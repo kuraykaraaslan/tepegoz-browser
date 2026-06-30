@@ -15,9 +15,14 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@tepegoz/capability-plane": "workspace:*",
     "@tepegoz/i18n": "workspace:*",
     "@tepegoz/libs": "workspace:*",
+    "@tepegoz/model-gateway": "workspace:*",
+    "@tepegoz/orchestrator": "workspace:*",
+    "@tepegoz/security-policy": "workspace:*",
     "@tepegoz/shared-types": "workspace:*",
+    "@tepegoz/tool-executor": "workspace:*",
     "@tepegoz/ui": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

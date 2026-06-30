@@ -30,6 +30,11 @@ export const IpcChannels = {
   tabsSetContentVisible: 'tabs:set-content-visible',
   tabsGetState: 'tabs:get-state',
   tabsState: 'tabs:state',
+  agentRun: 'agent:run',
+  agentCancel: 'agent:cancel',
+  agentEvent: 'agent:event',
+  agentApprovalRequest: 'agent:approval-request',
+  agentApprovalResponse: 'agent:approval-response',
 } as const;
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];
@@ -78,6 +83,44 @@ export interface TabsState {
   canGoForward: boolean;
 }
 
+/** Live Agent Console event kinds (observability-first: every step is surfaced). */
+export type AgentEventKind =
+  | 'plan'
+  | 'step_start'
+  | 'step_ok'
+  | 'step_error'
+  | 'awaiting_approval'
+  | 'done'
+  | 'error';
+
+export interface AgentEvent {
+  runId: string;
+  kind: AgentEventKind;
+  message: string;
+  /** Extra context (tool name, reason code, URL, plan summary). */
+  detail?: string;
+  ts: number;
+}
+
+/** HITL prompt raised when the Policy Kernel says "ask" — shown as a blocking modal. */
+export interface AgentApprovalRequest {
+  runId: string;
+  approvalId: string;
+  toolName: string;
+  /** Stable reason code (Permission Debug). */
+  reason: string;
+  /** HIGH-RISK actions require biometric (Windows Hello) — surfaced in the modal. */
+  biometric: boolean;
+  /** Truncated, safe preview of the tool arguments. */
+  argsPreview: string;
+}
+
+export interface AgentRunResult {
+  runId: string;
+  stoppedReason: string;
+  ok: boolean;
+}
+
 /** Content-area rectangle (DIP) where the active tab's web view is laid out, below the chrome. */
 export interface ContentBounds {
   x: number;
@@ -119,5 +162,16 @@ export interface TepegozApi {
   setContentVisible(visible: boolean): void;
   getTabsState(): Promise<TabsState>;
   onTabsState(callback: (state: TabsState) => void): () => void;
+  // Agent (Do mode): run a task, stream live events, answer HITL approvals.
+  /** Start an agentic task on the active tab; resolves when the run finishes. */
+  runAgent(prompt: string): Promise<AgentRunResult>;
+  /** Cancel an in-flight run. */
+  cancelAgent(runId: string): void;
+  /** Subscribe to the live Agent Console event stream; returns an unsubscribe function. */
+  onAgentEvent(callback: (event: AgentEvent) => void): () => void;
+  /** Subscribe to HITL approval prompts; returns an unsubscribe function. */
+  onAgentApprovalRequest(callback: (request: AgentApprovalRequest) => void): () => void;
+  /** Answer a HITL prompt (approve/deny a gated tool call). */
+  respondAgentApproval(approvalId: string, approved: boolean): void;
   readonly platform: string;
 }

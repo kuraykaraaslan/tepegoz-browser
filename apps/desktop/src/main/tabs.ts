@@ -1,4 +1,4 @@
-import { BrowserWindow, WebContentsView, type Rectangle } from 'electron';
+import { BrowserWindow, WebContentsView, type Rectangle, type WebContents } from 'electron';
 import { Logger } from '@tepegoz/libs';
 import { IpcChannels, type TabInfo, type TabsState } from '../shared/ipc-contract';
 import { isWebUrl, toNavigationUrl } from './lib/navigation-url';
@@ -240,6 +240,13 @@ export default class TabManager {
 
   private static active(): Tab | undefined {
     return TabManager.activeId !== null ? TabManager.tabs.get(TabManager.activeId) : undefined;
+  }
+
+  /** The active tab's webContents, for the agent perception layer (read DOM text). Null if none or
+   *  destroyed. The agent reads through this; it never gets the chrome's webContents or contextBridge. */
+  static activeWebContents(): WebContents | null {
+    const wc = TabManager.active()?.view.webContents;
+    return wc !== undefined && !wc.isDestroyed() ? wc : null;
   }
 
   private static requireWin(): BrowserWindow {

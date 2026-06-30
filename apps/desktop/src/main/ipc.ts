@@ -3,6 +3,10 @@ import { z } from 'zod';
 import { AppError, Logger, toBoundary } from '@tepegoz/libs';
 import {
   IpcChannels,
+  type AgentApprovalRequest,
+  type AgentEvent,
+  type AgentEventKind,
+  type AgentRunResult,
   type AppInfo,
   type CredentialsStatus,
   type IpcChannel,
@@ -10,6 +14,9 @@ import {
   type TabsState,
 } from '../shared/ipc-contract';
 import {
+  AgentApprovalResponseSchema,
+  AgentRunIdSchema,
+  AgentRunInputSchema,
   AppInfoSchema,
   ContentBoundsSchema,
   ContentVisibleSchema,
@@ -19,6 +26,8 @@ import {
   SetProviderKeyInputSchema,
   TabIdSchema,
 } from '../shared/ipc-schemas';
+import type { ConfirmRequest } from '@tepegoz/capability-plane';
+import AgentService from './agent/agent-service';
 import { PreferencesPatchSchema } from './preferences/preferences.model';
 import { isTrustedAppUrl } from './lib/trusted-origin';
 import CredentialVault from './security/credential-vault';
@@ -57,11 +66,50 @@ function handle<T>(channel: IpcChannel, fn: (event: IpcMainInvokeEvent, payload:
   });
 }
 
+/** Async variant of {@link handle}: awaits the handler so a rejected promise is mapped at the
+ *  boundary too (the sync `handle` would let an async rejection escape unmapped). */
+function handleAsync<T>(
+  channel: IpcChannel,
+  fn: (event: IpcMainInvokeEvent, payload: unknown) => Promise<T>,
+): void {
+  ipcMain.handle(channel, async (event, payload: unknown): Promise<T> => {
+    try {
+      assertTrustedSender(event);
+      return await fn(event, payload);
+    } catch (err) {
+      const boundary = toBoundary(err);
+      Logger.error(`IPC ${channel} failed`, {
+        statusCode: boundary.statusCode,
+        message: boundary.message,
+      });
+      throw new Error(boundary.message);
+    }
+  });
+}
+
 function credentialsStatus(): CredentialsStatus {
   return {
     encryptionAvailable: CredentialVault.isEncryptionAvailable(),
     providers: CredentialVault.status(),
   };
+}
+
+// Agent run + HITL state (registerIpc runs once at startup, so module scope is fine).
+let runCounter = 0;
+let approvalCounter = 0;
+const runControllers = new Map<string, AbortController>();
+const pendingApprovals = new Map<string, (approved: boolean) => void>();
+
+/** Truncated, safe preview of tool args for the HITL modal (never the full payload). */
+function safeArgsPreview(args: unknown): string {
+  let s: string | undefined;
+  try {
+    s = JSON.stringify(args);
+  } catch {
+    s = String(args);
+  }
+  s ??= 'undefined';
+  return s.length > 200 ? `${s.slice(0, 200)}…` : s;
 }
 
 /** Register all typed IPC handlers. */
@@ -178,4 +226,69 @@ export function registerIpc(): void {
   });
 
   handle(IpcChannels.tabsGetState, (): TabsState => TabManager.getState());
+
+  // Agent (Do mode). agent:run streams live events back to the SENDER and round-trips HITL approvals;
+  // the raw API key and tool args never cross to the renderer (only a truncated preview does).
+  handleAsync(IpcChannels.agentRun, async (event, payload): Promise<AgentRunResult> => {
+    const prompt = AgentRunInputSchema.parse(payload);
+    const sender = event.sender;
+    const runId = `run-${String(++runCounter)}`;
+    const controller = new AbortController();
+    runControllers.set(runId, controller);
+
+    const sendEvent = (e: AgentEvent): void => {
+      if (!sender.isDestroyed()) sender.send(IpcChannels.agentEvent, e);
+    };
+    const onEvent = (kind: AgentEventKind, message: string, detail?: string): void => {
+      sendEvent({ runId, kind, message, ts: Date.now(), ...(detail !== undefined ? { detail } : {}) });
+    };
+    const requestApproval = (req: ConfirmRequest): Promise<boolean> => {
+      const approvalId = `appr-${String(++approvalCounter)}`;
+      const request: AgentApprovalRequest = {
+        runId,
+        approvalId,
+        toolName: req.toolName,
+        reason: req.policy.reason,
+        biometric: req.policy.biometric,
+        argsPreview: safeArgsPreview(req.args),
+      };
+      onEvent('awaiting_approval', `Approval needed: ${req.toolName}`, req.policy.reason);
+      if (!sender.isDestroyed()) sender.send(IpcChannels.agentApprovalRequest, request);
+      return new Promise<boolean>((resolve) => {
+        pendingApprovals.set(approvalId, resolve);
+        setTimeout(() => {
+          if (pendingApprovals.delete(approvalId)) resolve(false); // fail-safe deny on no response
+        }, 120_000);
+      });
+    };
+
+    try {
+      const summary = await AgentService.run(prompt, {
+        onEvent,
+        requestApproval,
+        signal: controller.signal,
+      });
+      return { runId, stoppedReason: summary.stoppedReason, ok: summary.ok };
+    } catch (err) {
+      onEvent('error', err instanceof Error ? err.message : 'Agent run failed');
+      throw err;
+    } finally {
+      runControllers.delete(runId);
+    }
+  });
+
+  onAction(IpcChannels.agentCancel, AgentRunIdSchema, (runId) => {
+    runControllers.get(runId)?.abort();
+  });
+  onAction(
+    IpcChannels.agentApprovalResponse,
+    AgentApprovalResponseSchema,
+    ({ approvalId, approved }) => {
+      const resolve = pendingApprovals.get(approvalId);
+      if (resolve !== undefined) {
+        pendingApprovals.delete(approvalId);
+        resolve(approved);
+      }
+    },
+  );
 }

@@ -8,6 +8,7 @@ import type {
   TabsState,
   ThemePref,
 } from '../../shared/ipc-contract';
+import { AgentConsole } from './components/AgentConsole';
 import { SettingsPage } from './components/SettingsPage';
 import { TitleBar } from './components/TitleBar';
 import { Toolbar } from './components/Toolbar';
@@ -31,6 +32,7 @@ export function App() {
   const [status, setStatus] = useState<CredentialsStatus | null>(null);
   const [tabs, setTabs] = useState<TabsState>(EMPTY_TABS);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [agentOpen, setAgentOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -88,10 +90,10 @@ export function App() {
     };
   }, []);
 
-  // The Settings overlay (chrome-rendered) hides the web view so it shows through.
+  // Chrome-rendered overlays (Settings / Agent Console) hide the web view so they show through.
   useEffect(() => {
-    window.tepegoz.setContentVisible(!settingsOpen);
-  }, [settingsOpen]);
+    window.tepegoz.setContentVisible(!settingsOpen && !agentOpen);
+  }, [settingsOpen, agentOpen]);
 
   const locale = effectiveLocale(prefs?.locale ?? 'system');
   const t = resources[locale];
@@ -115,11 +117,14 @@ export function App() {
         tabs={tabs.tabs}
         activeId={tabs.activeId}
         onSelectTab={(id) => {
-          setSettingsOpen(false); // make the page visible (web view is hidden while Settings is open)
+          // Make the page visible (web view is hidden while an overlay is open).
+          setSettingsOpen(false);
+          setAgentOpen(false);
           window.tepegoz.activateTab(id);
         }}
         onNewTab={() => {
           setSettingsOpen(false);
+          setAgentOpen(false);
           window.tepegoz.createTab();
         }}
       />
@@ -131,6 +136,12 @@ export function App() {
         settingsOpen={settingsOpen}
         onToggleSettings={() => {
           setSettingsOpen((open) => !open);
+          setAgentOpen(false);
+        }}
+        agentOpen={agentOpen}
+        onToggleAgent={() => {
+          setAgentOpen((open) => !open);
+          setSettingsOpen(false);
         }}
       />
       <div ref={contentRef} className="relative flex-1 overflow-hidden">
@@ -151,6 +162,14 @@ export function App() {
               <p className="px-6 py-8 text-sm text-text-secondary">…</p>
             )}
           </div>
+        )}
+        {agentOpen && (
+          <AgentConsole
+            t={t}
+            onClose={() => {
+              setAgentOpen(false);
+            }}
+          />
         )}
       </div>
     </div>

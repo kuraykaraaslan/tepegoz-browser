@@ -35,3 +35,11 @@ export const TabIdSchema = z.string().min(1).max(64);
 export const NavigateInputSchema = z.string().max(4096);
 export const CreateTabInputSchema = z.string().max(4096).optional();
 export const ContentVisibleSchema = z.boolean();
+
+/** `agent:run` prompt (renderer → main). The agent treats this as the user's trusted intent. */
+export const AgentRunInputSchema = z.string().min(1).max(4000);
+export const AgentRunIdSchema = z.string().min(1).max(64);
+export const AgentApprovalResponseSchema = z.object({
+  approvalId: z.string().min(1).max(64),
+  approved: z.boolean(),
+});

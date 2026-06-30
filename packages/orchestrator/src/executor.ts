@@ -15,7 +15,7 @@ export interface StepOutcome {
   error?: ToolError;
 }
 
-export type StopReason = 'completed' | 'tool_error' | 'loop_detected' | 'max_steps';
+export type StopReason = 'completed' | 'tool_error' | 'loop_detected' | 'max_steps' | 'aborted';
 
 export interface RunResult {
   outcomes: StepOutcome[];
@@ -26,6 +26,11 @@ export interface RunOptions {
   maxSteps?: number;
   loopThreshold?: number;
   ctx?: InvokeContext;
+  /** Cooperative cancellation, checked before each step (AbortSignal is structurally compatible). */
+  signal?: { readonly aborted: boolean };
+  /** Live progress hooks (Agent Console). Called before/after each step. */
+  onStepStart?: (step: { id: string; tool: string }) => void;
+  onStepEnd?: (outcome: StepOutcome) => void;
 }
 
 function isToolError(v: unknown): v is ToolError {
@@ -51,6 +56,9 @@ export default class Executor {
     const signatureCounts = new Map<string, number>();
 
     for (const step of plan.steps) {
+      if (options.signal?.aborted === true) {
+        return { outcomes, stoppedReason: 'aborted' };
+      }
       if (outcomes.length >= maxSteps) {
         return { outcomes, stoppedReason: 'max_steps' };
       }
@@ -62,12 +70,16 @@ export default class Executor {
         return { outcomes, stoppedReason: 'loop_detected' };
       }
 
+      options.onStepStart?.({ id: step.id, tool: step.tool });
       const result = await ToolGateway.invoke(step.tool, step.args, ctx);
-      if (isToolError(result)) {
-        outcomes.push({ stepId: step.id, tool: step.tool, ok: false, error: result });
+      const outcome: StepOutcome = isToolError(result)
+        ? { stepId: step.id, tool: step.tool, ok: false, error: result }
+        : { stepId: step.id, tool: step.tool, ok: true, result };
+      outcomes.push(outcome);
+      options.onStepEnd?.(outcome);
+      if (!outcome.ok) {
         return { outcomes, stoppedReason: 'tool_error' };
       }
-      outcomes.push({ stepId: step.id, tool: step.tool, ok: true, result });
     }
 
     return { outcomes, stoppedReason: 'completed' };

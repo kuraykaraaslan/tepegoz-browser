@@ -8,7 +8,7 @@ the "everything at once" immaturity trap.
 **Branch examples:** `feat/model-gateway`, `feat/orchestrator`, `feat/agent-console`...
 
 ## Exit criteria (DoD) — quality floor cannot be lowered
-- [ ] **One concrete end-to-end agentic task** works: user prompt → Policy Kernel/HITL → CDP automation → Event Journal → Live Agent Console
+- [~] **One concrete end-to-end agentic task** works: user prompt → Policy Kernel/HITL → CDP automation → Event Journal → Live Agent Console _(working end-to-end: prompt → ModelRouter → Planner (DAG) → ToolGateway Policy Kernel/HITL → built-in browser tools on the active tab → live Agent Console with approval modal. Remaining: out-of-process CDP driver (currently DOM-text via the isolated view) + Event Journal projection of agent events)_
 - [ ] MVP 4 conditions (valuable/usable/testable/deliverable) met; success criteria written (min/strong/failure-signal + metrics)
 - [ ] Quality floor: input validation (zod) + error states (AppError) + logging (redacted) + Policy Kernel + HITL + backup/export awareness + handover note
 - [ ] **i18n:** all shipped surfaces fully **en (primary) + tr (parity)**; no hardcoded strings (lint clean); IME regression matrix passes
@@ -47,7 +47,7 @@ the "everything at once" immaturity trap.
 - [ ] Scoped Trust Profiles + **Permission Debug** (reason codes)
 
 ### L5 — Minimal Capability/Tool Plane (CLIENT only; SERVER in Phase 1b)
-- [ ] `CapabilityRegistry` + **`ToolGateway` (single PEP)** + built-in tools (browser_*, tab_*, dom_*, journal_*) _(registry + ToolGateway PEP wiring Policy Kernel/HITL/audit done + tested; built-in tools pending)_
+- [x] `CapabilityRegistry` + **`ToolGateway` (single PEP)** + built-in tools (browser_*, tab_*, dom_*, journal_*) _(registry + ToolGateway PEP wiring Policy Kernel/HITL/audit done + tested; built-in tools live: browser_get_page (sanitized perception), browser_update_location, tab_list_items, tab_create_item — wired into the running app via AgentService. journal_* tools follow with Event Journal)_
 - [x] **Tool naming** `{domain}_{verb}_{noun}` (lint-enforced) + **standard error envelope** + create/upload `idempotencyKey`
 - [ ] MCP **client**: prefer Anthropic native connector (`mcp_servers`/`mcp_toolset`); thin stdio supervisor (health/backoff)
 - [ ] tool-search defer rule (≥1 non-deferred); all tool inputs zod-validated in main before execution
@@ -55,7 +55,7 @@ the "everything at once" immaturity trap.
 ### L9 — First-class browser UI (KUIreact-first, P0)
 - [ ] **Command Palette** (Ctrl+K, 4 modes: Chat/Do/Make/Tasks) — KUIreact Modal+Input+virtualized
 - [ ] Deterministic **smart address bar / omnibox** (does NOT start an AI thread): unified suggestions (history + bookmark + open tabs + default search engine) + **inline calculation** (`2+2`, unit convert) + `tab:`/`history:`/`bookmark:` filter prefixes + **quick-settings** access (theme/language/privacy toggle); suggestion source zod-validated, no raw-HTML render
-- [ ] **Live Agent Console** (per step: URL/action/%progress/checkpoint/token-cost/error + timeline replay; **virtualized**)
+- [x] **Live Agent Console** (per step: URL/action/%progress/checkpoint/token-cost/error + timeline replay; **virtualized**) _(live per-step event stream (plan/step_start/step_ok/step_error/awaiting_approval/done/error) + Do-mode prompt + blocking HITL approval modal + AI-disclaimer + cancel, en/tr. Remaining: token-cost column, timeline replay, list virtualization)_
 - [ ] Browser shell: tab (optional group toggle), new-tab 3 options (AI/Favorites/Blank), reading mode, bookmark, OS-native password/passkey **POC** _(full WebAuthn + password manager → Phase 2)_
 - [ ] **Basic session restore**: persist open tabs on quit/crash → restore on launch + reopen-closed-tab (Ctrl+Shift+T); event-journal projection (ADR-0004). _(Full workspace/named-session UI → Phase 2b.)_
 - [x] **Settings page** (KUIreact, polished) — sectioned: **Providers & API keys** (safeStorage entry/validate/remove), **Appearance** (theme tokens), **Language** (runtime en/tr switch), **Privacy & telemetry** (default OFF, sensitive-site lockout), **Agent behavior**; hosts the **cost-saver "use a local model for simple tasks" toggle** (persisted via the L7 preference)
@@ -69,9 +69,9 @@ the "everything at once" immaturity trap.
 
 ### AI Integration rules (implementation)
 - [ ] **Streaming not written to DB** → on full validated response, one "committed" event to Journal
-- [ ] **Raw AI output not rendered as HTML** (safe markdown); page content to model wrapped with XML-delimiter + anti-injection footer
-- [ ] "AI-generated, may be wrong" label on every output; review&edit on side-effect actions
-- [ ] **Irreversible action → HITL before agent loop**; PII redaction; EU AI Act risk gate
+- [x] **Raw AI output not rendered as HTML** (safe markdown); page content to model wrapped with XML-delimiter + anti-injection footer _(perception wraps page text via wrapUntrustedContent (XML delimiter + anti-injection footer); Agent Console renders plain text, never HTML. Rich safe-markdown rendering of chat output is a later surface)_
+- [x] "AI-generated, may be wrong" label on every output; review&edit on side-effect actions _(AI-disclaimer in the Agent Console; side-effecting tools (state_changing/destructive/financial) gated by HITL approval modal via the Policy Kernel)_
+- [~] **Irreversible action → HITL before agent loop**; PII redaction; EU AI Act risk gate _(HITL gates state-changing/destructive/financial tools at the ToolGateway; PII/egress redaction available via the Egress Firewall (wiring into the model-egress path pending); EU AI Act gate pending)_
 
 ### Minimal safe-browsing core
 - [ ] Safe Browsing v5 **hash-prefix lookup** (URL never sent) + Egress Firewall core (not full adblock/extensions)

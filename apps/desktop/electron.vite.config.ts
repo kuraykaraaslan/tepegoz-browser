@@ -4,8 +4,17 @@ import tailwindcss from '@tailwindcss/vite';
 
 // Workspace packages expose TS source via their `exports`; they must be BUNDLED into main/preload
 // (not externalized) — otherwise Node would try to load their `./src/index.ts` at runtime and fail
-// with ERR_UNKNOWN_FILE_EXTENSION. Real npm deps (electron, zod, …) stay external.
-const WORKSPACE_PACKAGES = ['@tepegoz/shared-types', '@tepegoz/libs', '@tepegoz/i18n'];
+// with ERR_UNKNOWN_FILE_EXTENSION. Real npm deps (electron, zod, @anthropic-ai/sdk, …) stay external.
+const WORKSPACE_PACKAGES = [
+  '@tepegoz/shared-types',
+  '@tepegoz/libs',
+  '@tepegoz/i18n',
+  '@tepegoz/model-gateway',
+  '@tepegoz/orchestrator',
+  '@tepegoz/capability-plane',
+  '@tepegoz/security-policy',
+  '@tepegoz/tool-executor',
+];
 
 // electron-vite conventions: main = src/main/index.ts, preload = src/preload/index.ts,
 // renderer root = src/renderer (index.html). Output goes to out/.

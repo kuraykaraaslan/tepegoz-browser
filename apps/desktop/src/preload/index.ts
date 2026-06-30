@@ -1,6 +1,9 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import {
   IpcChannels,
+  type AgentApprovalRequest,
+  type AgentEvent,
+  type AgentRunResult,
   type AppInfo,
   type ContentBounds,
   type CredentialsStatus,
@@ -84,6 +87,32 @@ const api: TepegozApi = {
     return () => {
       ipcRenderer.removeListener(IpcChannels.tabsState, listener);
     };
+  },
+  runAgent: (prompt: string) =>
+    ipcRenderer.invoke(IpcChannels.agentRun, prompt) as Promise<AgentRunResult>,
+  cancelAgent: (runId: string) => {
+    ipcRenderer.send(IpcChannels.agentCancel, runId);
+  },
+  onAgentEvent: (callback: (event: AgentEvent) => void) => {
+    const listener = (_event: unknown, payload: AgentEvent): void => {
+      callback(payload);
+    };
+    ipcRenderer.on(IpcChannels.agentEvent, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.agentEvent, listener);
+    };
+  },
+  onAgentApprovalRequest: (callback: (request: AgentApprovalRequest) => void) => {
+    const listener = (_event: unknown, payload: AgentApprovalRequest): void => {
+      callback(payload);
+    };
+    ipcRenderer.on(IpcChannels.agentApprovalRequest, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.agentApprovalRequest, listener);
+    };
+  },
+  respondAgentApproval: (approvalId: string, approved: boolean) => {
+    ipcRenderer.send(IpcChannels.agentApprovalResponse, { approvalId, approved });
   },
   platform: process.platform,
 };

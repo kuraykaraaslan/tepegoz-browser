@@ -41,15 +41,30 @@ importers:
 
   apps/desktop:
     dependencies:
+      '@tepegoz/capability-plane':
+        specifier: workspace:*
+        version: link:../../packages/capability-plane
       '@tepegoz/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
       '@tepegoz/libs':
         specifier: workspace:*
         version: link:../../packages/libs
+      '@tepegoz/model-gateway':
+        specifier: workspace:*
+        version: link:../../packages/model-gateway
+      '@tepegoz/orchestrator':
+        specifier: workspace:*
+        version: link:../../packages/orchestrator
+      '@tepegoz/security-policy':
+        specifier: workspace:*
+        version: link:../../packages/security-policy
       '@tepegoz/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
+      '@tepegoz/tool-executor':
+        specifier: workspace:*
+        version: link:../../packages/tool-executor
       '@tepegoz/ui':
         specifier: workspace:*
         version: link:../../packages/ui

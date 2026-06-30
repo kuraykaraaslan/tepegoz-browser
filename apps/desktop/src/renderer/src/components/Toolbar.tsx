@@ -9,6 +9,8 @@ interface ToolbarProps {
   canGoForward: boolean;
   settingsOpen: boolean;
   onToggleSettings: () => void;
+  agentOpen: boolean;
+  onToggleAgent: () => void;
 }
 
 const NAV_BTN =
@@ -24,6 +26,8 @@ export function Toolbar({
   canGoForward,
   settingsOpen,
   onToggleSettings,
+  agentOpen,
+  onToggleAgent,
 }: ToolbarProps) {
   const [value, setValue] = useState(currentUrl);
   const [focused, setFocused] = useState(false);
@@ -93,6 +97,19 @@ export function Toolbar({
           className="h-8 w-full rounded-full border border-border bg-surface-base px-4 text-sm text-text-primary placeholder:text-text-disabled focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
         />
       </form>
+
+      <button
+        type="button"
+        aria-label={t.agentConsole.open}
+        aria-pressed={agentOpen}
+        onClick={onToggleAgent}
+        className={cn(NAV_BTN, 'w-auto px-2 text-xs font-medium', agentOpen && 'bg-surface-overlay text-text-primary')}
+      >
+        <svg className="mr-1 h-4 w-4" viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M8 2 l1.4 3.2 L12.6 6.6 9.4 8 8 11.2 6.6 8 3.4 6.6 6.6 5.2 Z" fill="currentColor" />
+        </svg>
+        {t.agentConsole.open}
+      </button>
 
       <button
         type="button"
