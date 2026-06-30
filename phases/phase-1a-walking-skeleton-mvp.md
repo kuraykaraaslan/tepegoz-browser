@@ -14,17 +14,18 @@ the "everything at once" immaturity trap.
 - [ ] **i18n:** all shipped surfaces fully **en (primary) + tr (parity)**; no hardcoded strings (lint clean); IME regression matrix passes
 - [ ] Coverage gate (S80/B70/F80/L80) + self-review/code-review + UAT signoff
 - [ ] Red-team injection corpus v1 passes; sensitive-site lockout + HITL scenarios tested
+- [ ] Smart address bar omnibox suggestions (history/bookmark/tab/search + inline calc) + basic session restore work
 
 ## Tasks
 
 ### L7 — Model Gateway (provider-agnostic, BYO-key)
 - [ ] `base.provider` + `anthropic.provider` (Claude **default**: Opus 4.8 plan / Sonnet 4.6 exec / Haiku 4.5 classify) + `openai.provider` (2nd adapter); `gemini.provider` interface-ready
 - [ ] `LocalTransport` (BYO-key, **safeStorage** vault); `ModelTransport`/`ModelRouter` interfaces on day 1 (local SLM no-op)
-- [ ] **Cost-saver preference** (persisted, settings-toggled): "use a local model for simple tasks" flag read by `ModelRouter`; in 1a the local SLM is a no-op placeholder → simple capabilities still resolve via cloud (real local routing activates in Phase 1b)
+- [x] **Cost-saver preference** (persisted, settings-toggled): "use a local model for simple tasks" flag read by `ModelRouter`; in 1a the local SLM is a no-op placeholder → simple capabilities still resolve via cloud (real local routing activates in Phase 1b)
 - [ ] **Every call:** mandatory `max_tokens` + timeout (30s/60s) + documented token budget; single singleton client per provider
 - [ ] Token Ledger (SQLite, provider+model+capability) + live quota indicator + 80% warning + auto-refund (system error/CAPTCHA/loop)
 - [ ] `technical-ai-doc.md` (models, DPA/model-card, risk category, human oversight, limits, UI disclosure)
-- [ ] ⚠️ model/SDK specifics (`output_config.effort` vs `budget_tokens`, `count_tokens`, prompt-caching) **verified against `claude-api` reference**
+- [x] ⚠️ model/SDK specifics (`output_config.effort` vs `budget_tokens`, `count_tokens`, prompt-caching) **verified against `claude-api` reference**
 
 ### L3 — Orchestrator (sequential; parallel in Phase 1b)
 - [ ] Planner: Intent → DAG (**sequential execution** first); each node risk-class (read/state-changing/destructive/financial) + cost estimate
@@ -53,17 +54,18 @@ the "everything at once" immaturity trap.
 
 ### L9 — First-class browser UI (KUIreact-first, P0)
 - [ ] **Command Palette** (Ctrl+K, 4 modes: Chat/Do/Make/Tasks) — KUIreact Modal+Input+virtualized
-- [ ] Deterministic **address bar** (does NOT start an AI thread)
+- [ ] Deterministic **smart address bar / omnibox** (does NOT start an AI thread): unified suggestions (history + bookmark + open tabs + default search engine) + **inline calculation** (`2+2`, unit convert) + `tab:`/`history:`/`bookmark:` filter prefixes + **quick-settings** access (theme/language/privacy toggle); suggestion source zod-validated, no raw-HTML render
 - [ ] **Live Agent Console** (per step: URL/action/%progress/checkpoint/token-cost/error + timeline replay; **virtualized**)
-- [ ] Browser shell: tab (optional group toggle), new-tab 3 options (AI/Favorites/Blank), reading mode, bookmark, OS-native password/passkey **POC**
-- [ ] **Settings page** (KUIreact, polished) — sectioned: **Providers & API keys** (safeStorage entry/validate/remove), **Appearance** (theme tokens), **Language** (runtime en/tr switch), **Privacy & telemetry** (default OFF, sensitive-site lockout), **Agent behavior**; hosts the **cost-saver "use a local model for simple tasks" toggle** (persisted via the L7 preference)
+- [ ] Browser shell: tab (optional group toggle), new-tab 3 options (AI/Favorites/Blank), reading mode, bookmark, OS-native password/passkey **POC** _(full WebAuthn + password manager → Phase 2)_
+- [ ] **Basic session restore**: persist open tabs on quit/crash → restore on launch + reopen-closed-tab (Ctrl+Shift+T); event-journal projection (ADR-0004). _(Full workspace/named-session UI → Phase 2b.)_
+- [x] **Settings page** (KUIreact, polished) — sectioned: **Providers & API keys** (safeStorage entry/validate/remove), **Appearance** (theme tokens), **Language** (runtime en/tr switch), **Privacy & telemetry** (default OFF, sensitive-site lockout), **Agent behavior**; hosts the **cost-saver "use a local model for simple tasks" toggle** (persisted via the L7 preference)
 - [ ] Token/quota indicator + Connection Health Panel (reason codes) + onboarding **privacy/consent wizard** (telemetry OFF default, sensitive-site locked)
 - [ ] frameless title bar (drag/no-drag + platform caption) + platform conventions + WCAG 2.2 AA + single SHORTCUTS registry + theme tokens
 
 ### i18n + IME (en primary; Turkish first-class) — on top of day-0 infra
 - [ ] Full **English** UI/help/error/permission (**en primary/source**) + **Turkish full parity** (first-class)
 - [ ] Fill IME regression matrix (Turkish TEXT input, independent of UI language): Turkish-Q/F, dead keys, ç/ğ/ı/ö/ş/ü; side-panel/command-palette inputs
-- [ ] runtime language switch; default = OS language (fallback to en if unsupported)
+- [x] runtime language switch; default = OS language (fallback to en if unsupported)
 
 ### AI Integration rules (implementation)
 - [ ] **Streaming not written to DB** → on full validated response, one "committed" event to Journal
