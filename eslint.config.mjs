@@ -14,6 +14,9 @@ export default tseslint.config(
       'e2e/**',
       '**/*.config.*',
       '**/*.cjs',
+      // Vendored KUIreact fork — drift-tracked in packages/ui/_FORK.md, not restyled to our rules.
+      'packages/ui/src/modules/**',
+      'packages/ui/src/libs/**',
     ],
   },
   js.configs.recommended,

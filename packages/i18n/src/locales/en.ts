@@ -37,6 +37,40 @@ export const en = {
     badState: 'Invalid state for this operation',
     upstreamDown: 'Service unavailable',
   },
+  settings: {
+    title: 'Settings',
+    providersTitle: 'Providers & API keys',
+    providersSubtitle:
+      'Keys are encrypted on this device (OS keychain) and never leave it without your action.',
+    apiKey: 'API key',
+    apiKeyPlaceholder: 'Paste your key…',
+    keySet: 'Key set',
+    keyNotSet: 'No key',
+    remove: 'Remove',
+    keySaved: 'Key saved.',
+    keyRemoved: 'Key removed.',
+    encryptionUnavailable:
+      'OS encryption is unavailable — keys cannot be stored securely on this device.',
+    providerNames: {
+      anthropic: 'Claude (Anthropic)',
+      openai: 'OpenAI',
+      gemini: 'Gemini (Google)',
+    },
+    appearanceTitle: 'Appearance',
+    theme: 'Theme',
+    themeSystem: 'System',
+    themeLight: 'Light',
+    themeDark: 'Dark',
+    languageTitle: 'Language',
+    langSystem: 'System',
+    privacyTitle: 'Privacy & telemetry',
+    telemetry: 'Share anonymous usage telemetry',
+    telemetryDesc: 'Off by default. No page content or keys are ever sent.',
+    costTitle: 'Cost & performance',
+    localModel: 'Use a local model for simple tasks',
+    localModelDesc:
+      'Runs simple steps (classify, summarize) on-device to cut AI cost, falling back to the cloud when needed. The local model activates in a later release.',
+  },
 };
 
 /** Shape contract derived from the English source (values widened to string). */
