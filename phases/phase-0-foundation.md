@@ -65,8 +65,8 @@ No product features; the decisions made here would force a full rewrite if wrong
 - [ ] Start Windows code-signing identity (Azure Trusted Signing / EV) — **BLOCKING (distribution)** — _user action_
 
 ### Documentation & security
-- [ ] root + per-package `README.md` (purpose/stack/setup/env/scripts/structure)
-- [ ] `docs/adr/` ~9 ADRs: Electron+React+TS · SQLite(FTS5+sqlite-vec) · event-sourced Journal · provider-agnostic AI + failure-story · CDP automation · Policy Kernel+HITL · L5 separate process · MCP convention · boundary-mapping (HTTP→IPC)
+- [x] root `README.md` (pre-existing, kept) + per-package READMEs (shared-types, libs, i18n, persistence, desktop)
+- [x] `docs/adr/` **10 ADRs (0001–0010)** + index: Electron+React+TS · monorepo · SQLite · event-sourced Journal · provider-agnostic AI · Policy Kernel+HITL · capability-plane/MCP(client+server) · perception/CDP · boundary-mapping · TS/tooling conventions
 - [ ] `CHANGELOG.md` (Keep-a-Changelog: Added/Changed/Fixed/Security/Operational) + `docs/known-issues.md` + `handover/` skeleton
 - [x] `.env.example` (key names only, no values; explicit "BYO keys live in OS keychain, not here")
 - [ ] **Threat Model Lite + Risk Register** (tepegoz = High/Critical; trust boundaries: renderer/isolated-webview/main/CDP/MCP-client/MCP-server/AI-provider/adapter/OAuth)
