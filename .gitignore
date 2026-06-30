@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+out/
+build/
+.turbo/
+*.tsbuildinfo
+
+# Native modules (rebuilt per-OS in CI)
+*.node
+
+# Test / coverage
+coverage/
+*.log
+
+# Secrets & local config (NEVER commit) — BYO keys live in OS keychain, not files
+.env
+.env.local
+.env.*.local
+
+# Packaged artifacts
+/release/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
