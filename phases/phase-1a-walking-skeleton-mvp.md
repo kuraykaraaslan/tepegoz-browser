@@ -77,6 +77,6 @@ the "everything at once" immaturity trap.
 - [ ] Safe Browsing v5 **hash-prefix lookup** (URL never sent) + Egress Firewall core (not full adblock/extensions)
 
 ### Test
-- [ ] **Deterministic agent-eval** (recorded HAR/DOM fixtures + golden-LLM replay)
+- [x] **Deterministic agent-eval** (recorded HAR/DOM fixtures + golden-LLM replay) _(golden-LLM replay via MockProvider canned plan → real Planner (parse/validate/unknown-tool reject) → Executor → ToolGateway (Policy Kernel + HITL approve/deny) → asserted outcomes; no network/key. HAR/DOM page fixtures land with the CDP perception layer)_
 - [ ] Playwright `_electron` E2E (fixed test profile + **mock provider**)
 - [ ] Red-team injection corpus v1; coverage gate; SQLite migration-safe tests
