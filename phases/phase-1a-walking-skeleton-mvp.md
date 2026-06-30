@@ -41,7 +41,7 @@ the "everything at once" immaturity trap.
 
 ### L8 — Core security (deterministic)
 - [x] **Policy Kernel** (BEFORE the LLM): classify tool call read/state-changing/high-risk; tainted-arg → escalate _(deterministic kernel + sensitive-site lockout + tests; wiring into the ToolGateway pending L5)_
-- [ ] Capability Broker (single least-privilege gate agent↔tool) + Taint/Provenance Tracker (web data = untrusted)
+- [x] Capability Broker (single least-privilege gate agent↔tool) + Taint/Provenance Tracker (web data = untrusted) _(Capability Broker = the ToolGateway single PEP (L5); Taint/Provenance Tracker added: web/model provenance = untrusted, verbatim data-flow taint of tool args → feeds Policy Kernel `taintedArgs`; 11 tests)_
 - [ ] **Egress Firewall (TS)**: Base64/high-entropy exfil + cross-origin PII/token + agentic-blabbering block
 - [ ] HITL & **Windows Hello** (focus-safe modal; HIGH-RISK biometric); **sensitive-site lockout** (bank/crypto/password/health)
 - [ ] Scoped Trust Profiles + **Permission Debug** (reason codes)
