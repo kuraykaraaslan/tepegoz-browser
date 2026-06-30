@@ -15,6 +15,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.107.0",
     "@tepegoz/libs": "workspace:*",
     "@tepegoz/shared-types": "workspace:*"
   },
