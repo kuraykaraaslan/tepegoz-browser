@@ -40,7 +40,7 @@ the "everything at once" immaturity trap.
 - [ ] `Content Sanitizer`: hidden/CSS-hidden + zero-width/bidi/homoglyph filtering → `[hidden content filtered]`
 
 ### L8 — Core security (deterministic)
-- [ ] **Policy Kernel** (BEFORE the LLM): classify tool call read/state-changing/high-risk; tainted-arg → escalate
+- [x] **Policy Kernel** (BEFORE the LLM): classify tool call read/state-changing/high-risk; tainted-arg → escalate _(deterministic kernel + sensitive-site lockout + tests; wiring into the ToolGateway pending L5)_
 - [ ] Capability Broker (single least-privilege gate agent↔tool) + Taint/Provenance Tracker (web data = untrusted)
 - [ ] **Egress Firewall (TS)**: Base64/high-entropy exfil + cross-origin PII/token + agentic-blabbering block
 - [ ] HITL & **Windows Hello** (focus-safe modal; HIGH-RISK biometric); **sensitive-site lockout** (bank/crypto/password/health)
