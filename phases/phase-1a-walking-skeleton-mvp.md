@@ -28,9 +28,9 @@ the "everything at once" immaturity trap.
 - [x] ⚠️ model/SDK specifics (`output_config.effort` vs `budget_tokens`, `count_tokens`, prompt-caching) **verified against `claude-api` reference**
 
 ### L3 — Orchestrator (sequential; parallel in Phase 1b)
-- [ ] Planner: Intent → DAG (**sequential execution** first); each node risk-class (read/state-changing/destructive/financial) + cost estimate
+- [x] Planner: Intent → DAG (**sequential execution** first); each node risk-class (read/state-changing/destructive/financial) + cost estimate _(Planner Intent→DAG + sequential Executor done + tested; risk-class enforced at the ToolGateway/Policy Kernel; per-node cost estimate pending)_
 - [ ] Editable **plan preview** (HITL) before execution
-- [ ] `MAX_AGENT_STEPS` hard-cap; Loop Detector (action-signature repeat → stop → HITL, credit preserved)
+- [x] `MAX_AGENT_STEPS` hard-cap; Loop Detector (action-signature repeat → stop → HITL, credit preserved)
 - [ ] Human Handoff Controller: CAPTCHA/2FA detection → graceful handoff + notification (**NO auto-solve**)
 
 ### L4 — Perception + tool-executor (DOM/a11y; vision in Phase 1b)
