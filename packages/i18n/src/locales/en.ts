@@ -14,6 +14,12 @@ export const en = {
     showPassword: 'Show',
     hidePassword: 'Hide',
   },
+  window: {
+    minimize: 'Minimize',
+    maximize: 'Maximize',
+    restore: 'Restore',
+    close: 'Close',
+  },
   commandPalette: {
     placeholder: 'Type a command or ask Tepegöz…',
     modeChat: 'Chat',

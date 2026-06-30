@@ -23,6 +23,26 @@ const api: TepegozApi = {
     ipcRenderer.invoke(IpcChannels.credentialsSet, { provider, apiKey }) as Promise<CredentialsStatus>,
   removeProviderKey: (provider: ProviderId) =>
     ipcRenderer.invoke(IpcChannels.credentialsRemove, { provider }) as Promise<CredentialsStatus>,
+  minimizeWindow: () => {
+    ipcRenderer.send(IpcChannels.windowMinimize);
+  },
+  toggleMaximizeWindow: () => {
+    ipcRenderer.send(IpcChannels.windowMaximizeToggle);
+  },
+  closeWindow: () => {
+    ipcRenderer.send(IpcChannels.windowClose);
+  },
+  isWindowMaximized: () =>
+    ipcRenderer.invoke(IpcChannels.windowIsMaximized) as Promise<boolean>,
+  onWindowMaximizedChange: (callback: (maximized: boolean) => void) => {
+    const listener = (_event: unknown, maximized: boolean): void => {
+      callback(maximized);
+    };
+    ipcRenderer.on(IpcChannels.windowMaximizedChanged, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.windowMaximizedChanged, listener);
+    };
+  },
   platform: process.platform,
 };
 

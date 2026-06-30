@@ -1,4 +1,4 @@
-import { app, ipcMain, type IpcMainInvokeEvent } from 'electron';
+import { app, BrowserWindow, ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron';
 import { AppError, Logger, toBoundary } from '@tepegoz/libs';
 import {
   IpcChannels,
@@ -86,5 +86,30 @@ export function registerIpc(): void {
     const { provider } = RemoveProviderKeyInputSchema.parse(payload);
     CredentialVault.removeKey(provider);
     return credentialsStatus();
+  });
+
+  // Custom window chrome controls (fire-and-forget): act on the SENDER's window only, and ignore
+  // anything from an untrusted frame.
+  const onWindowControl = (channel: string, action: (win: BrowserWindow) => void): void => {
+    ipcMain.on(channel, (event: IpcMainEvent) => {
+      if (!isTrustedAppUrl(event.senderFrame?.url ?? '')) return;
+      const win = BrowserWindow.fromWebContents(event.sender);
+      if (win) action(win);
+    });
+  };
+  onWindowControl(IpcChannels.windowMinimize, (win) => {
+    win.minimize();
+  });
+  onWindowControl(IpcChannels.windowMaximizeToggle, (win) => {
+    if (win.isMaximized()) win.unmaximize();
+    else win.maximize();
+  });
+  onWindowControl(IpcChannels.windowClose, (win) => {
+    win.close();
+  });
+
+  handle(IpcChannels.windowIsMaximized, (event): boolean => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    return win?.isMaximized() ?? false;
   });
 }

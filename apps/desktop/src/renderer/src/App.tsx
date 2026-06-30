@@ -8,6 +8,7 @@ import type {
   ThemePref,
 } from '../../shared/ipc-contract';
 import { SettingsPage } from './components/SettingsPage';
+import { TitleBar } from './components/TitleBar';
 
 function effectiveLocale(pref: LocalePref): Locale {
   if (pref === 'en' || pref === 'tr') return pref;
@@ -70,22 +71,22 @@ export function App() {
   }
 
   return (
-    <div className="min-h-screen bg-surface-base text-text-primary">
-      <header className="flex items-center border-b border-border px-6 py-3">
-        <h1 className="text-base font-semibold">{t.common.appName}</h1>
-      </header>
-      {prefs && status ? (
-        <SettingsPage
-          t={t}
-          prefs={prefs}
-          status={status}
-          onUpdatePrefs={onUpdatePrefs}
-          onSetKey={onSetKey}
-          onRemoveKey={onRemoveKey}
-        />
-      ) : (
-        <p className="px-6 py-8 text-sm text-text-secondary">…</p>
-      )}
+    <div className="flex h-screen flex-col bg-surface-base text-text-primary">
+      <TitleBar t={t} />
+      <div className="flex-1 overflow-auto">
+        {prefs && status ? (
+          <SettingsPage
+            t={t}
+            prefs={prefs}
+            status={status}
+            onUpdatePrefs={onUpdatePrefs}
+            onSetKey={onSetKey}
+            onRemoveKey={onRemoveKey}
+          />
+        ) : (
+          <p className="px-6 py-8 text-sm text-text-secondary">…</p>
+        )}
+      </div>
     </div>
   );
 }

@@ -12,6 +12,12 @@ export const tr: Resources = {
     showPassword: 'Göster',
     hidePassword: 'Gizle',
   },
+  window: {
+    minimize: 'Küçült',
+    maximize: 'Büyüt',
+    restore: 'Önceki boyut',
+    close: 'Kapat',
+  },
   commandPalette: {
     placeholder: "Bir komut yazın ya da Tepegöz'e sorun…",
     modeChat: 'Sohbet',

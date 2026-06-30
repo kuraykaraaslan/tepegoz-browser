@@ -12,3 +12,11 @@ body,
 #root {
   height: 100%;
 }
+
+/* Frameless-window drag regions for the custom title bar. */
+.app-drag {
+  -webkit-app-region: drag;
+}
+.app-no-drag {
+  -webkit-app-region: no-drag;
+}

@@ -13,6 +13,11 @@ export const IpcChannels = {
   credentialsStatus: 'credentials:status',
   credentialsSet: 'credentials:set',
   credentialsRemove: 'credentials:remove',
+  windowMinimize: 'window:minimize',
+  windowMaximizeToggle: 'window:maximize-toggle',
+  windowClose: 'window:close',
+  windowIsMaximized: 'window:is-maximized',
+  windowMaximizedChanged: 'window:maximized-changed',
 } as const;
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];
@@ -54,5 +59,12 @@ export interface TepegozApi {
   /** Renderer → main only (user-entered key). The raw key never flows back to the renderer. */
   setProviderKey(provider: ProviderId, apiKey: string): Promise<CredentialsStatus>;
   removeProviderKey(provider: ProviderId): Promise<CredentialsStatus>;
+  // Custom window chrome (frameless): caption controls.
+  minimizeWindow(): void;
+  toggleMaximizeWindow(): void;
+  closeWindow(): void;
+  isWindowMaximized(): Promise<boolean>;
+  /** Subscribe to maximize/restore state changes; returns an unsubscribe function. */
+  onWindowMaximizedChange(callback: (maximized: boolean) => void): () => void;
   readonly platform: string;
 }
