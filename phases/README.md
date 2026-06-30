@@ -17,11 +17,28 @@ them** with `- [ ]` / `- [x]`. This keeps the process resumable across sessions.
 | 1a | [phase-1a-walking-skeleton-mvp.md](phase-1a-walking-skeleton-mvp.md) | Walking-skeleton MVP (BYO-key local-first agentic core) | ⬜ Not started |
 | 1b | [phase-1b-agentic-deepening.md](phase-1b-agentic-deepening.md) | Parallel DAG + durable handoff + per-task memory + prompt/rules | ⬜ Not started |
 | 2 | [phase-2-adapters-safe-browsing.md](phase-2-adapters-safe-browsing.md) | Integration adapters + Safe-Browsing Suite | ⬜ Not started |
+| 2b | [phase-2b-daily-driver-ux.md](phase-2b-daily-driver-ux.md) | Daily-driver browser UX (tabs/PWA/DevTools) — parallel with Phase 2 | ⬜ Not started |
 | 3 | [phase-3-backend-cloud-extensions.md](phase-3-backend-cloud-extensions.md) | Managed subscription + cloud memory sync + extensions | ⬜ Not started |
 | 4 | [phase-4-maturation.md](phase-4-maturation.md) | Maturation (full extensions, cross-platform, enterprise) | ⬜ Not started |
 | 5 | [phase-5-vpn-network-privacy.md](phase-5-vpn-network-privacy.md) | Per-profile VPN tunnels + Tor (network privacy) | ⬜ Not started |
+| 6 | [phase-6-deterministic-automation.md](phase-6-deterministic-automation.md) | Deterministic replayable automation (RecipeCompiler + Watchers + Scheduler + Macros) | ⬜ Not started |
+| 7 | [phase-7-verifiable-accountability.md](phase-7-verifiable-accountability.md) | Verifiable accountability & proof-of-run (Notary + Dashboard + Dry-Run + Data Rights) | ⬜ Not started |
+| 8 | [phase-8-local-intelligence-sovereignty.md](phase-8-local-intelligence-sovereignty.md) | Local-first intelligence & sovereignty (air-gapped mode + Trust Mesh + semantic history/KG) | ⬜ Not started |
+| 9 | [phase-9-safe-autonomy-delegation.md](phase-9-safe-autonomy-delegation.md) | Safe autonomy & governed delegation (Mandates + Policy Bundles + Agent Endpoints) | ⬜ Not started |
+| 10 | [phase-10-daily-driver-delight.md](phase-10-daily-driver-delight.md) | Daily-driver delight (Time-Travel Tabs + Tab Janitor + Research Canvas + Magic Moment) | ⬜ Not started |
+| 10b | [phase-10b-accessibility-voice-reach.md](phase-10b-accessibility-voice-reach.md) | Accessibility, voice & inclusive reach (Assistive Mode + voice HITL + Guarded profiles) — parallel with 10 | ⬜ Not started |
+| 11 | [phase-11-regional-trust-kamu.md](phase-11-regional-trust-kamu.md) | Regional trust pack (e-Devlet/GİB/SGK/MHRS Kamu adapters + Locale-as-a-Plugin) | ⬜ Not started |
+| 12 | [phase-12-developer-platform-marketplace.md](phase-12-developer-platform-marketplace.md) | Developer platform & marketplace economy (SDK/CLI + Site-Recipe Library + SBOM gate) | ⬜ Not started |
 
 Status legend: ⬜ Not started · 🟡 In progress · ✅ Done (DoD passed)
+
+> **Phases 6–12 are the _next-horizon_ track** distilled from the "beyond Phases 0–5" synthesis — they build
+> **on top of a finished Phases 0–5**, not gaps in it. Through-line: tepegöz's event-sourced + deterministic +
+> policy-gated DNA is a set of latent products no cloud-LLM competitor can build —
+> **"Demonstrate once, run forever, prove everything, leak nothing."** Sequence these by their `Depends on`
+> field, **not** by number (e.g. 6 + 7 are near-horizon foundations; `10b` runs **parallel** with `10`; 12 is
+> adoption-gated). New ADRs for these phases continue from **0012** (`0011` is reserved for Phase 5 VPN) and are
+> written at each phase's start, per the existing convention.
 
 ## Cross-cutting compliance gates applied to EVERY phase (see plan §13)
 
@@ -42,3 +59,46 @@ These apply in every phase; a phase DoD does not close without them:
 2. Do tasks in order; tick each finished one with `- [x]`.
 3. When all of a phase's DoD checkboxes are ticked, set Status to ✅ and update the table above.
 4. Move to the next phase.
+
+## Deferred / adoption-gated backlog (from the beyond-phases synthesis)
+
+Sound, DNA-aligned, but **not headline bets** — parked here so they aren't lost. Promote an item into a phase
+once its parent foundation has shipped and demand is shown.
+
+**Second-order enrichments (ride a parent phase):** personal-dashboard new-tab briefing · offline reading queue
+· "Look Packs" theming (S-effort polish on theme tokens + marketplace signing) · failure-replay learning ·
+time-travel debugger · replayable RAG provenance · memory firewall (redaction refinement of the Trust Mesh) ·
+multi-agent crews · agent-builds-agent · journal-mined proactive suggestions. _(Each is a smaller surface on
+Phase 6 RecipeCompiler / Phase 7 Notary+fold / Phase 8 global index / Phase 1a–2b UI.)_
+
+**Deprioritized moonshots (with reason):**
+- **TEE / confidential-computing** for the managed proxy — Provider Trust Mesh + Sovereign Mode (Phase 8) give
+  the same "operator can't read your data" guarantee by keeping data local, far cheaper. Revisit if a buyer
+  demands server-side attested compute.
+- **ZK proof of policy compliance** — Notary Replay Receipts + the deterministic causal explainer (Phase 7)
+  already give content-free, third-party-verifiable proof. Revisit only for content-hiding-proof demand.
+- **Post-quantum hybrid envelope** for CloudSync/journal — low present impact; a versioned `crypto_suite`
+  agility field now, defer ML-KEM/ML-DSA until sync has real volume.
+- **On-device LoRA/QLoRA personalization + federated LoRA sync** — KG + RAG provenance (Phase 8) already give
+  inspectable, deletable, rebuildable personalization without baking PII into opaque weights.
+- **Data-Dignity Vault / behavioral-data marketplace** — keep the local vault + Memory Audit primitives; cut
+  the sell-your-data market (KVKK/GDPR entanglement + brand risk).
+- **Cross-org A2A negotiation protocol** — ship the standalone primitives (signed identity, notarized
+  transcript, mandate bounding, scoped grants — Phases 7/9); defer the protocol until counterparty adoption
+  exists.
+- **Decentralized identity / W3C VC / EUDI-eIDAS wallet** — constrain to `did:key` + signed Replay Receipts;
+  treat EUDI as a future pluggable adapter.
+- **Mobile companion read-only approver app** — DNA-sound (no agent/keys on phone, out-of-band HITL via E2EE
+  relay + fencing token), but a whole second platform; deferred behind desktop wedges.
+- **Roughtime / secure-time service** — minimal time-stamping lives inside NotaryService; defer a standalone
+  multi-server anchor until anchoring/VC features are in demand.
+- **Deepfake/AI-voice shield + C2PA provenance reading** — AgentThreatShield (Phase 2) + Content Sanitizer
+  cover the deterministic baseline; C2PA web adoption too partial. The net-new sliver (session-level egress
+  covert-channel scoring that **escalates to HITL, never silently blocks**) folds into the Egress Firewall
+  Rust port — advisory only.
+
+**Already planned — do NOT re-propose (consume the seam instead):** VPN/Tor/kill-switch → Phase 5 ·
+local-SLM / per-task memory / HybridRetriever / cost-saver toggle / vision fallback / MCP server (Bearer +
+rate-limit + Policy re-pass) / Effect-Ledger fencing / cross-model Context Package → Phase 1b · WebAuthn-passkey
++ built-in password manager → Phase 2 · managed-proxy Zero-Trust gateway / E2EE CloudSync (CRDT) / MV3 allowlist
+/ RBAC-SIEM-SSO-SOC2 / cross-platform / version-tagged ASR publication → Phases 3–4.

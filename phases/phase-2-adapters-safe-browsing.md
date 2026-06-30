@@ -7,8 +7,9 @@
 ## Exit criteria (DoD)
 - [ ] At least Gmail + Drive + Calendar adapters work end-to-end via official API; Canva via MCP
 - [ ] Adblock + Safe Browsing + AgentThreatShield active; cookie editor works
+- [ ] Cookie isolation + fingerprinting protection + per-site data clearing active; WebAuthn/passkey + built-in password manager work (agent access OFF)
 - [ ] Adapter health-check + version-pinning + regression suite exist; security re-evaluated on browser fallback
-- [ ] **i18n:** en+tr keys added for new surfaces (adapter consent/scope screens, safe-browsing settings, cookie editor)
+- [ ] **i18n:** en+tr keys added for new surfaces (adapter consent/scope screens, safe-browsing settings, cookie editor, cookie-isolation/fingerprint toggles, password manager/passkey UI)
 - [ ] Coverage + self-review + UAT signoff + migration-safe
 
 ## Tasks
@@ -27,9 +28,16 @@
 - [ ] `SafeBrowsingService` full: Google Safe Browsing v5 Update API (local hash-prefix) + community blocklist
 - [ ] `AgentThreatShield`: **local SLM** (landed in Phase 1b) scam/phishing scoring + egress anomaly → on high risk agent-lockout + HITL; anti-blabbering
 - [ ] `PopupAndPermissionGuard`: `setWindowOpenHandler` + background open; single policy-engine (no parallel permission flow)
+- [ ] **Third-party cookie isolation (Total-Cookie-Protection style)**: per-site state partitioning on top of Chromium's partition mechanism (consistent with **per-partition** adblock above); Firefox TCP as reference — **ADR required** (partition scope per-context vs. per-site; must NOT break logged-in adapter/`BrowserBackend` sessions)
+- [ ] **Fingerprinting protection**: noise on canvas/WebGL/font/audio entropy + `navigator` surface reduction; **per-site toggle** (strict/standard) for breakage — **ADR required** (scope + determinism/replay impact; agent's own automation runs `standard`, observations recorded per ADR-0004)
 
 ### Cookie & Storage editor (extra requirement #8)
 - [ ] `CookieAndStorageInspector`: CDP/`session.cookies` **DevTools-only** inspect-edit; fully isolated from OAuth vault; **agent access off by default**
+- [ ] **Per-site data clearing** ("Forget this site" / `Clear-Site-Data`): cookies + storage + cache + service-worker + permissions in one action; isolated from OAuth vault — **ADR required**: clearing recorded as a `SiteDataCleared` event (append-only "shown=recorded", ADR-0004) + user warning on silent credential loss
+
+### Credentials & Passkey (daily-driver) — **ADR required** (trust model, at phase start)
+- [ ] **Full WebAuthn / passkey**: enable `navigator.credentials` in renderer + `setDevicePermissionHandler` (platform authenticator / Windows Hello bridge — shares the Windows Hello HITL path from Phase 1a)
+- [ ] **Built-in password manager**: autofill + strong-password generation + `safeStorage`-encrypted vault + vault UI; breach/leak warning optional. **Constraint:** vault lives in main process (`safeStorage`, ADR-0005); renderer gets autofill only via narrow/zod-validated IPC; **agent access OFF by default** (ADR-0006 sensitive-site lockout already covers "password managers"). Cross-reference Phase 3 **password E2EE sync** + **Bitwarden native adapter** (sync/external layer; this is the local engine)
 
 ### Extensibility
 - [ ] Adapter Registry + Community SDK skeleton: signed `adapter.json` + sandbox + install-time scope-review
