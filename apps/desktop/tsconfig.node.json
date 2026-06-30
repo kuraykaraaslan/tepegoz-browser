@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": { "@/*": ["src/*"] },
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "noEmit": true
+  },
+  "comment": "Main + preload: NO DOM lib — enforces that privileged code never touches DOM globals.",
+  "include": ["src/main/**/*", "src/preload/**/*", "src/shared/**/*"]
+}

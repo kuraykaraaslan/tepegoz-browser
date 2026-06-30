@@ -27,7 +27,7 @@ No product features; the decisions made here would force a full rewrite if wrong
 - [x] root base `tsconfig.base.json` (strict, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, Bundler resolution, paths `@/*`) — all packages extend  _(dropped `ignoreDeprecations`: invalid on TS 5.7 + unneeded with Bundler resolution)_
 - [x] `eslint.config.mjs` (flat config; typescript-eslint strict **type-checked** + `no-floating-promises`) + `.prettierrc.json` + `.editorconfig`
 - [x] `dependency-cruiser.cjs` — no-circular + no-orphans + not-to-dev-dep (concrete L-layer rules added when those packages land)
-- [ ] `electron.vite.config.ts` (main/preload/renderer 3 targets) — **plain Vite FORBIDDEN**
+- [x] `electron.vite.config.ts` (main/preload/renderer 3 targets; preload forced **CJS `index.js`** for sandbox) — `apps/desktop` builds green
 - [ ] `electron-builder.yml` (Windows NSIS, appId `com.tepegoz.browser` **frozen**, fuses block, `asarUnpack: ['**/*.node']`, `electron-updater`)
 
 ### shared-types (single source of truth)
@@ -42,10 +42,10 @@ No product features; the decisions made here would force a full rewrite if wrong
 - [x] `libs/messages.ts` — constant operator/log messages (no inline throw strings)
 
 ### core-shell (L0) skeleton
-- [ ] single `createWindow()` factory (contextIsolation/sandbox/nodeIntegration:false/webSecurity:true)
-- [ ] Electron fuses (runAsNode=false, onlyLoadAppFromAsar, asar integrity, cookie encryption)
+- [x] single `createWindow()` factory (contextIsolation/sandbox/nodeIntegration:false/webSecurity:true) + `setWindowOpenHandler` deny + `will-navigate` deny + permission deny-by-default (`src/main/{window,security}.ts`)
+- [ ] Electron fuses (runAsNode=false, onlyLoadAppFromAsar, asar integrity, cookie encryption) — packaging step (with electron-builder)
 - [ ] launch with `--use-system-ca`; power-monitor resume hook skeleton; per-profile partition isolation
-- [ ] preload: typed `contextBridge`; NO raw `ipcRenderer` exposed; `src/shared/*.contract.ts` IPC channel registry (each handler validates payload-zod + sender allow-list)
+- [x] preload: typed `contextBridge` (`window.tepegoz`); NO raw `ipcRenderer`; `src/shared/ipc-contract.ts` channel registry; main validates sender allow-list + output schema (`src/main/ipc.ts`)
 
 ### persistence + Event Journal (L1)
 - [ ] `packages/persistence` — better-sqlite3 (WAL, `synchronous=NORMAL`)
