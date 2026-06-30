@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+          cache: pnpm
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck · lint · test · build
+        run: pnpm exec turbo run typecheck lint test build
+      - name: Dependency audit (report high/critical)
+        run: pnpm audit --audit-level=high || true
+
+  commit-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reject AI attribution trailers (internal-ai-rules)
+        shell: bash
+        run: |
+          base="${{ github.event.pull_request.base.sha }}"
+          [ -z "$base" ] && base="${{ github.event.before }}"
+          if [ -z "$base" ] || ! git rev-parse --verify -q "$base^{commit}" >/dev/null 2>&1; then
+            range="HEAD~1..HEAD"
+          else
+            range="$base..HEAD"
+          fi
+          if git log "$range" --format='%B' 2>/dev/null \
+            | grep -Eiq 'co-?authored-?by:[[:space:]]*claude|generated with .*claude'; then
+            echo "::error::AI attribution trailer found in a commit message (forbidden by internal-ai-rules)."
+            exit 1
+          fi
+          echo "Commit policy OK ($range)."

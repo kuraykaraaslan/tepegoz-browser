@@ -59,10 +59,10 @@ No product features; the decisions made here would force a full rewrite if wrong
 - [ ] `src/workers/` utilityProcess skeleton (deferred init after ready-to-show)
 
 ### CI/CD
-- [ ] `.github/workflows/ci.yml` — PR: frozen-lockfile install → lint → typecheck → test → build (unsigned)
-- [ ] coverage gate (S80/B70/F80/L80) + reject focused/skipped tests + AI-trailer commit lint + `pnpm audit`
-- [ ] `.github/workflows/release.yml` — tag-driven **per-OS matrix** (fail-fast:false), `install-app-deps` native rebuild, signing step skeleton
-- [ ] Start Windows code-signing identity (Azure Trusted Signing / EV) — **BLOCKING (distribution)**
+- [x] `.github/workflows/ci.yml` — push/PR: frozen-lockfile install → turbo typecheck/lint/test/build + `pnpm audit` (report) + **AI-trailer commit-policy job**
+- [ ] coverage gate (S80/B70/F80/L80) + reject focused/skipped tests — _deferred: enforce thresholds once substantive logic lands (Phase 1a)_
+- [x] `.github/workflows/release.yml` — tag-driven **per-OS matrix** (fail-fast:false), native rebuild per-OS; packaging/signing step = TODO (see below)
+- [ ] Start Windows code-signing identity (Azure Trusted Signing / EV) — **BLOCKING (distribution)** — _user action_
 
 ### Documentation & security
 - [ ] root + per-package `README.md` (purpose/stack/setup/env/scripts/structure)

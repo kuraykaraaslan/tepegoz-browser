@@ -1,0 +1,32 @@
+name: Release
+
+# Tag-driven, per-OS matrix. Native modules (better-sqlite3, …) and OS installers cannot be
+# cross-compiled, so each OS builds on its own runner.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+          cache: pnpm
+      - name: Install (frozen lockfile, native rebuild per-OS)
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck · lint · test · build
+        run: pnpm exec turbo run typecheck lint test build
+      # TODO(Phase 0 packaging): electron-builder + code signing (Windows Authenticode / Azure Trusted
+      # Signing; macOS Developer ID + notarize) + electron-updater publish to a signed HTTPS feed.
+      # BLOCKING for distribution — requires a signing identity. Unsigned builds are dev-only.
