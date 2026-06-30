@@ -30,6 +30,11 @@ export const en = {
     reload: 'Reload',
     omniboxPlaceholder: 'Search or enter address',
     settings: 'Settings',
+    // Tab right-click menu (native), mirroring Chrome's tab context menu.
+    newTabRight: 'New tab to the right',
+    duplicateTab: 'Duplicate',
+    closeOtherTabs: 'Close other tabs',
+    closeTabsRight: 'Close tabs to the right',
   },
   commandPalette: {
     placeholder: 'Type a command or ask Tepegöz…',

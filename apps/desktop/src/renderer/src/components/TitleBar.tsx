@@ -24,10 +24,11 @@ export function TitleBar({ t, tabs, activeId, onSelectTab, onNewTab }: TitleBarP
         <span className="h-2.5 w-2.5 rounded-full bg-primary" aria-hidden="true" />
         <h1 className="text-xs font-semibold text-text-primary">{t.common.appName}</h1>
       </div>
-      <div className="flex items-end pt-1.5">
+      {/* flex-1 + min-w-0: the strip fills the space between the brand and the caption controls so
+          tabs have real width to grow into; its trailing empty track stays a window-drag region. */}
+      <div className="flex min-w-0 flex-1 items-end pt-1.5">
         <TabStrip t={t} tabs={tabs} activeId={activeId} onSelect={onSelectTab} onNew={onNewTab} />
       </div>
-      <div className="h-full flex-1" />
       <WindowControls t={t} />
     </header>
   );

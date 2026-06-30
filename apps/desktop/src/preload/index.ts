@@ -54,6 +54,9 @@ const api: TepegozApi = {
   activateTab: (id: string) => {
     ipcRenderer.send(IpcChannels.tabsActivate, id);
   },
+  showTabContextMenu: (id: string) => {
+    ipcRenderer.send(IpcChannels.tabsContextMenu, id);
+  },
   navigateTab: (input: string) => {
     ipcRenderer.send(IpcChannels.tabsNavigate, input);
   },

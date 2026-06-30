@@ -22,6 +22,7 @@ interface Tab {
   title: string;
   url: string;
   isLoading: boolean;
+  faviconUrl: string | null;
 }
 
 export default class TabManager {
@@ -61,7 +62,7 @@ export default class TabManager {
         partition: BROWSING_PARTITION,
       },
     });
-    const tab: Tab = { id, view, title: '', url: '', isLoading: true };
+    const tab: Tab = { id, view, title: '', url: '', isLoading: true, faviconUrl: null };
     TabManager.tabs.set(id, tab);
     TabManager.wireView(tab);
 
@@ -118,6 +119,51 @@ export default class TabManager {
     }
   }
 
+  /** Reload a specific tab (context menu) — distinct from reloadActive (omnibox/shortcut). */
+  static reloadTab(id: string): void {
+    TabManager.tabs.get(id)?.view.webContents.reload();
+  }
+
+  /** Open a fresh tab immediately to the right of `refId` and focus it (Chrome's "New tab to the right"). */
+  static createTabRight(refId: string): void {
+    if (!TabManager.tabs.has(refId)) return;
+    const newId = TabManager.createTab();
+    TabManager.placeAfter(newId, refId);
+    TabManager.emitState();
+  }
+
+  /** Duplicate a tab's current URL into a new tab placed right after it, and focus it. */
+  static duplicateTab(id: string): void {
+    const src = TabManager.tabs.get(id);
+    if (!src) return;
+    const url = src.view.webContents.getURL() || src.url;
+    const newId = TabManager.createTab(url.length > 0 ? url : undefined);
+    TabManager.placeAfter(newId, id);
+    TabManager.emitState();
+  }
+
+  /** Close every tab except `id`, keeping `id` active. */
+  static closeOtherTabs(id: string): void {
+    if (!TabManager.tabs.has(id)) return;
+    if (TabManager.activeId !== id) TabManager.activate(id);
+    for (const other of [...TabManager.tabs.keys()].filter((k) => k !== id)) {
+      TabManager.closeTab(other);
+    }
+  }
+
+  /** Close all tabs ordered after `id`. */
+  static closeTabsToRight(id: string): void {
+    const ids = [...TabManager.tabs.keys()];
+    const idx = ids.indexOf(id);
+    if (idx === -1) return;
+    const toClose = ids.slice(idx + 1);
+    // If the active tab is being closed, fall back to the reference tab first.
+    if (TabManager.activeId !== null && toClose.includes(TabManager.activeId)) {
+      TabManager.activate(id);
+    }
+    for (const k of toClose) TabManager.closeTab(k);
+  }
+
   static navigateActive(rawUrl: string): void {
     const tab = TabManager.active();
     if (!tab) return;
@@ -169,6 +215,7 @@ export default class TabManager {
       title: t.title,
       url: t.url,
       isLoading: t.isLoading,
+      faviconUrl: t.faviconUrl,
     }));
     const active = TabManager.active();
     return {
@@ -177,6 +224,18 @@ export default class TabManager {
       canGoBack: active?.view.webContents.navigationHistory.canGoBack() ?? false,
       canGoForward: active?.view.webContents.navigationHistory.canGoForward() ?? false,
     };
+  }
+
+  /** Reorder the (insertion-ordered) tab map so `movedId` sits immediately after `refId`. */
+  private static placeAfter(movedId: string, refId: string): void {
+    if (movedId === refId) return;
+    const moved = TabManager.tabs.get(movedId);
+    if (!moved) return;
+    const entries = [...TabManager.tabs.entries()].filter(([k]) => k !== movedId);
+    const idx = entries.findIndex(([k]) => k === refId);
+    entries.splice(idx === -1 ? entries.length : idx + 1, 0, [movedId, moved]);
+    TabManager.tabs.clear();
+    for (const [k, v] of entries) TabManager.tabs.set(k, v);
   }
 
   private static active(): Tab | undefined {
@@ -217,11 +276,21 @@ export default class TabManager {
       tab.title = title;
       TabManager.emitState();
     });
+    // Electron sends every favicon a page declares; the last is typically the largest/most specific.
+    wc.on('page-favicon-updated', (_e, favicons) => {
+      tab.faviconUrl = favicons.at(-1) ?? null;
+      TabManager.emitState();
+    });
     wc.on('did-start-loading', () => {
       tab.isLoading = true;
       TabManager.emitState();
     });
     wc.on('did-stop-loading', sync);
+    // A committed top-level navigation means a new document — drop the old favicon so a stale icon
+    // from the previous page can't linger (the new one arrives via page-favicon-updated).
+    wc.on('did-navigate', () => {
+      tab.faviconUrl = null;
+    });
     wc.on('did-navigate', sync);
     wc.on('did-navigate-in-page', sync);
   }

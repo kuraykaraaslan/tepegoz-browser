@@ -25,6 +25,7 @@ export const IpcChannels = {
   tabsGoBack: 'tabs:go-back',
   tabsGoForward: 'tabs:go-forward',
   tabsReload: 'tabs:reload',
+  tabsContextMenu: 'tabs:context-menu',
   tabsSetBounds: 'tabs:set-bounds',
   tabsSetContentVisible: 'tabs:set-content-visible',
   tabsGetState: 'tabs:get-state',
@@ -66,6 +67,8 @@ export interface TabInfo {
   title: string;
   url: string;
   isLoading: boolean;
+  /** Page favicon URL (http(s)/data:), or null when the page has none yet. */
+  faviconUrl: string | null;
 }
 
 export interface TabsState {
@@ -103,6 +106,8 @@ export interface TepegozApi {
   createTab(url?: string): void;
   closeTab(id: string): void;
   activateTab(id: string): void;
+  /** Pop the native right-click menu for a tab (Chrome-style), acted on in the main process. */
+  showTabContextMenu(id: string): void;
   /** Navigate the ACTIVE tab (omnibox). */
   navigateTab(input: string): void;
   tabGoBack(): void;

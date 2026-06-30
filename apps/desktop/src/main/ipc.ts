@@ -24,6 +24,7 @@ import { isTrustedAppUrl } from './lib/trusted-origin';
 import CredentialVault from './security/credential-vault';
 import PreferenceStore from './preferences/preference-store';
 import TabManager from './tabs';
+import { showTabContextMenu } from './menus/tab-context-menu';
 
 /** Reject IPC from frames that are not our own app content (exact-host allow-list). */
 function assertTrustedSender(event: IpcMainInvokeEvent): void {
@@ -144,6 +145,18 @@ export function registerIpc(): void {
   });
   onAction(IpcChannels.tabsActivate, TabIdSchema, (id) => {
     TabManager.activate(id);
+  });
+  // Native tab context menu: needs the sender's window to anchor the popup, so it can't use the
+  // window-less onAction helper.
+  ipcMain.on(IpcChannels.tabsContextMenu, (event: IpcMainEvent, payload: unknown) => {
+    if (!isTrustedAppUrl(event.senderFrame?.url ?? '')) return;
+    const parsed = TabIdSchema.safeParse(payload);
+    if (!parsed.success) {
+      Logger.warn('Ignored tabs:context-menu: invalid payload');
+      return;
+    }
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) showTabContextMenu(win, parsed.data);
   });
   onAction(IpcChannels.tabsNavigate, NavigateInputSchema, (url) => {
     TabManager.navigateActive(url);

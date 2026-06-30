@@ -20,3 +20,12 @@ body,
 .app-no-drag {
   -webkit-app-region: no-drag;
 }
+
+/* Horizontally scrollable but chromeless — used by the tab strip so overflowing tabs can be
+   scrolled (wheel/trackpad) without a visible scrollbar eating vertical space. */
+.no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chromium (Electron) */
+}
