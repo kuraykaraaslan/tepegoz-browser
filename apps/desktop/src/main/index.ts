@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, powerMonitor } from 'electron';
 import { Logger } from '@tepegoz/libs';
 import { createWindow } from './window';
 import { installSecurity } from './security';
@@ -40,6 +40,15 @@ if (!app.requestSingleInstanceLock()) {
       installSecurity();
       registerIpc();
       bootstrap();
+
+      // Sleep/resume hooks. Phase 1b: the Recovery Coordinator resumes durable tasks from their last
+      // checkpoint on 'resume' (Opera Neon's "task drops on sleep" lesson).
+      powerMonitor.on('suspend', () => {
+        Logger.info('System suspending');
+      });
+      powerMonitor.on('resume', () => {
+        Logger.info('System resumed');
+      });
 
       app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {

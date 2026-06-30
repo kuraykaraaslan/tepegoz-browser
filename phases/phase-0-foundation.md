@@ -44,7 +44,7 @@ No product features; the decisions made here would force a full rewrite if wrong
 ### core-shell (L0) skeleton
 - [x] single `createWindow()` factory (contextIsolation/sandbox/nodeIntegration:false/webSecurity:true) + `setWindowOpenHandler` deny + `will-navigate` deny + permission deny-by-default (`src/main/{window,security}.ts`)
 - [ ] Electron fuses (runAsNode=false, onlyLoadAppFromAsar, asar integrity, cookie encryption) — packaging step (with electron-builder)
-- [ ] launch with `--use-system-ca`; power-monitor resume hook skeleton; per-profile partition isolation
+- [x] power-monitor suspend/resume hooks (Recovery Coordinator hook point, Phase 1b) + per-profile partition (`persist:tepegoz-app`) — _`--use-system-ca`: deferred (verify correct Electron/Node mechanism); Electron fuses → packaging step_
 - [x] preload: typed `contextBridge` (`window.tepegoz`); NO raw `ipcRenderer`; `src/shared/ipc-contract.ts` channel registry; main validates sender allow-list + output schema (`src/main/ipc.ts`)
 
 ### persistence + Event Journal (L1)
@@ -55,8 +55,8 @@ No product features; the decisions made here would force a full rewrite if wrong
 - [x] integration test harness (better-sqlite3, `:memory:`) — 5 tests green (journal + blob)
 
 ### native & workers (skeleton)
-- [ ] `packages/native-rs` (napi-rs) placeholder (egress/screenshot/checkpoint/SLM bridge) — **egress in TS for MVP**
-- [ ] `src/workers/` utilityProcess skeleton (deferred init after ready-to-show)
+- [x] `packages/native-rs` (napi-rs) placeholder (Cargo.toml + lib.rs + README; **no package.json** → not in JS build/CI yet) — **egress in TS for MVP**
+- [x] `src/main/workers/pool.ts` utilityProcess skeleton (`WorkerPool.initDeferred`, lazy after ready-to-show) — real workers Phase 1b
 
 ### CI/CD
 - [x] `.github/workflows/ci.yml` — push/PR: frozen-lockfile install → turbo typecheck/lint/test/build + `pnpm audit` (report) + **AI-trailer commit-policy job**

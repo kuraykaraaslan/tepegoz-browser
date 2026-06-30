@@ -19,6 +19,9 @@ export function createWindow(): BrowserWindow {
       nodeIntegration: false,
       webSecurity: true,
       spellcheck: false,
+      // App-chrome gets its own persistent partition. Browsed (untrusted) pages will later run in
+      // SEPARATE isolated partitions/WebContentsView, never sharing this session.
+      partition: 'persist:tepegoz-app',
     },
   });
 
