@@ -12,16 +12,21 @@ function guiEnv(): Record<string, string> {
   return env;
 }
 
-test('the app launches a window showing the Settings page', async () => {
+test('the app launches a browser window with chrome and a loaded tab', async () => {
   const app: ElectronApplication = await electron.launch({ args: [mainEntry], env: guiEnv() });
   try {
     const window = await app.firstWindow();
-    // The app shell heading.
+    // Brand in the custom title bar.
     await expect(window.locator('h1')).toHaveText('Tepegöz');
-    // The Settings page rendered — proves the preload bridge + prefs/credentials IPC + i18n all work
-    // (otherwise the "…" loading fallback would show instead of the page).
-    await expect(window.getByRole('heading', { name: 'Settings' })).toBeVisible();
-    await expect(window.getByText('Claude (Anthropic)')).toBeVisible();
+    // The browser chrome rendered: an omnibox and at least one tab.
+    await expect(window.locator('input[type="text"]')).toBeVisible();
+    await expect(window.locator('[role="tab"]').first()).toBeVisible();
+    // The first tab loads a real page in its WebContentsView — its title comes back over IPC
+    // (proves the chrome ↔ main ↔ browsing-view wiring end to end). Two web contents exist.
+    await expect.poll(() => app.windows().length).toBeGreaterThanOrEqual(2);
+    await expect
+      .poll(async () => window.locator('[role="tab"]').first().innerText())
+      .toContain('DuckDuckGo');
   } finally {
     await app.close();
   }

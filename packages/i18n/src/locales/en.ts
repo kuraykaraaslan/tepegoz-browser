@@ -20,6 +20,16 @@ export const en = {
     restore: 'Restore',
     close: 'Close',
   },
+  browser: {
+    newTab: 'New tab',
+    closeTab: 'Close tab',
+    untitled: 'New Tab',
+    back: 'Back',
+    forward: 'Forward',
+    reload: 'Reload',
+    omniboxPlaceholder: 'Search or enter address',
+    settings: 'Settings',
+  },
   commandPalette: {
     placeholder: 'Type a command or ask Tepegöz…',
     modeChat: 'Chat',

@@ -2,9 +2,11 @@ import { contextBridge, ipcRenderer } from 'electron';
 import {
   IpcChannels,
   type AppInfo,
+  type ContentBounds,
   type CredentialsStatus,
   type Preferences,
   type ProviderId,
+  type TabsState,
   type TepegozApi,
 } from '../shared/ipc-contract';
 
@@ -41,6 +43,43 @@ const api: TepegozApi = {
     ipcRenderer.on(IpcChannels.windowMaximizedChanged, listener);
     return () => {
       ipcRenderer.removeListener(IpcChannels.windowMaximizedChanged, listener);
+    };
+  },
+  createTab: (url?: string) => {
+    ipcRenderer.send(IpcChannels.tabsCreate, url);
+  },
+  closeTab: (id: string) => {
+    ipcRenderer.send(IpcChannels.tabsClose, id);
+  },
+  activateTab: (id: string) => {
+    ipcRenderer.send(IpcChannels.tabsActivate, id);
+  },
+  navigateTab: (input: string) => {
+    ipcRenderer.send(IpcChannels.tabsNavigate, input);
+  },
+  tabGoBack: () => {
+    ipcRenderer.send(IpcChannels.tabsGoBack);
+  },
+  tabGoForward: () => {
+    ipcRenderer.send(IpcChannels.tabsGoForward);
+  },
+  tabReload: () => {
+    ipcRenderer.send(IpcChannels.tabsReload);
+  },
+  setContentBounds: (bounds: ContentBounds) => {
+    ipcRenderer.send(IpcChannels.tabsSetBounds, bounds);
+  },
+  setContentVisible: (visible: boolean) => {
+    ipcRenderer.send(IpcChannels.tabsSetContentVisible, visible);
+  },
+  getTabsState: () => ipcRenderer.invoke(IpcChannels.tabsGetState) as Promise<TabsState>,
+  onTabsState: (callback: (state: TabsState) => void) => {
+    const listener = (_event: unknown, state: TabsState): void => {
+      callback(state);
+    };
+    ipcRenderer.on(IpcChannels.tabsState, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.tabsState, listener);
     };
   },
   platform: process.platform,

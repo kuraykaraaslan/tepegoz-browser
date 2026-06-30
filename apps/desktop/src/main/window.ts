@@ -1,6 +1,7 @@
 import { BrowserWindow, shell } from 'electron';
 import { join } from 'node:path';
 import { IpcChannels } from '../shared/ipc-contract';
+import { isTrustedAppUrl } from './lib/trusted-origin';
 
 /**
  * The SINGLE secure window factory (internal-ai-rules BLOCKING): every BrowserWindow is created here
@@ -62,6 +63,14 @@ export function createWindow(): BrowserWindow {
       void shell.openExternal(url);
     }
     return { action: 'deny' };
+  });
+
+  // The chrome window is locked to app content — it must never navigate to web/arbitrary URLs
+  // (browsed pages live in separate WebContentsViews, governed by TabManager).
+  win.webContents.on('will-navigate', (event, url) => {
+    if (!isTrustedAppUrl(url)) {
+      event.preventDefault();
+    }
   });
 
   return win;

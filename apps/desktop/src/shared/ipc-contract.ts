@@ -18,6 +18,17 @@ export const IpcChannels = {
   windowClose: 'window:close',
   windowIsMaximized: 'window:is-maximized',
   windowMaximizedChanged: 'window:maximized-changed',
+  tabsCreate: 'tabs:create',
+  tabsClose: 'tabs:close',
+  tabsActivate: 'tabs:activate',
+  tabsNavigate: 'tabs:navigate',
+  tabsGoBack: 'tabs:go-back',
+  tabsGoForward: 'tabs:go-forward',
+  tabsReload: 'tabs:reload',
+  tabsSetBounds: 'tabs:set-bounds',
+  tabsSetContentVisible: 'tabs:set-content-visible',
+  tabsGetState: 'tabs:get-state',
+  tabsState: 'tabs:state',
 } as const;
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];
@@ -50,6 +61,28 @@ export interface CredentialsStatus {
   providers: ProviderKeyStatus;
 }
 
+export interface TabInfo {
+  id: string;
+  title: string;
+  url: string;
+  isLoading: boolean;
+}
+
+export interface TabsState {
+  tabs: TabInfo[];
+  activeId: string | null;
+  canGoBack: boolean;
+  canGoForward: boolean;
+}
+
+/** Content-area rectangle (DIP) where the active tab's web view is laid out, below the chrome. */
+export interface ContentBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 /** The exact surface bridged to `window.tepegoz` in the renderer. */
 export interface TepegozApi {
   getAppInfo(): Promise<AppInfo>;
@@ -66,5 +99,20 @@ export interface TepegozApi {
   isWindowMaximized(): Promise<boolean>;
   /** Subscribe to maximize/restore state changes; returns an unsubscribe function. */
   onWindowMaximizedChange(callback: (maximized: boolean) => void): () => void;
+  // Browser tabs (each is an isolated WebContentsView in the main process).
+  createTab(url?: string): void;
+  closeTab(id: string): void;
+  activateTab(id: string): void;
+  /** Navigate the ACTIVE tab (omnibox). */
+  navigateTab(input: string): void;
+  tabGoBack(): void;
+  tabGoForward(): void;
+  tabReload(): void;
+  /** Report the content-area rect so main can lay out the active web view below the chrome. */
+  setContentBounds(bounds: ContentBounds): void;
+  /** Hide/show the web view so a chrome overlay (e.g. Settings) can take the content area. */
+  setContentVisible(visible: boolean): void;
+  getTabsState(): Promise<TabsState>;
+  onTabsState(callback: (state: TabsState) => void): () => void;
   readonly platform: string;
 }

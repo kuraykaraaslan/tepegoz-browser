@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron';
+import { z } from 'zod';
 import { AppError, Logger, toBoundary } from '@tepegoz/libs';
 import {
   IpcChannels,
@@ -6,16 +7,23 @@ import {
   type CredentialsStatus,
   type IpcChannel,
   type Preferences,
+  type TabsState,
 } from '../shared/ipc-contract';
 import {
   AppInfoSchema,
+  ContentBoundsSchema,
+  ContentVisibleSchema,
+  CreateTabInputSchema,
+  NavigateInputSchema,
   RemoveProviderKeyInputSchema,
   SetProviderKeyInputSchema,
+  TabIdSchema,
 } from '../shared/ipc-schemas';
 import { PreferencesPatchSchema } from './preferences/preferences.model';
 import { isTrustedAppUrl } from './lib/trusted-origin';
 import CredentialVault from './security/credential-vault';
 import PreferenceStore from './preferences/preference-store';
+import TabManager from './tabs';
 
 /** Reject IPC from frames that are not our own app content (exact-host allow-list). */
 function assertTrustedSender(event: IpcMainInvokeEvent): void {
@@ -112,4 +120,49 @@ export function registerIpc(): void {
     const win = BrowserWindow.fromWebContents(event.sender);
     return win?.isMaximized() ?? false;
   });
+
+  // Browser tabs (fire-and-forget). Validate sender + payload; ignore anything untrusted/malformed.
+  const onAction = <T>(channel: string, schema: z.ZodType<T>, fn: (value: T) => void): void => {
+    ipcMain.on(channel, (event: IpcMainEvent, payload: unknown) => {
+      if (!isTrustedAppUrl(event.senderFrame?.url ?? '')) return;
+      const parsed = schema.safeParse(payload);
+      if (parsed.success) fn(parsed.data);
+      else Logger.warn(`Ignored ${channel}: invalid payload`);
+    });
+  };
+  const onSignal = (channel: string, fn: () => void): void => {
+    ipcMain.on(channel, (event: IpcMainEvent) => {
+      if (isTrustedAppUrl(event.senderFrame?.url ?? '')) fn();
+    });
+  };
+
+  onAction(IpcChannels.tabsCreate, CreateTabInputSchema, (url) => {
+    TabManager.createTab(url);
+  });
+  onAction(IpcChannels.tabsClose, TabIdSchema, (id) => {
+    TabManager.closeTab(id);
+  });
+  onAction(IpcChannels.tabsActivate, TabIdSchema, (id) => {
+    TabManager.activate(id);
+  });
+  onAction(IpcChannels.tabsNavigate, NavigateInputSchema, (url) => {
+    TabManager.navigateActive(url);
+  });
+  onSignal(IpcChannels.tabsGoBack, () => {
+    TabManager.goBack();
+  });
+  onSignal(IpcChannels.tabsGoForward, () => {
+    TabManager.goForward();
+  });
+  onSignal(IpcChannels.tabsReload, () => {
+    TabManager.reloadActive();
+  });
+  onAction(IpcChannels.tabsSetBounds, ContentBoundsSchema, (bounds) => {
+    TabManager.setContentBounds(bounds);
+  });
+  onAction(IpcChannels.tabsSetContentVisible, ContentVisibleSchema, (visible) => {
+    TabManager.setContentVisible(visible);
+  });
+
+  handle(IpcChannels.tabsGetState, (): TabsState => TabManager.getState());
 }

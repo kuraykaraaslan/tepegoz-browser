@@ -5,6 +5,7 @@ import { createWindow } from './window';
 import { installSecurity } from './security';
 import { registerIpc } from './ipc';
 import { initStores } from './stores.electron';
+import TabManager from './tabs';
 
 // App-specific identity → userData at %APPDATA%/Tepegöz instead of the shared default "Electron" dir.
 // This avoids cross-instance GPU/disk-cache contention ("Unable to move the cache: Access is denied").
@@ -12,6 +13,7 @@ app.setName('Tepegöz');
 
 function bootstrap(): void {
   const win = createWindow();
+  TabManager.attach(win);
   // Dev: electron-vite injects the renderer dev-server URL. Prod: load the built file.
   const devUrl = process.env['ELECTRON_RENDERER_URL'];
   if (devUrl !== undefined && devUrl.length > 0) {
@@ -19,6 +21,8 @@ function bootstrap(): void {
   } else {
     void win.loadFile(join(__dirname, '../renderer/index.html'));
   }
+  // Open the first tab (state is also fetched by the renderer via getTabsState on mount).
+  TabManager.createTab();
 }
 
 // Single instance: a second launch focuses the existing window rather than fighting over the cache.

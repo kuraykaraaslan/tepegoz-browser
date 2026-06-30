@@ -18,6 +18,16 @@ export const tr: Resources = {
     restore: 'Önceki boyut',
     close: 'Kapat',
   },
+  browser: {
+    newTab: 'Yeni sekme',
+    closeTab: 'Sekmeyi kapat',
+    untitled: 'Yeni Sekme',
+    back: 'Geri',
+    forward: 'İleri',
+    reload: 'Yenile',
+    omniboxPlaceholder: 'Ara veya adres gir',
+    settings: 'Ayarlar',
+  },
   commandPalette: {
     placeholder: "Bir komut yazın ya da Tepegöz'e sorun…",
     modeChat: 'Sohbet',
