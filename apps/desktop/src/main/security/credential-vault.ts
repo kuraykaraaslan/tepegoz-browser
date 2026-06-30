@@ -1,4 +1,3 @@
-import { z } from 'zod';
 import { AppError } from '@tepegoz/libs';
 import { AIProviderEnum, type AIProvider } from '@tepegoz/shared-types';
 import { readJsonFile, writeJsonFile } from '../lib/json-store';
@@ -19,8 +18,6 @@ export interface SecretCrypto {
 
 export type ProviderKeyStatus = Record<AIProvider, boolean>;
 
-const StoredMapSchema = z.record(z.string(), z.string());
-
 export default class CredentialVault {
   private static crypto: SecretCrypto | null = null;
   private static filePath = '';
@@ -30,8 +27,24 @@ export default class CredentialVault {
   static init(deps: { crypto: SecretCrypto; filePath: string }): void {
     CredentialVault.crypto = deps.crypto;
     CredentialVault.filePath = deps.filePath;
-    const parsed = StoredMapSchema.safeParse(readJsonFile(deps.filePath));
-    CredentialVault.store = parsed.success ? { ...parsed.data } : {};
+    CredentialVault.store = CredentialVault.load(readJsonFile(deps.filePath));
+  }
+
+  /**
+   * Lenient per-entry load: keep only string ciphertexts for KNOWN providers; drop malformed or
+   * unknown entries individually. A single bad/tampered value must NOT discard every stored key
+   * (whole-object zod fail-safe would), and stale/unknown provider entries are shed, not re-persisted.
+   */
+  private static load(raw: unknown): Record<string, string> {
+    const out: Record<string, string> = {};
+    if (typeof raw !== 'object' || raw === null) return out;
+    const known = new Set<string>(AIProviderEnum.options);
+    for (const [k, v] of Object.entries(raw)) {
+      if (known.has(k) && typeof v === 'string') {
+        out[k] = v;
+      }
+    }
+    return out;
   }
 
   /** Test seam. */
@@ -86,7 +99,11 @@ export default class CredentialVault {
     const p = AIProviderEnum.parse(provider);
     const b64 = CredentialVault.store[p];
     if (b64 === undefined) return null;
-    return CredentialVault.requireCrypto().decrypt(Buffer.from(b64, 'base64'));
+    const crypto = CredentialVault.requireCrypto();
+    if (!crypto.isAvailable()) {
+      throw new AppError('OS encryption is unavailable; cannot read the stored key', 503);
+    }
+    return crypto.decrypt(Buffer.from(b64, 'base64'));
   }
 
   private static requireCrypto(): SecretCrypto {

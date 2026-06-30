@@ -11,6 +11,8 @@ export const en = {
     retry: 'Retry',
     save: 'Save',
     settings: 'Settings',
+    showPassword: 'Show',
+    hidePassword: 'Hide',
   },
   commandPalette: {
     placeholder: 'Type a command or ask Tepegöz…',

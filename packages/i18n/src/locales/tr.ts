@@ -9,6 +9,8 @@ export const tr: Resources = {
     retry: 'Yeniden dene',
     save: 'Kaydet',
     settings: 'Ayarlar',
+    showPassword: 'Göster',
+    hidePassword: 'Gizle',
   },
   commandPalette: {
     placeholder: "Bir komut yazın ya da Tepegöz'e sorun…",

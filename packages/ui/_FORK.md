@@ -23,10 +23,19 @@ Only the atoms the current surfaces need are forked; more are pulled in as scree
 | `src/modules/ui/AlertBanner.tsx` | `modules/ui/AlertBanner.tsx` | import `@/libs/...` → relative |
 | `styles/tokens.css` | `app/globals.css` (token + `@theme inline` subset) | dropped leaflet/quill/sidebar/RTE blocks |
 
+## Local patches (beyond the `@/` → relative rewrite)
+Tracked here so a future upstream `diff` is explainable. These were applied after a security/a11y
+review flagged real defects in the vendored atoms:
+- `Input.tsx`: password show/hide toggle + clear button gained `focus-visible:ring-2
+  focus-visible:ring-border-focus rounded` (WCAG 2.2 AA SC 2.4.7 — the upstream had only
+  `focus-visible:outline-none`, leaving no visible keyboard focus). Added optional
+  `showPasswordLabel` / `hidePasswordLabel` props (default English) so the toggle's accessible name
+  can be localized (Turkish first-class); when omitted, behavior is identical to upstream.
+
 ## Conventions
 - The only transform on component sources is rewriting the `@/` path alias to relative imports
-  (this fork has no `@/` alias). Otherwise files are copied verbatim so a future `diff` against
-  upstream is clean.
+  (this fork has no `@/` alias). Otherwise files are copied verbatim (except the Local patches above)
+  so a future `diff` against upstream is clean.
 - The vendored sources under `src/modules/**` and `src/libs/**` are **excluded from repo ESLint**
   (root `eslint.config.mjs` ignores) — we do not restyle upstream code; drift is tracked here instead.
 - `lazy.tsx` (upstream) is intentionally NOT forked — it imports `next/dynamic`, which does not exist

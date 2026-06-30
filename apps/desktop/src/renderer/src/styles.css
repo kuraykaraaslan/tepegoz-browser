@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+/* Design tokens + Tailwind v4 theme mapping (forked KUIreact theme). */
+@import "@tepegoz/ui/styles/tokens.css";
+
+/* The KUIreact atoms live outside this app's Vite root, so Tailwind can't auto-detect their class
+   names — tell it to scan the fork's source. */
+@source "../../../../../packages/ui/src";
+
+html,
+body,
+#root {
+  height: 100%;
+}

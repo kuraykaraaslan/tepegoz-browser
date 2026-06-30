@@ -4,6 +4,7 @@ import { Logger } from '@tepegoz/libs';
 import { createWindow } from './window';
 import { installSecurity } from './security';
 import { registerIpc } from './ipc';
+import { initStores } from './stores.electron';
 
 // App-specific identity → userData at %APPDATA%/Tepegöz instead of the shared default "Electron" dir.
 // This avoids cross-instance GPU/disk-cache contention ("Unable to move the cache: Access is denied").
@@ -38,6 +39,7 @@ if (!app.requestSingleInstanceLock()) {
     .whenReady()
     .then(() => {
       installSecurity();
+      initStores();
       registerIpc();
       bootstrap();
 

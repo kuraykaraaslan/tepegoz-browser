@@ -12,13 +12,16 @@ function guiEnv(): Record<string, string> {
   return env;
 }
 
-test('the app launches a window showing the Tepegöz heading', async () => {
+test('the app launches a window showing the Settings page', async () => {
   const app: ElectronApplication = await electron.launch({ args: [mainEntry], env: guiEnv() });
   try {
     const window = await app.firstWindow();
+    // The app shell heading.
     await expect(window.locator('h1')).toHaveText('Tepegöz');
-    // The preload bridge populated platform (not the "unknown" fallback).
-    await expect(window.locator('small')).not.toContainText('unknown');
+    // The Settings page rendered — proves the preload bridge + prefs/credentials IPC + i18n all work
+    // (otherwise the "…" loading fallback would show instead of the page).
+    await expect(window.getByRole('heading', { name: 'Settings' })).toBeVisible();
+    await expect(window.getByText('Claude (Anthropic)')).toBeVisible();
   } finally {
     await app.close();
   }

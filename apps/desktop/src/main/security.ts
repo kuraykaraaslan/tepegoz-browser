@@ -1,4 +1,5 @@
 import { app } from 'electron';
+import { isTrustedAppUrl } from './lib/trusted-origin';
 
 /**
  * App-wide deny-by-default hardening (renderer = untrusted). Blocks navigation outside app content,
@@ -8,8 +9,7 @@ import { app } from 'electron';
 export function installSecurity(): void {
   app.on('web-contents-created', (_event, contents) => {
     contents.on('will-navigate', (event, url) => {
-      const allowed = url.startsWith('file://') || url.startsWith('http://localhost');
-      if (!allowed) {
+      if (!isTrustedAppUrl(url)) {
         event.preventDefault();
       }
     });

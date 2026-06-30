@@ -19,6 +19,9 @@ type InputProps = {
   onClear?: () => void;
   showCount?: boolean;
   maxLength?: number;
+  /** Localizable accessible names for the password show/hide toggle (default English). */
+  showPasswordLabel?: string;
+  hidePasswordLabel?: string;
   className?: string;
 } & React.InputHTMLAttributes<HTMLInputElement>;
 
@@ -35,6 +38,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({
   onClear,
   showCount,
   maxLength,
+  showPasswordLabel = 'Show password',
+  hidePasswordLabel = 'Hide password',
   className,
   value,
   onChange,
@@ -139,9 +144,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({
         {isPassword && !readOnly && (
           <button
             type="button"
-            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            aria-label={showPassword ? hidePasswordLabel : showPasswordLabel}
             onClick={() => setShowPassword((v) => !v)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-text-disabled hover:text-text-primary transition-colors focus-visible:outline-none text-sm"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-text-disabled hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus rounded text-sm"
           >
             <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} className="w-3.5 h-3.5" />
           </button>
@@ -153,7 +158,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({
             type="button"
             aria-label="Clear"
             onClick={onClear}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-text-disabled hover:text-text-primary transition-colors focus-visible:outline-none"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-text-disabled hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus rounded"
           >
             <FontAwesomeIcon icon={faXmark} className="w-3 h-3" />
           </button>

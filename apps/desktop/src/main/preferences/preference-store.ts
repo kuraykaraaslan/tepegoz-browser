@@ -4,6 +4,7 @@ import {
   PreferencesPatchSchema,
   PreferencesSchema,
   type Preferences,
+  type PreferencesPatch,
 } from './preferences.model';
 
 /**
@@ -34,7 +35,7 @@ export default class PreferenceStore {
     return { ...PreferenceStore.prefs };
   }
 
-  static update(patch: Partial<Preferences>): Preferences {
+  static update(patch: PreferencesPatch): Preferences {
     const validated = PreferencesPatchSchema.parse(patch);
     PreferenceStore.prefs = PreferencesSchema.parse({ ...PreferenceStore.prefs, ...validated });
     writeJsonFile(PreferenceStore.filePath, PreferenceStore.prefs);

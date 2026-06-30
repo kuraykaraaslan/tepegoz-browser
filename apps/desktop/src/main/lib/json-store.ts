@@ -1,4 +1,13 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  writeSync,
+} from 'node:fs';
 import { dirname } from 'node:path';
 
 /**
@@ -16,7 +25,22 @@ export function readJsonFile(filePath: string): unknown {
   }
 }
 
+/**
+ * Crash-safe write: serialize to a sibling temp file, fsync it, then atomically rename over the
+ * target (rename is atomic on the same volume). This prevents a crash/power-loss mid-write from
+ * leaving a truncated/invalid file — critical for the encrypted credential vault, where a corrupt
+ * file would otherwise be silently overwritten with an empty map on the next mutation.
+ */
 export function writeJsonFile(filePath: string, data: unknown): void {
   mkdirSync(dirname(filePath), { recursive: true });
-  writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+  const tmpPath = `${filePath}.tmp`;
+  const contents = JSON.stringify(data, null, 2);
+  const fd = openSync(tmpPath, 'w');
+  try {
+    writeSync(fd, contents, null, 'utf8');
+    fsyncSync(fd);
+  } finally {
+    closeSync(fd);
+  }
+  renameSync(tmpPath, filePath);
 }

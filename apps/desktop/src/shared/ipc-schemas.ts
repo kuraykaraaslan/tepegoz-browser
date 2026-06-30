@@ -4,10 +4,22 @@ import type { AppInfo } from './ipc-contract';
 /**
  * Runtime (zod) validation for IPC payloads — MAIN PROCESS ONLY. Kept separate from `ipc-contract.ts`
  * so the sandboxed preload never pulls zod into its bundle (sandboxed preloads can't require external
- * modules at runtime).
+ * modules at runtime). Validates the UNTRUSTED direction: inputs arriving from the renderer.
  */
 export const AppInfoSchema: z.ZodType<AppInfo> = z.object({
   name: z.string(),
   version: z.string(),
   platform: z.string(),
+});
+
+const ProviderIdSchema = z.enum(['anthropic', 'openai', 'gemini']);
+
+/** `credentials:set` payload — the only channel that carries a raw key (renderer → main). */
+export const SetProviderKeyInputSchema = z.object({
+  provider: ProviderIdSchema,
+  apiKey: z.string().min(1).max(500),
+});
+
+export const RemoveProviderKeyInputSchema = z.object({
+  provider: ProviderIdSchema,
 });
