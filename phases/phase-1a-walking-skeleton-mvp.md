@@ -1,6 +1,6 @@
 # Phase 1a — Walking-Skeleton MVP (BYO-key, local-first agentic core)
 
-**Status:** ⬜ Not started  ·  **Estimate:** ~3–4 months  ·  **Depends on:** Phase 0
+**Status:** 🟡 In progress  ·  **Estimate:** ~3–4 months  ·  **Depends on:** Phase 0
 **Goal:** A narrow but END-TO-END working agentic core that runs fully local-first with the user's OWN
 Claude/OpenAI/Gemini key — **observable + security-by-design**. ZERO dependency on a managed backend.
 Deliberately narrow scope (vision/WebMCP/parallel-DAG/checkpoint-resume/prompt-rules → Phase 1b) to avoid

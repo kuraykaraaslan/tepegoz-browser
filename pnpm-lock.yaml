@@ -110,6 +110,25 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.0)
 
+  packages/model-gateway:
+    dependencies:
+      '@tepegoz/libs':
+        specifier: workspace:*
+        version: link:../libs
+      '@tepegoz/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.0
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)
+
   packages/persistence:
     dependencies:
       '@tepegoz/shared-types':

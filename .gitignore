@@ -14,6 +14,8 @@ build/
 
 # Test / coverage
 coverage/
+test-results/
+playwright-report/
 *.log
 
 # Secrets & local config (NEVER commit) — BYO keys live in OS keychain, not files
