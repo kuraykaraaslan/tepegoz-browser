@@ -110,7 +110,19 @@ export function App() {
 
   return (
     <div className="flex h-screen flex-col bg-surface-base text-text-primary">
-      <TitleBar t={t} tabs={tabs.tabs} activeId={tabs.activeId} />
+      <TitleBar
+        t={t}
+        tabs={tabs.tabs}
+        activeId={tabs.activeId}
+        onSelectTab={(id) => {
+          setSettingsOpen(false); // make the page visible (web view is hidden while Settings is open)
+          window.tepegoz.activateTab(id);
+        }}
+        onNewTab={() => {
+          setSettingsOpen(false);
+          window.tepegoz.createTab();
+        }}
+      />
       <Toolbar
         t={t}
         currentUrl={currentUrl}

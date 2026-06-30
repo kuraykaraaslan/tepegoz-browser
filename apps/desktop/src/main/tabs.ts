@@ -1,6 +1,7 @@
 import { BrowserWindow, WebContentsView, type Rectangle } from 'electron';
 import { Logger } from '@tepegoz/libs';
 import { IpcChannels, type TabInfo, type TabsState } from '../shared/ipc-contract';
+import { isWebUrl, toNavigationUrl } from './lib/navigation-url';
 
 /**
  * L0 tab model. Each tab is an isolated `WebContentsView` in a SEPARATE browsing partition
@@ -35,17 +36,20 @@ export default class TabManager {
     TabManager.win = win;
   }
 
-  /** Convert omnibox input into a navigable URL: a scheme passes through, a bare domain gets https://,
-   *  anything else becomes a search query (DuckDuckGo). */
-  static toNavigationUrl(input: string): string {
-    const s = input.trim();
-    if (s.length === 0) return NEW_TAB_URL;
-    if (/^[a-z][a-z0-9+.-]*:\/\//i.test(s) || s.startsWith('about:')) return s;
-    if (!s.includes(' ') && /^[^\s.]+\.[^\s]{2,}(\/.*)?$/.test(s)) return `https://${s}`;
-    return `https://duckduckgo.com/?q=${encodeURIComponent(s)}`;
+  /** Tear down all tabs + state when the window closes (prevents stale tabs leaking into a
+   *  re-created window, e.g. macOS app 'activate'). */
+  static reset(): void {
+    for (const tab of TabManager.tabs.values()) {
+      if (!tab.view.webContents.isDestroyed()) tab.view.webContents.close();
+    }
+    TabManager.tabs.clear();
+    TabManager.activeId = null;
+    TabManager.win = null;
+    TabManager.contentVisible = true;
+    TabManager.bounds = { x: 0, y: 0, width: 0, height: 0 };
   }
 
-  static createTab(rawUrl?: string): string {
+  static createTab(rawUrl?: string, opts?: { background?: boolean }): string {
     TabManager.requireWin(); // fail fast if not attached to a window
     const id = String(TabManager.nextId++);
     const view = new WebContentsView({
@@ -61,12 +65,17 @@ export default class TabManager {
     TabManager.tabs.set(id, tab);
     TabManager.wireView(tab);
 
-    const target = rawUrl !== undefined ? TabManager.toNavigationUrl(rawUrl) : NEW_TAB_URL;
+    const target = rawUrl !== undefined ? toNavigationUrl(rawUrl, NEW_TAB_URL) : NEW_TAB_URL;
     void view.webContents.loadURL(target).catch((err: unknown) => {
       Logger.warn('Tab failed to load', { url: target, err: String(err) });
     });
 
-    TabManager.activate(id);
+    // Background tabs (e.g. a non-foreground page's window.open) must NOT steal the foreground.
+    if (opts?.background === true && TabManager.activeId !== null) {
+      TabManager.emitState();
+    } else {
+      TabManager.activate(id);
+    }
     return id;
   }
 
@@ -112,7 +121,7 @@ export default class TabManager {
   static navigateActive(rawUrl: string): void {
     const tab = TabManager.active();
     if (!tab) return;
-    const url = TabManager.toNavigationUrl(rawUrl);
+    const url = toNavigationUrl(rawUrl, NEW_TAB_URL);
     void tab.view.webContents.loadURL(url).catch((err: unknown) => {
       Logger.warn('Navigation failed', { url, err: String(err) });
     });
@@ -182,14 +191,21 @@ export default class TabManager {
   private static wireView(tab: Tab): void {
     const wc = tab.view.webContents;
 
-    // Browsed pages are untrusted: open new windows as new tabs; allow only web/about/data navigation.
+    // Browsed pages are untrusted. New windows open as tabs ONLY for http(s) URLs (no file:/custom
+    // schemes); a popup from a non-foreground tab opens in the background and must not steal focus.
     wc.setWindowOpenHandler(({ url }) => {
-      TabManager.createTab(url);
+      if (isWebUrl(url)) {
+        TabManager.createTab(url, { background: tab.id !== TabManager.activeId });
+      }
       return { action: 'deny' };
     });
-    wc.on('will-navigate', (event, url) => {
-      if (!/^(https?:|about:|data:)/i.test(url)) event.preventDefault();
-    });
+    // Block dangerous schemes on BOTH initial navigations and server-side redirects (will-navigate
+    // alone misses redirect hops). The programmatic loadURL path is guarded by toNavigationUrl.
+    const blockNonWeb = (event: { preventDefault: () => void }, url: string): void => {
+      if (!/^(https?:|about:)/i.test(url)) event.preventDefault();
+    };
+    wc.on('will-navigate', blockNonWeb);
+    wc.on('will-redirect', blockNonWeb);
 
     const sync = (): void => {
       tab.url = wc.getURL();

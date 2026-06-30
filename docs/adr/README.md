@@ -18,3 +18,5 @@ consequences (including rejected alternatives). Format is a lightweight [MADR](h
 | [0008](0008-perception-cdp.md) | DOM/a11y-first perception, vision fallback, WebMCP optional | Accepted |
 | [0009](0009-boundary-mapping.md) | Boundary mapping: HTTP-semantic AppError → IPC / tool-call | Accepted |
 | [0010](0010-ts-tooling-conventions.md) | TypeScript/tooling conventions & deviations | Accepted |
+| 0011 | _(reserved: VPN & network privacy — written in Phase 5)_ | Proposed |
+| [0012](0012-browser-tab-model.md) | Browser tab model — isolated WebContentsView per tab | Accepted |

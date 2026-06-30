@@ -21,6 +21,7 @@ export const en = {
     close: 'Close',
   },
   browser: {
+    tabs: 'Tabs',
     newTab: 'New tab',
     closeTab: 'Close tab',
     untitled: 'New Tab',

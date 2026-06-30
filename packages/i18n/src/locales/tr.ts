@@ -19,6 +19,7 @@ export const tr: Resources = {
     close: 'Kapat',
   },
   browser: {
+    tabs: 'Sekmeler',
     newTab: 'Yeni sekme',
     closeTab: 'Sekmeyi kapat',
     untitled: 'Yeni Sekme',

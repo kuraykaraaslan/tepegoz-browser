@@ -74,7 +74,8 @@ export function Toolbar({
         onSubmit={(e) => {
           e.preventDefault();
           window.tepegoz.navigateTab(value);
-          (document.activeElement as HTMLElement | null)?.blur();
+          // Keep focus (and the typed value) until navigation commits; the focus guard then re-syncs
+          // to the real URL on blur. Blurring here would snap the box back to the OLD url mid-load.
         }}
       >
         <input

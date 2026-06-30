@@ -23,6 +23,9 @@ function bootstrap(): void {
   }
   // Open the first tab (state is also fetched by the renderer via getTabsState on mount).
   TabManager.createTab();
+  win.on('closed', () => {
+    TabManager.reset();
+  });
 }
 
 // Single instance: a second launch focuses the existing window rather than fighting over the cache.

@@ -12,8 +12,11 @@ import { app } from 'electron';
  */
 export function installSecurity(): void {
   app.on('web-contents-created', (_event, contents) => {
+    // Async request path (getUserMedia, geolocation, notifications, …) AND the synchronous check
+    // path (permission-state queries, fullscreen/pointer-lock gates) — both denied by default.
     contents.session.setPermissionRequestHandler((_wc, _permission, callback) => {
       callback(false);
     });
+    contents.session.setPermissionCheckHandler(() => false);
   });
 }

@@ -13,9 +13,11 @@ interface TitleBarProps {
   t: Resources;
   tabs: TabInfo[];
   activeId: string | null;
+  onSelectTab: (id: string) => void;
+  onNewTab: () => void;
 }
 
-export function TitleBar({ t, tabs, activeId }: TitleBarProps) {
+export function TitleBar({ t, tabs, activeId, onSelectTab, onNewTab }: TitleBarProps) {
   return (
     <header className="app-drag flex h-9 shrink-0 select-none items-stretch gap-2 border-b border-border bg-surface-raised pl-3">
       <div className="flex items-center gap-1.5">
@@ -23,7 +25,7 @@ export function TitleBar({ t, tabs, activeId }: TitleBarProps) {
         <h1 className="text-xs font-semibold text-text-primary">{t.common.appName}</h1>
       </div>
       <div className="flex items-end pt-1.5">
-        <TabStrip t={t} tabs={tabs} activeId={activeId} />
+        <TabStrip t={t} tabs={tabs} activeId={activeId} onSelect={onSelectTab} onNew={onNewTab} />
       </div>
       <div className="h-full flex-1" />
       <WindowControls t={t} />
