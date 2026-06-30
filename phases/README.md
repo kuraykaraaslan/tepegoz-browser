@@ -19,6 +19,7 @@ them** with `- [ ]` / `- [x]`. This keeps the process resumable across sessions.
 | 2 | [phase-2-adapters-safe-browsing.md](phase-2-adapters-safe-browsing.md) | Integration adapters + Safe-Browsing Suite | ⬜ Not started |
 | 3 | [phase-3-backend-cloud-extensions.md](phase-3-backend-cloud-extensions.md) | Managed subscription + cloud memory sync + extensions | ⬜ Not started |
 | 4 | [phase-4-maturation.md](phase-4-maturation.md) | Maturation (full extensions, cross-platform, enterprise) | ⬜ Not started |
+| 5 | [phase-5-vpn-network-privacy.md](phase-5-vpn-network-privacy.md) | Per-profile VPN tunnels + Tor (network privacy) | ⬜ Not started |
 
 Status legend: ⬜ Not started · 🟡 In progress · ✅ Done (DoD passed)
 

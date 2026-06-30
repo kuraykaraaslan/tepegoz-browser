@@ -20,7 +20,7 @@ deepen the local-first + security leadership. None of this blocks MVP value.
 - [ ] per-OS QA + IME regression + security-patch matrix; macOS notarize + Developer ID
 
 ### Ecosystem & enterprise
-- [ ] Built-in VPN (deferred): 3rd-party integration or own-infra decision (license/legal) — ADR
+- [ ] Built-in VPN — **promoted to Phase 5** (per-profile tunnels + Tor; see [phase-5-vpn-network-privacy.md](phase-5-vpn-network-privacy.md))
 - [ ] Connector/Skill **marketplace** (signed Ed25519 + provenance + sandbox + scope-review)
 - [ ] Enterprise: RBAC, SIEM/audit export, SSO, real org-policy, SOC2 path
 - [ ] Extended adapter library + site-specific connectors (a pre-WebMCP layer that raises end-to-end completion rate)
