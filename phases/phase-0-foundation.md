@@ -17,9 +17,9 @@ No product features; the decisions made here would force a full rewrite if wrong
 
 ### Repo & Git & compliance
 - [x] `git init`; `chore/scaffold` branch; `.gitignore` (node_modules, dist, out, .env, *.node build)
-- [ ] when origin remote added → **SSH** (`git@github.com:...`) — never HTTPS
-- [ ] **commit/PR template: NO AI attribution trailer**; optional commit-msg lint (reject AI trailer)
-- [ ] First project-root `CLAUDE.md`: branch-based workflow + AI-trailer ban + stack summary
+- [x] origin remote is **SSH** (`git@github.com:kuraykaraaslan/tepegoz-browser.git`) — never HTTPS
+- [x] **NO AI attribution trailer** in commits/PRs — enforced by CI `commit-policy` job _(local commit-msg hook optional)_
+- [x] First project-root `CLAUDE.md`: branch-based workflow + AI-trailer ban + stack summary
 
 ### Monorepo & build
 - [x] `pnpm-workspace.yaml` (apps/*, packages/*)
@@ -83,5 +83,5 @@ No product features; the decisions made here would force a full rewrite if wrong
 
 ### Test infrastructure
 - [x] Vitest (unit/integration) setup + sample tests (7 tests green across shared-types + libs)
-- [ ] Playwright `_electron` (E2E) skeleton (Spectron forbidden)
+- [x] Playwright `_electron` E2E smoke (Spectron forbidden) — launches built app, asserts "Tepegöz" + preload bridge; `pnpm e2e` green _(CI e2e + xvfb = follow-up)_
 - [x] i18n integrity test: `en` and `tr` key sets equal + `resolveLocale` fallback (3 tests green)

@@ -17,10 +17,12 @@
     "test": "turbo run test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "depcruise": "depcruise packages apps --config dependency-cruiser.cjs"
+    "depcruise": "depcruise packages apps --config dependency-cruiser.cjs",
+    "e2e": "turbo run build --filter=@tepegoz/desktop && playwright test"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
+    "@playwright/test": "^1.49.1",
     "@types/node": "^22.10.2",
     "dependency-cruiser": "^16.8.0",
     "eslint": "^9.17.0",
