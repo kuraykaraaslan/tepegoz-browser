@@ -13,7 +13,7 @@ the "everything at once" immaturity trap.
 - [ ] Quality floor: input validation (zod) + error states (AppError) + logging (redacted) + Policy Kernel + HITL + backup/export awareness + handover note
 - [ ] **i18n:** all shipped surfaces fully **en (primary) + tr (parity)**; no hardcoded strings (lint clean); IME regression matrix passes
 - [ ] Coverage gate (S80/B70/F80/L80) + self-review/code-review + UAT signoff
-- [ ] Red-team injection corpus v1 passes; sensitive-site lockout + HITL scenarios tested
+- [x] Red-team injection corpus v1 passes; sensitive-site lockout + HITL scenarios tested _(deterministic corpus runs the real defense pipeline — sanitizer (zero-width/bidi/homoglyph/hidden) → taint→HITL → sensitive-site lockout → egress block/redaction; 11 cases, CI regression gate)_
 - [ ] Smart address bar omnibox suggestions (history/bookmark/tab/search + inline calc) + basic session restore work
 
 ## Tasks
