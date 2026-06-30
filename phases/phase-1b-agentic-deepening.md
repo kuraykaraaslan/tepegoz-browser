@@ -52,5 +52,6 @@ fallback, full capability plane, **tepegoz's MCP SERVER surface**, local SLM.
 
 ### L7 — Local SLM + context management
 - [ ] ONNX Runtime + DirectML (Windows NPU/GPU; CPU fallback) — summarize/classify/redact/loop-detect/embed on device
+- [ ] **ModelRouter honors the cost-saver toggle** (Phase 1a settings flag): when ON, simple capabilities (classify/summarize/redact/loop-detect/embed) run on the local SLM to cut AI cost; transparent fallback to cloud on low confidence / unsupported task; per-capability routing + estimated savings surfaced in the Token Ledger
 - [ ] Egress Firewall TS → **Rust (napi-rs)** port; compaction via local SLM or Sonnet (NOT Haiku)
 - [ ] screenshot eviction (last 1-2 + `cas://hash`) + threshold-based compaction + prompt-cache prefix

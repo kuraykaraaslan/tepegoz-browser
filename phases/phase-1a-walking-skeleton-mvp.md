@@ -20,6 +20,7 @@ the "everything at once" immaturity trap.
 ### L7 — Model Gateway (provider-agnostic, BYO-key)
 - [ ] `base.provider` + `anthropic.provider` (Claude **default**: Opus 4.8 plan / Sonnet 4.6 exec / Haiku 4.5 classify) + `openai.provider` (2nd adapter); `gemini.provider` interface-ready
 - [ ] `LocalTransport` (BYO-key, **safeStorage** vault); `ModelTransport`/`ModelRouter` interfaces on day 1 (local SLM no-op)
+- [ ] **Cost-saver preference** (persisted, settings-toggled): "use a local model for simple tasks" flag read by `ModelRouter`; in 1a the local SLM is a no-op placeholder → simple capabilities still resolve via cloud (real local routing activates in Phase 1b)
 - [ ] **Every call:** mandatory `max_tokens` + timeout (30s/60s) + documented token budget; single singleton client per provider
 - [ ] Token Ledger (SQLite, provider+model+capability) + live quota indicator + 80% warning + auto-refund (system error/CAPTCHA/loop)
 - [ ] `technical-ai-doc.md` (models, DPA/model-card, risk category, human oversight, limits, UI disclosure)
@@ -55,6 +56,7 @@ the "everything at once" immaturity trap.
 - [ ] Deterministic **address bar** (does NOT start an AI thread)
 - [ ] **Live Agent Console** (per step: URL/action/%progress/checkpoint/token-cost/error + timeline replay; **virtualized**)
 - [ ] Browser shell: tab (optional group toggle), new-tab 3 options (AI/Favorites/Blank), reading mode, bookmark, OS-native password/passkey **POC**
+- [ ] **Settings page** (KUIreact, polished) — sectioned: **Providers & API keys** (safeStorage entry/validate/remove), **Appearance** (theme tokens), **Language** (runtime en/tr switch), **Privacy & telemetry** (default OFF, sensitive-site lockout), **Agent behavior**; hosts the **cost-saver "use a local model for simple tasks" toggle** (persisted via the L7 preference)
 - [ ] Token/quota indicator + Connection Health Panel (reason codes) + onboarding **privacy/consent wizard** (telemetry OFF default, sensitive-site locked)
 - [ ] frameless title bar (drag/no-drag + platform caption) + platform conventions + WCAG 2.2 AA + single SHORTCUTS registry + theme tokens
 
