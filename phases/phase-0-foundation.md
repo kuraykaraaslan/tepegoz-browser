@@ -10,7 +10,7 @@ No product features; the decisions made here would force a full rewrite if wrong
 - [ ] CI per-OS matrix (windows/macos/ubuntu) green; native modules rebuilt on each runner
 - [ ] shared-types zod contracts + sample round-trip tests exist
 - [ ] Secure `createWindow()` factory + fuses + typed IPC skeleton opens a working empty window
-- [ ] Threat Model Lite + Risk Register + ~9 ADRs + READMEs + CHANGELOG written
+- [x] Threat Model Lite + Risk Register + ~9 ADRs + READMEs + CHANGELOG written
 - [ ] Windows code-signing identity acquisition started (BLOCKING for distribution)
 
 ## Tasks
@@ -67,9 +67,9 @@ No product features; the decisions made here would force a full rewrite if wrong
 ### Documentation & security
 - [x] root `README.md` (pre-existing, kept) + per-package READMEs (shared-types, libs, i18n, persistence, desktop)
 - [x] `docs/adr/` **10 ADRs (0001–0010)** + index: Electron+React+TS · monorepo · SQLite · event-sourced Journal · provider-agnostic AI · Policy Kernel+HITL · capability-plane/MCP(client+server) · perception/CDP · boundary-mapping · TS/tooling conventions
-- [ ] `CHANGELOG.md` (Keep-a-Changelog: Added/Changed/Fixed/Security/Operational) + `docs/known-issues.md` + `handover/` skeleton
+- [x] `CHANGELOG.md` (Keep-a-Changelog) + `docs/known-issues.md` + `handover/` skeleton
 - [x] `.env.example` (key names only, no values; explicit "BYO keys live in OS keychain, not here")
-- [ ] **Threat Model Lite + Risk Register** (tepegoz = High/Critical; trust boundaries: renderer/isolated-webview/main/CDP/MCP-client/MCP-server/AI-provider/adapter/OAuth)
+- [x] **Threat Model Lite + Risk Register** (`docs/THREAT-MODEL.md`; High/Critical; assets/actors/entry-points/trust-boundaries/top-threats→mitigations/residual-risk)
 
 ### i18n infrastructure (DAY-0 — set up early to avoid pain later)
 - [ ] choose + set up i18n library (e.g. i18next/react-i18next or a lightweight type-safe solution; Electron renderer, no SSR) — **ADR**
