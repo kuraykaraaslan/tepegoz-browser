@@ -47,8 +47,8 @@ the "everything at once" immaturity trap.
 - [ ] Scoped Trust Profiles + **Permission Debug** (reason codes)
 
 ### L5 — Minimal Capability/Tool Plane (CLIENT only; SERVER in Phase 1b)
-- [ ] `CapabilityRegistry` + **`ToolGateway` (single PEP)** + built-in tools (browser_*, tab_*, dom_*, journal_*)
-- [ ] **Tool naming** `{domain}_{verb}_{noun}` (lint-enforced) + **standard error envelope** + create/upload `idempotencyKey`
+- [ ] `CapabilityRegistry` + **`ToolGateway` (single PEP)** + built-in tools (browser_*, tab_*, dom_*, journal_*) _(registry + ToolGateway PEP wiring Policy Kernel/HITL/audit done + tested; built-in tools pending)_
+- [x] **Tool naming** `{domain}_{verb}_{noun}` (lint-enforced) + **standard error envelope** + create/upload `idempotencyKey`
 - [ ] MCP **client**: prefer Anthropic native connector (`mcp_servers`/`mcp_toolset`); thin stdio supervisor (health/backoff)
 - [ ] tool-search defer rule (≥1 non-deferred); all tool inputs zod-validated in main before execution
 
