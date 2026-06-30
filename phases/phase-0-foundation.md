@@ -73,8 +73,8 @@ No product features; the decisions made here would force a full rewrite if wrong
 
 ### i18n infrastructure (DAY-0 — set up early to avoid pain later)
 - [ ] choose + set up i18n library (e.g. i18next/react-i18next or a lightweight type-safe solution; Electron renderer, no SSR) — **ADR**
-- [ ] `packages/i18n` locale bundle layout: `en/` (**primary/source; fallback**) + `tr/` (full parity, first-class); namespaced (common, agent-console, command-palette, settings, errors, onboarding…)
-- [ ] type-safe keys: key autocomplete + **missing key = build/lint error**
+- [x] `packages/i18n` locale bundle: `src/locales/en.ts` (**primary/source; fallback**) + `tr.ts` (full parity, first-class); namespaced (common, commandPalette, agentConsole, onboarding, errors) + `resolveLocale()`
+- [x] type-safe keys: `Resources = typeof en` contract → any missing/mismatched key in `tr` is a **build error** (verified)
 - [ ] **"no hardcoded user-facing string" ESLint rule** (e.g. eslint-plugin-i18next/no-literal-string); allow-list exception: logs/`*.messages.ts`/tests
 - [ ] locale-aware formatting (date/number/plural/relative-time) + RTL-ready skeleton
 - [ ] main-process user-facing text (native menu, dialog, notification, tray) reads from i18n (same catalog as renderer)
@@ -84,4 +84,4 @@ No product features; the decisions made here would force a full rewrite if wrong
 ### Test infrastructure
 - [x] Vitest (unit/integration) setup + sample tests (7 tests green across shared-types + libs)
 - [ ] Playwright `_electron` (E2E) skeleton (Spectron forbidden)
-- [ ] i18n integrity test: `en` and `tr` key sets equal (missing/extra key = red)
+- [x] i18n integrity test: `en` and `tr` key sets equal + `resolveLocale` fallback (3 tests green)
