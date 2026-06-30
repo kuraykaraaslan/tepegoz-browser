@@ -12,6 +12,7 @@ describe('shared-types contracts', () => {
       correlationId: 'run-1',
       payload: {},
       redacted: true,
+      deviceId: 'device-1',
     });
     expect(res.success).toBe(true);
   });

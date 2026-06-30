@@ -48,11 +48,11 @@ No product features; the decisions made here would force a full rewrite if wrong
 - [x] preload: typed `contextBridge` (`window.tepegoz`); NO raw `ipcRenderer`; `src/shared/ipc-contract.ts` channel registry; main validates sender allow-list + output schema (`src/main/ipc.ts`)
 
 ### persistence + Event Journal (L1)
-- [ ] `packages/persistence` — better-sqlite3 (WAL, `synchronous=NORMAL`)
-- [ ] append-only `events` table + reducer/projector skeleton
-- [ ] content-addressed blob store (SHA-256 + WebP); **base64 never in transcript** rule baked into code
-- [ ] migration infra + **day-0 sync-meta** (`updated_at`, `vector_clock`, `tombstone`) + device-scope
-- [ ] integration test harness (better-sqlite3)
+- [x] `packages/persistence` — better-sqlite3 (WAL, `synchronous=NORMAL`, foreign_keys ON)
+- [x] append-only `events` table + `EventJournal` (append/read-from-lsn, monotonic lsn, `deviceId`) — _reducer/projector fold → Phase 1b_
+- [x] content-addressed blob store (SHA-256, dedupe); **base64 never in journal** — only `cas://<hash>` refs — _WebP encoding at screenshot time, Phase 1b_
+- [x] migration infra (PRAGMA user_version, txn, forward-only) + **day-0 sync-meta** (`updated_at`/`version`/`tombstone` on `kv`; `device_id` on events) + device-scope — _`version` now; `vector_clock` when CRDT lands (Phase 3)_
+- [x] integration test harness (better-sqlite3, `:memory:`) — 5 tests green (journal + blob)
 
 ### native & workers (skeleton)
 - [ ] `packages/native-rs` (napi-rs) placeholder (egress/screenshot/checkpoint/SLM bridge) — **egress in TS for MVP**
