@@ -10,6 +10,7 @@ export default tseslint.config(
       '**/.turbo/**',
       '**/node_modules/**',
       '**/coverage/**',
+      '**/scripts/**',
       '**/*.config.*',
       '**/*.cjs',
     ],

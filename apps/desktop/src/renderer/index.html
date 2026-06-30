@@ -3,10 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'"
-    />
+    <!-- TODO(security, Phase 1a): set CSP via session response headers in main — dev-relaxed for
+         Vite HMR / React-Refresh inline preamble, strict in prod. A static strict meta CSP breaks dev. -->
     <title>Tepegöz</title>
   </head>
   <body>

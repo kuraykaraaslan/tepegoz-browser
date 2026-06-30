@@ -5,6 +5,10 @@ import { createWindow } from './window';
 import { installSecurity } from './security';
 import { registerIpc } from './ipc';
 
+// App-specific identity → userData at %APPDATA%/Tepegöz instead of the shared default "Electron" dir.
+// This avoids cross-instance GPU/disk-cache contention ("Unable to move the cache: Access is denied").
+app.setName('Tepegöz');
+
 function bootstrap(): void {
   const win = createWindow();
   // Dev: electron-vite injects the renderer dev-server URL. Prod: load the built file.
@@ -16,25 +20,40 @@ function bootstrap(): void {
   }
 }
 
-void app
-  .whenReady()
-  .then(() => {
-    installSecurity();
-    registerIpc();
-    bootstrap();
-
-    app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) {
-        bootstrap();
+// Single instance: a second launch focuses the existing window rather than fighting over the cache.
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    const [win] = BrowserWindow.getAllWindows();
+    if (win) {
+      if (win.isMinimized()) {
+        win.restore();
       }
-    });
-  })
-  .catch((err: unknown) => {
-    Logger.error('Failed to start Tepegöz', { err: String(err) });
+      win.focus();
+    }
   });
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
+  void app
+    .whenReady()
+    .then(() => {
+      installSecurity();
+      registerIpc();
+      bootstrap();
+
+      app.on('activate', () => {
+        if (BrowserWindow.getAllWindows().length === 0) {
+          bootstrap();
+        }
+      });
+    })
+    .catch((err: unknown) => {
+      Logger.error('Failed to start Tepegöz', { err: String(err) });
+    });
+
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') {
+      app.quit();
+    }
+  });
+}
