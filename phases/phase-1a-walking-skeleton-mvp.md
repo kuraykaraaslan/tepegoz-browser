@@ -20,7 +20,7 @@ the "everything at once" immaturity trap.
 
 ### L7 — Model Gateway (provider-agnostic, BYO-key)
 - [ ] `base.provider` + `anthropic.provider` (Claude **default**: Opus 4.8 plan / Sonnet 4.6 exec / Haiku 4.5 classify) + `openai.provider` (2nd adapter); `gemini.provider` interface-ready
-- [ ] `LocalTransport` (BYO-key, **safeStorage** vault); `ModelTransport`/`ModelRouter` interfaces on day 1 (local SLM no-op)
+- [x] `LocalTransport` (BYO-key, **safeStorage** vault); `ModelTransport`/`ModelRouter` interfaces on day 1 (local SLM no-op) _(LocalTransport = CredentialVault (safeStorage/DPAPI); ModelRouter built: capability→tier (plan/exec/classify) + cost-saver local/cloud routing with Phase-1a local-SLM no-op → transparent cloud fallback; 7 tests. Real on-device transport execution lands in 1b)_
 - [x] **Cost-saver preference** (persisted, settings-toggled): "use a local model for simple tasks" flag read by `ModelRouter`; in 1a the local SLM is a no-op placeholder → simple capabilities still resolve via cloud (real local routing activates in Phase 1b)
 - [ ] **Every call:** mandatory `max_tokens` + timeout (30s/60s) + documented token budget; single singleton client per provider
 - [ ] Token Ledger (SQLite, provider+model+capability) + live quota indicator + 80% warning + auto-refund (system error/CAPTCHA/loop)
