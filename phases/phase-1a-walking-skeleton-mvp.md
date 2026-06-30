@@ -37,7 +37,7 @@ the "everything at once" immaturity trap.
 - [ ] CDP **out-of-process** driver; DOM + accessibility tree (`getFullAXTree`) perception
 - [ ] page-stability wait (network-idle + MutationObserver)
 - [ ] background tab open (`active:false`, no focus steal) + **symmetric tab authority** (closes what it opens)
-- [ ] `Content Sanitizer`: hidden/CSS-hidden + zero-width/bidi/homoglyph filtering → `[hidden content filtered]`
+- [x] `Content Sanitizer`: hidden/CSS-hidden + zero-width/bidi/homoglyph filtering → `[hidden content filtered]` _(pure sanitizer: zero-width strip, bidi-control strip, mixed-script flag, hidden→placeholder, untrusted-content XML wrap + anti-injection footer; CSS-visibility detection lands with the perception layer)_
 
 ### L8 — Core security (deterministic)
 - [x] **Policy Kernel** (BEFORE the LLM): classify tool call read/state-changing/high-risk; tainted-arg → escalate _(deterministic kernel + sensitive-site lockout + tests; wiring into the ToolGateway pending L5)_
