@@ -8,3 +8,14 @@ export {
   PROVENANCE_LEVELS,
   type Provenance,
 } from './taint-tracker';
+export {
+  default as EgressFirewall,
+  inspectEgress,
+  shannonEntropy,
+  EGRESS_FINDING_KINDS,
+  type EgressFinding,
+  type EgressFindingKind,
+  type EgressSeverity,
+  type EgressDecision,
+  type EgressVerdict,
+} from './egress-firewall';
