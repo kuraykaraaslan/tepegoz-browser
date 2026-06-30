@@ -1,9 +1,10 @@
-import { z } from 'zod';
-
 /**
  * Typed IPC contract (internal-ai-rules / electron-desktop-security): the preload exposes ONLY a
- * small, named, typed API — never raw ipcRenderer. Every channel has a Zod schema; main validates
- * payload + sender. Channels are named `domain:action`.
+ * small, named, typed API — never raw ipcRenderer. Channels are named `domain:action`.
+ *
+ * NOTE: this file is imported by the SANDBOXED preload, so it must stay dependency-free (no zod —
+ * a sandboxed preload cannot `require` external npm modules). Runtime schemas live in `ipc-schemas.ts`
+ * (main-process only).
  */
 export const IpcChannels = {
   appGetInfo: 'app:get-info',
@@ -11,12 +12,11 @@ export const IpcChannels = {
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];
 
-export const AppInfoSchema = z.object({
-  name: z.string(),
-  version: z.string(),
-  platform: z.string(),
-});
-export type AppInfo = z.infer<typeof AppInfoSchema>;
+export interface AppInfo {
+  name: string;
+  version: string;
+  platform: string;
+}
 
 /** The exact surface bridged to `window.tepegoz` in the renderer. */
 export interface TepegozApi {

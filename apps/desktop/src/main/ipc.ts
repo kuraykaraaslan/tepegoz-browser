@@ -1,5 +1,6 @@
 import { app, ipcMain, type IpcMainInvokeEvent } from 'electron';
-import { AppInfoSchema, IpcChannels, type AppInfo } from '../shared/ipc-contract';
+import { IpcChannels, type AppInfo } from '../shared/ipc-contract';
+import { AppInfoSchema } from '../shared/ipc-schemas';
 
 /** Reject IPC from frames that are not our own app content (sender allow-list). */
 function assertTrustedSender(event: IpcMainInvokeEvent): void {
