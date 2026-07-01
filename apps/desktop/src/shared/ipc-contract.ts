@@ -40,13 +40,14 @@ export const IpcChannels = {
   tokenUsage: 'token:usage',
   tokenUsageGet: 'token:usage-get',
   menuShowMain: 'menu:show-main',
-  menuAction: 'menu:action',
+  extensionOpen: 'extension:open',
 } as const;
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];
 
 /** Internal (browser-served) page addresses, shown in the omnibox like Chrome's `chrome://` pages. */
 export const INTERNAL_SETTINGS_URL = 'tepegoz://settings';
+export const INTERNAL_EXTENSIONS_URL = 'tepegoz://extensions';
 
 export interface AppInfo {
   name: string;
@@ -65,6 +66,8 @@ export interface Preferences {
   /** Cost-saver: route simple capabilities to the local SLM (real routing lands in Phase 1b). */
   useLocalModelForSimpleTasks: boolean;
   defaultProvider: ProviderId;
+  /** Per-extension status (managed at tepegoz://extensions). Unlisted extensions default to enabled. */
+  extensions: ExtensionState[];
 }
 
 /** Per-provider "is a key stored" flags — NEVER the keys themselves. */
@@ -152,9 +155,35 @@ export interface TokenUsageSnapshot {
   totalTokens: number;
 }
 
-/** Actions the native main menu asks the chrome renderer to perform (chrome UI it owns). Settings is
- *  a tab (opened by TabManager), so the only chrome-UI action is opening the Agent Console. */
-export type MenuAction = 'open-agent';
+/**
+ * Internal "extensions" — built-in feature panels registered under one uniform model (the foundation
+ * for the extension system; real MV3/third-party extensions remain a later phase). Each opens as a
+ * chrome-rendered panel over the content area. The Agent is the first; add ids here as more land.
+ */
+export type ExtensionId = 'agent';
+export const EXTENSION_IDS: readonly ExtensionId[] = ['agent'];
+
+/** Per-extension status (managed at tepegoz://extensions). More states (e.g. 'error') may be added. */
+export type ExtensionStatus = 'enabled' | 'disabled';
+export interface ExtensionState {
+  id: ExtensionId;
+  status: ExtensionStatus;
+}
+
+/** An extension's status from the persisted list (defaults to 'enabled' when not listed). */
+export function extensionStatus(
+  extensions: readonly ExtensionState[],
+  id: ExtensionId,
+): ExtensionStatus {
+  return extensions.find((e) => e.id === id)?.status ?? 'enabled';
+}
+
+export function isExtensionEnabled(
+  extensions: readonly ExtensionState[],
+  id: ExtensionId,
+): boolean {
+  return extensionStatus(extensions, id) !== 'disabled';
+}
 
 /** Content-area rectangle (DIP) where the active tab's web view is laid out, below the chrome. */
 export interface ContentBounds {
@@ -218,7 +247,7 @@ export interface TepegozApi {
   getTokenUsage(): Promise<TokenUsageSnapshot>;
   /** Pop the native main (hamburger) menu, anchored to the sender window. */
   showMainMenu(): void;
-  /** Subscribe to main-menu actions the renderer must perform; returns an unsubscribe function. */
-  onMenuAction(callback: (action: MenuAction) => void): () => void;
+  /** Subscribe to "open this extension panel" requests from the menu; returns an unsubscribe fn. */
+  onOpenExtension(callback: (id: ExtensionId) => void): () => void;
   readonly platform: string;
 }

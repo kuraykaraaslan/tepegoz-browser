@@ -8,7 +8,7 @@ import {
   type AppInfo,
   type ContentBounds,
   type CredentialsStatus,
-  type MenuAction,
+  type ExtensionId,
   type Preferences,
   type ProviderId,
   type TabsState,
@@ -142,13 +142,13 @@ const api: TepegozApi = {
   showMainMenu: () => {
     ipcRenderer.send(IpcChannels.menuShowMain);
   },
-  onMenuAction: (callback: (action: MenuAction) => void) => {
-    const listener = (_event: unknown, action: MenuAction): void => {
-      callback(action);
+  onOpenExtension: (callback: (id: ExtensionId) => void) => {
+    const listener = (_event: unknown, id: ExtensionId): void => {
+      callback(id);
     };
-    ipcRenderer.on(IpcChannels.menuAction, listener);
+    ipcRenderer.on(IpcChannels.extensionOpen, listener);
     return () => {
-      ipcRenderer.removeListener(IpcChannels.menuAction, listener);
+      ipcRenderer.removeListener(IpcChannels.extensionOpen, listener);
     };
   },
   platform: process.platform,

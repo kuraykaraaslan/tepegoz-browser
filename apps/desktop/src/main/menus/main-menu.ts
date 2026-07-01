@@ -1,6 +1,13 @@
 import { app, Menu, type BrowserWindow, type MenuItemConstructorOptions } from 'electron';
-import { IpcChannels } from '../../shared/ipc-contract';
+import {
+  EXTENSION_IDS,
+  INTERNAL_EXTENSIONS_URL,
+  INTERNAL_SETTINGS_URL,
+  IpcChannels,
+  isExtensionEnabled,
+} from '../../shared/ipc-contract';
 import { mainResources } from '../lib/i18n-main';
+import PreferenceStore from '../preferences/preference-store';
 import TabManager from '../tabs';
 
 /**
@@ -12,6 +19,22 @@ import TabManager from '../tabs';
  */
 export function showMainMenu(win: BrowserWindow): void {
   const t = mainResources();
+  const { extensions } = PreferenceStore.getAll();
+  const extensionSubmenu: MenuItemConstructorOptions[] = [
+    ...EXTENSION_IDS.filter((id) => isExtensionEnabled(extensions, id)).map((id) => ({
+      label: t.extensions.names[id],
+      click: () => {
+        win.webContents.send(IpcChannels.extensionOpen, id);
+      },
+    })),
+    { type: 'separator' },
+    {
+      label: t.extensions.manage,
+      click: () => {
+        TabManager.openInternalPage(INTERNAL_EXTENSIONS_URL);
+      },
+    },
+  ];
   const template: MenuItemConstructorOptions[] = [
     {
       label: t.browser.newTab,
@@ -29,16 +52,14 @@ export function showMainMenu(win: BrowserWindow): void {
     },
     { type: 'separator' },
     {
-      label: t.agentConsole.open,
-      click: () => {
-        win.webContents.send(IpcChannels.menuAction, 'open-agent');
-      },
+      label: t.extensions.title,
+      submenu: extensionSubmenu,
     },
     {
       label: t.browser.settings,
       accelerator: 'CmdOrCtrl+,',
       click: () => {
-        TabManager.openSettings();
+        TabManager.openInternalPage(INTERNAL_SETTINGS_URL);
       },
     },
     { type: 'separator' },

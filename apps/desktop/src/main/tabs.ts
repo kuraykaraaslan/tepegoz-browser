@@ -1,7 +1,12 @@
 import { BrowserWindow, WebContentsView, type Rectangle, type WebContents } from 'electron';
 import { Logger } from '@tepegoz/libs';
-import { INTERNAL_SETTINGS_URL, IpcChannels, type TabInfo, type TabsState } from '../shared/ipc-contract';
-import { isInternalSettingsUrl, isWebUrl, toNavigationUrl } from './lib/navigation-url';
+import {
+  INTERNAL_EXTENSIONS_URL,
+  IpcChannels,
+  type TabInfo,
+  type TabsState,
+} from '../shared/ipc-contract';
+import { internalPageUrl, isWebUrl, toNavigationUrl } from './lib/navigation-url';
 import { mainResources } from './lib/i18n-main';
 
 /**
@@ -130,12 +135,12 @@ export default class TabManager {
     TabManager.tabs.get(id)?.view?.webContents.reload();
   }
 
-  /** Open (or focus) the internal Settings tab (tepegoz://settings) — rendered by the chrome, no
-   *  web view. A new-tab experience for internal pages, mirroring Chrome's chrome://settings. */
-  static openSettings(): void {
+  /** Open (or focus) an internal page tab (tepegoz://settings, tepegoz://extensions) — rendered by
+   *  the chrome, no web view. A new-tab experience for internal pages, mirroring Chrome's chrome://. */
+  static openInternalPage(url: string): void {
     TabManager.requireWin();
     for (const [existingId, tab] of TabManager.tabs) {
-      if (tab.kind === 'internal' && tab.url === INTERNAL_SETTINGS_URL) {
+      if (tab.kind === 'internal' && tab.url === url) {
         TabManager.activate(existingId);
         return;
       }
@@ -145,12 +150,17 @@ export default class TabManager {
       id,
       view: null,
       kind: 'internal',
-      title: mainResources().settings.title,
-      url: INTERNAL_SETTINGS_URL,
+      title: TabManager.internalTitle(url),
+      url,
       isLoading: false,
       faviconUrl: null,
     });
     TabManager.activate(id);
+  }
+
+  private static internalTitle(url: string): string {
+    const r = mainResources();
+    return url === INTERNAL_EXTENSIONS_URL ? r.extensions.title : r.settings.title;
   }
 
   /** Open a fresh tab immediately to the right of `refId` and focus it (Chrome's "New tab to the right"). */
@@ -166,7 +176,7 @@ export default class TabManager {
     const src = TabManager.tabs.get(id);
     if (!src) return;
     if (src.view === null) {
-      TabManager.openSettings(); // internal page → just focus it (nothing to duplicate)
+      TabManager.openInternalPage(src.url); // internal page → just focus it (nothing to duplicate)
       return;
     }
     const url = src.view.webContents.getURL() || src.url;
@@ -198,9 +208,10 @@ export default class TabManager {
   }
 
   static navigateActive(rawUrl: string): void {
-    // Internal pages (tepegoz://settings) open as their own tab, rendered by the trusted chrome.
-    if (isInternalSettingsUrl(rawUrl)) {
-      TabManager.openSettings();
+    // Internal pages (tepegoz://…) open as their own tab, rendered by the trusted chrome.
+    const internal = internalPageUrl(rawUrl);
+    if (internal !== null) {
+      TabManager.openInternalPage(internal);
       return;
     }
     const tab = TabManager.active();

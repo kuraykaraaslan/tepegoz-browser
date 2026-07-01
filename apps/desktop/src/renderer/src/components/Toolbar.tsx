@@ -1,15 +1,22 @@
 import { useEffect, useState } from 'react';
 import { cn } from '@tepegoz/ui';
 import type { Resources } from '@tepegoz/i18n';
+import { INTERNAL_EXTENSIONS_URL, type ExtensionId } from '../../../shared/ipc-contract';
+import type { ExtensionDef } from '../extensions/registry';
 import { evaluateOmniboxCalc } from '../lib/omnibox-calc';
+
+/** Max extension icons pinned inline next to the omnibox; beyond this, use the puzzle → manage page. */
+const MAX_INLINE_EXTENSIONS = 4;
 
 interface ToolbarProps {
   t: Resources;
   currentUrl: string;
   canGoBack: boolean;
   canGoForward: boolean;
-  agentOpen: boolean;
-  onToggleAgent: () => void;
+  /** Enabled extensions, shown as icons to the right of the address bar (Chrome-style). */
+  extensions: readonly ExtensionDef[];
+  openExtension: ExtensionId | null;
+  onOpenExtension: (id: ExtensionId) => void;
 }
 
 const NAV_BTN =
@@ -23,8 +30,9 @@ export function Toolbar({
   currentUrl,
   canGoBack,
   canGoForward,
-  agentOpen,
-  onToggleAgent,
+  extensions,
+  openExtension,
+  onOpenExtension,
 }: ToolbarProps) {
   const [value, setValue] = useState(currentUrl);
   const [focused, setFocused] = useState(false);
@@ -115,17 +123,37 @@ export function Toolbar({
         )}
       </form>
 
+      {/* Enabled extensions, pinned as icons to the right of the address bar (Chrome-style). */}
+      {extensions.length <= MAX_INLINE_EXTENSIONS &&
+        extensions.map((ext) => (
+          <button
+            key={ext.id}
+            type="button"
+            aria-label={t.extensions.names[ext.id]}
+            aria-pressed={openExtension === ext.id}
+            title={t.extensions.names[ext.id]}
+            onClick={() => {
+              onOpenExtension(ext.id);
+            }}
+            className={cn(NAV_BTN, openExtension === ext.id && 'bg-surface-overlay text-text-primary')}
+          >
+            {ext.icon}
+          </button>
+        ))}
+      {/* Puzzle: manage/overflow — opens the tepegoz://extensions page (like Chrome's puzzle piece). */}
       <button
         type="button"
-        aria-label={t.agentConsole.open}
-        aria-pressed={agentOpen}
-        onClick={onToggleAgent}
-        className={cn(NAV_BTN, 'w-auto px-2 text-xs font-medium', agentOpen && 'bg-surface-overlay text-text-primary')}
+        aria-label={t.extensions.manage}
+        title={t.extensions.manage}
+        onClick={() => window.tepegoz.navigateTab(INTERNAL_EXTENSIONS_URL)}
+        className={NAV_BTN}
       >
-        <svg className="mr-1 h-4 w-4" viewBox="0 0 16 16" aria-hidden="true">
-          <path d="M8 2 l1.4 3.2 L12.6 6.6 9.4 8 8 11.2 6.6 8 3.4 6.6 6.6 5.2 Z" fill="currentColor" />
+        <svg className="h-4 w-4" viewBox="0 0 16 16" aria-hidden="true">
+          <path
+            d="M9.5 2a1.5 1.5 0 0 0-1.5 1.5V4H6a1 1 0 0 0-1 1v2h-.5a1.5 1.5 0 1 0 0 3H5v2a1 1 0 0 0 1 1h2v-.5a1.5 1.5 0 0 1 3 0V13h1a1 1 0 0 0 1-1v-2h.5a1.5 1.5 0 1 0 0-3H13V5a1 1 0 0 0-1-1h-1v-.5A1.5 1.5 0 0 0 9.5 2Z"
+            fill="currentColor"
+          />
         </svg>
-        {t.agentConsole.open}
       </button>
 
       <button

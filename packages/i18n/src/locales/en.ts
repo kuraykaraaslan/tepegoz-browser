@@ -65,6 +65,18 @@ export const en = {
     planBody: 'Uncheck any step you do not want, then run. Nothing executes until you approve.',
     planRun: 'Run plan',
   },
+  extensions: {
+    title: 'Extensions',
+    manage: 'Manage extensions',
+    search: 'Search extensions',
+    empty: 'No matching extensions',
+    names: {
+      agent: 'Agent',
+    },
+    descriptions: {
+      agent: 'Autonomous browsing tasks on the current page, with human approval.',
+    },
+  },
   onboarding: {
     welcome: 'Welcome to Tepegöz',
     consentTitle: 'Your data, your control',

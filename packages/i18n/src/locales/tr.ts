@@ -63,6 +63,18 @@ export const tr: Resources = {
     planBody: 'İstemediğiniz adımların işaretini kaldırıp çalıştırın. Onaylayana kadar hiçbir şey yürütülmez.',
     planRun: 'Planı çalıştır',
   },
+  extensions: {
+    title: 'Eklentiler',
+    manage: 'Eklentileri yönet',
+    search: 'Eklentilerde ara',
+    empty: 'Eşleşen eklenti yok',
+    names: {
+      agent: 'Ajan',
+    },
+    descriptions: {
+      agent: 'Geçerli sayfada, insan onaylı otonom tarama görevleri.',
+    },
+  },
   onboarding: {
     welcome: "Tepegöz'e hoş geldiniz",
     consentTitle: 'Veriniz, sizin kontrolünüzde',
