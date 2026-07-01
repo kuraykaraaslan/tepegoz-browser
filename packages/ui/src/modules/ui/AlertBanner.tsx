@@ -24,6 +24,7 @@ export function AlertBanner({
   title,
   message,
   dismissible = false,
+  dismissLabel = 'Dismiss',
   action,
   icon,
   className,
@@ -32,6 +33,8 @@ export function AlertBanner({
   title?: string;
   message: string;
   dismissible?: boolean;
+  /** Localizable accessible name for the dismiss button (default English). */
+  dismissLabel?: string;
   action?: AlertAction;
   icon?: React.ReactNode;
   className?: string;
@@ -80,7 +83,7 @@ export function AlertBanner({
       {dismissible && (
         <button
           type="button"
-          aria-label="Dismiss"
+          aria-label={dismissLabel}
           onClick={() => setDismissed(true)}
           className="shrink-0 hover:opacity-70 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus rounded"
         >

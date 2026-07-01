@@ -38,6 +38,8 @@ type BadgeOwnProps = {
   dot?: boolean;
   dismissible?: boolean;
   onDismiss?: () => void;
+  /** Localizable accessible name for the dismiss button (default English). */
+  dismissLabel?: string;
   className?: string;
 };
 
@@ -49,6 +51,7 @@ export function Badge<C extends React.ElementType = 'span'>({
   dot = false,
   dismissible = false,
   onDismiss,
+  dismissLabel = 'Remove',
   className,
   ...rest
 }: PolymorphicProps<C, BadgeOwnProps>) {
@@ -74,7 +77,7 @@ export function Badge<C extends React.ElementType = 'span'>({
       {dismissible && (
         <button
           type="button"
-          aria-label="Remove"
+          aria-label={dismissLabel}
           onClick={onDismiss}
           className="ml-0.5 leading-none hover:opacity-70 transition-opacity focus-visible:outline-none rounded-full"
         >

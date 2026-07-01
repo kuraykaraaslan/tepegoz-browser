@@ -22,6 +22,10 @@ type InputProps = {
   /** Localizable accessible names for the password show/hide toggle (default English). */
   showPasswordLabel?: string;
   hidePasswordLabel?: string;
+  /** Localizable label texts for the required marker / read-only tag / clear button (default English). */
+  requiredLabel?: string;
+  readOnlyLabel?: string;
+  clearLabel?: string;
   className?: string;
 } & React.InputHTMLAttributes<HTMLInputElement>;
 
@@ -40,6 +44,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({
   maxLength,
   showPasswordLabel = 'Show password',
   hidePasswordLabel = 'Hide password',
+  requiredLabel = '(required)',
+  readOnlyLabel = '(read-only)',
+  clearLabel = 'Clear',
   className,
   value,
   onChange,
@@ -107,11 +114,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({
         {required && (
           <>
             <span className="text-error ml-1" aria-hidden="true">*</span>
-            <span className="sr-only">(required)</span>
+            <span className="sr-only">{requiredLabel}</span>
           </>
         )}
         {readOnly && (
-          <span className="ml-2 text-xs font-normal text-text-disabled">(read-only)</span>
+          <span className="ml-2 text-xs font-normal text-text-disabled">{readOnlyLabel}</span>
         )}
       </label>
 
@@ -156,7 +163,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({
         {clearable && value && !readOnly && !isPassword && (
           <button
             type="button"
-            aria-label="Clear"
+            aria-label={clearLabel}
             onClick={onClear}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-text-disabled hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus rounded"
           >
