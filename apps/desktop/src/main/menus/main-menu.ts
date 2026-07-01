@@ -5,10 +5,10 @@ import {
   INTERNAL_SETTINGS_URL,
   IpcChannels,
   isExtensionEnabled,
-} from '../../shared/ipc-contract';
+} from '@tepegoz/desktop-ipc';
 import { BUILTIN_MANIFESTS, extensionLabel } from '../../shared/extensions';
 import { mainLocale, mainResources } from '../lib/i18n-main';
-import PreferenceStore from '../preferences/preference-store';
+import PreferenceStore from '@tepegoz/preferences';
 import TabManager from '../tabs';
 
 /**

@@ -64,6 +64,24 @@ module.exports = {
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
     {
+      name: 'desktop-ipc-no-app-no-electron',
+      severity: 'error',
+      comment:
+        '@tepegoz/desktop-ipc is the IPC contract: it must never import back into the app or Electron. ' +
+        'Its `.` (contract) entry must also stay zod-free so the sandboxed preload can bundle it. See docs/package-map.md.',
+      from: { path: '^packages/desktop-ipc/' },
+      to: { path: ['^apps/', 'node_modules/electron'] },
+    },
+    {
+      name: 'preferences-no-app-no-electron',
+      severity: 'error',
+      comment:
+        '@tepegoz/preferences must stay Electron-free and app-free: the file path is injected by the ' +
+        'desktop app; the Preferences type comes from @tepegoz/desktop-ipc. See docs/package-map.md.',
+      from: { path: '^packages/preferences/' },
+      to: { path: ['^apps/', 'node_modules/electron'] },
+    },
+    {
       name: 'tab-strip-is-a-leaf',
       severity: 'error',
       comment:

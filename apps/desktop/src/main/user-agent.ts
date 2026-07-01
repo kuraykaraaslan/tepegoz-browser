@@ -1,6 +1,6 @@
 import { session, type Session } from 'electron';
 import { Logger } from '@tepegoz/libs';
-import PreferenceStore from './preferences/preference-store';
+import PreferenceStore from '@tepegoz/preferences';
 import TabManager, { BROWSING_PARTITION } from './tabs';
 
 /**

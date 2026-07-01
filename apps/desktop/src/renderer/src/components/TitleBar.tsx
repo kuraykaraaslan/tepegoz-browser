@@ -2,7 +2,7 @@ import type { Resources } from '@tepegoz/i18n';
 import { TabStrip } from '@tepegoz/tab-strip';
 import { BrandMark } from '@tepegoz/ui';
 import { WindowControls } from '@tepegoz/window-controls';
-import type { TabInfo } from '../../../shared/ipc-contract';
+import type { TabInfo } from '@tepegoz/desktop-ipc';
 import { useWindowMaximized } from '../lib/useWindowMaximized';
 
 /**

@@ -1,6 +1,6 @@
 import { app } from 'electron';
 import { resolveLocale, resources, type Locale } from '@tepegoz/i18n';
-import PreferenceStore from '../preferences/preference-store';
+import PreferenceStore from '@tepegoz/preferences';
 
 /**
  * Resources for the active locale (pref override → OS locale → default), for MAIN-PROCESS user-facing

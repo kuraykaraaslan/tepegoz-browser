@@ -50,9 +50,9 @@ Any new package must respect this graph and the no-circular rule in
 |---|---|---|---|---|---|
 | [x] | **@tepegoz/navigation** ⭐ (url-bar's backend twin) | ~~`main/lib/navigation-url.ts` + `trusted-origin.ts`~~ → `packages/navigation/` (pure); app keeps thin adapters | Scheme allow-list, `tepegoz://` internal-page routing, search fallback, trusted-origin — pure TS; `isPackaged` + internal-page set **injected** by desktop adapters | none (zero-dep) | ✅ done |
 | [x] | **@tepegoz/credential-vault** | ~~`main/security/credential-vault.ts`~~ → `packages/credential-vault/` | Encrypted BYO-key vault; `SecretCrypto` + file path injected (app wires safeStorage in `stores.electron.ts`); Electron-free, 9 tests | `@tepegoz/libs`, `shared-types`, `json-store` | ✅ done |
-| [ ] | **@tepegoz/preferences** | `main/preferences/preference-store.ts` + `preferences.model.ts` | Zod schema + store core (path injected); minor refactor: make `ExtensionId` enum pluggable | zod, json-store, `@tepegoz/libs` | M |
+| [x] | **@tepegoz/preferences** | ~~`main/preferences/*`~~ → `packages/preferences/` | Zod schema + defaults + store (path injected); the `Preferences` **type** is owned by `@tepegoz/desktop-ipc` and pinned via `satisfies`; 4 tests | `@tepegoz/desktop-ipc`, `extension-sdk`, `json-store`, zod | ✅ done |
 | [x] | **@tepegoz/json-store** | ~~`main/lib/json-store.ts`~~ → `packages/json-store/` | Crash-safe file-based JSON persist (Node-only); used by credential-vault + preferences | none (Node fs) | ✅ done |
-| [ ] | **@tepegoz/desktop-ipc** | `shared/ipc-contract.ts` + `shared/ipc-schemas.ts` | Typed IPC channel contract + zod validation (shared main+preload+renderer seam) | `@tepegoz/ext-agent` (types), `@tepegoz/persistence` (types), zod | S–M |
+| [x] | **@tepegoz/desktop-ipc** | ~~`shared/ipc-contract.ts` + `ipc-schemas.ts`~~ → `packages/desktop-ipc/` | Typed IPC contract via **two entries**: `.` = zod-free DTO types/channels/constants (sandboxed-preload-safe, verified 0 zod in preload bundle) · `./schemas` = zod validators (main only). Owns `Preferences`/`TabInfo`/… types | `@tepegoz/ext-agent`+`persistence` (types), `extension-sdk`, zod | ✅ done |
 | [ ] | **@tepegoz/browser-tools** | `main/agent/builtin-tools.ts` + `main/agent/perception.ts` | Browser capability descriptors + page perception; needs a `WebContents`/TabManager boundary interface to decouple from Electron (sanitizer already in `tool-executor`) | `@tepegoz/capability-plane`, `@tepegoz/shared-types`, `@tepegoz/tool-executor`, `@tepegoz/security-policy` | M–L |
 | [ ] | **@tepegoz/tab-engine** | `main/tabs.ts` | Tab lifecycle over `WebContentsView`. Heavy Electron coupling; needs boundary + pure-state refactor (long-term) | electron, `@tepegoz/persistence`, `@tepegoz/libs` | L |
 
@@ -86,7 +86,8 @@ For each new package (same shape as `@tepegoz/tool-executor` / `@tepegoz/ui`):
   `@tepegoz/omnibox` (+ calc), `@tepegoz/json-store`, BrandMark → `@tepegoz/ui`. ✅ done.
 - [x] **Wave 1 — UI chrome:** `tab-strip`, `window-controls`, `nav-toolbar`, `history-ui`,
   `extensions-ui`, `settings-ui`. ✅ done. (`browser-chrome` deprioritized — stays in app, see Catalog A.)
-- [ ] **Wave 2 — security/state cores:** ✅ `credential-vault` · ⬜ `preferences`, `desktop-ipc`.
+- [x] **Wave 2 — security/state cores:** `credential-vault`, `desktop-ipc` (2-entry, preload-safe),
+  `preferences` (type owned by desktop-ipc). ✅ done.
 - [ ] **Wave 3 — needs boundary refactor (Phase 1b/2b):** `browser-tools`, `tab-engine`.
 
 ## Per-package Definition of Done (when a package is actually extracted)

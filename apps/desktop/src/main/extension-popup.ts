@@ -1,7 +1,7 @@
 import { BrowserWindow, screen, type Rectangle } from 'electron';
 import { join } from 'node:path';
 import { Logger } from '@tepegoz/libs';
-import { IpcChannels } from '../shared/ipc-contract';
+import { IpcChannels } from '@tepegoz/desktop-ipc';
 import { manifestById } from '../shared/extensions';
 import { createPopupWindow } from './window';
 

@@ -6,7 +6,7 @@ import {
   IpcChannels,
   type TabInfo,
   type TabsState,
-} from '../shared/ipc-contract';
+} from '@tepegoz/desktop-ipc';
 import { HistoryStore } from '@tepegoz/persistence';
 import { internalPageUrl, isWebUrl, toNavigationUrl } from './lib/navigation-url';
 import { mainLocale, mainResources } from './lib/i18n-main';

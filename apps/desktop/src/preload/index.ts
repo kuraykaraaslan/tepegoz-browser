@@ -15,7 +15,7 @@ import {
   type TabsState,
   type TepegozApi,
   type TokenUsageSnapshot,
-} from '../shared/ipc-contract';
+} from '@tepegoz/desktop-ipc';
 
 /**
  * The ONLY bridge between renderer and main. A small, named, typed API — never raw ipcRenderer

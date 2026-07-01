@@ -8,7 +8,7 @@ import {
   INTERNAL_EXTENSIONS_URL,
   INTERNAL_HISTORY_URL,
   INTERNAL_SETTINGS_URL,
-} from '../../shared/ipc-contract';
+} from '@tepegoz/desktop-ipc';
 import { EXTENSION_PAGE_URLS } from '../../shared/extensions';
 
 export { isWebUrl, toNavigationUrl } from '@tepegoz/navigation';

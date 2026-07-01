@@ -8,7 +8,7 @@ import type {
   Preferences,
   ProviderId,
   ThemePref,
-} from '../../../shared/ipc-contract';
+} from '@tepegoz/desktop-ipc';
 
 const PROVIDERS: readonly ProviderId[] = ['anthropic', 'openai', 'gemini'];
 const THEMES: readonly ThemePref[] = ['system', 'light', 'dark'];

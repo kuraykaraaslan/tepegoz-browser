@@ -4,7 +4,7 @@ import {
   isExtensionEnabled,
   type ExtensionId,
   type ExtensionState,
-} from '../../../shared/ipc-contract';
+} from '@tepegoz/desktop-ipc';
 import { extensionLabel } from '../../../shared/extensions';
 import { EXTENSIONS } from '../extensions/registry';
 

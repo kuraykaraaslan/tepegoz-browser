@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { resources, resolveLocale, type Locale } from '@tepegoz/i18n';
-import type { ThemePref } from '../../../shared/ipc-contract';
+import type { ThemePref } from '@tepegoz/desktop-ipc';
 import { extensionDefById } from '../extensions/registry';
 
 /**

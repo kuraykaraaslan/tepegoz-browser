@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { EXTENSION_ID_RE } from '@tepegoz/extension-sdk';
-import type { Preferences } from '../../shared/ipc-contract';
+import type { Preferences } from '@tepegoz/desktop-ipc';
 
 /**
  * App preferences validation (main-side). The TYPE lives in the shared IPC contract (zod-free, so the

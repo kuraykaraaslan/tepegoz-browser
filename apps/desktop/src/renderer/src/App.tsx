@@ -13,7 +13,7 @@ import {
   INTERNAL_HISTORY_URL,
   INTERNAL_SETTINGS_URL,
   isExtensionEnabled,
-} from '../../shared/ipc-contract';
+} from '@tepegoz/desktop-ipc';
 import type {
   ContentBounds,
   CredentialsStatus,
@@ -23,7 +23,7 @@ import type {
   ProviderId,
   TabsState,
   ThemePref,
-} from '../../shared/ipc-contract';
+} from '@tepegoz/desktop-ipc';
 import { extensionIdFromPageUrl, extensionLabel, extensionPageUrl } from '../../shared/extensions';
 import { EXTENSIONS, extensionDefById } from './extensions/registry';
 import { HistoryPage } from '@tepegoz/history-ui';

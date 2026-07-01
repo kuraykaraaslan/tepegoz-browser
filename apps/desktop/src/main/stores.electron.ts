@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { app, safeStorage } from 'electron';
 import CredentialVault, { type SecretCrypto } from '@tepegoz/credential-vault';
-import PreferenceStore from './preferences/preference-store';
+import PreferenceStore from '@tepegoz/preferences';
 import { initDatabase } from './db/database.electron';
 
 /**

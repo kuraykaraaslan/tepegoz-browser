@@ -1,6 +1,6 @@
 import { app, BrowserWindow, shell, type Rectangle } from 'electron';
 import { join } from 'node:path';
-import { IpcChannels } from '../shared/ipc-contract';
+import { IpcChannels } from '@tepegoz/desktop-ipc';
 import { isTrustedAppUrl } from './lib/trusted-origin';
 
 /** App-chrome partition — shared by the main window and extension popups (both are trusted chrome). */

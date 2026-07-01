@@ -15,7 +15,7 @@ import {
   type Preferences,
   type TabsState,
   type TokenUsageSnapshot,
-} from '../shared/ipc-contract';
+} from '@tepegoz/desktop-ipc';
 import {
   AgentApprovalResponseSchema,
   AgentPlanResponseSchema,
@@ -33,7 +33,7 @@ import {
   RemoveProviderKeyInputSchema,
   SetProviderKeyInputSchema,
   TabIdSchema,
-} from '../shared/ipc-schemas';
+} from '@tepegoz/desktop-ipc/schemas';
 import type { ConfirmRequest } from '@tepegoz/capability-plane';
 import { TokenLedger } from '@tepegoz/model-gateway';
 import { EventJournal, HistoryStore } from '@tepegoz/persistence';
@@ -41,10 +41,10 @@ import type { EventType, Plan } from '@tepegoz/shared-types';
 import { randomUUID } from 'node:crypto';
 import AgentService, { type PlanApprovalDecision } from './agent/agent-service';
 import { getDb } from './db/database.electron';
-import { PreferencesPatchSchema } from './preferences/preferences.model';
+import { PreferencesPatchSchema } from '@tepegoz/preferences';
 import { isTrustedAppUrl } from './lib/trusted-origin';
 import CredentialVault from '@tepegoz/credential-vault';
-import PreferenceStore from './preferences/preference-store';
+import PreferenceStore from '@tepegoz/preferences';
 import TabManager from './tabs';
 import UserAgentManager from './user-agent';
 import ExtensionPopupManager from './extension-popup';

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { EXTENSION_ID_RE } from '@tepegoz/extension-sdk';
-import type { AppInfo } from './ipc-contract';
+import type { AppInfo } from './contract';
 
 /**
  * Runtime (zod) validation for IPC payloads — MAIN PROCESS ONLY. Kept separate from `ipc-contract.ts`

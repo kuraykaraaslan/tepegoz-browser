@@ -17,6 +17,10 @@ const WORKSPACE_PACKAGES = [
   '@tepegoz/navigation',
   '@tepegoz/json-store',
   '@tepegoz/credential-vault',
+  '@tepegoz/preferences',
+  // The typed IPC contract. Its `.` entry is zod-free so the sandboxed preload bundles it safely;
+  // the zod validators live in the `@tepegoz/desktop-ipc/schemas` entry (imported by main only).
+  '@tepegoz/desktop-ipc',
   // Extension SDK + built-in extension manifests: main reads them for id validation, `tepegoz://`
   // page routing, and native-menu labels (via shared/extensions.ts). Only the React-free manifest
   // modules are reached from main; the renderer bundles the surface components separately.

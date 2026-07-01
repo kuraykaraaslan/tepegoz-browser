@@ -7,7 +7,7 @@ on:
     tags: ['v*']
 
 permissions:
-  contents: read
+  contents: write # attach installers to the GitHub Release for this tag
 
 jobs:
   build:
@@ -27,6 +27,28 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Typecheck · lint · test · build
         run: pnpm exec turbo run typecheck lint test build
-      # TODO(Phase 0 packaging): electron-builder + code signing (Windows Authenticode / Azure Trusted
-      # Signing; macOS Developer ID + notarize) + electron-updater publish to a signed HTTPS feed.
-      # BLOCKING for distribution — requires a signing identity. Unsigned builds are dev-only.
+
+      # Windows: package an NSIS installer (.exe). Native modules (better-sqlite3) can't be
+      # cross-compiled, so this only runs on the windows-latest runner. `package:win` also runs
+      # `electron-vite build` to refresh out/ before electron-builder packages it.
+      # NOTE: unsigned (dev-only). Code signing is still BLOCKING for public distribution — wire
+      # Authenticode (CSC_LINK/CSC_KEY_PASSWORD) or Azure Trusted Signing secrets in
+      # apps/desktop/electron-builder.yml once a signing identity exists. macOS Developer ID +
+      # notarize and electron-updater publishing remain follow-ups (not built here yet).
+      - name: Package Windows installer (unsigned)
+        if: matrix.os == 'windows-latest'
+        run: pnpm --filter @tepegoz/desktop run package:win
+
+      - name: Upload installer artifact
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tepegoz-windows-installer
+          path: apps/desktop/dist/*.exe
+          if-no-files-found: error
+
+      - name: Attach installer to GitHub Release
+        if: matrix.os == 'windows-latest'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: apps/desktop/dist/*.exe

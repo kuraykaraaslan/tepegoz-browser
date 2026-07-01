@@ -1,0 +1,58 @@
+# electron-builder config for Tepegöz (Windows NSIS installer).
+#
+# The app is built by electron-vite into `out/` (main/preload/renderer); electron-builder only
+# PACKAGES that output into an installer — it does not compile TS. Run via `pnpm package:win`
+# (which does `electron-vite build && electron-builder --win`), never electron-builder alone.
+#
+# Native modules cannot be cross-compiled: build the Windows installer ON Windows (local dev box or
+# the `windows-latest` CI runner). See .github/workflows/release.yml.
+appId: com.tepegoz.browser
+productName: Tepegöz
+
+directories:
+  # Installer + unpacked output → apps/desktop/dist/ (turbo `build` already lists dist/** as output;
+  # dist/ is git-ignored). buildResources is where electron-builder looks for installer assets.
+  output: dist
+  buildResources: resources
+
+# What goes INTO the app (app.asar). Workspace packages are bundled into out/main by electron-vite,
+# so only the built output + resources + package.json are needed. `resources/**` MUST be included:
+# the brand icon is loaded at runtime via `join(app.getAppPath(), 'resources', 'icon.ico')`
+# (src/main/window.ts) — app.getAppPath() resolves to app.asar, so resources ship inside it.
+files:
+  - out/**
+  - resources/**
+  - package.json
+
+# better-sqlite3 is a native addon; a .node binary cannot be loaded from inside an asar archive, so
+# unpack it to app.asar.unpacked/. Without this, the DB fails to open and history/journal silently
+# no-op (see src/main/db/database.electron.ts).
+asarUnpack:
+  - '**/*.node'
+
+# Rebuild native deps (better-sqlite3) against the Electron ABI during packaging.
+npmRebuild: true
+
+win:
+  target: nsis
+  icon: resources/icon.ico
+  # --- Code signing (BLOCKING for distribution; not configured yet → unsigned dev-only builds) ---
+  # Unsigned installers trigger a SmartScreen "Unknown publisher" warning. When a signing identity is
+  # available, enable ONE of the following (driven by env/secrets, never commit certs/keys):
+  #   Authenticode (.pfx):  set CSC_LINK + CSC_KEY_PASSWORD env vars (electron-builder picks them up).
+  #   Azure Trusted Signing:
+  #     azureSignOptions:
+  #       endpoint: https://<region>.codesigning.azure.net
+  #       certificateProfileName: <profile>
+  #       codeSigningAccountName: <account>
+
+nsis:
+  oneClick: false # show a wizard instead of silent install
+  perMachine: false # per-user install → no admin/UAC prompt
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Tepegöz
+  installerIcon: resources/icon.ico
+  uninstallerIcon: resources/icon.ico
+# publish: (electron-updater feed) intentionally omitted — auto-update is a separate follow-up.

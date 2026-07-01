@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { cn } from '@tepegoz/ui';
 import { NavToolbar, NAV_BTN } from '@tepegoz/nav-toolbar';
 import type { Locale, Resources } from '@tepegoz/i18n';
-import { INTERNAL_EXTENSIONS_URL, type ContentBounds } from '../../../shared/ipc-contract';
+import { INTERNAL_EXTENSIONS_URL, type ContentBounds } from '@tepegoz/desktop-ipc';
 import { extensionLabel } from '../../../shared/extensions';
 import type { ExtensionDef } from '../extensions/registry';
 
