@@ -1,8 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { cn } from '@tepegoz/ui';
 import { NAV_BTN } from '@tepegoz/nav-toolbar';
-import type { Locale, Resources } from '@tepegoz/i18n';
+import type { Locale } from '@tepegoz/i18n';
+import { useT } from '@tepegoz/i18n/react';
 import { INTERNAL_EXTENSIONS_URL, type ContentBounds } from '@tepegoz/desktop-ipc';
+import { extensionsDict } from '../../../i18n';
 import { extensionLabel } from '../../../shared/extensions';
 import type { ExtensionDef } from '../extensions/registry';
 
@@ -78,7 +80,6 @@ function ExtensionIconButton({
 }
 
 interface ExtensionTrayProps {
-  t: Resources;
   locale: Locale;
   /** Enabled extensions, shown as icons to the right of the address bar (Chrome-style). */
   extensions: readonly ExtensionDef[];
@@ -90,12 +91,12 @@ interface ExtensionTrayProps {
 
 /** The pinned extension icons + the puzzle (manage) button — rendered in the nav bar's actions slot. */
 export function ExtensionTray({
-  t,
   locale,
   extensions,
   activeExtensionId,
   onExtensionAction,
 }: ExtensionTrayProps) {
+  const x = useT(extensionsDict);
   return (
     <>
       {/* Enabled extensions, pinned as icons to the right of the address bar (Chrome-style). */}
@@ -112,8 +113,8 @@ export function ExtensionTray({
       {/* Puzzle: manage/overflow — opens the tepegoz://extensions page (like Chrome's puzzle piece). */}
       <button
         type="button"
-        aria-label={t.extensions.manage}
-        title={t.extensions.manage}
+        aria-label={x.manage}
+        title={x.manage}
         onClick={() => window.tepegoz.navigateTab(INTERNAL_EXTENSIONS_URL)}
         className={NAV_BTN}
       >

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { cn } from '@tepegoz/ui';
-import type { Resources } from '@tepegoz/i18n';
+import { coreDict } from '@tepegoz/i18n';
+import { useT } from '@tepegoz/i18n/react';
+import { userAgentDict } from './i18n';
 import { USER_AGENT_PRESETS, matchPreset, type UserAgentPreset } from './presets';
 import type { UserAgentHostApi } from './types';
 
@@ -12,7 +14,6 @@ import type { UserAgentHostApi } from './types';
  * a `popup` (compact card under the toolbar icon) or a `page` (tepegoz://com.tepegoz.user-agent).
  */
 export interface UserAgentSurfaceProps {
-  t: Resources;
   api: UserAgentHostApi;
   onClose: () => void;
 }
@@ -25,8 +26,8 @@ const BTN_GHOST =
   'hover:bg-surface-overlay hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus';
 
 /** The stateful picker core, shared by every surface. Renders no chrome of its own. */
-export function UserAgentPicker({ t, api }: { t: Resources; api: UserAgentHostApi }) {
-  const x = t.userAgent;
+export function UserAgentPicker({ api }: { api: UserAgentHostApi }) {
+  const x = useT(userAgentDict);
   // `current` is the applied selection (UA string or null = default); null until loaded.
   const [current, setCurrent] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -170,32 +171,35 @@ export function UserAgentPicker({ t, api }: { t: Resources; api: UserAgentHostAp
 }
 
 /** Popup surface — a compact card. Width/height are clamped by the chrome host, not the extension. */
-export function UserAgentPopup({ t, api, onClose }: UserAgentSurfaceProps) {
+export function UserAgentPopup({ api, onClose }: UserAgentSurfaceProps) {
+  const ua = useT(userAgentDict);
+  const c = useT(coreDict);
   return (
     <div className="flex w-full flex-col">
       <div className="flex items-center justify-between border-b border-border px-4 py-2">
-        <h2 className="text-sm font-semibold text-text-primary">{t.userAgent.title}</h2>
-        <button type="button" onClick={onClose} aria-label={t.window.close} className={BTN_GHOST}>
-          {t.window.close}
+        <h2 className="text-sm font-semibold text-text-primary">{ua.title}</h2>
+        <button type="button" onClick={onClose} aria-label={c.window.close} className={BTN_GHOST}>
+          {c.window.close}
         </button>
       </div>
       <div className="p-3">
-        <UserAgentPicker t={t} api={api} />
+        <UserAgentPicker api={api} />
       </div>
     </div>
   );
 }
 
 /** Page surface — full internal page at tepegoz://com.tepegoz.user-agent. */
-export function UserAgentPage({ t, api }: UserAgentSurfaceProps) {
+export function UserAgentPage({ api }: UserAgentSurfaceProps) {
+  const ua = useT(userAgentDict);
   return (
     <div className="flex h-full flex-col bg-surface-base text-text-primary">
       <div className="shrink-0 border-b border-border px-8 py-4">
-        <h1 className="mx-auto max-w-2xl text-base font-semibold">{t.userAgent.title}</h1>
+        <h1 className="mx-auto max-w-2xl text-base font-semibold">{ua.title}</h1>
       </div>
       <div className="flex-1 overflow-auto px-8 py-6">
         <div className="mx-auto max-w-2xl">
-          <UserAgentPicker t={t} api={api} />
+          <UserAgentPicker api={api} />
         </div>
       </div>
     </div>

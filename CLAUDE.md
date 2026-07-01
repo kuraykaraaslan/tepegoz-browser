@@ -23,7 +23,9 @@ gates are summarized in `phases/README.md`; ADR-0010 records deviations.
   args, MCP, adapters, journal, policy). `@tepegoz/shared-types` is the only schema source.
 - `AppError(message, statusCode)` — services throw, the boundary maps (ADR-0009).
 - Secrets only in the main process via `safeStorage`; never in env/bundle/logs (redaction).
-- Every user-facing string via `@tepegoz/i18n` (English-first; Turkish first-class) — no hardcoded UI strings.
+- Every user-facing string is localized (English-first; Turkish first-class) — no hardcoded UI strings.
+  Each package/extension **owns its dictionary** (`src/i18n/`, `defineDict` + `useT`); only the shared core
+  (`common`/`window`/`errors`) lives in `@tepegoz/i18n` (ADR-0016).
 - Renderer is untrusted; one secure `createWindow()` factory; typed `contextBridge` only.
 
 ## Commands

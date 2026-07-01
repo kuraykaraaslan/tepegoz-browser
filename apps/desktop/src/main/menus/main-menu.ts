@@ -7,7 +7,7 @@ import {
   isExtensionEnabled,
 } from '@tepegoz/desktop-ipc';
 import { BUILTIN_MANIFESTS, extensionLabel } from '../../shared/extensions';
-import { mainLocale, mainResources } from '../lib/i18n-main';
+import { mainLocale, mainStrings } from '../lib/i18n-main';
 import PreferenceStore from '@tepegoz/preferences';
 import TabManager from '../tabs';
 
@@ -19,7 +19,7 @@ import TabManager from '../tabs';
  * signals the renderer.
  */
 export function showMainMenu(win: BrowserWindow): void {
-  const t = mainResources();
+  const t = mainStrings();
   const locale = mainLocale();
   const { extensions } = PreferenceStore.getAll();
   const extensionSubmenu: MenuItemConstructorOptions[] = [

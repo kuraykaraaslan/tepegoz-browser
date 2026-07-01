@@ -26,7 +26,7 @@ No product features; the decisions made here would force a full rewrite if wrong
 - [x] root `package.json` + `turbo.json` (lint/typecheck/test/build pipeline, cache) — **turbo pinned to `2.5.5`** (2.10.1 crashes on this machine: `STATUS_DLL_NOT_FOUND`)
 - [x] root base `tsconfig.base.json` (strict, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, Bundler resolution, paths `@/*`) — all packages extend  _(dropped `ignoreDeprecations`: invalid on TS 5.7 + unneeded with Bundler resolution)_
 - [x] `eslint.config.mjs` (flat config; typescript-eslint strict **type-checked** + `no-floating-promises`) + `.prettierrc.json` + `.editorconfig`
-- [x] `dependency-cruiser.cjs` — no-circular + no-orphans + not-to-dev-dep (concrete L-layer rules added when those packages land)
+- [x] `dependency-cruiser.cjs` — no-circular + no-orphans + not-to-dev-dep (concrete per-package layer rules **have since landed** as the packagization completed: no-app/no-electron + presentational-leaf rules — see `dependency-cruiser.cjs`)
 - [x] `electron.vite.config.ts` (main/preload/renderer 3 targets; preload forced **CJS `index.js`** for sandbox) — `apps/desktop` builds green
 - [ ] `electron-builder.yml` (Windows NSIS, appId `com.tepegoz.browser` **frozen**, fuses block, `asarUnpack: ['**/*.node']`, `electron-updater`)
 
@@ -66,18 +66,24 @@ No product features; the decisions made here would force a full rewrite if wrong
 
 ### Documentation & security
 - [x] root `README.md` (pre-existing, kept) + per-package READMEs (shared-types, libs, i18n, persistence, desktop)
-- [x] `docs/adr/` **10 ADRs (0001–0010)** + index: Electron+React+TS · monorepo · SQLite · event-sourced Journal · provider-agnostic AI · Policy Kernel+HITL · capability-plane/MCP(client+server) · perception/CDP · boundary-mapping · TS/tooling conventions
+- [x] `docs/adr/` **10 ADRs (0001–0010)** at Phase 0 _(now **0001–0016**; 0012–0016 added as later phases/refactors landed — browser-tab-model, agent-orchestration, user-data layout, package-extraction roadmap, per-package i18n — see `docs/adr/README.md`)_ + index: Electron+React+TS · monorepo · SQLite · event-sourced Journal · provider-agnostic AI · Policy Kernel+HITL · capability-plane/MCP(client+server) · perception/CDP · boundary-mapping · TS/tooling conventions
 - [x] `CHANGELOG.md` (Keep-a-Changelog) + `docs/known-issues.md` + `handover/` skeleton
 - [x] `.env.example` (key names only, no values; explicit "BYO keys live in OS keychain, not here")
 - [x] **Threat Model Lite + Risk Register** (`docs/THREAT-MODEL.md`; High/Critical; assets/actors/entry-points/trust-boundaries/top-threats→mitigations/residual-risk)
 
 ### i18n infrastructure (DAY-0 — set up early to avoid pain later)
-- [ ] choose + set up i18n library (e.g. i18next/react-i18next or a lightweight type-safe solution; Electron renderer, no SSR) — **ADR**
+> **Mechanism refactored ([ADR-0016](../docs/adr/0016-per-package-i18n.md)):** the monolithic `Resources`
+> catalog below became **per-package dictionaries + a React runtime**. `@tepegoz/i18n` keeps only the shared
+> core (`common`/`window`/`errors`) + `defineDict`/`pick`/`./react` (`useT`/`I18nProvider`)/`./testing`; each
+> package/extension owns `src/i18n/{en,tr,index}.ts`; React surfaces `useT(dict)`, the main process uses
+> `pick`/`mainStrings`. The en/tr-parity, no-hardcoded and main-process-i18n **outcomes** below still hold —
+> now enforced **per dict**.
+- [ ] choose + set up i18n library (chose a lightweight type-safe runtime: `defineDict` + `useT`/`I18nProvider`, not i18next; Electron renderer, no SSR) — **[ADR-0016](../docs/adr/0016-per-package-i18n.md)**
 - [x] `packages/i18n` locale bundle: `src/locales/en.ts` (**primary/source; fallback**) + `tr.ts` (full parity, first-class); namespaced (common, commandPalette, agentConsole, onboarding, errors) + `resolveLocale()`
 - [x] type-safe keys: `Resources = typeof en` contract → any missing/mismatched key in `tr` is a **build error** (verified)
 - [ ] **"no hardcoded user-facing string" ESLint rule** (e.g. eslint-plugin-i18next/no-literal-string); allow-list exception: logs/`*.messages.ts`/tests
 - [ ] locale-aware formatting (date/number/plural/relative-time) + RTL-ready skeleton
-- [ ] main-process user-facing text (native menu, dialog, notification, tray) reads from i18n (same catalog as renderer)
+- [ ] main-process user-facing text (native menu, dialog, notification, tray) reads from i18n — React-free, via `pick(dict, mainLocale())` → `mainStrings()` over the app's own dicts (ADR-0016)
 - [ ] language selection: OS language default + override in settings; runtime language switch (no restart)
 - [ ] Turkish IME/keyboard pipeline skeleton (ç/ğ/ı/ö/ş/ü, Turkish-Q/F, dead keys) — regression matrix filled in Phase 1a
 

@@ -180,9 +180,6 @@ importers:
 
   packages/browser-chrome:
     dependencies:
-      '@tepegoz/i18n':
-        specifier: workspace:*
-        version: link:../i18n
       '@tepegoz/nav-toolbar':
         specifier: workspace:*
         version: link:../nav-toolbar
@@ -309,6 +306,9 @@ importers:
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(lightningcss@1.32.0)
 
   packages/ext-user-agent:
     dependencies:
@@ -331,6 +331,9 @@ importers:
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(lightningcss@1.32.0)
 
   packages/extension-sdk:
     dependencies:
@@ -375,7 +378,14 @@ importers:
         version: 5.9.3
 
   packages/i18n:
+    dependencies:
+      react:
+        specifier: ^18 || ^19
+        version: 18.3.1
     devDependencies:
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.31
       typescript:
         specifier: ^5.7.2
         version: 5.9.3

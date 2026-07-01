@@ -64,6 +64,9 @@ the "everything at once" immaturity trap.
 - [ ] frameless title bar (drag/no-drag + platform caption) + platform conventions + WCAG 2.2 AA + single SHORTCUTS registry + theme tokens
 
 ### i18n + IME (en primary; Turkish first-class) — on top of day-0 infra
+> **Model:** strings live **per package** ([ADR-0016](../docs/adr/0016-per-package-i18n.md)) — each owner's
+> `src/i18n` dict via `defineDict`, React surfaces `useT(dict)`, main via `pick`/`mainStrings`, leaves
+> string-free. The parity/no-hardcoded/full-en+tr outcomes below hold **per dict**.
 - [ ] Full **English** UI/help/error/permission (**en primary/source**) + **Turkish full parity** (first-class)
 - [ ] Fill IME regression matrix (Turkish TEXT input, independent of UI language): Turkish-Q/F, dead keys, ç/ğ/ı/ö/ş/ü; side-panel/command-palette inputs
 - [x] runtime language switch; default = OS language (fallback to en if unsupported)

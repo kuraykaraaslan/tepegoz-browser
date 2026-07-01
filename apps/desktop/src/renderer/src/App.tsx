@@ -6,8 +6,10 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react';
-import { resources, resolveLocale, type Locale } from '@tepegoz/i18n';
+import { coreDict, pick, resolveLocale, type Locale } from '@tepegoz/i18n';
+import { I18nProvider } from '@tepegoz/i18n/react';
 import { Modal } from '@tepegoz/ui';
+import { browserDict, historyDict, sidebarDict } from '../../i18n';
 import {
   INTERNAL_EXTENSIONS_URL,
   INTERNAL_HISTORY_URL,
@@ -283,7 +285,13 @@ export function App() {
   }, []);
 
   const isMaximized = useWindowMaximized();
-  const t = resources[locale];
+  // App mounts the <I18nProvider> in its own return, so it sits ABOVE its own provider — it therefore
+  // resolves the strings it renders itself with `pick(dict, locale)` (not the `useT` hook). Child
+  // components/surfaces render under the provider and self-localize via `useT`.
+  const coreT = pick(coreDict, locale);
+  const browserT = pick(browserDict, locale);
+  const sidebarT = pick(sidebarDict, locale);
+  const historyT = pick(historyDict, locale);
   const activeTab = tabs.tabs.find((tb) => tb.id === tabs.activeId);
   const currentUrl = activeTab?.url ?? '';
   // Internal pages are tabs addressed tepegoz://… ; render them when active.
@@ -324,7 +332,7 @@ export function App() {
     const def = extensionDefById(activeSurface.id);
     const Surface = def?.surfaces[activeSurface.kind];
     if (def === undefined || Surface === undefined) return null;
-    const body = <Surface t={t} onClose={closeSurface} />;
+    const body = <Surface onClose={closeSurface} />;
     if (activeSurface.kind === 'panel') return body;
     if (activeSurface.kind === 'modal') {
       return (
@@ -350,21 +358,22 @@ export function App() {
         <div
           role="separator"
           aria-orientation="vertical"
-          aria-label={t.sidebar.resize}
+          aria-label={sidebarT.resize}
           onPointerDown={onSidebarResizeStart}
           className="absolute left-0 top-0 z-10 h-full w-1.5 -translate-x-1/2 cursor-col-resize hover:bg-border-focus"
         />
         <div className="relative flex-1 overflow-hidden">
-          <SidebarSurface t={t} onClose={() => setSidebarExtId(null)} />
+          <SidebarSurface onClose={() => setSidebarExtId(null)} />
         </div>
       </aside>
     );
   }
 
   return (
+    <I18nProvider locale={locale}>
     <div className="flex h-screen flex-col bg-surface-base text-text-primary">
       <BrowserChrome
-        t={t}
+        t={{ common: coreT.common, window: coreT.window, browser: browserT }}
         tabs={tabs.tabs}
         activeTabId={tabs.activeId}
         onSelectTab={(id) => {
@@ -391,7 +400,6 @@ export function App() {
         onNavigate={(input) => window.tepegoz.navigateTab(input)}
         toolbarActions={
           <ExtensionTray
-            t={t}
             locale={locale}
             extensions={enabledExtensions}
             activeExtensionId={activeSurface?.id ?? sidebarExtId ?? popupOpenId ?? null}
@@ -420,7 +428,6 @@ export function App() {
           <div className="absolute inset-0 bg-surface-base">
             {prefs && status ? (
               <SettingsPage
-                t={t}
                 prefs={prefs}
                 status={status}
                 onUpdatePrefs={onUpdatePrefs}
@@ -434,18 +441,18 @@ export function App() {
         )}
         {extensionsActive && (
           <div className="absolute inset-0 bg-surface-base">
-            <ExtensionsPage t={t} locale={locale} states={extensionStates} onToggle={onToggleExtension} />
+            <ExtensionsPage locale={locale} states={extensionStates} onToggle={onToggleExtension} />
           </div>
         )}
         {historyActive && (
           <div className="absolute inset-0 bg-surface-base">
             <HistoryPage
               labels={{
-                title: t.history.title,
-                search: t.history.search,
-                clear: t.history.clear,
-                delete: t.history.delete,
-                empty: t.history.empty,
+                title: historyT.title,
+                search: historyT.search,
+                clear: historyT.clear,
+                delete: historyT.delete,
+                empty: historyT.empty,
               }}
               list={(q) => (q.length === 0 ? window.tepegoz.getHistory() : window.tepegoz.searchHistory(q))}
               remove={(url) => window.tepegoz.deleteHistory(url)}
@@ -455,7 +462,7 @@ export function App() {
         )}
         {PageSurface !== undefined && (
           <div className="absolute inset-0 bg-surface-base">
-            <PageSurface t={t} onClose={closeSurface} />
+            <PageSurface onClose={closeSurface} />
           </div>
         )}
         {renderActiveSurface()}
@@ -463,5 +470,6 @@ export function App() {
         {renderSidebar()}
       </div>
     </div>
+    </I18nProvider>
   );
 }

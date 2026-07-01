@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { resources, resolveLocale, type Locale } from '@tepegoz/i18n';
+import { resolveLocale, type Locale } from '@tepegoz/i18n';
+import { I18nProvider } from '@tepegoz/i18n/react';
 import type { ThemePref } from '@tepegoz/desktop-ipc';
 import { extensionDefById } from '../extensions/registry';
 
@@ -43,10 +44,12 @@ export function PopupApp({ id }: { id: string }) {
   if (def === undefined || Surface === undefined) return null;
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-surface-base text-text-primary">
-      <div className="min-h-0 flex-1 overflow-auto">
-        <Surface t={resources[locale]} onClose={() => window.tepegoz.closeExtensionPopup()} />
+    <I18nProvider locale={locale}>
+      <div className="flex h-screen flex-col overflow-hidden bg-surface-base text-text-primary">
+        <div className="min-h-0 flex-1 overflow-auto">
+          <Surface onClose={() => window.tepegoz.closeExtensionPopup()} />
+        </div>
       </div>
-    </div>
+    </I18nProvider>
   );
 }

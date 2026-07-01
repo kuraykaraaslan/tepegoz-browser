@@ -9,7 +9,7 @@ function keyPaths(obj: Record<string, unknown>, prefix = ''): string[] {
   );
 }
 
-describe('i18n catalog integrity', () => {
+describe('i18n shared-core integrity', () => {
   const enKeys = keyPaths(resources.en).sort();
 
   it('every locale has the exact same key set as en (source of truth)', () => {

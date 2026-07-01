@@ -8,12 +8,14 @@
     "./manifest": "./src/manifest.ts",
     "./panel": "./src/panel.tsx",
     "./presets": "./src/presets.ts",
-    "./types": "./src/types.ts"
+    "./types": "./src/types.ts",
+    "./i18n": "./src/i18n/index.ts"
   },
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "lint": "eslint ."
   },
   "dependencies": {
@@ -26,6 +28,7 @@
   },
   "devDependencies": {
     "@types/react": "^18.3.18",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
   }
 }

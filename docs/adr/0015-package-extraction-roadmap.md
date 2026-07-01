@@ -25,7 +25,11 @@ can proceed one PR at a time across sessions without re-litigating scope.
   Electron, not published (ADR-0002): move code → add `package.json` + `tsconfig.json` (extends the base)
   → rewrite imports to `@tepegoz/<name>` → add a [`dependency-cruiser`](../../dependency-cruiser.cjs)
   layer rule. React packages take
-  `react`/`react-dom` as peers; UI packages take i18n `Resources` via props (no hardcoded strings).
+  `react`/`react-dom` as peers. **i18n ownership is per package** ([ADR-0016](0016-per-package-i18n.md)):
+  each package/extension owns its feature strings in its own `src/i18n/` dictionary and self-localizes via
+  `@tepegoz/i18n/react`'s `useT`; presentational leaves (tab-strip, window-controls, history-ui,
+  extensions-ui, browser-chrome) stay string-free and take `labels` via props; only the shared core
+  (`common`/`window`/`errors`) lives in `@tepegoz/i18n`.
 - **Order by dependency, not by number:** Wave 0 pure/quick wins (navigation, omnibox, json-store,
   BrandMark→ui) → Wave 1 UI chrome (Phase 2b) → Wave 2 security/state cores → Wave 3 boundary-refactor
   (browser-tools, tab-engine, Phase 1b/2b). Each extraction is its own branch/PR with its own DoD

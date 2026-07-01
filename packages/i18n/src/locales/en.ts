@@ -1,7 +1,8 @@
 /**
- * English is the PRIMARY / SOURCE locale. Its shape is the contract: every other locale must match
- * it exactly (enforced by the `Resources` type and the catalog-integrity test). No user-facing string
- * is hardcoded in components — it always comes from here.
+ * English is the PRIMARY / SOURCE locale for the SHARED CORE dictionary (cross-cutting strings used
+ * everywhere: common controls, native window captions, boundary error messages). Its shape is the
+ * contract — `tr.ts` must match it exactly (enforced by the `Resources` type and the parity test).
+ * Feature strings live with their owning package/extension (its own `src/i18n/`), not here.
  */
 export const en = {
   common: {
@@ -20,126 +21,11 @@ export const en = {
     restore: 'Restore',
     close: 'Close',
   },
-  browser: {
-    tabs: 'Tabs',
-    newTab: 'New tab',
-    closeTab: 'Close tab',
-    untitled: 'New Tab',
-    back: 'Back',
-    forward: 'Forward',
-    reload: 'Reload',
-    omniboxPlaceholder: 'Search or enter address',
-    settings: 'Settings',
-    menu: 'Main menu',
-    exit: 'Exit',
-    // Tab right-click menu (native), mirroring Chrome's tab context menu.
-    newTabRight: 'New tab to the right',
-    duplicateTab: 'Duplicate',
-    closeOtherTabs: 'Close other tabs',
-    closeTabsRight: 'Close tabs to the right',
-  },
-  commandPalette: {
-    placeholder: 'Type a command or ask Tepegöz…',
-    modeChat: 'Chat',
-    modeDo: 'Do',
-    modeMake: 'Make',
-    modeTasks: 'Tasks',
-  },
-  agentConsole: {
-    title: 'Agent Console',
-    progress: 'Progress',
-    tokens: 'Tokens',
-    noActiveTasks: 'No active tasks',
-    awaitingApproval: 'Awaiting your approval',
-    open: 'Agent',
-    runPlaceholder: 'Tell Tepegöz what to do on this page…',
-    run: 'Run',
-    running: 'Running…',
-    approvalTitle: 'Approval required',
-    approvalBody: 'The agent wants to run a tool that changes state. Allow it?',
-    biometricNote: 'This is a high-risk action (Windows Hello will be required in a later release).',
-    approve: 'Approve',
-    deny: 'Deny',
-    aiDisclaimer: 'AI-generated and may be wrong — review side-effecting actions.',
-    planTitle: 'Review the plan',
-    planBody: 'Uncheck any step you do not want, then run. Nothing executes until you approve.',
-    planRun: 'Run plan',
-  },
-  extensions: {
-    title: 'Extensions',
-    manage: 'Manage extensions',
-    search: 'Search extensions',
-    empty: 'No matching extensions',
-  },
-  sidebar: {
-    resize: 'Resize sidebar',
-  },
-  userAgent: {
-    title: 'User-Agent',
-    description: 'Choose how this browser identifies itself to sites. Pick a preset or paste your own.',
-    current: 'Current',
-    presets: 'Presets',
-    default: 'Default (Tepegöz)',
-    custom: 'Custom',
-    customPlaceholder: 'Paste a custom User-Agent string…',
-    customInUse: 'A custom User-Agent is active.',
-    apply: 'Apply',
-    active: 'Active',
-    reloadNote: 'Changing the User-Agent reloads your open tabs.',
-  },
-  history: {
-    title: 'History',
-    search: 'Search history',
-    empty: 'No history yet',
-    clear: 'Clear all',
-    delete: 'Remove',
-  },
-  onboarding: {
-    welcome: 'Welcome to Tepegöz',
-    consentTitle: 'Your data, your control',
-    consentBody: 'Telemetry is off by default. Sensitive sites are locked from automation.',
-  },
   errors: {
     unauthorized: 'Authentication required',
     forbidden: 'Action blocked by policy',
     badState: 'Invalid state for this operation',
     upstreamDown: 'Service unavailable',
-  },
-  settings: {
-    title: 'Settings',
-    search: 'Search settings',
-    noResults: 'No matching settings',
-    providersTitle: 'Providers & API keys',
-    providersSubtitle:
-      'Keys are encrypted on this device (OS keychain) and never leave it without your action.',
-    apiKey: 'API key',
-    apiKeyPlaceholder: 'Paste your key…',
-    keySet: 'Key set',
-    keyNotSet: 'No key',
-    remove: 'Remove',
-    keySaved: 'Key saved.',
-    keyRemoved: 'Key removed.',
-    encryptionUnavailable:
-      'OS encryption is unavailable — keys cannot be stored securely on this device.',
-    providerNames: {
-      anthropic: 'Claude (Anthropic)',
-      openai: 'OpenAI',
-      gemini: 'Gemini (Google)',
-    },
-    appearanceTitle: 'Appearance',
-    theme: 'Theme',
-    themeSystem: 'System',
-    themeLight: 'Light',
-    themeDark: 'Dark',
-    languageTitle: 'Language',
-    langSystem: 'System',
-    privacyTitle: 'Privacy & telemetry',
-    telemetry: 'Share anonymous usage telemetry',
-    telemetryDesc: 'Off by default. No page content or keys are ever sent.',
-    costTitle: 'Cost & performance',
-    localModel: 'Use a local model for simple tasks',
-    localModelDesc:
-      'Runs simple steps (classify, summarize) on-device to cut AI cost, falling back to the cloud when needed. The local model activates in a later release.',
   },
 };
 

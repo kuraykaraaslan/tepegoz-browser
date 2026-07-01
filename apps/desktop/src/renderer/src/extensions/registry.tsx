@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import type { Resources } from '@tepegoz/i18n';
 import type { ExtensionManifest, ExtensionSurfaceKind } from '@tepegoz/extension-sdk';
 import { agentManifest, AgentPanel } from '@tepegoz/ext-agent';
 import { userAgentManifest, UserAgentPopup, UserAgentPage } from '@tepegoz/ext-user-agent';
@@ -13,7 +12,6 @@ import { userAgentManifest, UserAgentPopup, UserAgentPage } from '@tepegoz/ext-u
  * `BUILTIN_MANIFESTS`. (Real MV3/third-party extensions are a later phase.)
  */
 export interface ExtensionSurfaceProps {
-  t: Resources;
   onClose: () => void;
 }
 
@@ -54,7 +52,7 @@ export const EXTENSIONS: readonly ExtensionDef[] = [
     icon: <AgentIcon />,
     surfaces: {
       // The AI console lives in the resizable sidebar so the page stays visible beside it.
-      sidebar: ({ t, onClose }) => <AgentPanel t={t} api={window.tepegoz} onClose={onClose} />,
+      sidebar: ({ onClose }) => <AgentPanel api={window.tepegoz} onClose={onClose} />,
     },
   },
   {
@@ -62,8 +60,8 @@ export const EXTENSIONS: readonly ExtensionDef[] = [
     manifest: userAgentManifest,
     icon: <UserAgentIcon />,
     surfaces: {
-      popup: ({ t, onClose }) => <UserAgentPopup t={t} api={window.tepegoz} onClose={onClose} />,
-      page: ({ t, onClose }) => <UserAgentPage t={t} api={window.tepegoz} onClose={onClose} />,
+      popup: ({ onClose }) => <UserAgentPopup api={window.tepegoz} onClose={onClose} />,
+      page: ({ onClose }) => <UserAgentPage api={window.tepegoz} onClose={onClose} />,
     },
   },
 ];

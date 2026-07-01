@@ -13,7 +13,6 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@tepegoz/i18n": "workspace:*",
     "@tepegoz/nav-toolbar": "workspace:*",
     "@tepegoz/tab-strip": "workspace:*",
     "@tepegoz/ui": "workspace:*",

@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./react": "./src/react.tsx",
+    "./testing": "./src/testing.ts"
   },
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -14,7 +16,16 @@
     "test": "vitest run",
     "lint": "eslint ."
   },
+  "peerDependencies": {
+    "react": "^18 || ^19"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@types/react": "^18.3.18",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   }

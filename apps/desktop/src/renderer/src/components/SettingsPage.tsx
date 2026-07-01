@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { SettingsLayout, type SettingsSection } from '@tepegoz/settings-ui';
 import { AlertBanner, Badge, Button, Card, Input, Toggle } from '@tepegoz/ui';
-import type { Resources } from '@tepegoz/i18n';
+import { coreDict } from '@tepegoz/i18n';
+import { useT } from '@tepegoz/i18n/react';
+import { settingsDict } from '../../../i18n';
 import type {
   CredentialsStatus,
   LocalePref,
@@ -59,7 +61,6 @@ const IconGear = () => (
 );
 
 interface SettingsPageProps {
-  t: Resources;
   prefs: Preferences;
   status: CredentialsStatus;
   onUpdatePrefs: (patch: Partial<Preferences>) => Promise<void>;
@@ -68,14 +69,14 @@ interface SettingsPageProps {
 }
 
 export function SettingsPage({
-  t,
   prefs,
   status,
   onUpdatePrefs,
   onSetKey,
   onRemoveKey,
 }: SettingsPageProps) {
-  const s = t.settings;
+  const s = useT(settingsDict);
+  const c = useT(coreDict);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState<{ variant: 'success' | 'error'; message: string } | null>(
     null,
@@ -114,7 +115,7 @@ export function SettingsPage({
       setDrafts((d) => ({ ...d, [provider]: '' }));
       notify('success', s.keySaved);
     } catch {
-      notify('error', t.errors.upstreamDown);
+      notify('error', c.errors.upstreamDown);
     }
   }
 
@@ -123,13 +124,13 @@ export function SettingsPage({
       await onRemoveKey(provider);
       notify('success', s.keyRemoved);
     } catch {
-      notify('error', t.errors.upstreamDown);
+      notify('error', c.errors.upstreamDown);
     }
   }
 
   function setPref(patch: Partial<Preferences>): void {
     void onUpdatePrefs(patch).catch(() => {
-      notify('error', t.errors.upstreamDown);
+      notify('error', c.errors.upstreamDown);
     });
   }
 
@@ -163,8 +164,8 @@ export function SettingsPage({
                     placeholder={s.apiKeyPlaceholder}
                     value={draft}
                     disabled={!status.encryptionAvailable}
-                    showPasswordLabel={t.common.showPassword}
-                    hidePasswordLabel={t.common.hidePassword}
+                    showPasswordLabel={c.common.showPassword}
+                    hidePasswordLabel={c.common.hidePassword}
                     onChange={(e) => {
                       const { value } = e.target;
                       setDrafts((d) => ({ ...d, [p]: value }));
@@ -176,7 +177,7 @@ export function SettingsPage({
                       disabled={!status.encryptionAvailable || draft.trim().length === 0}
                       onClick={() => void saveKey(p)}
                     >
-                      {t.common.save}
+                      {c.common.save}
                     </Button>
                     {isSet && (
                       <Button size="sm" variant="outline" onClick={() => void removeKey(p)}>

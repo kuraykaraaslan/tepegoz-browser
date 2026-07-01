@@ -9,7 +9,7 @@ import {
 import { HistoryStore } from '@tepegoz/persistence';
 import { TabStore } from '@tepegoz/tab-engine';
 import { internalPageUrl, isWebUrl, toNavigationUrl } from './lib/navigation-url';
-import { mainLocale, mainResources } from './lib/i18n-main';
+import { mainLocale, mainStrings } from './lib/i18n-main';
 import { extensionIdFromPageUrl, extensionLabel, manifestById } from '../shared/extensions';
 import { getDb } from './db/database.electron';
 
@@ -161,7 +161,7 @@ export default class TabManager {
   }
 
   private static internalTitle(url: string): string {
-    const r = mainResources();
+    const r = mainStrings();
     if (url === INTERNAL_EXTENSIONS_URL) return r.extensions.title;
     if (url === INTERNAL_HISTORY_URL) return r.history.title;
     // An extension `page` surface (tepegoz://<extension-id>) is titled from the extension's manifest.

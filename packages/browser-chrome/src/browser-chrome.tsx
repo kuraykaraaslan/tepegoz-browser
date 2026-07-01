@@ -1,12 +1,32 @@
 import { type ReactNode } from 'react';
-import type { Resources } from '@tepegoz/i18n';
 import { BrandMark } from '@tepegoz/ui';
 import { TabStrip, type TabDescriptor } from '@tepegoz/tab-strip';
 import { WindowControls } from '@tepegoz/window-controls';
 import { NavToolbar } from '@tepegoz/nav-toolbar';
 
+/**
+ * The exact string slices this chrome renders. The host composes it from the shared core dict
+ * (`common`/`window`) plus its own `browser` dict — this package stays a presentational leaf and owns
+ * no strings itself (same seam as `@tepegoz/tab-strip`/`@tepegoz/window-controls`).
+ */
+export interface BrowserChromeStrings {
+  common: { appName: string };
+  window: { minimize: string; maximize: string; restore: string; close: string };
+  browser: {
+    tabs: string;
+    untitled: string;
+    closeTab: string;
+    newTab: string;
+    back: string;
+    forward: string;
+    reload: string;
+    menu: string;
+    omniboxPlaceholder: string;
+  };
+}
+
 export interface BrowserChromeProps {
-  t: Resources;
+  t: BrowserChromeStrings;
   // Tab strip
   tabs: readonly TabDescriptor[];
   activeTabId: string | null;

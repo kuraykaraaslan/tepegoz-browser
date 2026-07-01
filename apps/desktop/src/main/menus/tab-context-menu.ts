@@ -1,5 +1,5 @@
 import { Menu, type BrowserWindow, type MenuItemConstructorOptions } from 'electron';
-import { mainResources } from '../lib/i18n-main';
+import { mainStrings } from '../lib/i18n-main';
 import TabManager from '../tabs';
 
 /**
@@ -12,7 +12,7 @@ export function showTabContextMenu(win: BrowserWindow, tabId: string): void {
   const idx = state.tabs.findIndex((tab) => tab.id === tabId);
   if (idx === -1) return; // tab vanished between right-click and IPC delivery
 
-  const t = mainResources();
+  const t = mainStrings();
   const hasOthers = state.tabs.length > 1;
   const hasRight = idx < state.tabs.length - 1;
 

@@ -8,9 +8,11 @@ them** with `- [ ]` / `- [x]`. This keeps the process resumable across sessions.
 > (to be moved into the repo as `docs/ARCHITECTURE.md` + `docs/ROADMAP.md`).
 > **Compliance:** `//wsl.localhost/Ubuntu/home/kuray/internal-ai-rules` (BINDING — see plan §13).
 > **Language:** Project artifacts are **English-first**; Turkish is a first-class supported locale.
-> **Package map:** `../docs/package-map.md` (+ [ADR-0015](../docs/adr/0015-package-extraction-roadmap.md)) —
-> living tick-list of cohesive parts of `apps/desktop` to extract into `packages/*` (e.g. `url-bar` →
-> `@tepegoz/omnibox`), sequenced in waves alongside these phases.
+> **Architecture / package map:** `../docs/package-map.md` (+ [ADR-0015](../docs/adr/0015-package-extraction-roadmap.md),
+> [ADR-0016](../docs/adr/0016-per-package-i18n.md)) — the **realized** module map. `apps/desktop` is now a thin
+> Electron shell over ~16 `@tepegoz/*` packages (chrome-leaf UI, main-process cores, the `desktop-ipc`
+> contract, `tab-engine`, `browser-tools`, per-package i18n dicts). **New work targets a package, not
+> `apps/desktop` growth**, and respects the `../dependency-cruiser.cjs` layer rules.
 
 ## Phase index & status
 
@@ -49,11 +51,12 @@ These apply in every phase; a phase DoD does not close without them:
 
 - [ ] **Git:** branch-based (`<type>/<short-scope>` → self-review PR → main); origin **SSH**; **NO AI attribution trailer** in commits/PRs
 - [ ] **Strict TS:** no `@ts-ignore`, `any` only in catch; all packages extend the root base tsconfig
+- [ ] **Modular architecture (realized):** new features live in a `@tepegoz/*` package (or extension), NOT by growing `apps/desktop` (which stays Electron-native glue: bootstrap · `createWindow` · `ipcMain` wiring · native menus · DI · DB init). Keep packages Electron-free where possible (inject the bridge via callbacks / a host interface, e.g. `BrowserHost`, `SecretCrypto`, injected `isPackaged`/file-path); presentational **leaf** packages stay string-free; every new package gets a `dependency-cruiser` layer rule + (renderer) a Tailwind `@source`. Module map: [`docs/package-map.md`](../docs/package-map.md).
 - [ ] **Zod boundary `safeParse`:** IPC, LLM tool-call args (untrusted!), MCP, Skills, adapters, Journal, Policy inputs
 - [ ] **AppError contract:** service throws → boundary catches → `{message, statusCode}`
 - [ ] **Security:** renderer = untrusted; secure `createWindow()` + fuses; secrets only in main + `safeStorage`; redaction in Journal/logs
 - [ ] **DoD gates:** self-review/code-review + coverage (S80/B70/F80/L80) + migration-safe DB + UAT signoff
-- [ ] **i18n day-0 (mandatory):** every user-facing string comes from the i18n catalog (**en primary/source + tr full parity, first-class**); **NO hardcoded UI strings** (ESLint rule; exception: logs/`*.messages.ts`). Main-process user-facing text (native menu/dialog/notification/tray) is i18n too. **Each phase adds en+tr keys for the surfaces it ships, in the same PR** — never deferred.
+- [ ] **i18n day-0 (mandatory) — per-package ([ADR-0016](../docs/adr/0016-per-package-i18n.md)):** the owning package/extension declares its feature strings in its **own** `src/i18n/{en,tr,index}.ts` via `defineDict({ en, tr })` (typing `tr` as `typeof en` → a missing/mismatched Turkish key is a **build error**, per dict) + a co-located parity test (`keyPaths` from `@tepegoz/i18n/testing`). Only the shared core (`common` · `window` · `errors`) lives in `@tepegoz/i18n`. React surfaces **self-localize** via `@tepegoz/i18n/react` `useT(dict)` — no `t` prop-drilling; presentational **leaf** packages stay string-free and take `labels` via props; the **main process stays React-free** and resolves strings with `pick(dict, mainLocale())` (`mainStrings()`) — native menu/dialog/notification/tray included. **NO hardcoded UI strings.** **en (source) + tr (full parity), first-class** — each phase ships its surfaces' strings in the **owner's** dict, in the same PR — never deferred.
 - [ ] **Determinism-first:** rule-based CDP wherever possible; the model is used only for understanding/ambiguity
 - [ ] **At phase start** re-read the relevant ruleset `_manifest.json` `blocking_rules` (especially `database-change-delivery.md` + `deployment-readiness.md` before any release/migration)
 

@@ -33,7 +33,7 @@ Any new package must respect this graph and the no-circular rule in
 | [x] | **@tepegoz/tab-strip** | ~~`renderer/src/components/TabStrip.tsx`~~ → `packages/tab-strip/` | Tab list: favicon fallback, wheel-scroll, container-query collapse; select/close/context-menu/new-tab via callbacks; `TabDescriptor` + `labels` (no i18n dep) | `@tepegoz/ui`, react (peer) | ✅ done |
 | [x] | **@tepegoz/window-controls** | ~~`renderer/src/components/WindowControls.tsx`~~ → `packages/window-controls/` | Min/max/restore/close; pure view — `isMaximized` + labels + callbacks in; app keeps a `useWindowMaximized` hook for the subscription | react (peer), zero deps | ✅ done |
 | [x] | **@tepegoz/nav-toolbar** | `Toolbar.tsx` split → `packages/nav-toolbar/` (`NavToolbar`); app keeps the extension tray/puzzle in an `actions` slot | Back/forward/reload + omnibox + actions slot + menu; all actions injected; exports `NAV_BTN` | `@tepegoz/omnibox`, react (peer) | ✅ done |
-| [x] | **@tepegoz/browser-chrome** | ~~`TitleBar.tsx` + `Toolbar.tsx`~~ → `packages/browser-chrome/` | The frameless chrome frame (title row: brand + tab-strip + window-controls; nav row: nav-toolbar). Composes the extracted chrome packages; all `window.tepegoz` actions + `isMaximized` injected; app fills the toolbar `actions` slot with its `ExtensionTray`. `t` in, sub-package labels mapped internally | `@tepegoz/tab-strip`, `window-controls`, `nav-toolbar`, `ui`, `i18n`, react (peer) | ✅ done |
+| [x] | **@tepegoz/browser-chrome** | ~~`TitleBar.tsx` + `Toolbar.tsx`~~ → `packages/browser-chrome/` | The frameless chrome frame (title row: brand + tab-strip + window-controls; nav row: nav-toolbar). Composes the extracted chrome packages; all `window.tepegoz` actions + `isMaximized` injected; app fills the toolbar `actions` slot with its `ExtensionTray`. String-free leaf: takes a composed `BrowserChromeStrings` (`common`/`window`/`browser`) via props; the app sources it from `useT(coreDict)` + its own `browserDict` | `@tepegoz/tab-strip`, `window-controls`, `nav-toolbar`, `ui`, react (peer) | ✅ done |
 | [x] | **@tepegoz/settings-ui** | `SettingsPage.tsx` split → `packages/settings-ui/` (`SettingsLayout` shell); app keeps `SettingsPage` content | Generic sidebar + cross-section search + content/banner slots; owns active/search state; all provider/theme/i18n content stays in the app | `@tepegoz/ui`, react (peer) | ✅ done |
 | [x] | **@tepegoz/history-ui** | ~~`renderer/src/components/HistoryPage.tsx`~~ → `packages/history-ui/` | Search + newest-first list + delete/clear; owns search state, `list`/`remove`/`clear` data source injected; `HistoryItem` + labels (no i18n dep) | react (peer), zero deps | ✅ done |
 | [x] | **@tepegoz/extensions-ui** | `ExtensionsPage.tsx` split → `packages/extensions-ui/` (`ExtensionsGrid` shell); app keeps registry/manifest mapping | Searchable card grid + toggles; `ExtensionCardItem` + labels + onToggle injected | `@tepegoz/ui`, react (peer) | ✅ done |
@@ -77,8 +77,10 @@ For each new package (same shape as `@tepegoz/tool-executor` / `@tepegoz/ui`):
 - Add the workspace dep to `apps/desktop/package.json`; rewrite moved imports to `@tepegoz/<name>`.
 - Add the package's layer rule to [`dependency-cruiser.cjs`](../dependency-cruiser.cjs) (per its
   "added as those packages land" note) — no cycles, no wrong-direction imports.
-- **i18n:** UI packages take `Resources`/`t` via props (no hardcoded strings); keep catalog keys in
-  `@tepegoz/i18n` (en + tr parity) in the same PR.
+- **i18n (per-package, [ADR-0016](adr/0016-per-package-i18n.md)):** a package owns its feature strings in
+  its own `src/i18n/{en,tr,index}.ts` (`defineDict`) + a parity test, and self-localizes via
+  `@tepegoz/i18n/react`'s `useT`. Presentational leaves stay string-free and take `labels` via props.
+  Only the shared core (`common`/`window`/`errors`) lives in `@tepegoz/i18n`; add en + tr in the same PR.
 
 ## Extraction order (waves)
 

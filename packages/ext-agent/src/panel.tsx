@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { cn, Modal } from '@tepegoz/ui';
-import type { Resources } from '@tepegoz/i18n';
+import { coreDict } from '@tepegoz/i18n';
+import { useT } from '@tepegoz/i18n/react';
+import { agentDict } from './i18n';
 import type {
   AgentApprovalRequest,
   AgentEvent,
@@ -16,7 +18,6 @@ import type {
  * the extension is decoupled from apps/desktop.
  */
 interface AgentPanelProps {
-  t: Resources;
   api: AgentHostApi;
   onClose: () => void;
 }
@@ -38,7 +39,9 @@ const BTN_GHOST =
   'rounded-md border border-border px-3 py-1.5 text-sm text-text-secondary ' +
   'hover:bg-surface-overlay hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus';
 
-export function AgentPanel({ t, api, onClose }: AgentPanelProps) {
+export function AgentPanel({ api, onClose }: AgentPanelProps) {
+  const a = useT(agentDict);
+  const c = useT(coreDict);
   const [prompt, setPrompt] = useState('');
   const [events, setEvents] = useState<AgentEvent[]>([]);
   const [running, setRunning] = useState(false);
@@ -130,18 +133,18 @@ export function AgentPanel({ t, api, onClose }: AgentPanelProps) {
   return (
     <div className="absolute inset-0 flex flex-col bg-surface-base">
       <div className="flex items-center justify-between border-b border-border px-4 py-2">
-        <h2 className="text-sm font-semibold text-text-primary">{t.agentConsole.title}</h2>
+        <h2 className="text-sm font-semibold text-text-primary">{a.title}</h2>
         <div className="flex items-center gap-3">
           {tokens !== null && (
             <span
               className="rounded-full bg-surface-overlay px-2 py-0.5 text-xs text-text-secondary"
-              title={`${t.agentConsole.tokens}: ${String(tokens.inputTokens)} in / ${String(tokens.outputTokens)} out`}
+              title={`${a.tokens}: ${String(tokens.inputTokens)} in / ${String(tokens.outputTokens)} out`}
             >
-              {t.agentConsole.tokens}: {tokens.totalTokens.toLocaleString()}
+              {a.tokens}: {tokens.totalTokens.toLocaleString()}
             </span>
           )}
-          <button type="button" onClick={onClose} aria-label={t.window.close} className={BTN_GHOST}>
-            {t.window.close}
+          <button type="button" onClick={onClose} aria-label={c.window.close} className={BTN_GHOST}>
+            {c.window.close}
           </button>
         </div>
       </div>
@@ -157,8 +160,8 @@ export function AgentPanel({ t, api, onClose }: AgentPanelProps) {
           type="text"
           value={prompt}
           disabled={running}
-          placeholder={t.agentConsole.runPlaceholder}
-          aria-label={t.agentConsole.runPlaceholder}
+          placeholder={a.runPlaceholder}
+          aria-label={a.runPlaceholder}
           onChange={(e) => {
             setPrompt(e.target.value);
           }}
@@ -166,11 +169,11 @@ export function AgentPanel({ t, api, onClose }: AgentPanelProps) {
         />
         {running ? (
           <button type="button" onClick={onCancel} className={BTN_GHOST}>
-            {t.common.cancel}
+            {c.common.cancel}
           </button>
         ) : (
           <button type="submit" disabled={prompt.trim().length === 0} className={BTN_PRIMARY}>
-            {t.agentConsole.run}
+            {a.run}
           </button>
         )}
       </form>
@@ -178,7 +181,7 @@ export function AgentPanel({ t, api, onClose }: AgentPanelProps) {
       <div ref={listRef} className="flex-1 space-y-1.5 overflow-auto p-3 text-sm" aria-live="polite">
         {events.length === 0 ? (
           <p className="text-text-secondary">
-            {running ? t.agentConsole.running : t.agentConsole.noActiveTasks}
+            {running ? a.running : a.noActiveTasks}
           </p>
         ) : (
           events.map((e, i) => (
@@ -196,19 +199,19 @@ export function AgentPanel({ t, api, onClose }: AgentPanelProps) {
       </div>
 
       <p className="border-t border-border px-3 py-2 text-xs text-text-secondary">
-        {t.agentConsole.aiDisclaimer}
+        {a.aiDisclaimer}
       </p>
 
       {planPreview !== null && (
         <Modal
           open
           onClose={() => respondPlan(false)}
-          title={t.agentConsole.planTitle}
-          ariaLabel={t.agentConsole.planTitle}
+          title={a.planTitle}
+          ariaLabel={a.planTitle}
           size="md"
           closeOnBackdrop={false}
         >
-          <p className="mt-1 text-xs text-text-secondary">{t.agentConsole.planBody}</p>
+          <p className="mt-1 text-xs text-text-secondary">{a.planBody}</p>
             {planPreview.goal.length > 0 && (
               <p className="mt-2 text-sm text-text-primary">{planPreview.goal}</p>
             )}
@@ -240,7 +243,7 @@ export function AgentPanel({ t, api, onClose }: AgentPanelProps) {
             </ul>
             <div className="mt-4 flex justify-end gap-2">
               <button type="button" onClick={() => respondPlan(false)} className={BTN_GHOST}>
-                {t.common.cancel}
+                {c.common.cancel}
               </button>
               <button
                 type="button"
@@ -248,7 +251,7 @@ export function AgentPanel({ t, api, onClose }: AgentPanelProps) {
                 disabled={skipIds.size === planPreview.steps.length}
                 className={BTN_PRIMARY}
               >
-                {t.agentConsole.planRun}
+                {a.planRun}
               </button>
             </div>
           </Modal>
@@ -258,26 +261,26 @@ export function AgentPanel({ t, api, onClose }: AgentPanelProps) {
         <Modal
           open
           onClose={() => respond(false)}
-          title={t.agentConsole.approvalTitle}
-          ariaLabel={t.agentConsole.approvalTitle}
+          title={a.approvalTitle}
+          ariaLabel={a.approvalTitle}
           size="sm"
           closeOnBackdrop={false}
         >
-          <p className="mt-2 text-sm text-text-secondary">{t.agentConsole.approvalBody}</p>
+          <p className="mt-2 text-sm text-text-secondary">{a.approvalBody}</p>
             <p className="mt-3 font-mono text-sm text-text-primary">{approval.toolName}</p>
             <p className="text-xs text-text-secondary">{approval.reason}</p>
             <pre className="mt-2 max-h-24 overflow-auto rounded bg-surface-base p-2 text-xs text-text-secondary">
               {approval.argsPreview}
             </pre>
             {approval.biometric && (
-              <p className="mt-2 text-xs text-amber-600">{t.agentConsole.biometricNote}</p>
+              <p className="mt-2 text-xs text-amber-600">{a.biometricNote}</p>
             )}
             <div className="mt-4 flex justify-end gap-2">
               <button type="button" onClick={() => respond(false)} className={BTN_GHOST}>
-                {t.agentConsole.deny}
+                {a.deny}
               </button>
               <button type="button" onClick={() => respond(true)} className={BTN_PRIMARY}>
-                {t.agentConsole.approve}
+                {a.approve}
               </button>
             </div>
           </Modal>
