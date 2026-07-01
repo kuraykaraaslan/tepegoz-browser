@@ -5,6 +5,7 @@ export const tr: AppStrings = {
   browser: {
     tabs: 'Sekmeler',
     newTab: 'Yeni sekme',
+    reopenTab: 'Kapatılan sekmeyi yeniden aç',
     closeTab: 'Sekmeyi kapat',
     untitled: 'Yeni Sekme',
     back: 'Geri',

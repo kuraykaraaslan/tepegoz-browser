@@ -282,6 +282,9 @@ export function registerIpc(): void {
   onSignal(IpcChannels.tabsReload, () => {
     TabManager.reloadActive();
   });
+  onSignal(IpcChannels.tabsReopenClosed, () => {
+    TabManager.reopenClosedTab();
+  });
   onAction(IpcChannels.tabsSetBounds, ContentBoundsSchema, (bounds) => {
     TabManager.setContentBounds(bounds);
   });

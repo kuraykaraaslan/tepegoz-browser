@@ -46,6 +46,13 @@ export function showMainMenu(win: BrowserWindow): void {
       },
     },
     {
+      label: t.browser.reopenTab,
+      accelerator: 'CmdOrCtrl+Shift+T',
+      click: () => {
+        TabManager.reopenClosedTab();
+      },
+    },
+    {
       label: t.browser.reload,
       accelerator: 'CmdOrCtrl+R',
       click: () => {

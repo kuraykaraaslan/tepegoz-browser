@@ -6,7 +6,7 @@ import {
   IpcChannels,
   type TabsState,
 } from '@tepegoz/desktop-ipc';
-import { HistoryStore } from '@tepegoz/persistence';
+import { HistoryStore, SessionStore } from '@tepegoz/persistence';
 import { TabStore } from '@tepegoz/tab-engine';
 import { internalPageUrl, isWebUrl, toNavigationUrl } from './lib/navigation-url';
 import { mainLocale, mainStrings } from './lib/i18n-main';
@@ -38,6 +38,10 @@ export default class TabManager {
   private static readonly views = new Map<string, WebContentsView>();
   private static bounds: Rectangle = { x: 0, y: 0, width: 0, height: 0 };
   private static contentVisible = true;
+  /** Recently-closed web-tab URLs (LIFO) for reopen-closed-tab (Ctrl+Shift+T). In-memory, session-scoped. */
+  private static readonly closedUrls: string[] = [];
+  /** Debounce handle for persisting the session snapshot (coalesces bursts of state changes). */
+  private static persistTimer: ReturnType<typeof setTimeout> | null = null;
 
   static attach(win: BrowserWindow): void {
     TabManager.win = win;
@@ -46,6 +50,12 @@ export default class TabManager {
   /** Tear down all tabs + state when the window closes (prevents stale tabs leaking into a
    *  re-created window, e.g. macOS app 'activate'). */
   static reset(): void {
+    // Cancel any pending debounced persist so it can't fire AFTER the store is cleared and overwrite the
+    // just-saved snapshot with an empty one. Callers persist synchronously before reset (see index.ts).
+    if (TabManager.persistTimer !== null) {
+      clearTimeout(TabManager.persistTimer);
+      TabManager.persistTimer = null;
+    }
     for (const view of TabManager.views.values()) {
       if (!view.webContents.isDestroyed()) view.webContents.close();
     }
@@ -116,6 +126,12 @@ export default class TabManager {
     if (!TabManager.store.has(id)) return;
     const view = TabManager.views.get(id);
     if (view !== undefined) {
+      // Remember the URL so Ctrl+Shift+T can reopen it (most-recent first, capped).
+      const closedUrl = view.webContents.getURL() || TabManager.store.get(id)?.url || '';
+      if (isWebUrl(closedUrl)) {
+        TabManager.closedUrls.push(closedUrl);
+        if (TabManager.closedUrls.length > 25) TabManager.closedUrls.shift();
+      }
       win.contentView.removeChildView(view);
       view.webContents.close();
       TabManager.views.delete(id);
@@ -395,5 +411,69 @@ export default class TabManager {
     if (win && !win.isDestroyed()) {
       win.webContents.send(IpcChannels.tabsState, TabManager.getState());
     }
+    TabManager.schedulePersist();
+  }
+
+  // ── Session restore ────────────────────────────────────────────────────────────────────────────
+
+  /** Reopen the most-recently-closed tab (Ctrl+Shift+T). No-op when the stack is empty. */
+  static reopenClosedTab(): void {
+    const url = TabManager.closedUrls.pop();
+    if (url !== undefined) TabManager.createTab(url);
+  }
+
+  /** The ordered web-tab URLs + active index, for the persisted session snapshot. Internal (view-less)
+   *  tabs and blank/unloaded tabs are skipped — only real web pages are restored. */
+  private static snapshot(): { tabs: string[]; activeIndex: number } {
+    const tabs: string[] = [];
+    let activeIndex = -1;
+    for (const rec of TabManager.store.records()) {
+      // Prefer the live URL, but on window close the webContents may already be gone — fall back to the
+      // last synced record URL so the closing snapshot still captures every tab.
+      const wc = TabManager.views.get(rec.id)?.webContents;
+      const url = (wc !== undefined && !wc.isDestroyed() ? wc.getURL() : '') || rec.url;
+      if (rec.kind !== 'web' || !isWebUrl(url)) continue;
+      if (rec.id === TabManager.store.activeId) activeIndex = tabs.length;
+      tabs.push(url);
+    }
+    return { tabs, activeIndex };
+  }
+
+  /** Debounced session persist — coalesces the burst of state changes during a page load into one write. */
+  private static schedulePersist(): void {
+    if (TabManager.persistTimer !== null) clearTimeout(TabManager.persistTimer);
+    TabManager.persistTimer = setTimeout(() => {
+      TabManager.persistTimer = null;
+      TabManager.persistNow();
+    }, 400);
+  }
+
+  /** Persist the current session snapshot immediately (called on quit, before `reset`). */
+  static persistNow(): void {
+    const db = getDb();
+    if (db === null) return;
+    try {
+      SessionStore.save(db, TabManager.snapshot());
+    } catch (err) {
+      Logger.warn('Failed to persist session', { err: String(err) });
+    }
+  }
+
+  /** Restore the last session's web tabs on launch. Returns true if any tab was restored (so the caller
+   *  can skip opening a default blank tab). */
+  static restoreSession(): boolean {
+    const db = getDb();
+    if (db === null) return false;
+    const snap = SessionStore.load(db);
+    if (snap === null || snap.tabs.length === 0) return false;
+    snap.tabs.forEach((url, i) => {
+      // First tab takes focus; the rest open in the background so they don't each steal it.
+      TabManager.createTab(url, { background: i !== 0 });
+    });
+    const ids = TabManager.store.ids();
+    if (snap.activeIndex >= 0 && snap.activeIndex < ids.length) {
+      TabManager.activate(ids[snap.activeIndex]!);
+    }
+    return true;
   }
 }

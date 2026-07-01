@@ -270,7 +270,11 @@ export function App() {
     const onKey = (e: KeyboardEvent): void => {
       if (!e.ctrlKey && !e.metaKey) return;
       const key = e.key.toLowerCase();
-      if (key === 't') {
+      if (key === 't' && e.shiftKey) {
+        e.preventDefault();
+        setActiveSurface(null);
+        window.tepegoz.reopenClosedTab(); // Ctrl+Shift+T — reopen the last-closed tab
+      } else if (key === 't') {
         e.preventDefault();
         setActiveSurface(null);
         window.tepegoz.createTab();

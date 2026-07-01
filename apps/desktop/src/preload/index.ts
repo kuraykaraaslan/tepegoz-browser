@@ -79,6 +79,9 @@ const api: TepegozApi = {
   tabReload: () => {
     ipcRenderer.send(IpcChannels.tabsReload);
   },
+  reopenClosedTab: () => {
+    ipcRenderer.send(IpcChannels.tabsReopenClosed);
+  },
   setContentBounds: (bounds: ContentBounds) => {
     ipcRenderer.send(IpcChannels.tabsSetBounds, bounds);
   },

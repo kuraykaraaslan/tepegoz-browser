@@ -53,6 +53,7 @@ export const IpcChannels = {
   tabsGoBack: 'tabs:go-back',
   tabsGoForward: 'tabs:go-forward',
   tabsReload: 'tabs:reload',
+  tabsReopenClosed: 'tabs:reopen-closed',
   tabsContextMenu: 'tabs:context-menu',
   tabsSetBounds: 'tabs:set-bounds',
   tabsSetContentVisible: 'tabs:set-content-visible',
@@ -205,6 +206,8 @@ export interface TepegozApi {
   tabGoBack(): void;
   tabGoForward(): void;
   tabReload(): void;
+  /** Reopen the most-recently-closed tab (Ctrl+Shift+T). */
+  reopenClosedTab(): void;
   /** Report the content-area rect so main can lay out the active web view below the chrome. */
   setContentBounds(bounds: ContentBounds): void;
   /** Hide/show the web view so a chrome overlay (e.g. Settings) can take the content area. */

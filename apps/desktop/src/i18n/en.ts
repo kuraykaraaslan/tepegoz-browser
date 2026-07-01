@@ -8,6 +8,7 @@ export const en = {
   browser: {
     tabs: 'Tabs',
     newTab: 'New tab',
+    reopenTab: 'Reopen closed tab',
     closeTab: 'Close tab',
     untitled: 'New Tab',
     back: 'Back',

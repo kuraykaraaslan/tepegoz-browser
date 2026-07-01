@@ -51,9 +51,13 @@ function bootstrap(): void {
   } else {
     void win.loadFile(join(__dirname, '../renderer/index.html'));
   }
-  // Open the first tab (state is also fetched by the renderer via getTabsState on mount).
-  TabManager.createTab();
+  // Restore the last session's tabs; if there was none, open a single default tab. (State is also
+  // fetched by the renderer via getTabsState on mount.)
+  if (!TabManager.restoreSession()) {
+    TabManager.createTab();
+  }
   win.on('closed', () => {
+    TabManager.persistNow(); // capture the final tab set BEFORE reset() clears the store
     TabManager.reset();
   });
 }
