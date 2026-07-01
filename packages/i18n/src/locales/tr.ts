@@ -28,6 +28,8 @@ export const tr: Resources = {
     reload: 'Yenile',
     omniboxPlaceholder: 'Ara veya adres gir',
     settings: 'Ayarlar',
+    menu: 'Ana menü',
+    exit: 'Çıkış',
     // Sekme sağ tık menüsü (yerel), Chrome'un sekme menüsünü örnek alır.
     newTabRight: 'Sağda yeni sekme',
     duplicateTab: 'Çoğalt',

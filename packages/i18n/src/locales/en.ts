@@ -30,6 +30,8 @@ export const en = {
     reload: 'Reload',
     omniboxPlaceholder: 'Search or enter address',
     settings: 'Settings',
+    menu: 'Main menu',
+    exit: 'Exit',
     // Tab right-click menu (native), mirroring Chrome's tab context menu.
     newTabRight: 'New tab to the right',
     duplicateTab: 'Duplicate',

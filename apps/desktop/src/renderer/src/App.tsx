@@ -95,6 +95,32 @@ export function App() {
     window.tepegoz.setContentVisible(!settingsOpen && !agentOpen);
   }, [settingsOpen, agentOpen]);
 
+  // App shortcuts (single registry): the accelerators shown in the main menu are wired here. We
+  // preventDefault so Ctrl+R reloads the active TAB, not the app chrome.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      const key = e.key.toLowerCase();
+      if (key === 't') {
+        e.preventDefault();
+        setSettingsOpen(false);
+        setAgentOpen(false);
+        window.tepegoz.createTab();
+      } else if (key === 'r') {
+        e.preventDefault();
+        window.tepegoz.tabReload();
+      } else if (key === ',') {
+        e.preventDefault();
+        setAgentOpen(false);
+        setSettingsOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+    };
+  }, []);
+
   const locale = effectiveLocale(prefs?.locale ?? 'system');
   const t = resources[locale];
   const activeTab = tabs.tabs.find((tb) => tb.id === tabs.activeId);
@@ -133,15 +159,18 @@ export function App() {
         currentUrl={currentUrl}
         canGoBack={tabs.canGoBack}
         canGoForward={tabs.canGoForward}
-        settingsOpen={settingsOpen}
-        onToggleSettings={() => {
-          setSettingsOpen((open) => !open);
-          setAgentOpen(false);
-        }}
         agentOpen={agentOpen}
         onToggleAgent={() => {
           setAgentOpen((open) => !open);
           setSettingsOpen(false);
+        }}
+        onOpenSettings={() => {
+          setAgentOpen(false);
+          setSettingsOpen(true);
+        }}
+        onOpenAgent={() => {
+          setSettingsOpen(false);
+          setAgentOpen(true);
         }}
       />
       <div ref={contentRef} className="relative flex-1 overflow-hidden">

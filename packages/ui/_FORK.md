@@ -21,6 +21,7 @@ Only the atoms the current surfaces need are forked; more are pulled in as scree
 | `src/modules/ui/Input.tsx` | `modules/ui/Input.tsx` | import `@/libs/...` → relative |
 | `src/modules/ui/Badge.tsx` | `modules/ui/Badge.tsx` | import `@/libs/...` → relative |
 | `src/modules/ui/AlertBanner.tsx` | `modules/ui/AlertBanner.tsx` | import `@/libs/...` → relative |
+| `src/modules/ui/DropdownMenu.tsx` | `modules/ui/DropdownMenu.tsx` | `@/` → relative; React default import → named; a11y + shortcut patches (below) |
 | `styles/tokens.css` | `app/globals.css` (token + `@theme inline` subset) | dropped leaflet/quill/sidebar/RTE blocks |
 
 ## Local patches (beyond the `@/` → relative rewrite)
@@ -31,6 +32,12 @@ review flagged real defects in the vendored atoms:
   `focus-visible:outline-none`, leaving no visible keyboard focus). Added optional
   `showPasswordLabel` / `hidePasswordLabel` props (default English) so the toggle's accessible name
   can be localized (Turkish first-class); when omitted, behavior is identical to upstream.
+- `DropdownMenu.tsx`: (1) a11y — the trigger is now a real `<button>` with `aria-haspopup`/
+  `aria-expanded` (upstream wrapped `trigger` in a non-focusable `<div onClick>`, not keyboard-operable
+  — WCAG 2.1.1); added `triggerClassName` / `triggerAriaLabel` passthrough. (2) feature — items gained
+  an optional right-aligned `shortcut` accelerator hint (icon → flex-1 label → shortcut layout).
+  (3) `React, { … }` default import → named `{ …, type ReactNode }` (this fork avoids the React
+  default import under `verbatimModuleSyntax`, consistent with the other atoms).
 
 ## Conventions
 - The only transform on component sources is rewriting the `@/` path alias to relative imports
