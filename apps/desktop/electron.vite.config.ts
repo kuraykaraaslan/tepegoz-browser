@@ -15,6 +15,7 @@ const WORKSPACE_PACKAGES = [
   '@tepegoz/security-policy',
   '@tepegoz/tool-executor',
   '@tepegoz/browser-tools',
+  '@tepegoz/tab-engine',
   '@tepegoz/navigation',
   '@tepegoz/json-store',
   '@tepegoz/credential-vault',

@@ -144,6 +144,15 @@ module.exports = {
       from: { path: '^packages/browser-tools/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
+    {
+      name: 'tab-engine-no-app-no-electron',
+      severity: 'error',
+      comment:
+        '@tepegoz/tab-engine is the pure tab-state model: no Electron, no app imports. The desktop ' +
+        'TabManager owns the WebContentsViews and delegates record state to it. See docs/package-map.md.',
+      from: { path: '^packages/tab-engine/' },
+      to: { path: ['^apps/', 'node_modules/electron'] },
+    },
   ],
   options: {
     doNotFollow: { path: 'node_modules' },

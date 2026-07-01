@@ -75,6 +75,10 @@ export function App() {
   const [sidebarExtId, setSidebarExtId] = useState<string | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
   const [resizingSidebar, setResizingSidebar] = useState(false);
+  // A still PNG of the page shown in place of the (briefly hidden) live web view during a resize drag,
+  // so the page never blanks to the chrome background. Null when not dragging / no capturable page.
+  const [resizeSnapshot, setResizeSnapshot] = useState<string | null>(null);
+  const draggingSidebarRef = useRef(false);
   // The extension whose native popup window is open (for the toolbar-icon pressed state), or null.
   const [popupOpenId, setPopupOpenId] = useState<string | null>(null);
   const popupOpenIdRef = useRef<string | null>(null);
@@ -124,24 +128,39 @@ export function App() {
     [],
   );
 
-  // Drag the sidebar's inner edge to resize (clamped). While dragging we hide the web view so the
-  // chrome — not the native view beside it — receives the pointer stream across the whole content area.
+  // Drag the sidebar's inner edge to resize (clamped). The native web view swallows pointer events when
+  // the cursor crosses over it, so we briefly hide it and let the chrome capture the drag — but we show
+  // a still snapshot of the page in its place first, so it never blanks to the chrome background.
   function onSidebarResizeStart(e: ReactPointerEvent): void {
     e.preventDefault();
     const startX = e.clientX;
     const startWidth = sidebarWidth;
-    setResizingSidebar(true);
+    draggingSidebarRef.current = true;
     const onMove = (ev: PointerEvent): void => {
       const next = startWidth + (startX - ev.clientX); // drag left → wider
       setSidebarWidth(Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, next)));
     };
     const onUp = (): void => {
+      draggingSidebarRef.current = false;
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
       setResizingSidebar(false);
+      setResizeSnapshot(null);
     };
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
+    // Capture the page FIRST, then hide the live view — no navy flash. If the drag already ended (fast
+    // click) or there's nothing to capture, we still hide so the drag tracks reliably.
+    void window.tepegoz.captureActiveTab().then(
+      (snap) => {
+        if (!draggingSidebarRef.current) return;
+        setResizeSnapshot(snap);
+        setResizingSidebar(true);
+      },
+      () => {
+        if (draggingSidebarRef.current) setResizingSidebar(true);
+      },
+    );
   }
 
   useEffect(() => {
@@ -372,6 +391,16 @@ export function App() {
         {/* The active tab's web page is a separate WebContentsView laid over this area by main. The
             internal app tabs (Settings/Extensions/History), extension `page` tabs, and open overlay
             surfaces have no web view, so the chrome renders them here instead. */}
+        {resizeSnapshot !== null && (
+          // A still of the page shown while the live web view is hidden during a sidebar resize drag.
+          <img
+            src={resizeSnapshot}
+            alt=""
+            aria-hidden="true"
+            draggable={false}
+            className="pointer-events-none absolute inset-0 h-full w-full object-cover object-left-top"
+          />
+        )}
         {settingsActive && (
           <div className="absolute inset-0 bg-surface-base">
             {prefs && status ? (

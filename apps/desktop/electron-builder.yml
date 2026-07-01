@@ -1,11 +1,13 @@
-# electron-builder config for Tepegöz (Windows NSIS installer).
+# electron-builder config for Tepegöz — Windows (NSIS), macOS (dmg/zip), Linux (deb/rpm/tar.gz).
 #
 # The app is built by electron-vite into `out/` (main/preload/renderer); electron-builder only
-# PACKAGES that output into an installer — it does not compile TS. Run via `pnpm package:win`
-# (which does `electron-vite build && electron-builder --win`), never electron-builder alone.
+# PACKAGES that output into an installer — it does not compile TS. Run via the per-OS scripts
+# (`pnpm package:win` / `package:mac` / `package:linux`), each of which runs `electron-vite build`
+# first; never invoke electron-builder alone.
 #
-# Native modules cannot be cross-compiled: build the Windows installer ON Windows (local dev box or
-# the `windows-latest` CI runner). See .github/workflows/release.yml.
+# Native modules (better-sqlite3) and OS installers CANNOT be cross-compiled — build each platform on
+# its own machine/runner: Windows→windows-latest, macOS→macos-latest, Linux→ubuntu-latest.
+# See .github/workflows/release.yml.
 appId: com.tepegoz.browser
 productName: Tepegöz
 
@@ -20,20 +22,15 @@ directories:
   output: dist
   buildResources: resources
 
-# What goes INTO the app (app.asar). Workspace packages are bundled into out/main by electron-vite,
-# so only the built output + resources + package.json are needed. `resources/**` MUST be included:
-# the brand icon is loaded at runtime via `join(app.getAppPath(), 'resources', 'icon.ico')`
-# (src/main/window.ts) — app.getAppPath() resolves to app.asar, so resources ship inside it.
-#
-# The `!node_modules/@tepegoz/**` exclusion is REQUIRED: every workspace dep is a pnpm symlink to
-# ../../packages/*, which lives outside apps/desktop. electron-builder would try to pack those real
-# paths and abort ("must be under apps/desktop"). They're already bundled into out/, so drop them —
-# only real external npm deps (better-sqlite3 native addon, zod, …) stay in node_modules.
+# What goes INTO the app (app.asar). Workspace packages are bundled into out/ by electron-vite (and
+# are devDependencies, so electron-builder never collects their outside-appDir pnpm symlinks), so only
+# the built output + resources + package.json are needed. `resources/**` MUST be included: the brand
+# icon is loaded at runtime via `join(app.getAppPath(), 'resources', 'icon.ico')` (src/main/window.ts)
+# — app.getAppPath() resolves to app.asar, so resources ship inside it.
 files:
   - out/**
   - resources/**
   - package.json
-  - '!node_modules/@tepegoz/**'
 
 # better-sqlite3 is a native addon; a .node binary cannot be loaded from inside an asar archive, so
 # unpack it to app.asar.unpacked/. Without this, the DB fails to open and history/journal silently
@@ -66,4 +63,29 @@ nsis:
   shortcutName: Tepegöz
   installerIcon: resources/icon.ico
   uninstallerIcon: resources/icon.ico
+
+mac:
+  target:
+    - dmg # drag-to-Applications disk image
+    - zip # plain archive (also the update artifact if electron-updater is added later)
+  icon: resources/icon.png # electron-builder converts PNG (≥512) → icon.icns at build time
+  category: public.app-category.productivity
+  # --- Signing + notarization (BLOCKING for distribution; unset → unsigned dev-only builds) ---
+  # Gatekeeper blocks unsigned/un-notarized apps. When an Apple Developer ID is available:
+  #   hardenedRuntime: true
+  #   notarize: true            # requires APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID env
+  # and provide the signing cert via CSC_LINK / CSC_KEY_PASSWORD.
+
+dmg: {} # defaults are fine (app + Applications symlink)
+
+linux:
+  target:
+    - deb # Debian / Ubuntu
+    - rpm # Fedora / RHEL (needs the `rpm` tool on the build host — see release.yml)
+    - tar.gz # distro-agnostic archive
+  icon: resources/icon.png # ≥512 PNG; electron-builder generates the hicolor icon set
+  category: Network # freedesktop main category for a web browser
+  maintainer: Kuray Karaaslan <kuraykaraaslan@gmail.com>
+  synopsis: Agentic, security-by-design, local-first browser.
+
 # publish: (electron-updater feed) intentionally omitted — auto-update is a separate follow-up.

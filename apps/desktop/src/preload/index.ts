@@ -82,6 +82,7 @@ const api: TepegozApi = {
   setContentVisible: (visible: boolean) => {
     ipcRenderer.send(IpcChannels.tabsSetContentVisible, visible);
   },
+  captureActiveTab: () => ipcRenderer.invoke(IpcChannels.tabsCapture) as Promise<string | null>,
   getTabsState: () => ipcRenderer.invoke(IpcChannels.tabsGetState) as Promise<TabsState>,
   onTabsState: (callback: (state: TabsState) => void) => {
     const listener = (_event: unknown, state: TabsState): void => {

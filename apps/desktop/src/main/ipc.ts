@@ -284,6 +284,8 @@ export function registerIpc(): void {
     TabManager.setContentVisible(visible);
   });
 
+  handleAsync(IpcChannels.tabsCapture, (): Promise<string | null> => TabManager.captureActive());
+
   handle(IpcChannels.tabsGetState, (): TabsState => TabManager.getState());
 
   // Agent (Do mode). agent:run streams live events back to the SENDER and round-trips HITL approvals;

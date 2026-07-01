@@ -41,6 +41,28 @@ importers:
 
   apps/desktop:
     dependencies:
+      better-sqlite3:
+        specifier: ^11.7.0
+        version: 11.10.0
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1
+        version: 18.3.1(react@18.3.1)
+      zod:
+        specifier: 3.23.8
+        version: 3.23.8
+    devDependencies:
+      '@electron/rebuild':
+        specifier: ^3.7.0
+        version: 3.7.2
+      '@resvg/resvg-js':
+        specifier: ^2.6.2
+        version: 2.6.2
+      '@tailwindcss/vite':
+        specifier: ^4.1.16
+        version: 4.3.2(vite@5.4.21(@types/node@22.20.0)(lightningcss@1.32.0))
       '@tepegoz/browser-tools':
         specifier: workspace:*
         version: link:../../packages/browser-tools
@@ -107,6 +129,9 @@ importers:
       '@tepegoz/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
+      '@tepegoz/tab-engine':
+        specifier: workspace:*
+        version: link:../../packages/tab-engine
       '@tepegoz/tab-strip':
         specifier: workspace:*
         version: link:../../packages/tab-strip
@@ -119,28 +144,6 @@ importers:
       '@tepegoz/window-controls':
         specifier: workspace:*
         version: link:../../packages/window-controls
-      better-sqlite3:
-        specifier: ^11.7.0
-        version: 11.10.0
-      react:
-        specifier: ^18.3.1
-        version: 18.3.1
-      react-dom:
-        specifier: ^18.3.1
-        version: 18.3.1(react@18.3.1)
-      zod:
-        specifier: 3.23.8
-        version: 3.23.8
-    devDependencies:
-      '@electron/rebuild':
-        specifier: ^3.7.0
-        version: 3.7.2
-      '@resvg/resvg-js':
-        specifier: ^2.6.2
-        version: 2.6.2
-      '@tailwindcss/vite':
-        specifier: ^4.1.16
-        version: 4.3.2(vite@5.4.21(@types/node@22.20.0)(lightningcss@1.32.0))
       '@types/react':
         specifier: ^18.3.18
         version: 18.3.31
@@ -561,6 +564,19 @@ importers:
       zod:
         specifier: 3.23.8
         version: 3.23.8
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(lightningcss@1.32.0)
+
+  packages/tab-engine:
+    dependencies:
+      '@tepegoz/desktop-ipc':
+        specifier: workspace:*
+        version: link:../desktop-ipc
     devDependencies:
       typescript:
         specifier: ^5.7.2

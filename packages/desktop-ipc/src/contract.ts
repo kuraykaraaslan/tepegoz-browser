@@ -56,6 +56,7 @@ export const IpcChannels = {
   tabsContextMenu: 'tabs:context-menu',
   tabsSetBounds: 'tabs:set-bounds',
   tabsSetContentVisible: 'tabs:set-content-visible',
+  tabsCapture: 'tabs:capture',
   tabsGetState: 'tabs:get-state',
   tabsState: 'tabs:state',
   agentRun: 'agent:run',
@@ -205,6 +206,9 @@ export interface TepegozApi {
   setContentBounds(bounds: ContentBounds): void;
   /** Hide/show the web view so a chrome overlay (e.g. Settings) can take the content area. */
   setContentVisible(visible: boolean): void;
+  /** Snapshot the active web view as a PNG data URL (or null if none), so the chrome can show a still
+   *  of the page while the live view is briefly hidden — e.g. during a sidebar resize drag. */
+  captureActiveTab(): Promise<string | null>;
   getTabsState(): Promise<TabsState>;
   onTabsState(callback: (state: TabsState) => void): () => void;
   // Agent (Do mode): run a task, stream live events, answer HITL approvals.

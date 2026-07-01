@@ -28,27 +28,52 @@ jobs:
       - name: Typecheck · lint · test · build
         run: pnpm exec turbo run typecheck lint test build
 
-      # Windows: package an NSIS installer (.exe). Native modules (better-sqlite3) can't be
-      # cross-compiled, so this only runs on the windows-latest runner. `package:win` also runs
-      # `electron-vite build` to refresh out/ before electron-builder packages it.
-      # NOTE: unsigned (dev-only). Code signing is still BLOCKING for public distribution — wire
-      # Authenticode (CSC_LINK/CSC_KEY_PASSWORD) or Azure Trusted Signing secrets in
-      # apps/desktop/electron-builder.yml once a signing identity exists. macOS Developer ID +
-      # notarize and electron-updater publishing remain follow-ups (not built here yet).
-      - name: Package Windows installer (unsigned)
+      # Package the per-OS installers. Each `package:*` script runs `electron-vite build` first, then
+      # electron-builder, which rebuilds better-sqlite3 against the Electron ABI for that platform.
+      # NOTE: all builds are UNSIGNED (dev-only). Code signing is still BLOCKING for public
+      # distribution — wire the signing secrets in apps/desktop/electron-builder.yml once identities
+      # exist: Windows Authenticode (CSC_LINK/CSC_KEY_PASSWORD) or Azure Trusted Signing; macOS
+      # Developer ID + notarize (APPLE_ID/APPLE_APP_SPECIFIC_PASSWORD/APPLE_TEAM_ID). electron-updater
+      # publishing remains a follow-up (not built here yet).
+      - name: Package Windows installer (NSIS .exe)
         if: matrix.os == 'windows-latest'
         run: pnpm --filter @tepegoz/desktop run package:win
 
-      - name: Upload installer artifact
-        if: matrix.os == 'windows-latest'
+      - name: Package macOS (.dmg + .zip)
+        if: matrix.os == 'macos-latest'
+        run: pnpm --filter @tepegoz/desktop run package:mac
+
+      # rpm target needs the `rpm` tool on the build host; deb/tar.gz work out of the box.
+      - name: Install rpm tooling (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y rpm
+
+      - name: Package Linux (.deb + .rpm + .tar.gz)
+        if: matrix.os == 'ubuntu-latest'
+        run: pnpm --filter @tepegoz/desktop run package:linux
+
+      # One artifact per OS (unique name required). Each runner only produces its own formats, so the
+      # globs that don't match are ignored.
+      - name: Upload installers artifact
         uses: actions/upload-artifact@v4
         with:
-          name: tepegoz-windows-installer
-          path: apps/desktop/dist/*.exe
+          name: tepegoz-${{ matrix.os }}
+          path: |
+            apps/desktop/dist/*.exe
+            apps/desktop/dist/*.dmg
+            apps/desktop/dist/*.zip
+            apps/desktop/dist/*.deb
+            apps/desktop/dist/*.rpm
+            apps/desktop/dist/*.tar.gz
           if-no-files-found: error
 
-      - name: Attach installer to GitHub Release
-        if: matrix.os == 'windows-latest'
+      - name: Attach installers to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: apps/desktop/dist/*.exe
+          files: |
+            apps/desktop/dist/*.exe
+            apps/desktop/dist/*.dmg
+            apps/desktop/dist/*.zip
+            apps/desktop/dist/*.deb
+            apps/desktop/dist/*.rpm
+            apps/desktop/dist/*.tar.gz
