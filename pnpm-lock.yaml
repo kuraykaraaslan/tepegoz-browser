@@ -41,6 +41,9 @@ importers:
 
   apps/desktop:
     dependencies:
+      '@tepegoz/browser-tools':
+        specifier: workspace:*
+        version: link:../../packages/browser-tools
       '@tepegoz/capability-plane':
         specifier: workspace:*
         version: link:../../packages/capability-plane
@@ -168,6 +171,25 @@ importers:
       vitest:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.0)(lightningcss@1.32.0)
+
+  packages/browser-tools:
+    dependencies:
+      '@tepegoz/capability-plane':
+        specifier: workspace:*
+        version: link:../capability-plane
+      '@tepegoz/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      '@tepegoz/tool-executor':
+        specifier: workspace:*
+        version: link:../tool-executor
+      zod:
+        specifier: 3.23.8
+        version: 3.23.8
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
 
   packages/capability-plane:
     dependencies:

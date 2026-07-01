@@ -135,6 +135,15 @@ module.exports = {
       from: { path: '^packages/nav-toolbar/' },
       to: { path: '^apps/' },
     },
+    {
+      name: 'browser-tools-no-app-no-electron',
+      severity: 'error',
+      comment:
+        '@tepegoz/browser-tools must stay Electron-free and app-free: the concrete browser operations ' +
+        'are injected via the BrowserHost interface (the desktop app implements it over TabManager). See docs/package-map.md.',
+      from: { path: '^packages/browser-tools/' },
+      to: { path: ['^apps/', 'node_modules/electron'] },
+    },
   ],
   options: {
     doNotFollow: { path: 'node_modules' },

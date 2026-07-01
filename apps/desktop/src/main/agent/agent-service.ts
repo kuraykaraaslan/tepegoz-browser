@@ -12,8 +12,9 @@ import type { Plan } from '@tepegoz/shared-types';
 import type { AgentEventKind } from '@tepegoz/desktop-ipc';
 import CredentialVault from '@tepegoz/credential-vault';
 import PreferenceStore from '@tepegoz/preferences';
+import { registerBuiltinTools } from '@tepegoz/browser-tools';
 import TabManager from '../tabs';
-import { registerBuiltinTools } from './builtin-tools';
+import { browserHost } from './browser-host';
 
 /** Best-effort URL string from a tool call's args (for the sensitive-site lockout). */
 function urlFromArgs(args: unknown): string | undefined {
@@ -85,7 +86,7 @@ export default class AgentService {
     });
     ModelGateway.register(new AnthropicProvider({ apiKey, effort: route.effort }));
 
-    registerBuiltinTools();
+    registerBuiltinTools(browserHost);
     const tools = CapabilityRegistry.list().map((d) => ({
       id: d.id,
       description: d.description,

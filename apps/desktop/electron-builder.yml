@@ -9,6 +9,11 @@
 appId: com.tepegoz.browser
 productName: Tepegöz
 
+# pnpm's hoisted linker installs electron at the monorepo-root node_modules, not apps/desktop's, so
+# electron-builder can't auto-detect it from projectDir — pin the version explicitly. Keep this in
+# sync with the `electron` devDependency (currently ^33.2.1 → resolved 33.4.11).
+electronVersion: 33.4.11
+
 directories:
   # Installer + unpacked output → apps/desktop/dist/ (turbo `build` already lists dist/** as output;
   # dist/ is git-ignored). buildResources is where electron-builder looks for installer assets.
@@ -19,10 +24,16 @@ directories:
 # so only the built output + resources + package.json are needed. `resources/**` MUST be included:
 # the brand icon is loaded at runtime via `join(app.getAppPath(), 'resources', 'icon.ico')`
 # (src/main/window.ts) — app.getAppPath() resolves to app.asar, so resources ship inside it.
+#
+# The `!node_modules/@tepegoz/**` exclusion is REQUIRED: every workspace dep is a pnpm symlink to
+# ../../packages/*, which lives outside apps/desktop. electron-builder would try to pack those real
+# paths and abort ("must be under apps/desktop"). They're already bundled into out/, so drop them —
+# only real external npm deps (better-sqlite3 native addon, zod, …) stay in node_modules.
 files:
   - out/**
   - resources/**
   - package.json
+  - '!node_modules/@tepegoz/**'
 
 # better-sqlite3 is a native addon; a .node binary cannot be loaded from inside an asar archive, so
 # unpack it to app.asar.unpacked/. Without this, the DB fails to open and history/journal silently

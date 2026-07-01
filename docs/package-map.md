@@ -53,8 +53,8 @@ Any new package must respect this graph and the no-circular rule in
 | [x] | **@tepegoz/preferences** | ~~`main/preferences/*`~~ → `packages/preferences/` | Zod schema + defaults + store (path injected); the `Preferences` **type** is owned by `@tepegoz/desktop-ipc` and pinned via `satisfies`; 4 tests | `@tepegoz/desktop-ipc`, `extension-sdk`, `json-store`, zod | ✅ done |
 | [x] | **@tepegoz/json-store** | ~~`main/lib/json-store.ts`~~ → `packages/json-store/` | Crash-safe file-based JSON persist (Node-only); used by credential-vault + preferences | none (Node fs) | ✅ done |
 | [x] | **@tepegoz/desktop-ipc** | ~~`shared/ipc-contract.ts` + `ipc-schemas.ts`~~ → `packages/desktop-ipc/` | Typed IPC contract via **two entries**: `.` = zod-free DTO types/channels/constants (sandboxed-preload-safe, verified 0 zod in preload bundle) · `./schemas` = zod validators (main only). Owns `Preferences`/`TabInfo`/… types | `@tepegoz/ext-agent`+`persistence` (types), `extension-sdk`, zod | ✅ done |
-| [ ] | **@tepegoz/browser-tools** | `main/agent/builtin-tools.ts` + `main/agent/perception.ts` | Browser capability descriptors + page perception; needs a `WebContents`/TabManager boundary interface to decouple from Electron (sanitizer already in `tool-executor`) | `@tepegoz/capability-plane`, `@tepegoz/shared-types`, `@tepegoz/tool-executor`, `@tepegoz/security-policy` | M–L |
-| [ ] | **@tepegoz/tab-engine** | `main/tabs.ts` | Tab lifecycle over `WebContentsView`. Heavy Electron coupling; needs boundary + pure-state refactor (long-term) | electron, `@tepegoz/persistence`, `@tepegoz/libs` | L |
+| [x] | **@tepegoz/browser-tools** | ~~`main/agent/builtin-tools.ts` + `perception.ts`~~ → `packages/browser-tools/` | Browser capability descriptors + registration + perception (cap/sanitize/wrap); Electron-free via a `BrowserHost` interface (app implements it in `main/agent/browser-host.ts` over TabManager) | `@tepegoz/capability-plane`, `shared-types`, `tool-executor`, zod | ✅ done |
+| — | ~~@tepegoz/tab-engine~~ | `main/tabs.ts` | **Deprioritized — stays in app.** `tabs.ts` *is* Electron `WebContentsView` lifecycle management; a package could only hold a thin pure "tab state" core while the bulk (views, events, bounds, partitions) stays Electron-bound. Low reuse value vs. large refactor — kept in-app like `window.ts`/`ipc.ts`. Revisit if a headless/multi-window tab model is needed (Phase 2b). | — | — |
 
 ## Catalog C — stays in `apps/desktop` (not candidates)
 
@@ -88,7 +88,11 @@ For each new package (same shape as `@tepegoz/tool-executor` / `@tepegoz/ui`):
   `extensions-ui`, `settings-ui`. ✅ done. (`browser-chrome` deprioritized — stays in app, see Catalog A.)
 - [x] **Wave 2 — security/state cores:** `credential-vault`, `desktop-ipc` (2-entry, preload-safe),
   `preferences` (type owned by desktop-ipc). ✅ done.
-- [ ] **Wave 3 — needs boundary refactor (Phase 1b/2b):** `browser-tools`, `tab-engine`.
+- [x] **Wave 3 — needs boundary refactor:** `browser-tools` (extracted via a `BrowserHost` interface).
+  ✅ done. (`tab-engine` deprioritized — it *is* Electron WebContentsView glue, stays in app; see Catalog B.)
+
+> **Packagization status:** every catalog item is either extracted (14 packages) or consciously kept
+> in-app (`browser-chrome`, `tab-engine`, and the Electron glue in Catalog C). The roadmap is complete.
 
 ## Per-package Definition of Done (when a package is actually extracted)
 

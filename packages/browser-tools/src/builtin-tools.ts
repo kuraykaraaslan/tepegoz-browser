@@ -1,9 +1,25 @@
 import { z } from 'zod';
-import { AppError } from '@tepegoz/libs';
 import { CapabilityRegistry } from '@tepegoz/capability-plane';
 import type { ToolDescriptor } from '@tepegoz/shared-types';
-import TabManager from '../tabs';
-import { readActivePage } from './perception';
+import { buildPageSnapshot } from './perception';
+
+/**
+ * The browser operations the built-in tools need, abstracted away from Electron. The desktop app
+ * implements this over its TabManager + WebContentsView; a headless/remote browser-agent could
+ * implement it differently. Keeping the tools behind this seam is what lets `@tepegoz/browser-tools`
+ * stay Electron-free.
+ */
+export interface BrowserHost {
+  /** Navigate the active tab to `url` (scheme allow-list enforced by the host) and resolve once
+   *  loading settles, with the final url + title. */
+  navigateActive(url: string): Promise<{ url: string; title: string }>;
+  /** Read the active page: its url, title, and the raw (unsanitized) visible text. */
+  readActivePage(): Promise<{ url: string; title: string; text: string }>;
+  /** List the open tabs. */
+  listTabs(): { id: string; title: string; url: string }[];
+  /** Open a new tab, optionally at a URL; returns its id. */
+  createTab(url?: string): string;
+}
 
 /**
  * Built-in browser/tab tools (L5). Each registers as a uniform ToolDescriptor + zod validator +
@@ -12,6 +28,7 @@ import { readActivePage } from './perception';
  * text so the planner (which only sees id/dangerClass/description) can produce valid args.
  *
  * Read tools are 'read' (auto-allowed); navigation/tab-open mutate state ('state_changing' → HITL).
+ * The concrete browser operations are injected via `BrowserHost`, so this package stays Electron-free.
  */
 let registered = false;
 
@@ -27,29 +44,8 @@ function descriptor(
   return { id, description, dangerClass, source: 'builtin', inputSchema: { type: 'object' }, requiresIdempotencyKey: false };
 }
 
-async function navigateAndWait(url: string): Promise<{ url: string; title: string }> {
-  TabManager.navigateActive(url); // scheme allow-list enforced inside
-  const wc = TabManager.activeWebContents();
-  if (wc === null) throw new AppError('No active tab to navigate', 409);
-  await new Promise<void>((resolve) => {
-    const onDone = (): void => {
-      clearTimeout(timer);
-      resolve();
-    };
-    const timer = setTimeout(() => {
-      wc.removeListener('did-stop-loading', onDone);
-      resolve();
-    }, 15_000);
-    wc.once('did-stop-loading', onDone);
-  });
-  // The tab may have been closed (webContents destroyed) during the up-to-15s wait — never call
-  // methods on a destroyed WebContents (throws an opaque "Object has been destroyed").
-  if (wc.isDestroyed()) throw new AppError('Active tab was closed during navigation', 409);
-  return { url: wc.getURL(), title: wc.getTitle() };
-}
-
 /** Idempotent: register the built-in tools exactly once into the CapabilityRegistry. */
-export function registerBuiltinTools(): void {
+export function registerBuiltinTools(host: BrowserHost): void {
   if (registered) return;
   registered = true;
 
@@ -60,7 +56,10 @@ export function registerBuiltinTools(): void {
       'Read the visible text of the current page. args: {} — returns { url, title, content }.',
     ),
     inputSchema: NoArgs,
-    handler: () => readActivePage(),
+    handler: async () => {
+      const { url, title, text } = await host.readActivePage();
+      return buildPageSnapshot(text, url, title);
+    },
   });
 
   CapabilityRegistry.register({
@@ -70,7 +69,7 @@ export function registerBuiltinTools(): void {
       'Navigate the active tab to a web URL. args: { url: string } — returns { url, title }.',
     ),
     inputSchema: NavigateArgs,
-    handler: (args) => navigateAndWait(args.url),
+    handler: (args) => host.navigateActive(args.url),
   });
 
   CapabilityRegistry.register({
@@ -80,8 +79,7 @@ export function registerBuiltinTools(): void {
       'List the open browser tabs. args: {} — returns an array of { id, title, url }.',
     ),
     inputSchema: NoArgs,
-    handler: () =>
-      TabManager.getState().tabs.map((t) => ({ id: t.id, title: t.title, url: t.url })),
+    handler: () => host.listTabs(),
   });
 
   CapabilityRegistry.register({
@@ -91,7 +89,7 @@ export function registerBuiltinTools(): void {
       'Open a new browser tab, optionally at a URL. args: { url?: string } — returns { id }.',
     ),
     inputSchema: CreateTabArgs,
-    handler: (args) => ({ id: TabManager.createTab(args.url) }),
+    handler: (args) => ({ id: host.createTab(args.url) }),
   });
 }
 

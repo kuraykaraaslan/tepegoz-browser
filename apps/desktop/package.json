@@ -19,6 +19,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@tepegoz/browser-tools": "workspace:*",
     "@tepegoz/capability-plane": "workspace:*",
     "@tepegoz/credential-vault": "workspace:*",
     "@tepegoz/desktop-ipc": "workspace:*",
