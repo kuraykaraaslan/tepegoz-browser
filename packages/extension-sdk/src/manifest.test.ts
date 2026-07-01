@@ -74,6 +74,15 @@ describe('extension manifest schema', () => {
     ).toBe(false);
   });
 
+  it('accepts only the closed permission set (no free-form strings)', () => {
+    expect(
+      validateManifest({ ...VALID, permissions: ['tabs', 'read-page', 'navigate', 'network'] })
+        .success,
+    ).toBe(true);
+    expect(validateManifest({ ...VALID, permissions: ['filesystem'] }).success).toBe(false);
+    expect(validateManifest({ ...VALID, permissions: ['Tabs'] }).success).toBe(false);
+  });
+
   it('defineExtension throws on an invalid manifest', () => {
     expect(() => defineExtension({ id: 'x' })).toThrow();
   });

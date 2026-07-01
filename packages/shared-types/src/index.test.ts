@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { EventSchema, AIProviderEnum, ToolNameSchema, ToolDescriptorSchema } from './index';
+import {
+  EventSchema,
+  AIProviderEnum,
+  PlanSchema,
+  PlanStepSchema,
+  ToolNameSchema,
+  ToolDescriptorSchema,
+} from './index';
 
 describe('shared-types contracts', () => {
   it('accepts a well-formed Event Journal record', () => {
@@ -25,6 +32,14 @@ describe('shared-types contracts', () => {
     expect(ToolNameSchema.safeParse('browser_get_page').success).toBe(true);
     expect(ToolNameSchema.safeParse('do_thing').success).toBe(false);
     expect(ToolNameSchema.safeParse('browser_frobnicate_page').success).toBe(false);
+  });
+
+  it('caps plan goal and step rationale lengths (untrusted planner output)', () => {
+    const step = { id: 's1', tool: 'browser_get_page', args: {} };
+    expect(PlanStepSchema.safeParse({ ...step, rationale: 'r'.repeat(500) }).success).toBe(true);
+    expect(PlanStepSchema.safeParse({ ...step, rationale: 'r'.repeat(501) }).success).toBe(false);
+    expect(PlanSchema.safeParse({ goal: 'g'.repeat(1000), steps: [] }).success).toBe(true);
+    expect(PlanSchema.safeParse({ goal: 'g'.repeat(1001), steps: [] }).success).toBe(false);
   });
 
   it('defaults requiresIdempotencyKey to false', () => {
