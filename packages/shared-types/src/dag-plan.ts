@@ -13,15 +13,16 @@ export const PlanStepSchema = z.object({
   tool: ToolNameSchema,
   /** Tool arguments (opaque here; validated by the tool's own schema at the gateway). */
   args: z.unknown(),
-  /** Human-readable justification, shown in the editable plan preview + Agent Console. */
-  rationale: z.string().default(''),
+  /** Human-readable justification, shown in the editable plan preview + Agent Console. Capped — the
+   *  planner LLM is untrusted and must not flood the journal/UI with unbounded strings. */
+  rationale: z.string().max(500).default(''),
   /** IDs of steps that must complete first (empty ⇒ runs in sequence). */
   dependsOn: z.array(z.string()).default([]),
 });
 export type PlanStep = z.infer<typeof PlanStepSchema>;
 
 export const PlanSchema = z.object({
-  goal: z.string().default(''),
+  goal: z.string().max(1000).default(''),
   steps: z.array(PlanStepSchema),
 });
 export type Plan = z.infer<typeof PlanSchema>;

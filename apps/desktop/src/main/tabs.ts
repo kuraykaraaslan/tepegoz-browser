@@ -28,6 +28,8 @@ import { getDb } from './db/database.electron';
  * real browser core for Phase 1a.
  */
 const NEW_TAB_URL = 'https://duckduckgo.com/';
+/** Cap for page-controlled titles before they reach the history DB (hostile-page DoS guard). */
+const MAX_TITLE_LENGTH = 2048;
 /** The isolated session partition every browsed page lives in (shared with the User-Agent switcher). */
 export const BROWSING_PARTITION = 'persist:tepegoz-web';
 
@@ -406,7 +408,8 @@ export default class TabManager {
       TabManager.store.update(id, { title });
       const db = getDb();
       const url = wc.getURL();
-      if (db !== null && isWebUrl(url)) HistoryStore.setTitle(db, url, title);
+      // Page-controlled string — cap before persisting so a hostile title can't bloat the DB.
+      if (db !== null && isWebUrl(url)) HistoryStore.setTitle(db, url, title.slice(0, MAX_TITLE_LENGTH));
       TabManager.emitState();
     });
     // Electron sends every favicon a page declares; the last is typically the largest/most specific.
@@ -429,7 +432,8 @@ export default class TabManager {
     wc.on('did-navigate', (_e, url) => {
       const db = getDb();
       if (db !== null && isWebUrl(url)) {
-        HistoryStore.record(db, { url, title: wc.getTitle() || url, ts: Date.now() });
+        const title = (wc.getTitle() || url).slice(0, MAX_TITLE_LENGTH);
+        HistoryStore.record(db, { url, title, ts: Date.now() });
       }
     });
     wc.on('did-navigate', sync);

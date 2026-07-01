@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <!-- TODO(security, Phase 1a): set CSP via session response headers in main — dev-relaxed for
-         Vite HMR / React-Refresh inline preamble, strict in prod. A static strict meta CSP breaks dev. -->
+    <!-- CSP is set via session response headers in main (security.ts installSecurity) — dev-relaxed
+         for Vite HMR / React-Refresh inline preamble, strict in prod. A static meta CSP breaks dev. -->
     <title>Tepegöz</title>
     <style>
       html,

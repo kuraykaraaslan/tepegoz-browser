@@ -25,6 +25,12 @@ export type ExtensionSurfaceKind = z.infer<typeof ExtensionSurfaceKindSchema>;
  */
 export const EXTENSION_ID_RE = /^[a-z0-9]+(\.[a-z0-9-]+)+$/;
 
+/** The closed set of capabilities an extension may request — a manifest naming anything else is
+ *  rejected at the trust boundary (no free-form permission strings). Extend the enum as new host
+ *  capabilities ship; enforcement lands with the Policy Kernel integration (Phase 3). */
+export const ExtensionPermissionSchema = z.enum(['tabs', 'read-page', 'navigate', 'network']);
+export type ExtensionPermission = z.infer<typeof ExtensionPermissionSchema>;
+
 /** Per-locale display overrides. Keyed by a locale string (e.g. 'tr') to avoid coupling the SDK to
  *  @tepegoz/i18n's Locale union; the host falls back to the top-level `name`/`description`. */
 const LocaleLabelSchema = z.object({
@@ -53,7 +59,7 @@ export const ExtensionManifestSchema = z
     /** Per-locale name/description overrides; host falls back to the top-level fields. */
     labels: z.record(LocaleLabelSchema).default({}),
     /** Capabilities the extension requests (enforced by the Policy Kernel / host later). */
-    permissions: z.array(z.string()).default([]),
+    permissions: z.array(ExtensionPermissionSchema).default([]),
   })
   .transform((m) => ({
     ...m,

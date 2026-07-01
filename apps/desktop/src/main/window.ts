@@ -3,8 +3,9 @@ import { join } from 'node:path';
 import { IpcChannels } from '@tepegoz/desktop-ipc';
 import { isTrustedAppUrl } from './lib/trusted-origin';
 
-/** App-chrome partition — shared by the main window and extension popups (both are trusted chrome). */
-const APP_PARTITION = 'persist:tepegoz-app';
+/** App-chrome partition — shared by the main window and extension popups (both are trusted chrome).
+ *  Exported for the CSP hook in security.ts (the policy applies to this session ONLY). */
+export const APP_PARTITION = 'persist:tepegoz-app';
 /** Secure webPreferences shared by every chrome window (internal-ai-rules BLOCKING: one config). */
 const CHROME_WEB_PREFERENCES = {
   preload: join(__dirname, '../preload/index.js'),

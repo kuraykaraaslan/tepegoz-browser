@@ -338,9 +338,13 @@ export function registerIpc(): void {
         ...(detail !== undefined ? { detail } : {}),
       });
       // Project agent events into the Event Journal (append-only audit; DoD "→ Event Journal").
+      // message/detail can carry model output (untrusted) — strip secrets/PII BEFORE the write and
+      // mark the record accordingly, per the journal schema's redaction contract (plan §13.9).
       const db = getDb();
       const type = JOURNAL_TYPE_BY_KIND[kind];
       if (db !== null && type !== undefined) {
+        const safeMessage = Logger.redact(message);
+        const safeDetail = detail !== undefined ? Logger.redact(detail) : undefined;
         try {
           EventJournal.append(db, {
             id: randomUUID(),
@@ -348,8 +352,11 @@ export function registerIpc(): void {
             ts: Date.now(),
             actor: 'agent',
             correlationId: runId,
-            payload: detail !== undefined ? { kind, message, detail } : { kind, message },
-            redacted: false,
+            payload:
+              safeDetail !== undefined
+                ? { kind, message: safeMessage, detail: safeDetail }
+                : { kind, message: safeMessage },
+            redacted: true,
           });
         } catch (err) {
           Logger.warn('Journal append failed', { err: String(err) });
