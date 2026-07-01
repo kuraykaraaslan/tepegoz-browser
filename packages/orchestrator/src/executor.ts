@@ -26,6 +26,13 @@ export interface RunOptions {
   maxSteps?: number;
   loopThreshold?: number;
   ctx?: InvokeContext;
+  /**
+   * Per-step context override (targetUrl for the sensitive-site lockout, taintedArgs for
+   * injection containment). Called just before each step; its result is passed to the ToolGateway
+   * for that step. Falls back to `ctx` when omitted. This is how the Policy Kernel actually receives
+   * the site + taint of each concrete tool call.
+   */
+  ctxFor?: (step: { id: string; tool: string; args: unknown }) => InvokeContext;
   /** Cooperative cancellation, checked before each step (AbortSignal is structurally compatible). */
   signal?: { readonly aborted: boolean };
   /** Live progress hooks (Agent Console). Called before/after each step. */
@@ -71,7 +78,10 @@ export default class Executor {
       }
 
       options.onStepStart?.({ id: step.id, tool: step.tool });
-      const result = await ToolGateway.invoke(step.tool, step.args, ctx);
+      const stepCtx = options.ctxFor
+        ? options.ctxFor({ id: step.id, tool: step.tool, args: step.args })
+        : ctx;
+      const result = await ToolGateway.invoke(step.tool, step.args, stepCtx);
       const outcome: StepOutcome = isToolError(result)
         ? { stepId: step.id, tool: step.tool, ok: false, error: result }
         : { stepId: step.id, tool: step.tool, ok: true, result };

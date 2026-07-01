@@ -102,9 +102,15 @@ function credentialsStatus(): CredentialsStatus {
 let runCounter = 0;
 let approvalCounter = 0;
 let planCounter = 0;
+// Phase 1a: ToolGateway's confirm/audit handlers are process-global statics, so exactly ONE agent
+// run may be active at a time (see ADR-0013). A second concurrent request is rejected.
+let agentRunActive = false;
 const runControllers = new Map<string, AbortController>();
-const pendingApprovals = new Map<string, (approved: boolean) => void>();
-const pendingPlans = new Map<string, (decision: PlanApprovalDecision) => void>();
+const pendingApprovals = new Map<string, { runId: string; resolve: (approved: boolean) => void }>();
+const pendingPlans = new Map<
+  string,
+  { runId: string; resolve: (decision: PlanApprovalDecision) => void }
+>();
 
 function tokenUsage(): TokenUsageSnapshot {
   const t = TokenLedger.totals();
@@ -242,6 +248,10 @@ export function registerIpc(): void {
   // the raw API key and tool args never cross to the renderer (only a truncated preview does).
   handleAsync(IpcChannels.agentRun, async (event, payload): Promise<AgentRunResult> => {
     const prompt = AgentRunInputSchema.parse(payload);
+    if (agentRunActive) {
+      throw new AppError('An agent task is already running', 409);
+    }
+    agentRunActive = true;
     const sender = event.sender;
     const runId = `run-${String(++runCounter)}`;
     const controller = new AbortController();
@@ -266,7 +276,7 @@ export function registerIpc(): void {
       onEvent('awaiting_approval', `Approval needed: ${req.toolName}`, req.policy.reason);
       if (!sender.isDestroyed()) sender.send(IpcChannels.agentApprovalRequest, request);
       return new Promise<boolean>((resolve) => {
-        pendingApprovals.set(approvalId, resolve);
+        pendingApprovals.set(approvalId, { runId, resolve });
         setTimeout(() => {
           if (pendingApprovals.delete(approvalId)) resolve(false); // fail-safe deny on no response
         }, 120_000);
@@ -285,7 +295,7 @@ export function registerIpc(): void {
       };
       if (!sender.isDestroyed()) sender.send(IpcChannels.agentPlanPreview, preview);
       return new Promise<PlanApprovalDecision>((resolve) => {
-        pendingPlans.set(planId, resolve);
+        pendingPlans.set(planId, { runId, resolve });
         setTimeout(() => {
           if (pendingPlans.delete(planId)) resolve({ approved: false }); // fail-safe reject
         }, 120_000);
@@ -305,21 +315,36 @@ export function registerIpc(): void {
       throw err;
     } finally {
       runControllers.delete(runId);
+      agentRunActive = false;
       if (!sender.isDestroyed()) sender.send(IpcChannels.tokenUsage, tokenUsage());
     }
   });
 
   onAction(IpcChannels.agentCancel, AgentRunIdSchema, (runId) => {
     runControllers.get(runId)?.abort();
+    // Unblock a run parked on a pending HITL prompt so cancel takes effect immediately (not after the
+    // 120s fail-safe): reject its plan/approval promises now.
+    for (const [id, entry] of pendingApprovals) {
+      if (entry.runId === runId) {
+        pendingApprovals.delete(id);
+        entry.resolve(false);
+      }
+    }
+    for (const [id, entry] of pendingPlans) {
+      if (entry.runId === runId) {
+        pendingPlans.delete(id);
+        entry.resolve({ approved: false });
+      }
+    }
   });
   onAction(
     IpcChannels.agentApprovalResponse,
     AgentApprovalResponseSchema,
     ({ approvalId, approved }) => {
-      const resolve = pendingApprovals.get(approvalId);
-      if (resolve !== undefined) {
+      const entry = pendingApprovals.get(approvalId);
+      if (entry !== undefined) {
         pendingApprovals.delete(approvalId);
-        resolve(approved);
+        entry.resolve(approved);
       }
     },
   );
@@ -327,10 +352,10 @@ export function registerIpc(): void {
     IpcChannels.agentPlanResponse,
     AgentPlanResponseSchema,
     ({ planId, approved, skipStepIds }) => {
-      const resolve = pendingPlans.get(planId);
-      if (resolve !== undefined) {
+      const entry = pendingPlans.get(planId);
+      if (entry !== undefined) {
         pendingPlans.delete(planId);
-        resolve(skipStepIds !== undefined ? { approved, skipStepIds } : { approved });
+        entry.resolve(skipStepIds !== undefined ? { approved, skipStepIds } : { approved });
       }
     },
   );

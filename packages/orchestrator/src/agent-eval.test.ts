@@ -99,6 +99,36 @@ describe('agent-eval: golden replay', () => {
     expect(calls).toEqual(['data_get_item']);
   });
 
+  it('applies per-step ctxFor so the sensitive-site lockout denies a state-changing call', async () => {
+    ModelGateway.reset();
+    ModelGateway.register(
+      new MockProvider(
+        JSON.stringify({
+          goal: 'go to the bank',
+          steps: [
+            {
+              id: 'b1',
+              tool: 'data_create_item',
+              args: { url: 'https://mybank.com/transfer' },
+              rationale: '',
+              dependsOn: [],
+            },
+          ],
+        }),
+      ),
+    );
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true)); // even if approved, lockout must deny
+    const run = await Executor.run(await plan(), {
+      ctxFor: (step) => {
+        const args = step.args as { url?: unknown };
+        return typeof args.url === 'string' ? { targetUrl: args.url } : {};
+      },
+    });
+    expect(run.stoppedReason).toBe('tool_error');
+    expect(run.outcomes[0]?.error?.code).toBe('FORBIDDEN');
+    expect(calls).toEqual([]); // handler never ran — denied before execution
+  });
+
   it('rejects a plan that references an unregistered tool (LLM output is untrusted)', async () => {
     ModelGateway.reset();
     ModelGateway.register(

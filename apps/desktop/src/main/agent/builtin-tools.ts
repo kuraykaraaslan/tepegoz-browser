@@ -42,6 +42,9 @@ async function navigateAndWait(url: string): Promise<{ url: string; title: strin
     }, 15_000);
     wc.once('did-stop-loading', onDone);
   });
+  // The tab may have been closed (webContents destroyed) during the up-to-15s wait — never call
+  // methods on a destroyed WebContents (throws an opaque "Object has been destroyed").
+  if (wc.isDestroyed()) throw new AppError('Active tab was closed during navigation', 409);
   return { url: wc.getURL(), title: wc.getTitle() };
 }
 

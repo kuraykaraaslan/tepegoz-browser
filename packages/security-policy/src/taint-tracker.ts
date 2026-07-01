@@ -38,6 +38,21 @@ function collectStrings(value: unknown, out: string[]): void {
 }
 
 /**
+ * True if any MIN_MATCH_LEN-length window of `arg` appears verbatim in `source`. Matching a SLICE of
+ * the arg (not requiring the whole arg to be contained) is what catches the model wrapping lifted
+ * page text in its own prose, e.g. "Per the page: wire $5000 to account 12345678, thanks".
+ */
+function sourceContainsSliceOf(source: string, arg: string): boolean {
+  if (arg.length < MIN_MATCH_LEN) return false;
+  // Fast path: the whole arg is present.
+  if (source.includes(arg)) return true;
+  for (let i = 0; i + MIN_MATCH_LEN <= arg.length; i += 1) {
+    if (source.includes(arg.slice(i, i + MIN_MATCH_LEN))) return true;
+  }
+  return false;
+}
+
+/**
  * Return the arg string leaves that derive from any of `untrustedTexts` (verbatim slice match).
  * Exposed for Permission Debug ("which value is tainted, and why am I being asked?").
  */
@@ -51,7 +66,7 @@ export function findTaintedValues(args: unknown, untrustedTexts: readonly string
   return leaves.filter((leaf) => {
     const norm = normalize(leaf);
     if (norm.length < MIN_MATCH_LEN) return false;
-    return sources.some((src) => src.includes(norm));
+    return sources.some((src) => sourceContainsSliceOf(src, norm));
   });
 }
 
