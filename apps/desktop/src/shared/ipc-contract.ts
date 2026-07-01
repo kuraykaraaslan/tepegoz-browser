@@ -69,6 +69,9 @@ export const IpcChannels = {
   tokenUsageGet: 'token:usage-get',
   menuShowMain: 'menu:show-main',
   extensionOpen: 'extension:open',
+  extensionPopupOpen: 'extension:popup-open',
+  extensionPopupClose: 'extension:popup-close',
+  extensionPopupClosed: 'extension:popup-closed',
   historyList: 'history:list',
   historySearch: 'history:search',
   historyDelete: 'history:delete',
@@ -232,6 +235,13 @@ export interface TepegozApi {
   showMainMenu(): void;
   /** Subscribe to "open this extension panel" requests from the menu; returns an unsubscribe fn. */
   onOpenExtension(callback: (id: ExtensionId) => void): () => void;
+  /** Open an extension's `popup` surface as a native floating window anchored at `anchor` (the toolbar
+   *  icon's rect, in window-content DIP). Floats above the page, which stays live behind it. */
+  openExtensionPopup(id: ExtensionId, anchor: ContentBounds): void;
+  /** Close the open extension popup (also auto-closes when it loses focus). */
+  closeExtensionPopup(): void;
+  /** Subscribe to popup-closed notifications (e.g. dismissed by click-away); returns an unsubscribe fn. */
+  onExtensionPopupClosed(callback: () => void): () => void;
   // Browsing history (tepegoz://history). All return the fresh list so the page re-renders.
   getHistory(): Promise<HistoryEntry[]>;
   searchHistory(query: string): Promise<HistoryEntry[]>;

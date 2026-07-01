@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@tepegoz/capability-plane": "workspace:*",
+    "@tepegoz/credential-vault": "workspace:*",
     "@tepegoz/ext-agent": "workspace:*",
     "@tepegoz/ext-user-agent": "workspace:*",
     "@tepegoz/extension-sdk": "workspace:*",

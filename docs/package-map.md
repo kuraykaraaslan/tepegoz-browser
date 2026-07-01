@@ -49,7 +49,7 @@ Any new package must respect this graph and the no-circular rule in
 | Done | Proposed package | Source (today) | Scope | Depends on | Effort |
 |---|---|---|---|---|---|
 | [x] | **@tepegoz/navigation** ⭐ (url-bar's backend twin) | ~~`main/lib/navigation-url.ts` + `trusted-origin.ts`~~ → `packages/navigation/` (pure); app keeps thin adapters | Scheme allow-list, `tepegoz://` internal-page routing, search fallback, trusted-origin — pure TS; `isPackaged` + internal-page set **injected** by desktop adapters | none (zero-dep) | ✅ done |
-| [ ] | **@tepegoz/credential-vault** | `main/security/credential-vault.ts` | Encrypted BYO-key vault; `SecretCrypto` injected (safeStorage); Electron-free, testable core | zod, `@tepegoz/shared-types`, `@tepegoz/libs` | M |
+| [x] | **@tepegoz/credential-vault** | ~~`main/security/credential-vault.ts`~~ → `packages/credential-vault/` | Encrypted BYO-key vault; `SecretCrypto` + file path injected (app wires safeStorage in `stores.electron.ts`); Electron-free, 9 tests | `@tepegoz/libs`, `shared-types`, `json-store` | ✅ done |
 | [ ] | **@tepegoz/preferences** | `main/preferences/preference-store.ts` + `preferences.model.ts` | Zod schema + store core (path injected); minor refactor: make `ExtensionId` enum pluggable | zod, json-store, `@tepegoz/libs` | M |
 | [x] | **@tepegoz/json-store** | ~~`main/lib/json-store.ts`~~ → `packages/json-store/` | Crash-safe file-based JSON persist (Node-only); used by credential-vault + preferences | none (Node fs) | ✅ done |
 | [ ] | **@tepegoz/desktop-ipc** | `shared/ipc-contract.ts` + `shared/ipc-schemas.ts` | Typed IPC channel contract + zod validation (shared main+preload+renderer seam) | `@tepegoz/ext-agent` (types), `@tepegoz/persistence` (types), zod | S–M |

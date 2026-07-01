@@ -44,6 +44,9 @@ importers:
       '@tepegoz/capability-plane':
         specifier: workspace:*
         version: link:../../packages/capability-plane
+      '@tepegoz/credential-vault':
+        specifier: workspace:*
+        version: link:../../packages/credential-vault
       '@tepegoz/ext-agent':
         specifier: workspace:*
         version: link:../../packages/ext-agent
@@ -159,6 +162,28 @@ importers:
       '@tepegoz/security-policy':
         specifier: workspace:*
         version: link:../security-policy
+      '@tepegoz/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.0
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(lightningcss@1.32.0)
+
+  packages/credential-vault:
+    dependencies:
+      '@tepegoz/json-store':
+        specifier: workspace:*
+        version: link:../json-store
+      '@tepegoz/libs':
+        specifier: workspace:*
+        version: link:../libs
       '@tepegoz/shared-types':
         specifier: workspace:*
         version: link:../shared-types

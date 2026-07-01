@@ -15,6 +15,7 @@ import {
   isExtensionEnabled,
 } from '../../shared/ipc-contract';
 import type {
+  ContentBounds,
   CredentialsStatus,
   ExtensionId,
   LocalePref,
@@ -57,6 +58,12 @@ const SIDEBAR_MIN_WIDTH = 280;
 const SIDEBAR_MAX_WIDTH = 640;
 const SIDEBAR_DEFAULT_WIDTH = 360;
 
+/** Fallback anchor for a popup opened without an icon rect (e.g. from the hamburger menu): the
+ *  top-right of the content, just under the chrome. */
+function defaultPopupAnchor(): ContentBounds {
+  return { x: window.innerWidth - 8, y: 84, width: 0, height: 0 };
+}
+
 export function App() {
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [status, setStatus] = useState<CredentialsStatus | null>(null);
@@ -68,6 +75,9 @@ export function App() {
   const [sidebarExtId, setSidebarExtId] = useState<string | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
   const [resizingSidebar, setResizingSidebar] = useState(false);
+  // The extension whose native popup window is open (for the toolbar-icon pressed state), or null.
+  const [popupOpenId, setPopupOpenId] = useState<string | null>(null);
+  const popupOpenIdRef = useRef<string | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
 
   const locale = effectiveLocale(prefs?.locale ?? 'system');
@@ -76,27 +86,43 @@ export function App() {
     setActiveSurface(null);
   }, []);
 
-  // Resolve a toolbar icon click/double-click (or a menu request) to its bound surface.
-  const runExtensionAction = useCallback((id: string, trigger: 'click' | 'doubleClick') => {
-    const def = extensionDefById(id);
-    if (def === undefined) return;
-    const action = trigger === 'click' ? def.manifest.actions.click : def.manifest.actions.doubleClick;
-    if (action === undefined) return;
-    if (action === 'page') {
-      setActiveSurface(null);
-      window.tepegoz.navigateTab(extensionPageUrl(id)); // opens/focuses the extension's internal tab
-      return;
-    }
-    if (action === 'sidebar') {
-      // A dock beside the page (web view stays visible); persists across tabs, toggles on re-trigger.
-      setSidebarExtId((cur) => (cur === id ? null : id));
-      return;
-    }
-    // Overlay surfaces (popup/modal/panel) hide the web view. Toggle: re-triggering closes it.
-    setActiveSurface((cur) =>
-      cur !== null && cur.id === id && cur.kind === action ? null : { id, kind: action },
-    );
-  }, []);
+  // Resolve a toolbar icon click/double-click (or a menu request) to its bound surface. `anchor` is the
+  // clicked icon's rect (for popups); absent for menu-triggered actions.
+  const runExtensionAction = useCallback(
+    (id: string, trigger: 'click' | 'doubleClick', anchor?: ContentBounds) => {
+      const def = extensionDefById(id);
+      if (def === undefined) return;
+      const action =
+        trigger === 'click' ? def.manifest.actions.click : def.manifest.actions.doubleClick;
+      if (action === undefined) return;
+      if (action === 'page') {
+        setActiveSurface(null);
+        window.tepegoz.navigateTab(extensionPageUrl(id)); // opens/focuses the extension's internal tab
+        return;
+      }
+      if (action === 'sidebar') {
+        // A dock beside the page (web view stays visible); persists across tabs, toggles on re-trigger.
+        setSidebarExtId((cur) => (cur === id ? null : id));
+        return;
+      }
+      if (action === 'popup') {
+        // A native floating window that keeps the page live behind it. Re-triggering toggles it off.
+        if (popupOpenIdRef.current === id) {
+          window.tepegoz.closeExtensionPopup();
+          setPopupOpenId(null);
+        } else {
+          window.tepegoz.openExtensionPopup(id, anchor ?? defaultPopupAnchor());
+          setPopupOpenId(id);
+        }
+        return;
+      }
+      // Remaining overlay surfaces (modal/panel) hide the web view. Toggle: re-triggering closes it.
+      setActiveSurface((cur) =>
+        cur !== null && cur.id === id && cur.kind === action ? null : { id, kind: action },
+      );
+    },
+    [],
+  );
 
   // Drag the sidebar's inner edge to resize (clamped). While dragging we hide the web view so the
   // chrome — not the native view beside it — receives the pointer stream across the whole content area.
@@ -199,6 +225,18 @@ export function App() {
     });
   }, [runExtensionAction]);
 
+  // Keep the popup-open ref in sync (read by runExtensionAction to toggle without stale closures).
+  useEffect(() => {
+    popupOpenIdRef.current = popupOpenId;
+  }, [popupOpenId]);
+
+  // The native popup closed itself (click-away / Escape / its Close button) — clear the pressed state.
+  useEffect(() => {
+    return window.tepegoz.onExtensionPopupClosed(() => {
+      setPopupOpenId(null);
+    });
+  }, []);
+
   // App shortcuts (single registry): the accelerators shown in the main menu are wired here. We
   // preventDefault so Ctrl+R reloads the active TAB, not the app chrome.
   useEffect(() => {
@@ -274,22 +312,7 @@ export function App() {
         </Modal>
       );
     }
-    // popup — a floating card anchored top-right over a dim backdrop that closes on outside click. The
-    // host clamps its width/height (with scroll) so an extension can't open an oversized popup.
-    return (
-      <div className="absolute inset-0 z-10 bg-black/40" role="presentation" onClick={closeSurface}>
-        <div
-          className="absolute right-2 top-2"
-          onClick={(e) => {
-            e.stopPropagation();
-          }}
-        >
-          <div className="max-h-[70vh] w-[min(360px,calc(100vw-1rem))] overflow-auto rounded-lg border border-border bg-surface-raised shadow-xl">
-            {body}
-          </div>
-        </div>
-      </div>
-    );
+    return null; // popup opens as a native window (openExtensionPopup), not a DOM overlay
   }
 
   /** Render the resizable sidebar dock (right), if an extension is docked. The page/web view stays
@@ -339,7 +362,7 @@ export function App() {
         canGoBack={tabs.canGoBack}
         canGoForward={tabs.canGoForward}
         extensions={enabledExtensions}
-        activeExtensionId={activeSurface?.id ?? sidebarExtId ?? null}
+        activeExtensionId={activeSurface?.id ?? sidebarExtId ?? popupOpenId ?? null}
         onExtensionAction={runExtensionAction}
       />
       <div className="relative flex flex-1 overflow-hidden">

@@ -155,6 +155,21 @@ const api: TepegozApi = {
       ipcRenderer.removeListener(IpcChannels.extensionOpen, listener);
     };
   },
+  openExtensionPopup: (id: ExtensionId, anchor: ContentBounds) => {
+    ipcRenderer.send(IpcChannels.extensionPopupOpen, { id, anchor });
+  },
+  closeExtensionPopup: () => {
+    ipcRenderer.send(IpcChannels.extensionPopupClose);
+  },
+  onExtensionPopupClosed: (callback: () => void) => {
+    const listener = (): void => {
+      callback();
+    };
+    ipcRenderer.on(IpcChannels.extensionPopupClosed, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.extensionPopupClosed, listener);
+    };
+  },
   getHistory: () => ipcRenderer.invoke(IpcChannels.historyList) as Promise<HistoryEntry[]>,
   searchHistory: (query: string) =>
     ipcRenderer.invoke(IpcChannels.historySearch, query) as Promise<HistoryEntry[]>,

@@ -10,7 +10,7 @@ import { Executor, Planner, type StepOutcome } from '@tepegoz/orchestrator';
 import { TaintTracker } from '@tepegoz/security-policy';
 import type { Plan } from '@tepegoz/shared-types';
 import type { AgentEventKind } from '../../shared/ipc-contract';
-import CredentialVault from '../security/credential-vault';
+import CredentialVault from '@tepegoz/credential-vault';
 import PreferenceStore from '../preferences/preference-store';
 import TabManager from '../tabs';
 import { registerBuiltinTools } from './builtin-tools';

@@ -8,7 +8,7 @@ import { readJsonFile, writeJsonFile } from '@tepegoz/json-store';
  * NEVER leave the main process — the renderer only ever learns *whether* a key is set (booleans).
  *
  * The crypto and file path are injected so this core is unit-testable without an Electron runtime;
- * the Electron wiring lives in `stores.electron.ts`.
+ * the Electron wiring lives in the desktop app's `stores.electron.ts`.
  */
 export interface SecretCrypto {
   isAvailable(): boolean;

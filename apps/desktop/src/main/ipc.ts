@@ -25,6 +25,7 @@ import {
   HistoryQuerySchema,
   HistoryUrlSchema,
   UserAgentSelectionSchema,
+  ExtensionPopupOpenSchema,
   ContentBoundsSchema,
   ContentVisibleSchema,
   CreateTabInputSchema,
@@ -42,10 +43,11 @@ import AgentService, { type PlanApprovalDecision } from './agent/agent-service';
 import { getDb } from './db/database.electron';
 import { PreferencesPatchSchema } from './preferences/preferences.model';
 import { isTrustedAppUrl } from './lib/trusted-origin';
-import CredentialVault from './security/credential-vault';
+import CredentialVault from '@tepegoz/credential-vault';
 import PreferenceStore from './preferences/preference-store';
 import TabManager from './tabs';
 import UserAgentManager from './user-agent';
+import ExtensionPopupManager from './extension-popup';
 import { showTabContextMenu } from './menus/tab-context-menu';
 import { showMainMenu } from './menus/main-menu';
 
@@ -248,6 +250,20 @@ export function registerIpc(): void {
     if (!isTrustedAppUrl(event.senderFrame?.url ?? '')) return;
     const win = BrowserWindow.fromWebContents(event.sender);
     if (win) showMainMenu(win);
+  });
+  // Extension popup — a native child window anchored under the toolbar icon (needs the sender window).
+  ipcMain.on(IpcChannels.extensionPopupOpen, (event: IpcMainEvent, payload: unknown) => {
+    if (!isTrustedAppUrl(event.senderFrame?.url ?? '')) return;
+    const parsed = ExtensionPopupOpenSchema.safeParse(payload);
+    if (!parsed.success) {
+      Logger.warn('Ignored extension:popup-open: invalid payload');
+      return;
+    }
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) ExtensionPopupManager.open(win, parsed.data.id, parsed.data.anchor);
+  });
+  onSignal(IpcChannels.extensionPopupClose, () => {
+    ExtensionPopupManager.close();
   });
   onAction(IpcChannels.tabsNavigate, NavigateInputSchema, (url) => {
     TabManager.navigateActive(url);

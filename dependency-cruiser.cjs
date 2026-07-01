@@ -55,6 +55,15 @@ module.exports = {
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
     {
+      name: 'credential-vault-no-electron',
+      severity: 'error',
+      comment:
+        '@tepegoz/credential-vault must stay Electron-free and app-free: the OS keychain (safeStorage) ' +
+        'is injected as SecretCrypto and the file path is injected by the desktop app. See docs/package-map.md.',
+      from: { path: '^packages/credential-vault/' },
+      to: { path: ['^apps/', 'node_modules/electron'] },
+    },
+    {
       name: 'tab-strip-is-a-leaf',
       severity: 'error',
       comment:

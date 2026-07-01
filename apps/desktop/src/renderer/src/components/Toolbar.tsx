@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { cn } from '@tepegoz/ui';
 import { Omnibox } from '@tepegoz/omnibox';
 import type { Locale, Resources } from '@tepegoz/i18n';
-import { INTERNAL_EXTENSIONS_URL } from '../../../shared/ipc-contract';
+import { INTERNAL_EXTENSIONS_URL, type ContentBounds } from '../../../shared/ipc-contract';
 import { extensionLabel } from '../../../shared/extensions';
 import type { ExtensionDef } from '../extensions/registry';
 
@@ -22,8 +22,9 @@ interface ToolbarProps {
   extensions: readonly ExtensionDef[];
   /** The extension whose surface is currently open (for the pressed highlight), or null. */
   activeExtensionId: string | null;
-  /** Fired when a toolbar icon is clicked / double-clicked; the host resolves it to a surface. */
-  onExtensionAction: (id: string, trigger: 'click' | 'doubleClick') => void;
+  /** Fired when a toolbar icon is clicked / double-clicked; the host resolves it to a surface. The
+   *  `anchor` is the clicked icon's rect, used to position a native popup under it. */
+  onExtensionAction: (id: string, trigger: 'click' | 'doubleClick', anchor?: ContentBounds) => void;
 }
 
 const NAV_BTN =
@@ -45,9 +46,10 @@ function ExtensionIconButton({
   ext: ExtensionDef;
   label: string;
   active: boolean;
-  onAction: (id: string, trigger: 'click' | 'doubleClick') => void;
+  onAction: (id: string, trigger: 'click' | 'doubleClick', anchor?: ContentBounds) => void;
 }) {
   const timer = useRef<number | null>(null);
+  const btnRef = useRef<HTMLButtonElement | null>(null);
   const hasDouble = ext.manifest.actions.doubleClick !== undefined;
 
   useEffect(
@@ -57,25 +59,33 @@ function ExtensionIconButton({
     [],
   );
 
+  function anchor(): ContentBounds | undefined {
+    const el = btnRef.current;
+    if (el === null) return undefined;
+    const r = el.getBoundingClientRect();
+    return { x: r.x, y: r.y, width: r.width, height: r.height };
+  }
+
   function handleClick(): void {
     if (!hasDouble) {
-      onAction(ext.id, 'click');
+      onAction(ext.id, 'click', anchor());
       return;
     }
     if (timer.current !== null) {
       window.clearTimeout(timer.current);
       timer.current = null;
-      onAction(ext.id, 'doubleClick');
+      onAction(ext.id, 'doubleClick', anchor());
       return;
     }
     timer.current = window.setTimeout(() => {
       timer.current = null;
-      onAction(ext.id, 'click');
+      onAction(ext.id, 'click', anchor());
     }, DOUBLE_CLICK_MS);
   }
 
   return (
     <button
+      ref={btnRef}
       type="button"
       aria-label={label}
       aria-pressed={active}

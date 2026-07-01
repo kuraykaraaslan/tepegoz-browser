@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { EXTENSION_ID_RE } from '@tepegoz/extension-sdk';
 import type { AppInfo } from './ipc-contract';
 
 /**
@@ -55,3 +56,14 @@ export const HistoryUrlSchema = z.string().min(1).max(4096);
 
 /** `user-agent:set` payload — a UA string to apply, or null to reset to the browser default. */
 export const UserAgentSelectionSchema = z.string().max(512).nullable();
+
+/** `extension:popup-open` payload — which extension, and the toolbar icon's rect to anchor under. */
+export const ExtensionPopupOpenSchema = z.object({
+  id: z.string().regex(EXTENSION_ID_RE).max(128),
+  anchor: z.object({
+    x: z.number(),
+    y: z.number(),
+    width: z.number(),
+    height: z.number(),
+  }),
+});

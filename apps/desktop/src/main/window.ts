@@ -1,7 +1,20 @@
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, shell, type Rectangle } from 'electron';
 import { join } from 'node:path';
 import { IpcChannels } from '../shared/ipc-contract';
 import { isTrustedAppUrl } from './lib/trusted-origin';
+
+/** App-chrome partition — shared by the main window and extension popups (both are trusted chrome). */
+const APP_PARTITION = 'persist:tepegoz-app';
+/** Secure webPreferences shared by every chrome window (internal-ai-rules BLOCKING: one config). */
+const CHROME_WEB_PREFERENCES = {
+  preload: join(__dirname, '../preload/index.js'),
+  contextIsolation: true,
+  sandbox: true,
+  nodeIntegration: false,
+  webSecurity: true,
+  spellcheck: false,
+  partition: APP_PARTITION,
+} as const;
 
 // Brand app icon (generated from resources/icon.svg via `pnpm --filter @tepegoz/desktop icons`).
 // Windows favors the multi-resolution .ico; other platforms use the 512px PNG.
@@ -31,17 +44,9 @@ export function createWindow(): BrowserWindow {
     icon: ICON_PATH,
     // Brand navy (logo background) so the frame matches before the renderer paints.
     backgroundColor: '#0c2135',
-    webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
-      contextIsolation: true,
-      sandbox: true,
-      nodeIntegration: false,
-      webSecurity: true,
-      spellcheck: false,
-      // App-chrome gets its own persistent partition. Browsed (untrusted) pages will later run in
-      // SEPARATE isolated partitions/WebContentsView, never sharing this session.
-      partition: 'persist:tepegoz-app',
-    },
+    // App-chrome gets its own persistent partition. Browsed (untrusted) pages run in SEPARATE isolated
+    // partitions/WebContentsView, never sharing this session.
+    webPreferences: { ...CHROME_WEB_PREFERENCES },
   });
 
   // Reveal the window robustly: prefer 'ready-to-show' (no white flash), but NEVER leave it stuck
@@ -83,5 +88,33 @@ export function createWindow(): BrowserWindow {
     }
   });
 
+  return win;
+}
+
+/**
+ * Secure factory for an extension popup window: a frameless, non-resizable child of `parent`, sharing
+ * the same trusted preload + app partition (so `window.tepegoz` works and the IPC sender allow-list
+ * accepts it). It floats above the parent's native web view, so the browsed page stays live behind it.
+ * The caller loads the renderer with `?popup=<id>` and manages show/close (blur-to-dismiss).
+ */
+export function createPopupWindow(parent: BrowserWindow, bounds: Rectangle): BrowserWindow {
+  const win = new BrowserWindow({
+    ...bounds,
+    parent,
+    show: false,
+    frame: false,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    skipTaskbar: true,
+    backgroundColor: '#0c2135',
+    webPreferences: { ...CHROME_WEB_PREFERENCES },
+  });
+  win.setMenu(null);
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  win.webContents.on('will-navigate', (event, url) => {
+    if (!isTrustedAppUrl(url)) event.preventDefault();
+  });
   return win;
 }
