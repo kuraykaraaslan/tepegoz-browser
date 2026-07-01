@@ -5,7 +5,30 @@
  * NOTE: this file is imported by the SANDBOXED preload, so it must stay dependency-free (no zod —
  * a sandboxed preload cannot `require` external npm modules). Runtime schemas live in `ipc-schemas.ts`
  * and `main/preferences/preferences.model.ts` (main-process only).
+ *
+ * Agent wire types come from the isolated Agent extension package (its public contract). Type-only,
+ * so the sandboxed preload stays dependency-free.
  */
+import type {
+  AgentApprovalRequest,
+  AgentEvent,
+  AgentEventKind,
+  AgentPlanPreview,
+  AgentPlanStep,
+  AgentRunResult,
+  TokenUsageSnapshot,
+} from '@tepegoz/ext-agent/types';
+
+export type {
+  AgentApprovalRequest,
+  AgentEvent,
+  AgentEventKind,
+  AgentPlanPreview,
+  AgentPlanStep,
+  AgentRunResult,
+  TokenUsageSnapshot,
+};
+
 export const IpcChannels = {
   appGetInfo: 'app:get-info',
   prefsGet: 'prefs:get',
@@ -93,66 +116,6 @@ export interface TabsState {
   activeId: string | null;
   canGoBack: boolean;
   canGoForward: boolean;
-}
-
-/** Live Agent Console event kinds (observability-first: every step is surfaced). */
-export type AgentEventKind =
-  | 'plan'
-  | 'step_start'
-  | 'step_ok'
-  | 'step_error'
-  | 'awaiting_approval'
-  | 'done'
-  | 'error';
-
-export interface AgentEvent {
-  runId: string;
-  kind: AgentEventKind;
-  message: string;
-  /** Extra context (tool name, reason code, URL, plan summary). */
-  detail?: string;
-  ts: number;
-}
-
-/** HITL prompt raised when the Policy Kernel says "ask" — shown as a blocking modal. */
-export interface AgentApprovalRequest {
-  runId: string;
-  approvalId: string;
-  toolName: string;
-  /** Stable reason code (Permission Debug). */
-  reason: string;
-  /** HIGH-RISK actions require biometric (Windows Hello) — surfaced in the modal. */
-  biometric: boolean;
-  /** Truncated, safe preview of the tool arguments. */
-  argsPreview: string;
-}
-
-export interface AgentRunResult {
-  runId: string;
-  stoppedReason: string;
-  ok: boolean;
-}
-
-/** One step of a proposed plan, shown in the editable plan-preview (HITL before the agent loop). */
-export interface AgentPlanStep {
-  id: string;
-  tool: string;
-  rationale: string;
-}
-
-/** The full plan proposed to the user for review BEFORE any step executes. */
-export interface AgentPlanPreview {
-  runId: string;
-  planId: string;
-  goal: string;
-  steps: AgentPlanStep[];
-}
-
-/** Token-usage snapshot for the quota indicator (aggregated by the Token Ledger). */
-export interface TokenUsageSnapshot {
-  inputTokens: number;
-  outputTokens: number;
-  totalTokens: number;
 }
 
 /**

@@ -26,7 +26,7 @@ export function ExtensionsPage({ t, states, onToggle }: ExtensionsPageProps) {
 
   const shown = EXTENSIONS.filter((ext) => {
     if (q.length === 0) return true;
-    return `${x.names[ext.id]} ${x.descriptions[ext.id]}`.toLowerCase().includes(q);
+    return `${x.names[ext.id]} ${ext.manifest.description}`.toLowerCase().includes(q);
   });
 
   return (
@@ -56,15 +56,20 @@ export function ExtensionsPage({ t, states, onToggle }: ExtensionsPageProps) {
                 <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center text-text-secondary">
                   {ext.icon}
                 </span>
-                <Toggle
-                  id={`ext-${ext.id}`}
-                  label={x.names[ext.id]}
-                  description={x.descriptions[ext.id]}
-                  checked={isExtensionEnabled(states, ext.id)}
-                  onChange={(v) => {
-                    onToggle(ext.id, v);
-                  }}
-                />
+                <div className="min-w-0 flex-1">
+                  <Toggle
+                    id={`ext-${ext.id}`}
+                    label={x.names[ext.id]}
+                    description={ext.manifest.description}
+                    checked={isExtensionEnabled(states, ext.id)}
+                    onChange={(v) => {
+                      onToggle(ext.id, v);
+                    }}
+                  />
+                  <p className="mt-1 text-[11px] text-text-disabled">
+                    v{ext.manifest.version} · {ext.manifest.id}
+                  </p>
+                </div>
               </div>
             </Card>
           ))}

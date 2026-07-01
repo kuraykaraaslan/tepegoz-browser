@@ -71,9 +71,6 @@ export const tr: Resources = {
     names: {
       agent: 'Ajan',
     },
-    descriptions: {
-      agent: 'Geçerli sayfada, insan onaylı otonom tarama görevleri.',
-    },
   },
   onboarding: {
     welcome: "Tepegöz'e hoş geldiniz",

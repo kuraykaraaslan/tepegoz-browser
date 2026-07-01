@@ -8,6 +8,7 @@
     "dev:raw": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
+    "icons": "node scripts/generate-icons.mjs",
     "typecheck:node": "tsc -p tsconfig.node.json --noEmit",
     "typecheck:web": "tsc -p tsconfig.web.json --noEmit",
     "typecheck": "pnpm run typecheck:node && pnpm run typecheck:web",
@@ -16,6 +17,8 @@
   },
   "dependencies": {
     "@tepegoz/capability-plane": "workspace:*",
+    "@tepegoz/ext-agent": "workspace:*",
+    "@tepegoz/extension-sdk": "workspace:*",
     "@tepegoz/i18n": "workspace:*",
     "@tepegoz/libs": "workspace:*",
     "@tepegoz/model-gateway": "workspace:*",
@@ -29,6 +32,7 @@
     "zod": "3.23.8"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/vite": "^4.1.16",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",

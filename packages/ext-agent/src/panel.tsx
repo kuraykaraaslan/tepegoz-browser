@@ -4,18 +4,20 @@ import type { Resources } from '@tepegoz/i18n';
 import type {
   AgentApprovalRequest,
   AgentEvent,
+  AgentHostApi,
   AgentPlanPreview,
   TokenUsageSnapshot,
-} from '../../../shared/ipc-contract';
+} from './types';
 
 /**
- * Live Agent Console (L9) — the "Do" surface. Streams every agent step from the main process
- * (observability-first), runs a task on the active tab, and raises the blocking HITL approval modal
- * when the Policy Kernel says "ask". Rendered as a chrome overlay (the web view is hidden while open,
- * but the agent still drives the live tab underneath).
+ * Agent extension panel (the "Do" surface). Streams every agent step from the host (observability-
+ * first), runs a task on the active tab, and raises the blocking HITL approval + editable plan-preview
+ * modals. It talks to the host ONLY through the injected {@link AgentHostApi} — no global bridge — so
+ * the extension is decoupled from apps/desktop.
  */
-interface AgentConsoleProps {
+interface AgentPanelProps {
   t: Resources;
+  api: AgentHostApi;
   onClose: () => void;
 }
 
@@ -36,7 +38,7 @@ const BTN_GHOST =
   'rounded-md border border-border px-3 py-1.5 text-sm text-text-secondary ' +
   'hover:bg-surface-overlay hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus';
 
-export function AgentConsole({ t, onClose }: AgentConsoleProps) {
+export function AgentPanel({ t, api, onClose }: AgentPanelProps) {
   const [prompt, setPrompt] = useState('');
   const [events, setEvents] = useState<AgentEvent[]>([]);
   const [running, setRunning] = useState(false);
@@ -48,22 +50,22 @@ export function AgentConsole({ t, onClose }: AgentConsoleProps) {
   const listRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const offEvent = window.tepegoz.onAgentEvent((e) => {
+    const offEvent = api.onAgentEvent((e) => {
       setRunId(e.runId);
       setEvents((prev) => [...prev, e]);
       if (e.kind === 'done' || e.kind === 'error') setRunning(false);
     });
-    const offApproval = window.tepegoz.onAgentApprovalRequest((req) => {
+    const offApproval = api.onAgentApprovalRequest((req) => {
       setApproval(req);
     });
-    const offPlan = window.tepegoz.onAgentPlanPreview((preview) => {
+    const offPlan = api.onAgentPlanPreview((preview) => {
       setSkipIds(new Set());
       setPlanPreview(preview);
     });
-    const offTokens = window.tepegoz.onTokenUsage((usage) => {
+    const offTokens = api.onTokenUsage((usage) => {
       setTokens(usage);
     });
-    void window.tepegoz.getTokenUsage().then(setTokens, () => {
+    void api.getTokenUsage().then(setTokens, () => {
       /* usage unavailable — indicator stays hidden */
     });
     return () => {
@@ -72,7 +74,7 @@ export function AgentConsole({ t, onClose }: AgentConsoleProps) {
       offPlan();
       offTokens();
     };
-  }, []);
+  }, [api]);
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
@@ -83,7 +85,7 @@ export function AgentConsole({ t, onClose }: AgentConsoleProps) {
     if (text.length === 0 || running) return;
     setEvents([]);
     setRunning(true);
-    void window.tepegoz
+    void api
       .runAgent(text)
       .catch(() => {
         /* the failure is also surfaced as an 'error' event in the list */
@@ -94,13 +96,13 @@ export function AgentConsole({ t, onClose }: AgentConsoleProps) {
   }
 
   function onCancel(): void {
-    if (runId !== null) window.tepegoz.cancelAgent(runId);
+    if (runId !== null) api.cancelAgent(runId);
     setRunning(false);
   }
 
   function respond(approved: boolean): void {
     if (approval !== null) {
-      window.tepegoz.respondAgentApproval(approval.approvalId, approved);
+      api.respondAgentApproval(approval.approvalId, approved);
       setApproval(null);
     }
   }
@@ -117,9 +119,9 @@ export function AgentConsole({ t, onClose }: AgentConsoleProps) {
   function respondPlan(approved: boolean): void {
     if (planPreview === null) return;
     if (approved) {
-      window.tepegoz.respondAgentPlan(planPreview.planId, true, [...skipIds]);
+      api.respondAgentPlan(planPreview.planId, true, [...skipIds]);
     } else {
-      window.tepegoz.respondAgentPlan(planPreview.planId, false);
+      api.respondAgentPlan(planPreview.planId, false);
       setRunning(false);
     }
     setPlanPreview(null);

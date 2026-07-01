@@ -1,13 +1,15 @@
 import type { ReactNode } from 'react';
 import type { Resources } from '@tepegoz/i18n';
+import type { ExtensionManifest } from '@tepegoz/extension-sdk';
+import { agentManifest, AgentPanel } from '@tepegoz/ext-agent';
 import type { ExtensionId } from '../../../shared/ipc-contract';
-import { AgentConsole } from '../components/AgentConsole';
 
 /**
- * Renderer registry of internal extension panels. Each entry maps an {@link ExtensionId} to a toolbar
- * icon + a chrome-rendered panel that opens over the content area. This is the single place a built-in
- * extension is wired on the UI side — add one here, plus its id in ipc-contract `EXTENSION_IDS` and
- * its title in i18n `extensions.names`. (Real MV3/third-party extensions are a later phase.)
+ * Renderer registry of internal extensions. Each entry pairs a schema-validated {@link ExtensionManifest}
+ * (from the extension's own package) with a toolbar icon and its panel. The panel receives the host
+ * API (`window.tepegoz`, which structurally satisfies the extension's own host-API contract) — the
+ * extension package never reaches the global bridge itself. Add a built-in extension here + its id in
+ * ipc-contract `EXTENSION_IDS`. (Real MV3/third-party extensions are a later phase.)
  */
 export interface ExtensionPanelProps {
   t: Resources;
@@ -16,6 +18,7 @@ export interface ExtensionPanelProps {
 
 export interface ExtensionDef {
   id: ExtensionId;
+  manifest: ExtensionManifest;
   icon: ReactNode;
   panel: (props: ExtensionPanelProps) => ReactNode;
 }
@@ -28,4 +31,11 @@ function AgentIcon() {
   );
 }
 
-export const EXTENSIONS: readonly ExtensionDef[] = [{ id: 'agent', icon: <AgentIcon />, panel: AgentConsole }];
+export const EXTENSIONS: readonly ExtensionDef[] = [
+  {
+    id: 'agent',
+    manifest: agentManifest,
+    icon: <AgentIcon />,
+    panel: ({ t, onClose }) => <AgentPanel t={t} api={window.tepegoz} onClose={onClose} />,
+  },
+];

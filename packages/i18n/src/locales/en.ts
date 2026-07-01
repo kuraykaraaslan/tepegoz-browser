@@ -73,9 +73,6 @@ export const en = {
     names: {
       agent: 'Agent',
     },
-    descriptions: {
-      agent: 'Autonomous browsing tasks on the current page, with human approval.',
-    },
   },
   onboarding: {
     welcome: 'Welcome to Tepegöz',
