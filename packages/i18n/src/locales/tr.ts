@@ -57,6 +57,9 @@ export const tr: Resources = {
     approve: 'Onayla',
     deny: 'Reddet',
     aiDisclaimer: 'AI üretti, hatalı olabilir — yan etkili eylemleri gözden geçirin.',
+    planTitle: 'Planı gözden geçirin',
+    planBody: 'İstemediğiniz adımların işaretini kaldırıp çalıştırın. Onaylayana kadar hiçbir şey yürütülmez.',
+    planRun: 'Planı çalıştır',
   },
   onboarding: {
     welcome: "Tepegöz'e hoş geldiniz",

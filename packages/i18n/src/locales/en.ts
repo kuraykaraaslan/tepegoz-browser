@@ -59,6 +59,9 @@ export const en = {
     approve: 'Approve',
     deny: 'Deny',
     aiDisclaimer: 'AI-generated and may be wrong — review side-effecting actions.',
+    planTitle: 'Review the plan',
+    planBody: 'Uncheck any step you do not want, then run. Nothing executes until you approve.',
+    planRun: 'Run plan',
   },
   onboarding: {
     welcome: 'Welcome to Tepegöz',

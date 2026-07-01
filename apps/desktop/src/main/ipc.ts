@@ -6,15 +6,18 @@ import {
   type AgentApprovalRequest,
   type AgentEvent,
   type AgentEventKind,
+  type AgentPlanPreview,
   type AgentRunResult,
   type AppInfo,
   type CredentialsStatus,
   type IpcChannel,
   type Preferences,
   type TabsState,
+  type TokenUsageSnapshot,
 } from '../shared/ipc-contract';
 import {
   AgentApprovalResponseSchema,
+  AgentPlanResponseSchema,
   AgentRunIdSchema,
   AgentRunInputSchema,
   AppInfoSchema,
@@ -27,7 +30,8 @@ import {
   TabIdSchema,
 } from '../shared/ipc-schemas';
 import type { ConfirmRequest } from '@tepegoz/capability-plane';
-import AgentService from './agent/agent-service';
+import { TokenLedger } from '@tepegoz/model-gateway';
+import AgentService, { type PlanApprovalDecision } from './agent/agent-service';
 import { PreferencesPatchSchema } from './preferences/preferences.model';
 import { isTrustedAppUrl } from './lib/trusted-origin';
 import CredentialVault from './security/credential-vault';
@@ -97,8 +101,15 @@ function credentialsStatus(): CredentialsStatus {
 // Agent run + HITL state (registerIpc runs once at startup, so module scope is fine).
 let runCounter = 0;
 let approvalCounter = 0;
+let planCounter = 0;
 const runControllers = new Map<string, AbortController>();
 const pendingApprovals = new Map<string, (approved: boolean) => void>();
+const pendingPlans = new Map<string, (decision: PlanApprovalDecision) => void>();
+
+function tokenUsage(): TokenUsageSnapshot {
+  const t = TokenLedger.totals();
+  return { inputTokens: t.inputTokens, outputTokens: t.outputTokens, totalTokens: t.totalTokens };
+}
 
 /** Truncated, safe preview of tool args for the HITL modal (never the full payload). */
 function safeArgsPreview(args: unknown): string {
@@ -261,10 +272,30 @@ export function registerIpc(): void {
         }, 120_000);
       });
     };
+    const requestPlanApproval = (plan: {
+      goal: string;
+      steps: { id: string; tool: string; rationale: string }[];
+    }): Promise<PlanApprovalDecision> => {
+      const planId = `plan-${String(++planCounter)}`;
+      const preview: AgentPlanPreview = {
+        runId,
+        planId,
+        goal: plan.goal,
+        steps: plan.steps.map((s) => ({ id: s.id, tool: s.tool, rationale: s.rationale })),
+      };
+      if (!sender.isDestroyed()) sender.send(IpcChannels.agentPlanPreview, preview);
+      return new Promise<PlanApprovalDecision>((resolve) => {
+        pendingPlans.set(planId, resolve);
+        setTimeout(() => {
+          if (pendingPlans.delete(planId)) resolve({ approved: false }); // fail-safe reject
+        }, 120_000);
+      });
+    };
 
     try {
       const summary = await AgentService.run(prompt, {
         onEvent,
+        requestPlanApproval,
         requestApproval,
         signal: controller.signal,
       });
@@ -274,6 +305,7 @@ export function registerIpc(): void {
       throw err;
     } finally {
       runControllers.delete(runId);
+      if (!sender.isDestroyed()) sender.send(IpcChannels.tokenUsage, tokenUsage());
     }
   });
 
@@ -291,4 +323,17 @@ export function registerIpc(): void {
       }
     },
   );
+  onAction(
+    IpcChannels.agentPlanResponse,
+    AgentPlanResponseSchema,
+    ({ planId, approved, skipStepIds }) => {
+      const resolve = pendingPlans.get(planId);
+      if (resolve !== undefined) {
+        pendingPlans.delete(planId);
+        resolve(skipStepIds !== undefined ? { approved, skipStepIds } : { approved });
+      }
+    },
+  );
+
+  handle(IpcChannels.tokenUsageGet, (): TokenUsageSnapshot => tokenUsage());
 }

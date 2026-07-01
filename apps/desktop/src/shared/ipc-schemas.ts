@@ -43,3 +43,9 @@ export const AgentApprovalResponseSchema = z.object({
   approvalId: z.string().min(1).max(64),
   approved: z.boolean(),
 });
+
+export const AgentPlanResponseSchema = z.object({
+  planId: z.string().min(1).max(64),
+  approved: z.boolean(),
+  skipStepIds: z.array(z.string().max(64)).max(100).optional(),
+});

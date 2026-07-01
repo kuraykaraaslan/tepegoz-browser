@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@tepegoz/ui';
 import type { Resources } from '@tepegoz/i18n';
-import type { AgentApprovalRequest, AgentEvent } from '../../../shared/ipc-contract';
+import type {
+  AgentApprovalRequest,
+  AgentEvent,
+  AgentPlanPreview,
+  TokenUsageSnapshot,
+} from '../../../shared/ipc-contract';
 
 /**
  * Live Agent Console (L9) — the "Do" surface. Streams every agent step from the main process
@@ -37,6 +42,9 @@ export function AgentConsole({ t, onClose }: AgentConsoleProps) {
   const [running, setRunning] = useState(false);
   const [runId, setRunId] = useState<string | null>(null);
   const [approval, setApproval] = useState<AgentApprovalRequest | null>(null);
+  const [planPreview, setPlanPreview] = useState<AgentPlanPreview | null>(null);
+  const [skipIds, setSkipIds] = useState<Set<string>>(new Set());
+  const [tokens, setTokens] = useState<TokenUsageSnapshot | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -48,9 +56,21 @@ export function AgentConsole({ t, onClose }: AgentConsoleProps) {
     const offApproval = window.tepegoz.onAgentApprovalRequest((req) => {
       setApproval(req);
     });
+    const offPlan = window.tepegoz.onAgentPlanPreview((preview) => {
+      setSkipIds(new Set());
+      setPlanPreview(preview);
+    });
+    const offTokens = window.tepegoz.onTokenUsage((usage) => {
+      setTokens(usage);
+    });
+    void window.tepegoz.getTokenUsage().then(setTokens, () => {
+      /* usage unavailable — indicator stays hidden */
+    });
     return () => {
       offEvent();
       offApproval();
+      offPlan();
+      offTokens();
     };
   }, []);
 
@@ -85,13 +105,43 @@ export function AgentConsole({ t, onClose }: AgentConsoleProps) {
     }
   }
 
+  function toggleStep(id: string): void {
+    setSkipIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function respondPlan(approved: boolean): void {
+    if (planPreview === null) return;
+    if (approved) {
+      window.tepegoz.respondAgentPlan(planPreview.planId, true, [...skipIds]);
+    } else {
+      window.tepegoz.respondAgentPlan(planPreview.planId, false);
+      setRunning(false);
+    }
+    setPlanPreview(null);
+  }
+
   return (
     <div className="absolute inset-0 flex flex-col bg-surface-base">
       <div className="flex items-center justify-between border-b border-border px-4 py-2">
         <h2 className="text-sm font-semibold text-text-primary">{t.agentConsole.title}</h2>
-        <button type="button" onClick={onClose} aria-label={t.window.close} className={BTN_GHOST}>
-          {t.window.close}
-        </button>
+        <div className="flex items-center gap-3">
+          {tokens !== null && (
+            <span
+              className="rounded-full bg-surface-overlay px-2 py-0.5 text-xs text-text-secondary"
+              title={`${t.agentConsole.tokens}: ${String(tokens.inputTokens)} in / ${String(tokens.outputTokens)} out`}
+            >
+              {t.agentConsole.tokens}: {tokens.totalTokens.toLocaleString()}
+            </span>
+          )}
+          <button type="button" onClick={onClose} aria-label={t.window.close} className={BTN_GHOST}>
+            {t.window.close}
+          </button>
+        </div>
       </div>
 
       <form
@@ -146,6 +196,62 @@ export function AgentConsole({ t, onClose }: AgentConsoleProps) {
       <p className="border-t border-border px-3 py-2 text-xs text-text-secondary">
         {t.agentConsole.aiDisclaimer}
       </p>
+
+      {planPreview !== null && (
+        <div
+          className="absolute inset-0 z-10 flex items-center justify-center bg-black/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t.agentConsole.planTitle}
+        >
+          <div className="flex max-h-full w-full max-w-md flex-col rounded-lg border border-border bg-surface-raised p-4 shadow-xl">
+            <h3 className="text-sm font-semibold text-text-primary">{t.agentConsole.planTitle}</h3>
+            <p className="mt-1 text-xs text-text-secondary">{t.agentConsole.planBody}</p>
+            {planPreview.goal.length > 0 && (
+              <p className="mt-2 text-sm text-text-primary">{planPreview.goal}</p>
+            )}
+            <ul className="mt-3 space-y-1.5 overflow-auto">
+              {planPreview.steps.map((step, i) => (
+                <li key={step.id}>
+                  <label className="flex cursor-pointer items-start gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={!skipIds.has(step.id)}
+                      onChange={() => {
+                        toggleStep(step.id);
+                      }}
+                      className="mt-0.5"
+                    />
+                    <span className="min-w-0">
+                      <span className="font-mono text-text-primary">
+                        {String(i + 1)}. {step.tool}
+                      </span>
+                      {step.rationale.length > 0 && (
+                        <span className="ml-1 break-words text-text-secondary">
+                          — {step.rationale}
+                        </span>
+                      )}
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" onClick={() => respondPlan(false)} className={BTN_GHOST}>
+                {t.common.cancel}
+              </button>
+              <button
+                type="button"
+                onClick={() => respondPlan(true)}
+                disabled={skipIds.size === planPreview.steps.length}
+                className={BTN_PRIMARY}
+              >
+                {t.agentConsole.planRun}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {approval !== null && (
         <div

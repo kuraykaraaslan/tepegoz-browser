@@ -47,6 +47,19 @@ export class TokenLedger {
     return total;
   }
 
+  /** Aggregate usage across every provider/model/capability (feeds the live quota indicator). */
+  static totals(): { inputTokens: number; outputTokens: number; totalTokens: number; calls: number } {
+    let inputTokens = 0;
+    let outputTokens = 0;
+    let calls = 0;
+    for (const e of TokenLedger.entries.values()) {
+      inputTokens += e.inputTokens;
+      outputTokens += e.outputTokens;
+      calls += e.calls;
+    }
+    return { inputTokens, outputTokens, totalTokens: inputTokens + outputTokens, calls };
+  }
+
   /** True if recording `projectedOutput` more tokens would exceed the capability's budget. */
   static wouldExceedBudget(capability: string, projectedOutput: number): boolean {
     const budget = TokenLedger.budgets.get(capability);

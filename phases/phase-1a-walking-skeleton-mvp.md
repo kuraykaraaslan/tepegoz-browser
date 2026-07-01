@@ -29,7 +29,7 @@ the "everything at once" immaturity trap.
 
 ### L3 — Orchestrator (sequential; parallel in Phase 1b)
 - [x] Planner: Intent → DAG (**sequential execution** first); each node risk-class (read/state-changing/destructive/financial) + cost estimate _(Planner Intent→DAG + sequential Executor done + tested; risk-class enforced at the ToolGateway/Policy Kernel; per-node cost estimate pending)_
-- [ ] Editable **plan preview** (HITL) before execution
+- [x] Editable **plan preview** (HITL) before execution _(after planning, the full DAG is shown in the Agent Console for review; the user can uncheck (skip) steps and must approve before ANY step runs — reject/timeout = nothing executes. en/tr)_
 - [x] `MAX_AGENT_STEPS` hard-cap; Loop Detector (action-signature repeat → stop → HITL, credit preserved)
 - [ ] Human Handoff Controller: CAPTCHA/2FA detection → graceful handoff + notification (**NO auto-solve**)
 
@@ -59,7 +59,7 @@ the "everything at once" immaturity trap.
 - [ ] Browser shell: tab (optional group toggle), new-tab 3 options (AI/Favorites/Blank), reading mode, bookmark, OS-native password/passkey **POC** _(full WebAuthn + password manager → Phase 2)_
 - [ ] **Basic session restore**: persist open tabs on quit/crash → restore on launch + reopen-closed-tab (Ctrl+Shift+T); event-journal projection (ADR-0004). _(Full workspace/named-session UI → Phase 2b.)_
 - [x] **Settings page** (KUIreact, polished) — sectioned: **Providers & API keys** (safeStorage entry/validate/remove), **Appearance** (theme tokens), **Language** (runtime en/tr switch), **Privacy & telemetry** (default OFF, sensitive-site lockout), **Agent behavior**; hosts the **cost-saver "use a local model for simple tasks" toggle** (persisted via the L7 preference)
-- [ ] Token/quota indicator + Connection Health Panel (reason codes) + onboarding **privacy/consent wizard** (telemetry OFF default, sensitive-site locked)
+- [~] Token/quota indicator + Connection Health Panel (reason codes) + onboarding **privacy/consent wizard** (telemetry OFF default, sensitive-site locked) _(live token indicator in the Agent Console — aggregate in/out/total from the Token Ledger, pushed after each run + on demand. Connection Health Panel + onboarding consent wizard pending)_
 - [ ] frameless title bar (drag/no-drag + platform caption) + platform conventions + WCAG 2.2 AA + single SHORTCUTS registry + theme tokens
 
 ### i18n + IME (en primary; Turkish first-class) — on top of day-0 infra

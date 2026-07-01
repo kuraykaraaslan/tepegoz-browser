@@ -3,6 +3,7 @@ import {
   IpcChannels,
   type AgentApprovalRequest,
   type AgentEvent,
+  type AgentPlanPreview,
   type AgentRunResult,
   type AppInfo,
   type ContentBounds,
@@ -11,6 +12,7 @@ import {
   type ProviderId,
   type TabsState,
   type TepegozApi,
+  type TokenUsageSnapshot,
 } from '../shared/ipc-contract';
 
 /**
@@ -114,6 +116,28 @@ const api: TepegozApi = {
   respondAgentApproval: (approvalId: string, approved: boolean) => {
     ipcRenderer.send(IpcChannels.agentApprovalResponse, { approvalId, approved });
   },
+  onAgentPlanPreview: (callback: (preview: AgentPlanPreview) => void) => {
+    const listener = (_event: unknown, payload: AgentPlanPreview): void => {
+      callback(payload);
+    };
+    ipcRenderer.on(IpcChannels.agentPlanPreview, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.agentPlanPreview, listener);
+    };
+  },
+  respondAgentPlan: (planId: string, approved: boolean, skipStepIds?: string[]) => {
+    ipcRenderer.send(IpcChannels.agentPlanResponse, { planId, approved, skipStepIds });
+  },
+  onTokenUsage: (callback: (usage: TokenUsageSnapshot) => void) => {
+    const listener = (_event: unknown, payload: TokenUsageSnapshot): void => {
+      callback(payload);
+    };
+    ipcRenderer.on(IpcChannels.tokenUsage, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.tokenUsage, listener);
+    };
+  },
+  getTokenUsage: () => ipcRenderer.invoke(IpcChannels.tokenUsageGet) as Promise<TokenUsageSnapshot>,
   platform: process.platform,
 };
 

@@ -35,6 +35,10 @@ export const IpcChannels = {
   agentEvent: 'agent:event',
   agentApprovalRequest: 'agent:approval-request',
   agentApprovalResponse: 'agent:approval-response',
+  agentPlanPreview: 'agent:plan-preview',
+  agentPlanResponse: 'agent:plan-response',
+  tokenUsage: 'token:usage',
+  tokenUsageGet: 'token:usage-get',
 } as const;
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];
@@ -121,6 +125,28 @@ export interface AgentRunResult {
   ok: boolean;
 }
 
+/** One step of a proposed plan, shown in the editable plan-preview (HITL before the agent loop). */
+export interface AgentPlanStep {
+  id: string;
+  tool: string;
+  rationale: string;
+}
+
+/** The full plan proposed to the user for review BEFORE any step executes. */
+export interface AgentPlanPreview {
+  runId: string;
+  planId: string;
+  goal: string;
+  steps: AgentPlanStep[];
+}
+
+/** Token-usage snapshot for the quota indicator (aggregated by the Token Ledger). */
+export interface TokenUsageSnapshot {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+}
+
 /** Content-area rectangle (DIP) where the active tab's web view is laid out, below the chrome. */
 export interface ContentBounds {
   x: number;
@@ -173,5 +199,13 @@ export interface TepegozApi {
   onAgentApprovalRequest(callback: (request: AgentApprovalRequest) => void): () => void;
   /** Answer a HITL prompt (approve/deny a gated tool call). */
   respondAgentApproval(approvalId: string, approved: boolean): void;
+  /** Subscribe to the editable plan preview shown before the agent loop runs. */
+  onAgentPlanPreview(callback: (preview: AgentPlanPreview) => void): () => void;
+  /** Approve (optionally skipping some steps) or reject a proposed plan before execution. */
+  respondAgentPlan(planId: string, approved: boolean, skipStepIds?: string[]): void;
+  /** Subscribe to token-usage updates for the quota indicator; returns an unsubscribe function. */
+  onTokenUsage(callback: (usage: TokenUsageSnapshot) => void): () => void;
+  /** Fetch the current token-usage snapshot. */
+  getTokenUsage(): Promise<TokenUsageSnapshot>;
   readonly platform: string;
 }
