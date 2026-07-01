@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { cn } from '@tepegoz/ui';
+import { cn, Modal } from '@tepegoz/ui';
 import type { Resources } from '@tepegoz/i18n';
 import type {
   AgentApprovalRequest,
@@ -200,15 +200,15 @@ export function AgentPanel({ t, api, onClose }: AgentPanelProps) {
       </p>
 
       {planPreview !== null && (
-        <div
-          className="absolute inset-0 z-10 flex items-center justify-center bg-black/40 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label={t.agentConsole.planTitle}
+        <Modal
+          open
+          onClose={() => respondPlan(false)}
+          title={t.agentConsole.planTitle}
+          ariaLabel={t.agentConsole.planTitle}
+          size="md"
+          closeOnBackdrop={false}
         >
-          <div className="flex max-h-full w-full max-w-md flex-col rounded-lg border border-border bg-surface-raised p-4 shadow-xl">
-            <h3 className="text-sm font-semibold text-text-primary">{t.agentConsole.planTitle}</h3>
-            <p className="mt-1 text-xs text-text-secondary">{t.agentConsole.planBody}</p>
+          <p className="mt-1 text-xs text-text-secondary">{t.agentConsole.planBody}</p>
             {planPreview.goal.length > 0 && (
               <p className="mt-2 text-sm text-text-primary">{planPreview.goal}</p>
             )}
@@ -251,20 +251,19 @@ export function AgentPanel({ t, api, onClose }: AgentPanelProps) {
                 {t.agentConsole.planRun}
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          </Modal>
+        )}
 
       {approval !== null && (
-        <div
-          className="absolute inset-0 z-10 flex items-center justify-center bg-black/40 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label={t.agentConsole.approvalTitle}
+        <Modal
+          open
+          onClose={() => respond(false)}
+          title={t.agentConsole.approvalTitle}
+          ariaLabel={t.agentConsole.approvalTitle}
+          size="sm"
+          closeOnBackdrop={false}
         >
-          <div className="w-full max-w-sm rounded-lg border border-border bg-surface-raised p-4 shadow-xl">
-            <h3 className="text-sm font-semibold text-text-primary">{t.agentConsole.approvalTitle}</h3>
-            <p className="mt-2 text-sm text-text-secondary">{t.agentConsole.approvalBody}</p>
+          <p className="mt-2 text-sm text-text-secondary">{t.agentConsole.approvalBody}</p>
             <p className="mt-3 font-mono text-sm text-text-primary">{approval.toolName}</p>
             <p className="text-xs text-text-secondary">{approval.reason}</p>
             <pre className="mt-2 max-h-24 overflow-auto rounded bg-surface-base p-2 text-xs text-text-secondary">
@@ -281,9 +280,8 @@ export function AgentPanel({ t, api, onClose }: AgentPanelProps) {
                 {t.agentConsole.approve}
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          </Modal>
+        )}
     </div>
   );
 }

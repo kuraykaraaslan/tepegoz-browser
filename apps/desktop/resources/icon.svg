@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Tepegöz app icon: cyclops-eye emblem on the brand navy, derived from the standalone logo. -->
+  <rect width="512" height="512" rx="112" fill="#0C2135"/>
+  <defs>
+    <clipPath id="eye"><path d="M40 162 Q120 70 200 162 Q120 254 40 162 Z"/></clipPath>
+  </defs>
+  <g transform="translate(256 262) scale(1.9) translate(-120 -175)">
+    <path d="M28 108 Q120 90 212 108 L212 150 Q212 214 120 256 Q28 214 28 150 Z" fill="#1C3D5E"/>
+    <path d="M40 162 Q120 70 200 162 Q120 254 40 162 Z" fill="#FFFFFF"/>
+    <g clip-path="url(#eye)">
+      <circle cx="120" cy="162" r="50" fill="#06AEC4"/>
+      <circle cx="120" cy="162" r="23" fill="#0C2135"/>
+      <circle cx="131" cy="151" r="8.5" fill="#FFFFFF"/>
+    </g>
+    <path d="M120 210 L120 250" fill="none" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round"/>
+  </g>
+</svg>

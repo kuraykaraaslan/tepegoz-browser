@@ -1,6 +1,6 @@
 import { AppError } from '@tepegoz/libs';
 import { AIProviderEnum, type AIProvider } from '@tepegoz/shared-types';
-import { readJsonFile, writeJsonFile } from '../lib/json-store';
+import { readJsonFile, writeJsonFile } from '@tepegoz/json-store';
 
 /**
  * BYO-key vault (L7 / electron-desktop-security). API keys are encrypted with the OS keychain

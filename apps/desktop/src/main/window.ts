@@ -1,7 +1,15 @@
-import { BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, shell } from 'electron';
 import { join } from 'node:path';
 import { IpcChannels } from '../shared/ipc-contract';
 import { isTrustedAppUrl } from './lib/trusted-origin';
+
+// Brand app icon (generated from resources/icon.svg via `pnpm --filter @tepegoz/desktop icons`).
+// Windows favors the multi-resolution .ico; other platforms use the 512px PNG.
+const ICON_PATH = join(
+  app.getAppPath(),
+  'resources',
+  process.platform === 'win32' ? 'icon.ico' : 'icon.png',
+);
 
 /**
  * The SINGLE secure window factory (internal-ai-rules BLOCKING): every BrowserWindow is created here
@@ -20,7 +28,9 @@ export function createWindow(): BrowserWindow {
     minHeight: 600,
     show: false,
     frame: false,
-    backgroundColor: '#0b0b0c',
+    icon: ICON_PATH,
+    // Brand navy (logo background) so the frame matches before the renderer paints.
+    backgroundColor: '#0c2135',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,

@@ -1,4 +1,4 @@
-import { readJsonFile, writeJsonFile } from '../lib/json-store';
+import { readJsonFile, writeJsonFile } from '@tepegoz/json-store';
 import {
   DEFAULT_PREFERENCES,
   PreferencesPatchSchema,

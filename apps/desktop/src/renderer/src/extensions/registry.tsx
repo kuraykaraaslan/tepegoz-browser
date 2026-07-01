@@ -1,26 +1,28 @@
 import type { ReactNode } from 'react';
 import type { Resources } from '@tepegoz/i18n';
-import type { ExtensionManifest } from '@tepegoz/extension-sdk';
+import type { ExtensionManifest, ExtensionSurfaceKind } from '@tepegoz/extension-sdk';
 import { agentManifest, AgentPanel } from '@tepegoz/ext-agent';
-import type { ExtensionId } from '../../../shared/ipc-contract';
+import { userAgentManifest, UserAgentPopup, UserAgentPage } from '@tepegoz/ext-user-agent';
 
 /**
  * Renderer registry of internal extensions. Each entry pairs a schema-validated {@link ExtensionManifest}
- * (from the extension's own package) with a toolbar icon and its panel. The panel receives the host
- * API (`window.tepegoz`, which structurally satisfies the extension's own host-API contract) — the
- * extension package never reaches the global bridge itself. Add a built-in extension here + its id in
- * ipc-contract `EXTENSION_IDS`. (Real MV3/third-party extensions are a later phase.)
+ * (from the extension's own package — also the source of truth for id/surfaces/actions in the shared
+ * `shared/extensions.ts`) with a toolbar icon and a map of SURFACE renderers. A surface receives the
+ * host API (`window.tepegoz`, which structurally satisfies each extension's host-API contract) — the
+ * extension package never reaches the global bridge itself. Add a built-in extension here + to
+ * `BUILTIN_MANIFESTS`. (Real MV3/third-party extensions are a later phase.)
  */
-export interface ExtensionPanelProps {
+export interface ExtensionSurfaceProps {
   t: Resources;
   onClose: () => void;
 }
 
 export interface ExtensionDef {
-  id: ExtensionId;
+  id: string;
   manifest: ExtensionManifest;
   icon: ReactNode;
-  panel: (props: ExtensionPanelProps) => ReactNode;
+  /** Renderers for the surfaces this extension implements (must cover `manifest.surfaces`). */
+  surfaces: Partial<Record<ExtensionSurfaceKind, (props: ExtensionSurfaceProps) => ReactNode>>;
 }
 
 function AgentIcon() {
@@ -31,11 +33,44 @@ function AgentIcon() {
   );
 }
 
+function UserAgentIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 16 16" aria-hidden="true">
+      <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M2 8 h12 M8 2 c2.4 1.8 2.4 10.2 0 12 M8 2 c-2.4 1.8 -2.4 10.2 0 12"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.2"
+      />
+    </svg>
+  );
+}
+
 export const EXTENSIONS: readonly ExtensionDef[] = [
   {
-    id: 'agent',
+    id: agentManifest.id,
     manifest: agentManifest,
     icon: <AgentIcon />,
-    panel: ({ t, onClose }) => <AgentPanel t={t} api={window.tepegoz} onClose={onClose} />,
+    surfaces: {
+      // The same console serves as a full-screen panel (click) and a docked sidebar (double-click);
+      // it fills whichever container the chrome gives it.
+      panel: ({ t, onClose }) => <AgentPanel t={t} api={window.tepegoz} onClose={onClose} />,
+      sidebar: ({ t, onClose }) => <AgentPanel t={t} api={window.tepegoz} onClose={onClose} />,
+    },
+  },
+  {
+    id: userAgentManifest.id,
+    manifest: userAgentManifest,
+    icon: <UserAgentIcon />,
+    surfaces: {
+      popup: ({ t, onClose }) => <UserAgentPopup t={t} api={window.tepegoz} onClose={onClose} />,
+      page: ({ t, onClose }) => <UserAgentPage t={t} api={window.tepegoz} onClose={onClose} />,
+    },
   },
 ];
+
+/** The registry entry for `id`, or undefined. */
+export function extensionDefById(id: string): ExtensionDef | undefined {
+  return EXTENSIONS.find((ext) => ext.id === id);
+}

@@ -22,3 +22,4 @@ consequences (including rejected alternatives). Format is a lightweight [MADR](h
 | [0012](0012-browser-tab-model.md) | Browser tab model — isolated WebContentsView per tab | Accepted |
 | [0013](0013-agent-orchestration-hitl.md) | Agent orchestration & two-stage HITL (end-to-end agentic task) | Accepted |
 | [0014](0014-user-data-layout-db-connector.md) | Chrome-like user-data layout (`tepegoz`) + single SQLite DB connector | Accepted |
+| [0015](0015-package-extraction-roadmap.md) | Package extraction roadmap — cohesive parts of `apps/desktop` become `packages/*` | Accepted |

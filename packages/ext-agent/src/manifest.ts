@@ -2,10 +2,17 @@ import { defineExtension } from '@tepegoz/extension-sdk';
 
 /** The Agent extension manifest — validated against the SDK schema at module load (dev-time contract). */
 export const agentManifest = defineExtension({
-  id: 'agent',
+  id: 'com.tepegoz.agent',
   name: 'Agent',
   version: '0.1.0',
   description: 'Autonomous browsing tasks on the current page, with human approval.',
-  kind: 'panel',
+  surfaces: ['panel', 'sidebar'],
+  actions: { click: 'panel', doubleClick: 'sidebar' },
+  labels: {
+    tr: {
+      name: 'Ajan',
+      description: 'Geçerli sayfada, insan onayıyla otonom tarama görevleri.',
+    },
+  },
   permissions: ['tabs', 'read-page', 'navigate'],
 });

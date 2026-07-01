@@ -9,7 +9,8 @@ import {
 } from '../shared/ipc-contract';
 import { HistoryStore } from '@tepegoz/persistence';
 import { internalPageUrl, isWebUrl, toNavigationUrl } from './lib/navigation-url';
-import { mainResources } from './lib/i18n-main';
+import { mainLocale, mainResources } from './lib/i18n-main';
+import { extensionIdFromPageUrl, extensionLabel, manifestById } from '../shared/extensions';
 import { getDb } from './db/database.electron';
 
 /**
@@ -23,7 +24,8 @@ import { getDb } from './db/database.electron';
  * real browser core for Phase 1a.
  */
 const NEW_TAB_URL = 'https://duckduckgo.com/';
-const BROWSING_PARTITION = 'persist:tepegoz-web';
+/** The isolated session partition every browsed page lives in (shared with the User-Agent switcher). */
+export const BROWSING_PARTITION = 'persist:tepegoz-web';
 
 interface Tab {
   id: string;
@@ -165,6 +167,12 @@ export default class TabManager {
     const r = mainResources();
     if (url === INTERNAL_EXTENSIONS_URL) return r.extensions.title;
     if (url === INTERNAL_HISTORY_URL) return r.history.title;
+    // An extension `page` surface (tepegoz://<extension-id>) is titled from the extension's manifest.
+    const extId = extensionIdFromPageUrl(url);
+    if (extId !== null) {
+      const manifest = manifestById(extId);
+      if (manifest !== undefined) return extensionLabel(manifest, mainLocale()).name;
+    }
     return r.settings.title;
   }
 
@@ -306,6 +314,19 @@ export default class TabManager {
   static activeWebContents(): WebContents | null {
     const wc = TabManager.active()?.view?.webContents;
     return wc !== undefined && !wc.isDestroyed() ? wc : null;
+  }
+
+  /** Apply a resolved User-Agent to every open web tab and reload it so the new identity takes effect
+   *  immediately (the session default already covers tabs opened afterwards). Internal tabs have no
+   *  web view and are skipped. */
+  static applyUserAgent(ua: string): void {
+    for (const tab of TabManager.tabs.values()) {
+      const wc = tab.view?.webContents;
+      if (wc !== undefined && !wc.isDestroyed()) {
+        wc.setUserAgent(ua);
+        wc.reload();
+      }
+    }
   }
 
   private static requireWin(): BrowserWindow {

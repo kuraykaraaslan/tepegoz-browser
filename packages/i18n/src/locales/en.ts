@@ -70,9 +70,22 @@ export const en = {
     manage: 'Manage extensions',
     search: 'Search extensions',
     empty: 'No matching extensions',
-    names: {
-      agent: 'Agent',
-    },
+  },
+  sidebar: {
+    resize: 'Resize sidebar',
+  },
+  userAgent: {
+    title: 'User-Agent',
+    description: 'Choose how this browser identifies itself to sites. Pick a preset or paste your own.',
+    current: 'Current',
+    presets: 'Presets',
+    default: 'Default (Tepegöz)',
+    custom: 'Custom',
+    customPlaceholder: 'Paste a custom User-Agent string…',
+    customInUse: 'A custom User-Agent is active.',
+    apply: 'Apply',
+    active: 'Active',
+    reloadNote: 'Changing the User-Agent reloads your open tabs.',
   },
   history: {
     title: 'History',

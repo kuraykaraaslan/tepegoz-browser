@@ -27,6 +27,42 @@ module.exports = {
       from: { pathNot: '\\.(test|spec)\\.ts$' },
       to: { dependencyTypes: ['npm-dev'] },
     },
+    {
+      name: 'omnibox-is-a-leaf',
+      severity: 'error',
+      comment:
+        '@tepegoz/omnibox is a presentational chrome leaf (url-bar): it must never import back into ' +
+        'the desktop app. Navigation/clipboard are injected via callbacks. See docs/package-map.md.',
+      from: { path: '^packages/omnibox/' },
+      to: { path: '^apps/' },
+    },
+    {
+      name: 'navigation-is-pure',
+      severity: 'error',
+      comment:
+        '@tepegoz/navigation is a pure URL/allow-list library: no Electron, no app imports. The ' +
+        'desktop adapters inject app.isPackaged and the internal-page set. See docs/package-map.md.',
+      from: { path: '^packages/navigation/' },
+      to: { path: ['^apps/', 'node_modules/electron'] },
+    },
+    {
+      name: 'json-store-is-pure',
+      severity: 'error',
+      comment:
+        '@tepegoz/json-store is a pure Node file utility: no Electron, no app imports. Callers pass ' +
+        'the file path and validate the returned shape with zod. See docs/package-map.md.',
+      from: { path: '^packages/json-store/' },
+      to: { path: ['^apps/', 'node_modules/electron'] },
+    },
+    {
+      name: 'tab-strip-is-a-leaf',
+      severity: 'error',
+      comment:
+        '@tepegoz/tab-strip is a presentational chrome leaf: it must never import back into the ' +
+        'desktop app. Selection/close/context-menu/new-tab are injected via callbacks. See docs/package-map.md.',
+      from: { path: '^packages/tab-strip/' },
+      to: { path: '^apps/' },
+    },
   ],
   options: {
     doNotFollow: { path: 'node_modules' },

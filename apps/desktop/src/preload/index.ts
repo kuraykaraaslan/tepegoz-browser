@@ -140,6 +140,9 @@ const api: TepegozApi = {
     };
   },
   getTokenUsage: () => ipcRenderer.invoke(IpcChannels.tokenUsageGet) as Promise<TokenUsageSnapshot>,
+  getUserAgent: () => ipcRenderer.invoke(IpcChannels.userAgentGet) as Promise<string | null>,
+  setUserAgent: (ua: string | null) =>
+    ipcRenderer.invoke(IpcChannels.userAgentSet, ua) as Promise<string | null>,
   showMainMenu: () => {
     ipcRenderer.send(IpcChannels.menuShowMain);
   },

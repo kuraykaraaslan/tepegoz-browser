@@ -5,8 +5,11 @@
 export { Button } from './modules/ui/Button';
 export { Toggle } from './modules/ui/Toggle';
 export { Card } from './modules/ui/Card';
+export { Modal } from './modules/ui/Modal';
 export { Input } from './modules/ui/Input';
 export { Badge } from './modules/ui/Badge';
 export { AlertBanner, type AlertAction } from './modules/ui/AlertBanner';
+// First-party (non-fork) brand assets.
+export { BrandMark } from './brand/BrandMark';
 export { cn } from './libs/utils/cn';
 export type { PolymorphicProps } from './libs/utils/polymorphic';

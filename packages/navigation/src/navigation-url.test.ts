@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isWebUrl, toNavigationUrl } from './navigation-url';
+import { internalPageUrl, isWebUrl, toNavigationUrl } from './navigation-url';
 
 const NT = 'https://duckduckgo.com/';
 
@@ -48,5 +48,21 @@ describe('isWebUrl', () => {
     expect(isWebUrl('file:///x')).toBe(false);
     expect(isWebUrl('about:blank')).toBe(false);
     expect(isWebUrl('javascript:1')).toBe(false);
+  });
+});
+
+describe('internalPageUrl', () => {
+  const URLS = ['tepegoz://settings', 'tepegoz://extensions', 'tepegoz://history'];
+
+  it('matches a known internal page (trailing-slash + case tolerant)', () => {
+    expect(internalPageUrl('tepegoz://settings', URLS)).toBe('tepegoz://settings');
+    expect(internalPageUrl('TEPEGOZ://Settings/', URLS)).toBe('tepegoz://settings');
+    expect(internalPageUrl('  tepegoz://history//  ', URLS)).toBe('tepegoz://history');
+  });
+
+  it('returns null for unknown internal pages and web URLs', () => {
+    expect(internalPageUrl('tepegoz://nope', URLS)).toBeNull();
+    expect(internalPageUrl('https://example.com', URLS)).toBeNull();
+    expect(internalPageUrl('settings', URLS)).toBeNull();
   });
 });

@@ -47,18 +47,30 @@ importers:
       '@tepegoz/ext-agent':
         specifier: workspace:*
         version: link:../../packages/ext-agent
+      '@tepegoz/ext-user-agent':
+        specifier: workspace:*
+        version: link:../../packages/ext-user-agent
       '@tepegoz/extension-sdk':
         specifier: workspace:*
         version: link:../../packages/extension-sdk
       '@tepegoz/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@tepegoz/json-store':
+        specifier: workspace:*
+        version: link:../../packages/json-store
       '@tepegoz/libs':
         specifier: workspace:*
         version: link:../../packages/libs
       '@tepegoz/model-gateway':
         specifier: workspace:*
         version: link:../../packages/model-gateway
+      '@tepegoz/navigation':
+        specifier: workspace:*
+        version: link:../../packages/navigation
+      '@tepegoz/omnibox':
+        specifier: workspace:*
+        version: link:../../packages/omnibox
       '@tepegoz/orchestrator':
         specifier: workspace:*
         version: link:../../packages/orchestrator
@@ -71,6 +83,9 @@ importers:
       '@tepegoz/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
+      '@tepegoz/tab-strip':
+        specifier: workspace:*
+        version: link:../../packages/tab-strip
       '@tepegoz/tool-executor':
         specifier: workspace:*
         version: link:../../packages/tool-executor
@@ -171,6 +186,28 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
+  packages/ext-user-agent:
+    dependencies:
+      '@tepegoz/extension-sdk':
+        specifier: workspace:*
+        version: link:../extension-sdk
+      '@tepegoz/i18n':
+        specifier: workspace:*
+        version: link:../i18n
+      '@tepegoz/ui':
+        specifier: workspace:*
+        version: link:../ui
+      react:
+        specifier: ^18 || ^19
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.31
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
   packages/extension-sdk:
     dependencies:
       zod:
@@ -186,6 +223,18 @@ importers:
 
   packages/i18n:
     devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(lightningcss@1.32.0)
+
+  packages/json-store:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.0
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -227,6 +276,37 @@ importers:
       '@types/node':
         specifier: ^22.10.2
         version: 22.20.0
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(lightningcss@1.32.0)
+
+  packages/navigation:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.0
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(lightningcss@1.32.0)
+
+  packages/omnibox:
+    dependencies:
+      '@tepegoz/ui':
+        specifier: workspace:*
+        version: link:../ui
+      react:
+        specifier: ^18 || ^19
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.31
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -312,6 +392,22 @@ importers:
       vitest:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.0)(lightningcss@1.32.0)
+
+  packages/tab-strip:
+    dependencies:
+      '@tepegoz/ui':
+        specifier: workspace:*
+        version: link:../ui
+      react:
+        specifier: ^18 || ^19
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.31
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
 
   packages/tool-executor:
     devDependencies:

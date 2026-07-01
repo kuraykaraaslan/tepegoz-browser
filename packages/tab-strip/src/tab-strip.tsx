@@ -1,13 +1,36 @@
 import { useRef, useState } from 'react';
 import { cn } from '@tepegoz/ui';
-import type { Resources } from '@tepegoz/i18n';
-import type { TabInfo } from '../../../shared/ipc-contract';
 
-interface TabStripProps {
-  t: Resources;
-  tabs: TabInfo[];
+/** The minimal tab shape the strip renders. Hosts pass their own richer tab objects (structural). */
+export interface TabDescriptor {
+  id: string;
+  title: string;
+  /** Page favicon URL (http(s)/data:), or null when the page has none yet. */
+  faviconUrl: string | null;
+  isLoading: boolean;
+}
+
+/** Localized strings, supplied by the host so the package stays i18n-agnostic. */
+export interface TabStripLabels {
+  /** aria-label for the whole tablist. */
+  tablist: string;
+  /** Shown for a tab that has no title yet. */
+  untitled: string;
+  /** aria-label for a tab's close button. */
+  closeTab: string;
+  /** aria-label for the new-tab button. */
+  newTab: string;
+}
+
+export interface TabStripProps {
+  tabs: readonly TabDescriptor[];
   activeId: string | null;
+  labels: TabStripLabels;
   onSelect: (id: string) => void;
+  /** Close a tab (close button + middle-click). */
+  onClose: (id: string) => void;
+  /** Open the native tab context menu (right-click). */
+  onContextMenu: (id: string) => void;
   onNew: () => void;
 }
 
@@ -42,7 +65,21 @@ function TabFavicon({ src, loading }: { src: string | null; loading: boolean }) 
   );
 }
 
-export function TabStrip({ t, tabs, activeId, onSelect, onNew }: TabStripProps) {
+/**
+ * `@tepegoz/tab-strip` — the horizontal browser tab strip. Presentational + self-contained: favicon
+ * fallback, wheel→horizontal scroll, container-query title/close collapse, keyboard + middle-click.
+ * Selection, close, context menu and new-tab are injected via callbacks, so the package has no
+ * dependency on the Electron bridge. Extracted from `apps/desktop` per docs/package-map.md.
+ */
+export function TabStrip({
+  tabs,
+  activeId,
+  labels,
+  onSelect,
+  onClose,
+  onContextMenu,
+  onNew,
+}: TabStripProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
 
   // Mouse wheels only emit vertical deltas; translate them to horizontal scroll so an overflowing
@@ -58,7 +95,7 @@ export function TabStrip({ t, tabs, activeId, onSelect, onNew }: TabStripProps) 
       ref={scrollerRef}
       role="tablist"
       aria-orientation="horizontal"
-      aria-label={t.browser.tabs}
+      aria-label={labels.tablist}
       onWheel={onWheel}
       className="no-scrollbar flex h-full min-w-0 flex-1 items-end gap-1 overflow-x-auto"
     >
@@ -69,8 +106,8 @@ export function TabStrip({ t, tabs, activeId, onSelect, onNew }: TabStripProps) 
             key={tab.id}
             role="tab"
             aria-selected={active}
-            aria-label={tab.title || t.browser.untitled}
-            title={tab.title || t.browser.untitled}
+            aria-label={tab.title || labels.untitled}
+            title={tab.title || labels.untitled}
             tabIndex={0}
             onClick={() => onSelect(tab.id)}
             onKeyDown={(e) => {
@@ -80,11 +117,11 @@ export function TabStrip({ t, tabs, activeId, onSelect, onNew }: TabStripProps) 
               }
             }}
             onAuxClick={(e) => {
-              if (e.button === 1) window.tepegoz.closeTab(tab.id); // middle-click closes
+              if (e.button === 1) onClose(tab.id); // middle-click closes
             }}
             onContextMenu={(e) => {
               e.preventDefault();
-              window.tepegoz.showTabContextMenu(tab.id);
+              onContextMenu(tab.id);
             }}
             className={cn(
               // @container: each tab measures its own width so the title/close collapse independently.
@@ -100,14 +137,14 @@ export function TabStrip({ t, tabs, activeId, onSelect, onNew }: TabStripProps) 
             <TabFavicon src={tab.faviconUrl} loading={tab.isLoading} />
             {/* Hidden below ~7rem of tab width: when names no longer fit, only favicons remain. */}
             <span className="hidden min-w-0 flex-1 truncate @min-[7rem]:block">
-              {tab.isLoading && !tab.title ? '…' : tab.title || t.browser.untitled}
+              {tab.isLoading && !tab.title ? '…' : tab.title || labels.untitled}
             </span>
             <button
               type="button"
-              aria-label={t.browser.closeTab}
+              aria-label={labels.closeTab}
               onClick={(e) => {
                 e.stopPropagation();
-                window.tepegoz.closeTab(tab.id);
+                onClose(tab.id);
               }}
               className="hidden shrink-0 rounded p-0.5 text-text-disabled opacity-0 transition-opacity hover:bg-surface-sunken hover:text-text-primary focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus group-hover:opacity-100 @min-[7rem]:block"
             >
@@ -120,7 +157,7 @@ export function TabStrip({ t, tabs, activeId, onSelect, onNew }: TabStripProps) 
       })}
       <button
         type="button"
-        aria-label={t.browser.newTab}
+        aria-label={labels.newTab}
         onClick={onNew}
         className="app-no-drag ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded text-text-secondary hover:bg-surface-overlay hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
       >

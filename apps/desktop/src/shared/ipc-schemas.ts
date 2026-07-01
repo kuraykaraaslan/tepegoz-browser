@@ -52,3 +52,6 @@ export const AgentPlanResponseSchema = z.object({
 
 export const HistoryQuerySchema = z.string().max(200);
 export const HistoryUrlSchema = z.string().min(1).max(4096);
+
+/** `user-agent:set` payload — a UA string to apply, or null to reset to the browser default. */
+export const UserAgentSelectionSchema = z.string().max(512).nullable();

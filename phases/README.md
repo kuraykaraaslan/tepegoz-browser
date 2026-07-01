@@ -8,6 +8,9 @@ them** with `- [ ]` / `- [x]`. This keeps the process resumable across sessions.
 > (to be moved into the repo as `docs/ARCHITECTURE.md` + `docs/ROADMAP.md`).
 > **Compliance:** `//wsl.localhost/Ubuntu/home/kuray/internal-ai-rules` (BINDING — see plan §13).
 > **Language:** Project artifacts are **English-first**; Turkish is a first-class supported locale.
+> **Package map:** `../docs/package-map.md` (+ [ADR-0015](../docs/adr/0015-package-extraction-roadmap.md)) —
+> living tick-list of cohesive parts of `apps/desktop` to extract into `packages/*` (e.g. `url-bar` →
+> `@tepegoz/omnibox`), sequenced in waves alongside these phases.
 
 ## Phase index & status
 

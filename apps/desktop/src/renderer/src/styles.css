@@ -7,6 +7,10 @@
    names — tell it to scan the fork's source. */
 @source "../../../../../packages/ui/src";
 
+/* Same for extracted chrome packages (their class names live outside the Vite root). */
+@source "../../../../../packages/omnibox/src";
+@source "../../../../../packages/tab-strip/src";
+
 html,
 body,
 #root {

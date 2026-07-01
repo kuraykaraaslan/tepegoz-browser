@@ -68,9 +68,22 @@ export const tr: Resources = {
     manage: 'Eklentileri yönet',
     search: 'Eklentilerde ara',
     empty: 'Eşleşen eklenti yok',
-    names: {
-      agent: 'Ajan',
-    },
+  },
+  sidebar: {
+    resize: 'Kenar çubuğunu yeniden boyutlandır',
+  },
+  userAgent: {
+    title: 'User-Agent',
+    description: 'Tarayıcının sitelere kendini nasıl tanıttığını seçin. Bir hazır ayar seçin ya da kendinizinkini yapıştırın.',
+    current: 'Geçerli',
+    presets: 'Hazır ayarlar',
+    default: 'Varsayılan (Tepegöz)',
+    custom: 'Özel',
+    customPlaceholder: 'Özel bir User-Agent dizesi yapıştırın…',
+    customInUse: 'Özel bir User-Agent etkin.',
+    apply: 'Uygula',
+    active: 'Etkin',
+    reloadNote: 'User-Agent değiştirmek açık sekmelerinizi yeniden yükler.',
   },
   history: {
     title: 'Geçmiş',

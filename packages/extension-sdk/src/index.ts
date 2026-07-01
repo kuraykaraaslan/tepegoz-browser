@@ -1,8 +1,9 @@
 export {
-  ExtensionKindSchema,
+  EXTENSION_ID_RE,
+  ExtensionSurfaceKindSchema,
   ExtensionManifestSchema,
   defineExtension,
   validateManifest,
-  type ExtensionKind,
+  type ExtensionSurfaceKind,
   type ExtensionManifest,
 } from './manifest';

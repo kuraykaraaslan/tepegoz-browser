@@ -1,22 +1,29 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { cn } from '@tepegoz/ui';
-import type { Resources } from '@tepegoz/i18n';
-import { INTERNAL_EXTENSIONS_URL, type ExtensionId } from '../../../shared/ipc-contract';
+import { Omnibox } from '@tepegoz/omnibox';
+import type { Locale, Resources } from '@tepegoz/i18n';
+import { INTERNAL_EXTENSIONS_URL } from '../../../shared/ipc-contract';
+import { extensionLabel } from '../../../shared/extensions';
 import type { ExtensionDef } from '../extensions/registry';
-import { evaluateOmniboxCalc } from '../lib/omnibox-calc';
 
 /** Max extension icons pinned inline next to the omnibox; beyond this, use the puzzle → manage page. */
 const MAX_INLINE_EXTENSIONS = 4;
+/** Window (ms) to wait for a second click before firing the single-click action (icons with a
+ *  double-click binding only). */
+const DOUBLE_CLICK_MS = 220;
 
 interface ToolbarProps {
   t: Resources;
+  locale: Locale;
   currentUrl: string;
   canGoBack: boolean;
   canGoForward: boolean;
   /** Enabled extensions, shown as icons to the right of the address bar (Chrome-style). */
   extensions: readonly ExtensionDef[];
-  openExtension: ExtensionId | null;
-  onOpenExtension: (id: ExtensionId) => void;
+  /** The extension whose surface is currently open (for the pressed highlight), or null. */
+  activeExtensionId: string | null;
+  /** Fired when a toolbar icon is clicked / double-clicked; the host resolves it to a surface. */
+  onExtensionAction: (id: string, trigger: 'click' | 'doubleClick') => void;
 }
 
 const NAV_BTN =
@@ -25,25 +32,72 @@ const NAV_BTN =
   'disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-default ' +
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus';
 
+/**
+ * A pinned extension icon. When the extension binds a double-click action, a single click is deferred
+ * briefly to tell the two apart (Chrome-style); otherwise it fires immediately.
+ */
+function ExtensionIconButton({
+  ext,
+  label,
+  active,
+  onAction,
+}: {
+  ext: ExtensionDef;
+  label: string;
+  active: boolean;
+  onAction: (id: string, trigger: 'click' | 'doubleClick') => void;
+}) {
+  const timer = useRef<number | null>(null);
+  const hasDouble = ext.manifest.actions.doubleClick !== undefined;
+
+  useEffect(
+    () => () => {
+      if (timer.current !== null) window.clearTimeout(timer.current);
+    },
+    [],
+  );
+
+  function handleClick(): void {
+    if (!hasDouble) {
+      onAction(ext.id, 'click');
+      return;
+    }
+    if (timer.current !== null) {
+      window.clearTimeout(timer.current);
+      timer.current = null;
+      onAction(ext.id, 'doubleClick');
+      return;
+    }
+    timer.current = window.setTimeout(() => {
+      timer.current = null;
+      onAction(ext.id, 'click');
+    }, DOUBLE_CLICK_MS);
+  }
+
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      aria-pressed={active}
+      title={label}
+      onClick={handleClick}
+      className={cn(NAV_BTN, active && 'bg-surface-overlay text-text-primary')}
+    >
+      {ext.icon}
+    </button>
+  );
+}
+
 export function Toolbar({
   t,
+  locale,
   currentUrl,
   canGoBack,
   canGoForward,
   extensions,
-  openExtension,
-  onOpenExtension,
+  activeExtensionId,
+  onExtensionAction,
 }: ToolbarProps) {
-  const [value, setValue] = useState(currentUrl);
-  const [focused, setFocused] = useState(false);
-
-  // Keep the omnibox in sync with the active tab's URL, except while the user is editing it.
-  useEffect(() => {
-    if (!focused) setValue(currentUrl);
-  }, [currentUrl, focused]);
-
-  const calc = value.trim().length > 0 ? evaluateOmniboxCalc(value) : null;
-
   return (
     <div className="flex h-11 shrink-0 items-center gap-1 border-b border-border bg-surface-raised px-2">
       <button
@@ -80,65 +134,23 @@ export function Toolbar({
         </svg>
       </button>
 
-      <form
-        className="relative flex-1"
-        onSubmit={(e) => {
-          e.preventDefault();
-          // Inline calculation: if the whole input is arithmetic, compute it (copy the result to the
-          // clipboard) instead of navigating — the omnibox never starts an AI thread (Comet lesson).
-          if (calc !== null) {
-            void navigator.clipboard?.writeText(calc.formatted);
-            setValue(calc.formatted);
-            return;
-          }
-          window.tepegoz.navigateTab(value);
-          // Keep focus (and the typed value) until navigation commits; the focus guard then re-syncs
-          // to the real URL on blur. Blurring here would snap the box back to the OLD url mid-load.
-        }}
-      >
-        <input
-          type="text"
-          value={value}
-          placeholder={t.browser.omniboxPlaceholder}
-          spellCheck={false}
-          aria-label={t.browser.omniboxPlaceholder}
-          onChange={(e) => setValue(e.target.value)}
-          onFocus={(e) => {
-            setFocused(true);
-            e.target.select();
-          }}
-          onBlur={() => setFocused(false)}
-          className={cn(
-            'h-8 w-full rounded-full border border-border bg-surface-base px-4 text-sm text-text-primary placeholder:text-text-disabled focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus',
-            calc !== null && 'pr-24',
-          )}
-        />
-        {calc !== null && (
-          <span
-            aria-live="polite"
-            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded bg-surface-overlay px-2 py-0.5 font-mono text-xs text-text-secondary"
-          >
-            = {calc.formatted}
-          </span>
-        )}
-      </form>
+      <Omnibox
+        className="flex-1"
+        currentUrl={currentUrl}
+        placeholder={t.browser.omniboxPlaceholder}
+        onNavigate={(input) => window.tepegoz.navigateTab(input)}
+      />
 
       {/* Enabled extensions, pinned as icons to the right of the address bar (Chrome-style). */}
       {extensions.length <= MAX_INLINE_EXTENSIONS &&
         extensions.map((ext) => (
-          <button
+          <ExtensionIconButton
             key={ext.id}
-            type="button"
-            aria-label={t.extensions.names[ext.id]}
-            aria-pressed={openExtension === ext.id}
-            title={t.extensions.names[ext.id]}
-            onClick={() => {
-              onOpenExtension(ext.id);
-            }}
-            className={cn(NAV_BTN, openExtension === ext.id && 'bg-surface-overlay text-text-primary')}
-          >
-            {ext.icon}
-          </button>
+            ext={ext}
+            label={extensionLabel(ext.manifest, locale).name}
+            active={activeExtensionId === ext.id}
+            onAction={onExtensionAction}
+          />
         ))}
       {/* Puzzle: manage/overflow — opens the tepegoz://extensions page (like Chrome's puzzle piece). */}
       <button

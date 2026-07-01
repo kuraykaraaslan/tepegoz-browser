@@ -1,32 +1,77 @@
 import { describe, it, expect } from 'vitest';
 import { defineExtension, validateManifest } from './manifest';
 
-const VALID = { id: 'agent', name: 'Agent', version: '0.1.0', kind: 'panel' } as const;
+const VALID = {
+  id: 'com.tepegoz.agent',
+  name: 'Agent',
+  version: '0.1.0',
+  surfaces: ['panel'],
+} as const;
 
 describe('extension manifest schema', () => {
   it('accepts a minimal valid manifest and applies defaults', () => {
     const m = defineExtension(VALID);
-    expect(m.id).toBe('agent');
+    expect(m.id).toBe('com.tepegoz.agent');
     expect(m.description).toBe(''); // default
     expect(m.permissions).toEqual([]); // default
+    expect(m.labels).toEqual({}); // default
+    expect(m.actions.click).toBe('panel'); // defaults to the first surface
+    expect(m.actions.doubleClick).toBeUndefined();
   });
 
-  it('keeps provided description + permissions', () => {
-    const m = defineExtension({ ...VALID, description: 'Does things', permissions: ['tabs'] });
+  it('keeps provided description + permissions + labels', () => {
+    const m = defineExtension({
+      ...VALID,
+      description: 'Does things',
+      permissions: ['tabs'],
+      labels: { tr: { name: 'Ajan' } },
+    });
     expect(m.description).toBe('Does things');
     expect(m.permissions).toEqual(['tabs']);
+    expect(m.labels.tr?.name).toBe('Ajan');
   });
 
-  it('rejects a non-kebab id', () => {
-    expect(validateManifest({ ...VALID, id: 'Agent_1' }).success).toBe(false);
+  it('binds click + doubleClick actions to declared surfaces', () => {
+    const m = defineExtension({
+      ...VALID,
+      surfaces: ['popup', 'page'],
+      actions: { click: 'popup', doubleClick: 'page' },
+    });
+    expect(m.actions.click).toBe('popup');
+    expect(m.actions.doubleClick).toBe('page');
+  });
+
+  it('accepts the sidebar surface', () => {
+    const m = defineExtension({
+      ...VALID,
+      surfaces: ['panel', 'sidebar'],
+      actions: { click: 'panel', doubleClick: 'sidebar' },
+    });
+    expect(m.surfaces).toContain('sidebar');
+    expect(m.actions.doubleClick).toBe('sidebar');
+  });
+
+  it('rejects a non-reverse-DNS id (kebab / single segment)', () => {
+    expect(validateManifest({ ...VALID, id: 'agent' }).success).toBe(false);
+    expect(validateManifest({ ...VALID, id: 'Com.Tepegoz.Agent' }).success).toBe(false);
   });
 
   it('rejects a non-semver version', () => {
     expect(validateManifest({ ...VALID, version: '1.0' }).success).toBe(false);
   });
 
-  it('rejects an unknown kind', () => {
-    expect(validateManifest({ ...VALID, kind: 'iframe' }).success).toBe(false);
+  it('rejects an empty surfaces list', () => {
+    expect(validateManifest({ ...VALID, surfaces: [] }).success).toBe(false);
+  });
+
+  it('rejects an unknown surface kind', () => {
+    expect(validateManifest({ ...VALID, surfaces: ['iframe'] }).success).toBe(false);
+  });
+
+  it('rejects an action bound to an unimplemented surface', () => {
+    expect(
+      validateManifest({ ...VALID, surfaces: ['panel'], actions: { click: 'page' } }).success,
+    ).toBe(false);
   });
 
   it('defineExtension throws on an invalid manifest', () => {

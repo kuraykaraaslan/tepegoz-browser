@@ -7,8 +7,11 @@ import PreferenceStore from '../preferences/preference-store';
  * strings — native menus and internal-tab titles. Resolved per call so it follows a live locale
  * change without a restart. Single source shared by the menus and TabManager (no per-file copies).
  */
-export function mainResources(): (typeof resources)[Locale] {
+export function mainLocale(): Locale {
   const pref = PreferenceStore.getAll().locale;
-  const locale: Locale = pref === 'en' || pref === 'tr' ? pref : resolveLocale(app.getLocale());
-  return resources[locale];
+  return pref === 'en' || pref === 'tr' ? pref : resolveLocale(app.getLocale());
+}
+
+export function mainResources(): (typeof resources)[Locale] {
+  return resources[mainLocale()];
 }

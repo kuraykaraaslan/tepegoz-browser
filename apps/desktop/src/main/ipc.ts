@@ -24,6 +24,7 @@ import {
   AppInfoSchema,
   HistoryQuerySchema,
   HistoryUrlSchema,
+  UserAgentSelectionSchema,
   ContentBoundsSchema,
   ContentVisibleSchema,
   CreateTabInputSchema,
@@ -44,6 +45,7 @@ import { isTrustedAppUrl } from './lib/trusted-origin';
 import CredentialVault from './security/credential-vault';
 import PreferenceStore from './preferences/preference-store';
 import TabManager from './tabs';
+import UserAgentManager from './user-agent';
 import { showTabContextMenu } from './menus/tab-context-menu';
 import { showMainMenu } from './menus/main-menu';
 
@@ -423,5 +425,12 @@ export function registerIpc(): void {
     const db = getDb();
     if (db !== null) HistoryStore.clear(db);
     return [];
+  });
+
+  // User-Agent switcher extension: read/apply the UA override for browsed pages.
+  handle(IpcChannels.userAgentGet, (): string | null => UserAgentManager.get());
+  handle(IpcChannels.userAgentSet, (_event, payload): string | null => {
+    const ua = UserAgentSelectionSchema.parse(payload);
+    return UserAgentManager.set(ua);
   });
 }

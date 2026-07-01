@@ -1,32 +1,36 @@
 import { useState } from 'react';
 import { Card, Toggle } from '@tepegoz/ui';
-import type { Resources } from '@tepegoz/i18n';
+import type { Locale, Resources } from '@tepegoz/i18n';
 import {
   isExtensionEnabled,
   type ExtensionId,
   type ExtensionState,
 } from '../../../shared/ipc-contract';
+import { extensionLabel } from '../../../shared/extensions';
 import { EXTENSIONS } from '../extensions/registry';
 
 /**
  * Internal extensions manager (tepegoz://extensions), Chrome-style: a searchable grid of extension
  * cards, each with an enable/disable status toggle. Lists the built-in extensions from the registry;
- * real MV3/third-party extensions are a later phase.
+ * real MV3/third-party extensions are a later phase. Names/descriptions come from each extension's
+ * manifest (localized via its `labels`), not the central i18n catalog.
  */
 interface ExtensionsPageProps {
   t: Resources;
+  locale: Locale;
   states: readonly ExtensionState[];
   onToggle: (id: ExtensionId, enabled: boolean) => void;
 }
 
-export function ExtensionsPage({ t, states, onToggle }: ExtensionsPageProps) {
+export function ExtensionsPage({ t, locale, states, onToggle }: ExtensionsPageProps) {
   const x = t.extensions;
   const [search, setSearch] = useState('');
   const q = search.trim().toLowerCase();
 
   const shown = EXTENSIONS.filter((ext) => {
     if (q.length === 0) return true;
-    return `${x.names[ext.id]} ${ext.manifest.description}`.toLowerCase().includes(q);
+    const label = extensionLabel(ext.manifest, locale);
+    return `${label.name} ${label.description}`.toLowerCase().includes(q);
   });
 
   return (
@@ -50,29 +54,32 @@ export function ExtensionsPage({ t, states, onToggle }: ExtensionsPageProps) {
 
       <div className="flex-1 overflow-auto px-8 py-6">
         <div className="mx-auto grid max-w-5xl grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {shown.map((ext) => (
-            <Card key={ext.id} variant="outline">
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center text-text-secondary">
-                  {ext.icon}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <Toggle
-                    id={`ext-${ext.id}`}
-                    label={x.names[ext.id]}
-                    description={ext.manifest.description}
-                    checked={isExtensionEnabled(states, ext.id)}
-                    onChange={(v) => {
-                      onToggle(ext.id, v);
-                    }}
-                  />
-                  <p className="mt-1 text-[11px] text-text-disabled">
-                    v{ext.manifest.version} · {ext.manifest.id}
-                  </p>
+          {shown.map((ext) => {
+            const label = extensionLabel(ext.manifest, locale);
+            return (
+              <Card key={ext.id} variant="outline">
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center text-text-secondary">
+                    {ext.icon}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <Toggle
+                      id={`ext-${ext.id}`}
+                      label={label.name}
+                      description={label.description}
+                      checked={isExtensionEnabled(states, ext.id)}
+                      onChange={(v) => {
+                        onToggle(ext.id, v);
+                      }}
+                    />
+                    <p className="mt-1 text-[11px] text-text-disabled">
+                      v{ext.manifest.version} · {ext.manifest.id}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
           {shown.length === 0 && <p className="text-sm text-text-secondary">{x.empty}</p>}
         </div>
       </div>

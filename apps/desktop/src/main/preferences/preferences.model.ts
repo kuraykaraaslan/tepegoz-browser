@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { EXTENSION_ID_RE } from '@tepegoz/extension-sdk';
 import type { Preferences } from '../../shared/ipc-contract';
 
 /**
@@ -9,7 +10,8 @@ import type { Preferences } from '../../shared/ipc-contract';
 export const ThemePrefSchema = z.enum(['system', 'light', 'dark']);
 export const LocalePrefSchema = z.enum(['system', 'en', 'tr']);
 export const ProviderPrefSchema = z.enum(['anthropic', 'openai', 'gemini']);
-export const ExtensionIdSchema = z.enum(['agent']);
+// Reverse-DNS extension id — shares the exact rule the SDK enforces on manifests (single source).
+export const ExtensionIdSchema = z.string().regex(EXTENSION_ID_RE);
 export const ExtensionStatusSchema = z.enum(['enabled', 'disabled']);
 export const ExtensionStateSchema = z.object({
   id: ExtensionIdSchema,
@@ -25,6 +27,8 @@ export const PreferencesSchema = z.object({
   // Required (not .default) so the schema input matches Preferences; init always merges the default
   // (extensions: []) first, and PreferencesPatchSchema (.partial) makes it optional on read/patch.
   extensions: z.array(ExtensionStateSchema),
+  // Active User-Agent override for browsed pages (User-Agent switcher extension); null = default.
+  userAgent: z.string().max(512).nullable(),
 }) satisfies z.ZodType<Preferences>;
 
 /** Patch shape for partial updates — only provided keys are applied. */
@@ -41,4 +45,5 @@ export const DEFAULT_PREFERENCES: Preferences = {
   useLocalModelForSimpleTasks: false,
   defaultProvider: 'anthropic',
   extensions: [],
+  userAgent: null,
 };

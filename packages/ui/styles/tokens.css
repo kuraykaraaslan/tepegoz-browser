@@ -3,16 +3,18 @@
    blocks dropped). See _FORK.md. Import AFTER `@import "tailwindcss";` in the renderer entry CSS. */
 
 :root {
-  --primary:         #3b82f6;
-  --primary-hover:   #2563eb;
-  --primary-active:  #1d4ed8;
-  --primary-subtle:  #eff6ff;
-  --primary-fg:      #ffffff;
+  /* Tepegöz brand: cyan accent (#06AEC4) + deep-navy/slate (#0C2135 / #1C3D5E). Navy text on the
+     bright cyan keeps primary surfaces legible (AA) while staying on-brand. */
+  --primary:         #06AEC4;
+  --primary-hover:   #0598AB;
+  --primary-active:  #047E8E;
+  --primary-subtle:  #E4F8FB;
+  --primary-fg:      #0C2135;
 
-  --secondary:        #8b5cf6;
-  --secondary-hover:  #7c3aed;
-  --secondary-active: #6d28d9;
-  --secondary-subtle: #f5f3ff;
+  --secondary:        #1C3D5E;
+  --secondary-hover:  #264E75;
+  --secondary-active: #16314B;
+  --secondary-subtle: #E8EEF4;
   --secondary-fg:     #ffffff;
 
   --surface-base:    #ffffff;
@@ -27,7 +29,7 @@
 
   --border:          #e5e7eb;
   --border-strong:   #d1d5db;
-  --border-focus:    #3b82f6;
+  --border-focus:    #06AEC4;
 
   --success:         #22c55e;
   --success-subtle:  #f0fdf4;
@@ -47,32 +49,34 @@
 }
 
 .dark {
-  --primary:          #60a5fa;
-  --primary-hover:    #93c5fd;
-  --primary-subtle:   #1e3a5f;
-  --primary-active:   #1d4ed8;
-  --primary-fg:       #ffffff;
+  /* Brighter cyan reads better on the navy surfaces; dark navy text stays on the cyan fills. */
+  --primary:          #22C6DA;
+  --primary-hover:    #51D6E6;
+  --primary-subtle:   #0B3A44;
+  --primary-active:   #06AEC4;
+  --primary-fg:       #08222B;
 
-  --secondary:        #a78bfa;
-  --secondary-hover:  #c4b5fd;
-  --secondary-active: #7c3aed;
-  --secondary-subtle: #2e1065;
+  --secondary:        #3A6B9A;
+  --secondary-hover:  #4F82B5;
+  --secondary-active: #1C3D5E;
+  --secondary-subtle: #16314B;
   --secondary-fg:     #ffffff;
 
-  --text-inverse:     #111827;
+  --text-inverse:     #0C2135;
 
-  --surface-base:    #0f172a;
-  --surface-raised:  #1e293b;
-  --surface-overlay: #334155;
-  --surface-sunken:  #1e293b;
+  /* Brand navy/slate surfaces (logo background = #0C2135). */
+  --surface-base:    #0C2135;
+  --surface-raised:  #14334E;
+  --surface-overlay: #1C3D5E;
+  --surface-sunken:  #14334E;
 
-  --text-primary:    #f1f5f9;
-  --text-secondary:  #94a3b8;
-  --text-disabled:   #475569;
+  --text-primary:    #EAF2F8;
+  --text-secondary:  #8FA8BF;
+  --text-disabled:   #4F6B85;
 
-  --border:          #334155;
-  --border-strong:   #475569;
-  --border-focus:    #60a5fa;
+  --border:          #1C3D5E;
+  --border-strong:   #2A547A;
+  --border-focus:    #22C6DA;
 
   --success:         #4ade80;
   --success-subtle:  #052e16;

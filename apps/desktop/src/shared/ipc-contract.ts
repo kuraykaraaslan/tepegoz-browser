@@ -73,6 +73,8 @@ export const IpcChannels = {
   historySearch: 'history:search',
   historyDelete: 'history:delete',
   historyClear: 'history:clear',
+  userAgentGet: 'user-agent:get',
+  userAgentSet: 'user-agent:set',
 } as const;
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];
@@ -101,6 +103,8 @@ export interface Preferences {
   defaultProvider: ProviderId;
   /** Per-extension status (managed at tepegoz://extensions). Unlisted extensions default to enabled. */
   extensions: ExtensionState[];
+  /** Active User-Agent override for browsed pages (User-Agent switcher extension); null = default. */
+  userAgent: string | null;
 }
 
 /** Per-provider "is a key stored" flags — NEVER the keys themselves. */
@@ -133,8 +137,9 @@ export interface TabsState {
  * for the extension system; real MV3/third-party extensions remain a later phase). Each opens as a
  * chrome-rendered panel over the content area. The Agent is the first; add ids here as more land.
  */
-export type ExtensionId = 'agent';
-export const EXTENSION_IDS: readonly ExtensionId[] = ['agent'];
+/** Reverse-DNS extension id (e.g. "com.tepegoz.agent"). The built-in registry (shared/extensions.ts)
+ *  is the source of truth for which ids exist — kept out of this preload-safe file (it pulls in zod). */
+export type ExtensionId = string;
 
 /** Per-extension status (managed at tepegoz://extensions). More states (e.g. 'error') may be added. */
 export type ExtensionStatus = 'enabled' | 'disabled';
@@ -218,6 +223,11 @@ export interface TepegozApi {
   onTokenUsage(callback: (usage: TokenUsageSnapshot) => void): () => void;
   /** Fetch the current token-usage snapshot. */
   getTokenUsage(): Promise<TokenUsageSnapshot>;
+  // User-Agent switcher extension: read/apply the UA override for browsed pages.
+  /** The currently applied UA override (or null for the browser default). */
+  getUserAgent(): Promise<string | null>;
+  /** Apply a UA string for browsed pages, or null to reset to the default. Returns the stored value. */
+  setUserAgent(ua: string | null): Promise<string | null>;
   /** Pop the native main (hamburger) menu, anchored to the sender window. */
   showMainMenu(): void;
   /** Subscribe to "open this extension panel" requests from the menu; returns an unsubscribe fn. */

@@ -1,13 +1,13 @@
 import { app, Menu, type BrowserWindow, type MenuItemConstructorOptions } from 'electron';
 import {
-  EXTENSION_IDS,
   INTERNAL_EXTENSIONS_URL,
   INTERNAL_HISTORY_URL,
   INTERNAL_SETTINGS_URL,
   IpcChannels,
   isExtensionEnabled,
 } from '../../shared/ipc-contract';
-import { mainResources } from '../lib/i18n-main';
+import { BUILTIN_MANIFESTS, extensionLabel } from '../../shared/extensions';
+import { mainLocale, mainResources } from '../lib/i18n-main';
 import PreferenceStore from '../preferences/preference-store';
 import TabManager from '../tabs';
 
@@ -20,12 +20,13 @@ import TabManager from '../tabs';
  */
 export function showMainMenu(win: BrowserWindow): void {
   const t = mainResources();
+  const locale = mainLocale();
   const { extensions } = PreferenceStore.getAll();
   const extensionSubmenu: MenuItemConstructorOptions[] = [
-    ...EXTENSION_IDS.filter((id) => isExtensionEnabled(extensions, id)).map((id) => ({
-      label: t.extensions.names[id],
+    ...BUILTIN_MANIFESTS.filter((m) => isExtensionEnabled(extensions, m.id)).map((m) => ({
+      label: extensionLabel(m, locale).name,
       click: () => {
-        win.webContents.send(IpcChannels.extensionOpen, id);
+        win.webContents.send(IpcChannels.extensionOpen, m.id);
       },
     })),
     { type: 'separator' },

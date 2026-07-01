@@ -7,6 +7,7 @@ import { installSecurity } from './security';
 import { registerIpc } from './ipc';
 import { initStores } from './stores.electron';
 import TabManager from './tabs';
+import UserAgentManager from './user-agent';
 
 // App-specific identity → userData at %APPDATA%/Tepegöz instead of the shared default "Electron" dir.
 // This avoids cross-instance GPU/disk-cache contention ("Unable to move the cache: Access is denied").
@@ -81,6 +82,8 @@ if (!app.requestSingleInstanceLock()) {
       }
       installSecurity();
       initStores();
+      // Apply the persisted User-Agent override to the browsing session BEFORE the first tab opens.
+      UserAgentManager.init();
       registerIpc();
       bootstrap();
 
