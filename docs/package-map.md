@@ -32,11 +32,11 @@ Any new package must respect this graph and the no-circular rule in
 | [x] | **@tepegoz/omnibox** ⭐ (`url-bar`) | ~~`Toolbar.tsx` + `omnibox-calc.ts`~~ → `packages/omnibox/` | Address-bar input + inline calc hint; navigate/copy via callbacks (no `window.tepegoz` coupling) | `@tepegoz/ui`, react (peer) | ✅ done |
 | [x] | **@tepegoz/tab-strip** | ~~`renderer/src/components/TabStrip.tsx`~~ → `packages/tab-strip/` | Tab list: favicon fallback, wheel-scroll, container-query collapse; select/close/context-menu/new-tab via callbacks; `TabDescriptor` + `labels` (no i18n dep) | `@tepegoz/ui`, react (peer) | ✅ done |
 | [x] | **@tepegoz/window-controls** | ~~`renderer/src/components/WindowControls.tsx`~~ → `packages/window-controls/` | Min/max/restore/close; pure view — `isMaximized` + labels + callbacks in; app keeps a `useWindowMaximized` hook for the subscription | react (peer), zero deps | ✅ done |
-| [ ] | **@tepegoz/nav-toolbar** | Rest of `Toolbar.tsx` (back/forward/reload + extension tray + menu) | Nav buttons + extension icons + menu button | `@tepegoz/ui`, `@tepegoz/i18n`, react | S–M |
-| [ ] | **@tepegoz/browser-chrome** | `TitleBar.tsx` + composition of the 4 above | Frameless "browser frame" meta-package | the UI packages above | M |
+| [x] | **@tepegoz/nav-toolbar** | `Toolbar.tsx` split → `packages/nav-toolbar/` (`NavToolbar`); app keeps the extension tray/puzzle in an `actions` slot | Back/forward/reload + omnibox + actions slot + menu; all actions injected; exports `NAV_BTN` | `@tepegoz/omnibox`, react (peer) | ✅ done |
+| — | ~~@tepegoz/browser-chrome~~ | `TitleBar.tsx` + composition | **Deprioritized — stays in app.** Now that tab-strip/window-controls/nav-toolbar/omnibox are packages, composing them (`TitleBar` + `Toolbar` in `App.tsx`) is thin app glue that wires all the `window.tepegoz` callbacks + tabs state + extension tray. A meta-package would need that entire callback surface injected — near-zero reuse value. | — | — |
 | [x] | **@tepegoz/settings-ui** | `SettingsPage.tsx` split → `packages/settings-ui/` (`SettingsLayout` shell); app keeps `SettingsPage` content | Generic sidebar + cross-section search + content/banner slots; owns active/search state; all provider/theme/i18n content stays in the app | `@tepegoz/ui`, react (peer) | ✅ done |
 | [x] | **@tepegoz/history-ui** | ~~`renderer/src/components/HistoryPage.tsx`~~ → `packages/history-ui/` | Search + newest-first list + delete/clear; owns search state, `list`/`remove`/`clear` data source injected; `HistoryItem` + labels (no i18n dep) | react (peer), zero deps | ✅ done |
-| [ ] | **@tepegoz/extensions-ui** | `renderer/src/components/ExtensionsPage.tsx` | Searchable toggle-card grid | `@tepegoz/ui`, `@tepegoz/i18n` | S–M |
+| [x] | **@tepegoz/extensions-ui** | `ExtensionsPage.tsx` split → `packages/extensions-ui/` (`ExtensionsGrid` shell); app keeps registry/manifest mapping | Searchable card grid + toggles; `ExtensionCardItem` + labels + onToggle injected | `@tepegoz/ui`, react (peer) | ✅ done |
 
 - **BrandMark** ✅ done — moved from `renderer/src/components/BrandMark.tsx` to
   `packages/ui/src/brand/BrandMark.tsx` (first-party, exported from the `@tepegoz/ui` barrel; kept out
@@ -82,11 +82,11 @@ For each new package (same shape as `@tepegoz/tool-executor` / `@tepegoz/ui`):
 
 ## Extraction order (waves)
 
-- [ ] **Wave 0 — quick wins (pure / low-coupling, do first):** `@tepegoz/navigation`,
-  `@tepegoz/omnibox` (+ calc), `@tepegoz/json-store`, BrandMark → `@tepegoz/ui`. All pure/near-pure and tested.
-- [ ] **Wave 1 — UI chrome (Phase 2b-aligned):** `tab-strip`, `window-controls`, `nav-toolbar`,
-  `browser-chrome`, `history-ui`, `extensions-ui`, `settings-ui`.
-- [ ] **Wave 2 — security/state cores:** `credential-vault`, `preferences`, `desktop-ipc`.
+- [x] **Wave 0 — quick wins (pure / low-coupling):** `@tepegoz/navigation`,
+  `@tepegoz/omnibox` (+ calc), `@tepegoz/json-store`, BrandMark → `@tepegoz/ui`. ✅ done.
+- [x] **Wave 1 — UI chrome:** `tab-strip`, `window-controls`, `nav-toolbar`, `history-ui`,
+  `extensions-ui`, `settings-ui`. ✅ done. (`browser-chrome` deprioritized — stays in app, see Catalog A.)
+- [ ] **Wave 2 — security/state cores:** ✅ `credential-vault` · ⬜ `preferences`, `desktop-ipc`.
 - [ ] **Wave 3 — needs boundary refactor (Phase 1b/2b):** `browser-tools`, `tab-engine`.
 
 ## Per-package Definition of Done (when a package is actually extracted)

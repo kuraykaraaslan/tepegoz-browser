@@ -13,6 +13,8 @@
 @source "../../../../../packages/window-controls/src";
 @source "../../../../../packages/history-ui/src";
 @source "../../../../../packages/settings-ui/src";
+@source "../../../../../packages/extensions-ui/src";
+@source "../../../../../packages/nav-toolbar/src";
 
 html,
 body,

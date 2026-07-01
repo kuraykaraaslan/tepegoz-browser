@@ -99,6 +99,24 @@ module.exports = {
       from: { path: '^packages/settings-ui/' },
       to: { path: '^apps/' },
     },
+    {
+      name: 'extensions-ui-is-a-leaf',
+      severity: 'error',
+      comment:
+        '@tepegoz/extensions-ui is a presentational chrome leaf (the extensions grid shell): it must ' +
+        'never import back into the desktop app. Items + copy are injected. See docs/package-map.md.',
+      from: { path: '^packages/extensions-ui/' },
+      to: { path: '^apps/' },
+    },
+    {
+      name: 'nav-toolbar-is-a-leaf',
+      severity: 'error',
+      comment:
+        '@tepegoz/nav-toolbar is a presentational chrome leaf (the browser nav bar): it must never ' +
+        'import back into the desktop app. Actions are injected; the extension tray fills an actions slot. See docs/package-map.md.',
+      from: { path: '^packages/nav-toolbar/' },
+      to: { path: '^apps/' },
+    },
   ],
   options: {
     doNotFollow: { path: 'node_modules' },

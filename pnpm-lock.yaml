@@ -56,6 +56,9 @@ importers:
       '@tepegoz/extension-sdk':
         specifier: workspace:*
         version: link:../../packages/extension-sdk
+      '@tepegoz/extensions-ui':
+        specifier: workspace:*
+        version: link:../../packages/extensions-ui
       '@tepegoz/history-ui':
         specifier: workspace:*
         version: link:../../packages/history-ui
@@ -71,6 +74,9 @@ importers:
       '@tepegoz/model-gateway':
         specifier: workspace:*
         version: link:../../packages/model-gateway
+      '@tepegoz/nav-toolbar':
+        specifier: workspace:*
+        version: link:../../packages/nav-toolbar
       '@tepegoz/navigation':
         specifier: workspace:*
         version: link:../../packages/navigation
@@ -255,6 +261,22 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.0)(lightningcss@1.32.0)
 
+  packages/extensions-ui:
+    dependencies:
+      '@tepegoz/ui':
+        specifier: workspace:*
+        version: link:../ui
+      react:
+        specifier: ^18 || ^19
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.31
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
   packages/history-ui:
     dependencies:
       react:
@@ -329,6 +351,22 @@ importers:
       vitest:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.0)(lightningcss@1.32.0)
+
+  packages/nav-toolbar:
+    dependencies:
+      '@tepegoz/omnibox':
+        specifier: workspace:*
+        version: link:../omnibox
+      react:
+        specifier: ^18 || ^19
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.31
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
 
   packages/navigation:
     devDependencies:
