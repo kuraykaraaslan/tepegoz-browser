@@ -5,3 +5,4 @@
  * only). Extracted from `apps/desktop/src/shared` per docs/package-map.md.
  */
 export * from './contract';
+export * from './boundary';

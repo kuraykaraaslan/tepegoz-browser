@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import {
   IpcChannels,
+  decodeBoundaryError,
   type AgentApprovalRequest,
   type AgentEvent,
   type AgentPlanPreview,
@@ -11,6 +12,7 @@ import {
   type CredentialsStatus,
   type ExtensionId,
   type HistoryEntry,
+  type IpcChannel,
   type Preferences,
   type ProviderId,
   type TabsState,
@@ -18,24 +20,30 @@ import {
   type TokenUsageSnapshot,
 } from '@tepegoz/desktop-ipc';
 
+/** Every request/response call goes through here so a rejection reaches the renderer as the typed
+ *  `{ message, statusCode }` pair (IpcBoundaryError) the boundary encoded — ADR-0009. */
+async function invoke<T>(channel: IpcChannel, payload?: unknown): Promise<T> {
+  try {
+    return (await ipcRenderer.invoke(channel, payload)) as T;
+  } catch (err) {
+    throw decodeBoundaryError(err);
+  }
+}
+
 /**
  * The ONLY bridge between renderer and main. A small, named, typed API — never raw ipcRenderer
  * (electron-desktop-security BLOCKING).
  */
 const api: TepegozApi = {
-  getAppInfo: () => ipcRenderer.invoke(IpcChannels.appGetInfo) as Promise<AppInfo>,
-  getPreferences: () => ipcRenderer.invoke(IpcChannels.prefsGet) as Promise<Preferences>,
+  getAppInfo: () => invoke<AppInfo>(IpcChannels.appGetInfo),
+  getPreferences: () => invoke<Preferences>(IpcChannels.prefsGet),
   updatePreferences: (patch: Partial<Preferences>) =>
-    ipcRenderer.invoke(IpcChannels.prefsSet, patch) as Promise<Preferences>,
-  getCredentialsStatus: () =>
-    ipcRenderer.invoke(IpcChannels.credentialsStatus) as Promise<CredentialsStatus>,
+    invoke<Preferences>(IpcChannels.prefsSet, patch),
+  getCredentialsStatus: () => invoke<CredentialsStatus>(IpcChannels.credentialsStatus),
   setProviderKey: (provider: ProviderId, apiKey: string) =>
-    ipcRenderer.invoke(IpcChannels.credentialsSet, {
-      provider,
-      apiKey,
-    }) as Promise<CredentialsStatus>,
+    invoke<CredentialsStatus>(IpcChannels.credentialsSet, { provider, apiKey }),
   removeProviderKey: (provider: ProviderId) =>
-    ipcRenderer.invoke(IpcChannels.credentialsRemove, { provider }) as Promise<CredentialsStatus>,
+    invoke<CredentialsStatus>(IpcChannels.credentialsRemove, { provider }),
   minimizeWindow: () => {
     ipcRenderer.send(IpcChannels.windowMinimize);
   },
@@ -45,7 +53,7 @@ const api: TepegozApi = {
   closeWindow: () => {
     ipcRenderer.send(IpcChannels.windowClose);
   },
-  isWindowMaximized: () => ipcRenderer.invoke(IpcChannels.windowIsMaximized) as Promise<boolean>,
+  isWindowMaximized: () => invoke<boolean>(IpcChannels.windowIsMaximized),
   onWindowMaximizedChange: (callback: (maximized: boolean) => void) => {
     const listener = (_event: unknown, maximized: boolean): void => {
       callback(maximized);
@@ -88,8 +96,8 @@ const api: TepegozApi = {
   setContentVisible: (visible: boolean) => {
     ipcRenderer.send(IpcChannels.tabsSetContentVisible, visible);
   },
-  captureActiveTab: () => ipcRenderer.invoke(IpcChannels.tabsCapture) as Promise<string | null>,
-  getTabsState: () => ipcRenderer.invoke(IpcChannels.tabsGetState) as Promise<TabsState>,
+  captureActiveTab: () => invoke<string | null>(IpcChannels.tabsCapture),
+  getTabsState: () => invoke<TabsState>(IpcChannels.tabsGetState),
   onTabsState: (callback: (state: TabsState) => void) => {
     const listener = (_event: unknown, state: TabsState): void => {
       callback(state);
@@ -99,8 +107,7 @@ const api: TepegozApi = {
       ipcRenderer.removeListener(IpcChannels.tabsState, listener);
     };
   },
-  runAgent: (prompt: string) =>
-    ipcRenderer.invoke(IpcChannels.agentRun, prompt) as Promise<AgentRunResult>,
+  runAgent: (prompt: string) => invoke<AgentRunResult>(IpcChannels.agentRun, prompt),
   cancelAgent: (runId: string) => {
     ipcRenderer.send(IpcChannels.agentCancel, runId);
   },
@@ -146,10 +153,9 @@ const api: TepegozApi = {
       ipcRenderer.removeListener(IpcChannels.tokenUsage, listener);
     };
   },
-  getTokenUsage: () => ipcRenderer.invoke(IpcChannels.tokenUsageGet) as Promise<TokenUsageSnapshot>,
-  getUserAgent: () => ipcRenderer.invoke(IpcChannels.userAgentGet) as Promise<string | null>,
-  setUserAgent: (ua: string | null) =>
-    ipcRenderer.invoke(IpcChannels.userAgentSet, ua) as Promise<string | null>,
+  getTokenUsage: () => invoke<TokenUsageSnapshot>(IpcChannels.tokenUsageGet),
+  getUserAgent: () => invoke<string | null>(IpcChannels.userAgentGet),
+  setUserAgent: (ua: string | null) => invoke<string | null>(IpcChannels.userAgentSet, ua),
   showMainMenu: () => {
     ipcRenderer.send(IpcChannels.menuShowMain);
   },
@@ -177,17 +183,14 @@ const api: TepegozApi = {
       ipcRenderer.removeListener(IpcChannels.extensionPopupClosed, listener);
     };
   },
-  getHistory: () => ipcRenderer.invoke(IpcChannels.historyList) as Promise<HistoryEntry[]>,
-  searchHistory: (query: string) =>
-    ipcRenderer.invoke(IpcChannels.historySearch, query) as Promise<HistoryEntry[]>,
-  deleteHistory: (url: string) =>
-    ipcRenderer.invoke(IpcChannels.historyDelete, url) as Promise<HistoryEntry[]>,
-  clearHistory: () => ipcRenderer.invoke(IpcChannels.historyClear) as Promise<HistoryEntry[]>,
-  listBookmarks: () => ipcRenderer.invoke(IpcChannels.bookmarksList) as Promise<BookmarkEntry[]>,
+  getHistory: () => invoke<HistoryEntry[]>(IpcChannels.historyList),
+  searchHistory: (query: string) => invoke<HistoryEntry[]>(IpcChannels.historySearch, query),
+  deleteHistory: (url: string) => invoke<HistoryEntry[]>(IpcChannels.historyDelete, url),
+  clearHistory: () => invoke<HistoryEntry[]>(IpcChannels.historyClear),
+  listBookmarks: () => invoke<BookmarkEntry[]>(IpcChannels.bookmarksList),
   toggleBookmark: (url: string, title: string) =>
-    ipcRenderer.invoke(IpcChannels.bookmarksToggle, { url, title }) as Promise<boolean>,
-  isBookmarked: (url: string) =>
-    ipcRenderer.invoke(IpcChannels.bookmarksIsBookmarked, url) as Promise<boolean>,
+    invoke<boolean>(IpcChannels.bookmarksToggle, { url, title }),
+  isBookmarked: (url: string) => invoke<boolean>(IpcChannels.bookmarksIsBookmarked, url),
   platform: process.platform,
 };
 

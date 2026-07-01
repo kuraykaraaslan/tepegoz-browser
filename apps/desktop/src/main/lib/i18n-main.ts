@@ -19,6 +19,7 @@ export function mainLocale(): Locale {
 export function mainStrings(): {
   browser: typeof browserDict.en;
   common: typeof coreDict.en.common;
+  errors: typeof coreDict.en.errors;
   extensions: typeof extensionsDict.en;
   history: typeof historyDict.en;
 } {
@@ -27,6 +28,8 @@ export function mainStrings(): {
     browser: pick(browserDict, l),
     // The settings tab title / menu entry reuse the shared-core `common.settings` (no re-translation).
     common: pick(coreDict, l).common,
+    // Boundary error messages (e.g. the untrusted-sender rejection) come from the shared core too.
+    errors: pick(coreDict, l).errors,
     extensions: pick(extensionsDict, l),
     history: pick(historyDict, l),
   };

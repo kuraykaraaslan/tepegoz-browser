@@ -26,6 +26,7 @@ export const en = {
     forbidden: 'Action blocked by policy',
     badState: 'Invalid state for this operation',
     upstreamDown: 'Service unavailable',
+    renderFailure: 'Something went wrong — please restart the app',
   },
 };
 

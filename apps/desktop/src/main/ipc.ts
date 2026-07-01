@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { AppError, Logger, toBoundary } from '@tepegoz/libs';
 import {
   IpcChannels,
+  encodeBoundaryMessage,
   type AgentApprovalRequest,
   type AgentEvent,
   type AgentEventKind,
@@ -47,6 +48,7 @@ import AgentService, { type PlanApprovalDecision } from './agent/agent-service';
 import { getDb } from './db/database.electron';
 import { PreferencesPatchSchema } from '@tepegoz/preferences';
 import { isTrustedAppUrl } from './lib/trusted-origin';
+import { mainStrings } from './lib/i18n-main';
 import CredentialVault from '@tepegoz/credential-vault';
 import PreferenceStore from '@tepegoz/preferences';
 import TabManager from './tabs';
@@ -60,15 +62,16 @@ function assertTrustedSender(event: IpcMainInvokeEvent): void {
   const url = event.senderFrame?.url ?? '';
   if (!isTrustedAppUrl(url)) {
     Logger.warn('Rejected IPC from untrusted sender', { url });
-    throw new AppError('Forbidden', 403);
+    throw new AppError(mainStrings().errors.forbidden, 403);
   }
 }
 
 /**
  * Single boundary for every handler (ADR-0009): validate sender, run the handler, and map ANY thrown
  * value to { message, statusCode } via toBoundary — logging the full error in main (redacted) and
- * letting ONLY the mapped, clean message cross to the untrusted renderer (raw zod/internal text and
- * the statusCode never leak across the boundary).
+ * letting ONLY the mapped, clean pair cross to the untrusted renderer (raw zod/internal text never
+ * leaks). The pair travels encoded in the Error message (Electron drops custom fields) and the
+ * preload decodes it back into a typed IpcBoundaryError for the renderer.
  */
 function handle<T>(
   channel: IpcChannel,
@@ -84,7 +87,7 @@ function handle<T>(
         statusCode: boundary.statusCode,
         message: boundary.message,
       });
-      throw new Error(boundary.message);
+      throw new Error(encodeBoundaryMessage(boundary.message, boundary.statusCode));
     }
   });
 }
@@ -105,7 +108,7 @@ function handleAsync<T>(
         statusCode: boundary.statusCode,
         message: boundary.message,
       });
-      throw new Error(boundary.message);
+      throw new Error(encodeBoundaryMessage(boundary.message, boundary.statusCode));
     }
   });
 }

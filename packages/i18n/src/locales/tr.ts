@@ -23,5 +23,6 @@ export const tr: Resources = {
     forbidden: 'Eylem politika tarafından engellendi',
     badState: 'Bu işlem için geçersiz durum',
     upstreamDown: 'Servis kullanılamıyor',
+    renderFailure: 'Bir şeyler ters gitti — lütfen uygulamayı yeniden başlatın',
   },
 };

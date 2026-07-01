@@ -159,16 +159,16 @@ export function App() {
     window.addEventListener('pointerup', onUp);
     // Capture the page FIRST, then hide the live view — no navy flash. If the drag already ended (fast
     // click) or there's nothing to capture, we still hide so the drag tracks reliably.
-    void window.tepegoz.captureActiveTab().then(
-      (snap) => {
+    window.tepegoz
+      .captureActiveTab()
+      .then((snap) => {
         if (!draggingSidebarRef.current) return;
         setResizeSnapshot(snap);
         setResizingSidebar(true);
-      },
-      () => {
+      })
+      .catch(() => {
         if (draggingSidebarRef.current) setResizingSidebar(true);
-      },
-    );
+      });
   }
 
   useEffect(() => {
@@ -182,8 +182,9 @@ export function App() {
         setPrefs(p);
         setStatus(s);
         setTabs(ts);
-      } catch {
+      } catch (err) {
         // Preload bridge unavailable (dev mishap) — leave defaults; the chrome still renders.
+        console.warn('Initial IPC state fetch failed — rendering with defaults', err);
       }
     })();
     return window.tepegoz.onTabsState(setTabs);
@@ -377,9 +378,13 @@ export function App() {
     const tab = tabsRef.current.tabs.find((tb) => tb.id === tabsRef.current.activeId);
     const url = tab?.url ?? '';
     if (!/^https?:\/\//i.test(url)) return;
-    const nowBookmarked = await window.tepegoz.toggleBookmark(url, tab?.title ?? url);
-    setActiveBookmarked(nowBookmarked);
-    await refreshBookmarks();
+    try {
+      const nowBookmarked = await window.tepegoz.toggleBookmark(url, tab?.title ?? url);
+      setActiveBookmarked(nowBookmarked);
+      await refreshBookmarks();
+    } catch (err) {
+      console.error('Bookmark toggle failed', err); // star state stays as-is (nothing was persisted)
+    }
   }, [refreshBookmarks]);
 
   const onOmniboxSuggest = useCallback(async (query: string): Promise<OmniboxSuggestion[]> => {
@@ -422,7 +427,9 @@ export function App() {
   function onToggleExtension(id: ExtensionId, enabled: boolean): void {
     const next = extensionStates.filter((e) => e.id !== id);
     next.push({ id, status: enabled ? 'enabled' : 'disabled' });
-    void onUpdatePrefs({ extensions: next });
+    onUpdatePrefs({ extensions: next }).catch((err: unknown) => {
+      console.error('Extension toggle failed', err); // prefs unchanged in main → UI stays consistent
+    });
     if (!enabled && activeSurface?.id === id) setActiveSurface(null);
     if (!enabled && sidebarExtId === id) setSidebarExtId(null);
   }
