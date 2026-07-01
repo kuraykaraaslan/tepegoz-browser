@@ -56,8 +56,15 @@ export default class TabManager {
       clearTimeout(TabManager.persistTimer);
       TabManager.persistTimer = null;
     }
+    const win = TabManager.win;
     for (const view of TabManager.views.values()) {
-      if (!view.webContents.isDestroyed()) view.webContents.close();
+      // Electron teardown order: detach from the window first, THEN close the contents — closing an
+      // attached view can race its compositor/storage teardown against the window's own destruction.
+      if (win !== null && !win.isDestroyed()) win.contentView.removeChildView(view);
+      if (!view.webContents.isDestroyed()) {
+        TabManager.unwireView(view);
+        view.webContents.close();
+      }
     }
     TabManager.views.clear();
     TabManager.store.clear();
@@ -133,6 +140,7 @@ export default class TabManager {
         if (TabManager.closedUrls.length > 25) TabManager.closedUrls.shift();
       }
       win.contentView.removeChildView(view);
+      TabManager.unwireView(view);
       view.webContents.close();
       TabManager.views.delete(id);
     }
@@ -343,6 +351,28 @@ export default class TabManager {
   private static requireWin(): BrowserWindow {
     if (TabManager.win === null) throw new Error('TabManager not attached to a window');
     return TabManager.win;
+  }
+
+  /** Every event `wireView` subscribes to — kept in sync so `unwireView` can drop exactly these. */
+  private static readonly WIRED_EVENTS = [
+    'will-navigate',
+    'will-redirect',
+    'page-title-updated',
+    'page-favicon-updated',
+    'did-start-loading',
+    'did-stop-loading',
+    'did-navigate',
+    'did-navigate-in-page',
+  ] as const;
+
+  /** Drop everything `wireView` attached BEFORE closing the contents: the handlers close over the tab
+   *  id + TabManager and would otherwise keep firing (and pin their closures) through teardown. Only
+   *  our own events are removed — Electron's internal listeners stay untouched. */
+  private static unwireView(view: WebContentsView): void {
+    const wc = view.webContents;
+    for (const event of TabManager.WIRED_EVENTS) {
+      wc.removeAllListeners(event);
+    }
   }
 
   private static wireView(id: string, view: WebContentsView): void {

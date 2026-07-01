@@ -12,5 +12,9 @@ export function openDatabase(path: string): Db {
   db.pragma('journal_mode = WAL');
   db.pragma('synchronous = NORMAL');
   db.pragma('foreign_keys = ON');
+  // better-sqlite3 defaults to 0ms (fail immediately with SQLITE_BUSY). Electron's main loop is
+  // single-threaded today, but WAL checkpoints and future utilityProcess workers contend for the
+  // write lock — retry for up to 5s instead of surfacing spurious busy errors.
+  db.pragma('busy_timeout = 5000');
   return db;
 }

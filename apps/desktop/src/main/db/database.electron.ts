@@ -47,3 +47,16 @@ export function initDatabase(): void {
 export function getDb(): Db | null {
   return db;
 }
+
+/** Close the connection (flushes the WAL checkpoint). Called once from `will-quit`, after every
+ *  window has closed and persisted — `getDb()` returns null afterwards, so any late event handler
+ *  (e.g. a straggling navigation) degrades to the same "persistence off" no-op path as a failed open. */
+export function closeDatabase(): void {
+  if (db === null) return;
+  try {
+    db.close();
+  } catch (err) {
+    Logger.warn('Failed to close database cleanly', { err: String(err) });
+  }
+  db = null;
+}

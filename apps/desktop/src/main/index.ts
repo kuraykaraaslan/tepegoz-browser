@@ -4,10 +4,23 @@ import { app, BrowserWindow, powerMonitor } from 'electron';
 import { Logger } from '@tepegoz/libs';
 import { createWindow } from './window';
 import { installSecurity } from './security';
-import { registerIpc } from './ipc';
+import { abortActiveAgentRuns, registerIpc } from './ipc';
 import { initStores } from './stores.electron';
+import { closeDatabase } from './db/database.electron';
 import TabManager from './tabs';
 import UserAgentManager from './user-agent';
+import ExtensionPopupManager from './extension-popup';
+
+// Last-resort process-level hooks: an async error that escapes every boundary must be LOGGED, not a
+// silent crash. Exceptions still terminate (state is unknown); rejections are logged and survived.
+process.on('unhandledRejection', (reason) => {
+  Logger.error('Unhandled promise rejection in main', { reason: String(reason) });
+});
+process.on('uncaughtException', (err) => {
+  Logger.error('Uncaught exception in main', { err: String(err), stack: err.stack ?? '' });
+  process.exitCode = 1;
+  app.quit();
+});
 
 // App-specific identity → userData at %APPDATA%/Tepegöz instead of the shared default "Electron" dir.
 // This avoids cross-instance GPU/disk-cache contention ("Unable to move the cache: Access is denied").
@@ -114,5 +127,19 @@ if (!app.requestSingleInstanceLock()) {
     if (process.platform !== 'darwin') {
       app.quit();
     }
+  });
+
+  // Quit orchestration, in dependency order. before-quit (windows still alive): stop the agent so no
+  // tool/journal write races teardown, drop the popup child window, snapshot the session while every
+  // tab's webContents can still report its URL. The window 'closed' handler then persists + resets as
+  // usual, and will-quit (all windows gone) finally flushes + closes the SQLite connection — after
+  // this, getDb() is null and any straggling handler no-ops.
+  app.on('before-quit', () => {
+    abortActiveAgentRuns();
+    ExtensionPopupManager.close();
+    TabManager.persistNow();
+  });
+  app.on('will-quit', () => {
+    closeDatabase();
   });
 }

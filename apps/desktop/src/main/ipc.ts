@@ -131,6 +131,20 @@ const pendingPlans = new Map<
   { runId: string; resolve: (decision: PlanApprovalDecision) => void }
 >();
 
+/** Abort every in-flight agent run and unblock any HITL prompt parked on a promise (fail-safe deny),
+ *  so quit doesn't race a half-finished run against store/database teardown. Called from before-quit. */
+export function abortActiveAgentRuns(): void {
+  for (const controller of runControllers.values()) controller.abort();
+  for (const [id, entry] of pendingApprovals) {
+    pendingApprovals.delete(id);
+    entry.resolve(false);
+  }
+  for (const [id, entry] of pendingPlans) {
+    pendingPlans.delete(id);
+    entry.resolve({ approved: false });
+  }
+}
+
 function tokenUsage(): TokenUsageSnapshot {
   const t = TokenLedger.totals();
   return { inputTokens: t.inputTokens, outputTokens: t.outputTokens, totalTokens: t.totalTokens };
