@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { resources, resolveLocale, type Locale } from '@tepegoz/i18n';
+import { INTERNAL_SETTINGS_URL } from '../../shared/ipc-contract';
 import type {
   CredentialsStatus,
   LocalePref,
@@ -31,7 +32,6 @@ export function App() {
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [status, setStatus] = useState<CredentialsStatus | null>(null);
   const [tabs, setTabs] = useState<TabsState>(EMPTY_TABS);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [agentOpen, setAgentOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement | null>(null);
 
@@ -90,21 +90,16 @@ export function App() {
     };
   }, []);
 
-  // Chrome-rendered overlays (Settings / Agent Console) hide the web view so they show through.
+  // The Agent Console is a chrome-rendered overlay; it hides the active web view while open.
+  // (Settings is a tab with no web view, so it needs no coordination here.)
   useEffect(() => {
-    window.tepegoz.setContentVisible(!settingsOpen && !agentOpen);
-  }, [settingsOpen, agentOpen]);
+    window.tepegoz.setContentVisible(!agentOpen);
+  }, [agentOpen]);
 
-  // Native main-menu actions (Settings / Agent) arrive here as UI-state changes.
+  // The native main menu asks the chrome to open the Agent Console (its only chrome-UI action).
   useEffect(() => {
-    return window.tepegoz.onMenuAction((action) => {
-      if (action === 'open-settings') {
-        setAgentOpen(false);
-        setSettingsOpen(true);
-      } else {
-        setSettingsOpen(false);
-        setAgentOpen(true);
-      }
+    return window.tepegoz.onMenuAction(() => {
+      setAgentOpen(true);
     });
   }, []);
 
@@ -116,7 +111,6 @@ export function App() {
       const key = e.key.toLowerCase();
       if (key === 't') {
         e.preventDefault();
-        setSettingsOpen(false);
         setAgentOpen(false);
         window.tepegoz.createTab();
       } else if (key === 'r') {
@@ -125,7 +119,7 @@ export function App() {
       } else if (key === ',') {
         e.preventDefault();
         setAgentOpen(false);
-        setSettingsOpen(true);
+        window.tepegoz.navigateTab(INTERNAL_SETTINGS_URL); // opens/focuses the Settings tab
       }
     };
     window.addEventListener('keydown', onKey);
@@ -138,6 +132,8 @@ export function App() {
   const t = resources[locale];
   const activeTab = tabs.tabs.find((tb) => tb.id === tabs.activeId);
   const currentUrl = activeTab?.url ?? '';
+  // The internal Settings page is a tab addressed tepegoz://settings; render it when it's active.
+  const settingsActive = activeTab?.url === INTERNAL_SETTINGS_URL;
 
   async function onUpdatePrefs(patch: Partial<Preferences>): Promise<void> {
     setPrefs(await window.tepegoz.updatePreferences(patch));
@@ -156,13 +152,10 @@ export function App() {
         tabs={tabs.tabs}
         activeId={tabs.activeId}
         onSelectTab={(id) => {
-          // Make the page visible (web view is hidden while an overlay is open).
-          setSettingsOpen(false);
-          setAgentOpen(false);
+          setAgentOpen(false); // close the Agent overlay when switching tabs
           window.tepegoz.activateTab(id);
         }}
         onNewTab={() => {
-          setSettingsOpen(false);
           setAgentOpen(false);
           window.tepegoz.createTab();
         }}
@@ -175,14 +168,13 @@ export function App() {
         agentOpen={agentOpen}
         onToggleAgent={() => {
           setAgentOpen((open) => !open);
-          setSettingsOpen(false);
         }}
       />
       <div ref={contentRef} className="relative flex-1 overflow-hidden">
-        {/* The active tab's web page is a separate WebContentsView laid over this area by the main
-            process. When Settings is open the web view is hidden and this overlay shows instead. */}
-        {settingsOpen && (
-          <div className="absolute inset-0 overflow-auto bg-surface-base">
+        {/* The active tab's web page is a separate WebContentsView laid over this area by main. The
+            internal Settings tab has no web view, so the chrome renders it here instead. */}
+        {settingsActive && (
+          <div className="absolute inset-0 bg-surface-base">
             {prefs && status ? (
               <SettingsPage
                 t={t}

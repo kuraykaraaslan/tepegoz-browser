@@ -1,7 +1,8 @@
 import { BrowserWindow, WebContentsView, type Rectangle, type WebContents } from 'electron';
 import { Logger } from '@tepegoz/libs';
-import { IpcChannels, type TabInfo, type TabsState } from '../shared/ipc-contract';
-import { isWebUrl, toNavigationUrl } from './lib/navigation-url';
+import { INTERNAL_SETTINGS_URL, IpcChannels, type TabInfo, type TabsState } from '../shared/ipc-contract';
+import { isInternalSettingsUrl, isWebUrl, toNavigationUrl } from './lib/navigation-url';
+import { mainResources } from './lib/i18n-main';
 
 /**
  * L0 tab model. Each tab is an isolated `WebContentsView` in a SEPARATE browsing partition
@@ -18,7 +19,9 @@ const BROWSING_PARTITION = 'persist:tepegoz-web';
 
 interface Tab {
   id: string;
-  view: WebContentsView;
+  /** null for INTERNAL pages (tepegoz://settings) — rendered by the chrome, not a web view. */
+  view: WebContentsView | null;
+  kind: 'web' | 'internal';
   title: string;
   url: string;
   isLoading: boolean;
@@ -41,7 +44,7 @@ export default class TabManager {
    *  re-created window, e.g. macOS app 'activate'). */
   static reset(): void {
     for (const tab of TabManager.tabs.values()) {
-      if (!tab.view.webContents.isDestroyed()) tab.view.webContents.close();
+      if (tab.view !== null && !tab.view.webContents.isDestroyed()) tab.view.webContents.close();
     }
     TabManager.tabs.clear();
     TabManager.activeId = null;
@@ -62,9 +65,9 @@ export default class TabManager {
         partition: BROWSING_PARTITION,
       },
     });
-    const tab: Tab = { id, view, title: '', url: '', isLoading: true, faviconUrl: null };
+    const tab: Tab = { id, view, kind: 'web', title: '', url: '', isLoading: true, faviconUrl: null };
     TabManager.tabs.set(id, tab);
-    TabManager.wireView(tab);
+    TabManager.wireView(tab, view);
 
     const target = rawUrl !== undefined ? toNavigationUrl(rawUrl, NEW_TAB_URL) : NEW_TAB_URL;
     void view.webContents.loadURL(target).catch((err: unknown) => {
@@ -85,13 +88,14 @@ export default class TabManager {
     const tab = TabManager.tabs.get(id);
     if (!tab) return;
 
-    // Detach the previously-active view (kept alive in the background), attach the new one.
+    // Detach the previously-active view (kept alive in the background), attach the new one. Internal
+    // tabs have no view — the chrome renders their page over the (empty) content area.
     if (TabManager.activeId !== null && TabManager.activeId !== id) {
       const prev = TabManager.tabs.get(TabManager.activeId);
-      if (prev) win.contentView.removeChildView(prev.view);
+      if (prev?.view != null) win.contentView.removeChildView(prev.view);
     }
     TabManager.activeId = id;
-    if (TabManager.contentVisible) {
+    if (TabManager.contentVisible && tab.view !== null) {
       win.contentView.addChildView(tab.view);
       tab.view.setBounds(TabManager.bounds);
     }
@@ -102,8 +106,10 @@ export default class TabManager {
     const win = TabManager.requireWin();
     const tab = TabManager.tabs.get(id);
     if (!tab) return;
-    win.contentView.removeChildView(tab.view);
-    tab.view.webContents.close();
+    if (tab.view !== null) {
+      win.contentView.removeChildView(tab.view);
+      tab.view.webContents.close();
+    }
     TabManager.tabs.delete(id);
 
     if (TabManager.activeId === id) {
@@ -121,7 +127,30 @@ export default class TabManager {
 
   /** Reload a specific tab (context menu) — distinct from reloadActive (omnibox/shortcut). */
   static reloadTab(id: string): void {
-    TabManager.tabs.get(id)?.view.webContents.reload();
+    TabManager.tabs.get(id)?.view?.webContents.reload();
+  }
+
+  /** Open (or focus) the internal Settings tab (tepegoz://settings) — rendered by the chrome, no
+   *  web view. A new-tab experience for internal pages, mirroring Chrome's chrome://settings. */
+  static openSettings(): void {
+    TabManager.requireWin();
+    for (const [existingId, tab] of TabManager.tabs) {
+      if (tab.kind === 'internal' && tab.url === INTERNAL_SETTINGS_URL) {
+        TabManager.activate(existingId);
+        return;
+      }
+    }
+    const id = String(TabManager.nextId++);
+    TabManager.tabs.set(id, {
+      id,
+      view: null,
+      kind: 'internal',
+      title: mainResources().settings.title,
+      url: INTERNAL_SETTINGS_URL,
+      isLoading: false,
+      faviconUrl: null,
+    });
+    TabManager.activate(id);
   }
 
   /** Open a fresh tab immediately to the right of `refId` and focus it (Chrome's "New tab to the right"). */
@@ -136,6 +165,10 @@ export default class TabManager {
   static duplicateTab(id: string): void {
     const src = TabManager.tabs.get(id);
     if (!src) return;
+    if (src.view === null) {
+      TabManager.openSettings(); // internal page → just focus it (nothing to duplicate)
+      return;
+    }
     const url = src.view.webContents.getURL() || src.url;
     const newId = TabManager.createTab(url.length > 0 ? url : undefined);
     TabManager.placeAfter(newId, id);
@@ -165,42 +198,52 @@ export default class TabManager {
   }
 
   static navigateActive(rawUrl: string): void {
+    // Internal pages (tepegoz://settings) open as their own tab, rendered by the trusted chrome.
+    if (isInternalSettingsUrl(rawUrl)) {
+      TabManager.openSettings();
+      return;
+    }
     const tab = TabManager.active();
     if (!tab) return;
     const url = toNavigationUrl(rawUrl, NEW_TAB_URL);
+    if (tab.view === null) {
+      TabManager.createTab(url); // typing a URL while on an internal page opens a new web tab
+      return;
+    }
     void tab.view.webContents.loadURL(url).catch((err: unknown) => {
       Logger.warn('Navigation failed', { url, err: String(err) });
     });
   }
 
   static goBack(): void {
-    const wc = TabManager.active()?.view.webContents;
+    const wc = TabManager.active()?.view?.webContents;
     if (wc?.navigationHistory.canGoBack()) wc.navigationHistory.goBack();
   }
 
   static goForward(): void {
-    const wc = TabManager.active()?.view.webContents;
+    const wc = TabManager.active()?.view?.webContents;
     if (wc?.navigationHistory.canGoForward()) wc.navigationHistory.goForward();
   }
 
   static reloadActive(): void {
-    TabManager.active()?.view.webContents.reload();
+    TabManager.active()?.view?.webContents.reload();
   }
 
   /** The content area (below the chrome), in DIP, as measured by the renderer. */
   static setContentBounds(bounds: Rectangle): void {
     TabManager.bounds = bounds;
     if (TabManager.contentVisible) {
-      TabManager.active()?.view.setBounds(bounds);
+      TabManager.active()?.view?.setBounds(bounds);
     }
   }
 
-  /** Hide the web view so a chrome-rendered overlay (e.g. Settings) shows through. */
+  /** Hide the active web view so a chrome-rendered overlay (Agent Console) shows through. Internal
+   *  tabs have no view, so this is a no-op for them. */
   static setContentVisible(visible: boolean): void {
     const win = TabManager.requireWin();
     TabManager.contentVisible = visible;
     const tab = TabManager.active();
-    if (!tab) return;
+    if (!tab || tab.view === null) return;
     if (visible) {
       win.contentView.addChildView(tab.view);
       tab.view.setBounds(TabManager.bounds);
@@ -221,8 +264,8 @@ export default class TabManager {
     return {
       tabs,
       activeId: TabManager.activeId,
-      canGoBack: active?.view.webContents.navigationHistory.canGoBack() ?? false,
-      canGoForward: active?.view.webContents.navigationHistory.canGoForward() ?? false,
+      canGoBack: active?.view?.webContents.navigationHistory.canGoBack() ?? false,
+      canGoForward: active?.view?.webContents.navigationHistory.canGoForward() ?? false,
     };
   }
 
@@ -245,7 +288,7 @@ export default class TabManager {
   /** The active tab's webContents, for the agent perception layer (read DOM text). Null if none or
    *  destroyed. The agent reads through this; it never gets the chrome's webContents or contextBridge. */
   static activeWebContents(): WebContents | null {
-    const wc = TabManager.active()?.view.webContents;
+    const wc = TabManager.active()?.view?.webContents;
     return wc !== undefined && !wc.isDestroyed() ? wc : null;
   }
 
@@ -254,8 +297,8 @@ export default class TabManager {
     return TabManager.win;
   }
 
-  private static wireView(tab: Tab): void {
-    const wc = tab.view.webContents;
+  private static wireView(tab: Tab, view: WebContentsView): void {
+    const wc = view.webContents;
 
     // Browsed pages are untrusted. New windows open as tabs ONLY for http(s) URLs (no file:/custom
     // schemes); a popup from a non-foreground tab opens in the background and must not steal focus.

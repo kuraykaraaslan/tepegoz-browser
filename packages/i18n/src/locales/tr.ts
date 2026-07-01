@@ -76,6 +76,8 @@ export const tr: Resources = {
   },
   settings: {
     title: 'Ayarlar',
+    search: 'Ayarlarda ara',
+    noResults: 'Eşleşen ayar yok',
     providersTitle: 'Sağlayıcılar ve API anahtarları',
     providersSubtitle:
       'Anahtarlar bu cihazda şifrelenir (işletim sistemi anahtarlığı) ve sizin işleminiz olmadan cihazdan çıkmaz.',

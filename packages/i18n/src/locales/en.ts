@@ -78,6 +78,8 @@ export const en = {
   },
   settings: {
     title: 'Settings',
+    search: 'Search settings',
+    noResults: 'No matching settings',
     providersTitle: 'Providers & API keys',
     providersSubtitle:
       'Keys are encrypted on this device (OS keychain) and never leave it without your action.',

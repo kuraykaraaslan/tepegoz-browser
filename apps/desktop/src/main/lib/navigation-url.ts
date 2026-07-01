@@ -8,12 +8,20 @@
  *
  * Pure (no Electron) so it is unit-testable and reusable by every load entry point.
  */
+import { INTERNAL_SETTINGS_URL } from '../../shared/ipc-contract';
+
 const HTTP_SCHEME = /^https?:\/\//i;
 const LOCALHOST = /^(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i;
 
 /** True only for http/https URLs — the only schemes safe to load into an untrusted browsing view. */
 export function isWebUrl(url: string): boolean {
   return HTTP_SCHEME.test(url.trim());
+}
+
+/** True for the internal settings address (`tepegoz://settings`, trailing slash tolerated). Internal
+ *  pages are rendered by the trusted chrome, NOT loaded into an untrusted browsing view. */
+export function isInternalSettingsUrl(input: string): boolean {
+  return input.trim().toLowerCase().replace(/\/+$/, '') === INTERNAL_SETTINGS_URL;
 }
 
 function looksLikeHost(input: string): boolean {

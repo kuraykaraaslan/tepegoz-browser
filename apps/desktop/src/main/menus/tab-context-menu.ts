@@ -1,15 +1,6 @@
-import { app, Menu, type BrowserWindow, type MenuItemConstructorOptions } from 'electron';
-import { resolveLocale, resources, type Locale } from '@tepegoz/i18n';
-import PreferenceStore from '../preferences/preference-store';
+import { Menu, type BrowserWindow, type MenuItemConstructorOptions } from 'electron';
+import { mainResources } from '../lib/i18n-main';
 import TabManager from '../tabs';
-
-/** The localized strings for the active locale (pref override → OS locale → default), resolved per
- *  popup so the native menu follows a live locale change without an app restart. */
-function currentResources(): (typeof resources)[Locale] {
-  const pref = PreferenceStore.getAll().locale;
-  const locale: Locale = pref === 'en' || pref === 'tr' ? pref : resolveLocale(app.getLocale());
-  return resources[locale];
-}
 
 /**
  * Native tab right-click menu, mirroring Chrome's tab context menu (the subset Phase 1a supports).
@@ -21,7 +12,7 @@ export function showTabContextMenu(win: BrowserWindow, tabId: string): void {
   const idx = state.tabs.findIndex((tab) => tab.id === tabId);
   if (idx === -1) return; // tab vanished between right-click and IPC delivery
 
-  const t = currentResources();
+  const t = mainResources();
   const hasOthers = state.tabs.length > 1;
   const hasRight = idx < state.tabs.length - 1;
 

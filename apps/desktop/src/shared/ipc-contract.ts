@@ -45,6 +45,9 @@ export const IpcChannels = {
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];
 
+/** Internal (browser-served) page addresses, shown in the omnibox like Chrome's `chrome://` pages. */
+export const INTERNAL_SETTINGS_URL = 'tepegoz://settings';
+
 export interface AppInfo {
   name: string;
   version: string;
@@ -149,8 +152,9 @@ export interface TokenUsageSnapshot {
   totalTokens: number;
 }
 
-/** Actions the native main menu asks the chrome renderer to perform (UI state it owns). */
-export type MenuAction = 'open-settings' | 'open-agent';
+/** Actions the native main menu asks the chrome renderer to perform (chrome UI it owns). Settings is
+ *  a tab (opened by TabManager), so the only chrome-UI action is opening the Agent Console. */
+export type MenuAction = 'open-agent';
 
 /** Content-area rectangle (DIP) where the active tab's web view is laid out, below the chrome. */
 export interface ContentBounds {
