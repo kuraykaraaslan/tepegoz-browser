@@ -17,6 +17,10 @@ export const en = {
     // Omnibox suggestion hints (deterministic dropdown — no AI thread).
     omniboxSearchHint: 'Search the web',
     omniboxSwitchToTab: 'Switch to tab',
+    omniboxBookmark: 'Bookmark',
+    // Bookmark star (right of the omnibox).
+    bookmarkAdd: 'Bookmark this page',
+    bookmarkRemove: 'Remove bookmark',
     settings: 'Settings',
     menu: 'Main menu',
     exit: 'Exit',

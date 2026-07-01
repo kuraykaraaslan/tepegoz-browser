@@ -8,7 +8,7 @@
  * unit-testable and reusable. Ranking is intentionally simple and stable (no time-of-day, no `Math.random`).
  */
 
-export type OmniboxSuggestionKind = 'navigate' | 'search' | 'history' | 'tab' | 'calc';
+export type OmniboxSuggestionKind = 'navigate' | 'search' | 'history' | 'bookmark' | 'tab' | 'calc';
 
 /** What the omnibox does when a suggestion is chosen — dispatched via the component's callbacks. */
 export type OmniboxAction =
@@ -39,11 +39,18 @@ export interface OmniboxHistoryCandidate {
   visitCount: number;
 }
 
+export interface OmniboxBookmarkCandidate {
+  url: string;
+  title: string;
+}
+
 export interface OmniboxSuggestSources {
   /** Currently open tabs (host filters out the active tab if desired). */
   tabs: readonly OmniboxTabCandidate[];
   /** History rows, pre-filtered by the host's `history:search` (re-filtered here defensively). */
   history: readonly OmniboxHistoryCandidate[];
+  /** Bookmarks (host passes the full list; filtered + capped here). */
+  bookmarks?: readonly OmniboxBookmarkCandidate[];
 }
 
 /** Localized hints the builder needs, so the package stays i18n-agnostic. */
@@ -52,9 +59,11 @@ export interface OmniboxSuggestLabels {
   search: string;
   /** Subtitle for a switch-to-open-tab suggestion, e.g. "Switch to tab". */
   switchToTab: string;
+  /** Subtitle for a bookmark suggestion, e.g. "Bookmark". */
+  bookmark: string;
 }
 
-export type OmniboxScope = 'all' | 'tab' | 'history';
+export type OmniboxScope = 'all' | 'tab' | 'history' | 'bookmark';
 
 /** A parsed omnibox query: the scope prefix (if any) and the remaining search term. */
 export interface OmniboxQuery {
@@ -65,6 +74,7 @@ export interface OmniboxQuery {
 const SCOPE_PREFIXES: ReadonlyArray<readonly [string, OmniboxScope]> = [
   ['tab:', 'tab'],
   ['history:', 'history'],
+  ['bookmark:', 'bookmark'],
 ];
 
 /** Split a leading `tab:` / `history:` scope prefix off the raw query. Prefix match is case-insensitive. */
@@ -105,7 +115,12 @@ function matches(needle: string, ...haystacks: string[]): boolean {
 /** The typed text itself: navigate a URL, else search the web. Only shown in the unscoped view. */
 function primarySuggestion(term: string, labels: OmniboxSuggestLabels): OmniboxSuggestion {
   if (looksNavigable(term)) {
-    return { key: 'primary', kind: 'navigate', title: term, action: { type: 'navigate', input: term } };
+    return {
+      key: 'primary',
+      kind: 'navigate',
+      title: term,
+      action: { type: 'navigate', input: term },
+    };
   }
   return {
     key: 'primary',
@@ -133,23 +148,54 @@ function tabSuggestions(
     }));
 }
 
-/** History matching the needle → navigate suggestions, most-visited first, duplicate URLs collapsed. */
+/** Bookmarks matching the needle → navigate suggestions (curated, so ranked above history). */
+function bookmarkSuggestions(
+  bookmarks: readonly OmniboxBookmarkCandidate[],
+  needle: string,
+  labels: OmniboxSuggestLabels,
+): OmniboxSuggestion[] {
+  return bookmarks
+    .filter((b) => matches(needle, b.title, b.url))
+    .map((b) => ({
+      key: `bookmark:${b.url}`,
+      kind: 'bookmark',
+      title: b.title.length > 0 ? b.title : b.url,
+      subtitle: labels.bookmark,
+      action: { type: 'navigate', input: b.url },
+    }));
+}
+
+/** History matching the needle → navigate suggestions, most-visited first. */
 function historySuggestions(
   history: OmniboxSuggestSources['history'],
   needle: string,
 ): OmniboxSuggestion[] {
-  const seenUrls = new Set<string>();
-  const out: OmniboxSuggestion[] = [];
-  for (const entry of [...history].sort((a, b) => b.visitCount - a.visitCount)) {
-    if (seenUrls.has(entry.url) || !matches(needle, entry.title, entry.url)) continue;
-    seenUrls.add(entry.url);
-    out.push({
+  return [...history]
+    .sort((a, b) => b.visitCount - a.visitCount)
+    .filter((entry) => matches(needle, entry.title, entry.url))
+    .map((entry) => ({
       key: `history:${entry.url}`,
       kind: 'history',
       title: entry.title.length > 0 ? entry.title : entry.url,
       subtitle: entry.url,
       action: { type: 'navigate', input: entry.url },
-    });
+    }));
+}
+
+/**
+ * Drop later suggestions whose navigate target (URL / typed text) already appeared. Runs in priority
+ * order, so the first (higher-ranked) copy wins — the typed URL beats a bookmark beats a history row.
+ * `activateTab` suggestions live in a separate id space and are never collapsed.
+ */
+function dedupeByNavTarget(suggestions: readonly OmniboxSuggestion[]): OmniboxSuggestion[] {
+  const seen = new Set<string>();
+  const out: OmniboxSuggestion[] = [];
+  for (const s of suggestions) {
+    if (s.action.type === 'navigate') {
+      if (seen.has(s.action.input)) continue;
+      seen.add(s.action.input);
+    }
+    out.push(s);
   }
   return out;
 }
@@ -157,9 +203,9 @@ function historySuggestions(
 /**
  * Build the unified, ordered suggestion list for a typed omnibox value.
  *
- * Order (unscoped): primary navigate/search action → matching open tabs → matching history.
- * Scoped (`tab:` / `history:`) narrows to a single source and drops the primary action. Duplicate URLs
- * are collapsed and the list is capped at {@link MAX_OMNIBOX_SUGGESTIONS}.
+ * Order (unscoped): primary navigate/search action → open tabs → bookmarks → history. Scoped
+ * (`tab:` / `history:` / `bookmark:`) narrows to a single source and drops the primary action.
+ * Duplicate navigate targets are collapsed and the list is capped at {@link MAX_OMNIBOX_SUGGESTIONS}.
  */
 export function buildOmniboxSuggestions(
   query: string,
@@ -169,26 +215,18 @@ export function buildOmniboxSuggestions(
   const { scope, term } = parseOmniboxQuery(query);
   const needle = term.toLowerCase();
 
-  // Nothing typed and no scope prefix → no suggestions. A bare `tab:` / `history:` (empty term) still
-  // lists everything in that source, which is the point of the prefix.
+  // Nothing typed and no scope prefix → no suggestions. A bare `tab:` / `history:` / `bookmark:`
+  // (empty term) still lists everything in that source, which is the point of the prefix.
   if (scope === 'all' && term.length === 0) return [];
 
   const out: OmniboxSuggestion[] = [];
   if (scope === 'all') out.push(primarySuggestion(term, labels));
-  if (scope !== 'history') out.push(...tabSuggestions(sources.tabs, needle, labels));
-  if (scope !== 'tab') out.push(...historySuggestions(sources.history, needle));
+  if (scope === 'all' || scope === 'tab') out.push(...tabSuggestions(sources.tabs, needle, labels));
+  if (scope === 'all' || scope === 'bookmark') {
+    out.push(...bookmarkSuggestions(sources.bookmarks ?? [], needle, labels));
+  }
+  if (scope === 'all' || scope === 'history')
+    out.push(...historySuggestions(sources.history, needle));
 
-  // Collapse a history row that duplicates the primary navigate target (typed a full URL that's visited).
-  const primaryNav = out.find((s) => s.key === 'primary' && s.kind === 'navigate');
-  const deduped =
-    primaryNav === undefined
-      ? out
-      : out.filter(
-          (s) =>
-            s.key === 'primary' ||
-            s.kind !== 'history' ||
-            (s.action.type === 'navigate' && s.action.input !== primaryNav.title),
-        );
-
-  return deduped.slice(0, MAX_OMNIBOX_SUGGESTIONS);
+  return dedupeByNavTarget(out).slice(0, MAX_OMNIBOX_SUGGESTIONS);
 }

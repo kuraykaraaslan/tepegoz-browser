@@ -4,3 +4,4 @@ export * from './meta';
 export * from './event-journal';
 export * from './blob-store';
 export * from './history-store';
+export * from './bookmark-store';

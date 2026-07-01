@@ -29,7 +29,11 @@ import type {
 import { extensionIdFromPageUrl, extensionLabel, extensionPageUrl } from '../../shared/extensions';
 import { EXTENSIONS, extensionDefById } from './extensions/registry';
 import { BrowserChrome } from '@tepegoz/browser-chrome';
-import { buildOmniboxSuggestions, parseOmniboxQuery, type OmniboxSuggestion } from '@tepegoz/omnibox';
+import {
+  buildOmniboxSuggestions,
+  parseOmniboxQuery,
+  type OmniboxSuggestion,
+} from '@tepegoz/omnibox';
 import { HistoryPage } from '@tepegoz/history-ui';
 import { ExtensionsPage } from './components/ExtensionsPage';
 import { ExtensionTray } from './components/ExtensionTray';
@@ -309,12 +313,14 @@ export function App() {
   const extensionStates = prefs?.extensions ?? [];
   const enabledExtensions = EXTENSIONS.filter((ext) => isExtensionEnabled(extensionStates, ext.id));
 
-  // Deterministic omnibox suggestions (history + open tabs + navigate/search). Refs keep the injected
-  // callbacks stable so the Omnibox effect doesn't refetch every render; they mirror the latest state.
+  // Deterministic omnibox suggestions (history + bookmarks + open tabs + navigate/search). Refs keep the
+  // injected callbacks stable so the Omnibox effect doesn't refetch every render; they mirror latest state.
   const tabsRef = useRef(tabs);
+  const bookmarksRef = useRef<{ url: string; title: string }[]>([]);
   const suggestLabelsRef = useRef({
     search: browserT.omniboxSearchHint,
     switchToTab: browserT.omniboxSwitchToTab,
+    bookmark: browserT.omniboxBookmark,
   });
   useEffect(() => {
     tabsRef.current = tabs;
@@ -323,8 +329,55 @@ export function App() {
     suggestLabelsRef.current = {
       search: browserT.omniboxSearchHint,
       switchToTab: browserT.omniboxSwitchToTab,
+      bookmark: browserT.omniboxBookmark,
     };
   }, [browserT]);
+
+  // Bookmark star state for the active tab + the cached bookmark list feeding omnibox suggestions.
+  const [activeBookmarked, setActiveBookmarked] = useState(false);
+  const canBookmark = /^https?:\/\//i.test(currentUrl);
+
+  const refreshBookmarks = useCallback(async (): Promise<void> => {
+    try {
+      const list = await window.tepegoz.listBookmarks();
+      bookmarksRef.current = list.map((b) => ({ url: b.url, title: b.title }));
+    } catch {
+      bookmarksRef.current = [];
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshBookmarks();
+  }, [refreshBookmarks]);
+
+  // Reflect whether the active page is bookmarked (drives the star's filled/outline state).
+  useEffect(() => {
+    if (!canBookmark) {
+      setActiveBookmarked(false);
+      return;
+    }
+    let cancelled = false;
+    void window.tepegoz.isBookmarked(currentUrl).then(
+      (b) => {
+        if (!cancelled) setActiveBookmarked(b);
+      },
+      () => {
+        if (!cancelled) setActiveBookmarked(false);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUrl, canBookmark]);
+
+  const onToggleBookmark = useCallback(async (): Promise<void> => {
+    const tab = tabsRef.current.tabs.find((tb) => tb.id === tabsRef.current.activeId);
+    const url = tab?.url ?? '';
+    if (!/^https?:\/\//i.test(url)) return;
+    const nowBookmarked = await window.tepegoz.toggleBookmark(url, tab?.title ?? url);
+    setActiveBookmarked(nowBookmarked);
+    await refreshBookmarks();
+  }, [refreshBookmarks]);
 
   const onOmniboxSuggest = useCallback(async (query: string): Promise<OmniboxSuggestion[]> => {
     const { term } = parseOmniboxQuery(query);
@@ -332,7 +385,7 @@ export function App() {
     try {
       history = term.length > 0 ? await window.tepegoz.searchHistory(term) : [];
     } catch {
-      history = []; // history unavailable → still surface tabs + the navigate/search action
+      history = []; // history unavailable → still surface tabs/bookmarks + the navigate/search action
     }
     const state = tabsRef.current;
     return buildOmniboxSuggestions(
@@ -343,6 +396,7 @@ export function App() {
           .filter((tb) => tb.id !== state.activeId)
           .map((tb) => ({ id: tb.id, title: tb.title, url: tb.url })),
         history: history.map((h) => ({ url: h.url, title: h.title, visitCount: h.visitCount })),
+        bookmarks: bookmarksRef.current,
       },
       suggestLabelsRef.current,
     );
@@ -416,107 +470,116 @@ export function App() {
 
   return (
     <I18nProvider locale={locale}>
-    <div className="flex h-screen flex-col bg-surface-base text-text-primary">
-      <BrowserChrome
-        t={{ common: coreT.common, window: coreT.window, browser: browserT }}
-        tabs={tabs.tabs}
-        activeTabId={tabs.activeId}
-        onSelectTab={(id) => {
-          setActiveSurface(null); // close any extension surface when switching tabs
-          window.tepegoz.activateTab(id);
-        }}
-        onCloseTab={(id) => window.tepegoz.closeTab(id)}
-        onTabContextMenu={(id) => window.tepegoz.showTabContextMenu(id)}
-        onNewTab={() => {
-          setActiveSurface(null);
-          window.tepegoz.createTab();
-        }}
-        isMaximized={isMaximized}
-        onMinimize={() => window.tepegoz.minimizeWindow()}
-        onToggleMaximize={() => window.tepegoz.toggleMaximizeWindow()}
-        onClose={() => window.tepegoz.closeWindow()}
-        currentUrl={currentUrl}
-        canGoBack={tabs.canGoBack}
-        canGoForward={tabs.canGoForward}
-        onBack={() => window.tepegoz.tabGoBack()}
-        onForward={() => window.tepegoz.tabGoForward()}
-        onReload={() => window.tepegoz.tabReload()}
-        onMenu={() => window.tepegoz.showMainMenu()}
-        onNavigate={(input) => window.tepegoz.navigateTab(input)}
-        onSuggest={onOmniboxSuggest}
-        onActivateTab={onActivateTabFromOmnibox}
-        toolbarActions={
-          <ExtensionTray
-            locale={locale}
-            extensions={enabledExtensions}
-            activeExtensionId={activeSurface?.id ?? sidebarExtId ?? popupOpenId ?? null}
-            onExtensionAction={runExtensionAction}
-          />
-        }
-      />
-      <div className="relative flex flex-1 overflow-hidden">
-        {/* Left region = the web-view area (its bounds are measured from contentRef, so they exclude
+      <div className="flex h-screen flex-col bg-surface-base text-text-primary">
+        <BrowserChrome
+          t={{ common: coreT.common, window: coreT.window, browser: browserT }}
+          tabs={tabs.tabs}
+          activeTabId={tabs.activeId}
+          onSelectTab={(id) => {
+            setActiveSurface(null); // close any extension surface when switching tabs
+            window.tepegoz.activateTab(id);
+          }}
+          onCloseTab={(id) => window.tepegoz.closeTab(id)}
+          onTabContextMenu={(id) => window.tepegoz.showTabContextMenu(id)}
+          onNewTab={() => {
+            setActiveSurface(null);
+            window.tepegoz.createTab();
+          }}
+          isMaximized={isMaximized}
+          onMinimize={() => window.tepegoz.minimizeWindow()}
+          onToggleMaximize={() => window.tepegoz.toggleMaximizeWindow()}
+          onClose={() => window.tepegoz.closeWindow()}
+          currentUrl={currentUrl}
+          canGoBack={tabs.canGoBack}
+          canGoForward={tabs.canGoForward}
+          onBack={() => window.tepegoz.tabGoBack()}
+          onForward={() => window.tepegoz.tabGoForward()}
+          onReload={() => window.tepegoz.tabReload()}
+          onMenu={() => window.tepegoz.showMainMenu()}
+          onNavigate={(input) => window.tepegoz.navigateTab(input)}
+          onSuggest={onOmniboxSuggest}
+          onActivateTab={onActivateTabFromOmnibox}
+          isBookmarked={activeBookmarked}
+          canBookmark={canBookmark}
+          onToggleBookmark={() => void onToggleBookmark()}
+          toolbarActions={
+            <ExtensionTray
+              locale={locale}
+              extensions={enabledExtensions}
+              activeExtensionId={activeSurface?.id ?? sidebarExtId ?? popupOpenId ?? null}
+              onExtensionAction={runExtensionAction}
+            />
+          }
+        />
+        <div className="relative flex flex-1 overflow-hidden">
+          {/* Left region = the web-view area (its bounds are measured from contentRef, so they exclude
             the sidebar); the resizable sidebar dock sits to its right. */}
-        <div ref={contentRef} className="relative flex-1 overflow-hidden">
-        {/* The active tab's web page is a separate WebContentsView laid over this area by main. The
+          <div ref={contentRef} className="relative flex-1 overflow-hidden">
+            {/* The active tab's web page is a separate WebContentsView laid over this area by main. The
             internal app tabs (Settings/Extensions/History), extension `page` tabs, and open overlay
             surfaces have no web view, so the chrome renders them here instead. */}
-        {resizeSnapshot !== null && (
-          // A still of the page shown while the live web view is hidden during a sidebar resize drag.
-          <img
-            src={resizeSnapshot}
-            alt=""
-            aria-hidden="true"
-            draggable={false}
-            className="pointer-events-none absolute inset-0 h-full w-full object-cover object-left-top"
-          />
-        )}
-        {settingsActive && (
-          <div className="absolute inset-0 bg-surface-base">
-            {prefs && status ? (
-              <SettingsPage
-                prefs={prefs}
-                status={status}
-                onUpdatePrefs={onUpdatePrefs}
-                onSetKey={onSetKey}
-                onRemoveKey={onRemoveKey}
+            {resizeSnapshot !== null && (
+              // A still of the page shown while the live web view is hidden during a sidebar resize drag.
+              <img
+                src={resizeSnapshot}
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+                className="pointer-events-none absolute inset-0 h-full w-full object-cover object-left-top"
               />
-            ) : (
-              <p className="px-6 py-8 text-sm text-text-secondary">…</p>
             )}
+            {settingsActive && (
+              <div className="absolute inset-0 bg-surface-base">
+                {prefs && status ? (
+                  <SettingsPage
+                    prefs={prefs}
+                    status={status}
+                    onUpdatePrefs={onUpdatePrefs}
+                    onSetKey={onSetKey}
+                    onRemoveKey={onRemoveKey}
+                  />
+                ) : (
+                  <p className="px-6 py-8 text-sm text-text-secondary">…</p>
+                )}
+              </div>
+            )}
+            {extensionsActive && (
+              <div className="absolute inset-0 bg-surface-base">
+                <ExtensionsPage
+                  locale={locale}
+                  states={extensionStates}
+                  onToggle={onToggleExtension}
+                />
+              </div>
+            )}
+            {historyActive && (
+              <div className="absolute inset-0 bg-surface-base">
+                <HistoryPage
+                  labels={{
+                    title: historyT.title,
+                    search: historyT.search,
+                    clear: historyT.clear,
+                    delete: historyT.delete,
+                    empty: historyT.empty,
+                  }}
+                  list={(q) =>
+                    q.length === 0 ? window.tepegoz.getHistory() : window.tepegoz.searchHistory(q)
+                  }
+                  remove={(url) => window.tepegoz.deleteHistory(url)}
+                  clear={() => window.tepegoz.clearHistory()}
+                />
+              </div>
+            )}
+            {PageSurface !== undefined && (
+              <div className="absolute inset-0 bg-surface-base">
+                <PageSurface onClose={closeSurface} />
+              </div>
+            )}
+            {renderActiveSurface()}
           </div>
-        )}
-        {extensionsActive && (
-          <div className="absolute inset-0 bg-surface-base">
-            <ExtensionsPage locale={locale} states={extensionStates} onToggle={onToggleExtension} />
-          </div>
-        )}
-        {historyActive && (
-          <div className="absolute inset-0 bg-surface-base">
-            <HistoryPage
-              labels={{
-                title: historyT.title,
-                search: historyT.search,
-                clear: historyT.clear,
-                delete: historyT.delete,
-                empty: historyT.empty,
-              }}
-              list={(q) => (q.length === 0 ? window.tepegoz.getHistory() : window.tepegoz.searchHistory(q))}
-              remove={(url) => window.tepegoz.deleteHistory(url)}
-              clear={() => window.tepegoz.clearHistory()}
-            />
-          </div>
-        )}
-        {PageSurface !== undefined && (
-          <div className="absolute inset-0 bg-surface-base">
-            <PageSurface onClose={closeSurface} />
-          </div>
-        )}
-        {renderActiveSurface()}
+          {renderSidebar()}
         </div>
-        {renderSidebar()}
       </div>
-    </div>
     </I18nProvider>
   );
 }

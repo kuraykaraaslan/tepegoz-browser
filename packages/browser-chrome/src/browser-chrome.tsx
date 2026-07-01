@@ -23,6 +23,8 @@ export interface BrowserChromeStrings {
     reload: string;
     menu: string;
     omniboxPlaceholder: string;
+    bookmarkAdd: string;
+    bookmarkRemove: string;
   };
 }
 
@@ -53,6 +55,13 @@ export interface BrowserChromeProps {
   onSuggest?: ((query: string) => Promise<OmniboxSuggestion[]>) | undefined;
   /** Switch to an already-open tab (for `activateTab` omnibox suggestions). */
   onActivateTab?: ((tabId: string) => void) | undefined;
+  // Bookmark star (right of the omnibox).
+  /** Whether the active page is bookmarked (filled vs. outline star). */
+  isBookmarked?: boolean | undefined;
+  /** True only for bookmarkable pages (http(s)); the star is disabled otherwise. */
+  canBookmark?: boolean | undefined;
+  /** Toggle the active page's bookmark. Omit to hide the star. */
+  onToggleBookmark?: (() => void) | undefined;
   /** Host-provided controls between the omnibox and the menu button (e.g. the extension tray + puzzle). */
   toolbarActions?: ReactNode;
 }
@@ -86,6 +95,9 @@ export function BrowserChrome({
   onNavigate,
   onSuggest,
   onActivateTab,
+  isBookmarked,
+  canBookmark,
+  onToggleBookmark,
   toolbarActions,
 }: BrowserChromeProps) {
   return (
@@ -135,6 +147,8 @@ export function BrowserChrome({
           forward: t.browser.forward,
           reload: t.browser.reload,
           menu: t.browser.menu,
+          bookmarkAdd: t.browser.bookmarkAdd,
+          bookmarkRemove: t.browser.bookmarkRemove,
         }}
         onBack={onBack}
         onForward={onForward}
@@ -145,6 +159,9 @@ export function BrowserChrome({
         onNavigate={onNavigate}
         onSuggest={onSuggest}
         onActivateTab={onActivateTab}
+        isBookmarked={isBookmarked}
+        canBookmark={canBookmark}
+        onToggleBookmark={onToggleBookmark}
         actions={toolbarActions}
       />
     </>

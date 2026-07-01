@@ -85,6 +85,23 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 3,
+    up: (db) => {
+      db.exec(`
+        -- Bookmarks: one row per URL (re-bookmarking refreshes the title via UNIQUE(url) upsert).
+        -- Newest-first listing uses idx_bookmarks_ts.
+        CREATE TABLE bookmarks (
+          id    INTEGER PRIMARY KEY AUTOINCREMENT,
+          url   TEXT NOT NULL,
+          title TEXT NOT NULL,
+          ts    INTEGER NOT NULL
+        );
+        CREATE UNIQUE INDEX idx_bookmarks_url ON bookmarks (url);
+        CREATE INDEX idx_bookmarks_ts ON bookmarks (ts);
+      `);
+    },
+  },
 ];
 
 /**
@@ -93,7 +110,9 @@ const MIGRATIONS: Migration[] = [
  */
 export function migrate(db: Db): number {
   const current = userVersion(db);
-  const pending = MIGRATIONS.filter((m) => m.version > current).sort((a, b) => a.version - b.version);
+  const pending = MIGRATIONS.filter((m) => m.version > current).sort(
+    (a, b) => a.version - b.version,
+  );
   const run = db.transaction(() => {
     for (const m of pending) {
       m.up(db);

@@ -7,7 +7,7 @@ import {
   type OmniboxSuggestSources,
 } from './omnibox-suggest';
 
-const LABELS = { search: 'Search the web', switchToTab: 'Switch to tab' };
+const LABELS = { search: 'Search the web', switchToTab: 'Switch to tab', bookmark: 'Bookmark' };
 
 const SOURCES: OmniboxSuggestSources = {
   tabs: [
@@ -19,12 +19,17 @@ const SOURCES: OmniboxSuggestSources = {
     { url: 'https://example.org', title: 'Example Org', visitCount: 2 },
     { url: 'https://news.ycombinator.com', title: 'Hacker News', visitCount: 20 },
   ],
+  bookmarks: [
+    { url: 'https://example.net/docs', title: 'Example Docs' },
+    { url: 'https://example.com/blog', title: 'Example Blog (bookmarked)' },
+  ],
 };
 
 describe('parseOmniboxQuery', () => {
-  it('detects tab: and history: scope prefixes (case-insensitive) and trims the term', () => {
+  it('detects tab:/history:/bookmark: scope prefixes (case-insensitive) and trims the term', () => {
     expect(parseOmniboxQuery('tab: github')).toEqual({ scope: 'tab', term: 'github' });
     expect(parseOmniboxQuery('HISTORY:blog')).toEqual({ scope: 'history', term: 'blog' });
+    expect(parseOmniboxQuery('Bookmark:docs')).toEqual({ scope: 'bookmark', term: 'docs' });
   });
 
   it('treats a prefix-free query as the "all" scope', () => {
@@ -34,7 +39,13 @@ describe('parseOmniboxQuery', () => {
 
 describe('looksNavigable', () => {
   it('recognises URLs, dotted hosts, localhost and host:port', () => {
-    for (const s of ['https://x.com', 'example.com', 'example.com/path', 'localhost:3000', '192.168.1.1'])
+    for (const s of [
+      'https://x.com',
+      'example.com',
+      'example.com/path',
+      'localhost:3000',
+      '192.168.1.1',
+    ])
       expect(looksNavigable(s)).toBe(true);
   });
 
@@ -50,19 +61,46 @@ describe('buildOmniboxSuggestions', () => {
 
   it('puts a search suggestion first for free text, then matching tabs/history', () => {
     const out = buildOmniboxSuggestions('example', SOURCES, LABELS);
-    expect(out[0]).toMatchObject({ kind: 'search', action: { type: 'navigate', input: 'example' } });
+    expect(out[0]).toMatchObject({
+      kind: 'search',
+      action: { type: 'navigate', input: 'example' },
+    });
     expect(out.some((s) => s.kind === 'tab' && s.action.type === 'activateTab')).toBe(true);
     expect(out.some((s) => s.kind === 'history')).toBe(true);
   });
 
   it('puts a navigate (not search) suggestion first when the text looks like a URL', () => {
     const out = buildOmniboxSuggestions('example.com', SOURCES, LABELS);
-    expect(out[0]).toMatchObject({ kind: 'navigate', action: { type: 'navigate', input: 'example.com' } });
+    expect(out[0]).toMatchObject({
+      kind: 'navigate',
+      action: { type: 'navigate', input: 'example.com' },
+    });
   });
 
   it('ranks history by visit count (most-visited first)', () => {
-    const out = buildOmniboxSuggestions('example', SOURCES, LABELS).filter((s) => s.kind === 'history');
+    // Use the history: scope so bookmarks don't shadow the example.com/blog history row.
+    const out = buildOmniboxSuggestions('history:example', SOURCES, LABELS);
     expect(out[0]?.subtitle).toBe('https://example.com/blog'); // visitCount 9 before 2
+  });
+
+  it('ranks bookmarks above history and collapses a history row that duplicates a bookmark', () => {
+    const out = buildOmniboxSuggestions('example', SOURCES, LABELS);
+    const blog = out.filter(
+      (s) => s.action.type === 'navigate' && s.action.input === 'https://example.com/blog',
+    );
+    expect(blog).toHaveLength(1);
+    expect(blog[0]?.kind).toBe('bookmark'); // bookmark wins over the same-URL history row
+    // The bookmark suggestion appears before any history suggestion.
+    const firstBookmark = out.findIndex((s) => s.kind === 'bookmark');
+    const firstHistory = out.findIndex((s) => s.kind === 'history');
+    expect(firstBookmark).toBeGreaterThanOrEqual(0);
+    expect(firstBookmark).toBeLessThan(firstHistory);
+  });
+
+  it('bookmark: scope only returns bookmarks', () => {
+    const out = buildOmniboxSuggestions('bookmark:docs', SOURCES, LABELS);
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({ kind: 'bookmark', title: 'Example Docs' });
   });
 
   it('tab: scope only returns open tabs and drops the primary action', () => {

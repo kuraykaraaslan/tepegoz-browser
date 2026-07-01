@@ -54,6 +54,14 @@ export const AgentPlanResponseSchema = z.object({
 export const HistoryQuerySchema = z.string().max(200);
 export const HistoryUrlSchema = z.string().min(1).max(4096);
 
+/** `bookmarks:toggle` payload — the page URL + its title (title defaults to the URL if empty). */
+export const BookmarkToggleSchema = z.object({
+  url: z.string().min(1).max(4096),
+  title: z.string().max(2048),
+});
+/** `bookmarks:is-bookmarked` payload — a single URL to look up. */
+export const BookmarkUrlSchema = z.string().min(1).max(4096);
+
 /** `user-agent:set` payload — a UA string to apply, or null to reset to the browser default. */
 export const UserAgentSelectionSchema = z.string().max(512).nullable();
 

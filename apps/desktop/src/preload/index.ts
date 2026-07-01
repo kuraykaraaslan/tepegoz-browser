@@ -6,6 +6,7 @@ import {
   type AgentPlanPreview,
   type AgentRunResult,
   type AppInfo,
+  type BookmarkEntry,
   type ContentBounds,
   type CredentialsStatus,
   type ExtensionId,
@@ -29,7 +30,10 @@ const api: TepegozApi = {
   getCredentialsStatus: () =>
     ipcRenderer.invoke(IpcChannels.credentialsStatus) as Promise<CredentialsStatus>,
   setProviderKey: (provider: ProviderId, apiKey: string) =>
-    ipcRenderer.invoke(IpcChannels.credentialsSet, { provider, apiKey }) as Promise<CredentialsStatus>,
+    ipcRenderer.invoke(IpcChannels.credentialsSet, {
+      provider,
+      apiKey,
+    }) as Promise<CredentialsStatus>,
   removeProviderKey: (provider: ProviderId) =>
     ipcRenderer.invoke(IpcChannels.credentialsRemove, { provider }) as Promise<CredentialsStatus>,
   minimizeWindow: () => {
@@ -41,8 +45,7 @@ const api: TepegozApi = {
   closeWindow: () => {
     ipcRenderer.send(IpcChannels.windowClose);
   },
-  isWindowMaximized: () =>
-    ipcRenderer.invoke(IpcChannels.windowIsMaximized) as Promise<boolean>,
+  isWindowMaximized: () => ipcRenderer.invoke(IpcChannels.windowIsMaximized) as Promise<boolean>,
   onWindowMaximizedChange: (callback: (maximized: boolean) => void) => {
     const listener = (_event: unknown, maximized: boolean): void => {
       callback(maximized);
@@ -177,6 +180,11 @@ const api: TepegozApi = {
   deleteHistory: (url: string) =>
     ipcRenderer.invoke(IpcChannels.historyDelete, url) as Promise<HistoryEntry[]>,
   clearHistory: () => ipcRenderer.invoke(IpcChannels.historyClear) as Promise<HistoryEntry[]>,
+  listBookmarks: () => ipcRenderer.invoke(IpcChannels.bookmarksList) as Promise<BookmarkEntry[]>,
+  toggleBookmark: (url: string, title: string) =>
+    ipcRenderer.invoke(IpcChannels.bookmarksToggle, { url, title }) as Promise<boolean>,
+  isBookmarked: (url: string) =>
+    ipcRenderer.invoke(IpcChannels.bookmarksIsBookmarked, url) as Promise<boolean>,
   platform: process.platform,
 };
 

@@ -29,10 +29,10 @@ export type {
   TokenUsageSnapshot,
 };
 
-// Browsing-history entry type lives in the persistence package (single source). Type-only import →
-// erased, so the sandboxed preload stays dependency-free.
-import type { HistoryEntry } from '@tepegoz/persistence';
-export type { HistoryEntry };
+// Browsing-history + bookmark entry types live in the persistence package (single source). Type-only
+// imports → erased, so the sandboxed preload stays dependency-free.
+import type { BookmarkEntry, HistoryEntry } from '@tepegoz/persistence';
+export type { BookmarkEntry, HistoryEntry };
 
 export const IpcChannels = {
   appGetInfo: 'app:get-info',
@@ -77,6 +77,9 @@ export const IpcChannels = {
   historySearch: 'history:search',
   historyDelete: 'history:delete',
   historyClear: 'history:clear',
+  bookmarksList: 'bookmarks:list',
+  bookmarksToggle: 'bookmarks:toggle',
+  bookmarksIsBookmarked: 'bookmarks:is-bookmarked',
   userAgentGet: 'user-agent:get',
   userAgentSet: 'user-agent:set',
 } as const;
@@ -251,5 +254,12 @@ export interface TepegozApi {
   searchHistory(query: string): Promise<HistoryEntry[]>;
   deleteHistory(url: string): Promise<HistoryEntry[]>;
   clearHistory(): Promise<HistoryEntry[]>;
+  // Bookmarks. Only http(s) pages are bookmarkable (internal tepegoz:// pages are rejected in main).
+  /** All bookmarks, newest-first. */
+  listBookmarks(): Promise<BookmarkEntry[]>;
+  /** Add the page if absent, else remove it. Returns the resulting bookmarked state. */
+  toggleBookmark(url: string, title: string): Promise<boolean>;
+  /** Whether a URL is currently bookmarked (drives the star's filled/outline state). */
+  isBookmarked(url: string): Promise<boolean>;
   readonly platform: string;
 }

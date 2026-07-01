@@ -15,6 +15,9 @@ export interface NavToolbarLabels {
   forward: string;
   reload: string;
   menu: string;
+  /** Star aria-labels (state-dependent). Optional — omit to hide the bookmark star. */
+  bookmarkAdd?: string;
+  bookmarkRemove?: string;
 }
 
 export interface NavToolbarProps {
@@ -33,6 +36,13 @@ export interface NavToolbarProps {
   onSuggest?: ((query: string) => Promise<OmniboxSuggestion[]>) | undefined;
   /** Switch to an already-open tab (for `activateTab` omnibox suggestions). */
   onActivateTab?: ((tabId: string) => void) | undefined;
+  // Bookmark star (Chrome-style, right of the omnibox). Omit onToggleBookmark to hide it entirely.
+  /** Whether the active page is bookmarked (filled vs. outline star). */
+  isBookmarked?: boolean | undefined;
+  /** True only for bookmarkable pages (http(s)); the star is disabled otherwise. */
+  canBookmark?: boolean | undefined;
+  /** Toggle the active page's bookmark. */
+  onToggleBookmark?: (() => void) | undefined;
   /** Host-provided controls between the omnibox and the menu button (e.g. pinned extension icons). */
   actions?: ReactNode;
 }
@@ -56,6 +66,9 @@ export function NavToolbar({
   onNavigate,
   onSuggest,
   onActivateTab,
+  isBookmarked = false,
+  canBookmark = false,
+  onToggleBookmark,
   actions,
 }: NavToolbarProps) {
   return (
@@ -68,7 +81,14 @@ export function NavToolbar({
         className={NAV_BTN}
       >
         <svg className="h-4 w-4" viewBox="0 0 16 16" aria-hidden="true">
-          <path d="M10 3 L5 8 L10 13" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M10 3 L5 8 L10 13"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       </button>
       <button
@@ -79,13 +99,33 @@ export function NavToolbar({
         className={NAV_BTN}
       >
         <svg className="h-4 w-4" viewBox="0 0 16 16" aria-hidden="true">
-          <path d="M6 3 L11 8 L6 13" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M6 3 L11 8 L6 13"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       </button>
       <button type="button" aria-label={labels.reload} onClick={onReload} className={NAV_BTN}>
         <svg className="h-4 w-4" viewBox="0 0 16 16" aria-hidden="true">
-          <path d="M13 8 A5 5 0 1 1 11.5 4.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-          <path d="M13 2 V5 H10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M13 8 A5 5 0 1 1 11.5 4.5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+          />
+          <path
+            d="M13 2 V5 H10"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       </button>
 
@@ -97,6 +137,31 @@ export function NavToolbar({
         onSuggest={onSuggest}
         onActivateTab={onActivateTab}
       />
+
+      {onToggleBookmark !== undefined && (
+        <button
+          type="button"
+          aria-label={isBookmarked ? labels.bookmarkRemove : labels.bookmarkAdd}
+          aria-pressed={isBookmarked}
+          disabled={!canBookmark}
+          onClick={onToggleBookmark}
+          className={NAV_BTN}
+        >
+          <svg
+            className="h-4 w-4"
+            viewBox="0 0 16 16"
+            aria-hidden="true"
+            fill={isBookmarked ? 'currentColor' : 'none'}
+          >
+            <path
+              d="M8 1.6 L10 5.7 L14.4 6.3 L11.2 9.4 L12 13.8 L8 11.7 L4 13.8 L4.8 9.4 L1.6 6.3 L6 5.7 Z"
+              stroke="currentColor"
+              strokeWidth="1.3"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      )}
 
       {actions}
 

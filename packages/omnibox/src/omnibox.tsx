@@ -229,7 +229,16 @@ function SuggestionIcon({ kind }: { kind: OmniboxSuggestion['kind'] }) {
   if (kind === 'tab') {
     return (
       <svg className={common} viewBox="0 0 16 16" aria-hidden="true">
-        <rect x="2" y="3" width="12" height="10" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.4" />
+        <rect
+          x="2"
+          y="3"
+          width="12"
+          height="10"
+          rx="1.5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.4"
+        />
         <path d="M2 6 H14" fill="none" stroke="currentColor" strokeWidth="1.4" />
       </svg>
     );
@@ -238,7 +247,13 @@ function SuggestionIcon({ kind }: { kind: OmniboxSuggestion['kind'] }) {
     return (
       <svg className={common} viewBox="0 0 16 16" aria-hidden="true">
         <circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" strokeWidth="1.4" />
-        <path d="M8 5 V8 L10 9.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+        <path
+          d="M8 5 V8 L10 9.5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinecap="round"
+        />
       </svg>
     );
   }
@@ -246,7 +261,13 @@ function SuggestionIcon({ kind }: { kind: OmniboxSuggestion['kind'] }) {
   return (
     <svg className={common} viewBox="0 0 16 16" aria-hidden="true">
       <circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M10.5 10.5 L14 14" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <path
+        d="M10.5 10.5 L14 14"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }

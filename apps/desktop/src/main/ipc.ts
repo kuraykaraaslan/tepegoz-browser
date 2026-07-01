@@ -9,6 +9,7 @@ import {
   type AgentPlanPreview,
   type AgentRunResult,
   type AppInfo,
+  type BookmarkEntry,
   type CredentialsStatus,
   type HistoryEntry,
   type IpcChannel,
@@ -22,6 +23,8 @@ import {
   AgentRunIdSchema,
   AgentRunInputSchema,
   AppInfoSchema,
+  BookmarkToggleSchema,
+  BookmarkUrlSchema,
   HistoryQuerySchema,
   HistoryUrlSchema,
   UserAgentSelectionSchema,
@@ -36,7 +39,8 @@ import {
 } from '@tepegoz/desktop-ipc/schemas';
 import type { ConfirmRequest } from '@tepegoz/capability-plane';
 import { TokenLedger } from '@tepegoz/model-gateway';
-import { EventJournal, HistoryStore } from '@tepegoz/persistence';
+import { BookmarkStore, EventJournal, HistoryStore } from '@tepegoz/persistence';
+import { isWebUrl } from '@tepegoz/navigation';
 import type { EventType, Plan } from '@tepegoz/shared-types';
 import { randomUUID } from 'node:crypto';
 import AgentService, { type PlanApprovalDecision } from './agent/agent-service';
@@ -66,7 +70,10 @@ function assertTrustedSender(event: IpcMainInvokeEvent): void {
  * letting ONLY the mapped, clean message cross to the untrusted renderer (raw zod/internal text and
  * the statusCode never leak across the boundary).
  */
-function handle<T>(channel: IpcChannel, fn: (event: IpcMainInvokeEvent, payload: unknown) => T): void {
+function handle<T>(
+  channel: IpcChannel,
+  fn: (event: IpcMainInvokeEvent, payload: unknown) => T,
+): void {
   ipcMain.handle(channel, (event, payload: unknown): T => {
     try {
       assertTrustedSender(event);
@@ -153,14 +160,12 @@ const JOURNAL_TYPE_BY_KIND: Partial<Record<AgentEventKind, EventType>> = {
 
 /** Register all typed IPC handlers. */
 export function registerIpc(): void {
-  handle(
-    IpcChannels.appGetInfo,
-    (): AppInfo =>
-      AppInfoSchema.parse({
-        name: 'Tepegöz',
-        version: app.getVersion(),
-        platform: process.platform,
-      }),
+  handle(IpcChannels.appGetInfo, (): AppInfo =>
+    AppInfoSchema.parse({
+      name: 'Tepegöz',
+      version: app.getVersion(),
+      platform: process.platform,
+    }),
   );
 
   handle(IpcChannels.prefsGet, (): Preferences => PreferenceStore.getAll());
@@ -305,7 +310,13 @@ export function registerIpc(): void {
       if (!sender.isDestroyed()) sender.send(IpcChannels.agentEvent, e);
     };
     const onEvent = (kind: AgentEventKind, message: string, detail?: string): void => {
-      sendEvent({ runId, kind, message, ts: Date.now(), ...(detail !== undefined ? { detail } : {}) });
+      sendEvent({
+        runId,
+        kind,
+        message,
+        ts: Date.now(),
+        ...(detail !== undefined ? { detail } : {}),
+      });
       // Project agent events into the Event Journal (append-only audit; DoD "→ Event Journal").
       const db = getDb();
       const type = JOURNAL_TYPE_BY_KIND[kind];
@@ -443,6 +454,29 @@ export function registerIpc(): void {
     const db = getDb();
     if (db !== null) HistoryStore.clear(db);
     return [];
+  });
+
+  // Bookmarks. Only http(s) pages are bookmarkable — internal tepegoz:// pages and non-web schemes
+  // are rejected here (defense in depth alongside the renderer only offering the star on web pages).
+  handle(IpcChannels.bookmarksList, (): BookmarkEntry[] => {
+    const db = getDb();
+    return db !== null ? BookmarkStore.list(db) : [];
+  });
+  handle(IpcChannels.bookmarksToggle, (_event, payload): boolean => {
+    const { url, title } = BookmarkToggleSchema.parse(payload);
+    const db = getDb();
+    if (db === null || !isWebUrl(url)) return false;
+    if (BookmarkStore.isBookmarked(db, url)) {
+      BookmarkStore.remove(db, url);
+      return false;
+    }
+    BookmarkStore.add(db, { url, title: title.trim().length > 0 ? title : url, ts: Date.now() });
+    return true;
+  });
+  handle(IpcChannels.bookmarksIsBookmarked, (_event, payload): boolean => {
+    const url = BookmarkUrlSchema.parse(payload);
+    const db = getDb();
+    return db !== null && BookmarkStore.isBookmarked(db, url);
   });
 
   // User-Agent switcher extension: read/apply the UA override for browsed pages.

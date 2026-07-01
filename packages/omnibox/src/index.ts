@@ -16,6 +16,7 @@ export {
   type OmniboxQuery,
   type OmniboxTabCandidate,
   type OmniboxHistoryCandidate,
+  type OmniboxBookmarkCandidate,
   type OmniboxSuggestSources,
   type OmniboxSuggestLabels,
 } from './omnibox-suggest';

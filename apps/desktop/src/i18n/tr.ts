@@ -14,6 +14,10 @@ export const tr: AppStrings = {
     // Omniçubuk öneri ipuçları (deterministik açılır liste — yapay zekâ başlatmaz).
     omniboxSearchHint: "Web'de ara",
     omniboxSwitchToTab: 'Sekmeye geç',
+    omniboxBookmark: 'Yer imi',
+    // Yer imi yıldızı (omniçubuğun sağında).
+    bookmarkAdd: 'Bu sayfayı yer imlerine ekle',
+    bookmarkRemove: 'Yer imini kaldır',
     settings: 'Ayarlar',
     menu: 'Ana menü',
     exit: 'Çıkış',
