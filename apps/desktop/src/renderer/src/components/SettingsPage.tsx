@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
-import { SettingsLayout, type SettingsSection } from '@tepegoz/settings-ui';
+import { SettingsLayout, settingsDict, type SettingsSection } from '@tepegoz/settings-ui';
 import { AlertBanner, Badge, Button, Card, Input, Toggle } from '@tepegoz/ui';
 import { coreDict } from '@tepegoz/i18n';
 import { useT } from '@tepegoz/i18n/react';
-import { settingsDict } from '../../../i18n';
 import type {
   CredentialsStatus,
   LocalePref,
@@ -283,7 +282,6 @@ export function SettingsPage({
 
   return (
     <SettingsLayout
-      labels={{ title: s.title, search: s.search, noResults: s.noResults }}
       titleIcon={<IconGear />}
       sections={sections}
       banner={

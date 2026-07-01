@@ -1,12 +1,10 @@
 import { ExtensionsGrid, type ExtensionCardItem } from '@tepegoz/extensions-ui';
 import type { Locale } from '@tepegoz/i18n';
-import { useT } from '@tepegoz/i18n/react';
 import {
   isExtensionEnabled,
   type ExtensionId,
   type ExtensionState,
 } from '@tepegoz/desktop-ipc';
-import { extensionsDict } from '../../../i18n';
 import { extensionLabel } from '../../../shared/extensions';
 import { EXTENSIONS } from '../extensions/registry';
 
@@ -22,7 +20,6 @@ interface ExtensionsPageProps {
 }
 
 export function ExtensionsPage({ locale, states, onToggle }: ExtensionsPageProps) {
-  const x = useT(extensionsDict);
   const items: ExtensionCardItem[] = EXTENSIONS.map((ext) => {
     const label = extensionLabel(ext.manifest, locale);
     return {
@@ -35,11 +32,5 @@ export function ExtensionsPage({ locale, states, onToggle }: ExtensionsPageProps
     };
   });
 
-  return (
-    <ExtensionsGrid
-      labels={{ title: x.title, search: x.search, empty: x.empty }}
-      items={items}
-      onToggle={onToggle}
-    />
-  );
+  return <ExtensionsGrid items={items} onToggle={onToggle} />;
 }

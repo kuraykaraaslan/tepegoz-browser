@@ -9,7 +9,7 @@ import {
 import { coreDict, pick, resolveLocale, type Locale } from '@tepegoz/i18n';
 import { I18nProvider } from '@tepegoz/i18n/react';
 import { Modal } from '@tepegoz/ui';
-import { browserDict, historyDict, sidebarDict } from '../../i18n';
+import { browserDict, sidebarDict } from '../../i18n';
 import {
   INTERNAL_EXTENSIONS_URL,
   INTERNAL_HISTORY_URL,
@@ -300,7 +300,6 @@ export function App() {
   const coreT = pick(coreDict, locale);
   const browserT = pick(browserDict, locale);
   const sidebarT = pick(sidebarDict, locale);
-  const historyT = pick(historyDict, locale);
   const activeTab = tabs.tabs.find((tb) => tb.id === tabs.activeId);
   const currentUrl = activeTab?.url ?? '';
   // Internal pages are tabs addressed tepegoz://… ; render them when active.
@@ -559,13 +558,6 @@ export function App() {
             {historyActive && (
               <div className="absolute inset-0 bg-surface-base">
                 <HistoryPage
-                  labels={{
-                    title: historyT.title,
-                    search: historyT.search,
-                    clear: historyT.clear,
-                    delete: historyT.delete,
-                    empty: historyT.empty,
-                  }}
                   list={(q) =>
                     q.length === 0 ? window.tepegoz.getHistory() : window.tepegoz.searchHistory(q)
                   }

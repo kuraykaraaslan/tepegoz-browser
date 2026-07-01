@@ -20,4 +20,12 @@ export const tr: AgentStrings = {
   planTitle: 'Planı gözden geçirin',
   planBody: 'İstemediğiniz adımların işaretini kaldırıp çalıştırın. Onaylayana kadar hiçbir şey yürütülmez.',
   planRun: 'Planı çalıştır',
+  // Agentic komut paleti (Sohbet/Yap/Üret/Görevler) — bu yüzeyin sahibi bu eklenti.
+  commandPalette: {
+    placeholder: "Bir komut yazın ya da Tepegöz'e sorun…",
+    modeChat: 'Sohbet',
+    modeDo: 'Yap',
+    modeMake: 'Üret',
+    modeTasks: 'Görevler',
+  },
 };

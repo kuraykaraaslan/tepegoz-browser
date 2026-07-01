@@ -3,9 +3,5 @@
  * content area). Section content and copy are host-supplied. Extracted from `apps/desktop` per
  * docs/package-map.md.
  */
-export {
-  SettingsLayout,
-  type SettingsLayoutProps,
-  type SettingsLayoutLabels,
-  type SettingsSection,
-} from './settings-layout';
+export { SettingsLayout, type SettingsLayoutProps, type SettingsSection } from './settings-layout';
+export { settingsDict, type SettingsStrings } from './i18n';

@@ -3,9 +3,5 @@
  * Owns its search/list state; the data source is injected. Extracted from `apps/desktop` per
  * docs/package-map.md.
  */
-export {
-  HistoryPage,
-  type HistoryPageProps,
-  type HistoryUiLabels,
-  type HistoryItem,
-} from './history-ui';
+export { HistoryPage, type HistoryPageProps, type HistoryItem } from './history-ui';
+export { historyDict, type HistoryStrings } from './i18n';

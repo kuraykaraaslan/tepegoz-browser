@@ -88,6 +88,12 @@ export function createWindow(): BrowserWindow {
     }
   });
 
+  // The OS window title (taskbar / Alt-Tab) reflects the ACTIVE TAB, not the chrome document — so
+  // suppress Electron's auto-sync from the chrome's static <title>; TabManager owns the title.
+  win.webContents.on('page-title-updated', (event) => {
+    event.preventDefault();
+  });
+
   return win;
 }
 

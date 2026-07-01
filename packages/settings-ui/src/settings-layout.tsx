@@ -1,5 +1,8 @@
 import { useState, type ReactNode } from 'react';
 import { cn } from '@tepegoz/ui';
+import { coreDict } from '@tepegoz/i18n';
+import { useT } from '@tepegoz/i18n/react';
+import { settingsDict } from './i18n';
 
 const IconSearch = () => (
   <svg className="h-4 w-4" viewBox="0 0 16 16" aria-hidden="true">
@@ -17,14 +20,7 @@ export interface SettingsSection {
   content: ReactNode;
 }
 
-export interface SettingsLayoutLabels {
-  title: string;
-  search: string;
-  noResults: string;
-}
-
 export interface SettingsLayoutProps {
-  labels: SettingsLayoutLabels;
   /** Icon shown next to the title in the sidebar header. */
   titleIcon: ReactNode;
   sections: readonly SettingsSection[];
@@ -33,12 +29,14 @@ export interface SettingsLayoutProps {
 }
 
 /**
- * `@tepegoz/settings-ui` — the generic settings shell: a sidebar of sections + a search box that
- * filters across every section + a scrollable content area. Section content and all copy are supplied
- * by the host, so the package carries no app-specific settings logic (providers, theme, i18n keys stay
- * in the app). Extracted from `apps/desktop` per docs/package-map.md.
+ * `@tepegoz/settings-ui` — the settings shell: a sidebar of sections + a search box that filters across
+ * every section + a scrollable content area. Owns its own dictionary (`useT(settingsDict)`); the page
+ * title reuses the shared-core `common.settings`. Section content is host-supplied. Extracted from
+ * `apps/desktop` per docs/package-map.md.
  */
-export function SettingsLayout({ labels, titleIcon, sections, banner }: SettingsLayoutProps) {
+export function SettingsLayout({ titleIcon, sections, banner }: SettingsLayoutProps) {
+  const t = useT(settingsDict);
+  const title = useT(coreDict).common.settings;
   const [active, setActive] = useState<string>(sections[0]?.id ?? '');
   const [search, setSearch] = useState('');
 
@@ -53,7 +51,7 @@ export function SettingsLayout({ labels, titleIcon, sections, banner }: Settings
       <aside className="w-60 shrink-0 overflow-auto border-r border-border py-4">
         <div className="flex items-center gap-2 px-5 pb-4 text-text-primary">
           {titleIcon}
-          <h1 className="text-base font-semibold">{labels.title}</h1>
+          <h1 className="text-base font-semibold">{title}</h1>
         </div>
         <nav className="space-y-0.5 px-2">
           {sections.map((sec) => (
@@ -88,8 +86,8 @@ export function SettingsLayout({ labels, titleIcon, sections, banner }: Settings
             <input
               type="text"
               value={search}
-              placeholder={labels.search}
-              aria-label={labels.search}
+              placeholder={t.search}
+              aria-label={t.search}
               spellCheck={false}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -104,7 +102,7 @@ export function SettingsLayout({ labels, titleIcon, sections, banner }: Settings
             {banner}
             {sections.map((sec) => (isVisible(sec) ? <div key={sec.id}>{sec.content}</div> : null))}
             {searching && !anyVisible && (
-              <p className="text-sm text-text-secondary">{labels.noResults}</p>
+              <p className="text-sm text-text-secondary">{t.noResults}</p>
             )}
           </div>
         </div>

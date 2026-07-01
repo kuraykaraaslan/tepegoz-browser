@@ -1,7 +1,11 @@
 # ADR-0016: Per-package i18n dictionaries + a React i18n runtime
 
-- **Status:** Accepted
+- **Status:** Accepted (partially superseded)
 - **Date:** 2026-07-01
+- **Superseded by:** [ADR-0017](0017-feature-ui-package-i18n.md) — the "presentational leaves remain
+  string-free" clause no longer holds for `history-ui`/`extensions-ui`/`settings-ui`, which now own their
+  own dictionaries. The rest of this ADR (shared core, React runtime, `pick` for non-React, app-owned
+  `browser`) still stands.
 
 ## Context
 `@tepegoz/i18n` began as a **monolithic catalog**: one `en`/`tr` object with every namespace

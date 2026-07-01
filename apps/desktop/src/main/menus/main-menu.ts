@@ -71,7 +71,7 @@ export function showMainMenu(win: BrowserWindow): void {
       submenu: extensionSubmenu,
     },
     {
-      label: t.browser.settings,
+      label: t.common.settings,
       accelerator: 'CmdOrCtrl+,',
       click: () => {
         TabManager.openInternalPage(INTERNAL_SETTINGS_URL);

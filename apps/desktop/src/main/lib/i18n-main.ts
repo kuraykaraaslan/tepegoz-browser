@@ -1,6 +1,8 @@
 import { app } from 'electron';
-import { pick, resolveLocale, type Locale } from '@tepegoz/i18n';
-import { browserDict, extensionsDict, historyDict, settingsDict } from '../../i18n';
+import { coreDict, pick, resolveLocale, type Locale } from '@tepegoz/i18n';
+import { extensionsDict } from '@tepegoz/extensions-ui/i18n';
+import { historyDict } from '@tepegoz/history-ui/i18n';
+import { browserDict } from '../../i18n';
 import PreferenceStore from '@tepegoz/preferences';
 
 /**
@@ -16,15 +18,16 @@ export function mainLocale(): Locale {
 
 export function mainStrings(): {
   browser: typeof browserDict.en;
+  common: typeof coreDict.en.common;
   extensions: typeof extensionsDict.en;
   history: typeof historyDict.en;
-  settings: typeof settingsDict.en;
 } {
   const l = mainLocale();
   return {
     browser: pick(browserDict, l),
+    // The settings tab title / menu entry reuse the shared-core `common.settings` (no re-translation).
+    common: pick(coreDict, l).common,
     extensions: pick(extensionsDict, l),
     history: pick(historyDict, l),
-    settings: pick(settingsDict, l),
   };
 }

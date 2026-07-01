@@ -10,9 +10,4 @@ export type { AppStrings } from './en';
  * (and each main-process import) pulls only what it needs.
  */
 export const browserDict = defineDict({ en: en.browser, tr: tr.browser });
-export const commandPaletteDict = defineDict({ en: en.commandPalette, tr: tr.commandPalette });
-export const extensionsDict = defineDict({ en: en.extensions, tr: tr.extensions });
 export const sidebarDict = defineDict({ en: en.sidebar, tr: tr.sidebar });
-export const historyDict = defineDict({ en: en.history, tr: tr.history });
-export const onboardingDict = defineDict({ en: en.onboarding, tr: tr.onboarding });
-export const settingsDict = defineDict({ en: en.settings, tr: tr.settings });

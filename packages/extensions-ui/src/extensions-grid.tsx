@@ -1,5 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Card, Toggle } from '@tepegoz/ui';
+import { useT } from '@tepegoz/i18n/react';
+import { extensionsDict } from './i18n';
 
 /** One extension card. Hosts map their own extension/manifest objects into this shape. */
 export interface ExtensionCardItem {
@@ -12,26 +14,19 @@ export interface ExtensionCardItem {
   enabled: boolean;
 }
 
-/** Localized strings, supplied by the host so the package stays i18n-agnostic. */
-export interface ExtensionsGridLabels {
-  title: string;
-  search: string;
-  empty: string;
-}
-
 export interface ExtensionsGridProps {
-  labels: ExtensionsGridLabels;
   items: readonly ExtensionCardItem[];
   onToggle: (id: string, enabled: boolean) => void;
 }
 
 /**
  * `@tepegoz/extensions-ui` — the extensions manager shell (Chrome-style): a searchable grid of
- * extension cards, each with an enable/disable toggle. The extension list, manifest labels and
- * enabled-state come from the host as `items`, so the package carries no app-specific extension logic.
- * Extracted from `apps/desktop` per docs/package-map.md.
+ * extension cards, each with an enable/disable toggle. Owns its own dictionary (`useT(extensionsDict)`);
+ * the extension list, manifest labels and enabled-state come from the host as `items`, so the package
+ * carries no app-specific extension logic. Extracted from `apps/desktop` per docs/package-map.md.
  */
-export function ExtensionsGrid({ labels, items, onToggle }: ExtensionsGridProps) {
+export function ExtensionsGrid({ items, onToggle }: ExtensionsGridProps) {
+  const t = useT(extensionsDict);
   const [search, setSearch] = useState('');
   const q = search.trim().toLowerCase();
   const shown = items.filter((it) =>
@@ -42,12 +37,12 @@ export function ExtensionsGrid({ labels, items, onToggle }: ExtensionsGridProps)
     <div className="flex h-full flex-col bg-surface-base text-text-primary">
       <div className="shrink-0 border-b border-border px-8 py-4">
         <div className="mx-auto flex max-w-5xl items-center gap-4">
-          <h1 className="text-base font-semibold">{labels.title}</h1>
+          <h1 className="text-base font-semibold">{t.title}</h1>
           <input
             type="text"
             value={search}
-            placeholder={labels.search}
-            aria-label={labels.search}
+            placeholder={t.search}
+            aria-label={t.search}
             spellCheck={false}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -80,7 +75,7 @@ export function ExtensionsGrid({ labels, items, onToggle }: ExtensionsGridProps)
               </div>
             </Card>
           ))}
-          {shown.length === 0 && <p className="text-sm text-text-secondary">{labels.empty}</p>}
+          {shown.length === 0 && <p className="text-sm text-text-secondary">{t.empty}</p>}
         </div>
       </div>
     </div>

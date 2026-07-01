@@ -18,6 +18,14 @@ export const en = {
   planTitle: 'Review the plan',
   planBody: 'Uncheck any step you do not want, then run. Nothing executes until you approve.',
   planRun: 'Run plan',
+  // The agentic command palette (Chat/Do/Make/Tasks) — this extension owns the surface.
+  commandPalette: {
+    placeholder: 'Type a command or ask Tepegöz…',
+    modeChat: 'Chat',
+    modeDo: 'Do',
+    modeMake: 'Make',
+    modeTasks: 'Tasks',
+  },
 };
 
 export type AgentStrings = typeof en;

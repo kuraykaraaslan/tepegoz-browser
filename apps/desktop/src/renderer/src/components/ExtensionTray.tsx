@@ -4,7 +4,7 @@ import { NAV_BTN } from '@tepegoz/nav-toolbar';
 import type { Locale } from '@tepegoz/i18n';
 import { useT } from '@tepegoz/i18n/react';
 import { INTERNAL_EXTENSIONS_URL, type ContentBounds } from '@tepegoz/desktop-ipc';
-import { extensionsDict } from '../../../i18n';
+import { extensionsDict } from '@tepegoz/extensions-ui/i18n';
 import { extensionLabel } from '../../../shared/extensions';
 import type { ExtensionDef } from '../extensions/registry';
 

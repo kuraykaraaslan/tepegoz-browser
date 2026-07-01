@@ -186,7 +186,7 @@ export default class TabManager {
       const manifest = manifestById(extId);
       if (manifest !== undefined) return extensionLabel(manifest, mainLocale()).name;
     }
-    return r.settings.title;
+    return r.common.settings;
   }
 
   /** Open a fresh tab immediately to the right of `refId` and focus it (Chrome's "New tab to the right"). */
@@ -410,8 +410,16 @@ export default class TabManager {
     const win = TabManager.win;
     if (win && !win.isDestroyed()) {
       win.webContents.send(IpcChannels.tabsState, TabManager.getState());
+      TabManager.syncWindowTitle(win);
     }
     TabManager.schedulePersist();
+  }
+
+  /** Reflect the active tab in the OS window title (taskbar / Alt-Tab): "<tab title> - Tepegöz",
+   *  falling back to just "Tepegöz" when the active tab has no title yet. */
+  private static syncWindowTitle(win: BrowserWindow): void {
+    const title = TabManager.store.active()?.title.trim() ?? '';
+    win.setTitle(title.length > 0 ? `${title} - Tepegöz` : 'Tepegöz');
   }
 
   // ── Session restore ────────────────────────────────────────────────────────────────────────────

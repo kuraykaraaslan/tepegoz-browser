@@ -353,6 +353,9 @@ importers:
 
   packages/extensions-ui:
     dependencies:
+      '@tepegoz/i18n':
+        specifier: workspace:*
+        version: link:../i18n
       '@tepegoz/ui':
         specifier: workspace:*
         version: link:../ui
@@ -366,9 +369,15 @@ importers:
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(lightningcss@1.32.0)
 
   packages/history-ui:
     dependencies:
+      '@tepegoz/i18n':
+        specifier: workspace:*
+        version: link:../i18n
       react:
         specifier: ^18 || ^19
         version: 18.3.1
@@ -379,6 +388,9 @@ importers:
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(lightningcss@1.32.0)
 
   packages/i18n:
     dependencies:
@@ -589,6 +601,9 @@ importers:
 
   packages/settings-ui:
     dependencies:
+      '@tepegoz/i18n':
+        specifier: workspace:*
+        version: link:../i18n
       '@tepegoz/ui':
         specifier: workspace:*
         version: link:../ui
@@ -602,6 +617,9 @@ importers:
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(lightningcss@1.32.0)
 
   packages/shared-types:
     dependencies:

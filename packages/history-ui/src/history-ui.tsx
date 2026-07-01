@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useT } from '@tepegoz/i18n/react';
+import { historyDict } from './i18n';
 
 /** The minimal history entry the view renders. Hosts pass their own richer entries (structural). */
 export interface HistoryItem {
@@ -8,17 +10,7 @@ export interface HistoryItem {
   ts: number;
 }
 
-/** Localized strings, supplied by the host so the package stays i18n-agnostic. */
-export interface HistoryUiLabels {
-  title: string;
-  search: string;
-  clear: string;
-  delete: string;
-  empty: string;
-}
-
 export interface HistoryPageProps {
-  labels: HistoryUiLabels;
   /** Fetch history for a (trimmed) query; empty string = full history. Returns newest-first. */
   list: (query: string) => Promise<HistoryItem[]>;
   /** Remove one entry by URL; returns the updated list. */
@@ -29,11 +21,12 @@ export interface HistoryPageProps {
 
 /**
  * `@tepegoz/history-ui` — the browsing-history manager (Chrome-style): a search box + a newest-first
- * list of visited pages, each removable, plus "Clear all". Owns its search/list state; the data
- * source (list/remove/clear) is injected, so the package has no dependency on the Electron bridge.
- * Extracted from `apps/desktop` per docs/package-map.md.
+ * list of visited pages, each removable, plus "Clear all". Owns its search/list state and its own
+ * dictionary (`useT(historyDict)`); the data source (list/remove/clear) is injected, so the package has
+ * no dependency on the Electron bridge. Extracted from `apps/desktop` per docs/package-map.md.
  */
-export function HistoryPage({ labels, list, remove, clear }: HistoryPageProps) {
+export function HistoryPage({ list, remove, clear }: HistoryPageProps) {
+  const t = useT(historyDict);
   const [search, setSearch] = useState('');
   const [entries, setEntries] = useState<HistoryItem[]>([]);
 
@@ -49,12 +42,12 @@ export function HistoryPage({ labels, list, remove, clear }: HistoryPageProps) {
     <div className="flex h-full flex-col bg-surface-base text-text-primary">
       <div className="shrink-0 border-b border-border px-8 py-4">
         <div className="mx-auto flex max-w-3xl items-center gap-4">
-          <h1 className="text-base font-semibold">{labels.title}</h1>
+          <h1 className="text-base font-semibold">{t.title}</h1>
           <input
             type="text"
             value={search}
-            placeholder={labels.search}
-            aria-label={labels.search}
+            placeholder={t.search}
+            aria-label={t.search}
             spellCheck={false}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -68,7 +61,7 @@ export function HistoryPage({ labels, list, remove, clear }: HistoryPageProps) {
             }}
             className="rounded-md border border-border px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-overlay hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
           >
-            {labels.clear}
+            {t.clear}
           </button>
         </div>
       </div>
@@ -86,8 +79,8 @@ export function HistoryPage({ labels, list, remove, clear }: HistoryPageProps) {
               </div>
               <button
                 type="button"
-                aria-label={labels.delete}
-                title={labels.delete}
+                aria-label={t.delete}
+                title={t.delete}
                 onClick={() => {
                   void remove(entry.url).then(setEntries, () => undefined);
                 }}
@@ -99,7 +92,7 @@ export function HistoryPage({ labels, list, remove, clear }: HistoryPageProps) {
           ))}
         </ul>
         {entries.length === 0 && (
-          <p className="mx-auto max-w-3xl py-8 text-sm text-text-secondary">{labels.empty}</p>
+          <p className="mx-auto max-w-3xl py-8 text-sm text-text-secondary">{t.empty}</p>
         )}
       </div>
     </div>
