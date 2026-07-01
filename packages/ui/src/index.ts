@@ -8,6 +8,5 @@ export { Card } from './modules/ui/Card';
 export { Input } from './modules/ui/Input';
 export { Badge } from './modules/ui/Badge';
 export { AlertBanner, type AlertAction } from './modules/ui/AlertBanner';
-export { DropdownMenu, type DropdownItem } from './modules/ui/DropdownMenu';
 export { cn } from './libs/utils/cn';
 export type { PolymorphicProps } from './libs/utils/polymorphic';

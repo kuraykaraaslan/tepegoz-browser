@@ -33,7 +33,6 @@ export function App() {
   const [tabs, setTabs] = useState<TabsState>(EMPTY_TABS);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [agentOpen, setAgentOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -91,11 +90,23 @@ export function App() {
     };
   }, []);
 
-  // Chrome-rendered overlays (Settings / Agent Console) AND the open main menu hide the web view so
-  // they show through — otherwise the overlaid native WebContentsView would cover the dropdown.
+  // Chrome-rendered overlays (Settings / Agent Console) hide the web view so they show through.
   useEffect(() => {
-    window.tepegoz.setContentVisible(!settingsOpen && !agentOpen && !menuOpen);
-  }, [settingsOpen, agentOpen, menuOpen]);
+    window.tepegoz.setContentVisible(!settingsOpen && !agentOpen);
+  }, [settingsOpen, agentOpen]);
+
+  // Native main-menu actions (Settings / Agent) arrive here as UI-state changes.
+  useEffect(() => {
+    return window.tepegoz.onMenuAction((action) => {
+      if (action === 'open-settings') {
+        setAgentOpen(false);
+        setSettingsOpen(true);
+      } else {
+        setSettingsOpen(false);
+        setAgentOpen(true);
+      }
+    });
+  }, []);
 
   // App shortcuts (single registry): the accelerators shown in the main menu are wired here. We
   // preventDefault so Ctrl+R reloads the active TAB, not the app chrome.
@@ -166,15 +177,6 @@ export function App() {
           setAgentOpen((open) => !open);
           setSettingsOpen(false);
         }}
-        onOpenSettings={() => {
-          setAgentOpen(false);
-          setSettingsOpen(true);
-        }}
-        onOpenAgent={() => {
-          setSettingsOpen(false);
-          setAgentOpen(true);
-        }}
-        onMenuOpenChange={setMenuOpen}
       />
       <div ref={contentRef} className="relative flex-1 overflow-hidden">
         {/* The active tab's web page is a separate WebContentsView laid over this area by the main

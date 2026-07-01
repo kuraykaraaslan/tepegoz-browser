@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { cn } from '@tepegoz/ui';
 import type { Resources } from '@tepegoz/i18n';
 import { evaluateOmniboxCalc } from '../lib/omnibox-calc';
-import { MainMenu } from './MainMenu';
 
 interface ToolbarProps {
   t: Resources;
@@ -11,9 +10,6 @@ interface ToolbarProps {
   canGoForward: boolean;
   agentOpen: boolean;
   onToggleAgent: () => void;
-  onOpenSettings: () => void;
-  onOpenAgent: () => void;
-  onMenuOpenChange: (open: boolean) => void;
 }
 
 const NAV_BTN =
@@ -29,9 +25,6 @@ export function Toolbar({
   canGoForward,
   agentOpen,
   onToggleAgent,
-  onOpenSettings,
-  onOpenAgent,
-  onMenuOpenChange,
 }: ToolbarProps) {
   const [value, setValue] = useState(currentUrl);
   const [focused, setFocused] = useState(false);
@@ -135,12 +128,19 @@ export function Toolbar({
         {t.agentConsole.open}
       </button>
 
-      <MainMenu
-        t={t}
-        onOpenSettings={onOpenSettings}
-        onOpenAgent={onOpenAgent}
-        onOpenChange={onMenuOpenChange}
-      />
+      <button
+        type="button"
+        aria-label={t.browser.menu}
+        aria-haspopup="menu"
+        onClick={() => window.tepegoz.showMainMenu()}
+        className={NAV_BTN}
+      >
+        <svg className="h-4 w-4" viewBox="0 0 16 16" aria-hidden="true">
+          <circle cx="8" cy="3.2" r="1.3" fill="currentColor" />
+          <circle cx="8" cy="8" r="1.3" fill="currentColor" />
+          <circle cx="8" cy="12.8" r="1.3" fill="currentColor" />
+        </svg>
+      </button>
     </div>
   );
 }

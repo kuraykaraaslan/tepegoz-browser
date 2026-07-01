@@ -39,6 +39,8 @@ export const IpcChannels = {
   agentPlanResponse: 'agent:plan-response',
   tokenUsage: 'token:usage',
   tokenUsageGet: 'token:usage-get',
+  menuShowMain: 'menu:show-main',
+  menuAction: 'menu:action',
 } as const;
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];
@@ -147,6 +149,9 @@ export interface TokenUsageSnapshot {
   totalTokens: number;
 }
 
+/** Actions the native main menu asks the chrome renderer to perform (UI state it owns). */
+export type MenuAction = 'open-settings' | 'open-agent';
+
 /** Content-area rectangle (DIP) where the active tab's web view is laid out, below the chrome. */
 export interface ContentBounds {
   x: number;
@@ -207,5 +212,9 @@ export interface TepegozApi {
   onTokenUsage(callback: (usage: TokenUsageSnapshot) => void): () => void;
   /** Fetch the current token-usage snapshot. */
   getTokenUsage(): Promise<TokenUsageSnapshot>;
+  /** Pop the native main (hamburger) menu, anchored to the sender window. */
+  showMainMenu(): void;
+  /** Subscribe to main-menu actions the renderer must perform; returns an unsubscribe function. */
+  onMenuAction(callback: (action: MenuAction) => void): () => void;
   readonly platform: string;
 }

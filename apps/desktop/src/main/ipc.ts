@@ -31,6 +31,7 @@ import {
 } from '../shared/ipc-schemas';
 import type { ConfirmRequest } from '@tepegoz/capability-plane';
 import { TokenLedger } from '@tepegoz/model-gateway';
+import type { Plan } from '@tepegoz/shared-types';
 import AgentService, { type PlanApprovalDecision } from './agent/agent-service';
 import { PreferencesPatchSchema } from './preferences/preferences.model';
 import { isTrustedAppUrl } from './lib/trusted-origin';
@@ -38,6 +39,7 @@ import CredentialVault from './security/credential-vault';
 import PreferenceStore from './preferences/preference-store';
 import TabManager from './tabs';
 import { showTabContextMenu } from './menus/tab-context-menu';
+import { showMainMenu } from './menus/main-menu';
 
 /** Reject IPC from frames that are not our own app content (exact-host allow-list). */
 function assertTrustedSender(event: IpcMainInvokeEvent): void {
@@ -223,6 +225,12 @@ export function registerIpc(): void {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (win) showTabContextMenu(win, parsed.data);
   });
+  // Native main (hamburger) menu — needs the sender's window to anchor the popup.
+  ipcMain.on(IpcChannels.menuShowMain, (event: IpcMainEvent) => {
+    if (!isTrustedAppUrl(event.senderFrame?.url ?? '')) return;
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) showMainMenu(win);
+  });
   onAction(IpcChannels.tabsNavigate, NavigateInputSchema, (url) => {
     TabManager.navigateActive(url);
   });
@@ -282,10 +290,7 @@ export function registerIpc(): void {
         }, 120_000);
       });
     };
-    const requestPlanApproval = (plan: {
-      goal: string;
-      steps: { id: string; tool: string; rationale: string }[];
-    }): Promise<PlanApprovalDecision> => {
+    const requestPlanApproval = (plan: Plan): Promise<PlanApprovalDecision> => {
       const planId = `plan-${String(++planCounter)}`;
       const preview: AgentPlanPreview = {
         runId,

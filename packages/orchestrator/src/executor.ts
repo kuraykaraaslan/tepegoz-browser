@@ -1,5 +1,5 @@
 import { ToolGateway, type InvokeContext } from '@tepegoz/capability-plane';
-import type { Plan, ToolError } from '@tepegoz/shared-types';
+import type { Plan, PlanStep, ToolError } from '@tepegoz/shared-types';
 
 /**
  * L3 sequential executor. Runs a {@link Plan}'s steps in order through the single ToolGateway PEP
@@ -32,11 +32,11 @@ export interface RunOptions {
    * for that step. Falls back to `ctx` when omitted. This is how the Policy Kernel actually receives
    * the site + taint of each concrete tool call.
    */
-  ctxFor?: (step: { id: string; tool: string; args: unknown }) => InvokeContext;
+  ctxFor?: (step: PlanStep) => InvokeContext;
   /** Cooperative cancellation, checked before each step (AbortSignal is structurally compatible). */
   signal?: { readonly aborted: boolean };
   /** Live progress hooks (Agent Console). Called before/after each step. */
-  onStepStart?: (step: { id: string; tool: string }) => void;
+  onStepStart?: (step: PlanStep) => void;
   onStepEnd?: (outcome: StepOutcome) => void;
 }
 
@@ -77,10 +77,8 @@ export default class Executor {
         return { outcomes, stoppedReason: 'loop_detected' };
       }
 
-      options.onStepStart?.({ id: step.id, tool: step.tool });
-      const stepCtx = options.ctxFor
-        ? options.ctxFor({ id: step.id, tool: step.tool, args: step.args })
-        : ctx;
+      options.onStepStart?.(step);
+      const stepCtx = options.ctxFor ? options.ctxFor(step) : ctx;
       const result = await ToolGateway.invoke(step.tool, step.args, stepCtx);
       const outcome: StepOutcome = isToolError(result)
         ? { stepId: step.id, tool: step.tool, ok: false, error: result }

@@ -8,6 +8,7 @@ import {
   type AppInfo,
   type ContentBounds,
   type CredentialsStatus,
+  type MenuAction,
   type Preferences,
   type ProviderId,
   type TabsState,
@@ -138,6 +139,18 @@ const api: TepegozApi = {
     };
   },
   getTokenUsage: () => ipcRenderer.invoke(IpcChannels.tokenUsageGet) as Promise<TokenUsageSnapshot>,
+  showMainMenu: () => {
+    ipcRenderer.send(IpcChannels.menuShowMain);
+  },
+  onMenuAction: (callback: (action: MenuAction) => void) => {
+    const listener = (_event: unknown, action: MenuAction): void => {
+      callback(action);
+    };
+    ipcRenderer.on(IpcChannels.menuAction, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.menuAction, listener);
+    };
+  },
   platform: process.platform,
 };
 
