@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { EXTENSION_ID_RE } from '@tepegoz/extension-sdk';
-import type { AppInfo } from './contract';
+import { PROVIDER_IDS, type AppInfo } from './contract';
 
 /**
  * Runtime (zod) validation for IPC payloads — MAIN PROCESS ONLY. Kept separate from `ipc-contract.ts`
@@ -13,7 +13,7 @@ export const AppInfoSchema: z.ZodType<AppInfo> = z.object({
   platform: z.string(),
 });
 
-const ProviderIdSchema = z.enum(['anthropic', 'openai', 'gemini']);
+const ProviderIdSchema = z.enum(PROVIDER_IDS);
 
 /** `credentials:set` payload — the only channel that carries a raw key (renderer → main). */
 export const SetProviderKeyInputSchema = z.object({
@@ -68,10 +68,5 @@ export const UserAgentSelectionSchema = z.string().max(512).nullable();
 /** `extension:popup-open` payload — which extension, and the toolbar icon's rect to anchor under. */
 export const ExtensionPopupOpenSchema = z.object({
   id: z.string().regex(EXTENSION_ID_RE).max(128),
-  anchor: z.object({
-    x: z.number(),
-    y: z.number(),
-    width: z.number(),
-    height: z.number(),
-  }),
+  anchor: ContentBoundsSchema,
 });

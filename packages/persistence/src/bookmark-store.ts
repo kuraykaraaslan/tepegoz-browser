@@ -8,16 +8,6 @@ export interface BookmarkEntry {
   ts: number;
 }
 
-interface BookmarkRow {
-  url: string;
-  title: string;
-  ts: number;
-}
-
-function toEntry(row: BookmarkRow): BookmarkEntry {
-  return { url: row.url, title: row.title, ts: row.ts };
-}
-
 /**
  * Bookmarks (L1). One row per URL (re-bookmarking the same URL just refreshes the title). Reads are
  * trusted DB output; the untrusted boundary (renderer add/remove) is validated at the IPC layer.
@@ -40,23 +30,22 @@ export class BookmarkStore {
     return row !== undefined;
   }
 
-  /** Newest-first (most recently bookmarked). */
+  /** Newest-first (most recently bookmarked). The SELECT column list IS the entry shape (url, title,
+   *  ts — no snake_case columns), so rows are the entries; no mapper layer. */
   static list(db: Db, limit = 500): BookmarkEntry[] {
-    const rows = db
+    return db
       .prepare('SELECT url, title, ts FROM bookmarks ORDER BY ts DESC LIMIT ?')
-      .all(limit) as BookmarkRow[];
-    return rows.map(toEntry);
+      .all(limit) as BookmarkEntry[];
   }
 
   static search(db: Db, query: string, limit = 500): BookmarkEntry[] {
     const like = `%${query}%`;
-    const rows = db
+    return db
       .prepare(
         `SELECT url, title, ts FROM bookmarks
          WHERE url LIKE ? OR title LIKE ? ORDER BY ts DESC LIMIT ?`,
       )
-      .all(like, like, limit) as BookmarkRow[];
-    return rows.map(toEntry);
+      .all(like, like, limit) as BookmarkEntry[];
   }
 
   static count(db: Db): number {

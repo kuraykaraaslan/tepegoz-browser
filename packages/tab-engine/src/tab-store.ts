@@ -3,17 +3,13 @@ import type { TabInfo, TabsState } from '@tepegoz/desktop-ipc';
 export type TabKind = 'web' | 'internal';
 
 /**
- * Pure, Electron-free tab record. A `web` tab is backed by a WebContentsView in the desktop app; an
+ * Pure, Electron-free tab record: the wire `TabInfo` (canonical shape, from the IPC contract) plus the
+ * engine-only `kind` discriminator. A `web` tab is backed by a WebContentsView in the desktop app; an
  * `internal` tab (tepegoz://…) has no view and is rendered by the chrome. The view itself lives in the
  * app's TabManager, NOT here.
  */
-export interface TabRecord {
-  id: string;
+export interface TabRecord extends TabInfo {
   kind: TabKind;
-  title: string;
-  url: string;
-  isLoading: boolean;
-  faviconUrl: string | null;
 }
 
 /**

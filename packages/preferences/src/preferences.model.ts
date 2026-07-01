@@ -1,15 +1,16 @@
 import { z } from 'zod';
 import { EXTENSION_ID_RE } from '@tepegoz/extension-sdk';
-import type { Preferences } from '@tepegoz/desktop-ipc';
+import { LOCALE_PREFS, PROVIDER_IDS, THEME_PREFS, type Preferences } from '@tepegoz/desktop-ipc';
 
 /**
- * App preferences validation (main-side). The TYPE lives in the shared IPC contract (zod-free, so the
- * sandboxed preload can use it); this schema is the runtime validator, kept in sync with the type via
- * the `satisfies` check below.
+ * App preferences validation (main-side). The TYPE and its value lists live in the shared IPC contract
+ * (zod-free, so the sandboxed preload can use it); each z.enum below is BUILT from the contract's
+ * canonical array — one list per union, no re-spelling — and the `satisfies` check below pins the
+ * whole object shape.
  */
-export const ThemePrefSchema = z.enum(['system', 'light', 'dark']);
-export const LocalePrefSchema = z.enum(['system', 'en', 'tr']);
-export const ProviderPrefSchema = z.enum(['anthropic', 'openai', 'gemini']);
+export const ThemePrefSchema = z.enum(THEME_PREFS);
+export const LocalePrefSchema = z.enum(LOCALE_PREFS);
+export const ProviderPrefSchema = z.enum(PROVIDER_IDS);
 // Reverse-DNS extension id — shares the exact rule the SDK enforces on manifests (single source).
 export const ExtensionIdSchema = z.string().regex(EXTENSION_ID_RE);
 export const ExtensionStatusSchema = z.enum(['enabled', 'disabled']);

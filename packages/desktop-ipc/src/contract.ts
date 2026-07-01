@@ -98,9 +98,17 @@ export interface AppInfo {
   platform: string;
 }
 
-export type ThemePref = 'system' | 'light' | 'dark';
-export type LocalePref = 'system' | 'en' | 'tr';
-export type ProviderId = 'anthropic' | 'openai' | 'gemini';
+// Canonical value lists — the ONE place these unions are spelled out. The zod validators (schemas.ts,
+// preferences.model.ts) build their z.enum from these same arrays, so schema/type drift is impossible.
+// Plain `as const` arrays keep this file dependency-free for the sandboxed preload. PROVIDER_IDS
+// mirrors `AIProviderEnum` in @tepegoz/shared-types (this package can't depend on it yet — the enum
+// unification across that boundary is tracked as a follow-up).
+export const THEME_PREFS = ['system', 'light', 'dark'] as const;
+export type ThemePref = (typeof THEME_PREFS)[number];
+export const LOCALE_PREFS = ['system', 'en', 'tr'] as const;
+export type LocalePref = (typeof LOCALE_PREFS)[number];
+export const PROVIDER_IDS = ['anthropic', 'openai', 'gemini'] as const;
+export type ProviderId = (typeof PROVIDER_IDS)[number];
 
 export interface Preferences {
   theme: ThemePref;
