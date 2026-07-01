@@ -1,5 +1,6 @@
 import { AppError } from '@tepegoz/libs';
 import { ToolNameSchema, type ToolDescriptor } from '@tepegoz/shared-types';
+import { CapabilityMessages } from './messages';
 import type { RegisteredTool } from './types';
 
 /**
@@ -18,7 +19,7 @@ export default class CapabilityRegistry {
   static register<T>(tool: RegisteredTool<T>): void {
     const id = ToolNameSchema.parse(tool.descriptor.id); // enforce naming convention
     if (CapabilityRegistry.tools.has(id)) {
-      throw new AppError(`Tool already registered: ${id}`, 409);
+      throw new AppError(CapabilityMessages.toolAlreadyRegistered(id), 409);
     }
     CapabilityRegistry.tools.set(id, tool as RegisteredTool);
   }

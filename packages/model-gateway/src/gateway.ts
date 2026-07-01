@@ -1,6 +1,7 @@
 import { AppError } from '@tepegoz/libs';
 import type { AIProvider } from '@tepegoz/shared-types';
 import type { CanonRequest, CanonResponse, ModelProvider } from './types';
+import { GatewayMessages } from './messages';
 import { TokenLedger } from './token-ledger';
 
 /**
@@ -21,15 +22,15 @@ export class ModelGateway {
 
   static async complete(req: CanonRequest): Promise<CanonResponse> {
     if (!Number.isInteger(req.maxTokens) || req.maxTokens <= 0) {
-      throw new AppError('max_tokens is required and must be a positive integer', 400);
+      throw new AppError(GatewayMessages.MaxTokensRequired, 400);
     }
     if (!Number.isInteger(req.timeoutMs) || req.timeoutMs <= 0) {
-      throw new AppError('timeout is required and must be a positive integer', 400);
+      throw new AppError(GatewayMessages.TimeoutRequired, 400);
     }
 
     const provider = ModelGateway.providers.get(req.provider);
     if (provider === undefined) {
-      throw new AppError(`No model provider registered for "${req.provider}"`, 503);
+      throw new AppError(GatewayMessages.noProviderRegistered(req.provider), 503);
     }
 
     const controller = new AbortController();

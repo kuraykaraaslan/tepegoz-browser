@@ -3,6 +3,7 @@ import { AppError } from '@tepegoz/libs';
 import type { AIProvider } from '@tepegoz/shared-types';
 import type { CanonRequest, CanonResponse, CanonStopReason, CanonToolCall, ModelProvider } from '../types';
 import type { EffortLevel } from '../models';
+import { GatewayMessages } from '../messages';
 
 /**
  * Anthropic (Claude) adapter (L7) — normalizes the canonical request/response shapes to the
@@ -116,7 +117,7 @@ function toAppError(err: unknown): Error {
     const code = typeof status === 'number' && status >= 400 && status < 500 ? status : 503;
     return new AppError(err.message, code);
   }
-  return err instanceof Error ? err : new AppError('Unknown model-provider error', 503);
+  return err instanceof Error ? err : new AppError(GatewayMessages.UnknownProviderError, 503);
 }
 
 export class AnthropicProvider implements ModelProvider {
@@ -140,7 +141,7 @@ export class AnthropicProvider implements ModelProvider {
       message = await this.client.messages.create(params, { signal, timeout: req.timeoutMs });
     } catch (err) {
       if (signal.aborted) {
-        throw new AppError('Model request aborted (timeout)', 503);
+        throw new AppError(GatewayMessages.RequestTimedOut, 503);
       }
       throw toAppError(err);
     }

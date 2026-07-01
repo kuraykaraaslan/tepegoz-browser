@@ -1,6 +1,7 @@
 import { AppError } from '@tepegoz/libs';
 import { ModelGateway, type CanonRequest } from '@tepegoz/model-gateway';
 import { PlanSchema, type AIProvider, type Plan, type ToolDescriptor } from '@tepegoz/shared-types';
+import { PlannerMessages } from './messages';
 
 /**
  * L3 Planner: natural-language intent → a validated {@link Plan} (DAG of tool-call steps). The LLM's
@@ -55,18 +56,18 @@ export default class Planner {
     try {
       raw = JSON.parse(extractJson(response.text));
     } catch {
-      throw new AppError('Planner returned invalid JSON', 502);
+      throw new AppError(PlannerMessages.InvalidJson, 502);
     }
 
     const parsed = PlanSchema.safeParse(raw);
     if (!parsed.success) {
-      throw new AppError('Planner returned a malformed plan', 502);
+      throw new AppError(PlannerMessages.MalformedPlan, 502);
     }
 
     const known = new Set(req.tools.map((t) => t.id));
     for (const step of parsed.data.steps) {
       if (!known.has(step.tool)) {
-        throw new AppError(`Planner referenced unknown tool: ${step.tool}`, 502);
+        throw new AppError(PlannerMessages.unknownTool(step.tool), 502);
       }
     }
     return parsed.data;

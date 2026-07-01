@@ -1,6 +1,7 @@
 import { AppError } from '@tepegoz/libs';
 import { AIProviderEnum, type AIProvider } from '@tepegoz/shared-types';
 import { readJsonFile, writeJsonFile } from '@tepegoz/json-store';
+import { VaultMessages } from './messages';
 
 /**
  * BYO-key vault (L7 / electron-desktop-security). API keys are encrypted with the OS keychain
@@ -62,11 +63,11 @@ export default class CredentialVault {
     const p = AIProviderEnum.parse(provider);
     const key = apiKey.trim();
     if (key.length === 0) {
-      throw new AppError('API key must not be empty', 400);
+      throw new AppError(VaultMessages.EmptyApiKey, 400);
     }
     const crypto = CredentialVault.requireCrypto();
     if (!crypto.isAvailable()) {
-      throw new AppError('OS encryption is unavailable; cannot store the key securely', 503);
+      throw new AppError(VaultMessages.EncryptionUnavailable, 503);
     }
     CredentialVault.store[p] = crypto.encrypt(key).toString('base64');
     CredentialVault.persist();
@@ -101,14 +102,14 @@ export default class CredentialVault {
     if (b64 === undefined) return null;
     const crypto = CredentialVault.requireCrypto();
     if (!crypto.isAvailable()) {
-      throw new AppError('OS encryption is unavailable; cannot read the stored key', 503);
+      throw new AppError(VaultMessages.DecryptionUnavailable, 503);
     }
     return crypto.decrypt(Buffer.from(b64, 'base64'));
   }
 
   private static requireCrypto(): SecretCrypto {
     if (CredentialVault.crypto === null) {
-      throw new AppError('Credential vault is not initialized', 500);
+      throw new AppError(VaultMessages.NotInitialized, 500);
     }
     return CredentialVault.crypto;
   }
