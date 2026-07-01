@@ -26,11 +26,12 @@ import type {
 } from '@tepegoz/desktop-ipc';
 import { extensionIdFromPageUrl, extensionLabel, extensionPageUrl } from '../../shared/extensions';
 import { EXTENSIONS, extensionDefById } from './extensions/registry';
+import { BrowserChrome } from '@tepegoz/browser-chrome';
 import { HistoryPage } from '@tepegoz/history-ui';
 import { ExtensionsPage } from './components/ExtensionsPage';
+import { ExtensionTray } from './components/ExtensionTray';
 import { SettingsPage } from './components/SettingsPage';
-import { TitleBar } from './components/TitleBar';
-import { Toolbar } from './components/Toolbar';
+import { useWindowMaximized } from './lib/useWindowMaximized';
 
 /** The overlay surface kinds (everything except `page`, which opens as its own internal tab). */
 type OverlaySurfaceKind = 'popup' | 'modal' | 'panel';
@@ -281,6 +282,7 @@ export function App() {
     };
   }, []);
 
+  const isMaximized = useWindowMaximized();
   const t = resources[locale];
   const activeTab = tabs.tabs.find((tb) => tb.id === tabs.activeId);
   const currentUrl = activeTab?.url ?? '';
@@ -361,28 +363,41 @@ export function App() {
 
   return (
     <div className="flex h-screen flex-col bg-surface-base text-text-primary">
-      <TitleBar
+      <BrowserChrome
         t={t}
         tabs={tabs.tabs}
-        activeId={tabs.activeId}
+        activeTabId={tabs.activeId}
         onSelectTab={(id) => {
           setActiveSurface(null); // close any extension surface when switching tabs
           window.tepegoz.activateTab(id);
         }}
+        onCloseTab={(id) => window.tepegoz.closeTab(id)}
+        onTabContextMenu={(id) => window.tepegoz.showTabContextMenu(id)}
         onNewTab={() => {
           setActiveSurface(null);
           window.tepegoz.createTab();
         }}
-      />
-      <Toolbar
-        t={t}
-        locale={locale}
+        isMaximized={isMaximized}
+        onMinimize={() => window.tepegoz.minimizeWindow()}
+        onToggleMaximize={() => window.tepegoz.toggleMaximizeWindow()}
+        onClose={() => window.tepegoz.closeWindow()}
         currentUrl={currentUrl}
         canGoBack={tabs.canGoBack}
         canGoForward={tabs.canGoForward}
-        extensions={enabledExtensions}
-        activeExtensionId={activeSurface?.id ?? sidebarExtId ?? popupOpenId ?? null}
-        onExtensionAction={runExtensionAction}
+        onBack={() => window.tepegoz.tabGoBack()}
+        onForward={() => window.tepegoz.tabGoForward()}
+        onReload={() => window.tepegoz.tabReload()}
+        onMenu={() => window.tepegoz.showMainMenu()}
+        onNavigate={(input) => window.tepegoz.navigateTab(input)}
+        toolbarActions={
+          <ExtensionTray
+            t={t}
+            locale={locale}
+            extensions={enabledExtensions}
+            activeExtensionId={activeSurface?.id ?? sidebarExtId ?? popupOpenId ?? null}
+            onExtensionAction={runExtensionAction}
+          />
+        }
       />
       <div className="relative flex flex-1 overflow-hidden">
         {/* Left region = the web-view area (its bounds are measured from contentRef, so they exclude

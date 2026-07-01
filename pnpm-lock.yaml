@@ -63,6 +63,9 @@ importers:
       '@tailwindcss/vite':
         specifier: ^4.1.16
         version: 4.3.2(vite@5.4.21(@types/node@22.20.0)(lightningcss@1.32.0))
+      '@tepegoz/browser-chrome':
+        specifier: workspace:*
+        version: link:../../packages/browser-chrome
       '@tepegoz/browser-tools':
         specifier: workspace:*
         version: link:../../packages/browser-tools
@@ -174,6 +177,34 @@ importers:
       vitest:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.0)(lightningcss@1.32.0)
+
+  packages/browser-chrome:
+    dependencies:
+      '@tepegoz/i18n':
+        specifier: workspace:*
+        version: link:../i18n
+      '@tepegoz/nav-toolbar':
+        specifier: workspace:*
+        version: link:../nav-toolbar
+      '@tepegoz/tab-strip':
+        specifier: workspace:*
+        version: link:../tab-strip
+      '@tepegoz/ui':
+        specifier: workspace:*
+        version: link:../ui
+      '@tepegoz/window-controls':
+        specifier: workspace:*
+        version: link:../window-controls
+      react:
+        specifier: ^18 || ^19
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.31
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
 
   packages/browser-tools:
     dependencies:

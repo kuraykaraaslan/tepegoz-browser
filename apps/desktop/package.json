@@ -33,6 +33,7 @@
     "@electron/rebuild": "^3.7.0",
     "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/vite": "^4.1.16",
+    "@tepegoz/browser-chrome": "workspace:*",
     "@tepegoz/browser-tools": "workspace:*",
     "@tepegoz/capability-plane": "workspace:*",
     "@tepegoz/credential-vault": "workspace:*",

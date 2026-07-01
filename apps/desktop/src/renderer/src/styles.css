@@ -15,6 +15,7 @@
 @source "../../../../../packages/settings-ui/src";
 @source "../../../../../packages/extensions-ui/src";
 @source "../../../../../packages/nav-toolbar/src";
+@source "../../../../../packages/browser-chrome/src";
 
 html,
 body,

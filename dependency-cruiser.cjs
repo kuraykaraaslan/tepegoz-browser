@@ -136,6 +136,15 @@ module.exports = {
       to: { path: '^apps/' },
     },
     {
+      name: 'browser-chrome-is-a-leaf',
+      severity: 'error',
+      comment:
+        '@tepegoz/browser-chrome is the presentational chrome frame (title row + nav bar): it must ' +
+        'never import back into the desktop app. Actions are injected; the extension tray fills a slot. See docs/package-map.md.',
+      from: { path: '^packages/browser-chrome/' },
+      to: { path: '^apps/' },
+    },
+    {
       name: 'browser-tools-no-app-no-electron',
       severity: 'error',
       comment:

@@ -33,7 +33,7 @@ Any new package must respect this graph and the no-circular rule in
 | [x] | **@tepegoz/tab-strip** | ~~`renderer/src/components/TabStrip.tsx`~~ → `packages/tab-strip/` | Tab list: favicon fallback, wheel-scroll, container-query collapse; select/close/context-menu/new-tab via callbacks; `TabDescriptor` + `labels` (no i18n dep) | `@tepegoz/ui`, react (peer) | ✅ done |
 | [x] | **@tepegoz/window-controls** | ~~`renderer/src/components/WindowControls.tsx`~~ → `packages/window-controls/` | Min/max/restore/close; pure view — `isMaximized` + labels + callbacks in; app keeps a `useWindowMaximized` hook for the subscription | react (peer), zero deps | ✅ done |
 | [x] | **@tepegoz/nav-toolbar** | `Toolbar.tsx` split → `packages/nav-toolbar/` (`NavToolbar`); app keeps the extension tray/puzzle in an `actions` slot | Back/forward/reload + omnibox + actions slot + menu; all actions injected; exports `NAV_BTN` | `@tepegoz/omnibox`, react (peer) | ✅ done |
-| — | ~~@tepegoz/browser-chrome~~ | `TitleBar.tsx` + composition | **Deprioritized — stays in app.** Now that tab-strip/window-controls/nav-toolbar/omnibox are packages, composing them (`TitleBar` + `Toolbar` in `App.tsx`) is thin app glue that wires all the `window.tepegoz` callbacks + tabs state + extension tray. A meta-package would need that entire callback surface injected — near-zero reuse value. | — | — |
+| [x] | **@tepegoz/browser-chrome** | ~~`TitleBar.tsx` + `Toolbar.tsx`~~ → `packages/browser-chrome/` | The frameless chrome frame (title row: brand + tab-strip + window-controls; nav row: nav-toolbar). Composes the extracted chrome packages; all `window.tepegoz` actions + `isMaximized` injected; app fills the toolbar `actions` slot with its `ExtensionTray`. `t` in, sub-package labels mapped internally | `@tepegoz/tab-strip`, `window-controls`, `nav-toolbar`, `ui`, `i18n`, react (peer) | ✅ done |
 | [x] | **@tepegoz/settings-ui** | `SettingsPage.tsx` split → `packages/settings-ui/` (`SettingsLayout` shell); app keeps `SettingsPage` content | Generic sidebar + cross-section search + content/banner slots; owns active/search state; all provider/theme/i18n content stays in the app | `@tepegoz/ui`, react (peer) | ✅ done |
 | [x] | **@tepegoz/history-ui** | ~~`renderer/src/components/HistoryPage.tsx`~~ → `packages/history-ui/` | Search + newest-first list + delete/clear; owns search state, `list`/`remove`/`clear` data source injected; `HistoryItem` + labels (no i18n dep) | react (peer), zero deps | ✅ done |
 | [x] | **@tepegoz/extensions-ui** | `ExtensionsPage.tsx` split → `packages/extensions-ui/` (`ExtensionsGrid` shell); app keeps registry/manifest mapping | Searchable card grid + toggles; `ExtensionCardItem` + labels + onToggle injected | `@tepegoz/ui`, react (peer) | ✅ done |
@@ -85,14 +85,15 @@ For each new package (same shape as `@tepegoz/tool-executor` / `@tepegoz/ui`):
 - [x] **Wave 0 — quick wins (pure / low-coupling):** `@tepegoz/navigation`,
   `@tepegoz/omnibox` (+ calc), `@tepegoz/json-store`, BrandMark → `@tepegoz/ui`. ✅ done.
 - [x] **Wave 1 — UI chrome:** `tab-strip`, `window-controls`, `nav-toolbar`, `history-ui`,
-  `extensions-ui`, `settings-ui`. ✅ done. (`browser-chrome` deprioritized — stays in app, see Catalog A.)
+  `extensions-ui`, `settings-ui`, `browser-chrome` (frame composition). ✅ done.
 - [x] **Wave 2 — security/state cores:** `credential-vault`, `desktop-ipc` (2-entry, preload-safe),
   `preferences` (type owned by desktop-ipc). ✅ done.
 - [x] **Wave 3 — needs boundary refactor:** `browser-tools` (extracted via a `BrowserHost` interface).
   ✅ done. (`tab-engine` deprioritized — it *is* Electron WebContentsView glue, stays in app; see Catalog B.)
 
-> **Packagization status:** every catalog item is either extracted (14 packages) or consciously kept
-> in-app (`browser-chrome`, `tab-engine`, and the Electron glue in Catalog C). The roadmap is complete.
+> **Packagization status: complete.** Every catalog item is extracted (16 packages) except the
+> Electron-native glue in Catalog C (bootstrap, `createWindow`, global hardening, `ipcMain` wiring,
+> native menus, DI, DB init), which stays in the app by design.
 
 ## Per-package Definition of Done (when a package is actually extracted)
 
