@@ -21,3 +21,4 @@ consequences (including rejected alternatives). Format is a lightweight [MADR](h
 | 0011 | _(reserved: VPN & network privacy — written in Phase 5)_ | Proposed |
 | [0012](0012-browser-tab-model.md) | Browser tab model — isolated WebContentsView per tab | Accepted |
 | [0013](0013-agent-orchestration-hitl.md) | Agent orchestration & two-stage HITL (end-to-end agentic task) | Accepted |
+| [0014](0014-user-data-layout-db-connector.md) | Chrome-like user-data layout (`tepegoz`) + single SQLite DB connector | Accepted |

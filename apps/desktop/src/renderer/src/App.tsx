@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { resources, resolveLocale, type Locale } from '@tepegoz/i18n';
 import {
   INTERNAL_EXTENSIONS_URL,
+  INTERNAL_HISTORY_URL,
   INTERNAL_SETTINGS_URL,
   isExtensionEnabled,
 } from '../../shared/ipc-contract';
@@ -16,6 +17,7 @@ import type {
 } from '../../shared/ipc-contract';
 import { EXTENSIONS } from './extensions/registry';
 import { ExtensionsPage } from './components/ExtensionsPage';
+import { HistoryPage } from './components/HistoryPage';
 import { SettingsPage } from './components/SettingsPage';
 import { TitleBar } from './components/TitleBar';
 import { Toolbar } from './components/Toolbar';
@@ -141,6 +143,7 @@ export function App() {
   // Internal pages are tabs addressed tepegoz://… ; render them when active.
   const settingsActive = activeTab?.url === INTERNAL_SETTINGS_URL;
   const extensionsActive = activeTab?.url === INTERNAL_EXTENSIONS_URL;
+  const historyActive = activeTab?.url === INTERNAL_HISTORY_URL;
   const extensionStates = prefs?.extensions ?? [];
   const enabledExtensions = EXTENSIONS.filter((ext) => isExtensionEnabled(extensionStates, ext.id));
   // The open extension's panel component (capitalized so JSX renders it as a component → hooks work).
@@ -212,6 +215,11 @@ export function App() {
         {extensionsActive && (
           <div className="absolute inset-0 bg-surface-base">
             <ExtensionsPage t={t} states={extensionStates} onToggle={onToggleExtension} />
+          </div>
+        )}
+        {historyActive && (
+          <div className="absolute inset-0 bg-surface-base">
+            <HistoryPage t={t} />
           </div>
         )}
         {ExtensionPanel && (

@@ -2,12 +2,15 @@ import { BrowserWindow, WebContentsView, type Rectangle, type WebContents } from
 import { Logger } from '@tepegoz/libs';
 import {
   INTERNAL_EXTENSIONS_URL,
+  INTERNAL_HISTORY_URL,
   IpcChannels,
   type TabInfo,
   type TabsState,
 } from '../shared/ipc-contract';
+import { HistoryStore } from '@tepegoz/persistence';
 import { internalPageUrl, isWebUrl, toNavigationUrl } from './lib/navigation-url';
 import { mainResources } from './lib/i18n-main';
+import { getDb } from './db/database.electron';
 
 /**
  * L0 tab model. Each tab is an isolated `WebContentsView` in a SEPARATE browsing partition
@@ -160,7 +163,9 @@ export default class TabManager {
 
   private static internalTitle(url: string): string {
     const r = mainResources();
-    return url === INTERNAL_EXTENSIONS_URL ? r.extensions.title : r.settings.title;
+    if (url === INTERNAL_EXTENSIONS_URL) return r.extensions.title;
+    if (url === INTERNAL_HISTORY_URL) return r.history.title;
+    return r.settings.title;
   }
 
   /** Open a fresh tab immediately to the right of `refId` and focus it (Chrome's "New tab to the right"). */
@@ -335,6 +340,9 @@ export default class TabManager {
     };
     wc.on('page-title-updated', (_e, title) => {
       tab.title = title;
+      const db = getDb();
+      const url = wc.getURL();
+      if (db !== null && isWebUrl(url)) HistoryStore.setTitle(db, url, title);
       TabManager.emitState();
     });
     // Electron sends every favicon a page declares; the last is typically the largest/most specific.
@@ -351,6 +359,14 @@ export default class TabManager {
     // from the previous page can't linger (the new one arrives via page-favicon-updated).
     wc.on('did-navigate', () => {
       tab.faviconUrl = null;
+    });
+    // Record the visit in browsing history (once per committed top-level navigation). Only http(s);
+    // no-op when the DB connector is unavailable. The title is refined later via page-title-updated.
+    wc.on('did-navigate', (_e, url) => {
+      const db = getDb();
+      if (db !== null && isWebUrl(url)) {
+        HistoryStore.record(db, { url, title: wc.getTitle() || url, ts: Date.now() });
+      }
     });
     wc.on('did-navigate', sync);
     wc.on('did-navigate-in-page', sync);

@@ -10,6 +10,7 @@ import {
   type AgentRunResult,
   type AppInfo,
   type CredentialsStatus,
+  type HistoryEntry,
   type IpcChannel,
   type Preferences,
   type TabsState,
@@ -21,6 +22,8 @@ import {
   AgentRunIdSchema,
   AgentRunInputSchema,
   AppInfoSchema,
+  HistoryQuerySchema,
+  HistoryUrlSchema,
   ContentBoundsSchema,
   ContentVisibleSchema,
   CreateTabInputSchema,
@@ -31,8 +34,11 @@ import {
 } from '../shared/ipc-schemas';
 import type { ConfirmRequest } from '@tepegoz/capability-plane';
 import { TokenLedger } from '@tepegoz/model-gateway';
-import type { Plan } from '@tepegoz/shared-types';
+import { EventJournal, HistoryStore } from '@tepegoz/persistence';
+import type { EventType, Plan } from '@tepegoz/shared-types';
+import { randomUUID } from 'node:crypto';
 import AgentService, { type PlanApprovalDecision } from './agent/agent-service';
+import { getDb } from './db/database.electron';
 import { PreferencesPatchSchema } from './preferences/preferences.model';
 import { isTrustedAppUrl } from './lib/trusted-origin';
 import CredentialVault from './security/credential-vault';
@@ -130,6 +136,16 @@ function safeArgsPreview(args: unknown): string {
   s ??= 'undefined';
   return s.length > 200 ? `${s.slice(0, 200)}…` : s;
 }
+
+/** Maps a UI agent-event kind to a journal EventType. Unmapped kinds (e.g. 'plan') are not journaled. */
+const JOURNAL_TYPE_BY_KIND: Partial<Record<AgentEventKind, EventType>> = {
+  step_start: 'AgentStepExecuted',
+  step_ok: 'AgentStepExecuted',
+  step_error: 'AgentStepExecuted',
+  awaiting_approval: 'HitlRequested',
+  done: 'TaskSucceeded',
+  error: 'TaskFailed',
+};
 
 /** Register all typed IPC handlers. */
 export function registerIpc(): void {
@@ -270,6 +286,24 @@ export function registerIpc(): void {
     };
     const onEvent = (kind: AgentEventKind, message: string, detail?: string): void => {
       sendEvent({ runId, kind, message, ts: Date.now(), ...(detail !== undefined ? { detail } : {}) });
+      // Project agent events into the Event Journal (append-only audit; DoD "→ Event Journal").
+      const db = getDb();
+      const type = JOURNAL_TYPE_BY_KIND[kind];
+      if (db !== null && type !== undefined) {
+        try {
+          EventJournal.append(db, {
+            id: randomUUID(),
+            type,
+            ts: Date.now(),
+            actor: 'agent',
+            correlationId: runId,
+            payload: detail !== undefined ? { kind, message, detail } : { kind, message },
+            redacted: false,
+          });
+        } catch (err) {
+          Logger.warn('Journal append failed', { err: String(err) });
+        }
+      }
     };
     const requestApproval = (req: ConfirmRequest): Promise<boolean> => {
       const approvalId = `appr-${String(++approvalCounter)}`;
@@ -366,4 +400,28 @@ export function registerIpc(): void {
   );
 
   handle(IpcChannels.tokenUsageGet, (): TokenUsageSnapshot => tokenUsage());
+
+  // Browsing history (tepegoz://history). Each returns the fresh list so the page re-renders.
+  handle(IpcChannels.historyList, (): HistoryEntry[] => {
+    const db = getDb();
+    return db !== null ? HistoryStore.list(db) : [];
+  });
+  handle(IpcChannels.historySearch, (_event, payload): HistoryEntry[] => {
+    const query = HistoryQuerySchema.parse(payload).trim();
+    const db = getDb();
+    if (db === null) return [];
+    return query.length === 0 ? HistoryStore.list(db) : HistoryStore.search(db, query);
+  });
+  handle(IpcChannels.historyDelete, (_event, payload): HistoryEntry[] => {
+    const url = HistoryUrlSchema.parse(payload);
+    const db = getDb();
+    if (db === null) return [];
+    HistoryStore.deleteUrl(db, url);
+    return HistoryStore.list(db);
+  });
+  handle(IpcChannels.historyClear, (): HistoryEntry[] => {
+    const db = getDb();
+    if (db !== null) HistoryStore.clear(db);
+    return [];
+  });
 }

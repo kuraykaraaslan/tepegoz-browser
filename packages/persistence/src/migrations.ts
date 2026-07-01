@@ -57,6 +57,34 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 2,
+    up: (db) => {
+      db.exec(`
+        -- Browsing history: one row per URL (visits coalesced via UNIQUE(url) upsert). Newest-first
+        -- listing uses idx_history_ts.
+        CREATE TABLE history (
+          id          INTEGER PRIMARY KEY AUTOINCREMENT,
+          url         TEXT NOT NULL,
+          title       TEXT NOT NULL,
+          ts          INTEGER NOT NULL,
+          visit_count INTEGER NOT NULL DEFAULT 1
+        );
+        CREATE UNIQUE INDEX idx_history_url ON history (url);
+        CREATE INDEX idx_history_ts ON history (ts);
+
+        -- Installed (third-party) extensions on disk under Extensions/. Scaffold; real install is a
+        -- later phase (MV3). Built-in extension state stays in preferences for now.
+        CREATE TABLE installed_extensions (
+          id      TEXT PRIMARY KEY,
+          name    TEXT NOT NULL,
+          version TEXT NOT NULL,
+          path    TEXT NOT NULL,
+          status  TEXT NOT NULL DEFAULT 'enabled'
+        );
+      `);
+    },
+  },
 ];
 
 /**

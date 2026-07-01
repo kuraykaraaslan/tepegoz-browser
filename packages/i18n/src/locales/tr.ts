@@ -72,6 +72,13 @@ export const tr: Resources = {
       agent: 'Ajan',
     },
   },
+  history: {
+    title: 'Geçmiş',
+    search: 'Geçmişte ara',
+    empty: 'Henüz geçmiş yok',
+    clear: 'Tümünü temizle',
+    delete: 'Kaldır',
+  },
   onboarding: {
     welcome: "Tepegöz'e hoş geldiniz",
     consentTitle: 'Veriniz, sizin kontrolünüzde',

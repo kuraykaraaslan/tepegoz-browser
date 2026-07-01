@@ -9,6 +9,7 @@ import {
   type ContentBounds,
   type CredentialsStatus,
   type ExtensionId,
+  type HistoryEntry,
   type Preferences,
   type ProviderId,
   type TabsState,
@@ -151,6 +152,12 @@ const api: TepegozApi = {
       ipcRenderer.removeListener(IpcChannels.extensionOpen, listener);
     };
   },
+  getHistory: () => ipcRenderer.invoke(IpcChannels.historyList) as Promise<HistoryEntry[]>,
+  searchHistory: (query: string) =>
+    ipcRenderer.invoke(IpcChannels.historySearch, query) as Promise<HistoryEntry[]>,
+  deleteHistory: (url: string) =>
+    ipcRenderer.invoke(IpcChannels.historyDelete, url) as Promise<HistoryEntry[]>,
+  clearHistory: () => ipcRenderer.invoke(IpcChannels.historyClear) as Promise<HistoryEntry[]>,
   platform: process.platform,
 };
 

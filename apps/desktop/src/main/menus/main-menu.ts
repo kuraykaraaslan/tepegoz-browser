@@ -2,6 +2,7 @@ import { app, Menu, type BrowserWindow, type MenuItemConstructorOptions } from '
 import {
   EXTENSION_IDS,
   INTERNAL_EXTENSIONS_URL,
+  INTERNAL_HISTORY_URL,
   INTERNAL_SETTINGS_URL,
   IpcChannels,
   isExtensionEnabled,
@@ -51,6 +52,12 @@ export function showMainMenu(win: BrowserWindow): void {
       },
     },
     { type: 'separator' },
+    {
+      label: t.history.title,
+      click: () => {
+        TabManager.openInternalPage(INTERNAL_HISTORY_URL);
+      },
+    },
     {
       label: t.extensions.title,
       submenu: extensionSubmenu,

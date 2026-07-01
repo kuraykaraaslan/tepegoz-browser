@@ -8,11 +8,19 @@
  *
  * Pure (no Electron) so it is unit-testable and reusable by every load entry point.
  */
-import { INTERNAL_EXTENSIONS_URL, INTERNAL_SETTINGS_URL } from '../../shared/ipc-contract';
+import {
+  INTERNAL_EXTENSIONS_URL,
+  INTERNAL_HISTORY_URL,
+  INTERNAL_SETTINGS_URL,
+} from '../../shared/ipc-contract';
 
 const HTTP_SCHEME = /^https?:\/\//i;
 const LOCALHOST = /^(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i;
-const INTERNAL_URLS: readonly string[] = [INTERNAL_SETTINGS_URL, INTERNAL_EXTENSIONS_URL];
+const INTERNAL_URLS: readonly string[] = [
+  INTERNAL_SETTINGS_URL,
+  INTERNAL_EXTENSIONS_URL,
+  INTERNAL_HISTORY_URL,
+];
 
 /** True only for http/https URLs — the only schemes safe to load into an untrusted browsing view. */
 export function isWebUrl(url: string): boolean {

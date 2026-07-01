@@ -49,3 +49,6 @@ export const AgentPlanResponseSchema = z.object({
   approved: z.boolean(),
   skipStepIds: z.array(z.string().max(64)).max(100).optional(),
 });
+
+export const HistoryQuerySchema = z.string().max(200);
+export const HistoryUrlSchema = z.string().min(1).max(4096);

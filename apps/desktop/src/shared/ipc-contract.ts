@@ -29,6 +29,11 @@ export type {
   TokenUsageSnapshot,
 };
 
+// Browsing-history entry type lives in the persistence package (single source). Type-only import →
+// erased, so the sandboxed preload stays dependency-free.
+import type { HistoryEntry } from '@tepegoz/persistence';
+export type { HistoryEntry };
+
 export const IpcChannels = {
   appGetInfo: 'app:get-info',
   prefsGet: 'prefs:get',
@@ -64,6 +69,10 @@ export const IpcChannels = {
   tokenUsageGet: 'token:usage-get',
   menuShowMain: 'menu:show-main',
   extensionOpen: 'extension:open',
+  historyList: 'history:list',
+  historySearch: 'history:search',
+  historyDelete: 'history:delete',
+  historyClear: 'history:clear',
 } as const;
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];
@@ -71,6 +80,7 @@ export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];
 /** Internal (browser-served) page addresses, shown in the omnibox like Chrome's `chrome://` pages. */
 export const INTERNAL_SETTINGS_URL = 'tepegoz://settings';
 export const INTERNAL_EXTENSIONS_URL = 'tepegoz://extensions';
+export const INTERNAL_HISTORY_URL = 'tepegoz://history';
 
 export interface AppInfo {
   name: string;
@@ -212,5 +222,10 @@ export interface TepegozApi {
   showMainMenu(): void;
   /** Subscribe to "open this extension panel" requests from the menu; returns an unsubscribe fn. */
   onOpenExtension(callback: (id: ExtensionId) => void): () => void;
+  // Browsing history (tepegoz://history). All return the fresh list so the page re-renders.
+  getHistory(): Promise<HistoryEntry[]>;
+  searchHistory(query: string): Promise<HistoryEntry[]>;
+  deleteHistory(url: string): Promise<HistoryEntry[]>;
+  clearHistory(): Promise<HistoryEntry[]>;
   readonly platform: string;
 }

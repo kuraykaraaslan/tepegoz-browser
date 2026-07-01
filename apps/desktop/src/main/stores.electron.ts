@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import { app, safeStorage } from 'electron';
 import CredentialVault, { type SecretCrypto } from './security/credential-vault';
 import PreferenceStore from './preferences/preference-store';
+import { initDatabase } from './db/database.electron';
 
 /**
  * Electron wiring for the main-process stores (the only place that touches `safeStorage`/`app`).
@@ -21,4 +22,5 @@ export function initStores(): void {
     filePath: join(userData, 'credentials.enc.json'),
   });
   PreferenceStore.init({ filePath: join(userData, 'preferences.json') });
+  initDatabase(); // the SQLite connector (journal + history + kv) under the same user-data dir
 }

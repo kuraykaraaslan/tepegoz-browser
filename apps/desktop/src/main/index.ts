@@ -1,3 +1,4 @@
+import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { app, BrowserWindow, powerMonitor } from 'electron';
 import { Logger } from '@tepegoz/libs';
@@ -10,6 +11,34 @@ import TabManager from './tabs';
 // App-specific identity → userData at %APPDATA%/Tepegöz instead of the shared default "Electron" dir.
 // This avoids cross-instance GPU/disk-cache contention ("Unable to move the cache: Access is denied").
 app.setName('Tepegöz');
+// Windows: bind an explicit AppUserModelID so the taskbar groups windows under our brand icon
+// (and notifications are attributed to Tepegöz) rather than the default Electron identity.
+if (process.platform === 'win32') app.setAppUserModelId('com.tepegoz.browser');
+
+// Single Chrome-like user-data directory named `tepegoz` (app.setName above is only the display /
+// taskbar name). Pin it explicitly BEFORE whenReady so EVERY app.getPath('userData') — stores, the
+// SQLite DB, and the browsing partitions — resolves here. One-time: carry the small settings files
+// over from the pre-rename "Tepegöz" folder so existing preferences + encrypted API keys survive.
+{
+  const appDataDir = app.getPath('appData');
+  const legacyDir = join(appDataDir, 'Tepegöz');
+  const userDataDir = join(appDataDir, 'tepegoz');
+  if (existsSync(legacyDir)) {
+    mkdirSync(userDataDir, { recursive: true });
+    for (const file of ['preferences.json', 'credentials.enc.json']) {
+      const src = join(legacyDir, file);
+      const dst = join(userDataDir, file);
+      if (existsSync(src) && !existsSync(dst)) {
+        try {
+          copyFileSync(src, dst);
+        } catch (err) {
+          Logger.warn('Failed to carry over legacy user-data file', { file, err: String(err) });
+        }
+      }
+    }
+  }
+  app.setPath('userData', userDataDir);
+}
 
 function bootstrap(): void {
   const win = createWindow();
@@ -45,6 +74,11 @@ if (!app.requestSingleInstanceLock()) {
   void app
     .whenReady()
     .then(() => {
+      // macOS: the BrowserWindow `icon` is ignored (the dock uses the app bundle), so set it here
+      // for dev/unpackaged runs. Windows/Linux get the brand icon via the window itself.
+      if (process.platform === 'darwin') {
+        app.dock?.setIcon(join(app.getAppPath(), 'resources', 'icon.png'));
+      }
       installSecurity();
       initStores();
       registerIpc();

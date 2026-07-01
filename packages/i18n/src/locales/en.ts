@@ -74,6 +74,13 @@ export const en = {
       agent: 'Agent',
     },
   },
+  history: {
+    title: 'History',
+    search: 'Search history',
+    empty: 'No history yet',
+    clear: 'Clear all',
+    delete: 'Remove',
+  },
   onboarding: {
     welcome: 'Welcome to Tepegöz',
     consentTitle: 'Your data, your control',

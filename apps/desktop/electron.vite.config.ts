@@ -14,6 +14,9 @@ const WORKSPACE_PACKAGES = [
   '@tepegoz/capability-plane',
   '@tepegoz/security-policy',
   '@tepegoz/tool-executor',
+  // Bundled into main (TS source). Its native dep `better-sqlite3` stays external (real npm module,
+  // rebuilt against the Electron ABI via `pnpm --filter @tepegoz/desktop run rebuild`).
+  '@tepegoz/persistence',
 ];
 
 // electron-vite conventions: main = src/main/index.ts, preload = src/preload/index.ts,
