@@ -30,6 +30,7 @@ export function DropdownMenu({
   className,
   triggerClassName,
   triggerAriaLabel,
+  onOpenChange,
 }: {
   trigger: ReactNode;
   items: DropdownItem[];
@@ -38,9 +39,15 @@ export function DropdownMenu({
   className?: string;
   triggerClassName?: string;
   triggerAriaLabel?: string;
+  /** Notified whenever the panel opens/closes (e.g. to lift the menu above an overlaid native view). */
+  onOpenChange?: (open: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    onOpenChange?.(open);
+  }, [open, onOpenChange]);
 
   useEffect(() => {
     if (!open) return;

@@ -13,6 +13,7 @@ interface ToolbarProps {
   onToggleAgent: () => void;
   onOpenSettings: () => void;
   onOpenAgent: () => void;
+  onMenuOpenChange: (open: boolean) => void;
 }
 
 const NAV_BTN =
@@ -30,6 +31,7 @@ export function Toolbar({
   onToggleAgent,
   onOpenSettings,
   onOpenAgent,
+  onMenuOpenChange,
 }: ToolbarProps) {
   const [value, setValue] = useState(currentUrl);
   const [focused, setFocused] = useState(false);
@@ -133,7 +135,12 @@ export function Toolbar({
         {t.agentConsole.open}
       </button>
 
-      <MainMenu t={t} onOpenSettings={onOpenSettings} onOpenAgent={onOpenAgent} />
+      <MainMenu
+        t={t}
+        onOpenSettings={onOpenSettings}
+        onOpenAgent={onOpenAgent}
+        onOpenChange={onMenuOpenChange}
+      />
     </div>
   );
 }

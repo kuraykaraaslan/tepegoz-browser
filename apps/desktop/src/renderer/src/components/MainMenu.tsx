@@ -10,6 +10,8 @@ interface MainMenuProps {
   t: Resources;
   onOpenSettings: () => void;
   onOpenAgent: () => void;
+  /** Reported so the app can hide the overlaid web view while the menu is open (else it covers it). */
+  onOpenChange: (open: boolean) => void;
 }
 
 const ICON = 'h-4 w-4';
@@ -64,7 +66,7 @@ const TRIGGER =
   'hover:bg-surface-overlay hover:text-text-primary transition-colors ' +
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus';
 
-export function MainMenu({ t, onOpenSettings, onOpenAgent }: MainMenuProps) {
+export function MainMenu({ t, onOpenSettings, onOpenAgent, onOpenChange }: MainMenuProps) {
   const items: DropdownItem[] = [
     {
       label: t.browser.newTab,
@@ -98,6 +100,7 @@ export function MainMenu({ t, onOpenSettings, onOpenAgent }: MainMenuProps) {
   return (
     <DropdownMenu
       align="right"
+      onOpenChange={onOpenChange}
       triggerAriaLabel={t.browser.menu}
       triggerClassName={TRIGGER}
       trigger={

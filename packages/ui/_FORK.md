@@ -37,7 +37,9 @@ review flagged real defects in the vendored atoms:
   — WCAG 2.1.1); added `triggerClassName` / `triggerAriaLabel` passthrough. (2) feature — items gained
   an optional right-aligned `shortcut` accelerator hint (icon → flex-1 label → shortcut layout).
   (3) `React, { … }` default import → named `{ …, type ReactNode }` (this fork avoids the React
-  default import under `verbatimModuleSyntax`, consistent with the other atoms).
+  default import under `verbatimModuleSyntax`, consistent with the other atoms). (4) `onOpenChange`
+  callback so the host can react to open/close (Tepegöz hides the overlaid native `WebContentsView`
+  while the menu is open, else it would cover the DOM dropdown).
 
 ## Conventions
 - The only transform on component sources is rewriting the `@/` path alias to relative imports
