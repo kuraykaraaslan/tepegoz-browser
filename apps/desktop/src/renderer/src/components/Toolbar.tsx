@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { cn } from '@tepegoz/ui';
 import type { Resources } from '@tepegoz/i18n';
+import { evaluateOmniboxCalc } from '../lib/omnibox-calc';
 
 interface ToolbarProps {
   t: Resources;
@@ -36,6 +37,8 @@ export function Toolbar({
   useEffect(() => {
     if (!focused) setValue(currentUrl);
   }, [currentUrl, focused]);
+
+  const calc = value.trim().length > 0 ? evaluateOmniboxCalc(value) : null;
 
   return (
     <div className="flex h-11 shrink-0 items-center gap-1 border-b border-border bg-surface-raised px-2">
@@ -74,9 +77,16 @@ export function Toolbar({
       </button>
 
       <form
-        className="flex-1"
+        className="relative flex-1"
         onSubmit={(e) => {
           e.preventDefault();
+          // Inline calculation: if the whole input is arithmetic, compute it (copy the result to the
+          // clipboard) instead of navigating — the omnibox never starts an AI thread (Comet lesson).
+          if (calc !== null) {
+            void navigator.clipboard?.writeText(calc.formatted);
+            setValue(calc.formatted);
+            return;
+          }
           window.tepegoz.navigateTab(value);
           // Keep focus (and the typed value) until navigation commits; the focus guard then re-syncs
           // to the real URL on blur. Blurring here would snap the box back to the OLD url mid-load.
@@ -94,8 +104,19 @@ export function Toolbar({
             e.target.select();
           }}
           onBlur={() => setFocused(false)}
-          className="h-8 w-full rounded-full border border-border bg-surface-base px-4 text-sm text-text-primary placeholder:text-text-disabled focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+          className={cn(
+            'h-8 w-full rounded-full border border-border bg-surface-base px-4 text-sm text-text-primary placeholder:text-text-disabled focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus',
+            calc !== null && 'pr-24',
+          )}
         />
+        {calc !== null && (
+          <span
+            aria-live="polite"
+            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded bg-surface-overlay px-2 py-0.5 font-mono text-xs text-text-secondary"
+          >
+            = {calc.formatted}
+          </span>
+        )}
       </form>
 
       <button
