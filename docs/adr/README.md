@@ -20,3 +20,4 @@ consequences (including rejected alternatives). Format is a lightweight [MADR](h
 | [0010](0010-ts-tooling-conventions.md) | TypeScript/tooling conventions & deviations | Accepted |
 | 0011 | _(reserved: VPN & network privacy — written in Phase 5)_ | Proposed |
 | [0012](0012-browser-tab-model.md) | Browser tab model — isolated WebContentsView per tab | Accepted |
+| [0013](0013-agent-orchestration-hitl.md) | Agent orchestration & two-stage HITL (end-to-end agentic task) | Accepted |
