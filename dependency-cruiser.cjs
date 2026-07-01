@@ -63,6 +63,33 @@ module.exports = {
       from: { path: '^packages/tab-strip/' },
       to: { path: '^apps/' },
     },
+    {
+      name: 'window-controls-is-a-leaf',
+      severity: 'error',
+      comment:
+        '@tepegoz/window-controls is a presentational chrome leaf: it must never import back into ' +
+        'the desktop app. Maximized state + actions are injected via props. See docs/package-map.md.',
+      from: { path: '^packages/window-controls/' },
+      to: { path: '^apps/' },
+    },
+    {
+      name: 'history-ui-is-a-leaf',
+      severity: 'error',
+      comment:
+        '@tepegoz/history-ui is a presentational chrome leaf: it must never import back into the ' +
+        'desktop app. The history data source (list/remove/clear) is injected. See docs/package-map.md.',
+      from: { path: '^packages/history-ui/' },
+      to: { path: '^apps/' },
+    },
+    {
+      name: 'settings-ui-is-a-leaf',
+      severity: 'error',
+      comment:
+        '@tepegoz/settings-ui is a presentational chrome leaf (the generic settings shell): it must ' +
+        'never import back into the desktop app. Section content + copy are injected. See docs/package-map.md.',
+      from: { path: '^packages/settings-ui/' },
+      to: { path: '^apps/' },
+    },
   ],
   options: {
     doNotFollow: { path: 'node_modules' },

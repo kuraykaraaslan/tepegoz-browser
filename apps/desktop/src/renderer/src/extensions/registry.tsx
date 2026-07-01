@@ -53,9 +53,7 @@ export const EXTENSIONS: readonly ExtensionDef[] = [
     manifest: agentManifest,
     icon: <AgentIcon />,
     surfaces: {
-      // The same console serves as a full-screen panel (click) and a docked sidebar (double-click);
-      // it fills whichever container the chrome gives it.
-      panel: ({ t, onClose }) => <AgentPanel t={t} api={window.tepegoz} onClose={onClose} />,
+      // The AI console lives in the resizable sidebar so the page stays visible beside it.
       sidebar: ({ t, onClose }) => <AgentPanel t={t} api={window.tepegoz} onClose={onClose} />,
     },
   },

@@ -1,5 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { AlertBanner, Badge, Button, Card, Input, Toggle, cn } from '@tepegoz/ui';
+import { useEffect, useState } from 'react';
+import { SettingsLayout, type SettingsSection } from '@tepegoz/settings-ui';
+import { AlertBanner, Badge, Button, Card, Input, Toggle } from '@tepegoz/ui';
 import type { Resources } from '@tepegoz/i18n';
 import type {
   CredentialsStatus,
@@ -12,8 +13,6 @@ import type {
 const PROVIDERS: readonly ProviderId[] = ['anthropic', 'openai', 'gemini'];
 const THEMES: readonly ThemePref[] = ['system', 'light', 'dark'];
 const LOCALES: readonly LocalePref[] = ['system', 'en', 'tr'];
-
-type SectionId = 'providers' | 'appearance' | 'language' | 'privacy' | 'cost';
 
 const ICON = 'h-4 w-4';
 const IconKey = () => (
@@ -47,12 +46,6 @@ const IconGauge = () => (
     <path d="M8 12 10.5 7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
   </svg>
 );
-const IconSearch = () => (
-  <svg className={ICON} viewBox="0 0 16 16" aria-hidden="true">
-    <circle cx="7" cy="7" r="4.2" fill="none" stroke="currentColor" strokeWidth="1.3" />
-    <path d="M10.2 10.2 L14 14" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-  </svg>
-);
 const IconGear = () => (
   <svg className="h-5 w-5" viewBox="0 0 16 16" aria-hidden="true">
     <circle cx="8" cy="8" r="2.2" fill="none" stroke="currentColor" strokeWidth="1.4" />
@@ -83,8 +76,6 @@ export function SettingsPage({
   onRemoveKey,
 }: SettingsPageProps) {
   const s = t.settings;
-  const [active, setActive] = useState<SectionId>('providers');
-  const [search, setSearch] = useState('');
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState<{ variant: 'success' | 'error'; message: string } | null>(
     null,
@@ -142,229 +133,163 @@ export function SettingsPage({
     });
   }
 
-  const sections: { id: SectionId; label: string; icon: ReactNode; text: string }[] = [
+  const sections: SettingsSection[] = [
     {
       id: 'providers',
       label: s.providersTitle,
       icon: <IconKey />,
-      text: `${s.providersTitle} ${s.providersSubtitle} ${s.apiKey} ${PROVIDERS.map((p) => s.providerNames[p]).join(' ')}`,
+      searchText: `${s.providersTitle} ${s.providersSubtitle} ${s.apiKey} ${PROVIDERS.map((p) => s.providerNames[p]).join(' ')}`,
+      content: (
+        <Card title={s.providersTitle} subtitle={s.providersSubtitle}>
+          {!status.encryptionAvailable && (
+            <AlertBanner variant="error" message={s.encryptionUnavailable} className="mb-4" />
+          )}
+          <div className="space-y-5">
+            {PROVIDERS.map((p) => {
+              const isSet = status.providers[p];
+              const draft = drafts[p] ?? '';
+              return (
+                <div key={p} className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-text-primary">{s.providerNames[p]}</span>
+                    <Badge variant={isSet ? 'success' : 'neutral'} dot>
+                      {isSet ? s.keySet : s.keyNotSet}
+                    </Badge>
+                  </div>
+                  <Input
+                    id={`key-${p}`}
+                    label={s.apiKey}
+                    type="password"
+                    placeholder={s.apiKeyPlaceholder}
+                    value={draft}
+                    disabled={!status.encryptionAvailable}
+                    showPasswordLabel={t.common.showPassword}
+                    hidePasswordLabel={t.common.hidePassword}
+                    onChange={(e) => {
+                      const { value } = e.target;
+                      setDrafts((d) => ({ ...d, [p]: value }));
+                    }}
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      disabled={!status.encryptionAvailable || draft.trim().length === 0}
+                      onClick={() => void saveKey(p)}
+                    >
+                      {t.common.save}
+                    </Button>
+                    {isSet && (
+                      <Button size="sm" variant="outline" onClick={() => void removeKey(p)}>
+                        {s.remove}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      ),
     },
     {
       id: 'appearance',
       label: s.appearanceTitle,
       icon: <IconPalette />,
-      text: `${s.appearanceTitle} ${s.theme} ${s.themeSystem} ${s.themeLight} ${s.themeDark}`,
+      searchText: `${s.appearanceTitle} ${s.theme} ${s.themeSystem} ${s.themeLight} ${s.themeDark}`,
+      content: (
+        <Card title={s.appearanceTitle}>
+          <p className="mb-2 text-sm font-medium text-text-primary">{s.theme}</p>
+          <div className="flex gap-2">
+            {THEMES.map((th) => (
+              <Button
+                key={th}
+                size="sm"
+                variant={prefs.theme === th ? 'primary' : 'outline'}
+                onClick={() => {
+                  setPref({ theme: th });
+                }}
+              >
+                {themeLabel[th]}
+              </Button>
+            ))}
+          </div>
+        </Card>
+      ),
     },
-    { id: 'language', label: s.languageTitle, icon: <IconGlobe />, text: `${s.languageTitle}` },
+    {
+      id: 'language',
+      label: s.languageTitle,
+      icon: <IconGlobe />,
+      searchText: `${s.languageTitle}`,
+      content: (
+        <Card title={s.languageTitle}>
+          <div className="flex gap-2">
+            {LOCALES.map((lc) => (
+              <Button
+                key={lc}
+                size="sm"
+                variant={prefs.locale === lc ? 'primary' : 'outline'}
+                onClick={() => {
+                  setPref({ locale: lc });
+                }}
+              >
+                {localeLabel[lc]}
+              </Button>
+            ))}
+          </div>
+        </Card>
+      ),
+    },
     {
       id: 'privacy',
       label: s.privacyTitle,
       icon: <IconShield />,
-      text: `${s.privacyTitle} ${s.telemetry} ${s.telemetryDesc}`,
+      searchText: `${s.privacyTitle} ${s.telemetry} ${s.telemetryDesc}`,
+      content: (
+        <Card title={s.privacyTitle}>
+          <Toggle
+            id="telemetry"
+            label={s.telemetry}
+            description={s.telemetryDesc}
+            checked={prefs.telemetryEnabled}
+            onChange={(v) => {
+              setPref({ telemetryEnabled: v });
+            }}
+          />
+        </Card>
+      ),
     },
     {
       id: 'cost',
       label: s.costTitle,
       icon: <IconGauge />,
-      text: `${s.costTitle} ${s.localModel} ${s.localModelDesc}`,
+      searchText: `${s.costTitle} ${s.localModel} ${s.localModelDesc}`,
+      content: (
+        <Card title={s.costTitle}>
+          <Toggle
+            id="local-model"
+            label={s.localModel}
+            description={s.localModelDesc}
+            checked={prefs.useLocalModelForSimpleTasks}
+            onChange={(v) => {
+              setPref({ useLocalModelForSimpleTasks: v });
+            }}
+          />
+        </Card>
+      ),
     },
   ];
 
-  const q = search.trim().toLowerCase();
-  const searching = q.length > 0;
-  const isVisible = (text: string, id: SectionId): boolean =>
-    searching ? text.toLowerCase().includes(q) : active === id;
-  const anyVisible = sections.some((sec) => isVisible(sec.text, sec.id));
-
-  function renderSection(id: SectionId): ReactNode {
-    switch (id) {
-      case 'providers':
-        return (
-          <Card title={s.providersTitle} subtitle={s.providersSubtitle}>
-            {!status.encryptionAvailable && (
-              <AlertBanner variant="error" message={s.encryptionUnavailable} className="mb-4" />
-            )}
-            <div className="space-y-5">
-              {PROVIDERS.map((p) => {
-                const isSet = status.providers[p];
-                const draft = drafts[p] ?? '';
-                return (
-                  <div key={p} className="space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium text-text-primary">{s.providerNames[p]}</span>
-                      <Badge variant={isSet ? 'success' : 'neutral'} dot>
-                        {isSet ? s.keySet : s.keyNotSet}
-                      </Badge>
-                    </div>
-                    <Input
-                      id={`key-${p}`}
-                      label={s.apiKey}
-                      type="password"
-                      placeholder={s.apiKeyPlaceholder}
-                      value={draft}
-                      disabled={!status.encryptionAvailable}
-                      showPasswordLabel={t.common.showPassword}
-                      hidePasswordLabel={t.common.hidePassword}
-                      onChange={(e) => {
-                        const { value } = e.target;
-                        setDrafts((d) => ({ ...d, [p]: value }));
-                      }}
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        disabled={!status.encryptionAvailable || draft.trim().length === 0}
-                        onClick={() => void saveKey(p)}
-                      >
-                        {t.common.save}
-                      </Button>
-                      {isSet && (
-                        <Button size="sm" variant="outline" onClick={() => void removeKey(p)}>
-                          {s.remove}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-        );
-      case 'appearance':
-        return (
-          <Card title={s.appearanceTitle}>
-            <p className="mb-2 text-sm font-medium text-text-primary">{s.theme}</p>
-            <div className="flex gap-2">
-              {THEMES.map((th) => (
-                <Button
-                  key={th}
-                  size="sm"
-                  variant={prefs.theme === th ? 'primary' : 'outline'}
-                  onClick={() => {
-                    setPref({ theme: th });
-                  }}
-                >
-                  {themeLabel[th]}
-                </Button>
-              ))}
-            </div>
-          </Card>
-        );
-      case 'language':
-        return (
-          <Card title={s.languageTitle}>
-            <div className="flex gap-2">
-              {LOCALES.map((lc) => (
-                <Button
-                  key={lc}
-                  size="sm"
-                  variant={prefs.locale === lc ? 'primary' : 'outline'}
-                  onClick={() => {
-                    setPref({ locale: lc });
-                  }}
-                >
-                  {localeLabel[lc]}
-                </Button>
-              ))}
-            </div>
-          </Card>
-        );
-      case 'privacy':
-        return (
-          <Card title={s.privacyTitle}>
-            <Toggle
-              id="telemetry"
-              label={s.telemetry}
-              description={s.telemetryDesc}
-              checked={prefs.telemetryEnabled}
-              onChange={(v) => {
-                setPref({ telemetryEnabled: v });
-              }}
-            />
-          </Card>
-        );
-      case 'cost':
-        return (
-          <Card title={s.costTitle}>
-            <Toggle
-              id="local-model"
-              label={s.localModel}
-              description={s.localModelDesc}
-              checked={prefs.useLocalModelForSimpleTasks}
-              onChange={(v) => {
-                setPref({ useLocalModelForSimpleTasks: v });
-              }}
-            />
-          </Card>
-        );
-      default:
-        return null;
-    }
-  }
-
   return (
-    <div className="flex h-full bg-surface-base text-text-primary">
-      <aside className="w-60 shrink-0 overflow-auto border-r border-border py-4">
-        <div className="flex items-center gap-2 px-5 pb-4 text-text-primary">
-          <IconGear />
-          <h1 className="text-base font-semibold">{s.title}</h1>
-        </div>
-        <nav className="space-y-0.5 px-2">
-          {sections.map((sec) => (
-            <button
-              key={sec.id}
-              type="button"
-              aria-current={!searching && active === sec.id}
-              onClick={() => {
-                setActive(sec.id);
-                setSearch('');
-              }}
-              className={cn(
-                'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors',
-                !searching && active === sec.id
-                  ? 'bg-surface-overlay font-medium text-text-primary'
-                  : 'text-text-secondary hover:bg-surface-overlay hover:text-text-primary',
-              )}
-            >
-              <span className="h-4 w-4 shrink-0">{sec.icon}</span>
-              {sec.label}
-            </button>
-          ))}
-        </nav>
-      </aside>
-
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <div className="shrink-0 border-b border-border px-8 py-4">
-          <div className="relative mx-auto max-w-2xl">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary">
-              <IconSearch />
-            </span>
-            <input
-              type="text"
-              value={search}
-              placeholder={s.search}
-              aria-label={s.search}
-              spellCheck={false}
-              onChange={(e) => {
-                setSearch(e.target.value);
-              }}
-              className="h-10 w-full rounded-full border border-border bg-surface-raised pl-10 pr-4 text-sm text-text-primary placeholder:text-text-disabled focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-            />
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-auto px-8 py-6">
-          <div className="mx-auto max-w-2xl space-y-6">
-            {feedback && (
-              <AlertBanner key={feedbackKey} variant={feedback.variant} message={feedback.message} />
-            )}
-            {sections.map((sec) =>
-              isVisible(sec.text, sec.id) ? <div key={sec.id}>{renderSection(sec.id)}</div> : null,
-            )}
-            {searching && !anyVisible && <p className="text-sm text-text-secondary">{s.noResults}</p>}
-          </div>
-        </div>
-      </div>
-    </div>
+    <SettingsLayout
+      labels={{ title: s.title, search: s.search, noResults: s.noResults }}
+      titleIcon={<IconGear />}
+      sections={sections}
+      banner={
+        feedback ? (
+          <AlertBanner key={feedbackKey} variant={feedback.variant} message={feedback.message} />
+        ) : null
+      }
+    />
   );
 }

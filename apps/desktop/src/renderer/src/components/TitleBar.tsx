@@ -1,8 +1,9 @@
 import type { Resources } from '@tepegoz/i18n';
 import { TabStrip } from '@tepegoz/tab-strip';
 import { BrandMark } from '@tepegoz/ui';
+import { WindowControls } from '@tepegoz/window-controls';
 import type { TabInfo } from '../../../shared/ipc-contract';
-import { WindowControls } from './WindowControls';
+import { useWindowMaximized } from '../lib/useWindowMaximized';
 
 /**
  * Custom window title row for the frameless window (browser-style): brand, tab strip, a draggable
@@ -19,6 +20,7 @@ interface TitleBarProps {
 }
 
 export function TitleBar({ t, tabs, activeId, onSelectTab, onNewTab }: TitleBarProps) {
+  const isMaximized = useWindowMaximized();
   return (
     <header className="app-drag flex h-9 shrink-0 select-none items-stretch gap-2 border-b border-border bg-surface-raised pl-3">
       <div className="flex items-center gap-1.5">
@@ -43,7 +45,18 @@ export function TitleBar({ t, tabs, activeId, onSelectTab, onNewTab }: TitleBarP
           onNew={onNewTab}
         />
       </div>
-      <WindowControls t={t} />
+      <WindowControls
+        isMaximized={isMaximized}
+        labels={{
+          minimize: t.window.minimize,
+          maximize: t.window.maximize,
+          restore: t.window.restore,
+          close: t.window.close,
+        }}
+        onMinimize={() => window.tepegoz.minimizeWindow()}
+        onToggleMaximize={() => window.tepegoz.toggleMaximizeWindow()}
+        onClose={() => window.tepegoz.closeWindow()}
+      />
     </header>
   );
 }

@@ -1,40 +1,60 @@
 import { useEffect, useState } from 'react';
-import type { Resources } from '@tepegoz/i18n';
-import type { HistoryEntry } from '../../../shared/ipc-contract';
 
-/**
- * Browsing-history manager (tepegoz://history), Chrome-style: a search box + a newest-first list of
- * visited pages, each removable, plus "Clear all". Data comes from the SQLite DB connector via IPC.
- */
-interface HistoryPageProps {
-  t: Resources;
+/** The minimal history entry the view renders. Hosts pass their own richer entries (structural). */
+export interface HistoryItem {
+  url: string;
+  title: string;
+  /** Visit timestamp (epoch ms). */
+  ts: number;
 }
 
-export function HistoryPage({ t }: HistoryPageProps) {
-  const h = t.history;
+/** Localized strings, supplied by the host so the package stays i18n-agnostic. */
+export interface HistoryUiLabels {
+  title: string;
+  search: string;
+  clear: string;
+  delete: string;
+  empty: string;
+}
+
+export interface HistoryPageProps {
+  labels: HistoryUiLabels;
+  /** Fetch history for a (trimmed) query; empty string = full history. Returns newest-first. */
+  list: (query: string) => Promise<HistoryItem[]>;
+  /** Remove one entry by URL; returns the updated list. */
+  remove: (url: string) => Promise<HistoryItem[]>;
+  /** Clear all history; returns the (empty) list. */
+  clear: () => Promise<HistoryItem[]>;
+}
+
+/**
+ * `@tepegoz/history-ui` — the browsing-history manager (Chrome-style): a search box + a newest-first
+ * list of visited pages, each removable, plus "Clear all". Owns its search/list state; the data
+ * source (list/remove/clear) is injected, so the package has no dependency on the Electron bridge.
+ * Extracted from `apps/desktop` per docs/package-map.md.
+ */
+export function HistoryPage({ labels, list, remove, clear }: HistoryPageProps) {
   const [search, setSearch] = useState('');
-  const [entries, setEntries] = useState<HistoryEntry[]>([]);
+  const [entries, setEntries] = useState<HistoryItem[]>([]);
 
   useEffect(() => {
-    const q = search.trim();
-    void (q.length === 0 ? window.tepegoz.getHistory() : window.tepegoz.searchHistory(q)).then(
-      setEntries,
-      () => {
-        setEntries([]);
-      },
-    );
+    void list(search.trim()).then(setEntries, () => {
+      setEntries([]);
+    });
+    // `list` is a stable data-source binding; re-fetch only when the query changes.
+
   }, [search]);
 
   return (
     <div className="flex h-full flex-col bg-surface-base text-text-primary">
       <div className="shrink-0 border-b border-border px-8 py-4">
         <div className="mx-auto flex max-w-3xl items-center gap-4">
-          <h1 className="text-base font-semibold">{h.title}</h1>
+          <h1 className="text-base font-semibold">{labels.title}</h1>
           <input
             type="text"
             value={search}
-            placeholder={h.search}
-            aria-label={h.search}
+            placeholder={labels.search}
+            aria-label={labels.search}
             spellCheck={false}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -44,11 +64,11 @@ export function HistoryPage({ t }: HistoryPageProps) {
           <button
             type="button"
             onClick={() => {
-              void window.tepegoz.clearHistory().then(setEntries, () => undefined);
+              void clear().then(setEntries, () => undefined);
             }}
             className="rounded-md border border-border px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-overlay hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
           >
-            {h.clear}
+            {labels.clear}
           </button>
         </div>
       </div>
@@ -66,10 +86,10 @@ export function HistoryPage({ t }: HistoryPageProps) {
               </div>
               <button
                 type="button"
-                aria-label={h.delete}
-                title={h.delete}
+                aria-label={labels.delete}
+                title={labels.delete}
                 onClick={() => {
-                  void window.tepegoz.deleteHistory(entry.url).then(setEntries, () => undefined);
+                  void remove(entry.url).then(setEntries, () => undefined);
                 }}
                 className="shrink-0 rounded-md px-2 py-1 text-xs text-text-secondary hover:bg-surface-overlay hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
               >
@@ -79,7 +99,7 @@ export function HistoryPage({ t }: HistoryPageProps) {
           ))}
         </ul>
         {entries.length === 0 && (
-          <p className="mx-auto max-w-3xl py-8 text-sm text-text-secondary">{h.empty}</p>
+          <p className="mx-auto max-w-3xl py-8 text-sm text-text-secondary">{labels.empty}</p>
         )}
       </div>
     </div>

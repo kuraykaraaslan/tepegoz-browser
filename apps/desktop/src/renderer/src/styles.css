@@ -10,6 +10,9 @@
 /* Same for extracted chrome packages (their class names live outside the Vite root). */
 @source "../../../../../packages/omnibox/src";
 @source "../../../../../packages/tab-strip/src";
+@source "../../../../../packages/window-controls/src";
+@source "../../../../../packages/history-ui/src";
+@source "../../../../../packages/settings-ui/src";
 
 html,
 body,

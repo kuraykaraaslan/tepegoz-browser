@@ -6,8 +6,8 @@ export const agentManifest = defineExtension({
   name: 'Agent',
   version: '0.1.0',
   description: 'Autonomous browsing tasks on the current page, with human approval.',
-  surfaces: ['panel', 'sidebar'],
-  actions: { click: 'panel', doubleClick: 'sidebar' },
+  surfaces: ['sidebar'],
+  actions: { click: 'sidebar' },
   labels: {
     tr: {
       name: 'Ajan',

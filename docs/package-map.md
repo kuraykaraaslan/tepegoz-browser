@@ -31,11 +31,11 @@ Any new package must respect this graph and the no-circular rule in
 |---|---|---|---|---|---|
 | [x] | **@tepegoz/omnibox** ⭐ (`url-bar`) | ~~`Toolbar.tsx` + `omnibox-calc.ts`~~ → `packages/omnibox/` | Address-bar input + inline calc hint; navigate/copy via callbacks (no `window.tepegoz` coupling) | `@tepegoz/ui`, react (peer) | ✅ done |
 | [x] | **@tepegoz/tab-strip** | ~~`renderer/src/components/TabStrip.tsx`~~ → `packages/tab-strip/` | Tab list: favicon fallback, wheel-scroll, container-query collapse; select/close/context-menu/new-tab via callbacks; `TabDescriptor` + `labels` (no i18n dep) | `@tepegoz/ui`, react (peer) | ✅ done |
-| [ ] | **@tepegoz/window-controls** | `renderer/src/components/WindowControls.tsx` | Min/max/restore/close + maximize-state sync (injected callbacks) | react | S |
+| [x] | **@tepegoz/window-controls** | ~~`renderer/src/components/WindowControls.tsx`~~ → `packages/window-controls/` | Min/max/restore/close; pure view — `isMaximized` + labels + callbacks in; app keeps a `useWindowMaximized` hook for the subscription | react (peer), zero deps | ✅ done |
 | [ ] | **@tepegoz/nav-toolbar** | Rest of `Toolbar.tsx` (back/forward/reload + extension tray + menu) | Nav buttons + extension icons + menu button | `@tepegoz/ui`, `@tepegoz/i18n`, react | S–M |
 | [ ] | **@tepegoz/browser-chrome** | `TitleBar.tsx` + composition of the 4 above | Frameless "browser frame" meta-package | the UI packages above | M |
-| [ ] | **@tepegoz/settings-ui** | `renderer/src/components/SettingsPage.tsx` | Generic sidebar + multi-section + search shell (provider/theme logic stays in app) | `@tepegoz/ui`, `@tepegoz/i18n` | M |
-| [ ] | **@tepegoz/history-ui** | `renderer/src/components/HistoryPage.tsx` | Search + chronological list + delete/clear (via callbacks) | `@tepegoz/ui`, `@tepegoz/i18n` | S–M |
+| [x] | **@tepegoz/settings-ui** | `SettingsPage.tsx` split → `packages/settings-ui/` (`SettingsLayout` shell); app keeps `SettingsPage` content | Generic sidebar + cross-section search + content/banner slots; owns active/search state; all provider/theme/i18n content stays in the app | `@tepegoz/ui`, react (peer) | ✅ done |
+| [x] | **@tepegoz/history-ui** | ~~`renderer/src/components/HistoryPage.tsx`~~ → `packages/history-ui/` | Search + newest-first list + delete/clear; owns search state, `list`/`remove`/`clear` data source injected; `HistoryItem` + labels (no i18n dep) | react (peer), zero deps | ✅ done |
 | [ ] | **@tepegoz/extensions-ui** | `renderer/src/components/ExtensionsPage.tsx` | Searchable toggle-card grid | `@tepegoz/ui`, `@tepegoz/i18n` | S–M |
 
 - **BrandMark** ✅ done — moved from `renderer/src/components/BrandMark.tsx` to

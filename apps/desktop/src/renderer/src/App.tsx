@@ -25,8 +25,8 @@ import type {
 } from '../../shared/ipc-contract';
 import { extensionIdFromPageUrl, extensionLabel, extensionPageUrl } from '../../shared/extensions';
 import { EXTENSIONS, extensionDefById } from './extensions/registry';
+import { HistoryPage } from '@tepegoz/history-ui';
 import { ExtensionsPage } from './components/ExtensionsPage';
-import { HistoryPage } from './components/HistoryPage';
 import { SettingsPage } from './components/SettingsPage';
 import { TitleBar } from './components/TitleBar';
 import { Toolbar } from './components/Toolbar';
@@ -274,10 +274,10 @@ export function App() {
         </Modal>
       );
     }
-    // popup — a transparent backdrop catches outside clicks; the card is anchored top-right. The host
-    // clamps the card's width/height (with scroll), so an extension can't open an oversized popup.
+    // popup — a floating card anchored top-right over a dim backdrop that closes on outside click. The
+    // host clamps its width/height (with scroll) so an extension can't open an oversized popup.
     return (
-      <div className="absolute inset-0 z-10" role="presentation" onClick={closeSurface}>
+      <div className="absolute inset-0 z-10 bg-black/40" role="presentation" onClick={closeSurface}>
         <div
           className="absolute right-2 top-2"
           onClick={(e) => {
@@ -372,7 +372,18 @@ export function App() {
         )}
         {historyActive && (
           <div className="absolute inset-0 bg-surface-base">
-            <HistoryPage t={t} />
+            <HistoryPage
+              labels={{
+                title: t.history.title,
+                search: t.history.search,
+                clear: t.history.clear,
+                delete: t.history.delete,
+                empty: t.history.empty,
+              }}
+              list={(q) => (q.length === 0 ? window.tepegoz.getHistory() : window.tepegoz.searchHistory(q))}
+              remove={(url) => window.tepegoz.deleteHistory(url)}
+              clear={() => window.tepegoz.clearHistory()}
+            />
           </div>
         )}
         {PageSurface !== undefined && (

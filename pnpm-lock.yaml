@@ -53,6 +53,9 @@ importers:
       '@tepegoz/extension-sdk':
         specifier: workspace:*
         version: link:../../packages/extension-sdk
+      '@tepegoz/history-ui':
+        specifier: workspace:*
+        version: link:../../packages/history-ui
       '@tepegoz/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
@@ -80,6 +83,9 @@ importers:
       '@tepegoz/security-policy':
         specifier: workspace:*
         version: link:../../packages/security-policy
+      '@tepegoz/settings-ui':
+        specifier: workspace:*
+        version: link:../../packages/settings-ui
       '@tepegoz/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
@@ -92,6 +98,9 @@ importers:
       '@tepegoz/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@tepegoz/window-controls':
+        specifier: workspace:*
+        version: link:../../packages/window-controls
       better-sqlite3:
         specifier: ^11.7.0
         version: 11.10.0
@@ -220,6 +229,19 @@ importers:
       vitest:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.0)(lightningcss@1.32.0)
+
+  packages/history-ui:
+    dependencies:
+      react:
+        specifier: ^18 || ^19
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.31
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
 
   packages/i18n:
     devDependencies:
@@ -380,6 +402,22 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.0)(lightningcss@1.32.0)
 
+  packages/settings-ui:
+    dependencies:
+      '@tepegoz/ui':
+        specifier: workspace:*
+        version: link:../ui
+      react:
+        specifier: ^18 || ^19
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.31
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
   packages/shared-types:
     dependencies:
       zod:
@@ -451,6 +489,19 @@ importers:
       '@types/react-dom':
         specifier: ^18.3.5
         version: 18.3.7(@types/react@18.3.31)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  packages/window-controls:
+    dependencies:
+      react:
+        specifier: ^18 || ^19
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.31
       typescript:
         specifier: ^5.7.2
         version: 5.9.3

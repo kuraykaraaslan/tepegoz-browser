@@ -1,6 +1,3 @@
-import { useEffect, useState } from 'react';
-import type { Resources } from '@tepegoz/i18n';
-
 const ICON = 'h-2.5 w-2.5';
 
 function MinimizeIcon() {
@@ -38,38 +35,53 @@ const BTN =
   'hover:bg-surface-overlay hover:text-text-primary transition-colors ' +
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-border-focus';
 
-export function WindowControls({ t }: { t: Resources }) {
-  const [maximized, setMaximized] = useState(false);
+/** Localized aria-labels, supplied by the host so the package stays i18n-agnostic. */
+export interface WindowControlsLabels {
+  minimize: string;
+  maximize: string;
+  restore: string;
+  close: string;
+}
 
-  useEffect(() => {
-    const api = window.tepegoz;
-    void api.isWindowMaximized().then(setMaximized).catch(() => undefined);
-    return api.onWindowMaximizedChange(setMaximized);
-  }, []);
+export interface WindowControlsProps {
+  /** Whether the window is currently maximized (drives the maximize/restore icon + label). */
+  isMaximized: boolean;
+  labels: WindowControlsLabels;
+  onMinimize: () => void;
+  onToggleMaximize: () => void;
+  onClose: () => void;
+}
 
+/**
+ * `@tepegoz/window-controls` — the native caption buttons (minimize / maximize·restore / close) for a
+ * frameless window. Pure presentational view: the maximized state and all actions are injected, so the
+ * package has no dependency on the Electron bridge. Extracted from `apps/desktop` per docs/package-map.md.
+ */
+export function WindowControls({
+  isMaximized,
+  labels,
+  onMinimize,
+  onToggleMaximize,
+  onClose,
+}: WindowControlsProps) {
   return (
     <div className="flex h-full items-stretch">
-      <button
-        type="button"
-        aria-label={t.window.minimize}
-        className={BTN}
-        onClick={() => window.tepegoz.minimizeWindow()}
-      >
+      <button type="button" aria-label={labels.minimize} className={BTN} onClick={onMinimize}>
         <MinimizeIcon />
       </button>
       <button
         type="button"
-        aria-label={maximized ? t.window.restore : t.window.maximize}
+        aria-label={isMaximized ? labels.restore : labels.maximize}
         className={BTN}
-        onClick={() => window.tepegoz.toggleMaximizeWindow()}
+        onClick={onToggleMaximize}
       >
-        {maximized ? <RestoreIcon /> : <MaximizeIcon />}
+        {isMaximized ? <RestoreIcon /> : <MaximizeIcon />}
       </button>
       <button
         type="button"
-        aria-label={t.window.close}
+        aria-label={labels.close}
         className={`${BTN} hover:bg-error hover:text-text-inverse`}
-        onClick={() => window.tepegoz.closeWindow()}
+        onClick={onClose}
       >
         <CloseIcon />
       </button>
