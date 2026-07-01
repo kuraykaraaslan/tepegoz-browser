@@ -3,6 +3,7 @@ import { BrandMark } from '@tepegoz/ui';
 import { TabStrip, type TabDescriptor } from '@tepegoz/tab-strip';
 import { WindowControls } from '@tepegoz/window-controls';
 import { NavToolbar } from '@tepegoz/nav-toolbar';
+import type { OmniboxSuggestion } from '@tepegoz/omnibox';
 
 /**
  * The exact string slices this chrome renders. The host composes it from the shared core dict
@@ -48,6 +49,10 @@ export interface BrowserChromeProps {
   onReload: () => void;
   onMenu: () => void;
   onNavigate: (input: string) => void;
+  /** Async omnibox suggestion source (history/tab/search); omit to disable the dropdown. */
+  onSuggest?: ((query: string) => Promise<OmniboxSuggestion[]>) | undefined;
+  /** Switch to an already-open tab (for `activateTab` omnibox suggestions). */
+  onActivateTab?: ((tabId: string) => void) | undefined;
   /** Host-provided controls between the omnibox and the menu button (e.g. the extension tray + puzzle). */
   toolbarActions?: ReactNode;
 }
@@ -79,6 +84,8 @@ export function BrowserChrome({
   onReload,
   onMenu,
   onNavigate,
+  onSuggest,
+  onActivateTab,
   toolbarActions,
 }: BrowserChromeProps) {
   return (
@@ -136,6 +143,8 @@ export function BrowserChrome({
         currentUrl={currentUrl}
         omniboxPlaceholder={t.browser.omniboxPlaceholder}
         onNavigate={onNavigate}
+        onSuggest={onSuggest}
+        onActivateTab={onActivateTab}
         actions={toolbarActions}
       />
     </>

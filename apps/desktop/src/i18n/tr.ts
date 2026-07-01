@@ -11,6 +11,9 @@ export const tr: AppStrings = {
     forward: 'İleri',
     reload: 'Yenile',
     omniboxPlaceholder: 'Ara veya adres gir',
+    // Omniçubuk öneri ipuçları (deterministik açılır liste — yapay zekâ başlatmaz).
+    omniboxSearchHint: "Web'de ara",
+    omniboxSwitchToTab: 'Sekmeye geç',
     settings: 'Ayarlar',
     menu: 'Ana menü',
     exit: 'Çıkış',

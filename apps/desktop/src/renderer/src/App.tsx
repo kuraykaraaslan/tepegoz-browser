@@ -29,6 +29,7 @@ import type {
 import { extensionIdFromPageUrl, extensionLabel, extensionPageUrl } from '../../shared/extensions';
 import { EXTENSIONS, extensionDefById } from './extensions/registry';
 import { BrowserChrome } from '@tepegoz/browser-chrome';
+import { buildOmniboxSuggestions, parseOmniboxQuery, type OmniboxSuggestion } from '@tepegoz/omnibox';
 import { HistoryPage } from '@tepegoz/history-ui';
 import { ExtensionsPage } from './components/ExtensionsPage';
 import { ExtensionTray } from './components/ExtensionTray';
@@ -308,6 +309,50 @@ export function App() {
   const extensionStates = prefs?.extensions ?? [];
   const enabledExtensions = EXTENSIONS.filter((ext) => isExtensionEnabled(extensionStates, ext.id));
 
+  // Deterministic omnibox suggestions (history + open tabs + navigate/search). Refs keep the injected
+  // callbacks stable so the Omnibox effect doesn't refetch every render; they mirror the latest state.
+  const tabsRef = useRef(tabs);
+  const suggestLabelsRef = useRef({
+    search: browserT.omniboxSearchHint,
+    switchToTab: browserT.omniboxSwitchToTab,
+  });
+  useEffect(() => {
+    tabsRef.current = tabs;
+  }, [tabs]);
+  useEffect(() => {
+    suggestLabelsRef.current = {
+      search: browserT.omniboxSearchHint,
+      switchToTab: browserT.omniboxSwitchToTab,
+    };
+  }, [browserT]);
+
+  const onOmniboxSuggest = useCallback(async (query: string): Promise<OmniboxSuggestion[]> => {
+    const { term } = parseOmniboxQuery(query);
+    let history: Awaited<ReturnType<typeof window.tepegoz.searchHistory>> = [];
+    try {
+      history = term.length > 0 ? await window.tepegoz.searchHistory(term) : [];
+    } catch {
+      history = []; // history unavailable → still surface tabs + the navigate/search action
+    }
+    const state = tabsRef.current;
+    return buildOmniboxSuggestions(
+      query,
+      {
+        // Don't offer switching to the tab that's already active.
+        tabs: state.tabs
+          .filter((tb) => tb.id !== state.activeId)
+          .map((tb) => ({ id: tb.id, title: tb.title, url: tb.url })),
+        history: history.map((h) => ({ url: h.url, title: h.title, visitCount: h.visitCount })),
+      },
+      suggestLabelsRef.current,
+    );
+  }, []);
+
+  const onActivateTabFromOmnibox = useCallback((tabId: string): void => {
+    setActiveSurface(null);
+    window.tepegoz.activateTab(tabId);
+  }, []);
+
   async function onUpdatePrefs(patch: Partial<Preferences>): Promise<void> {
     setPrefs(await window.tepegoz.updatePreferences(patch));
   }
@@ -398,6 +443,8 @@ export function App() {
         onReload={() => window.tepegoz.tabReload()}
         onMenu={() => window.tepegoz.showMainMenu()}
         onNavigate={(input) => window.tepegoz.navigateTab(input)}
+        onSuggest={onOmniboxSuggest}
+        onActivateTab={onActivateTabFromOmnibox}
         toolbarActions={
           <ExtensionTray
             locale={locale}

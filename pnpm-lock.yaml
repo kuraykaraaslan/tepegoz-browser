@@ -183,6 +183,9 @@ importers:
       '@tepegoz/nav-toolbar':
         specifier: workspace:*
         version: link:../nav-toolbar
+      '@tepegoz/omnibox':
+        specifier: workspace:*
+        version: link:../omnibox
       '@tepegoz/tab-strip':
         specifier: workspace:*
         version: link:../tab-strip

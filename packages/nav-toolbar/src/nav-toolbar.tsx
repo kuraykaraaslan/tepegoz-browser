@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { Omnibox } from '@tepegoz/omnibox';
+import { Omnibox, type OmniboxSuggestion } from '@tepegoz/omnibox';
 
 /** Shared base class for a 32px toolbar icon button. Exported so hosts can style matching controls
  *  (e.g. pinned extension icons) the same way. */
@@ -29,6 +29,10 @@ export interface NavToolbarProps {
   currentUrl: string;
   omniboxPlaceholder: string;
   onNavigate: (input: string) => void;
+  /** Async omnibox suggestion source (history/tab/search); omit to disable the dropdown. */
+  onSuggest?: ((query: string) => Promise<OmniboxSuggestion[]>) | undefined;
+  /** Switch to an already-open tab (for `activateTab` omnibox suggestions). */
+  onActivateTab?: ((tabId: string) => void) | undefined;
   /** Host-provided controls between the omnibox and the menu button (e.g. pinned extension icons). */
   actions?: ReactNode;
 }
@@ -50,6 +54,8 @@ export function NavToolbar({
   currentUrl,
   omniboxPlaceholder,
   onNavigate,
+  onSuggest,
+  onActivateTab,
   actions,
 }: NavToolbarProps) {
   return (
@@ -88,6 +94,8 @@ export function NavToolbar({
         currentUrl={currentUrl}
         placeholder={omniboxPlaceholder}
         onNavigate={onNavigate}
+        onSuggest={onSuggest}
+        onActivateTab={onActivateTab}
       />
 
       {actions}

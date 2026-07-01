@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@tepegoz/nav-toolbar": "workspace:*",
+    "@tepegoz/omnibox": "workspace:*",
     "@tepegoz/tab-strip": "workspace:*",
     "@tepegoz/ui": "workspace:*",
     "@tepegoz/window-controls": "workspace:*"

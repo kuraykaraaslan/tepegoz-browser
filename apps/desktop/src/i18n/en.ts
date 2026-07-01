@@ -14,6 +14,9 @@ export const en = {
     forward: 'Forward',
     reload: 'Reload',
     omniboxPlaceholder: 'Search or enter address',
+    // Omnibox suggestion hints (deterministic dropdown — no AI thread).
+    omniboxSearchHint: 'Search the web',
+    omniboxSwitchToTab: 'Switch to tab',
     settings: 'Settings',
     menu: 'Main menu',
     exit: 'Exit',

@@ -4,3 +4,18 @@
  */
 export { Omnibox, type OmniboxProps } from './omnibox';
 export { evaluateOmniboxCalc, type CalcResult } from './omnibox-calc';
+export {
+  buildOmniboxSuggestions,
+  parseOmniboxQuery,
+  looksNavigable,
+  MAX_OMNIBOX_SUGGESTIONS,
+  type OmniboxSuggestion,
+  type OmniboxSuggestionKind,
+  type OmniboxAction,
+  type OmniboxScope,
+  type OmniboxQuery,
+  type OmniboxTabCandidate,
+  type OmniboxHistoryCandidate,
+  type OmniboxSuggestSources,
+  type OmniboxSuggestLabels,
+} from './omnibox-suggest';
