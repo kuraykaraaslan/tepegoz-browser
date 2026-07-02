@@ -5,6 +5,10 @@ import { defineConfig } from 'vitest/config';
  * One vitest pass over every package's unit tests (per-package `turbo run test` stays the day-to-day
  * runner; jsdom tests opt in via their `@vitest-environment` docblock).
  *
+ * Named `vitest.coverage.config.ts` ON PURPOSE: vitest walks UP for a `vitest.config.*`, so a plain
+ * root config would hijack every package-local `vitest run` (their cwd-relative include would match
+ * nothing → "No test files found"). Only `pnpm coverage` loads this file, via --config.
+ *
  * Scope is EXPLICIT, not silent: `coverage.include` lists the packages held to the gate today.
  * Excluded (documented, to be burned down):
  *  - packages/persistence — better-sqlite3 is rebuilt per-runtime (Electron ABI locally), so its

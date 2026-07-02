@@ -16,7 +16,7 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "test:electron": "node scripts/test-electron.mjs",
-    "coverage": "vitest run --coverage",
+    "coverage": "vitest run --coverage --config vitest.coverage.config.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "depcruise": "depcruise packages apps --config dependency-cruiser.cjs",
