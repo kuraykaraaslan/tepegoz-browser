@@ -34,20 +34,24 @@ export function HistoryPage({ list, remove, clear }: HistoryPageProps) {
     void list(search.trim()).then(setEntries, () => {
       setEntries([]);
     });
-    // `list` is a stable data-source binding; re-fetch only when the query changes.
-
-  }, [search]);
+    // `list` is in the deps for correctness — hosts must pass a stable (useCallback) binding, or the
+    // page refetches every host render.
+  }, [search, list]);
 
   return (
     <div className="flex h-full flex-col bg-surface-base text-text-primary">
       <div className="shrink-0 border-b border-border px-8 py-4">
         <div className="mx-auto flex max-w-3xl items-center gap-4">
           <h1 className="text-base font-semibold">{t.title}</h1>
+          {/* Programmatic label (UI-03); visually the field stays placeholder-labeled, Chrome-style. */}
+          <label htmlFor="history-search" className="sr-only">
+            {t.search}
+          </label>
           <input
+            id="history-search"
             type="text"
             value={search}
             placeholder={t.search}
-            aria-label={t.search}
             spellCheck={false}
             onChange={(e) => {
               setSearch(e.target.value);

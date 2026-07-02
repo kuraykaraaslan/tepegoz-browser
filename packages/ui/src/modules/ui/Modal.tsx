@@ -1,5 +1,5 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { cn } from '../../libs/utils/cn';
 
 type ModalProps = {
@@ -11,12 +11,18 @@ type ModalProps = {
   title?: string;
   /** Accessible label for the dialog (falls back to `title`). */
   ariaLabel?: string;
+  /** id of the element that describes the dialog body (wired to aria-describedby). */
+  describedById?: string;
   size?: 'sm' | 'md';
   /** When false, clicking the backdrop does NOT close (for blocking confirmations). Default true. */
   closeOnBackdrop?: boolean;
   children?: React.ReactNode;
   className?: string;
 };
+
+/** What the focus trap considers tabbable inside the dialog. */
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /**
  * Centered dialog over a dimmed backdrop — the shared surface for extension `modal` actions and any
@@ -28,11 +34,14 @@ export function Modal({
   onClose,
   title,
   ariaLabel,
+  describedById,
   size = 'sm',
   closeOnBackdrop = true,
   children,
   className,
 }: ModalProps) {
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     if (!open) return undefined;
     const onKey = (e: KeyboardEvent): void => {
@@ -44,6 +53,42 @@ export function Modal({
     };
   }, [open, onClose]);
 
+  // Modal ARIA focus contract: remember the opener, move focus INTO the dialog on open, keep Tab /
+  // Shift+Tab cycling inside it, and return focus to the opener on close (WCAG 2.2 dialog pattern).
+  useEffect(() => {
+    if (!open) return undefined;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const dialog = dialogRef.current;
+    const initial = dialog?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR) ?? dialog;
+    initial?.focus();
+
+    const onTab = (e: KeyboardEvent): void => {
+      if (e.key !== 'Tab' || dialog === null) return;
+      const items = [...dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)];
+      const first = items.at(0);
+      const last = items.at(-1);
+      if (first === undefined || last === undefined) {
+        e.preventDefault(); // nothing tabbable — keep focus parked on the dialog itself
+        dialog.focus();
+        return;
+      }
+      const active = document.activeElement;
+      const outside = !dialog.contains(active);
+      if (e.shiftKey && (active === first || outside)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (active === last || outside)) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener('keydown', onTab);
+    return () => {
+      window.removeEventListener('keydown', onTab);
+      opener?.focus();
+    };
+  }, [open]);
+
   if (!open) return null;
 
   return (
@@ -52,9 +97,12 @@ export function Modal({
       role="dialog"
       aria-modal="true"
       aria-label={ariaLabel ?? title}
+      aria-describedby={describedById}
       onClick={closeOnBackdrop ? onClose : undefined}
     >
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         className={cn(
           // Host-enforced size cap: width by `size`, height ≤ 85vh with the body scrolling — an
           // extension's content can never grow the dialog past these bounds.

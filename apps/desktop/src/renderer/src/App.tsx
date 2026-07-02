@@ -415,6 +415,14 @@ export function App() {
     window.tepegoz.activateTab(tabId);
   }, []);
 
+  // Stable data-source bindings for HistoryPage — it refetches when `list` changes identity.
+  const historyList = useCallback(
+    (q: string) => (q.length === 0 ? window.tepegoz.getHistory() : window.tepegoz.searchHistory(q)),
+    [],
+  );
+  const historyRemove = useCallback((url: string) => window.tepegoz.deleteHistory(url), []);
+  const historyClear = useCallback(() => window.tepegoz.clearHistory(), []);
+
   async function onUpdatePrefs(patch: Partial<Preferences>): Promise<void> {
     setPrefs(await window.tepegoz.updatePreferences(patch));
   }
@@ -564,13 +572,7 @@ export function App() {
             )}
             {historyActive && (
               <div className="absolute inset-0 bg-surface-base">
-                <HistoryPage
-                  list={(q) =>
-                    q.length === 0 ? window.tepegoz.getHistory() : window.tepegoz.searchHistory(q)
-                  }
-                  remove={(url) => window.tepegoz.deleteHistory(url)}
-                  clear={() => window.tepegoz.clearHistory()}
-                />
+                <HistoryPage list={historyList} remove={historyRemove} clear={historyClear} />
               </div>
             )}
             {PageSurface !== undefined && (
