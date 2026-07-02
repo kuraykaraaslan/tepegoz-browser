@@ -63,6 +63,15 @@ importers:
       '@electron/rebuild':
         specifier: ^3.7.0
         version: 3.7.2
+      '@fortawesome/fontawesome-svg-core':
+        specifier: ^7.2.0
+        version: 7.3.0
+      '@fortawesome/free-solid-svg-icons':
+        specifier: ^7.2.0
+        version: 7.3.0
+      '@fortawesome/react-fontawesome':
+        specifier: ^3.3.1
+        version: 3.3.1(@fortawesome/fontawesome-svg-core@7.3.0)(react@18.3.1)
       '@modelcontextprotocol/sdk':
         specifier: 1.22.0
         version: 1.22.0
@@ -72,6 +81,9 @@ importers:
       '@tailwindcss/vite':
         specifier: ^4.1.16
         version: 4.3.2(vite@5.4.21(@types/node@22.20.0)(lightningcss@1.32.0))
+      '@tepegoz/agent-runtime':
+        specifier: workspace:*
+        version: link:../../packages/agent-runtime
       '@tepegoz/browser-chrome':
         specifier: workspace:*
         version: link:../../packages/browser-chrome
@@ -126,6 +138,12 @@ importers:
       '@tepegoz/navigation':
         specifier: workspace:*
         version: link:../../packages/navigation
+      '@tepegoz/notifications':
+        specifier: workspace:*
+        version: link:../../packages/notifications
+      '@tepegoz/notifications-ui':
+        specifier: workspace:*
+        version: link:../../packages/notifications-ui
       '@tepegoz/omnibox':
         specifier: workspace:*
         version: link:../../packages/omnibox
@@ -189,6 +207,49 @@ importers:
       vite:
         specifier: ^5.4.11
         version: 5.4.21(@types/node@22.20.0)(lightningcss@1.32.0)
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
+
+  packages/agent-runtime:
+    dependencies:
+      '@tepegoz/browser-tools':
+        specifier: workspace:*
+        version: link:../browser-tools
+      '@tepegoz/capability-plane':
+        specifier: workspace:*
+        version: link:../capability-plane
+      '@tepegoz/credential-vault':
+        specifier: workspace:*
+        version: link:../credential-vault
+      '@tepegoz/ext-agent':
+        specifier: workspace:*
+        version: link:../ext-agent
+      '@tepegoz/libs':
+        specifier: workspace:*
+        version: link:../libs
+      '@tepegoz/model-gateway':
+        specifier: workspace:*
+        version: link:../model-gateway
+      '@tepegoz/orchestrator':
+        specifier: workspace:*
+        version: link:../orchestrator
+      '@tepegoz/preferences':
+        specifier: workspace:*
+        version: link:../preferences
+      '@tepegoz/security-policy':
+        specifier: workspace:*
+        version: link:../security-policy
+      '@tepegoz/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.0
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
       vitest:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
@@ -436,6 +497,15 @@ importers:
 
   packages/history-ui:
     dependencies:
+      '@fortawesome/fontawesome-svg-core':
+        specifier: ^7.2.0
+        version: 7.3.0
+      '@fortawesome/free-solid-svg-icons':
+        specifier: ^7.2.0
+        version: 7.3.0
+      '@fortawesome/react-fontawesome':
+        specifier: ^3.3.1
+        version: 3.3.1(@fortawesome/fontawesome-svg-core@7.3.0)(react@18.3.1)
       '@tepegoz/i18n':
         specifier: workspace:*
         version: link:../i18n
@@ -555,6 +625,18 @@ importers:
 
   packages/nav-toolbar:
     dependencies:
+      '@fortawesome/fontawesome-svg-core':
+        specifier: ^7.2.0
+        version: 7.3.0
+      '@fortawesome/free-regular-svg-icons':
+        specifier: ^7.2.0
+        version: 7.3.0
+      '@fortawesome/free-solid-svg-icons':
+        specifier: ^7.2.0
+        version: 7.3.0
+      '@fortawesome/react-fontawesome':
+        specifier: ^3.3.1
+        version: 3.3.1(@fortawesome/fontawesome-svg-core@7.3.0)(react@18.3.1)
       '@tepegoz/omnibox':
         specifier: workspace:*
         version: link:../omnibox
@@ -599,8 +681,82 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
 
+  packages/notifications:
+    dependencies:
+      '@tepegoz/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      zod:
+        specifier: 3.23.8
+        version: 3.23.8
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.0
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
+
+  packages/notifications-ui:
+    dependencies:
+      '@fortawesome/free-solid-svg-icons':
+        specifier: ^7.2.0
+        version: 7.3.0
+      '@fortawesome/react-fontawesome':
+        specifier: ^3.3.1
+        version: 3.3.1(@fortawesome/fontawesome-svg-core@7.3.0)(react@18.3.1)
+      '@tepegoz/i18n':
+        specifier: workspace:*
+        version: link:../i18n
+      '@tepegoz/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      '@tepegoz/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      '@testing-library/dom':
+        specifier: ^10.4.0
+        version: 10.4.1
+      '@testing-library/react':
+        specifier: ^16.1.0
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.31
+      '@types/react-dom':
+        specifier: ^18.3.5
+        version: 18.3.7(@types/react@18.3.31)
+      jsdom:
+        specifier: ^25.0.1
+        version: 25.0.1
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1
+        version: 18.3.1(react@18.3.1)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
+
   packages/omnibox:
     dependencies:
+      '@fortawesome/fontawesome-svg-core':
+        specifier: ^7.2.0
+        version: 7.3.0
+      '@fortawesome/free-solid-svg-icons':
+        specifier: ^7.2.0
+        version: 7.3.0
+      '@fortawesome/react-fontawesome':
+        specifier: ^3.3.1
+        version: 3.3.1(@fortawesome/fontawesome-svg-core@7.3.0)(react@18.3.1)
       '@tepegoz/ui':
         specifier: workspace:*
         version: link:../ui
@@ -711,6 +867,15 @@ importers:
 
   packages/settings-ui:
     dependencies:
+      '@fortawesome/fontawesome-svg-core':
+        specifier: ^7.2.0
+        version: 7.3.0
+      '@fortawesome/free-solid-svg-icons':
+        specifier: ^7.2.0
+        version: 7.3.0
+      '@fortawesome/react-fontawesome':
+        specifier: ^3.3.1
+        version: 3.3.1(@fortawesome/fontawesome-svg-core@7.3.0)(react@18.3.1)
       '@tepegoz/i18n':
         specifier: workspace:*
         version: link:../i18n
@@ -759,6 +924,15 @@ importers:
 
   packages/tab-strip:
     dependencies:
+      '@fortawesome/fontawesome-svg-core':
+        specifier: ^7.2.0
+        version: 7.3.0
+      '@fortawesome/free-solid-svg-icons':
+        specifier: ^7.2.0
+        version: 7.3.0
+      '@fortawesome/react-fontawesome':
+        specifier: ^3.3.1
+        version: 3.3.1(@fortawesome/fontawesome-svg-core@7.3.0)(react@18.3.1)
       '@tepegoz/ui':
         specifier: workspace:*
         version: link:../ui
@@ -839,6 +1013,15 @@ importers:
 
   packages/window-controls:
     dependencies:
+      '@fortawesome/fontawesome-svg-core':
+        specifier: ^7.2.0
+        version: 7.3.0
+      '@fortawesome/free-solid-svg-icons':
+        specifier: ^7.2.0
+        version: 7.3.0
+      '@fortawesome/react-fontawesome':
+        specifier: ^3.3.1
+        version: 3.3.1(@fortawesome/fontawesome-svg-core@7.3.0)(react@18.3.1)
       react:
         specifier: ^18 || ^19
         version: 18.3.1
@@ -1219,6 +1402,10 @@ packages:
 
   '@fortawesome/fontawesome-svg-core@7.3.0':
     resolution: {integrity: sha512-MFbTNLDWkLJwbozDvHOZ7hwyDjQcBMBattlcOQ6ZmV5YD9bBrqdl1rNtmVjQ/lzqveXXX3sMz2Ew6fAgXoxmkw==}
+    engines: {node: '>=6'}
+
+  '@fortawesome/free-regular-svg-icons@7.3.0':
+    resolution: {integrity: sha512-4675NiHzJJs0dLStFpp5G1JNfMYxqFSxZ2iCaiMfHptjlc8McLG9oqcd5pFEiPiqfiV2YG25cJ9EYWIEhUvp+A==}
     engines: {node: '>=6'}
 
   '@fortawesome/free-solid-svg-icons@7.3.0':
@@ -4628,6 +4815,10 @@ snapshots:
   '@fortawesome/fontawesome-common-types@7.3.0': {}
 
   '@fortawesome/fontawesome-svg-core@7.3.0':
+    dependencies:
+      '@fortawesome/fontawesome-common-types': 7.3.0
+
+  '@fortawesome/free-regular-svg-icons@7.3.0':
     dependencies:
       '@fortawesome/fontawesome-common-types': 7.3.0
 

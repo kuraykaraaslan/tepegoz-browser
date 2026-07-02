@@ -12,6 +12,11 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint ."
   },
+  "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^7.2.0",
+    "@fortawesome/free-solid-svg-icons": "^7.2.0",
+    "@fortawesome/react-fontawesome": "^3.3.1"
+  },
   "peerDependencies": {
     "react": "^18 || ^19"
   },
