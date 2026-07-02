@@ -34,6 +34,17 @@ export type {
 import type { BookmarkEntry, HistoryEntry } from '@tepegoz/persistence';
 export type { BookmarkEntry, HistoryEntry };
 
+// Provider identity is owned by @tepegoz/shared-types (the single schema source): AIProviderEnum and
+// this contract both derive from the SAME zod-free `providers` entry, which the sandboxed preload can
+// safely import at runtime. (MCP_TRANSPORTS below still mirrors McpTransportEnum — next candidate.)
+import {
+  AI_PROVIDERS,
+  type AIProvider as ProviderId,
+  type ProviderKeyStatus,
+} from '@tepegoz/shared-types/providers';
+export const PROVIDER_IDS = AI_PROVIDERS;
+export type { ProviderId, ProviderKeyStatus };
+
 // Channel names + internal page addresses live in channels.ts (250-line cap); re-exported here so
 // `@tepegoz/desktop-ipc` consumers keep one import surface.
 export * from './channels';
@@ -46,15 +57,12 @@ export interface AppInfo {
 
 // Canonical value lists — the ONE place these unions are spelled out. The zod validators (schemas.ts,
 // preferences.model.ts) build their z.enum from these same arrays, so schema/type drift is impossible.
-// Plain `as const` arrays keep this file dependency-free for the sandboxed preload. PROVIDER_IDS
-// mirrors `AIProviderEnum` in @tepegoz/shared-types (this package can't depend on it yet — the enum
-// unification across that boundary is tracked as a follow-up).
+// Plain `as const` arrays keep this file dependency-free for the sandboxed preload. (Provider identity
+// comes from @tepegoz/shared-types/providers — see the import block above.)
 export const THEME_PREFS = ['system', 'light', 'dark'] as const;
 export type ThemePref = (typeof THEME_PREFS)[number];
 export const LOCALE_PREFS = ['system', 'en', 'tr'] as const;
 export type LocalePref = (typeof LOCALE_PREFS)[number];
-export const PROVIDER_IDS = ['anthropic', 'openai', 'gemini'] as const;
-export type ProviderId = (typeof PROVIDER_IDS)[number];
 
 export const MCP_TRANSPORTS = ['stdio', 'http_sse'] as const;
 export type McpTransportId = (typeof MCP_TRANSPORTS)[number];
@@ -102,9 +110,6 @@ export interface Preferences {
   /** External MCP servers whose tools the agent may use (routed through the ToolGateway PEP). */
   mcpServers: McpServerPref[];
 }
-
-/** Per-provider "is a key stored" flags — NEVER the keys themselves. */
-export type ProviderKeyStatus = Record<ProviderId, boolean>;
 
 export interface CredentialsStatus {
   /** Whether the OS keychain (safeStorage) can encrypt on this device. */

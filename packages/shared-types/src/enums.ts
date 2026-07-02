@@ -1,12 +1,13 @@
 import { z } from 'zod';
+import { AI_PROVIDERS } from './providers';
 
 /**
  * Runtime-validated enums (internal-ai-rules: z.enum, not TS enum, for anything validated at runtime).
  * Each yields both a runtime validator and a z.infer type.
  */
 
-export const AIProviderEnum = z.enum(['anthropic', 'openai', 'gemini']);
-export type AIProvider = z.infer<typeof AIProviderEnum>;
+/** Built FROM the canonical zod-free list in providers.ts (the `AIProvider` type lives there too). */
+export const AIProviderEnum = z.enum(AI_PROVIDERS);
 
 export const PolicyDecisionEnum = z.enum(['allow', 'deny', 'ask']);
 export type PolicyDecision = z.infer<typeof PolicyDecisionEnum>;

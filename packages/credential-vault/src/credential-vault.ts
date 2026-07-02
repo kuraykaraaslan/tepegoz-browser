@@ -1,5 +1,5 @@
 import { AppError } from '@tepegoz/libs';
-import { AIProviderEnum, type AIProvider } from '@tepegoz/shared-types';
+import { AIProviderEnum, type AIProvider, type ProviderKeyStatus } from '@tepegoz/shared-types';
 import { readJsonFile, writeJsonFile } from '@tepegoz/json-store';
 import { VaultMessages } from './messages';
 
@@ -17,7 +17,8 @@ export interface SecretCrypto {
   decrypt(blob: Buffer): string;
 }
 
-export type ProviderKeyStatus = Record<AIProvider, boolean>;
+// Re-exported from the canonical definition in @tepegoz/shared-types (single schema source).
+export type { ProviderKeyStatus };
 
 export default class CredentialVault {
   private static crypto: SecretCrypto | null = null;

@@ -17,6 +17,7 @@
     "@tepegoz/ext-agent": "workspace:*",
     "@tepegoz/extension-sdk": "workspace:*",
     "@tepegoz/persistence": "workspace:*",
+    "@tepegoz/shared-types": "workspace:*",
     "zod": "3.23.8"
   },
   "devDependencies": {
