@@ -145,6 +145,15 @@ module.exports = {
       to: { path: '^apps/' },
     },
     {
+      name: 'browser-menu-is-a-leaf',
+      severity: 'error',
+      comment:
+        '@tepegoz/browser-menu is a presentational chrome leaf (the reusable menu surface): it must ' +
+        'never import back into the desktop app. Items + copy are injected. See docs/package-map.md.',
+      from: { path: '^packages/browser-menu/' },
+      to: { path: '^apps/' },
+    },
+    {
       name: 'browser-tools-no-app-no-electron',
       severity: 'error',
       comment:
@@ -160,6 +169,15 @@ module.exports = {
         '@tepegoz/tab-engine is the pure tab-state model: no Electron, no app imports. The desktop ' +
         'TabManager owns the WebContentsViews and delegates record state to it. See docs/package-map.md.',
       from: { path: '^packages/tab-engine/' },
+      to: { path: ['^apps/', 'node_modules/electron'] },
+    },
+    {
+      name: 'mcp-client-no-app-no-electron',
+      severity: 'error',
+      comment:
+        '@tepegoz/mcp-client must stay Electron-free and app-free: the SDK Client + stdio transport ' +
+        'and config sourcing are injected by the desktop layer (transport.electron / supervisor.electron). See docs/package-map.md.',
+      from: { path: '^packages/mcp-client/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
   ],

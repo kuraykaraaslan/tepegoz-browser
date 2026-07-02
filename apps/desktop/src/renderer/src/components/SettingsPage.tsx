@@ -6,6 +6,8 @@ import { useT } from '@tepegoz/i18n/react';
 import type {
   CredentialsStatus,
   LocalePref,
+  McpServerState,
+  McpServerStatusInfo,
   Preferences,
   ProviderId,
   ThemePref,
@@ -19,12 +21,22 @@ const ICON = 'h-4 w-4';
 const IconKey = () => (
   <svg className={ICON} viewBox="0 0 16 16" aria-hidden="true">
     <circle cx="5.5" cy="5.5" r="3" fill="none" stroke="currentColor" strokeWidth="1.3" />
-    <path d="M7.7 7.7 L13 13 M11 11 l1.5-1.5 M12.5 12.5 l1-1" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    <path
+      d="M7.7 7.7 L13 13 M11 11 l1.5-1.5 M12.5 12.5 l1-1"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+    />
   </svg>
 );
 const IconPalette = () => (
   <svg className={ICON} viewBox="0 0 16 16" aria-hidden="true">
-    <path d="M8 2a6 6 0 1 0 0 12c1 0 1.5-.8 1-1.6-.5-.9.2-1.9 1.2-1.9H12a2 2 0 0 0 2-2A6 6 0 0 0 8 2Z" fill="none" stroke="currentColor" strokeWidth="1.2" />
+    <path
+      d="M8 2a6 6 0 1 0 0 12c1 0 1.5-.8 1-1.6-.5-.9.2-1.9 1.2-1.9H12a2 2 0 0 0 2-2A6 6 0 0 0 8 2Z"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.2"
+    />
     <circle cx="5.5" cy="6" r=".9" fill="currentColor" />
     <circle cx="8" cy="4.5" r=".9" fill="currentColor" />
     <circle cx="10.5" cy="6" r=".9" fill="currentColor" />
@@ -33,18 +45,47 @@ const IconPalette = () => (
 const IconGlobe = () => (
   <svg className={ICON} viewBox="0 0 16 16" aria-hidden="true">
     <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth="1.2" />
-    <path d="M2 8h12 M8 2c2 2 2 10 0 12 M8 2c-2 2-2 10 0 12" fill="none" stroke="currentColor" strokeWidth="1.1" />
+    <path
+      d="M2 8h12 M8 2c2 2 2 10 0 12 M8 2c-2 2-2 10 0 12"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.1"
+    />
   </svg>
 );
 const IconShield = () => (
   <svg className={ICON} viewBox="0 0 16 16" aria-hidden="true">
-    <path d="M8 2 3 4v4c0 3 2 5 5 6 3-1 5-3 5-6V4L8 2Z" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+    <path
+      d="M8 2 3 4v4c0 3 2 5 5 6 3-1 5-3 5-6V4L8 2Z"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      strokeLinejoin="round"
+    />
   </svg>
 );
 const IconGauge = () => (
   <svg className={ICON} viewBox="0 0 16 16" aria-hidden="true">
-    <path d="M3 12a5 5 0 1 1 10 0" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    <path
+      d="M3 12a5 5 0 1 1 10 0"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+    />
     <path d="M8 12 10.5 7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+  </svg>
+);
+const IconPlug = () => (
+  <svg className={ICON} viewBox="0 0 16 16" aria-hidden="true">
+    <path
+      d="M6 2v3 M10 2v3 M4 5h8v2a4 4 0 0 1-8 0V5Z M8 11v3"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
   </svg>
 );
 const IconGear = () => (
@@ -65,6 +106,68 @@ interface SettingsPageProps {
   onUpdatePrefs: (patch: Partial<Preferences>) => Promise<void>;
   onSetKey: (provider: ProviderId, apiKey: string) => Promise<void>;
   onRemoveKey: (provider: ProviderId) => Promise<void>;
+  getMcpStatus: () => Promise<McpServerStatusInfo[]>;
+}
+
+/** Read-only list of configured MCP servers + their live connection state (polled while open). */
+function McpConnectionsSection({
+  getMcpStatus,
+  labels,
+}: {
+  getMcpStatus: () => Promise<McpServerStatusInfo[]>;
+  labels: {
+    empty: string;
+    tools: string;
+    stateLabel: Record<McpServerState, string>;
+  };
+}) {
+  const [servers, setServers] = useState<McpServerStatusInfo[]>([]);
+  useEffect(() => {
+    let alive = true;
+    const load = (): void => {
+      void getMcpStatus().then(
+        (s) => {
+          if (alive) setServers(s);
+        },
+        () => {
+          /* status unavailable — leave the list as-is */
+        },
+      );
+    };
+    load();
+    const id = setInterval(load, 3000);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, [getMcpStatus]);
+
+  if (servers.length === 0) {
+    return <p className="text-sm text-text-secondary">{labels.empty}</p>;
+  }
+  return (
+    <div className="space-y-3">
+      {servers.map((srv) => (
+        <div key={srv.id} className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <span className="text-sm font-medium text-text-primary">{srv.label}</span>
+            <span className="ml-2 text-xs text-text-secondary">
+              {srv.transport}
+              {srv.state === 'ready' ? ` · ${String(srv.toolCount)} ${labels.tools}` : ''}
+            </span>
+          </div>
+          <Badge
+            variant={
+              srv.state === 'ready' ? 'success' : srv.state === 'error' ? 'error' : 'neutral'
+            }
+            dot
+          >
+            {labels.stateLabel[srv.state]}
+          </Badge>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function SettingsPage({
@@ -73,13 +176,15 @@ export function SettingsPage({
   onUpdatePrefs,
   onSetKey,
   onRemoveKey,
+  getMcpStatus,
 }: SettingsPageProps) {
   const s = useT(settingsDict);
   const c = useT(coreDict);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [feedback, setFeedback] = useState<{ variant: 'success' | 'error'; message: string } | null>(
-    null,
-  );
+  const [feedback, setFeedback] = useState<{
+    variant: 'success' | 'error';
+    message: string;
+  } | null>(null);
   const [feedbackKey, setFeedbackKey] = useState(0);
 
   function notify(variant: 'success' | 'error', message: string): void {
@@ -104,7 +209,11 @@ export function SettingsPage({
     dark: s.themeDark,
   };
   // Language endonyms are conventionally shown untranslated.
-  const localeLabel: Record<LocalePref, string> = { system: s.langSystem, en: 'English', tr: 'Türkçe' };
+  const localeLabel: Record<LocalePref, string> = {
+    system: s.langSystem,
+    en: 'English',
+    tr: 'Türkçe',
+  };
 
   async function saveKey(provider: ProviderId): Promise<void> {
     const key = (drafts[provider] ?? '').trim();
@@ -151,7 +260,9 @@ export function SettingsPage({
               return (
                 <div key={p} className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium text-text-primary">{s.providerNames[p]}</span>
+                    <span className="text-sm font-medium text-text-primary">
+                      {s.providerNames[p]}
+                    </span>
                     <Badge variant={isSet ? 'success' : 'neutral'} dot>
                       {isSet ? s.keySet : s.keyNotSet}
                     </Badge>
@@ -273,6 +384,29 @@ export function SettingsPage({
             checked={prefs.useLocalModelForSimpleTasks}
             onChange={(v) => {
               setPref({ useLocalModelForSimpleTasks: v });
+            }}
+          />
+        </Card>
+      ),
+    },
+    {
+      id: 'connections',
+      label: s.connectionsTitle,
+      icon: <IconPlug />,
+      searchText: `${s.connectionsTitle} ${s.connectionsSubtitle} MCP`,
+      content: (
+        <Card title={s.connectionsTitle} subtitle={s.connectionsSubtitle}>
+          <McpConnectionsSection
+            getMcpStatus={getMcpStatus}
+            labels={{
+              empty: s.mcpNoServers,
+              tools: s.mcpToolCount,
+              stateLabel: {
+                idle: s.mcpStateIdle,
+                connecting: s.mcpStateConnecting,
+                ready: s.mcpStateReady,
+                error: s.mcpStateError,
+              },
             }}
           />
         </Card>

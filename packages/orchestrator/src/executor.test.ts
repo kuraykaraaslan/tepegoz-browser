@@ -4,12 +4,26 @@ import type { Plan, PlanStep, RiskLevel } from '@tepegoz/shared-types';
 import Executor from './executor';
 
 const passAny: InputValidator<Record<string, unknown>> = {
-  safeParse: (d) => ({ success: true, data: (typeof d === 'object' && d !== null ? d : {}) as Record<string, unknown> }),
+  safeParse: (d) => ({
+    success: true,
+    data: (typeof d === 'object' && d !== null ? d : {}) as Record<string, unknown>,
+  }),
 };
 
-function reg(id: string, dangerClass: RiskLevel, handler: (args: unknown) => unknown = () => 'ok'): void {
+function reg(
+  id: string,
+  dangerClass: RiskLevel,
+  handler: (args: unknown) => unknown = () => 'ok',
+): void {
   CapabilityRegistry.register({
-    descriptor: { id, description: 't', dangerClass, source: 'builtin', inputSchema: {}, requiresIdempotencyKey: false },
+    descriptor: {
+      id,
+      description: 't',
+      dangerClass,
+      source: 'builtin',
+      inputSchema: {},
+      requiresIdempotencyKey: false,
+    },
     inputSchema: passAny,
     handler,
   });
@@ -31,7 +45,9 @@ describe('Executor.run', () => {
   it('runs steps sequentially through the gateway and collects results', async () => {
     reg('browser_get_page', 'read', () => 'A');
     reg('tab_list_items', 'read', () => 'B');
-    const r = await Executor.run(plan([step('s1', 'browser_get_page'), step('s2', 'tab_list_items')]));
+    const r = await Executor.run(
+      plan([step('s1', 'browser_get_page'), step('s2', 'tab_list_items')]),
+    );
     expect(r.stoppedReason).toBe('completed');
     expect(r.outcomes.map((o) => o.result)).toEqual(['A', 'B']);
   });
@@ -46,7 +62,11 @@ describe('Executor.run', () => {
   it('stops on a repeated action (loop detector)', async () => {
     reg('browser_get_page', 'read');
     const r = await Executor.run(
-      plan([step('s1', 'browser_get_page'), step('s2', 'browser_get_page'), step('s3', 'browser_get_page')]),
+      plan([
+        step('s1', 'browser_get_page'),
+        step('s2', 'browser_get_page'),
+        step('s3', 'browser_get_page'),
+      ]),
       { loopThreshold: 3 },
     );
     expect(r.stoppedReason).toBe('loop_detected');
@@ -55,10 +75,37 @@ describe('Executor.run', () => {
 
   it('caps at MAX_AGENT_STEPS', async () => {
     reg('browser_get_page', 'read');
-    const r = await Executor.run(plan([step('s1', 'browser_get_page'), step('s2', 'browser_get_page')]), {
-      maxSteps: 1,
-    });
+    const r = await Executor.run(
+      plan([step('s1', 'browser_get_page'), step('s2', 'browser_get_page')]),
+      {
+        maxSteps: 1,
+      },
+    );
     expect(r.stoppedReason).toBe('max_steps');
     expect(r.outcomes).toHaveLength(1);
+  });
+
+  it('halts on a post-step guard directive (human handoff) without running later steps', async () => {
+    reg('browser_get_page', 'read', () => 'captcha page');
+    reg('tab_create_item', 'read', () => 'should not run');
+    const r = await Executor.run(
+      plan([step('s1', 'browser_get_page'), step('s2', 'tab_create_item')]),
+      { guard: (o) => (o.result === 'captcha page' ? 'handoff' : null) },
+    );
+    expect(r.stoppedReason).toBe('handoff');
+    expect(r.outcomes).toHaveLength(1);
+  });
+
+  it('continues when the guard returns null', async () => {
+    reg('browser_get_page', 'read', () => 'clean');
+    reg('tab_list_items', 'read', () => 'B');
+    const r = await Executor.run(
+      plan([step('s1', 'browser_get_page'), step('s2', 'tab_list_items')]),
+      {
+        guard: () => null,
+      },
+    );
+    expect(r.stoppedReason).toBe('completed');
+    expect(r.outcomes).toHaveLength(2);
   });
 });

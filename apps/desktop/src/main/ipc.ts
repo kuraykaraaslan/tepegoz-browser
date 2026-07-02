@@ -1,4 +1,11 @@
-import { app, BrowserWindow, ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  Notification,
+  type IpcMainEvent,
+  type IpcMainInvokeEvent,
+} from 'electron';
 import { z } from 'zod';
 import { AppError, Logger, toBoundary } from '@tepegoz/libs';
 import {
@@ -14,6 +21,7 @@ import {
   type CredentialsStatus,
   type HistoryEntry,
   type IpcChannel,
+  type McpServerStatusInfo,
   type Preferences,
   type TabsState,
   type TokenUsageSnapshot,
@@ -29,7 +37,7 @@ import {
   HistoryQuerySchema,
   HistoryUrlSchema,
   UserAgentSelectionSchema,
-  ExtensionPopupOpenSchema,
+  PopupOpenSchema,
   ContentBoundsSchema,
   ContentVisibleSchema,
   CreateTabInputSchema,
@@ -45,6 +53,7 @@ import { isWebUrl } from '@tepegoz/navigation';
 import type { EventType, Plan } from '@tepegoz/shared-types';
 import { randomUUID } from 'node:crypto';
 import AgentService, { type PlanApprovalDecision } from './agent/agent-service';
+import McpService from './mcp/supervisor.electron';
 import { getDb } from './db/database.electron';
 import { PreferencesPatchSchema } from '@tepegoz/preferences';
 import { isTrustedAppUrl } from './lib/trusted-origin';
@@ -53,9 +62,12 @@ import CredentialVault from '@tepegoz/credential-vault';
 import PreferenceStore from '@tepegoz/preferences';
 import TabManager from './tabs';
 import UserAgentManager from './user-agent';
-import ExtensionPopupManager from './extension-popup';
+import PopupWindowManager from './popup-window';
+import { manifestById } from '../shared/extensions';
 import { showTabContextMenu } from './menus/tab-context-menu';
-import { showMainMenu } from './menus/main-menu';
+
+/** Native main-menu popup width (px); its height is computed by the renderer and clamped in main. */
+const MAIN_MENU_WIDTH = 300;
 
 /** Reject IPC from frames that are not our own app content (exact-host allow-list). */
 function assertTrustedSender(event: IpcMainInvokeEvent): void {
@@ -171,6 +183,7 @@ const JOURNAL_TYPE_BY_KIND: Partial<Record<AgentEventKind, EventType>> = {
   step_ok: 'AgentStepExecuted',
   step_error: 'AgentStepExecuted',
   awaiting_approval: 'HitlRequested',
+  handoff: 'HandoffRequested',
   done: 'TaskSucceeded',
   error: 'TaskFailed',
 };
@@ -189,8 +202,15 @@ export function registerIpc(): void {
 
   handle(IpcChannels.prefsSet, (_event, payload): Preferences => {
     const validated = PreferencesPatchSchema.parse(payload);
-    return PreferenceStore.update(validated);
+    const next = PreferenceStore.update(validated);
+    // MCP servers or extension enablement may have changed — re-sync the supervisor's connected set.
+    if (validated.mcpServers !== undefined || validated.extensions !== undefined) {
+      void McpService.reconcile();
+    }
+    return next;
   });
+
+  handle(IpcChannels.mcpGetStatus, (): McpServerStatusInfo[] => McpService.getStatus());
 
   handle(IpcChannels.credentialsStatus, (): CredentialsStatus => credentialsStatus());
 
@@ -267,25 +287,50 @@ export function registerIpc(): void {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (win) showTabContextMenu(win, parsed.data);
   });
-  // Native main (hamburger) menu — needs the sender's window to anchor the popup.
-  ipcMain.on(IpcChannels.menuShowMain, (event: IpcMainEvent) => {
+  // Popup windows — a native child window anchored under a toolbar control (needs the sender window).
+  // Reusable primitive: the main menu, extension popups, and future surfaces route through here.
+  ipcMain.on(IpcChannels.popupOpen, (event: IpcMainEvent, payload: unknown) => {
     if (!isTrustedAppUrl(event.senderFrame?.url ?? '')) return;
-    const win = BrowserWindow.fromWebContents(event.sender);
-    if (win) showMainMenu(win);
-  });
-  // Extension popup — a native child window anchored under the toolbar icon (needs the sender window).
-  ipcMain.on(IpcChannels.extensionPopupOpen, (event: IpcMainEvent, payload: unknown) => {
-    if (!isTrustedAppUrl(event.senderFrame?.url ?? '')) return;
-    const parsed = ExtensionPopupOpenSchema.safeParse(payload);
+    const parsed = PopupOpenSchema.safeParse(payload);
     if (!parsed.success) {
-      Logger.warn('Ignored extension:popup-open: invalid payload');
+      Logger.warn('Ignored popup:open: invalid payload');
       return;
     }
     const win = BrowserWindow.fromWebContents(event.sender);
-    if (win) ExtensionPopupManager.open(win, parsed.data.id, parsed.data.anchor);
+    if (!win) return;
+    const { surface, id, anchor, height } = parsed.data;
+    if (surface === 'main-menu') {
+      PopupWindowManager.open({
+        parent: win,
+        key: 'main-menu',
+        query: { surface: 'main-menu' },
+        anchor,
+        width: MAIN_MENU_WIDTH,
+        // exactOptionalPropertyTypes: only pass height when the renderer actually measured one.
+        ...(height !== undefined ? { height } : {}),
+      });
+    } else if (surface === 'ext' && id !== undefined) {
+      const manifest = manifestById(id);
+      if (manifest === undefined || !manifest.surfaces.includes('popup')) {
+        Logger.warn('Ignored popup open for a non-popup extension', { id });
+        return;
+      }
+      PopupWindowManager.open({
+        parent: win,
+        key: `ext:${id}`,
+        query: { surface: 'ext', id },
+        anchor,
+      });
+    } else {
+      Logger.warn('Ignored popup:open: unknown surface', { surface });
+    }
   });
-  onSignal(IpcChannels.extensionPopupClose, () => {
-    ExtensionPopupManager.close();
+  onSignal(IpcChannels.popupClose, () => {
+    PopupWindowManager.close();
+  });
+  // Exit — quits the whole app regardless of the sender window (a popup can't use the window-close path).
+  onSignal(IpcChannels.appQuit, () => {
+    app.quit();
   });
   onAction(IpcChannels.tabsNavigate, NavigateInputSchema, (url) => {
     TabManager.navigateActive(url);
@@ -361,6 +406,11 @@ export function registerIpc(): void {
         } catch (err) {
           Logger.warn('Journal append failed', { err: String(err) });
         }
+      }
+      // Human Handoff Controller: surface the handoff out-of-band too — the user may be looking
+      // elsewhere while the agent runs, so raise a native OS notification (localized).
+      if (kind === 'handoff' && Notification.isSupported()) {
+        new Notification({ title: mainStrings().agent.handoff.notifyTitle, body: message }).show();
       }
     };
     const requestApproval = (req: ConfirmRequest): Promise<boolean> => {

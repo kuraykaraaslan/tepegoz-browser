@@ -21,7 +21,6 @@ export interface BrowserChromeStrings {
     back: string;
     forward: string;
     reload: string;
-    menu: string;
     omniboxPlaceholder: string;
     bookmarkAdd: string;
     bookmarkRemove: string;
@@ -49,7 +48,8 @@ export interface BrowserChromeProps {
   onBack: () => void;
   onForward: () => void;
   onReload: () => void;
-  onMenu: () => void;
+  /** The main (hamburger) menu control (button + its dropdown), supplied by the host. */
+  menu: ReactNode;
   onNavigate: (input: string) => void;
   /** Async omnibox suggestion source (history/tab/search); omit to disable the dropdown. */
   onSuggest?: ((query: string) => Promise<OmniboxSuggestion[]>) | undefined;
@@ -91,7 +91,7 @@ export function BrowserChrome({
   onBack,
   onForward,
   onReload,
-  onMenu,
+  menu,
   onNavigate,
   onSuggest,
   onActivateTab,
@@ -146,14 +146,13 @@ export function BrowserChrome({
           back: t.browser.back,
           forward: t.browser.forward,
           reload: t.browser.reload,
-          menu: t.browser.menu,
           bookmarkAdd: t.browser.bookmarkAdd,
           bookmarkRemove: t.browser.bookmarkRemove,
         }}
         onBack={onBack}
         onForward={onForward}
         onReload={onReload}
-        onMenu={onMenu}
+        menu={menu}
         currentUrl={currentUrl}
         omniboxPlaceholder={t.browser.omniboxPlaceholder}
         onNavigate={onNavigate}

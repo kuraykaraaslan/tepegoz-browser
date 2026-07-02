@@ -14,7 +14,6 @@ export interface NavToolbarLabels {
   back: string;
   forward: string;
   reload: string;
-  menu: string;
   /** Star aria-labels (state-dependent). Optional — omit to hide the bookmark star. */
   bookmarkAdd?: string;
   bookmarkRemove?: string;
@@ -27,7 +26,9 @@ export interface NavToolbarProps {
   onBack: () => void;
   onForward: () => void;
   onReload: () => void;
-  onMenu: () => void;
+  /** The main (hamburger) menu control — rendered at the toolbar's trailing edge. The host supplies the
+   *  whole element (button + its dropdown) so this package stays presentational and bridge-agnostic. */
+  menu: ReactNode;
   /** Omnibox (address bar) inputs — rendered flex-1 between the nav buttons and the actions slot. */
   currentUrl: string;
   omniboxPlaceholder: string;
@@ -60,7 +61,7 @@ export function NavToolbar({
   onBack,
   onForward,
   onReload,
-  onMenu,
+  menu,
   currentUrl,
   omniboxPlaceholder,
   onNavigate,
@@ -165,19 +166,7 @@ export function NavToolbar({
 
       {actions}
 
-      <button
-        type="button"
-        aria-label={labels.menu}
-        aria-haspopup="menu"
-        onClick={onMenu}
-        className={NAV_BTN}
-      >
-        <svg className="h-4 w-4" viewBox="0 0 16 16" aria-hidden="true">
-          <circle cx="8" cy="3.2" r="1.3" fill="currentColor" />
-          <circle cx="8" cy="8" r="1.3" fill="currentColor" />
-          <circle cx="8" cy="12.8" r="1.3" fill="currentColor" />
-        </svg>
-      </button>
+      {menu}
     </div>
   );
 }

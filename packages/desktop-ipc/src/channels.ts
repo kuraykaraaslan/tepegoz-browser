@@ -38,11 +38,11 @@ export const IpcChannels = {
   agentPlanResponse: 'agent:plan-response',
   tokenUsage: 'token:usage',
   tokenUsageGet: 'token:usage-get',
-  menuShowMain: 'menu:show-main',
   extensionOpen: 'extension:open',
-  extensionPopupOpen: 'extension:popup-open',
-  extensionPopupClose: 'extension:popup-close',
-  extensionPopupClosed: 'extension:popup-closed',
+  popupOpen: 'popup:open',
+  popupClose: 'popup:close',
+  popupClosed: 'popup:closed',
+  appQuit: 'app:quit',
   historyList: 'history:list',
   historySearch: 'history:search',
   historyDelete: 'history:delete',
@@ -52,6 +52,7 @@ export const IpcChannels = {
   bookmarksIsBookmarked: 'bookmarks:is-bookmarked',
   userAgentGet: 'user-agent:get',
   userAgentSet: 'user-agent:set',
+  mcpGetStatus: 'mcp:get-status',
 } as const;
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];

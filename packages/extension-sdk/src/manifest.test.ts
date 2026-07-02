@@ -86,4 +86,29 @@ describe('extension manifest schema', () => {
   it('defineExtension throws on an invalid manifest', () => {
     expect(() => defineExtension({ id: 'x' })).toThrow();
   });
+
+  describe('mcpServer declaration', () => {
+    it('is optional and accepts a valid stdio server', () => {
+      expect(validateManifest(VALID).success).toBe(true); // absent is fine
+      const m = defineExtension({
+        ...VALID,
+        mcpServer: { transport: 'stdio', command: 'my-server', args: ['--flag'] },
+      });
+      expect(m.mcpServer?.command).toBe('my-server');
+      expect(m.mcpServer?.args).toEqual(['--flag']);
+    });
+
+    it('requires a command for stdio and a url for http_sse', () => {
+      expect(validateManifest({ ...VALID, mcpServer: { transport: 'stdio' } }).success).toBe(false);
+      expect(validateManifest({ ...VALID, mcpServer: { transport: 'http_sse' } }).success).toBe(
+        false,
+      );
+      expect(
+        validateManifest({
+          ...VALID,
+          mcpServer: { transport: 'http_sse', url: 'https://x.test/mcp' },
+        }).success,
+      ).toBe(true);
+    });
+  });
 });

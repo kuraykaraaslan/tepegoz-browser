@@ -35,4 +35,13 @@ export const tr: SettingsStrings = {
   localModel: 'Basit işler için yerel model kullan',
   localModelDesc:
     'Basit adımları (sınıflandırma, özetleme) cihazda çalıştırarak AI maliyetini düşürür, gerektiğinde buluta döner. Yerel model ileri bir sürümde devreye girer.',
+  connectionsTitle: 'Bağlantılar',
+  connectionsSubtitle:
+    'Model Context Protocol (MCP) sunucuları. Araçları, güvenlik politikası üzerinden ajana sunulur. Sunucuları tercihlerden ekleyin; buradan düzenleme ileri bir sürümde gelecek.',
+  mcpNoServers: 'Yapılandırılmış MCP sunucusu yok.',
+  mcpStateIdle: 'Boşta',
+  mcpStateConnecting: 'Bağlanıyor…',
+  mcpStateReady: 'Hazır',
+  mcpStateError: 'Hata',
+  mcpToolCount: 'araç',
 };

@@ -28,3 +28,34 @@ export function resolveLocale(requested: string | undefined): Locale {
     ? (base as Locale)
     : DEFAULT_LOCALE;
 }
+
+/** Locale-aware formatting (Intl date/number/relative-time/list/plural). */
+export {
+  formatDate,
+  formatTime,
+  formatNumber,
+  formatCurrency,
+  formatRelativeTime,
+  formatList,
+  pluralCategory,
+  selectPlural,
+} from './format';
+
+/** Text-direction (RTL-ready) skeleton. */
+export { localeDir, RTL_LOCALES, type Direction } from './direction';
+import { localeDir as dir } from './direction';
+
+/** True when EVERY supported locale is LTR — lets callers skip RTL wiring until a first RTL locale lands. */
+export const ALL_SUPPORTED_LTR: boolean = SUPPORTED_LOCALES.every((l) => dir(l) === 'ltr');
+
+/** Turkish case-folding + IME/keyboard regression-matrix skeleton. */
+export {
+  turkishUpper,
+  turkishLower,
+  turkishCompare,
+  TURKISH_SPECIAL_LETTERS,
+  TURKISH_LAYOUTS,
+  IME_MATRIX,
+  type TurkishLayout,
+  type ImeCase,
+} from './turkish';

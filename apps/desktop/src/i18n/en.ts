@@ -35,6 +35,27 @@ export const en = {
   sidebar: {
     resize: 'Resize sidebar',
   },
+  // Main (hamburger) menu — the Chrome-style item set. Real actions reuse existing strings
+  // (browser.newTab/reopenTab/reload/exit, common.settings, history.title, extensions.title/manage);
+  // the keys below are menu-only rows, several of which are not-yet-implemented placeholders.
+  menu: {
+    newWindow: 'New window',
+    newIncognito: 'New Incognito window',
+    profileYou: 'You',
+    passwords: 'Passwords and autofill',
+    downloads: 'Downloads',
+    bookmarks: 'Bookmarks and lists',
+    tabGroups: 'Tab groups',
+    deleteBrowsingData: 'Delete browsing data…',
+    zoom: 'Zoom',
+    print: 'Print…',
+    searchLens: 'Search this tab with Google Lens',
+    translate: 'Translate…',
+    findEdit: 'Find and edit',
+    castSaveShare: 'Cast, save, and share',
+    moreTools: 'More tools',
+    help: 'Help',
+  },
 };
 
 /** Shape contract derived from the English source. */

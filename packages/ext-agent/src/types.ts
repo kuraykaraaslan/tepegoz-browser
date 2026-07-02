@@ -10,6 +10,7 @@ export type AgentEventKind =
   | 'step_ok'
   | 'step_error'
   | 'awaiting_approval'
+  | 'handoff'
   | 'done'
   | 'error';
 

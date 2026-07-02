@@ -30,6 +30,7 @@ export const EventTypeEnum = z.enum([
   'PolicyBlocked',
   'HitlRequested',
   'HitlResolved',
+  'HandoffRequested',
   'CheckpointWritten',
   'TaskSucceeded',
   'TaskFailed',

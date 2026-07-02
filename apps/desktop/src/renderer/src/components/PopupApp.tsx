@@ -5,7 +5,7 @@ import type { ThemePref } from '@tepegoz/desktop-ipc';
 import { extensionDefById } from '../extensions/registry';
 
 /**
- * Standalone render target for a native extension popup window (loaded with `?popup=<id>`). It renders
+ * Standalone render target for a native extension popup window (loaded with `?surface=ext&id=<id>`). It renders
  * ONLY that extension's `popup` surface — no browser chrome — filling the frameless popup window that
  * floats over the live page. Talks to the host through the same `window.tepegoz` bridge; closes via its
  * own Close button, Escape, or losing focus (handled in the main process).
@@ -31,7 +31,7 @@ export function PopupApp({ id }: { id: string }) {
       },
     );
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') window.tepegoz.closeExtensionPopup();
+      if (e.key === 'Escape') window.tepegoz.closePopup();
     };
     window.addEventListener('keydown', onKey);
     return () => {
@@ -47,7 +47,7 @@ export function PopupApp({ id }: { id: string }) {
     <I18nProvider locale={locale}>
       <div className="flex h-screen flex-col overflow-hidden bg-surface-base text-text-primary">
         <div className="min-h-0 flex-1 overflow-auto">
-          <Surface onClose={() => window.tepegoz.closeExtensionPopup()} />
+          <Surface onClose={() => window.tepegoz.closePopup()} />
         </div>
       </div>
     </I18nProvider>

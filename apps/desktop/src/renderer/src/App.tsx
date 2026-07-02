@@ -6,7 +6,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react';
-import { coreDict, pick, resolveLocale, type Locale } from '@tepegoz/i18n';
+import { coreDict, localeDir, pick, resolveLocale, type Locale } from '@tepegoz/i18n';
 import { I18nProvider } from '@tepegoz/i18n/react';
 import { Modal } from '@tepegoz/ui';
 import { browserDict, sidebarDict } from '../../i18n';
@@ -37,6 +37,7 @@ import {
 import { HistoryPage } from '@tepegoz/history-ui';
 import { ExtensionsPage } from './components/ExtensionsPage';
 import { ExtensionTray } from './components/ExtensionTray';
+import { MainMenuButton } from './components/MainMenuButton';
 import { SettingsPage } from './components/SettingsPage';
 import { useWindowMaximized } from './lib/useWindowMaximized';
 
@@ -120,10 +121,10 @@ export function App() {
       if (action === 'popup') {
         // A native floating window that keeps the page live behind it. Re-triggering toggles it off.
         if (popupOpenIdRef.current === id) {
-          window.tepegoz.closeExtensionPopup();
+          window.tepegoz.closePopup();
           setPopupOpenId(null);
         } else {
-          window.tepegoz.openExtensionPopup(id, anchor ?? defaultPopupAnchor());
+          window.tepegoz.openPopup('ext', anchor ?? defaultPopupAnchor(), { id });
           setPopupOpenId(id);
         }
         return;
@@ -189,6 +190,12 @@ export function App() {
     })();
     return window.tepegoz.onTabsState(setTabs);
   }, []);
+
+  // RTL-ready: mirror the active locale's writing direction onto <html dir> (both shipping locales are
+  // LTR, so this is a no-op today, but the whole surface is wired for a future RTL locale — ADR-0016).
+  useEffect(() => {
+    document.documentElement.dir = localeDir(locale);
+  }, [locale]);
 
   const theme = prefs?.theme ?? 'system';
   useEffect(() => {
@@ -260,8 +267,8 @@ export function App() {
 
   // The native popup closed itself (click-away / Escape / its Close button) — clear the pressed state.
   useEffect(() => {
-    return window.tepegoz.onExtensionPopupClosed(() => {
-      setPopupOpenId(null);
+    return window.tepegoz.onPopupClosed((surface) => {
+      if (surface.startsWith('ext:')) setPopupOpenId(null);
     });
   }, []);
 
@@ -458,7 +465,7 @@ export function App() {
         </Modal>
       );
     }
-    return null; // popup opens as a native window (openExtensionPopup), not a DOM overlay
+    return null; // popup opens as a native window (openPopup), not a DOM overlay
   }
 
   /** Render the resizable sidebar dock (right), if an extension is docked. The page/web view stays
@@ -513,7 +520,7 @@ export function App() {
           onBack={() => window.tepegoz.tabGoBack()}
           onForward={() => window.tepegoz.tabGoForward()}
           onReload={() => window.tepegoz.tabReload()}
-          onMenu={() => window.tepegoz.showMainMenu()}
+          menu={<MainMenuButton label={browserT.menu} extensionCount={enabledExtensions.length} />}
           onNavigate={(input) => window.tepegoz.navigateTab(input)}
           onSuggest={onOmniboxSuggest}
           onActivateTab={onActivateTabFromOmnibox}
@@ -555,6 +562,7 @@ export function App() {
                     onUpdatePrefs={onUpdatePrefs}
                     onSetKey={onSetKey}
                     onRemoveKey={onRemoveKey}
+                    getMcpStatus={() => window.tepegoz.getMcpStatus()}
                   />
                 ) : (
                   <p className="px-6 py-8 text-sm text-text-secondary">…</p>

@@ -102,7 +102,7 @@ export function createWindow(): BrowserWindow {
  * Secure factory for an extension popup window: a frameless, non-resizable child of `parent`, sharing
  * the same trusted preload + app partition (so `window.tepegoz` works and the IPC sender allow-list
  * accepts it). It floats above the parent's native web view, so the browsed page stays live behind it.
- * The caller loads the renderer with `?popup=<id>` and manages show/close (blur-to-dismiss).
+ * The caller loads the renderer with `?surface=<kind>` and manages show/close (blur-to-dismiss).
  */
 export function createPopupWindow(parent: BrowserWindow, bounds: Rectangle): BrowserWindow {
   const win = new BrowserWindow({

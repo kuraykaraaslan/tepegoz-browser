@@ -9,7 +9,8 @@ import { initStores } from './stores.electron';
 import { closeDatabase } from './db/database.electron';
 import TabManager from './tabs';
 import UserAgentManager from './user-agent';
-import ExtensionPopupManager from './extension-popup';
+import PopupWindowManager from './popup-window';
+import McpService from './mcp/supervisor.electron';
 
 // Last-resort process-level hooks: an async error that escapes every boundary must be LOGGED, not a
 // silent crash. Exceptions still terminate (state is unknown); rejections are logged and survived.
@@ -103,6 +104,9 @@ if (!app.requestSingleInstanceLock()) {
       UserAgentManager.init();
       registerIpc();
       bootstrap();
+      // Connect configured MCP servers in the background (non-blocking; a bad server must not delay
+      // startup). Their tools register into the CapabilityRegistry as they become ready (ADR-0018).
+      McpService.start();
 
       // Sleep/resume hooks. Phase 1b: the Recovery Coordinator resumes durable tasks from their last
       // checkpoint on 'resume' (Opera Neon's "task drops on sleep" lesson).
@@ -136,7 +140,8 @@ if (!app.requestSingleInstanceLock()) {
   // this, getDb() is null and any straggling handler no-ops.
   app.on('before-quit', () => {
     abortActiveAgentRuns();
-    ExtensionPopupManager.close();
+    void McpService.stop();
+    PopupWindowManager.close();
     TabManager.persistNow();
   });
   app.on('will-quit', () => {

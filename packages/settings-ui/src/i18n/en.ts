@@ -36,6 +36,15 @@ export const en = {
   localModel: 'Use a local model for simple tasks',
   localModelDesc:
     'Runs simple steps (classify, summarize) on-device to cut AI cost, falling back to the cloud when needed. The local model activates in a later release.',
+  connectionsTitle: 'Connections',
+  connectionsSubtitle:
+    'Model Context Protocol (MCP) servers. Their tools become available to the agent through the security policy. Add servers in preferences; editing here arrives in a later release.',
+  mcpNoServers: 'No MCP servers configured.',
+  mcpStateIdle: 'Idle',
+  mcpStateConnecting: 'Connecting…',
+  mcpStateReady: 'Ready',
+  mcpStateError: 'Error',
+  mcpToolCount: 'tools',
 };
 
 export type SettingsStrings = typeof en;

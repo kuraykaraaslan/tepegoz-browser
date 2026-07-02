@@ -4,5 +4,11 @@
  * ToolGateway PEP. Electron-free: the concrete browser operations are injected via `BrowserHost`, and
  * perception (sanitize/wrap) is pure. Extracted from `apps/desktop` per docs/package-map.md.
  */
-export { registerBuiltinTools, resetBuiltinToolsForTest, type BrowserHost } from './builtin-tools';
+export {
+  registerBuiltinTools,
+  resetBuiltinToolsForTest,
+  type BrowserHost,
+  type JournalReader,
+  type JournalEntry,
+} from './builtin-tools';
 export { buildPageSnapshot, type PageSnapshot } from './perception';

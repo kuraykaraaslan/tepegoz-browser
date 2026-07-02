@@ -11,3 +11,4 @@ export type { AppStrings } from './en';
  */
 export const browserDict = defineDict({ en: en.browser, tr: tr.browser });
 export const sidebarDict = defineDict({ en: en.sidebar, tr: tr.sidebar });
+export const menuDict = defineDict({ en: en.menu, tr: tr.menu });

@@ -15,7 +15,8 @@ export interface StepOutcome {
   error?: ToolError;
 }
 
-export type StopReason = 'completed' | 'tool_error' | 'loop_detected' | 'max_steps' | 'aborted';
+export type StopReason =
+  'completed' | 'tool_error' | 'loop_detected' | 'max_steps' | 'aborted' | 'handoff';
 
 export interface RunResult {
   outcomes: StepOutcome[];
@@ -38,6 +39,12 @@ export interface RunOptions {
   /** Live progress hooks (Agent Console). Called before/after each step. */
   onStepStart?: (step: PlanStep) => void;
   onStepEnd?: (outcome: StepOutcome) => void;
+  /**
+   * Post-step guard (Human Handoff Controller): inspect a *successful* step's outcome and return a
+   * {@link StopReason} to halt the run gracefully — e.g. `'handoff'` when a CAPTCHA/2FA challenge is
+   * detected in the perceived page (the agent must NOT try to solve it). Returning `null` continues.
+   */
+  guard?: (outcome: StepOutcome) => StopReason | null;
 }
 
 function isToolError(v: unknown): v is ToolError {
@@ -87,6 +94,10 @@ export default class Executor {
       options.onStepEnd?.(outcome);
       if (!outcome.ok) {
         return { outcomes, stoppedReason: 'tool_error' };
+      }
+      const halt = options.guard?.(outcome);
+      if (halt != null) {
+        return { outcomes, stoppedReason: halt };
       }
     }
 

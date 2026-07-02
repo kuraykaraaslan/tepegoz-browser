@@ -38,6 +38,37 @@ const LocaleLabelSchema = z.object({
   description: z.string().max(300).optional(),
 });
 
+/**
+ * An MCP server an extension provides, so its "skills" (tools) become usable by the internal agent
+ * (routed through the host's ToolGateway PEP — ADR-0018). Validated at the manifest trust boundary.
+ * Phase 1a wires only `stdio`; `http_sse` is reserved.
+ */
+export const McpServerDeclSchema = z
+  .object({
+    transport: z.enum(['stdio', 'http_sse']),
+    command: z.string().min(1).max(1024).optional(),
+    args: z.array(z.string().max(1024)).max(64).default([]),
+    env: z.record(z.string().max(4096)).default({}),
+    url: z.string().url().max(2048).optional(),
+  })
+  .superRefine((decl, ctx) => {
+    if (decl.transport === 'stdio' && (decl.command === undefined || decl.command.length === 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['command'],
+        message: 'stdio requires "command"',
+      });
+    }
+    if (decl.transport === 'http_sse' && decl.url === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['url'],
+        message: 'http_sse requires "url"',
+      });
+    }
+  });
+export type McpServerDecl = z.infer<typeof McpServerDeclSchema>;
+
 export const ExtensionManifestSchema = z
   .object({
     /** Stable machine id, reverse-DNS (e.g. "com.tepegoz.agent"). */
@@ -60,6 +91,8 @@ export const ExtensionManifestSchema = z
     labels: z.record(LocaleLabelSchema).default({}),
     /** Capabilities the extension requests (enforced by the Policy Kernel / host later). */
     permissions: z.array(ExtensionPermissionSchema).default([]),
+    /** Optional MCP server this extension provides; its tools reach the agent via the ToolGateway PEP. */
+    mcpServer: McpServerDeclSchema.optional(),
   })
   .transform((m) => ({
     ...m,

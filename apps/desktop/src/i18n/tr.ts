@@ -30,4 +30,22 @@ export const tr: AppStrings = {
   sidebar: {
     resize: 'Kenar çubuğunu yeniden boyutlandır',
   },
+  menu: {
+    newWindow: 'Yeni pencere',
+    newIncognito: 'Yeni Gizli pencere',
+    profileYou: 'Sen',
+    passwords: 'Şifreler ve otomatik doldurma',
+    downloads: 'İndirilenler',
+    bookmarks: 'Yer imleri ve listeler',
+    tabGroups: 'Sekme grupları',
+    deleteBrowsingData: 'Tarama verilerini sil…',
+    zoom: 'Yakınlaştırma',
+    print: 'Yazdır…',
+    searchLens: "Bu sekmeyi Google Lens ile ara",
+    translate: 'Çevir…',
+    findEdit: 'Bul ve düzenle',
+    castSaveShare: 'Yayınla, kaydet ve paylaş',
+    moreTools: 'Diğer araçlar',
+    help: 'Yardım',
+  },
 };

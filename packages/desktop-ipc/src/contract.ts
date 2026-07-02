@@ -56,6 +56,38 @@ export type LocalePref = (typeof LOCALE_PREFS)[number];
 export const PROVIDER_IDS = ['anthropic', 'openai', 'gemini'] as const;
 export type ProviderId = (typeof PROVIDER_IDS)[number];
 
+export const MCP_TRANSPORTS = ['stdio', 'http_sse'] as const;
+export type McpTransportId = (typeof MCP_TRANSPORTS)[number];
+
+/**
+ * A user-configured MCP server (persisted in preferences). Its tools are surfaced to the agent through
+ * the single ToolGateway PEP (ADR-0018). Extensions can also declare servers in their manifest; those
+ * are not stored here. In Phase 1a only `stdio` is wired; `http_sse` is reserved.
+ */
+export interface McpServerPref {
+  id: string;
+  label: string;
+  transport: McpTransportId;
+  // Optional fields include `| undefined` to match the zod `.optional()` output shape under
+  // exactOptionalPropertyTypes (the preferences schema `satisfies z.ZodType<Preferences>`).
+  command?: string | undefined;
+  args?: string[] | undefined;
+  env?: Record<string, string> | undefined;
+  url?: string | undefined;
+  enabled: boolean;
+}
+
+/** Read-only connection status for the Settings "Connections / MCP" list (never carries secrets). */
+export type McpServerState = 'idle' | 'connecting' | 'ready' | 'error';
+export interface McpServerStatusInfo {
+  id: string;
+  label: string;
+  transport: McpTransportId;
+  state: McpServerState;
+  toolCount: number;
+  error?: string;
+}
+
 export interface Preferences {
   theme: ThemePref;
   locale: LocalePref;
@@ -67,6 +99,8 @@ export interface Preferences {
   extensions: ExtensionState[];
   /** Active User-Agent override for browsed pages (User-Agent switcher extension); null = default. */
   userAgent: string | null;
+  /** External MCP servers whose tools the agent may use (routed through the ToolGateway PEP). */
+  mcpServers: McpServerPref[];
 }
 
 /** Per-provider "is a key stored" flags — NEVER the keys themselves. */
@@ -195,17 +229,23 @@ export interface TepegozApi {
   getUserAgent(): Promise<string | null>;
   /** Apply a UA string for browsed pages, or null to reset to the default. Returns the stored value. */
   setUserAgent(ua: string | null): Promise<string | null>;
-  /** Pop the native main (hamburger) menu, anchored to the sender window. */
-  showMainMenu(): void;
-  /** Subscribe to "open this extension panel" requests from the menu; returns an unsubscribe fn. */
+  /** Read-only status of every configured MCP server (Settings → Connections). Never returns secrets. */
+  getMcpStatus(): Promise<McpServerStatusInfo[]>;
+  /** Subscribe to "open this extension panel" requests; returns an unsubscribe fn. */
   onOpenExtension(callback: (id: ExtensionId) => void): () => void;
-  /** Open an extension's `popup` surface as a native floating window anchored at `anchor` (the toolbar
-   *  icon's rect, in window-content DIP). Floats above the page, which stays live behind it. */
-  openExtensionPopup(id: ExtensionId, anchor: ContentBounds): void;
-  /** Close the open extension popup (also auto-closes when it loses focus). */
-  closeExtensionPopup(): void;
-  /** Subscribe to popup-closed notifications (e.g. dismissed by click-away); returns an unsubscribe fn. */
-  onExtensionPopupClosed(callback: () => void): () => void;
+  /** Open a named app surface as a native floating popup window anchored at `anchor` (the trigger's
+   *  rect, in window-content DIP). Floats above the page, which stays live behind it. Reusable across
+   *  surfaces: `surface` is the kind ('main-menu' | 'ext'); extensions pass their id via `opts.id`;
+   *  `opts.height` requests a content height (clamped to the work area). */
+  openPopup(surface: string, anchor: ContentBounds, opts?: { id?: string; height?: number }): void;
+  /** Close the open popup window (also auto-closes on blur/Escape). */
+  closePopup(): void;
+  /** Subscribe to popup-closed notifications; the callback receives the closed surface key
+   *  ('main-menu' | `ext:<id>`). Returns an unsubscribe fn. */
+  onPopupClosed(callback: (surface: string) => void): () => void;
+  /** Quit the whole app (Exit). Distinct from `closeWindow` so it works when invoked from a popup
+   *  window (where the sender-window path would close the popup, not the main window). */
+  quitApp(): void;
   // Browsing history (tepegoz://history). All return the fresh list so the page re-renders.
   getHistory(): Promise<HistoryEntry[]>;
   searchHistory(query: string): Promise<HistoryEntry[]>;

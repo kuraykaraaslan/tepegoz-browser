@@ -1,6 +1,12 @@
 export { default as PolicyKernel, type PolicyContext, type PolicyResult } from './policy-kernel';
 export { isSensitiveSite } from './sensitive-site';
 export {
+  detectHandoff,
+  HANDOFF_KINDS,
+  type HandoffKind,
+  type HandoffSignal,
+} from './handoff-detector';
+export {
   default as TaintTracker,
   argsAreTainted,
   findTaintedValues,

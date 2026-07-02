@@ -65,8 +65,14 @@ export const BookmarkUrlSchema = z.string().min(1).max(4096);
 /** `user-agent:set` payload — a UA string to apply, or null to reset to the browser default. */
 export const UserAgentSelectionSchema = z.string().max(512).nullable();
 
-/** `extension:popup-open` payload — which extension, and the toolbar icon's rect to anchor under. */
-export const ExtensionPopupOpenSchema = z.object({
-  id: z.string().regex(EXTENSION_ID_RE).max(128),
+/**
+ * `popup:open` payload — the reusable native popup primitive. `surface` is the surface kind (e.g.
+ * 'main-menu' | 'ext'); `id` is required only for the extension surface; `anchor` is the trigger's rect
+ * to anchor under; `height` is an optional desired content height (clamped to the work area in main).
+ */
+export const PopupOpenSchema = z.object({
+  surface: z.string().min(1).max(64),
+  id: z.string().regex(EXTENSION_ID_RE).max(128).optional(),
   anchor: ContentBoundsSchema,
+  height: z.number().int().positive().max(2000).optional(),
 });

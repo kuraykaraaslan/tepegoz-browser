@@ -1,6 +1,12 @@
 import { z } from 'zod';
 import { EXTENSION_ID_RE } from '@tepegoz/extension-sdk';
-import { LOCALE_PREFS, PROVIDER_IDS, THEME_PREFS, type Preferences } from '@tepegoz/desktop-ipc';
+import {
+  LOCALE_PREFS,
+  MCP_TRANSPORTS,
+  PROVIDER_IDS,
+  THEME_PREFS,
+  type Preferences,
+} from '@tepegoz/desktop-ipc';
 
 /**
  * App preferences validation (main-side). The TYPE and its value lists live in the shared IPC contract
@@ -19,6 +25,35 @@ export const ExtensionStateSchema = z.object({
   status: ExtensionStatusSchema,
 });
 
+// One MCP server config. stdio needs a command; http_sse (reserved for Phase 1b) needs a url.
+export const McpServerPrefSchema = z
+  .object({
+    id: z.string().min(1).max(64),
+    label: z.string().min(1).max(64),
+    transport: z.enum(MCP_TRANSPORTS),
+    command: z.string().min(1).max(1024).optional(),
+    args: z.array(z.string().max(1024)).max(64).optional(),
+    env: z.record(z.string().max(4096)).optional(),
+    url: z.string().url().max(2048).optional(),
+    enabled: z.boolean(),
+  })
+  .superRefine((cfg, ctx) => {
+    if (cfg.transport === 'stdio' && (cfg.command === undefined || cfg.command.length === 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'stdio requires "command"',
+        path: ['command'],
+      });
+    }
+    if (cfg.transport === 'http_sse' && cfg.url === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'http_sse requires "url"',
+        path: ['url'],
+      });
+    }
+  });
+
 export const PreferencesSchema = z.object({
   theme: ThemePrefSchema,
   locale: LocalePrefSchema,
@@ -30,6 +65,8 @@ export const PreferencesSchema = z.object({
   extensions: z.array(ExtensionStateSchema),
   // Active User-Agent override for browsed pages (User-Agent switcher extension); null = default.
   userAgent: z.string().max(512).nullable(),
+  // External MCP servers whose tools the agent may use (routed through the ToolGateway PEP).
+  mcpServers: z.array(McpServerPrefSchema),
 }) satisfies z.ZodType<Preferences>;
 
 /** Patch shape for partial updates — only provided keys are applied. */
@@ -47,4 +84,5 @@ export const DEFAULT_PREFERENCES: Preferences = {
   defaultProvider: 'anthropic',
   extensions: [],
   userAgent: null,
+  mcpServers: [],
 };

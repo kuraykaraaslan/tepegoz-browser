@@ -24,6 +24,14 @@ export default class CapabilityRegistry {
     CapabilityRegistry.tools.set(id, tool as RegisteredTool);
   }
 
+  /**
+   * Remove a previously-registered tool (e.g. when an MCP server disconnects/backs off). Idempotent:
+   * returns whether a tool was actually removed. Re-registering the same id afterwards is allowed.
+   */
+  static unregister(id: string): boolean {
+    return CapabilityRegistry.tools.delete(id);
+  }
+
   static get(id: string): RegisteredTool | undefined {
     return CapabilityRegistry.tools.get(id);
   }

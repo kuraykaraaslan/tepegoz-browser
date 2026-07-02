@@ -45,4 +45,28 @@ describe('EventJournal', () => {
     const read = EventJournal.readFrom(db, e.lsn - 1)[0];
     expect(read?.payload).toEqual({ step: 1 });
   });
+
+  it('reads recent events newest-first, capped by limit', () => {
+    EventJournal.append(db, makeEvent('run-1'));
+    EventJournal.append(db, makeEvent('run-2'));
+    EventJournal.append(db, makeEvent('run-3'));
+    const recent = EventJournal.readRecent(db, 2);
+    expect(recent.map((e) => e.correlationId)).toEqual(['run-3', 'run-2']);
+  });
+
+  it('scopes recent events to one correlationId', () => {
+    EventJournal.append(db, makeEvent('run-a'));
+    EventJournal.append(db, makeEvent('run-b'));
+    EventJournal.append(db, makeEvent('run-a'));
+    const scoped = EventJournal.readRecent(db, 10, 'run-a');
+    expect(scoped).toHaveLength(2);
+    expect(scoped.every((e) => e.correlationId === 'run-a')).toBe(true);
+  });
+
+  it('clamps a non-positive or oversized limit', () => {
+    EventJournal.append(db, makeEvent('run-1'));
+    expect(EventJournal.readRecent(db, 0)).toHaveLength(0);
+    expect(EventJournal.readRecent(db, -5)).toHaveLength(0);
+    expect(EventJournal.readRecent(db, 10_000)).toHaveLength(1);
+  });
 });

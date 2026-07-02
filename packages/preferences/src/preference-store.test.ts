@@ -42,10 +42,41 @@ describe('PreferenceStore', () => {
 
   it('falls back to defaults on a corrupt patch value', () => {
     PreferenceStore.init({ filePath });
-    expect(() =>
-      PreferenceStore.update({ theme: 'neon' as unknown as 'dark' }),
-    ).toThrow();
+    expect(() => PreferenceStore.update({ theme: 'neon' as unknown as 'dark' })).toThrow();
     // store unchanged after the rejected update
     expect(PreferenceStore.getAll().theme).toBe('system');
+  });
+
+  it('defaults mcpServers to [] and round-trips a valid stdio server', () => {
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().mcpServers).toEqual([]);
+    const next = PreferenceStore.update({
+      mcpServers: [
+        { id: 'files', label: 'Files', transport: 'stdio', command: 'srv', enabled: true },
+      ],
+    });
+    expect(next.mcpServers[0]?.command).toBe('srv');
+  });
+
+  it('rejects an stdio MCP server with no command and an invalid transport', () => {
+    PreferenceStore.init({ filePath });
+    expect(() =>
+      PreferenceStore.update({
+        mcpServers: [{ id: 'x', label: 'X', transport: 'stdio', enabled: true }],
+      }),
+    ).toThrow();
+    expect(() =>
+      PreferenceStore.update({
+        mcpServers: [
+          {
+            id: 'x',
+            label: 'X',
+            transport: 'ws' as unknown as 'stdio',
+            command: 'c',
+            enabled: true,
+          },
+        ],
+      }),
+    ).toThrow();
   });
 });

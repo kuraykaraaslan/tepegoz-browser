@@ -28,6 +28,7 @@ const KIND_DOT: Record<AgentEvent['kind'], string> = {
   step_ok: 'bg-green-500',
   step_error: 'bg-red-500',
   awaiting_approval: 'bg-amber-500',
+  handoff: 'bg-amber-500',
   done: 'bg-green-600',
   error: 'bg-red-600',
 };
@@ -178,11 +179,13 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
         )}
       </form>
 
-      <div ref={listRef} className="flex-1 space-y-1.5 overflow-auto p-3 text-sm" aria-live="polite">
+      <div
+        ref={listRef}
+        className="flex-1 space-y-1.5 overflow-auto p-3 text-sm"
+        aria-live="polite"
+      >
         {events.length === 0 ? (
-          <p className="text-text-secondary">
-            {running ? a.running : a.noActiveTasks}
-          </p>
+          <p className="text-text-secondary">{running ? a.running : a.noActiveTasks}</p>
         ) : (
           events.map((e, i) => (
             <div key={`${String(e.ts)}-${String(i)}`} className="flex items-start gap-2">
@@ -212,50 +215,50 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
           closeOnBackdrop={false}
         >
           <p className="mt-1 text-xs text-text-secondary">{a.planBody}</p>
-            {planPreview.goal.length > 0 && (
-              <p className="mt-2 text-sm text-text-primary">{planPreview.goal}</p>
-            )}
-            <ul className="mt-3 space-y-1.5 overflow-auto">
-              {planPreview.steps.map((step, i) => (
-                <li key={step.id}>
-                  <label className="flex cursor-pointer items-start gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={!skipIds.has(step.id)}
-                      onChange={() => {
-                        toggleStep(step.id);
-                      }}
-                      className="mt-0.5"
-                    />
-                    <span className="min-w-0">
-                      <span className="font-mono text-text-primary">
-                        {String(i + 1)}. {step.tool}
-                      </span>
-                      {step.rationale.length > 0 && (
-                        <span className="ml-1 break-words text-text-secondary">
-                          — {step.rationale}
-                        </span>
-                      )}
+          {planPreview.goal.length > 0 && (
+            <p className="mt-2 text-sm text-text-primary">{planPreview.goal}</p>
+          )}
+          <ul className="mt-3 space-y-1.5 overflow-auto">
+            {planPreview.steps.map((step, i) => (
+              <li key={step.id}>
+                <label className="flex cursor-pointer items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={!skipIds.has(step.id)}
+                    onChange={() => {
+                      toggleStep(step.id);
+                    }}
+                    className="mt-0.5"
+                  />
+                  <span className="min-w-0">
+                    <span className="font-mono text-text-primary">
+                      {String(i + 1)}. {step.tool}
                     </span>
-                  </label>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-4 flex justify-end gap-2">
-              <button type="button" onClick={() => respondPlan(false)} className={BTN_GHOST}>
-                {c.common.cancel}
-              </button>
-              <button
-                type="button"
-                onClick={() => respondPlan(true)}
-                disabled={skipIds.size === planPreview.steps.length}
-                className={BTN_PRIMARY}
-              >
-                {a.planRun}
-              </button>
-            </div>
-          </Modal>
-        )}
+                    {step.rationale.length > 0 && (
+                      <span className="ml-1 break-words text-text-secondary">
+                        — {step.rationale}
+                      </span>
+                    )}
+                  </span>
+                </label>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-4 flex justify-end gap-2">
+            <button type="button" onClick={() => respondPlan(false)} className={BTN_GHOST}>
+              {c.common.cancel}
+            </button>
+            <button
+              type="button"
+              onClick={() => respondPlan(true)}
+              disabled={skipIds.size === planPreview.steps.length}
+              className={BTN_PRIMARY}
+            >
+              {a.planRun}
+            </button>
+          </div>
+        </Modal>
+      )}
 
       {approval !== null && (
         <Modal
@@ -267,24 +270,22 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
           closeOnBackdrop={false}
         >
           <p className="mt-2 text-sm text-text-secondary">{a.approvalBody}</p>
-            <p className="mt-3 font-mono text-sm text-text-primary">{approval.toolName}</p>
-            <p className="text-xs text-text-secondary">{approval.reason}</p>
-            <pre className="mt-2 max-h-24 overflow-auto rounded bg-surface-base p-2 text-xs text-text-secondary">
-              {approval.argsPreview}
-            </pre>
-            {approval.biometric && (
-              <p className="mt-2 text-xs text-amber-600">{a.biometricNote}</p>
-            )}
-            <div className="mt-4 flex justify-end gap-2">
-              <button type="button" onClick={() => respond(false)} className={BTN_GHOST}>
-                {a.deny}
-              </button>
-              <button type="button" onClick={() => respond(true)} className={BTN_PRIMARY}>
-                {a.approve}
-              </button>
-            </div>
-          </Modal>
-        )}
+          <p className="mt-3 font-mono text-sm text-text-primary">{approval.toolName}</p>
+          <p className="text-xs text-text-secondary">{approval.reason}</p>
+          <pre className="mt-2 max-h-24 overflow-auto rounded bg-surface-base p-2 text-xs text-text-secondary">
+            {approval.argsPreview}
+          </pre>
+          {approval.biometric && <p className="mt-2 text-xs text-amber-600">{a.biometricNote}</p>}
+          <div className="mt-4 flex justify-end gap-2">
+            <button type="button" onClick={() => respond(false)} className={BTN_GHOST}>
+              {a.deny}
+            </button>
+            <button type="button" onClick={() => respond(true)} className={BTN_PRIMARY}>
+              {a.approve}
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

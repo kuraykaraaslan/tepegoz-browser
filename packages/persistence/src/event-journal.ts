@@ -72,6 +72,22 @@ export class EventJournal {
     return rows.map(rowToEvent);
   }
 
+  /**
+   * Read the most recent `limit` events (newest first), optionally scoped to one `correlationId`
+   * (a single task/run). Backs the `journal_query_events` agent tool + the Console timeline replay.
+   */
+  static readRecent(db: Db, limit: number, correlationId?: string): EventRecord[] {
+    const n = Math.max(0, Math.min(Math.trunc(limit), 1000));
+    if (n === 0) return [];
+    const rows =
+      correlationId === undefined
+        ? (db.prepare('SELECT * FROM events ORDER BY lsn DESC LIMIT ?').all(n) as EventRow[])
+        : (db
+            .prepare('SELECT * FROM events WHERE correlation_id = ? ORDER BY lsn DESC LIMIT ?')
+            .all(correlationId, n) as EventRow[]);
+    return rows.map(rowToEvent);
+  }
+
   static count(db: Db): number {
     const row = db.prepare('SELECT COUNT(*) AS n FROM events').get() as { n: number };
     return row.n;

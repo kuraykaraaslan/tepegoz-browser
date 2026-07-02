@@ -7,7 +7,7 @@ import {
   type InvokeContext,
 } from '@tepegoz/capability-plane';
 import { Executor, Planner, type StepOutcome } from '@tepegoz/orchestrator';
-import { TaintTracker } from '@tepegoz/security-policy';
+import { TaintTracker, detectHandoff } from '@tepegoz/security-policy';
 import type { Plan } from '@tepegoz/shared-types';
 import type { AgentEventKind } from '@tepegoz/desktop-ipc';
 import CredentialVault from '@tepegoz/credential-vault';
@@ -15,6 +15,8 @@ import PreferenceStore from '@tepegoz/preferences';
 import { registerBuiltinTools } from '@tepegoz/browser-tools';
 import TabManager from '../tabs';
 import { browserHost } from './browser-host';
+import { journalHost } from './journal-host';
+import { mainStrings } from '../lib/i18n-main';
 
 /** Best-effort URL string from a tool call's args (for the sensitive-site lockout). */
 function urlFromArgs(args: unknown): string | undefined {
@@ -30,6 +32,15 @@ function contentFromResult(result: unknown): string | undefined {
   if (result !== null && typeof result === 'object' && 'content' in result) {
     const content = (result as { content?: unknown }).content;
     if (typeof content === 'string' && content.length > 0) return content;
+  }
+  return undefined;
+}
+
+/** The url a read tool's result reports (perception snapshot), for handoff/URL-aware checks. */
+function urlFromResult(result: unknown): string | undefined {
+  if (result !== null && typeof result === 'object' && 'url' in result) {
+    const url = (result as { url?: unknown }).url;
+    if (typeof url === 'string' && url.length > 0) return url;
   }
   return undefined;
 }
@@ -72,7 +83,10 @@ export default class AgentService {
     const prefs = PreferenceStore.getAll();
     const provider = prefs.defaultProvider;
     if (provider !== 'anthropic') {
-      throw new AppError(`Provider "${provider}" is not supported yet (Phase 1a is Claude-only)`, 501);
+      throw new AppError(
+        `Provider "${provider}" is not supported yet (Phase 1a is Claude-only)`,
+        501,
+      );
     }
     const apiKey = CredentialVault.getKey(provider);
     if (apiKey === null) {
@@ -86,7 +100,7 @@ export default class AgentService {
     });
     ModelGateway.register(new AnthropicProvider({ apiKey, effort: route.effort }));
 
-    registerBuiltinTools(browserHost);
+    registerBuiltinTools(browserHost, journalHost);
     const tools = CapabilityRegistry.list().map((d) => ({
       id: d.id,
       description: d.description,
@@ -156,9 +170,28 @@ export default class AgentService {
             hooks.onEvent('step_error', `${o.tool} ✗`, o.error?.message ?? 'failed');
           }
         },
+        // Human Handoff Controller: a CAPTCHA/2FA in a perceived page halts the loop and hands
+        // control back to the user — deterministic, NO auto-solve, credit preserved.
+        guard: (o: StepOutcome) => {
+          const content = contentFromResult(o.result);
+          if (content === undefined) return null;
+          const signal = detectHandoff(content, urlFromResult(o.result));
+          if (signal === null) return null;
+          const msg = mainStrings().agent.handoff;
+          hooks.onEvent('handoff', signal.kind === 'captcha' ? msg.captcha : msg.twofa);
+          return 'handoff';
+        },
       });
+      if (result.stoppedReason === 'handoff') {
+        // The 'handoff' event above is the terminal, user-facing message — no generic "Finished" line.
+        return { stoppedReason: 'handoff', ok: false };
+      }
       const usage = TokenLedger.totals();
-      hooks.onEvent('done', `Finished: ${result.stoppedReason}`, `${String(usage.totalTokens)} tokens`);
+      hooks.onEvent(
+        'done',
+        `Finished: ${result.stoppedReason}`,
+        `${String(usage.totalTokens)} tokens`,
+      );
       return { stoppedReason: result.stoppedReason, ok: result.stoppedReason === 'completed' };
     } finally {
       ToolGateway.setConfirmHandler(null);

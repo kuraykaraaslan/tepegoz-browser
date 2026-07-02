@@ -13,6 +13,7 @@ import {
   type ExtensionId,
   type HistoryEntry,
   type IpcChannel,
+  type McpServerStatusInfo,
   type Preferences,
   type ProviderId,
   type TabsState,
@@ -156,9 +157,7 @@ const api: TepegozApi = {
   getTokenUsage: () => invoke<TokenUsageSnapshot>(IpcChannels.tokenUsageGet),
   getUserAgent: () => invoke<string | null>(IpcChannels.userAgentGet),
   setUserAgent: (ua: string | null) => invoke<string | null>(IpcChannels.userAgentSet, ua),
-  showMainMenu: () => {
-    ipcRenderer.send(IpcChannels.menuShowMain);
-  },
+  getMcpStatus: () => invoke<McpServerStatusInfo[]>(IpcChannels.mcpGetStatus),
   onOpenExtension: (callback: (id: ExtensionId) => void) => {
     const listener = (_event: unknown, id: ExtensionId): void => {
       callback(id);
@@ -168,20 +167,28 @@ const api: TepegozApi = {
       ipcRenderer.removeListener(IpcChannels.extensionOpen, listener);
     };
   },
-  openExtensionPopup: (id: ExtensionId, anchor: ContentBounds) => {
-    ipcRenderer.send(IpcChannels.extensionPopupOpen, { id, anchor });
+  openPopup: (surface: string, anchor: ContentBounds, opts?: { id?: string; height?: number }) => {
+    ipcRenderer.send(IpcChannels.popupOpen, {
+      surface,
+      id: opts?.id,
+      anchor,
+      height: opts?.height,
+    });
   },
-  closeExtensionPopup: () => {
-    ipcRenderer.send(IpcChannels.extensionPopupClose);
+  closePopup: () => {
+    ipcRenderer.send(IpcChannels.popupClose);
   },
-  onExtensionPopupClosed: (callback: () => void) => {
-    const listener = (): void => {
-      callback();
+  onPopupClosed: (callback: (surface: string) => void) => {
+    const listener = (_event: unknown, surface: string): void => {
+      callback(surface);
     };
-    ipcRenderer.on(IpcChannels.extensionPopupClosed, listener);
+    ipcRenderer.on(IpcChannels.popupClosed, listener);
     return () => {
-      ipcRenderer.removeListener(IpcChannels.extensionPopupClosed, listener);
+      ipcRenderer.removeListener(IpcChannels.popupClosed, listener);
     };
+  },
+  quitApp: () => {
+    ipcRenderer.send(IpcChannels.appQuit);
   },
   getHistory: () => invoke<HistoryEntry[]>(IpcChannels.historyList),
   searchHistory: (query: string) => invoke<HistoryEntry[]>(IpcChannels.historySearch, query),

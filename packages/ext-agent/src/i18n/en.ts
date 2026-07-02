@@ -18,6 +18,14 @@ export const en = {
   planTitle: 'Review the plan',
   planBody: 'Uncheck any step you do not want, then run. Nothing executes until you approve.',
   planRun: 'Run plan',
+  // Human Handoff Controller — shown when a CAPTCHA / 2FA is detected and the agent hands back.
+  handoff: {
+    notifyTitle: 'Your turn — Tepegöz paused',
+    captcha:
+      'A CAPTCHA was detected. Tepegöz has stopped and handed control back to you — it will not solve it automatically. Complete it yourself, then start a new task.',
+    twofa:
+      'A verification step (2FA / one-time code) was detected. Tepegöz has stopped and handed control back to you — finish signing in yourself, then start a new task.',
+  },
   // The agentic command palette (Chat/Do/Make/Tasks) — this extension owns the surface.
   commandPalette: {
     placeholder: 'Type a command or ask Tepegöz…',
