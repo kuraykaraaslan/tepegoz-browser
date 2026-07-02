@@ -1,8 +1,8 @@
 import { StrictMode, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { coreDict, pick, resolveLocale } from '@tepegoz/i18n';
+import { ErrorBoundary } from '@tepegoz/ui';
 import { App } from './App';
-import { ErrorBoundary } from './components/ErrorBoundary';
 import { PopupApp } from './components/PopupApp';
 import { MainMenuPopup } from './components/MainMenuPopup';
 import './styles.css';

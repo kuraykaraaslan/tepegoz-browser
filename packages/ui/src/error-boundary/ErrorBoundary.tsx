@@ -12,8 +12,9 @@ interface ErrorBoundaryState {
 
 /**
  * Root render-error net: a component that throws during render would otherwise unmount the ENTIRE
- * chrome (React 18 default), leaving a blank window with no way to close it (custom window controls).
- * Complements the promise-level handling — render errors don't reject promises.
+ * app tree (React 18 default), leaving a blank window with no recovery. First-party (non-fork) atom —
+ * pure React + design tokens, no app coupling. The fallback copy is injected (localized by the caller,
+ * since the boundary renders before i18n providers mount).
  */
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   override state: ErrorBoundaryState = { failed: false };
@@ -23,7 +24,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   override componentDidCatch(error: Error, info: ErrorInfo): void {
-    console.error('Renderer crashed', error, info.componentStack);
+    console.error('Render tree crashed', error, info.componentStack);
   }
 
   override render(): ReactNode {
