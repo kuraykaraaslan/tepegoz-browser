@@ -77,6 +77,19 @@ export const PopupOpenSchema = z.object({
   height: z.number().int().positive().max(2000).optional(),
 });
 
+/** `popup:resize` payload — the open popup reports its measured content height so main shrinks the
+ *  window to fit (removing the empty strip from the open-time height estimate). Clamped in main. */
+export const PopupResizeSchema = z.object({
+  height: z.number().int().positive().max(2000),
+});
+
+/** `submenu:open` payload — a flyout submenu opened beside the main menu popup (its own native window). */
+export const SubmenuOpenSchema = z.object({
+  kind: z.string().min(1).max(32),
+  anchor: ContentBoundsSchema,
+  height: z.number().int().positive().max(2000).optional(),
+});
+
 /** `notifications:dismiss` / `notifications:mark-read` payload — a single notification id. */
 export const NotificationIdSchema = z.string().min(1).max(128);
 

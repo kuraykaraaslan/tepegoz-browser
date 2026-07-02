@@ -5,6 +5,8 @@ import { ErrorBoundary } from '@tepegoz/ui';
 import { App } from './App';
 import { PopupApp } from './components/PopupApp';
 import { MainMenuPopup } from './components/MainMenuPopup';
+import { MenuSubPopup } from './components/MenuSubPopup';
+import { UserMenuPopup } from './components/UserMenuPopup';
 import { NotificationCenterPopup } from './components/NotificationCenterPopup';
 import './styles.css';
 
@@ -16,6 +18,8 @@ const extId = params.get('id');
 
 let node: ReactNode = <App />;
 if (surface === 'main-menu') node = <MainMenuPopup />;
+else if (surface === 'user-menu') node = <UserMenuPopup />;
+else if (surface === 'menu-sub') node = <MenuSubPopup kind={params.get('kind') ?? ''} />;
 else if (surface === 'notifications') node = <NotificationCenterPopup />;
 else if (surface === 'ext' && extId !== null) node = <PopupApp id={extId} />;
 

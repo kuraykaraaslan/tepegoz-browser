@@ -9,7 +9,7 @@ import {
 import { coreDict, localeDir, pick, resolveLocale, type Locale } from '@tepegoz/i18n';
 import { I18nProvider } from '@tepegoz/i18n/react';
 import { Modal } from '@tepegoz/ui';
-import { browserDict, sidebarDict } from '../../i18n';
+import { browserDict, sidebarDict, userMenuDict } from '../../i18n';
 import {
   INTERNAL_EXTENSIONS_URL,
   INTERNAL_HISTORY_URL,
@@ -22,12 +22,14 @@ import type {
   CredentialsStatus,
   ExtensionId,
   LocalePref,
+  NotificationPermissionRequest,
   Preferences,
   ProviderId,
   TabsState,
   ThemePref,
 } from '@tepegoz/desktop-ipc';
-import { ToastStack } from '@tepegoz/notifications-ui';
+import { NotificationPermissionPrompt, ToastStack } from '@tepegoz/notifications-ui';
+import { runNotificationAction } from './lib/notification-actions';
 import { extensionIdFromPageUrl, extensionLabel, extensionPageUrl } from '../../shared/extensions';
 import { EXTENSIONS, extensionDefById } from './extensions/registry';
 import { BrowserChrome } from '@tepegoz/browser-chrome';
@@ -40,6 +42,7 @@ import { HistoryPage } from '@tepegoz/history-ui';
 import { ExtensionsPage } from './components/ExtensionsPage';
 import { ExtensionTray } from './components/ExtensionTray';
 import { MainMenuButton } from './components/MainMenuButton';
+import { UserMenuButton } from './components/UserMenuButton';
 import { NotificationBellButton } from './components/NotificationBellButton';
 import { SettingsPage } from './components/SettingsPage';
 import { useWindowMaximized } from './lib/useWindowMaximized';
@@ -100,6 +103,8 @@ export function App() {
   const dismissToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
+  // Pending per-site Web Notification consent prompt (from the main-process broker), or null.
+  const [permReq, setPermReq] = useState<NotificationPermissionRequest | null>(null);
 
   const locale = effectiveLocale(prefs?.locale ?? 'system');
 
@@ -206,6 +211,20 @@ export function App() {
       setToasts((prev) => [...prev, toast].slice(-3));
     });
   }, []);
+
+  // Per-site Web Notification consent prompts from the main-process broker. Only one at a time (the
+  // broker serializes); a new one replaces any still-open prompt.
+  useEffect(() => {
+    return window.tepegoz.onNotificationPermissionRequest(setPermReq);
+  }, []);
+  const answerPermission = useCallback(
+    (allow: boolean, remember: boolean) => {
+      if (permReq === null) return;
+      window.tepegoz.respondNotificationPermission({ requestId: permReq.requestId, allow, remember });
+      setPermReq(null);
+    },
+    [permReq],
+  );
 
   // RTL-ready: mirror the active locale's writing direction onto <html dir> (both shipping locales are
   // LTR, so this is a no-op today, but the whole surface is wired for a future RTL locale — ADR-0016).
@@ -324,6 +343,7 @@ export function App() {
   const coreT = pick(coreDict, locale);
   const browserT = pick(browserDict, locale);
   const sidebarT = pick(sidebarDict, locale);
+  const userMenuT = pick(userMenuDict, locale);
   const activeTab = tabs.tabs.find((tb) => tb.id === tabs.activeId);
   const currentUrl = activeTab?.url ?? '';
   // Internal pages are tabs addressed tepegoz://… ; render them when active.
@@ -536,8 +556,9 @@ export function App() {
           onBack={() => window.tepegoz.tabGoBack()}
           onForward={() => window.tepegoz.tabGoForward()}
           onReload={() => window.tepegoz.tabReload()}
+          onHome={() => window.tepegoz.tabHome()}
           captionLeading={<NotificationBellButton />}
-          menu={<MainMenuButton label={browserT.menu} extensionCount={enabledExtensions.length} />}
+          menu={<MainMenuButton label={browserT.menu} />}
           onNavigate={(input) => window.tepegoz.navigateTab(input)}
           onSuggest={onOmniboxSuggest}
           onActivateTab={onActivateTabFromOmnibox}
@@ -545,12 +566,15 @@ export function App() {
           canBookmark={canBookmark}
           onToggleBookmark={() => void onToggleBookmark()}
           toolbarActions={
-            <ExtensionTray
-              locale={locale}
-              extensions={enabledExtensions}
-              activeExtensionId={activeSurface?.id ?? sidebarExtId ?? popupOpenId ?? null}
-              onExtensionAction={runExtensionAction}
-            />
+            <>
+              <ExtensionTray
+                locale={locale}
+                extensions={enabledExtensions}
+                activeExtensionId={activeSurface?.id ?? sidebarExtId ?? popupOpenId ?? null}
+                onExtensionAction={runExtensionAction}
+              />
+              <UserMenuButton label={userMenuT.menuLabel} name={userMenuT.name} />
+            </>
           }
         />
         <div className="relative flex flex-1 overflow-hidden">
@@ -610,7 +634,25 @@ export function App() {
           {renderSidebar()}
         </div>
         {/* Transient toast overlay (channel `toast`); native OS notifications cover the over-page case. */}
-        <ToastStack toasts={toasts} onDismiss={dismissToast} />
+        <ToastStack
+          toasts={toasts}
+          onDismiss={dismissToast}
+          onAction={(item, action) => {
+            runNotificationAction(item, action);
+            dismissToast(item.id);
+          }}
+        />
+        {/* Per-site Web Notification consent prompt (blocking: no backdrop dismiss — the site awaits an answer). */}
+        <Modal
+          open={permReq !== null}
+          onClose={() => answerPermission(false, false)}
+          ariaLabel={permReq?.origin ?? ''}
+          closeOnBackdrop={false}
+        >
+          {permReq !== null && (
+            <NotificationPermissionPrompt origin={permReq.origin} onDecision={answerPermission} />
+          )}
+        </Modal>
       </div>
     </I18nProvider>
   );

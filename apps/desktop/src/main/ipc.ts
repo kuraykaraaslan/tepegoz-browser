@@ -38,17 +38,21 @@ import {
   HistoryUrlSchema,
   UserAgentSelectionSchema,
   PopupOpenSchema,
+  PopupResizeSchema,
+  SubmenuOpenSchema,
   ContentBoundsSchema,
   ContentVisibleSchema,
   CreateTabInputSchema,
   NavigateInputSchema,
   NotificationIdSchema,
+  NotificationPermissionResponseSchema,
   RemoveProviderKeyInputSchema,
   SetProviderKeyInputSchema,
   TabIdSchema,
 } from '@tepegoz/desktop-ipc/schemas';
 import NotificationStore from '@tepegoz/notifications';
 import NotificationHost from './notifications/notification-host';
+import NotificationPermissionBroker from './notifications/permission-broker';
 import type { ConfirmRequest } from '@tepegoz/capability-plane';
 import { TokenLedger } from '@tepegoz/model-gateway';
 import { BookmarkStore, EventJournal, HistoryStore } from '@tepegoz/persistence';
@@ -71,6 +75,8 @@ import { showTabContextMenu } from './menus/tab-context-menu';
 
 /** Native main-menu popup width (px); its height is computed by the renderer and clamped in main. */
 const MAIN_MENU_WIDTH = 300;
+/** Native user (profile) menu popup width (px). */
+const USER_MENU_WIDTH = 320;
 /** Native notification-center popup width (px). */
 const NOTIFICATIONS_WIDTH = 360;
 
@@ -314,6 +320,15 @@ export function registerIpc(): void {
         // exactOptionalPropertyTypes: only pass height when the renderer actually measured one.
         ...(height !== undefined ? { height } : {}),
       });
+    } else if (surface === 'user-menu') {
+      PopupWindowManager.open({
+        parent: win,
+        key: 'user-menu',
+        query: { surface: 'user-menu' },
+        anchor,
+        width: USER_MENU_WIDTH,
+        ...(height !== undefined ? { height } : {}),
+      });
     } else if (surface === 'notifications') {
       PopupWindowManager.open({
         parent: win,
@@ -339,8 +354,35 @@ export function registerIpc(): void {
       Logger.warn('Ignored popup:open: unknown surface', { surface });
     }
   });
+  // Self-resize: the open popup reports its measured content height so main shrinks the window to fit
+  // (needs the sender window to identify which popup, so it can't use the window-less onAction helper).
+  ipcMain.on(IpcChannels.popupResize, (event: IpcMainEvent, payload: unknown) => {
+    if (!isTrustedAppUrl(event.senderFrame?.url ?? '')) return;
+    const parsed = PopupResizeSchema.safeParse(payload);
+    if (!parsed.success) {
+      Logger.warn('Ignored popup:resize: invalid payload');
+      return;
+    }
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) PopupWindowManager.resize(win, parsed.data.height);
+  });
   onSignal(IpcChannels.popupClose, () => {
     PopupWindowManager.close();
+  });
+  // Submenu flyout — a second native window to the LEFT of the main-menu popup. It attaches to the
+  // currently-open primary popup, so it needs no sender window.
+  ipcMain.on(IpcChannels.submenuOpen, (event: IpcMainEvent, payload: unknown) => {
+    if (!isTrustedAppUrl(event.senderFrame?.url ?? '')) return;
+    const parsed = SubmenuOpenSchema.safeParse(payload);
+    if (!parsed.success) {
+      Logger.warn('Ignored submenu:open: invalid payload');
+      return;
+    }
+    const { kind, anchor, height } = parsed.data;
+    PopupWindowManager.openSubmenu({ query: { surface: 'menu-sub', kind }, anchor, height });
+  });
+  onSignal(IpcChannels.submenuClose, () => {
+    PopupWindowManager.closeSub();
   });
   // Notification center — a snapshot getter plus fire-and-forget mutations. Live state is PUSHED from
   // NotificationHost (store subscription) to every app window, so there is no subscribe handler here.
@@ -357,6 +399,10 @@ export function registerIpc(): void {
   onSignal(IpcChannels.notificationsMarkAllRead, () => {
     NotificationStore.markAllRead();
   });
+  // Per-site Web Notification consent answer (renderer → main); resolves the pending broker prompt.
+  onAction(IpcChannels.notificationPermissionRespond, NotificationPermissionResponseSchema, (res) => {
+    NotificationPermissionBroker.respond(res);
+  });
   // Exit — quits the whole app regardless of the sender window (a popup can't use the window-close path).
   onSignal(IpcChannels.appQuit, () => {
     app.quit();
@@ -372,6 +418,9 @@ export function registerIpc(): void {
   });
   onSignal(IpcChannels.tabsReload, () => {
     TabManager.reloadActive();
+  });
+  onSignal(IpcChannels.tabsHome, () => {
+    TabManager.goHome();
   });
   onSignal(IpcChannels.tabsReopenClosed, () => {
     TabManager.reopenClosedTab();

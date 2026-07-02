@@ -1,10 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { coreDict, resolveLocale, type Locale } from '@tepegoz/i18n';
 import { I18nProvider, useT } from '@tepegoz/i18n/react';
-import { Menu } from '@tepegoz/browser-menu';
+import { Menu, type MenuFlyout } from '@tepegoz/browser-menu';
 import {
-  INTERNAL_EXTENSIONS_URL,
-  INTERNAL_HISTORY_URL,
   INTERNAL_SETTINGS_URL,
   isExtensionEnabled,
   type ExtensionState,
@@ -13,15 +11,16 @@ import {
 import { historyDict } from '@tepegoz/history-ui/i18n';
 import { extensionsDict } from '@tepegoz/extensions-ui/i18n';
 import { browserDict, menuDict } from '../../../i18n';
-import { extensionPageUrl } from '../../../shared/extensions';
-import { EXTENSIONS, type ExtensionDef } from '../extensions/registry';
+import { EXTENSIONS } from '../extensions/registry';
 import { buildMainMenuModel } from './main-menu-model';
 
 /**
  * Standalone render target for the native main-menu popup window (loaded with `?surface=main-menu`).
  * Mirrors `PopupApp` structure: fetch prefs → apply theme + locale, Escape closes, wrap in the
- * I18nProvider. It renders the Chrome-style menu over the live page (the window floats above the
- * WebContentsView, so nothing is hidden). Actions run against the main window (TabManager singleton).
+ * I18nProvider. It renders the compact Chrome-style menu over the live page (the window floats above the
+ * WebContentsView, so nothing is hidden). History and Extensions are `flyout` parents: hovering them
+ * opens a SEPARATE window to the left (see MenuSubPopup). Actions run against the main window (TabManager
+ * singleton).
  */
 function applyTheme(theme: ThemePref): void {
   const isDark =
@@ -30,9 +29,29 @@ function applyTheme(theme: ThemePref): void {
   document.documentElement.classList.toggle('dark', isDark);
 }
 
+/** Row height (px) used to size the submenu flyout window from its item count (main clamps + scrolls). */
+const SUB_ROW_H = 36;
+
 export function MainMenuPopup() {
   const [locale, setLocale] = useState<Locale>('en');
   const [extensionStates, setExtensionStates] = useState<ExtensionState[]>([]);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Shrink the native popup window to the menu's natural content height, removing the empty strip left
+  // by the open-time height estimate (MainMenuButton). Re-measures on content changes (e.g. locale
+  // load swaps in translated labels of a different height). Content height is independent of the window
+  // height, so reporting it never feeds back into a resize loop. The measured box is `flow-root` (a
+  // block-formatting context) so any child top/bottom margins are contained in its bounding rect rather
+  // than collapsing out and being under-measured (which would leave a surplus that scrolls).
+  useEffect(() => {
+    const el = contentRef.current;
+    if (el === null) return;
+    const report = (): void => window.tepegoz.resizePopup(Math.ceil(el.getBoundingClientRect().height));
+    report();
+    const observer = new ResizeObserver(report);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     void window.tepegoz.getPreferences().then(
@@ -54,13 +73,15 @@ export function MainMenuPopup() {
     };
   }, []);
 
-  const enabled = EXTENSIONS.filter((e) => isExtensionEnabled(extensionStates, e.id));
+  const enabledCount = EXTENSIONS.filter((e) => isExtensionEnabled(extensionStates, e.id)).length;
 
   return (
     <I18nProvider locale={locale}>
       <div className="flex h-screen flex-col overflow-hidden bg-surface-base text-text-primary">
         <div className="min-h-0 flex-1 overflow-auto">
-          <MainMenuBody extensions={enabled} locale={locale} />
+          <div ref={contentRef} className="flow-root">
+            <MainMenuBody extensionCount={enabledCount} />
+          </div>
         </div>
       </div>
     </I18nProvider>
@@ -68,14 +89,14 @@ export function MainMenuPopup() {
 }
 
 /** Builds the item model under the I18nProvider (so `useT` resolves) and renders the menu. */
-function MainMenuBody({ extensions, locale }: { extensions: readonly ExtensionDef[]; locale: Locale }) {
+function MainMenuBody({ extensionCount }: { extensionCount: number }) {
   const b = useT(browserDict);
   const core = useT(coreDict);
   const h = useT(historyDict);
   const x = useT(extensionsDict);
   const m = useT(menuDict);
 
-  // Every real action runs the bridge call, then self-dismisses the popup (Chrome-style).
+  // Every action runs the bridge call, then self-dismisses the popup (Chrome-style).
   const act = (fn: () => void): void => {
     fn();
     window.tepegoz.closePopup();
@@ -89,23 +110,31 @@ function MainMenuBody({ extensions, locale }: { extensions: readonly ExtensionDe
       exit: b.exit,
       settings: core.common.settings,
       history: h.title,
-      extensionsManage: x.manage,
-      menuLabel: b.menu,
+      extensions: x.title,
       menu: m,
     },
     {
       newTab: () => act(() => window.tepegoz.createTab()),
       reopenTab: () => act(() => window.tepegoz.reopenClosedTab()),
       reload: () => act(() => window.tepegoz.tabReload()),
-      openHistory: () => act(() => window.tepegoz.navigateTab(INTERNAL_HISTORY_URL)),
-      openExtension: (id) => act(() => window.tepegoz.navigateTab(extensionPageUrl(id))),
-      manageExtensions: () => act(() => window.tepegoz.navigateTab(INTERNAL_EXTENSIONS_URL)),
       openSettings: () => act(() => window.tepegoz.navigateTab(INTERNAL_SETTINGS_URL)),
       exit: () => act(() => window.tepegoz.quitApp()),
     },
-    extensions,
-    locale,
   );
 
-  return <Menu items={items} ariaLabel={b.menu} autoFocus />;
+  // History/Extensions submenu parents → open a separate native window to the left, aligned to the row.
+  const flyout: MenuFlyout = {
+    onOpen: (id, rect) => {
+      const kind = id === 'history' ? 'history' : 'extensions';
+      const rows = kind === 'history' ? 6 : extensionCount + 1; // last-5 + "show all" / exts + "manage"
+      window.tepegoz.openSubmenu(
+        kind,
+        { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+        { height: rows * SUB_ROW_H + 8 },
+      );
+    },
+    onClose: () => window.tepegoz.closeSubmenu(),
+  };
+
+  return <Menu items={items} ariaLabel={b.menu} autoFocus flyout={flyout} />;
 }

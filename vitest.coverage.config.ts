@@ -37,6 +37,8 @@ export default defineConfig({
         'packages/model-gateway/src/**',
         'packages/nav-toolbar/src/**',
         'packages/navigation/src/**',
+        'packages/notifications/src/**',
+        'packages/notifications-ui/src/**',
         'packages/omnibox/src/**',
         'packages/orchestrator/src/**',
         'packages/preferences/src/**',

@@ -92,6 +92,9 @@ const api: TepegozApi = {
   tabReload: () => {
     ipcRenderer.send(IpcChannels.tabsReload);
   },
+  tabHome: () => {
+    ipcRenderer.send(IpcChannels.tabsHome);
+  },
   reopenClosedTab: () => {
     ipcRenderer.send(IpcChannels.tabsReopenClosed);
   },
@@ -179,6 +182,9 @@ const api: TepegozApi = {
       height: opts?.height,
     });
   },
+  resizePopup: (height: number) => {
+    ipcRenderer.send(IpcChannels.popupResize, { height });
+  },
   closePopup: () => {
     ipcRenderer.send(IpcChannels.popupClose);
   },
@@ -193,6 +199,12 @@ const api: TepegozApi = {
   },
   quitApp: () => {
     ipcRenderer.send(IpcChannels.appQuit);
+  },
+  openSubmenu: (kind: string, anchor: ContentBounds, opts?: { height?: number }) => {
+    ipcRenderer.send(IpcChannels.submenuOpen, { kind, anchor, height: opts?.height });
+  },
+  closeSubmenu: () => {
+    ipcRenderer.send(IpcChannels.submenuClose);
   },
   getHistory: () => invoke<HistoryEntry[]>(IpcChannels.historyList),
   searchHistory: (query: string) => invoke<HistoryEntry[]>(IpcChannels.historySearch, query),

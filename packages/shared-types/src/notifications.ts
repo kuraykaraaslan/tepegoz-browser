@@ -45,8 +45,10 @@ export interface NotificationAction {
   /** Localized button label (the source supplies it already-localized). */
   label: string;
   type: NotificationActionType;
+  // `| undefined` mirrors the zod `.optional()` output shape under exactOptionalPropertyTypes (the core
+  // schema parses into this type), matching the McpServerPref convention.
   /** Target URL for `open_url` actions. */
-  url?: string;
+  url?: string | undefined;
 }
 
 /** A notification as stored/rendered. Never carries secrets (safe to journal/redact upstream). */

@@ -1,4 +1,13 @@
 import { type ReactNode } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faArrowLeft,
+  faArrowRight,
+  faHouse,
+  faRotateRight,
+  faStar,
+} from '@fortawesome/free-solid-svg-icons';
+import { faStar as faStarOutline } from '@fortawesome/free-regular-svg-icons';
 import { Omnibox, type OmniboxSuggestion } from '@tepegoz/omnibox';
 
 /** Shared base class for a 32px toolbar icon button. Exported so hosts can style matching controls
@@ -14,6 +23,7 @@ export interface NavToolbarLabels {
   back: string;
   forward: string;
   reload: string;
+  home: string;
   /** Star aria-labels (state-dependent). Optional — omit to hide the bookmark star. */
   bookmarkAdd?: string;
   bookmarkRemove?: string;
@@ -26,6 +36,7 @@ export interface NavToolbarProps {
   onBack: () => void;
   onForward: () => void;
   onReload: () => void;
+  onHome: () => void;
   /** The main (hamburger) menu control — rendered at the toolbar's trailing edge. The host supplies the
    *  whole element (button + its dropdown) so this package stays presentational and bridge-agnostic. */
   menu: ReactNode;
@@ -61,6 +72,7 @@ export function NavToolbar({
   onBack,
   onForward,
   onReload,
+  onHome,
   menu,
   currentUrl,
   omniboxPlaceholder,
@@ -81,16 +93,7 @@ export function NavToolbar({
         onClick={onBack}
         className={NAV_BTN}
       >
-        <svg className="h-4 w-4" viewBox="0 0 16 16" aria-hidden="true">
-          <path
-            d="M10 3 L5 8 L10 13"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <FontAwesomeIcon icon={faArrowLeft} className="h-4 w-4" aria-hidden />
       </button>
       <button
         type="button"
@@ -99,35 +102,13 @@ export function NavToolbar({
         onClick={onForward}
         className={NAV_BTN}
       >
-        <svg className="h-4 w-4" viewBox="0 0 16 16" aria-hidden="true">
-          <path
-            d="M6 3 L11 8 L6 13"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <FontAwesomeIcon icon={faArrowRight} className="h-4 w-4" aria-hidden />
       </button>
       <button type="button" aria-label={labels.reload} onClick={onReload} className={NAV_BTN}>
-        <svg className="h-4 w-4" viewBox="0 0 16 16" aria-hidden="true">
-          <path
-            d="M13 8 A5 5 0 1 1 11.5 4.5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-          />
-          <path
-            d="M13 2 V5 H10"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <FontAwesomeIcon icon={faRotateRight} className="h-4 w-4" aria-hidden />
+      </button>
+      <button type="button" aria-label={labels.home} onClick={onHome} className={NAV_BTN}>
+        <FontAwesomeIcon icon={faHouse} className="h-4 w-4" aria-hidden />
       </button>
 
       <Omnibox
@@ -148,19 +129,11 @@ export function NavToolbar({
           onClick={onToggleBookmark}
           className={NAV_BTN}
         >
-          <svg
+          <FontAwesomeIcon
+            icon={isBookmarked ? faStar : faStarOutline}
             className="h-4 w-4"
-            viewBox="0 0 16 16"
-            aria-hidden="true"
-            fill={isBookmarked ? 'currentColor' : 'none'}
-          >
-            <path
-              d="M8 1.6 L10 5.7 L14.4 6.3 L11.2 9.4 L12 13.8 L8 11.7 L4 13.8 L4.8 9.4 L1.6 6.3 L6 5.7 Z"
-              stroke="currentColor"
-              strokeWidth="1.3"
-              strokeLinejoin="round"
-            />
-          </svg>
+            aria-hidden
+          />
         </button>
       )}
 

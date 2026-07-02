@@ -50,11 +50,19 @@ export type { ProviderId, ProviderKeyStatus };
 import {
   SITE_PERMISSION_STATES,
   type AppNotification,
+  type NotificationAction,
+  type NotificationActionType,
   type NotificationState,
   type SitePermissionState,
 } from '@tepegoz/shared-types/notifications';
 export { SITE_PERMISSION_STATES };
-export type { AppNotification, NotificationState, SitePermissionState };
+export type {
+  AppNotification,
+  NotificationAction,
+  NotificationActionType,
+  NotificationState,
+  SitePermissionState,
+};
 
 // Channel names + internal page addresses live in channels.ts (250-line cap); re-exported here so
 // `@tepegoz/desktop-ipc` consumers keep one import surface.
@@ -232,6 +240,8 @@ export interface TepegozApi {
   tabGoBack(): void;
   tabGoForward(): void;
   tabReload(): void;
+  /** Navigate the ACTIVE tab to the home / start page. */
+  tabHome(): void;
   /** Reopen the most-recently-closed tab (Ctrl+Shift+T). */
   reopenClosedTab(): void;
   /** Report the content-area rect so main can lay out the active web view below the chrome. */
@@ -276,6 +286,9 @@ export interface TepegozApi {
    *  surfaces: `surface` is the kind ('main-menu' | 'ext'); extensions pass their id via `opts.id`;
    *  `opts.height` requests a content height (clamped to the work area). */
   openPopup(surface: string, anchor: ContentBounds, opts?: { id?: string; height?: number }): void;
+  /** Report the open popup's measured content height (px) so main shrinks the window to fit — removing
+   *  the empty strip left by the open-time height estimate. Clamped to the work area in main. */
+  resizePopup(height: number): void;
   /** Close the open popup window (also auto-closes on blur/Escape). */
   closePopup(): void;
   /** Subscribe to popup-closed notifications; the callback receives the closed surface key
@@ -284,6 +297,12 @@ export interface TepegozApi {
   /** Quit the whole app (Exit). Distinct from `closeWindow` so it works when invoked from a popup
    *  window (where the sender-window path would close the popup, not the main window). */
   quitApp(): void;
+  /** Open a submenu flyout as its own native window to the LEFT of the main-menu popup, vertically
+   *  aligned to `anchor` (the hovered row's rect). `kind` selects the content (e.g. 'history'|'extensions').
+   *  Replaces any open flyout. */
+  openSubmenu(kind: string, anchor: ContentBounds, opts?: { height?: number }): void;
+  /** Close the submenu flyout, if one is open. */
+  closeSubmenu(): void;
   // Browsing history (tepegoz://history). All return the fresh list so the page re-renders.
   getHistory(): Promise<HistoryEntry[]>;
   searchHistory(query: string): Promise<HistoryEntry[]>;

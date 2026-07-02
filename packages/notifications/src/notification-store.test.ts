@@ -106,6 +106,43 @@ describe('NotificationInputSchema + toNotification', () => {
     expect(n).toMatchObject({ id: 'n-1', ts: 123, read: false, kind: 'warning' });
   });
 
+  it('accepts a list of typed actions and carries them onto the notification', () => {
+    const parsed = NotificationInputSchema.parse({
+      kind: 'info',
+      source: 'system',
+      title: 'Done',
+      body: '',
+      actions: [
+        { id: 'open', label: 'Open', type: 'open_url', url: 'https://ex.com' },
+        { id: 'cfg', label: 'Settings', type: 'open_settings' },
+      ],
+    });
+    const n = toNotification(parsed, 'n-2', 1);
+    expect(n.actions).toHaveLength(2);
+    expect(n.actions?.[0]?.type).toBe('open_url');
+  });
+
+  it('rejects an unknown action type and more than four actions', () => {
+    expect(
+      NotificationInputSchema.safeParse({
+        kind: 'info',
+        source: 'system',
+        title: 'x',
+        body: '',
+        actions: [{ id: 'a', label: 'A', type: 'delete_everything' }],
+      }).success,
+    ).toBe(false);
+    expect(
+      NotificationInputSchema.safeParse({
+        kind: 'info',
+        source: 'system',
+        title: 'x',
+        body: '',
+        actions: Array.from({ length: 5 }, (_, i) => ({ id: `a${i}`, label: 'A', type: 'dismiss' })),
+      }).success,
+    ).toBe(false);
+  });
+
   it('rejects an empty title and an out-of-set channel', () => {
     expect(NotificationInputSchema.safeParse({ kind: 'info', source: 'system', title: '', body: '' }).success).toBe(false);
     expect(

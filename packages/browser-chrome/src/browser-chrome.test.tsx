@@ -14,6 +14,7 @@ const STRINGS: BrowserChromeStrings = {
     back: 'Back',
     forward: 'Forward',
     reload: 'Reload',
+    home: 'Home',
     omniboxPlaceholder: 'Search or type a URL',
     bookmarkAdd: 'Add bookmark',
     bookmarkRemove: 'Remove bookmark',
@@ -32,6 +33,7 @@ function renderChrome() {
     onBack: vi.fn(),
     onForward: vi.fn(),
     onReload: vi.fn(),
+    onHome: vi.fn(),
     onNavigate: vi.fn(),
   };
   render(
@@ -55,7 +57,7 @@ afterEach(cleanup);
 describe('BrowserChrome', () => {
   it('composes the full chrome: brand, tab strip, caption controls, nav bar', () => {
     renderChrome();
-    expect(screen.getByRole('heading', { name: STRINGS.common.appName })).toBeDefined();
+    expect(screen.getByRole('img', { name: STRINGS.common.appName })).toBeDefined();
     expect(screen.getByRole('tablist', { name: STRINGS.browser.tabs })).toBeDefined();
     expect(screen.getByRole('tab', { name: 'First page', selected: true })).toBeDefined();
     expect(screen.getByRole('button', { name: STRINGS.window.minimize })).toBeDefined();

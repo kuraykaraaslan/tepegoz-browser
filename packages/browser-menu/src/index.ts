@@ -3,5 +3,5 @@
  * renders a generic `MenuItem[]` model; actions + content copy are injected so it backs the main
  * (hamburger) menu and any future menu. Owns only its structural strings (see ./i18n).
  */
-export { Menu, type MenuProps } from './menu';
-export type { MenuItem } from './menu.types';
+export { Menu, type MenuProps, type MenuFlyout } from './menu';
+export type { MenuItem, MenuAction } from './menu.types';

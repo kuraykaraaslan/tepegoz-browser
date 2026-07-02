@@ -21,6 +21,7 @@ export interface BrowserChromeStrings {
     back: string;
     forward: string;
     reload: string;
+    home: string;
     omniboxPlaceholder: string;
     bookmarkAdd: string;
     bookmarkRemove: string;
@@ -48,6 +49,7 @@ export interface BrowserChromeProps {
   onBack: () => void;
   onForward: () => void;
   onReload: () => void;
+  onHome: () => void;
   /** The main (hamburger) menu control (button + its dropdown), supplied by the host. */
   menu: ReactNode;
   onNavigate: (input: string) => void;
@@ -64,6 +66,9 @@ export interface BrowserChromeProps {
   onToggleBookmark?: (() => void) | undefined;
   /** Host-provided controls between the omnibox and the menu button (e.g. the extension tray + puzzle). */
   toolbarActions?: ReactNode;
+  /** Host-provided controls in the title row, immediately LEFT of the window caption controls (e.g. the
+   *  notification-center bell). Interactive, so it opts out of the window drag region. */
+  captionLeading?: ReactNode;
 }
 
 /**
@@ -91,6 +96,7 @@ export function BrowserChrome({
   onBack,
   onForward,
   onReload,
+  onHome,
   menu,
   onNavigate,
   onSuggest,
@@ -99,6 +105,7 @@ export function BrowserChrome({
   canBookmark,
   onToggleBookmark,
   toolbarActions,
+  captionLeading,
 }: BrowserChromeProps) {
   return (
     <>
@@ -106,9 +113,8 @@ export function BrowserChrome({
           the caption controls. `-webkit-app-region: drag` on the bar restores OS caption behaviors;
           interactive children opt out with `.app-no-drag`. */}
       <header className="app-drag flex h-9 shrink-0 select-none items-stretch gap-2 border-b border-border bg-surface-raised pl-3">
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center" role="img" aria-label={t.common.appName}>
           <BrandMark className="h-5 w-5" />
-          <h1 className="text-xs font-semibold text-text-primary">{t.common.appName}</h1>
         </div>
         <div className="flex min-w-0 flex-1 items-end pt-1.5">
           <TabStrip
@@ -126,6 +132,9 @@ export function BrowserChrome({
             onNew={onNewTab}
           />
         </div>
+        {captionLeading !== undefined && (
+          <div className="app-no-drag flex items-center">{captionLeading}</div>
+        )}
         <WindowControls
           isMaximized={isMaximized}
           labels={{
@@ -146,12 +155,14 @@ export function BrowserChrome({
           back: t.browser.back,
           forward: t.browser.forward,
           reload: t.browser.reload,
+          home: t.browser.home,
           bookmarkAdd: t.browser.bookmarkAdd,
           bookmarkRemove: t.browser.bookmarkRemove,
         }}
         onBack={onBack}
         onForward={onForward}
         onReload={onReload}
+        onHome={onHome}
         menu={menu}
         currentUrl={currentUrl}
         omniboxPlaceholder={t.browser.omniboxPlaceholder}

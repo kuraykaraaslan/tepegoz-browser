@@ -7,6 +7,7 @@ const LABELS = {
   back: 'Back',
   forward: 'Forward',
   reload: 'Reload',
+  home: 'Home',
   bookmarkAdd: 'Add bookmark',
   bookmarkRemove: 'Remove bookmark',
 };
@@ -16,6 +17,7 @@ function renderToolbar(over: Partial<NavToolbarProps> = {}) {
     onBack: vi.fn(),
     onForward: vi.fn(),
     onReload: vi.fn(),
+    onHome: vi.fn(),
     onNavigate: vi.fn(),
   };
   render(
@@ -46,6 +48,8 @@ describe('NavToolbar', () => {
     expect(h.onBack).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole('button', { name: LABELS.reload }));
     expect(h.onReload).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: LABELS.home }));
+    expect(h.onHome).toHaveBeenCalledTimes(1);
   });
 
   it('hides the bookmark star entirely when no toggle handler is injected', () => {

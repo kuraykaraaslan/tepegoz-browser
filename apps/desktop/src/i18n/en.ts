@@ -16,6 +16,7 @@ export const en = {
     back: 'Back',
     forward: 'Forward',
     reload: 'Reload',
+    home: 'Home',
     omniboxPlaceholder: 'Search or enter address',
     // Omnibox suggestion hints (deterministic dropdown — no AI thread).
     omniboxSearchHint: 'Search the web',
@@ -55,6 +56,39 @@ export const en = {
     castSaveShare: 'Cast, save, and share',
     moreTools: 'More tools',
     help: 'Help',
+    showFullHistory: 'Show full history',
+    // Short captions shown under the grouped icon buttons (the full labels above stay the tooltips).
+    short: {
+      newWindow: 'Window',
+      newIncognito: 'Incognito',
+      deleteBrowsingData: 'Clear',
+      passwords: 'Passwords',
+      downloads: 'Downloads',
+      bookmarks: 'Bookmarks',
+      tabGroups: 'Groups',
+      print: 'Print',
+      searchLens: 'Lens',
+      translate: 'Translate',
+      findEdit: 'Find',
+      castSaveShare: 'Share',
+      moreTools: 'Tools',
+      help: 'Help',
+    },
+  },
+  // User (profile) menu — placeholder for now; mirrors Chrome's profile menu. Not yet wired.
+  userMenu: {
+    menuLabel: 'Profile menu',
+    name: 'You',
+    email: 'you@example.com',
+    passwords: 'Passwords and autofill',
+    manageAccount: 'Manage your account',
+    customizeProfile: 'Customize profile',
+    sync: 'Sync is on',
+    closeProfile: 'Close this profile',
+    otherProfiles: 'Other profiles',
+    addProfile: 'Add profile',
+    guestProfile: 'Open Guest profile',
+    manageProfiles: 'Manage profiles',
   },
 };
 

@@ -34,6 +34,12 @@ export const en = {
     modeMake: 'Make',
     modeTasks: 'Tasks',
   },
+  // Timeline replay — scrub a run's event stream to review it step-by-step (live = follow the latest).
+  replay: {
+    timeline: 'Replay timeline',
+    stepLabel: 'Step',
+    live: 'Live',
+  },
 };
 
 export type AgentStrings = typeof en;

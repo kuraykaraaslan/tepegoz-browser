@@ -279,6 +279,11 @@ export default class TabManager {
     TabManager.activeView()?.webContents.reload();
   }
 
+  /** Navigate the active tab to the home / start page. */
+  static goHome(): void {
+    TabManager.navigateActive(NEW_TAB_URL);
+  }
+
   /** The content area (below the chrome), in DIP, as measured by the renderer. */
   static setContentBounds(bounds: Rectangle): void {
     TabManager.bounds = bounds;
@@ -409,7 +414,8 @@ export default class TabManager {
       const db = getDb();
       const url = wc.getURL();
       // Page-controlled string — cap before persisting so a hostile title can't bloat the DB.
-      if (db !== null && isWebUrl(url)) HistoryStore.setTitle(db, url, title.slice(0, MAX_TITLE_LENGTH));
+      if (db !== null && isWebUrl(url))
+        HistoryStore.setTitle(db, url, title.slice(0, MAX_TITLE_LENGTH));
       TabManager.emitState();
     });
     // Electron sends every favicon a page declares; the last is typically the largest/most specific.

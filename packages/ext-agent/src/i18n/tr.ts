@@ -37,4 +37,10 @@ export const tr: AgentStrings = {
     modeMake: 'Üret',
     modeTasks: 'Görevler',
   },
+  // Zaman çizelgesi tekrarı — bir çalışmanın olay akışını adım adım gözden geçirin (canlı = en yeniyi izler).
+  replay: {
+    timeline: 'Tekrar zaman çizelgesi',
+    stepLabel: 'Adım',
+    live: 'Canlı',
+  },
 };

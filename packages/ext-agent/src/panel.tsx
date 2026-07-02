@@ -51,6 +51,9 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
   const [planPreview, setPlanPreview] = useState<AgentPlanPreview | null>(null);
   const [skipIds, setSkipIds] = useState<Set<string>>(new Set());
   const [tokens, setTokens] = useState<TokenUsageSnapshot | null>(null);
+  // Timeline replay: null = live (follow the latest, auto-scroll). A number freezes the view at that
+  // event index so a finished (or in-flight) run can be reviewed step-by-step.
+  const [replayIndex, setReplayIndex] = useState<number | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -81,13 +84,15 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
   }, [api]);
 
   useEffect(() => {
-    listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
-  }, [events]);
+    // Only auto-follow while live; a frozen replay view must not jump when new events arrive.
+    if (replayIndex === null) listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
+  }, [events, replayIndex]);
 
   function onRun(): void {
     const text = prompt.trim();
     if (text.length === 0 || running) return;
     setEvents([]);
+    setReplayIndex(null);
     setRunning(true);
     void api
       .runAgent(text)
@@ -130,6 +135,10 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
     }
     setPlanPreview(null);
   }
+
+  const replaying = replayIndex !== null;
+  const shownCount = replaying ? Math.min(replayIndex + 1, events.length) : events.length;
+  const visibleEvents = replaying ? events.slice(0, shownCount) : events;
 
   return (
     <div className="absolute inset-0 flex flex-col bg-surface-base">
@@ -187,8 +196,14 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
         {events.length === 0 ? (
           <p className="text-text-secondary">{running ? a.running : a.noActiveTasks}</p>
         ) : (
-          events.map((e, i) => (
-            <div key={`${String(e.ts)}-${String(i)}`} className="flex items-start gap-2">
+          visibleEvents.map((e, i) => (
+            <div
+              key={`${String(e.ts)}-${String(i)}`}
+              className={cn(
+                'flex items-start gap-2 rounded px-1',
+                replaying && i === shownCount - 1 && 'bg-surface-overlay',
+              )}
+            >
               <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', KIND_DOT[e.kind])} />
               <div className="min-w-0">
                 <span className="text-text-primary">{e.message}</span>
@@ -200,6 +215,37 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
           ))
         )}
       </div>
+
+      {events.length > 1 && (
+        <div className="flex items-center gap-2 border-t border-border px-3 py-2 text-xs text-text-secondary">
+          <input
+            type="range"
+            min={0}
+            max={events.length - 1}
+            value={replayIndex ?? events.length - 1}
+            aria-label={a.replay.timeline}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              setReplayIndex(v >= events.length - 1 ? null : v);
+            }}
+            className="h-1 flex-1 cursor-pointer"
+          />
+          <span className="shrink-0 tabular-nums">
+            {a.replay.stepLabel} {`${String(shownCount)} / ${String(events.length)}`}
+          </span>
+          <button
+            type="button"
+            onClick={() => setReplayIndex(null)}
+            disabled={!replaying}
+            className={cn(
+              'shrink-0 rounded px-2 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus',
+              replaying ? 'bg-surface-overlay text-text-primary hover:opacity-90' : 'opacity-40',
+            )}
+          >
+            {a.replay.live}
+          </button>
+        </div>
+      )}
 
       <p className="border-t border-border px-3 py-2 text-xs text-text-secondary">
         {a.aiDisclaimer}
