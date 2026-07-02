@@ -26,6 +26,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Typecheck · lint · test · build
         run: pnpm exec turbo run typecheck lint test build
+      - name: Coverage gate (S80/B70/F80/L80 — scope in vitest.config.ts)
+        run: pnpm run coverage
       - name: Dependency audit (report high/critical)
         run: pnpm audit --audit-level=high || true
 
