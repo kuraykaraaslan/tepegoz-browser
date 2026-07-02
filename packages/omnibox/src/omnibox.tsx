@@ -1,4 +1,10 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faClockRotateLeft,
+  faMagnifyingGlass,
+  faWindowMaximize,
+} from '@fortawesome/free-solid-svg-icons';
 import { cn } from '@tepegoz/ui';
 import { evaluateOmniboxCalc } from './omnibox-calc';
 import type { OmniboxSuggestion } from './omnibox-suggest';
@@ -223,51 +229,11 @@ export function Omnibox({
   );
 }
 
-/** A tiny inline glyph per suggestion kind (no icon-font dependency — the omnibox is a leaf). */
+/** A FontAwesome glyph per suggestion kind. */
 function SuggestionIcon({ kind }: { kind: OmniboxSuggestion['kind'] }) {
-  const common = 'h-3.5 w-3.5 shrink-0 text-text-secondary';
-  if (kind === 'tab') {
-    return (
-      <svg className={common} viewBox="0 0 16 16" aria-hidden="true">
-        <rect
-          x="2"
-          y="3"
-          width="12"
-          height="10"
-          rx="1.5"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.4"
-        />
-        <path d="M2 6 H14" fill="none" stroke="currentColor" strokeWidth="1.4" />
-      </svg>
-    );
-  }
-  if (kind === 'history') {
-    return (
-      <svg className={common} viewBox="0 0 16 16" aria-hidden="true">
-        <circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" strokeWidth="1.4" />
-        <path
-          d="M8 5 V8 L10 9.5"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.4"
-          strokeLinecap="round"
-        />
-      </svg>
-    );
-  }
-  // navigate + search both show a magnifier-ish / globe glyph; a search magnifier reads best here.
+  const icon =
+    kind === 'tab' ? faWindowMaximize : kind === 'history' ? faClockRotateLeft : faMagnifyingGlass;
   return (
-    <svg className={common} viewBox="0 0 16 16" aria-hidden="true">
-      <circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" strokeWidth="1.4" />
-      <path
-        d="M10.5 10.5 L14 14"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-      />
-    </svg>
+    <FontAwesomeIcon icon={icon} className="h-3.5 w-3.5 shrink-0 text-text-secondary" aria-hidden />
   );
 }

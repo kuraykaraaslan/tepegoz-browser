@@ -1,34 +1,12 @@
-const ICON = 'h-2.5 w-2.5';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faWindowMinimize,
+  faWindowMaximize,
+  faWindowRestore,
+  faXmark,
+} from '@fortawesome/free-solid-svg-icons';
 
-function MinimizeIcon() {
-  return (
-    <svg className={ICON} viewBox="0 0 10 10" aria-hidden="true">
-      <rect x="0" y="4.5" width="10" height="1" fill="currentColor" />
-    </svg>
-  );
-}
-function MaximizeIcon() {
-  return (
-    <svg className={ICON} viewBox="0 0 10 10" aria-hidden="true">
-      <rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="currentColor" />
-    </svg>
-  );
-}
-function RestoreIcon() {
-  return (
-    <svg className={ICON} viewBox="0 0 10 10" aria-hidden="true">
-      <rect x="0.5" y="2.5" width="7" height="7" fill="none" stroke="currentColor" />
-      <path d="M2.5 2.5 V0.5 H9.5 V7.5 H7.5" fill="none" stroke="currentColor" />
-    </svg>
-  );
-}
-function CloseIcon() {
-  return (
-    <svg className={ICON} viewBox="0 0 10 10" aria-hidden="true">
-      <path d="M1 1 L9 9 M9 1 L1 9" stroke="currentColor" strokeWidth="1.1" />
-    </svg>
-  );
-}
+const ICON = 'h-2.5 w-2.5';
 
 const BTN =
   'app-no-drag flex h-full w-11 items-center justify-center text-text-secondary ' +
@@ -67,7 +45,7 @@ export function WindowControls({
   return (
     <div className="flex h-full items-stretch">
       <button type="button" aria-label={labels.minimize} className={BTN} onClick={onMinimize}>
-        <MinimizeIcon />
+        <FontAwesomeIcon icon={faWindowMinimize} className={ICON} aria-hidden />
       </button>
       <button
         type="button"
@@ -75,7 +53,11 @@ export function WindowControls({
         className={BTN}
         onClick={onToggleMaximize}
       >
-        {isMaximized ? <RestoreIcon /> : <MaximizeIcon />}
+        <FontAwesomeIcon
+          icon={isMaximized ? faWindowRestore : faWindowMaximize}
+          className={ICON}
+          aria-hidden
+        />
       </button>
       <button
         type="button"
@@ -83,7 +65,7 @@ export function WindowControls({
         className={`${BTN} hover:bg-error hover:text-text-inverse`}
         onClick={onClose}
       >
-        <CloseIcon />
+        <FontAwesomeIcon icon={faXmark} className={ICON} aria-hidden />
       </button>
     </div>
   );

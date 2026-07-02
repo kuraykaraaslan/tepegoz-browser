@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faXmark } from '@fortawesome/free-solid-svg-icons';
 import { useT } from '@tepegoz/i18n/react';
 import { historyDict } from './i18n';
 
@@ -90,7 +92,7 @@ export function HistoryPage({ list, remove, clear }: HistoryPageProps) {
                 }}
                 className="shrink-0 rounded-md px-2 py-1 text-xs text-text-secondary hover:bg-surface-overlay hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
               >
-                ✕
+                <FontAwesomeIcon icon={faXmark} className="h-3 w-3" aria-hidden />
               </button>
             </li>
           ))}

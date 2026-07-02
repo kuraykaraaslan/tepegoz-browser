@@ -1,4 +1,15 @@
 import { useEffect, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faBell,
+  faGauge,
+  faGear,
+  faGlobe,
+  faKey,
+  faPalette,
+  faPlug,
+  faShield,
+} from '@fortawesome/free-solid-svg-icons';
 import { SettingsLayout, settingsDict, type SettingsSection } from '@tepegoz/settings-ui';
 import { AlertBanner, Badge, Button, Card, Input, Toggle } from '@tepegoz/ui';
 import { coreDict } from '@tepegoz/i18n';
@@ -18,87 +29,14 @@ const THEMES: readonly ThemePref[] = ['system', 'light', 'dark'];
 const LOCALES: readonly LocalePref[] = ['system', 'en', 'tr'];
 
 const ICON = 'h-4 w-4';
-const IconKey = () => (
-  <svg className={ICON} viewBox="0 0 16 16" aria-hidden="true">
-    <circle cx="5.5" cy="5.5" r="3" fill="none" stroke="currentColor" strokeWidth="1.3" />
-    <path
-      d="M7.7 7.7 L13 13 M11 11 l1.5-1.5 M12.5 12.5 l1-1"
-      stroke="currentColor"
-      strokeWidth="1.3"
-      strokeLinecap="round"
-    />
-  </svg>
-);
-const IconPalette = () => (
-  <svg className={ICON} viewBox="0 0 16 16" aria-hidden="true">
-    <path
-      d="M8 2a6 6 0 1 0 0 12c1 0 1.5-.8 1-1.6-.5-.9.2-1.9 1.2-1.9H12a2 2 0 0 0 2-2A6 6 0 0 0 8 2Z"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.2"
-    />
-    <circle cx="5.5" cy="6" r=".9" fill="currentColor" />
-    <circle cx="8" cy="4.5" r=".9" fill="currentColor" />
-    <circle cx="10.5" cy="6" r=".9" fill="currentColor" />
-  </svg>
-);
-const IconGlobe = () => (
-  <svg className={ICON} viewBox="0 0 16 16" aria-hidden="true">
-    <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth="1.2" />
-    <path
-      d="M2 8h12 M8 2c2 2 2 10 0 12 M8 2c-2 2-2 10 0 12"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.1"
-    />
-  </svg>
-);
-const IconShield = () => (
-  <svg className={ICON} viewBox="0 0 16 16" aria-hidden="true">
-    <path
-      d="M8 2 3 4v4c0 3 2 5 5 6 3-1 5-3 5-6V4L8 2Z"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.2"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-const IconGauge = () => (
-  <svg className={ICON} viewBox="0 0 16 16" aria-hidden="true">
-    <path
-      d="M3 12a5 5 0 1 1 10 0"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.3"
-      strokeLinecap="round"
-    />
-    <path d="M8 12 10.5 7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-  </svg>
-);
-const IconPlug = () => (
-  <svg className={ICON} viewBox="0 0 16 16" aria-hidden="true">
-    <path
-      d="M6 2v3 M10 2v3 M4 5h8v2a4 4 0 0 1-8 0V5Z M8 11v3"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-const IconGear = () => (
-  <svg className="h-5 w-5" viewBox="0 0 16 16" aria-hidden="true">
-    <circle cx="8" cy="8" r="2.2" fill="none" stroke="currentColor" strokeWidth="1.4" />
-    <path
-      d="M8 1.5 v2 M8 12.5 v2 M1.5 8 h2 M12.5 8 h2 M3.4 3.4 l1.4 1.4 M11.2 11.2 l1.4 1.4 M12.6 3.4 l-1.4 1.4 M4.8 11.2 l-1.4 1.4"
-      stroke="currentColor"
-      strokeWidth="1.3"
-      strokeLinecap="round"
-    />
-  </svg>
-);
+const IconKey = () => <FontAwesomeIcon icon={faKey} className={ICON} aria-hidden />;
+const IconPalette = () => <FontAwesomeIcon icon={faPalette} className={ICON} aria-hidden />;
+const IconGlobe = () => <FontAwesomeIcon icon={faGlobe} className={ICON} aria-hidden />;
+const IconShield = () => <FontAwesomeIcon icon={faShield} className={ICON} aria-hidden />;
+const IconGauge = () => <FontAwesomeIcon icon={faGauge} className={ICON} aria-hidden />;
+const IconBell = () => <FontAwesomeIcon icon={faBell} className={ICON} aria-hidden />;
+const IconPlug = () => <FontAwesomeIcon icon={faPlug} className={ICON} aria-hidden />;
+const IconGear = () => <FontAwesomeIcon icon={faGear} className="h-5 w-5" aria-hidden />;
 
 interface SettingsPageProps {
   prefs: Preferences;
@@ -365,6 +303,25 @@ export function SettingsPage({
             checked={prefs.telemetryEnabled}
             onChange={(v) => {
               setPref({ telemetryEnabled: v });
+            }}
+          />
+        </Card>
+      ),
+    },
+    {
+      id: 'notifications',
+      label: s.notificationsTitle,
+      icon: <IconBell />,
+      searchText: `${s.notificationsTitle} ${s.notifications} ${s.notificationsDesc}`,
+      content: (
+        <Card title={s.notificationsTitle}>
+          <Toggle
+            id="notifications-enabled"
+            label={s.notifications}
+            description={s.notificationsDesc}
+            checked={prefs.notificationsEnabled}
+            onChange={(v) => {
+              setPref({ notificationsEnabled: v });
             }}
           />
         </Card>

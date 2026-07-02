@@ -1,14 +1,13 @@
 import { useState, type ReactNode } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons';
 import { cn } from '@tepegoz/ui';
 import { coreDict } from '@tepegoz/i18n';
 import { useT } from '@tepegoz/i18n/react';
 import { settingsDict } from './i18n';
 
 const IconSearch = () => (
-  <svg className="h-4 w-4" viewBox="0 0 16 16" aria-hidden="true">
-    <circle cx="7" cy="7" r="4.2" fill="none" stroke="currentColor" strokeWidth="1.3" />
-    <path d="M10.2 10.2 L14 14" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-  </svg>
+  <FontAwesomeIcon icon={faMagnifyingGlass} className="h-4 w-4" aria-hidden />
 );
 
 export interface SettingsSection {

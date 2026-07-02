@@ -1,4 +1,6 @@
 import { useEffect, useRef } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPuzzlePiece } from '@fortawesome/free-solid-svg-icons';
 import { cn } from '@tepegoz/ui';
 import { NAV_BTN } from '@tepegoz/nav-toolbar';
 import type { Locale } from '@tepegoz/i18n';
@@ -118,12 +120,7 @@ export function ExtensionTray({
         onClick={() => window.tepegoz.navigateTab(INTERNAL_EXTENSIONS_URL)}
         className={NAV_BTN}
       >
-        <svg className="h-4 w-4" viewBox="0 0 16 16" aria-hidden="true">
-          <path
-            d="M9.5 2a1.5 1.5 0 0 0-1.5 1.5V4H6a1 1 0 0 0-1 1v2h-.5a1.5 1.5 0 1 0 0 3H5v2a1 1 0 0 0 1 1h2v-.5a1.5 1.5 0 0 1 3 0V13h1a1 1 0 0 0 1-1v-2h.5a1.5 1.5 0 1 0 0-3H13V5a1 1 0 0 0-1-1h-1v-.5A1.5 1.5 0 0 0 9.5 2Z"
-            fill="currentColor"
-          />
-        </svg>
+        <FontAwesomeIcon icon={faPuzzlePiece} className="h-4 w-4" aria-hidden />
       </button>
     </>
   );

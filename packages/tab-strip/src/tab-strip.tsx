@@ -1,4 +1,6 @@
 import { useRef, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faGlobe, faPlus, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { cn } from '@tepegoz/ui';
 
 /** The minimal tab shape the strip renders. Hosts pass their own richer tab objects (structural). */
@@ -49,19 +51,11 @@ function TabFavicon({ src, loading }: { src: string | null; loading: boolean }) 
     );
   }
   return (
-    <svg
+    <FontAwesomeIcon
+      icon={faGlobe}
       className={cn('h-4 w-4 shrink-0 text-text-disabled', loading && 'animate-pulse')}
-      viewBox="0 0 16 16"
-      fill="none"
-      aria-hidden="true"
-    >
-      <circle cx="8" cy="8" r="6.25" stroke="currentColor" strokeWidth="1.2" />
-      <path
-        d="M1.75 8 H14.25 M8 1.75 C5.7 4 5.7 12 8 14.25 M8 1.75 C10.3 4 10.3 12 8 14.25"
-        stroke="currentColor"
-        strokeWidth="1.1"
-      />
-    </svg>
+      aria-hidden
+    />
   );
 }
 
@@ -148,9 +142,7 @@ export function TabStrip({
               }}
               className="hidden shrink-0 rounded p-0.5 text-text-disabled opacity-0 transition-opacity hover:bg-surface-sunken hover:text-text-primary focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus group-hover:opacity-100 @min-[7rem]:block"
             >
-              <svg className="h-2.5 w-2.5" viewBox="0 0 10 10" aria-hidden="true">
-                <path d="M1 1 L9 9 M9 1 L1 9" stroke="currentColor" strokeWidth="1.2" />
-              </svg>
+              <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" aria-hidden />
             </button>
           </div>
         );
@@ -161,9 +153,7 @@ export function TabStrip({
         onClick={onNew}
         className="app-no-drag ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded text-text-secondary hover:bg-surface-overlay hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
       >
-        <svg className="h-3 w-3" viewBox="0 0 12 12" aria-hidden="true">
-          <path d="M6 1 V11 M1 6 H11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-        </svg>
+        <FontAwesomeIcon icon={faPlus} className="h-3 w-3" aria-hidden />
       </button>
     </div>
   );

@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faRobot, faUserSecret } from '@fortawesome/free-solid-svg-icons';
 import type { ExtensionManifest, ExtensionSurfaceKind } from '@tepegoz/extension-sdk';
 import { agentManifest, AgentPanel } from '@tepegoz/ext-agent';
 import { userAgentManifest, UserAgentPopup, UserAgentPage } from '@tepegoz/ext-user-agent';
@@ -24,25 +26,11 @@ export interface ExtensionDef {
 }
 
 function AgentIcon() {
-  return (
-    <svg className="h-4 w-4" viewBox="0 0 16 16" aria-hidden="true">
-      <path d="M8 2 l1.4 3.2 L12.6 6.6 9.4 8 8 11.2 6.6 8 3.4 6.6 6.6 5.2 Z" fill="currentColor" />
-    </svg>
-  );
+  return <FontAwesomeIcon icon={faRobot} className="h-4 w-4" aria-hidden />;
 }
 
 function UserAgentIcon() {
-  return (
-    <svg className="h-4 w-4" viewBox="0 0 16 16" aria-hidden="true">
-      <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth="1.4" />
-      <path
-        d="M2 8 h12 M8 2 c2.4 1.8 2.4 10.2 0 12 M8 2 c-2.4 1.8 -2.4 10.2 0 12"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.2"
-      />
-    </svg>
-  );
+  return <FontAwesomeIcon icon={faUserSecret} className="h-4 w-4" aria-hidden />;
 }
 
 export const EXTENSIONS: readonly ExtensionDef[] = [
