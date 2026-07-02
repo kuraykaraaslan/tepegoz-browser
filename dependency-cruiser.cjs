@@ -180,6 +180,16 @@ module.exports = {
       from: { path: '^packages/mcp-client/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
+    {
+      name: 'agent-runtime-no-app-no-electron',
+      severity: 'error',
+      comment:
+        '@tepegoz/agent-runtime is the Electron-free agentic run engine: the browser tool host, journal ' +
+        'reader, active-tab URL and localized handoff copy are injected via AgentRunDeps by the desktop ' +
+        'adapter (main/agent/agent-service.ts). See docs/package-map.md.',
+      from: { path: '^packages/agent-runtime/' },
+      to: { path: ['^apps/', 'node_modules/electron'] },
+    },
   ],
   options: {
     doNotFollow: { path: 'node_modules' },

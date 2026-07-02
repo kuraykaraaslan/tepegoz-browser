@@ -25,7 +25,7 @@ them** with `- [ ]` / `- [x]`. This keeps the process resumable across sessions.
 | 2b | [phase-2b-daily-driver-ux.md](phase-2b-daily-driver-ux.md) | Daily-driver browser UX (tabs/PWA/DevTools) — parallel with Phase 2 | ⬜ Not started |
 | 3 | [phase-3-backend-cloud-extensions.md](phase-3-backend-cloud-extensions.md) | Managed subscription + cloud memory sync + extensions | ⬜ Not started |
 | 4 | [phase-4-maturation.md](phase-4-maturation.md) | Maturation (full extensions, cross-platform, enterprise) | ⬜ Not started |
-| 5 | [phase-5-vpn-network-privacy.md](phase-5-vpn-network-privacy.md) | Per-profile VPN tunnels + Tor (network privacy) | ⬜ Not started |
+| 5 | [phase-5-vpn-network-privacy.md](phase-5-vpn-network-privacy.md) | Per-tab & per-group VPN tunnels + Tor (network privacy) | ⬜ Not started |
 | 6 | [phase-6-deterministic-automation.md](phase-6-deterministic-automation.md) | Deterministic replayable automation (RecipeCompiler + Watchers + Scheduler + Macros) | ⬜ Not started |
 | 7 | [phase-7-verifiable-accountability.md](phase-7-verifiable-accountability.md) | Verifiable accountability & proof-of-run (Notary + Dashboard + Dry-Run + Data Rights) | ⬜ Not started |
 | 8 | [phase-8-local-intelligence-sovereignty.md](phase-8-local-intelligence-sovereignty.md) | Local-first intelligence & sovereignty (air-gapped mode + Trust Mesh + semantic history/KG) | ⬜ Not started |
