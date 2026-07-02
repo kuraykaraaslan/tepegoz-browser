@@ -59,6 +59,14 @@ export class HistoryStore {
     db.prepare('DELETE FROM history WHERE url = ?').run(url);
   }
 
+  /** Retention: drop entries last visited more than `maxAgeDays` ago (default 90, Chrome-like).
+   *  Called once at startup — keeps the table bounded without a background job. */
+  static prune(db: Db, nowTs: number, maxAgeDays = 90): number {
+    const cutoff = nowTs - maxAgeDays * 24 * 60 * 60 * 1000;
+    const result = db.prepare('DELETE FROM history WHERE ts < ?').run(cutoff);
+    return result.changes;
+  }
+
   static clear(db: Db): void {
     db.prepare('DELETE FROM history').run();
   }

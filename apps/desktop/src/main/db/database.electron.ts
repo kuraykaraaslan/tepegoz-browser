@@ -2,7 +2,7 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { app } from 'electron';
 import { Logger } from '@tepegoz/libs';
-import { migrate, openDatabase, type Db } from '@tepegoz/persistence';
+import { HistoryStore, migrate, openDatabase, type Db } from '@tepegoz/persistence';
 
 /**
  * The single SQLite "DB connector" for the user-data directory (`%APPDATA%/tepegoz/tepegoz.db`): the
@@ -33,6 +33,9 @@ export function initDatabase(): void {
   try {
     const opened = openDatabase(dbPath);
     migrate(opened);
+    // Startup retention pass — history is otherwise unbounded (one row per unique URL, forever).
+    const pruned = HistoryStore.prune(opened, Date.now());
+    if (pruned > 0) Logger.info('Pruned expired history entries', { pruned });
     db = opened;
     Logger.info('Database ready', { path: dbPath });
   } catch (err) {

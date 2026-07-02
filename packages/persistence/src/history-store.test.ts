@@ -57,4 +57,18 @@ describe('HistoryStore', () => {
     HistoryStore.clear(db);
     expect(HistoryStore.count(db)).toBe(0);
   });
+
+  it('prunes entries older than the retention window, keeps the rest', () => {
+    const day = 24 * 60 * 60 * 1000;
+    const now = 200 * day;
+    HistoryStore.record(db, { url: 'https://old.com/', title: 'Old', ts: now - 91 * day });
+    HistoryStore.record(db, { url: 'https://edge.com/', title: 'Edge', ts: now - 90 * day });
+    HistoryStore.record(db, { url: 'https://new.com/', title: 'New', ts: now - day });
+    const pruned = HistoryStore.prune(db, now);
+    expect(pruned).toBe(1);
+    expect(HistoryStore.list(db).map((e) => e.url)).toEqual([
+      'https://new.com/',
+      'https://edge.com/',
+    ]);
+  });
 });
