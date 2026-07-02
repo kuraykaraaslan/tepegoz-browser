@@ -7,6 +7,7 @@ import {
   type AgentPlanPreview,
   type AgentRunResult,
   type AppInfo,
+  type AppNotification,
   type BookmarkEntry,
   type ContentBounds,
   type CredentialsStatus,
@@ -14,6 +15,9 @@ import {
   type HistoryEntry,
   type IpcChannel,
   type McpServerStatusInfo,
+  type NotificationPermissionRequest,
+  type NotificationPermissionResponse,
+  type NotificationState,
   type Preferences,
   type ProviderId,
   type TabsState,
@@ -198,6 +202,49 @@ const api: TepegozApi = {
   toggleBookmark: (url: string, title: string) =>
     invoke<boolean>(IpcChannels.bookmarksToggle, { url, title }),
   isBookmarked: (url: string) => invoke<boolean>(IpcChannels.bookmarksIsBookmarked, url),
+  listNotifications: () => invoke<NotificationState>(IpcChannels.notificationsList),
+  onNotificationsState: (callback: (state: NotificationState) => void) => {
+    const listener = (_event: unknown, state: NotificationState): void => {
+      callback(state);
+    };
+    ipcRenderer.on(IpcChannels.notificationsState, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.notificationsState, listener);
+    };
+  },
+  onNotificationToast: (callback: (toast: AppNotification) => void) => {
+    const listener = (_event: unknown, toast: AppNotification): void => {
+      callback(toast);
+    };
+    ipcRenderer.on(IpcChannels.notificationsToast, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.notificationsToast, listener);
+    };
+  },
+  dismissNotification: (id: string) => {
+    ipcRenderer.send(IpcChannels.notificationsDismiss, id);
+  },
+  dismissAllNotifications: () => {
+    ipcRenderer.send(IpcChannels.notificationsDismissAll);
+  },
+  markNotificationRead: (id: string) => {
+    ipcRenderer.send(IpcChannels.notificationsMarkRead, id);
+  },
+  markAllNotificationsRead: () => {
+    ipcRenderer.send(IpcChannels.notificationsMarkAllRead);
+  },
+  onNotificationPermissionRequest: (callback: (request: NotificationPermissionRequest) => void) => {
+    const listener = (_event: unknown, request: NotificationPermissionRequest): void => {
+      callback(request);
+    };
+    ipcRenderer.on(IpcChannels.notificationPermissionRequest, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.notificationPermissionRequest, listener);
+    };
+  },
+  respondNotificationPermission: (response: NotificationPermissionResponse) => {
+    ipcRenderer.send(IpcChannels.notificationPermissionRespond, response);
+  },
   platform: process.platform,
 };
 

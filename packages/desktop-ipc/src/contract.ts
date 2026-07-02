@@ -45,6 +45,17 @@ import {
 export const PROVIDER_IDS = AI_PROVIDERS;
 export type { ProviderId, ProviderKeyStatus };
 
+// Notification identity + data model is owned by @tepegoz/shared-types (zod-free, so the sandboxed
+// preload can import it at runtime). The zod validators build from these same arrays (single source).
+import {
+  SITE_PERMISSION_STATES,
+  type AppNotification,
+  type NotificationState,
+  type SitePermissionState,
+} from '@tepegoz/shared-types/notifications';
+export { SITE_PERMISSION_STATES };
+export type { AppNotification, NotificationState, SitePermissionState };
+
 // Channel names + internal page addresses live in channels.ts (250-line cap); re-exported here so
 // `@tepegoz/desktop-ipc` consumers keep one import surface.
 export * from './channels';
@@ -109,6 +120,28 @@ export interface Preferences {
   userAgent: string | null;
   /** External MCP servers whose tools the agent may use (routed through the ToolGateway PEP). */
   mcpServers: McpServerPref[];
+  /** Master switch for native OS + in-app notifications (Settings → Notifications). */
+  notificationsEnabled: boolean;
+  /** Per-origin web-capability permissions (currently the Web Notification API consent state). */
+  sitePermissions: Record<string, SitePermissions>;
+}
+
+/** Per-origin web-capability grants. Keyed by origin in `Preferences.sitePermissions`. */
+export interface SitePermissions {
+  notifications?: SitePermissionState | undefined;
+}
+
+/** Main → renderer: a site asked for a web capability; the renderer shows the consent prompt. */
+export interface NotificationPermissionRequest {
+  requestId: string;
+  origin: string;
+}
+
+/** Renderer → main: the user's consent answer. `remember` persists it to `sitePermissions`. */
+export interface NotificationPermissionResponse {
+  requestId: string;
+  allow: boolean;
+  remember: boolean;
 }
 
 export interface CredentialsStatus {
@@ -263,5 +296,22 @@ export interface TepegozApi {
   toggleBookmark(url: string, title: string): Promise<boolean>;
   /** Whether a URL is currently bookmarked (drives the star's filled/outline state). */
   isBookmarked(url: string): Promise<boolean>;
+  // Notification center. State is pushed live from main; the renderer mutates via fire-and-forget.
+  /** Current center snapshot (items + unread count). */
+  listNotifications(): Promise<NotificationState>;
+  /** Subscribe to live center-state pushes; returns an unsubscribe fn. */
+  onNotificationsState(callback: (state: NotificationState) => void): () => void;
+  /** Subscribe to transient toasts (channel `toast`); returns an unsubscribe fn. */
+  onNotificationToast(callback: (toast: AppNotification) => void): () => void;
+  dismissNotification(id: string): void;
+  dismissAllNotifications(): void;
+  markNotificationRead(id: string): void;
+  markAllNotificationsRead(): void;
+  /** Subscribe to per-site Web Notification consent prompts; returns an unsubscribe fn. */
+  onNotificationPermissionRequest(
+    callback: (request: NotificationPermissionRequest) => void,
+  ): () => void;
+  /** Answer a pending consent prompt (allow/deny, optionally remembered for the origin). */
+  respondNotificationPermission(response: NotificationPermissionResponse): void;
   readonly platform: string;
 }

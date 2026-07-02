@@ -76,3 +76,13 @@ export const PopupOpenSchema = z.object({
   anchor: ContentBoundsSchema,
   height: z.number().int().positive().max(2000).optional(),
 });
+
+/** `notifications:dismiss` / `notifications:mark-read` payload — a single notification id. */
+export const NotificationIdSchema = z.string().min(1).max(128);
+
+/** `notifications:permission-respond` payload — the user's answer to a Web Notification consent prompt. */
+export const NotificationPermissionResponseSchema = z.object({
+  requestId: z.string().min(1).max(128),
+  allow: z.boolean(),
+  remember: z.boolean(),
+});

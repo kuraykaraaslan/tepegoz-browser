@@ -53,6 +53,17 @@ export const IpcChannels = {
   userAgentGet: 'user-agent:get',
   userAgentSet: 'user-agent:set',
   mcpGetStatus: 'mcp:get-status',
+  // Notification center: list/mutate the persisted center, plus main→renderer pushes for live state,
+  // transient toasts, and the per-site Web Notification consent prompt.
+  notificationsList: 'notifications:list',
+  notificationsDismiss: 'notifications:dismiss',
+  notificationsDismissAll: 'notifications:dismiss-all',
+  notificationsMarkRead: 'notifications:mark-read',
+  notificationsMarkAllRead: 'notifications:mark-all-read',
+  notificationsState: 'notifications:state',
+  notificationsToast: 'notifications:toast',
+  notificationPermissionRequest: 'notifications:permission-request',
+  notificationPermissionRespond: 'notifications:permission-respond',
 } as const;
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];

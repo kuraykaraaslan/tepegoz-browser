@@ -32,6 +32,10 @@ export const en = {
   privacyTitle: 'Privacy & telemetry',
   telemetry: 'Share anonymous usage telemetry',
   telemetryDesc: 'Off by default. No page content or keys are ever sent.',
+  notificationsTitle: 'Notifications',
+  notifications: 'Enable notifications',
+  notificationsDesc:
+    'Show the notification center, toasts, and native OS notifications for agent handoffs, sites, and system events. When off, only the center keeps a history.',
   costTitle: 'Cost & performance',
   localModel: 'Use a local model for simple tasks',
   localModelDesc:

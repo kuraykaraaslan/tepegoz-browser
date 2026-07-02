@@ -17,6 +17,7 @@ import {
   isExtensionEnabled,
 } from '@tepegoz/desktop-ipc';
 import type {
+  AppNotification,
   ContentBounds,
   CredentialsStatus,
   ExtensionId,
@@ -26,6 +27,7 @@ import type {
   TabsState,
   ThemePref,
 } from '@tepegoz/desktop-ipc';
+import { ToastStack } from '@tepegoz/notifications-ui';
 import { extensionIdFromPageUrl, extensionLabel, extensionPageUrl } from '../../shared/extensions';
 import { EXTENSIONS, extensionDefById } from './extensions/registry';
 import { BrowserChrome } from '@tepegoz/browser-chrome';
@@ -38,6 +40,7 @@ import { HistoryPage } from '@tepegoz/history-ui';
 import { ExtensionsPage } from './components/ExtensionsPage';
 import { ExtensionTray } from './components/ExtensionTray';
 import { MainMenuButton } from './components/MainMenuButton';
+import { NotificationBellButton } from './components/NotificationBellButton';
 import { SettingsPage } from './components/SettingsPage';
 import { useWindowMaximized } from './lib/useWindowMaximized';
 
@@ -92,6 +95,11 @@ export function App() {
   const [popupOpenId, setPopupOpenId] = useState<string | null>(null);
   const popupOpenIdRef = useRef<string | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
+  // Transient toasts pushed from NotificationHost (channel `toast`); capped, oldest dropped.
+  const [toasts, setToasts] = useState<AppNotification[]>([]);
+  const dismissToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  }, []);
 
   const locale = effectiveLocale(prefs?.locale ?? 'system');
 
@@ -189,6 +197,14 @@ export function App() {
       }
     })();
     return window.tepegoz.onTabsState(setTabs);
+  }, []);
+
+  // Transient toasts: append each pushed toast (capped to the newest 3; individual auto-dismiss timers
+  // live in the ToastStack).
+  useEffect(() => {
+    return window.tepegoz.onNotificationToast((toast) => {
+      setToasts((prev) => [...prev, toast].slice(-3));
+    });
   }, []);
 
   // RTL-ready: mirror the active locale's writing direction onto <html dir> (both shipping locales are
@@ -520,6 +536,7 @@ export function App() {
           onBack={() => window.tepegoz.tabGoBack()}
           onForward={() => window.tepegoz.tabGoForward()}
           onReload={() => window.tepegoz.tabReload()}
+          captionLeading={<NotificationBellButton />}
           menu={<MainMenuButton label={browserT.menu} extensionCount={enabledExtensions.length} />}
           onNavigate={(input) => window.tepegoz.navigateTab(input)}
           onSuggest={onOmniboxSuggest}
@@ -592,6 +609,8 @@ export function App() {
           </div>
           {renderSidebar()}
         </div>
+        {/* Transient toast overlay (channel `toast`); native OS notifications cover the over-page case. */}
+        <ToastStack toasts={toasts} onDismiss={dismissToast} />
       </div>
     </I18nProvider>
   );

@@ -11,6 +11,8 @@ import TabManager from './tabs';
 import UserAgentManager from './user-agent';
 import PopupWindowManager from './popup-window';
 import McpService from './mcp/supervisor.electron';
+import NotificationHost from './notifications/notification-host';
+import NotificationPermissionBroker from './notifications/permission-broker';
 
 // Last-resort process-level hooks: an async error that escapes every boundary must be LOGGED, not a
 // silent crash. Exceptions still terminate (state is unknown); rejections are logged and survived.
@@ -58,6 +60,10 @@ if (process.platform === 'win32') app.setAppUserModelId('com.tepegoz.browser');
 function bootstrap(): void {
   const win = createWindow();
   TabManager.attach(win);
+  // Wire the notification center's store→renderer broadcast to this window (toast + bell badge target),
+  // and the per-site Web Notification consent prompt to the same window.
+  NotificationHost.attach(win);
+  NotificationPermissionBroker.attach(win);
   // Dev: electron-vite injects the renderer dev-server URL. Prod: load the built file.
   const devUrl = process.env['ELECTRON_RENDERER_URL'];
   if (devUrl !== undefined && devUrl.length > 0) {

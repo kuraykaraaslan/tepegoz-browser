@@ -1,5 +1,15 @@
 import { app, session } from 'electron';
 import { APP_PARTITION } from './window';
+import NotificationPermissionBroker from './notifications/permission-broker';
+
+/** Safe origin of a requesting URL, or null if unparsable. */
+function originOf(url: string): string | null {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Content-Security-Policy for the TRUSTED APP CHROME only (SECURITY-06 blocking rule). Browsed pages
@@ -32,8 +42,9 @@ function chromeCsp(dev: boolean): string {
 
 /**
  * Cross-surface hardening that must apply to EVERY web contents (app chrome AND browsed pages):
- * deny all permission requests by default (geolocation, notifications, media, …). Real permissions
- * go through HITL in a later phase.
+ * deny permission requests by default (geolocation, media, …). The one exception is the Web
+ * Notification API, which is brokered per-site through {@link NotificationPermissionBroker} (stored
+ * grant/denial, else a HITL consent prompt, gated on the notifications preference).
  *
  * Surface-specific navigation policy is deliberately NOT global:
  *  - the app chrome window is locked to app content (deny-by-default) in `createWindow`;
@@ -42,12 +53,25 @@ function chromeCsp(dev: boolean): string {
  */
 export function installSecurity(): void {
   app.on('web-contents-created', (_event, contents) => {
-    // Async request path (getUserMedia, geolocation, notifications, …) AND the synchronous check
-    // path (permission-state queries, fullscreen/pointer-lock gates) — both denied by default.
-    contents.session.setPermissionRequestHandler((_wc, _permission, callback) => {
+    // Async request path (getUserMedia, geolocation, notifications, …): notifications are brokered
+    // per-site; everything else is denied by default.
+    contents.session.setPermissionRequestHandler((_wc, permission, callback, details) => {
+      if (permission === 'notifications') {
+        const origin = originOf(details.requestingUrl);
+        if (origin === null) {
+          callback(false);
+          return;
+        }
+        void NotificationPermissionBroker.request(origin).then(callback);
+        return;
+      }
       callback(false);
     });
-    contents.session.setPermissionCheckHandler(() => false);
+    // Synchronous check path (permission-state queries): reflect stored notification grants; deny the rest.
+    contents.session.setPermissionCheckHandler((_wc, permission, requestingOrigin) => {
+      if (permission === 'notifications') return NotificationPermissionBroker.isAllowed(requestingOrigin);
+      return false;
+    });
   });
 
   // CSP response header for every document the app chrome loads (dev server or packaged file).

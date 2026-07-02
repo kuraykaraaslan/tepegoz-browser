@@ -2,7 +2,6 @@ import {
   app,
   BrowserWindow,
   ipcMain,
-  Notification,
   type IpcMainEvent,
   type IpcMainInvokeEvent,
 } from 'electron';
@@ -22,6 +21,7 @@ import {
   type HistoryEntry,
   type IpcChannel,
   type McpServerStatusInfo,
+  type NotificationState,
   type Preferences,
   type TabsState,
   type TokenUsageSnapshot,
@@ -42,10 +42,13 @@ import {
   ContentVisibleSchema,
   CreateTabInputSchema,
   NavigateInputSchema,
+  NotificationIdSchema,
   RemoveProviderKeyInputSchema,
   SetProviderKeyInputSchema,
   TabIdSchema,
 } from '@tepegoz/desktop-ipc/schemas';
+import NotificationStore from '@tepegoz/notifications';
+import NotificationHost from './notifications/notification-host';
 import type { ConfirmRequest } from '@tepegoz/capability-plane';
 import { TokenLedger } from '@tepegoz/model-gateway';
 import { BookmarkStore, EventJournal, HistoryStore } from '@tepegoz/persistence';
@@ -68,6 +71,8 @@ import { showTabContextMenu } from './menus/tab-context-menu';
 
 /** Native main-menu popup width (px); its height is computed by the renderer and clamped in main. */
 const MAIN_MENU_WIDTH = 300;
+/** Native notification-center popup width (px). */
+const NOTIFICATIONS_WIDTH = 360;
 
 /** Reject IPC from frames that are not our own app content (exact-host allow-list). */
 function assertTrustedSender(event: IpcMainInvokeEvent): void {
@@ -309,6 +314,15 @@ export function registerIpc(): void {
         // exactOptionalPropertyTypes: only pass height when the renderer actually measured one.
         ...(height !== undefined ? { height } : {}),
       });
+    } else if (surface === 'notifications') {
+      PopupWindowManager.open({
+        parent: win,
+        key: 'notifications',
+        query: { surface: 'notifications' },
+        anchor,
+        width: NOTIFICATIONS_WIDTH,
+        ...(height !== undefined ? { height } : {}),
+      });
     } else if (surface === 'ext' && id !== undefined) {
       const manifest = manifestById(id);
       if (manifest === undefined || !manifest.surfaces.includes('popup')) {
@@ -327,6 +341,21 @@ export function registerIpc(): void {
   });
   onSignal(IpcChannels.popupClose, () => {
     PopupWindowManager.close();
+  });
+  // Notification center — a snapshot getter plus fire-and-forget mutations. Live state is PUSHED from
+  // NotificationHost (store subscription) to every app window, so there is no subscribe handler here.
+  handle(IpcChannels.notificationsList, (): NotificationState => NotificationStore.state());
+  onAction(IpcChannels.notificationsDismiss, NotificationIdSchema, (id) => {
+    NotificationStore.dismiss(id);
+  });
+  onAction(IpcChannels.notificationsMarkRead, NotificationIdSchema, (id) => {
+    NotificationStore.markRead(id);
+  });
+  onSignal(IpcChannels.notificationsDismissAll, () => {
+    NotificationStore.dismissAll();
+  });
+  onSignal(IpcChannels.notificationsMarkAllRead, () => {
+    NotificationStore.markAllRead();
   });
   // Exit — quits the whole app regardless of the sender window (a popup can't use the window-close path).
   onSignal(IpcChannels.appQuit, () => {
@@ -407,10 +436,17 @@ export function registerIpc(): void {
           Logger.warn('Journal append failed', { err: String(err) });
         }
       }
-      // Human Handoff Controller: surface the handoff out-of-band too — the user may be looking
-      // elsewhere while the agent runs, so raise a native OS notification (localized).
-      if (kind === 'handoff' && Notification.isSupported()) {
-        new Notification({ title: mainStrings().agent.handoff.notifyTitle, body: message }).show();
+      // Human Handoff Controller: surface the handoff across every channel — the user may be looking
+      // elsewhere while the agent runs. NotificationHost records it in the center, shows a toast, and
+      // raises a native OS notification (all localized, gated on the notifications preference).
+      if (kind === 'handoff') {
+        NotificationHost.push({
+          source: 'agent',
+          kind: 'warning',
+          title: mainStrings().agent.handoff.notifyTitle,
+          body: message,
+          channels: ['center', 'toast', 'native'],
+        });
       }
     };
     const requestApproval = (req: ConfirmRequest): Promise<boolean> => {

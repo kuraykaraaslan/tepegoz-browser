@@ -31,6 +31,10 @@ export const tr: SettingsStrings = {
   privacyTitle: 'Gizlilik ve telemetri',
   telemetry: 'Anonim kullanım telemetrisini paylaş',
   telemetryDesc: 'Varsayılan kapalı. Sayfa içeriği veya anahtarlar asla gönderilmez.',
+  notificationsTitle: 'Bildirimler',
+  notifications: 'Bildirimleri etkinleştir',
+  notificationsDesc:
+    'Ajan devri, siteler ve sistem olayları için bildirim merkezini, toast’ları ve işletim sistemi bildirimlerini gösterir. Kapalıyken yalnızca merkez geçmişi tutar.',
   costTitle: 'Maliyet ve performans',
   localModel: 'Basit işler için yerel model kullan',
   localModelDesc:

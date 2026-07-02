@@ -1,5 +1,12 @@
 import { z } from 'zod';
 import { AI_PROVIDERS } from './providers';
+import {
+  NOTIFICATION_ACTION_TYPES,
+  NOTIFICATION_CHANNELS,
+  NOTIFICATION_KINDS,
+  NOTIFICATION_SOURCES,
+  SITE_PERMISSION_STATES,
+} from './notifications';
 
 /**
  * Runtime-validated enums (internal-ai-rules: z.enum, not TS enum, for anything validated at runtime).
@@ -21,6 +28,13 @@ export type RiskLevel = z.infer<typeof RiskLevelEnum>;
 
 export const McpTransportEnum = z.enum(['stdio', 'http_sse']);
 export type McpTransport = z.infer<typeof McpTransportEnum>;
+
+/** Notification enums — built FROM the canonical zod-free lists in notifications.ts (single source). */
+export const NotificationKindEnum = z.enum(NOTIFICATION_KINDS);
+export const NotificationSourceEnum = z.enum(NOTIFICATION_SOURCES);
+export const NotificationChannelEnum = z.enum(NOTIFICATION_CHANNELS);
+export const NotificationActionTypeEnum = z.enum(NOTIFICATION_ACTION_TYPES);
+export const SitePermissionStateEnum = z.enum(SITE_PERMISSION_STATES);
 
 /** Event Journal record types — phrased as "things that happened" (event-sourcing). */
 export const EventTypeEnum = z.enum([

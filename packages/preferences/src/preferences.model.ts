@@ -4,6 +4,7 @@ import {
   LOCALE_PREFS,
   MCP_TRANSPORTS,
   PROVIDER_IDS,
+  SITE_PERMISSION_STATES,
   THEME_PREFS,
   type Preferences,
 } from '@tepegoz/desktop-ipc';
@@ -67,6 +68,13 @@ export const PreferencesSchema = z.object({
   userAgent: z.string().max(512).nullable(),
   // External MCP servers whose tools the agent may use (routed through the ToolGateway PEP).
   mcpServers: z.array(McpServerPrefSchema),
+  // Master switch for native OS + in-app notifications.
+  notificationsEnabled: z.boolean(),
+  // Per-origin web-capability grants (Web Notification API consent). Keyed by origin.
+  sitePermissions: z.record(
+    z.string().max(2048),
+    z.object({ notifications: z.enum(SITE_PERMISSION_STATES).optional() }),
+  ),
 }) satisfies z.ZodType<Preferences>;
 
 /** Patch shape for partial updates — only provided keys are applied. */
@@ -85,4 +93,6 @@ export const DEFAULT_PREFERENCES: Preferences = {
   extensions: [],
   userAgent: null,
   mcpServers: [],
+  notificationsEnabled: true,
+  sitePermissions: {},
 };

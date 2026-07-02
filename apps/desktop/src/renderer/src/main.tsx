@@ -5,6 +5,7 @@ import { ErrorBoundary } from '@tepegoz/ui';
 import { App } from './App';
 import { PopupApp } from './components/PopupApp';
 import { MainMenuPopup } from './components/MainMenuPopup';
+import { NotificationCenterPopup } from './components/NotificationCenterPopup';
 import './styles.css';
 
 // A native popup window loads this same bundle with `?surface=<kind>` (see PopupWindowManager); render
@@ -15,6 +16,7 @@ const extId = params.get('id');
 
 let node: ReactNode = <App />;
 if (surface === 'main-menu') node = <MainMenuPopup />;
+else if (surface === 'notifications') node = <NotificationCenterPopup />;
 else if (surface === 'ext' && extId !== null) node = <PopupApp id={extId} />;
 
 // The boundary's fallback renders when App (and its locale state) is gone — resolve from the OS locale.
