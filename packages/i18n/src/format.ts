@@ -42,7 +42,11 @@ export function formatCurrency(value: number, locale: Locale, currency: string):
  * Human relative time from `from` (default: now) to `value`, auto-picking the largest sensible unit
  * (e.g. "3 minutes ago", "yarın"). `now` is injected for testability/determinism.
  */
-export function formatRelativeTime(value: Date | number, locale: Locale, now: Date | number = Date.now()): string {
+export function formatRelativeTime(
+  value: Date | number,
+  locale: Locale,
+  now: Date | number = Date.now(),
+): string {
   const toMs = value instanceof Date ? value.getTime() : value;
   const fromMs = now instanceof Date ? now.getTime() : now;
   const diffSec = Math.round((toMs - fromMs) / 1000);

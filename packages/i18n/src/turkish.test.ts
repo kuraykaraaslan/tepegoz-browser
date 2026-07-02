@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { turkishUpper, turkishLower, turkishCompare, TURKISH_SPECIAL_LETTERS, IME_MATRIX, TURKISH_LAYOUTS } from './turkish';
+import {
+  turkishUpper,
+  turkishLower,
+  turkishCompare,
+  TURKISH_SPECIAL_LETTERS,
+  IME_MATRIX,
+  TURKISH_LAYOUTS,
+} from './turkish';
 import { localeDir } from './direction';
 import { ALL_SUPPORTED_LTR } from './index';
 

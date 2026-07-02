@@ -70,6 +70,18 @@ export const IME_MATRIX: readonly ImeCase[] = [
       deadKey: false,
     })),
   ),
-  { layout: 'tr-Q', name: 'tr-Q: dead-key circumflex â', sequence: 'deadCircumflex+a', expected: 'â', deadKey: true },
-  { layout: 'tr-F', name: 'tr-F: dead-key circumflex î', sequence: 'deadCircumflex+i', expected: 'î', deadKey: true },
+  {
+    layout: 'tr-Q',
+    name: 'tr-Q: dead-key circumflex â',
+    sequence: 'deadCircumflex+a',
+    expected: 'â',
+    deadKey: true,
+  },
+  {
+    layout: 'tr-F',
+    name: 'tr-F: dead-key circumflex î',
+    sequence: 'deadCircumflex+i',
+    expected: 'î',
+    deadKey: true,
+  },
 ];
