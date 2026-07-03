@@ -6,6 +6,7 @@
 export {
   TabStrip,
   type TabDescriptor,
+  type TabGroupDescriptor,
   type TabStripLabels,
   type TabStripProps,
 } from './tab-strip';

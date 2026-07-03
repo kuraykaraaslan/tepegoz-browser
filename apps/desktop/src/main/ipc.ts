@@ -280,11 +280,41 @@ export function registerIpc(): void {
   onAction(IpcChannels.tabsCreate, CreateTabInputSchema, (url) => {
     TabManager.createTab(url);
   });
+  onAction(IpcChannels.tabsCreateBackground, CreateBackgroundTabSchema, (url) => {
+    TabManager.createTab(url, { background: true });
+  });
   onAction(IpcChannels.tabsClose, TabIdSchema, (id) => {
     TabManager.closeTab(id);
   });
   onAction(IpcChannels.tabsActivate, TabIdSchema, (id) => {
     TabManager.activate(id);
+  });
+  // Advanced tab UX (ADR-0020): drag-reorder, groups, pinning.
+  onAction(IpcChannels.tabsMove, TabMoveSchema, ({ id, toIndex, intoGroupId }) => {
+    TabManager.moveTab(id, toIndex, intoGroupId);
+  });
+  onAction(IpcChannels.tabsPin, TabPinSchema, ({ id, pinned }) => {
+    TabManager.setPinned(id, pinned);
+  });
+  onAction(IpcChannels.tabsGroupCreate, TabGroupCreateSchema, ({ memberIds }) => {
+    TabManager.createGroup(memberIds);
+  });
+  onAction(IpcChannels.tabsGroupMove, TabGroupMoveSchema, ({ groupId, toIndex }) => {
+    TabManager.moveGroup(groupId, toIndex);
+  });
+  onAction(IpcChannels.tabsGroupUpdate, TabGroupUpdateSchema, ({ groupId, name, color, collapsed }) => {
+    if (name !== undefined) TabManager.renameGroup(groupId, name);
+    if (color !== undefined) TabManager.recolorGroup(groupId, color);
+    if (collapsed !== undefined) TabManager.setGroupCollapsed(groupId, collapsed);
+  });
+  onAction(IpcChannels.tabsGroupAssign, TabGroupAssignSchema, ({ tabId, groupId }) => {
+    TabManager.assignToGroup(tabId, groupId);
+  });
+  onAction(IpcChannels.tabsGroupRemove, TabIdSchema, (tabId) => {
+    TabManager.removeFromGroup(tabId);
+  });
+  onAction(IpcChannels.tabsUngroup, TabIdSchema, (groupId) => {
+    TabManager.ungroup(groupId);
   });
   // Native tab context menu: needs the sender's window to anchor the popup, so it can't use the
   // window-less onAction helper.
@@ -297,6 +327,17 @@ export function registerIpc(): void {
     }
     const win = BrowserWindow.fromWebContents(event.sender);
     if (win) showTabContextMenu(win, parsed.data);
+  });
+  // Native group-header context menu — also needs the sender's window to anchor + to push the rename.
+  ipcMain.on(IpcChannels.tabsGroupContextMenu, (event: IpcMainEvent, payload: unknown) => {
+    if (!isTrustedAppUrl(event.senderFrame?.url ?? '')) return;
+    const parsed = TabGroupIdSchema.safeParse(payload);
+    if (!parsed.success) {
+      Logger.warn('Ignored tabs:group-context-menu: invalid payload');
+      return;
+    }
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) showGroupContextMenu(win, parsed.data);
   });
   // Popup windows — a native child window anchored under a toolbar control (needs the sender window).
   // Reusable primitive: the main menu, extension popups, and future surfaces route through here.

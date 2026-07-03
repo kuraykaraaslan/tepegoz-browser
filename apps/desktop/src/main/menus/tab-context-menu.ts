@@ -15,8 +15,58 @@ export function showTabContextMenu(win: BrowserWindow, tabId: string): void {
   const t = mainStrings();
   const hasOthers = state.tabs.length > 1;
   const hasRight = idx < state.tabs.length - 1;
+  const tab = state.tabs[idx]!;
+  const isPinned = tab.pinned;
+  const inGroup = tab.groupId !== null;
+  // Groups the tab could be added to (all groups except its own).
+  const otherGroups = state.groups.filter((g) => g.id !== tab.groupId);
+
+  const groupSubmenu: MenuItemConstructorOptions[] = [
+    {
+      label: t.browser.addToNewGroup,
+      click: () => {
+        TabManager.createGroup([tabId]);
+      },
+    },
+    ...(otherGroups.length > 0
+      ? [
+          { type: 'separator' as const },
+          ...otherGroups.map((g) => ({
+            label: g.name.trim().length > 0 ? g.name : t.browser.unnamedGroup,
+            click: () => {
+              TabManager.assignToGroup(tabId, g.id);
+            },
+          })),
+        ]
+      : []),
+  ];
 
   const template: MenuItemConstructorOptions[] = [
+    {
+      label: isPinned ? t.browser.unpinTab : t.browser.pinTab,
+      click: () => {
+        TabManager.setPinned(tabId, !isPinned);
+      },
+    },
+    { type: 'separator' },
+    { label: t.browser.addToGroup, submenu: groupSubmenu },
+    ...(inGroup
+      ? [
+          {
+            label: t.browser.removeFromGroup,
+            click: () => {
+              TabManager.removeFromGroup(tabId);
+            },
+          },
+          {
+            label: t.browser.ungroup,
+            click: () => {
+              if (tab.groupId !== null) TabManager.ungroup(tab.groupId);
+            },
+          },
+        ]
+      : []),
+    { type: 'separator' },
     {
       label: t.browser.newTabRight,
       click: () => {

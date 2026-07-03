@@ -71,6 +71,9 @@ const api: TepegozApi = {
   createTab: (url?: string) => {
     ipcRenderer.send(IpcChannels.tabsCreate, url);
   },
+  createTabInBackground: (url: string) => {
+    ipcRenderer.send(IpcChannels.tabsCreateBackground, url);
+  },
   closeTab: (id: string) => {
     ipcRenderer.send(IpcChannels.tabsClose, id);
   },
@@ -97,6 +100,42 @@ const api: TepegozApi = {
   },
   reopenClosedTab: () => {
     ipcRenderer.send(IpcChannels.tabsReopenClosed);
+  },
+  moveTab: (id: string, toIndex: number, intoGroupId?: string | null) => {
+    ipcRenderer.send(IpcChannels.tabsMove, { id, toIndex, intoGroupId });
+  },
+  setTabPinned: (id: string, pinned: boolean) => {
+    ipcRenderer.send(IpcChannels.tabsPin, { id, pinned });
+  },
+  createTabGroup: (memberIds?: string[]) => {
+    ipcRenderer.send(IpcChannels.tabsGroupCreate, { memberIds });
+  },
+  moveTabGroup: (groupId: string, toIndex: number) => {
+    ipcRenderer.send(IpcChannels.tabsGroupMove, { groupId, toIndex });
+  },
+  updateTabGroup: (groupId: string, patch: { name?: string; color?: TabGroupColor; collapsed?: boolean }) => {
+    ipcRenderer.send(IpcChannels.tabsGroupUpdate, { groupId, ...patch });
+  },
+  assignTabToGroup: (tabId: string, groupId: string) => {
+    ipcRenderer.send(IpcChannels.tabsGroupAssign, { tabId, groupId });
+  },
+  removeTabFromGroup: (tabId: string) => {
+    ipcRenderer.send(IpcChannels.tabsGroupRemove, tabId);
+  },
+  ungroupTabGroup: (groupId: string) => {
+    ipcRenderer.send(IpcChannels.tabsUngroup, groupId);
+  },
+  showTabGroupContextMenu: (groupId: string) => {
+    ipcRenderer.send(IpcChannels.tabsGroupContextMenu, groupId);
+  },
+  onTabGroupStartRename: (callback: (groupId: string) => void) => {
+    const listener = (_event: unknown, groupId: string): void => {
+      callback(groupId);
+    };
+    ipcRenderer.on(IpcChannels.tabsGroupStartRename, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.tabsGroupStartRename, listener);
+    };
   },
   setContentBounds: (bounds: ContentBounds) => {
     ipcRenderer.send(IpcChannels.tabsSetBounds, bounds);

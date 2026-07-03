@@ -30,6 +30,20 @@ export const IpcChannels = {
   tabsCapture: 'tabs:capture',
   tabsGetState: 'tabs:get-state',
   tabsState: 'tabs:state',
+  // Advanced tab UX (ADR-0020): drag-reorder, groups, and pinning. All fire-and-forget mutations;
+  // state is pushed back via `tabs:state`.
+  tabsMove: 'tabs:move',
+  tabsPin: 'tabs:pin',
+  tabsGroupCreate: 'tabs:group-create',
+  tabsGroupMove: 'tabs:group-move',
+  tabsGroupUpdate: 'tabs:group-update',
+  tabsGroupAssign: 'tabs:group-assign',
+  tabsGroupRemove: 'tabs:group-remove',
+  tabsUngroup: 'tabs:ungroup',
+  /** Renderer→main: pop the native group context menu (anchored to the sender window). */
+  tabsGroupContextMenu: 'tabs:group-context-menu',
+  /** Main→renderer: open the inline rename editor for a group (from the group menu's Rename item). */
+  tabsGroupStartRename: 'tabs:group-start-rename',
   agentRun: 'agent:run',
   agentCancel: 'agent:cancel',
   agentEvent: 'agent:event',

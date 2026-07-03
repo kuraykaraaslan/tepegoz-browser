@@ -33,8 +33,55 @@ export const ContentBoundsSchema = z.object({
 });
 
 export const TabIdSchema = z.string().min(1).max(64);
+export const TabGroupIdSchema = z.string().min(1).max(64);
+/** The fixed Chrome-style group palette (ADR-0020). Mirrors `TabGroupColor` in the contract. */
+export const TabGroupColorSchema = z.enum([
+  'grey',
+  'blue',
+  'red',
+  'yellow',
+  'green',
+  'pink',
+  'purple',
+  'cyan',
+  'orange',
+]);
+
+/** `tabs:move` — drag-reorder a tab. `intoGroupId`: a group id joins, null ungroups, omitted infers. */
+export const TabMoveSchema = z.object({
+  id: TabIdSchema,
+  toIndex: z.number().int().min(0),
+  intoGroupId: TabGroupIdSchema.nullable().optional(),
+});
+
+/** `tabs:pin` — pin/unpin a tab. */
+export const TabPinSchema = z.object({ id: TabIdSchema, pinned: z.boolean() });
+
+/** `tabs:group-create` — group these tabs (empty/omitted → the active tab). */
+export const TabGroupCreateSchema = z.object({
+  memberIds: z.array(TabIdSchema).max(500).optional(),
+});
+
+/** `tabs:group-move` — reorder a whole group's run. */
+export const TabGroupMoveSchema = z.object({ groupId: TabGroupIdSchema, toIndex: z.number().int().min(0) });
+
+/** `tabs:group-update` — patch a group's name/color/collapsed (only provided keys change). */
+export const TabGroupUpdateSchema = z
+  .object({
+    groupId: TabGroupIdSchema,
+    name: z.string().max(200),
+    color: TabGroupColorSchema,
+    collapsed: z.boolean(),
+  })
+  .partial({ name: true, color: true, collapsed: true });
+
+/** `tabs:group-assign` — add a tab to an existing group. */
+export const TabGroupAssignSchema = z.object({ tabId: TabIdSchema, groupId: TabGroupIdSchema });
+
 export const NavigateInputSchema = z.string().max(4096);
 export const CreateTabInputSchema = z.string().max(4096).optional();
+/** `tabs:create-background` payload — a required URL to open in a background tab. */
+export const CreateBackgroundTabSchema = z.string().min(1).max(4096);
 export const ContentVisibleSchema = z.boolean();
 
 /** `agent:run` prompt (renderer → main). The agent treats this as the user's trusted intent. */

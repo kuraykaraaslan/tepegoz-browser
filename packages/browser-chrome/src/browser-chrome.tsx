@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
 import { BrandMark } from '@tepegoz/ui';
-import { TabStrip, type TabDescriptor } from '@tepegoz/tab-strip';
+import { TabStrip, type TabDescriptor, type TabGroupDescriptor } from '@tepegoz/tab-strip';
 import { WindowControls } from '@tepegoz/window-controls';
 import { NavToolbar } from '@tepegoz/nav-toolbar';
 import type { OmniboxSuggestion } from '@tepegoz/omnibox';
@@ -25,6 +25,8 @@ export interface BrowserChromeStrings {
     omniboxPlaceholder: string;
     bookmarkAdd: string;
     bookmarkRemove: string;
+    unnamedGroup: string;
+    toggleGroup: string;
   };
 }
 
@@ -32,11 +34,29 @@ export interface BrowserChromeProps {
   t: BrowserChromeStrings;
   // Tab strip
   tabs: readonly TabDescriptor[];
+  /** Tab groups (ADR-0020); omit when the host has no grouping. */
+  tabGroups?: readonly TabGroupDescriptor[] | undefined;
+  /** A group whose inline rename editor should open (from the native group menu's "Rename"). */
+  renamingGroupId?: string | null | undefined;
   activeTabId: string | null;
   onSelectTab: (id: string) => void;
   onCloseTab: (id: string) => void;
   onTabContextMenu: (id: string) => void;
+  /** Open the native group context menu (right-click a group header). */
+  onTabGroupContextMenu?: ((groupId: string) => void) | undefined;
   onNewTab: () => void;
+  /** Drag-reorder a tab to `toIndex` (grouping inferred by the host from neighbors). */
+  onMoveTab?: ((id: string, toIndex: number) => void) | undefined;
+  /** Drag-reorder a whole group's run to `toIndex` among the non-member tabs. */
+  onMoveTabGroup?: ((groupId: string, toIndex: number) => void) | undefined;
+  /** Add a tab to a group (drop a tab on the group header). */
+  onAssignTabToGroup?: ((tabId: string, groupId: string) => void) | undefined;
+  /** Collapse/expand a group. */
+  onToggleGroupCollapsed?: ((groupId: string, collapsed: boolean) => void) | undefined;
+  /** Rename a group (inline). */
+  onRenameTabGroup?: ((groupId: string, name: string) => void) | undefined;
+  /** Called once the external rename trigger (`renamingGroupId`) has been consumed. */
+  onRenameTabGroupHandled?: (() => void) | undefined;
   // Window caption controls
   isMaximized: boolean;
   onMinimize: () => void;
@@ -81,11 +101,20 @@ export interface BrowserChromeProps {
 export function BrowserChrome({
   t,
   tabs,
+  tabGroups,
+  renamingGroupId,
   activeTabId,
   onSelectTab,
   onCloseTab,
   onTabContextMenu,
+  onTabGroupContextMenu,
   onNewTab,
+  onMoveTab,
+  onMoveTabGroup,
+  onAssignTabToGroup,
+  onToggleGroupCollapsed,
+  onRenameTabGroup,
+  onRenameTabGroupHandled,
   isMaximized,
   onMinimize,
   onToggleMaximize,
@@ -119,17 +148,28 @@ export function BrowserChrome({
         <div className="flex min-w-0 flex-1 items-end pt-1.5">
           <TabStrip
             tabs={tabs}
+            groups={tabGroups}
+            renamingGroupId={renamingGroupId}
             activeId={activeTabId}
             labels={{
               tablist: t.browser.tabs,
               untitled: t.browser.untitled,
               closeTab: t.browser.closeTab,
               newTab: t.browser.newTab,
+              unnamedGroup: t.browser.unnamedGroup,
+              toggleGroup: t.browser.toggleGroup,
             }}
             onSelect={onSelectTab}
             onClose={onCloseTab}
             onContextMenu={onTabContextMenu}
+            onGroupContextMenu={onTabGroupContextMenu}
             onNew={onNewTab}
+            onMove={onMoveTab}
+            onMoveGroup={onMoveTabGroup}
+            onAssignToGroup={onAssignTabToGroup}
+            onToggleGroupCollapsed={onToggleGroupCollapsed}
+            onRenameGroup={onRenameTabGroup}
+            onRenameHandled={onRenameTabGroupHandled}
           />
         </div>
         {captionLeading !== undefined && (

@@ -32,6 +32,35 @@ export const en = {
     duplicateTab: 'Duplicate',
     closeOtherTabs: 'Close other tabs',
     closeTabsRight: 'Close tabs to the right',
+    // Pinning + tab groups (ADR-0020).
+    pinTab: 'Pin tab',
+    unpinTab: 'Unpin tab',
+    addToNewGroup: 'Add tab to new group',
+    addToGroup: 'Add tab to group',
+    removeFromGroup: 'Remove from group',
+    ungroup: 'Ungroup',
+    /** Fallback label for an unnamed group (in menus and on the strip). */
+    unnamedGroup: 'Group',
+    /** aria-label for a group header pill. */
+    groupHeader: 'Tab group',
+    /** aria-label for the group collapse/expand toggle. */
+    toggleGroup: 'Collapse or expand group',
+    // Group header right-click menu (native).
+    renameGroup: 'Rename group',
+    newTabInGroup: 'New tab in group',
+    closeGroup: 'Close group',
+    groupColor: 'Color',
+    groupColors: {
+      grey: 'Grey',
+      blue: 'Blue',
+      red: 'Red',
+      yellow: 'Yellow',
+      green: 'Green',
+      pink: 'Pink',
+      purple: 'Purple',
+      cyan: 'Cyan',
+      orange: 'Orange',
+    },
   },
   sidebar: {
     resize: 'Resize sidebar',

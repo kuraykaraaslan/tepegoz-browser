@@ -1,10 +1,32 @@
 import type { Db } from './db';
 import { MetaStore } from './meta';
 
-/** A restorable browsing session: the ordered web-tab URLs and which one was active. */
+/** A persisted tab: its restorable URL plus its organizational state (pin + group membership). */
+export interface PersistedTab {
+  url: string;
+  pinned: boolean;
+  /** Owning group id (matches a `PersistedGroup.id`), or null when ungrouped. */
+  groupId: string | null;
+}
+
+/** A persisted tab group. `color` is stored loosely (a string) — the model re-validates on restore. */
+export interface PersistedGroup {
+  id: string;
+  name: string;
+  color: string;
+  collapsed: boolean;
+}
+
+/**
+ * A restorable browsing session: ordered web tabs (with pin + group membership), the group metadata,
+ * and which tab was active. Versioned so the shape can evolve; `load` upconverts older snapshots.
+ */
 export interface SessionSnapshot {
-  /** Ordered web-tab URLs to restore (internal tepegoz:// pages are not persisted). */
-  tabs: string[];
+  version: 2;
+  /** Ordered web tabs to restore (internal tepegoz:// pages are not persisted). */
+  tabs: PersistedTab[];
+  /** Group metadata in strip order (each group has ≥1 member among `tabs`). */
+  groups: PersistedGroup[];
   /** Index into `tabs` to activate on restore, or -1 when none applies (consumer clamps). */
   activeIndex: number;
 }
@@ -12,9 +34,10 @@ export interface SessionSnapshot {
 const SESSION_KEY = 'session';
 
 /**
- * Persisted last-session snapshot (L0 session restore). Stored as JSON in the local `meta` table (this
- * is local-instance state, not syncable settings). `load` defensively validates the shape — a corrupt
- * or partial value yields `null` (start fresh) rather than throwing.
+ * Persisted last-session snapshot (session restore). Stored as JSON in the local `meta` table (this is
+ * local-instance state, not syncable settings). `load` is defensively shape-tolerant: it upconverts a
+ * legacy v1 snapshot (`{ tabs: string[]; activeIndex }`) to v2, and yields `null` for corrupt/unknown
+ * values (start fresh) rather than throwing. `save` always writes the current v2 shape.
  */
 export class SessionStore {
   static save(db: Db, snapshot: SessionSnapshot): void {
@@ -25,24 +48,73 @@ export class SessionStore {
     const raw = MetaStore.get(db, SESSION_KEY);
     if (raw === undefined) return null;
     try {
-      const parsed: unknown = JSON.parse(raw);
-      return isSnapshot(parsed) ? { tabs: parsed.tabs, activeIndex: parsed.activeIndex } : null;
+      return migrateSnapshot(JSON.parse(raw));
     } catch {
       return null; // malformed JSON → start fresh
     }
   }
 
   static clear(db: Db): void {
-    SessionStore.save(db, { tabs: [], activeIndex: -1 });
+    SessionStore.save(db, { version: 2, tabs: [], groups: [], activeIndex: -1 });
   }
 }
 
-function isSnapshot(value: unknown): value is SessionSnapshot {
-  if (typeof value !== 'object' || value === null) return false;
+/** Upconvert any stored value to the current v2 shape, or null if it isn't a recognizable snapshot. */
+export function migrateSnapshot(value: unknown): SessionSnapshot | null {
+  if (typeof value !== 'object' || value === null) return null;
   const o = value as Record<string, unknown>;
-  return (
-    Array.isArray(o.tabs) &&
-    o.tabs.every((t) => typeof t === 'string') &&
-    typeof o.activeIndex === 'number'
-  );
+  if (typeof o.activeIndex !== 'number' || !Array.isArray(o.tabs)) return null;
+
+  // Legacy v1: `tabs` is a plain string[] and there's no `version`.
+  if (o.version === undefined) {
+    if (!o.tabs.every((t) => typeof t === 'string')) return null;
+    return {
+      version: 2,
+      tabs: o.tabs.map((url) => ({ url: String(url), pinned: false, groupId: null })),
+      groups: [],
+      activeIndex: o.activeIndex,
+    };
+  }
+
+  // v2.
+  if (o.version === 2) {
+    const tabs = parseTabs(o.tabs);
+    const groups = parseGroups(o.groups);
+    if (tabs === null || groups === null) return null;
+    return { version: 2, tabs, groups, activeIndex: o.activeIndex };
+  }
+
+  return null; // unknown future version → start fresh rather than misread
+}
+
+function parseTabs(raw: unknown[]): PersistedTab[] | null {
+  const out: PersistedTab[] = [];
+  for (const t of raw) {
+    if (typeof t !== 'object' || t === null) return null;
+    const o = t as Record<string, unknown>;
+    if (typeof o.url !== 'string') return null;
+    out.push({
+      url: o.url,
+      pinned: o.pinned === true,
+      groupId: typeof o.groupId === 'string' ? o.groupId : null,
+    });
+  }
+  return out;
+}
+
+function parseGroups(raw: unknown): PersistedGroup[] | null {
+  if (!Array.isArray(raw)) return null;
+  const out: PersistedGroup[] = [];
+  for (const g of raw) {
+    if (typeof g !== 'object' || g === null) return null;
+    const o = g as Record<string, unknown>;
+    if (typeof o.id !== 'string' || typeof o.color !== 'string') return null;
+    out.push({
+      id: o.id,
+      name: typeof o.name === 'string' ? o.name : '',
+      color: o.color,
+      collapsed: o.collapsed === true,
+    });
+  }
+  return out;
 }

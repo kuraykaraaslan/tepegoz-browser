@@ -1,4 +1,11 @@
-import { BrowserWindow, WebContentsView, type Rectangle, type WebContents } from 'electron';
+import {
+  BrowserWindow,
+  WebContentsView,
+  type BrowserWindowConstructorOptions,
+  type HandlerDetails,
+  type Rectangle,
+  type WebContents,
+} from 'electron';
 import { Logger } from '@tepegoz/libs';
 import {
   INTERNAL_EXTENSIONS_URL,
@@ -6,12 +13,70 @@ import {
   IpcChannels,
   type TabsState,
 } from '@tepegoz/desktop-ipc';
-import { HistoryStore, SessionStore } from '@tepegoz/persistence';
-import { TabStore } from '@tepegoz/tab-engine';
+import {
+  HistoryStore,
+  SessionStore,
+  type PersistedGroup,
+  type PersistedTab,
+  type SessionSnapshot,
+} from '@tepegoz/persistence';
+import {
+  TabStore,
+  TAB_GROUP_COLORS,
+  DEFAULT_GROUP_COLOR,
+  type TabGroupColor,
+} from '@tepegoz/tab-engine';
 import { internalPageUrl, isWebUrl, toNavigationUrl } from './lib/navigation-url';
 import { mainLocale, mainStrings } from './lib/i18n-main';
 import { extensionIdFromPageUrl, extensionLabel, manifestById } from '../shared/extensions';
 import { getDb } from './db/database.electron';
+import PopupBlockerManager from './popup-blocker';
+import { openPageContextMenu } from './menus/page-context-menu';
+
+/** Coerce a persisted (untyped) group color back to a valid `TabGroupColor`, defaulting if unknown. */
+function asGroupColor(color: string): TabGroupColor {
+  return (TAB_GROUP_COLORS as readonly string[]).includes(color)
+    ? (color as TabGroupColor)
+    : DEFAULT_GROUP_COLOR;
+}
+
+/** The origin of a URL (`https://example.com`), or '' when it can't be parsed (keys the popup policy). */
+function originOf(url: string): string {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return '';
+  }
+}
+
+/** A popup opened with no explicit URL targets `about:blank` (matches the DOM's window.open default). */
+function popupTargetUrl(url: string): string {
+  return url.trim().length === 0 ? 'about:blank' : url;
+}
+
+/** Schemes whose popup MUST be created natively by Electron so `window.open` returns a live, scriptable
+ *  reference to the opener (about:blank / data: / javascript: — used by document.write / contentWindow
+ *  style popups). A plain http(s) popup can instead open as one of our tabs. */
+function needsNativeWindow(url: string): boolean {
+  const u = url.trim().toLowerCase();
+  return u === '' || u === 'about:blank' || u.startsWith('data:') || u.startsWith('javascript:');
+}
+
+/** Whether the page asked for a real popup WINDOW rather than a tab: geometry in `features`, an explicit
+ *  new-window disposition, or a POST body (a form target=_blank whose POST we must not drop). */
+function wantsNativeWindow(details: HandlerDetails): boolean {
+  return (
+    details.disposition === 'new-window' ||
+    details.postBody != null ||
+    /\b(?:width|height|innerwidth|innerheight)\b/i.test(details.features)
+  );
+}
+
+/** Block navigations to dangerous schemes (anything but http(s)/about:) on a browsed webContents — on
+ *  BOTH will-navigate and will-redirect (the latter alone misses redirect hops). */
+function blockNonWeb(event: { preventDefault: () => void }, url: string): void {
+  if (!/^(https?:|about:)/i.test(url)) event.preventDefault();
+}
 
 /**
  * L0 tab model. Each tab is an isolated `WebContentsView` in a SEPARATE browsing partition
@@ -33,6 +98,20 @@ const MAX_TITLE_LENGTH = 2048;
 /** The isolated session partition every browsed page lives in (shared with the User-Agent switcher). */
 export const BROWSING_PARTITION = 'persist:tepegoz-web';
 
+/** Secure window options for page-opened popups (child windows): the same hardened, chrome-less profile
+ *  and isolated browsing partition as a tab's view — no preload, so the page never reaches the bridge. */
+const POPUP_WINDOW_OPTIONS: BrowserWindowConstructorOptions = {
+  webPreferences: {
+    contextIsolation: true,
+    sandbox: true,
+    nodeIntegration: false,
+    webSecurity: true,
+    partition: BROWSING_PARTITION,
+  },
+};
+
+export type NavigationObserver = (url: string, webContents: WebContents) => void;
+
 export default class TabManager {
   private static win: BrowserWindow | null = null;
   private static readonly store = new TabStore();
@@ -44,6 +123,14 @@ export default class TabManager {
   private static readonly closedUrls: string[] = [];
   /** Debounce handle for persisting the session snapshot (coalesces bursts of state changes). */
   private static persistTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Observers notified after every committed top-level navigation (did-stop-loading). */
+  private static readonly navigationObservers = new Set<NavigationObserver>();
+
+  /** Register a callback invoked after each committed top-level page load. Returns an unsubscribe fn. */
+  static onNavigation(fn: NavigationObserver): () => void {
+    TabManager.navigationObservers.add(fn);
+    return () => { TabManager.navigationObservers.delete(fn); };
+  }
 
   static attach(win: BrowserWindow): void {
     TabManager.win = win;
@@ -75,7 +162,10 @@ export default class TabManager {
     TabManager.bounds = { x: 0, y: 0, width: 0, height: 0 };
   }
 
-  static createTab(rawUrl?: string, opts?: { background?: boolean }): string {
+  static createTab(
+    rawUrl?: string,
+    opts?: { background?: boolean; openerId?: string | undefined },
+  ): string {
     TabManager.requireWin(); // fail fast if not attached to a window
     const view = new WebContentsView({
       webPreferences: {
@@ -96,6 +186,10 @@ export default class TabManager {
     TabManager.views.set(id, view);
     TabManager.wireView(id, view);
 
+    // A tab spawned FROM a grouped tab (window.open, "open link in new tab", duplicate, new-tab-right)
+    // must join that group and sit right after its opener — never break out of the group run (ADR-0020).
+    TabManager.inheritGroup(id, opts?.openerId);
+
     const target = rawUrl !== undefined ? toNavigationUrl(rawUrl, NEW_TAB_URL) : NEW_TAB_URL;
     void view.webContents.loadURL(target).catch((err: unknown) => {
       Logger.warn('Tab failed to load', { url: target, err: String(err) });
@@ -108,6 +202,21 @@ export default class TabManager {
       TabManager.activate(id);
     }
     return id;
+  }
+
+  /** If `openerId` is a grouped tab, put the new tab in the same group, right after the opener. No-op
+   *  when there's no opener or the opener is ungrouped (the tab stays where `add` placed it). */
+  private static inheritGroup(newId: string, openerId?: string): void {
+    if (openerId === undefined) return;
+    const opener = TabManager.store.get(openerId);
+    if (opener?.groupId == null) return;
+    TabManager.store.assignToGroup(newId, opener.groupId);
+    TabManager.store.placeAfter(newId, openerId);
+  }
+
+  /** The active tab's id (null if none) — lets callers open a new tab as a child of the current tab. */
+  static activeTabId(): string | null {
+    return TabManager.store.activeId;
   }
 
   static activate(id: string): void {
@@ -202,7 +311,8 @@ export default class TabManager {
   /** Open a fresh tab immediately to the right of `refId` and focus it (Chrome's "New tab to the right"). */
   static createTabRight(refId: string): void {
     if (!TabManager.store.has(refId)) return;
-    const newId = TabManager.createTab();
+    // openerId → inherits refId's group (if any); placeAfter fixes the position for the ungrouped case.
+    const newId = TabManager.createTab(undefined, { openerId: refId });
     TabManager.store.placeAfter(newId, refId);
     TabManager.emitState();
   }
@@ -217,7 +327,7 @@ export default class TabManager {
       return;
     }
     const url = view.webContents.getURL() || rec.url;
-    const newId = TabManager.createTab(url.length > 0 ? url : undefined);
+    const newId = TabManager.createTab(url.length > 0 ? url : undefined, { openerId: id });
     TabManager.store.placeAfter(newId, id);
     TabManager.emitState();
   }
@@ -243,6 +353,100 @@ export default class TabManager {
       TabManager.activate(id);
     }
     for (const k of toClose) TabManager.closeTab(k);
+  }
+
+  // ── Groups, ordering & pinning ───────────────────────────────────────────────────────────────
+  // Thin delegates to the pure TabStore (invariants + contiguity live there, ADR-0020). Each mutates
+  // the store then re-emits state so the strip re-renders.
+
+  /** Drag-reorder: move `id` to `toIndex`. `intoGroupId` resolves membership (see TabStore.moveTab). */
+  static moveTab(id: string, toIndex: number, intoGroupId?: string | null): void {
+    if (!TabManager.store.has(id)) return;
+    TabManager.store.moveTab(id, toIndex, intoGroupId);
+    TabManager.emitState();
+  }
+
+  /** Reorder a whole group's run to `toIndex` among the non-member tabs. */
+  static moveGroup(groupId: string, toIndex: number): void {
+    TabManager.store.moveGroup(groupId, toIndex);
+    TabManager.emitState();
+  }
+
+  /** Create a group from `memberIds` (defaults to the active tab) and return the new group id. */
+  static createGroup(memberIds?: string[]): string {
+    const members =
+      memberIds !== undefined && memberIds.length > 0
+        ? memberIds.filter((id) => TabManager.store.has(id))
+        : TabManager.activeGroupSeed();
+    const id = TabManager.store.createGroup({ memberIds: members });
+    TabManager.emitState();
+    return id;
+  }
+
+  /** The default single-member seed for "new group" from a context menu (the clicked/active tab). */
+  private static activeGroupSeed(): string[] {
+    const active = TabManager.store.activeId;
+    return active !== null ? [active] : [];
+  }
+
+  static assignToGroup(tabId: string, groupId: string): void {
+    TabManager.store.assignToGroup(tabId, groupId);
+    TabManager.emitState();
+  }
+
+  static removeFromGroup(tabId: string): void {
+    TabManager.store.removeFromGroup(tabId);
+    TabManager.emitState();
+  }
+
+  static renameGroup(groupId: string, name: string): void {
+    TabManager.store.renameGroup(groupId, name);
+    TabManager.emitState();
+  }
+
+  static recolorGroup(groupId: string, color: TabGroupColor): void {
+    TabManager.store.recolorGroup(groupId, color);
+    TabManager.emitState();
+  }
+
+  static setGroupCollapsed(groupId: string, collapsed: boolean): void {
+    TabManager.store.setGroupCollapsed(groupId, collapsed);
+    TabManager.emitState();
+  }
+
+  static ungroup(groupId: string): void {
+    TabManager.store.ungroup(groupId);
+    TabManager.emitState();
+  }
+
+  /** Open a new tab already assigned to `groupId` (group menu → "New tab in group"). */
+  static newTabInGroup(groupId: string): void {
+    if (TabManager.store.getGroup(groupId) === undefined) return;
+    const id = TabManager.createTab();
+    TabManager.store.assignToGroup(id, groupId);
+    TabManager.emitState();
+  }
+
+  /** Close every tab in a group (group menu → "Close group"). */
+  static closeGroup(groupId: string): void {
+    const memberIds = TabManager.store
+      .records()
+      .filter((r) => r.groupId === groupId)
+      .map((r) => r.id);
+    for (const id of memberIds) TabManager.closeTab(id);
+  }
+
+  /** The colors + current color of a group, for building the native group menu (undefined if unknown). */
+  static groupMenuInfo(groupId: string): { color: TabGroupColor } | undefined {
+    const g = TabManager.store.getGroup(groupId);
+    return g !== undefined ? { color: g.color } : undefined;
+  }
+
+  /** Pin / unpin a tab (moves to the pinned run; pinning clears group membership). */
+  static setPinned(id: string, pinned: boolean): void {
+    if (!TabManager.store.has(id)) return;
+    TabManager.store.setPinned(id, pinned);
+    TabManager.emitState();
   }
 
   static navigateActive(rawUrl: string): void {
@@ -277,6 +481,63 @@ export default class TabManager {
 
   static reloadActive(): void {
     TabManager.activeView()?.webContents.reload();
+  }
+
+  /** Print the active web page (opens the system print dialog). Page context menu → Print. */
+  static printActive(): void {
+    TabManager.activeView()?.webContents.print();
+  }
+
+  /** Open the active page's HTML source in place (Chrome's `view-source:`). Web pages only. */
+  static viewSourceActive(): void {
+    const wc = TabManager.activeView()?.webContents;
+    if (wc === undefined) return;
+    const url = wc.getURL();
+    if (isWebUrl(url)) void wc.loadURL(`view-source:${url}`).catch(() => undefined);
+  }
+
+  /** Save the active page — Electron's default download flow shows the OS save dialog. */
+  static saveActive(): void {
+    const wc = TabManager.activeView()?.webContents;
+    if (wc !== undefined) wc.downloadURL(wc.getURL());
+  }
+
+  /** Download a specific URL through the active view (Save image/video/audio as → OS save dialog). */
+  static downloadUrlActive(url: string): void {
+    if (url.length > 0) TabManager.activeView()?.webContents.downloadURL(url);
+  }
+
+  /** Editing commands on the active page (page context menu → Cut/Copy/Paste/Select all). */
+  static copyActive(): void {
+    TabManager.activeView()?.webContents.copy();
+  }
+  static cutActive(): void {
+    TabManager.activeView()?.webContents.cut();
+  }
+  static pasteActive(): void {
+    TabManager.activeView()?.webContents.paste();
+  }
+  static selectAllActive(): void {
+    TabManager.activeView()?.webContents.selectAll();
+  }
+
+  /** Copy the image at the given view-relative coordinates (px) to the clipboard. */
+  static copyImageAtActive(x: number, y: number): void {
+    TabManager.activeView()?.webContents.copyImageAt(Math.round(x), Math.round(y));
+  }
+
+  /** Open DevTools and inspect the element at the given view-relative coordinates (px). */
+  static inspectActiveAt(x: number, y: number): void {
+    const wc = TabManager.activeView()?.webContents;
+    if (wc === undefined) return;
+    const px = Math.round(x);
+    const py = Math.round(y);
+    if (wc.isDevToolsOpened()) {
+      wc.inspectElement(px, py);
+    } else {
+      wc.once('devtools-opened', () => wc.inspectElement(px, py));
+      wc.openDevTools();
+    }
   }
 
   /** Navigate the active tab to the home / start page. */
@@ -364,6 +625,7 @@ export default class TabManager {
   private static readonly WIRED_EVENTS = [
     'will-navigate',
     'will-redirect',
+    'context-menu',
     'page-title-updated',
     'page-favicon-updated',
     'did-start-loading',
@@ -385,21 +647,57 @@ export default class TabManager {
   private static wireView(id: string, view: WebContentsView): void {
     const wc = view.webContents;
 
-    // Browsed pages are untrusted. New windows open as tabs ONLY for http(s) URLs (no file:/custom
-    // schemes); a popup from a non-foreground tab opens in the background and must not steal focus.
-    wc.setWindowOpenHandler(({ url }) => {
-      if (isWebUrl(url)) {
-        TabManager.createTab(url, { background: id !== TabManager.store.activeId });
+    // Browsed pages are untrusted. Every path that creates a new browsing context (window.open,
+    // target=_blank, form/base target, event-simulated clicks) funnels through this handler, so it is
+    // the single popup enforcement point. Strict popup blocker first: block unless the SOURCE page's
+    // origin is trusted (a blocked popup raises a notification whose inline actions can still open it).
+    // When allowed we open HYBRID: plain http(s) popups become tabs (our model); popups that need a
+    // live window reference (about:blank/data:/javascript:), geometry, a POST body, or an explicit
+    // new-window disposition are created NATIVELY by Electron so `window.open` returns a scriptable ref.
+    wc.setWindowOpenHandler((details) => {
+      const target = popupTargetUrl(details.url);
+      const sourceOrigin = originOf(wc.getURL());
+      if (PopupBlockerManager.shouldBlock(sourceOrigin)) {
+        PopupBlockerManager.onBlocked(sourceOrigin, target);
+        return { action: 'deny' };
       }
+      if (needsNativeWindow(details.url) || wantsNativeWindow(details)) {
+        return { action: 'allow', overrideBrowserWindowOptions: POPUP_WINDOW_OPTIONS };
+      }
+      // Plain new tab. Non-web schemes (file:/custom) that didn't need a native window are dropped.
+      if (!isWebUrl(target)) return { action: 'deny' };
+      const background =
+        details.disposition === 'background-tab'
+          ? true
+          : details.disposition === 'foreground-tab'
+            ? false
+            : id !== TabManager.store.activeId;
+      // Spawned by the page → the opener is THIS tab, so the new tab inherits its group (ADR-0020).
+      TabManager.createTab(target, { background, openerId: id });
       return { action: 'deny' };
+    });
+    // A natively-allowed popup opens its own top-level window; harden it the same way as a browsed view
+    // (block dangerous schemes, and route ITS nested popups through the same policy).
+    wc.on('did-create-window', (win) => {
+      TabManager.wirePopupWindow(win.webContents);
     });
     // Block dangerous schemes on BOTH initial navigations and server-side redirects (will-navigate
     // alone misses redirect hops). The programmatic loadURL path is guarded by toNavigationUrl.
-    const blockNonWeb = (event: { preventDefault: () => void }, url: string): void => {
-      if (!/^(https?:|about:)/i.test(url)) event.preventDefault();
-    };
     wc.on('will-navigate', blockNonWeb);
     wc.on('will-redirect', blockNonWeb);
+
+    // Right-click on the page → open the Chrome-style page context menu as a rendered popup window
+    // (same primitive as the main menu), anchored at the click point (offset by the view's own bounds).
+    // `params` (selection/link/media/editable) picks the menu variant in the renderer.
+    wc.on('context-menu', (_e, params) => {
+      const win = TabManager.win;
+      if (win !== null) {
+        openPageContextMenu(win, params, TabManager.bounds, {
+          canGoBack: wc.navigationHistory.canGoBack(),
+          canGoForward: wc.navigationHistory.canGoForward(),
+        });
+      }
+    });
 
     const sync = (): void => {
       TabManager.store.update(id, {
@@ -427,7 +725,13 @@ export default class TabManager {
       TabManager.store.update(id, { isLoading: true });
       TabManager.emitState();
     });
-    wc.on('did-stop-loading', sync);
+    wc.on('did-stop-loading', () => {
+      sync();
+      const url = wc.getURL();
+      if (isWebUrl(url)) {
+        for (const obs of TabManager.navigationObservers) obs(url, wc);
+      }
+    });
     // A committed top-level navigation means a new document — drop the old favicon so a stale icon
     // from the previous page can't linger (the new one arrives via page-favicon-updated).
     wc.on('did-navigate', () => {
@@ -444,6 +748,29 @@ export default class TabManager {
     });
     wc.on('did-navigate', sync);
     wc.on('did-navigate-in-page', sync);
+  }
+
+  /** Harden a natively-opened popup window's webContents: block dangerous-scheme navigations and route
+   *  its OWN popups through the same blocker + hybrid policy. A popup window has no tab context, so its
+   *  nested popups (when allowed) stay native windows rather than becoming tabs. */
+  private static wirePopupWindow(wc: WebContents): void {
+    wc.setWindowOpenHandler((details) => {
+      const target = popupTargetUrl(details.url);
+      const sourceOrigin = originOf(wc.getURL());
+      if (PopupBlockerManager.shouldBlock(sourceOrigin)) {
+        PopupBlockerManager.onBlocked(sourceOrigin, target);
+        return { action: 'deny' };
+      }
+      if (isWebUrl(target) || needsNativeWindow(details.url) || wantsNativeWindow(details)) {
+        return { action: 'allow', overrideBrowserWindowOptions: POPUP_WINDOW_OPTIONS };
+      }
+      return { action: 'deny' };
+    });
+    wc.on('did-create-window', (win) => {
+      TabManager.wirePopupWindow(win.webContents);
+    });
+    wc.on('will-navigate', blockNonWeb);
+    wc.on('will-redirect', blockNonWeb);
   }
 
   private static emitState(): void {
@@ -470,10 +797,11 @@ export default class TabManager {
     if (url !== undefined) TabManager.createTab(url);
   }
 
-  /** The ordered web-tab URLs + active index, for the persisted session snapshot. Internal (view-less)
-   *  tabs and blank/unloaded tabs are skipped — only real web pages are restored. */
-  private static snapshot(): { tabs: string[]; activeIndex: number } {
-    const tabs: string[] = [];
+  /** The ordered web tabs (URL + pin + group membership) + group metadata + active index, for the
+   *  persisted session snapshot. Internal (view-less) tabs and blank/unloaded tabs are skipped — only
+   *  real web pages are restored (ADR-0020). */
+  private static snapshot(): SessionSnapshot {
+    const tabs: PersistedTab[] = [];
     let activeIndex = -1;
     for (const rec of TabManager.store.records()) {
       // Prefer the live URL, but on window close the webContents may already be gone — fall back to the
@@ -482,9 +810,17 @@ export default class TabManager {
       const url = (wc !== undefined && !wc.isDestroyed() ? wc.getURL() : '') || rec.url;
       if (rec.kind !== 'web' || !isWebUrl(url)) continue;
       if (rec.id === TabManager.store.activeId) activeIndex = tabs.length;
-      tabs.push(url);
+      tabs.push({ url, pinned: rec.pinned, groupId: rec.groupId });
     }
-    return { tabs, activeIndex };
+    // Only persist groups that still own at least one persisted (web) tab.
+    const liveGroups = new Set(
+      tabs.map((t) => t.groupId).filter((g): g is string => g !== null),
+    );
+    const groups: PersistedGroup[] = TabManager.store
+      .groupsInOrder()
+      .filter((g) => liveGroups.has(g.id))
+      .map((g) => ({ id: g.id, name: g.name, color: g.color, collapsed: g.collapsed }));
+    return { version: 2, tabs, groups, activeIndex };
   }
 
   /** Debounced session persist — coalesces the burst of state changes during a page load into one write. */
@@ -514,14 +850,34 @@ export default class TabManager {
     if (db === null) return false;
     const snap = SessionStore.load(db);
     if (snap === null || snap.tabs.length === 0) return false;
-    snap.tabs.forEach((url, i) => {
+
+    // 1. Recreate tabs in order, remembering the persisted-index → new-tab-id mapping.
+    const createdIds = snap.tabs.map((t, i) =>
       // First tab takes focus; the rest open in the background so they don't each steal it.
-      TabManager.createTab(url, { background: i !== 0 });
-    });
-    const ids = TabManager.store.ids();
-    if (snap.activeIndex >= 0 && snap.activeIndex < ids.length) {
-      TabManager.activate(ids[snap.activeIndex]!);
+      TabManager.createTab(t.url, { background: i !== 0 }),
+    );
+
+    // 2. Re-create groups with their metadata, then restore membership + pins (order changes as the
+    //    store normalizes, so we track the ACTIVE tab by id, not by the persisted index).
+    for (const pg of snap.groups) {
+      const memberIds = snap.tabs
+        .map((t, i) => (t.groupId === pg.id ? createdIds[i]! : null))
+        .filter((id): id is string => id !== null);
+      if (memberIds.length === 0) continue;
+      const gid = TabManager.store.createGroup({ name: pg.name, color: asGroupColor(pg.color), memberIds });
+      TabManager.store.setGroupCollapsed(gid, pg.collapsed);
     }
+    snap.tabs.forEach((t, i) => {
+      if (t.pinned) TabManager.store.setPinned(createdIds[i]!, true);
+    });
+
+    // 3. Activate the persisted active tab by its new id (robust to the normalized reordering).
+    const activeId =
+      snap.activeIndex >= 0 && snap.activeIndex < createdIds.length
+        ? createdIds[snap.activeIndex]
+        : undefined;
+    if (activeId !== undefined) TabManager.activate(activeId);
+    else TabManager.emitState();
     return true;
   }
 }

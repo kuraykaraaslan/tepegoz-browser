@@ -83,6 +83,8 @@ export function App() {
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [status, setStatus] = useState<CredentialsStatus | null>(null);
   const [tabs, setTabs] = useState<TabsState>(EMPTY_TABS);
+  // A group whose inline rename editor should open (set by the native group menu's "Rename" push).
+  const [renamingGroupId, setRenamingGroupId] = useState<string | null>(null);
   // The extension surface currently overlaid on the content area (popup/modal/panel), or null. A `page`
   // action opens an internal tab instead, so it never lives here.
   const [activeSurface, setActiveSurface] = useState<ActiveSurface | null>(null);
@@ -201,7 +203,12 @@ export function App() {
         console.warn('Initial IPC state fetch failed — rendering with defaults', err);
       }
     })();
-    return window.tepegoz.onTabsState(setTabs);
+    const unsubTabs = window.tepegoz.onTabsState(setTabs);
+    const unsubRename = window.tepegoz.onTabGroupStartRename(setRenamingGroupId);
+    return () => {
+      unsubTabs();
+      unsubRename();
+    };
   }, []);
 
   // Transient toasts: append each pushed toast (capped to the newest 3; individual auto-dismiss timers
@@ -542,10 +549,19 @@ export function App() {
           }}
           onCloseTab={(id) => window.tepegoz.closeTab(id)}
           onTabContextMenu={(id) => window.tepegoz.showTabContextMenu(id)}
+          onTabGroupContextMenu={(groupId) => window.tepegoz.showTabGroupContextMenu(groupId)}
+          onRenameTabGroupHandled={() => setRenamingGroupId(null)}
           onNewTab={() => {
             setActiveSurface(null);
             window.tepegoz.createTab();
           }}
+          onMoveTab={(id, toIndex) => window.tepegoz.moveTab(id, toIndex)}
+          onMoveTabGroup={(groupId, toIndex) => window.tepegoz.moveTabGroup(groupId, toIndex)}
+          onAssignTabToGroup={(tabId, groupId) => window.tepegoz.assignTabToGroup(tabId, groupId)}
+          onToggleGroupCollapsed={(groupId, collapsed) =>
+            window.tepegoz.updateTabGroup(groupId, { collapsed })
+          }
+          onRenameTabGroup={(groupId, name) => window.tepegoz.updateTabGroup(groupId, { name })}
           isMaximized={isMaximized}
           onMinimize={() => window.tepegoz.minimizeWindow()}
           onToggleMaximize={() => window.tepegoz.toggleMaximizeWindow()}

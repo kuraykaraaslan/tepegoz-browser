@@ -18,6 +18,8 @@ const STRINGS: BrowserChromeStrings = {
     omniboxPlaceholder: 'Search or type a URL',
     bookmarkAdd: 'Add bookmark',
     bookmarkRemove: 'Remove bookmark',
+    unnamedGroup: 'Group',
+    toggleGroup: 'Toggle group',
   },
 };
 

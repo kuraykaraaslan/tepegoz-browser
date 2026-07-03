@@ -158,6 +158,26 @@ export interface CredentialsStatus {
   providers: ProviderKeyStatus;
 }
 
+/** One of the fixed Chrome-style tab-group colors (ADR-0020). */
+export type TabGroupColor =
+  | 'grey'
+  | 'blue'
+  | 'red'
+  | 'yellow'
+  | 'green'
+  | 'pink'
+  | 'purple'
+  | 'cyan'
+  | 'orange';
+
+/** A tab group: purely organizational metadata (ADR-0020), never a session/policy partition. */
+export interface TabGroupInfo {
+  id: string;
+  name: string;
+  color: TabGroupColor;
+  collapsed: boolean;
+}
+
 export interface TabInfo {
   id: string;
   title: string;
@@ -165,10 +185,22 @@ export interface TabInfo {
   isLoading: boolean;
   /** Page favicon URL (http(s)/data:), or null when the page has none yet. */
   faviconUrl: string | null;
+  /** Pinned tabs form a run at the front of the strip and cannot belong to a group (ADR-0020). */
+  pinned: boolean;
+  /** Owning group id, or null when ungrouped. Mutually exclusive with `pinned`. */
+  groupId: string | null;
+  /** True while the page is producing audio. */
+  audible?: boolean;
+  /** True when the user has muted this tab's audio. */
+  muted?: boolean;
+  /** True when the tab's view has been discarded (sleeping) and will reload on next activation. */
+  discarded?: boolean;
 }
 
 export interface TabsState {
   tabs: TabInfo[];
+  /** Groups in strip order (each group's member tabs are contiguous in `tabs`). */
+  groups: TabGroupInfo[];
   activeId: string | null;
   canGoBack: boolean;
   canGoForward: boolean;
@@ -231,6 +263,8 @@ export interface TepegozApi {
   onWindowMaximizedChange(callback: (maximized: boolean) => void): () => void;
   // Browser tabs (each is an isolated WebContentsView in the main process).
   createTab(url?: string): void;
+  /** Open a URL in a background tab (does not steal focus). */
+  createTabInBackground(url: string): void;
   closeTab(id: string): void;
   activateTab(id: string): void;
   /** Pop the native right-click menu for a tab (Chrome-style), acted on in the main process. */
@@ -244,6 +278,28 @@ export interface TepegozApi {
   tabHome(): void;
   /** Reopen the most-recently-closed tab (Ctrl+Shift+T). */
   reopenClosedTab(): void;
+  // Advanced tab UX (ADR-0020): drag-reorder, groups, pinning. All fire-and-forget; state arrives via
+  // `onTabsState`.
+  /** Drag-reorder a tab to `toIndex`. `intoGroupId`: a group id joins it, null ungroups, omitted infers. */
+  moveTab(id: string, toIndex: number, intoGroupId?: string | null): void;
+  /** Pin or unpin a tab (pinned tabs sit at the front and leave any group). */
+  setTabPinned(id: string, pinned: boolean): void;
+  /** Create a group from `memberIds` (empty/omitted → the active tab). */
+  createTabGroup(memberIds?: string[]): void;
+  /** Reorder a whole group's run to `toIndex` among the non-member tabs. */
+  moveTabGroup(groupId: string, toIndex: number): void;
+  /** Patch a group's name/color/collapsed (only provided keys change). */
+  updateTabGroup(groupId: string, patch: { name?: string; color?: TabGroupColor; collapsed?: boolean }): void;
+  /** Add a tab to an existing group. */
+  assignTabToGroup(tabId: string, groupId: string): void;
+  /** Remove a tab from its group (it becomes ungrouped). */
+  removeTabFromGroup(tabId: string): void;
+  /** Dissolve a group (its tabs become ungrouped). */
+  ungroupTabGroup(groupId: string): void;
+  /** Pop the native group context menu (right-click a group header), acted on in the main process. */
+  showTabGroupContextMenu(groupId: string): void;
+  /** Main→renderer: open the inline rename editor for a group (from the native "Rename" menu item). */
+  onTabGroupStartRename(callback: (groupId: string) => void): () => void;
   /** Report the content-area rect so main can lay out the active web view below the chrome. */
   setContentBounds(bounds: ContentBounds): void;
   /** Hide/show the web view so a chrome overlay (e.g. Settings) can take the content area. */
