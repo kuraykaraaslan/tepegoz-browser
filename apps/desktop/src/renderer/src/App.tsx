@@ -441,7 +441,7 @@ export function App() {
     const { term } = parseOmniboxQuery(query);
     let history: Awaited<ReturnType<typeof window.tepegoz.searchHistory>> = [];
     try {
-      history = term.length > 0 ? await window.tepegoz.searchHistory(term) : [];
+      history = term.length > 0 ? await window.tepegoz.searchHistory({ query: term }) : [];
     } catch {
       history = []; // history unavailable → still surface tabs/bookmarks + the navigate/search action
     }
@@ -467,7 +467,10 @@ export function App() {
 
   // Stable data-source bindings for HistoryPage — it refetches when `list` changes identity.
   const historyList = useCallback(
-    (q: string) => (q.length === 0 ? window.tepegoz.getHistory() : window.tepegoz.searchHistory(q)),
+    (q: string, offset: number) =>
+      q.length === 0
+        ? window.tepegoz.getHistory({ offset })
+        : window.tepegoz.searchHistory({ query: q, offset }),
     [],
   );
   const historyRemove = useCallback((url: string) => window.tepegoz.deleteHistory(url), []);

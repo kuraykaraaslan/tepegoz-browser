@@ -7,4 +7,5 @@ export const tr: HistoryStrings = {
   empty: 'Henüz geçmiş yok',
   clear: 'Tümünü temizle',
   delete: 'Kaldır',
+  loading: 'Yükleniyor...',
 };

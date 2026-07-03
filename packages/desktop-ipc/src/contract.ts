@@ -423,11 +423,11 @@ export interface TepegozApi {
   getPageMenuContext(): Promise<PageMenuContext>;
   /** Run a wired page-menu action against the captured context (acted on in the main process). */
   pageMenuAction(action: PageMenuAction): void;
-  // Browsing history (tepegoz://history). All return the fresh list so the page re-renders.
-  getHistory(): Promise<HistoryEntry[]>;
-  searchHistory(query: string): Promise<HistoryEntry[]>;
-  deleteHistory(url: string): Promise<HistoryEntry[]>;
-  clearHistory(): Promise<HistoryEntry[]>;
+  // Browsing history (tepegoz://history).
+  getHistory(params?: { limit?: number; offset?: number }): Promise<HistoryEntry[]>;
+  searchHistory(params: { query: string; limit?: number; offset?: number }): Promise<HistoryEntry[]>;
+  deleteHistory(url: string): Promise<void>;
+  clearHistory(): Promise<void>;
   // Bookmarks. Only http(s) pages are bookmarkable (internal tepegoz:// pages are rejected in main).
   /** All bookmarks, newest-first. */
   listBookmarks(): Promise<BookmarkEntry[]>;

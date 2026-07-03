@@ -249,10 +249,12 @@ const api: TepegozApi = {
   pageMenuAction: (action: PageMenuAction) => {
     ipcRenderer.send(IpcChannels.pageMenuAction, action);
   },
-  getHistory: () => invoke<HistoryEntry[]>(IpcChannels.historyList),
-  searchHistory: (query: string) => invoke<HistoryEntry[]>(IpcChannels.historySearch, query),
-  deleteHistory: (url: string) => invoke<HistoryEntry[]>(IpcChannels.historyDelete, url),
-  clearHistory: () => invoke<HistoryEntry[]>(IpcChannels.historyClear),
+  getHistory: (params?: { limit?: number; offset?: number }) =>
+    invoke<HistoryEntry[]>(IpcChannels.historyList, params),
+  searchHistory: (params: { query: string; limit?: number; offset?: number }) =>
+    invoke<HistoryEntry[]>(IpcChannels.historySearch, params),
+  deleteHistory: (url: string) => invoke<void>(IpcChannels.historyDelete, url),
+  clearHistory: () => invoke<void>(IpcChannels.historyClear),
   listBookmarks: () => invoke<BookmarkEntry[]>(IpcChannels.bookmarksList),
   toggleBookmark: (url: string, title: string) =>
     invoke<boolean>(IpcChannels.bookmarksToggle, { url, title }),

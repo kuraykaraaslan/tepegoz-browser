@@ -641,28 +641,28 @@ export function registerIpc(): void {
 
   handle(IpcChannels.tokenUsageGet, (): TokenUsageSnapshot => tokenUsage());
 
-  // Browsing history (tepegoz://history). Each returns the fresh list so the page re-renders.
-  handle(IpcChannels.historyList, (): HistoryEntry[] => {
+  // Browsing history (tepegoz://history).
+  handle(IpcChannels.historyList, (_event, payload): HistoryEntry[] => {
+    const { limit, offset } = HistoryPageParamsSchema.parse(payload ?? {});
     const db = getDb();
-    return db !== null ? HistoryStore.list(db) : [];
+    return db !== null ? HistoryStore.list(db, limit, offset) : [];
   });
   handle(IpcChannels.historySearch, (_event, payload): HistoryEntry[] => {
-    const query = HistoryQuerySchema.parse(payload).trim();
+    const { query, limit, offset } = HistorySearchParamsSchema.parse(payload ?? {});
     const db = getDb();
     if (db === null) return [];
-    return query.length === 0 ? HistoryStore.list(db) : HistoryStore.search(db, query);
+    return query.trim().length === 0
+      ? HistoryStore.list(db, limit, offset)
+      : HistoryStore.search(db, query.trim(), limit, offset);
   });
-  handle(IpcChannels.historyDelete, (_event, payload): HistoryEntry[] => {
+  handle(IpcChannels.historyDelete, (_event, payload): void => {
     const url = HistoryUrlSchema.parse(payload);
     const db = getDb();
-    if (db === null) return [];
-    HistoryStore.deleteUrl(db, url);
-    return HistoryStore.list(db);
+    if (db !== null) HistoryStore.deleteUrl(db, url);
   });
-  handle(IpcChannels.historyClear, (): HistoryEntry[] => {
+  handle(IpcChannels.historyClear, (): void => {
     const db = getDb();
     if (db !== null) HistoryStore.clear(db);
-    return [];
   });
 
   // Bookmarks. Only http(s) pages are bookmarkable — internal tepegoz:// pages and non-web schemes

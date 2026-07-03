@@ -5,6 +5,7 @@ export const en = {
   empty: 'No history yet',
   clear: 'Clear all',
   delete: 'Remove',
+  loading: 'Loading...',
 };
 
 export type HistoryStrings = typeof en;

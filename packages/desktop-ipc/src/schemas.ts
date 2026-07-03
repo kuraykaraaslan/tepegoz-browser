@@ -101,6 +101,16 @@ export const AgentPlanResponseSchema = z.object({
 export const HistoryQuerySchema = z.string().max(200);
 export const HistoryUrlSchema = z.string().min(1).max(4096);
 
+export const HistoryPageParamsSchema = z.object({
+  limit: z.number().int().min(1).max(200).default(50),
+  offset: z.number().int().min(0).default(0),
+});
+export const HistorySearchParamsSchema = z.object({
+  query: z.string().max(200).default(''),
+  limit: z.number().int().min(1).max(200).default(50),
+  offset: z.number().int().min(0).default(0),
+});
+
 /** `bookmarks:toggle` payload — the page URL + its title (title defaults to the URL if empty). */
 export const BookmarkToggleSchema = z.object({
   url: z.string().min(1).max(4096),

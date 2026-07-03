@@ -32,21 +32,21 @@ export class HistoryStore {
     ).run(entry);
   }
 
-  static list(db: Db, limit = 200): HistoryEntry[] {
+  static list(db: Db, limit = 50, offset = 0): HistoryEntry[] {
     const rows = db
-      .prepare('SELECT url, title, ts, visit_count FROM history ORDER BY ts DESC LIMIT ?')
-      .all(limit) as HistoryRow[];
+      .prepare('SELECT url, title, ts, visit_count FROM history ORDER BY ts DESC LIMIT ? OFFSET ?')
+      .all(limit, offset) as HistoryRow[];
     return rows.map(toEntry);
   }
 
-  static search(db: Db, query: string, limit = 200): HistoryEntry[] {
+  static search(db: Db, query: string, limit = 50, offset = 0): HistoryEntry[] {
     const like = `%${query}%`;
     const rows = db
       .prepare(
         `SELECT url, title, ts, visit_count FROM history
-         WHERE url LIKE ? OR title LIKE ? ORDER BY ts DESC LIMIT ?`,
+         WHERE url LIKE ? OR title LIKE ? ORDER BY ts DESC LIMIT ? OFFSET ?`,
       )
-      .all(like, like, limit) as HistoryRow[];
+      .all(like, like, limit, offset) as HistoryRow[];
     return rows.map(toEntry);
   }
 
