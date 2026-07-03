@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faRobot, faUserSecret } from '@fortawesome/free-solid-svg-icons';
+import { faBan, faRobot, faUserSecret, faWandMagicSparkles } from '@fortawesome/free-solid-svg-icons';
 import type { ExtensionManifest, ExtensionSurfaceKind } from '@tepegoz/extension-sdk';
 import { agentManifest, AgentPanel } from '@tepegoz/ext-agent';
 import { userAgentManifest, UserAgentPopup, UserAgentPage } from '@tepegoz/ext-user-agent';
+import { popupBlockerManifest, PopupBlockerPopup, PopupBlockerPage } from '@tepegoz/ext-popup-blocker';
+import { macrosManifest, MacrosPanel, MacrosPage } from '@tepegoz/ext-macros';
 
 /**
  * Renderer registry of internal extensions. Each entry pairs a schema-validated {@link ExtensionManifest}
@@ -33,6 +35,14 @@ function UserAgentIcon() {
   return <FontAwesomeIcon icon={faUserSecret} className="h-4 w-4" aria-hidden />;
 }
 
+function PopupBlockerIcon() {
+  return <FontAwesomeIcon icon={faBan} className="h-4 w-4" aria-hidden />;
+}
+
+function MacrosIcon() {
+  return <FontAwesomeIcon icon={faWandMagicSparkles} className="h-4 w-4" aria-hidden />;
+}
+
 export const EXTENSIONS: readonly ExtensionDef[] = [
   {
     id: agentManifest.id,
@@ -50,6 +60,26 @@ export const EXTENSIONS: readonly ExtensionDef[] = [
     surfaces: {
       popup: ({ onClose }) => <UserAgentPopup api={window.tepegoz} onClose={onClose} />,
       page: ({ onClose }) => <UserAgentPage api={window.tepegoz} onClose={onClose} />,
+    },
+  },
+  {
+    id: popupBlockerManifest.id,
+    manifest: popupBlockerManifest,
+    icon: <PopupBlockerIcon />,
+    surfaces: {
+      popup: ({ onClose }) => <PopupBlockerPopup api={window.tepegoz} onClose={onClose} />,
+      page: ({ onClose }) => <PopupBlockerPage api={window.tepegoz} onClose={onClose} />,
+    },
+  },
+  {
+    id: macrosManifest.id,
+    manifest: macrosManifest,
+    icon: <MacrosIcon />,
+    surfaces: {
+      // Record/run lives in the resizable sidebar so the page stays visible; the page surface is the
+      // full "My Macros" manager at tepegoz://com.tepegoz.macros.
+      sidebar: ({ onClose }) => <MacrosPanel api={window.tepegoz} onClose={onClose} />,
+      page: ({ onClose }) => <MacrosPage api={window.tepegoz} onClose={onClose} />,
     },
   },
 ];

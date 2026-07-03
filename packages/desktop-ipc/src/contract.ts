@@ -29,6 +29,11 @@ export type {
   TokenUsageSnapshot,
 };
 
+// Popup Blocker settings shape is owned by the extension package (like the Agent wire types above),
+// so the extension stays the single source of truth. Type-only → erased for the sandboxed preload.
+import type { PopupBlockerRequest, PopupBlockerSettings } from '@tepegoz/ext-popup-blocker/types';
+export type { PopupBlockerRequest, PopupBlockerSettings };
+
 // Browsing-history + bookmark entry types live in the persistence package (single source). Type-only
 // imports → erased, so the sandboxed preload stays dependency-free.
 import type { BookmarkEntry, HistoryEntry } from '@tepegoz/persistence';
@@ -132,6 +137,8 @@ export interface Preferences {
   notificationsEnabled: boolean;
   /** Per-origin web-capability permissions (currently the Web Notification API consent state). */
   sitePermissions: Record<string, SitePermissions>;
+  /** Popup Blocker (strict) extension settings. */
+  popupBlocker: PopupBlockerSettings;
 }
 
 /** Per-origin web-capability grants. Keyed by origin in `Preferences.sitePermissions`. */
@@ -392,6 +399,15 @@ export interface TepegozApi {
   getUserAgent(): Promise<string | null>;
   /** Apply a UA string for browsed pages, or null to reset to the default. Returns the stored value. */
   setUserAgent(ua: string | null): Promise<string | null>;
+  // Popup Blocker (strict) extension: read/apply settings + trust an origin.
+  /** The current popup-blocker settings. */
+  getPopupBlockerSettings(): Promise<PopupBlockerSettings>;
+  /** Patch popup-blocker settings (only provided keys change). Returns the stored settings. */
+  setPopupBlockerSettings(patch: Partial<PopupBlockerSettings>): Promise<PopupBlockerSettings>;
+  /** Add an origin to the popup-blocker trust allowlist (its future popups pass). */
+  trustPopupOrigin(origin: string): void;
+  /** The most-recent blocked-popup events this session (newest first, max 20). */
+  getRecentRequests(): Promise<PopupBlockerRequest[]>;
   /** Read-only status of every configured MCP server (Settings → Connections). Never returns secrets. */
   getMcpStatus(): Promise<McpServerStatusInfo[]>;
   /** Subscribe to "open this extension panel" requests; returns an unsubscribe fn. */

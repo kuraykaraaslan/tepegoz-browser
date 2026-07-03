@@ -122,6 +122,21 @@ export const BookmarkUrlSchema = z.string().min(1).max(4096);
 /** `user-agent:set` payload — a UA string to apply, or null to reset to the browser default. */
 export const UserAgentSelectionSchema = z.string().max(512).nullable();
 
+/** `popup-blocker:set` payload — a partial settings patch (only provided keys change). */
+export const PopupBlockerPatchSchema = z
+  .object({
+    enabled: z.boolean(),
+    showNotifications: z.boolean(),
+    trustedOrigins: z.array(z.string().max(2048)).max(500),
+  })
+  .partial();
+
+/** `popup-blocker:trust` payload — an origin to add to the trust allowlist. */
+export const PopupOriginSchema = z.string().min(1).max(2048);
+
+/** `extension:context-menu` payload — the reverse-DNS id of the toolbar icon that was right-clicked. */
+export const ExtensionIdSchema = z.string().regex(EXTENSION_ID_RE).max(128);
+
 /**
  * `popup:open` payload — the reusable native popup primitive. `surface` is the surface kind (e.g.
  * 'main-menu' | 'ext'); `id` is required only for the extension surface; `anchor` is the trigger's rect

@@ -203,6 +203,13 @@ const api: TepegozApi = {
   getTokenUsage: () => invoke<TokenUsageSnapshot>(IpcChannels.tokenUsageGet),
   getUserAgent: () => invoke<string | null>(IpcChannels.userAgentGet),
   setUserAgent: (ua: string | null) => invoke<string | null>(IpcChannels.userAgentSet, ua),
+  getPopupBlockerSettings: () => invoke<PopupBlockerSettings>(IpcChannels.popupBlockerGet),
+  setPopupBlockerSettings: (patch: Partial<PopupBlockerSettings>) =>
+    invoke<PopupBlockerSettings>(IpcChannels.popupBlockerSet, patch),
+  trustPopupOrigin: (origin: string) => {
+    ipcRenderer.send(IpcChannels.popupBlockerTrust, origin);
+  },
+  getRecentRequests: () => invoke<PopupBlockerRequest[]>(IpcChannels.popupBlockerRecentRequests),
   getMcpStatus: () => invoke<McpServerStatusInfo[]>(IpcChannels.mcpGetStatus),
   onOpenExtension: (callback: (id: ExtensionId) => void) => {
     const listener = (_event: unknown, id: ExtensionId): void => {

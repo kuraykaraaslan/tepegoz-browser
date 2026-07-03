@@ -74,6 +74,10 @@ export const IpcChannels = {
   bookmarksIsBookmarked: 'bookmarks:is-bookmarked',
   userAgentGet: 'user-agent:get',
   userAgentSet: 'user-agent:set',
+  popupBlockerGet: 'popup-blocker:get',
+  popupBlockerSet: 'popup-blocker:set',
+  popupBlockerTrust: 'popup-blocker:trust',
+  popupBlockerRecentRequests: 'popup-blocker:recent-requests',
   mcpGetStatus: 'mcp:get-status',
   // Notification center: list/mutate the persisted center, plus main→renderer pushes for live state,
   // transient toasts, and the per-site Web Notification consent prompt.

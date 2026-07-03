@@ -9,6 +9,7 @@ import { initStores } from './stores.electron';
 import { closeDatabase } from './db/database.electron';
 import TabManager from './tabs';
 import UserAgentManager from './user-agent';
+import PopupBlockerManager from './popup-blocker';
 import PopupWindowManager from './popup-window';
 import McpService from './mcp/supervisor.electron';
 import ExtensionCapabilityService from './extensions/capability-supervisor.electron';
@@ -109,6 +110,8 @@ if (!app.requestSingleInstanceLock()) {
       initStores();
       // Apply the persisted User-Agent override to the browsing session BEFORE the first tab opens.
       UserAgentManager.init();
+      // Load the popup-blocker settings before any page can call window.open.
+      PopupBlockerManager.init();
       registerIpc();
       bootstrap();
       // Connect configured MCP servers in the background (non-blocking; a bad server must not delay

@@ -1,11 +1,14 @@
 {
-  "name": "@tepegoz/desktop-ipc",
+  "name": "@tepegoz/ext-popup-blocker",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./schemas": "./src/schemas.ts"
+    "./manifest": "./src/manifest.ts",
+    "./panel": "./src/panel.tsx",
+    "./types": "./src/types.ts",
+    "./i18n": "./src/i18n/index.ts"
   },
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -14,14 +17,15 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@tepegoz/ext-agent": "workspace:*",
-    "@tepegoz/ext-popup-blocker": "workspace:*",
     "@tepegoz/extension-sdk": "workspace:*",
-    "@tepegoz/persistence": "workspace:*",
-    "@tepegoz/shared-types": "workspace:*",
-    "zod": "3.23.8"
+    "@tepegoz/i18n": "workspace:*",
+    "@tepegoz/ui": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^18 || ^19"
   },
   "devDependencies": {
+    "@types/react": "^18.3.18",
     "typescript": "^5.7.2"
   }
 }

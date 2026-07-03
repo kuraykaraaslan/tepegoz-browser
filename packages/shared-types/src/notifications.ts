@@ -30,12 +30,23 @@ export type SitePermissionState = (typeof SITE_PERMISSION_STATES)[number];
 /**
  * What a notification action does when activated (a bounded, safe set so the host can execute it from
  * the action's type alone — no arbitrary callbacks cross the IPC boundary):
- *  - `open_url` — open `NotificationAction.url` in a new tab;
+ *  - `open_url` — open `NotificationAction.url` in a new (foreground) tab;
+ *  - `open_url_background` — open `NotificationAction.url` in a background tab (no focus steal);
+ *  - `navigate_current` — navigate the ACTIVE tab to `NotificationAction.url`;
+ *  - `trust_origin` — trust the notification's `origin` (allow its popups) + open `url` if present;
  *  - `open_settings` — open the app settings page;
  *  - `mark_read` — mark this notification read;
  *  - `dismiss` — dismiss this notification.
  */
-export const NOTIFICATION_ACTION_TYPES = ['open_url', 'open_settings', 'mark_read', 'dismiss'] as const;
+export const NOTIFICATION_ACTION_TYPES = [
+  'open_url',
+  'open_url_background',
+  'navigate_current',
+  'trust_origin',
+  'open_settings',
+  'mark_read',
+  'dismiss',
+] as const;
 export type NotificationActionType = (typeof NOTIFICATION_ACTION_TYPES)[number];
 
 /** One actionable button on a notification. Multiple may be attached (see `AppNotification.actions`). */

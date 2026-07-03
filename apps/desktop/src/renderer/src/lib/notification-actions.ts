@@ -17,6 +17,28 @@ export function runNotificationAction(item: AppNotification, action: Notificatio
         return true;
       }
       return false;
+    case 'open_url_background':
+      if (action.url !== undefined && action.url.length > 0) {
+        window.tepegoz.createTabInBackground(action.url);
+        return true;
+      }
+      return false;
+    case 'navigate_current':
+      if (action.url !== undefined && action.url.length > 0) {
+        window.tepegoz.navigateTab(action.url);
+        return true;
+      }
+      return false;
+    case 'trust_origin':
+      // Trust the source site (its future popups pass), then open the pending popup.
+      if (item.origin !== undefined && item.origin.length > 0) {
+        window.tepegoz.trustPopupOrigin(item.origin);
+      }
+      if (action.url !== undefined && action.url.length > 0) {
+        window.tepegoz.createTab(action.url);
+        return true;
+      }
+      return false;
     case 'open_settings':
       window.tepegoz.navigateTab(INTERNAL_SETTINGS_URL);
       return true;

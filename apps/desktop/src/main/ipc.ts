@@ -694,4 +694,17 @@ export function registerIpc(): void {
     const ua = UserAgentSelectionSchema.parse(payload);
     return UserAgentManager.set(ua);
   });
+
+  // Popup Blocker (strict) extension: read/patch settings + trust an origin.
+  handle(IpcChannels.popupBlockerGet, (): PopupBlockerSettings => PopupBlockerManager.get());
+  handle(IpcChannels.popupBlockerSet, (_event, payload): PopupBlockerSettings => {
+    const patch = PopupBlockerPatchSchema.parse(payload) as Partial<PopupBlockerSettings>;
+    return PopupBlockerManager.update(patch);
+  });
+  onAction(IpcChannels.popupBlockerTrust, PopupOriginSchema, (origin) => {
+    PopupBlockerManager.trustOrigin(origin);
+  });
+  handle(IpcChannels.popupBlockerRecentRequests, (): PopupBlockerRequest[] =>
+    PopupBlockerManager.getRecentRequests(),
+  );
 }

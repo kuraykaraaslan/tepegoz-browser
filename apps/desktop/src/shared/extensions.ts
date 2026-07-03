@@ -10,10 +10,17 @@
 import type { ExtensionManifest } from '@tepegoz/extension-sdk';
 import { agentManifest } from '@tepegoz/ext-agent/manifest';
 import { userAgentManifest } from '@tepegoz/ext-user-agent/manifest';
+import { popupBlockerManifest } from '@tepegoz/ext-popup-blocker/manifest';
+import { macrosManifest } from '@tepegoz/ext-macros/manifest';
 
 /** Every built-in extension's manifest. Add new built-ins here (and their components in the renderer
  *  registry). Real MV3/third-party extensions are a later phase. */
-export const BUILTIN_MANIFESTS: readonly ExtensionManifest[] = [agentManifest, userAgentManifest];
+export const BUILTIN_MANIFESTS: readonly ExtensionManifest[] = [
+  agentManifest,
+  userAgentManifest,
+  popupBlockerManifest,
+  macrosManifest,
+];
 
 /** All built-in extension ids (reverse-DNS), for iteration in menus etc. */
 export const EXTENSION_IDS: readonly string[] = BUILTIN_MANIFESTS.map((m) => m.id);
