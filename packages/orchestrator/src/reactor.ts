@@ -1,0 +1,201 @@
+import { AppError } from '@tepegoz/libs';
+import { ModelGateway, type CanonMessage } from '@tepegoz/model-gateway';
+import { ToolGateway, type InvokeContext } from '@tepegoz/capability-plane';
+import { z } from 'zod';
+import type { AIProvider, ToolDescriptor, ToolError } from '@tepegoz/shared-types';
+import type { StepOutcome, StopReason } from './executor';
+import { ReactorMessages } from './messages';
+
+/**
+ * L3 reactive executor — the perceive → decide → act loop. Unlike the static {@link Executor} (which
+ * runs a plan fixed *before* the page is seen), the reactor asks the model for the NEXT single tool
+ * call given the goal + everything observed so far, runs it through the single ToolGateway PEP (Policy
+ * Kernel + HITL), feeds the observation back, and repeats — so the agent can target live element
+ * `ref`s from `browser_get_elements`, react to what a page actually shows, and recover from a failed
+ * step. Same Phase-1a safeguards as the static executor: hard `maxSteps` cap, Loop Detector, abort,
+ * and a post-step guard (Human Handoff Controller). The model's output is UNTRUSTED — every decision
+ * is JSON-extracted + zod-validated and the chosen tool must be registered before it can run.
+ */
+
+/** The model's next move: run one tool, or declare the goal met. Validated at the (untrusted) boundary. */
+const DecisionSchema = z.discriminatedUnion('action', [
+  z.object({
+    action: z.literal('act'),
+    tool: z.string().min(1).max(100),
+    args: z.unknown().default({}),
+    rationale: z.string().max(500).default(''),
+  }),
+  z.object({ action: z.literal('finish'), summary: z.string().max(1000).default('') }),
+]);
+export type Decision = z.infer<typeof DecisionSchema>;
+
+function extractJson(text: string): string {
+  const fenced = /```(?:json)?\s*([\s\S]*?)```/i.exec(text);
+  const body = fenced?.[1] ?? text;
+  const start = body.indexOf('{');
+  const end = body.lastIndexOf('}');
+  return start >= 0 && end > start ? body.slice(start, end + 1) : body;
+}
+
+/** Parse the model's raw turn into a validated {@link Decision}. Throws AppError on malformed output. */
+export function parseDecision(text: string): Decision {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(extractJson(text));
+  } catch {
+    throw new AppError(ReactorMessages.InvalidJson, 502);
+  }
+  const parsed = DecisionSchema.safeParse(raw);
+  if (!parsed.success) throw new AppError(ReactorMessages.MalformedDecision, 502);
+  return parsed.data;
+}
+
+export interface ReactRequest {
+  goal: string;
+  /** Approved-plan outline shown to the model as guidance (not a rigid script). */
+  outline?: string[];
+  /** Steps the user pruned from the plan preview — the agent must NOT do these. */
+  avoid?: string[];
+  tools: Pick<ToolDescriptor, 'id' | 'description' | 'dangerClass'>[];
+  provider: AIProvider;
+  model: string;
+  maxTokens?: number;
+  timeoutMs?: number;
+}
+
+export interface ReactOptions {
+  maxSteps?: number;
+  loopThreshold?: number;
+  /** Per-call Policy Kernel context (targetUrl for the sensitive-site lockout, taintedArgs). */
+  ctxFor?: (tool: string, args: unknown) => InvokeContext;
+  signal?: { readonly aborted: boolean };
+  /** Fired when the model chooses to act, before the tool runs (Agent Console). */
+  onDecision?: (tool: string, rationale: string) => void;
+  /** Fired after each tool call resolves (drives taint recording + console step events). */
+  onOutcome?: (outcome: StepOutcome) => void;
+  /** Post-step guard (Human Handoff Controller): return a StopReason to halt (e.g. CAPTCHA/2FA). */
+  guard?: (outcome: StepOutcome) => StopReason | null;
+}
+
+export interface ReactResult {
+  outcomes: StepOutcome[];
+  stoppedReason: StopReason;
+  /** The model's closing summary when it finished on its own. */
+  summary?: string;
+}
+
+/** Longest single observation fed back to the model (truncate untrusted page dumps; compaction → 1b). */
+const MAX_OBSERVATION_CHARS = 6000;
+
+function isToolError(v: unknown): v is ToolError {
+  return typeof v === 'object' && v !== null && (v as { isError?: unknown }).isError === true;
+}
+
+function stableStringify(v: unknown): string {
+  if (v === null || typeof v !== 'object') return JSON.stringify(v) ?? 'null';
+  if (Array.isArray(v)) return `[${v.map(stableStringify).join(',')}]`;
+  const obj = v as Record<string, unknown>;
+  return `{${Object.keys(obj)
+    .sort()
+    .map((k) => `${JSON.stringify(k)}:${stableStringify(obj[k])}`)
+    .join(',')}}`;
+}
+
+/** The observation text fed back to the model after a tool call — a read tool's already-wrapped
+ *  `content` when present, else a compact JSON of the result; truncated to keep the prompt bounded. */
+function observationOf(outcome: StepOutcome): string {
+  if (!outcome.ok) {
+    const err = outcome.error;
+    return `Tool "${outcome.tool}" failed: ${err?.code ?? 'ERROR'} — ${err?.message ?? 'unknown error'}`;
+  }
+  const result = outcome.result;
+  const text =
+    result !== null && typeof result === 'object' && typeof (result as { content?: unknown }).content === 'string'
+      ? (result as { content: string }).content
+      : stableStringify(result);
+  return text.length > MAX_OBSERVATION_CHARS ? `${text.slice(0, MAX_OBSERVATION_CHARS)}\n…[truncated]` : text;
+}
+
+function systemPrompt(req: ReactRequest): string {
+  const toolList = req.tools.map((t) => `- ${t.id} (${t.dangerClass}): ${t.description}`).join('\n');
+  const outline = req.outline && req.outline.length > 0 ? `\nSuggested approach:\n${req.outline.join('\n')}` : '';
+  const avoid = req.avoid && req.avoid.length > 0 ? `\nDo NOT do (the user removed these): ${req.avoid.join('; ')}` : '';
+  return (
+    'You are an agent driving a web browser one action at a time. Given the goal and everything ' +
+    'observed so far, decide the SINGLE next step. To interact with a page, first call ' +
+    'browser_get_elements to see the actionable elements and their refs, then use browser_update_page ' +
+    'with a ref. Output ONLY JSON, no prose or markdown fences, of exactly one of:\n' +
+    '{"action":"act","tool":"<id>","args":{…},"rationale":"<why>"}\n' +
+    '{"action":"finish","summary":"<what you accomplished>"}\n' +
+    'Finish as soon as the goal is met or is impossible. Use ONLY these tools (by exact id):\n' +
+    toolList +
+    outline +
+    avoid
+  );
+}
+
+export default class Reactor {
+  static async run(req: ReactRequest, options: ReactOptions = {}): Promise<ReactResult> {
+    const maxSteps = options.maxSteps ?? 25;
+    const loopThreshold = options.loopThreshold ?? 3;
+    const known = new Set(req.tools.map((t) => t.id));
+    const outcomes: StepOutcome[] = [];
+    const signatureCounts = new Map<string, number>();
+
+    const messages: CanonMessage[] = [
+      { role: 'system', content: systemPrompt(req) },
+      { role: 'user', content: `Goal: ${req.goal}` },
+    ];
+
+    for (let step = 0; ; step++) {
+      if (options.signal?.aborted === true) return { outcomes, stoppedReason: 'aborted' };
+      if (outcomes.length >= maxSteps) return { outcomes, stoppedReason: 'max_steps' };
+
+      const response = await ModelGateway.complete({
+        provider: req.provider,
+        model: req.model,
+        capability: 'exec',
+        messages,
+        maxTokens: req.maxTokens ?? 1500,
+        timeoutMs: req.timeoutMs ?? 60_000,
+      });
+      const decision = parseDecision(response.text);
+      messages.push({ role: 'assistant', content: response.text });
+
+      if (decision.action === 'finish') {
+        return { outcomes, stoppedReason: 'completed', summary: decision.summary };
+      }
+
+      // The model's tool choice is untrusted — an unregistered id is fed back as an error, never run.
+      if (!known.has(decision.tool)) {
+        messages.push({ role: 'user', content: `Observation: unknown tool "${decision.tool}". Choose a listed tool.` });
+        continue;
+      }
+
+      const signature = `${decision.tool}:${stableStringify(decision.args)}`;
+      const count = (signatureCounts.get(signature) ?? 0) + 1;
+      signatureCounts.set(signature, count);
+      if (count >= loopThreshold) return { outcomes, stoppedReason: 'loop_detected' };
+
+      options.onDecision?.(decision.tool, decision.rationale);
+      const ctx = options.ctxFor ? options.ctxFor(decision.tool, decision.args) : {};
+      const result = await ToolGateway.invoke(decision.tool, decision.args, ctx);
+      const outcome: StepOutcome = isToolError(result)
+        ? { stepId: `r${String(step)}`, tool: decision.tool, ok: false, error: result }
+        : { stepId: `r${String(step)}`, tool: decision.tool, ok: true, result };
+      outcomes.push(outcome);
+      options.onOutcome?.(outcome);
+
+      // A policy/HITL denial (FORBIDDEN) is the user's hard "no" → stop. Other failures (stale ref,
+      // element not visible, timeout) are recoverable: feed them back so the agent can adapt.
+      if (!outcome.ok && outcome.error?.code === 'FORBIDDEN') {
+        return { outcomes, stoppedReason: 'tool_error' };
+      }
+
+      const halt = outcome.ok ? options.guard?.(outcome) : null;
+      if (halt != null) return { outcomes, stoppedReason: halt };
+
+      messages.push({ role: 'user', content: `Observation:\n${observationOf(outcome)}` });
+    }
+  }
+}

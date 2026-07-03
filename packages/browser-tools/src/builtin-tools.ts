@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { CapabilityRegistry } from '@tepegoz/capability-plane';
 import type { ToolDescriptor } from '@tepegoz/shared-types';
-import { buildPageSnapshot } from './perception';
+import type { RawInteractable } from '@tepegoz/tool-executor';
+import { buildPageSnapshot, buildElementsSnapshot } from './perception';
 
 /**
  * The browser operations the built-in tools need, abstracted away from Electron. The desktop app
@@ -19,6 +20,17 @@ export interface BrowserHost {
   listTabs(): { id: string; title: string; url: string }[];
   /** Open a new tab, optionally at a URL; returns its id. */
   createTab(url?: string): string;
+  /** Read the active page's actionable elements (accessibility tree). The host keeps the
+   *  `ref → node` map for the action calls below, so `ref`s stay valid until the next snapshot. */
+  snapshotElements(): Promise<{ url: string; title: string; elements: RawInteractable[] }>;
+  /** Click the element identified by `ref` from the most recent {@link snapshotElements}. */
+  clickElement(ref: number): Promise<void>;
+  /** Focus the input identified by `ref` and replace its value with `text`. */
+  fillElement(ref: number, text: string): Promise<void>;
+  /** Dispatch a single named key (Enter, Tab, Escape, ArrowDown, …) to the focused element. */
+  pressKey(key: string): Promise<void>;
+  /** Scroll the page up or down (`amount` in CSS px; host picks a sensible default). */
+  scrollPage(direction: 'up' | 'down', amount?: number): Promise<void>;
 }
 
 /** One audit event as exposed to the agent — a compact, already-redacted projection. */
@@ -53,6 +65,18 @@ let registered = false;
 const NavigateArgs = z.object({ url: z.string().min(1).max(4096) });
 const CreateTabArgs = z.object({ url: z.string().min(1).max(4096).optional() });
 const NoArgs = z.object({}).strip();
+const Ref = z.number().int().positive().max(10_000);
+/** One page interaction, discriminated by `action` so each variant validates its own args. */
+const UpdatePageArgs = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('click'), ref: Ref }),
+  z.object({ action: z.literal('fill'), ref: Ref, text: z.string().max(10_000) }),
+  z.object({ action: z.literal('press'), key: z.string().min(1).max(40) }),
+  z.object({
+    action: z.literal('scroll'),
+    direction: z.enum(['up', 'down']),
+    amount: z.number().int().positive().max(100_000).optional(),
+  }),
+]);
 const JournalQueryArgs = z.object({
   limit: z.number().int().positive().max(200).optional(),
   correlationId: z.string().min(1).max(200).optional(),
@@ -99,6 +123,51 @@ export function registerBuiltinTools(host: BrowserHost, journal?: JournalReader)
     ),
     inputSchema: NavigateArgs,
     handler: (args) => host.navigateActive(args.url),
+  });
+
+  CapabilityRegistry.register({
+    descriptor: descriptor(
+      'browser_get_elements',
+      'read',
+      'Read the current page\'s actionable elements (buttons, links, inputs) from the accessibility ' +
+        'tree. args: {} — returns { url, title, elements: [{ ref, role, name, value?, disabled? }], content }. ' +
+        'Use each element\'s `ref` with browser_update_page to click or fill it. Re-read after any ' +
+        'navigation or page change — refs are only valid for the latest snapshot.',
+    ),
+    inputSchema: NoArgs,
+    handler: async () => {
+      const { url, title, elements } = await host.snapshotElements();
+      return buildElementsSnapshot(elements, url, title);
+    },
+  });
+
+  CapabilityRegistry.register({
+    descriptor: descriptor(
+      'browser_update_page',
+      'state_changing',
+      'Perform ONE interaction on the current page, using a `ref` from browser_get_elements. args: ' +
+        'one of { action: "click", ref } · { action: "fill", ref, text } · { action: "press", key } ' +
+        '(e.g. "Enter", "Tab", "Escape", "ArrowDown") · { action: "scroll", direction: "up"|"down", amount? }. ' +
+        'Returns { ok: true }.',
+    ),
+    inputSchema: UpdatePageArgs,
+    handler: async (args) => {
+      switch (args.action) {
+        case 'click':
+          await host.clickElement(args.ref);
+          break;
+        case 'fill':
+          await host.fillElement(args.ref, args.text);
+          break;
+        case 'press':
+          await host.pressKey(args.key);
+          break;
+        case 'scroll':
+          await host.scrollPage(args.direction, args.amount);
+          break;
+      }
+      return { ok: true };
+    },
   });
 
   CapabilityRegistry.register({

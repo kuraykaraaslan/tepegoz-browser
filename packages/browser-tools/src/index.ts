@@ -11,4 +11,9 @@ export {
   type JournalReader,
   type JournalEntry,
 } from './builtin-tools';
-export { buildPageSnapshot, type PageSnapshot } from './perception';
+export {
+  buildPageSnapshot,
+  buildElementsSnapshot,
+  type PageSnapshot,
+  type ElementsSnapshot,
+} from './perception';

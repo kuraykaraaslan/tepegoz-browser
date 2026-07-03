@@ -1,4 +1,11 @@
-import { sanitizeText, wrapUntrustedContent } from '@tepegoz/tool-executor';
+import {
+  sanitizeText,
+  wrapUntrustedContent,
+  finalizeElements,
+  renderElementsText,
+  type InteractableElement,
+  type RawInteractable,
+} from '@tepegoz/tool-executor';
 
 /**
  * L4 perception (Phase 1a: DOM text only; accessibility tree + vision are later phases). Takes the
@@ -22,4 +29,31 @@ export interface PageSnapshot {
 export function buildPageSnapshot(rawText: string, url: string, title: string): PageSnapshot {
   const { text, flags } = sanitizeText(rawText.slice(0, MAX_PAGE_CHARS));
   return { url, title, content: wrapUntrustedContent(text, url), flags };
+}
+
+/**
+ * The actionable perception the agent targets by `ref`. The host reads the accessibility tree and
+ * hands the (untrusted) interactable nodes here; this shapes them into the sanitized, capped element
+ * list plus a model-safe `content` listing. `content` doubles as the taint signal (element labels are
+ * page-controlled) — the runtime records it as untrusted, exactly like a page-text read.
+ */
+export interface ElementsSnapshot {
+  url: string;
+  title: string;
+  /** Sanitized, ref-indexed interactable elements (button/link/textbox/…). */
+  elements: InteractableElement[];
+  /** Sanitized + XML-wrapped listing of `elements` — safe to hand to the model (and the taint source). */
+  content: string;
+  /** Sanitizer flags aggregated over element labels (zero_width/bidi/mixed_script). */
+  flags: string[];
+}
+
+/** Sanitize → ref-index → wrap the raw interactable nodes into a model-safe actionable snapshot. */
+export function buildElementsSnapshot(
+  raw: RawInteractable[],
+  url: string,
+  title: string,
+): ElementsSnapshot {
+  const { elements, flags } = finalizeElements(raw);
+  return { url, title, elements, content: wrapUntrustedContent(renderElementsText(elements), url), flags };
 }

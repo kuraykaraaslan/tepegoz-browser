@@ -6,7 +6,7 @@ import {
   type ConfirmRequest,
   type InvokeContext,
 } from '@tepegoz/capability-plane';
-import { Executor, Planner, type StepOutcome } from '@tepegoz/orchestrator';
+import { Planner, Reactor, type StepOutcome } from '@tepegoz/orchestrator';
 import { TaintTracker, detectHandoff } from '@tepegoz/security-policy';
 import type { Plan } from '@tepegoz/shared-types';
 import type { AgentEventKind } from '@tepegoz/ext-agent/types';
@@ -94,13 +94,25 @@ export async function runAgent(
       501,
     );
   }
-  const apiKey = CredentialVault.getKey(provider);
+  // Pick the user-selected active key for this provider; fall back to its first (oldest) key if the
+  // selection is unset or dangling. The raw key stays in main (getKeyById/getFirstKeyForProvider are
+  // main-only), never crossing IPC.
+  const activeKeyId = prefs.activeProviderKeys[provider];
+  const apiKey =
+    (activeKeyId !== undefined ? CredentialVault.getKeyById(activeKeyId) : null) ??
+    CredentialVault.getFirstKeyForProvider(provider);
   if (apiKey === null) {
     throw new AppError('No API key configured. Add one in Settings → Providers.', 401);
   }
 
   const route = ModelRouter.route({
     capability: 'plan',
+    costSaver: prefs.useLocalModelForSimpleTasks,
+    provider,
+  });
+  // The reactive loop runs on the exec tier (cheaper/faster than the planning tier).
+  const execRoute = ModelRouter.route({
+    capability: 'exec',
     costSaver: prefs.useLocalModelForSimpleTasks,
     provider,
   });
@@ -155,41 +167,58 @@ export async function runAgent(
     hooks.onEvent('step_start', `${entry.toolName}: ${entry.decision}`, entry.reason);
   });
 
+  // The approved plan becomes GUIDANCE for the reactive loop (not a rigid script): its steps are a
+  // suggested outline and the pruned steps are things to avoid. Execution is reactive — the model
+  // sees each page (via browser_get_elements) and picks the next action, so it can target live
+  // element refs and recover from a failed step. Static Executor.run stays for deterministic replays.
+  const outline = approvedPlan.steps.map((s) => `- ${s.tool}: ${s.rationale}`);
+  const avoid = plan.steps.filter((s) => skip.has(s.id)).map((s) => s.rationale || s.tool);
+
   try {
-    const result = await Executor.run(approvedPlan, {
-      signal: hooks.signal,
-      // The Policy Kernel gets the concrete site + taint of EACH tool call here (this is what
-      // makes the sensitive-site lockout and taint→HITL actually fire at runtime).
-      ctxFor: (step): InvokeContext => {
-        const targetUrl = urlFromArgs(step.args) ?? deps.activeTabUrl();
-        const ctx: InvokeContext = { taintedArgs: taint.isTainted(step.args) };
-        if (targetUrl !== undefined) ctx.targetUrl = targetUrl;
-        return ctx;
+    const result = await Reactor.run(
+      {
+        goal: approvedPlan.goal.length > 0 ? approvedPlan.goal : prompt,
+        outline,
+        avoid,
+        tools,
+        provider: execRoute.provider,
+        model: execRoute.model,
       },
-      onStepEnd: (o: StepOutcome) => {
-        if (o.ok) {
-          // Record perceived page text as untrusted for subsequent steps' taint checks.
+      {
+        signal: hooks.signal,
+        // The Policy Kernel gets the concrete site + taint of EACH tool call here (this is what
+        // makes the sensitive-site lockout and taint→HITL actually fire at runtime).
+        ctxFor: (_tool, args): InvokeContext => {
+          const targetUrl = urlFromArgs(args) ?? deps.activeTabUrl();
+          const ctx: InvokeContext = { taintedArgs: taint.isTainted(args) };
+          if (targetUrl !== undefined) ctx.targetUrl = targetUrl;
+          return ctx;
+        },
+        onOutcome: (o: StepOutcome) => {
+          if (o.ok) {
+            // Record perceived page text as untrusted for subsequent steps' taint checks.
+            const content = contentFromResult(o.result);
+            if (content !== undefined) taint.record(content);
+            hooks.onEvent('step_ok', `${o.tool} ✓`);
+          } else {
+            hooks.onEvent('step_error', `${o.tool} ✗`, o.error?.message ?? 'failed');
+          }
+        },
+        // Human Handoff Controller: a CAPTCHA/2FA in a perceived page halts the loop and hands
+        // control back to the user — deterministic, NO auto-solve, credit preserved.
+        guard: (o: StepOutcome) => {
           const content = contentFromResult(o.result);
-          if (content !== undefined) taint.record(content);
-          hooks.onEvent('step_ok', `${o.tool} ✓`);
-        } else {
-          hooks.onEvent('step_error', `${o.tool} ✗`, o.error?.message ?? 'failed');
-        }
+          if (content === undefined) return null;
+          const signal = detectHandoff(content, urlFromResult(o.result));
+          if (signal === null) return null;
+          hooks.onEvent(
+            'handoff',
+            signal.kind === 'captcha' ? deps.handoffStrings.captcha : deps.handoffStrings.twofa,
+          );
+          return 'handoff';
+        },
       },
-      // Human Handoff Controller: a CAPTCHA/2FA in a perceived page halts the loop and hands
-      // control back to the user — deterministic, NO auto-solve, credit preserved.
-      guard: (o: StepOutcome) => {
-        const content = contentFromResult(o.result);
-        if (content === undefined) return null;
-        const signal = detectHandoff(content, urlFromResult(o.result));
-        if (signal === null) return null;
-        hooks.onEvent(
-          'handoff',
-          signal.kind === 'captcha' ? deps.handoffStrings.captcha : deps.handoffStrings.twofa,
-        );
-        return 'handoff';
-      },
-    });
+    );
     if (result.stoppedReason === 'handoff') {
       // The 'handoff' event above is the terminal, user-facing message — no generic "Finished" line.
       return { stoppedReason: 'handoff', ok: false };
@@ -197,7 +226,9 @@ export async function runAgent(
     const usage = TokenLedger.totals();
     hooks.onEvent(
       'done',
-      `Finished: ${result.stoppedReason}`,
+      result.summary !== undefined && result.summary.length > 0
+        ? result.summary
+        : `Finished: ${result.stoppedReason}`,
       `${String(usage.totalTokens)} tokens`,
     );
     return { stoppedReason: result.stoppedReason, ok: result.stoppedReason === 'completed' };

@@ -7,3 +7,9 @@ export const PlannerMessages = {
   MalformedPlan: 'Planner returned a malformed plan',
   unknownTool: (tool: string): string => `Planner referenced unknown tool: ${tool}`,
 } as const;
+
+/** Constant error messages for the reactive executor's untrusted-output boundary. */
+export const ReactorMessages = {
+  InvalidJson: 'Agent returned invalid JSON',
+  MalformedDecision: 'Agent returned a malformed decision',
+} as const;

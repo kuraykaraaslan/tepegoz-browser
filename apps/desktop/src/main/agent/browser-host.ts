@@ -1,6 +1,8 @@
 import { AppError } from '@tepegoz/libs';
+import type { WebContents } from 'electron';
 import type { BrowserHost } from '@tepegoz/browser-tools';
 import TabManager from '../tabs';
+import CdpDriver from './cdp-driver';
 
 /**
  * Desktop `BrowserHost` for `@tepegoz/browser-tools`: the Electron/WebContentsView operations behind
@@ -40,9 +42,21 @@ async function readActivePage(): Promise<{ url: string; title: string; text: str
   return { url, title, text: typeof result === 'string' ? result : '' };
 }
 
+/** The active tab's WebContents for CDP-driven perception/action, or a 409 when there is none. */
+function requireActiveWc(): WebContents {
+  const wc = TabManager.activeWebContents();
+  if (wc === null) throw new AppError('No active page', 409);
+  return wc;
+}
+
 export const browserHost: BrowserHost = {
   navigateActive,
   readActivePage,
   listTabs: () => TabManager.getState().tabs.map((t) => ({ id: t.id, title: t.title, url: t.url })),
   createTab: (url) => TabManager.createTab(url),
+  snapshotElements: () => CdpDriver.snapshotElements(requireActiveWc()),
+  clickElement: (ref) => CdpDriver.clickElement(requireActiveWc(), ref),
+  fillElement: (ref, text) => CdpDriver.fillElement(requireActiveWc(), ref, text),
+  pressKey: (key) => CdpDriver.pressKey(requireActiveWc(), key),
+  scrollPage: (direction, amount) => CdpDriver.scrollPage(requireActiveWc(), direction, amount),
 };

@@ -6,3 +6,11 @@ export {
   type StepOutcome,
   type StopReason,
 } from './executor';
+export {
+  default as Reactor,
+  parseDecision,
+  type Decision,
+  type ReactRequest,
+  type ReactOptions,
+  type ReactResult,
+} from './reactor';
