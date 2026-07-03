@@ -60,6 +60,10 @@ export const IpcChannels = {
   popupClosed: 'popup:closed',
   submenuOpen: 'submenu:open',
   submenuClose: 'submenu:close',
+  // Web-page (WebContentsView) right-click menu: rendered as a native popup window from the MAIN
+  // process. The popup surface pulls the captured context, then dispatches the chosen action.
+  pageMenuGetContext: 'page-menu:get-context',
+  pageMenuAction: 'page-menu:action',
   appQuit: 'app:quit',
   historyList: 'history:list',
   historySearch: 'history:search',

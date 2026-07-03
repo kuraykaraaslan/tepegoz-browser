@@ -130,6 +130,28 @@ export const PopupResizeSchema = z.object({
   height: z.number().int().positive().max(2000),
 });
 
+/** `page-menu:action` payload — which wired action of the web-page right-click menu to run. */
+export const PageMenuActionSchema = z.enum([
+  'back',
+  'forward',
+  'reload',
+  'view-source',
+  'inspect',
+  'print',
+  'save',
+  'copy',
+  'cut',
+  'paste',
+  'select-all',
+  'search-selection',
+  'copy-link',
+  'open-link-new-tab',
+  'copy-image',
+  'copy-media-link',
+  'save-media',
+  'open-media-new-tab',
+]);
+
 /** `submenu:open` payload — a flyout submenu opened beside the main menu popup (its own native window). */
 export const SubmenuOpenSchema = z.object({
   kind: z.string().min(1).max(32),

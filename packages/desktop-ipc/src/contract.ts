@@ -245,15 +245,74 @@ export interface ContentBounds {
   height: number;
 }
 
+/** The wired actions of the web-page right-click menu. Placeholder rows (Cast, Lens, …) have no action.
+ *  Dispatched in main against the context captured at right-click time (inspect/copy-image use its x/y,
+ *  link/media actions use the captured URLs). */
+export type PageMenuAction =
+  | 'back'
+  | 'forward'
+  | 'reload'
+  | 'view-source'
+  | 'inspect'
+  | 'print'
+  | 'save'
+  | 'copy'
+  | 'cut'
+  | 'paste'
+  | 'select-all'
+  | 'search-selection'
+  | 'copy-link'
+  | 'open-link-new-tab'
+  | 'copy-image'
+  | 'copy-media-link'
+  | 'save-media'
+  | 'open-media-new-tab';
+
+/** The media kind under the cursor (from Electron's `context-menu` params). `none` = not media. */
+export type PageMenuMediaType = 'none' | 'image' | 'audio' | 'video' | 'canvas' | 'file' | 'plugin';
+
+/** Snapshot the page context menu reads to pick its variant + enable rows (captured at right-click). */
+export interface PageMenuContext {
+  canGoBack: boolean;
+  canGoForward: boolean;
+  pageUrl: string;
+  /** Selected text (trimmed, truncated for display), or '' if none. */
+  selectionText: string;
+  /** The link href under the cursor, or '' if not on a link. */
+  linkUrl: string;
+  /** The media/source URL under the cursor, or '' if not on media. */
+  srcUrl: string;
+  mediaType: PageMenuMediaType;
+  /** True when the cursor is in an editable field (input/textarea/contenteditable). */
+  isEditable: boolean;
+  canCopy: boolean;
+  canCut: boolean;
+  canPaste: boolean;
+  canSelectAll: boolean;
+}
+
 /** The exact surface bridged to `window.tepegoz` in the renderer. */
 export interface TepegozApi {
   getAppInfo(): Promise<AppInfo>;
   getPreferences(): Promise<Preferences>;
   updatePreferences(patch: Partial<Preferences>): Promise<Preferences>;
+  /** Reset all preferences to defaults. Encrypted credentials (the vault) are NOT affected. */
+  resetPreferences(): Promise<Preferences>;
+  /** The curated PUBLIC settings snapshot exposed to extensions (read-only; never carries secrets). */
+  getPublicSettings(): Promise<PublicSettings>;
+  /** Subscribe to public-settings changes; returns an unsubscribe function (like `onTabsState`). */
+  onPublicSettingsChanged(callback: (settings: PublicSettings) => void): () => void;
   getCredentialsStatus(): Promise<CredentialsStatus>;
+  /** Every stored key's metadata (no secret). Any number of keys per provider. */
+  listCredentials(): Promise<ProviderKeyMeta[]>;
   /** Renderer → main only (user-entered key). The raw key never flows back to the renderer. */
-  setProviderKey(provider: ProviderId, apiKey: string): Promise<CredentialsStatus>;
-  removeProviderKey(provider: ProviderId): Promise<CredentialsStatus>;
+  addProviderKey(provider: ProviderId, label: string, apiKey: string): Promise<CredentialsStatus>;
+  /** Remove one stored key by its id. */
+  removeProviderKeyById(id: string): Promise<CredentialsStatus>;
+  /** Rename one stored key by its id (label only — the secret is untouched). */
+  renameProviderKey(id: string, label: string): Promise<CredentialsStatus>;
+  /** Reorder all keys (drag-drop priority). The top key's provider becomes the default provider. */
+  reorderProviderKeys(orderedIds: string[]): Promise<CredentialsStatus>;
   // Custom window chrome (frameless): caption controls.
   minimizeWindow(): void;
   toggleMaximizeWindow(): void;
@@ -359,6 +418,11 @@ export interface TepegozApi {
   openSubmenu(kind: string, anchor: ContentBounds, opts?: { height?: number }): void;
   /** Close the submenu flyout, if one is open. */
   closeSubmenu(): void;
+  // Web-page right-click menu (rendered popup surface `page-context-menu`, opened from main).
+  /** Read the context captured at the last right-click, so the popup can enable/disable its rows. */
+  getPageMenuContext(): Promise<PageMenuContext>;
+  /** Run a wired page-menu action against the captured context (acted on in the main process). */
+  pageMenuAction(action: PageMenuAction): void;
   // Browsing history (tepegoz://history). All return the fresh list so the page re-renders.
   getHistory(): Promise<HistoryEntry[]>;
   searchHistory(query: string): Promise<HistoryEntry[]>;

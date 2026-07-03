@@ -41,6 +41,10 @@ export interface OpenPopupOptions {
   width?: number;
   /** Desired content height (px); clamped to the display work area. Defaults to a 520px cap. */
   height?: number;
+  /** Horizontal placement relative to `anchor`. `'end'` (default) right-aligns the popup to the
+   *  anchor's right edge (toolbar controls open leftward); `'start'` left-aligns it to the anchor's
+   *  left edge (a context menu opens rightward from the cursor). */
+  align?: 'start' | 'end';
 }
 
 export interface OpenSubmenuOptions {
@@ -72,7 +76,7 @@ export default class PopupWindowManager {
     PopupWindowManager.close(); // only one primary popup at a time
 
     const width = opts.width ?? DEFAULT_WIDTH;
-    const bounds = anchorToBounds(parent, anchor, width, opts.height);
+    const bounds = anchorToBounds(parent, anchor, width, opts.height, opts.align ?? 'end');
     const win = createPopupWindow(parent, bounds);
     PopupWindowManager.win = win;
     PopupWindowManager.openKey = key;
@@ -104,8 +108,11 @@ export default class PopupWindowManager {
       PopupWindowManager.lastClosedKey = closedKey;
       PopupWindowManager.openKey = null;
       PopupWindowManager.lastCloseAt = nowMs();
-      if (!parent.isDestroyed() && closedKey !== null) {
-        parent.webContents.send(IpcChannels.popupClosed, closedKey);
+      if (!parent.isDestroyed()) {
+        // On Windows, closing a frameless child window can cause the parent to minimize due to how
+        // the OS handles focus handoff. Re-focus the parent explicitly to prevent this.
+        if (!parent.isMinimized()) parent.focus();
+        if (closedKey !== null) parent.webContents.send(IpcChannels.popupClosed, closedKey);
       }
     });
   }
@@ -184,16 +191,19 @@ function loadSurface(win: BrowserWindow, query: Record<string, string>, key: str
   });
 }
 
-/** Place the popup under the anchor (right-aligned to it, so it opens leftward), clamped to the work area. */
+/** Place the popup under the anchor, clamped to the work area. `align` picks the horizontal edge:
+ *  `'end'` right-aligns to the anchor (toolbar controls open leftward); `'start'` left-aligns to it
+ *  (a context menu opens rightward from the cursor). */
 function anchorToBounds(
   parent: BrowserWindow,
   anchor: Rectangle,
   width: number,
   desiredHeight?: number,
+  align: 'start' | 'end' = 'end',
 ): Rectangle {
   const cb = parent.getContentBounds();
   const area = screen.getDisplayMatching(cb).workArea;
-  let x = Math.round(cb.x + anchor.x + anchor.width - width);
+  let x = Math.round(align === 'start' ? cb.x + anchor.x : cb.x + anchor.x + anchor.width - width);
   let y = Math.round(cb.y + anchor.y + anchor.height + GAP);
   x = Math.min(Math.max(x, area.x), area.x + area.width - width);
   const cap = desiredHeight ?? DEFAULT_MAX_HEIGHT;

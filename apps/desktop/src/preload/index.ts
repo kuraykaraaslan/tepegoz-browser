@@ -245,6 +245,10 @@ const api: TepegozApi = {
   closeSubmenu: () => {
     ipcRenderer.send(IpcChannels.submenuClose);
   },
+  getPageMenuContext: () => invoke<PageMenuContext>(IpcChannels.pageMenuGetContext),
+  pageMenuAction: (action: PageMenuAction) => {
+    ipcRenderer.send(IpcChannels.pageMenuAction, action);
+  },
   getHistory: () => invoke<HistoryEntry[]>(IpcChannels.historyList),
   searchHistory: (query: string) => invoke<HistoryEntry[]>(IpcChannels.historySearch, query),
   deleteHistory: (url: string) => invoke<HistoryEntry[]>(IpcChannels.historyDelete, url),

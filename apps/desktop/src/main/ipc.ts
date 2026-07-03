@@ -425,6 +425,12 @@ export function registerIpc(): void {
   onSignal(IpcChannels.submenuClose, () => {
     PopupWindowManager.closeSub();
   });
+  // Web-page right-click menu (rendered popup surface): the popup reads the context captured at
+  // right-click, then dispatches the chosen wired action — acted on against the active view in main.
+  handle(IpcChannels.pageMenuGetContext, () => getPageMenuContext());
+  onAction(IpcChannels.pageMenuAction, PageMenuActionSchema, (action) => {
+    runPageMenuAction(action);
+  });
   // Notification center — a snapshot getter plus fire-and-forget mutations. Live state is PUSHED from
   // NotificationHost (store subscription) to every app window, so there is no subscribe handler here.
   handle(IpcChannels.notificationsList, (): NotificationState => NotificationStore.state());
