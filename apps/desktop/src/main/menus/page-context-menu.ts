@@ -1,5 +1,5 @@
 import { clipboard, type BrowserWindow, type ContextMenuParams, type Rectangle } from 'electron';
-import type { PageMenuAction, PageMenuContext, PageMenuMediaType } from '@tepegoz/desktop-ipc';
+import type { PageMenuAction, PageMenuContext } from '@tepegoz/desktop-ipc';
 import PopupWindowManager from '../popup-window';
 import TabManager from '../tabs';
 
@@ -48,7 +48,7 @@ export function openPageContextMenu(
     selectionText: params.selectionText.trim().slice(0, SELECTION_DISPLAY_MAX),
     linkUrl: params.linkURL,
     srcUrl: params.srcURL,
-    mediaType: params.mediaType as PageMenuMediaType,
+    mediaType: params.mediaType,
     isEditable: params.isEditable,
     canCopy: params.editFlags.canCopy,
     canCut: params.editFlags.canCut,
@@ -92,8 +92,11 @@ const EMPTY: PageMenuContext = {
 /** The context the popup surface reads to pick its variant and enable rows. */
 export function getPageMenuContext(): PageMenuContext {
   if (last === null) return EMPTY;
-  const { x: _x, y: _y, ...ctx } = last;
-  return ctx;
+  // Return only the wire context (PageMenuContext) — the captured x/y point is main-process-only.
+  const { canGoBack, canGoForward, pageUrl, selectionText, linkUrl, srcUrl, mediaType, isEditable,
+    canCopy, canCut, canPaste, canSelectAll } = last;
+  return { canGoBack, canGoForward, pageUrl, selectionText, linkUrl, srcUrl, mediaType, isEditable,
+    canCopy, canCut, canPaste, canSelectAll };
 }
 
 /** Run a wired page-menu action against the captured context (all act on the active web view). */
