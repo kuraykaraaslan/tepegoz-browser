@@ -7,7 +7,8 @@ import {
   type PageContextMenuContext,
 } from '@tepegoz/page-context-menu';
 import { pageContextMenuDict } from '@tepegoz/page-context-menu/i18n';
-import type { PageMenuAction, PageMenuContext, ThemePref } from '@tepegoz/desktop-ipc';
+import type { PageMenuAction, PageMenuContext } from '@tepegoz/desktop-ipc';
+import { applyTheme } from '../lib/theme';
 
 /**
  * Standalone render target for the native page (web view) right-click popup window (loaded with
@@ -18,12 +19,6 @@ import type { PageMenuAction, PageMenuContext, ThemePref } from '@tepegoz/deskto
  * row dispatches its action to main, then dismisses the popup (Chrome-style). Not-yet-implemented rows
  * are disabled placeholders (see the model).
  */
-function applyTheme(theme: ThemePref): void {
-  const isDark =
-    theme === 'dark' ||
-    (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  document.documentElement.classList.toggle('dark', isDark);
-}
 
 /** Map the IPC context to the model's context (field names align; `pageUrl` isn't needed by the model). */
 function toModelContext(c: PageMenuContext | null): PageContextMenuContext {
@@ -61,7 +56,7 @@ export function PageContextMenuPopup() {
   useEffect(() => {
     void window.tepegoz.getPreferences().then(
       (p) => {
-        applyTheme(p.theme);
+        applyTheme(p.theme, p.themeColor);
         setLocale(p.locale === 'en' || p.locale === 'tr' ? p.locale : resolveLocale(navigator.language));
       },
       () => {

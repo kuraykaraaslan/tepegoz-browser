@@ -23,13 +23,15 @@ const WORKSPACE_PACKAGES = [
   // The typed IPC contract. Its `.` entry is zod-free so the sandboxed preload bundles it safely;
   // the zod validators live in the `@tepegoz/desktop-ipc/schemas` entry (imported by main only).
   '@tepegoz/desktop-ipc',
-  // Extension SDK + built-in extension manifests: main reads them for id validation, `tepegoz://`
-  // page routing, and native-menu labels (via shared/extensions.ts). Only the React-free manifest
-  // modules are reached from main; the renderer bundles the surface components separately.
+  // Extension SDK + the catalog loader: main reads the generated `extensions.catalog.json` for id
+  // validation, `tepegoz://` page routing, and native-menu labels (via shared/extensions.ts). Only the
+  // React-free loader is reached from main; the renderer bundles the surface components separately.
   '@tepegoz/extension-sdk',
+  '@tepegoz/extension-catalog',
   '@tepegoz/ext-agent',
   '@tepegoz/ext-user-agent',
   '@tepegoz/ext-popup-blocker',
+  '@tepegoz/ext-macros',
   // Bundled into main (TS source). Its native dep `better-sqlite3` stays external (real npm module,
   // rebuilt against the Electron ABI via `pnpm --filter @tepegoz/desktop run rebuild`).
   '@tepegoz/persistence',

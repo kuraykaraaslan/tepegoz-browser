@@ -94,13 +94,9 @@ export async function runAgent(
       501,
     );
   }
-  // Pick the user-selected active key for this provider; fall back to its first (oldest) key if the
-  // selection is unset or dangling. The raw key stays in main (getKeyById/getFirstKeyForProvider are
-  // main-only), never crossing IPC.
-  const activeKeyId = prefs.activeProviderKeys[provider];
-  const apiKey =
-    (activeKeyId !== undefined ? CredentialVault.getKeyById(activeKeyId) : null) ??
-    CredentialVault.getFirstKeyForProvider(provider);
+  // `defaultProvider` is the provider of the top (highest-priority) key; use that provider's first key
+  // in vault order. The raw key stays in main (getFirstKeyForProvider is main-only), never on IPC.
+  const apiKey = CredentialVault.getFirstKeyForProvider(provider);
   if (apiKey === null) {
     throw new AppError('No API key configured. Add one in Settings → Providers.', 401);
   }

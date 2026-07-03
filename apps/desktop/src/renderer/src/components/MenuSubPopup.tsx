@@ -6,13 +6,13 @@ import {
   INTERNAL_EXTENSIONS_URL,
   INTERNAL_HISTORY_URL,
   isExtensionEnabled,
-  type ThemePref,
 } from '@tepegoz/desktop-ipc';
 import { historyDict } from '@tepegoz/history-ui/i18n';
 import { extensionsDict } from '@tepegoz/extensions-ui/i18n';
 import { menuDict } from '../../../i18n';
 import { extensionLabel, extensionPageUrl } from '../../../shared/extensions';
 import { EXTENSIONS } from '../extensions/registry';
+import { applyTheme } from '../lib/theme';
 
 /**
  * Standalone render target for a submenu flyout window (loaded with `?surface=menu-sub&kind=<k>`). It's
@@ -22,13 +22,6 @@ import { EXTENSIONS } from '../extensions/registry';
  * main window (TabManager singleton) then closes the whole menu via `closePopup` (which cascades here).
  */
 const RECENT_HISTORY_COUNT = 5;
-
-function applyTheme(theme: ThemePref): void {
-  const isDark =
-    theme === 'dark' ||
-    (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  document.documentElement.classList.toggle('dark', isDark);
-}
 
 export function MenuSubPopup({ kind }: { kind: string }) {
   const [locale, setLocale] = useState<Locale>('en');
@@ -49,7 +42,7 @@ export function MenuSubPopup({ kind }: { kind: string }) {
         return; // bridge unavailable
       }
       if (cancelled) return;
-      applyTheme(prefs.theme);
+      applyTheme(prefs.theme, prefs.themeColor);
       const loc: Locale =
         prefs.locale === 'en' || prefs.locale === 'tr' ? prefs.locale : resolveLocale(navigator.language);
       setLocale(loc);

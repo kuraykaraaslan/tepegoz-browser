@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { resolveLocale, type Locale } from '@tepegoz/i18n';
 import { I18nProvider } from '@tepegoz/i18n/react';
 import { NotificationCenter } from '@tepegoz/notifications-ui';
-import type { NotificationState, ThemePref } from '@tepegoz/desktop-ipc';
+import type { NotificationState } from '@tepegoz/desktop-ipc';
 import { runNotificationAction } from '../lib/notification-actions';
+import { applyTheme } from '../lib/theme';
 
 /**
  * Standalone render target for the native notification-center popup window (loaded with
@@ -11,12 +12,6 @@ import { runNotificationAction } from '../lib/notification-actions';
  * wrap in the I18nProvider. It fetches the current center snapshot and subscribes to live pushes from
  * NotificationHost, delegating every mutation back to the main process via the bridge.
  */
-function applyTheme(theme: ThemePref): void {
-  const isDark =
-    theme === 'dark' ||
-    (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  document.documentElement.classList.toggle('dark', isDark);
-}
 
 /** Compact locale-aware relative time ("2 min ago") for a notification's timestamp. */
 function formatRelative(ts: number, locale: Locale): string {
@@ -39,7 +34,7 @@ export function NotificationCenterPopup() {
   useEffect(() => {
     void window.tepegoz.getPreferences().then(
       (p) => {
-        applyTheme(p.theme);
+        applyTheme(p.theme, p.themeColor);
         setLocale(
           p.locale === 'en' || p.locale === 'tr' ? p.locale : resolveLocale(navigator.language),
         );

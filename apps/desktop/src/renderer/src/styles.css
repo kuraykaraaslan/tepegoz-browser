@@ -17,6 +17,8 @@
 @source "../../../../../packages/nav-toolbar/src";
 @source "../../../../../packages/browser-chrome/src";
 @source "../../../../../packages/browser-menu/src";
+@source "../../../../../packages/ext-macros/src";
+@source "../../../../../packages/password-ui/src";
 
 html,
 body,

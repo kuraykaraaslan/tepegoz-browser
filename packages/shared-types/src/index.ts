@@ -1,5 +1,7 @@
 export * from './providers';
 export * from './notifications';
+export * from './public-settings';
+export * from './search-engines';
 export * from './enums';
 export * from './event-journal';
 export * from './tool-descriptor';

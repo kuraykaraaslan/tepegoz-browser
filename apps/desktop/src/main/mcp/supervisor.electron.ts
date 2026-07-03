@@ -3,14 +3,14 @@ import { McpSupervisor, type McpServerConfig } from '@tepegoz/mcp-client';
 import type { McpServerStatusInfo } from '@tepegoz/desktop-ipc';
 import PreferenceStore from '@tepegoz/preferences';
 import { mergeMcpConfigs } from './config-source';
-import { BUILTIN_MANIFESTS } from '../../shared/extensions';
+import { builtinManifests } from '../../shared/extensions';
 import { mainLocale } from '../lib/i18n-main';
 import { createClient, createTransport } from './transport.electron';
 
 /** Read the current desired MCP config set from prefs + enabled extensions (Electron/store reads). */
 function collectMcpConfigs(): McpServerConfig[] {
   const prefs = PreferenceStore.getAll();
-  return mergeMcpConfigs(prefs, BUILTIN_MANIFESTS, mainLocale());
+  return mergeMcpConfigs(prefs, builtinManifests(), mainLocale());
 }
 
 /**

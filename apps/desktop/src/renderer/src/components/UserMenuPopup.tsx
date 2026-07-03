@@ -3,8 +3,8 @@ import { resolveLocale, type Locale } from '@tepegoz/i18n';
 import { I18nProvider, useT } from '@tepegoz/i18n/react';
 import { Icon } from '@tepegoz/ui';
 import { Menu, type MenuItem } from '@tepegoz/browser-menu';
-import type { ThemePref } from '@tepegoz/desktop-ipc';
 import { userMenuDict } from '../../../i18n';
+import { applyTheme } from '../lib/theme';
 import { UserAvatar } from './UserAvatar';
 
 /**
@@ -12,13 +12,6 @@ import { UserAvatar } from './UserAvatar';
  * MainMenuPopup structure. PLACEHOLDER for now: it reproduces Chrome's profile-menu layout (header card +
  * account/profile actions) but every item is disabled — nothing is wired yet.
  */
-function applyTheme(theme: ThemePref): void {
-  const isDark =
-    theme === 'dark' ||
-    (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  document.documentElement.classList.toggle('dark', isDark);
-}
-
 export function UserMenuPopup() {
   const [locale, setLocale] = useState<Locale>('en');
   const contentRef = useRef<HTMLDivElement>(null);
@@ -42,7 +35,7 @@ export function UserMenuPopup() {
   useEffect(() => {
     void window.tepegoz.getPreferences().then(
       (p) => {
-        applyTheme(p.theme);
+        applyTheme(p.theme, p.themeColor);
         setLocale(p.locale === 'en' || p.locale === 'tr' ? p.locale : resolveLocale(navigator.language));
       },
       () => {

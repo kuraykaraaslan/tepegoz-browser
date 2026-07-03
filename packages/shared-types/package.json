@@ -6,7 +6,10 @@
   "exports": {
     ".": "./src/index.ts",
     "./providers": "./src/providers.ts",
-    "./notifications": "./src/notifications.ts"
+    "./notifications": "./src/notifications.ts",
+    "./macro-ir": "./src/macro-ir.ts",
+    "./public-settings": "./src/public-settings.ts",
+    "./search-engines": "./src/search-engines.ts"
   },
   "main": "./src/index.ts",
   "types": "./src/index.ts",

@@ -9,19 +9,20 @@ import {
   INTERNAL_HISTORY_URL,
   INTERNAL_SETTINGS_URL,
 } from '@tepegoz/desktop-ipc';
-import { EXTENSION_PAGE_URLS } from '../../shared/extensions';
+import { extensionPageUrls } from '../../shared/extensions';
 
 export { isWebUrl, toNavigationUrl } from '@tepegoz/navigation';
 
-// Built-in app pages + every extension that declares a `page` surface (tepegoz://<extension-id>).
-const INTERNAL_URLS: readonly string[] = [
-  INTERNAL_SETTINGS_URL,
-  INTERNAL_EXTENSIONS_URL,
-  INTERNAL_HISTORY_URL,
-  ...EXTENSION_PAGE_URLS,
-];
-
-/** The canonical internal-page URL if `input` addresses one, else null. */
+/** The canonical internal-page URL if `input` addresses one, else null. The extension page URLs are
+ *  computed at CALL time — the built-in catalog is loaded at startup AFTER this module is imported, so
+ *  capturing them at module scope would freeze an empty list and break `tepegoz://<ext-id>` routing. */
 export function internalPageUrl(input: string): string | null {
-  return resolveInternalPage(input, INTERNAL_URLS);
+  // Built-in app pages + every extension that declares a `page` surface (tepegoz://<extension-id>).
+  const internalUrls: readonly string[] = [
+    INTERNAL_SETTINGS_URL,
+    INTERNAL_EXTENSIONS_URL,
+    INTERNAL_HISTORY_URL,
+    ...extensionPageUrls(),
+  ];
+  return resolveInternalPage(input, internalUrls);
 }

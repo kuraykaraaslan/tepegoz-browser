@@ -47,6 +47,7 @@ import { MainMenuButton } from './components/MainMenuButton';
 import { UserMenuButton } from './components/UserMenuButton';
 import { NotificationBellButton } from './components/NotificationBellButton';
 import { SettingsPage } from './components/SettingsPage';
+import { applyTheme } from './lib/theme';
 import { useWindowMaximized } from './lib/useWindowMaximized';
 
 /** The overlay surface kinds (everything except `page`, which opens as its own internal tab). */
@@ -61,14 +62,14 @@ function effectiveLocale(pref: LocalePref): Locale {
   return resolveLocale(navigator.language);
 }
 
-function applyTheme(theme: ThemePref): void {
-  const isDark =
-    theme === 'dark' ||
-    (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  document.documentElement.classList.toggle('dark', isDark);
-}
 
-const EMPTY_TABS: TabsState = { tabs: [], activeId: null, canGoBack: false, canGoForward: false };
+const EMPTY_TABS: TabsState = {
+  tabs: [],
+  groups: [],
+  activeId: null,
+  canGoBack: false,
+  canGoForward: false,
+};
 
 /** Sidebar dock width bounds (px); the user drags the edge to resize between these. */
 const SIDEBAR_MIN_WIDTH = 280;
@@ -593,6 +594,8 @@ export function App() {
         <BrowserChrome
           t={{ common: coreT.common, window: coreT.window, browser: browserT }}
           tabs={tabs.tabs}
+          tabGroups={tabs.groups}
+          renamingGroupId={renamingGroupId}
           activeTabId={tabs.activeId}
           onSelectTab={(id) => {
             setActiveSurface(null); // close any extension surface when switching tabs

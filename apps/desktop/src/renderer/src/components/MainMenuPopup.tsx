@@ -6,12 +6,12 @@ import {
   INTERNAL_SETTINGS_URL,
   isExtensionEnabled,
   type ExtensionState,
-  type ThemePref,
 } from '@tepegoz/desktop-ipc';
 import { historyDict } from '@tepegoz/history-ui/i18n';
 import { extensionsDict } from '@tepegoz/extensions-ui/i18n';
 import { browserDict, menuDict } from '../../../i18n';
 import { EXTENSIONS } from '../extensions/registry';
+import { applyTheme } from '../lib/theme';
 import { buildMainMenuModel } from './main-menu-model';
 
 /**
@@ -22,13 +22,6 @@ import { buildMainMenuModel } from './main-menu-model';
  * opens a SEPARATE window to the left (see MenuSubPopup). Actions run against the main window (TabManager
  * singleton).
  */
-function applyTheme(theme: ThemePref): void {
-  const isDark =
-    theme === 'dark' ||
-    (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  document.documentElement.classList.toggle('dark', isDark);
-}
-
 /** Row height (px) used to size the submenu flyout window from its item count (main clamps + scrolls). */
 const SUB_ROW_H = 36;
 
@@ -56,7 +49,7 @@ export function MainMenuPopup() {
   useEffect(() => {
     void window.tepegoz.getPreferences().then(
       (p) => {
-        applyTheme(p.theme);
+        applyTheme(p.theme, p.themeColor);
         setLocale(p.locale === 'en' || p.locale === 'tr' ? p.locale : resolveLocale(navigator.language));
         setExtensionStates(p.extensions);
       },

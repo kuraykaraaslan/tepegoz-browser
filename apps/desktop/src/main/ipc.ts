@@ -18,11 +18,18 @@ import {
   type AppInfo,
   type BookmarkEntry,
   type CredentialsStatus,
+  type ExtensionManifestWire,
   type HistoryEntry,
   type IpcChannel,
+  type Macro,
+  type MacroSummary,
   type McpServerStatusInfo,
   type NotificationState,
+  type PopupBlockerRequest,
+  type PopupBlockerSettings,
   type Preferences,
+  type ProviderKeyMeta,
+  type PublicSettings,
   type TabsState,
   type TokenUsageSnapshot,
 } from '@tepegoz/desktop-ipc';
@@ -34,21 +41,41 @@ import {
   AppInfoSchema,
   BookmarkToggleSchema,
   BookmarkUrlSchema,
-  HistoryQuerySchema,
+  HistoryPageParamsSchema,
+  HistorySearchParamsSchema,
   HistoryUrlSchema,
   UserAgentSelectionSchema,
+  PopupBlockerPatchSchema,
+  PopupOriginSchema,
+  CreateBackgroundTabSchema,
   PopupOpenSchema,
   PopupResizeSchema,
+  PageMenuActionSchema,
   SubmenuOpenSchema,
   ContentBoundsSchema,
   ContentVisibleSchema,
   CreateTabInputSchema,
+  ExtensionIdSchema,
   NavigateInputSchema,
   NotificationIdSchema,
   NotificationPermissionResponseSchema,
-  RemoveProviderKeyInputSchema,
-  SetProviderKeyInputSchema,
+  AddProviderKeyInputSchema,
+  RemoveKeyByIdSchema,
+  RenameProviderKeyInputSchema,
+  ReorderKeysSchema,
   TabIdSchema,
+  TabGroupIdSchema,
+  TabMoveSchema,
+  TabPinSchema,
+  TabGroupCreateSchema,
+  TabGroupMoveSchema,
+  TabGroupUpdateSchema,
+  TabGroupAssignSchema,
+  MacroSchema,
+  MacroIdSchema,
+  MacroRunInputSchema,
+  MacroRunDraftSchema,
+  MacroAttachCsvSchema,
 } from '@tepegoz/desktop-ipc/schemas';
 import NotificationStore from '@tepegoz/notifications';
 import NotificationHost from './notifications/notification-host';
@@ -61,17 +88,24 @@ import type { EventType, Plan } from '@tepegoz/shared-types';
 import { randomUUID } from 'node:crypto';
 import AgentService, { type PlanApprovalDecision } from './agent/agent-service';
 import McpService from './mcp/supervisor.electron';
+import ExtensionCapabilityService from './extensions/capability-supervisor.electron';
+import MacroService from './macro/macro-service.electron';
 import { getDb } from './db/database.electron';
-import { PreferencesPatchSchema } from '@tepegoz/preferences';
+import { DEFAULT_PREFERENCES, PreferencesPatchSchema } from '@tepegoz/preferences';
 import { isTrustedAppUrl } from './lib/trusted-origin';
 import { mainStrings } from './lib/i18n-main';
+import { getPublicSettings, broadcastPublicSettings } from './settings/public-settings-host';
 import CredentialVault from '@tepegoz/credential-vault';
 import PreferenceStore from '@tepegoz/preferences';
 import TabManager from './tabs';
 import UserAgentManager from './user-agent';
+import PopupBlockerManager from './popup-blocker';
 import PopupWindowManager from './popup-window';
-import { manifestById } from '../shared/extensions';
+import { builtinManifests, manifestById } from '../shared/extensions';
 import { showTabContextMenu } from './menus/tab-context-menu';
+import { showExtensionContextMenu } from './menus/extension-context-menu';
+import { showGroupContextMenu } from './menus/tab-group-context-menu';
+import { getPageMenuContext, runPageMenuAction } from './menus/page-context-menu';
 
 /** Native main-menu popup width (px); its height is computed by the renderer and clamped in main. */
 const MAIN_MENU_WIDTH = 300;

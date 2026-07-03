@@ -26,7 +26,13 @@ const BTN_GHOST =
   'hover:bg-surface-overlay hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus';
 
 /** The stateful picker core, shared by every surface. Renders no chrome of its own. */
-export function UserAgentPicker({ api }: { api: UserAgentHostApi }) {
+export function UserAgentPicker({
+  api,
+  scrollablePresets = false,
+}: Readonly<{
+  api: UserAgentHostApi;
+  scrollablePresets?: boolean;
+}>) {
   const x = useT(userAgentDict);
   // `current` is the applied selection (UA string or null = default); null until loaded.
   const [current, setCurrent] = useState<string | null>(null);
@@ -96,7 +102,7 @@ export function UserAgentPicker({ api }: { api: UserAgentHostApi }) {
         <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-text-secondary">
           {x.presets}
         </h3>
-        <ul className="space-y-1.5">
+        <ul className={cn('space-y-1.5', scrollablePresets && 'max-h-52 overflow-y-auto pr-0.5')}>
           {USER_AGENT_PRESETS.map((preset) => {
             const isActive = loaded && !customActive && activePreset?.id === preset.id;
             return (
@@ -183,7 +189,7 @@ export function UserAgentPopup({ api, onClose }: UserAgentSurfaceProps) {
         </button>
       </div>
       <div className="p-3">
-        <UserAgentPicker api={api} />
+        <UserAgentPicker api={api} scrollablePresets />
       </div>
     </div>
   );
