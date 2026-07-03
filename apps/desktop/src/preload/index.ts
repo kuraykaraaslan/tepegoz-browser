@@ -44,11 +44,27 @@ const api: TepegozApi = {
   getPreferences: () => invoke<Preferences>(IpcChannels.prefsGet),
   updatePreferences: (patch: Partial<Preferences>) =>
     invoke<Preferences>(IpcChannels.prefsSet, patch),
+  resetPreferences: () => invoke<Preferences>(IpcChannels.prefsReset),
+  getPublicSettings: () => invoke<PublicSettings>(IpcChannels.publicSettingsGet),
+  onPublicSettingsChanged: (callback: (settings: PublicSettings) => void) => {
+    const listener = (_event: unknown, settings: PublicSettings): void => {
+      callback(settings);
+    };
+    ipcRenderer.on(IpcChannels.publicSettingsChanged, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.publicSettingsChanged, listener);
+    };
+  },
   getCredentialsStatus: () => invoke<CredentialsStatus>(IpcChannels.credentialsStatus),
-  setProviderKey: (provider: ProviderId, apiKey: string) =>
-    invoke<CredentialsStatus>(IpcChannels.credentialsSet, { provider, apiKey }),
-  removeProviderKey: (provider: ProviderId) =>
-    invoke<CredentialsStatus>(IpcChannels.credentialsRemove, { provider }),
+  listCredentials: () => invoke<ProviderKeyMeta[]>(IpcChannels.credentialsList),
+  addProviderKey: (provider: ProviderId, label: string, apiKey: string) =>
+    invoke<CredentialsStatus>(IpcChannels.credentialsAdd, { provider, label, apiKey }),
+  removeProviderKeyById: (id: string) =>
+    invoke<CredentialsStatus>(IpcChannels.credentialsRemoveById, { keyId: id }),
+  renameProviderKey: (id: string, label: string) =>
+    invoke<CredentialsStatus>(IpcChannels.credentialsRename, { keyId: id, label }),
+  reorderProviderKeys: (orderedIds: string[]) =>
+    invoke<CredentialsStatus>(IpcChannels.credentialsReorder, { orderedIds }),
   minimizeWindow: () => {
     ipcRenderer.send(IpcChannels.windowMinimize);
   },

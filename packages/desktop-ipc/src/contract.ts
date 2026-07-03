@@ -39,16 +39,21 @@ export type { PopupBlockerRequest, PopupBlockerSettings };
 import type { BookmarkEntry, HistoryEntry } from '@tepegoz/persistence';
 export type { BookmarkEntry, HistoryEntry };
 
+// Extension manifest identity comes from the SDK schema (single source). Type-only → erased, so the
+// sandboxed preload stays dependency-free (the SDK pulls in zod). See `ExtensionManifestWire` below.
+import type { ExtensionManifest } from '@tepegoz/extension-sdk';
+
 // Provider identity is owned by @tepegoz/shared-types (the single schema source): AIProviderEnum and
 // this contract both derive from the SAME zod-free `providers` entry, which the sandboxed preload can
 // safely import at runtime. (MCP_TRANSPORTS below still mirrors McpTransportEnum — next candidate.)
 import {
   AI_PROVIDERS,
   type AIProvider as ProviderId,
+  type ProviderKeyMeta,
   type ProviderKeyStatus,
 } from '@tepegoz/shared-types/providers';
 export const PROVIDER_IDS = AI_PROVIDERS;
-export type { ProviderId, ProviderKeyStatus };
+export type { ProviderId, ProviderKeyMeta, ProviderKeyStatus };
 
 // Notification identity + data model is owned by @tepegoz/shared-types (zod-free, so the sandboxed
 // preload can import it at runtime). The zod validators build from these same arrays (single source).
@@ -95,6 +100,10 @@ export type {
 // `@tepegoz/desktop-ipc` consumers keep one import surface.
 export * from './channels';
 
+// The public-settings allowlist + shape (extension-facing curated preferences). Zod-free.
+// `PublicSettings` is imported (below) for use in `TepegozApi`; `export *` only re-exports.
+import type { PublicSettings } from './public-settings';
+export * from './public-settings';
 
 export interface AppInfo {
   name: string;
@@ -145,11 +154,27 @@ export interface McpServerStatusInfo {
 
 export interface Preferences {
   theme: ThemePref;
+  /**
+   * Custom single-color theme (hex, e.g. '#7c3aed'); '' = follow `theme` (system/light/dark). When
+   * set, it becomes the base surface and text auto-contrasts (dark color → light text, and vice-versa).
+   */
+  themeColor: string;
   locale: LocalePref;
   telemetryEnabled: boolean;
   /** Cost-saver: route simple capabilities to the local SLM (real routing lands in Phase 1b). */
   useLocalModelForSimpleTasks: boolean;
+  /**
+   * The default AI provider — DERIVED from the credential vault's key order (the provider of the
+   * top/highest-priority key) and synced by main whenever keys change. There is no separate UI for it;
+   * reorder the keys to change it.
+   */
   defaultProvider: ProviderId;
+  /** Region/country (ISO 3166 code, e.g. 'TR'); '' = follow the OS. Drives date/number formatting. */
+  region: string;
+  /** Date-format style (Intl `dateStyle`): 'short' | 'medium' | 'long' | 'full'. */
+  dateFormat: string;
+  /** The selected default search engine id (see @tepegoz/shared-types/search-engines). */
+  searchEngineId: string;
   /** Per-extension status (managed at tepegoz://extensions). Unlisted extensions default to enabled. */
   extensions: ExtensionState[];
   /** Active User-Agent override for browsed pages (User-Agent switcher extension); null = default. */
@@ -185,7 +210,10 @@ export interface NotificationPermissionResponse {
 export interface CredentialsStatus {
   /** Whether the OS keychain (safeStorage) can encrypt on this device. */
   encryptionAvailable: boolean;
+  /** Per-provider "has ≥1 key" flags (kept for existing consumers; derived from `keys`). */
   providers: ProviderKeyStatus;
+  /** Every stored key's metadata (NO secret; `last4` is a non-secret fingerprint). Any number per provider. */
+  keys: ProviderKeyMeta[];
 }
 
 // Login credential manager — preload-safe inline types (no @tepegoz/password-core import so the

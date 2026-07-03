@@ -262,18 +262,20 @@ export function App() {
   }, [locale]);
 
   const theme = prefs?.theme ?? 'system';
+  const themeColor = prefs?.themeColor ?? '';
   useEffect(() => {
-    applyTheme(theme);
-    if (theme !== 'system') return undefined;
+    applyTheme(theme, themeColor);
+    // Only follow OS changes for the plain system mode (a custom color overrides it).
+    if (theme !== 'system' || themeColor !== '') return undefined;
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const onChange = (): void => {
-      applyTheme('system');
+      applyTheme('system', '');
     };
     mq.addEventListener('change', onChange);
     return () => {
       mq.removeEventListener('change', onChange);
     };
-  }, [theme]);
+  }, [theme, themeColor]);
 
   // Tell main where to lay out the active tab's web view (the content area below the chrome).
   useEffect(() => {
@@ -514,11 +516,22 @@ export function App() {
   async function onUpdatePrefs(patch: Partial<Preferences>): Promise<void> {
     setPrefs(await window.tepegoz.updatePreferences(patch));
   }
-  async function onSetKey(provider: ProviderId, apiKey: string): Promise<void> {
-    setStatus(await window.tepegoz.setProviderKey(provider, apiKey));
+  async function onAddKey(provider: ProviderId, label: string, apiKey: string): Promise<void> {
+    setStatus(await window.tepegoz.addProviderKey(provider, label, apiKey));
   }
-  async function onRemoveKey(provider: ProviderId): Promise<void> {
-    setStatus(await window.tepegoz.removeProviderKey(provider));
+  async function onRemoveKeyById(id: string): Promise<void> {
+    setStatus(await window.tepegoz.removeProviderKeyById(id));
+  }
+  async function onRenameKey(id: string, label: string): Promise<void> {
+    setStatus(await window.tepegoz.renameProviderKey(id, label));
+  }
+  async function onReorderKeys(orderedIds: string[]): Promise<void> {
+    setStatus(await window.tepegoz.reorderProviderKeys(orderedIds));
+    // The top key defines the default provider; main synced it, so refresh prefs too.
+    setPrefs(await window.tepegoz.getPreferences());
+  }
+  async function onResetPrefs(): Promise<void> {
+    setPrefs(await window.tepegoz.resetPreferences());
   }
   function onToggleExtension(id: ExtensionId, enabled: boolean): void {
     const next = extensionStates.filter((e) => e.id !== id);

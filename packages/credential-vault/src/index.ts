@@ -4,4 +4,9 @@
  * to an injected file path. Raw keys never leave the caller. Extracted from `apps/desktop` per
  * docs/package-map.md.
  */
-export { default, type SecretCrypto, type ProviderKeyStatus } from './credential-vault';
+export {
+  default,
+  type SecretCrypto,
+  type ProviderKeyStatus,
+  type ProviderKeyMeta,
+} from './credential-vault';

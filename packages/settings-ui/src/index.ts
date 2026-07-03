@@ -4,4 +4,5 @@
  * docs/package-map.md.
  */
 export { SettingsLayout, type SettingsLayoutProps, type SettingsSection } from './settings-layout';
+export { ComingSoonCard, type ComingSoonCardProps } from './coming-soon-card';
 export { settingsDict, type SettingsStrings } from './i18n';

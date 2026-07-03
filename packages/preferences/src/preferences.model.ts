@@ -4,9 +4,11 @@ import {
   LOCALE_PREFS,
   MCP_TRANSPORTS,
   PROVIDER_IDS,
+  RESOLVED_LOCALES,
   SITE_PERMISSION_STATES,
   THEME_PREFS,
   type Preferences,
+  type PublicSettings,
 } from '@tepegoz/desktop-ipc';
 
 /**
@@ -57,10 +59,17 @@ export const McpServerPrefSchema = z
 
 export const PreferencesSchema = z.object({
   theme: ThemePrefSchema,
+  // Custom single-color theme (hex) or '' to follow the mode. Lenient; the UI validates/normalizes.
+  themeColor: z.string().max(32),
   locale: LocalePrefSchema,
   telemetryEnabled: z.boolean(),
   useLocalModelForSimpleTasks: z.boolean(),
+  // Derived from the credential vault's key order (top key's provider) and synced by main; no UI.
   defaultProvider: ProviderPrefSchema,
+  // Region/date/search are lenient strings (validated/normalized at the UI); unknown values are harmless.
+  region: z.string().max(16),
+  dateFormat: z.string().max(16),
+  searchEngineId: z.string().max(64),
   // Required (not .default) so the schema input matches Preferences; init always merges the default
   // (extensions: []) first, and PreferencesPatchSchema (.partial) makes it optional on read/patch.
   extensions: z.array(ExtensionStateSchema),
@@ -75,6 +84,12 @@ export const PreferencesSchema = z.object({
     z.string().max(2048),
     z.object({ notifications: z.enum(SITE_PERMISSION_STATES).optional() }),
   ),
+  // Popup Blocker (strict) settings — block popups by default, allowing only trusted origins.
+  popupBlocker: z.object({
+    enabled: z.boolean(),
+    showNotifications: z.boolean(),
+    trustedOrigins: z.array(z.string().max(2048)).max(500),
+  }),
 }) satisfies z.ZodType<Preferences>;
 
 /** Patch shape for partial updates — only provided keys are applied. */
@@ -82,17 +97,40 @@ export const PreferencesPatchSchema = PreferencesSchema.partial();
 
 export type PreferencesPatch = z.infer<typeof PreferencesPatchSchema>;
 
+/**
+ * Boundary validator for the curated PUBLIC settings the main process sends to extensions. The object
+ * schema strips any extra key, so even a buggy projection can't leak a private field. Built from the
+ * SAME canonical enums as the preferences schema (no drift); `satisfies` pins it to `PublicSettings`.
+ * The `resolvedLocale` enum comes from the shared `RESOLVED_LOCALES` list. Keep the public field set in
+ * sync with `PUBLIC_SETTING_KEYS` (guarded by the test below).
+ */
+export const PublicSettingsSchema = z.object({
+  theme: ThemePrefSchema,
+  themeColor: z.string().max(32),
+  locale: LocalePrefSchema,
+  telemetryEnabled: z.boolean(),
+  notificationsEnabled: z.boolean(),
+  useLocalModelForSimpleTasks: z.boolean(),
+  defaultProvider: ProviderPrefSchema,
+  resolvedLocale: z.enum(RESOLVED_LOCALES),
+}) satisfies z.ZodType<PublicSettings>;
+
 export type { Preferences };
 
 export const DEFAULT_PREFERENCES: Preferences = {
   theme: 'system',
+  themeColor: '',
   locale: 'system',
   telemetryEnabled: false,
   useLocalModelForSimpleTasks: false,
   defaultProvider: 'anthropic',
+  region: '',
+  dateFormat: 'medium',
+  searchEngineId: 'google',
   extensions: [],
   userAgent: null,
   mcpServers: [],
   notificationsEnabled: true,
   sitePermissions: {},
+  popupBlocker: { enabled: true, showNotifications: true, trustedOrigins: [] },
 };

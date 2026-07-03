@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons';
 import { cn } from '@tepegoz/ui';
@@ -17,6 +17,8 @@ export interface SettingsSection {
   /** Free text matched against the search query to decide this section's visibility. */
   searchText: string;
   content: ReactNode;
+  /** Optional sidebar grouping (Chrome/Edge-style headings). Undefined ⇒ ungrouped (flat list). */
+  group?: string;
 }
 
 export interface SettingsLayoutProps {
@@ -53,26 +55,37 @@ export function SettingsLayout({ titleIcon, sections, banner }: SettingsLayoutPr
           <h1 className="text-base font-semibold">{title}</h1>
         </div>
         <nav className="space-y-0.5 px-2">
-          {sections.map((sec) => (
-            <button
-              key={sec.id}
-              type="button"
-              aria-current={!searching && active === sec.id}
-              onClick={() => {
-                setActive(sec.id);
-                setSearch('');
-              }}
-              className={cn(
-                'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors',
-                !searching && active === sec.id
-                  ? 'bg-surface-overlay font-medium text-text-primary'
-                  : 'text-text-secondary hover:bg-surface-overlay hover:text-text-primary',
-              )}
-            >
-              <span className="h-4 w-4 shrink-0">{sec.icon}</span>
-              {sec.label}
-            </button>
-          ))}
+          {sections.map((sec, i) => {
+            // A group heading precedes the first section of each group (Chrome/Edge-style). Ungrouped
+            // sections (group === undefined) render with no heading, preserving the old flat list.
+            const showHeading = sec.group !== undefined && sec.group !== sections[i - 1]?.group;
+            return (
+              <Fragment key={sec.id}>
+                {showHeading && (
+                  <p className="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                    {sec.group}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  aria-current={!searching && active === sec.id}
+                  onClick={() => {
+                    setActive(sec.id);
+                    setSearch('');
+                  }}
+                  className={cn(
+                    'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors',
+                    !searching && active === sec.id
+                      ? 'bg-surface-overlay font-medium text-text-primary'
+                      : 'text-text-secondary hover:bg-surface-overlay hover:text-text-primary',
+                  )}
+                >
+                  <span className="h-4 w-4 shrink-0">{sec.icon}</span>
+                  {sec.label}
+                </button>
+              </Fragment>
+            );
+          })}
         </nav>
       </aside>
 

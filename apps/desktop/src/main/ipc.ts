@@ -140,7 +140,22 @@ function credentialsStatus(): CredentialsStatus {
   return {
     encryptionAvailable: CredentialVault.isEncryptionAvailable(),
     providers: CredentialVault.status(),
+    keys: CredentialVault.listMeta(),
   };
+}
+
+/**
+ * Keep `defaultProvider` in sync with the credential vault's key ORDER: the provider of the top
+ * (highest-priority) key is the default. Called after any add/remove/reorder. Re-broadcasts public
+ * settings (defaultProvider is public) when it actually changes. No-op when there are no keys.
+ */
+function syncDefaultProviderFromKeys(): void {
+  const top = CredentialVault.topProvider();
+  if (top === null) return;
+  if (PreferenceStore.getAll().defaultProvider !== top) {
+    PreferenceStore.update({ defaultProvider: top });
+    broadcastPublicSettings();
+  }
 }
 
 // Agent run + HITL state (registerIpc runs once at startup, so module scope is fine).
@@ -218,6 +233,25 @@ export function registerIpc(): void {
     if (validated.mcpServers !== undefined || validated.extensions !== undefined) {
       void McpService.reconcile();
     }
+    // Extension enablement also gates in-process agent capabilities (ADR-0021).
+    if (validated.extensions !== undefined) {
+      ExtensionCapabilityService.reconcile();
+    }
+    // Any change may touch a PUBLIC setting (theme/locale/etc.) — push the fresh snapshot to
+    // subscribed extensions. The projection ignores private keys, so this never leaks them.
+    broadcastPublicSettings();
+    return next;
+  });
+
+  handle(IpcChannels.publicSettingsGet, (): PublicSettings => getPublicSettings());
+
+  handle(IpcChannels.prefsReset, (): Preferences => {
+    // Merging the full defaults over the current prefs resets every field. Credentials live in the
+    // vault (not preferences), so they are untouched. Reconcile downstream services + re-broadcast.
+    const next = PreferenceStore.update(DEFAULT_PREFERENCES);
+    void McpService.reconcile();
+    ExtensionCapabilityService.reconcile();
+    broadcastPublicSettings();
     return next;
   });
 
@@ -225,15 +259,35 @@ export function registerIpc(): void {
 
   handle(IpcChannels.credentialsStatus, (): CredentialsStatus => credentialsStatus());
 
-  handle(IpcChannels.credentialsSet, (_event, payload): CredentialsStatus => {
-    const { provider, apiKey } = SetProviderKeyInputSchema.parse(payload);
-    CredentialVault.setKey(provider, apiKey);
+  handle(IpcChannels.credentialsList, (): ProviderKeyMeta[] => CredentialVault.listMeta());
+
+  handle(IpcChannels.credentialsAdd, (_event, payload): CredentialsStatus => {
+    const { provider, label, apiKey } = AddProviderKeyInputSchema.parse(payload);
+    CredentialVault.addKey(provider, label, apiKey);
+    // The first key ever added becomes the top key → sync the default provider to it.
+    syncDefaultProviderFromKeys();
     return credentialsStatus();
   });
 
-  handle(IpcChannels.credentialsRemove, (_event, payload): CredentialsStatus => {
-    const { provider } = RemoveProviderKeyInputSchema.parse(payload);
-    CredentialVault.removeKey(provider);
+  handle(IpcChannels.credentialsRemoveById, (_event, payload): CredentialsStatus => {
+    const { keyId } = RemoveKeyByIdSchema.parse(payload);
+    CredentialVault.removeKey(keyId);
+    // Removing the top key promotes the next one → re-sync the default provider.
+    syncDefaultProviderFromKeys();
+    return credentialsStatus();
+  });
+
+  handle(IpcChannels.credentialsRename, (_event, payload): CredentialsStatus => {
+    const { keyId, label } = RenameProviderKeyInputSchema.parse(payload);
+    CredentialVault.renameKey(keyId, label);
+    return credentialsStatus();
+  });
+
+  handle(IpcChannels.credentialsReorder, (_event, payload): CredentialsStatus => {
+    const { orderedIds } = ReorderKeysSchema.parse(payload);
+    CredentialVault.reorderKeys(orderedIds);
+    // The new top key defines the default provider.
+    syncDefaultProviderFromKeys();
     return credentialsStatus();
   });
 
