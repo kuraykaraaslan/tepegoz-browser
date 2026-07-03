@@ -28,6 +28,10 @@ sync-meta + ModelTransport), there is NO rewrite.
 
 ### Browser sync (separate from agent memory)
 - [ ] bookmark/password/tab E2EE sync — a layer independent of agent-memory sync
+- [ ] **Local encrypted profile/workspace export-import** (device migration / offline backup): a
+      `safeStorage`/passphrase-encrypted archive of profile data (bookmarks/history/preferences/workspaces,
+      credentials still vault-scoped) — an **offline** path independent of E2EE cloud sync; reuses the Phase 7
+      Data Rights export seam
 
 ### ExtensionHost (extra requirement #9)
 - [ ] limited MV3 (content-script/DNR/storage allowlist: Dark Reader, adblock-complement, reading tools) via `electron-chrome-extensions`

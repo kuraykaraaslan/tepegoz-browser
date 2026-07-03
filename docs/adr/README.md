@@ -23,4 +23,9 @@ consequences (including rejected alternatives). Format is a lightweight [MADR](h
 | [0013](0013-agent-orchestration-hitl.md) | Agent orchestration & two-stage HITL (end-to-end agentic task) | Accepted |
 | [0014](0014-user-data-layout-db-connector.md) | Chrome-like user-data layout (`tepegoz`) + single SQLite DB connector | Accepted |
 | [0015](0015-package-extraction-roadmap.md) | Package extraction roadmap — cohesive parts of `apps/desktop` become `packages/*` | Accepted |
-| [0016](0016-per-package-i18n.md) | Per-package i18n dictionaries + a React i18n runtime | Accepted |
+| [0016](0016-per-package-i18n.md) | Per-package i18n dictionaries + a React i18n runtime | Accepted (partially superseded by 0017) |
+| [0017](0017-feature-ui-package-i18n.md) | Feature-UI packages own their dictionaries | Accepted |
+| [0018](0018-mcp-client.md) | MCP client — external MCP servers behind the single PEP | Accepted |
+| [0019](0019-chromium-update-cadence.md) | Electron/Chromium security-update cadence | Proposed |
+| [0020](0020-tab-boundary-model.md) | Tab Boundary Model — groups, pins, split view, workspaces | Accepted |
+| [0021](0021-agent-controllable-extensions.md) | Agent-controllable extensions via in-process capability providers | Accepted |

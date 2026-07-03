@@ -91,6 +91,25 @@ module.exports = {
       to: { path: '^apps/' },
     },
     {
+      name: 'extension-host-no-app-no-electron',
+      severity: 'error',
+      comment:
+        '@tepegoz/extension-host (ADR-0021) is the Electron-free in-process capability supervisor + ' +
+        'meta extension-management tools: no Electron, no app imports. The CapabilityRegistry and the ' +
+        'ExtensionManagementHost are injected by the desktop app. See docs/package-map.md.',
+      from: { path: '^packages/extension-host/' },
+      to: { path: ['^apps/', 'node_modules/electron'] },
+    },
+    {
+      name: 'macro-engine-no-app-no-electron',
+      severity: 'error',
+      comment:
+        '@tepegoz/macro-engine is a pure deterministic interpreter: no Electron, no app imports. The ' +
+        'MacroHost (CDP/tabs) is injected by the desktop app. See docs/package-map.md.',
+      from: { path: '^packages/macro-engine/' },
+      to: { path: ['^apps/', 'node_modules/electron'] },
+    },
+    {
       name: 'window-controls-is-a-leaf',
       severity: 'error',
       comment:

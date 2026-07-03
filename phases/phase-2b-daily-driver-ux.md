@@ -11,7 +11,8 @@ work lives in Phase 2; agent orchestration (multi-tab parallelism) stays in Phas
 - [ ] Tab groups + split view + workspaces + full session restore (named sessions, recently-closed, multi-window) work
 - [ ] One PWA installs + works offline + receives a push (under the permission guard) end-to-end
 - [ ] DevTools opens with all panels (network/perf/memory/console/a11y/security/storage) + device emulation; **agent has no DevTools tool**; blocked on sensitive sites
-- [ ] **i18n:** en+tr keys added for new surfaces (tab/workspace UI, PWA install/permission prompts, DevTools menu)
+- [ ] **Default-browser registration** works (http/https handler + inbound-link routing to the existing window) and a **Task Manager** shows per-tab CPU/memory via `app.getAppMetrics`
+- [ ] **i18n:** en+tr keys added for new surfaces (tab/workspace UI, PWA install/permission prompts, DevTools menu, default-browser prompt, Task Manager)
 - [ ] ADRs accepted for: Tab Boundary Model, PWA security model, DevTools expose boundary (no code before acceptance)
 - [ ] Coverage gate (S80/B70/F80/L80) + self-review/code-review + UAT signoff + migration-safe
 
@@ -28,6 +29,15 @@ work lives in Phase 2; agent orchestration (multi-tab parallelism) stays in Phas
 ### Developer Tools (built-in Chromium, exposed)
 - [ ] Securely expose Chromium's built-in DevTools per `WebContentsView` (network/performance/memory/console/accessibility/security/storage panels come free from Chromium) + **device/mobile emulation**.
 - [ ] Open via menu + shortcut (F12 / Ctrl+Shift+I); triggered from main process without leaking privilege to the renderer. Do NOT write custom panels. **ADR required** (DevTools expose boundary): exposed to the **user** but **NOT as an agent tool** (no `devtools_*` in the Capability Plane); blocked on sensitive sites (bank/crypto/health/password-manager); device-emulation state recorded as a journal observation; reconcile with production hardening fuses (`disableDebugger`).
+
+### L8 — OS integration & diagnostics
+- [ ] **Default-browser registration** (`app.setAsDefaultProtocolClient` for http/https + OS default-apps
+      prompt); inbound links from other apps open in the **existing** window via the `second-instance` handler
+      already wired in Phase 1a — a new window only when none is open.
+- [ ] **Tab discard / sleep** (background-tab suspension + reload-on-focus) to cap memory — distinct from the
+      Phase 1b agent-context eviction (that is per-task *agent* memory; this is *browser-tab* lifecycle).
+- [ ] **Task Manager** (`app.getAppMetrics` → per-`WebContentsView` CPU / memory / PID; end-process; shows
+      which tabs are discarded) surfaced as an internal `tepegoz://` page.
 
 ### Cross-cutting (as in every phase)
 - [ ] i18n en+tr for all new surfaces; zod `safeParse` at every IPC/trust boundary; AppError contract; renderer-untrusted security; DoD coverage gate; **NO AI attribution trailer** in commits/PRs.

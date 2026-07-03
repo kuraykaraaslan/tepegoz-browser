@@ -13,6 +13,7 @@ No product features; the decisions made here would force a full rewrite if wrong
 - [ ] Secure `createWindow()` factory + fuses + typed IPC skeleton opens a working empty window
 - [x] Threat Model Lite + Risk Register + ~9 ADRs + READMEs + CHANGELOG written
 - [ ] Windows code-signing identity acquisition started (BLOCKING for distribution)
+- [ ] Release & update hardening designed (auto-update + signed rollback + crashReporter + safe-mode + corrupt-profile recovery) — _runtime flow activated before first public release_
 
 ## Tasks
 
@@ -72,6 +73,25 @@ No product features; the decisions made here would force a full rewrite if wrong
 - [ ] coverage gate (S80/B70/F80/L80) + reject focused/skipped tests — _deferred: enforce thresholds once substantive logic lands (Phase 1a)_
 - [x] `.github/workflows/release.yml` — tag-driven **per-OS matrix** (fail-fast:false), native rebuild per-OS; packaging/signing step = TODO (see below)
 - [ ] Start Windows code-signing identity (Azure Trusted Signing / EV) — **BLOCKING (distribution)** — _user action_
+
+### Release & update hardening (pre-distribution; runtime flow activated before first public release)
+
+> Anchored to the `electron-updater` config (build section above) + code-signing (below). Design lands in
+> Phase 0; the live update/rollback runtime is gated to the first public release. The AIs' "P0 release
+> blockers" — the boring-but-mandatory distribution infra — live here.
+
+- [ ] **Auto-update runtime** (`electron-updater`) with **update-signature verification** (only signed builds
+      from the trusted channel install) + **staged rollout / rollback** (a bad version auto-reverts to the
+      last-known-good)
+- [ ] **`crashReporter`** wiring + minidump collection — **opt-in**, redacted (reuse `Logger.redact`); no PII
+      in reports
+- [ ] **Safe-mode boot** (launch with extensions + agent disabled for recovery) + **corrupt-profile recovery**
+      (migration-repair / fail-safe fresh-start — generalizes the existing `SessionStore` fail-safe: malformed
+      snapshot → start fresh, never crash-loop)
+- [ ] **Chromium security-update cadence** (upstream-intake side of the update story): pinned+watched
+      `electron`, ≤2-week adoption SLA for security bumps, embedded engine version logged per release — see
+      [ADR-0019](../docs/adr/0019-chromium-update-cadence.md). This governs *which engine* we ship; the
+      auto-update runtime above governs *how* we ship it.
 
 ### Documentation & security
 

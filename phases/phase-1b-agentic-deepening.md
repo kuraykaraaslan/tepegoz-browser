@@ -55,3 +55,6 @@ fallback, full capability plane, **tepegoz's MCP SERVER surface**, local SLM.
 - [ ] **ModelRouter honors the cost-saver toggle** (Phase 1a settings flag): when ON, simple capabilities (classify/summarize/redact/loop-detect/embed) run on the local SLM to cut AI cost; transparent fallback to cloud on low confidence / unsupported task; per-capability routing + estimated savings surfaced in the Token Ledger
 - [ ] Egress Firewall TS → **Rust (napi-rs)** port; compaction via local SLM or Sonnet (NOT Haiku)
 - [ ] screenshot eviction (last 1-2 + `cas://hash`) + threshold-based compaction + prompt-cache prefix
+- [ ] _Scope note:_ browser-level **tab discard/sleep + Task Manager UI** live in **Phase 2b** (OS
+      integration & diagnostics). This L7 eviction/compaction is **agent-context** memory only — keep the
+      two separate so the discard strategy is not registered twice.

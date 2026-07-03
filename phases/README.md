@@ -18,11 +18,12 @@ them** with `- [ ]` / `- [x]`. This keeps the process resumable across sessions.
 
 | Phase | File | Goal | Status |
 |---|---|---|---|
-| 0 | [phase-0-foundation.md](phase-0-foundation.md) | Monorepo scaffold + core contracts + CI | 🟡 Core done (packaging/signing + Phase-1a-bound i18n deferred) |
+| 0 | [phase-0-foundation.md](phase-0-foundation.md) | Monorepo scaffold + core contracts + CI | 🟡 Core done (packaging/signing + release/update hardening + Phase-1a-bound i18n deferred) |
 | 1a | [phase-1a-walking-skeleton-mvp.md](phase-1a-walking-skeleton-mvp.md) | Walking-skeleton MVP (BYO-key local-first agentic core) | ⬜ Not started |
 | 1b | [phase-1b-agentic-deepening.md](phase-1b-agentic-deepening.md) | Parallel DAG + durable handoff + per-task memory + prompt/rules | ⬜ Not started |
 | 2 | [phase-2-adapters-safe-browsing.md](phase-2-adapters-safe-browsing.md) | Integration adapters + Safe-Browsing Suite | ⬜ Not started |
 | 2b | [phase-2b-daily-driver-ux.md](phase-2b-daily-driver-ux.md) | Daily-driver browser UX (tabs/PWA/DevTools) — parallel with Phase 2 | ⬜ Not started |
+| 2c | [phase-2c-classic-browser-essentials.md](phase-2c-classic-browser-essentials.md) | Classic browser essentials + downloads (find/print/PDF/reader/translate/bookmarks/private/permissions) — parallel with Phase 2/2b | ⬜ Not started |
 | 3 | [phase-3-backend-cloud-extensions.md](phase-3-backend-cloud-extensions.md) | Managed subscription + cloud memory sync + extensions | ⬜ Not started |
 | 4 | [phase-4-maturation.md](phase-4-maturation.md) | Maturation (full extensions, cross-platform, enterprise) | ⬜ Not started |
 | 5 | [phase-5-vpn-network-privacy.md](phase-5-vpn-network-privacy.md) | Per-tab & per-group VPN tunnels + Tor (network privacy) | ⬜ Not started |
@@ -34,8 +35,13 @@ them** with `- [ ]` / `- [x]`. This keeps the process resumable across sessions.
 | 10b | [phase-10b-accessibility-voice-reach.md](phase-10b-accessibility-voice-reach.md) | Accessibility, voice & inclusive reach (Assistive Mode + voice HITL + Guarded profiles) — parallel with 10 | ⬜ Not started |
 | 11 | [phase-11-regional-trust-kamu.md](phase-11-regional-trust-kamu.md) | Regional trust pack (e-Devlet/GİB/SGK/MHRS Kamu adapters + Locale-as-a-Plugin) | ⬜ Not started |
 | 12 | [phase-12-developer-platform-marketplace.md](phase-12-developer-platform-marketplace.md) | Developer platform & marketplace economy (SDK/CLI + Site-Recipe Library + SBOM gate) | ⬜ Not started |
+| M | [phase-macros.md](phase-macros.md) | Macros extension (`@tepegoz/ext-macros`) — iMacros successor: record/edit/replay, robust selectors, agent capabilities (down-payment on Phase 6) | 🟡 Core shipped |
+| E | [phase-extras.md](phase-extras.md) | Extras — special-track, demand-gated items off the 0–12 critical path (e.g. DRM/Widevine) | ⬜ Not started |
 
 Status legend: ⬜ Not started · 🟡 In progress · ✅ Done (DoD passed)
+
+> **Phase E (Extras) is not sequenced.** It is not numbered into the 0–12 flow and nothing depends on it; each
+> item is a recorded, demand-gated decision that graduates to its own branch/ADR only when pull is shown.
 
 > **Phases 6–12 are the _next-horizon_ track** distilled from the "beyond Phases 0–5" synthesis — they build
 > **on top of a finished Phases 0–5**, not gaps in it. Through-line: tepegöz's event-sourced + deterministic +
@@ -76,6 +82,10 @@ once its parent foundation has shipped and demand is shown.
 time-travel debugger · replayable RAG provenance · memory firewall (redaction refinement of the Trust Mesh) ·
 multi-agent crews · agent-builds-agent · journal-mined proactive suggestions. _(Each is a smaller surface on
 Phase 6 RecipeCompiler / Phase 7 Notary+fold / Phase 8 global index / Phase 1a–2b UI.)_
+
+**Special-track extras (cannot be done in routine development):** now live in their own
+[Phase E — Extras](phase-extras.md) (e.g. DRM/Widevine — castLabs ECS build + VMP signing). Off the 0–12
+critical path; demand-gated.
 
 **Deprioritized moonshots (with reason):**
 - **TEE / confidential-computing** for the managed proxy — Provider Trust Mesh + Sovereign Mode (Phase 8) give
