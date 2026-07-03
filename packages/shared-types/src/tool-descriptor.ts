@@ -13,8 +13,10 @@ export const ToolNameSchema = z
   );
 export type ToolName = z.infer<typeof ToolNameSchema>;
 
-/** Where a tool comes from — all sources look identical to the agent (uniform tool plane, plan §10). */
-export const ToolSourceEnum = z.enum(['builtin', 'mcp', 'skill', 'adapter', 'prompt']);
+/** Where a tool comes from — all sources look identical to the agent (uniform tool plane, plan §10).
+ *  `extension` = an in-process capability contributed by a built-in extension (ADR-0021), distinct
+ *  from `mcp` (an out-of-process stdio server declared via `manifest.mcpServer`, ADR-0018). */
+export const ToolSourceEnum = z.enum(['builtin', 'mcp', 'skill', 'adapter', 'prompt', 'extension']);
 export type ToolSource = z.infer<typeof ToolSourceEnum>;
 
 /** Normalized tool descriptor registered in the Capability Plane (L5). */

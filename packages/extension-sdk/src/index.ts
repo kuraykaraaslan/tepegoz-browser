@@ -9,3 +9,11 @@ export {
   type ExtensionManifest,
   type McpServerDecl,
 } from './manifest';
+
+export {
+  capability,
+  defineCapabilities,
+  type ExtensionCapability,
+  type ExtensionCapabilityDef,
+  type ExtensionCapabilitySet,
+} from './capabilities';

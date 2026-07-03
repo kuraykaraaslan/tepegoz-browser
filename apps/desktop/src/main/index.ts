@@ -11,6 +11,7 @@ import TabManager from './tabs';
 import UserAgentManager from './user-agent';
 import PopupWindowManager from './popup-window';
 import McpService from './mcp/supervisor.electron';
+import ExtensionCapabilityService from './extensions/capability-supervisor.electron';
 import NotificationHost from './notifications/notification-host';
 import NotificationPermissionBroker from './notifications/permission-broker';
 
@@ -113,6 +114,10 @@ if (!app.requestSingleInstanceLock()) {
       // Connect configured MCP servers in the background (non-blocking; a bad server must not delay
       // startup). Their tools register into the CapabilityRegistry as they become ready (ADR-0018).
       McpService.start();
+      // Register enabled built-in extensions' in-process agent capabilities into the same
+      // CapabilityRegistry, behind the same ToolGateway PEP (ADR-0021). Meta extension-management
+      // tools are always on. ext-macros contributes its capabilities via provide() when wired.
+      ExtensionCapabilityService.start();
 
       // Sleep/resume hooks. Phase 1b: the Recovery Coordinator resumes durable tasks from their last
       // checkpoint on 'resume' (Opera Neon's "task drops on sleep" lesson).
