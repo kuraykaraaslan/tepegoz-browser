@@ -9,6 +9,18 @@ the LLM each run (slow, costly, injection-prone, abandonment-prone), uniquely en
 Effect Ledger + perception-observation events. Narrative: **"Demonstrate once, run forever, nearly free."**
 **Branch examples:** `feat/recipe-compiler`, `feat/automation-watchers`, `feat/automation-scheduler`, `feat/palette-macros`
 
+> **Down-payment shipped (`feat/ext-macros`, ADR-0021).** A deterministic, no-code macro extension
+> (`@tepegoz/ext-macros`) already realizes the human-recorded **Record → Replay** slice of this phase
+> **model-free**: a `@tepegoz/macro-engine` interpreter (control flow, unlimited variables/arrays, CSV
+> `forEachRow` with restart, a safe sandboxed expression language, located errors) driven over a CDP
+> **robust multi-selector engine** with auto-wait (`macro-cdp.ts`), a CDP recorder (`macro-recorder.ts`),
+> `MacroStore` (migration v5), and streamed run progress. It also lands the **agent-controllable
+> extension standard** ([ADR-0021](../docs/adr/0021-agent-controllable-extensions.md)): the macro tools
+> (`macros_*`) + meta `extension_*` tools register into the single CapabilityRegistry behind the
+> ToolGateway PEP. Remaining for this phase proper: run→recipe **distillation** from a `TaskSucceeded`
+> chain, self-healing selectors (one scoped model replan), Watchers, the Scheduler, and the restricted
+> unattended trust profile.
+
 ## Exit criteria (DoD)
 - [ ] A successful agentic task is **distilled into a recipe** that re-runs end-to-end with **0 model calls**;
       on selector miss it self-heals (one scoped replan) and re-distills

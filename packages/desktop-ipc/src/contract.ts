@@ -69,9 +69,32 @@ export type {
   SitePermissionState,
 };
 
+// Macro IR + wire DTOs are owned by @tepegoz/shared-types (zod-free `macro-ir` entry, so the sandboxed
+// preload can import the types at runtime; the extension surfaces + agent capabilities share them too).
+// The zod validators (MacroSchema) build from the same module.
+import type {
+  Macro,
+  MacroRecordedStep,
+  MacroRunDraftInput,
+  MacroRunInput,
+  MacroRunProgress,
+  MacroSummary,
+  Step,
+} from '@tepegoz/shared-types/macro-ir';
+export type {
+  Macro,
+  MacroRecordedStep,
+  MacroRunDraftInput,
+  MacroRunInput,
+  MacroRunProgress,
+  MacroSummary,
+  Step,
+};
+
 // Channel names + internal page addresses live in channels.ts (250-line cap); re-exported here so
 // `@tepegoz/desktop-ipc` consumers keep one import surface.
 export * from './channels';
+
 
 export interface AppInfo {
   name: string;
@@ -523,8 +546,25 @@ export interface TepegozApi {
   onAutofillAvailable(callback: (payload: AutofillAvailablePayload) => void): () => void;
   /** Fill the selected credential into the active tab's page form. Main decrypts; nothing returns. */
   fillLogin(credentialId: string): void;
+  // Macros (ext-macros): CRUD + CSV attach, deterministic run + record, with streamed events.
+  listMacros(): Promise<MacroSummary[]>;
+  getMacro(id: string): Promise<Macro | null>;
+  /** Save (upsert) a macro; the IR is validated by MacroSchema in main. Returns its summary. */
+  saveMacro(macro: Macro): Promise<MacroSummary>;
+  deleteMacro(id: string): Promise<void>;
   /** Store CSV text as a content-addressed blob; returns the hash to reference from a `forEachRow`. */
+  attachMacroCsv(content: string): Promise<string>;
+  /** Start a saved-macro run; progress streams via {@link onMacroRunProgress}. Returns the runId. */
+  runMacro(input: MacroRunInput): Promise<{ runId: string }>;
+  /** Run an UNSAVED macro IR directly (record/edit → play without persisting). */
+  runDraftMacro(input: MacroRunDraftInput): Promise<{ runId: string }>;
+  cancelMacro(runId: string): void;
   /** Subscribe to run progress (started/step/done/failed). Returns an unsubscribe function. */
+  onMacroRunProgress(callback: (progress: MacroRunProgress) => void): () => void;
+  /** Begin recording the active tab; captured steps stream via {@link onMacroRecordStep}. */
+  startMacroRecording(): Promise<void>;
+  stopMacroRecording(): Promise<void>;
   /** Subscribe to captured steps while recording. Returns an unsubscribe function. */
+  onMacroRecordStep(callback: (step: MacroRecordedStep) => void): () => void;
   readonly platform: string;
 }

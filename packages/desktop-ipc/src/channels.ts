@@ -105,9 +105,22 @@ export const IpcChannels = {
   loginsAutofillAvailable: 'logins:autofill-available',
   /** Renderer→main: user selected a credential to autofill. */
   loginsFill: 'logins:fill',
+  // Macro automation (ext-macros). Request/response CRUD + run; record start/stop is fire-and-forget
   // with main→renderer streaming pushes for captured steps and run progress.
+  macrosList: 'macros:list',
+  macrosGet: 'macros:get',
+  macrosSave: 'macros:save',
+  macrosDelete: 'macros:delete',
+  macrosRun: 'macros:run',
+  macrosRunDraft: 'macros:run-draft',
+  macrosCancel: 'macros:cancel',
+  macrosAttachCsv: 'macros:attach-csv',
+  macrosRecordStart: 'macros:record-start',
+  macrosRecordStop: 'macros:record-stop',
   /** Main→renderer push: a step was captured while recording. */
+  macrosRecordStep: 'macros:record-step',
   /** Main→renderer push: run progress (step started/finished, run done/failed). */
+  macrosRunProgress: 'macros:run-progress',
 } as const;
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];

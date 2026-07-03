@@ -125,6 +125,24 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 5,
+    up: (db) => {
+      db.exec(`
+        -- Saved macros (ext-macros): user-authored deterministic automation scripts. The full IR is
+        -- stored as JSON in \`ir\`; attached CSV data lives in the content-addressed \`blobs\` table and
+        -- is referenced by hash from the IR (no CSV inline in this row).
+        CREATE TABLE macros (
+          id         TEXT PRIMARY KEY,
+          name       TEXT NOT NULL,
+          ir         TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        );
+        CREATE INDEX idx_macros_updated ON macros (updated_at);
+      `);
+    },
+  },
 ];
 
 /**

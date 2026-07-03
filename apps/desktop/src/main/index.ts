@@ -13,6 +13,8 @@ import PopupBlockerManager from './popup-blocker';
 import PopupWindowManager from './popup-window';
 import McpService from './mcp/supervisor.electron';
 import ExtensionCapabilityService from './extensions/capability-supervisor.electron';
+import MacroService from './macro/macro-service.electron';
+import { macrosCapabilities } from '@tepegoz/ext-macros/capabilities';
 import NotificationHost from './notifications/notification-host';
 import NotificationPermissionBroker from './notifications/permission-broker';
 import PasswordHost from './password/password-host';
@@ -124,7 +126,8 @@ if (!app.requestSingleInstanceLock()) {
       McpService.start();
       // Register enabled built-in extensions' in-process agent capabilities into the same
       // CapabilityRegistry, behind the same ToolGateway PEP (ADR-0021). Meta extension-management
-      // tools are always on. ext-macros contributes its capabilities via provide() when wired.
+      // tools are always on. ext-macros contributes its capabilities here, then start() reconciles.
+      ExtensionCapabilityService.provide(macrosCapabilities(), MacroService.capabilityHost());
       ExtensionCapabilityService.start();
 
       // Sleep/resume hooks. Phase 1b: the Recovery Coordinator resumes durable tasks from their last

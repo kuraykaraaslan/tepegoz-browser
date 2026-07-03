@@ -353,15 +353,36 @@ const api: TepegozApi = {
   fillLogin: (credentialId: string) => {
     ipcRenderer.send(IpcChannels.loginsFill, { credentialId });
   },
+  // Macros (ext-macros).
+  listMacros: () => invoke<MacroSummary[]>(IpcChannels.macrosList),
+  getMacro: (id: string) => invoke<Macro | null>(IpcChannels.macrosGet, id),
+  saveMacro: (macro: Macro) => invoke<MacroSummary>(IpcChannels.macrosSave, macro),
+  deleteMacro: (id: string) => invoke<void>(IpcChannels.macrosDelete, id),
+  attachMacroCsv: (content: string) => invoke<string>(IpcChannels.macrosAttachCsv, { content }),
+  runMacro: (input: MacroRunInput) => invoke<{ runId: string }>(IpcChannels.macrosRun, input),
+  runDraftMacro: (input: MacroRunDraftInput) =>
+    invoke<{ runId: string }>(IpcChannels.macrosRunDraft, input),
+  cancelMacro: (runId: string) => {
+    ipcRenderer.send(IpcChannels.macrosCancel, runId);
   },
+  onMacroRunProgress: (callback: (progress: MacroRunProgress) => void) => {
+    const listener = (_event: unknown, payload: MacroRunProgress): void => {
       callback(payload);
     };
+    ipcRenderer.on(IpcChannels.macrosRunProgress, listener);
     return () => {
+      ipcRenderer.removeListener(IpcChannels.macrosRunProgress, listener);
     };
   },
+  startMacroRecording: () => invoke<void>(IpcChannels.macrosRecordStart),
+  stopMacroRecording: () => invoke<void>(IpcChannels.macrosRecordStop),
+  onMacroRecordStep: (callback: (step: MacroRecordedStep) => void) => {
+    const listener = (_event: unknown, payload: MacroRecordedStep): void => {
       callback(payload);
     };
+    ipcRenderer.on(IpcChannels.macrosRecordStep, listener);
     return () => {
+      ipcRenderer.removeListener(IpcChannels.macrosRecordStep, listener);
     };
   },
   platform: process.platform,

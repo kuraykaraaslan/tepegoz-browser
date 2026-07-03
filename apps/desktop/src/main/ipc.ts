@@ -718,4 +718,46 @@ export function registerIpc(): void {
   handle(IpcChannels.popupBlockerRecentRequests, (): PopupBlockerRequest[] =>
     PopupBlockerManager.getRecentRequests(),
   );
+
+  // Macros (ext-macros): CRUD + CSV attach, deterministic run (streamed located progress), and record
+  // (streamed captured Steps). The macro IR is validated with MacroSchema at this trust boundary.
+  handle(IpcChannels.macrosList, (): MacroSummary[] => MacroService.list());
+  handle(IpcChannels.macrosGet, (_event, payload): Macro | null =>
+    MacroService.get(MacroIdSchema.parse(payload)),
+  );
+  handle(IpcChannels.macrosSave, (_event, payload): MacroSummary =>
+    MacroService.save(MacroSchema.parse(payload)),
+  );
+  handle(IpcChannels.macrosDelete, (_event, payload): void => {
+    MacroService.delete(MacroIdSchema.parse(payload));
+  });
+  handle(IpcChannels.macrosAttachCsv, (_event, payload): string =>
+    MacroService.attachCsv(MacroAttachCsvSchema.parse(payload).content),
+  );
+  handle(IpcChannels.macrosRun, (event, payload): { runId: string } => {
+    const input = MacroRunInputSchema.parse(payload);
+    const sender = event.sender;
+    const runId = MacroService.run(input, (progress) => {
+      if (!sender.isDestroyed()) sender.send(IpcChannels.macrosRunProgress, progress);
+    });
+    return { runId };
+  });
+  handle(IpcChannels.macrosRunDraft, (event, payload): { runId: string } => {
+    const { macro, variables } = MacroRunDraftSchema.parse(payload);
+    const sender = event.sender;
+    const runId = MacroService.runDraft(macro, variables, (progress) => {
+      if (!sender.isDestroyed()) sender.send(IpcChannels.macrosRunProgress, progress);
+    });
+    return { runId };
+  });
+  onAction(IpcChannels.macrosCancel, MacroIdSchema, (runId) => {
+    MacroService.cancel(runId);
+  });
+  handleAsync(IpcChannels.macrosRecordStart, async (event): Promise<void> => {
+    const sender = event.sender;
+    await MacroService.recordStart((index, step) => {
+      if (!sender.isDestroyed()) sender.send(IpcChannels.macrosRecordStep, { index, step });
+    });
+  });
+  handleAsync(IpcChannels.macrosRecordStop, (): Promise<void> => MacroService.recordStop());
 }

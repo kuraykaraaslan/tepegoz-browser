@@ -7,6 +7,7 @@ import {
   NOTIFICATION_SOURCES,
   SITE_PERMISSION_STATES,
 } from './notifications';
+import { COMPARE_OPS, SELECTOR_KINDS, STEP_KINDS } from './macro-ir';
 
 /**
  * Runtime-validated enums (internal-ai-rules: z.enum, not TS enum, for anything validated at runtime).
@@ -28,6 +29,11 @@ export type RiskLevel = z.infer<typeof RiskLevelEnum>;
 
 export const McpTransportEnum = z.enum(['stdio', 'http_sse']);
 export type McpTransport = z.infer<typeof McpTransportEnum>;
+
+/** Macro IR enums — built FROM the canonical zod-free lists in macro-ir.ts (single source). */
+export const SelectorKindEnum = z.enum(SELECTOR_KINDS);
+export const CompareOpEnum = z.enum(COMPARE_OPS);
+export const StepKindEnum = z.enum(STEP_KINDS);
 
 /** Notification enums — built FROM the canonical zod-free lists in notifications.ts (single source). */
 export const NotificationKindEnum = z.enum(NOTIFICATION_KINDS);
