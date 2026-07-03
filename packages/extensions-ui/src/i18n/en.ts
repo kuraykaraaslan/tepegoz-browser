@@ -4,6 +4,9 @@ export const en = {
   manage: 'Manage extensions',
   search: 'Search extensions',
   empty: 'No matching extensions',
+  // Toolbar-icon right-click menu.
+  settingsPage: 'Settings page',
+  remove: 'Remove',
 };
 
 export type ExtensionsStrings = typeof en;

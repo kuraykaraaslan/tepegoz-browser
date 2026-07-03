@@ -248,6 +248,14 @@ export type ExtensionId = string;
 
 /** Per-extension status (managed at tepegoz://extensions). More states (e.g. 'error') may be added. */
 export type ExtensionStatus = 'enabled' | 'disabled';
+
+/** The action chosen from a toolbar extension icon's right-click menu: open its settings page, or
+ *  remove (disable) it. */
+export type ExtensionContextMenuAction = 'page' | 'remove';
+export interface ExtensionContextMenuChoice {
+  id: ExtensionId;
+  action: ExtensionContextMenuAction;
+}
 export interface ExtensionState {
   id: ExtensionId;
   status: ExtensionStatus;
@@ -436,6 +444,11 @@ export interface TepegozApi {
   getMcpStatus(): Promise<McpServerStatusInfo[]>;
   /** Subscribe to "open this extension panel" requests; returns an unsubscribe fn. */
   onOpenExtension(callback: (id: ExtensionId) => void): () => void;
+  /** Pop the native right-click menu for a toolbar extension icon (Settings page / Remove), acted on in
+   *  the main process; the chosen action is pushed back via `onExtensionContextMenuAction`. */
+  showExtensionContextMenu(id: ExtensionId): void;
+  /** Subscribe to the action chosen from an extension icon's context menu; returns an unsubscribe fn. */
+  onExtensionContextMenuAction(callback: (choice: ExtensionContextMenuChoice) => void): () => void;
   /** Open a named app surface as a native floating popup window anchored at `anchor` (the trigger's
    *  rect, in window-content DIP). Floats above the page, which stays live behind it. Reusable across
    *  surfaces: `surface` is the kind ('main-menu' | 'ext'); extensions pass their id via `opts.id`;

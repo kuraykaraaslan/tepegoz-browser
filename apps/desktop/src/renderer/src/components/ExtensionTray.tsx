@@ -74,6 +74,10 @@ function ExtensionIconButton({
       aria-pressed={active}
       title={label}
       onClick={handleClick}
+      onContextMenu={(e) => {
+        e.preventDefault(); // native OS menu (Settings page / Remove), acted on in the main process
+        window.tepegoz.showExtensionContextMenu(ext.id);
+      }}
       className={cn(NAV_BTN, active && 'bg-surface-overlay text-text-primary')}
     >
       {ext.icon}

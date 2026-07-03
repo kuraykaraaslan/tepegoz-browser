@@ -328,6 +328,17 @@ export function registerIpc(): void {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (win) showTabContextMenu(win, parsed.data);
   });
+  // Native extension-icon context menu — also needs the sender's window to anchor + to push the choice.
+  ipcMain.on(IpcChannels.extensionContextMenu, (event: IpcMainEvent, payload: unknown) => {
+    if (!isTrustedAppUrl(event.senderFrame?.url ?? '')) return;
+    const parsed = ExtensionIdSchema.safeParse(payload);
+    if (!parsed.success) {
+      Logger.warn('Ignored extension:context-menu: invalid payload');
+      return;
+    }
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) showExtensionContextMenu(win, parsed.data);
+  });
   // Native group-header context menu — also needs the sender's window to anchor + to push the rename.
   ipcMain.on(IpcChannels.tabsGroupContextMenu, (event: IpcMainEvent, payload: unknown) => {
     if (!isTrustedAppUrl(event.senderFrame?.url ?? '')) return;

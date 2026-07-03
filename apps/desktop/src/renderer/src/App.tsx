@@ -324,6 +324,19 @@ export function App() {
     });
   }, [runExtensionAction]);
 
+  // Right-click on a toolbar extension icon → the native menu relays the chosen action back here so it
+  // runs against our authoritative React state: open its settings page, or remove (disable) it.
+  useEffect(() => {
+    return window.tepegoz.onExtensionContextMenuAction(({ id, action }) => {
+      if (action === 'page') {
+        setActiveSurface(null);
+        window.tepegoz.navigateTab(extensionPageUrl(id));
+      } else {
+        onToggleExtension(id, false);
+      }
+    });
+  }, [onToggleExtension]);
+
   // Keep the popup-open ref in sync (read by runExtensionAction to toggle without stale closures).
   useEffect(() => {
     popupOpenIdRef.current = popupOpenId;

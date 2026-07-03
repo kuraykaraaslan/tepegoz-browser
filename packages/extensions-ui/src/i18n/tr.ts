@@ -6,4 +6,7 @@ export const tr: ExtensionsStrings = {
   manage: 'Eklentileri yönet',
   search: 'Eklentilerde ara',
   empty: 'Eşleşen eklenti yok',
+  // Araç çubuğu simgesi sağ-tık menüsü.
+  settingsPage: 'Ayarlar sayfası',
+  remove: 'Kaldır',
 };

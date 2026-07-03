@@ -220,6 +220,18 @@ const api: TepegozApi = {
       ipcRenderer.removeListener(IpcChannels.extensionOpen, listener);
     };
   },
+  showExtensionContextMenu: (id: ExtensionId) => {
+    ipcRenderer.send(IpcChannels.extensionContextMenu, id);
+  },
+  onExtensionContextMenuAction: (callback: (choice: ExtensionContextMenuChoice) => void) => {
+    const listener = (_event: unknown, choice: ExtensionContextMenuChoice): void => {
+      callback(choice);
+    };
+    ipcRenderer.on(IpcChannels.extensionContextMenuAction, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.extensionContextMenuAction, listener);
+    };
+  },
   openPopup: (surface: string, anchor: ContentBounds, opts?: { id?: string; height?: number }) => {
     ipcRenderer.send(IpcChannels.popupOpen, {
       surface,

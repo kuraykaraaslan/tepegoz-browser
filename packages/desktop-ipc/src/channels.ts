@@ -54,6 +54,10 @@ export const IpcChannels = {
   tokenUsage: 'token:usage',
   tokenUsageGet: 'token:usage-get',
   extensionOpen: 'extension:open',
+  /** Renderer→main: pop the native context menu for a toolbar extension icon (settings page / remove). */
+  extensionContextMenu: 'extension:context-menu',
+  /** Main→renderer push: the action chosen from an extension icon's context menu (`page` | `remove`). */
+  extensionContextMenuAction: 'extension:context-menu-action',
   popupOpen: 'popup:open',
   popupResize: 'popup:resize',
   popupClose: 'popup:close',
