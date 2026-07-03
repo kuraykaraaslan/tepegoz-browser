@@ -10,7 +10,7 @@ import {
 import type { ExtensionCapabilitySet } from '@tepegoz/extension-sdk';
 import { isExtensionEnabled } from '@tepegoz/desktop-ipc';
 import PreferenceStore from '@tepegoz/preferences';
-import { BUILTIN_MANIFESTS, extensionLabel, manifestById } from '../../shared/extensions';
+import { builtinManifests, extensionLabel, manifestById } from '../../shared/extensions';
 import { mainLocale } from '../lib/i18n-main';
 
 /**
@@ -46,7 +46,9 @@ function infoFor(id: string): ExtensionInfo | undefined {
 
 const managementHost: ExtensionManagementHost = {
   list: () =>
-    BUILTIN_MANIFESTS.map((m) => infoFor(m.id)).filter((i): i is ExtensionInfo => i !== undefined),
+    builtinManifests()
+      .map((m) => infoFor(m.id))
+      .filter((i): i is ExtensionInfo => i !== undefined),
   get: (id) => infoFor(id),
   setEnabled: (id, enabled) => {
     const manifest = manifestById(id);

@@ -63,6 +63,8 @@ export const IpcChannels = {
   agentPlanResponse: 'agent:plan-response',
   tokenUsage: 'token:usage',
   tokenUsageGet: 'token:usage-get',
+  /** Renderer→main: the identity of every built-in extension (from the validated on-disk catalog). */
+  extensionsListManifests: 'extensions:list-manifests',
   extensionOpen: 'extension:open',
   /** Renderer→main: pop the native context menu for a toolbar extension icon (settings page / remove). */
   extensionContextMenu: 'extension:context-menu',

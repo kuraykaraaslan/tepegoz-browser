@@ -78,6 +78,10 @@ export const ExtensionManifestSchema = z
     /** Semantic version x.y.z. */
     version: z.string().regex(/^\d+\.\d+\.\d+$/, 'version must be semver x.y.z'),
     description: z.string().max(300).default(''),
+    /** Toolbar-icon identifier (a stable slug the host maps to a rendered icon). Data-driven so the
+     *  registry carries icon identity instead of the renderer hardcoding a node per extension; the
+     *  host falls back to a generic icon for an unknown id. */
+    icon: z.string().min(1).max(64).default('puzzle-piece'),
     /** The surfaces this extension implements (at least one). */
     surfaces: z.array(ExtensionSurfaceKindSchema).min(1),
     /** Chrome-style toolbar-icon bindings. `click` defaults to the first declared surface. */

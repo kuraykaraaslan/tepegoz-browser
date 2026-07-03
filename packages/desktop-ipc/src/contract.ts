@@ -297,6 +297,11 @@ export interface TabsState {
  *  is the source of truth for which ids exist — kept out of this preload-safe file (it pulls in zod). */
 export type ExtensionId = string;
 
+/** The renderer-facing extension manifest: IDENTITY only. Omits `mcpServer` (agent/main-only). Delivered
+ *  by `listExtensionManifests`; the renderer pairs each with its lazily-loaded surface components + icon
+ *  (enabled/disabled state comes separately from prefs — {@link ExtensionState}). */
+export type ExtensionManifestWire = Omit<ExtensionManifest, 'mcpServer'>;
+
 /** Per-extension status (managed at tepegoz://extensions). More states (e.g. 'error') may be added. */
 export type ExtensionStatus = 'enabled' | 'disabled';
 
@@ -493,6 +498,9 @@ export interface TepegozApi {
   getRecentRequests(): Promise<PopupBlockerRequest[]>;
   /** Read-only status of every configured MCP server (Settings → Connections). Never returns secrets. */
   getMcpStatus(): Promise<McpServerStatusInfo[]>;
+  /** The identity of every built-in extension (from the validated on-disk catalog). The renderer pairs
+   *  each with its lazily-loaded surface components + icon; enabled/disabled state comes from prefs. */
+  listExtensionManifests(): Promise<ExtensionManifestWire[]>;
   /** Subscribe to "open this extension panel" requests; returns an unsubscribe fn. */
   onOpenExtension(callback: (id: ExtensionId) => void): () => void;
   /** Pop the native right-click menu for a toolbar extension icon (Settings page / Remove), acted on in

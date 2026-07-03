@@ -257,6 +257,24 @@ export function registerIpc(): void {
 
   handle(IpcChannels.mcpGetStatus, (): McpServerStatusInfo[] => McpService.getStatus());
 
+  // Built-in extension identity for the renderer (it pairs each with lazily-loaded surfaces + icon).
+  // Read-only, trusted direction; `mcpServer` is stripped — the renderer never needs it.
+  handle(
+    IpcChannels.extensionsListManifests,
+    (): ExtensionManifestWire[] =>
+      builtinManifests().map((m) => ({
+        id: m.id,
+        name: m.name,
+        version: m.version,
+        description: m.description,
+        icon: m.icon,
+        surfaces: m.surfaces,
+        actions: m.actions,
+        labels: m.labels,
+        permissions: m.permissions,
+      })),
+  );
+
   handle(IpcChannels.credentialsStatus, (): CredentialsStatus => credentialsStatus());
 
   handle(IpcChannels.credentialsList, (): ProviderKeyMeta[] => CredentialVault.listMeta());

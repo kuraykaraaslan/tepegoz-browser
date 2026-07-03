@@ -227,6 +227,8 @@ const api: TepegozApi = {
   },
   getRecentRequests: () => invoke<PopupBlockerRequest[]>(IpcChannels.popupBlockerRecentRequests),
   getMcpStatus: () => invoke<McpServerStatusInfo[]>(IpcChannels.mcpGetStatus),
+  listExtensionManifests: () =>
+    invoke<ExtensionManifestWire[]>(IpcChannels.extensionsListManifests),
   onOpenExtension: (callback: (id: ExtensionId) => void) => {
     const listener = (_event: unknown, id: ExtensionId): void => {
       callback(id);

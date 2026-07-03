@@ -17,6 +17,11 @@ describe('extension manifest schema', () => {
     expect(m.labels).toEqual({}); // default
     expect(m.actions.click).toBe('panel'); // defaults to the first surface
     expect(m.actions.doubleClick).toBeUndefined();
+    expect(m.icon).toBe('puzzle-piece'); // default icon slug
+  });
+
+  it('keeps a provided icon slug', () => {
+    expect(defineExtension({ ...VALID, icon: 'robot' }).icon).toBe('robot');
   });
 
   it('keeps provided description + permissions + labels', () => {

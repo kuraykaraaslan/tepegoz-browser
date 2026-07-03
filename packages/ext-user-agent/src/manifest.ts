@@ -6,6 +6,7 @@ export const userAgentManifest = defineExtension({
   name: 'User-Agent',
   version: '0.1.0',
   description: 'Change how the browser identifies itself to sites — pick a User-Agent from a list.',
+  icon: 'user-secret',
   surfaces: ['popup', 'page'],
   actions: { click: 'popup', doubleClick: 'page' },
   labels: {

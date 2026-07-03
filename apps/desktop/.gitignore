@@ -1,0 +1,3 @@
+# Generated at build/dev time from each built-in extension's manifest (see
+# scripts/generate-extension-catalog.ts). Main reads + zod-validates it at startup.
+resources/extensions.catalog.json
