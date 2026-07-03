@@ -102,6 +102,29 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 4,
+    up: (db) => {
+      db.exec(`
+        -- Encrypted login credentials for the password manager. Passwords are stored as
+        -- base64(safeStorage.encryptString(plain)) — the OS keychain (DPAPI on Windows) must be
+        -- available to decrypt them. Raw passwords never leave the main process.
+        CREATE TABLE login_credentials (
+          id           TEXT PRIMARY KEY,
+          url          TEXT NOT NULL,
+          username     TEXT NOT NULL,
+          title        TEXT NOT NULL DEFAULT '',
+          notes        TEXT NOT NULL DEFAULT '',
+          encrypted_pw TEXT NOT NULL,
+          provider_id  TEXT NOT NULL DEFAULT 'local',
+          created_at   INTEGER NOT NULL,
+          updated_at   INTEGER NOT NULL
+        );
+        CREATE INDEX idx_credentials_url ON login_credentials (url);
+        CREATE UNIQUE INDEX idx_credentials_url_username ON login_credentials (url, username);
+      `);
+    },
+  },
 ];
 
 /**

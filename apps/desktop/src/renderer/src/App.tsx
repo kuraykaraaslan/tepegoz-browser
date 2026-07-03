@@ -18,17 +18,19 @@ import {
 } from '@tepegoz/desktop-ipc';
 import type {
   AppNotification,
+  AutofillAvailablePayload,
   ContentBounds,
   CredentialsStatus,
   ExtensionId,
   LocalePref,
+  LoginCredentialMeta,
   NotificationPermissionRequest,
   Preferences,
   ProviderId,
   TabsState,
-  ThemePref,
 } from '@tepegoz/desktop-ipc';
 import { NotificationPermissionPrompt, ToastStack } from '@tepegoz/notifications-ui';
+import { AutofillSuggestion } from '@tepegoz/password-ui';
 import { runNotificationAction } from './lib/notification-actions';
 import { extensionIdFromPageUrl, extensionLabel, extensionPageUrl } from '../../shared/extensions';
 import { EXTENSIONS, extensionDefById } from './extensions/registry';
@@ -107,6 +109,10 @@ export function App() {
   }, []);
   // Pending per-site Web Notification consent prompt (from the main-process broker), or null.
   const [permReq, setPermReq] = useState<NotificationPermissionRequest | null>(null);
+  // Autofill suggestions pushed from main when a page loads and has matching stored credentials.
+  const [autofill, setAutofill] = useState<AutofillAvailablePayload | null>(null);
+  // Cached credential list for the Passwords settings section.
+  const [loginCredentials, setLoginCredentials] = useState<LoginCredentialMeta[]>([]);
 
   const locale = effectiveLocale(prefs?.locale ?? 'system');
 
@@ -223,6 +229,22 @@ export function App() {
   // broker serializes); a new one replaces any still-open prompt.
   useEffect(() => {
     return window.tepegoz.onNotificationPermissionRequest(setPermReq);
+  }, []);
+
+  // Autofill: main pushes matching credentials when a page finishes loading. Navigating away clears.
+  useEffect(() => {
+    return window.tepegoz.onAutofillAvailable((payload) => {
+      setAutofill(payload);
+    });
+  }, []);
+
+  // Refresh the credentials list whenever the Passwords settings section is open.
+  const refreshLogins = useCallback(async (): Promise<void> => {
+    try {
+      setLoginCredentials(await window.tepegoz.listLogins());
+    } catch {
+      setLoginCredentials([]);
+    }
   }, []);
   const answerPermission = useCallback(
     (allow: boolean, remember: boolean) => {
@@ -620,9 +642,27 @@ export function App() {
                     prefs={prefs}
                     status={status}
                     onUpdatePrefs={onUpdatePrefs}
-                    onSetKey={onSetKey}
-                    onRemoveKey={onRemoveKey}
+                    onResetPrefs={onResetPrefs}
+                    onAddKey={onAddKey}
+                    onRemoveKeyById={onRemoveKeyById}
+                    onRenameKey={onRenameKey}
+                    onReorderKeys={onReorderKeys}
                     getMcpStatus={() => window.tepegoz.getMcpStatus()}
+                    loginCredentials={loginCredentials}
+                    onLoginSectionMount={refreshLogins}
+                    onAddLogin={(c) =>
+                      window.tepegoz.setLogin(c).then(async () => { await refreshLogins(); })
+                    }
+                    onRemoveLogin={(id) =>
+                      window.tepegoz.removeLogin(id).then(async () => { await refreshLogins(); })
+                    }
+                    onImportLogins={(data, fmt) =>
+                      window.tepegoz.importLogins(data, fmt).then(async (r) => {
+                        await refreshLogins();
+                        return r;
+                      })
+                    }
+                    onExportLogins={(fmt) => window.tepegoz.exportLogins(fmt)}
                   />
                 ) : (
                   <p className="px-6 py-8 text-sm text-text-secondary">…</p>
@@ -649,6 +689,21 @@ export function App() {
               </div>
             )}
             {renderActiveSurface()}
+            {autofill !== null && (
+              <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
+                <div className="pointer-events-auto">
+                  <AutofillSuggestion
+                    url={autofill.url}
+                    matches={autofill.matches}
+                    onFill={(id) => {
+                      window.tepegoz.fillLogin(id);
+                      setAutofill(null);
+                    }}
+                    onDismiss={() => setAutofill(null)}
+                  />
+                </div>
+              </div>
+            )}
           </div>
           {renderSidebar()}
         </div>

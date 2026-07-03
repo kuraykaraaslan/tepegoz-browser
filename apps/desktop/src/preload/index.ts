@@ -309,6 +309,49 @@ const api: TepegozApi = {
   respondNotificationPermission: (response: NotificationPermissionResponse) => {
     ipcRenderer.send(IpcChannels.notificationPermissionRespond, response);
   },
+  // Login credential manager. Raw secrets never cross this bridge — only metadata returns.
+  listLogins: () => invoke<LoginCredentialMeta[]>(IpcChannels.loginsList),
+  setLogin: (credential: {
+    url: string;
+    username: string;
+    password: string;
+    title?: string;
+    notes?: string;
+  }) =>
+    invoke<LoginCredentialMeta>(IpcChannels.loginsSet, {
+      url: credential.url,
+      username: credential.username,
+      secret: credential.password,
+      title: credential.title,
+      notes: credential.notes,
+    }),
+  removeLogin: (id: string) => invoke<void>(IpcChannels.loginsRemove, id),
+  importLogins: (data: string, format: string) =>
+    invoke<LoginImportResult>(IpcChannels.loginsImport, { data, format }),
+  exportLogins: (format: string) => invoke<string>(IpcChannels.loginsExport, format),
+  onAutofillAvailable: (callback: (payload: AutofillAvailablePayload) => void) => {
+    const listener = (_event: unknown, payload: AutofillAvailablePayload): void => {
+      callback(payload);
+    };
+    ipcRenderer.on(IpcChannels.loginsAutofillAvailable, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.loginsAutofillAvailable, listener);
+    };
+  },
+  fillLogin: (credentialId: string) => {
+    ipcRenderer.send(IpcChannels.loginsFill, { credentialId });
+  },
+  },
+      callback(payload);
+    };
+    return () => {
+    };
+  },
+      callback(payload);
+    };
+    return () => {
+    };
+  },
   platform: process.platform,
 };
 

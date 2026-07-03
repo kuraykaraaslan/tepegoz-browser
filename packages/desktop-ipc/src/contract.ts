@@ -165,6 +165,30 @@ export interface CredentialsStatus {
   providers: ProviderKeyStatus;
 }
 
+// Login credential manager — preload-safe inline types (no @tepegoz/password-core import so the
+// sandboxed preload stays dependency-free). These mirror the types in password-core/src/types.ts.
+export interface LoginCredentialMeta {
+  id: string;
+  url: string;
+  username: string;
+  title: string;
+  notes: string;
+  providerId: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface LoginImportResult {
+  imported: number;
+  skipped: number;
+  errors: string[];
+}
+
+export interface AutofillAvailablePayload {
+  url: string;
+  matches: LoginCredentialMeta[];
+}
+
 /** One of the fixed Chrome-style tab-group colors (ADR-0020). */
 export type TabGroupColor =
   | 'grey'
@@ -468,5 +492,26 @@ export interface TepegozApi {
   ): () => void;
   /** Answer a pending consent prompt (allow/deny, optionally remembered for the origin). */
   respondNotificationPermission(response: NotificationPermissionResponse): void;
+  // Login credential manager (logins:* channels). Encrypted on disk; raw secrets never cross IPC.
+  /** All stored login metadata (no passwords). */
+  listLogins(): Promise<LoginCredentialMeta[]>;
+  /** Save a new or updated login. The raw password is encrypted in main immediately on arrival. */
+  setLogin(credential: {
+    url: string;
+    username: string;
+    password: string;
+    title?: string;
+    notes?: string;
+  }): Promise<LoginCredentialMeta>;
+  removeLogin(id: string): Promise<void>;
+  importLogins(data: string, format: string): Promise<LoginImportResult>;
+  exportLogins(format: string): Promise<string>;
+  /** Subscribe to autofill-available pushes (main → renderer on page load). Returns unsubscribe fn. */
+  onAutofillAvailable(callback: (payload: AutofillAvailablePayload) => void): () => void;
+  /** Fill the selected credential into the active tab's page form. Main decrypts; nothing returns. */
+  fillLogin(credentialId: string): void;
+  /** Store CSV text as a content-addressed blob; returns the hash to reference from a `forEachRow`. */
+  /** Subscribe to run progress (started/step/done/failed). Returns an unsubscribe function. */
+  /** Subscribe to captured steps while recording. Returns an unsubscribe function. */
   readonly platform: string;
 }

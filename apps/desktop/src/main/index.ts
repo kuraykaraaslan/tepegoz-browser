@@ -5,7 +5,7 @@ import { Logger } from '@tepegoz/libs';
 import { createWindow } from './window';
 import { installSecurity } from './security';
 import { abortActiveAgentRuns, registerIpc } from './ipc';
-import { initStores } from './stores.electron';
+import { initStores, passwordVault } from './stores.electron';
 import { closeDatabase } from './db/database.electron';
 import TabManager from './tabs';
 import UserAgentManager from './user-agent';
@@ -15,6 +15,8 @@ import McpService from './mcp/supervisor.electron';
 import ExtensionCapabilityService from './extensions/capability-supervisor.electron';
 import NotificationHost from './notifications/notification-host';
 import NotificationPermissionBroker from './notifications/permission-broker';
+import PasswordHost from './password/password-host';
+import AutofillHost from './password/autofill-host';
 
 // Last-resort process-level hooks: an async error that escapes every boundary must be LOGGED, not a
 // silent crash. Exceptions still terminate (state is unknown); rejections are logged and survived.
@@ -66,6 +68,9 @@ function bootstrap(): void {
   // and the per-site Web Notification consent prompt to the same window.
   NotificationHost.attach(win);
   NotificationPermissionBroker.attach(win);
+  // Password manager: IPC handlers + autofill push/fill (hooks into TabManager navigation events).
+  PasswordHost.attach();
+  AutofillHost.attach(win, passwordVault);
   // Dev: electron-vite injects the renderer dev-server URL. Prod: load the built file.
   const devUrl = process.env['ELECTRON_RENDERER_URL'];
   if (devUrl !== undefined && devUrl.length > 0) {

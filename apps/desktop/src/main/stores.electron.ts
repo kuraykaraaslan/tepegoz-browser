@@ -2,7 +2,10 @@ import { join } from 'node:path';
 import { app, safeStorage } from 'electron';
 import CredentialVault, { type SecretCrypto } from '@tepegoz/credential-vault';
 import PreferenceStore from '@tepegoz/preferences';
-import { initDatabase } from './db/database.electron';
+import { initDatabase, getDb } from './db/database.electron';
+import { passwordVault } from '@tepegoz/password-vault';
+import { PasswordProviderRegistry } from '@tepegoz/password-core';
+import { googleCsvProvider } from '@tepegoz/password-provider-google-csv';
 
 /**
  * Electron wiring for the main-process stores (the only place that touches `safeStorage`/`app`).
@@ -23,4 +26,12 @@ export function initStores(): void {
   });
   PreferenceStore.init({ filePath: join(userData, 'preferences.json') });
   initDatabase(); // the SQLite connector (journal + history + kv) under the same user-data dir
+  const db = getDb();
+  if (db !== null) {
+    passwordVault.init({ crypto: safeStorageCrypto, db });
+    PasswordProviderRegistry.register(passwordVault);
+    PasswordProviderRegistry.register(googleCsvProvider);
+  }
 }
+
+export { passwordVault };
