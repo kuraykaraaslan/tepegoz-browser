@@ -51,13 +51,26 @@ afterEach(() => {
 });
 
 describe('runAgent guards (before any model/tool call)', () => {
-  it('rejects when the default provider is not the (Phase-1a) supported one', async () => {
-    PreferenceStore.update({ defaultProvider: 'openai' });
-    await expect(runAgent('do a thing', hooks(), DEPS)).rejects.toThrow(/not supported/i);
+  it('rejects when the only stored key is for a not-yet-wired provider (Gemini)', async () => {
+    CredentialVault.addKey('gemini', 'work', 'gm-only');
+    await expect(runAgent('do a thing', hooks(), DEPS)).rejects.toThrow(/No usable API key/i);
   });
 
-  it('rejects when no API key is configured for the default provider', async () => {
-    // Default provider is anthropic; no key stored → the key guard fires.
+  it('rejects when no API key is stored at all', async () => {
     await expect(runAgent('do a thing', hooks(), DEPS)).rejects.toThrow(/API key/i);
+  });
+
+  it('selects the highest-priority runnable key even when a not-yet-wired provider is on top', async () => {
+    // Top (highest-priority) key is Gemini (no adapter yet), but an OpenAI key sits below it: the run
+    // must resolve to the OpenAI key instead of hard-failing. Mock the key fetch to stop before the
+    // live model call.
+    CredentialVault.addKey('gemini', 'work', 'gm-top');
+    CredentialVault.addKey('openai', 'personal', 'sk-openai-lower');
+    const spy = vi.spyOn(CredentialVault, 'getFirstKeyForProvider').mockImplementation(() => {
+      throw new Error('stop-before-network');
+    });
+    await expect(runAgent('do a thing', hooks(), DEPS)).rejects.toThrow('stop-before-network');
+    expect(spy).toHaveBeenCalledWith('openai');
+    spy.mockRestore();
   });
 });

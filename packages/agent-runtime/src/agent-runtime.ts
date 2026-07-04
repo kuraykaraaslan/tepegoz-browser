@@ -1,5 +1,13 @@
 import { AppError } from '@tepegoz/libs';
-import { AnthropicProvider, ModelGateway, ModelRouter, TokenLedger } from '@tepegoz/model-gateway';
+import {
+  AnthropicProvider,
+  ModelGateway,
+  ModelRouter,
+  OpenAIProvider,
+  TokenLedger,
+  type EffortLevel,
+  type ModelProvider,
+} from '@tepegoz/model-gateway';
 import {
   CapabilityRegistry,
   ToolGateway,
@@ -8,7 +16,12 @@ import {
 } from '@tepegoz/capability-plane';
 import { Planner, Reactor, type StepOutcome } from '@tepegoz/orchestrator';
 import { TaintTracker, detectHandoff } from '@tepegoz/security-policy';
-import type { Plan } from '@tepegoz/shared-types';
+import {
+  isRunnableProvider,
+  RUNNABLE_AI_PROVIDERS,
+  type AIProvider,
+  type Plan,
+} from '@tepegoz/shared-types';
 import type { AgentEventKind } from '@tepegoz/ext-agent/types';
 import CredentialVault from '@tepegoz/credential-vault';
 import PreferenceStore from '@tepegoz/preferences';
@@ -78,24 +91,45 @@ export interface AgentRunSummary {
  * L3 orchestration entry point (Phase 1a end-to-end): user prompt → ModelRouter → Planner (DAG) →
  * sequential Executor through the single ToolGateway PEP (Policy Kernel + HITL) → live Agent Console
  * events. The provider is registered from the safeStorage vault key at run time; the raw key never
- * leaves the process. Provider-agnostic by design; Phase 1a is Claude-only. Electron-free: every
- * app/OS concern is injected via {@link AgentRunDeps}.
+ * leaves the process. Provider-agnostic by design; Anthropic + OpenAI adapters ship today (see
+ * RUNNABLE_AI_PROVIDERS). Electron-free: every app/OS concern is injected via {@link AgentRunDeps}.
  */
+/**
+ * Build the model-provider adapter for a resolved provider id. `effort` is applied only by the
+ * Anthropic adapter (its `output_config.effort`); the OpenAI tier models are plain chat models that
+ * take no effort field, so it is ignored there (see {@link OpenAIProvider}).
+ */
+function providerFor(provider: AIProvider, apiKey: string, effort: EffortLevel): ModelProvider {
+  if (provider === 'openai') {
+    return new OpenAIProvider({ apiKey });
+  }
+  return new AnthropicProvider({ apiKey, effort });
+}
+
 export async function runAgent(
   prompt: string,
   hooks: AgentRunHooks,
   deps: AgentRunDeps,
 ): Promise<AgentRunSummary> {
   const prefs = PreferenceStore.getAll();
-  const provider = prefs.defaultProvider;
-  if (provider !== 'anthropic') {
+  // A key for ANY provider can be stored, but a run resolves to the highest-priority stored key whose
+  // provider the runtime has an adapter for — so a user whose top key is a not-yet-wired provider
+  // still runs on a lower-priority supported key instead of hard-failing.
+  const storedKeys = CredentialVault.listMeta();
+  const runnable = storedKeys.find((m) => isRunnableProvider(m.provider));
+  if (runnable === undefined) {
+    if (storedKeys.length === 0) {
+      throw new AppError('No API key configured. Add one in Settings → Providers.', 401);
+    }
     throw new AppError(
-      `Provider "${provider}" is not supported yet (Phase 1a is Claude-only)`,
+      `No usable API key: this build can run ${RUNNABLE_AI_PROVIDERS.join(', ')}. ` +
+        `Add a key for one of these in Settings → Providers.`,
       501,
     );
   }
-  // `defaultProvider` is the provider of the top (highest-priority) key; use that provider's first key
-  // in vault order. The raw key stays in main (getFirstKeyForProvider is main-only), never on IPC.
+  // Use that provider's highest-priority key. The raw key stays in main (getFirstKeyForProvider is
+  // main-only), never on IPC.
+  const provider = runnable.provider;
   const apiKey = CredentialVault.getFirstKeyForProvider(provider);
   if (apiKey === null) {
     throw new AppError('No API key configured. Add one in Settings → Providers.', 401);
@@ -112,7 +146,7 @@ export async function runAgent(
     costSaver: prefs.useLocalModelForSimpleTasks,
     provider,
   });
-  ModelGateway.register(new AnthropicProvider({ apiKey, effort: route.effort }));
+  ModelGateway.register(providerFor(provider, apiKey, route.effort));
 
   registerBuiltinTools(deps.browserHost, deps.journal);
   const tools = CapabilityRegistry.list().map((d) => ({

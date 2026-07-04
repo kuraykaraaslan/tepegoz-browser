@@ -7,6 +7,21 @@
 export const AI_PROVIDERS = ['anthropic', 'openai', 'gemini'] as const;
 export type AIProvider = (typeof AI_PROVIDERS)[number];
 
+/**
+ * The providers the agent runtime has an adapter for and can actually DRIVE today. A key for any
+ * provider may be stored, but a run resolves to the highest-priority stored key whose provider is in
+ * this set — so a user whose top key is a not-yet-wired provider still runs on a lower-priority
+ * supported key instead of hard-failing. The ONE source of truth, shared by the runtime (key
+ * selection) and the Settings UI (the "not usable yet" hint). Widen this as providers are wired up
+ * (Gemini pending an adapter).
+ */
+export const RUNNABLE_AI_PROVIDERS = ['anthropic', 'openai'] as const satisfies readonly AIProvider[];
+
+/** True when the agent runtime can drive `provider` today (see {@link RUNNABLE_AI_PROVIDERS}). */
+export function isRunnableProvider(provider: AIProvider): boolean {
+  return (RUNNABLE_AI_PROVIDERS as readonly AIProvider[]).includes(provider);
+}
+
 /** Per-provider "has at least one key stored" flags — NEVER the keys themselves. Shared by the
  *  credential vault (producer, derived from the key collection) and the IPC contract (renderer status). */
 export type ProviderKeyStatus = Record<AIProvider, boolean>;
