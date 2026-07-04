@@ -32,6 +32,8 @@ export function resolveLocale(requested: string | undefined): Locale {
 /** Locale-aware formatting (Intl date/number/relative-time/list/plural). */
 export {
   formatDate,
+  formatDateByFormat,
+  DATE_FORMAT_IDS,
   formatTime,
   formatNumber,
   formatCurrency,
@@ -40,6 +42,7 @@ export {
   pluralCategory,
   selectPlural,
 } from './format';
+export type { DateFormatId } from './format';
 
 /** Text-direction (RTL-ready) skeleton. */
 export { localeDir, RTL_LOCALES, type Direction } from './direction';

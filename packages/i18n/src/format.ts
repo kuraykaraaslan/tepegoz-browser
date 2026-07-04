@@ -17,6 +17,54 @@ export function formatDate(
   return new Intl.DateTimeFormat(locale, options).format(value);
 }
 
+/**
+ * Selectable date formats for the `dateFormat` preference. The first four are locale-aware Intl
+ * `dateStyle` presets (order/month-name follow the locale); the rest are fixed-order concrete
+ * patterns (numeric order is fixed; any month name still comes from `Intl`, so it stays localized).
+ */
+export const DATE_FORMAT_IDS = [
+  'short',
+  'medium',
+  'long',
+  'full',
+  'iso',
+  'dmy-slash',
+  'mdy-slash',
+  'dmy-dot',
+  'd-mmm-y',
+] as const;
+export type DateFormatId = (typeof DATE_FORMAT_IDS)[number];
+
+const DATE_STYLE_IDS = new Set<string>(['short', 'medium', 'long', 'full']);
+
+/**
+ * Format a date per the stored `dateFormat` preference id. `locale` may be any BCP-47 tag (e.g.
+ * `tr-DE`) so region-specific month names/ordering apply. Unknown ids fall back to `medium`.
+ */
+export function formatDateByFormat(value: Date | number, locale: string, format: string): string {
+  const d = value instanceof Date ? value : new Date(value);
+  if (DATE_STYLE_IDS.has(format)) {
+    return new Intl.DateTimeFormat(locale, { dateStyle: format as 'short' | 'medium' | 'long' | 'full' }).format(d);
+  }
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  switch (format) {
+    case 'iso':
+      return `${y}-${m}-${day}`;
+    case 'dmy-slash':
+      return `${day}/${m}/${y}`;
+    case 'mdy-slash':
+      return `${m}/${day}/${y}`;
+    case 'dmy-dot':
+      return `${day}.${m}.${y}`;
+    case 'd-mmm-y':
+      return `${d.getDate()} ${new Intl.DateTimeFormat(locale, { month: 'short' }).format(d)} ${y}`;
+    default:
+      return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(d);
+  }
+}
+
 export function formatTime(
   value: Date | number,
   locale: Locale,
