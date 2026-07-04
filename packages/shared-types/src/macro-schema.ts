@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CompareOpEnum, SelectorKindEnum } from './enums';
+import { CompareOpEnum, SelectorKindEnum, StepErrorPolicyEnum } from './enums';
 import {
   MACRO_IR_VERSION,
   type Macro,
@@ -33,6 +33,12 @@ const SelectorSchema: z.ZodType<Selector> = z.object({
 
 const SelectorChainSchema = z.array(SelectorSchema).min(1).max(MAX_CHAIN);
 
+/** Optional per-step error-handling fields, spread into every browser-action step object. */
+const errorHandling = {
+  onError: StepErrorPolicyEnum.optional(),
+  retries: z.number().int().min(0).max(100).optional(),
+};
+
 export const PredicateSchema: z.ZodType<Predicate> = z.lazy(() =>
   z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('elementExists'), target: SelectorChainSchema }),
@@ -49,18 +55,20 @@ export const PredicateSchema: z.ZodType<Predicate> = z.lazy(() =>
 export const StepSchema: z.ZodType<Step> = z.lazy(() =>
   z
     .discriminatedUnion('kind', [
-      z.object({ kind: z.literal('navigate'), url: Bounded }),
-      z.object({ kind: z.literal('click'), target: SelectorChainSchema }),
+      z.object({ kind: z.literal('navigate'), url: Bounded, ...errorHandling }),
+      z.object({ kind: z.literal('click'), target: SelectorChainSchema, ...errorHandling }),
       z.object({
         kind: z.literal('fill'),
         target: SelectorChainSchema,
         value: z.string().max(10_000),
+        ...errorHandling,
       }),
-      z.object({ kind: z.literal('press'), key: z.string().min(1).max(40) }),
+      z.object({ kind: z.literal('press'), key: z.string().min(1).max(40), ...errorHandling }),
       z.object({
         kind: z.literal('scroll'),
         direction: z.enum(['up', 'down']),
         amount: z.number().int().positive().max(100_000).optional(),
+        ...errorHandling,
       }),
       z.object({
         kind: z.literal('extract'),
@@ -68,15 +76,18 @@ export const StepSchema: z.ZodType<Step> = z.lazy(() =>
         into: VarName,
         attr: z.string().min(1).max(128).optional(),
         append: z.boolean().optional(),
+        ...errorHandling,
       }),
       z.object({
         kind: z.literal('waitFor'),
         target: SelectorChainSchema,
         timeoutMs: z.number().int().positive().max(600_000).optional(),
+        ...errorHandling,
       }),
       z.object({
         kind: z.literal('waitLoad'),
         timeoutMs: z.number().int().positive().max(600_000).optional(),
+        ...errorHandling,
       }),
       z.object({ kind: z.literal('waitMs'), ms: z.number().int().positive().max(600_000) }),
       z.object({

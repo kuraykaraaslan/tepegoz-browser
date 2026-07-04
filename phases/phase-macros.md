@@ -59,10 +59,12 @@ without the Manifest-V3 death, the opaque error codes, or the `EVAL` security ho
 ### M1 — Editor / UX
 - [ ] **Nested block editing** — edit inside `if` / `repeat` / `forEachRow` bodies (add/edit/reorder
       child steps), not just top-level. *(highest-impact gap)*
-- [ ] **Add every step kind from scratch** — `click`, `fill`, `press`, `scroll`, `extract`, `assert`,
-      `setVar`, `if`, `repeat`, `forEachRow` (today only wait/navigate/waitFor/waitLoad).
-- [ ] **Richer inline editors** — selector editing for `click`/`extract`; condition builder for
-      `assert`/`if`; name+expression editor for `setVar`; loop `count`/`while` + `forEachRow` config.
+- [x] **Add every simple step kind from scratch** — `navigate`/`click`/`fill`/`press`/`scroll`/
+      `extract`/`setVar`/`waitFor`/`waitLoad`/`waitMs` via the Add-step picker. *(block kinds
+      `if`/`repeat`/`forEachRow`/`assert` still pending — need the nested editor above.)*
+- [x] **Richer inline editors** — selector input for `click`/`fill`/`extract`; key select for `press`;
+      direction for `scroll`; name+expression for `setVar`; URL/timeout for `navigate`/`waitFor`/
+      `waitLoad`. *(condition builder for `assert`/`if` + loop config still pending.)*
 - [ ] **Drag-and-drop reordering** (replace ↑/↓).
 - [ ] **Step disable (skip without delete)**, **duplicate**, **copy/paste** steps.
 - [ ] **Step-through / breakpoints**, **pause & resume** during a run.
@@ -98,8 +100,9 @@ without the Manifest-V3 death, the opaque error codes, or the `EVAL` security ho
 
 ### M5 — Reliability & execution
 - [ ] **Adjustable speed / step-delay UI** — the engine floor is 50 ms; expose slow/normal/fast.
-- [ ] **Per-step error policy** — "on error: stop / skip / retry (N)". Correctly fixes the iMacros
-      `!ERRORIGNORE`-swallows-`FAIL_IF_FOUND` problem.
+- [x] **Per-step error policy** — `onError: stop | skip | retry` + `retries` on every browser-action
+      step (IR + zod + engine + a per-row editor control). Correctly fixes the iMacros
+      `!ERRORIGNORE`-swallows-`FAIL_IF_FOUND` problem. *(3 engine tests.)*
 - [ ] **Run history & replay-diff** — journal every run (Event Journal wiring exists); show the failing
       step vs the recorded golden trace.
 - [ ] **Default timeout / retry settings** per macro.

@@ -214,6 +214,46 @@ describe('runMacro', () => {
     expect(host.sleeps).toEqual([50]);
   });
 
+  it('onError:skip swallows a failing step and continues (fixes iMacros !ERRORIGNORE)', async () => {
+    const host = fakeHost({ waitFor: () => Promise.resolve(false) });
+    const r = await runMacro(
+      macro([
+        { kind: 'waitFor', target: css('.never'), timeoutMs: 10, onError: 'skip' },
+        { kind: 'click', target: css('.after') },
+      ]),
+      host,
+    );
+    expect(r.ok).toBe(true);
+    expect(host.log).toContain('click .after');
+  });
+
+  it('onError:retry re-runs the step up to `retries` times, then succeeds', async () => {
+    let attempts = 0;
+    const host = fakeHost({
+      click: (c) => {
+        attempts++;
+        if (attempts < 3) return Promise.reject(new Error('not yet'));
+        return Promise.resolve(void [c]);
+      },
+    });
+    const r = await runMacro(
+      macro([{ kind: 'click', target: css('.flaky'), onError: 'retry', retries: 3 }]),
+      host,
+    );
+    expect(r.ok).toBe(true);
+    expect(attempts).toBe(3);
+  });
+
+  it('onError:retry fails the run once retries are exhausted (located error)', async () => {
+    const host = fakeHost({ click: () => Promise.reject(new Error('always fails')) });
+    const r = await runMacro(
+      macro([{ kind: 'click', target: css('.flaky'), onError: 'retry', retries: 1 }]),
+      host,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error?.where).toBe('step 1 (click)');
+  });
+
   it('honours the abort signal', async () => {
     const host = fakeHost();
     const controller = { aborted: false };

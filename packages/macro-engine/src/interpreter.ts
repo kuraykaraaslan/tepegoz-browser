@@ -86,11 +86,31 @@ export async function runMacro(
       throw new MacroError(`Exceeded step budget (${maxSteps})`, path, step.kind);
     }
     opts.onProgress?.({ phase: 'step', path, kind: step.kind });
-    try {
-      await dispatch(step, path);
-    } catch (err) {
-      if (err instanceof MacroError || err instanceof MacroAborted) throw err;
-      throw new MacroError(err instanceof Error ? err.message : String(err), path, step.kind);
+
+    // Per-step error policy (answers iMacros' !ERRORIGNORE/FAIL_IF_FOUND): stop | skip | retry(N).
+    const onError = 'onError' in step ? (step.onError ?? 'stop') : 'stop';
+    const maxRetries = 'retries' in step && typeof step.retries === 'number' ? step.retries : 0;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await dispatch(step, path);
+        break;
+      } catch (err) {
+        if (err instanceof MacroAborted) throw err;
+        const macroErr =
+          err instanceof MacroError
+            ? err
+            : new MacroError(err instanceof Error ? err.message : String(err), path, step.kind);
+        if (onError === 'retry' && attempt < maxRetries) {
+          opts.onProgress?.({ phase: 'step', path, kind: `${step.kind}:retry` });
+          await host.sleep(minStepIntervalMs);
+          continue;
+        }
+        if (onError === 'skip') {
+          opts.onProgress?.({ phase: 'step', path, kind: `${step.kind}:skipped` });
+          break; // swallow the failure and continue the run
+        }
+        throw macroErr; // 'stop' (default), or retries exhausted
+      }
     }
     // Enforce the minimum inter-operation gap after any real browser action (floor speed).
     if (PACED_KINDS.has(step.kind)) await host.sleep(minStepIntervalMs);

@@ -87,26 +87,42 @@ export type StepKind = (typeof STEP_KINDS)[number];
 /** `assert` failure severity: `hard` aborts the run; `soft` journals and continues. */
 export type AssertSeverity = 'hard' | 'soft';
 
+/**
+ * Per-step failure handling — the direct answer to the iMacros `!ERRORIGNORE`-swallows-`FAIL_IF_FOUND`
+ * complaint. `stop` (default) aborts the run at the exact failing step; `skip` swallows the error and
+ * continues; `retry` re-runs the step up to `retries` times, then fails. Carried only by browser-action
+ * steps (the ones that can meaningfully fail on a page).
+ */
+export const STEP_ERROR_POLICIES = ['stop', 'skip', 'retry'] as const;
+export type StepErrorPolicy = (typeof STEP_ERROR_POLICIES)[number];
+
+/** Optional error-handling fields mixed into every browser-action step. */
+interface StepErrorHandling {
+  onError?: StepErrorPolicy | undefined;
+  /** Only meaningful with `onError: 'retry'` — how many extra attempts before failing. */
+  retries?: number | undefined;
+}
+
 /** One macro instruction. A discriminated union on `kind`; `if`/`repeat`/`forEachRow` nest `Step[]`. */
 export type Step =
   /** `url` interpolates `{{var}}`. */
-  | { kind: 'navigate'; url: string }
-  | { kind: 'click'; target: SelectorChain }
+  | ({ kind: 'navigate'; url: string } & StepErrorHandling)
+  | ({ kind: 'click'; target: SelectorChain } & StepErrorHandling)
   /** `value` interpolates `{{var}}` / CSV columns. */
-  | { kind: 'fill'; target: SelectorChain; value: string }
-  | { kind: 'press'; key: string }
-  | { kind: 'scroll'; direction: 'up' | 'down'; amount?: number | undefined }
+  | ({ kind: 'fill'; target: SelectorChain; value: string } & StepErrorHandling)
+  | ({ kind: 'press'; key: string } & StepErrorHandling)
+  | ({ kind: 'scroll'; direction: 'up' | 'down'; amount?: number | undefined } & StepErrorHandling)
   /** Read text (or `attr`) from the target into variable `into`; `append` pushes onto an array var. */
-  | {
+  | ({
       kind: 'extract';
       target: SelectorChain;
       into: string;
       attr?: string | undefined;
       append?: boolean | undefined;
-    }
-  | { kind: 'waitFor'; target: SelectorChain; timeoutMs?: number | undefined }
+    } & StepErrorHandling)
+  | ({ kind: 'waitFor'; target: SelectorChain; timeoutMs?: number | undefined } & StepErrorHandling)
   /** Wait for the current page's navigation/load to settle (e.g. after a click that triggers nav). */
-  | { kind: 'waitLoad'; timeoutMs?: number | undefined }
+  | ({ kind: 'waitLoad'; timeoutMs?: number | undefined } & StepErrorHandling)
   | { kind: 'waitMs'; ms: number }
   | { kind: 'assert'; predicate: Predicate; severity: AssertSeverity; message?: string | undefined }
   | { kind: 'setVar'; name: string; expr: string }
