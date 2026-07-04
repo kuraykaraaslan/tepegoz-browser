@@ -14,6 +14,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@tepegoz/bookmarks": "workspace:*",
     "@tepegoz/ext-agent": "workspace:*",
     "@tepegoz/ext-popup-blocker": "workspace:*",
     "@tepegoz/extension-sdk": "workspace:*",
