@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faBell,
@@ -27,9 +27,10 @@ import {
   type SettingsSection,
 } from '@tepegoz/settings-ui';
 import { AlertBanner, Badge, Button, Card, cn, Input, Toggle } from '@tepegoz/ui';
-import { coreDict } from '@tepegoz/i18n';
+import { coreDict, DATE_FORMAT_IDS, formatDateByFormat, type DateFormatId } from '@tepegoz/i18n';
 import { useLocale, useT } from '@tepegoz/i18n/react';
-import { SEARCH_ENGINES } from '@tepegoz/shared-types/search-engines';
+import { DEFAULT_SEARCH_ENGINE_ID, SEARCH_ENGINES } from '@tepegoz/shared-types/search-engines';
+import { isRunnableProvider, LOCALE_PREFS, PROVIDER_IDS, THEME_PREFS } from '@tepegoz/desktop-ipc';
 import type {
   AppInfo,
   CredentialsStatus,
@@ -44,24 +45,48 @@ import type {
   ThemePref,
 } from '@tepegoz/desktop-ipc';
 import { CredentialsSettings, ImportExportPanel } from '@tepegoz/password-ui';
+import { getCountryDataList } from 'countries-list';
+import { FlagSelect, type FlagOption } from './FlagSelect';
+import { TURKIC_REGIONS, TURKIC_REGION_BASE_ISO, turkicFlagFor } from '../data/turkic-regions';
 
-const PROVIDERS: readonly ProviderId[] = ['anthropic', 'openai', 'gemini'];
-const THEMES: readonly ThemePref[] = ['system', 'light', 'dark'];
-const LOCALES: readonly LocalePref[] = ['system', 'en', 'tr'];
-/** Providers whose keys the agent runtime can actually use today (Phase-1a is Claude-only). */
-const RUNNABLE_PROVIDERS = new Set<ProviderId>(['anthropic']);
-/** A curated set of regions (ISO 3166) for date/number formatting; names are localized via Intl. */
-const REGIONS: readonly string[] = [
-  'US', 'GB', 'TR', 'DE', 'FR', 'ES', 'IT', 'NL', 'SE', 'PL',
-  'RU', 'UA', 'SA', 'AE', 'IN', 'CN', 'JP', 'KR', 'BR', 'MX',
-  'AR', 'CA', 'AU', 'ZA',
-];
-const DATE_STYLES = ['short', 'medium', 'long', 'full'] as const;
-type DateStyle = (typeof DATE_STYLES)[number];
-/** 8 preset single-color themes — muted, dark tones (no eye-searing brights). */
-const THEME_PRESETS: readonly string[] = [
-  '#1e293b', '#334155', '#3f3f46', '#4c1d95',
-  '#155e63', '#7f1d1d', '#78350f', '#14532d',
+// Reuse the canonical value lists (single source in @tepegoz/desktop-ipc / @tepegoz/shared-types) so
+// the picker never drifts from the schema — no locally duplicated provider/theme/locale arrays.
+const PROVIDERS: readonly ProviderId[] = PROVIDER_IDS;
+const THEMES: readonly ThemePref[] = THEME_PREFS;
+const LOCALES: readonly LocalePref[] = LOCALE_PREFS;
+/** Every country's ISO 3166-1 alpha-2 (flag + Intl) and alpha-3 (stored value + shown code). */
+const COUNTRIES: readonly { iso2: string; iso3: string }[] = getCountryDataList().map((c) => ({
+  iso2: c.iso2,
+  iso3: c.iso3,
+}));
+/** alpha-3 → alpha-2, so alpha-3 region values still format via Intl (which needs alpha-2). */
+const ISO3_TO_ISO2: Record<string, string> = Object.fromEntries(COUNTRIES.map((c) => [c.iso3, c.iso2]));
+/** Per-locale display-name overrides where the CLDR/Intl label isn't wanted (TR → "Turkey" in English). */
+const REGION_NAME_OVERRIDES: Record<string, Partial<Record<LocalePref, string>>> = {
+  TR: { en: 'Turkey' },
+};
+/** Flag shown next to each UI language (a language is not a country, so this is a sensible mapping). */
+const LOCALE_FLAG: Record<LocalePref, string | undefined> = { system: undefined, en: 'GB', tr: 'TR' };
+/** The named preset colors (name shown as a hover tooltip); keys map to `settingsDict.themeColorNames`. */
+type ThemeColorName =
+  | 'slate'
+  | 'steel'
+  | 'graphite'
+  | 'turquoise'
+  | 'violet'
+  | 'maroon'
+  | 'amber'
+  | 'forest';
+/** Preset single-color themes — muted, dark tones (no eye-searing brights). Incl. a brand turquoise. */
+const THEME_PRESETS: readonly { color: string; name: ThemeColorName }[] = [
+  { color: '#1e293b', name: 'slate' },
+  { color: '#334155', name: 'steel' },
+  { color: '#3f3f46', name: 'graphite' },
+  { color: '#0d7377', name: 'turquoise' },
+  { color: '#4c1d95', name: 'violet' },
+  { color: '#7f1d1d', name: 'maroon' },
+  { color: '#78350f', name: 'amber' },
+  { color: '#14532d', name: 'forest' },
 ];
 const DEFAULT_CUSTOM_COLOR = '#334155';
 
@@ -141,6 +166,21 @@ function ThemePreview({ theme }: { theme: ThemePref }) {
         <span style={{ backgroundColor: p.text, opacity: 0.4, width: 44, height: 6, borderRadius: 2 }} />
       </div>
     </div>
+  );
+}
+
+/** A tiny white crescent-and-star (ay-yıldız) for the turquoise swatch. `bg` = the swatch color, used
+ *  to "bite" the crescent so it blends with the button background regardless of the exact tone. */
+function CrescentStar({ bg }: { bg: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5 drop-shadow" aria-hidden>
+      <circle cx="10.5" cy="12" r="6" fill="#ffffff" />
+      <circle cx="13" cy="11" r="5.1" fill={bg} />
+      <polygon
+        fill="#ffffff"
+        points="15.5,9.4 16.12,11.15 17.97,11.2 16.5,12.32 17.03,14.1 15.5,13.05 13.97,14.1 14.5,12.32 13.03,11.2 14.88,11.15"
+      />
+    </svg>
   );
 }
 
@@ -344,7 +384,14 @@ function ProvidersSection({
             }}
           />
         </div>
-        <Button size="sm" disabled={!encryptionAvailable || keyValue.trim().length === 0}>
+        {/* h-[38px] + mb-1 aligns the button box with the Input/Select boxes, whose wrappers
+            add a label above and a ~4px hint gap below (space-y-1). */}
+        <Button
+          type="submit"
+          size="sm"
+          className="mb-1 h-[38px]"
+          disabled={!encryptionAvailable || keyValue.trim().length === 0}
+        >
           {s.addKey}
         </Button>
       </form>
@@ -394,7 +441,7 @@ function ProvidersSection({
                           setRenameDraft(e.target.value);
                         }}
                       />
-                      <Button size="sm" disabled={renameDraft.trim().length === 0}>
+                      <Button type="submit" size="sm" disabled={renameDraft.trim().length === 0}>
                         {c.common.save}
                       </Button>
                       <Button
@@ -419,7 +466,7 @@ function ProvidersSection({
                         <span className="ml-2 text-xs text-text-secondary">
                           {s.providerNames[k.provider]}
                         </span>
-                        {k.provider !== undefined && !RUNNABLE_PROVIDERS.has(k.provider) && (
+                        {k.provider !== undefined && !isRunnableProvider(k.provider) && (
                           <span className="ml-2 text-xs text-text-disabled">
                             {s.providerNotUsableYet}
                           </span>
@@ -458,6 +505,129 @@ function ProvidersSection({
 }
 
 /** Language, region, and date-format pickers with a live date preview. */
+/**
+ * Homepage URL + default/custom search engines. The homepage drives new tabs, the Home button, and a
+ * blank omnibox submit; the search engine (built-in or user-added) resolves typed omnibox queries.
+ * Custom engines are persisted in `prefs.customSearchEngines` and merged with the built-in list.
+ */
+function SearchStartupSection({
+  prefs,
+  setPref,
+}: {
+  prefs: Preferences;
+  setPref: (patch: Partial<Preferences>) => void;
+}) {
+  const s = useT(settingsDict);
+  const [name, setName] = useState('');
+  const [url, setUrl] = useState('');
+  const engines = [...SEARCH_ENGINES, ...prefs.customSearchEngines];
+  const urlInvalid = url.length > 0 && !url.includes('{q}');
+  const canAdd = name.trim().length > 0 && url.trim().length > 0 && !urlInvalid;
+
+  function addEngine(): void {
+    if (!canAdd) return;
+    const engine = { id: `custom-${crypto.randomUUID()}`, name: name.trim(), searchUrlTemplate: url.trim() };
+    setPref({ customSearchEngines: [...prefs.customSearchEngines, engine] });
+    setName('');
+    setUrl('');
+  }
+
+  function removeEngine(id: string): void {
+    setPref({
+      customSearchEngines: prefs.customSearchEngines.filter((e) => e.id !== id),
+      // If the removed engine was the selected default, fall back to the built-in default.
+      ...(prefs.searchEngineId === id ? { searchEngineId: DEFAULT_SEARCH_ENGINE_ID } : {}),
+    });
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <Input
+          id="homepage-url"
+          label={s.homepageLabel}
+          hint={s.homepageDesc}
+          placeholder={s.homepagePlaceholder}
+          value={prefs.homepageUrl}
+          onChange={(e) => {
+            setPref({ homepageUrl: e.target.value });
+          }}
+        />
+      </Card>
+
+      <Card title={s.searchEngineLabel} subtitle={s.searchEngineDesc}>
+        <Select
+          id="search-engine"
+          value={prefs.searchEngineId}
+          onChange={(v) => {
+            setPref({ searchEngineId: v });
+          }}
+        >
+          {engines.map((e) => (
+            <option key={e.id} value={e.id}>
+              {e.name}
+            </option>
+          ))}
+        </Select>
+
+        {prefs.customSearchEngines.length > 0 && (
+          <ul className="mt-4 space-y-2">
+            {prefs.customSearchEngines.map((e) => (
+              <li
+                key={e.id}
+                className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <div className="text-sm font-medium text-text-primary">{e.name}</div>
+                  <div className="truncate text-xs text-text-secondary">{e.searchUrlTemplate}</div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    removeEngine(e.id);
+                  }}
+                >
+                  {s.searchEngineRemove}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="mt-4 space-y-2">
+          <span className="block text-sm font-medium text-text-primary">{s.searchEngineCustom}</span>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <Input
+              id="custom-engine-name"
+              label={s.searchEngineCustomName}
+              placeholder={s.searchEngineCustomName}
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+              }}
+            />
+            <Input
+              id="custom-engine-url"
+              label={s.searchEngineCustomUrl}
+              placeholder={s.searchEngineCustomUrlPlaceholder}
+              value={url}
+              {...(urlInvalid ? { error: s.searchEngineCustomInvalid } : {})}
+              onChange={(e) => {
+                setUrl(e.target.value);
+              }}
+            />
+            <Button size="sm" variant="outline" disabled={!canAdd} onClick={addEngine}>
+              {s.searchEngineCustomAdd}
+            </Button>
+          </div>
+          <p className="text-xs text-text-secondary">{s.searchEngineCustomUrlHint}</p>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 function LanguageRegionSection({
   prefs,
   setPref,
@@ -472,80 +642,110 @@ function LanguageRegionSection({
     en: 'English',
     tr: 'Türkçe',
   };
-  const dateStyleLabel: Record<DateStyle, string> = {
+  const dateFormatLabel: Record<DateFormatId, string> = {
     short: s.dateShort,
     medium: s.dateMedium,
     long: s.dateLong,
     full: s.dateFull,
+    iso: s.dateIso,
+    'dmy-slash': s.dateDmySlash,
+    'mdy-slash': s.dateMdySlash,
+    'dmy-dot': s.dateDmyDot,
+    'd-mmm-y': s.dateShortMonth,
   };
 
-  // Build a BCP-47 tag from language + region for the live preview.
+  // Build a BCP-47 tag from language + region so date examples follow the chosen language + region.
+  // Custom (non-ISO) regions map to a base ISO region so the tag stays valid for Intl.
   const lang = prefs.locale === 'system' ? uiLocale : prefs.locale;
-  const tag = prefs.region.length > 0 ? `${lang}-${prefs.region}` : lang;
-  const style: DateStyle = (DATE_STYLES as readonly string[]).includes(prefs.dateFormat)
-    ? (prefs.dateFormat as DateStyle)
+  const fmtRegion =
+    TURKIC_REGION_BASE_ISO[prefs.region] ?? ISO3_TO_ISO2[prefs.region] ?? prefs.region;
+  const tag = fmtRegion.length > 0 ? `${lang}-${fmtRegion}` : lang;
+  const SAMPLE_DATE = new Date(2026, 0, 15);
+  const dateFormat: DateFormatId = (DATE_FORMAT_IDS as readonly string[]).includes(prefs.dateFormat)
+    ? (prefs.dateFormat as DateFormatId)
     : 'medium';
-  let preview = '';
-  try {
-    preview = new Intl.DateTimeFormat(tag, { dateStyle: style }).format(new Date(2026, 0, 15));
-  } catch {
-    preview = '';
-  }
-
-  function regionName(code: string): string {
+  function dateExample(id: DateFormatId): string {
     try {
-      return new Intl.DisplayNames([uiLocale], { type: 'region' }).of(code) ?? code;
+      return formatDateByFormat(SAMPLE_DATE, tag, id);
     } catch {
-      return code;
+      return '';
     }
   }
-  const regions = [...REGIONS].sort((a, b) => regionName(a).localeCompare(regionName(b)));
+  const preview = dateExample(dateFormat);
+
+  const languageOptions: FlagOption[] = LOCALES.map((lc) => ({
+    value: lc,
+    label: localeLabel[lc],
+    iso2: LOCALE_FLAG[lc],
+  }));
+
+  // Localize every country name via Intl.DisplayNames (Turkish-first), then sort by that name.
+  // Memoized because it builds ~250 entries and only depends on the UI locale + the "system" label.
+  const regionOptions = useMemo<FlagOption[]>(() => {
+    let dn: Intl.DisplayNames | null = null;
+    try {
+      dn = new Intl.DisplayNames([uiLocale], { type: 'region' });
+    } catch {
+      dn = null;
+    }
+    const countries: FlagOption[] = COUNTRIES.map(({ iso2, iso3 }) => ({
+      value: iso3,
+      iso2,
+      code: iso3,
+      label: REGION_NAME_OVERRIDES[iso2]?.[uiLocale] ?? dn?.of(iso2) ?? iso2,
+    }));
+    // Turkic regions/peoples that are not ISO countries: bundled flag + 3-letter code, mixed in by name.
+    const turkic: FlagOption[] = TURKIC_REGIONS.map((r) => ({
+      value: r.code,
+      code: r.code,
+      iso2: r.iso2,
+      flagSrc: turkicFlagFor(r.code),
+      label: uiLocale === 'tr' ? r.tr : r.en,
+    }));
+    const merged = [...countries, ...turkic].sort((a, b) => a.label.localeCompare(b.label, uiLocale));
+    return [{ value: '', label: s.regionSystem }, ...merged];
+  }, [uiLocale, s.regionSystem]);
 
   return (
     <Card title={s.languageRegionTitle}>
       <div className="space-y-4">
-        <Select
+        <FlagSelect
           id="language"
           label={s.languageLabel}
           value={prefs.locale}
           onChange={(v) => {
             setPref({ locale: v as LocalePref });
           }}
-        >
-          {LOCALES.map((lc) => (
-            <option key={lc} value={lc}>
-              {localeLabel[lc]}
-            </option>
-          ))}
-        </Select>
+          options={languageOptions}
+          searchable
+          searchPlaceholder={s.languageSearchPlaceholder}
+          noResultsLabel={s.searchNoResults}
+        />
 
-        <Select
+        <FlagSelect
           id="region"
           label={s.regionLabel}
           value={prefs.region}
           onChange={(v) => {
             setPref({ region: v });
           }}
-        >
-          <option value="">{s.regionSystem}</option>
-          {regions.map((code) => (
-            <option key={code} value={code}>
-              {regionName(code)}
-            </option>
-          ))}
-        </Select>
+          options={regionOptions}
+          searchable
+          searchPlaceholder={s.regionSearchPlaceholder}
+          noResultsLabel={s.searchNoResults}
+        />
 
         <Select
           id="date-format"
           label={s.dateFormatLabel}
-          value={style}
+          value={dateFormat}
           onChange={(v) => {
             setPref({ dateFormat: v });
           }}
         >
-          {DATE_STYLES.map((ds) => (
-            <option key={ds} value={ds}>
-              {dateStyleLabel[ds]}
+          {DATE_FORMAT_IDS.map((id) => (
+            <option key={id} value={id}>
+              {dateFormatLabel[id]} — {dateExample(id)}
             </option>
           ))}
         </Select>
@@ -753,7 +953,8 @@ export function SettingsPage({
   };
   // The custom color picker is "active" when a color is set that isn't one of the presets.
   const customColorActive =
-    prefs.themeColor !== '' && !THEME_PRESETS.includes(prefs.themeColor.toLowerCase());
+    prefs.themeColor !== '' &&
+    !THEME_PRESETS.some((p) => p.color === prefs.themeColor.toLowerCase());
 
   function setPref(patch: Partial<Preferences>): void {
     void onUpdatePrefs(patch).catch(() => {
@@ -835,23 +1036,27 @@ export function SettingsPage({
           <p className="mb-1 mt-5 text-sm font-medium text-text-primary">{s.colorTheme}</p>
           <p className="mb-3 text-xs text-text-secondary">{s.colorThemeHint}</p>
           <div className="flex flex-wrap items-center gap-2">
-            {THEME_PRESETS.map((color) => {
-              const active = prefs.themeColor.toLowerCase() === color;
+            {THEME_PRESETS.map((preset) => {
+              const active = prefs.themeColor.toLowerCase() === preset.color;
+              const name = s.themeColorNames[preset.name];
               return (
                 <button
-                  key={color}
+                  key={preset.color}
                   type="button"
-                  aria-label={color}
+                  title={name}
+                  aria-label={name}
                   aria-pressed={active}
                   onClick={() => {
-                    setPref({ themeColor: color });
+                    setPref({ themeColor: preset.color });
                   }}
-                  style={{ backgroundColor: color }}
+                  style={{ backgroundColor: preset.color }}
                   className={cn(
-                    'h-8 w-8 rounded-full border border-border transition-transform hover:scale-110',
+                    'flex h-8 w-8 items-center justify-center rounded-full border border-border transition-transform hover:scale-110',
                     active && 'ring-2 ring-offset-2 ring-border-focus ring-offset-surface-raised',
                   )}
-                />
+                >
+                  {preset.name === 'turquoise' && <CrescentStar bg={preset.color} />}
+                </button>
               );
             })}
             <label
@@ -900,29 +1105,7 @@ export function SettingsPage({
             description={s.coming.onStartup.description}
             items={s.coming.onStartup.items}
           />
-          <Card title={s.searchEngineLabel} subtitle={s.searchEngineDesc}>
-            <Select
-              id="search-engine"
-              value={prefs.searchEngineId}
-              onChange={(v) => {
-                setPref({ searchEngineId: v });
-              }}
-            >
-              {SEARCH_ENGINES.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.name}
-                </option>
-              ))}
-            </Select>
-            <div className="mt-3 flex items-center gap-2">
-              <Button size="sm" variant="outline" disabled>
-                {s.searchEngineCustom}
-              </Button>
-              <Badge variant="neutral" dot>
-                {s.comingSoon}
-              </Badge>
-            </div>
-          </Card>
+          <SearchStartupSection prefs={prefs} setPref={setPref} />
         </div>
       ),
     },

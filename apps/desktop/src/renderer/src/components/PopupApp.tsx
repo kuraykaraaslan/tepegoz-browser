@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { I18nProvider } from '@tepegoz/i18n/react';
+import { coreDict, pick } from '@tepegoz/i18n';
 import type { PublicSettings, ResolvedLocale } from '@tepegoz/desktop-ipc';
 import { extensionDefById } from '../extensions/registry';
+import { useExtensionCatalog } from '../extensions/useExtensionCatalog';
 import { applyTheme } from '../lib/theme';
 
 /**
@@ -16,6 +18,7 @@ import { applyTheme } from '../lib/theme';
  */
 export function PopupApp({ id }: { id: string }) {
   const [locale, setLocale] = useState<ResolvedLocale>('en');
+  const { registry } = useExtensionCatalog();
 
   useEffect(() => {
     const apply = (s: PublicSettings): void => {
@@ -36,15 +39,28 @@ export function PopupApp({ id }: { id: string }) {
     };
   }, []);
 
-  const def = extensionDefById(id);
+  const def = extensionDefById(registry, id);
   const Surface = def?.surfaces.popup;
   if (def === undefined || Surface === undefined) return null;
 
+  const loading = pick(coreDict, locale).common.loading;
   return (
     <I18nProvider locale={locale}>
       <div className="flex h-screen flex-col overflow-hidden bg-surface-base text-text-primary">
         <div className="min-h-0 flex-1 overflow-auto">
-          <Surface onClose={() => window.tepegoz.closePopup()} />
+          <Suspense
+            fallback={
+              <div
+                role="status"
+                aria-label={loading}
+                className="flex h-full w-full items-center justify-center text-sm text-text-muted"
+              >
+                {loading}
+              </div>
+            }
+          >
+            <Surface onClose={() => window.tepegoz.closePopup()} />
+          </Suspense>
         </div>
       </div>
     </I18nProvider>

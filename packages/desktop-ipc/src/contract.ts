@@ -34,14 +34,33 @@ export type {
 import type { PopupBlockerRequest, PopupBlockerSettings } from '@tepegoz/ext-popup-blocker/types';
 export type { PopupBlockerRequest, PopupBlockerSettings };
 
-// Browsing-history + bookmark entry types live in the persistence package (single source). Type-only
-// imports → erased, so the sandboxed preload stays dependency-free.
-import type { BookmarkEntry, HistoryEntry } from '@tepegoz/persistence';
-export type { BookmarkEntry, HistoryEntry };
+// History lives in persistence; bookmarks moved to their own feature package. Both are the single
+// source for their entry type. Type-only imports → erased, so the sandboxed preload stays dependency-free.
+import type { HistoryEntry } from '@tepegoz/persistence';
+import type {
+  BookmarkEntry,
+  BookmarkNode,
+  BookmarkNodeType,
+  BookmarkTreeNode,
+} from '@tepegoz/bookmarks';
+export type { BookmarkEntry, BookmarkNode, BookmarkNodeType, BookmarkTreeNode, HistoryEntry };
+
+/** Which action a native bookmark context-menu item asks the renderer to perform (main→renderer). */
+export interface BookmarkMenuAction {
+  action: 'open' | 'open-new-tab' | 'open-all' | 'rename' | 'add-folder' | 'delete' | 'open-manager';
+  /** The clicked node's id. */
+  id: string;
+  type: BookmarkNodeType;
+}
 
 // Extension manifest identity comes from the SDK schema (single source). Type-only → erased, so the
 // sandboxed preload stays dependency-free (the SDK pulls in zod). See `ExtensionManifestWire` below.
 import type { ExtensionManifest } from '@tepegoz/extension-sdk';
+
+// User-added search engines are owned by @tepegoz/shared-types (zod-free, preload-safe). Type-only →
+// erased. Persisted in `Preferences.customSearchEngines` and merged with the built-in list.
+import type { SearchEngine } from '@tepegoz/shared-types/search-engines';
+export type { SearchEngine };
 
 // Provider identity is owned by @tepegoz/shared-types (the single schema source): AIProviderEnum and
 // this contract both derive from the SAME zod-free `providers` entry, which the sandboxed preload can
@@ -53,6 +72,10 @@ import {
   type ProviderKeyStatus,
 } from '@tepegoz/shared-types/providers';
 export const PROVIDER_IDS = AI_PROVIDERS;
+export {
+  RUNNABLE_AI_PROVIDERS as RUNNABLE_PROVIDER_IDS,
+  isRunnableProvider,
+} from '@tepegoz/shared-types/providers';
 export type { ProviderId, ProviderKeyMeta, ProviderKeyStatus };
 
 // Notification identity + data model is owned by @tepegoz/shared-types (zod-free, so the sandboxed
@@ -175,6 +198,12 @@ export interface Preferences {
   dateFormat: string;
   /** The selected default search engine id (see @tepegoz/shared-types/search-engines). */
   searchEngineId: string;
+  /** User-added search engines, merged with the built-in list in the picker + omnibox resolution. */
+  customSearchEngines: SearchEngine[];
+  /** The home / new-tab page URL (opened for a new tab, the Home button, and a blank omnibox submit). */
+  homepageUrl: string;
+  /** Show the bookmarks bar strip under the nav toolbar (Chrome-style; toggled from the Bookmarks menu). */
+  showBookmarksBar: boolean;
   /** Per-extension status (managed at tepegoz://extensions). Unlisted extensions default to enabled. */
   extensions: ExtensionState[];
   /** Active User-Agent override for browsed pages (User-Agent switcher extension); null = default. */
@@ -544,9 +573,26 @@ export interface TepegozApi {
   /** All bookmarks, newest-first. */
   listBookmarks(): Promise<BookmarkEntry[]>;
   /** Add the page if absent, else remove it. Returns the resulting bookmarked state. */
-  toggleBookmark(url: string, title: string): Promise<boolean>;
+  toggleBookmark(url: string, title: string, favicon?: string | null): Promise<boolean>;
   /** Whether a URL is currently bookmarked (drives the star's filled/outline state). */
   isBookmarked(url: string): Promise<boolean>;
+  // Bookmark tree (folders + ordering) — the interactive bar + manager page.
+  /** The full forest: [Bookmarks bar, Other bookmarks], each with its subtree. */
+  getBookmarkTree(): Promise<BookmarkTreeNode[]>;
+  /** Create a folder under `parentId` (defaults to end); resolves when persisted. */
+  createBookmarkFolder(parentId: string, title: string, index?: number): Promise<void>;
+  /** Rename a node (bookmark or folder). */
+  renameBookmark(id: string, title: string): Promise<void>;
+  /** Delete a node (folders delete their contents too). */
+  removeBookmark(id: string): Promise<void>;
+  /** Reparent + reorder a node to `index` within `newParentId` (drag-drop). */
+  moveBookmark(id: string, newParentId: string, index: number): Promise<void>;
+  /** Pop the native right-click menu for a bar/manager node. */
+  showBookmarkContextMenu(id: string, type: BookmarkNodeType): void;
+  /** Subscribe to native-menu action choices (main→renderer); returns an unsubscribe fn. */
+  onBookmarkMenuAction(callback: (action: BookmarkMenuAction) => void): () => void;
+  /** Subscribe to "bookmark tree changed" pushes (incl. from popup windows); returns an unsubscribe fn. */
+  onBookmarksChanged(callback: () => void): () => void;
   // Notification center. State is pushed live from main; the renderer mutates via fire-and-forget.
   /** Current center snapshot (items + unread count). */
   listNotifications(): Promise<NotificationState>;

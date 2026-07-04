@@ -35,7 +35,18 @@ function looksLikeHost(input: string): boolean {
   return /^[^\s.]+(\.[^\s.]+)+$/.test(host); // dotted domain or IP
 }
 
-export function toNavigationUrl(input: string, fallbackUrl: string): string {
+/** Default web-search builder (DuckDuckGo) — used when the caller doesn't pass its own. The app wires
+ *  the user's selected/custom engine via `buildSearch` (see `tabs.ts`); the pure package stays
+ *  engine-agnostic and app-import-free. */
+function defaultSearch(query: string): string {
+  return `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
+}
+
+export function toNavigationUrl(
+  input: string,
+  fallbackUrl: string,
+  buildSearch: (query: string) => string = defaultSearch,
+): string {
   const s = input.trim();
   if (s.length === 0) return fallbackUrl;
   if (HTTP_SCHEME.test(s)) return s; // already an http(s) URL
@@ -43,5 +54,5 @@ export function toNavigationUrl(input: string, fallbackUrl: string): string {
     // localhost is conventionally http; everything else defaults to https.
     return `${LOCALHOST.test(s) ? 'http' : 'https'}://${s}`;
   }
-  return `https://duckduckgo.com/?q=${encodeURIComponent(s)}`;
+  return buildSearch(s);
 }

@@ -24,6 +24,16 @@ export const en = {
   colorTheme: 'Color theme',
   colorThemeHint: 'Pick one color — text contrast is chosen automatically.',
   customColor: 'Custom',
+  themeColorNames: {
+    slate: 'Slate',
+    steel: 'Steel',
+    graphite: 'Graphite',
+    turquoise: 'Turquoise',
+    violet: 'Violet',
+    maroon: 'Maroon',
+    amber: 'Amber',
+    forest: 'Forest',
+  },
 
   // --- Language & region ---
   languageRegionTitle: 'Language & region',
@@ -31,11 +41,19 @@ export const en = {
   langSystem: 'System',
   regionLabel: 'Region',
   regionSystem: 'System default',
+  languageSearchPlaceholder: 'Search language…',
+  regionSearchPlaceholder: 'Search country…',
+  searchNoResults: 'No results',
   dateFormatLabel: 'Date format',
   dateShort: 'Short',
   dateMedium: 'Medium',
   dateLong: 'Long',
   dateFull: 'Full',
+  dateIso: 'ISO 8601',
+  dateDmySlash: 'Day/Month/Year',
+  dateMdySlash: 'Month/Day/Year',
+  dateDmyDot: 'Day.Month.Year',
+  dateShortMonth: 'Short month',
   previewLabel: 'Preview',
 
   // --- Preferences (startup + search engine) ---
@@ -43,6 +61,16 @@ export const en = {
   searchEngineLabel: 'Search engine',
   searchEngineDesc: 'The engine used when you search from the address bar.',
   searchEngineCustom: 'Add a custom engine',
+  searchEngineCustomName: 'Name',
+  searchEngineCustomUrl: 'Search URL',
+  searchEngineCustomUrlPlaceholder: 'https://example.com/search?q={q}',
+  searchEngineCustomUrlHint: 'Use {q} where the query goes.',
+  searchEngineCustomAdd: 'Add',
+  searchEngineCustomInvalid: 'The search URL must contain {q}.',
+  searchEngineRemove: 'Remove',
+  homepageLabel: 'Homepage',
+  homepageDesc: 'Opened for new tabs, the Home button, and a blank address-bar submit.',
+  homepagePlaceholder: 'https://example.com',
 
   // --- Notifications ---
   notificationsTitle: 'Notifications',
@@ -143,7 +171,7 @@ export const en = {
     onStartup: {
       title: 'On startup',
       description: 'What opens when the browser launches.',
-      items: ['Open a new tab', 'Continue where you left off', 'Open specific pages', 'Homepage'],
+      items: ['Open a new tab', 'Continue where you left off', 'Open specific pages'],
     },
     downloads: {
       title: 'Downloads',

@@ -10,7 +10,6 @@ import {
 import { historyDict } from '@tepegoz/history-ui/i18n';
 import { extensionsDict } from '@tepegoz/extensions-ui/i18n';
 import { browserDict, menuDict } from '../../../i18n';
-import { EXTENSIONS } from '../extensions/registry';
 import { applyTheme } from '../lib/theme';
 import { buildMainMenuModel } from './main-menu-model';
 
@@ -28,6 +27,10 @@ const SUB_ROW_H = 36;
 export function MainMenuPopup() {
   const [locale, setLocale] = useState<Locale>('en');
   const [extensionStates, setExtensionStates] = useState<ExtensionState[]>([]);
+  // Built-in extension ids from the catalog (over IPC) — the enabled count sizes the flyout submenu.
+  const [extensionIds, setExtensionIds] = useState<string[]>([]);
+  // Bookmark count (over IPC) — sizes the Bookmarks flyout submenu window.
+  const [bookmarkCount, setBookmarkCount] = useState(0);
   const contentRef = useRef<HTMLDivElement>(null);
 
   // Shrink the native popup window to the menu's natural content height, removing the empty strip left
@@ -57,6 +60,18 @@ export function MainMenuPopup() {
         /* bridge unavailable — fall back to defaults */
       },
     );
+    void window.tepegoz.listExtensionManifests().then(
+      (manifests) => setExtensionIds(manifests.map((m) => m.id)),
+      () => {
+        /* bridge unavailable — the submenu still shows the "manage" row */
+      },
+    );
+    void window.tepegoz.listBookmarks().then(
+      (list) => setBookmarkCount(list.length),
+      () => {
+        /* bridge unavailable — the submenu still shows the bookmarks-bar toggle */
+      },
+    );
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') window.tepegoz.closePopup();
     };
@@ -66,14 +81,14 @@ export function MainMenuPopup() {
     };
   }, []);
 
-  const enabledCount = EXTENSIONS.filter((e) => isExtensionEnabled(extensionStates, e.id)).length;
+  const enabledCount = extensionIds.filter((id) => isExtensionEnabled(extensionStates, id)).length;
 
   return (
     <I18nProvider locale={locale}>
       <div className="flex h-screen flex-col overflow-hidden bg-surface-base text-text-primary">
         <div className="min-h-0 flex-1 overflow-auto">
           <div ref={contentRef} className="flow-root">
-            <MainMenuBody extensionCount={enabledCount} />
+            <MainMenuBody extensionCount={enabledCount} bookmarkCount={bookmarkCount} />
           </div>
         </div>
       </div>
@@ -82,7 +97,13 @@ export function MainMenuPopup() {
 }
 
 /** Builds the item model under the I18nProvider (so `useT` resolves) and renders the menu. */
-function MainMenuBody({ extensionCount }: { extensionCount: number }) {
+function MainMenuBody({
+  extensionCount,
+  bookmarkCount,
+}: {
+  extensionCount: number;
+  bookmarkCount: number;
+}) {
   const b = useT(browserDict);
   const core = useT(coreDict);
   const h = useT(historyDict);
@@ -118,8 +139,15 @@ function MainMenuBody({ extensionCount }: { extensionCount: number }) {
   // History/Extensions submenu parents → open a separate native window to the left, aligned to the row.
   const flyout: MenuFlyout = {
     onOpen: (id, rect) => {
-      const kind = id === 'history' ? 'history' : 'extensions';
-      const rows = kind === 'history' ? 6 : extensionCount + 1; // last-5 + "show all" / exts + "manage"
+      const kind = id === 'history' ? 'history' : id === 'bookmarks' ? 'bookmarks' : 'extensions';
+      // history: last-5 + "show all"; bookmarks: toggle + separator + list (capped, main scrolls);
+      // extensions: enabled + "manage".
+      const rows =
+        kind === 'history'
+          ? 6
+          : kind === 'bookmarks'
+            ? Math.min(bookmarkCount, 10) + 3
+            : extensionCount + 1;
       window.tepegoz.openSubmenu(
         kind,
         { x: rect.x, y: rect.y, width: rect.width, height: rect.height },

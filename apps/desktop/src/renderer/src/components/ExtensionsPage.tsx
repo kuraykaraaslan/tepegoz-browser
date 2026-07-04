@@ -5,22 +5,24 @@ import {
   type ExtensionId,
   type ExtensionState,
 } from '@tepegoz/desktop-ipc';
-import { extensionLabel } from '../../../shared/extensions';
-import { EXTENSIONS } from '../extensions/registry';
+import { extensionLabel } from '../../../shared/extension-urls';
+import type { ExtensionDef } from '../extensions/registry';
 
 /**
  * Internal extensions manager (tepegoz://extensions): maps the built-in extension registry (with each
- * manifest's localized labels + enabled state) into the generic `@tepegoz/extensions-ui` grid. Real
- * MV3/third-party extensions are a later phase.
+ * manifest's localized labels + enabled state) into the generic `@tepegoz/extensions-ui` grid. The
+ * registry is passed in (built from the IPC-delivered catalog). Real MV3/third-party extensions are a
+ * later phase.
  */
 interface ExtensionsPageProps {
   locale: Locale;
+  extensions: readonly ExtensionDef[];
   states: readonly ExtensionState[];
   onToggle: (id: ExtensionId, enabled: boolean) => void;
 }
 
-export function ExtensionsPage({ locale, states, onToggle }: ExtensionsPageProps) {
-  const items: ExtensionCardItem[] = EXTENSIONS.map((ext) => {
+export function ExtensionsPage({ locale, extensions, states, onToggle }: ExtensionsPageProps) {
+  const items: ExtensionCardItem[] = extensions.map((ext) => {
     const label = extensionLabel(ext.manifest, locale);
     return {
       id: ext.id,

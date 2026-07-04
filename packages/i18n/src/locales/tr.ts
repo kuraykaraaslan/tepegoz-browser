@@ -11,6 +11,7 @@ export const tr: Resources = {
     settings: 'Ayarlar',
     showPassword: 'Göster',
     hidePassword: 'Gizle',
+    loading: 'Yükleniyor…',
   },
   window: {
     minimize: 'Küçült',

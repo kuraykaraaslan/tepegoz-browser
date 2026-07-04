@@ -70,6 +70,25 @@ export const PreferencesSchema = z.object({
   region: z.string().max(16),
   dateFormat: z.string().max(16),
   searchEngineId: z.string().max(64),
+  // User-added search engines. `searchUrlTemplate` must contain the `{q}` query placeholder.
+  customSearchEngines: z
+    .array(
+      z.object({
+        id: z.string().min(1).max(64),
+        name: z.string().min(1).max(64),
+        searchUrlTemplate: z
+          .string()
+          .min(1)
+          .max(2048)
+          .refine((t) => t.includes('{q}'), 'searchUrlTemplate must contain the {q} placeholder'),
+      }),
+    )
+    .max(50),
+  // Home / new-tab page URL. Lenient string (validated/normalized at the UI); a blank value falls back
+  // to the built-in default at the navigation site.
+  homepageUrl: z.string().max(2048),
+  // Show the bookmarks bar strip under the nav toolbar (toggled from the Bookmarks menu).
+  showBookmarksBar: z.boolean(),
   // Required (not .default) so the schema input matches Preferences; init always merges the default
   // (extensions: []) first, and PreferencesPatchSchema (.partial) makes it optional on read/patch.
   extensions: z.array(ExtensionStateSchema),
@@ -127,6 +146,9 @@ export const DEFAULT_PREFERENCES: Preferences = {
   region: '',
   dateFormat: 'medium',
   searchEngineId: 'google',
+  customSearchEngines: [],
+  homepageUrl: 'https://duckduckgo.com/',
+  showBookmarksBar: true,
   extensions: [],
   userAgent: null,
   mcpServers: [],

@@ -53,6 +53,9 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   region: 'private',
   dateFormat: 'private',
   searchEngineId: 'private',
+  customSearchEngines: 'private',
+  homepageUrl: 'private',
+  showBookmarksBar: 'private',
   // Private — secret-adjacent or a browsing/footprint signal that must never reach an extension.
   extensions: 'private',
   userAgent: 'private',

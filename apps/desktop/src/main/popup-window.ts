@@ -22,6 +22,8 @@ import { createPopupWindow } from './window';
 const DEFAULT_WIDTH = 360;
 const DEFAULT_MAX_HEIGHT = 520;
 const MIN_HEIGHT = 160;
+/** Submenu flyouts can be much shorter than the primary popup (a 1–2 row list), so they floor lower. */
+const SUBMENU_MIN_HEIGHT = 44;
 const GAP = 6;
 const SUBMENU_WIDTH = 260;
 /** Ignore an open that lands right after a blur-close of the SAME key (re-trigger = toggle-off). */
@@ -149,17 +151,21 @@ export default class PopupWindowManager {
     });
   }
 
-  /** Shrink/grow the primary popup to its measured content height (px), keeping the top anchor. Only the
-   *  managed primary popup may self-resize; height is clamped to the work area below its current top. */
+  /** Shrink/grow a managed popup to its measured content height (px), keeping the top anchor. Both the
+   *  primary popup AND the submenu flyout may self-resize (each observes its own content); height is
+   *  clamped to the work area below the window's current top. The submenu uses a smaller floor so a
+   *  short flyout (e.g. an empty bookmarks list) doesn't leave dead rows. */
   static resize(sender: BrowserWindow, height: number): void {
-    const win = PopupWindowManager.win;
-    if (win === null || win.isDestroyed() || sender !== win) return;
-    const b = win.getBounds();
+    const isPrimary = sender === PopupWindowManager.win;
+    const isSub = sender === PopupWindowManager.subWin;
+    if ((!isPrimary && !isSub) || sender.isDestroyed()) return;
+    const b = sender.getBounds();
     const area = screen.getDisplayMatching(b).workArea;
     const maxH = area.y + area.height - b.y - GAP;
-    const next = Math.max(MIN_HEIGHT, Math.min(height, maxH));
+    const floor = isSub ? SUBMENU_MIN_HEIGHT : MIN_HEIGHT;
+    const next = Math.max(floor, Math.min(height, maxH));
     if (next === b.height) return;
-    win.setBounds({ x: b.x, y: b.y, width: b.width, height: next });
+    sender.setBounds({ x: b.x, y: b.y, width: b.width, height: next });
   }
 
   static closeSub(): void {

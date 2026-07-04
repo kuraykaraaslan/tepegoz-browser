@@ -88,6 +88,16 @@ export const IpcChannels = {
   bookmarksList: 'bookmarks:list',
   bookmarksToggle: 'bookmarks:toggle',
   bookmarksIsBookmarked: 'bookmarks:is-bookmarked',
+  // Bookmark tree (folders + ordering) — the interactive bar + manager.
+  bookmarksTree: 'bookmarks:tree',
+  bookmarksCreateFolder: 'bookmarks:create-folder',
+  bookmarksRename: 'bookmarks:rename',
+  bookmarksRemove: 'bookmarks:remove',
+  bookmarksMove: 'bookmarks:move',
+  bookmarksContextMenu: 'bookmarks:context-menu',
+  bookmarksMenuAction: 'bookmarks:menu-action',
+  /** Main→renderer: the bookmark tree changed (incl. from a popup window) → refetch. */
+  bookmarksChanged: 'bookmarks:changed',
   userAgentGet: 'user-agent:get',
   userAgentSet: 'user-agent:set',
   popupBlockerGet: 'popup-blocker:get',
@@ -141,3 +151,4 @@ export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];
 export const INTERNAL_SETTINGS_URL = 'tepegoz://settings';
 export const INTERNAL_EXTENSIONS_URL = 'tepegoz://extensions';
 export const INTERNAL_HISTORY_URL = 'tepegoz://history';
+export const INTERNAL_BOOKMARKS_URL = 'tepegoz://bookmarks';

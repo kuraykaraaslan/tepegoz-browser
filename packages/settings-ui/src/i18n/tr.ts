@@ -23,6 +23,16 @@ export const tr: SettingsStrings = {
   colorTheme: 'Renk teması',
   colorThemeHint: 'Tek bir renk seçin — metin kontrastı otomatik belirlenir.',
   customColor: 'Özel',
+  themeColorNames: {
+    slate: 'Arduvaz',
+    steel: 'Çelik',
+    graphite: 'Grafit',
+    turquoise: 'Turkuaz',
+    violet: 'Mor',
+    maroon: 'Bordo',
+    amber: 'Kehribar',
+    forest: 'Orman',
+  },
 
   // --- Dil ve bölge ---
   languageRegionTitle: 'Dil ve bölge',
@@ -30,11 +40,19 @@ export const tr: SettingsStrings = {
   langSystem: 'Sistem',
   regionLabel: 'Bölge',
   regionSystem: 'Sistem varsayılanı',
+  languageSearchPlaceholder: 'Dil ara…',
+  regionSearchPlaceholder: 'Ülke ara…',
+  searchNoResults: 'Sonuç yok',
   dateFormatLabel: 'Tarih biçimi',
   dateShort: 'Kısa',
   dateMedium: 'Orta',
   dateLong: 'Uzun',
   dateFull: 'Tam',
+  dateIso: 'ISO 8601',
+  dateDmySlash: 'Gün/Ay/Yıl',
+  dateMdySlash: 'Ay/Gün/Yıl',
+  dateDmyDot: 'Gün.Ay.Yıl',
+  dateShortMonth: 'Kısa ay',
   previewLabel: 'Önizleme',
 
   // --- Tercihler (başlangıç + arama motoru) ---
@@ -42,6 +60,16 @@ export const tr: SettingsStrings = {
   searchEngineLabel: 'Arama motoru',
   searchEngineDesc: 'Adres çubuğundan arama yaptığınızda kullanılan motor.',
   searchEngineCustom: 'Özel motor ekle',
+  searchEngineCustomName: 'Ad',
+  searchEngineCustomUrl: 'Arama URL’si',
+  searchEngineCustomUrlPlaceholder: 'https://ornek.com/ara?q={q}',
+  searchEngineCustomUrlHint: 'Sorgunun geleceği yere {q} koyun.',
+  searchEngineCustomAdd: 'Ekle',
+  searchEngineCustomInvalid: 'Arama URL’si {q} içermeli.',
+  searchEngineRemove: 'Kaldır',
+  homepageLabel: 'Ana sayfa',
+  homepageDesc: 'Yeni sekmeler, Ana Sayfa düğmesi ve boş adres çubuğu gönderiminde açılır.',
+  homepagePlaceholder: 'https://ornek.com',
 
   // --- Bildirimler ---
   notificationsTitle: 'Bildirimler',
@@ -142,7 +170,7 @@ export const tr: SettingsStrings = {
     onStartup: {
       title: 'Başlangıçta',
       description: 'Tarayıcı açıldığında ne açılır.',
-      items: ['Yeni sekme aç', 'Kaldığın yerden devam et', 'Belirli sayfaları aç', 'Ana sayfa'],
+      items: ['Yeni sekme aç', 'Kaldığın yerden devam et', 'Belirli sayfaları aç'],
     },
     downloads: {
       title: 'İndirilenler',

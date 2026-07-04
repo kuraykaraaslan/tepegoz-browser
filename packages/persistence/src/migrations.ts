@@ -1,4 +1,12 @@
+import { randomUUID } from 'node:crypto';
 import type { Db } from './db';
+
+// Bookmark-tree seed constants — kept as literals here (persistence must not depend on @tepegoz/bookmarks).
+// These mirror BOOKMARK_ROOT_BAR / BOOKMARK_ROOT_OTHER / the position gap in @tepegoz/bookmarks (single
+// canonical source lives there; this is a one-time DDL seed).
+const ROOT_BAR = 'root-bar';
+const ROOT_OTHER = 'root-other';
+const POSITION_GAP = 1000;
 
 interface Migration {
   version: number;
@@ -141,6 +149,68 @@ const MIGRATIONS: Migration[] = [
         );
         CREATE INDEX idx_macros_updated ON macros (updated_at);
       `);
+    },
+  },
+  {
+    version: 6,
+    up: (db) => {
+      // Bookmark TREE (folders + bookmarks in one self-referential table, Chrome-style). `foreign_keys`
+      // is ON (db.ts), so ON DELETE CASCADE gives recursive folder delete for free. `position` is a
+      // sparse rank within a parent (gap 1000) — reads sort by (parent_id, position); never assume it is
+      // contiguous. The old flat `bookmarks` table is migrated into the Bar root and dropped.
+      db.exec(`
+        CREATE TABLE bookmark_nodes (
+          id         TEXT PRIMARY KEY,
+          parent_id  TEXT REFERENCES bookmark_nodes(id) ON DELETE CASCADE,
+          node_type  TEXT NOT NULL CHECK (node_type IN ('folder', 'bookmark')),
+          title      TEXT NOT NULL,
+          url        TEXT,
+          position   INTEGER NOT NULL,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          CHECK ((node_type = 'folder') = (url IS NULL))
+        );
+        CREATE INDEX idx_bmnodes_parent_pos ON bookmark_nodes (parent_id, position);
+        CREATE INDEX idx_bmnodes_url ON bookmark_nodes (url);
+      `);
+
+      const now = Date.now();
+      const insertNode = db.prepare(
+        `INSERT INTO bookmark_nodes (id, parent_id, node_type, title, url, position, created_at, updated_at)
+         VALUES (@id, @parentId, @nodeType, @title, @url, @position, @createdAt, @updatedAt)`,
+      );
+      // Two fixed roots (deterministic ids so code references them by constant; UI relabels via i18n).
+      insertNode.run({
+        id: ROOT_BAR, parentId: null, nodeType: 'folder', title: 'Bookmarks bar',
+        url: null, position: 0, createdAt: now, updatedAt: now,
+      });
+      insertNode.run({
+        id: ROOT_OTHER, parentId: null, nodeType: 'folder', title: 'Other bookmarks',
+        url: null, position: POSITION_GAP, createdAt: now, updatedAt: now,
+      });
+
+      // Migrate the existing flat bookmarks into the Bar root, preserving order (oldest → first).
+      const flat = db
+        .prepare('SELECT url, title, ts FROM bookmarks ORDER BY ts ASC')
+        .all() as { url: string; title: string; ts: number }[];
+      flat.forEach((b, i) => {
+        insertNode.run({
+          id: randomUUID(), parentId: ROOT_BAR, nodeType: 'bookmark',
+          title: b.title, url: b.url, position: i * POSITION_GAP,
+          createdAt: b.ts, updatedAt: b.ts,
+        });
+      });
+
+      db.exec('DROP TABLE bookmarks;');
+    },
+  },
+  {
+    version: 7,
+    up: (db) => {
+      // Persist the page favicon captured when a bookmark is added (http(s)/data: URL), so the bar and
+      // manager can show it without a fresh network fetch. Nullable — folders and pre-existing bookmarks
+      // have none until re-saved.
+      db.exec('ALTER TABLE bookmark_nodes ADD COLUMN favicon TEXT;');
     },
   },
 ];

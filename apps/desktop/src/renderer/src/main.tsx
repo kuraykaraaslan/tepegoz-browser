@@ -9,6 +9,8 @@ import { MenuSubPopup } from './components/MenuSubPopup';
 import { PageContextMenuPopup } from './components/PageContextMenuPopup';
 import { UserMenuPopup } from './components/UserMenuPopup';
 import { NotificationCenterPopup } from './components/NotificationCenterPopup';
+import { BookmarkFolderPopup } from './components/BookmarkFolderPopup';
+import { BookmarkDialogPopup } from './components/BookmarkDialogPopup';
 import './styles.css';
 
 // A native popup window loads this same bundle with `?surface=<kind>` (see PopupWindowManager); render
@@ -23,6 +25,10 @@ else if (surface === 'page-context-menu') node = <PageContextMenuPopup />;
 else if (surface === 'user-menu') node = <UserMenuPopup />;
 else if (surface === 'menu-sub') node = <MenuSubPopup kind={params.get('kind') ?? ''} />;
 else if (surface === 'notifications') node = <NotificationCenterPopup />;
+else if (surface === 'bookmark-folder' && extId !== null) node = <BookmarkFolderPopup folderId={extId} />;
+else if (surface === 'bookmark-rename' && extId !== null) node = <BookmarkDialogPopup mode="rename" id={extId} />;
+else if (surface === 'bookmark-add-folder' && extId !== null)
+  node = <BookmarkDialogPopup mode="add-folder" id={extId} />;
 else if (surface === 'ext' && extId !== null) node = <PopupApp id={extId} />;
 
 // The boundary's fallback renders when App (and its locale state) is gone — resolve from the OS locale.

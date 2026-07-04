@@ -104,10 +104,10 @@ export function buildMainMenuModel(copy: MainMenuCopy, actions: MainMenuActions)
       items: [
         action('passwords', copy.menu.passwords, copy.menu.short.passwords, 'key'),
         action('downloads', copy.menu.downloads, copy.menu.short.downloads, 'download'),
-        action('bookmarks', copy.menu.bookmarks, copy.menu.short.bookmarks, 'bookmark'),
         action('tab-groups', copy.menu.tabGroups, copy.menu.short.tabGroups, 'layers'),
       ],
     },
+    { id: 'bookmarks', label: copy.menu.bookmarks, icon: <Icon name="bookmark" />, flyout: true },
     { id: 'history', label: copy.history, icon: <Icon name="history" />, flyout: true },
     { kind: 'separator' },
     { id: 'extensions', label: copy.extensions, icon: <Icon name="puzzle" />, flyout: true },

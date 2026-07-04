@@ -7,7 +7,7 @@ import type { Locale } from '@tepegoz/i18n';
 import { useT } from '@tepegoz/i18n/react';
 import { INTERNAL_EXTENSIONS_URL, type ContentBounds } from '@tepegoz/desktop-ipc';
 import { extensionsDict } from '@tepegoz/extensions-ui/i18n';
-import { extensionLabel } from '../../../shared/extensions';
+import { extensionLabel } from '../../../shared/extension-urls';
 import type { ExtensionDef } from '../extensions/registry';
 
 /** Max extension icons pinned inline next to the omnibox; beyond this, use the puzzle → manage page. */

@@ -58,3 +58,19 @@ either.
   `CapabilityRegistry.list()`), giving a clean capability kill-switch.
 - Residual risk: a first-party extension is trusted in-process (unlike a sandboxed stdio server), so
   its danger-class declarations matter — mitigated by the fail-safe PEP defaults and the enabled-gate.
+
+## Update (2026-07-03) — first-party runtime catalog + lazy surface loading
+
+The built-in extension registry is now **data-driven** rather than a hardcoded array. Extension
+IDENTITY loads from a build-time-generated, on-disk catalog (`apps/desktop/resources/extensions.catalog.json`,
+emitted by `scripts/generate-extension-catalog.ts` from each extension's authored manifest) that the
+main process reads and **validates with zod (`validateManifest` safeParse) at startup** — a single
+malformed manifest is skipped-and-logged, not fatal. The renderer receives manifests over IPC
+(`listExtensionManifests`, a zod-free `ExtensionManifestWire`) and **lazy-loads** each surface component
+via `React.lazy` + dynamic `import()` (code-split, loaded on first open). Enabled/disabled state stays
+in `preferences.json`.
+
+Scope is deliberately **first-party built-ins only**: because bundled first-party code needs static
+module specifiers for code-splitting, one small surface-loader thunk map remains in renderer source
+(the honest limit). Loading extensions from a user/db directory, **untrusted/MV3/third-party execution,
+sandboxing, and permission enforcement remain Phase 3** — unchanged by this refinement.

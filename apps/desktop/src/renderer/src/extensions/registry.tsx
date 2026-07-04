@@ -1,19 +1,16 @@
-import type { ReactNode } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBan, faRobot, faUserSecret, faWandMagicSparkles } from '@fortawesome/free-solid-svg-icons';
-import type { ExtensionManifest, ExtensionSurfaceKind } from '@tepegoz/extension-sdk';
-import { agentManifest, AgentPanel } from '@tepegoz/ext-agent';
-import { userAgentManifest, UserAgentPopup, UserAgentPage } from '@tepegoz/ext-user-agent';
-import { popupBlockerManifest, PopupBlockerPopup, PopupBlockerPage } from '@tepegoz/ext-popup-blocker';
-import { macrosManifest, MacrosPanel, MacrosPage } from '@tepegoz/ext-macros';
+import { lazy, type ComponentType, type ReactNode } from 'react';
+import type { ExtensionSurfaceKind } from '@tepegoz/extension-sdk';
+import type { ExtensionManifestWire } from '@tepegoz/desktop-ipc';
+import { iconNodeFor } from './icon-registry';
+import { SURFACE_LOADERS, type SurfaceLoader } from './surface-loaders';
 
 /**
- * Renderer registry of internal extensions. Each entry pairs a schema-validated {@link ExtensionManifest}
- * (from the extension's own package — also the source of truth for id/surfaces/actions in the shared
- * `shared/extensions.ts`) with a toolbar icon and a map of SURFACE renderers. A surface receives the
- * host API (`window.tepegoz`, which structurally satisfies each extension's host-API contract) — the
- * extension package never reaches the global bridge itself. Add a built-in extension here + to
- * `BUILTIN_MANIFESTS`. (Real MV3/third-party extensions are a later phase.)
+ * Renderer registry of built-in extensions, built at runtime from the IPC-delivered catalog (identity)
+ * paired with lazily-loaded surface components (see {@link SURFACE_LOADERS}) and a data-driven icon
+ * (from the manifest's `icon` slug). No hardcoded manifest array lives here anymore; each surface is a
+ * `React.lazy` component code-split into its own chunk, loaded only when the surface first renders
+ * (wrap render sites in `<Suspense>`). A surface receives the host API indirectly — the loader binds
+ * `window.tepegoz` — so the extension package never reaches the global bridge itself.
  */
 export interface ExtensionSurfaceProps {
   onClose: () => void;
@@ -21,70 +18,37 @@ export interface ExtensionSurfaceProps {
 
 export interface ExtensionDef {
   id: string;
-  manifest: ExtensionManifest;
+  manifest: ExtensionManifestWire;
   icon: ReactNode;
-  /** Renderers for the surfaces this extension implements (must cover `manifest.surfaces`). */
-  surfaces: Partial<Record<ExtensionSurfaceKind, (props: ExtensionSurfaceProps) => ReactNode>>;
+  /** Lazy renderers for the surfaces this extension implements (a subset of `manifest.surfaces` — a
+   *  declared surface with no registered loader is skipped). */
+  surfaces: Partial<Record<ExtensionSurfaceKind, ComponentType<ExtensionSurfaceProps>>>;
 }
 
-function AgentIcon() {
-  return <FontAwesomeIcon icon={faRobot} className="h-4 w-4" aria-hidden />;
+/** Wrap a surface loader thunk as a `React.lazy` component (needs a `{ default }` module shape). */
+function lazySurface(loader: SurfaceLoader): ComponentType<ExtensionSurfaceProps> {
+  return lazy(() => loader().then((component) => ({ default: component })));
 }
 
-function UserAgentIcon() {
-  return <FontAwesomeIcon icon={faUserSecret} className="h-4 w-4" aria-hidden />;
+/** Build the renderer registry from the catalog manifests: pair each with its lazy surfaces + icon. */
+export function buildExtensionRegistry(
+  manifests: readonly ExtensionManifestWire[],
+): ExtensionDef[] {
+  return manifests.map((manifest) => {
+    const loaders = SURFACE_LOADERS[manifest.id] ?? {};
+    const surfaces: Partial<Record<ExtensionSurfaceKind, ComponentType<ExtensionSurfaceProps>>> = {};
+    for (const kind of manifest.surfaces) {
+      const loader = loaders[kind];
+      if (loader !== undefined) surfaces[kind] = lazySurface(loader);
+    }
+    return { id: manifest.id, manifest, icon: iconNodeFor(manifest.icon), surfaces };
+  });
 }
-
-function PopupBlockerIcon() {
-  return <FontAwesomeIcon icon={faBan} className="h-4 w-4" aria-hidden />;
-}
-
-function MacrosIcon() {
-  return <FontAwesomeIcon icon={faWandMagicSparkles} className="h-4 w-4" aria-hidden />;
-}
-
-export const EXTENSIONS: readonly ExtensionDef[] = [
-  {
-    id: agentManifest.id,
-    manifest: agentManifest,
-    icon: <AgentIcon />,
-    surfaces: {
-      // The AI console lives in the resizable sidebar so the page stays visible beside it.
-      sidebar: ({ onClose }) => <AgentPanel api={window.tepegoz} onClose={onClose} />,
-    },
-  },
-  {
-    id: userAgentManifest.id,
-    manifest: userAgentManifest,
-    icon: <UserAgentIcon />,
-    surfaces: {
-      popup: ({ onClose }) => <UserAgentPopup api={window.tepegoz} onClose={onClose} />,
-      page: ({ onClose }) => <UserAgentPage api={window.tepegoz} onClose={onClose} />,
-    },
-  },
-  {
-    id: popupBlockerManifest.id,
-    manifest: popupBlockerManifest,
-    icon: <PopupBlockerIcon />,
-    surfaces: {
-      popup: ({ onClose }) => <PopupBlockerPopup api={window.tepegoz} onClose={onClose} />,
-      page: ({ onClose }) => <PopupBlockerPage api={window.tepegoz} onClose={onClose} />,
-    },
-  },
-  {
-    id: macrosManifest.id,
-    manifest: macrosManifest,
-    icon: <MacrosIcon />,
-    surfaces: {
-      // Record/run lives in the resizable sidebar so the page stays visible; the page surface is the
-      // full "My Macros" manager at tepegoz://com.tepegoz.macros.
-      sidebar: ({ onClose }) => <MacrosPanel api={window.tepegoz} onClose={onClose} />,
-      page: ({ onClose }) => <MacrosPage api={window.tepegoz} onClose={onClose} />,
-    },
-  },
-];
 
 /** The registry entry for `id`, or undefined. */
-export function extensionDefById(id: string): ExtensionDef | undefined {
-  return EXTENSIONS.find((ext) => ext.id === id);
+export function extensionDefById(
+  registry: readonly ExtensionDef[],
+  id: string,
+): ExtensionDef | undefined {
+  return registry.find((ext) => ext.id === id);
 }

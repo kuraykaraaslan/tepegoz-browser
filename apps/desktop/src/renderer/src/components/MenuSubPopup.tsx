@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { pick, resolveLocale, type Locale } from '@tepegoz/i18n';
 import { I18nProvider } from '@tepegoz/i18n/react';
 import { Menu, type MenuItem } from '@tepegoz/browser-menu';
+import { Icon } from '@tepegoz/ui';
 import {
+  INTERNAL_BOOKMARKS_URL,
   INTERNAL_EXTENSIONS_URL,
   INTERNAL_HISTORY_URL,
   isExtensionEnabled,
@@ -10,8 +12,8 @@ import {
 import { historyDict } from '@tepegoz/history-ui/i18n';
 import { extensionsDict } from '@tepegoz/extensions-ui/i18n';
 import { menuDict } from '../../../i18n';
-import { extensionLabel, extensionPageUrl } from '../../../shared/extensions';
-import { EXTENSIONS } from '../extensions/registry';
+import { extensionLabel, extensionPageUrl } from '../../../shared/extension-urls';
+import { iconNodeFor } from '../extensions/icon-registry';
 import { applyTheme } from '../lib/theme';
 
 /**
@@ -26,6 +28,20 @@ const RECENT_HISTORY_COUNT = 5;
 export function MenuSubPopup({ kind }: { kind: string }) {
   const [locale, setLocale] = useState<Locale>('en');
   const [items, setItems] = useState<MenuItem[]>([]);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Shrink/grow the native flyout window to the item list's natural height (the open-time height is
+  // only an estimate; the real row count is known once the async data loads), removing dead rows.
+  // Mirrors MainMenuPopup — the main process resizes whichever popup sent the request (here, the sub).
+  useEffect(() => {
+    const el = contentRef.current;
+    if (el === null) return;
+    const report = (): void => window.tepegoz.resizePopup(Math.ceil(el.getBoundingClientRect().height));
+    report();
+    const observer = new ResizeObserver(report);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -66,16 +82,63 @@ export function MenuSubPopup({ kind }: { kind: string }) {
           ),
           { id: 'history-all', label: m.showFullHistory, onSelect: () => act(() => window.tepegoz.navigateTab(INTERNAL_HISTORY_URL)) },
         ]);
+      } else if (kind === 'bookmarks') {
+        const m = pick(menuDict, loc);
+        let bms: Awaited<ReturnType<typeof window.tepegoz.listBookmarks>> = [];
+        try {
+          bms = await window.tepegoz.listBookmarks();
+        } catch {
+          /* ignore — still show the show/hide bookmarks-bar toggle */
+        }
+        if (cancelled) return;
+        // Default-on: the bar shows unless the preference is explicitly false (so a prefs object that
+        // predates the field still reads as "shown", matching DEFAULT_PREFERENCES).
+        const barShown = prefs.showBookmarksBar !== false;
+        setItems([
+          // Chrome-style show/hide bookmarks-bar toggle (checkmark reflects the current preference).
+          {
+            id: 'bm-bar-toggle',
+            label: m.showBookmarksBar,
+            ...(barShown ? { trailing: <Icon name="check" /> } : {}),
+            onSelect: () =>
+              act(() => {
+                void window.tepegoz.updatePreferences({ showBookmarksBar: !barShown });
+              }),
+          },
+          {
+            id: 'bm-manager',
+            label: m.bookmarkManager,
+            onSelect: () => act(() => window.tepegoz.navigateTab(INTERNAL_BOOKMARKS_URL)),
+          },
+          { kind: 'separator' },
+          ...(bms.length === 0
+            ? [{ id: 'bm-empty', label: m.noBookmarks, disabled: true } as MenuItem]
+            : bms.map(
+                (bm): MenuItem => ({
+                  id: `bm:${bm.url}`,
+                  label: bm.title.length > 0 ? bm.title : bm.url,
+                  icon: <Icon name="bookmark" />,
+                  onSelect: () => act(() => window.tepegoz.navigateTab(bm.url)),
+                }),
+              )),
+        ]);
       } else if (kind === 'extensions') {
         const x = pick(extensionsDict, loc);
-        const enabled = EXTENSIONS.filter((ext) => isExtensionEnabled(prefs.extensions, ext.id));
+        let manifests: Awaited<ReturnType<typeof window.tepegoz.listExtensionManifests>> = [];
+        try {
+          manifests = await window.tepegoz.listExtensionManifests();
+        } catch {
+          /* ignore — just show "Manage extensions" */
+        }
+        if (cancelled) return;
+        const enabled = manifests.filter((m) => isExtensionEnabled(prefs.extensions, m.id));
         setItems([
           ...enabled.map(
-            (ext): MenuItem => ({
-              id: `ext:${ext.id}`,
-              label: extensionLabel(ext.manifest, loc).name,
-              icon: ext.icon,
-              onSelect: () => act(() => window.tepegoz.navigateTab(extensionPageUrl(ext.id))),
+            (m): MenuItem => ({
+              id: `ext:${m.id}`,
+              label: extensionLabel(m, loc).name,
+              icon: iconNodeFor(m.icon),
+              onSelect: () => act(() => window.tepegoz.navigateTab(extensionPageUrl(m.id))),
             }),
           ),
           { id: 'ext-manage', label: x.manage, onSelect: () => act(() => window.tepegoz.navigateTab(INTERNAL_EXTENSIONS_URL)) },
@@ -94,13 +157,19 @@ export function MenuSubPopup({ kind }: { kind: string }) {
   }, [kind]);
 
   const ariaLabel =
-    kind === 'history' ? pick(historyDict, locale).title : pick(extensionsDict, locale).title;
+    kind === 'history'
+      ? pick(historyDict, locale).title
+      : kind === 'bookmarks'
+        ? pick(menuDict, locale).bookmarks
+        : pick(extensionsDict, locale).title;
 
   return (
     <I18nProvider locale={locale}>
       <div className="flex h-screen flex-col overflow-hidden bg-surface-base text-text-primary">
         <div className="min-h-0 flex-1 overflow-auto">
-          <Menu items={items} ariaLabel={ariaLabel} />
+          <div ref={contentRef} className="flow-root">
+            <Menu items={items} ariaLabel={ariaLabel} />
+          </div>
         </div>
       </div>
     </I18nProvider>

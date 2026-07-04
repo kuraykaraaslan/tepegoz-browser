@@ -1,35 +1,19 @@
 /**
  * The built-in extension registry — the single source of truth for extension IDENTITY (ids, versions,
- * surfaces, localized labels, page routing) in the MAIN process. Deliberately React-free. The manifests
- * are no longer hardcoded here: {@link initBuiltinManifests} is called ONCE at startup with the entries
- * read + validated from the on-disk catalog (`resources/extensions.catalog.json`, see
- * `main/stores.electron.ts`). Consumers read them at call time via {@link builtinManifests} — never at
- * module load — so they always see the initialized set.
+ * surfaces, localized labels, page routing) in the MAIN process. Deliberately React-free, and MAIN-ONLY:
+ * the manifests are not hardcoded here — {@link initBuiltinManifests} is called ONCE at startup (in
+ * `main/stores.electron.ts`) with the entries read + validated from the on-disk catalog
+ * (`resources/extensions.catalog.json`). Consumers read them at CALL time via {@link builtinManifests} —
+ * never at module load — so they always see the initialized set.
  *
- * The renderer does NOT import the registry array from here; it receives manifests over IPC
- * (`listExtensionManifests`) and shares only the pure helpers in `./extension-urls`. This module is NOT
- * imported by the sandboxed preload / `ipc-contract.ts` — those must stay dependency-free.
+ * The renderer does NOT import this module; it receives manifests over IPC (`listExtensionManifests`) and
+ * shares only the pure helpers in `./extension-urls`. This module is NOT imported by the sandboxed
+ * preload / `ipc-contract.ts` — those must stay dependency-free.
  */
 import type { ExtensionManifest } from '@tepegoz/extension-sdk';
 import { extensionIdFromPageUrl as idFromPageUrl, extensionPageUrl } from './extension-urls';
 
-// TEMPORARY migration fallback: the built-in manifests as static imports, used ONLY until
-// initBuiltinManifests() runs in main. Removed in the final migration step once the renderer moves to
-// the IPC-delivered catalog and main always initializes from disk. (Real MV3/third-party extensions
-// remain a later phase — untrusted/disk loading is out of scope here.)
-import { agentManifest } from '@tepegoz/ext-agent/manifest';
-import { userAgentManifest } from '@tepegoz/ext-user-agent/manifest';
-import { popupBlockerManifest } from '@tepegoz/ext-popup-blocker/manifest';
-import { macrosManifest } from '@tepegoz/ext-macros/manifest';
-
 export { extensionPageUrl, extensionLabel } from './extension-urls';
-
-const FALLBACK_MANIFESTS: readonly ExtensionManifest[] = [
-  agentManifest,
-  userAgentManifest,
-  popupBlockerManifest,
-  macrosManifest,
-];
 
 let manifests: readonly ExtensionManifest[] | null = null;
 
@@ -41,10 +25,12 @@ export function initBuiltinManifests(entries: readonly ExtensionManifest[]): voi
   manifests = entries;
 }
 
-/** Every built-in extension's manifest — the catalog set once initialized, the static fallback until
- *  then (renderer / pre-init reads). Read at CALL time so the initialized set is always seen. */
+/** Every built-in extension's manifest (from the catalog, populated once at startup). Read at CALL time
+ *  so the initialized set is always seen; throws if read before {@link initBuiltinManifests} (a
+ *  startup-order bug — the catalog load in `initStores` must run first). */
 export function builtinManifests(): readonly ExtensionManifest[] {
-  return manifests ?? FALLBACK_MANIFESTS;
+  if (manifests === null) throw new Error('built-in manifests read before initialization');
+  return manifests;
 }
 
 /** The manifest for `id`, or undefined if unknown. */

@@ -10,6 +10,9 @@ import {
   type AppNotification,
   type AutofillAvailablePayload,
   type BookmarkEntry,
+  type BookmarkMenuAction,
+  type BookmarkNodeType,
+  type BookmarkTreeNode,
   type ContentBounds,
   type CredentialsStatus,
   type ExtensionContextMenuChoice,
@@ -311,9 +314,34 @@ const api: TepegozApi = {
   deleteHistory: (url: string) => invoke<void>(IpcChannels.historyDelete, url),
   clearHistory: () => invoke<void>(IpcChannels.historyClear),
   listBookmarks: () => invoke<BookmarkEntry[]>(IpcChannels.bookmarksList),
-  toggleBookmark: (url: string, title: string) =>
-    invoke<boolean>(IpcChannels.bookmarksToggle, { url, title }),
+  toggleBookmark: (url: string, title: string, favicon?: string | null) =>
+    invoke<boolean>(IpcChannels.bookmarksToggle, { url, title, favicon }),
   isBookmarked: (url: string) => invoke<boolean>(IpcChannels.bookmarksIsBookmarked, url),
+  getBookmarkTree: () => invoke<BookmarkTreeNode[]>(IpcChannels.bookmarksTree),
+  createBookmarkFolder: (parentId: string, title: string, index?: number) =>
+    invoke<void>(IpcChannels.bookmarksCreateFolder, { parentId, title, index }),
+  renameBookmark: (id: string, title: string) =>
+    invoke<void>(IpcChannels.bookmarksRename, { id, title }),
+  removeBookmark: (id: string) => invoke<void>(IpcChannels.bookmarksRemove, id),
+  moveBookmark: (id: string, newParentId: string, index: number) =>
+    invoke<void>(IpcChannels.bookmarksMove, { id, newParentId, index }),
+  showBookmarkContextMenu: (id: string, type: BookmarkNodeType) => {
+    ipcRenderer.send(IpcChannels.bookmarksContextMenu, { id, type });
+  },
+  onBookmarkMenuAction: (callback: (action: BookmarkMenuAction) => void) => {
+    const listener = (_event: unknown, action: BookmarkMenuAction): void => callback(action);
+    ipcRenderer.on(IpcChannels.bookmarksMenuAction, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.bookmarksMenuAction, listener);
+    };
+  },
+  onBookmarksChanged: (callback: () => void) => {
+    const listener = (): void => callback();
+    ipcRenderer.on(IpcChannels.bookmarksChanged, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.bookmarksChanged, listener);
+    };
+  },
   listNotifications: () => invoke<NotificationState>(IpcChannels.notificationsList),
   onNotificationsState: (callback: (state: NotificationState) => void) => {
     const listener = (_event: unknown, state: NotificationState): void => {

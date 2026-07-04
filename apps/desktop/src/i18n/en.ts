@@ -25,6 +25,27 @@ export const en = {
     // Bookmark star (right of the omnibox).
     bookmarkAdd: 'Bookmark this page',
     bookmarkRemove: 'Remove bookmark',
+    // Bookmarks bar (the strip under the nav toolbar).
+    bookmarksBar: 'Bookmarks bar',
+    noBookmarksBar: 'No bookmarks yet. Star a page to add it here.',
+    // Native right-click menu for a bar/manager bookmark or folder.
+    bookmarkMenu: {
+      open: 'Open',
+      openNewTab: 'Open in new tab',
+      openAll: 'Open all',
+      rename: 'Rename…',
+      addFolder: 'Add folder…',
+      delete: 'Delete',
+      manager: 'Bookmark manager',
+    },
+    // Add/rename dialog (bookmark bar).
+    newFolder: 'New folder',
+    folderNamePlaceholder: 'Folder name',
+    renameTitle: 'Rename',
+    add: 'Add',
+    save: 'Save',
+    cancel: 'Cancel',
+    openAllConfirm: 'Open all bookmarks in new tabs?',
     menu: 'Main menu',
     exit: 'Exit',
     // Tab right-click menu (native), mirroring Chrome's tab context menu.
@@ -86,6 +107,10 @@ export const en = {
     moreTools: 'More tools',
     help: 'Help',
     showFullHistory: 'Show full history',
+    // Bookmarks submenu (flyout): the show/hide bookmarks-bar toggle + empty-state row.
+    showBookmarksBar: 'Show bookmarks bar',
+    noBookmarks: 'No bookmarks yet',
+    bookmarkManager: 'Bookmark manager',
     // Short captions shown under the grouped icon buttons (the full labels above stay the tooltips).
     short: {
       newWindow: 'Window',

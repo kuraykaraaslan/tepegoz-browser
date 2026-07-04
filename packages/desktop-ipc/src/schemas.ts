@@ -126,13 +126,44 @@ export const HistorySearchParamsSchema = z.object({
   offset: z.number().int().min(0).default(0),
 });
 
-/** `bookmarks:toggle` payload — the page URL + its title (title defaults to the URL if empty). */
+/** `bookmarks:toggle` payload — the page URL + its title (title defaults to the URL if empty) + the
+ *  page's current favicon URL (http(s)/data:) captured at save time. */
 export const BookmarkToggleSchema = z.object({
   url: z.string().min(1).max(4096),
   title: z.string().max(2048),
+  favicon: z.string().max(100000).nullish(),
 });
 /** `bookmarks:is-bookmarked` payload — a single URL to look up. */
 export const BookmarkUrlSchema = z.string().min(1).max(4096);
+
+// Bookmark tree ops. A node id is a uuid or one of the two fixed roots. Handlers refuse the roots where
+// it matters (delete/move a root). Folder ops carry no URL, so `isBookmarkable` is applied to bookmark
+// ops only (not present here — the bar creates folders + moves; bookmarks are still added via the star).
+const BookmarkNodeId = z.string().min(1).max(64);
+/** `bookmarks:create-folder` — a new folder under `parentId` (optionally at `index`). */
+export const BookmarkCreateFolderSchema = z.object({
+  parentId: BookmarkNodeId,
+  title: z.string().min(1).max(2048),
+  index: z.number().int().min(0).max(100000).optional(),
+});
+/** `bookmarks:rename` — set a node's title. */
+export const BookmarkRenameSchema = z.object({
+  id: BookmarkNodeId,
+  title: z.string().min(1).max(2048),
+});
+/** `bookmarks:remove` — delete a node (recursive; handler refuses roots). */
+export const BookmarkRemoveSchema = BookmarkNodeId;
+/** `bookmarks:move` — reparent + reorder a node to `index` within `newParentId`. */
+export const BookmarkMoveSchema = z.object({
+  id: BookmarkNodeId,
+  newParentId: BookmarkNodeId,
+  index: z.number().int().min(0).max(100000),
+});
+/** `bookmarks:context-menu` — pop the native menu for a node (renderer→main). */
+export const BookmarkContextMenuSchema = z.object({
+  id: BookmarkNodeId,
+  type: z.enum(['folder', 'bookmark']),
+});
 
 /** `user-agent:set` payload — a UA string to apply, or null to reset to the browser default. */
 export const UserAgentSelectionSchema = z.string().max(512).nullable();
@@ -159,7 +190,10 @@ export const ExtensionIdSchema = z.string().regex(EXTENSION_ID_RE).max(128);
  */
 export const PopupOpenSchema = z.object({
   surface: z.string().min(1).max(64),
-  id: z.string().regex(EXTENSION_ID_RE).max(128).optional(),
+  // A surface-specific target id: an extension id (ext popup) OR a bookmark node id/root (bookmark
+  // surfaces). Kept a loose bounded string here; each surface handler re-validates it (the ext handler
+  // via manifestById, the bookmark handlers via the tree store), so an unknown id is simply ignored.
+  id: z.string().min(1).max(128).optional(),
   anchor: ContentBoundsSchema,
   height: z.number().int().positive().max(2000).optional(),
 });

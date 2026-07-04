@@ -119,6 +119,16 @@ module.exports = {
       to: { path: '^apps/' },
     },
     {
+      name: 'bookmarks-ui-is-a-leaf',
+      severity: 'error',
+      comment:
+        '@tepegoz/bookmarks-ui is a presentational chrome leaf (the tepegoz://bookmarks manager): it must ' +
+        'never import back into the desktop app. The tree, mutations, open + context-menu actions, and copy ' +
+        'are injected. See docs/package-map.md.',
+      from: { path: '^packages/bookmarks-ui/' },
+      to: { path: '^apps/' },
+    },
+    {
       name: 'history-ui-is-a-leaf',
       severity: 'error',
       comment:
@@ -143,6 +153,16 @@ module.exports = {
         '@tepegoz/extensions-ui is a presentational chrome leaf (the extensions grid shell): it must ' +
         'never import back into the desktop app. Items + copy are injected. See docs/package-map.md.',
       from: { path: '^packages/extensions-ui/' },
+      to: { path: '^apps/' },
+    },
+    {
+      name: 'bookmarks-bar-is-a-leaf',
+      severity: 'error',
+      comment:
+        '@tepegoz/bookmarks-bar is a presentational chrome leaf (the bookmarks strip under the nav ' +
+        'bar): it must never import back into the desktop app. The list, the open action, and the copy ' +
+        'are injected. See docs/package-map.md.',
+      from: { path: '^packages/bookmarks-bar/' },
       to: { path: '^apps/' },
     },
     {

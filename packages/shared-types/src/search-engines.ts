@@ -2,8 +2,8 @@
  * The built-in search engines a user can pick as their default (Settings → Preferences). A self-
  * contained, zod-free / preload-safe module (like `providers.ts`) so both the renderer and main can
  * import it. `name` is a brand name (shown untranslated); `searchUrlTemplate` has a single `{q}`
- * placeholder replaced with the URL-encoded query. Adding a custom engine is a later feature — the UI
- * shows it as a placeholder for now.
+ * placeholder replaced with the URL-encoded query. Users can add their own engines (persisted in
+ * `Preferences.customSearchEngines`); pass the merged list to the resolvers below.
  */
 export interface SearchEngine {
   /** Stable id persisted in `Preferences.searchEngineId`. */
@@ -38,16 +38,30 @@ const FALLBACK_ENGINE: SearchEngine = {
   searchUrlTemplate: 'https://www.google.com/search?q={q}',
 };
 
-/** The engine for `id`, falling back to the default engine (never undefined). */
-export function searchEngineById(id: string): SearchEngine {
+/** The built-in engines plus the user's custom ones (custom appended, in menu order). */
+export function allSearchEngines(custom: readonly SearchEngine[] = []): readonly SearchEngine[] {
+  return custom.length === 0 ? SEARCH_ENGINES : [...SEARCH_ENGINES, ...custom];
+}
+
+/** The engine for `id` within `engines` (built-in + custom), falling back to the default (never
+ *  undefined). Pass `allSearchEngines(prefs.customSearchEngines)` to honor user-added engines. */
+export function searchEngineById(
+  id: string,
+  engines: readonly SearchEngine[] = SEARCH_ENGINES,
+): SearchEngine {
   return (
-    SEARCH_ENGINES.find((e) => e.id === id) ??
-    SEARCH_ENGINES.find((e) => e.id === DEFAULT_SEARCH_ENGINE_ID) ??
+    engines.find((e) => e.id === id) ??
+    engines.find((e) => e.id === DEFAULT_SEARCH_ENGINE_ID) ??
     FALLBACK_ENGINE
   );
 }
 
-/** Build a search URL for `query` using engine `id` (query is URL-encoded). */
-export function buildSearchUrl(id: string, query: string): string {
-  return searchEngineById(id).searchUrlTemplate.replace('{q}', encodeURIComponent(query));
+/** Build a search URL for `query` using engine `id` (query is URL-encoded). `engines` should be the
+ *  merged built-in + custom list so a user-added engine resolves. */
+export function buildSearchUrl(
+  id: string,
+  query: string,
+  engines: readonly SearchEngine[] = SEARCH_ENGINES,
+): string {
+  return searchEngineById(id, engines).searchUrlTemplate.replace('{q}', encodeURIComponent(query));
 }

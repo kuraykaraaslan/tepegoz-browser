@@ -1,6 +1,7 @@
 import { app } from 'electron';
 import { coreDict, pick, resolveLocale, type Locale } from '@tepegoz/i18n';
 import { agentDict } from '@tepegoz/ext-agent/i18n';
+import { bookmarksUiDict } from '@tepegoz/bookmarks-ui/i18n';
 import { extensionsDict } from '@tepegoz/extensions-ui/i18n';
 import { historyDict } from '@tepegoz/history-ui/i18n';
 import { browserDict } from '../../i18n';
@@ -19,6 +20,7 @@ export function mainLocale(): Locale {
 
 export function mainStrings(): {
   agent: typeof agentDict.en;
+  bookmarks: typeof bookmarksUiDict.en;
   browser: typeof browserDict.en;
   common: typeof coreDict.en.common;
   errors: typeof coreDict.en.errors;
@@ -29,6 +31,7 @@ export function mainStrings(): {
   return {
     // Agent-run surfaces the main process phrases (e.g. the Human Handoff Controller message).
     agent: pick(agentDict, l),
+    bookmarks: pick(bookmarksUiDict, l),
     browser: pick(browserDict, l),
     // The settings tab title / menu entry reuse the shared-core `common.settings` (no re-translation).
     common: pick(coreDict, l).common,

@@ -8,6 +8,7 @@ import {
 } from 'electron';
 import { Logger } from '@tepegoz/libs';
 import {
+  INTERNAL_BOOKMARKS_URL,
   INTERNAL_EXTENSIONS_URL,
   INTERNAL_HISTORY_URL,
   IpcChannels,
@@ -27,6 +28,8 @@ import {
   type TabGroupColor,
 } from '@tepegoz/tab-engine';
 import { internalPageUrl, isWebUrl, toNavigationUrl } from './lib/navigation-url';
+import { allSearchEngines, buildSearchUrl } from '@tepegoz/shared-types/search-engines';
+import PreferenceStore from '@tepegoz/preferences';
 import { mainLocale, mainStrings } from './lib/i18n-main';
 import { extensionIdFromPageUrl, extensionLabel, manifestById } from '../shared/extensions';
 import { getDb } from './db/database.electron';
@@ -92,7 +95,17 @@ function blockNonWeb(event: { preventDefault: () => void }, url: string): void {
  * Per-site partition isolation, profiles, and checkpoint/resume are later phases; this is the minimal
  * real browser core for Phase 1a.
  */
-const NEW_TAB_URL = 'https://duckduckgo.com/';
+/** Fallback home / new-tab URL when the `homepageUrl` preference is blank. */
+const DEFAULT_HOME_URL = 'https://duckduckgo.com/';
+/** The current home / new-tab page URL (from prefs, falling back to the built-in default when blank). */
+function homeUrl(): string {
+  return PreferenceStore.getAll().homepageUrl || DEFAULT_HOME_URL;
+}
+/** Resolve a typed omnibox query to a search URL via the selected engine (built-in or user-custom). */
+function searchUrlForQuery(query: string): string {
+  const prefs = PreferenceStore.getAll();
+  return buildSearchUrl(prefs.searchEngineId, query, allSearchEngines(prefs.customSearchEngines));
+}
 /** Cap for page-controlled titles before they reach the history DB (hostile-page DoS guard). */
 const MAX_TITLE_LENGTH = 2048;
 /** The isolated session partition every browsed page lives in (shared with the User-Agent switcher). */
@@ -190,7 +203,8 @@ export default class TabManager {
     // must join that group and sit right after its opener — never break out of the group run (ADR-0020).
     TabManager.inheritGroup(id, opts?.openerId);
 
-    const target = rawUrl !== undefined ? toNavigationUrl(rawUrl, NEW_TAB_URL) : NEW_TAB_URL;
+    const home = homeUrl();
+    const target = rawUrl !== undefined ? toNavigationUrl(rawUrl, home, searchUrlForQuery) : home;
     void view.webContents.loadURL(target).catch((err: unknown) => {
       Logger.warn('Tab failed to load', { url: target, err: String(err) });
     });
@@ -299,6 +313,7 @@ export default class TabManager {
     const r = mainStrings();
     if (url === INTERNAL_EXTENSIONS_URL) return r.extensions.title;
     if (url === INTERNAL_HISTORY_URL) return r.history.title;
+    if (url === INTERNAL_BOOKMARKS_URL) return r.bookmarks.title;
     // An extension `page` surface (tepegoz://<extension-id>) is titled from the extension's manifest.
     const extId = extensionIdFromPageUrl(url);
     if (extId !== null) {
@@ -458,7 +473,7 @@ export default class TabManager {
     }
     const rec = TabManager.store.active();
     if (rec === undefined) return;
-    const url = toNavigationUrl(rawUrl, NEW_TAB_URL);
+    const url = toNavigationUrl(rawUrl, homeUrl(), searchUrlForQuery);
     const view = TabManager.views.get(rec.id);
     if (view === undefined) {
       TabManager.createTab(url); // typing a URL while on an internal page opens a new web tab
@@ -542,7 +557,7 @@ export default class TabManager {
 
   /** Navigate the active tab to the home / start page. */
   static goHome(): void {
-    TabManager.navigateActive(NEW_TAB_URL);
+    TabManager.navigateActive(homeUrl());
   }
 
   /** The content area (below the chrome), in DIP, as measured by the renderer. */

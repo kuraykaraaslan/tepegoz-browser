@@ -17,6 +17,7 @@ import {
   type AgentRunResult,
   type AppInfo,
   type BookmarkEntry,
+  type BookmarkTreeNode,
   type CredentialsStatus,
   type ExtensionManifestWire,
   type HistoryEntry,
@@ -41,6 +42,11 @@ import {
   AppInfoSchema,
   BookmarkToggleSchema,
   BookmarkUrlSchema,
+  BookmarkCreateFolderSchema,
+  BookmarkRenameSchema,
+  BookmarkRemoveSchema,
+  BookmarkMoveSchema,
+  BookmarkContextMenuSchema,
   HistoryPageParamsSchema,
   HistorySearchParamsSchema,
   HistoryUrlSchema,
@@ -82,8 +88,8 @@ import NotificationHost from './notifications/notification-host';
 import NotificationPermissionBroker from './notifications/permission-broker';
 import type { ConfirmRequest } from '@tepegoz/capability-plane';
 import { TokenLedger } from '@tepegoz/model-gateway';
-import { BookmarkStore, EventJournal, HistoryStore } from '@tepegoz/persistence';
-import { isWebUrl } from '@tepegoz/navigation';
+import { EventJournal, HistoryStore } from '@tepegoz/persistence';
+import { BookmarkTreeStore, isBookmarkable } from '@tepegoz/bookmarks';
 import type { EventType, Plan } from '@tepegoz/shared-types';
 import { randomUUID } from 'node:crypto';
 import AgentService, { type PlanApprovalDecision } from './agent/agent-service';
@@ -103,6 +109,7 @@ import PopupBlockerManager from './popup-blocker';
 import PopupWindowManager from './popup-window';
 import { builtinManifests, manifestById } from '../shared/extensions';
 import { showTabContextMenu } from './menus/tab-context-menu';
+import { showBookmarkContextMenu } from './menus/bookmark-context-menu';
 import { showExtensionContextMenu } from './menus/extension-context-menu';
 import { showGroupContextMenu } from './menus/tab-group-context-menu';
 import { getPageMenuContext, runPageMenuAction } from './menus/page-context-menu';
@@ -113,6 +120,18 @@ const MAIN_MENU_WIDTH = 300;
 const USER_MENU_WIDTH = 320;
 /** Native notification-center popup width (px). */
 const NOTIFICATIONS_WIDTH = 360;
+/** Native bookmark folder-dropdown popup width (px). */
+const BOOKMARK_FOLDER_WIDTH = 280;
+/** Native bookmark rename / add-folder dialog popup width (px). */
+const BOOKMARK_DIALOG_WIDTH = 320;
+
+/** Notify every app window that the bookmark tree changed (a popup-window mutation must reach the main
+ *  window's bar + manager). Mirrors `broadcastPublicSettings`. */
+function broadcastBookmarksChanged(): void {
+  for (const w of BrowserWindow.getAllWindows()) {
+    if (!w.isDestroyed()) w.webContents.send(IpcChannels.bookmarksChanged);
+  }
+}
 
 /** Reject IPC from frames that are not our own app content (exact-host allow-list). */
 function assertTrustedSender(event: IpcMainInvokeEvent): void {
@@ -434,6 +453,17 @@ export function registerIpc(): void {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (win) showTabContextMenu(win, parsed.data);
   });
+  // Native bookmark context menu — also needs the sender's window to anchor the popup.
+  ipcMain.on(IpcChannels.bookmarksContextMenu, (event: IpcMainEvent, payload: unknown) => {
+    if (!isTrustedAppUrl(event.senderFrame?.url ?? '')) return;
+    const parsed = BookmarkContextMenuSchema.safeParse(payload);
+    if (!parsed.success) {
+      Logger.warn('Ignored bookmarks:context-menu: invalid payload');
+      return;
+    }
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) showBookmarkContextMenu(win, parsed.data.id, parsed.data.type);
+  });
   // Native extension-icon context menu — also needs the sender's window to anchor + to push the choice.
   ipcMain.on(IpcChannels.extensionContextMenu, (event: IpcMainEvent, payload: unknown) => {
     if (!isTrustedAppUrl(event.senderFrame?.url ?? '')) return;
@@ -507,6 +537,27 @@ export function registerIpc(): void {
         key: `ext:${id}`,
         query: { surface: 'ext', id },
         anchor,
+      });
+    } else if (surface === 'bookmark-folder' && id !== undefined) {
+      // A bar folder's dropdown, floating over the page (a native window can't be occluded by the view).
+      PopupWindowManager.open({
+        parent: win,
+        key: `bookmark-folder:${id}`,
+        query: { surface, id },
+        anchor,
+        width: BOOKMARK_FOLDER_WIDTH,
+        ...(height !== undefined ? { height } : {}),
+      });
+    } else if ((surface === 'bookmark-rename' || surface === 'bookmark-add-folder') && id !== undefined) {
+      // Rename / add-folder dialog as a native window so the page stays visible behind it. The mode is
+      // carried by the surface name; `id` is the target node (rename) or parent folder (add-folder).
+      PopupWindowManager.open({
+        parent: win,
+        key: 'bookmark-dialog',
+        query: { surface, id },
+        anchor,
+        width: BOOKMARK_DIALOG_WIDTH,
+        ...(height !== undefined ? { height } : {}),
       });
     } else {
       Logger.warn('Ignored popup:open: unknown surface', { surface });
@@ -782,27 +833,66 @@ export function registerIpc(): void {
     if (db !== null) HistoryStore.clear(db);
   });
 
-  // Bookmarks. Only http(s) pages are bookmarkable — internal tepegoz:// pages and non-web schemes
-  // are rejected here (defense in depth alongside the renderer only offering the star on web pages).
+  // Bookmarks. http(s) pages plus trusted system paths (tepegoz:// internal pages, file://) are
+  // bookmarkable; executable/smuggling schemes are rejected here via isBookmarkable (defense in depth
+  // alongside the renderer only offering the star on bookmarkable pages). See @tepegoz/bookmarks.
   handle(IpcChannels.bookmarksList, (): BookmarkEntry[] => {
     const db = getDb();
-    return db !== null ? BookmarkStore.list(db) : [];
+    return db !== null ? BookmarkTreeStore.listFlat(db) : [];
   });
   handle(IpcChannels.bookmarksToggle, (_event, payload): boolean => {
-    const { url, title } = BookmarkToggleSchema.parse(payload);
+    const { url, title, favicon } = BookmarkToggleSchema.parse(payload);
     const db = getDb();
-    if (db === null || !isWebUrl(url)) return false;
-    if (BookmarkStore.isBookmarked(db, url)) {
-      BookmarkStore.remove(db, url);
-      return false;
-    }
-    BookmarkStore.add(db, { url, title: title.trim().length > 0 ? title : url, ts: Date.now() });
-    return true;
+    if (db === null || !isBookmarkable(url)) return false;
+    const result = BookmarkTreeStore.toggleAtBar(db, url, title, favicon ?? null);
+    broadcastBookmarksChanged();
+    return result;
   });
   handle(IpcChannels.bookmarksIsBookmarked, (_event, payload): boolean => {
     const url = BookmarkUrlSchema.parse(payload);
     const db = getDb();
-    return db !== null && BookmarkStore.isBookmarked(db, url);
+    return db !== null && BookmarkTreeStore.isBookmarkedAnywhere(db, url);
+  });
+  // Bookmark tree (folders + ordering) for the interactive bar + manager. Mutations return void; the
+  // renderer refetches getBookmarkTree after each so the bar/manager reflect the change.
+  handle(IpcChannels.bookmarksTree, (): BookmarkTreeNode[] => {
+    const db = getDb();
+    return db !== null ? BookmarkTreeStore.getTree(db) : [];
+  });
+  handle(IpcChannels.bookmarksCreateFolder, (_event, payload): void => {
+    const { parentId, title, index } = BookmarkCreateFolderSchema.parse(payload);
+    const db = getDb();
+    if (db !== null) {
+      BookmarkTreeStore.createFolder(
+        db,
+        index === undefined ? { parentId, title } : { parentId, title, index },
+      );
+      broadcastBookmarksChanged();
+    }
+  });
+  handle(IpcChannels.bookmarksRename, (_event, payload): void => {
+    const { id, title } = BookmarkRenameSchema.parse(payload);
+    const db = getDb();
+    if (db !== null) {
+      BookmarkTreeStore.rename(db, id, title);
+      broadcastBookmarksChanged();
+    }
+  });
+  handle(IpcChannels.bookmarksRemove, (_event, payload): void => {
+    const id = BookmarkRemoveSchema.parse(payload);
+    const db = getDb();
+    if (db !== null) {
+      BookmarkTreeStore.remove(db, id);
+      broadcastBookmarksChanged();
+    }
+  });
+  handle(IpcChannels.bookmarksMove, (_event, payload): void => {
+    const { id, newParentId, index } = BookmarkMoveSchema.parse(payload);
+    const db = getDb();
+    if (db !== null) {
+      BookmarkTreeStore.move(db, id, newParentId, index);
+      broadcastBookmarksChanged();
+    }
   });
 
   // User-Agent switcher extension: read/apply the UA override for browsed pages.

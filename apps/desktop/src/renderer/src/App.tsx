@@ -1,4 +1,5 @@
 import {
+  Suspense,
   useCallback,
   useEffect,
   useRef,
@@ -11,6 +12,7 @@ import { I18nProvider } from '@tepegoz/i18n/react';
 import { Modal } from '@tepegoz/ui';
 import { browserDict, sidebarDict, userMenuDict } from '../../i18n';
 import {
+  INTERNAL_BOOKMARKS_URL,
   INTERNAL_EXTENSIONS_URL,
   INTERNAL_HISTORY_URL,
   INTERNAL_SETTINGS_URL,
@@ -19,6 +21,8 @@ import {
 import type {
   AppNotification,
   AutofillAvailablePayload,
+  BookmarkMenuAction,
+  BookmarkTreeNode,
   ContentBounds,
   CredentialsStatus,
   ExtensionId,
@@ -29,18 +33,26 @@ import type {
   ProviderId,
   TabsState,
 } from '@tepegoz/desktop-ipc';
+import { isBookmarkable, BOOKMARK_ROOT_BAR } from '@tepegoz/bookmarks';
 import { NotificationPermissionPrompt, ToastStack } from '@tepegoz/notifications-ui';
 import { AutofillSuggestion } from '@tepegoz/password-ui';
 import { runNotificationAction } from './lib/notification-actions';
-import { extensionIdFromPageUrl, extensionLabel, extensionPageUrl } from '../../shared/extensions';
-import { EXTENSIONS, extensionDefById } from './extensions/registry';
+import {
+  extensionIdFromPageUrl,
+  extensionLabel,
+  extensionPageUrl,
+} from '../../shared/extension-urls';
+import { extensionDefById } from './extensions/registry';
+import { useExtensionCatalog } from './extensions/useExtensionCatalog';
 import { BrowserChrome } from '@tepegoz/browser-chrome';
+import { BookmarksBar } from '@tepegoz/bookmarks-bar';
 import {
   buildOmniboxSuggestions,
   parseOmniboxQuery,
   type OmniboxSuggestion,
 } from '@tepegoz/omnibox';
 import { HistoryPage } from '@tepegoz/history-ui';
+import { BookmarksManager } from '@tepegoz/bookmarks-ui';
 import { ExtensionsPage } from './components/ExtensionsPage';
 import { ExtensionTray } from './components/ExtensionTray';
 import { MainMenuButton } from './components/MainMenuButton';
@@ -82,6 +94,13 @@ function defaultPopupAnchor(): ContentBounds {
   return { x: window.innerWidth - 8, y: 84, width: 0, height: 0 };
 }
 
+/** Centered-top anchor for a bookmark rename / add-folder dialog popup. `openPopup` right-aligns the
+ *  popup to the anchor's right edge, so a full-dialog-width anchor centers the (same-width) dialog. */
+function bookmarkDialogAnchor(): ContentBounds {
+  const width = 320;
+  return { x: Math.round(window.innerWidth / 2 - width / 2), y: 72, width, height: 0 };
+}
+
 export function App() {
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [status, setStatus] = useState<CredentialsStatus | null>(null);
@@ -110,10 +129,17 @@ export function App() {
   }, []);
   // Pending per-site Web Notification consent prompt (from the main-process broker), or null.
   const [permReq, setPermReq] = useState<NotificationPermissionRequest | null>(null);
+  // The "open all" confirmation is an in-renderer modal (rare, >15 bookmarks), so it must hide the native
+  // web view while open (declared above the content-visibility effect that reads it). Rename / add-folder
+  // are native popup windows instead (they float over the page — see openBookmarkDialog).
+  const [openAllUrls, setOpenAllUrls] = useState<string[] | null>(null);
   // Autofill suggestions pushed from main when a page loads and has matching stored credentials.
   const [autofill, setAutofill] = useState<AutofillAvailablePayload | null>(null);
   // Cached credential list for the Passwords settings section.
   const [loginCredentials, setLoginCredentials] = useState<LoginCredentialMeta[]>([]);
+  // Built-in extensions, fetched once over IPC (identity) + paired with lazy surfaces. Empty until it
+  // resolves — the tray/menus tolerate an empty list the same way the UI tolerates `prefs === null`.
+  const { registry } = useExtensionCatalog();
 
   const locale = effectiveLocale(prefs?.locale ?? 'system');
 
@@ -125,7 +151,7 @@ export function App() {
   // clicked icon's rect (for popups); absent for menu-triggered actions.
   const runExtensionAction = useCallback(
     (id: string, trigger: 'click' | 'doubleClick', anchor?: ContentBounds) => {
-      const def = extensionDefById(id);
+      const def = extensionDefById(registry, id);
       if (def === undefined) return;
       const action =
         trigger === 'click' ? def.manifest.actions.click : def.manifest.actions.doubleClick;
@@ -156,7 +182,7 @@ export function App() {
         cur !== null && cur.id === id && cur.kind === action ? null : { id, kind: action },
       );
     },
-    [],
+    [registry],
   );
 
   // Drag the sidebar's inner edge to resize (clamped). The native web view swallows pointer events when
@@ -301,12 +327,23 @@ export function App() {
     };
   }, []);
 
+  // Keep prefs fresh when ANOTHER window changes them (the Bookmarks menu toggling the bookmarks bar,
+  // etc.) — main broadcasts on every prefs write. Refetch the full prefs so the bar re-renders live.
+  useEffect(() => {
+    return window.tepegoz.onPublicSettingsChanged(() => {
+      void window.tepegoz.getPreferences().then(setPrefs, () => {
+        /* bridge unavailable — keep the last known prefs */
+      });
+    });
+  }, []);
+
   // Overlay surfaces (popup/modal/panel) are chrome-rendered and hide the active web view while open.
   // A sidebar resize also hides it momentarily so the chrome captures the drag's pointer stream (the
   // native web view otherwise swallows pointer events once the cursor crosses over it).
   useEffect(() => {
-    window.tepegoz.setContentVisible(activeSurface === null && !resizingSidebar);
-  }, [activeSurface, resizingSidebar]);
+    const overlayOpen = activeSurface !== null || openAllUrls !== null;
+    window.tepegoz.setContentVisible(!overlayOpen && !resizingSidebar);
+  }, [activeSurface, openAllUrls, resizingSidebar]);
 
   // Escape closes the open overlay surface (the Modal also self-handles Escape — both are idempotent).
   useEffect(() => {
@@ -389,21 +426,36 @@ export function App() {
   const browserT = pick(browserDict, locale);
   const sidebarT = pick(sidebarDict, locale);
   const userMenuT = pick(userMenuDict, locale);
+
+  // Shown while a lazily code-split extension surface loads (localized; a11y status role).
+  const surfaceFallback = (
+    <div
+      role="status"
+      aria-label={coreT.common.loading}
+      className="flex h-full w-full items-center justify-center text-sm text-text-muted"
+    >
+      {coreT.common.loading}
+    </div>
+  );
   const activeTab = tabs.tabs.find((tb) => tb.id === tabs.activeId);
   const currentUrl = activeTab?.url ?? '';
   // Internal pages are tabs addressed tepegoz://… ; render them when active.
   const settingsActive = activeTab?.url === INTERNAL_SETTINGS_URL;
   const extensionsActive = activeTab?.url === INTERNAL_EXTENSIONS_URL;
   const historyActive = activeTab?.url === INTERNAL_HISTORY_URL;
+  const bookmarksActive = activeTab?.url === INTERNAL_BOOKMARKS_URL;
   // An extension `page` surface: tepegoz://<extension-id> → render that extension's page component.
-  const pageExtId = activeTab !== undefined ? extensionIdFromPageUrl(activeTab.url) : null;
-  const PageSurface = pageExtId !== null ? extensionDefById(pageExtId)?.surfaces.page : undefined;
+  const pageExtIds = registry.filter((d) => d.manifest.surfaces.includes('page')).map((d) => d.id);
+  const pageExtId =
+    activeTab !== undefined ? extensionIdFromPageUrl(activeTab.url, pageExtIds) : null;
+  const PageSurface =
+    pageExtId !== null ? extensionDefById(registry, pageExtId)?.surfaces.page : undefined;
   // The extension docked in the sidebar (if any) and its sidebar surface renderer.
-  const sidebarDef = sidebarExtId !== null ? extensionDefById(sidebarExtId) : undefined;
+  const sidebarDef = sidebarExtId !== null ? extensionDefById(registry, sidebarExtId) : undefined;
   const SidebarSurface = sidebarDef?.surfaces.sidebar;
 
   const extensionStates = prefs?.extensions ?? [];
-  const enabledExtensions = EXTENSIONS.filter((ext) => isExtensionEnabled(extensionStates, ext.id));
+  const enabledExtensions = registry.filter((ext) => isExtensionEnabled(extensionStates, ext.id));
 
   // Deterministic omnibox suggestions (history + bookmarks + open tabs + navigate/search). Refs keep the
   // injected callbacks stable so the Omnibox effect doesn't refetch every render; they mirror latest state.
@@ -427,16 +479,31 @@ export function App() {
 
   // Bookmark star state for the active tab + the cached bookmark list feeding omnibox suggestions.
   const [activeBookmarked, setActiveBookmarked] = useState(false);
-  const canBookmark = /^https?:\/\//i.test(currentUrl);
+  // The Bookmarks-bar root's children (tree) drive the interactive bar; the flat ref feeds the omnibox.
+  const [barNodes, setBarNodes] = useState<BookmarkTreeNode[]>([]);
+  // Bumped after any bookmark mutation → the manager page (tepegoz://bookmarks) refetches its own tree.
+  const [bookmarksVersion, setBookmarksVersion] = useState(0);
+  const canBookmark = isBookmarkable(currentUrl);
 
   const refreshBookmarks = useCallback(async (): Promise<void> => {
+    let tree: BookmarkTreeNode[] = [];
+    let flat: Awaited<ReturnType<typeof window.tepegoz.listBookmarks>> = [];
     try {
-      const list = await window.tepegoz.listBookmarks();
-      bookmarksRef.current = list.map((b) => ({ url: b.url, title: b.title }));
+      [tree, flat] = await Promise.all([
+        window.tepegoz.getBookmarkTree(),
+        window.tepegoz.listBookmarks(),
+      ]);
     } catch {
-      bookmarksRef.current = [];
+      tree = [];
+      flat = [];
     }
+    bookmarksRef.current = flat.map((b) => ({ url: b.url, title: b.title }));
+    setBarNodes(tree.find((r) => r.id === BOOKMARK_ROOT_BAR)?.children ?? []);
+    setBookmarksVersion((v) => v + 1);
   }, []);
+
+  // Stable manager binding (it refetches when this or `refreshKey` change identity).
+  const getBookmarkTree = useCallback(() => window.tepegoz.getBookmarkTree(), []);
 
   useEffect(() => {
     void refreshBookmarks();
@@ -465,14 +532,97 @@ export function App() {
   const onToggleBookmark = useCallback(async (): Promise<void> => {
     const tab = tabsRef.current.tabs.find((tb) => tb.id === tabsRef.current.activeId);
     const url = tab?.url ?? '';
-    if (!/^https?:\/\//i.test(url)) return;
+    if (!isBookmarkable(url)) return;
     try {
-      const nowBookmarked = await window.tepegoz.toggleBookmark(url, tab?.title ?? url);
+      const nowBookmarked = await window.tepegoz.toggleBookmark(
+        url,
+        tab?.title ?? url,
+        tab?.faviconUrl ?? null,
+      );
       setActiveBookmarked(nowBookmarked);
       await refreshBookmarks();
     } catch (err) {
       console.error('Bookmark toggle failed', err); // star state stays as-is (nothing was persisted)
     }
+  }, [refreshBookmarks]);
+
+  // Bookmark bar drag-drop → move; native right-click menu → these renderer-driven actions. Rename and
+  // add-folder open a small dialog; the rest run immediately, then refetch so the bar reflects the change.
+  const onBookmarkMove = useCallback(
+    (id: string, newParentId: string, index: number): void => {
+      void (async () => {
+        try {
+          await window.tepegoz.moveBookmark(id, newParentId, index);
+          await refreshBookmarks();
+        } catch (err) {
+          console.error('Bookmark move failed', err);
+        }
+      })();
+    },
+    [refreshBookmarks],
+  );
+
+  const findBarNode = useCallback(
+    (id: string): BookmarkTreeNode | null => {
+      const walk = (nodes: readonly BookmarkTreeNode[]): BookmarkTreeNode | null => {
+        for (const n of nodes) {
+          if (n.id === id) return n;
+          const hit = walk(n.children);
+          if (hit !== null) return hit;
+        }
+        return null;
+      };
+      return walk(barNodes);
+    },
+    [barNodes],
+  );
+
+  const onBookmarkMenuAction = useCallback(
+    async (a: BookmarkMenuAction): Promise<void> => {
+      const node = findBarNode(a.id);
+      if (a.action === 'open') {
+        if (node?.url != null) window.tepegoz.navigateTab(node.url);
+      } else if (a.action === 'open-new-tab') {
+        if (node?.url != null) window.tepegoz.createTabInBackground(node.url);
+      } else if (a.action === 'open-all') {
+        const urls: string[] = [];
+        const collect = (n: BookmarkTreeNode): void => {
+          if (n.type === 'bookmark' && n.url != null) urls.push(n.url);
+          n.children.forEach(collect);
+        };
+        if (node !== null) collect(node);
+        if (urls.length > 15) setOpenAllUrls(urls);
+        else urls.forEach((u) => window.tepegoz.createTabInBackground(u));
+      } else if (a.action === 'delete') {
+        try {
+          await window.tepegoz.removeBookmark(a.id); // the bookmarks:changed broadcast triggers the refetch
+        } catch (err) {
+          console.error('Bookmark delete failed', err);
+        }
+      } else if (a.action === 'open-manager') {
+        window.tepegoz.navigateTab(INTERNAL_BOOKMARKS_URL);
+      } else if (a.action === 'rename') {
+        window.tepegoz.openPopup('bookmark-rename', bookmarkDialogAnchor(), { id: a.id });
+      } else {
+        // add-folder: on a folder → subfolder inside it; on a bookmark → a sibling folder on the bar.
+        const parentId = a.type === 'folder' ? a.id : BOOKMARK_ROOT_BAR;
+        window.tepegoz.openPopup('bookmark-add-folder', bookmarkDialogAnchor(), { id: parentId });
+      }
+    },
+    [findBarNode],
+  );
+
+  useEffect(() => {
+    return window.tepegoz.onBookmarkMenuAction((a) => {
+      void onBookmarkMenuAction(a);
+    });
+  }, [onBookmarkMenuAction]);
+
+  // The tree changed (possibly from a popup window: folder dropdown, rename/add-folder dialog) → refetch.
+  useEffect(() => {
+    return window.tepegoz.onBookmarksChanged(() => {
+      void refreshBookmarks();
+    });
   }, [refreshBookmarks]);
 
   const onOmniboxSuggest = useCallback(async (query: string): Promise<OmniboxSuggestion[]> => {
@@ -548,10 +698,14 @@ export function App() {
    *  dialog, popup = anchored card under the toolbar icons). */
   function renderActiveSurface(): ReactNode {
     if (activeSurface === null) return null;
-    const def = extensionDefById(activeSurface.id);
+    const def = extensionDefById(registry, activeSurface.id);
     const Surface = def?.surfaces[activeSurface.kind];
     if (def === undefined || Surface === undefined) return null;
-    const body = <Surface onClose={closeSurface} />;
+    const body = (
+      <Suspense fallback={surfaceFallback}>
+        <Surface onClose={closeSurface} />
+      </Suspense>
+    );
     if (activeSurface.kind === 'panel') return body;
     if (activeSurface.kind === 'modal') {
       return (
@@ -582,7 +736,9 @@ export function App() {
           className="absolute left-0 top-0 z-10 h-full w-1.5 -translate-x-1/2 cursor-col-resize hover:bg-border-focus"
         />
         <div className="relative flex-1 overflow-hidden">
-          <SidebarSurface onClose={() => setSidebarExtId(null)} />
+          <Suspense fallback={surfaceFallback}>
+            <SidebarSurface onClose={() => setSidebarExtId(null)} />
+          </Suspense>
         </div>
       </aside>
     );
@@ -647,6 +803,22 @@ export function App() {
             </>
           }
         />
+        {/* Chrome-style bookmarks bar (toggled from the Bookmarks menu). Rendered above the content row,
+            so contentRef's ResizeObserver reports the new top and main reflows the web view down.
+            Default-on: shown once prefs load unless explicitly turned off. */}
+        {prefs !== null && prefs.showBookmarksBar !== false && (
+          <BookmarksBar
+            nodes={barNodes}
+            barRootId={BOOKMARK_ROOT_BAR}
+            onOpen={(url) => window.tepegoz.navigateTab(url)}
+            onOpenFolder={(folderId, anchor) =>
+              window.tepegoz.openPopup('bookmark-folder', anchor, { id: folderId })
+            }
+            onMove={onBookmarkMove}
+            onContextMenu={(id, type) => window.tepegoz.showBookmarkContextMenu(id, type)}
+            labels={{ bar: browserT.bookmarksBar, empty: browserT.noBookmarksBar }}
+          />
+        )}
         <div className="relative flex flex-1 overflow-hidden">
           {/* Left region = the web-view area (its bounds are measured from contentRef, so they exclude
             the sidebar); the resizable sidebar dock sits to its right. */}
@@ -702,6 +874,7 @@ export function App() {
               <div className="absolute inset-0 bg-surface-base">
                 <ExtensionsPage
                   locale={locale}
+                  extensions={registry}
                   states={extensionStates}
                   onToggle={onToggleExtension}
                 />
@@ -712,9 +885,25 @@ export function App() {
                 <HistoryPage list={historyList} remove={historyRemove} clear={historyClear} />
               </div>
             )}
+            {bookmarksActive && (
+              <div className="absolute inset-0 bg-surface-base">
+                <BookmarksManager
+                  getTree={getBookmarkTree}
+                  refreshKey={bookmarksVersion}
+                  onMove={onBookmarkMove}
+                  onNewFolder={(parentId) =>
+                    window.tepegoz.openPopup('bookmark-add-folder', bookmarkDialogAnchor(), { id: parentId })
+                  }
+                  onOpen={(url) => window.tepegoz.navigateTab(url)}
+                  onContextMenu={(id, type) => window.tepegoz.showBookmarkContextMenu(id, type)}
+                />
+              </div>
+            )}
             {PageSurface !== undefined && (
               <div className="absolute inset-0 bg-surface-base">
-                <PageSurface onClose={closeSurface} />
+                <Suspense fallback={surfaceFallback}>
+                  <PageSurface onClose={closeSurface} />
+                </Suspense>
               </div>
             )}
             {renderActiveSurface()}
@@ -754,6 +943,39 @@ export function App() {
         >
           {permReq !== null && (
             <NotificationPermissionPrompt origin={permReq.origin} onDecision={answerPermission} />
+          )}
+        </Modal>
+        {/* "Open all" confirmation for a large folder. */}
+        <Modal
+          open={openAllUrls !== null}
+          onClose={() => setOpenAllUrls(null)}
+          ariaLabel={browserT.bookmarkMenu.openAll}
+        >
+          {openAllUrls !== null && (
+            <div className="flex min-w-[20rem] flex-col gap-4 p-4">
+              <p className="text-sm text-text-primary">
+                {browserT.openAllConfirm} ({openAllUrls.length})
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setOpenAllUrls(null)}
+                  className="rounded-md px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-overlay"
+                >
+                  {browserT.cancel}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    openAllUrls.forEach((u) => window.tepegoz.createTabInBackground(u));
+                    setOpenAllUrls(null);
+                  }}
+                  className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-fg hover:bg-primary-hover"
+                >
+                  {browserT.bookmarkMenu.openAll}
+                </button>
+              </div>
+            </div>
           )}
         </Modal>
       </div>

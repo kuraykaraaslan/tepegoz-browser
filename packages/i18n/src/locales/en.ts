@@ -14,6 +14,7 @@ export const en = {
     settings: 'Settings',
     showPassword: 'Show',
     hidePassword: 'Hide',
+    loading: 'Loading…',
   },
   window: {
     minimize: 'Minimize',
