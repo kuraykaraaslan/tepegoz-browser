@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { WebContents } from 'electron';
 import { AppError, Logger } from '@tepegoz/libs';
+import { HumanInputAdapter } from '@tepegoz/human-input';
 import {
   isInteractableRole,
   MAX_INTERACTABLE_ELEMENTS,
@@ -187,33 +188,59 @@ export default class CdpDriver {
     };
   }
 
-  static async clickElement(wc: WebContents, ref: number): Promise<void> {
+  static async clickElement(
+    wc: WebContents,
+    ref: number,
+    adapter?: HumanInputAdapter,
+  ): Promise<void> {
     await CdpDriver.ensureAttached(wc);
     const backendNodeId = CdpDriver.backendNodeId(wc, ref);
     const { x, y } = await CdpDriver.centerOf(wc, backendNodeId);
-    const base = { x, y, button: 'left' as const, clickCount: 1 };
-    await wc.debugger.sendCommand('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
-    await wc.debugger.sendCommand('Input.dispatchMouseEvent', { type: 'mousePressed', ...base });
-    await wc.debugger.sendCommand('Input.dispatchMouseEvent', { type: 'mouseReleased', ...base });
+    if (adapter === undefined) {
+      const base = { x, y, button: 'left' as const, clickCount: 1 };
+      await wc.debugger.sendCommand('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
+      await wc.debugger.sendCommand('Input.dispatchMouseEvent', { type: 'mousePressed', ...base });
+      await wc.debugger.sendCommand('Input.dispatchMouseEvent', { type: 'mouseReleased', ...base });
+    } else {
+      await adapter.click(x, y);
+    }
     await CdpDriver.settle(wc);
   }
 
-  static async fillElement(wc: WebContents, ref: number, text: string): Promise<void> {
+  static async fillElement(
+    wc: WebContents,
+    ref: number,
+    text: string,
+    adapter?: HumanInputAdapter,
+  ): Promise<void> {
     await CdpDriver.ensureAttached(wc);
     const backendNodeId = CdpDriver.backendNodeId(wc, ref);
-    await CdpDriver.centerOf(wc, backendNodeId); // scroll into view
+    const { x, y } = await CdpDriver.centerOf(wc, backendNodeId);
+    if (adapter !== undefined) await adapter.moveTo(x, y);
     await wc.debugger.sendCommand('DOM.focus', { backendNodeId });
     // Select any existing value (Ctrl+A) so the insert replaces it, then type the new text.
     await CdpDriver.sendKey(wc, { key: 'a', code: 'KeyA', keyCode: 65 }, 2 /* Ctrl */);
-    await wc.debugger.sendCommand('Input.insertText', { text });
+    if (adapter === undefined) {
+      await wc.debugger.sendCommand('Input.insertText', { text });
+    } else {
+      await adapter.insertText(text);
+    }
     await CdpDriver.settle(wc);
   }
 
-  static async pressKey(wc: WebContents, key: string): Promise<void> {
+  static async pressKey(
+    wc: WebContents,
+    key: string,
+    adapter?: HumanInputAdapter,
+  ): Promise<void> {
     await CdpDriver.ensureAttached(wc);
     const spec = KEY_MAP[key];
     if (spec === undefined) throw new AppError(`Unsupported key: ${key}`, 400);
-    await CdpDriver.sendKey(wc, spec);
+    if (adapter === undefined) {
+      await CdpDriver.sendKey(wc, spec);
+    } else {
+      await adapter.pressKey(spec);
+    }
     await CdpDriver.settle(wc);
   }
 
@@ -221,17 +248,23 @@ export default class CdpDriver {
     wc: WebContents,
     direction: 'up' | 'down',
     amount?: number,
+    adapter?: HumanInputAdapter,
   ): Promise<void> {
     await CdpDriver.ensureAttached(wc);
-    const deltaY = (direction === 'down' ? 1 : -1) * (amount ?? DEFAULT_SCROLL_PX);
-    await wc.debugger.sendCommand('Input.dispatchMouseEvent', {
-      type: 'mouseWheel',
-      x: 10,
-      y: 10,
-      deltaX: 0,
-      deltaY,
-    });
-    await delay(SETTLE_MS);
+    if (adapter === undefined) {
+      const deltaY = (direction === 'down' ? 1 : -1) * (amount ?? DEFAULT_SCROLL_PX);
+      await wc.debugger.sendCommand('Input.dispatchMouseEvent', {
+        type: 'mouseWheel',
+        x: 10,
+        y: 10,
+        deltaX: 0,
+        deltaY,
+      });
+      await delay(SETTLE_MS);
+    } else {
+      await adapter.scroll(direction, amount);
+      await delay(SETTLE_MS);
+    }
   }
 
   /** Dispatch a keyDown+keyUp for one key, with optional modifier bitmask (CDP: 2 = Ctrl). */
@@ -248,9 +281,9 @@ export default class CdpDriver {
       nativeVirtualKeyCode: spec.keyCode,
     };
     await wc.debugger.sendCommand('Input.dispatchKeyEvent', {
-      type: spec.text !== undefined ? 'keyDown' : 'rawKeyDown',
+      type: spec.text === undefined ? 'rawKeyDown' : 'keyDown',
       ...common,
-      ...(spec.text !== undefined ? { text: spec.text } : {}),
+      ...(spec.text === undefined ? {} : { text: spec.text }),
     });
     await wc.debugger.sendCommand('Input.dispatchKeyEvent', { type: 'keyUp', ...common });
   }

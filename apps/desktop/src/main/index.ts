@@ -17,7 +17,7 @@ import MacroService from './macro/macro-service.electron';
 import { macrosCapabilities } from '@tepegoz/ext-macros/capabilities';
 import { registerBuiltinTools } from '@tepegoz/browser-tools';
 import FileOperationsHost from './file-operations/file-operations-host';
-import { browserHost } from './agent/browser-host';
+import { attachBrowserHostWindow, browserHost } from './agent/browser-host';
 import { journalHost } from './agent/journal-host';
 import NotificationHost from './notifications/notification-host';
 import NotificationPermissionBroker from './notifications/permission-broker';
@@ -69,6 +69,7 @@ if (process.platform === 'win32') app.setAppUserModelId('com.tepegoz.browser');
 
 function bootstrap(): void {
   const win = createWindow();
+  attachBrowserHostWindow(win);
   TabManager.attach(win);
   // Wire the notification center's store→renderer broadcast to this window (toast + bell badge target),
   // and the per-site Web Notification consent prompt to the same window.

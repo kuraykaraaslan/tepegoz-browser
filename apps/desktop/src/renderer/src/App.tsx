@@ -59,6 +59,7 @@ import { MainMenuButton } from './components/MainMenuButton';
 import { UserMenuButton } from './components/UserMenuButton';
 import { NotificationBellButton } from './components/NotificationBellButton';
 import { SettingsPage } from './components/SettingsPage';
+import { CursorOverlay } from './components/CursorOverlay';
 import { applyTheme } from './lib/theme';
 import { useWindowMaximized } from './lib/useWindowMaximized';
 
@@ -988,6 +989,7 @@ export function App() {
           )}
         </Modal>
       </div>
+      <CursorOverlay />
     </I18nProvider>
   );
 }

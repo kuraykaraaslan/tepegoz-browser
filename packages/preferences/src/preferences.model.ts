@@ -75,7 +75,7 @@ export const PreferencesSchema = z.object({
   localActions: z.record(z.string().max(64), z.boolean()),
   // Agent panel per-run provider override (null = default resolution); autonomy level (default safe).
   agentProviderOverride: ProviderPrefSchema.nullable(),
-  agentAutonomy: z.enum(['ask', 'act', 'auto']),
+  agentAutonomy: z.enum(['ask', 'act', 'auto', 'dangerous']),
   agentEffort: z.enum(AGENT_EFFORT_LEVELS),
   // Derived from the credential vault's key order (top key's provider) and synced by main; no UI.
   defaultProvider: ProviderPrefSchema,

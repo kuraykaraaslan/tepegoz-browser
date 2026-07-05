@@ -16,7 +16,7 @@ export const tr: AgentStrings = {
   biometricNote: 'Bu yüksek riskli bir işlem (Windows Hello ileri bir sürümde gerekli olacak).',
   approve: 'Onayla',
   deny: 'Reddet',
-  aiDisclaimer: 'AI üretti, hatalı olabilir — yan etkili eylemleri gözden geçirin.',
+  aiDisclaimer: 'AI üretti, hatalı olabilir.',
   planTitle: 'Planı gözden geçirin',
   planBody:
     'İstemediğiniz adımların işaretini kaldırıp çalıştırın. Onaylayana kadar hiçbir şey yürütülmez.',
@@ -86,5 +86,17 @@ export const tr: AgentStrings = {
   thread: {
     you: 'Sen',
     working: 'Çalışıyor…',
+  },
+  // Besteci ek chip'leri (seçili metin / dosya / ekran görüntüsü).
+  attach: {
+    selection: 'Seçili metin',
+    file: 'Dosya',
+    screenshot: 'Ekran görüntüsü',
+    removeLabel: 'Eki kaldır',
+    selectionEmpty: 'Sayfada seçili metin yok.',
+    addSelection: 'Seçili metni ekle',
+    addFile: 'Dosya ekle',
+    addScreenshot: 'Ekran görüntüsü ekle',
+    lines: 'satır',
   },
 };

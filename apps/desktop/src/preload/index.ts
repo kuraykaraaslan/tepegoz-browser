@@ -7,6 +7,7 @@ import {
   type AgentConfig,
   type AgentEffort,
   type AgentEvent,
+  type AgentFileAttachment,
   type AgentPlanPreview,
   type AgentRunResult,
   type AppInfo,
@@ -197,12 +198,30 @@ const api: TepegozApi = {
       ipcRenderer.removeListener(IpcChannels.tabsState, listener);
     };
   },
-  runAgent: (prompt: string) => invoke<AgentRunResult>(IpcChannels.agentRun, prompt),
+  ensureActiveGroup: () => invoke<{ groupId: string }>(IpcChannels.agentEnsureGroup).then((r) => r.groupId),
+  onActiveGroupChange: (callback: (groupId: string | null) => void) => {
+    // Derive active group from tab state changes — no separate push needed.
+    let lastGroupId: string | null | undefined = undefined;
+    const listener = (_event: unknown, state: TabsState): void => {
+      const active = state.tabs.find((t) => t.id === state.activeId);
+      const gid = active?.groupId ?? null;
+      if (gid !== lastGroupId) {
+        lastGroupId = gid;
+        callback(gid);
+      }
+    };
+    ipcRenderer.on(IpcChannels.tabsState, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.tabsState, listener);
+    };
+  },
+  runAgent: (input: { prompt: string; groupId: string }) =>
+    invoke<AgentRunResult>(IpcChannels.agentRun, input),
   cancelAgent: (runId: string) => {
     ipcRenderer.send(IpcChannels.agentCancel, runId);
   },
-  newAgentConversation: () => {
-    ipcRenderer.send(IpcChannels.agentNewConversation);
+  newAgentConversation: (groupId: string) => {
+    ipcRenderer.send(IpcChannels.agentNewConversation, groupId);
   },
   onAgentEvent: (callback: (event: AgentEvent) => void) => {
     const listener = (_event: unknown, payload: AgentEvent): void => {
@@ -254,6 +273,9 @@ const api: TepegozApi = {
   openAgentFile: (path: string) => {
     ipcRenderer.send(IpcChannels.agentOpenFile, path);
   },
+  capturePageSelection: () => invoke<string>(IpcChannels.agentCaptureSelection),
+  pickAgentFiles: () => invoke<AgentFileAttachment[]>(IpcChannels.agentPickFiles),
+  capturePageScreenshot: () => invoke<string | null>(IpcChannels.tabsCapture),
   listLocalModels: () => invoke<LocalModelInfo[]>(IpcChannels.modelsList),
   downloadLocalModel: (id: string) => invoke<void>(IpcChannels.modelsDownload, id),
   cancelLocalModelDownload: (id: string) => {
@@ -488,6 +510,15 @@ const api: TepegozApi = {
     ipcRenderer.on(IpcChannels.macrosRecordStep, listener);
     return () => {
       ipcRenderer.removeListener(IpcChannels.macrosRecordStep, listener);
+    };
+  },
+  onCursorPosition: (callback: (pos: { x: number; y: number; visible: boolean }) => void) => {
+    const listener = (_event: unknown, pos: { x: number; y: number; visible: boolean }): void => {
+      callback(pos);
+    };
+    ipcRenderer.on(IpcChannels.cursorPosition, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.cursorPosition, listener);
     };
   },
   platform: process.platform,

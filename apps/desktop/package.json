@@ -60,6 +60,7 @@
     "@tepegoz/extensions-ui": "workspace:*",
     "@tepegoz/history-ui": "workspace:*",
     "@tepegoz/http": "workspace:*",
+    "@tepegoz/human-input": "workspace:*",
     "@tepegoz/i18n": "workspace:*",
     "@tepegoz/json-store": "workspace:*",
     "@tepegoz/libs": "workspace:*",

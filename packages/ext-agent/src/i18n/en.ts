@@ -14,7 +14,7 @@ export const en = {
   biometricNote: 'This is a high-risk action (Windows Hello will be required in a later release).',
   approve: 'Approve',
   deny: 'Deny',
-  aiDisclaimer: 'AI-generated and may be wrong — review side-effecting actions.',
+  aiDisclaimer: 'AI-generated and may be wrong.',
   planTitle: 'Review the plan',
   planBody: 'Uncheck any step you do not want, then run. Nothing executes until you approve.',
   planRun: 'Run plan',
@@ -83,6 +83,18 @@ export const en = {
   thread: {
     you: 'You',
     working: 'Working…',
+  },
+  // Composer attachment chips (selected text / file / screenshot).
+  attach: {
+    selection: 'Selected text',
+    file: 'File',
+    screenshot: 'Screenshot',
+    removeLabel: 'Remove attachment',
+    selectionEmpty: 'No text is selected on the page.',
+    addSelection: 'Attach selected text',
+    addFile: 'Attach file',
+    addScreenshot: 'Attach screenshot',
+    lines: 'lines',
   },
 };
 

@@ -46,6 +46,7 @@ import {
 } from '@tepegoz/desktop-ipc';
 import {
   AgentApprovalResponseSchema,
+  AgentNewConversationSchema,
   AgentOpenFileSchema,
   AgentPlanResponseSchema,
   AgentRunIdSchema,
@@ -109,11 +110,12 @@ import {
 } from '@tepegoz/shared-types';
 import { randomUUID } from 'node:crypto';
 import AgentService, { type PlanApprovalDecision } from './agent/agent-service';
+import { setCurrentAgentRun } from './agent/browser-host';
 import FileOperationsHost from './file-operations/file-operations-host';
 import McpService from './mcp/supervisor.electron';
 import ModelManager from './model-catalog/model-manager.electron';
 import ExtensionCapabilityService from './extensions/capability-supervisor.electron';
-import MacroService from './macro/macro-service.electron';
+import MacroService, { type MacroCursorOpts } from './macro/macro-service.electron';
 import { getDb } from './db/database.electron';
 import { DEFAULT_PREFERENCES, PreferencesPatchSchema } from '@tepegoz/preferences';
 import { isTrustedAppUrl } from './lib/trusted-origin';
@@ -271,9 +273,9 @@ function buildAgentConfig(): AgentConfig {
 let runCounter = 0;
 let approvalCounter = 0;
 let planCounter = 0;
-// Phase 1a: ToolGateway's confirm/audit handlers are process-global statics, so exactly ONE agent
-// run may be active at a time (see ADR-0013). A second concurrent request is rejected.
-let agentRunActive = false;
+// Per-group run tracking: each tab-group can have one active agent run at a time; different groups
+// may run concurrently (ADR-0013 Phase 1b — per-run scoping replaces the old global lock).
+const agentRunByGroup = new Map<string, boolean>();
 const runControllers = new Map<string, AbortController>();
 const pendingApprovals = new Map<string, { runId: string; resolve: (approved: boolean) => void }>();
 const pendingPlans = new Map<
@@ -285,6 +287,7 @@ const pendingPlans = new Map<
  *  so quit doesn't race a half-finished run against store/database teardown. Called from before-quit. */
 export function abortActiveAgentRuns(): void {
   for (const controller of runControllers.values()) controller.abort();
+  agentRunByGroup.clear();
   for (const [id, entry] of pendingApprovals) {
     pendingApprovals.delete(id);
     entry.resolve(false);
@@ -728,22 +731,22 @@ export function registerIpc(): void {
   // Agent (Do mode). agent:run streams live events back to the SENDER and round-trips HITL approvals;
   // the raw API key and tool args never cross to the renderer (only a truncated preview does).
   handleAsync(IpcChannels.agentRun, async (event, payload): Promise<AgentRunResult> => {
-    const prompt = AgentRunInputSchema.parse(payload);
-    if (agentRunActive) {
-      throw new AppError('An agent task is already running', 409);
+    const { prompt, groupId } = AgentRunInputSchema.parse(payload);
+    if (agentRunByGroup.get(groupId) === true) {
+      throw new AppError('An agent task is already running for this group', 409);
     }
-    agentRunActive = true;
+    agentRunByGroup.set(groupId, true);
     const sender = event.sender;
     const runId = `run-${String(++runCounter)}`;
     const controller = new AbortController();
-    runControllers.set(runId, controller);
-
     const sendEvent = (e: AgentEvent): void => {
       if (!sender.isDestroyed()) sender.send(IpcChannels.agentEvent, e);
     };
+    setCurrentAgentRun(runId, groupId, sendEvent);
     const onEvent = (kind: AgentEventKind, message: string, detail?: string): void => {
       sendEvent({
         runId,
+        groupId,
         kind,
         message,
         ts: Date.now(),
@@ -792,6 +795,7 @@ export function registerIpc(): void {
       const approvalId = `appr-${String(++approvalCounter)}`;
       const request: AgentApprovalRequest = {
         runId,
+        groupId,
         approvalId,
         toolName: req.toolName,
         reason: req.policy.reason,
@@ -819,6 +823,7 @@ export function registerIpc(): void {
       const planId = `plan-${String(++planCounter)}`;
       const preview: AgentPlanPreview = {
         runId,
+        groupId,
         planId,
         goal: plan.goal,
         steps: plan.steps.map((s) => ({ id: s.id, tool: s.tool, rationale: s.rationale })),
@@ -838,14 +843,15 @@ export function registerIpc(): void {
         requestPlanApproval,
         requestApproval,
         signal: controller.signal,
-      });
+      }, groupId);
       return { runId, stoppedReason: summary.stoppedReason, ok: summary.ok };
     } catch (err) {
       onEvent('error', err instanceof Error ? err.message : 'Agent run failed');
       throw err;
     } finally {
+      setCurrentAgentRun(null, null, null);
       runControllers.delete(runId);
-      agentRunActive = false;
+      agentRunByGroup.delete(groupId);
       if (!sender.isDestroyed()) sender.send(IpcChannels.tokenUsage, tokenUsage());
     }
   });
@@ -867,8 +873,64 @@ export function registerIpc(): void {
       }
     }
   });
-  onSignal(IpcChannels.agentNewConversation, () => {
-    AgentService.newConversation();
+  onAction(IpcChannels.agentNewConversation, AgentNewConversationSchema, (groupId) => {
+    AgentService.newConversation(groupId);
+  });
+
+  // Ensure the active tab belongs to a tab group; creates one if needed → { groupId }.
+  handleAsync(IpcChannels.agentEnsureGroup, async (): Promise<{ groupId: string }> => {
+    const state = TabManager.getState();
+    if (state.activeId === null) throw new AppError('No active tab', 409);
+    const AgentTabGroup = (await import('./agent/agent-tab-group')).default;
+    const groupId = AgentTabGroup.ensureGroupForTab(state.activeId);
+    return { groupId };
+  });
+
+  // Capture the active page's text selection via executeJavaScript.
+  handleAsync(IpcChannels.agentCaptureSelection, async (): Promise<string> => {
+    const wc = TabManager.activeWebContents();
+    if (wc === null || wc.isDestroyed()) return '';
+    const result: unknown = await wc.executeJavaScript(
+      'window.getSelection() ? window.getSelection().toString() : ""',
+      true,
+    );
+    return typeof result === 'string' ? result : '';
+  });
+
+  // Open a native file picker and read the selected files for agent attachment.
+  handleAsync(IpcChannels.agentPickFiles, async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      properties: ['openFile', 'multiSelections'],
+    });
+    if (canceled || filePaths.length === 0) return [];
+    const fs = await import('node:fs/promises');
+    const mime = (name: string): string => {
+      const ext = name.slice(name.lastIndexOf('.') + 1).toLowerCase();
+      const map: Record<string, string> = {
+        pdf: 'application/pdf', txt: 'text/plain', md: 'text/markdown',
+        json: 'application/json', csv: 'text/csv', html: 'text/html',
+        js: 'text/javascript', ts: 'text/typescript', py: 'text/x-python',
+      };
+      return map[ext] ?? 'application/octet-stream';
+    };
+    const MAX_SIZE = 5 * 1024 * 1024; // 5 MB per file
+    const results = await Promise.all(
+      filePaths.slice(0, 5).map(async (fp) => {
+        const stat = await fs.stat(fp);
+        if (stat.size > MAX_SIZE) return null;
+        const buf = await fs.readFile(fp);
+        const name = fp.slice(Math.max(fp.lastIndexOf('/'), fp.lastIndexOf('\\')) + 1);
+        const mimeType = mime(name);
+        const isText = mimeType.startsWith('text/') || mimeType === 'application/json';
+        return {
+          name,
+          content: isText ? buf.toString('utf8') : buf.toString('base64'),
+          mimeType,
+          sizeBytes: stat.size,
+        };
+      }),
+    );
+    return results.filter(Boolean);
   });
   onAction(
     IpcChannels.agentApprovalResponse,
@@ -1067,17 +1129,37 @@ export function registerIpc(): void {
   handle(IpcChannels.macrosRun, (event, payload): { runId: string } => {
     const input = MacroRunInputSchema.parse(payload);
     const sender = event.sender;
+    const cursorOpts: MacroCursorOpts = {
+      onCursorMove: (x, y) => {
+        if (sender.isDestroyed()) return;
+        const b = TabManager.getContentBounds();
+        sender.send(IpcChannels.cursorPosition, { x: x + b.x, y: y + b.y, visible: true });
+      },
+      onCursorHide: () => {
+        if (!sender.isDestroyed()) sender.send(IpcChannels.cursorPosition, { x: 0, y: 0, visible: false });
+      },
+    };
     const runId = MacroService.run(input, (progress) => {
       if (!sender.isDestroyed()) sender.send(IpcChannels.macrosRunProgress, progress);
-    });
+    }, cursorOpts);
     return { runId };
   });
   handle(IpcChannels.macrosRunDraft, (event, payload): { runId: string } => {
     const { macro, variables } = MacroRunDraftSchema.parse(payload);
     const sender = event.sender;
+    const cursorOpts: MacroCursorOpts = {
+      onCursorMove: (x, y) => {
+        if (sender.isDestroyed()) return;
+        const b = TabManager.getContentBounds();
+        sender.send(IpcChannels.cursorPosition, { x: x + b.x, y: y + b.y, visible: true });
+      },
+      onCursorHide: () => {
+        if (!sender.isDestroyed()) sender.send(IpcChannels.cursorPosition, { x: 0, y: 0, visible: false });
+      },
+    };
     const runId = MacroService.runDraft(macro, variables, (progress) => {
       if (!sender.isDestroyed()) sender.send(IpcChannels.macrosRunProgress, progress);
-    });
+    }, cursorOpts);
     return { runId };
   });
   onAction(IpcChannels.macrosCancel, MacroIdSchema, (runId) => {

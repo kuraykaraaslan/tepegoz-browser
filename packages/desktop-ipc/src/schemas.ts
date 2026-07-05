@@ -99,8 +99,13 @@ export const CreateTabInputSchema = z.string().max(4096).optional();
 export const CreateBackgroundTabSchema = z.string().min(1).max(4096);
 export const ContentVisibleSchema = z.boolean();
 
-/** `agent:run` prompt (renderer → main). The agent treats this as the user's trusted intent. */
-export const AgentRunInputSchema = z.string().min(1).max(4000);
+/** `agent:run` payload — prompt + the tab-group id that owns this agent session. */
+export const AgentRunInputSchema = z.object({
+  prompt: z.string().min(1).max(4000),
+  groupId: z.string().min(1).max(64),
+});
+/** `agent:new-conversation` payload — the group whose history to clear. */
+export const AgentNewConversationSchema = z.string().min(1).max(64);
 export const AgentRunIdSchema = z.string().min(1).max(64);
 export const AgentApprovalResponseSchema = z.object({
   approvalId: z.string().min(1).max(64),

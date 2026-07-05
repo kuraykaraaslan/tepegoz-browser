@@ -79,12 +79,18 @@ function toWireProgress(runId: string, ev: RunProgress): MacroRunProgress {
   return { runId, phase: 'failed', failingStep: ev.path[0], detail: ev.detail };
 }
 
+export interface MacroCursorOpts {
+  onCursorMove: (x: number, y: number) => void;
+  onCursorHide: () => void;
+}
+
 /** Run an ALREADY-LOADED macro (saved or an unsaved draft) to completion; record + return outcome. */
 async function executeMacro(
   macro: Macro,
   variables: Record<string, string> | undefined,
   runId: string,
   onProgress?: (ev: RunProgress) => void,
+  cursorOpts?: MacroCursorOpts,
 ): Promise<MacroRunOutcome> {
   const signal = { aborted: false };
   runControllers.set(runId, signal);
@@ -93,6 +99,9 @@ async function executeMacro(
       const bytes = BlobStore.get(db(), hash);
       return Promise.resolve(bytes === undefined ? [] : parseCsv(bytes.toString('utf8')));
     },
+    ...(cursorOpts === undefined
+      ? {}
+      : { onCursorMove: cursorOpts.onCursorMove, onCursorHide: cursorOpts.onCursorHide }),
   });
   try {
     const result = await runMacro(macro, host, {
@@ -126,9 +135,10 @@ function startRun(
   macro: Macro,
   variables: Record<string, string> | undefined,
   emit: (p: MacroRunProgress) => void,
+  cursorOpts?: MacroCursorOpts,
 ): string {
   const runId = randomUUID();
-  void executeMacro(macro, variables, runId, (ev) => emit(toWireProgress(runId, ev)));
+  void executeMacro(macro, variables, runId, (ev) => emit(toWireProgress(runId, ev)), cursorOpts);
   return runId;
 }
 
@@ -157,15 +167,15 @@ const MacroService = {
   },
 
   /** Start a saved-macro run; `emit` streams located progress to the renderer. Returns the runId. */
-  run(input: MacroRunInput, emit: (p: MacroRunProgress) => void): string {
+  run(input: MacroRunInput, emit: (p: MacroRunProgress) => void, cursorOpts?: MacroCursorOpts): string {
     const macro = MacroStore.get(db(), input.macroId);
     if (macro === null) throw new AppError(`Unknown macro: ${input.macroId}`, 404);
-    return startRun(macro, input.variables, emit);
+    return startRun(macro, input.variables, emit, cursorOpts);
   },
 
   /** Start an UNSAVED-DRAFT run (record/edit → play without persisting). Returns the runId. */
-  runDraft(macro: Macro, variables: Record<string, string> | undefined, emit: (p: MacroRunProgress) => void): string {
-    return startRun(macro, variables, emit);
+  runDraft(macro: Macro, variables: Record<string, string> | undefined, emit: (p: MacroRunProgress) => void, cursorOpts?: MacroCursorOpts): string {
+    return startRun(macro, variables, emit, cursorOpts);
   },
 
   /** Run a saved macro to COMPLETION and resolve with the outcome (the agent-capability path). */

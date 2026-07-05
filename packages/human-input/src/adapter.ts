@@ -1,4 +1,4 @@
-import { gaussianJitter, easeInOut, easeOut, easeIn, catmullRom } from './math.js';
+import { gaussianJitter, easeInOut, easeOut, catmullRom } from './math.js';
 
 const delay = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
@@ -32,6 +32,9 @@ export class HumanInputAdapter {
   constructor(
     private readonly send: CdpSend,
     private readonly onCursorMove?: (x: number, y: number) => void,
+    private readonly onAction?: (kind: string, detail: string) => void,
+    /** Return true to abort the current movement and yield to real user input. */
+    private readonly shouldYield?: () => boolean,
   ) {}
 
   /**
@@ -50,15 +53,15 @@ export class HumanInputAdapter {
     }
 
     // Catmull-Rom control points: ghost points add slight curvature
-    const gx = (v: number): number => gaussianJitter(0, 15);
-    const p0x = this.curX + gx(0);
-    const p0y = this.curY + gx(0);
+    const gx = (): number => gaussianJitter(0, 15);
+    const p0x = this.curX + gx();
+    const p0y = this.curY + gx();
     const p1x = this.curX;
     const p1y = this.curY;
     const p2x = x;
     const p2y = y;
-    const p3x = x + gx(0);
-    const p3y = y + gx(0);
+    const p3x = x + gx();
+    const p3y = y + gx();
 
     const n = Math.min(80, Math.max(4, Math.round(dist / 6)));
     const totalMs = Math.min(700, Math.max(120, (dist / 400) * 1000));
@@ -71,6 +74,7 @@ export class HumanInputAdapter {
     let prevY = this.curY;
 
     for (let i = 1; i <= n; i++) {
+      if (this.shouldYield?.()) break; // real mouse took over — stop mid-path
       const tRaw = i / n;
       const t = easeInOut(tRaw);
       const px = catmullRom(p0x, p1x, p2x, p3x, t);
@@ -85,6 +89,11 @@ export class HumanInputAdapter {
         y: py,
         movementX: movX,
         movementY: movY,
+        button: 'none',
+        buttons: 0,
+        modifiers: 0,
+        clickCount: 0,
+        pointerType: 'mouse',
       });
       this.onCursorMove?.(px, py);
       prevX = px;
@@ -105,67 +114,83 @@ export class HumanInputAdapter {
    * Sets `buttons: 1` during press and `buttons: 0` after release (detection systems check this field).
    */
   async click(x: number, y: number): Promise<void> {
+    this.onAction?.('click', `(${Math.round(x)}, ${Math.round(y)})`);
     await this.moveTo(x, y);
+    if (this.shouldYield?.()) return; // user took control before we reached target
     await delay(Math.max(20, gaussianJitter(80, 30)));
 
-    const base = { x, y, button: 'left' as const, clickCount: 1 };
+    const base = { x, y, button: 'left' as const, clickCount: 1, modifiers: 0, pointerType: 'mouse' };
     await this.send('Input.dispatchMouseEvent', { type: 'mousePressed', ...base, buttons: 1 });
     await delay(Math.max(10, gaussianJitter(60, 20)));
     await this.send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...base, buttons: 0 });
   }
 
   /**
-   * 3-phase scroll simulating natural trackpad/wheel momentum:
-   *   Phase 1 — Main ease-out scroll  (~90% of distance)
-   *   Phase 2 — Overshoot             (~7% extra, same direction)
-   *   Phase 3 — Spring-back           (retracts the overshoot)
-   *
-   * Each phase dispatches multiple small mouseWheel events so deltas stay small
-   * (a single large-delta event is a strong bot signal).
+   * Smooth scroll using the page's native CSS scroll animation (window.scrollBy behavior:'smooth')
+   * so the visual result is fluid. While the page animates, the cursor drifts naturally.
+   * A small spring-back retraction follows to simulate trackpad momentum release.
    */
   async scroll(direction: 'up' | 'down', totalPx?: number): Promise<void> {
     const sign = direction === 'down' ? 1 : -1;
     const effectivePx = totalPx ?? Math.max(300, gaussianJitter(540, 60));
     const overshootPx = effectivePx * Math.max(0.04, gaussianJitter(0.07, 0.02));
 
-    const dispatchPhase = async (
-      deltaTotalPx: number,
-      events: number,
-      durationMs: number,
-      ease: (t: number) => number,
-    ): Promise<void> => {
-      const deltaSign = deltaTotalPx >= 0 ? 1 : -1;
-      const absDelta = Math.abs(deltaTotalPx);
-      const weights: number[] = [];
-      let weightSum = 0;
-      for (let i = 0; i < events; i++) {
-        const t = (i + 0.5) / events;
-        const w = ease(t);
-        weights.push(w);
-        weightSum += w;
-      }
-      const intervalMs = durationMs / events;
-      for (let i = 0; i < events; i++) {
-        const deltaY = sign * deltaSign * (weights[i]! / weightSum) * absDelta;
-        const deltaX = gaussianJitter(0, 0.7);
+    this.onAction?.('scroll', direction);
+
+    // Cursor starts at current position (or page center if not yet moved)
+    let cx = this.curX > 0 ? this.curX : 640;
+    let cy = this.curY > 0 ? this.curY : 400;
+    this.onCursorMove?.(cx, cy);
+
+    // Trigger visible smooth scroll animation via JS eval
+    await this.send('Runtime.evaluate', {
+      expression: `window.scrollBy({top:${sign * (effectivePx + overshootPx)},behavior:'smooth'})`,
+      silent: true,
+      returnByValue: false,
+    }).catch(() => undefined);
+
+    // Cursor drift while the page animates (natural hand micro-tremor during scroll)
+    const durationMs = Math.min(1200, Math.max(500, effectivePx));
+    const steps = Math.round(durationMs / 50);
+    for (let i = 0; i < steps; i++) {
+      if (this.shouldYield?.()) break; // user took control
+      cx += gaussianJitter(0, 1.5);
+      cy += gaussianJitter(0, 2.5) * sign;
+      cx = Math.max(10, Math.min(1200, cx));
+      cy = Math.max(10, Math.min(800, cy));
+      this.onCursorMove?.(cx, cy);
+      // Scatter a few small wheel events for behavioral authenticity (not for scroll effect)
+      if (i % 4 === 0) {
+        const t = (i + 0.5) / steps;
         await this.send('Input.dispatchMouseEvent', {
           type: 'mouseWheel',
-          x: 10,
-          y: 10,
-          deltaX,
-          deltaY,
-        });
-        await delay(intervalMs);
+          x: cx,
+          y: cy,
+          deltaX: gaussianJitter(0, 0.5),
+          deltaY: sign * easeOut(1 - t) * (effectivePx / Math.max(1, Math.floor(steps / 4))),
+          modifiers: 0,
+          pointerType: 'mouse',
+        }).catch(() => undefined);
       }
-    };
+      await delay(50);
+    }
 
-    // Phase 1: main scroll, ease-out (fast start, gentle finish)
-    const mainCount = Math.round(Math.max(8, gaussianJitter(11, 1.5)));
-    await dispatchPhase(effectivePx * 0.9 + overshootPx, mainCount, 450, easeOut);
+    // Spring-back: retract the overshoot so the net distance is effectivePx
+    await this.send('Runtime.evaluate', {
+      expression: `window.scrollBy({top:${-sign * overshootPx},behavior:'smooth'})`,
+      silent: true,
+      returnByValue: false,
+    }).catch(() => undefined);
 
-    // Phase 2: spring-back (ease-in, opposite direction, quick)
-    const springCount = Math.round(Math.max(2, gaussianJitter(3, 0.5)));
-    await dispatchPhase(-overshootPx, springCount, 120, easeIn);
+    for (let i = 0; i < 4; i++) {
+      cx += gaussianJitter(0, 1);
+      cy += gaussianJitter(0, 1.5) * -sign;
+      this.onCursorMove?.(cx, cy);
+      await delay(40);
+    }
+
+    this.curX = cx;
+    this.curY = cy;
   }
 
   /**
@@ -173,6 +198,7 @@ export class HumanInputAdapter {
    * Models the Hold Time (HT) metric used by behavioral detectors.
    */
   async pressKey(spec: KeySpec, modifiers = 0): Promise<void> {
+    this.onAction?.('key', spec.key);
     const common: Record<string, unknown> = {
       modifiers,
       key: spec.key,
@@ -180,11 +206,11 @@ export class HumanInputAdapter {
       windowsVirtualKeyCode: spec.keyCode,
       nativeVirtualKeyCode: spec.keyCode,
     };
-    const downType = spec.text !== undefined ? 'keyDown' : 'rawKeyDown';
+    const downType = spec.text === undefined ? 'rawKeyDown' : 'keyDown';
     await this.send('Input.dispatchKeyEvent', {
       type: downType,
       ...common,
-      ...(spec.text !== undefined ? { text: spec.text } : {}),
+      ...(spec.text === undefined ? {} : { text: spec.text }),
     });
     await delay(Math.max(15, gaussianJitter(70, 30)));
     await this.send('Input.dispatchKeyEvent', { type: 'keyUp', ...common });
@@ -196,6 +222,7 @@ export class HumanInputAdapter {
    * Models the Flight Time (FT) metric used by behavioral detectors.
    */
   async insertText(text: string): Promise<void> {
+    this.onAction?.('type', text.length > 30 ? `${text.slice(0, 30)}…` : text);
     for (const char of text) {
       await this.send('Input.insertText', { text: char });
       await delay(Math.max(15, gaussianJitter(60, 25)));

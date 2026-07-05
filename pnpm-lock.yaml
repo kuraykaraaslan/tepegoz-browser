@@ -147,6 +147,9 @@ importers:
       '@tepegoz/http':
         specifier: workspace:*
         version: link:../../packages/http
+      '@tepegoz/human-input':
+        specifier: workspace:*
+        version: link:../../packages/human-input
       '@tepegoz/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
@@ -861,6 +864,15 @@ importers:
       vitest:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
+
+  packages/human-input:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.0
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
 
   packages/i18n:
     dependencies:

@@ -2,9 +2,11 @@ import { AppError } from '@tepegoz/libs';
 import type { WebContents } from 'electron';
 import type { MacroHost } from '@tepegoz/macro-engine';
 import type { SelectorChain } from '@tepegoz/shared-types';
+import { HumanInputAdapter } from '@tepegoz/human-input';
 import TabManager from '../tabs';
 import MacroCdp from '../agent/macro-cdp';
 import { browserHost } from '../agent/browser-host';
+import { showPageCursor, hidePageCursor, isUserControlActive } from '../agent/page-cursor';
 
 /**
  * Desktop {@link MacroHost} for `@tepegoz/macro-engine`: implements the deterministic runtime's
@@ -20,6 +22,10 @@ export interface MacroHostDeps {
   readCsv: (blobHash: string) => Promise<Record<string, string>[]>;
   /** Highlight resolved elements during replay (record/replay UX). Default true. */
   highlight?: boolean;
+  /** Called on each cursor-position update during the run (CDP coords, view-relative). */
+  onCursorMove?: (x: number, y: number) => void;
+  /** Called after each action completes to hide the overlay cursor. */
+  onCursorHide?: () => void;
 }
 
 function requireWc(): WebContents {
@@ -30,6 +36,19 @@ function requireWc(): WebContents {
 
 export function createMacroHost(deps: MacroHostDeps): MacroHost {
   const highlightOn = deps.highlight ?? true;
+
+  // One adapter per macro run — always created so all actions use human-like timing.
+  // Cursor position is injected into the live page DOM (position:fixed, z-index:max).
+  const adapter = new HumanInputAdapter(
+    (method, params) => requireWc().debugger.sendCommand(method, params),
+    (x, y) => {
+      const wc = TabManager.activeWebContents();
+      if (wc !== null) showPageCursor(wc, x, y);
+      deps.onCursorMove?.(x, y);
+    },
+    undefined,
+    isUserControlActive,
+  );
 
   const resolve = async (chain: SelectorChain, timeoutMs?: number): Promise<number> => {
     const wc = requireWc();
@@ -44,20 +63,36 @@ export function createMacroHost(deps: MacroHostDeps): MacroHost {
       await browserHost.navigateActive(url); // scheme allow-list + settle enforced inside
     },
     click: async (chain) => {
-      await MacroCdp.click(requireWc(), await resolve(chain));
+      const wc = requireWc();
+      await MacroCdp.click(wc, await resolve(chain), adapter);
+      hidePageCursor(wc);
+      deps.onCursorHide?.();
     },
     fill: async (chain, value) => {
-      await MacroCdp.fill(requireWc(), await resolve(chain), value);
+      const wc = requireWc();
+      await MacroCdp.fill(wc, await resolve(chain), value, adapter);
+      hidePageCursor(wc);
+      deps.onCursorHide?.();
     },
-    press: (key) => MacroCdp.pressKey(requireWc(), key),
-    scroll: (direction, amount) => MacroCdp.scroll(requireWc(), direction, amount),
+    press: async (key) => {
+      const wc = requireWc();
+      await MacroCdp.pressKey(wc, key, adapter);
+      hidePageCursor(wc);
+      deps.onCursorHide?.();
+    },
+    scroll: async (direction, amount) => {
+      const wc = requireWc();
+      await MacroCdp.scroll(wc, direction, amount, adapter);
+      hidePageCursor(wc);
+      deps.onCursorHide?.();
+    },
     extract: async (chain, attr) => MacroCdp.extract(requireWc(), await resolve(chain), attr),
     waitFor: async (chain, timeoutMs) =>
       (await MacroCdp.resolveChain(requireWc(), chain, timeoutMs)) !== null,
     waitForLoad: (timeoutMs) =>
       new Promise<void>((resolve) => {
         const wc = TabManager.activeWebContents();
-        if (wc === null || !wc.isLoadingMainFrame()) {
+        if (wc?.isLoadingMainFrame() !== true) {
           resolve();
           return;
         }

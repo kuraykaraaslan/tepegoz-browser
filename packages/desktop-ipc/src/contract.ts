@@ -16,10 +16,12 @@ import type {
   AgentEffort,
   AgentEvent,
   AgentEventKind,
+  AgentFileAttachment,
   AgentModelChoice,
   AgentPlanPreview,
   AgentPlanStep,
   AgentRunResult,
+  Attachment,
   TokenUsageSnapshot,
 } from '@tepegoz/ext-agent/types';
 // Canonical effort-level list is owned by the agent package (zod-free); re-exported so the preferences
@@ -34,10 +36,12 @@ export type {
   AgentEffort,
   AgentEvent,
   AgentEventKind,
+  AgentFileAttachment,
   AgentModelChoice,
   AgentPlanPreview,
   AgentPlanStep,
   AgentRunResult,
+  Attachment,
   TokenUsageSnapshot,
 };
 
@@ -639,12 +643,16 @@ export interface TepegozApi {
   getTabsState(): Promise<TabsState>;
   onTabsState(callback: (state: TabsState) => void): () => void;
   // Agent (Do mode): run a task, stream live events, answer HITL approvals.
+  /** Ensure the active tab belongs to a group (creates one if needed). Returns the groupId. */
+  ensureActiveGroup(): Promise<string>;
+  /** Subscribe to active-tab-group changes; returns an unsubscribe function. */
+  onActiveGroupChange(callback: (groupId: string | null) => void): () => void;
   /** Start an agentic task on the active tab; resolves when the run finishes. */
-  runAgent(prompt: string): Promise<AgentRunResult>;
+  runAgent(input: { prompt: string; groupId: string }): Promise<AgentRunResult>;
   /** Cancel an in-flight run. */
   cancelAgent(runId: string): void;
-  /** Reset conversation memory so the next run starts a fresh thread (panel "New task"). */
-  newAgentConversation(): void;
+  /** Reset conversation memory for a specific group (panel "New task"). */
+  newAgentConversation(groupId: string): void;
   /** Subscribe to the live Agent Console event stream; returns an unsubscribe function. */
   onAgentEvent(callback: (event: AgentEvent) => void): () => void;
   /** Subscribe to HITL approval prompts; returns an unsubscribe function. */
@@ -669,6 +677,12 @@ export interface TepegozApi {
   setAgentEffort(level: AgentEffort): Promise<void>;
   /** Open a file the agent produced, gated to the whitelisted folders (fire-and-forget). */
   openAgentFile(path: string): void;
+  /** Capture the active page's current text selection. Returns empty string when nothing is selected. */
+  capturePageSelection(): Promise<string>;
+  /** Open a native file picker and return the selected files' content. */
+  pickAgentFiles(): Promise<AgentFileAttachment[]>;
+  /** Snapshot the active tab as a PNG data URL for use as a composer attachment (alias of captureActiveTab). */
+  capturePageScreenshot(): Promise<string | null>;
   // On-device model management (Settings → Providers → Local).
   /** The model catalog merged with live install/download state. */
   listLocalModels(): Promise<LocalModelInfo[]>;
@@ -832,5 +846,8 @@ export interface TepegozApi {
   stopMacroRecording(): Promise<void>;
   /** Subscribe to captured steps while recording. Returns an unsubscribe function. */
   onMacroRecordStep(callback: (step: MacroRecordedStep) => void): () => void;
+  /** Subscribe to simulated cursor-position updates during a macro/agent run. Returns unsubscribe fn.
+   *  Coordinates are shell-window-relative (CSS px, position:fixed space). `visible:false` = idle. */
+  onCursorPosition(callback: (pos: { x: number; y: number; visible: boolean }) => void): () => void;
   readonly platform: string;
 }

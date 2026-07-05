@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { WebContents } from 'electron';
 import { AppError } from '@tepegoz/libs';
 import type { Selector, SelectorChain } from '@tepegoz/shared-types';
+import { HumanInputAdapter } from '@tepegoz/human-input';
 
 /**
  * Deterministic **selector engine** for the macro runtime (the direct answer to iMacros' static
@@ -144,25 +145,43 @@ export default class MacroCdp {
     return { x: (q[0]! + q[2]! + q[4]! + q[6]!) / 4, y: (q[1]! + q[3]! + q[5]! + q[7]!) / 4 };
   }
 
-  static async click(wc: WebContents, backendNodeId: number): Promise<void> {
+  static async click(
+    wc: WebContents,
+    backendNodeId: number,
+    adapter?: HumanInputAdapter,
+  ): Promise<void> {
     const { x, y } = await MacroCdp.centerOf(wc, backendNodeId);
-    const base = { x, y, button: 'left' as const, clickCount: 1 };
-    await wc.debugger.sendCommand('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
-    await wc.debugger.sendCommand('Input.dispatchMouseEvent', { type: 'mousePressed', ...base });
-    await wc.debugger.sendCommand('Input.dispatchMouseEvent', { type: 'mouseReleased', ...base });
+    if (adapter === undefined) {
+      const base = { x, y, button: 'left' as const, clickCount: 1 };
+      await wc.debugger.sendCommand('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
+      await wc.debugger.sendCommand('Input.dispatchMouseEvent', { type: 'mousePressed', ...base });
+      await wc.debugger.sendCommand('Input.dispatchMouseEvent', { type: 'mouseReleased', ...base });
+    } else {
+      await adapter.click(x, y);
+    }
   }
 
-  static async fill(wc: WebContents, backendNodeId: number, text: string): Promise<void> {
-    await MacroCdp.centerOf(wc, backendNodeId); // scroll into view
+  static async fill(
+    wc: WebContents,
+    backendNodeId: number,
+    text: string,
+    adapter?: HumanInputAdapter,
+  ): Promise<void> {
+    const { x, y } = await MacroCdp.centerOf(wc, backendNodeId);
+    if (adapter !== undefined) await adapter.moveTo(x, y);
     await wc.debugger.sendCommand('DOM.focus', { backendNodeId });
-    // Select existing value (Ctrl+A) then insert, so the new text replaces it.
+    // Select existing value (Ctrl+A) then insert the new text, replacing it.
     await wc.debugger.sendCommand('Input.dispatchKeyEvent', {
       type: 'keyDown', modifiers: 2, key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65,
     });
     await wc.debugger.sendCommand('Input.dispatchKeyEvent', {
       type: 'keyUp', modifiers: 2, key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65,
     });
-    await wc.debugger.sendCommand('Input.insertText', { text });
+    if (adapter === undefined) {
+      await wc.debugger.sendCommand('Input.insertText', { text });
+    } else {
+      await adapter.insertText(text);
+    }
   }
 
   /** Read the element's text, or a named attribute, by calling a function ON that specific node. */
@@ -202,28 +221,45 @@ export default class MacroCdp {
     await wc.debugger.sendCommand('Overlay.hideHighlight').catch(() => undefined);
   }
 
-  static async pressKey(wc: WebContents, key: string): Promise<void> {
+  static async pressKey(
+    wc: WebContents,
+    key: string,
+    adapter?: HumanInputAdapter,
+  ): Promise<void> {
     const spec = KEY_MAP[key];
     if (spec === undefined) throw new AppError(`Unsupported key: ${key}`, 400);
-    const common = {
-      key: spec.key,
-      code: spec.code,
-      windowsVirtualKeyCode: spec.keyCode,
-      nativeVirtualKeyCode: spec.keyCode,
-    };
-    await wc.debugger.sendCommand('Input.dispatchKeyEvent', {
-      type: spec.text !== undefined ? 'keyDown' : 'rawKeyDown',
-      ...common,
-      ...(spec.text !== undefined ? { text: spec.text } : {}),
-    });
-    await wc.debugger.sendCommand('Input.dispatchKeyEvent', { type: 'keyUp', ...common });
+    if (adapter === undefined) {
+      const common = {
+        key: spec.key,
+        code: spec.code,
+        windowsVirtualKeyCode: spec.keyCode,
+        nativeVirtualKeyCode: spec.keyCode,
+      };
+      await wc.debugger.sendCommand('Input.dispatchKeyEvent', {
+        type: spec.text === undefined ? 'rawKeyDown' : 'keyDown',
+        ...common,
+        ...(spec.text === undefined ? {} : { text: spec.text }),
+      });
+      await wc.debugger.sendCommand('Input.dispatchKeyEvent', { type: 'keyUp', ...common });
+    } else {
+      await adapter.pressKey(spec);
+    }
   }
 
-  static async scroll(wc: WebContents, direction: 'up' | 'down', amount?: number): Promise<void> {
-    const deltaY = (direction === 'down' ? 1 : -1) * (amount ?? 600);
-    await wc.debugger.sendCommand('Input.dispatchMouseEvent', {
-      type: 'mouseWheel', x: 10, y: 10, deltaX: 0, deltaY,
-    });
+  static async scroll(
+    wc: WebContents,
+    direction: 'up' | 'down',
+    amount?: number,
+    adapter?: HumanInputAdapter,
+  ): Promise<void> {
+    if (adapter === undefined) {
+      const deltaY = (direction === 'down' ? 1 : -1) * (amount ?? 600);
+      await wc.debugger.sendCommand('Input.dispatchMouseEvent', {
+        type: 'mouseWheel', x: 10, y: 10, deltaX: 0, deltaY,
+      });
+    } else {
+      await adapter.scroll(direction, amount);
+    }
   }
 }
 

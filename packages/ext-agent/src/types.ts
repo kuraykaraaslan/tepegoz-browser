@@ -13,6 +13,7 @@ export type AgentEventKind =
   | 'step_ok'
   | 'step_error'
   | 'awaiting_approval'
+  | 'input_action'
   | 'handoff'
   | 'done'
   | 'error';
@@ -26,6 +27,8 @@ export type AgentEffort = (typeof AGENT_EFFORT_LEVELS)[number];
 
 export interface AgentEvent {
   runId: string;
+  /** The tab-group that owns this agent session. */
+  groupId: string;
   kind: AgentEventKind;
   message: string;
   detail?: string;
@@ -34,6 +37,8 @@ export interface AgentEvent {
 
 export interface AgentApprovalRequest {
   runId: string;
+  /** The tab-group that owns this agent session. */
+  groupId: string;
   approvalId: string;
   toolName: string;
   reason: string;
@@ -49,6 +54,8 @@ export interface AgentPlanStep {
 
 export interface AgentPlanPreview {
   runId: string;
+  /** The tab-group that owns this agent session. */
+  groupId: string;
   planId: string;
   goal: string;
   steps: AgentPlanStep[];
@@ -91,12 +98,32 @@ export interface AgentConfig {
   effort: AgentEffort;
 }
 
+/** A file the user attached to a message via the native file picker. */
+export interface AgentFileAttachment {
+  name: string;
+  content: string;
+  mimeType: string;
+  sizeBytes: number;
+}
+
+/** A composer attachment chip (selected text, file, or screenshot). */
+export interface Attachment {
+  id: string;
+  kind: 'selection' | 'file' | 'screenshot';
+  label: string;
+  content: string;
+}
+
 /** What the Agent panel needs from the host — a small, typed surface (injected, not a global). */
 export interface AgentHostApi {
-  runAgent(prompt: string): Promise<AgentRunResult>;
+  runAgent(input: { prompt: string; groupId: string }): Promise<AgentRunResult>;
   cancelAgent(runId: string): void;
-  /** Reset conversation memory so the next run starts a fresh thread (panel "New task"). */
-  newAgentConversation(): void;
+  /** Reset conversation memory for a specific tab-group (panel "New task"). */
+  newAgentConversation(groupId: string): void;
+  /** Ensure the active tab belongs to a group; creates one if needed. Returns the groupId. */
+  ensureActiveGroup(): Promise<string>;
+  /** Subscribe to active-tab-group changes. The callback receives the new groupId (null = no group). */
+  onActiveGroupChange(callback: (groupId: string | null) => void): () => void;
   onAgentEvent(callback: (event: AgentEvent) => void): () => void;
   onAgentApprovalRequest(callback: (request: AgentApprovalRequest) => void): () => void;
   respondAgentApproval(approvalId: string, approved: boolean): void;
@@ -116,4 +143,10 @@ export interface AgentHostApi {
   openAgentFile(path: string): void;
   /** Open a URL from agent output in a new browser tab. */
   createTab(url?: string): void;
+  /** Capture the active page's current text selection. Returns empty string if nothing is selected. */
+  capturePageSelection(): Promise<string>;
+  /** Open a native file picker and return the selected files' content. */
+  pickAgentFiles(): Promise<AgentFileAttachment[]>;
+  /** Capture a screenshot of the active tab as a base64-encoded PNG data URL. */
+  capturePageScreenshot(): Promise<string | null>;
 }

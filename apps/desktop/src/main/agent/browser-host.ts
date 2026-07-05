@@ -1,9 +1,12 @@
 import { AppError } from '@tepegoz/libs';
-import type { WebContents } from 'electron';
+import type { BrowserWindow, WebContents } from 'electron';
 import type { BrowserHost } from '@tepegoz/browser-tools';
+import { HumanInputAdapter, type CdpSend } from '@tepegoz/human-input';
+import { IpcChannels, type AgentEvent } from '@tepegoz/desktop-ipc';
 import TabManager from '../tabs';
 import CdpDriver from './cdp-driver';
 import AgentTabGroup from './agent-tab-group';
+import { showPageCursor, hidePageCursor, isUserControlActive, resetForAgentAction } from './page-cursor';
 
 /**
  * Desktop `BrowserHost` for `@tepegoz/browser-tools`: the Electron/WebContentsView operations behind
@@ -50,14 +53,98 @@ function requireActiveWc(): WebContents {
   return wc;
 }
 
+// --- Cursor overlay wiring ---
+
+let mainWin: BrowserWindow | null = null;
+
+/** Called from index.ts after createWindow(); provides the target for cursor IPC pushes. */
+export function attachBrowserHostWindow(win: BrowserWindow): void {
+  mainWin = win;
+}
+
+function sendCursorPosition(x: number, y: number, visible: boolean): void {
+  if (mainWin === null || mainWin.isDestroyed()) return;
+  const b = TabManager.getContentBounds();
+  mainWin.webContents.send(IpcChannels.cursorPosition, {
+    x: x + b.x,
+    y: y + b.y,
+    visible,
+  });
+}
+
+function onCursorMove(x: number, y: number): void {
+  const wc = TabManager.activeWebContents();
+  if (wc !== null) showPageCursor(wc, x, y);
+  sendCursorPosition(x, y, true);
+}
+
+function onCursorHide(): void {
+  const wc = TabManager.activeWebContents();
+  if (wc !== null) hidePageCursor(wc);
+  sendCursorPosition(0, 0, false);
+}
+
+// --- Input-action event wiring (agent progress panel) ---
+
+let currentAgentRunId: string | null = null;
+let currentAgentGroupId: string | null = null;
+let currentAgentSend: ((e: AgentEvent) => void) | null = null;
+
+/** Called by ipc.ts at the start/end of each agentRun to bind the active run's event channel. */
+export function setCurrentAgentRun(
+  runId: string | null,
+  groupId: string | null,
+  send: ((e: AgentEvent) => void) | null,
+): void {
+  currentAgentRunId = runId;
+  currentAgentGroupId = groupId;
+  currentAgentSend = send;
+}
+
+function onInputAction(kind: string, detail: string): void {
+  if (currentAgentRunId === null || currentAgentGroupId === null || currentAgentSend === null) return;
+  currentAgentSend({
+    runId: currentAgentRunId,
+    groupId: currentAgentGroupId,
+    kind: 'input_action',
+    message: `${kind} ${detail}`,
+    ts: Date.now(),
+  });
+}
+
+// Single module-level adapter — curX/curY accumulate across agent actions within a session.
+const cdpSend: CdpSend = (method, params) =>
+  requireActiveWc().debugger.sendCommand(method, params);
+
+const browserAdapter = new HumanInputAdapter(cdpSend, onCursorMove, onInputAction, isUserControlActive);
+
+// --- BrowserHost ---
+
 export const browserHost: BrowserHost = {
   navigateActive,
   readActivePage,
   listTabs: () => TabManager.getState().tabs.map((t) => ({ id: t.id, title: t.title, url: t.url })),
-  createTab: (url, groupName) => AgentTabGroup.openTab(url, groupName),
+  createTab: (url, groupName) =>
+    AgentTabGroup.openTab(currentAgentGroupId ?? '', url, groupName),
   snapshotElements: () => CdpDriver.snapshotElements(requireActiveWc()),
-  clickElement: (ref) => CdpDriver.clickElement(requireActiveWc(), ref),
-  fillElement: (ref, text) => CdpDriver.fillElement(requireActiveWc(), ref, text),
-  pressKey: (key) => CdpDriver.pressKey(requireActiveWc(), key),
-  scrollPage: (direction, amount) => CdpDriver.scrollPage(requireActiveWc(), direction, amount),
+  clickElement: async (ref) => {
+    resetForAgentAction();
+    await CdpDriver.clickElement(requireActiveWc(), ref, browserAdapter);
+    onCursorHide();
+  },
+  fillElement: async (ref, text) => {
+    resetForAgentAction();
+    await CdpDriver.fillElement(requireActiveWc(), ref, text, browserAdapter);
+    onCursorHide();
+  },
+  pressKey: async (key) => {
+    resetForAgentAction();
+    await CdpDriver.pressKey(requireActiveWc(), key, browserAdapter);
+    onCursorHide();
+  },
+  scrollPage: async (direction, amount) => {
+    resetForAgentAction();
+    await CdpDriver.scrollPage(requireActiveWc(), direction, amount, browserAdapter);
+    onCursorHide();
+  },
 };

@@ -56,8 +56,16 @@ export const IpcChannels = {
   tabsGroupStartRename: 'tabs:group-start-rename',
   agentRun: 'agent:run',
   agentCancel: 'agent:cancel',
-  /** Renderer→main: reset conversation memory so the next run starts a fresh thread (panel "New task"). */
+  /** Renderer→main: reset conversation memory for a specific group (panel "New task"). */
   agentNewConversation: 'agent:new-conversation',
+  /** Renderer→main: ensure the active tab belongs to a group; creates one if needed → { groupId }. */
+  agentEnsureGroup: 'agent:ensure-group',
+  /** Main→renderer push: active tab's group changed (groupId | null). */
+  agentGroupChanged: 'agent:group-changed',
+  /** Renderer→main: capture the page's current text selection → string. */
+  agentCaptureSelection: 'agent:capture-selection',
+  /** Renderer→main: open a native file picker and read selected files → AgentFileAttachment[]. */
+  agentPickFiles: 'agent:pick-files',
   agentEvent: 'agent:event',
   agentApprovalRequest: 'agent:approval-request',
   agentApprovalResponse: 'agent:approval-response',
@@ -170,6 +178,8 @@ export const IpcChannels = {
   // op that exceeds its folder's granted mode, and every grant-management tool, fall through to it). So
   // the only dedicated channel is the native directory picker for the Settings "Add folder" button.
   fileAccessPickFolder: 'file-access:pick-folder',
+  /** Main→renderer push: simulated cursor position during a macro/agent run. */
+  cursorPosition: 'cursor:position',
 } as const;
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];

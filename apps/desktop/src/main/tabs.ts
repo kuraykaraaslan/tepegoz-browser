@@ -595,6 +595,12 @@ export default class TabManager {
     TabManager.navigateActive(homeUrl());
   }
 
+  /** The current content-area bounds (DIP, shell-window-relative). Used to offset CDP coordinates
+   *  (which are view-relative) to shell-window-relative coordinates for the cursor overlay. */
+  static getContentBounds(): Rectangle {
+    return { ...TabManager.bounds };
+  }
+
   /** The content area (below the chrome), in DIP, as measured by the renderer. */
   static setContentBounds(bounds: Rectangle): void {
     TabManager.bounds = bounds;
