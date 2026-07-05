@@ -16,3 +16,6 @@ preference); this package just renders when asked.
   labels={{ bar: 'Bookmarks bar', empty: 'No bookmarks yet.' }}
 />
 ```
+
+## Scripts
+`pnpm typecheck` · `pnpm lint` · `pnpm test`

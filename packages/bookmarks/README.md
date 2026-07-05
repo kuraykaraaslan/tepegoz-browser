@@ -13,3 +13,6 @@ Bookmarks feature module (L1). Owns:
 
 Pure and app-free (the store takes `Db`, `isBookmarkable` is a pure function), so the rule is safe to
 import from the sandboxed renderer without pulling in native modules.
+
+## Scripts
+`pnpm typecheck` · `pnpm lint` · `pnpm test` · `pnpm build`
