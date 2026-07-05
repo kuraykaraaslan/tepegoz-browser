@@ -81,6 +81,24 @@ function blockNonWeb(event: { preventDefault: () => void }, url: string): void {
   if (!/^(https?:|about:)/i.test(url)) event.preventDefault();
 }
 
+/** How long (ms) a discrete user input keeps the page "user-activated" for popup purposes. Chrome's
+ *  transient activation is 5s; a click→window.open fires synchronously, so a short window is ample and
+ *  keeps a stale gesture from later whitelisting an auto-popup. */
+const GESTURE_ACTIVATION_MS = 1000;
+
+/** Discrete inputs that count as a user gesture (grant transient activation). Scroll / mouse-move /
+ *  pointer-move do NOT — matching the browser, which only activates on clicks, key presses and taps. */
+function isActivatingInput(type: string): boolean {
+  return (
+    type === 'mouseDown' ||
+    type === 'keyDown' ||
+    type === 'rawKeyDown' ||
+    type === 'pointerDown' ||
+    type === 'touchStart' ||
+    type === 'gestureTap'
+  );
+}
+
 /**
  * L0 tab model. Each tab is an isolated `WebContentsView` in a SEPARATE browsing partition
  * (`persist:tepegoz-web`) from the app chrome (`persist:tepegoz-app`) — browsed pages are untrusted
@@ -138,6 +156,17 @@ export default class TabManager {
   private static persistTimer: ReturnType<typeof setTimeout> | null = null;
   /** Observers notified after every committed top-level navigation (did-stop-loading). */
   private static readonly navigationObservers = new Set<NavigationObserver>();
+  /** Last discrete user-input time per browsed webContents — the popup blocker only blocks popups that
+   *  open WITHOUT a recent gesture (a link click / window.open in response to a click must pass). Keyed
+   *  weakly so entries vanish when the webContents is GC'd; no manual cleanup needed. */
+  private static readonly lastGestureAt = new WeakMap<WebContents, number>();
+
+  /** Whether `wc` had a discrete user input within the activation window (i.e. the popup it just tried to
+   *  open is user-initiated, not an unsolicited auto-popup). */
+  private static hadRecentGesture(wc: WebContents): boolean {
+    const at = TabManager.lastGestureAt.get(wc);
+    return at !== undefined && Date.now() - at < GESTURE_ACTIVATION_MS;
+  }
 
   /** Register a callback invoked after each committed top-level page load. Returns an unsubscribe fn. */
   static onNavigation(fn: NavigationObserver): () => void {
@@ -404,6 +433,12 @@ export default class TabManager {
     return active !== null ? [active] : [];
   }
 
+  /** Whether a group with this id still exists (its members may all have been closed). Lets the agent's
+   *  per-conversation grouping tell "reuse my group" from "the user closed it → open a fresh one". */
+  static hasGroup(groupId: string): boolean {
+    return TabManager.store.getGroup(groupId) !== undefined;
+  }
+
   static assignToGroup(tabId: string, groupId: string): void {
     TabManager.store.assignToGroup(tabId, groupId);
     TabManager.emitState();
@@ -638,6 +673,7 @@ export default class TabManager {
 
   /** Every event `wireView` subscribes to — kept in sync so `unwireView` can drop exactly these. */
   private static readonly WIRED_EVENTS = [
+    'input-event',
     'will-navigate',
     'will-redirect',
     'context-menu',
@@ -662,17 +698,26 @@ export default class TabManager {
   private static wireView(id: string, view: WebContentsView): void {
     const wc = view.webContents;
 
+    // Track discrete user input so the popup blocker can tell a user-clicked new-tab link (which must
+    // open) from an unsolicited auto-popup (which is blocked). See the window-open handler below.
+    wc.on('input-event', (_e, input) => {
+      if (isActivatingInput(input.type)) TabManager.lastGestureAt.set(wc, Date.now());
+    });
+
     // Browsed pages are untrusted. Every path that creates a new browsing context (window.open,
     // target=_blank, form/base target, event-simulated clicks) funnels through this handler, so it is
-    // the single popup enforcement point. Strict popup blocker first: block unless the SOURCE page's
-    // origin is trusted (a blocked popup raises a notification whose inline actions can still open it).
-    // When allowed we open HYBRID: plain http(s) popups become tabs (our model); popups that need a
-    // live window reference (about:blank/data:/javascript:), geometry, a POST body, or an explicit
-    // new-window disposition are created NATIVELY by Electron so `window.open` returns a scriptable ref.
+    // the single popup enforcement point. Strict popup blocker first, BUT only for popups opened WITHOUT
+    // a recent user gesture: a user-clicked `target=_blank` link (or a window.open in response to a
+    // click) is legitimate and must open — only unsolicited auto-popups are blocked, matching how a real
+    // browser's popup blocker keys on transient user activation. A blocked popup raises a notification
+    // whose inline actions can still open it. When allowed we open HYBRID: plain http(s) popups become
+    // tabs (our model); popups that need a live window reference (about:blank/data:/javascript:),
+    // geometry, a POST body, or an explicit new-window disposition are created NATIVELY by Electron so
+    // `window.open` returns a scriptable ref.
     wc.setWindowOpenHandler((details) => {
       const target = popupTargetUrl(details.url);
       const sourceOrigin = originOf(wc.getURL());
-      if (PopupBlockerManager.shouldBlock(sourceOrigin)) {
+      if (!TabManager.hadRecentGesture(wc) && PopupBlockerManager.shouldBlock(sourceOrigin)) {
         PopupBlockerManager.onBlocked(sourceOrigin, target);
         return { action: 'deny' };
       }
@@ -769,10 +814,13 @@ export default class TabManager {
    *  its OWN popups through the same blocker + hybrid policy. A popup window has no tab context, so its
    *  nested popups (when allowed) stay native windows rather than becoming tabs. */
   private static wirePopupWindow(wc: WebContents): void {
+    wc.on('input-event', (_e, input) => {
+      if (isActivatingInput(input.type)) TabManager.lastGestureAt.set(wc, Date.now());
+    });
     wc.setWindowOpenHandler((details) => {
       const target = popupTargetUrl(details.url);
       const sourceOrigin = originOf(wc.getURL());
-      if (PopupBlockerManager.shouldBlock(sourceOrigin)) {
+      if (!TabManager.hadRecentGesture(wc) && PopupBlockerManager.shouldBlock(sourceOrigin)) {
         PopupBlockerManager.onBlocked(sourceOrigin, target);
         return { action: 'deny' };
       }

@@ -34,7 +34,7 @@ export function ExtensionsGrid({ items, onToggle }: ExtensionsGridProps) {
   );
 
   return (
-    <div className="flex h-full flex-col bg-surface-base text-text-primary">
+    <div className="flex h-full flex-col bg-surface-system text-text-primary">
       <div className="shrink-0 border-b border-border px-8 py-4">
         <div className="mx-auto flex max-w-5xl items-center gap-4">
           <h1 className="text-base font-semibold">{t.title}</h1>

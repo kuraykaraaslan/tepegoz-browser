@@ -108,7 +108,7 @@ function SortableBarItem({
   onActivate: (node: BookmarkBarNode, anchor: HTMLElement) => void;
   onContextMenu: (id: string, type: BookmarkBarNodeType) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } = useSortable({
     id: node.id,
   });
   const style: CSSProperties = {
@@ -116,12 +116,14 @@ function SortableBarItem({
     transition,
     opacity: isDragging ? 0.4 : 1,
   };
+  // Highlight a folder when another item is dragged over it — it's about to be dropped INSIDE.
+  const dropInto = node.type === 'folder' && isOver && !isDragging;
   return (
     <button
       ref={setNodeRef}
       style={style}
       type="button"
-      className={CHIP}
+      className={`${CHIP} ${dropInto ? 'bg-primary-subtle ring-2 ring-border-focus' : ''}`}
       title={node.title.length > 0 ? node.title : (node.url ?? '')}
       onClick={(e) => onActivate(node, e.currentTarget)}
       onContextMenu={(e) => {

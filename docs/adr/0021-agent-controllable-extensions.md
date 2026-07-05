@@ -74,3 +74,21 @@ Scope is deliberately **first-party built-ins only**: because bundled first-part
 module specifiers for code-splitting, one small surface-loader thunk map remains in renderer source
 (the honest limit). Loading extensions from a user/db directory, **untrusted/MV3/third-party execution,
 sandboxing, and permission enforcement remain Phase 3** — unchanged by this refinement.
+
+## Update (2026-07-04) — local-eligibility metadata (the "run locally" standard)
+
+`ExtensionCapabilityDef` (and the builtin tool descriptors) now carry three OPTIONAL, fail-safe fields
+so the Settings → **Cost & performance** "run locally" list is fully data-driven for extensions too:
+
+- `aiTask?: AiTask` — the LLM/cognitive work an action entails (`none | read_understand | summarize |
+  classify | extract | redact | plan | decide`). `'none'`/absent ⇒ a purely mechanical action → never
+  local-toggleable.
+- `localCapable?: boolean` — override; absent ⇒ derived from `aiTask` (present and not `'none'`), via the
+  shared `isLocalCapable()` in `@tepegoz/shared-types`.
+- `category?: string` — explicit Settings group; absent ⇒ derived from the id's `{domain}` prefix.
+
+Because extension capabilities already register into the ONE `CapabilityRegistry` behind the ONE PEP,
+they appear in the "run locally" list automatically — an extension author only declares these fields.
+Fail-safe like the danger classes: unknown/absent ⇒ treated as `none`/not-local. The on-device model
+itself is the `'local'` provider (see `@tepegoz/local-inference`); routing is decided per-capability by
+`ModelRouter`, unchanged by this metadata.

@@ -8,6 +8,7 @@
     "./manifest": "./src/manifest.ts",
     "./panel": "./src/panel.tsx",
     "./types": "./src/types.ts",
+    "./default-trusted-origins": "./src/default-trusted-origins.ts",
     "./i18n": "./src/i18n/index.ts"
   },
   "main": "./src/index.ts",

@@ -27,6 +27,25 @@ export type HITLStatus = z.infer<typeof HITLStatusEnum>;
 export const RiskLevelEnum = z.enum(['read', 'state_changing', 'destructive', 'financial']);
 export type RiskLevel = z.infer<typeof RiskLevelEnum>;
 
+/**
+ * The LLM/cognitive work class an action's reasoning maps to — the axis that decides whether the
+ * on-device (local) model can do it. `'none'` = a purely mechanical action (click/navigate/create
+ * tab) with no AI step, so it is never "run locally"-toggleable. The others mirror the model
+ * gateway's SIMPLE_CAPABILITIES plus the two heavy tiers (`plan`/`decide`). Author-declared on each
+ * tool descriptor; absent ⇒ treated as `none` (fail-safe).
+ */
+export const AiTaskEnum = z.enum([
+  'none',
+  'read_understand',
+  'summarize',
+  'classify',
+  'extract',
+  'redact',
+  'plan',
+  'decide',
+]);
+export type AiTask = z.infer<typeof AiTaskEnum>;
+
 export const McpTransportEnum = z.enum(['stdio', 'http_sse']);
 export type McpTransport = z.infer<typeof McpTransportEnum>;
 

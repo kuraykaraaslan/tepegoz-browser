@@ -40,6 +40,49 @@ export const en = {
     stepLabel: 'Step',
     live: 'Live',
   },
+  // Composer / chrome.
+  newTask: 'New task',
+  send: 'Send',
+  stop: 'Stop',
+  modelLabel: 'Model',
+  // Amber risk banner shown when autonomy is not 'ask' (level-aware).
+  risk: {
+    actTitle: 'Acting without asking',
+    actBody: 'Runs routine steps on its own, but still pauses for destructive or financial actions.',
+    autoTitle: 'Fully autonomous',
+    autoBody: 'Takes actions on this page and the web without pausing — review the timeline.',
+  },
+  // Graduated autonomy levels (the composer dropdown).
+  autonomy: {
+    ask: { title: 'Ask before acting', desc: 'Reviews the plan and each state-changing step.' },
+    act: {
+      title: 'Act without asking',
+      desc: 'Runs routine steps; still asks for destructive or financial actions.',
+    },
+    auto: { title: 'Auto', desc: 'Fully autonomous — takes actions without pausing.' },
+  },
+  // Reasoning-effort presets (the composer effort dropdown). Higher effort → deeper reasoning + more tokens.
+  effort: {
+    title: 'Effort',
+    low: { title: 'Low', desc: 'Fastest and cheapest — brief reasoning.' },
+    medium: { title: 'Medium', desc: 'Balanced reasoning and cost.' },
+    high: { title: 'High', desc: 'Deeper reasoning (default).' },
+    xhigh: { title: 'Very high', desc: 'Extended reasoning, longer answers.' },
+    max: { title: 'Max', desc: 'Maximum reasoning and token budget.' },
+  },
+  // Collapsible reasoning section (the agent's plan goal + per-step rationale).
+  reasoning: {
+    title: 'Reasoning',
+    show: 'Show',
+    hide: 'Hide',
+  },
+  // Copy button on markdown code blocks.
+  copy: 'Copy',
+  // Chat thread — each turn is the user's message followed by the agent's response.
+  thread: {
+    you: 'You',
+    working: 'Working…',
+  },
 };
 
 export type AgentStrings = typeof en;

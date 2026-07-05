@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.107.0",
+    "@tepegoz/http": "workspace:*",
     "@tepegoz/libs": "workspace:*",
     "@tepegoz/shared-types": "workspace:*"
   },

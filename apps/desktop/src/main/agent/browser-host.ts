@@ -3,6 +3,7 @@ import type { WebContents } from 'electron';
 import type { BrowserHost } from '@tepegoz/browser-tools';
 import TabManager from '../tabs';
 import CdpDriver from './cdp-driver';
+import AgentTabGroup from './agent-tab-group';
 
 /**
  * Desktop `BrowserHost` for `@tepegoz/browser-tools`: the Electron/WebContentsView operations behind
@@ -53,7 +54,7 @@ export const browserHost: BrowserHost = {
   navigateActive,
   readActivePage,
   listTabs: () => TabManager.getState().tabs.map((t) => ({ id: t.id, title: t.title, url: t.url })),
-  createTab: (url) => TabManager.createTab(url),
+  createTab: (url, groupName) => AgentTabGroup.openTab(url, groupName),
   snapshotElements: () => CdpDriver.snapshotElements(requireActiveWc()),
   clickElement: (ref) => CdpDriver.clickElement(requireActiveWc(), ref),
   fillElement: (ref, text) => CdpDriver.fillElement(requireActiveWc(), ref, text),

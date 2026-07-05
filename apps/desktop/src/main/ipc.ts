@@ -1,18 +1,26 @@
 import {
   app,
   BrowserWindow,
+  dialog,
   ipcMain,
+  shell,
   type IpcMainEvent,
   type IpcMainInvokeEvent,
 } from 'electron';
 import { z } from 'zod';
 import { AppError, Logger, toBoundary } from '@tepegoz/libs';
 import {
+  AGENT_EFFORT_LEVELS,
   IpcChannels,
+  PROVIDER_IDS,
   encodeBoundaryMessage,
+  type AIAdaptor,
   type AgentApprovalRequest,
+  type AgentAutonomy,
+  type AgentConfig,
   type AgentEvent,
   type AgentEventKind,
+  type AgentModelChoice,
   type AgentPlanPreview,
   type AgentRunResult,
   type AppInfo,
@@ -20,8 +28,10 @@ import {
   type BookmarkTreeNode,
   type CredentialsStatus,
   type ExtensionManifestWire,
+  type FileAccessFolderPickResult,
   type HistoryEntry,
   type IpcChannel,
+  type LocalModelInfo,
   type Macro,
   type MacroSummary,
   type McpServerStatusInfo,
@@ -36,6 +46,7 @@ import {
 } from '@tepegoz/desktop-ipc';
 import {
   AgentApprovalResponseSchema,
+  AgentOpenFileSchema,
   AgentPlanResponseSchema,
   AgentRunIdSchema,
   AgentRunInputSchema,
@@ -90,16 +101,24 @@ import type { ConfirmRequest } from '@tepegoz/capability-plane';
 import { TokenLedger } from '@tepegoz/model-gateway';
 import { EventJournal, HistoryStore } from '@tepegoz/persistence';
 import { BookmarkTreeStore, isBookmarkable } from '@tepegoz/bookmarks';
-import type { EventType, Plan } from '@tepegoz/shared-types';
+import {
+  isRunnableProvider,
+  type AIProvider,
+  type EventType,
+  type Plan,
+} from '@tepegoz/shared-types';
 import { randomUUID } from 'node:crypto';
 import AgentService, { type PlanApprovalDecision } from './agent/agent-service';
+import FileOperationsHost from './file-operations/file-operations-host';
 import McpService from './mcp/supervisor.electron';
+import ModelManager from './model-catalog/model-manager.electron';
 import ExtensionCapabilityService from './extensions/capability-supervisor.electron';
 import MacroService from './macro/macro-service.electron';
 import { getDb } from './db/database.electron';
 import { DEFAULT_PREFERENCES, PreferencesPatchSchema } from '@tepegoz/preferences';
 import { isTrustedAppUrl } from './lib/trusted-origin';
-import { mainStrings } from './lib/i18n-main';
+import { mainLocale, mainStrings } from './lib/i18n-main';
+import { buildAiAdaptors } from './agent/ai-adaptors';
 import { getPublicSettings, broadcastPublicSettings } from './settings/public-settings-host';
 import CredentialVault from '@tepegoz/credential-vault';
 import PreferenceStore from '@tepegoz/preferences';
@@ -211,6 +230,43 @@ function syncDefaultProviderFromKeys(): void {
   }
 }
 
+
+/** The effective provider the NEXT run resolves to (mirrors `resolveProvider`, non-throwing for the
+ *  panel's display). `local` availability is proxied by "a model is selected" here. */
+function effectiveAgentProvider(prefs: Preferences, hasKey: (p: AIProvider) => boolean): AIProvider {
+  const localAvailable = prefs.localProvider.selectedModelId !== '';
+  const ov = prefs.agentProviderOverride;
+  if (ov === 'local' && localAvailable) return 'local';
+  if (ov !== null && ov !== 'local' && isRunnableProvider(ov) && hasKey(ov)) return ov;
+  if (prefs.localProvider.mode === 'default' && localAvailable) return 'local';
+  const top = CredentialVault.topProvider();
+  return top !== null && isRunnableProvider(top) ? top : 'anthropic';
+}
+
+/** Build the Agent panel's config: selectable providers (with a usable-now flag) + the current choice +
+ *  the autonomy level. Data-driven from the vault status + prefs. */
+function buildAgentConfig(): AgentConfig {
+  const prefs = PreferenceStore.getAll();
+  const status = CredentialVault.status();
+  const hasKey = (p: AIProvider): boolean => status[p];
+  const localModel = prefs.localProvider.selectedModelId;
+  const choices: AgentModelChoice[] = [
+    { provider: 'anthropic', label: 'Claude', available: hasKey('anthropic') },
+    { provider: 'openai', label: 'OpenAI', available: hasKey('openai') },
+    {
+      provider: 'local',
+      label: localModel !== '' ? `Local: ${localModel}` : 'Local',
+      available: localModel !== '',
+    },
+  ];
+  return {
+    provider: effectiveAgentProvider(prefs, hasKey),
+    choices,
+    autonomy: prefs.agentAutonomy,
+    effort: prefs.agentEffort,
+  };
+}
+
 // Agent run + HITL state (registerIpc runs once at startup, so module scope is fine).
 let runCounter = 0;
 let approvalCounter = 0;
@@ -290,6 +346,10 @@ export function registerIpc(): void {
     if (validated.extensions !== undefined) {
       ExtensionCapabilityService.reconcile();
     }
+    // File-access whitelist or master switch changed — re-sync the live FileAccessPolicy.
+    if (validated.fileAccessGrants !== undefined || validated.fileOperationsEnabled !== undefined) {
+      FileOperationsHost.reconcile();
+    }
     // Any change may touch a PUBLIC setting (theme/locale/etc.) — push the fresh snapshot to
     // subscribed extensions. The projection ignores private keys, so this never leaks them.
     broadcastPublicSettings();
@@ -309,6 +369,10 @@ export function registerIpc(): void {
   });
 
   handle(IpcChannels.mcpGetStatus, (): McpServerStatusInfo[] => McpService.getStatus());
+
+  // The live AIAdaptor inventory for the Settings "run locally" list — system + extension + MCP groups
+  // built from the single CapabilityRegistry, so the list needs no maintenance as tools change.
+  handle(IpcChannels.aiAdaptorsList, (): AIAdaptor[] => buildAiAdaptors(mainLocale()));
 
   // Built-in extension identity for the renderer (it pairs each with lazily-loaded surfaces + icon).
   // Read-only, trusted direction; `mcpServer` is stripped — the renderer never needs it.
@@ -462,7 +526,7 @@ export function registerIpc(): void {
       return;
     }
     const win = BrowserWindow.fromWebContents(event.sender);
-    if (win) showBookmarkContextMenu(win, parsed.data.id, parsed.data.type);
+    if (win) showBookmarkContextMenu(win, parsed.data.id, parsed.data.type, parsed.data.variant);
   });
   // Native extension-icon context menu — also needs the sender's window to anchor + to push the choice.
   ipcMain.on(IpcChannels.extensionContextMenu, (event: IpcMainEvent, payload: unknown) => {
@@ -618,6 +682,16 @@ export function registerIpc(): void {
   onAction(IpcChannels.notificationPermissionRespond, NotificationPermissionResponseSchema, (res) => {
     NotificationPermissionBroker.respond(res);
   });
+  // File operations: native directory picker for the Settings "Add folder" button. Chosen paths are
+  // canonicalized (symlinks resolved) so they match the sandbox's realpath comparisons when persisted.
+  handleAsync(IpcChannels.fileAccessPickFolder, async (event): Promise<FileAccessFolderPickResult> => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const result = win
+      ? await dialog.showOpenDialog(win, { properties: ['openDirectory'] })
+      : await dialog.showOpenDialog({ properties: ['openDirectory'] });
+    const paths = await Promise.all(result.filePaths.map((p) => FileOperationsHost.canonicalize(p)));
+    return { paths, cancelled: result.canceled };
+  });
   // Exit — quits the whole app regardless of the sender window (a popup can't use the window-close path).
   onSignal(IpcChannels.appQuit, () => {
     app.quit();
@@ -713,7 +787,8 @@ export function registerIpc(): void {
         });
       }
     };
-    const requestApproval = (req: ConfirmRequest): Promise<boolean> => {
+    /** Present the standard HITL approval modal and await the user's answer. */
+    const promptApproval = (req: ConfirmRequest): Promise<boolean> => {
       const approvalId = `appr-${String(++approvalCounter)}`;
       const request: AgentApprovalRequest = {
         runId,
@@ -731,6 +806,14 @@ export function registerIpc(): void {
           if (pendingApprovals.delete(approvalId)) resolve(false); // fail-safe deny on no response
         }, 120_000);
       });
+    };
+    // File tools self-gate on their folder grant mode: an op within the granted mode runs silently,
+    // one outside every grant is refused, and an escalation / grant-management tool falls through to the
+    // standard approval modal so the user consents. Every other tool goes straight to the modal.
+    const requestApproval = async (req: ConfirmRequest): Promise<boolean> => {
+      const decision = await FileOperationsHost.consentDecision(req);
+      if (decision.type === 'auto') return decision.approved;
+      return promptApproval(req);
     };
     const requestPlanApproval = (plan: Plan): Promise<PlanApprovalDecision> => {
       const planId = `plan-${String(++planCounter)}`;
@@ -784,6 +867,9 @@ export function registerIpc(): void {
       }
     }
   });
+  onSignal(IpcChannels.agentNewConversation, () => {
+    AgentService.newConversation();
+  });
   onAction(
     IpcChannels.agentApprovalResponse,
     AgentApprovalResponseSchema,
@@ -808,6 +894,54 @@ export function registerIpc(): void {
   );
 
   handle(IpcChannels.tokenUsageGet, (): TokenUsageSnapshot => tokenUsage());
+
+  // Agent panel config: current provider + selectable choices + autonomy level, and setters.
+  handle(IpcChannels.agentGetConfig, (): AgentConfig => buildAgentConfig());
+  handle(IpcChannels.agentSetProvider, (_event, payload): void => {
+    const provider = z.enum(PROVIDER_IDS).parse(payload);
+    PreferenceStore.update({ agentProviderOverride: provider });
+  });
+  handle(IpcChannels.agentSetAutonomy, (_event, payload): void => {
+    const level: AgentAutonomy = z.enum(['ask', 'act', 'auto']).parse(payload);
+    PreferenceStore.update({ agentAutonomy: level });
+  });
+  handle(IpcChannels.agentSetEffort, (_event, payload): void => {
+    const level = z.enum(AGENT_EFFORT_LEVELS).parse(payload);
+    PreferenceStore.update({ agentEffort: level });
+  });
+  // Open a file the agent produced — gated to the whitelisted folders (403 → refused + logged, never
+  // opens outside a grant). Fire-and-forget; the async open runs off the handler.
+  onAction(IpcChannels.agentOpenFile, AgentOpenFileSchema, (path) => {
+    void (async () => {
+      try {
+        const real = await FileOperationsHost.assertOpenablePath(path);
+        await shell.openPath(real);
+      } catch (err) {
+        Logger.warn('Refused to open agent file', { path, err: String(err) });
+      }
+    })();
+  });
+
+  // On-device model management. Progress/install changes are pushed to every window via models:state.
+  ModelManager.setProgressListener((models) => {
+    for (const w of BrowserWindow.getAllWindows()) {
+      if (!w.isDestroyed()) w.webContents.send(IpcChannels.modelsState, models);
+    }
+  });
+  const ModelIdSchema = z.string().min(1).max(64);
+  handle(IpcChannels.modelsList, (): LocalModelInfo[] => ModelManager.list());
+  handleAsync(IpcChannels.modelsDownload, async (_event, payload): Promise<void> => {
+    await ModelManager.download(ModelIdSchema.parse(payload));
+  });
+  onAction(IpcChannels.modelsCancel, ModelIdSchema, (id) => {
+    ModelManager.cancel(id);
+  });
+  handle(IpcChannels.modelsSelect, (_event, payload): void => {
+    ModelManager.select(ModelIdSchema.parse(payload));
+  });
+  handle(IpcChannels.modelsDelete, (_event, payload): void => {
+    ModelManager.remove(ModelIdSchema.parse(payload));
+  });
 
   // Browsing history (tepegoz://history).
   handle(IpcChannels.historyList, (_event, payload): HistoryEntry[] => {

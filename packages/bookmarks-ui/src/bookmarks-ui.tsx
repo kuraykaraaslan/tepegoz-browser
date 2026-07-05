@@ -4,6 +4,7 @@ import {
   DragOverlay,
   PointerSensor,
   closestCenter,
+  useDraggable,
   useDroppable,
   useSensor,
   useSensors,
@@ -84,10 +85,12 @@ function Favicon({ src }: { src: string | null | undefined }) {
   );
 }
 
-/** One folder row in the left tree — selectable + a drop target for move-into. */
+/** One folder row in the left tree — selectable, a drop target (move-into), and draggable itself (a
+ *  non-root folder can be dragged onto another folder/root to move it). Roots are droppable only. */
 function FolderRow({
   node,
   depth,
+  draggable,
   selectedId,
   expanded,
   onToggle,
@@ -96,29 +99,44 @@ function FolderRow({
 }: {
   node: BookmarkManagerNode;
   depth: number;
+  draggable: boolean;
   selectedId: string;
   expanded: Set<string>;
   onToggle: (id: string) => void;
   onSelect: (id: string) => void;
   onContextMenu: (id: string, type: BookmarkNodeType) => void;
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id: `${TREE_PREFIX}${node.id}` });
+  const dndId = `${TREE_PREFIX}${node.id}`;
+  const { setNodeRef: setDropRef, isOver } = useDroppable({ id: dndId });
+  const { setNodeRef: setDragRef, attributes, listeners, isDragging } = useDraggable({
+    id: dndId,
+    disabled: !draggable,
+  });
+  const setRef = useCallback(
+    (el: HTMLElement | null) => {
+      setDropRef(el);
+      setDragRef(el);
+    },
+    [setDropRef, setDragRef],
+  );
   const subfolders = node.children.filter((c) => c.type === 'folder');
   const isOpen = expanded.has(node.id);
   const isSelected = selectedId === node.id;
   return (
     <li>
       <div
-        ref={setNodeRef}
-        className={`flex cursor-pointer items-center gap-1.5 rounded-md py-1.5 pr-2 text-sm ${
+        ref={setRef}
+        className={`flex cursor-pointer select-none items-center gap-1.5 rounded-md py-1.5 pr-2 text-sm ${
           isSelected ? 'bg-surface-overlay text-text-primary' : 'text-text-secondary hover:bg-surface-overlay/60'
         } ${isOver ? 'ring-2 ring-border-focus' : ''}`}
-        style={{ paddingLeft: 8 + depth * 14 }}
+        style={{ paddingLeft: 8 + depth * 14, opacity: isDragging ? 0.4 : 1 }}
         onClick={() => onSelect(node.id)}
         onContextMenu={(e) => {
           e.preventDefault();
           onContextMenu(node.id, 'folder');
         }}
+        {...attributes}
+        {...listeners}
       >
         {subfolders.length > 0 ? (
           <button
@@ -145,6 +163,7 @@ function FolderRow({
               key={sf.id}
               node={sf}
               depth={depth + 1}
+              draggable
               selectedId={selectedId}
               expanded={expanded}
               onToggle={onToggle}
@@ -170,17 +189,23 @@ function ItemRow({
   onSelectFolder: (id: string) => void;
   onContextMenu: (id: string, type: BookmarkNodeType) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: node.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } = useSortable({
+    id: node.id,
+  });
   const style: CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.4 : 1,
   };
+  // Highlight a folder row when another item is dragged over it — it's about to be dropped inside.
+  const dropInto = node.type === 'folder' && isOver && !isDragging;
   return (
     <li
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-surface-overlay"
+      className={`flex select-none items-center gap-3 rounded-md px-2 py-2 hover:bg-surface-overlay ${
+        dropInto ? 'ring-2 ring-border-focus' : ''
+      }`}
       onContextMenu={(e) => {
         e.preventDefault();
         onContextMenu(node.id, node.type);
@@ -272,28 +297,43 @@ export function BookmarksManager({
     });
   }, []);
 
+  const stripTree = (id: string): string => (id.startsWith(TREE_PREFIX) ? id.slice(TREE_PREFIX.length) : id);
+
   const handleDragStart = (e: DragStartEvent): void => setActiveId(String(e.active.id));
   const handleDragEnd = (e: DragEndEvent): void => {
     setActiveId(null);
     if (e.over === null || selectedId === null) return;
-    const active = String(e.active.id);
-    const over = String(e.over.id);
-    if (over.startsWith(TREE_PREFIX)) {
-      const folderId = over.slice(TREE_PREFIX.length);
-      if (folderId !== active) onMove(active, folderId, END_INDEX);
+    const rawActive = String(e.active.id);
+    const rawOver = String(e.over.id);
+    const activeNodeId = stripTree(rawActive); // a dragged tree folder is prefixed; right-pane rows are not
+    const overIsTree = rawOver.startsWith(TREE_PREFIX);
+    const overNodeId = stripTree(rawOver);
+    if (activeNodeId === overNodeId) return;
+    // 1) Dropped onto a folder in the LEFT tree → move INTO it. Covers moving into a folder, OUT of the
+    //    current folder (drop on a parent/root), or into another folder — for tree folders and list rows.
+    if (overIsTree) {
+      onMove(activeNodeId, overNodeId, END_INDEX);
       return;
     }
+    // A tree-folder drag only resolves against tree drops; dropping it in the list is a no-op.
+    if (rawActive.startsWith(TREE_PREFIX)) return;
+    // 2) A right-pane row dropped onto a FOLDER row in the list → move INTO that folder (Chrome behavior).
+    if (children.find((c) => c.id === overNodeId)?.type === 'folder') {
+      onMove(activeNodeId, overNodeId, END_INDEX);
+      return;
+    }
+    // 3) Otherwise reorder within the current folder.
     const ids = children.map((c) => c.id);
-    const from = ids.indexOf(active);
-    const to = ids.indexOf(over);
+    const from = ids.indexOf(activeNodeId);
+    const to = ids.indexOf(overNodeId);
     if (from === -1 || to === -1 || from === to) return;
-    onMove(active, selectedId, arrayMove(ids, from, to).indexOf(active));
+    onMove(activeNodeId, selectedId, arrayMove(ids, from, to).indexOf(activeNodeId));
   };
 
-  const activeNode = activeId === null ? null : findNode(roots, activeId);
+  const activeNode = activeId === null ? null : findNode(roots, stripTree(activeId));
 
   return (
-    <div className="flex h-full flex-col bg-surface-base text-text-primary">
+    <div className="flex h-full flex-col bg-surface-system text-text-primary">
       <div className="flex shrink-0 items-center gap-4 border-b border-border px-6 py-3">
         <h1 className="text-base font-semibold">{t.title}</h1>
         <input
@@ -330,6 +370,7 @@ export function BookmarksManager({
                   key={r.id}
                   node={r}
                   depth={0}
+                  draggable={false}
                   selectedId={selectedId ?? ''}
                   expanded={expanded}
                   onToggle={toggle}

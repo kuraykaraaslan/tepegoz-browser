@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { ModelGateway, MockProvider } from '@tepegoz/model-gateway';
+import {
+  ModelGateway,
+  MockProvider,
+  type CanonRequest,
+  type CanonResponse,
+  type ModelProvider,
+} from '@tepegoz/model-gateway';
 import type { ToolDescriptor } from '@tepegoz/shared-types';
 import Planner from './planner';
 
@@ -41,5 +47,41 @@ describe('Planner.plan', () => {
   it('rejects a plan that references an unregistered tool', async () => {
     const evil = { goal: '', steps: [{ id: 's1', tool: 'secret_get_files', args: {}, rationale: '', dependsOn: [] }] };
     await expect(Planner.plan(req(JSON.stringify(evil)))).rejects.toThrow(/unknown tool/);
+  });
+
+  it('adds the coreference instruction to the plan prompt ONLY when history is present', async () => {
+    /** Captures the system prompt the planner sends and returns a valid plan so plan() resolves. */
+    class CapturingProvider implements ModelProvider {
+      readonly id = 'anthropic' as const;
+      system = '';
+      complete(request: CanonRequest): Promise<CanonResponse> {
+        this.system = request.messages.find((m) => m.role === 'system')?.content ?? '';
+        return Promise.resolve({
+          text: JSON.stringify(validPlan),
+          stopReason: 'end',
+          usage: { inputTokens: 1, outputTokens: 1 },
+          toolCalls: [],
+        });
+      }
+    }
+    const base = { intent: 'summarize the page', tools, provider: 'anthropic' as const, model: 'claude-opus-4-8' };
+
+    const withHistory = new CapturingProvider();
+    ModelGateway.reset();
+    ModelGateway.register(withHistory);
+    await Planner.plan({
+      ...base,
+      history: [
+        { role: 'user', content: 'Atatürk' },
+        { role: 'assistant', content: 'searched Atatürk' },
+      ],
+    });
+    expect(withHistory.system).toContain('earlier turns of the SAME conversation');
+
+    const withoutHistory = new CapturingProvider();
+    ModelGateway.reset();
+    ModelGateway.register(withoutHistory);
+    await Planner.plan(base);
+    expect(withoutHistory.system).not.toContain('earlier turns of the SAME conversation');
   });
 });

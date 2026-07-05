@@ -9,7 +9,8 @@
     "./notifications": "./src/notifications.ts",
     "./macro-ir": "./src/macro-ir.ts",
     "./public-settings": "./src/public-settings.ts",
-    "./search-engines": "./src/search-engines.ts"
+    "./search-engines": "./src/search-engines.ts",
+    "./file-access": "./src/file-access.ts"
   },
   "main": "./src/index.ts",
   "types": "./src/index.ts",

@@ -6,6 +6,7 @@ import {
   faCreditCard,
   faDesktop,
   faDownload,
+  faFolderTree,
   faGauge,
   faGear,
   faGlobe,
@@ -30,11 +31,22 @@ import { AlertBanner, Badge, Button, Card, cn, Input, Toggle } from '@tepegoz/ui
 import { coreDict, DATE_FORMAT_IDS, formatDateByFormat, type DateFormatId } from '@tepegoz/i18n';
 import { useLocale, useT } from '@tepegoz/i18n/react';
 import { DEFAULT_SEARCH_ENGINE_ID, SEARCH_ENGINES } from '@tepegoz/shared-types/search-engines';
-import { isRunnableProvider, LOCALE_PREFS, PROVIDER_IDS, THEME_PREFS } from '@tepegoz/desktop-ipc';
+import {
+  FILE_ACCESS_MODES,
+  isRunnableProvider,
+  LOCALE_PREFS,
+  PROVIDER_IDS,
+  THEME_PREFS,
+} from '@tepegoz/desktop-ipc';
 import type {
+  AIAdaptor,
+  AIAdaptorAction,
   AppInfo,
   CredentialsStatus,
+  FileAccessGrant,
+  FileAccessMode,
   LocalePref,
+  LocalModelInfo,
   LoginCredentialMeta,
   LoginImportResult,
   McpServerState,
@@ -100,6 +112,7 @@ const IconBell = () => <FontAwesomeIcon icon={faBell} className={ICON} aria-hidd
 const IconPlug = () => <FontAwesomeIcon icon={faPlug} className={ICON} aria-hidden />;
 const IconLock = () => <FontAwesomeIcon icon={faLock} className={ICON} aria-hidden />;
 const IconSearch = () => <FontAwesomeIcon icon={faMagnifyingGlass} className={ICON} aria-hidden />;
+const IconFiles = () => <FontAwesomeIcon icon={faFolderTree} className={ICON} aria-hidden />;
 const IconDownload = () => <FontAwesomeIcon icon={faDownload} className={ICON} aria-hidden />;
 const IconA11y = () => <FontAwesomeIcon icon={faUniversalAccess} className={ICON} aria-hidden />;
 const IconSliders = () => <FontAwesomeIcon icon={faSliders} className={ICON} aria-hidden />;
@@ -504,6 +517,222 @@ function ProvidersSection({
   );
 }
 
+/**
+ * On-device models — download/select/delete GGUF models the agent can run locally. The catalog +
+ * live install/download state come from the main process over IPC (`listLocalModels` +
+ * `onLocalModelsState`); models download into the profile via node-llama-cpp, not bundled.
+ */
+function LocalModelsSection() {
+  const s = useT(settingsDict);
+  const c = useT(coreDict);
+  const [models, setModels] = useState<LocalModelInfo[]>([]);
+
+  useEffect(() => {
+    void window.tepegoz.listLocalModels().then(setModels, () => {
+      setModels([]);
+    });
+    return window.tepegoz.onLocalModelsState(setModels);
+  }, []);
+
+  return (
+    <Card title={s.localModels.title} subtitle={s.localModels.hint}>
+      {models.length === 0 ? (
+        <p className="text-sm text-text-secondary">{s.localModels.empty}</p>
+      ) : (
+        <ul className="space-y-2">
+          {models.map((m) => (
+            <li
+              key={m.id}
+              className="flex items-center gap-3 rounded-md border border-border px-3 py-2"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium text-text-primary">{m.name}</span>
+                  {m.recommended && (
+                    <Badge variant="success" size="sm">
+                      {s.localModels.recommended}
+                    </Badge>
+                  )}
+                  {m.selected && (
+                    <Badge variant="primary" size="sm" dot>
+                      {s.localModels.selected}
+                    </Badge>
+                  )}
+                </div>
+                <span className="text-xs text-text-secondary">
+                  {m.paramsB}
+                  {s.localModels.paramsUnit} · {m.ctx.toLocaleString()} {s.localModels.ctxUnit}
+                </span>
+                {m.downloading && (
+                  <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-surface-sunken">
+                    <div
+                      className="h-full bg-primary transition-[width] duration-300"
+                      style={{ width: `${String(Math.round(m.progress * 100))}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="flex shrink-0 items-center gap-1.5">
+                {m.downloading ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      window.tepegoz.cancelLocalModelDownload(m.id);
+                    }}
+                  >
+                    {c.common.cancel}
+                  </Button>
+                ) : m.installed ? (
+                  <>
+                    {!m.selected && (
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          void window.tepegoz
+                            .selectLocalModel(m.id)
+                            .then(() => window.tepegoz.listLocalModels())
+                            .then(setModels, () => undefined);
+                        }}
+                      >
+                        {s.localModels.use}
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        void window.tepegoz.deleteLocalModel(m.id).catch(() => undefined);
+                      }}
+                    >
+                      {s.localModels.delete}
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      void window.tepegoz.downloadLocalModel(m.id).catch(() => undefined);
+                    }}
+                  >
+                    {s.localModels.download}
+                  </Button>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
+/**
+ * Cost & performance — a master "use a local model" toggle plus a LIVE list of AIAdaptors (system,
+ * extension, and MCP groups), each shown with a kind badge and its actions, and a per-action "run on
+ * device" toggle. The inventory is built from the single CapabilityRegistry over IPC (`listAiAdaptors`),
+ * so it needs no maintenance as tools are added; mechanical actions (no AI step, `localCapable === false`)
+ * show a muted "Native · no AI" label instead of a toggle. Danger class is badged like the Agent Console.
+ */
+function LocalActionsSection({
+  prefs,
+  setPref,
+}: {
+  prefs: Preferences;
+  setPref: (patch: Partial<Preferences>) => void;
+}) {
+  const s = useT(settingsDict);
+  const [adaptors, setAdaptors] = useState<AIAdaptor[]>([]);
+
+  useEffect(() => {
+    void window.tepegoz.listAiAdaptors().then(setAdaptors, () => {
+      setAdaptors([]);
+    });
+  }, []);
+
+  const masterOn = prefs.useLocalModelForSimpleTasks;
+
+  const dangerVariant: Record<AIAdaptorAction['dangerClass'], 'success' | 'warning' | 'error'> = {
+    read: 'success',
+    state_changing: 'warning',
+    destructive: 'error',
+    financial: 'error',
+  };
+  const kindVariant: Record<AIAdaptor['kind'], 'info' | 'neutral'> = {
+    system: 'neutral',
+    extension: 'info',
+    mcp: 'info',
+  };
+  // System-adaptor titles are localized here by id; extension/MCP titles arrive already resolved.
+  const adaptorTitle = (a: AIAdaptor): string =>
+    a.kind === 'system' ? (s.adaptors[a.id as keyof typeof s.adaptors] ?? a.title) : a.title;
+
+  return (
+    <Card title={s.costTitle}>
+      <Toggle
+        id="local-model"
+        label={s.localModel}
+        description={s.localModelDesc}
+        checked={masterOn}
+        onChange={(v) => {
+          setPref({
+            useLocalModelForSimpleTasks: v,
+            localProvider: { ...prefs.localProvider, mode: v ? 'simple' : 'off' },
+          });
+        }}
+      />
+
+      <p className="mb-3 mt-5 text-sm text-text-secondary">{s.localActionsHint}</p>
+
+      {adaptors.length === 0 ? (
+        <p className="text-sm text-text-secondary">{s.noActionsYet}</p>
+      ) : (
+        <div className="space-y-4">
+          {adaptors.map((adaptor) => (
+            <div key={adaptor.id}>
+              <div className="mb-1.5 flex items-center gap-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                  {adaptorTitle(adaptor)}
+                </p>
+                <Badge variant={kindVariant[adaptor.kind]}>{s.adaptorKinds[adaptor.kind]}</Badge>
+              </div>
+              <ul className="space-y-1.5">
+                {adaptor.actions.map((a) => (
+                  <li
+                    key={a.id}
+                    className="flex items-center gap-3 rounded-md border border-border px-3 py-2"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <span className="font-mono text-sm text-text-primary">{a.id}</span>
+                      <Badge variant={dangerVariant[a.dangerClass]} className="ml-2" dot>
+                        {s.dangerLabels[a.dangerClass]}
+                      </Badge>
+                    </div>
+                    {a.localCapable ? (
+                      <Toggle
+                        id={`local-action-${a.id}`}
+                        size="sm"
+                        label={s.runLocallyLabel}
+                        checked={masterOn && (prefs.localActions[a.id] ?? true)}
+                        disabled={!masterOn}
+                        onChange={(v) => {
+                          setPref({ localActions: { ...prefs.localActions, [a.id]: v } });
+                        }}
+                      />
+                    ) : (
+                      <span className="shrink-0 text-xs text-text-disabled">{s.nativeNoAiLabel}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 /** Language, region, and date-format pickers with a live date preview. */
 /**
  * Homepage URL + default/custom search engines. The homepage drives new tabs, the Home button, and a
@@ -625,6 +854,132 @@ function SearchStartupSection({
         </div>
       </Card>
     </div>
+  );
+}
+
+/**
+ * File operations: the folder whitelist that sandboxes the AI assistant's file tools. Each folder
+ * carries a permission mode (read / read-write / full) and a recursive flag; the grant's mode is the
+ * authorization (an op within it runs without asking, beyond it the assistant must request approval).
+ * The list is persisted in `prefs.fileAccessGrants`; the main process reconciles the live access policy.
+ */
+function FileOperationsSection({
+  prefs,
+  setPref,
+}: {
+  prefs: Preferences;
+  setPref: (patch: Partial<Preferences>) => void;
+}) {
+  const s = useT(settingsDict);
+  const f = s.fileOps;
+  const [warn, setWarn] = useState('');
+  const grants = prefs.fileAccessGrants;
+
+  async function addFolder(): Promise<void> {
+    setWarn('');
+    const res = await window.tepegoz.pickFileAccessFolder();
+    if (res.cancelled) return;
+    const additions: FileAccessGrant[] = [];
+    for (const path of res.paths) {
+      const dupe = grants.some((g) => g.path === path) || additions.some((g) => g.path === path);
+      if (dupe) setWarn(f.duplicate);
+      else additions.push({ path, mode: 'read', recursive: true });
+    }
+    if (additions.length > 0) setPref({ fileAccessGrants: [...grants, ...additions] });
+  }
+
+  function updateGrant(path: string, patch: Partial<FileAccessGrant>): void {
+    setPref({ fileAccessGrants: grants.map((g) => (g.path === path ? { ...g, ...patch } : g)) });
+  }
+
+  function removeGrant(path: string): void {
+    setPref({ fileAccessGrants: grants.filter((g) => g.path !== path) });
+  }
+
+  return (
+    <Card title={f.title} subtitle={f.subtitle}>
+      <Toggle
+        id="file-ops-enabled"
+        label={f.enable}
+        description={f.enableDesc}
+        checked={prefs.fileOperationsEnabled}
+        onChange={(v) => {
+          setPref({ fileOperationsEnabled: v });
+        }}
+      />
+
+      <div
+        className={cn(
+          'mt-5 space-y-3',
+          !prefs.fileOperationsEnabled && 'pointer-events-none opacity-50',
+        )}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-text-secondary">{f.modeHint}</p>
+          <Button size="sm" variant="outline" onClick={() => void addFolder()}>
+            {f.addFolder}
+          </Button>
+        </div>
+
+        {grants.length === 0 ? (
+          <p className="rounded-md border border-dashed border-border px-3 py-6 text-center text-sm text-text-secondary">
+            {f.noFolders}
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {grants.map((g) => (
+              <li
+                key={g.path}
+                className="flex flex-col gap-2 rounded-md border border-border px-3 py-2 sm:flex-row sm:items-center"
+              >
+                <span
+                  className="min-w-0 flex-1 truncate font-mono text-xs text-text-primary"
+                  title={g.path}
+                >
+                  {g.path}
+                </span>
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-1.5 text-xs text-text-secondary">
+                    <input
+                      type="checkbox"
+                      checked={g.recursive}
+                      onChange={(e) => {
+                        updateGrant(g.path, { recursive: e.target.checked });
+                      }}
+                    />
+                    {f.recursive}
+                  </label>
+                  <select
+                    aria-label={f.modeLabel}
+                    value={g.mode}
+                    onChange={(e) => {
+                      updateGrant(g.path, { mode: e.target.value as FileAccessMode });
+                    }}
+                    className="h-8 rounded-md border border-border bg-surface-raised px-2 text-xs text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+                  >
+                    {FILE_ACCESS_MODES.map((m) => (
+                      <option key={m} value={m}>
+                        {f.modes[m]}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      removeGrant(g.path);
+                    }}
+                  >
+                    {f.remove}
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        {warn.length > 0 && <p className="text-xs text-amber-500">{warn}</p>}
+      </div>
+    </Card>
   );
 }
 
@@ -1180,19 +1535,12 @@ export function SettingsPage({
       group: G_AI,
       label: s.costTitle,
       icon: <IconGauge />,
-      searchText: `${s.costTitle} ${s.localModel} ${s.localModelDesc}`,
+      searchText: `${s.costTitle} ${s.localModel} ${s.localModelDesc} ${s.localActionsHint} ${s.localModels.title}`,
       content: (
-        <Card title={s.costTitle}>
-          <Toggle
-            id="local-model"
-            label={s.localModel}
-            description={s.localModelDesc}
-            checked={prefs.useLocalModelForSimpleTasks}
-            onChange={(v) => {
-              setPref({ useLocalModelForSimpleTasks: v });
-            }}
-          />
-        </Card>
+        <div className="space-y-6">
+          <LocalModelsSection />
+          <LocalActionsSection prefs={prefs} setPref={setPref} />
+        </div>
       ),
     },
     {
@@ -1308,6 +1656,14 @@ export function SettingsPage({
       ),
     },
     // ---------- Advanced ----------
+    {
+      id: 'file-operations',
+      group: G_ADVANCED,
+      label: s.fileOps.title,
+      icon: <IconFiles />,
+      searchText: `${s.fileOps.title} ${s.fileOps.subtitle} ${s.fileOps.enable} ${s.fileOps.addFolder}`,
+      content: <FileOperationsSection prefs={prefs} setPref={setPref} />,
+    },
     {
       id: 'system',
       group: G_ADVANCED,

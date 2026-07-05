@@ -62,6 +62,18 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   mcpServers: 'private',
   sitePermissions: 'private',
   popupBlocker: 'private',
+  popupBlockerSeeded: 'private',
+  // Private — on-device model config/footprint; the public cost-saver bool above is enough for extensions.
+  localProvider: 'private',
+  localActions: 'private',
+  // Private — agent panel per-run selections (provider override + autonomy + effort).
+  agentProviderOverride: 'private',
+  agentAutonomy: 'private',
+  agentEffort: 'private',
+  // Private — local file-access configuration (a filesystem footprint that must never reach an extension).
+  fileOperationsEnabled: 'private',
+  fileAccessGrants: 'private',
+  fileAccessSeeded: 'private',
 };
 
 // --- Compile-time guards: pin the shared PublicSettings shape to the real Preferences projection. ---

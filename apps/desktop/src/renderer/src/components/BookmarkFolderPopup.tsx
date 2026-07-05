@@ -1,10 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { resolveLocale, type Locale } from '@tepegoz/i18n';
+import { pick, resolveLocale, type Locale } from '@tepegoz/i18n';
 import { I18nProvider } from '@tepegoz/i18n/react';
+import { bookmarksUiDict } from '@tepegoz/bookmarks-ui/i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBookmark, faChevronDown, faChevronRight, faFolder } from '@fortawesome/free-solid-svg-icons';
-import type { BookmarkTreeNode } from '@tepegoz/desktop-ipc';
+import type { BookmarkMenuAction, BookmarkTreeNode } from '@tepegoz/desktop-ipc';
+import { BOOKMARK_ROOT_BAR } from '@tepegoz/bookmarks';
 import { applyTheme } from '../lib/theme';
+
+/** The item's reduced right-click menu (Open / Move to Bookmarks bar / Delete) — this popup handles it. */
+const openItemMenu = (id: string, type: 'folder' | 'bookmark'): void =>
+  window.tepegoz.showBookmarkContextMenu(id, type, 'folder-item');
+const END_INDEX = 100000;
 
 /**
  * Standalone render target for a bar folder's dropdown (loaded with `?surface=bookmark-folder&id=<id>`).
@@ -53,6 +60,10 @@ function FolderContents({ nodes, depth }: { nodes: readonly BookmarkTreeNode[]; 
               if (n.url !== null) window.tepegoz.navigateTab(n.url);
               window.tepegoz.closePopup();
             }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              openItemMenu(n.id, 'bookmark');
+            }}
           >
             <Favicon src={n.favicon} />
             <span className="min-w-0 flex-1 truncate">{n.title.length > 0 ? n.title : n.url}</span>
@@ -72,6 +83,10 @@ function FolderBranch({ node, depth }: { node: BookmarkTreeNode; depth: number }
         className={ROW}
         style={{ paddingLeft: 8 + depth * 14 }}
         onClick={() => setOpen((o) => !o)}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          openItemMenu(node.id, 'folder');
+        }}
       >
         <FontAwesomeIcon icon={open ? faChevronDown : faChevronRight} className="h-2.5 w-2.5 shrink-0 opacity-70" aria-hidden />
         <FontAwesomeIcon icon={faFolder} className="h-4 w-4 shrink-0" aria-hidden />
@@ -86,6 +101,35 @@ export function BookmarkFolderPopup({ folderId }: { folderId: string }) {
   const [locale, setLocale] = useState<Locale>('en');
   const [children, setChildren] = useState<BookmarkTreeNode[]>([]);
   const contentRef = useRef<HTMLDivElement>(null);
+  // Latest contents, read by the (mount-once) menu-action handler without re-subscribing.
+  const childrenRef = useRef<BookmarkTreeNode[]>([]);
+  childrenRef.current = children;
+
+  // The reduced right-click menu is popped by main and its action is sent back HERE (the popup window
+  // that requested it). Handle the ones this popup owns, then close so the change is visible on the bar.
+  useEffect(() => {
+    return window.tepegoz.onBookmarkMenuAction((a: BookmarkMenuAction) => {
+      const node = findNode(childrenRef.current, a.id);
+      if (a.action === 'open') {
+        if (node?.url != null) window.tepegoz.navigateTab(node.url);
+      } else if (a.action === 'open-new-tab') {
+        if (node?.url != null) window.tepegoz.createTabInBackground(node.url);
+      } else if (a.action === 'open-all') {
+        const urls: string[] = [];
+        const collect = (n: BookmarkTreeNode): void => {
+          if (n.type === 'bookmark' && n.url != null) urls.push(n.url);
+          n.children.forEach(collect);
+        };
+        if (node !== null) collect(node);
+        urls.forEach((u) => window.tepegoz.createTabInBackground(u));
+      } else if (a.action === 'move-to-bar') {
+        void window.tepegoz.moveBookmark(a.id, BOOKMARK_ROOT_BAR, END_INDEX);
+      } else if (a.action === 'delete') {
+        void window.tepegoz.removeBookmark(a.id);
+      }
+      window.tepegoz.closePopup();
+    });
+  }, []);
 
   useEffect(() => {
     const el = contentRef.current;
@@ -133,8 +177,11 @@ export function BookmarkFolderPopup({ folderId }: { folderId: string }) {
         <div className="min-h-0 flex-1 overflow-auto">
           <div ref={contentRef} className="flow-root p-1">
             {isEmpty ? (
-              <span className="block px-2 py-1.5 text-sm text-text-tertiary" style={{ minHeight: ROW_H }}>
-                —
+              <span
+                className="block px-3 py-2 text-center text-sm text-text-tertiary"
+                style={{ minHeight: ROW_H }}
+              >
+                {pick(bookmarksUiDict, locale).emptyFolder}
               </span>
             ) : (
               <FolderContents nodes={children} depth={0} />

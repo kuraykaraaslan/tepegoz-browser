@@ -56,6 +56,8 @@ export const IpcChannels = {
   tabsGroupStartRename: 'tabs:group-start-rename',
   agentRun: 'agent:run',
   agentCancel: 'agent:cancel',
+  /** Renderer→main: reset conversation memory so the next run starts a fresh thread (panel "New task"). */
+  agentNewConversation: 'agent:new-conversation',
   agentEvent: 'agent:event',
   agentApprovalRequest: 'agent:approval-request',
   agentApprovalResponse: 'agent:approval-response',
@@ -63,6 +65,21 @@ export const IpcChannels = {
   agentPlanResponse: 'agent:plan-response',
   tokenUsage: 'token:usage',
   tokenUsageGet: 'token:usage-get',
+  // Agent panel config: current provider + choices + autonomy level, and setters for each.
+  agentGetConfig: 'agent:get-config',
+  agentSetProvider: 'agent:set-provider',
+  agentSetAutonomy: 'agent:set-autonomy',
+  /** Renderer→main: set the per-run reasoning-effort preset (Agent panel effort dropdown). */
+  agentSetEffort: 'agent:set-effort',
+  /** Renderer→main: open a file the agent produced (fire-and-forget; gated to whitelisted folders). */
+  agentOpenFile: 'agent:open-file',
+  // On-device model management (Settings → Providers → Local). `models:state` is a main→renderer push.
+  modelsList: 'models:list',
+  modelsDownload: 'models:download',
+  modelsCancel: 'models:cancel',
+  modelsSelect: 'models:select',
+  modelsDelete: 'models:delete',
+  modelsState: 'models:state',
   /** Renderer→main: the identity of every built-in extension (from the validated on-disk catalog). */
   extensionsListManifests: 'extensions:list-manifests',
   extensionOpen: 'extension:open',
@@ -105,6 +122,9 @@ export const IpcChannels = {
   popupBlockerTrust: 'popup-blocker:trust',
   popupBlockerRecentRequests: 'popup-blocker:recent-requests',
   mcpGetStatus: 'mcp:get-status',
+  /** Renderer→main: the live AIAdaptor inventory (system + extension + MCP groups, each with its
+   *  actions) for the Settings "run locally" list — built from the single CapabilityRegistry. */
+  aiAdaptorsList: 'ai-adaptors:list',
   // Notification center: list/mutate the persisted center, plus main→renderer pushes for live state,
   // transient toasts, and the per-site Web Notification consent prompt.
   notificationsList: 'notifications:list',
@@ -143,6 +163,13 @@ export const IpcChannels = {
   macrosRecordStep: 'macros:record-step',
   /** Main→renderer push: run progress (step started/finished, run done/failed). */
   macrosRunProgress: 'macros:run-progress',
+  // File operations (Settings → File operations): the folder-access whitelist that sandboxes the agent's
+  // file tools. The grant LIST lives in `Preferences.fileAccessGrants` (read via prefs:get, written via
+  // prefs:set — the main-process host reconciles the live FileAccessPolicy on change). The AI-driven
+  // "grant this folder / allow this write" consent reuses the existing agent HITL approval modal (a file
+  // op that exceeds its folder's granted mode, and every grant-management tool, fall through to it). So
+  // the only dedicated channel is the native directory picker for the Settings "Add folder" button.
+  fileAccessPickFolder: 'file-access:pick-folder',
 } as const;
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];

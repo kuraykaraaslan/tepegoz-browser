@@ -5,6 +5,7 @@ import {
   ModelRouter,
   OpenAIProvider,
   TokenLedger,
+  type CanonMessage,
   type EffortLevel,
   type ModelProvider,
 } from '@tepegoz/model-gateway';
@@ -26,6 +27,18 @@ import type { AgentEventKind } from '@tepegoz/ext-agent/types';
 import CredentialVault from '@tepegoz/credential-vault';
 import PreferenceStore from '@tepegoz/preferences';
 import { registerBuiltinTools, type BrowserHost, type JournalReader } from '@tepegoz/browser-tools';
+import { LocalProvider, type LocalProviderConfig } from '@tepegoz/local-inference';
+
+/** The reasoning-effort preset (Agent panel) maps to a per-call max output-token budget: higher effort
+ *  allows longer reasoning/summaries. Kept within Claude 4.x output limits. Applied to both the planning
+ *  and the reactive-execution calls; the Anthropic adapter also receives the matching `output_config.effort`. */
+const EFFORT_MAX_TOKENS: Record<EffortLevel, number> = {
+  low: 2048,
+  medium: 4096,
+  high: 8192,
+  xhigh: 16384,
+  max: 32768,
+};
 
 /** Best-effort URL string from a tool call's args (for the sensitive-site lockout). */
 function urlFromArgs(args: unknown): string | undefined {
@@ -80,11 +93,19 @@ export interface AgentRunDeps {
   journal: JournalReader;
   activeTabUrl: () => string | undefined;
   handoffStrings: { captcha: string; twofa: string };
+  /**
+   * On-device inference config (engine + selected-model resolver). Injected by the Electron wiring;
+   * absent when the app didn't wire a local engine, in which case `'local'` routing is unavailable and
+   * the run falls back to a cloud provider. Keeps this package Electron-free.
+   */
+  localInference?: LocalProviderConfig;
 }
 
 export interface AgentRunSummary {
   stoppedReason: string;
   ok: boolean;
+  /** The agent's closing summary for this turn — appended to the conversation memory by the host. */
+  summary?: string;
 }
 
 /**
@@ -99,22 +120,29 @@ export interface AgentRunSummary {
  * Anthropic adapter (its `output_config.effort`); the OpenAI tier models are plain chat models that
  * take no effort field, so it is ignored there (see {@link OpenAIProvider}).
  */
-function providerFor(provider: AIProvider, apiKey: string, effort: EffortLevel): ModelProvider {
-  if (provider === 'openai') {
-    return new OpenAIProvider({ apiKey });
+/**
+ * Resolve which provider serves the run, in priority order: (1) an explicit per-run override from the
+ * Agent panel, when usable; (2) whole-agent-local (`mode:'default'`) when a model is available; (3) the
+ * highest-priority stored key whose provider has an adapter. Throws {@link AppError} when none is usable.
+ */
+function resolveProvider(
+  override: AIProvider | null,
+  mode: 'off' | 'simple' | 'default',
+  localAvailable: boolean,
+): { provider: AIProvider; apiKey: string } {
+  // 1) Explicit per-run override — honored ONLY when actually usable (local needs a model; a cloud
+  //    provider needs a stored key). An unusable override is ignored and we fall through.
+  if (override === 'local' && localAvailable) {
+    return { provider: 'local', apiKey: '' };
   }
-  return new AnthropicProvider({ apiKey, effort });
-}
-
-export async function runAgent(
-  prompt: string,
-  hooks: AgentRunHooks,
-  deps: AgentRunDeps,
-): Promise<AgentRunSummary> {
-  const prefs = PreferenceStore.getAll();
-  // A key for ANY provider can be stored, but a run resolves to the highest-priority stored key whose
-  // provider the runtime has an adapter for — so a user whose top key is a not-yet-wired provider
-  // still runs on a lower-priority supported key instead of hard-failing.
+  if (override !== null && override !== 'local' && isRunnableProvider(override)) {
+    const overrideKey = CredentialVault.getFirstKeyForProvider(override);
+    if (overrideKey !== null) return { provider: override, apiKey: overrideKey };
+  }
+  // 2) Whole-agent-local.
+  if (mode === 'default' && localAvailable) {
+    return { provider: 'local', apiKey: '' };
+  }
   const storedKeys = CredentialVault.listMeta();
   const runnable = storedKeys.find((m) => isRunnableProvider(m.provider));
   if (runnable === undefined) {
@@ -127,26 +155,74 @@ export async function runAgent(
       501,
     );
   }
-  // Use that provider's highest-priority key. The raw key stays in main (getFirstKeyForProvider is
-  // main-only), never on IPC.
-  const provider = runnable.provider;
-  const apiKey = CredentialVault.getFirstKeyForProvider(provider);
+  // The raw key stays in main (getFirstKeyForProvider is main-only), never on IPC.
+  const apiKey = CredentialVault.getFirstKeyForProvider(runnable.provider);
   if (apiKey === null) {
     throw new AppError('No API key configured. Add one in Settings → Providers.', 401);
   }
+  return { provider: runnable.provider, apiKey };
+}
 
-  const route = ModelRouter.route({
-    capability: 'plan',
-    costSaver: prefs.useLocalModelForSimpleTasks,
-    provider,
-  });
+function providerFor(
+  provider: AIProvider,
+  apiKey: string,
+  effort: EffortLevel,
+  localConfig: LocalProviderConfig | undefined,
+): ModelProvider {
+  if (provider === 'local') {
+    if (localConfig === undefined) {
+      throw new AppError('On-device inference is not available on this machine.', 503);
+    }
+    return new LocalProvider(localConfig);
+  }
+  if (provider === 'openai') {
+    return new OpenAIProvider({ apiKey });
+  }
+  return new AnthropicProvider({ apiKey, effort });
+}
+
+export async function runAgent(
+  prompt: string,
+  hooks: AgentRunHooks,
+  deps: AgentRunDeps,
+  /** Prior conversation turns (earlier prompts + summaries) so the agent has context for follow-ups. */
+  history: readonly CanonMessage[] = [],
+): Promise<AgentRunSummary> {
+  const prefs = PreferenceStore.getAll();
+  // Per-task token counter: the ledger is a process-global static, so clear it at the START of each run
+  // — otherwise the panel's counter shows session-cumulative tokens ("keeps climbing").
+  TokenLedger.reset();
+
+  // On-device availability: a native backend AND a selected/installed model. Drives both the
+  // whole-agent-local path below and the router's per-capability `local` offload.
+  const localAvailable =
+    deps.localInference?.engine.isAvailable() === true &&
+    deps.localInference.resolveModel() !== null;
+
+  // Resolve the provider: per-run override (panel selector) → whole-agent-local → highest-priority key.
+  const { provider, apiKey } = resolveProvider(
+    prefs.agentProviderOverride,
+    prefs.localProvider.mode,
+    localAvailable,
+  );
+
+  // Cost-saver is on when either the public toggle is set or the local provider is enabled at all.
+  const costSaver = prefs.useLocalModelForSimpleTasks || prefs.localProvider.mode !== 'off';
+
+  // Per-run reasoning effort (Agent panel): overrides the router's tier effort and sets the token budget.
+  const effort = prefs.agentEffort;
+  const maxTokens = EFFORT_MAX_TOKENS[effort];
+
+  const route = ModelRouter.route({ capability: 'plan', costSaver, localAvailable, provider });
   // The reactive loop runs on the exec tier (cheaper/faster than the planning tier).
-  const execRoute = ModelRouter.route({
-    capability: 'exec',
-    costSaver: prefs.useLocalModelForSimpleTasks,
-    provider,
-  });
-  ModelGateway.register(providerFor(provider, apiKey, route.effort));
+  const execRoute = ModelRouter.route({ capability: 'exec', costSaver, localAvailable, provider });
+  ModelGateway.register(providerFor(provider, apiKey, effort, deps.localInference));
+  // Also register the on-device provider when a model is available, so a simple-capability local
+  // offload (router `transport:'local'` → `provider:'local'`) resolves even while the main run is on a
+  // cloud provider. Harmless duplicate when the main provider already IS local.
+  if (provider !== 'local' && localAvailable && deps.localInference !== undefined) {
+    ModelGateway.register(new LocalProvider(deps.localInference));
+  }
 
   registerBuiltinTools(deps.browserHost, deps.journal);
   const tools = CapabilityRegistry.list().map((d) => ({
@@ -161,6 +237,8 @@ export async function runAgent(
     tools,
     provider: route.provider,
     model: route.model,
+    maxTokens,
+    history,
   });
   hooks.onEvent(
     'plan',
@@ -213,15 +291,27 @@ export async function runAgent(
         tools,
         provider: execRoute.provider,
         model: execRoute.model,
+        maxTokens,
+        history,
       },
       {
         signal: hooks.signal,
+        // Surface each step's decision rationale as a 'decision' event → the panel's Reasoning section.
+        onDecision: (tool, rationale) => {
+          if (rationale.length > 0) hooks.onEvent('decision', tool, rationale);
+        },
         // The Policy Kernel gets the concrete site + taint of EACH tool call here (this is what
         // makes the sensitive-site lockout and taint→HITL actually fire at runtime).
-        ctxFor: (_tool, args): InvokeContext => {
+        ctxFor: (tool, args): InvokeContext => {
           const targetUrl = urlFromArgs(args) ?? deps.activeTabUrl();
           const ctx: InvokeContext = { taintedArgs: taint.isTainted(args) };
           if (targetUrl !== undefined) ctx.targetUrl = targetUrl;
+          // create/upload-style tools require an idempotency key at the PEP. The agent supplies a fresh
+          // one per invocation — the reactor's loop detection and each tool's own guards (e.g.
+          // file_create_file's exists→409 check) handle accidental repeats.
+          if (CapabilityRegistry.get(tool)?.descriptor.requiresIdempotencyKey === true) {
+            ctx.idempotencyKey = globalThis.crypto.randomUUID();
+          }
           return ctx;
         },
         onOutcome: (o: StepOutcome) => {
@@ -261,7 +351,13 @@ export async function runAgent(
         : `Finished: ${result.stoppedReason}`,
       `${String(usage.totalTokens)} tokens`,
     );
-    return { stoppedReason: result.stoppedReason, ok: result.stoppedReason === 'completed' };
+    return {
+      stoppedReason: result.stoppedReason,
+      ok: result.stoppedReason === 'completed',
+      ...(result.summary !== undefined && result.summary.length > 0
+        ? { summary: result.summary }
+        : {}),
+    };
   } finally {
     ToolGateway.setConfirmHandler(null);
     ToolGateway.setAuditHandler(null);

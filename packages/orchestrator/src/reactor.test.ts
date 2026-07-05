@@ -95,9 +95,53 @@ describe('parseDecision (untrusted LLM output boundary)', () => {
     });
   });
 
-  it('rejects invalid JSON and unknown actions', () => {
-    expect(() => parseDecision('not json')).toThrow();
-    expect(() => parseDecision('{"action":"delete_all"}')).toThrow();
+  it('rejects invalid JSON and shapes with no salvageable decision', () => {
+    expect(() => parseDecision('not json')).toThrow(); // unparseable
+    expect(() => parseDecision('{"action":"act"}')).toThrow(); // act with no tool
+    expect(() => parseDecision('{"foo":"bar"}')).toThrow(); // no discriminator / tool / summary
+  });
+
+  it('coerces a tool id placed directly in the action field into an act decision', () => {
+    // Observed from gpt-4o: {"action":"<toolid>", "args":{…}} instead of action:"act" + tool:"<id>".
+    expect(
+      parseDecision('{"action":"browser_update_location","args":{"url":"https://www.google.com"}}'),
+    ).toEqual({
+      action: 'act',
+      tool: 'browser_update_location',
+      args: { url: 'https://www.google.com' },
+      rationale: '',
+    });
+  });
+
+  it('promotes a tool-id-in-action over a bogus tool field (e.g. a misplaced ref number)', () => {
+    // Observed from gpt-4o: the real tool id landed in `action`, while `tool` held the ref "21".
+    expect(
+      parseDecision(
+        '{"action":"browser_update_page","tool":"21","args":{"action":"fill","ref":21,"text":"x"}}',
+      ),
+    ).toEqual({
+      action: 'act',
+      tool: 'browser_update_page',
+      args: { action: 'fill', ref: 21, text: 'x' },
+      rationale: '',
+    });
+  });
+
+  it('coerces weak-model near-miss shapes (missing action, "arguments" alias, envelope)', () => {
+    // No `action`, tool present, OpenAI-style "arguments" key.
+    expect(parseDecision('{"tool":"browser_get_elements","arguments":{"ref":"e1"}}')).toEqual({
+      action: 'act',
+      tool: 'browser_get_elements',
+      args: { ref: 'e1' },
+      rationale: '',
+    });
+    // No `action`, only a summary ⇒ finish.
+    expect(parseDecision('{"summary":"done"}')).toEqual({ action: 'finish', summary: 'done' });
+    // Wrapped in a single-object envelope.
+    expect(parseDecision('{"decision":{"action":"finish","summary":"ok"}}')).toEqual({
+      action: 'finish',
+      summary: 'ok',
+    });
   });
 });
 
@@ -171,5 +215,51 @@ describe('Reactor.run', () => {
     expect(res.stoppedReason).toBe('tool_error');
     expect(res.outcomes[0]?.error?.code).toBe('FORBIDDEN');
     expect(calls).toEqual([]);
+  });
+});
+
+describe('Reactor system prompt (coreference + browsing strategy)', () => {
+  /** Captures the system message the model receives so we can assert its guidance. */
+  class CapturingProvider implements ModelProvider {
+    readonly id: AIProvider = 'anthropic';
+    system = '';
+    complete(request: CanonRequest): Promise<CanonResponse> {
+      this.system = request.messages.find((m) => m.role === 'system')?.content ?? '';
+      return Promise.resolve({
+        text: finish,
+        stopReason: 'end',
+        usage: { inputTokens: 1, outputTokens: 1 },
+        toolCalls: [],
+      });
+    }
+  }
+
+  const capture = async (history?: CanonRequest['messages']): Promise<string> => {
+    const provider = new CapturingProvider();
+    ModelGateway.reset();
+    ModelGateway.register(provider);
+    await Reactor.run({
+      goal: 'do it',
+      tools: tools(),
+      provider: 'anthropic',
+      model: 'mock',
+      ...(history !== undefined ? { history } : {}),
+    });
+    return provider.system;
+  };
+
+  it('adds the coreference instruction ONLY when there are prior turns', async () => {
+    const withHistory = await capture([
+      { role: 'user', content: 'Atatürk' },
+      { role: 'assistant', content: 'searched Atatürk' },
+    ]);
+    expect(withHistory).toContain('earlier turns of the SAME conversation');
+
+    const withoutHistory = await capture();
+    expect(withoutHistory).not.toContain('earlier turns of the SAME conversation');
+  });
+
+  it('always prefers reusing the current tab over opening a new one', async () => {
+    expect(await capture()).toContain('Prefer to stay in the CURRENT tab');
   });
 });

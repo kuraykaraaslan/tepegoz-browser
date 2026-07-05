@@ -1,5 +1,5 @@
 import type { AIProvider } from '@tepegoz/shared-types';
-import { ANTHROPIC_MODEL, type EffortLevel } from './models';
+import { ANTHROPIC_MODEL, LOCAL_MODEL, OPENAI_MODEL, type EffortLevel } from './models';
 
 /**
  * Deterministic capability → model routing (L7). Maps each capability to a model tier and decides
@@ -11,11 +11,25 @@ import { ANTHROPIC_MODEL, type EffortLevel } from './models';
  *     transparently fall back to the cheap cloud classify tier — real on-device routing arrives in
  *     Phase 1b (ONNX/DirectML). The routing LOGIC ships now so nothing has to be rewritten.
  *
- * Pure: returns a decision; the ModelGateway executes it. Model IDs are Anthropic-specific for the
- * Phase 1a single-provider (Claude) scope; other providers' tier maps arrive with their adapters.
+ * Pure: returns a decision; the ModelGateway executes it. The chosen model is looked up in the
+ * provider's tier map ({@link PROVIDER_MODELS}), so adding a provider is a data change, not a code
+ * branch here.
  */
 export type ModelTier = keyof typeof ANTHROPIC_MODEL; // 'plan' | 'exec' | 'classify'
 export type ModelTransport = 'local' | 'cloud';
+
+/**
+ * Per-provider tier → model map. Each provider shares the SAME `plan | exec | classify` keys, so the
+ * router picks a provider's map and indexes by tier — no provider-specific branching. Gemini has no
+ * adapter yet (not in RUNNABLE_AI_PROVIDERS), so it points at the Anthropic map as a total-map
+ * placeholder; a run never resolves to it until a Gemini adapter ships.
+ */
+const PROVIDER_MODELS: Record<AIProvider, Record<ModelTier, string>> = {
+  anthropic: ANTHROPIC_MODEL,
+  openai: OPENAI_MODEL,
+  gemini: ANTHROPIC_MODEL,
+  local: LOCAL_MODEL,
+};
 
 /** Simple capabilities eligible for local-SLM offload under the cost-saver toggle. */
 export const SIMPLE_CAPABILITIES: ReadonlySet<string> = new Set([
@@ -73,10 +87,19 @@ export class ModelRouter {
     const eligibleForLocal = input.costSaver && SIMPLE_CAPABILITIES.has(input.capability);
 
     if (eligibleForLocal && input.localAvailable === true) {
-      return { tier, transport: 'local', provider, model: LOCAL_SLM_MODEL, effort, reason: 'local_offload' };
+      // A local offload is SERVED by the 'local' provider — report it directly so callers use the
+      // decision's provider/model uniformly (regardless of which cloud provider was requested).
+      return {
+        tier,
+        transport: 'local',
+        provider: 'local',
+        model: LOCAL_MODEL[tier],
+        effort,
+        reason: 'local_offload',
+      };
     }
 
     const reason = eligibleForLocal ? 'local_unavailable_cloud_fallback' : `${tier}_cloud`;
-    return { tier, transport: 'cloud', provider, model: ANTHROPIC_MODEL[tier], effort, reason };
+    return { tier, transport: 'cloud', provider, model: PROVIDER_MODELS[provider][tier], effort, reason };
   }
 }

@@ -1,5 +1,5 @@
-import { AppError } from '@tepegoz/libs';
-import { ModelGateway, type CanonRequest } from '@tepegoz/model-gateway';
+import { AppError, Logger } from '@tepegoz/libs';
+import { ModelGateway, type CanonMessage, type CanonRequest } from '@tepegoz/model-gateway';
 import { PlanSchema, type AIProvider, type Plan, type ToolDescriptor } from '@tepegoz/shared-types';
 import { PlannerMessages } from './messages';
 
@@ -16,6 +16,8 @@ export interface PlanRequest {
   model: string;
   maxTokens?: number;
   timeoutMs?: number;
+  /** Prior conversation turns so the plan for a follow-up message accounts for earlier context. */
+  history?: readonly CanonMessage[];
 }
 
 function extractJson(text: string): string {
@@ -31,9 +33,21 @@ export default class Planner {
     const toolList = req.tools
       .map((t) => `- ${t.id} (${t.dangerClass}): ${t.description}`)
       .join('\n');
+    // Coreference guidance — only when there ARE earlier turns, so a follow-up ("research this") plans
+    // for the real subject rather than the literal pronoun.
+    const coref =
+      req.history && req.history.length > 0
+        ? 'The messages before the goal are earlier turns of the SAME conversation. Resolve any pronoun ' +
+          'or deictic in the goal (English: this/that/it/them; Turkish: bunu/şunu/onu/o/bunları) to the ' +
+          'concrete subject from those earlier turns BEFORE planning. '
+        : '';
     const system =
       'You are the planner for an agentic browser. Produce a plan of tool-call steps that ' +
-      "accomplishes the user's goal. Output ONLY JSON of the form " +
+      "accomplishes the user's goal. " +
+      coref +
+      'Prefer navigating the current tab with browser_update_location; only plan a tab_create_item when ' +
+      'a new tab is genuinely needed (the current page must stay open or a side-by-side comparison). ' +
+      'Output ONLY JSON of the form ' +
       '{"goal": string, "steps": [{"id": string, "tool": string, "args": object, "rationale": string, "dependsOn": string[]}]}. ' +
       `Use ONLY these tools (by exact id):\n${toolList}\n` +
       'No prose and no markdown fences.';
@@ -44,10 +58,12 @@ export default class Planner {
       capability: 'plan',
       messages: [
         { role: 'system', content: system },
+        ...(req.history ?? []),
         { role: 'user', content: req.intent },
       ],
       maxTokens: req.maxTokens ?? 2000,
       timeoutMs: req.timeoutMs ?? 60_000,
+      responseFormat: 'json',
     };
 
     const response = await ModelGateway.complete(canon);
@@ -56,11 +72,16 @@ export default class Planner {
     try {
       raw = JSON.parse(extractJson(response.text));
     } catch {
+      Logger.warn(PlannerMessages.InvalidJson, { raw: response.text.slice(0, 400) });
       throw new AppError(PlannerMessages.InvalidJson, 502);
     }
 
     const parsed = PlanSchema.safeParse(raw);
     if (!parsed.success) {
+      Logger.warn(PlannerMessages.MalformedPlan, {
+        raw: response.text.slice(0, 400),
+        issues: parsed.error.issues,
+      });
       throw new AppError(PlannerMessages.MalformedPlan, 502);
     }
 

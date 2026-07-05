@@ -21,6 +21,10 @@
   --surface-raised:  #f9fafb;
   --surface-overlay: #f3f4f6;
   --surface-sunken:  #e5e7eb;
+  /* Background for internal/system pages (Settings, Extensions, History, Bookmarks). A dimmed, duller
+     shade of --surface-base so the trusted chrome recedes below the theme instead of glaring at full
+     brightness — derived from surface-base, so it tracks a custom theme color automatically. */
+  --surface-system:  color-mix(in srgb, var(--surface-base) 95%, #000);
 
   --text-primary:    #111827;
   --text-secondary:  #6b7280;
@@ -69,6 +73,8 @@
   --surface-raised:  #14334E;
   --surface-overlay: #1C3D5E;
   --surface-sunken:  #14334E;
+  /* Dark/custom themes glare more than light ones, so dim system pages harder here (~18% toward black). */
+  --surface-system:  color-mix(in srgb, var(--surface-base) 82%, #000);
 
   --text-primary:    #EAF2F8;
   --text-secondary:  #8FA8BF;
@@ -112,6 +118,7 @@
   --color-surface-raised:  var(--surface-raised);
   --color-surface-overlay: var(--surface-overlay);
   --color-surface-sunken:  var(--surface-sunken);
+  --color-surface-system:  var(--surface-system);
 
   --color-text-primary:    var(--text-primary);
   --color-text-secondary:  var(--text-secondary);

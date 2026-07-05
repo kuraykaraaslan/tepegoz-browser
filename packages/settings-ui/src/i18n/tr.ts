@@ -77,6 +77,29 @@ export const tr: SettingsStrings = {
   notificationsDesc:
     'Ajan devri, siteler ve sistem olayları için bildirim merkezini, toast’ları ve işletim sistemi bildirimlerini gösterir. Kapalıyken yalnızca merkez geçmişi tutar.',
 
+  // --- Dosya işlemleri ---
+  fileOps: {
+    title: 'Dosya işlemleri',
+    subtitle:
+      'Yapay zekâ asistanının okuyup değiştirebileceği klasörler. Diskinizdeki diğer her şey erişime kapalı kalır. Varsayılan klasör home/tepegoz.',
+    enable: 'Dosya işlemlerine izin ver',
+    enableDesc:
+      'Ana anahtar. Kapalıyken asistan, aşağıdaki klasörler ne derse desin hiçbir dosyaya dokunamaz.',
+    addFolder: 'Klasör ekle',
+    noFolders: 'Henüz klasör yok — asistanın dosyalarla çalışması için bir tane ekleyin.',
+    recursive: 'Alt klasörleri dâhil et',
+    modeLabel: 'Erişim',
+    modes: {
+      read: 'Yalnızca okuma',
+      'read-write': 'Okuma ve yazma',
+      full: 'Tam (silme dâhil)',
+    },
+    modeHint:
+      'Bir klasörün erişim düzeyi içinde asistan sormadan çalışır; bunun ötesindeki her şey — ve her yeni klasör — onayınızı gerektirir.',
+    remove: 'Kaldır',
+    duplicate: 'Bu klasör zaten listede.',
+  },
+
   // --- Sağlayıcılar ve API anahtarları ---
   providersTitle: 'Sağlayıcılar ve API anahtarları',
   providersSubtitle:
@@ -104,13 +127,49 @@ export const tr: SettingsStrings = {
     anthropic: 'Claude (Anthropic)',
     openai: 'OpenAI',
     gemini: 'Gemini (Google)',
+    local: 'Yerel (cihazda)',
   },
 
   // --- Maliyet ve performans ---
   costTitle: 'Maliyet ve performans',
   localModel: 'Basit işler için yerel model kullan',
   localModelDesc:
-    'Basit adımları (sınıflandırma, özetleme) cihazda çalıştırarak AI maliyetini düşürür, gerektiğinde buluta döner. Yerel model ileri bir sürümde devreye girer.',
+    'Basit AI adımlarını (sayfayı okuyup anlama, özetleme, sınıflandırma) cihazında çalıştırarak maliyeti düşürür, gerektiğinde buluta döner. Yerel modeli Sağlayıcılar → Yerel altından ekle.',
+  localActionsHint:
+    'Ajanın hangi AI adımlarının cihazında çalışabileceğini seç. Mekanik tarayıcı işlemleri (tıkla, gezin, sekme aç) her zaman yerel/native çalışır — AI adımları yoktur.',
+  runLocallyLabel: 'Cihazda',
+  nativeNoAiLabel: 'Native · AI yok',
+  noActionsYet: 'Henüz aksiyon yok.',
+  localModels: {
+    title: 'Cihaz-içi modeller',
+    hint: 'Ajanı yerelde çalıştırmak için bir model indir. Profilinde saklanır — uygulamayla paketlenmez.',
+    recommended: 'Önerilen',
+    selected: 'Kullanımda',
+    use: 'Kullan',
+    download: 'İndir',
+    delete: 'Sil',
+    empty: 'Model yok.',
+    paramsUnit: 'B',
+    ctxUnit: 'ctx',
+  },
+  dangerLabels: {
+    read: 'okur',
+    state_changing: 'sayfayı değiştirir',
+    destructive: 'yıkıcı',
+    financial: 'finansal',
+  },
+  // AIAdaptor grupları: sistem adaptör başlıkları (adaptör id'sine göre) + grup türü rozet etiketleri.
+  adaptors: {
+    browser: 'Tarayıcı',
+    file: 'Dosya işlemleri',
+    journal: 'Günlük ve denetim',
+    extensions: 'Eklentiler',
+  },
+  adaptorKinds: {
+    system: 'Sistem',
+    extension: 'Eklenti',
+    mcp: 'MCP',
+  },
 
   // --- Bağlantılar / MCP ---
   connectionsTitle: 'Bağlantılar',

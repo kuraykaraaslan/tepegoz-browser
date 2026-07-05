@@ -20,6 +20,8 @@
   "dependencies": {
     "@tepegoz/extension-sdk": "workspace:*",
     "@tepegoz/i18n": "workspace:*",
+    "@tepegoz/markdown": "workspace:*",
+    "@tepegoz/shared-types": "workspace:*",
     "@tepegoz/ui": "workspace:*"
   },
   "peerDependencies": {

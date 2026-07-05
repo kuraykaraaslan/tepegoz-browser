@@ -37,6 +37,7 @@ export const en = {
       addFolder: 'Add folder…',
       delete: 'Delete',
       manager: 'Bookmark manager',
+      moveToBar: 'Move to Bookmarks bar',
     },
     // Add/rename dialog (bookmark bar).
     newFolder: 'New folder',

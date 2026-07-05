@@ -30,6 +30,7 @@ export const tr: AppStrings = {
       addFolder: 'Klasör ekle…',
       delete: 'Sil',
       manager: 'Yer imi yöneticisi',
+      moveToBar: 'Yer imi çubuğuna taşı',
     },
     newFolder: 'Yeni klasör',
     folderNamePlaceholder: 'Klasör adı',

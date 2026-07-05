@@ -78,6 +78,29 @@ export const en = {
   notificationsDesc:
     'Show the notification center, toasts, and native OS notifications for agent handoffs, sites, and system events. When off, only the center keeps a history.',
 
+  // --- File operations ---
+  fileOps: {
+    title: 'File operations',
+    subtitle:
+      'Folders the AI assistant may read and modify. Everything else on your disk stays off-limits. The default folder is home/tepegoz.',
+    enable: 'Allow file operations',
+    enableDesc:
+      'Master switch. When off, the assistant cannot touch any file, whatever the folders below say.',
+    addFolder: 'Add folder',
+    noFolders: 'No folders yet — add one to let the assistant work with files.',
+    recursive: 'Include subfolders',
+    modeLabel: 'Access',
+    modes: {
+      read: 'Read only',
+      'read-write': 'Read & write',
+      full: 'Full (incl. delete)',
+    },
+    modeHint:
+      'Within a folder’s access level the assistant works without asking; anything beyond it — and any new folder — needs your approval.',
+    remove: 'Remove',
+    duplicate: 'That folder is already in the list.',
+  },
+
   // --- Providers & API keys ---
   providersTitle: 'Providers & API keys',
   providersSubtitle:
@@ -105,13 +128,49 @@ export const en = {
     anthropic: 'Claude (Anthropic)',
     openai: 'OpenAI',
     gemini: 'Gemini (Google)',
+    local: 'Local (on-device)',
   },
 
   // --- Cost & performance ---
   costTitle: 'Cost & performance',
   localModel: 'Use a local model for simple tasks',
   localModelDesc:
-    'Runs simple steps (classify, summarize) on-device to cut AI cost, falling back to the cloud when needed. The local model activates in a later release.',
+    'Runs simple AI steps (read & understand pages, summarize, classify) on your device to cut cost, falling back to the cloud when needed. Add a local model under Providers → Local.',
+  localActionsHint:
+    'Choose which of the agent’s AI steps may run on your device. Mechanical browser actions (click, navigate, open tab) always run natively — they have no AI step.',
+  runLocallyLabel: 'On device',
+  nativeNoAiLabel: 'Native · no AI',
+  noActionsYet: 'No actions available yet.',
+  localModels: {
+    title: 'On-device models',
+    hint: 'Download a model to run the agent locally. Stored in your profile — not bundled with the app.',
+    recommended: 'Recommended',
+    selected: 'In use',
+    use: 'Use',
+    download: 'Download',
+    delete: 'Delete',
+    empty: 'No models available.',
+    paramsUnit: 'B',
+    ctxUnit: 'ctx',
+  },
+  dangerLabels: {
+    read: 'reads',
+    state_changing: 'changes page',
+    destructive: 'destructive',
+    financial: 'financial',
+  },
+  // AIAdaptor groups: system-adaptor titles (keyed by adaptor id) + the per-group kind badge labels.
+  adaptors: {
+    browser: 'Browser',
+    file: 'File operations',
+    journal: 'Journal & audit',
+    extensions: 'Extensions',
+  },
+  adaptorKinds: {
+    system: 'System',
+    extension: 'Extension',
+    mcp: 'MCP',
+  },
 
   // --- Connections / MCP ---
   connectionsTitle: 'Connections',

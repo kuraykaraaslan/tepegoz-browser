@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { RiskLevelEnum } from './enums';
+import { AiTaskEnum, RiskLevelEnum } from './enums';
 
 /**
  * MCP tool naming: {domain}_{verb}_{noun}, approved verb vocabulary only
@@ -31,8 +31,28 @@ export const ToolDescriptorSchema = z.object({
   requiresIdempotencyKey: z.boolean().default(false),
   /** Provenance for trust/marketplace (Ed25519 signer id, etc.). */
   provenance: z.string().optional(),
+  /**
+   * The LLM/cognitive work this action entails — the axis that decides local-vs-cloud. Optional and
+   * fail-safe: absent ⇒ treated as `'none'` (mechanical, no AI step → never "run locally"). See
+   * {@link AiTaskEnum}.
+   */
+  aiTask: AiTaskEnum.optional(),
+  /**
+   * Whether this action's AI work may run on the on-device model. Absent ⇒ derived from `aiTask`
+   * (anything other than `'none'`/absent is local-capable) by consumers; kept optional here so authors
+   * can force it off for a cognition-bearing action. Fail-safe: unknown ⇒ not local.
+   */
+  localCapable: z.boolean().optional(),
+  /** Explicit UI group; absent ⇒ consumers derive it from the id's `{domain}` prefix. */
+  category: z.string().max(64).optional(),
 });
 export type ToolDescriptor = z.infer<typeof ToolDescriptorSchema>;
+
+/** True when an action's AI work can run on the local model: explicit `localCapable`, else derived
+ *  from `aiTask` (present and not `'none'`). The single rule shared by the router and the Settings UI. */
+export function isLocalCapable(d: Pick<ToolDescriptor, 'aiTask' | 'localCapable'>): boolean {
+  return d.localCapable ?? (d.aiTask !== undefined && d.aiTask !== 'none');
+}
 
 /** Standard MCP error envelope (MCP_Server_Design_Rules) — no HTTP status, no stack. */
 export const ToolErrorCodeEnum = z.enum([

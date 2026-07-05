@@ -11,18 +11,30 @@
  */
 import type {
   AgentApprovalRequest,
+  AgentAutonomy,
+  AgentConfig,
+  AgentEffort,
   AgentEvent,
   AgentEventKind,
+  AgentModelChoice,
   AgentPlanPreview,
   AgentPlanStep,
   AgentRunResult,
   TokenUsageSnapshot,
 } from '@tepegoz/ext-agent/types';
+// Canonical effort-level list is owned by the agent package (zod-free); re-exported so the preferences
+// schema builds its z.enum from the same source (no drift), like the other canonical arrays below.
+import { AGENT_EFFORT_LEVELS } from '@tepegoz/ext-agent/types';
+export { AGENT_EFFORT_LEVELS };
 
 export type {
   AgentApprovalRequest,
+  AgentAutonomy,
+  AgentConfig,
+  AgentEffort,
   AgentEvent,
   AgentEventKind,
+  AgentModelChoice,
   AgentPlanPreview,
   AgentPlanStep,
   AgentRunResult,
@@ -47,7 +59,15 @@ export type { BookmarkEntry, BookmarkNode, BookmarkNodeType, BookmarkTreeNode, H
 
 /** Which action a native bookmark context-menu item asks the renderer to perform (main→renderer). */
 export interface BookmarkMenuAction {
-  action: 'open' | 'open-new-tab' | 'open-all' | 'rename' | 'add-folder' | 'delete' | 'open-manager';
+  action:
+    | 'open'
+    | 'open-new-tab'
+    | 'open-all'
+    | 'rename'
+    | 'add-folder'
+    | 'delete'
+    | 'open-manager'
+    | 'move-to-bar';
   /** The clicked node's id. */
   id: string;
   type: BookmarkNodeType;
@@ -61,6 +81,21 @@ import type { ExtensionManifest } from '@tepegoz/extension-sdk';
 // erased. Persisted in `Preferences.customSearchEngines` and merged with the built-in list.
 import type { SearchEngine } from '@tepegoz/shared-types/search-engines';
 export type { SearchEngine };
+
+// File-access grant model is owned by @tepegoz/shared-types (zod-free `file-access` entry, preload-safe).
+// The zod validator (preferences.model.ts) builds from the same FILE_ACCESS_MODES list (single source).
+import {
+  FILE_ACCESS_MODES,
+  type FileAccessGrant,
+  type FileAccessMode,
+} from '@tepegoz/shared-types/file-access';
+export { FILE_ACCESS_MODES };
+export type { FileAccessGrant, FileAccessMode };
+
+// Tool/action metadata types (zod-free type-only imports → erased, preload-safe). Used by the
+// "run locally" action inventory below.
+import type { AiTask, RiskLevel, ToolSource } from '@tepegoz/shared-types';
+export type { AiTask, RiskLevel, ToolSource } from '@tepegoz/shared-types';
 
 // Provider identity is owned by @tepegoz/shared-types (the single schema source): AIProviderEnum and
 // this contract both derive from the SAME zod-free `providers` entry, which the sandboxed preload can
@@ -175,6 +210,51 @@ export interface McpServerStatusInfo {
   error?: string;
 }
 
+/**
+ * The kind of an {@link AIAdaptor} (the group badge in Settings). `system` = a built-in tool group
+ * (browser / file operations / journal / the extension-management host); `extension` = a user-installed
+ * extension's own group; `mcp` = an external MCP server. Derived from the tool source in the main process.
+ */
+export const AI_ADAPTOR_KINDS = ['system', 'extension', 'mcp'] as const;
+export type AIAdaptorKind = (typeof AI_ADAPTOR_KINDS)[number];
+
+/**
+ * One agent action (a single registered tool), projected from the CapabilityRegistry for the Settings
+ * "run locally" list. `aiTask`/`localCapable` are resolved (defaults applied); `provenance` is the
+ * contributing extension/server id; `adaptorId` is the {@link AIAdaptor} it belongs to.
+ */
+export interface AIAdaptorAction {
+  id: string;
+  description: string;
+  dangerClass: RiskLevel;
+  source: ToolSource;
+  provenance?: string;
+  /** Resolved AI-task class ('none' when mechanical). */
+  aiTask: AiTask;
+  /** Resolved: whether this action's AI work may run on the local model. */
+  localCapable: boolean;
+  /** The id of the owning {@link AIAdaptor} (its group key). */
+  adaptorId: string;
+}
+
+/**
+ * An **AIAdaptor** — a named, typed group of agent actions surfaced in Settings → Cost & performance.
+ * System tool groups (file operations, browser, journal), each extension, and each MCP server are all
+ * modeled uniformly as adaptors. Built in the main process from the single CapabilityRegistry, so the
+ * list needs no maintenance as tools are added. For `system` adaptors the renderer may localize `title`
+ * by `id`; for `extension`/`mcp` the `title` is already resolved (manifest name / server label).
+ */
+export interface AIAdaptor {
+  /** Group key: a system id ('browser'|'file'|'journal'|'extensions'), an extension id, or a server id. */
+  id: string;
+  title: string;
+  kind: AIAdaptorKind;
+  description?: string;
+  /** Extension/server id for `extension`/`mcp` adaptors; absent for `system`. */
+  provenance?: string;
+  actions: AIAdaptorAction[];
+}
+
 export interface Preferences {
   theme: ThemePref;
   /**
@@ -184,8 +264,24 @@ export interface Preferences {
   themeColor: string;
   locale: LocalePref;
   telemetryEnabled: boolean;
-  /** Cost-saver: route simple capabilities to the local SLM (real routing lands in Phase 1b). */
+  /** Cost-saver: route simple/local-eligible capabilities to the on-device model. Mirrors
+   *  `localProvider.mode !== 'off'` (kept as the single public boolean the router reads as `costSaver`). */
   useLocalModelForSimpleTasks: boolean;
+  /** On-device (local) provider config: how it participates + which downloaded model is selected. */
+  localProvider: LocalProviderPref;
+  /** Per-action "run locally" overrides, keyed by action (tool) id → run-on-device. Absent id ⇒ the
+   *  action's default (derived from its `aiTask`). Only affects `localCapable` actions. */
+  localActions: Record<string, boolean>;
+  /** Per-run provider chosen from the Agent panel selector; `null` = no override (fall back to the
+   *  default resolution: whole-agent-local, then the highest-priority stored key). Only applied when
+   *  usable (a cloud provider needs a key; `'local'` needs an installed model). */
+  agentProviderOverride: ProviderId | null;
+  /** Agent autonomy: `'ask'` = HITL plan + per-tool approval (default, safe); `'auto'` = "act without
+   *  asking" (the panel auto-approves; `deny`-class policy still hard-blocks). */
+  agentAutonomy: AgentAutonomy;
+  /** Agent reasoning-effort preset for a run: raises reasoning depth (Anthropic `output_config.effort`)
+   *  AND the per-call max-token budget. Set from the Agent panel effort dropdown. */
+  agentEffort: AgentEffort;
   /**
    * The default AI provider — DERIVED from the credential vault's key order (the provider of the
    * top/highest-priority key) and synced by main whenever keys change. There is no separate UI for it;
@@ -216,11 +312,61 @@ export interface Preferences {
   sitePermissions: Record<string, SitePermissions>;
   /** Popup Blocker (strict) extension settings. */
   popupBlocker: PopupBlockerSettings;
+  /** One-time sentinel: true after the curated default trusted origins have been seeded into
+   *  `popupBlocker.trustedOrigins`, so an intentionally removed default is never re-added. Not
+   *  user-facing. */
+  popupBlockerSeeded: boolean;
+  /** Master switch for the agent's local file operations (Settings → File operations). When off, every
+   *  `file_*`/`fileaccess_*` tool refuses regardless of grants. */
+  fileOperationsEnabled: boolean;
+  /** The folders the agent may operate in, each with a permission mode (the whitelist sandbox). Empty =
+   *  no filesystem access. The main process seeds `~/tepegoz` (full) once — see `fileAccessSeeded`. */
+  fileAccessGrants: FileAccessGrant[];
+  /** One-time sentinel: true after the default `~/tepegoz` grant has been seeded, so an intentionally
+   *  emptied list is never re-seeded. Not user-facing. */
+  fileAccessSeeded: boolean;
+}
+
+/**
+ * How the on-device provider participates in a run:
+ *  - `'off'`     — never use the local model.
+ *  - `'simple'`  — local for simple/local-eligible actions only (cloud handles plan/decide).
+ *  - `'default'` — run the WHOLE agent on-device (plan + exec), fully offline.
+ */
+export type LocalProviderMode = 'off' | 'simple' | 'default';
+
+/** On-device provider config (keyless — the "key" is a downloaded model selected from the catalog). */
+export interface LocalProviderPref {
+  mode: LocalProviderMode;
+  /** Selected installed model id, or '' when none selected. */
+  selectedModelId: string;
+}
+
+/** One on-device model row for the Settings model-management UI (catalog entry + live install state). */
+export interface LocalModelInfo {
+  id: string;
+  name: string;
+  /** Parameter count in billions (a size/RAM hint). */
+  paramsB: number;
+  ctx: number;
+  recommended: boolean;
+  installed: boolean;
+  downloading: boolean;
+  /** 0..1 download progress while `downloading`. */
+  progress: number;
+  selected: boolean;
 }
 
 /** Per-origin web-capability grants. Keyed by origin in `Preferences.sitePermissions`. */
 export interface SitePermissions {
   notifications?: SitePermissionState | undefined;
+}
+
+/** Result of the native directory picker (Settings → File operations → Add folder). */
+export interface FileAccessFolderPickResult {
+  /** Absolute path(s) the user chose (canonical). Empty when cancelled. */
+  paths: string[];
+  cancelled: boolean;
 }
 
 /** Main → renderer: a site asked for a web capability; the renderer shows the consent prompt. */
@@ -497,6 +643,8 @@ export interface TepegozApi {
   runAgent(prompt: string): Promise<AgentRunResult>;
   /** Cancel an in-flight run. */
   cancelAgent(runId: string): void;
+  /** Reset conversation memory so the next run starts a fresh thread (panel "New task"). */
+  newAgentConversation(): void;
   /** Subscribe to the live Agent Console event stream; returns an unsubscribe function. */
   onAgentEvent(callback: (event: AgentEvent) => void): () => void;
   /** Subscribe to HITL approval prompts; returns an unsubscribe function. */
@@ -511,6 +659,29 @@ export interface TepegozApi {
   onTokenUsage(callback: (usage: TokenUsageSnapshot) => void): () => void;
   /** Fetch the current token-usage snapshot. */
   getTokenUsage(): Promise<TokenUsageSnapshot>;
+  /** Agent panel: current provider + selectable choices + autonomy level. */
+  getAgentConfig(): Promise<AgentConfig>;
+  /** Agent panel: set the per-run provider override (model selector). */
+  setAgentProvider(provider: ProviderId): Promise<void>;
+  /** Agent panel: set the autonomy level (mode dropdown). */
+  setAgentAutonomy(level: AgentAutonomy): Promise<void>;
+  /** Agent panel: set the reasoning-effort preset (effort dropdown). */
+  setAgentEffort(level: AgentEffort): Promise<void>;
+  /** Open a file the agent produced, gated to the whitelisted folders (fire-and-forget). */
+  openAgentFile(path: string): void;
+  // On-device model management (Settings → Providers → Local).
+  /** The model catalog merged with live install/download state. */
+  listLocalModels(): Promise<LocalModelInfo[]>;
+  /** Start (or resume) downloading a model into the profile; progress streams via onLocalModelsState. */
+  downloadLocalModel(id: string): Promise<void>;
+  /** Cancel an in-progress download. */
+  cancelLocalModelDownload(id: string): void;
+  /** Select an installed model for on-device runs. */
+  selectLocalModel(id: string): Promise<void>;
+  /** Delete a downloaded model file. */
+  deleteLocalModel(id: string): Promise<void>;
+  /** Subscribe to model list/state changes (download progress, install, select); returns unsubscribe. */
+  onLocalModelsState(callback: (models: LocalModelInfo[]) => void): () => void;
   // User-Agent switcher extension: read/apply the UA override for browsed pages.
   /** The currently applied UA override (or null for the browser default). */
   getUserAgent(): Promise<string | null>;
@@ -527,6 +698,9 @@ export interface TepegozApi {
   getRecentRequests(): Promise<PopupBlockerRequest[]>;
   /** Read-only status of every configured MCP server (Settings → Connections). Never returns secrets. */
   getMcpStatus(): Promise<McpServerStatusInfo[]>;
+  /** The live AIAdaptor inventory (system + extension + MCP groups, each with its actions) for the
+   *  Settings "run locally" list. Built from the single CapabilityRegistry, so it needs no maintenance. */
+  listAiAdaptors(): Promise<AIAdaptor[]>;
   /** The identity of every built-in extension (from the validated on-disk catalog). The renderer pairs
    *  each with its lazily-loaded surface components + icon; enabled/disabled state comes from prefs. */
   listExtensionManifests(): Promise<ExtensionManifestWire[]>;
@@ -587,8 +761,13 @@ export interface TepegozApi {
   removeBookmark(id: string): Promise<void>;
   /** Reparent + reorder a node to `index` within `newParentId` (drag-drop). */
   moveBookmark(id: string, newParentId: string, index: number): Promise<void>;
-  /** Pop the native right-click menu for a bar/manager node. */
-  showBookmarkContextMenu(id: string, type: BookmarkNodeType): void;
+  /** Pop the native right-click menu for a bar/manager node. `variant` 'folder-item' is the reduced
+   *  menu used inside a bar folder-dropdown popup. */
+  showBookmarkContextMenu(
+    id: string,
+    type: BookmarkNodeType,
+    variant?: 'default' | 'folder-item',
+  ): void;
   /** Subscribe to native-menu action choices (main→renderer); returns an unsubscribe fn. */
   onBookmarkMenuAction(callback: (action: BookmarkMenuAction) => void): () => void;
   /** Subscribe to "bookmark tree changed" pushes (incl. from popup windows); returns an unsubscribe fn. */
@@ -610,6 +789,11 @@ export interface TepegozApi {
   ): () => void;
   /** Answer a pending consent prompt (allow/deny, optionally remembered for the origin). */
   respondNotificationPermission(response: NotificationPermissionResponse): void;
+  // File operations (Settings → File operations). The grant list is read/written through preferences
+  // (`getPreferences().fileAccessGrants` / `updatePreferences({ fileAccessGrants })`); the AI-driven
+  // consent reuses the agent HITL modal. Only the native folder picker needs its own bridge method.
+  /** Open the native directory picker; returns the chosen absolute folder path(s). */
+  pickFileAccessFolder(): Promise<FileAccessFolderPickResult>;
   // Login credential manager (logins:* channels). Encrypted on disk; raw secrets never cross IPC.
   /** All stored login metadata (no passwords). */
   listLogins(): Promise<LoginCredentialMeta[]>;

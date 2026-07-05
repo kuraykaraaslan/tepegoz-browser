@@ -15,6 +15,10 @@ import McpService from './mcp/supervisor.electron';
 import ExtensionCapabilityService from './extensions/capability-supervisor.electron';
 import MacroService from './macro/macro-service.electron';
 import { macrosCapabilities } from '@tepegoz/ext-macros/capabilities';
+import { registerBuiltinTools } from '@tepegoz/browser-tools';
+import FileOperationsHost from './file-operations/file-operations-host';
+import { browserHost } from './agent/browser-host';
+import { journalHost } from './agent/journal-host';
 import NotificationHost from './notifications/notification-host';
 import NotificationPermissionBroker from './notifications/permission-broker';
 import PasswordHost from './password/password-host';
@@ -129,6 +133,12 @@ if (!app.requestSingleInstanceLock()) {
       // tools are always on. ext-macros contributes its capabilities here, then start() reconciles.
       ExtensionCapabilityService.provide(macrosCapabilities(), MacroService.capabilityHost());
       ExtensionCapabilityService.start();
+      // Register the built-in browser tools at startup (idempotent — the first agent run is a no-op)
+      // so the Settings "run locally" action list can enumerate them before any run happens.
+      registerBuiltinTools(browserHost, journalHost);
+      // Sandboxed file operations: seed the default ~/tepegoz grant (first run), sync the access policy
+      // from prefs, and register the file_* / fileaccess_* tools into the same CapabilityRegistry.
+      FileOperationsHost.init();
 
       // Sleep/resume hooks. Phase 1b: the Recovery Coordinator resumes durable tasks from their last
       // checkpoint on 'resume' (Opera Neon's "task drops on sleep" lesson).

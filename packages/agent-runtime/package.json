@@ -19,6 +19,7 @@
     "@tepegoz/credential-vault": "workspace:*",
     "@tepegoz/ext-agent": "workspace:*",
     "@tepegoz/libs": "workspace:*",
+    "@tepegoz/local-inference": "workspace:*",
     "@tepegoz/model-gateway": "workspace:*",
     "@tepegoz/orchestrator": "workspace:*",
     "@tepegoz/preferences": "workspace:*",

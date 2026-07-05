@@ -18,6 +18,35 @@ export const ANTHROPIC_MODEL = {
 export type AnthropicModelId = (typeof ANTHROPIC_MODEL)[keyof typeof ANTHROPIC_MODEL];
 
 /**
+ * OpenAI model IDs per tier — same three roles as {@link ANTHROPIC_MODEL} so the router can pick a
+ * provider's map by the SAME `plan | exec | classify` key. Mirrors the Anthropic tiering (capable for
+ * plan/exec, cheap for classify): `gpt-4o` drives planning AND the reactive exec loop (it must emit the
+ * exact decision shape reliably — `gpt-4o-mini` does not), and `gpt-4o-mini` handles cheap classify.
+ * These are plain chat models (no `reasoning_effort`), so the OpenAI adapter never sends an effort
+ * field. Edit here to retune (e.g. drop exec to `gpt-4o-mini` to cut cost) — the routing LOGIC is
+ * provider-agnostic and does not change.
+ */
+export const OPENAI_MODEL = {
+  plan: 'gpt-4o',
+  exec: 'gpt-4o',
+  classify: 'gpt-4o-mini',
+} as const;
+
+export type OpenAIModelId = (typeof OPENAI_MODEL)[keyof typeof OPENAI_MODEL];
+
+/**
+ * On-device (local) tier map. Every tier resolves to the same routing placeholder `LOCAL_SLM_MODEL`
+ * (see model-router) — the real GGUF is chosen at run time by the selected catalog model, which
+ * `LocalProvider.resolveModel()` maps to a file path. A tiny local model has no meaningful plan/exec/
+ * classify split, so one id covers all three.
+ */
+export const LOCAL_MODEL = {
+  plan: 'local-slm',
+  exec: 'local-slm',
+  classify: 'local-slm',
+} as const;
+
+/**
  * `output_config.effort` levels. On Opus 4.8 reasoning depth is controlled HERE — `budget_tokens`
  * is rejected with a 400 and must never be sent. Default (omitted) is server-side `high`; `xhigh`
  * is the sweet spot for coding/agentic work.

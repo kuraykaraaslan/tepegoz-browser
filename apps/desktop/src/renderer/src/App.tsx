@@ -601,6 +601,12 @@ export function App() {
         }
       } else if (a.action === 'open-manager') {
         window.tepegoz.navigateTab(INTERNAL_BOOKMARKS_URL);
+      } else if (a.action === 'move-to-bar') {
+        try {
+          await window.tepegoz.moveBookmark(a.id, BOOKMARK_ROOT_BAR, 100000); // to the bar root's end
+        } catch (err) {
+          console.error('Move to bar failed', err);
+        }
       } else if (a.action === 'rename') {
         window.tepegoz.openPopup('bookmark-rename', bookmarkDialogAnchor(), { id: a.id });
       } else {
@@ -811,9 +817,12 @@ export function App() {
             nodes={barNodes}
             barRootId={BOOKMARK_ROOT_BAR}
             onOpen={(url) => window.tepegoz.navigateTab(url)}
-            onOpenFolder={(folderId, anchor) =>
-              window.tepegoz.openPopup('bookmark-folder', anchor, { id: folderId })
-            }
+            onOpenFolder={(folderId, anchor) => {
+              // Seed a tight height (main self-resizes to the real content once it loads) so a small
+              // folder doesn't open as a tall window.
+              const rows = Math.max(1, findBarNode(folderId)?.children.length ?? 1);
+              window.tepegoz.openPopup('bookmark-folder', anchor, { id: folderId, height: rows * 32 + 12 });
+            }}
             onMove={onBookmarkMove}
             onContextMenu={(id, type) => window.tepegoz.showBookmarkContextMenu(id, type)}
             labels={{ bar: browserT.bookmarksBar, empty: browserT.noBookmarksBar }}
@@ -837,7 +846,7 @@ export function App() {
               />
             )}
             {settingsActive && (
-              <div className="absolute inset-0 bg-surface-base">
+              <div className="absolute inset-0 bg-surface-system">
                 {prefs && status ? (
                   <SettingsPage
                     prefs={prefs}
@@ -871,7 +880,7 @@ export function App() {
               </div>
             )}
             {extensionsActive && (
-              <div className="absolute inset-0 bg-surface-base">
+              <div className="absolute inset-0 bg-surface-system">
                 <ExtensionsPage
                   locale={locale}
                   extensions={registry}
@@ -881,12 +890,12 @@ export function App() {
               </div>
             )}
             {historyActive && (
-              <div className="absolute inset-0 bg-surface-base">
+              <div className="absolute inset-0 bg-surface-system">
                 <HistoryPage list={historyList} remove={historyRemove} clear={historyClear} />
               </div>
             )}
             {bookmarksActive && (
-              <div className="absolute inset-0 bg-surface-base">
+              <div className="absolute inset-0 bg-surface-system">
                 <BookmarksManager
                   getTree={getBookmarkTree}
                   refreshKey={bookmarksVersion}

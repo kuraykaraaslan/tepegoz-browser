@@ -48,7 +48,7 @@ export function SettingsLayout({ titleIcon, sections, banner }: SettingsLayoutPr
   const anyVisible = sections.some(isVisible);
 
   return (
-    <div className="flex h-full bg-surface-base text-text-primary">
+    <div className="flex h-full bg-surface-system text-text-primary">
       <aside className="w-60 shrink-0 overflow-auto border-r border-border py-4">
         <div className="flex items-center gap-2 px-5 pb-4 text-text-primary">
           {titleIcon}

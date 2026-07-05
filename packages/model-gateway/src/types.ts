@@ -38,6 +38,12 @@ export interface CanonRequest {
   /** REQUIRED — no untimed model call. */
   timeoutMs: number;
   tools?: CanonToolDef[];
+  /**
+   * Ask the provider to constrain output to a single JSON object (OpenAI `json_object` mode) — used by
+   * the Planner/Reactor whose output is JSON-parsed + zod-validated, so weaker models can't wrap it in
+   * prose/fences. Providers that follow JSON instructions natively (Anthropic) may ignore it.
+   */
+  responseFormat?: 'json';
 }
 
 export interface CanonResponse {

@@ -13,7 +13,8 @@ const host: BrowserHost = {
   navigateActive: (url) => Promise.resolve({ url, title: 'T' }),
   readActivePage: () => Promise.resolve({ url: 'https://a.test', title: 'A', text: 'hello' }),
   listTabs: () => [{ id: '1', title: 'A', url: 'https://a.test' }],
-  createTab: (url) => `tab-${url ?? 'blank'}`,
+  createTab: (url, groupName) =>
+    `tab-${url ?? 'blank'}${groupName !== undefined ? `-g:${groupName}` : ''}`,
   snapshotElements: () =>
     Promise.resolve({
       url: 'https://a.test',
@@ -72,6 +73,22 @@ describe('registerBuiltinTools', () => {
     expect(snap.elements[1]?.name).toBe('Login');
     // The listing is wrapped as untrusted content (taint source for the runtime).
     expect(snap.content).toContain('untrusted_page_content');
+  });
+
+  it('tab_create_item forwards url + groupName and enforces the arg shape', async () => {
+    registerBuiltinTools(host);
+    const tool = CapabilityRegistry.get('tab_create_item');
+    expect(tool?.descriptor.dangerClass).toBe('state_changing');
+    // The model's task label reaches the host so the new tab is grouped.
+    expect(await tool?.handler({ url: 'https://a.test', groupName: 'Atatürk' })).toEqual({
+      id: 'tab-https://a.test-g:Atatürk',
+    });
+    // groupName is optional; a bare url still opens a tab.
+    expect(await tool?.handler({})).toEqual({ id: 'tab-blank' });
+    // Boundary: an over-long groupName is rejected at the tool seam.
+    const schema = tool?.inputSchema;
+    expect(schema?.safeParse({ groupName: 'x'.repeat(61) }).success).toBe(false);
+    expect(schema?.safeParse({ url: 'https://a.test', groupName: 'ok' }).success).toBe(true);
   });
 
   it('browser_update_page dispatches each action variant to the host', async () => {

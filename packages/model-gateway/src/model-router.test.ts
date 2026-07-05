@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ModelRouter, LOCAL_SLM_MODEL } from './model-router';
-import { ANTHROPIC_MODEL } from './models';
+import { ANTHROPIC_MODEL, OPENAI_MODEL } from './models';
 
 describe('ModelRouter.route — tier selection', () => {
   it('routes planning to the Opus tier at xhigh effort', () => {
@@ -42,6 +42,18 @@ describe('ModelRouter.route — cost-saver offload', () => {
     expect(d.tier).toBe('classify');
   });
 
+  it('reports the local offload as SERVED by the local provider regardless of the requested cloud one', () => {
+    const d = ModelRouter.route({
+      capability: 'summarize',
+      costSaver: true,
+      localAvailable: true,
+      provider: 'openai',
+    });
+    expect(d.transport).toBe('local');
+    expect(d.provider).toBe('local'); // not 'openai' — the decision names the actual serving provider
+    expect(d.model).toBe(LOCAL_SLM_MODEL);
+  });
+
   it('never offloads non-simple capabilities even with cost-saver + local available', () => {
     const plan = ModelRouter.route({ capability: 'plan', costSaver: true, localAvailable: true });
     expect(plan.transport).toBe('cloud');
@@ -53,9 +65,23 @@ describe('ModelRouter.route — cost-saver offload', () => {
   });
 });
 
-describe('ModelRouter.route — provider passthrough', () => {
-  it('honors an explicit provider override', () => {
+describe('ModelRouter.route — provider-specific model maps', () => {
+  it('honors an explicit provider override and selects that provider tier map', () => {
     const d = ModelRouter.route({ capability: 'plan', costSaver: false, provider: 'openai' });
     expect(d.provider).toBe('openai');
+    expect(d.model).toBe(OPENAI_MODEL.plan);
+  });
+
+  it('routes each OpenAI tier to its model', () => {
+    expect(ModelRouter.route({ capability: 'browse', costSaver: false, provider: 'openai' }).model).toBe(
+      OPENAI_MODEL.exec,
+    );
+    expect(ModelRouter.route({ capability: 'classify', costSaver: false, provider: 'openai' }).model).toBe(
+      OPENAI_MODEL.classify,
+    );
+  });
+
+  it('defaults to the Anthropic map when no provider is given', () => {
+    expect(ModelRouter.route({ capability: 'plan', costSaver: false }).model).toBe(ANTHROPIC_MODEL.plan);
   });
 });

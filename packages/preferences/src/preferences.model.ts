@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { EXTENSION_ID_RE } from '@tepegoz/extension-sdk';
 import {
+  AGENT_EFFORT_LEVELS,
+  FILE_ACCESS_MODES,
   LOCALE_PREFS,
   MCP_TRANSPORTS,
   PROVIDER_IDS,
@@ -64,6 +66,17 @@ export const PreferencesSchema = z.object({
   locale: LocalePrefSchema,
   telemetryEnabled: z.boolean(),
   useLocalModelForSimpleTasks: z.boolean(),
+  // On-device provider participation + selected downloaded model (keyless; see @tepegoz/local-inference).
+  localProvider: z.object({
+    mode: z.enum(['off', 'simple', 'default']),
+    selectedModelId: z.string().max(64),
+  }),
+  // Per-action "run locally" overrides: action (tool) id → run-on-device. Only affects localCapable actions.
+  localActions: z.record(z.string().max(64), z.boolean()),
+  // Agent panel per-run provider override (null = default resolution); autonomy level (default safe).
+  agentProviderOverride: ProviderPrefSchema.nullable(),
+  agentAutonomy: z.enum(['ask', 'act', 'auto']),
+  agentEffort: z.enum(AGENT_EFFORT_LEVELS),
   // Derived from the credential vault's key order (top key's provider) and synced by main; no UI.
   defaultProvider: ProviderPrefSchema,
   // Region/date/search are lenient strings (validated/normalized at the UI); unknown values are harmless.
@@ -109,6 +122,23 @@ export const PreferencesSchema = z.object({
     showNotifications: z.boolean(),
     trustedOrigins: z.array(z.string().max(2048)).max(500),
   }),
+  // One-time sentinel: true once the curated default trusted origins have been seeded (see the host's
+  // PopupBlockerManager.init), so a user who removes a default never gets it back on next launch.
+  popupBlockerSeeded: z.boolean(),
+  // File operations: master switch + the folder whitelist (each folder has a permission mode). The
+  // FILE_ACCESS_MODES enum is the single source shared with @tepegoz/file-operations. `path` is an
+  // absolute, canonical folder; main resolves/validates it before persisting.
+  fileOperationsEnabled: z.boolean(),
+  fileAccessGrants: z
+    .array(
+      z.object({
+        path: z.string().min(1).max(1024),
+        mode: z.enum(FILE_ACCESS_MODES),
+        recursive: z.boolean(),
+      }),
+    )
+    .max(100),
+  fileAccessSeeded: z.boolean(),
 }) satisfies z.ZodType<Preferences>;
 
 /** Patch shape for partial updates — only provided keys are applied. */
@@ -142,6 +172,11 @@ export const DEFAULT_PREFERENCES: Preferences = {
   locale: 'system',
   telemetryEnabled: false,
   useLocalModelForSimpleTasks: false,
+  localProvider: { mode: 'off', selectedModelId: '' },
+  localActions: {},
+  agentProviderOverride: null,
+  agentAutonomy: 'ask',
+  agentEffort: 'high',
   defaultProvider: 'anthropic',
   region: '',
   dateFormat: 'medium',
@@ -155,4 +190,10 @@ export const DEFAULT_PREFERENCES: Preferences = {
   notificationsEnabled: true,
   sitePermissions: {},
   popupBlocker: { enabled: true, showNotifications: true, trustedOrigins: [] },
+  // Seeded once by the main-process host (union of the curated defaults); starts empty + unseeded here.
+  popupBlockerSeeded: false,
+  fileOperationsEnabled: true,
+  // Seeded lazily by the main-process host (needs os.homedir()); starts empty + unseeded here.
+  fileAccessGrants: [],
+  fileAccessSeeded: false,
 };

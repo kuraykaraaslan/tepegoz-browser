@@ -1,5 +1,6 @@
 import { pick } from '@tepegoz/i18n';
 import { popupBlockerDict } from '@tepegoz/ext-popup-blocker/i18n';
+import { DEFAULT_TRUSTED_POPUP_ORIGINS } from '@tepegoz/ext-popup-blocker/default-trusted-origins';
 import type { PopupBlockerRequest, PopupBlockerSettings } from '@tepegoz/desktop-ipc';
 import PreferenceStore from '@tepegoz/preferences';
 import NotificationHost from './notifications/notification-host';
@@ -20,9 +21,25 @@ export default class PopupBlockerManager {
 
   private static readonly recentRequests: PopupBlockerRequest[] = [];
 
-  /** Load persisted settings (call after PreferenceStore.init, before the first tab opens). */
+  /** Load persisted settings (call after PreferenceStore.init, before the first tab opens). On first run
+   *  this also seeds the curated default trusted origins so common OAuth / payment / collaboration popups
+   *  work out of the box. */
   static init(): void {
-    PopupBlockerManager.settings = PreferenceStore.getAll().popupBlocker;
+    PopupBlockerManager.settings = PopupBlockerManager.seedDefaultTrustedOrigins();
+  }
+
+  /** One-time seed: union the curated default trusted origins into the persisted allowlist and mark it
+   *  seeded, so a user who later removes a default is respected (it is never re-added). No-op once seeded.
+   *  Returns the settings to hold in memory. */
+  private static seedDefaultTrustedOrigins(): PopupBlockerSettings {
+    const prefs = PreferenceStore.getAll();
+    if (prefs.popupBlockerSeeded) return prefs.popupBlocker;
+    const merged = [
+      ...new Set([...prefs.popupBlocker.trustedOrigins, ...DEFAULT_TRUSTED_POPUP_ORIGINS]),
+    ].slice(0, 500); // stay within the schema's trustedOrigins cap
+    const next: PopupBlockerSettings = { ...prefs.popupBlocker, trustedOrigins: merged };
+    PreferenceStore.update({ popupBlocker: next, popupBlockerSeeded: true });
+    return next;
   }
 
   static get(): PopupBlockerSettings {

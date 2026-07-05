@@ -12,6 +12,7 @@ export function showBookmarkContextMenu(
   win: BrowserWindow,
   id: string,
   type: BookmarkNodeType,
+  variant: 'default' | 'folder-item' = 'default',
 ): void {
   const t = mainStrings().browser.bookmarkMenu;
   const send = (action: BookmarkMenuAction['action']): void => {
@@ -21,6 +22,29 @@ export function showBookmarkContextMenu(
       type,
     } satisfies BookmarkMenuAction);
   };
+
+  // Reduced menu shown INSIDE a bar folder-dropdown popup — the actions that popup window can handle
+  // itself (its own renderer subscribes to bookmarks:menu-action). "Move to Bookmarks bar" is the
+  // drag-free way to take an item OUT of the folder (cross-window drag isn't possible).
+  if (variant === 'folder-item') {
+    const items: MenuItemConstructorOptions[] =
+      type === 'folder'
+        ? [
+            { label: t.openAll, click: () => send('open-all') },
+            { type: 'separator' },
+            { label: t.moveToBar, click: () => send('move-to-bar') },
+            { label: t.delete, click: () => send('delete') },
+          ]
+        : [
+            { label: t.open, click: () => send('open') },
+            { label: t.openNewTab, click: () => send('open-new-tab') },
+            { type: 'separator' },
+            { label: t.moveToBar, click: () => send('move-to-bar') },
+            { label: t.delete, click: () => send('delete') },
+          ];
+    Menu.buildFromTemplate(items).popup({ window: win });
+    return;
+  }
 
   // The two fixed roots (bar background right-click, or a root in the manager tree) can't be renamed,
   // deleted, or "opened" — offer only Add folder + the manager.
@@ -40,15 +64,20 @@ export function showBookmarkContextMenu(
           { label: t.addFolder, click: () => send('add-folder') },
           { type: 'separator' },
           { label: t.delete, click: () => send('delete') },
+          { type: 'separator' },
+          { label: t.manager, click: () => send('open-manager') },
         ]
       : [
           { label: t.open, click: () => send('open') },
           { label: t.openNewTab, click: () => send('open-new-tab') },
           { type: 'separator' },
           { label: t.rename, click: () => send('rename') },
+          { label: t.moveToBar, click: () => send('move-to-bar') },
           { label: t.addFolder, click: () => send('add-folder') },
           { type: 'separator' },
           { label: t.delete, click: () => send('delete') },
+          { type: 'separator' },
+          { label: t.manager, click: () => send('open-manager') },
         ];
 
   Menu.buildFromTemplate(template).popup({ window: win });

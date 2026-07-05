@@ -18,8 +18,9 @@ export interface BrowserHost {
   readActivePage(): Promise<{ url: string; title: string; text: string }>;
   /** List the open tabs. */
   listTabs(): { id: string; title: string; url: string }[];
-  /** Open a new tab, optionally at a URL; returns its id. */
-  createTab(url?: string): string;
+  /** Open a new tab, optionally at a URL and inside a named group (agent tabs are grouped by task);
+   *  returns its id. */
+  createTab(url?: string, groupName?: string): string;
   /** Read the active page's actionable elements (accessibility tree). The host keeps the
    *  `ref → node` map for the action calls below, so `ref`s stay valid until the next snapshot. */
   snapshotElements(): Promise<{ url: string; title: string; elements: RawInteractable[] }>;
@@ -63,7 +64,10 @@ export interface JournalReader {
 let registered = false;
 
 const NavigateArgs = z.object({ url: z.string().min(1).max(4096) });
-const CreateTabArgs = z.object({ url: z.string().min(1).max(4096).optional() });
+const CreateTabArgs = z.object({
+  url: z.string().min(1).max(4096).optional(),
+  groupName: z.string().min(1).max(60).optional(),
+});
 const NoArgs = z.object({}).strip();
 const Ref = z.number().int().positive().max(10_000);
 /** One page interaction, discriminated by `action` so each variant validates its own args. */
@@ -86,7 +90,11 @@ function descriptor(
   id: string,
   dangerClass: ToolDescriptor['dangerClass'],
   description: string,
+  aiTask: ToolDescriptor['aiTask'] = 'none',
 ): ToolDescriptor {
+  // Adaptor grouping (Settings → Cost & performance): the owning package declares its group via
+  // `category`. browser_* and tab_* share the 'browser' adaptor; the audit journal tool is its own.
+  const category = id.startsWith('journal_') ? 'journal' : 'browser';
   return {
     id,
     description,
@@ -94,6 +102,8 @@ function descriptor(
     source: 'builtin',
     inputSchema: { type: 'object' },
     requiresIdempotencyKey: false,
+    aiTask,
+    category,
   };
 }
 
@@ -107,6 +117,7 @@ export function registerBuiltinTools(host: BrowserHost, journal?: JournalReader)
       'browser_get_page',
       'read',
       'Read the visible text of the current page. args: {} — returns { url, title, content }.',
+      'read_understand',
     ),
     inputSchema: NoArgs,
     handler: async () => {
@@ -119,7 +130,8 @@ export function registerBuiltinTools(host: BrowserHost, journal?: JournalReader)
     descriptor: descriptor(
       'browser_update_location',
       'state_changing',
-      'Navigate the active tab to a web URL. args: { url: string } — returns { url, title }.',
+      'The DEFAULT way to open a page: navigate the CURRENT active tab to a web URL (reuses the tab). ' +
+        'args: { url: string } — returns { url, title }.',
     ),
     inputSchema: NavigateArgs,
     handler: (args) => host.navigateActive(args.url),
@@ -133,6 +145,7 @@ export function registerBuiltinTools(host: BrowserHost, journal?: JournalReader)
         'tree. args: {} — returns { url, title, elements: [{ ref, role, name, value?, disabled? }], content }. ' +
         'Use each element\'s `ref` with browser_update_page to click or fill it. Re-read after any ' +
         'navigation or page change — refs are only valid for the latest snapshot.',
+      'read_understand',
     ),
     inputSchema: NoArgs,
     handler: async () => {
@@ -184,10 +197,13 @@ export function registerBuiltinTools(host: BrowserHost, journal?: JournalReader)
     descriptor: descriptor(
       'tab_create_item',
       'state_changing',
-      'Open a new browser tab, optionally at a URL. args: { url?: string } — returns { id }.',
+      'Open a NEW browser tab — use ONLY when the current page must be preserved or you need a ' +
+        'side-by-side comparison; otherwise navigate the current tab with browser_update_location. ' +
+        'ALWAYS pass a short groupName naming the current task/topic (e.g. "Atatürk") so the new tab is ' +
+        'grouped. args: { url?: string, groupName?: string } — returns { id }.',
     ),
     inputSchema: CreateTabArgs,
-    handler: (args) => ({ id: host.createTab(args.url) }),
+    handler: (args) => ({ id: host.createTab(args.url, args.groupName) }),
   });
 
   // journal_* (L5): read-only access to the agent's own append-only audit trail. Registered only

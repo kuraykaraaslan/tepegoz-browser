@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ToolNameSchema, type RiskLevel, type ToolDescriptor } from '@tepegoz/shared-types';
+import { ToolNameSchema, type AiTask, type RiskLevel, type ToolDescriptor } from '@tepegoz/shared-types';
 import { EXTENSION_ID_RE } from './manifest';
 
 /**
@@ -23,6 +23,17 @@ export interface ExtensionCapabilityDef<A = unknown, H = unknown> {
   description: string;
   /** Danger class — fail-safe: only `read` may auto-allow; everything else is HITL-gated at the PEP. */
   dangerClass: RiskLevel;
+  /**
+   * The LLM/cognitive work this capability entails — the axis that decides local-vs-cloud and drives
+   * the Settings "run locally" list. Omit (or `'none'`) for a purely mechanical action; use e.g.
+   * `'summarize'`/`'classify'`/`'extract'` for AI work the on-device model can do. Fail-safe: absent ⇒
+   * `none`/not-local (like the danger-class fail-safe at the PEP).
+   */
+  aiTask?: AiTask;
+  /** Override local-eligibility; absent ⇒ derived from `aiTask` (present and not `'none'`). */
+  localCapable?: boolean;
+  /** Explicit Settings group; absent ⇒ derived from the id's `{domain}` prefix. */
+  category?: string;
   /** create/upload-style tools must carry an idempotency key (exactly-once-ish). */
   requiresIdempotencyKey?: boolean;
   /** Zod validator for the (untrusted) arguments — the trust boundary; the gateway validates here. */
@@ -64,6 +75,11 @@ export function capability<A, H>(def: ExtensionCapabilityDef<A, H>): ExtensionCa
     inputSchema: { type: 'object' },
     requiresIdempotencyKey: def.requiresIdempotencyKey ?? false,
   };
+  // Pass through the (optional) local-eligibility metadata — the extension standard for the Settings
+  // "run locally" list. Set only when provided (exactOptionalPropertyTypes).
+  if (def.aiTask !== undefined) descriptor.aiTask = def.aiTask;
+  if (def.localCapable !== undefined) descriptor.localCapable = def.localCapable;
+  if (def.category !== undefined) descriptor.category = def.category;
   return {
     descriptor,
     inputSchema: def.inputSchema,

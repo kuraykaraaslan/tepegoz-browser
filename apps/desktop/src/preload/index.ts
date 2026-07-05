@@ -3,6 +3,9 @@ import {
   IpcChannels,
   decodeBoundaryError,
   type AgentApprovalRequest,
+  type AgentAutonomy,
+  type AgentConfig,
+  type AgentEffort,
   type AgentEvent,
   type AgentPlanPreview,
   type AgentRunResult,
@@ -18,8 +21,10 @@ import {
   type ExtensionContextMenuChoice,
   type ExtensionId,
   type ExtensionManifestWire,
+  type FileAccessFolderPickResult,
   type HistoryEntry,
   type IpcChannel,
+  type LocalModelInfo,
   type LoginCredentialMeta,
   type LoginImportResult,
   type Macro,
@@ -28,6 +33,7 @@ import {
   type MacroRunInput,
   type MacroRunProgress,
   type MacroSummary,
+  type AIAdaptor,
   type McpServerStatusInfo,
   type NotificationPermissionRequest,
   type NotificationPermissionResponse,
@@ -195,6 +201,9 @@ const api: TepegozApi = {
   cancelAgent: (runId: string) => {
     ipcRenderer.send(IpcChannels.agentCancel, runId);
   },
+  newAgentConversation: () => {
+    ipcRenderer.send(IpcChannels.agentNewConversation);
+  },
   onAgentEvent: (callback: (event: AgentEvent) => void) => {
     const listener = (_event: unknown, payload: AgentEvent): void => {
       callback(payload);
@@ -238,6 +247,29 @@ const api: TepegozApi = {
     };
   },
   getTokenUsage: () => invoke<TokenUsageSnapshot>(IpcChannels.tokenUsageGet),
+  getAgentConfig: () => invoke<AgentConfig>(IpcChannels.agentGetConfig),
+  setAgentProvider: (provider: ProviderId) => invoke<void>(IpcChannels.agentSetProvider, provider),
+  setAgentAutonomy: (level: AgentAutonomy) => invoke<void>(IpcChannels.agentSetAutonomy, level),
+  setAgentEffort: (level: AgentEffort) => invoke<void>(IpcChannels.agentSetEffort, level),
+  openAgentFile: (path: string) => {
+    ipcRenderer.send(IpcChannels.agentOpenFile, path);
+  },
+  listLocalModels: () => invoke<LocalModelInfo[]>(IpcChannels.modelsList),
+  downloadLocalModel: (id: string) => invoke<void>(IpcChannels.modelsDownload, id),
+  cancelLocalModelDownload: (id: string) => {
+    ipcRenderer.send(IpcChannels.modelsCancel, id);
+  },
+  selectLocalModel: (id: string) => invoke<void>(IpcChannels.modelsSelect, id),
+  deleteLocalModel: (id: string) => invoke<void>(IpcChannels.modelsDelete, id),
+  onLocalModelsState: (callback: (models: LocalModelInfo[]) => void) => {
+    const listener = (_event: unknown, models: LocalModelInfo[]): void => {
+      callback(models);
+    };
+    ipcRenderer.on(IpcChannels.modelsState, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.modelsState, listener);
+    };
+  },
   getUserAgent: () => invoke<string | null>(IpcChannels.userAgentGet),
   setUserAgent: (ua: string | null) => invoke<string | null>(IpcChannels.userAgentSet, ua),
   getPopupBlockerSettings: () => invoke<PopupBlockerSettings>(IpcChannels.popupBlockerGet),
@@ -248,6 +280,7 @@ const api: TepegozApi = {
   },
   getRecentRequests: () => invoke<PopupBlockerRequest[]>(IpcChannels.popupBlockerRecentRequests),
   getMcpStatus: () => invoke<McpServerStatusInfo[]>(IpcChannels.mcpGetStatus),
+  listAiAdaptors: () => invoke<AIAdaptor[]>(IpcChannels.aiAdaptorsList),
   listExtensionManifests: () =>
     invoke<ExtensionManifestWire[]>(IpcChannels.extensionsListManifests),
   onOpenExtension: (callback: (id: ExtensionId) => void) => {
@@ -325,8 +358,12 @@ const api: TepegozApi = {
   removeBookmark: (id: string) => invoke<void>(IpcChannels.bookmarksRemove, id),
   moveBookmark: (id: string, newParentId: string, index: number) =>
     invoke<void>(IpcChannels.bookmarksMove, { id, newParentId, index }),
-  showBookmarkContextMenu: (id: string, type: BookmarkNodeType) => {
-    ipcRenderer.send(IpcChannels.bookmarksContextMenu, { id, type });
+  showBookmarkContextMenu: (
+    id: string,
+    type: BookmarkNodeType,
+    variant?: 'default' | 'folder-item',
+  ) => {
+    ipcRenderer.send(IpcChannels.bookmarksContextMenu, { id, type, variant });
   },
   onBookmarkMenuAction: (callback: (action: BookmarkMenuAction) => void) => {
     const listener = (_event: unknown, action: BookmarkMenuAction): void => callback(action);
@@ -385,6 +422,10 @@ const api: TepegozApi = {
   respondNotificationPermission: (response: NotificationPermissionResponse) => {
     ipcRenderer.send(IpcChannels.notificationPermissionRespond, response);
   },
+  // File operations (Settings → File operations). The grant list rides on preferences; only the native
+  // folder picker needs a bridge method (AI-driven consent reuses the agent HITL modal).
+  pickFileAccessFolder: () =>
+    invoke<FileAccessFolderPickResult>(IpcChannels.fileAccessPickFolder),
   // Login credential manager. Raw secrets never cross this bridge — only metadata returns.
   listLogins: () => invoke<LoginCredentialMeta[]>(IpcChannels.loginsList),
   setLogin: (credential: {

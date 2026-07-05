@@ -32,7 +32,12 @@ afterEach(() => {
 describe('CredentialVault (multi-key)', () => {
   it('starts empty', () => {
     CredentialVault.init({ crypto: fakeCrypto, filePath });
-    expect(CredentialVault.status()).toEqual({ anthropic: false, openai: false, gemini: false });
+    expect(CredentialVault.status()).toEqual({
+      anthropic: false,
+      openai: false,
+      gemini: false,
+      local: false,
+    });
     expect(CredentialVault.listMeta()).toEqual([]);
     expect(CredentialVault.getFirstKeyForProvider('anthropic')).toBeNull();
   });
@@ -176,7 +181,12 @@ describe('CredentialVault (multi-key)', () => {
     const ok = { id: 'a', provider: 'anthropic', label: 'ok', createdAt: 2, last4: 'kkkk', ciphertext: enc('k') };
     writeFileSync(filePath, JSON.stringify({ version: 2, keys: [grok, ok] }), 'utf8');
     CredentialVault.init({ crypto: fakeCrypto, filePath });
-    expect(CredentialVault.status()).toEqual({ anthropic: true, openai: false, gemini: false });
+    expect(CredentialVault.status()).toEqual({
+      anthropic: true,
+      openai: false,
+      gemini: false,
+      local: false,
+    });
     expect(CredentialVault.listMeta()).toHaveLength(1);
   });
 

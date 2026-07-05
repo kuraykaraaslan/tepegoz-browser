@@ -4,8 +4,18 @@
  * by the SANDBOXED preload, which must stay dependency-free) can consume it at runtime; `enums.ts`
  * builds the zod validator (`AIProviderEnum`) from this same array.
  */
-export const AI_PROVIDERS = ['anthropic', 'openai', 'gemini'] as const;
+export const AI_PROVIDERS = ['anthropic', 'openai', 'gemini', 'local'] as const;
 export type AIProvider = (typeof AI_PROVIDERS)[number];
+
+/**
+ * `'local'` is the on-device provider: it has NO API key (it runs a downloaded model via the
+ * `@tepegoz/local-inference` engine), so it resolves through a key-free path (`prefs.localProvider`)
+ * rather than the credential vault. Kept OUT of {@link RUNNABLE_AI_PROVIDERS} (that set means
+ * "resolvable from a stored key") and detected with this predicate instead.
+ */
+export function isLocalProvider(provider: AIProvider): boolean {
+  return provider === 'local';
+}
 
 /**
  * The providers the agent runtime has an adapter for and can actually DRIVE today. A key for any

@@ -113,6 +113,9 @@ export const AgentPlanResponseSchema = z.object({
   skipStepIds: z.array(z.string().max(64)).max(100).optional(),
 });
 
+/** `agent:open-file` payload — an absolute path the agent produced; opened only if inside a grant. */
+export const AgentOpenFileSchema = z.string().min(1).max(4096);
+
 export const HistoryQuerySchema = z.string().max(200);
 export const HistoryUrlSchema = z.string().min(1).max(4096);
 
@@ -159,10 +162,12 @@ export const BookmarkMoveSchema = z.object({
   newParentId: BookmarkNodeId,
   index: z.number().int().min(0).max(100000),
 });
-/** `bookmarks:context-menu` — pop the native menu for a node (renderer→main). */
+/** `bookmarks:context-menu` — pop the native menu for a node (renderer→main). `variant` 'folder-item'
+ *  is the reduced menu shown inside a bar folder-dropdown popup (Open / Move to bar / Delete). */
 export const BookmarkContextMenuSchema = z.object({
   id: BookmarkNodeId,
   type: z.enum(['folder', 'bookmark']),
+  variant: z.enum(['default', 'folder-item']).optional(),
 });
 
 /** `user-agent:set` payload — a UA string to apply, or null to reset to the browser default. */

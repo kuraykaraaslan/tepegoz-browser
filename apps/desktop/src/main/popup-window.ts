@@ -153,8 +153,9 @@ export default class PopupWindowManager {
 
   /** Shrink/grow a managed popup to its measured content height (px), keeping the top anchor. Both the
    *  primary popup AND the submenu flyout may self-resize (each observes its own content); height is
-   *  clamped to the work area below the window's current top. The submenu uses a smaller floor so a
-   *  short flyout (e.g. an empty bookmarks list) doesn't leave dead rows. */
+   *  clamped to the work area below the window's current top. Submenu flyouts and the bookmark
+   *  folder-dropdown / dialog popups use a smaller floor so a short one (e.g. a 1-item folder) doesn't
+   *  leave dead rows — the big menus keep the taller MIN_HEIGHT. */
   static resize(sender: BrowserWindow, height: number): void {
     const isPrimary = sender === PopupWindowManager.win;
     const isSub = sender === PopupWindowManager.subWin;
@@ -162,7 +163,8 @@ export default class PopupWindowManager {
     const b = sender.getBounds();
     const area = screen.getDisplayMatching(b).workArea;
     const maxH = area.y + area.height - b.y - GAP;
-    const floor = isSub ? SUBMENU_MIN_HEIGHT : MIN_HEIGHT;
+    const smallFloor = isSub || (isPrimary && (PopupWindowManager.openKey?.startsWith('bookmark-') ?? false));
+    const floor = smallFloor ? SUBMENU_MIN_HEIGHT : MIN_HEIGHT;
     const next = Math.max(floor, Math.min(height, maxH));
     if (next === b.height) return;
     sender.setBounds({ x: b.x, y: b.y, width: b.width, height: next });
