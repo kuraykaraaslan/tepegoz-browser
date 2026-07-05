@@ -9,12 +9,18 @@ export interface PersistedTab {
   groupId: string | null;
 }
 
-/** A persisted tab group. `color` is stored loosely (a string) — the model re-validates on restore. */
+/** A flat, JSON-safe per-tab-group setting value (mirrors `TabGroupSettingValue` in `@tepegoz/desktop-ipc`). */
+export type PersistedGroupSettingValue = string | number | boolean | null;
+
+/** A persisted tab group. `color` is stored loosely (a string) — the model re-validates on restore.
+ *  `id` is a stable UUID (unlike the pre-UUID scheme, restore reuses it rather than minting a new one),
+ *  so `settings` (the per-tab-group settings standard) round-trips under the same key across restarts. */
 export interface PersistedGroup {
   id: string;
   name: string;
   color: string;
   collapsed: boolean;
+  settings: Record<string, PersistedGroupSettingValue>;
 }
 
 /**
@@ -114,7 +120,21 @@ function parseGroups(raw: unknown): PersistedGroup[] | null {
       name: typeof o.name === 'string' ? o.name : '',
       color: o.color,
       collapsed: o.collapsed === true,
+      settings: parseSettings(o.settings),
     });
+  }
+  return out;
+}
+
+/** Tolerantly default a persisted group's settings bag to `{}` unless it's already a flat, JSON-safe
+ *  record — never throws (corrupt/legacy snapshots just start that group with no settings). */
+function parseSettings(raw: unknown): Record<string, PersistedGroupSettingValue> {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return {};
+  const out: Record<string, PersistedGroupSettingValue> = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' || value === null) {
+      out[key] = value;
+    }
   }
   return out;
 }

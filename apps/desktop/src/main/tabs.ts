@@ -12,6 +12,7 @@ import {
   INTERNAL_EXTENSIONS_URL,
   INTERNAL_HISTORY_URL,
   IpcChannels,
+  type TabGroupSettingValue,
   type TabsState,
 } from '@tepegoz/desktop-ipc';
 import {
@@ -464,6 +465,12 @@ export default class TabManager {
     TabManager.emitState();
   }
 
+  /** Merge-patch a group's extensible settings bag (the per-tab-group settings standard). */
+  static updateGroupSettings(groupId: string, patch: Record<string, TabGroupSettingValue>): void {
+    TabManager.store.updateGroupSettings(groupId, patch);
+    TabManager.emitState();
+  }
+
   static ungroup(groupId: string): void {
     TabManager.store.ungroup(groupId);
     TabManager.emitState();
@@ -888,7 +895,7 @@ export default class TabManager {
     const groups: PersistedGroup[] = TabManager.store
       .groupsInOrder()
       .filter((g) => liveGroups.has(g.id))
-      .map((g) => ({ id: g.id, name: g.name, color: g.color, collapsed: g.collapsed }));
+      .map((g) => ({ id: g.id, name: g.name, color: g.color, collapsed: g.collapsed, settings: g.settings }));
     return { version: 2, tabs, groups, activeIndex };
   }
 
@@ -933,8 +940,15 @@ export default class TabManager {
         .map((t, i) => (t.groupId === pg.id ? createdIds[i]! : null))
         .filter((id): id is string => id !== null);
       if (memberIds.length === 0) continue;
-      const gid = TabManager.store.createGroup({ name: pg.name, color: asGroupColor(pg.color), memberIds });
-      TabManager.store.setGroupCollapsed(gid, pg.collapsed);
+      // `id: pg.id` reuses the group's stable (pre-restart) UUID so `settings` stays keyed correctly.
+      TabManager.store.createGroup({
+        id: pg.id,
+        name: pg.name,
+        color: asGroupColor(pg.color),
+        collapsed: pg.collapsed,
+        settings: pg.settings,
+        memberIds,
+      });
     }
     snap.tabs.forEach((t, i) => {
       if (t.pinned) TabManager.store.setPinned(createdIds[i]!, true);

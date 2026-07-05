@@ -109,6 +109,31 @@ describe('TabStore — records & ordering (existing)', () => {
 });
 
 describe('TabStore — groups', () => {
+  it('createGroup mints a UUID id and an empty settings bag by default', () => {
+    const a = store.add(web());
+    const g = store.createGroup({ memberIds: [a] });
+    expect(g).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+    expect(store.getGroup(g)?.settings).toEqual({});
+  });
+
+  it('createGroup accepts an explicit id + settings (session restore reusing a persisted group)', () => {
+    const a = store.add(web());
+    const g = store.createGroup({
+      id: 'restored-id',
+      settings: { 'agent.panelOpen': true },
+      memberIds: [a],
+    });
+    expect(g).toBe('restored-id');
+    expect(store.getGroup(g)?.settings).toEqual({ 'agent.panelOpen': true });
+  });
+
+  it('updateGroupSettings merge-patches only the provided keys', () => {
+    const a = store.add(web());
+    const g = store.createGroup({ memberIds: [a], settings: { 'agent.panelOpen': true, 'x': 1 } });
+    store.updateGroupSettings(g, { 'agent.panelOpen': false });
+    expect(store.getGroup(g)?.settings).toEqual({ 'agent.panelOpen': false, 'x': 1 });
+  });
+
   it('createGroup pulls members contiguous and returns a group id', () => {
     const a = store.add(web());
     const b = store.add(web());

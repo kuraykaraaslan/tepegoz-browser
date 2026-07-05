@@ -431,12 +431,31 @@ export type TabGroupColor =
   | 'cyan'
   | 'orange';
 
-/** A tab group: purely organizational metadata (ADR-0020), never a session/policy partition. */
+/**
+ * A per-tab-group setting key. Namespaced `"<feature>.<name>"` — known first-party keys today:
+ * `"agent.panelOpen"`; reserved for later: `"vpn.connectionId"`, `"tor.enabled"`. An extension should
+ * use its own `"ext.<extensionId>.<name>"` key. Plain `string` (not a closed union) so any feature or
+ * extension can write its own key with no change to this shared type — see `TabGroupInfo.settings` for
+ * the standard this supports.
+ */
+export type TabGroupSettingKey = string;
+
+/** JSON-safe, flat setting value. A feature needing more than one value uses multiple namespaced keys
+ *  (e.g. `vpn.connectionId` + `vpn.mode`) rather than nesting. */
+export type TabGroupSettingValue = string | number | boolean | null;
+
+/**
+ * A tab group: organizational metadata (ADR-0020) plus an extensible per-group settings bag. `settings`
+ * is the standard seam for feature toggles/bindings that vary by tab group (agent enabled/open today;
+ * VPN/Tor connection bindings later, per phase-5) — it carries no isolation/session/capability
+ * semantics (ADR-0020 still holds for that axis), only user-facing preferences.
+ */
 export interface TabGroupInfo {
   id: string;
   name: string;
   color: TabGroupColor;
   collapsed: boolean;
+  settings: Record<TabGroupSettingKey, TabGroupSettingValue>;
 }
 
 export interface TabInfo {
@@ -622,7 +641,15 @@ export interface TepegozApi {
   /** Reorder a whole group's run to `toIndex` among the non-member tabs. */
   moveTabGroup(groupId: string, toIndex: number): void;
   /** Patch a group's name/color/collapsed (only provided keys change). */
-  updateTabGroup(groupId: string, patch: { name?: string; color?: TabGroupColor; collapsed?: boolean }): void;
+  updateTabGroup(
+    groupId: string,
+    patch: {
+      name?: string;
+      color?: TabGroupColor;
+      collapsed?: boolean;
+      settings?: Record<TabGroupSettingKey, TabGroupSettingValue>;
+    },
+  ): void;
   /** Add a tab to an existing group. */
   assignTabToGroup(tabId: string, groupId: string): void;
   /** Remove a tab from its group (it becomes ungrouped). */

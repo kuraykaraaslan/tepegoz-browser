@@ -1,4 +1,5 @@
-import type { TabGroupInfo, TabInfo, TabsState } from '@tepegoz/desktop-ipc';
+import { randomUUID } from 'node:crypto';
+import type { TabGroupInfo, TabGroupSettingValue, TabInfo, TabsState } from '@tepegoz/desktop-ipc';
 import { DEFAULT_GROUP_COLOR } from './types';
 import type { TabGroup, TabGroupColor, TabRecord } from './types';
 
@@ -23,7 +24,6 @@ export class TabStore {
   private readonly groups = new Map<string, TabGroup>();
   private activeIdValue: string | null = null;
   private nextId = 1;
-  private nextGroupId = 1;
 
   /** Insert a new tab (id is allocated here) and return its id. Appended at the end of the strip. */
   add(
@@ -157,14 +157,25 @@ export class TabStore {
     this.normalize();
   }
 
-  /** Create a group from `memberIds` (unpinning them). Returns the new group id. */
-  createGroup(opts: { name?: string; color?: TabGroupColor; memberIds?: string[] } = {}): string {
-    const id = `g${this.nextGroupId++}`;
+  /** Create a group from `memberIds` (unpinning them). Returns the new group id. `opts.id` lets a
+   *  restore pass in the group's previously-persisted (stable) id instead of minting a new one. */
+  createGroup(
+    opts: {
+      id?: string;
+      name?: string;
+      color?: TabGroupColor;
+      collapsed?: boolean;
+      settings?: Record<string, TabGroupSettingValue>;
+      memberIds?: string[];
+    } = {},
+  ): string {
+    const id = opts.id ?? randomUUID();
     this.groups.set(id, {
       id,
       name: opts.name ?? '',
       color: opts.color ?? DEFAULT_GROUP_COLOR,
-      collapsed: false,
+      collapsed: opts.collapsed ?? false,
+      settings: opts.settings ?? {},
     });
     for (const m of opts.memberIds ?? []) {
       const rec = this.tabs.get(m);
@@ -216,6 +227,13 @@ export class TabStore {
   setGroupCollapsed(id: string, collapsed: boolean): void {
     const g = this.groups.get(id);
     if (g !== undefined) g.collapsed = collapsed;
+  }
+
+  /** Merge-patch a group's extensible settings bag (`TabGroupSettingKey` → value); only the provided
+   *  keys change. This is the per-tab-group settings standard (agent enabled, later VPN/Tor bindings). */
+  updateGroupSettings(id: string, patch: Record<string, TabGroupSettingValue>): void {
+    const g = this.groups.get(id);
+    if (g !== undefined) g.settings = { ...g.settings, ...patch };
   }
 
   /** Dissolve a group: its members become ungrouped in place, then the group is removed. */
@@ -336,6 +354,7 @@ export class TabStore {
       name: g.name,
       color: g.color,
       collapsed: g.collapsed,
+      settings: g.settings,
     }));
     return {
       tabs,

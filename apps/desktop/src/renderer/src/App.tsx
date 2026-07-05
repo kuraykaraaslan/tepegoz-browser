@@ -84,6 +84,11 @@ const EMPTY_TABS: TabsState = {
   canGoForward: false,
 };
 
+/** The Agent Console's extension id + the `TabGroupSettingKey` remembering its open/closed state per
+ *  tab group (the existing sidebar toggle button doubles as the per-group control — no new UI). */
+const AGENT_EXTENSION_ID = 'com.tepegoz.agent';
+const AGENT_PANEL_OPEN_KEY = 'agent.panelOpen';
+
 /** Sidebar dock width bounds (px); the user drags the edge to resize between these. */
 const SIDEBAR_MIN_WIDTH = 280;
 const SIDEBAR_MAX_WIDTH = 640;
@@ -144,6 +149,24 @@ export function App() {
 
   const locale = effectiveLocale(prefs?.locale ?? 'system');
 
+  // The active tab's group (null when ungrouped) + that group's remembered Agent Console open state.
+  const activeGroupId = tabs.tabs.find((t) => t.id === tabs.activeId)?.groupId ?? null;
+  const activeGroupAgentPanelOpen = tabs.groups.find((g) => g.id === activeGroupId)?.settings[
+    AGENT_PANEL_OPEN_KEY
+  ];
+
+  // Restore the active tab group's own Agent Console open/closed state on switch. A group with no
+  // explicit value yet (new group) is left alone — no forced default, no surprise toggle. Never yanks
+  // away some other extension the user deliberately docked (only acts when the sidebar is empty or
+  // already showing the agent).
+  useEffect(() => {
+    if (activeGroupId === null || activeGroupAgentPanelOpen === undefined) return;
+    setSidebarExtId((cur) => {
+      if (cur !== null && cur !== AGENT_EXTENSION_ID) return cur;
+      return activeGroupAgentPanelOpen ? AGENT_EXTENSION_ID : null;
+    });
+  }, [activeGroupId, activeGroupAgentPanelOpen]);
+
   const closeSurface = useCallback(() => {
     setActiveSurface(null);
   }, []);
@@ -163,8 +186,18 @@ export function App() {
         return;
       }
       if (action === 'sidebar') {
-        // A dock beside the page (web view stays visible); persists across tabs, toggles on re-trigger.
-        setSidebarExtId((cur) => (cur === id ? null : id));
+        // A dock beside the page (web view stays visible); toggles on re-trigger. For the Agent Console
+        // specifically, also remember the resulting open/closed state on the active tab group, so
+        // switching groups later restores each one's own state (TabGroupSettingKey standard).
+        setSidebarExtId((cur) => {
+          const next = cur === id ? null : id;
+          if (id === AGENT_EXTENSION_ID && activeGroupId !== null) {
+            window.tepegoz.updateTabGroup(activeGroupId, {
+              settings: { [AGENT_PANEL_OPEN_KEY]: next === id },
+            });
+          }
+          return next;
+        });
         return;
       }
       if (action === 'popup') {
@@ -183,7 +216,7 @@ export function App() {
         cur !== null && cur.id === id && cur.kind === action ? null : { id, kind: action },
       );
     },
-    [registry],
+    [registry, activeGroupId],
   );
 
   // Drag the sidebar's inner edge to resize (clamped). The native web view swallows pointer events when

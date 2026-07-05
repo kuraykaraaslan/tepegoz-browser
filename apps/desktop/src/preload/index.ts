@@ -48,6 +48,8 @@ import {
   type ProviderKeyMeta,
   type PublicSettings,
   type TabGroupColor,
+  type TabGroupSettingKey,
+  type TabGroupSettingValue,
   type TabsState,
   type TepegozApi,
   type TokenUsageSnapshot,
@@ -157,7 +159,15 @@ const api: TepegozApi = {
   moveTabGroup: (groupId: string, toIndex: number) => {
     ipcRenderer.send(IpcChannels.tabsGroupMove, { groupId, toIndex });
   },
-  updateTabGroup: (groupId: string, patch: { name?: string; color?: TabGroupColor; collapsed?: boolean }) => {
+  updateTabGroup: (
+    groupId: string,
+    patch: {
+      name?: string;
+      color?: TabGroupColor;
+      collapsed?: boolean;
+      settings?: Record<TabGroupSettingKey, TabGroupSettingValue>;
+    },
+  ) => {
     ipcRenderer.send(IpcChannels.tabsGroupUpdate, { groupId, ...patch });
   },
   assignTabToGroup: (tabId: string, groupId: string) => {

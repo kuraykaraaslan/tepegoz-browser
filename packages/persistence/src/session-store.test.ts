@@ -30,11 +30,27 @@ describe('SessionStore', () => {
         { url: 'https://b.com/', pinned: false, groupId: 'g1' },
         { url: 'https://c.com/', pinned: false, groupId: 'g1' },
       ],
-      groups: [{ id: 'g1', name: 'Work', color: 'red', collapsed: false }],
+      groups: [{ id: 'g1', name: 'Work', color: 'red', collapsed: false, settings: { 'agent.panelOpen': true } }],
       activeIndex: 1,
     });
     SessionStore.save(db, snap);
     expect(SessionStore.load(db)).toEqual(snap);
+  });
+
+  it('defaults a persisted group\'s settings to {} when absent or malformed', () => {
+    MetaStore.set(
+      db,
+      'session',
+      JSON.stringify({
+        version: 2,
+        tabs: [{ url: 'https://a.com/', pinned: false, groupId: 'g1' }],
+        groups: [
+          { id: 'g1', name: 'Work', color: 'red', collapsed: false }, // no `settings` key at all
+        ],
+        activeIndex: 0,
+      }),
+    );
+    expect(SessionStore.load(db)?.groups[0]?.settings).toEqual({});
   });
 
   it('upconverts a legacy v1 snapshot (string[] tabs) to v2', () => {

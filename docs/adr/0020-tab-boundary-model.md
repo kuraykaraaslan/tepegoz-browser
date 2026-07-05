@@ -45,6 +45,17 @@ would be an ambiguous concept that could silently accrue partition or capability
   one at full bounds. A `SplitLayout | null` (null = today's single-active-view mode) describes panes +
   ratios + focused pane; navigation actions target the **focused pane**.
 
+## Addendum (2026-07-06): per-group settings vs. policy semantics
+`TabGroupInfo` now carries a `settings: Record<TabGroupSettingKey, TabGroupSettingValue>` bag (a flat,
+JSON-safe map — see `packages/desktop-ipc/src/contract.ts`) as the standard seam for feature toggles
+that vary **per tab group**: the Agent Console's open/closed state (`'agent.panelOpen'`) today; VPN/Tor
+connection bindings (Phase 5, `phases/phase-5-vpn-network-privacy.md`) later. This does **not** revisit
+the Decision above: `settings` carries no isolation/session/capability semantics — it never creates a
+partition, never gates a permission grant, and the Policy Kernel / ToolGateway PEP (ADR-0013) remains
+the sole security-policy axis. It is exactly the same kind of "binding/UI layer, not a partition axis"
+Phase 5 already describes for its own group→connection binding. Any group-scoped **security** decision
+must still resolve through ADR-0013's policy plane, never by reading `settings`.
+
 ## Consequences
 - "Group / workspace / split" are unambiguous: they reorganize and re-lay-out views the user already
   trusts under the ADR-0012 boundary; they add **no** new trust, partition, or policy surface. A

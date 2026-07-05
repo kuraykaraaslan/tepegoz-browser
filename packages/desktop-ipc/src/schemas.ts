@@ -80,15 +80,23 @@ export const TabGroupCreateSchema = z.object({
 /** `tabs:group-move` — reorder a whole group's run. */
 export const TabGroupMoveSchema = z.object({ groupId: TabGroupIdSchema, toIndex: z.number().int().min(0) });
 
-/** `tabs:group-update` — patch a group's name/color/collapsed (only provided keys change). */
+/** A single per-tab-group setting value (`TabGroupSettingKey` → value) — flat and JSON-safe. */
+export const TabGroupSettingValueSchema = z.union([z.string().max(2048), z.number(), z.boolean(), z.null()]);
+
+/** The extensible per-group settings bag (agent enabled/open today; VPN/Tor bindings later). */
+export const TabGroupSettingsSchema = z.record(z.string().min(1).max(128), TabGroupSettingValueSchema);
+
+/** `tabs:group-update` — patch a group's name/color/collapsed/settings (only provided keys change;
+ *  `settings` itself is a merge-patch — only its provided keys change). */
 export const TabGroupUpdateSchema = z
   .object({
     groupId: TabGroupIdSchema,
     name: z.string().max(200),
     color: TabGroupColorSchema,
     collapsed: z.boolean(),
+    settings: TabGroupSettingsSchema,
   })
-  .partial({ name: true, color: true, collapsed: true });
+  .partial({ name: true, color: true, collapsed: true, settings: true });
 
 /** `tabs:group-assign` — add a tab to an existing group. */
 export const TabGroupAssignSchema = z.object({ tabId: TabIdSchema, groupId: TabGroupIdSchema });

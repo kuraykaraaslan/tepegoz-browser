@@ -21,7 +21,6 @@ import type {
   AgentConfig,
   AgentEffort,
   AgentEvent,
-  AgentFileAttachment,
   AgentHostApi,
   AgentPlanPreview,
   Attachment,
@@ -284,11 +283,8 @@ function serializeAttachments(attachments: Attachment[], prompt: string): string
 export function AgentPanel({ api, onClose }: AgentPanelProps) {
   const a = useT(agentDict);
   const c = useT(coreDict);
-  const [prompt, setPrompt] = useState('');
   const [config, setConfig] = useState<AgentConfig | null>(null);
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [dismissedNotices, setDismissedNotices] = useState<Set<string>>(new Set());
-  const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set());
 
   // Active tab-group id — the agent session key.
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
@@ -417,10 +413,14 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
     const fullPrompt = serializeAttachments(attachments, text);
     const id = `turn-${String(Date.now())}-${String(activeState.turns.length)}`;
     const newTurn: Turn = { id, prompt: text, runId: null, events: [] };
-    mutateActive((s) => ({ ...s, turns: [...s.turns, newTurn], running: true }));
-    setPrompt('');
-    setAttachments([]);
-    setExpandedFiles(new Set());
+    mutateActive((s) => ({
+      ...s,
+      turns: [...s.turns, newTurn],
+      running: true,
+      prompt: '',
+      attachments: [],
+      expandedFiles: new Set(),
+    }));
     void api.runAgent({ prompt: fullPrompt, groupId: activeGroupId })
       .catch(() => { /* failure surfaced as 'error' event */ })
       .finally(() => {
@@ -438,8 +438,6 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
     if (activeState.running) onCancel();
     if (activeGroupId !== null) api.newAgentConversation(activeGroupId);
     mutateActive(() => emptyGroupState());
-    setPrompt('');
-    setAttachments([]);
   }
 
   function toggleReasoning(turnId: string): void {
@@ -503,12 +501,15 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
 
   // ---- Attachment actions -----------------------------------------------------------------------
   function removeAttachment(id: string): void {
-    setAttachments((prev) => prev.filter((a) => a.id !== id));
-    setExpandedFiles((prev) => { const next = new Set(prev); next.delete(id); return next; });
+    mutateActive((s) => {
+      const nextExpanded = new Set(s.expandedFiles);
+      nextExpanded.delete(id);
+      return { ...s, attachments: s.attachments.filter((a) => a.id !== id), expandedFiles: nextExpanded };
+    });
   }
 
   function addAttachment(att: Attachment): void {
-    setAttachments((prev) => [...prev, att]);
+    mutateActive((s) => ({ ...s, attachments: [...s.attachments, att] }));
   }
 
   async function onAttachSelection(): Promise<void> {
@@ -559,7 +560,10 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
   const effort: AgentEffort = config?.effort ?? 'high';
   const notices = buildNotices(autonomy, a.risk).filter((n) => !dismissedNotices.has(n.id));
 
-  const { turns, approval, planPreview, running, skipIds, tokens, openReasoning, openSteps } = activeState;
+  const {
+    turns, approval, planPreview, running, skipIds, tokens, openReasoning, openSteps,
+    prompt, attachments, expandedFiles,
+  } = activeState;
 
   return (
     <div
@@ -788,10 +792,10 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
                       {isFile ? (
                         <button
                           type="button"
-                          onClick={() => setExpandedFiles((prev) => {
-                            const next = new Set(prev);
+                          onClick={() => mutateActive((s) => {
+                            const next = new Set(s.expandedFiles);
                             if (next.has(att.id)) next.delete(att.id); else next.add(att.id);
-                            return next;
+                            return { ...s, expandedFiles: next };
                           })}
                           className="max-w-[14rem] truncate text-left underline-offset-2 hover:underline focus-visible:outline-none"
                         >
@@ -826,7 +830,7 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
             disabled={running}
             placeholder={a.runPlaceholder}
             aria-label={a.runPlaceholder}
-            onChange={(e) => { setPrompt(e.target.value); }}
+            onChange={(e) => { const value = e.target.value; mutateActive((s) => ({ ...s, prompt: value })); }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onRun(); }
             }}

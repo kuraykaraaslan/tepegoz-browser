@@ -494,10 +494,11 @@ export function registerIpc(): void {
   onAction(IpcChannels.tabsGroupMove, TabGroupMoveSchema, ({ groupId, toIndex }) => {
     TabManager.moveGroup(groupId, toIndex);
   });
-  onAction(IpcChannels.tabsGroupUpdate, TabGroupUpdateSchema, ({ groupId, name, color, collapsed }) => {
+  onAction(IpcChannels.tabsGroupUpdate, TabGroupUpdateSchema, ({ groupId, name, color, collapsed, settings }) => {
     if (name !== undefined) TabManager.renameGroup(groupId, name);
     if (color !== undefined) TabManager.recolorGroup(groupId, color);
     if (collapsed !== undefined) TabManager.setGroupCollapsed(groupId, collapsed);
+    if (settings !== undefined) TabManager.updateGroupSettings(groupId, settings);
   });
   onAction(IpcChannels.tabsGroupAssign, TabGroupAssignSchema, ({ tabId, groupId }) => {
     TabManager.assignToGroup(tabId, groupId);
