@@ -61,6 +61,8 @@ const ICON_BTN =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus';
 
 const AUTONOMY_LEVELS: readonly AgentAutonomy[] = ['ask', 'act', 'auto'];
+const AUTONOMY_LEVELS_ALL: readonly AgentAutonomy[] = ['ask', 'act', 'auto', 'dangerous'];
+const AUTONOMY_DISABLED = new Set<AgentAutonomy>(['dangerous']);
 
 /** Should the panel auto-approve a gated tool call at this level? `auto` = always; `act` = only
  *  low-risk (non-biometric) tools; `ask` = never (the modal is shown). */
@@ -96,10 +98,14 @@ const ActIcon = ({ className }: { className?: string }) => <Svg className={class
 const AutoIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" className={className} aria-hidden fill="currentColor"><path d="M13 2L3 14h7l-1 8 10-12h-7z" /></svg>
 );
+const DangerousIcon = ({ className }: { className?: string }) => (
+  <Svg className={className}><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></Svg>
+);
 const AUTONOMY_ICON: Record<AgentAutonomy, (p: { className?: string }) => ReactNode> = {
   ask: AskIcon,
   act: ActIcon,
   auto: AutoIcon,
+  dangerous: DangerousIcon,
 };
 const GaugeIcon = ({ className }: { className?: string }) => (
   <Svg className={className}>
@@ -109,6 +115,15 @@ const GaugeIcon = ({ className }: { className?: string }) => (
 
 /** Event kinds whose message is model prose → rendered as markdown (links + code + file paths). */
 const PROSE_KINDS = new Set<AgentEvent['kind']>(['done', 'error', 'handoff']);
+
+/** Tool-call progress kinds — collapsed into the per-turn "Progress" group so the thread stays tidy;
+ *  the final response (done/error/handoff) renders on its own below. */
+const STEP_KINDS = new Set<AgentEvent['kind']>([
+  'step_start',
+  'step_ok',
+  'step_error',
+  'awaiting_approval',
+]);
 
 /** Notice severities for the dynamic notices strip above the composer (extensible: quota/limit/…). */
 type NoticeSeverity = 'info' | 'warning' | 'danger';
@@ -252,8 +267,10 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
   const [skipIds, setSkipIds] = useState<Set<string>>(new Set());
   const [tokens, setTokens] = useState<TokenUsageSnapshot | null>(null);
   const [config, setConfig] = useState<AgentConfig | null>(null);
-  // Per-turn reasoning disclosure open-state (a turn's "thinking" section expands independently).
+  // Per-turn disclosure open-state: the "thinking" (reasoning) and the tool-call "Progress" groups each
+  // expand independently and are collapsed by default so the thread stays uncluttered.
   const [openReasoning, setOpenReasoning] = useState<Set<string>>(new Set());
+  const [openSteps, setOpenSteps] = useState<Set<string>>(new Set());
   const listRef = useRef<HTMLDivElement | null>(null);
   // The event callbacks are registered once; read the LIVE autonomy level through a ref to avoid a
   // stale closure (and to not re-subscribe on every level change).
@@ -344,11 +361,21 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
     setApproval(null);
     setPlanPreview(null);
     setOpenReasoning(new Set());
+    setOpenSteps(new Set());
     setTokens(null); // reset the per-task token counter (the next run reseeds it)
   }
 
   function toggleReasoning(id: string): void {
     setOpenReasoning((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSteps(id: string): void {
+    setOpenSteps((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -488,10 +515,16 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
         ) : (
           <div className="space-y-4">
             {turnViews.map(({ turn, visible }, ti) => {
-              // Split this turn's revealed events into the collapsible reasoning and the action timeline.
+              // Split this turn's events into three lanes: collapsible reasoning ("thinking"), the
+              // collapsible tool-call Progress group, and the visible response (done/error/handoff prose).
               const reasoning = visible.filter((e) => e.kind === 'plan' || e.kind === 'decision');
-              const timeline = visible.filter((e) => e.kind !== 'plan' && e.kind !== 'decision');
-              const open = openReasoning.has(turn.id);
+              const steps = visible.filter((e) => STEP_KINDS.has(e.kind));
+              const response = visible.filter(
+                (e) => !STEP_KINDS.has(e.kind) && e.kind !== 'plan' && e.kind !== 'decision',
+              );
+              const reasoningOpen = openReasoning.has(turn.id);
+              const stepsOpen = openSteps.has(turn.id);
+              const latestStep = steps.at(-1);
               const isLast = ti === turnViews.length - 1;
               // The turn is still working while it's the active one, a run is in flight, and no terminal
               // (done/error) event has landed yet.
@@ -521,9 +554,9 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
                           <SparkIcon className="h-3.5 w-3.5 text-indigo-400" />
                           {a.reasoning.title} ({reasoning.length})
                         </span>
-                        <span>{open ? a.reasoning.hide : a.reasoning.show}</span>
+                        <span>{reasoningOpen ? a.reasoning.hide : a.reasoning.show}</span>
                       </button>
-                      {open && (
+                      {reasoningOpen && (
                         <ul className="space-y-1 border-t border-border px-3 py-2 text-xs text-text-secondary">
                           {reasoning.map((e, i) => (
                             <li key={`r-${String(e.ts)}-${String(i)}`} className="[overflow-wrap:anywhere]">
@@ -537,7 +570,48 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
                       )}
                     </div>
                   )}
-                  {timeline.map((e, i) => {
+
+                  {/* Collapsed tool-call progress — every browser step lives here so the thread stays
+                      tidy; while running, the header shows the current step so collapsed ≠ opaque. */}
+                  {steps.length > 0 && (
+                    <div className="rounded-md border border-border bg-surface-raised">
+                      <button
+                        type="button"
+                        onClick={() => toggleSteps(turn.id)}
+                        className="flex w-full items-center justify-between gap-2 px-2 py-1.5 text-xs text-text-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+                      >
+                        <span className="flex min-w-0 items-center gap-1.5">
+                          <GaugeIcon className="h-3.5 w-3.5 shrink-0 text-text-secondary" />
+                          <span className="shrink-0">
+                            {a.progress} ({steps.length})
+                          </span>
+                          {working && !stepsOpen && latestStep !== undefined && (
+                            <span className="truncate text-text-disabled">· {latestStep.message}</span>
+                          )}
+                        </span>
+                        <span className="shrink-0">{stepsOpen ? a.reasoning.hide : a.reasoning.show}</span>
+                      </button>
+                      {stepsOpen && (
+                        <ul className="space-y-1 border-t border-border px-2 py-2">
+                          {steps.map((e, i) => (
+                            <li key={`s-${String(e.ts)}-${String(i)}`} className="flex items-start gap-2 px-1">
+                              <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', KIND_DOT[e.kind])} />
+                              <div className="min-w-0 flex-1">
+                                <span className="text-text-primary [overflow-wrap:anywhere]">{e.message}</span>
+                                {e.detail !== undefined && e.detail.length > 0 && (
+                                  <span className="ml-1 text-text-secondary [overflow-wrap:anywhere]">
+                                    — {e.detail}
+                                  </span>
+                                )}
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+
+                  {response.map((e, i) => {
                     const isProse = PROSE_KINDS.has(e.kind);
                     return (
                       <div
@@ -639,19 +713,35 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
               }
             >
               {(close) =>
-                AUTONOMY_LEVELS.map((level) => {
+                AUTONOMY_LEVELS_ALL.map((level) => {
                   const Glyph = AUTONOMY_ICON[level];
+                  const disabled = AUTONOMY_DISABLED.has(level);
                   return (
                     <button
                       key={level}
                       type="button"
-                      onClick={() => {
-                        chooseAutonomy(level);
-                        close();
-                      }}
-                      className="flex w-full items-start gap-2 rounded-md px-2 py-2 text-left hover:bg-surface-overlay"
+                      disabled={disabled}
+                      onClick={
+                        disabled
+                          ? undefined
+                          : () => {
+                              chooseAutonomy(level);
+                              close();
+                            }
+                      }
+                      className={
+                        'flex w-full items-start gap-2 rounded-md px-2 py-2 text-left' +
+                        (disabled
+                          ? ' cursor-not-allowed opacity-40'
+                          : ' hover:bg-surface-overlay')
+                      }
                     >
-                      <Glyph className="mt-0.5 h-4 w-4 shrink-0 text-text-secondary" />
+                      <Glyph
+                        className={
+                          'mt-0.5 h-4 w-4 shrink-0' +
+                          (disabled ? ' text-red-500/50' : ' text-text-secondary')
+                        }
+                      />
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm font-medium text-text-primary">
                           {a.autonomy[level].title}

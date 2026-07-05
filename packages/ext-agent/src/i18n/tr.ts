@@ -63,6 +63,7 @@ export const tr: AgentStrings = {
       desc: 'Rutin adımları çalıştırır; yıkıcı veya finansal işlemler için yine sorar.',
     },
     auto: { title: 'Otomatik', desc: 'Tam otonom — durmadan işlem yapar.' },
+    dangerous: { title: 'Tehlikeli', desc: 'Yakında — güvenlik kilitleri olmayan kısıtsız mod.' },
   },
   // Akıl yürütme çabası ön ayarları (besteci çaba açılır menüsü). Yüksek çaba → daha derin akıl + daha çok token.
   effort: {

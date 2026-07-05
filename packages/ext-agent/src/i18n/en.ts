@@ -60,6 +60,7 @@ export const en = {
       desc: 'Runs routine steps; still asks for destructive or financial actions.',
     },
     auto: { title: 'Auto', desc: 'Fully autonomous — takes actions without pausing.' },
+    dangerous: { title: 'Dangerous', desc: 'Coming soon — unrestricted mode with no safety gates.' },
   },
   // Reasoning-effort presets (the composer effort dropdown). Higher effort → deeper reasoning + more tokens.
   effort: {

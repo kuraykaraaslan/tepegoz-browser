@@ -72,7 +72,7 @@ export interface TokenUsageSnapshot {
  * actions. `auto` = fully hands-off (auto-approve everything). At every level the `deny`-class
  * (sensitive-site lockout) still hard-blocks in the main process.
  */
-export type AgentAutonomy = 'ask' | 'act' | 'auto';
+export type AgentAutonomy = 'ask' | 'act' | 'auto' | 'dangerous';
 
 /** One selectable provider/model for the panel's model picker. */
 export interface AgentModelChoice {
