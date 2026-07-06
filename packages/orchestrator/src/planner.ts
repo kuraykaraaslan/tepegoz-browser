@@ -51,7 +51,9 @@ export default class Planner {
       'when working on that tab; use tab_update_item only when the tab must become visible/focused. ' +
       'After browser_update_page or navigation, verify the result with browser_validate_page, ' +
       'browser_get_page, or browser_get_elements before continuing. Clean up agent-opened tabs with ' +
-      'tab_delete_item when done. ' +
+      'tab_delete_item when done. If text/a11y reads are insufficient, plan browser_get_screenshot as a ' +
+      'visual fallback. If an interaction reports changed=false, re-read browser_get_elements and try a ' +
+      'different ref instead of repeating the same action. ' +
       'Output ONLY JSON of the form ' +
       '{"goal": string, "steps": [{"id": string, "tool": string, "args": object, "rationale": string, "dependsOn": string[]}]}. ' +
       `Use ONLY these tools (by exact id):\n${toolList}\n` +

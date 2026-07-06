@@ -20,7 +20,7 @@ them** with `- [ ]` / `- [x]`. This keeps the process resumable across sessions.
 |---|---|---|---|
 | 0 | [phase-0-foundation.md](phase-0-foundation.md) | Monorepo scaffold + core contracts + CI | 🟡 Core done (packaging/signing + release/update hardening + Phase-1a-bound i18n deferred) |
 | 1a | [phase-1a-walking-skeleton-mvp.md](phase-1a-walking-skeleton-mvp.md) | Walking-skeleton MVP (BYO-key local-first agentic core) | 🟡 In progress (agent console/runtime/tool plane/browser tools live; e2e + remaining gates pending) |
-| 1b | [phase-1b-agentic-deepening.md](phase-1b-agentic-deepening.md) | Parallel DAG + durable handoff + per-task memory + prompt/rules | 🟡 Early down-payments (tabId-scoped browser control + validation; durable resume/parallel DAG pending) |
+| 1b | [phase-1b-agentic-deepening.md](phase-1b-agentic-deepening.md) | Parallel DAG + durable handoff + per-task memory + prompt/rules | 🟡 Early down-payments (tabId-scoped browser control + validation + visual fallback; durable resume/parallel DAG pending) |
 | 2 | [phase-2-adapters-safe-browsing.md](phase-2-adapters-safe-browsing.md) | Integration adapters + Safe-Browsing Suite | ⬜ Not started |
 | 2b | [phase-2b-daily-driver-ux.md](phase-2b-daily-driver-ux.md) | Daily-driver browser UX (tabs/PWA/DevTools) — parallel with Phase 2 | ⬜ Not started |
 | 2c | [phase-2c-classic-browser-essentials.md](phase-2c-classic-browser-essentials.md) | Classic browser essentials + downloads (find/print/PDF/reader/translate/bookmarks/private/permissions) — parallel with Phase 2/2b | 🟡 In progress (download/clipboard/upload manager slices) |
@@ -53,6 +53,8 @@ work has been folded into Phase 1a/1b as follows:
       creation.
 - [x] Phase 1b down-payment: `tabId`-scoped browser tools and per-WebContents CDP element references.
 - [x] Phase 1b down-payment: `browser_validate_page` action-verification tool.
+- [x] Phase 1b down-payment: `@tepegoz/screenshots` + `browser_get_screenshot` visual fallback with
+      viewport/fullPage capture, bounded metadata, and desktop host adapter.
 - [x] Phase 1b down-payment: retry/recovery taxonomy for policy denial, stale selectors, page changes,
       navigation timeout, auth handoff, transient failures, and malformed model output.
 - [x] Phase 2c down-payment: download/clipboard manager domain packages, IPC/preload contracts, web-permission
@@ -70,7 +72,9 @@ work has been folded into Phase 1a/1b as follows:
 - [x] Phase 2c down-payment: `tepegoz://uploads`, presentational Uploads UI, internal navigation, and
       main-menu action.
 - [x] Phase 2c down-payment: combined toolbar transfer indicator/popup for recent downloads and uploads.
-- [ ] Phase 1b remaining: durable resume across app restarts, screenshot/vision fallback, true parallel DAG.
+- [x] Phase 1b down-payment: action-recovery fixtures for screenshot fallback, changed=false form recovery,
+      and table-reading flows.
+- [ ] Phase 1b remaining: durable resume across app restarts, true parallel DAG, vision model routing/eviction.
 
 > **Phase E (Extras) is not sequenced.** It is not numbered into the 0–12 flow and nothing depends on it; each
 > item is a recorded, demand-gated decision that graduates to its own branch/ADR only when pull is shown.

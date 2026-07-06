@@ -32,6 +32,16 @@ const UpdatePageArgs = z.discriminatedUnion('action', [
   }),
 ]);
 
+interface PageFingerprint {
+  url: string;
+  title: string;
+  text: string;
+}
+
+function pageChanged(before: PageFingerprint, after: PageFingerprint): boolean {
+  return before.url !== after.url || before.title !== after.title || before.text !== after.text;
+}
+
 /** Build a `browser_*` builtin ToolDescriptor (mirrors `@tepegoz/file-operations`'s local helper). */
 function descriptor(
   id: string,
@@ -128,10 +138,12 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
         '{ action: "press", key, tabId? } (e.g. "Enter", "Tab", "Escape", "ArrowDown") · ' +
         '{ action: "scroll", direction: "up"|"down", amount?, tabId? }. Omit tabId for the active tab. ' +
         'File inputs must be handled through upload_create_item so path grants, approval, and audit apply. ' +
-        'Returns { ok: true }.',
+        'Returns { ok, url, title, changed, recoveryHint? }; if changed=false, re-read elements or use ' +
+        'browser_get_screenshot before trying a different ref.',
     ),
     inputSchema: UpdatePageArgs,
     handler: async (args) => {
+      const before = await host.readPage(args.tabId);
       switch (args.action) {
         case 'click':
           await host.clickElement(args.ref, args.tabId);
@@ -146,7 +158,18 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
           await host.scrollPage(args.direction, args.amount, args.tabId);
           break;
       }
-      return { ok: true };
+      const after = await host.readPage(args.tabId);
+      const changed = pageChanged(before, after);
+      return changed
+        ? { ok: true, url: after.url, title: after.title, changed }
+        : {
+            ok: true,
+            url: after.url,
+            title: after.title,
+            changed,
+            recoveryHint:
+              'No visible text/url/title change was detected. Re-read browser_get_elements and try a different ref; use browser_get_screenshot if text/a11y is insufficient.',
+          };
     },
   });
 }

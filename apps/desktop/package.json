@@ -87,6 +87,7 @@
     "@tepegoz/persistence": "workspace:*",
     "@tepegoz/preferences": "workspace:*",
     "@tepegoz/security-policy": "workspace:*",
+    "@tepegoz/screenshots": "workspace:*",
     "@tepegoz/settings-ui": "workspace:*",
     "@tepegoz/shared-types": "workspace:*",
     "@tepegoz/tab-engine": "workspace:*",

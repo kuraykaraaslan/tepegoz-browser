@@ -1,7 +1,6 @@
 # Plan — ext-agent'i Claude Chrome Seviyesine Yaklastirma
 
-**Durum:** Uygulama devam ediyor; Faz 1 tamamlandi, download/clipboard Slice 1-5 tamamlandi,
-upload broker track basladi.
+**Durum:** Faz 1 ve Faz 2 tamamlandi; download/clipboard/upload transfer track tamamlandi.
 **Tarih:** 2026-07-06
 **Kapsam:** `extensions/ext-agent`, agent runtime, browser/tab tools, desktop host baglantilari ve
 ilgili dokumantasyon.
@@ -32,7 +31,7 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 | Faz | Durum | Not |
 |-----|-------|-----|
 | 1. Agent Reliability | Tamamlandi | Run izolasyonu, state machine/checkpoint, hata siniflandirmasi, recovery ve eval testleri tamamlandi. |
-| 2. Browser Reliability | Devam ediyor | TabId scoped browser tools, sayfa dogrulama, download/upload/clipboard brokerlari tamamlandi; vision fallback kaldi. |
+| 2. Browser Reliability | Tamamlandi | TabId scoped browser tools, sayfa dogrulama, screenshot/fullPage visual fallback, action recovery, fixtures ve download/upload/clipboard brokerlari tamamlandi. |
 | 3. Task Productization | Baslamadi | Saved tasks, artifacts, scheduler, templates ve dashboard. |
 | 4. Tool Ecosystem | Baslamadi | Web search/fetch, servis adaptorleri ve MCP/policy genisletmeleri. |
 | 5. Acceptance/Eval | Baslamadi | Claude benzeri is senaryolari icin otomatik kabul setleri. |
@@ -77,10 +76,9 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 - [x] `browser_validate_page` eklendi: load bekleme, sayfa okuma ve opsiyonel metin dogrulama yapiyor.
 - [x] Planner/reactor prompt'lari navigasyon ve sayfa aksiyonlari sonrasi dogrulama yapacak sekilde
   guncellendi.
-- [ ] Screenshot/vision fallback ekle: metin/a11y yetersiz kalinca hedef sekmeden goruntu alip modele
-  kontrollu baglam olarak aktar.
-- [ ] Download/upload/clipboard araclarini policy-gated sekilde ekle. Download + clipboard + upload
-  brokerlari tamamlandi; screenshot/vision ile ilgili browser-reliability isi ayri kaliyor.
+- [x] Screenshot/vision fallback ekle: `@tepegoz/screenshots` ve `browser_get_screenshot` hedef
+  sekmeden viewport veya bounded fullPage PNG alip modele kontrollu, untrusted visual context olarak aktarir.
+- [x] Download/upload/clipboard araclarini policy-gated sekilde ekle.
   - [x] Slice 1: `@tepegoz/downloads` ve `@tepegoz/clipboard` domain paketleri, IPC/preload
     kontratlari, preferences alanlari ve phase/layer kurallari eklendi.
   - [x] Slice 2: DownloadService + quarantine + Electron `will-download` adapter + SQLite projection +
@@ -92,11 +90,11 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
   - [x] Upload Slice 1: `@tepegoz/uploads` domain paketi, zod schemas, `upload_*` tool registration,
     IPC contract kanallari ve layer kurali eklendi.
   - [x] Upload Slice 2: UploadService + CDP file input binding + file sandbox preflight + redacted audit.
-- [x] Upload Slice 3: `tepegoz://uploads` UI, preload/IPC wiring, menu/navigation ve phase/docs tamamlama.
+  - [x] Upload Slice 3: `tepegoz://uploads` UI, preload/IPC wiring, menu/navigation ve phase/docs tamamlama.
   - [x] Combined transfer activity: toolbar indicator + tek popup icinde recent download/upload listesi.
-- [ ] Action recovery ekle: click/fill sonrasi beklenen degisim yoksa yeniden snapshot ve alternatif
-  selector denemesi.
-- [ ] Form ve tablo senaryolari icin fixtures ekle.
+- [x] Action recovery ekle: click/fill sonrasi beklenen degisim yoksa `changed=false` + recovery hint ile
+  yeniden element snapshot ve alternatif selector denemesi promptlanir.
+- [x] Form ve tablo senaryolari icin fixtures ekle.
 
 ## Faz 3 — Task Productization
 
@@ -166,12 +164,13 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 - [x] `a2937cc Add upload broker domain foundations`
 - [x] `cf752c0 Wire upload broker service`
 - [x] `d1684d6 Add uploads page and navigation`
+- [x] `4dce586 Add combined transfer activity popup`
 
 ## Siradaki En Mantikli Dilim
 
-Bu noktadan sonra aktif dilim **Browser Reliability / download + clipboard manager** oldu. Kullanici
-istegiyle Phase 2c download manager ve Permissions Center clipboard altyapisi, agent tool gating ile
-birlikte one alindi; screenshot/vision fallback siradaki browser-reliability dilimi olarak kalir.
+Faz 2 Browser Reliability tamamlandi. Siradaki mantikli dilim Phase 3 Task Productization veya Phase 5
+Acceptance/Eval kabul setlerini genisletmek; Phase 2c klasik browser essentials icinde kalan user-facing
+find/print/PDF/reader/translate/screenshot-CAS isleri ayri urun yuzeyi olarak duruyor.
 
 Download/clipboard icin kalan siradaki is:
 
@@ -182,8 +181,8 @@ Download/clipboard icin kalan siradaki is:
 - [x] Siradaki: ClipboardService + generic WebPermissionBroker dilimine gec.
 - [x] Siradaki: `download_*` / `clipboard_*` capability tools + HITL entegrasyonu.
 
-Download/clipboard/upload track icin kod dilimleri tamamlandi. Kalan browser-reliability isleri: gercek
-SafeBrowsing provider/ADR, screenshot/vision fallback, manual UAT ve daha genis e2e kabul seti.
+Download/clipboard/upload track icin kod dilimleri tamamlandi. Kalan transfer guvenligi isi: gercek
+SafeBrowsing provider/ADR ve manual UAT.
 
 Upload broker icin aktif siradaki isler:
 
@@ -192,6 +191,8 @@ Upload broker icin aktif siradaki isler:
 - [x] UploadService, CDP `DOM.setFileInputFiles`, file sandbox preflight ve Event Journal audit.
 - [x] Uploads UI/internal page/preload wiring.
 - [x] Combined transfer activity toolbar indicator/popup.
+- [x] Browser screenshot package + visual fallback: `@tepegoz/screenshots`, `browser_get_screenshot`,
+      viewport/fullPage host adapter, action-recovery promptlari ve reactor fixtures.
 
 ## Ek Dogrulama Kaydi - Download/Clipboard Track
 
@@ -233,6 +234,11 @@ Upload broker icin aktif siradaki isler:
 - [x] Upload Slice 3: `pnpm --filter @tepegoz/desktop typecheck/lint`
 - [x] Combined transfer activity: `pnpm --filter @tepegoz/desktop typecheck/lint`
 - [x] Combined transfer activity: `pnpm --filter @tepegoz/ui typecheck`
+- [x] Screenshot fallback: `pnpm --filter @tepegoz/screenshots test/typecheck/lint`
+- [x] Screenshot fallback: `pnpm --filter @tepegoz/browser-tools test/typecheck/lint`
+- [x] Screenshot fallback: `pnpm --filter @tepegoz/orchestrator test/typecheck/lint`
+- [x] Screenshot fallback: `pnpm --filter @tepegoz/desktop typecheck/lint`
+- [x] Screenshot fallback: `git diff --check`
 - [x] Upload Slice 3: `git diff --check`
 - [ ] Upload Slice 3: `pnpm depcruise` — blocked by stale generated desktop output:
   `apps/desktop/out/main/node-B4hO7KOT.js` references a missing file during dependency extraction.

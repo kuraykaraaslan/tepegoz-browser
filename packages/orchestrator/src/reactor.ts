@@ -217,7 +217,10 @@ const BROWSING_STRATEGY =
   'in the background by default; pass the returned id as `tabId` to browser_* tools when working on ' +
   'that tab. Use tab_update_item only when the tab must become visible/focused. Close tabs you opened ' +
   'with tab_delete_item when they are no longer needed. After browser_update_page or navigation, verify ' +
-  'the result with browser_validate_page, browser_get_page, or browser_get_elements before continuing.';
+  'the result with browser_validate_page, browser_get_page, or browser_get_elements before continuing. ' +
+  'If browser_get_page/browser_get_elements do not expose enough information, use browser_get_screenshot ' +
+  'as a visual fallback. If browser_update_page returns changed=false, do not repeat the same ref blindly; ' +
+  're-read browser_get_elements and try a different actionable ref or finish with a clear limitation.';
 
 function systemPrompt(req: ReactRequest): string {
   const toolList = req.tools.map((t) => `- ${t.id} (${t.dangerClass}): ${t.description}`).join('\n');

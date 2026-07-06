@@ -22,6 +22,7 @@ import { registerJournalTools } from '@tepegoz/journal-tools';
 import { registerDownloadTools } from '@tepegoz/downloads/tools';
 import { registerClipboardTools } from '@tepegoz/clipboard/tools';
 import { registerUploadTools } from '@tepegoz/uploads/tools';
+import { registerScreenshotTools } from '@tepegoz/screenshots/tools';
 import FileOperationsHost from './file-operations/file-operations-host';
 import { attachBrowserHostWindow, browserHost } from './agent/browser-host.electron';
 import { journalHost } from './agent/journal-host.electron';
@@ -154,6 +155,7 @@ if (!app.requestSingleInstanceLock()) {
       // no longer vanish when `com.tepegoz.agent` is disabled (the runtime that invokes them only runs
       // when the extension is enabled). `browserHost` also implements the tab host (TabHost).
       registerBrowserTools({ host: browserHost });
+      registerScreenshotTools({ host: browserHost });
       registerTabTools({ host: browserHost });
       registerJournalTools({ host: journalHost });
       registerDownloadTools({ host: downloadToolsHost });

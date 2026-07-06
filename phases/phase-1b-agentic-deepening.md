@@ -46,7 +46,9 @@ fallback, full capability plane, **tepegoz's MCP SERVER surface**, local SLM.
 ### L4 — Vision fallback
 - [ ] Vision only when DOM insufficient/layout changed (not every step); vision-heavy steps routed to Opus (high-res vision is Opus 4.7+)
 - [x] Non-vision action verification foundation: `browser_validate_page` waits for load, reads the target page, returns URL/title, and optionally verifies expected text after navigation/page actions.
-- [ ] Screenshot/vision fallback: when DOM/a11y + `browser_validate_page` are insufficient, capture the target tab screenshot and pass a bounded visual context to the model.
+- [x] Screenshot/vision fallback foundation: when DOM/a11y + `browser_validate_page` are insufficient,
+      `browser_get_screenshot` captures the target tab as viewport or bounded fullPage PNG and passes
+      metadata + untrusted visual context to the model. Still pending above: vision-heavy model routing policy.
 
 ### L5 — Full Capability Plane + **tepegoz = MCP SERVER**
 - [ ] **SkillRuntime** (SKILL.md frontmatter + lazy progressive-disclosure) + SkillRegistry + versioning

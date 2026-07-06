@@ -68,6 +68,8 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       determinism/observation-recording impact (agent's own runs read untranslated source)
 - [ ] User-facing **screenshot** (visible viewport + full-page) → stored as a **CAS blob** (reuse Phase 0/1b
       blob store; WebP), never inline base64
+  - [x] Agent visual fallback down-payment: `@tepegoz/screenshots` + `browser_get_screenshot` can capture
+        viewport/fullPage PNG for model context. The user-facing CAS/WebP screenshot surface remains open.
 - [ ] **Per-site zoom persistence** (`webContents.setZoomLevel` + per-origin store in preferences; restored
       on navigate) — the current shell has no zoom memory
 - [ ] **Spellcheck** (`session.setSpellCheckerLanguages` + built-in Chromium spellchecker; currently

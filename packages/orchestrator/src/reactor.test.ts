@@ -53,6 +53,28 @@ function fakeTool(id: string, dangerClass: RiskLevel, result: unknown): Register
   };
 }
 
+function fakeToolSequence(id: string, dangerClass: RiskLevel, results: unknown[]): RegisteredTool<unknown> {
+  let index = 0;
+  const descriptor: ToolDescriptor = {
+    id,
+    description: `fake ${id}`,
+    dangerClass,
+    source: 'builtin',
+    inputSchema: { type: 'object' },
+    requiresIdempotencyKey: false,
+  };
+  return {
+    descriptor,
+    inputSchema: { safeParse: (data: unknown) => ({ success: true, data }) },
+    handler: () => {
+      calls.push(id);
+      const result = results[Math.min(index, results.length - 1)];
+      index += 1;
+      return result;
+    },
+  };
+}
+
 const tools = () =>
   CapabilityRegistry.list().map((d) => ({
     id: d.id,
@@ -254,6 +276,83 @@ describe('Reactor.run', () => {
     expect(res.outcomes[0]?.error?.message).toContain('stale ref');
     expect(calls).toEqual(['browser_update_page', 'browser_get_elements']);
   });
+
+  it('fixture: falls back to a screenshot when text/a11y has no useful elements', async () => {
+    CapabilityRegistry.reset();
+    CapabilityRegistry.register(fakeTool('browser_get_elements', 'read', { content: 'No actionable elements', elements: [] }));
+    CapabilityRegistry.register(
+      fakeTool('browser_get_screenshot', 'read', {
+        content: 'Viewport screenshot captured from https://fixture.local',
+        mimeType: 'image/png',
+        width: 640,
+        height: 480,
+      }),
+    );
+    script([act('browser_get_elements'), act('browser_get_screenshot'), finish]);
+
+    const res = await Reactor.run(req('inspect a canvas-only form'));
+
+    expect(res.stoppedReason).toBe('completed');
+    expect(calls).toEqual(['browser_get_elements', 'browser_get_screenshot']);
+  });
+
+  it('fixture: recovers a form action by re-reading elements and trying an alternate ref', async () => {
+    CapabilityRegistry.reset();
+    CapabilityRegistry.register(
+      fakeToolSequence('browser_get_elements', 'read', [
+        { content: '1. button "Continue"\n2. button "Submit order"' },
+        { content: '1. button "Continue"\n2. button "Submit order"' },
+      ]),
+    );
+    CapabilityRegistry.register(
+      fakeToolSequence('browser_update_page', 'state_changing', [
+        {
+          ok: true,
+          changed: false,
+          recoveryHint: 'No visible change was detected. Re-read browser_get_elements and try a different ref.',
+        },
+        { ok: true, changed: true, url: 'https://fixture.local/done', title: 'Done' },
+      ]),
+    );
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    script([
+      act('browser_get_elements'),
+      act('browser_update_page', { action: 'click', ref: 1 }),
+      act('browser_get_elements'),
+      act('browser_update_page', { action: 'click', ref: 2 }),
+      finish,
+    ]);
+
+    const res = await Reactor.run(req('submit the fixture form'));
+
+    expect(res.stoppedReason).toBe('completed');
+    expect(calls).toEqual([
+      'browser_get_elements',
+      'browser_update_page',
+      'browser_get_elements',
+      'browser_update_page',
+    ]);
+    expect(res.outcomes[1]?.result).toMatchObject({ changed: false });
+    expect(res.outcomes[3]?.result).toMatchObject({ changed: true });
+  });
+
+  it('fixture: reads table-like page content before finishing', async () => {
+    CapabilityRegistry.reset();
+    CapabilityRegistry.register(
+      fakeTool('browser_get_page', 'read', {
+        content: 'Product | Price\nA | $10\nB | $12',
+        url: 'https://fixture.local/table',
+        title: 'Fixture table',
+      }),
+    );
+    script([act('browser_get_page'), JSON.stringify({ action: 'finish', summary: 'A costs $10; B costs $12.' })]);
+
+    const res = await Reactor.run(req('summarize the table'));
+
+    expect(res.stoppedReason).toBe('completed');
+    expect(res.summary).toBe('A costs $10; B costs $12.');
+    expect(calls).toEqual(['browser_get_page']);
+  });
 });
 
 describe('Reactor system prompt (coreference + browsing strategy)', () => {
@@ -299,5 +398,11 @@ describe('Reactor system prompt (coreference + browsing strategy)', () => {
 
   it('always prefers reusing the current tab over opening a new one', async () => {
     expect(await capture()).toContain('Prefer to stay in the CURRENT tab');
+  });
+
+  it('mentions screenshot fallback and changed=false recovery', async () => {
+    const prompt = await capture();
+    expect(prompt).toContain('browser_get_screenshot');
+    expect(prompt).toContain('changed=false');
   });
 });

@@ -134,7 +134,7 @@ export function recoveryAdviceFor(failure: AgentFailure): RecoveryAdvice {
         retryable: true,
         nextTool: 'browser_get_elements',
         instruction:
-          'The element reference is stale. Re-read the current tab with browser_get_elements, then retry with a fresh ref.',
+          'The element reference is stale. Re-read the current tab with browser_get_elements, then retry with a fresh ref. If the actionable target is not exposed by a11y/text, use browser_get_screenshot as a visual fallback.',
       };
     case 'navigation_timeout':
       return {
@@ -146,9 +146,9 @@ export function recoveryAdviceFor(failure: AgentFailure): RecoveryAdvice {
     case 'page_changed':
       return {
         retryable: true,
-        nextTool: 'browser_get_page',
+        nextTool: 'browser_get_elements',
         instruction:
-          'The page changed while acting. Read the page again before choosing the next action.',
+          'The page changed while acting. Re-read the page and elements before choosing the next action; use browser_get_screenshot if the new state is not visible in text/a11y.',
       };
     case 'model_malformed':
       return {

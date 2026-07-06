@@ -183,6 +183,15 @@ module.exports = {
       to: { path: '^apps/' },
     },
     {
+      name: 'screenshots-no-app-no-electron',
+      severity: 'error',
+      comment:
+        '@tepegoz/screenshots is the Electron-free screenshot domain/tool package: no Electron, no app ' +
+        'imports. The desktop app owns WebContents capture and full-page sizing. See docs/package-map.md.',
+      from: { path: '^packages/screenshots/' },
+      to: { path: ['^apps/', 'node_modules/electron'] },
+    },
+    {
       name: 'settings-ui-is-a-leaf',
       severity: 'error',
       comment:

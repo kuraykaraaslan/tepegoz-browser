@@ -45,7 +45,24 @@ describe('registerBrowserTools', () => {
     expect(cap).toBeDefined();
     const result = await cap!.handler({ action: 'click', ref: 3 });
     expect(clickElement).toHaveBeenCalledWith(3, undefined);
-    expect(result).toEqual({ ok: true });
+    expect(result).toMatchObject({ ok: true, changed: false });
+    expect((result as Record<string, unknown>).recoveryHint).toEqual(expect.any(String));
+  });
+
+  it('reports visible page changes after an interaction', async () => {
+    const readPage = vi
+      .fn()
+      .mockResolvedValueOnce({ url: 'https://x', title: 'X', text: 'before' })
+      .mockResolvedValueOnce({ url: 'https://x/done', title: 'Done', text: 'after' });
+    const clickElement = vi.fn(() => Promise.resolve());
+    registerBrowserTools({ host: fakeHost({ readPage, clickElement }) });
+
+    const result = await CapabilityRegistry.get('browser_update_page')!.handler({
+      action: 'click',
+      ref: 3,
+    });
+
+    expect(result).toEqual({ ok: true, url: 'https://x/done', title: 'Done', changed: true });
   });
 
   it('passes tabId through read/snapshot/action tools', async () => {
