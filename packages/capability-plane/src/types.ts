@@ -33,6 +33,7 @@ export interface ConfirmRequest {
   toolName: string;
   policy: PolicyResult;
   args: unknown;
+  targetUrl?: string | undefined;
 }
 
 /** Audit record for every gated invocation (fed to the Event Journal later). */

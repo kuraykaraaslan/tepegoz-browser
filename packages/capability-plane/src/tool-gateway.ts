@@ -99,7 +99,12 @@ export default class ToolGateway {
       const confirmHandler = scoped !== undefined ? scoped.confirmHandler : ToolGateway.confirmHandler;
       const approved =
         confirmHandler !== null &&
-        (await confirmHandler({ toolName, policy, args: parsed.data }));
+        (await confirmHandler({
+          toolName,
+          policy,
+          args: parsed.data,
+          ...(ctx.targetUrl !== undefined ? { targetUrl: ctx.targetUrl } : {}),
+        }));
       if (!approved) {
         return toolError('FORBIDDEN', `Denied at confirmation: ${policy.reason}`, false);
       }

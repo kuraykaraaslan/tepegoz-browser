@@ -86,6 +86,9 @@ work has been folded into Phase 1a/1b as follows:
       same single-agent-run lock as the Agent panel and fail-safe denying unattended HITL escalations.
 - [x] Code-claude Faz 3 down-payment: `tepegoz://tasks` internal page, `@tepegoz/tasks-ui`, task IPC/preload
       surface, live task-state push, main-menu Tasks action, and Agent panel "Save as task" draft flow.
+- [x] Code-claude Faz 3 down-payment: task capability tools are registered into the unified ToolGateway,
+      and unattended task runs auto-approve state-changing tools only inside the saved task's exact
+      origin + preapproved-write policy.
 - [ ] Phase 1b remaining: durable resume across app restarts, true parallel DAG, vision model routing/eviction.
 
 > **Phase E (Extras) is not sequenced.** It is not numbered into the 0–12 flow and nothing depends on it; each

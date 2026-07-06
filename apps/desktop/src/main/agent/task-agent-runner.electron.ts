@@ -3,7 +3,7 @@ import { AppError, Logger } from '@tepegoz/libs';
 import type { ConfirmRequest } from '@tepegoz/capability-plane';
 import { isExtensionEnabled, type AgentEventKind } from '@tepegoz/desktop-ipc';
 import { agentManifest } from '@tepegoz/ext-agent/manifest';
-import type { TaskDefinition, TaskRunRecord, TaskTrigger } from '@tepegoz/tasks';
+import { taskCanUseTool, type TaskDefinition, type TaskRunRecord, type TaskTrigger } from '@tepegoz/tasks';
 import { EventJournal } from '@tepegoz/persistence';
 import type { EventType } from '@tepegoz/shared-types';
 import PreferenceStore from '@tepegoz/preferences';
@@ -51,6 +51,22 @@ function appendEvent(
   } catch (err) {
     Logger.warn('Background task journal append failed', { err: String(err) });
   }
+}
+
+function originOf(url: string | undefined): string | null {
+  if (url === undefined || url.length === 0) return null;
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
+}
+
+function taskPolicyPreapproves(task: TaskDefinition, req: ConfirmRequest): boolean {
+  if (!taskCanUseTool(task.policy, req.toolName, 'write')) return false;
+  const targetOrigin = originOf(req.targetUrl ?? task.targetUrl);
+  if (targetOrigin === null) return false;
+  return task.policy.allowedOrigins.includes(targetOrigin);
 }
 
 export async function runTaskAgent(
@@ -101,6 +117,15 @@ export async function runTaskAgent(
         },
         requestPlanApproval: () => Promise.resolve({ approved: true }),
         requestApproval: (req: ConfirmRequest) => {
+          if (taskPolicyPreapproves(task, req)) {
+            appendEvent('AgentStepExecuted', run.correlationId, {
+              taskId: task.id,
+              toolName: req.toolName,
+              decision: 'preapproved',
+              origin: originOf(req.targetUrl ?? task.targetUrl),
+            });
+            return Promise.resolve(true);
+          }
           appendEvent('TaskAwaitingApproval', run.correlationId, {
             taskId: task.id,
             toolName: req.toolName,

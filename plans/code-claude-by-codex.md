@@ -1,6 +1,6 @@
 # Plan — ext-agent'i Claude Chrome Seviyesine Yaklastirma
 
-**Durum:** Faz 1 ve Faz 2 tamamlandi; Faz 3 Task Productization Slice 5 tamamlandi.
+**Durum:** Faz 1 ve Faz 2 tamamlandi; Faz 3 Task Productization tamamlandi.
 **Tarih:** 2026-07-06
 **Kapsam:** `extensions/ext-agent`, agent runtime, browser/tab tools, desktop host baglantilari ve
 ilgili dokumantasyon.
@@ -32,7 +32,7 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 |-----|-------|-----|
 | 1. Agent Reliability | Tamamlandi | Run izolasyonu, state machine/checkpoint, hata siniflandirmasi, recovery ve eval testleri tamamlandi. |
 | 2. Browser Reliability | Tamamlandi | TabId scoped browser tools, sayfa dogrulama, screenshot/fullPage visual fallback, action recovery, fixtures ve download/upload/clipboard brokerlari tamamlandi. |
-| 3. Task Productization | Devam ediyor | Task domain/persistence/scheduler, background runner ve `tepegoz://tasks` dashboard/IPC tamamlandi. |
+| 3. Task Productization | Tamamlandi | Task domain/persistence/scheduler, background runner, `tepegoz://tasks`, task tools ve preapproved policy entegrasyonu tamamlandi. |
 | 4. Tool Ecosystem | Baslamadi | Web search/fetch, servis adaptorleri ve MCP/policy genisletmeleri. |
 | 5. Acceptance/Eval | Baslamadi | Claude benzeri is senaryolari icin otomatik kabul setleri. |
 
@@ -104,6 +104,7 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
     ve Capability Plane descriptorlari eklendi.
   - [x] Slice 5 UI/IPC: `tasks:*` IPC/preload bridge, `@tepegoz/tasks-ui`, `tepegoz://tasks` internal
     page ve Agent panelden disabled task draft kaydetme affordance'i eklendi.
+  - [x] Slice 6 tools: `task_*` Capability Plane tools desktop `TaskService` host'una baglandi.
 - [ ] Artifacts modeli: ajan ciktilarini panelde indirilebilir/yeniden kullanilabilir nesneler olarak
   tutma.
   - [x] Slice 2 projection: `task_runs`, `task_artifacts` ve `task_trigger_state` SQLite tabloları ile
@@ -120,6 +121,8 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
     task run'lari renderer sender olmadan AgentService'e baglanabiliyor.
   - [x] Slice 5 dashboard: saved task listesi, run-now, enable/disable, run history ve artifact listesi
     renderer state push ile guncelleniyor.
+  - [x] Slice 6 policy: background task run'lari state-changing tool HITL'ini yalnizca saved task'in
+    exact origin + preapproved write tool policy'si icindeyse otomatik onayliyor; aksi halde paused/notify.
 
 ## Faz 4 — Tool Ecosystem
 
@@ -220,7 +223,7 @@ Faz 3 Task Productization icin aktif siradaki isler:
 - [x] Slice 3: desktop `TaskService`, interval/page-change scheduler, queue/coalescing.
 - [x] Slice 4: renderer-sender bagimsiz `AgentRunLauncher`.
 - [x] Slice 5: IPC/preload + `@tepegoz/tasks-ui` + `tepegoz://tasks`.
-- [ ] Slice 6: task capability host + preapproved policy entegrasyonu.
+- [x] Slice 6: task capability host + preapproved policy entegrasyonu.
 
 ## Ek Dogrulama Kaydi - Download/Clipboard Track
 
@@ -283,6 +286,9 @@ Faz 3 Task Productization icin aktif siradaki isler:
 - [x] Task Slice 5: `git diff --check`
 - [ ] Task Slice 5: source-scoped `depcruise packages apps/desktop/src` — blocked by existing repo-wide
   `not-to-dev-dep` / generated `out/` / menu cycle debt; new `tasks-ui-is-a-leaf` rule was added.
+- [x] Task Slice 6: `pnpm --filter @tepegoz/capability-plane test/typecheck/lint`
+- [x] Task Slice 6: `pnpm --filter @tepegoz/tasks test/typecheck/lint`
+- [x] Task Slice 6: `pnpm --filter @tepegoz/desktop typecheck/lint`
 - [x] Upload Slice 3: `git diff --check`
 - [ ] Upload Slice 3: `pnpm depcruise` — blocked by stale generated desktop output:
   `apps/desktop/out/main/node-B4hO7KOT.js` references a missing file during dependency extraction.

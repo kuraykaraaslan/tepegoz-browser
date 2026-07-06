@@ -23,6 +23,7 @@ import { registerDownloadTools } from '@tepegoz/downloads/tools';
 import { registerClipboardTools } from '@tepegoz/clipboard/tools';
 import { registerUploadTools } from '@tepegoz/uploads/tools';
 import { registerScreenshotTools } from '@tepegoz/screenshots/tools';
+import { registerTaskTools } from '@tepegoz/tasks/tools';
 import FileOperationsHost from './file-operations/file-operations-host';
 import { attachBrowserHostWindow, browserHost } from './agent/browser-host.electron';
 import { journalHost } from './agent/journal-host.electron';
@@ -36,6 +37,7 @@ import { clipboardToolsHost } from './clipboard/clipboard-tools-host.electron';
 import UploadService from './uploads/upload-service.electron';
 import { uploadToolsHost } from './uploads/upload-tools-host.electron';
 import TaskService from './tasks/task-service.electron';
+import { taskToolsHost } from './tasks/task-tools-host.electron';
 import { runTaskAgent } from './agent/task-agent-runner.electron';
 
 // Last-resort process-level hooks: an async error that escapes every boundary must be LOGGED, not a
@@ -165,6 +167,7 @@ if (!app.requestSingleInstanceLock()) {
       registerDownloadTools({ host: downloadToolsHost });
       registerClipboardTools({ host: clipboardToolsHost });
       registerUploadTools({ host: uploadToolsHost });
+      registerTaskTools({ host: taskToolsHost });
       // Register enabled built-in extensions' in-process agent capabilities into the same
       // CapabilityRegistry, behind the same ToolGateway PEP (ADR-0021). Meta extension-management tools
       // are always on. Each `provide` is gated on its extension being enabled by `start()`'s reconcile —
