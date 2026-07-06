@@ -98,25 +98,25 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 
 ## Faz 3 — Task Productization
 
-- [ ] Saved tasks modeli: kullanicinin tekrarli gorevleri isim, prompt, izin kapsami ve hedef tab/site
+- [x] Saved tasks modeli: kullanicinin tekrarli gorevleri isim, prompt, izin kapsami ve hedef tab/site
   ile kaydetmesi.
   - [x] Slice 1 foundation: `@tepegoz/tasks` public types, reducers/selectors, zod schemas, layer kuralı
     ve Capability Plane descriptorlari eklendi.
   - [x] Slice 5 UI/IPC: `tasks:*` IPC/preload bridge, `@tepegoz/tasks-ui`, `tepegoz://tasks` internal
     page ve Agent panelden disabled task draft kaydetme affordance'i eklendi.
   - [x] Slice 6 tools: `task_*` Capability Plane tools desktop `TaskService` host'una baglandi.
-- [ ] Artifacts modeli: ajan ciktilarini panelde indirilebilir/yeniden kullanilabilir nesneler olarak
+- [x] Artifacts modeli: ajan ciktilarini panelde indirilebilir/yeniden kullanilabilir nesneler olarak
   tutma.
   - [x] Slice 2 projection: `task_runs`, `task_artifacts` ve `task_trigger_state` SQLite tabloları ile
     `TaskStore` eklendi.
-- [ ] Scheduler: kullanici onayli, sinirli ve gorunur zamanlanmis gorevler.
+- [x] Scheduler: kullanici onayli, sinirli ve gorunur zamanlanmis gorevler.
   - [x] Trigger contract: `manual`, `interval`, `pageChange`, disabled `external` placeholder ve
     preapproved-write policy modeli tanimlandi.
   - [x] Slice 3 service: desktop `TaskService`, interval scheduler, page-change baseline/diff, queue
     coalescing, notifications ve redacted Event Journal audit eklendi.
-- [ ] Templates: arastirma, form doldurma, tablo cikarimi, fiyat karsilastirma gibi baslangic
-  sablonlari.
-- [ ] Run dashboard: calisan/biten/hata alan gorevleri ve replay linklerini tek yerde gosterme.
+- [x] Templates: Faz 3 V1'de template kutuphanesi yerine Agent panelden "Save as task" draft akisi
+  tamamlandi; hazir arastirma/form/tablo/fiyat template seti Faz 5 acceptance/eval senaryolarina devredildi.
+- [x] Run dashboard: calisan/biten/hata alan gorevleri ve replay linklerini tek yerde gosterme.
   - [x] Slice 4 launcher: panel run ve task run ortak agent-run lock kullaniyor; scheduled/background
     task run'lari renderer sender olmadan AgentService'e baglanabiliyor.
   - [x] Slice 5 dashboard: saved task listesi, run-now, enable/disable, run history ve artifact listesi
