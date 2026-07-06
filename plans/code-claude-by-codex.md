@@ -165,6 +165,7 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 - [x] `cf752c0 Wire upload broker service`
 - [x] `d1684d6 Add uploads page and navigation`
 - [x] `4dce586 Add combined transfer activity popup`
+- [x] `84352e6 Add browser screenshot fallback package`
 
 ## Siradaki En Mantikli Dilim
 
