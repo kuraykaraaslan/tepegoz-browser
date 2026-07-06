@@ -9,6 +9,7 @@ export const en = {
   runPlaceholder: 'Tell Tepegöz what to do on this page…',
   run: 'Run',
   running: 'Running…',
+  runFailed: 'Agent run failed before it could start.',
   approvalTitle: 'Approval required',
   approvalBody: 'The agent wants to run a tool that changes state. Allow it?',
   biometricNote: 'This is a high-risk action (Windows Hello will be required in a later release).',

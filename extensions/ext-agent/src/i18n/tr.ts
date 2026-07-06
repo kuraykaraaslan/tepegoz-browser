@@ -11,6 +11,7 @@ export const tr: AgentStrings = {
   runPlaceholder: 'Tepegöz bu sayfada ne yapsın…',
   run: 'Çalıştır',
   running: 'Çalışıyor…',
+  runFailed: 'Ajan başlatılamadı.',
   approvalTitle: 'Onay gerekli',
   approvalBody: 'Ajan, durumu değiştiren bir araç çalıştırmak istiyor. İzin veriyor musunuz?',
   biometricNote: 'Bu yüksek riskli bir işlem (Windows Hello ileri bir sürümde gerekli olacak).',

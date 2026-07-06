@@ -30,6 +30,7 @@ Uygulama durumu (2026-07-06):
 |-----|-------|------------------|
 | Agent Reliability | [x] | `ToolGateway.runWithHandlers` ile HITL/audit context run bazında izole edildi; agent runtime bu scoped çalıştırmayı kullanıyor. |
 | Agent Reliability | [x] | Main süreçte run controller kaydı, iptal yolu ve geçici tek aktif run koruması eklendi. |
+| Agent Reliability | [x] | Panel, event stream başlamadan reddedilen `runAgent` hatalarını aynı turn içinde yerel `error` event'i olarak gösteriyor. |
 | Agent Reliability | [ ] | Resume/checkpoint, retry/recovery sınıflandırması ve eval harness henüz tamamlanmadı. |
 | Browser Reliability | [x] | Sekme oluşturma/okuma/güncelleme/kapatma araçları eklendi; yeni sekmeler varsayılan olarak arka planda açılıyor. |
 | Browser Reliability | [x] | `browser_*` araçları `tabId` kabul edecek şekilde genişletildi; desktop TabHost ve CDP driver hedef sekmeye göre çalışıyor. |

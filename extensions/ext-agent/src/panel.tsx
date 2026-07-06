@@ -9,6 +9,7 @@ import { AGENT_EFFORT_LEVELS } from './types';
 import type {
   AgentAutonomy,
   AgentConfig,
+  AgentEvent,
   AgentEffort,
   AgentHostApi,
 } from './types';
@@ -107,14 +108,18 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
     ? (groupStates.get(activeGroupId) ?? emptyGroupState())
     : emptyGroupState();
 
-  function mutateActive(fn: (s: GroupState) => GroupState): void {
-    if (activeGroupId === null) return;
+  function mutateGroup(groupId: string, fn: (s: GroupState) => GroupState): void {
     setGroupStates((prev) => {
-      const cur = prev.get(activeGroupId) ?? emptyGroupState();
+      const cur = prev.get(groupId) ?? emptyGroupState();
       const next = new Map(prev);
-      next.set(activeGroupId, fn(cur));
+      next.set(groupId, fn(cur));
       return next;
     });
+  }
+
+  function mutateActive(fn: (s: GroupState) => GroupState): void {
+    if (activeGroupId === null) return;
+    mutateGroup(activeGroupId, fn);
   }
 
   // Subscribe to agent events, approvals, plan previews, and token usage.
@@ -192,10 +197,11 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
   function onRun(): void {
     const text = prompt.trim();
     if (text.length === 0 || activeState.running || activeGroupId === null) return;
+    const groupId = activeGroupId;
     const fullPrompt = serializeAttachments(attachments, text);
     const id = `turn-${String(Date.now())}-${String(activeState.turns.length)}`;
     const newTurn: Turn = { id, prompt: text, runId: null, events: [] };
-    mutateActive((s) => ({
+    mutateGroup(groupId, (s) => ({
       ...s,
       turns: [...s.turns, newTurn],
       running: true,
@@ -203,10 +209,31 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
       attachments: [],
       expandedFiles: new Set(),
     }));
-    void api.runAgent({ prompt: fullPrompt, groupId: activeGroupId })
-      .catch(() => { /* failure surfaced as 'error' event */ })
+    void api.runAgent({ prompt: fullPrompt, groupId })
+      .catch((err: unknown) => {
+        const message = err instanceof Error && err.message.trim().length > 0
+          ? err.message
+          : a.runFailed;
+        const localRunId = `local-${id}`;
+        mutateGroup(groupId, (s) => {
+          const turns = s.turns.map((turn) => {
+            if (turn.id !== id) return turn;
+            if (turn.events.some((event) => event.kind === 'done' || event.kind === 'error')) return turn;
+            const runId = turn.runId ?? localRunId;
+            const event: AgentEvent = {
+              runId,
+              groupId,
+              kind: 'error',
+              message,
+              ts: Date.now(),
+            };
+            return { ...turn, runId, events: [...turn.events, event] };
+          });
+          return { ...s, turns, running: false, runId: null };
+        });
+      })
       .finally(() => {
-        mutateActive((s) => ({ ...s, running: false }));
+        mutateGroup(groupId, (s) => ({ ...s, running: false }));
       });
   }
 
