@@ -47,6 +47,8 @@ export default class Planner {
       coref +
       'Prefer navigating the current tab with browser_update_location; only plan a tab_create_item when ' +
       'a new tab is genuinely needed (the current page must stay open or a side-by-side comparison). ' +
+      'New tabs open in the background by default, so plan a tab_update_item with the returned id before ' +
+      'driving that tab with browser_* tools; clean up agent-opened tabs with tab_delete_item when done. ' +
       'Output ONLY JSON of the form ' +
       '{"goal": string, "steps": [{"id": string, "tool": string, "args": object, "rationale": string, "dependsOn": string[]}]}. ' +
       `Use ONLY these tools (by exact id):\n${toolList}\n` +

@@ -271,11 +271,6 @@ export async function runAgent(
   // side-effecting arg that lifts it escalates to HITL (Policy Kernel `taintedArgs`).
   const taint = new TaintTracker();
 
-  ToolGateway.setConfirmHandler(hooks.requestApproval);
-  ToolGateway.setAuditHandler((entry) => {
-    hooks.onEvent('step_start', `${entry.toolName}: ${entry.decision}`, entry.reason);
-  });
-
   // The approved plan becomes GUIDANCE for the reactive loop (not a rigid script): its steps are a
   // suggested outline and the pruned steps are things to avoid. Execution is reactive — the model
   // sees each page (via browser_get_elements) and picks the next action, so it can target live
@@ -283,8 +278,14 @@ export async function runAgent(
   const outline = approvedPlan.steps.map((s) => `- ${s.tool}: ${s.rationale}`);
   const avoid = plan.steps.filter((s) => skip.has(s.id)).map((s) => s.rationale || s.tool);
 
-  try {
-    const result = await Reactor.run(
+  const result = await ToolGateway.runWithHandlers(
+    {
+      confirmHandler: hooks.requestApproval,
+      auditHandler: (entry) => {
+        hooks.onEvent('step_start', `${entry.toolName}: ${entry.decision}`, entry.reason);
+      },
+    },
+    () => Reactor.run(
       {
         goal: approvedPlan.goal.length > 0 ? approvedPlan.goal : prompt,
         outline,
@@ -339,28 +340,25 @@ export async function runAgent(
           return 'handoff';
         },
       },
-    );
-    if (result.stoppedReason === 'handoff') {
-      // The 'handoff' event above is the terminal, user-facing message — no generic "Finished" line.
-      return { stoppedReason: 'handoff', ok: false };
-    }
-    const usage = TokenLedger.totals();
-    hooks.onEvent(
-      'done',
-      result.summary !== undefined && result.summary.length > 0
-        ? result.summary
-        : `Finished: ${result.stoppedReason}`,
-      `${String(usage.totalTokens)} tokens`,
-    );
-    return {
-      stoppedReason: result.stoppedReason,
-      ok: result.stoppedReason === 'completed',
-      ...(result.summary !== undefined && result.summary.length > 0
-        ? { summary: result.summary }
-        : {}),
-    };
-  } finally {
-    ToolGateway.setConfirmHandler(null);
-    ToolGateway.setAuditHandler(null);
+    ),
+  );
+  if (result.stoppedReason === 'handoff') {
+    // The 'handoff' event above is the terminal, user-facing message — no generic "Finished" line.
+    return { stoppedReason: 'handoff', ok: false };
   }
+  const usage = TokenLedger.totals();
+  hooks.onEvent(
+    'done',
+    result.summary !== undefined && result.summary.length > 0
+      ? result.summary
+      : `Finished: ${result.stoppedReason}`,
+    `${String(usage.totalTokens)} tokens`,
+  );
+  return {
+    stoppedReason: result.stoppedReason,
+    ok: result.stoppedReason === 'completed',
+    ...(result.summary !== undefined && result.summary.length > 0
+      ? { summary: result.summary }
+      : {}),
+  };
 }

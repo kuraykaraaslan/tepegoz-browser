@@ -22,9 +22,10 @@ app implements over its `TabManager`. These drive the *live* tabs and are a sepa
 
 ## Exports
 - **`registerTabTools({ host })`** — registers the `tab_*` agent tools (`tab_list_items`,
-  `tab_create_item`) into the `CapabilityRegistry`, bound to an injected `TabHost`. Always-on; the app
-  calls it once at startup.
-- **`TabHost`** — the injected live-tab seam: `listTabs()` and `createTab(url?, groupName?)`.
+  `tab_get_item`, `tab_create_item`, `tab_update_item`, `tab_delete_item`) into the
+  `CapabilityRegistry`, bound to an injected `TabHost`. Always-on; the app calls it once at startup.
+- **`TabHost`** — the injected live-tab seam: `listTabs()`,
+  `createTab(url?, groupName?, background?)`, `activateTab(id)`, and `closeTab(id)`.
 - **`TabStore`** — the model itself: `add`/`get`/`has`/`delete`, group create/assign/remove/pin
   mutations, `normalize()` (the invariant pass), and `toState(nav)` which projects the current model
   to the renderer-facing `TabsState` (given back/forward nav availability).

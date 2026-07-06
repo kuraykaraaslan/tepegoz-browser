@@ -1,5 +1,6 @@
 import { PolicyKernel } from '@tepegoz/security-policy';
 import type { ToolError, ToolErrorCode } from '@tepegoz/shared-types';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import CapabilityRegistry from './registry';
 import type { AuditEntry, ConfirmRequest, InvokeContext } from './types';
 
@@ -24,6 +25,10 @@ function toolError(
 export default class ToolGateway {
   private static confirmHandler: ((req: ConfirmRequest) => Promise<boolean>) | null = null;
   private static auditHandler: ((entry: AuditEntry) => void) | null = null;
+  private static readonly handlerScope = new AsyncLocalStorage<{
+    confirmHandler: ((req: ConfirmRequest) => Promise<boolean>) | null;
+    auditHandler: ((entry: AuditEntry) => void) | null;
+  }>();
 
   /** Wire the HITL prompt (renderer/UI). Without it, every "ask" decision fails safe to denied. */
   static setConfirmHandler(handler: ((req: ConfirmRequest) => Promise<boolean>) | null): void {
@@ -32,6 +37,26 @@ export default class ToolGateway {
 
   static setAuditHandler(handler: ((entry: AuditEntry) => void) | null): void {
     ToolGateway.auditHandler = handler;
+  }
+
+  /**
+   * Scope HITL/audit handlers to one async agent run. This keeps concurrent runs from overwriting each
+   * other's callbacks while preserving the legacy setters as process-defaults for tests/static callers.
+   */
+  static runWithHandlers<T>(
+    handlers: {
+      confirmHandler?: ((req: ConfirmRequest) => Promise<boolean>) | null;
+      auditHandler?: ((entry: AuditEntry) => void) | null;
+    },
+    fn: () => Promise<T>,
+  ): Promise<T> {
+    return ToolGateway.handlerScope.run(
+      {
+        confirmHandler: handlers.confirmHandler ?? null,
+        auditHandler: handlers.auditHandler ?? null,
+      },
+      fn,
+    );
   }
 
   /** Test seam. */
@@ -63,15 +88,18 @@ export default class ToolGateway {
       taintedArgs: ctx.taintedArgs ?? false,
       ...(ctx.targetUrl !== undefined ? { targetUrl: ctx.targetUrl } : {}),
     });
-    ToolGateway.auditHandler?.({ toolName, decision: policy.decision, reason: policy.reason });
+    const scoped = ToolGateway.handlerScope.getStore();
+    const auditHandler = scoped !== undefined ? scoped.auditHandler : ToolGateway.auditHandler;
+    auditHandler?.({ toolName, decision: policy.decision, reason: policy.reason });
 
     if (policy.decision === 'deny') {
       return toolError('FORBIDDEN', `Blocked by policy: ${policy.reason}`, false);
     }
     if (policy.decision === 'ask') {
+      const confirmHandler = scoped !== undefined ? scoped.confirmHandler : ToolGateway.confirmHandler;
       const approved =
-        ToolGateway.confirmHandler !== null &&
-        (await ToolGateway.confirmHandler({ toolName, policy, args: parsed.data }));
+        confirmHandler !== null &&
+        (await confirmHandler({ toolName, policy, args: parsed.data }));
       if (!approved) {
         return toolError('FORBIDDEN', `Denied at confirmation: ${policy.reason}`, false);
       }

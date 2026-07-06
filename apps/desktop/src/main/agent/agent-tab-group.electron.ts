@@ -18,9 +18,11 @@ const AgentTabGroup = {
   /** Open a tab for the agent and place it in the session's group (create-or-reuse). Throws if an
    *  enabled extension's `tab:create` interceptor blocked it (surfaced to the agent as a failed
    *  tool call) — today nothing registers that interceptor, so this path is unreachable in practice. */
-  openTab(agentGroupId: string, url?: string, groupName?: string): string {
+  openTab(agentGroupId: string, url?: string, groupName?: string, background?: boolean): string {
     const s = store.get(agentGroupId);
-    const id = TabManager.createTab(url);
+    const id = background === undefined
+      ? TabManager.createTab(url)
+      : TabManager.createTab(url, { background });
     if (id === null) throw new Error('Tab creation was blocked by an extension');
     if (s.tabGroupId !== null && TabManager.hasGroup(s.tabGroupId)) {
       TabManager.assignToGroup(id, s.tabGroupId);

@@ -19,3 +19,10 @@ optional, future-ready fast path; Tepegöz may also inject WebMCP into its own s
 - Avoids the screenshot token-blowup, agentic sluggishness, and execution-loop classes at once.
 - Background tabs open with `active:false` (no focus stealing); the agent closes what it opens.
 - A Content Sanitizer strips hidden/zero-width/bidi/homoglyph injection vectors before model input.
+
+## Update (2026-07-06) — implementation note
+
+CDP/a11y perception is implemented. Tab tools now include list/get/create/update(active)/delete, and
+agent-created tabs open in the background by default. The remaining browser-reliability gap is that
+`browser_*` tools still primarily drive the focused tab; they need tabId-scoped calls before concurrent
+multi-group agent execution is re-enabled.

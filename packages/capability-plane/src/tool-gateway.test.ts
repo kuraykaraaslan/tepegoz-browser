@@ -106,6 +106,38 @@ describe('ToolGateway.invoke', () => {
     await ToolGateway.invoke('browser_get_page', {});
     expect(entries).toContain('browser_get_page:allow');
   });
+
+  it('scopes HITL handlers per async run', async () => {
+    register({ id: 'form_update_field', dangerClass: 'state_changing' });
+    const seen: string[] = [];
+    let releaseA: (() => void) | undefined;
+    const gateA = new Promise<void>((resolve) => { releaseA = resolve; });
+
+    const runA = ToolGateway.runWithHandlers(
+      {
+        confirmHandler: async () => {
+          await gateA;
+          seen.push('a');
+          return true;
+        },
+      },
+      () => ToolGateway.invoke('form_update_field', { run: 'a' }),
+    );
+    const runB = ToolGateway.runWithHandlers(
+      {
+        confirmHandler: () => {
+          seen.push('b');
+          return Promise.resolve(false);
+        },
+      },
+      () => ToolGateway.invoke('form_update_field', { run: 'b' }),
+    );
+
+    expect(asError(await runB).code).toBe('FORBIDDEN');
+    releaseA?.();
+    expect(await runA).toBe('ok');
+    expect(seen).toEqual(['b', 'a']);
+  });
 });
 
 describe('CapabilityRegistry', () => {

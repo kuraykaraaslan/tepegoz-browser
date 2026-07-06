@@ -124,9 +124,27 @@ const browserAdapter = new HumanInputAdapter(cdpSend, onCursorMove, onInputActio
 export const browserHost: BrowserHost & TabHost = {
   navigateActive,
   readActivePage,
-  listTabs: () => TabManager.getState().tabs.map((t) => ({ id: t.id, title: t.title, url: t.url })),
-  createTab: (url, groupName) =>
-    AgentTabGroup.openTab(currentAgentGroupId ?? '', url, groupName),
+  listTabs: () => {
+    const state = TabManager.getState();
+    return state.tabs.map((t) => ({
+      id: t.id,
+      title: t.title,
+      url: t.url,
+      active: t.id === state.activeId,
+    }));
+  },
+  createTab: (url, groupName, background) =>
+    AgentTabGroup.openTab(currentAgentGroupId ?? '', url, groupName, background),
+  activateTab: (id) => {
+    if (!TabManager.getState().tabs.some((t) => t.id === id)) return false;
+    TabManager.activate(id);
+    return TabManager.getState().activeId === id;
+  },
+  closeTab: (id) => {
+    if (!TabManager.getState().tabs.some((t) => t.id === id)) return false;
+    TabManager.closeTab(id);
+    return !TabManager.getState().tabs.some((t) => t.id === id);
+  },
   snapshotElements: () => CdpDriver.snapshotElements(requireActiveWc()),
   clickElement: async (ref) => {
     resetForAgentAction();

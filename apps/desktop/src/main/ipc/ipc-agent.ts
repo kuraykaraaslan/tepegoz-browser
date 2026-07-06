@@ -51,8 +51,9 @@ import { handle, handleAsync, onAction } from './ipc-helpers';
 let runCounter = 0;
 let approvalCounter = 0;
 let planCounter = 0;
-// Per-group run tracking: each tab-group can have one active agent run at a time; different groups
-// may run concurrently (ADR-0013 Phase 1b — per-run scoping replaces the old global lock).
+// Run tracking: the UI state is per group, but the browser driver still targets the focused tab and
+// input-action event wiring is process-scoped. Keep execution single-run until browser tools become
+// tabId-scoped end to end.
 const agentRunByGroup = new Map<string, boolean>();
 const runControllers = new Map<string, AbortController>();
 const pendingApprovals = new Map<string, { runId: string; resolve: (approved: boolean) => void }>();
@@ -159,6 +160,9 @@ export function registerAgentIpc(): void {
   handleAsync(IpcChannels.agentRun, async (event, payload): Promise<AgentRunResult> => {
     requireAgentEnabled();
     const { prompt, groupId } = AgentRunInputSchema.parse(payload);
+    if (runControllers.size > 0) {
+      throw new AppError('An agent task is already running', 409);
+    }
     if (agentRunByGroup.get(groupId) === true) {
       throw new AppError('An agent task is already running for this group', 409);
     }
@@ -166,6 +170,7 @@ export function registerAgentIpc(): void {
     const sender = event.sender;
     const runId = `run-${String(++runCounter)}`;
     const controller = new AbortController();
+    runControllers.set(runId, controller);
     const sendEvent = (e: AgentEvent): void => {
       if (!sender.isDestroyed()) sender.send(IpcChannels.agentEvent, e);
     };
