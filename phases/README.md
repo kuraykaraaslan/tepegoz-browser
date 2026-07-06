@@ -97,6 +97,10 @@ work has been folded into Phase 1a/1b as follows:
       connection state, auth kind, and audit-required badges.
 - [x] Code-claude Faz 4 down-payment: tool/adaptor settings expose category/source, risk,
       argument-schema presence, and idempotency requirement for MCP and built-in tools.
+- [x] Code-claude Faz 5 down-payment: `@tepegoz/orchestrator` now has deterministic acceptance/eval
+      scenarios for heading extraction, multi-tab research, form-fill-before-submit, action recovery,
+      and CAPTCHA/2FA handoff, plus metrics for task success, recovery success, approvals, tool errors,
+      navigation validation failures, and token usage.
 - [ ] Phase 1b remaining: durable resume across app restarts, true parallel DAG, vision model routing/eviction.
 
 > **Phase E (Extras) is not sequenced.** It is not numbered into the 0–12 flow and nothing depends on it; each

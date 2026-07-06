@@ -23,3 +23,4 @@ export {
   type AgentFailureKind,
   type RecoveryAdvice,
 } from './recovery';
+export * from './acceptance-eval';

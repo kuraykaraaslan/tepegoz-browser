@@ -1,6 +1,6 @@
 # Plan — ext-agent'i Claude Chrome Seviyesine Yaklastirma
 
-**Durum:** Faz 1, Faz 2, Faz 3 Task Productization ve Faz 4 Tool Ecosystem tamamlandi.
+**Durum:** Faz 1-5 tamamlandi.
 **Tarih:** 2026-07-06
 **Kapsam:** `extensions/ext-agent`, agent runtime, browser/tab tools, desktop host baglantilari ve
 ilgili dokumantasyon.
@@ -34,7 +34,7 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 | 2. Browser Reliability | Tamamlandi | TabId scoped browser tools, sayfa dogrulama, screenshot/fullPage visual fallback, action recovery, fixtures ve download/upload/clipboard brokerlari tamamlandi. |
 | 3. Task Productization | Tamamlandi | Task domain/persistence/scheduler, background runner, `tepegoz://tasks`, task tools ve preapproved policy entegrasyonu tamamlandi. |
 | 4. Tool Ecosystem | Tamamlandi | Web search/get-page tools, genel adaptör inventory, MCP metadata ve normalize tool result sozlesmesi tamamlandi. |
-| 5. Acceptance/Eval | Baslamadi | Claude benzeri is senaryolari icin otomatik kabul setleri. |
+| 5. Acceptance/Eval | Tamamlandi | Claude benzeri is senaryolari icin deterministik kabul seti ve metrik ozeti eklendi. |
 
 ## Faz 1 — Agent Reliability
 
@@ -144,13 +144,17 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 
 ## Faz 5 — Acceptance/Eval
 
-- [ ] Kabul senaryosu: "Bu sayfadaki basliklari cikar ve ozetle."
-- [ ] Kabul senaryosu: "Uc sekmede kaynak ac, ortak bulgulari tablo yap."
-- [ ] Kabul senaryosu: "Formu verilen bilgilerle doldur, gondermeden once dur."
-- [ ] Kabul senaryosu: "Sayfa degisti/tiklama tutmadi; kendini toparlayip tekrar dene."
-- [ ] Kabul senaryosu: "CAPTCHA/2FA gorunce otomatik cozme, handoff ver."
-- [ ] Metrikler: task success rate, recovery success rate, approval latency, tool error rate,
+- [x] Kabul senaryosu: "Bu sayfadaki basliklari cikar ve ozetle."
+- [x] Kabul senaryosu: "Uc sekmede kaynak ac, ortak bulgulari tablo yap."
+- [x] Kabul senaryosu: "Formu verilen bilgilerle doldur, gondermeden once dur."
+- [x] Kabul senaryosu: "Sayfa degisti/tiklama tutmadi; kendini toparlayip tekrar dene."
+- [x] Kabul senaryosu: "CAPTCHA/2FA gorunce otomatik cozme, handoff ver."
+- [x] Metrikler: task success rate, recovery success rate, approval latency, tool error rate,
   navigation validation failure rate, token usage.
+  - [x] `@tepegoz/orchestrator` icinde `ACCEPTANCE_SCENARIOS`, `recordFromOutcomes` ve
+    `summarizeAcceptanceRuns` eklendi.
+  - [x] `acceptance-eval.test.ts` deterministik scripted-model + fake tools ile bes senaryoyu ve
+    metrikleri no-network/no-key olarak kosuyor.
 
 ## Dogrulama Kaydi
 
@@ -190,6 +194,10 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 - [x] Faz 4: `pnpm --filter @tepegoz/desktop typecheck`
 - [x] Faz 4: `pnpm --filter @tepegoz/desktop lint`
 - [x] Faz 4: `git diff --check`
+- [x] Faz 5: `pnpm --filter @tepegoz/orchestrator test`
+- [x] Faz 5: `pnpm --filter @tepegoz/orchestrator typecheck`
+- [x] Faz 5: `pnpm --filter @tepegoz/orchestrator lint`
+- [x] Faz 5: `git diff --check`
 
 ## Yapilan Commitler
 
@@ -220,9 +228,9 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 
 ## Siradaki En Mantikli Dilim
 
-Faz 2 Browser Reliability tamamlandi. Siradaki mantikli dilim Phase 3 Task Productization veya Phase 5
-Acceptance/Eval kabul setlerini genisletmek; Phase 2c klasik browser essentials icinde kalan user-facing
-find/print/PDF/reader/translate/screenshot-CAS isleri ayri urun yuzeyi olarak duruyor.
+Code-claude Faz 1-5 tamamlandi. Siradaki mantikli dilim Phase 2c klasik browser essentials icinde kalan
+user-facing find/print/PDF/reader/translate/screenshot-CAS islerini urun yuzeyi olarak tamamlamak veya
+Phase 1b durable resume / parallel DAG / vision routing borclarina gecmek.
 
 Download/clipboard icin kalan siradaki is:
 
