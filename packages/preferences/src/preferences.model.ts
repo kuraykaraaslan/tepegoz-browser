@@ -102,6 +102,10 @@ export const PreferencesSchema = z.object({
   homepageUrl: z.string().max(2048),
   // Show the bookmarks bar strip under the nav toolbar (toggled from the Bookmarks menu).
   showBookmarksBar: z.boolean(),
+  // Browser downloads. Empty directory means "use the OS Downloads folder"; main canonicalizes before
+  // persisting any user-picked directory.
+  downloadDirectory: z.string().max(1024),
+  downloadAskEachTime: z.boolean(),
   // Required (not .default) so the schema input matches Preferences; init always merges the default
   // (extensions: []) first, and PreferencesPatchSchema (.partial) makes it optional on read/patch.
   extensions: z.array(ExtensionStateSchema),
@@ -114,7 +118,11 @@ export const PreferencesSchema = z.object({
   // Per-origin web-capability grants (Web Notification API consent). Keyed by origin.
   sitePermissions: z.record(
     z.string().max(2048),
-    z.object({ notifications: z.enum(SITE_PERMISSION_STATES).optional() }),
+    z.object({
+      notifications: z.enum(SITE_PERMISSION_STATES).optional(),
+      clipboardRead: z.enum(SITE_PERMISSION_STATES).optional(),
+      clipboardWrite: z.enum(SITE_PERMISSION_STATES).optional(),
+    }),
   ),
   // Popup Blocker (strict) settings — block popups by default, allowing only trusted origins.
   popupBlocker: z.object({
@@ -184,6 +192,8 @@ export const DEFAULT_PREFERENCES: Preferences = {
   customSearchEngines: [],
   homepageUrl: 'https://duckduckgo.com/',
   showBookmarksBar: true,
+  downloadDirectory: '',
+  downloadAskEachTime: false,
   extensions: [],
   userAgent: null,
   mcpServers: [],

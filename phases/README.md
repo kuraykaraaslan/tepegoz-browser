@@ -23,7 +23,7 @@ them** with `- [ ]` / `- [x]`. This keeps the process resumable across sessions.
 | 1b | [phase-1b-agentic-deepening.md](phase-1b-agentic-deepening.md) | Parallel DAG + durable handoff + per-task memory + prompt/rules | 🟡 Early down-payments (tabId-scoped browser control + validation; durable resume/parallel DAG pending) |
 | 2 | [phase-2-adapters-safe-browsing.md](phase-2-adapters-safe-browsing.md) | Integration adapters + Safe-Browsing Suite | ⬜ Not started |
 | 2b | [phase-2b-daily-driver-ux.md](phase-2b-daily-driver-ux.md) | Daily-driver browser UX (tabs/PWA/DevTools) — parallel with Phase 2 | ⬜ Not started |
-| 2c | [phase-2c-classic-browser-essentials.md](phase-2c-classic-browser-essentials.md) | Classic browser essentials + downloads (find/print/PDF/reader/translate/bookmarks/private/permissions) — parallel with Phase 2/2b | ⬜ Not started |
+| 2c | [phase-2c-classic-browser-essentials.md](phase-2c-classic-browser-essentials.md) | Classic browser essentials + downloads (find/print/PDF/reader/translate/bookmarks/private/permissions) — parallel with Phase 2/2b | 🟡 In progress (download/clipboard foundations) |
 | 3 | [phase-3-backend-cloud-extensions.md](phase-3-backend-cloud-extensions.md) | Managed subscription + cloud memory sync + extensions | ⬜ Not started |
 | 4 | [phase-4-maturation.md](phase-4-maturation.md) | Maturation (full extensions, cross-platform, enterprise) | ⬜ Not started |
 | 5 | [phase-5-vpn-network-privacy.md](phase-5-vpn-network-privacy.md) | Per-tab & per-group VPN tunnels + Tor (network privacy) | ⬜ Not started |
@@ -55,6 +55,8 @@ work has been folded into Phase 1a/1b as follows:
 - [x] Phase 1b down-payment: `browser_validate_page` action-verification tool.
 - [x] Phase 1b down-payment: retry/recovery taxonomy for policy denial, stale selectors, page changes,
       navigation timeout, auth handoff, transient failures, and malformed model output.
+- [x] Phase 2c down-payment: download/clipboard manager domain packages, IPC/preload contracts, web-permission
+      preference shape, and layer rules.
 - [ ] Phase 1b remaining: durable resume across app restarts, screenshot/vision fallback, true parallel DAG.
 
 > **Phase E (Extras) is not sequenced.** It is not numbered into the 0–12 flow and nothing depends on it; each

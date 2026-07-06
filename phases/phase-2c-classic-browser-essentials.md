@@ -1,6 +1,6 @@
 # Phase 2c — Classic Browser Essentials & Downloads
 
-**Status:** ⬜ Not started  ·  **Estimate:** ~2–3 months  ·  **Depends on:** Phase 1a (UI shell, omnibox,
+**Status:** 🟡 In progress (download/clipboard foundations)  ·  **Estimate:** ~2–3 months  ·  **Depends on:** Phase 1a (UI shell, omnibox,
 `BookmarkStore`, partition machinery) + Phase 2 (`SafeBrowsingService` — reused for download hash checks) +
 Phase 2b (tab shell)
 **Goal:** Close the "boring but mandatory" gaps that separate a credible everyday browser from an agentic
@@ -34,6 +34,8 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
 ## Tasks
 
 ### L10 — Safe Downloads + Download Manager
+- [x] Slice 1 foundation: `@tepegoz/downloads` headless types/reducer/schemas/tests, IPC/preload
+      contracts, download preferences, Event Journal event names, and layer rules.
 - [ ] `will-download` intercept in the browsing session → **quarantine** the file (temp, not-yet-trusted) +
       compute file hash + check via Phase 2 **`SafeBrowsingService`** (reuse, do NOT re-implement); community
       blocklist reuse where present
@@ -81,6 +83,8 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
 - [ ] **Web permissions UI** (camera/mic/location/notification/clipboard): per-site grant/deny/ask, all routed
       through the **single Policy/PermissionGuard** (same engine as Phase 2 `PopupAndPermissionGuard` + the
       Phase 1a notification permission-broker) — **no parallel permission flow**
+  - [x] Slice 1 foundation: `@tepegoz/clipboard` headless operation/policy/audit types, schemas/tests, and
+        `sitePermissions` shape extended for `clipboardRead`/`clipboardWrite`.
 - [ ] **Per-agent permission matrix** (allowed / requires-approval / denied) rendered as a **read-only view**
       over the Policy Kernel + Capability Plane audit — a UI surface, **not** a new decision engine
 

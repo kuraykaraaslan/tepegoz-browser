@@ -261,6 +261,13 @@ export const NotificationPermissionResponseSchema = z.object({
   remember: z.boolean(),
 });
 
+export { DownloadCommandInputSchema, DownloadCreateInputSchema } from '@tepegoz/downloads/schemas';
+export {
+  ClipboardOperationInputSchema,
+  ClipboardReadTextInputSchema,
+  ClipboardWriteTextInputSchema,
+} from '@tepegoz/clipboard/schemas';
+
 // Login credential manager schemas (logins:* channels).
 /** `logins:set` — the only channel that carries a plaintext secret (renderer → main). Main encrypts
  *  immediately via safeStorage; the raw value is never stored or returned. */

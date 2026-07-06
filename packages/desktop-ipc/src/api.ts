@@ -29,6 +29,7 @@ import type {
   MacroSummary,
 } from './contract';
 import type { AppInfo, ContentBounds, CredentialsStatus } from './contract';
+import type { DownloadCommandInput, DownloadRecord, DownloadsState } from './contract';
 import type { ProviderId, ProviderKeyMeta } from './contract';
 import type {
   ExtensionId,
@@ -223,6 +224,11 @@ export interface TepegozApi {
   showExtensionContextMenu(id: ExtensionId): void;
   /** Subscribe to the action chosen from an extension icon's context menu; returns an unsubscribe fn. */
   onExtensionContextMenuAction(callback: (choice: ExtensionContextMenuChoice) => void): () => void;
+  // Browser downloads (tepegoz://downloads). Mutations go through id-addressed commands; paths stay in
+  // main and the UI asks main to open/reveal by id.
+  listDownloads(): Promise<DownloadRecord[]>;
+  commandDownload(input: DownloadCommandInput): Promise<void>;
+  onDownloadsState(callback: (state: DownloadsState) => void): () => void;
   /** Open a named app surface as a native floating popup window anchored at `anchor` (the trigger's
    *  rect, in window-content DIP). Floats above the page, which stays live behind it. Reusable across
    *  surfaces: `surface` is the kind ('main-menu' | 'ext'); extensions pass their id via `opts.id`;

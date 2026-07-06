@@ -108,12 +108,18 @@ importers:
       '@tepegoz/capability-plane':
         specifier: workspace:*
         version: link:../../packages/capability-plane
+      '@tepegoz/clipboard':
+        specifier: workspace:*
+        version: link:../../packages/clipboard
       '@tepegoz/credential-vault':
         specifier: workspace:*
         version: link:../../packages/credential-vault
       '@tepegoz/desktop-ipc':
         specifier: workspace:*
         version: link:../../packages/desktop-ipc
+      '@tepegoz/downloads':
+        specifier: workspace:*
+        version: link:../../packages/downloads
       '@tepegoz/ext-agent':
         specifier: workspace:*
         version: link:../../extensions/ext-agent
@@ -676,6 +682,22 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
 
+  packages/clipboard:
+    dependencies:
+      zod:
+        specifier: 3.23.8
+        version: 3.23.8
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.0
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
+
   packages/credential-vault:
     dependencies:
       '@tepegoz/json-store':
@@ -703,6 +725,12 @@ importers:
       '@tepegoz/bookmarks':
         specifier: workspace:*
         version: link:../bookmarks
+      '@tepegoz/clipboard':
+        specifier: workspace:*
+        version: link:../clipboard
+      '@tepegoz/downloads':
+        specifier: workspace:*
+        version: link:../downloads
       '@tepegoz/ext-agent':
         specifier: workspace:*
         version: link:../../extensions/ext-agent
@@ -725,6 +753,22 @@ importers:
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
+
+  packages/downloads:
+    dependencies:
+      zod:
+        specifier: 3.23.8
+        version: 3.23.8
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.0
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
 
   packages/extension-catalog:
     dependencies:

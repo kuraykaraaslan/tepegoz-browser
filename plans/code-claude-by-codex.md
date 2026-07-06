@@ -79,6 +79,12 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 - [ ] Screenshot/vision fallback ekle: metin/a11y yetersiz kalinca hedef sekmeden goruntu alip modele
   kontrollu baglam olarak aktar.
 - [ ] Download/upload/clipboard araclarini policy-gated sekilde ekle.
+  - [x] Slice 1: `@tepegoz/downloads` ve `@tepegoz/clipboard` domain paketleri, IPC/preload
+    kontratlari, preferences alanlari ve phase/layer kurallari eklendi.
+  - [ ] Slice 2: DownloadService + quarantine + Electron `will-download` adapter + audit.
+  - [ ] Slice 3: `@tepegoz/downloads-ui`, `tepegoz://downloads` ve download settings.
+  - [ ] Slice 4: ClipboardService + generic WebPermissionBroker.
+  - [ ] Slice 5: `download_*` / `clipboard_*` capability tools + HITL entegrasyonu.
 - [ ] Action recovery ekle: click/fill sonrasi beklenen degisim yoksa yeniden snapshot ve alternatif
   selector denemesi.
 - [ ] Form ve tablo senaryolari icin fixtures ekle.
@@ -143,19 +149,19 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 - [x] `285eee5 Mark agent roadmap phase progress`
 - [x] `3aaa286 Surface agent startup failures in panel`
 - [x] `6b9f626 Complete agent reliability phase`
+- [ ] Slice 1 commit: Download/clipboard foundations (commit sonrasi hash ile guncellenecek)
 
 ## Siradaki En Mantikli Dilim
 
-Bu noktadan sonra uygulanacak ilk dilim **Browser Reliability / screenshot-vision fallback** olmali.
-Sebep: Faz 1 artik stale selector, timeout, page changed ve malformed model durumlarini siniflandirip
-toparlanma talimati uretiyor. DOM/a11y + `browser_validate_page` yetersiz kaldiginda bir sonraki eksik
-parca hedef sekmeden kontrollu screenshot alip modele goruntu baglami verebilmek.
+Bu noktadan sonra aktif dilim **Browser Reliability / download + clipboard manager** oldu. Kullanici
+istegiyle Phase 2c download manager ve Permissions Center clipboard altyapisi, agent tool gating ile
+birlikte one alindi; screenshot/vision fallback siradaki browser-reliability dilimi olarak kalir.
 
-Onerilen ilk is:
+Download/clipboard icin kalan siradaki is:
 
-- [ ] `BrowserHost.captureScreenshot(tabId?)` seam'i ekle.
-- [ ] `browser_get_screenshot` veya vision-only fallback tool'u policy-gated sekilde ekle.
-- [ ] Reactor recovery yolunda DOM/a11y yetersizse screenshot aracini oner.
-- [ ] Unit test: DOM bos / action dogrulanamadi / screenshot fallback sirasi.
+- [ ] DownloadService'i Electron `will-download` ile bagla.
+- [ ] Karantina path/store + hash + unknown SafeBrowsing verdict akisini uygula.
+- [ ] Download IPC handlerlari ve Event Journal audit eventlerini ekle.
+- [ ] Ardindan downloads UI/settings ve clipboard broker dilimine gec.
 
 Bu dosya kaydedildikten sonra is burada durduruldu.

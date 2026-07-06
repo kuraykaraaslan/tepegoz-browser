@@ -88,6 +88,10 @@ export const IpcChannels = {
   modelsSelect: 'models:select',
   modelsDelete: 'models:delete',
   modelsState: 'models:state',
+  // Browser downloads (`tepegoz://downloads`). State is pushed live from the main-process DownloadService.
+  downloadsList: 'downloads:list',
+  downloadsCommand: 'downloads:command',
+  downloadsState: 'downloads:state',
   /** Renderer→main: the identity of every built-in extension (from the validated on-disk catalog). */
   extensionsListManifests: 'extensions:list-manifests',
   extensionOpen: 'extension:open',
@@ -188,4 +192,5 @@ export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];
 export const INTERNAL_SETTINGS_URL = 'tepegoz://settings';
 export const INTERNAL_EXTENSIONS_URL = 'tepegoz://extensions';
 export const INTERNAL_HISTORY_URL = 'tepegoz://history';
+export const INTERNAL_DOWNLOADS_URL = 'tepegoz://downloads';
 export const INTERNAL_BOOKMARKS_URL = 'tepegoz://bookmarks';

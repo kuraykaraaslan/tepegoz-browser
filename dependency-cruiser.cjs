@@ -138,6 +138,33 @@ module.exports = {
       to: { path: '^apps/' },
     },
     {
+      name: 'downloads-ui-is-a-leaf',
+      severity: 'error',
+      comment:
+        '@tepegoz/downloads-ui is the presentational tepegoz://downloads surface: it must never import ' +
+        'back into the desktop app. Download data and commands are injected. See docs/package-map.md.',
+      from: { path: '^packages/downloads-ui/' },
+      to: { path: '^apps/' },
+    },
+    {
+      name: 'downloads-no-app-no-electron',
+      severity: 'error',
+      comment:
+        '@tepegoz/downloads is the Electron-free download domain model: no Electron, no app imports. ' +
+        'The desktop app owns DownloadItem, quarantine paths, and native open/reveal. See docs/package-map.md.',
+      from: { path: '^packages/downloads/' },
+      to: { path: ['^apps/', 'node_modules/electron'] },
+    },
+    {
+      name: 'clipboard-no-app-no-electron',
+      severity: 'error',
+      comment:
+        '@tepegoz/clipboard is the Electron-free clipboard policy/type model: no Electron, no app ' +
+        'imports. The desktop app owns native clipboard and WebContents commands. See docs/package-map.md.',
+      from: { path: '^packages/clipboard/' },
+      to: { path: ['^apps/', 'node_modules/electron'] },
+    },
+    {
       name: 'settings-ui-is-a-leaf',
       severity: 'error',
       comment:

@@ -15,6 +15,8 @@
   },
   "dependencies": {
     "@tepegoz/bookmarks": "workspace:*",
+    "@tepegoz/clipboard": "workspace:*",
+    "@tepegoz/downloads": "workspace:*",
     "@tepegoz/ext-agent": "workspace:*",
     "@tepegoz/ext-popup-blocker": "workspace:*",
     "@tepegoz/extension-sdk": "workspace:*",

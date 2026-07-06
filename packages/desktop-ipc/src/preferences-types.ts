@@ -97,6 +97,10 @@ export interface Preferences {
   homepageUrl: string;
   /** Show the bookmarks bar strip under the nav toolbar (Chrome-style; toggled from the Bookmarks menu). */
   showBookmarksBar: boolean;
+  /** Absolute directory for released downloads. Empty = OS default Downloads folder. */
+  downloadDirectory: string;
+  /** Ask for a target path before each user-initiated browser download. */
+  downloadAskEachTime: boolean;
   /** Per-extension status (managed at tepegoz://extensions). Unlisted extensions default to enabled. */
   extensions: ExtensionState[];
   /** Active User-Agent override for browsed pages (User-Agent switcher extension); null = default. */
@@ -157,6 +161,8 @@ export interface LocalModelInfo {
 /** Per-origin web-capability grants. Keyed by origin in `Preferences.sitePermissions`. */
 export interface SitePermissions {
   notifications?: SitePermissionState | undefined;
+  clipboardRead?: SitePermissionState | undefined;
+  clipboardWrite?: SitePermissionState | undefined;
 }
 
 /** Result of the native directory picker (Settings → File operations → Add folder). */

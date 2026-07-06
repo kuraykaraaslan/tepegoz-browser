@@ -135,6 +135,25 @@ export type {
   SitePermissionState,
 };
 
+// Browser download manager types are owned by @tepegoz/downloads (zod-free public entry; schemas stay
+// in its ./schemas subpath). Type-only import keeps the sandboxed preload dependency-free.
+import type {
+  DownloadCommandInput,
+  DownloadCreateInput,
+  DownloadRecord,
+  DownloadsState,
+} from '@tepegoz/downloads';
+export type { DownloadCommandInput, DownloadCreateInput, DownloadRecord, DownloadsState };
+
+// Clipboard operation types are owned by @tepegoz/clipboard. The desktop IPC contract only exposes
+// zod-free wire types; runtime validators are re-exported from ./schemas for main-process use.
+import type {
+  ClipboardOperationInput,
+  ClipboardReadTextInput,
+  ClipboardWriteTextInput,
+} from '@tepegoz/clipboard';
+export type { ClipboardOperationInput, ClipboardReadTextInput, ClipboardWriteTextInput };
+
 // Macro IR + wire DTOs are owned by @tepegoz/shared-types (zod-free `macro-ir` entry, so the sandboxed
 // preload can import the types at runtime; the extension surfaces + agent capabilities share them too).
 // The zod validators (MacroSchema) build from the same module.
@@ -178,11 +197,17 @@ export interface AppInfo {
   platform: string;
 }
 
+export type WebPermissionCapability = 'notifications' | 'clipboardRead' | 'clipboardWrite';
+
 /** Main → renderer: a site asked for a web capability; the renderer shows the consent prompt. */
-export interface NotificationPermissionRequest {
+export interface WebPermissionRequest {
   requestId: string;
   origin: string;
+  capability: WebPermissionCapability;
 }
+
+/** Back-compat alias for the notification prompt bridge while the UI becomes capability-aware. */
+export type NotificationPermissionRequest = WebPermissionRequest;
 
 /** Renderer → main: the user's consent answer. `remember` persists it to `sitePermissions`. */
 export interface NotificationPermissionResponse {
