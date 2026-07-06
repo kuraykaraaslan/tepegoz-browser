@@ -179,6 +179,7 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 - [x] `cfaea44 Add task productization domain`
 - [x] `9652a81 Add task persistence projections`
 - [x] `8ae3adb Add desktop task scheduler service`
+- [x] `793d5ec Add background task agent runner`
 
 ## Siradaki En Mantikli Dilim
 
