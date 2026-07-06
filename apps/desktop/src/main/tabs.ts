@@ -8,7 +8,6 @@ import {
 import { Logger } from '@tepegoz/libs';
 import {
   INTERNAL_BOOKMARKS_URL,
-  INTERNAL_AGENT_HISTORY_URL,
   INTERNAL_DOWNLOADS_URL,
   INTERNAL_EXTENSIONS_URL,
   INTERNAL_HISTORY_URL,
@@ -304,7 +303,6 @@ export default class TabManager {
   private static internalTitle(url: string): string {
     const r = mainStrings();
     if (url === INTERNAL_EXTENSIONS_URL) return r.extensions.title;
-    if (url === INTERNAL_AGENT_HISTORY_URL) return r.agentHistory.title;
     if (url === INTERNAL_HISTORY_URL) return r.history.title;
     if (url === INTERNAL_DOWNLOADS_URL) return r.downloads.title;
     if (url === INTERNAL_UPLOADS_URL) return r.uploads.title;

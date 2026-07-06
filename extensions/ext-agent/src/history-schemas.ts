@@ -4,7 +4,7 @@ import {
   AGENT_HISTORY_EVENT_KINDS,
   type AgentConversationListInput,
   type AgentConversationOpenInput,
-} from './index';
+} from './history';
 
 export const AgentConversationListInputSchema: z.ZodType<AgentConversationListInput> = z.object({
   query: z.string().max(200).optional(),

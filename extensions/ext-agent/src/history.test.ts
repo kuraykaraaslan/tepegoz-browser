@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { summarizeConversationPrompt, terminalStatusFromEvents } from './index';
+import { summarizeConversationPrompt, terminalStatusFromEvents } from './history';
 
-describe('agent-history helpers', () => {
+describe('agent conversation history helpers', () => {
   it('normalizes prompt whitespace for title and preview', () => {
     expect(summarizeConversationPrompt('  hello\n\nworld  ').title).toBe('hello world');
   });

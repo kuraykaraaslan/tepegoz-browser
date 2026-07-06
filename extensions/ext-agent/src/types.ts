@@ -12,7 +12,7 @@ import type {
   AgentConversationOpenInput,
   AgentConversationSummary,
   AgentConversationsState,
-} from '@tepegoz/agent-history';
+} from './history';
 
 export type {
   AgentAttachmentMeta,

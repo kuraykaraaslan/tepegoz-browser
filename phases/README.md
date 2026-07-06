@@ -48,7 +48,8 @@ work has been folded into Phase 1a/1b as follows:
 
 - [x] Phase 1a: run-scoped `ToolGateway` HITL/audit context, cancellation wiring, startup-error visibility.
 - [x] Phase 1a: Agent Console conversation history is now local-profile persistent, searchable from a
-      header dropdown, restorable into the panel, and available as `tepegoz://agent-history`.
+      header dropdown, restorable into the panel, and available through the ext-agent page surface
+      (`tepegoz://com.tepegoz.agent`), not as a core system page.
 - [x] Phase 1a: explicit run state machine + journaled checkpoints with plan decision, last successful
       step, page/tab snapshot metadata, terminal reason, and recovery advice.
 - [x] Phase 1a: tab tool expansion (`tab_get_item`, `tab_update_item`, `tab_delete_item`) and background tab

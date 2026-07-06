@@ -5,7 +5,6 @@ import { Modal } from '@tepegoz/ui';
 import { browserDict, sidebarDict, userMenuDict } from '../../i18n';
 import {
   INTERNAL_BOOKMARKS_URL,
-  INTERNAL_AGENT_HISTORY_URL,
   INTERNAL_DOWNLOADS_URL,
   INTERNAL_EXTENSIONS_URL,
   INTERNAL_HISTORY_URL,
@@ -36,7 +35,6 @@ import { useExtensionCatalog } from './extensions/useExtensionCatalog';
 import { BrowserChrome } from '@tepegoz/browser-chrome';
 import { BookmarksBar } from '@tepegoz/bookmarks-bar';
 import { HistoryPage } from '@tepegoz/history-ui';
-import { AgentHistoryPage } from '@tepegoz/agent-history-ui';
 import { DownloadsPage } from '@tepegoz/downloads-ui';
 import { UploadsPage } from '@tepegoz/uploads-ui';
 import { TasksPage } from '@tepegoz/tasks-ui';
@@ -314,7 +312,6 @@ export function App() {
   const settingsActive = currentUrl === INTERNAL_SETTINGS_URL;
   const extensionsActive = currentUrl === INTERNAL_EXTENSIONS_URL;
   const historyActive = currentUrl === INTERNAL_HISTORY_URL;
-  const agentHistoryActive = currentUrl === INTERNAL_AGENT_HISTORY_URL;
   const downloadsActive = currentUrl === INTERNAL_DOWNLOADS_URL;
   const uploadsActive = currentUrl === INTERNAL_UPLOADS_URL;
   const tasksActive = currentUrl === INTERNAL_TASKS_URL;
@@ -406,27 +403,6 @@ export function App() {
   const taskSubscribe = useCallback(
     (callback: Parameters<typeof window.tepegoz.onTasksState>[0]) =>
       window.tepegoz.onTasksState(callback),
-    [],
-  );
-  const agentHistoryList = useCallback(
-    (query: string, offset: number) =>
-      window.tepegoz.listAgentConversations({ query, offset, limit: 50 }),
-    [],
-  );
-  const agentHistoryGet = useCallback((id: string) => window.tepegoz.getAgentConversation(id), []);
-  const agentHistoryOpen = useCallback(async (id: string): Promise<void> => {
-    const groupId = await window.tepegoz.ensureActiveGroup();
-    await window.tepegoz.openAgentConversation({ id, groupId });
-    window.tepegoz.updateTabGroup(groupId, { settings: { [AGENT_PANEL_OPEN_KEY]: true } });
-  }, []);
-  const agentHistoryRemove = useCallback(
-    (id: string) => window.tepegoz.deleteAgentConversation(id),
-    [],
-  );
-  const agentHistoryClear = useCallback(() => window.tepegoz.clearAgentConversations(), []);
-  const agentHistorySubscribe = useCallback(
-    (callback: Parameters<typeof window.tepegoz.onAgentConversationsState>[0]) =>
-      window.tepegoz.onAgentConversationsState(callback),
     [],
   );
 
@@ -577,18 +553,6 @@ export function App() {
                   list={omniboxHistory.historyList}
                   remove={omniboxHistory.historyRemove}
                   clear={omniboxHistory.historyClear}
-                />
-              </div>
-            )}
-            {agentHistoryActive && (
-              <div className="absolute inset-0 bg-surface-system">
-                <AgentHistoryPage
-                  list={agentHistoryList}
-                  get={agentHistoryGet}
-                  open={agentHistoryOpen}
-                  remove={agentHistoryRemove}
-                  clear={agentHistoryClear}
-                  subscribe={agentHistorySubscribe}
                 />
               </div>
             )}

@@ -15,8 +15,8 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@tepegoz/agent-history": "workspace:*",
     "@tepegoz/downloads": "workspace:*",
+    "@tepegoz/ext-agent": "workspace:*",
     "@tepegoz/tasks": "workspace:*",
     "@tepegoz/shared-types": "workspace:*",
     "better-sqlite3": "^11.7.0"

@@ -81,10 +81,6 @@ export interface AgentConversationOpenInput {
   groupId: string;
 }
 
-export function emptyAgentConversationsState(): AgentConversationsState {
-  return { items: [] };
-}
-
 export function summarizeConversationPrompt(prompt: string): { title: string; preview: string } {
   const compact = prompt.replace(/\s+/g, ' ').trim();
   const title = compact.length === 0 ? 'Untitled conversation' : compact.slice(0, 80);

@@ -5,8 +5,8 @@ import type {
   AgentConversationSummary,
   AgentConversationTurn,
   AgentHistoryEvent,
-} from '@tepegoz/agent-history';
-import { summarizeConversationPrompt, terminalStatusFromEvents } from '@tepegoz/agent-history';
+} from '@tepegoz/ext-agent/history';
+import { summarizeConversationPrompt, terminalStatusFromEvents } from '@tepegoz/ext-agent/history';
 import type { Db } from './db';
 
 interface ConversationRow {

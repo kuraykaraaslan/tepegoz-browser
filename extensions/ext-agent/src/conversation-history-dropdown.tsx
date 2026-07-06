@@ -3,7 +3,7 @@ import type { AgentConversationDetail, AgentConversationSummary, AgentHostApi } 
 import { Dropdown } from './panel-dropdown';
 import { HistoryIcon } from './panel-icons';
 
-const FULL_HISTORY_URL = 'tepegoz://agent-history';
+const FULL_HISTORY_URL = 'tepegoz://com.tepegoz.agent';
 
 export function ConversationHistoryDropdown({
   api,

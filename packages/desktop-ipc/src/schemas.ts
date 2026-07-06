@@ -280,7 +280,7 @@ export {
   AgentConversationIdSchema,
   AgentConversationListInputSchema,
   AgentConversationOpenInputSchema,
-} from '@tepegoz/agent-history/schemas';
+} from '@tepegoz/ext-agent/history-schemas';
 export {
   ClipboardOperationInputSchema,
   ClipboardReadTextInputSchema,

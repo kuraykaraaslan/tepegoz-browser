@@ -7,6 +7,9 @@
     ".": "./src/index.ts",
     "./manifest": "./src/manifest.ts",
     "./panel": "./src/panel.tsx",
+    "./history": "./src/history.ts",
+    "./history-schemas": "./src/history-schemas.ts",
+    "./history-page": "./src/history-page.tsx",
     "./types": "./src/types.ts",
     "./tab-group-core": "./src/tab-group-core.ts",
     "./i18n": "./src/i18n/index.ts"
@@ -19,7 +22,6 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@tepegoz/agent-history": "workspace:*",
     "@tepegoz/extension-sdk": "workspace:*",
     "@tepegoz/i18n": "workspace:*",
     "@tepegoz/markdown": "workspace:*",

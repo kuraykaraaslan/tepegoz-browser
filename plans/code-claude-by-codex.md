@@ -48,7 +48,7 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
   event'i olarak gosteriyor.
 - [x] Panel hata fallback metinleri EN/TR i18n sozluklerine eklendi.
 - [x] Agent Console konusma gecmisi yerlestirildi: yerel SQLite projection, header history dropdown,
-  secilen konusmayi panele geri yukleme ve `tepegoz://agent-history` tam gecmis sayfasi.
+  secilen konusmayi panele geri yukleme ve ext-agent page surface'i (`tepegoz://com.tepegoz.agent`).
 - [x] Run state machine'i acik durum gecisleriyle toparla: requested, planning, awaiting plan,
   executing, paused, done, error, cancelled.
 - [x] Resume/checkpoint tasarla: son basarili adim, sayfa/tab snapshot referansi ve kullanici karari
@@ -200,12 +200,6 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 - [x] Faz 5: `pnpm --filter @tepegoz/orchestrator typecheck`
 - [x] Faz 5: `pnpm --filter @tepegoz/orchestrator lint`
 - [x] Faz 5: `git diff --check`
-- [x] Agent History: `pnpm --filter @tepegoz/agent-history test`
-- [x] Agent History: `pnpm --filter @tepegoz/agent-history typecheck`
-- [x] Agent History: `pnpm --filter @tepegoz/agent-history lint`
-- [x] Agent History: `pnpm --filter @tepegoz/agent-history-ui test`
-- [x] Agent History: `pnpm --filter @tepegoz/agent-history-ui typecheck`
-- [x] Agent History: `pnpm --filter @tepegoz/agent-history-ui lint`
 - [x] Agent History: `pnpm --filter @tepegoz/persistence typecheck`
 - [x] Agent History: `pnpm --filter @tepegoz/persistence lint`
 - [x] Agent History: `pnpm --filter @tepegoz/desktop-ipc typecheck`

@@ -3,7 +3,7 @@ import type {
   AgentAttachmentMeta,
   AgentConversationDetail,
   AgentHistoryEvent,
-} from '@tepegoz/agent-history';
+} from '@tepegoz/ext-agent/history';
 import type { CanonMessage } from '@tepegoz/model-gateway';
 import { randomUUID } from 'node:crypto';
 import { AgentConversationStore, type Db } from '@tepegoz/persistence';

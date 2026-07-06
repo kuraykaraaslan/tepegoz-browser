@@ -7,7 +7,7 @@ export const agentManifest = defineExtension({
   version: '0.1.0',
   description: 'Autonomous browsing tasks on the current page, with human approval.',
   icon: 'robot',
-  surfaces: ['sidebar'],
+  surfaces: ['sidebar', 'page'],
   actions: { click: 'sidebar' },
   labels: {
     tr: {

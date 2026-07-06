@@ -4,23 +4,14 @@ import type {
   AgentConversationDetail,
   AgentConversationSummary,
   AgentConversationsState,
-} from '@tepegoz/agent-history';
-import { agentHistoryDict } from './i18n';
+  AgentHostApi,
+} from './types';
+import { agentDict } from './i18n';
 
 const PAGE_SIZE = 50;
 
-export interface AgentHistoryPageProps {
-  list: (query: string, offset: number) => Promise<AgentConversationSummary[]>;
-  get: (id: string) => Promise<AgentConversationDetail | null>;
-  open: (id: string) => Promise<void>;
-  remove: (id: string) => Promise<void>;
-  clear: () => Promise<void>;
-  subscribe: (callback: (state: AgentConversationsState) => void) => () => void;
-}
-
-export function AgentHistoryPage(props: Readonly<AgentHistoryPageProps>) {
-  const { clear, get, list, open, remove, subscribe } = props;
-  const t = useT(agentHistoryDict);
+export function AgentHistoryPage({ api }: Readonly<{ api: AgentHostApi; onClose: () => void }>) {
+  const t = useT(agentDict).historyPage;
   const [query, setQuery] = useState('');
   const [items, setItems] = useState<AgentConversationSummary[]>([]);
   const [selected, setSelected] = useState<AgentConversationDetail | null>(null);
@@ -30,13 +21,15 @@ export function AgentHistoryPage(props: Readonly<AgentHistoryPageProps>) {
   const sentinelRef = useRef<HTMLDivElement>(null);
   const loadingRef = useRef(false);
 
-  useEffect(() => subscribe((state) => setItems(state.items)), [subscribe]);
+  useEffect(() => api.onAgentConversationsState((state: AgentConversationsState) => {
+    if (query.trim().length === 0) setItems(state.items);
+  }), [api, query]);
 
   useEffect(() => {
     let cancelled = false;
     loadingRef.current = true;
     setLoading(true);
-    void list(query.trim(), 0).then((page) => {
+    void api.listAgentConversations({ query: query.trim(), offset: 0, limit: PAGE_SIZE }).then((page) => {
       if (cancelled) return;
       loadingRef.current = false;
       setItems(page);
@@ -52,13 +45,13 @@ export function AgentHistoryPage(props: Readonly<AgentHistoryPageProps>) {
       setLoading(false);
     });
     return () => { cancelled = true; };
-  }, [query, list]);
+  }, [api, query]);
 
   const loadMore = useCallback(() => {
     if (loadingRef.current || !hasMore) return;
     loadingRef.current = true;
     setLoading(true);
-    void list(query.trim(), offset).then((page) => {
+    void api.listAgentConversations({ query: query.trim(), offset, limit: PAGE_SIZE }).then((page) => {
       loadingRef.current = false;
       setItems((prev) => [...prev, ...page]);
       setOffset((prev) => prev + page.length);
@@ -68,7 +61,7 @@ export function AgentHistoryPage(props: Readonly<AgentHistoryPageProps>) {
       loadingRef.current = false;
       setLoading(false);
     });
-  }, [hasMore, offset, list, query]);
+  }, [api, hasMore, offset, query]);
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -80,8 +73,9 @@ export function AgentHistoryPage(props: Readonly<AgentHistoryPageProps>) {
     return () => { observer.disconnect(); };
   }, [loadMore]);
 
-  async function selectConversation(id: string): Promise<void> {
-    setSelected(await get(id));
+  async function openInPanel(id: string): Promise<void> {
+    const groupId = await api.ensureActiveGroup();
+    await api.openAgentConversation({ id, groupId });
   }
 
   return (
@@ -96,14 +90,10 @@ export function AgentHistoryPage(props: Readonly<AgentHistoryPageProps>) {
             value={query}
             placeholder={t.search}
             spellCheck={false}
-            onChange={(e) => setQuery(e.currentTarget.value)}
+            onChange={(event) => setQuery(event.currentTarget.value)}
             className="ml-auto h-9 w-72 max-w-full rounded-full border border-border bg-surface-raised px-4 text-sm text-text-primary placeholder:text-text-disabled focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
           />
-          <button
-            type="button"
-            onClick={() => void clear().then(() => { setItems([]); setSelected(null); })}
-            className="rounded-md border border-border px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-overlay hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-          >
+          <button type="button" onClick={() => void api.clearAgentConversations()} className={ACTION_CLASS}>
             {t.clear}
           </button>
         </div>
@@ -115,7 +105,7 @@ export function AgentHistoryPage(props: Readonly<AgentHistoryPageProps>) {
               <li key={item.id} className="py-2">
                 <button
                   type="button"
-                  onClick={() => void selectConversation(item.id)}
+                  onClick={() => void api.getAgentConversation(item.id).then(setSelected)}
                   className="w-full rounded-md px-2 py-2 text-left hover:bg-surface-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
                 >
                   <p className="truncate text-sm font-medium text-text-primary">{item.title}</p>
@@ -135,59 +125,39 @@ export function AgentHistoryPage(props: Readonly<AgentHistoryPageProps>) {
           {selected === null ? (
             <p className="py-8 text-sm text-text-secondary">{t.detailEmpty}</p>
           ) : (
-            <ConversationDetail
-              detail={selected}
-              labels={{ open: t.openInPanel, remove: t.delete }}
-              onOpen={() => void open(selected.summary.id)}
-              onRemove={() => void remove(selected.summary.id).then(() => setSelected(null))}
-            />
+            <article className="mx-auto max-w-3xl">
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <h2 className="min-w-0 truncate text-lg font-semibold">{selected.summary.title}</h2>
+                <div className="flex shrink-0 gap-2">
+                  <button type="button" onClick={() => void openInPanel(selected.summary.id)} className={ACTION_CLASS}>
+                    {t.openInPanel}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void api.deleteAgentConversation(selected.summary.id).then(() => setSelected(null))}
+                    className={ACTION_CLASS}
+                  >
+                    {t.delete}
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-4">
+                {selected.turns.map((turn) => (
+                  <section key={turn.id} className="space-y-2">
+                    <div className="rounded-2xl rounded-br-sm bg-amber-500/15 px-3 py-2 text-sm">{turn.prompt}</div>
+                    {turn.responseSummary !== undefined && (
+                      <div className="rounded-lg border border-border bg-surface-raised px-3 py-2 text-sm">
+                        {turn.responseSummary}
+                      </div>
+                    )}
+                  </section>
+                ))}
+              </div>
+            </article>
           )}
         </div>
       </div>
     </div>
-  );
-}
-
-function ConversationDetail({
-  detail,
-  labels,
-  onOpen,
-  onRemove,
-}: {
-  detail: AgentConversationDetail;
-  labels: { open: string; remove: string };
-  onOpen: () => void;
-  onRemove: () => void;
-}) {
-  return (
-    <article className="mx-auto max-w-3xl">
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="truncate text-lg font-semibold">{detail.summary.title}</h2>
-          <p className="mt-1 text-xs text-text-secondary">
-            {new Date(detail.summary.updatedAt).toLocaleString()}
-          </p>
-        </div>
-        <div className="flex shrink-0 gap-2">
-          <button type="button" onClick={onOpen} className={ACTION_CLASS}>{labels.open}</button>
-          <button type="button" onClick={onRemove} className={ACTION_CLASS}>{labels.remove}</button>
-        </div>
-      </div>
-      <div className="space-y-4">
-        {detail.turns.map((turn) => (
-          <section key={turn.id} className="space-y-2">
-            <div className="rounded-2xl rounded-br-sm bg-amber-500/15 px-3 py-2 text-sm">
-              {turn.prompt}
-            </div>
-            {turn.responseSummary !== undefined && (
-              <div className="rounded-lg border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary">
-                {turn.responseSummary}
-              </div>
-            )}
-          </section>
-        ))}
-      </div>
-    </article>
   );
 }
 

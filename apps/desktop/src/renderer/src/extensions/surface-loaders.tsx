@@ -56,6 +56,13 @@ export const SURFACE_LOADERS: Record<
             );
           },
       ),
+    page: () =>
+      import('@tepegoz/ext-agent/history-page').then(
+        (m) =>
+          function AgentHistoryPageSurface({ onClose }: ExtensionSurfaceProps) {
+            return <m.AgentHistoryPage api={window.tepegoz} onClose={onClose} />;
+          },
+      ),
   },
   'com.tepegoz.user-agent': {
     popup: () =>

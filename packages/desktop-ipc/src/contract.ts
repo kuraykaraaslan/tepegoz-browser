@@ -177,8 +177,8 @@ export type {
   TasksState,
 };
 
-// Agent Console conversation history is local-profile only. The package owns zod-free public wire
-// types; main-process validators live in @tepegoz/agent-history/schemas.
+// Agent Console conversation history is extension-owned and local-profile only. The ext-agent package
+// owns zod-free public wire types; main-process validators live in its history-schemas subpath.
 import type {
   AgentAttachmentMeta,
   AgentConversationDetail,
@@ -187,7 +187,7 @@ import type {
   AgentConversationSummary,
   AgentConversationTurn,
   AgentConversationsState,
-} from '@tepegoz/agent-history';
+} from '@tepegoz/ext-agent/history';
 export type {
   AgentAttachmentMeta,
   AgentConversationDetail,
