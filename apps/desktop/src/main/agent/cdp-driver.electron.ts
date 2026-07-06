@@ -45,6 +45,13 @@ const AxNodeSchema = z
 const AxTreeSchema = z.object({ nodes: z.array(AxNodeSchema) });
 
 const BoxModelSchema = z.object({ model: z.object({ content: z.array(z.number()) }) });
+const DescribeNodeSchema = z.object({
+  node: z.object({
+    localName: z.string().optional(),
+    nodeName: z.string().optional(),
+    attributes: z.array(z.string()).optional(),
+  }),
+});
 
 /** A named key the agent can press → CDP key-event fields. */
 const KEY_MAP: Record<string, { key: string; code: string; keyCode: number; text?: string }> = {
@@ -71,6 +78,16 @@ function axString(value: unknown): string {
   if (typeof value === 'string') return value;
   if (typeof value === 'number' || typeof value === 'boolean') return String(value);
   return '';
+}
+
+function attributesMap(attrs: string[] | undefined): Map<string, string> {
+  const map = new Map<string, string>();
+  if (attrs === undefined) return map;
+  for (let i = 0; i < attrs.length; i += 2) {
+    const key = attrs[i];
+    if (key !== undefined) map.set(key.toLowerCase(), attrs[i + 1] ?? '');
+  }
+  return map;
 }
 
 export default class CdpDriver {
@@ -130,8 +147,9 @@ export default class CdpDriver {
     const refMap = new Map<number, number>();
     for (const node of parsed.data.nodes) {
       if (node.ignored === true || node.backendDOMNodeId === undefined) continue;
-      const role = axString(node.role?.value);
-      if (role === '' || !isInteractableRole(role)) continue;
+      const fileInput = await CdpDriver.fileInputInfo(wc, node.backendDOMNodeId);
+      const role = axString(node.role?.value) || (fileInput !== null ? 'button' : '');
+      if (fileInput === null && (role === '' || !isInteractableRole(role))) continue;
 
       const disabled = node.properties?.some(
         (p) => p.name === 'disabled' && p.value?.value === true,
@@ -140,6 +158,11 @@ export default class CdpDriver {
       const value = axString(node.value?.value);
       if (value !== '') el.value = value;
       if (disabled === true) el.disabled = true;
+      if (fileInput !== null) {
+        el.inputKind = 'file';
+        if (fileInput.accept.length > 0) el.accept = fileInput.accept;
+        if (fileInput.multiple) el.multiple = true;
+      }
 
       elements.push(el);
       refMap.set(elements.length, node.backendDOMNodeId); // ref is 1-based, aligned with finalizeElements
@@ -159,6 +182,37 @@ export default class CdpDriver {
     const id = refMap.get(ref);
     if (id === undefined) throw new AppError(`No element with ref ${String(ref)}`, 404);
     return id;
+  }
+
+  private static async fileInputInfo(
+    wc: WebContents,
+    backendNodeId: number,
+  ): Promise<{ accept: string; multiple: boolean } | null> {
+    const raw: unknown = await wc.debugger.sendCommand('DOM.describeNode', { backendNodeId, depth: 0 });
+    const parsed = DescribeNodeSchema.safeParse(raw);
+    if (!parsed.success) return null;
+    const nodeName = (parsed.data.node.localName ?? parsed.data.node.nodeName ?? '').toLowerCase();
+    if (nodeName !== 'input') return null;
+    const attrs = attributesMap(parsed.data.node.attributes);
+    if ((attrs.get('type') ?? '').toLowerCase() !== 'file') return null;
+    return { accept: attrs.get('accept') ?? '', multiple: attrs.has('multiple') };
+  }
+
+  static async setFileInputFiles(
+    wc: WebContents,
+    ref: number,
+    paths: string[],
+  ): Promise<{ accept: string; multiple: boolean }> {
+    await CdpDriver.ensureAttached(wc);
+    const backendNodeId = CdpDriver.backendNodeId(wc, ref);
+    const info = await CdpDriver.fileInputInfo(wc, backendNodeId);
+    if (info === null) throw new AppError('Target element is not a file input', 409);
+    if (!info.multiple && paths.length > 1) {
+      throw new AppError('Target file input does not accept multiple files', 409);
+    }
+    await wc.debugger.sendCommand('DOM.setFileInputFiles', { backendNodeId, files: paths });
+    await CdpDriver.settle(wc);
+    return info;
   }
 
   /** The center point (CSS px, viewport-relative) of an element, after scrolling it into view. */

@@ -20,6 +20,12 @@ export interface InteractableElement {
   value?: string;
   /** True when the element is disabled (surfaced so the model does not target dead controls). */
   disabled?: boolean;
+  /** Specialized input type when the control needs a non-text action. */
+  inputKind?: 'file';
+  /** File input accept filter, as declared by the page. Page-controlled and advisory only. */
+  accept?: string;
+  /** True when a file input accepts multiple files. */
+  multiple?: boolean;
 }
 
 /** Raw interactable node as read from the accessibility tree, BEFORE sanitization/capping. */
@@ -28,6 +34,9 @@ export interface RawInteractable {
   name: string;
   value?: string;
   disabled?: boolean;
+  inputKind?: 'file';
+  accept?: string;
+  multiple?: boolean;
 }
 
 /**
@@ -100,6 +109,11 @@ export function finalizeElements(raw: RawInteractable[]): {
       if (value.text.length > 0) el.value = value.text;
     }
     if (node.disabled === true) el.disabled = true;
+    if (node.inputKind === 'file') {
+      el.inputKind = 'file';
+      if (node.accept !== undefined && node.accept.length > 0) el.accept = sanitizeLabel(node.accept).text;
+      if (node.multiple === true) el.multiple = true;
+    }
     elements.push(el);
   }
   return { elements, flags: [...flags] };
@@ -114,6 +128,11 @@ export function renderElementsText(elements: InteractableElement[]): string {
       if (el.name.length > 0) parts.push(`"${el.name}"`);
       if (el.value !== undefined) parts.push(`= "${el.value}"`);
       if (el.disabled === true) parts.push('(disabled)');
+      if (el.inputKind === 'file') {
+        parts.push('(file input)');
+        if (el.accept !== undefined) parts.push(`accept="${el.accept}"`);
+        if (el.multiple === true) parts.push('multiple');
+      }
       return parts.join(' ');
     })
     .join('\n');

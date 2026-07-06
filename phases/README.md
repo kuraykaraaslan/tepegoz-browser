@@ -65,6 +65,8 @@ work has been folded into Phase 1a/1b as follows:
       ToolGateway HITL/idempotency policy.
 - [x] Phase 2c down-payment: `@tepegoz/uploads` domain package, redacted upload activity contract,
       IPC channels, and `upload_*` Capability Plane tool registration.
+- [x] Phase 2c down-payment: desktop UploadService, CDP file-input binding, file sandbox preflight,
+      request observation, and redacted upload audit.
 - [ ] Phase 1b remaining: durable resume across app restarts, screenshot/vision fallback, true parallel DAG.
 
 > **Phase E (Extras) is not sequenced.** It is not numbered into the 0–12 flow and nothing depends on it; each

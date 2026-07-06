@@ -26,4 +26,6 @@ export interface BrowserHost {
   pressKey(key: string, tabId?: string): Promise<void>;
   /** Scroll the page up or down (`amount` in CSS px; host picks a sensible default). */
   scrollPage(direction: 'up' | 'down', amount?: number, tabId?: string): Promise<void>;
+  /** Bind local files to a file input identified by `ref` from the latest snapshot. */
+  setFileInputFiles(ref: number, paths: string[], tabId?: string): Promise<void>;
 }

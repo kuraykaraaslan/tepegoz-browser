@@ -91,7 +91,7 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
   - [x] Slice 5: `download_*` / `clipboard_*` capability tools + HITL/idempotency entegrasyonu.
   - [x] Upload Slice 1: `@tepegoz/uploads` domain paketi, zod schemas, `upload_*` tool registration,
     IPC contract kanallari ve layer kurali eklendi.
-  - [ ] Upload Slice 2: UploadService + CDP file input binding + file sandbox preflight + redacted audit.
+  - [x] Upload Slice 2: UploadService + CDP file input binding + file sandbox preflight + redacted audit.
   - [ ] Upload Slice 3: `tepegoz://uploads` UI, preload/IPC wiring, menu/navigation ve phase/docs tamamlama.
 - [ ] Action recovery ekle: click/fill sonrasi beklenen degisim yoksa yeniden snapshot ve alternatif
   selector denemesi.
@@ -163,6 +163,7 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 - [x] `3ed3a0e Centralize clipboard permissions`
 - [x] `d000098 Register download and clipboard tools`
 - [x] `a2937cc Add upload broker domain foundations`
+- [x] Upload Slice 2 commit: Wire upload broker service (commit sonrasi hash ile guncellenecek)
 
 ## Siradaki En Mantikli Dilim
 
@@ -186,7 +187,7 @@ Upload broker icin aktif siradaki isler:
 
 - [x] `@tepegoz/uploads` domain paketi + `upload_*` tool descriptorlari.
 - [x] Desktop IPC zod-free contract ve main-only schema re-export.
-- [ ] UploadService, CDP `DOM.setFileInputFiles`, file sandbox preflight ve Event Journal audit.
+- [x] UploadService, CDP `DOM.setFileInputFiles`, file sandbox preflight ve Event Journal audit.
 - [ ] Uploads UI/internal page/preload wiring.
 
 ## Ek Dogrulama Kaydi - Download/Clipboard Track
@@ -217,6 +218,10 @@ Upload broker icin aktif siradaki isler:
 - [x] Slice 5 tekrar dogrulamalari: `pnpm --filter @tepegoz/desktop-ipc typecheck`
 - [x] Upload Slice 1: `pnpm --filter @tepegoz/uploads test/typecheck/lint`
 - [x] Upload Slice 1: `pnpm --filter @tepegoz/desktop-ipc typecheck/lint`
+- [x] Upload Slice 2: `pnpm --filter @tepegoz/tool-executor test/typecheck/lint`
+- [x] Upload Slice 2: `pnpm --filter @tepegoz/browser-tools test/typecheck/lint`
+- [x] Upload Slice 2: `pnpm --filter @tepegoz/shared-types test/typecheck`
+- [x] Upload Slice 2: `pnpm --filter @tepegoz/desktop typecheck/lint`
 - [ ] `pnpm --filter @tepegoz/persistence test` — blocked by local native ABI mismatch:
   `better-sqlite3.node` was compiled for NODE_MODULE_VERSION 130; current Node requires 127.
 

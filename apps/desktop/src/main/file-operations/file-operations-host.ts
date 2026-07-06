@@ -216,6 +216,18 @@ export default class FileOperationsHost {
     return real;
   }
 
+  /** Canonicalize `input`, assert it is inside an allowed folder, and assert it is a regular file.
+   *  Used by the upload broker before a local path is bound to an untrusted page's file input. */
+  static async assertReadableFile(input: string): Promise<string> {
+    const real = await canonicalize(input);
+    policy.assertMembership(real);
+    const stat = await fsHost.stat(real);
+    if (stat.kind !== 'file') {
+      throw new AppError(`Not a regular file: '${real}'`, 400);
+    }
+    return real;
+  }
+
   /** The grants actually in force: the persisted list when file ops are enabled, else none. */
   static effectiveGrants(): FileAccessGrant[] {
     const prefs = PreferenceStore.getAll();

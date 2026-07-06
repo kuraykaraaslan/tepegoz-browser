@@ -103,7 +103,7 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
 ### L5/L8 — Upload Broker + Upload Activity
 - [x] Upload Slice 1 foundation: `@tepegoz/uploads` redacted records/reducer/risk helpers, zod schemas,
       `upload_*` Capability Plane registration, IPC contract channels, and layer rules.
-- [ ] Upload Slice 2 service: desktop `UploadService` validates file sandbox access, binds files to
+- [x] Upload Slice 2 service: desktop `UploadService` validates file sandbox access, binds files to
       target file inputs with CDP, observes upload requests, and writes content-free Event Journal audit.
 - [ ] Upload Slice 3 UI: `@tepegoz/uploads-ui`, `tepegoz://uploads`, preload IPC wiring, menu/navigation.
 - [ ] Native file picker interception remains deferred; v1 focuses on agent-controlled file input uploads.

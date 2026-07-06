@@ -2,6 +2,7 @@ import { registerAgentIpc } from './ipc-agent';
 import { registerTabsWindowsIpc } from './ipc-tabs-windows';
 import { registerContentIpc } from './ipc-content';
 import { registerDownloadsIpc } from './ipc-downloads';
+import { registerUploadsIpc } from './ipc-uploads';
 
 export { abortActiveAgentRuns } from './ipc-agent';
 
@@ -15,4 +16,5 @@ export function registerIpc(): void {
   registerTabsWindowsIpc();
   registerContentIpc();
   registerDownloadsIpc();
+  registerUploadsIpc();
 }

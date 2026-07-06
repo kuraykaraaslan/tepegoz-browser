@@ -21,6 +21,7 @@ import { registerTabTools } from '@tepegoz/tab-engine';
 import { registerJournalTools } from '@tepegoz/journal-tools';
 import { registerDownloadTools } from '@tepegoz/downloads/tools';
 import { registerClipboardTools } from '@tepegoz/clipboard/tools';
+import { registerUploadTools } from '@tepegoz/uploads/tools';
 import FileOperationsHost from './file-operations/file-operations-host';
 import { attachBrowserHostWindow, browserHost } from './agent/browser-host.electron';
 import { journalHost } from './agent/journal-host.electron';
@@ -31,6 +32,8 @@ import AutofillHost from './password/autofill-host';
 import DownloadService from './downloads/download-service.electron';
 import { downloadToolsHost } from './downloads/download-tools-host.electron';
 import { clipboardToolsHost } from './clipboard/clipboard-tools-host.electron';
+import UploadService from './uploads/upload-service.electron';
+import { uploadToolsHost } from './uploads/upload-tools-host.electron';
 
 // Last-resort process-level hooks: an async error that escapes every boundary must be LOGGED, not a
 // silent crash. Exceptions still terminate (state is unknown); rejections are logged and survived.
@@ -134,6 +137,7 @@ if (!app.requestSingleInstanceLock()) {
       // Browser downloads: attach the browsing-session will-download handler before any page can start
       // a download, load the SQLite projection, and route every file through quarantine first.
       DownloadService.init();
+      UploadService.init();
       // Load the popup-blocker settings before any page can call window.open, and register its
       // `popup:open` interceptor with the generic action-interception plane (ADR-0022).
       popupBlockerHost.init();
@@ -154,6 +158,7 @@ if (!app.requestSingleInstanceLock()) {
       registerJournalTools({ host: journalHost });
       registerDownloadTools({ host: downloadToolsHost });
       registerClipboardTools({ host: clipboardToolsHost });
+      registerUploadTools({ host: uploadToolsHost });
       // Register enabled built-in extensions' in-process agent capabilities into the same
       // CapabilityRegistry, behind the same ToolGateway PEP (ADR-0021). Meta extension-management tools
       // are always on. Each `provide` is gated on its extension being enabled by `start()`'s reconcile —

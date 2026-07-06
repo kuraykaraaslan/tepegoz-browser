@@ -13,6 +13,7 @@ function fakeHost(overrides?: Partial<BrowserHost>): BrowserHost {
     fillElement: () => Promise.resolve(),
     pressKey: () => Promise.resolve(),
     scrollPage: () => Promise.resolve(),
+    setFileInputFiles: () => Promise.resolve(),
     ...overrides,
   };
 }
@@ -66,6 +67,20 @@ describe('registerBrowserTools', () => {
     expect(readPage).toHaveBeenCalledWith('tab-2');
     expect(snapshotElements).toHaveBeenCalledWith('tab-2');
     expect(fillElement).toHaveBeenCalledWith(4, 'hello', 'tab-2');
+  });
+
+  it('routes file upload actions to the host', async () => {
+    const setFileInputFiles = vi.fn(() => Promise.resolve());
+    registerBrowserTools({ host: fakeHost({ setFileInputFiles }) });
+
+    await CapabilityRegistry.get('browser_update_page')!.handler({
+      action: 'upload',
+      ref: 5,
+      paths: ['C:\\tmp\\report.pdf'],
+      tabId: 'tab-2',
+    });
+
+    expect(setFileInputFiles).toHaveBeenCalledWith(5, ['C:\\tmp\\report.pdf'], 'tab-2');
   });
 
   it('validates page text after waiting for load', async () => {

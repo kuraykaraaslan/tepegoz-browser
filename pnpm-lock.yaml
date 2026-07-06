@@ -246,6 +246,9 @@ importers:
       '@tepegoz/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@tepegoz/uploads':
+        specifier: workspace:*
+        version: link:../../packages/uploads
       '@tepegoz/window-controls':
         specifier: workspace:*
         version: link:../../packages/window-controls
