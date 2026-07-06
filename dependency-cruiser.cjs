@@ -174,6 +174,15 @@ module.exports = {
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
     {
+      name: 'uploads-ui-is-a-leaf',
+      severity: 'error',
+      comment:
+        '@tepegoz/uploads-ui is the presentational tepegoz://uploads surface: it must never import ' +
+        'back into the desktop app. Upload data and commands are injected. See docs/package-map.md.',
+      from: { path: '^packages/uploads-ui/' },
+      to: { path: '^apps/' },
+    },
+    {
       name: 'settings-ui-is-a-leaf',
       severity: 'error',
       comment:

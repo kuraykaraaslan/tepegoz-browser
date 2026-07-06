@@ -105,7 +105,7 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       `upload_*` Capability Plane registration, IPC contract channels, and layer rules.
 - [x] Upload Slice 2 service: desktop `UploadService` validates file sandbox access, binds files to
       target file inputs with CDP, observes upload requests, and writes content-free Event Journal audit.
-- [ ] Upload Slice 3 UI: `@tepegoz/uploads-ui`, `tepegoz://uploads`, preload IPC wiring, menu/navigation.
+- [x] Upload Slice 3 UI: `@tepegoz/uploads-ui`, `tepegoz://uploads`, preload IPC wiring, menu/navigation.
 - [ ] Native file picker interception remains deferred; v1 focuses on agent-controlled file input uploads.
 
 ### L8/L9 — Browser-completeness dialogs (auth / cert / navigation)

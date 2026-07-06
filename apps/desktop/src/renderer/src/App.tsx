@@ -9,6 +9,7 @@ import {
   INTERNAL_EXTENSIONS_URL,
   INTERNAL_HISTORY_URL,
   INTERNAL_SETTINGS_URL,
+  INTERNAL_UPLOADS_URL,
   isExtensionEnabled,
 } from '@tepegoz/desktop-ipc';
 import type {
@@ -34,6 +35,7 @@ import { BrowserChrome } from '@tepegoz/browser-chrome';
 import { BookmarksBar } from '@tepegoz/bookmarks-bar';
 import { HistoryPage } from '@tepegoz/history-ui';
 import { DownloadsPage } from '@tepegoz/downloads-ui';
+import { UploadsPage } from '@tepegoz/uploads-ui';
 import { BookmarksManager } from '@tepegoz/bookmarks-ui';
 import { ExtensionsPage } from './components/ExtensionsPage';
 import { ExtensionTray } from './components/ExtensionTray';
@@ -308,6 +310,7 @@ export function App() {
   const extensionsActive = currentUrl === INTERNAL_EXTENSIONS_URL;
   const historyActive = currentUrl === INTERNAL_HISTORY_URL;
   const downloadsActive = currentUrl === INTERNAL_DOWNLOADS_URL;
+  const uploadsActive = currentUrl === INTERNAL_UPLOADS_URL;
   const bookmarksActive = currentUrl === INTERNAL_BOOKMARKS_URL;
   // An extension `page` surface: tepegoz://<extension-id> → render that extension's page component.
   const pageExtIds = registry.filter((d) => d.manifest.surfaces.includes('page')).map((d) => d.id);
@@ -358,6 +361,17 @@ export function App() {
   const downloadSubscribe = useCallback(
     (callback: Parameters<typeof window.tepegoz.onDownloadsState>[0]) =>
       window.tepegoz.onDownloadsState(callback),
+    [],
+  );
+  const uploadList = useCallback(() => window.tepegoz.listUploads(), []);
+  const uploadCommand = useCallback(
+    (input: Parameters<typeof window.tepegoz.commandUpload>[0]) =>
+      window.tepegoz.commandUpload(input),
+    [],
+  );
+  const uploadSubscribe = useCallback(
+    (callback: Parameters<typeof window.tepegoz.onUploadsState>[0]) =>
+      window.tepegoz.onUploadsState(callback),
     [],
   );
 
@@ -517,6 +531,15 @@ export function App() {
                   list={downloadList}
                   command={downloadCommand}
                   subscribe={downloadSubscribe}
+                />
+              </div>
+            )}
+            {uploadsActive && (
+              <div className="absolute inset-0 bg-surface-system">
+                <UploadsPage
+                  list={uploadList}
+                  command={uploadCommand}
+                  subscribe={uploadSubscribe}
                 />
               </div>
             )}

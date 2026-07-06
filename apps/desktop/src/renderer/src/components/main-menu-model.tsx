@@ -16,6 +16,7 @@ export interface MainMenuCopy {
     profileYou: string;
     passwords: string;
     downloads: string;
+    uploads: string;
     bookmarks: string;
     tabGroups: string;
     deleteBrowsingData: string;
@@ -34,6 +35,7 @@ export interface MainMenuCopy {
       deleteBrowsingData: string;
       passwords: string;
       downloads: string;
+      uploads: string;
       bookmarks: string;
       tabGroups: string;
       print: string;
@@ -53,6 +55,7 @@ export interface MainMenuActions {
   reopenTab: () => void;
   reload: () => void;
   openDownloads: () => void;
+  openUploads: () => void;
   openSettings: () => void;
   exit: () => void;
 }
@@ -105,6 +108,7 @@ export function buildMainMenuModel(copy: MainMenuCopy, actions: MainMenuActions)
       items: [
         action('passwords', copy.menu.passwords, copy.menu.short.passwords, 'key'),
         action('downloads', copy.menu.downloads, copy.menu.short.downloads, 'download', actions.openDownloads),
+        action('uploads', copy.menu.uploads, copy.menu.short.uploads, 'upload', actions.openUploads),
         action('tab-groups', copy.menu.tabGroups, copy.menu.short.tabGroups, 'layers'),
       ],
     },

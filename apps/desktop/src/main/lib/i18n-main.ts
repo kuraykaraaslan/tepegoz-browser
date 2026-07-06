@@ -5,6 +5,7 @@ import { bookmarksUiDict } from '@tepegoz/bookmarks-ui/i18n';
 import { extensionsDict } from '@tepegoz/extensions-ui/i18n';
 import { historyDict } from '@tepegoz/history-ui/i18n';
 import { downloadsDict } from '@tepegoz/downloads-ui/i18n';
+import { uploadsDict } from '@tepegoz/uploads-ui/i18n';
 import { browserDict } from '../../i18n';
 import PreferenceStore from '@tepegoz/preferences';
 
@@ -28,6 +29,7 @@ export function mainStrings(): {
   errors: typeof coreDict.en.errors;
   extensions: typeof extensionsDict.en;
   history: typeof historyDict.en;
+  uploads: typeof uploadsDict.en;
 } {
   const l = mainLocale();
   return {
@@ -42,5 +44,6 @@ export function mainStrings(): {
     errors: pick(coreDict, l).errors,
     extensions: pick(extensionsDict, l),
     history: pick(historyDict, l),
+    uploads: pick(uploadsDict, l),
   };
 }

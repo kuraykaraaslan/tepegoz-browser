@@ -94,6 +94,7 @@
     "@tepegoz/tool-executor": "workspace:*",
     "@tepegoz/ui": "workspace:*",
     "@tepegoz/uploads": "workspace:*",
+    "@tepegoz/uploads-ui": "workspace:*",
     "@tepegoz/window-controls": "workspace:*",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",

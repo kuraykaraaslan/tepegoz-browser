@@ -30,11 +30,6 @@ const UpdatePageArgs = z.discriminatedUnion('action', [
     direction: z.enum(['up', 'down']),
     amount: z.number().int().positive().max(100_000).optional(),
   }),
-  TargetTabArgs.extend({
-    action: z.literal('upload'),
-    ref: Ref,
-    paths: z.array(z.string().min(1).max(4096)).min(1).max(20),
-  }),
 ]);
 
 /** Build a `browser_*` builtin ToolDescriptor (mirrors `@tepegoz/file-operations`'s local helper). */
@@ -131,8 +126,8 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
       'Perform ONE interaction on a page, using a `ref` from browser_get_elements on the same tab. args: ' +
         'one of { action: "click", ref, tabId? } · { action: "fill", ref, text, tabId? } · ' +
         '{ action: "press", key, tabId? } (e.g. "Enter", "Tab", "Escape", "ArrowDown") · ' +
-        '{ action: "scroll", direction: "up"|"down", amount?, tabId? } · ' +
-        '{ action: "upload", ref, paths, tabId? } for file inputs. Omit tabId for the active tab. ' +
+        '{ action: "scroll", direction: "up"|"down", amount?, tabId? }. Omit tabId for the active tab. ' +
+        'File inputs must be handled through upload_create_item so path grants, approval, and audit apply. ' +
         'Returns { ok: true }.',
     ),
     inputSchema: UpdatePageArgs,
@@ -149,9 +144,6 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
           break;
         case 'scroll':
           await host.scrollPage(args.direction, args.amount, args.tabId);
-          break;
-        case 'upload':
-          await host.setFileInputFiles(args.ref, args.paths, args.tabId);
           break;
       }
       return { ok: true };

@@ -11,6 +11,7 @@ import {
   INTERNAL_DOWNLOADS_URL,
   INTERNAL_EXTENSIONS_URL,
   INTERNAL_HISTORY_URL,
+  INTERNAL_UPLOADS_URL,
   IpcChannels,
   type TabGroupSettingValue,
   type TabsState,
@@ -303,6 +304,7 @@ export default class TabManager {
     if (url === INTERNAL_EXTENSIONS_URL) return r.extensions.title;
     if (url === INTERNAL_HISTORY_URL) return r.history.title;
     if (url === INTERNAL_DOWNLOADS_URL) return r.downloads.title;
+    if (url === INTERNAL_UPLOADS_URL) return r.uploads.title;
     if (url === INTERNAL_BOOKMARKS_URL) return r.bookmarks.title;
     // An extension `page` surface (tepegoz://<extension-id>) is titled from the extension's manifest.
     const extId = extensionIdFromPageUrl(url);

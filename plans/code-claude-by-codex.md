@@ -92,7 +92,7 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
   - [x] Upload Slice 1: `@tepegoz/uploads` domain paketi, zod schemas, `upload_*` tool registration,
     IPC contract kanallari ve layer kurali eklendi.
   - [x] Upload Slice 2: UploadService + CDP file input binding + file sandbox preflight + redacted audit.
-  - [ ] Upload Slice 3: `tepegoz://uploads` UI, preload/IPC wiring, menu/navigation ve phase/docs tamamlama.
+  - [x] Upload Slice 3: `tepegoz://uploads` UI, preload/IPC wiring, menu/navigation ve phase/docs tamamlama.
 - [ ] Action recovery ekle: click/fill sonrasi beklenen degisim yoksa yeniden snapshot ve alternatif
   selector denemesi.
 - [ ] Form ve tablo senaryolari icin fixtures ekle.
@@ -188,7 +188,7 @@ Upload broker icin aktif siradaki isler:
 - [x] `@tepegoz/uploads` domain paketi + `upload_*` tool descriptorlari.
 - [x] Desktop IPC zod-free contract ve main-only schema re-export.
 - [x] UploadService, CDP `DOM.setFileInputFiles`, file sandbox preflight ve Event Journal audit.
-- [ ] Uploads UI/internal page/preload wiring.
+- [x] Uploads UI/internal page/preload wiring.
 
 ## Ek Dogrulama Kaydi - Download/Clipboard Track
 
@@ -222,6 +222,15 @@ Upload broker icin aktif siradaki isler:
 - [x] Upload Slice 2: `pnpm --filter @tepegoz/browser-tools test/typecheck/lint`
 - [x] Upload Slice 2: `pnpm --filter @tepegoz/shared-types test/typecheck`
 - [x] Upload Slice 2: `pnpm --filter @tepegoz/desktop typecheck/lint`
+- [x] Upload Slice 3: `pnpm --filter @tepegoz/uploads-ui test/typecheck/lint`
+- [x] Upload Slice 3: `pnpm --filter @tepegoz/browser-tools test/typecheck/lint`
+- [x] Upload Slice 3: `pnpm --filter @tepegoz/navigation test`
+- [x] Upload Slice 3: `pnpm --filter @tepegoz/ui typecheck`
+- [x] Upload Slice 3: `pnpm --filter @tepegoz/desktop-ipc typecheck`
+- [x] Upload Slice 3: `pnpm --filter @tepegoz/desktop typecheck/lint`
+- [x] Upload Slice 3: `git diff --check`
+- [ ] Upload Slice 3: `pnpm depcruise` — blocked by stale generated desktop output:
+  `apps/desktop/out/main/node-B4hO7KOT.js` references a missing file during dependency extraction.
 - [ ] `pnpm --filter @tepegoz/persistence test` — blocked by local native ABI mismatch:
   `better-sqlite3.node` was compiled for NODE_MODULE_VERSION 130; current Node requires 127.
 

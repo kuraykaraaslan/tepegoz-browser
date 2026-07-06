@@ -179,9 +179,4 @@ export const browserHost: BrowserHost & TabHost = {
     await CdpDriver.scrollPage(requireWc(tabId), direction, amount, tabId === undefined ? browserAdapter : undefined);
     onCursorHide();
   },
-  setFileInputFiles: async (ref, paths, tabId) => {
-    resetForAgentAction();
-    await CdpDriver.setFileInputFiles(requireWc(tabId), ref, paths);
-    onCursorHide();
-  },
 };

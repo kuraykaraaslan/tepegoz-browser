@@ -52,7 +52,13 @@ describe('isWebUrl', () => {
 });
 
 describe('internalPageUrl', () => {
-  const URLS = ['tepegoz://settings', 'tepegoz://extensions', 'tepegoz://history', 'tepegoz://downloads'];
+  const URLS = [
+    'tepegoz://settings',
+    'tepegoz://extensions',
+    'tepegoz://history',
+    'tepegoz://downloads',
+    'tepegoz://uploads',
+  ];
 
   it('matches a known internal page (trailing-slash + case tolerant)', () => {
     expect(internalPageUrl('tepegoz://settings', URLS)).toBe('tepegoz://settings');
