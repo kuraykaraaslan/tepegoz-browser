@@ -51,7 +51,7 @@ import {
   UserAgentSelectionSchema,
 } from '@tepegoz/desktop-ipc/schemas';
 import NotificationStore from '@tepegoz/notifications';
-import NotificationPermissionBroker from '../notifications/permission-broker';
+import WebPermissionBroker from '../web-permissions/permission-broker';
 import { HistoryStore } from '@tepegoz/persistence';
 import { BookmarkTreeStore, isBookmarkable } from '@tepegoz/bookmarks';
 import FileOperationsHost from '../file-operations/file-operations-host';
@@ -240,7 +240,7 @@ export function registerContentIpc(): void {
   });
   // Per-site Web Notification consent answer (renderer → main); resolves the pending broker prompt.
   onAction(IpcChannels.notificationPermissionRespond, NotificationPermissionResponseSchema, (res) => {
-    NotificationPermissionBroker.respond(res);
+    WebPermissionBroker.respond(res);
   });
 
   // Browsing history (tepegoz://history).

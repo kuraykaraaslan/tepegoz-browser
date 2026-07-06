@@ -1,6 +1,7 @@
 import { app, session } from 'electron';
 import { APP_PARTITION } from './window';
-import NotificationPermissionBroker from './notifications/permission-broker';
+import WebPermissionBroker from './web-permissions/permission-broker';
+import type { WebPermissionCapability } from '@tepegoz/desktop-ipc';
 
 /** Safe origin of a requesting URL, or null if unparsable. */
 function originOf(url: string): string | null {
@@ -43,8 +44,8 @@ function chromeCsp(dev: boolean): string {
 /**
  * Cross-surface hardening that must apply to EVERY web contents (app chrome AND browsed pages):
  * deny permission requests by default (geolocation, media, …). The one exception is the Web
- * Notification API, which is brokered per-site through {@link NotificationPermissionBroker} (stored
- * grant/denial, else a HITL consent prompt, gated on the notifications preference).
+ * Notification and clipboard APIs, which are brokered per-site through {@link WebPermissionBroker}
+ * (stored grant/denial, else a HITL consent prompt; notifications also honor the master preference).
  *
  * Surface-specific navigation policy is deliberately NOT global:
  *  - the app chrome window is locked to app content (deny-by-default) in `createWindow`;
@@ -56,20 +57,22 @@ export function installSecurity(): void {
     // Async request path (getUserMedia, geolocation, notifications, …): notifications are brokered
     // per-site; everything else is denied by default.
     contents.session.setPermissionRequestHandler((_wc, permission, callback, details) => {
-      if (permission === 'notifications') {
+      const capability = permissionCapability(permission);
+      if (capability !== null) {
         const origin = originOf(details.requestingUrl);
         if (origin === null) {
           callback(false);
           return;
         }
-        void NotificationPermissionBroker.request(origin).then(callback);
+        void WebPermissionBroker.request(capability, origin).then(callback);
         return;
       }
       callback(false);
     });
-    // Synchronous check path (permission-state queries): reflect stored notification grants; deny the rest.
+    // Synchronous check path (permission-state queries): reflect stored grants; deny the rest.
     contents.session.setPermissionCheckHandler((_wc, permission, requestingOrigin) => {
-      if (permission === 'notifications') return NotificationPermissionBroker.isAllowed(requestingOrigin);
+      const capability = permissionCapability(permission);
+      if (capability !== null) return WebPermissionBroker.isAllowed(capability, requestingOrigin);
       return false;
     });
   });
@@ -81,4 +84,13 @@ export function installSecurity(): void {
       responseHeaders: { ...details.responseHeaders, 'Content-Security-Policy': [csp] },
     });
   });
+}
+
+function permissionCapability(permission: string): WebPermissionCapability | null {
+  if (permission === 'notifications') return 'notifications';
+  if (permission === 'clipboard-read' || permission === 'deprecated-sync-clipboard-read') {
+    return 'clipboardRead';
+  }
+  if (permission === 'clipboard-sanitized-write') return 'clipboardWrite';
+  return null;
 }

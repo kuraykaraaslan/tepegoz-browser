@@ -1,7 +1,8 @@
-import { clipboard, type BrowserWindow, type ContextMenuParams, type Rectangle } from 'electron';
+import { type BrowserWindow, type ContextMenuParams, type Rectangle } from 'electron';
 import type { PageMenuAction, PageMenuContext } from '@tepegoz/desktop-ipc';
 import PopupWindowManager from '../popup-window';
 import TabManager from '../tabs';
+import ClipboardService from '../clipboard/clipboard-service.electron';
 
 /**
  * Web-page (WebContentsView) right-click menu — the Chrome-style page context menu. Unlike the native
@@ -142,7 +143,13 @@ export function runPageMenuAction(action: PageMenuAction): void {
       }
       break;
     case 'copy-link':
-      if (ctx !== null && ctx.linkUrl.length > 0) clipboard.writeText(ctx.linkUrl);
+      if (ctx !== null && ctx.linkUrl.length > 0) {
+        ClipboardService.writeText({
+          text: ctx.linkUrl,
+          actor: 'user',
+          origin: safeOrigin(ctx.pageUrl),
+        });
+      }
       break;
     case 'open-link-new-tab':
       if (ctx !== null && ctx.linkUrl.length > 0) {
@@ -153,7 +160,13 @@ export function runPageMenuAction(action: PageMenuAction): void {
       if (ctx !== null) TabManager.copyImageAtActive(ctx.x, ctx.y);
       break;
     case 'copy-media-link':
-      if (ctx !== null && ctx.srcUrl.length > 0) clipboard.writeText(ctx.srcUrl);
+      if (ctx !== null && ctx.srcUrl.length > 0) {
+        ClipboardService.writeText({
+          text: ctx.srcUrl,
+          actor: 'user',
+          origin: safeOrigin(ctx.pageUrl),
+        });
+      }
       break;
     case 'save-media':
       if (ctx !== null) TabManager.downloadUrlActive(ctx.srcUrl);
@@ -169,4 +182,12 @@ export function runPageMenuAction(action: PageMenuAction): void {
 /** The right-clicked page is the active tab, so it's the opener — new tabs inherit its group. */
 function opener(): string | undefined {
   return TabManager.activeTabId() ?? undefined;
+}
+
+function safeOrigin(url: string): string | undefined {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return undefined;
+  }
 }

@@ -350,6 +350,16 @@ export function SitePermissionsSection({
                     {s.sitePermissionNotifications}: {perms.notifications}
                   </span>
                 )}
+                {perms.clipboardRead !== undefined && (
+                  <span className="ml-2 text-xs text-text-secondary">
+                    {s.sitePermissionClipboardRead}: {perms.clipboardRead}
+                  </span>
+                )}
+                {perms.clipboardWrite !== undefined && (
+                  <span className="ml-2 text-xs text-text-secondary">
+                    {s.sitePermissionClipboardWrite}: {perms.clipboardWrite}
+                  </span>
+                )}
               </div>
               <Button size="sm" variant="outline" onClick={() => onReset(origin)}>
                 {s.permissionReset}

@@ -33,6 +33,7 @@ import { mainLocale, mainStrings } from './lib/i18n-main';
 import { extensionIdFromPageUrl, extensionLabel, manifestById } from '../shared/extensions';
 import { getDb } from './db/database.electron';
 import ActionInterceptorService from './extensions/action-interceptors.electron';
+import ClipboardService from './clipboard/clipboard-service.electron';
 import DownloadService from './downloads/download-service.electron';
 import { openPageContextMenu } from './menus/page-context-menu';
 import {
@@ -541,21 +542,21 @@ export default class TabManager {
 
   /** Editing commands on the active page (page context menu → Cut/Copy/Paste/Select all). */
   static copyActive(): void {
-    TabManager.activeView()?.webContents.copy();
+    ClipboardService.copy(TabManager.activeView()?.webContents);
   }
   static cutActive(): void {
-    TabManager.activeView()?.webContents.cut();
+    ClipboardService.cut(TabManager.activeView()?.webContents);
   }
   static pasteActive(): void {
-    TabManager.activeView()?.webContents.paste();
+    ClipboardService.paste(TabManager.activeView()?.webContents);
   }
   static selectAllActive(): void {
-    TabManager.activeView()?.webContents.selectAll();
+    ClipboardService.selectAll(TabManager.activeView()?.webContents);
   }
 
   /** Copy the image at the given view-relative coordinates (px) to the clipboard. */
   static copyImageAtActive(x: number, y: number): void {
-    TabManager.activeView()?.webContents.copyImageAt(Math.round(x), Math.round(y));
+    ClipboardService.copyImageAt(TabManager.activeView()?.webContents, x, y);
   }
 
   /** Open DevTools and inspect the element at the given view-relative coordinates (px). */

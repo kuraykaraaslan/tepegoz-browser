@@ -89,6 +89,9 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       Phase 1a notification permission-broker) — **no parallel permission flow**
   - [x] Slice 1 foundation: `@tepegoz/clipboard` headless operation/policy/audit types, schemas/tests, and
         `sitePermissions` shape extended for `clipboardRead`/`clipboardWrite`.
+  - [x] Slice 4 service/broker: desktop `ClipboardService` centralizes native clipboard/WebContents
+        operations with content-free audit; `WebPermissionBroker` handles notifications + clipboard
+        read/write through one per-origin prompt/reset path.
 - [ ] **Per-agent permission matrix** (allowed / requires-approval / denied) rendered as a **read-only view**
       over the Policy Kernel + Capability Plane audit — a UI surface, **not** a new decision engine
 

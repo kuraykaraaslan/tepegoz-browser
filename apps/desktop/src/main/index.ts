@@ -23,7 +23,7 @@ import FileOperationsHost from './file-operations/file-operations-host';
 import { attachBrowserHostWindow, browserHost } from './agent/browser-host.electron';
 import { journalHost } from './agent/journal-host.electron';
 import NotificationHost from './notifications/notification-host';
-import NotificationPermissionBroker from './notifications/permission-broker';
+import WebPermissionBroker from './web-permissions/permission-broker';
 import PasswordHost from './password/password-host';
 import AutofillHost from './password/autofill-host';
 import DownloadService from './downloads/download-service.electron';
@@ -78,7 +78,7 @@ function bootstrap(): void {
   // Wire the notification center's store→renderer broadcast to this window (toast + bell badge target),
   // and the per-site Web Notification consent prompt to the same window.
   NotificationHost.attach(win);
-  NotificationPermissionBroker.attach(win);
+  WebPermissionBroker.attach(win);
   // Password manager: IPC handlers + autofill push/fill (hooks into TabManager navigation events).
   PasswordHost.attach();
   AutofillHost.attach(win, passwordVault);

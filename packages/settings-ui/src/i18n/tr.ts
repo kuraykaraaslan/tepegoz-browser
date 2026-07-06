@@ -208,6 +208,8 @@ export const tr: SettingsStrings = {
   sitePermissionsSubtitle: 'Site bazında yetki verileri (örn. bildirimler).',
   sitePermissionsEmpty: 'Site bazında izin ayarlanmadı.',
   sitePermissionNotifications: 'Bildirimler',
+  sitePermissionClipboardRead: 'Pano okuma',
+  sitePermissionClipboardWrite: 'Panoya yazma',
   permissionReset: 'Sıfırla',
 
   // --- Parolalar ---

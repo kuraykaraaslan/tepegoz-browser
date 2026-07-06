@@ -577,7 +577,11 @@ export function App() {
           closeOnBackdrop={false}
         >
           {permReq !== null && (
-            <NotificationPermissionPrompt origin={permReq.origin} onDecision={answerPermission} />
+            <NotificationPermissionPrompt
+              origin={permReq.origin}
+              capability={permReq.capability}
+              onDecision={answerPermission}
+            />
           )}
         </Modal>
         {/* "Open all" confirmation for a large folder. */}

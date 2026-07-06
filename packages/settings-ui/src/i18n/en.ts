@@ -209,6 +209,8 @@ export const en = {
   sitePermissionsSubtitle: 'Per-site capability grants (e.g. notifications).',
   sitePermissionsEmpty: 'No per-site permissions set.',
   sitePermissionNotifications: 'Notifications',
+  sitePermissionClipboardRead: 'Clipboard read',
+  sitePermissionClipboardWrite: 'Clipboard write',
   permissionReset: 'Reset',
 
   // --- Passwords ---

@@ -17,6 +17,10 @@ export const en = {
   /** Native/website notification consent prompt. `{origin}` is composed by the host. */
   permissionTitle: 'Allow notifications?',
   permissionBody: 'wants to show notifications.',
+  permissionClipboardReadTitle: 'Allow clipboard read?',
+  permissionClipboardReadBody: 'wants to read text from the clipboard.',
+  permissionClipboardWriteTitle: 'Allow clipboard write?',
+  permissionClipboardWriteBody: 'wants to write text to the clipboard.',
   permissionAllow: 'Allow',
   permissionBlock: 'Block',
   permissionRemember: 'Remember this decision',

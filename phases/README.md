@@ -59,6 +59,8 @@ work has been folded into Phase 1a/1b as follows:
       preference shape, layer rules, DownloadService quarantine flow, SQLite projection, and redacted audit.
 - [x] Phase 2c down-payment: `tepegoz://downloads`, presentational Downloads UI, main-menu action, and
       Settings download controls.
+- [x] Phase 2c down-payment: centralized ClipboardService and generic WebPermissionBroker for
+      notifications + clipboard permissions.
 - [ ] Phase 1b remaining: durable resume across app restarts, screenshot/vision fallback, true parallel DAG.
 
 > **Phase E (Extras) is not sequenced.** It is not numbered into the 0–12 flow and nothing depends on it; each
