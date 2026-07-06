@@ -9,6 +9,7 @@ import {
   INTERNAL_EXTENSIONS_URL,
   INTERNAL_HISTORY_URL,
   INTERNAL_SETTINGS_URL,
+  INTERNAL_TASKS_URL,
   INTERNAL_UPLOADS_URL,
   isExtensionEnabled,
 } from '@tepegoz/desktop-ipc';
@@ -36,6 +37,7 @@ import { BookmarksBar } from '@tepegoz/bookmarks-bar';
 import { HistoryPage } from '@tepegoz/history-ui';
 import { DownloadsPage } from '@tepegoz/downloads-ui';
 import { UploadsPage } from '@tepegoz/uploads-ui';
+import { TasksPage } from '@tepegoz/tasks-ui';
 import { BookmarksManager } from '@tepegoz/bookmarks-ui';
 import { ExtensionsPage } from './components/ExtensionsPage';
 import { ExtensionTray } from './components/ExtensionTray';
@@ -312,6 +314,7 @@ export function App() {
   const historyActive = currentUrl === INTERNAL_HISTORY_URL;
   const downloadsActive = currentUrl === INTERNAL_DOWNLOADS_URL;
   const uploadsActive = currentUrl === INTERNAL_UPLOADS_URL;
+  const tasksActive = currentUrl === INTERNAL_TASKS_URL;
   const bookmarksActive = currentUrl === INTERNAL_BOOKMARKS_URL;
   // An extension `page` surface: tepegoz://<extension-id> → render that extension's page component.
   const pageExtIds = registry.filter((d) => d.manifest.surfaces.includes('page')).map((d) => d.id);
@@ -373,6 +376,33 @@ export function App() {
   const uploadSubscribe = useCallback(
     (callback: Parameters<typeof window.tepegoz.onUploadsState>[0]) =>
       window.tepegoz.onUploadsState(callback),
+    [],
+  );
+  const taskList = useCallback(() => window.tepegoz.listTasks(), []);
+  const taskSave = useCallback(
+    (input: Parameters<typeof window.tepegoz.saveTask>[0]) => window.tepegoz.saveTask(input),
+    [],
+  );
+  const taskCommand = useCallback(
+    (input: Parameters<typeof window.tepegoz.runTaskNow>[0]) =>
+      input.action === 'cancel'
+        ? window.tepegoz.cancelTaskRun(input)
+        : window.tepegoz.runTaskNow(input),
+    [],
+  );
+  const taskSetEnabled = useCallback(
+    (input: Parameters<typeof window.tepegoz.setTaskEnabled>[0]) =>
+      window.tepegoz.setTaskEnabled(input),
+    [],
+  );
+  const taskRuns = useCallback((taskId?: string) => window.tepegoz.listTaskRuns(taskId), []);
+  const taskArtifacts = useCallback(
+    (taskId?: string) => window.tepegoz.listTaskArtifacts(taskId),
+    [],
+  );
+  const taskSubscribe = useCallback(
+    (callback: Parameters<typeof window.tepegoz.onTasksState>[0]) =>
+      window.tepegoz.onTasksState(callback),
     [],
   );
 
@@ -542,6 +572,19 @@ export function App() {
                   list={uploadList}
                   command={uploadCommand}
                   subscribe={uploadSubscribe}
+                />
+              </div>
+            )}
+            {tasksActive && (
+              <div className="absolute inset-0 bg-surface-system">
+                <TasksPage
+                  list={taskList}
+                  save={taskSave}
+                  command={taskCommand}
+                  setEnabled={taskSetEnabled}
+                  listRuns={taskRuns}
+                  listArtifacts={taskArtifacts}
+                  subscribe={taskSubscribe}
                 />
               </div>
             )}

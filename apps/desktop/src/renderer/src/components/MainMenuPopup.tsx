@@ -5,6 +5,7 @@ import { Menu, type MenuFlyout } from '@tepegoz/browser-menu';
 import {
   INTERNAL_DOWNLOADS_URL,
   INTERNAL_SETTINGS_URL,
+  INTERNAL_TASKS_URL,
   INTERNAL_UPLOADS_URL,
   isExtensionEnabled,
   type ExtensionState,
@@ -135,6 +136,7 @@ function MainMenuBody({
       reload: () => act(() => window.tepegoz.tabReload()),
       openDownloads: () => act(() => window.tepegoz.navigateTab(INTERNAL_DOWNLOADS_URL)),
       openUploads: () => act(() => window.tepegoz.navigateTab(INTERNAL_UPLOADS_URL)),
+      openTasks: () => act(() => window.tepegoz.navigateTab(INTERNAL_TASKS_URL)),
       openSettings: () => act(() => window.tepegoz.navigateTab(INTERNAL_SETTINGS_URL)),
       exit: () => act(() => window.tepegoz.quitApp()),
     },

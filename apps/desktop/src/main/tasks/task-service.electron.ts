@@ -1,5 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { BrowserWindow } from 'electron';
 import { AppError, Logger } from '@tepegoz/libs';
+import { IpcChannels, type TasksState } from '@tepegoz/desktop-ipc';
 import {
   defaultTaskPolicy,
   nextIntervalRunAt,
@@ -163,6 +165,14 @@ export default class TaskService {
     return db === null ? [] : TaskStore.list(db);
   }
 
+  static state(): TasksState {
+    return {
+      tasks: TaskService.list(),
+      runs: TaskService.listRuns(),
+      artifacts: TaskService.listArtifacts(),
+    };
+  }
+
   static get(id: string): TaskDefinition | null {
     const db = getDb();
     return db === null ? null : TaskStore.get(db, id);
@@ -189,13 +199,16 @@ export default class TaskService {
     };
     const nextRunAt = computeNextRunAt(task, at);
     TaskStore.upsert(db, nextRunAt === undefined ? task : { ...task, nextRunAt });
-    return TaskStore.get(db, task.id) ?? task;
+    const saved = TaskStore.get(db, task.id) ?? task;
+    TaskService.broadcast();
+    return saved;
   }
 
   static delete(id: string): void {
     const db = getDb();
     if (db !== null) TaskStore.delete(db, id);
     TaskService.queue.delete(id);
+    TaskService.broadcast();
   }
 
   static listRuns(taskId?: string): TaskRunRecord[] {
@@ -217,6 +230,7 @@ export default class TaskService {
     }
     if (input.action === 'cancel') {
       TaskService.queue.delete(input.id);
+      TaskService.broadcast();
       return;
     }
     if (input.action === 'archive') {
@@ -239,6 +253,7 @@ export default class TaskService {
     };
     const nextRunAt = status === 'enabled' ? computeNextRunAt(next, at) : undefined;
     TaskStore.upsert(db, nextRunAt === undefined ? next : { ...next, nextRunAt });
+    TaskService.broadcast();
   }
 
   private static recomputeNextRuns(): void {
@@ -334,6 +349,7 @@ export default class TaskService {
     const db = getDb();
     if (db !== null) TaskStore.upsertRun(db, run);
     TaskService.queue.set(task.id, { task, trigger, run });
+    TaskService.broadcast();
     appendAudit('TaskQueued', {
       taskId: task.id,
       triggerType: run.triggerType,
@@ -360,6 +376,7 @@ export default class TaskService {
     const db = getDb();
     const started: TaskRunRecord = { ...input.run, status: 'running', startedAt: now() };
     if (db !== null) TaskStore.upsertRun(db, started);
+    TaskService.broadcast();
     appendAudit('TaskStarted', { taskId: input.task.id, triggerType: started.triggerType }, started.correlationId);
     if (input.task.policy.notifyOnStart) {
       NotificationHost.push({
@@ -388,6 +405,7 @@ export default class TaskService {
       TaskStore.upsertRun(db, done);
       TaskStore.upsert(db, { ...input.task, lastRunAt: completedAt, updatedAt: completedAt });
     }
+    TaskService.broadcast();
     appendAudit(result.ok ? 'TaskSucceeded' : 'TaskFailed', {
       taskId: input.task.id,
       triggerType: done.triggerType,
@@ -403,6 +421,13 @@ export default class TaskService {
         body: result.summary ?? result.error ?? input.task.prompt.slice(0, 140),
         channels: ['center', 'toast', 'native'],
       });
+    }
+  }
+
+  private static broadcast(): void {
+    const state = TaskService.state();
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed()) win.webContents.send(IpcChannels.tasksState, state);
     }
   }
 }

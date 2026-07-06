@@ -46,6 +46,7 @@ export const tr: AgentStrings = {
   },
   // Besteci / çerçeve.
   newTask: 'Yeni görev',
+  saveAsTask: 'Görev olarak kaydet',
   send: 'Gönder',
   stop: 'Durdur',
   modelLabel: 'Model',

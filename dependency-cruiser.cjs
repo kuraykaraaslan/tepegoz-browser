@@ -201,6 +201,15 @@ module.exports = {
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
     {
+      name: 'tasks-ui-is-a-leaf',
+      severity: 'error',
+      comment:
+        '@tepegoz/tasks-ui is the presentational tepegoz://tasks surface: it must never import ' +
+        'back into the desktop app. Task data, commands, and subscriptions are injected. See docs/package-map.md.',
+      from: { path: '^packages/tasks-ui/' },
+      to: { path: '^apps/' },
+    },
+    {
       name: 'settings-ui-is-a-leaf',
       severity: 'error',
       comment:

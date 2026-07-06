@@ -96,6 +96,17 @@ export const IpcChannels = {
   uploadsList: 'uploads:list',
   uploadsCommand: 'uploads:command',
   uploadsState: 'uploads:state',
+  // Saved/triggered agent tasks (`tepegoz://tasks`). State is projected by the main-process TaskService.
+  tasksList: 'tasks:list',
+  tasksGet: 'tasks:get',
+  tasksSave: 'tasks:save',
+  tasksDelete: 'tasks:delete',
+  tasksRunNow: 'tasks:run-now',
+  tasksCancelRun: 'tasks:cancel-run',
+  tasksSetEnabled: 'tasks:set-enabled',
+  tasksListRuns: 'tasks:list-runs',
+  tasksListArtifacts: 'tasks:list-artifacts',
+  tasksState: 'tasks:state',
   /** Renderer→main: the identity of every built-in extension (from the validated on-disk catalog). */
   extensionsListManifests: 'extensions:list-manifests',
   extensionOpen: 'extension:open',
@@ -198,4 +209,5 @@ export const INTERNAL_EXTENSIONS_URL = 'tepegoz://extensions';
 export const INTERNAL_HISTORY_URL = 'tepegoz://history';
 export const INTERNAL_DOWNLOADS_URL = 'tepegoz://downloads';
 export const INTERNAL_UPLOADS_URL = 'tepegoz://uploads';
+export const INTERNAL_TASKS_URL = 'tepegoz://tasks';
 export const INTERNAL_BOOKMARKS_URL = 'tepegoz://bookmarks';

@@ -31,6 +31,14 @@ import type {
 import type { AppInfo, ContentBounds, CredentialsStatus } from './contract';
 import type { DownloadCommandInput, DownloadRecord, DownloadsState } from './contract';
 import type { UploadCommandInput, UploadRecord, UploadsState } from './contract';
+import type {
+  TaskArtifactRecord,
+  TaskCommandInput,
+  TaskDefinition,
+  TaskRunRecord,
+  TaskSaveInput,
+  TasksState,
+} from './contract';
 import type { ProviderId, ProviderKeyMeta } from './contract';
 import type {
   ExtensionId,
@@ -234,6 +242,17 @@ export interface TepegozApi {
   listUploads(): Promise<UploadRecord[]>;
   commandUpload(input: UploadCommandInput): Promise<void>;
   onUploadsState(callback: (state: UploadsState) => void): () => void;
+  // Saved/triggered agent tasks.
+  listTasks(): Promise<TaskDefinition[]>;
+  getTask(id: string): Promise<TaskDefinition | null>;
+  saveTask(input: TaskSaveInput): Promise<TaskDefinition>;
+  deleteTask(id: string): Promise<void>;
+  runTaskNow(input: TaskCommandInput): Promise<void>;
+  cancelTaskRun(input: TaskCommandInput): Promise<void>;
+  setTaskEnabled(input: { id: string; enabled: boolean }): Promise<void>;
+  listTaskRuns(taskId?: string): Promise<TaskRunRecord[]>;
+  listTaskArtifacts(taskId?: string): Promise<TaskArtifactRecord[]>;
+  onTasksState(callback: (state: TasksState) => void): () => void;
   /** Open a named app surface as a native floating popup window anchored at `anchor` (the trigger's
    *  rect, in window-content DIP). Floats above the page, which stays live behind it. Reusable across
    *  surfaces: `surface` is the kind ('main-menu' | 'ext'); extensions pass their id via `opts.id`;

@@ -10,6 +10,7 @@ import {
   INTERNAL_DOWNLOADS_URL,
   INTERNAL_HISTORY_URL,
   INTERNAL_SETTINGS_URL,
+  INTERNAL_TASKS_URL,
   INTERNAL_UPLOADS_URL,
 } from '@tepegoz/desktop-ipc';
 import { extensionPageUrls } from '../../shared/extensions';
@@ -27,6 +28,7 @@ export function internalPageUrl(input: string): string | null {
     INTERNAL_HISTORY_URL,
     INTERNAL_DOWNLOADS_URL,
     INTERNAL_UPLOADS_URL,
+    INTERNAL_TASKS_URL,
     INTERNAL_BOOKMARKS_URL,
     ...extensionPageUrls(),
   ];

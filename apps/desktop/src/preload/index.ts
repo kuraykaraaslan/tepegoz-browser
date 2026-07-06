@@ -7,6 +7,7 @@ import { settingsMiscApi } from './api-settings-misc';
 import { loginsMacrosApi } from './api-logins-macros';
 import { downloadsApi } from './api-downloads';
 import { uploadsApi } from './api-uploads';
+import { tasksApi } from './api-tasks';
 
 /**
  * The ONLY bridge between renderer and main. A small, named, typed API — never raw ipcRenderer
@@ -21,6 +22,7 @@ const api: TepegozApi = {
   ...loginsMacrosApi,
   ...downloadsApi,
   ...uploadsApi,
+  ...tasksApi,
   platform: process.platform,
 };
 

@@ -3,6 +3,7 @@ import { registerTabsWindowsIpc } from './ipc-tabs-windows';
 import { registerContentIpc } from './ipc-content';
 import { registerDownloadsIpc } from './ipc-downloads';
 import { registerUploadsIpc } from './ipc-uploads';
+import { registerTasksIpc } from './ipc-tasks';
 
 export { abortActiveAgentRuns } from './ipc-agent';
 
@@ -17,4 +18,5 @@ export function registerIpc(): void {
   registerContentIpc();
   registerDownloadsIpc();
   registerUploadsIpc();
+  registerTasksIpc();
 }

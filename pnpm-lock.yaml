@@ -246,6 +246,9 @@ importers:
       '@tepegoz/tasks':
         specifier: workspace:*
         version: link:../../packages/tasks
+      '@tepegoz/tasks-ui':
+        specifier: workspace:*
+        version: link:../../packages/tasks-ui
       '@tepegoz/tool-executor':
         specifier: workspace:*
         version: link:../../packages/tool-executor
@@ -767,6 +770,9 @@ importers:
       '@tepegoz/shared-types':
         specifier: workspace:*
         version: link:../shared-types
+      '@tepegoz/tasks':
+        specifier: workspace:*
+        version: link:../tasks
       '@tepegoz/uploads':
         specifier: workspace:*
         version: link:../uploads
@@ -1714,6 +1720,34 @@ importers:
       '@types/node':
         specifier: ^22.10.2
         version: 22.20.0
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
+
+  packages/tasks-ui:
+    dependencies:
+      '@tepegoz/i18n':
+        specifier: workspace:*
+        version: link:../i18n
+      '@tepegoz/tasks':
+        specifier: workspace:*
+        version: link:../tasks
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.31
+      '@types/react-dom':
+        specifier: ^18.3.5
+        version: 18.3.7(@types/react@18.3.31)
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1
+        version: 18.3.1(react@18.3.1)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3

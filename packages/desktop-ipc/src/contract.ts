@@ -155,6 +155,25 @@ import type {
 } from '@tepegoz/uploads';
 export type { UploadCommandInput, UploadCreateInput, UploadRecord, UploadsState };
 
+// Saved/triggered agent task types are owned by @tepegoz/tasks (zod-free public entry; schemas stay
+// in its ./schemas subpath).
+import type {
+  TaskArtifactRecord,
+  TaskCommandInput,
+  TaskDefinition,
+  TaskRunRecord,
+  TaskSaveInput,
+  TasksState,
+} from '@tepegoz/tasks';
+export type {
+  TaskArtifactRecord,
+  TaskCommandInput,
+  TaskDefinition,
+  TaskRunRecord,
+  TaskSaveInput,
+  TasksState,
+};
+
 // Clipboard operation types are owned by @tepegoz/clipboard. The desktop IPC contract only exposes
 // zod-free wire types; runtime validators are re-exported from ./schemas for main-process use.
 import type {

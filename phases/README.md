@@ -84,6 +84,8 @@ work has been folded into Phase 1a/1b as follows:
       next code-claude slice.
 - [x] Code-claude Faz 3 down-payment: renderer-sender-independent background task runner, sharing the
       same single-agent-run lock as the Agent panel and fail-safe denying unattended HITL escalations.
+- [x] Code-claude Faz 3 down-payment: `tepegoz://tasks` internal page, `@tepegoz/tasks-ui`, task IPC/preload
+      surface, live task-state push, main-menu Tasks action, and Agent panel "Save as task" draft flow.
 - [ ] Phase 1b remaining: durable resume across app restarts, true parallel DAG, vision model routing/eviction.
 
 > **Phase E (Extras) is not sequenced.** It is not numbered into the 0–12 flow and nothing depends on it; each

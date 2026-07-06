@@ -43,6 +43,7 @@ export const en = {
   },
   // Composer / chrome.
   newTask: 'New task',
+  saveAsTask: 'Save as task',
   send: 'Send',
   stop: 'Stop',
   modelLabel: 'Model',

@@ -1,6 +1,6 @@
 # Plan — ext-agent'i Claude Chrome Seviyesine Yaklastirma
 
-**Durum:** Faz 1 ve Faz 2 tamamlandi; Faz 3 Task Productization Slice 1 basladi.
+**Durum:** Faz 1 ve Faz 2 tamamlandi; Faz 3 Task Productization Slice 5 tamamlandi.
 **Tarih:** 2026-07-06
 **Kapsam:** `extensions/ext-agent`, agent runtime, browser/tab tools, desktop host baglantilari ve
 ilgili dokumantasyon.
@@ -32,7 +32,7 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 |-----|-------|-----|
 | 1. Agent Reliability | Tamamlandi | Run izolasyonu, state machine/checkpoint, hata siniflandirmasi, recovery ve eval testleri tamamlandi. |
 | 2. Browser Reliability | Tamamlandi | TabId scoped browser tools, sayfa dogrulama, screenshot/fullPage visual fallback, action recovery, fixtures ve download/upload/clipboard brokerlari tamamlandi. |
-| 3. Task Productization | Devam ediyor | Task domain/persistence/scheduler ve renderer-sender bagimsiz background agent runner tamamlandi. |
+| 3. Task Productization | Devam ediyor | Task domain/persistence/scheduler, background runner ve `tepegoz://tasks` dashboard/IPC tamamlandi. |
 | 4. Tool Ecosystem | Baslamadi | Web search/fetch, servis adaptorleri ve MCP/policy genisletmeleri. |
 | 5. Acceptance/Eval | Baslamadi | Claude benzeri is senaryolari icin otomatik kabul setleri. |
 
@@ -102,6 +102,8 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
   ile kaydetmesi.
   - [x] Slice 1 foundation: `@tepegoz/tasks` public types, reducers/selectors, zod schemas, layer kuralı
     ve Capability Plane descriptorlari eklendi.
+  - [x] Slice 5 UI/IPC: `tasks:*` IPC/preload bridge, `@tepegoz/tasks-ui`, `tepegoz://tasks` internal
+    page ve Agent panelden disabled task draft kaydetme affordance'i eklendi.
 - [ ] Artifacts modeli: ajan ciktilarini panelde indirilebilir/yeniden kullanilabilir nesneler olarak
   tutma.
   - [x] Slice 2 projection: `task_runs`, `task_artifacts` ve `task_trigger_state` SQLite tabloları ile
@@ -116,6 +118,8 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 - [ ] Run dashboard: calisan/biten/hata alan gorevleri ve replay linklerini tek yerde gosterme.
   - [x] Slice 4 launcher: panel run ve task run ortak agent-run lock kullaniyor; scheduled/background
     task run'lari renderer sender olmadan AgentService'e baglanabiliyor.
+  - [x] Slice 5 dashboard: saved task listesi, run-now, enable/disable, run history ve artifact listesi
+    renderer state push ile guncelleniyor.
 
 ## Faz 4 — Tool Ecosystem
 
@@ -215,7 +219,7 @@ Faz 3 Task Productization icin aktif siradaki isler:
 - [x] Slice 2: persistence migration + `TaskStore`, run/artifact projections, trigger state.
 - [x] Slice 3: desktop `TaskService`, interval/page-change scheduler, queue/coalescing.
 - [x] Slice 4: renderer-sender bagimsiz `AgentRunLauncher`.
-- [ ] Slice 5: IPC/preload + `@tepegoz/tasks-ui` + `tepegoz://tasks`.
+- [x] Slice 5: IPC/preload + `@tepegoz/tasks-ui` + `tepegoz://tasks`.
 - [ ] Slice 6: task capability host + preapproved policy entegrasyonu.
 
 ## Ek Dogrulama Kaydi - Download/Clipboard Track
@@ -271,6 +275,14 @@ Faz 3 Task Productization icin aktif siradaki isler:
 - [x] Task Slice 3: `pnpm --filter @tepegoz/desktop typecheck/lint`
 - [x] Task Slice 3: `pnpm --filter @tepegoz/tasks test/typecheck/lint`
 - [x] Task Slice 4: `pnpm --filter @tepegoz/desktop typecheck/lint`
+- [x] Task Slice 5: `pnpm --filter @tepegoz/tasks-ui test/typecheck/lint`
+- [x] Task Slice 5: `pnpm --filter @tepegoz/desktop-ipc typecheck/lint`
+- [x] Task Slice 5: `pnpm --filter @tepegoz/desktop typecheck/lint`
+- [x] Task Slice 5: `pnpm --filter @tepegoz/ext-agent typecheck/lint`
+- [x] Task Slice 5: `pnpm --filter @tepegoz/ui typecheck/lint`
+- [x] Task Slice 5: `git diff --check`
+- [ ] Task Slice 5: source-scoped `depcruise packages apps/desktop/src` — blocked by existing repo-wide
+  `not-to-dev-dep` / generated `out/` / menu cycle debt; new `tasks-ui-is-a-leaf` rule was added.
 - [x] Upload Slice 3: `git diff --check`
 - [ ] Upload Slice 3: `pnpm depcruise` — blocked by stale generated desktop output:
   `apps/desktop/out/main/node-B4hO7KOT.js` references a missing file during dependency extraction.

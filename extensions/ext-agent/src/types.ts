@@ -149,4 +149,6 @@ export interface AgentHostApi {
   pickAgentFiles(): Promise<AgentFileAttachment[]>;
   /** Capture a screenshot of the active tab as a base64-encoded PNG data URL. */
   capturePageScreenshot(): Promise<string | null>;
+  /** Save the current composer prompt as a disabled task draft in the host task manager. */
+  saveCurrentPromptAsTask?(input: { prompt: string; name?: string | undefined }): Promise<void>;
 }
