@@ -34,6 +34,13 @@ import { isRunnableProvider, type AIProvider, type EventType, type Plan } from '
 import { randomUUID } from 'node:crypto';
 import AgentService, { type PlanApprovalDecision } from '../agent/agent-service.electron';
 import { setCurrentAgentRun } from '../agent/browser-host.electron';
+import {
+  abortAllAgentRunControllers,
+  agentRunController,
+  hasActiveAgentRun,
+  registerAgentRunController,
+  unregisterAgentRunController,
+} from '../agent/agent-run-lock.electron';
 import FileOperationsHost from '../file-operations/file-operations-host';
 import { getDb } from '../db/database.electron';
 import { mainStrings } from '../lib/i18n-main';
@@ -55,7 +62,6 @@ let planCounter = 0;
 // input-action event wiring is process-scoped. Keep execution single-run until browser tools become
 // tabId-scoped end to end.
 const agentRunByGroup = new Map<string, boolean>();
-const runControllers = new Map<string, AbortController>();
 const pendingApprovals = new Map<string, { runId: string; resolve: (approved: boolean) => void }>();
 const pendingPlans = new Map<
   string,
@@ -65,7 +71,7 @@ const pendingPlans = new Map<
 /** Abort every in-flight agent run and unblock any HITL prompt parked on a promise (fail-safe deny),
  *  so quit doesn't race a half-finished run against store/database teardown. Called from before-quit. */
 export function abortActiveAgentRuns(): void {
-  for (const controller of runControllers.values()) controller.abort();
+  abortAllAgentRunControllers();
   agentRunByGroup.clear();
   for (const [id, entry] of pendingApprovals) {
     pendingApprovals.delete(id);
@@ -160,7 +166,7 @@ export function registerAgentIpc(): void {
   handleAsync(IpcChannels.agentRun, async (event, payload): Promise<AgentRunResult> => {
     requireAgentEnabled();
     const { prompt, groupId } = AgentRunInputSchema.parse(payload);
-    if (runControllers.size > 0) {
+    if (hasActiveAgentRun()) {
       throw new AppError('An agent task is already running', 409);
     }
     if (agentRunByGroup.get(groupId) === true) {
@@ -170,7 +176,7 @@ export function registerAgentIpc(): void {
     const sender = event.sender;
     const runId = `run-${String(++runCounter)}`;
     const controller = new AbortController();
-    runControllers.set(runId, controller);
+    registerAgentRunController(runId, controller);
     const sendEvent = (e: AgentEvent): void => {
       if (!sender.isDestroyed()) sender.send(IpcChannels.agentEvent, e);
     };
@@ -306,14 +312,14 @@ export function registerAgentIpc(): void {
       throw err;
     } finally {
       setCurrentAgentRun(null, null, null);
-      runControllers.delete(runId);
+      unregisterAgentRunController(runId);
       agentRunByGroup.delete(groupId);
       if (!sender.isDestroyed()) sender.send(IpcChannels.tokenUsage, tokenUsage());
     }
   });
 
   onAction(IpcChannels.agentCancel, AgentRunIdSchema, (runId) => {
-    runControllers.get(runId)?.abort();
+    agentRunController(runId)?.abort();
     // Unblock a run parked on a pending HITL prompt so cancel takes effect immediately (not after the
     // 120s fail-safe): reject its plan/approval promises now.
     for (const [id, entry] of pendingApprovals) {

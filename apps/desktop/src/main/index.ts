@@ -36,6 +36,7 @@ import { clipboardToolsHost } from './clipboard/clipboard-tools-host.electron';
 import UploadService from './uploads/upload-service.electron';
 import { uploadToolsHost } from './uploads/upload-tools-host.electron';
 import TaskService from './tasks/task-service.electron';
+import { runTaskAgent } from './agent/task-agent-runner.electron';
 
 // Last-resort process-level hooks: an async error that escapes every boundary must be LOGGED, not a
 // silent crash. Exceptions still terminate (state is unknown); rejections are logged and survived.
@@ -146,6 +147,7 @@ if (!app.requestSingleInstanceLock()) {
       ActionInterceptorService.provide(popupBlockerHost.interceptors);
       registerIpc();
       bootstrap();
+      TaskService.setRunner(runTaskAgent);
       TaskService.init();
       // Connect configured MCP servers in the background (non-blocking; a bad server must not delay
       // startup). Their tools register into the CapabilityRegistry as they become ready (ADR-0018).

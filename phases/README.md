@@ -82,6 +82,8 @@ work has been folded into Phase 1a/1b as follows:
 - [x] Code-claude Faz 3 down-payment: desktop `TaskService` scheduler with interval/page-change checks,
       queue coalescing, notifications, and redacted task audit events. Runner binding remains in the
       next code-claude slice.
+- [x] Code-claude Faz 3 down-payment: renderer-sender-independent background task runner, sharing the
+      same single-agent-run lock as the Agent panel and fail-safe denying unattended HITL escalations.
 - [ ] Phase 1b remaining: durable resume across app restarts, true parallel DAG, vision model routing/eviction.
 
 > **Phase E (Extras) is not sequenced.** It is not numbered into the 0–12 flow and nothing depends on it; each
