@@ -1486,6 +1486,9 @@ importers:
       '@tepegoz/shared-types':
         specifier: workspace:*
         version: link:../shared-types
+      '@tepegoz/tasks':
+        specifier: workspace:*
+        version: link:../tasks
       better-sqlite3:
         specifier: ^11.7.0
         version: 11.10.0

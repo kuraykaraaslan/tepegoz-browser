@@ -88,6 +88,11 @@ export const EventTypeEnum = z.enum([
   'UploadCanceled',
   'UploadFailed',
   'UploadCleared',
+  'TaskQueued',
+  'TaskStarted',
+  'TaskAwaitingApproval',
+  'TaskCanceled',
+  'TaskArtifactCreated',
   'TaskSucceeded',
   'TaskFailed',
 ]);

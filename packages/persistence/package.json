@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@tepegoz/downloads": "workspace:*",
+    "@tepegoz/tasks": "workspace:*",
     "@tepegoz/shared-types": "workspace:*",
     "better-sqlite3": "^11.7.0"
   },

@@ -248,6 +248,77 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 9,
+    up: (db) => {
+      db.exec(`
+        -- Saved agent tasks (code-claude Faz 3): task definitions are local projections over the
+        -- Event Journal. Trigger and policy JSON is validated at the IPC/service boundary.
+        CREATE TABLE tasks (
+          id            TEXT PRIMARY KEY,
+          name          TEXT NOT NULL,
+          prompt        TEXT NOT NULL,
+          description   TEXT,
+          status        TEXT NOT NULL,
+          triggers      TEXT NOT NULL,
+          policy        TEXT NOT NULL,
+          target_url    TEXT,
+          target_origin TEXT,
+          created_at    INTEGER NOT NULL,
+          updated_at    INTEGER NOT NULL,
+          last_run_at   INTEGER,
+          next_run_at   INTEGER
+        );
+        CREATE INDEX idx_tasks_status_next ON tasks (status, next_run_at);
+        CREATE INDEX idx_tasks_updated ON tasks (updated_at DESC);
+
+        CREATE TABLE task_runs (
+          id             TEXT PRIMARY KEY,
+          task_id        TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+          correlation_id TEXT NOT NULL,
+          trigger_type   TEXT NOT NULL,
+          trigger_source TEXT,
+          status         TEXT NOT NULL,
+          queued_at      INTEGER NOT NULL,
+          started_at     INTEGER,
+          completed_at   INTEGER,
+          summary        TEXT,
+          error          TEXT
+        );
+        CREATE INDEX idx_task_runs_task ON task_runs (task_id, queued_at DESC);
+        CREATE INDEX idx_task_runs_status ON task_runs (status);
+
+        CREATE TABLE task_artifacts (
+          id         TEXT PRIMARY KEY,
+          task_id    TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+          run_id     TEXT NOT NULL REFERENCES task_runs(id) ON DELETE CASCADE,
+          kind       TEXT NOT NULL,
+          title      TEXT NOT NULL,
+          summary    TEXT,
+          mime_type  TEXT,
+          blob_ref   TEXT,
+          path       TEXT,
+          url        TEXT,
+          created_at INTEGER NOT NULL
+        );
+        CREATE INDEX idx_task_artifacts_task ON task_artifacts (task_id, created_at DESC);
+        CREATE INDEX idx_task_artifacts_run ON task_artifacts (run_id);
+
+        CREATE TABLE task_trigger_state (
+          task_id          TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+          trigger_key      TEXT NOT NULL,
+          last_checked_at  INTEGER,
+          last_fired_at    INTEGER,
+          next_check_at    INTEGER,
+          baseline_hash    TEXT,
+          baseline_preview TEXT,
+          error            TEXT,
+          PRIMARY KEY (task_id, trigger_key)
+        );
+        CREATE INDEX idx_task_trigger_due ON task_trigger_state (next_check_at);
+      `);
+    },
+  },
 ];
 
 /**
