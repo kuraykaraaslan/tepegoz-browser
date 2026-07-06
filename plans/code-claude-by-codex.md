@@ -164,6 +164,7 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 - [x] `d000098 Register download and clipboard tools`
 - [x] `a2937cc Add upload broker domain foundations`
 - [x] `cf752c0 Wire upload broker service`
+- [x] `d1684d6 Add uploads page and navigation`
 
 ## Siradaki En Mantikli Dilim
 
@@ -231,6 +232,9 @@ Upload broker icin aktif siradaki isler:
 - [x] Upload Slice 3: `git diff --check`
 - [ ] Upload Slice 3: `pnpm depcruise` — blocked by stale generated desktop output:
   `apps/desktop/out/main/node-B4hO7KOT.js` references a missing file during dependency extraction.
+- [ ] Upload Slice 3: source-scoped `depcruise packages apps/desktop/src` — blocked by existing repo-wide
+  `not-to-dev-dep` / menu cycle debt; includes the same React peer/dev classification already present in
+  other UI leaf packages.
 - [ ] `pnpm --filter @tepegoz/persistence test` — blocked by local native ABI mismatch:
   `better-sqlite3.node` was compiled for NODE_MODULE_VERSION 130; current Node requires 127.
 
