@@ -142,6 +142,7 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 - [x] `a1f6b07 Add browser page validation tool`
 - [x] `285eee5 Mark agent roadmap phase progress`
 - [x] `3aaa286 Surface agent startup failures in panel`
+- [x] `6b9f626 Complete agent reliability phase`
 
 ## Siradaki En Mantikli Dilim
 
