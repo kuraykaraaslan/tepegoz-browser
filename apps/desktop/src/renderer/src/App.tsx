@@ -40,6 +40,7 @@ import { BookmarksManager } from '@tepegoz/bookmarks-ui';
 import { ExtensionsPage } from './components/ExtensionsPage';
 import { ExtensionTray } from './components/ExtensionTray';
 import { MainMenuButton } from './components/MainMenuButton';
+import { TransferActivityButton } from './components/TransferActivityButton';
 import { UserMenuButton } from './components/UserMenuButton';
 import { NotificationBellButton } from './components/NotificationBellButton';
 import { SettingsPage } from './components/SettingsPage';
@@ -424,6 +425,7 @@ export function App() {
           onToggleBookmark={() => void bookmarks.onToggleBookmark()}
           toolbarActions={
             <>
+              <TransferActivityButton />
               <ExtensionTray
                 locale={locale}
                 extensions={enabledExtensions}

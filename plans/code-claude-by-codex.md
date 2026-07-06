@@ -92,7 +92,8 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
   - [x] Upload Slice 1: `@tepegoz/uploads` domain paketi, zod schemas, `upload_*` tool registration,
     IPC contract kanallari ve layer kurali eklendi.
   - [x] Upload Slice 2: UploadService + CDP file input binding + file sandbox preflight + redacted audit.
-  - [x] Upload Slice 3: `tepegoz://uploads` UI, preload/IPC wiring, menu/navigation ve phase/docs tamamlama.
+- [x] Upload Slice 3: `tepegoz://uploads` UI, preload/IPC wiring, menu/navigation ve phase/docs tamamlama.
+  - [x] Combined transfer activity: toolbar indicator + tek popup icinde recent download/upload listesi.
 - [ ] Action recovery ekle: click/fill sonrasi beklenen degisim yoksa yeniden snapshot ve alternatif
   selector denemesi.
 - [ ] Form ve tablo senaryolari icin fixtures ekle.
@@ -190,6 +191,7 @@ Upload broker icin aktif siradaki isler:
 - [x] Desktop IPC zod-free contract ve main-only schema re-export.
 - [x] UploadService, CDP `DOM.setFileInputFiles`, file sandbox preflight ve Event Journal audit.
 - [x] Uploads UI/internal page/preload wiring.
+- [x] Combined transfer activity toolbar indicator/popup.
 
 ## Ek Dogrulama Kaydi - Download/Clipboard Track
 
@@ -229,6 +231,8 @@ Upload broker icin aktif siradaki isler:
 - [x] Upload Slice 3: `pnpm --filter @tepegoz/ui typecheck`
 - [x] Upload Slice 3: `pnpm --filter @tepegoz/desktop-ipc typecheck`
 - [x] Upload Slice 3: `pnpm --filter @tepegoz/desktop typecheck/lint`
+- [x] Combined transfer activity: `pnpm --filter @tepegoz/desktop typecheck/lint`
+- [x] Combined transfer activity: `pnpm --filter @tepegoz/ui typecheck`
 - [x] Upload Slice 3: `git diff --check`
 - [ ] Upload Slice 3: `pnpm depcruise` — blocked by stale generated desktop output:
   `apps/desktop/out/main/node-B4hO7KOT.js` references a missing file during dependency extraction.

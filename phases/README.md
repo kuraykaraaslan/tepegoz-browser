@@ -69,6 +69,7 @@ work has been folded into Phase 1a/1b as follows:
       request observation, and redacted upload audit.
 - [x] Phase 2c down-payment: `tepegoz://uploads`, presentational Uploads UI, internal navigation, and
       main-menu action.
+- [x] Phase 2c down-payment: combined toolbar transfer indicator/popup for recent downloads and uploads.
 - [ ] Phase 1b remaining: durable resume across app restarts, screenshot/vision fallback, true parallel DAG.
 
 > **Phase E (Extras) is not sequenced.** It is not numbered into the 0–12 flow and nothing depends on it; each

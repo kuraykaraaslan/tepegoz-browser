@@ -74,6 +74,13 @@ export const tr: AppStrings = {
   sidebar: {
     resize: 'Kenar çubuğunu yeniden boyutlandır',
   },
+  transfer: {
+    title: 'Aktarımlar',
+    empty: 'Henüz indirme veya yükleme yok',
+    close: 'Aktarımları kapat',
+    fullDownloads: 'Tüm indirme geçmişi',
+    fullUploads: 'Tüm yükleme etkinliği',
+  },
   menu: {
     newWindow: 'Yeni pencere',
     newIncognito: 'Yeni Gizli pencere',

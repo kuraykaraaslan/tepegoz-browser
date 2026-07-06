@@ -87,6 +87,13 @@ export const en = {
   sidebar: {
     resize: 'Resize sidebar',
   },
+  transfer: {
+    title: 'Transfers',
+    empty: 'No downloads or uploads yet',
+    close: 'Close transfers',
+    fullDownloads: 'Full download history',
+    fullUploads: 'Full upload activity',
+  },
   // Main (hamburger) menu — the Chrome-style item set. Real actions reuse existing strings
   // (browser.newTab/reopenTab/reload/exit, common.settings, history.title, extensions.title/manage);
   // the keys below are menu-only rows, several of which are not-yet-implemented placeholders.

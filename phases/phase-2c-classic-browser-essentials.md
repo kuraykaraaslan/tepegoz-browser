@@ -40,6 +40,8 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       file, stores a SQLite projection, and emits redacted Event Journal audit records.
 - [x] Slice 3 UI/settings: `@tepegoz/downloads-ui`, `tepegoz://downloads`, main-menu Downloads action, and
       Settings download location / ask-each-time / clear-history controls.
+- [x] Combined transfer activity popup: toolbar indicator appears when download/upload activity exists and
+      opens a single recent activity menu for both directions.
 - [x] Slice 5 capability tools: `download_list_items`, `download_get_item`, `download_create_item`, and
       `download_update_item` registered in the Capability Plane with redacted records, idempotency for create,
       and ToolGateway HITL for state-changing actions.
@@ -106,6 +108,8 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
 - [x] Upload Slice 2 service: desktop `UploadService` validates file sandbox access, binds files to
       target file inputs with CDP, observes upload requests, and writes content-free Event Journal audit.
 - [x] Upload Slice 3 UI: `@tepegoz/uploads-ui`, `tepegoz://uploads`, preload IPC wiring, menu/navigation.
+- [x] Combined transfer activity popup shows upload activity alongside download activity from one toolbar
+      indicator.
 - [ ] Native file picker interception remains deferred; v1 focuses on agent-controlled file input uploads.
 
 ### L8/L9 — Browser-completeness dialogs (auth / cert / navigation)

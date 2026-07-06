@@ -9,6 +9,7 @@ import { MenuSubPopup } from './components/MenuSubPopup';
 import { PageContextMenuPopup } from './components/PageContextMenuPopup';
 import { UserMenuPopup } from './components/UserMenuPopup';
 import { NotificationCenterPopup } from './components/NotificationCenterPopup';
+import { TransferActivityPopup } from './components/TransferActivityPopup';
 import { BookmarkFolderPopup } from './components/BookmarkFolderPopup';
 import { BookmarkDialogPopup } from './components/BookmarkDialogPopup';
 import { applyTheme } from './lib/theme';
@@ -33,6 +34,7 @@ else if (surface === 'page-context-menu') node = <PageContextMenuPopup />;
 else if (surface === 'user-menu') node = <UserMenuPopup />;
 else if (surface === 'menu-sub') node = <MenuSubPopup kind={params.get('kind') ?? ''} />;
 else if (surface === 'notifications') node = <NotificationCenterPopup />;
+else if (surface === 'transfers') node = <TransferActivityPopup />;
 else if (surface === 'bookmark-folder' && extId !== null) node = <BookmarkFolderPopup folderId={extId} />;
 else if (surface === 'bookmark-rename' && extId !== null) node = <BookmarkDialogPopup mode="rename" id={extId} />;
 else if (surface === 'bookmark-add-folder' && extId !== null)
