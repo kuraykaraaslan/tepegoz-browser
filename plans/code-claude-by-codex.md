@@ -156,7 +156,7 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 - [x] `21224b2 Wire quarantined browser downloads`
 - [x] `67b0555 Add downloads page and settings`
 - [x] `3ed3a0e Centralize clipboard permissions`
-- [x] Slice 5: Register download and clipboard tools (hash final cikisinda raporlanacak)
+- [x] `d000098 Register download and clipboard tools`
 
 ## Siradaki En Mantikli Dilim
 
