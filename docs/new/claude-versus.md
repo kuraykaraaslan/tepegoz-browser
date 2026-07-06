@@ -24,6 +24,21 @@ tools, multimodal screenshot aktarımı ve eval/acceptance setleriyle süreci g�
 - **Tool Ecosystem:** MCP/extension araçlarının policy-gated genişlemesi, web search/fetch ve servis
   adaptörleri.
 
+Uygulama durumu (2026-07-06):
+
+| Faz | Durum | Yapılan/Kalan İş |
+|-----|-------|------------------|
+| Agent Reliability | [x] | `ToolGateway.runWithHandlers` ile HITL/audit context run bazında izole edildi; agent runtime bu scoped çalıştırmayı kullanıyor. |
+| Agent Reliability | [x] | Main süreçte run controller kaydı, iptal yolu ve geçici tek aktif run koruması eklendi. |
+| Agent Reliability | [ ] | Resume/checkpoint, retry/recovery sınıflandırması ve eval harness henüz tamamlanmadı. |
+| Browser Reliability | [x] | Sekme oluşturma/okuma/güncelleme/kapatma araçları eklendi; yeni sekmeler varsayılan olarak arka planda açılıyor. |
+| Browser Reliability | [x] | `browser_*` araçları `tabId` kabul edecek şekilde genişletildi; desktop TabHost ve CDP driver hedef sekmeye göre çalışıyor. |
+| Browser Reliability | [x] | CDP element referansları sekme/WebContents bazında ayrıldı; bir sekmedeki snapshot diğer sekmenin ref'lerini bozmuyor. |
+| Browser Reliability | [x] | `browser_validate_page` aracı eklendi; navigasyon/aksiyon sonrası yükleme bekleme, sayfa okuma ve metin doğrulama yapılabiliyor. |
+| Browser Reliability | [ ] | Screenshot/vision fallback, download/upload/clipboard ve daha geniş action recovery işleri bekliyor. |
+| Task Productization | [ ] | Saved tasks, artifacts, scheduler, templates ve run dashboard henüz başlamadı. |
+| Tool Ecosystem | [ ] | Web search/fetch ve servis adaptörleri, mevcut MCP/policy kapısına bağlanacak şekilde henüz genişletilmedi. |
+
 ## Mevcut ext-agent Mimarisi ve İş Akışları  
 Mevcut **ext-agent** uzantısı, `@tepegoz/extension-sdk` kullanılarak geliştirilmiştir. Manifest’e göre (“agentManifest”), uzantı bir **sidebar** yüzeyinde çalışır ve kullanıcı tıklamasına yanıt verir. Kullanıcı arayüzü (`AgentPanel`) muhtemelen bir yan panelde yer alır. Uzantı, tarayıcı sekmeleriyle etkileşim için `tabs`, `read-page`, `navigate` gibi izinlere sahiptir. Kod incelendiğinde, uzantı **plan-onay-adım** modeliyle işlemektedir: Kullanıcı bir görev belirler, ajan bir plan oluşturur, her adım için kullanıcı onayı ister (`AgentApprovalRequest` gibi olaylar). Ajan, onaylanan her adımı sırasıyla yürütürken, gerekli durumlarda ekran görüntüsü alabilir, dosya seçebilir veya sayfa verisini okuyabilir. Araç çağrıları (`AgentHostApi`) olarak, örneğin `openTab`, `openFile`, `capturePageSelection`, `runCommand`, `searchGoogle` gibi metodlar kullanılmaktadır.  
 
