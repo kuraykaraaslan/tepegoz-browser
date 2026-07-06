@@ -6,6 +6,10 @@ import {
   PlanStepSchema,
   ToolNameSchema,
   ToolDescriptorSchema,
+  ADAPTOR_KINDS,
+  ADAPTOR_PERMISSION_STATES,
+  ToolSuccessSchema,
+  toolSuccess,
 } from './index';
 
 describe('shared-types contracts', () => {
@@ -52,5 +56,26 @@ describe('shared-types contracts', () => {
     });
     expect(res.success).toBe(true);
     if (res.success) expect(res.data.requiresIdempotencyKey).toBe(false);
+  });
+
+  it('exports adaptor kinds and permission states for connection inventory', () => {
+    expect(ADAPTOR_KINDS).toContain('mcp');
+    expect(ADAPTOR_KINDS).toContain('graphql');
+    expect(ADAPTOR_PERMISSION_STATES).toContain('not_configured');
+    expect(ADAPTOR_PERMISSION_STATES).toContain('connected');
+  });
+});
+
+describe('tool result contract', () => {
+  it('normalizes a success envelope with summary, artifacts and page refs', () => {
+    const result = toolSuccess('Fetched page', {
+      content: { title: 'Example' },
+      pageRefs: [{ url: 'https://example.com', title: 'Example' }],
+      artifacts: [{ id: 'a1', kind: 'link', title: 'Example', url: 'https://example.com' }],
+    });
+    const parsed = ToolSuccessSchema.safeParse(result);
+    expect(parsed.success).toBe(true);
+    expect(result.ok).toBe(true);
+    expect(result.summary).toBe('Fetched page');
   });
 });

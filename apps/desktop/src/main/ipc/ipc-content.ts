@@ -4,6 +4,7 @@ import {
   IpcChannels,
   isExtensionEnabled,
   type AIAdaptor,
+  type AdaptorConnection,
   type AppInfo,
   type BookmarkEntry,
   type BookmarkTreeNode,
@@ -62,7 +63,7 @@ import MacroService, { type MacroCursorOpts } from '../macro/macro-service.elect
 import { getDb } from '../db/database.electron';
 import { DEFAULT_PREFERENCES, PreferencesPatchSchema } from '@tepegoz/preferences';
 import { mainLocale } from '../lib/i18n-main';
-import { buildAiAdaptors } from '../agent/ai-adaptors';
+import { buildAdaptorConnections, buildAiAdaptors } from '../agent/ai-adaptors';
 import { getPublicSettings, broadcastPublicSettings } from '../settings/public-settings-host';
 import CredentialVault from '@tepegoz/credential-vault';
 import PreferenceStore from '@tepegoz/preferences';
@@ -155,6 +156,8 @@ export function registerContentIpc(): void {
   });
 
   handle(IpcChannels.mcpGetStatus, (): McpServerStatusInfo[] => McpService.getStatus());
+
+  handle(IpcChannels.adaptorsList, (): AdaptorConnection[] => buildAdaptorConnections(mainLocale()));
 
   // The live AIAdaptor inventory for the Settings "run locally" list — system + extension + MCP groups
   // built from the single CapabilityRegistry, so the list needs no maintenance as tools change.

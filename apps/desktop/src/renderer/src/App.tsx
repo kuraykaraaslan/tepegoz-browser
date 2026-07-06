@@ -516,7 +516,6 @@ export function App() {
                     onRemoveKeyById={onRemoveKeyById}
                     onRenameKey={onRenameKey}
                     onReorderKeys={onReorderKeys}
-                    getMcpStatus={() => window.tepegoz.getMcpStatus()}
                     loginCredentials={loginCredentials}
                     onLoginSectionMount={refreshLogins}
                     onAddLogin={(c) =>

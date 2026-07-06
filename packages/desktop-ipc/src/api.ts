@@ -40,6 +40,7 @@ import type {
   TasksState,
 } from './contract';
 import type { ProviderId, ProviderKeyMeta } from './contract';
+import type { AdaptorConnection } from './contract';
 import type {
   ExtensionId,
   ExtensionManifestWire,
@@ -220,6 +221,8 @@ export interface TepegozApi {
   getRecentRequests(): Promise<PopupBlockerRequest[]>;
   /** Read-only status of every configured MCP server (Settings → Connections). Never returns secrets. */
   getMcpStatus(): Promise<McpServerStatusInfo[]>;
+  /** Read-only adaptor inventory shown next to MCP tools in Settings. */
+  listAdaptors(): Promise<AdaptorConnection[]>;
   /** The live AIAdaptor inventory (system + extension + MCP groups, each with its actions) for the
    *  Settings "run locally" list. Built from the single CapabilityRegistry, so it needs no maintenance. */
   listAiAdaptors(): Promise<AIAdaptor[]>;

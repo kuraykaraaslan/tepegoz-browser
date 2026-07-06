@@ -23,6 +23,9 @@ export interface AIAdaptorAction {
   description: string;
   dangerClass: RiskLevel;
   source: ToolSource;
+  inputSchema?: unknown;
+  requiresIdempotencyKey: boolean;
+  category?: string | undefined;
   provenance?: string;
   /** Resolved AI-task class ('none' when mechanical). */
   aiTask: AiTask;

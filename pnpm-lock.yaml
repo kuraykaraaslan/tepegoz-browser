@@ -261,6 +261,9 @@ importers:
       '@tepegoz/uploads-ui':
         specifier: workspace:*
         version: link:../../packages/uploads-ui
+      '@tepegoz/web-tools':
+        specifier: workspace:*
+        version: link:../../packages/web-tools
       '@tepegoz/window-controls':
         specifier: workspace:*
         version: link:../../packages/window-controls
@@ -1850,6 +1853,25 @@ importers:
       react-dom:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
+
+  packages/web-tools:
+    dependencies:
+      '@tepegoz/capability-plane':
+        specifier: workspace:*
+        version: link:../capability-plane
+      '@tepegoz/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      zod:
+        specifier: 3.23.8
+        version: 3.23.8
+    devDependencies:
       typescript:
         specifier: ^5.7.2
         version: 5.9.3

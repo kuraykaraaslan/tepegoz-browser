@@ -1,7 +1,7 @@
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { AppError, Logger } from '@tepegoz/libs';
 import { CapabilityRegistry } from '@tepegoz/capability-plane';
-import type { ToolDescriptor } from '@tepegoz/shared-types';
+import { toolSuccess, type ToolDescriptor } from '@tepegoz/shared-types';
 import type { McpServerConfig } from './config';
 import { dangerClassFor, requiresIdempotencyFor } from './danger';
 import { McpMessages } from './messages';
@@ -132,12 +132,14 @@ export default class McpConnection {
       .map((b) => (typeof b.text === 'string' ? b.text : ''))
       .filter((t) => t.length > 0)
       .join('\n');
-    return {
-      content: text,
-      ...(parsed.data.structuredContent !== undefined
-        ? { structuredContent: parsed.data.structuredContent }
-        : {}),
-    };
+    return toolSuccess('MCP tool returned content.', {
+      content: {
+        text,
+        ...(parsed.data.structuredContent !== undefined
+          ? { structuredContent: parsed.data.structuredContent }
+          : {}),
+      },
+    });
   }
 
   /** Unregister this server's tools + free its ids, then close the transport. Idempotent. */

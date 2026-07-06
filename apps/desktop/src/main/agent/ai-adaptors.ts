@@ -1,7 +1,13 @@
 import { CapabilityRegistry } from '@tepegoz/capability-plane';
 import { EXTENSION_HOST_ID } from '@tepegoz/extension-host';
 import { isLocalCapable, type ToolDescriptor } from '@tepegoz/shared-types';
-import type { AIAdaptor, AIAdaptorAction, AIAdaptorKind } from '@tepegoz/desktop-ipc';
+import type {
+  AdaptorConnection,
+  AIAdaptor,
+  AIAdaptorAction,
+  AIAdaptorKind,
+  McpServerState,
+} from '@tepegoz/desktop-ipc';
 import { extensionLabel, manifestById } from '../../shared/extensions';
 import McpService from '../mcp/supervisor.electron';
 
@@ -65,10 +71,13 @@ function actionOf(d: ToolDescriptor, adaptorId: string): AIAdaptorAction {
     description: d.description,
     dangerClass: d.dangerClass,
     source: d.source,
+    inputSchema: d.inputSchema,
+    requiresIdempotencyKey: d.requiresIdempotencyKey,
     aiTask: d.aiTask ?? 'none',
     localCapable: isLocalCapable(d),
     adaptorId,
   };
+  if (d.category !== undefined) action.category = d.category;
   if (d.provenance !== undefined) action.provenance = d.provenance;
   return action;
 }
@@ -91,4 +100,70 @@ export function buildAiAdaptors(locale: string): AIAdaptor[] {
   return [...byId.values()].sort(
     (a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind] || a.title.localeCompare(b.title),
   );
+}
+
+const MCP_STATE: Record<McpServerState, AdaptorConnection['state']> = {
+  idle: 'not_configured',
+  connecting: 'not_configured',
+  ready: 'connected',
+  error: 'error',
+};
+
+function capabilityForAdaptor(id: string): AdaptorConnection['permissions'][number]['capability'] {
+  if (id === 'file' || id === 'downloads' || id === 'uploads') return 'files';
+  if (id === 'browser' || id === 'tab' || id === 'screenshots') return 'browser';
+  if (id === 'web') return 'web';
+  return 'web';
+}
+
+export function buildAdaptorConnections(locale: string): AdaptorConnection[] {
+  const toolAdaptors = buildAiAdaptors(locale);
+  const mcpById = new Map(McpService.getStatus().map((s) => [s.id, s]));
+  const connections = new Map<string, AdaptorConnection>();
+
+  for (const adaptor of toolAdaptors) {
+    const mcp = adaptor.kind === 'mcp' ? mcpById.get(adaptor.id) : undefined;
+    const state = mcp !== undefined ? MCP_STATE[mcp.state] : 'connected';
+    connections.set(adaptor.id, {
+      id: adaptor.id,
+      label: adaptor.title,
+      kind: adaptor.kind === 'mcp' ? 'mcp' : 'local',
+      provider: adaptor.kind === 'mcp' ? 'MCP' : 'Tepegöz',
+      state,
+      authKind: adaptor.kind === 'mcp' ? 'none' : 'local',
+      permissions: [
+        {
+          capability: capabilityForAdaptor(adaptor.id),
+          scopes: adaptor.actions.map((a) => a.id),
+          state,
+        },
+      ],
+      auditRequired: adaptor.kind !== 'system',
+      toolCount: adaptor.actions.length,
+    });
+  }
+
+  for (const mcp of mcpById.values()) {
+    if (connections.has(mcp.id)) continue;
+    connections.set(mcp.id, {
+      id: mcp.id,
+      label: mcp.label,
+      kind: 'mcp',
+      provider: 'MCP',
+      state: MCP_STATE[mcp.state],
+      authKind: 'none',
+      permissions: [
+        {
+          capability: 'web',
+          scopes: [],
+          state: MCP_STATE[mcp.state],
+          ...(mcp.error !== undefined ? { reason: mcp.error } : {}),
+        },
+      ],
+      auditRequired: true,
+      toolCount: mcp.toolCount,
+    });
+  }
+
+  return [...connections.values()].sort((a, b) => a.kind.localeCompare(b.kind) || a.label.localeCompare(b.label));
 }

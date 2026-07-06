@@ -17,6 +17,7 @@ import type {
   ProviderKeyMeta,
 } from '@tepegoz/desktop-ipc';
 import { PROVIDERS, Select } from './settings-shared';
+import { ToolMetadataBadges } from './settings-tool-metadata';
 
 /**
  * AI & Agent settings panels: providers/keys, on-device models, cost/local-actions, and MCP
@@ -535,6 +536,10 @@ export function LocalActionsSection({
                       <Badge variant={dangerVariant[a.dangerClass]} className="ml-2" dot>
                         {s.dangerLabels[a.dangerClass]}
                       </Badge>
+                      <ToolMetadataBadges
+                        action={a}
+                        labels={{ schema: s.toolSchemaLabel, idempotency: s.toolIdempotencyLabel }}
+                      />
                     </div>
                     {a.localCapable ? (
                       <Toggle

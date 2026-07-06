@@ -98,7 +98,11 @@ describe('McpConnection', () => {
     await conn.connect();
     const result = await ToolGateway.invoke('mcpfiles_get_file', { path: '/a' }, CTX);
     expect(isToolError(result)).toBe(false);
-    expect((result as { content: string }).content).toBe('FILE BODY');
+    expect(result).toMatchObject({
+      ok: true,
+      summary: 'MCP tool returned content.',
+      content: { text: 'FILE BODY' },
+    });
   });
 
   it('rejects invalid args at the gateway (ajv) without calling the server', async () => {

@@ -86,6 +86,9 @@ import type { ExtensionManifest } from '@tepegoz/extension-sdk';
 import type { SearchEngine } from '@tepegoz/shared-types/search-engines';
 export type { SearchEngine };
 
+import type { AdaptorConnection } from '@tepegoz/shared-types/adaptors';
+export type { AdaptorConnection };
+
 // File-access grant model is owned by @tepegoz/shared-types (zod-free `file-access` entry, preload-safe).
 // The zod validator (preferences.model.ts) builds from the same FILE_ACCESS_MODES list (single source).
 import {

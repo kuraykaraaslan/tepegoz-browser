@@ -149,6 +149,7 @@ export const IpcChannels = {
   popupBlockerTrust: 'popup-blocker:trust',
   popupBlockerRecentRequests: 'popup-blocker:recent-requests',
   mcpGetStatus: 'mcp:get-status',
+  adaptorsList: 'adaptors:list',
   /** Renderer→main: the live AIAdaptor inventory (system + extension + MCP groups, each with its
    *  actions) for the Settings "run locally" list — built from the single CapabilityRegistry. */
   aiAdaptorsList: 'ai-adaptors:list',

@@ -89,6 +89,14 @@ work has been folded into Phase 1a/1b as follows:
 - [x] Code-claude Faz 3 down-payment: task capability tools are registered into the unified ToolGateway,
       and unattended task runs auto-approve state-changing tools only inside the saved task's exact
       origin + preapproved-write policy.
+- [x] Code-claude Faz 4 down-payment: `@tepegoz/web-tools` exposes web search/get-page tools through the
+      unified ToolGateway/PolicyKernel, and MCP results now use the normalized `ok/summary/content`
+      tool-result envelope.
+- [x] Code-claude Faz 4 down-payment: Settings now has a unified Adaptors inventory for MCP,
+      local/native, and future REST/GraphQL/OAuth service adaptors, with tool counts, capability scopes,
+      connection state, auth kind, and audit-required badges.
+- [x] Code-claude Faz 4 down-payment: tool/adaptor settings expose category/source, risk,
+      argument-schema presence, and idempotency requirement for MCP and built-in tools.
 - [ ] Phase 1b remaining: durable resume across app restarts, true parallel DAG, vision model routing/eviction.
 
 > **Phase E (Extras) is not sequenced.** It is not numbered into the 0–12 flow and nothing depends on it; each

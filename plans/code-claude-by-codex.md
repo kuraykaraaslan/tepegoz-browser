@@ -1,6 +1,6 @@
 # Plan — ext-agent'i Claude Chrome Seviyesine Yaklastirma
 
-**Durum:** Faz 1 ve Faz 2 tamamlandi; Faz 3 Task Productization tamamlandi.
+**Durum:** Faz 1, Faz 2, Faz 3 Task Productization ve Faz 4 Tool Ecosystem tamamlandi.
 **Tarih:** 2026-07-06
 **Kapsam:** `extensions/ext-agent`, agent runtime, browser/tab tools, desktop host baglantilari ve
 ilgili dokumantasyon.
@@ -33,7 +33,7 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 | 1. Agent Reliability | Tamamlandi | Run izolasyonu, state machine/checkpoint, hata siniflandirmasi, recovery ve eval testleri tamamlandi. |
 | 2. Browser Reliability | Tamamlandi | TabId scoped browser tools, sayfa dogrulama, screenshot/fullPage visual fallback, action recovery, fixtures ve download/upload/clipboard brokerlari tamamlandi. |
 | 3. Task Productization | Tamamlandi | Task domain/persistence/scheduler, background runner, `tepegoz://tasks`, task tools ve preapproved policy entegrasyonu tamamlandi. |
-| 4. Tool Ecosystem | Baslamadi | Web search/fetch, servis adaptorleri ve MCP/policy genisletmeleri. |
+| 4. Tool Ecosystem | Tamamlandi | Web search/get-page tools, genel adaptör inventory, MCP metadata ve normalize tool result sozlesmesi tamamlandi. |
 | 5. Acceptance/Eval | Baslamadi | Claude benzeri is senaryolari icin otomatik kabul setleri. |
 
 ## Faz 1 — Agent Reliability
@@ -126,11 +126,21 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 
 ## Faz 4 — Tool Ecosystem
 
-- [ ] Web search/fetch araclarini mevcut `ToolGateway` ve `PolicyKernel` uzerinden yayinla.
-- [ ] Servis adaptorleri icin izin modeli: Gmail/Drive/Docs benzeri hesap baglantilari her zaman
-  acik izin ve audit event'i uretmeli.
-- [ ] MCP araclarini kategori, risk ve arguman semasi ile panelde gorunur kil.
-- [ ] Tool sonuc sozlesmelerini normalize et: ok/error, summary, artifact refs, page refs.
+- [x] Web search/fetch araclarini mevcut `ToolGateway` ve `PolicyKernel` uzerinden yayinla.
+  - [x] `@tepegoz/web-tools` Electron-free paket olarak eklendi; `web_search_items` ve
+    `web_get_page` tool'lari desktop HTTP host'u enjekte edilerek CapabilityRegistry'ye kaydediliyor.
+- [x] Servis/adaptor izin modeli: Gmail/Drive/Docs benzeri hesap baglantilari ve MCP/REST/GraphQL
+  gibi tool provider'lar ayni "Adaptors" inventory modeli altinda gorunur olmali.
+  - [x] `AdaptorConnection` public contract'i eklendi: `mcp`, `rest`, `graphql`, `oauth_service`,
+    `local` kind'lari; capability scopes; auth kind; auditRequired; state; toolCount.
+  - [x] Settings `Adaptors` ekrani MCP, local/native ve gelecekte REST/GraphQL/OAuth adaptörleri ayni
+    listede gosterecek sekilde baglandi.
+- [x] MCP araclarini kategori, risk ve arguman semasi ile panelde gorunur kil.
+  - [x] `AIAdaptorAction` artik `inputSchema`, `requiresIdempotencyKey` ve `category` tasiyor;
+    Settings tool satirlari schema/idempotency/kategori rozetlerini gosteriyor.
+- [x] Tool sonuc sozlesmelerini normalize et: ok/error, summary, artifact refs, page refs.
+  - [x] `ToolSuccessSchema`, `ToolResultSchema` ve `toolSuccess()` eklendi; web ve MCP tool
+    sonuclari `ok/summary/content/artifacts/pageRefs` zarfi ile donuyor.
 
 ## Faz 5 — Acceptance/Eval
 
@@ -164,6 +174,22 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 - [x] `pnpm --filter @tepegoz/ext-agent typecheck`
 - [x] `pnpm --filter @tepegoz/ext-agent test`
 - [x] `pnpm --filter @tepegoz/ext-agent lint`
+- [x] Faz 4: `pnpm --filter @tepegoz/shared-types test`
+- [x] Faz 4: `pnpm --filter @tepegoz/shared-types typecheck`
+- [x] Faz 4: `pnpm --filter @tepegoz/shared-types lint`
+- [x] Faz 4: `pnpm --filter @tepegoz/web-tools test`
+- [x] Faz 4: `pnpm --filter @tepegoz/web-tools typecheck`
+- [x] Faz 4: `pnpm --filter @tepegoz/web-tools lint`
+- [x] Faz 4: `pnpm --filter @tepegoz/desktop-ipc typecheck`
+- [x] Faz 4: `pnpm --filter @tepegoz/desktop-ipc lint`
+- [x] Faz 4: `pnpm --filter @tepegoz/mcp-client test`
+- [x] Faz 4: `pnpm --filter @tepegoz/mcp-client typecheck`
+- [x] Faz 4: `pnpm --filter @tepegoz/mcp-client lint`
+- [x] Faz 4: `pnpm --filter @tepegoz/settings-ui test`
+- [x] Faz 4: `pnpm --filter @tepegoz/settings-ui typecheck`
+- [x] Faz 4: `pnpm --filter @tepegoz/desktop typecheck`
+- [x] Faz 4: `pnpm --filter @tepegoz/desktop lint`
+- [x] Faz 4: `git diff --check`
 
 ## Yapilan Commitler
 

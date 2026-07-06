@@ -16,6 +16,7 @@ import {
   type LocalModelInfo,
   type McpServerStatusInfo,
   type ProviderId,
+  type AdaptorConnection,
   type TepegozApi,
   type TokenUsageSnapshot,
 } from '@tepegoz/desktop-ipc';
@@ -50,6 +51,7 @@ export const agentModelsApi: Pick<
   | 'deleteLocalModel'
   | 'onLocalModelsState'
   | 'getMcpStatus'
+  | 'listAdaptors'
   | 'listAiAdaptors'
   | 'listExtensionManifests'
   | 'onOpenExtension'
@@ -134,6 +136,7 @@ export const agentModelsApi: Pick<
     };
   },
   getMcpStatus: () => invoke<McpServerStatusInfo[]>(IpcChannels.mcpGetStatus),
+  listAdaptors: () => invoke<AdaptorConnection[]>(IpcChannels.adaptorsList),
   listAiAdaptors: () => invoke<AIAdaptor[]>(IpcChannels.aiAdaptorsList),
   listExtensionManifests: () =>
     invoke<ExtensionManifestWire[]>(IpcChannels.extensionsListManifests),

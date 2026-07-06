@@ -15,13 +15,13 @@
 ## Tasks
 
 ### L6 — Integration Adapter Layer (extra requirement #5)
-- [ ] `IntegrationAdapter` dual-backend: `ApiBackend` (official REST/SDK, **preferred**) + `BrowserBackend` (logged-in WebContentsView fallback)
+- [~] `IntegrationAdapter` dual-backend: `ApiBackend` (official REST/SDK, **preferred**) + `BrowserBackend` (logged-in WebContentsView fallback) _(down-payment shipped: shared `AdaptorConnection` inventory model covers `mcp`, `rest`, `graphql`, `oauth_service`, and `local` adaptors with auth kind, permission scopes, state, tool count, and audit-required metadata; Settings surfaces them under one Adaptors panel. Real REST/GraphQL/OAuth adapter execution remains pending.)_
 - [ ] `ExecutionRouter`: **Official API > Browser-automation** (deterministic; decision+reason to event-log); on fallback the security class (read→state-changing) is re-evaluated
 - [ ] `Credential Vault` + OAuth Broker: Authorization Code + **PKCE**, least-scope, refresh rotation, per-profile isolation, DPAPI/safeStorage + AES-256-GCM; **OAuth token never raw-visible to the agent**
 - [ ] Reference adapters: **Google package** (Gmail read/draft/**send=HITL**, Drive→blob, Calendar) single OAuth client
 - [ ] **Canva = existing remote MCP** (`mcp__claude_ai_Canva__*`) — do NOT write a custom adapter (MCP-vs-adapter criterion → ADR)
 - [ ] Adapter **health-check + version-pinning + regression suite**; large output (Drive/Gmail thread) → CAS + reference+summary
-- [ ] each adapter registered to L5 Capability Plane as a ToolProvider (same gateway/permission/audit)
+- [~] each adapter registered to L5 Capability Plane as a ToolProvider (same gateway/permission/audit) _(down-payment shipped: MCP and local/native tool providers are projected into the same Adaptors inventory; `@tepegoz/web-tools` registers web search/get-page through ToolGateway/PolicyKernel. Future REST/GraphQL/OAuth adapters consume the same model.)_
 
 ### L10 — Safe-Browsing Suite (extra requirement #8)
 - [ ] `NetworkFilterEngine`: `@ghostery/adblocker-electron` (EasyList/EasyPrivacy → DNR + cosmetic, **per-partition**) — **NO system-proxy MITM**

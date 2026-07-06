@@ -151,6 +151,8 @@ export const tr: SettingsStrings = {
     'Ajanın hangi AI adımlarının cihazında çalışabileceğini seç. Mekanik tarayıcı işlemleri (tıkla, gezin, sekme aç) her zaman yerel/native çalışır — AI adımları yoktur.',
   runLocallyLabel: 'Cihazda',
   nativeNoAiLabel: 'Native · AI yok',
+  toolSchemaLabel: 'şema',
+  toolIdempotencyLabel: 'idempotency',
   noActionsYet: 'Henüz aksiyon yok.',
   localModels: {
     title: 'Cihaz-içi modeller',
@@ -187,6 +189,31 @@ export const tr: SettingsStrings = {
   connectionsTitle: 'Bağlantılar',
   connectionsSubtitle:
     'Model Context Protocol (MCP) sunucuları. Araçları, güvenlik politikası üzerinden ajana sunulur. Sunucuları tercihlerden ekleyin; buradan düzenleme ileri bir sürümde gelecek.',
+  adaptorInventoryTitle: 'Adaptörler',
+  adaptorInventorySubtitle:
+    'Ajan politikasının gördüğü MCP, REST, GraphQL, OAuth servis ve yerel/native adaptörler.',
+  adaptorInventoryEmpty: 'Henüz adaptör yok.',
+  adaptorAuditRequired: 'Denetim',
+  adaptorToolsLabel: 'araç',
+  adaptorKindLabels: {
+    mcp: 'MCP',
+    rest: 'REST',
+    graphql: 'GraphQL',
+    oauth_service: 'OAuth servis',
+    local: 'Yerel',
+  },
+  adaptorStateLabels: {
+    not_configured: 'Yapılandırılmadı',
+    connected: 'Bağlı',
+    revoked: 'İptal edildi',
+    error: 'Hata',
+  },
+  adaptorAuthLabels: {
+    oauth: 'OAuth',
+    api_key: 'API anahtarı',
+    local: 'Yerel',
+    none: 'Hesap yok',
+  },
   mcpNoServers: 'Yapılandırılmış MCP sunucusu yok.',
   mcpStateIdle: 'Boşta',
   mcpStateConnecting: 'Bağlanıyor…',

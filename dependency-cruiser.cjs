@@ -201,6 +201,15 @@ module.exports = {
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
     {
+      name: 'web-tools-no-app-no-electron',
+      severity: 'error',
+      comment:
+        '@tepegoz/web-tools is the Electron-free web search/fetch tool package: no Electron, no app ' +
+        'imports. The desktop app injects the concrete outbound HTTP host. See docs/package-map.md.',
+      from: { path: '^packages/web-tools/' },
+      to: { path: ['^apps/', 'node_modules/electron'] },
+    },
+    {
       name: 'tasks-ui-is-a-leaf',
       severity: 'error',
       comment:

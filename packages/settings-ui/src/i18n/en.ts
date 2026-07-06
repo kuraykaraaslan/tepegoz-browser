@@ -152,6 +152,8 @@ export const en = {
     'Choose which of the agent’s AI steps may run on your device. Mechanical browser actions (click, navigate, open tab) always run natively — they have no AI step.',
   runLocallyLabel: 'On device',
   nativeNoAiLabel: 'Native · no AI',
+  toolSchemaLabel: 'schema',
+  toolIdempotencyLabel: 'idempotency',
   noActionsYet: 'No actions available yet.',
   localModels: {
     title: 'On-device models',
@@ -188,6 +190,31 @@ export const en = {
   connectionsTitle: 'Connections',
   connectionsSubtitle:
     'Model Context Protocol (MCP) servers. Their tools become available to the agent through the security policy. Add servers in preferences; editing here arrives in a later release.',
+  adaptorInventoryTitle: 'Adaptors',
+  adaptorInventorySubtitle:
+    'MCP, REST, GraphQL, OAuth service, and local/native adaptors visible to the agent policy.',
+  adaptorInventoryEmpty: 'No adaptors available yet.',
+  adaptorAuditRequired: 'Audit',
+  adaptorToolsLabel: 'tools',
+  adaptorKindLabels: {
+    mcp: 'MCP',
+    rest: 'REST',
+    graphql: 'GraphQL',
+    oauth_service: 'OAuth service',
+    local: 'Local',
+  },
+  adaptorStateLabels: {
+    not_configured: 'Not configured',
+    connected: 'Connected',
+    revoked: 'Revoked',
+    error: 'Error',
+  },
+  adaptorAuthLabels: {
+    oauth: 'OAuth',
+    api_key: 'API key',
+    local: 'Local',
+    none: 'No account',
+  },
   mcpNoServers: 'No MCP servers configured.',
   mcpStateIdle: 'Idle',
   mcpStateConnecting: 'Connecting…',

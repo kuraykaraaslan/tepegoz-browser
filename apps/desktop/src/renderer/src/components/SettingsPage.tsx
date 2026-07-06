@@ -34,13 +34,13 @@ import type {
   CredentialsStatus,
   LoginCredentialMeta,
   LoginImportResult,
-  McpServerStatusInfo,
   Preferences,
   ProviderId,
 } from '@tepegoz/desktop-ipc';
 import { PROVIDERS } from './settings-shared';
 import { AppearanceSection, LanguageRegionSection } from './settings-appearance-language';
-import { LocalActionsSection, LocalModelsSection, McpConnectionsSection, ProvidersSection } from './settings-ai-panels';
+import { LocalActionsSection, LocalModelsSection, ProvidersSection } from './settings-ai-panels';
+import { AdaptorsSection } from './settings-adaptors-section';
 import {
   AboutSection,
   DownloadSettingsSection,
@@ -80,7 +80,6 @@ interface SettingsPageProps {
   onRemoveKeyById: (id: string) => Promise<void>;
   onRenameKey: (id: string, label: string) => Promise<void>;
   onReorderKeys: (orderedIds: string[]) => Promise<void>;
-  getMcpStatus: () => Promise<McpServerStatusInfo[]>;
   loginCredentials: LoginCredentialMeta[];
   onLoginSectionMount: () => Promise<void>;
   onAddLogin: (c: { url: string; username: string; password: string; title?: string; notes?: string }) => Promise<void>;
@@ -98,7 +97,6 @@ export function SettingsPage({
   onRemoveKeyById,
   onRenameKey,
   onReorderKeys,
-  getMcpStatus,
   loginCredentials,
   onLoginSectionMount,
   onAddLogin,
@@ -282,26 +280,10 @@ export function SettingsPage({
     {
       id: 'connections',
       group: G_AI,
-      label: s.connectionsTitle,
+      label: s.adaptorInventoryTitle,
       icon: <IconPlug />,
-      searchText: `${s.connectionsTitle} ${s.connectionsSubtitle} MCP`,
-      content: (
-        <Card title={s.connectionsTitle} subtitle={s.connectionsSubtitle}>
-          <McpConnectionsSection
-            getMcpStatus={getMcpStatus}
-            labels={{
-              empty: s.mcpNoServers,
-              tools: s.mcpToolCount,
-              stateLabel: {
-                idle: s.mcpStateIdle,
-                connecting: s.mcpStateConnecting,
-                ready: s.mcpStateReady,
-                error: s.mcpStateError,
-              },
-            }}
-          />
-        </Card>
-      ),
+      searchText: `${s.adaptorInventoryTitle} ${s.adaptorInventorySubtitle} MCP REST GraphQL OAuth`,
+      content: <AdaptorsSection />,
     },
     {
       id: 'agent-controls',
