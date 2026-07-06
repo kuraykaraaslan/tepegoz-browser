@@ -14,7 +14,17 @@ ordering are explicitly **organizational metadata only** (ADR-0020) — every we
 one `persist:tepegoz-web` session; grouping carries no capability/permission/policy semantics and must
 not be conflated with the agent's policy-isolation axis.
 
+It also owns the agent's built-in **`tab_*` capabilities** (`registerTabTools`): tab enumeration/creation
+is a tab-domain operation, registered as always-on `source: 'builtin'` tools behind the ToolGateway PEP
+(ADR-0021/0024 update — no longer scoped to the Agent extension), bound to an injected `TabHost` that the
+app implements over its `TabManager`. These drive the *live* tabs and are a separate concern from
+`TabStore`'s pure record state; they co-locate here because both belong to the tab domain.
+
 ## Exports
+- **`registerTabTools({ host })`** — registers the `tab_*` agent tools (`tab_list_items`,
+  `tab_create_item`) into the `CapabilityRegistry`, bound to an injected `TabHost`. Always-on; the app
+  calls it once at startup.
+- **`TabHost`** — the injected live-tab seam: `listTabs()` and `createTab(url?, groupName?)`.
 - **`TabStore`** — the model itself: `add`/`get`/`has`/`delete`, group create/assign/remove/pin
   mutations, `normalize()` (the invariant pass), and `toState(nav)` which projects the current model
   to the renderer-facing `TabsState` (given back/forward nav availability).

@@ -1,6 +1,7 @@
 import { AppError } from '@tepegoz/libs';
 import type { BrowserWindow, WebContents } from 'electron';
 import type { BrowserHost } from '@tepegoz/browser-tools';
+import type { TabHost } from '@tepegoz/tab-engine';
 import { HumanInputAdapter, type CdpSend } from '@tepegoz/human-input';
 import { IpcChannels, type AgentEvent } from '@tepegoz/desktop-ipc';
 import TabManager from '../tabs';
@@ -118,9 +119,9 @@ const cdpSend: CdpSend = (method, params) =>
 
 const browserAdapter = new HumanInputAdapter(cdpSend, onCursorMove, onInputAction, isUserControlActive);
 
-// --- BrowserHost ---
+// --- BrowserHost + TabHost (one object satisfies both injected seams) ---
 
-export const browserHost: BrowserHost = {
+export const browserHost: BrowserHost & TabHost = {
   navigateActive,
   readActivePage,
   listTabs: () => TabManager.getState().tabs.map((t) => ({ id: t.id, title: t.title, url: t.url })),

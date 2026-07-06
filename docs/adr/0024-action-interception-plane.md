@@ -76,3 +76,13 @@ therefore synchronous by necessity, not by choice.
 - A future action type that genuinely needs an async verdict (e.g. "confirm before closing an
   unsaved-work tab") is out of scope here — it would need its own dispatch path, since
   `setWindowOpenHandler`/`will-navigate` can never be that path (see Context).
+
+## Update (2026-07-06) — the agent's browser/tab/journal tools are no longer part of the agent kill-switch
+
+The agent's built-in `browser_*` / `tab_*` / `journal_search_events` tools have moved off the
+`com.tepegoz.agent` extension into always-on, package-owned builtins (see the 2026-07-06 update in
+[ADR-0021](0021-agent-controllable-extensions.md) for the full rationale). Consequently, **disabling the
+Agent extension no longer unregisters those tools** — the ADR-0021 capability kill-switch now applies only
+to `ext-macros`'s `macros_*`. This is orthogonal to *this* ADR's action-interception plane (popup/tab/
+navigation hooks), which is unchanged: `TabManager.createTab` still degrades to plain-browser behavior
+when no interceptor is registered, regardless of the agent's enabled state.

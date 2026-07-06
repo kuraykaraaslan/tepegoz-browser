@@ -1,4 +1,4 @@
-import type { JournalEntry, JournalReader } from '@tepegoz/browser-tools';
+import type { JournalEntry, JournalReader } from '@tepegoz/journal-tools';
 import { EventJournal } from '@tepegoz/persistence';
 import { getDb } from '../db/database.electron';
 
@@ -15,8 +15,8 @@ function summarize(payload: unknown): string {
 }
 
 /**
- * Desktop `JournalReader` for `@tepegoz/browser-tools`: exposes the append-only Event Journal to the
- * `journal_query_events` agent tool as a compact, read-only projection. Keeping the SQLite/persistence
+ * Desktop `JournalReader` for `@tepegoz/journal-tools`: exposes the append-only Event Journal to the
+ * `journal_search_events` agent tool as a compact, read-only projection. Keeping the SQLite/persistence
  * dependency here lets the tools package stay Electron- and persistence-free. Returns `[]` before the
  * database is ready rather than throwing (the tool is best-effort observability).
  */

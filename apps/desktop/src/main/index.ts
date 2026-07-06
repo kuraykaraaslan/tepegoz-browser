@@ -16,7 +16,9 @@ import popupBlockerHost from './extensions/popup-blocker-host.electron';
 import userAgentHost from './extensions/user-agent-host.electron';
 import MacroService from './macro/macro-service.electron';
 import { macrosCapabilities } from '@tepegoz/ext-macros/capabilities';
-import { agentBuiltinCapabilities } from '@tepegoz/ext-agent/capabilities';
+import { registerBrowserTools } from '@tepegoz/browser-tools';
+import { registerTabTools } from '@tepegoz/tab-engine';
+import { registerJournalTools } from '@tepegoz/journal-tools';
 import FileOperationsHost from './file-operations/file-operations-host';
 import { attachBrowserHostWindow, browserHost } from './agent/browser-host.electron';
 import { journalHost } from './agent/journal-host.electron';
@@ -133,12 +135,19 @@ if (!app.requestSingleInstanceLock()) {
       // Connect configured MCP servers in the background (non-blocking; a bad server must not delay
       // startup). Their tools register into the CapabilityRegistry as they become ready (ADR-0018).
       McpService.start();
+      // The agent's built-in browser/tab/journal tools are always-on, package-owned builtins
+      // (ADR-0021/0024 update), registered directly into the CapabilityRegistry behind the same
+      // ToolGateway PEP — like the file_* tools — bound to their injected hosts. They belong to their
+      // domains (@tepegoz/browser-tools · tab-engine · journal-tools), not the Agent extension, so they
+      // no longer vanish when `com.tepegoz.agent` is disabled (the runtime that invokes them only runs
+      // when the extension is enabled). `browserHost` also implements the tab host (TabHost).
+      registerBrowserTools({ host: browserHost });
+      registerTabTools({ host: browserHost });
+      registerJournalTools({ host: journalHost });
       // Register enabled built-in extensions' in-process agent capabilities into the same
-      // CapabilityRegistry, behind the same ToolGateway PEP (ADR-0021). Meta extension-management
-      // tools are always on. Each `provide` is gated on its extension being enabled by `start()`'s
-      // reconcile — so disabling `com.tepegoz.agent` unregisters the agent's built-in browser tools,
-      // and disabling `com.tepegoz.macros` unregisters the macro tools (ADR-0024 kill-switch).
-      ExtensionCapabilityService.provide(agentBuiltinCapabilities(), { ...browserHost, ...journalHost });
+      // CapabilityRegistry, behind the same ToolGateway PEP (ADR-0021). Meta extension-management tools
+      // are always on. Each `provide` is gated on its extension being enabled by `start()`'s reconcile —
+      // so disabling `com.tepegoz.macros` unregisters the macro tools (ADR-0024 kill-switch).
       ExtensionCapabilityService.provide(macrosCapabilities(), MacroService.capabilityHost());
       ExtensionCapabilityService.start();
       // Sandboxed file operations: seed the default ~/tepegoz grant (first run), sync the access policy

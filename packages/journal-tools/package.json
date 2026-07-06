@@ -1,5 +1,5 @@
 {
-  "name": "@tepegoz/tab-engine",
+  "name": "@tepegoz/journal-tools",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -15,7 +15,6 @@
   },
   "dependencies": {
     "@tepegoz/capability-plane": "workspace:*",
-    "@tepegoz/desktop-ipc": "workspace:*",
     "@tepegoz/shared-types": "workspace:*",
     "zod": "3.23.8"
   },

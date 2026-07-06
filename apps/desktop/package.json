@@ -62,6 +62,7 @@
     "@tepegoz/http": "workspace:*",
     "@tepegoz/human-input": "workspace:*",
     "@tepegoz/i18n": "workspace:*",
+    "@tepegoz/journal-tools": "workspace:*",
     "@tepegoz/json-store": "workspace:*",
     "@tepegoz/libs": "workspace:*",
     "@tepegoz/local-inference": "workspace:*",

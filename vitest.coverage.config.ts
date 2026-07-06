@@ -31,6 +31,7 @@ export default defineConfig({
         'packages/browser-tools/src/**',
         'packages/capability-plane/src/**',
         'packages/extension-sdk/src/**',
+        'packages/journal-tools/src/**',
         'packages/json-store/src/**',
         'packages/libs/src/**',
         'packages/mcp-client/src/**',

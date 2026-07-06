@@ -153,6 +153,9 @@ importers:
       '@tepegoz/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@tepegoz/journal-tools':
+        specifier: workspace:*
+        version: link:../../packages/journal-tools
       '@tepegoz/json-store':
         specifier: workspace:*
         version: link:../../packages/json-store
@@ -276,9 +279,6 @@ importers:
 
   extensions/ext-agent:
     dependencies:
-      '@tepegoz/browser-tools':
-        specifier: workspace:*
-        version: link:../../packages/browser-tools
       '@tepegoz/extension-sdk':
         specifier: workspace:*
         version: link:../../packages/extension-sdk
@@ -899,6 +899,25 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
 
+  packages/journal-tools:
+    dependencies:
+      '@tepegoz/capability-plane':
+        specifier: workspace:*
+        version: link:../capability-plane
+      '@tepegoz/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      zod:
+        specifier: 3.23.8
+        version: 3.23.8
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
+
   packages/json-store:
     devDependencies:
       '@types/node':
@@ -1466,9 +1485,18 @@ importers:
 
   packages/tab-engine:
     dependencies:
+      '@tepegoz/capability-plane':
+        specifier: workspace:*
+        version: link:../capability-plane
       '@tepegoz/desktop-ipc':
         specifier: workspace:*
         version: link:../desktop-ipc
+      '@tepegoz/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      zod:
+        specifier: 3.23.8
+        version: 3.23.8
     devDependencies:
       typescript:
         specifier: ^5.7.2

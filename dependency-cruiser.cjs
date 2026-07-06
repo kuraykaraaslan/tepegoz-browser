@@ -205,9 +205,20 @@ module.exports = {
       name: 'tab-engine-no-app-no-electron',
       severity: 'error',
       comment:
-        '@tepegoz/tab-engine is the pure tab-state model: no Electron, no app imports. The desktop ' +
-        'TabManager owns the WebContentsViews and delegates record state to it. See docs/package-map.md.',
+        '@tepegoz/tab-engine is the pure tab-state model + the tab_* agent tools (registerTabTools): ' +
+        'no Electron, no app imports. The desktop TabManager owns the WebContentsViews and injects the ' +
+        'TabHost. See docs/package-map.md.',
       from: { path: '^packages/tab-engine/' },
+      to: { path: ['^apps/', 'node_modules/electron'] },
+    },
+    {
+      name: 'journal-tools-no-app-no-electron',
+      severity: 'error',
+      comment:
+        '@tepegoz/journal-tools owns the journal_search_events agent tool: no Electron, no app, no ' +
+        'persistence imports. The JournalReader (over EventJournal + SQLite) is injected by the desktop ' +
+        'app. See docs/package-map.md.',
+      from: { path: '^packages/journal-tools/' },
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
     {

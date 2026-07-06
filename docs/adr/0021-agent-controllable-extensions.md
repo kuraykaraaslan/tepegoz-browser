@@ -104,3 +104,25 @@ they appear in the "run locally" list automatically — an extension author only
 Fail-safe like the danger classes: unknown/absent ⇒ treated as `none`/not-local. The on-device model
 itself is the `'local'` provider (see `@tepegoz/local-inference`); routing is decided per-capability by
 `ModelRouter`, unchanged by this metadata.
+
+## Update (2026-07-06) — browser/tab/journal tools moved to always-on, package-owned builtins
+
+The Agent extension (`com.tepegoz.agent`) previously declared the `browser_*`, `tab_*`, and
+`journal_search_events` tools via `defineCapabilities`, so they registered through the
+`ExtensionCapabilitySupervisor` and were unregistered when the agent was disabled (the kill-switch of
+Decision #2 / ADR-0024). But those are **browser-, tab-, and journal-domain operations, not agent-owned**
+— only `ext-macros`'s `macros_*` genuinely belong to their extension. They now register the same way
+`@tepegoz/file-operations` registers `file_*`: **always-on `source: 'builtin'` tools written directly to
+the `CapabilityRegistry`**, owned by their domain packages —
+`@tepegoz/browser-tools` (`registerBrowserTools`), `@tepegoz/tab-engine` (`registerTabTools`, via a new
+`TabHost` seam split out of `BrowserHost`), and `@tepegoz/journal-tools` (`registerJournalTools`, which
+now owns the `JournalReader`/`JournalEntry` seam moved out of `browser-tools`). The desktop app calls the
+three `registerXxxTools({ host })` factories once at startup, next to `FileOperationsHost.init()`.
+
+This does **not** weaken the single-PEP invariant: every one is still policy-gated, HITL-guarded, and
+audited exactly as before, and the ids/danger-classes are unchanged (a pure ownership + registration-path
+move, not a rename). It **does** change the kill-switch surface: disabling `com.tepegoz.agent` no longer
+unregisters these tools. That is acceptable because the agent *runtime* that invokes tools only runs when
+the extension is enabled, so a registered-but-unreachable browser tool is inert — the same posture as the
+always-on `file_*` and `extension_*` builtins. Only `ext-macros` remains on the extension-supervisor
+kill-switch path (its tools genuinely are its domain).
