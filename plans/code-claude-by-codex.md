@@ -32,7 +32,7 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 |-----|-------|-----|
 | 1. Agent Reliability | Tamamlandi | Run izolasyonu, state machine/checkpoint, hata siniflandirmasi, recovery ve eval testleri tamamlandi. |
 | 2. Browser Reliability | Tamamlandi | TabId scoped browser tools, sayfa dogrulama, screenshot/fullPage visual fallback, action recovery, fixtures ve download/upload/clipboard brokerlari tamamlandi. |
-| 3. Task Productization | Devam ediyor | `@tepegoz/tasks` domain paketi ve persistence projection/TaskStore tamamlandi. |
+| 3. Task Productization | Devam ediyor | `@tepegoz/tasks`, persistence projection/TaskStore ve desktop TaskService scheduler tamamlandi. |
 | 4. Tool Ecosystem | Baslamadi | Web search/fetch, servis adaptorleri ve MCP/policy genisletmeleri. |
 | 5. Acceptance/Eval | Baslamadi | Claude benzeri is senaryolari icin otomatik kabul setleri. |
 
@@ -109,6 +109,8 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 - [ ] Scheduler: kullanici onayli, sinirli ve gorunur zamanlanmis gorevler.
   - [x] Trigger contract: `manual`, `interval`, `pageChange`, disabled `external` placeholder ve
     preapproved-write policy modeli tanimlandi.
+  - [x] Slice 3 service: desktop `TaskService`, interval scheduler, page-change baseline/diff, queue
+    coalescing, notifications ve redacted Event Journal audit eklendi.
 - [ ] Templates: arastirma, form doldurma, tablo cikarimi, fiyat karsilastirma gibi baslangic
   sablonlari.
 - [ ] Run dashboard: calisan/biten/hata alan gorevleri ve replay linklerini tek yerde gosterme.
@@ -207,7 +209,7 @@ Faz 3 Task Productization icin aktif siradaki isler:
 
 - [x] Slice 1: `@tepegoz/tasks` package + schemas + `task_*` tool descriptorlari.
 - [x] Slice 2: persistence migration + `TaskStore`, run/artifact projections, trigger state.
-- [ ] Slice 3: desktop `TaskService`, interval/page-change scheduler, queue/coalescing.
+- [x] Slice 3: desktop `TaskService`, interval/page-change scheduler, queue/coalescing.
 - [ ] Slice 4: renderer-sender bagimsiz `AgentRunLauncher`.
 - [ ] Slice 5: IPC/preload + `@tepegoz/tasks-ui` + `tepegoz://tasks`.
 - [ ] Slice 6: task capability host + preapproved policy entegrasyonu.
@@ -262,6 +264,8 @@ Faz 3 Task Productization icin aktif siradaki isler:
 - [x] Task Slice 2: `pnpm --filter @tepegoz/shared-types test/typecheck/lint`
 - [ ] Task Slice 2: `pnpm --filter @tepegoz/persistence test` — blocked by local native ABI mismatch:
   `better-sqlite3.node` was compiled for NODE_MODULE_VERSION 130; current Node requires 127.
+- [x] Task Slice 3: `pnpm --filter @tepegoz/desktop typecheck/lint`
+- [x] Task Slice 3: `pnpm --filter @tepegoz/tasks test/typecheck/lint`
 - [x] Upload Slice 3: `git diff --check`
 - [ ] Upload Slice 3: `pnpm depcruise` — blocked by stale generated desktop output:
   `apps/desktop/out/main/node-B4hO7KOT.js` references a missing file during dependency extraction.

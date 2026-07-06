@@ -243,6 +243,9 @@ importers:
       '@tepegoz/tab-strip':
         specifier: workspace:*
         version: link:../../packages/tab-strip
+      '@tepegoz/tasks':
+        specifier: workspace:*
+        version: link:../../packages/tasks
       '@tepegoz/tool-executor':
         specifier: workspace:*
         version: link:../../packages/tool-executor

@@ -92,6 +92,7 @@
     "@tepegoz/shared-types": "workspace:*",
     "@tepegoz/tab-engine": "workspace:*",
     "@tepegoz/tab-strip": "workspace:*",
+    "@tepegoz/tasks": "workspace:*",
     "@tepegoz/tool-executor": "workspace:*",
     "@tepegoz/ui": "workspace:*",
     "@tepegoz/uploads": "workspace:*",
