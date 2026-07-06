@@ -2,7 +2,6 @@ import {
   BrowserWindow,
   WebContentsView,
   type BrowserWindowConstructorOptions,
-  type HandlerDetails,
   type Rectangle,
   type WebContents,
 } from 'electron';
@@ -24,8 +23,6 @@ import {
 } from '@tepegoz/persistence';
 import {
   TabStore,
-  TAB_GROUP_COLORS,
-  DEFAULT_GROUP_COLOR,
   type TabGroupColor,
 } from '@tepegoz/tab-engine';
 import { internalPageUrl, isWebUrl, toNavigationUrl } from './lib/navigation-url';
@@ -34,71 +31,18 @@ import PreferenceStore from '@tepegoz/preferences';
 import { mainLocale, mainStrings } from './lib/i18n-main';
 import { extensionIdFromPageUrl, extensionLabel, manifestById } from '../shared/extensions';
 import { getDb } from './db/database.electron';
-import PopupBlockerManager from './popup-blocker';
+import ActionInterceptorService from './extensions/action-interceptors.electron';
 import { openPageContextMenu } from './menus/page-context-menu';
-
-/** Coerce a persisted (untyped) group color back to a valid `TabGroupColor`, defaulting if unknown. */
-function asGroupColor(color: string): TabGroupColor {
-  return (TAB_GROUP_COLORS as readonly string[]).includes(color)
-    ? (color as TabGroupColor)
-    : DEFAULT_GROUP_COLOR;
-}
-
-/** The origin of a URL (`https://example.com`), or '' when it can't be parsed (keys the popup policy). */
-function originOf(url: string): string {
-  try {
-    return new URL(url).origin;
-  } catch {
-    return '';
-  }
-}
-
-/** A popup opened with no explicit URL targets `about:blank` (matches the DOM's window.open default). */
-function popupTargetUrl(url: string): string {
-  return url.trim().length === 0 ? 'about:blank' : url;
-}
-
-/** Schemes whose popup MUST be created natively by Electron so `window.open` returns a live, scriptable
- *  reference to the opener (about:blank / data: / javascript: — used by document.write / contentWindow
- *  style popups). A plain http(s) popup can instead open as one of our tabs. */
-function needsNativeWindow(url: string): boolean {
-  const u = url.trim().toLowerCase();
-  return u === '' || u === 'about:blank' || u.startsWith('data:') || u.startsWith('javascript:');
-}
-
-/** Whether the page asked for a real popup WINDOW rather than a tab: geometry in `features`, an explicit
- *  new-window disposition, or a POST body (a form target=_blank whose POST we must not drop). */
-function wantsNativeWindow(details: HandlerDetails): boolean {
-  return (
-    details.disposition === 'new-window' ||
-    details.postBody != null ||
-    /\b(?:width|height|innerwidth|innerheight)\b/i.test(details.features)
-  );
-}
-
-/** Block navigations to dangerous schemes (anything but http(s)/about:) on a browsed webContents — on
- *  BOTH will-navigate and will-redirect (the latter alone misses redirect hops). */
-function blockNonWeb(event: { preventDefault: () => void }, url: string): void {
-  if (!/^(https?:|about:)/i.test(url)) event.preventDefault();
-}
-
-/** How long (ms) a discrete user input keeps the page "user-activated" for popup purposes. Chrome's
- *  transient activation is 5s; a click→window.open fires synchronously, so a short window is ample and
- *  keeps a stale gesture from later whitelisting an auto-popup. */
-const GESTURE_ACTIVATION_MS = 1000;
-
-/** Discrete inputs that count as a user gesture (grant transient activation). Scroll / mouse-move /
- *  pointer-move do NOT — matching the browser, which only activates on clicks, key presses and taps. */
-function isActivatingInput(type: string): boolean {
-  return (
-    type === 'mouseDown' ||
-    type === 'keyDown' ||
-    type === 'rawKeyDown' ||
-    type === 'pointerDown' ||
-    type === 'touchStart' ||
-    type === 'gestureTap'
-  );
-}
+import {
+  asGroupColor,
+  blockNonWeb,
+  GESTURE_ACTIVATION_MS,
+  isActivatingInput,
+  needsNativeWindow,
+  originOf,
+  popupTargetUrl,
+  wantsNativeWindow,
+} from './tabs-popup-policy';
 
 /**
  * L0 tab model. Each tab is an isolated `WebContentsView` in a SEPARATE browsing partition
@@ -205,11 +149,23 @@ export default class TabManager {
     TabManager.bounds = { x: 0, y: 0, width: 0, height: 0 };
   }
 
+  /** Create a new tab, or `null` if an enabled extension's `tab:create` interceptor blocked it. */
   static createTab(
     rawUrl?: string,
     opts?: { background?: boolean; openerId?: string | undefined },
-  ): string {
+  ): string | null {
     TabManager.requireWin(); // fail fast if not attached to a window
+    const home = homeUrl();
+    const target = rawUrl !== undefined ? toNavigationUrl(rawUrl, home, searchUrlForQuery) : home;
+    if (
+      ActionInterceptorService.shouldBlock('tab:create', {
+        url: target,
+        openerId: opts?.openerId ?? null,
+        background: opts?.background === true,
+      })
+    ) {
+      return null;
+    }
     const view = new WebContentsView({
       webPreferences: {
         contextIsolation: true,
@@ -233,8 +189,6 @@ export default class TabManager {
     // must join that group and sit right after its opener — never break out of the group run (ADR-0020).
     TabManager.inheritGroup(id, opts?.openerId);
 
-    const home = homeUrl();
-    const target = rawUrl !== undefined ? toNavigationUrl(rawUrl, home, searchUrlForQuery) : home;
     void view.webContents.loadURL(target).catch((err: unknown) => {
       Logger.warn('Tab failed to load', { url: target, err: String(err) });
     });
@@ -286,6 +240,8 @@ export default class TabManager {
   static closeTab(id: string): void {
     const win = TabManager.requireWin();
     if (!TabManager.store.has(id)) return;
+    const url = TabManager.store.get(id)?.url ?? '';
+    if (ActionInterceptorService.shouldBlock('tab:close', { tabId: id, url })) return;
     const view = TabManager.views.get(id);
     if (view !== undefined) {
       // Remember the URL so Ctrl+Shift+T can reopen it (most-recent first, capped).
@@ -358,6 +314,7 @@ export default class TabManager {
     if (!TabManager.store.has(refId)) return;
     // openerId → inherits refId's group (if any); placeAfter fixes the position for the ungrouped case.
     const newId = TabManager.createTab(undefined, { openerId: refId });
+    if (newId === null) return;
     TabManager.store.placeAfter(newId, refId);
     TabManager.emitState();
   }
@@ -373,6 +330,7 @@ export default class TabManager {
     }
     const url = view.webContents.getURL() || rec.url;
     const newId = TabManager.createTab(url.length > 0 ? url : undefined, { openerId: id });
+    if (newId === null) return;
     TabManager.store.placeAfter(newId, id);
     TabManager.emitState();
   }
@@ -480,6 +438,7 @@ export default class TabManager {
   static newTabInGroup(groupId: string): void {
     if (TabManager.store.getGroup(groupId) === undefined) return;
     const id = TabManager.createTab();
+    if (id === null) return;
     TabManager.store.assignToGroup(id, groupId);
     TabManager.emitState();
   }
@@ -730,8 +689,10 @@ export default class TabManager {
     wc.setWindowOpenHandler((details) => {
       const target = popupTargetUrl(details.url);
       const sourceOrigin = originOf(wc.getURL());
-      if (!TabManager.hadRecentGesture(wc) && PopupBlockerManager.shouldBlock(sourceOrigin)) {
-        PopupBlockerManager.onBlocked(sourceOrigin, target);
+      if (
+        !TabManager.hadRecentGesture(wc) &&
+        ActionInterceptorService.shouldBlock('popup:open', { sourceOrigin, url: target })
+      ) {
         return { action: 'deny' };
       }
       if (needsNativeWindow(details.url) || wantsNativeWindow(details)) {
@@ -755,9 +716,20 @@ export default class TabManager {
       TabManager.wirePopupWindow(win.webContents);
     });
     // Block dangerous schemes on BOTH initial navigations and server-side redirects (will-navigate
-    // alone misses redirect hops). The programmatic loadURL path is guarded by toNavigationUrl.
-    wc.on('will-navigate', blockNonWeb);
-    wc.on('will-redirect', blockNonWeb);
+    // alone misses redirect hops); ALSO consult the `navigation:navigate` interceptor (ADR-0022) —
+    // native popup windows (`wirePopupWindow`) skip this second check, they have no tracked tab id.
+    wc.on('will-navigate', (event, url) => {
+      blockNonWeb(event, url);
+      if (ActionInterceptorService.shouldBlock('navigation:navigate', { tabId: id, url, isRedirect: false })) {
+        event.preventDefault();
+      }
+    });
+    wc.on('will-redirect', (event, url) => {
+      blockNonWeb(event, url);
+      if (ActionInterceptorService.shouldBlock('navigation:navigate', { tabId: id, url, isRedirect: true })) {
+        event.preventDefault();
+      }
+    });
 
     // Right-click on the page → open the Chrome-style page context menu as a rendered popup window
     // (same primitive as the main menu), anchored at the click point (offset by the view's own bounds).
@@ -833,8 +805,10 @@ export default class TabManager {
     wc.setWindowOpenHandler((details) => {
       const target = popupTargetUrl(details.url);
       const sourceOrigin = originOf(wc.getURL());
-      if (!TabManager.hadRecentGesture(wc) && PopupBlockerManager.shouldBlock(sourceOrigin)) {
-        PopupBlockerManager.onBlocked(sourceOrigin, target);
+      if (
+        !TabManager.hadRecentGesture(wc) &&
+        ActionInterceptorService.shouldBlock('popup:open', { sourceOrigin, url: target })
+      ) {
         return { action: 'deny' };
       }
       if (isWebUrl(target) || needsNativeWindow(details.url) || wantsNativeWindow(details)) {
@@ -934,10 +908,11 @@ export default class TabManager {
     );
 
     // 2. Re-create groups with their metadata, then restore membership + pins (order changes as the
-    //    store normalizes, so we track the ACTIVE tab by id, not by the persisted index).
+    //    store normalizes, so we track the ACTIVE tab by id, not by the persisted index). A `null`
+    //    entry means that tab's `tab:create` was blocked by an extension interceptor — skip it.
     for (const pg of snap.groups) {
       const memberIds = snap.tabs
-        .map((t, i) => (t.groupId === pg.id ? createdIds[i]! : null))
+        .map((t, i) => (t.groupId === pg.id ? createdIds[i] ?? null : null))
         .filter((id): id is string => id !== null);
       if (memberIds.length === 0) continue;
       // `id: pg.id` reuses the group's stable (pre-restart) UUID so `settings` stays keyed correctly.
@@ -951,7 +926,8 @@ export default class TabManager {
       });
     }
     snap.tabs.forEach((t, i) => {
-      if (t.pinned) TabManager.store.setPinned(createdIds[i]!, true);
+      const id = createdIds[i];
+      if (t.pinned && id !== null && id !== undefined) TabManager.store.setPinned(id, true);
     });
 
     // 3. Activate the persisted active tab by its new id (robust to the normalized reordering).
@@ -959,7 +935,7 @@ export default class TabManager {
       snap.activeIndex >= 0 && snap.activeIndex < createdIds.length
         ? createdIds[snap.activeIndex]
         : undefined;
-    if (activeId !== undefined) TabManager.activate(activeId);
+    if (activeId !== undefined && activeId !== null) TabManager.activate(activeId);
     else TabManager.emitState();
     return true;
   }

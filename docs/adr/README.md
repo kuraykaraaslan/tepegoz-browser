@@ -29,3 +29,6 @@ consequences (including rejected alternatives). Format is a lightweight [MADR](h
 | [0019](0019-chromium-update-cadence.md) | Electron/Chromium security-update cadence | Proposed |
 | [0020](0020-tab-boundary-model.md) | Tab Boundary Model — groups, pins, split view, workspaces | Accepted |
 | [0021](0021-agent-controllable-extensions.md) | Agent-controllable extensions via in-process capability providers | Accepted |
+| [0022](0022-file-operations-sandbox.md) | Folder-sandboxed file operations for the agent | Accepted |
+| [0023](0023-ai-adaptors.md) | AIAdaptor — typed capability groups over the tool plane | Accepted |
+| [0024](0024-action-interception-plane.md) | Synchronous action-interception plane for browser-mechanics hooks | Accepted |

@@ -16,18 +16,6 @@ const fakeCrypto: SecretCrypto = {
 };
 
 const DEPS: AgentRunDeps = {
-  browserHost: {
-    navigateActive: () => Promise.resolve({ url: '', title: '' }),
-    readActivePage: () => Promise.resolve({ url: '', title: '', text: '' }),
-    listTabs: () => [],
-    createTab: () => 'tab-1',
-    snapshotElements: () => Promise.resolve({ url: '', title: '', elements: [] }),
-    clickElement: () => Promise.resolve(),
-    fillElement: () => Promise.resolve(),
-    pressKey: () => Promise.resolve(),
-    scrollPage: () => Promise.resolve(),
-  },
-  journal: { recentEvents: () => [] },
   activeTabUrl: () => undefined,
   handoffStrings: { captcha: 'captcha', twofa: '2fa' },
 };

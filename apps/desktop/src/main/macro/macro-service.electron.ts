@@ -4,59 +4,19 @@ import type { Macro, Step } from '@tepegoz/shared-types';
 import type { MacroRunInput, MacroRunProgress, MacroSummary } from '@tepegoz/desktop-ipc';
 import { runMacro, type RunProgress } from '@tepegoz/macro-engine';
 import type { MacroRunOutcome, MacrosCapabilityHost } from '@tepegoz/ext-macros/types';
+import { parseCsv } from '@tepegoz/ext-macros/csv';
 import { BlobStore, MacroStore, type Db } from '@tepegoz/persistence';
 import { getDb } from '../db/database.electron';
 import { createMacroHost } from './macro-host.electron';
-import MacroRecorder from '../agent/macro-recorder';
+import MacroRecorder from '../agent/macro-recorder.electron';
 import TabManager from '../tabs';
 
 /**
  * Main-process orchestrator for ext-macros: CRUD over `MacroStore`, CSV attachment via the
  * content-addressed `BlobStore`, deterministic run execution via `@tepegoz/macro-engine` (streaming
- * located progress), and the record→Step stream. Kept out of `ipc.ts` so that file stays lean.
+ * located progress), and the record→Step stream. Kept out of `ipc.ts` so that file stays lean. The
+ * pure CSV parser lives in `@tepegoz/ext-macros/csv`.
  */
-
-/** Minimal CSV parser (RFC-4180-ish: quoted fields, escaped quotes, CRLF). Header row → record keys. */
-function parseCsv(text: string): Record<string, string>[] {
-  const rows: string[][] = [];
-  let field = '';
-  let row: string[] = [];
-  let inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i]!;
-    if (inQuotes) {
-      if (c === '"') {
-        if (text[i + 1] === '"') {
-          field += '"';
-          i++;
-        } else inQuotes = false;
-      } else field += c;
-    } else if (c === '"') inQuotes = true;
-    else if (c === ',') {
-      row.push(field);
-      field = '';
-    } else if (c === '\n' || c === '\r') {
-      if (c === '\r' && text[i + 1] === '\n') i++;
-      row.push(field);
-      field = '';
-      if (row.some((f) => f.length > 0)) rows.push(row);
-      row = [];
-    } else field += c;
-  }
-  if (field.length > 0 || row.length > 0) {
-    row.push(field);
-    if (row.some((f) => f.length > 0)) rows.push(row);
-  }
-  if (rows.length === 0) return [];
-  const header = rows[0]!;
-  return rows.slice(1).map((r) => {
-    const rec: Record<string, string> = {};
-    header.forEach((h, idx) => {
-      rec[h] = r[idx] ?? '';
-    });
-    return rec;
-  });
-}
 
 const runControllers = new Map<string, { aborted: boolean }>();
 

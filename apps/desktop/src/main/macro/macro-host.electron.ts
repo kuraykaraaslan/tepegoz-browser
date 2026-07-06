@@ -4,9 +4,9 @@ import type { MacroHost } from '@tepegoz/macro-engine';
 import type { SelectorChain } from '@tepegoz/shared-types';
 import { HumanInputAdapter } from '@tepegoz/human-input';
 import TabManager from '../tabs';
-import MacroCdp from '../agent/macro-cdp';
-import { browserHost } from '../agent/browser-host';
-import { showPageCursor, hidePageCursor, isUserControlActive } from '../agent/page-cursor';
+import MacroCdp from '../agent/macro-cdp.electron';
+import { browserHost } from '../agent/browser-host.electron';
+import { showPageCursor, hidePageCursor, isUserControlActive } from '../agent/page-cursor.electron';
 
 /**
  * Desktop {@link MacroHost} for `@tepegoz/macro-engine`: implements the deterministic runtime's

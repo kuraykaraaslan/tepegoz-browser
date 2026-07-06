@@ -23,6 +23,13 @@ tools so the agent can manage extensions itself. Electron-free: the registry ada
   enabled, permissions, contributed capability ids).
 - **`ExtensionManagementHost`** — the injected host for the meta tools (`list`/`get`/`setEnabled`),
   implemented by the app over `PreferenceStore` + `BUILTIN_MANIFESTS`.
+- **`ActionInterceptorSupervisor`** / **`ActionInterceptorSupervisorDeps`** — the synchronous
+  action-interception plane (ADR-0024): simpler than `ExtensionCapabilitySupervisor` (no persistent
+  registry, so `evaluate(actionType, ctx)` checks `isEnabled` live on every call instead of
+  register/unregister + `reconcile`). `provide(set)` registers an extension's
+  `@tepegoz/extension-sdk` `ActionInterceptorSet`; `evaluate` returns `true` if the first enabled,
+  matching interceptor blocks. Electron-free: the app wires the enabled-check in
+  `main/extensions/action-interceptors.electron.ts`.
 
 ## Scripts
 `pnpm typecheck` · `pnpm lint` · `pnpm test` · `pnpm build`

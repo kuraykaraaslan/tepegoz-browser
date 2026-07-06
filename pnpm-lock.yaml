@@ -116,16 +116,16 @@ importers:
         version: link:../../packages/desktop-ipc
       '@tepegoz/ext-agent':
         specifier: workspace:*
-        version: link:../../packages/ext-agent
+        version: link:../../extensions/ext-agent
       '@tepegoz/ext-macros':
         specifier: workspace:*
-        version: link:../../packages/ext-macros
+        version: link:../../extensions/ext-macros
       '@tepegoz/ext-popup-blocker':
         specifier: workspace:*
-        version: link:../../packages/ext-popup-blocker
+        version: link:../../extensions/ext-popup-blocker
       '@tepegoz/ext-user-agent':
         specifier: workspace:*
-        version: link:../../packages/ext-user-agent
+        version: link:../../extensions/ext-user-agent
       '@tepegoz/extension-catalog':
         specifier: workspace:*
         version: link:../../packages/extension-catalog
@@ -274,11 +274,129 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
 
-  packages/agent-runtime:
+  extensions/ext-agent:
     dependencies:
       '@tepegoz/browser-tools':
         specifier: workspace:*
-        version: link:../browser-tools
+        version: link:../../packages/browser-tools
+      '@tepegoz/extension-sdk':
+        specifier: workspace:*
+        version: link:../../packages/extension-sdk
+      '@tepegoz/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
+      '@tepegoz/markdown':
+        specifier: workspace:*
+        version: link:../../packages/markdown
+      '@tepegoz/shared-types':
+        specifier: workspace:*
+        version: link:../../packages/shared-types
+      '@tepegoz/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      react:
+        specifier: ^18 || ^19
+        version: 18.3.1
+      zod:
+        specifier: 3.23.8
+        version: 3.23.8
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.31
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
+
+  extensions/ext-macros:
+    dependencies:
+      '@tepegoz/extension-sdk':
+        specifier: workspace:*
+        version: link:../../packages/extension-sdk
+      '@tepegoz/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
+      '@tepegoz/shared-types':
+        specifier: workspace:*
+        version: link:../../packages/shared-types
+      '@tepegoz/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      react:
+        specifier: ^18 || ^19
+        version: 18.3.1
+      zod:
+        specifier: 3.23.8
+        version: 3.23.8
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.31
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
+
+  extensions/ext-popup-blocker:
+    dependencies:
+      '@tepegoz/extension-sdk':
+        specifier: workspace:*
+        version: link:../../packages/extension-sdk
+      '@tepegoz/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
+      '@tepegoz/notifications':
+        specifier: workspace:*
+        version: link:../../packages/notifications
+      '@tepegoz/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      react:
+        specifier: ^18 || ^19
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.31
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
+
+  extensions/ext-user-agent:
+    dependencies:
+      '@tepegoz/extension-sdk':
+        specifier: workspace:*
+        version: link:../../packages/extension-sdk
+      '@tepegoz/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
+      '@tepegoz/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      react:
+        specifier: ^18 || ^19
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.31
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
+
+  packages/agent-runtime:
+    dependencies:
       '@tepegoz/capability-plane':
         specifier: workspace:*
         version: link:../capability-plane
@@ -287,7 +405,7 @@ importers:
         version: link:../credential-vault
       '@tepegoz/ext-agent':
         specifier: workspace:*
-        version: link:../ext-agent
+        version: link:../../extensions/ext-agent
       '@tepegoz/libs':
         specifier: workspace:*
         version: link:../libs
@@ -587,10 +705,10 @@ importers:
         version: link:../bookmarks
       '@tepegoz/ext-agent':
         specifier: workspace:*
-        version: link:../ext-agent
+        version: link:../../extensions/ext-agent
       '@tepegoz/ext-popup-blocker':
         specifier: workspace:*
-        version: link:../ext-popup-blocker
+        version: link:../../extensions/ext-popup-blocker
       '@tepegoz/extension-sdk':
         specifier: workspace:*
         version: link:../extension-sdk
@@ -607,115 +725,6 @@ importers:
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
-
-  packages/ext-agent:
-    dependencies:
-      '@tepegoz/extension-sdk':
-        specifier: workspace:*
-        version: link:../extension-sdk
-      '@tepegoz/i18n':
-        specifier: workspace:*
-        version: link:../i18n
-      '@tepegoz/markdown':
-        specifier: workspace:*
-        version: link:../markdown
-      '@tepegoz/shared-types':
-        specifier: workspace:*
-        version: link:../shared-types
-      '@tepegoz/ui':
-        specifier: workspace:*
-        version: link:../ui
-      react:
-        specifier: ^18 || ^19
-        version: 18.3.1
-    devDependencies:
-      '@types/react':
-        specifier: ^18.3.18
-        version: 18.3.31
-      typescript:
-        specifier: ^5.7.2
-        version: 5.9.3
-      vitest:
-        specifier: ^2.1.8
-        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
-
-  packages/ext-macros:
-    dependencies:
-      '@tepegoz/extension-sdk':
-        specifier: workspace:*
-        version: link:../extension-sdk
-      '@tepegoz/i18n':
-        specifier: workspace:*
-        version: link:../i18n
-      '@tepegoz/shared-types':
-        specifier: workspace:*
-        version: link:../shared-types
-      '@tepegoz/ui':
-        specifier: workspace:*
-        version: link:../ui
-      react:
-        specifier: ^18 || ^19
-        version: 18.3.1
-      zod:
-        specifier: 3.23.8
-        version: 3.23.8
-    devDependencies:
-      '@types/react':
-        specifier: ^18.3.18
-        version: 18.3.31
-      typescript:
-        specifier: ^5.7.2
-        version: 5.9.3
-      vitest:
-        specifier: ^2.1.8
-        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
-
-  packages/ext-popup-blocker:
-    dependencies:
-      '@tepegoz/extension-sdk':
-        specifier: workspace:*
-        version: link:../extension-sdk
-      '@tepegoz/i18n':
-        specifier: workspace:*
-        version: link:../i18n
-      '@tepegoz/ui':
-        specifier: workspace:*
-        version: link:../ui
-      react:
-        specifier: ^18 || ^19
-        version: 18.3.1
-    devDependencies:
-      '@types/react':
-        specifier: ^18.3.18
-        version: 18.3.31
-      typescript:
-        specifier: ^5.7.2
-        version: 5.9.3
-
-  packages/ext-user-agent:
-    dependencies:
-      '@tepegoz/extension-sdk':
-        specifier: workspace:*
-        version: link:../extension-sdk
-      '@tepegoz/i18n':
-        specifier: workspace:*
-        version: link:../i18n
-      '@tepegoz/ui':
-        specifier: workspace:*
-        version: link:../ui
-      react:
-        specifier: ^18 || ^19
-        version: 18.3.1
-    devDependencies:
-      '@types/react':
-        specifier: ^18.3.18
-        version: 18.3.31
-      typescript:
-        specifier: ^5.7.2
-        version: 5.9.3
-      vitest:
-        specifier: ^2.1.8
-        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
 
   packages/extension-catalog:
     dependencies:

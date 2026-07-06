@@ -103,8 +103,16 @@ export function createWindow(): BrowserWindow {
  * the same trusted preload + app partition (so `window.tepegoz` works and the IPC sender allow-list
  * accepts it). It floats above the parent's native web view, so the browsed page stays live behind it.
  * The caller loads the renderer with `?surface=<kind>` and manages show/close (blur-to-dismiss).
+ *
+ * `backgroundColor` is the resolved theme surface color (see resolveSurfaceTheme) so the window's first
+ * paint matches the active theme — a hardcoded navy default would flash before the renderer applies a
+ * light/custom theme. Defaults to brand navy for callers that don't resolve one.
  */
-export function createPopupWindow(parent: BrowserWindow, bounds: Rectangle): BrowserWindow {
+export function createPopupWindow(
+  parent: BrowserWindow,
+  bounds: Rectangle,
+  backgroundColor = '#0c2135',
+): BrowserWindow {
   const win = new BrowserWindow({
     ...bounds,
     parent,
@@ -115,7 +123,7 @@ export function createPopupWindow(parent: BrowserWindow, bounds: Rectangle): Bro
     maximizable: false,
     fullscreenable: false,
     skipTaskbar: true,
-    backgroundColor: '#0c2135',
+    backgroundColor,
     webPreferences: { ...CHROME_WEB_PREFERENCES },
   });
   win.setMenu(null);

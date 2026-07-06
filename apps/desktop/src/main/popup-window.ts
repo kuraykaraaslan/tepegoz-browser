@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { Logger } from '@tepegoz/libs';
 import { IpcChannels } from '@tepegoz/desktop-ipc';
 import { createPopupWindow } from './window';
+import { resolveSurfaceTheme } from './lib/surface-theme';
 
 /**
  * Owns THE popup window(s) — native, frameless child windows that float above the browsed page (which
@@ -79,10 +80,13 @@ export default class PopupWindowManager {
 
     const width = opts.width ?? DEFAULT_WIDTH;
     const bounds = anchorToBounds(parent, anchor, width, opts.height, opts.align ?? 'end');
-    const win = createPopupWindow(parent, bounds);
+    // Resolve the active theme up front so the window's first paint AND the pre-mount renderer use the
+    // right surface color — otherwise a light/custom theme flashes navy before applyTheme runs.
+    const surface = resolveSurfaceTheme();
+    const win = createPopupWindow(parent, bounds, surface.color);
     PopupWindowManager.win = win;
     PopupWindowManager.openKey = key;
-    loadSurface(win, query, key);
+    loadSurface(win, { ...query, theme: surface.theme, themeColor: surface.themeColor }, key);
 
     const reveal = (): void => {
       if (!win.isDestroyed() && !win.isVisible()) win.show();
@@ -126,9 +130,10 @@ export default class PopupWindowManager {
     PopupWindowManager.closeSub();
 
     const bounds = subAnchorToBounds(parent, opts.anchor, opts.height);
-    const win = createPopupWindow(parent, bounds);
+    const surface = resolveSurfaceTheme();
+    const win = createPopupWindow(parent, bounds, surface.color);
     PopupWindowManager.subWin = win;
-    loadSurface(win, opts.query, 'menu-sub');
+    loadSurface(win, { ...opts.query, theme: surface.theme, themeColor: surface.themeColor }, 'menu-sub');
 
     // Show WITHOUT stealing focus, so the primary popup doesn't blur (and close) when the flyout opens.
     const reveal = (): void => {

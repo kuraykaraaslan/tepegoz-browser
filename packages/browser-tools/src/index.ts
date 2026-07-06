@@ -1,16 +1,15 @@
 /**
- * `@tepegoz/browser-tools` — the built-in browser/tab capabilities (L5) for the agent: read page,
- * navigate, list/create tabs, registered into the CapabilityRegistry and reached only through the
- * ToolGateway PEP. Electron-free: the concrete browser operations are injected via `BrowserHost`, and
- * perception (sanitize/wrap) is pure. Extracted from `apps/desktop` per docs/package-map.md.
+ * `@tepegoz/browser-tools` — the Electron-free building blocks for the agent's built-in browser/tab
+ * tools: the `BrowserHost`/`JournalReader` host contracts (injected by the app) and pure perception
+ * (sanitize/wrap) helpers. The tools themselves are declared as the Agent extension's capabilities in
+ * `@tepegoz/ext-agent`'s `agentBuiltinCapabilities` (ADR-0021), reached only through the ToolGateway
+ * PEP. Extracted from `apps/desktop` per docs/package-map.md.
  */
 export {
-  registerBuiltinTools,
-  resetBuiltinToolsForTest,
   type BrowserHost,
   type JournalReader,
   type JournalEntry,
-} from './builtin-tools';
+} from './host';
 export {
   buildPageSnapshot,
   buildElementsSnapshot,

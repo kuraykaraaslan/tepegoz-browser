@@ -26,7 +26,6 @@ import {
 import type { AgentEventKind } from '@tepegoz/ext-agent/types';
 import CredentialVault from '@tepegoz/credential-vault';
 import PreferenceStore from '@tepegoz/preferences';
-import { registerBuiltinTools, type BrowserHost, type JournalReader } from '@tepegoz/browser-tools';
 import { LocalProvider, type LocalProviderConfig } from '@tepegoz/local-inference';
 
 /** The reasoning-effort preset (Agent panel) maps to a per-call max output-token budget: higher effort
@@ -84,13 +83,13 @@ export interface AgentRunHooks {
 }
 
 /**
- * Host-injected seams so the runtime stays Electron- and app-free: the browser tool implementation,
- * the journal reader, a live "active tab URL" reader (Policy Kernel site context), and the localized
- * human-handoff copy (the only user-facing strings the runtime emits that must be localized).
+ * Host-injected seams so the runtime stays Electron- and app-free: a live "active tab URL" reader
+ * (Policy Kernel site context) and the localized human-handoff copy (the only user-facing strings the
+ * runtime emits that must be localized). The agent's built-in tools (and their concrete browser/journal
+ * host) are registered separately at app startup via `ExtensionCapabilityService` (ADR-0021/0024), so
+ * they are NOT passed here — this runtime just enumerates the single `CapabilityRegistry`.
  */
 export interface AgentRunDeps {
-  browserHost: BrowserHost;
-  journal: JournalReader;
   activeTabUrl: () => string | undefined;
   handoffStrings: { captcha: string; twofa: string };
   /**
@@ -224,7 +223,9 @@ export async function runAgent(
     ModelGateway.register(new LocalProvider(deps.localInference));
   }
 
-  registerBuiltinTools(deps.browserHost, deps.journal);
+  // The agent's built-in tools are registered at startup by the app's ExtensionCapabilityService
+  // (gated on `com.tepegoz.agent` being enabled, ADR-0021/0024) — this runtime just enumerates
+  // whatever the single CapabilityRegistry currently holds, so a disabled agent has no tools.
   const tools = CapabilityRegistry.list().map((d) => ({
     id: d.id,
     description: d.description,

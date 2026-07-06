@@ -17,3 +17,12 @@ export {
   type ExtensionCapabilityDef,
   type ExtensionCapabilitySet,
 } from './capabilities';
+
+export {
+  defineActionInterceptors,
+  type ActionType,
+  type ActionContext,
+  type ActionInterceptor,
+  type ActionInterceptorDef,
+  type ActionInterceptorSet,
+} from './action-interceptors';

@@ -14,7 +14,6 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@tepegoz/browser-tools": "workspace:*",
     "@tepegoz/capability-plane": "workspace:*",
     "@tepegoz/credential-vault": "workspace:*",
     "@tepegoz/ext-agent": "workspace:*",

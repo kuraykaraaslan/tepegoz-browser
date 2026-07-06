@@ -1,12 +1,4 @@
-import {
-  Suspense,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type PointerEvent as ReactPointerEvent,
-  type ReactNode,
-} from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { coreDict, localeDir, pick, resolveLocale, type Locale } from '@tepegoz/i18n';
 import { I18nProvider } from '@tepegoz/i18n/react';
 import { Modal } from '@tepegoz/ui';
@@ -21,9 +13,6 @@ import {
 import type {
   AppNotification,
   AutofillAvailablePayload,
-  BookmarkMenuAction,
-  BookmarkTreeNode,
-  ContentBounds,
   CredentialsStatus,
   ExtensionId,
   LocalePref,
@@ -33,24 +22,15 @@ import type {
   ProviderId,
   TabsState,
 } from '@tepegoz/desktop-ipc';
-import { isBookmarkable, BOOKMARK_ROOT_BAR } from '@tepegoz/bookmarks';
 import { NotificationPermissionPrompt, ToastStack } from '@tepegoz/notifications-ui';
 import { AutofillSuggestion } from '@tepegoz/password-ui';
+import { BOOKMARK_ROOT_BAR } from '@tepegoz/bookmarks';
 import { runNotificationAction } from './lib/notification-actions';
-import {
-  extensionIdFromPageUrl,
-  extensionLabel,
-  extensionPageUrl,
-} from '../../shared/extension-urls';
+import { extensionIdFromPageUrl, extensionPageUrl } from '../../shared/extension-urls';
 import { extensionDefById } from './extensions/registry';
 import { useExtensionCatalog } from './extensions/useExtensionCatalog';
 import { BrowserChrome } from '@tepegoz/browser-chrome';
 import { BookmarksBar } from '@tepegoz/bookmarks-bar';
-import {
-  buildOmniboxSuggestions,
-  parseOmniboxQuery,
-  type OmniboxSuggestion,
-} from '@tepegoz/omnibox';
 import { HistoryPage } from '@tepegoz/history-ui';
 import { BookmarksManager } from '@tepegoz/bookmarks-ui';
 import { ExtensionsPage } from './components/ExtensionsPage';
@@ -62,19 +42,14 @@ import { SettingsPage } from './components/SettingsPage';
 import { CursorOverlay } from './components/CursorOverlay';
 import { applyTheme } from './lib/theme';
 import { useWindowMaximized } from './lib/useWindowMaximized';
-
-/** The overlay surface kinds (everything except `page`, which opens as its own internal tab). */
-type OverlaySurfaceKind = 'popup' | 'modal' | 'panel';
-interface ActiveSurface {
-  id: string;
-  kind: OverlaySurfaceKind;
-}
+import { bookmarkDialogAnchor, useBookmarksBar } from './app-bookmarks';
+import { AGENT_PANEL_OPEN_KEY, useExtensionSurfaces } from './app-extension-surfaces';
+import { useOmniboxAndHistory } from './app-omnibox-history';
 
 function effectiveLocale(pref: LocalePref): Locale {
   if (pref === 'en' || pref === 'tr') return pref;
   return resolveLocale(navigator.language);
 }
-
 
 const EMPTY_TABS: TabsState = {
   tabs: [],
@@ -84,50 +59,12 @@ const EMPTY_TABS: TabsState = {
   canGoForward: false,
 };
 
-/** The Agent Console's extension id + the `TabGroupSettingKey` remembering its open/closed state per
- *  tab group (the existing sidebar toggle button doubles as the per-group control — no new UI). */
-const AGENT_EXTENSION_ID = 'com.tepegoz.agent';
-const AGENT_PANEL_OPEN_KEY = 'agent.panelOpen';
-
-/** Sidebar dock width bounds (px); the user drags the edge to resize between these. */
-const SIDEBAR_MIN_WIDTH = 280;
-const SIDEBAR_MAX_WIDTH = 640;
-const SIDEBAR_DEFAULT_WIDTH = 360;
-
-/** Fallback anchor for a popup opened without an icon rect (e.g. from the hamburger menu): the
- *  top-right of the content, just under the chrome. */
-function defaultPopupAnchor(): ContentBounds {
-  return { x: window.innerWidth - 8, y: 84, width: 0, height: 0 };
-}
-
-/** Centered-top anchor for a bookmark rename / add-folder dialog popup. `openPopup` right-aligns the
- *  popup to the anchor's right edge, so a full-dialog-width anchor centers the (same-width) dialog. */
-function bookmarkDialogAnchor(): ContentBounds {
-  const width = 320;
-  return { x: Math.round(window.innerWidth / 2 - width / 2), y: 72, width, height: 0 };
-}
-
 export function App() {
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [status, setStatus] = useState<CredentialsStatus | null>(null);
   const [tabs, setTabs] = useState<TabsState>(EMPTY_TABS);
   // A group whose inline rename editor should open (set by the native group menu's "Rename" push).
   const [renamingGroupId, setRenamingGroupId] = useState<string | null>(null);
-  // The extension surface currently overlaid on the content area (popup/modal/panel), or null. A `page`
-  // action opens an internal tab instead, so it never lives here.
-  const [activeSurface, setActiveSurface] = useState<ActiveSurface | null>(null);
-  // The extension docked in the resizable sidebar (persists across tab switches, Chrome-style), or null.
-  const [sidebarExtId, setSidebarExtId] = useState<string | null>(null);
-  const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
-  const [resizingSidebar, setResizingSidebar] = useState(false);
-  // A still PNG of the page shown in place of the (briefly hidden) live web view during a resize drag,
-  // so the page never blanks to the chrome background. Null when not dragging / no capturable page.
-  const [resizeSnapshot, setResizeSnapshot] = useState<string | null>(null);
-  const draggingSidebarRef = useRef(false);
-  // The extension whose native popup window is open (for the toolbar-icon pressed state), or null.
-  const [popupOpenId, setPopupOpenId] = useState<string | null>(null);
-  const popupOpenIdRef = useRef<string | null>(null);
-  const contentRef = useRef<HTMLDivElement | null>(null);
   // Transient toasts pushed from NotificationHost (channel `toast`); capped, oldest dropped.
   const [toasts, setToasts] = useState<AppNotification[]>([]);
   const dismissToast = useCallback((id: string) => {
@@ -135,10 +72,6 @@ export function App() {
   }, []);
   // Pending per-site Web Notification consent prompt (from the main-process broker), or null.
   const [permReq, setPermReq] = useState<NotificationPermissionRequest | null>(null);
-  // The "open all" confirmation is an in-renderer modal (rare, >15 bookmarks), so it must hide the native
-  // web view while open (declared above the content-visibility effect that reads it). Rename / add-folder
-  // are native popup windows instead (they float over the page — see openBookmarkDialog).
-  const [openAllUrls, setOpenAllUrls] = useState<string[] | null>(null);
   // Autofill suggestions pushed from main when a page loads and has matching stored credentials.
   const [autofill, setAutofill] = useState<AutofillAvailablePayload | null>(null);
   // Cached credential list for the Passwords settings section.
@@ -149,110 +82,63 @@ export function App() {
 
   const locale = effectiveLocale(prefs?.locale ?? 'system');
 
+  // Shared ref for handlers that need the latest tab state without re-subscribing every render
+  // (bookmarks + omnibox, both split into their own hooks below).
+  const tabsRef = useRef(tabs);
+  useEffect(() => {
+    tabsRef.current = tabs;
+  }, [tabs]);
+
+  const activeTab = tabs.tabs.find((tb) => tb.id === tabs.activeId);
+  const currentUrl = activeTab?.url ?? '';
+
+  const bookmarks = useBookmarksBar(tabsRef, currentUrl);
+
   // The active tab's group (null when ungrouped) + that group's remembered Agent Console open state.
   const activeGroupId = tabs.tabs.find((t) => t.id === tabs.activeId)?.groupId ?? null;
   const activeGroupAgentPanelOpen = tabs.groups.find((g) => g.id === activeGroupId)?.settings[
     AGENT_PANEL_OPEN_KEY
   ];
 
-  // Restore the active tab group's own Agent Console open/closed state on switch. A group with no
-  // explicit value yet (new group) is left alone — no forced default, no surprise toggle. Never yanks
-  // away some other extension the user deliberately docked (only acts when the sidebar is empty or
-  // already showing the agent).
-  useEffect(() => {
-    if (activeGroupId === null || activeGroupAgentPanelOpen === undefined) return;
-    setSidebarExtId((cur) => {
-      if (cur !== null && cur !== AGENT_EXTENSION_ID) return cur;
-      return activeGroupAgentPanelOpen ? AGENT_EXTENSION_ID : null;
-    });
-  }, [activeGroupId, activeGroupAgentPanelOpen]);
+  // App mounts the <I18nProvider> in its own return, so it sits ABOVE its own provider — it therefore
+  // resolves the strings it renders itself with `pick(dict, locale)` (not the `useT` hook). Child
+  // components/surfaces render under the provider and self-localize via `useT`.
+  const coreT = pick(coreDict, locale);
+  const browserT = pick(browserDict, locale);
+  const sidebarT = pick(sidebarDict, locale);
+  const userMenuT = pick(userMenuDict, locale);
 
-  const closeSurface = useCallback(() => {
-    setActiveSurface(null);
-  }, []);
-
-  // Resolve a toolbar icon click/double-click (or a menu request) to its bound surface. `anchor` is the
-  // clicked icon's rect (for popups); absent for menu-triggered actions.
-  const runExtensionAction = useCallback(
-    (id: string, trigger: 'click' | 'doubleClick', anchor?: ContentBounds) => {
-      const def = extensionDefById(registry, id);
-      if (def === undefined) return;
-      const action =
-        trigger === 'click' ? def.manifest.actions.click : def.manifest.actions.doubleClick;
-      if (action === undefined) return;
-      if (action === 'page') {
-        setActiveSurface(null);
-        window.tepegoz.navigateTab(extensionPageUrl(id)); // opens/focuses the extension's internal tab
-        return;
-      }
-      if (action === 'sidebar') {
-        // A dock beside the page (web view stays visible); toggles on re-trigger. For the Agent Console
-        // specifically, also remember the resulting open/closed state on the active tab group, so
-        // switching groups later restores each one's own state (TabGroupSettingKey standard).
-        setSidebarExtId((cur) => {
-          const next = cur === id ? null : id;
-          if (id === AGENT_EXTENSION_ID && activeGroupId !== null) {
-            window.tepegoz.updateTabGroup(activeGroupId, {
-              settings: { [AGENT_PANEL_OPEN_KEY]: next === id },
-            });
-          }
-          return next;
-        });
-        return;
-      }
-      if (action === 'popup') {
-        // A native floating window that keeps the page live behind it. Re-triggering toggles it off.
-        if (popupOpenIdRef.current === id) {
-          window.tepegoz.closePopup();
-          setPopupOpenId(null);
-        } else {
-          window.tepegoz.openPopup('ext', anchor ?? defaultPopupAnchor(), { id });
-          setPopupOpenId(id);
-        }
-        return;
-      }
-      // Remaining overlay surfaces (modal/panel) hide the web view. Toggle: re-triggering closes it.
-      setActiveSurface((cur) =>
-        cur !== null && cur.id === id && cur.kind === action ? null : { id, kind: action },
-      );
-    },
-    [registry, activeGroupId],
+  // Shown while a lazily code-split extension surface loads (localized; a11y status role).
+  const surfaceFallback = (
+    <div
+      role="status"
+      aria-label={coreT.common.loading}
+      className="flex h-full w-full items-center justify-center text-sm text-text-muted"
+    >
+      {coreT.common.loading}
+    </div>
   );
 
-  // Drag the sidebar's inner edge to resize (clamped). The native web view swallows pointer events when
-  // the cursor crosses over it, so we briefly hide it and let the chrome capture the drag — but we show
-  // a still snapshot of the page in its place first, so it never blanks to the chrome background.
-  function onSidebarResizeStart(e: ReactPointerEvent): void {
-    e.preventDefault();
-    const startX = e.clientX;
-    const startWidth = sidebarWidth;
-    draggingSidebarRef.current = true;
-    const onMove = (ev: PointerEvent): void => {
-      const next = startWidth + (startX - ev.clientX); // drag left → wider
-      setSidebarWidth(Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, next)));
-    };
-    const onUp = (): void => {
-      draggingSidebarRef.current = false;
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-      setResizingSidebar(false);
-      setResizeSnapshot(null);
-    };
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-    // Capture the page FIRST, then hide the live view — no navy flash. If the drag already ended (fast
-    // click) or there's nothing to capture, we still hide so the drag tracks reliably.
-    window.tepegoz
-      .captureActiveTab()
-      .then((snap) => {
-        if (!draggingSidebarRef.current) return;
-        setResizeSnapshot(snap);
-        setResizingSidebar(true);
-      })
-      .catch(() => {
-        if (draggingSidebarRef.current) setResizingSidebar(true);
-      });
-  }
+  const extSurfaces = useExtensionSurfaces(
+    registry,
+    activeGroupId,
+    activeGroupAgentPanelOpen,
+    locale,
+    sidebarT.resize,
+    surfaceFallback,
+    bookmarks.openAllUrls !== null,
+  );
+
+  const omniboxHistory = useOmniboxAndHistory(
+    tabsRef,
+    {
+      search: browserT.omniboxSearchHint,
+      switchToTab: browserT.omniboxSwitchToTab,
+      bookmark: browserT.omniboxBookmark,
+    },
+    bookmarks.bookmarksRef,
+    extSurfaces.closeSurface,
+  );
 
   useEffect(() => {
     void (async () => {
@@ -339,6 +225,7 @@ export function App() {
   }, [theme, themeColor]);
 
   // Tell main where to lay out the active tab's web view (the content area below the chrome).
+  const contentRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     const el = contentRef.current;
     if (el === null) return undefined;
@@ -371,57 +258,18 @@ export function App() {
     });
   }, []);
 
-  // Overlay surfaces (popup/modal/panel) are chrome-rendered and hide the active web view while open.
-  // A sidebar resize also hides it momentarily so the chrome captures the drag's pointer stream (the
-  // native web view otherwise swallows pointer events once the cursor crosses over it).
-  useEffect(() => {
-    const overlayOpen = activeSurface !== null || openAllUrls !== null;
-    window.tepegoz.setContentVisible(!overlayOpen && !resizingSidebar);
-  }, [activeSurface, openAllUrls, resizingSidebar]);
-
-  // Escape closes the open overlay surface (the Modal also self-handles Escape — both are idempotent).
-  useEffect(() => {
-    if (activeSurface === null) return undefined;
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') setActiveSurface(null);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [activeSurface]);
-
-  // The native menu's Extensions submenu asks the chrome to open an extension (its click surface).
-  useEffect(() => {
-    return window.tepegoz.onOpenExtension((id) => {
-      runExtensionAction(id, 'click');
-    });
-  }, [runExtensionAction]);
-
   // Right-click on a toolbar extension icon → the native menu relays the chosen action back here so it
   // runs against our authoritative React state: open its settings page, or remove (disable) it.
   useEffect(() => {
     return window.tepegoz.onExtensionContextMenuAction(({ id, action }) => {
       if (action === 'page') {
-        setActiveSurface(null);
+        extSurfaces.closeSurface();
         window.tepegoz.navigateTab(extensionPageUrl(id));
       } else {
         onToggleExtension(id, false);
       }
     });
   }, [onToggleExtension]);
-
-  // Keep the popup-open ref in sync (read by runExtensionAction to toggle without stale closures).
-  useEffect(() => {
-    popupOpenIdRef.current = popupOpenId;
-  }, [popupOpenId]);
-
-  // The native popup closed itself (click-away / Escape / its Close button) — clear the pressed state.
-  useEffect(() => {
-    return window.tepegoz.onPopupClosed((surface) => {
-      if (surface.startsWith('ext:')) setPopupOpenId(null);
-    });
-  }, []);
 
   // App shortcuts (single registry): the accelerators shown in the main menu are wired here. We
   // preventDefault so Ctrl+R reloads the active TAB, not the app chrome.
@@ -431,18 +279,18 @@ export function App() {
       const key = e.key.toLowerCase();
       if (key === 't' && e.shiftKey) {
         e.preventDefault();
-        setActiveSurface(null);
+        extSurfaces.closeSurface();
         window.tepegoz.reopenClosedTab(); // Ctrl+Shift+T — reopen the last-closed tab
       } else if (key === 't') {
         e.preventDefault();
-        setActiveSurface(null);
+        extSurfaces.closeSurface();
         window.tepegoz.createTab();
       } else if (key === 'r') {
         e.preventDefault();
         window.tepegoz.tabReload();
       } else if (key === ',') {
         e.preventDefault();
-        setActiveSurface(null);
+        extSurfaces.closeSurface();
         window.tepegoz.navigateTab(INTERNAL_SETTINGS_URL); // opens/focuses the Settings tab
       }
     };
@@ -453,256 +301,20 @@ export function App() {
   }, []);
 
   const isMaximized = useWindowMaximized();
-  // App mounts the <I18nProvider> in its own return, so it sits ABOVE its own provider — it therefore
-  // resolves the strings it renders itself with `pick(dict, locale)` (not the `useT` hook). Child
-  // components/surfaces render under the provider and self-localize via `useT`.
-  const coreT = pick(coreDict, locale);
-  const browserT = pick(browserDict, locale);
-  const sidebarT = pick(sidebarDict, locale);
-  const userMenuT = pick(userMenuDict, locale);
-
-  // Shown while a lazily code-split extension surface loads (localized; a11y status role).
-  const surfaceFallback = (
-    <div
-      role="status"
-      aria-label={coreT.common.loading}
-      className="flex h-full w-full items-center justify-center text-sm text-text-muted"
-    >
-      {coreT.common.loading}
-    </div>
-  );
-  const activeTab = tabs.tabs.find((tb) => tb.id === tabs.activeId);
-  const currentUrl = activeTab?.url ?? '';
   // Internal pages are tabs addressed tepegoz://… ; render them when active.
-  const settingsActive = activeTab?.url === INTERNAL_SETTINGS_URL;
-  const extensionsActive = activeTab?.url === INTERNAL_EXTENSIONS_URL;
-  const historyActive = activeTab?.url === INTERNAL_HISTORY_URL;
-  const bookmarksActive = activeTab?.url === INTERNAL_BOOKMARKS_URL;
+  const settingsActive = currentUrl === INTERNAL_SETTINGS_URL;
+  const extensionsActive = currentUrl === INTERNAL_EXTENSIONS_URL;
+  const historyActive = currentUrl === INTERNAL_HISTORY_URL;
+  const bookmarksActive = currentUrl === INTERNAL_BOOKMARKS_URL;
   // An extension `page` surface: tepegoz://<extension-id> → render that extension's page component.
   const pageExtIds = registry.filter((d) => d.manifest.surfaces.includes('page')).map((d) => d.id);
   const pageExtId =
     activeTab !== undefined ? extensionIdFromPageUrl(activeTab.url, pageExtIds) : null;
   const PageSurface =
     pageExtId !== null ? extensionDefById(registry, pageExtId)?.surfaces.page : undefined;
-  // The extension docked in the sidebar (if any) and its sidebar surface renderer.
-  const sidebarDef = sidebarExtId !== null ? extensionDefById(registry, sidebarExtId) : undefined;
-  const SidebarSurface = sidebarDef?.surfaces.sidebar;
 
   const extensionStates = prefs?.extensions ?? [];
   const enabledExtensions = registry.filter((ext) => isExtensionEnabled(extensionStates, ext.id));
-
-  // Deterministic omnibox suggestions (history + bookmarks + open tabs + navigate/search). Refs keep the
-  // injected callbacks stable so the Omnibox effect doesn't refetch every render; they mirror latest state.
-  const tabsRef = useRef(tabs);
-  const bookmarksRef = useRef<{ url: string; title: string }[]>([]);
-  const suggestLabelsRef = useRef({
-    search: browserT.omniboxSearchHint,
-    switchToTab: browserT.omniboxSwitchToTab,
-    bookmark: browserT.omniboxBookmark,
-  });
-  useEffect(() => {
-    tabsRef.current = tabs;
-  }, [tabs]);
-  useEffect(() => {
-    suggestLabelsRef.current = {
-      search: browserT.omniboxSearchHint,
-      switchToTab: browserT.omniboxSwitchToTab,
-      bookmark: browserT.omniboxBookmark,
-    };
-  }, [browserT]);
-
-  // Bookmark star state for the active tab + the cached bookmark list feeding omnibox suggestions.
-  const [activeBookmarked, setActiveBookmarked] = useState(false);
-  // The Bookmarks-bar root's children (tree) drive the interactive bar; the flat ref feeds the omnibox.
-  const [barNodes, setBarNodes] = useState<BookmarkTreeNode[]>([]);
-  // Bumped after any bookmark mutation → the manager page (tepegoz://bookmarks) refetches its own tree.
-  const [bookmarksVersion, setBookmarksVersion] = useState(0);
-  const canBookmark = isBookmarkable(currentUrl);
-
-  const refreshBookmarks = useCallback(async (): Promise<void> => {
-    let tree: BookmarkTreeNode[] = [];
-    let flat: Awaited<ReturnType<typeof window.tepegoz.listBookmarks>> = [];
-    try {
-      [tree, flat] = await Promise.all([
-        window.tepegoz.getBookmarkTree(),
-        window.tepegoz.listBookmarks(),
-      ]);
-    } catch {
-      tree = [];
-      flat = [];
-    }
-    bookmarksRef.current = flat.map((b) => ({ url: b.url, title: b.title }));
-    setBarNodes(tree.find((r) => r.id === BOOKMARK_ROOT_BAR)?.children ?? []);
-    setBookmarksVersion((v) => v + 1);
-  }, []);
-
-  // Stable manager binding (it refetches when this or `refreshKey` change identity).
-  const getBookmarkTree = useCallback(() => window.tepegoz.getBookmarkTree(), []);
-
-  useEffect(() => {
-    void refreshBookmarks();
-  }, [refreshBookmarks]);
-
-  // Reflect whether the active page is bookmarked (drives the star's filled/outline state).
-  useEffect(() => {
-    if (!canBookmark) {
-      setActiveBookmarked(false);
-      return;
-    }
-    let cancelled = false;
-    void window.tepegoz.isBookmarked(currentUrl).then(
-      (b) => {
-        if (!cancelled) setActiveBookmarked(b);
-      },
-      () => {
-        if (!cancelled) setActiveBookmarked(false);
-      },
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [currentUrl, canBookmark]);
-
-  const onToggleBookmark = useCallback(async (): Promise<void> => {
-    const tab = tabsRef.current.tabs.find((tb) => tb.id === tabsRef.current.activeId);
-    const url = tab?.url ?? '';
-    if (!isBookmarkable(url)) return;
-    try {
-      const nowBookmarked = await window.tepegoz.toggleBookmark(
-        url,
-        tab?.title ?? url,
-        tab?.faviconUrl ?? null,
-      );
-      setActiveBookmarked(nowBookmarked);
-      await refreshBookmarks();
-    } catch (err) {
-      console.error('Bookmark toggle failed', err); // star state stays as-is (nothing was persisted)
-    }
-  }, [refreshBookmarks]);
-
-  // Bookmark bar drag-drop → move; native right-click menu → these renderer-driven actions. Rename and
-  // add-folder open a small dialog; the rest run immediately, then refetch so the bar reflects the change.
-  const onBookmarkMove = useCallback(
-    (id: string, newParentId: string, index: number): void => {
-      void (async () => {
-        try {
-          await window.tepegoz.moveBookmark(id, newParentId, index);
-          await refreshBookmarks();
-        } catch (err) {
-          console.error('Bookmark move failed', err);
-        }
-      })();
-    },
-    [refreshBookmarks],
-  );
-
-  const findBarNode = useCallback(
-    (id: string): BookmarkTreeNode | null => {
-      const walk = (nodes: readonly BookmarkTreeNode[]): BookmarkTreeNode | null => {
-        for (const n of nodes) {
-          if (n.id === id) return n;
-          const hit = walk(n.children);
-          if (hit !== null) return hit;
-        }
-        return null;
-      };
-      return walk(barNodes);
-    },
-    [barNodes],
-  );
-
-  const onBookmarkMenuAction = useCallback(
-    async (a: BookmarkMenuAction): Promise<void> => {
-      const node = findBarNode(a.id);
-      if (a.action === 'open') {
-        if (node?.url != null) window.tepegoz.navigateTab(node.url);
-      } else if (a.action === 'open-new-tab') {
-        if (node?.url != null) window.tepegoz.createTabInBackground(node.url);
-      } else if (a.action === 'open-all') {
-        const urls: string[] = [];
-        const collect = (n: BookmarkTreeNode): void => {
-          if (n.type === 'bookmark' && n.url != null) urls.push(n.url);
-          n.children.forEach(collect);
-        };
-        if (node !== null) collect(node);
-        if (urls.length > 15) setOpenAllUrls(urls);
-        else urls.forEach((u) => window.tepegoz.createTabInBackground(u));
-      } else if (a.action === 'delete') {
-        try {
-          await window.tepegoz.removeBookmark(a.id); // the bookmarks:changed broadcast triggers the refetch
-        } catch (err) {
-          console.error('Bookmark delete failed', err);
-        }
-      } else if (a.action === 'open-manager') {
-        window.tepegoz.navigateTab(INTERNAL_BOOKMARKS_URL);
-      } else if (a.action === 'move-to-bar') {
-        try {
-          await window.tepegoz.moveBookmark(a.id, BOOKMARK_ROOT_BAR, 100000); // to the bar root's end
-        } catch (err) {
-          console.error('Move to bar failed', err);
-        }
-      } else if (a.action === 'rename') {
-        window.tepegoz.openPopup('bookmark-rename', bookmarkDialogAnchor(), { id: a.id });
-      } else {
-        // add-folder: on a folder → subfolder inside it; on a bookmark → a sibling folder on the bar.
-        const parentId = a.type === 'folder' ? a.id : BOOKMARK_ROOT_BAR;
-        window.tepegoz.openPopup('bookmark-add-folder', bookmarkDialogAnchor(), { id: parentId });
-      }
-    },
-    [findBarNode],
-  );
-
-  useEffect(() => {
-    return window.tepegoz.onBookmarkMenuAction((a) => {
-      void onBookmarkMenuAction(a);
-    });
-  }, [onBookmarkMenuAction]);
-
-  // The tree changed (possibly from a popup window: folder dropdown, rename/add-folder dialog) → refetch.
-  useEffect(() => {
-    return window.tepegoz.onBookmarksChanged(() => {
-      void refreshBookmarks();
-    });
-  }, [refreshBookmarks]);
-
-  const onOmniboxSuggest = useCallback(async (query: string): Promise<OmniboxSuggestion[]> => {
-    const { term } = parseOmniboxQuery(query);
-    let history: Awaited<ReturnType<typeof window.tepegoz.searchHistory>> = [];
-    try {
-      history = term.length > 0 ? await window.tepegoz.searchHistory({ query: term }) : [];
-    } catch {
-      history = []; // history unavailable → still surface tabs/bookmarks + the navigate/search action
-    }
-    const state = tabsRef.current;
-    return buildOmniboxSuggestions(
-      query,
-      {
-        // Don't offer switching to the tab that's already active.
-        tabs: state.tabs
-          .filter((tb) => tb.id !== state.activeId)
-          .map((tb) => ({ id: tb.id, title: tb.title, url: tb.url })),
-        history: history.map((h) => ({ url: h.url, title: h.title, visitCount: h.visitCount })),
-        bookmarks: bookmarksRef.current,
-      },
-      suggestLabelsRef.current,
-    );
-  }, []);
-
-  const onActivateTabFromOmnibox = useCallback((tabId: string): void => {
-    setActiveSurface(null);
-    window.tepegoz.activateTab(tabId);
-  }, []);
-
-  // Stable data-source bindings for HistoryPage — it refetches when `list` changes identity.
-  const historyList = useCallback(
-    (q: string, offset: number) =>
-      q.length === 0
-        ? window.tepegoz.getHistory({ offset })
-        : window.tepegoz.searchHistory({ query: q, offset }),
-    [],
-  );
-  const historyRemove = useCallback((url: string) => window.tepegoz.deleteHistory(url), []);
-  const historyClear = useCallback(() => window.tepegoz.clearHistory(), []);
 
   async function onUpdatePrefs(patch: Partial<Preferences>): Promise<void> {
     setPrefs(await window.tepegoz.updatePreferences(patch));
@@ -730,58 +342,8 @@ export function App() {
     onUpdatePrefs({ extensions: next }).catch((err: unknown) => {
       console.error('Extension toggle failed', err); // prefs unchanged in main → UI stays consistent
     });
-    if (!enabled && activeSurface?.id === id) setActiveSurface(null);
-    if (!enabled && sidebarExtId === id) setSidebarExtId(null);
-  }
-
-  /** Render the open overlay surface, wrapped per its kind (panel = full overlay, modal = centered
-   *  dialog, popup = anchored card under the toolbar icons). */
-  function renderActiveSurface(): ReactNode {
-    if (activeSurface === null) return null;
-    const def = extensionDefById(registry, activeSurface.id);
-    const Surface = def?.surfaces[activeSurface.kind];
-    if (def === undefined || Surface === undefined) return null;
-    const body = (
-      <Suspense fallback={surfaceFallback}>
-        <Surface onClose={closeSurface} />
-      </Suspense>
-    );
-    if (activeSurface.kind === 'panel') return body;
-    if (activeSurface.kind === 'modal') {
-      return (
-        <Modal open onClose={closeSurface} ariaLabel={extensionLabel(def.manifest, locale).name}>
-          {body}
-        </Modal>
-      );
-    }
-    return null; // popup opens as a native window (openPopup), not a DOM overlay
-  }
-
-  /** Render the resizable sidebar dock (right), if an extension is docked. The page/web view stays
-   *  visible beside it — its bounds already exclude this strip because `contentRef` measures only the
-   *  left region. */
-  function renderSidebar(): ReactNode {
-    if (sidebarDef === undefined || SidebarSurface === undefined) return null;
-    return (
-      <aside
-        style={{ width: sidebarWidth }}
-        className="relative flex shrink-0 border-l border-border bg-surface-base"
-        aria-label={extensionLabel(sidebarDef.manifest, locale).name}
-      >
-        <div
-          role="separator"
-          aria-orientation="vertical"
-          aria-label={sidebarT.resize}
-          onPointerDown={onSidebarResizeStart}
-          className="absolute left-0 top-0 z-10 h-full w-1.5 -translate-x-1/2 cursor-col-resize hover:bg-border-focus"
-        />
-        <div className="relative flex-1 overflow-hidden">
-          <Suspense fallback={surfaceFallback}>
-            <SidebarSurface onClose={() => setSidebarExtId(null)} />
-          </Suspense>
-        </div>
-      </aside>
-    );
+    if (!enabled && extSurfaces.activeSurface?.id === id) extSurfaces.closeSurface();
+    if (!enabled && extSurfaces.sidebarExtId === id) extSurfaces.closeSidebar();
   }
 
   return (
@@ -794,7 +356,7 @@ export function App() {
           renamingGroupId={renamingGroupId}
           activeTabId={tabs.activeId}
           onSelectTab={(id) => {
-            setActiveSurface(null); // close any extension surface when switching tabs
+            extSurfaces.closeSurface(); // close any extension surface when switching tabs
             window.tepegoz.activateTab(id);
           }}
           onCloseTab={(id) => window.tepegoz.closeTab(id)}
@@ -802,7 +364,7 @@ export function App() {
           onTabGroupContextMenu={(groupId) => window.tepegoz.showTabGroupContextMenu(groupId)}
           onRenameTabGroupHandled={() => setRenamingGroupId(null)}
           onNewTab={() => {
-            setActiveSurface(null);
+            extSurfaces.closeSurface();
             window.tepegoz.createTab();
           }}
           onMoveTab={(id, toIndex) => window.tepegoz.moveTab(id, toIndex)}
@@ -826,18 +388,20 @@ export function App() {
           captionLeading={<NotificationBellButton />}
           menu={<MainMenuButton label={browserT.menu} />}
           onNavigate={(input) => window.tepegoz.navigateTab(input)}
-          onSuggest={onOmniboxSuggest}
-          onActivateTab={onActivateTabFromOmnibox}
-          isBookmarked={activeBookmarked}
-          canBookmark={canBookmark}
-          onToggleBookmark={() => void onToggleBookmark()}
+          onSuggest={omniboxHistory.onOmniboxSuggest}
+          onActivateTab={omniboxHistory.onActivateTabFromOmnibox}
+          isBookmarked={bookmarks.activeBookmarked}
+          canBookmark={bookmarks.canBookmark}
+          onToggleBookmark={() => void bookmarks.onToggleBookmark()}
           toolbarActions={
             <>
               <ExtensionTray
                 locale={locale}
                 extensions={enabledExtensions}
-                activeExtensionId={activeSurface?.id ?? sidebarExtId ?? popupOpenId ?? null}
-                onExtensionAction={runExtensionAction}
+                activeExtensionId={
+                  extSurfaces.activeSurface?.id ?? extSurfaces.sidebarExtId ?? extSurfaces.popupOpenId ?? null
+                }
+                onExtensionAction={extSurfaces.runExtensionAction}
               />
               <UserMenuButton label={userMenuT.menuLabel} name={userMenuT.name} />
             </>
@@ -848,16 +412,16 @@ export function App() {
             Default-on: shown once prefs load unless explicitly turned off. */}
         {prefs !== null && prefs.showBookmarksBar !== false && (
           <BookmarksBar
-            nodes={barNodes}
+            nodes={bookmarks.barNodes}
             barRootId={BOOKMARK_ROOT_BAR}
             onOpen={(url) => window.tepegoz.navigateTab(url)}
             onOpenFolder={(folderId, anchor) => {
               // Seed a tight height (main self-resizes to the real content once it loads) so a small
               // folder doesn't open as a tall window.
-              const rows = Math.max(1, findBarNode(folderId)?.children.length ?? 1);
+              const rows = Math.max(1, bookmarks.findBarNode(folderId)?.children.length ?? 1);
               window.tepegoz.openPopup('bookmark-folder', anchor, { id: folderId, height: rows * 32 + 12 });
             }}
-            onMove={onBookmarkMove}
+            onMove={bookmarks.onBookmarkMove}
             onContextMenu={(id, type) => window.tepegoz.showBookmarkContextMenu(id, type)}
             labels={{ bar: browserT.bookmarksBar, empty: browserT.noBookmarksBar }}
           />
@@ -869,10 +433,10 @@ export function App() {
             {/* The active tab's web page is a separate WebContentsView laid over this area by main. The
             internal app tabs (Settings/Extensions/History), extension `page` tabs, and open overlay
             surfaces have no web view, so the chrome renders them here instead. */}
-            {resizeSnapshot !== null && (
+            {extSurfaces.resizeSnapshot !== null && (
               // A still of the page shown while the live web view is hidden during a sidebar resize drag.
               <img
-                src={resizeSnapshot}
+                src={extSurfaces.resizeSnapshot}
                 alt=""
                 aria-hidden="true"
                 draggable={false}
@@ -925,15 +489,19 @@ export function App() {
             )}
             {historyActive && (
               <div className="absolute inset-0 bg-surface-system">
-                <HistoryPage list={historyList} remove={historyRemove} clear={historyClear} />
+                <HistoryPage
+                  list={omniboxHistory.historyList}
+                  remove={omniboxHistory.historyRemove}
+                  clear={omniboxHistory.historyClear}
+                />
               </div>
             )}
             {bookmarksActive && (
               <div className="absolute inset-0 bg-surface-system">
                 <BookmarksManager
-                  getTree={getBookmarkTree}
-                  refreshKey={bookmarksVersion}
-                  onMove={onBookmarkMove}
+                  getTree={bookmarks.getBookmarkTree}
+                  refreshKey={bookmarks.bookmarksVersion}
+                  onMove={bookmarks.onBookmarkMove}
                   onNewFolder={(parentId) =>
                     window.tepegoz.openPopup('bookmark-add-folder', bookmarkDialogAnchor(), { id: parentId })
                   }
@@ -945,11 +513,11 @@ export function App() {
             {PageSurface !== undefined && (
               <div className="absolute inset-0 bg-surface-base">
                 <Suspense fallback={surfaceFallback}>
-                  <PageSurface onClose={closeSurface} />
+                  <PageSurface onClose={extSurfaces.closeSurface} />
                 </Suspense>
               </div>
             )}
-            {renderActiveSurface()}
+            {extSurfaces.renderActiveSurface()}
             {autofill !== null && (
               <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
                 <div className="pointer-events-auto">
@@ -966,7 +534,7 @@ export function App() {
               </div>
             )}
           </div>
-          {renderSidebar()}
+          {extSurfaces.renderSidebar()}
         </div>
         {/* Transient toast overlay (channel `toast`); native OS notifications cover the over-page case. */}
         <ToastStack
@@ -990,19 +558,19 @@ export function App() {
         </Modal>
         {/* "Open all" confirmation for a large folder. */}
         <Modal
-          open={openAllUrls !== null}
-          onClose={() => setOpenAllUrls(null)}
+          open={bookmarks.openAllUrls !== null}
+          onClose={() => bookmarks.setOpenAllUrls(null)}
           ariaLabel={browserT.bookmarkMenu.openAll}
         >
-          {openAllUrls !== null && (
+          {bookmarks.openAllUrls !== null && (
             <div className="flex min-w-[20rem] flex-col gap-4 p-4">
               <p className="text-sm text-text-primary">
-                {browserT.openAllConfirm} ({openAllUrls.length})
+                {browserT.openAllConfirm} ({bookmarks.openAllUrls.length})
               </p>
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setOpenAllUrls(null)}
+                  onClick={() => bookmarks.setOpenAllUrls(null)}
                   className="rounded-md px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-overlay"
                 >
                   {browserT.cancel}
@@ -1010,8 +578,8 @@ export function App() {
                 <button
                   type="button"
                   onClick={() => {
-                    openAllUrls.forEach((u) => window.tepegoz.createTabInBackground(u));
-                    setOpenAllUrls(null);
+                    bookmarks.openAllUrls?.forEach((u) => window.tepegoz.createTabInBackground(u));
+                    bookmarks.setOpenAllUrls(null);
                   }}
                   className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-fg hover:bg-primary-hover"
                 >

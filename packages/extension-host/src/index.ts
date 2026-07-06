@@ -5,3 +5,7 @@ export type {
   ExtensionInfo,
   ExtensionManagementHost,
 } from './types';
+export {
+  ActionInterceptorSupervisor,
+  type ActionInterceptorSupervisorDeps,
+} from './action-interceptor-supervisor';

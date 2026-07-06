@@ -12,8 +12,10 @@
       body {
         margin: 0;
         height: 100%;
-        /* Brand navy: matches the logo + dark-theme surface so there's no flash before React mounts. */
-        background: #0c2135;
+        /* Track the active theme's surface once tokens load / main.tsx applies the theme (popups pass it
+           in the URL). Falls back to brand navy for the very first paint before the bundle runs — the
+           native window backgroundColor is already the resolved surface color, so there's no flash. */
+        background: var(--surface-base, #0c2135);
       }
     </style>
   </head>

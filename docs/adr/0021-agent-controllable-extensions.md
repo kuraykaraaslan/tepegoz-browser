@@ -75,6 +75,18 @@ module specifiers for code-splitting, one small surface-loader thunk map remains
 (the honest limit). Loading extensions from a user/db directory, **untrusted/MV3/third-party execution,
 sandboxing, and permission enforcement remain Phase 3** — unchanged by this refinement.
 
+## Update (2026-07-06) — extensions live in `extensions/`, catalog scans the folder
+
+The built-in extension packages moved out of `packages/*` into a sibling top-level **`extensions/`**
+workspace (`extensions/ext-agent`, `ext-macros`, `ext-popup-blocker`, `ext-user-agent`) — they own real
+decision logic now (ADR-0024), so they're physically separated from plain shared libraries. The catalog
+generator (`scripts/generate-extension-catalog.ts`) no longer imports a hardcoded manifest array; it
+**scans `extensions/<pkg>/src/manifest.ts`**, dynamically imports each, and includes every module that
+exports a `validateManifest`-passing manifest. Dropping an extension folder in makes it load; removing
+one makes it disappear — with no code change. The renderer's surface-loader thunk map stays a static
+superset (the same bundler limit above), consulted only for extensions actually present in the catalog,
+so a stale thunk for a removed extension is inert.
+
 ## Update (2026-07-04) — local-eligibility metadata (the "run locally" standard)
 
 `ExtensionCapabilityDef` (and the builtin tool descriptors) now carry three OPTIONAL, fail-safe fields

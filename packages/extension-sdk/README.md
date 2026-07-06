@@ -30,6 +30,18 @@ the agent-callable capability contract an extension may declare (ADR-0021). Depe
 - **`ExtensionCapabilityDef`** / **`ExtensionCapability`** / **`ExtensionCapabilitySet`** — the
   author-facing definition type, the normalized/registry-facing type, and the per-extension set
   returned by `defineCapabilities`.
+- **`defineActionInterceptors(extensionId, defs)`** — declare an extension's synchronous action
+  interceptors (ADR-0024): allow/deny predicates for browser mechanics (`popup:open`, `tab:create`,
+  `tab:close`, `navigation:navigate`) that `TabManager` consults at each action's execution point.
+  Unlike `capability`/`defineCapabilities` (async, behind the agent's `ToolGateway` PEP), these run
+  INLINE and must be synchronous — `WebContents.setWindowOpenHandler`/`will-navigate` accept no
+  `Promise`. Validates the extension id and stamps it on every interceptor for the enabled-set gate
+  applied by `@tepegoz/extension-host`'s `ActionInterceptorSupervisor`.
+- **`ActionType`** / **`ActionContext`** — the closed union of interceptable actions and each one's
+  typed context shape (the single source of truth new action types are added to).
+- **`ActionInterceptorDef`** / **`ActionInterceptor`** / **`ActionInterceptorSet`** — the author-facing
+  definition type, the normalized/supervisor-facing type, and the per-extension set returned by
+  `defineActionInterceptors`.
 
 ## Scripts
 `pnpm typecheck` · `pnpm build` · `pnpm test` · `pnpm lint`

@@ -8,17 +8,18 @@ import { abortActiveAgentRuns, registerIpc } from './ipc';
 import { initStores, passwordVault } from './stores.electron';
 import { closeDatabase } from './db/database.electron';
 import TabManager from './tabs';
-import UserAgentManager from './user-agent';
-import PopupBlockerManager from './popup-blocker';
 import PopupWindowManager from './popup-window';
 import McpService from './mcp/supervisor.electron';
 import ExtensionCapabilityService from './extensions/capability-supervisor.electron';
+import ActionInterceptorService from './extensions/action-interceptors.electron';
+import popupBlockerHost from './extensions/popup-blocker-host.electron';
+import userAgentHost from './extensions/user-agent-host.electron';
 import MacroService from './macro/macro-service.electron';
 import { macrosCapabilities } from '@tepegoz/ext-macros/capabilities';
-import { registerBuiltinTools } from '@tepegoz/browser-tools';
+import { agentBuiltinCapabilities } from '@tepegoz/ext-agent/capabilities';
 import FileOperationsHost from './file-operations/file-operations-host';
-import { attachBrowserHostWindow, browserHost } from './agent/browser-host';
-import { journalHost } from './agent/journal-host';
+import { attachBrowserHostWindow, browserHost } from './agent/browser-host.electron';
+import { journalHost } from './agent/journal-host.electron';
 import NotificationHost from './notifications/notification-host';
 import NotificationPermissionBroker from './notifications/permission-broker';
 import PasswordHost from './password/password-host';
@@ -120,10 +121,13 @@ if (!app.requestSingleInstanceLock()) {
       }
       installSecurity();
       initStores();
-      // Apply the persisted User-Agent override to the browsing session BEFORE the first tab opens.
-      UserAgentManager.init();
-      // Load the popup-blocker settings before any page can call window.open.
-      PopupBlockerManager.init();
+      // Apply the persisted User-Agent override to the browsing session BEFORE the first tab opens
+      // (a no-op default when the extension is disabled).
+      userAgentHost.init();
+      // Load the popup-blocker settings before any page can call window.open, and register its
+      // `popup:open` interceptor with the generic action-interception plane (ADR-0022).
+      popupBlockerHost.init();
+      ActionInterceptorService.provide(popupBlockerHost.interceptors);
       registerIpc();
       bootstrap();
       // Connect configured MCP servers in the background (non-blocking; a bad server must not delay
@@ -131,12 +135,12 @@ if (!app.requestSingleInstanceLock()) {
       McpService.start();
       // Register enabled built-in extensions' in-process agent capabilities into the same
       // CapabilityRegistry, behind the same ToolGateway PEP (ADR-0021). Meta extension-management
-      // tools are always on. ext-macros contributes its capabilities here, then start() reconciles.
+      // tools are always on. Each `provide` is gated on its extension being enabled by `start()`'s
+      // reconcile — so disabling `com.tepegoz.agent` unregisters the agent's built-in browser tools,
+      // and disabling `com.tepegoz.macros` unregisters the macro tools (ADR-0024 kill-switch).
+      ExtensionCapabilityService.provide(agentBuiltinCapabilities(), { ...browserHost, ...journalHost });
       ExtensionCapabilityService.provide(macrosCapabilities(), MacroService.capabilityHost());
       ExtensionCapabilityService.start();
-      // Register the built-in browser tools at startup (idempotent — the first agent run is a no-op)
-      // so the Settings "run locally" action list can enumerate them before any run happens.
-      registerBuiltinTools(browserHost, journalHost);
       // Sandboxed file operations: seed the default ~/tepegoz grant (first run), sync the access policy
       // from prefs, and register the file_* / fileaccess_* tools into the same CapabilityRegistry.
       FileOperationsHost.init();
