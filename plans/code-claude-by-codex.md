@@ -20,6 +20,11 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
   guvenilir hale getirmek.
 - Uygulama kucuk ve commitlenebilir dilimlerle ilerleyecek. Her dilim kendi test/typecheck/lint
   dogrulamasindan gececek.
+- Bu plandan devam eden her uygulama diliminde **iki yer birlikte guncellenecek**:
+  1. Bu dosyadaki ilgili checkbox/durum satiri.
+  2. Asil faz dosyalari: `phases/README.md` ve is hangi faza denk geliyorsa o faz dosyasi
+     (`phase-1a`, `phase-1b`, `phase-6` vb.).
+  Plan ve fazlar ayrismayacak; commit atmadan once tamamlanan isler iki tarafta da isaretlenecek.
 
 ## Faz Durumu
 
