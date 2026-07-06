@@ -14,10 +14,7 @@ import { showPageCursor, hidePageCursor, isUserControlActive, resetForAgentActio
  * the built-in agent tools (navigate + read active page via the isolated view, list/create tabs).
  * Keeping this here lets the tools package stay Electron-free.
  */
-async function navigateActive(url: string): Promise<{ url: string; title: string }> {
-  TabManager.navigateActive(url); // scheme allow-list enforced inside
-  const wc = TabManager.activeWebContents();
-  if (wc === null) throw new AppError('No active tab to navigate', 409);
+async function waitForLoad(wc: WebContents): Promise<void> {
   await new Promise<void>((resolve) => {
     const onDone = (): void => {
       clearTimeout(timer);
@@ -29,15 +26,24 @@ async function navigateActive(url: string): Promise<{ url: string; title: string
     }, 15_000);
     wc.once('did-stop-loading', onDone);
   });
+}
+
+async function navigate(url: string, tabId?: string): Promise<{ url: string; title: string }> {
+  if (tabId === undefined) {
+    TabManager.navigateActive(url); // scheme allow-list enforced inside
+  } else if (!TabManager.navigateTab(tabId, url)) {
+    throw new AppError(`No web tab to navigate: ${tabId}`, 409);
+  }
+  const wc = requireWc(tabId);
+  await waitForLoad(wc);
   // The tab may have been closed (webContents destroyed) during the up-to-15s wait — never call
   // methods on a destroyed WebContents (throws an opaque "Object has been destroyed").
   if (wc.isDestroyed()) throw new AppError('Active tab was closed during navigation', 409);
   return { url: wc.getURL(), title: wc.getTitle() };
 }
 
-async function readActivePage(): Promise<{ url: string; title: string; text: string }> {
-  const wc = TabManager.activeWebContents();
-  if (wc === null) throw new AppError('No active page to read', 409);
+async function readPage(tabId?: string): Promise<{ url: string; title: string; text: string }> {
+  const wc = requireWc(tabId);
   const url = wc.getURL();
   const title = wc.getTitle();
   const result: unknown = await wc.executeJavaScript(
@@ -47,10 +53,10 @@ async function readActivePage(): Promise<{ url: string; title: string; text: str
   return { url, title, text: typeof result === 'string' ? result : '' };
 }
 
-/** The active tab's WebContents for CDP-driven perception/action, or a 409 when there is none. */
-function requireActiveWc(): WebContents {
-  const wc = TabManager.activeWebContents();
-  if (wc === null) throw new AppError('No active page', 409);
+/** The target tab's WebContents for CDP-driven perception/action, or a 409 when there is none. */
+function requireWc(tabId?: string): WebContents {
+  const wc = tabId === undefined ? TabManager.activeWebContents() : TabManager.webContentsForTab(tabId);
+  if (wc === null) throw new AppError(tabId === undefined ? 'No active page' : `No web tab: ${tabId}`, 409);
   return wc;
 }
 
@@ -115,15 +121,15 @@ function onInputAction(kind: string, detail: string): void {
 
 // Single module-level adapter — curX/curY accumulate across agent actions within a session.
 const cdpSend: CdpSend = (method, params) =>
-  requireActiveWc().debugger.sendCommand(method, params);
+  requireWc().debugger.sendCommand(method, params);
 
 const browserAdapter = new HumanInputAdapter(cdpSend, onCursorMove, onInputAction, isUserControlActive);
 
 // --- BrowserHost + TabHost (one object satisfies both injected seams) ---
 
 export const browserHost: BrowserHost & TabHost = {
-  navigateActive,
-  readActivePage,
+  navigate,
+  readPage,
   listTabs: () => {
     const state = TabManager.getState();
     return state.tabs.map((t) => ({
@@ -145,25 +151,25 @@ export const browserHost: BrowserHost & TabHost = {
     TabManager.closeTab(id);
     return !TabManager.getState().tabs.some((t) => t.id === id);
   },
-  snapshotElements: () => CdpDriver.snapshotElements(requireActiveWc()),
-  clickElement: async (ref) => {
+  snapshotElements: (tabId) => CdpDriver.snapshotElements(requireWc(tabId)),
+  clickElement: async (ref, tabId) => {
     resetForAgentAction();
-    await CdpDriver.clickElement(requireActiveWc(), ref, browserAdapter);
+    await CdpDriver.clickElement(requireWc(tabId), ref, tabId === undefined ? browserAdapter : undefined);
     onCursorHide();
   },
-  fillElement: async (ref, text) => {
+  fillElement: async (ref, text, tabId) => {
     resetForAgentAction();
-    await CdpDriver.fillElement(requireActiveWc(), ref, text, browserAdapter);
+    await CdpDriver.fillElement(requireWc(tabId), ref, text, tabId === undefined ? browserAdapter : undefined);
     onCursorHide();
   },
-  pressKey: async (key) => {
+  pressKey: async (key, tabId) => {
     resetForAgentAction();
-    await CdpDriver.pressKey(requireActiveWc(), key, browserAdapter);
+    await CdpDriver.pressKey(requireWc(tabId), key, tabId === undefined ? browserAdapter : undefined);
     onCursorHide();
   },
-  scrollPage: async (direction, amount) => {
+  scrollPage: async (direction, amount, tabId) => {
     resetForAgentAction();
-    await CdpDriver.scrollPage(requireActiveWc(), direction, amount, browserAdapter);
+    await CdpDriver.scrollPage(requireWc(tabId), direction, amount, tabId === undefined ? browserAdapter : undefined);
     onCursorHide();
   },
 };

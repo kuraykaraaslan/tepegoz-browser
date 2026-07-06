@@ -196,8 +196,9 @@ const BROWSING_STRATEGY =
   '\nPrefer to stay in the CURRENT tab: navigate it with browser_update_location. Open a new tab with ' +
   'tab_create_item ONLY when the current page must stay open or you need a side-by-side comparison — ' +
   'and when you do, pass a short groupName naming the task so the new tab is grouped. New tabs open ' +
-  'in the background by default; call tab_update_item with the returned id before using browser_* tools ' +
-  'on that tab. Close tabs you opened with tab_delete_item when they are no longer needed.';
+  'in the background by default; pass the returned id as `tabId` to browser_* tools when working on ' +
+  'that tab. Use tab_update_item only when the tab must become visible/focused. Close tabs you opened ' +
+  'with tab_delete_item when they are no longer needed.';
 
 function systemPrompt(req: ReactRequest): string {
   const toolList = req.tools.map((t) => `- ${t.id} (${t.dangerClass}): ${t.description}`).join('\n');

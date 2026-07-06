@@ -17,7 +17,8 @@ tools, multimodal screenshot aktarımı ve eval/acceptance setleriyle süreci g�
 Önerilen güncel faz iskeleti:
 - **Agent Reliability:** tekil run state machine, iptal/resume/checkpoint, scoped HITL/audit context,
   hata sınıflandırması, retry/recovery ve eval harness.
-- **Browser Reliability:** tab seçme/kapatma/bekleme, action verification, screenshot/vision fallback,
+- **Browser Reliability:** tabId-scoped browser tools, tab seçme/kapatma/bekleme, action verification,
+  screenshot/vision fallback,
   download/upload/clipboard ve tabId-scoped tool çağrıları.
 - **Task Productization:** saved tasks, artifacts, scheduler, templates ve run dashboard.
 - **Tool Ecosystem:** MCP/extension araçlarının policy-gated genişlemesi, web search/fetch ve servis

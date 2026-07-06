@@ -12,7 +12,7 @@ import { showPageCursor, hidePageCursor, isUserControlActive } from '../agent/pa
  * Desktop {@link MacroHost} for `@tepegoz/macro-engine`: implements the deterministic runtime's
  * browser operations over the CDP selector engine ({@link MacroCdp}) + `TabManager`. Element-targeting
  * calls auto-wait (resolve a SelectorChain by polling) — the interpreter never sleeps to "wait" for an
- * element. Navigation reuses the app's scheme-allow-listed `navigateActive` path.
+ * element. Navigation reuses the app's scheme-allow-listed browser navigation path.
  *
  * The macro RUN as a whole is gated at the capability boundary (`macros_create_run` is state_changing
  * → HITL, ADR-0021); finer per-element-step PEP re-gating is a Phase-6 hardening follow-up.
@@ -60,7 +60,7 @@ export function createMacroHost(deps: MacroHostDeps): MacroHost {
 
   return {
     navigate: async (url) => {
-      await browserHost.navigateActive(url); // scheme allow-list + settle enforced inside
+      await browserHost.navigate(url); // scheme allow-list + settle enforced inside
     },
     click: async (chain) => {
       const wc = requireWc();

@@ -55,9 +55,9 @@ Electron app.
 - **HITL/audit callbacks are run-scoped.** `ToolGateway` now supports async-scoped HITL and audit
   handlers so one run cannot overwrite another run's confirmation callbacks. The legacy setters remain
   as process-default test/static seams.
-- **Execution is intentionally serialized for now.** The public state model remains group-aware, but
-  the browser tools still operate through the focused tab and input-action event wiring is process
-  scoped. Until browser tools accept a `tabId`/workspace target end to end, the desktop IPC layer runs
-  at most one active agent task at a time.
+- **Execution is intentionally serialized for now.** The public state model remains group-aware, and
+  browser tools now accept optional `tabId` targets, but input-action event wiring and run UX are still
+  process scoped. Until verification/recovery and run-channel ownership are scoped end to end, the
+  desktop IPC layer runs at most one active agent task at a time.
 - **Phase labels are advisory.** If phase documents and the current TypeScript API disagree, the API
   contract and this ADR addendum are the source of truth for implementation order.

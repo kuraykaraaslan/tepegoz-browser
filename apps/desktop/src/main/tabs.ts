@@ -485,6 +485,18 @@ export default class TabManager {
     });
   }
 
+  /** Navigate a specific existing web tab. Returns false for missing/internal tabs. */
+  static navigateTab(id: string, rawUrl: string): boolean {
+    if (!TabManager.store.has(id)) return false;
+    const view = TabManager.views.get(id);
+    if (view === undefined) return false;
+    const url = toNavigationUrl(rawUrl, homeUrl(), searchUrlForQuery);
+    void view.webContents.loadURL(url).catch((err: unknown) => {
+      Logger.warn('Navigation failed', { url, err: String(err) });
+    });
+    return true;
+  }
+
   static goBack(): void {
     const wc = TabManager.activeView()?.webContents;
     if (wc?.navigationHistory.canGoBack()) wc.navigationHistory.goBack();
@@ -608,6 +620,12 @@ export default class TabManager {
    *  destroyed. The agent reads through this; it never gets the chrome's webContents or contextBridge. */
   static activeWebContents(): WebContents | null {
     const wc = TabManager.activeView()?.webContents;
+    return wc !== undefined && !wc.isDestroyed() ? wc : null;
+  }
+
+  /** A specific tab's WebContents, or null for missing/internal/destroyed tabs. */
+  static webContentsForTab(id: string): WebContents | null {
+    const wc = TabManager.views.get(id)?.webContents;
     return wc !== undefined && !wc.isDestroyed() ? wc : null;
   }
 

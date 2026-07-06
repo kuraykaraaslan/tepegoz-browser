@@ -48,6 +48,15 @@ function urlFromArgs(args: unknown): string | undefined {
   return undefined;
 }
 
+/** Best-effort tab id string from a tool call's args, for tab-scoped policy context. */
+function tabIdFromArgs(args: unknown): string | undefined {
+  if (args !== null && typeof args === 'object' && 'tabId' in args) {
+    const tabId = (args as { tabId?: unknown }).tabId;
+    if (typeof tabId === 'string' && tabId.length > 0) return tabId;
+  }
+  return undefined;
+}
+
 /** The sanitized page text a read tool returned, so it can be recorded as untrusted (taint). */
 function contentFromResult(result: unknown): string | undefined {
   if (result !== null && typeof result === 'object' && 'content' in result) {
@@ -91,6 +100,8 @@ export interface AgentRunHooks {
  */
 export interface AgentRunDeps {
   activeTabUrl: () => string | undefined;
+  /** Resolve a browser tab's committed URL for tabId-scoped browser tools. */
+  tabUrl?: (tabId: string) => string | undefined;
   handoffStrings: { captcha: string; twofa: string };
   /**
    * On-device inference config (engine + selected-model resolver). Injected by the Electron wiring;
@@ -305,7 +316,11 @@ export async function runAgent(
         // The Policy Kernel gets the concrete site + taint of EACH tool call here (this is what
         // makes the sensitive-site lockout and taint→HITL actually fire at runtime).
         ctxFor: (tool, args): InvokeContext => {
-          const targetUrl = urlFromArgs(args) ?? deps.activeTabUrl();
+          const tabId = tabIdFromArgs(args);
+          const targetUrl =
+            urlFromArgs(args) ??
+            (tabId !== undefined ? deps.tabUrl?.(tabId) : undefined) ??
+            deps.activeTabUrl();
           const ctx: InvokeContext = { taintedArgs: taint.isTainted(args) };
           if (targetUrl !== undefined) ctx.targetUrl = targetUrl;
           // create/upload-style tools require an idempotency key at the PEP. The agent supplies a fresh

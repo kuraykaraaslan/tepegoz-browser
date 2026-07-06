@@ -5,8 +5,8 @@ import type { BrowserHost } from './host';
 
 function fakeHost(overrides?: Partial<BrowserHost>): BrowserHost {
   return {
-    navigateActive: () => Promise.resolve({ url: 'https://x', title: 'X' }),
-    readActivePage: () => Promise.resolve({ url: 'https://x', title: 'X', text: 'hello' }),
+    navigate: () => Promise.resolve({ url: 'https://x', title: 'X' }),
+    readPage: () => Promise.resolve({ url: 'https://x', title: 'X', text: 'hello' }),
     snapshotElements: () => Promise.resolve({ url: 'https://x', title: 'X', elements: [] }),
     clickElement: () => Promise.resolve(),
     fillElement: () => Promise.resolve(),
@@ -42,7 +42,27 @@ describe('registerBrowserTools', () => {
     const cap = CapabilityRegistry.get('browser_update_page');
     expect(cap).toBeDefined();
     const result = await cap!.handler({ action: 'click', ref: 3 });
-    expect(clickElement).toHaveBeenCalledWith(3);
+    expect(clickElement).toHaveBeenCalledWith(3, undefined);
     expect(result).toEqual({ ok: true });
+  });
+
+  it('passes tabId through read/snapshot/action tools', async () => {
+    const readPage = vi.fn(() => Promise.resolve({ url: 'https://x', title: 'X', text: 'hello' }));
+    const snapshotElements = vi.fn(() => Promise.resolve({ url: 'https://x', title: 'X', elements: [] }));
+    const fillElement = vi.fn(() => Promise.resolve());
+    registerBrowserTools({ host: fakeHost({ readPage, snapshotElements, fillElement }) });
+
+    await CapabilityRegistry.get('browser_get_page')!.handler({ tabId: 'tab-2' });
+    await CapabilityRegistry.get('browser_get_elements')!.handler({ tabId: 'tab-2' });
+    await CapabilityRegistry.get('browser_update_page')!.handler({
+      action: 'fill',
+      ref: 4,
+      text: 'hello',
+      tabId: 'tab-2',
+    });
+
+    expect(readPage).toHaveBeenCalledWith('tab-2');
+    expect(snapshotElements).toHaveBeenCalledWith('tab-2');
+    expect(fillElement).toHaveBeenCalledWith(4, 'hello', 'tab-2');
   });
 });

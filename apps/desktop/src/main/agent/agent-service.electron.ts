@@ -22,6 +22,12 @@ function activeTabUrl(): string | undefined {
   return active !== undefined && active.url.length > 0 ? active.url : undefined;
 }
 
+/** A specific tab's committed URL (Policy Kernel site context for tabId-scoped browser tools). */
+function tabUrl(tabId: string): string | undefined {
+  const tab = TabManager.getState().tabs.find((t) => t.id === tabId);
+  return tab !== undefined && tab.url.length > 0 ? tab.url : undefined;
+}
+
 /**
  * Desktop adapter over the Electron-free `@tepegoz/agent-runtime`: injects the browser tool host,
  * journal reader, active-tab URL, and the localized handoff copy (`mainStrings().agent.handoff`).
@@ -37,6 +43,7 @@ export default class AgentService {
       hooks,
       {
         activeTabUrl,
+        tabUrl,
         handoffStrings: { captcha: handoff.captcha, twofa: handoff.twofa },
         localInference: { engine: llamaEngine(), resolveModel: () => ModelManager.resolveModel() },
       },

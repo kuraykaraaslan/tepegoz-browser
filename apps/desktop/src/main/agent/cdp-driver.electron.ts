@@ -76,10 +76,8 @@ function axString(value: unknown): string {
 export default class CdpDriver {
   /** The WebContents the debugger is currently attached to (null when detached). */
   private static attached: WebContents | null = null;
-  /** ref (1-based) → backendNodeId, from the latest snapshot. Cleared on re-attach/detach. */
-  private static refMap = new Map<number, number>();
-  /** The WebContents the current refMap belongs to (stale-ref guard across tab switches). */
-  private static refWc: WebContents | null = null;
+  /** Per-tab ref (1-based) → backendNodeId maps, from each tab's latest snapshot. */
+  private static readonly refMaps = new WeakMap<WebContents, Map<number, number>>();
 
   /** Attach + enable the domains we need on `wc`, re-attaching if the active tab changed. */
   private static async ensureAttached(wc: WebContents): Promise<void> {
@@ -96,10 +94,11 @@ export default class CdpDriver {
     CdpDriver.attached = wc;
     // A tab that navigates/closes must not leave us pointing at a dead session.
     wc.debugger.once('detach', () => {
-      if (CdpDriver.attached === wc) CdpDriver.reset();
+      if (CdpDriver.attached === wc) CdpDriver.attached = null;
     });
     wc.once('destroyed', () => {
-      if (CdpDriver.attached === wc) CdpDriver.reset();
+      if (CdpDriver.attached === wc) CdpDriver.attached = null;
+      CdpDriver.refMaps.delete(wc);
     });
     await wc.debugger.sendCommand('DOM.enable');
     await wc.debugger.sendCommand('Accessibility.enable');
@@ -115,13 +114,7 @@ export default class CdpDriver {
         Logger.warn('CDP detach failed', { err: String(err) });
       }
     }
-    CdpDriver.reset();
-  }
-
-  private static reset(): void {
     CdpDriver.attached = null;
-    CdpDriver.refWc = null;
-    CdpDriver.refMap = new Map();
   }
 
   /** Read the active page's actionable elements from the accessibility tree. */
@@ -153,17 +146,17 @@ export default class CdpDriver {
       if (elements.length >= MAX_INTERACTABLE_ELEMENTS) break;
     }
 
-    CdpDriver.refMap = refMap;
-    CdpDriver.refWc = wc;
+    CdpDriver.refMaps.set(wc, refMap);
     return { url: wc.getURL(), title: wc.getTitle(), elements };
   }
 
   /** Resolve a snapshot `ref` to its backendNodeId, guarding against stale refs / tab switches. */
   private static backendNodeId(wc: WebContents, ref: number): number {
-    if (CdpDriver.refWc !== wc) {
+    const refMap = CdpDriver.refMaps.get(wc);
+    if (refMap === undefined) {
       throw new AppError('Element refs are stale — read the page elements again first', 409);
     }
-    const id = CdpDriver.refMap.get(ref);
+    const id = refMap.get(ref);
     if (id === undefined) throw new AppError(`No element with ref ${String(ref)}`, 404);
     return id;
   }
