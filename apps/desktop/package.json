@@ -51,6 +51,7 @@
     "@tepegoz/credential-vault": "workspace:*",
     "@tepegoz/desktop-ipc": "workspace:*",
     "@tepegoz/downloads": "workspace:*",
+    "@tepegoz/downloads-ui": "workspace:*",
     "@tepegoz/ext-agent": "workspace:*",
     "@tepegoz/ext-macros": "workspace:*",
     "@tepegoz/ext-popup-blocker": "workspace:*",

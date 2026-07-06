@@ -52,6 +52,7 @@ export interface MainMenuActions {
   newTab: () => void;
   reopenTab: () => void;
   reload: () => void;
+  openDownloads: () => void;
   openSettings: () => void;
   exit: () => void;
 }
@@ -103,7 +104,7 @@ export function buildMainMenuModel(copy: MainMenuCopy, actions: MainMenuActions)
       id: 'data-actions',
       items: [
         action('passwords', copy.menu.passwords, copy.menu.short.passwords, 'key'),
-        action('downloads', copy.menu.downloads, copy.menu.short.downloads, 'download'),
+        action('downloads', copy.menu.downloads, copy.menu.short.downloads, 'download', actions.openDownloads),
         action('tab-groups', copy.menu.tabGroups, copy.menu.short.tabGroups, 'layers'),
       ],
     },

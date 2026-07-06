@@ -3,6 +3,7 @@ import { coreDict, resolveLocale, type Locale } from '@tepegoz/i18n';
 import { I18nProvider, useT } from '@tepegoz/i18n/react';
 import { Menu, type MenuFlyout } from '@tepegoz/browser-menu';
 import {
+  INTERNAL_DOWNLOADS_URL,
   INTERNAL_SETTINGS_URL,
   isExtensionEnabled,
   type ExtensionState,
@@ -131,6 +132,7 @@ function MainMenuBody({
       newTab: () => act(() => window.tepegoz.createTab()),
       reopenTab: () => act(() => window.tepegoz.reopenClosedTab()),
       reload: () => act(() => window.tepegoz.tabReload()),
+      openDownloads: () => act(() => window.tepegoz.navigateTab(INTERNAL_DOWNLOADS_URL)),
       openSettings: () => act(() => window.tepegoz.navigateTab(INTERNAL_SETTINGS_URL)),
       exit: () => act(() => window.tepegoz.quitApp()),
     },

@@ -83,7 +83,7 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
     kontratlari, preferences alanlari ve phase/layer kurallari eklendi.
   - [x] Slice 2: DownloadService + quarantine + Electron `will-download` adapter + SQLite projection +
     redacted Event Journal audit eklendi.
-  - [ ] Slice 3: `@tepegoz/downloads-ui`, `tepegoz://downloads` ve download settings.
+  - [x] Slice 3: `@tepegoz/downloads-ui`, `tepegoz://downloads`, main-menu action ve download settings.
   - [ ] Slice 4: ClipboardService + generic WebPermissionBroker.
   - [ ] Slice 5: `download_*` / `clipboard_*` capability tools + HITL entegrasyonu.
 - [ ] Action recovery ekle: click/fill sonrasi beklenen degisim yoksa yeniden snapshot ve alternatif
@@ -151,7 +151,8 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 - [x] `3aaa286 Surface agent startup failures in panel`
 - [x] `6b9f626 Complete agent reliability phase`
 - [x] `b6e3083 Add download and clipboard foundations`
-- [ ] Slice 2 commit: DownloadService/quarantine/audit (commit sonrasi hash ile guncellenecek)
+- [x] `21224b2 Wire quarantined browser downloads`
+- [ ] Slice 3 commit: Downloads UI/settings (commit sonrasi hash ile guncellenecek)
 
 ## Siradaki En Mantikli Dilim
 
@@ -164,7 +165,8 @@ Download/clipboard icin kalan siradaki is:
 - [x] DownloadService'i Electron `will-download` ile bagla.
 - [x] Karantina path/store + hash + unknown SafeBrowsing verdict akisini uygula.
 - [x] Download IPC handlerlari ve Event Journal audit eventlerini ekle.
-- [ ] Ardindan downloads UI/settings ve clipboard broker dilimine gec.
+- [x] Ardindan downloads UI/settings ve clipboard broker dilimine gec.
+- [ ] Siradaki: ClipboardService + generic WebPermissionBroker dilimine gec.
 
 ## Ek Dogrulama Kaydi - Download/Clipboard Track
 
@@ -180,6 +182,12 @@ Download/clipboard icin kalan siradaki is:
 - [x] `pnpm --filter @tepegoz/persistence lint`
 - [x] `pnpm --filter @tepegoz/desktop typecheck`
 - [x] `pnpm --filter @tepegoz/desktop lint`
+- [x] `pnpm --filter @tepegoz/downloads-ui test`
+- [x] `pnpm --filter @tepegoz/downloads-ui typecheck`
+- [x] `pnpm --filter @tepegoz/downloads-ui lint`
+- [x] `pnpm --filter @tepegoz/settings-ui test`
+- [x] `pnpm --filter @tepegoz/settings-ui typecheck`
+- [x] `pnpm --filter @tepegoz/navigation test`
 - [ ] `pnpm --filter @tepegoz/persistence test` — blocked by local native ABI mismatch:
   `better-sqlite3.node` was compiled for NODE_MODULE_VERSION 130; current Node requires 127.
 

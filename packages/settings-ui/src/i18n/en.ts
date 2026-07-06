@@ -72,6 +72,18 @@ export const en = {
   homepageDesc: 'Opened for new tabs, the Home button, and a blank address-bar submit.',
   homepagePlaceholder: 'https://example.com',
 
+  // --- Downloads ---
+  downloadsTitle: 'Downloads',
+  downloadsSubtitle: 'Where browser downloads are released after quarantine.',
+  downloadLocationLabel: 'Download location',
+  downloadLocationDesc: 'Leave empty to use the operating system Downloads folder.',
+  downloadLocationPlaceholder: 'System Downloads folder',
+  downloadAskEachTime: 'Ask where to save each file',
+  downloadAskEachTimeDesc: 'When releasing a quarantined file, choose the final save path.',
+  clearDownloadsLabel: 'Download history',
+  clearDownloadsDesc: 'Remove completed, blocked, canceled, and failed downloads from the list.',
+  clearDownloadsButton: 'Clear download history',
+
   // --- Notifications ---
   notificationsTitle: 'Notifications',
   notifications: 'Enable notifications',

@@ -38,6 +38,8 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       contracts, download preferences, Event Journal event names, and layer rules.
 - [x] Slice 2 service: desktop `DownloadService` wires `will-download`, saves first to quarantine, hashes the
       file, stores a SQLite projection, and emits redacted Event Journal audit records.
+- [x] Slice 3 UI/settings: `@tepegoz/downloads-ui`, `tepegoz://downloads`, main-menu Downloads action, and
+      Settings download location / ask-each-time / clear-history controls.
 - [ ] `will-download` intercept in the browsing session → **quarantine** the file (temp, not-yet-trusted) +
       compute file hash + check via Phase 2 **`SafeBrowsingService`** (reuse, do NOT re-implement); community
       blocklist reuse where present
@@ -47,7 +49,7 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       + timestamp + agent task/`correlationId` (append-only "shown=recorded", ADR-0004)
 - [ ] Expose a `download_*` tool in the **Capability Plane** (Policy Kernel gated; **agent access
       deny-by-default**, HITL for any state-changing save) — never a direct renderer/agent filesystem write
-- [ ] **`@tepegoz/downloads` (headless store)** + **`@tepegoz/downloads-ui`** (presentational): list, progress,
+- [x] **`@tepegoz/downloads` (headless store)** + **`@tepegoz/downloads-ui`** (presentational): list, progress,
       pause/resume/cancel, open, reveal-in-folder; actions injected via callbacks (Electron-free leaf)
 - [ ] *Risk (ADR required):* download trust model — agent-initiated download security class, quarantine
       lifecycle, and the "release from quarantine" HITL gate

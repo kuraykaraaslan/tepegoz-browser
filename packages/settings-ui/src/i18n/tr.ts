@@ -71,6 +71,18 @@ export const tr: SettingsStrings = {
   homepageDesc: 'Yeni sekmeler, Ana Sayfa düğmesi ve boş adres çubuğu gönderiminde açılır.',
   homepagePlaceholder: 'https://ornek.com',
 
+  // --- İndirilenler ---
+  downloadsTitle: 'İndirilenler',
+  downloadsSubtitle: 'Tarayıcı indirmelerinin karantinadan çıktıktan sonra bırakılacağı yer.',
+  downloadLocationLabel: 'İndirme konumu',
+  downloadLocationDesc: 'İşletim sisteminin İndirilenler klasörünü kullanmak için boş bırakın.',
+  downloadLocationPlaceholder: 'Sistem İndirilenler klasörü',
+  downloadAskEachTime: 'Her dosya için nereye kaydedileceğini sor',
+  downloadAskEachTimeDesc: 'Karantinadaki dosya serbest bırakılırken son kayıt yolunu seç.',
+  clearDownloadsLabel: 'İndirme geçmişi',
+  clearDownloadsDesc: 'Tamamlanan, engellenen, iptal edilen ve başarısız indirmeleri listeden kaldırır.',
+  clearDownloadsButton: 'İndirme geçmişini temizle',
+
   // --- Bildirimler ---
   notificationsTitle: 'Bildirimler',
   notifications: 'Bildirimleri etkinleştir',

@@ -43,6 +43,7 @@ import { AppearanceSection, LanguageRegionSection } from './settings-appearance-
 import { LocalActionsSection, LocalModelsSection, McpConnectionsSection, ProvidersSection } from './settings-ai-panels';
 import {
   AboutSection,
+  DownloadSettingsSection,
   FileOperationsSection,
   PasswordsSection,
   SearchStartupSection,
@@ -208,16 +209,10 @@ export function SettingsPage({
     {
       id: 'downloads',
       group: G_GENERAL,
-      label: s.coming.downloads.title,
+      label: s.downloadsTitle,
       icon: <IconDownload />,
-      searchText: `${s.coming.downloads.title} ${s.coming.downloads.description}`,
-      content: (
-        <ComingSoonCard
-          title={s.coming.downloads.title}
-          description={s.coming.downloads.description}
-          items={s.coming.downloads.items}
-        />
-      ),
+      searchText: `${s.downloadsTitle} ${s.downloadLocationLabel} ${s.downloadAskEachTime} ${s.clearDownloadsLabel}`,
+      content: <DownloadSettingsSection prefs={prefs} setPref={setPref} />,
     },
     {
       id: 'accessibility',

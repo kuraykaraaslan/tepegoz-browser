@@ -5,6 +5,7 @@ import { Modal } from '@tepegoz/ui';
 import { browserDict, sidebarDict, userMenuDict } from '../../i18n';
 import {
   INTERNAL_BOOKMARKS_URL,
+  INTERNAL_DOWNLOADS_URL,
   INTERNAL_EXTENSIONS_URL,
   INTERNAL_HISTORY_URL,
   INTERNAL_SETTINGS_URL,
@@ -32,6 +33,7 @@ import { useExtensionCatalog } from './extensions/useExtensionCatalog';
 import { BrowserChrome } from '@tepegoz/browser-chrome';
 import { BookmarksBar } from '@tepegoz/bookmarks-bar';
 import { HistoryPage } from '@tepegoz/history-ui';
+import { DownloadsPage } from '@tepegoz/downloads-ui';
 import { BookmarksManager } from '@tepegoz/bookmarks-ui';
 import { ExtensionsPage } from './components/ExtensionsPage';
 import { ExtensionTray } from './components/ExtensionTray';
@@ -305,6 +307,7 @@ export function App() {
   const settingsActive = currentUrl === INTERNAL_SETTINGS_URL;
   const extensionsActive = currentUrl === INTERNAL_EXTENSIONS_URL;
   const historyActive = currentUrl === INTERNAL_HISTORY_URL;
+  const downloadsActive = currentUrl === INTERNAL_DOWNLOADS_URL;
   const bookmarksActive = currentUrl === INTERNAL_BOOKMARKS_URL;
   // An extension `page` surface: tepegoz://<extension-id> → render that extension's page component.
   const pageExtIds = registry.filter((d) => d.manifest.surfaces.includes('page')).map((d) => d.id);
@@ -345,6 +348,18 @@ export function App() {
     if (!enabled && extSurfaces.activeSurface?.id === id) extSurfaces.closeSurface();
     if (!enabled && extSurfaces.sidebarExtId === id) extSurfaces.closeSidebar();
   }
+
+  const downloadList = useCallback(() => window.tepegoz.listDownloads(), []);
+  const downloadCommand = useCallback(
+    (input: Parameters<typeof window.tepegoz.commandDownload>[0]) =>
+      window.tepegoz.commandDownload(input),
+    [],
+  );
+  const downloadSubscribe = useCallback(
+    (callback: Parameters<typeof window.tepegoz.onDownloadsState>[0]) =>
+      window.tepegoz.onDownloadsState(callback),
+    [],
+  );
 
   return (
     <I18nProvider locale={locale}>
@@ -493,6 +508,15 @@ export function App() {
                   list={omniboxHistory.historyList}
                   remove={omniboxHistory.historyRemove}
                   clear={omniboxHistory.historyClear}
+                />
+              </div>
+            )}
+            {downloadsActive && (
+              <div className="absolute inset-0 bg-surface-system">
+                <DownloadsPage
+                  list={downloadList}
+                  command={downloadCommand}
+                  subscribe={downloadSubscribe}
                 />
               </div>
             )}

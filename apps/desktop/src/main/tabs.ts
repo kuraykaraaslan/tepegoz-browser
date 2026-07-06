@@ -8,6 +8,7 @@ import {
 import { Logger } from '@tepegoz/libs';
 import {
   INTERNAL_BOOKMARKS_URL,
+  INTERNAL_DOWNLOADS_URL,
   INTERNAL_EXTENSIONS_URL,
   INTERNAL_HISTORY_URL,
   IpcChannels,
@@ -300,6 +301,7 @@ export default class TabManager {
     const r = mainStrings();
     if (url === INTERNAL_EXTENSIONS_URL) return r.extensions.title;
     if (url === INTERNAL_HISTORY_URL) return r.history.title;
+    if (url === INTERNAL_DOWNLOADS_URL) return r.downloads.title;
     if (url === INTERNAL_BOOKMARKS_URL) return r.bookmarks.title;
     // An extension `page` surface (tepegoz://<extension-id>) is titled from the extension's manifest.
     const extId = extensionIdFromPageUrl(url);

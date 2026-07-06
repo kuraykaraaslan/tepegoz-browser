@@ -143,6 +143,59 @@ export function SearchStartupSection({
   );
 }
 
+export function DownloadSettingsSection({
+  prefs,
+  setPref,
+}: {
+  prefs: Preferences;
+  setPref: (patch: Partial<Preferences>) => void;
+}) {
+  const s = useT(settingsDict);
+
+  function clearDownloads(): void {
+    void window.tepegoz.listDownloads().then((downloads) => {
+      for (const item of downloads) {
+        if (['completed', 'blocked', 'canceled', 'failed'].includes(item.status)) {
+          void window.tepegoz.commandDownload({ id: item.id, action: 'clear' });
+        }
+      }
+    });
+  }
+
+  return (
+    <Card title={s.downloadsTitle} subtitle={s.downloadsSubtitle}>
+      <div className="space-y-5">
+        <Input
+          id="download-directory"
+          label={s.downloadLocationLabel}
+          hint={s.downloadLocationDesc}
+          placeholder={s.downloadLocationPlaceholder}
+          value={prefs.downloadDirectory}
+          onChange={(e) => {
+            setPref({ downloadDirectory: e.target.value });
+          }}
+        />
+        <Toggle
+          id="download-ask-each-time"
+          label={s.downloadAskEachTime}
+          description={s.downloadAskEachTimeDesc}
+          checked={prefs.downloadAskEachTime}
+          onChange={(v) => {
+            setPref({ downloadAskEachTime: v });
+          }}
+        />
+        <div>
+          <p className="text-sm font-medium text-text-primary">{s.clearDownloadsLabel}</p>
+          <p className="mb-2 text-xs text-text-secondary">{s.clearDownloadsDesc}</p>
+          <Button size="sm" variant="outline" onClick={clearDownloads}>
+            {s.clearDownloadsButton}
+          </Button>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 /**
  * File operations: the folder whitelist that sandboxes the AI assistant's file tools. Each folder
  * carries a permission mode (read / read-write / full) and a recursive flag; the grant's mode is the

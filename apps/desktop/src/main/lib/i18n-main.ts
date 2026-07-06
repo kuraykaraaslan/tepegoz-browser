@@ -4,6 +4,7 @@ import { agentDict } from '@tepegoz/ext-agent/i18n';
 import { bookmarksUiDict } from '@tepegoz/bookmarks-ui/i18n';
 import { extensionsDict } from '@tepegoz/extensions-ui/i18n';
 import { historyDict } from '@tepegoz/history-ui/i18n';
+import { downloadsDict } from '@tepegoz/downloads-ui/i18n';
 import { browserDict } from '../../i18n';
 import PreferenceStore from '@tepegoz/preferences';
 
@@ -23,6 +24,7 @@ export function mainStrings(): {
   bookmarks: typeof bookmarksUiDict.en;
   browser: typeof browserDict.en;
   common: typeof coreDict.en.common;
+  downloads: typeof downloadsDict.en;
   errors: typeof coreDict.en.errors;
   extensions: typeof extensionsDict.en;
   history: typeof historyDict.en;
@@ -35,6 +37,7 @@ export function mainStrings(): {
     browser: pick(browserDict, l),
     // The settings tab title / menu entry reuse the shared-core `common.settings` (no re-translation).
     common: pick(coreDict, l).common,
+    downloads: pick(downloadsDict, l),
     // Boundary error messages (e.g. the untrusted-sender rejection) come from the shared core too.
     errors: pick(coreDict, l).errors,
     extensions: pick(extensionsDict, l),
