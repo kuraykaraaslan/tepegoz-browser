@@ -49,7 +49,9 @@ export default class Planner {
       'a new tab is genuinely needed (the current page must stay open or a side-by-side comparison). ' +
       'New tabs open in the background by default, so pass the returned id as `tabId` to browser_* tools ' +
       'when working on that tab; use tab_update_item only when the tab must become visible/focused. ' +
-      'Clean up agent-opened tabs with tab_delete_item when done. ' +
+      'After browser_update_page or navigation, verify the result with browser_validate_page, ' +
+      'browser_get_page, or browser_get_elements before continuing. Clean up agent-opened tabs with ' +
+      'tab_delete_item when done. ' +
       'Output ONLY JSON of the form ' +
       '{"goal": string, "steps": [{"id": string, "tool": string, "args": object, "rationale": string, "dependsOn": string[]}]}. ' +
       `Use ONLY these tools (by exact id):\n${toolList}\n` +

@@ -13,6 +13,8 @@ export interface BrowserHost {
   navigate(url: string, tabId?: string): Promise<{ url: string; title: string }>;
   /** Read a page: its url, title, and the raw (unsanitized) visible text. */
   readPage(tabId?: string): Promise<{ url: string; title: string; text: string }>;
+  /** Wait for a page's current load to settle. */
+  waitForLoad(tabId?: string, timeoutMs?: number): Promise<{ url: string; title: string }>;
   /** Read a page's actionable elements (accessibility tree). The host keeps the
    *  `ref → node` map for the action calls below, so `ref`s stay valid until the next snapshot. */
   snapshotElements(tabId?: string): Promise<{ url: string; title: string; elements: RawInteractable[] }>;

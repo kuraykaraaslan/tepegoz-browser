@@ -14,7 +14,9 @@ import { showPageCursor, hidePageCursor, isUserControlActive, resetForAgentActio
  * the built-in agent tools (navigate + read active page via the isolated view, list/create tabs).
  * Keeping this here lets the tools package stay Electron-free.
  */
-async function waitForLoad(wc: WebContents): Promise<void> {
+const DEFAULT_LOAD_TIMEOUT_MS = 15_000;
+
+async function waitForLoad(wc: WebContents, timeoutMs = DEFAULT_LOAD_TIMEOUT_MS): Promise<void> {
   await new Promise<void>((resolve) => {
     const onDone = (): void => {
       clearTimeout(timer);
@@ -23,7 +25,7 @@ async function waitForLoad(wc: WebContents): Promise<void> {
     const timer = setTimeout(() => {
       wc.removeListener('did-stop-loading', onDone);
       resolve();
-    }, 15_000);
+    }, timeoutMs);
     wc.once('did-stop-loading', onDone);
   });
 }
@@ -130,6 +132,11 @@ const browserAdapter = new HumanInputAdapter(cdpSend, onCursorMove, onInputActio
 export const browserHost: BrowserHost & TabHost = {
   navigate,
   readPage,
+  waitForLoad: async (tabId, timeoutMs) => {
+    const wc = requireWc(tabId);
+    await waitForLoad(wc, timeoutMs);
+    return { url: wc.getURL(), title: wc.getTitle() };
+  },
   listTabs: () => {
     const state = TabManager.getState();
     return state.tabs.map((t) => ({

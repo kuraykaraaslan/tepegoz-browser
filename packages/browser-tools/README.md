@@ -18,10 +18,11 @@ ADR-0008) is pure and lives alongside the tool registrations. Extracted from `ap
 - **`registerBrowserTools({ host })`** — registers every `browser_*` tool into the `CapabilityRegistry`,
   bound to the given `BrowserHost`. Always-on; the app calls it once at startup.
 - **`BrowserHost`** — the injected host contract: `navigate(url, tabId?)`, `readPage(tabId?)`,
-  `snapshotElements(tabId?)`, `clickElement(ref, tabId?)`, `fillElement(ref, text, tabId?)`,
-  `pressKey(key, tabId?)`, `scrollPage(direction, amount?, tabId?)`. Omitting `tabId` preserves active
-  tab behavior; passing one scopes the operation to that browser tab. `ref`s stay valid until the next
-  `snapshotElements()` call on the same tab.
+  `waitForLoad(tabId?, timeoutMs?)`, `snapshotElements(tabId?)`, `clickElement(ref, tabId?)`,
+  `fillElement(ref, text, tabId?)`, `pressKey(key, tabId?)`, `scrollPage(direction, amount?, tabId?)`.
+  Omitting `tabId` preserves active tab behavior; passing one scopes the operation to that browser tab.
+  `browser_validate_page` uses `waitForLoad` + `readPage` as a lightweight post-action verification
+  tool. `ref`s stay valid until the next `snapshotElements()` call on the same tab.
 - **`buildPageSnapshot`** / **`PageSnapshot`** — url/title/sanitized-text snapshot of the active page.
 - **`buildElementsSnapshot`** / **`ElementsSnapshot`** — the finalized, sanitized interactable-element
   list (built on `@tepegoz/tool-executor`'s `finalizeElements`) for click/fill targeting.

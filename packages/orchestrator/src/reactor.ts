@@ -198,7 +198,8 @@ const BROWSING_STRATEGY =
   'and when you do, pass a short groupName naming the task so the new tab is grouped. New tabs open ' +
   'in the background by default; pass the returned id as `tabId` to browser_* tools when working on ' +
   'that tab. Use tab_update_item only when the tab must become visible/focused. Close tabs you opened ' +
-  'with tab_delete_item when they are no longer needed.';
+  'with tab_delete_item when they are no longer needed. After browser_update_page or navigation, verify ' +
+  'the result with browser_validate_page, browser_get_page, or browser_get_elements before continuing.';
 
 function systemPrompt(req: ReactRequest): string {
   const toolList = req.tools.map((t) => `- ${t.id} (${t.dangerClass}): ${t.description}`).join('\n');

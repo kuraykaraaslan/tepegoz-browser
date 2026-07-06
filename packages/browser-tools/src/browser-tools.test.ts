@@ -7,6 +7,7 @@ function fakeHost(overrides?: Partial<BrowserHost>): BrowserHost {
   return {
     navigate: () => Promise.resolve({ url: 'https://x', title: 'X' }),
     readPage: () => Promise.resolve({ url: 'https://x', title: 'X', text: 'hello' }),
+    waitForLoad: () => Promise.resolve({ url: 'https://x', title: 'X' }),
     snapshotElements: () => Promise.resolve({ url: 'https://x', title: 'X', elements: [] }),
     clickElement: () => Promise.resolve(),
     fillElement: () => Promise.resolve(),
@@ -29,6 +30,7 @@ describe('registerBrowserTools', () => {
       'browser_get_page',
       'browser_update_location',
       'browser_update_page',
+      'browser_validate_page',
     ]);
     for (const d of CapabilityRegistry.list()) {
       expect(d.source).toBe('builtin');
@@ -64,5 +66,19 @@ describe('registerBrowserTools', () => {
     expect(readPage).toHaveBeenCalledWith('tab-2');
     expect(snapshotElements).toHaveBeenCalledWith('tab-2');
     expect(fillElement).toHaveBeenCalledWith(4, 'hello', 'tab-2');
+  });
+
+  it('validates page text after waiting for load', async () => {
+    const waitForLoad = vi.fn(() => Promise.resolve({ url: 'https://x', title: 'X' }));
+    registerBrowserTools({ host: fakeHost({ waitForLoad }) });
+    const cap = CapabilityRegistry.get('browser_validate_page');
+    expect(await cap!.handler({ tabId: 'tab-2', containsText: 'ell', timeoutMs: 1000 })).toEqual({
+      url: 'https://x',
+      title: 'X',
+      ok: true,
+      containsText: 'ell',
+    });
+    expect(await cap!.handler({ containsText: 'missing' })).toMatchObject({ ok: false });
+    expect(waitForLoad).toHaveBeenCalledWith('tab-2', 1000);
   });
 });

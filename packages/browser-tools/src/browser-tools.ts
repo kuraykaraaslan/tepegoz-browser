@@ -15,6 +15,10 @@ import type { BrowserHost } from './host';
 
 const TargetTabArgs = z.object({ tabId: z.string().min(1).max(128).optional() }).strip();
 const NavigateArgs = TargetTabArgs.extend({ url: z.string().min(1).max(4096) });
+const ValidatePageArgs = TargetTabArgs.extend({
+  containsText: z.string().min(1).max(500).optional(),
+  timeoutMs: z.number().int().positive().max(60_000).optional(),
+});
 const Ref = z.number().int().positive().max(10_000);
 /** One page interaction, discriminated by `action` so each variant validates its own args. */
 const UpdatePageArgs = z.discriminatedUnion('action', [
@@ -92,6 +96,26 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
     handler: async (args) => {
       const { url, title, elements } = await host.snapshotElements(args.tabId);
       return buildElementsSnapshot(elements, url, title);
+    },
+  });
+
+  CapabilityRegistry.register({
+    descriptor: descriptor(
+      'browser_validate_page',
+      'read',
+      'Wait for a page load to settle and optionally verify visible text. args: ' +
+        '{ tabId?: string, containsText?: string, timeoutMs?: number } — omit tabId for the active tab. ' +
+        'Returns { url, title, ok, containsText? }.',
+      { aiTask: 'read_understand' },
+    ),
+    inputSchema: ValidatePageArgs,
+    handler: async (args) => {
+      await host.waitForLoad(args.tabId, args.timeoutMs);
+      const { url, title, text } = await host.readPage(args.tabId);
+      const ok = args.containsText === undefined || text.includes(args.containsText);
+      return args.containsText === undefined
+        ? { url, title, ok }
+        : { url, title, ok, containsText: args.containsText };
     },
   });
 

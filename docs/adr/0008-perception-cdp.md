@@ -25,5 +25,6 @@ optional, future-ready fast path; Tepegöz may also inject WebMCP into its own s
 CDP/a11y perception is implemented. Tab tools now include list/get/create/update(active)/delete, and
 agent-created tabs open in the background by default. `browser_*` tools accept an optional `tabId`, so
 the agent can read, snapshot, navigate, and interact with a named browser tab while preserving the
-active-tab fallback. The remaining browser-reliability gap before concurrent multi-group execution is
-verification/recovery depth around these tab-scoped actions.
+active-tab fallback. `browser_validate_page` provides a lightweight wait + visible-text verification
+step after navigation or page interaction. The remaining browser-reliability gap before concurrent
+multi-group execution is deeper recovery around these tab-scoped actions.
