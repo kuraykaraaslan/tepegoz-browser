@@ -19,8 +19,8 @@ them** with `- [ ]` / `- [x]`. This keeps the process resumable across sessions.
 | Phase | File | Goal | Status |
 |---|---|---|---|
 | 0 | [phase-0-foundation.md](phase-0-foundation.md) | Monorepo scaffold + core contracts + CI | 🟡 Core done (packaging/signing + release/update hardening + Phase-1a-bound i18n deferred) |
-| 1a | [phase-1a-walking-skeleton-mvp.md](phase-1a-walking-skeleton-mvp.md) | Walking-skeleton MVP (BYO-key local-first agentic core) | ⬜ Not started |
-| 1b | [phase-1b-agentic-deepening.md](phase-1b-agentic-deepening.md) | Parallel DAG + durable handoff + per-task memory + prompt/rules | ⬜ Not started |
+| 1a | [phase-1a-walking-skeleton-mvp.md](phase-1a-walking-skeleton-mvp.md) | Walking-skeleton MVP (BYO-key local-first agentic core) | 🟡 In progress (agent console/runtime/tool plane/browser tools live; e2e + remaining gates pending) |
+| 1b | [phase-1b-agentic-deepening.md](phase-1b-agentic-deepening.md) | Parallel DAG + durable handoff + per-task memory + prompt/rules | 🟡 Early down-payments (tabId-scoped browser control + validation; durable resume/parallel DAG pending) |
 | 2 | [phase-2-adapters-safe-browsing.md](phase-2-adapters-safe-browsing.md) | Integration adapters + Safe-Browsing Suite | ⬜ Not started |
 | 2b | [phase-2b-daily-driver-ux.md](phase-2b-daily-driver-ux.md) | Daily-driver browser UX (tabs/PWA/DevTools) — parallel with Phase 2 | ⬜ Not started |
 | 2c | [phase-2c-classic-browser-essentials.md](phase-2c-classic-browser-essentials.md) | Classic browser essentials + downloads (find/print/PDF/reader/translate/bookmarks/private/permissions) — parallel with Phase 2/2b | ⬜ Not started |
@@ -39,6 +39,19 @@ them** with `- [ ]` / `- [x]`. This keeps the process resumable across sessions.
 | E | [phase-extras.md](phase-extras.md) | Extras — special-track, demand-gated items off the 0–12 critical path (e.g. DRM/Widevine) | ⬜ Not started |
 
 Status legend: ⬜ Not started · 🟡 In progress · ✅ Done (DoD passed)
+
+## Current Claude-level agent hardening track
+
+See [`../plans/code-claude-by-codex.md`](../plans/code-claude-by-codex.md) for the resumable plan and
+[`../docs/new/claude-versus.md`](../docs/new/claude-versus.md) for the research/status table. The completed
+work has been folded into Phase 1a/1b as follows:
+
+- [x] Phase 1a: run-scoped `ToolGateway` HITL/audit context, cancellation wiring, startup-error visibility.
+- [x] Phase 1a: tab tool expansion (`tab_get_item`, `tab_update_item`, `tab_delete_item`) and background tab
+      creation.
+- [x] Phase 1b down-payment: `tabId`-scoped browser tools and per-WebContents CDP element references.
+- [x] Phase 1b down-payment: `browser_validate_page` action-verification tool.
+- [ ] Phase 1b remaining: checkpoint/resume, retry/recovery taxonomy, screenshot/vision fallback.
 
 > **Phase E (Extras) is not sequenced.** It is not numbered into the 0–12 flow and nothing depends on it; each
 > item is a recorded, demand-gated decision that graduates to its own branch/ADR only when pull is shown.

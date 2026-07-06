@@ -55,6 +55,8 @@ Effect Ledger + perception-observation events. Narrative: **"Demonstrate once, r
       to variables (never inlined as constants)
 
 ### L3/L4 — Self-correcting golden assertions (verified-done, not vibe-done)
+- [x] Foundation primitive shipped: `browser_validate_page` can wait for target-tab load, read URL/title/page text,
+      and check expected text after navigation/page actions. Full recipe assertions below still remain Phase 6 work.
 - [ ] Recipes/plans carry **deterministic post-conditions** captured at distill time (expected a11y node, URL
       pattern, a `journal_*` effect, an extracted numeric)
 - [ ] After each node, evaluate assertions **without a model**; on failure run the bounded ladder:

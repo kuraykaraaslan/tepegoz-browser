@@ -1,6 +1,6 @@
 # Phase 1b — Agentic Deepening
 
-**Status:** ⬜ Not started  ·  **Estimate:** ~4–6 months  ·  **Depends on:** Phase 1a
+**Status:** 🟡 Early down-payments  ·  **Estimate:** ~4–6 months  ·  **Depends on:** Phase 1a
 **Goal:** Full agentic capabilities on top of the walking skeleton: multi-tab parallelism, durability
 (checkpoint/resume + cross-agent handoff), per-task memory (GB scale), prompt/rules engine, vision
 fallback, full capability plane, **tepegoz's MCP SERVER surface**, local SLM.
@@ -17,7 +17,8 @@ fallback, full capability plane, **tepegoz's MCP SERVER surface**, local SLM.
 
 ### L3 — Parallel DAG execution (Shadow Workspace)
 - [ ] Scheduler: topological order → independent branches to parallel workers; join sync; **adaptive throttling** (default 5)
-- [ ] sync/async/multi-tab **single abstraction**; each branch isolated BrowserContext + Agent Console stream
+- [~] sync/async/multi-tab **single abstraction**; each branch isolated BrowserContext + Agent Console stream _(down-payment shipped: browser tools accept optional `tabId`, desktop `BrowserHost` resolves target `WebContents` by tab, `AgentRunDeps.tabUrl(tabId)` feeds the correct URL into policy context, and CDP element refs are isolated per WebContents. Still pending: true parallel branch scheduler, isolated BrowserContexts per branch, and per-branch Agent Console streams.)_
+- [x] Tab-control foundation for multi-tab tasks: `tab_create_item`, `tab_list_items`, `tab_get_item`, `tab_update_item`, and `tab_delete_item` are available behind the CapabilityRegistry/ToolGateway; new tabs open in the background by default to avoid stealing focus.
 
 ### L2 — Durable handoff (extra requirement #1)
 - [ ] XState node state machine (PENDING→READY→LEASED→RUNNING→{SUCCEEDED|FAILED|AWAITING_HITL|COMPENSATING})
@@ -25,6 +26,9 @@ fallback, full capability plane, **tepegoz's MCP SERVER surface**, local SLM.
 - [ ] **Effect Ledger** (`idempotencyKey` + `fencing_token`) → no double side-effect on replay; Lease Manager (TTL + heartbeat)
 - [ ] **agent-agnostic Context Package** (goal + hashed guardrail set + memory ref + last checkpoint LSN + open nodes + artifact summaries); provider transcript NOT embedded
 - [ ] Recovery Coordinator + power-monitor resume; **handoff only at safe checkpoint boundaries**; rehydration protocol (rebuild CDP/MCP/sandbox/OAuth); different-model thinking-loss accepted + summary recovery
+- [x] Run-scope isolation foundation: HITL/audit callbacks are scoped with `ToolGateway.runWithHandlers`, so future resumed/parallel runs do not share mutable handler state.
+- [x] Cancel/start failure foundation: active run controllers are registered for cancellation, overlapping runs are fail-closed for now, and pre-stream startup failures surface in the Agent Console as `error` events.
+- [ ] Recovery taxonomy: classify transient navigation timeouts, stale element refs, page-changed failures, policy denial, auth/handoff, and malformed model output before retrying.
 
 ### L2 — Per-task memory (extra requirement #2, GB scale)
 - [ ] `mem_<taskId>.sqlite` + CAS isolation; tiered HOT(RAM/LRU)/WARM(SQLite+FTS5+vec)/COLD(zstd)/CAS(blob)
@@ -40,6 +44,8 @@ fallback, full capability plane, **tepegoz's MCP SERVER surface**, local SLM.
 
 ### L4 — Vision fallback
 - [ ] Vision only when DOM insufficient/layout changed (not every step); vision-heavy steps routed to Opus (high-res vision is Opus 4.7+)
+- [x] Non-vision action verification foundation: `browser_validate_page` waits for load, reads the target page, returns URL/title, and optionally verifies expected text after navigation/page actions.
+- [ ] Screenshot/vision fallback: when DOM/a11y + `browser_validate_page` are insufficient, capture the target tab screenshot and pass a bounded visual context to the model.
 
 ### L5 — Full Capability Plane + **tepegoz = MCP SERVER**
 - [ ] **SkillRuntime** (SKILL.md frontmatter + lazy progressive-disclosure) + SkillRegistry + versioning
