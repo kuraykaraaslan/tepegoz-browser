@@ -176,6 +176,7 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 - [x] `84352e6 Add browser screenshot fallback package`
 - [x] `cfaea44 Add task productization domain`
 - [x] `9652a81 Add task persistence projections`
+- [x] `8ae3adb Add desktop task scheduler service`
 
 ## Siradaki En Mantikli Dilim
 
