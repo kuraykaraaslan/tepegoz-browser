@@ -32,7 +32,7 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 | Faz | Durum | Not |
 |-----|-------|-----|
 | 1. Agent Reliability | Tamamlandi | Run izolasyonu, state machine/checkpoint, hata siniflandirmasi, recovery ve eval testleri tamamlandi. |
-| 2. Browser Reliability | Devam ediyor | TabId scoped browser tools ve sayfa dogrulama tamamlandi; vision/download/upload/clipboard kaldi. |
+| 2. Browser Reliability | Devam ediyor | TabId scoped browser tools, sayfa dogrulama, download/upload/clipboard brokerlari tamamlandi; vision fallback kaldi. |
 | 3. Task Productization | Baslamadi | Saved tasks, artifacts, scheduler, templates ve dashboard. |
 | 4. Tool Ecosystem | Baslamadi | Web search/fetch, servis adaptorleri ve MCP/policy genisletmeleri. |
 | 5. Acceptance/Eval | Baslamadi | Claude benzeri is senaryolari icin otomatik kabul setleri. |
@@ -79,8 +79,8 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
   guncellendi.
 - [ ] Screenshot/vision fallback ekle: metin/a11y yetersiz kalinca hedef sekmeden goruntu alip modele
   kontrollu baglam olarak aktar.
-- [ ] Download/upload/clipboard araclarini policy-gated sekilde ekle. Download + clipboard tamamlandi;
-  upload ve screenshot/vision ile ilgili browser-reliability isleri ayri kaliyor.
+- [ ] Download/upload/clipboard araclarini policy-gated sekilde ekle. Download + clipboard + upload
+  brokerlari tamamlandi; screenshot/vision ile ilgili browser-reliability isi ayri kaliyor.
   - [x] Slice 1: `@tepegoz/downloads` ve `@tepegoz/clipboard` domain paketleri, IPC/preload
     kontratlari, preferences alanlari ve phase/layer kurallari eklendi.
   - [x] Slice 2: DownloadService + quarantine + Electron `will-download` adapter + SQLite projection +
@@ -181,8 +181,8 @@ Download/clipboard icin kalan siradaki is:
 - [x] Siradaki: ClipboardService + generic WebPermissionBroker dilimine gec.
 - [x] Siradaki: `download_*` / `clipboard_*` capability tools + HITL entegrasyonu.
 
-Download/clipboard track icin kod dilimleri tamamlandi. Kalan browser-reliability isleri: gercek
-SafeBrowsing provider/ADR, upload araclari, screenshot/vision fallback, manual UAT ve daha genis e2e kabul seti.
+Download/clipboard/upload track icin kod dilimleri tamamlandi. Kalan browser-reliability isleri: gercek
+SafeBrowsing provider/ADR, screenshot/vision fallback, manual UAT ve daha genis e2e kabul seti.
 
 Upload broker icin aktif siradaki isler:
 
