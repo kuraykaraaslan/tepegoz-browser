@@ -92,6 +92,10 @@ export const IpcChannels = {
   downloadsList: 'downloads:list',
   downloadsCommand: 'downloads:command',
   downloadsState: 'downloads:state',
+  // Browser uploads (`tepegoz://uploads`). State is pushed live from the main-process UploadService.
+  uploadsList: 'uploads:list',
+  uploadsCommand: 'uploads:command',
+  uploadsState: 'uploads:state',
   /** Renderer→main: the identity of every built-in extension (from the validated on-disk catalog). */
   extensionsListManifests: 'extensions:list-manifests',
   extensionOpen: 'extension:open',
@@ -193,4 +197,5 @@ export const INTERNAL_SETTINGS_URL = 'tepegoz://settings';
 export const INTERNAL_EXTENSIONS_URL = 'tepegoz://extensions';
 export const INTERNAL_HISTORY_URL = 'tepegoz://history';
 export const INTERNAL_DOWNLOADS_URL = 'tepegoz://downloads';
+export const INTERNAL_UPLOADS_URL = 'tepegoz://uploads';
 export const INTERNAL_BOOKMARKS_URL = 'tepegoz://bookmarks';

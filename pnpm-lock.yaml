@@ -755,6 +755,9 @@ importers:
       '@tepegoz/shared-types':
         specifier: workspace:*
         version: link:../shared-types
+      '@tepegoz/uploads':
+        specifier: workspace:*
+        version: link:../uploads
       zod:
         specifier: 3.23.8
         version: 3.23.8
@@ -1701,6 +1704,28 @@ importers:
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
+
+  packages/uploads:
+    dependencies:
+      '@tepegoz/capability-plane':
+        specifier: workspace:*
+        version: link:../capability-plane
+      '@tepegoz/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      zod:
+        specifier: 3.23.8
+        version: 3.23.8
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.0
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
 
   packages/window-controls:
     dependencies:

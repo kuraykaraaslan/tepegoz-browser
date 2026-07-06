@@ -262,6 +262,7 @@ export const NotificationPermissionResponseSchema = z.object({
 });
 
 export { DownloadCommandInputSchema, DownloadCreateInputSchema } from '@tepegoz/downloads/schemas';
+export { UploadCommandInputSchema, UploadCreateInputSchema } from '@tepegoz/uploads/schemas';
 export {
   ClipboardOperationInputSchema,
   ClipboardReadTextInputSchema,

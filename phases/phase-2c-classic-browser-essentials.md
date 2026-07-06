@@ -1,6 +1,6 @@
 # Phase 2c — Classic Browser Essentials & Downloads
 
-**Status:** 🟡 In progress (download/clipboard manager slices)  ·  **Estimate:** ~2–3 months  ·  **Depends on:** Phase 1a (UI shell, omnibox,
+**Status:** 🟡 In progress (download/clipboard/upload manager slices)  ·  **Estimate:** ~2–3 months  ·  **Depends on:** Phase 1a (UI shell, omnibox,
 `BookmarkStore`, partition machinery) + Phase 2 (`SafeBrowsingService` — reused for download hash checks) +
 Phase 2b (tab shell)
 **Goal:** Close the "boring but mandatory" gaps that separate a credible everyday browser from an agentic
@@ -99,6 +99,14 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         Capability Plane tools; write requires an idempotency key and audit remains content-free.
 - [ ] **Per-agent permission matrix** (allowed / requires-approval / denied) rendered as a **read-only view**
       over the Policy Kernel + Capability Plane audit — a UI surface, **not** a new decision engine
+
+### L5/L8 — Upload Broker + Upload Activity
+- [x] Upload Slice 1 foundation: `@tepegoz/uploads` redacted records/reducer/risk helpers, zod schemas,
+      `upload_*` Capability Plane registration, IPC contract channels, and layer rules.
+- [ ] Upload Slice 2 service: desktop `UploadService` validates file sandbox access, binds files to
+      target file inputs with CDP, observes upload requests, and writes content-free Event Journal audit.
+- [ ] Upload Slice 3 UI: `@tepegoz/uploads-ui`, `tepegoz://uploads`, preload IPC wiring, menu/navigation.
+- [ ] Native file picker interception remains deferred; v1 focuses on agent-controlled file input uploads.
 
 ### L8/L9 — Browser-completeness dialogs (auth / cert / navigation)
 - [ ] **Basic-auth dialog** (`app.on('login')`) — HTTP 401 credential prompt routed through the single

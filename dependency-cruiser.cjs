@@ -165,6 +165,15 @@ module.exports = {
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
     {
+      name: 'uploads-no-app-no-electron',
+      severity: 'error',
+      comment:
+        '@tepegoz/uploads is the Electron-free upload broker domain model: no Electron, no app imports. ' +
+        'The desktop app owns file paths, CDP file-input binding, and native dialogs. See docs/package-map.md.',
+      from: { path: '^packages/uploads/' },
+      to: { path: ['^apps/', 'node_modules/electron'] },
+    },
+    {
       name: 'settings-ui-is-a-leaf',
       severity: 'error',
       comment:

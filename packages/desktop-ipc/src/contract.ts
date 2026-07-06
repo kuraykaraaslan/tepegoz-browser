@@ -145,6 +145,16 @@ import type {
 } from '@tepegoz/downloads';
 export type { DownloadCommandInput, DownloadCreateInput, DownloadRecord, DownloadsState };
 
+// Browser upload broker types are owned by @tepegoz/uploads (zod-free public entry; schemas stay in
+// its ./schemas subpath). Paths and content never cross the IPC contract.
+import type {
+  UploadCommandInput,
+  UploadCreateInput,
+  UploadRecord,
+  UploadsState,
+} from '@tepegoz/uploads';
+export type { UploadCommandInput, UploadCreateInput, UploadRecord, UploadsState };
+
 // Clipboard operation types are owned by @tepegoz/clipboard. The desktop IPC contract only exposes
 // zod-free wire types; runtime validators are re-exported from ./schemas for main-process use.
 import type {

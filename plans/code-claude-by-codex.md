@@ -1,6 +1,7 @@
 # Plan — ext-agent'i Claude Chrome Seviyesine Yaklastirma
 
-**Durum:** Uygulama devam ediyor; Faz 1 tamamlandi, download/clipboard Slice 1-5 tamamlandi.
+**Durum:** Uygulama devam ediyor; Faz 1 tamamlandi, download/clipboard Slice 1-5 tamamlandi,
+upload broker track basladi.
 **Tarih:** 2026-07-06
 **Kapsam:** `extensions/ext-agent`, agent runtime, browser/tab tools, desktop host baglantilari ve
 ilgili dokumantasyon.
@@ -88,6 +89,10 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
   - [x] Slice 4: ClipboardService + generic WebPermissionBroker; notification akisi korunarak clipboard
     read/write site izinleri eklendi.
   - [x] Slice 5: `download_*` / `clipboard_*` capability tools + HITL/idempotency entegrasyonu.
+  - [x] Upload Slice 1: `@tepegoz/uploads` domain paketi, zod schemas, `upload_*` tool registration,
+    IPC contract kanallari ve layer kurali eklendi.
+  - [ ] Upload Slice 2: UploadService + CDP file input binding + file sandbox preflight + redacted audit.
+  - [ ] Upload Slice 3: `tepegoz://uploads` UI, preload/IPC wiring, menu/navigation ve phase/docs tamamlama.
 - [ ] Action recovery ekle: click/fill sonrasi beklenen degisim yoksa yeniden snapshot ve alternatif
   selector denemesi.
 - [ ] Form ve tablo senaryolari icin fixtures ekle.
@@ -157,6 +162,7 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 - [x] `67b0555 Add downloads page and settings`
 - [x] `3ed3a0e Centralize clipboard permissions`
 - [x] `d000098 Register download and clipboard tools`
+- [x] Upload Slice 1 commit: Upload domain and IPC foundations (commit sonrasi hash ile guncellenecek)
 
 ## Siradaki En Mantikli Dilim
 
@@ -175,6 +181,13 @@ Download/clipboard icin kalan siradaki is:
 
 Download/clipboard track icin kod dilimleri tamamlandi. Kalan browser-reliability isleri: gercek
 SafeBrowsing provider/ADR, upload araclari, screenshot/vision fallback, manual UAT ve daha genis e2e kabul seti.
+
+Upload broker icin aktif siradaki isler:
+
+- [x] `@tepegoz/uploads` domain paketi + `upload_*` tool descriptorlari.
+- [x] Desktop IPC zod-free contract ve main-only schema re-export.
+- [ ] UploadService, CDP `DOM.setFileInputFiles`, file sandbox preflight ve Event Journal audit.
+- [ ] Uploads UI/internal page/preload wiring.
 
 ## Ek Dogrulama Kaydi - Download/Clipboard Track
 
@@ -202,6 +215,8 @@ SafeBrowsing provider/ADR, upload araclari, screenshot/vision fallback, manual U
 - [x] Slice 5 tekrar dogrulamalari: `pnpm --filter @tepegoz/clipboard test/typecheck/lint`
 - [x] Slice 5 tekrar dogrulamalari: `pnpm --filter @tepegoz/desktop typecheck/lint`
 - [x] Slice 5 tekrar dogrulamalari: `pnpm --filter @tepegoz/desktop-ipc typecheck`
+- [x] Upload Slice 1: `pnpm --filter @tepegoz/uploads test/typecheck/lint`
+- [x] Upload Slice 1: `pnpm --filter @tepegoz/desktop-ipc typecheck/lint`
 - [ ] `pnpm --filter @tepegoz/persistence test` — blocked by local native ABI mismatch:
   `better-sqlite3.node` was compiled for NODE_MODULE_VERSION 130; current Node requires 127.
 
