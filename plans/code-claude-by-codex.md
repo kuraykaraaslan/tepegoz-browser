@@ -1,6 +1,6 @@
 # Plan — ext-agent'i Claude Chrome Seviyesine Yaklastirma
 
-**Durum:** Faz 1 ve Faz 2 tamamlandi; download/clipboard/upload transfer track tamamlandi.
+**Durum:** Faz 1 ve Faz 2 tamamlandi; Faz 3 Task Productization Slice 1 basladi.
 **Tarih:** 2026-07-06
 **Kapsam:** `extensions/ext-agent`, agent runtime, browser/tab tools, desktop host baglantilari ve
 ilgili dokumantasyon.
@@ -32,7 +32,7 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 |-----|-------|-----|
 | 1. Agent Reliability | Tamamlandi | Run izolasyonu, state machine/checkpoint, hata siniflandirmasi, recovery ve eval testleri tamamlandi. |
 | 2. Browser Reliability | Tamamlandi | TabId scoped browser tools, sayfa dogrulama, screenshot/fullPage visual fallback, action recovery, fixtures ve download/upload/clipboard brokerlari tamamlandi. |
-| 3. Task Productization | Baslamadi | Saved tasks, artifacts, scheduler, templates ve dashboard. |
+| 3. Task Productization | Devam ediyor | `@tepegoz/tasks` domain paketi, trigger/policy/run/artifact kontratlari ve task tool descriptorlari tamamlandi. |
 | 4. Tool Ecosystem | Baslamadi | Web search/fetch, servis adaptorleri ve MCP/policy genisletmeleri. |
 | 5. Acceptance/Eval | Baslamadi | Claude benzeri is senaryolari icin otomatik kabul setleri. |
 
@@ -100,9 +100,13 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 
 - [ ] Saved tasks modeli: kullanicinin tekrarli gorevleri isim, prompt, izin kapsami ve hedef tab/site
   ile kaydetmesi.
+  - [x] Slice 1 foundation: `@tepegoz/tasks` public types, reducers/selectors, zod schemas, layer kuralı
+    ve Capability Plane descriptorlari eklendi.
 - [ ] Artifacts modeli: ajan ciktilarini panelde indirilebilir/yeniden kullanilabilir nesneler olarak
   tutma.
 - [ ] Scheduler: kullanici onayli, sinirli ve gorunur zamanlanmis gorevler.
+  - [x] Trigger contract: `manual`, `interval`, `pageChange`, disabled `external` placeholder ve
+    preapproved-write policy modeli tanimlandi.
 - [ ] Templates: arastirma, form doldurma, tablo cikarimi, fiyat karsilastirma gibi baslangic
   sablonlari.
 - [ ] Run dashboard: calisan/biten/hata alan gorevleri ve replay linklerini tek yerde gosterme.
@@ -195,6 +199,15 @@ Upload broker icin aktif siradaki isler:
 - [x] Browser screenshot package + visual fallback: `@tepegoz/screenshots`, `browser_get_screenshot`,
       viewport/fullPage host adapter, action-recovery promptlari ve reactor fixtures.
 
+Faz 3 Task Productization icin aktif siradaki isler:
+
+- [x] Slice 1: `@tepegoz/tasks` package + schemas + `task_*` tool descriptorlari.
+- [ ] Slice 2: persistence migration + `TaskStore`, run/artifact projections, trigger state.
+- [ ] Slice 3: desktop `TaskService`, interval/page-change scheduler, queue/coalescing.
+- [ ] Slice 4: renderer-sender bagimsiz `AgentRunLauncher`.
+- [ ] Slice 5: IPC/preload + `@tepegoz/tasks-ui` + `tepegoz://tasks`.
+- [ ] Slice 6: task capability host + preapproved policy entegrasyonu.
+
 ## Ek Dogrulama Kaydi - Download/Clipboard Track
 
 - [x] `pnpm --filter @tepegoz/downloads test`
@@ -240,6 +253,7 @@ Upload broker icin aktif siradaki isler:
 - [x] Screenshot fallback: `pnpm --filter @tepegoz/orchestrator test/typecheck/lint`
 - [x] Screenshot fallback: `pnpm --filter @tepegoz/desktop typecheck/lint`
 - [x] Screenshot fallback: `git diff --check`
+- [x] Task Slice 1: `pnpm --filter @tepegoz/tasks test/typecheck/lint`
 - [x] Upload Slice 3: `git diff --check`
 - [ ] Upload Slice 3: `pnpm depcruise` — blocked by stale generated desktop output:
   `apps/desktop/out/main/node-B4hO7KOT.js` references a missing file during dependency extraction.

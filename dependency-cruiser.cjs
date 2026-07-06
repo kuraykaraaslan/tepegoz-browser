@@ -192,6 +192,15 @@ module.exports = {
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
     {
+      name: 'tasks-no-app-no-electron',
+      severity: 'error',
+      comment:
+        '@tepegoz/tasks is the Electron-free saved-task/trigger domain model: no Electron, no app ' +
+        'imports. The desktop app owns scheduling, browser checks, and agent run launching. See docs/package-map.md.',
+      from: { path: '^packages/tasks/' },
+      to: { path: ['^apps/', 'node_modules/electron'] },
+    },
+    {
       name: 'settings-ui-is-a-leaf',
       severity: 'error',
       comment:

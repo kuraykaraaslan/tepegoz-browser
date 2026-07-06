@@ -74,6 +74,9 @@ work has been folded into Phase 1a/1b as follows:
 - [x] Phase 2c down-payment: combined toolbar transfer indicator/popup for recent downloads and uploads.
 - [x] Phase 1b down-payment: action-recovery fixtures for screenshot fallback, changed=false form recovery,
       and table-reading flows.
+- [x] Code-claude Faz 3 down-payment: `@tepegoz/tasks` saved-task/trigger domain package with
+      interval/page-change/external-placeholder triggers, narrow preapproval policy, run/artifact records,
+      and `task_*` Capability Plane descriptors (`task_create_run` follows the repo tool-naming rule).
 - [ ] Phase 1b remaining: durable resume across app restarts, true parallel DAG, vision model routing/eviction.
 
 > **Phase E (Extras) is not sequenced.** It is not numbered into the 0–12 flow and nothing depends on it; each
