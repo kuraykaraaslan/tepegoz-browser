@@ -5,6 +5,23 @@
  * agent's public wire shapes; the app re-exports them from its IPC contract.
  */
 import type { AIProvider } from '@tepegoz/shared-types/providers';
+import type {
+  AgentAttachmentMeta,
+  AgentConversationDetail,
+  AgentConversationListInput,
+  AgentConversationOpenInput,
+  AgentConversationSummary,
+  AgentConversationsState,
+} from '@tepegoz/agent-history';
+
+export type {
+  AgentAttachmentMeta,
+  AgentConversationDetail,
+  AgentConversationListInput,
+  AgentConversationOpenInput,
+  AgentConversationSummary,
+  AgentConversationsState,
+};
 
 export type AgentEventKind =
   | 'plan'
@@ -116,10 +133,22 @@ export interface Attachment {
 
 /** What the Agent panel needs from the host — a small, typed surface (injected, not a global). */
 export interface AgentHostApi {
-  runAgent(input: { prompt: string; groupId: string }): Promise<AgentRunResult>;
+  runAgent(input: {
+    prompt: string;
+    groupId: string;
+    displayPrompt?: string;
+    attachmentMeta?: AgentAttachmentMeta[];
+  }): Promise<AgentRunResult>;
   cancelAgent(runId: string): void;
   /** Reset conversation memory for a specific tab-group (panel "New task"). */
   newAgentConversation(groupId: string): void;
+  listAgentConversations(input?: AgentConversationListInput): Promise<AgentConversationSummary[]>;
+  getAgentConversation(id: string): Promise<AgentConversationDetail | null>;
+  getCurrentAgentConversation(groupId: string): Promise<AgentConversationDetail | null>;
+  openAgentConversation(input: AgentConversationOpenInput): Promise<AgentConversationDetail | null>;
+  deleteAgentConversation(id: string): Promise<void>;
+  clearAgentConversations(): Promise<void>;
+  onAgentConversationsState(callback: (state: AgentConversationsState) => void): () => void;
   /** Ensure the active tab belongs to a group; creates one if needed. Returns the groupId. */
   ensureActiveGroup(): Promise<string>;
   /** Subscribe to active-tab-group changes. The callback receives the new groupId (null = no group). */

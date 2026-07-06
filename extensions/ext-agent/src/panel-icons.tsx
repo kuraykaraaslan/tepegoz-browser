@@ -20,6 +20,9 @@ export const SparkIcon = ({ className }: { className?: string }) => (
 );
 export const CloseIcon = ({ className }: { className?: string }) => <Svg className={className}><path d="M6 6l12 12M18 6L6 18" /></Svg>;
 export const NewTaskIcon = ({ className }: { className?: string }) => <Svg className={className}><path d="M12 5v14M5 12h14" /></Svg>;
+export const HistoryIcon = ({ className }: { className?: string }) => (
+  <Svg className={className}><path d="M3 12a9 9 0 109-9M3 3v6h6M12 7v5l3 2" /></Svg>
+);
 export const SendIcon = ({ className }: { className?: string }) => <Svg className={className}><path d="M12 19V5M6 11l6-6 6 6" /></Svg>;
 export const StopIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" className={className} aria-hidden fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2" /></svg>

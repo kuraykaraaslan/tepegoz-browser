@@ -39,6 +39,13 @@ import type {
   TaskSaveInput,
   TasksState,
 } from './contract';
+import type {
+  AgentConversationDetail,
+  AgentConversationListInput,
+  AgentConversationOpenInput,
+  AgentConversationSummary,
+  AgentConversationsState,
+} from './contract';
 import type { ProviderId, ProviderKeyMeta } from './contract';
 import type { AdaptorConnection } from './contract';
 import type {
@@ -157,11 +164,23 @@ export interface TepegozApi {
   /** Subscribe to active-tab-group changes; returns an unsubscribe function. */
   onActiveGroupChange(callback: (groupId: string | null) => void): () => void;
   /** Start an agentic task on the active tab; resolves when the run finishes. */
-  runAgent(input: { prompt: string; groupId: string }): Promise<AgentRunResult>;
+  runAgent(input: {
+    prompt: string;
+    groupId: string;
+    displayPrompt?: string;
+    attachmentMeta?: { kind: 'selection' | 'file' | 'screenshot'; label: string; mimeType?: string; sizeBytes?: number }[];
+  }): Promise<AgentRunResult>;
   /** Cancel an in-flight run. */
   cancelAgent(runId: string): void;
   /** Reset conversation memory for a specific group (panel "New task"). */
   newAgentConversation(groupId: string): void;
+  listAgentConversations(input?: AgentConversationListInput): Promise<AgentConversationSummary[]>;
+  getAgentConversation(id: string): Promise<AgentConversationDetail | null>;
+  getCurrentAgentConversation(groupId: string): Promise<AgentConversationDetail | null>;
+  openAgentConversation(input: AgentConversationOpenInput): Promise<AgentConversationDetail | null>;
+  deleteAgentConversation(id: string): Promise<void>;
+  clearAgentConversations(): Promise<void>;
+  onAgentConversationsState(callback: (state: AgentConversationsState) => void): () => void;
   /** Subscribe to the live Agent Console event stream; returns an unsubscribe function. */
   onAgentEvent(callback: (event: AgentEvent) => void): () => void;
   /** Subscribe to HITL approval prompts; returns an unsubscribe function. */

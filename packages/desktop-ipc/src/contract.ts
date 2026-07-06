@@ -177,6 +177,27 @@ export type {
   TasksState,
 };
 
+// Agent Console conversation history is local-profile only. The package owns zod-free public wire
+// types; main-process validators live in @tepegoz/agent-history/schemas.
+import type {
+  AgentAttachmentMeta,
+  AgentConversationDetail,
+  AgentConversationListInput,
+  AgentConversationOpenInput,
+  AgentConversationSummary,
+  AgentConversationTurn,
+  AgentConversationsState,
+} from '@tepegoz/agent-history';
+export type {
+  AgentAttachmentMeta,
+  AgentConversationDetail,
+  AgentConversationListInput,
+  AgentConversationOpenInput,
+  AgentConversationSummary,
+  AgentConversationTurn,
+  AgentConversationsState,
+};
+
 // Clipboard operation types are owned by @tepegoz/clipboard. The desktop IPC contract only exposes
 // zod-free wire types; runtime validators are re-exported from ./schemas for main-process use.
 import type {

@@ -1,6 +1,7 @@
 import type {
   AgentApprovalRequest,
   AgentAutonomy,
+  AgentConversationDetail,
   AgentEvent,
   AgentPlanPreview,
   Attachment,
@@ -115,4 +116,30 @@ export function serializeAttachments(attachments: Attachment[], prompt: string):
     }
   }
   return `${parts.join('\n\n')}\n\n---\n\n${prompt}`;
+}
+
+export function attachmentMeta(attachments: Attachment[]) {
+  return attachments.map((attachment) => ({
+    kind: attachment.kind,
+    label: attachment.label,
+  }));
+}
+
+export function stateFromConversation(detail: AgentConversationDetail): GroupState {
+  return {
+    ...emptyGroupState(),
+    turns: detail.turns.map((turn) => ({
+      id: turn.id,
+      prompt: turn.prompt,
+      runId: turn.runId ?? null,
+      events: turn.events.map((event) => ({
+        runId: event.runId,
+        groupId: event.groupId,
+        kind: event.kind,
+        message: event.message,
+        ts: event.ts,
+        ...(event.detail !== undefined ? { detail: event.detail } : {}),
+      })),
+    })),
+  };
 }

@@ -111,6 +111,18 @@ export const ContentVisibleSchema = z.boolean();
 export const AgentRunInputSchema = z.object({
   prompt: z.string().min(1).max(4000),
   groupId: z.string().min(1).max(64),
+  displayPrompt: z.string().min(1).max(4000).optional(),
+  attachmentMeta: z
+    .array(
+      z.object({
+        kind: z.enum(['selection', 'file', 'screenshot']),
+        label: z.string().min(1).max(512),
+        mimeType: z.string().max(256).optional(),
+        sizeBytes: z.number().int().nonnegative().optional(),
+      }),
+    )
+    .max(10)
+    .optional(),
 });
 /** `agent:new-conversation` payload — the group whose history to clear. */
 export const AgentNewConversationSchema = z.string().min(1).max(64);
@@ -264,6 +276,11 @@ export const NotificationPermissionResponseSchema = z.object({
 export { DownloadCommandInputSchema, DownloadCreateInputSchema } from '@tepegoz/downloads/schemas';
 export { UploadCommandInputSchema, UploadCreateInputSchema } from '@tepegoz/uploads/schemas';
 export { TaskCommandInputSchema, TaskDefinitionSchema, TaskSaveInputSchema } from '@tepegoz/tasks/schemas';
+export {
+  AgentConversationIdSchema,
+  AgentConversationListInputSchema,
+  AgentConversationOpenInputSchema,
+} from '@tepegoz/agent-history/schemas';
 export {
   ClipboardOperationInputSchema,
   ClipboardReadTextInputSchema,

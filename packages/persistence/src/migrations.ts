@@ -319,6 +319,45 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 10,
+    up: (db) => {
+      db.exec(`
+        -- Agent Console conversation history. Full content is local-profile only; Event Journal keeps
+        -- redacted audit events and does not mirror these rows.
+        CREATE TABLE agent_conversations (
+          id          TEXT PRIMARY KEY,
+          group_id    TEXT NOT NULL,
+          title       TEXT NOT NULL,
+          preview     TEXT NOT NULL,
+          status      TEXT NOT NULL,
+          turn_count  INTEGER NOT NULL DEFAULT 0,
+          started_at  INTEGER NOT NULL,
+          updated_at  INTEGER NOT NULL,
+          last_run_id TEXT
+        );
+        CREATE INDEX idx_agent_conversations_updated ON agent_conversations (updated_at DESC);
+        CREATE INDEX idx_agent_conversations_group ON agent_conversations (group_id);
+
+        CREATE TABLE agent_conversation_turns (
+          id               TEXT PRIMARY KEY,
+          conversation_id  TEXT NOT NULL REFERENCES agent_conversations(id) ON DELETE CASCADE,
+          run_id           TEXT,
+          prompt           TEXT NOT NULL,
+          response_summary TEXT,
+          status           TEXT NOT NULL,
+          events_json      TEXT NOT NULL,
+          attachments_json TEXT NOT NULL,
+          created_at       INTEGER NOT NULL,
+          updated_at       INTEGER NOT NULL
+        );
+        CREATE INDEX idx_agent_turns_conversation ON agent_conversation_turns (
+          conversation_id,
+          created_at ASC
+        );
+      `);
+    },
+  },
 ];
 
 /**

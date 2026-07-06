@@ -46,6 +46,13 @@ export const tr: AgentStrings = {
   },
   // Besteci / çerçeve.
   newTask: 'Yeni görev',
+  history: {
+    label: 'Konuşma geçmişi',
+    search: 'Konuşmalarda ara...',
+    empty: 'Henüz konuşma yok',
+    loading: 'Yükleniyor...',
+    full: 'Tüm konuşma geçmişi',
+  },
   saveAsTask: 'Görev olarak kaydet',
   send: 'Gönder',
   stop: 'Durdur',

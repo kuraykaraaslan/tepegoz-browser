@@ -15,6 +15,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@tepegoz/agent-history": "workspace:*",
     "@tepegoz/downloads": "workspace:*",
     "@tepegoz/tasks": "workspace:*",
     "@tepegoz/shared-types": "workspace:*",

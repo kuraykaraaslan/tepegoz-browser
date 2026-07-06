@@ -81,6 +81,14 @@ export const IpcChannels = {
   agentSetEffort: 'agent:set-effort',
   /** Renderer→main: open a file the agent produced (fire-and-forget; gated to whitelisted folders). */
   agentOpenFile: 'agent:open-file',
+  // Agent Console conversation history (`tepegoz://agent-history`).
+  agentConversationsList: 'agent-conversations:list',
+  agentConversationsGet: 'agent-conversations:get',
+  agentConversationsCurrent: 'agent-conversations:current',
+  agentConversationsOpen: 'agent-conversations:open',
+  agentConversationsDelete: 'agent-conversations:delete',
+  agentConversationsClear: 'agent-conversations:clear',
+  agentConversationsState: 'agent-conversations:state',
   // On-device model management (Settings → Providers → Local). `models:state` is a main→renderer push.
   modelsList: 'models:list',
   modelsDownload: 'models:download',
@@ -208,6 +216,7 @@ export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];
 export const INTERNAL_SETTINGS_URL = 'tepegoz://settings';
 export const INTERNAL_EXTENSIONS_URL = 'tepegoz://extensions';
 export const INTERNAL_HISTORY_URL = 'tepegoz://history';
+export const INTERNAL_AGENT_HISTORY_URL = 'tepegoz://agent-history';
 export const INTERNAL_DOWNLOADS_URL = 'tepegoz://downloads';
 export const INTERNAL_UPLOADS_URL = 'tepegoz://uploads';
 export const INTERNAL_TASKS_URL = 'tepegoz://tasks';

@@ -1,4 +1,4 @@
-import { dialog, shell } from 'electron';
+import { BrowserWindow, dialog, shell } from 'electron';
 import { z } from 'zod';
 import { AppError, Logger } from '@tepegoz/libs';
 import {
@@ -21,6 +21,9 @@ import { agentManifest } from '@tepegoz/ext-agent/manifest';
 import {
   AgentApprovalResponseSchema,
   AgentNewConversationSchema,
+  AgentConversationIdSchema,
+  AgentConversationListInputSchema,
+  AgentConversationOpenInputSchema,
   AgentOpenFileSchema,
   AgentPlanResponseSchema,
   AgentRunIdSchema,
@@ -30,6 +33,7 @@ import NotificationHost from '../notifications/notification-host';
 import type { ConfirmRequest } from '@tepegoz/capability-plane';
 import { TokenLedger } from '@tepegoz/model-gateway';
 import { EventJournal } from '@tepegoz/persistence';
+import { AgentConversationStore } from '@tepegoz/persistence';
 import { isRunnableProvider, type AIProvider, type EventType, type Plan } from '@tepegoz/shared-types';
 import { randomUUID } from 'node:crypto';
 import AgentService, { type PlanApprovalDecision } from '../agent/agent-service.electron';
@@ -48,6 +52,11 @@ import CredentialVault from '@tepegoz/credential-vault';
 import PreferenceStore from '@tepegoz/preferences';
 import TabManager from '../tabs';
 import { handle, handleAsync, onAction } from './ipc-helpers';
+import type {
+  AgentConversationDetail,
+  AgentConversationSummary,
+  AgentConversationsState,
+} from '@tepegoz/desktop-ipc';
 
 /**
  * Agent run/config + HITL (approval + plan-preview) IPC domain (split out of `ipc.ts`, ADR-0010
@@ -67,6 +76,20 @@ const pendingPlans = new Map<
   string,
   { runId: string; resolve: (decision: PlanApprovalDecision) => void }
 >();
+
+function listConversationsState(): AgentConversationsState {
+  const db = getDb();
+  return { items: db === null ? [] : AgentConversationStore.list(db, { limit: 50 }) };
+}
+
+function broadcastConversationsState(): void {
+  const state = listConversationsState();
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.webContents.isDestroyed()) {
+      win.webContents.send(IpcChannels.agentConversationsState, state);
+    }
+  }
+}
 
 /** Abort every in-flight agent run and unblock any HITL prompt parked on a promise (fail-safe deny),
  *  so quit doesn't race a half-finished run against store/database teardown. Called from before-quit. */
@@ -165,7 +188,7 @@ export function registerAgentIpc(): void {
   // the raw API key and tool args never cross to the renderer (only a truncated preview does).
   handleAsync(IpcChannels.agentRun, async (event, payload): Promise<AgentRunResult> => {
     requireAgentEnabled();
-    const { prompt, groupId } = AgentRunInputSchema.parse(payload);
+    const { prompt, groupId, displayPrompt, attachmentMeta } = AgentRunInputSchema.parse(payload);
     if (hasActiveAgentRun()) {
       throw new AppError('An agent task is already running', 409);
     }
@@ -176,6 +199,18 @@ export function registerAgentIpc(): void {
     const sender = event.sender;
     const runId = `run-${String(++runCounter)}`;
     const controller = new AbortController();
+    const historyDb = getDb();
+    const history =
+      historyDb === null
+        ? null
+        : AgentService.beginHistoryTurn(historyDb, {
+            groupId,
+            runId,
+            prompt: displayPrompt ?? prompt,
+            attachments: attachmentMeta ?? [],
+            ts: Date.now(),
+          });
+    if (history !== null) broadcastConversationsState();
     registerAgentRunController(runId, controller);
     const sendEvent = (e: AgentEvent): void => {
       if (!sender.isDestroyed()) sender.send(IpcChannels.agentEvent, e);
@@ -190,6 +225,17 @@ export function registerAgentIpc(): void {
         ts: Date.now(),
         ...(detail !== undefined ? { detail } : {}),
       });
+      if (historyDb !== null && history !== null) {
+        AgentService.appendHistoryEvent(historyDb, history.turnId, {
+          runId,
+          groupId,
+          kind,
+          message,
+          ...(detail !== undefined ? { detail } : {}),
+          ts: Date.now(),
+        });
+        broadcastConversationsState();
+      }
       // Project agent events into the Event Journal (append-only audit; DoD "→ Event Journal").
       // message/detail can carry model output (untrusted) — strip secrets/PII BEFORE the write and
       // mark the record accordingly, per the journal schema's redaction contract (plan §13.9).
@@ -305,7 +351,7 @@ export function registerAgentIpc(): void {
         requestPlanApproval,
         requestApproval,
         signal: controller.signal,
-      }, groupId);
+      }, groupId, displayPrompt ?? prompt);
       return { runId, stoppedReason: summary.stoppedReason, ok: summary.ok };
     } catch (err) {
       onEvent('error', err instanceof Error ? err.message : 'Agent run failed');
@@ -338,6 +384,63 @@ export function registerAgentIpc(): void {
   onAction(IpcChannels.agentNewConversation, AgentNewConversationSchema, (groupId) => {
     if (!agentEnabled()) return;
     AgentService.newConversation(groupId);
+  });
+
+  handle(
+    IpcChannels.agentConversationsList,
+    (_event, payload): AgentConversationSummary[] => {
+      requireAgentEnabled();
+      const db = getDb();
+      if (db === null) return [];
+      const input = AgentConversationListInputSchema.parse(payload ?? {});
+      return AgentConversationStore.list(db, {
+        ...(input.query !== undefined ? { query: input.query } : {}),
+        ...(input.limit !== undefined ? { limit: input.limit } : {}),
+        ...(input.offset !== undefined ? { offset: input.offset } : {}),
+      });
+    },
+  );
+  handle(
+    IpcChannels.agentConversationsGet,
+    (_event, payload): AgentConversationDetail | null => {
+      requireAgentEnabled();
+      const db = getDb();
+      if (db === null) return null;
+      return AgentConversationStore.get(db, AgentConversationIdSchema.parse(payload));
+    },
+  );
+  handle(
+    IpcChannels.agentConversationsCurrent,
+    (_event, payload): AgentConversationDetail | null => {
+      requireAgentEnabled();
+      const db = getDb();
+      if (db === null) return null;
+      return AgentService.currentConversation(db, AgentNewConversationSchema.parse(payload));
+    },
+  );
+  handle(
+    IpcChannels.agentConversationsOpen,
+    (_event, payload): AgentConversationDetail | null => {
+      requireAgentEnabled();
+      const db = getDb();
+      if (db === null) return null;
+      const input = AgentConversationOpenInputSchema.parse(payload);
+      return AgentService.openConversation(db, input.id, input.groupId);
+    },
+  );
+  handle(IpcChannels.agentConversationsDelete, (_event, payload): void => {
+    requireAgentEnabled();
+    const db = getDb();
+    if (db === null) return;
+    AgentConversationStore.delete(db, AgentConversationIdSchema.parse(payload));
+    broadcastConversationsState();
+  });
+  handle(IpcChannels.agentConversationsClear, (): void => {
+    requireAgentEnabled();
+    const db = getDb();
+    if (db === null) return;
+    AgentConversationStore.clear(db);
+    broadcastConversationsState();
   });
 
   // Ensure the active tab belongs to a tab group; creates one if needed → { groupId }.

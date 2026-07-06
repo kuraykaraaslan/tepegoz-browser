@@ -4,6 +4,11 @@ import {
   type AgentApprovalRequest,
   type AgentAutonomy,
   type AgentConfig,
+  type AgentConversationDetail,
+  type AgentConversationListInput,
+  type AgentConversationOpenInput,
+  type AgentConversationSummary,
+  type AgentConversationsState,
   type AgentEffort,
   type AgentEvent,
   type AgentFileAttachment,
@@ -29,6 +34,13 @@ export const agentModelsApi: Pick<
   | 'runAgent'
   | 'cancelAgent'
   | 'newAgentConversation'
+  | 'listAgentConversations'
+  | 'getAgentConversation'
+  | 'getCurrentAgentConversation'
+  | 'openAgentConversation'
+  | 'deleteAgentConversation'
+  | 'clearAgentConversations'
+  | 'onAgentConversationsState'
   | 'onAgentEvent'
   | 'onAgentApprovalRequest'
   | 'respondAgentApproval'
@@ -58,13 +70,33 @@ export const agentModelsApi: Pick<
   | 'showExtensionContextMenu'
   | 'onExtensionContextMenuAction'
 > = {
-  runAgent: (input: { prompt: string; groupId: string }) =>
+  runAgent: (input: Parameters<TepegozApi['runAgent']>[0]) =>
     invoke<AgentRunResult>(IpcChannels.agentRun, input),
   cancelAgent: (runId: string) => {
     ipcRenderer.send(IpcChannels.agentCancel, runId);
   },
   newAgentConversation: (groupId: string) => {
     ipcRenderer.send(IpcChannels.agentNewConversation, groupId);
+  },
+  listAgentConversations: (input?: AgentConversationListInput) =>
+    invoke<AgentConversationSummary[]>(IpcChannels.agentConversationsList, input ?? {}),
+  getAgentConversation: (id: string) =>
+    invoke<AgentConversationDetail | null>(IpcChannels.agentConversationsGet, id),
+  getCurrentAgentConversation: (groupId: string) =>
+    invoke<AgentConversationDetail | null>(IpcChannels.agentConversationsCurrent, groupId),
+  openAgentConversation: (input: AgentConversationOpenInput) =>
+    invoke<AgentConversationDetail | null>(IpcChannels.agentConversationsOpen, input),
+  deleteAgentConversation: (id: string) =>
+    invoke<void>(IpcChannels.agentConversationsDelete, id),
+  clearAgentConversations: () => invoke<void>(IpcChannels.agentConversationsClear),
+  onAgentConversationsState: (callback: (state: AgentConversationsState) => void) => {
+    const listener = (_event: unknown, payload: AgentConversationsState): void => {
+      callback(payload);
+    };
+    ipcRenderer.on(IpcChannels.agentConversationsState, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.agentConversationsState, listener);
+    };
   },
   onAgentEvent: (callback: (event: AgentEvent) => void) => {
     const listener = (_event: unknown, payload: AgentEvent): void => {

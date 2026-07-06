@@ -43,6 +43,13 @@ export const en = {
   },
   // Composer / chrome.
   newTask: 'New task',
+  history: {
+    label: 'Conversation history',
+    search: 'Search conversations...',
+    empty: 'No conversations yet',
+    loading: 'Loading...',
+    full: 'Full conversation history',
+  },
   saveAsTask: 'Save as task',
   send: 'Send',
   stop: 'Stop',

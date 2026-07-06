@@ -12,7 +12,9 @@ import type {
   AgentEvent,
   AgentEffort,
   AgentHostApi,
+  AgentConversationDetail,
 } from './types';
+import { ConversationHistoryDropdown } from './conversation-history-dropdown';
 import { Dropdown } from './panel-dropdown';
 import {
   AUTONOMY_ICON,
@@ -37,7 +39,9 @@ import {
   autoApprovesTool,
   buildNotices,
   emptyGroupState,
+  attachmentMeta,
   serializeAttachments,
+  stateFromConversation,
   type Attachment,
   type GroupState,
   type Turn,
@@ -103,6 +107,16 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
       setActiveGroupId(gid);
     });
   }, [api]);
+
+  useEffect(() => {
+    if (activeGroupId === null) return;
+    let cancelled = false;
+    void api.getCurrentAgentConversation(activeGroupId).then((detail) => {
+      if (cancelled || detail === null) return;
+      mutateGroup(activeGroupId, () => stateFromConversation(detail));
+    }, () => {});
+    return () => { cancelled = true; };
+  }, [api, activeGroupId]);
 
   // Helpers to read/mutate the active group's state.
   const activeState: GroupState = activeGroupId !== null
@@ -210,7 +224,12 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
       attachments: [],
       expandedFiles: new Set(),
     }));
-    void api.runAgent({ prompt: fullPrompt, groupId })
+    void api.runAgent({
+      prompt: fullPrompt,
+      groupId,
+      displayPrompt: text,
+      attachmentMeta: attachmentMeta(attachments),
+    })
       .catch((err: unknown) => {
         const message = err instanceof Error && err.message.trim().length > 0
           ? err.message
@@ -248,6 +267,11 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
     if (activeState.running) onCancel();
     if (activeGroupId !== null) api.newAgentConversation(activeGroupId);
     mutateActive(() => emptyGroupState());
+  }
+
+  function onOpenConversation(detail: AgentConversationDetail): void {
+    if (activeGroupId === null) return;
+    mutateGroup(activeGroupId, () => stateFromConversation(detail));
   }
 
   function toggleReasoning(turnId: string): void {
@@ -411,6 +435,13 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
               {a.tokens}: {tokens.totalTokens.toLocaleString()}
             </span>
           )}
+          <ConversationHistoryDropdown
+            api={api}
+            groupId={activeGroupId}
+            labels={a.history}
+            iconButtonClassName={ICON_BTN}
+            onOpenConversation={onOpenConversation}
+          />
           <button type="button" onClick={onNewTask} aria-label={a.newTask} title={a.newTask} className={ICON_BTN}>
             <NewTaskIcon className="h-4 w-4" />
           </button>

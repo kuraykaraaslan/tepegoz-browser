@@ -8,3 +8,4 @@ export * from './history-store';
 export * from './session-store';
 export * from './download-store';
 export * from './task-store';
+export * from './agent-conversation-store';

@@ -47,6 +47,8 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 - [x] Panel, event stream baslamadan reddedilen `runAgent` hatalarini ayni turn icinde yerel `error`
   event'i olarak gosteriyor.
 - [x] Panel hata fallback metinleri EN/TR i18n sozluklerine eklendi.
+- [x] Agent Console konusma gecmisi yerlestirildi: yerel SQLite projection, header history dropdown,
+  secilen konusmayi panele geri yukleme ve `tepegoz://agent-history` tam gecmis sayfasi.
 - [x] Run state machine'i acik durum gecisleriyle toparla: requested, planning, awaiting plan,
   executing, paused, done, error, cancelled.
 - [x] Resume/checkpoint tasarla: son basarili adim, sayfa/tab snapshot referansi ve kullanici karari
@@ -198,6 +200,22 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 - [x] Faz 5: `pnpm --filter @tepegoz/orchestrator typecheck`
 - [x] Faz 5: `pnpm --filter @tepegoz/orchestrator lint`
 - [x] Faz 5: `git diff --check`
+- [x] Agent History: `pnpm --filter @tepegoz/agent-history test`
+- [x] Agent History: `pnpm --filter @tepegoz/agent-history typecheck`
+- [x] Agent History: `pnpm --filter @tepegoz/agent-history lint`
+- [x] Agent History: `pnpm --filter @tepegoz/agent-history-ui test`
+- [x] Agent History: `pnpm --filter @tepegoz/agent-history-ui typecheck`
+- [x] Agent History: `pnpm --filter @tepegoz/agent-history-ui lint`
+- [x] Agent History: `pnpm --filter @tepegoz/persistence typecheck`
+- [x] Agent History: `pnpm --filter @tepegoz/persistence lint`
+- [x] Agent History: `pnpm --filter @tepegoz/desktop-ipc typecheck`
+- [x] Agent History: `pnpm --filter @tepegoz/desktop-ipc lint`
+- [x] Agent History: `pnpm --filter @tepegoz/ext-agent test`
+- [x] Agent History: `pnpm --filter @tepegoz/ext-agent typecheck`
+- [x] Agent History: `pnpm --filter @tepegoz/ext-agent lint`
+- [x] Agent History: `pnpm --filter @tepegoz/desktop typecheck`
+- [x] Agent History: `pnpm --filter @tepegoz/desktop lint`
+- [x] Agent History: `git diff --check`
 
 ## Yapilan Commitler
 

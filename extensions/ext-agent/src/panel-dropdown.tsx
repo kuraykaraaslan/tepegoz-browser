@@ -17,10 +17,19 @@ import { ChevronDown } from './panel-icons';
  * Extracted from `panel.tsx` (ADR-0010 file-size split).
  */
 export function Dropdown({
-  trigger, direction = 'down', align = 'left', className, children,
+  trigger,
+  direction = 'down',
+  align = 'left',
+  className,
+  triggerClassName,
+  showChevron = true,
+  ariaLabel,
+  title,
+  children,
 }: {
   trigger: ReactNode; direction?: 'down' | 'up'; align?: 'left' | 'right';
-  className?: string; children: (close: () => void) => ReactNode;
+  className?: string; triggerClassName?: string; showChevron?: boolean;
+  ariaLabel?: string; title?: string; children: (close: () => void) => ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -67,11 +76,16 @@ export function Dropdown({
       <button
         ref={triggerRef}
         type="button"
+        aria-label={ariaLabel}
+        title={title}
         onClick={() => { setOpen((v) => !v); }}
-        className="flex items-center gap-1 rounded-md px-2 py-1 text-sm text-text-primary hover:bg-surface-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+        className={cn(
+          'flex items-center gap-1 rounded-md px-2 py-1 text-sm text-text-primary hover:bg-surface-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus',
+          triggerClassName,
+        )}
       >
         {trigger}
-        <ChevronDown className="h-3 w-3 text-text-secondary" />
+        {showChevron && <ChevronDown className="h-3 w-3 text-text-secondary" />}
       </button>
       {open && createPortal(
         <div ref={menuRef} style={pos} className="min-w-[11rem] max-w-[16rem] rounded-lg border border-border bg-surface-raised p-1 shadow-lg">

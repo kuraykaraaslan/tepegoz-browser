@@ -84,6 +84,12 @@ importers:
       '@tailwindcss/vite':
         specifier: ^4.1.16
         version: 4.3.2(vite@5.4.21(@types/node@22.20.0)(lightningcss@1.32.0))
+      '@tepegoz/agent-history':
+        specifier: workspace:*
+        version: link:../../packages/agent-history
+      '@tepegoz/agent-history-ui':
+        specifier: workspace:*
+        version: link:../../packages/agent-history-ui
       '@tepegoz/agent-runtime':
         specifier: workspace:*
         version: link:../../packages/agent-runtime
@@ -306,6 +312,9 @@ importers:
 
   extensions/ext-agent:
     dependencies:
+      '@tepegoz/agent-history':
+        specifier: workspace:*
+        version: link:../../packages/agent-history
       '@tepegoz/extension-sdk':
         specifier: workspace:*
         version: link:../../packages/extension-sdk
@@ -415,6 +424,50 @@ importers:
       '@types/react':
         specifier: ^18.3.18
         version: 18.3.31
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
+
+  packages/agent-history:
+    dependencies:
+      zod:
+        specifier: 3.23.8
+        version: 3.23.8
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.0
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
+
+  packages/agent-history-ui:
+    dependencies:
+      '@tepegoz/agent-history':
+        specifier: workspace:*
+        version: link:../agent-history
+      '@tepegoz/i18n':
+        specifier: workspace:*
+        version: link:../i18n
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.31
+      '@types/react-dom':
+        specifier: ^18.3.5
+        version: 18.3.7(@types/react@18.3.31)
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1
+        version: 18.3.1(react@18.3.1)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -749,6 +802,9 @@ importers:
 
   packages/desktop-ipc:
     dependencies:
+      '@tepegoz/agent-history':
+        specifier: workspace:*
+        version: link:../agent-history
       '@tepegoz/bookmarks':
         specifier: workspace:*
         version: link:../bookmarks
@@ -1492,6 +1548,9 @@ importers:
 
   packages/persistence:
     dependencies:
+      '@tepegoz/agent-history':
+        specifier: workspace:*
+        version: link:../agent-history
       '@tepegoz/downloads':
         specifier: workspace:*
         version: link:../downloads
@@ -1732,6 +1791,12 @@ importers:
 
   packages/tasks-ui:
     dependencies:
+      '@fortawesome/free-solid-svg-icons':
+        specifier: ^7.2.0
+        version: 7.3.0
+      '@fortawesome/react-fontawesome':
+        specifier: ^3.3.1
+        version: 3.3.1(@fortawesome/fontawesome-svg-core@7.3.0)(react@18.3.1)
       '@tepegoz/i18n':
         specifier: workspace:*
         version: link:../i18n
