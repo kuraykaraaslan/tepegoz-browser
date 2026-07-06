@@ -163,7 +163,7 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 - [x] `3ed3a0e Centralize clipboard permissions`
 - [x] `d000098 Register download and clipboard tools`
 - [x] `a2937cc Add upload broker domain foundations`
-- [x] Upload Slice 2 commit: Wire upload broker service (commit sonrasi hash ile guncellenecek)
+- [x] `cf752c0 Wire upload broker service`
 
 ## Siradaki En Mantikli Dilim
 
