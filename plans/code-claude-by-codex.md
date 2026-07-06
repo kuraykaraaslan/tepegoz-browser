@@ -162,7 +162,7 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 - [x] `67b0555 Add downloads page and settings`
 - [x] `3ed3a0e Centralize clipboard permissions`
 - [x] `d000098 Register download and clipboard tools`
-- [x] Upload Slice 1 commit: Upload domain and IPC foundations (commit sonrasi hash ile guncellenecek)
+- [x] `a2937cc Add upload broker domain foundations`
 
 ## Siradaki En Mantikli Dilim
 
