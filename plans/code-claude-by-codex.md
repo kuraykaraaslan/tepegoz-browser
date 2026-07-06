@@ -213,6 +213,10 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 - [x] `9652a81 Add task persistence projections`
 - [x] `8ae3adb Add desktop task scheduler service`
 - [x] `793d5ec Add background task agent runner`
+- [x] `55c2b82 Add task manager UI and IPC`
+- [x] `d5214e9 Register task tools with preapproval policy`
+- [x] `eb674eb Mark task productization plan complete`
+- [x] `5e15c20 Add tool ecosystem adaptors`
 
 ## Siradaki En Mantikli Dilim
 
