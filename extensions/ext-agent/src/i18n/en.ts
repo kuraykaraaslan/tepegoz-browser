@@ -61,7 +61,6 @@ export const en = {
     turns: 'turns',
     detailEmpty: 'Select a conversation to preview it.',
   },
-  saveAsTask: 'Save as task',
   send: 'Send',
   stop: 'Stop',
   modelLabel: 'Model',

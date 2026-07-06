@@ -1,13 +1,6 @@
 import type { ComponentType } from 'react';
 import type { ExtensionSurfaceKind } from '@tepegoz/extension-sdk';
-import { defaultTaskPolicy } from '@tepegoz/tasks';
-import { INTERNAL_TASKS_URL } from '@tepegoz/desktop-ipc';
 import type { ExtensionSurfaceProps } from './registry';
-
-function taskDraftTitle(prompt: string, fallback: string | undefined): string {
-  const title = (fallback ?? prompt.split(/\r?\n/, 1)[0] ?? '').trim().slice(0, 80);
-  return title.length > 0 ? title : 'Saved agent task';
-}
 
 /**
  * The ONE renderer file with static module specifiers: it maps `extensionId → { surfaceKind → thunk }`,
@@ -32,28 +25,7 @@ export const SURFACE_LOADERS: Record<
       import('@tepegoz/ext-agent/panel').then(
         (m) =>
           function AgentSidebar({ onClose }: ExtensionSurfaceProps) {
-            return (
-              <m.AgentPanel
-                api={{
-                  ...window.tepegoz,
-                  saveCurrentPromptAsTask: async ({ prompt, name }) => {
-                    const state = await window.tepegoz.getTabsState();
-                    const current = state.tabs.find((tab) => tab.id === state.activeId);
-                    const targetUrl = current?.url.startsWith('http') === true ? current.url : undefined;
-                    await window.tepegoz.saveTask({
-                      name: taskDraftTitle(prompt, name),
-                      prompt,
-                      status: 'disabled',
-                      triggers: [{ type: 'manual' }],
-                      policy: defaultTaskPolicy(),
-                      ...(targetUrl !== undefined ? { targetUrl } : {}),
-                    });
-                    window.tepegoz.navigateTab(INTERNAL_TASKS_URL);
-                  },
-                }}
-                onClose={onClose}
-              />
-            );
+            return <m.AgentPanel api={window.tepegoz} onClose={onClose} />;
           },
       ),
     page: () =>

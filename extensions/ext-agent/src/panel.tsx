@@ -72,7 +72,6 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
   const c = useT(coreDict);
   const [config, setConfig] = useState<AgentConfig | null>(null);
   const [dismissedNotices, setDismissedNotices] = useState<Set<string>>(new Set());
-  const [savingTask, setSavingTask] = useState(false);
 
   // Active tab-group id — the agent session key.
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
@@ -385,20 +384,6 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
         content: dataUrl,
       });
     } catch { /* ignore */ }
-  }
-
-  async function onSaveAsTask(): Promise<void> {
-    const text = prompt.trim();
-    if (api.saveCurrentPromptAsTask === undefined || text.length === 0 || savingTask) return;
-    setSavingTask(true);
-    try {
-      await api.saveCurrentPromptAsTask({
-        prompt: text,
-        name: text.split(/\r?\n/, 1)[0]?.slice(0, 80),
-      });
-    } finally {
-      setSavingTask(false);
-    }
   }
 
   // ---- Derived values --------------------------------------------------------------------------
@@ -723,19 +708,6 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
               </button>
 
               <div className="mx-1 h-4 w-px bg-border" />
-
-              {api.saveCurrentPromptAsTask !== undefined && (
-                <button
-                  type="button"
-                  title={a.saveAsTask}
-                  aria-label={a.saveAsTask}
-                  disabled={prompt.trim().length === 0 || savingTask}
-                  onClick={() => { void onSaveAsTask(); }}
-                  className={cn(ICON_BTN, 'text-xs disabled:opacity-40')}
-                >
-                  {a.saveAsTask}
-                </button>
-              )}
 
               <Dropdown
                 direction="up"

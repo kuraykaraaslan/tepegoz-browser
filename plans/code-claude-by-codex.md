@@ -116,8 +116,9 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
     preapproved-write policy modeli tanimlandi.
   - [x] Slice 3 service: desktop `TaskService`, interval scheduler, page-change baseline/diff, queue
     coalescing, notifications ve redacted Event Journal audit eklendi.
-- [x] Templates: Faz 3 V1'de template kutuphanesi yerine Agent panelden "Save as task" draft akisi
-  tamamlandi; hazir arastirma/form/tablo/fiyat template seti Faz 5 acceptance/eval senaryolarina devredildi.
+- [x] Templates: Faz 3 V1'de template kutuphanesi ertelendi; Agent paneldeki "Save as task" draft
+  affordance'i sonraki Tasks yeniden kurgusuna kadar kaldirildi. Hazir arastirma/form/tablo/fiyat
+  template seti Faz 5 acceptance/eval senaryolarina devredildi.
 - [x] Run dashboard: calisan/biten/hata alan gorevleri ve replay linklerini tek yerde gosterme.
   - [x] Slice 4 launcher: panel run ve task run ortak agent-run lock kullaniyor; scheduled/background
     task run'lari renderer sender olmadan AgentService'e baglanabiliyor.

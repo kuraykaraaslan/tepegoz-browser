@@ -64,7 +64,6 @@ export const tr: AgentStrings = {
     turns: 'tur',
     detailEmpty: 'Önizlemek için bir konuşma seçin.',
   },
-  saveAsTask: 'Görev olarak kaydet',
   send: 'Gönder',
   stop: 'Durdur',
   modelLabel: 'Model',
