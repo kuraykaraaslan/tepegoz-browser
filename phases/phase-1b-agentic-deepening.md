@@ -22,13 +22,14 @@ fallback, full capability plane, **tepegoz's MCP SERVER surface**, local SLM.
 
 ### L2 — Durable handoff (extra requirement #1)
 - [ ] XState node state machine (PENDING→READY→LEASED→RUNNING→{SUCCEEDED|FAILED|AWAITING_HITL|COMPENSATING})
-- [ ] Snapshot Store + Checkpointer (node boundary + periodic); resume = nearest snapshot + delta replay
+- [~] Snapshot Store + Checkpointer (node boundary + periodic); resume = nearest snapshot + delta replay _(down-payment shipped: runtime checkpoints now capture plan decision, last successful step, page/tab snapshot metadata, terminal reason, and recovery advice, and desktop projects them into the Event Journal as `CheckpointWritten`. Still pending: durable resume from nearest checkpoint + delta replay.)_
 - [ ] **Effect Ledger** (`idempotencyKey` + `fencing_token`) → no double side-effect on replay; Lease Manager (TTL + heartbeat)
 - [ ] **agent-agnostic Context Package** (goal + hashed guardrail set + memory ref + last checkpoint LSN + open nodes + artifact summaries); provider transcript NOT embedded
 - [ ] Recovery Coordinator + power-monitor resume; **handoff only at safe checkpoint boundaries**; rehydration protocol (rebuild CDP/MCP/sandbox/OAuth); different-model thinking-loss accepted + summary recovery
 - [x] Run-scope isolation foundation: HITL/audit callbacks are scoped with `ToolGateway.runWithHandlers`, so future resumed/parallel runs do not share mutable handler state.
 - [x] Cancel/start failure foundation: active run controllers are registered for cancellation, overlapping runs are fail-closed for now, and pre-stream startup failures surface in the Agent Console as `error` events.
-- [ ] Recovery taxonomy: classify transient navigation timeouts, stale element refs, page-changed failures, policy denial, auth/handoff, and malformed model output before retrying.
+- [x] Recovery taxonomy: classify transient navigation timeouts, stale element refs, page-changed failures, policy denial, auth/handoff, validation/unknown failures, and malformed model output before retrying.
+- [x] Bounded recovery strategy: malformed model decisions get limited JSON repair attempts; recoverable tool failures feed back concrete next-step advice (`browser_get_elements`, `browser_validate_page`, `browser_get_page`) and repeated same-kind failures fail closed.
 
 ### L2 — Per-task memory (extra requirement #2, GB scale)
 - [ ] `mem_<taskId>.sqlite` + CAS isolation; tiered HOT(RAM/LRU)/WARM(SQLite+FTS5+vec)/COLD(zstd)/CAS(blob)

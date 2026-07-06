@@ -6,7 +6,7 @@ import {
   type ModelProvider,
 } from '@tepegoz/model-gateway';
 import { CapabilityRegistry, ToolGateway, type RegisteredTool } from '@tepegoz/capability-plane';
-import type { AIProvider, RiskLevel, ToolDescriptor } from '@tepegoz/shared-types';
+import type { AIProvider, RiskLevel, ToolDescriptor, ToolError } from '@tepegoz/shared-types';
 import Reactor, { parseDecision } from './reactor';
 
 /**
@@ -68,6 +68,12 @@ function script(replies: string[]): void {
 const act = (tool: string, args: Record<string, unknown> = {}): string =>
   JSON.stringify({ action: 'act', tool, args, rationale: 'r' });
 const finish = JSON.stringify({ action: 'finish', summary: 'done' });
+const toolError = (code: ToolError['code'], message: string, retryable: boolean): ToolError => ({
+  isError: true,
+  code,
+  message,
+  retryable,
+});
 
 beforeEach(() => {
   calls.length = 0;
@@ -168,7 +174,8 @@ describe('Reactor.run', () => {
     ToolGateway.setConfirmHandler(() => Promise.resolve(false));
     script([act('browser_update_page', { action: 'click', ref: 1 }), finish]);
     const res = await Reactor.run(req());
-    expect(res.stoppedReason).toBe('tool_error');
+    expect(res.stoppedReason).toBe('policy_denied');
+    expect(res.failure?.kind).toBe('policy_denied');
     expect(res.outcomes[0]?.error?.code).toBe('FORBIDDEN');
     expect(calls).toEqual([]);
   });
@@ -212,9 +219,40 @@ describe('Reactor.run', () => {
         return typeof a.url === 'string' ? { targetUrl: a.url } : {};
       },
     });
-    expect(res.stoppedReason).toBe('tool_error');
+    expect(res.stoppedReason).toBe('policy_denied');
+    expect(res.failure?.kind).toBe('policy_denied');
     expect(res.outcomes[0]?.error?.code).toBe('FORBIDDEN');
     expect(calls).toEqual([]);
+  });
+
+  it('repairs malformed model decisions with a bounded JSON retry', async () => {
+    script(['not-json', act('browser_get_elements'), finish]);
+    const res = await Reactor.run(req(), { maxDecisionRepairs: 1 });
+    expect(res.stoppedReason).toBe('completed');
+    expect(calls).toEqual(['browser_get_elements']);
+  });
+
+  it('feeds stale element failures back with a recovery hint, then continues from a fresh snapshot', async () => {
+    CapabilityRegistry.reset();
+    CapabilityRegistry.register(fakeTool('browser_get_elements', 'read', { content: 'fresh elements' }));
+    CapabilityRegistry.register(
+      fakeTool(
+        'browser_update_page',
+        'state_changing',
+        toolError('INTERNAL_ERROR', 'stale ref: element not found in latest snapshot', true),
+      ),
+    );
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    script([
+      act('browser_update_page', { action: 'click', ref: 99 }),
+      act('browser_get_elements'),
+      finish,
+    ]);
+    const res = await Reactor.run(req(), { maxRecoveryAttempts: 1 });
+    expect(res.stoppedReason).toBe('completed');
+    expect(res.outcomes[0]?.ok).toBe(false);
+    expect(res.outcomes[0]?.error?.message).toContain('stale ref');
+    expect(calls).toEqual(['browser_update_page', 'browser_get_elements']);
   });
 });
 

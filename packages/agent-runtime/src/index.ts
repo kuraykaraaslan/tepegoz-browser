@@ -12,3 +12,17 @@ export {
   type AgentRunSummary,
   type PlanApprovalDecision,
 } from './agent-runtime';
+export {
+  advanceRunPhase,
+  checkpointForDecision,
+  checkpointForPlan,
+  checkpointFromOutcome,
+  isTerminalPhase,
+  terminalCheckpoint,
+  type AgentPageCheckpoint,
+  type AgentPlanDecisionCheckpoint,
+  type AgentRunCheckpoint,
+  type AgentRunPhase,
+  type AgentRunTransition,
+  type AgentStepCheckpoint,
+} from './run-lifecycle';

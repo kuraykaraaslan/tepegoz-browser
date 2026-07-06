@@ -10,13 +10,25 @@ import type { Plan, PlanStep, ToolError } from '@tepegoz/shared-types';
 export interface StepOutcome {
   stepId: string;
   tool: string;
+  args?: unknown;
   ok: boolean;
   result?: unknown;
   error?: ToolError;
 }
 
 export type StopReason =
-  'completed' | 'tool_error' | 'loop_detected' | 'max_steps' | 'aborted' | 'handoff';
+  | 'completed'
+  | 'tool_error'
+  | 'policy_denied'
+  | 'selector_stale'
+  | 'navigation_timeout'
+  | 'page_changed'
+  | 'model_malformed'
+  | 'transient_error'
+  | 'loop_detected'
+  | 'max_steps'
+  | 'aborted'
+  | 'handoff';
 
 export interface RunResult {
   outcomes: StepOutcome[];
@@ -88,8 +100,8 @@ export default class Executor {
       const stepCtx = options.ctxFor ? options.ctxFor(step) : ctx;
       const result = await ToolGateway.invoke(step.tool, step.args, stepCtx);
       const outcome: StepOutcome = isToolError(result)
-        ? { stepId: step.id, tool: step.tool, ok: false, error: result }
-        : { stepId: step.id, tool: step.tool, ok: true, result };
+        ? { stepId: step.id, tool: step.tool, args: step.args, ok: false, error: result }
+        : { stepId: step.id, tool: step.tool, args: step.args, ok: true, result };
       outcomes.push(outcome);
       options.onStepEnd?.(outcome);
       if (!outcome.ok) {

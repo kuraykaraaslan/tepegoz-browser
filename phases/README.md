@@ -47,11 +47,15 @@ See [`../plans/code-claude-by-codex.md`](../plans/code-claude-by-codex.md) for t
 work has been folded into Phase 1a/1b as follows:
 
 - [x] Phase 1a: run-scoped `ToolGateway` HITL/audit context, cancellation wiring, startup-error visibility.
+- [x] Phase 1a: explicit run state machine + journaled checkpoints with plan decision, last successful
+      step, page/tab snapshot metadata, terminal reason, and recovery advice.
 - [x] Phase 1a: tab tool expansion (`tab_get_item`, `tab_update_item`, `tab_delete_item`) and background tab
       creation.
 - [x] Phase 1b down-payment: `tabId`-scoped browser tools and per-WebContents CDP element references.
 - [x] Phase 1b down-payment: `browser_validate_page` action-verification tool.
-- [ ] Phase 1b remaining: checkpoint/resume, retry/recovery taxonomy, screenshot/vision fallback.
+- [x] Phase 1b down-payment: retry/recovery taxonomy for policy denial, stale selectors, page changes,
+      navigation timeout, auth handoff, transient failures, and malformed model output.
+- [ ] Phase 1b remaining: durable resume across app restarts, screenshot/vision fallback, true parallel DAG.
 
 > **Phase E (Extras) is not sequenced.** It is not numbered into the 0–12 flow and nothing depends on it; each
 > item is a recorded, demand-gated decision that graduates to its own branch/ADR only when pull is shown.

@@ -5,6 +5,13 @@ import { z } from 'zod';
 import type { AIProvider, ToolDescriptor, ToolError } from '@tepegoz/shared-types';
 import type { StepOutcome, StopReason } from './executor';
 import { ReactorMessages } from './messages';
+import {
+  classifyRuntimeError,
+  classifyToolFailure,
+  recoveryAdviceFor,
+  stopReasonForFailure,
+  type AgentFailure,
+} from './recovery';
 
 /**
  * L3 reactive executor — the perceive → decide → act loop. Unlike the static {@link Executor} (which
@@ -142,11 +149,16 @@ export interface ReactOptions {
   onOutcome?: (outcome: StepOutcome) => void;
   /** Post-step guard (Human Handoff Controller): return a StopReason to halt (e.g. CAPTCHA/2FA). */
   guard?: (outcome: StepOutcome) => StopReason | null;
+  /** Bounded self-repair attempts for malformed model decisions. */
+  maxDecisionRepairs?: number;
+  /** Bounded recovery attempts per failure kind+tool before fail-closed. */
+  maxRecoveryAttempts?: number;
 }
 
 export interface ReactResult {
   outcomes: StepOutcome[];
   stoppedReason: StopReason;
+  failure?: AgentFailure | undefined;
   /** The model's closing summary when it finished on its own. */
   summary?: string;
 }
@@ -181,6 +193,12 @@ function observationOf(outcome: StepOutcome): string {
       ? (result as { content: string }).content
       : stableStringify(result);
   return text.length > MAX_OBSERVATION_CHARS ? `${text.slice(0, MAX_OBSERVATION_CHARS)}\n…[truncated]` : text;
+}
+
+function observationWithRecovery(outcome: StepOutcome, failure: AgentFailure): string {
+  const advice = recoveryAdviceFor(failure);
+  const next = advice.nextTool === undefined ? '' : ` Suggested next tool: ${advice.nextTool}.`;
+  return `${observationOf(outcome)}\nRecovery: ${advice.instruction}${next}`;
 }
 
 /** Coreference guidance — emitted only when there ARE earlier turns, so a follow-up like "research this"
@@ -229,6 +247,10 @@ export default class Reactor {
     const known = new Set(req.tools.map((t) => t.id));
     const outcomes: StepOutcome[] = [];
     const signatureCounts = new Map<string, number>();
+    const recoveryCounts = new Map<string, number>();
+    const maxDecisionRepairs = options.maxDecisionRepairs ?? 2;
+    const maxRecoveryAttempts = options.maxRecoveryAttempts ?? 2;
+    let decisionRepairs = 0;
 
     const messages: CanonMessage[] = [
       { role: 'system', content: systemPrompt(req) },
@@ -240,17 +262,38 @@ export default class Reactor {
       if (options.signal?.aborted === true) return { outcomes, stoppedReason: 'aborted' };
       if (outcomes.length >= maxSteps) return { outcomes, stoppedReason: 'max_steps' };
 
-      const response = await ModelGateway.complete({
-        provider: req.provider,
-        model: req.model,
-        capability: 'exec',
-        messages,
-        maxTokens: req.maxTokens ?? 1500,
-        timeoutMs: req.timeoutMs ?? 60_000,
-        responseFormat: 'json',
-      });
-      const decision = parseDecision(response.text);
-      messages.push({ role: 'assistant', content: response.text });
+      let responseText: string;
+      let decision: Decision;
+      try {
+        const response = await ModelGateway.complete({
+          provider: req.provider,
+          model: req.model,
+          capability: 'exec',
+          messages,
+          maxTokens: req.maxTokens ?? 1500,
+          timeoutMs: req.timeoutMs ?? 60_000,
+          responseFormat: 'json',
+        });
+        responseText = response.text;
+        decision = parseDecision(responseText);
+      } catch (err) {
+        const failure = classifyRuntimeError(err);
+        if (failure.kind === 'model_malformed' && decisionRepairs < maxDecisionRepairs) {
+          decisionRepairs += 1;
+          const advice = recoveryAdviceFor(failure);
+          messages.push({
+            role: 'user',
+            content:
+              `Recovery: ${advice.instruction} Output ONLY one valid JSON object: ` +
+              '{"action":"act","tool":"<id>","args":{},"rationale":"<why>"} or ' +
+              '{"action":"finish","summary":"<summary>"}.',
+          });
+          continue;
+        }
+        return { outcomes, stoppedReason: stopReasonForFailure(failure), failure };
+      }
+      decisionRepairs = 0;
+      messages.push({ role: 'assistant', content: responseText });
 
       if (decision.action === 'finish') {
         return { outcomes, stoppedReason: 'completed', summary: decision.summary };
@@ -271,15 +314,26 @@ export default class Reactor {
       const ctx = options.ctxFor ? options.ctxFor(decision.tool, decision.args) : {};
       const result = await ToolGateway.invoke(decision.tool, decision.args, ctx);
       const outcome: StepOutcome = isToolError(result)
-        ? { stepId: `r${String(step)}`, tool: decision.tool, ok: false, error: result }
-        : { stepId: `r${String(step)}`, tool: decision.tool, ok: true, result };
+        ? { stepId: `r${String(step)}`, tool: decision.tool, args: decision.args, ok: false, error: result }
+        : { stepId: `r${String(step)}`, tool: decision.tool, args: decision.args, ok: true, result };
       outcomes.push(outcome);
       options.onOutcome?.(outcome);
 
-      // A policy/HITL denial (FORBIDDEN) is the user's hard "no" → stop. Other failures (stale ref,
-      // element not visible, timeout) are recoverable: feed them back so the agent can adapt.
-      if (!outcome.ok && outcome.error?.code === 'FORBIDDEN') {
-        return { outcomes, stoppedReason: 'tool_error' };
+      // A policy/HITL denial is the user's hard "no" → stop. Recoverable failures are fed back with
+      // a concrete recovery hint, but repeated same-kind failures fail closed instead of looping.
+      if (!outcome.ok) {
+        const failure = classifyToolFailure(outcome);
+        if (!failure.retryable) {
+          return { outcomes, stoppedReason: stopReasonForFailure(failure), failure };
+        }
+        const key = `${failure.kind}:${outcome.tool}`;
+        const recoveryCount = (recoveryCounts.get(key) ?? 0) + 1;
+        recoveryCounts.set(key, recoveryCount);
+        if (recoveryCount > maxRecoveryAttempts) {
+          return { outcomes, stoppedReason: stopReasonForFailure(failure), failure };
+        }
+        messages.push({ role: 'user', content: `Observation:\n${observationWithRecovery(outcome, failure)}` });
+        continue;
       }
 
       const halt = outcome.ok ? options.guard?.(outcome) : null;

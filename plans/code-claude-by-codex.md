@@ -30,7 +30,7 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 
 | Faz | Durum | Not |
 |-----|-------|-----|
-| 1. Agent Reliability | Devam ediyor | Run izolasyonu ve baslangic hata gorunurlugu tamamlandi; recovery/eval kaldi. |
+| 1. Agent Reliability | Tamamlandi | Run izolasyonu, state machine/checkpoint, hata siniflandirmasi, recovery ve eval testleri tamamlandi. |
 | 2. Browser Reliability | Devam ediyor | TabId scoped browser tools ve sayfa dogrulama tamamlandi; vision/download/upload/clipboard kaldi. |
 | 3. Task Productization | Baslamadi | Saved tasks, artifacts, scheduler, templates ve dashboard. |
 | 4. Tool Ecosystem | Baslamadi | Web search/fetch, servis adaptorleri ve MCP/policy genisletmeleri. |
@@ -47,15 +47,15 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 - [x] Panel, event stream baslamadan reddedilen `runAgent` hatalarini ayni turn icinde yerel `error`
   event'i olarak gosteriyor.
 - [x] Panel hata fallback metinleri EN/TR i18n sozluklerine eklendi.
-- [ ] Run state machine'i acik durum gecisleriyle toparla: requested, planning, awaiting plan,
+- [x] Run state machine'i acik durum gecisleriyle toparla: requested, planning, awaiting plan,
   executing, paused, done, error, cancelled.
-- [ ] Resume/checkpoint tasarla: son basarili adim, sayfa/tab snapshot referansi ve kullanici karari
+- [x] Resume/checkpoint tasarla: son basarili adim, sayfa/tab snapshot referansi ve kullanici karari
   birlikte saklanmali.
-- [ ] Hata siniflandirmasi ekle: transient, policy denied, page changed, selector stale, navigation
+- [x] Hata siniflandirmasi ekle: transient, policy denied, page changed, selector stale, navigation
   timeout, auth/handoff, model malformed.
-- [ ] Retry/recovery stratejisi ekle: selector stale ise yeniden snapshot, navigation timeout ise
+- [x] Retry/recovery stratejisi ekle: selector stale ise yeniden snapshot, navigation timeout ise
   validate/read fallback, model malformed ise bounded repair.
-- [ ] Eval harness ekle: runtime kararlarini mock host ile deterministik test eden senaryolar.
+- [x] Eval harness ekle: runtime kararlarini mock host ile deterministik test eden senaryolar.
 
 ## Faz 2 — Browser Reliability
 
@@ -145,15 +145,16 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 
 ## Siradaki En Mantikli Dilim
 
-Bu noktadan sonra uygulanacak ilk dilim **Agent Reliability / hata siniflandirmasi + recovery** olmali.
-Sebep: tabId scoped tools ve page validation artik var; ajan bir aksiyon basarisiz oldugunda bunu
-siniflandirip toparlanmayi deneyemezse Claude seviyesinde "sureci yonetme" hissi eksik kalir.
+Bu noktadan sonra uygulanacak ilk dilim **Browser Reliability / screenshot-vision fallback** olmali.
+Sebep: Faz 1 artik stale selector, timeout, page changed ve malformed model durumlarini siniflandirip
+toparlanma talimati uretiyor. DOM/a11y + `browser_validate_page` yetersiz kaldiginda bir sonraki eksik
+parca hedef sekmeden kontrollu screenshot alip modele goruntu baglami verebilmek.
 
 Onerilen ilk is:
 
-- [ ] `AgentRuntimeErrorKind` veya benzeri kucuk bir hata taksonomisi ekle.
-- [ ] Browser tool hatalarini bu taksonomiye map et.
-- [ ] Reactor prompt'una "dogrulama basarisizsa once snapshot/readPage ile toparlan" kurali ekle.
-- [ ] Unit test: stale element / navigation timeout / policy denied ayrimi.
+- [ ] `BrowserHost.captureScreenshot(tabId?)` seam'i ekle.
+- [ ] `browser_get_screenshot` veya vision-only fallback tool'u policy-gated sekilde ekle.
+- [ ] Reactor recovery yolunda DOM/a11y yetersizse screenshot aracini oner.
+- [ ] Unit test: DOM bos / action dogrulanamadi / screenshot fallback sirasi.
 
 Bu dosya kaydedildikten sonra is burada durduruldu.

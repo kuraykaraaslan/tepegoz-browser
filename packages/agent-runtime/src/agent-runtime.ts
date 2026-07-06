@@ -15,7 +15,7 @@ import {
   type ConfirmRequest,
   type InvokeContext,
 } from '@tepegoz/capability-plane';
-import { Planner, Reactor, type StepOutcome } from '@tepegoz/orchestrator';
+import { Planner, Reactor, type AgentFailure, type StepOutcome } from '@tepegoz/orchestrator';
 import { TaintTracker, detectHandoff } from '@tepegoz/security-policy';
 import {
   isRunnableProvider,
@@ -27,6 +27,15 @@ import type { AgentEventKind } from '@tepegoz/ext-agent/types';
 import CredentialVault from '@tepegoz/credential-vault';
 import PreferenceStore from '@tepegoz/preferences';
 import { LocalProvider, type LocalProviderConfig } from '@tepegoz/local-inference';
+import {
+  advanceRunPhase,
+  checkpointForDecision,
+  checkpointForPlan,
+  checkpointFromOutcome,
+  terminalCheckpoint,
+  type AgentRunCheckpoint,
+  type AgentRunPhase,
+} from './run-lifecycle';
 
 /** The reasoning-effort preset (Agent panel) maps to a per-call max output-token budget: higher effort
  *  allows longer reasoning/summaries. Kept within Claude 4.x output limits. Applied to both the planning
@@ -83,6 +92,8 @@ export interface PlanApprovalDecision {
 
 export interface AgentRunHooks {
   onEvent: (kind: AgentEventKind, message: string, detail?: string) => void;
+  /** Durable checkpoint seam: hosts may project this into the Event Journal for resume/replay. */
+  onCheckpoint?: (checkpoint: AgentRunCheckpoint) => void;
   /** HITL before the loop: user reviews/edits the plan; resolve approved=false to abort. */
   requestPlanApproval: (plan: Plan) => Promise<PlanApprovalDecision>;
   /** HITL: resolve true to allow a gated tool call, false to deny. */
@@ -114,6 +125,7 @@ export interface AgentRunDeps {
 export interface AgentRunSummary {
   stoppedReason: string;
   ok: boolean;
+  checkpoint?: AgentRunCheckpoint | undefined;
   /** The agent's closing summary for this turn — appended to the conversation memory by the host. */
   summary?: string;
 }
@@ -198,6 +210,17 @@ export async function runAgent(
   /** Prior conversation turns (earlier prompts + summaries) so the agent has context for follow-ups. */
   history: readonly CanonMessage[] = [],
 ): Promise<AgentRunSummary> {
+  let phase: AgentRunPhase = 'requested';
+  let lastCheckpoint: AgentRunCheckpoint | undefined;
+  const emitCheckpoint = (checkpoint: AgentRunCheckpoint): void => {
+    lastCheckpoint = checkpoint;
+    hooks.onCheckpoint?.(checkpoint);
+  };
+  const transition = (event: Parameters<typeof advanceRunPhase>[1]): AgentRunPhase => {
+    phase = advanceRunPhase(phase, event);
+    return phase;
+  };
+
   const prefs = PreferenceStore.getAll();
   // Per-task token counter: the ledger is a process-global static, so clear it at the START of each run
   // — otherwise the panel's counter shows session-cumulative tokens ("keeps climbing").
@@ -243,6 +266,7 @@ export async function runAgent(
     dangerClass: d.dangerClass,
   }));
 
+  transition('start_planning');
   hooks.onEvent('plan', 'Planning…');
   const plan = await Planner.plan({
     intent: prompt,
@@ -257,26 +281,42 @@ export async function runAgent(
     `Plan ready: ${String(plan.steps.length)} step(s)`,
     plan.steps.map((s) => s.tool).join(' → '),
   );
+  emitCheckpoint(checkpointForPlan(transition('plan_ready'), plan));
 
   // A cancel during planning must abort before we prompt for plan approval.
   if (hooks.signal.aborted) {
+    emitCheckpoint(terminalCheckpoint(transition('cancel'), 'aborted'));
     hooks.onEvent('done', 'Cancelled.');
-    return { stoppedReason: 'aborted', ok: false };
+    return { stoppedReason: 'aborted', ok: false, checkpoint: lastCheckpoint };
   }
 
   // HITL before the loop: the user reviews (and may prune) the plan before ANYTHING runs.
   const decision = await hooks.requestPlanApproval(plan);
   if (!decision.approved) {
+    emitCheckpoint(
+      checkpointForDecision(transition('plan_rejected'), plan, {
+        approved: false,
+        skippedStepIds: decision.skipStepIds ?? [],
+      }),
+    );
     hooks.onEvent('done', 'Plan rejected — nothing was executed.');
-    return { stoppedReason: 'plan_rejected', ok: false };
+    return { stoppedReason: 'plan_rejected', ok: false, checkpoint: lastCheckpoint };
   }
   const skip = new Set(decision.skipStepIds ?? []);
   const steps = plan.steps.filter((s) => !skip.has(s.id));
+  emitCheckpoint(
+    checkpointForDecision(transition('plan_approved'), plan, {
+      approved: true,
+      skippedStepIds: decision.skipStepIds ?? [],
+    }),
+  );
   if (steps.length === 0) {
+    emitCheckpoint(terminalCheckpoint(transition('complete'), 'plan_empty'));
     hooks.onEvent('done', 'All steps skipped — nothing to run.');
-    return { stoppedReason: 'plan_empty', ok: false };
+    return { stoppedReason: 'plan_empty', ok: false, checkpoint: lastCheckpoint };
   }
   const approvedPlan: Plan = { goal: plan.goal, steps };
+  transition('execution_started');
 
   // Taint corpus for THIS run: web/model text the agent perceives becomes untrusted, so any later
   // side-effecting arg that lifts it escalates to HITL (Policy Kernel `taintedArgs`).
@@ -332,6 +372,7 @@ export async function runAgent(
           return ctx;
         },
         onOutcome: (o: StepOutcome) => {
+          emitCheckpoint(checkpointFromOutcome(phase, o));
           if (o.ok) {
             // Record perceived page text as untrusted for subsequent steps' taint checks.
             const content = contentFromResult(o.result);
@@ -359,11 +400,22 @@ export async function runAgent(
   );
   if (result.stoppedReason === 'handoff') {
     // The 'handoff' event above is the terminal, user-facing message — no generic "Finished" line.
-    return { stoppedReason: 'handoff', ok: false };
+    emitCheckpoint(terminalCheckpoint(transition('pause'), 'handoff'));
+    return { stoppedReason: 'handoff', ok: false, checkpoint: lastCheckpoint };
   }
+  const failure: AgentFailure | undefined = result.failure;
+  const terminalPhase =
+    result.stoppedReason === 'completed'
+      ? transition('complete')
+      : result.stoppedReason === 'aborted'
+        ? transition('cancel')
+        : transition('fail');
+  emitCheckpoint(terminalCheckpoint(terminalPhase, result.stoppedReason, failure));
   const usage = TokenLedger.totals();
+  const terminalKind: AgentEventKind =
+    result.stoppedReason === 'completed' || result.stoppedReason === 'aborted' ? 'done' : 'error';
   hooks.onEvent(
-    'done',
+    terminalKind,
     result.summary !== undefined && result.summary.length > 0
       ? result.summary
       : `Finished: ${result.stoppedReason}`,
@@ -372,6 +424,7 @@ export async function runAgent(
   return {
     stoppedReason: result.stoppedReason,
     ok: result.stoppedReason === 'completed',
+    checkpoint: lastCheckpoint,
     ...(result.summary !== undefined && result.summary.length > 0
       ? { summary: result.summary }
       : {}),

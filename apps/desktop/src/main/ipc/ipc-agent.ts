@@ -222,6 +222,29 @@ export function registerAgentIpc(): void {
         });
       }
     };
+    const onCheckpoint: NonNullable<Parameters<typeof AgentService.run>[1]['onCheckpoint']> = (checkpoint) => {
+      const db = getDb();
+      if (db === null) return;
+      let payload: unknown = checkpoint;
+      try {
+        payload = JSON.parse(Logger.redact(JSON.stringify(checkpoint)));
+      } catch {
+        payload = checkpoint;
+      }
+      try {
+        EventJournal.append(db, {
+          id: randomUUID(),
+          type: 'CheckpointWritten',
+          ts: Date.now(),
+          actor: 'agent',
+          correlationId: runId,
+          payload,
+          redacted: true,
+        });
+      } catch (err) {
+        Logger.warn('Journal checkpoint append failed', { err: String(err) });
+      }
+    };
     /** Present the standard HITL approval modal and await the user's answer. */
     const promptApproval = (req: ConfirmRequest): Promise<boolean> => {
       const approvalId = `appr-${String(++approvalCounter)}`;
@@ -272,6 +295,7 @@ export function registerAgentIpc(): void {
     try {
       const summary = await AgentService.run(prompt, {
         onEvent,
+        onCheckpoint,
         requestPlanApproval,
         requestApproval,
         signal: controller.signal,
