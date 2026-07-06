@@ -225,6 +225,7 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 - [x] `d5214e9 Register task tools with preapproval policy`
 - [x] `eb674eb Mark task productization plan complete`
 - [x] `5e15c20 Add tool ecosystem adaptors`
+- [x] `1f4a9f1 Add agent acceptance eval suite`
 
 ## Siradaki En Mantikli Dilim
 
