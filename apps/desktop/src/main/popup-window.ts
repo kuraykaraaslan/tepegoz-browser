@@ -31,6 +31,18 @@ const SUBMENU_WIDTH = 260;
 const REOPEN_GUARD_MS = 250;
 /** Debounce a blur before acting, so focus can settle on the sub window (or elsewhere) first. */
 const BLUR_CLOSE_MS = 90;
+/** Reveal-on-measure: after the renderer reports a content height, wait this long for further measures
+ *  to settle (empty→data re-measure, locale swap) before showing — so the window appears ONCE at its
+ *  final size instead of flashing an oversized empty box that then shrinks. */
+const SETTLE_MS = 80;
+/** Hard fallback so surfaces that never report a height (notifications, extension popups) and load
+ *  hiccups still reveal. Tight — a toolbar menu must feel instant (cf. the main window's 4s last resort). */
+const FALLBACK_MS = 250;
+/** Fade-in ramp at reveal: opacity 0→1 over ~FADE_STEPS frames. Killing the residual white-flash that
+ *  Electron can paint on show() even with a backgroundColor set — we fade from transparent (the live
+ *  page shows through) so no white frame is ever visible, synchronized with the reveal. */
+const FADE_STEPS = 8;
+const FADE_STEP_MS = 16;
 
 export interface OpenPopupOptions {
   parent: BrowserWindow;
@@ -59,12 +71,30 @@ export interface OpenSubmenuOptions {
   height?: number | undefined;
 }
 
+/** Per-window reveal bookkeeping for the reveal-on-measure gate (see armReveal). */
+interface RevealState {
+  /** `'active'` → show() (primary popup takes focus); `'inactive'` → showInactive() (submenu must not
+   *  steal focus, else the primary blurs and closes). */
+  mode: 'active' | 'inactive';
+  /** Settle debounce: rescheduled on each measure; fires the reveal once measures quiet down. */
+  settle: ReturnType<typeof setTimeout> | null;
+  /** Hard cap so a never-measuring surface (or a load hiccup) still reveals. */
+  fallback: ReturnType<typeof setTimeout> | null;
+  /** Opacity ramp interval running while the window fades in (0→1) at reveal. */
+  fade: ReturnType<typeof setInterval> | null;
+  /** Latched once shown, so neither timer nor a later measure re-triggers show(). */
+  done: boolean;
+}
+
 export default class PopupWindowManager {
   private static win: BrowserWindow | null = null;
   private static subWin: BrowserWindow | null = null;
   private static openKey: string | null = null;
   private static lastClosedKey: string | null = null;
   private static lastCloseAt = 0;
+  /** Reveal state keyed by window — WeakMap so `resize()` looks it up without a primary/sub branch, and
+   *  entries drop when a window is GC'd (timers are also cleared explicitly on close). */
+  private static readonly reveals = new WeakMap<BrowserWindow, RevealState>();
 
   /** Open (or toggle-guard) the primary popup for `key`, anchored under `anchor` (window-content DIP). */
   static open(opts: OpenPopupOptions): void {
@@ -88,11 +118,9 @@ export default class PopupWindowManager {
     PopupWindowManager.openKey = key;
     loadSurface(win, { ...query, theme: surface.theme, themeColor: surface.themeColor }, key);
 
-    const reveal = (): void => {
-      if (!win.isDestroyed() && !win.isVisible()) win.show();
-    };
-    win.once('ready-to-show', reveal);
-    win.webContents.once('did-finish-load', reveal);
+    // Reveal only once the renderer has measured its content (or the fallback fires) — showing on
+    // ready-to-show would flash the oversized open-time estimate before it shrinks to fit.
+    PopupWindowManager.armReveal(win, 'active');
 
     // Click-away dismiss — but keep the menu open while focus is on its own submenu window. Debounced so
     // the newly focused window is known.
@@ -107,6 +135,7 @@ export default class PopupWindowManager {
       }, BLUR_CLOSE_MS);
     });
     win.on('closed', () => {
+      PopupWindowManager.disarmReveal(win);
       if (PopupWindowManager.win !== win) return;
       PopupWindowManager.closeSub();
       const closedKey = PopupWindowManager.openKey;
@@ -135,12 +164,9 @@ export default class PopupWindowManager {
     PopupWindowManager.subWin = win;
     loadSurface(win, { ...opts.query, theme: surface.theme, themeColor: surface.themeColor }, 'menu-sub');
 
-    // Show WITHOUT stealing focus, so the primary popup doesn't blur (and close) when the flyout opens.
-    const reveal = (): void => {
-      if (!win.isDestroyed() && !win.isVisible()) win.showInactive();
-    };
-    win.once('ready-to-show', reveal);
-    win.webContents.once('did-finish-load', reveal);
+    // Reveal on measure (like the primary), but WITHOUT stealing focus — else the primary popup blurs
+    // and closes when the flyout opens.
+    PopupWindowManager.armReveal(win, 'inactive');
     // If the sub is clicked and then focus leaves the pair entirely, tear everything down.
     win.on('blur', () => {
       setTimeout(() => {
@@ -152,6 +178,7 @@ export default class PopupWindowManager {
       }, BLUR_CLOSE_MS);
     });
     win.on('closed', () => {
+      PopupWindowManager.disarmReveal(win);
       if (PopupWindowManager.subWin === win) PopupWindowManager.subWin = null;
     });
   }
@@ -171,8 +198,75 @@ export default class PopupWindowManager {
     const smallFloor = isSub || (isPrimary && (PopupWindowManager.openKey?.startsWith('bookmark-') ?? false));
     const floor = smallFloor ? SUBMENU_MIN_HEIGHT : MIN_HEIGHT;
     const next = Math.max(floor, Math.min(height, maxH));
+    // Arm/reschedule the reveal on EVERY measure — even a no-op one below, whose bounds don't change,
+    // still means the content settled and the window should be shown.
+    PopupWindowManager.bumpReveal(sender);
     if (next === b.height) return;
     sender.setBounds({ x: b.x, y: b.y, width: b.width, height: next });
+  }
+
+  /** Arm the reveal-on-measure gate for `win`: schedule a hard-fallback reveal now (covers surfaces that
+   *  never report a height + load hiccups); the first measure then debounces to the settled size. */
+  private static armReveal(win: BrowserWindow, mode: 'active' | 'inactive'): void {
+    const state: RevealState = {
+      mode,
+      settle: null,
+      fallback: setTimeout(() => PopupWindowManager.doReveal(win), FALLBACK_MS),
+      fade: null,
+      done: false,
+    };
+    PopupWindowManager.reveals.set(win, state);
+  }
+
+  /** A measure arrived for `win` — (re)start the settle debounce so consecutive measures (empty→data,
+   *  locale swap) coalesce into a single reveal at the final size. No-op once revealed. */
+  private static bumpReveal(win: BrowserWindow): void {
+    const state = PopupWindowManager.reveals.get(win);
+    if (state === undefined || state.done) return;
+    if (state.settle !== null) clearTimeout(state.settle);
+    state.settle = setTimeout(() => PopupWindowManager.doReveal(win), SETTLE_MS);
+  }
+
+  /** Show `win` once (latched), clearing its timers, then fade it in. `active` → show() (primary takes
+   *  focus); `inactive` → showInactive() (submenu must not steal focus, or the primary blurs and closes).
+   *  Shown at opacity 0 so the fade hides any white frame Electron may paint on show(). */
+  private static doReveal(win: BrowserWindow): void {
+    const state = PopupWindowManager.reveals.get(win);
+    if (state === undefined || state.done) return;
+    state.done = true;
+    if (state.settle !== null) clearTimeout(state.settle);
+    if (state.fallback !== null) clearTimeout(state.fallback);
+    state.settle = null;
+    state.fallback = null;
+    if (win.isDestroyed() || win.isVisible()) return;
+    win.setOpacity(0);
+    if (state.mode === 'active') win.show();
+    else win.showInactive();
+    let step = 0;
+    state.fade = setInterval(() => {
+      if (win.isDestroyed()) {
+        if (state.fade !== null) clearInterval(state.fade);
+        state.fade = null;
+        return;
+      }
+      step += 1;
+      win.setOpacity(Math.min(1, step / FADE_STEPS));
+      if (step >= FADE_STEPS) {
+        if (state.fade !== null) clearInterval(state.fade);
+        state.fade = null;
+      }
+    }, FADE_STEP_MS);
+  }
+
+  /** Cancel any pending reveal/fade for `win` and drop its state — so a queued timer can't show a closed
+   *  window. Called from each window's `closed` handler. */
+  private static disarmReveal(win: BrowserWindow): void {
+    const state = PopupWindowManager.reveals.get(win);
+    if (state === undefined) return;
+    if (state.settle !== null) clearTimeout(state.settle);
+    if (state.fallback !== null) clearTimeout(state.fallback);
+    if (state.fade !== null) clearInterval(state.fade);
+    PopupWindowManager.reveals.delete(win);
   }
 
   static closeSub(): void {
