@@ -32,6 +32,7 @@ import { mainLocale, mainStrings } from './lib/i18n-main';
 import { extensionIdFromPageUrl, extensionLabel, manifestById } from '../shared/extensions';
 import { getDb } from './db/database.electron';
 import ActionInterceptorService from './extensions/action-interceptors.electron';
+import DownloadService from './downloads/download-service.electron';
 import { openPageContextMenu } from './menus/page-context-menu';
 import {
   asGroupColor,
@@ -524,15 +525,16 @@ export default class TabManager {
     if (isWebUrl(url)) void wc.loadURL(`view-source:${url}`).catch(() => undefined);
   }
 
-  /** Save the active page — Electron's default download flow shows the OS save dialog. */
+  /** Save the active page through the central DownloadService (quarantine + audit). */
   static saveActive(): void {
     const wc = TabManager.activeView()?.webContents;
-    if (wc !== undefined) wc.downloadURL(wc.getURL());
+    if (wc !== undefined) DownloadService.downloadURL(wc, wc.getURL(), { actor: 'user' });
   }
 
   /** Download a specific URL through the active view (Save image/video/audio as → OS save dialog). */
   static downloadUrlActive(url: string): void {
-    if (url.length > 0) TabManager.activeView()?.webContents.downloadURL(url);
+    const wc = TabManager.activeView()?.webContents;
+    if (wc !== undefined) DownloadService.downloadURL(wc, url, { actor: 'user' });
   }
 
   /** Editing commands on the active page (page context menu → Cut/Copy/Paste/Select all). */

@@ -56,7 +56,7 @@ work has been folded into Phase 1a/1b as follows:
 - [x] Phase 1b down-payment: retry/recovery taxonomy for policy denial, stale selectors, page changes,
       navigation timeout, auth handoff, transient failures, and malformed model output.
 - [x] Phase 2c down-payment: download/clipboard manager domain packages, IPC/preload contracts, web-permission
-      preference shape, and layer rules.
+      preference shape, layer rules, DownloadService quarantine flow, SQLite projection, and redacted audit.
 - [ ] Phase 1b remaining: durable resume across app restarts, screenshot/vision fallback, true parallel DAG.
 
 > **Phase E (Extras) is not sequenced.** It is not numbered into the 0–12 flow and nothing depends on it; each

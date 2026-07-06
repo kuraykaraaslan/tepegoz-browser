@@ -36,6 +36,8 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
 ### L10 — Safe Downloads + Download Manager
 - [x] Slice 1 foundation: `@tepegoz/downloads` headless types/reducer/schemas/tests, IPC/preload
       contracts, download preferences, Event Journal event names, and layer rules.
+- [x] Slice 2 service: desktop `DownloadService` wires `will-download`, saves first to quarantine, hashes the
+      file, stores a SQLite projection, and emits redacted Event Journal audit records.
 - [ ] `will-download` intercept in the browsing session → **quarantine** the file (temp, not-yet-trusted) +
       compute file hash + check via Phase 2 **`SafeBrowsingService`** (reuse, do NOT re-implement); community
       blocklist reuse where present

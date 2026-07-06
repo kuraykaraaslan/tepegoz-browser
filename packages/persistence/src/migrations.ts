@@ -213,6 +213,41 @@ const MIGRATIONS: Migration[] = [
       db.exec('ALTER TABLE bookmark_nodes ADD COLUMN favicon TEXT;');
     },
   },
+  {
+    version: 8,
+    up: (db) => {
+      db.exec(`
+        -- Browser download projection. Paths are local-only operational state for release/open/reveal;
+        -- Event Journal entries stay redacted and never store paths.
+        CREATE TABLE downloads (
+          id              TEXT PRIMARY KEY,
+          url             TEXT NOT NULL,
+          filename        TEXT NOT NULL,
+          mime_type       TEXT,
+          status          TEXT NOT NULL,
+          risk            TEXT NOT NULL,
+          trust_verdict   TEXT NOT NULL,
+          received_bytes  INTEGER NOT NULL,
+          total_bytes     INTEGER,
+          can_resume      INTEGER NOT NULL,
+          created_at      INTEGER NOT NULL,
+          updated_at      INTEGER NOT NULL,
+          completed_at    INTEGER,
+          error           TEXT,
+          sha256          TEXT,
+          actor           TEXT NOT NULL,
+          source_url      TEXT,
+          source_origin   TEXT,
+          correlation_id  TEXT,
+          task_id         TEXT,
+          quarantine_path TEXT,
+          final_path      TEXT
+        );
+        CREATE INDEX idx_downloads_updated ON downloads (updated_at DESC);
+        CREATE INDEX idx_downloads_status ON downloads (status);
+      `);
+    },
+  },
 ];
 
 /**

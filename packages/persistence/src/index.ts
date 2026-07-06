@@ -6,3 +6,4 @@ export * from './blob-store';
 export * from './macro-store';
 export * from './history-store';
 export * from './session-store';
+export * from './download-store';

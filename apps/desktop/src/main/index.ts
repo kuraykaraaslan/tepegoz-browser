@@ -26,6 +26,7 @@ import NotificationHost from './notifications/notification-host';
 import NotificationPermissionBroker from './notifications/permission-broker';
 import PasswordHost from './password/password-host';
 import AutofillHost from './password/autofill-host';
+import DownloadService from './downloads/download-service.electron';
 
 // Last-resort process-level hooks: an async error that escapes every boundary must be LOGGED, not a
 // silent crash. Exceptions still terminate (state is unknown); rejections are logged and survived.
@@ -126,6 +127,9 @@ if (!app.requestSingleInstanceLock()) {
       // Apply the persisted User-Agent override to the browsing session BEFORE the first tab opens
       // (a no-op default when the extension is disabled).
       userAgentHost.init();
+      // Browser downloads: attach the browsing-session will-download handler before any page can start
+      // a download, load the SQLite projection, and route every file through quarantine first.
+      DownloadService.init();
       // Load the popup-blocker settings before any page can call window.open, and register its
       // `popup:open` interceptor with the generic action-interception plane (ADR-0022).
       popupBlockerHost.init();

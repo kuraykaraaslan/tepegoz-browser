@@ -1419,6 +1419,9 @@ importers:
 
   packages/persistence:
     dependencies:
+      '@tepegoz/downloads':
+        specifier: workspace:*
+        version: link:../downloads
       '@tepegoz/shared-types':
         specifier: workspace:*
         version: link:../shared-types
