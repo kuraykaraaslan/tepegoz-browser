@@ -173,6 +173,7 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 - [x] `4dce586 Add combined transfer activity popup`
 - [x] `84352e6 Add browser screenshot fallback package`
 - [x] `cfaea44 Add task productization domain`
+- [x] `9652a81 Add task persistence projections`
 
 ## Siradaki En Mantikli Dilim
 
