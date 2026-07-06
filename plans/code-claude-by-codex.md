@@ -1,6 +1,6 @@
 # Plan — ext-agent'i Claude Chrome Seviyesine Yaklastirma
 
-**Durum:** Uygulama basladi, bu noktada durduruldu.
+**Durum:** Uygulama devam ediyor; Faz 1 tamamlandi, download/clipboard Slice 1-5 tamamlandi.
 **Tarih:** 2026-07-06
 **Kapsam:** `extensions/ext-agent`, agent runtime, browser/tab tools, desktop host baglantilari ve
 ilgili dokumantasyon.
@@ -78,7 +78,8 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
   guncellendi.
 - [ ] Screenshot/vision fallback ekle: metin/a11y yetersiz kalinca hedef sekmeden goruntu alip modele
   kontrollu baglam olarak aktar.
-- [ ] Download/upload/clipboard araclarini policy-gated sekilde ekle.
+- [ ] Download/upload/clipboard araclarini policy-gated sekilde ekle. Download + clipboard tamamlandi;
+  upload ve screenshot/vision ile ilgili browser-reliability isleri ayri kaliyor.
   - [x] Slice 1: `@tepegoz/downloads` ve `@tepegoz/clipboard` domain paketleri, IPC/preload
     kontratlari, preferences alanlari ve phase/layer kurallari eklendi.
   - [x] Slice 2: DownloadService + quarantine + Electron `will-download` adapter + SQLite projection +
@@ -86,7 +87,7 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
   - [x] Slice 3: `@tepegoz/downloads-ui`, `tepegoz://downloads`, main-menu action ve download settings.
   - [x] Slice 4: ClipboardService + generic WebPermissionBroker; notification akisi korunarak clipboard
     read/write site izinleri eklendi.
-  - [ ] Slice 5: `download_*` / `clipboard_*` capability tools + HITL entegrasyonu.
+  - [x] Slice 5: `download_*` / `clipboard_*` capability tools + HITL/idempotency entegrasyonu.
 - [ ] Action recovery ekle: click/fill sonrasi beklenen degisim yoksa yeniden snapshot ve alternatif
   selector denemesi.
 - [ ] Form ve tablo senaryolari icin fixtures ekle.
@@ -154,7 +155,8 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 - [x] `b6e3083 Add download and clipboard foundations`
 - [x] `21224b2 Wire quarantined browser downloads`
 - [x] `67b0555 Add downloads page and settings`
-- [ ] Slice 4 commit: Clipboard service and web permissions (commit sonrasi hash ile guncellenecek)
+- [x] `3ed3a0e Centralize clipboard permissions`
+- [x] Slice 5: Register download and clipboard tools (hash final cikisinda raporlanacak)
 
 ## Siradaki En Mantikli Dilim
 
@@ -169,7 +171,10 @@ Download/clipboard icin kalan siradaki is:
 - [x] Download IPC handlerlari ve Event Journal audit eventlerini ekle.
 - [x] Ardindan downloads UI/settings ve clipboard broker dilimine gec.
 - [x] Siradaki: ClipboardService + generic WebPermissionBroker dilimine gec.
-- [ ] Siradaki: `download_*` / `clipboard_*` capability tools + HITL entegrasyonu.
+- [x] Siradaki: `download_*` / `clipboard_*` capability tools + HITL entegrasyonu.
+
+Download/clipboard track icin kod dilimleri tamamlandi. Kalan browser-reliability isleri: gercek
+SafeBrowsing provider/ADR, upload araclari, screenshot/vision fallback, manual UAT ve daha genis e2e kabul seti.
 
 ## Ek Dogrulama Kaydi - Download/Clipboard Track
 
@@ -193,7 +198,11 @@ Download/clipboard icin kalan siradaki is:
 - [x] `pnpm --filter @tepegoz/navigation test`
 - [x] `pnpm --filter @tepegoz/notifications-ui test`
 - [x] `pnpm --filter @tepegoz/notifications-ui typecheck`
+- [x] Slice 5 tekrar dogrulamalari: `pnpm --filter @tepegoz/downloads test/typecheck/lint`
+- [x] Slice 5 tekrar dogrulamalari: `pnpm --filter @tepegoz/clipboard test/typecheck/lint`
+- [x] Slice 5 tekrar dogrulamalari: `pnpm --filter @tepegoz/desktop typecheck/lint`
+- [x] Slice 5 tekrar dogrulamalari: `pnpm --filter @tepegoz/desktop-ipc typecheck`
 - [ ] `pnpm --filter @tepegoz/persistence test` — blocked by local native ABI mismatch:
   `better-sqlite3.node` was compiled for NODE_MODULE_VERSION 130; current Node requires 127.
 
-Bu dosya kaydedildikten sonra is burada durduruldu.
+Bu dosya bundan sonra da her committe asil faz dosyalariyla birlikte guncellenecek.

@@ -687,6 +687,12 @@ importers:
 
   packages/clipboard:
     dependencies:
+      '@tepegoz/capability-plane':
+        specifier: workspace:*
+        version: link:../capability-plane
+      '@tepegoz/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
       zod:
         specifier: 3.23.8
         version: 3.23.8
@@ -759,6 +765,12 @@ importers:
 
   packages/downloads:
     dependencies:
+      '@tepegoz/capability-plane':
+        specifier: workspace:*
+        version: link:../capability-plane
+      '@tepegoz/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
       zod:
         specifier: 3.23.8
         version: 3.23.8

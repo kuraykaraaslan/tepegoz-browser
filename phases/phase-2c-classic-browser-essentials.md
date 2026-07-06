@@ -1,6 +1,6 @@
 # Phase 2c — Classic Browser Essentials & Downloads
 
-**Status:** 🟡 In progress (download/clipboard foundations)  ·  **Estimate:** ~2–3 months  ·  **Depends on:** Phase 1a (UI shell, omnibox,
+**Status:** 🟡 In progress (download/clipboard manager slices)  ·  **Estimate:** ~2–3 months  ·  **Depends on:** Phase 1a (UI shell, omnibox,
 `BookmarkStore`, partition machinery) + Phase 2 (`SafeBrowsingService` — reused for download hash checks) +
 Phase 2b (tab shell)
 **Goal:** Close the "boring but mandatory" gaps that separate a credible everyday browser from an agentic
@@ -40,14 +40,17 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       file, stores a SQLite projection, and emits redacted Event Journal audit records.
 - [x] Slice 3 UI/settings: `@tepegoz/downloads-ui`, `tepegoz://downloads`, main-menu Downloads action, and
       Settings download location / ask-each-time / clear-history controls.
+- [x] Slice 5 capability tools: `download_list_items`, `download_get_item`, `download_create_item`, and
+      `download_update_item` registered in the Capability Plane with redacted records, idempotency for create,
+      and ToolGateway HITL for state-changing actions.
 - [ ] `will-download` intercept in the browsing session → **quarantine** the file (temp, not-yet-trusted) +
       compute file hash + check via Phase 2 **`SafeBrowsingService`** (reuse, do NOT re-implement); community
       blocklist reuse where present
 - [ ] **Executable/script** downloads (`.exe/.msi/.bat/.ps1/.sh/.dmg/...`) force an extra HITL confirm; zip/rar
       surface a content warning; nothing is "trusted" until the check passes
-- [ ] **"Agent-downloaded"** provenance: an agent-initiated download is tagged + journaled with source domain
+- [x] **"Agent-downloaded"** provenance: an agent-initiated download is tagged + journaled with source domain
       + timestamp + agent task/`correlationId` (append-only "shown=recorded", ADR-0004)
-- [ ] Expose a `download_*` tool in the **Capability Plane** (Policy Kernel gated; **agent access
+- [x] Expose a `download_*` tool in the **Capability Plane** (Policy Kernel gated; **agent access
       deny-by-default**, HITL for any state-changing save) — never a direct renderer/agent filesystem write
 - [x] **`@tepegoz/downloads` (headless store)** + **`@tepegoz/downloads-ui`** (presentational): list, progress,
       pause/resume/cancel, open, reveal-in-folder; actions injected via callbacks (Electron-free leaf)
@@ -92,6 +95,8 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
   - [x] Slice 4 service/broker: desktop `ClipboardService` centralizes native clipboard/WebContents
         operations with content-free audit; `WebPermissionBroker` handles notifications + clipboard
         read/write through one per-origin prompt/reset path.
+  - [x] Slice 5 capability tools: `clipboard_get_text` and `clipboard_create_text` registered as HITL-gated
+        Capability Plane tools; write requires an idempotency key and audit remains content-free.
 - [ ] **Per-agent permission matrix** (allowed / requires-approval / denied) rendered as a **read-only view**
       over the Policy Kernel + Capability Plane audit — a UI surface, **not** a new decision engine
 
