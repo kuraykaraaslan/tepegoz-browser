@@ -11,6 +11,7 @@ export type AgentFailureKind =
   | 'auth_handoff'
   | 'model_malformed'
   | 'validation'
+  | 'egress_blocked'
   | 'unknown';
 
 export interface AgentFailure {
@@ -27,6 +28,8 @@ export interface RecoveryAdvice {
   nextTool?: string | undefined;
 }
 
+// The Egress Firewall's block/deny messages (model-gateway messages.ts) both carry this stable phrase.
+const EGRESS_BLOCK_RE = /outbound model request/i;
 const MODEL_MALFORMED_RE = /invalid json|malformed (?:decision|plan)|returned invalid|returned a malformed/i;
 const AUTH_HANDOFF_RE = /captcha|2fa|two[-\s]?factor|otp|one[-\s]?time|verification code/i;
 const STALE_SELECTOR_RE = /stale|detached|no such element|element .*not found|ref\b|snapshot|not visible/i;
@@ -60,6 +63,11 @@ function retryableOf(error: unknown): boolean {
 
 export function classifyRuntimeError(err: unknown): AgentFailure {
   const message = messageOf(err);
+  // Egress Firewall block/deny (AppError 403 with the stable egress phrase) — a security stop, not a
+  // generic tool error; surfaced distinctly so the user learns why the run stopped. Not retryable.
+  if (err instanceof AppError && err.statusCode === 403 && EGRESS_BLOCK_RE.test(message)) {
+    return { kind: 'egress_blocked', message, retryable: false };
+  }
   if (err instanceof AppError && err.statusCode === 502) {
     return { kind: 'model_malformed', message, retryable: true };
   }
@@ -121,6 +129,8 @@ export function stopReasonForFailure(failure: AgentFailure): StopReason {
       return 'model_malformed';
     case 'transient':
       return 'transient_error';
+    case 'egress_blocked':
+      return 'egress_blocked';
     case 'validation':
     case 'unknown':
       return 'tool_error';
@@ -171,6 +181,12 @@ export function recoveryAdviceFor(failure: AgentFailure): RecoveryAdvice {
       return {
         retryable: false,
         instruction: 'Authentication or CAPTCHA needs human handoff. Do not try to solve it automatically.',
+      };
+    case 'egress_blocked':
+      return {
+        retryable: false,
+        instruction:
+          'The Egress Firewall stopped this run because the outbound model request looked like it contained a secret, and it was not sent. Remove the sensitive value from context or narrow the task, then start again.',
       };
     case 'validation':
     case 'unknown':

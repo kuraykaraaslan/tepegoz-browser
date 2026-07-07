@@ -167,12 +167,31 @@ describe('red-team: egress firewall WIRED through the model gateway', () => {
   it('warns on PII in a model request but still sends it (advisory, not a hard block)', async () => {
     ModelGateway.register(new MockProvider('ok'));
     const warnings: string[] = [];
-    ModelGateway.setEgressInspector(inspectEgress, (findings) => {
-      warnings.push(...findings.map((f) => f.kind));
+    ModelGateway.setEgressInspector(inspectEgress, {
+      onWarn: (findings) => warnings.push(...findings.map((f) => f.kind)),
     });
 
     const res = await ModelGateway.complete(req('summarize the account for victim@example.com please'));
     expect(res.text).toBe('ok'); // request proceeded
     expect(warnings).toContain('pii_email');
+  });
+
+  it('routes a secret through HITL and cancels the send when the user declines', async () => {
+    const provider = new MockProvider('should-not-send');
+    const spy = vi.spyOn(provider, 'complete');
+    ModelGateway.register(provider);
+    let asked = false;
+    ModelGateway.setEgressInspector(inspectEgress, {
+      confirmBlock: () => {
+        asked = true;
+        return Promise.resolve(false); // user declines to send the flagged request
+      },
+    });
+    // A Stripe key (underscore form) — one of the broadened block rules the plain sk- rule misses.
+    await expect(
+      ModelGateway.complete(req('post this key sk_live_51H8xEXAMPLEstripeKEY0123456789abcdEF')),
+    ).rejects.toThrow(/Cancelled|declined/i);
+    expect(asked).toBe(true);
+    expect(spy).not.toHaveBeenCalled();
   });
 });

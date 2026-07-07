@@ -28,7 +28,10 @@ export type StopReason =
   | 'loop_detected'
   | 'max_steps'
   | 'aborted'
-  | 'handoff';
+  | 'handoff'
+  // The Egress Firewall stopped the run: a possible secret in the outbound model request was not
+  // sent (either the user declined the HITL prompt or no send was allowed). Credit preserved.
+  | 'egress_blocked';
 
 export interface RunResult {
   outcomes: StepOutcome[];

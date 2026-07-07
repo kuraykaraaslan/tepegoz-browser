@@ -9,7 +9,9 @@ export const GatewayMessages = {
   RequestTimedOut: 'Model request aborted (timeout)',
   noProviderRegistered: (provider: string): string =>
     `No model provider registered for "${provider}"`,
-  // Egress Firewall block — the message carries only the redacted finding KINDS, never the payload.
+  // Egress Firewall — messages carry only the redacted finding KINDS, never the payload/secret.
   egressBlocked: (kinds: string): string =>
     `Blocked: the outbound model request contains ${kinds} (potential secret exfiltration). The request was not sent.`,
+  egressDenied: (kinds: string): string =>
+    `Cancelled: you declined to send the outbound model request flagged for ${kinds} (potential secret exfiltration).`,
 } as const;

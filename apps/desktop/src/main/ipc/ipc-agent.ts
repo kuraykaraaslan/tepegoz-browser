@@ -149,6 +149,9 @@ const REFUNDABLE_STOP_REASONS = new Set<string>([
   'selector_stale',
   'page_changed',
   'max_steps',
+  // Egress Firewall stopped the run (secret in the outbound request) — a security stop, not the user's
+  // productive work; don't spend their quota on it.
+  'egress_blocked',
 ]);
 
 /** Raise the localized 80%-quota warning ONCE, on the run that pushes cumulative usage across the

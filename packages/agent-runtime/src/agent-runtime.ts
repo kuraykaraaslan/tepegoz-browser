@@ -16,7 +16,13 @@ import {
   type ConfirmRequest,
   type InvokeContext,
 } from '@tepegoz/capability-plane';
-import { Planner, Reactor, type AgentFailure, type StepOutcome } from '@tepegoz/orchestrator';
+import {
+  Planner,
+  Reactor,
+  classifyRuntimeError,
+  type AgentFailure,
+  type StepOutcome,
+} from '@tepegoz/orchestrator';
 import { TaintTracker, detectHandoff, inspectEgress } from '@tepegoz/security-policy';
 import {
   isRunnableProvider,
@@ -214,6 +220,36 @@ function providerFor(
   return new AnthropicProvider({ apiKey, effort });
 }
 
+/**
+ * Run the Planner, converting an Egress-Firewall block during PLANNING into a terminal failure
+ * (symmetric with the reactor path, which already catches it) instead of throwing out of the run — so
+ * the run lifecycle/journal stays consistent regardless of WHEN the block trips. Other planning errors
+ * keep their existing behavior (surface at the IPC boundary).
+ */
+async function planOrEgressStop(
+  input: Parameters<typeof Planner.plan>[0],
+): Promise<{ plan: Plan } | { egressFailure: AgentFailure }> {
+  try {
+    return { plan: await Planner.plan(input) };
+  } catch (err) {
+    const failure = classifyRuntimeError(err);
+    if (failure.kind === 'egress_blocked') return { egressFailure: failure };
+    throw err;
+  }
+}
+
+/** The terminal Console line for a finished run: the agent's own summary if any, else a distinct
+ *  reason for a security stop (Egress Firewall), else a generic finished line. */
+function terminalMessageFor(
+  stoppedReason: string,
+  summary: string | undefined,
+  failure: AgentFailure | undefined,
+): string {
+  if (summary !== undefined && summary.length > 0) return summary;
+  if (failure?.kind === 'egress_blocked' && failure.message.length > 0) return failure.message;
+  return `Finished: ${stoppedReason}`;
+}
+
 export async function runAgent(
   prompt: string,
   hooks: AgentRunHooks,
@@ -249,9 +285,23 @@ export async function runAgent(
   // called, so no secret is sent and no tokens are spent); PII/encoded-blob warnings are surfaced to the
   // Console. Set per run so the warn handler targets THIS run's stream — the gateway is only ever called
   // by the Planner/Reactor inside this run. The inspector itself is stateless (safe to leave installed).
-  ModelGateway.setEgressInspector(inspectEgress, (findings) => {
-    const summary = findings.map((f) => `${f.kind} (${f.sample})`).join(', ');
-    hooks.onEvent('decision', 'Egress warning: possible PII/encoded data in the model request', summary);
+  ModelGateway.setEgressInspector(inspectEgress, {
+    // Advisory (PII / encoded blob): surface to the Console, still send.
+    onWarn: (findings) => {
+      const summary = findings.map((f) => `${f.kind} (${f.sample})`).join(', ');
+      hooks.onEvent('decision', 'Egress warning: possible PII/encoded data in the model request', summary);
+    },
+    // Possible secret (block-severity): route to HITL — the user chooses to send or cancel (origin-blind
+    // detection can't tell a real secret from token-shaped page content it was asked to read, so a hard
+    // abort would kill legitimate runs). Cancel → the gateway throws → the run stops 'egress_blocked'.
+    confirmBlock: (findings) => {
+      const kinds = [...new Set(findings.map((f) => f.kind))].join(', ');
+      return hooks.requestApproval({
+        toolName: 'model_send',
+        policy: { decision: 'ask', reason: `egress_possible_secret:${kinds}`, biometric: false },
+        args: { flagged: findings.map((f) => `${f.kind}: ${f.sample}`) },
+      });
+    },
   });
 
   // On-device availability: a native backend AND a selected/installed model. Drives both the
@@ -296,7 +346,7 @@ export async function runAgent(
 
   transition('start_planning');
   hooks.onEvent('plan', 'Planning…');
-  const plan = await Planner.plan({
+  const planned = await planOrEgressStop({
     intent: prompt,
     tools,
     provider: route.provider,
@@ -304,6 +354,12 @@ export async function runAgent(
     maxTokens,
     history,
   });
+  if ('egressFailure' in planned) {
+    emitCheckpoint(terminalCheckpoint(transition('fail'), 'egress_blocked', planned.egressFailure));
+    hooks.onEvent('error', planned.egressFailure.message);
+    return { stoppedReason: 'egress_blocked', ok: false, checkpoint: lastCheckpoint };
+  }
+  const plan = planned.plan;
   hooks.onEvent(
     'plan',
     `Plan ready: ${String(plan.steps.length)} step(s)`,
@@ -444,9 +500,7 @@ export async function runAgent(
     result.stoppedReason === 'completed' || result.stoppedReason === 'aborted' ? 'done' : 'error';
   hooks.onEvent(
     terminalKind,
-    result.summary !== undefined && result.summary.length > 0
-      ? result.summary
-      : `Finished: ${result.stoppedReason}`,
+    terminalMessageFor(result.stoppedReason, result.summary, failure),
     `${String(usage.totalTokens)} tokens`,
   );
   return {

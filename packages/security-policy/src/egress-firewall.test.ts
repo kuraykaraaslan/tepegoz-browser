@@ -33,6 +33,15 @@ describe('inspectEgress — secrets (block)', () => {
   it('blocks a private key header', () => {
     expect(EgressFirewall.isBlocked('-----BEGIN RSA PRIVATE KEY-----')).toBe(true);
   });
+
+  it('blocks common vendor credential formats the sk- rule misses (Stripe/GitHub-PAT/Slack/SendGrid)', () => {
+    // Stripe uses an underscore, so the hyphen-anchored sk- rule never matches it — its own rule must.
+    expect(EgressFirewall.isBlocked('sk_live_51H8xEXAMPLEstripeKEY0123456789abcdEF')).toBe(true);
+    expect(EgressFirewall.isBlocked('rk_test_51H8xEXAMPLEstripeKEY0123456789abcdEF')).toBe(true);
+    expect(EgressFirewall.isBlocked('github_pat_11ABCDEFG0aBcDeFgHiJkL_mNoPqRsTuVwXyZ')).toBe(true);
+    expect(EgressFirewall.isBlocked('xoxb-1234567890-ABCDEFGHIJKLMNOP')).toBe(true);
+    expect(EgressFirewall.isBlocked('SG.ABCDEFGHIJKLMNOPqrstuv.ABCDEFGHIJKLMNOPqrstuvwxyz012345')).toBe(true);
+  });
 });
 
 describe('inspectEgress — PII (warn)', () => {

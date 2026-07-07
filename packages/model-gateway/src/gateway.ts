@@ -24,6 +24,19 @@ export interface GatewayEgressVerdict {
 export type EgressInspector = (payload: string) => GatewayEgressVerdict;
 /** Notified on a `warn` verdict (PII / encoded blobs) — advisory, the request still goes out. */
 export type EgressWarningHandler = (findings: GatewayEgressFinding[]) => void;
+/**
+ * HITL decision on a `block` verdict (a possible secret in the outbound request). Resolve `true` to
+ * SEND anyway, `false` to cancel. Injected by the app (wired to the agent's approval modal). When NO
+ * handler is installed the gateway fails CLOSED (throws) — a block never silently sends.
+ */
+export type EgressConfirmHandler = (findings: GatewayEgressFinding[]) => Promise<boolean>;
+
+export interface EgressHandlers {
+  /** Advisory notification on a warn verdict (request still sent). */
+  onWarn?: EgressWarningHandler;
+  /** HITL gate on a block verdict; absent → fail closed (throw). */
+  confirmBlock?: EgressConfirmHandler;
+}
 
 /**
  * The single entry point for every model call (L7), provider-agnostic. Enforces required
@@ -35,12 +48,12 @@ export type EgressWarningHandler = (findings: GatewayEgressFinding[]) => void;
 export class ModelGateway {
   private static readonly providers = new Map<AIProvider, ModelProvider>();
   private static egressInspector: EgressInspector | null = null;
-  private static egressWarn: EgressWarningHandler | null = null;
+  private static egressHandlers: EgressHandlers = {};
 
   static reset(): void {
     ModelGateway.providers.clear();
     ModelGateway.egressInspector = null;
-    ModelGateway.egressWarn = null;
+    ModelGateway.egressHandlers = {};
   }
 
   static register(provider: ModelProvider): void {
@@ -49,32 +62,50 @@ export class ModelGateway {
 
   /**
    * Install the Egress Firewall over every outbound model request. Idempotent; the app sets it per
-   * run. `warn` is called on a warn-severity verdict (advisory) — the request still proceeds.
+   * run. `confirmBlock` gates a block-severity finding through HITL (resolve true to send); when it is
+   * absent the gateway fails CLOSED (throws) so a block never silently sends. `onWarn` is advisory.
    */
-  static setEgressInspector(inspector: EgressInspector | null, warn?: EgressWarningHandler | null): void {
+  static setEgressInspector(inspector: EgressInspector | null, handlers: EgressHandlers = {}): void {
     ModelGateway.egressInspector = inspector;
-    ModelGateway.egressWarn = warn ?? null;
+    ModelGateway.egressHandlers = handlers;
+  }
+
+  /** The full outbound body an adapter transmits: every message's content PLUS each tool's
+   *  name/description/inputSchema (adapters send tools too — inspect them, not just the messages). */
+  private static egressPayload(req: CanonRequest): string {
+    const parts = req.messages.map((m) => m.content);
+    for (const t of req.tools ?? []) {
+      parts.push(t.name, t.description, JSON.stringify(t.inputSchema));
+    }
+    return parts.join('\n');
   }
 
   /**
-   * Inspect the serialized outbound payload (every message's content). A block-severity finding
-   * (secret token / private key) throws BEFORE the provider is called — the request never leaves the
-   * device. A warn-severity finding (PII / encoded blob) is surfaced but allowed through.
+   * Inspect the serialized outbound payload before the request leaves the device. A block-severity
+   * finding (secret token / private key) is routed to HITL (`confirmBlock`): the user chooses to send
+   * or cancel; a cancel (or no handler installed → fail closed) THROWS before the provider is called.
+   * A warn-severity finding (PII / encoded blob) is surfaced (`onWarn`) but allowed through.
    */
-  private static inspectEgress(req: CanonRequest): void {
+  private static async inspectEgress(req: CanonRequest): Promise<void> {
     const inspector = ModelGateway.egressInspector;
     if (inspector === null) return;
-    const payload = req.messages.map((m) => m.content).join('\n');
-    const verdict = inspector(payload);
+    const verdict = inspector(ModelGateway.egressPayload(req));
     if (verdict.decision === 'block') {
+      const blockFindings = verdict.findings.filter((f) => f.severity === 'block');
       // Message carries only the redacted finding KINDS — never the payload or the raw secret.
-      const kinds = [
-        ...new Set(verdict.findings.filter((f) => f.severity === 'block').map((f) => f.kind)),
-      ].join(', ');
-      throw new AppError(GatewayMessages.egressBlocked(kinds), 403);
+      const kinds = [...new Set(blockFindings.map((f) => f.kind))].join(', ');
+      const confirm = ModelGateway.egressHandlers.confirmBlock;
+      if (confirm === undefined) {
+        throw new AppError(GatewayMessages.egressBlocked(kinds), 403); // fail closed
+      }
+      const approved = await confirm(blockFindings);
+      if (!approved) {
+        throw new AppError(GatewayMessages.egressDenied(kinds), 403);
+      }
+      return; // user approved sending despite the finding
     }
     if (verdict.decision === 'warn') {
-      ModelGateway.egressWarn?.(verdict.findings);
+      ModelGateway.egressHandlers.onWarn?.(verdict.findings);
     }
   }
 
@@ -91,9 +122,9 @@ export class ModelGateway {
       throw new AppError(GatewayMessages.noProviderRegistered(req.provider), 503);
     }
 
-    // Egress Firewall (before the request leaves the device): a hard secret/key leak throws here and
-    // the provider is never called; a warn is surfaced and allowed.
-    ModelGateway.inspectEgress(req);
+    // Egress Firewall (before the request leaves the device): a possible secret leak is routed to HITL
+    // and throws if the user cancels (or fails closed with no handler); a warn is surfaced and allowed.
+    await ModelGateway.inspectEgress(req);
 
     const controller = new AbortController();
     const timer = setTimeout(() => {

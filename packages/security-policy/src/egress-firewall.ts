@@ -43,12 +43,23 @@ interface PatternRule {
 }
 
 // Order matters only for readability; matchAll is independent per rule. All use the global flag.
+// Vendor-prefixed rules are high-confidence (low false-positive) so they are safe to BLOCK. Enumeration
+// necessarily lags real-world formats, so the model-egress path routes a block to HITL (never a silent
+// send), and unmatched-but-suspicious tokens still surface as high_entropy/base64_blob 'warn' below.
 const SECRET_RULES: readonly PatternRule[] = [
   { kind: 'private_key', severity: 'block', re: /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/g },
   { kind: 'secret_token', severity: 'block', re: /\bsk-ant-[A-Za-z0-9_-]{20,}/g },
   { kind: 'secret_token', severity: 'block', re: /\bsk-[A-Za-z0-9]{20,}\b/g },
+  // Stripe secret + restricted keys use an UNDERSCORE (the sk- rule above never matches them).
+  { kind: 'secret_token', severity: 'block', re: /\b[rs]k_(?:live|test)_[A-Za-z0-9]{16,}/g },
   { kind: 'secret_token', severity: 'block', re: /\bAKIA[0-9A-Z]{16}\b/g },
   { kind: 'secret_token', severity: 'block', re: /\bgh[pousr]_[A-Za-z0-9]{36,}\b/g },
+  // GitHub fine-grained PAT (github_pat_...) — distinct prefix from the classic gh[pousr]_ tokens.
+  { kind: 'secret_token', severity: 'block', re: /\bgithub_pat_\w{22,}/g },
+  // Slack bot/user/app/refresh tokens.
+  { kind: 'secret_token', severity: 'block', re: /\bxox[bpasr]-[A-Za-z0-9-]{10,}/g },
+  // SendGrid API key (SG.<id>.<secret>).
+  { kind: 'secret_token', severity: 'block', re: /\bSG\.[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}/g },
   { kind: 'secret_token', severity: 'block', re: /\bAIza[0-9A-Za-z_-]{35,}/g },
   { kind: 'secret_token', severity: 'block', re: /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g },
   { kind: 'secret_token', severity: 'block', re: /\bBearer\s+[A-Za-z0-9._-]{20,}/gi },
