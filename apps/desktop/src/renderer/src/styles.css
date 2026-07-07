@@ -71,6 +71,24 @@ body,
   -webkit-app-region: no-drag;
 }
 
+/* Windows 11 "glass" (Mica) chrome. When the main process enables the native Mica backdrop it also sets
+   the `.glass` class on <html> (App.tsx). The material only shows where painted content is non-opaque, so
+   the shell root goes transparent and the chrome bars (`.chrome-surface`) become translucent. The compound
+   selectors outrank the Tailwind `bg-surface-*` utilities on specificity — no `!important` needed. Mixing
+   toward `transparent` (not a color) keeps the fill tracking custom `themeColor` overrides that rewrite
+   `--surface-raised`. No `backdrop-filter: blur` — Mica already supplies the backdrop blur. */
+.glass .app-shell {
+  background-color: transparent;
+}
+.glass .chrome-surface {
+  background-color: color-mix(in srgb, var(--surface-raised) 72%, transparent);
+}
+/* Dark surfaces read fine slightly more translucent; light themes need more fill to keep bars legible
+   over a bright wallpaper. Both `.glass` and `.dark` live on <html>, so this is a compound selector. */
+.glass.dark .chrome-surface {
+  background-color: color-mix(in srgb, var(--surface-raised) 65%, transparent);
+}
+
 /* Horizontally scrollable but chromeless — used by the tab strip so overflowing tabs can be
    scrolled (wheel/trackpad) without a visible scrollbar eating vertical space. */
 .no-scrollbar {

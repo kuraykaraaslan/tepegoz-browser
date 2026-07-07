@@ -88,7 +88,7 @@ export function NavToolbar({
   actions,
 }: NavToolbarProps) {
   return (
-    <div className="relative z-20 flex h-11 shrink-0 items-center gap-1 border-b border-border bg-surface-raised px-2">
+    <div className="chrome-surface relative z-20 flex h-11 shrink-0 items-center gap-1 border-b border-border bg-surface-raised px-2">
       <button
         type="button"
         aria-label={labels.back}

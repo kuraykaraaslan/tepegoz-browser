@@ -263,6 +263,8 @@ export interface AppInfo {
   name: string;
   version: string;
   platform: string;
+  /** True when the OS supports the translucent "glass" chrome (Windows 11 Mica). Gates the Settings toggle. */
+  glassAvailable: boolean;
 }
 
 export type WebPermissionCapability = 'notifications' | 'clipboardRead' | 'clipboardWrite';

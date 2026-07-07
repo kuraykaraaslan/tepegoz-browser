@@ -194,7 +194,7 @@ export function BookmarksBar({
       ref={barRef}
       role="toolbar"
       aria-label={labels.bar}
-      className="flex h-9 shrink-0 items-center gap-1 overflow-x-auto border-b border-border bg-surface-raised px-2"
+      className="chrome-surface flex h-9 shrink-0 items-center gap-1 overflow-x-auto border-b border-border bg-surface-raised px-2"
       onWheel={(e) => {
         if (barRef.current !== null && e.deltaY !== 0) barRef.current.scrollLeft += e.deltaY;
       }}

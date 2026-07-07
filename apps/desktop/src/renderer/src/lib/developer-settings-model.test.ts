@@ -37,6 +37,7 @@ const PREFS: Preferences = {
   fileOperationsEnabled: true,
   fileAccessGrants: [],
   fileAccessSeeded: false,
+  glassChrome: true,
 };
 
 describe('developer settings model', () => {

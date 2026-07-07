@@ -82,6 +82,9 @@ export function App() {
   const [permReq, setPermReq] = useState<NotificationPermissionRequest | null>(null);
   // Autofill suggestions pushed from main when a page loads and has matching stored credentials.
   const [autofill, setAutofill] = useState<AutofillAvailablePayload | null>(null);
+  // Whether the OS can render the glass (Win11 Mica) chrome — gates both the `.glass` class and the
+  // Settings toggle. Fetched once from app info.
+  const [glassAvailable, setGlassAvailable] = useState(false);
   // Cached credential list for the Passwords settings section.
   const [loginCredentials, setLoginCredentials] = useState<LoginCredentialMeta[]>([]);
   // Built-in extensions, fetched once over IPC (identity) + paired with lazy surfaces. Empty until it
@@ -201,6 +204,14 @@ export function App() {
     });
   }, []);
 
+  // One-shot: does this OS support the glass (Win11 Mica) chrome?
+  useEffect(() => {
+    void window.tepegoz.getAppInfo().then(
+      (info) => setGlassAvailable(info.glassAvailable),
+      () => setGlassAvailable(false),
+    );
+  }, []);
+
   // Refresh the credentials list whenever the Passwords settings section is open.
   const refreshLogins = useCallback(async (): Promise<void> => {
     try {
@@ -239,6 +250,15 @@ export function App() {
       mq.removeEventListener('change', onChange);
     };
   }, [theme, themeColor]);
+
+  // Mark the root for glass chrome so the `.glass` CSS makes the shell/bars translucent, in lockstep with
+  // the native Mica backdrop the main process applies. On non-Win11 the pref is on but main never enables
+  // the material, so the translucency would reveal the opaque shell — harmless, but keep the class off
+  // there by gating on the runtime capability (fetched into `glassAvailable`).
+  const glassChrome = prefs?.glassChrome ?? false;
+  useEffect(() => {
+    document.documentElement.classList.toggle('glass', glassChrome && glassAvailable);
+  }, [glassChrome, glassAvailable]);
 
   // Tell main where to lay out the active tab's web view (the content area below the chrome).
   const contentRef = useRef<HTMLDivElement | null>(null);
@@ -474,7 +494,7 @@ export function App() {
 
   return (
     <I18nProvider locale={locale}>
-      <div className="flex h-screen flex-col bg-surface-base text-text-primary">
+      <div className="app-shell flex h-screen flex-col bg-surface-base text-text-primary">
         <BrowserChrome
           t={{ common: coreT.common, window: coreT.window, browser: browserT }}
           tabs={tabs.tabs}
@@ -554,7 +574,9 @@ export function App() {
             labels={{ bar: browserT.bookmarksBar, empty: browserT.noBookmarksBar }}
           />
         )}
-        <div className="relative flex flex-1 overflow-hidden">
+        {/* Opaque base so the glass (transparent .app-shell) is confined to the chrome bars and never
+          bleeds into the content/sidebar region between a web view detaching and an internal page paint. */}
+        <div className="relative flex flex-1 overflow-hidden bg-surface-base">
           {/* Left region = the web-view area (its bounds are measured from contentRef, so they exclude
             the sidebar); the resizable sidebar dock sits to its right. */}
           <div ref={contentRef} className="relative flex-1 overflow-hidden">

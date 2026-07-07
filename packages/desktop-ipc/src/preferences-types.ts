@@ -128,6 +128,9 @@ export interface Preferences {
   /** One-time sentinel: true after the default `~/tepegoz` grant has been seeded, so an intentionally
    *  emptied list is never re-seeded. Not user-facing. */
   fileAccessSeeded: boolean;
+  /** Translucent "glass" chrome (Windows 11 Mica backdrop behind the tab/toolbar/bookmarks bars).
+   *  Private (not exposed to extensions); only takes visible effect on Win11 — see `isMicaSupported`. */
+  glassChrome: boolean;
 }
 
 /**

@@ -197,7 +197,7 @@ export function SettingsPage({
       group: G_GENERAL,
       label: s.appearanceTitle,
       icon: <IconPalette />,
-      searchText: `${s.appearanceTitle} ${s.theme} ${s.themeSystem} ${s.themeLight} ${s.themeDark}`,
+      searchText: `${s.appearanceTitle} ${s.theme} ${s.themeSystem} ${s.themeLight} ${s.themeDark} ${s.glassTitle} ${s.glassHint}`,
       content: <AppearanceSection prefs={prefs} setPref={setPref} />,
     },
     {

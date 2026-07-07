@@ -144,7 +144,7 @@ export function BrowserChrome({
       {/* Custom window title row for the frameless window: brand, tab strip, a draggable spacer, and
           the caption controls. `-webkit-app-region: drag` on the bar restores OS caption behaviors;
           interactive children opt out with `.app-no-drag`. */}
-      <header className="app-drag flex h-9 shrink-0 select-none items-stretch gap-2 border-b border-border bg-surface-raised pl-3">
+      <header className="chrome-surface app-drag flex h-9 shrink-0 select-none items-stretch gap-2 border-b border-border bg-surface-raised pl-3">
         <div className="flex items-center" role="img" aria-label={t.common.appName}>
           <BrandMark className="h-5 w-5" />
         </div>

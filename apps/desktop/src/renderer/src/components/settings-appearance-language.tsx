@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { settingsDict } from '@tepegoz/settings-ui';
-import { Card, cn } from '@tepegoz/ui';
+import { Card, cn, Toggle } from '@tepegoz/ui';
 import { DATE_FORMAT_IDS, formatDateByFormat, type DateFormatId } from '@tepegoz/i18n';
 import { useLocale, useT } from '@tepegoz/i18n/react';
 import type { LocalePref, Preferences, ThemePref } from '@tepegoz/desktop-ipc';
@@ -99,6 +99,14 @@ export function AppearanceSection({
   setPref: (patch: Partial<Preferences>) => void;
 }) {
   const s = useT(settingsDict);
+  // Glass (Win11 Mica) is OS-gated — only offer the toggle where the material can actually render.
+  const [glassAvailable, setGlassAvailable] = useState(false);
+  useEffect(() => {
+    void window.tepegoz.getAppInfo().then(
+      (info) => setGlassAvailable(info.glassAvailable),
+      () => setGlassAvailable(false),
+    );
+  }, []);
   const themeLabel: Record<ThemePref, string> = {
     system: s.themeSystem,
     light: s.themeLight,
@@ -185,6 +193,20 @@ export function AppearanceSection({
           />
         </label>
       </div>
+
+      {glassAvailable && (
+        <div className="mt-5 border-t border-border pt-4">
+          <Toggle
+            id="glass-chrome"
+            label={s.glassTitle}
+            description={s.glassHint}
+            checked={prefs.glassChrome}
+            onChange={(v) => {
+              setPref({ glassChrome: v });
+            }}
+          />
+        </div>
+      )}
     </Card>
   );
 }

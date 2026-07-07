@@ -77,6 +77,8 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   fileOperationsEnabled: 'private',
   fileAccessGrants: 'private',
   fileAccessSeeded: 'private',
+  // Private — a purely cosmetic window-chrome preference; extensions have no need for it.
+  glassChrome: 'private',
 };
 
 // --- Compile-time guards: pin the shared PublicSettings shape to the real Preferences projection. ---

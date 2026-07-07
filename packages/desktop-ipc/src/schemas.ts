@@ -11,6 +11,7 @@ export const AppInfoSchema: z.ZodType<AppInfo> = z.object({
   name: z.string(),
   version: z.string(),
   platform: z.string(),
+  glassAvailable: z.boolean(),
 });
 
 const ProviderIdSchema = z.enum(PROVIDER_IDS);

@@ -34,6 +34,8 @@ export const en = {
     amber: 'Amber',
     forest: 'Forest',
   },
+  glassTitle: 'Glass effect',
+  glassHint: 'Make the tab bar and toolbar translucent, showing your desktop through them (Windows 11).',
 
   // --- Language & region ---
   languageRegionTitle: 'Language & region',

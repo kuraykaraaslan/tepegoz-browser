@@ -75,6 +75,7 @@ import userAgentHost from '../extensions/user-agent-host.electron';
 import popupBlockerHost from '../extensions/popup-blocker-host.electron';
 import { builtinManifests } from '../../shared/extensions';
 import { handle, handleAsync, onAction, onSignal } from './ipc-helpers';
+import { applyChromeGlass, isMicaSupported } from '../lib/glass';
 
 /**
  * App info/preferences + credentials + MCP/AI-adaptors/extensions + notifications + history +
@@ -120,6 +121,7 @@ export function registerContentIpc(): void {
       name: 'Tepegöz',
       version: app.getVersion(),
       platform: process.platform,
+      glassAvailable: isMicaSupported(),
     }),
   );
 
@@ -139,6 +141,13 @@ export function registerContentIpc(): void {
     // File-access whitelist or master switch changed — re-sync the live FileAccessPolicy.
     if (validated.fileAccessGrants !== undefined || validated.fileOperationsEnabled !== undefined) {
       FileOperationsHost.reconcile();
+    }
+    // Glass toggled — apply the Mica backdrop live to every top-level chrome window (popups are children
+    // and stay opaque). setBackgroundMaterial/setBackgroundColor take effect without recreating windows.
+    if (validated.glassChrome !== undefined) {
+      for (const w of BrowserWindow.getAllWindows()) {
+        if (!w.isDestroyed() && w.getParentWindow() === null) applyChromeGlass(w, next.glassChrome);
+      }
     }
     // Any change may touch a PUBLIC setting (theme/locale/etc.) — push the fresh snapshot to
     // subscribed extensions. The projection ignores private keys, so this never leaks them.

@@ -1,7 +1,9 @@
 import { app, BrowserWindow, shell, type Rectangle } from 'electron';
 import { join } from 'node:path';
 import { IpcChannels } from '@tepegoz/desktop-ipc';
+import PreferenceStore from '@tepegoz/preferences';
 import { isTrustedAppUrl } from './lib/trusted-origin';
+import { GLASS_BG, OPAQUE_BG, isMicaSupported } from './lib/glass';
 
 /** App-chrome partition — shared by the main window and extension popups (both are trusted chrome).
  *  Exported for the CSP hook in security.ts (the policy applies to this session ONLY). */
@@ -35,6 +37,10 @@ const ICON_PATH = join(
  * which also restores OS caption behaviors (snap, double-click-to-maximize, system menu).
  */
 export function createWindow(): BrowserWindow {
+  // Windows 11 "glass": create the window with the Mica backdrop when supported + enabled. The renderer's
+  // `.glass` styles make the shell/bars translucent so the material shows through (see lib/glass.ts).
+  // `show:false` + reveal-on-paint (below) means the transparent fill never flashes the desktop.
+  const glass = isMicaSupported() && PreferenceStore.getAll().glassChrome;
   const win = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -43,8 +49,9 @@ export function createWindow(): BrowserWindow {
     show: false,
     frame: false,
     icon: ICON_PATH,
-    // Brand navy (logo background) so the frame matches before the renderer paints.
-    backgroundColor: '#0c2135',
+    // Brand navy (logo background) so the frame matches before the renderer paints; transparent under glass.
+    backgroundColor: glass ? GLASS_BG : OPAQUE_BG,
+    ...(glass ? { backgroundMaterial: 'mica' as const } : {}),
     // App-chrome gets its own persistent partition. Browsed (untrusted) pages run in SEPARATE isolated
     // partitions/WebContentsView, never sharing this session.
     webPreferences: { ...CHROME_WEB_PREFERENCES },

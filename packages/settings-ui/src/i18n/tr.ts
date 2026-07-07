@@ -33,6 +33,8 @@ export const tr: SettingsStrings = {
     amber: 'Kehribar',
     forest: 'Orman',
   },
+  glassTitle: 'Cam efekti',
+  glassHint: 'Sekme çubuğunu ve araç çubuğunu saydamlaştırarak arkasındaki masaüstünü gösterir (Windows 11).',
 
   // --- Dil ve bölge ---
   languageRegionTitle: 'Dil ve bölge',

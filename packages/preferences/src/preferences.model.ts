@@ -149,6 +149,8 @@ export const PreferencesSchema = z.object({
     )
     .max(100),
   fileAccessSeeded: z.boolean(),
+  // Translucent "glass" chrome (Win11 Mica). Private — not projected to PublicSettings.
+  glassChrome: z.boolean(),
 }) satisfies z.ZodType<Preferences>;
 
 /** Patch shape for partial updates — only provided keys are applied. */
@@ -209,4 +211,6 @@ export const DEFAULT_PREFERENCES: Preferences = {
   // Seeded lazily by the main-process host (needs os.homedir()); starts empty + unseeded here.
   fileAccessGrants: [],
   fileAccessSeeded: false,
+  // Glass chrome on by default; the main process only applies Mica when the OS supports it (Win11).
+  glassChrome: true,
 };
