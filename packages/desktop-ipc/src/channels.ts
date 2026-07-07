@@ -146,6 +146,7 @@ export const IpcChannels = {
   bookmarksRename: 'bookmarks:rename',
   bookmarksRemove: 'bookmarks:remove',
   bookmarksMove: 'bookmarks:move',
+  bookmarksImport: 'bookmarks:import',
   bookmarksContextMenu: 'bookmarks:context-menu',
   bookmarksMenuAction: 'bookmarks:menu-action',
   /** Main→renderer: the bookmark tree changed (incl. from a popup window) → refetch. */

@@ -77,6 +77,21 @@ export interface BookmarkMenuAction {
   type: BookmarkNodeType;
 }
 
+export type BrowserImportSource = 'chrome' | 'edge' | 'firefox' | 'brave' | 'other';
+
+export interface BookmarkImportInput {
+  source: BrowserImportSource;
+  format: 'html';
+  data: string;
+}
+
+export interface BookmarkImportResult {
+  imported: number;
+  skipped: number;
+  folders: number;
+  errors: string[];
+}
+
 // Extension manifest identity comes from the SDK schema (single source). Type-only → erased, so the
 // sandboxed preload stays dependency-free (the SDK pulls in zod). See `ExtensionManifestWire` below.
 import type { ExtensionManifest } from '@tepegoz/extension-sdk';

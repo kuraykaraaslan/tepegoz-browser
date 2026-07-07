@@ -7,6 +7,7 @@ import {
   type AdaptorConnection,
   type AppInfo,
   type BookmarkEntry,
+  type BookmarkImportResult,
   type BookmarkTreeNode,
   type CredentialsStatus,
   type ExtensionManifestWire,
@@ -29,6 +30,7 @@ import {
   AddProviderKeyInputSchema,
   AppInfoSchema,
   BookmarkCreateFolderSchema,
+  BookmarkImportSchema,
   BookmarkMoveSchema,
   BookmarkRemoveSchema,
   BookmarkRenameSchema,
@@ -54,7 +56,7 @@ import {
 import NotificationStore from '@tepegoz/notifications';
 import WebPermissionBroker from '../web-permissions/permission-broker';
 import { HistoryStore } from '@tepegoz/persistence';
-import { BookmarkTreeStore, isBookmarkable } from '@tepegoz/bookmarks';
+import { BookmarkTreeStore, importBookmarksHtmlToStore, isBookmarkable } from '@tepegoz/bookmarks';
 import FileOperationsHost from '../file-operations/file-operations-host';
 import McpService from '../mcp/supervisor.electron';
 import ModelManager from '../model-catalog/model-manager.electron';
@@ -165,20 +167,18 @@ export function registerContentIpc(): void {
 
   // Built-in extension identity for the renderer (it pairs each with lazily-loaded surfaces + icon).
   // Read-only, trusted direction; `mcpServer` is stripped — the renderer never needs it.
-  handle(
-    IpcChannels.extensionsListManifests,
-    (): ExtensionManifestWire[] =>
-      builtinManifests().map((m) => ({
-        id: m.id,
-        name: m.name,
-        version: m.version,
-        description: m.description,
-        icon: m.icon,
-        surfaces: m.surfaces,
-        actions: m.actions,
-        labels: m.labels,
-        permissions: m.permissions,
-      })),
+  handle(IpcChannels.extensionsListManifests, (): ExtensionManifestWire[] =>
+    builtinManifests().map((m) => ({
+      id: m.id,
+      name: m.name,
+      version: m.version,
+      description: m.description,
+      icon: m.icon,
+      surfaces: m.surfaces,
+      actions: m.actions,
+      labels: m.labels,
+      permissions: m.permissions,
+    })),
   );
 
   handle(IpcChannels.credentialsStatus, (): CredentialsStatus => credentialsStatus());
@@ -217,14 +217,19 @@ export function registerContentIpc(): void {
 
   // File operations: native directory picker for the Settings "Add folder" button. Chosen paths are
   // canonicalized (symlinks resolved) so they match the sandbox's realpath comparisons when persisted.
-  handleAsync(IpcChannels.fileAccessPickFolder, async (event): Promise<FileAccessFolderPickResult> => {
-    const win = BrowserWindow.fromWebContents(event.sender);
-    const result = win
-      ? await dialog.showOpenDialog(win, { properties: ['openDirectory'] })
-      : await dialog.showOpenDialog({ properties: ['openDirectory'] });
-    const paths = await Promise.all(result.filePaths.map((p) => FileOperationsHost.canonicalize(p)));
-    return { paths, cancelled: result.canceled };
-  });
+  handleAsync(
+    IpcChannels.fileAccessPickFolder,
+    async (event): Promise<FileAccessFolderPickResult> => {
+      const win = BrowserWindow.fromWebContents(event.sender);
+      const result = win
+        ? await dialog.showOpenDialog(win, { properties: ['openDirectory'] })
+        : await dialog.showOpenDialog({ properties: ['openDirectory'] });
+      const paths = await Promise.all(
+        result.filePaths.map((p) => FileOperationsHost.canonicalize(p)),
+      );
+      return { paths, cancelled: result.canceled };
+    },
+  );
 
   // Notification center — a snapshot getter plus fire-and-forget mutations. Live state is PUSHED from
   // NotificationHost (store subscription) to every app window, so there is no subscribe handler here.
@@ -242,9 +247,13 @@ export function registerContentIpc(): void {
     NotificationStore.markAllRead();
   });
   // Per-site Web Notification consent answer (renderer → main); resolves the pending broker prompt.
-  onAction(IpcChannels.notificationPermissionRespond, NotificationPermissionResponseSchema, (res) => {
-    WebPermissionBroker.respond(res);
-  });
+  onAction(
+    IpcChannels.notificationPermissionRespond,
+    NotificationPermissionResponseSchema,
+    (res) => {
+      WebPermissionBroker.respond(res);
+    },
+  );
 
   // Browsing history (tepegoz://history).
   handle(IpcChannels.historyList, (_event, payload): HistoryEntry[] => {
@@ -295,6 +304,16 @@ export function registerContentIpc(): void {
   handle(IpcChannels.bookmarksTree, (): BookmarkTreeNode[] => {
     const db = getDb();
     return db !== null ? BookmarkTreeStore.getTree(db) : [];
+  });
+  handle(IpcChannels.bookmarksImport, (_event, payload): BookmarkImportResult => {
+    const input = BookmarkImportSchema.parse(payload);
+    const db = getDb();
+    if (db === null)
+      return { imported: 0, skipped: 0, folders: 0, errors: ['Database is unavailable'] };
+
+    const result = importBookmarksHtmlToStore(db, input);
+    if (result.imported > 0 || result.folders > 0) broadcastBookmarksChanged();
+    return result;
   });
   handle(IpcChannels.bookmarksCreateFolder, (_event, payload): void => {
     const { parentId, title, index } = BookmarkCreateFolderSchema.parse(payload);
@@ -413,12 +432,17 @@ export function registerContentIpc(): void {
         sender.send(IpcChannels.cursorPosition, { x: x + b.x, y: y + b.y, visible: true });
       },
       onCursorHide: () => {
-        if (!sender.isDestroyed()) sender.send(IpcChannels.cursorPosition, { x: 0, y: 0, visible: false });
+        if (!sender.isDestroyed())
+          sender.send(IpcChannels.cursorPosition, { x: 0, y: 0, visible: false });
       },
     };
-    const runId = MacroService.run(input, (progress) => {
-      if (!sender.isDestroyed()) sender.send(IpcChannels.macrosRunProgress, progress);
-    }, cursorOpts);
+    const runId = MacroService.run(
+      input,
+      (progress) => {
+        if (!sender.isDestroyed()) sender.send(IpcChannels.macrosRunProgress, progress);
+      },
+      cursorOpts,
+    );
     return { runId };
   });
   handle(IpcChannels.macrosRunDraft, (event, payload): { runId: string } => {
@@ -432,12 +456,18 @@ export function registerContentIpc(): void {
         sender.send(IpcChannels.cursorPosition, { x: x + b.x, y: y + b.y, visible: true });
       },
       onCursorHide: () => {
-        if (!sender.isDestroyed()) sender.send(IpcChannels.cursorPosition, { x: 0, y: 0, visible: false });
+        if (!sender.isDestroyed())
+          sender.send(IpcChannels.cursorPosition, { x: 0, y: 0, visible: false });
       },
     };
-    const runId = MacroService.runDraft(macro, variables, (progress) => {
-      if (!sender.isDestroyed()) sender.send(IpcChannels.macrosRunProgress, progress);
-    }, cursorOpts);
+    const runId = MacroService.runDraft(
+      macro,
+      variables,
+      (progress) => {
+        if (!sender.isDestroyed()) sender.send(IpcChannels.macrosRunProgress, progress);
+      },
+      cursorOpts,
+    );
     return { runId };
   });
   onAction(IpcChannels.macrosCancel, MacroIdSchema, (runId) => {

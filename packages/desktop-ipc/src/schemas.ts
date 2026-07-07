@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { EXTENSION_ID_RE } from '@tepegoz/extension-sdk';
-import { PROVIDER_IDS, type AppInfo } from './contract';
+import { PROVIDER_IDS, type AppInfo, type BookmarkImportInput } from './contract';
 
 /**
  * Runtime (zod) validation for IPC payloads — MAIN PROCESS ONLY. Kept separate from `ipc-contract.ts`
@@ -78,13 +78,24 @@ export const TabGroupCreateSchema = z.object({
 });
 
 /** `tabs:group-move` — reorder a whole group's run. */
-export const TabGroupMoveSchema = z.object({ groupId: TabGroupIdSchema, toIndex: z.number().int().min(0) });
+export const TabGroupMoveSchema = z.object({
+  groupId: TabGroupIdSchema,
+  toIndex: z.number().int().min(0),
+});
 
 /** A single per-tab-group setting value (`TabGroupSettingKey` → value) — flat and JSON-safe. */
-export const TabGroupSettingValueSchema = z.union([z.string().max(2048), z.number(), z.boolean(), z.null()]);
+export const TabGroupSettingValueSchema = z.union([
+  z.string().max(2048),
+  z.number(),
+  z.boolean(),
+  z.null(),
+]);
 
 /** The extensible per-group settings bag (agent enabled/open today; VPN/Tor bindings later). */
-export const TabGroupSettingsSchema = z.record(z.string().min(1).max(128), TabGroupSettingValueSchema);
+export const TabGroupSettingsSchema = z.record(
+  z.string().min(1).max(128),
+  TabGroupSettingValueSchema,
+);
 
 /** `tabs:group-update` — patch a group's name/color/collapsed/settings (only provided keys change;
  *  `settings` itself is a merge-patch — only its provided keys change). */
@@ -195,6 +206,12 @@ export const BookmarkContextMenuSchema = z.object({
   variant: z.enum(['default', 'folder-item']).optional(),
 });
 
+export const BookmarkImportSchema = z.object({
+  source: z.enum(['chrome', 'edge', 'firefox', 'brave', 'other']),
+  format: z.literal('html'),
+  data: z.string().max(10_485_760),
+}) satisfies z.ZodType<BookmarkImportInput>;
+
 /** `user-agent:set` payload — a UA string to apply, or null to reset to the browser default. */
 export const UserAgentSelectionSchema = z.string().max(512).nullable();
 
@@ -275,7 +292,11 @@ export const NotificationPermissionResponseSchema = z.object({
 
 export { DownloadCommandInputSchema, DownloadCreateInputSchema } from '@tepegoz/downloads/schemas';
 export { UploadCommandInputSchema, UploadCreateInputSchema } from '@tepegoz/uploads/schemas';
-export { TaskCommandInputSchema, TaskDefinitionSchema, TaskSaveInputSchema } from '@tepegoz/tasks/schemas';
+export {
+  TaskCommandInputSchema,
+  TaskDefinitionSchema,
+  TaskSaveInputSchema,
+} from '@tepegoz/tasks/schemas';
 export {
   AgentConversationIdSchema,
   AgentConversationListInputSchema,

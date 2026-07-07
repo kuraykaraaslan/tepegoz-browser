@@ -3,6 +3,8 @@ import {
   IpcChannels,
   type AppNotification,
   type BookmarkEntry,
+  type BookmarkImportInput,
+  type BookmarkImportResult,
   type BookmarkMenuAction,
   type BookmarkNodeType,
   type BookmarkTreeNode,
@@ -26,6 +28,7 @@ export const bookmarksHistoryApi: Pick<
   | 'toggleBookmark'
   | 'isBookmarked'
   | 'getBookmarkTree'
+  | 'importBookmarks'
   | 'createBookmarkFolder'
   | 'renameBookmark'
   | 'removeBookmark'
@@ -54,6 +57,8 @@ export const bookmarksHistoryApi: Pick<
     invoke<boolean>(IpcChannels.bookmarksToggle, { url, title, favicon }),
   isBookmarked: (url: string) => invoke<boolean>(IpcChannels.bookmarksIsBookmarked, url),
   getBookmarkTree: () => invoke<BookmarkTreeNode[]>(IpcChannels.bookmarksTree),
+  importBookmarks: (input: BookmarkImportInput) =>
+    invoke<BookmarkImportResult>(IpcChannels.bookmarksImport, input),
   createBookmarkFolder: (parentId: string, title: string, index?: number) =>
     invoke<void>(IpcChannels.bookmarksCreateFolder, { parentId, title, index }),
   renameBookmark: (id: string, title: string) =>

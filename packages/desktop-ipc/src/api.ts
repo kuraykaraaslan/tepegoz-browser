@@ -18,6 +18,7 @@ import type {
 import type { PopupBlockerRequest, PopupBlockerSettings } from './contract';
 import type { HistoryEntry } from './contract';
 import type { BookmarkEntry, BookmarkNodeType, BookmarkTreeNode } from './contract';
+import type { BookmarkImportInput, BookmarkImportResult } from './contract';
 import type { BookmarkMenuAction } from './contract';
 import type { AppNotification, NotificationState } from './contract';
 import type {
@@ -48,21 +49,10 @@ import type {
 } from './contract';
 import type { ProviderId, ProviderKeyMeta } from './contract';
 import type { AdaptorConnection } from './contract';
-import type {
-  ExtensionId,
-  ExtensionManifestWire,
-  ExtensionContextMenuChoice,
-} from './contract';
+import type { ExtensionId, ExtensionManifestWire, ExtensionContextMenuChoice } from './contract';
 import type { PageMenuAction, PageMenuContext } from './contract';
-import type {
-  LoginCredentialMeta,
-  LoginImportResult,
-  AutofillAvailablePayload,
-} from './contract';
-import type {
-  NotificationPermissionRequest,
-  NotificationPermissionResponse,
-} from './contract';
+import type { LoginCredentialMeta, LoginImportResult, AutofillAvailablePayload } from './contract';
+import type { NotificationPermissionRequest, NotificationPermissionResponse } from './contract';
 import type { PublicSettings } from './public-settings';
 import type {
   Preferences,
@@ -70,7 +60,12 @@ import type {
   McpServerStatusInfo,
   FileAccessFolderPickResult,
 } from './preferences-types';
-import type { TabGroupColor, TabGroupSettingKey, TabGroupSettingValue, TabsState } from './tabs-types';
+import type {
+  TabGroupColor,
+  TabGroupSettingKey,
+  TabGroupSettingValue,
+  TabsState,
+} from './tabs-types';
 import type { AIAdaptor } from './ai-adaptor-types';
 
 /** The exact surface bridged to `window.tepegoz` in the renderer. */
@@ -168,7 +163,12 @@ export interface TepegozApi {
     prompt: string;
     groupId: string;
     displayPrompt?: string;
-    attachmentMeta?: { kind: 'selection' | 'file' | 'screenshot'; label: string; mimeType?: string; sizeBytes?: number }[];
+    attachmentMeta?: {
+      kind: 'selection' | 'file' | 'screenshot';
+      label: string;
+      mimeType?: string;
+      sizeBytes?: number;
+    }[];
   }): Promise<AgentRunResult>;
   /** Cancel an in-flight run. */
   cancelAgent(runId: string): void;
@@ -304,7 +304,11 @@ export interface TepegozApi {
   pageMenuAction(action: PageMenuAction): void;
   // Browsing history (tepegoz://history).
   getHistory(params?: { limit?: number; offset?: number }): Promise<HistoryEntry[]>;
-  searchHistory(params: { query: string; limit?: number; offset?: number }): Promise<HistoryEntry[]>;
+  searchHistory(params: {
+    query: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<HistoryEntry[]>;
   deleteHistory(url: string): Promise<void>;
   clearHistory(): Promise<void>;
   // Bookmarks. Only http(s) pages are bookmarkable (internal tepegoz:// pages are rejected in main).
@@ -317,6 +321,8 @@ export interface TepegozApi {
   // Bookmark tree (folders + ordering) — the interactive bar + manager page.
   /** The full forest: [Bookmarks bar, Other bookmarks], each with its subtree. */
   getBookmarkTree(): Promise<BookmarkTreeNode[]>;
+  /** Import a browser-exported bookmarks file into the local bookmark tree. */
+  importBookmarks(input: BookmarkImportInput): Promise<BookmarkImportResult>;
   /** Create a folder under `parentId` (defaults to end); resolves when persisted. */
   createBookmarkFolder(parentId: string, title: string, index?: number): Promise<void>;
   /** Rename a node (bookmark or folder). */
