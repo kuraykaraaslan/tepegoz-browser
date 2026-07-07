@@ -80,7 +80,8 @@ export const tr: SettingsStrings = {
   downloadAskEachTime: 'Her dosya için nereye kaydedileceğini sor',
   downloadAskEachTimeDesc: 'Karantinadaki dosya serbest bırakılırken son kayıt yolunu seç.',
   clearDownloadsLabel: 'İndirme geçmişi',
-  clearDownloadsDesc: 'Tamamlanan, engellenen, iptal edilen ve başarısız indirmeleri listeden kaldırır.',
+  clearDownloadsDesc:
+    'Tamamlanan, engellenen, iptal edilen ve başarısız indirmeleri listeden kaldırır.',
   clearDownloadsButton: 'İndirme geçmişini temizle',
 
   // --- Bildirimler ---
@@ -242,12 +243,23 @@ export const tr: SettingsStrings = {
   // --- Parolalar ---
   passwordsTitle: 'Parolalar',
 
+  // --- Geliştirici ---
+  developerTitle: 'Geliştirici',
+  developerDesc:
+    'Geliştirme derlemeleri için salt okunur çalışma zamanı teşhisleri. Bu bölüm NODE_ENV=development dışında gizlenir.',
+  developerNodeEnv: 'NODE_ENV',
+  developerViteMode: 'Vite modu',
+  developerRendererBuild: 'Renderer derlemesi',
+  developerAppVersion: 'Uygulama sürümü',
+  developerPlatform: 'Platform',
+
   // --- Sıfırla ---
   resetTitle: 'Ayarları sıfırla',
   resetDesc:
     'Tüm tercihleri varsayılanlara geri yükler. Kayıtlı API anahtarları ve parolalar etkilenmez.',
   resetButton: 'Varsayılanlara sıfırla',
-  resetConfirm: 'Tüm ayarlar varsayılanlara sıfırlansın mı? Kayıtlı anahtarlar ve parolalar korunur.',
+  resetConfirm:
+    'Tüm ayarlar varsayılanlara sıfırlansın mı? Kayıtlı anahtarlar ve parolalar korunur.',
   resetDone: 'Ayarlar varsayılanlara sıfırlandı.',
 
   // --- Hakkında ---
@@ -275,7 +287,11 @@ export const tr: SettingsStrings = {
     downloads: {
       title: 'İndirilenler',
       description: 'Dosyaların nereye kaydedileceği.',
-      items: ['İndirme konumu', 'Her dosya için nereye kaydedileceğini sor', 'İndirme geçmişini temizle'],
+      items: [
+        'İndirme konumu',
+        'Her dosya için nereye kaydedileceğini sor',
+        'İndirme geçmişini temizle',
+      ],
     },
     accessibility: {
       title: 'Erişilebilirlik',
@@ -284,7 +300,12 @@ export const tr: SettingsStrings = {
     agentControls: {
       title: 'Ajan denetimleri',
       description: 'Yapay zekâ ajanı üzerinde ince ayar denetimi.',
-      items: ['Özerklik / onay düzeyi', 'Token bütçe sınırı', 'Model yönlendirme', 'Araç bazında izinler'],
+      items: [
+        'Özerklik / onay düzeyi',
+        'Token bütçe sınırı',
+        'Model yönlendirme',
+        'Araç bazında izinler',
+      ],
     },
     autofill: {
       title: 'Otomatik doldurma',

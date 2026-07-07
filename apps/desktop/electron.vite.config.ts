@@ -40,20 +40,27 @@ const WORKSPACE_PACKAGES = [
 
 // electron-vite conventions: main = src/main/index.ts, preload = src/preload/index.ts,
 // renderer root = src/renderer (index.html). Output goes to out/.
-export default defineConfig({
-  main: {
-    plugins: [externalizeDepsPlugin({ exclude: WORKSPACE_PACKAGES })],
-  },
-  preload: {
-    plugins: [externalizeDepsPlugin({ exclude: WORKSPACE_PACKAGES })],
-    // Force CJS single-file preload (sandbox:true requires CJS) at a stable path matching window.ts.
-    build: {
-      rollupOptions: {
-        output: { format: 'cjs', entryFileNames: 'index.js' },
+export default defineConfig(({ command }) => {
+  const nodeEnv = process.env['NODE_ENV'] ?? (command === 'serve' ? 'development' : 'production');
+
+  return {
+    main: {
+      plugins: [externalizeDepsPlugin({ exclude: WORKSPACE_PACKAGES })],
+    },
+    preload: {
+      plugins: [externalizeDepsPlugin({ exclude: WORKSPACE_PACKAGES })],
+      // Force CJS single-file preload (sandbox:true requires CJS) at a stable path matching window.ts.
+      build: {
+        rollupOptions: {
+          output: { format: 'cjs', entryFileNames: 'index.js' },
+        },
       },
     },
-  },
-  renderer: {
-    plugins: [react(), tailwindcss()],
-  },
+    renderer: {
+      define: {
+        __TEPEGOZ_NODE_ENV__: JSON.stringify(nodeEnv),
+      },
+      plugins: [react(), tailwindcss()],
+    },
+  };
 });

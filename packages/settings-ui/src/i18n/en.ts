@@ -243,6 +243,16 @@ export const en = {
   // --- Passwords ---
   passwordsTitle: 'Passwords',
 
+  // --- Developer ---
+  developerTitle: 'Developer',
+  developerDesc:
+    'Read-only runtime diagnostics for development builds. This section is hidden outside NODE_ENV=development.',
+  developerNodeEnv: 'NODE_ENV',
+  developerViteMode: 'Vite mode',
+  developerRendererBuild: 'Renderer build',
+  developerAppVersion: 'App version',
+  developerPlatform: 'Platform',
+
   // --- Reset ---
   resetTitle: 'Reset settings',
   resetDesc:
@@ -285,7 +295,12 @@ export const en = {
     agentControls: {
       title: 'Agent controls',
       description: 'Fine-grained control over the AI agent.',
-      items: ['Autonomy / approval level', 'Token-budget cap', 'Model routing', 'Per-tool permissions'],
+      items: [
+        'Autonomy / approval level',
+        'Token-budget cap',
+        'Model routing',
+        'Per-tool permissions',
+      ],
     },
     autofill: {
       title: 'Autofill',

@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faBell,
   faCircleInfo,
+  faCode,
   faCreditCard,
   faDesktop,
   faDownload,
@@ -49,6 +50,8 @@ import {
   SearchStartupSection,
   SitePermissionsSection,
 } from './settings-privacy-files';
+import { DeveloperSection } from './settings-developer';
+import { isDeveloperSettingsVisible, nodeEnv, rendererBuild, viteMode } from '../lib/developer-env';
 
 const ICON = 'h-4 w-4';
 const IconKey = () => <FontAwesomeIcon icon={faKey} className={ICON} aria-hidden />;
@@ -68,6 +71,7 @@ const IconCard = () => <FontAwesomeIcon icon={faCreditCard} className={ICON} ari
 const IconDesktop = () => <FontAwesomeIcon icon={faDesktop} className={ICON} aria-hidden />;
 const IconReset = () => <FontAwesomeIcon icon={faRotateLeft} className={ICON} aria-hidden />;
 const IconInfo = () => <FontAwesomeIcon icon={faCircleInfo} className={ICON} aria-hidden />;
+const IconDeveloper = () => <FontAwesomeIcon icon={faCode} className={ICON} aria-hidden />;
 const IconGear = () => <FontAwesomeIcon icon={faGear} className="h-5 w-5" aria-hidden />;
 
 interface SettingsPageProps {
@@ -82,7 +86,13 @@ interface SettingsPageProps {
   onReorderKeys: (orderedIds: string[]) => Promise<void>;
   loginCredentials: LoginCredentialMeta[];
   onLoginSectionMount: () => Promise<void>;
-  onAddLogin: (c: { url: string; username: string; password: string; title?: string; notes?: string }) => Promise<void>;
+  onAddLogin: (c: {
+    url: string;
+    username: string;
+    password: string;
+    title?: string;
+    notes?: string;
+  }) => Promise<void>;
   onRemoveLogin: (id: string) => Promise<void>;
   onImportLogins: (data: string, format: string) => Promise<LoginImportResult>;
   onExportLogins: (format: string) => Promise<string>;
@@ -168,6 +178,7 @@ export function SettingsPage({
   const G_PRIVACY = s.groupPrivacy;
   const G_ADVANCED = s.groupAdvanced;
   const G_ABOUT = s.groupAbout;
+  const developerVisible = isDeveloperSettingsVisible(nodeEnv);
 
   const sections: SettingsSection[] = [
     // ---------- General ----------
@@ -396,6 +407,24 @@ export function SettingsPage({
         />
       ),
     },
+    ...(developerVisible
+      ? [
+          {
+            id: 'developer',
+            group: G_ADVANCED,
+            label: s.developerTitle,
+            icon: <IconDeveloper />,
+            searchText: `${s.developerTitle} ${s.developerDesc} ${s.developerNodeEnv} ${s.developerViteMode} ${s.developerRendererBuild} ${s.developerAppVersion} ${s.developerPlatform} NODE_ENV Vite DEV PROD`,
+            content: (
+              <DeveloperSection
+                nodeEnv={nodeEnv}
+                viteMode={viteMode}
+                rendererBuild={rendererBuild}
+              />
+            ),
+          },
+        ]
+      : []),
     {
       id: 'reset',
       group: G_ADVANCED,
