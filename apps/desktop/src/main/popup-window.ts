@@ -41,8 +41,8 @@ const FALLBACK_MS = 250;
 /** Fade-in ramp at reveal: opacity 0→1 over ~FADE_STEPS frames. Killing the residual white-flash that
  *  Electron can paint on show() even with a backgroundColor set — we fade from transparent (the live
  *  page shows through) so no white frame is ever visible, synchronized with the reveal. */
-const FADE_STEPS = 8;
-const FADE_STEP_MS = 16;
+const FADE_STEPS = 6;
+const FADE_STEP_MS = 10;
 
 export interface OpenPopupOptions {
   parent: BrowserWindow;
