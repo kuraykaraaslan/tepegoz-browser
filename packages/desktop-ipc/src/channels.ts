@@ -66,6 +66,8 @@ export const IpcChannels = {
   agentGroupChanged: 'agent:group-changed',
   /** Renderer→main: capture the page's current text selection → string. */
   agentCaptureSelection: 'agent:capture-selection',
+  /** Renderer→main: the active tab's committed URL (seed a task's target page) → string | null. */
+  agentActiveTabUrl: 'agent:active-tab-url',
   /** Renderer→main: open a native file picker and read selected files → AgentFileAttachment[]. */
   agentPickFiles: 'agent:pick-files',
   agentEvent: 'agent:event',
@@ -216,6 +218,7 @@ export const IpcChannels = {
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];
 
 /** Internal (browser-served) page addresses, shown in the omnibox like Chrome's `chrome://` pages. */
+export const INTERNAL_NEWTAB_URL = 'tepegoz://newtab';
 export const INTERNAL_SETTINGS_URL = 'tepegoz://settings';
 export const INTERNAL_EXTENSIONS_URL = 'tepegoz://extensions';
 export const INTERNAL_HISTORY_URL = 'tepegoz://history';

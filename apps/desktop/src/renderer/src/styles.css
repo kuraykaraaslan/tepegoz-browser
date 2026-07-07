@@ -3,6 +3,36 @@
 /* Design tokens + Tailwind v4 theme mapping (forked KUIreact theme). */
 @import '@tepegoz/ui/styles/tokens.css';
 
+/* Brand wordmark face — self-hosted Baloo 2 ExtraBold (rounded geometric, Turkish first-class), latin
+   subset. Served from renderer/public so it loads offline under the strict app CSP (`font-src 'self'`);
+   no Google Fonts fetch. Only weight 800 ships (the wordmark's weight) — see .font-wordmark + TepegozLogo. */
+@font-face {
+  font-family: 'Baloo 2';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('/fonts/Baloo2-800-latin.woff2') format('woff2');
+}
+
+/* Opt-in wordmark type — the emblem lockup and the "Tepegöz" wordmark reach for this, everything else
+   keeps the UI font. */
+.font-wordmark {
+  font-family: 'Baloo 2', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* The brand emblem carries its navy/cyan/eye via CSS vars (light-theme defaults here — declared on the
+   class, NOT inline on the SVG, so the dark override below can win). On dark surfaces the deep navy
+   (#0C2135) sinks into the near-black system background, so lift the shield a step — matches the
+   design's "reverse / dark" lockup. The eye + iris stay put. */
+.tepegoz-emblem {
+  --navy: #0c2135;
+  --cyan: #06aec4;
+  --eye: #ffffff;
+}
+.dark .tepegoz-emblem {
+  --navy: #1b3b5c;
+}
+
 /* The KUIreact atoms live outside this app's Vite root, so Tailwind can't auto-detect their class
    names — tell it to scan the fork's source. */
 @source "../../../../../packages/ui/src";
@@ -14,7 +44,7 @@
 @source "../../../../../packages/history-ui/src";
 @source "../../../../../packages/downloads-ui/src";
 @source "../../../../../packages/uploads-ui/src";
-@source "../../../../../packages/tasks-ui/src";
+@source "../../../../../packages/newtab-ui/src";
 @source "../../../../../packages/settings-ui/src";
 @source "../../../../../packages/extensions-ui/src";
 @source "../../../../../packages/onboarding-ui/src";
@@ -24,6 +54,7 @@
 @source "../../../../../packages/browser-chrome/src";
 @source "../../../../../packages/browser-menu/src";
 @source "../../../../../extensions/ext-macros/src";
+@source "../../../../../extensions/ext-tasks/src";
 @source "../../../../../packages/password-ui/src";
 
 html,

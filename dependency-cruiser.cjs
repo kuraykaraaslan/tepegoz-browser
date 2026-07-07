@@ -183,6 +183,16 @@ module.exports = {
       to: { path: '^apps/' },
     },
     {
+      name: 'newtab-ui-is-a-leaf',
+      severity: 'error',
+      comment:
+        '@tepegoz/newtab-ui is the presentational tepegoz://newtab surface (AI/Favorites/Blank chooser): ' +
+        'it must never import back into the desktop app. Favorites data and the agent/navigation actions ' +
+        'are injected. See docs/package-map.md.',
+      from: { path: '^packages/newtab-ui/' },
+      to: { path: '^apps/' },
+    },
+    {
       name: 'screenshots-no-app-no-electron',
       severity: 'error',
       comment:

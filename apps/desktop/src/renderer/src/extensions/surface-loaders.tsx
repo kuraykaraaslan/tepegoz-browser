@@ -84,4 +84,13 @@ export const SURFACE_LOADERS: Record<
           },
       ),
   },
+  'com.tepegoz.tasks': {
+    page: () =>
+      import('@tepegoz/ext-tasks/page').then(
+        (m) =>
+          function TasksPageSurface({ onClose }: ExtensionSurfaceProps) {
+            return <m.TasksPage api={window.tepegoz} onClose={onClose} />;
+          },
+      ),
+  },
 };

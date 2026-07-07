@@ -11,6 +11,7 @@ import {
   INTERNAL_DOWNLOADS_URL,
   INTERNAL_EXTENSIONS_URL,
   INTERNAL_HISTORY_URL,
+  INTERNAL_NEWTAB_URL,
   INTERNAL_TASKS_URL,
   INTERNAL_UPLOADS_URL,
   IpcChannels,
@@ -160,8 +161,14 @@ export default class TabManager {
     opts?: { background?: boolean; openerId?: string | undefined },
   ): string | null {
     TabManager.requireWin(); // fail fast if not attached to a window
+    // A blank new tab (Ctrl+T, the "+" button, new-tab-to-the-right, startup) lands on the internal
+    // new-tab page — the AI / Favorites / Blank chooser — rather than a web page. It's a view-less
+    // internal tab, created fresh each time (never deduped) so every new tab is its own.
+    if (rawUrl === undefined) {
+      return TabManager.createInternalTab(INTERNAL_NEWTAB_URL, opts);
+    }
     const home = homeUrl();
-    const target = rawUrl !== undefined ? toNavigationUrl(rawUrl, home, searchUrlForQuery) : home;
+    const target = toNavigationUrl(rawUrl, home, searchUrlForQuery);
     if (
       ActionInterceptorService.shouldBlock('tab:create', {
         url: target,
@@ -263,6 +270,14 @@ export default class TabManager {
     const wasActive = TabManager.store.activeId === id;
     TabManager.store.delete(id);
 
+    // Closing the final tab closes the window instead of leaving an empty chrome over a blank content
+    // area — the app then quits (non-macOS) via the `window-all-closed` handler, or on macOS follows
+    // the platform convention of an open-but-window-less app.
+    if (TabManager.store.ids().length === 0) {
+      win.close();
+      return;
+    }
+
     if (wasActive) {
       TabManager.store.setActive(null);
       const next = TabManager.store.ids().at(-1);
@@ -300,8 +315,42 @@ export default class TabManager {
     TabManager.activate(id);
   }
 
+  /** Create a fresh internal (view-less) tab for `url`, honouring opener-group inheritance and the
+   *  background flag — the internal-page counterpart of `createTab`'s web path. Unlike
+   *  `openInternalPage` it never focuses an existing tab of the same URL, so multiple blank new-tab
+   *  pages can coexist. Returns `null` if an extension interceptor blocked the create. */
+  private static createInternalTab(
+    url: string,
+    opts?: { background?: boolean; openerId?: string | undefined },
+  ): string | null {
+    if (
+      ActionInterceptorService.shouldBlock('tab:create', {
+        url,
+        openerId: opts?.openerId ?? null,
+        background: opts?.background === true,
+      })
+    ) {
+      return null;
+    }
+    const id = TabManager.store.add({
+      kind: 'internal',
+      title: TabManager.internalTitle(url),
+      url,
+      isLoading: false,
+      faviconUrl: null,
+    });
+    TabManager.inheritGroup(id, opts?.openerId);
+    if (opts?.background === true && TabManager.store.activeId !== null) {
+      TabManager.emitState();
+    } else {
+      TabManager.activate(id);
+    }
+    return id;
+  }
+
   private static internalTitle(url: string): string {
     const r = mainStrings();
+    if (url === INTERNAL_NEWTAB_URL) return r.browser.untitled;
     if (url === INTERNAL_EXTENSIONS_URL) return r.extensions.title;
     if (url === INTERNAL_HISTORY_URL) return r.history.title;
     if (url === INTERNAL_DOWNLOADS_URL) return r.downloads.title;

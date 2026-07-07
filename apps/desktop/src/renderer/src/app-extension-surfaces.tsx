@@ -22,7 +22,7 @@ export interface ActiveSurface {
 
 /** The Agent Console's extension id + the `TabGroupSettingKey` remembering its open/closed state per
  *  tab group (the existing sidebar toggle button doubles as the per-group control — no new UI). */
-const AGENT_EXTENSION_ID = 'com.tepegoz.agent';
+export const AGENT_EXTENSION_ID = 'com.tepegoz.agent';
 export const AGENT_PANEL_OPEN_KEY = 'agent.panelOpen';
 
 /** Sidebar dock width bounds (px); the user drags the edge to resize between these. */

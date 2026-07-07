@@ -5,6 +5,7 @@
  * agent's public wire shapes; the app re-exports them from its IPC contract.
  */
 import type { AIProvider } from '@tepegoz/shared-types/providers';
+import type { TaskDefinition, TaskSaveInput } from '@tepegoz/tasks';
 import type {
   AgentAttachmentMeta,
   AgentConversationDetail,
@@ -140,6 +141,10 @@ export interface AgentHostApi {
     attachmentMeta?: AgentAttachmentMeta[];
   }): Promise<AgentRunResult>;
   cancelAgent(runId: string): void;
+  /** The active tab's committed URL (seed a converted task's target page); null when no web tab. */
+  getActiveTabUrl(): Promise<string | null>;
+  /** Save (or update) a scheduled task — used by "Save as scheduled task" in the panel. */
+  saveTask(input: TaskSaveInput): Promise<TaskDefinition>;
   /** Reset conversation memory for a specific tab-group (panel "New task"). */
   newAgentConversation(groupId: string): void;
   listAgentConversations(input?: AgentConversationListInput): Promise<AgentConversationSummary[]>;

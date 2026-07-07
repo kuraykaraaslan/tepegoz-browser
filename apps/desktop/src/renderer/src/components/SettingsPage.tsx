@@ -51,7 +51,7 @@ import {
   SitePermissionsSection,
 } from './settings-privacy-files';
 import { DeveloperSection } from './settings-developer';
-import { isDeveloperSettingsVisible, nodeEnv, rendererBuild, viteMode } from '../lib/developer-env';
+import { isDeveloperSettingsVisible, nodeEnv } from '../lib/developer-env';
 
 const ICON = 'h-4 w-4';
 const IconKey = () => <FontAwesomeIcon icon={faKey} className={ICON} aria-hidden />;
@@ -142,6 +142,16 @@ export function SettingsPage({
     void onUpdatePrefs(patch).catch(() => {
       notify('error', c.errors.upstreamDown);
     });
+  }
+
+  async function setDeveloperPref(patch: Partial<Preferences>): Promise<void> {
+    try {
+      await onUpdatePrefs(patch);
+      notify('success', s.developerSaved);
+    } catch (err) {
+      notify('error', c.errors.upstreamDown);
+      throw err;
+    }
   }
 
   function resetSitePermission(origin: string): void {
@@ -414,14 +424,8 @@ export function SettingsPage({
             group: G_ADVANCED,
             label: s.developerTitle,
             icon: <IconDeveloper />,
-            searchText: `${s.developerTitle} ${s.developerDesc} ${s.developerNodeEnv} ${s.developerViteMode} ${s.developerRendererBuild} ${s.developerAppVersion} ${s.developerPlatform} NODE_ENV Vite DEV PROD`,
-            content: (
-              <DeveloperSection
-                nodeEnv={nodeEnv}
-                viteMode={viteMode}
-                rendererBuild={rendererBuild}
-              />
-            ),
+            searchText: `${s.developerTitle} ${s.developerDesc} ${s.developerSearchPlaceholder} settings preferences public private`,
+            content: <DeveloperSection prefs={prefs} onUpdatePrefs={setDeveloperPref} />,
           },
         ]
       : []),

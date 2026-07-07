@@ -9,6 +9,7 @@ import {
   INTERNAL_EXTENSIONS_URL,
   INTERNAL_DOWNLOADS_URL,
   INTERNAL_HISTORY_URL,
+  INTERNAL_NEWTAB_URL,
   INTERNAL_SETTINGS_URL,
   INTERNAL_TASKS_URL,
   INTERNAL_UPLOADS_URL,
@@ -23,6 +24,7 @@ export { isWebUrl, toNavigationUrl } from '@tepegoz/navigation';
 export function internalPageUrl(input: string): string | null {
   // Built-in app pages + every extension that declares a `page` surface (tepegoz://<extension-id>).
   const internalUrls: readonly string[] = [
+    INTERNAL_NEWTAB_URL,
     INTERNAL_SETTINGS_URL,
     INTERNAL_EXTENSIONS_URL,
     INTERNAL_HISTORY_URL,

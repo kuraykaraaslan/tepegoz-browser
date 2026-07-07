@@ -1,0 +1,71 @@
+import { describe, expect, it } from 'vitest';
+import type { Preferences } from '@tepegoz/desktop-ipc';
+import {
+  buildBooleanPreferencePatch,
+  buildJsonPreferencePatch,
+  listDeveloperPreferenceRows,
+} from './developer-settings-model';
+
+const PREFS: Preferences = {
+  theme: 'system',
+  themeColor: '',
+  locale: 'system',
+  telemetryEnabled: false,
+  useLocalModelForSimpleTasks: false,
+  localProvider: { mode: 'off', selectedModelId: '' },
+  localActions: {},
+  agentProviderOverride: null,
+  agentAutonomy: 'ask',
+  agentEffort: 'high',
+  defaultProvider: 'anthropic',
+  region: '',
+  dateFormat: 'medium',
+  searchEngineId: 'google',
+  onboardingCompleted: false,
+  customSearchEngines: [],
+  homepageUrl: 'https://duckduckgo.com/',
+  showBookmarksBar: true,
+  downloadDirectory: '',
+  downloadAskEachTime: false,
+  extensions: [],
+  userAgent: null,
+  mcpServers: [],
+  notificationsEnabled: true,
+  sitePermissions: {},
+  popupBlocker: { enabled: true, showNotifications: true, trustedOrigins: [] },
+  popupBlockerSeeded: false,
+  fileOperationsEnabled: true,
+  fileAccessGrants: [],
+  fileAccessSeeded: false,
+};
+
+describe('developer settings model', () => {
+  it('lists every top-level preference key without pseudo flags', () => {
+    const keys = listDeveloperPreferenceRows(PREFS)
+      .map((row) => row.key)
+      .sort();
+
+    expect(keys).toEqual(Object.keys(PREFS).sort());
+    expect(keys).not.toContain('developerFlags');
+  });
+
+  it('builds boolean preference patches', () => {
+    expect(buildBooleanPreferencePatch('onboardingCompleted', true)).toEqual({
+      onboardingCompleted: true,
+    });
+  });
+
+  it('builds JSON preference patches from valid JSON', () => {
+    expect(buildJsonPreferencePatch('mcpServers', '[]', 'Invalid JSON')).toEqual({
+      ok: true,
+      patch: { mcpServers: [] },
+    });
+  });
+
+  it('rejects invalid JSON drafts', () => {
+    expect(buildJsonPreferencePatch('mcpServers', '[', 'Invalid JSON')).toEqual({
+      ok: false,
+      error: 'Invalid JSON',
+    });
+  });
+});

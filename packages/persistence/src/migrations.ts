@@ -358,6 +358,14 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 11,
+    up: (db) => {
+      // Link a saved task back to the agent conversation it was converted from (traceability +
+      // re-convert-in-place). Additive column; existing rows read back as NULL → undefined.
+      db.exec('ALTER TABLE tasks ADD COLUMN source_conversation_id TEXT;');
+    },
+  },
 ];
 
 /**

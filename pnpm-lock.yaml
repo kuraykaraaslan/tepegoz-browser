@@ -132,6 +132,9 @@ importers:
       '@tepegoz/ext-popup-blocker':
         specifier: workspace:*
         version: link:../../extensions/ext-popup-blocker
+      '@tepegoz/ext-tasks':
+        specifier: workspace:*
+        version: link:../../extensions/ext-tasks
       '@tepegoz/ext-user-agent':
         specifier: workspace:*
         version: link:../../extensions/ext-user-agent
@@ -192,6 +195,9 @@ importers:
       '@tepegoz/navigation':
         specifier: workspace:*
         version: link:../../packages/navigation
+      '@tepegoz/newtab-ui':
+        specifier: workspace:*
+        version: link:../../packages/newtab-ui
       '@tepegoz/notifications':
         specifier: workspace:*
         version: link:../../packages/notifications
@@ -249,9 +255,6 @@ importers:
       '@tepegoz/tasks':
         specifier: workspace:*
         version: link:../../packages/tasks
-      '@tepegoz/tasks-ui':
-        specifier: workspace:*
-        version: link:../../packages/tasks-ui
       '@tepegoz/tool-executor':
         specifier: workspace:*
         version: link:../../packages/tool-executor
@@ -321,6 +324,9 @@ importers:
       '@tepegoz/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
+      '@tepegoz/tasks':
+        specifier: workspace:*
+        version: link:../../packages/tasks
       '@tepegoz/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -383,6 +389,37 @@ importers:
       '@tepegoz/notifications':
         specifier: workspace:*
         version: link:../../packages/notifications
+      '@tepegoz/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      react:
+        specifier: ^18 || ^19
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.31
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
+
+  extensions/ext-tasks:
+    dependencies:
+      '@tepegoz/ext-agent':
+        specifier: workspace:*
+        version: link:../ext-agent
+      '@tepegoz/extension-sdk':
+        specifier: workspace:*
+        version: link:../../packages/extension-sdk
+      '@tepegoz/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
+      '@tepegoz/tasks':
+        specifier: workspace:*
+        version: link:../../packages/tasks
       '@tepegoz/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -1268,6 +1305,37 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
 
+  packages/newtab-ui:
+    dependencies:
+      '@fortawesome/free-solid-svg-icons':
+        specifier: ^7.2.0
+        version: 7.3.0
+      '@fortawesome/react-fontawesome':
+        specifier: ^3.3.1
+        version: 3.3.1(@fortawesome/fontawesome-svg-core@7.3.0)(react@18.3.1)
+      '@tepegoz/i18n':
+        specifier: workspace:*
+        version: link:../i18n
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.31
+      '@types/react-dom':
+        specifier: ^18.3.5
+        version: 18.3.7(@types/react@18.3.31)
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1
+        version: 18.3.1(react@18.3.1)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
+
   packages/notifications:
     dependencies:
       '@tepegoz/shared-types':
@@ -1769,34 +1837,6 @@ importers:
       '@types/node':
         specifier: ^22.10.2
         version: 22.20.0
-      typescript:
-        specifier: ^5.7.2
-        version: 5.9.3
-      vitest:
-        specifier: ^2.1.8
-        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
-
-  packages/tasks-ui:
-    dependencies:
-      '@tepegoz/i18n':
-        specifier: workspace:*
-        version: link:../i18n
-      '@tepegoz/tasks':
-        specifier: workspace:*
-        version: link:../tasks
-    devDependencies:
-      '@types/react':
-        specifier: ^18.3.18
-        version: 18.3.31
-      '@types/react-dom':
-        specifier: ^18.3.5
-        version: 18.3.7(@types/react@18.3.31)
-      react:
-        specifier: ^18.3.1
-        version: 18.3.1
-      react-dom:
-        specifier: ^18.3.1
-        version: 18.3.1(react@18.3.1)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3

@@ -23,6 +23,16 @@ export type TaskPageChangeMode = (typeof TASK_PAGE_CHANGE_MODES)[number];
 export const TASK_COMMAND_ACTIONS = ['run', 'cancel', 'enable', 'disable', 'archive'] as const;
 export type TaskCommandAction = (typeof TASK_COMMAND_ACTIONS)[number];
 
+/**
+ * High-level autonomy preset for a saved task. The host synthesizes a concrete {@link TaskPolicy} from
+ * this at save time (the renderer never sees the tool allowlist). Enforcement is origin-scoped:
+ * `notify` pauses on every write; `sameOriginWrites` pre-approves the browser write tools on the task's
+ * own target origin only (mirrors the interactive agent's "act" autonomy, still origin-bounded). Broader
+ * autonomy is expressed by editing the policy directly, not via a preset.
+ */
+export const TASK_AUTONOMY_PRESETS = ['notify', 'sameOriginWrites'] as const;
+export type TaskAutonomyPreset = (typeof TASK_AUTONOMY_PRESETS)[number];
+
 export const MIN_TASK_INTERVAL_MINUTES = 5;
 export const DEFAULT_TASK_MAX_RUN_MS = 10 * 60 * 1000;
 export const DEFAULT_TASK_COOLDOWN_MS = 15 * 60 * 1000;
@@ -81,6 +91,8 @@ export interface TaskDefinition {
   policy: TaskPolicy;
   targetUrl?: string | undefined;
   targetOrigin?: string | undefined;
+  /** The agent conversation this task was converted from, if any (traceability + re-convert-in-place). */
+  sourceConversationId?: string | undefined;
   createdAt: number;
   updatedAt: number;
   lastRunAt?: number | undefined;
@@ -128,9 +140,17 @@ export interface TaskSaveInput {
   description?: string | undefined;
   status?: TaskStatus | undefined;
   triggers: TaskTrigger[];
-  policy: TaskPolicy;
+  /**
+   * The concrete policy to store. Optional: when omitted, the host synthesizes one from {@link autonomy}
+   * (needs the live tool registry, so only the main process can do it). Provide this to store an explicit,
+   * hand-crafted policy (advanced editor).
+   */
+  policy?: TaskPolicy | undefined;
+  /** Autonomy preset the host uses to synthesize {@link policy} when the latter is omitted. */
+  autonomy?: TaskAutonomyPreset | undefined;
   targetUrl?: string | undefined;
   targetOrigin?: string | undefined;
+  sourceConversationId?: string | undefined;
 }
 
 export interface TaskCommandInput {
@@ -251,3 +271,5 @@ export function taskCanUseTool(policy: TaskPolicy, toolId: string, danger: 'read
   if (danger === 'read') return policy.allowedReadTools.includes(toolId);
   return policy.preapprovedWriteTools.includes(toolId);
 }
+
+export * from './conversion';

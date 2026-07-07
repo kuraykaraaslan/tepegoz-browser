@@ -246,12 +246,22 @@ export const en = {
   // --- Developer ---
   developerTitle: 'Developer',
   developerDesc:
-    'Read-only runtime diagnostics for development builds. This section is hidden outside NODE_ENV=development.',
-  developerNodeEnv: 'NODE_ENV',
-  developerViteMode: 'Vite mode',
-  developerRendererBuild: 'Renderer build',
-  developerAppVersion: 'App version',
-  developerPlatform: 'Platform',
+    'Development-only editor for the current top-level settings object. Values are validated by the normal preferences schema.',
+  developerSearchPlaceholder: 'Search settings keys',
+  developerApply: 'Apply',
+  developerEdit: 'Edit',
+  developerSaved: 'Developer setting saved.',
+  developerSaveFailed: 'Could not save this setting.',
+  developerInvalidJson: 'Invalid JSON.',
+  developerPublic: 'Public',
+  developerPrivate: 'Private',
+  developerType: 'Type',
+  developerValue: 'Current value',
+  developerColumnKey: 'Key',
+  developerColumnVisibility: 'Visibility',
+  developerColumnType: 'Type',
+  developerColumnValue: 'Value',
+  developerColumnActions: 'Actions',
 
   // --- Reset ---
   resetTitle: 'Reset settings',

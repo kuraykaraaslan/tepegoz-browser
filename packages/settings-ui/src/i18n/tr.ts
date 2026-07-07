@@ -246,12 +246,22 @@ export const tr: SettingsStrings = {
   // --- Geliştirici ---
   developerTitle: 'Geliştirici',
   developerDesc:
-    'Geliştirme derlemeleri için salt okunur çalışma zamanı teşhisleri. Bu bölüm NODE_ENV=development dışında gizlenir.',
-  developerNodeEnv: 'NODE_ENV',
-  developerViteMode: 'Vite modu',
-  developerRendererBuild: 'Renderer derlemesi',
-  developerAppVersion: 'Uygulama sürümü',
-  developerPlatform: 'Platform',
+    'Mevcut top-level settings objesi için sadece geliştirme ortamında görünen editör. Değerler normal preferences şemasıyla doğrulanır.',
+  developerSearchPlaceholder: 'Settings keylerinde ara',
+  developerApply: 'Uygula',
+  developerEdit: 'Düzenle',
+  developerSaved: 'Geliştirici ayarı kaydedildi.',
+  developerSaveFailed: 'Bu ayar kaydedilemedi.',
+  developerInvalidJson: 'Geçersiz JSON.',
+  developerPublic: 'Public',
+  developerPrivate: 'Private',
+  developerType: 'Tip',
+  developerValue: 'Mevcut değer',
+  developerColumnKey: 'Key',
+  developerColumnVisibility: 'Görünürlük',
+  developerColumnType: 'Tip',
+  developerColumnValue: 'Değer',
+  developerColumnActions: 'İşlemler',
 
   // --- Sıfırla ---
   resetTitle: 'Ayarları sıfırla',

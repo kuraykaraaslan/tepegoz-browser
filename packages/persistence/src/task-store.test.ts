@@ -34,6 +34,17 @@ describe('TaskStore', () => {
     expect(TaskStore.get(db, 'new')?.triggers[0]).toMatchObject({ type: 'interval', everyMinutes: 5 });
   });
 
+  it('round-trips the sourceConversationId column (migration v11)', () => {
+    const db = memoryDb();
+    TaskStore.upsert(db, { ...task('linked', 10), sourceConversationId: 'conv-42' });
+    TaskStore.upsert(db, task('unlinked', 20));
+
+    expect(TaskStore.get(db, 'linked')?.sourceConversationId).toBe('conv-42');
+    // Absent column reads back as undefined, not null.
+    expect(TaskStore.get(db, 'unlinked')?.sourceConversationId).toBeUndefined();
+    expect('sourceConversationId' in (TaskStore.get(db, 'unlinked') ?? {})).toBe(false);
+  });
+
   it('returns due enabled tasks', () => {
     const db = memoryDb();
     TaskStore.upsert(db, { ...task('due', 10), nextRunAt: 100 });

@@ -16,6 +16,7 @@ import type {
 } from './types';
 import { ConversationHistoryDropdown } from './conversation-history-dropdown';
 import { Dropdown } from './panel-dropdown';
+import { ScheduleTaskModal } from './schedule-task-modal';
 import {
   AUTONOMY_ICON,
   CameraIcon,
@@ -26,6 +27,7 @@ import {
   KIND_DOT,
   NewTaskIcon,
   PaperclipIcon,
+  ScheduleIcon,
   SendIcon,
   SparkIcon,
   StopIcon,
@@ -72,6 +74,7 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
   const c = useT(coreDict);
   const [config, setConfig] = useState<AgentConfig | null>(null);
   const [dismissedNotices, setDismissedNotices] = useState<Set<string>>(new Set());
+  const [scheduleOpen, setScheduleOpen] = useState(false);
 
   // Active tab-group id — the agent session key.
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
@@ -427,6 +430,17 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
             iconButtonClassName={ICON_BTN}
             onOpenConversation={onOpenConversation}
           />
+          {turns.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setScheduleOpen(true)}
+              aria-label={a.scheduleTask.action}
+              title={a.scheduleTask.action}
+              className={ICON_BTN}
+            >
+              <ScheduleIcon className="h-4 w-4" />
+            </button>
+          )}
           <button type="button" onClick={onNewTask} aria-label={a.newTask} title={a.newTask} className={ICON_BTN}>
             <NewTaskIcon className="h-4 w-4" />
           </button>
@@ -850,6 +864,14 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
           </div>
         </Modal>
       )}
+
+      <ScheduleTaskModal
+        api={api}
+        open={scheduleOpen}
+        groupId={activeGroupId}
+        fallbackFirstPrompt={turns[0]?.prompt ?? ''}
+        onClose={() => setScheduleOpen(false)}
+      />
     </div>
   );
 }

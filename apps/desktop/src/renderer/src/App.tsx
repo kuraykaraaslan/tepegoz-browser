@@ -8,8 +8,8 @@ import {
   INTERNAL_DOWNLOADS_URL,
   INTERNAL_EXTENSIONS_URL,
   INTERNAL_HISTORY_URL,
+  INTERNAL_NEWTAB_URL,
   INTERNAL_SETTINGS_URL,
-  INTERNAL_TASKS_URL,
   INTERNAL_UPLOADS_URL,
   isExtensionEnabled,
 } from '@tepegoz/desktop-ipc';
@@ -28,6 +28,7 @@ import type {
 import { NotificationPermissionPrompt, ToastStack } from '@tepegoz/notifications-ui';
 import { AutofillSuggestion } from '@tepegoz/password-ui';
 import { BOOKMARK_ROOT_BAR } from '@tepegoz/bookmarks';
+import type { BookmarkTreeNode } from '@tepegoz/bookmarks';
 import { runNotificationAction } from './lib/notification-actions';
 import { extensionIdFromPageUrl, extensionPageUrl } from '../../shared/extension-urls';
 import { extensionDefById } from './extensions/registry';
@@ -37,7 +38,7 @@ import { BookmarksBar } from '@tepegoz/bookmarks-bar';
 import { HistoryPage } from '@tepegoz/history-ui';
 import { DownloadsPage } from '@tepegoz/downloads-ui';
 import { UploadsPage } from '@tepegoz/uploads-ui';
-import { TasksPage } from '@tepegoz/tasks-ui';
+import { NewTabPage, type NewTabFavorite } from '@tepegoz/newtab-ui';
 import { BookmarksManager } from '@tepegoz/bookmarks-ui';
 import { ExtensionsPage } from './components/ExtensionsPage';
 import { ExtensionTray } from './components/ExtensionTray';
@@ -50,7 +51,7 @@ import { CursorOverlay } from './components/CursorOverlay';
 import { applyTheme } from './lib/theme';
 import { useWindowMaximized } from './lib/useWindowMaximized';
 import { bookmarkDialogAnchor, useBookmarksBar } from './app-bookmarks';
-import { AGENT_PANEL_OPEN_KEY, useExtensionSurfaces } from './app-extension-surfaces';
+import { AGENT_EXTENSION_ID, AGENT_PANEL_OPEN_KEY, useExtensionSurfaces } from './app-extension-surfaces';
 import { useOmniboxAndHistory } from './app-omnibox-history';
 
 function effectiveLocale(pref: LocalePref): Locale {
@@ -341,12 +342,12 @@ export function App() {
 
   const isMaximized = useWindowMaximized();
   // Internal pages are tabs addressed tepegoz://… ; render them when active.
+  const newTabActive = currentUrl === INTERNAL_NEWTAB_URL;
   const settingsActive = currentUrl === INTERNAL_SETTINGS_URL;
   const extensionsActive = currentUrl === INTERNAL_EXTENSIONS_URL;
   const historyActive = currentUrl === INTERNAL_HISTORY_URL;
   const downloadsActive = currentUrl === INTERNAL_DOWNLOADS_URL;
   const uploadsActive = currentUrl === INTERNAL_UPLOADS_URL;
-  const tasksActive = currentUrl === INTERNAL_TASKS_URL;
   const bookmarksActive = currentUrl === INTERNAL_BOOKMARKS_URL;
   // An extension `page` surface: tepegoz://<extension-id> → render that extension's page component.
   const pageExtIds = registry.filter((d) => d.manifest.surfaces.includes('page')).map((d) => d.id);
@@ -410,33 +411,65 @@ export function App() {
       window.tepegoz.onUploadsState(callback),
     [],
   );
-  const taskList = useCallback(() => window.tepegoz.listTasks(), []);
-  const taskSave = useCallback(
-    (input: Parameters<typeof window.tepegoz.saveTask>[0]) => window.tepegoz.saveTask(input),
+  // The new-tab page's Favorites grid reads the bookmark tree (so each tile carries its node id, needed
+  // to edit/remove the shortcut), flattened to link leaves and shown newest-first.
+  const newTabFavorites = useCallback(
+    (): Promise<readonly NewTabFavorite[]> =>
+      window.tepegoz.getBookmarkTree().then((roots) => {
+        const leaves: NewTabFavorite[] = [];
+        const walk = (nodes: readonly BookmarkTreeNode[], updatedAt: number[]): void => {
+          for (const node of nodes) {
+            if (node.type === 'bookmark' && typeof node.url === 'string' && node.url.length > 0) {
+              leaves.push({ id: node.id, title: node.title, url: node.url });
+              updatedAt.push(node.updatedAt);
+            }
+            if (node.children.length > 0) walk(node.children, updatedAt);
+          }
+        };
+        const times: number[] = [];
+        walk(roots, times);
+        return leaves
+          .map((fav, i) => ({ fav, ts: times[i] ?? 0 }))
+          .sort((a, b) => b.ts - a.ts)
+          .map((e) => e.fav);
+      }),
     [],
   );
-  const taskCommand = useCallback(
-    (input: Parameters<typeof window.tepegoz.runTaskNow>[0]) =>
-      input.action === 'cancel'
-        ? window.tepegoz.cancelTaskRun(input)
-        : window.tepegoz.runTaskNow(input),
+
+  // New-tab shortcut mutations, backed by bookmarks. Add stars a page (toggle adds it to the bar);
+  // editing renames in place when only the name changed, else re-creates the bookmark under the new URL
+  // (there is no url-edit primitive); remove deletes it. The bookmarksChanged broadcast bumps
+  // `bookmarks.bookmarksVersion` → the grid refetches.
+  const onAddShortcut = useCallback((title: string, url: string) => {
+    const name = title.trim() || url;
+    void window.tepegoz.toggleBookmark(url, name);
+  }, []);
+  const onEditShortcut = useCallback(
+    (id: string, title: string, url: string, previousUrl: string) => {
+      const name = title.trim() || url;
+      if (url === previousUrl) {
+        void window.tepegoz.renameBookmark(id, name);
+        return;
+      }
+      void window.tepegoz.removeBookmark(id).then(() => window.tepegoz.toggleBookmark(url, name));
+    },
     [],
   );
-  const taskSetEnabled = useCallback(
-    (input: Parameters<typeof window.tepegoz.setTaskEnabled>[0]) =>
-      window.tepegoz.setTaskEnabled(input),
-    [],
+  const onRemoveShortcut = useCallback((id: string) => {
+    void window.tepegoz.removeBookmark(id);
+  }, []);
+
+  // Submitting the new-tab search box navigates (URL or search query, resolved in main), then closes
+  // the now-orphaned newtab tab so the result replaces it in place — Chrome's new-tab-page behaviour.
+  const onNewTabSearch = useCallback(
+    (query: string) => {
+      const fromId = tabs.activeId;
+      window.tepegoz.navigateTab(query);
+      if (fromId !== null) window.tepegoz.closeTab(fromId);
+    },
+    [tabs.activeId],
   );
-  const taskRuns = useCallback((taskId?: string) => window.tepegoz.listTaskRuns(taskId), []);
-  const taskArtifacts = useCallback(
-    (taskId?: string) => window.tepegoz.listTaskArtifacts(taskId),
-    [],
-  );
-  const taskSubscribe = useCallback(
-    (callback: Parameters<typeof window.tepegoz.onTasksState>[0]) =>
-      window.tepegoz.onTasksState(callback),
-    [],
-  );
+
   const contentSnapshot = extSurfaces.resizeSnapshot ?? (omniboxViewHidden ? omniboxSnapshot : null);
 
   return (
@@ -538,6 +571,20 @@ export function App() {
                 className="pointer-events-none absolute inset-0 h-full w-full object-cover object-left-top"
               />
             )}
+            {newTabActive && (
+              <div className="absolute inset-0 bg-surface-system">
+                <NewTabPage
+                  listFavorites={newTabFavorites}
+                  refreshKey={bookmarks.bookmarksVersion}
+                  onOpenFavorite={(url) => window.tepegoz.navigateTab(url)}
+                  onSearch={onNewTabSearch}
+                  onOpenAgent={() => extSurfaces.runExtensionAction(AGENT_EXTENSION_ID, 'click')}
+                  onAddShortcut={onAddShortcut}
+                  onEditShortcut={onEditShortcut}
+                  onRemoveShortcut={onRemoveShortcut}
+                />
+              </div>
+            )}
             {settingsActive && (
               <div className="absolute inset-0 bg-surface-system">
                 {prefs && status ? (
@@ -605,19 +652,6 @@ export function App() {
                   list={uploadList}
                   command={uploadCommand}
                   subscribe={uploadSubscribe}
-                />
-              </div>
-            )}
-            {tasksActive && (
-              <div className="absolute inset-0 bg-surface-system">
-                <TasksPage
-                  list={taskList}
-                  save={taskSave}
-                  command={taskCommand}
-                  setEnabled={taskSetEnabled}
-                  listRuns={taskRuns}
-                  listArtifacts={taskArtifacts}
-                  subscribe={taskSubscribe}
                 />
               </div>
             )}

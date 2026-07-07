@@ -33,6 +33,7 @@ export const agentModelsApi: Pick<
   TepegozApi,
   | 'runAgent'
   | 'cancelAgent'
+  | 'getActiveTabUrl'
   | 'newAgentConversation'
   | 'listAgentConversations'
   | 'getAgentConversation'
@@ -75,6 +76,7 @@ export const agentModelsApi: Pick<
   cancelAgent: (runId: string) => {
     ipcRenderer.send(IpcChannels.agentCancel, runId);
   },
+  getActiveTabUrl: () => invoke<string | null>(IpcChannels.agentActiveTabUrl),
   newAgentConversation: (groupId: string) => {
     ipcRenderer.send(IpcChannels.agentNewConversation, groupId);
   },

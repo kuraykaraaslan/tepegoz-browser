@@ -6,7 +6,7 @@ import { extensionsDict } from '@tepegoz/extensions-ui/i18n';
 import { historyDict } from '@tepegoz/history-ui/i18n';
 import { downloadsDict } from '@tepegoz/downloads-ui/i18n';
 import { uploadsDict } from '@tepegoz/uploads-ui/i18n';
-import { tasksDict } from '@tepegoz/tasks-ui/i18n';
+import { tasksDict } from '@tepegoz/ext-tasks/i18n';
 import { browserDict } from '../../i18n';
 import PreferenceStore from '@tepegoz/preferences';
 

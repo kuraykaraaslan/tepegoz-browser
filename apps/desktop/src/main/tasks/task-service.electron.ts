@@ -3,9 +3,10 @@ import { BrowserWindow } from 'electron';
 import { AppError, Logger } from '@tepegoz/libs';
 import { IpcChannels, type TasksState } from '@tepegoz/desktop-ipc';
 import {
-  defaultTaskPolicy,
   nextIntervalRunAt,
   normalizeTaskTrigger,
+  originOf,
+  synthesizePolicy,
   type PageChangeTaskTrigger,
   type TaskArtifactRecord,
   type TaskCommandInput,
@@ -137,6 +138,7 @@ function appendAudit(type: EventType, payload: Record<string, unknown>, correlat
 export default class TaskService {
   private static timer: NodeJS.Timeout | null = null;
   private static runner: TaskRunLauncher | null = null;
+  private static writeToolIdsProvider: (() => string[]) | null = null;
   private static runningTaskId: string | null = null;
   private static queue = new Map<string, QueuedTaskRun>();
 
@@ -158,6 +160,15 @@ export default class TaskService {
 
   static setRunner(runner: TaskRunLauncher | null): void {
     TaskService.runner = runner;
+  }
+
+  /**
+   * Inject a provider that lists the write-class tool ids the agent can currently run. Used to synthesize
+   * a task's {@link TaskPolicy} from its autonomy preset at save time — kept out of `@tepegoz/tasks` so the
+   * package stays free of a hard capability-plane dependency (mirrors {@link setRunner}).
+   */
+  static setWriteToolIdsProvider(provider: (() => string[]) | null): void {
+    TaskService.writeToolIdsProvider = provider;
   }
 
   static list(): TaskDefinition[] {
@@ -183,6 +194,15 @@ export default class TaskService {
     if (db === null) throw new AppError('Database unavailable', 503);
     const existing = input.id !== undefined ? TaskStore.get(db, input.id) : null;
     const at = now();
+    const targetOrigin = input.targetOrigin ?? originOf(input.targetUrl);
+    // Prefer an explicit hand-crafted policy; otherwise synthesize one from the autonomy preset using the
+    // live write-tool set (the renderer never sees the tool allowlist — trust boundary stays in main).
+    const policy =
+      input.policy ??
+      synthesizePolicy(input.autonomy ?? 'notify', {
+        ...(targetOrigin !== undefined ? { targetOrigin } : {}),
+        writeToolIds: TaskService.writeToolIdsProvider?.() ?? [],
+      });
     const task: TaskDefinition = {
       id: input.id ?? randomUUID(),
       name: input.name,
@@ -190,9 +210,14 @@ export default class TaskService {
       ...(input.description !== undefined ? { description: input.description } : {}),
       status: input.status ?? existing?.status ?? 'enabled',
       triggers: input.triggers.map(normalizeTaskTrigger),
-      policy: { ...defaultTaskPolicy(), ...input.policy },
+      policy,
       ...(input.targetUrl !== undefined ? { targetUrl: input.targetUrl } : {}),
-      ...(input.targetOrigin !== undefined ? { targetOrigin: input.targetOrigin } : {}),
+      ...(targetOrigin !== undefined ? { targetOrigin } : {}),
+      ...(input.sourceConversationId !== undefined
+        ? { sourceConversationId: input.sourceConversationId }
+        : existing?.sourceConversationId !== undefined
+          ? { sourceConversationId: existing.sourceConversationId }
+          : {}),
       createdAt: existing?.createdAt ?? at,
       updatedAt: at,
       ...(existing?.lastRunAt !== undefined ? { lastRunAt: existing.lastRunAt } : {}),

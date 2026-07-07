@@ -26,6 +26,7 @@ import { registerUploadTools } from '@tepegoz/uploads/tools';
 import { registerScreenshotTools } from '@tepegoz/screenshots/tools';
 import { registerTaskTools } from '@tepegoz/tasks/tools';
 import { registerWebTools } from '@tepegoz/web-tools/tools';
+import { CapabilityRegistry } from '@tepegoz/capability-plane';
 import FileOperationsHost from './file-operations/file-operations-host';
 import { attachBrowserHostWindow, browserHost } from './agent/browser-host.electron';
 import { journalHost } from './agent/journal-host.electron';
@@ -148,6 +149,15 @@ if (!app.requestSingleInstanceLock()) {
       registerIpc();
       bootstrap();
       TaskService.setRunner(runTaskAgent);
+      // Let saved-task policy synthesis pre-approve routine write tools (click/type/navigate) on the
+      // task's own origin. `destructive`/`financial` tools are deliberately excluded — they still pause
+      // for approval even on the target site (mirrors the interactive agent's "act" autonomy). Evaluated
+      // lazily at save time, so it sees the fully-registered registry (browser/extension tools below).
+      TaskService.setWriteToolIdsProvider(() =>
+        CapabilityRegistry.list()
+          .filter((tool) => tool.dangerClass === 'state_changing')
+          .map((tool) => tool.id),
+      );
       TaskService.init();
       // Connect configured MCP servers in the background (non-blocking; a bad server must not delay
       // startup). Their tools register into the CapabilityRegistry as they become ready (ADR-0018).

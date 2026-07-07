@@ -1,5 +1,5 @@
 {
-  "name": "@tepegoz/tasks-ui",
+  "name": "@tepegoz/newtab-ui",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -15,8 +15,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@tepegoz/i18n": "workspace:*",
-    "@tepegoz/tasks": "workspace:*"
+    "@fortawesome/free-solid-svg-icons": "^7.2.0",
+    "@fortawesome/react-fontawesome": "^3.3.1",
+    "@tepegoz/i18n": "workspace:*"
   },
   "peerDependencies": {
     "react": "^18 || ^19"

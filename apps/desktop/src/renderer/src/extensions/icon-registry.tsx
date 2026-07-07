@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faBan,
+  faListCheck,
   faPuzzlePiece,
   faRobot,
   faUserSecret,
@@ -19,6 +20,7 @@ const ICONS: Record<string, IconDefinition> = {
   'user-secret': faUserSecret,
   ban: faBan,
   'wand-magic-sparkles': faWandMagicSparkles,
+  'list-check': faListCheck,
   'puzzle-piece': faPuzzlePiece,
 };
 

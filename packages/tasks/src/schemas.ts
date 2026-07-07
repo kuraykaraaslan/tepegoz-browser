@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   MIN_TASK_INTERVAL_MINUTES,
+  TASK_AUTONOMY_PRESETS,
   TASK_COMMAND_ACTIONS,
   TASK_EXTERNAL_SOURCES,
   TASK_PAGE_CHANGE_MODES,
@@ -20,6 +21,7 @@ export const TaskRunStatusSchema = z.enum(TASK_RUN_STATUSES);
 export const TaskCommandActionSchema = z.enum(TASK_COMMAND_ACTIONS);
 export const TaskExternalSourceSchema = z.enum(TASK_EXTERNAL_SOURCES);
 export const TaskPageChangeModeSchema = z.enum(TASK_PAGE_CHANGE_MODES);
+export const TaskAutonomyPresetSchema = z.enum(TASK_AUTONOMY_PRESETS);
 
 export const TaskPolicySchema = z.object({
   allowedOrigins: z.array(z.string().min(1).max(2048)).max(50),
@@ -74,6 +76,7 @@ export const TaskDefinitionSchema = z.object({
   policy: TaskPolicySchema,
   targetUrl: z.string().max(4096).optional(),
   targetOrigin: z.string().max(2048).optional(),
+  sourceConversationId: z.string().min(1).max(128).optional(),
   createdAt: z.number().int().nonnegative(),
   updatedAt: z.number().int().nonnegative(),
   lastRunAt: z.number().int().nonnegative().optional(),
@@ -87,9 +90,11 @@ export const TaskSaveInputSchema = z.object({
   description: z.string().max(2048).optional(),
   status: TaskStatusSchema.optional(),
   triggers: z.array(TaskTriggerSchema).min(1).max(20),
-  policy: TaskPolicySchema,
+  policy: TaskPolicySchema.optional(),
+  autonomy: TaskAutonomyPresetSchema.optional(),
   targetUrl: z.string().max(4096).optional(),
   targetOrigin: z.string().max(2048).optional(),
+  sourceConversationId: z.string().min(1).max(128).optional(),
 }) satisfies z.ZodType<TaskSaveInput>;
 
 export const TaskCommandInputSchema = z.object({

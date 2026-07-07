@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 48" width="210" height="48" role="img" aria-label="Tepegöz">
+  <!-- Tepegöz horizontal logo lockup: the brand emblem (browser frame — tab dots + forward arrow —
+       around a cyclops eye, in brand navy/cyan) + the "Tepegöz" wordmark. The wordmark is
+       `currentColor` so it inherits the surrounding text colour when the SVG is inlined (theme-aware,
+       WCAG-AA on both light and dark). Reference mirror of tepegoz-logo.tsx — keep roughly in sync. -->
+  <g transform="translate(0 2) scale(0.163)">
+    <clipPath id="eye-clip"><path d="M40 162 Q120 70 200 162 Q120 254 40 162 Z"/></clipPath>
+    <rect x="28" y="26" width="84" height="46" rx="13" fill="#0C2135"/>
+    <circle cx="50" cy="49" r="7" fill="#06AEC4"/>
+    <circle cx="72" cy="49" r="7" fill="#06AEC4"/>
+    <circle cx="94" cy="49" r="7" fill="#06AEC4"/>
+    <rect x="128" y="24" width="84" height="48" rx="13" fill="#06AEC4"/>
+    <path d="M150 45 H172 V40 L190 49 L172 58 V53 H150 Z" fill="#FFFFFF"/>
+    <path d="M28 108 Q120 90 212 108 L212 150 Q212 214 120 256 Q28 214 28 150 Z" fill="#0C2135"/>
+    <path d="M40 162 Q120 70 200 162 Q120 254 40 162 Z" fill="#FFFFFF"/>
+    <g clip-path="url(#eye-clip)">
+      <circle cx="120" cy="162" r="50" fill="#06AEC4"/>
+      <circle cx="120" cy="162" r="23" fill="#0C2135"/>
+      <circle cx="131" cy="151" r="8.5" fill="#FFFFFF"/>
+    </g>
+    <path d="M120 210 L120 250" fill="none" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round"/>
+  </g>
+  <text x="56" y="24" dominant-baseline="central" fill="currentColor"
+        font-family="'Baloo 2', ui-sans-serif, system-ui, sans-serif"
+        font-size="30" font-weight="800" letter-spacing="-0.3">Tepegöz</text>
+</svg>

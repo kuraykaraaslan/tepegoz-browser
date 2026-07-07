@@ -26,6 +26,7 @@
     "@tepegoz/i18n": "workspace:*",
     "@tepegoz/markdown": "workspace:*",
     "@tepegoz/shared-types": "workspace:*",
+    "@tepegoz/tasks": "workspace:*",
     "@tepegoz/ui": "workspace:*",
     "zod": "3.23.8"
   },

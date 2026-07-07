@@ -9,6 +9,7 @@ export { Modal } from './modules/ui/Modal';
 export { Input } from './modules/ui/Input';
 export { Badge } from './modules/ui/Badge';
 export { AlertBanner, type AlertAction } from './modules/ui/AlertBanner';
+export { DataTable, type DataTableProps, type TableColumn } from './modules/ui/DataTable';
 // First-party (non-fork) brand assets + the shared (menu-model) FontAwesome icon surface.
 export { BrandMark } from './brand/BrandMark';
 export { Icon, type IconName, type IconProps } from './icon/Icon';

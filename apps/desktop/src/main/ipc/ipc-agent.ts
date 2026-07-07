@@ -465,6 +465,13 @@ export function registerAgentIpc(): void {
     return typeof result === 'string' ? result : '';
   });
 
+  // The active tab's committed URL — used to seed a converted task's target page.
+  handle(IpcChannels.agentActiveTabUrl, (): string | null => {
+    const state = TabManager.getState();
+    const active = state.tabs.find((tab) => tab.id === state.activeId);
+    return active !== undefined && active.url.length > 0 ? active.url : null;
+  });
+
   // Open a native file picker and read the selected files for agent attachment.
   handleAsync(IpcChannels.agentPickFiles, async () => {
     requireAgentEnabled();

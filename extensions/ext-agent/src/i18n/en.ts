@@ -115,6 +115,32 @@ export const en = {
     addScreenshot: 'Attach screenshot',
     lines: 'lines',
   },
+  // "Save as scheduled task" — convert this chat into a recurring task (see the Scheduled Tasks extension).
+  scheduleTask: {
+    action: 'Save as task',
+    title: 'Save as scheduled task',
+    desc: 'Run this chat automatically on a schedule or when the page changes.',
+    name: 'Name',
+    instruction: 'Instruction',
+    instructionHint: 'What the agent should do each time this runs.',
+    targetUrl: 'Target page (URL)',
+    schedule: 'Schedule',
+    presetContinuous: 'Continuous (every 5 min)',
+    presetInterval: 'On an interval',
+    presetPageChange: 'When the page changes',
+    everyMinutes: 'Every (minutes)',
+    minInterval: 'Minimum is 5 minutes.',
+    autonomy: 'When it needs to act',
+    autonomyNotify: 'Notify me',
+    autonomySameOrigin: 'Act on this site',
+    save: 'Save task',
+    cancel: 'Cancel',
+    nameRequired: 'Give the task a name.',
+    instructionRequired: 'Add an instruction for the task.',
+    saveFailed: 'Could not save the task.',
+    saved: '✓ Task saved',
+    openManager: 'Open tasks',
+  },
 };
 
 export type AgentStrings = typeof en;

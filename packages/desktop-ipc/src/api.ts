@@ -174,6 +174,8 @@ export interface TepegozApi {
   }): Promise<AgentRunResult>;
   /** Cancel an in-flight run. */
   cancelAgent(runId: string): void;
+  /** The active tab's committed URL, or null when there's no web tab (seeds a converted task's target). */
+  getActiveTabUrl(): Promise<string | null>;
   /** Reset conversation memory for a specific group (panel "New task"). */
   newAgentConversation(groupId: string): void;
   listAgentConversations(input?: AgentConversationListInput): Promise<AgentConversationSummary[]>;

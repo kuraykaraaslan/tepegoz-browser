@@ -17,6 +17,7 @@ interface TaskRow {
   policy: string;
   target_url: string | null;
   target_origin: string | null;
+  source_conversation_id: string | null;
   created_at: number;
   updated_at: number;
   last_run_at: number | null;
@@ -101,6 +102,7 @@ function rowToTask(row: TaskRow): TaskDefinition {
     }),
     ...(row.target_url !== null ? { targetUrl: row.target_url } : {}),
     ...(row.target_origin !== null ? { targetOrigin: row.target_origin } : {}),
+    ...(row.source_conversation_id !== null ? { sourceConversationId: row.source_conversation_id } : {}),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     ...(row.last_run_at !== null ? { lastRunAt: row.last_run_at } : {}),
@@ -119,6 +121,7 @@ function taskParams(task: TaskDefinition): Record<string, unknown> {
     policy: JSON.stringify(task.policy),
     targetUrl: task.targetUrl ?? null,
     targetOrigin: task.targetOrigin ?? null,
+    sourceConversationId: task.sourceConversationId ?? null,
     createdAt: task.createdAt,
     updatedAt: task.updatedAt,
     lastRunAt: task.lastRunAt ?? null,
@@ -240,10 +243,10 @@ export class TaskStore {
     db.prepare(
       `INSERT INTO tasks (
         id, name, prompt, description, status, triggers, policy, target_url, target_origin,
-        created_at, updated_at, last_run_at, next_run_at
+        source_conversation_id, created_at, updated_at, last_run_at, next_run_at
       ) VALUES (
         @id, @name, @prompt, @description, @status, @triggers, @policy, @targetUrl,
-        @targetOrigin, @createdAt, @updatedAt, @lastRunAt, @nextRunAt
+        @targetOrigin, @sourceConversationId, @createdAt, @updatedAt, @lastRunAt, @nextRunAt
       )
       ON CONFLICT(id) DO UPDATE SET
         name = excluded.name,
@@ -254,6 +257,7 @@ export class TaskStore {
         policy = excluded.policy,
         target_url = excluded.target_url,
         target_origin = excluded.target_origin,
+        source_conversation_id = excluded.source_conversation_id,
         updated_at = excluded.updated_at,
         last_run_at = excluded.last_run_at,
         next_run_at = excluded.next_run_at`,
