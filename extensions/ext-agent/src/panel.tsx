@@ -415,13 +415,29 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
           <h2 className="text-sm font-semibold text-text-primary">{a.title}</h2>
         </div>
         <div className="flex items-center gap-1.5">
-          {tokens !== null && tokens.totalTokens > 0 && (
+          {tokens !== null && tokens.quota > 0 ? (
+            // Quota indicator: cumulative lifetime usage against the account quota; amber at ≥80%.
             <span
-              className="rounded-full bg-surface-overlay px-2 py-0.5 text-xs text-text-secondary"
-              title={`${a.tokens}: ${String(tokens.inputTokens)} in / ${String(tokens.outputTokens)} out`}
+              className={cn(
+                'rounded-full px-2 py-0.5 text-xs',
+                tokens.lifetimeTokens / tokens.quota >= 0.8
+                  ? 'bg-amber-500/15 text-amber-500'
+                  : 'bg-surface-overlay text-text-secondary',
+              )}
+              title={`${a.tokens}: ${String(tokens.inputTokens)} in / ${String(tokens.outputTokens)} out (this run)`}
             >
-              {a.tokens}: {tokens.totalTokens.toLocaleString()}
+              {a.tokens}: {tokens.lifetimeTokens.toLocaleString()} / {tokens.quota.toLocaleString()}
             </span>
+          ) : (
+            tokens !== null &&
+            tokens.totalTokens > 0 && (
+              <span
+                className="rounded-full bg-surface-overlay px-2 py-0.5 text-xs text-text-secondary"
+                title={`${a.tokens}: ${String(tokens.inputTokens)} in / ${String(tokens.outputTokens)} out`}
+              >
+                {a.tokens}: {tokens.totalTokens.toLocaleString()}
+              </span>
+            )
           )}
           <ConversationHistoryDropdown
             api={api}

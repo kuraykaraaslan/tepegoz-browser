@@ -35,6 +35,21 @@ export const OPENAI_MODEL = {
 export type OpenAIModelId = (typeof OPENAI_MODEL)[keyof typeof OPENAI_MODEL];
 
 /**
+ * Google Gemini model IDs per tier — same three roles as {@link ANTHROPIC_MODEL} so the router picks a
+ * provider's map by the SAME `plan | exec | classify` key. Mirrors the capable/cheap tiering: `2.5-pro`
+ * for planning, `2.5-flash` for the reactive exec loop, `2.5-flash-lite` for cheap classify. These are
+ * plain generateContent models (no Anthropic-style effort field); edit here to retune — the routing
+ * LOGIC is provider-agnostic and does not change.
+ */
+export const GEMINI_MODEL = {
+  plan: 'gemini-2.5-pro',
+  exec: 'gemini-2.5-flash',
+  classify: 'gemini-2.5-flash-lite',
+} as const;
+
+export type GeminiModelId = (typeof GEMINI_MODEL)[keyof typeof GEMINI_MODEL];
+
+/**
  * On-device (local) tier map. Every tier resolves to the same routing placeholder `LOCAL_SLM_MODEL`
  * (see model-router) — the real GGUF is chosen at run time by the selected catalog model, which
  * `LocalProvider.resolveModel()` maps to a file path. A tiny local model has no meaningful plan/exec/

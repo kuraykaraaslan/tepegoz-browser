@@ -72,10 +72,11 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   // Private — on-device model config/footprint; the public cost-saver bool above is enough for extensions.
   localProvider: 'private',
   localActions: 'private',
-  // Private — agent panel per-run selections (provider override + autonomy + effort).
+  // Private — agent panel per-run selections (provider override + autonomy + effort) + token quota.
   agentProviderOverride: 'private',
   agentAutonomy: 'private',
   agentEffort: 'private',
+  agentTokenQuota: 'private',
   // Private — local file-access configuration (a filesystem footprint that must never reach an extension).
   fileOperationsEnabled: 'private',
   fileAccessGrants: 'private',

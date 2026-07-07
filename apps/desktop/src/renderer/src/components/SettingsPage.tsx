@@ -40,7 +40,12 @@ import type {
 } from '@tepegoz/desktop-ipc';
 import { PROVIDERS } from './settings-shared';
 import { AppearanceSection, LanguageRegionSection } from './settings-appearance-language';
-import { LocalActionsSection, LocalModelsSection, ProvidersSection } from './settings-ai-panels';
+import {
+  LocalActionsSection,
+  LocalModelsSection,
+  ProvidersSection,
+  TokenBudgetSection,
+} from './settings-ai-panels';
 import { AdaptorsSection } from './settings-adaptors-section';
 import {
   AboutSection,
@@ -292,9 +297,10 @@ export function SettingsPage({
       group: G_AI,
       label: s.costTitle,
       icon: <IconGauge />,
-      searchText: `${s.costTitle} ${s.localModel} ${s.localModelDesc} ${s.localActionsHint} ${s.localModels.title}`,
+      searchText: `${s.costTitle} ${s.localModel} ${s.localModelDesc} ${s.localActionsHint} ${s.localModels.title} ${s.tokenBudget.title} ${s.tokenBudget.desc}`,
       content: (
         <div className="space-y-6">
+          <TokenBudgetSection prefs={prefs} setPref={setPref} />
           <LocalModelsSection />
           <LocalActionsSection prefs={prefs} setPref={setPref} />
         </div>

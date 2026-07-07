@@ -6,3 +6,4 @@ export * from './gateway';
 export * from './mock-provider';
 export * from './providers/anthropic.provider';
 export * from './providers/openai.provider';
+export * from './providers/gemini.provider';

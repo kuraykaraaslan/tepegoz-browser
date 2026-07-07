@@ -31,6 +31,27 @@ jobs:
       - name: Dependency audit (report high/critical)
         run: pnpm audit --audit-level=high || true
 
+  e2e:
+    # Playwright `_electron` smoke (Phase 1a DoD): launches the BUILT app and asserts real window
+    # behavior. Separate job because it needs the Electron-ABI native addon + a virtual display, which
+    # would conflict with `verify`'s Node-ABI install.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+          cache: pnpm
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+      - name: Rebuild native addon for the Electron ABI (better-sqlite3)
+        run: pnpm --filter @tepegoz/desktop run rebuild
+      - name: Install Playwright system libraries (Electron/Chromium)
+        run: pnpm exec playwright install-deps chromium
+      - name: Playwright _electron smoke (headless via xvfb)
+        run: xvfb-run -a pnpm e2e
+
   commit-policy:
     runs-on: ubuntu-latest
     steps:

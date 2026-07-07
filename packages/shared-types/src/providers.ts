@@ -22,10 +22,13 @@ export function isLocalProvider(provider: AIProvider): boolean {
  * provider may be stored, but a run resolves to the highest-priority stored key whose provider is in
  * this set — so a user whose top key is a not-yet-wired provider still runs on a lower-priority
  * supported key instead of hard-failing. The ONE source of truth, shared by the runtime (key
- * selection) and the Settings UI (the "not usable yet" hint). Widen this as providers are wired up
- * (Gemini pending an adapter).
+ * selection) and the Settings UI (the "not usable yet" hint). Widen this as providers are wired up.
  */
-export const RUNNABLE_AI_PROVIDERS = ['anthropic', 'openai'] as const satisfies readonly AIProvider[];
+export const RUNNABLE_AI_PROVIDERS = [
+  'anthropic',
+  'openai',
+  'gemini',
+] as const satisfies readonly AIProvider[];
 
 /** True when the agent runtime can drive `provider` today (see {@link RUNNABLE_AI_PROVIDERS}). */
 export function isRunnableProvider(provider: AIProvider): boolean {

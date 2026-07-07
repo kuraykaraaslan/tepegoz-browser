@@ -47,6 +47,9 @@ export default class AgentService {
     hooks: AgentRunHooks,
     groupId: string,
     displayPrompt = prompt,
+    /** Token budget seam (L7): account quota + persisted lifetime, forwarded to the runtime so the
+     *  live quota indicator + 80% warning reflect cumulative usage. Persistence/refund stays in the IPC layer. */
+    tokenBudget?: { quota: number; lifetimeUsed: number },
   ): Promise<AgentRunSummary> {
     const handoff = mainStrings().agent.handoff;
     AgentTabGroup.setTopic(groupId, displayPrompt);
@@ -59,6 +62,7 @@ export default class AgentService {
         tabUrl,
         handoffStrings: { captcha: handoff.captcha, twofa: handoff.twofa },
         localInference: { engine: llamaEngine(), resolveModel: () => ModelManager.resolveModel() },
+        ...(tokenBudget !== undefined ? { tokenBudget } : {}),
       },
       history,
     );

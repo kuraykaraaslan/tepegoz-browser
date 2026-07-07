@@ -110,6 +110,22 @@ export function fromAnthropicResult(result: AnthropicCompletion): CanonResponse 
   };
 }
 
+/**
+ * One Anthropic SDK client per API key, reused across runs (internal-ai-rules: single singleton client
+ * per provider — the SDK holds a keep-alive connection pool, so re-creating it every run wastes sockets).
+ * Keyed by the raw key, which stays in the main process. An injected client (tests) bypasses the cache.
+ */
+const clientByKey = new Map<string, Anthropic>();
+function sharedClient(apiKey: string | undefined): Anthropic {
+  const cacheKey = apiKey ?? '';
+  let client = clientByKey.get(cacheKey);
+  if (client === undefined) {
+    client = new Anthropic(apiKey !== undefined ? { apiKey } : {});
+    clientByKey.set(cacheKey, client);
+  }
+  return client;
+}
+
 function toAppError(err: unknown): Error {
   if (err instanceof Anthropic.APIError) {
     const status: unknown = err.status;
@@ -127,9 +143,7 @@ export class AnthropicProvider implements ModelProvider {
   private readonly thinking: boolean;
 
   constructor(config: ProviderConfig) {
-    this.client =
-      config.client ??
-      new Anthropic(config.apiKey !== undefined ? { apiKey: config.apiKey } : {});
+    this.client = config.client ?? sharedClient(config.apiKey);
     this.effort = config.effort;
     this.thinking = config.thinking ?? false;
   }

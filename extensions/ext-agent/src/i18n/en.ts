@@ -27,6 +27,11 @@ export const en = {
     twofa:
       'A verification step (2FA / one-time code) was detected. Tepegöz has stopped and handed control back to you — finish signing in yourself, then start a new task.',
   },
+  // Token Ledger quota — the 80% warning (raised once when cumulative usage crosses the threshold).
+  quota: {
+    warnTitle: 'Approaching your token quota',
+    warnBody: 'This account has used over 80% of its token quota. Adjust it in Settings → Agent.',
+  },
   // The agentic command palette (Chat/Do/Make/Tasks) — this extension owns the surface.
   commandPalette: {
     placeholder: 'Type a command or ask Tepegöz…',

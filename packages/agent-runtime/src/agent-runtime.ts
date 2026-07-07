@@ -1,6 +1,7 @@
 import { AppError } from '@tepegoz/libs';
 import {
   AnthropicProvider,
+  GeminiProvider,
   ModelGateway,
   ModelRouter,
   OpenAIProvider,
@@ -120,6 +121,13 @@ export interface AgentRunDeps {
    * the run falls back to a cloud provider. Keeps this package Electron-free.
    */
   localInference?: LocalProviderConfig;
+  /**
+   * Token budget seam (L7): the account-wide total-token quota + the persisted lifetime usage (from
+   * the SQLite Token Ledger). Seeds the in-memory ledger AFTER its per-run reset so the live quota
+   * indicator + 80% warning reflect CUMULATIVE spend, not just this run. Absent → no quota (unlimited).
+   * The host owns persistence + the pre-flight block + auto-refund; this only feeds the live status.
+   */
+  tokenBudget?: { quota: number; lifetimeUsed: number };
 }
 
 export interface AgentRunSummary {
@@ -200,6 +208,9 @@ function providerFor(
   if (provider === 'openai') {
     return new OpenAIProvider({ apiKey });
   }
+  if (provider === 'gemini') {
+    return new GeminiProvider({ apiKey });
+  }
   return new AnthropicProvider({ apiKey, effort });
 }
 
@@ -225,6 +236,12 @@ export async function runAgent(
   // Per-task token counter: the ledger is a process-global static, so clear it at the START of each run
   // — otherwise the panel's counter shows session-cumulative tokens ("keeps climbing").
   TokenLedger.reset();
+  // Seed the quota + persisted lifetime AFTER the reset, so the live budgetStatus (quota indicator +
+  // 80% warning) is computed against cumulative account usage. Off (0) → unlimited.
+  if (deps.tokenBudget !== undefined) {
+    TokenLedger.setQuota(deps.tokenBudget.quota);
+    TokenLedger.setBaseline(deps.tokenBudget.lifetimeUsed);
+  }
 
   // On-device availability: a native backend AND a selected/installed model. Drives both the
   // whole-agent-local path below and the router's per-capability `local` offload.

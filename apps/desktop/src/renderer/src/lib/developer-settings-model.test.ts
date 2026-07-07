@@ -17,6 +17,7 @@ const PREFS: Preferences = {
   agentProviderOverride: null,
   agentAutonomy: 'ask',
   agentEffort: 'high',
+  agentTokenQuota: 0,
   defaultProvider: 'anthropic',
   region: '',
   dateFormat: 'medium',

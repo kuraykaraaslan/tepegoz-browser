@@ -30,6 +30,11 @@ export const tr: AgentStrings = {
     twofa:
       'Bir doğrulama adımı (2FA / tek kullanımlık kod) algılandı. Tepegöz durdu ve kontrolü size geri verdi — girişi kendiniz tamamlayın, sonra yeni bir görev başlatın.',
   },
+  // Token Defteri kotası — %80 uyarısı (kümülatif kullanım eşiği aştığında bir kez gösterilir).
+  quota: {
+    warnTitle: 'Token kotanıza yaklaşıyorsunuz',
+    warnBody: "Bu hesap token kotasının %80'inden fazlasını kullandı. Ayarlar → Ajan'dan düzenleyin.",
+  },
   // Agentic komut paleti (Sohbet/Yap/Üret/Görevler) — bu yüzeyin sahibi bu eklenti.
   commandPalette: {
     placeholder: "Bir komut yazın ya da Tepegöz'e sorun…",

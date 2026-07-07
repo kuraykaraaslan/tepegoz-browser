@@ -34,9 +34,13 @@ import type { ConfirmRequest } from '@tepegoz/capability-plane';
 import { TokenLedger } from '@tepegoz/model-gateway';
 import { EventJournal } from '@tepegoz/persistence';
 import { AgentConversationStore } from '@tepegoz/persistence';
+import { TokenStore } from '@tepegoz/persistence';
 import { isRunnableProvider, type AIProvider, type EventType, type Plan } from '@tepegoz/shared-types';
 import { randomUUID } from 'node:crypto';
-import AgentService, { type PlanApprovalDecision } from '../agent/agent-service.electron';
+import AgentService, {
+  type AgentRunSummary,
+  type PlanApprovalDecision,
+} from '../agent/agent-service.electron';
 import { setCurrentAgentRun } from '../agent/browser-host.electron';
 import {
   abortAllAgentRunControllers,
@@ -118,9 +122,50 @@ function requireAgentEnabled(): void {
   if (!agentEnabled()) throw new AppError('Agent extension is disabled', 403);
 }
 
+/** Live token snapshot: this run's counter (in-memory ledger) + the account quota and persisted
+ *  lifetime usage (SQLite Token Ledger), so the panel can render the quota indicator + 80% warning. */
 function tokenUsage(): TokenUsageSnapshot {
   const t = TokenLedger.totals();
-  return { inputTokens: t.inputTokens, outputTokens: t.outputTokens, totalTokens: t.totalTokens };
+  const db = getDb();
+  const quota = PreferenceStore.getAll().agentTokenQuota;
+  const lifetimeTokens = db !== null ? TokenStore.lifetimeTotals(db).totalTokens : 0;
+  return {
+    inputTokens: t.inputTokens,
+    outputTokens: t.outputTokens,
+    totalTokens: t.totalTokens,
+    quota,
+    lifetimeTokens,
+  };
+}
+
+/** Terminal reasons where the run's tokens are auto-refunded (credit preserved): the failure was
+ *  outside the user's control — a system/transient error, a CAPTCHA/2FA handoff, or a detected loop. */
+const REFUNDABLE_STOP_REASONS = new Set<string>([
+  'handoff',
+  'loop_detected',
+  'transient_error',
+  'navigation_timeout',
+  'model_malformed',
+  'selector_stale',
+  'page_changed',
+  'max_steps',
+]);
+
+/** Raise the localized 80%-quota warning ONCE, on the run that pushes cumulative usage across the
+ *  threshold (was below, now at/over). No-op when the quota is off or the threshold was already passed. */
+function maybeWarnQuota(quota: number, usedBefore: number, usedAfter: number): void {
+  if (quota <= 0) return;
+  const threshold = quota * 0.8;
+  if (usedBefore < threshold && usedAfter >= threshold) {
+    const strings = mainStrings().agent.quota;
+    NotificationHost.push({
+      source: 'agent',
+      kind: 'warning',
+      title: strings.warnTitle,
+      body: strings.warnBody,
+      channels: ['center', 'toast'],
+    });
+  }
 }
 
 /** Truncated, safe preview of tool args for the HITL modal (never the full payload). */
@@ -344,19 +389,59 @@ export function registerAgentIpc(): void {
       });
     };
 
+    // Token budget (L7): the account quota + the persisted lifetime BEFORE this run. Used for the
+    // pre-flight gate, the live indicator seed, the auto-refund, and the 80% warning crossing check.
+    const budgetDb = getDb();
+    const tokenQuota = PreferenceStore.getAll().agentTokenQuota;
+    const lifetimeUsedBefore =
+      budgetDb !== null ? TokenStore.lifetimeTotals(budgetDb).totalTokens : 0;
+    let runSummary: AgentRunSummary | undefined;
+    let runThrew = false;
+
     try {
-      const summary = await AgentService.run(prompt, {
-        onEvent,
-        onCheckpoint,
-        requestPlanApproval,
-        requestApproval,
-        signal: controller.signal,
-      }, groupId, displayPrompt ?? prompt);
+      // Pre-flight budget gate: block BEFORE planning when the account quota is already spent.
+      if (tokenQuota > 0 && lifetimeUsedBefore >= tokenQuota) {
+        throw new AppError('Token quota reached. Increase it in Settings → Agent, or reset usage.', 429);
+      }
+      const summary = await AgentService.run(
+        prompt,
+        {
+          onEvent,
+          onCheckpoint,
+          requestPlanApproval,
+          requestApproval,
+          signal: controller.signal,
+        },
+        groupId,
+        displayPrompt ?? prompt,
+        { quota: tokenQuota, lifetimeUsed: lifetimeUsedBefore },
+      );
+      runSummary = summary;
       return { runId, stoppedReason: summary.stoppedReason, ok: summary.ok };
     } catch (err) {
+      runThrew = true;
       onEvent('error', err instanceof Error ? err.message : 'Agent run failed');
       throw err;
     } finally {
+      // Persist THIS run's usage to the SQLite Token Ledger (provider+model+capability), then auto-refund
+      // when the run failed for a reason outside the user's control, and raise the 80% warning if this
+      // run crossed the threshold. Best-effort: a ledger write must never break the run's teardown.
+      const persistDb = getDb();
+      if (persistDb !== null) {
+        try {
+          TokenStore.recordRun(persistDb, {
+            correlationId: runId,
+            ts: Date.now(),
+            entries: TokenLedger.snapshotEntries(),
+          });
+          const refundable =
+            runThrew || (runSummary !== undefined && REFUNDABLE_STOP_REASONS.has(runSummary.stoppedReason));
+          if (refundable) TokenStore.refundRun(persistDb, runId, Date.now());
+          maybeWarnQuota(tokenQuota, lifetimeUsedBefore, TokenStore.lifetimeTotals(persistDb).totalTokens);
+        } catch (err) {
+          Logger.warn('Token ledger persist failed', { err: String(err) });
+        }
+      }
       setCurrentAgentRun(null, null, null);
       unregisterAgentRunController(runId);
       agentRunByGroup.delete(groupId);

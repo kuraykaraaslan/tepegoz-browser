@@ -41,26 +41,31 @@ afterEach(() => {
 });
 
 describe('runAgent guards (before any model/tool call)', () => {
-  it('rejects when the only stored key is for a not-yet-wired provider (Gemini)', async () => {
+  it('resolves a Gemini-only vault now that Gemini is a wired provider', async () => {
     CredentialVault.addKey('gemini', 'work', 'gm-only');
-    await expect(runAgent('do a thing', hooks(), DEPS)).rejects.toThrow(/No usable API key/i);
+    // Mock the key fetch to stop before the live model call — we only assert the resolved provider.
+    const spy = vi.spyOn(CredentialVault, 'getFirstKeyForProvider').mockImplementation(() => {
+      throw new Error('stop-before-network');
+    });
+    await expect(runAgent('do a thing', hooks(), DEPS)).rejects.toThrow('stop-before-network');
+    expect(spy).toHaveBeenCalledWith('gemini');
+    spy.mockRestore();
   });
 
   it('rejects when no API key is stored at all', async () => {
     await expect(runAgent('do a thing', hooks(), DEPS)).rejects.toThrow(/API key/i);
   });
 
-  it('selects the highest-priority runnable key even when a not-yet-wired provider is on top', async () => {
-    // Top (highest-priority) key is Gemini (no adapter yet), but an OpenAI key sits below it: the run
-    // must resolve to the OpenAI key instead of hard-failing. Mock the key fetch to stop before the
-    // live model call.
+  it('resolves the highest-priority stored key (Gemini on top, now wired)', async () => {
+    // Top (highest-priority) key is Gemini and a lower OpenAI key sits below it: the run resolves to
+    // the TOP key. Mock the key fetch to stop before the live model call.
     CredentialVault.addKey('gemini', 'work', 'gm-top');
     CredentialVault.addKey('openai', 'personal', 'sk-openai-lower');
     const spy = vi.spyOn(CredentialVault, 'getFirstKeyForProvider').mockImplementation(() => {
       throw new Error('stop-before-network');
     });
     await expect(runAgent('do a thing', hooks(), DEPS)).rejects.toThrow('stop-before-network');
-    expect(spy).toHaveBeenCalledWith('openai');
+    expect(spy).toHaveBeenCalledWith('gemini');
     spy.mockRestore();
   });
 

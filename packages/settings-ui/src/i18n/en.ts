@@ -157,6 +157,12 @@ export const en = {
   toolSchemaLabel: 'schema',
   toolIdempotencyLabel: 'idempotency',
   noActionsYet: 'No actions available yet.',
+  tokenBudget: {
+    title: 'Token budget',
+    desc: 'Cap total token spend across agent runs. The Agent Console shows a live indicator and warns at 80%; a new run is blocked once the cap is reached. Runs that fail for reasons outside your control (system errors, CAPTCHA/2FA, loops) are auto-refunded.',
+    label: 'Total token quota (0 = unlimited)',
+    used: 'Used so far',
+  },
   localModels: {
     title: 'On-device models',
     hint: 'Download a model to run the agent locally. Stored in your profile — not bundled with the app.',

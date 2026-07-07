@@ -125,6 +125,9 @@ export interface Preferences {
   /** Agent reasoning-effort preset for a run: raises reasoning depth (Anthropic `output_config.effort`)
    *  AND the per-call max-token budget. Set from the Agent panel effort dropdown. */
   agentEffort: AgentEffort;
+  /** Account-wide total-token quota (input+output) across runs; 0 = unlimited/off. Feeds the Token
+   *  Ledger quota indicator, the 80% warning, and the pre-flight budget gate. Set in Settings → Agent. */
+  agentTokenQuota: number;
   /**
    * The default AI provider — DERIVED from the credential vault's key order (the provider of the
    * top/highest-priority key) and synced by main whenever keys change. There is no separate UI for it;

@@ -1,5 +1,5 @@
 import type { AIProvider } from '@tepegoz/shared-types';
-import { ANTHROPIC_MODEL, LOCAL_MODEL, OPENAI_MODEL, type EffortLevel } from './models';
+import { ANTHROPIC_MODEL, GEMINI_MODEL, LOCAL_MODEL, OPENAI_MODEL, type EffortLevel } from './models';
 
 /**
  * Deterministic capability → model routing (L7). Maps each capability to a model tier and decides
@@ -20,14 +20,13 @@ export type ModelTransport = 'local' | 'cloud';
 
 /**
  * Per-provider tier → model map. Each provider shares the SAME `plan | exec | classify` keys, so the
- * router picks a provider's map and indexes by tier — no provider-specific branching. Gemini has no
- * adapter yet (not in RUNNABLE_AI_PROVIDERS), so it points at the Anthropic map as a total-map
- * placeholder; a run never resolves to it until a Gemini adapter ships.
+ * router picks a provider's map and indexes by tier — no provider-specific branching. Adding a
+ * provider is a data change here plus an adapter + a RUNNABLE_AI_PROVIDERS entry.
  */
 const PROVIDER_MODELS: Record<AIProvider, Record<ModelTier, string>> = {
   anthropic: ANTHROPIC_MODEL,
   openai: OPENAI_MODEL,
-  gemini: ANTHROPIC_MODEL,
+  gemini: GEMINI_MODEL,
   local: LOCAL_MODEL,
 };
 

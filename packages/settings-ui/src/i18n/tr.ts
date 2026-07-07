@@ -157,6 +157,12 @@ export const tr: SettingsStrings = {
   toolSchemaLabel: 'şema',
   toolIdempotencyLabel: 'idempotency',
   noActionsYet: 'Henüz aksiyon yok.',
+  tokenBudget: {
+    title: 'Token bütçesi',
+    desc: "Tüm ajan çalışmalarındaki toplam token harcamasını sınırlayın. Ajan Konsolu canlı bir gösterge sunar ve %80'de uyarır; sınıra ulaşılınca yeni çalışma engellenir. Sizin kontrolünüz dışındaki nedenlerle (sistem hataları, CAPTCHA/2FA, döngüler) başarısız olan çalışmalar otomatik iade edilir.",
+    label: 'Toplam token kotası (0 = sınırsız)',
+    used: 'Şu ana dek kullanılan',
+  },
   localModels: {
     title: 'Cihaz-içi modeller',
     hint: 'Ajanı yerelde çalıştırmak için bir model indir. Profilinde saklanır — uygulamayla paketlenmez.',

@@ -366,6 +366,42 @@ const MIGRATIONS: Migration[] = [
       db.exec('ALTER TABLE tasks ADD COLUMN source_conversation_id TEXT;');
     },
   },
+  {
+    version: 12,
+    up: (db) => {
+      db.exec(`
+        -- Token Ledger (L7): persisted model-usage accounting at provider+model+capability granularity.
+        -- One row per (run, provider, model, capability); the live in-memory ledger feeds the run and
+        -- these rows are the cross-restart lifetime total behind the quota indicator + 80% warning.
+        --
+        -- 'refunded' rows are excluded from the quota total (auto-refund on system-error/CAPTCHA/loop —
+        -- the user's budget is not spent when a run fails for reasons outside their control).
+        --
+        -- Sync-ready from day 0 (mirrors the 'kv' table): a UUID primary key (not an autoincrement rowid
+        -- that would collide across devices), 'device_id' for per-device accounting that aggregates under
+        -- one tepegoz account later, and updated_at/version/tombstone sync-meta — so Phase 3 account cloud
+        -- sync is NOT a schema migration.
+        CREATE TABLE token_usage (
+          id             TEXT PRIMARY KEY,
+          ts             INTEGER NOT NULL,
+          device_id      TEXT NOT NULL,
+          correlation_id TEXT,
+          provider       TEXT NOT NULL,
+          model          TEXT NOT NULL,
+          capability     TEXT NOT NULL,
+          input_tokens   INTEGER NOT NULL,
+          output_tokens  INTEGER NOT NULL,
+          calls          INTEGER NOT NULL,
+          refunded       INTEGER NOT NULL DEFAULT 0,
+          updated_at     INTEGER NOT NULL,
+          version        INTEGER NOT NULL DEFAULT 1,
+          tombstone      INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE INDEX idx_token_usage_ts ON token_usage (ts DESC);
+        CREATE INDEX idx_token_usage_corr ON token_usage (correlation_id);
+      `);
+    },
+  },
 ];
 
 /**

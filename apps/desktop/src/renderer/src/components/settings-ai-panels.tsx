@@ -565,3 +565,54 @@ export function LocalActionsSection({
     </Card>
   );
 }
+
+/**
+ * Token budget (L7 cost transparency): the account-wide total-token quota that drives the Agent
+ * Console's live quota indicator + 80% warning + pre-flight block. `0` = unlimited. The lifetime "used"
+ * figure comes from the persisted SQLite Token Ledger via `getTokenUsage` (non-refunded total).
+ */
+export function TokenBudgetSection({
+  prefs,
+  setPref,
+}: {
+  prefs: Preferences;
+  setPref: (patch: Partial<Preferences>) => void;
+}) {
+  const s = useT(settingsDict);
+  const [used, setUsed] = useState<number | null>(null);
+
+  useEffect(() => {
+    void window.tepegoz.getTokenUsage().then(
+      (u) => {
+        setUsed(u.lifetimeTokens);
+      },
+      () => {
+        setUsed(null);
+      },
+    );
+  }, []);
+
+  return (
+    <Card title={s.tokenBudget.title}>
+      <p className="mb-3 text-sm text-text-secondary">{s.tokenBudget.desc}</p>
+      <div className="max-w-xs">
+        <Input
+          id="agent-token-quota"
+          label={s.tokenBudget.label}
+          type="number"
+          min={0}
+          value={String(prefs.agentTokenQuota)}
+          onChange={(e) => {
+            const n = Math.max(0, Math.trunc(Number(e.target.value) || 0));
+            setPref({ agentTokenQuota: n });
+          }}
+        />
+      </div>
+      {used !== null && (
+        <p className="mt-2 text-xs text-text-secondary">
+          {s.tokenBudget.used}: {used.toLocaleString()}
+        </p>
+      )}
+    </Card>
+  );
+}

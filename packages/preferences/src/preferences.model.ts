@@ -79,6 +79,9 @@ export const PreferencesSchema = z.object({
   agentProviderOverride: ProviderPrefSchema.nullable(),
   agentAutonomy: z.enum(['ask', 'act', 'auto', 'dangerous']),
   agentEffort: z.enum(AGENT_EFFORT_LEVELS),
+  // Account-wide total-token quota (input+output) across runs; 0 = unlimited/off. Drives the Token
+  // Ledger quota indicator, the 80% warning, and the pre-flight budget gate. Private (no public projection).
+  agentTokenQuota: z.number().int().min(0).max(1_000_000_000),
   // Derived from the credential vault's key order (top key's provider) and synced by main; no UI.
   defaultProvider: ProviderPrefSchema,
   // Region/date/search are lenient strings (validated/normalized at the UI); unknown values are harmless.
@@ -215,6 +218,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   agentProviderOverride: null,
   agentAutonomy: 'ask',
   agentEffort: 'high',
+  agentTokenQuota: 0,
   defaultProvider: 'anthropic',
   region: '',
   dateFormat: 'medium',

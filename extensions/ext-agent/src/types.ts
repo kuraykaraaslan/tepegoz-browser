@@ -86,9 +86,14 @@ export interface AgentRunResult {
 }
 
 export interface TokenUsageSnapshot {
+  /** Tokens for the CURRENT run (the in-memory ledger — resets each task). */
   inputTokens: number;
   outputTokens: number;
   totalTokens: number;
+  /** Account-wide total-token quota (0 = unlimited/off). Drives the quota indicator + 80% warning. */
+  quota: number;
+  /** Persisted lifetime tokens used against the quota (non-refunded), across every run/restart. */
+  lifetimeTokens: number;
 }
 
 /**
