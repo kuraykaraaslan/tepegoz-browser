@@ -1,0 +1,64 @@
+# @tepegoz/ext-user-agent CHECKLIST
+
+Prepared from the extension README only; implementation status was not inspected.
+
+- [ ] Support a User-Agent switcher extension.
+- [ ] Support a compact toolbar popup surface.
+- [ ] Support a full internal page surface.
+- [ ] Support a shared stateful picker across popup and page surfaces.
+- [ ] Support host-injected APIs without direct global bridge access.
+- [ ] Support reading the active User-Agent selection from the host.
+- [ ] Support applying a User-Agent selection through the host.
+- [ ] Support resetting to the browser default User-Agent.
+- [ ] Support built-in Chrome presets.
+- [ ] Support built-in Edge presets.
+- [ ] Support built-in Firefox presets.
+- [ ] Support built-in Safari presets.
+- [ ] Support Windows desktop presets.
+- [ ] Support macOS desktop presets.
+- [ ] Support iPhone mobile presets.
+- [ ] Support Android mobile presets.
+- [ ] Support Googlebot or crawler-style presets.
+- [ ] Support custom User-Agent string input.
+- [ ] Support validating custom User-Agent strings.
+- [ ] Support matching a current User-Agent string to a preset.
+- [ ] Support displaying the active preset label.
+- [ ] Support displaying custom mode when no preset matches.
+- [ ] Support applying changes immediately.
+- [ ] Support reloading open tabs after selection changes.
+- [ ] Support warning users before disruptive reload behavior.
+- [ ] Support per-profile User-Agent preferences.
+- [ ] Support per-site User-Agent overrides.
+- [ ] Support temporary session-only User-Agent overrides.
+- [ ] Support searching presets by browser, platform, and device.
+- [ ] Support grouping presets by browser family.
+- [ ] Support grouping presets by device type.
+- [ ] Support showing preset details in a readable format.
+- [ ] Support copying the resolved User-Agent string.
+- [ ] Support importing custom preset lists.
+- [ ] Support exporting custom preset lists.
+- [ ] Support editing saved custom presets.
+- [ ] Support deleting saved custom presets.
+- [ ] Support preventing duplicate custom preset names.
+- [ ] Support safe truncation for long User-Agent strings.
+- [ ] Support accessible radio or listbox semantics for preset selection.
+- [ ] Support keyboard navigation through presets.
+- [ ] Support localized English and Turkish strings.
+- [ ] Support compact popup layout.
+- [ ] Support full-page management layout.
+- [ ] Support high-contrast selected states.
+- [ ] Support reduced-motion friendly selection updates.
+- [ ] Support network permission explanation copy.
+- [ ] Support tabs permission explanation copy.
+- [ ] Support no agent-callable capability requirement.
+- [ ] Support host-only application of resolved User-Agent strings.
+- [ ] Support clear distinction between default and custom values.
+- [ ] Support private-session behavior for temporary overrides.
+- [ ] Support diagnostics showing which tabs need reload.
+- [ ] Support bulk reload confirmation for many open tabs.
+- [ ] Support reset-all-overrides workflow.
+- [ ] Support testable preset matching helpers.
+- [ ] Support manifest metadata for popup and page surfaces.
+- [ ] Support permissions for tabs and network behavior.
+- [ ] Support future Client Hints controls alongside User-Agent strings.
+- [ ] Support future preset catalog updates without host code changes.

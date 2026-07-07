@@ -1,0 +1,64 @@
+# @tepegoz/ext-agent CHECKLIST
+
+Prepared from the extension README only; implementation status was not inspected.
+
+- [ ] Support a sidebar agent panel for autonomous browsing tasks.
+- [ ] Support chat-style interaction with the current browsing context.
+- [ ] Support command modes such as Chat, Do, Make, and Tasks.
+- [ ] Support independent agent sessions per tab group.
+- [ ] Support automatic context switching when the active tab group changes.
+- [ ] Support visible run state for idle, planning, running, waiting, and completed flows.
+- [ ] Support plan preview before a run executes.
+- [ ] Support approving an entire proposed plan.
+- [ ] Support rejecting a proposed plan.
+- [ ] Support skipping individual plan steps during review.
+- [ ] Support per-step rationale display.
+- [ ] Support collapsible reasoning sections.
+- [ ] Support autonomy levels for review-everything workflows.
+- [ ] Support autonomy levels for routine auto-approval workflows.
+- [ ] Support autonomy levels for hands-off workflows.
+- [ ] Support a gated unrestricted autonomy mode with explicit user consent.
+- [ ] Support destructive-action approval prompts.
+- [ ] Support financial-action approval prompts.
+- [ ] Support biometric-gated approval prompts for high-risk actions.
+- [ ] Support routine state-changing approval prompts.
+- [ ] Support clear approval request summaries.
+- [ ] Support canceling an active run.
+- [ ] Support resetting an agent session.
+- [ ] Support retrying after recoverable run failures.
+- [ ] Support human handoff for CAPTCHA pages.
+- [ ] Support human handoff for two-factor authentication pages.
+- [ ] Support resuming after a human handoff is completed.
+- [ ] Support live event streaming from planning and execution.
+- [ ] Support a replay timeline over run events.
+- [ ] Support scrubbing through the replay timeline.
+- [ ] Support event kinds for plan, decision, step start, step success, and step error.
+- [ ] Support event kinds for approval waits, input actions, handoffs, completion, and errors.
+- [ ] Support terminal run results with run identifiers and stop reasons.
+- [ ] Support token usage reporting for input, output, and total tokens.
+- [ ] Support provider configuration from the panel.
+- [ ] Support autonomy configuration from the panel.
+- [ ] Support reasoning-effort presets from low through maximum.
+- [ ] Support composer attachments from selected page text.
+- [ ] Support composer attachments from user-selected files.
+- [ ] Support composer attachments from screenshots.
+- [ ] Support screenshot capture through host APIs.
+- [ ] Support file attachment capture through host APIs.
+- [ ] Support creating tabs through host APIs when a task needs a new workspace.
+- [ ] Support tab-aware task execution summaries.
+- [ ] Support safe rendering of model output as assistant messages.
+- [ ] Support visible tool-call progress without exposing secrets.
+- [ ] Support policy-denied outcomes with understandable user messaging.
+- [ ] Support disabled states when provider configuration is unavailable.
+- [ ] Support empty conversation state for new sessions.
+- [ ] Support conversation history within a tab-group session.
+- [ ] Support keyboard-accessible composer submission.
+- [ ] Support keyboard-accessible plan and approval controls.
+- [ ] Support localized English and Turkish strings.
+- [ ] Support screen-reader labels for run controls and approval buttons.
+- [ ] Support compact layout for narrow sidebars.
+- [ ] Support resizable sidebar-friendly content.
+- [ ] Support copyable run summaries.
+- [ ] Support privacy-friendly redaction of sensitive event details.
+- [ ] Support host-injected APIs without direct global bridge access.
+- [ ] Support extension manifest metadata for sidebar permissions.
