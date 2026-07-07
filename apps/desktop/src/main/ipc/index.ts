@@ -4,6 +4,7 @@ import { registerContentIpc } from './ipc-content';
 import { registerDownloadsIpc } from './ipc-downloads';
 import { registerUploadsIpc } from './ipc-uploads';
 import { registerTasksIpc } from './ipc-tasks';
+import { registerTabDragIpc } from '../tab-drag-coordinator';
 
 export { abortActiveAgentRuns } from './ipc-agent';
 
@@ -15,6 +16,7 @@ export { abortActiveAgentRuns } from './ipc-agent';
 export function registerIpc(): void {
   registerAgentIpc();
   registerTabsWindowsIpc();
+  registerTabDragIpc();
   registerContentIpc();
   registerDownloadsIpc();
   registerUploadsIpc();

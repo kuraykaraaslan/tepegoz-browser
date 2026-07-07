@@ -4,6 +4,7 @@ import {
   type AppInfo,
   type CredentialsStatus,
   type FileAccessFolderPickResult,
+  type NewTabBackgroundImagePick,
   type PopupBlockerRequest,
   type PopupBlockerSettings,
   type Preferences,
@@ -38,6 +39,8 @@ export const settingsMiscApi: Pick<
   | 'trustPopupOrigin'
   | 'getRecentRequests'
   | 'pickFileAccessFolder'
+  | 'pickNewTabBackgroundImage'
+  | 'getNewTabBackgroundImage'
 > = {
   getAppInfo: () => invoke<AppInfo>(IpcChannels.appGetInfo),
   getPreferences: () => invoke<Preferences>(IpcChannels.prefsGet),
@@ -77,4 +80,9 @@ export const settingsMiscApi: Pick<
   // File operations (Settings → File operations). The grant list rides on preferences; only the native
   // folder picker needs a bridge method (AI-driven consent reuses the agent HITL modal).
   pickFileAccessFolder: () => invoke<FileAccessFolderPickResult>(IpcChannels.fileAccessPickFolder),
+  // New-tab background image: native picker (bytes stored in the blob store) + ref → data: URL resolver.
+  pickNewTabBackgroundImage: () =>
+    invoke<NewTabBackgroundImagePick>(IpcChannels.newtabPickBackgroundImage),
+  getNewTabBackgroundImage: (ref: string) =>
+    invoke<string | null>(IpcChannels.newtabGetBackgroundImage, ref),
 };

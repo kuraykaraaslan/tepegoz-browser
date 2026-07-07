@@ -140,3 +140,40 @@ export function createPopupWindow(
   });
   return win;
 }
+
+/**
+ * Secure factory for the tab tear-off DRAG PREVIEW window: a small, frameless, transparent,
+ * click-through, always-on-top chip that follows the cursor across the desktop while a tab/group is
+ * dragged out of its strip. Click-through (`setIgnoreMouseEvents`) + non-focusable so it never captures
+ * the pointer nor steals focus — the source window keeps drag ownership; main just repositions this. The
+ * caller loads the renderer with `?surface=drag-preview` and drives show/move/close.
+ */
+export function createDragPreviewWindow(): BrowserWindow {
+  const win = new BrowserWindow({
+    width: 232,
+    height: 40,
+    show: false,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    movable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    skipTaskbar: true,
+    focusable: false,
+    hasShadow: false,
+    alwaysOnTop: true,
+    // No backgroundColor — the surface paints its own translucent chip over the transparent window.
+    webPreferences: { ...CHROME_WEB_PREFERENCES },
+  });
+  win.setMenu(null);
+  // Float above everything (incl. fullscreen) and never intercept the pointer while it tracks the cursor.
+  win.setAlwaysOnTop(true, 'screen-saver');
+  win.setIgnoreMouseEvents(true);
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  win.webContents.on('will-navigate', (event, url) => {
+    if (!isTrustedAppUrl(url)) event.preventDefault();
+  });
+  return win;
+}

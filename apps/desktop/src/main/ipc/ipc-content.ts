@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { app, BrowserWindow, dialog } from 'electron';
 import { z } from 'zod';
 import {
@@ -17,6 +18,7 @@ import {
   type Macro,
   type MacroSummary,
   type McpServerStatusInfo,
+  type NewTabBackgroundImagePick,
   type NotificationState,
   type PopupBlockerRequest,
   type PopupBlockerSettings,
@@ -44,6 +46,7 @@ import {
   MacroRunDraftSchema,
   MacroRunInputSchema,
   MacroSchema,
+  CasRefSchema,
   NotificationIdSchema,
   NotificationPermissionResponseSchema,
   PopupBlockerPatchSchema,
@@ -55,7 +58,7 @@ import {
 } from '@tepegoz/desktop-ipc/schemas';
 import NotificationStore from '@tepegoz/notifications';
 import WebPermissionBroker from '../web-permissions/permission-broker';
-import { HistoryStore } from '@tepegoz/persistence';
+import { BlobStore, HistoryStore } from '@tepegoz/persistence';
 import { BookmarkTreeStore, importBookmarksHtmlToStore, isBookmarkable } from '@tepegoz/bookmarks';
 import FileOperationsHost from '../file-operations/file-operations-host';
 import McpService from '../mcp/supervisor.electron';
@@ -70,7 +73,7 @@ import { getPublicSettings, broadcastPublicSettings } from '../settings/public-s
 import CredentialVault from '@tepegoz/credential-vault';
 import PreferenceStore from '@tepegoz/preferences';
 import TabManager from '../tabs';
-import { completeOnboarding } from '../onboarding.electron';
+import { completeOnboarding } from '../browser-windows';
 import userAgentHost from '../extensions/user-agent-host.electron';
 import popupBlockerHost from '../extensions/popup-blocker-host.electron';
 import { builtinManifests } from '../../shared/extensions';
@@ -89,6 +92,24 @@ function broadcastBookmarksChanged(): void {
   for (const w of BrowserWindow.getAllWindows()) {
     if (!w.isDestroyed()) w.webContents.send(IpcChannels.bookmarksChanged);
   }
+}
+
+/** Max size for an uploaded new-tab background image (bytes stored in the content-addressed blob store). */
+const MAX_NEWTAB_BG_BYTES = 8 * 1024 * 1024;
+
+/** Sniff an image MIME from magic bytes (defense in depth beyond the dialog filter). Returns null when
+ *  the content isn't a recognized image, so a mislabelled/hostile file is rejected on upload. */
+function sniffImageMime(bytes: Buffer): string | null {
+  if (bytes.length >= 4 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47)
+    return 'image/png';
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg';
+  if (bytes.length >= 6 && bytes.toString('ascii', 0, 4) === 'GIF8') return 'image/gif';
+  if (bytes.length >= 12 && bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP')
+    return 'image/webp';
+  // SVG is text — accept when an <svg tag appears near the head (past any XML/doctype prolog).
+  if (bytes.toString('utf8', 0, Math.min(bytes.length, 512)).toLowerCase().includes('<svg'))
+    return 'image/svg+xml';
+  return null;
 }
 
 function credentialsStatus(): CredentialsStatus {
@@ -247,6 +268,42 @@ export function registerContentIpc(): void {
       return { paths, cancelled: result.canceled };
     },
   );
+
+  // New-tab background image: native picker → validate (real image, ≤ size cap) → content-addressed blob
+  // store. Only the cas:// ref is persisted (in prefs.newTabBackground.imageRef); bytes live in the DB.
+  handleAsync(
+    IpcChannels.newtabPickBackgroundImage,
+    async (event): Promise<NewTabBackgroundImagePick> => {
+      const win = BrowserWindow.fromWebContents(event.sender);
+      const opts: Electron.OpenDialogOptions = {
+        properties: ['openFile'],
+        filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'] }],
+      };
+      const result = win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts);
+      const filePath = result.filePaths[0];
+      if (result.canceled || filePath === undefined) return { ref: '', dataUrl: '', cancelled: true };
+      const db = getDb();
+      if (db === null) throw new AppError('Storage is unavailable', 500);
+      const bytes = await readFile(filePath);
+      if (bytes.length > MAX_NEWTAB_BG_BYTES) throw new AppError('Image is too large (max 8 MB)', 413);
+      const mime = sniffImageMime(bytes);
+      if (mime === null) throw new AppError('Unsupported image type', 415);
+      // put() inserts with refcount 0 and there is no unref API, so replacing the image leaves an orphan
+      // blob — harmless (deduped by hash; a future GC can sweep refcount-0 rows).
+      const ref = BlobStore.put(db, bytes);
+      return { ref, dataUrl: `data:${mime};base64,${bytes.toString('base64')}`, cancelled: false };
+    },
+  );
+
+  handle(IpcChannels.newtabGetBackgroundImage, (_event, payload): string | null => {
+    const ref = CasRefSchema.parse(payload);
+    const db = getDb();
+    if (db === null) return null;
+    const bytes = BlobStore.get(db, ref);
+    if (bytes === undefined) return null;
+    const mime = sniffImageMime(bytes) ?? 'image/png';
+    return `data:${mime};base64,${bytes.toString('base64')}`;
+  });
 
   // Notification center — a snapshot getter plus fire-and-forget mutations. Live state is PUSHED from
   // NotificationHost (store subscription) to every app window, so there is no subscribe handler here.

@@ -20,12 +20,21 @@ export function isWebUrl(url: string): boolean {
 
 /**
  * The canonical internal-page URL (tepegoz://…) if `input` addresses one (trailing slash tolerated),
- * else null. Internal pages are rendered by the trusted chrome, NOT loaded into a browsing view.
+ * else null. A simple fragment (`#section-id`) is preserved so internal pages can deep-link to a
+ * trusted in-app section without becoming a web navigation. Internal pages are rendered by the trusted
+ * chrome, NOT loaded into a browsing view.
  * `internalUrls` must be the lowercase, canonical set of internal page URLs for the host app.
  */
 export function internalPageUrl(input: string, internalUrls: readonly string[]): string | null {
-  const s = input.trim().toLowerCase().replace(/\/+$/, '');
-  return internalUrls.find((url) => url === s) ?? null;
+  const trimmed = input.trim().toLowerCase();
+  const hashIndex = trimmed.indexOf('#');
+  const base = (hashIndex >= 0 ? trimmed.slice(0, hashIndex) : trimmed).replace(/\/+$/, '');
+  const canonical = internalUrls.find((url) => url === base);
+  if (canonical === undefined) return null;
+
+  const fragment = hashIndex >= 0 ? trimmed.slice(hashIndex + 1) : '';
+  if (fragment.length === 0) return canonical;
+  return /^[a-z0-9_-]{1,64}$/.test(fragment) ? `${canonical}#${fragment}` : canonical;
 }
 
 function looksLikeHost(input: string): boolean {

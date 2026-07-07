@@ -5,6 +5,8 @@ import {
   FILE_ACCESS_MODES,
   LOCALE_PREFS,
   MCP_TRANSPORTS,
+  NEWTAB_BG_KINDS,
+  NEWTAB_IMAGE_FITS,
   PROVIDER_IDS,
   RESOLVED_LOCALES,
   SITE_PERMISSION_STATES,
@@ -104,6 +106,30 @@ export const PreferencesSchema = z.object({
   homepageUrl: z.string().max(2048),
   // Show the bookmarks bar strip under the nav toolbar (toggled from the Bookmarks menu).
   showBookmarksBar: z.boolean(),
+  // New-tab shortcut tiles — the user's own list, independent of bookmarks. Capped at one Chrome-style
+  // grid (two rows of five).
+  newTabShortcuts: z
+    .array(
+      z.object({
+        id: z.string().min(1).max(64),
+        title: z.string().max(256),
+        url: z.string().min(1).max(2048),
+      }),
+    )
+    .max(10),
+  // New-tab background: kind (default surface / solid color / uploaded image), the color + optional SVG
+  // pattern id for 'color', the cas:// blob ref for 'image', and a 0..1 dimness (background opacity).
+  newTabBackground: z.object({
+    kind: z.enum(NEWTAB_BG_KINDS),
+    color: z.string().max(32),
+    svgId: z.string().max(64),
+    imageRef: z.string().max(128),
+    imageFit: z.enum(NEWTAB_IMAGE_FITS),
+    imagePositionX: z.number().min(0).max(100),
+    imagePositionY: z.number().min(0).max(100),
+    imageZoom: z.number().min(1).max(4),
+    opacity: z.number().min(0).max(1),
+  }),
   // Browser downloads. Empty directory means "use the OS Downloads folder"; main canonicalizes before
   // persisting any user-picked directory.
   downloadDirectory: z.string().max(1024),
@@ -197,6 +223,18 @@ export const DEFAULT_PREFERENCES: Preferences = {
   customSearchEngines: [],
   homepageUrl: 'https://duckduckgo.com/',
   showBookmarksBar: true,
+  newTabShortcuts: [],
+  newTabBackground: {
+    kind: 'default',
+    color: '#1e293b',
+    svgId: '',
+    imageRef: '',
+    imageFit: 'cover',
+    imagePositionX: 50,
+    imagePositionY: 50,
+    imageZoom: 1,
+    opacity: 1,
+  },
   downloadDirectory: '',
   downloadAskEachTime: false,
   extensions: [],

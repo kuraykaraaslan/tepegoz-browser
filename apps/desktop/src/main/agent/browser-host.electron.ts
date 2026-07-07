@@ -1,5 +1,5 @@
 import { AppError } from '@tepegoz/libs';
-import type { BrowserWindow, WebContents } from 'electron';
+import type { WebContents } from 'electron';
 import type { BrowserHost } from '@tepegoz/browser-tools';
 import type { ScreenshotCaptureInput, ScreenshotCaptureResult } from '@tepegoz/screenshots';
 import type { ScreenshotToolsHost } from '@tepegoz/screenshots/tools';
@@ -20,17 +20,7 @@ const DEFAULT_LOAD_TIMEOUT_MS = 15_000;
 const SCREENSHOT_MAX_CAPTURE_PIXELS = 30_000_000;
 
 async function waitForLoad(wc: WebContents, timeoutMs = DEFAULT_LOAD_TIMEOUT_MS): Promise<void> {
-  await new Promise<void>((resolve) => {
-    const onDone = (): void => {
-      clearTimeout(timer);
-      resolve();
-    };
-    const timer = setTimeout(() => {
-      wc.removeListener('did-stop-loading', onDone);
-      resolve();
-    }, timeoutMs);
-    wc.once('did-stop-loading', onDone);
-  });
+  await CdpDriver.waitForPageSettled(wc, timeoutMs);
 }
 
 async function navigate(url: string, tabId?: string): Promise<{ url: string; title: string }> {
@@ -137,17 +127,12 @@ function requireWc(tabId?: string): WebContents {
 
 // --- Cursor overlay wiring ---
 
-let mainWin: BrowserWindow | null = null;
-
-/** Called from index.ts after createWindow(); provides the target for cursor IPC pushes. */
-export function attachBrowserHostWindow(win: BrowserWindow): void {
-  mainWin = win;
-}
-
 function sendCursorPosition(x: number, y: number, visible: boolean): void {
-  if (mainWin === null || mainWin.isDestroyed()) return;
+  // The agent acts on the focused chrome window; push the cursor overlay there.
+  const win = TabManager.focusedWindow();
+  if (win === null || win.isDestroyed()) return;
   const b = TabManager.getContentBounds();
-  mainWin.webContents.send(IpcChannels.cursorPosition, {
+  win.webContents.send(IpcChannels.cursorPosition, {
     x: x + b.x,
     y: y + b.y,
     visible,
@@ -228,8 +213,12 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
   },
   closeTab: (id) => {
     if (!TabManager.getState().tabs.some((t) => t.id === id)) return false;
+    const agentGroupId = currentAgentGroupId;
+    if (agentGroupId === null || !AgentTabGroup.ownsTab(agentGroupId, id)) return false;
     TabManager.closeTab(id);
-    return !TabManager.getState().tabs.some((t) => t.id === id);
+    const closed = !TabManager.getState().tabs.some((t) => t.id === id);
+    if (closed) AgentTabGroup.releaseTab(agentGroupId, id);
+    return closed;
   },
   snapshotElements: (tabId) => CdpDriver.snapshotElements(requireWc(tabId)),
   captureScreenshot,

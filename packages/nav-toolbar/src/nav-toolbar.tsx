@@ -8,7 +8,7 @@ import {
   faStar,
 } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarOutline } from '@fortawesome/free-regular-svg-icons';
-import { Omnibox, type OmniboxSuggestion } from '@tepegoz/omnibox';
+import { Omnibox, type OmniboxQuickSettingTarget, type OmniboxSuggestion } from '@tepegoz/omnibox';
 
 /** Shared base class for a 32px toolbar icon button. Exported so hosts can style matching controls
  *  (e.g. pinned extension icons) the same way. */
@@ -48,6 +48,8 @@ export interface NavToolbarProps {
   onSuggest?: ((query: string) => Promise<OmniboxSuggestion[]>) | undefined;
   /** Switch to an already-open tab (for `activateTab` omnibox suggestions). */
   onActivateTab?: ((tabId: string) => void) | undefined;
+  /** Open a high-frequency settings panel from an omnibox suggestion. */
+  onOpenQuickSetting?: ((target: OmniboxQuickSettingTarget) => void) | undefined;
   /** Reports the omnibox dropdown height to hosts that need to manage native web-view layering. */
   onOmniboxDropdownHeightChange?: ((height: number) => void) | undefined;
   // Bookmark star (Chrome-style, right of the omnibox). Omit onToggleBookmark to hide it entirely.
@@ -81,6 +83,7 @@ export function NavToolbar({
   onNavigate,
   onSuggest,
   onActivateTab,
+  onOpenQuickSetting,
   onOmniboxDropdownHeightChange,
   isBookmarked = false,
   canBookmark = false,
@@ -121,6 +124,7 @@ export function NavToolbar({
         onNavigate={onNavigate}
         onSuggest={onSuggest}
         onActivateTab={onActivateTab}
+        onOpenQuickSetting={onOpenQuickSetting}
         onDropdownHeightChange={onOmniboxDropdownHeightChange}
       />
 

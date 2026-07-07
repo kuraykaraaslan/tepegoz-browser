@@ -7,6 +7,10 @@ export {
   TabStrip,
   type TabDescriptor,
   type TabGroupDescriptor,
+  type TabStripGeometryReport,
   type TabStripLabels,
   type TabStripProps,
+  type TabTearBegin,
+  type TabTearItem,
+  type TabTearPoint,
 } from './tab-strip';

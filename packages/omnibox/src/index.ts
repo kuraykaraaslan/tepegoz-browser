@@ -11,6 +11,7 @@ export {
   MAX_OMNIBOX_SUGGESTIONS,
   type OmniboxSuggestion,
   type OmniboxSuggestionKind,
+  type OmniboxQuickSettingTarget,
   type OmniboxAction,
   type OmniboxScope,
   type OmniboxQuery,

@@ -20,6 +20,7 @@ import type {
   ExtensionId,
   LocalePref,
   LoginCredentialMeta,
+  NewTabBackground,
   NotificationPermissionRequest,
   Preferences,
   ProviderId,
@@ -28,7 +29,6 @@ import type {
 import { NotificationPermissionPrompt, ToastStack } from '@tepegoz/notifications-ui';
 import { AutofillSuggestion } from '@tepegoz/password-ui';
 import { BOOKMARK_ROOT_BAR } from '@tepegoz/bookmarks';
-import type { BookmarkTreeNode } from '@tepegoz/bookmarks';
 import { runNotificationAction } from './lib/notification-actions';
 import { extensionIdFromPageUrl, extensionPageUrl } from '../../shared/extension-urls';
 import { extensionDefById } from './extensions/registry';
@@ -38,7 +38,8 @@ import { BookmarksBar } from '@tepegoz/bookmarks-bar';
 import { HistoryPage } from '@tepegoz/history-ui';
 import { DownloadsPage } from '@tepegoz/downloads-ui';
 import { UploadsPage } from '@tepegoz/uploads-ui';
-import { NewTabPage, type NewTabFavorite } from '@tepegoz/newtab-ui';
+import type { OmniboxQuickSettingTarget } from '@tepegoz/omnibox';
+import { NewTabPage, type ResolvedNewTabBackground } from '@tepegoz/newtab-ui';
 import { BookmarksManager } from '@tepegoz/bookmarks-ui';
 import { ExtensionsPage } from './components/ExtensionsPage';
 import { ExtensionTray } from './components/ExtensionTray';
@@ -66,6 +67,34 @@ const EMPTY_TABS: TabsState = {
   canGoBack: false,
   canGoForward: false,
 };
+
+/** Fallback new-tab background while preferences are still loading (mirrors DEFAULT_PREFERENCES). */
+const DEFAULT_NEWTAB_BACKGROUND: NewTabBackground = {
+  kind: 'default',
+  color: '#1e293b',
+  svgId: '',
+  imageRef: '',
+  imageFit: 'cover',
+  imagePositionX: 50,
+  imagePositionY: 50,
+  imageZoom: 1,
+  opacity: 1,
+};
+
+const QUICK_SETTING_SECTION: Record<OmniboxQuickSettingTarget, string> = {
+  appearance: 'appearance',
+  language: 'language',
+  privacy: 'privacy',
+};
+
+function internalPageBase(url: string): string {
+  return url.split('#', 1)[0] ?? url;
+}
+
+function internalPageHash(url: string): string {
+  const hashIndex = url.indexOf('#');
+  return hashIndex >= 0 ? url.slice(hashIndex + 1) : '';
+}
 
 export function App() {
   const [prefs, setPrefs] = useState<Preferences | null>(null);
@@ -105,6 +134,8 @@ export function App() {
   const [omniboxDropdownHeight, setOmniboxDropdownHeight] = useState(0);
   const [omniboxSnapshot, setOmniboxSnapshot] = useState<string | null>(null);
   const [omniboxViewHidden, setOmniboxViewHidden] = useState(false);
+  // Fetched-once data URLs for uploaded new-tab background images, keyed by their cas:// ref.
+  const [bgImageCache, setBgImageCache] = useState<Record<string, string>>({});
   const omniboxDropdownOpen = omniboxDropdownHeight > 0;
   const onOmniboxDropdownHeightChange = useCallback((height: number): void => {
     const next = Math.max(0, Math.ceil(height));
@@ -154,6 +185,10 @@ export function App() {
       search: browserT.omniboxSearchHint,
       switchToTab: browserT.omniboxSwitchToTab,
       bookmark: browserT.omniboxBookmark,
+      quickSettings: browserT.omniboxQuickSettings,
+      quickAppearance: browserT.omniboxQuickAppearance,
+      quickLanguage: browserT.omniboxQuickLanguage,
+      quickPrivacy: browserT.omniboxQuickPrivacy,
     },
     bookmarks.bookmarksRef,
     extSurfaces.closeSurface,
@@ -362,13 +397,15 @@ export function App() {
 
   const isMaximized = useWindowMaximized();
   // Internal pages are tabs addressed tepegoz://… ; render them when active.
-  const newTabActive = currentUrl === INTERNAL_NEWTAB_URL;
-  const settingsActive = currentUrl === INTERNAL_SETTINGS_URL;
-  const extensionsActive = currentUrl === INTERNAL_EXTENSIONS_URL;
-  const historyActive = currentUrl === INTERNAL_HISTORY_URL;
-  const downloadsActive = currentUrl === INTERNAL_DOWNLOADS_URL;
-  const uploadsActive = currentUrl === INTERNAL_UPLOADS_URL;
-  const bookmarksActive = currentUrl === INTERNAL_BOOKMARKS_URL;
+  const currentBaseUrl = internalPageBase(currentUrl);
+  const newTabActive = currentBaseUrl === INTERNAL_NEWTAB_URL;
+  const settingsActive = currentBaseUrl === INTERNAL_SETTINGS_URL;
+  const extensionsActive = currentBaseUrl === INTERNAL_EXTENSIONS_URL;
+  const historyActive = currentBaseUrl === INTERNAL_HISTORY_URL;
+  const downloadsActive = currentBaseUrl === INTERNAL_DOWNLOADS_URL;
+  const uploadsActive = currentBaseUrl === INTERNAL_UPLOADS_URL;
+  const bookmarksActive = currentBaseUrl === INTERNAL_BOOKMARKS_URL;
+  const settingsSectionId = settingsActive ? internalPageHash(currentUrl) : '';
   // An extension `page` surface: tepegoz://<extension-id> → render that extension's page component.
   const pageExtIds = registry.filter((d) => d.manifest.surfaces.includes('page')).map((d) => d.id);
   const pageExtId =
@@ -398,6 +435,10 @@ export function App() {
   }
   async function onResetPrefs(): Promise<void> {
     setPrefs(await window.tepegoz.resetPreferences());
+  }
+  function onOpenQuickSetting(target: OmniboxQuickSettingTarget): void {
+    extSurfaces.closeSurface();
+    window.tepegoz.navigateTab(`${INTERNAL_SETTINGS_URL}#${QUICK_SETTING_SECTION[target]}`);
   }
   function onToggleExtension(id: ExtensionId, enabled: boolean): void {
     const next = extensionStates.filter((e) => e.id !== id);
@@ -431,53 +472,51 @@ export function App() {
       window.tepegoz.onUploadsState(callback),
     [],
   );
-  // The new-tab page's Favorites grid reads the bookmark tree (so each tile carries its node id, needed
-  // to edit/remove the shortcut), flattened to link leaves and shown newest-first.
-  const newTabFavorites = useCallback(
-    (): Promise<readonly NewTabFavorite[]> =>
-      window.tepegoz.getBookmarkTree().then((roots) => {
-        const leaves: NewTabFavorite[] = [];
-        const walk = (nodes: readonly BookmarkTreeNode[], updatedAt: number[]): void => {
-          for (const node of nodes) {
-            if (node.type === 'bookmark' && typeof node.url === 'string' && node.url.length > 0) {
-              leaves.push({ id: node.id, title: node.title, url: node.url });
-              updatedAt.push(node.updatedAt);
-            }
-            if (node.children.length > 0) walk(node.children, updatedAt);
-          }
-        };
-        const times: number[] = [];
-        walk(roots, times);
-        return leaves
-          .map((fav, i) => ({ fav, ts: times[i] ?? 0 }))
-          .sort((a, b) => b.ts - a.ts)
-          .map((e) => e.fav);
-      }),
-    [],
-  );
+  // New-tab shortcuts are the user's own list (independent of bookmarks), persisted in preferences.
+  // Add/edit/remove are plain array transforms over `prefs.newTabShortcuts` (capped at MAX_SHORTCUTS).
+  const newTabShortcuts = prefs?.newTabShortcuts ?? [];
+  const onAddShortcut = (title: string, url: string): void => {
+    const current = prefs?.newTabShortcuts ?? [];
+    if (current.length >= 10) return;
+    void onUpdatePrefs({
+      newTabShortcuts: [...current, { id: crypto.randomUUID(), title: title.trim() || url, url }],
+    });
+  };
+  const onEditShortcut = (id: string, title: string, url: string): void => {
+    const current = prefs?.newTabShortcuts ?? [];
+    void onUpdatePrefs({
+      newTabShortcuts: current.map((s) => (s.id === id ? { ...s, title: title.trim() || url, url } : s)),
+    });
+  };
+  const onRemoveShortcut = (id: string): void => {
+    const current = prefs?.newTabShortcuts ?? [];
+    void onUpdatePrefs({ newTabShortcuts: current.filter((s) => s.id !== id) });
+  };
 
-  // New-tab shortcut mutations, backed by bookmarks. Add stars a page (toggle adds it to the bar);
-  // editing renames in place when only the name changed, else re-creates the bookmark under the new URL
-  // (there is no url-edit primitive); remove deletes it. The bookmarksChanged broadcast bumps
-  // `bookmarks.bookmarksVersion` → the grid refetches.
-  const onAddShortcut = useCallback((title: string, url: string) => {
-    const name = title.trim() || url;
-    void window.tepegoz.toggleBookmark(url, name);
-  }, []);
-  const onEditShortcut = useCallback(
-    (id: string, title: string, url: string, previousUrl: string) => {
-      const name = title.trim() || url;
-      if (url === previousUrl) {
-        void window.tepegoz.renameBookmark(id, name);
-        return;
-      }
-      void window.tepegoz.removeBookmark(id).then(() => window.tepegoz.toggleBookmark(url, name));
-    },
-    [],
-  );
-  const onRemoveShortcut = useCallback((id: string) => {
-    void window.tepegoz.removeBookmark(id);
-  }, []);
+  // New-tab background: the stored descriptor plus any uploaded image resolved to a data URL. Uploaded
+  // bytes live in the main-process blob store; fetch each ref once and cache the data URL.
+  const newTabBackground = prefs?.newTabBackground ?? DEFAULT_NEWTAB_BACKGROUND;
+  useEffect(() => {
+    const { kind, imageRef } = newTabBackground;
+    if (kind !== 'image' || imageRef === '' || bgImageCache[imageRef] !== undefined) return;
+    void window.tepegoz.getNewTabBackgroundImage(imageRef).then((dataUrl) => {
+      if (dataUrl !== null) setBgImageCache((c) => ({ ...c, [imageRef]: dataUrl }));
+    });
+  }, [newTabBackground, bgImageCache]);
+  const resolvedNewTabBackground: ResolvedNewTabBackground = {
+    ...newTabBackground,
+    imageDataUrl:
+      newTabBackground.imageRef !== '' ? bgImageCache[newTabBackground.imageRef] : undefined,
+  };
+  const onChangeNewTabBackground = (patch: Partial<NewTabBackground>): void => {
+    void onUpdatePrefs({ newTabBackground: { ...newTabBackground, ...patch } });
+  };
+  const onPickNewTabBackgroundImage = async (): Promise<{ ref: string; dataUrl: string } | null> => {
+    const r = await window.tepegoz.pickNewTabBackgroundImage();
+    if (r.cancelled) return null;
+    setBgImageCache((c) => ({ ...c, [r.ref]: r.dataUrl }));
+    return { ref: r.ref, dataUrl: r.dataUrl };
+  };
 
   // Submitting the new-tab search box navigates (URL or search query, resolved in main), then closes
   // the now-orphaned newtab tab so the result replaces it in place — Chrome's new-tab-page behaviour.
@@ -520,6 +559,15 @@ export function App() {
             window.tepegoz.updateTabGroup(groupId, { collapsed })
           }
           onRenameTabGroup={(groupId, name) => window.tepegoz.updateTabGroup(groupId, { name })}
+          onTearBegin={(payload) => window.tepegoz.beginTabDrag(payload)}
+          onTearMove={({ screenX, screenY }) =>
+            window.tepegoz.moveTabDrag({ screenX, screenY, torn: true })
+          }
+          onTearEnd={({ screenX, screenY }) =>
+            window.tepegoz.endTabDrag({ screenX, screenY, torn: true })
+          }
+          onTearCancel={() => window.tepegoz.cancelTabDrag()}
+          onReportTabStripGeometry={(geometry) => window.tepegoz.reportTabStrip(geometry)}
           isMaximized={isMaximized}
           onMinimize={() => window.tepegoz.minimizeWindow()}
           onToggleMaximize={() => window.tepegoz.toggleMaximizeWindow()}
@@ -536,6 +584,7 @@ export function App() {
           onNavigate={(input) => window.tepegoz.navigateTab(input)}
           onSuggest={omniboxHistory.onOmniboxSuggest}
           onActivateTab={omniboxHistory.onActivateTabFromOmnibox}
+          onOpenQuickSetting={onOpenQuickSetting}
           onOmniboxDropdownHeightChange={onOmniboxDropdownHeightChange}
           isBookmarked={bookmarks.activeBookmarked}
           canBookmark={bookmarks.canBookmark}
@@ -596,14 +645,16 @@ export function App() {
             {newTabActive && (
               <div className="absolute inset-0 bg-surface-system">
                 <NewTabPage
-                  listFavorites={newTabFavorites}
-                  refreshKey={bookmarks.bookmarksVersion}
-                  onOpenFavorite={(url) => window.tepegoz.navigateTab(url)}
+                  shortcuts={newTabShortcuts}
+                  onOpenShortcut={(url) => window.tepegoz.navigateTab(url)}
                   onSearch={onNewTabSearch}
                   onOpenAgent={() => extSurfaces.runExtensionAction(AGENT_EXTENSION_ID, 'click')}
                   onAddShortcut={onAddShortcut}
                   onEditShortcut={onEditShortcut}
                   onRemoveShortcut={onRemoveShortcut}
+                  background={resolvedNewTabBackground}
+                  onChangeBackground={onChangeNewTabBackground}
+                  onPickBackgroundImage={onPickNewTabBackgroundImage}
                 />
               </div>
             )}
@@ -611,6 +662,7 @@ export function App() {
               <div className="absolute inset-0 bg-surface-system">
                 {prefs && status ? (
                   <SettingsPage
+                    initialSectionId={settingsSectionId}
                     prefs={prefs}
                     status={status}
                     onUpdatePrefs={onUpdatePrefs}

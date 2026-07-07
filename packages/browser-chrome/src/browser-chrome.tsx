@@ -1,9 +1,16 @@
 import { type ReactNode } from 'react';
 import { BrandMark } from '@tepegoz/ui';
-import { TabStrip, type TabDescriptor, type TabGroupDescriptor } from '@tepegoz/tab-strip';
+import {
+  TabStrip,
+  type TabDescriptor,
+  type TabGroupDescriptor,
+  type TabStripGeometryReport,
+  type TabTearBegin,
+  type TabTearPoint,
+} from '@tepegoz/tab-strip';
 import { WindowControls } from '@tepegoz/window-controls';
 import { NavToolbar } from '@tepegoz/nav-toolbar';
-import type { OmniboxSuggestion } from '@tepegoz/omnibox';
+import type { OmniboxQuickSettingTarget, OmniboxSuggestion } from '@tepegoz/omnibox';
 
 /**
  * The exact string slices this chrome renders. The host composes it from the shared core dict
@@ -57,6 +64,12 @@ export interface BrowserChromeProps {
   onRenameTabGroup?: ((groupId: string, name: string) => void) | undefined;
   /** Called once the external rename trigger (`renamingGroupId`) has been consumed. */
   onRenameTabGroupHandled?: (() => void) | undefined;
+  // Tab tear-off (drag a tab/group out of the strip → new/another window).
+  onTearBegin?: ((payload: TabTearBegin) => void) | undefined;
+  onTearMove?: ((point: TabTearPoint) => void) | undefined;
+  onTearEnd?: ((point: TabTearPoint) => void) | undefined;
+  onTearCancel?: (() => void) | undefined;
+  onReportTabStripGeometry?: ((geometry: TabStripGeometryReport) => void) | undefined;
   // Window caption controls
   isMaximized: boolean;
   onMinimize: () => void;
@@ -77,6 +90,8 @@ export interface BrowserChromeProps {
   onSuggest?: ((query: string) => Promise<OmniboxSuggestion[]>) | undefined;
   /** Switch to an already-open tab (for `activateTab` omnibox suggestions). */
   onActivateTab?: ((tabId: string) => void) | undefined;
+  /** Open a high-frequency settings panel from an omnibox suggestion. */
+  onOpenQuickSetting?: ((target: OmniboxQuickSettingTarget) => void) | undefined;
   /** Reports the omnibox dropdown height to hosts that need to manage native web-view layering. */
   onOmniboxDropdownHeightChange?: ((height: number) => void) | undefined;
   // Bookmark star (right of the omnibox).
@@ -117,6 +132,11 @@ export function BrowserChrome({
   onToggleGroupCollapsed,
   onRenameTabGroup,
   onRenameTabGroupHandled,
+  onTearBegin,
+  onTearMove,
+  onTearEnd,
+  onTearCancel,
+  onReportTabStripGeometry,
   isMaximized,
   onMinimize,
   onToggleMaximize,
@@ -132,6 +152,7 @@ export function BrowserChrome({
   onNavigate,
   onSuggest,
   onActivateTab,
+  onOpenQuickSetting,
   onOmniboxDropdownHeightChange,
   isBookmarked,
   canBookmark,
@@ -173,6 +194,11 @@ export function BrowserChrome({
             onToggleGroupCollapsed={onToggleGroupCollapsed}
             onRenameGroup={onRenameTabGroup}
             onRenameHandled={onRenameTabGroupHandled}
+            onTearBegin={onTearBegin}
+            onTearMove={onTearMove}
+            onTearEnd={onTearEnd}
+            onTearCancel={onTearCancel}
+            onReportGeometry={onReportTabStripGeometry}
           />
         </div>
         {captionLeading !== undefined && (
@@ -212,6 +238,7 @@ export function BrowserChrome({
         onNavigate={onNavigate}
         onSuggest={onSuggest}
         onActivateTab={onActivateTab}
+        onOpenQuickSetting={onOpenQuickSetting}
         onOmniboxDropdownHeightChange={onOmniboxDropdownHeightChange}
         isBookmarked={isBookmarked}
         canBookmark={canBookmark}

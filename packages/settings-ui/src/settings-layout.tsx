@@ -1,4 +1,4 @@
-import { Fragment, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons';
 import { cn } from '@tepegoz/ui';
@@ -25,6 +25,8 @@ export interface SettingsLayoutProps {
   /** Icon shown next to the title in the sidebar header. */
   titleIcon: ReactNode;
   sections: readonly SettingsSection[];
+  /** Optional section id selected by the host, e.g. from `tepegoz://settings#privacy`. */
+  initialSectionId?: string | undefined;
   /** Optional element rendered above the section content (e.g. transient feedback). */
   banner?: ReactNode;
 }
@@ -35,11 +37,22 @@ export interface SettingsLayoutProps {
  * title reuses the shared-core `common.settings`. Section content is host-supplied. Extracted from
  * `apps/desktop` per docs/package-map.md.
  */
-export function SettingsLayout({ titleIcon, sections, banner }: SettingsLayoutProps) {
+export function SettingsLayout({ titleIcon, sections, initialSectionId, banner }: SettingsLayoutProps) {
   const t = useT(settingsDict);
   const title = useT(coreDict).common.settings;
-  const [active, setActive] = useState<string>(sections[0]?.id ?? '');
+  const firstSectionId = sections[0]?.id ?? '';
+  const sectionIds = useMemo(() => new Set(sections.map((section) => section.id)), [sections]);
+  const initialActive =
+    initialSectionId !== undefined && sectionIds.has(initialSectionId)
+      ? initialSectionId
+      : firstSectionId;
+  const [active, setActive] = useState<string>(initialActive);
   const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    setActive(initialActive);
+    setSearch('');
+  }, [initialActive]);
 
   const q = search.trim().toLowerCase();
   const searching = q.length > 0;

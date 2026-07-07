@@ -52,6 +52,16 @@ const DescribeNodeSchema = z.object({
     attributes: z.array(z.string()).optional(),
   }),
 });
+const FrameTreeSchema = z
+  .object({
+    frameTree: z.object({ frame: z.object({ id: z.string() }).passthrough() }).passthrough(),
+  })
+  .passthrough();
+const IsolatedWorldSchema = z.object({ executionContextId: z.number().int().nonnegative() }).passthrough();
+const NetworkRequestSchema = z
+  .object({ requestId: z.string(), type: z.string().optional() })
+  .passthrough();
+const NetworkCompleteSchema = z.object({ requestId: z.string() }).passthrough();
 
 /** A named key the agent can press → CDP key-event fields. */
 const KEY_MAP: Record<string, { key: string; code: string; keyCode: number; text?: string }> = {
@@ -119,6 +129,9 @@ export default class CdpDriver {
     });
     await wc.debugger.sendCommand('DOM.enable');
     await wc.debugger.sendCommand('Accessibility.enable');
+    await wc.debugger.sendCommand('Page.enable');
+    await wc.debugger.sendCommand('Runtime.enable');
+    await wc.debugger.sendCommand('Network.enable');
   }
 
   /** Detach the debugger from the current WebContents (best-effort; swallows teardown races). */
@@ -307,11 +320,10 @@ export default class CdpDriver {
         deltaX: 0,
         deltaY,
       });
-      await delay(SETTLE_MS);
     } else {
       await adapter.scroll(direction, amount);
-      await delay(SETTLE_MS);
     }
+    await CdpDriver.settle(wc);
   }
 
   /** Dispatch a keyDown+keyUp for one key, with optional modifier bitmask (CDP: 2 = Ctrl). */
@@ -335,20 +347,140 @@ export default class CdpDriver {
     await wc.debugger.sendCommand('Input.dispatchKeyEvent', { type: 'keyUp', ...common });
   }
 
-  /** Wait for a load triggered by an interaction to settle, then a short quiet period. */
-  private static async settle(wc: WebContents): Promise<void> {
+  /** Wait for a load triggered by an interaction to settle, then network and DOM quiescence. */
+  static async waitForPageSettled(wc: WebContents, timeoutMs = LOAD_TIMEOUT_MS): Promise<void> {
     if (wc.isDestroyed()) return;
+    await CdpDriver.ensureAttached(wc);
+    const deadline = Date.now() + timeoutMs;
     if (wc.isLoadingMainFrame()) {
-      await new Promise<void>((resolve) => {
-        const done = (): void => {
-          clearTimeout(timer);
-          if (!wc.isDestroyed()) wc.removeListener('did-stop-loading', done);
-          resolve();
-        };
-        const timer = setTimeout(done, LOAD_TIMEOUT_MS);
-        wc.once('did-stop-loading', done);
-      });
+      await CdpDriver.waitForLoadStop(wc, timeoutMs);
     }
-    await delay(SETTLE_MS);
+    if (wc.isDestroyed()) return;
+
+    const remaining = (): number => Math.max(SETTLE_MS, deadline - Date.now());
+    await CdpDriver.waitForNetworkIdle(wc, SETTLE_MS, remaining()).catch(() => undefined);
+    if (wc.isDestroyed()) return;
+    await CdpDriver.waitForDomQuiet(wc, SETTLE_MS, remaining()).catch(() => delay(SETTLE_MS));
+  }
+
+  /** Wait for a load triggered by an interaction to settle. */
+  private static async settle(wc: WebContents): Promise<void> {
+    await CdpDriver.waitForPageSettled(wc);
+  }
+
+  private static async waitForLoadStop(wc: WebContents, timeoutMs: number): Promise<void> {
+    await new Promise<void>((resolve) => {
+      const done = (): void => {
+        clearTimeout(timer);
+        if (!wc.isDestroyed()) wc.removeListener('did-stop-loading', done);
+        resolve();
+      };
+      const timer = setTimeout(done, timeoutMs);
+      wc.once('did-stop-loading', done);
+    });
+  }
+
+  private static async waitForNetworkIdle(
+    wc: WebContents,
+    quietMs: number,
+    timeoutMs: number,
+  ): Promise<void> {
+    await CdpDriver.ensureAttached(wc);
+    await new Promise<void>((resolve) => {
+      const inflight = new Set<string>();
+      let idleTimer: ReturnType<typeof setTimeout> | null = null;
+      let timeoutTimer: ReturnType<typeof setTimeout> | null = null;
+      let onMessage: (_e: unknown, method: string, params?: unknown) => void = () => undefined;
+
+      const done = (): void => {
+        if (idleTimer !== null) clearTimeout(idleTimer);
+        if (timeoutTimer !== null) clearTimeout(timeoutTimer);
+        if (!wc.isDestroyed()) {
+          wc.debugger.removeListener('message', onMessage);
+          wc.removeListener('destroyed', done);
+        }
+        resolve();
+      };
+      const scheduleIdle = (): void => {
+        if (idleTimer !== null) clearTimeout(idleTimer);
+        if (inflight.size === 0) idleTimer = setTimeout(done, quietMs);
+      };
+      onMessage = (_e: unknown, method: string, params?: unknown): void => {
+        if (method === 'Network.requestWillBeSent') {
+          const parsed = NetworkRequestSchema.safeParse(params);
+          if (!parsed.success) return;
+          if (parsed.data.type === 'WebSocket' || parsed.data.type === 'EventSource') return;
+          inflight.add(parsed.data.requestId);
+          if (idleTimer !== null) clearTimeout(idleTimer);
+          return;
+        }
+        if (method !== 'Network.loadingFinished' && method !== 'Network.loadingFailed') return;
+        const parsed = NetworkCompleteSchema.safeParse(params);
+        if (!parsed.success) return;
+        inflight.delete(parsed.data.requestId);
+        scheduleIdle();
+      };
+
+      wc.debugger.on('message', onMessage);
+      wc.once('destroyed', done);
+      timeoutTimer = setTimeout(done, timeoutMs);
+      scheduleIdle();
+    });
+  }
+
+  private static async waitForDomQuiet(
+    wc: WebContents,
+    quietMs: number,
+    timeoutMs: number,
+  ): Promise<void> {
+    await CdpDriver.ensureAttached(wc);
+    const contextId = await CdpDriver.mainFrameIsolatedContext(wc);
+    const quiet = Math.max(0, Math.trunc(quietMs));
+    const timeout = Math.max(quiet, Math.trunc(timeoutMs));
+    await wc.debugger.sendCommand('Runtime.evaluate', {
+      expression: `(() => new Promise((resolve) => {
+        const quietMs = ${String(quiet)};
+        const timeoutMs = ${String(timeout)};
+        const root = document.documentElement || document.body;
+        if (!root || typeof MutationObserver === 'undefined') {
+          setTimeout(() => resolve('no-dom'), quietMs);
+          return;
+        }
+        let observer = null;
+        let quietTimer = 0;
+        let timeoutTimer = 0;
+        const finish = (reason) => {
+          clearTimeout(quietTimer);
+          clearTimeout(timeoutTimer);
+          if (observer !== null) observer.disconnect();
+          resolve(reason);
+        };
+        observer = new MutationObserver(() => {
+          clearTimeout(quietTimer);
+          quietTimer = setTimeout(() => finish('quiet'), quietMs);
+        });
+        observer.observe(root, { subtree: true, childList: true, attributes: true, characterData: true });
+        timeoutTimer = setTimeout(() => finish('timeout'), timeoutMs);
+        quietTimer = setTimeout(() => finish('quiet'), quietMs);
+      }))()`,
+      contextId,
+      awaitPromise: true,
+      returnByValue: true,
+      silent: true,
+    });
+  }
+
+  private static async mainFrameIsolatedContext(wc: WebContents): Promise<number> {
+    const frameTreeRaw: unknown = await wc.debugger.sendCommand('Page.getFrameTree');
+    const frameTree = FrameTreeSchema.safeParse(frameTreeRaw);
+    if (!frameTree.success) throw new AppError('Failed to resolve the page frame for settling', 502);
+    const worldRaw: unknown = await wc.debugger.sendCommand('Page.createIsolatedWorld', {
+      frameId: frameTree.data.frameTree.frame.id,
+      worldName: 'tepegoz-page-stability',
+      grantUniveralAccess: false,
+    });
+    const world = IsolatedWorldSchema.safeParse(worldRaw);
+    if (!world.success) throw new AppError('Failed to create an isolated settling context', 502);
+    return world.data.executionContextId;
   }
 }

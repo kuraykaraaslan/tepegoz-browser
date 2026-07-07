@@ -75,6 +75,7 @@ const IconDeveloper = () => <FontAwesomeIcon icon={faCode} className={ICON} aria
 const IconGear = () => <FontAwesomeIcon icon={faGear} className="h-5 w-5" aria-hidden />;
 
 interface SettingsPageProps {
+  initialSectionId?: string;
   prefs: Preferences;
   status: CredentialsStatus;
   onUpdatePrefs: (patch: Partial<Preferences>) => Promise<void>;
@@ -99,6 +100,7 @@ interface SettingsPageProps {
 }
 
 export function SettingsPage({
+  initialSectionId,
   prefs,
   status,
   onUpdatePrefs,
@@ -459,6 +461,7 @@ export function SettingsPage({
     <SettingsLayout
       titleIcon={<IconGear />}
       sections={sections}
+      initialSectionId={initialSectionId}
       banner={
         feedback ? (
           <AlertBanner key={feedbackKey} variant={feedback.variant} message={feedback.message} />

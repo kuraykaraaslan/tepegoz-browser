@@ -31,7 +31,18 @@ const AgentTabGroup = {
       const name = store.resolveGroupName(agentGroupId, groupName);
       if (name.length > 0) TabManager.renameGroup(s.tabGroupId, name);
     }
+    store.recordOwnedTab(agentGroupId, id);
     return id;
+  },
+
+  /** Whether this agent session opened the tab and therefore owns close authority for it. */
+  ownsTab(agentGroupId: string, tabId: string): boolean {
+    return store.ownsTab(agentGroupId, tabId);
+  },
+
+  /** Drop a tab from ownership once the close has actually happened. */
+  releaseTab(agentGroupId: string, tabId: string): void {
+    store.releaseOwnedTab(agentGroupId, tabId);
   },
 
   /** Clear the session state so the next conversation opens a fresh group. */

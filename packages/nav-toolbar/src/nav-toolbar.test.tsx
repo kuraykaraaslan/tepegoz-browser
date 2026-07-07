@@ -88,9 +88,12 @@ describe('NavToolbar', () => {
           action: { type: 'navigate', input: 'duck' },
         },
       ];
-      const onOmniboxDropdownHeightChange = vi.fn();
+      const onOmniboxDropdownHeightChange = vi.fn<(height: number) => void>();
+      const onSuggest = vi.fn<(query: string) => Promise<OmniboxSuggestion[]>>(() =>
+        Promise.resolve(suggestions),
+      );
       renderToolbar({
-        onSuggest: vi.fn(async () => suggestions),
+        onSuggest,
         onOmniboxDropdownHeightChange,
       });
 

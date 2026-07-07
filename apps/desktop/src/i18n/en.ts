@@ -22,6 +22,10 @@ export const en = {
     omniboxSearchHint: 'Search the web',
     omniboxSwitchToTab: 'Switch to tab',
     omniboxBookmark: 'Bookmark',
+    omniboxQuickSettings: 'Settings',
+    omniboxQuickAppearance: 'Open Appearance settings',
+    omniboxQuickLanguage: 'Open Language & region settings',
+    omniboxQuickPrivacy: 'Open Privacy settings',
     // Bookmark star (right of the omnibox).
     bookmarkAdd: 'Bookmark this page',
     bookmarkRemove: 'Remove bookmark',

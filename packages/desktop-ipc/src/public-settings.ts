@@ -57,6 +57,9 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   customSearchEngines: 'private',
   homepageUrl: 'private',
   showBookmarksBar: 'private',
+  // Private — new-tab personalization (the user's shortcut list + background); extensions have no need.
+  newTabShortcuts: 'private',
+  newTabBackground: 'private',
   downloadDirectory: 'private',
   downloadAskEachTime: 'private',
   // Private — secret-adjacent or a browsing/footprint signal that must never reach an extension.

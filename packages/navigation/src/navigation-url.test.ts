@@ -66,6 +66,19 @@ describe('internalPageUrl', () => {
     expect(internalPageUrl('  tepegoz://history//  ', URLS)).toBe('tepegoz://history');
   });
 
+  it('preserves a safe fragment for internal-page section deep links', () => {
+    expect(internalPageUrl('tepegoz://settings#privacy', URLS)).toBe(
+      'tepegoz://settings#privacy',
+    );
+    expect(internalPageUrl('TEPEGOZ://Settings/#Appearance', URLS)).toBe(
+      'tepegoz://settings#appearance',
+    );
+  });
+
+  it('drops unsafe internal-page fragments', () => {
+    expect(internalPageUrl('tepegoz://settings#../../x', URLS)).toBe('tepegoz://settings');
+  });
+
   it('returns null for unknown internal pages and web URLs', () => {
     expect(internalPageUrl('tepegoz://nope', URLS)).toBeNull();
     expect(internalPageUrl('https://example.com', URLS)).toBeNull();

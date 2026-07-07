@@ -65,6 +65,7 @@ export const SitePermissionStateEnum = z.enum(SITE_PERMISSION_STATES);
 /** Event Journal record types — phrased as "things that happened" (event-sourcing). */
 export const EventTypeEnum = z.enum([
   'SessionStarted',
+  'SessionSnapshotWritten',
   'TabOpened',
   'AgentStepExecuted',
   'ToolInvoked',

@@ -1,4 +1,4 @@
-import { ipcMain, type BrowserWindow, type IpcMainInvokeEvent } from 'electron';
+import { ipcMain, type BrowserWindow, type IpcMainInvokeEvent, type WebContents } from 'electron';
 import { AppError, Logger, toBoundary } from '@tepegoz/libs';
 import { encodeBoundaryMessage, IpcChannels } from '@tepegoz/desktop-ipc';
 import { LoginFillSchema } from '@tepegoz/desktop-ipc/schemas';
@@ -26,16 +26,16 @@ function buildFillScript(username: string, plainPassword: string): string {
 }
 
 export default class AutofillHost {
-  private static win: BrowserWindow | null = null;
   private static vault: PasswordVault | null = null;
   private static unsubscribeNavigation: (() => void) | null = null;
 
-  static attach(win: BrowserWindow, vault: PasswordVault): void {
-    AutofillHost.win = win;
+  /** Registers the (global) fill IPC handler once and subscribes to navigations across all windows;
+   *  the autofill-available push targets the window that hosts the navigating tab. */
+  static attach(vault: PasswordVault): void {
     AutofillHost.vault = vault;
 
     AutofillHost.unsubscribeNavigation = TabManager.onNavigation(
-      (url: string) => { void AutofillHost.onPageLoaded(url); },
+      (url: string, _wc: WebContents, owner: BrowserWindow) => { void AutofillHost.onPageLoaded(url, owner); },
     );
 
     ipcMain.handle(IpcChannels.loginsFill, async (event: IpcMainInvokeEvent, payload: unknown) => {
@@ -59,13 +59,11 @@ export default class AutofillHost {
     AutofillHost.unsubscribeNavigation?.();
     AutofillHost.unsubscribeNavigation = null;
     ipcMain.removeHandler(IpcChannels.loginsFill);
-    AutofillHost.win = null;
     AutofillHost.vault = null;
   }
 
-  private static async onPageLoaded(url: string): Promise<void> {
-    const win = AutofillHost.win;
-    if (!win || win.isDestroyed()) return;
+  private static async onPageLoaded(url: string, win: BrowserWindow): Promise<void> {
+    if (win.isDestroyed()) return;
     try {
       const matches = await PasswordProviderRegistry.findByUrl(url);
       if (matches.length === 0) return;

@@ -56,6 +56,21 @@ export const IpcChannels = {
   tabsGroupContextMenu: 'tabs:group-context-menu',
   /** Main→renderer: open the inline rename editor for a group (from the group menu's Rename item). */
   tabsGroupStartRename: 'tabs:group-start-rename',
+  // Chrome-like tab tear-off. The source renderer streams the drag (screen coords) so the MAIN process
+  // can drive a floating preview window and, on release, hit-test other windows' strips → merge, or an
+  // empty desktop → new window. Renderers also report their strip geometry so main can hit-test drops.
+  /** Renderer→main: a strip drag left the strip; begin a tear session (dragged tab/group + preview chip). */
+  tabsDragBegin: 'tabs:drag-begin',
+  /** Renderer→main: pointer moved during a torn drag (screen coords) — reposition the floating preview. */
+  tabsDragMove: 'tabs:drag-move',
+  /** Renderer→main: torn drag released (screen coords) — perform the merge / new-window move. */
+  tabsDragEnd: 'tabs:drag-end',
+  /** Renderer→main: torn drag cancelled (Esc / drop failed) — tear down the preview, no move. */
+  tabsDragCancel: 'tabs:drag-cancel',
+  /** Renderer→main: this window's tab-strip geometry (client coords) for cross-window drop hit-testing. */
+  tabsReportStrip: 'tabs:report-strip',
+  /** Renderer→main: open a fresh empty browser window (main-menu "New window"). */
+  windowNew: 'window:new',
   agentRun: 'agent:run',
   agentCancel: 'agent:cancel',
   /** Renderer→main: reset conversation memory for a specific group (panel "New task"). */
@@ -211,6 +226,11 @@ export const IpcChannels = {
   // op that exceeds its folder's granted mode, and every grant-management tool, fall through to it). So
   // the only dedicated channel is the native directory picker for the Settings "Add folder" button.
   fileAccessPickFolder: 'file-access:pick-folder',
+  // New-tab page background image. `pick` opens a native image picker, reads + validates the file in
+  // main, and stores the bytes in the content-addressed blob store (only a `cas://` ref is persisted in
+  // prefs). `get` resolves a stored ref back to a `data:` URL for the renderer to paint.
+  newtabPickBackgroundImage: 'newtab:pick-background-image',
+  newtabGetBackgroundImage: 'newtab:get-background-image',
   /** Main→renderer push: simulated cursor position during a macro/agent run. */
   cursorPosition: 'cursor:position',
 } as const;

@@ -2,12 +2,13 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faClockRotateLeft,
+  faGear,
   faMagnifyingGlass,
   faWindowMaximize,
 } from '@fortawesome/free-solid-svg-icons';
 import { cn } from '@tepegoz/ui';
 import { evaluateOmniboxCalc } from './omnibox-calc';
-import type { OmniboxSuggestion } from './omnibox-suggest';
+import type { OmniboxQuickSettingTarget, OmniboxSuggestion } from './omnibox-suggest';
 
 export interface OmniboxProps {
   /** The active tab's committed URL. The box re-syncs to this whenever the user is not editing it. */
@@ -30,6 +31,8 @@ export interface OmniboxProps {
   onSuggest?: ((query: string) => Promise<OmniboxSuggestion[]>) | undefined;
   /** Switch to an already-open tab (dispatched for `activateTab` suggestions). */
   onActivateTab?: ((tabId: string) => void) | undefined;
+  /** Open a high-frequency settings panel (theme/language/privacy) from a deterministic suggestion. */
+  onOpenQuickSetting?: ((target: OmniboxQuickSettingTarget) => void) | undefined;
   /** Reports the rendered dropdown height so native hosts can manage WebContentsView layering. */
   onDropdownHeightChange?: ((height: number) => void) | undefined;
   /** Extra classes for the wrapping form (e.g. `flex-1` for layout). */
@@ -64,6 +67,7 @@ export function Omnibox({
   onCalcResult,
   onSuggest,
   onActivateTab,
+  onOpenQuickSetting,
   onDropdownHeightChange,
   className,
 }: OmniboxProps) {
@@ -153,6 +157,9 @@ export function Omnibox({
       case 'calc':
         if (onCalcResult) onCalcResult(s.action.formatted);
         else void navigator.clipboard?.writeText(s.action.formatted);
+        break;
+      case 'openQuickSetting':
+        onOpenQuickSetting?.(s.action.target);
         break;
     }
   }
@@ -272,7 +279,13 @@ export function Omnibox({
 /** A FontAwesome glyph per suggestion kind. */
 function SuggestionIcon({ kind }: { kind: OmniboxSuggestion['kind'] }) {
   const icon =
-    kind === 'tab' ? faWindowMaximize : kind === 'history' ? faClockRotateLeft : faMagnifyingGlass;
+    kind === 'tab'
+      ? faWindowMaximize
+      : kind === 'history'
+        ? faClockRotateLeft
+        : kind === 'quick-setting'
+          ? faGear
+          : faMagnifyingGlass;
   return (
     <FontAwesomeIcon icon={icon} className="h-3.5 w-3.5 shrink-0 text-text-secondary" aria-hidden />
   );

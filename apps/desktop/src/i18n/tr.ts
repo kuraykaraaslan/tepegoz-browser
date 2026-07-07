@@ -17,6 +17,10 @@ export const tr: AppStrings = {
     omniboxSearchHint: "Web'de ara",
     omniboxSwitchToTab: 'Sekmeye geç',
     omniboxBookmark: 'Yer imi',
+    omniboxQuickSettings: 'Ayarlar',
+    omniboxQuickAppearance: 'Görünüm ayarlarını aç',
+    omniboxQuickLanguage: 'Dil ve bölge ayarlarını aç',
+    omniboxQuickPrivacy: 'Gizlilik ayarlarını aç',
     // Yer imi yıldızı (omniçubuğun sağında).
     bookmarkAdd: 'Bu sayfayı yer imlerine ekle',
     bookmarkRemove: 'Yer imini kaldır',

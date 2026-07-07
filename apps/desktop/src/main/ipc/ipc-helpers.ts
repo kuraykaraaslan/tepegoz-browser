@@ -83,6 +83,33 @@ export function onSignal(channel: string, fn: () => void): void {
   });
 }
 
+/** Window-scoped tab action (fire-and-forget): like {@link onAction} but also resolves the SENDER's
+ *  window, so a handler can route to that window's tab manager (multi-window). Ignores untrusted frames
+ *  and any message whose sender is not a live BrowserWindow. */
+export function onWindowAction<T>(
+  channel: string,
+  schema: z.ZodType<T>,
+  fn: (win: BrowserWindow, value: T) => void,
+): void {
+  ipcMain.on(channel, (event: IpcMainEvent, payload: unknown) => {
+    if (!isTrustedAppUrl(event.senderFrame?.url ?? '')) return;
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win === null) return;
+    const parsed = schema.safeParse(payload);
+    if (parsed.success) fn(win, parsed.data);
+    else Logger.warn(`Ignored ${channel}: invalid payload`);
+  });
+}
+
+/** Window-scoped signal (fire-and-forget, no payload): resolves the SENDER's window. */
+export function onWindowSignal(channel: string, fn: (win: BrowserWindow) => void): void {
+  ipcMain.on(channel, (event: IpcMainEvent) => {
+    if (!isTrustedAppUrl(event.senderFrame?.url ?? '')) return;
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win !== null) fn(win);
+  });
+}
+
 /** Custom window chrome controls (fire-and-forget): act on the SENDER's window only, and ignore
  *  anything from an untrusted frame. */
 export function onWindowControl(channel: string, action: (win: BrowserWindow) => void): void {

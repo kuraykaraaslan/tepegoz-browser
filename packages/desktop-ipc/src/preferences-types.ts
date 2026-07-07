@@ -23,6 +23,17 @@ export type LocalePref = (typeof LOCALE_PREFS)[number];
 export const MCP_TRANSPORTS = ['stdio', 'http_sse'] as const;
 export type McpTransportId = (typeof MCP_TRANSPORTS)[number];
 
+// New-tab page background kinds. `default` = the theme surface; `color` = a solid color (optionally
+// overlaid with a preset SVG pattern); `image` = an uploaded image stored in the content-addressed
+// blob store. The zod validator builds its enum from this same array.
+export const NEWTAB_BG_KINDS = ['default', 'color', 'image'] as const;
+export type NewTabBackgroundKind = (typeof NEWTAB_BG_KINDS)[number];
+
+// How an uploaded background image is sized in the page: `cover` fills + crops, `contain` fits whole,
+// `fill` stretches to the frame, `center` shows it at natural size, `tile` repeats it.
+export const NEWTAB_IMAGE_FITS = ['cover', 'contain', 'fill', 'center', 'tile'] as const;
+export type NewTabImageFit = (typeof NEWTAB_IMAGE_FITS)[number];
+
 /**
  * A user-configured MCP server (persisted in preferences). Its tools are surfaced to the agent through
  * the single ToolGateway PEP (ADR-0018). Extensions can also declare servers in their manifest; those
@@ -50,6 +61,41 @@ export interface McpServerStatusInfo {
   state: McpServerState;
   toolCount: number;
   error?: string;
+}
+
+/** One shortcut tile on the new-tab page — the user's own list, independent of bookmarks. */
+export interface NewTabShortcut {
+  /** Stable id (generated uuid) — needed to edit/remove the tile. */
+  id: string;
+  title: string;
+  url: string;
+}
+
+/**
+ * New-tab page background customization.
+ *  - `kind: 'default'` — the theme surface (no custom background); other fields are ignored.
+ *  - `kind: 'color'`   — a solid `color`, optionally overlaid with a preset SVG pattern (`svgId`).
+ *  - `kind: 'image'`   — an uploaded image, stored as a `cas://` blob referenced by `imageRef`.
+ * `opacity` (0..1) fades the whole background layer toward the theme surface — the "dimness" control.
+ */
+export interface NewTabBackground {
+  kind: NewTabBackgroundKind;
+  /** Hex color for `kind: 'color'` (e.g. '#1e293b'). */
+  color: string;
+  /** Preset SVG-pattern id overlaid on the color ('' = none). Only meaningful for `kind: 'color'`. */
+  svgId: string;
+  /** `cas://<hash>` reference to the uploaded image blob. Only meaningful for `kind: 'image'`. */
+  imageRef: string;
+  /** How the uploaded image is sized (cover/contain/fill/center/tile). Only for `kind: 'image'`. */
+  imageFit: NewTabImageFit;
+  /** Focal point of the uploaded image as x/y percentages (0..100), driving CSS `background-position`
+   *  (50/50 = centered). Set by dragging the image in the adjust popup. Only for `kind: 'image'`. */
+  imagePositionX: number;
+  imagePositionY: number;
+  /** Zoom factor for the uploaded image (1 = 100%, up to 4). Scales toward the focal point. */
+  imageZoom: number;
+  /** Background-layer opacity, 0..1 (lower = paler; the theme surface shows through). */
+  opacity: number;
 }
 
 export interface Preferences {
@@ -99,6 +145,10 @@ export interface Preferences {
   homepageUrl: string;
   /** Show the bookmarks bar strip under the nav toolbar (Chrome-style; toggled from the Bookmarks menu). */
   showBookmarksBar: boolean;
+  /** New-tab page shortcut tiles — the user's own list, independent of bookmarks (starts empty). */
+  newTabShortcuts: NewTabShortcut[];
+  /** New-tab page background (solid color / color + SVG pattern / uploaded image, plus a dimness level). */
+  newTabBackground: NewTabBackground;
   /** Absolute directory for released downloads. Empty = OS default Downloads folder. */
   downloadDirectory: string;
   /** Ask for a target path before each user-initiated browser download. */
@@ -174,5 +224,14 @@ export interface SitePermissions {
 export interface FileAccessFolderPickResult {
   /** Absolute path(s) the user chose (canonical). Empty when cancelled. */
   paths: string[];
+  cancelled: boolean;
+}
+
+/** Result of the new-tab background image picker (native dialog → content-addressed blob store). */
+export interface NewTabBackgroundImagePick {
+  /** `cas://<hash>` reference to the stored image, or '' when cancelled. */
+  ref: string;
+  /** `data:` URL of the image for immediate display, or '' when cancelled. */
+  dataUrl: string;
   cancelled: boolean;
 }

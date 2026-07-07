@@ -30,6 +30,11 @@ describe('evaluateOmniboxCalc', () => {
     expect(evaluateOmniboxCalc('0.1 + 0.2')?.formatted).toBe('0.3');
   });
 
+  it('surfaces fixed-ratio unit conversions through the same inline result path', () => {
+    expect(evaluateOmniboxCalc('1 in to cm')?.formatted).toBe('2.54 cm');
+    expect(evaluateOmniboxCalc('32 f c')?.formatted).toBe('0 C');
+  });
+
   it('returns null for a bare number (not a calculation)', () => {
     expect(evaluateOmniboxCalc('42')).toBeNull();
   });

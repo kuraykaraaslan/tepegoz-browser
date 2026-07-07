@@ -2,11 +2,10 @@ import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { app, BrowserWindow, powerMonitor } from 'electron';
 import { Logger } from '@tepegoz/libs';
-import { createWindow } from './window';
 import { installSecurity } from './security';
 import { abortActiveAgentRuns, registerIpc } from './ipc';
-import { initStores, passwordVault } from './stores.electron';
-import { loadBrowser, loadOnboarding, shouldShowOnboarding } from './onboarding.electron';
+import { initStores } from './stores.electron';
+import { initHosts, openWindow } from './browser-windows';
 import { closeDatabase } from './db/database.electron';
 import TabManager from './tabs';
 import PopupWindowManager from './popup-window';
@@ -28,12 +27,8 @@ import { registerTaskTools } from '@tepegoz/tasks/tools';
 import { registerWebTools } from '@tepegoz/web-tools/tools';
 import { CapabilityRegistry } from '@tepegoz/capability-plane';
 import FileOperationsHost from './file-operations/file-operations-host';
-import { attachBrowserHostWindow, browserHost } from './agent/browser-host.electron';
+import { browserHost } from './agent/browser-host.electron';
 import { journalHost } from './agent/journal-host.electron';
-import NotificationHost from './notifications/notification-host';
-import WebPermissionBroker from './web-permissions/permission-broker';
-import PasswordHost from './password/password-host';
-import AutofillHost from './password/autofill-host';
 import DownloadService from './downloads/download-service.electron';
 import { downloadToolsHost } from './downloads/download-tools-host.electron';
 import { clipboardToolsHost } from './clipboard/clipboard-tools-host.electron';
@@ -87,36 +82,14 @@ if (process.platform === 'win32') app.setAppUserModelId('com.tepegoz.browser');
   app.setPath('userData', userDataDir);
 }
 
-function bootstrap(): void {
-  const win = createWindow();
-  attachBrowserHostWindow(win);
-  TabManager.attach(win);
-  // Wire the notification center's store→renderer broadcast to this window (toast + bell badge target),
-  // and the per-site Web Notification consent prompt to the same window.
-  NotificationHost.attach(win);
-  WebPermissionBroker.attach(win);
-  // Password manager: IPC handlers + autofill push/fill (hooks into TabManager navigation events).
-  PasswordHost.attach();
-  AutofillHost.attach(win, passwordVault);
-  if (shouldShowOnboarding()) {
-    loadOnboarding(win);
-  } else {
-    // Restore the last session's tabs; if there was none, open a single default tab. (State is also
-    // fetched by the renderer via getTabsState on mount.)
-    loadBrowser(win);
-  }
-  win.on('closed', () => {
-    TabManager.persistNow(); // capture the final tab set BEFORE reset() clears the store
-    TabManager.reset();
-  });
-}
 
 // Single instance: a second launch focuses the existing window rather than fighting over the cache.
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.on('second-instance', () => {
-    const [win] = BrowserWindow.getAllWindows();
+    // Focus the last-focused chrome window (not an arbitrary one) when a second launch is intercepted.
+    const win = TabManager.focusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? null;
     if (win) {
       if (win.isMinimized()) {
         win.restore();
@@ -147,7 +120,8 @@ if (!app.requestSingleInstanceLock()) {
       popupBlockerHost.init();
       ActionInterceptorService.provide(popupBlockerHost.interceptors);
       registerIpc();
-      bootstrap();
+      initHosts();
+      openWindow();
       TaskService.setRunner(runTaskAgent);
       // Let saved-task policy synthesis pre-approve routine write tools (click/type/navigate) on the
       // task's own origin. `destructive`/`financial` tools are deliberately excluded — they still pause
@@ -198,7 +172,7 @@ if (!app.requestSingleInstanceLock()) {
 
       app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
-          bootstrap();
+          openWindow();
         }
       });
     })

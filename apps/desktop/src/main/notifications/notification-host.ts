@@ -7,16 +7,16 @@ import NotificationStore, {
 } from '@tepegoz/notifications';
 import { IpcChannels, type AppNotification } from '@tepegoz/desktop-ipc';
 import PreferenceStore from '@tepegoz/preferences';
+import TabManager from '../tabs';
 
 /**
  * Main-process owner of the notification center (mirrors the `journalHost` seam). Holds the singleton
  * `NotificationStore`, broadcasts its state to every app chrome window, and routes each notification
  * across the delivery surfaces the SOURCE chose (`channels`): the center (persisted history), a
- * transient toast in the main window, and/or a native OS notification. Generalizes the one-off handoff
- * notification that used to live inline in `ipc.ts`.
+ * transient toast in the focused window, and/or a native OS notification. Generalizes the one-off
+ * handoff notification that used to live inline in `ipc.ts`.
  */
 let seq = 0;
-let mainWindow: BrowserWindow | null = null;
 let wired = false;
 
 /** Broadcast the center snapshot to every app chrome window (main + open popups). Browsed pages are
@@ -29,9 +29,9 @@ function broadcastState(): void {
 }
 
 export default class NotificationHost {
-  /** Wire the store→renderer broadcast and record the main window (toast target). Idempotent. */
-  static attach(win: BrowserWindow): void {
-    mainWindow = win;
+  /** Wire the store→renderer broadcast once. The toast target is resolved dynamically (focused window),
+   *  so this needs no window and is safe to call regardless of how many windows exist. Idempotent. */
+  static attach(): void {
     if (!wired) {
       NotificationStore.subscribe(broadcastState);
       wired = true;
@@ -56,9 +56,9 @@ export default class NotificationHost {
 
     if (input.channels.includes('center')) NotificationStore.add(item);
 
-    const toMain = mainWindow !== null && !mainWindow.isDestroyed();
-    if (enabled && input.channels.includes('toast') && toMain) {
-      mainWindow?.webContents.send(IpcChannels.notificationsToast, item);
+    const target = TabManager.focusedWindow();
+    if (enabled && input.channels.includes('toast') && target !== null && !target.isDestroyed()) {
+      target.webContents.send(IpcChannels.notificationsToast, item);
     }
     if (enabled && input.channels.includes('native') && Notification.isSupported()) {
       new Notification({ title: item.title, body: item.body }).show();

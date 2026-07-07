@@ -69,3 +69,58 @@ export interface TabsState {
   canGoBack: boolean;
   canGoForward: boolean;
 }
+
+// ── Tab tear-off (drag a tab/group out of the strip into a new/another window) ──────────────────────
+
+/** What is being torn off: a single tab or a whole group (its header was dragged). */
+export interface TabDragItem {
+  kind: 'tab' | 'group';
+  /** The tab id (`kind: 'tab'`) or group id (`kind: 'group'`). */
+  id: string;
+}
+
+/** Payload for `tabsDragBegin` — identifies the dragged item and everything needed to render the
+ *  floating preview so it looks and is sized EXACTLY like the real tab it was torn from. */
+export interface TabDragBegin {
+  item: TabDragItem;
+  /** Title shown on the floating preview chip (the tab's title, or the group name). */
+  title: string;
+  /** Favicon URL for the preview chip (single tab only), or null. */
+  faviconUrl: string | null;
+  /** Where within the dragged tab the pointer grabbed (client px), so the preview stays "held" under the
+   *  cursor at that same point instead of jumping to a fixed offset. */
+  grabOffset: { x: number; y: number };
+  /** The dragged tab's measured on-screen size (client px) — the preview window is sized to match. */
+  width: number;
+  height: number;
+  /** Whether the torn tab was the active tab (drives the chip's active vs inactive surface styling). */
+  active: boolean;
+  /** Whether the torn tab was pinned (favicon-only chip, no title). */
+  pinned: boolean;
+  /** The owning group's palette color key (e.g. `blue`), or null when ungrouped — for the chip accent. */
+  groupColor: string | null;
+}
+
+/** Payload for `tabsDragMove` / `tabsDragEnd` — the cursor in desktop-global screen coords (DIP). `torn`
+ *  is true while the pointer is outside the source strip (the floating preview is shown). */
+export interface TabDragPoint {
+  screenX: number;
+  screenY: number;
+  torn: boolean;
+}
+
+/** One rendered tab's horizontal extent in the strip (client CSS px), for drop-index hit-testing. */
+export interface TabStripSlot {
+  id: string;
+  left: number;
+  width: number;
+}
+
+/** Payload for `tabsReportStrip` — this window's strip rect + per-tab slots in client (renderer) coords.
+ *  Main adds the window's content-origin to get screen coords for cross-window drop hit-testing. */
+export interface TabStripGeometry {
+  /** The strip's bounding rect in client coords (below the caption, above the content view). */
+  strip: { x: number; y: number; width: number; height: number };
+  /** The draggable tab slots, left-to-right. */
+  slots: TabStripSlot[];
+}

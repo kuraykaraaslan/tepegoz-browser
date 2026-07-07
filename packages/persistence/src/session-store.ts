@@ -23,18 +23,36 @@ export interface PersistedGroup {
   settings: Record<string, PersistedGroupSettingValue>;
 }
 
-/**
- * A restorable browsing session: ordered web tabs (with pin + group membership), the group metadata,
- * and which tab was active. Versioned so the shape can evolve; `load` upconverts older snapshots.
- */
-export interface SessionSnapshot {
-  version: 2;
+/** A browser window's position + size (screen DIP), so restore reopens each window where it was. */
+export interface WindowBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** One window's restorable tabs: ordered web tabs (with pin + group membership), group metadata, the
+ *  active tab, and the window's on-screen bounds. */
+export interface WindowSnapshot {
   /** Ordered web tabs to restore (internal tepegoz:// pages are not persisted). */
   tabs: PersistedTab[];
   /** Group metadata in strip order (each group has ≥1 member among `tabs`). */
   groups: PersistedGroup[];
   /** Index into `tabs` to activate on restore, or -1 when none applies (consumer clamps). */
   activeIndex: number;
+  /** Window position/size to restore; absent for legacy (single-window) snapshots. */
+  bounds?: WindowBounds;
+}
+
+/**
+ * A restorable browsing session across ALL open windows (multi-window, ADR tab tear-off). Versioned so
+ * the shape can evolve; `load` upconverts older single-window snapshots (v1/v2) into a one-entry
+ * `windows` array.
+ */
+export interface SessionSnapshot {
+  version: 3;
+  /** Each open window's tabs, in the order windows were opened. */
+  windows: WindowSnapshot[];
 }
 
 const SESSION_KEY = 'session';
@@ -42,8 +60,9 @@ const SESSION_KEY = 'session';
 /**
  * Persisted last-session snapshot (session restore). Stored as JSON in the local `meta` table (this is
  * local-instance state, not syncable settings). `load` is defensively shape-tolerant: it upconverts a
- * legacy v1 snapshot (`{ tabs: string[]; activeIndex }`) to v2, and yields `null` for corrupt/unknown
- * values (start fresh) rather than throwing. `save` always writes the current v2 shape.
+ * legacy v1 snapshot (`{ tabs: string[]; activeIndex }`) and a single-window v2 snapshot into the current
+ * multi-window v3 shape, and yields `null` for corrupt/unknown values (start fresh) rather than throwing.
+ * `save` always writes the current v3 shape.
  */
 export class SessionStore {
   static save(db: Db, snapshot: SessionSnapshot): void {
@@ -61,36 +80,79 @@ export class SessionStore {
   }
 
   static clear(db: Db): void {
-    SessionStore.save(db, { version: 2, tabs: [], groups: [], activeIndex: -1 });
+    SessionStore.save(db, { version: 3, windows: [] });
   }
 }
 
-/** Upconvert any stored value to the current v2 shape, or null if it isn't a recognizable snapshot. */
+/** Upconvert any stored value to the current v3 shape, or null if it isn't a recognizable snapshot. */
 export function migrateSnapshot(value: unknown): SessionSnapshot | null {
   if (typeof value !== 'object' || value === null) return null;
   const o = value as Record<string, unknown>;
-  if (typeof o.activeIndex !== 'number' || !Array.isArray(o.tabs)) return null;
-
-  // Legacy v1: `tabs` is a plain string[] and there's no `version`.
-  if (o.version === undefined) {
-    if (!o.tabs.every((t) => typeof t === 'string')) return null;
-    return {
-      version: 2,
-      tabs: o.tabs.map((url) => ({ url: String(url), pinned: false, groupId: null })),
-      groups: [],
-      activeIndex: o.activeIndex,
-    };
-  }
-
-  // v2.
+  if (o.version === 3) return migrateV3(o.windows); // current multi-window shape
   if (o.version === 2) {
-    const tabs = parseTabs(o.tabs);
-    const groups = parseGroups(o.groups);
-    if (tabs === null || groups === null) return null;
-    return { version: 2, tabs, groups, activeIndex: o.activeIndex };
+    // v2 — a single window's tabs/groups/activeIndex at the top level → wrap as one window.
+    const w = parseWindow(o);
+    return w === null ? null : { version: 3, windows: [w] };
   }
-
+  if (o.version === undefined) return migrateV1(o); // legacy string[] tabs
   return null; // unknown future version → start fresh rather than misread
+}
+
+/** Parse a v3 `windows` array; null if it (or any window) is malformed. */
+function migrateV3(windows: unknown): SessionSnapshot | null {
+  if (!Array.isArray(windows)) return null;
+  const out: WindowSnapshot[] = [];
+  for (const w of windows) {
+    const parsed = parseWindow(w);
+    if (parsed === null) return null;
+    out.push(parsed);
+  }
+  return { version: 3, windows: out };
+}
+
+/** Upconvert a legacy v1 snapshot (`{ tabs: string[]; activeIndex }`) to a one-window v3 snapshot. */
+function migrateV1(o: Record<string, unknown>): SessionSnapshot | null {
+  if (typeof o.activeIndex !== 'number' || !Array.isArray(o.tabs)) return null;
+  if (!o.tabs.every((t) => typeof t === 'string')) return null;
+  return {
+    version: 3,
+    windows: [
+      {
+        tabs: o.tabs.map((url) => ({ url: String(url), pinned: false, groupId: null })),
+        groups: [],
+        activeIndex: o.activeIndex,
+      },
+    ],
+  };
+}
+
+/** Parse one window's snapshot (also the v2 top-level shape). Null when the shape is unrecognizable. */
+function parseWindow(value: unknown): WindowSnapshot | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const o = value as Record<string, unknown>;
+  if (typeof o.activeIndex !== 'number' || !Array.isArray(o.tabs)) return null;
+  const tabs = parseTabs(o.tabs);
+  const groups = parseGroups(o.groups);
+  if (tabs === null || groups === null) return null;
+  const window: WindowSnapshot = { tabs, groups, activeIndex: o.activeIndex };
+  const bounds = parseBounds(o.bounds);
+  if (bounds !== null) window.bounds = bounds;
+  return window;
+}
+
+/** Tolerantly parse a window's bounds; null (omit) unless all four numeric fields are present. */
+function parseBounds(raw: unknown): WindowBounds | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const o = raw as Record<string, unknown>;
+  if (
+    typeof o.x !== 'number' ||
+    typeof o.y !== 'number' ||
+    typeof o.width !== 'number' ||
+    typeof o.height !== 'number'
+  ) {
+    return null;
+  }
+  return { x: o.x, y: o.y, width: o.width, height: o.height };
 }
 
 function parseTabs(raw: unknown[]): PersistedTab[] | null {

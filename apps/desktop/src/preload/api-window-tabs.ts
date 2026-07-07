@@ -4,10 +4,13 @@ import {
   type ContentBounds,
   type PageMenuAction,
   type PageMenuContext,
+  type TabDragBegin,
+  type TabDragPoint,
   type TabGroupColor,
   type TabGroupSettingKey,
   type TabGroupSettingValue,
   type TabsState,
+  type TabStripGeometry,
   type TepegozApi,
 } from '@tepegoz/desktop-ipc';
 import { invoke } from './ipc-invoke';
@@ -47,6 +50,12 @@ export const windowTabsApi: Pick<
   | 'captureActiveTab'
   | 'getTabsState'
   | 'onTabsState'
+  | 'beginTabDrag'
+  | 'moveTabDrag'
+  | 'endTabDrag'
+  | 'cancelTabDrag'
+  | 'reportTabStrip'
+  | 'newWindow'
   | 'ensureActiveGroup'
   | 'onActiveGroupChange'
   | 'openPopup'
@@ -171,6 +180,24 @@ export const windowTabsApi: Pick<
     return () => {
       ipcRenderer.removeListener(IpcChannels.tabsState, listener);
     };
+  },
+  beginTabDrag: (payload: TabDragBegin) => {
+    ipcRenderer.send(IpcChannels.tabsDragBegin, payload);
+  },
+  moveTabDrag: (point: TabDragPoint) => {
+    ipcRenderer.send(IpcChannels.tabsDragMove, point);
+  },
+  endTabDrag: (point: TabDragPoint) => {
+    ipcRenderer.send(IpcChannels.tabsDragEnd, point);
+  },
+  cancelTabDrag: () => {
+    ipcRenderer.send(IpcChannels.tabsDragCancel);
+  },
+  reportTabStrip: (geometry: TabStripGeometry) => {
+    ipcRenderer.send(IpcChannels.tabsReportStrip, geometry);
+  },
+  newWindow: () => {
+    ipcRenderer.send(IpcChannels.windowNew);
   },
   ensureActiveGroup: () => invoke<{ groupId: string }>(IpcChannels.agentEnsureGroup).then((r) => r.groupId),
   onActiveGroupChange: (callback: (groupId: string | null) => void) => {

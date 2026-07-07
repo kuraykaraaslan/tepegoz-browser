@@ -59,12 +59,16 @@ import type {
   LocalModelInfo,
   McpServerStatusInfo,
   FileAccessFolderPickResult,
+  NewTabBackgroundImagePick,
 } from './preferences-types';
 import type {
+  TabDragBegin,
+  TabDragPoint,
   TabGroupColor,
   TabGroupSettingKey,
   TabGroupSettingValue,
   TabsState,
+  TabStripGeometry,
 } from './tabs-types';
 import type { AIAdaptor } from './ai-adaptor-types';
 
@@ -155,6 +159,20 @@ export interface TepegozApi {
   captureActiveTab(): Promise<string | null>;
   getTabsState(): Promise<TabsState>;
   onTabsState(callback: (state: TabsState) => void): () => void;
+  // Chrome-like tab tear-off. The strip streams the drag once it leaves the strip; main drives a
+  // floating preview window and performs the cross-window move (merge / new window) on release.
+  /** A strip drag has torn out: begin a tear session and show the floating preview chip. */
+  beginTabDrag(payload: TabDragBegin): void;
+  /** Reposition the floating preview to the cursor (screen coords) during a torn drag. */
+  moveTabDrag(point: TabDragPoint): void;
+  /** Torn drag released: main hit-tests the drop → merge into a window's strip, or a new window. */
+  endTabDrag(point: TabDragPoint): void;
+  /** Torn drag cancelled (Esc / invalid): tear down the preview, no move. */
+  cancelTabDrag(): void;
+  /** Report this window's strip geometry (client coords) so main can hit-test cross-window drops. */
+  reportTabStrip(geometry: TabStripGeometry): void;
+  /** Open a fresh empty browser window (main-menu "New window"). */
+  newWindow(): void;
   // Agent (Do mode): run a task, stream live events, answer HITL approvals.
   /** Ensure the active tab belongs to a group (creates one if needed). Returns the groupId. */
   ensureActiveGroup(): Promise<string>;
@@ -368,6 +386,12 @@ export interface TepegozApi {
   // consent reuses the agent HITL modal. Only the native folder picker needs its own bridge method.
   /** Open the native directory picker; returns the chosen absolute folder path(s). */
   pickFileAccessFolder(): Promise<FileAccessFolderPickResult>;
+  // New-tab page background image (Customize → Upload image). Bytes are read + validated in main and
+  // stored in the content-addressed blob store; only a `cas://` ref is persisted in preferences.
+  /** Open a native image picker; stores the chosen file and returns its `cas://` ref + a `data:` URL. */
+  pickNewTabBackgroundImage(): Promise<NewTabBackgroundImagePick>;
+  /** Resolve a stored background-image ref (`cas://`) to a `data:` URL, or null if missing. */
+  getNewTabBackgroundImage(ref: string): Promise<string | null>;
   // Login credential manager (logins:* channels). Encrypted on disk; raw secrets never cross IPC.
   /** All stored login metadata (no passwords). */
   listLogins(): Promise<LoginCredentialMeta[]>;

@@ -7,7 +7,15 @@ import {
   type OmniboxSuggestSources,
 } from './omnibox-suggest';
 
-const LABELS = { search: 'Search the web', switchToTab: 'Switch to tab', bookmark: 'Bookmark' };
+const LABELS = {
+  search: 'Search the web',
+  switchToTab: 'Switch to tab',
+  bookmark: 'Bookmark',
+  quickSettings: 'Settings',
+  quickAppearance: 'Open Appearance settings',
+  quickLanguage: 'Open Language & region settings',
+  quickPrivacy: 'Open Privacy settings',
+};
 
 const SOURCES: OmniboxSuggestSources = {
   tabs: [
@@ -30,6 +38,7 @@ describe('parseOmniboxQuery', () => {
     expect(parseOmniboxQuery('tab: github')).toEqual({ scope: 'tab', term: 'github' });
     expect(parseOmniboxQuery('HISTORY:blog')).toEqual({ scope: 'history', term: 'blog' });
     expect(parseOmniboxQuery('Bookmark:docs')).toEqual({ scope: 'bookmark', term: 'docs' });
+    expect(parseOmniboxQuery('settings: theme')).toEqual({ scope: 'settings', term: 'theme' });
   });
 
   it('treats a prefix-free query as the "all" scope', () => {
@@ -101,6 +110,32 @@ describe('buildOmniboxSuggestions', () => {
     const out = buildOmniboxSuggestions('bookmark:docs', SOURCES, LABELS);
     expect(out).toHaveLength(1);
     expect(out[0]).toMatchObject({ kind: 'bookmark', title: 'Example Docs' });
+  });
+
+  it('settings: scope only returns quick settings', () => {
+    const out = buildOmniboxSuggestions('settings:privacy', SOURCES, LABELS);
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({
+      kind: 'quick-setting',
+      title: 'Open Privacy settings',
+      action: { type: 'openQuickSetting', target: 'privacy' },
+    });
+  });
+
+  it('surfaces quick settings for theme/language/privacy terms before tabs/history', () => {
+    const out = buildOmniboxSuggestions('theme', SOURCES, LABELS);
+    expect(out[0]?.kind).toBe('search');
+    expect(out[1]).toMatchObject({
+      kind: 'quick-setting',
+      action: { type: 'openQuickSetting', target: 'appearance' },
+    });
+  });
+
+  it('matches Turkish quick-settings aliases deterministically', () => {
+    const out = buildOmniboxSuggestions('gizlilik', SOURCES, LABELS);
+    expect(out.some((s) => s.action.type === 'openQuickSetting' && s.action.target === 'privacy')).toBe(
+      true,
+    );
   });
 
   it('tab: scope only returns open tabs and drops the primary action', () => {

@@ -128,6 +128,8 @@ export function TabChip({ tab, active, group, labels, onSelect, onClose, onConte
       style={style}
       {...attributes}
       {...listeners}
+      // Queried by the strip to report per-tab slot geometry for cross-window drop hit-testing.
+      data-tab-id={tab.id}
       // Semantic tablist attributes come AFTER the dnd-kit spread so they win (dnd sets role=button).
       role="tab"
       aria-selected={active}

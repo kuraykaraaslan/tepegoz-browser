@@ -31,7 +31,15 @@ import { showBookmarkContextMenu } from '../menus/bookmark-context-menu';
 import { showExtensionContextMenu } from '../menus/extension-context-menu';
 import { showGroupContextMenu } from '../menus/tab-group-context-menu';
 import { getPageMenuContext, runPageMenuAction } from '../menus/page-context-menu';
-import { handle, handleAsync, onAction, onSignal, onWindowControl } from './ipc-helpers';
+import {
+  handle,
+  handleAsync,
+  onAction,
+  onSignal,
+  onWindowAction,
+  onWindowControl,
+  onWindowSignal,
+} from './ipc-helpers';
 
 /**
  * Window chrome + tabs/tab-groups + native context menus + popup/submenu/page-menu IPC domain
@@ -67,45 +75,49 @@ export function registerTabsWindowsIpc(): void {
     return win?.isMaximized() ?? false;
   });
 
-  onAction(IpcChannels.tabsCreate, CreateTabInputSchema, (url) => {
-    TabManager.createTab(url);
+  // Tab actions route to the SENDER's window (multi-window) — `forSenderWindow` walks a menu popup's
+  // parent chain to the owning browser window, and falls back to the focused window.
+  onWindowAction(IpcChannels.tabsCreate, CreateTabInputSchema, (win, url) => {
+    TabManager.forSenderWindow(win)?.createTab(url);
   });
-  onAction(IpcChannels.tabsCreateBackground, CreateBackgroundTabSchema, (url) => {
-    TabManager.createTab(url, { background: true });
+  onWindowAction(IpcChannels.tabsCreateBackground, CreateBackgroundTabSchema, (win, url) => {
+    TabManager.forSenderWindow(win)?.createTab(url, { background: true });
   });
-  onAction(IpcChannels.tabsClose, TabIdSchema, (id) => {
-    TabManager.closeTab(id);
+  onWindowAction(IpcChannels.tabsClose, TabIdSchema, (win, id) => {
+    TabManager.forSenderWindow(win)?.closeTab(id);
   });
-  onAction(IpcChannels.tabsActivate, TabIdSchema, (id) => {
-    TabManager.activate(id);
+  onWindowAction(IpcChannels.tabsActivate, TabIdSchema, (win, id) => {
+    TabManager.forSenderWindow(win)?.activate(id);
   });
   // Advanced tab UX (ADR-0020): drag-reorder, groups, pinning.
-  onAction(IpcChannels.tabsMove, TabMoveSchema, ({ id, toIndex, intoGroupId }) => {
-    TabManager.moveTab(id, toIndex, intoGroupId);
+  onWindowAction(IpcChannels.tabsMove, TabMoveSchema, (win, { id, toIndex, intoGroupId }) => {
+    TabManager.forSenderWindow(win)?.moveTab(id, toIndex, intoGroupId);
   });
-  onAction(IpcChannels.tabsPin, TabPinSchema, ({ id, pinned }) => {
-    TabManager.setPinned(id, pinned);
+  onWindowAction(IpcChannels.tabsPin, TabPinSchema, (win, { id, pinned }) => {
+    TabManager.forSenderWindow(win)?.setPinned(id, pinned);
   });
-  onAction(IpcChannels.tabsGroupCreate, TabGroupCreateSchema, ({ memberIds }) => {
-    TabManager.createGroup(memberIds);
+  onWindowAction(IpcChannels.tabsGroupCreate, TabGroupCreateSchema, (win, { memberIds }) => {
+    TabManager.forSenderWindow(win)?.createGroup(memberIds);
   });
-  onAction(IpcChannels.tabsGroupMove, TabGroupMoveSchema, ({ groupId, toIndex }) => {
-    TabManager.moveGroup(groupId, toIndex);
+  onWindowAction(IpcChannels.tabsGroupMove, TabGroupMoveSchema, (win, { groupId, toIndex }) => {
+    TabManager.forSenderWindow(win)?.moveGroup(groupId, toIndex);
   });
-  onAction(IpcChannels.tabsGroupUpdate, TabGroupUpdateSchema, ({ groupId, name, color, collapsed, settings }) => {
-    if (name !== undefined) TabManager.renameGroup(groupId, name);
-    if (color !== undefined) TabManager.recolorGroup(groupId, color);
-    if (collapsed !== undefined) TabManager.setGroupCollapsed(groupId, collapsed);
-    if (settings !== undefined) TabManager.updateGroupSettings(groupId, settings);
+  onWindowAction(IpcChannels.tabsGroupUpdate, TabGroupUpdateSchema, (win, { groupId, name, color, collapsed, settings }) => {
+    const wt = TabManager.forSenderWindow(win);
+    if (wt === undefined) return;
+    if (name !== undefined) wt.renameGroup(groupId, name);
+    if (color !== undefined) wt.recolorGroup(groupId, color);
+    if (collapsed !== undefined) wt.setGroupCollapsed(groupId, collapsed);
+    if (settings !== undefined) wt.updateGroupSettings(groupId, settings);
   });
-  onAction(IpcChannels.tabsGroupAssign, TabGroupAssignSchema, ({ tabId, groupId }) => {
-    TabManager.assignToGroup(tabId, groupId);
+  onWindowAction(IpcChannels.tabsGroupAssign, TabGroupAssignSchema, (win, { tabId, groupId }) => {
+    TabManager.forSenderWindow(win)?.assignToGroup(tabId, groupId);
   });
-  onAction(IpcChannels.tabsGroupRemove, TabIdSchema, (tabId) => {
-    TabManager.removeFromGroup(tabId);
+  onWindowAction(IpcChannels.tabsGroupRemove, TabIdSchema, (win, tabId) => {
+    TabManager.forSenderWindow(win)?.removeFromGroup(tabId);
   });
-  onAction(IpcChannels.tabsUngroup, TabIdSchema, (groupId) => {
-    TabManager.ungroup(groupId);
+  onWindowAction(IpcChannels.tabsUngroup, TabIdSchema, (win, groupId) => {
+    TabManager.forSenderWindow(win)?.ungroup(groupId);
   });
   // Native tab context menu: needs the sender's window to anchor the popup, so it can't use the
   // window-less onAction helper.
@@ -269,32 +281,39 @@ export function registerTabsWindowsIpc(): void {
   onSignal(IpcChannels.appQuit, () => {
     app.quit();
   });
-  onAction(IpcChannels.tabsNavigate, NavigateInputSchema, (url) => {
-    TabManager.navigateActive(url);
+  onWindowAction(IpcChannels.tabsNavigate, NavigateInputSchema, (win, url) => {
+    TabManager.forSenderWindow(win)?.navigateActive(url);
   });
-  onSignal(IpcChannels.tabsGoBack, () => {
-    TabManager.goBack();
+  onWindowSignal(IpcChannels.tabsGoBack, (win) => {
+    TabManager.forSenderWindow(win)?.goBack();
   });
-  onSignal(IpcChannels.tabsGoForward, () => {
-    TabManager.goForward();
+  onWindowSignal(IpcChannels.tabsGoForward, (win) => {
+    TabManager.forSenderWindow(win)?.goForward();
   });
-  onSignal(IpcChannels.tabsReload, () => {
-    TabManager.reloadActive();
+  onWindowSignal(IpcChannels.tabsReload, (win) => {
+    TabManager.forSenderWindow(win)?.reloadActive();
   });
-  onSignal(IpcChannels.tabsHome, () => {
-    TabManager.goHome();
+  onWindowSignal(IpcChannels.tabsHome, (win) => {
+    TabManager.forSenderWindow(win)?.goHome();
   });
-  onSignal(IpcChannels.tabsReopenClosed, () => {
-    TabManager.reopenClosedTab();
+  onWindowSignal(IpcChannels.tabsReopenClosed, (win) => {
+    TabManager.forSenderWindow(win)?.reopenClosedTab();
   });
-  onAction(IpcChannels.tabsSetBounds, ContentBoundsSchema, (bounds) => {
-    TabManager.setContentBounds(bounds);
+  // Content bounds/visibility are strictly per-window (each window reports its own content area), so
+  // these MUST route by sender window — the focused-window fallback would misplace a background
+  // window's view.
+  onWindowAction(IpcChannels.tabsSetBounds, ContentBoundsSchema, (win, bounds) => {
+    TabManager.forWindow(win)?.setContentBounds(bounds);
   });
-  onAction(IpcChannels.tabsSetContentVisible, ContentVisibleSchema, (visible) => {
-    TabManager.setContentVisible(visible);
+  onWindowAction(IpcChannels.tabsSetContentVisible, ContentVisibleSchema, (win, visible) => {
+    TabManager.forWindow(win)?.setContentVisible(visible);
   });
 
-  handleAsync(IpcChannels.tabsCapture, (): Promise<string | null> => TabManager.captureActive());
+  handleAsync(IpcChannels.tabsCapture, (event): Promise<string | null> =>
+    TabManager.forSender(event.sender)?.captureActive() ?? Promise.resolve(null),
+  );
 
-  handle(IpcChannels.tabsGetState, (): TabsState => TabManager.getState());
+  handle(IpcChannels.tabsGetState, (event): TabsState =>
+    TabManager.forSender(event.sender)?.getState() ?? { tabs: [], groups: [], activeId: null, canGoBack: false, canGoForward: false },
+  );
 }

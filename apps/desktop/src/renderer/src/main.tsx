@@ -13,6 +13,7 @@ import { TransferActivityPopup } from './components/TransferActivityPopup';
 import { BookmarkFolderPopup } from './components/BookmarkFolderPopup';
 import { BookmarkDialogPopup } from './components/BookmarkDialogPopup';
 import { OnboardingApp } from './components/OnboardingApp';
+import { DragPreviewSurface } from './components/DragPreviewSurface';
 import { applyTheme } from './lib/theme';
 import './styles.css';
 
@@ -29,6 +30,17 @@ const extId = params.get('id');
 const themeParam = params.get('theme');
 if (themeParam !== null) applyTheme(themeParam, params.get('themeColor') ?? '');
 
+// The drag-preview floats in a transparent, click-through window. styles.css paints the app background
+// on <html>/<body>/#root, which would otherwise show through as an opaque box — strip it so only the
+// chip is visible, and kill scrollbars (the window is sized to the chip).
+if (surface === 'drag-preview') {
+  document.documentElement.style.background = 'transparent';
+  const { style } = document.body;
+  style.background = 'transparent';
+  style.margin = '0';
+  style.overflow = 'hidden';
+}
+
 let node: ReactNode = <App />;
 if (surface === 'main-menu') node = <MainMenuPopup />;
 else if (surface === 'page-context-menu') node = <PageContextMenuPopup />;
@@ -43,6 +55,17 @@ else if (surface === 'bookmark-rename' && extId !== null)
 else if (surface === 'bookmark-add-folder' && extId !== null)
   node = <BookmarkDialogPopup mode="add-folder" id={extId} />;
 else if (surface === 'onboarding') node = <OnboardingApp />;
+else if (surface === 'drag-preview')
+  node = (
+    <DragPreviewSurface
+      title={params.get('title') ?? ''}
+      faviconUrl={params.get('favicon')}
+      active={params.get('active') === '1'}
+      pinned={params.get('pinned') === '1'}
+      groupColor={params.get('groupColor')}
+      kind={params.get('kind') === 'group' ? 'group' : 'tab'}
+    />
+  );
 else if (surface === 'ext' && extId !== null) node = <PopupApp id={extId} />;
 
 // The boundary's fallback renders when App (and its locale state) is gone — resolve from the OS locale.

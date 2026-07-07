@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import {
   BrowserWindow,
   WebContentsView,
@@ -19,15 +20,18 @@ import {
   type TabsState,
 } from '@tepegoz/desktop-ipc';
 import {
+  EventJournal,
   HistoryStore,
   SessionStore,
   type PersistedGroup,
   type PersistedTab,
-  type SessionSnapshot,
+  type WindowSnapshot,
 } from '@tepegoz/persistence';
 import {
   TabStore,
+  type TabGroup,
   type TabGroupColor,
+  type TabRecord,
 } from '@tepegoz/tab-engine';
 import { internalPageUrl, isWebUrl, toNavigationUrl } from './lib/navigation-url';
 import { allSearchEngines, buildSearchUrl } from '@tepegoz/shared-types/search-engines';
@@ -57,12 +61,14 @@ import {
  * lives in the window's own webContents; the active tab's view is laid into the content area below
  * the chrome using bounds reported by the renderer.
  *
- * The pure record state (which tabs exist, which is active, ordering, TabsState projection) lives in
- * `@tepegoz/tab-engine`'s `TabStore` (unit-tested); this class owns the WebContentsViews + all Electron
- * I/O and delegates every record mutation to the store.
+ * The per-window tab state (which tabs exist, which is active, ordering, TabsState projection) lives in
+ * a `WindowTabs` instance — one per browser window — and the pure record model in `@tepegoz/tab-engine`'s
+ * `TabStore` (unit-tested). `TabManager` is the static registry + facade over those instances: it maps
+ * windows↔instances, resolves the sender/focused window for IPC and agent code, and coordinates the
+ * cross-window tear-off move primitives (`detachTab`/`adoptTab`).
  *
  * Per-site partition isolation, profiles, and checkpoint/resume are later phases; this is the minimal
- * real browser core for Phase 1a.
+ * real browser core.
  */
 /** Fallback home / new-tab URL when the `homepageUrl` preference is blank. */
 const DEFAULT_HOME_URL = 'https://duckduckgo.com/';
@@ -92,80 +98,103 @@ const POPUP_WINDOW_OPTIONS: BrowserWindowConstructorOptions = {
   },
 };
 
-export type NavigationObserver = (url: string, webContents: WebContents) => void;
+/** Notified after each committed top-level navigation: `(url, browsedWebContents, ownerWindow)`. The
+ *  owner window lets an observer (e.g. autofill) target the chrome window that hosts the browsed page. */
+export type NavigationObserver = (url: string, webContents: WebContents, owner: BrowserWindow) => void;
 
-export default class TabManager {
-  private static win: BrowserWindow | null = null;
-  private static readonly store = new TabStore();
+/** A tab pulled out of one window, ready to be adopted by another (tear-off / merge). The
+ *  `WebContentsView` (and its live webContents) is kept ALIVE across the move — never reloaded. */
+export interface DetachedTab {
+  record: TabRecord;
+  /** The live view for a `web` tab; `null` for a view-less internal tab. */
+  view: WebContentsView | null;
+  /** The source group's metadata when the tab was grouped (recreated in the destination). */
+  group: TabGroup | null;
+}
+
+// ── Session-wide shared state (window-agnostic; shared by every WindowTabs instance) ───────────────
+
+/** Recently-closed web-tab URLs (LIFO) for reopen-closed-tab (Ctrl+Shift+T). In-memory, session-scoped
+ *  and shared across all windows (matches Chrome's session-wide reopen stack). */
+const closedUrls: string[] = [];
+/** Observers notified after every committed top-level navigation (did-stop-loading), across all windows. */
+const navigationObservers = new Set<NavigationObserver>();
+/** Last discrete user-input time per browsed webContents — the popup blocker only blocks popups that
+ *  open WITHOUT a recent gesture. Keyed weakly so entries vanish when the webContents is GC'd. */
+const lastGestureAt = new WeakMap<WebContents, number>();
+
+/** Whether `wc` had a discrete user input within the activation window (i.e. the popup it just tried to
+ *  open is user-initiated, not an unsolicited auto-popup). */
+function hadRecentGesture(wc: WebContents): boolean {
+  const at = lastGestureAt.get(wc);
+  return at !== undefined && Date.now() - at < GESTURE_ACTIVATION_MS;
+}
+
+const EMPTY_TABS_STATE: TabsState = {
+  tabs: [],
+  groups: [],
+  activeId: null,
+  canGoBack: false,
+  canGoForward: false,
+};
+
+function internalBaseUrl(url: string): string {
+  return url.split('#', 1)[0] ?? url;
+}
+
+/**
+ * One browser window's worth of tabs: it owns the `WebContentsView`s + all Electron I/O and delegates
+ * every record mutation to its own `TabStore`. Multiple instances coexist (one per window); the static
+ * `TabManager` registry/facade routes to the right one.
+ */
+export class WindowTabs {
+  private readonly store = new TabStore();
   /** WebContentsViews for `web` tabs (internal tabs have none), keyed by tab id. */
-  private static readonly views = new Map<string, WebContentsView>();
-  private static bounds: Rectangle = { x: 0, y: 0, width: 0, height: 0 };
-  private static contentVisible = true;
-  /** Recently-closed web-tab URLs (LIFO) for reopen-closed-tab (Ctrl+Shift+T). In-memory, session-scoped. */
-  private static readonly closedUrls: string[] = [];
+  private readonly views = new Map<string, WebContentsView>();
+  private bounds: Rectangle = { x: 0, y: 0, width: 0, height: 0 };
+  private contentVisible = true;
   /** Debounce handle for persisting the session snapshot (coalesces bursts of state changes). */
-  private static persistTimer: ReturnType<typeof setTimeout> | null = null;
-  /** Observers notified after every committed top-level navigation (did-stop-loading). */
-  private static readonly navigationObservers = new Set<NavigationObserver>();
-  /** Last discrete user-input time per browsed webContents — the popup blocker only blocks popups that
-   *  open WITHOUT a recent gesture (a link click / window.open in response to a click must pass). Keyed
-   *  weakly so entries vanish when the webContents is GC'd; no manual cleanup needed. */
-  private static readonly lastGestureAt = new WeakMap<WebContents, number>();
+  private persistTimer: ReturnType<typeof setTimeout> | null = null;
 
-  /** Whether `wc` had a discrete user input within the activation window (i.e. the popup it just tried to
-   *  open is user-initiated, not an unsolicited auto-popup). */
-  private static hadRecentGesture(wc: WebContents): boolean {
-    const at = TabManager.lastGestureAt.get(wc);
-    return at !== undefined && Date.now() - at < GESTURE_ACTIVATION_MS;
+  constructor(private readonly win: BrowserWindow) {}
+
+  /** The owning chrome window (for the registry / focused-window resolution). */
+  get window(): BrowserWindow {
+    return this.win;
   }
 
-  /** Register a callback invoked after each committed top-level page load. Returns an unsubscribe fn. */
-  static onNavigation(fn: NavigationObserver): () => void {
-    TabManager.navigationObservers.add(fn);
-    return () => { TabManager.navigationObservers.delete(fn); };
-  }
-
-  static attach(win: BrowserWindow): void {
-    TabManager.win = win;
-  }
-
-  /** Tear down all tabs + state when the window closes (prevents stale tabs leaking into a
-   *  re-created window, e.g. macOS app 'activate'). */
-  static reset(): void {
+  /** Tear down all views + state when the window closes (prevents stale tabs leaking). Called by the
+   *  registry on `unregister`. */
+  dispose(): void {
     // Cancel any pending debounced persist so it can't fire AFTER the store is cleared and overwrite the
-    // just-saved snapshot with an empty one. Callers persist synchronously before reset (see index.ts).
-    if (TabManager.persistTimer !== null) {
-      clearTimeout(TabManager.persistTimer);
-      TabManager.persistTimer = null;
+    // just-saved snapshot with an empty one. Callers persist synchronously before dispose (see index.ts).
+    if (this.persistTimer !== null) {
+      clearTimeout(this.persistTimer);
+      this.persistTimer = null;
     }
-    const win = TabManager.win;
-    for (const view of TabManager.views.values()) {
+    for (const view of this.views.values()) {
       // Electron teardown order: detach from the window first, THEN close the contents — closing an
       // attached view can race its compositor/storage teardown against the window's own destruction.
-      if (win !== null && !win.isDestroyed()) win.contentView.removeChildView(view);
+      if (!this.win.isDestroyed()) this.win.contentView.removeChildView(view);
       if (!view.webContents.isDestroyed()) {
-        TabManager.unwireView(view);
+        this.unwireView(view);
         view.webContents.close();
       }
     }
-    TabManager.views.clear();
-    TabManager.store.clear();
-    TabManager.win = null;
-    TabManager.contentVisible = true;
-    TabManager.bounds = { x: 0, y: 0, width: 0, height: 0 };
+    this.views.clear();
+    this.store.clear();
   }
 
   /** Create a new tab, or `null` if an enabled extension's `tab:create` interceptor blocked it. */
-  static createTab(
+  createTab(
     rawUrl?: string,
     opts?: { background?: boolean; openerId?: string | undefined },
   ): string | null {
-    TabManager.requireWin(); // fail fast if not attached to a window
     // A blank new tab (Ctrl+T, the "+" button, new-tab-to-the-right, startup) lands on the internal
     // new-tab page — the AI / Favorites / Blank chooser — rather than a web page. It's a view-less
     // internal tab, created fresh each time (never deduped) so every new tab is its own.
     if (rawUrl === undefined) {
-      return TabManager.createInternalTab(INTERNAL_NEWTAB_URL, opts);
+      return this.createInternalTab(INTERNAL_NEWTAB_URL, opts);
     }
     const home = homeUrl();
     const target = toNavigationUrl(rawUrl, home, searchUrlForQuery);
@@ -187,139 +216,142 @@ export default class TabManager {
         partition: BROWSING_PARTITION,
       },
     });
-    const id = TabManager.store.add({
+    const id = this.store.add({
       kind: 'web',
       title: '',
       url: '',
       isLoading: true,
       faviconUrl: null,
     });
-    TabManager.views.set(id, view);
-    TabManager.wireView(id, view);
+    this.views.set(id, view);
+    this.wireView(id, view);
 
     // A tab spawned FROM a grouped tab (window.open, "open link in new tab", duplicate, new-tab-right)
     // must join that group and sit right after its opener — never break out of the group run (ADR-0020).
-    TabManager.inheritGroup(id, opts?.openerId);
+    this.inheritGroup(id, opts?.openerId);
 
     void view.webContents.loadURL(target).catch((err: unknown) => {
       Logger.warn('Tab failed to load', { url: target, err: String(err) });
     });
 
     // Background tabs (e.g. a non-foreground page's window.open) must NOT steal the foreground.
-    if (opts?.background === true && TabManager.store.activeId !== null) {
-      TabManager.emitState();
+    if (opts?.background === true && this.store.activeId !== null) {
+      this.emitState();
     } else {
-      TabManager.activate(id);
+      this.activate(id);
     }
     return id;
   }
 
   /** If `openerId` is a grouped tab, put the new tab in the same group, right after the opener. No-op
    *  when there's no opener or the opener is ungrouped (the tab stays where `add` placed it). */
-  private static inheritGroup(newId: string, openerId?: string): void {
+  private inheritGroup(newId: string, openerId?: string): void {
     if (openerId === undefined) return;
-    const opener = TabManager.store.get(openerId);
+    const opener = this.store.get(openerId);
     if (opener?.groupId == null) return;
-    TabManager.store.assignToGroup(newId, opener.groupId);
-    TabManager.store.placeAfter(newId, openerId);
+    this.store.assignToGroup(newId, opener.groupId);
+    this.store.placeAfter(newId, openerId);
   }
 
   /** The active tab's id (null if none) — lets callers open a new tab as a child of the current tab. */
-  static activeTabId(): string | null {
-    return TabManager.store.activeId;
+  activeTabId(): string | null {
+    return this.store.activeId;
   }
 
-  static activate(id: string): void {
-    const win = TabManager.requireWin();
-    if (!TabManager.store.has(id)) return;
+  activate(id: string): void {
+    if (!this.store.has(id)) return;
 
     // Detach the previously-active view (kept alive in the background), attach the new one. Internal
     // tabs have no view — the chrome renders their page over the (empty) content area.
-    const prevId = TabManager.store.activeId;
+    const prevId = this.store.activeId;
     if (prevId !== null && prevId !== id) {
-      const prevView = TabManager.views.get(prevId);
-      if (prevView != null) win.contentView.removeChildView(prevView);
+      const prevView = this.views.get(prevId);
+      if (prevView != null) this.win.contentView.removeChildView(prevView);
     }
-    TabManager.store.setActive(id);
-    const view = TabManager.views.get(id);
-    if (TabManager.contentVisible && view !== undefined) {
-      win.contentView.addChildView(view);
-      view.setBounds(TabManager.bounds);
+    this.store.setActive(id);
+    const view = this.views.get(id);
+    if (this.contentVisible && view !== undefined) {
+      this.win.contentView.addChildView(view);
+      view.setBounds(this.bounds);
     }
-    TabManager.emitState();
+    this.emitState();
   }
 
-  static closeTab(id: string): void {
-    const win = TabManager.requireWin();
-    if (!TabManager.store.has(id)) return;
-    const url = TabManager.store.get(id)?.url ?? '';
+  closeTab(id: string): void {
+    if (!this.store.has(id)) return;
+    const url = this.store.get(id)?.url ?? '';
     if (ActionInterceptorService.shouldBlock('tab:close', { tabId: id, url })) return;
-    const view = TabManager.views.get(id);
+    const view = this.views.get(id);
     if (view !== undefined) {
       // Remember the URL so Ctrl+Shift+T can reopen it (most-recent first, capped).
-      const closedUrl = view.webContents.getURL() || TabManager.store.get(id)?.url || '';
+      const closedUrl = view.webContents.getURL() || this.store.get(id)?.url || '';
       if (isWebUrl(closedUrl)) {
-        TabManager.closedUrls.push(closedUrl);
-        if (TabManager.closedUrls.length > 25) TabManager.closedUrls.shift();
+        closedUrls.push(closedUrl);
+        if (closedUrls.length > 25) closedUrls.shift();
       }
-      win.contentView.removeChildView(view);
-      TabManager.unwireView(view);
+      this.win.contentView.removeChildView(view);
+      this.unwireView(view);
       view.webContents.close();
-      TabManager.views.delete(id);
+      this.views.delete(id);
     }
-    const wasActive = TabManager.store.activeId === id;
-    TabManager.store.delete(id);
+    const wasActive = this.store.activeId === id;
+    this.store.delete(id);
+    this.afterRemove(wasActive);
+  }
 
+  /** Post-removal bookkeeping shared by `closeTab` and `detachTab`: reselect the active tab, or close
+   *  the window when the last tab is gone (→ the app quits on non-macOS via `window-all-closed`). */
+  private afterRemove(wasActive: boolean): void {
     // Closing the final tab closes the window instead of leaving an empty chrome over a blank content
     // area — the app then quits (non-macOS) via the `window-all-closed` handler, or on macOS follows
     // the platform convention of an open-but-window-less app.
-    if (TabManager.store.ids().length === 0) {
-      win.close();
+    if (this.store.ids().length === 0) {
+      if (!this.win.isDestroyed()) this.win.close();
       return;
     }
-
     if (wasActive) {
-      TabManager.store.setActive(null);
-      const next = TabManager.store.ids().at(-1);
+      this.store.setActive(null);
+      const next = this.store.ids().at(-1);
       if (next !== undefined) {
-        TabManager.activate(next);
+        this.activate(next);
       } else {
-        TabManager.emitState();
+        this.emitState();
       }
     } else {
-      TabManager.emitState();
+      this.emitState();
     }
   }
 
   /** Reload a specific tab (context menu) — distinct from reloadActive (omnibox/shortcut). */
-  static reloadTab(id: string): void {
-    TabManager.views.get(id)?.webContents.reload();
+  reloadTab(id: string): void {
+    this.views.get(id)?.webContents.reload();
   }
 
   /** Open (or focus) an internal page tab (tepegoz://settings, tepegoz://extensions) — rendered by
    *  the chrome, no web view. A new-tab experience for internal pages, mirroring Chrome's chrome://. */
-  static openInternalPage(url: string): void {
-    TabManager.requireWin();
-    const existing = TabManager.store.findInternal(url);
+  openInternalPage(url: string): void {
+    const baseUrl = internalBaseUrl(url);
+    const existing = this.store.records().find((rec) => rec.kind === 'internal' && internalBaseUrl(rec.url) === baseUrl)?.id;
     if (existing !== undefined) {
-      TabManager.activate(existing);
+      this.store.update(existing, { url, title: this.internalTitle(url) });
+      this.activate(existing);
       return;
     }
-    const id = TabManager.store.add({
+    const id = this.store.add({
       kind: 'internal',
-      title: TabManager.internalTitle(url),
+      title: this.internalTitle(url),
       url,
       isLoading: false,
       faviconUrl: null,
     });
-    TabManager.activate(id);
+    this.activate(id);
   }
 
   /** Create a fresh internal (view-less) tab for `url`, honouring opener-group inheritance and the
    *  background flag — the internal-page counterpart of `createTab`'s web path. Unlike
    *  `openInternalPage` it never focuses an existing tab of the same URL, so multiple blank new-tab
    *  pages can coexist. Returns `null` if an extension interceptor blocked the create. */
-  private static createInternalTab(
+  private createInternalTab(
     url: string,
     opts?: { background?: boolean; openerId?: string | undefined },
   ): string | null {
@@ -332,33 +364,34 @@ export default class TabManager {
     ) {
       return null;
     }
-    const id = TabManager.store.add({
+    const id = this.store.add({
       kind: 'internal',
-      title: TabManager.internalTitle(url),
+      title: this.internalTitle(url),
       url,
       isLoading: false,
       faviconUrl: null,
     });
-    TabManager.inheritGroup(id, opts?.openerId);
-    if (opts?.background === true && TabManager.store.activeId !== null) {
-      TabManager.emitState();
+    this.inheritGroup(id, opts?.openerId);
+    if (opts?.background === true && this.store.activeId !== null) {
+      this.emitState();
     } else {
-      TabManager.activate(id);
+      this.activate(id);
     }
     return id;
   }
 
-  private static internalTitle(url: string): string {
+  private internalTitle(url: string): string {
     const r = mainStrings();
-    if (url === INTERNAL_NEWTAB_URL) return r.browser.untitled;
-    if (url === INTERNAL_EXTENSIONS_URL) return r.extensions.title;
-    if (url === INTERNAL_HISTORY_URL) return r.history.title;
-    if (url === INTERNAL_DOWNLOADS_URL) return r.downloads.title;
-    if (url === INTERNAL_UPLOADS_URL) return r.uploads.title;
-    if (url === INTERNAL_TASKS_URL) return r.tasks.title;
-    if (url === INTERNAL_BOOKMARKS_URL) return r.bookmarks.title;
+    const baseUrl = internalBaseUrl(url);
+    if (baseUrl === INTERNAL_NEWTAB_URL) return r.browser.untitled;
+    if (baseUrl === INTERNAL_EXTENSIONS_URL) return r.extensions.title;
+    if (baseUrl === INTERNAL_HISTORY_URL) return r.history.title;
+    if (baseUrl === INTERNAL_DOWNLOADS_URL) return r.downloads.title;
+    if (baseUrl === INTERNAL_UPLOADS_URL) return r.uploads.title;
+    if (baseUrl === INTERNAL_TASKS_URL) return r.tasks.title;
+    if (baseUrl === INTERNAL_BOOKMARKS_URL) return r.bookmarks.title;
     // An extension `page` surface (tepegoz://<extension-id>) is titled from the extension's manifest.
-    const extId = extensionIdFromPageUrl(url);
+    const extId = extensionIdFromPageUrl(baseUrl);
     if (extId !== null) {
       const manifest = manifestById(extId);
       if (manifest !== undefined) return extensionLabel(manifest, mainLocale()).name;
@@ -367,52 +400,52 @@ export default class TabManager {
   }
 
   /** Open a fresh tab immediately to the right of `refId` and focus it (Chrome's "New tab to the right"). */
-  static createTabRight(refId: string): void {
-    if (!TabManager.store.has(refId)) return;
+  createTabRight(refId: string): void {
+    if (!this.store.has(refId)) return;
     // openerId → inherits refId's group (if any); placeAfter fixes the position for the ungrouped case.
-    const newId = TabManager.createTab(undefined, { openerId: refId });
+    const newId = this.createTab(undefined, { openerId: refId });
     if (newId === null) return;
-    TabManager.store.placeAfter(newId, refId);
-    TabManager.emitState();
+    this.store.placeAfter(newId, refId);
+    this.emitState();
   }
 
   /** Duplicate a tab's current URL into a new tab placed right after it, and focus it. */
-  static duplicateTab(id: string): void {
-    const rec = TabManager.store.get(id);
+  duplicateTab(id: string): void {
+    const rec = this.store.get(id);
     if (rec === undefined) return;
-    const view = TabManager.views.get(id);
+    const view = this.views.get(id);
     if (view === undefined) {
-      TabManager.openInternalPage(rec.url); // internal page → just focus it (nothing to duplicate)
+      this.openInternalPage(rec.url); // internal page → just focus it (nothing to duplicate)
       return;
     }
     const url = view.webContents.getURL() || rec.url;
-    const newId = TabManager.createTab(url.length > 0 ? url : undefined, { openerId: id });
+    const newId = this.createTab(url.length > 0 ? url : undefined, { openerId: id });
     if (newId === null) return;
-    TabManager.store.placeAfter(newId, id);
-    TabManager.emitState();
+    this.store.placeAfter(newId, id);
+    this.emitState();
   }
 
   /** Close every tab except `id`, keeping `id` active. */
-  static closeOtherTabs(id: string): void {
-    if (!TabManager.store.has(id)) return;
-    if (TabManager.store.activeId !== id) TabManager.activate(id);
-    for (const other of TabManager.store.ids().filter((k) => k !== id)) {
-      TabManager.closeTab(other);
+  closeOtherTabs(id: string): void {
+    if (!this.store.has(id)) return;
+    if (this.store.activeId !== id) this.activate(id);
+    for (const other of this.store.ids().filter((k) => k !== id)) {
+      this.closeTab(other);
     }
   }
 
   /** Close all tabs ordered after `id`. */
-  static closeTabsToRight(id: string): void {
-    const ids = TabManager.store.ids();
+  closeTabsToRight(id: string): void {
+    const ids = this.store.ids();
     const idx = ids.indexOf(id);
     if (idx === -1) return;
     const toClose = ids.slice(idx + 1);
     // If the active tab is being closed, fall back to the reference tab first.
-    const activeId = TabManager.store.activeId;
+    const activeId = this.store.activeId;
     if (activeId !== null && toClose.includes(activeId)) {
-      TabManager.activate(id);
+      this.activate(id);
     }
-    for (const k of toClose) TabManager.closeTab(k);
+    for (const k of toClose) this.closeTab(k);
   }
 
   // ── Groups, ordering & pinning ───────────────────────────────────────────────────────────────
@@ -420,121 +453,202 @@ export default class TabManager {
   // the store then re-emits state so the strip re-renders.
 
   /** Drag-reorder: move `id` to `toIndex`. `intoGroupId` resolves membership (see TabStore.moveTab). */
-  static moveTab(id: string, toIndex: number, intoGroupId?: string | null): void {
-    if (!TabManager.store.has(id)) return;
-    TabManager.store.moveTab(id, toIndex, intoGroupId);
-    TabManager.emitState();
+  moveTab(id: string, toIndex: number, intoGroupId?: string | null): void {
+    if (!this.store.has(id)) return;
+    this.store.moveTab(id, toIndex, intoGroupId);
+    this.emitState();
   }
 
   /** Reorder a whole group's run to `toIndex` among the non-member tabs. */
-  static moveGroup(groupId: string, toIndex: number): void {
-    TabManager.store.moveGroup(groupId, toIndex);
-    TabManager.emitState();
+  moveGroup(groupId: string, toIndex: number): void {
+    this.store.moveGroup(groupId, toIndex);
+    this.emitState();
   }
 
   /** Create a group from `memberIds` (defaults to the active tab) and return the new group id. */
-  static createGroup(memberIds?: string[]): string {
+  createGroup(memberIds?: string[]): string {
     const members =
       memberIds !== undefined && memberIds.length > 0
-        ? memberIds.filter((id) => TabManager.store.has(id))
-        : TabManager.activeGroupSeed();
-    const id = TabManager.store.createGroup({ memberIds: members });
-    TabManager.emitState();
+        ? memberIds.filter((id) => this.store.has(id))
+        : this.activeGroupSeed();
+    const id = this.store.createGroup({ memberIds: members });
+    this.emitState();
     return id;
   }
 
   /** The default single-member seed for "new group" from a context menu (the clicked/active tab). */
-  private static activeGroupSeed(): string[] {
-    const active = TabManager.store.activeId;
+  private activeGroupSeed(): string[] {
+    const active = this.store.activeId;
     return active !== null ? [active] : [];
   }
 
   /** Whether a group with this id still exists (its members may all have been closed). Lets the agent's
    *  per-conversation grouping tell "reuse my group" from "the user closed it → open a fresh one". */
-  static hasGroup(groupId: string): boolean {
-    return TabManager.store.getGroup(groupId) !== undefined;
+  hasGroup(groupId: string): boolean {
+    return this.store.getGroup(groupId) !== undefined;
   }
 
-  static assignToGroup(tabId: string, groupId: string): void {
-    TabManager.store.assignToGroup(tabId, groupId);
-    TabManager.emitState();
+  assignToGroup(tabId: string, groupId: string): void {
+    this.store.assignToGroup(tabId, groupId);
+    this.emitState();
   }
 
-  static removeFromGroup(tabId: string): void {
-    TabManager.store.removeFromGroup(tabId);
-    TabManager.emitState();
+  removeFromGroup(tabId: string): void {
+    this.store.removeFromGroup(tabId);
+    this.emitState();
   }
 
-  static renameGroup(groupId: string, name: string): void {
-    TabManager.store.renameGroup(groupId, name);
-    TabManager.emitState();
+  renameGroup(groupId: string, name: string): void {
+    this.store.renameGroup(groupId, name);
+    this.emitState();
   }
 
-  static recolorGroup(groupId: string, color: TabGroupColor): void {
-    TabManager.store.recolorGroup(groupId, color);
-    TabManager.emitState();
+  recolorGroup(groupId: string, color: TabGroupColor): void {
+    this.store.recolorGroup(groupId, color);
+    this.emitState();
   }
 
-  static setGroupCollapsed(groupId: string, collapsed: boolean): void {
-    TabManager.store.setGroupCollapsed(groupId, collapsed);
-    TabManager.emitState();
+  setGroupCollapsed(groupId: string, collapsed: boolean): void {
+    this.store.setGroupCollapsed(groupId, collapsed);
+    this.emitState();
   }
 
   /** Merge-patch a group's extensible settings bag (the per-tab-group settings standard). */
-  static updateGroupSettings(groupId: string, patch: Record<string, TabGroupSettingValue>): void {
-    TabManager.store.updateGroupSettings(groupId, patch);
-    TabManager.emitState();
+  updateGroupSettings(groupId: string, patch: Record<string, TabGroupSettingValue>): void {
+    this.store.updateGroupSettings(groupId, patch);
+    this.emitState();
   }
 
-  static ungroup(groupId: string): void {
-    TabManager.store.ungroup(groupId);
-    TabManager.emitState();
+  ungroup(groupId: string): void {
+    this.store.ungroup(groupId);
+    this.emitState();
   }
 
   /** Open a new tab already assigned to `groupId` (group menu → "New tab in group"). */
-  static newTabInGroup(groupId: string): void {
-    if (TabManager.store.getGroup(groupId) === undefined) return;
-    const id = TabManager.createTab();
+  newTabInGroup(groupId: string): void {
+    if (this.store.getGroup(groupId) === undefined) return;
+    const id = this.createTab();
     if (id === null) return;
-    TabManager.store.assignToGroup(id, groupId);
-    TabManager.emitState();
+    this.store.assignToGroup(id, groupId);
+    this.emitState();
   }
 
   /** Close every tab in a group (group menu → "Close group"). */
-  static closeGroup(groupId: string): void {
-    const memberIds = TabManager.store
+  closeGroup(groupId: string): void {
+    const memberIds = this.store
       .records()
       .filter((r) => r.groupId === groupId)
       .map((r) => r.id);
-    for (const id of memberIds) TabManager.closeTab(id);
+    for (const id of memberIds) this.closeTab(id);
   }
 
   /** The colors + current color of a group, for building the native group menu (undefined if unknown). */
-  static groupMenuInfo(groupId: string): { color: TabGroupColor } | undefined {
-    const g = TabManager.store.getGroup(groupId);
+  groupMenuInfo(groupId: string): { color: TabGroupColor } | undefined {
+    const g = this.store.getGroup(groupId);
     return g !== undefined ? { color: g.color } : undefined;
   }
 
   /** Pin / unpin a tab (moves to the pinned run; pinning clears group membership). */
-  static setPinned(id: string, pinned: boolean): void {
-    if (!TabManager.store.has(id)) return;
-    TabManager.store.setPinned(id, pinned);
-    TabManager.emitState();
+  setPinned(id: string, pinned: boolean): void {
+    if (!this.store.has(id)) return;
+    this.store.setPinned(id, pinned);
+    this.emitState();
   }
 
-  static navigateActive(rawUrl: string): void {
+  // ── Cross-window move primitives (tear-off / merge) ────────────────────────────────────────────
+
+  /** Whether a tab / group id currently lives in this window's store. */
+  hasTab(id: string): boolean {
+    return this.store.has(id);
+  }
+
+  /** The tab ids of a group's contiguous run in this window (strip order), or [] when unknown. */
+  groupMemberIds(groupId: string): string[] {
+    return this.store
+      .records()
+      .filter((r) => r.groupId === groupId)
+      .map((r) => r.id);
+  }
+
+  /**
+   * Remove a tab from THIS window WITHOUT destroying its view, returning everything needed to re-home it
+   * in another window (`adoptTab`). The `WebContentsView` + its live webContents survive — the caller
+   * must adopt it or the view leaks. Reselects the active tab / closes an emptied window, exactly like
+   * `closeTab`. Returns `null` for an unknown id.
+   */
+  detachTab(id: string): DetachedTab | null {
+    const rec = this.store.get(id);
+    if (rec === undefined) return null;
+    const group =
+      rec.groupId !== null ? this.store.getGroup(rec.groupId) ?? null : null;
+    const view = this.views.get(id) ?? null;
+    if (view !== null) {
+      this.win.contentView.removeChildView(view);
+      this.unwireView(view); // drop OUR handlers; the destination re-wires bound to itself
+      this.views.delete(id);
+    }
+    const detached: DetachedTab = {
+      record: { ...rec },
+      view,
+      group: group !== null ? { ...group } : null,
+    };
+    const wasActive = this.store.activeId === id;
+    this.store.delete(id);
+    this.afterRemove(wasActive);
+    return detached;
+  }
+
+  /**
+   * Adopt a tab detached from another window into THIS window. Mints a FRESH id (ids are per-store),
+   * re-creates the source group (reusing its stable UUID) when the tab was grouped, re-wires the live
+   * view bound to this instance (no reload), and focuses it at `atIndex` (appended when omitted).
+   */
+  adoptTab(detached: DetachedTab, atIndex?: number): string {
+    const { record, view, group } = detached;
+    const newId = this.store.add({
+      kind: record.kind,
+      title: record.title,
+      url: record.url,
+      isLoading: record.isLoading,
+      faviconUrl: record.faviconUrl,
+      pinned: record.pinned,
+    });
+    if (view !== null) {
+      this.views.set(newId, view);
+      this.wireView(newId, view);
+    }
+    if (group !== null) {
+      if (this.store.getGroup(group.id) === undefined) {
+        this.store.createGroup({
+          id: group.id,
+          name: group.name,
+          color: group.color,
+          collapsed: group.collapsed,
+          settings: group.settings,
+        });
+      }
+      this.store.assignToGroup(newId, group.id);
+    }
+    if (atIndex !== undefined) {
+      this.store.moveTab(newId, atIndex, group !== null ? group.id : null);
+    }
+    this.activate(newId); // a merged/torn tab takes focus in its new window (Chrome parity)
+    return newId;
+  }
+
+  navigateActive(rawUrl: string): void {
     // Internal pages (tepegoz://…) open as their own tab, rendered by the trusted chrome.
     const internal = internalPageUrl(rawUrl);
     if (internal !== null) {
-      TabManager.openInternalPage(internal);
+      this.openInternalPage(internal);
       return;
     }
-    const rec = TabManager.store.active();
+    const rec = this.store.active();
     if (rec === undefined) return;
     const url = toNavigationUrl(rawUrl, homeUrl(), searchUrlForQuery);
-    const view = TabManager.views.get(rec.id);
+    const view = this.views.get(rec.id);
     if (view === undefined) {
-      TabManager.createTab(url); // typing a URL while on an internal page opens a new web tab
+      this.createTab(url); // typing a URL while on an internal page opens a new web tab
       return;
     }
     void view.webContents.loadURL(url).catch((err: unknown) => {
@@ -543,9 +657,9 @@ export default class TabManager {
   }
 
   /** Navigate a specific existing web tab. Returns false for missing/internal tabs. */
-  static navigateTab(id: string, rawUrl: string): boolean {
-    if (!TabManager.store.has(id)) return false;
-    const view = TabManager.views.get(id);
+  navigateTab(id: string, rawUrl: string): boolean {
+    if (!this.store.has(id)) return false;
+    const view = this.views.get(id);
     if (view === undefined) return false;
     const url = toNavigationUrl(rawUrl, homeUrl(), searchUrlForQuery);
     void view.webContents.loadURL(url).catch((err: unknown) => {
@@ -554,67 +668,67 @@ export default class TabManager {
     return true;
   }
 
-  static goBack(): void {
-    const wc = TabManager.activeView()?.webContents;
+  goBack(): void {
+    const wc = this.activeView()?.webContents;
     if (wc?.navigationHistory.canGoBack()) wc.navigationHistory.goBack();
   }
 
-  static goForward(): void {
-    const wc = TabManager.activeView()?.webContents;
+  goForward(): void {
+    const wc = this.activeView()?.webContents;
     if (wc?.navigationHistory.canGoForward()) wc.navigationHistory.goForward();
   }
 
-  static reloadActive(): void {
-    TabManager.activeView()?.webContents.reload();
+  reloadActive(): void {
+    this.activeView()?.webContents.reload();
   }
 
   /** Print the active web page (opens the system print dialog). Page context menu → Print. */
-  static printActive(): void {
-    TabManager.activeView()?.webContents.print();
+  printActive(): void {
+    this.activeView()?.webContents.print();
   }
 
   /** Open the active page's HTML source in place (Chrome's `view-source:`). Web pages only. */
-  static viewSourceActive(): void {
-    const wc = TabManager.activeView()?.webContents;
+  viewSourceActive(): void {
+    const wc = this.activeView()?.webContents;
     if (wc === undefined) return;
     const url = wc.getURL();
     if (isWebUrl(url)) void wc.loadURL(`view-source:${url}`).catch(() => undefined);
   }
 
   /** Save the active page through the central DownloadService (quarantine + audit). */
-  static saveActive(): void {
-    const wc = TabManager.activeView()?.webContents;
+  saveActive(): void {
+    const wc = this.activeView()?.webContents;
     if (wc !== undefined) DownloadService.downloadURL(wc, wc.getURL(), { actor: 'user' });
   }
 
   /** Download a specific URL through the active view (Save image/video/audio as → OS save dialog). */
-  static downloadUrlActive(url: string): void {
-    const wc = TabManager.activeView()?.webContents;
+  downloadUrlActive(url: string): void {
+    const wc = this.activeView()?.webContents;
     if (wc !== undefined) DownloadService.downloadURL(wc, url, { actor: 'user' });
   }
 
   /** Editing commands on the active page (page context menu → Cut/Copy/Paste/Select all). */
-  static copyActive(): void {
-    ClipboardService.copy(TabManager.activeView()?.webContents);
+  copyActive(): void {
+    ClipboardService.copy(this.activeView()?.webContents);
   }
-  static cutActive(): void {
-    ClipboardService.cut(TabManager.activeView()?.webContents);
+  cutActive(): void {
+    ClipboardService.cut(this.activeView()?.webContents);
   }
-  static pasteActive(): void {
-    ClipboardService.paste(TabManager.activeView()?.webContents);
+  pasteActive(): void {
+    ClipboardService.paste(this.activeView()?.webContents);
   }
-  static selectAllActive(): void {
-    ClipboardService.selectAll(TabManager.activeView()?.webContents);
+  selectAllActive(): void {
+    ClipboardService.selectAll(this.activeView()?.webContents);
   }
 
   /** Copy the image at the given view-relative coordinates (px) to the clipboard. */
-  static copyImageAtActive(x: number, y: number): void {
-    ClipboardService.copyImageAt(TabManager.activeView()?.webContents, x, y);
+  copyImageAtActive(x: number, y: number): void {
+    ClipboardService.copyImageAt(this.activeView()?.webContents, x, y);
   }
 
   /** Open DevTools and inspect the element at the given view-relative coordinates (px). */
-  static inspectActiveAt(x: number, y: number): void {
-    const wc = TabManager.activeView()?.webContents;
+  inspectActiveAt(x: number, y: number): void {
+    const wc = this.activeView()?.webContents;
     if (wc === undefined) return;
     const px = Math.round(x);
     const py = Math.round(y);
@@ -627,71 +741,68 @@ export default class TabManager {
   }
 
   /** Navigate the active tab to the home / start page. */
-  static goHome(): void {
-    TabManager.navigateActive(homeUrl());
+  goHome(): void {
+    this.navigateActive(homeUrl());
   }
 
   /** The current content-area bounds (DIP, shell-window-relative). Used to offset CDP coordinates
    *  (which are view-relative) to shell-window-relative coordinates for the cursor overlay. */
-  static getContentBounds(): Rectangle {
-    return { ...TabManager.bounds };
+  getContentBounds(): Rectangle {
+    return { ...this.bounds };
   }
 
   /** The content area (below the chrome), in DIP, as measured by the renderer. */
-  static setContentBounds(bounds: Rectangle): void {
-    TabManager.bounds = bounds;
-    if (TabManager.contentVisible) {
-      TabManager.activeView()?.setBounds(bounds);
+  setContentBounds(bounds: Rectangle): void {
+    this.bounds = bounds;
+    if (this.contentVisible) {
+      this.activeView()?.setBounds(bounds);
     }
   }
 
   /** Hide the active web view so a chrome-rendered overlay (Agent Console) shows through. Internal
    *  tabs have no view, so this is a no-op for them. */
-  static setContentVisible(visible: boolean): void {
-    const win = TabManager.requireWin();
-    TabManager.contentVisible = visible;
-    const view = TabManager.activeView();
+  setContentVisible(visible: boolean): void {
+    this.contentVisible = visible;
+    const view = this.activeView();
     if (view === undefined) return;
     if (visible) {
-      win.contentView.addChildView(view);
-      view.setBounds(TabManager.bounds);
+      this.win.contentView.addChildView(view);
+      view.setBounds(this.bounds);
     } else {
-      win.contentView.removeChildView(view);
+      this.win.contentView.removeChildView(view);
     }
   }
 
-  static getState(): TabsState {
-    const wc = TabManager.activeView()?.webContents;
-    return TabManager.store.toState({
+  getState(): TabsState {
+    const wc = this.activeView()?.webContents;
+    return this.store.toState({
       canGoBack: wc?.navigationHistory.canGoBack() ?? false,
       canGoForward: wc?.navigationHistory.canGoForward() ?? false,
     });
   }
 
   /** The active tab's WebContentsView, or undefined for no-active / internal (view-less) tabs. */
-  private static activeView(): WebContentsView | undefined {
-    const id = TabManager.store.activeId;
-    return id !== null ? TabManager.views.get(id) : undefined;
+  private activeView(): WebContentsView | undefined {
+    const id = this.store.activeId;
+    return id !== null ? this.views.get(id) : undefined;
   }
 
   /** The active tab's webContents, for the agent perception layer (read DOM text). Null if none or
    *  destroyed. The agent reads through this; it never gets the chrome's webContents or contextBridge. */
-  static activeWebContents(): WebContents | null {
-    const wc = TabManager.activeView()?.webContents;
+  activeWebContents(): WebContents | null {
+    const wc = this.activeView()?.webContents;
     return wc !== undefined && !wc.isDestroyed() ? wc : null;
   }
 
   /** A specific tab's WebContents, or null for missing/internal/destroyed tabs. */
-  static webContentsForTab(id: string): WebContents | null {
-    const wc = TabManager.views.get(id)?.webContents;
+  webContentsForTab(id: string): WebContents | null {
+    const wc = this.views.get(id)?.webContents;
     return wc !== undefined && !wc.isDestroyed() ? wc : null;
   }
 
-  /** Snapshot the active web view as a PNG data URL (null for internal/no-view tabs or on failure).
-   *  The chrome shows this still while the live view is momentarily hidden (e.g. a sidebar resize),
-   *  so the page never blanks to the chrome background. */
-  static async captureActive(): Promise<string | null> {
-    const wc = TabManager.activeWebContents();
+  /** Snapshot the active web view as a PNG data URL (null for internal/no-view tabs or on failure). */
+  async captureActive(): Promise<string | null> {
+    const wc = this.activeWebContents();
     if (wc === null) return null;
     try {
       const image = await wc.capturePage();
@@ -701,22 +812,15 @@ export default class TabManager {
     }
   }
 
-  /** Apply a resolved User-Agent to every open web tab and reload it so the new identity takes effect
-   *  immediately (the session default already covers tabs opened afterwards). Internal tabs have no
-   *  web view and are skipped. */
-  static applyUserAgent(ua: string): void {
-    for (const view of TabManager.views.values()) {
+  /** Apply a resolved User-Agent to every open web tab in this window and reload it. */
+  applyUserAgent(ua: string): void {
+    for (const view of this.views.values()) {
       const wc = view.webContents;
       if (!wc.isDestroyed()) {
         wc.setUserAgent(ua);
         wc.reload();
       }
     }
-  }
-
-  private static requireWin(): BrowserWindow {
-    if (TabManager.win === null) throw new Error('TabManager not attached to a window');
-    return TabManager.win;
   }
 
   /** Every event `wireView` subscribes to — kept in sync so `unwireView` can drop exactly these. */
@@ -733,23 +837,24 @@ export default class TabManager {
     'did-navigate-in-page',
   ] as const;
 
-  /** Drop everything `wireView` attached BEFORE closing the contents: the handlers close over the tab
-   *  id + TabManager and would otherwise keep firing (and pin their closures) through teardown. Only
-   *  our own events are removed — Electron's internal listeners stay untouched. */
-  private static unwireView(view: WebContentsView): void {
+  /** Drop everything `wireView` attached BEFORE closing the contents (or before re-homing the view in
+   *  another window): the handlers close over the tab id + this instance and would otherwise keep firing
+   *  (and pin their closures) through teardown. Only our own events are removed — Electron's internal
+   *  listeners stay untouched. */
+  private unwireView(view: WebContentsView): void {
     const wc = view.webContents;
-    for (const event of TabManager.WIRED_EVENTS) {
+    for (const event of WindowTabs.WIRED_EVENTS) {
       wc.removeAllListeners(event);
     }
   }
 
-  private static wireView(id: string, view: WebContentsView): void {
+  private wireView(id: string, view: WebContentsView): void {
     const wc = view.webContents;
 
     // Track discrete user input so the popup blocker can tell a user-clicked new-tab link (which must
     // open) from an unsolicited auto-popup (which is blocked). See the window-open handler below.
     wc.on('input-event', (_e, input) => {
-      if (isActivatingInput(input.type)) TabManager.lastGestureAt.set(wc, Date.now());
+      if (isActivatingInput(input.type)) lastGestureAt.set(wc, Date.now());
     });
 
     // Browsed pages are untrusted. Every path that creates a new browsing context (window.open,
@@ -766,7 +871,7 @@ export default class TabManager {
       const target = popupTargetUrl(details.url);
       const sourceOrigin = originOf(wc.getURL());
       if (
-        !TabManager.hadRecentGesture(wc) &&
+        !hadRecentGesture(wc) &&
         ActionInterceptorService.shouldBlock('popup:open', { sourceOrigin, url: target })
       ) {
         return { action: 'deny' };
@@ -781,15 +886,15 @@ export default class TabManager {
           ? true
           : details.disposition === 'foreground-tab'
             ? false
-            : id !== TabManager.store.activeId;
+            : id !== this.store.activeId;
       // Spawned by the page → the opener is THIS tab, so the new tab inherits its group (ADR-0020).
-      TabManager.createTab(target, { background, openerId: id });
+      this.createTab(target, { background, openerId: id });
       return { action: 'deny' };
     });
     // A natively-allowed popup opens its own top-level window; harden it the same way as a browsed view
     // (block dangerous schemes, and route ITS nested popups through the same policy).
     wc.on('did-create-window', (win) => {
-      TabManager.wirePopupWindow(win.webContents);
+      this.wirePopupWindow(win.webContents);
     });
     // Block dangerous schemes on BOTH initial navigations and server-side redirects (will-navigate
     // alone misses redirect hops); ALSO consult the `navigation:navigate` interceptor (ADR-0022) —
@@ -811,9 +916,8 @@ export default class TabManager {
     // (same primitive as the main menu), anchored at the click point (offset by the view's own bounds).
     // `params` (selection/link/media/editable) picks the menu variant in the renderer.
     wc.on('context-menu', (_e, params) => {
-      const win = TabManager.win;
-      if (win !== null) {
-        openPageContextMenu(win, params, TabManager.bounds, {
+      if (!this.win.isDestroyed()) {
+        openPageContextMenu(this.win, params, this.bounds, {
           canGoBack: wc.navigationHistory.canGoBack(),
           canGoForward: wc.navigationHistory.canGoForward(),
         });
@@ -821,42 +925,42 @@ export default class TabManager {
     });
 
     const sync = (): void => {
-      TabManager.store.update(id, {
+      this.store.update(id, {
         url: wc.getURL(),
         title: wc.getTitle(),
         isLoading: wc.isLoadingMainFrame(),
       });
-      TabManager.emitState();
+      this.emitState();
     };
     wc.on('page-title-updated', (_e, title) => {
-      TabManager.store.update(id, { title });
+      this.store.update(id, { title });
       const db = getDb();
       const url = wc.getURL();
       // Page-controlled string — cap before persisting so a hostile title can't bloat the DB.
       if (db !== null && isWebUrl(url))
         HistoryStore.setTitle(db, url, title.slice(0, MAX_TITLE_LENGTH));
-      TabManager.emitState();
+      this.emitState();
     });
     // Electron sends every favicon a page declares; the last is typically the largest/most specific.
     wc.on('page-favicon-updated', (_e, favicons) => {
-      TabManager.store.update(id, { faviconUrl: favicons.at(-1) ?? null });
-      TabManager.emitState();
+      this.store.update(id, { faviconUrl: favicons.at(-1) ?? null });
+      this.emitState();
     });
     wc.on('did-start-loading', () => {
-      TabManager.store.update(id, { isLoading: true });
-      TabManager.emitState();
+      this.store.update(id, { isLoading: true });
+      this.emitState();
     });
     wc.on('did-stop-loading', () => {
       sync();
       const url = wc.getURL();
       if (isWebUrl(url)) {
-        for (const obs of TabManager.navigationObservers) obs(url, wc);
+        for (const obs of navigationObservers) obs(url, wc, this.win);
       }
     });
     // A committed top-level navigation means a new document — drop the old favicon so a stale icon
     // from the previous page can't linger (the new one arrives via page-favicon-updated).
     wc.on('did-navigate', () => {
-      TabManager.store.update(id, { faviconUrl: null });
+      this.store.update(id, { faviconUrl: null });
     });
     // Record the visit in browsing history (once per committed top-level navigation). Only http(s);
     // no-op when the DB connector is unavailable. The title is refined later via page-title-updated.
@@ -874,15 +978,15 @@ export default class TabManager {
   /** Harden a natively-opened popup window's webContents: block dangerous-scheme navigations and route
    *  its OWN popups through the same blocker + hybrid policy. A popup window has no tab context, so its
    *  nested popups (when allowed) stay native windows rather than becoming tabs. */
-  private static wirePopupWindow(wc: WebContents): void {
+  private wirePopupWindow(wc: WebContents): void {
     wc.on('input-event', (_e, input) => {
-      if (isActivatingInput(input.type)) TabManager.lastGestureAt.set(wc, Date.now());
+      if (isActivatingInput(input.type)) lastGestureAt.set(wc, Date.now());
     });
     wc.setWindowOpenHandler((details) => {
       const target = popupTargetUrl(details.url);
       const sourceOrigin = originOf(wc.getURL());
       if (
-        !TabManager.hadRecentGesture(wc) &&
+        !hadRecentGesture(wc) &&
         ActionInterceptorService.shouldBlock('popup:open', { sourceOrigin, url: target })
       ) {
         return { action: 'deny' };
@@ -893,94 +997,84 @@ export default class TabManager {
       return { action: 'deny' };
     });
     wc.on('did-create-window', (win) => {
-      TabManager.wirePopupWindow(win.webContents);
+      this.wirePopupWindow(win.webContents);
     });
     wc.on('will-navigate', blockNonWeb);
     wc.on('will-redirect', blockNonWeb);
   }
 
-  private static emitState(): void {
-    const win = TabManager.win;
-    if (win && !win.isDestroyed()) {
-      win.webContents.send(IpcChannels.tabsState, TabManager.getState());
-      TabManager.syncWindowTitle(win);
+  private emitState(): void {
+    if (!this.win.isDestroyed()) {
+      this.win.webContents.send(IpcChannels.tabsState, this.getState());
+      this.syncWindowTitle();
     }
-    TabManager.schedulePersist();
+    this.schedulePersist();
   }
 
   /** Reflect the active tab in the OS window title (taskbar / Alt-Tab): "<tab title> - Tepegöz",
    *  falling back to just "Tepegöz" when the active tab has no title yet. */
-  private static syncWindowTitle(win: BrowserWindow): void {
-    const title = TabManager.store.active()?.title.trim() ?? '';
-    win.setTitle(title.length > 0 ? `${title} - Tepegöz` : 'Tepegöz');
+  private syncWindowTitle(): void {
+    const title = this.store.active()?.title.trim() ?? '';
+    this.win.setTitle(title.length > 0 ? `${title} - Tepegöz` : 'Tepegöz');
   }
 
   // ── Session restore ────────────────────────────────────────────────────────────────────────────
 
   /** Reopen the most-recently-closed tab (Ctrl+Shift+T). No-op when the stack is empty. */
-  static reopenClosedTab(): void {
-    const url = TabManager.closedUrls.pop();
-    if (url !== undefined) TabManager.createTab(url);
+  reopenClosedTab(): void {
+    const url = closedUrls.pop();
+    if (url !== undefined) this.createTab(url);
   }
 
-  /** The ordered web tabs (URL + pin + group membership) + group metadata + active index, for the
-   *  persisted session snapshot. Internal (view-less) tabs and blank/unloaded tabs are skipped — only
-   *  real web pages are restored (ADR-0020). */
-  private static snapshot(): SessionSnapshot {
+  /** This window's restorable snapshot: ordered web tabs (URL + pin + group membership), group metadata,
+   *  active index, and window bounds. Internal (view-less) tabs and blank/unloaded tabs are skipped —
+   *  only real web pages are restored (ADR-0020). Contributes one entry to the multi-window session. */
+  snapshot(): WindowSnapshot {
     const tabs: PersistedTab[] = [];
     let activeIndex = -1;
-    for (const rec of TabManager.store.records()) {
+    for (const rec of this.store.records()) {
       // Prefer the live URL, but on window close the webContents may already be gone — fall back to the
       // last synced record URL so the closing snapshot still captures every tab.
-      const wc = TabManager.views.get(rec.id)?.webContents;
+      const wc = this.views.get(rec.id)?.webContents;
       const url = (wc !== undefined && !wc.isDestroyed() ? wc.getURL() : '') || rec.url;
       if (rec.kind !== 'web' || !isWebUrl(url)) continue;
-      if (rec.id === TabManager.store.activeId) activeIndex = tabs.length;
+      if (rec.id === this.store.activeId) activeIndex = tabs.length;
       tabs.push({ url, pinned: rec.pinned, groupId: rec.groupId });
     }
     // Only persist groups that still own at least one persisted (web) tab.
     const liveGroups = new Set(
       tabs.map((t) => t.groupId).filter((g): g is string => g !== null),
     );
-    const groups: PersistedGroup[] = TabManager.store
+    const groups: PersistedGroup[] = this.store
       .groupsInOrder()
       .filter((g) => liveGroups.has(g.id))
       .map((g) => ({ id: g.id, name: g.name, color: g.color, collapsed: g.collapsed, settings: g.settings }));
-    return { version: 2, tabs, groups, activeIndex };
+    const snap: WindowSnapshot = { tabs, groups, activeIndex };
+    if (!this.win.isDestroyed()) {
+      const b = this.win.getBounds();
+      snap.bounds = { x: b.x, y: b.y, width: b.width, height: b.height };
+    }
+    return snap;
   }
 
   /** Debounced session persist — coalesces the burst of state changes during a page load into one write. */
-  private static schedulePersist(): void {
-    if (TabManager.persistTimer !== null) clearTimeout(TabManager.persistTimer);
-    TabManager.persistTimer = setTimeout(() => {
-      TabManager.persistTimer = null;
+  private schedulePersist(): void {
+    if (this.persistTimer !== null) clearTimeout(this.persistTimer);
+    this.persistTimer = setTimeout(() => {
+      this.persistTimer = null;
       TabManager.persistNow();
     }, 400);
   }
 
-  /** Persist the current session snapshot immediately (called on quit, before `reset`). */
-  static persistNow(): void {
-    const db = getDb();
-    if (db === null) return;
-    try {
-      SessionStore.save(db, TabManager.snapshot());
-    } catch (err) {
-      Logger.warn('Failed to persist session', { err: String(err) });
-    }
-  }
-
-  /** Restore the last session's web tabs on launch. Returns true if any tab was restored (so the caller
-   *  can skip opening a default blank tab). */
-  static restoreSession(): boolean {
-    const db = getDb();
-    if (db === null) return false;
-    const snap = SessionStore.load(db);
-    if (snap === null || snap.tabs.length === 0) return false;
+  /** Restore one window's persisted tabs into THIS window. Returns true if any tab was restored (so the
+   *  caller can skip opening a default blank tab). */
+  restoreWindow(snap: WindowSnapshot): boolean {
+    if (snap.tabs.length === 0) return false;
 
     // 1. Recreate tabs in order, remembering the persisted-index → new-tab-id mapping.
     const createdIds = snap.tabs.map((t, i) =>
       // First tab takes focus; the rest open in the background so they don't each steal it.
-      TabManager.createTab(t.url, { background: i !== 0 }),
+      this.createTab(t.url, { background: i !== 0 }),
     );
 
     // 2. Re-create groups with their metadata, then restore membership + pins (order changes as the
@@ -992,7 +1086,7 @@ export default class TabManager {
         .filter((id): id is string => id !== null);
       if (memberIds.length === 0) continue;
       // `id: pg.id` reuses the group's stable (pre-restart) UUID so `settings` stays keyed correctly.
-      TabManager.store.createGroup({
+      this.store.createGroup({
         id: pg.id,
         name: pg.name,
         color: asGroupColor(pg.color),
@@ -1003,7 +1097,7 @@ export default class TabManager {
     }
     snap.tabs.forEach((t, i) => {
       const id = createdIds[i];
-      if (t.pinned && id !== null && id !== undefined) TabManager.store.setPinned(id, true);
+      if (t.pinned && id !== null && id !== undefined) this.store.setPinned(id, true);
     });
 
     // 3. Activate the persisted active tab by its new id (robust to the normalized reordering).
@@ -1011,8 +1105,300 @@ export default class TabManager {
       snap.activeIndex >= 0 && snap.activeIndex < createdIds.length
         ? createdIds[snap.activeIndex]
         : undefined;
-    if (activeId !== undefined && activeId !== null) TabManager.activate(activeId);
-    else TabManager.emitState();
+    if (activeId !== undefined && activeId !== null) this.activate(activeId);
+    else this.emitState();
     return true;
+  }
+}
+
+/**
+ * Static registry + facade over the per-window `WindowTabs` instances. Window-scoped IPC resolves the
+ * sender window via {@link forWindow}; agent / menu / host code that means "the current browser" resolves
+ * the {@link focused} window. Session-wide concerns (navigation observers, reopen stack) are shared.
+ */
+export default class TabManager {
+  private static readonly registry = new Map<BrowserWindow, WindowTabs>();
+  private static lastFocusedWin: BrowserWindow | null = null;
+  private static lastPersistedSessionJson: string | null = null;
+
+  // ── Registry ─────────────────────────────────────────────────────────────────────────────────
+
+  /** Create + register a `WindowTabs` for a freshly-created chrome window. Idempotent per window. */
+  static register(win: BrowserWindow): WindowTabs {
+    const existing = TabManager.registry.get(win);
+    if (existing !== undefined) return existing;
+    const wt = new WindowTabs(win);
+    TabManager.registry.set(win, wt);
+    TabManager.lastFocusedWin = win;
+    win.on('focus', () => {
+      TabManager.lastFocusedWin = win;
+    });
+    return wt;
+  }
+
+  /** Persist + tear down a window's tabs when it closes. */
+  static unregister(win: BrowserWindow): void {
+    const wt = TabManager.registry.get(win);
+    if (wt === undefined) return;
+    wt.dispose();
+    TabManager.registry.delete(win);
+    if (TabManager.lastFocusedWin === win) TabManager.lastFocusedWin = null;
+  }
+
+  /** The `WindowTabs` for a specific window (undefined if it isn't a registered chrome window). */
+  static forWindow(win: BrowserWindow | null): WindowTabs | undefined {
+    return win !== null ? TabManager.registry.get(win) : undefined;
+  }
+
+  /** The `WindowTabs` owning the chrome webContents that sent an IPC message. */
+  static forSender(wc: WebContents): WindowTabs | undefined {
+    return TabManager.forWindow(BrowserWindow.fromWebContents(wc));
+  }
+
+  /**
+   * Resolve the tab manager for a window that sent a tab IPC message. Popup surfaces (main menu, page
+   * context menu) are child windows, so walk the `parent` chain to reach the owning browser window;
+   * fall back to the focused window for anything unattached. This is the routing seam every tab IPC
+   * handler uses so actions land in the RIGHT window (multi-window), while menu popups still work.
+   */
+  static forSenderWindow(win: BrowserWindow | null): WindowTabs | undefined {
+    let w: BrowserWindow | null = win;
+    while (w !== null && !w.isDestroyed()) {
+      const wt = TabManager.registry.get(w);
+      if (wt !== undefined) return wt;
+      w = w.getParentWindow();
+    }
+    return TabManager.focused();
+  }
+
+  /** The focused (or last-focused, or any) window's tabs — the target for agent / menu / host code that
+   *  means "the current browser". Undefined only when no chrome window exists. */
+  static focused(): WindowTabs | undefined {
+    const last = TabManager.lastFocusedWin;
+    if (last !== null && !last.isDestroyed()) {
+      const wt = TabManager.registry.get(last);
+      if (wt !== undefined) return wt;
+    }
+    for (const wt of TabManager.registry.values()) {
+      if (!wt.window.isDestroyed()) return wt;
+    }
+    return undefined;
+  }
+
+  /** The focused chrome window itself (toast / cursor / permission target), or null when none. */
+  static focusedWindow(): BrowserWindow | null {
+    return TabManager.focused()?.window ?? null;
+  }
+
+  /** Every registered window's tabs (broadcast operations, session persist). */
+  static all(): WindowTabs[] {
+    return [...TabManager.registry.values()];
+  }
+
+  // ── Session-wide (shared) ──────────────────────────────────────────────────────────────────────
+
+  /** Register a callback invoked after each committed top-level page load, in ANY window. Returns an
+   *  unsubscribe fn. */
+  static onNavigation(fn: NavigationObserver): () => void {
+    navigationObservers.add(fn);
+    return () => { navigationObservers.delete(fn); };
+  }
+
+  /** Apply a resolved User-Agent to every open web tab across all windows and reload. */
+  static applyUserAgent(ua: string): void {
+    for (const wt of TabManager.all()) wt.applyUserAgent(ua);
+  }
+
+  /** Persist every window's session snapshot immediately (called on quit + window close, before
+   *  dispose). Each registered window contributes one entry; windows with no restorable web tabs are
+   *  dropped so an empty/internal-only window doesn't clutter the restore. */
+  static persistNow(): void {
+    const db = getDb();
+    if (db === null) return;
+    const windows = TabManager.all()
+      .map((wt) => wt.snapshot())
+      .filter((w) => w.tabs.length > 0);
+    const snapshot = { version: 3 as const, windows };
+    const serialized = JSON.stringify(snapshot);
+    if (serialized === TabManager.lastPersistedSessionJson) return;
+    try {
+      SessionStore.save(db, snapshot);
+      TabManager.lastPersistedSessionJson = serialized;
+    } catch (err) {
+      Logger.warn('Failed to persist session', { err: String(err) });
+      return;
+    }
+    try {
+      EventJournal.append(db, {
+        id: randomUUID(),
+        type: 'SessionSnapshotWritten',
+        ts: Date.now(),
+        actor: 'system',
+        correlationId: 'session-restore',
+        redacted: true,
+        payload: {
+          version: 3,
+          windowCount: windows.length,
+          tabCount: windows.reduce((sum, w) => sum + w.tabs.length, 0),
+          groupCount: windows.reduce((sum, w) => sum + w.groups.length, 0),
+          activeWindowCount: windows.filter((w) => w.activeIndex >= 0).length,
+        },
+      });
+    } catch (err) {
+      Logger.warn('Failed to append session snapshot journal event', { err: String(err) });
+    }
+  }
+
+  // ── Facade (delegates to the focused window) ───────────────────────────────────────────────────
+  // The many agent / macro / task / menu / host callers that predate multi-window keep calling
+  // `TabManager.x(...)`; each resolves the focused window. IPC handlers that know their sender window
+  // call `TabManager.forWindow(win).x(...)` directly for window-accurate routing.
+
+  static createTab(rawUrl?: string, opts?: { background?: boolean; openerId?: string | undefined }): string | null {
+    return TabManager.focused()?.createTab(rawUrl, opts) ?? null;
+  }
+  static activeTabId(): string | null {
+    return TabManager.focused()?.activeTabId() ?? null;
+  }
+  static activate(id: string): void {
+    TabManager.focused()?.activate(id);
+  }
+  static closeTab(id: string): void {
+    TabManager.focused()?.closeTab(id);
+  }
+  static reloadTab(id: string): void {
+    TabManager.focused()?.reloadTab(id);
+  }
+  static openInternalPage(url: string): void {
+    TabManager.focused()?.openInternalPage(url);
+  }
+  static createTabRight(refId: string): void {
+    TabManager.focused()?.createTabRight(refId);
+  }
+  static duplicateTab(id: string): void {
+    TabManager.focused()?.duplicateTab(id);
+  }
+  static closeOtherTabs(id: string): void {
+    TabManager.focused()?.closeOtherTabs(id);
+  }
+  static closeTabsToRight(id: string): void {
+    TabManager.focused()?.closeTabsToRight(id);
+  }
+  static moveTab(id: string, toIndex: number, intoGroupId?: string | null): void {
+    TabManager.focused()?.moveTab(id, toIndex, intoGroupId);
+  }
+  static moveGroup(groupId: string, toIndex: number): void {
+    TabManager.focused()?.moveGroup(groupId, toIndex);
+  }
+  static createGroup(memberIds?: string[]): string {
+    return TabManager.focused()?.createGroup(memberIds) ?? '';
+  }
+  static hasGroup(groupId: string): boolean {
+    return TabManager.focused()?.hasGroup(groupId) ?? false;
+  }
+  static assignToGroup(tabId: string, groupId: string): void {
+    TabManager.focused()?.assignToGroup(tabId, groupId);
+  }
+  static removeFromGroup(tabId: string): void {
+    TabManager.focused()?.removeFromGroup(tabId);
+  }
+  static renameGroup(groupId: string, name: string): void {
+    TabManager.focused()?.renameGroup(groupId, name);
+  }
+  static recolorGroup(groupId: string, color: TabGroupColor): void {
+    TabManager.focused()?.recolorGroup(groupId, color);
+  }
+  static setGroupCollapsed(groupId: string, collapsed: boolean): void {
+    TabManager.focused()?.setGroupCollapsed(groupId, collapsed);
+  }
+  static updateGroupSettings(groupId: string, patch: Record<string, TabGroupSettingValue>): void {
+    TabManager.focused()?.updateGroupSettings(groupId, patch);
+  }
+  static ungroup(groupId: string): void {
+    TabManager.focused()?.ungroup(groupId);
+  }
+  static newTabInGroup(groupId: string): void {
+    TabManager.focused()?.newTabInGroup(groupId);
+  }
+  static closeGroup(groupId: string): void {
+    TabManager.focused()?.closeGroup(groupId);
+  }
+  static groupMenuInfo(groupId: string): { color: TabGroupColor } | undefined {
+    return TabManager.focused()?.groupMenuInfo(groupId);
+  }
+  static setPinned(id: string, pinned: boolean): void {
+    TabManager.focused()?.setPinned(id, pinned);
+  }
+  static navigateActive(rawUrl: string): void {
+    TabManager.focused()?.navigateActive(rawUrl);
+  }
+  static navigateTab(id: string, rawUrl: string): boolean {
+    return TabManager.focused()?.navigateTab(id, rawUrl) ?? false;
+  }
+  static goBack(): void {
+    TabManager.focused()?.goBack();
+  }
+  static goForward(): void {
+    TabManager.focused()?.goForward();
+  }
+  static reloadActive(): void {
+    TabManager.focused()?.reloadActive();
+  }
+  static printActive(): void {
+    TabManager.focused()?.printActive();
+  }
+  static viewSourceActive(): void {
+    TabManager.focused()?.viewSourceActive();
+  }
+  static saveActive(): void {
+    TabManager.focused()?.saveActive();
+  }
+  static downloadUrlActive(url: string): void {
+    TabManager.focused()?.downloadUrlActive(url);
+  }
+  static copyActive(): void {
+    TabManager.focused()?.copyActive();
+  }
+  static cutActive(): void {
+    TabManager.focused()?.cutActive();
+  }
+  static pasteActive(): void {
+    TabManager.focused()?.pasteActive();
+  }
+  static selectAllActive(): void {
+    TabManager.focused()?.selectAllActive();
+  }
+  static copyImageAtActive(x: number, y: number): void {
+    TabManager.focused()?.copyImageAtActive(x, y);
+  }
+  static inspectActiveAt(x: number, y: number): void {
+    TabManager.focused()?.inspectActiveAt(x, y);
+  }
+  static goHome(): void {
+    TabManager.focused()?.goHome();
+  }
+  static getContentBounds(): Rectangle {
+    return TabManager.focused()?.getContentBounds() ?? { x: 0, y: 0, width: 0, height: 0 };
+  }
+  static setContentBounds(bounds: Rectangle): void {
+    TabManager.focused()?.setContentBounds(bounds);
+  }
+  static setContentVisible(visible: boolean): void {
+    TabManager.focused()?.setContentVisible(visible);
+  }
+  static getState(): TabsState {
+    return TabManager.focused()?.getState() ?? EMPTY_TABS_STATE;
+  }
+  static activeWebContents(): WebContents | null {
+    return TabManager.focused()?.activeWebContents() ?? null;
+  }
+  static webContentsForTab(id: string): WebContents | null {
+    return TabManager.focused()?.webContentsForTab(id) ?? null;
+  }
+  static captureActive(): Promise<string | null> {
+    return TabManager.focused()?.captureActive() ?? Promise.resolve(null);
+  }
+  static reopenClosedTab(): void {
+    TabManager.focused()?.reopenClosedTab();
   }
 }

@@ -6,6 +6,10 @@ export interface OmniboxSuggestLabels {
   search: string;
   switchToTab: string;
   bookmark: string;
+  quickSettings: string;
+  quickAppearance: string;
+  quickLanguage: string;
+  quickPrivacy: string;
 }
 
 export interface OmniboxHistoryResult {

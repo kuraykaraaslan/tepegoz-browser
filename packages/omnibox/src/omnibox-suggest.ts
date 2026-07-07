@@ -2,19 +2,29 @@
  * Pure, deterministic omnibox suggestion builder. The address bar is a DETERMINISTIC surface — it must
  * NEVER start an AI thread (Comet lesson). It composes unified suggestions from injected data (open
  * tabs + browsing history) plus the primary navigate/search action for the typed text, and supports
- * `tab:` / `history:` scope prefixes.
+ * `tab:` / `history:` / `bookmark:` / `settings:` scope prefixes.
  *
  * No Electron, no IPC, no React — the host fetches history/tabs and feeds them in, so this is fully
  * unit-testable and reusable. Ranking is intentionally simple and stable (no time-of-day, no `Math.random`).
  */
 
-export type OmniboxSuggestionKind = 'navigate' | 'search' | 'history' | 'bookmark' | 'tab' | 'calc';
+export type OmniboxSuggestionKind =
+  | 'navigate'
+  | 'search'
+  | 'history'
+  | 'bookmark'
+  | 'tab'
+  | 'calc'
+  | 'quick-setting';
+
+export type OmniboxQuickSettingTarget = 'appearance' | 'language' | 'privacy';
 
 /** What the omnibox does when a suggestion is chosen — dispatched via the component's callbacks. */
 export type OmniboxAction =
   | { type: 'navigate'; input: string }
   | { type: 'activateTab'; tabId: string }
-  | { type: 'calc'; formatted: string };
+  | { type: 'calc'; formatted: string }
+  | { type: 'openQuickSetting'; target: OmniboxQuickSettingTarget };
 
 export interface OmniboxSuggestion {
   /** Stable key for React lists + keyboard selection. */
@@ -61,9 +71,14 @@ export interface OmniboxSuggestLabels {
   switchToTab: string;
   /** Subtitle for a bookmark suggestion, e.g. "Bookmark". */
   bookmark: string;
+  /** Subtitle for quick settings suggestions, e.g. "Settings". */
+  quickSettings: string;
+  quickAppearance: string;
+  quickLanguage: string;
+  quickPrivacy: string;
 }
 
-export type OmniboxScope = 'all' | 'tab' | 'history' | 'bookmark';
+export type OmniboxScope = 'all' | 'tab' | 'history' | 'bookmark' | 'settings';
 
 /** A parsed omnibox query: the scope prefix (if any) and the remaining search term. */
 export interface OmniboxQuery {
@@ -75,6 +90,39 @@ const SCOPE_PREFIXES: ReadonlyArray<readonly [string, OmniboxScope]> = [
   ['tab:', 'tab'],
   ['history:', 'history'],
   ['bookmark:', 'bookmark'],
+  ['settings:', 'settings'],
+];
+
+const QUICK_SETTINGS: ReadonlyArray<{
+  target: OmniboxQuickSettingTarget;
+  label: keyof Pick<OmniboxSuggestLabels, 'quickAppearance' | 'quickLanguage' | 'quickPrivacy'>;
+  terms: readonly string[];
+}> = [
+  {
+    target: 'appearance',
+    label: 'quickAppearance',
+    terms: [
+      'appearance',
+      'theme',
+      'color',
+      'glass',
+      'görünüm',
+      'gorunum',
+      'tema',
+      'renk',
+      'cam',
+    ],
+  },
+  {
+    target: 'language',
+    label: 'quickLanguage',
+    terms: ['language', 'lang', 'locale', 'region', 'dil', 'bölge', 'bolge'],
+  },
+  {
+    target: 'privacy',
+    label: 'quickPrivacy',
+    terms: ['privacy', 'telemetry', 'history', 'gizlilik', 'mahremiyet', 'telemetri', 'geçmiş', 'gecmis'],
+  },
 ];
 
 /** Split a leading `tab:` / `history:` scope prefix off the raw query. Prefix match is case-insensitive. */
@@ -109,7 +157,15 @@ export function looksNavigable(input: string): boolean {
 
 function matches(needle: string, ...haystacks: string[]): boolean {
   if (needle.length === 0) return true;
-  return haystacks.some((h) => h.toLowerCase().includes(needle));
+  return haystacks.some((h) => normalizeSearch(h).includes(needle));
+}
+
+function normalizeSearch(input: string): string {
+  return input
+    .toLocaleLowerCase('en-US')
+    .replaceAll('ı', 'i')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
 }
 
 /** The typed text itself: navigate a URL, else search the web. Only shown in the unscoped view. */
@@ -146,6 +202,22 @@ function tabSuggestions(
       subtitle: labels.switchToTab,
       action: { type: 'activateTab', tabId: tab.id },
     }));
+}
+
+/** Deterministic shortcuts into high-frequency settings panels. */
+function quickSettingSuggestions(
+  needle: string,
+  labels: OmniboxSuggestLabels,
+): OmniboxSuggestion[] {
+  return QUICK_SETTINGS.filter((entry) => matches(needle, labels[entry.label], ...entry.terms)).map(
+    (entry) => ({
+      key: `quick-setting:${entry.target}`,
+      kind: 'quick-setting',
+      title: labels[entry.label],
+      subtitle: labels.quickSettings,
+      action: { type: 'openQuickSetting', target: entry.target },
+    }),
+  );
 }
 
 /** Bookmarks matching the needle → navigate suggestions (curated, so ranked above history). */
@@ -203,8 +275,9 @@ function dedupeByNavTarget(suggestions: readonly OmniboxSuggestion[]): OmniboxSu
 /**
  * Build the unified, ordered suggestion list for a typed omnibox value.
  *
- * Order (unscoped): primary navigate/search action → open tabs → bookmarks → history. Scoped
- * (`tab:` / `history:` / `bookmark:`) narrows to a single source and drops the primary action.
+ * Order (unscoped): primary navigate/search action → quick settings → open tabs → bookmarks → history.
+ * Scoped (`settings:` / `tab:` / `history:` / `bookmark:`) narrows to a single source and drops the
+ * primary action.
  * Duplicate navigate targets are collapsed and the list is capped at {@link MAX_OMNIBOX_SUGGESTIONS}.
  */
 export function buildOmniboxSuggestions(
@@ -213,7 +286,7 @@ export function buildOmniboxSuggestions(
   labels: OmniboxSuggestLabels,
 ): OmniboxSuggestion[] {
   const { scope, term } = parseOmniboxQuery(query);
-  const needle = term.toLowerCase();
+  const needle = normalizeSearch(term);
 
   // Nothing typed and no scope prefix → no suggestions. A bare `tab:` / `history:` / `bookmark:`
   // (empty term) still lists everything in that source, which is the point of the prefix.
@@ -221,6 +294,7 @@ export function buildOmniboxSuggestions(
 
   const out: OmniboxSuggestion[] = [];
   if (scope === 'all') out.push(primarySuggestion(term, labels));
+  if (scope === 'all' || scope === 'settings') out.push(...quickSettingSuggestions(needle, labels));
   if (scope === 'all' || scope === 'tab') out.push(...tabSuggestions(sources.tabs, needle, labels));
   if (scope === 'all' || scope === 'bookmark') {
     out.push(...bookmarkSuggestions(sources.bookmarks ?? [], needle, labels));

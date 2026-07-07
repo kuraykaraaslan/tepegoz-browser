@@ -1,4 +1,3 @@
-import { BrowserWindow } from 'electron';
 import PreferenceStore from '@tepegoz/preferences';
 import {
   IpcChannels,
@@ -6,11 +5,11 @@ import {
   type SitePermissionState,
   type WebPermissionCapability,
 } from '@tepegoz/desktop-ipc';
+import TabManager from '../tabs';
 
 const PROMPT_TIMEOUT_MS = 60_000;
 
 let seq = 0;
-let mainWindow: BrowserWindow | null = null;
 const pending = new Map<
   string,
   {
@@ -46,20 +45,18 @@ function persist(
 }
 
 export default class WebPermissionBroker {
-  static attach(win: BrowserWindow): void {
-    mainWindow = win;
-  }
-
   static request(capability: WebPermissionCapability, origin: string): Promise<boolean> {
     if (!capabilityEnabled(capability)) return Promise.resolve(false);
     const decided = storedState(origin, capability);
     if (decided === 'allowed') return Promise.resolve(true);
     if (decided === 'denied') return Promise.resolve(false);
-    if (mainWindow === null || mainWindow.isDestroyed()) return Promise.resolve(false);
+    // The requesting page is (virtually always) the active tab of the focused window — prompt there.
+    const target = TabManager.focusedWindow();
+    if (target === null || target.isDestroyed()) return Promise.resolve(false);
 
     seq += 1;
     const requestId = `perm-${String(seq)}`;
-    mainWindow.webContents.send(IpcChannels.notificationPermissionRequest, {
+    target.webContents.send(IpcChannels.notificationPermissionRequest, {
       requestId,
       origin,
       capability,

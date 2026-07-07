@@ -4,8 +4,11 @@
  * dynamic code execution on user input). Returns null for anything that is not a self-contained
  * arithmetic expression so the omnibox can fall back to search/navigation.
  *
- * Supports: + - * / % , parentheses, unary minus, decimals. (Unit/currency conversion is a follow-up.)
+ * Supports: + - * / % , parentheses, unary minus, decimals, and fixed-ratio unit conversion.
+ * Currency conversion is intentionally excluded because rates are live data, not deterministic math.
  */
+import { evaluateOmniboxUnitConversion } from './omnibox-units';
+
 export interface CalcResult {
   /** Canonical expression echoed back (trimmed input). */
   expression: string;
@@ -143,6 +146,14 @@ class Parser {
 export function evaluateOmniboxCalc(input: string): CalcResult | null {
   const trimmed = input.trim();
   if (trimmed.length === 0) return null;
+  const conversion = evaluateOmniboxUnitConversion(trimmed);
+  if (conversion !== null) {
+    return {
+      expression: conversion.expression,
+      value: conversion.value,
+      formatted: conversion.formatted,
+    };
+  }
   const tokens = tokenize(trimmed);
   if (tokens === null || tokens.length === 0) return null;
   // Require at least one binary operator — a lone "42" is not a calculation.
