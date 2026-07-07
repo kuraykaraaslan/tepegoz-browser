@@ -98,6 +98,14 @@ export function App() {
 
   const activeTab = tabs.tabs.find((tb) => tb.id === tabs.activeId);
   const currentUrl = activeTab?.url ?? '';
+  const [omniboxDropdownHeight, setOmniboxDropdownHeight] = useState(0);
+  const [omniboxSnapshot, setOmniboxSnapshot] = useState<string | null>(null);
+  const [omniboxViewHidden, setOmniboxViewHidden] = useState(false);
+  const omniboxDropdownOpen = omniboxDropdownHeight > 0;
+  const onOmniboxDropdownHeightChange = useCallback((height: number): void => {
+    const next = Math.max(0, Math.ceil(height));
+    setOmniboxDropdownHeight((current) => (current === next ? current : next));
+  }, []);
 
   const bookmarks = useBookmarksBar(tabsRef, currentUrl);
 
@@ -133,7 +141,7 @@ export function App() {
     locale,
     sidebarT.resize,
     surfaceFallback,
-    bookmarks.openAllUrls !== null,
+    bookmarks.openAllUrls !== null || omniboxViewHidden,
   );
 
   const omniboxHistory = useOmniboxAndHistory(
@@ -254,6 +262,30 @@ export function App() {
       window.removeEventListener('resize', report);
     };
   }, []);
+
+  // Native WebContentsViews sit above the renderer DOM, so the omnibox list cannot simply z-index over
+  // a live page. While suggestions are open, paint a still of the page and detach the live view.
+  useEffect(() => {
+    let cancelled = false;
+    if (!omniboxDropdownOpen) {
+      setOmniboxViewHidden(false);
+      setOmniboxSnapshot(null);
+      return undefined;
+    }
+    window.tepegoz
+      .captureActiveTab()
+      .then((snap) => {
+        if (cancelled) return;
+        setOmniboxSnapshot(snap);
+        setOmniboxViewHidden(true);
+      })
+      .catch(() => {
+        if (!cancelled) setOmniboxViewHidden(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [omniboxDropdownOpen]);
 
   // Keep prefs fresh when ANOTHER window changes them (the Bookmarks menu toggling the bookmarks bar,
   // etc.) — main broadcasts on every prefs write. Refetch the full prefs so the bar re-renders live.
@@ -405,6 +437,7 @@ export function App() {
       window.tepegoz.onTasksState(callback),
     [],
   );
+  const contentSnapshot = extSurfaces.resizeSnapshot ?? (omniboxViewHidden ? omniboxSnapshot : null);
 
   return (
     <I18nProvider locale={locale}>
@@ -450,6 +483,7 @@ export function App() {
           onNavigate={(input) => window.tepegoz.navigateTab(input)}
           onSuggest={omniboxHistory.onOmniboxSuggest}
           onActivateTab={omniboxHistory.onActivateTabFromOmnibox}
+          onOmniboxDropdownHeightChange={onOmniboxDropdownHeightChange}
           isBookmarked={bookmarks.activeBookmarked}
           canBookmark={bookmarks.canBookmark}
           onToggleBookmark={() => void bookmarks.onToggleBookmark()}
@@ -494,10 +528,10 @@ export function App() {
             {/* The active tab's web page is a separate WebContentsView laid over this area by main. The
             internal app tabs (Settings/Extensions/History), extension `page` tabs, and open overlay
             surfaces have no web view, so the chrome renders them here instead. */}
-            {extSurfaces.resizeSnapshot !== null && (
-              // A still of the page shown while the live web view is hidden during a sidebar resize drag.
+            {contentSnapshot !== null && (
+              // A still of the page shown while the live web view is hidden for chrome overlays.
               <img
-                src={extSurfaces.resizeSnapshot}
+                src={contentSnapshot}
                 alt=""
                 aria-hidden="true"
                 draggable={false}

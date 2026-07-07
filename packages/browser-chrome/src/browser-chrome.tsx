@@ -77,6 +77,8 @@ export interface BrowserChromeProps {
   onSuggest?: ((query: string) => Promise<OmniboxSuggestion[]>) | undefined;
   /** Switch to an already-open tab (for `activateTab` omnibox suggestions). */
   onActivateTab?: ((tabId: string) => void) | undefined;
+  /** Reports the omnibox dropdown height to hosts that need to manage native web-view layering. */
+  onOmniboxDropdownHeightChange?: ((height: number) => void) | undefined;
   // Bookmark star (right of the omnibox).
   /** Whether the active page is bookmarked (filled vs. outline star). */
   isBookmarked?: boolean | undefined;
@@ -130,6 +132,7 @@ export function BrowserChrome({
   onNavigate,
   onSuggest,
   onActivateTab,
+  onOmniboxDropdownHeightChange,
   isBookmarked,
   canBookmark,
   onToggleBookmark,
@@ -209,6 +212,7 @@ export function BrowserChrome({
         onNavigate={onNavigate}
         onSuggest={onSuggest}
         onActivateTab={onActivateTab}
+        onOmniboxDropdownHeightChange={onOmniboxDropdownHeightChange}
         isBookmarked={isBookmarked}
         canBookmark={canBookmark}
         onToggleBookmark={onToggleBookmark}

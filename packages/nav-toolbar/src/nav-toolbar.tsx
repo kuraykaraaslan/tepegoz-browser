@@ -48,6 +48,8 @@ export interface NavToolbarProps {
   onSuggest?: ((query: string) => Promise<OmniboxSuggestion[]>) | undefined;
   /** Switch to an already-open tab (for `activateTab` omnibox suggestions). */
   onActivateTab?: ((tabId: string) => void) | undefined;
+  /** Reports the omnibox dropdown height to hosts that need to manage native web-view layering. */
+  onOmniboxDropdownHeightChange?: ((height: number) => void) | undefined;
   // Bookmark star (Chrome-style, right of the omnibox). Omit onToggleBookmark to hide it entirely.
   /** Whether the active page is bookmarked (filled vs. outline star). */
   isBookmarked?: boolean | undefined;
@@ -79,13 +81,14 @@ export function NavToolbar({
   onNavigate,
   onSuggest,
   onActivateTab,
+  onOmniboxDropdownHeightChange,
   isBookmarked = false,
   canBookmark = false,
   onToggleBookmark,
   actions,
 }: NavToolbarProps) {
   return (
-    <div className="flex h-11 shrink-0 items-center gap-1 border-b border-border bg-surface-raised px-2">
+    <div className="relative z-20 flex h-11 shrink-0 items-center gap-1 border-b border-border bg-surface-raised px-2">
       <button
         type="button"
         aria-label={labels.back}
@@ -118,6 +121,7 @@ export function NavToolbar({
         onNavigate={onNavigate}
         onSuggest={onSuggest}
         onActivateTab={onActivateTab}
+        onDropdownHeightChange={onOmniboxDropdownHeightChange}
       />
 
       {onToggleBookmark !== undefined && (

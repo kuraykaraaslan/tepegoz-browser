@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import type { OmniboxSuggestion } from '@tepegoz/omnibox';
 import { NavToolbar, type NavToolbarProps } from './nav-toolbar';
 
 const LABELS = {
@@ -73,5 +74,39 @@ describe('NavToolbar', () => {
   it('renders the host-supplied menu slot', () => {
     renderToolbar();
     expect(screen.getByTestId('menu-slot')).toBeDefined();
+  });
+
+  it('reports the omnibox suggestion dropdown height for native view layout', async () => {
+    vi.useFakeTimers();
+    try {
+      const suggestions: OmniboxSuggestion[] = [
+        {
+          key: 'search:duck',
+          kind: 'search',
+          title: 'duck',
+          subtitle: 'Search the web',
+          action: { type: 'navigate', input: 'duck' },
+        },
+      ];
+      const onOmniboxDropdownHeightChange = vi.fn();
+      renderToolbar({
+        onSuggest: vi.fn(async () => suggestions),
+        onOmniboxDropdownHeightChange,
+      });
+
+      const input = screen.getByRole('combobox');
+      fireEvent.focus(input);
+      fireEvent.change(input, { target: { value: 'duck' } });
+      await act(async () => {
+        vi.advanceTimersByTime(100);
+        await Promise.resolve();
+      });
+
+      expect(screen.getByRole('listbox')).toBeDefined();
+      const heights = onOmniboxDropdownHeightChange.mock.calls.map(([height]) => height);
+      expect(Math.max(...heights)).toBeGreaterThan(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

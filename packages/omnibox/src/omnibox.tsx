@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faClockRotateLeft,
@@ -30,12 +30,25 @@ export interface OmniboxProps {
   onSuggest?: ((query: string) => Promise<OmniboxSuggestion[]>) | undefined;
   /** Switch to an already-open tab (dispatched for `activateTab` suggestions). */
   onActivateTab?: ((tabId: string) => void) | undefined;
+  /** Reports the rendered dropdown height so native hosts can manage WebContentsView layering. */
+  onDropdownHeightChange?: ((height: number) => void) | undefined;
   /** Extra classes for the wrapping form (e.g. `flex-1` for layout). */
   className?: string;
 }
 
 /** Debounce (ms) before asking the host for suggestions — keeps typing snappy, avoids IPC per keystroke. */
 const SUGGEST_DEBOUNCE_MS = 90;
+const DROPDOWN_GAP_PX = 4; // Tailwind `mt-1`.
+const FALLBACK_SUGGESTION_ROW_PX = 32;
+const FALLBACK_LIST_CHROME_PX = 10; // py-1 + borders.
+
+function dropdownHeight(list: HTMLUListElement | null, count: number): number {
+  const measured = list?.getBoundingClientRect().height ?? 0;
+  if (measured > 0) return Math.ceil(measured + DROPDOWN_GAP_PX);
+  return count > 0
+    ? count * FALLBACK_SUGGESTION_ROW_PX + FALLBACK_LIST_CHROME_PX + DROPDOWN_GAP_PX
+    : 0;
+}
 
 /**
  * `@tepegoz/omnibox` — the address bar (url-bar). Presentational + self-contained: it owns the typed
@@ -51,6 +64,7 @@ export function Omnibox({
   onCalcResult,
   onSuggest,
   onActivateTab,
+  onDropdownHeightChange,
   className,
 }: OmniboxProps) {
   const [value, setValue] = useState(currentUrl);
@@ -60,6 +74,7 @@ export function Omnibox({
   const [selected, setSelected] = useState(-1);
   // Monotonic request id so a slow suggestion fetch can't overwrite a newer query's results.
   const reqIdRef = useRef(0);
+  const listRef = useRef<HTMLUListElement | null>(null);
   const listboxId = useId();
 
   // Keep the omnibox in sync with the active tab's URL, except while the user is editing it.
@@ -95,6 +110,30 @@ export function Omnibox({
     }, SUGGEST_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [value, focused, calc, onSuggest]);
+
+  useLayoutEffect(() => {
+    if (onDropdownHeightChange === undefined) return undefined;
+    if (!open) {
+      onDropdownHeightChange(0);
+      return undefined;
+    }
+    const report = (): void => {
+      onDropdownHeightChange(dropdownHeight(listRef.current, suggestions.length));
+    };
+    report();
+    const list = listRef.current;
+    if (list === null || typeof ResizeObserver === 'undefined') {
+      return () => onDropdownHeightChange(0);
+    }
+    const observer = new ResizeObserver(report);
+    observer.observe(list);
+    window.addEventListener('resize', report);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', report);
+      onDropdownHeightChange(0);
+    };
+  }, [open, suggestions.length, onDropdownHeightChange]);
 
   function closeSuggestions(): void {
     reqIdRef.current++; // invalidate any in-flight fetch
@@ -193,6 +232,7 @@ export function Omnibox({
       )}
       {open && (
         <ul
+          ref={listRef}
           id={listboxId}
           role="listbox"
           className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-xl border border-border bg-surface-raised py-1 shadow-lg"
