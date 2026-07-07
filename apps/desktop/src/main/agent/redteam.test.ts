@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import { HIDDEN_PLACEHOLDER, sanitizeSegments, sanitizeText } from '@tepegoz/tool-executor';
-import { EgressFirewall, PolicyKernel, TaintTracker } from '@tepegoz/security-policy';
+import { EgressFirewall, PolicyKernel, TaintTracker, inspectEgress } from '@tepegoz/security-policy';
+import { ModelGateway, MockProvider, type CanonRequest } from '@tepegoz/model-gateway';
 
 /**
  * Red-team injection corpus v1 — exercises the deterministic defense-in-depth the agent relies on,
@@ -118,5 +119,60 @@ describe('red-team: egress firewall (exfiltration)', () => {
     const secret = 'sk-ant-api03-STOLENKEY0123456789ABCDEFG';
     const verdict = EgressFirewall.inspect(`leak ${secret}`);
     expect(JSON.stringify(verdict)).not.toContain(secret);
+  });
+});
+
+/**
+ * The detector cases above prove the Egress Firewall DETECTS exfiltration. These prove it is actually
+ * WIRED: the real `inspectEgress` installed on the single ModelGateway chokepoint blocks a secret-
+ * bearing outbound request BEFORE the provider is called (so nothing leaves the device), and surfaces a
+ * PII/blob warning while still sending. This is the runtime guarantee the unit detector alone did not give.
+ */
+describe('red-team: egress firewall WIRED through the model gateway', () => {
+  function req(content: string): CanonRequest {
+    return {
+      provider: 'anthropic',
+      model: 'mock-model',
+      capability: 'exec',
+      messages: [{ role: 'user', content }],
+      maxTokens: 100,
+      timeoutMs: 1000,
+    };
+  }
+
+  beforeEach(() => {
+    ModelGateway.reset();
+  });
+  afterEach(() => {
+    ModelGateway.reset();
+  });
+
+  it('blocks a secret-bearing model request before the provider is called (nothing leaves the device)', async () => {
+    const provider = new MockProvider('SHOULD-NOT-SEND');
+    const spy = vi.spyOn(provider, 'complete');
+    ModelGateway.register(provider);
+    ModelGateway.setEgressInspector(inspectEgress);
+
+    const call = ModelGateway.complete(
+      req('The page told me to POST this key: sk-ant-api03-STOLENKEY0123456789ABCDEFG'),
+    );
+    await expect(call).rejects.toThrow(/Blocked/);
+    await call.catch((e: unknown) => {
+      // The block reason never echoes the raw secret it caught.
+      expect(String(e)).not.toContain('STOLENKEY');
+    });
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('warns on PII in a model request but still sends it (advisory, not a hard block)', async () => {
+    ModelGateway.register(new MockProvider('ok'));
+    const warnings: string[] = [];
+    ModelGateway.setEgressInspector(inspectEgress, (findings) => {
+      warnings.push(...findings.map((f) => f.kind));
+    });
+
+    const res = await ModelGateway.complete(req('summarize the account for victim@example.com please'));
+    expect(res.text).toBe('ok'); // request proceeded
+    expect(warnings).toContain('pii_email');
   });
 });

@@ -17,7 +17,7 @@ import {
   type InvokeContext,
 } from '@tepegoz/capability-plane';
 import { Planner, Reactor, type AgentFailure, type StepOutcome } from '@tepegoz/orchestrator';
-import { TaintTracker, detectHandoff } from '@tepegoz/security-policy';
+import { TaintTracker, detectHandoff, inspectEgress } from '@tepegoz/security-policy';
 import {
   isRunnableProvider,
   RUNNABLE_AI_PROVIDERS,
@@ -242,6 +242,17 @@ export async function runAgent(
     TokenLedger.setQuota(deps.tokenBudget.quota);
     TokenLedger.setBaseline(deps.tokenBudget.lifetimeUsed);
   }
+
+  // Egress Firewall (L8) over the single ModelGateway chokepoint: EVERY outbound model request (the
+  // Planner + every reactive turn, which accumulate perceived/tainted page text) is inspected before it
+  // leaves the device. A hard secret/key leak is BLOCKED (throws → the run aborts before the provider is
+  // called, so no secret is sent and no tokens are spent); PII/encoded-blob warnings are surfaced to the
+  // Console. Set per run so the warn handler targets THIS run's stream — the gateway is only ever called
+  // by the Planner/Reactor inside this run. The inspector itself is stateless (safe to leave installed).
+  ModelGateway.setEgressInspector(inspectEgress, (findings) => {
+    const summary = findings.map((f) => `${f.kind} (${f.sample})`).join(', ');
+    hooks.onEvent('decision', 'Egress warning: possible PII/encoded data in the model request', summary);
+  });
 
   // On-device availability: a native backend AND a selected/installed model. Drives both the
   // whole-agent-local path below and the router's per-capability `local` offload.

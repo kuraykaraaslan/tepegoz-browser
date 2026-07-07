@@ -49,14 +49,14 @@ export function buildBooleanPreferencePatch(
   key: EditablePreferenceKey,
   value: boolean,
 ): Partial<Preferences> {
-  return { [key]: value } as Partial<Preferences>;
+  return { [key]: value };
 }
 
 export function buildStringPreferencePatch(
   key: EditablePreferenceKey,
   value: string,
 ): Partial<Preferences> {
-  return { [key]: value } as Partial<Preferences>;
+  return { [key]: value };
 }
 
 export function buildJsonPreferencePatch(
@@ -65,7 +65,8 @@ export function buildJsonPreferencePatch(
   invalidJsonMessage: string,
 ): PreferencePatchResult {
   try {
-    return { ok: true, patch: { [key]: JSON.parse(draft) } as Partial<Preferences> };
+    const parsed: unknown = JSON.parse(draft);
+    return { ok: true, patch: { [key]: parsed } };
   } catch {
     return { ok: false, error: invalidJsonMessage };
   }
