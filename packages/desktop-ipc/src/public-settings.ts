@@ -53,6 +53,7 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   region: 'private',
   dateFormat: 'private',
   searchEngineId: 'private',
+  onboardingCompleted: 'private',
   customSearchEngines: 'private',
   homepageUrl: 'private',
   showBookmarksBar: 'private',

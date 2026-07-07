@@ -1,4 +1,5 @@
 import { readJsonFile, writeJsonFile } from '@tepegoz/json-store';
+import { existsSync } from 'node:fs';
 import {
   DEFAULT_PREFERENCES,
   PreferencesPatchSchema,
@@ -18,10 +19,16 @@ export default class PreferenceStore {
 
   static init(deps: { filePath: string }): void {
     PreferenceStore.filePath = deps.filePath;
-    const parsed = PreferencesPatchSchema.safeParse(readJsonFile(deps.filePath));
+    const fileExists = existsSync(deps.filePath);
+    const raw = readJsonFile(deps.filePath);
+    const parsed = PreferencesPatchSchema.safeParse(raw);
+    const patch: PreferencesPatch = parsed.success ? parsed.data : {};
+    // Back-compat: old profiles have a preferences file but no onboarding sentinel. Treat them as
+    // already onboarded so an upgrade does not interrupt the user's existing browser session.
+    if (fileExists && !hasOwn(raw, 'onboardingCompleted')) patch.onboardingCompleted = true;
     PreferenceStore.prefs = PreferencesSchema.parse({
       ...DEFAULT_PREFERENCES,
-      ...(parsed.success ? parsed.data : {}),
+      ...patch,
     });
   }
 
@@ -41,4 +48,10 @@ export default class PreferenceStore {
     writeJsonFile(PreferenceStore.filePath, PreferenceStore.prefs);
     return PreferenceStore.getAll();
   }
+}
+
+function hasOwn(value: unknown, key: string): boolean {
+  return (
+    typeof value === 'object' && value !== null && Object.prototype.hasOwnProperty.call(value, key)
+  );
 }

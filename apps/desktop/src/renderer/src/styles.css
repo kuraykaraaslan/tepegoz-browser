@@ -1,7 +1,7 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* Design tokens + Tailwind v4 theme mapping (forked KUIreact theme). */
-@import "@tepegoz/ui/styles/tokens.css";
+@import '@tepegoz/ui/styles/tokens.css';
 
 /* The KUIreact atoms live outside this app's Vite root, so Tailwind can't auto-detect their class
    names — tell it to scan the fork's source. */
@@ -17,6 +17,7 @@
 @source "../../../../../packages/tasks-ui/src";
 @source "../../../../../packages/settings-ui/src";
 @source "../../../../../packages/extensions-ui/src";
+@source "../../../../../packages/onboarding-ui/src";
 @source "../../../../../packages/nav-toolbar/src";
 @source "../../../../../packages/bookmarks-bar/src";
 @source "../../../../../packages/bookmarks-ui/src";

@@ -6,6 +6,7 @@ import { createWindow } from './window';
 import { installSecurity } from './security';
 import { abortActiveAgentRuns, registerIpc } from './ipc';
 import { initStores, passwordVault } from './stores.electron';
+import { loadBrowser, loadOnboarding, shouldShowOnboarding } from './onboarding.electron';
 import { closeDatabase } from './db/database.electron';
 import TabManager from './tabs';
 import PopupWindowManager from './popup-window';
@@ -96,17 +97,12 @@ function bootstrap(): void {
   // Password manager: IPC handlers + autofill push/fill (hooks into TabManager navigation events).
   PasswordHost.attach();
   AutofillHost.attach(win, passwordVault);
-  // Dev: electron-vite injects the renderer dev-server URL. Prod: load the built file.
-  const devUrl = process.env['ELECTRON_RENDERER_URL'];
-  if (devUrl !== undefined && devUrl.length > 0) {
-    void win.loadURL(devUrl);
+  if (shouldShowOnboarding()) {
+    loadOnboarding(win);
   } else {
-    void win.loadFile(join(__dirname, '../renderer/index.html'));
-  }
-  // Restore the last session's tabs; if there was none, open a single default tab. (State is also
-  // fetched by the renderer via getTabsState on mount.)
-  if (!TabManager.restoreSession()) {
-    TabManager.createTab();
+    // Restore the last session's tabs; if there was none, open a single default tab. (State is also
+    // fetched by the renderer via getTabsState on mount.)
+    loadBrowser(win);
   }
   win.on('closed', () => {
     TabManager.persistNow(); // capture the final tab set BEFORE reset() clears the store

@@ -70,6 +70,7 @@ import { getPublicSettings, broadcastPublicSettings } from '../settings/public-s
 import CredentialVault from '@tepegoz/credential-vault';
 import PreferenceStore from '@tepegoz/preferences';
 import TabManager from '../tabs';
+import { completeOnboarding } from '../onboarding.electron';
 import userAgentHost from '../extensions/user-agent-host.electron';
 import popupBlockerHost from '../extensions/popup-blocker-host.electron';
 import { builtinManifests } from '../../shared/extensions';
@@ -157,9 +158,16 @@ export function registerContentIpc(): void {
     return next;
   });
 
+  handle(IpcChannels.onboardingComplete, (event): void => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win !== null) completeOnboarding(win);
+  });
+
   handle(IpcChannels.mcpGetStatus, (): McpServerStatusInfo[] => McpService.getStatus());
 
-  handle(IpcChannels.adaptorsList, (): AdaptorConnection[] => buildAdaptorConnections(mainLocale()));
+  handle(IpcChannels.adaptorsList, (): AdaptorConnection[] =>
+    buildAdaptorConnections(mainLocale()),
+  );
 
   // The live AIAdaptor inventory for the Settings "run locally" list — system + extension + MCP groups
   // built from the single CapabilityRegistry, so the list needs no maintenance as tools change.

@@ -22,6 +22,7 @@ export const settingsMiscApi: Pick<
   | 'getPreferences'
   | 'updatePreferences'
   | 'resetPreferences'
+  | 'completeOnboarding'
   | 'getPublicSettings'
   | 'onPublicSettingsChanged'
   | 'getCredentialsStatus'
@@ -43,6 +44,7 @@ export const settingsMiscApi: Pick<
   updatePreferences: (patch: Partial<Preferences>) =>
     invoke<Preferences>(IpcChannels.prefsSet, patch),
   resetPreferences: () => invoke<Preferences>(IpcChannels.prefsReset),
+  completeOnboarding: () => invoke<void>(IpcChannels.onboardingComplete),
   getPublicSettings: () => invoke<PublicSettings>(IpcChannels.publicSettingsGet),
   onPublicSettingsChanged: (callback: (settings: PublicSettings) => void) => {
     const listener = (_event: unknown, settings: PublicSettings): void => {
@@ -74,6 +76,5 @@ export const settingsMiscApi: Pick<
   getRecentRequests: () => invoke<PopupBlockerRequest[]>(IpcChannels.popupBlockerRecentRequests),
   // File operations (Settings → File operations). The grant list rides on preferences; only the native
   // folder picker needs a bridge method (AI-driven consent reuses the agent HITL modal).
-  pickFileAccessFolder: () =>
-    invoke<FileAccessFolderPickResult>(IpcChannels.fileAccessPickFolder),
+  pickFileAccessFolder: () => invoke<FileAccessFolderPickResult>(IpcChannels.fileAccessPickFolder),
 };

@@ -201,6 +201,9 @@ importers:
       '@tepegoz/omnibox':
         specifier: workspace:*
         version: link:../../packages/omnibox
+      '@tepegoz/onboarding-ui':
+        specifier: workspace:*
+        version: link:../../packages/onboarding-ui
       '@tepegoz/orchestrator':
         specifier: workspace:*
         version: link:../../packages/orchestrator
@@ -1351,6 +1354,46 @@ importers:
       '@types/react':
         specifier: ^18.3.18
         version: 18.3.31
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
+
+  packages/onboarding-ui:
+    dependencies:
+      '@tepegoz/desktop-ipc':
+        specifier: workspace:*
+        version: link:../desktop-ipc
+      '@tepegoz/i18n':
+        specifier: workspace:*
+        version: link:../i18n
+      '@tepegoz/ui':
+        specifier: workspace:*
+        version: link:../ui
+      '@tepegoz/window-controls':
+        specifier: workspace:*
+        version: link:../window-controls
+    devDependencies:
+      '@testing-library/react':
+        specifier: ^16.1.0
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.31
+      '@types/react-dom':
+        specifier: ^18.3.5
+        version: 18.3.7(@types/react@18.3.31)
+      jsdom:
+        specifier: ^25.0.1
+        version: 25.0.1
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1
+        version: 18.3.1(react@18.3.1)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3

@@ -9,6 +9,8 @@ export const IpcChannels = {
   prefsSet: 'prefs:set',
   /** Restore all preferences to their defaults (does NOT touch the encrypted credential vault). */
   prefsReset: 'prefs:reset',
+  /** Finish first-run onboarding and switch the window into the normal browser chrome. */
+  onboardingComplete: 'onboarding:complete',
   // Curated public settings exposed to extensions (read-only). `changed` is a main→renderer push.
   publicSettingsGet: 'public-settings:get',
   publicSettingsChanged: 'public-settings:changed',

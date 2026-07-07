@@ -75,6 +75,8 @@ export interface TepegozApi {
   updatePreferences(patch: Partial<Preferences>): Promise<Preferences>;
   /** Reset all preferences to defaults. Encrypted credentials (the vault) are NOT affected. */
   resetPreferences(): Promise<Preferences>;
+  /** Finish the first-run welcome flow and load the normal browser chrome. */
+  completeOnboarding(): Promise<void>;
   /** The curated PUBLIC settings snapshot exposed to extensions (read-only; never carries secrets). */
   getPublicSettings(): Promise<PublicSettings>;
   /** Subscribe to public-settings changes; returns an unsubscribe function (like `onTabsState`). */

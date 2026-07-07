@@ -83,6 +83,8 @@ export const PreferencesSchema = z.object({
   region: z.string().max(16),
   dateFormat: z.string().max(16),
   searchEngineId: z.string().max(64),
+  // First-run welcome sentinel. Private: not exposed to extensions.
+  onboardingCompleted: z.boolean(),
   // User-added search engines. `searchUrlTemplate` must contain the `{q}` query placeholder.
   customSearchEngines: z
     .array(
@@ -189,6 +191,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   region: '',
   dateFormat: 'medium',
   searchEngineId: 'google',
+  onboardingCompleted: false,
   customSearchEngines: [],
   homepageUrl: 'https://duckduckgo.com/',
   showBookmarksBar: true,

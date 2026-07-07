@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import PreferenceStore from './preference-store';
@@ -22,6 +22,14 @@ describe('PreferenceStore', () => {
   it('returns defaults when no file exists', () => {
     PreferenceStore.init({ filePath });
     expect(PreferenceStore.getAll()).toEqual(DEFAULT_PREFERENCES);
+    expect(PreferenceStore.getAll().onboardingCompleted).toBe(false);
+  });
+
+  it('treats existing profiles without an onboarding sentinel as already completed', () => {
+    writeFileSync(filePath, JSON.stringify({ locale: 'tr' }), 'utf8');
+    PreferenceStore.init({ filePath });
+    expect(PreferenceStore.getAll().locale).toBe('tr');
+    expect(PreferenceStore.getAll().onboardingCompleted).toBe(true);
   });
 
   it('merges a partial update without clobbering other keys', () => {

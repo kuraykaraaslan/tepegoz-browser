@@ -12,6 +12,7 @@ import { NotificationCenterPopup } from './components/NotificationCenterPopup';
 import { TransferActivityPopup } from './components/TransferActivityPopup';
 import { BookmarkFolderPopup } from './components/BookmarkFolderPopup';
 import { BookmarkDialogPopup } from './components/BookmarkDialogPopup';
+import { OnboardingApp } from './components/OnboardingApp';
 import { applyTheme } from './lib/theme';
 import './styles.css';
 
@@ -35,10 +36,13 @@ else if (surface === 'user-menu') node = <UserMenuPopup />;
 else if (surface === 'menu-sub') node = <MenuSubPopup kind={params.get('kind') ?? ''} />;
 else if (surface === 'notifications') node = <NotificationCenterPopup />;
 else if (surface === 'transfers') node = <TransferActivityPopup />;
-else if (surface === 'bookmark-folder' && extId !== null) node = <BookmarkFolderPopup folderId={extId} />;
-else if (surface === 'bookmark-rename' && extId !== null) node = <BookmarkDialogPopup mode="rename" id={extId} />;
+else if (surface === 'bookmark-folder' && extId !== null)
+  node = <BookmarkFolderPopup folderId={extId} />;
+else if (surface === 'bookmark-rename' && extId !== null)
+  node = <BookmarkDialogPopup mode="rename" id={extId} />;
 else if (surface === 'bookmark-add-folder' && extId !== null)
   node = <BookmarkDialogPopup mode="add-folder" id={extId} />;
+else if (surface === 'onboarding') node = <OnboardingApp />;
 else if (surface === 'ext' && extId !== null) node = <PopupApp id={extId} />;
 
 // The boundary's fallback renders when App (and its locale state) is gone — resolve from the OS locale.

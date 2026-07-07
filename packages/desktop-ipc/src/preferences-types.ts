@@ -91,6 +91,8 @@ export interface Preferences {
   dateFormat: string;
   /** The selected default search engine id (see @tepegoz/shared-types/search-engines). */
   searchEngineId: string;
+  /** One-time first-run sentinel. False only for a brand-new profile that has not completed welcome. */
+  onboardingCompleted: boolean;
   /** User-added search engines, merged with the built-in list in the picker + omnibox resolution. */
   customSearchEngines: SearchEngine[];
   /** The home / new-tab page URL (opened for a new tab, the Home button, and a blank omnibox submit). */
