@@ -229,6 +229,8 @@ export interface TepegozApi {
   setAgentEffort(level: AgentEffort): Promise<void>;
   /** Open a file the agent produced, gated to the whitelisted folders (fire-and-forget). */
   openAgentFile(path: string): void;
+  /** Write the current chat log to the ~/tepegoz folder and reveal it. Resolves to the absolute path. */
+  exportChatLog(input: { content: string; title?: string }): Promise<string>;
   /** Capture the active page's current text selection. Returns empty string when nothing is selected. */
   capturePageSelection(): Promise<string>;
   /** Open a native file picker and return the selected files' content. */
@@ -262,8 +264,6 @@ export interface TepegozApi {
   trustPopupOrigin(origin: string): void;
   /** The most-recent blocked-popup events this session (newest first, max 20). */
   getRecentRequests(): Promise<PopupBlockerRequest[]>;
-  /** Read-only status of every configured MCP server (Settings → Connections). Never returns secrets. */
-  getMcpStatus(): Promise<McpServerStatusInfo[]>;
   // Adblock Shield extension: network blocking, cosmetic filtering, per-site pause, and list refresh.
   /** The current adblock settings. */
   getAdblockSettings(): Promise<AdblockSettings>;
@@ -275,6 +275,8 @@ export interface TepegozApi {
   setAdblockSiteEnabled(origin: string, enabled: boolean): Promise<AdblockSettings>;
   /** Refresh filter lists; manual calls are cooldown-limited and preserve the old engine on failure. */
   refreshAdblockLists(): Promise<AdblockState>;
+  /** Read-only status of every configured MCP server (Settings → Connections). Never returns secrets. */
+  getMcpStatus(): Promise<McpServerStatusInfo[]>;
   /** Read-only adaptor inventory shown next to MCP tools in Settings. */
   listAdaptors(): Promise<AdaptorConnection[]>;
   /** The live AIAdaptor inventory (system + extension + MCP groups, each with its actions) for the

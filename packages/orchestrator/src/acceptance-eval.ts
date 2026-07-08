@@ -18,7 +18,13 @@ export interface AcceptanceScenario {
 }
 
 export interface AcceptanceRunRecord {
-  scenarioId: AcceptanceScenarioId;
+  /** The scenario's id. Widened from the legacy `AcceptanceScenarioId` union to a plain string so the
+   *  AI-1 data-driven registry (its ids are open) shares this record/metrics contract. */
+  scenarioId: string;
+  /** True when this scenario is one where the agent is expected to recover from a stuck action — feeds
+   *  `recoverySuccessRate`. Legacy scenarios leave it false and rely on the static
+   *  {@link ACCEPTANCE_SCENARIOS} lookup; registry scenarios set it explicitly. */
+  requiresRecovery: boolean;
   ok: boolean;
   stoppedReason: StopReason;
   toolCalls: number;
@@ -79,17 +85,19 @@ function validationChangedFalse(outcome: StepOutcome): boolean {
 }
 
 export function recordFromOutcomes(input: {
-  scenarioId: AcceptanceScenarioId;
+  scenarioId: string;
   stoppedReason: StopReason;
   outcomes: StepOutcome[];
   approvalLatencyMs?: number[] | undefined;
   tokenUsage?: { inputTokens: number; outputTokens: number } | undefined;
   recovered?: boolean | undefined;
+  requiresRecovery?: boolean | undefined;
   ok?: boolean | undefined;
 }): AcceptanceRunRecord {
   const usage = input.tokenUsage ?? { inputTokens: 0, outputTokens: 0 };
   return {
     scenarioId: input.scenarioId,
+    requiresRecovery: input.requiresRecovery ?? false,
     ok: input.ok ?? input.stoppedReason === 'completed',
     stoppedReason: input.stoppedReason,
     toolCalls: input.outcomes.length,
@@ -105,8 +113,10 @@ export function recordFromOutcomes(input: {
 
 export function summarizeAcceptanceRuns(records: AcceptanceRunRecord[]): AcceptanceMetrics {
   const passed = records.filter((r) => r.ok).length;
-  const recoveryRuns = records.filter((r) =>
-    ACCEPTANCE_SCENARIOS.some((s) => s.id === r.scenarioId && s.requiresRecovery === true),
+  const recoveryRuns = records.filter(
+    (r) =>
+      r.requiresRecovery ||
+      ACCEPTANCE_SCENARIOS.some((s) => s.id === r.scenarioId && s.requiresRecovery === true),
   );
   const toolCalls = records.reduce((sum, r) => sum + r.toolCalls, 0);
   const validationCalls = records.reduce((sum, r) => sum + r.navigationValidationCalls, 0);

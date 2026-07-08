@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { AgentConversationDetail, AgentConversationSummary, AgentHostApi } from './types';
 import { Dropdown } from './panel-dropdown';
-import { HistoryIcon } from './panel-icons';
+import { HistoryIcon, TrashIcon } from './panel-icons';
 
 const FULL_HISTORY_URL = 'tepegoz://com.tepegoz.agent';
 
@@ -20,6 +20,7 @@ export function ConversationHistoryDropdown({
     empty: string;
     loading: string;
     full: string;
+    delete: string;
   };
   iconButtonClassName: string;
   onOpenConversation: (detail: AgentConversationDetail) => void;
@@ -48,6 +49,11 @@ export function ConversationHistoryDropdown({
       if (query.trim().length === 0) setItems(state.items.slice(0, 10));
     });
   }, [api, query]);
+
+  const deleteConversation = (id: string) => {
+    setItems((prev) => prev.filter((c) => c.id !== id));
+    void api.deleteAgentConversation(id);
+  };
 
   return (
     <Dropdown
@@ -78,7 +84,7 @@ export function ConversationHistoryDropdown({
             ) : (
               <ul className="space-y-1">
                 {items.map((item) => (
-                  <li key={item.id}>
+                  <li key={item.id} className="group/item relative">
                     <button
                       type="button"
                       onClick={() => {
@@ -88,10 +94,19 @@ export function ConversationHistoryDropdown({
                           close();
                         });
                       }}
-                      className="w-full rounded-md px-2 py-2 text-left hover:bg-surface-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+                      className="w-full rounded-md py-2 pl-2 pr-9 text-left hover:bg-surface-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
                     >
                       <p className="truncate text-sm font-medium text-text-primary">{item.title}</p>
                       <p className="mt-0.5 line-clamp-2 text-xs text-text-secondary">{item.preview}</p>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={labels.delete}
+                      title={labels.delete}
+                      onClick={() => deleteConversation(item.id)}
+                      className="absolute right-1 top-1 rounded-md p-1.5 text-text-secondary opacity-0 hover:bg-surface-base hover:text-red-500 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus group-hover/item:opacity-100"
+                    >
+                      <TrashIcon className="h-4 w-4" />
                     </button>
                   </li>
                 ))}

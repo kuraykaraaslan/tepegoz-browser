@@ -196,6 +196,13 @@ export class WindowTabs {
     if (rawUrl === undefined) {
       return this.createInternalTab(INTERNAL_NEWTAB_URL, opts);
     }
+    // Internal pages (tepegoz://…, incl. extension `page` surfaces) are rendered by the trusted chrome
+    // in a view-less internal tab — never handed to `toNavigationUrl`, which would treat the scheme as
+    // a search query and open a web search for it.
+    const internal = internalPageUrl(rawUrl);
+    if (internal !== null) {
+      return this.createInternalTab(internal, opts);
+    }
     const home = homeUrl();
     const target = toNavigationUrl(rawUrl, home, searchUrlForQuery);
     if (
@@ -256,6 +263,15 @@ export class WindowTabs {
   /** The active tab's id (null if none) — lets callers open a new tab as a child of the current tab. */
   activeTabId(): string | null {
     return this.store.activeId;
+  }
+
+  /** The active tab's id ONLY when it is a view-less (internal) tab — one that `navigateActive` would
+   *  fork into a brand-new web tab rather than navigate in place. Else null. A web tab always owns a
+   *  `WebContentsView` from creation (before its first load), so "no view entry" ⟺ internal. The agent
+   *  host uses this to replace the newtab in place inside its group instead of orphaning it. */
+  viewlessActiveTabId(): string | null {
+    const id = this.store.activeId;
+    return id !== null && this.views.get(id) === undefined ? id : null;
   }
 
   activate(id: string): void {
@@ -1259,6 +1275,9 @@ export default class TabManager {
   }
   static activeTabId(): string | null {
     return TabManager.focused()?.activeTabId() ?? null;
+  }
+  static viewlessActiveTabId(): string | null {
+    return TabManager.focused()?.viewlessActiveTabId() ?? null;
   }
   static activate(id: string): void {
     TabManager.focused()?.activate(id);

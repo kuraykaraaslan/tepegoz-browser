@@ -180,6 +180,8 @@ export interface AgentHostApi {
   setAgentEffort(level: AgentEffort): Promise<void>;
   /** Open a file the agent produced (gated to the whitelisted folders in the main process). */
   openAgentFile(path: string): void;
+  /** Write the current chat log to the ~/tepegoz folder and reveal it. Resolves to the absolute path. */
+  exportChatLog(input: { content: string; title?: string }): Promise<string>;
   /** Open a URL from agent output in a new browser tab. */
   createTab(url?: string): void;
   /** Capture the active page's current text selection. Returns empty string if nothing is selected. */

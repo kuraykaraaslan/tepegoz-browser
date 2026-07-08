@@ -125,6 +125,80 @@ export function attachmentMeta(attachments: Attachment[]) {
   }));
 }
 
+/** Human-readable label per event kind, used in the exported chat-log transcript. */
+const EVENT_KIND_LABEL: Record<AgentEvent['kind'], string> = {
+  plan: 'Plan',
+  decision: 'Decision',
+  step_start: 'Step start',
+  step_ok: 'Step ok',
+  step_error: 'Step error',
+  awaiting_approval: 'Awaiting approval',
+  input_action: 'Input action',
+  handoff: 'Handoff',
+  done: 'Response',
+  error: 'Error',
+};
+
+/** Metadata prepended to an exported chat-log transcript (all optional beyond the export time). */
+export interface ConversationLogMeta {
+  exportedAt: number;
+  groupId: string | null;
+  provider?: string;
+  autonomy?: string;
+  effort?: string;
+  tokens?: TokenUsageSnapshot | null;
+}
+
+/** UTC time-of-day (`HH:MM:SS`) from an epoch-ms timestamp — compact per-event prefix in the log. */
+function clock(ms: number): string {
+  return new Date(ms).toISOString().slice(11, 19);
+}
+
+/**
+ * Render the panel's live turns into a complete, self-contained markdown transcript — every turn's
+ * prompt plus each streamed event (kind, time, message, detail) in order. Pure so it's unit-testable;
+ * the panel writes the result to `~/tepegoz` via the host `exportChatLog`.
+ */
+export function serializeConversationLog(turns: Turn[], meta: ConversationLogMeta): string {
+  const parts: string[] = ['# Tepegöz Agent — Chat Log', ''];
+  parts.push(`- Exported: ${new Date(meta.exportedAt).toISOString()}`);
+  if (meta.groupId !== null) parts.push(`- Group: ${meta.groupId}`);
+  if (meta.provider !== undefined) parts.push(`- Provider: ${meta.provider}`);
+  if (meta.autonomy !== undefined) parts.push(`- Autonomy: ${meta.autonomy}`);
+  if (meta.effort !== undefined) parts.push(`- Effort: ${meta.effort}`);
+  if (meta.tokens != null) {
+    parts.push(
+      `- Tokens: ${String(meta.tokens.totalTokens)} ` +
+        `(${String(meta.tokens.inputTokens)} in / ${String(meta.tokens.outputTokens)} out)`,
+    );
+  }
+  parts.push('', '---', '');
+
+  if (turns.length === 0) {
+    parts.push('_No messages in this conversation._', '');
+    return parts.join('\n');
+  }
+
+  turns.forEach((turn, i) => {
+    const promptText = turn.prompt.trim();
+    parts.push(`## Turn ${String(i + 1)}`, '', '**You:**', '', promptText.length > 0 ? promptText : '_(empty)_', '');
+    if (turn.events.length === 0) {
+      parts.push('_No agent events recorded._', '');
+    } else {
+      for (const e of turn.events) {
+        const label = EVENT_KIND_LABEL[e.kind];
+        parts.push(`- \`[${clock(e.ts)}] ${label}\` ${e.message.trim()}`);
+        const detail = e.detail?.trim() ?? '';
+        if (detail.length > 0) parts.push(`  - ${detail}`);
+      }
+      parts.push('');
+    }
+    parts.push('---', '');
+  });
+
+  return parts.join('\n');
+}
+
 export function stateFromConversation(detail: AgentConversationDetail): GroupState {
   return {
     ...emptyGroupState(),

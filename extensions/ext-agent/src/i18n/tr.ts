@@ -17,7 +17,6 @@ export const tr: AgentStrings = {
   biometricNote: 'Bu yüksek riskli bir işlem (Windows Hello ileri bir sürümde gerekli olacak).',
   approve: 'Onayla',
   deny: 'Reddet',
-  aiDisclaimer: 'AI üretti, hatalı olabilir.',
   planTitle: 'Planı gözden geçirin',
   planBody:
     'İstemediğiniz adımların işaretini kaldırıp çalıştırın. Onaylayana kadar hiçbir şey yürütülmez.',
@@ -57,6 +56,7 @@ export const tr: AgentStrings = {
     empty: 'Henüz konuşma yok',
     loading: 'Yükleniyor...',
     full: 'Tüm konuşma geçmişi',
+    delete: 'Konuşmayı sil',
   },
   historyPage: {
     title: 'Ajan geçmişi',
@@ -148,5 +148,11 @@ export const tr: AgentStrings = {
     saveFailed: 'Görev kaydedilemedi.',
     saved: '✓ Görev kaydedildi',
     openManager: 'Görevleri aç',
+  },
+  // Sohbet kaydını ~/tepegoz klasörüne aktar (başlıktaki yıldız) — hata ayıklama için tam dökümü paylaş.
+  exportLog: {
+    action: 'Sohbet kaydını tepegoz’a kaydet',
+    saved: '✓ Sohbet kaydı kaydedildi',
+    failed: 'Sohbet kaydı kaydedilemedi.',
   },
 };

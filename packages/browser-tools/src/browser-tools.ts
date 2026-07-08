@@ -99,7 +99,9 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
         'tree. args: { tabId?: string } — omit tabId for the active tab. Returns ' +
         '{ url, title, elements: [{ ref, role, name, value?, disabled? }], content }. ' +
         "Use each element's `ref` with browser_update_page to click or fill it. Re-read after any " +
-        'navigation or page change — refs are only valid for the latest snapshot.',
+        'navigation or page change — refs are only valid for the latest snapshot. ' +
+        "A collapsed menu/drawer's items are NOT listed until it is open — click its menu/hamburger " +
+        'toggle (or scroll), then re-read.',
       { aiTask: 'read_understand' },
     ),
     inputSchema: TargetTabArgs,

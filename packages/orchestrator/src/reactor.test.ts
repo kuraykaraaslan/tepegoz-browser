@@ -405,4 +405,11 @@ describe('Reactor system prompt (coreference + browsing strategy)', () => {
     expect(prompt).toContain('browser_get_screenshot');
     expect(prompt).toContain('changed=false');
   });
+
+  it('guides opening hidden menus/drawers and trying conventional URL paths before giving up', async () => {
+    const prompt = await capture();
+    expect(prompt).toContain('REVEAL hidden navigation');
+    expect(prompt).toContain('collapsed menu');
+    expect(prompt).toContain('/blog');
+  });
 });

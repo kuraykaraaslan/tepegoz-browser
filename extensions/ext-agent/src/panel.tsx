@@ -43,6 +43,7 @@ import {
   emptyGroupState,
   attachmentMeta,
   serializeAttachments,
+  serializeConversationLog,
   stateFromConversation,
   type Attachment,
   type GroupState,
@@ -75,6 +76,10 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
   const [config, setConfig] = useState<AgentConfig | null>(null);
   const [dismissedNotices, setDismissedNotices] = useState<Set<string>>(new Set());
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  // Transient "log saved" confirmation shown on the header star after a successful export.
+  const [logExported, setLogExported] = useState(false);
+  // Transient export failure message (surfaced so a blocked/failed export is never silent).
+  const [exportError, setExportError] = useState<string | null>(null);
 
   // Active tab-group id — the agent session key.
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
@@ -276,6 +281,33 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
     mutateGroup(activeGroupId, () => stateFromConversation(detail));
   }
 
+  /** Dump the full chat log (this group's turns + streamed events) to the ~/tepegoz folder, then flash
+   *  a brief confirmation on the header star. Used to hand a complete transcript off for debugging. */
+  function onExportLog(): void {
+    if (activeState.turns.length === 0) return;
+    const content = serializeConversationLog(activeState.turns, {
+      exportedAt: Date.now(),
+      groupId: activeGroupId,
+      ...(config !== null
+        ? { provider: config.provider, autonomy: config.autonomy, effort: config.effort }
+        : {}),
+      tokens: activeState.tokens,
+    });
+    const title = activeState.turns[0]?.prompt.trim() ?? '';
+    void api
+      .exportChatLog({ content, ...(title.length > 0 ? { title } : {}) })
+      .then(() => {
+        setExportError(null);
+        setLogExported(true);
+        setTimeout(() => { setLogExported(false); }, 2000);
+      })
+      .catch((err: unknown) => {
+        const msg = err instanceof Error && err.message.trim().length > 0 ? err.message : a.exportLog.failed;
+        setExportError(msg);
+        setTimeout(() => { setExportError(null); }, 6000);
+      });
+  }
+
   function toggleReasoning(turnId: string): void {
     mutateActive((s) => {
       const next = new Set(s.openReasoning);
@@ -411,7 +443,20 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
         <div className="flex items-center gap-2">
-          <SparkIcon className="h-4 w-4 text-amber-500" />
+          <button
+            type="button"
+            onClick={onExportLog}
+            disabled={turns.length === 0}
+            aria-label={logExported ? a.exportLog.saved : a.exportLog.action}
+            title={logExported ? a.exportLog.saved : a.exportLog.action}
+            className="-m-0.5 rounded-md p-0.5 hover:bg-surface-overlay disabled:cursor-default disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+          >
+            {logExported ? (
+              <CheckIcon className="h-4 w-4 text-emerald-500" />
+            ) : (
+              <SparkIcon className="h-4 w-4 text-amber-500" />
+            )}
+          </button>
           <h2 className="text-sm font-semibold text-text-primary">{a.title}</h2>
         </div>
         <div className="flex items-center gap-1.5">
@@ -488,6 +533,24 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
           }
         </Dropdown>
       </div>
+
+      {/* Export failure banner (a blocked/failed chat-log export is never silent). */}
+      {exportError !== null && (
+        <div
+          role="alert"
+          className="flex items-start gap-2 border-b border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-700 dark:text-red-300"
+        >
+          <span className="flex-1"><span className="font-semibold">{a.exportLog.failed}</span> {exportError}</span>
+          <button
+            type="button"
+            aria-label={c.window.close}
+            onClick={() => { setExportError(null); }}
+            className="shrink-0 opacity-60 hover:opacity-100 focus-visible:outline-none"
+          >
+            <CloseIcon className="h-3 w-3" />
+          </button>
+        </div>
+      )}
 
       {/* Conversation thread */}
       <div ref={listRef} className="flex-1 overflow-y-auto overflow-x-hidden p-3 text-sm" aria-live="polite">
@@ -643,7 +706,7 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
 
       {/* Composer */}
       <form
-        className="px-3 pt-1.5 pb-2"
+        className="px-3 pt-1.5 pb-4"
         onSubmit={(e) => { e.preventDefault(); onRun(); }}
       >
         <div className="rounded-lg border border-border bg-surface-raised focus-within:ring-2 focus-within:ring-border-focus">
@@ -826,9 +889,6 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
           </div>
         </div>
       </form>
-
-      {/* Footer disclaimer */}
-      <p className="px-3 pb-2 text-center text-xs text-text-secondary">{a.aiDisclaimer}</p>
 
       {/* Plan preview modal */}
       {planPreview !== null && (

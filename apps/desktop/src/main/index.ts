@@ -40,6 +40,7 @@ import BrowsingWebRequestService from './web-request/browsing-web-request-servic
 import TaskService from './tasks/task-service.electron';
 import { taskToolsHost } from './tasks/task-tools-host.electron';
 import { runTaskAgent } from './agent/task-agent-runner.electron';
+import { maybeRunEval } from './agent/agent-eval-runner.electron';
 import { webToolsHost } from './web/web-tools-host.electron';
 
 // Last-resort process-level hooks: an async error that escapes every boundary must be LOGGED, not a
@@ -114,19 +115,19 @@ if (!app.requestSingleInstanceLock()) {
       // Apply the persisted User-Agent override to the browsing session BEFORE the first tab opens
       // (a no-op default when the extension is disabled).
       userAgentHost.init();
-      // Browser downloads: attach the browsing-session will-download handler before any page can start
       // Own the single Electron webRequest listener set for the shared browsing partition. Feature
       // services register with this multiplexer so Electron's "last listener wins" behavior cannot
       // make them silently replace each other.
       BrowsingWebRequestService.init(session.fromPartition(BROWSING_PARTITION).webRequest);
+      // Browser downloads: attach the browsing-session will-download handler before any page can start
       // a download, load the SQLite projection, and route every file through quarantine first.
       DownloadService.init();
       UploadService.init();
-      // Load the popup-blocker settings before any page can call window.open, and register its
       // Adblock Shield: load persisted settings, register network hooks, then restore/download lists
       // in the background. Until an engine is ready, the multiplexer fails open.
       adblockHost.init();
       AdblockEngineService.init();
+      // Load the popup-blocker settings before any page can call window.open, and register its
       // `popup:open` interceptor with the generic action-interception plane (ADR-0022).
       popupBlockerHost.init();
       ActionInterceptorService.provide(popupBlockerHost.interceptors);
@@ -171,6 +172,10 @@ if (!app.requestSingleInstanceLock()) {
       // Sandboxed file operations: seed the default ~/tepegoz grant (first run), sync the access policy
       // from prefs, and register the file_* / fileaccess_* tools into the same CapabilityRegistry.
       FileOperationsHost.init();
+
+      // AI-1 eval harness batch mode — INERT unless TEPEGOZ_EVAL=1. Runs after every tool is registered
+      // so the driven scenario sees the full CapabilityRegistry, then quits.
+      void maybeRunEval();
 
       // Sleep/resume hooks. Phase 1b: the Recovery Coordinator resumes durable tasks from their last
       // checkpoint on 'resume' (Opera Neon's "task drops on sleep" lesson).

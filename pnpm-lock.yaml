@@ -493,6 +493,34 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
 
+  packages/agent-eval:
+    dependencies:
+      '@tepegoz/model-gateway':
+        specifier: workspace:*
+        version: link:../model-gateway
+      '@tepegoz/orchestrator':
+        specifier: workspace:*
+        version: link:../orchestrator
+      '@tepegoz/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      zod:
+        specifier: 3.23.8
+        version: 3.23.8
+    devDependencies:
+      '@playwright/test':
+        specifier: ^1.49.1
+        version: 1.61.1
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.0
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
+
   packages/agent-runtime:
     dependencies:
       '@tepegoz/capability-plane':
@@ -829,6 +857,9 @@ importers:
       '@tepegoz/downloads':
         specifier: workspace:*
         version: link:../downloads
+      '@tepegoz/ext-adblock':
+        specifier: workspace:*
+        version: link:../../extensions/ext-adblock
       '@tepegoz/ext-agent':
         specifier: workspace:*
         version: link:../../extensions/ext-agent
@@ -857,9 +888,6 @@ importers:
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
-      '@tepegoz/ext-adblock':
-        specifier: workspace:*
-        version: link:../../extensions/ext-adblock
 
   packages/downloads:
     dependencies:
@@ -1073,6 +1101,9 @@ importers:
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
 
   packages/i18n:
     dependencies:
@@ -2441,6 +2472,28 @@ packages:
   '@gar/promisify@1.1.3':
     resolution: {integrity: sha512-k2Ty1JcVojjJFwrg/ThKi2ujJ7XNLYaFGNB/bWT9wGR+oSMJHMa5w+CUq6p/pVrKeNNgA7pCqEcjSnHVoqJQFw==}
 
+  '@ghostery/adblocker-content@2.18.1':
+    resolution: {integrity: sha512-7OwXvqssrSqceXDMccq1SG2LEp0P899TWv0J52kA4PCjCgdsffdj7wMO98LbiVWEKJ9e00X4V2ZptC4VGYsX/w==}
+
+  '@ghostery/adblocker-electron-preload@2.18.1':
+    resolution: {integrity: sha512-hD2jPy8mmtp+2QvicbU5414IZLwn3kmBzKIH8O7dBQclSdliZRGZ78rEiWuPVZejRjCgpprDrUxLMdpQy6aUMA==}
+    peerDependencies:
+      electron: '>11'
+
+  '@ghostery/adblocker-electron@2.18.1':
+    resolution: {integrity: sha512-hLjy85DKl63oSyunZ4VOMk3WW/utTYCuicxw7oTvZok+Qcw+5Mxs6u+04YwwD2nezUmgyiLlUJtxoXnR8qFfSA==}
+    peerDependencies:
+      electron: '>11'
+
+  '@ghostery/adblocker-extended-selectors@2.18.1':
+    resolution: {integrity: sha512-FruZMMUhdi0KG8GTTS9hs4njeQu1FyrzVtm9p3JKY6GpCNspy3kioP48JU3ASNzSDYZb5Xu8xbwPoSHJ4RQBeg==}
+
+  '@ghostery/adblocker@2.18.1':
+    resolution: {integrity: sha512-pWMJqpXpuqIlcF3ZZQ2E7ixnC7xhtYn/bpOn3N69vFrAm4wrZCIbKzz1+xSxKWCmJvDT4fg7rN2R6jQwFXm5BA==}
+
+  '@ghostery/url-parser@1.3.1':
+    resolution: {integrity: sha512-QKqGi+7aDQ4RcyHyCwgEk6B9vWnsBP4Q7htaN0zPJV3ATqTKEQDtSTb9c/AN586oJUDs24YXKcwFYwNweY/YjQ==}
+
   '@huggingface/jinja@0.5.9':
     resolution: {integrity: sha512-uWTG+l3VJRsl7EXxYizuL3P+cCPoc3cRqbWWRcQN0FhejRfbdq0RNhCmbY/YDtnTcz9icdLYuLDjsnz4d8JMuw==}
     engines: {node: '>=18'}
@@ -2472,28 +2525,6 @@ packages:
   '@isaacs/fs-minipass@4.0.1':
     resolution: {integrity: sha512-wgm9Ehl2jpeqP3zw/7mo3kRHFp5MEDhqAdwy1fTGkHAwnkGOVsgpvQhL8B5n1qlb01jV3n/bI0ZfZp5lWA1k4w==}
     engines: {node: '>=18.0.0'}
-  '@ghostery/adblocker-content@2.18.1':
-    resolution: {integrity: sha512-7OwXvqssrSqceXDMccq1SG2LEp0P899TWv0J52kA4PCjCgdsffdj7wMO98LbiVWEKJ9e00X4V2ZptC4VGYsX/w==}
-
-  '@ghostery/adblocker-electron-preload@2.18.1':
-    resolution: {integrity: sha512-hD2jPy8mmtp+2QvicbU5414IZLwn3kmBzKIH8O7dBQclSdliZRGZ78rEiWuPVZejRjCgpprDrUxLMdpQy6aUMA==}
-    peerDependencies:
-      electron: '>11'
-
-  '@ghostery/adblocker-electron@2.18.1':
-    resolution: {integrity: sha512-hLjy85DKl63oSyunZ4VOMk3WW/utTYCuicxw7oTvZok+Qcw+5Mxs6u+04YwwD2nezUmgyiLlUJtxoXnR8qFfSA==}
-    peerDependencies:
-      electron: '>11'
-
-  '@ghostery/adblocker-extended-selectors@2.18.1':
-    resolution: {integrity: sha512-FruZMMUhdi0KG8GTTS9hs4njeQu1FyrzVtm9p3JKY6GpCNspy3kioP48JU3ASNzSDYZb5Xu8xbwPoSHJ4RQBeg==}
-
-  '@ghostery/adblocker@2.18.1':
-    resolution: {integrity: sha512-pWMJqpXpuqIlcF3ZZQ2E7ixnC7xhtYn/bpOn3N69vFrAm4wrZCIbKzz1+xSxKWCmJvDT4fg7rN2R6jQwFXm5BA==}
-
-  '@ghostery/url-parser@1.3.1':
-    resolution: {integrity: sha512-QKqGi+7aDQ4RcyHyCwgEk6B9vWnsBP4Q7htaN0zPJV3ATqTKEQDtSTb9c/AN586oJUDs24YXKcwFYwNweY/YjQ==}
-
 
   '@istanbuljs/schema@0.1.6':
     resolution: {integrity: sha512-+Sg6GCR/wy1oSmQDFq4LQDAhm3ETKnorxN+y5nbLULOR3P0c14f2Wurzj3/xqPXtasLFfHd5iRFQ7AJt4KH2cw==}
@@ -2703,6 +2734,24 @@ packages:
     resolution: {integrity: sha512-DmCG8GzysnCZ15bres3N5AHCmwBwYgp0As6xjhQ47rAUTUXxJiK+lLUxaGsX3hd/30qUpVElh05PbGuxRPgJwA==}
     engines: {node: '>= 10'}
 
+  '@remusao/guess-url-type@2.1.0':
+    resolution: {integrity: sha512-zI3dlTUxpjvx2GCxp9nLOSK5yEIqDCpxlAVGwb2Y49RKkS72oeNaxxo+VWS5+XQ5+Mf8Zfp9ZXIlk+G5eoEN8A==}
+
+  '@remusao/small@2.1.0':
+    resolution: {integrity: sha512-Y1kyjZp7JU7dXdyOdxHVNfoTr1XLZJTyQP36/esZUU/WRWq9XY0PV2HsE3CsIHuaTf4pvgWv2pvzvnZ//UHIJQ==}
+
+  '@remusao/smaz-compress@2.2.0':
+    resolution: {integrity: sha512-TXpTPgILRUYOt2rEe0+9PC12xULPvBqeMpmipzB9A7oM4fa9Ztvy9lLYzPTd7tiQEeoNa1pmxihpKfJtsxnM/w==}
+
+  '@remusao/smaz-decompress@2.2.0':
+    resolution: {integrity: sha512-ERAPwxPaA0/yg4hkNU7T2S+lnp9jj1sApcQMtOyROvOQyo+Zuh6Hn/oRcXr8mmjlYzyRaC7E6r3mT1nrdHR6pg==}
+
+  '@remusao/smaz@2.2.0':
+    resolution: {integrity: sha512-eSd3Qs0ELP/e7tU1SI5RWXcCn9KjDgvBY+KtWbL4i2QvvHhJOfdIt4v0AA3S5BbLWAr5dCEC7C4LUfogDm6q/Q==}
+
+  '@remusao/trie@2.1.0':
+    resolution: {integrity: sha512-Er3Q8q0/2OcCJPQYJOPLmCuqO0wu7cav3SPtpjlxSbjFi1x+A1pZkkLD6c9q2rGEkGW/tkrRzfrhNMt8VQjzXg==}
+
   '@resvg/resvg-js-android-arm-eabi@2.6.2':
     resolution: {integrity: sha512-FrJibrAk6v29eabIPgcTUMPXiEz8ssrAk7TXxsiZzww9UTQ1Z5KAbFJs+Z0Ez+VZTYgnE5IQJqBcoSiMebtPHA==}
     engines: {node: '>= 10'}
@@ -2734,24 +2783,6 @@ packages:
     os: [linux]
 
   '@resvg/resvg-js-linux-arm64-gnu@2.6.2':
-  '@remusao/guess-url-type@2.1.0':
-    resolution: {integrity: sha512-zI3dlTUxpjvx2GCxp9nLOSK5yEIqDCpxlAVGwb2Y49RKkS72oeNaxxo+VWS5+XQ5+Mf8Zfp9ZXIlk+G5eoEN8A==}
-
-  '@remusao/small@2.1.0':
-    resolution: {integrity: sha512-Y1kyjZp7JU7dXdyOdxHVNfoTr1XLZJTyQP36/esZUU/WRWq9XY0PV2HsE3CsIHuaTf4pvgWv2pvzvnZ//UHIJQ==}
-
-  '@remusao/smaz-compress@2.2.0':
-    resolution: {integrity: sha512-TXpTPgILRUYOt2rEe0+9PC12xULPvBqeMpmipzB9A7oM4fa9Ztvy9lLYzPTd7tiQEeoNa1pmxihpKfJtsxnM/w==}
-
-  '@remusao/smaz-decompress@2.2.0':
-    resolution: {integrity: sha512-ERAPwxPaA0/yg4hkNU7T2S+lnp9jj1sApcQMtOyROvOQyo+Zuh6Hn/oRcXr8mmjlYzyRaC7E6r3mT1nrdHR6pg==}
-
-  '@remusao/smaz@2.2.0':
-    resolution: {integrity: sha512-eSd3Qs0ELP/e7tU1SI5RWXcCn9KjDgvBY+KtWbL4i2QvvHhJOfdIt4v0AA3S5BbLWAr5dCEC7C4LUfogDm6q/Q==}
-
-  '@remusao/trie@2.1.0':
-    resolution: {integrity: sha512-Er3Q8q0/2OcCJPQYJOPLmCuqO0wu7cav3SPtpjlxSbjFi1x+A1pZkkLD6c9q2rGEkGW/tkrRzfrhNMt8VQjzXg==}
-
     resolution: {integrity: sha512-zc2BlJSim7YR4FZDQ8OUoJg5holYzdiYMeobb9pJuGDidGL9KZUv7SbiD4E8oZogtYY42UZEap7dqkkYuA91pg==}
     engines: {node: '>= 10'}
     cpu: [arm64]
@@ -5818,6 +5849,12 @@ packages:
   tldts-core@6.1.86:
     resolution: {integrity: sha512-Je6p7pkk+KMzMv2XXKmAE3McmolOQFdxkKw0R8EYNr7sELW46JqnNeTX8ybPiQgvg1ymCoF8LXs5fzFaZvJPTA==}
 
+  tldts-core@7.4.7:
+    resolution: {integrity: sha512-rNlAI8fKn/JckBMUSbNL/ES2kmDiurWaE49l+ikwEc9A6lFR7gMx9AhgQMQKBK4H5w4pKLH64JzZfB99uRsGNQ==}
+
+  tldts-experimental@7.4.7:
+    resolution: {integrity: sha512-b4vI93uN1McPDbDrL9ptWIL3xIQPWd1x42ckiKVFJP2/krs2YeiJza1BZJa/z43oduI9+ZMj8QKTlHrwDO01Zw==}
+
   tldts@6.1.86:
     resolution: {integrity: sha512-WMi/OQ2axVTf/ykqCQgXiIct+mSQDFdH2fkwhPwgEwvJ1kSzZRiinb0zF2Xb8u4+OqPChmyI6MEu4EezNJz+FQ==}
     hasBin: true
@@ -5849,12 +5886,6 @@ packages:
 
   truncate-utf8-bytes@1.0.2:
     resolution: {integrity: sha512-95Pu1QXQvruGEhv62XCMO3Mm90GscOCClvrIUwCM0PYOXK3kaF3l3sIHxx71ThJfcbM2O5Au6SO3AWCSEfW4mQ==}
-  tldts-core@7.4.7:
-    resolution: {integrity: sha512-rNlAI8fKn/JckBMUSbNL/ES2kmDiurWaE49l+ikwEc9A6lFR7gMx9AhgQMQKBK4H5w4pKLH64JzZfB99uRsGNQ==}
-
-  tldts-experimental@7.4.7:
-    resolution: {integrity: sha512-b4vI93uN1McPDbDrL9ptWIL3xIQPWd1x42ckiKVFJP2/krs2YeiJza1BZJa/z43oduI9+ZMj8QKTlHrwDO01Zw==}
-
 
   ts-algebra@2.0.0:
     resolution: {integrity: sha512-FPAhNPFMrkwz76P7cdjdmiShwMynZYN6SgOujD1urY4oNm80Ou9oMdmbR45LotcKOXoy7wSmHkRFE6Mxbrhefw==}
@@ -6654,37 +6685,6 @@ snapshots:
 
   '@gar/promisify@1.1.3': {}
 
-  '@huggingface/jinja@0.5.9': {}
-
-  '@humanfs/core@0.19.2':
-    dependencies:
-      '@humanfs/types': 0.15.0
-
-  '@humanfs/node@0.16.8':
-    dependencies:
-      '@humanfs/core': 0.19.2
-      '@humanfs/types': 0.15.0
-      '@humanwhocodes/retry': 0.4.3
-
-  '@humanfs/types@0.15.0': {}
-
-  '@humanwhocodes/module-importer@1.0.1': {}
-
-  '@humanwhocodes/retry@0.4.3': {}
-
-  '@isaacs/cliui@8.0.2':
-    dependencies:
-      string-width: 5.1.2
-      string-width-cjs: string-width@4.2.3
-      strip-ansi: 7.2.0
-      strip-ansi-cjs: strip-ansi@6.0.1
-      wrap-ansi: 8.1.0
-      wrap-ansi-cjs: wrap-ansi@7.0.0
-
-  '@isaacs/fs-minipass@4.0.1':
-    dependencies:
-      minipass: 7.1.3
-
   '@ghostery/adblocker-content@2.18.1':
     dependencies:
       '@ghostery/adblocker-extended-selectors': 2.18.1
@@ -6716,6 +6716,37 @@ snapshots:
   '@ghostery/url-parser@1.3.1':
     dependencies:
       tldts-experimental: 7.4.7
+
+  '@huggingface/jinja@0.5.9': {}
+
+  '@humanfs/core@0.19.2':
+    dependencies:
+      '@humanfs/types': 0.15.0
+
+  '@humanfs/node@0.16.8':
+    dependencies:
+      '@humanfs/core': 0.19.2
+      '@humanfs/types': 0.15.0
+      '@humanwhocodes/retry': 0.4.3
+
+  '@humanfs/types@0.15.0': {}
+
+  '@humanwhocodes/module-importer@1.0.1': {}
+
+  '@humanwhocodes/retry@0.4.3': {}
+
+  '@isaacs/cliui@8.0.2':
+    dependencies:
+      string-width: 5.1.2
+      string-width-cjs: string-width@4.2.3
+      strip-ansi: 7.2.0
+      strip-ansi-cjs: strip-ansi@6.0.1
+      wrap-ansi: 8.1.0
+      wrap-ansi-cjs: wrap-ansi@7.0.0
+
+  '@isaacs/fs-minipass@4.0.1':
+    dependencies:
+      minipass: 7.1.3
 
   '@istanbuljs/schema@0.1.6': {}
 
@@ -6872,6 +6903,23 @@ snapshots:
       '@reflink/reflink-win32-x64-msvc': 0.1.19
     optional: true
 
+  '@remusao/guess-url-type@2.1.0': {}
+
+  '@remusao/small@2.1.0': {}
+
+  '@remusao/smaz-compress@2.2.0':
+    dependencies:
+      '@remusao/trie': 2.1.0
+
+  '@remusao/smaz-decompress@2.2.0': {}
+
+  '@remusao/smaz@2.2.0':
+    dependencies:
+      '@remusao/smaz-compress': 2.2.0
+      '@remusao/smaz-decompress': 2.2.0
+
+  '@remusao/trie@2.1.0': {}
+
   '@resvg/resvg-js-android-arm-eabi@2.6.2':
     optional: true
 
@@ -6903,23 +6951,6 @@ snapshots:
     optional: true
 
   '@resvg/resvg-js-win32-ia32-msvc@2.6.2':
-  '@remusao/guess-url-type@2.1.0': {}
-
-  '@remusao/small@2.1.0': {}
-
-  '@remusao/smaz-compress@2.2.0':
-    dependencies:
-      '@remusao/trie': 2.1.0
-
-  '@remusao/smaz-decompress@2.2.0': {}
-
-  '@remusao/smaz@2.2.0':
-    dependencies:
-      '@remusao/smaz-compress': 2.2.0
-      '@remusao/smaz-decompress': 2.2.0
-
-  '@remusao/trie@2.1.0': {}
-
     optional: true
 
   '@resvg/resvg-js-win32-x64-msvc@2.6.2':
@@ -10472,6 +10503,12 @@ snapshots:
 
   tldts-core@6.1.86: {}
 
+  tldts-core@7.4.7: {}
+
+  tldts-experimental@7.4.7:
+    dependencies:
+      tldts-core: 7.4.7
+
   tldts@6.1.86:
     dependencies:
       tldts-core: 6.1.86
@@ -10503,12 +10540,6 @@ snapshots:
   ts-algebra@2.0.0: {}
 
   ts-api-utils@2.5.0(typescript@5.9.3):
-  tldts-core@7.4.7: {}
-
-  tldts-experimental@7.4.7:
-    dependencies:
-      tldts-core: 7.4.7
-
     dependencies:
       typescript: 5.9.3
 

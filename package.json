@@ -20,7 +20,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "depcruise": "depcruise packages apps --config dependency-cruiser.cjs",
-    "e2e": "turbo run build --filter=@tepegoz/desktop && playwright test"
+    "e2e": "turbo run build --filter=@tepegoz/desktop && playwright test",
+    "eval": "turbo run build --filter=@tepegoz/desktop && playwright test --config playwright.eval.config.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

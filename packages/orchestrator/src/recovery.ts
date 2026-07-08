@@ -12,6 +12,7 @@ export type AgentFailureKind =
   | 'model_malformed'
   | 'validation'
   | 'egress_blocked'
+  | 'no_active_page'
   | 'unknown';
 
 export interface AgentFailure {
@@ -35,6 +36,9 @@ const AUTH_HANDOFF_RE = /captcha|2fa|two[-\s]?factor|otp|one[-\s]?time|verificat
 const STALE_SELECTOR_RE = /stale|detached|no such element|element .*not found|ref\b|snapshot|not visible/i;
 const NAVIGATION_TIMEOUT_RE = /timeout|timed out|navigation|load|net::|did-stop-loading/i;
 const PAGE_CHANGED_RE = /page changed|frame detached|execution context|context destroyed|navigated|target closed/i;
+// A browser_* read/interaction ran with no drivable page (on the view-less newtab, or a stale tabId).
+// Distinct so the advice is "open a page first" instead of the generic "transient, retry" flail.
+const NO_ACTIVE_PAGE_RE = /no active page|no web tab/i;
 
 function messageOf(error: unknown): string {
   if (typeof error === 'object' && error !== null && 'message' in error) {
@@ -104,6 +108,11 @@ export function classifyToolFailure(outcome: Pick<StepOutcome, 'tool' | 'error'>
   if (PAGE_CHANGED_RE.test(message)) {
     return { ...base, kind: 'page_changed', retryable: true };
   }
+  // Must precede the INTERNAL_ERROR/transient catch-all: the ToolGateway flattens this AppError(409) to
+  // INTERNAL_ERROR, but the message survives, so match on it to give "open a page first" guidance.
+  if (outcome.tool.startsWith('browser_') && NO_ACTIVE_PAGE_RE.test(message)) {
+    return { ...base, kind: 'no_active_page', retryable: true };
+  }
   if (code === 'VALIDATION_ERROR') {
     return { ...base, kind: 'validation', retryable: false };
   }
@@ -131,6 +140,7 @@ export function stopReasonForFailure(failure: AgentFailure): StopReason {
       return 'transient_error';
     case 'egress_blocked':
       return 'egress_blocked';
+    case 'no_active_page':
     case 'validation':
     case 'unknown':
       return 'tool_error';
@@ -171,6 +181,15 @@ export function recoveryAdviceFor(failure: AgentFailure): RecoveryAdvice {
         retryable: true,
         instruction:
           'This looks transient. Retry only after re-reading or validating the current state; do not repeat the same side effect blindly.',
+      };
+    case 'no_active_page':
+      return {
+        retryable: true,
+        nextTool: 'browser_update_location',
+        instruction:
+          'There is no active web page yet (you may be on the new-tab page). Open one first with ' +
+          'browser_update_location {"url": "…"} (omit tabId); do NOT retry a read or interaction tool ' +
+          'until a page is open.',
       };
     case 'policy_denied':
       return {

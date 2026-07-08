@@ -215,4 +215,29 @@ describe('Phase 5 acceptance eval scenarios', () => {
     });
     expect(metrics.tokenUsage.totalTokens).toBeGreaterThan(0);
   });
+
+  it('counts a registry scenario (string id) as a recovery run via its own requiresRecovery flag', () => {
+    // AI-1: registry ids are open strings and carry their own recovery expectation (no static lookup).
+    const rec = recordFromOutcomes({
+      scenarioId: 'ai1_custom_recovery',
+      stoppedReason: 'completed',
+      outcomes: [],
+      requiresRecovery: true,
+      recovered: true,
+    });
+    expect(rec.scenarioId).toBe('ai1_custom_recovery');
+    expect(rec.requiresRecovery).toBe(true);
+    expect(summarizeAcceptanceRuns([rec]).recoverySuccessRate).toBe(1);
+
+    // Same scenario that did NOT recover → the recovery rate reflects the failure.
+    const failed = recordFromOutcomes({
+      scenarioId: 'ai1_custom_recovery',
+      stoppedReason: 'max_steps',
+      outcomes: [],
+      requiresRecovery: true,
+      recovered: false,
+      ok: false,
+    });
+    expect(summarizeAcceptanceRuns([failed]).recoverySuccessRate).toBe(0);
+  });
 });

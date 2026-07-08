@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Newsletter</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; }
+      #overlay {
+        position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6);
+        display: flex; align-items: center; justify-content: center;
+      }
+      #overlay.hidden { display: none; }
+      #modal { background: #fff; padding: 2rem; border-radius: 8px; }
+    </style>
+  </head>
+  <body>
+    <div id="overlay">
+      <div id="modal" role="dialog" aria-label="Newsletter signup">
+        <p>Subscribe to our newsletter!</p>
+        <button id="close" aria-label="Close">Close</button>
+      </div>
+    </div>
+    <main>
+      <h1>Main content</h1>
+      <p>The article you actually came to read.</p>
+    </main>
+    <script>
+      document.getElementById('close').addEventListener('click', () => {
+        document.getElementById('overlay').classList.add('hidden');
+      });
+    </script>
+  </body>
+</html>

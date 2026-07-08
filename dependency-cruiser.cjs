@@ -24,7 +24,8 @@ module.exports = {
       name: 'not-to-dev-dep',
       severity: 'error',
       comment: 'Production code must not import devDependencies.',
-      from: { pathNot: '\\.(test|spec)\\.ts$' },
+      // `.eval.ts` are dev-only agent-eval drivers (Playwright over the real app) — dev-only like tests.
+      from: { pathNot: '\\.(test|spec|eval)\\.ts$' },
       to: { dependencyTypes: ['npm-dev'] },
     },
     {

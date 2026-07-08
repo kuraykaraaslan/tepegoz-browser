@@ -15,7 +15,6 @@ export const en = {
   biometricNote: 'This is a high-risk action (Windows Hello will be required in a later release).',
   approve: 'Approve',
   deny: 'Deny',
-  aiDisclaimer: 'AI-generated and may be wrong.',
   planTitle: 'Review the plan',
   planBody: 'Uncheck any step you do not want, then run. Nothing executes until you approve.',
   planRun: 'Run plan',
@@ -54,6 +53,7 @@ export const en = {
     empty: 'No conversations yet',
     loading: 'Loading...',
     full: 'Full conversation history',
+    delete: 'Delete conversation',
   },
   historyPage: {
     title: 'Agent history',
@@ -145,6 +145,12 @@ export const en = {
     saveFailed: 'Could not save the task.',
     saved: '✓ Task saved',
     openManager: 'Open tasks',
+  },
+  // Export the full chat log to the ~/tepegoz folder (the header star) — hand a transcript off for debugging.
+  exportLog: {
+    action: 'Save chat log to tepegoz',
+    saved: '✓ Chat log saved',
+    failed: 'Could not save the chat log.',
   },
 };
 

@@ -4,6 +4,7 @@ export * from './model-router';
 export * from './token-ledger';
 export * from './gateway';
 export * from './mock-provider';
+export * from './scripted-provider';
 export * from './providers/anthropic.provider';
 export * from './providers/openai.provider';
 export * from './providers/gemini.provider';

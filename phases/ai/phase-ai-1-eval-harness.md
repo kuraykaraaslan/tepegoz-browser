@@ -1,0 +1,60 @@
+# Phase AI-1 — Real-Result Eval Loop
+
+**Status:** 🟡 In progress (PR1 backbone + PR2 live-tier/judge/nightly-CI code landed; end-to-end `pnpm eval`
+run pending the Electron-ABI env) ·  **Depends on:** Phase 1a  ·  **Track:** [`phases/ai`](README.md)
+
+> **PR1 backbone:** `@tepegoz/agent-eval` (data-driven zod registry loader, local fixture server,
+> ground-truth scorer, honest metrics report), the `runAgent` provider-injection seam, the
+> `ScriptedProvider`, `test-fixtures/sites/*` hard-case fixtures, the env-gated app batch-eval runner, and
+> the `_electron` Playwright driver + `pnpm eval` wiring.
+> **PR2:** the real-cloud-model **live tier** (`TEPEGOZ_EVAL_MODE=live`, provider from an env key), the
+> **LLM-judge** (`judge.ts`) + **calibration** (`calibration.ts` + `human-labels.json`), and the
+> **nightly non-blocking CI** (`.github/workflows/eval-nightly.yml`). Every unit-testable part is green;
+> the end-to-end `pnpm eval` run happens in the Electron-ABI env (like `pnpm e2e`), not the Node-ABI test
+> session.
+**Goal:** A repeatable, **honest** way to measure the agent's real competence, so every later change is
+justified by a pass-rate delta on the **real product model** against **real / representative pages** — not
+by a green offline test. This is the measurement backbone the rest of the track is scored against.
+
+## Why (the anti-vanity contract)
+
+Today the only agent evals are the offline `acceptance-eval.ts` scenarios driven by a `ScriptedProvider`:
+useful for **loop plumbing / regression**, but the "pass" is tautological because we script the model's
+decisions. That is **not** evidence the agent can do a task. This phase adds the missing tier: a real model
+driving real pages with ground-truth scoring, plus a **held-out** set so fixes can't be overfit to the eval.
+
+## Exit criteria (DoD)
+- [x] `pnpm eval` runs the **full agent** (`runAgent`) with the **real product model** against a scenario set and emits an `AcceptanceMetrics`-shaped report (task-success-rate, per-scenario pass/fail, tokens, N, threshold) plus a machine-readable JSON artifact. _(Live tier: `TEPEGOZ_EVAL_MODE=live` injects the real provider from an env key over the full registry; scripted tier for no-key runs. Report + JSON artifact via `buildReport`/`writeReport`. End-to-end run happens in the Electron-ABI env.)_
+- [x] Scenarios are a **data-driven, zod-validated registry** (not a hard-coded tuple); a new scenario is one JSON entry. _(`EvalScenarioSchema` in `@tepegoz/shared-types`; `loadScenarios` safeParses `packages/agent-eval/scenarios/*.json`.)_
+- [x] Two target types work: **local HTML fixtures** (deterministic regression) and **real-site** scenarios (honest competence), each tagged; a **held-out** subset is reported separately and never used during development. _(Both `target` shapes in the schema; `test-fixtures/sites/*`; live driver navigates `realUrl` targets; `heldOut` split reported separately in `buildReport`.)_
+- [x] Scoring is **ground-truth first** (DOM/value assertion) with an **optional LLM-judge** for open-ended tasks; the judge is calibrated against a small human-labelled sample and its agreement rate is recorded. _(`scoreScenario` (ground-truth) → `judgeScenario` (secondary); `agreementRate` over `calibration/human-labels.json`, recorded in the report.)_
+- [x] CI: offline/scripted tier stays in `turbo run test` (blocking regression); the live tier runs **out-of-band** (nightly / manual `pnpm eval`), budget-bounded, with pass-rate **trend** surfaced (a drop warns, does not silently pass). _(`.github/workflows/eval-nightly.yml`: schedule + dispatch, `continue-on-error`, uploads the JSON artifact, `::warning::` on a below-threshold pass rate.)_
+- [x] **i18n:** no new user-facing strings expected; if any, en+tr in the owning package dict. _(None added — harness is dev-only; the app runner logs are not UI strings.)_
+- [ ] Coverage + self-review + migration-safe (no DB schema change expected). _(No DB change; unit tiers green. Coverage gate + self-review PR pending.)_
+
+## Tasks
+
+### Scenario model (data-driven)
+- [x] `EvalScenario` zod schema: `{ id, task, target: { fixture: string } | { realUrl: string }, success: { domAssertion?, expectedValue?, judgeRubric? }, heldOut: boolean, tags: string[] }`; loaded + `safeParse`d at run time. Reuse `@tepegoz/shared-types` where a shape already exists. _(`packages/shared-types/src/eval-scenario.ts`.)_
+- [x] Seed the registry with the real failures observed to date (view-less-newtab navigation, blog-behind-a-menu, blog-not-linked-from-landing) plus the existing 5 acceptance scenarios re-expressed in the new shape. _(`packages/agent-eval/scenarios/{real-failures,acceptance}.json`; the recovery/handoff acceptance behaviors stay in the offline `acceptance-eval` tier — they test agent internals, not page competence.)_
+- [x] Evolve `ACCEPTANCE_SCENARIO_IDS` (hard-coded tuple in `packages/orchestrator/src/acceptance-eval.ts`) into the loaded registry (keep `recordFromOutcomes` / `summarizeAcceptanceRuns` / `AcceptanceMetrics`). _(Widened `scenarioId` to `string`; helpers + metrics contract unchanged; registry now drives the id set.)_
+
+### Local fixture server (deterministic real pages)
+- [x] `test-fixtures/sites/` static HTML pages that reproduce the hard cases: hamburger/drawer nav, blog-behind-nav, infinite-scroll list, native `<select>`, occluding modal, multi-tab flow.
+- [x] A tiny static server (`http.createServer`) the harness points the agent at; no cloud dependency for the page. _(`packages/agent-eval/src/fixture-server.ts`.)_
+
+### Full-loop harness
+- [x] **Provider-injection seam on `runAgent`** (`packages/agent-runtime/src/agent-runtime.ts`): today it self-resolves the provider from vault/prefs and calls `ModelGateway.register` internally. Add an optional `deps.provider` so the harness can inject the real cloud model, a `LocalProvider` (GGUF) for cheap smoke, or a scripted provider — without going through the vault. _(`deps.provider?: { id, instance }`; `registerRunProvider` bypasses the vault when present. `ScriptedProvider` added to `@tepegoz/model-gateway`.)_
+- [x] Register a real `BrowserHost` (or a headless CDP host over the fixture pages) via `registerBrowserTools({ host })`; reuse the `fakeHost` pattern only for offline plumbing tests. _(Chose max fidelity: the `_electron` driver launches the REAL app; the env-gated `agent-eval-runner.electron.ts` drives the run over the real `browserHost` + Policy plane.)_
+- [x] Per scenario: run to completion (bounded steps + token budget), then score: DOM/value assertion primary; LLM-judge secondary; record an `AcceptanceRunRecord`; aggregate to `AcceptanceMetrics`. _(Driver + `scoreScenario` (ground-truth) + `recordFromOutcomes` + `buildReport`. LLM-judge secondary = PR2.)_
+- [x] Honest reporting: emit the full pass/fail list, the held-out metric separately, the model id + N + threshold; **no cherry-picking**. A scenario the agent gets wrong MUST show as a fail (the eval's job is to be able to fail). _(`buildReport` / `formatReportTable` / `writeReport`; scorer returns a fail for a missing assertion and defers judge-only scenarios as a fail.)_
+
+### CI / cadence
+- [x] Offline scripted acceptance stays in `turbo run test` (blocking). _(Unchanged — `acceptance-eval.test.ts` + all new unit tiers stay in `turbo run test`.)_
+- [x] `pnpm eval` script + a nightly workflow (non-blocking) that stores the metrics artifact and warns on a pass-rate regression trend. _(`pnpm eval` + `playwright.eval.config.ts` + `_electron` driver; `.github/workflows/eval-nightly.yml` uploads the artifact + `::warning::` on regression.)_
+
+## Non-goals / scope notes
+- No agent-behaviour change lands in this phase — it only measures. (AI-2/AI-3/AI-4 are scored *by* it.)
+- The live tier is deliberately **out of the blocking gate** (cost + real-web flakiness); its signal is the
+  trend + the before/after delta on a change, not a hard CI pass.
+- Prefer the real product model for the headline metric; a weak local model "passing" is a false signal.

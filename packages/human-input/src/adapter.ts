@@ -228,4 +228,14 @@ export class HumanInputAdapter {
       await delay(Math.max(15, gaussianJitter(60, 25)));
     }
   }
+
+  /**
+   * Human "think/react" pause BETWEEN behaviors — the gap a real user leaves between one action and
+   * the next (not the timing *within* a single motion). Gaussian-jittered and floored so it is never
+   * zero. Defaults to ≈ 0.3–0.9 s; pass a smaller mean/std for the short beats inside a composed
+   * action, e.g. `idle(200, 70)` between a click and the follow-up keystroke.
+   */
+  async idle(meanMs = 600, stdMs = 150): Promise<void> {
+    await delay(Math.max(250, gaussianJitter(meanMs, stdMs)));
+  }
 }

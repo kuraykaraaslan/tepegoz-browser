@@ -1,0 +1,63 @@
+name: Agent Eval (nightly)
+
+# AI-1 real-result eval loop, OUT-OF-BAND on purpose (cost + real-web flakiness): it is NOT a blocking
+# gate. It drives the built app via `_electron` and emits the metrics artifact; a pass-rate drop WARNS,
+# it never silently passes and never fails the build. The blocking regression tier stays in the `verify`
+# job's `turbo run test`. Runs nightly + on manual dispatch.
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+          cache: pnpm
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+      # Same Electron-ABI native addon + virtual display the e2e job uses (the eval launches the real app).
+      - name: Rebuild native addon for the Electron ABI (better-sqlite3)
+        run: pnpm --filter @tepegoz/desktop run rebuild
+      - name: Install Playwright system libraries (Electron/Chromium)
+        run: pnpm exec playwright install-deps chromium
+      # Live tier when a model key is configured (repo secret EVAL_API_KEY + vars EVAL_MODE/EVAL_PROVIDER),
+      # otherwise the deterministic scripted tier. Non-blocking — a real-web/model failure must not go red.
+      - name: Run agent eval (out-of-band, non-blocking)
+        continue-on-error: true
+        env:
+          TEPEGOZ_EVAL_MODE: ${{ vars.EVAL_MODE || 'scripted' }}
+          TEPEGOZ_EVAL_PROVIDER: ${{ vars.EVAL_PROVIDER || 'anthropic' }}
+          TEPEGOZ_EVAL_API_KEY: ${{ secrets.EVAL_API_KEY }}
+        run: xvfb-run -a pnpm eval
+      # Surface a pass-rate regression as a WARNING (trend across runs = the uploaded artifacts). Never fails.
+      - name: Warn on pass-rate regression
+        if: always()
+        shell: bash
+        run: |
+          report=agent-eval-report.json
+          if [ ! -f "$report" ]; then
+            echo "::warning::agent-eval produced no report (the run likely failed to launch the app)."
+            exit 0
+          fi
+          met=$(node -e "process.stdout.write(String(require('./'+process.argv[1]).thresholdMet))" "$report")
+          rate=$(node -e "process.stdout.write(String(require('./'+process.argv[1]).dev.metrics.taskSuccessRate))" "$report")
+          echo "dev task-success rate: $rate (threshold met: $met)"
+          if [ "$met" != "true" ]; then
+            echo "::warning::agent-eval dev pass-rate is below threshold ($rate). Investigate the trend in the uploaded artifact."
+          fi
+      - name: Upload metrics artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-eval-report
+          path: agent-eval-report.json
+          if-no-files-found: warn

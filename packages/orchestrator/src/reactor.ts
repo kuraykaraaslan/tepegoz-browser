@@ -220,7 +220,16 @@ const BROWSING_STRATEGY =
   'the result with browser_validate_page, browser_get_page, or browser_get_elements before continuing. ' +
   'If browser_get_page/browser_get_elements do not expose enough information, use browser_get_screenshot ' +
   'as a visual fallback. If browser_update_page returns changed=false, do not repeat the same ref blindly; ' +
-  're-read browser_get_elements and try a different actionable ref or finish with a clear limitation.';
+  're-read browser_get_elements and try a different actionable ref or finish with a clear limitation.' +
+  '\nWhen you cannot find a target section or link on the page, do NOT give up after reading only the ' +
+  'landing page. First REVEAL hidden navigation: a site\'s links are often behind a menu / hamburger / ' +
+  'drawer or an overflow ("☰", "Menu", "More") toggle, or below the fold — click that toggle with ' +
+  'browser_update_page (or scroll), then re-read browser_get_elements, because a collapsed menu\'s links ' +
+  'are NOT listed until it is opened. If the target is still not found, navigate directly to a ' +
+  'conventional path on the SAME site with browser_update_location by appending a likely path to the ' +
+  'origin (e.g. /blog, /posts, /articles, /about) and verify with browser_get_page or ' +
+  'browser_validate_page; if a path 404s or is empty, try another common candidate (a few at most), then ' +
+  'finish with a clear limitation.';
 
 function systemPrompt(req: ReactRequest): string {
   const toolList = req.tools.map((t) => `- ${t.id} (${t.dangerClass}): ${t.description}`).join('\n');

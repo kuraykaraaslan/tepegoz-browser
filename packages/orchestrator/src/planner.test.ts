@@ -84,4 +84,26 @@ describe('Planner.plan', () => {
     await Planner.plan(base);
     expect(withoutHistory.system).not.toContain('earlier turns of the SAME conversation');
   });
+
+  it('guides opening menus/drawers and trying a conventional URL path', async () => {
+    class CapturingProvider implements ModelProvider {
+      readonly id = 'anthropic' as const;
+      system = '';
+      complete(request: CanonRequest): Promise<CanonResponse> {
+        this.system = request.messages.find((m) => m.role === 'system')?.content ?? '';
+        return Promise.resolve({
+          text: JSON.stringify(validPlan),
+          stopReason: 'end',
+          usage: { inputTokens: 1, outputTokens: 1 },
+          toolCalls: [],
+        });
+      }
+    }
+    const provider = new CapturingProvider();
+    ModelGateway.reset();
+    ModelGateway.register(provider);
+    await Planner.plan({ intent: 'find the blog', tools, provider: 'anthropic' as const, model: 'claude-opus-4-8' });
+    expect(provider.system).toContain('menu/hamburger');
+    expect(provider.system).toContain('/blog');
+  });
 });

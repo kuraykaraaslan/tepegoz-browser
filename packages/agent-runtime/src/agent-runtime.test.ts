@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import CredentialVault, { type SecretCrypto } from '@tepegoz/credential-vault';
 import PreferenceStore from '@tepegoz/preferences';
-import { TokenLedger } from '@tepegoz/model-gateway';
+import { TokenLedger, type CanonResponse, type ModelProvider } from '@tepegoz/model-gateway';
 import type { LlamaEngine, LocalProviderConfig } from '@tepegoz/local-inference';
 import { runAgent, type AgentRunDeps, type AgentRunHooks } from './agent-runtime';
 
@@ -109,6 +109,18 @@ describe('runAgent guards (before any model/tool call)', () => {
     });
     await expect(runAgent('x', hooks(), DEPS)).rejects.toThrow('stop-at-anthropic');
     spy.mockRestore();
+  });
+
+  it('uses an injected provider (eval seam) and bypasses vault resolution entirely', async () => {
+    // No API key stored anywhere. The old path would throw "No API key" during resolveProvider BEFORE
+    // any model call; the seam must instead reach the injected provider — proven by its sentinel throw.
+    const injected: ModelProvider = {
+      id: 'anthropic',
+      complete: (): Promise<CanonResponse> => Promise.reject(new Error('reached-injected-provider')),
+    };
+    await expect(
+      runAgent('do a thing', hooks(), { ...DEPS, provider: { id: 'anthropic', instance: injected } }),
+    ).rejects.toThrow('reached-injected-provider');
   });
 
   it('resets the token ledger at the start of each run (per-task counter, not session-cumulative)', async () => {

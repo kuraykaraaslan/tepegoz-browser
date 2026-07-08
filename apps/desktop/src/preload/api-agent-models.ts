@@ -54,6 +54,7 @@ export const agentModelsApi: Pick<
   | 'setAgentAutonomy'
   | 'setAgentEffort'
   | 'openAgentFile'
+  | 'exportChatLog'
   | 'capturePageSelection'
   | 'pickAgentFiles'
   | 'capturePageScreenshot'
@@ -150,6 +151,8 @@ export const agentModelsApi: Pick<
   openAgentFile: (path: string) => {
     ipcRenderer.send(IpcChannels.agentOpenFile, path);
   },
+  exportChatLog: (input: { content: string; title?: string }) =>
+    invoke<string>(IpcChannels.agentExportConversation, input),
   capturePageSelection: () => invoke<string>(IpcChannels.agentCaptureSelection),
   pickAgentFiles: () => invoke<AgentFileAttachment[]>(IpcChannels.agentPickFiles),
   capturePageScreenshot: () => invoke<string | null>(IpcChannels.tabsCapture),

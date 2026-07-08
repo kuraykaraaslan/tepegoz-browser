@@ -1,0 +1,52 @@
+{
+  "scenarios": [
+    {
+      "id": "headings_summary",
+      "task": "Summarize the section headings on this page.",
+      "target": { "fixture": "headings" },
+      "success": { "expectedValue": "Risks" },
+      "heldOut": false,
+      "tags": ["read", "acceptance"]
+    },
+    {
+      "id": "native_select_country",
+      "task": "Set the country dropdown to Türkiye.",
+      "target": { "fixture": "native-select" },
+      "success": { "domAssertion": "Selected: Türkiye" },
+      "heldOut": false,
+      "tags": ["form", "acceptance"]
+    },
+    {
+      "id": "dismiss_occluding_modal",
+      "task": "Dismiss the newsletter popup and read the main heading.",
+      "target": { "fixture": "occluding-modal" },
+      "success": { "domAssertion": "Main content" },
+      "heldOut": false,
+      "tags": ["interaction", "acceptance"]
+    },
+    {
+      "id": "infinite_scroll_find",
+      "task": "Scroll the feed until you find Item 30 and confirm it exists.",
+      "target": { "fixture": "infinite-scroll" },
+      "success": { "domAssertion": "Item 30" },
+      "heldOut": true,
+      "tags": ["scroll", "acceptance"]
+    },
+    {
+      "id": "multi_tab_compare",
+      "task": "Open both plan pages and tell me which plan is cheaper.",
+      "target": { "fixture": "multi-tab" },
+      "success": { "expectedValue": "Plan B" },
+      "heldOut": false,
+      "tags": ["multi-tab", "acceptance"]
+    },
+    {
+      "id": "compare_plans_judged",
+      "task": "Compare both plans and explain which is cheaper and by how much.",
+      "target": { "fixture": "multi-tab" },
+      "success": { "judgeRubric": "The summary must correctly identify Plan B as the cheaper plan ($20/mo vs $30/mo)." },
+      "heldOut": false,
+      "tags": ["multi-tab", "judge"]
+    }
+  ]
+}

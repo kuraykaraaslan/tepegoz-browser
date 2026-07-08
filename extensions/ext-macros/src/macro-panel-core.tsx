@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { cn } from '@tepegoz/ui';
 import { useT } from '@tepegoz/i18n/react';
-import type { Macro, MacroRunProgress, MacroSummary, Step, StepErrorPolicy } from '@tepegoz/shared-types';
+import {
+  COMPARE_OPS,
+  type CompareOp,
+  type Macro,
+  type MacroRunProgress,
+  type MacroSummary,
+  type Predicate,
+  type Step,
+  type StepErrorPolicy,
+} from '@tepegoz/shared-types';
 import { macrosDict } from './i18n';
 import type { MacrosHostApi } from './types';
 import {
@@ -17,10 +26,30 @@ import {
   PRESS_KEYS,
   type AddableKind,
   cssChain,
+  defaultPredicate,
   describeStep,
   emptyDraft,
   newStepOfKind,
 } from './macro-step-helpers';
+import {
+  appendStepToContainer,
+  deleteStepAtLocation,
+  insertStepAfterLocation,
+  moveStepAtLocation,
+  stepLocationKey,
+  type StepContainerPath,
+  type StepLocation,
+  updateStepAtLocation,
+} from './macro-step-tree';
+
+const EDITABLE_PREDICATE_KINDS = [
+  'textPresent',
+  'textAbsent',
+  'elementExists',
+  'elementVisible',
+  'varCompare',
+] as const;
+type EditablePredicateKind = (typeof EDITABLE_PREDICATE_KINDS)[number];
 
 /** Shared stateful core — used by both the sidebar Studio and the internal page manager. */
 export function MacrosCore({ api }: Readonly<{ api: MacrosHostApi }>) {
@@ -31,6 +60,7 @@ export function MacrosCore({ api }: Readonly<{ api: MacrosHostApi }>) {
   const [addKind, setAddKind] = useState<AddableKind>('waitMs');
   const [progress, setProgress] = useState<MacroRunProgress | null>(null);
   const [runId, setRunId] = useState<string | null>(null);
+  const [csvInputs, setCsvInputs] = useState<Record<string, string>>({});
 
   const refresh = useCallback(() => {
     void api.listMacros().then(setMacros, () => undefined);
@@ -39,7 +69,7 @@ export function MacrosCore({ api }: Readonly<{ api: MacrosHostApi }>) {
   useEffect(() => {
     refresh();
     const offStep = api.onMacroRecordStep((s) => {
-      setDraft((prev) => (prev === null ? prev : { ...prev, steps: [...prev.steps, s.step] }));
+      setDraft((prev) => (prev === null ? prev : { ...prev, steps: appendStepToContainer(prev.steps, [], s.step) }));
     });
     const offRun = api.onMacroRunProgress((p) => {
       setProgress(p);
@@ -54,33 +84,43 @@ export function MacrosCore({ api }: Readonly<{ api: MacrosHostApi }>) {
     };
   }, [api, refresh]);
 
-  // ── draft mutations (all edit-without-saving) ──────────────────────────────────────────────────
-  const patchSteps = (fn: (steps: Step[]) => Step[]): void =>
-    setDraft((prev) => (prev === null ? prev : { ...prev, steps: fn([...prev.steps]) }));
+  // -- draft mutations (all edit-without-saving) --------------------------------------------------
+  const patchSteps = (fn: (steps: readonly Step[]) => Step[]): void =>
+    setDraft((prev) => (prev === null ? prev : { ...prev, steps: fn(prev.steps) }));
 
-  const updateStep = (i: number, next: Step): void =>
-    patchSteps((steps) => {
-      steps[i] = next;
-      return steps;
+  const updateStep = (location: StepLocation, next: Step): void =>
+    patchSteps((steps) => updateStepAtLocation(steps, location, () => next));
+
+  const patchStep = (location: StepLocation, fn: (step: Step) => Step): void =>
+    patchSteps((steps) => updateStepAtLocation(steps, location, fn));
+
+  const setErrorPolicy = (location: StepLocation, patch: { onError?: StepErrorPolicy; retries?: number }): void =>
+    patchStep(location, (step) => ({ ...step, ...patch }));
+
+  const moveStep = (location: StepLocation, dir: -1 | 1): void =>
+    patchSteps((steps) => moveStepAtLocation(steps, location, dir));
+
+  const deleteStep = (location: StepLocation): void =>
+    patchSteps((steps) => deleteStepAtLocation(steps, location));
+
+  const insertAfter = (location: StepLocation, step: Step): void =>
+    patchSteps((steps) => insertStepAfterLocation(steps, location, step));
+
+  const addStep = (containerPath: StepContainerPath, kind: AddableKind): void =>
+    patchSteps((steps) => appendStepToContainer(steps, containerPath, newStepOfKind(kind)));
+
+  async function attachCsv(location: StepLocation, step: Extract<Step, { kind: 'forEachRow' }>): Promise<void> {
+    const key = stepLocationKey(location);
+    const content = csvInputs[key] ?? '';
+    if (content.trim().length === 0) return;
+    const hash = await api.attachMacroCsv(content);
+    updateStep(location, { ...step, csvBlobHash: hash });
+    setCsvInputs((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
     });
-  // Set error-handling fields on an action step. Cast is sound: the control is only rendered for the
-  // ERROR_POLICY_KINDS (browser-action steps that actually carry onError/retries in the IR).
-  const setErrorPolicy = (i: number, s: Step, patch: { onError?: StepErrorPolicy; retries?: number }): void =>
-    updateStep(i, { ...s, ...patch });
-  const moveStep = (i: number, dir: -1 | 1): void =>
-    patchSteps((steps) => {
-      const j = i + dir;
-      if (j < 0 || j >= steps.length) return steps;
-      [steps[i], steps[j]] = [steps[j]!, steps[i]!];
-      return steps;
-    });
-  const deleteStep = (i: number): void => patchSteps((steps) => steps.filter((_, k) => k !== i));
-  const insertAfter = (i: number, step: Step): void =>
-    patchSteps((steps) => {
-      steps.splice(i + 1, 0, step);
-      return steps;
-    });
-  const addStep = (kind: AddableKind): void => patchSteps((steps) => [...steps, newStepOfKind(kind)]);
+  }
 
   async function toggleRecord(): Promise<void> {
     if (recording) {
@@ -148,10 +188,22 @@ export function MacrosCore({ api }: Readonly<{ api: MacrosHostApi }>) {
     waitFor: t.stepWaitFor,
     waitLoad: t.stepWaitLoad,
     waitMs: t.stepWaitMs,
+    assert: t.stepAssert,
+    if: t.stepIf,
+    repeat: t.stepRepeat,
+    forEachRow: t.stepForEachRow,
   };
   const stepTypeLabel = (kind: AddableKind): string => STEP_LABELS[kind];
 
-  /** A CSS-selector text input bound to a step's `target[0].value` (used by click/fill/extract). */
+  const PREDICATE_LABELS: Record<EditablePredicateKind | 'advanced', string> = {
+    textPresent: t.predTextPresent,
+    textAbsent: t.predTextAbsent,
+    elementExists: t.predElementExists,
+    elementVisible: t.predElementVisible,
+    varCompare: t.predVarCompare,
+    advanced: t.predAdvanced,
+  };
+
   const selectorInput = (value: string, onValue: (v: string) => void) => (
     <input
       type="text"
@@ -163,32 +215,159 @@ export function MacrosCore({ api }: Readonly<{ api: MacrosHostApi }>) {
     />
   );
 
-  /** The editable body for one step row (inline field editors for the parameterised kinds). */
-  function stepBody(step: Step, i: number) {
+  function makePredicate(kind: EditablePredicateKind): Predicate {
+    switch (kind) {
+      case 'textPresent':
+        return { kind, text: 'Success' };
+      case 'textAbsent':
+        return { kind, text: 'Error' };
+      case 'elementExists':
+      case 'elementVisible':
+        return { kind, target: cssChain('body') };
+      case 'varCompare':
+        return { kind, left: 'x', op: 'eq', right: '""' };
+    }
+  }
+
+  function describePredicate(predicate: Predicate): string {
+    switch (predicate.kind) {
+      case 'textPresent':
+        return `${t.predTextPresent}: ${predicate.text}`;
+      case 'textAbsent':
+        return `${t.predTextAbsent}: ${predicate.text}`;
+      case 'elementExists':
+        return `${t.predElementExists}: ${predicate.target[0]?.value ?? ''}`;
+      case 'elementVisible':
+        return `${t.predElementVisible}: ${predicate.target[0]?.value ?? ''}`;
+      case 'varCompare':
+        return `${predicate.left} ${predicate.op} ${predicate.right}`;
+      case 'and':
+        return `and(${predicate.all.length})`;
+      case 'or':
+        return `or(${predicate.any.length})`;
+      case 'not':
+        return `not(${describePredicate(predicate.of)})`;
+    }
+  }
+
+  function predicateEditor(predicate: Predicate, onChange: (next: Predicate) => void) {
+    const editableKind = EDITABLE_PREDICATE_KINDS.includes(predicate.kind as EditablePredicateKind)
+      ? (predicate.kind as EditablePredicateKind)
+      : 'advanced';
+    return (
+      <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+        <select
+          value={editableKind}
+          aria-label={t.predicate}
+          onChange={(e) => {
+            if (e.target.value !== 'advanced') onChange(makePredicate(e.target.value as EditablePredicateKind));
+          }}
+          className={cn(FIELD, 'w-36')}
+        >
+          {editableKind === 'advanced' && <option value="advanced">{PREDICATE_LABELS.advanced}</option>}
+          {EDITABLE_PREDICATE_KINDS.map((kind) => (
+            <option key={kind} value={kind}>
+              {PREDICATE_LABELS[kind]}
+            </option>
+          ))}
+        </select>
+        {predicate.kind === 'textPresent' || predicate.kind === 'textAbsent' ? (
+          <input
+            type="text"
+            value={predicate.text}
+            aria-label={t.predicate}
+            onChange={(e) => onChange({ ...predicate, text: e.target.value })}
+            className={cn(FIELD, 'min-w-0 flex-1')}
+          />
+        ) : null}
+        {predicate.kind === 'elementExists' || predicate.kind === 'elementVisible'
+          ? selectorInput(predicate.target[0]?.value ?? '', (v) => onChange({ ...predicate, target: cssChain(v) }))
+          : null}
+        {predicate.kind === 'varCompare' ? (
+          <>
+            <input
+              type="text"
+              value={predicate.left}
+              placeholder={t.leftExpr}
+              aria-label={t.leftExpr}
+              onChange={(e) => onChange({ ...predicate, left: e.target.value })}
+              className={cn(FIELD, 'w-24')}
+            />
+            <select
+              value={predicate.op}
+              aria-label={t.comparison}
+              onChange={(e) => onChange({ ...predicate, op: e.target.value as CompareOp })}
+              className={cn(FIELD, 'w-20')}
+            >
+              {COMPARE_OPS.map((op) => (
+                <option key={op} value={op}>
+                  {op}
+                </option>
+              ))}
+            </select>
+            <input
+              type="text"
+              value={predicate.right}
+              placeholder={t.rightExpr}
+              aria-label={t.rightExpr}
+              onChange={(e) => onChange({ ...predicate, right: e.target.value })}
+              className={cn(FIELD, 'w-24')}
+            />
+          </>
+        ) : null}
+        {editableKind === 'advanced' && (
+          <span className="min-w-0 flex-1 truncate font-mono text-text-secondary">{describePredicate(predicate)}</span>
+        )}
+      </span>
+    );
+  }
+
+  function updateAssertMessage(step: Extract<Step, { kind: 'assert' }>, location: StepLocation, message: string): void {
+    const next: Step =
+      message.length === 0
+        ? { kind: 'assert', predicate: step.predicate, severity: step.severity }
+        : { ...step, message };
+    updateStep(location, next);
+  }
+
+  function updateForEachMaxRows(
+    step: Extract<Step, { kind: 'forEachRow' }>,
+    location: StepLocation,
+    raw: string,
+  ): void {
+    const maxRows = raw.trim().length === 0 ? undefined : Math.max(1, Number(raw));
+    const next: Step =
+      maxRows === undefined
+        ? { kind: 'forEachRow', csvBlobHash: step.csvBlobHash, as: step.as, onEnd: step.onEnd, body: step.body }
+        : { ...step, maxRows };
+    updateStep(location, next);
+  }
+
+  function stepBody(step: Step, location: StepLocation) {
     if (step.kind === 'navigate') {
       return (
         <input
           type="url"
           value={step.url}
           aria-label={t.stepNavigate}
-          onChange={(e) => updateStep(i, { kind: 'navigate', url: e.target.value })}
+          onChange={(e) => updateStep(location, { ...step, url: e.target.value })}
           className={cn(FIELD, 'min-w-0 flex-1')}
         />
       );
     }
     if (step.kind === 'click') {
-      return selectorInput(step.target[0]?.value ?? '', (v) => updateStep(i, { kind: 'click', target: cssChain(v) }));
+      return selectorInput(step.target[0]?.value ?? '', (v) => updateStep(location, { ...step, target: cssChain(v) }));
     }
     if (step.kind === 'fill') {
       return (
         <span className="flex min-w-0 flex-1 items-center gap-1">
-          {selectorInput(step.target[0]?.value ?? '', (v) => updateStep(i, { ...step, target: cssChain(v) }))}
+          {selectorInput(step.target[0]?.value ?? '', (v) => updateStep(location, { ...step, target: cssChain(v) }))}
           <input
             type="text"
             value={step.value}
             placeholder={t.fillValue}
             aria-label={t.fillValue}
-            onChange={(e) => updateStep(i, { ...step, value: e.target.value })}
+            onChange={(e) => updateStep(location, { ...step, value: e.target.value })}
             className={cn(FIELD, 'min-w-0 flex-1')}
           />
         </span>
@@ -201,7 +380,7 @@ export function MacrosCore({ api }: Readonly<{ api: MacrosHostApi }>) {
           <select
             value={step.key}
             aria-label={t.key}
-            onChange={(e) => updateStep(i, { kind: 'press', key: e.target.value })}
+            onChange={(e) => updateStep(location, { ...step, key: e.target.value })}
             className={cn(FIELD, 'w-32')}
           >
             {PRESS_KEYS.map((k) => (
@@ -220,7 +399,7 @@ export function MacrosCore({ api }: Readonly<{ api: MacrosHostApi }>) {
           <select
             value={step.direction}
             aria-label={t.direction}
-            onChange={(e) => updateStep(i, { ...step, direction: e.target.value === 'up' ? 'up' : 'down' })}
+            onChange={(e) => updateStep(location, { ...step, direction: e.target.value === 'up' ? 'up' : 'down' })}
             className={cn(FIELD, 'w-24')}
           >
             <option value="down">{t.scrollDown}</option>
@@ -232,14 +411,14 @@ export function MacrosCore({ api }: Readonly<{ api: MacrosHostApi }>) {
     if (step.kind === 'extract') {
       return (
         <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 text-text-primary">
-          {selectorInput(step.target[0]?.value ?? '', (v) => updateStep(i, { ...step, target: cssChain(v) }))}
+          {selectorInput(step.target[0]?.value ?? '', (v) => updateStep(location, { ...step, target: cssChain(v) }))}
           {'→'}
           <input
             type="text"
             value={step.into}
             placeholder={t.varName}
             aria-label={t.into}
-            onChange={(e) => updateStep(i, { ...step, into: e.target.value })}
+            onChange={(e) => updateStep(location, { ...step, into: e.target.value })}
             className={cn(FIELD, 'w-24')}
           />
           <label className="flex items-center gap-1 text-text-secondary">
@@ -247,7 +426,7 @@ export function MacrosCore({ api }: Readonly<{ api: MacrosHostApi }>) {
               type="checkbox"
               checked={step.append === true}
               aria-label={t.appendArray}
-              onChange={(e) => updateStep(i, { ...step, append: e.target.checked })}
+              onChange={(e) => updateStep(location, { ...step, append: e.target.checked })}
             />
             {t.appendArray}
           </label>
@@ -262,7 +441,7 @@ export function MacrosCore({ api }: Readonly<{ api: MacrosHostApi }>) {
             value={step.name}
             placeholder={t.varName}
             aria-label={t.varName}
-            onChange={(e) => updateStep(i, { ...step, name: e.target.value })}
+            onChange={(e) => updateStep(location, { ...step, name: e.target.value })}
             className={cn(FIELD, 'w-24')}
           />
           {'='}
@@ -271,7 +450,7 @@ export function MacrosCore({ api }: Readonly<{ api: MacrosHostApi }>) {
             value={step.expr}
             placeholder={t.expression}
             aria-label={t.expression}
-            onChange={(e) => updateStep(i, { ...step, expr: e.target.value })}
+            onChange={(e) => updateStep(location, { ...step, expr: e.target.value })}
             className={cn(FIELD, 'min-w-0 flex-1')}
           />
         </span>
@@ -286,7 +465,7 @@ export function MacrosCore({ api }: Readonly<{ api: MacrosHostApi }>) {
             min={1}
             value={step.ms}
             aria-label={t.durationMs}
-            onChange={(e) => updateStep(i, { kind: 'waitMs', ms: Math.max(1, Number(e.target.value)) })}
+            onChange={(e) => updateStep(location, { kind: 'waitMs', ms: Math.max(1, Number(e.target.value)) })}
             className={cn(FIELD, 'w-20')}
           />
           {'ms'}
@@ -302,7 +481,7 @@ export function MacrosCore({ api }: Readonly<{ api: MacrosHostApi }>) {
             value={step.target[0]?.value ?? ''}
             placeholder={t.selectorPlaceholder}
             aria-label={t.stepWaitFor}
-            onChange={(e) => updateStep(i, { kind: 'waitFor', target: [{ kind: 'css', value: e.target.value }], timeoutMs: step.timeoutMs })}
+            onChange={(e) => updateStep(location, { ...step, target: [{ kind: 'css', value: e.target.value }] })}
             className={cn(FIELD, 'min-w-0 flex-1')}
           />
           <input
@@ -310,7 +489,7 @@ export function MacrosCore({ api }: Readonly<{ api: MacrosHostApi }>) {
             min={1}
             value={step.timeoutMs ?? DEFAULT_ELEMENT_TIMEOUT_MS}
             aria-label={t.durationMs}
-            onChange={(e) => updateStep(i, { kind: 'waitFor', target: step.target, timeoutMs: Math.max(1, Number(e.target.value)) })}
+            onChange={(e) => updateStep(location, { ...step, timeoutMs: Math.max(1, Number(e.target.value)) })}
             className={cn(FIELD, 'w-20')}
           />
           {'ms'}
@@ -326,17 +505,253 @@ export function MacrosCore({ api }: Readonly<{ api: MacrosHostApi }>) {
             min={1}
             value={step.timeoutMs ?? DEFAULT_LOAD_TIMEOUT_MS}
             aria-label={t.durationMs}
-            onChange={(e) => updateStep(i, { kind: 'waitLoad', timeoutMs: Math.max(1, Number(e.target.value)) })}
+            onChange={(e) => updateStep(location, { ...step, timeoutMs: Math.max(1, Number(e.target.value)) })}
             className={cn(FIELD, 'w-24')}
           />
           {'ms'}
         </span>
       );
     }
+    if (step.kind === 'assert') {
+      return (
+        <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 text-text-primary">
+          {t.stepAssert}
+          {predicateEditor(step.predicate, (predicate) => updateStep(location, { ...step, predicate }))}
+          <select
+            value={step.severity}
+            aria-label={t.severity}
+            onChange={(e) => updateStep(location, { ...step, severity: e.target.value === 'soft' ? 'soft' : 'hard' })}
+            className={cn(FIELD, 'w-20')}
+          >
+            <option value="hard">{t.severityHard}</option>
+            <option value="soft">{t.severitySoft}</option>
+          </select>
+          <input
+            type="text"
+            value={step.message ?? ''}
+            placeholder={t.assertMessage}
+            aria-label={t.assertMessage}
+            onChange={(e) => updateAssertMessage(step, location, e.target.value)}
+            className={cn(FIELD, 'min-w-0 flex-1')}
+          />
+        </span>
+      );
+    }
+    if (step.kind === 'if') {
+      return (
+        <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 text-text-primary">
+          {t.stepIf}
+          {predicateEditor(step.cond, (cond) => updateStep(location, { ...step, cond }))}
+        </span>
+      );
+    }
+    if (step.kind === 'repeat') {
+      const mode = step.count !== undefined ? 'count' : 'while';
+      return (
+        <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 text-text-primary">
+          {t.stepRepeat}
+          <select
+            value={mode}
+            aria-label={t.repeatMode}
+            onChange={(e) =>
+              updateStep(
+                location,
+                e.target.value === 'count'
+                  ? { kind: 'repeat', count: 3, body: step.body }
+                  : { kind: 'repeat', while: defaultPredicate(), body: step.body },
+              )
+            }
+            className={cn(FIELD, 'w-24')}
+          >
+            <option value="count">{t.repeatCount}</option>
+            <option value="while">{t.repeatWhile}</option>
+          </select>
+          {step.count !== undefined ? (
+            <input
+              type="number"
+              min={1}
+              value={step.count}
+              aria-label={t.count}
+              onChange={(e) => updateStep(location, { kind: 'repeat', count: Math.max(1, Number(e.target.value)), body: step.body })}
+              className={cn(FIELD, 'w-20')}
+            />
+          ) : (
+            predicateEditor(step.while ?? defaultPredicate(), (predicate) =>
+              updateStep(location, { kind: 'repeat', while: predicate, body: step.body }),
+            )
+          )}
+        </span>
+      );
+    }
+    if (step.kind === 'forEachRow') {
+      const key = stepLocationKey(location);
+      const csvText = csvInputs[key] ?? '';
+      return (
+        <span className="flex min-w-0 flex-1 flex-col gap-1 text-text-primary">
+          <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+            {t.stepForEachRow}
+            <input
+              type="text"
+              value={step.csvBlobHash}
+              placeholder={t.csvHash}
+              aria-label={t.csvHash}
+              onChange={(e) => updateStep(location, { ...step, csvBlobHash: e.target.value })}
+              className={cn(FIELD, 'min-w-0 flex-1')}
+            />
+            <input
+              type="text"
+              value={step.as}
+              placeholder={t.csvVar}
+              aria-label={t.csvVar}
+              onChange={(e) => updateStep(location, { ...step, as: e.target.value })}
+              className={cn(FIELD, 'w-20')}
+            />
+            <select
+              value={step.onEnd}
+              aria-label={t.csvOnEnd}
+              onChange={(e) => updateStep(location, { ...step, onEnd: e.target.value === 'restart' ? 'restart' : 'stop' })}
+              className={cn(FIELD, 'w-24')}
+            >
+              <option value="stop">{t.csvStop}</option>
+              <option value="restart">{t.csvRestart}</option>
+            </select>
+            <input
+              type="number"
+              min={1}
+              value={step.maxRows ?? ''}
+              placeholder={t.csvMaxRows}
+              aria-label={t.csvMaxRows}
+              onChange={(e) => updateForEachMaxRows(step, location, e.target.value)}
+              className={cn(FIELD, 'w-20')}
+            />
+          </span>
+          <span className="flex min-w-0 items-start gap-1.5">
+            <textarea
+              value={csvText}
+              placeholder={t.csvContent}
+              aria-label={t.csvContent}
+              onChange={(e) => setCsvInputs((prev) => ({ ...prev, [key]: e.target.value }))}
+              className={cn(FIELD, 'h-14 min-w-0 flex-1 py-1')}
+            />
+            <button
+              type="button"
+              className={ICON_BTN}
+              onClick={() => void attachCsv(location, step)}
+              disabled={csvText.trim().length === 0}
+            >
+              {t.csvAttach}
+            </button>
+          </span>
+        </span>
+      );
+    }
     return <span className="min-w-0 flex-1 truncate font-mono text-text-primary">{describeStep(step)}</span>;
   }
 
-  // ── Editor view (draft open) ───────────────────────────────────────────────────────────────────
+  function renderStepChildren(step: Step, location: StepLocation, depth: number) {
+    if (step.kind === 'if') {
+      const thenPath: StepContainerPath = [...location.containerPath, { index: location.index, slot: 'then' }];
+      const elsePath: StepContainerPath = [...location.containerPath, { index: location.index, slot: 'else' }];
+      return (
+        <div className="mt-2 space-y-2 border-l border-border pl-3">
+          {renderStepList(step.then, thenPath, t.thenBranch, depth + 1)}
+          {renderStepList(step.else ?? [], elsePath, t.elseBranch, depth + 1)}
+        </div>
+      );
+    }
+    if (step.kind === 'repeat' || step.kind === 'forEachRow') {
+      const bodyPath: StepContainerPath = [...location.containerPath, { index: location.index, slot: 'body' }];
+      return <div className="mt-2 border-l border-border pl-3">{renderStepList(step.body, bodyPath, t.bodyBranch, depth + 1)}</div>;
+    }
+    return null;
+  }
+
+  function renderStepList(steps: readonly Step[], containerPath: StepContainerPath, label: string, depth = 0) {
+    const isTopLevel = containerPath.length === 0;
+    return (
+      <div className={cn(!isTopLevel && 'rounded-md bg-surface-base/40 p-2')}>
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <h3 className="text-xs font-medium uppercase tracking-wide text-text-secondary">
+            {label} ({steps.length})
+          </h3>
+          <span className="flex items-center gap-1">
+            <select
+              value={addKind}
+              aria-label={t.addStep}
+              onChange={(e) => setAddKind(e.target.value as AddableKind)}
+              className={cn(FIELD, 'h-7')}
+            >
+              {ADDABLE_KINDS.map((k) => (
+                <option key={k} value={k}>
+                  {stepTypeLabel(k)}
+                </option>
+              ))}
+            </select>
+            <button type="button" className={ICON_BTN} onClick={() => addStep(containerPath, addKind)}>
+              {'+'} {t.addStep}
+            </button>
+          </span>
+        </div>
+        <ol className="space-y-1">
+          {steps.map((s, i) => {
+            const location: StepLocation = { containerPath, index: i };
+            return (
+              <li key={stepLocationKey(location)} className="rounded-md border border-border bg-surface-raised px-2 py-1.5 text-xs">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-5 shrink-0 text-text-disabled">{i + 1}</span>
+                  {stepBody(s, location)}
+                  {ERROR_POLICY_KINDS.has(s.kind) && (
+                    <span className="flex shrink-0 items-center gap-1">
+                      <select
+                        value={('onError' in s ? s.onError : undefined) ?? 'stop'}
+                        aria-label={t.onError}
+                        title={t.onError}
+                        onChange={(e) => setErrorPolicy(location, { onError: e.target.value as StepErrorPolicy })}
+                        className={cn(FIELD, 'w-16')}
+                      >
+                        <option value="stop">{t.onStop}</option>
+                        <option value="skip">{t.onSkip}</option>
+                        <option value="retry">{t.onRetry}</option>
+                      </select>
+                      {'onError' in s && s.onError === 'retry' && (
+                        <input
+                          type="number"
+                          min={0}
+                          value={s.retries ?? 0}
+                          aria-label={t.retries}
+                          title={t.retries}
+                          onChange={(e) => setErrorPolicy(location, { retries: Math.max(0, Number(e.target.value)) })}
+                          className={cn(FIELD, 'w-12')}
+                        />
+                      )}
+                    </span>
+                  )}
+                  <span className="flex shrink-0 gap-1">
+                    <button type="button" className={ICON_BTN} aria-label={t.moveUp} disabled={i === 0} onClick={() => moveStep(location, -1)}>
+                      {'↑'}
+                    </button>
+                    <button type="button" className={ICON_BTN} aria-label={t.moveDown} disabled={i === steps.length - 1} onClick={() => moveStep(location, 1)}>
+                      {'↓'}
+                    </button>
+                    <button type="button" className={ICON_BTN} aria-label={t.insertWait} onClick={() => insertAfter(location, { kind: 'waitMs', ms: DEFAULT_WAIT_MS })}>
+                      {'+⏱'}
+                    </button>
+                    <button type="button" className={ICON_BTN} aria-label={t.delete} onClick={() => deleteStep(location)}>
+                      {'✕'}
+                    </button>
+                  </span>
+                </div>
+                {renderStepChildren(s, location, depth)}
+              </li>
+            );
+          })}
+        </ol>
+        {steps.length === 0 && <p className="text-sm text-text-secondary">{isTopLevel ? t.emptyDraft : t.emptyBranch}</p>}
+      </div>
+    );
+  }
+
+  // -- Editor view (draft open) --------------------------------------------------------------------
   if (draft !== null) {
     return (
       <div className="space-y-3">
@@ -359,79 +774,7 @@ export function MacrosCore({ api }: Readonly<{ api: MacrosHostApi }>) {
           className="h-9 w-full rounded-md border border-border bg-surface-raised px-3 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
         />
 
-        <div>
-          <div className="mb-1 flex items-center justify-between gap-2">
-            <h3 className="text-xs font-medium uppercase tracking-wide text-text-secondary">
-              {t.steps} ({draft.steps.length})
-            </h3>
-            <span className="flex items-center gap-1">
-              <select
-                value={addKind}
-                aria-label={t.addStep}
-                onChange={(e) => setAddKind(e.target.value as AddableKind)}
-                className={cn(FIELD, 'h-7')}
-              >
-                {ADDABLE_KINDS.map((k) => (
-                  <option key={k} value={k}>
-                    {stepTypeLabel(k)}
-                  </option>
-                ))}
-              </select>
-              <button type="button" className={ICON_BTN} onClick={() => addStep(addKind)}>
-                {'+'} {t.addStep}
-              </button>
-            </span>
-          </div>
-          <ol className="space-y-1">
-            {draft.steps.map((s, i) => (
-              <li key={i} className="flex items-center gap-1.5 rounded-md border border-border bg-surface-raised px-2 py-1.5 text-xs">
-                <span className="w-5 shrink-0 text-text-disabled">{i + 1}</span>
-                {stepBody(s, i)}
-                {ERROR_POLICY_KINDS.has(s.kind) && (
-                  <span className="flex shrink-0 items-center gap-1">
-                    <select
-                      value={('onError' in s ? s.onError : undefined) ?? 'stop'}
-                      aria-label={t.onError}
-                      title={t.onError}
-                      onChange={(e) => setErrorPolicy(i, s, { onError: e.target.value as StepErrorPolicy })}
-                      className={cn(FIELD, 'w-16')}
-                    >
-                      <option value="stop">{t.onStop}</option>
-                      <option value="skip">{t.onSkip}</option>
-                      <option value="retry">{t.onRetry}</option>
-                    </select>
-                    {'onError' in s && s.onError === 'retry' && (
-                      <input
-                        type="number"
-                        min={0}
-                        value={s.retries ?? 0}
-                        aria-label={t.retries}
-                        title={t.retries}
-                        onChange={(e) => setErrorPolicy(i, s, { retries: Math.max(0, Number(e.target.value)) })}
-                        className={cn(FIELD, 'w-12')}
-                      />
-                    )}
-                  </span>
-                )}
-                <span className="flex shrink-0 gap-1">
-                  <button type="button" className={ICON_BTN} aria-label={t.moveUp} disabled={i === 0} onClick={() => moveStep(i, -1)}>
-                    {'↑'}
-                  </button>
-                  <button type="button" className={ICON_BTN} aria-label={t.moveDown} disabled={i === draft.steps.length - 1} onClick={() => moveStep(i, 1)}>
-                    {'↓'}
-                  </button>
-                  <button type="button" className={ICON_BTN} aria-label={t.insertWait} onClick={() => insertAfter(i, { kind: 'waitMs', ms: DEFAULT_WAIT_MS })}>
-                    {'+⏱'}
-                  </button>
-                  <button type="button" className={ICON_BTN} aria-label={t.delete} onClick={() => deleteStep(i)}>
-                    {'✕'}
-                  </button>
-                </span>
-              </li>
-            ))}
-          </ol>
-          {draft.steps.length === 0 && <p className="text-sm text-text-secondary">{t.emptyDraft}</p>}
-        </div>
+        {renderStepList(draft.steps, [], t.steps)}
 
         {progressLine}
 
@@ -452,7 +795,7 @@ export function MacrosCore({ api }: Readonly<{ api: MacrosHostApi }>) {
     );
   }
 
-  // ── List view ──────────────────────────────────────────────────────────────────────────────────
+  // -- List view -----------------------------------------------------------------------------------
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">

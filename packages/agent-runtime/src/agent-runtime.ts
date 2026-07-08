@@ -134,6 +134,15 @@ export interface AgentRunDeps {
    * The host owns persistence + the pre-flight block + auto-refund; this only feeds the live status.
    */
   tokenBudget?: { quota: number; lifetimeUsed: number };
+  /**
+   * Test/eval seam (AI-1): a pre-resolved model provider. When present, `runAgent` registers this
+   * instance directly and SKIPS the vault/prefs resolution — so the eval harness can inject a scripted
+   * provider (deterministic fixtures) or a real cloud model (honest competence) without a stored key,
+   * while everything else (real BrowserHost, Policy/HITL plane, routing, ledger, egress firewall) runs
+   * exactly as in production. Absent → today's behavior (resolve from the safeStorage vault). The `id`
+   * drives the ModelRouter's per-capability model choice, unchanged.
+   */
+  provider?: { id: AIProvider; instance: ModelProvider };
 }
 
 export interface AgentRunSummary {
@@ -226,6 +235,31 @@ function providerFor(
  * the run lifecycle/journal stays consistent regardless of WHEN the block trips. Other planning errors
  * keep their existing behavior (surface at the IPC boundary).
  */
+/**
+ * Register the model provider(s) for this run and return the resolved provider id (which drives the
+ * ModelRouter's per-capability model choice). The eval/test seam takes priority: an injected provider
+ * bypasses the vault entirely and is registered as-is. Otherwise resolve from the vault/prefs (per-run
+ * override → whole-agent-local → highest-priority key), build the adapter, and also register the
+ * on-device provider when available so a `local` capability offload resolves alongside a cloud run.
+ */
+function registerRunProvider(
+  deps: AgentRunDeps,
+  prefs: { agentProviderOverride: AIProvider | null; localProvider: { mode: 'off' | 'simple' | 'default' } },
+  localAvailable: boolean,
+  effort: EffortLevel,
+): AIProvider {
+  if (deps.provider !== undefined) {
+    ModelGateway.register(deps.provider.instance);
+    return deps.provider.id;
+  }
+  const resolved = resolveProvider(prefs.agentProviderOverride, prefs.localProvider.mode, localAvailable);
+  ModelGateway.register(providerFor(resolved.provider, resolved.apiKey, effort, deps.localInference));
+  if (resolved.provider !== 'local' && localAvailable && deps.localInference !== undefined) {
+    ModelGateway.register(new LocalProvider(deps.localInference));
+  }
+  return resolved.provider;
+}
+
 async function planOrEgressStop(
   input: Parameters<typeof Planner.plan>[0],
 ): Promise<{ plan: Plan } | { egressFailure: AgentFailure }> {
@@ -310,30 +344,18 @@ export async function runAgent(
     deps.localInference?.engine.isAvailable() === true &&
     deps.localInference.resolveModel() !== null;
 
-  // Resolve the provider: per-run override (panel selector) → whole-agent-local → highest-priority key.
-  const { provider, apiKey } = resolveProvider(
-    prefs.agentProviderOverride,
-    prefs.localProvider.mode,
-    localAvailable,
-  );
-
-  // Cost-saver is on when either the public toggle is set or the local provider is enabled at all.
-  const costSaver = prefs.useLocalModelForSimpleTasks || prefs.localProvider.mode !== 'off';
-
   // Per-run reasoning effort (Agent panel): overrides the router's tier effort and sets the token budget.
   const effort = prefs.agentEffort;
   const maxTokens = EFFORT_MAX_TOKENS[effort];
+  // Cost-saver is on when either the public toggle is set or the local provider is enabled at all.
+  const costSaver = prefs.useLocalModelForSimpleTasks || prefs.localProvider.mode !== 'off';
+
+  // Resolve + register the provider (eval seam → vault/prefs) and get the id that drives routing.
+  const provider = registerRunProvider(deps, prefs, localAvailable, effort);
 
   const route = ModelRouter.route({ capability: 'plan', costSaver, localAvailable, provider });
   // The reactive loop runs on the exec tier (cheaper/faster than the planning tier).
   const execRoute = ModelRouter.route({ capability: 'exec', costSaver, localAvailable, provider });
-  ModelGateway.register(providerFor(provider, apiKey, effort, deps.localInference));
-  // Also register the on-device provider when a model is available, so a simple-capability local
-  // offload (router `transport:'local'` → `provider:'local'`) resolves even while the main run is on a
-  // cloud provider. Harmless duplicate when the main provider already IS local.
-  if (provider !== 'local' && localAvailable && deps.localInference !== undefined) {
-    ModelGateway.register(new LocalProvider(deps.localInference));
-  }
 
   // The agent's built-in tools are registered at startup by the app's ExtensionCapabilityService
   // (gated on `com.tepegoz.agent` being enabled, ADR-0021/0024) — this runtime just enumerates

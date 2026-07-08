@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Country picker</title>
+    <style>body { font-family: system-ui, sans-serif; margin: 2rem; }</style>
+  </head>
+  <body>
+    <h1>Choose your country</h1>
+    <label for="country">Country</label>
+    <select id="country" aria-label="Country">
+      <option value="">— select —</option>
+      <option value="de">Germany</option>
+      <option value="tr">Türkiye</option>
+      <option value="us">United States</option>
+    </select>
+    <p id="result">Selected: none</p>
+    <script>
+      const sel = document.getElementById('country');
+      const out = document.getElementById('result');
+      sel.addEventListener('change', () => {
+        out.textContent = 'Selected: ' + sel.options[sel.selectedIndex].text;
+      });
+    </script>
+  </body>
+</html>

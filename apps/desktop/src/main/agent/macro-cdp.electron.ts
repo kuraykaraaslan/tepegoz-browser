@@ -129,6 +129,7 @@ export default class MacroCdp {
       await wc.debugger.sendCommand('Input.dispatchMouseEvent', { type: 'mousePressed', ...base });
       await wc.debugger.sendCommand('Input.dispatchMouseEvent', { type: 'mouseReleased', ...base });
     } else {
+      await adapter.idle(); // human think/react pause between behaviors
       await adapter.click(x, y);
     }
   }
@@ -140,20 +141,53 @@ export default class MacroCdp {
     adapter?: HumanInputAdapter,
   ): Promise<void> {
     const { x, y } = await MacroCdp.centerOf(wc, backendNodeId);
-    if (adapter !== undefined) await adapter.moveTo(x, y);
-    await wc.debugger.sendCommand('DOM.focus', { backendNodeId });
-    // Select existing value (Ctrl+A) then insert the new text, replacing it.
-    await wc.debugger.sendCommand('Input.dispatchKeyEvent', {
-      type: 'keyDown', modifiers: 2, key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65,
-    });
-    await wc.debugger.sendCommand('Input.dispatchKeyEvent', {
-      type: 'keyUp', modifiers: 2, key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65,
-    });
     if (adapter === undefined) {
+      // No visible cursor: programmatic focus + select-all + insert is acceptable.
+      await wc.debugger.sendCommand('DOM.focus', { backendNodeId });
+      await wc.debugger.sendCommand('Input.dispatchKeyEvent', {
+        type: 'keyDown', modifiers: 2, key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65,
+      });
+      await wc.debugger.sendCommand('Input.dispatchKeyEvent', {
+        type: 'keyUp', modifiers: 2, key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65,
+      });
       await wc.debugger.sendCommand('Input.insertText', { text });
     } else {
+      // Focus the field with a REAL trusted click (never DOM.focus); verify + retry on a covered box.
+      await adapter.idle(); // human think/react pause between behaviors
+      let target = { x, y };
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (attempt > 0) {
+          await adapter.idle(200, 70);
+          target = await MacroCdp.centerOf(wc, backendNodeId);
+        }
+        await adapter.click(target.x, target.y);
+        if (await MacroCdp.isFocused(wc, backendNodeId)) break;
+      }
+      await adapter.idle(200, 70); // beat: click -> select-all
+      // Text-less KeySpec => rawKeyDown, so Ctrl+A fires the accelerator without typing 'a'.
+      await adapter.pressKey({ key: 'a', code: 'KeyA', keyCode: 65 }, 2 /* Ctrl */);
+      await adapter.idle(200, 70); // beat: select-all -> type
       await adapter.insertText(text);
     }
+  }
+
+  /** True when `backendNodeId` (or a descendant) is the document's active/focused element. */
+  private static async isFocused(wc: WebContents, backendNodeId: number): Promise<boolean> {
+    const resolvedRaw: unknown = await wc.debugger
+      .sendCommand('DOM.resolveNode', { backendNodeId })
+      .catch(() => null);
+    const resolved = ResolveSchema.safeParse(resolvedRaw);
+    if (!resolved.success) return false;
+    const raw: unknown = await wc.debugger
+      .sendCommand('Runtime.callFunctionOn', {
+        objectId: resolved.data.object.objectId,
+        functionDeclaration:
+          'function(){return this===document.activeElement||this.contains(document.activeElement);}',
+        returnByValue: true,
+      })
+      .catch(() => null);
+    const parsed = CallResultSchema.safeParse(raw);
+    return parsed.success && parsed.data.result.value === true;
   }
 
   /** Read the element's text, or a named attribute, by calling a function ON that specific node. */
@@ -214,6 +248,7 @@ export default class MacroCdp {
       });
       await wc.debugger.sendCommand('Input.dispatchKeyEvent', { type: 'keyUp', ...common });
     } else {
+      await adapter.idle(); // human think/react pause between behaviors
       await adapter.pressKey(spec);
     }
   }
@@ -230,6 +265,7 @@ export default class MacroCdp {
         type: 'mouseWheel', x: 10, y: 10, deltaX: 0, deltaY,
       });
     } else {
+      await adapter.idle(); // human think/react pause between behaviors
       await adapter.scroll(direction, amount);
     }
   }

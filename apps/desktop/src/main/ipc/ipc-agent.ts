@@ -24,6 +24,7 @@ import {
   AgentConversationIdSchema,
   AgentConversationListInputSchema,
   AgentConversationOpenInputSchema,
+  AgentExportConversationSchema,
   AgentOpenFileSchema,
   AgentPlanResponseSchema,
   AgentRunIdSchema,
@@ -635,6 +636,25 @@ export function registerAgentIpc(): void {
     const level = z.enum(AGENT_EFFORT_LEVELS).parse(payload);
     PreferenceStore.update({ agentEffort: level });
   });
+  // Write the current chat log to ~/tepegoz and reveal it in the OS file manager, so the user can grab
+  // the full transcript to share. The transcript is rendered in the renderer (it owns the live
+  // turns/events); this handler only derives a safe filename, then delegates the write to
+  // FileOperationsHost — the SAME sandboxed file path the agent's tools use (no raw node:fs here).
+  handleAsync(IpcChannels.agentExportConversation, async (_event, payload): Promise<string> => {
+    requireAgentEnabled();
+    const { content } = AgentExportConversationSchema.parse(payload);
+    // e.g. ai_agent_log_2026-07-08_08-55-46.txt (local time, separator-free single segment).
+    const now = new Date();
+    const pad = (n: number): string => String(n).padStart(2, '0');
+    const stamp =
+      `${String(now.getFullYear())}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` +
+      `_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+    const filename = `ai_agent_log_${stamp}.txt`;
+    const full = await FileOperationsHost.writeExport(filename, content);
+    shell.showItemInFolder(full);
+    return full;
+  });
+
   // Open a file the agent produced — gated to the whitelisted folders (403 → refused + logged, never
   // opens outside a grant). Fire-and-forget; the async open runs off the handler.
   onAction(IpcChannels.agentOpenFile, AgentOpenFileSchema, (path) => {

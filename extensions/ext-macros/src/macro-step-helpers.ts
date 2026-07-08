@@ -1,4 +1,4 @@
-import { MACRO_IR_VERSION, type Macro, type Step } from '@tepegoz/shared-types';
+import { MACRO_IR_VERSION, type Macro, type Predicate, type Step } from '@tepegoz/shared-types';
 
 export const BTN =
   'rounded-md bg-surface-overlay px-3 py-1.5 text-sm font-medium text-text-primary hover:opacity-90 ' +
@@ -27,11 +27,14 @@ export const PRESS_KEYS = [
 /** The step kinds the editor can add from scratch (recorded macros may contain any kind). */
 export const ADDABLE_KINDS = [
   'navigate', 'click', 'fill', 'press', 'scroll', 'extract', 'setVar', 'waitFor', 'waitLoad', 'waitMs',
+  'assert', 'if', 'repeat', 'forEachRow',
 ] as const;
 export type AddableKind = (typeof ADDABLE_KINDS)[number];
 
 /** A single-CSS-candidate selector chain (the editor authors CSS; recordings keep richer chains). */
 export const cssChain = (value: string) => [{ kind: 'css' as const, value }];
+
+export const defaultPredicate = (): Predicate => ({ kind: 'textPresent', text: 'Success' });
 
 /** Step kinds that carry a per-step error policy (browser actions). */
 export const ERROR_POLICY_KINDS = new Set<Step['kind']>([
@@ -43,23 +46,37 @@ export function newStepOfKind(kind: AddableKind): Step {
     case 'navigate':
       return { kind: 'navigate', url: 'https://' };
     case 'click':
-      return { kind: 'click', target: cssChain('') };
+      return { kind: 'click', target: cssChain('button') };
     case 'fill':
-      return { kind: 'fill', target: cssChain(''), value: '' };
+      return { kind: 'fill', target: cssChain('input'), value: '' };
     case 'press':
       return { kind: 'press', key: 'Enter' };
     case 'scroll':
       return { kind: 'scroll', direction: 'down' };
     case 'extract':
-      return { kind: 'extract', target: cssChain(''), into: 'result' };
+      return { kind: 'extract', target: cssChain('body'), into: 'result' };
     case 'setVar':
       return { kind: 'setVar', name: 'x', expr: '' };
     case 'waitFor':
-      return { kind: 'waitFor', target: cssChain(''), timeoutMs: DEFAULT_ELEMENT_TIMEOUT_MS };
+      return { kind: 'waitFor', target: cssChain('body'), timeoutMs: DEFAULT_ELEMENT_TIMEOUT_MS };
     case 'waitLoad':
       return { kind: 'waitLoad', timeoutMs: DEFAULT_LOAD_TIMEOUT_MS };
     case 'waitMs':
       return { kind: 'waitMs', ms: DEFAULT_WAIT_MS };
+    case 'assert':
+      return { kind: 'assert', predicate: defaultPredicate(), severity: 'hard' };
+    case 'if':
+      return { kind: 'if', cond: defaultPredicate(), then: [{ kind: 'waitMs', ms: DEFAULT_WAIT_MS }] };
+    case 'repeat':
+      return { kind: 'repeat', count: 3, body: [{ kind: 'waitMs', ms: DEFAULT_WAIT_MS }] };
+    case 'forEachRow':
+      return {
+        kind: 'forEachRow',
+        csvBlobHash: 'paste-csv-and-attach',
+        as: 'row',
+        onEnd: 'stop',
+        body: [{ kind: 'waitMs', ms: DEFAULT_WAIT_MS }],
+      };
   }
 }
 
@@ -90,7 +107,7 @@ export function describeStep(step: Step): string {
     case 'setVar':
       return `set ${step.name} = ${step.expr}`;
     case 'if':
-      return `if … (${step.then.length} then)`;
+      return `if … (${step.then.length} then${step.else === undefined ? '' : ` / ${step.else.length} else`})`;
     case 'repeat':
       return `repeat ${step.count ?? 'while'} …`;
     case 'forEachRow':

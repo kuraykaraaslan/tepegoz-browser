@@ -9,5 +9,6 @@ export * from './event-journal';
 export * from './tool-descriptor';
 export * from './tool-result';
 export * from './dag-plan';
+export * from './eval-scenario';
 export * from './macro-ir';
 export * from './macro-schema';

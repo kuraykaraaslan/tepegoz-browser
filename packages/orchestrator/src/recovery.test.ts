@@ -51,4 +51,35 @@ describe('agent recovery classification', () => {
     expect(failure.retryable).toBe(true);
     expect(stopReasonForFailure(failure)).toBe('model_malformed');
   });
+
+  it('classifies "No active page" as no_active_page and steers to navigate first', () => {
+    // The ToolGateway flattens AppError(409) to INTERNAL_ERROR; the message survives and must win over
+    // the generic transient catch-all so the model is told to open a page instead of retrying blindly.
+    const failure = classifyToolFailure({
+      tool: 'browser_get_page',
+      error: err('INTERNAL_ERROR', 'No active page', true),
+    });
+    expect(failure.kind).toBe('no_active_page');
+    expect(failure.retryable).toBe(true);
+    expect(stopReasonForFailure(failure)).toBe('tool_error');
+    const advice = recoveryAdviceFor(failure);
+    expect(advice.nextTool).toBe('browser_update_location');
+    expect(advice.instruction.toLowerCase()).toContain('open');
+  });
+
+  it('classifies a stale "No web tab" target as no_active_page too', () => {
+    const failure = classifyToolFailure({
+      tool: 'browser_get_elements',
+      error: err('INTERNAL_ERROR', 'No web tab: tab-9', true),
+    });
+    expect(failure.kind).toBe('no_active_page');
+  });
+
+  it('does not treat a non-browser tool error mentioning "no active page" as no_active_page', () => {
+    const failure = classifyToolFailure({
+      tool: 'file_read_file',
+      error: err('INTERNAL_ERROR', 'no active page', true),
+    });
+    expect(failure.kind).toBe('transient');
+  });
 });

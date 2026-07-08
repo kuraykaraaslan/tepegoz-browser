@@ -62,6 +62,8 @@ const NetworkRequestSchema = z
   .object({ requestId: z.string(), type: z.string().optional() })
   .passthrough();
 const NetworkCompleteSchema = z.object({ requestId: z.string() }).passthrough();
+const ResolveSchema = z.object({ object: z.object({ objectId: z.string() }).passthrough() });
+const CallResultSchema = z.object({ result: z.object({ value: z.unknown() }).passthrough() });
 
 /** A named key the agent can press → CDP key-event fields. */
 const KEY_MAP: Record<string, { key: string; code: string; keyCode: number; text?: string }> = {
@@ -262,6 +264,7 @@ export default class CdpDriver {
       await wc.debugger.sendCommand('Input.dispatchMouseEvent', { type: 'mousePressed', ...base });
       await wc.debugger.sendCommand('Input.dispatchMouseEvent', { type: 'mouseReleased', ...base });
     } else {
+      await adapter.idle(); // human think/react pause between behaviors
       await adapter.click(x, y);
     }
     await CdpDriver.settle(wc);
@@ -276,16 +279,52 @@ export default class CdpDriver {
     await CdpDriver.ensureAttached(wc);
     const backendNodeId = CdpDriver.backendNodeId(wc, ref);
     const { x, y } = await CdpDriver.centerOf(wc, backendNodeId);
-    if (adapter !== undefined) await adapter.moveTo(x, y);
-    await wc.debugger.sendCommand('DOM.focus', { backendNodeId });
-    // Select any existing value (Ctrl+A) so the insert replaces it, then type the new text.
-    await CdpDriver.sendKey(wc, { key: 'a', code: 'KeyA', keyCode: 65 }, 2 /* Ctrl */);
     if (adapter === undefined) {
+      // Background-tab teleport fallback (no visible cursor): programmatic focus is acceptable here.
+      await wc.debugger.sendCommand('DOM.focus', { backendNodeId });
+      // Select any existing value (Ctrl+A) so the insert replaces it, then type the new text.
+      await CdpDriver.sendKey(wc, { key: 'a', code: 'KeyA', keyCode: 65 }, 2 /* Ctrl */);
       await wc.debugger.sendCommand('Input.insertText', { text });
     } else {
+      // Active tab: focus the field with a REAL trusted click (never DOM.focus). If the click lands
+      // on something covering the center, verify focus and retry — recomputing the box in case the
+      // layout shifted (e.g. an overlay dismissed on the first click).
+      await adapter.idle(); // human think/react pause between behaviors
+      let target = { x, y };
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (attempt > 0) {
+          await adapter.idle(200, 70);
+          target = await CdpDriver.centerOf(wc, backendNodeId);
+        }
+        await adapter.click(target.x, target.y);
+        if (await CdpDriver.isFocused(wc, backendNodeId)) break;
+      }
+      await adapter.idle(200, 70); // beat: click -> select-all
+      // Ctrl+A with a text-less KeySpec => rawKeyDown, so it fires the accelerator without typing 'a'.
+      await adapter.pressKey({ key: 'a', code: 'KeyA', keyCode: 65 }, 2 /* Ctrl */);
+      await adapter.idle(200, 70); // beat: select-all -> type
       await adapter.insertText(text);
     }
     await CdpDriver.settle(wc);
+  }
+
+  /** True when `backendNodeId` (or a descendant) is the document's active/focused element. */
+  private static async isFocused(wc: WebContents, backendNodeId: number): Promise<boolean> {
+    const resolved: unknown = await wc.debugger
+      .sendCommand('DOM.resolveNode', { backendNodeId })
+      .catch(() => null);
+    const parsed = ResolveSchema.safeParse(resolved);
+    if (!parsed.success) return false;
+    const raw: unknown = await wc.debugger
+      .sendCommand('Runtime.callFunctionOn', {
+        objectId: parsed.data.object.objectId,
+        functionDeclaration:
+          'function(){return this===document.activeElement||this.contains(document.activeElement);}',
+        returnByValue: true,
+      })
+      .catch(() => null);
+    const r = CallResultSchema.safeParse(raw);
+    return r.success && r.data.result.value === true;
   }
 
   static async pressKey(
@@ -299,6 +338,7 @@ export default class CdpDriver {
     if (adapter === undefined) {
       await CdpDriver.sendKey(wc, spec);
     } else {
+      await adapter.idle(); // human think/react pause between behaviors
       await adapter.pressKey(spec);
     }
     await CdpDriver.settle(wc);
@@ -321,6 +361,7 @@ export default class CdpDriver {
         deltaY,
       });
     } else {
+      await adapter.idle(); // human think/react pause between behaviors
       await adapter.scroll(direction, amount);
     }
     await CdpDriver.settle(wc);

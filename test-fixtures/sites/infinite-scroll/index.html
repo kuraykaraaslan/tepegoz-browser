@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Infinite list</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; }
+      li { padding: 0.25rem 0; }
+    </style>
+  </head>
+  <body>
+    <h1>Feed</h1>
+    <ul id="list"></ul>
+    <div id="sentinel">Loading…</div>
+    <script>
+      let n = 0;
+      const list = document.getElementById('list');
+      function loadMore() {
+        for (let i = 0; i < 10 && n < 40; i++) {
+          n += 1;
+          const li = document.createElement('li');
+          li.textContent = 'Item ' + n;
+          list.appendChild(li);
+        }
+        if (n >= 40) document.getElementById('sentinel').textContent = 'End of feed';
+      }
+      loadMore();
+      const io = new IntersectionObserver((entries) => {
+        if (entries.some((e) => e.isIntersecting)) loadMore();
+      });
+      io.observe(document.getElementById('sentinel'));
+    </script>
+  </body>
+</html>

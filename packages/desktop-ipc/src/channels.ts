@@ -100,6 +100,8 @@ export const IpcChannels = {
   agentSetEffort: 'agent:set-effort',
   /** Renderer→main: open a file the agent produced (fire-and-forget; gated to whitelisted folders). */
   agentOpenFile: 'agent:open-file',
+  /** Renderer→main: write the current chat log to the ~/tepegoz folder and reveal it → absolute path. */
+  agentExportConversation: 'agent:export-conversation',
   // Agent extension conversation history. The product surface is the ext-agent page, not a core page.
   agentConversationsList: 'agent-conversations:list',
   agentConversationsGet: 'agent-conversations:get',
@@ -176,13 +178,13 @@ export const IpcChannels = {
   popupBlockerSet: 'popup-blocker:set',
   popupBlockerTrust: 'popup-blocker:trust',
   popupBlockerRecentRequests: 'popup-blocker:recent-requests',
-  mcpGetStatus: 'mcp:get-status',
-  adaptorsList: 'adaptors:list',
   adblockGet: 'adblock:get',
   adblockSet: 'adblock:set',
   adblockState: 'adblock:state',
   adblockSiteSet: 'adblock:site-set',
   adblockRefresh: 'adblock:refresh',
+  mcpGetStatus: 'mcp:get-status',
+  adaptorsList: 'adaptors:list',
   /** Renderer→main: the live AIAdaptor inventory (system + extension + MCP groups, each with its
    *  actions) for the Settings "run locally" list — built from the single CapabilityRegistry. */
   aiAdaptorsList: 'ai-adaptors:list',

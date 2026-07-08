@@ -25,7 +25,21 @@ async function waitForLoad(wc: WebContents, timeoutMs = DEFAULT_LOAD_TIMEOUT_MS)
 
 async function navigate(url: string, tabId?: string): Promise<{ url: string; title: string }> {
   if (tabId === undefined) {
-    TabManager.navigateActive(url); // scheme allow-list enforced inside
+    // When the active tab is the view-less internal newtab, `navigateActive` would fork the navigation
+    // into a brand-new UNGROUPED web tab (leaving the newtab orphaned) — which desyncs the agent's
+    // active-tab target and produces "No active page" on the next read. Instead, open the page as a real
+    // web tab INSIDE this run's group (create-or-reuse + ownership), then close the orphan so the result
+    // replaces the newtab in place (Chrome parity). Only for an active agent run (group known).
+    const orphanId = TabManager.viewlessActiveTabId();
+    if (orphanId !== null && currentAgentGroupId !== null) {
+      const newId = AgentTabGroup.openTab(currentAgentGroupId, url); // activates newId; throws if blocked
+      TabManager.closeTab(orphanId); // orphan is no longer active → no reselection churn
+      const wc = requireWc(newId);
+      await waitForLoad(wc);
+      if (wc.isDestroyed()) throw new AppError('Active tab was closed during navigation', 409);
+      return { url: wc.getURL(), title: wc.getTitle() };
+    }
+    TabManager.navigateActive(url); // live web view (in-place), or no active run — scheme allow-list inside
   } else if (!TabManager.navigateTab(tabId, url)) {
     throw new AppError(`No web tab to navigate: ${tabId}`, 409);
   }
@@ -209,7 +223,10 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
   activateTab: (id) => {
     if (!TabManager.getState().tabs.some((t) => t.id === id)) return false;
     TabManager.activate(id);
-    return TabManager.getState().activeId === id;
+    // Report success only when the tab is now the active AND drivable page: a view-less internal tab
+    // (e.g. the newtab) activates but yields no page for the browser_* tools, so returning `true` there
+    // is a false success that makes the model treat it as usable and flail. `false` steers it to navigate.
+    return TabManager.getState().activeId === id && TabManager.activeWebContents() !== null;
   },
   closeTab: (id) => {
     if (!TabManager.getState().tabs.some((t) => t.id === id)) return false;

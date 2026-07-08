@@ -57,14 +57,15 @@ without the Manifest-V3 death, the opaque error codes, or the `EVAL` security ho
 ## Tasks
 
 ### M1 — Editor / UX
-- [ ] **Nested block editing** — edit inside `if` / `repeat` / `forEachRow` bodies (add/edit/reorder
+- [x] **Nested block editing** — edit inside `if` / `repeat` / `forEachRow` bodies (add/edit/reorder
       child steps), not just top-level. *(highest-impact gap)*
 - [x] **Add every simple step kind from scratch** — `navigate`/`click`/`fill`/`press`/`scroll`/
       `extract`/`setVar`/`waitFor`/`waitLoad`/`waitMs` via the Add-step picker. *(block kinds
-      `if`/`repeat`/`forEachRow`/`assert` still pending — need the nested editor above.)*
+      `if`/`repeat`/`forEachRow`/`assert` now covered by the nested editor.)*
 - [x] **Richer inline editors** — selector input for `click`/`fill`/`extract`; key select for `press`;
       direction for `scroll`; name+expression for `setVar`; URL/timeout for `navigate`/`waitFor`/
-      `waitLoad`. *(condition builder for `assert`/`if` + loop config still pending.)*
+      `waitLoad`; predicate builder for `assert`/`if`; repeat mode config; CSV row loop config +
+      attach-from-editor.)*
 - [ ] **Drag-and-drop reordering** (replace ↑/↓).
 - [ ] **Step disable (skip without delete)**, **duplicate**, **copy/paste** steps.
 - [ ] **Step-through / breakpoints**, **pause & resume** during a run.

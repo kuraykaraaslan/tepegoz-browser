@@ -200,6 +200,13 @@ export const AgentPlanResponseSchema = z.object({
 /** `agent:open-file` payload — an absolute path the agent produced; opened only if inside a grant. */
 export const AgentOpenFileSchema = z.string().min(1).max(4096);
 
+/** `agent:export-conversation` payload — the rendered chat-log text plus an optional title used to
+ *  derive the filename (the main process sanitizes it and stamps a timestamp). */
+export const AgentExportConversationSchema = z.object({
+  content: z.string().min(1).max(5_000_000),
+  title: z.string().max(200).optional(),
+});
+
 export const HistoryQuerySchema = z.string().max(200);
 export const HistoryUrlSchema = z.string().min(1).max(4096);
 

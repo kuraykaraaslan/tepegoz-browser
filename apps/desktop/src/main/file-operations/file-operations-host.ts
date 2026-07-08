@@ -216,6 +216,27 @@ export default class FileOperationsHost {
     return real;
   }
 
+  /**
+   * Write a user-initiated export (the agent chat log) into the app's default `~/tepegoz` workspace via
+   * the file-operations fs host — never raw `node:fs`. This is a FIRST-PARTY action on the user's OWN
+   * data to a FIXED, canonicalized destination with a single filename segment, so — unlike the agent's
+   * file tools — it does NOT depend on the "Allow file operations" master switch or a folder grant
+   * (those gate the *untrusted*, model-driven file tools). The hardcoded `~/tepegoz` target plus the
+   * traversal check below make it impossible to write anywhere else. Returns the absolute path.
+   */
+  static async writeExport(filename: string, content: string): Promise<string> {
+    const dir = await canonicalize(path.join(homedir(), 'tepegoz'));
+    const target = await canonicalize(path.join(dir, filename));
+    // Defense in depth: the filename is server-generated and separator-free, but reject anything that
+    // resolves outside ~/tepegoz regardless (e.g. a future caller passing a crafted name).
+    if (path.dirname(target) !== dir) {
+      throw new AppError(`Invalid export filename: '${filename}'`, 400);
+    }
+    await fsHost.mkdir(dir);
+    await fsHost.writeFile(target, content, 'utf8');
+    return target;
+  }
+
   /** Canonicalize `input`, assert it is inside an allowed folder, and assert it is a regular file.
    *  Used by the upload broker before a local path is bound to an untrusted page's file input. */
   static async assertReadableFile(input: string): Promise<string> {

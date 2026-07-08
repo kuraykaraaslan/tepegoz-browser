@@ -1,0 +1,28 @@
+{
+  "scenarios": [
+    {
+      "id": "blog_behind_menu",
+      "task": "Open this site's blog and tell me the title of the latest post.",
+      "target": { "fixture": "blog-behind-nav" },
+      "success": { "domAssertion": "Latest post" },
+      "heldOut": false,
+      "tags": ["nav", "real-failure"]
+    },
+    {
+      "id": "blog_not_linked",
+      "task": "Find and open this site's blog.",
+      "target": { "fixture": "blog-not-linked" },
+      "success": { "domAssertion": "Latest post" },
+      "heldOut": true,
+      "tags": ["nav", "real-failure"]
+    },
+    {
+      "id": "viewless_newtab_about",
+      "task": "Go to the About page and read who they are.",
+      "target": { "fixture": "view-less-newtab" },
+      "success": { "domAssertion": "About us" },
+      "heldOut": false,
+      "tags": ["nav", "real-failure"]
+    }
+  ]
+}

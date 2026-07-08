@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Acme — Home</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; }
+      #drawer { display: none; }
+      #drawer.open { display: block; }
+      nav a { display: block; padding: 0.5rem 0; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <button id="menu" aria-label="Menu" aria-expanded="false">☰ Menu</button>
+      <h1>Acme Corporation</h1>
+    </header>
+    <!-- The Blog link is NOT listed until the drawer is opened — the classic "blog behind a menu". -->
+    <nav id="drawer" aria-label="Primary">
+      <a href="about.html">About</a>
+      <a href="blog.html">Blog</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+    <main>
+      <p>Welcome to Acme. Use the menu to find our Blog.</p>
+    </main>
+    <script>
+      const btn = document.getElementById('menu');
+      const drawer = document.getElementById('drawer');
+      btn.addEventListener('click', () => {
+        const open = drawer.classList.toggle('open');
+        btn.setAttribute('aria-expanded', String(open));
+      });
+    </script>
+  </body>
+</html>
