@@ -1,4 +1,5 @@
 import { MAX_INTERACTABLE_ELEMENTS, type RawInteractable } from './interactable.js';
+import type { NodePath } from './dom-path.js';
 
 /**
  * Pure typed model for the render-DOM perception (AI-2). The in-page `buildDomTree` script walks the
@@ -16,8 +17,8 @@ import { MAX_INTERACTABLE_ELEMENTS, type RawInteractable } from './interactable.
 export interface DomTreeNode {
   /** Lower-cased HTML tag name (`a`, `button`, `div`, …). */
   tag: string;
-  /** Absolute XPath from the document root — the stable handle the driver re-resolves to a node. */
-  xpath: string;
+  /** Child-index address (segments crossing shadow/iframe boundaries) the driver re-resolves. */
+  path: NodePath;
   /** ARIA role: explicit `role=` attribute, else a coarse role derived from the tag. May be ''. */
   role: string;
   /** Visible text (own + descendant, collapsed + capped by the script). */
@@ -49,8 +50,8 @@ export interface DomTreeResult {
 export interface ParsedDomTree {
   /** Raw interactable nodes in ref order (ref = index + 1); feed straight to `finalizeElements`. */
   interactables: RawInteractable[];
-  /** `xpaths[i]` targets the element at ref `i + 1` — the driver's `selectorMap`. */
-  xpaths: string[];
+  /** `paths[i]` addresses the element at ref `i + 1` — the driver's `selectorMap`. */
+  paths: NodePath[];
   /**
    * `hashes[i]` is a cross-snapshot fingerprint of the element at ref `i + 1`. The driver diffs it
    * against the previous same-page snapshot (see {@link markNewElements}) to flag freshly-appeared
@@ -105,7 +106,7 @@ export function parseDomTree(result: DomTreeResult): ParsedDomTree {
   const nodes = result.nodes.slice(0, MAX_INTERACTABLE_ELEMENTS);
   return {
     interactables: nodes.map(toRawInteractable),
-    xpaths: nodes.map((n) => n.xpath),
+    paths: nodes.map((n) => n.path),
     hashes: nodes.map(nodeHash),
   };
 }

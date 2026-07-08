@@ -6,8 +6,10 @@ import {
   isInteractableRole,
   parseDomTree,
   markNewElements,
+  resolveNodePath,
   MAX_INTERACTABLE_ELEMENTS,
   type RawInteractable,
+  type NodePath,
 } from '@tepegoz/tool-executor';
 import { buildDomTreeExpression } from './build-dom-tree-script.js';
 
@@ -75,7 +77,7 @@ const EvalHandleSchema = z.object({
 const DomTreeNodeSchema = z
   .object({
     tag: z.string(),
-    xpath: z.string(),
+    path: z.array(z.array(z.number().int().nonnegative())),
     role: z.string(),
     name: z.string(),
     href: z.string().optional(),
@@ -115,10 +117,11 @@ const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
 
 /**
  * How a snapshot `ref` maps back to a DOM node. The accessibility path resolves directly by
- * `backendNodeId`; the render-DOM path (AI-2) stores an XPath re-resolved lazily at action time
- * (keeps a snapshot cheap — only the acted-on element is resolved).
+ * `backendNodeId`; the render-DOM path (AI-2) stores a child-index `path` (crossing shadow/iframe
+ * boundaries) re-resolved lazily at action time (keeps a snapshot cheap — only the acted-on element
+ * is resolved).
  */
-type RefTarget = { backendNodeId: number } | { xpath: string };
+type RefTarget = { backendNodeId: number } | { path: NodePath };
 /** A node handle any DOM.* command accepts — either an existing backend id or a live object handle. */
 type NodeArg = { backendNodeId: number } | { objectId: string };
 
@@ -230,7 +233,7 @@ export default class CdpDriver {
     const tree = DomTreeResultSchema.safeParse(call.data.result.value);
     if (!tree.success) throw new AppError('render-DOM perception payload malformed', 502);
 
-    const { interactables, xpaths, hashes } = parseDomTree(tree.data);
+    const { interactables, paths, hashes } = parseDomTree(tree.data);
 
     // Mark elements that appeared since the previous snapshot of the SAME page (e.g. a menu the
     // agent just opened). A navigation (url change) or the first snapshot marks nothing new.
@@ -244,8 +247,8 @@ export default class CdpDriver {
 
     const refMap = new Map<number, RefTarget>();
     interactables.forEach((_, i) => {
-      const xpath = xpaths[i];
-      if (xpath !== undefined) refMap.set(i + 1, { xpath });
+      const path = paths[i];
+      if (path !== undefined) refMap.set(i + 1, { path });
     });
     CdpDriver.refMaps.set(wc, refMap);
     return { url: tree.data.url, title: tree.data.title, elements: interactables };
@@ -304,14 +307,19 @@ export default class CdpDriver {
     const target = refMap.get(ref);
     if (target === undefined) throw new AppError(`No element with ref ${String(ref)}`, 404);
     if ('backendNodeId' in target) return { backendNodeId: target.backendNodeId };
-    return { objectId: await CdpDriver.xpathToObjectId(wc, target.xpath) };
+    return { objectId: await CdpDriver.pathToObjectId(wc, target.path) };
   }
 
-  /** Re-resolve an XPath to a live object handle on the page's main frame (render-DOM ref path). */
-  private static async xpathToObjectId(wc: WebContents, xpath: string): Promise<string> {
+  /**
+   * Re-resolve a child-index `path` to a live object handle by injecting the SAME `resolveNodePath`
+   * algorithm the pure layer unit-tests (via `.toString()`) into an isolated world — so shadow-DOM
+   * and same-origin iframe targets resolve where XPath cannot cross. A stale path (DOM changed) yields
+   * `null` → no objectId → a 409 asking the agent to re-read the page.
+   */
+  private static async pathToObjectId(wc: WebContents, path: NodePath): Promise<string> {
     const contextId = await CdpDriver.mainFrameIsolatedContext(wc);
     const raw: unknown = await wc.debugger.sendCommand('Runtime.evaluate', {
-      expression: `document.evaluate(${JSON.stringify(xpath)}, document, null, 9, null).singleNodeValue`,
+      expression: `(${resolveNodePath.toString()})(document, ${JSON.stringify(path)})`,
       contextId,
       returnByValue: false,
       silent: true,

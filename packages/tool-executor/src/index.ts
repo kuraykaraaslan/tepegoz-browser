@@ -20,3 +20,5 @@ export {
 export type { InteractableElement, RawInteractable } from './interactable.js';
 export { parseDomTree, markNewElements } from './dom-tree.js';
 export type { DomTreeResult, DomTreeNode, ParsedDomTree } from './dom-tree.js';
+export { resolveNodePath } from './dom-path.js';
+export type { PathNode, NodePath, PathSegment } from './dom-path.js';

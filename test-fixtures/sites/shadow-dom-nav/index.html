@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Widget Home</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Widget Home</h1>
+    <!--
+      The navigation lives inside a custom element's OPEN shadow root. A main-frame-only DOM walk
+      never sees it; render-DOM perception (AI-2 PR2b) pierces the shadow boundary and addresses the
+      link by a child-index path that crosses into the shadow root, so it can be found AND clicked.
+    -->
+    <custom-nav></custom-nav>
+    <p>Use the navigation widget above.</p>
+    <script>
+      class CustomNav extends HTMLElement {
+        constructor() {
+          super();
+          const root = this.attachShadow({ mode: 'open' });
+          root.innerHTML = '<a href="target.html">Go to Target</a>';
+        }
+      }
+      customElements.define('custom-nav', CustomNav);
+    </script>
+  </body>
+</html>

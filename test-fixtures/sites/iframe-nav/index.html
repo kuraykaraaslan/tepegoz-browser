@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Portal</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; }
+      iframe { width: 100%; height: 160px; border: 1px solid #ccc; }
+    </style>
+  </head>
+  <body>
+    <h1>Portal</h1>
+    <!--
+      The actionable control lives inside a SAME-ORIGIN iframe. Render-DOM perception (AI-2 PR2b)
+      recurses into the iframe's document (one index space) and addresses the link by a path that
+      crosses the frame boundary. The link uses target="_top", so clicking it navigates the top page.
+    -->
+    <iframe src="frame.html" title="Navigation panel"></iframe>
+    <p>Use the panel above to continue.</p>
+  </body>
+</html>

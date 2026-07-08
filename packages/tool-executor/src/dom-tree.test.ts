@@ -9,15 +9,15 @@ const result = (nodes: DomTreeResult['nodes']): DomTreeResult => ({
 });
 
 describe('parseDomTree', () => {
-  it('maps nodes to raw interactables and an aligned xpath list', () => {
-    const { interactables, xpaths } = parseDomTree(
+  it('maps nodes to raw interactables and an aligned path list', () => {
+    const { interactables, paths } = parseDomTree(
       result([
-        { tag: 'a', xpath: '/html[1]/body[1]/a[1]', role: 'link', name: 'Blog', href: 'blog.html' },
-        { tag: 'button', xpath: '/html[1]/body[1]/button[1]', role: 'button', name: 'Menu' },
+        { tag: 'a', path: [[0, 1, 0]], role: 'link', name: 'Blog', href: 'blog.html' },
+        { tag: 'button', path: [[0, 1, 1]], role: 'button', name: 'Menu' },
       ]),
     );
     expect(interactables).toHaveLength(2);
-    expect(xpaths).toEqual(['/html[1]/body[1]/a[1]', '/html[1]/body[1]/button[1]']);
+    expect(paths).toEqual([[[0, 1, 0]], [[0, 1, 1]]]);
     expect(interactables[0]).toMatchObject({ tag: 'a', role: 'link', name: 'Blog', href: 'blog.html' });
   });
 
@@ -26,7 +26,7 @@ describe('parseDomTree', () => {
       result([
         {
           tag: 'input',
-          xpath: '/x',
+          path: [[0]],
           role: 'textbox',
           name: 'Email',
           value: 'a@b.com',
@@ -50,7 +50,7 @@ describe('parseDomTree', () => {
       result([
         {
           tag: 'input',
-          xpath: '/x',
+          path: [[0]],
           role: 'button',
           name: 'Upload',
           inputType: 'file',
@@ -64,35 +64,42 @@ describe('parseDomTree', () => {
 
   it('does not treat a non-file input as a file picker', () => {
     const { interactables } = parseDomTree(
-      result([{ tag: 'input', xpath: '/x', role: 'textbox', name: 'Q', inputType: 'text' }]),
+      result([{ tag: 'input', path: [[0]], role: 'textbox', name: 'Q', inputType: 'text' }]),
     );
     expect(interactables[0]?.inputKind).toBeUndefined();
   });
 
+  it('preserves a shadow/iframe-crossing path (multi-segment)', () => {
+    const { paths } = parseDomTree(
+      result([{ tag: 'button', path: [[0, 0], [0]], role: 'button', name: 'In shadow' }]),
+    );
+    expect(paths[0]).toEqual([[0, 0], [0]]);
+  });
+
   it('drops empty href/value/attributes rather than emitting empties', () => {
     const { interactables } = parseDomTree(
-      result([{ tag: 'div', xpath: '/x', role: '', name: 'Click', href: '', value: '', attributes: {} }]),
+      result([{ tag: 'div', path: [[0]], role: '', name: 'Click', href: '', value: '', attributes: {} }]),
     );
     expect(interactables[0]).toEqual({ tag: 'div', role: '', name: 'Click' });
   });
 
-  it('caps nodes, xpaths AND hashes together so refs stay aligned', () => {
+  it('caps nodes, paths AND hashes together so refs stay aligned', () => {
     const many = Array.from({ length: MAX_INTERACTABLE_ELEMENTS + 25 }, (_, i) => ({
       tag: 'button',
-      xpath: `/b[${String(i)}]`,
+      path: [[i]],
       role: 'button',
       name: 'x',
     }));
-    const { interactables, xpaths, hashes } = parseDomTree(result(many));
+    const { interactables, paths, hashes } = parseDomTree(result(many));
     expect(interactables).toHaveLength(MAX_INTERACTABLE_ELEMENTS);
-    expect(xpaths).toHaveLength(MAX_INTERACTABLE_ELEMENTS);
+    expect(paths).toHaveLength(MAX_INTERACTABLE_ELEMENTS);
     expect(hashes).toHaveLength(MAX_INTERACTABLE_ELEMENTS);
   });
 
   it('fingerprints by identity, not structural position', () => {
-    const a = parseDomTree(result([{ tag: 'a', xpath: '/html[1]/body[1]/a[1]', role: 'link', name: 'Blog', href: 'b.html' }]));
+    const a = parseDomTree(result([{ tag: 'a', path: [[0, 1, 0]], role: 'link', name: 'Blog', href: 'b.html' }]));
     // Same element, shifted position (a sibling was inserted before it) → SAME fingerprint.
-    const b = parseDomTree(result([{ tag: 'a', xpath: '/html[1]/body[1]/a[2]', role: 'link', name: 'Blog', href: 'b.html' }]));
+    const b = parseDomTree(result([{ tag: 'a', path: [[0, 1, 5]], role: 'link', name: 'Blog', href: 'b.html' }]));
     expect(a.hashes[0]).toBe(b.hashes[0]);
   });
 });

@@ -15,6 +15,22 @@
       "success": { "domAssertion": "Security best practices" },
       "heldOut": true,
       "tags": ["perception", "href", "ai-2"]
+    },
+    {
+      "id": "shadow_dom_nav",
+      "task": "Use the navigation widget to open the Target page and read it.",
+      "target": { "fixture": "shadow-dom-nav" },
+      "success": { "domAssertion": "reached the target page" },
+      "heldOut": false,
+      "tags": ["perception", "shadow-dom", "ai-2b"]
+    },
+    {
+      "id": "iframe_nav",
+      "task": "Continue to the Target page using the panel, then read it.",
+      "target": { "fixture": "iframe-nav" },
+      "success": { "domAssertion": "reached the target page from inside an iframe" },
+      "heldOut": true,
+      "tags": ["perception", "iframe", "ai-2b"]
     }
   ]
 }

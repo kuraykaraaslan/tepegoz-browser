@@ -9,8 +9,11 @@ import { MAX_INTERACTABLE_ELEMENTS } from '@tepegoz/tool-executor';
  * (`elementFromPoint` hit-test, so a modal suppresses what it covers) ∧ in the viewport, in document
  * order. The driver validates the payload (zod) and hands it to `parseDomTree`.
  *
- * PR1 scope: the page's main frame only. iframe frame-hopping, shadow-DOM piercing, and `*[n]`
- * new-element marking land in AI-2 PR2. No page mutation — perception is read-only.
+ * Traversal pierces OPEN shadow roots and SAME-ORIGIN iframes into one index space (PR2b); closed
+ * shadow roots and cross-origin frames are unreachable (they read as null) and are left for a future
+ * per-frame CDP-injection pass. Each element is addressed by a child-index `path` (segments crossing
+ * shadow/iframe boundaries), re-resolved by the driver via `resolveNodePath`. No page mutation —
+ * perception is read-only.
  */
 
 /** Hard cap on candidates the script emits; the pure layer re-caps to {@link MAX_INTERACTABLE_ELEMENTS}. */
@@ -44,10 +47,10 @@ export function buildDomTreeExpression(viewportExpansionPx = 0): string {
   const rectCache = new WeakMap();
   const styleCache = new WeakMap();
   const rectOf = (el) => { let r = rectCache.get(el); if (r === undefined) { r = el.getBoundingClientRect(); rectCache.set(el, r); } return r; };
-  const styleOf = (el) => { let s = styleCache.get(el); if (s === undefined) { s = getComputedStyle(el); styleCache.set(el, s); } return s; };
-
-  const vw = window.innerWidth || document.documentElement.clientWidth || 0;
-  const vh = window.innerHeight || document.documentElement.clientHeight || 0;
+  // Window-aware: an element inside a same-origin iframe has its own viewport + getComputedStyle host.
+  const winOf = (el) => (el.ownerDocument && el.ownerDocument.defaultView) || window;
+  const styleOf = (el) => { let s = styleCache.get(el); if (s === undefined) { s = winOf(el).getComputedStyle(el); styleCache.set(el, s); } return s; };
+  const vpOf = (el) => { const w = winOf(el); return { vw: w.innerWidth || 0, vh: w.innerHeight || 0 }; };
 
   const isVisible = (el) => {
     const r = rectOf(el);
@@ -58,24 +61,29 @@ export function buildDomTreeExpression(viewportExpansionPx = 0): string {
 
   const isInViewport = (el) => {
     const r = rectOf(el);
-    return r.bottom > -EXP && r.right > -EXP && r.top < vh + EXP && r.left < vw + EXP;
+    const vp = vpOf(el);
+    return r.bottom > -EXP && r.right > -EXP && r.top < vp.vh + EXP && r.left < vp.vw + EXP;
   };
 
   const isTopElement = (el) => {
     const r = rectOf(el);
+    const vp = vpOf(el);
     const cx = r.left + r.width / 2;
     const cy = r.top + r.height / 2;
-    // Off the REAL viewport (only reachable via the expansion band) — cannot hit-test, so accept it.
-    if (cx < 0 || cy < 0 || cx > vw || cy > vh) return true;
-    const top = document.elementFromPoint(cx, cy);
-    if (top === null) return false;
-    return top === el || el.contains(top) || top.contains(el);
+    // Off the element's own (real) viewport — cannot hit-test, so accept it. Occlusion is tested per
+    // root: an element's getRootNode() (its shadowRoot or document) hit-tests in its own coord space.
+    if (cx < 0 || cy < 0 || cx > vp.vw || cy > vp.vh) return true;
+    const root = el.getRootNode();
+    const hit = (root && root.elementFromPoint) ? root.elementFromPoint(cx, cy) : el.ownerDocument.elementFromPoint(cx, cy);
+    if (hit === null) return false;
+    return hit === el || el.contains(hit) || hit.contains(el);
   };
 
   const hasHandler = (el) => el.onclick !== null || el.getAttribute('onclick') !== null || el.getAttribute('onmousedown') !== null;
 
   const isInteractive = (el) => {
-    if (el === document.body || el === document.documentElement) return false;
+    const doc = el.ownerDocument;
+    if (el === doc.body || el === doc.documentElement) return false;
     if (el.hasAttribute('disabled')) return true; // still index it — surfaced as disabled downstream
     if (INTERACTIVE_TAGS.has(el.tagName)) return true;
     const role = el.getAttribute('role');
@@ -88,7 +96,8 @@ export function buildDomTreeExpression(viewportExpansionPx = 0): string {
     // wrapper/overlay-sized regions, whose real target is a descendant (trims over-selection).
     if (styleOf(el).cursor === 'pointer') {
       const r = rectOf(el);
-      return (r.width * r.height) / (vw * vh || 1) <= MAX_POINTER_AREA_FRAC;
+      const vp = vpOf(el);
+      return (r.width * r.height) / (vp.vw * vp.vh || 1) <= MAX_POINTER_AREA_FRAC;
     }
     return false;
   };
@@ -128,20 +137,6 @@ export function buildDomTreeExpression(viewportExpansionPx = 0): string {
     return title ? title.trim().slice(0, MAX_TEXT) : '';
   };
 
-  const xpathOf = (el) => {
-    const parts = [];
-    let node = el;
-    while (node && node.nodeType === 1 && node !== document.documentElement.parentNode) {
-      const tag = node.tagName.toLowerCase();
-      let i = 1;
-      let sib = node.previousElementSibling;
-      while (sib) { if (sib.tagName === node.tagName) i++; sib = sib.previousElementSibling; }
-      parts.unshift(tag + '[' + i + ']');
-      node = node.parentElement;
-    }
-    return '/' + parts.join('/');
-  };
-
   const attrsOf = (el) => {
     const out = {};
     for (const name of ATTR_ALLOWLIST) {
@@ -151,17 +146,11 @@ export function buildDomTreeExpression(viewportExpansionPx = 0): string {
     return out;
   };
 
+  // Emit one indexable element. \`path\` is a child-index address (segments crossing shadow/iframe
+  // boundaries) the driver re-resolves via resolveNodePath — see @tepegoz/tool-executor/dom-path.
   const nodes = [];
-  const walker = document.createTreeWalker(document.body || document.documentElement, NodeFilter.SHOW_ELEMENT);
-  let scanned = 0;
-  let current = walker.currentNode;
-  while (current && scanned < NODE_CAP && nodes.length < EMIT_CAP) {
-    scanned++;
-    const el = current;
-    current = walker.nextNode();
-    if (!isVisible(el) || !isInViewport(el) || !isInteractive(el) || !isTopElement(el)) continue;
-
-    const node = { tag: el.tagName.toLowerCase(), xpath: xpathOf(el), role: el.getAttribute('role') || implicitRole(el), name: textOf(el) };
+  const emit = (el, path) => {
+    const node = { tag: el.tagName.toLowerCase(), path: path, role: el.getAttribute('role') || implicitRole(el), name: textOf(el) };
     if (el.tagName === 'A') { const href = el.getAttribute('href'); if (href) node.href = el.href || href; }
     if ('value' in el && el.value != null && String(el.value) !== '') node.value = String(el.value).slice(0, MAX_TEXT);
     if (el.hasAttribute('disabled') || el.getAttribute('aria-disabled') === 'true') node.disabled = true;
@@ -173,8 +162,35 @@ export function buildDomTreeExpression(viewportExpansionPx = 0): string {
       if (el.hasAttribute('multiple')) node.multiple = true;
     }
     nodes.push(node);
-  }
+  };
 
+  let scanned = 0;
+  const capped = () => nodes.length >= EMIT_CAP || scanned >= NODE_CAP;
+
+  // Recursive walk piercing OPEN shadow roots + SAME-ORIGIN iframes into one index space. \`chain\` is
+  // the boundary-crossing segments to reach the current root; \`pathInRoot\` the child-index steps
+  // within it. Closed shadow roots / cross-origin frames read as null and are simply not descended.
+  const visit = (el, pathInRoot, chain) => {
+    if (capped()) return;
+    scanned++;
+    const fullPath = chain.concat([pathInRoot]);
+    if (isVisible(el) && isInViewport(el) && isInteractive(el) && isTopElement(el)) emit(el, fullPath);
+    if (el.shadowRoot) {
+      visitRoot(el.shadowRoot, fullPath);
+    } else if (el.tagName === 'IFRAME') {
+      let doc = null;
+      try { doc = el.contentDocument; } catch (e) { doc = null; }
+      if (doc) visitRoot(doc, fullPath);
+    }
+    const kids = el.children;
+    for (let j = 0; j < kids.length && !capped(); j++) visit(kids[j], pathInRoot.concat(j), chain);
+  };
+  const visitRoot = (root, chain) => {
+    const kids = root.children;
+    for (let j = 0; j < kids.length && !capped(); j++) visit(kids[j], [j], chain);
+  };
+
+  visitRoot(document, []);
   return { url: document.location.href, title: document.title, nodes };
 })()`;
 }
