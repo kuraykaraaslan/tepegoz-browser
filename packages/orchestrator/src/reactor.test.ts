@@ -224,7 +224,7 @@ describe('Reactor.run', () => {
 
   it('stops on the max-steps cap', async () => {
     ToolGateway.setConfirmHandler(() => Promise.resolve(true));
-    // Always reads (distinct args each turn so the loop detector does not fire first).
+    // Always reads (a 'read' tool, exempt from the loop detector), so only the maxSteps cap can stop it.
     const replies = Array.from({ length: 10 }, (_, i) => act('browser_get_elements', { n: i }));
     script(replies);
     const res = await Reactor.run(req(), { maxSteps: 3 });
@@ -232,10 +232,51 @@ describe('Reactor.run', () => {
     expect(calls).toHaveLength(3);
   });
 
-  it('stops when the same action repeats (Loop Detector)', async () => {
-    script([act('browser_get_elements'), act('browser_get_elements'), act('browser_get_elements'), finish]);
+  it('exempts idempotent reads from the loop detector (state-every-step is not a loop)', async () => {
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    // Four identical browser_get_elements reads (a 'read' tool) — well past loopThreshold — must NOT trip
+    // the detector: re-reading the page is the encouraged pattern, and the run-global signature counter
+    // would otherwise hard-stop a healthy multi-step task. Only maxSteps bounds a pure-read spin.
+    script([
+      act('browser_get_elements'),
+      act('browser_get_elements'),
+      act('browser_get_elements'),
+      act('browser_get_elements'),
+      finish,
+    ]);
+    const res = await Reactor.run(req(), { loopThreshold: 3 });
+    expect(res.stoppedReason).toBe('completed');
+    expect(calls).toEqual([
+      'browser_get_elements',
+      'browser_get_elements',
+      'browser_get_elements',
+      'browser_get_elements',
+    ]);
+  });
+
+  it('stops when a state-changing action repeats past the nudge (Loop Detector)', async () => {
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    // Threshold 3: the 3rd identical click fires a recovery nudge (skipped, not executed); only a 4th
+    // identical repeat after the nudge is conceded as a real loop. Reads are exempt, so the detector is
+    // exercised with a state-changing action.
+    const click = act('browser_update_page', { action: 'click', ref: 1 });
+    script([click, click, click, click]);
     const res = await Reactor.run(req(), { loopThreshold: 3 });
     expect(res.stoppedReason).toBe('loop_detected');
+    // Boundary: the 1st and 2nd clicks executed; the 3rd was nudged (skipped) and the 4th tripped the stop.
+    expect(calls).toEqual(['browser_update_page', 'browser_update_page']);
+  });
+
+  it('nudges once on a repeat and recovers when the model then switches action', async () => {
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    // 3rd identical click triggers the nudge (skipped, not executed); the model then advances with a
+    // different action (ref 2) instead of looping, so the run proceeds to completion — proving 3 identical
+    // state-changing calls do NOT stop when followed by a distinct action.
+    const click = act('browser_update_page', { action: 'click', ref: 1 });
+    script([click, click, click, act('browser_update_page', { action: 'click', ref: 2 }), finish]);
+    const res = await Reactor.run(req(), { loopThreshold: 3 });
+    expect(res.stoppedReason).toBe('completed');
+    expect(calls).toEqual(['browser_update_page', 'browser_update_page', 'browser_update_page']);
   });
 
   it('honors cancellation before the first model call', async () => {

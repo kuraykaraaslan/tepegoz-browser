@@ -36,10 +36,34 @@ interface PageFingerprint {
   url: string;
   title: string;
   text: string;
+  /** Structural signature of the VISIBLE actionable elements (host-computed). Catches state changes an
+   *  in-place SPA toggle makes that leave url/title/innerText untouched — a drawer/menu/dropdown/accordion
+   *  sliding into view, a tab panel swapping, a modal opening — where the revealed nodes already lived in
+   *  the DOM (so `innerText` never moved) but were off-canvas/hidden until the interaction. */
+  sig: string;
 }
 
+/** Did the interaction move the page? True on any url/title/visible-text change OR a change to the
+ *  visible actionable-element set. The structural arm is what stops a menu-toggle click from reading as a
+ *  no-op (the false `changed:false` that used to drive the agent into a re-click loop). */
 function pageChanged(before: PageFingerprint, after: PageFingerprint): boolean {
-  return before.url !== after.url || before.title !== after.title || before.text !== after.text;
+  return (
+    before.url !== after.url ||
+    before.title !== after.title ||
+    before.text !== after.text ||
+    before.sig !== after.sig
+  );
+}
+
+/** A change the structural signature caught but url/title/visible-text did not — i.e. the actionable set
+ *  moved (a menu/panel opened) with no new visible prose. The model must re-read elements to see it. */
+function structuralOnlyChange(before: PageFingerprint, after: PageFingerprint): boolean {
+  return (
+    before.sig !== after.sig &&
+    before.url === after.url &&
+    before.title === after.title &&
+    before.text === after.text
+  );
 }
 
 /** Build a `browser_*` builtin ToolDescriptor (mirrors `@tepegoz/file-operations`'s local helper). */
@@ -140,8 +164,10 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
         '{ action: "press", key, tabId? } (e.g. "Enter", "Tab", "Escape", "ArrowDown") · ' +
         '{ action: "scroll", direction: "up"|"down", amount?, tabId? }. Omit tabId for the active tab. ' +
         'File inputs must be handled through upload_create_item so path grants, approval, and audit apply. ' +
-        'Returns { ok, url, title, changed, recoveryHint? }; if changed=false, re-read elements or use ' +
-        'browser_get_screenshot before trying a different ref.',
+        'Returns { ok, url, title, changed, recoveryHint?, note? }. changed=true also fires when a click ' +
+        'opens a menu/drawer/panel with no new page text (a `note` then says to re-read elements). If ' +
+        'changed=false, re-read elements or use browser_get_screenshot before trying a different ref — ' +
+        'never repeat the same ref blindly.',
     ),
     inputSchema: UpdatePageArgs,
     handler: async (args) => {
@@ -162,16 +188,36 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
       }
       const after = await host.readPage(args.tabId);
       const changed = pageChanged(before, after);
-      return changed
-        ? { ok: true, url: after.url, title: after.title, changed }
-        : {
-            ok: true,
-            url: after.url,
-            title: after.title,
-            changed,
-            recoveryHint:
-              'No visible text/url/title change was detected. Re-read browser_get_elements and try a different ref; use browser_get_screenshot if text/a11y is insufficient.',
-          };
+      // A scroll's effect is a viewport move, not a content/state change. Report `changed` plainly and skip
+      // BOTH the structural "a menu opened — do NOT repeat" note (false: scrolling changes the in-viewport
+      // actionable set by design, and scrolling again is a normal way to reach content) and the "no change"
+      // recovery hint. The model re-reads elements next to see what scrolled into view.
+      if (args.action === 'scroll') {
+        return { ok: true, url: after.url, title: after.title, changed };
+      }
+      if (!changed) {
+        return {
+          ok: true,
+          url: after.url,
+          title: after.title,
+          changed,
+          recoveryHint:
+            'No visible or structural change was detected. Re-read browser_get_elements and try a different ref; use browser_get_screenshot if text/a11y is insufficient.',
+        };
+      }
+      // Structural-only: the actionable set moved (a menu/drawer/panel opened) but no new prose appeared.
+      // Tell the model so it re-reads elements and acts on the newly revealed controls instead of assuming
+      // its click failed and repeating it — the exact loop this signal is here to break.
+      if (structuralOnlyChange(before, after)) {
+        return {
+          ok: true,
+          url: after.url,
+          title: after.title,
+          changed,
+          note: 'The set of actionable elements changed (e.g. a menu/drawer/panel opened) with no new page text. Re-read browser_get_elements and act on the newly revealed controls — do NOT repeat this interaction.',
+        };
+      }
+      return { ok: true, url: after.url, title: after.title, changed };
     },
   });
 }

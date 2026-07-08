@@ -6,7 +6,7 @@ import type { BrowserHost } from './host';
 function fakeHost(overrides?: Partial<BrowserHost>): BrowserHost {
   return {
     navigate: () => Promise.resolve({ url: 'https://x', title: 'X' }),
-    readPage: () => Promise.resolve({ url: 'https://x', title: 'X', text: 'hello' }),
+    readPage: () => Promise.resolve({ url: 'https://x', title: 'X', text: 'hello', sig: 's1' }),
     waitForLoad: () => Promise.resolve({ url: 'https://x', title: 'X' }),
     snapshotElements: () => Promise.resolve({ url: 'https://x', title: 'X', elements: [] }),
     clickElement: () => Promise.resolve(),
@@ -52,8 +52,8 @@ describe('registerBrowserTools', () => {
   it('reports visible page changes after an interaction', async () => {
     const readPage = vi
       .fn()
-      .mockResolvedValueOnce({ url: 'https://x', title: 'X', text: 'before' })
-      .mockResolvedValueOnce({ url: 'https://x/done', title: 'Done', text: 'after' });
+      .mockResolvedValueOnce({ url: 'https://x', title: 'X', text: 'before', sig: 's1' })
+      .mockResolvedValueOnce({ url: 'https://x/done', title: 'Done', text: 'after', sig: 's2' });
     const clickElement = vi.fn(() => Promise.resolve());
     registerBrowserTools({ host: fakeHost({ readPage, clickElement }) });
 
@@ -65,8 +65,49 @@ describe('registerBrowserTools', () => {
     expect(result).toEqual({ ok: true, url: 'https://x/done', title: 'Done', changed: true });
   });
 
+  it('reports a structural-only change (menu opened) as changed with a re-read note', async () => {
+    // url/title/visible-text identical before and after — only the visible actionable set (sig) moved,
+    // the drawer-menu case: the click really opened it, so this must NOT read as a no-op.
+    const readPage = vi
+      .fn()
+      .mockResolvedValueOnce({ url: 'https://x', title: 'X', text: 'same', sig: 'closed' })
+      .mockResolvedValueOnce({ url: 'https://x', title: 'X', text: 'same', sig: 'open' });
+    const clickElement = vi.fn(() => Promise.resolve());
+    registerBrowserTools({ host: fakeHost({ readPage, clickElement }) });
+
+    const result = (await CapabilityRegistry.get('browser_update_page')!.handler({
+      action: 'click',
+      ref: 3,
+    })) as Record<string, unknown>;
+
+    expect(result.changed).toBe(true);
+    expect(result.recoveryHint).toBeUndefined();
+    expect(result.note).toEqual(expect.stringContaining('Re-read browser_get_elements'));
+  });
+
+  it('reports a scroll plainly — no false "menu opened" note, no "no change" hint', async () => {
+    // sig is viewport-relative, so a scroll shifts the in-viewport actionable set even though url/title/
+    // innerText are scroll-invariant. That must NOT surface as "a menu opened — do NOT repeat" (which would
+    // block the normal scroll-again-to-reach-content pattern); a scroll's viewport move is reported plainly.
+    const readPage = vi
+      .fn()
+      .mockResolvedValueOnce({ url: 'https://x', title: 'X', text: 'same', sig: 'top' })
+      .mockResolvedValueOnce({ url: 'https://x', title: 'X', text: 'same', sig: 'scrolled' });
+    const scrollPage = vi.fn(() => Promise.resolve());
+    registerBrowserTools({ host: fakeHost({ readPage, scrollPage }) });
+
+    const result = (await CapabilityRegistry.get('browser_update_page')!.handler({
+      action: 'scroll',
+      direction: 'down',
+    })) as Record<string, unknown>;
+
+    expect(result).toEqual({ ok: true, url: 'https://x', title: 'X', changed: true });
+    expect(result.note).toBeUndefined();
+    expect(result.recoveryHint).toBeUndefined();
+  });
+
   it('passes tabId through read/snapshot/action tools', async () => {
-    const readPage = vi.fn(() => Promise.resolve({ url: 'https://x', title: 'X', text: 'hello' }));
+    const readPage = vi.fn(() => Promise.resolve({ url: 'https://x', title: 'X', text: 'hello', sig: 's1' }));
     const snapshotElements = vi.fn(() => Promise.resolve({ url: 'https://x', title: 'X', elements: [] }));
     const fillElement = vi.fn(() => Promise.resolve());
     registerBrowserTools({ host: fakeHost({ readPage, snapshotElements, fillElement }) });

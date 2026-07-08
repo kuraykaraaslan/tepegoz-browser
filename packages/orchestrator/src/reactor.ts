@@ -314,8 +314,14 @@ export default class Reactor {
     const maxSteps = options.maxSteps ?? 25;
     const loopThreshold = options.loopThreshold ?? 3;
     const known = new Set(req.tools.map((t) => t.id));
+    // Idempotent read-only tools (perception/verification, dangerClass 'read') are EXEMPT from the loop
+    // detector below: re-reading the page after each action is the encouraged state-every-step pattern, and
+    // because `signatureCounts` is run-global (non-consecutive) counting them would trip a healthy
+    // multi-step task on its 3rd identical re-read. A read-only spin is still bounded by `maxSteps`.
+    const readOnlyTools = new Set(req.tools.filter((t) => t.dangerClass === 'read').map((t) => t.id));
     const outcomes: StepOutcome[] = [];
     const signatureCounts = new Map<string, number>();
+    const loopNudged = new Set<string>();
     const recoveryCounts = new Map<string, number>();
     const maxDecisionRepairs = options.maxDecisionRepairs ?? 2;
     const maxRecoveryAttempts = options.maxRecoveryAttempts ?? 2;
@@ -472,10 +478,30 @@ export default class Reactor {
         continue;
       }
 
-      const signature = `${decision.tool}:${stableStringify(decision.args)}`;
-      const count = (signatureCounts.get(signature) ?? 0) + 1;
-      signatureCounts.set(signature, count);
-      if (count >= loopThreshold) return { outcomes, stoppedReason: 'loop_detected' };
+      // Loop detection counts only STATE-CHANGING actions (reads are exempt — see `readOnlyTools`).
+      if (!readOnlyTools.has(decision.tool)) {
+        const signature = `${decision.tool}:${stableStringify(decision.args)}`;
+        const count = (signatureCounts.get(signature) ?? 0) + 1;
+        signatureCounts.set(signature, count);
+        if (count >= loopThreshold) {
+          // Don't concede on the first repeat: a stuck agent is usually repeating an action that ALREADY
+          // succeeded (a menu it opened is open; its click landed) or targeting a stale ref — the model just
+          // failed to perceive it. Give ONE structured recovery turn (verify, then act differently) before
+          // the hard stop. Only a further identical repeat after the nudge is a real loop.
+          if (!loopNudged.has(signature)) {
+            loopNudged.add(signature);
+            pushObservation(
+              `Observation: You have chosen ${decision.tool} with identical arguments ${String(count)} ` +
+                'times without moving toward the goal. It may ALREADY have taken effect (e.g. the menu / ' +
+                'panel you are toggling is already open) or the ref may be stale — verify by re-reading ' +
+                'browser_get_elements (or browser_get_screenshot) rather than assuming. Then act on a ' +
+                'DIFFERENT element to advance the goal; do NOT repeat this exact call.',
+            );
+            continue;
+          }
+          return { outcomes, stoppedReason: 'loop_detected' };
+        }
+      }
 
       options.onDecision?.(decision.tool, decision.rationale);
       const ctx = options.ctxFor ? options.ctxFor(decision.tool, decision.args) : {};

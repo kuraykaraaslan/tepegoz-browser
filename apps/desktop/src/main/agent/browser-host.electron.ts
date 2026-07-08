@@ -51,15 +51,92 @@ async function navigate(url: string, tabId?: string): Promise<{ url: string; tit
   return { url: wc.getURL(), title: wc.getTitle() };
 }
 
-async function readPage(tabId?: string): Promise<{ url: string; title: string; text: string }> {
+async function readPage(
+  tabId?: string,
+): Promise<{ url: string; title: string; text: string; sig: string }> {
   const wc = requireWc(tabId);
   const url = wc.getURL();
   const title = wc.getTitle();
+  // Read the visible text AND a structural signature of the on-screen actionable elements in one eval.
+  // The signature hashes each visible interactive element's structural identity (tag · role · href-path ·
+  // digit-masked label), in traversal order — NOT its position — so an in-place SPA toggle that slides a
+  // drawer/menu/panel into the viewport changes it (the revealed controls become visible) while incidental
+  // repaints/animations and live clock/counter labels do not. It pierces OPEN shadow roots and SAME-ORIGIN
+  // iframes so it observes the same clickable surface AI-2 perception (buildDomTree) exposes to the model.
+  // This is what lets browser_update_page tell a real state change from a genuine no-op. See
+  // `packages/browser-tools`'s pageChanged.
   const result: unknown = await wc.executeJavaScript(
-    'document.body ? document.body.innerText : ""',
+    `(() => {
+      const text = document.body ? document.body.innerText : '';
+      let sig = '';
+      try {
+        const SEL = 'a[href],button,input,select,textarea,summary,[role=button],[role=link],[role=menuitem],[role=tab],[role=checkbox],[role=switch],[onclick],[tabindex]';
+        const CAP = 800;
+        const parts = [];
+        // Rendered? checkVisibility (Chromium 105+) also catches ANCESTOR opacity:0 / display:none /
+        // content-visibility — the common CSS fade-in drawer/menu pattern a per-element style read misses.
+        const shown = (el, win) => {
+          if (typeof el.checkVisibility === 'function') {
+            return el.checkVisibility({ opacityProperty: true, visibilityProperty: true, contentVisibilityAuto: true });
+          }
+          const st = win.getComputedStyle(el);
+          return !(st.visibility === 'hidden' || st.display === 'none' || parseFloat(st.opacity) === 0);
+        };
+        const visit = (root, win) => {
+          if (!root || !win || parts.length >= CAP) return;
+          const vw = win.innerWidth || 0;
+          const vh = win.innerHeight || 0;
+          let nodes;
+          try { nodes = root.querySelectorAll(SEL); } catch (_e) { nodes = []; }
+          for (let i = 0; i < nodes.length && parts.length < CAP; i++) {
+            const el = nodes[i];
+            const r = el.getBoundingClientRect();
+            if (r.width < 1 || r.height < 1) continue;                                  // zero-area
+            if (r.bottom <= 0 || r.right <= 0 || r.top >= vh || r.left >= vw) continue; // off-viewport
+            if (!shown(el, win)) continue;
+            // Identity = tag · role · href(query dropped) · label(digits masked); el.value is excluded so a
+            // live clock/counter/re-tokenized URL does not flip sig on a genuine no-op.
+            let href = el.getAttribute('href') || '';
+            const q = href.indexOf('?'); if (q >= 0) href = href.slice(0, q);
+            const label = (el.getAttribute('aria-label') || el.textContent || '')
+              .replace(/\\s+/g, ' ').trim().slice(0, 40).replace(/\\d+/g, '#');
+            parts.push(el.tagName + '|' + (el.getAttribute('role') || '') + '|' + href + '|' + label);
+          }
+          // Open shadow roots (closed roots expose no .shadowRoot, so are invisible here — as intended).
+          let hosts;
+          try { hosts = root.querySelectorAll('*'); } catch (_e) { hosts = []; }
+          for (let i = 0; i < hosts.length && parts.length < CAP; i++) {
+            if (hosts[i].shadowRoot) visit(hosts[i].shadowRoot, win);
+          }
+          // Same-origin iframes (cross-origin contentDocument access throws → skipped).
+          let frames;
+          try { frames = root.querySelectorAll('iframe'); } catch (_e) { frames = []; }
+          for (let i = 0; i < frames.length && parts.length < CAP; i++) {
+            let doc = null, fwin = null;
+            try { doc = frames[i].contentDocument; fwin = frames[i].contentWindow; } catch (_e) { doc = null; }
+            if (doc && fwin) visit(doc, fwin);
+          }
+        };
+        visit(document, window);
+        // djb2 over the joined parts — a compact, order-sensitive fingerprint (not sent to the model).
+        const s = parts.join('\\n');
+        let h = 5381;
+        for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+        sig = (h >>> 0).toString(36) + ':' + parts.length;
+      } catch (_e) {
+        sig = '';
+      }
+      return { text: typeof text === 'string' ? text : '', sig };
+    })()`,
     true,
   );
-  return { url, title, text: typeof result === 'string' ? result : '' };
+  const shaped = (result ?? {}) as { text?: unknown; sig?: unknown };
+  return {
+    url,
+    title,
+    text: typeof shaped.text === 'string' ? shaped.text : '',
+    sig: typeof shaped.sig === 'string' ? shaped.sig : '',
+  };
 }
 
 interface PageDimensions {

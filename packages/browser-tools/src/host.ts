@@ -11,8 +11,11 @@ export interface BrowserHost {
   /** Navigate a tab to `url` (scheme allow-list enforced by the host) and resolve once
    *  loading settles, with the final url + title. */
   navigate(url: string, tabId?: string): Promise<{ url: string; title: string }>;
-  /** Read a page: its url, title, and the raw (unsanitized) visible text. */
-  readPage(tabId?: string): Promise<{ url: string; title: string; text: string }>;
+  /** Read a page: its url, title, the raw (unsanitized) visible text, and `sig` — a compact structural
+   *  signature of the currently VISIBLE actionable elements. `sig` lets an in-place interaction (opening a
+   *  drawer/menu/dropdown, swapping a tab panel) register as a change even when url/title/innerText do not
+   *  move, so `browser_update_page` never mis-reports such a click as a no-op. */
+  readPage(tabId?: string): Promise<{ url: string; title: string; text: string; sig: string }>;
   /** Wait for a page's current load to settle. */
   waitForLoad(tabId?: string, timeoutMs?: number): Promise<{ url: string; title: string }>;
   /** Read a page's actionable elements (accessibility tree). The host keeps the
