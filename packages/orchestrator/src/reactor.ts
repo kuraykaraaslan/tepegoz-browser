@@ -24,6 +24,17 @@ import {
  * is JSON-extracted + zod-validated and the chosen tool must be registered before it can run.
  */
 
+/**
+ * The actor's progress "brain" (AI-3): a self-assessment carried on every decision. `memory` forces
+ * explicit progress counting ("2 of 10 done") — a strong anti-loop / don't-give-up signal. All optional
+ * so weak models that omit them still parse (json_object mode only guarantees valid JSON, not shape).
+ */
+const BRAIN_FIELDS = {
+  evaluation_previous_goal: z.string().max(500).optional(),
+  memory: z.string().max(1500).optional(),
+  next_goal: z.string().max(500).optional(),
+};
+
 /** The model's next move: run one tool, or declare the goal met. Validated at the (untrusted) boundary. */
 const DecisionSchema = z.discriminatedUnion('action', [
   z.object({
@@ -31,8 +42,9 @@ const DecisionSchema = z.discriminatedUnion('action', [
     tool: z.string().min(1).max(100),
     args: z.unknown().default({}),
     rationale: z.string().max(500).default(''),
+    ...BRAIN_FIELDS,
   }),
-  z.object({ action: z.literal('finish'), summary: z.string().max(1000).default('') }),
+  z.object({ action: z.literal('finish'), summary: z.string().max(1000).default(''), ...BRAIN_FIELDS }),
 ]);
 export type Decision = z.infer<typeof DecisionSchema>;
 
@@ -165,6 +177,12 @@ export interface ReactResult {
 
 /** Longest single observation fed back to the model (truncate untrusted page dumps; compaction → 1b). */
 const MAX_OBSERVATION_CHARS = 6000;
+/** Observations longer than this are treated as page-state blobs subject to transient collapse (AI-3). */
+const STATE_COLLAPSE_THRESHOLD = 800;
+/** Replaces a superseded page-state observation so only the LATEST one stays live (bounds context). */
+const COLLAPSED_STATE_PLACEHOLDER =
+  'Observation: [an earlier page snapshot was omitted here to save context — re-read ' +
+  'browser_get_elements / browser_get_page if you need that page state again].';
 
 function isToolError(v: unknown): v is ToolError {
   return typeof v === 'object' && v !== null && (v as { isError?: unknown }).isError === true;
@@ -241,9 +259,12 @@ function systemPrompt(req: ReactRequest): string {
     'observed so far, decide the SINGLE next step. To interact with a page, first call ' +
     'browser_get_elements to see the actionable elements and their refs, then use browser_update_page ' +
     'with a ref. Output ONLY JSON, no prose or markdown fences, of exactly one of:\n' +
-    '{"action":"act","tool":"<id>","args":{…},"rationale":"<why>"}\n' +
-    '{"action":"finish","summary":"<what you accomplished>"}\n' +
-    'Finish as soon as the goal is met or is impossible. Use ONLY these tools (by exact id):\n' +
+    '{"action":"act","tool":"<id>","args":{…},"rationale":"<why>","evaluation_previous_goal":"<did the last action achieve its goal? success/failure and why>","memory":"<concrete progress so far, counting explicitly e.g. \'opened 2 of 5 products\'>","next_goal":"<the immediate objective of THIS step>"}\n' +
+    '{"action":"finish","summary":"<what you accomplished>","memory":"<final progress>"}\n' +
+    'Always fill evaluation_previous_goal / memory / next_goal — memory is your running progress ledger: ' +
+    'carry forward what you have already done and what remains (with counts) so you never repeat a step or ' +
+    'give up while items remain. Finish as soon as the goal is met or is genuinely impossible. ' +
+    'Use ONLY these tools (by exact id):\n' +
     toolList +
     BROWSING_STRATEGY +
     coref +
@@ -269,6 +290,20 @@ export default class Reactor {
       ...(req.history ?? []),
       { role: 'user', content: `Goal: ${req.goal}` },
     ];
+
+    // Transient page-state (AI-3): keep only the LATEST large observation live. When a new page-state
+    // blob is fed back, the previous one is collapsed to a placeholder so DOM dumps never accumulate
+    // across a long run — the compact decisions (with their `memory`) remain the persistent history.
+    let lastStateIndex: number | null = null;
+    const pushObservation = (content: string): void => {
+      const isState = content.length > STATE_COLLAPSE_THRESHOLD;
+      if (isState && lastStateIndex !== null) {
+        const prev = messages[lastStateIndex];
+        if (prev !== undefined) messages[lastStateIndex] = { ...prev, content: COLLAPSED_STATE_PLACEHOLDER };
+      }
+      messages.push({ role: 'user', content });
+      if (isState) lastStateIndex = messages.length - 1;
+    };
 
     for (let step = 0; ; step++) {
       if (options.signal?.aborted === true) return { outcomes, stoppedReason: 'aborted' };
@@ -344,14 +379,14 @@ export default class Reactor {
         if (recoveryCount > maxRecoveryAttempts) {
           return { outcomes, stoppedReason: stopReasonForFailure(failure), failure };
         }
-        messages.push({ role: 'user', content: `Observation:\n${observationWithRecovery(outcome, failure)}` });
+        pushObservation(`Observation:\n${observationWithRecovery(outcome, failure)}`);
         continue;
       }
 
       const halt = outcome.ok ? options.guard?.(outcome) : null;
       if (halt != null) return { outcomes, stoppedReason: halt };
 
-      messages.push({ role: 'user', content: `Observation:\n${observationOf(outcome)}` });
+      pushObservation(`Observation:\n${observationOf(outcome)}`);
     }
   }
 }

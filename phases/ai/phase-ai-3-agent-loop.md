@@ -1,6 +1,6 @@
 # Phase AI-3 — Agent Loop: Planner-as-Validator + Progress Memory
 
-**Status:** ⬜ Not started  ·  **Depends on:** [AI-1](phase-ai-1-eval-harness.md)  ·  **Track:** [`phases/ai`](README.md)
+**Status:** 🟡 In progress (PR1 landed: progress-brain decision fields + transient page-state. **PR2 remaining:** planner-as-validator cadence + stale-DOM guard.)  ·  **Depends on:** [AI-1](phase-ai-1-eval-harness.md)  ·  **Track:** [`phases/ai`](README.md)
 **Goal:** Upgrade the run loop so the agent **doesn't give up prematurely** and doesn't loop: a periodic
 **Planner acts as the completion validator** (the actor cannot self-declare success), the actor carries an
 explicit **progress memory**, and page state is **pushed every step then kept transient** so context never
@@ -27,12 +27,12 @@ fix for the exact failure we saw, and it is code, not a prompt sentence.
    subset check and re-perceive instead of acting on a stale ref (pairs with `*[n]` from AI-2).
 
 ## Exit criteria (DoD)
-- [ ] The actor can **no longer unilaterally end** the run by "finishing"; a periodic Planner validates completion and is the only terminator (with the final answer). Fail-closed after the step budget / consecutive-failure cap.
-- [ ] Each decision includes `evaluation_previous_goal` / `memory` / `next_goal`; `memory` is carried across steps and used for progress/counting.
-- [ ] Page-state messages are transient (added → removed → replaced by compact output); long runs do not accumulate DOM dumps (measured token growth is bounded).
-- [ ] **Measured on the [AI-1](phase-ai-1-eval-harness.md) harness:** the "gave up after one page" scenario (blog behind a menu / not on the landing page) flips from fail → pass with the real model; no regression on the held-out set; loop/step caps still terminate pathological runs.
-- [ ] Existing recovery taxonomy ([`recovery.ts`](../../packages/orchestrator/src/recovery.ts)) and HITL/policy gates preserved (this changes *cadence/authority*, not the security plane).
-- [ ] **i18n:** none expected (internal). Coverage + self-review + acceptance metrics stay green.
+- [ ] The actor can **no longer unilaterally end** the run by "finishing"; a periodic Planner validates completion and is the only terminator (with the final answer). Fail-closed after the step budget / consecutive-failure cap. *(PR2.)*
+- [x] Each decision includes `evaluation_previous_goal` / `memory` / `next_goal`; `memory` is carried across steps and used for progress/counting. *(PR1: added to the `act`+`finish` `DecisionSchema` as tolerant optionals; the system prompt requests them and frames `memory` as a running progress ledger; the compact decisions (with `memory`) are the persistent history — see transient-state below.)*
+- [x] Page-state messages are transient (added → removed → replaced by compact output); long runs do not accumulate DOM dumps (measured token growth is bounded). *(PR1: observations over `STATE_COLLAPSE_THRESHOLD` are page-state; when a new one arrives the previous is collapsed to a placeholder, so exactly one full page-state is ever live. Unit-tested.)*
+- [ ] **Measured on the [AI-1](phase-ai-1-eval-harness.md) harness:** the "gave up after one page" scenario (blog behind a menu / not on the landing page) flips from fail → pass with the real model; no regression on the held-out set; loop/step caps still terminate pathological runs. *(Owed — the give-up fix is chiefly PR2's validator; pending the Electron-ABI eval env, same blocker as AI-1/AI-2.)*
+- [x] Existing recovery taxonomy ([`recovery.ts`](../../packages/orchestrator/src/recovery.ts)) and HITL/policy gates preserved (this changes *cadence/authority*, not the security plane). *(PR1 touches only the actor decision shape + context bookkeeping; the ToolGateway PEP, loop/step caps, recovery, and guard paths are unchanged — all 27 reactor tests green.)*
+- [x] **i18n:** none (internal). PR1 coverage: brain-field parsing, transient-state collapse (message capture across turns), and prompt guidance; self-review.
 
 ## Tasks
 
@@ -41,13 +41,13 @@ fix for the exact failure we saw, and it is code, not a prompt sentence.
 - [ ] Planner completion output supplies the `final_answer`; wire it to the run summary/Agent Console.
 
 ### Progress brain
-- [ ] Extend the actor decision schema with `evaluation_previous_goal` / `memory` / `next_goal` (zod at the untrusted-model boundary, mirroring `parseDecision`'s tolerance). Persist `memory` in the retained decision output across steps.
+- [x] Extend the actor decision schema with `evaluation_previous_goal` / `memory` / `next_goal` (zod at the untrusted-model boundary, mirroring `parseDecision`'s tolerance — all optional so weak models still parse). Persisted implicitly: the retained assistant decisions carry `memory` across steps.
 
 ### Context control
-- [ ] Add-then-remove page-state message handling so only the latest state blob is live; the persistent history is the compact decisions + selected observations (+ plan text). Keep a hard token cap as a secondary guard.
+- [x] Add-then-collapse page-state handling so only the latest state blob is live; the persistent history is the compact decisions + selected observations (+ plan text). `MAX_OBSERVATION_CHARS` remains the per-observation hard cap.
 
 ### Stale-DOM guard
-- [ ] Before an index-based action following a page change, compare branch-path-hash sets (from AI-2) and re-perceive if the DOM is no longer a subset; otherwise proceed.
+- [ ] Before an index-based action following a page change, compare branch-path-hash sets (from AI-2) and re-perceive if the DOM is no longer a subset; otherwise proceed. *(PR2 — pairs with AI-2 `*[n]`/fingerprints.)*
 
 ## Scope notes
 - This deepens, but does not conflict with, [Phase 1b](../phase-1b-agentic-deepening.md)'s durable-resume /

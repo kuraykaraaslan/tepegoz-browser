@@ -155,6 +155,26 @@ describe('parseDecision (untrusted LLM output boundary)', () => {
     });
   });
 
+  it('parses the AI-3 progress brain (evaluation_previous_goal / memory / next_goal)', () => {
+    expect(
+      parseDecision(
+        '{"action":"act","tool":"browser_get_elements","evaluation_previous_goal":"ok","memory":"1 of 3 done","next_goal":"open item 2"}',
+      ),
+    ).toEqual({
+      action: 'act',
+      tool: 'browser_get_elements',
+      args: {},
+      rationale: '',
+      evaluation_previous_goal: 'ok',
+      memory: '1 of 3 done',
+      next_goal: 'open item 2',
+    });
+  });
+
+  it('omits absent brain fields (weak models that skip them still parse)', () => {
+    expect(parseDecision('{"action":"finish","summary":"ok"}')).toEqual({ action: 'finish', summary: 'ok' });
+  });
+
   it('coerces weak-model near-miss shapes (missing action, "arguments" alias, envelope)', () => {
     // No `action`, tool present, OpenAI-style "arguments" key.
     expect(parseDecision('{"tool":"browser_get_elements","arguments":{"ref":"e1"}}')).toEqual({
@@ -336,6 +356,43 @@ describe('Reactor.run', () => {
     expect(res.outcomes[3]?.result).toMatchObject({ changed: true });
   });
 
+  it('keeps only the latest page-state blob live, collapsing superseded ones (AI-3 transient state)', async () => {
+    // Two distinct LARGE observations (> collapse threshold); the earlier one must be collapsed by the
+    // time the model is called for the finish decision, so DOM dumps never accumulate.
+    const big1 = `ELEMENTS-ONE ${'A'.repeat(1000)}`;
+    const big2 = `ELEMENTS-TWO ${'B'.repeat(1000)}`;
+    CapabilityRegistry.reset();
+    CapabilityRegistry.register(fakeToolSequence('browser_get_elements', 'read', [{ content: big1 }, { content: big2 }]));
+
+    class RecordingProvider implements ModelProvider {
+      readonly id: AIProvider = 'anthropic';
+      readonly turns: string[][] = [];
+      constructor(private readonly replies: string[]) {}
+      complete(request: CanonRequest): Promise<CanonResponse> {
+        this.turns.push(request.messages.map((m) => m.content));
+        const text = this.replies[this.turns.length - 1] ?? finish;
+        return Promise.resolve({ text, stopReason: 'end', usage: { inputTokens: 1, outputTokens: 1 }, toolCalls: [] });
+      }
+    }
+    const provider = new RecordingProvider([
+      act('browser_get_elements', { n: 1 }),
+      act('browser_get_elements', { n: 2 }),
+      finish,
+    ]);
+    ModelGateway.reset();
+    ModelGateway.register(provider);
+
+    const res = await Reactor.run(req());
+    expect(res.stoppedReason).toBe('completed');
+
+    // At the finish turn (3rd model call) the latest blob is full; the earlier one is collapsed away.
+    const finishTurn = provider.turns[2] ?? [];
+    const joined = finishTurn.join('\n');
+    expect(joined).toContain('ELEMENTS-TWO');
+    expect(joined).not.toContain('ELEMENTS-ONE');
+    expect(joined).toContain('an earlier page snapshot was omitted');
+  });
+
   it('fixture: reads table-like page content before finishing', async () => {
     CapabilityRegistry.reset();
     CapabilityRegistry.register(
@@ -411,5 +468,12 @@ describe('Reactor system prompt (coreference + browsing strategy)', () => {
     expect(prompt).toContain('REVEAL hidden navigation');
     expect(prompt).toContain('collapsed menu');
     expect(prompt).toContain('/blog');
+  });
+
+  it('requests the progress brain (memory ledger) so the actor tracks progress and does not give up', async () => {
+    const prompt = await capture();
+    expect(prompt).toContain('evaluation_previous_goal');
+    expect(prompt).toContain('next_goal');
+    expect(prompt).toContain('running progress ledger');
   });
 });
