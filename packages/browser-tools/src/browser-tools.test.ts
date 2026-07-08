@@ -13,6 +13,7 @@ function fakeHost(overrides?: Partial<BrowserHost>): BrowserHost {
     fillElement: () => Promise.resolve(),
     pressKey: () => Promise.resolve(),
     scrollPage: () => Promise.resolve(),
+    scrollToText: () => Promise.resolve({ found: true, count: 1 }),
     ...overrides,
   };
 }
@@ -104,6 +105,60 @@ describe('registerBrowserTools', () => {
     expect(result).toEqual({ ok: true, url: 'https://x', title: 'X', changed: true });
     expect(result.note).toBeUndefined();
     expect(result.recoveryHint).toBeUndefined();
+  });
+
+  it('scroll_to_text found: reveals the target, reports found + a re-read note', async () => {
+    const scrollToText = vi.fn(() => Promise.resolve({ found: true, count: 2 }));
+    // Revealing an off-screen target shifts the in-viewport set, so `changed` is true; the meaningful
+    // signal is found=true, and the model is told to re-read to act on the now-visible controls.
+    const readPage = vi
+      .fn()
+      .mockResolvedValueOnce({ url: 'https://x', title: 'X', text: 'same', sig: 'before' })
+      .mockResolvedValueOnce({ url: 'https://x', title: 'X', text: 'same', sig: 'after' });
+    registerBrowserTools({ host: fakeHost({ scrollToText, readPage }) });
+
+    const result = (await CapabilityRegistry.get('browser_update_page')!.handler({
+      action: 'scroll_to_text',
+      text: 'Pricing',
+      nth: 2,
+    })) as Record<string, unknown>;
+
+    expect(scrollToText).toHaveBeenCalledWith('Pricing', 2, undefined);
+    expect(result.found).toBe(true);
+    expect(result.recoveryHint).toBeUndefined();
+    expect(result.note).toEqual(expect.stringContaining('Re-read browser_get_elements'));
+  });
+
+  it('scroll_to_text miss: reports found=false with a different-words hint, not the generic ref hint', async () => {
+    const scrollToText = vi.fn(() => Promise.resolve({ found: false, count: 0 }));
+    registerBrowserTools({ host: fakeHost({ scrollToText }) });
+
+    const result = (await CapabilityRegistry.get('browser_update_page')!.handler({
+      action: 'scroll_to_text',
+      text: 'Nonexistent',
+    })) as Record<string, unknown>;
+
+    expect(scrollToText).toHaveBeenCalledWith('Nonexistent', undefined, undefined);
+    expect(result.found).toBe(false);
+    expect(result.note).toBeUndefined();
+    expect(result.recoveryHint).toEqual(expect.stringContaining('No matching text'));
+  });
+
+  it('scroll_to_text shortfall: fewer matches than nth reports found + an honest "only N" note, not a miss', async () => {
+    // The text IS on the page (2 occurrences) but the model asked for the 5th. Revealing the last real
+    // occurrence is progress — reporting "no matching text" would wrongly steer it to rephrase.
+    const scrollToText = vi.fn(() => Promise.resolve({ found: true, count: 2 }));
+    registerBrowserTools({ host: fakeHost({ scrollToText }) });
+
+    const result = (await CapabilityRegistry.get('browser_update_page')!.handler({
+      action: 'scroll_to_text',
+      text: 'Add to cart',
+      nth: 5,
+    })) as Record<string, unknown>;
+
+    expect(result.found).toBe(true);
+    expect(result.recoveryHint).toBeUndefined();
+    expect(result.note).toEqual(expect.stringContaining('Found only 2 occurrence'));
   });
 
   it('passes tabId through read/snapshot/action tools', async () => {

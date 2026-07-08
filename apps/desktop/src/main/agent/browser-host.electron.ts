@@ -139,6 +139,50 @@ async function readPage(
   };
 }
 
+/** Content-addressed reveal: scroll the `nth` on-page occurrence of `text` into view via the browser's
+ *  native find (which searches same-origin frames), then EXPLICITLY scroll the matched node to centre —
+ *  a `scrollIntoView` is focus/visibility-independent, unlike `window.find`'s implicit selection-scroll —
+ *  and clear the selection so no highlight lingers and no later keypress operates on the selected range.
+ *  Deterministic and rule-based (no wheel-delta guesswork). Resolves `{ found, count }`: `count` is how
+ *  many occurrences were located (≤ nth), so a shortfall is reported honestly rather than as "no match".
+ *  The text is embedded with JSON.stringify so it can never break out of the string literal. */
+async function scrollToText(
+  text: string,
+  nth?: number,
+  tabId?: string,
+): Promise<{ found: boolean; count: number }> {
+  const wc = requireWc(tabId);
+  const n = nth !== undefined && Number.isFinite(nth) && nth > 0 ? Math.min(Math.floor(nth), 50) : 1;
+  const raw: unknown = await wc.executeJavaScript(
+    `(() => {
+      try {
+        const t = ${JSON.stringify(text)};
+        const sel = window.getSelection ? window.getSelection() : null;
+        if (sel) sel.removeAllRanges();               // start the search from the top of the document
+        let count = 0;
+        for (let i = 0; i < ${String(n)}; i++) {
+          // window.find(text, caseSensitive, backwards, wrapAround, wholeWord, searchInFrames, showDialog)
+          if (window.find(t, false, false, false, false, true, false)) count++;
+          else break;                                 // fewer than nth matches -> stop; count is the total
+        }
+        if (count > 0 && sel && sel.rangeCount > 0) {
+          const node = sel.getRangeAt(0).startContainer;
+          const el = node && node.nodeType === 1 ? node : (node ? node.parentElement : null);
+          if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ block: 'center', inline: 'nearest' });
+          sel.removeAllRanges();                       // drop the highlight; no lingering selection to act on
+        }
+        return { found: count > 0, count: count };
+      } catch (_e) {
+        return { found: false, count: 0 };
+      }
+    })()`,
+    true,
+  );
+  const shaped = (raw as { found?: unknown; count?: unknown } | null) ?? {};
+  const count = typeof shaped.count === 'number' && Number.isFinite(shaped.count) ? shaped.count : 0;
+  return { found: shaped.found === true, count };
+}
+
 interface PageDimensions {
   width: number;
   height: number;
@@ -335,5 +379,11 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
     resetForAgentAction();
     await CdpDriver.scrollPage(requireWc(tabId), direction, amount, tabId === undefined ? browserAdapter : undefined);
     onCursorHide();
+  },
+  scrollToText: (text, nth, tabId) => {
+    // Narrate to the Agent Console for parity with the adapter-driven actions (this reveal bypasses the
+    // HumanInputAdapter, which is what normally emits the input_action event).
+    onInputAction('scroll_to_text', text.length > 60 ? `${text.slice(0, 60)}…` : text);
+    return scrollToText(text, nth, tabId);
   },
 };

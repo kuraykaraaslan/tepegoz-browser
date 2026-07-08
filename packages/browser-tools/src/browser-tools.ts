@@ -30,6 +30,11 @@ const UpdatePageArgs = z.discriminatedUnion('action', [
     direction: z.enum(['up', 'down']),
     amount: z.number().int().positive().max(100_000).optional(),
   }),
+  TargetTabArgs.extend({
+    action: z.literal('scroll_to_text'),
+    text: z.string().min(1).max(500),
+    nth: z.number().int().positive().max(50).optional(),
+  }),
 ]);
 
 interface PageFingerprint {
@@ -162,16 +167,22 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
       'Perform ONE interaction on a page, using a `ref` from browser_get_elements on the same tab. args: ' +
         'one of { action: "click", ref, tabId? } · { action: "fill", ref, text, tabId? } · ' +
         '{ action: "press", key, tabId? } (e.g. "Enter", "Tab", "Escape", "ArrowDown") · ' +
-        '{ action: "scroll", direction: "up"|"down", amount?, tabId? }. Omit tabId for the active tab. ' +
+        '{ action: "scroll", direction: "up"|"down", amount?, tabId? } · ' +
+        '{ action: "scroll_to_text", text, nth?, tabId? } to bring an off-screen target INTO view so it ' +
+        'appears in browser_get_elements (use this instead of blind scrolling when you know the label/text; ' +
+        '`nth` picks the Nth match, default 1). Omit tabId for the active tab. ' +
         'File inputs must be handled through upload_create_item so path grants, approval, and audit apply. ' +
-        'Returns { ok, url, title, changed, recoveryHint?, note? }. changed=true also fires when a click ' +
-        'opens a menu/drawer/panel with no new page text (a `note` then says to re-read elements). If ' +
+        'Returns { ok, url, title, changed, recoveryHint?, note?, found? }. changed=true also fires when a ' +
+        'click opens a menu/drawer/panel with no new page text (a `note` then says to re-read elements); ' +
+        'scroll_to_text returns found=true|false. If ' +
         'changed=false, re-read elements or use browser_get_screenshot before trying a different ref — ' +
         'never repeat the same ref blindly.',
     ),
     inputSchema: UpdatePageArgs,
     handler: async (args) => {
       const before = await host.readPage(args.tabId);
+      let found: boolean | undefined;
+      let matchCount: number | undefined;
       switch (args.action) {
         case 'click':
           await host.clickElement(args.ref, args.tabId);
@@ -185,9 +196,36 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
         case 'scroll':
           await host.scrollPage(args.direction, args.amount, args.tabId);
           break;
+        case 'scroll_to_text':
+          ({ found, count: matchCount } = await host.scrollToText(args.text, args.nth, args.tabId));
+          break;
       }
       const after = await host.readPage(args.tabId);
       const changed = pageChanged(before, after);
+      // scroll_to_text is a content-addressed reveal: its meaningful result is `found`, not the structural
+      // delta. On a hit, tell the model to re-read so the now-in-view target enters the index map; on a
+      // miss, steer it to different words rather than the generic "try another ref" hint.
+      if (args.action === 'scroll_to_text') {
+        if (found !== true) {
+          return {
+            ok: true,
+            url: after.url,
+            title: after.title,
+            changed,
+            found: false,
+            recoveryHint:
+              'No matching text was found on the page. Try fewer or different words, or scroll and re-read; use browser_get_screenshot if unsure what is present.',
+          };
+        }
+        // Honest shortfall: fewer occurrences than the requested `nth` exist. Report it rather than
+        // claiming success on the nth — the page is scrolled to the LAST (count-th) occurrence.
+        const nthRequested = args.nth ?? 1;
+        const note =
+          matchCount !== undefined && matchCount < nthRequested
+            ? `Found only ${String(matchCount)} occurrence(s) of that text (fewer than the ${String(nthRequested)} requested) and scrolled to the last one. Re-read browser_get_elements to act on it.`
+            : 'Scrolled the matching text into view. Re-read browser_get_elements to act on the now-visible controls.';
+        return { ok: true, url: after.url, title: after.title, changed, found: true, note };
+      }
       // A scroll's effect is a viewport move, not a content/state change. Report `changed` plainly and skip
       // BOTH the structural "a menu opened — do NOT repeat" note (false: scrolling changes the in-viewport
       // actionable set by design, and scrolling again is a normal way to reach content) and the "no change"

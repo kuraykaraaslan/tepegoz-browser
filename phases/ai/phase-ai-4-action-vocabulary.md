@@ -1,6 +1,6 @@
 # Phase AI-4 — Higher-Level Deterministic Actions
 
-**Status:** ⬜ Not started  ·  **Depends on:** [AI-2](phase-ai-2-perception-buildtree.md)  ·  **Track:** [`phases/ai`](README.md)
+**Status:** 🟡 In progress (**PR1 landed (code):** `scroll_to_text` — the flagship content-addressed reveal — as a `browser_update_page` action variant, backed by a deterministic host primitive over the browser's native find (same-origin frames included). Unit-tested (plumbing/regression); on-harness measurement owed. Remaining: native dropdowns, page-quantized scroll + boundary detection, web-search, send-keys, tab auto-switch.)  ·  **Depends on:** [AI-2](phase-ai-2-perception-buildtree.md)  ·  **Track:** [`phases/ai`](README.md)
 **Goal:** Give the agent a small set of **higher-level, deterministic** actions that encode competence in
 code — so it doesn't need a prose rule (or several fragile clicks) for each common web pattern. Ported
 selectively from nanobrowser's action vocabulary, registered behind the same CapabilityRegistry/ToolGateway
@@ -14,8 +14,10 @@ scroll", or "search for X" are today either impossible or left to prose + luck. 
 replaces a class of brittle multi-step prose with one reliable primitive.
 
 ## What to add (each replaces a fragile prose rule)
-- **`scroll_to_text(text, nth?)`** — content-addressed scroll to bring an off-viewport target into the
-  index map. The primary deterministic "reveal a target that isn't in view" primitive.
+- **`scroll_to_text(text, nth?)`** — ✅ **PR1 (code):** content-addressed scroll to bring an off-viewport
+  target into the index map. The primary deterministic "reveal a target that isn't in view" primitive.
+  Shipped as a `browser_update_page` action variant over the browser's native find (same-origin frames
+  included); returns `{ found }`. Unit-tested; real-page metric owed.
 - **`cache_content(content)`** — an incremental scratchpad so multi-page extraction survives scroll/context
   loss; wrapped as untrusted (see [AI-5](phase-ai-5-content-security.md)).
 - **`get_dropdown_options(index)` / `select_dropdown_option(index, text)`** — native `<select>` handling

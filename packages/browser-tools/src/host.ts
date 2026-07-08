@@ -29,4 +29,10 @@ export interface BrowserHost {
   pressKey(key: string, tabId?: string): Promise<void>;
   /** Scroll the page up or down (`amount` in CSS px; host picks a sensible default). */
   scrollPage(direction: 'up' | 'down', amount?: number, tabId?: string): Promise<void>;
+  /** Content-addressed reveal: bring the `nth` (1-based, default 1) on-page occurrence of `text` into
+   *  view so it enters the element index map. Deterministic (uses the browser's native find), searches
+   *  same-origin frames, and explicitly scrolls the match to centre. Resolves `{ found, count }` where
+   *  `count` is how many occurrences were located (≤ nth) — so a shortfall (`count < nth`) is honest
+   *  rather than reported as "no match". The primitive for targets that aren't yet in view. */
+  scrollToText(text: string, nth?: number, tabId?: string): Promise<{ found: boolean; count: number }>;
 }
