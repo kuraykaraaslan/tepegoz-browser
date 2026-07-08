@@ -149,9 +149,43 @@ export interface ReactRequest {
   history?: readonly CanonMessage[];
 }
 
+/**
+ * Completion-authority hook (AI-3 PR2). When supplied, the ACTOR can no longer end the run by itself:
+ * its `finish` becomes a *claim* that the validator (a periodic Planner pass) must confirm. Only a
+ * `done: true` verdict terminates — supplying the authoritative `finalAnswer`. This is the loop-level
+ * fix for premature give-ups ("I couldn't find the blog" after one page).
+ */
+export interface CompletionContext {
+  goal: string;
+  /** The actor's latest progress ledger (`memory` field), carried across steps. */
+  memory: string;
+  /** The actor's `finish` summary when this check was triggered by a completion CLAIM. */
+  claimedSummary?: string;
+  /** What prompted the check — an actor claim, or the periodic cadence. */
+  trigger: 'claim' | 'periodic';
+  /** Compact tail of recent observations, so the validator can judge against real page evidence. */
+  recentObservations: readonly string[];
+}
+export interface CompletionVerdict {
+  done: boolean;
+  /** The authoritative final answer when `done` — wired to the run summary. */
+  finalAnswer?: string;
+  /** Why not done (fed back to the actor as guidance to continue). */
+  reason?: string;
+}
+
 export interface ReactOptions {
   maxSteps?: number;
   loopThreshold?: number;
+  /**
+   * The completion validator (AI-3). Present ⇒ the actor's `finish` is only a claim; the validator is
+   * the sole terminator. Absent ⇒ legacy behaviour (the actor's `finish` ends the run directly).
+   */
+  validateCompletion?: (ctx: CompletionContext) => Promise<CompletionVerdict>;
+  /** Cadence for the periodic validator pass (in actions taken). Default 3. */
+  planningInterval?: number;
+  /** Rejected completion CLAIMS tolerated before conceding to the actor (fail-closed). Default 3. */
+  maxCompletionRejects?: number;
   /** Per-call Policy Kernel context (targetUrl for the sensitive-site lockout, taintedArgs). */
   ctxFor?: (tool: string, args: unknown) => InvokeContext;
   signal?: { readonly aborted: boolean };
@@ -283,7 +317,83 @@ export default class Reactor {
     const recoveryCounts = new Map<string, number>();
     const maxDecisionRepairs = options.maxDecisionRepairs ?? 2;
     const maxRecoveryAttempts = options.maxRecoveryAttempts ?? 2;
+    const planningInterval = Math.max(1, options.planningInterval ?? 3);
+    const maxCompletionRejects = options.maxCompletionRejects ?? 3;
     let decisionRepairs = 0;
+    // Completion-authority state (AI-3 PR2): the actor's latest progress ledger, how many finish
+    // CLAIMS the validator has rejected (fail-closed guard), and the action count last validated
+    // (so a periodic check fires once per cadence tick, not on every no-op turn).
+    let latestMemory = '';
+    let completionRejects = 0;
+    let lastValidatedCount = -1;
+
+    /** The compact tail of recent observations handed to the completion validator as page evidence. */
+    const recentObservations = (): string[] =>
+      outcomes.slice(-3).map((o) => {
+        const text = observationOf(o);
+        return text.length > 500 ? `${text.slice(0, 500)}…` : text;
+      });
+
+    const validator = options.validateCompletion;
+    /** Run the validator, fail-open to "not done" on error so a validator hiccup never kills the run. */
+    const validate = async (ctx: CompletionContext): Promise<CompletionVerdict> => {
+      if (validator === undefined) return { done: false };
+      try {
+        return await validator(ctx);
+      } catch (err) {
+        Logger.warn('completion validator failed; treating as not-done', { err: String(err) });
+        return { done: false };
+      }
+    };
+
+    /** Periodic validator pass: end the run iff the Planner judges the goal already met. Else null. */
+    const periodicCheck = async (): Promise<ReactResult | null> => {
+      if (
+        validator === undefined ||
+        outcomes.length === 0 ||
+        outcomes.length % planningInterval !== 0 ||
+        outcomes.length === lastValidatedCount
+      ) {
+        return null;
+      }
+      lastValidatedCount = outcomes.length;
+      const verdict = await validate({
+        goal: req.goal,
+        memory: latestMemory,
+        trigger: 'periodic',
+        recentObservations: recentObservations(),
+      });
+      return verdict.done ? { outcomes, stoppedReason: 'completed', summary: verdict.finalAnswer ?? latestMemory } : null;
+    };
+
+    /**
+     * Resolve the actor's `finish` CLAIM. Without a validator the claim ends the run (legacy). With one,
+     * only a `done` verdict ends it (with the authoritative answer); a rejection pushes continue-guidance
+     * and returns null so the loop goes on — until `maxCompletionRejects`, after which we concede to the
+     * actor rather than burn the whole step budget.
+     */
+    const settleClaim = async (summary: string): Promise<ReactResult | null> => {
+      if (validator === undefined) return { outcomes, stoppedReason: 'completed', summary };
+      const verdict = await validate({
+        goal: req.goal,
+        memory: latestMemory,
+        claimedSummary: summary,
+        trigger: 'claim',
+        recentObservations: recentObservations(),
+      });
+      if (verdict.done) return { outcomes, stoppedReason: 'completed', summary: verdict.finalAnswer ?? summary };
+      completionRejects += 1;
+      if (completionRejects > maxCompletionRejects) return { outcomes, stoppedReason: 'completed', summary };
+      const reason = verdict.reason !== undefined && verdict.reason.length > 0 ? ` — ${verdict.reason}` : '';
+      messages.push({
+        role: 'user',
+        content:
+          `Completion check: NOT done yet${reason}. Do NOT finish. Continue toward the goal (open menus, ` +
+          'try other links or conventional paths, or read more of the page) and only finish once every ' +
+          'part of the goal is actually satisfied.',
+      });
+      return null;
+    };
 
     const messages: CanonMessage[] = [
       { role: 'system', content: systemPrompt(req) },
@@ -308,6 +418,11 @@ export default class Reactor {
     for (let step = 0; ; step++) {
       if (options.signal?.aborted === true) return { outcomes, stoppedReason: 'aborted' };
       if (outcomes.length >= maxSteps) return { outcomes, stoppedReason: 'max_steps' };
+
+      // Periodic validator pass (AI-3): every `planningInterval` actions the Planner checks whether the
+      // goal is already met — catching an actor stuck acting past completion.
+      const periodicDone = await periodicCheck();
+      if (periodicDone !== null) return periodicDone;
 
       let responseText: string;
       let decision: Decision;
@@ -341,9 +456,12 @@ export default class Reactor {
       }
       decisionRepairs = 0;
       messages.push({ role: 'assistant', content: responseText });
+      if (decision.memory !== undefined && decision.memory.length > 0) latestMemory = decision.memory;
 
       if (decision.action === 'finish') {
-        return { outcomes, stoppedReason: 'completed', summary: decision.summary };
+        const settled = await settleClaim(decision.summary);
+        if (settled !== null) return settled;
+        continue;
       }
 
       // The model's tool choice is untrusted — an unregistered id is fed back as an error, never run.

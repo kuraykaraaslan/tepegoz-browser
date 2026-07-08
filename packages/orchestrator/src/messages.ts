@@ -5,6 +5,7 @@
 export const PlannerMessages = {
   InvalidJson: 'Planner returned invalid JSON',
   MalformedPlan: 'Planner returned a malformed plan',
+  MalformedValidation: 'Completion validator returned a malformed verdict',
   unknownTool: (tool: string): string => `Planner referenced unknown tool: ${tool}`,
 } as const;
 

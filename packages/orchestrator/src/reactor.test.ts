@@ -393,6 +393,63 @@ describe('Reactor.run', () => {
     expect(joined).toContain('an earlier page snapshot was omitted');
   });
 
+  it('AI-3 validator: challenges a premature finish, then completes when the validator confirms done', async () => {
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    script([finish, act('browser_get_elements'), finish]);
+    let validatorCalls = 0;
+    const res = await Reactor.run(req(), {
+      validateCompletion: () => {
+        validatorCalls += 1;
+        return Promise.resolve(
+          validatorCalls === 1
+            ? { done: false, reason: 'the blog was not actually opened' }
+            : { done: true, finalAnswer: 'Latest post: Hello World' },
+        );
+      },
+    });
+    expect(res.stoppedReason).toBe('completed');
+    expect(res.summary).toBe('Latest post: Hello World'); // the validator's answer is authoritative
+    expect(validatorCalls).toBe(2);
+    expect(calls).toEqual(['browser_get_elements']); // the challenge forced one more action
+  });
+
+  it('AI-3 validator: accepts a genuine completion claim and returns the final answer', async () => {
+    script([finish]);
+    const res = await Reactor.run(req(), {
+      validateCompletion: () => Promise.resolve({ done: true, finalAnswer: 'the answer' }),
+    });
+    expect(res.stoppedReason).toBe('completed');
+    expect(res.summary).toBe('the answer');
+  });
+
+  it('AI-3 validator: fails closed to the actor claim after maxCompletionRejects rejections', async () => {
+    script([finish, finish, finish]);
+    let validatorCalls = 0;
+    const res = await Reactor.run(req(), {
+      maxCompletionRejects: 2,
+      validateCompletion: () => {
+        validatorCalls += 1;
+        return Promise.resolve({ done: false, reason: 'never satisfied' });
+      },
+    });
+    expect(res.stoppedReason).toBe('completed'); // conceded rather than burning the whole step budget
+    expect(res.summary).toBe('done');
+    expect(validatorCalls).toBe(3); // rejects 1,2 continue; the 3rd exceeds the cap and concedes
+  });
+
+  it('AI-3 validator: a periodic pass can end the run when the goal is already met', async () => {
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    script(Array.from({ length: 10 }, (_, i) => act('browser_get_elements', { n: i })));
+    const res = await Reactor.run(req(), {
+      planningInterval: 3,
+      validateCompletion: (ctx) =>
+        Promise.resolve(ctx.trigger === 'periodic' ? { done: true, finalAnswer: 'auto-complete' } : { done: false }),
+    });
+    expect(res.stoppedReason).toBe('completed');
+    expect(res.summary).toBe('auto-complete');
+    expect(calls).toHaveLength(3); // periodic check fires after 3 actions and ends the run
+  });
+
   it('fixture: reads table-like page content before finishing', async () => {
     CapabilityRegistry.reset();
     CapabilityRegistry.register(

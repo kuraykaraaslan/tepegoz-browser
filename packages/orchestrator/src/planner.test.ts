@@ -107,3 +107,35 @@ describe('Planner.plan', () => {
     expect(provider.system).toContain('/blog');
   });
 });
+
+function vreq(reply: string) {
+  ModelGateway.reset();
+  ModelGateway.register(new MockProvider(reply));
+  return {
+    goal: 'find and open the blog',
+    memory: 'opened the menu',
+    recentObservations: ['Latest post: Hello World'],
+    provider: 'anthropic' as const,
+    model: 'claude-opus-4-8',
+  };
+}
+
+describe('Planner.validateCompletion (completion authority, untrusted boundary)', () => {
+  it('parses a done verdict with the authoritative final answer', async () => {
+    const v = await Planner.validateCompletion(vreq(JSON.stringify({ done: true, final_answer: 'Latest post: Hello World' })));
+    expect(v).toEqual({ done: true, finalAnswer: 'Latest post: Hello World' });
+  });
+
+  it('parses a not-done verdict carrying the remaining-work reason', async () => {
+    const v = await Planner.validateCompletion(vreq(JSON.stringify({ done: false, reason: 'the blog page was never opened' })));
+    expect(v).toEqual({ done: false, reason: 'the blog page was never opened' });
+  });
+
+  it('rejects non-JSON output', async () => {
+    await expect(Planner.validateCompletion(vreq('I think it is done'))).rejects.toThrow(/JSON/);
+  });
+
+  it('rejects a verdict missing the done boolean (malformed shape)', async () => {
+    await expect(Planner.validateCompletion(vreq(JSON.stringify({ final_answer: 'x' })))).rejects.toThrow(/malformed/i);
+  });
+});

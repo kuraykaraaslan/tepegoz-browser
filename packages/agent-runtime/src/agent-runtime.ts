@@ -455,6 +455,19 @@ export async function runAgent(
       },
       {
         signal: hooks.signal,
+        // Planner-as-validator (AI-3): the actor's `finish` is only a claim — a periodic Planner pass is
+        // the sole completion authority, so a premature give-up is challenged and the run continues. The
+        // validator call goes through ModelGateway, so the Egress-Firewall inspector + TokenLedger apply.
+        validateCompletion: (ctx) =>
+          Planner.validateCompletion({
+            goal: ctx.goal,
+            memory: ctx.memory,
+            claimedSummary: ctx.claimedSummary,
+            recentObservations: ctx.recentObservations,
+            provider: execRoute.provider,
+            model: execRoute.model,
+            maxTokens,
+          }),
         // Surface each step's decision rationale as a 'decision' event → the panel's Reasoning section.
         onDecision: (tool, rationale) => {
           if (rationale.length > 0) hooks.onEvent('decision', tool, rationale);

@@ -1,4 +1,9 @@
-export { default as Planner, type PlanRequest } from './planner';
+export {
+  default as Planner,
+  type PlanRequest,
+  type CompletionValidationRequest,
+  type CompletionValidation,
+} from './planner';
 export {
   default as Executor,
   type RunOptions,
@@ -13,6 +18,8 @@ export {
   type ReactRequest,
   type ReactOptions,
   type ReactResult,
+  type CompletionContext,
+  type CompletionVerdict,
 } from './reactor';
 export {
   classifyRuntimeError,
