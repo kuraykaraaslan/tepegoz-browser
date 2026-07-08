@@ -21,14 +21,21 @@ const SCAN_NODE_CAP = 12_000;
 const MAX_TEXT = 200;
 
 /**
- * Build the injectable expression. Caps are interpolated as literals so the script stays a pure
- * self-contained IIFE (no closure over host state). Returns `{ url, title, nodes }`.
+ * Build the injectable expression. Caps + the viewport-expansion band are interpolated as literals so
+ * the script stays a pure self-contained IIFE (no closure over host state). `viewportExpansionPx`
+ * grows the in-viewport test by that many CSS px on every edge (0 = strictly on-screen, the default);
+ * a larger band is the "expand viewport" knob for the rare full-page case. Returns `{ url, title, nodes }`.
  */
-export function buildDomTreeExpression(): string {
+export function buildDomTreeExpression(viewportExpansionPx = 0): string {
+  const expansion = Math.max(0, Math.trunc(viewportExpansionPx));
   return `(() => {
   const EMIT_CAP = ${String(SCAN_EMIT_CAP)};
   const NODE_CAP = ${String(SCAN_NODE_CAP)};
   const MAX_TEXT = ${String(MAX_TEXT)};
+  const EXP = ${String(expansion)};
+  // A cursor:pointer region larger than this fraction of the viewport is treated as a wrapper/overlay,
+  // not a button — the real target is a descendant. Trims cursor-heuristic over-selection.
+  const MAX_POINTER_AREA_FRAC = 0.5;
 
   const ATTR_ALLOWLIST = ['type','name','placeholder','title','alt','aria-label','aria-expanded','aria-haspopup','aria-selected','aria-checked','data-testid'];
   const INTERACTIVE_TAGS = new Set(['A','BUTTON','INPUT','SELECT','TEXTAREA','SUMMARY','OPTION','LABEL']);
@@ -51,13 +58,15 @@ export function buildDomTreeExpression(): string {
 
   const isInViewport = (el) => {
     const r = rectOf(el);
-    return r.bottom > 0 && r.right > 0 && r.top < vh && r.left < vw;
+    return r.bottom > -EXP && r.right > -EXP && r.top < vh + EXP && r.left < vw + EXP;
   };
 
   const isTopElement = (el) => {
     const r = rectOf(el);
-    const cx = Math.min(Math.max(r.left + r.width / 2, 1), vw - 1);
-    const cy = Math.min(Math.max(r.top + r.height / 2, 1), vh - 1);
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    // Off the REAL viewport (only reachable via the expansion band) — cannot hit-test, so accept it.
+    if (cx < 0 || cy < 0 || cx > vw || cy > vh) return true;
     const top = document.elementFromPoint(cx, cy);
     if (top === null) return false;
     return top === el || el.contains(top) || top.contains(el);
@@ -66,6 +75,7 @@ export function buildDomTreeExpression(): string {
   const hasHandler = (el) => el.onclick !== null || el.getAttribute('onclick') !== null || el.getAttribute('onmousedown') !== null;
 
   const isInteractive = (el) => {
+    if (el === document.body || el === document.documentElement) return false;
     if (el.hasAttribute('disabled')) return true; // still index it — surfaced as disabled downstream
     if (INTERACTIVE_TAGS.has(el.tagName)) return true;
     const role = el.getAttribute('role');
@@ -74,8 +84,12 @@ export function buildDomTreeExpression(): string {
     const ti = el.getAttribute('tabindex');
     if (ti !== null && ti !== '-1') return true;
     if (hasHandler(el)) return true;
-    // The div/span-button heuristic: a pointer cursor the site set for a clickable region.
-    if (styleOf(el).cursor === 'pointer') return true;
+    // The div/span-button heuristic: a pointer cursor the site set for a clickable region — but skip
+    // wrapper/overlay-sized regions, whose real target is a descendant (trims over-selection).
+    if (styleOf(el).cursor === 'pointer') {
+      const r = rectOf(el);
+      return (r.width * r.height) / (vw * vh || 1) <= MAX_POINTER_AREA_FRAC;
+    }
     return false;
   };
 

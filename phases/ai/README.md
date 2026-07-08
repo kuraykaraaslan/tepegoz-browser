@@ -57,7 +57,7 @@ loop control, action vocabulary, content-security) into our own packages. Real-g
 | Phase | File | Goal | Depends on | Status |
 |---|---|---|---|---|
 | AI-1 | [phase-ai-1-eval-harness.md](phase-ai-1-eval-harness.md) | Real-result eval loop (golden set + live harness + held-out) | Phase 1a | 🟡 In progress (backbone + live tier + judge + nightly CI code landed; e2e `pnpm eval` run pending Electron-ABI env) |
-| AI-2 | [phase-ai-2-perception-buildtree.md](phase-ai-2-perception-buildtree.md) | Render-DOM perception (buildDomTree-style) replacing a11y-only | AI-1 | 🟡 In progress (PR1 landed: core perception + predicates + typed model + serialization + xpath→CDP click mapping + `href`/attrs; a11y fallback behind `TEPEGOZ_PERCEPTION`. PR2: iframe/shadow-DOM + `*[n]` marking + on-harness measurement) |
+| AI-2 | [phase-ai-2-perception-buildtree.md](phase-ai-2-perception-buildtree.md) | Render-DOM perception (buildDomTree-style) replacing a11y-only | AI-1 | 🟡 In progress (PR1+PR2a landed: core perception + predicates + typed model + serialization + xpath→CDP click mapping + `href`/attrs + `*[n]` marking + cursor/viewport calibration; a11y fallback behind `TEPEGOZ_PERCEPTION`. PR2b: iframe/shadow-DOM stitching + on-harness measurement) |
 | AI-3 | [phase-ai-3-agent-loop.md](phase-ai-3-agent-loop.md) | Planner-as-validator loop + progress memory + state-every-step | AI-1 | ⬜ Not started |
 | AI-4 | [phase-ai-4-action-vocabulary.md](phase-ai-4-action-vocabulary.md) | Higher-level deterministic actions (scroll-to-text, dropdowns, …) | AI-2 | ⬜ Not started |
 | AI-5 | [phase-ai-5-content-security.md](phase-ai-5-content-security.md) | Untrusted-content wrapping + injection/PII sanitizer | AI-2 | ⬜ Not started |

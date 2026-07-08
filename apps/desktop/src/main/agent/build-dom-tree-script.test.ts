@@ -24,4 +24,11 @@ describe('buildDomTreeExpression', () => {
   it('interpolates the shared element cap so the emit cap tracks it', () => {
     expect(buildDomTreeExpression()).toContain(`EMIT_CAP = ${String(MAX_INTERACTABLE_ELEMENTS + 100)}`);
   });
+
+  it('defaults to a strictly on-screen viewport and honours the expansion knob', () => {
+    expect(buildDomTreeExpression()).toContain('EXP = 0');
+    expect(buildDomTreeExpression(300)).toContain('EXP = 300');
+    expect(buildDomTreeExpression(-5)).toContain('EXP = 0'); // clamped
+    expect(() => new vm.Script(`(${buildDomTreeExpression(300)})`)).not.toThrow();
+  });
 });

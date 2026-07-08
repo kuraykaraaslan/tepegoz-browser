@@ -18,5 +18,5 @@ export {
   ATTR_ALLOWLIST,
 } from './interactable.js';
 export type { InteractableElement, RawInteractable } from './interactable.js';
-export { parseDomTree } from './dom-tree.js';
+export { parseDomTree, markNewElements } from './dom-tree.js';
 export type { DomTreeResult, DomTreeNode, ParsedDomTree } from './dom-tree.js';

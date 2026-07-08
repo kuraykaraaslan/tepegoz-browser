@@ -51,6 +51,32 @@ export interface ParsedDomTree {
   interactables: RawInteractable[];
   /** `xpaths[i]` targets the element at ref `i + 1` — the driver's `selectorMap`. */
   xpaths: string[];
+  /**
+   * `hashes[i]` is a cross-snapshot fingerprint of the element at ref `i + 1`. The driver diffs it
+   * against the previous same-page snapshot (see {@link markNewElements}) to flag freshly-appeared
+   * elements — e.g. the links a just-clicked menu revealed.
+   */
+  hashes: string[];
+}
+
+/**
+ * A stable-ish identity for an element across snapshots of the SAME page. Structural position (xpath)
+ * is deliberately excluded: a menu opening shifts siblings, which would spuriously "renew" everything.
+ * Identity by tag + role + accessible name + link destination flags genuine new controls; duplicate
+ * controls collide (they simply won't be individually marked new — the flag is advisory).
+ */
+function nodeHash(node: DomTreeNode): string {
+  return `${node.tag}|${node.role}|${node.name}|${node.href ?? ''}`;
+}
+
+/**
+ * Diff the current fingerprints against the previous same-page snapshot's set: `isNew[i]` is true when
+ * fingerprint `i` was NOT present before. `prevHashes === null` (a fresh page, or the first snapshot)
+ * marks nothing new — "new" means appeared-since-an-action-on-this-page, not present-on-first-load.
+ */
+export function markNewElements(hashes: readonly string[], prevHashes: ReadonlySet<string> | null): boolean[] {
+  if (prevHashes === null) return hashes.map(() => false);
+  return hashes.map((h) => !prevHashes.has(h));
 }
 
 /** Map one validated DOM-tree node to a raw interactable, deriving the file-input action. */
@@ -80,5 +106,6 @@ export function parseDomTree(result: DomTreeResult): ParsedDomTree {
   return {
     interactables: nodes.map(toRawInteractable),
     xpaths: nodes.map((n) => n.xpath),
+    hashes: nodes.map(nodeHash),
   };
 }

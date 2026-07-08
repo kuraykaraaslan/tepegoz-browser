@@ -36,6 +36,11 @@ export interface InteractableElement {
    * model disambiguate targets. Render-DOM perception only; keys are lower-cased. Untrusted.
    */
   attributes?: Record<string, string>;
+  /**
+   * True when this element appeared since the previous snapshot of the same page (e.g. a menu the
+   * agent just opened). Rendered as a `*` marker. Render-DOM perception only.
+   */
+  isNew?: boolean;
   /** Specialized input type when the control needs a non-text action. */
   inputKind?: 'file';
   /** File input accept filter, as declared by the page. Page-controlled and advisory only. */
@@ -56,6 +61,8 @@ export interface RawInteractable {
   disabled?: boolean;
   /** Raw page attributes captured by the render-DOM script; filtered to {@link ATTR_ALLOWLIST} here. */
   attributes?: Record<string, string>;
+  /** Set by the driver when this element is new since the previous same-page snapshot. */
+  isNew?: boolean;
   inputKind?: 'file';
   accept?: string;
   multiple?: boolean;
@@ -168,6 +175,7 @@ function finalizeNode(node: RawInteractable, ref: number, flags: Set<string>): I
   if (value.length > 0) el.value = value;
   const attributes = finalizeAttributes(node.attributes, flags);
   if (attributes !== undefined) el.attributes = attributes;
+  if (node.isNew === true) el.isNew = true;
   if (node.disabled === true) el.disabled = true;
   if (node.inputKind === 'file') {
     el.inputKind = 'file';
@@ -203,6 +211,11 @@ const IMPLICIT_ROLE: Record<string, string> = {
   select: 'combobox',
 };
 
+/** The ref token, prefixed with `*` when the element is new since the previous same-page snapshot. */
+function refToken(el: InteractableElement): string {
+  return `${el.isNew === true ? '*' : ''}[${String(el.ref)}]`;
+}
+
 /** Trailing annotations shared by both render formats (value / disabled / file input). */
 function elementAnnotations(el: InteractableElement): string[] {
   const parts: string[] = [];
@@ -225,12 +238,12 @@ function renderTagged(el: InteractableElement, tag: string): string {
   const open = attrs.length > 0 ? `${tag} ${attrs.join(' ')}` : tag;
   const body =
     el.name.length > 0 ? `<${open}>${el.name}</${tag}>` : `<${open} />`;
-  return [`[${String(el.ref)}]${body}`, ...elementAnnotations(el)].join(' ');
+  return [`${refToken(el)}${body}`, ...elementAnnotations(el)].join(' ');
 }
 
 /** Accessibility-tree (legacy/fallback) format: `[ref] role "name"`. */
 function renderLegacy(el: InteractableElement): string {
-  const parts = [`[${String(el.ref)}] ${el.role}`];
+  const parts = [`${refToken(el)} ${el.role}`];
   if (el.name.length > 0) parts.push(`"${el.name}"`);
   return [...parts, ...elementAnnotations(el)].join(' ');
 }

@@ -5,6 +5,7 @@ import { HumanInputAdapter } from '@tepegoz/human-input';
 import {
   isInteractableRole,
   parseDomTree,
+  markNewElements,
   MAX_INTERACTABLE_ELEMENTS,
   type RawInteractable,
 } from '@tepegoz/tool-executor';
@@ -143,6 +144,8 @@ export default class CdpDriver {
   private static attached: WebContents | null = null;
   /** Per-tab ref (1-based) → node target maps, from each tab's latest snapshot. */
   private static readonly refMaps = new WeakMap<WebContents, Map<number, RefTarget>>();
+  /** Per-tab previous render-DOM snapshot (url + element fingerprints) for `*[n]` new-element marking. */
+  private static readonly prevSnapshots = new WeakMap<WebContents, { url: string; hashes: Set<string> }>();
 
   /** Attach + enable the domains we need on `wc`, re-attaching if the active tab changed. */
   private static async ensureAttached(wc: WebContents): Promise<void> {
@@ -164,6 +167,7 @@ export default class CdpDriver {
     wc.once('destroyed', () => {
       if (CdpDriver.attached === wc) CdpDriver.attached = null;
       CdpDriver.refMaps.delete(wc);
+      CdpDriver.prevSnapshots.delete(wc);
     });
     await wc.debugger.sendCommand('DOM.enable');
     await wc.debugger.sendCommand('Accessibility.enable');
@@ -226,7 +230,18 @@ export default class CdpDriver {
     const tree = DomTreeResultSchema.safeParse(call.data.result.value);
     if (!tree.success) throw new AppError('render-DOM perception payload malformed', 502);
 
-    const { interactables, xpaths } = parseDomTree(tree.data);
+    const { interactables, xpaths, hashes } = parseDomTree(tree.data);
+
+    // Mark elements that appeared since the previous snapshot of the SAME page (e.g. a menu the
+    // agent just opened). A navigation (url change) or the first snapshot marks nothing new.
+    const prev = CdpDriver.prevSnapshots.get(wc);
+    const prevHashes = prev !== undefined && prev.url === tree.data.url ? prev.hashes : null;
+    const isNew = markNewElements(hashes, prevHashes);
+    interactables.forEach((raw, i) => {
+      if (isNew[i] === true) raw.isNew = true;
+    });
+    CdpDriver.prevSnapshots.set(wc, { url: tree.data.url, hashes: new Set(hashes) });
+
     const refMap = new Map<number, RefTarget>();
     interactables.forEach((_, i) => {
       const xpath = xpaths[i];

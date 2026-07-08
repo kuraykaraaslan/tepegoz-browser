@@ -142,4 +142,15 @@ describe('renderElementsText', () => {
     ]);
     expect(renderElementsText(elements)).toBe('[1]<input placeholder="Search" />');
   });
+
+  it('prefixes new-since-last-snapshot elements with * (both formats)', () => {
+    const { elements } = finalizeElements([
+      { role: 'link', name: 'Blog', tag: 'a', href: 'b.html', isNew: true },
+      { role: 'button', name: 'Old' }, // a11y (legacy) element, not new
+      { role: 'link', name: 'New', isNew: true }, // a11y element, new
+    ]);
+    expect(renderElementsText(elements)).toBe(
+      '*[1]<a href="b.html">Blog</a>\n[2] button "Old"\n*[3] link "New"',
+    );
+  });
 });
