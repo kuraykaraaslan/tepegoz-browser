@@ -4,9 +4,11 @@ import { AppError, Logger } from '@tepegoz/libs';
 import { HumanInputAdapter } from '@tepegoz/human-input';
 import {
   isInteractableRole,
+  parseDomTree,
   MAX_INTERACTABLE_ELEMENTS,
   type RawInteractable,
 } from '@tepegoz/tool-executor';
+import { buildDomTreeExpression } from './build-dom-tree-script.js';
 
 /**
  * L4 out-of-process CDP driver. Drives the active tab's page through Electron's `webContents.debugger`
@@ -64,6 +66,31 @@ const NetworkRequestSchema = z
 const NetworkCompleteSchema = z.object({ requestId: z.string() }).passthrough();
 const ResolveSchema = z.object({ object: z.object({ objectId: z.string() }).passthrough() });
 const CallResultSchema = z.object({ result: z.object({ value: z.unknown() }).passthrough() });
+/** Runtime.evaluate result envelope when we ask for a handle (not by-value). */
+const EvalHandleSchema = z.object({
+  result: z.object({ objectId: z.string().optional(), subtype: z.string().optional() }).passthrough(),
+});
+/** The render-DOM perception payload (page-controlled → validated here, the CDP trust boundary). */
+const DomTreeNodeSchema = z
+  .object({
+    tag: z.string(),
+    xpath: z.string(),
+    role: z.string(),
+    name: z.string(),
+    href: z.string().optional(),
+    value: z.string().optional(),
+    disabled: z.boolean().optional(),
+    attributes: z.record(z.string()).optional(),
+    inputType: z.string().optional(),
+    accept: z.string().optional(),
+    multiple: z.boolean().optional(),
+  })
+  .passthrough();
+const DomTreeResultSchema = z.object({
+  url: z.string(),
+  title: z.string(),
+  nodes: z.array(DomTreeNodeSchema),
+});
 
 /** A named key the agent can press → CDP key-event fields. */
 const KEY_MAP: Record<string, { key: string; code: string; keyCode: number; text?: string }> = {
@@ -85,6 +112,15 @@ const KEY_MAP: Record<string, { key: string; code: string; keyCode: number; text
 
 const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * How a snapshot `ref` maps back to a DOM node. The accessibility path resolves directly by
+ * `backendNodeId`; the render-DOM path (AI-2) stores an XPath re-resolved lazily at action time
+ * (keeps a snapshot cheap — only the acted-on element is resolved).
+ */
+type RefTarget = { backendNodeId: number } | { xpath: string };
+/** A node handle any DOM.* command accepts — either an existing backend id or a live object handle. */
+type NodeArg = { backendNodeId: number } | { objectId: string };
+
 /** The AX-node value coerced to a trimmed string, or '' when absent/non-scalar. */
 function axString(value: unknown): string {
   if (typeof value === 'string') return value;
@@ -105,8 +141,8 @@ function attributesMap(attrs: string[] | undefined): Map<string, string> {
 export default class CdpDriver {
   /** The WebContents the debugger is currently attached to (null when detached). */
   private static attached: WebContents | null = null;
-  /** Per-tab ref (1-based) → backendNodeId maps, from each tab's latest snapshot. */
-  private static readonly refMaps = new WeakMap<WebContents, Map<number, number>>();
+  /** Per-tab ref (1-based) → node target maps, from each tab's latest snapshot. */
+  private static readonly refMaps = new WeakMap<WebContents, Map<number, RefTarget>>();
 
   /** Attach + enable the domains we need on `wc`, re-attaching if the active tab changed. */
   private static async ensureAttached(wc: WebContents): Promise<void> {
@@ -149,8 +185,59 @@ export default class CdpDriver {
     CdpDriver.attached = null;
   }
 
-  /** Read the active page's actionable elements from the accessibility tree. */
+  /** Perception source: render-DOM (AI-2 default) unless `TEPEGOZ_PERCEPTION=a11y` forces the fallback. */
+  private static perceptionMode(): 'render-dom' | 'a11y' {
+    return process.env.TEPEGOZ_PERCEPTION === 'a11y' ? 'a11y' : 'render-dom';
+  }
+
+  /**
+   * Read the active page's actionable elements. Uses render-DOM perception (interactivity + occlusion
+   * + viewport + `href`/attributes) by default, falling back to the accessibility-tree snapshot when
+   * that path is disabled or errors. Both populate the per-tab `ref → node` map for action dispatch.
+   */
   static async snapshotElements(
+    wc: WebContents,
+  ): Promise<{ url: string; title: string; elements: RawInteractable[] }> {
+    if (CdpDriver.perceptionMode() === 'render-dom') {
+      try {
+        return await CdpDriver.snapshotElementsRenderDom(wc);
+      } catch (err) {
+        Logger.warn('render-DOM perception failed; falling back to a11y', { err: String(err) });
+      }
+    }
+    return CdpDriver.snapshotElementsA11y(wc);
+  }
+
+  /** Render-DOM perception (AI-2): inject `buildDomTree` in an isolated world, validate, map to refs. */
+  private static async snapshotElementsRenderDom(
+    wc: WebContents,
+  ): Promise<{ url: string; title: string; elements: RawInteractable[] }> {
+    await CdpDriver.ensureAttached(wc);
+    const contextId = await CdpDriver.mainFrameIsolatedContext(wc);
+    const raw: unknown = await wc.debugger.sendCommand('Runtime.evaluate', {
+      expression: buildDomTreeExpression(),
+      contextId,
+      returnByValue: true,
+      awaitPromise: false,
+      silent: true,
+    });
+    const call = CallResultSchema.safeParse(raw);
+    if (!call.success) throw new AppError('render-DOM perception returned no value', 502);
+    const tree = DomTreeResultSchema.safeParse(call.data.result.value);
+    if (!tree.success) throw new AppError('render-DOM perception payload malformed', 502);
+
+    const { interactables, xpaths } = parseDomTree(tree.data);
+    const refMap = new Map<number, RefTarget>();
+    interactables.forEach((_, i) => {
+      const xpath = xpaths[i];
+      if (xpath !== undefined) refMap.set(i + 1, { xpath });
+    });
+    CdpDriver.refMaps.set(wc, refMap);
+    return { url: tree.data.url, title: tree.data.title, elements: interactables };
+  }
+
+  /** Read the active page's actionable elements from the accessibility tree (fallback path). */
+  private static async snapshotElementsA11y(
     wc: WebContents,
   ): Promise<{ url: string; title: string; elements: RawInteractable[] }> {
     await CdpDriver.ensureAttached(wc);
@@ -159,10 +246,10 @@ export default class CdpDriver {
     if (!parsed.success) throw new AppError('Failed to read the page accessibility tree', 502);
 
     const elements: RawInteractable[] = [];
-    const refMap = new Map<number, number>();
+    const refMap = new Map<number, RefTarget>();
     for (const node of parsed.data.nodes) {
       if (node.ignored === true || node.backendDOMNodeId === undefined) continue;
-      const fileInput = await CdpDriver.fileInputInfo(wc, node.backendDOMNodeId);
+      const fileInput = await CdpDriver.fileInputInfo(wc, { backendNodeId: node.backendDOMNodeId });
       const role = axString(node.role?.value) || (fileInput !== null ? 'button' : '');
       if (fileInput === null && (role === '' || !isInteractableRole(role))) continue;
 
@@ -180,7 +267,8 @@ export default class CdpDriver {
       }
 
       elements.push(el);
-      refMap.set(elements.length, node.backendDOMNodeId); // ref is 1-based, aligned with finalizeElements
+      // ref is 1-based, aligned with finalizeElements
+      refMap.set(elements.length, { backendNodeId: node.backendDOMNodeId });
       if (elements.length >= MAX_INTERACTABLE_ELEMENTS) break;
     }
 
@@ -188,22 +276,43 @@ export default class CdpDriver {
     return { url: wc.getURL(), title: wc.getTitle(), elements };
   }
 
-  /** Resolve a snapshot `ref` to its backendNodeId, guarding against stale refs / tab switches. */
-  private static backendNodeId(wc: WebContents, ref: number): number {
+  /**
+   * Resolve a snapshot `ref` to a live node handle, guarding against stale refs / tab switches. The
+   * a11y path returns the stored `backendNodeId`; the render-DOM path re-resolves the stored XPath to
+   * a fresh object handle against the current DOM (so a `ref` stays valid within its snapshot).
+   */
+  private static async resolveRef(wc: WebContents, ref: number): Promise<NodeArg> {
     const refMap = CdpDriver.refMaps.get(wc);
     if (refMap === undefined) {
       throw new AppError('Element refs are stale — read the page elements again first', 409);
     }
-    const id = refMap.get(ref);
-    if (id === undefined) throw new AppError(`No element with ref ${String(ref)}`, 404);
-    return id;
+    const target = refMap.get(ref);
+    if (target === undefined) throw new AppError(`No element with ref ${String(ref)}`, 404);
+    if ('backendNodeId' in target) return { backendNodeId: target.backendNodeId };
+    return { objectId: await CdpDriver.xpathToObjectId(wc, target.xpath) };
+  }
+
+  /** Re-resolve an XPath to a live object handle on the page's main frame (render-DOM ref path). */
+  private static async xpathToObjectId(wc: WebContents, xpath: string): Promise<string> {
+    const contextId = await CdpDriver.mainFrameIsolatedContext(wc);
+    const raw: unknown = await wc.debugger.sendCommand('Runtime.evaluate', {
+      expression: `document.evaluate(${JSON.stringify(xpath)}, document, null, 9, null).singleNodeValue`,
+      contextId,
+      returnByValue: false,
+      silent: true,
+    });
+    const parsed = EvalHandleSchema.safeParse(raw);
+    if (!parsed.success || parsed.data.result.objectId === undefined) {
+      throw new AppError('Element is no longer on the page — read the page elements again first', 409);
+    }
+    return parsed.data.result.objectId;
   }
 
   private static async fileInputInfo(
     wc: WebContents,
-    backendNodeId: number,
+    node: NodeArg,
   ): Promise<{ accept: string; multiple: boolean } | null> {
-    const raw: unknown = await wc.debugger.sendCommand('DOM.describeNode', { backendNodeId, depth: 0 });
+    const raw: unknown = await wc.debugger.sendCommand('DOM.describeNode', { ...node, depth: 0 });
     const parsed = DescribeNodeSchema.safeParse(raw);
     if (!parsed.success) return null;
     const nodeName = (parsed.data.node.localName ?? parsed.data.node.nodeName ?? '').toLowerCase();
@@ -219,13 +328,13 @@ export default class CdpDriver {
     paths: string[],
   ): Promise<{ accept: string; multiple: boolean }> {
     await CdpDriver.ensureAttached(wc);
-    const backendNodeId = CdpDriver.backendNodeId(wc, ref);
-    const info = await CdpDriver.fileInputInfo(wc, backendNodeId);
+    const node = await CdpDriver.resolveRef(wc, ref);
+    const info = await CdpDriver.fileInputInfo(wc, node);
     if (info === null) throw new AppError('Target element is not a file input', 409);
     if (!info.multiple && paths.length > 1) {
       throw new AppError('Target file input does not accept multiple files', 409);
     }
-    await wc.debugger.sendCommand('DOM.setFileInputFiles', { backendNodeId, files: paths });
+    await wc.debugger.sendCommand('DOM.setFileInputFiles', { ...node, files: paths });
     await CdpDriver.settle(wc);
     return info;
   }
@@ -233,12 +342,12 @@ export default class CdpDriver {
   /** The center point (CSS px, viewport-relative) of an element, after scrolling it into view. */
   private static async centerOf(
     wc: WebContents,
-    backendNodeId: number,
+    node: NodeArg,
   ): Promise<{ x: number; y: number }> {
     await wc.debugger
-      .sendCommand('DOM.scrollIntoViewIfNeeded', { backendNodeId })
+      .sendCommand('DOM.scrollIntoViewIfNeeded', { ...node })
       .catch(() => undefined); // best-effort; getBoxModel below is the real guard
-    const raw: unknown = await wc.debugger.sendCommand('DOM.getBoxModel', { backendNodeId });
+    const raw: unknown = await wc.debugger.sendCommand('DOM.getBoxModel', { ...node });
     const box = BoxModelSchema.safeParse(raw);
     if (!box.success || box.data.model.content.length < 8) {
       throw new AppError('Element is not visible/clickable', 409);
@@ -256,8 +365,8 @@ export default class CdpDriver {
     adapter?: HumanInputAdapter,
   ): Promise<void> {
     await CdpDriver.ensureAttached(wc);
-    const backendNodeId = CdpDriver.backendNodeId(wc, ref);
-    const { x, y } = await CdpDriver.centerOf(wc, backendNodeId);
+    const node = await CdpDriver.resolveRef(wc, ref);
+    const { x, y } = await CdpDriver.centerOf(wc, node);
     if (adapter === undefined) {
       const base = { x, y, button: 'left' as const, clickCount: 1 };
       await wc.debugger.sendCommand('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
@@ -277,11 +386,11 @@ export default class CdpDriver {
     adapter?: HumanInputAdapter,
   ): Promise<void> {
     await CdpDriver.ensureAttached(wc);
-    const backendNodeId = CdpDriver.backendNodeId(wc, ref);
-    const { x, y } = await CdpDriver.centerOf(wc, backendNodeId);
+    const node = await CdpDriver.resolveRef(wc, ref);
+    const { x, y } = await CdpDriver.centerOf(wc, node);
     if (adapter === undefined) {
       // Background-tab teleport fallback (no visible cursor): programmatic focus is acceptable here.
-      await wc.debugger.sendCommand('DOM.focus', { backendNodeId });
+      await wc.debugger.sendCommand('DOM.focus', { ...node });
       // Select any existing value (Ctrl+A) so the insert replaces it, then type the new text.
       await CdpDriver.sendKey(wc, { key: 'a', code: 'KeyA', keyCode: 65 }, 2 /* Ctrl */);
       await wc.debugger.sendCommand('Input.insertText', { text });
@@ -294,10 +403,10 @@ export default class CdpDriver {
       for (let attempt = 0; attempt < 3; attempt++) {
         if (attempt > 0) {
           await adapter.idle(200, 70);
-          target = await CdpDriver.centerOf(wc, backendNodeId);
+          target = await CdpDriver.centerOf(wc, node);
         }
         await adapter.click(target.x, target.y);
-        if (await CdpDriver.isFocused(wc, backendNodeId)) break;
+        if (await CdpDriver.isFocused(wc, node)) break;
       }
       await adapter.idle(200, 70); // beat: click -> select-all
       // Ctrl+A with a text-less KeySpec => rawKeyDown, so it fires the accelerator without typing 'a'.
@@ -308,16 +417,22 @@ export default class CdpDriver {
     await CdpDriver.settle(wc);
   }
 
-  /** True when `backendNodeId` (or a descendant) is the document's active/focused element. */
-  private static async isFocused(wc: WebContents, backendNodeId: number): Promise<boolean> {
-    const resolved: unknown = await wc.debugger
-      .sendCommand('DOM.resolveNode', { backendNodeId })
-      .catch(() => null);
-    const parsed = ResolveSchema.safeParse(resolved);
-    if (!parsed.success) return false;
+  /** True when the target node (or a descendant) is the document's active/focused element. */
+  private static async isFocused(wc: WebContents, node: NodeArg): Promise<boolean> {
+    let objectId: string;
+    if ('objectId' in node) {
+      objectId = node.objectId;
+    } else {
+      const resolved: unknown = await wc.debugger
+        .sendCommand('DOM.resolveNode', { backendNodeId: node.backendNodeId })
+        .catch(() => null);
+      const parsed = ResolveSchema.safeParse(resolved);
+      if (!parsed.success) return false;
+      objectId = parsed.data.object.objectId;
+    }
     const raw: unknown = await wc.debugger
       .sendCommand('Runtime.callFunctionOn', {
-        objectId: parsed.data.object.objectId,
+        objectId,
         functionDeclaration:
           'function(){return this===document.activeElement||this.contains(document.activeElement);}',
         returnByValue: true,

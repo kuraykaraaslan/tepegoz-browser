@@ -1,0 +1,20 @@
+{
+  "scenarios": [
+    {
+      "id": "div_button_products",
+      "task": "Open the Products page and tell me the featured item.",
+      "target": { "fixture": "div-button-nav" },
+      "success": { "domAssertion": "Featured item", "expectedValue": "Acme Widget 3000" },
+      "heldOut": false,
+      "tags": ["perception", "div-button", "ai-2"]
+    },
+    {
+      "id": "link_href_security",
+      "task": "Open the article about online security and tell me its headline.",
+      "target": { "fixture": "link-href" },
+      "success": { "domAssertion": "Security best practices" },
+      "heldOut": true,
+      "tags": ["perception", "href", "ai-2"]
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Daily Digest</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; }
+      article { margin-bottom: 1.5rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Daily Digest</h1>
+    <!--
+      Every teaser link says the same thing ("Read more") — the ONLY way to pick the right one is
+      its href. An a11y-only snapshot exposes just the accessible name ("Read more") with no
+      destination, so the model is guessing. Render-DOM perception (AI-2) surfaces `href`, letting
+      the model reason about where each link goes before clicking.
+    -->
+    <article>
+      <h2>Weather</h2>
+      <p>Sunny skies ahead this weekend.</p>
+      <a href="weather.html">Read more</a>
+    </article>
+    <article>
+      <h2>Security</h2>
+      <p>A roundup of this week's online safety tips.</p>
+      <a href="security.html">Read more</a>
+    </article>
+    <article>
+      <h2>Sports</h2>
+      <p>The local team clinched a playoff spot.</p>
+      <a href="sports.html">Read more</a>
+    </article>
+  </body>
+</html>

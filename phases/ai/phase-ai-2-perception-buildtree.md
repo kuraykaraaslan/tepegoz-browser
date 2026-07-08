@@ -1,6 +1,6 @@
 # Phase AI-2 — Render-DOM Perception (buildDomTree-style)
 
-**Status:** ⬜ Not started  ·  **Depends on:** [AI-1](phase-ai-1-eval-harness.md)  ·  **Track:** [`phases/ai`](README.md)
+**Status:** 🟡 In progress (PR1 landed: core perception + predicates + typed model + serialization + xpath→CDP click mapping + `href`/attributes. PR2 remaining: iframe/shadow-DOM stitching, `*[n]` new-element marking, cursor-heuristic calibration, and the on-harness measurement — pending the Electron-ABI eval env, same blocker as AI-1's e2e run.)  ·  **Depends on:** [AI-1](phase-ai-1-eval-harness.md)  ·  **Track:** [`phases/ai`](README.md)
 **Goal:** Replace the agent's **accessibility-tree-only** element snapshot with a **rendered-DOM +
 computed-style + geometry** perception (the browser-use/nanobrowser `buildDomTree` technique), ported into
 tepegoz's CDP driver. This is the single highest-leverage change: it systematically fixes whole classes of
@@ -29,32 +29,32 @@ attributes. The render-DOM approach fixes all three and adds new-element diffing
 > deterministic reveal helpers from [AI-4](phase-ai-4-action-vocabulary.md).
 
 ## Exit criteria (DoD)
-- [ ] `snapshotElements` builds its element list from the rendered DOM (interactivity + occlusion + viewport), keyed by a stable `highlightIndex → { xpath, attributes }` selector map; refs remain valid within a snapshot.
-- [ ] Each element carries `href` and the relevant attributes in the model-facing serialization; `*[n]` marks new-since-last-state elements.
-- [ ] Clicking a ref still goes through the **existing real-gesture human-input adapter** (no pixel-replay; resolve index → node → CDP, then the current click/type path). Determinism-first preserved.
-- [ ] Same-origin iframe + open/closed shadow DOM elements are reachable in one index space.
-- [ ] **Measured on the [AI-1](phase-ai-1-eval-harness.md) harness:** the hidden-nav and occlusion fixtures pass, and the real-site blog scenario improves vs the a11y-only baseline (before/after pass-rate recorded). Held-out set does not regress.
-- [ ] **i18n:** none expected (internal perception). Coverage + self-review.
+- [x] `snapshotElements` builds its element list from the rendered DOM (interactivity + occlusion + viewport), keyed by a stable `highlightIndex → { xpath, attributes }` selector map; refs remain valid within a snapshot. *(PR1: render-DOM path default, `TEPEGOZ_PERCEPTION=a11y` falls back; xpath selector map re-resolved lazily at action time.)*
+- [x] Each element carries `href` and the relevant attributes in the model-facing serialization. *(PR1; `*[n]` new-element marking → PR2, needs whole-tree branch-path hashing.)*
+- [x] Clicking a ref still goes through the **existing real-gesture human-input adapter** (no pixel-replay; resolve index → xpath → CDP object handle, then the current click/type path). Determinism-first preserved.
+- [ ] Same-origin iframe + open/closed shadow DOM elements are reachable in one index space. *(PR2.)*
+- [ ] **Measured on the [AI-1](phase-ai-1-eval-harness.md) harness:** the hidden-nav and occlusion fixtures pass, and the real-site blog scenario improves vs the a11y-only baseline (before/after pass-rate recorded). Held-out set does not regress. *(Fixtures `div-button-nav` + `link-href` and scenarios added; run pending the Electron-ABI eval env — same blocker as AI-1's e2e `pnpm eval`.)*
+- [x] **i18n:** none (internal perception). Pure-layer coverage added (`dom-tree.test.ts`, extended `interactable.test.ts`, `build-dom-tree-script.test.ts` syntax guard); self-review.
 
 ## Tasks
 
 ### Perception core (port into the CDP driver)
-- [ ] Author the in-page `buildDomTree` script; inject via `wc.executeJavaScript` (tepegoz already runs `executeJavaScript` for selection/innerText) and return a **serializable flat map** `{ rootId, map }` — no in-page handles.
-- [ ] Predicates: `isInteractive` (cursor set + tag whitelist + role/aria + class/data + inline on*), `isVisible` (offset size, not display:none/visibility:hidden), `isTopElement` (`elementFromPoint` centre + corners), `isInViewport` (viewport ± expansion, default 0). Cap depth; per-run `WeakMap` caches for rects/styles.
-- [ ] Attribute capture for interactive candidates/iframes/body (all names), incl. `href`.
-- [ ] iframe recursion (same-origin) + cross-origin re-injection stitched into one index space; shadow-DOM traversal (force open mode via an `attachShadow` patch on the page).
+- [x] Author the in-page `buildDomTree` script ([`build-dom-tree-script.ts`](../../apps/desktop/src/main/agent/build-dom-tree-script.ts)); inject into an **isolated world** (untrusted-page-tamper-proof) via `Runtime.evaluate` and return a **serializable flat list** of the indexable nodes — no in-page handles.
+- [x] Predicates: `isInteractive` (cursor:pointer + tag whitelist + role/aria + tabindex/contenteditable + inline on*), `isVisible` (box size, not display:none/visibility:hidden/opacity:0), `isTopElement` (`elementFromPoint` centre), `isInViewport` (viewport intersection). Node/emit caps; per-run `WeakMap` caches for rects/styles.
+- [x] Attribute capture for interactive candidates (allow-list), incl. `href`.
+- [ ] iframe recursion (same-origin) + cross-origin re-injection stitched into one index space; shadow-DOM traversal (force open mode via an `attachShadow` patch on the page). *(PR2.)*
 
 ### Typed model + serialization
-- [ ] Parse the flat map into typed nodes + `selectorMap: Map<highlightIndex, node>`; compute branch-path hashes for `isNew`.
-- [ ] Extend [`packages/tool-executor/src/interactable.ts`](../../packages/tool-executor/src/interactable.ts) `RawInteractable`/`InteractableElement` with `href?`, `isNew?`, and the attribute allow-list; plumb through `finalizeElements` / `renderElementsText` and the `BrowserHost.snapshotElements` return type.
-- [ ] Serialize as `[index]<tag attr=…>text /​>` (attribute values capped; `*[index]` for new); page-controlled text/attrs pass through `sanitizeLabel` (untrusted).
+- [x] Parse the flat list into typed nodes + `xpaths` selector map ([`dom-tree.ts`](../../packages/tool-executor/src/dom-tree.ts)); pure + Electron-free (zod boundary at the CDP read site). *(Branch-path hashing for `isNew` → PR2.)*
+- [x] Extend [`packages/tool-executor/src/interactable.ts`](../../packages/tool-executor/src/interactable.ts) `RawInteractable`/`InteractableElement` with `tag?`, `href?`, and the attribute allow-list; plumbed through `finalizeElements` / `renderElementsText` and the `BrowserHost.snapshotElements` return type. *(`isNew?` → PR2.)*
+- [x] Serialize render-DOM elements as `[index]<tag role=… href=… attr=…>text</tag>` (self-closing when unnamed; attribute values capped; overriding role surfaced, tag-implicit role suppressed); page-controlled text/attrs pass through `sanitizeText`/`sanitizeLabel` (untrusted). Legacy a11y format preserved for the fallback path.
 
 ### Click/act mapping (reuse existing)
-- [ ] index → node → xpath/CSS → CDP resolve (`DOM.resolveNode`/`performSearch`, backend node id) → existing `centerOf` + human-input gesture. No new click path; keep the real-gesture adapter.
+- [x] index → xpath → CDP resolve (`document.evaluate` in the isolated world → `objectId` handle) → existing `centerOf` + human-input gesture. No new click path; the real-gesture adapter is unchanged (a11y refs still resolve by `backendNodeId`).
 
 ### Tuning
-- [ ] Token control: keep viewport-limited default + attribute allow-list; expose an "expand viewport" knob for the rare full-page case.
-- [ ] Calibrate the cursor heuristic (e.g. treat `cursor:text` carefully) against the AI-1 fixtures to avoid over/under-selection.
+- [ ] Token control: viewport-limited default + attribute allow-list are in; expose an "expand viewport" knob for the rare full-page case. *(PR2.)*
+- [ ] Calibrate the cursor heuristic (e.g. treat `cursor:text` carefully) against the AI-1 fixtures to avoid over/under-selection. *(PR2, once the harness can run.)*
 
 ## Scope notes
 - `CdpDriver` and `MacroCdp` share one `webContents.debugger` attachment (only one active at a time) — keep the injection/read within that constraint.

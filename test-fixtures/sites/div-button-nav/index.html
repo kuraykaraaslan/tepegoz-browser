@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Shop</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; }
+      .navbtn {
+        display: inline-block; padding: 0.6rem 1rem; margin-right: 0.5rem;
+        background: #eee; border-radius: 6px; cursor: pointer; user-select: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Welcome to the Shop</h1>
+    <!--
+      These nav controls are plain <div>s with a pointer cursor + a JS onclick handler — NO ARIA
+      role, NO href. The accessibility tree exposes them as generic (non-actionable) text, so an
+      a11y-only snapshot cannot target them. Render-DOM perception (AI-2) catches them via the
+      computed `cursor: pointer` + inline handler heuristic. This is the headline a11y gap.
+    -->
+    <div class="navbtn" onclick="location.href='products.html'">Products</div>
+    <div class="navbtn" onclick="location.href='support.html'">Support</div>
+    <p>Browse our catalog using the buttons above.</p>
+  </body>
+</html>

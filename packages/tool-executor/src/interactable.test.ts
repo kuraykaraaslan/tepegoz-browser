@@ -63,6 +63,33 @@ describe('finalizeElements', () => {
     expect(elements[0]?.disabled).toBe(true);
   });
 
+  it('carries render-DOM tag + sanitized href through', () => {
+    const { elements } = finalizeElements([
+      { role: 'link', name: 'Blog', tag: 'A', href: 'https://x/blog' },
+    ]);
+    expect(elements[0]).toMatchObject({ tag: 'a', href: 'https://x/blog' });
+  });
+
+  it('keeps only allow-listed attributes and drops the rest', () => {
+    const { elements } = finalizeElements([
+      {
+        role: 'button',
+        name: 'Menu',
+        tag: 'button',
+        attributes: { 'aria-expanded': 'false', onclick: 'evil()', style: 'x', 'data-testid': 'nav' },
+      },
+    ]);
+    expect(elements[0]?.attributes).toEqual({ 'aria-expanded': 'false', 'data-testid': 'nav' });
+  });
+
+  it('sanitizes attribute values and reports the flag', () => {
+    const { elements, flags } = finalizeElements([
+      { role: 'button', name: 'x', tag: 'button', attributes: { title: 'a' + String.fromCharCode(0x200b) + 'b' } },
+    ]);
+    expect(elements[0]?.attributes?.title).toBe('ab');
+    expect(flags).toContain('zero_width');
+  });
+
   it('caps the element set to guard against hostile pages', () => {
     const raw: RawInteractable[] = Array.from({ length: MAX_INTERACTABLE_ELEMENTS + 50 }, () => ({
       role: 'button',
@@ -87,5 +114,32 @@ describe('renderElementsText', () => {
 
   it('handles the empty case', () => {
     expect(renderElementsText([])).toBe('(no interactable elements found)');
+  });
+
+  it('renders render-DOM elements as pseudo-HTML with href + attributes', () => {
+    const { elements } = finalizeElements([
+      { role: 'link', name: 'Blog', tag: 'a', href: 'blog.html' },
+      { role: 'button', name: 'Menu', tag: 'button', attributes: { 'aria-expanded': 'false' } },
+    ]);
+    expect(renderElementsText(elements)).toBe(
+      '[1]<a href="blog.html">Blog</a>\n[2]<button aria-expanded="false">Menu</button>',
+    );
+  });
+
+  it('surfaces an overriding role but suppresses a tag-implicit one', () => {
+    const { elements } = finalizeElements([
+      { role: 'button', name: 'Subscribe', tag: 'div' }, // div acting as a button → role shown
+      { role: 'link', name: 'Home', tag: 'a', href: 'i.html' }, // a→link is implicit → role hidden
+    ]);
+    expect(renderElementsText(elements)).toBe(
+      '[1]<div role="button">Subscribe</div>\n[2]<a href="i.html">Home</a>',
+    );
+  });
+
+  it('self-closes an unnamed tagged element', () => {
+    const { elements } = finalizeElements([
+      { role: 'textbox', name: '', tag: 'input', attributes: { placeholder: 'Search' } },
+    ]);
+    expect(renderElementsText(elements)).toBe('[1]<input placeholder="Search" />');
   });
 });
