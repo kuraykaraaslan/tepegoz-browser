@@ -29,6 +29,7 @@ const WORKSPACE_PACKAGES = [
   // React-free loader is reached from main; the renderer bundles the surface components separately.
   '@tepegoz/extension-sdk',
   '@tepegoz/extension-catalog',
+  '@tepegoz/ext-adblock',
   '@tepegoz/ext-agent',
   '@tepegoz/ext-user-agent',
   '@tepegoz/ext-popup-blocker',

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { basename } from 'node:path';
 import { stat } from 'node:fs/promises';
-import { BrowserWindow, session, type WebContents } from 'electron';
+import { BrowserWindow, type WebContents } from 'electron';
 import {
   aggregateUploadRisk,
   classifyUploadRisk,
@@ -19,13 +19,13 @@ import { getDb } from '../db/database.electron';
 import FileOperationsHost from '../file-operations/file-operations-host';
 import CdpDriver from '../agent/cdp-driver.electron';
 import TabManager from '../tabs';
+import BrowsingWebRequestService from '../web-request/browsing-web-request-service.electron';
 
 interface ActiveUpload extends UploadRecord {
   paths: string[];
   requestIds: Set<number>;
 }
 
-const BROWSING_PARTITION = 'persist:tepegoz-web';
 const UPLOAD_METHODS = new Set(['POST', 'PUT', 'PATCH']);
 
 function originOf(url: string): string | undefined {
@@ -96,15 +96,13 @@ class UploadService {
   static init(): void {
     if (UploadService.initialized) return;
     UploadService.initialized = true;
-    const webRequest = session.fromPartition(BROWSING_PARTITION).webRequest;
-    webRequest.onBeforeRequest((details, callback) => {
+    BrowsingWebRequestService.onBeforeRequest('uploads', (details) => {
       UploadService.observeBeforeRequest(details);
-      callback({});
     });
-    webRequest.onCompleted((details) => {
+    BrowsingWebRequestService.onCompleted('uploads', (details) => {
       UploadService.observeCompleted(details.id);
     });
-    webRequest.onErrorOccurred((details) => {
+    BrowsingWebRequestService.onErrorOccurred('uploads', (details) => {
       UploadService.observeFailed(details.id, details.error);
     });
   }

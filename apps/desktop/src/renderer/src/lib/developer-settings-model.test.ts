@@ -46,6 +46,12 @@ const PREFS: Preferences = {
   notificationsEnabled: true,
   sitePermissions: {},
   popupBlocker: { enabled: true, showNotifications: true, trustedOrigins: [] },
+  adblock: {
+    enabled: true,
+    blockingMode: 'ads-and-trackers',
+    cosmeticFiltering: true,
+    disabledOrigins: [],
+  },
   popupBlockerSeeded: false,
   fileOperationsEnabled: true,
   fileAccessGrants: [],

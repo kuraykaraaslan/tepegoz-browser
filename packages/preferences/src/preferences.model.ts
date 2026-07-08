@@ -161,6 +161,13 @@ export const PreferencesSchema = z.object({
     showNotifications: z.boolean(),
     trustedOrigins: z.array(z.string().max(2048)).max(500),
   }),
+  // Adblock Shield settings. Filter-list cache/state and recent blocked URLs are kept outside prefs.
+  adblock: z.object({
+    enabled: z.boolean(),
+    blockingMode: z.literal('ads-and-trackers'),
+    cosmeticFiltering: z.boolean(),
+    disabledOrigins: z.array(z.string().max(2048)).max(500),
+  }),
   // One-time sentinel: true once the curated default trusted origins have been seeded (see the host's
   // PopupBlockerManager.init), so a user who removes a default never gets it back on next launch.
   popupBlockerSeeded: z.boolean(),
@@ -247,6 +254,12 @@ export const DEFAULT_PREFERENCES: Preferences = {
   notificationsEnabled: true,
   sitePermissions: {},
   popupBlocker: { enabled: true, showNotifications: true, trustedOrigins: [] },
+  adblock: {
+    enabled: true,
+    blockingMode: 'ads-and-trackers',
+    cosmeticFiltering: true,
+    disabledOrigins: [],
+  },
   // Seeded once by the main-process host (union of the curated defaults); starts empty + unseeded here.
   popupBlockerSeeded: false,
   fileOperationsEnabled: true,

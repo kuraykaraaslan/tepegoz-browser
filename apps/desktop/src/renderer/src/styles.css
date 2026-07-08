@@ -53,6 +53,7 @@
 @source "../../../../../packages/bookmarks-ui/src";
 @source "../../../../../packages/browser-chrome/src";
 @source "../../../../../packages/browser-menu/src";
+@source "../../../../../extensions/ext-adblock/src";
 @source "../../../../../extensions/ext-macros/src";
 @source "../../../../../extensions/ext-tasks/src";
 @source "../../../../../packages/password-ui/src";

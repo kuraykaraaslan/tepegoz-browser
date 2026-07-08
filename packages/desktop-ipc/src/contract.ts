@@ -50,6 +50,14 @@ export type {
 import type { PopupBlockerRequest, PopupBlockerSettings } from '@tepegoz/ext-popup-blocker/types';
 export type { PopupBlockerRequest, PopupBlockerSettings };
 
+// Adblock settings/state shape is owned by the extension package. Type-only → erased for preload.
+import type {
+  AdblockBlockedRequest,
+  AdblockSettings,
+  AdblockState,
+} from '@tepegoz/ext-adblock/types';
+export type { AdblockBlockedRequest, AdblockSettings, AdblockState };
+
 // History lives in persistence; bookmarks moved to their own feature package. Both are the single
 // source for their entry type. Type-only imports → erased, so the sandboxed preload stays dependency-free.
 import type { HistoryEntry } from '@tepegoz/persistence';

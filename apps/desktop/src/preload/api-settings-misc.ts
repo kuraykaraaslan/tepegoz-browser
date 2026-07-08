@@ -1,6 +1,8 @@
 import { ipcRenderer } from 'electron';
 import {
   IpcChannels,
+  type AdblockSettings,
+  type AdblockState,
   type AppInfo,
   type CredentialsStatus,
   type FileAccessFolderPickResult,
@@ -38,6 +40,11 @@ export const settingsMiscApi: Pick<
   | 'setPopupBlockerSettings'
   | 'trustPopupOrigin'
   | 'getRecentRequests'
+  | 'getAdblockSettings'
+  | 'setAdblockSettings'
+  | 'getAdblockState'
+  | 'setAdblockSiteEnabled'
+  | 'refreshAdblockLists'
   | 'pickFileAccessFolder'
   | 'pickNewTabBackgroundImage'
   | 'getNewTabBackgroundImage'
@@ -77,6 +84,13 @@ export const settingsMiscApi: Pick<
     ipcRenderer.send(IpcChannels.popupBlockerTrust, origin);
   },
   getRecentRequests: () => invoke<PopupBlockerRequest[]>(IpcChannels.popupBlockerRecentRequests),
+  getAdblockSettings: () => invoke<AdblockSettings>(IpcChannels.adblockGet),
+  setAdblockSettings: (patch: Partial<AdblockSettings>) =>
+    invoke<AdblockSettings>(IpcChannels.adblockSet, patch),
+  getAdblockState: () => invoke<AdblockState>(IpcChannels.adblockState),
+  setAdblockSiteEnabled: (origin: string, enabled: boolean) =>
+    invoke<AdblockSettings>(IpcChannels.adblockSiteSet, { origin, enabled }),
+  refreshAdblockLists: () => invoke<AdblockState>(IpcChannels.adblockRefresh),
   // File operations (Settings → File operations). The grant list rides on preferences; only the native
   // folder picker needs a bridge method (AI-driven consent reuses the agent HITL modal).
   pickFileAccessFolder: () => invoke<FileAccessFolderPickResult>(IpcChannels.fileAccessPickFolder),

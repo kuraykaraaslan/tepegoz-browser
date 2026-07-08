@@ -5,6 +5,8 @@
  * `contract.ts` is erased at compile time and carries no runtime cycle.
  */
 import type {
+  AdblockSettings,
+  AdblockState,
   AgentApprovalRequest,
   AgentConfig,
   AgentAutonomy,
@@ -262,6 +264,17 @@ export interface TepegozApi {
   getRecentRequests(): Promise<PopupBlockerRequest[]>;
   /** Read-only status of every configured MCP server (Settings → Connections). Never returns secrets. */
   getMcpStatus(): Promise<McpServerStatusInfo[]>;
+  // Adblock Shield extension: network blocking, cosmetic filtering, per-site pause, and list refresh.
+  /** The current adblock settings. */
+  getAdblockSettings(): Promise<AdblockSettings>;
+  /** Patch adblock settings (only provided keys change). Returns the stored settings. */
+  setAdblockSettings(patch: Partial<AdblockSettings>): Promise<AdblockSettings>;
+  /** Session-only adblock state: counters, engine status, last update, and recent blocked requests. */
+  getAdblockState(): Promise<AdblockState>;
+  /** Enable/disable adblock for one origin. `enabled=false` pauses protection for that site. */
+  setAdblockSiteEnabled(origin: string, enabled: boolean): Promise<AdblockSettings>;
+  /** Refresh filter lists; manual calls are cooldown-limited and preserve the old engine on failure. */
+  refreshAdblockLists(): Promise<AdblockState>;
   /** Read-only adaptor inventory shown next to MCP tools in Settings. */
   listAdaptors(): Promise<AdaptorConnection[]>;
   /** The live AIAdaptor inventory (system + extension + MCP groups, each with its actions) for the

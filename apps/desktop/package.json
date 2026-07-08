@@ -24,6 +24,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@ghostery/adblocker-electron": "2.18.1",
     "better-sqlite3": "^11.7.0",
     "node-llama-cpp": "^3.19.0",
     "react": "^18.3.1",
@@ -52,6 +53,7 @@
     "@tepegoz/desktop-ipc": "workspace:*",
     "@tepegoz/downloads": "workspace:*",
     "@tepegoz/downloads-ui": "workspace:*",
+    "@tepegoz/ext-adblock": "workspace:*",
     "@tepegoz/ext-agent": "workspace:*",
     "@tepegoz/ext-macros": "workspace:*",
     "@tepegoz/ext-popup-blocker": "workspace:*",

@@ -4,6 +4,7 @@
  * import it; re-exported from `contract.ts` for the single public surface.
  */
 import type { AgentAutonomy, AgentEffort } from '@tepegoz/ext-agent/types';
+import type { AdblockSettings } from '@tepegoz/ext-adblock/types';
 import type { PopupBlockerSettings } from '@tepegoz/ext-popup-blocker/types';
 import type { SearchEngine } from '@tepegoz/shared-types/search-engines';
 import type { FileAccessGrant } from '@tepegoz/shared-types/file-access';
@@ -168,6 +169,8 @@ export interface Preferences {
   sitePermissions: Record<string, SitePermissions>;
   /** Popup Blocker (strict) extension settings. */
   popupBlocker: PopupBlockerSettings;
+  /** Adblock Shield extension settings. Recent blocked URLs stay session-only and are not persisted. */
+  adblock: AdblockSettings;
   /** One-time sentinel: true after the curated default trusted origins have been seeded into
    *  `popupBlocker.trustedOrigins`, so an intentionally removed default is never re-added. Not
    *  user-facing. */

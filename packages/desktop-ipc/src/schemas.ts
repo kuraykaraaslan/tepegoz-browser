@@ -275,6 +275,22 @@ export const PopupBlockerPatchSchema = z
 /** `popup-blocker:trust` payload — an origin to add to the trust allowlist. */
 export const PopupOriginSchema = z.string().min(1).max(2048);
 
+/** `adblock:set` payload — a partial settings patch (only provided keys change). */
+export const AdblockPatchSchema = z
+  .object({
+    enabled: z.boolean(),
+    blockingMode: z.literal('ads-and-trackers'),
+    cosmeticFiltering: z.boolean(),
+    disabledOrigins: z.array(z.string().max(2048)).max(500),
+  })
+  .partial();
+
+/** `adblock:site-set` payload — enable or pause protection for one http(s) origin. */
+export const AdblockSiteEnabledSchema = z.object({
+  origin: z.string().min(1).max(2048),
+  enabled: z.boolean(),
+});
+
 /** `extension:context-menu` payload — the reverse-DNS id of the toolbar icon that was right-clicked. */
 export const ExtensionIdSchema = z.string().regex(EXTENSION_ID_RE).max(128);
 

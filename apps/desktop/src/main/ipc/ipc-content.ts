@@ -4,6 +4,8 @@ import { z } from 'zod';
 import {
   IpcChannels,
   isExtensionEnabled,
+  type AdblockSettings,
+  type AdblockState,
   type AIAdaptor,
   type AdaptorConnection,
   type AppInfo,
@@ -29,6 +31,8 @@ import {
 import { AppError } from '@tepegoz/libs';
 import { macrosManifest } from '@tepegoz/ext-macros/manifest';
 import {
+  AdblockPatchSchema,
+  AdblockSiteEnabledSchema,
   AddProviderKeyInputSchema,
   AppInfoSchema,
   BookmarkCreateFolderSchema,
@@ -76,6 +80,8 @@ import TabManager from '../tabs';
 import { completeOnboarding } from '../browser-windows';
 import userAgentHost from '../extensions/user-agent-host.electron';
 import popupBlockerHost from '../extensions/popup-blocker-host.electron';
+import adblockHost from '../extensions/adblock-host.electron';
+import AdblockEngineService from '../extensions/adblock-engine.electron';
 import { builtinManifests } from '../../shared/extensions';
 import { handle, handleAsync, onAction, onSignal } from './ipc-helpers';
 import { applyChromeGlass, isMicaSupported } from '../lib/glass';
@@ -163,6 +169,9 @@ export function registerContentIpc(): void {
     if (validated.fileAccessGrants !== undefined || validated.fileOperationsEnabled !== undefined) {
       FileOperationsHost.reconcile();
     }
+    if (validated.adblock !== undefined) {
+      adblockHost.init();
+    }
     // Glass toggled — apply the Mica backdrop live to every top-level chrome window (popups are children
     // and stay opaque). setBackgroundMaterial/setBackgroundColor take effect without recreating windows.
     if (validated.glassChrome !== undefined) {
@@ -184,6 +193,7 @@ export function registerContentIpc(): void {
     const next = PreferenceStore.update(DEFAULT_PREFERENCES);
     void McpService.reconcile();
     ExtensionCapabilityService.reconcile();
+    adblockHost.init();
     broadcastPublicSettings();
     return next;
   });
@@ -444,6 +454,22 @@ export function registerContentIpc(): void {
   handle(IpcChannels.popupBlockerRecentRequests, (): PopupBlockerRequest[] =>
     popupBlockerHost.getRecentRequests(),
   );
+
+  // Adblock Shield extension: read/patch settings, per-site pause, session state, and safe refresh.
+  handle(IpcChannels.adblockGet, (): AdblockSettings => adblockHost.get());
+  handle(IpcChannels.adblockSet, (_event, payload): AdblockSettings => {
+    const patch = AdblockPatchSchema.parse(payload) as Partial<AdblockSettings>;
+    return adblockHost.update(patch);
+  });
+  handle(IpcChannels.adblockState, (): AdblockState => adblockHost.state());
+  handle(IpcChannels.adblockSiteSet, (_event, payload): AdblockSettings => {
+    const { origin, enabled } = AdblockSiteEnabledSchema.parse(payload);
+    return adblockHost.setSiteEnabled(origin, enabled);
+  });
+  handleAsync(IpcChannels.adblockRefresh, async (): Promise<AdblockState> => {
+    await AdblockEngineService.refresh({ manual: true });
+    return adblockHost.state();
+  });
 
   // On-device model management. Progress/install changes are pushed to every window via models:state.
   ModelManager.setProgressListener((models) => {

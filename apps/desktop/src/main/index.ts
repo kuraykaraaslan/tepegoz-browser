@@ -1,19 +1,21 @@
 import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { app, BrowserWindow, powerMonitor } from 'electron';
+import { app, BrowserWindow, powerMonitor, session } from 'electron';
 import { Logger } from '@tepegoz/libs';
 import { installSecurity } from './security';
 import { abortActiveAgentRuns, registerIpc } from './ipc';
 import { initStores } from './stores.electron';
 import { initHosts, openWindow } from './browser-windows';
 import { closeDatabase } from './db/database.electron';
-import TabManager from './tabs';
+import TabManager, { BROWSING_PARTITION } from './tabs';
 import PopupWindowManager from './popup-window';
 import McpService from './mcp/supervisor.electron';
 import ExtensionCapabilityService from './extensions/capability-supervisor.electron';
 import ActionInterceptorService from './extensions/action-interceptors.electron';
 import popupBlockerHost from './extensions/popup-blocker-host.electron';
 import userAgentHost from './extensions/user-agent-host.electron';
+import adblockHost from './extensions/adblock-host.electron';
+import AdblockEngineService from './extensions/adblock-engine.electron';
 import MacroService from './macro/macro-service.electron';
 import { macrosCapabilities } from '@tepegoz/ext-macros/capabilities';
 import { registerBrowserTools } from '@tepegoz/browser-tools';
@@ -34,6 +36,7 @@ import { downloadToolsHost } from './downloads/download-tools-host.electron';
 import { clipboardToolsHost } from './clipboard/clipboard-tools-host.electron';
 import UploadService from './uploads/upload-service.electron';
 import { uploadToolsHost } from './uploads/upload-tools-host.electron';
+import BrowsingWebRequestService from './web-request/browsing-web-request-service.electron';
 import TaskService from './tasks/task-service.electron';
 import { taskToolsHost } from './tasks/task-tools-host.electron';
 import { runTaskAgent } from './agent/task-agent-runner.electron';
@@ -112,10 +115,18 @@ if (!app.requestSingleInstanceLock()) {
       // (a no-op default when the extension is disabled).
       userAgentHost.init();
       // Browser downloads: attach the browsing-session will-download handler before any page can start
+      // Own the single Electron webRequest listener set for the shared browsing partition. Feature
+      // services register with this multiplexer so Electron's "last listener wins" behavior cannot
+      // make them silently replace each other.
+      BrowsingWebRequestService.init(session.fromPartition(BROWSING_PARTITION).webRequest);
       // a download, load the SQLite projection, and route every file through quarantine first.
       DownloadService.init();
       UploadService.init();
       // Load the popup-blocker settings before any page can call window.open, and register its
+      // Adblock Shield: load persisted settings, register network hooks, then restore/download lists
+      // in the background. Until an engine is ready, the multiplexer fails open.
+      adblockHost.init();
+      AdblockEngineService.init();
       // `popup:open` interceptor with the generic action-interception plane (ADR-0022).
       popupBlockerHost.init();
       ActionInterceptorService.provide(popupBlockerHost.interceptors);

@@ -68,6 +68,22 @@ export const SURFACE_LOADERS: Record<
           },
       ),
   },
+  'com.tepegoz.adblock': {
+    popup: () =>
+      import('@tepegoz/ext-adblock/panel').then(
+        (m) =>
+          function AdblockPopupSurface({ onClose }: ExtensionSurfaceProps) {
+            return <m.AdblockPopup api={window.tepegoz} onClose={onClose} />;
+          },
+      ),
+    page: () =>
+      import('@tepegoz/ext-adblock/panel').then(
+        (m) =>
+          function AdblockPageSurface({ onClose }: ExtensionSurfaceProps) {
+            return <m.AdblockPage api={window.tepegoz} onClose={onClose} />;
+          },
+      ),
+  },
   'com.tepegoz.macros': {
     sidebar: () =>
       import('@tepegoz/ext-macros/panel').then(

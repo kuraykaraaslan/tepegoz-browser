@@ -5,6 +5,7 @@ import {
   faListCheck,
   faPuzzlePiece,
   faRobot,
+  faShieldHalved,
   faUserSecret,
   faWandMagicSparkles,
   type IconDefinition,
@@ -21,6 +22,7 @@ const ICONS: Record<string, IconDefinition> = {
   ban: faBan,
   'wand-magic-sparkles': faWandMagicSparkles,
   'list-check': faListCheck,
+  'shield-halved': faShieldHalved,
   'puzzle-piece': faPuzzlePiece,
 };
 

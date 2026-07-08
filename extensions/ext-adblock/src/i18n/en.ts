@@ -1,0 +1,33 @@
+export const en = {
+  title: 'Adblock Shield',
+  description:
+    'Blocks ads and trackers with cached filter lists. If a site breaks, pause protection for that site.',
+  enabled: 'Enabled',
+  enabledHint: 'Block ads and trackers on every site',
+  cosmeticFiltering: 'Hide leftover ad boxes',
+  cosmeticHint: 'Applies lightweight cosmetic rules after a page loads',
+  currentSite: 'Current site',
+  noSite: 'No active web page',
+  pauseSite: 'Pause on this site',
+  resumeSite: 'Resume on this site',
+  reload: 'Reload',
+  blockedThisSession: 'Blocked this session',
+  engineStatus: 'Engine',
+  statusIdle: 'Idle',
+  statusLoading: 'Loading',
+  statusReady: 'Ready',
+  statusUpdating: 'Updating',
+  statusError: 'Needs attention',
+  lastUpdated: 'Last updated',
+  neverUpdated: 'Not updated yet',
+  updateNow: 'Update filters',
+  updateCoolingDown: 'Update available later',
+  recentBlocked: 'Recent blocked requests',
+  recentBlockedEmpty: 'Nothing blocked this session.',
+  disabledSites: 'Paused sites',
+  disabledSitesEmpty: 'No paused sites.',
+  remove: 'Remove',
+  bestEffort: 'YouTube and other anti-adblock systems are best-effort in this first version.',
+};
+
+export type AdblockStrings = typeof en;

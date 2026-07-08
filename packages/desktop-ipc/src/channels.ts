@@ -178,6 +178,11 @@ export const IpcChannels = {
   popupBlockerRecentRequests: 'popup-blocker:recent-requests',
   mcpGetStatus: 'mcp:get-status',
   adaptorsList: 'adaptors:list',
+  adblockGet: 'adblock:get',
+  adblockSet: 'adblock:set',
+  adblockState: 'adblock:state',
+  adblockSiteSet: 'adblock:site-set',
+  adblockRefresh: 'adblock:refresh',
   /** Renderer→main: the live AIAdaptor inventory (system + extension + MCP groups, each with its
    *  actions) for the Settings "run locally" list — built from the single CapabilityRegistry. */
   aiAdaptorsList: 'ai-adaptors:list',
