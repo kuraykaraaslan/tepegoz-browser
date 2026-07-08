@@ -18,7 +18,8 @@
     "@tepegoz/capability-plane": "workspace:*",
     "@tepegoz/libs": "workspace:*",
     "@tepegoz/model-gateway": "workspace:*",
-    "@tepegoz/shared-types": "workspace:*"
+    "@tepegoz/shared-types": "workspace:*",
+    "@tepegoz/tool-executor": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

@@ -139,3 +139,22 @@ describe('Planner.validateCompletion (completion authority, untrusted boundary)'
     await expect(Planner.validateCompletion(vreq(JSON.stringify({ final_answer: 'x' })))).rejects.toThrow(/malformed/i);
   });
 });
+
+describe('Planner security preamble (AI-5)', () => {
+  class SysCapture implements ModelProvider {
+    readonly id = 'anthropic' as const;
+    system = '';
+    complete(request: CanonRequest): Promise<CanonResponse> {
+      this.system = request.messages.find((m) => m.role === 'system')?.content ?? '';
+      return Promise.resolve({ text: JSON.stringify(validPlan), stopReason: 'end', usage: { inputTokens: 1, outputTokens: 1 }, toolCalls: [] });
+    }
+  }
+
+  it('prepends the security preamble to the plan prompt', async () => {
+    const provider = new SysCapture();
+    ModelGateway.reset();
+    ModelGateway.register(provider);
+    await Planner.plan({ intent: 'summarize', tools, provider: 'anthropic' as const, model: 'claude-opus-4-8' });
+    expect(provider.system).toContain('UNTRUSTED DATA');
+  });
+});

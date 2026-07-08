@@ -1,5 +1,5 @@
 import {
-  sanitizeText,
+  sanitizeContent,
   wrapUntrustedContent,
   finalizeElements,
   renderElementsText,
@@ -25,9 +25,9 @@ export interface PageSnapshot {
   flags: string[];
 }
 
-/** Cap → sanitize → wrap the raw page text into a model-safe snapshot. */
+/** Cap → sanitize + injection-guard → wrap the raw page text into a model-safe snapshot. */
 export function buildPageSnapshot(rawText: string, url: string, title: string): PageSnapshot {
-  const { text, flags } = sanitizeText(rawText.slice(0, MAX_PAGE_CHARS));
+  const { text, flags } = sanitizeContent(rawText.slice(0, MAX_PAGE_CHARS));
   return { url, title, content: wrapUntrustedContent(text, url), flags };
 }
 
@@ -54,6 +54,10 @@ export function buildElementsSnapshot(
   url: string,
   title: string,
 ): ElementsSnapshot {
-  const { elements, flags } = finalizeElements(raw);
-  return { url, title, elements, content: wrapUntrustedContent(renderElementsText(elements), url), flags };
+  const { elements, flags: elementFlags } = finalizeElements(raw);
+  // The element labels are already per-label sanitized; guard the WHOLE listing for injection patterns
+  // (a malicious link/button text saying "ignore your task…") before it is wrapped as untrusted.
+  const guarded = sanitizeContent(renderElementsText(elements));
+  const flags = [...new Set([...elementFlags, ...guarded.flags])];
+  return { url, title, elements, content: wrapUntrustedContent(guarded.text, url), flags };
 }

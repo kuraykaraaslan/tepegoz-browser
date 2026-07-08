@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { AppError, Logger } from '@tepegoz/libs';
 import { ModelGateway, type CanonMessage, type CanonRequest } from '@tepegoz/model-gateway';
+import { SECURITY_PREAMBLE, wrapUserRequest } from '@tepegoz/tool-executor';
 import { PlanSchema, type AIProvider, type Plan, type ToolDescriptor } from '@tepegoz/shared-types';
 import { PlannerMessages } from './messages';
 
@@ -75,6 +76,7 @@ export default class Planner {
           'concrete subject from those earlier turns BEFORE planning. '
         : '';
     const system =
+      `${SECURITY_PREAMBLE}\n\n` +
       'You are the planner for an agentic browser. Produce a plan of tool-call steps that ' +
       "accomplishes the user's goal. " +
       coref +
@@ -103,7 +105,7 @@ export default class Planner {
       messages: [
         { role: 'system', content: system },
         ...(req.history ?? []),
-        { role: 'user', content: req.intent },
+        { role: 'user', content: wrapUserRequest(req.intent) },
       ],
       maxTokens: req.maxTokens ?? 2000,
       timeoutMs: req.timeoutMs ?? 60_000,
@@ -146,6 +148,7 @@ export default class Planner {
    */
   static async validateCompletion(req: CompletionValidationRequest): Promise<CompletionValidation> {
     const system =
+      `${SECURITY_PREAMBLE}\n\n` +
       'You are the STRICT completion validator for an agentic browser run. Given the user GOAL, the ' +
       "actor's progress ledger, and recent page observations, decide whether the goal is ACTUALLY and " +
       'FULLY accomplished. Be strict: if the actor gave up, completed only part of the goal, or has not ' +

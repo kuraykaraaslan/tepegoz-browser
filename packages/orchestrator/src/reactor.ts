@@ -1,6 +1,7 @@
 import { AppError, Logger } from '@tepegoz/libs';
 import { ModelGateway, type CanonMessage } from '@tepegoz/model-gateway';
 import { ToolGateway, type InvokeContext } from '@tepegoz/capability-plane';
+import { SECURITY_PREAMBLE, wrapUserRequest } from '@tepegoz/tool-executor';
 import { z } from 'zod';
 import type { AIProvider, ToolDescriptor, ToolError } from '@tepegoz/shared-types';
 import type { StepOutcome, StopReason } from './executor';
@@ -289,6 +290,7 @@ function systemPrompt(req: ReactRequest): string {
   const avoid = req.avoid && req.avoid.length > 0 ? `\nDo NOT do (the user removed these): ${req.avoid.join('; ')}` : '';
   const coref = req.history && req.history.length > 0 ? COREFERENCE_INSTRUCTION : '';
   return (
+    `${SECURITY_PREAMBLE}\n\n` +
     'You are an agent driving a web browser one action at a time. Given the goal and everything ' +
     'observed so far, decide the SINGLE next step. To interact with a page, first call ' +
     'browser_get_elements to see the actionable elements and their refs, then use browser_update_page ' +
@@ -398,7 +400,7 @@ export default class Reactor {
     const messages: CanonMessage[] = [
       { role: 'system', content: systemPrompt(req) },
       ...(req.history ?? []),
-      { role: 'user', content: `Goal: ${req.goal}` },
+      { role: 'user', content: `Goal:\n${wrapUserRequest(req.goal)}` },
     ];
 
     // Transient page-state (AI-3): keep only the LATEST large observation live. When a new page-state
