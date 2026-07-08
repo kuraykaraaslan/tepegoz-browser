@@ -13,7 +13,7 @@ export {
   TRUSTED_TASK_OPEN,
   TRUSTED_TASK_CLOSE,
 } from './content-guard.js';
-export type { ThreatKind, Threat, GuardResult } from './content-guard.js';
+export type { ThreatKind, Threat, GuardResult, GuardConfig } from './content-guard.js';
 export {
   INTERACTABLE_ROLES,
   isInteractableRole,

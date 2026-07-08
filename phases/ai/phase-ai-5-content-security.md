@@ -1,6 +1,6 @@
 # Phase AI-5 — Untrusted-Content Wrapping + Sanitizer
 
-**Status:** 🟡 In progress (PR1 landed: inbound content guard — NFKC + injection-pattern redaction + forged-trust-tag strip + threat taxonomy, wired at the perception boundary; trusted-task fencing + security preamble in the reactor/planner. **PR2 remaining:** inbound PII redaction (strict mode) + zod-typed config + on-harness adversarial measurement.)  ·  **Depends on:** [AI-2](phase-ai-2-perception-buildtree.md)  ·  **Track:** [`phases/ai`](README.md)
+**Status:** 🟡 In progress (PR1 + PR2 landed: inbound content guard — NFKC + injection redaction + forged-tag strip + threat taxonomy at the perception boundary; trusted-task fencing + security preamble; **strict-mode inbound PII redaction** (email/card/SSN/credential) + `GuardConfig`. **Remaining:** wire strict-mode to a user setting + on-harness adversarial measurement.)  ·  **Depends on:** [AI-2](phase-ai-2-perception-buildtree.md)  ·  **Track:** [`phases/ai`](README.md)
 **Goal:** Treat everything the page contributes to the model context (element text, page text, cached
 findings, attributes) as **untrusted data, never instructions** — with an explicit trust boundary and a
 content sanitizer. Prompt injection via page content is a top risk for any browsing agent; for a commercial
@@ -37,7 +37,7 @@ strip known injection patterns before it reaches the model, matching nanobrowser
 - [x] Module in an existing agent package ([`packages/tool-executor/src/content-guard.ts`](../../packages/tool-executor/src/content-guard.ts), Electron-free, beside `content-sanitizer`): `sanitizeContent` (NFKC + zero-width strip + pattern redact), `detectThreats` (non-mutating), `wrapUserRequest`, `SECURITY_PREAMBLE`, and the threat taxonomy (`task_override`, `prompt_injection`, `forged_trust_tag`). *(zod-typed `enabled`/`strict` config → PR2 with the PII work.)*
 - [x] Wired at the perception/observation boundary (AI-2 serialization + `readPage` via `buildElementsSnapshot`/`buildPageSnapshot`) so nothing page-derived reaches the model unwrapped. *(`cache_content` guarding lands with that action — AI-4.)*
 - [x] Added the general security preamble to the reactor + planner (+ completion-validator) system prompts (small, general — not per-site).
-- [ ] Pattern-based PII redaction on inbound text (SSN/card/email/credentials in strict mode), coordinated with existing redaction. *(PR2.)*
+- [x] Pattern-based PII redaction on inbound text (email/card/SSN/credentials in `strict` mode via `GuardConfig`), a heuristic v1 that complements — does not replace — the authoritative outbound redaction; flags `sensitive_data`. *(Off by default — a browsing agent legitimately reads page data; wiring strict mode to a user setting is a small follow-up. zod validation of the config lives at its settings-loading boundary, not in the pure guard.)*
 - [x] Injection fixtures + unit tests; the real-model adversarial task-integrity measurement pends the harness env. *(PR2 completes the on-harness measurement.)*
 
 ## Scope notes

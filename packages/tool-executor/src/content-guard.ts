@@ -14,7 +14,18 @@ import { sanitizeText } from './content-sanitizer.js';
  */
 
 /** The coarse taxonomy of inbound threats the guard recognizes (shared with the audit/taint plane). */
-export type ThreatKind = 'task_override' | 'prompt_injection' | 'forged_trust_tag';
+export type ThreatKind = 'task_override' | 'prompt_injection' | 'forged_trust_tag' | 'sensitive_data';
+
+/**
+ * Guard configuration. `enabled: false` passes text through untouched (caller opt-out). `strict: true`
+ * additionally redacts inbound PII (email / card / SSN / credentials) from page text — off by default
+ * because a browsing agent legitimately needs to read most page data; it's an opt-in hardening mode.
+ */
+export interface GuardConfig {
+  enabled?: boolean;
+  strict?: boolean;
+}
+const DEFAULT_CONFIG: Required<GuardConfig> = { enabled: true, strict: false };
 
 export interface Threat {
   kind: ThreatKind;
@@ -71,6 +82,20 @@ const FORGED_TAG_REDACTION = '[filtered tag]';
 const MAX_SAMPLE = 80;
 
 /**
+ * Inbound PII patterns redacted only in {@link GuardConfig.strict} mode (heuristic/regex v1). Bounded
+ * quantifiers only. This complements — does not replace — the authoritative OUTBOUND redaction; it
+ * strips page-visible PII before it can enter the model context in hardened runs.
+ */
+const PII_PATTERNS: readonly { label: string; re: RegExp }[] = [
+  { label: 'email', re: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,24}\b/g },
+  // 13–16 digit card number in the common 4-4-4-(1..4) grouping (optional space/hyphen separators).
+  { label: 'card', re: /\b\d{4}[ -]?\d{4}[ -]?\d{4}[ -]?\d{1,4}\b/g },
+  { label: 'ssn', re: /\b\d{3}-\d{2}-\d{4}\b/g },
+  // "password: …" / "api_key = …" / "secret: …" — redacts the value, keeps the label as a signal.
+  { label: 'credential', re: /\b(?:password|passwd|api[_-]?key|secret|token)\b\s*[:=]\s*\S{1,120}/gi },
+];
+
+/**
  * NON-MUTATING threat scan (NFKC-folded first). Use when you only want to FLAG page content (e.g. the
  * taint plane) without altering the text; {@link sanitizeContent} both scans and redacts.
  */
@@ -91,7 +116,10 @@ export function detectThreats(text: string): Threat[] {
  * sanitizer) → redact injection patterns → strip forged trust tags. Returns the cleaned text plus the
  * threats + flags for the taint/audit signal. Wrap the result with {@link wrapUntrustedContent}.
  */
-export function sanitizeContent(raw: string): GuardResult {
+export function sanitizeContent(raw: string, config: GuardConfig = {}): GuardResult {
+  const { enabled, strict } = { ...DEFAULT_CONFIG, ...config };
+  if (!enabled) return { text: raw, threats: [], flags: [] };
+
   const base = sanitizeText(raw.normalize('NFKC'));
   const threats = detectThreats(base.text);
   let text = base.text;
@@ -99,6 +127,20 @@ export function sanitizeContent(raw: string): GuardResult {
   text = text.replace(FORGED_TRUST_TAG, FORGED_TAG_REDACTION);
   const flags = [...base.flags];
   if (threats.length > 0) flags.push('injection');
+
+  if (strict) {
+    let pii = false;
+    for (const { label, re } of PII_PATTERNS) {
+      text = text.replace(re, () => {
+        pii = true;
+        return `[redacted: ${label}]`;
+      });
+    }
+    if (pii) {
+      flags.push('sensitive_data');
+      threats.push({ kind: 'sensitive_data', sample: '[redacted]' });
+    }
+  }
   return { text, threats, flags };
 }
 
