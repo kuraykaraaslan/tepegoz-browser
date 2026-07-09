@@ -2,6 +2,7 @@ import { AppError } from '@tepegoz/libs';
 import {
   AnthropicProvider,
   GeminiProvider,
+  KimiProvider,
   ModelGateway,
   ModelRouter,
   OpenAIProvider,
@@ -225,6 +226,9 @@ function providerFor(
   }
   if (provider === 'gemini') {
     return new GeminiProvider({ apiKey });
+  }
+  if (provider === 'kimi') {
+    return new KimiProvider({ apiKey });
   }
   return new AnthropicProvider({ apiKey, effort });
 }

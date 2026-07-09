@@ -4,7 +4,7 @@
  * by the SANDBOXED preload, which must stay dependency-free) can consume it at runtime; `enums.ts`
  * builds the zod validator (`AIProviderEnum`) from this same array.
  */
-export const AI_PROVIDERS = ['anthropic', 'openai', 'gemini', 'local'] as const;
+export const AI_PROVIDERS = ['anthropic', 'openai', 'gemini', 'kimi', 'local'] as const;
 export type AIProvider = (typeof AI_PROVIDERS)[number];
 
 /**
@@ -28,6 +28,7 @@ export const RUNNABLE_AI_PROVIDERS = [
   'anthropic',
   'openai',
   'gemini',
+  'kimi',
 ] as const satisfies readonly AIProvider[];
 
 /** True when the agent runtime can drive `provider` today (see {@link RUNNABLE_AI_PROVIDERS}). */

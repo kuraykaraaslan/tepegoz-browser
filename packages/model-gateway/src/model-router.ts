@@ -1,5 +1,12 @@
 import type { AIProvider } from '@tepegoz/shared-types';
-import { ANTHROPIC_MODEL, GEMINI_MODEL, LOCAL_MODEL, OPENAI_MODEL, type EffortLevel } from './models';
+import {
+  ANTHROPIC_MODEL,
+  GEMINI_MODEL,
+  KIMI_MODEL,
+  LOCAL_MODEL,
+  OPENAI_MODEL,
+  type EffortLevel,
+} from './models';
 
 /**
  * Deterministic capability → model routing (L7). Maps each capability to a model tier and decides
@@ -27,6 +34,7 @@ const PROVIDER_MODELS: Record<AIProvider, Record<ModelTier, string>> = {
   anthropic: ANTHROPIC_MODEL,
   openai: OPENAI_MODEL,
   gemini: GEMINI_MODEL,
+  kimi: KIMI_MODEL,
   local: LOCAL_MODEL,
 };
 

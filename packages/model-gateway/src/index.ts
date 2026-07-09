@@ -8,3 +8,4 @@ export * from './scripted-provider';
 export * from './providers/anthropic.provider';
 export * from './providers/openai.provider';
 export * from './providers/gemini.provider';
+export * from './providers/kimi.provider';

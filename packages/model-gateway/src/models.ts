@@ -50,6 +50,21 @@ export const GEMINI_MODEL = {
 export type GeminiModelId = (typeof GEMINI_MODEL)[keyof typeof GEMINI_MODEL];
 
 /**
+ * Kimi (Moonshot AI) model IDs per tier — same three roles as {@link ANTHROPIC_MODEL} so the router
+ * picks a provider's map by the SAME `plan | exec | classify` key. The Kimi API is OpenAI-compatible;
+ * `kimi-k2-0711-preview` (the flagship K2 model) drives planning AND the reactive exec loop, and the
+ * cheaper `moonshot-v1-8k` handles classify. These are plain chat models (no effort field). Edit here
+ * to retune — the routing LOGIC is provider-agnostic and does not change.
+ */
+export const KIMI_MODEL = {
+  plan: 'kimi-k2-0711-preview',
+  exec: 'kimi-k2-0711-preview',
+  classify: 'moonshot-v1-8k',
+} as const;
+
+export type KimiModelId = (typeof KIMI_MODEL)[keyof typeof KIMI_MODEL];
+
+/**
  * On-device (local) tier map. Every tier resolves to the same routing placeholder `LOCAL_SLM_MODEL`
  * (see model-router) — the real GGUF is chosen at run time by the selected catalog model, which
  * `LocalProvider.resolveModel()` maps to a file path. A tiny local model has no meaningful plan/exec/
