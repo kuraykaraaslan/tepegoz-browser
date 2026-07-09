@@ -5,7 +5,7 @@ import type { CanonRequest } from '../types';
 function req(over: Partial<CanonRequest> = {}): CanonRequest {
   return {
     provider: 'kimi',
-    model: 'kimi-k2-0711-preview',
+    model: 'kimi-k2.6',
     capability: 'plan',
     messages: [{ role: 'user', content: 'hi' }],
     maxTokens: 1024,

@@ -52,13 +52,14 @@ export type GeminiModelId = (typeof GEMINI_MODEL)[keyof typeof GEMINI_MODEL];
 /**
  * Kimi (Moonshot AI) model IDs per tier — same three roles as {@link ANTHROPIC_MODEL} so the router
  * picks a provider's map by the SAME `plan | exec | classify` key. The Kimi API is OpenAI-compatible;
- * `kimi-k2-0711-preview` (the flagship K2 model) drives planning AND the reactive exec loop, and the
- * cheaper `moonshot-v1-8k` handles classify. These are plain chat models (no effort field). Edit here
+ * `kimi-k2.6` (the current flagship, 256k context) drives planning AND the reactive exec loop, and the
+ * cheaper `moonshot-v1-8k` handles classify. These are plain chat models (no effort field). NOTE: the
+ * `kimi-k2-*-preview` snapshots were deprecated (2026-05) — use the dotted `kimi-k2.N` line. Edit here
  * to retune — the routing LOGIC is provider-agnostic and does not change.
  */
 export const KIMI_MODEL = {
-  plan: 'kimi-k2-0711-preview',
-  exec: 'kimi-k2-0711-preview',
+  plan: 'kimi-k2.6',
+  exec: 'kimi-k2.6',
   classify: 'moonshot-v1-8k',
 } as const;
 

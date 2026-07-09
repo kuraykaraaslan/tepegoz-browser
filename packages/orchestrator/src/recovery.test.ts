@@ -82,4 +82,19 @@ describe('agent recovery classification', () => {
     });
     expect(failure.kind).toBe('transient');
   });
+
+  it('classifies a malformed-arguments VALIDATION_ERROR as boundedly retryable (fix the shape and retry)', () => {
+    // Validation runs before any side effect in the ToolGateway, so a rejected call is safe to retry with
+    // corrected args — a hard stop here killed whole runs when a (weaker) model got the shape wrong once.
+    const failure = classifyToolFailure({
+      tool: 'browser_update_page',
+      error: err('VALIDATION_ERROR', 'Invalid arguments for browser_update_page', false),
+    });
+    expect(failure.kind).toBe('validation');
+    expect(failure.retryable).toBe(true);
+    // Still fails closed (bounded by the reactor's recovery counter) if the model never corrects it.
+    expect(stopReasonForFailure(failure)).toBe('tool_error');
+    expect(recoveryAdviceFor(failure).retryable).toBe(true);
+    expect(recoveryAdviceFor(failure).instruction.toLowerCase()).toContain('schema');
+  });
 });

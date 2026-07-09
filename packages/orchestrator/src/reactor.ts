@@ -233,12 +233,31 @@ function stableStringify(v: unknown): string {
     .join(',')}}`;
 }
 
+/** Compact rendering of a ToolError's `details` when they are zod issues (the shape the ToolGateway
+ *  attaches on a VALIDATION_ERROR): `path: message` per issue, so the model sees exactly which field/
+ *  type was wrong and can self-correct. Bounded; returns '' for any other/absent detail shape. */
+function renderIssues(details: unknown): string {
+  if (!Array.isArray(details)) return '';
+  const lines = details
+    .filter((i): i is { path?: unknown; message?: unknown } => typeof i === 'object' && i !== null)
+    .map((i) => {
+      const path = Array.isArray(i.path) && i.path.length > 0 ? i.path.join('.') : '(root)';
+      const message = typeof i.message === 'string' ? i.message : 'invalid';
+      return `${path}: ${message}`;
+    });
+  if (lines.length === 0) return '';
+  const joined = lines.join('; ');
+  return joined.length > MAX_OBSERVATION_CHARS ? `${joined.slice(0, MAX_OBSERVATION_CHARS)}…` : joined;
+}
+
 /** The observation text fed back to the model after a tool call — a read tool's already-wrapped
  *  `content` when present, else a compact JSON of the result; truncated to keep the prompt bounded. */
 function observationOf(outcome: StepOutcome): string {
   if (!outcome.ok) {
     const err = outcome.error;
-    return `Tool "${outcome.tool}" failed: ${err?.code ?? 'ERROR'} — ${err?.message ?? 'unknown error'}`;
+    const issues = renderIssues(err?.details);
+    const detail = issues.length > 0 ? ` [${issues}]` : '';
+    return `Tool "${outcome.tool}" failed: ${err?.code ?? 'ERROR'} — ${err?.message ?? 'unknown error'}${detail}`;
   }
   const result = outcome.result;
   const text =

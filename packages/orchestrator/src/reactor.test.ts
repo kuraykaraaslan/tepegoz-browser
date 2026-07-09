@@ -338,6 +338,70 @@ describe('Reactor.run', () => {
     expect(calls).toEqual(['browser_update_page', 'browser_get_elements']);
   });
 
+  it('recovers from a malformed-args VALIDATION_ERROR: feeds the zod issues back, then completes on the corrected call', async () => {
+    // A tool whose schema requires `text`; the gateway rejects the arg-less call BEFORE the handler runs
+    // (so `calls` stays empty until the corrected call), attaching the zod issues as `details`.
+    const schemaTool: RegisteredTool<unknown> = {
+      descriptor: {
+        id: 'data_create_item',
+        description: 'fake data_create_item',
+        dangerClass: 'state_changing',
+        source: 'builtin',
+        inputSchema: { type: 'object' },
+        requiresIdempotencyKey: false,
+      },
+      inputSchema: {
+        safeParse: (data: unknown) => {
+          const text = (data as { text?: unknown } | null)?.text;
+          return typeof text === 'string' && text.length > 0
+            ? { success: true, data }
+            : { success: false, error: { issues: [{ path: ['text'], message: 'Required' }] } };
+        },
+      },
+      handler: () => {
+        calls.push('data_create_item');
+        return { ok: true };
+      },
+    };
+    CapabilityRegistry.reset();
+    CapabilityRegistry.register(schemaTool);
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+
+    // Recording provider so we can assert the concrete field error reaches the model's next prompt.
+    const prompts: string[] = [];
+    const replies = [
+      act('data_create_item', {}), // rejected → VALIDATION_ERROR with issues
+      act('data_create_item', { text: 'hello' }), // corrected → succeeds
+      finish,
+    ];
+    let turn = 0;
+    ModelGateway.reset();
+    ModelGateway.register({
+      id: 'anthropic',
+      complete: (r: CanonRequest) => {
+        prompts.push(r.messages.map((m) => m.content).join('\n'));
+        const text = replies[turn] ?? finish;
+        turn += 1;
+        return Promise.resolve({
+          text,
+          stopReason: 'end' as const,
+          usage: { inputTokens: 0, outputTokens: text.length },
+          toolCalls: [],
+        });
+      },
+    });
+
+    const res = await Reactor.run(req('write an item'), { maxRecoveryAttempts: 1 });
+
+    expect(res.stoppedReason).toBe('completed');
+    expect(res.outcomes[0]?.ok).toBe(false);
+    expect(res.outcomes[0]?.error?.code).toBe('VALIDATION_ERROR');
+    // The handler ran exactly once — on the corrected call, never on the rejected one.
+    expect(calls).toEqual(['data_create_item']);
+    // The rejected call's field error was fed back so the model could fix it (turn 2 sees "text: Required").
+    expect(prompts.some((p) => p.includes('text: Required'))).toBe(true);
+  });
+
   it('fixture: falls back to a screenshot when text/a11y has no useful elements', async () => {
     CapabilityRegistry.reset();
     CapabilityRegistry.register(fakeTool('browser_get_elements', 'read', { content: 'No actionable elements', elements: [] }));

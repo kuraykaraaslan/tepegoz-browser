@@ -113,8 +113,12 @@ export function classifyToolFailure(outcome: Pick<StepOutcome, 'tool' | 'error'>
   if (outcome.tool.startsWith('browser_') && NO_ACTIVE_PAGE_RE.test(message)) {
     return { ...base, kind: 'no_active_page', retryable: true };
   }
+  // Arg validation runs BEFORE policy/HITL/execution in the ToolGateway, so a rejected call had no
+  // side effect — retrying with corrected arguments is safe. Bounded by the reactor's recovery counter,
+  // so a model that can't fix its shape still fails closed after a few attempts. The concrete zod
+  // issues are fed back to the model by the reactor's observation (see observationOf).
   if (code === 'VALIDATION_ERROR') {
-    return { ...base, kind: 'validation', retryable: false };
+    return { ...base, kind: 'validation', retryable: true };
   }
   if (retryableOf(error) || code === 'RATE_LIMITED' || code === 'UPSTREAM_ERROR' || code === 'INTERNAL_ERROR') {
     return { ...base, kind: 'transient', retryable: true };
@@ -208,6 +212,13 @@ export function recoveryAdviceFor(failure: AgentFailure): RecoveryAdvice {
           'The Egress Firewall stopped this run because the outbound model request looked like it contained a secret, and it was not sent. Remove the sensitive value from context or narrow the task, then start again.',
       };
     case 'validation':
+      return {
+        retryable: true,
+        instruction:
+          "The arguments did not match the tool's input schema. Read the reported field errors below, " +
+          'then retry with corrected arguments that match the schema exactly (right field names, types, ' +
+          'and any required discriminator such as `action`). Do NOT repeat the same invalid call.',
+      };
     case 'unknown':
       return {
         retryable: false,
