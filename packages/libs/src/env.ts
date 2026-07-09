@@ -8,6 +8,7 @@ import { PolicyDecisionEnum } from '@tepegoz/shared-types';
  * process.env directly; it imports `env` from here.
  */
 const EnvSchema = z.object({
+  NODE_ENV: z.enum(['development', 'production', 'test']).optional(),
   SQLITE_PATH: z.string().min(1).optional(),
   MCP_DEFAULT_PORT: z.coerce.number().int().positive().optional(),
   POLICY_DEFAULT_DECISION: PolicyDecisionEnum.default('ask'),
@@ -17,3 +18,6 @@ const EnvSchema = z.object({
 export type Env = z.infer<typeof EnvSchema>;
 
 export const env: Env = EnvSchema.parse(process.env);
+
+/** True in local development — used to surface verbose diagnostics that are noise (or a leak) in prod. */
+export const isDev: boolean = env.NODE_ENV === 'development';

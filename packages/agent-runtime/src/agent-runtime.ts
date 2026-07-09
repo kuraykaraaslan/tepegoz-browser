@@ -1,4 +1,4 @@
-import { AppError } from '@tepegoz/libs';
+import { AppError, isDev } from '@tepegoz/libs';
 import {
   AnthropicProvider,
   GeminiProvider,
@@ -285,7 +285,21 @@ function terminalMessageFor(
 ): string {
   if (summary !== undefined && summary.length > 0) return summary;
   if (failure?.kind === 'egress_blocked' && failure.message.length > 0) return failure.message;
-  return `Finished: ${stoppedReason}`;
+  const base = `Finished: ${stoppedReason}`;
+  // In development, surface the underlying failure detail (tool + error code + message) instead of the
+  // opaque stop reason, so the Console shows *why* a run stopped. Never in production — the raw message
+  // can carry page/tool internals and is noise for end users.
+  if (isDev && failure !== undefined) {
+    const detail = [
+      failure.tool !== undefined ? `tool=${failure.tool}` : undefined,
+      failure.code !== undefined ? `code=${failure.code}` : undefined,
+      failure.message.length > 0 ? failure.message : undefined,
+    ]
+      .filter((part): part is string => part !== undefined)
+      .join(' ');
+    if (detail.length > 0) return `${base} — ${detail}`;
+  }
+  return base;
 }
 
 export async function runAgent(
