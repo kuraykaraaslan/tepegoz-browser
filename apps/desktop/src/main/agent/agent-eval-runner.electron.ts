@@ -6,6 +6,7 @@ import { runAgent, type AgentRunHooks } from '@tepegoz/agent-runtime';
 import {
   AnthropicProvider,
   GeminiProvider,
+  KimiProvider,
   OpenAIProvider,
   ScriptedProvider,
   type ModelProvider,
@@ -72,6 +73,8 @@ function liveProviderFromEnv(): { id: AIProvider; instance: ModelProvider } {
     instance = new OpenAIProvider({ apiKey });
   } else if (id === 'gemini') {
     instance = new GeminiProvider({ apiKey });
+  } else if (id === 'kimi') {
+    instance = new KimiProvider({ apiKey });
   } else {
     instance = new AnthropicProvider({ apiKey });
   }

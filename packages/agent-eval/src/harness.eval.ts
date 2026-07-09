@@ -8,6 +8,7 @@ import { recordFromOutcomes } from '@tepegoz/orchestrator';
 import {
   AnthropicProvider,
   GeminiProvider,
+  KimiProvider,
   ModelRouter,
   OpenAIProvider,
   type ModelProvider,
@@ -141,6 +142,7 @@ function judgeComplete(): (m: JudgeMessages) => Promise<string> {
   let provider: ModelProvider;
   if (id === 'openai') provider = new OpenAIProvider({ apiKey: API_KEY });
   else if (id === 'gemini') provider = new GeminiProvider({ apiKey: API_KEY });
+  else if (id === 'kimi') provider = new KimiProvider({ apiKey: API_KEY });
   else provider = new AnthropicProvider({ apiKey: API_KEY });
   const route = ModelRouter.route({ capability: 'exec', costSaver: false, localAvailable: false, provider: id });
   return async ({ system, user }) => {

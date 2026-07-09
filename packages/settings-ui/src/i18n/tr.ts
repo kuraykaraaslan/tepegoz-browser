@@ -142,6 +142,7 @@ export const tr: SettingsStrings = {
     anthropic: 'Claude (Anthropic)',
     openai: 'OpenAI',
     gemini: 'Gemini (Google)',
+    kimi: 'Kimi (Moonshot)',
     local: 'Yerel (cihazda)',
   },
 

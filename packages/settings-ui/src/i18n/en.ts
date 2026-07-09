@@ -142,6 +142,7 @@ export const en = {
     anthropic: 'Claude (Anthropic)',
     openai: 'OpenAI',
     gemini: 'Gemini (Google)',
+    kimi: 'Kimi (Moonshot)',
     local: 'Local (on-device)',
   },
 
