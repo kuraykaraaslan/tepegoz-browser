@@ -8,6 +8,7 @@ import type {
   AdblockSettings,
   AdblockState,
   AgentApprovalRequest,
+  AgentBundleExportInput,
   AgentConfig,
   AgentAutonomy,
   AgentEffort,
@@ -235,6 +236,9 @@ export interface TepegozApi {
   openAgentFile(path: string): void;
   /** Write the current chat log to the ~/tepegoz folder and reveal it. Resolves to the absolute path. */
   exportChatLog(input: { content: string; title?: string }): Promise<string>;
+  /** Write a full diagnostic bundle (chat + per-tab DOM/PNG snapshots + memory + journal + manifest) to a
+   *  `~/tepegoz/ai_agent_export_<stamp>/` folder and reveal it. Resolves to the absolute folder path. */
+  exportAgentBundle(input: AgentBundleExportInput): Promise<string>;
   /** Capture the active page's current text selection. Returns empty string when nothing is selected. */
   capturePageSelection(): Promise<string>;
   /** Open a native file picker and return the selected files' content. */

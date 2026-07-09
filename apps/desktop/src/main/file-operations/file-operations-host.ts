@@ -237,6 +237,36 @@ export default class FileOperationsHost {
     return target;
   }
 
+  /**
+   * Write a user-initiated multi-file export (the agent diagnostic bundle) into a fresh
+   * `~/tepegoz/<dirName>/` folder — same first-party rationale + fixed destination as {@link writeExport},
+   * extended to a directory tree (subfolders like `tabs/`, plus binary `base64` files for PNGs). Each
+   * file's resolved target is re-checked to stay strictly inside the bundle folder (traversal defense in
+   * depth), and its parent directory is created first. Returns the absolute bundle folder path.
+   */
+  static async writeExportBundle(
+    dirName: string,
+    files: { relPath: string; content: string; encoding?: 'utf8' | 'base64' }[],
+  ): Promise<string> {
+    const root = await canonicalize(path.join(homedir(), 'tepegoz'));
+    const bundleDir = await canonicalize(path.join(root, dirName));
+    // The bundle folder itself must sit directly under ~/tepegoz (server-generated, separator-free name).
+    if (path.dirname(bundleDir) !== root) {
+      throw new AppError(`Invalid export bundle name: '${dirName}'`, 400);
+    }
+    await fsHost.mkdir(bundleDir);
+    for (const file of files) {
+      const target = await canonicalize(path.join(bundleDir, file.relPath));
+      // Reject anything that resolves outside the bundle folder regardless of the relPath given.
+      if (target !== bundleDir && !target.startsWith(bundleDir + path.sep)) {
+        throw new AppError(`Invalid export file path: '${file.relPath}'`, 400);
+      }
+      await fsHost.mkdir(path.dirname(target));
+      await fsHost.writeFile(target, file.content, file.encoding ?? 'utf8');
+    }
+    return bundleDir;
+  }
+
   /** Canonicalize `input`, assert it is inside an allowed folder, and assert it is a regular file.
    *  Used by the upload broker before a local path is bound to an untrusted page's file input. */
   static async assertReadableFile(input: string): Promise<string> {

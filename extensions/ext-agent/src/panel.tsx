@@ -281,10 +281,12 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
     mutateGroup(activeGroupId, () => stateFromConversation(detail));
   }
 
-  /** Dump the full chat log (this group's turns + streamed events) to the ~/tepegoz folder, then flash
-   *  a brief confirmation on the header star. Used to hand a complete transcript off for debugging. */
+  /** Dump the full diagnostic bundle for this session — the chat transcript plus, gathered in the main
+   *  process, each group tab's perceived DOM + a PNG, the model-visible memory, the recent journal, and an
+   *  environment manifest — into a ~/tepegoz/ai_agent_export_<stamp>/ folder, then flash the header star.
+   *  Used to hand a complete, analyse-later snapshot of an agent run off for debugging. */
   function onExportLog(): void {
-    if (activeState.turns.length === 0) return;
+    if (activeState.turns.length === 0 || activeGroupId === null) return;
     const content = serializeConversationLog(activeState.turns, {
       exportedAt: Date.now(),
       groupId: activeGroupId,
@@ -294,8 +296,23 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
       tokens: activeState.tokens,
     });
     const title = activeState.turns[0]?.prompt.trim() ?? '';
+    const meta = {
+      ...(config !== null
+        ? { provider: config.provider, autonomy: config.autonomy, effort: config.effort }
+        : {}),
+      ...(activeState.tokens != null
+        ? {
+            tokens: {
+              inputTokens: activeState.tokens.inputTokens,
+              outputTokens: activeState.tokens.outputTokens,
+              totalTokens: activeState.tokens.totalTokens,
+            },
+          }
+        : {}),
+      ...(title.length > 0 ? { title } : {}),
+    };
     void api
-      .exportChatLog({ content, ...(title.length > 0 ? { title } : {}) })
+      .exportAgentBundle({ chatContent: content, groupId: activeGroupId, meta })
       .then(() => {
         setExportError(null);
         setLogExported(true);
@@ -422,7 +439,12 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
   }
 
   // ---- Derived values --------------------------------------------------------------------------
-  const currentLabel = config?.choices.find((ch) => ch.provider === config.provider)?.label ?? a.modelLabel;
+  const currentChoice = config?.choices.find((ch) => ch.provider === config.provider);
+  const currentLabel = currentChoice
+    ? currentChoice.keyLabel !== undefined
+      ? `${currentChoice.label} · ${currentChoice.keyLabel}`
+      : currentChoice.label
+    : a.modelLabel;
   const availableChoices = config?.choices.filter((ch) => ch.available) ?? [];
   const AutonomyGlyph = AUTONOMY_ICON[autonomy];
   const effort: AgentEffort = config?.effort ?? 'high';
@@ -525,7 +547,7 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
                   onClick={() => { chooseProvider(ch.provider); close(); }}
                   className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-text-primary hover:bg-surface-overlay"
                 >
-                  <span className="flex-1">{ch.label}</span>
+                  <span className="flex-1">{ch.keyLabel !== undefined ? `${ch.label} · ${ch.keyLabel}` : ch.label}</span>
                   {config?.provider === ch.provider && <CheckIcon className="h-4 w-4 text-amber-500" />}
                 </button>
               ))

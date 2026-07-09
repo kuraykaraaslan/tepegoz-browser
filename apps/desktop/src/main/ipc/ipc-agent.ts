@@ -24,6 +24,7 @@ import {
   AgentConversationIdSchema,
   AgentConversationListInputSchema,
   AgentConversationOpenInputSchema,
+  AgentExportBundleSchema,
   AgentExportConversationSchema,
   AgentOpenFileSchema,
   AgentPlanResponseSchema,
@@ -36,13 +37,14 @@ import { TokenLedger } from '@tepegoz/model-gateway';
 import { EventJournal } from '@tepegoz/persistence';
 import { AgentConversationStore } from '@tepegoz/persistence';
 import { TokenStore } from '@tepegoz/persistence';
-import { isRunnableProvider, type AIProvider, type EventType, type Plan } from '@tepegoz/shared-types';
+import { isRunnableProvider, RUNNABLE_AI_PROVIDERS, type AIProvider, type EventType, type Plan } from '@tepegoz/shared-types';
 import { randomUUID } from 'node:crypto';
 import AgentService, {
   type AgentRunSummary,
   type PlanApprovalDecision,
 } from '../agent/agent-service.electron';
 import { setCurrentAgentRun } from '../agent/browser-host.electron';
+import { collectAgentExportBundleFiles } from '../agent/export-bundle.electron';
 import {
   abortAllAgentRunControllers,
   agentRunController,
@@ -207,16 +209,33 @@ function effectiveAgentProvider(prefs: Preferences, hasKey: (p: AIProvider) => b
   return top !== null && isRunnableProvider(top) ? top : 'anthropic';
 }
 
-/** Build the Agent panel's config: selectable providers (with a usable-now flag) + the current choice +
- *  the autonomy level. Data-driven from the vault status + prefs. */
+/** Display name per runnable cloud provider. Keyed off the runnable-provider union so wiring up a new
+ *  provider forces a name here (and thus into the Agent panel's picker). */
+const CLOUD_PROVIDER_NAMES = {
+  anthropic: 'Claude',
+  openai: 'OpenAI',
+  gemini: 'Gemini',
+  kimi: 'Kimi',
+} satisfies Record<(typeof RUNNABLE_AI_PROVIDERS)[number], string>;
+
+/** Build the Agent panel's config: selectable providers (with a usable-now flag + default-key label) +
+ *  the current choice + the autonomy level. Data-driven from the runnable-provider set + vault + prefs. */
 function buildAgentConfig(): AgentConfig {
   const prefs = PreferenceStore.getAll();
   const status = CredentialVault.status();
   const hasKey = (p: AIProvider): boolean => status[p];
   const localModel = prefs.localProvider.selectedModelId;
+  const cloudChoices: AgentModelChoice[] = RUNNABLE_AI_PROVIDERS.map((p) => {
+    const keyLabel = CredentialVault.listMetaByProvider(p)[0]?.label;
+    return {
+      provider: p,
+      label: CLOUD_PROVIDER_NAMES[p],
+      available: hasKey(p),
+      ...(keyLabel !== undefined ? { keyLabel } : {}),
+    };
+  });
   const choices: AgentModelChoice[] = [
-    { provider: 'anthropic', label: 'Claude', available: hasKey('anthropic') },
-    { provider: 'openai', label: 'OpenAI', available: hasKey('openai') },
+    ...cloudChoices,
     {
       provider: 'local',
       label: localModel !== '' ? `Local: ${localModel}` : 'Local',
@@ -653,6 +672,25 @@ export function registerAgentIpc(): void {
     const full = await FileOperationsHost.writeExport(filename, content);
     shell.showItemInFolder(full);
     return full;
+  });
+
+  // Write a full diagnostic bundle (chat + per-tab DOM/PNG snapshots + memory + journal + manifest) into a
+  // fresh ~/tepegoz/ai_agent_export_<stamp>/ folder and reveal it. The renderer supplies the transcript +
+  // group id; the collector gathers everything only the main process can reach (tab webContents, memory,
+  // journal). Same fixed-destination + sandboxed-fs rationale as the plain chat-log export above.
+  handleAsync(IpcChannels.agentExportBundle, async (_event, payload): Promise<string> => {
+    requireAgentEnabled();
+    const input = AgentExportBundleSchema.parse(payload);
+    const now = new Date();
+    const pad = (n: number): string => String(n).padStart(2, '0');
+    const stamp =
+      `${String(now.getFullYear())}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` +
+      `_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+    const dirName = `ai_agent_export_${stamp}`;
+    const files = await collectAgentExportBundleFiles(input, now.getTime());
+    const dir = await FileOperationsHost.writeExportBundle(dirName, files);
+    shell.showItemInFolder(dir);
+    return dir;
   });
 
   // Open a file the agent produced — gated to the whitelisted folders (403 → refused + logged, never

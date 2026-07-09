@@ -146,11 +146,12 @@ export const en = {
     saved: '✓ Task saved',
     openManager: 'Open tasks',
   },
-  // Export the full chat log to the ~/tepegoz folder (the header star) — hand a transcript off for debugging.
+  // Export a full diagnostic bundle to the ~/tepegoz folder (the header star) — chat transcript plus
+  // per-tab DOM/PNG snapshots, memory, journal, and a manifest, for analysing an agent run.
   exportLog: {
-    action: 'Save chat log to tepegoz',
-    saved: '✓ Chat log saved',
-    failed: 'Could not save the chat log.',
+    action: 'Save diagnostic bundle to tepegoz',
+    saved: '✓ Bundle saved',
+    failed: 'Could not save the diagnostic bundle.',
   },
 };
 

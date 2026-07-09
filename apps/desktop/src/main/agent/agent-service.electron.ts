@@ -79,6 +79,12 @@ export default class AgentService {
     return summary;
   }
 
+  /** The model-visible conversation memory for a group (the bounded `CanonMessage[]` the runtime injects
+   *  as history) — read-only snapshot for diagnostics/export. Empty when the group has no memory yet. */
+  static conversationMemory(groupId: string): CanonMessage[] {
+    return conversations.get(groupId) ?? [];
+  }
+
   /** Clears conversation memory for a specific group AND its agent tab-group binding. */
   static newConversation(groupId: string): void {
     conversations.delete(groupId);

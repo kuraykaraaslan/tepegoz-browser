@@ -149,10 +149,11 @@ export const tr: AgentStrings = {
     saved: '✓ Görev kaydedildi',
     openManager: 'Görevleri aç',
   },
-  // Sohbet kaydını ~/tepegoz klasörüne aktar (başlıktaki yıldız) — hata ayıklama için tam dökümü paylaş.
+  // Tam tanılama paketini ~/tepegoz klasörüne aktar (başlıktaki yıldız) — sohbet dökümü + sekme DOM/PNG
+  // anlık görüntüleri, bellek, günlük ve manifest; bir agent koşusunu analiz etmek için.
   exportLog: {
-    action: 'Sohbet kaydını tepegoz’a kaydet',
-    saved: '✓ Sohbet kaydı kaydedildi',
-    failed: 'Sohbet kaydı kaydedilemedi.',
+    action: 'Tanılama paketini tepegoz’a kaydet',
+    saved: '✓ Paket kaydedildi',
+    failed: 'Tanılama paketi kaydedilemedi.',
   },
 };

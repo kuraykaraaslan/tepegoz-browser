@@ -107,8 +107,10 @@ export type AgentAutonomy = 'ask' | 'act' | 'auto' | 'dangerous';
 /** One selectable provider/model for the panel's model picker. */
 export interface AgentModelChoice {
   provider: AIProvider;
-  /** Human label, e.g. "Claude", "OpenAI", "Local: <model>". */
+  /** Provider display name, e.g. "Claude", "OpenAI", "Gemini", "Local: <model>". */
   label: string;
+  /** The provider's default (highest-priority) key label, e.g. "Personal". Absent for local / no key. */
+  keyLabel?: string;
   /** Whether it's usable right now (a cloud provider has a key; local has a selected model). */
   available: boolean;
 }
@@ -119,6 +121,24 @@ export interface AgentConfig {
   choices: AgentModelChoice[];
   autonomy: AgentAutonomy;
   effort: AgentEffort;
+}
+
+/** Input for the diagnostic-bundle export (the header star). The renderer supplies the rendered chat
+ *  transcript + the active agent group id + display meta; the main process gathers the per-tab
+ *  snapshots, model-visible memory, journal, and environment (it owns the tabs' webContents). */
+export interface AgentBundleExportInput {
+  /** The rendered chat-log markdown, written verbatim as `chat.md`. */
+  chatContent: string;
+  /** The active agent session group id — selects which tabs' snapshots + which memory to include. */
+  groupId: string;
+  /** Optional display context echoed into `manifest.json` (the panel already has these). */
+  meta?: {
+    provider?: string;
+    autonomy?: string;
+    effort?: string;
+    tokens?: { inputTokens?: number; outputTokens?: number; totalTokens?: number };
+    title?: string;
+  };
 }
 
 /** A file the user attached to a message via the native file picker. */
@@ -182,6 +202,9 @@ export interface AgentHostApi {
   openAgentFile(path: string): void;
   /** Write the current chat log to the ~/tepegoz folder and reveal it. Resolves to the absolute path. */
   exportChatLog(input: { content: string; title?: string }): Promise<string>;
+  /** Write a full diagnostic bundle (chat + per-tab DOM/PNG snapshots + memory + journal + manifest) to a
+   *  `~/tepegoz/ai_agent_export_<stamp>/` folder and reveal it. Resolves to the absolute folder path. */
+  exportAgentBundle(input: AgentBundleExportInput): Promise<string>;
   /** Open a URL from agent output in a new browser tab. */
   createTab(url?: string): void;
   /** Capture the active page's current text selection. Returns empty string if nothing is selected. */

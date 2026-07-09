@@ -207,6 +207,30 @@ export const AgentExportConversationSchema = z.object({
   title: z.string().max(200).optional(),
 });
 
+/** `agent:export-bundle` payload — the rendered chat-log text (written as `chat.md`), the agent session
+ *  group id whose tabs/memory the main process gathers, and optional display meta echoed into the
+ *  manifest. The heavy diagnostics (tab DOM/PNG snapshots, model-visible memory, journal, environment)
+ *  are collected in the main process, which is the only side that can reach a tab's webContents. */
+export const AgentExportBundleSchema = z.object({
+  chatContent: z.string().min(1).max(5_000_000),
+  groupId: z.string().min(1).max(200),
+  meta: z
+    .object({
+      provider: z.string().max(100).optional(),
+      autonomy: z.string().max(50).optional(),
+      effort: z.string().max(50).optional(),
+      tokens: z
+        .object({
+          inputTokens: z.number().optional(),
+          outputTokens: z.number().optional(),
+          totalTokens: z.number().optional(),
+        })
+        .optional(),
+      title: z.string().max(200).optional(),
+    })
+    .optional(),
+});
+
 export const HistoryQuerySchema = z.string().max(200);
 export const HistoryUrlSchema = z.string().min(1).max(4096);
 

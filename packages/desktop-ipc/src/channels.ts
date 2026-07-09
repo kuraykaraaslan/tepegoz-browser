@@ -102,6 +102,9 @@ export const IpcChannels = {
   agentOpenFile: 'agent:open-file',
   /** Renderer→main: write the current chat log to the ~/tepegoz folder and reveal it → absolute path. */
   agentExportConversation: 'agent:export-conversation',
+  /** Renderer→main: write a full diagnostic bundle (chat + per-tab DOM/PNG snapshots + memory + journal +
+   *  manifest) into a `~/tepegoz/ai_agent_export_<stamp>/` folder and reveal it → absolute folder path. */
+  agentExportBundle: 'agent:export-bundle',
   // Agent extension conversation history. The product surface is the ext-agent page, not a core page.
   agentConversationsList: 'agent-conversations:list',
   agentConversationsGet: 'agent-conversations:get',

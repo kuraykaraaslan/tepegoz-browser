@@ -12,6 +12,7 @@
 import type {
   AgentApprovalRequest,
   AgentAutonomy,
+  AgentBundleExportInput,
   AgentConfig,
   AgentEffort,
   AgentEvent,
@@ -32,6 +33,7 @@ export { AGENT_EFFORT_LEVELS };
 export type {
   AgentApprovalRequest,
   AgentAutonomy,
+  AgentBundleExportInput,
   AgentConfig,
   AgentEffort,
   AgentEvent,

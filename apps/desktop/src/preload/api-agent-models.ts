@@ -3,6 +3,7 @@ import {
   IpcChannels,
   type AgentApprovalRequest,
   type AgentAutonomy,
+  type AgentBundleExportInput,
   type AgentConfig,
   type AgentConversationDetail,
   type AgentConversationListInput,
@@ -55,6 +56,7 @@ export const agentModelsApi: Pick<
   | 'setAgentEffort'
   | 'openAgentFile'
   | 'exportChatLog'
+  | 'exportAgentBundle'
   | 'capturePageSelection'
   | 'pickAgentFiles'
   | 'capturePageScreenshot'
@@ -153,6 +155,8 @@ export const agentModelsApi: Pick<
   },
   exportChatLog: (input: { content: string; title?: string }) =>
     invoke<string>(IpcChannels.agentExportConversation, input),
+  exportAgentBundle: (input: AgentBundleExportInput) =>
+    invoke<string>(IpcChannels.agentExportBundle, input),
   capturePageSelection: () => invoke<string>(IpcChannels.agentCaptureSelection),
   pickAgentFiles: () => invoke<AgentFileAttachment[]>(IpcChannels.agentPickFiles),
   capturePageScreenshot: () => invoke<string | null>(IpcChannels.tabsCapture),
