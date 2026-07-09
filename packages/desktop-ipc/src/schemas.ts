@@ -344,6 +344,16 @@ export const PageMenuActionSchema = z.enum([
   'open-media-new-tab',
 ]);
 
+/** `page-menu:contribution-action` payload — dispatches an item selected from a contributed section. */
+export const PageMenuContributionActionSchema = z.object({
+  menuId: z.string().min(1).max(128),
+  contributorId: z.string().min(1).max(128),
+  sectionId: z.string().min(1).max(128),
+  itemId: z.string().min(1).max(128),
+  actionId: z.string().min(1).max(128),
+  payload: z.unknown().optional(),
+});
+
 /** `submenu:open` payload — a flyout submenu opened beside the main menu popup (its own native window). */
 export const SubmenuOpenSchema = z.object({
   kind: z.string().min(1).max(32),

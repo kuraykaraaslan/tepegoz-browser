@@ -7,7 +7,11 @@ import {
   type PageContextMenuContext,
 } from '@tepegoz/page-context-menu';
 import { pageContextMenuDict } from '@tepegoz/page-context-menu/i18n';
-import type { PageMenuAction, PageMenuContext } from '@tepegoz/desktop-ipc';
+import type {
+  PageMenuAction,
+  PageMenuContext,
+  PageMenuContributionActionInput,
+} from '@tepegoz/desktop-ipc';
 import { applyTheme } from '../lib/theme';
 
 /**
@@ -23,6 +27,8 @@ import { applyTheme } from '../lib/theme';
 /** Map the IPC context to the model's context (field names align; `pageUrl` isn't needed by the model). */
 function toModelContext(c: PageMenuContext | null): PageContextMenuContext {
   return {
+    menuId: c?.menuId ?? '',
+    contributions: c?.contributions ?? [],
     canGoBack: c?.canGoBack ?? false,
     canGoForward: c?.canGoForward ?? false,
     selectionText: c?.selectionText ?? '',
@@ -97,6 +103,10 @@ function PageContextMenuBody({ ctx }: { ctx: PageContextMenuContext }) {
     window.tepegoz.pageMenuAction(action);
     window.tepegoz.closePopup();
   };
+  const actContribution = (input: PageMenuContributionActionInput): void => {
+    window.tepegoz.pageMenuContributionAction(input);
+    window.tepegoz.closePopup();
+  };
 
   const items = buildPageContextMenuModel(t, ctx, {
     back: act('back'),
@@ -117,6 +127,7 @@ function PageContextMenuBody({ ctx }: { ctx: PageContextMenuContext }) {
     copyMediaLink: act('copy-media-link'),
     saveMedia: act('save-media'),
     openMediaNewTab: act('open-media-new-tab'),
+    contribution: actContribution,
   });
 
   return <Menu items={items} ariaLabel={t.menuLabel} autoFocus />;

@@ -933,7 +933,7 @@ export class WindowTabs {
     // `params` (selection/link/media/editable) picks the menu variant in the renderer.
     wc.on('context-menu', (_e, params) => {
       if (!this.win.isDestroyed()) {
-        openPageContextMenu(this.win, params, this.bounds, {
+        void openPageContextMenu(this.win, wc, params, this.bounds, {
           canGoBack: wc.navigationHistory.canGoBack(),
           canGoForward: wc.navigationHistory.canGoForward(),
         });

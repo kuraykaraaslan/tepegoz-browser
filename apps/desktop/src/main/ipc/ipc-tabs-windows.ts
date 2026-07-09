@@ -10,6 +10,7 @@ import {
   ExtensionIdSchema,
   NavigateInputSchema,
   PageMenuActionSchema,
+  PageMenuContributionActionSchema,
   PopupOpenSchema,
   PopupResizeSchema,
   SubmenuOpenSchema,
@@ -30,7 +31,11 @@ import { showTabContextMenu } from '../menus/tab-context-menu';
 import { showBookmarkContextMenu } from '../menus/bookmark-context-menu';
 import { showExtensionContextMenu } from '../menus/extension-context-menu';
 import { showGroupContextMenu } from '../menus/tab-group-context-menu';
-import { getPageMenuContext, runPageMenuAction } from '../menus/page-context-menu';
+import {
+  getPageMenuContext,
+  runPageMenuAction,
+  runPageMenuContributionAction,
+} from '../menus/page-context-menu';
 import {
   handle,
   handleAsync,
@@ -276,6 +281,9 @@ export function registerTabsWindowsIpc(): void {
   handle(IpcChannels.pageMenuGetContext, () => getPageMenuContext());
   onAction(IpcChannels.pageMenuAction, PageMenuActionSchema, (action) => {
     runPageMenuAction(action);
+  });
+  onAction(IpcChannels.pageMenuContributionAction, PageMenuContributionActionSchema, (input) => {
+    runPageMenuContributionAction(input);
   });
   // Exit — quits the whole app regardless of the sender window (a popup can't use the window-close path).
   onSignal(IpcChannels.appQuit, () => {

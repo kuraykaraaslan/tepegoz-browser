@@ -8,4 +8,8 @@ export type {
   PageContextMenuContext,
   PageContextMenuActions,
   PageContextMenuMediaType,
+  PageMenuContributionActionInput,
+  PageMenuContributionItem,
+  PageMenuContributionPlacement,
+  PageMenuContributionSection,
 } from './model';

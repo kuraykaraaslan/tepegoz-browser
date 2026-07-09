@@ -405,8 +405,40 @@ export type PageMenuAction =
 /** The media kind under the cursor (from Electron's `context-menu` params). `none` = not media. */
 export type PageMenuMediaType = 'none' | 'image' | 'audio' | 'video' | 'canvas' | 'file' | 'plugin';
 
+export type PageMenuContributionPlacement = 'top' | 'before-edit' | 'before-inspect' | 'bottom';
+
+export interface PageMenuContributionItem {
+  id: string;
+  label: string;
+  actionId: string;
+  payload?: unknown;
+  shortcut?: string;
+  disabled?: boolean;
+  danger?: boolean;
+}
+
+export interface PageMenuContributionSection {
+  id: string;
+  contributorId: string;
+  title?: string;
+  placement: PageMenuContributionPlacement;
+  priority: number;
+  items: PageMenuContributionItem[];
+}
+
+export interface PageMenuContributionActionInput {
+  menuId: string;
+  contributorId: string;
+  sectionId: string;
+  itemId: string;
+  actionId: string;
+  payload?: unknown;
+}
+
 /** Snapshot the page context menu reads to pick its variant + enable rows (captured at right-click). */
 export interface PageMenuContext {
+  menuId: string;
+  contributions: PageMenuContributionSection[];
   canGoBack: boolean;
   canGoForward: boolean;
   pageUrl: string;

@@ -1,8 +1,19 @@
-import { type BrowserWindow, type ContextMenuParams, type Rectangle } from 'electron';
-import type { PageMenuAction, PageMenuContext } from '@tepegoz/desktop-ipc';
+import { randomUUID } from 'node:crypto';
+import {
+  type BrowserWindow,
+  type ContextMenuParams,
+  type Rectangle,
+  type WebContents,
+} from 'electron';
+import type {
+  PageMenuAction,
+  PageMenuContext,
+  PageMenuContributionActionInput,
+} from '@tepegoz/desktop-ipc';
 import PopupWindowManager from '../popup-window';
 import TabManager from '../tabs';
 import ClipboardService from '../clipboard/clipboard-service.electron';
+import PageContextMenuContributionService from './page-context-menu-contributions';
 
 /**
  * Web-page (WebContentsView) right-click menu — the Chrome-style page context menu. Unlike the native
@@ -16,7 +27,7 @@ import ClipboardService from '../clipboard/clipboard-service.electron';
 const WIDTH = 260;
 /** Open-time height estimate (px). The popup is `resizable:false`, so this MUST be >= the tallest
  *  variant's content height; the renderer measures and reports its natural height and main trims to fit. */
-const HEIGHT = 520;
+const HEIGHT = 680;
 /** Cap the selection carried to the renderer (label display only — the full selection isn't needed). */
 const SELECTION_DISPLAY_MAX = 120;
 
@@ -24,9 +35,12 @@ const SELECTION_DISPLAY_MAX = 120;
 interface Captured extends PageMenuContext {
   x: number;
   y: number;
+  parent: BrowserWindow;
+  webContents: WebContents;
 }
 
 let last: Captured | null = null;
+let openSeq = 0;
 
 /** DuckDuckGo search URL for the selected text (matches the app's default engine / NEW_TAB_URL). */
 function searchUrl(query: string): string {
@@ -36,13 +50,17 @@ function searchUrl(query: string): string {
 /** Open the page context menu at the click point. `viewBounds` is the web view's rect within the window
  *  content (so the view-relative `params.x/y` map to window-content coordinates for anchoring); `nav`
  *  is the clicked view's navigation state (captured now — the active view can't change under the menu). */
-export function openPageContextMenu(
+export async function openPageContextMenu(
   parent: BrowserWindow,
+  webContents: WebContents,
   params: ContextMenuParams,
   viewBounds: Rectangle,
   nav: { canGoBack: boolean; canGoForward: boolean },
-): void {
-  last = {
+): Promise<void> {
+  const seq = ++openSeq;
+  const captured: Captured = {
+    menuId: randomUUID(),
+    contributions: [],
     canGoBack: nav.canGoBack,
     canGoForward: nav.canGoForward,
     pageUrl: params.pageURL,
@@ -57,7 +75,12 @@ export function openPageContextMenu(
     canSelectAll: params.editFlags.canSelectAll,
     x: params.x,
     y: params.y,
+    parent,
+    webContents,
   };
+  const contributions = await PageContextMenuContributionService.collect(captured);
+  if (seq !== openSeq || parent.isDestroyed() || webContents.isDestroyed()) return;
+  last = { ...captured, contributions };
   const anchor: Rectangle = {
     x: viewBounds.x + params.x,
     y: viewBounds.y + params.y,
@@ -76,6 +99,8 @@ export function openPageContextMenu(
 }
 
 const EMPTY: PageMenuContext = {
+  menuId: '',
+  contributions: [],
   canGoBack: false,
   canGoForward: false,
   pageUrl: '',
@@ -94,10 +119,42 @@ const EMPTY: PageMenuContext = {
 export function getPageMenuContext(): PageMenuContext {
   if (last === null) return EMPTY;
   // Return only the wire context (PageMenuContext) — the captured x/y point is main-process-only.
-  const { canGoBack, canGoForward, pageUrl, selectionText, linkUrl, srcUrl, mediaType, isEditable,
-    canCopy, canCut, canPaste, canSelectAll } = last;
-  return { canGoBack, canGoForward, pageUrl, selectionText, linkUrl, srcUrl, mediaType, isEditable,
-    canCopy, canCut, canPaste, canSelectAll };
+  const {
+    menuId,
+    contributions,
+    canGoBack,
+    canGoForward,
+    pageUrl,
+    selectionText,
+    linkUrl,
+    srcUrl,
+    mediaType,
+    isEditable,
+    canCopy,
+    canCut,
+    canPaste,
+    canSelectAll,
+  } = last;
+  return {
+    menuId,
+    contributions,
+    canGoBack,
+    canGoForward,
+    pageUrl,
+    selectionText,
+    linkUrl,
+    srcUrl,
+    mediaType,
+    isEditable,
+    canCopy,
+    canCut,
+    canPaste,
+    canSelectAll,
+  };
+}
+
+export function runPageMenuContributionAction(input: PageMenuContributionActionInput): void {
+  void PageContextMenuContributionService.runAction(input);
 }
 
 /** Run a wired page-menu action against the captured context (all act on the active web view). */

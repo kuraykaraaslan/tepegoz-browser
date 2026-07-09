@@ -4,6 +4,7 @@ import {
   type ContentBounds,
   type PageMenuAction,
   type PageMenuContext,
+  type PageMenuContributionActionInput,
   type TabDragBegin,
   type TabDragPoint,
   type TabGroupColor,
@@ -67,6 +68,7 @@ export const windowTabsApi: Pick<
   | 'closeSubmenu'
   | 'getPageMenuContext'
   | 'pageMenuAction'
+  | 'pageMenuContributionAction'
 > = {
   minimizeWindow: () => {
     ipcRenderer.send(IpcChannels.windowMinimize);
@@ -251,5 +253,8 @@ export const windowTabsApi: Pick<
   getPageMenuContext: () => invoke<PageMenuContext>(IpcChannels.pageMenuGetContext),
   pageMenuAction: (action: PageMenuAction) => {
     ipcRenderer.send(IpcChannels.pageMenuAction, action);
+  },
+  pageMenuContributionAction: (input: PageMenuContributionActionInput) => {
+    ipcRenderer.send(IpcChannels.pageMenuContributionAction, input);
   },
 };

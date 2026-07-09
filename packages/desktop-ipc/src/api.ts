@@ -52,7 +52,11 @@ import type {
 import type { ProviderId, ProviderKeyMeta } from './contract';
 import type { AdaptorConnection } from './contract';
 import type { ExtensionId, ExtensionManifestWire, ExtensionContextMenuChoice } from './contract';
-import type { PageMenuAction, PageMenuContext } from './contract';
+import type {
+  PageMenuAction,
+  PageMenuContext,
+  PageMenuContributionActionInput,
+} from './contract';
 import type { LoginCredentialMeta, LoginImportResult, AutofillAvailablePayload } from './contract';
 import type { NotificationPermissionRequest, NotificationPermissionResponse } from './contract';
 import type { PublicSettings } from './public-settings';
@@ -339,6 +343,8 @@ export interface TepegozApi {
   getPageMenuContext(): Promise<PageMenuContext>;
   /** Run a wired page-menu action against the captured context (acted on in the main process). */
   pageMenuAction(action: PageMenuAction): void;
+  /** Run a contributed page-menu action against the menu captured at right-click time. */
+  pageMenuContributionAction(input: PageMenuContributionActionInput): void;
   // Browsing history (tepegoz://history).
   getHistory(params?: { limit?: number; offset?: number }): Promise<HistoryEntry[]>;
   searchHistory(params: {

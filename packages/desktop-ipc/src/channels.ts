@@ -153,6 +153,7 @@ export const IpcChannels = {
   // process. The popup surface pulls the captured context, then dispatches the chosen action.
   pageMenuGetContext: 'page-menu:get-context',
   pageMenuAction: 'page-menu:action',
+  pageMenuContributionAction: 'page-menu:contribution-action',
   appQuit: 'app:quit',
   historyList: 'history:list',
   historySearch: 'history:search',
