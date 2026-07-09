@@ -14,6 +14,11 @@ import {
   type ProviderKeyMeta,
   type PublicSettings,
   type TepegozApi,
+  type TypoCheckInput,
+  type TypoCheckResult,
+  type TypoDictionaryInfo,
+  type TypoSettings,
+  type TypoState,
 } from '@tepegoz/desktop-ipc';
 import { invoke } from './ipc-invoke';
 
@@ -45,6 +50,18 @@ export const settingsMiscApi: Pick<
   | 'getAdblockState'
   | 'setAdblockSiteEnabled'
   | 'refreshAdblockLists'
+  | 'getTypoSettings'
+  | 'setTypoSettings'
+  | 'getTypoState'
+  | 'checkTypoText'
+  | 'listTypoDictionaries'
+  | 'downloadTypoDictionary'
+  | 'cancelTypoDictionaryDownload'
+  | 'deleteTypoDictionary'
+  | 'showTypoDictionariesFolder'
+  | 'setTypoSiteEnabled'
+  | 'addTypoIgnoredWord'
+  | 'onTypoDictionariesState'
   | 'pickFileAccessFolder'
   | 'pickNewTabBackgroundImage'
   | 'getNewTabBackgroundImage'
@@ -91,6 +108,34 @@ export const settingsMiscApi: Pick<
   setAdblockSiteEnabled: (origin: string, enabled: boolean) =>
     invoke<AdblockSettings>(IpcChannels.adblockSiteSet, { origin, enabled }),
   refreshAdblockLists: () => invoke<AdblockState>(IpcChannels.adblockRefresh),
+  getTypoSettings: () => invoke<TypoSettings>(IpcChannels.typoGet),
+  setTypoSettings: (patch: Partial<TypoSettings>) =>
+    invoke<TypoSettings>(IpcChannels.typoSet, patch),
+  getTypoState: () => invoke<TypoState>(IpcChannels.typoState),
+  checkTypoText: (input: TypoCheckInput) =>
+    invoke<TypoCheckResult>(IpcChannels.typoCheck, input),
+  listTypoDictionaries: () =>
+    invoke<TypoDictionaryInfo[]>(IpcChannels.typoDictionariesList),
+  downloadTypoDictionary: (id: string) =>
+    invoke<void>(IpcChannels.typoDictionaryDownload, id),
+  cancelTypoDictionaryDownload: (id: string) => {
+    ipcRenderer.send(IpcChannels.typoDictionaryCancel, id);
+  },
+  deleteTypoDictionary: (id: string) => invoke<void>(IpcChannels.typoDictionaryDelete, id),
+  showTypoDictionariesFolder: () => invoke<void>(IpcChannels.typoDictionaryShowFolder),
+  setTypoSiteEnabled: (origin: string, enabled: boolean) =>
+    invoke<TypoSettings>(IpcChannels.typoSiteSet, { origin, enabled }),
+  addTypoIgnoredWord: (word: string, language: string) =>
+    invoke<TypoSettings>(IpcChannels.typoIgnoredWordAdd, { word, language }),
+  onTypoDictionariesState: (callback: (items: TypoDictionaryInfo[]) => void) => {
+    const listener = (_event: unknown, items: TypoDictionaryInfo[]): void => {
+      callback(items);
+    };
+    ipcRenderer.on(IpcChannels.typoDictionariesState, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.typoDictionariesState, listener);
+    };
+  },
   // File operations (Settings → File operations). The grant list rides on preferences; only the native
   // folder picker needs a bridge method (AI-driven consent reuses the agent HITL modal).
   pickFileAccessFolder: () => invoke<FileAccessFolderPickResult>(IpcChannels.fileAccessPickFolder),

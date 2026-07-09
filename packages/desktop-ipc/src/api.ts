@@ -19,6 +19,13 @@ import type {
   TokenUsageSnapshot,
 } from './contract';
 import type { PopupBlockerRequest, PopupBlockerSettings } from './contract';
+import type {
+  TypoCheckInput,
+  TypoCheckResult,
+  TypoDictionaryInfo,
+  TypoSettings,
+  TypoState,
+} from './contract';
 import type { HistoryEntry } from './contract';
 import type { BookmarkEntry, BookmarkNodeType, BookmarkTreeNode } from './contract';
 import type { BookmarkImportInput, BookmarkImportResult } from './contract';
@@ -283,6 +290,19 @@ export interface TepegozApi {
   setAdblockSiteEnabled(origin: string, enabled: boolean): Promise<AdblockSettings>;
   /** Refresh filter lists; manual calls are cooldown-limited and preserve the old engine on failure. */
   refreshAdblockLists(): Promise<AdblockState>;
+  // Typo extension: local-first writing checks and downloadable dictionaries.
+  getTypoSettings(): Promise<TypoSettings>;
+  setTypoSettings(patch: Partial<TypoSettings>): Promise<TypoSettings>;
+  getTypoState(): Promise<TypoState>;
+  checkTypoText(input: TypoCheckInput): Promise<TypoCheckResult>;
+  listTypoDictionaries(): Promise<TypoDictionaryInfo[]>;
+  downloadTypoDictionary(id: string): Promise<void>;
+  cancelTypoDictionaryDownload(id: string): void;
+  deleteTypoDictionary(id: string): Promise<void>;
+  showTypoDictionariesFolder(): Promise<void>;
+  setTypoSiteEnabled(origin: string, enabled: boolean): Promise<TypoSettings>;
+  addTypoIgnoredWord(word: string, language: string): Promise<TypoSettings>;
+  onTypoDictionariesState(callback: (items: TypoDictionaryInfo[]) => void): () => void;
   /** Read-only status of every configured MCP server (Settings → Connections). Never returns secrets. */
   getMcpStatus(): Promise<McpServerStatusInfo[]>;
   /** Read-only adaptor inventory shown next to MCP tools in Settings. */

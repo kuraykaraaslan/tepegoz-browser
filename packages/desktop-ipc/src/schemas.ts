@@ -322,6 +322,49 @@ export const AdblockSiteEnabledSchema = z.object({
   enabled: z.boolean(),
 });
 
+/** `typo:set` payload — a partial settings patch (only provided keys change). */
+export const TypoPatchSchema = z
+  .object({
+    enabled: z.boolean(),
+    autoDetectLanguage: z.boolean(),
+    languages: z.array(z.string().min(1).max(16)).max(20),
+    defaultLanguage: z.string().min(1).max(16),
+    localLlmMode: z.enum(['off', 'auto']),
+    externalAiMode: z.enum(['off', 'manual']),
+    disabledOrigins: z.array(z.string().max(2048)).max(500),
+    ignoredWords: z
+      .array(
+        z.object({
+          word: z.string().min(1).max(200),
+          language: z.string().min(1).max(16),
+        }),
+      )
+      .max(2000),
+  })
+  .partial();
+
+/** `typo:check` payload. */
+export const TypoCheckInputSchema = z.object({
+  text: z.string().min(1).max(50_000),
+  language: z.string().min(1).max(16).optional(),
+  origin: z.string().max(2048).optional(),
+  aiMode: z.enum(['none', 'auto', 'manual']).optional(),
+});
+
+export const TypoDictionaryIdSchema = z.string().min(1).max(64);
+
+/** `typo:site-set` payload — enable or pause Typo for one http(s) origin. */
+export const TypoSiteEnabledSchema = z.object({
+  origin: z.string().min(1).max(2048),
+  enabled: z.boolean(),
+});
+
+/** `typo:ignored-word-add` payload. */
+export const TypoIgnoredWordAddSchema = z.object({
+  word: z.string().min(1).max(200),
+  language: z.string().min(1).max(16),
+});
+
 /** `extension:context-menu` payload — the reverse-DNS id of the toolbar icon that was right-clicked. */
 export const ExtensionIdSchema = z.string().regex(EXTENSION_ID_RE).max(128);
 

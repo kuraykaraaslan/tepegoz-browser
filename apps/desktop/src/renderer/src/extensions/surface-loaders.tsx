@@ -84,6 +84,22 @@ export const SURFACE_LOADERS: Record<
           },
       ),
   },
+  'com.tepegoz.typo': {
+    popup: () =>
+      import('@tepegoz/ext-typo/panel').then(
+        (m) =>
+          function TypoPopupSurface({ onClose }: ExtensionSurfaceProps) {
+            return <m.TypoPopup api={window.tepegoz} onClose={onClose} />;
+          },
+      ),
+    page: () =>
+      import('@tepegoz/ext-typo/panel').then(
+        (m) =>
+          function TypoPageSurface({ onClose }: ExtensionSurfaceProps) {
+            return <m.TypoPage api={window.tepegoz} onClose={onClose} />;
+          },
+      ),
+  },
   'com.tepegoz.macros': {
     sidebar: () =>
       import('@tepegoz/ext-macros/panel').then(

@@ -60,6 +60,16 @@ import type {
 } from '@tepegoz/ext-adblock/types';
 export type { AdblockBlockedRequest, AdblockSettings, AdblockState };
 
+// Typo extension settings/state shape is owned by the extension package. Type-only → erased for preload.
+import type {
+  TypoCheckInput,
+  TypoCheckResult,
+  TypoDictionaryInfo,
+  TypoSettings,
+  TypoState,
+} from '@tepegoz/ext-typo/types';
+export type { TypoCheckInput, TypoCheckResult, TypoDictionaryInfo, TypoSettings, TypoState };
+
 // History lives in persistence; bookmarks moved to their own feature package. Both are the single
 // source for their entry type. Type-only imports → erased, so the sandboxed preload stays dependency-free.
 import type { HistoryEntry } from '@tepegoz/persistence';

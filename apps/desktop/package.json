@@ -27,6 +27,7 @@
     "@ghostery/adblocker-electron": "2.18.1",
     "better-sqlite3": "^11.7.0",
     "node-llama-cpp": "^3.19.0",
+    "nspell": "2.1.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "zod": "3.23.8"
@@ -58,6 +59,7 @@
     "@tepegoz/ext-macros": "workspace:*",
     "@tepegoz/ext-popup-blocker": "workspace:*",
     "@tepegoz/ext-tasks": "workspace:*",
+    "@tepegoz/ext-typo": "workspace:*",
     "@tepegoz/ext-user-agent": "workspace:*",
     "@tepegoz/extension-catalog": "workspace:*",
     "@tepegoz/file-operations": "workspace:*",

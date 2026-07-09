@@ -27,6 +27,10 @@ import {
   type Preferences,
   type ProviderKeyMeta,
   type PublicSettings,
+  type TypoCheckResult,
+  type TypoDictionaryInfo,
+  type TypoSettings,
+  type TypoState,
 } from '@tepegoz/desktop-ipc';
 import { AppError } from '@tepegoz/libs';
 import { macrosManifest } from '@tepegoz/ext-macros/manifest';
@@ -58,6 +62,11 @@ import {
   RemoveKeyByIdSchema,
   RenameProviderKeyInputSchema,
   ReorderKeysSchema,
+  TypoCheckInputSchema,
+  TypoDictionaryIdSchema,
+  TypoIgnoredWordAddSchema,
+  TypoPatchSchema,
+  TypoSiteEnabledSchema,
   UserAgentSelectionSchema,
 } from '@tepegoz/desktop-ipc/schemas';
 import NotificationStore from '@tepegoz/notifications';
@@ -82,6 +91,8 @@ import userAgentHost from '../extensions/user-agent-host.electron';
 import popupBlockerHost from '../extensions/popup-blocker-host.electron';
 import adblockHost from '../extensions/adblock-host.electron';
 import AdblockEngineService from '../extensions/adblock-engine.electron';
+import typoHost from '../extensions/typo-host.electron';
+import TypoDictionaryManager from '../extensions/typo-dictionary-manager.electron';
 import { builtinManifests } from '../../shared/extensions';
 import { handle, handleAsync, onAction, onSignal } from './ipc-helpers';
 import { applyChromeGlass, isMicaSupported } from '../lib/glass';
@@ -172,6 +183,9 @@ export function registerContentIpc(): void {
     if (validated.adblock !== undefined) {
       adblockHost.init();
     }
+    if (validated.typo !== undefined) {
+      typoHost.init();
+    }
     // Glass toggled — apply the Mica backdrop live to every top-level chrome window (popups are children
     // and stay opaque). setBackgroundMaterial/setBackgroundColor take effect without recreating windows.
     if (validated.glassChrome !== undefined) {
@@ -194,6 +208,7 @@ export function registerContentIpc(): void {
     void McpService.reconcile();
     ExtensionCapabilityService.reconcile();
     adblockHost.init();
+    typoHost.init();
     broadcastPublicSettings();
     return next;
   });
@@ -469,6 +484,45 @@ export function registerContentIpc(): void {
   handleAsync(IpcChannels.adblockRefresh, async (): Promise<AdblockState> => {
     await AdblockEngineService.refresh({ manual: true });
     return adblockHost.state();
+  });
+
+  // Typo extension: settings, live checks, per-site pause, ignored words, and downloadable dictionaries.
+  handle(IpcChannels.typoGet, (): TypoSettings => typoHost.get());
+  handle(IpcChannels.typoSet, (_event, payload): TypoSettings => {
+    const patch = TypoPatchSchema.parse(payload) as Partial<TypoSettings>;
+    return typoHost.update(patch);
+  });
+  handle(IpcChannels.typoState, (): TypoState => typoHost.state());
+  handleAsync(IpcChannels.typoCheck, async (_event, payload): Promise<TypoCheckResult> => {
+    return typoHost.check(TypoCheckInputSchema.parse(payload));
+  });
+  handle(IpcChannels.typoDictionariesList, (): TypoDictionaryInfo[] =>
+    TypoDictionaryManager.list(),
+  );
+  TypoDictionaryManager.setProgressListener((dictionaries) => {
+    for (const w of BrowserWindow.getAllWindows()) {
+      if (!w.isDestroyed()) w.webContents.send(IpcChannels.typoDictionariesState, dictionaries);
+    }
+  });
+  handleAsync(IpcChannels.typoDictionaryDownload, async (_event, payload): Promise<void> => {
+    await TypoDictionaryManager.download(TypoDictionaryIdSchema.parse(payload));
+  });
+  onAction(IpcChannels.typoDictionaryCancel, TypoDictionaryIdSchema, (id) => {
+    TypoDictionaryManager.cancel(id);
+  });
+  handle(IpcChannels.typoDictionaryDelete, (_event, payload): void => {
+    TypoDictionaryManager.remove(TypoDictionaryIdSchema.parse(payload));
+  });
+  handleAsync(IpcChannels.typoDictionaryShowFolder, (): Promise<void> =>
+    TypoDictionaryManager.showFolder(),
+  );
+  handle(IpcChannels.typoSiteSet, (_event, payload): TypoSettings => {
+    const { origin, enabled } = TypoSiteEnabledSchema.parse(payload);
+    return typoHost.setSiteEnabled(origin, enabled);
+  });
+  handle(IpcChannels.typoIgnoredWordAdd, (_event, payload): TypoSettings => {
+    const { word, language } = TypoIgnoredWordAddSchema.parse(payload);
+    return typoHost.addIgnoredWord(word, language);
   });
 
   // On-device model management. Progress/install changes are pushed to every window via models:state.

@@ -1,0 +1,152 @@
+{
+  "version": 1,
+  "dictionaries": [
+    {
+      "id": "tr-hunspell",
+      "language": "tr",
+      "name": "Turkish Hunspell",
+      "uri": "https://registry.npmjs.org/dictionary-tr/-/dictionary-tr-2.0.0.tgz",
+      "sizeBytes": 9358006,
+      "sha256": "b6d5a806dccccad937f7373809deef117ca8594a1f95eab4fe5be6c37b5d6ef1",
+      "license": "MIT",
+      "version": "2.0.0",
+      "recommended": true,
+      "aff": {
+        "uri": "https://unpkg.com/dictionary-tr@2.0.0/index.aff",
+        "sizeBytes": 240814,
+        "sha256": "6a390c79b054ad427cf9a6bf6de43463953cc1918e7f727e9dd4ebd4f9702f42"
+      },
+      "dic": {
+        "uri": "https://unpkg.com/dictionary-tr@2.0.0/index.dic",
+        "sizeBytes": 9117192,
+        "sha256": "dc1d8f7724f4aefd117274678de431e4ea1765f2e02e6983b6ca48cbf5a7fc7c"
+      }
+    },
+    {
+      "id": "en-hunspell",
+      "language": "en",
+      "name": "English Hunspell",
+      "uri": "https://registry.npmjs.org/dictionary-en/-/dictionary-en-4.0.0.tgz",
+      "sizeBytes": 554848,
+      "sha256": "160cba5e6c0230d43d70b0c929e498566ff2c3c4bcf840318d98ce28e31ee756",
+      "license": "MIT/BSD",
+      "version": "4.0.0",
+      "recommended": true,
+      "aff": {
+        "uri": "https://unpkg.com/dictionary-en@4.0.0/index.aff",
+        "sizeBytes": 3086,
+        "sha256": "8ae1f19d4840d957728ad90555d5a8dff6cc5c046279c95ff0c00fc0a0136c7b"
+      },
+      "dic": {
+        "uri": "https://unpkg.com/dictionary-en@4.0.0/index.dic",
+        "sizeBytes": 551762,
+        "sha256": "f0b1a234bd178bdd01875b2a392a9647f888b8fe879f79c52aae62c2759b3647"
+      }
+    },
+    {
+      "id": "fr-hunspell",
+      "language": "fr",
+      "name": "French Hunspell",
+      "uri": "https://registry.npmjs.org/dictionary-fr/-/dictionary-fr-3.0.0.tgz",
+      "sizeBytes": 1429003,
+      "sha256": "b20ab69249881bc36b1dcdfbfd2df226660a7cecc95f2cf122714008b491c78e",
+      "license": "MPL-2.0",
+      "version": "3.0.0",
+      "recommended": false,
+      "aff": {
+        "uri": "https://unpkg.com/dictionary-fr@3.0.0/index.aff",
+        "sizeBytes": 199870,
+        "sha256": "05a735d34c912e4e381ff08ee7c747923ccf5cf9dca81d8467982fa1ca51c2b7"
+      },
+      "dic": {
+        "uri": "https://unpkg.com/dictionary-fr@3.0.0/index.dic",
+        "sizeBytes": 1229133,
+        "sha256": "984e933237bc1224a48f42828233be9b03228260ef67aa8e2bdddcd03a26230d"
+      }
+    },
+    {
+      "id": "es-hunspell",
+      "language": "es",
+      "name": "Spanish Hunspell",
+      "uri": "https://registry.npmjs.org/dictionary-es/-/dictionary-es-4.0.0.tgz",
+      "sizeBytes": 873337,
+      "sha256": "b46986527b23ff1a578d601db7f1e6dc80cc36b728fdcb6044b5212e12e202d5",
+      "license": "GPL-3.0/LGPL-3.0/MPL-1.1",
+      "version": "4.0.0",
+      "recommended": false,
+      "aff": {
+        "uri": "https://unpkg.com/dictionary-es@4.0.0/index.aff",
+        "sizeBytes": 167135,
+        "sha256": "892039d59db11d747061b81c3a92a52d48ba0e055b5835af1943cbd3c2fba85b"
+      },
+      "dic": {
+        "uri": "https://unpkg.com/dictionary-es@4.0.0/index.dic",
+        "sizeBytes": 706202,
+        "sha256": "907f786a8ceb3456722b20ad91dd4dbe99c5c16e45015ea63155e36f26b06d2c"
+      }
+    },
+    {
+      "id": "pt-hunspell",
+      "language": "pt",
+      "name": "Portuguese Hunspell",
+      "uri": "https://registry.npmjs.org/dictionary-pt/-/dictionary-pt-4.0.0.tgz",
+      "sizeBytes": 5457481,
+      "sha256": "644a05af5c6d2c16eea1093c7ac4c14b45637170cf5b3dd1c07ae0f13256b54d",
+      "license": "LGPL-3.0/MPL-2.0",
+      "version": "4.0.0",
+      "recommended": false,
+      "aff": {
+        "uri": "https://unpkg.com/dictionary-pt@4.0.0/index.aff",
+        "sizeBytes": 979789,
+        "sha256": "a9f3621b94eb4d6838474bf9982027758e77dcb248815f49409b1a4a477dbd27"
+      },
+      "dic": {
+        "uri": "https://unpkg.com/dictionary-pt@4.0.0/index.dic",
+        "sizeBytes": 4477692,
+        "sha256": "32e2edd83541d58613bcc83ef731a79aadf85ed57e977a16c6b5f711a7a36cee"
+      }
+    },
+    {
+      "id": "de-hunspell",
+      "language": "de",
+      "name": "German Hunspell",
+      "uri": "https://registry.npmjs.org/dictionary-de/-/dictionary-de-3.0.0.tgz",
+      "sizeBytes": 1137393,
+      "sha256": "50b5640b33c276a49cc15f426f2d31ee5faf397f4a27e92b1678e77f43f8d14a",
+      "license": "GPL-2.0/GPL-3.0",
+      "version": "3.0.0",
+      "recommended": false,
+      "aff": {
+        "uri": "https://unpkg.com/dictionary-de@3.0.0/index.aff",
+        "sizeBytes": 19199,
+        "sha256": "57fdd1b16aac2131003c91e0cf2a488becb970382a402a9ce089307301cb3ef0"
+      },
+      "dic": {
+        "uri": "https://unpkg.com/dictionary-de@3.0.0/index.dic",
+        "sizeBytes": 1118194,
+        "sha256": "b5c781a0cf6f285fb6b9b8ab02fbea104b987104a1efdda8a835837e89e3ec77"
+      }
+    },
+    {
+      "id": "it-hunspell",
+      "language": "it",
+      "name": "Italian Hunspell",
+      "uri": "https://registry.npmjs.org/dictionary-it/-/dictionary-it-2.0.0.tgz",
+      "sizeBytes": 1365774,
+      "sha256": "d004e1a9b9f41c262590164ba957bd75d376db8b9457e449b5dae60b4d020387",
+      "license": "GPL-3.0",
+      "version": "2.0.0",
+      "recommended": false,
+      "aff": {
+        "uri": "https://unpkg.com/dictionary-it@2.0.0/index.aff",
+        "sizeBytes": 70020,
+        "sha256": "5770cd3e16d494c045b4a9a4a9fcd7962577e642d0384a7129c020a12cdd2c79"
+      },
+      "dic": {
+        "uri": "https://unpkg.com/dictionary-it@2.0.0/index.dic",
+        "sizeBytes": 1295754,
+        "sha256": "b1348fbdb6f441ea9dd7e33b2cfcb96ead39ccd5e48bf894972774cd5aa86abb"
+      }
+    }
+  ]
+}

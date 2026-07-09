@@ -69,6 +69,7 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   sitePermissions: 'private',
   popupBlocker: 'private',
   adblock: 'private',
+  typo: 'private',
   popupBlockerSeeded: 'private',
   // Private — on-device model config/footprint; the public cost-saver bool above is enough for extensions.
   localProvider: 'private',

@@ -168,6 +168,24 @@ export const PreferencesSchema = z.object({
     cosmeticFiltering: z.boolean(),
     disabledOrigins: z.array(z.string().max(2048)).max(500),
   }),
+  // Typo extension settings. Dictionaries are profile files, not preference payloads.
+  typo: z.object({
+    enabled: z.boolean(),
+    autoDetectLanguage: z.boolean(),
+    languages: z.array(z.string().min(1).max(16)).max(20),
+    defaultLanguage: z.string().min(1).max(16),
+    localLlmMode: z.enum(['off', 'auto']),
+    externalAiMode: z.enum(['off', 'manual']),
+    disabledOrigins: z.array(z.string().max(2048)).max(500),
+    ignoredWords: z
+      .array(
+        z.object({
+          word: z.string().min(1).max(200),
+          language: z.string().min(1).max(16),
+        }),
+      )
+      .max(2000),
+  }),
   // One-time sentinel: true once the curated default trusted origins have been seeded (see the host's
   // PopupBlockerManager.init), so a user who removes a default never gets it back on next launch.
   popupBlockerSeeded: z.boolean(),
@@ -259,6 +277,16 @@ export const DEFAULT_PREFERENCES: Preferences = {
     blockingMode: 'ads-and-trackers',
     cosmeticFiltering: true,
     disabledOrigins: [],
+  },
+  typo: {
+    enabled: true,
+    autoDetectLanguage: true,
+    languages: ['tr', 'en'],
+    defaultLanguage: 'tr',
+    localLlmMode: 'auto',
+    externalAiMode: 'manual',
+    disabledOrigins: [],
+    ignoredWords: [],
   },
   // Seeded once by the main-process host (union of the curated defaults); starts empty + unseeded here.
   popupBlockerSeeded: false,

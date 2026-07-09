@@ -6,6 +6,7 @@
 import type { AgentAutonomy, AgentEffort } from '@tepegoz/ext-agent/types';
 import type { AdblockSettings } from '@tepegoz/ext-adblock/types';
 import type { PopupBlockerSettings } from '@tepegoz/ext-popup-blocker/types';
+import type { TypoSettings } from '@tepegoz/ext-typo/types';
 import type { SearchEngine } from '@tepegoz/shared-types/search-engines';
 import type { FileAccessGrant } from '@tepegoz/shared-types/file-access';
 import type { AIProvider as ProviderId } from '@tepegoz/shared-types/providers';
@@ -171,6 +172,8 @@ export interface Preferences {
   popupBlocker: PopupBlockerSettings;
   /** Adblock Shield extension settings. Recent blocked URLs stay session-only and are not persisted. */
   adblock: AdblockSettings;
+  /** Typo extension settings. Dictionaries live in userData/dictionaries and are not persisted here. */
+  typo: TypoSettings;
   /** One-time sentinel: true after the curated default trusted origins have been seeded into
    *  `popupBlocker.trustedOrigins`, so an intentionally removed default is never re-added. Not
    *  user-facing. */

@@ -16,8 +16,13 @@ import popupBlockerHost from './extensions/popup-blocker-host.electron';
 import userAgentHost from './extensions/user-agent-host.electron';
 import adblockHost from './extensions/adblock-host.electron';
 import AdblockEngineService from './extensions/adblock-engine.electron';
+import typoHost, { typoCapabilityHost } from './extensions/typo-host.electron';
+import TypoPageInjector from './extensions/typo-page-injector.electron';
+import typoContextMenuContributor from './extensions/typo-context-menu-contributor.electron';
+import PageContextMenuContributionService from './menus/page-context-menu-contributions';
 import MacroService from './macro/macro-service.electron';
 import { macrosCapabilities } from '@tepegoz/ext-macros/capabilities';
+import { typoCapabilities } from '@tepegoz/ext-typo/capabilities';
 import { registerBrowserTools } from '@tepegoz/browser-tools';
 import { registerTabTools } from '@tepegoz/tab-engine';
 import { registerJournalTools } from '@tepegoz/journal-tools';
@@ -127,6 +132,9 @@ if (!app.requestSingleInstanceLock()) {
       // in the background. Until an engine is ready, the multiplexer fails open.
       adblockHost.init();
       AdblockEngineService.init();
+      typoHost.init();
+      TypoPageInjector.start();
+      PageContextMenuContributionService.provide(typoContextMenuContributor);
       // Load the popup-blocker settings before any page can call window.open, and register its
       // `popup:open` interceptor with the generic action-interception plane (ADR-0022).
       popupBlockerHost.init();
@@ -168,6 +176,7 @@ if (!app.requestSingleInstanceLock()) {
       // are always on. Each `provide` is gated on its extension being enabled by `start()`'s reconcile —
       // so disabling `com.tepegoz.macros` unregisters the macro tools (ADR-0024 kill-switch).
       ExtensionCapabilityService.provide(macrosCapabilities(), MacroService.capabilityHost());
+      ExtensionCapabilityService.provide(typoCapabilities(), typoCapabilityHost);
       ExtensionCapabilityService.start();
       // Sandboxed file operations: seed the default ~/tepegoz grant (first run), sync the access policy
       // from prefs, and register the file_* / fileaccess_* tools into the same CapabilityRegistry.
