@@ -1,7 +1,9 @@
 # Phase AI-1 — Real-Result Eval Loop
 
-**Status:** 🟡 In progress (PR1 backbone + PR2 live-tier/judge/nightly-CI code landed; end-to-end `pnpm eval`
-run pending the Electron-ABI env) ·  **Depends on:** Phase 1a  ·  **Track:** [`phases/ai`](README.md)
+**Status:** 🟡 In progress (PR1 backbone + PR2 live-tier/judge/nightly-CI code landed; **e2e `pnpm eval` now
+runs green on-harness** — scripted tier PASS against the real app after fixing two launch blockers, commit
+`e9f7fee`; the live-tier competence numbers are the remaining owed measurement) ·  **Depends on:** Phase 1a
+·  **Track:** [`phases/ai`](README.md)
 
 > **PR1 backbone:** `@tepegoz/agent-eval` (data-driven zod registry loader, local fixture server,
 > ground-truth scorer, honest metrics report), the `runAgent` provider-injection seam, the
@@ -12,6 +14,18 @@ run pending the Electron-ABI env) ·  **Depends on:** Phase 1a  ·  **Track:** [
 > **nightly non-blocking CI** (`.github/workflows/eval-nightly.yml`). Every unit-testable part is green;
 > the end-to-end `pnpm eval` run happens in the Electron-ABI env (like `pnpm e2e`), not the Node-ABI test
 > session.
+> **PR3 (on-harness green, commit `e9f7fee`):** the e2e `pnpm eval` now drives the real app to completion.
+> Two launch blockers had kept it from ever running — the real reason the e2e run stayed "pending": (1) the
+> harness inherited `ELECTRON_RUN_AS_NODE` (agent/CI shells set it), so Playwright started electron.exe as
+> plain Node — no `app` object, `require('electron')` a path string — and the app threw at startup
+> (Playwright surfaced only "Process failed to launch"); the harness now strips it from the launch env like
+> `pnpm dev` does. (2) it launched the built entry file `out/main/index.js`, so `app.getAppPath()` resolved
+> to `out/main/` and every `getAppPath()`-relative resource read (the extension catalog) missed → "Failed to
+> read extension catalog"; the harness now launches the `apps/desktop` **directory** so Electron resolves
+> the entry via `package.json "main"` and `getAppPath()` stays `apps/desktop`. Scripted tier passes green
+> (`blog_behind_menu`, task-success 100%) against the real BrowserHost + ToolGateway/Policy plane + scorer.
+> **Owed:** the live-tier competence run (real product model over the full 14-scenario registry) — the
+> environment is proven; it needs a provider API key.
 **Goal:** A repeatable, **honest** way to measure the agent's real competence, so every later change is
 justified by a pass-rate delta on the **real product model** against **real / representative pages** — not
 by a green offline test. This is the measurement backbone the rest of the track is scored against.
