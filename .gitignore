@@ -16,6 +16,7 @@ build/
 coverage/
 test-results/
 playwright-report/
+agent-eval-report.json
 *.log
 
 # Secrets & local config (NEVER commit) — BYO keys live in OS keychain, not files

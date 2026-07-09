@@ -38,7 +38,14 @@ const repoRoot = resolve(here, '../../..');
 const fixturesDir = join(repoRoot, 'test-fixtures', 'sites');
 const scenariosDir = join(here, '..', 'scenarios');
 const labelsPath = join(here, '..', 'calibration', 'human-labels.json');
-const appEntry = join(repoRoot, 'apps', 'desktop', 'out', 'main', 'index.js');
+// Launch the app DIRECTORY (Electron resolves the entry via apps/desktop/package.json "main"), NOT the
+// built entry file directly. Passing out/main/index.js makes Electron set app.getAppPath() to out/main/,
+// so every getAppPath()-relative resource read (the extension catalog, model/typo catalogs, brand icon
+// under resources/) resolves against out/main/resources/ — which `electron-vite build` does not populate
+// — and the app throws "Failed to read extension catalog" at startup. Launching the dir keeps
+// getAppPath() = apps/desktop, so resources/ resolves to the real apps/desktop/resources.
+const appDir = join(repoRoot, 'apps', 'desktop');
+const appEntry = join(appDir, 'out', 'main', 'index.js');
 
 const MODE = process.env.TEPEGOZ_EVAL_MODE === 'live' ? 'live' : 'scripted';
 const PROVIDER_ID = process.env.TEPEGOZ_EVAL_PROVIDER ?? 'anthropic';
@@ -116,18 +123,23 @@ function planRun(
 
 async function runOne(scenario: EvalScenario, entryUrl: string, extraEnv: Record<string, string>, work: string): Promise<EvalOut> {
   const outPath = join(work, `${scenario.id}.out.json`);
-  const app = await electron.launch({
-    args: [appEntry],
-    env: {
-      ...process.env,
-      ...extraEnv,
-      TEPEGOZ_EVAL: '1',
-      TEPEGOZ_EVAL_PROMPT: scenario.task,
-      TEPEGOZ_EVAL_FIXTURE_URL: entryUrl,
-      TEPEGOZ_EVAL_OUT: outPath,
-      ELECTRON_ENABLE_LOGGING: '1',
-    },
+  // Electron must launch as a REAL GUI app. Agent/CI shells (this one included) often set
+  // ELECTRON_RUN_AS_NODE=1, which makes electron.exe run as plain Node — no `app` object,
+  // `require('electron')` returns a path string — so the app throws at startup and Playwright
+  // surfaces only "Process failed to launch". Drop it here, exactly like `pnpm dev` does
+  // (apps/desktop/scripts/dev.mjs), so the harness is robust to the ambient env.
+  const launchEnv: Record<string, string> = {};
+  for (const [k, v] of Object.entries(process.env)) {
+    if (v !== undefined && k !== 'ELECTRON_RUN_AS_NODE') launchEnv[k] = v;
+  }
+  Object.assign(launchEnv, extraEnv, {
+    TEPEGOZ_EVAL: '1',
+    TEPEGOZ_EVAL_PROMPT: scenario.task,
+    TEPEGOZ_EVAL_FIXTURE_URL: entryUrl,
+    TEPEGOZ_EVAL_OUT: outPath,
+    ELECTRON_ENABLE_LOGGING: '1',
   });
+  const app = await electron.launch({ args: [appDir], env: launchEnv });
   const wrote = await waitForFile(outPath, 120_000);
   await app.close().catch(() => undefined);
   return wrote ? (JSON.parse(readFileSync(outPath, 'utf8')) as EvalOut) : { error: 'no output' };
@@ -164,6 +176,11 @@ function judgeComplete(): (m: JudgeMessages) => Promise<string> {
 
 test('agent-eval — drive the real app and score competence', async () => {
   test.setTimeout(1_800_000);
+  if (!existsSync(appEntry)) {
+    throw new Error(
+      `desktop app not built at ${appEntry} — run \`pnpm --filter @tepegoz/desktop build\` (\`pnpm eval\` does this first).`,
+    );
+  }
   const server = await startFixtureServer(fixturesDir);
   const { scenarios, errors } = loadScenarios(scenariosDir);
   for (const e of errors) console.warn(`[registry] ${e.file}: ${e.reason}`);
