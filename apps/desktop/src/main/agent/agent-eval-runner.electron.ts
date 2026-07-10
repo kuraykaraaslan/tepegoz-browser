@@ -144,6 +144,10 @@ export async function maybeRunEval(): Promise<void> {
           stoppedReason: summary.stoppedReason,
           finalUrl: page.url,
           finalPageText: page.text,
+          // AI-1 observability: real per-step outcomes + token usage from the run, so the harness scores
+          // honest toolCalls/toolErrors/cost instead of the previous hard-coded zeros.
+          steps: summary.steps ?? [],
+          tokenUsage: summary.tokenUsage ?? { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
         },
         null,
         2,

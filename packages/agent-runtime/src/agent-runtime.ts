@@ -152,6 +152,18 @@ export interface AgentRunSummary {
   checkpoint?: AgentRunCheckpoint | undefined;
   /** The agent's closing summary for this turn — appended to the conversation memory by the host. */
   summary?: string;
+  /**
+   * Real per-run token usage read from the process-global {@link TokenLedger} at run end. Additive and
+   * optional (absent on early terminal returns like plan_rejected/egress_blocked). Lets the AI-1 eval
+   * harness report honest cost instead of the previous hard-coded 0, and any host surface a real total.
+   */
+  tokenUsage?: { inputTokens: number; outputTokens: number; totalTokens: number } | undefined;
+  /**
+   * The per-step tool outcomes of the reactive loop (tool id + ok + optional error), in order. Additive
+   * and optional. Lets the AI-1 eval harness compute real toolCalls/toolErrors and print a compact
+   * failure trace for triage, instead of reconstructing them by parsing event strings.
+   */
+  steps?: Array<{ tool: string; ok: boolean; error?: string | undefined }> | undefined;
 }
 
 /**
@@ -560,6 +572,16 @@ export async function runAgent(
     stoppedReason: result.stoppedReason,
     ok: result.stoppedReason === 'completed',
     checkpoint: lastCheckpoint,
+    tokenUsage: {
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+      totalTokens: usage.totalTokens,
+    },
+    steps: result.outcomes.map((o) => ({
+      tool: o.tool,
+      ok: o.ok,
+      ...(o.error?.message !== undefined ? { error: o.error.message } : {}),
+    })),
     ...(result.summary !== undefined && result.summary.length > 0
       ? { summary: result.summary }
       : {}),
