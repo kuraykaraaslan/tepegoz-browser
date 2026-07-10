@@ -118,6 +118,7 @@ type EvalOut = z.infer<typeof EvalOutSchema>;
 /** A prior archived run — read (zod-safe) only to print a dev/held-out before→after trend line. */
 const PriorRunSchema = z.object({
   model: z.string(),
+  n: z.number(),
   dev: z.object({ metrics: z.object({ taskSuccessRate: z.number() }) }),
   heldOut: z.object({ metrics: z.object({ taskSuccessRate: z.number() }) }),
 });
@@ -132,29 +133,32 @@ function modelLabel(): string {
   return `${PROVIDER_ID} (plan=${route('plan')}, exec=${route('exec')})`;
 }
 
-/** The newest archived run's dev/held-out pass rates (or null on the first run) — for the trend line. */
-function latestArchivedRun(dir: string): { model: string; dev: number; heldOut: number } | null {
+/** The newest archived run that is COMPARABLE to this one — same model AND same scenario-set size — so the
+ *  trend delta is like-for-like (a scripted N=1 vs a live N=14 comparison is meaningless). Null if none. */
+function latestArchivedRun(dir: string, model: string, n: number): { model: string; dev: number; heldOut: number } | null {
   let files: string[];
   try {
     files = readdirSync(dir)
       .filter((f) => f.endsWith('.json'))
-      .sort((a, b) => a.localeCompare(b));
+      .sort((a, b) => b.localeCompare(a)); // newest first (ISO-timestamped names sort chronologically)
   } catch {
     return null;
   }
-  const last = files.at(-1);
-  if (last === undefined) return null;
-  try {
-    const parsed = PriorRunSchema.safeParse(JSON.parse(readFileSync(join(dir, last), 'utf8')));
-    if (!parsed.success) return null;
+  for (const f of files) {
+    let parsed;
+    try {
+      parsed = PriorRunSchema.safeParse(JSON.parse(readFileSync(join(dir, f), 'utf8')));
+    } catch {
+      continue;
+    }
+    if (!parsed.success || parsed.data.model !== model || parsed.data.n !== n) continue;
     return {
       model: parsed.data.model,
       dev: parsed.data.dev.metrics.taskSuccessRate,
       heldOut: parsed.data.heldOut.metrics.taskSuccessRate,
     };
-  } catch {
-    return null;
   }
+  return null;
 }
 
 /** Apply the optional {@link ONLY} scenario allowlist (logs the selection). Empty allowlist → full set. */
@@ -170,7 +174,7 @@ function selectScenarios(loaded: EvalScenario[]): EvalScenario[] {
 /** One-line dev/held-out before→after trend vs. the newest prior archived run. */
 function trendLine(prior: { model: string; dev: number; heldOut: number } | null, report: EvalReport): string {
   const pct = (n: number): string => `${(n * 100).toFixed(1)}%`;
-  if (prior === null) return 'trend: (no prior archived run — this is the baseline)';
+  if (prior === null) return 'trend: (no comparable prior run — same model + scenario set — this is the baseline)';
   const arrow = (d: number): string => {
     if (d > 0) return `▲ +${pct(d)}`;
     if (d < 0) return `▼ ${pct(d)}`;
@@ -435,7 +439,7 @@ test('agent-eval — drive the real app and score competence', async () => {
   // Read the newest prior archived run BEFORE writing this one, so the trend compares against the last
   // run and not itself; then archive this run under a timestamped, git-ignored name for the before/after
   // history the iterative loop depends on, and keep the fixed latest-pointer for existing tooling/CI.
-  const prior = latestArchivedRun(archiveDir);
+  const prior = latestArchivedRun(archiveDir, report.model, report.n);
   const artifact = writeReport(repoRoot, report);
   const archived = writeReport(archiveDir, report, `${runTag}-${MODE}.json`);
   console.log(trendLine(prior, report));
