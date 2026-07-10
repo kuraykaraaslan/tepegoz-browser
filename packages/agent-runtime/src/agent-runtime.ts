@@ -26,7 +26,7 @@ import {
   type RunControl,
   type StepOutcome,
 } from '@tepegoz/orchestrator';
-import { TaintTracker, detectHandoff, inspectEgress } from '@tepegoz/security-policy';
+import { TaintTracker, detectHandoff, inspectEgress, type HandoffKind } from '@tepegoz/security-policy';
 import {
   isRunnableProvider,
   RUNNABLE_AI_PROVIDERS,
@@ -57,6 +57,13 @@ const EFFORT_MAX_TOKENS: Record<EffortLevel, number> = {
   xhigh: 16384,
   max: 32768,
 };
+
+/** Model-facing nudge injected (as a steer message) when the user resumes after a login handoff-hold:
+ *  re-perceive the now-authenticated page and continue the ORIGINAL task rather than restart. English to
+ *  match the other reactor-injected control messages (the model reasons in English internally). */
+const RESUME_AFTER_LOGIN =
+  'I have completed the sign-in on this page. Re-read the current page with browser_get_elements, then ' +
+  'continue the original task from where you left off — do not start over.';
 
 /** Best-effort URL string from a tool call's args (for the sensitive-site lockout). */
 function urlFromArgs(args: unknown): string | undefined {
@@ -128,7 +135,8 @@ export interface AgentRunDeps {
   activeTabUrl: () => string | undefined;
   /** Resolve a browser tab's committed URL for tabId-scoped browser tools. */
   tabUrl?: (tabId: string) => string | undefined;
-  handoffStrings: { captcha: string; twofa: string };
+  /** Localized human-handoff copy, one message per {@link HandoffKind} (captcha / twofa / login). */
+  handoffStrings: Record<HandoffKind, string>;
   /**
    * On-device inference config (engine + selected-model resolver). Injected by the Electron wiring;
    * absent when the app didn't wire a local engine, in which case `'local'` routing is unavailable and
@@ -569,17 +577,23 @@ export async function runAgent(
             hooks.onEvent('step_error', `${o.tool} ✗`, o.error?.message ?? 'failed');
           }
         },
-        // Human Handoff Controller: a CAPTCHA/2FA in a perceived page halts the loop and hands
-        // control back to the user — deterministic, NO auto-solve, credit preserved.
+        // Human Handoff Controller: a CAPTCHA / 2FA / login wall in a perceived page hands control back
+        // to the user — deterministic, NO auto-solve (the agent holds no credentials), credit preserved.
+        // A login wall is RESUMABLE in-session: pause and wait for the user to sign in, then continue from
+        // the re-perceived (now authenticated) page — the agent must NOT "cleverly" work around the gate.
+        // CAPTCHA / 2FA stay terminal (solve-and-restart). Without a run-control (eval/tests) a login wall
+        // also terminates, so the harness still sees a definite stop rather than a silent hang.
         guard: (o: StepOutcome) => {
           const content = contentFromResult(o.result);
           if (content === undefined) return null;
           const signal = detectHandoff(content, urlFromResult(o.result));
           if (signal === null) return null;
-          hooks.onEvent(
-            'handoff',
-            signal.kind === 'captcha' ? deps.handoffStrings.captcha : deps.handoffStrings.twofa,
-          );
+          hooks.onEvent('handoff', deps.handoffStrings[signal.kind]);
+          if (signal.kind === 'login' && hooks.control !== undefined) {
+            hooks.control.enterHandoffHold(RESUME_AFTER_LOGIN);
+            hooks.onEvent('paused', 'paused'); // surface the Resume affordance while we wait for sign-in
+            return null; // hold at the next step gate — the run is NOT terminated
+          }
           return 'handoff';
         },
       },

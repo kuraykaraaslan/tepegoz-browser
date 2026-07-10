@@ -1,9 +1,12 @@
 /**
  * Human-handoff detection (L3 Human Handoff Controller). Deterministic, rule-based scan of perceived
- * page text (+ optional URL) for a CAPTCHA or a two-factor / one-time-code challenge. When one is
- * found the orchestrator halts the agent loop and hands control back to the human — the agent NEVER
- * attempts to solve it (no auto-solve; credit is preserved). Determinism-first: the model is not asked
- * "is this a CAPTCHA?"; a keyword match on the already-sanitized text is enough and is replayable.
+ * page text (+ optional URL) for a CAPTCHA, a two-factor / one-time-code challenge, or a LOGIN wall.
+ * When one is found the orchestrator hands control back to the human — the agent NEVER attempts to
+ * solve it (no auto-solve; the agent has no credentials and never sees a stored secret, so a page
+ * asking for a password is always the human's to complete). Determinism-first: the model is not asked
+ * "is this a CAPTCHA / login page?"; a keyword match on the already-sanitized text is enough and is
+ * replayable — the agent must not be free to "cleverly" work around a login wall (go to /explore,
+ * click a random public post) when the task actually needs the user signed in.
  *
  * Precision matters as much as recall. A naive substring scan over-matches badly: the perceived text
  * includes hrefs/asset URLs whose hex fingerprints routinely contain the hex triple `2fa` (e.g.
@@ -17,7 +20,7 @@
  * Real challenge pages almost always carry a strong phrase, so recall stays high while topical mentions
  * and hex noise stop tripping the wall. Pure — no I/O, no Electron.
  */
-export const HANDOFF_KINDS = ['captcha', 'twofa'] as const;
+export const HANDOFF_KINDS = ['captcha', 'twofa', 'login'] as const;
 export type HandoffKind = (typeof HANDOFF_KINDS)[number];
 
 export interface HandoffSignal {
@@ -83,6 +86,46 @@ const TWOFA_WEAK: readonly string[] = [
 ];
 
 /**
+ * LOGIN-wall markers — a page the user must sign in on before the task can proceed. Precision is the
+ * whole game here: a bare "Log in" / "Sign up" link sits in the header of a huge share of the web
+ * (including pages that are perfectly browsable without an account), so matching those tokens alone
+ * would fire a bogus wall on every second page. So login detection leans on two HIGH-PRECISION signals
+ * instead:
+ *   • {@link PASSWORD_FIELD} — the perceived interactable listing renders a password input verbatim as
+ *     `type="password"` (an allow-listed attribute, render-DOM perception). A visible password box is
+ *     an unambiguous "enter your credentials here" — and the agent can never type a password anyway —
+ *     so it is a login wall regardless of the task. This is the workhorse (catches the real IG/gated
+ *     login card on the very first `browser_get_elements`).
+ *   • {@link LOGIN_STRONG} — wall COPY (verb + purpose: "log in to continue/see/view"), never a bare
+ *     nav label. Covers the accessibility-tree fallback mode, where attributes (and thus the password
+ *     `type`) are not surfaced.
+ * Deliberately NO weak/bare `log in` token: a header link must not trip the wall.
+ */
+const PASSWORD_FIELD = /\btype\s*=\s*["']?password\b/;
+
+const LOGIN_STRONG: readonly string[] = [
+  'log in to continue',
+  'login to continue',
+  'sign in to continue',
+  'log in to see',
+  'sign in to see',
+  'log in to view',
+  'sign in to view',
+  'log in to like',
+  'log in to comment',
+  'log in to your account to',
+  'you must be logged in',
+  'you must be signed in',
+  'you need to log in',
+  'you need to be logged in',
+  'you need to sign in',
+  'please log in to',
+  'please sign in to',
+  'your session has expired',
+  'session has expired',
+];
+
+/**
  * Imperative/input cues that distinguish an actual challenge from a topical mention. Split into small
  * alternations (kept simple on purpose) and tested together via {@link hasCue}.
  */
@@ -128,7 +171,8 @@ function firstWeakWithCue(haystack: string, markers: readonly string[]): string 
 
 /**
  * Scan perceived (sanitized) page text and an optional URL for a handoff trigger. Returns the first
- * signal found (CAPTCHA takes precedence over 2FA), or `null` when nothing matches.
+ * signal found, or `null` when nothing matches. Precedence runs most-specific → most-general: CAPTCHA,
+ * then 2FA, then a login wall (a login page that also carries a captcha hands off as the captcha).
  */
 export function detectHandoff(text: string, url?: string): HandoffSignal | null {
   const haystack = `${text} ${url ?? ''}`.toLowerCase();
@@ -142,6 +186,11 @@ export function detectHandoff(text: string, url?: string): HandoffSignal | null 
 
   const twofaWeak = firstWeakWithCue(haystack, TWOFA_WEAK);
   if (twofaWeak !== undefined) return { kind: 'twofa', matched: twofaWeak };
+
+  if (PASSWORD_FIELD.test(haystack)) return { kind: 'login', matched: 'type=password' };
+
+  const loginStrong = firstStrong(haystack, LOGIN_STRONG);
+  if (loginStrong !== undefined) return { kind: 'login', matched: loginStrong };
 
   return null;
 }

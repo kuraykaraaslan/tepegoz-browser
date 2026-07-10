@@ -62,7 +62,7 @@ export default class AgentService {
         {
           activeTabUrl,
           tabUrl,
-          handoffStrings: { captcha: handoff.captcha, twofa: handoff.twofa },
+          handoffStrings: { captcha: handoff.captcha, twofa: handoff.twofa, login: handoff.login },
           localInference: { engine: llamaEngine(), resolveModel: () => ModelManager.resolveModel() },
           ...(tokenBudget !== undefined ? { tokenBudget } : {}),
         },

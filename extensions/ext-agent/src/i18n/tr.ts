@@ -21,13 +21,15 @@ export const tr: AgentStrings = {
   planBody:
     'İstemediğiniz adımların işaretini kaldırıp çalıştırın. Onaylayana kadar hiçbir şey yürütülmez.',
   planRun: 'Planı çalıştır',
-  // İnsana Devir Denetleyicisi — CAPTCHA / 2FA algılandığında ajan kontrolü geri verir.
+  // İnsana Devir Denetleyicisi — CAPTCHA / 2FA / giriş duvarı algılandığında ajan kontrolü geri verir.
   handoff: {
     notifyTitle: 'Sıra sizde — Tepegöz duraklattı',
     captcha:
       'Bir CAPTCHA algılandı. Tepegöz durdu ve kontrolü size geri verdi — otomatik olarak çözmeyecek. Kendiniz tamamlayın, sonra yeni bir görev başlatın.',
     twofa:
       'Bir doğrulama adımı (2FA / tek kullanımlık kod) algılandı. Tepegöz durdu ve kontrolü size geri verdi — girişi kendiniz tamamlayın, sonra yeni bir görev başlatın.',
+    login:
+      'Bir giriş ekranı algılandı. Tepegöz duraklattı ve sizin yerinize giriş yapmayacak. Sayfada giriş yapın, sonra “Devam et”e basın — görevi oradan sürdürür.',
   },
   // Token Defteri kotası — %80 uyarısı (kümülatif kullanım eşiği aştığında bir kez gösterilir).
   quota: {

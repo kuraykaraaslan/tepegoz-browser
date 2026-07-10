@@ -32,6 +32,8 @@ export class RunControlHandle implements RunControl {
   private readonly abortController = new AbortController();
   private pausedByUser = false;
   private offline = false;
+  /** Held for a human handoff the run itself detected (login wall). Cleared by the same user `resume()`. */
+  private handoffHeld = false;
   private steerQueue: string[] = [];
   private wake = deferred();
   private modelCtl: AbortController | null = null;
@@ -47,7 +49,7 @@ export class RunControlHandle implements RunControl {
     return this.abortController.signal.aborted;
   }
   isHeld(): boolean {
-    return this.pausedByUser || this.offline;
+    return this.pausedByUser || this.offline || this.handoffHeld;
   }
 
   private notify(): void {
@@ -80,13 +82,23 @@ export class RunControlHandle implements RunControl {
     this.hintOffline();
   }
 
+  enterHandoffHold(guidance: string): void {
+    if (this.handoffHeld) return; // idempotent — a re-detected wall on the same held page doesn't re-queue
+    this.handoffHeld = true;
+    if (guidance.length > 0) this.steerQueue.push(guidance); // drained on resume → re-perceive + continue
+    this.notify(); // does NOT abort the in-flight step — hold at the next gate, exactly like a user pause
+  }
+
   // --- host-driven mutators (each notifies the condition wait) ---
   pause(): void {
     this.pausedByUser = true;
     this.notify(); // does NOT abort the in-flight model call — let this step finish, hold at the next gate
   }
   resume(): void {
+    // One "Resume" releases BOTH a user pause and a handoff (login) hold — after the user signs in they
+    // press the same button, and the queued re-perceive guidance is drained at the next gate.
     this.pausedByUser = false;
+    this.handoffHeld = false;
     this.notify();
   }
   setOffline(): void {

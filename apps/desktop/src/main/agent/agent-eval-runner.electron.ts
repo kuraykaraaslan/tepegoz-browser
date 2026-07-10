@@ -130,7 +130,7 @@ export async function maybeRunEval(): Promise<void> {
     const summary = await runAgent(prompt, hooks, {
       activeTabUrl,
       tabUrl,
-      handoffStrings: { captcha: handoff.captcha, twofa: handoff.twofa },
+      handoffStrings: { captcha: handoff.captcha, twofa: handoff.twofa, login: handoff.login },
       localInference: { engine: llamaEngine(), resolveModel: () => ModelManager.resolveModel() },
       provider,
     });

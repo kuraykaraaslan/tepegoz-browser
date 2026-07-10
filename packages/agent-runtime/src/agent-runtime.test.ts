@@ -23,7 +23,7 @@ const fakeCrypto: SecretCrypto = {
 
 const DEPS: AgentRunDeps = {
   activeTabUrl: () => undefined,
-  handoffStrings: { captcha: 'captcha', twofa: '2fa' },
+  handoffStrings: { captcha: 'captcha', twofa: '2fa', login: 'login' },
 };
 
 function hooks(): AgentRunHooks {

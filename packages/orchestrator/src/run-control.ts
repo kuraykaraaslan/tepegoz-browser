@@ -32,4 +32,12 @@ export interface RunControl {
    * network monitor to begin active reconnect probing. Idempotent.
    */
   enterOfflineHold(): void;
+  /**
+   * Suspend the run for a HUMAN HANDOFF the reactor's guard detected in the perceived page (a login wall,
+   * so far — the agent has no credentials and must not "work around" a sign-in gate). Holds like a user
+   * pause: the same "Resume" the user presses after signing in releases it. `guidance` is queued so it is
+   * drained (as a steer message) on release — telling the model to re-read the now-authenticated page and
+   * continue rather than restart. Distinct from a user pause so the host can surface WHY the run is held.
+   */
+  enterHandoffHold(guidance: string): void;
 }

@@ -100,4 +100,45 @@ describe('RunControlHandle', () => {
     expect(hinted).toBe(1);
     expect(h.isHeld()).toBe(true);
   });
+
+  it('enterHandoffHold parks the run until resume', async () => {
+    const h = new RunControlHandle(noop);
+    h.enterHandoffHold('re-read the page and continue');
+    expect(h.isHeld()).toBe(true);
+    let resolved = false;
+    const p = h.waitWhileHeld().then(() => {
+      resolved = true;
+    });
+    await Promise.resolve();
+    expect(resolved).toBe(false); // parked until the user signs in and resumes
+    h.resume();
+    await p; // MUST terminate
+    expect(resolved).toBe(true);
+  });
+
+  it('resume() releases a handoff hold and the queued guidance is available to drain', async () => {
+    const h = new RunControlHandle(noop);
+    h.enterHandoffHold('the user signed in — re-read and continue');
+    const p = h.waitWhileHeld();
+    h.resume(); // same button the user presses after logging in
+    await p; // MUST terminate
+    expect(h.isHeld()).toBe(false);
+    expect(h.drainSteer()).toEqual(['the user signed in — re-read and continue']);
+  });
+
+  it('enterHandoffHold is idempotent (a re-detected wall does not re-queue guidance)', () => {
+    const h = new RunControlHandle(noop);
+    h.enterHandoffHold('guidance');
+    h.enterHandoffHold('guidance'); // second detection on the same held page
+    expect(h.drainSteer()).toEqual(['guidance']); // queued once, not twice
+  });
+
+  it('abort wins over a handoff hold', async () => {
+    const h = new RunControlHandle(noop);
+    h.enterHandoffHold('guidance');
+    const p = h.waitWhileHeld();
+    h.abort();
+    await p; // resolves despite still being handoff-held
+    expect(h.aborted).toBe(true);
+  });
 });
