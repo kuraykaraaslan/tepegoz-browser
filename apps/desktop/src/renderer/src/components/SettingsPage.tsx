@@ -41,6 +41,7 @@ import type {
 import { PROVIDERS } from './settings-shared';
 import { AppearanceSection, LanguageRegionSection } from './settings-appearance-language';
 import {
+  DefaultModelsSection,
   LocalActionsSection,
   LocalModelsSection,
   ProvidersSection,
@@ -279,17 +280,20 @@ export function SettingsPage({
       group: G_AI,
       label: s.providersTitle,
       icon: <IconKey />,
-      searchText: `${s.providersTitle} ${s.providersSubtitle} ${s.apiKey} ${s.addKey} ${PROVIDERS.map((p) => s.providerNames[p]).join(' ')}`,
+      searchText: `${s.providersTitle} ${s.providersSubtitle} ${s.apiKey} ${s.addKey} ${s.defaultModels.title} ${s.defaultModels.subtitle} ${PROVIDERS.map((p) => s.providerNames[p]).join(' ')}`,
       content: (
-        <ProvidersSection
-          keys={status.keys}
-          encryptionAvailable={status.encryptionAvailable}
-          onAdd={onAddKey}
-          onRemoveById={onRemoveKeyById}
-          onRename={onRenameKey}
-          onReorder={onReorderKeys}
-          notify={notify}
-        />
+        <div className="space-y-6">
+          <ProvidersSection
+            keys={status.keys}
+            encryptionAvailable={status.encryptionAvailable}
+            onAdd={onAddKey}
+            onRemoveById={onRemoveKeyById}
+            onRename={onRenameKey}
+            onReorder={onReorderKeys}
+            notify={notify}
+          />
+          <DefaultModelsSection prefs={prefs} setPref={setPref} />
+        </div>
       ),
     },
     {

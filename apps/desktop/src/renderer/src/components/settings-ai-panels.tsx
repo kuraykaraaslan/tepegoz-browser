@@ -7,6 +7,7 @@ import { coreDict } from '@tepegoz/i18n';
 import { useT } from '@tepegoz/i18n/react';
 import { isRunnableProvider } from '@tepegoz/desktop-ipc';
 import type {
+  AgentModelChoice,
   AIAdaptor,
   AIAdaptorAction,
   LocalModelInfo,
@@ -341,6 +342,73 @@ export function ProvidersSection({
             })}
           </ul>
         </>
+      )}
+    </Card>
+  );
+}
+
+/**
+ * Default model per provider — pins which model each provider uses for agent runs (persisted as
+ * `agentModelOverride`, the SAME pref the Agent Console's Model dropdown writes). "Auto" clears the pin
+ * (per-task tier routing). The selectable models come from the agent config over IPC, so this stays in
+ * lockstep with the runtime's catalog without importing the model-gateway into the renderer.
+ */
+export function DefaultModelsSection({
+  prefs,
+  setPref,
+}: {
+  prefs: Preferences;
+  setPref: (patch: Partial<Preferences>) => void;
+}) {
+  const s = useT(settingsDict);
+  const [choices, setChoices] = useState<AgentModelChoice[]>([]);
+
+  useEffect(() => {
+    void window.tepegoz.getAgentConfig().then(
+      (cfg) => {
+        setChoices(cfg.choices);
+      },
+      () => {
+        setChoices([]);
+      },
+    );
+  }, []);
+
+  const withModels = choices.filter((c) => c.models.length > 0);
+
+  const setModel = (provider: ProviderId, model: string): void => {
+    const next = { ...prefs.agentModelOverride };
+    if (model === '') delete next[provider];
+    else next[provider] = model;
+    setPref({ agentModelOverride: next });
+  };
+
+  return (
+    <Card title={s.defaultModels.title} subtitle={s.defaultModels.subtitle}>
+      {withModels.length === 0 ? (
+        <p className="text-sm text-text-secondary">{s.defaultModels.empty}</p>
+      ) : (
+        <div className="space-y-4">
+          {withModels.map((c) => (
+            <div key={c.provider} className="max-w-xs">
+              <Select
+                id={`default-model-${c.provider}`}
+                label={c.label}
+                value={prefs.agentModelOverride[c.provider] ?? ''}
+                onChange={(v) => {
+                  setModel(c.provider, v);
+                }}
+              >
+                <option value="">{s.defaultModels.auto}</option>
+                {c.models.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          ))}
+        </div>
       )}
     </Card>
   );

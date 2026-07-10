@@ -145,6 +145,13 @@ export const tr: SettingsStrings = {
     kimi: 'Kimi (Moonshot)',
     local: 'Yerel (cihazda)',
   },
+  defaultModels: {
+    title: 'Sağlayıcı başına varsayılan model',
+    subtitle:
+      'Her sağlayıcının ajan çalışmalarında kullanacağı modeli sabitleyin. “Otomatik” göreve göre yönlendirir (planlama için güçlü model, basit adımlar için daha ucuz). Bunu Ajan Konsolu’ndan da değiştirebilirsiniz.',
+    auto: 'Otomatik (önerilen)',
+    empty: 'Modelini seçmek için bir sağlayıcı anahtarı ekleyin.',
+  },
 
   // --- Maliyet ve performans ---
   costTitle: 'Maliyet ve performans',

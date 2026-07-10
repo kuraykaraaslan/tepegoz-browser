@@ -145,6 +145,13 @@ export const en = {
     kimi: 'Kimi (Moonshot)',
     local: 'Local (on-device)',
   },
+  defaultModels: {
+    title: 'Default model per provider',
+    subtitle:
+      'Pin which model each provider uses for agent runs. "Auto" routes per task (a capable model for planning, a cheaper one for simple steps). You can also change this from the Agent Console.',
+    auto: 'Auto (recommended)',
+    empty: 'Add a provider key to choose its model.',
+  },
 
   // --- Cost & performance ---
   costTitle: 'Cost & performance',
