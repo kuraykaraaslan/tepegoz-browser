@@ -484,6 +484,28 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
     prompt, attachments, expandedFiles,
   } = activeState;
 
+  // Gear tooltip: a one-glance summary of the current run config (provider · model · autonomy · effort),
+  // shown on hover so the values are visible without opening the popover.
+  const configChoice = config?.choices.find((c) => c.provider === config.provider);
+  const providerTip = configChoice
+    ? configChoice.keyLabel !== undefined
+      ? `${configChoice.label} · ${configChoice.keyLabel}`
+      : configChoice.label
+    : (config?.provider ?? '');
+  const modelTip =
+    config === null || config.model === ''
+      ? a.modelAuto
+      : (configChoice?.models.find((m) => m.id === config.model)?.label ?? config.model);
+  const configTooltip =
+    config === null
+      ? a.config
+      : [
+          `${a.provider}: ${providerTip}`,
+          `${a.modelLabel}: ${modelTip}`,
+          `${a.autonomyLabel}: ${a.autonomy[config.autonomy].title}`,
+          `${a.effort.title}: ${a.effort[config.effort].title}`,
+        ].join('\n');
+
   return (
     <div
       className={cn(
@@ -834,7 +856,7 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
                 direction="up"
                 menuClassName="w-72"
                 ariaLabel={a.config}
-                title={a.config}
+                title={configTooltip}
                 trigger={
                   <span className="flex items-center gap-1.5">
                     <GearIcon className="h-3.5 w-3.5 text-text-secondary" />
