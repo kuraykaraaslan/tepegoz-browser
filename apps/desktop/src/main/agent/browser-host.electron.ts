@@ -5,7 +5,7 @@ import type { ScreenshotCaptureInput, ScreenshotCaptureResult } from '@tepegoz/s
 import type { ScreenshotToolsHost } from '@tepegoz/screenshots/tools';
 import type { TabHost } from '@tepegoz/tab-engine';
 import { HumanInputAdapter, type CdpSend } from '@tepegoz/human-input';
-import { IpcChannels, type AgentEvent } from '@tepegoz/desktop-ipc';
+import { IpcChannels, type AgentEvent, type AgentEventKind } from '@tepegoz/desktop-ipc';
 import TabManager from '../tabs';
 import CdpDriver from './cdp-driver.electron';
 import AgentTabGroup from './agent-tab-group.electron';
@@ -304,12 +304,20 @@ export function setCurrentAgentRun(
 }
 
 function onInputAction(kind: string, detail: string): void {
+  emitCurrentRunEvent('input_action', `${kind} ${detail}`);
+}
+
+/** Emit a live event on the CURRENTLY-active agent run's channel (out-of-band from the reactor loop) —
+ *  used by input-action narration and by the run-control handlers (paused/resumed/steered). No-op when no
+ *  run is bound. */
+export function emitCurrentRunEvent(kind: AgentEventKind, message: string, detail?: string): void {
   if (currentAgentRunId === null || currentAgentGroupId === null || currentAgentSend === null) return;
   currentAgentSend({
     runId: currentAgentRunId,
     groupId: currentAgentGroupId,
-    kind: 'input_action',
-    message: `${kind} ${detail}`,
+    kind,
+    message,
+    ...(detail !== undefined ? { detail } : {}),
     ts: Date.now(),
   });
 }

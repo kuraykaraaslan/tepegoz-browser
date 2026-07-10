@@ -30,6 +30,7 @@ import {
   AgentPlanResponseSchema,
   AgentRunIdSchema,
   AgentRunInputSchema,
+  AgentSteerSchema,
 } from '@tepegoz/desktop-ipc/schemas';
 import NotificationHost from '../notifications/notification-host';
 import type { ConfirmRequest } from '@tepegoz/capability-plane';
@@ -43,15 +44,20 @@ import AgentService, {
   type AgentRunSummary,
   type PlanApprovalDecision,
 } from '../agent/agent-service.electron';
-import { setCurrentAgentRun } from '../agent/browser-host.electron';
+import { emitCurrentRunEvent, setCurrentAgentRun } from '../agent/browser-host.electron';
 import { collectAgentExportBundleFiles } from '../agent/export-bundle.electron';
 import {
   abortAllAgentRunControllers,
-  agentRunController,
+  agentRunControl,
+  createRunControl,
   hasActiveAgentRun,
-  registerAgentRunController,
-  unregisterAgentRunController,
+  pauseAgentRun,
+  resumeAgentRun,
+  steerAgentRun,
+  unregisterRunControl,
 } from '../agent/agent-run-lock.electron';
+import { holdCheckpoint, resumeCheckpoint, type AgentRunCheckpoint } from '@tepegoz/agent-runtime';
+import { AGENT_HISTORY_EVENT_KINDS, type AgentHistoryEventKind } from '@tepegoz/ext-agent/history';
 import FileOperationsHost from '../file-operations/file-operations-host';
 import { getDb } from '../db/database.electron';
 import { mainStrings } from '../lib/i18n-main';
@@ -187,6 +193,12 @@ function safeArgsPreview(args: unknown): string {
 }
 
 /** Maps a UI agent-event kind to a journal EventType. Unmapped kinds (e.g. 'plan') are not journaled. */
+/** Ephemeral run-control kinds (paused/resumed/steered) bypass onEvent, so they're never persisted — this
+ *  guard narrows a live event kind to the persisted history subset at the conversation-store boundary. */
+function isHistoryKind(kind: AgentEventKind): kind is AgentHistoryEventKind {
+  return (AGENT_HISTORY_EVENT_KINDS as readonly string[]).includes(kind);
+}
+
 const JOURNAL_TYPE_BY_KIND: Partial<Record<AgentEventKind, EventType>> = {
   step_start: 'AgentStepExecuted',
   step_ok: 'AgentStepExecuted',
@@ -266,7 +278,6 @@ export function registerAgentIpc(): void {
     agentRunByGroup.set(groupId, true);
     const sender = event.sender;
     const runId = `run-${String(++runCounter)}`;
-    const controller = new AbortController();
     const historyDb = getDb();
     const history =
       historyDb === null
@@ -279,7 +290,10 @@ export function registerAgentIpc(): void {
             ts: Date.now(),
           });
     if (history !== null) broadcastConversationsState();
-    registerAgentRunController(runId, controller);
+    const control = createRunControl(runId, () => {
+      // Phase 2 (resilience): kick the NetworkMonitor into active reconnect probing when a drop is seen
+      // only on the model socket. No-op for now — pause/steer (Phase 1) do not need it.
+    });
     const sendEvent = (e: AgentEvent): void => {
       if (!sender.isDestroyed()) sender.send(IpcChannels.agentEvent, e);
     };
@@ -293,7 +307,7 @@ export function registerAgentIpc(): void {
         ts: Date.now(),
         ...(detail !== undefined ? { detail } : {}),
       });
-      if (historyDb !== null && history !== null) {
+      if (historyDb !== null && history !== null && isHistoryKind(kind)) {
         AgentService.appendHistoryEvent(historyDb, history.turnId, {
           runId,
           groupId,
@@ -433,7 +447,8 @@ export function registerAgentIpc(): void {
           onCheckpoint,
           requestPlanApproval,
           requestApproval,
-          signal: controller.signal,
+          signal: control.signal,
+          control,
         },
         groupId,
         displayPrompt ?? prompt,
@@ -466,14 +481,14 @@ export function registerAgentIpc(): void {
         }
       }
       setCurrentAgentRun(null, null, null);
-      unregisterAgentRunController(runId);
+      unregisterRunControl(runId);
       agentRunByGroup.delete(groupId);
       if (!sender.isDestroyed()) sender.send(IpcChannels.tokenUsage, tokenUsage());
     }
   });
 
   onAction(IpcChannels.agentCancel, AgentRunIdSchema, (runId) => {
-    agentRunController(runId)?.abort();
+    agentRunControl(runId)?.abort();
     // Unblock a run parked on a pending HITL prompt so cancel takes effect immediately (not after the
     // 120s fail-safe): reject its plan/approval promises now.
     for (const [id, entry] of pendingApprovals) {
@@ -489,6 +504,49 @@ export function registerAgentIpc(): void {
       }
     }
   });
+
+  // Durable hold/resume record — mirrors the run handler's onCheckpoint (redact → Journal). Best-effort.
+  const journalRunCheckpoint = (runId: string, cp: AgentRunCheckpoint): void => {
+    const db = getDb();
+    if (db === null) return;
+    let payload: unknown = cp;
+    try {
+      payload = JSON.parse(Logger.redact(JSON.stringify(cp)));
+    } catch {
+      payload = cp;
+    }
+    try {
+      EventJournal.append(db, {
+        id: randomUUID(),
+        type: 'CheckpointWritten',
+        ts: Date.now(),
+        actor: 'agent',
+        correlationId: runId,
+        payload,
+        redacted: true,
+      });
+    } catch (err) {
+      Logger.warn('Journal hold/resume checkpoint append failed', { err: String(err) });
+    }
+  };
+
+  // Run-control: pause/resume HOLD the loop between steps (not cancel); steer INJECTS a message into the
+  // running agent. The panel labels 'paused'/'resumed' from its own dict, so no main-process UI string.
+  onAction(IpcChannels.agentPause, AgentRunIdSchema, (runId) => {
+    pauseAgentRun(runId);
+    emitCurrentRunEvent('paused', 'paused');
+    journalRunCheckpoint(runId, holdCheckpoint('user'));
+  });
+  onAction(IpcChannels.agentResume, AgentRunIdSchema, (runId) => {
+    resumeAgentRun(runId);
+    emitCurrentRunEvent('resumed', 'resumed');
+    journalRunCheckpoint(runId, resumeCheckpoint());
+  });
+  onAction(IpcChannels.agentSteer, AgentSteerSchema, ({ runId, text }) => {
+    steerAgentRun(runId, text);
+    emitCurrentRunEvent('steered', text);
+  });
+
   onAction(IpcChannels.agentNewConversation, AgentNewConversationSchema, (groupId) => {
     if (!agentEnabled()) return;
     AgentService.newConversation(groupId);

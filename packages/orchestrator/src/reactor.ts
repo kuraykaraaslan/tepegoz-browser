@@ -5,6 +5,7 @@ import { SECURITY_PREAMBLE, wrapUserRequest } from '@tepegoz/tool-executor';
 import { z } from 'zod';
 import type { AIProvider, ToolDescriptor, ToolError } from '@tepegoz/shared-types';
 import type { StepOutcome, StopReason } from './executor';
+import type { RunControl } from './run-control';
 import { ReactorMessages } from './messages';
 import {
   classifyRuntimeError,
@@ -190,6 +191,11 @@ export interface ReactOptions {
   /** Per-call Policy Kernel context (targetUrl for the sensitive-site lockout, taintedArgs). */
   ctxFor?: (tool: string, args: unknown) => InvokeContext;
   signal?: { readonly aborted: boolean };
+  /**
+   * Composed run-control gate (user pause/resume, connectivity hold, mid-run steering). Additive: when
+   * absent the loop runs exactly as before (signal-only). See {@link RunControl}.
+   */
+  control?: RunControl;
   /** Fired when the model chooses to act, before the tool runs (Agent Console). */
   onDecision?: (tool: string, rationale: string) => void;
   /** Fired after each tool call resolves (drives taint recording + console step events). */
@@ -444,6 +450,19 @@ export default class Reactor {
 
     for (let step = 0; ; step++) {
       if (options.signal?.aborted === true) return { outcomes, stoppedReason: 'aborted' };
+      // Run-control gate (additive; skipped entirely when `control` is absent — byte-identical legacy
+      // path): hold the loop while paused-by-user or offline, then fold any mid-run steering messages the
+      // user injected into the conversation before the next decision. Abort always wins over a hold.
+      if (options.control !== undefined) {
+        await options.control.waitWhileHeld();
+        if (options.control.aborted) return { outcomes, stoppedReason: 'aborted' };
+        for (const steer of options.control.drainSteer()) {
+          messages.push({
+            role: 'user',
+            content: `New instruction from the user (mid-run): ${wrapUserRequest(steer)}\nFold this into your current work; do NOT restart from scratch.`,
+          });
+        }
+      }
       if (outcomes.length >= maxSteps) return { outcomes, stoppedReason: 'max_steps' };
 
       // Periodic validator pass (AI-3): every `planningInterval` actions the Planner checks whether the

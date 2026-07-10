@@ -71,7 +71,16 @@ export const tr: AgentStrings = {
   },
   send: 'Gönder',
   stop: 'Durdur',
+  pause: 'Duraklat',
+  resume: 'Devam et',
+  steer: 'Talimat gönder (çalışan göreve eklenir)',
+  steerPlaceholder: 'Çalışırken bir talimat ekle…',
+  paused: 'Duraklatıldı',
   modelLabel: 'Model',
+  noModels: 'Uygun model yok',
+  // Bestecinin birleşik çalışma yapılandırması (dişli simgesi): model · otonomi · çaba tek denetimde.
+  config: 'Yapılandırma',
+  autonomyLabel: 'Otonomi',
   // Otonomi 'ask' değilken gösterilen amber risk bandı (seviyeye duyarlı).
   risk: {
     actTitle: 'Sormadan uyguluyor',

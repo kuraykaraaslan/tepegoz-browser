@@ -24,9 +24,12 @@ import {
   CloseIcon,
   CursorIcon,
   GaugeIcon,
+  GearIcon,
   KIND_DOT,
   NewTaskIcon,
   PaperclipIcon,
+  PauseIcon,
+  PlayIcon,
   ScheduleIcon,
   SendIcon,
   SparkIcon,
@@ -157,7 +160,16 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
         const next = new Map(prev);
         const newTurns = [...cur.turns.slice(0, last), updated];
         const isTerminal = e.kind === 'done' || e.kind === 'error';
-        next.set(gid, { ...cur, turns: newTurns, running: isTerminal ? false : cur.running, runId: isTerminal ? null : cur.runId });
+        let paused = cur.paused;
+        if (isTerminal || e.kind === 'resumed') paused = false;
+        else if (e.kind === 'paused') paused = true;
+        next.set(gid, {
+          ...cur,
+          turns: newTurns,
+          running: isTerminal ? false : cur.running,
+          paused,
+          runId: isTerminal ? null : cur.runId,
+        });
         return next;
       });
     });
@@ -268,6 +280,28 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
     const { runId } = activeState;
     if (runId !== null) api.cancelAgent(runId);
     mutateActive((s) => ({ ...s, running: false }));
+  }
+
+  /** Composer submit: while a run is active this STEERS it (folds the message into the current run);
+   *  otherwise it starts a new run. */
+  function onSubmit(): void {
+    const text = prompt.trim();
+    if (text.length === 0 || activeGroupId === null) return;
+    const { running, runId } = activeState;
+    if (running && runId !== null) {
+      api.steerAgent(runId, text);
+      mutateActive((s) => ({ ...s, prompt: '' }));
+      return;
+    }
+    onRun();
+  }
+
+  /** Toggle hold/resume on the active run (no-op when nothing is running). */
+  function onPauseResume(): void {
+    const { runId, paused } = activeState;
+    if (runId === null) return;
+    if (paused) api.resumeAgent(runId);
+    else api.pauseAgent(runId);
   }
 
   function onNewTask(): void {
@@ -439,14 +473,7 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
   }
 
   // ---- Derived values --------------------------------------------------------------------------
-  const currentChoice = config?.choices.find((ch) => ch.provider === config.provider);
-  const currentLabel = currentChoice
-    ? currentChoice.keyLabel !== undefined
-      ? `${currentChoice.label} · ${currentChoice.keyLabel}`
-      : currentChoice.label
-    : a.modelLabel;
   const availableChoices = config?.choices.filter((ch) => ch.available) ?? [];
-  const AutonomyGlyph = AUTONOMY_ICON[autonomy];
   const effort: AgentEffort = config?.effort ?? 'high';
   const notices = buildNotices(autonomy, a.risk).filter((n) => !dismissedNotices.has(n.id));
 
@@ -729,7 +756,7 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
       {/* Composer */}
       <form
         className="px-3 pt-1.5 pb-4"
-        onSubmit={(e) => { e.preventDefault(); onRun(); }}
+        onSubmit={(e) => { e.preventDefault(); onSubmit(); }}
       >
         <div className="rounded-lg border border-border bg-surface-raised focus-within:ring-2 focus-within:ring-border-focus">
           {/* Attachment chips */}
@@ -782,12 +809,11 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
           <textarea
             rows={2}
             value={prompt}
-            disabled={running}
-            placeholder={a.runPlaceholder}
-            aria-label={a.runPlaceholder}
+            placeholder={running ? a.steerPlaceholder : a.runPlaceholder}
+            aria-label={running ? a.steerPlaceholder : a.runPlaceholder}
             onChange={(e) => { const value = e.target.value; mutateActive((s) => ({ ...s, prompt: value })); }}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onRun(); }
+              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSubmit(); }
             }}
             className="block w-full resize-none bg-transparent px-3 py-2 text-sm text-text-primary placeholder:text-text-disabled focus:outline-none disabled:opacity-60"
           />
@@ -887,27 +913,39 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
               </Dropdown>
             </div>
 
-            {running ? (
-              <button
-                type="button"
-                onClick={onCancel}
-                aria-label={a.stop}
-                title={a.stop}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-overlay text-text-primary hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-              >
-                <StopIcon className="h-3.5 w-3.5" />
-              </button>
-            ) : (
+            <div className="flex items-center gap-1">
+              {running && (
+                <button
+                  type="button"
+                  onClick={onPauseResume}
+                  aria-label={activeState.paused ? a.resume : a.pause}
+                  title={activeState.paused ? a.resume : a.pause}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-overlay text-text-primary hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+                >
+                  {activeState.paused ? <PlayIcon className="h-4 w-4" /> : <PauseIcon className="h-4 w-4" />}
+                </button>
+              )}
+              {running && (
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  aria-label={a.stop}
+                  title={a.stop}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-overlay text-text-primary hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+                >
+                  <StopIcon className="h-3.5 w-3.5" />
+                </button>
+              )}
               <button
                 type="submit"
                 disabled={prompt.trim().length === 0 && attachments.length === 0}
-                aria-label={a.send}
-                title={a.send}
+                aria-label={running ? a.steer : a.send}
+                title={running ? a.steer : a.send}
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500 text-white hover:opacity-90 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
               >
                 <SendIcon className="h-4 w-4" />
               </button>
-            )}
+            </div>
           </div>
         </div>
       </form>

@@ -28,9 +28,11 @@ export function autoApprovesTool(level: AgentAutonomy, biometric: boolean): bool
 /** Event kinds whose message is model prose → rendered as markdown. */
 export const PROSE_KINDS = new Set<AgentEvent['kind']>(['done', 'error', 'handoff']);
 
-/** Tool-call progress kinds collapsed into the per-turn "Progress" group. */
+/** Tool-call progress kinds collapsed into the per-turn "Progress" group. `steered` rides here so an
+ *  injected mid-run instruction is visible in the transcript. (`paused`/`resumed` drive the banner, not a
+ *  list row.) */
 export const STEP_KINDS = new Set<AgentEvent['kind']>([
-  'step_start', 'step_ok', 'step_error', 'awaiting_approval', 'input_action',
+  'step_start', 'step_ok', 'step_error', 'awaiting_approval', 'input_action', 'steered',
 ]);
 
 /** Notice severities for the dynamic notices strip above the composer. */
@@ -75,6 +77,8 @@ export interface GroupState {
   approval: AgentApprovalRequest | null;
   planPreview: AgentPlanPreview | null;
   running: boolean;
+  /** The run is held (paused-by-user or offline) — the loop is suspended but not cancelled. */
+  paused: boolean;
   runId: string | null;
   skipIds: Set<string>;
   tokens: TokenUsageSnapshot | null;
@@ -91,6 +95,7 @@ export function emptyGroupState(): GroupState {
     approval: null,
     planPreview: null,
     running: false,
+    paused: false,
     runId: null,
     skipIds: new Set(),
     tokens: null,
@@ -135,6 +140,9 @@ const EVENT_KIND_LABEL: Record<AgentEvent['kind'], string> = {
   awaiting_approval: 'Awaiting approval',
   input_action: 'Input action',
   handoff: 'Handoff',
+  paused: 'Paused',
+  resumed: 'Resumed',
+  steered: 'Steering',
   done: 'Response',
   error: 'Error',
 };

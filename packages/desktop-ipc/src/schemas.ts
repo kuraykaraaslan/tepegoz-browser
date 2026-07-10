@@ -186,6 +186,11 @@ export const AgentRunInputSchema = z.object({
 /** `agent:new-conversation` payload — the group whose history to clear. */
 export const AgentNewConversationSchema = z.string().min(1).max(64);
 export const AgentRunIdSchema = z.string().min(1).max(64);
+/** A mid-run steering message injected into a running agent. */
+export const AgentSteerSchema = z.object({
+  runId: z.string().min(1).max(64),
+  text: z.string().min(1).max(4000),
+});
 export const AgentApprovalResponseSchema = z.object({
   approvalId: z.string().min(1).max(64),
   approved: z.boolean(),

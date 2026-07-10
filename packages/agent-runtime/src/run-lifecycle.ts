@@ -153,3 +153,14 @@ export function terminalCheckpoint(
     ...(failure !== undefined ? { lastFailure: failure, recovery: recoveryAdviceFor(failure) } : {}),
   };
 }
+
+/** A NON-terminal hold — the run is paused (by the user) or offline; it will resume, not end. Distinct
+ *  from {@link terminalCheckpoint}'s handoff-pause. Durable "paused at step N, why" for resume/replay. */
+export function holdCheckpoint(reason: 'user' | 'offline'): AgentRunCheckpoint {
+  return { phase: 'paused', ts: Date.now(), stoppedReason: `hold:${reason}` };
+}
+
+/** The paused → executing resume edge (the state machine already models it; this exercises it). */
+export function resumeCheckpoint(): AgentRunCheckpoint {
+  return { phase: 'executing', ts: Date.now() };
+}

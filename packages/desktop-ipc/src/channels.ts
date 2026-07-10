@@ -73,6 +73,11 @@ export const IpcChannels = {
   windowNew: 'window:new',
   agentRun: 'agent:run',
   agentCancel: 'agent:cancel',
+  /** Renderer→main: hold/resume a running agent between steps (not cancel). */
+  agentPause: 'agent:pause',
+  agentResume: 'agent:resume',
+  /** Renderer→main: inject a steering message into a RUNNING agent (folds into the current run). */
+  agentSteer: 'agent:steer',
   /** Renderer→main: reset conversation memory for a specific group (panel "New task"). */
   agentNewConversation: 'agent:new-conversation',
   /** Renderer→main: ensure the active tab belongs to a group; creates one if needed → { groupId }. */

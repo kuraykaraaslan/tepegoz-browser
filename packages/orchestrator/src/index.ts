@@ -21,6 +21,7 @@ export {
   type CompletionContext,
   type CompletionVerdict,
 } from './reactor';
+export { type RunControl } from './run-control';
 export {
   classifyRuntimeError,
   classifyToolFailure,

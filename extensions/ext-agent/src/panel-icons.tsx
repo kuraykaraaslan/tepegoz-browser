@@ -33,6 +33,12 @@ export const SendIcon = ({ className }: { className?: string }) => <Svg classNam
 export const StopIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" className={className} aria-hidden fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2" /></svg>
 );
+export const PauseIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className} aria-hidden fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1" /><rect x="14" y="5" width="4" height="14" rx="1" /></svg>
+);
+export const PlayIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className} aria-hidden fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+);
 export const ChevronDown = ({ className }: { className?: string }) => <Svg className={className}><path d="M6 9l6 6 6-6" /></Svg>;
 export const CheckIcon = ({ className }: { className?: string }) => <Svg className={className}><path d="M20 6L9 17l-5-5" /></Svg>;
 export const AskIcon = ({ className }: { className?: string }) => <Svg className={className}><path d="M8 12V7a2 2 0 114 0M6 12V9a2 2 0 114 0m0-1a2 2 0 114 0v1m0-1a2 2 0 114 0v6a5 5 0 01-5 5h-2a5 5 0 01-4-2l-3-4a2 2 0 013-2l2 1.5" /></Svg>;
@@ -52,6 +58,13 @@ export const AUTONOMY_ICON: Record<AgentAutonomy, (p: { className?: string }) =>
 export const GaugeIcon = ({ className }: { className?: string }) => (
   <Svg className={className}>
     <path d="M12 13l3.5-3.5M4 19a8 8 0 1116 0" />
+  </Svg>
+);
+/** Cog / settings gear — the composer's combined run-config control (model · autonomy · effort). */
+export const GearIcon = ({ className }: { className?: string }) => (
+  <Svg className={className}>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
   </Svg>
 );
 export const PaperclipIcon = ({ className }: { className?: string }) => (
@@ -74,6 +87,9 @@ export const KIND_DOT: Record<AgentEvent['kind'], string> = {
   awaiting_approval: 'bg-amber-500',
   input_action: 'bg-sky-400',
   handoff: 'bg-amber-500',
+  paused: 'bg-amber-500',
+  resumed: 'bg-green-500',
+  steered: 'bg-indigo-400',
   done: 'bg-green-600',
   error: 'bg-red-600',
 };

@@ -33,6 +33,10 @@ export type AgentEventKind =
   | 'awaiting_approval'
   | 'input_action'
   | 'handoff'
+  // Run-control (live, ephemeral — NOT journaled as step events; the durable record is the checkpoint):
+  | 'paused'
+  | 'resumed'
+  | 'steered'
   | 'done'
   | 'error';
 
@@ -166,6 +170,11 @@ export interface AgentHostApi {
     attachmentMeta?: AgentAttachmentMeta[];
   }): Promise<AgentRunResult>;
   cancelAgent(runId: string): void;
+  /** Hold/resume a running agent between steps (not cancel). */
+  pauseAgent(runId: string): void;
+  resumeAgent(runId: string): void;
+  /** Inject a steering message into a RUNNING agent — folds into the current run, not a new one. */
+  steerAgent(runId: string, text: string): void;
   /** The active tab's committed URL (seed a converted task's target page); null when no web tab. */
   getActiveTabUrl(): Promise<string | null>;
   /** Save (or update) a scheduled task — used by "Save as scheduled task" in the panel. */

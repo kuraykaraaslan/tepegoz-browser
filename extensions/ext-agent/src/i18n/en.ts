@@ -68,7 +68,16 @@ export const en = {
   },
   send: 'Send',
   stop: 'Stop',
+  pause: 'Pause',
+  resume: 'Resume',
+  steer: 'Send instruction (folds into the running task)',
+  steerPlaceholder: 'Add an instruction while it works…',
+  paused: 'Paused',
   modelLabel: 'Model',
+  noModels: 'No model available',
+  // The composer's combined run-config popover (gear icon): model · autonomy · effort in one control.
+  config: 'Config',
+  autonomyLabel: 'Autonomy',
   // Amber risk banner shown when autonomy is not 'ask' (level-aware).
   risk: {
     actTitle: 'Acting without asking',

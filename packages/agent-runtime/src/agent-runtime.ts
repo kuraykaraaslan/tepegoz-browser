@@ -22,6 +22,7 @@ import {
   Reactor,
   classifyRuntimeError,
   type AgentFailure,
+  type RunControl,
   type StepOutcome,
 } from '@tepegoz/orchestrator';
 import { TaintTracker, detectHandoff, inspectEgress } from '@tepegoz/security-policy';
@@ -108,6 +109,11 @@ export interface AgentRunHooks {
   requestApproval: (req: ConfirmRequest) => Promise<boolean>;
   /** Cooperative cancellation, checked between steps. */
   signal: { readonly aborted: boolean };
+  /**
+   * Composed run-control gate (user pause/resume, connectivity hold, mid-run steering). Additive: when
+   * absent the run behaves exactly as before (signal-only). Forwarded verbatim to the reactor.
+   */
+  control?: RunControl;
 }
 
 /**
@@ -485,6 +491,7 @@ export async function runAgent(
       },
       {
         signal: hooks.signal,
+        ...(hooks.control !== undefined ? { control: hooks.control } : {}),
         // Planner-as-validator (AI-3): the actor's `finish` is only a claim — a periodic Planner pass is
         // the sole completion authority, so a premature give-up is challenged and the run continues. The
         // validator call goes through ModelGateway, so the Egress-Firewall inspector + TokenLedger apply.
