@@ -35,4 +35,14 @@ export interface BrowserHost {
    *  `count` is how many occurrences were located (≤ nth) — so a shortfall (`count < nth`) is honest
    *  rather than reported as "no match". The primitive for targets that aren't yet in view. */
   scrollToText(text: string, nth?: number, tabId?: string): Promise<{ found: boolean; count: number }>;
+  /** Choose an `<option>` in the native `<select>` at `ref`, matching `value` against option text or
+   *  value (exact → diacritic-insensitive → substring) and firing `input`+`change` so page scripts react.
+   *  A native select opens an OS popup that DOM clicks can't drive, so this is the deterministic way to
+   *  set one. Resolves the matched option's label (or `null` when nothing matched) plus the full option
+   *  list — so on a miss the agent can retry with an exact label it can now see. */
+  selectOption(
+    ref: number,
+    value: string,
+    tabId?: string,
+  ): Promise<{ selected: string | null; options: string[] }>;
 }

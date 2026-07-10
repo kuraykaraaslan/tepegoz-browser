@@ -386,4 +386,11 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
     onInputAction('scroll_to_text', text.length > 60 ? `${text.slice(0, 60)}…` : text);
     return scrollToText(text, nth, tabId);
   },
+  selectOption: (ref, value, tabId) => {
+    // Deterministic CDP set (native selects open an OS popup no synthetic click can drive); narrate for
+    // parity with adapter-driven actions since this bypasses the HumanInputAdapter.
+    resetForAgentAction();
+    onInputAction('select_option', value.length > 60 ? `${value.slice(0, 60)}…` : value);
+    return CdpDriver.selectOption(requireWc(tabId), ref, value);
+  },
 };

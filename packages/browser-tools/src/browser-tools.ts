@@ -35,6 +35,11 @@ const UpdatePageArgs = z.discriminatedUnion('action', [
     text: z.string().min(1).max(500),
     nth: z.number().int().positive().max(50).optional(),
   }),
+  TargetTabArgs.extend({
+    action: z.literal('select_option'),
+    ref: Ref,
+    value: z.string().min(1).max(1000),
+  }),
 ]);
 
 interface PageFingerprint {
@@ -69,6 +74,31 @@ function structuralOnlyChange(before: PageFingerprint, after: PageFingerprint): 
     before.title === after.title &&
     before.text === after.text
   );
+}
+
+/** Result for a `select_option`: on a miss, surface the real option list so the model retries with an
+ *  exact label rather than falling back to clicking the native (OS-popup) select. */
+function selectOptionResult(
+  value: string,
+  selected: string | null | undefined,
+  optionLabels: string[] | undefined,
+  after: { url: string; title: string },
+  changed: boolean,
+): { ok: true; url: string; title: string; changed: boolean; recoveryHint?: string; note?: string } {
+  if (selected === null || selected === undefined) {
+    const opts = (optionLabels ?? []).filter((o) => o.length > 0).join(', ');
+    return {
+      ok: true,
+      url: after.url,
+      title: after.title,
+      changed,
+      recoveryHint:
+        `No option matching "${value}" in that dropdown.` +
+        (opts.length > 0 ? ` Available options: ${opts}.` : '') +
+        ' Call select_option again with one of the exact labels.',
+    };
+  }
+  return { ok: true, url: after.url, title: after.title, changed, note: `Selected "${selected}" in the dropdown.` };
 }
 
 /** Build a `browser_*` builtin ToolDescriptor (mirrors `@tepegoz/file-operations`'s local helper). */
@@ -170,7 +200,10 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
         '{ action: "scroll", direction: "up"|"down", amount?, tabId? } · ' +
         '{ action: "scroll_to_text", text, nth?, tabId? } to bring an off-screen target INTO view so it ' +
         'appears in browser_get_elements (use this instead of blind scrolling when you know the label/text; ' +
-        '`nth` picks the Nth match, default 1). Omit tabId for the active tab. ' +
+        '`nth` picks the Nth match, default 1) · ' +
+        '{ action: "select_option", ref, value, tabId? } to choose an option in a native <select> dropdown ' +
+        '(a native select opens an OS popup that a click/press cannot drive — ALWAYS use this, never click ' +
+        'then arrow/type; `value` matches the option label or value). Omit tabId for the active tab. ' +
         'File inputs must be handled through upload_create_item so path grants, approval, and audit apply. ' +
         'Returns { ok, url, title, changed, recoveryHint?, note?, found? }. changed=true also fires when a ' +
         'click opens a menu/drawer/panel with no new page text (a `note` then says to re-read elements); ' +
@@ -183,6 +216,8 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
       const before = await host.readPage(args.tabId);
       let found: boolean | undefined;
       let matchCount: number | undefined;
+      let selected: string | null | undefined;
+      let optionLabels: string[] | undefined;
       switch (args.action) {
         case 'click':
           await host.clickElement(args.ref, args.tabId);
@@ -199,9 +234,16 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
         case 'scroll_to_text':
           ({ found, count: matchCount } = await host.scrollToText(args.text, args.nth, args.tabId));
           break;
+        case 'select_option':
+          ({ selected, options: optionLabels } = await host.selectOption(args.ref, args.value, args.tabId));
+          break;
       }
       const after = await host.readPage(args.tabId);
       const changed = pageChanged(before, after);
+      // select_option's meaningful result is whether an option matched, not the structural delta.
+      if (args.action === 'select_option') {
+        return selectOptionResult(args.value, selected, optionLabels, after, changed);
+      }
       // scroll_to_text is a content-addressed reveal: its meaningful result is `found`, not the structural
       // delta. On a hit, tell the model to re-read so the now-in-view target enters the index map; on a
       // miss, steer it to different words rather than the generic "try another ref" hint.

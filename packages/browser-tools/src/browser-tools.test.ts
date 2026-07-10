@@ -14,6 +14,7 @@ function fakeHost(overrides?: Partial<BrowserHost>): BrowserHost {
     pressKey: () => Promise.resolve(),
     scrollPage: () => Promise.resolve(),
     scrollToText: () => Promise.resolve({ found: true, count: 1 }),
+    selectOption: () => Promise.resolve({ selected: 'Türkiye', options: ['Germany', 'Türkiye'] }),
     ...overrides,
   };
 }
@@ -48,6 +49,31 @@ describe('registerBrowserTools', () => {
     expect(clickElement).toHaveBeenCalledWith(3, undefined);
     expect(result).toMatchObject({ ok: true, changed: false });
     expect((result as Record<string, unknown>).recoveryHint).toEqual(expect.any(String));
+  });
+
+  it('select_option → host.selectOption and reports the chosen label', async () => {
+    const selectOption = vi.fn(() => Promise.resolve({ selected: 'Türkiye', options: ['Germany', 'Türkiye'] }));
+    registerBrowserTools({ host: fakeHost({ selectOption }) });
+    const result = await CapabilityRegistry.get('browser_update_page')!.handler({
+      action: 'select_option',
+      ref: 4,
+      value: 'Türkiye',
+    });
+    expect(selectOption).toHaveBeenCalledWith(4, 'Türkiye', undefined);
+    expect(result).toMatchObject({ ok: true, note: 'Selected "Türkiye" in the dropdown.' });
+  });
+
+  it('select_option miss → recoveryHint lists the available options', async () => {
+    const selectOption = vi.fn(() => Promise.resolve({ selected: null, options: ['Germany', 'Türkiye'] }));
+    registerBrowserTools({ host: fakeHost({ selectOption }) });
+    const result = (await CapabilityRegistry.get('browser_update_page')!.handler({
+      action: 'select_option',
+      ref: 4,
+      value: 'Atlantis',
+    })) as Record<string, unknown>;
+    expect(result.recoveryHint).toContain('Germany, Türkiye');
+    expect(result.recoveryHint).toContain('Atlantis');
+    expect(result.note).toBeUndefined();
   });
 
   it('reports visible page changes after an interaction', async () => {

@@ -69,6 +69,37 @@ const NetworkRequestSchema = z
 const NetworkCompleteSchema = z.object({ requestId: z.string() }).passthrough();
 const ResolveSchema = z.object({ object: z.object({ objectId: z.string() }).passthrough() });
 const CallResultSchema = z.object({ result: z.object({ value: z.unknown() }).passthrough() });
+/** `Runtime.callFunctionOn` returnByValue envelope for {@link SELECT_OPTION_FN}. */
+const SelectResultSchema = z.object({
+  result: z.object({
+    value: z.object({ selected: z.string().nullable(), options: z.array(z.string()) }),
+  }),
+});
+/**
+ * Runs ON a native `<select>` node (or a wrapper containing one): finds the option matching `value` by
+ * text/label/value — exact, then diacritic-insensitive (NFKD), then substring — sets it and fires
+ * `input`+`change` so page scripts react. Returns the matched option's label (or null) + all labels.
+ * A native select opens an OS popup that synthetic clicks can't drive, so this is the deterministic path.
+ */
+const SELECT_OPTION_FN =
+  'function(value){' +
+  'var el=this;' +
+  "if(!el||el.tagName!=='SELECT'){el=(el&&el.querySelector)?el.querySelector('select'):null;}" +
+  'if(!el){return {selected:null,options:[]};}' +
+  'var opts=Array.prototype.slice.call(el.options||[]);' +
+  "var label=function(o){return String(o.label||o.textContent||o.value||'').trim();};" +
+  'var labels=opts.map(label);' +
+  "var norm=function(s){return String(s==null?'':s).normalize('NFKD').replace(/\\p{Diacritic}/gu,'').trim().toLowerCase();};" +
+  'var want=String(value).trim().toLowerCase();var wantN=norm(value);' +
+  "var exact=function(o){return String(o.textContent||'').trim().toLowerCase()===want||String(o.label||'').trim().toLowerCase()===want||String(o.value||'').trim().toLowerCase()===want;};" +
+  'var diac=function(o){return norm(o.textContent)===wantN||norm(o.label)===wantN||norm(o.value)===wantN;};' +
+  'var sub=function(o){return wantN.length>0&&norm(o.textContent).indexOf(wantN)>=0;};' +
+  'var found=opts.find(exact)||opts.find(diac)||opts.find(sub);' +
+  'if(!found){return {selected:null,options:labels};}' +
+  'el.value=found.value;el.selectedIndex=found.index;' +
+  "el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));" +
+  'return {selected:label(found),options:labels};' +
+  '}';
 /** Runtime.evaluate result envelope when we ask for a handle (not by-value). */
 const EvalHandleSchema = z.object({
   result: z.object({ objectId: z.string().optional(), subtype: z.string().optional() }).passthrough(),
@@ -438,6 +469,39 @@ export default class CdpDriver {
       await adapter.insertText(text);
     }
     await CdpDriver.settle(wc);
+  }
+
+  /** Resolve a {@link NodeArg} to a live `objectId` (needed by `Runtime.callFunctionOn`). */
+  private static async objectIdFor(wc: WebContents, node: NodeArg): Promise<string> {
+    if ('objectId' in node) return node.objectId;
+    const resolved: unknown = await wc.debugger.sendCommand('DOM.resolveNode', {
+      backendNodeId: node.backendNodeId,
+    });
+    const parsed = ResolveSchema.safeParse(resolved);
+    if (!parsed.success) throw new AppError('could not resolve node for select_option', 409);
+    return parsed.data.object.objectId;
+  }
+
+  /** Choose an option in a native `<select>` at `ref` (see {@link SELECT_OPTION_FN}). Deterministic —
+   *  sets value + fires change in the page; no OS-popup interaction. Returns the matched label + options. */
+  static async selectOption(
+    wc: WebContents,
+    ref: number,
+    value: string,
+  ): Promise<{ selected: string | null; options: string[] }> {
+    await CdpDriver.ensureAttached(wc);
+    const node = await CdpDriver.resolveRef(wc, ref);
+    const objectId = await CdpDriver.objectIdFor(wc, node);
+    const raw: unknown = await wc.debugger.sendCommand('Runtime.callFunctionOn', {
+      objectId,
+      functionDeclaration: SELECT_OPTION_FN,
+      arguments: [{ value }],
+      returnByValue: true,
+    });
+    await CdpDriver.settle(wc);
+    const parsed = SelectResultSchema.safeParse(raw);
+    if (!parsed.success) return { selected: null, options: [] };
+    return parsed.data.result.value;
   }
 
   /** True when the target node (or a descendant) is the document's active/focused element. */
