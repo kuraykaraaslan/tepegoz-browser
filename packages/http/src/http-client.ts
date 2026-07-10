@@ -1,4 +1,8 @@
-import axios, { type AxiosInstance, type CreateAxiosDefaults } from 'axios';
+import axios, {
+  type AxiosInstance,
+  type CreateAxiosDefaults,
+  type InternalAxiosRequestConfig,
+} from 'axios';
 import { AppError, Logger } from '@tepegoz/libs';
 import { HttpMessages } from './messages';
 
@@ -72,6 +76,66 @@ export function normalizeHttpError(err: unknown): AppError {
   return new AppError(HttpMessages.UnknownHttpError, 503);
 }
 
+/** Max automatic retries for a 429. A 429 means the request was REJECTED (never processed), so a retry
+ *  is safe even for a non-idempotent POST — nothing ran. Bounded so a persistently rate-limited endpoint
+ *  still fails within a caller's own deadline instead of looping. */
+const MAX_RETRIES_429 = 6;
+/** Upper bound on a single backoff wait (ms) — a huge server `Retry-After` cannot hang a run unbounded. */
+const MAX_BACKOFF_MS = 10_000;
+/** Random jitter added to each backoff (ms) to de-synchronise concurrent rate-limited callers. */
+const BACKOFF_JITTER_MS = 200;
+
+/**
+ * The wait (ms) a 429 asks for: prefer the `Retry-After` header (delta-seconds or an HTTP-date), then
+ * the provider message's "try again in Xms / X.Ys" hint (OpenAI/Anthropic word the wait in the body).
+ * Returns null when neither is present, so the caller falls back to exponential backoff. Pure — unit
+ * tested; `now` is injected so the HTTP-date branch is deterministic in tests.
+ */
+export function retryAfterMs(headers: unknown, message: string | undefined, now = Date.now()): number | null {
+  const bag = typeof headers === 'object' && headers !== null ? (headers as Record<string, unknown>) : {};
+  const rawHeader = bag['retry-after'] ?? bag['Retry-After'];
+  if (typeof rawHeader === 'string' && rawHeader.length > 0) {
+    const secs = Number(rawHeader);
+    if (Number.isFinite(secs)) return Math.max(0, Math.round(secs * 1000));
+    const when = Date.parse(rawHeader);
+    if (!Number.isNaN(when)) return Math.max(0, when - now);
+  }
+  if (typeof message === 'string') {
+    const inMs = /try again in\s+([\d.]+)\s*ms/i.exec(message);
+    if (inMs?.[1] !== undefined) return Math.max(0, Math.round(Number(inMs[1])));
+    const inS = /try again in\s+([\d.]+)\s*s/i.exec(message);
+    if (inS?.[1] !== undefined) return Math.max(0, Math.round(Number(inS[1]) * 1000));
+  }
+  return null;
+}
+
+/** Backoff for the nth (0-based) 429 retry: the server's hint if given, else exponential (0.5·2^n),
+ *  both capped at {@link MAX_BACKOFF_MS}, plus jitter. Pure except for the jitter draw. */
+export function backoffMs(attempt: number, hintMs: number | null): number {
+  const base = hintMs ?? 500 * 2 ** attempt;
+  return Math.min(MAX_BACKOFF_MS, Math.max(0, base)) + Math.floor(Math.random() * BACKOFF_JITTER_MS);
+}
+
+/** A cancel-aware delay: resolves after `ms`, or rejects (RequestCanceled) the instant `signal` aborts,
+ *  so a backing-off retry does not outlive a cancelled run. */
+function delay(ms: number, signal: AbortSignal | undefined): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted === true) {
+      reject(new AppError(HttpMessages.RequestCanceled, 503));
+      return;
+    }
+    const onAbort = (): void => {
+      clearTimeout(timer);
+      reject(new AppError(HttpMessages.RequestCanceled, 503));
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
+}
+
 /**
  * Build a configured axios instance. Use this everywhere outbound HTTP is needed — do NOT construct
  * `axios` directly or add a vendor SDK.
@@ -86,10 +150,26 @@ export function createHttpClient(options: HttpClientOptions = {}): AxiosInstance
     config.baseURL = options.baseURL;
   }
   const instance = axios.create(config);
-  // Single boundary: every rejected request leaves as a mapped, redacted AppError.
+  // Single boundary: a 429 (rate limited → request REJECTED, not processed) is backed off and retried,
+  // bounded + cancel-aware + honoring Retry-After; everything else — or a 429 past the retry budget —
+  // leaves as a mapped, redacted AppError. This is the one place retries are meant to live (see header).
   instance.interceptors.response.use(
     (response) => response,
-    (error: unknown) => Promise.reject(normalizeHttpError(error)),
+    async (error: unknown) => {
+      if (axios.isAxiosError(error) && error.response?.status === 429 && error.config) {
+        const cfg = error.config as InternalAxiosRequestConfig & { retry429?: number };
+        const attempt = cfg.retry429 ?? 0;
+        const signal = cfg.signal as AbortSignal | undefined;
+        if (attempt < MAX_RETRIES_429 && signal?.aborted !== true) {
+          cfg.retry429 = attempt + 1;
+          const wait = backoffMs(attempt, retryAfterMs(error.response.headers, extractProviderMessage(error.response.data)));
+          Logger.info('http 429: backing off before retry', { attempt: attempt + 1, waitMs: wait });
+          await delay(wait, signal);
+          return instance(cfg);
+        }
+      }
+      throw normalizeHttpError(error);
+    },
   );
   return instance;
 }
