@@ -61,9 +61,22 @@ export function createWindow(): BrowserWindow {
   // hidden if that event is delayed or missed (e.g. a renderer load hiccup in dev). did-finish-load
   // and a timed fallback guarantee the window always appears. show() is idempotent.
   let shown = false;
+  // The AI-1 eval harness launches the real app many times back-to-back; keep every launch OFF the
+  // user's active view so a batch run never steals focus or pops windows while they work at the machine.
+  const evalMode = process.env.TEPEGOZ_EVAL === '1';
   const reveal = (): void => {
     if (shown || win.isDestroyed()) return;
     shown = true;
+    if (evalMode) {
+      // Invisible but FULLY COMPOSITED: a fully-transparent (opacity 0), shown-inactive window keeps
+      // painting its surface — so render-DOM perception (`elementFromPoint` hit-testing) AND screenshots
+      // still work — while the user sees nothing and focus is never stolen. Minimizing instead would stop
+      // compositing and blind perception. Also moved off-screen as belt-and-suspenders.
+      win.setOpacity(0);
+      win.setPosition(-2400, -2400);
+      win.showInactive();
+      return;
+    }
     win.show();
     win.focus();
   };

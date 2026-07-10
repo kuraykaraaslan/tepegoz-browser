@@ -57,6 +57,16 @@ const ONLY = (process.env.TEPEGOZ_EVAL_ONLY ?? '')
   .split(',')
   .map((s) => s.trim())
   .filter((s) => s.length > 0);
+// The eval window launches MINIMIZED (window.ts, so a batch run never pops windows / steals focus while
+// the user works). A minimized/occluded window normally STOPS compositing — which breaks render-DOM
+// perception (`document.elementFromPoint` hit-testing returns null → zero actionable elements) and
+// screenshots. These Chromium switches keep the renderer painting while minimized so perception still
+// works. Dev-harness only (passed at launch), never in production.
+const KEEP_RENDERING_MINIMIZED = [
+  '--disable-features=CalculateNativeWinOcclusion',
+  '--disable-backgrounding-occluded-windows',
+  '--disable-renderer-backgrounding',
+];
 
 const act = (tool: string, args: Record<string, unknown>, rationale: string): string =>
   JSON.stringify({ action: 'act', tool, args, rationale });
@@ -229,7 +239,8 @@ async function runOne(
     TEPEGOZ_EVAL_OUT: outPath,
     ELECTRON_ENABLE_LOGGING: '1',
   });
-  const app = await electron.launch({ args: [appDir], env: launchEnv });
+  // Switches BEFORE the app path go to Chromium/Electron; the app path is the first positional arg.
+  const app = await electron.launch({ args: [...KEEP_RENDERING_MINIMIZED, appDir], env: launchEnv });
   // Capture the app's stdout/stderr (the `[eval] <kind>` step trace + Chromium logs) so a FAIL can be
   // diagnosed at step granularity. Best-effort — never fail the run on a log-write error.
   const logChunks: string[] = [];
