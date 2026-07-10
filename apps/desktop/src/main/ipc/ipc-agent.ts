@@ -35,6 +35,7 @@ import {
 import NotificationHost from '../notifications/notification-host';
 import type { ConfirmRequest } from '@tepegoz/capability-plane';
 import { ModelGateway, PROVIDER_MODEL_CATALOG, TokenLedger } from '@tepegoz/model-gateway';
+import { hotSwapRunProvider } from '@tepegoz/agent-runtime';
 import { EventJournal } from '@tepegoz/persistence';
 import { AgentConversationStore } from '@tepegoz/persistence';
 import { TokenStore } from '@tepegoz/persistence';
@@ -711,6 +712,16 @@ export function registerAgentIpc(): void {
   handle(IpcChannels.agentSetProvider, (_event, payload): void => {
     const provider = z.enum(PROVIDER_IDS).parse(payload);
     PreferenceStore.update({ agentProviderOverride: provider });
+    // Instant mid-conversation switch: if a run is active, hot-swap its provider so the NEXT request
+    // hits the new API. Uses the provider's pinned model if set, else its primary model. Safe no-op if
+    // the provider isn't usable (no key) — the run simply stays on its current provider until next task.
+    if (hasActiveAgentRun()) {
+      const prefs = PreferenceStore.getAll();
+      hotSwapRunProvider(provider, {
+        effort: prefs.agentEffort,
+        model: prefs.agentModelOverride[provider] ?? '',
+      });
+    }
   });
   handle(IpcChannels.agentSetModel, (_event, payload): void => {
     const { provider, model } = z

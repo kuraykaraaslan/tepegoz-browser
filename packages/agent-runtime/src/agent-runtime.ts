@@ -6,6 +6,7 @@ import {
   ModelGateway,
   ModelRouter,
   OpenAIProvider,
+  PROVIDER_MODEL_CATALOG,
   TokenLedger,
   type CanonMessage,
   type EffortLevel,
@@ -280,6 +281,29 @@ function registerRunProvider(
     ModelGateway.register(new LocalProvider(deps.localInference));
   }
   return resolved.provider;
+}
+
+/**
+ * Live provider hot-swap for the ACTIVE run (Agent panel provider dropdown, mid-conversation). Resolves
+ * the key, builds + registers the new adapter, and pins the gateway to {provider, model} so the NEXT
+ * request routes to the new provider's API. SAFE by construction: on any failure (no key, unusable
+ * provider) it returns `false` and leaves the run untouched on its current provider — it can only ADD a
+ * registration + set the self-healing pin, never tear down the running provider. `model` empty → the
+ * provider's primary catalog model (single-model "everything", consistent with the Model pin). `local`
+ * is not hot-swappable here (it needs engine + on-device model wiring) — it applies at the next run.
+ */
+export function hotSwapRunProvider(
+  provider: AIProvider,
+  opts: { effort: EffortLevel; model: string },
+): boolean {
+  if (provider === 'local' || !isRunnableProvider(provider)) return false;
+  const apiKey = CredentialVault.getFirstKeyForProvider(provider);
+  if (apiKey === null) return false;
+  ModelGateway.register(providerFor(provider, apiKey, opts.effort, undefined));
+  const model = opts.model.length > 0 ? opts.model : (PROVIDER_MODEL_CATALOG[provider][0]?.id ?? '');
+  if (model.length === 0) return false;
+  ModelGateway.setModelOverride({ provider, model });
+  return true;
 }
 
 async function planOrEgressStop(

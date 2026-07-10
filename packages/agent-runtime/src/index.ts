@@ -7,6 +7,7 @@
  */
 export {
   runAgent,
+  hotSwapRunProvider,
   type AgentRunHooks,
   type AgentRunDeps,
   type AgentRunSummary,
