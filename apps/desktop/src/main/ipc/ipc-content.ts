@@ -27,6 +27,10 @@ import {
   type Preferences,
   type ProviderKeyMeta,
   type PublicSettings,
+  type TranslatePageState,
+  type TranslateSettings,
+  type TranslateState,
+  type TranslateTextResult,
   type TypoCheckResult,
   type TypoDictionaryInfo,
   type TypoSettings,
@@ -67,6 +71,12 @@ import {
   TypoIgnoredWordAddSchema,
   TypoPatchSchema,
   TypoSiteEnabledSchema,
+  TranslateCloudFallbackResponseSchema,
+  TranslateGlossaryAddSchema,
+  TranslateGlossaryIdSchema,
+  TranslatePatchSchema,
+  TranslateSiteEnabledSchema,
+  TranslateTextInputSchema,
   UserAgentSelectionSchema,
 } from '@tepegoz/desktop-ipc/schemas';
 import NotificationStore from '@tepegoz/notifications';
@@ -93,6 +103,8 @@ import adblockHost from '../extensions/adblock-host.electron';
 import AdblockEngineService from '../extensions/adblock-engine.electron';
 import typoHost from '../extensions/typo-host.electron';
 import TypoDictionaryManager from '../extensions/typo-dictionary-manager.electron';
+import translateHost, { respondTranslateCloudFallback } from '../extensions/translate-host.electron';
+import TranslatePageInjector from '../extensions/translate-page-injector.electron';
 import { builtinManifests } from '../../shared/extensions';
 import { handle, handleAsync, onAction, onSignal } from './ipc-helpers';
 import { applyChromeGlass, isMicaSupported } from '../lib/glass';
@@ -186,6 +198,9 @@ export function registerContentIpc(): void {
     if (validated.typo !== undefined) {
       typoHost.init();
     }
+    if (validated.translate !== undefined) {
+      translateHost.init();
+    }
     // Glass toggled — apply the Mica backdrop live to every top-level chrome window (popups are children
     // and stay opaque). setBackgroundMaterial/setBackgroundColor take effect without recreating windows.
     if (validated.glassChrome !== undefined) {
@@ -209,6 +224,7 @@ export function registerContentIpc(): void {
     ExtensionCapabilityService.reconcile();
     adblockHost.init();
     typoHost.init();
+    translateHost.init();
     broadcastPublicSettings();
     return next;
   });
@@ -523,6 +539,36 @@ export function registerContentIpc(): void {
   handle(IpcChannels.typoIgnoredWordAdd, (_event, payload): TypoSettings => {
     const { word, language } = TypoIgnoredWordAddSchema.parse(payload);
     return typoHost.addIgnoredWord(word, language);
+  });
+
+  // Translate extension: settings, text translation, full-page actions, per-site pause, glossary.
+  handle(IpcChannels.translateGet, (): TranslateSettings => translateHost.get());
+  handle(IpcChannels.translateSet, (_event, payload): TranslateSettings => {
+    const patch = TranslatePatchSchema.parse(payload) as Partial<TranslateSettings>;
+    return translateHost.update(patch);
+  });
+  handle(IpcChannels.translateState, (): TranslateState => translateHost.state());
+  handleAsync(IpcChannels.translateText, async (_event, payload): Promise<TranslateTextResult> => {
+    return translateHost.translateText(TranslateTextInputSchema.parse(payload));
+  });
+  handleAsync(IpcChannels.translatePageStart, async (): Promise<TranslatePageState | null> => {
+    return TranslatePageInjector.translateActive();
+  });
+  handleAsync(IpcChannels.translatePageRestore, async (): Promise<TranslatePageState | null> => {
+    return TranslatePageInjector.restoreActive();
+  });
+  handle(IpcChannels.translateSiteSet, (_event, payload): TranslateSettings => {
+    const { origin, enabled } = TranslateSiteEnabledSchema.parse(payload);
+    return translateHost.setSiteEnabled(origin, enabled);
+  });
+  handle(IpcChannels.translateGlossaryAdd, (_event, payload): TranslateSettings => {
+    return translateHost.addGlossaryTerm(TranslateGlossaryAddSchema.parse(payload));
+  });
+  handle(IpcChannels.translateGlossaryRemove, (_event, payload): TranslateSettings => {
+    return translateHost.removeGlossaryTerm(TranslateGlossaryIdSchema.parse(payload));
+  });
+  onAction(IpcChannels.translateCloudFallbackRespond, TranslateCloudFallbackResponseSchema, (response) => {
+    respondTranslateCloudFallback(response);
   });
 
   // On-device model management. Progress/install changes are pushed to every window via models:state.

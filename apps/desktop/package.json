@@ -59,6 +59,7 @@
     "@tepegoz/ext-macros": "workspace:*",
     "@tepegoz/ext-popup-blocker": "workspace:*",
     "@tepegoz/ext-tasks": "workspace:*",
+    "@tepegoz/ext-translate": "workspace:*",
     "@tepegoz/ext-typo": "workspace:*",
     "@tepegoz/ext-user-agent": "workspace:*",
     "@tepegoz/extension-catalog": "workspace:*",

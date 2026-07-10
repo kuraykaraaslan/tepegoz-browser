@@ -365,6 +365,64 @@ export const TypoIgnoredWordAddSchema = z.object({
   language: z.string().min(1).max(16),
 });
 
+/** `translate:set` payload — a partial settings patch (only provided keys change). */
+export const TranslatePatchSchema = z
+  .object({
+    enabled: z.boolean(),
+    autoTranslateForeignPages: z.boolean(),
+    targetLanguageMode: z.literal('app-locale'),
+    displayMode: z.literal('replace'),
+    engineMode: z.literal('local-first'),
+    cloudFallbackMode: z.enum(['ask', 'allow', 'deny']),
+    disabledOrigins: z.array(z.string().max(2048)).max(500),
+    glossaryTerms: z
+      .array(
+        z.object({
+          id: z.string().min(1).max(128),
+          source: z.string().min(1).max(200),
+          target: z.string().min(1).max(200),
+          sourceLanguage: z.string().min(1).max(16).optional(),
+          targetLanguage: z.string().min(1).max(16).optional(),
+          caseSensitive: z.boolean(),
+        }),
+      )
+      .max(1000),
+  })
+  .partial();
+
+/** `translate:text` payload. */
+export const TranslateTextInputSchema = z.object({
+  text: z.string().min(1).max(50_000),
+  sourceLanguage: z.string().min(1).max(16).optional(),
+  targetLanguage: z.string().min(1).max(16).optional(),
+  origin: z.string().max(2048).optional(),
+  reason: z.enum(['selection', 'page', 'manual']).optional(),
+});
+
+/** `translate:site-set` payload — enable or pause Translate for one http(s) origin. */
+export const TranslateSiteEnabledSchema = z.object({
+  origin: z.string().min(1).max(2048),
+  enabled: z.boolean(),
+});
+
+/** `translate-glossary:add` payload. */
+export const TranslateGlossaryAddSchema = z.object({
+  source: z.string().min(1).max(200),
+  target: z.string().min(1).max(200),
+  sourceLanguage: z.string().min(1).max(16).optional(),
+  targetLanguage: z.string().min(1).max(16).optional(),
+  caseSensitive: z.boolean(),
+});
+
+export const TranslateGlossaryIdSchema = z.string().min(1).max(128);
+
+/** `translate-cloud:respond` payload. */
+export const TranslateCloudFallbackResponseSchema = z.object({
+  requestId: z.string().min(1).max(128),
+  allow: z.boolean(),
+  remember: z.boolean(),
+});
+
 /** `extension:context-menu` payload — the reverse-DNS id of the toolbar icon that was right-clicked. */
 export const ExtensionIdSchema = z.string().regex(EXTENSION_ID_RE).max(128);
 

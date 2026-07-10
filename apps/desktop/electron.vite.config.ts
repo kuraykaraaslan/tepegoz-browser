@@ -34,6 +34,7 @@ const WORKSPACE_PACKAGES = [
   '@tepegoz/ext-user-agent',
   '@tepegoz/ext-popup-blocker',
   '@tepegoz/ext-macros',
+  '@tepegoz/ext-translate',
   '@tepegoz/ext-typo',
   // Bundled into main (TS source). Its native dep `better-sqlite3` stays external (real npm module,
   // rebuilt against the Electron ABI via `pnpm --filter @tepegoz/desktop run rebuild`).

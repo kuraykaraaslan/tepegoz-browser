@@ -6,6 +6,7 @@
 import type { AgentAutonomy, AgentEffort } from '@tepegoz/ext-agent/types';
 import type { AdblockSettings } from '@tepegoz/ext-adblock/types';
 import type { PopupBlockerSettings } from '@tepegoz/ext-popup-blocker/types';
+import type { TranslateSettings } from '@tepegoz/ext-translate/types';
 import type { TypoSettings } from '@tepegoz/ext-typo/types';
 import type { SearchEngine } from '@tepegoz/shared-types/search-engines';
 import type { FileAccessGrant } from '@tepegoz/shared-types/file-access';
@@ -174,6 +175,8 @@ export interface Preferences {
   adblock: AdblockSettings;
   /** Typo extension settings. Dictionaries live in userData/dictionaries and are not persisted here. */
   typo: TypoSettings;
+  /** Translate extension settings. Translation memory lives outside preferences. */
+  translate: TranslateSettings;
   /** One-time sentinel: true after the curated default trusted origins have been seeded into
    *  `popupBlocker.trustedOrigins`, so an intentionally removed default is never re-added. Not
    *  user-facing. */

@@ -26,6 +26,16 @@ import type {
   TypoSettings,
   TypoState,
 } from './contract';
+import type {
+  TranslateCloudFallbackRequest,
+  TranslateCloudFallbackResponse,
+  TranslateGlossaryTerm,
+  TranslatePageState,
+  TranslateSettings,
+  TranslateState,
+  TranslateTextInput,
+  TranslateTextResult,
+} from './contract';
 import type { HistoryEntry } from './contract';
 import type { BookmarkEntry, BookmarkNodeType, BookmarkTreeNode } from './contract';
 import type { BookmarkImportInput, BookmarkImportResult } from './contract';
@@ -303,6 +313,19 @@ export interface TepegozApi {
   setTypoSiteEnabled(origin: string, enabled: boolean): Promise<TypoSettings>;
   addTypoIgnoredWord(word: string, language: string): Promise<TypoSettings>;
   onTypoDictionariesState(callback: (items: TypoDictionaryInfo[]) => void): () => void;
+  // Translate extension: full-page and selection translation.
+  getTranslateSettings(): Promise<TranslateSettings>;
+  setTranslateSettings(patch: Partial<TranslateSettings>): Promise<TranslateSettings>;
+  getTranslateState(): Promise<TranslateState>;
+  translateText(input: TranslateTextInput): Promise<TranslateTextResult>;
+  startPageTranslation(): Promise<TranslatePageState | null>;
+  restorePageOriginal(): Promise<TranslatePageState | null>;
+  setTranslateSiteEnabled(origin: string, enabled: boolean): Promise<TranslateSettings>;
+  addTranslateGlossaryTerm(term: Omit<TranslateGlossaryTerm, 'id'>): Promise<TranslateSettings>;
+  removeTranslateGlossaryTerm(id: string): Promise<TranslateSettings>;
+  onTranslatePageState(callback: (state: TranslatePageState | null) => void): () => void;
+  onTranslateCloudFallbackRequest(callback: (request: TranslateCloudFallbackRequest) => void): () => void;
+  respondTranslateCloudFallback(response: TranslateCloudFallbackResponse): void;
   /** Read-only status of every configured MCP server (Settings → Connections). Never returns secrets. */
   getMcpStatus(): Promise<McpServerStatusInfo[]>;
   /** Read-only adaptor inventory shown next to MCP tools in Settings. */

@@ -19,10 +19,14 @@ import AdblockEngineService from './extensions/adblock-engine.electron';
 import typoHost, { typoCapabilityHost } from './extensions/typo-host.electron';
 import TypoPageInjector from './extensions/typo-page-injector.electron';
 import typoContextMenuContributor from './extensions/typo-context-menu-contributor.electron';
+import translateHost, { translateCapabilityHost } from './extensions/translate-host.electron';
+import TranslatePageInjector from './extensions/translate-page-injector.electron';
+import translateContextMenuContributor from './extensions/translate-context-menu-contributor.electron';
 import PageContextMenuContributionService from './menus/page-context-menu-contributions';
 import MacroService from './macro/macro-service.electron';
 import { macrosCapabilities } from '@tepegoz/ext-macros/capabilities';
 import { typoCapabilities } from '@tepegoz/ext-typo/capabilities';
+import { translateCapabilities } from '@tepegoz/ext-translate/capabilities';
 import { registerBrowserTools } from '@tepegoz/browser-tools';
 import { registerTabTools } from '@tepegoz/tab-engine';
 import { registerJournalTools } from '@tepegoz/journal-tools';
@@ -135,6 +139,9 @@ if (!app.requestSingleInstanceLock()) {
       typoHost.init();
       TypoPageInjector.start();
       PageContextMenuContributionService.provide(typoContextMenuContributor);
+      translateHost.init();
+      TranslatePageInjector.start();
+      PageContextMenuContributionService.provide(translateContextMenuContributor);
       // Load the popup-blocker settings before any page can call window.open, and register its
       // `popup:open` interceptor with the generic action-interception plane (ADR-0022).
       popupBlockerHost.init();
@@ -177,6 +184,7 @@ if (!app.requestSingleInstanceLock()) {
       // so disabling `com.tepegoz.macros` unregisters the macro tools (ADR-0024 kill-switch).
       ExtensionCapabilityService.provide(macrosCapabilities(), MacroService.capabilityHost());
       ExtensionCapabilityService.provide(typoCapabilities(), typoCapabilityHost);
+      ExtensionCapabilityService.provide(translateCapabilities(), translateCapabilityHost);
       ExtensionCapabilityService.start();
       // Sandboxed file operations: seed the default ~/tepegoz grant (first run), sync the access policy
       // from prefs, and register the file_* / fileaccess_* tools into the same CapabilityRegistry.

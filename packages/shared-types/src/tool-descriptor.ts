@@ -8,7 +8,7 @@ import { AiTaskEnum, RiskLevelEnum } from './enums';
 export const ToolNameSchema = z
   .string()
   .regex(
-    /^[a-z][a-z0-9]*_(list|get|search|create|update|delete|upload|download|analyze|export|validate)_[a-z][a-z0-9]*$/,
+    /^[a-z][a-z0-9]*_(list|get|search|create|update|delete|upload|download|analyze|translate|export|validate)_[a-z][a-z0-9]*$/,
     'Tool name must be {domain}_{verb}_{noun} using an approved verb',
   );
 export type ToolName = z.infer<typeof ToolNameSchema>;

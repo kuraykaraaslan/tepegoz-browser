@@ -144,6 +144,9 @@ importers:
       '@tepegoz/ext-tasks':
         specifier: workspace:*
         version: link:../../extensions/ext-tasks
+      '@tepegoz/ext-translate':
+        specifier: workspace:*
+        version: link:../../extensions/ext-translate
       '@tepegoz/ext-typo':
         specifier: workspace:*
         version: link:../../extensions/ext-typo
@@ -463,6 +466,34 @@ importers:
       react:
         specifier: ^18 || ^19
         version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.31
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
+
+  extensions/ext-translate:
+    dependencies:
+      '@tepegoz/extension-sdk':
+        specifier: workspace:*
+        version: link:../../packages/extension-sdk
+      '@tepegoz/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
+      '@tepegoz/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      react:
+        specifier: ^18 || ^19
+        version: 18.3.1
+      zod:
+        specifier: 3.23.8
+        version: 3.23.8
     devDependencies:
       '@types/react':
         specifier: ^18.3.18
@@ -900,6 +931,9 @@ importers:
       '@tepegoz/ext-popup-blocker':
         specifier: workspace:*
         version: link:../../extensions/ext-popup-blocker
+      '@tepegoz/ext-translate':
+        specifier: workspace:*
+        version: link:../../extensions/ext-translate
       '@tepegoz/ext-typo':
         specifier: workspace:*
         version: link:../../extensions/ext-typo

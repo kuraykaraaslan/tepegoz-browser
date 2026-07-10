@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faBan,
   faListCheck,
+  faLanguage,
   faPuzzlePiece,
   faRobot,
   faShieldHalved,
@@ -22,6 +23,7 @@ const ICONS: Record<string, IconDefinition> = {
   ban: faBan,
   'wand-magic-sparkles': faWandMagicSparkles,
   'list-check': faListCheck,
+  language: faLanguage,
   'shield-halved': faShieldHalved,
   'puzzle-piece': faPuzzlePiece,
 };

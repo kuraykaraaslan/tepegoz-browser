@@ -186,6 +186,28 @@ export const PreferencesSchema = z.object({
       )
       .max(2000),
   }),
+  // Translate extension settings. Translation memory is kept outside preferences.
+  translate: z.object({
+    enabled: z.boolean(),
+    autoTranslateForeignPages: z.boolean(),
+    targetLanguageMode: z.literal('app-locale'),
+    displayMode: z.literal('replace'),
+    engineMode: z.literal('local-first'),
+    cloudFallbackMode: z.enum(['ask', 'allow', 'deny']),
+    disabledOrigins: z.array(z.string().max(2048)).max(500),
+    glossaryTerms: z
+      .array(
+        z.object({
+          id: z.string().min(1).max(128),
+          source: z.string().min(1).max(200),
+          target: z.string().min(1).max(200),
+          sourceLanguage: z.string().min(1).max(16).optional(),
+          targetLanguage: z.string().min(1).max(16).optional(),
+          caseSensitive: z.boolean(),
+        }),
+      )
+      .max(1000),
+  }),
   // One-time sentinel: true once the curated default trusted origins have been seeded (see the host's
   // PopupBlockerManager.init), so a user who removes a default never gets it back on next launch.
   popupBlockerSeeded: z.boolean(),
@@ -287,6 +309,16 @@ export const DEFAULT_PREFERENCES: Preferences = {
     externalAiMode: 'manual',
     disabledOrigins: [],
     ignoredWords: [],
+  },
+  translate: {
+    enabled: true,
+    autoTranslateForeignPages: true,
+    targetLanguageMode: 'app-locale',
+    displayMode: 'replace',
+    engineMode: 'local-first',
+    cloudFallbackMode: 'ask',
+    disabledOrigins: [],
+    glossaryTerms: [],
   },
   // Seeded once by the main-process host (union of the curated defaults); starts empty + unseeded here.
   popupBlockerSeeded: false,

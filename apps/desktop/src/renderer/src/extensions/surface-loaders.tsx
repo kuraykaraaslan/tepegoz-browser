@@ -100,6 +100,22 @@ export const SURFACE_LOADERS: Record<
           },
       ),
   },
+  'com.tepegoz.translate': {
+    popup: () =>
+      import('@tepegoz/ext-translate/panel').then(
+        (m) =>
+          function TranslatePopupSurface({ onClose }: ExtensionSurfaceProps) {
+            return <m.TranslatePopup api={window.tepegoz} onClose={onClose} />;
+          },
+      ),
+    page: () =>
+      import('@tepegoz/ext-translate/panel').then(
+        (m) =>
+          function TranslatePageSurface({ onClose }: ExtensionSurfaceProps) {
+            return <m.TranslatePage api={window.tepegoz} onClose={onClose} />;
+          },
+      ),
+  },
   'com.tepegoz.macros': {
     sidebar: () =>
       import('@tepegoz/ext-macros/panel').then(

@@ -70,6 +70,28 @@ import type {
 } from '@tepegoz/ext-typo/types';
 export type { TypoCheckInput, TypoCheckResult, TypoDictionaryInfo, TypoSettings, TypoState };
 
+// Translate extension settings/state shape is owned by the extension package. Type-only → erased.
+import type {
+  TranslateCloudFallbackRequest,
+  TranslateCloudFallbackResponse,
+  TranslateGlossaryTerm,
+  TranslatePageState,
+  TranslateSettings,
+  TranslateState,
+  TranslateTextInput,
+  TranslateTextResult,
+} from '@tepegoz/ext-translate/types';
+export type {
+  TranslateCloudFallbackRequest,
+  TranslateCloudFallbackResponse,
+  TranslateGlossaryTerm,
+  TranslatePageState,
+  TranslateSettings,
+  TranslateState,
+  TranslateTextInput,
+  TranslateTextResult,
+};
+
 // History lives in persistence; bookmarks moved to their own feature package. Both are the single
 // source for their entry type. Type-only imports → erased, so the sandboxed preload stays dependency-free.
 import type { HistoryEntry } from '@tepegoz/persistence';

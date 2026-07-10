@@ -14,6 +14,14 @@ import {
   type ProviderKeyMeta,
   type PublicSettings,
   type TepegozApi,
+  type TranslateCloudFallbackRequest,
+  type TranslateCloudFallbackResponse,
+  type TranslateGlossaryTerm,
+  type TranslatePageState,
+  type TranslateSettings,
+  type TranslateState,
+  type TranslateTextInput,
+  type TranslateTextResult,
   type TypoCheckInput,
   type TypoCheckResult,
   type TypoDictionaryInfo,
@@ -62,6 +70,18 @@ export const settingsMiscApi: Pick<
   | 'setTypoSiteEnabled'
   | 'addTypoIgnoredWord'
   | 'onTypoDictionariesState'
+  | 'getTranslateSettings'
+  | 'setTranslateSettings'
+  | 'getTranslateState'
+  | 'translateText'
+  | 'startPageTranslation'
+  | 'restorePageOriginal'
+  | 'setTranslateSiteEnabled'
+  | 'addTranslateGlossaryTerm'
+  | 'removeTranslateGlossaryTerm'
+  | 'onTranslatePageState'
+  | 'onTranslateCloudFallbackRequest'
+  | 'respondTranslateCloudFallback'
   | 'pickFileAccessFolder'
   | 'pickNewTabBackgroundImage'
   | 'getNewTabBackgroundImage'
@@ -135,6 +155,43 @@ export const settingsMiscApi: Pick<
     return () => {
       ipcRenderer.removeListener(IpcChannels.typoDictionariesState, listener);
     };
+  },
+  getTranslateSettings: () => invoke<TranslateSettings>(IpcChannels.translateGet),
+  setTranslateSettings: (patch: Partial<TranslateSettings>) =>
+    invoke<TranslateSettings>(IpcChannels.translateSet, patch),
+  getTranslateState: () => invoke<TranslateState>(IpcChannels.translateState),
+  translateText: (input: TranslateTextInput) =>
+    invoke<TranslateTextResult>(IpcChannels.translateText, input),
+  startPageTranslation: () =>
+    invoke<TranslatePageState | null>(IpcChannels.translatePageStart),
+  restorePageOriginal: () =>
+    invoke<TranslatePageState | null>(IpcChannels.translatePageRestore),
+  setTranslateSiteEnabled: (origin: string, enabled: boolean) =>
+    invoke<TranslateSettings>(IpcChannels.translateSiteSet, { origin, enabled }),
+  addTranslateGlossaryTerm: (term: Omit<TranslateGlossaryTerm, 'id'>) =>
+    invoke<TranslateSettings>(IpcChannels.translateGlossaryAdd, term),
+  removeTranslateGlossaryTerm: (id: string) =>
+    invoke<TranslateSettings>(IpcChannels.translateGlossaryRemove, id),
+  onTranslatePageState: (callback: (state: TranslatePageState | null) => void) => {
+    const listener = (_event: unknown, state: TranslatePageState | null): void => {
+      callback(state);
+    };
+    ipcRenderer.on(IpcChannels.translatePageState, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.translatePageState, listener);
+    };
+  },
+  onTranslateCloudFallbackRequest: (callback: (request: TranslateCloudFallbackRequest) => void) => {
+    const listener = (_event: unknown, request: TranslateCloudFallbackRequest): void => {
+      callback(request);
+    };
+    ipcRenderer.on(IpcChannels.translateCloudFallbackRequest, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.translateCloudFallbackRequest, listener);
+    };
+  },
+  respondTranslateCloudFallback: (response: TranslateCloudFallbackResponse) => {
+    ipcRenderer.send(IpcChannels.translateCloudFallbackRespond, response);
   },
   // File operations (Settings → File operations). The grant list rides on preferences; only the native
   // folder picker needs a bridge method (AI-driven consent reuses the agent HITL modal).

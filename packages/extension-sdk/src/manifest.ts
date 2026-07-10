@@ -28,7 +28,13 @@ export const EXTENSION_ID_RE = /^[a-z0-9]+(\.[a-z0-9-]+)+$/;
 /** The closed set of capabilities an extension may request — a manifest naming anything else is
  *  rejected at the trust boundary (no free-form permission strings). Extend the enum as new host
  *  capabilities ship; enforcement lands with the Policy Kernel integration (Phase 3). */
-export const ExtensionPermissionSchema = z.enum(['tabs', 'read-page', 'navigate', 'network']);
+export const ExtensionPermissionSchema = z.enum([
+  'tabs',
+  'read-page',
+  'write-page',
+  'navigate',
+  'network',
+]);
 export type ExtensionPermission = z.infer<typeof ExtensionPermissionSchema>;
 
 /** Per-locale display overrides. Keyed by a locale string (e.g. 'tr') to avoid coupling the SDK to
