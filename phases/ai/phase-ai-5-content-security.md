@@ -46,3 +46,30 @@ strip known injection patterns before it reaches the model, matching nanobrowser
   Firewall / HITL.
 - Coordinate with [Phase 2](../phase-2-adapters-safe-browsing.md) (AgentThreatShield / Content Sanitizer)
   so this inbound guard and that safe-browsing work share one taxonomy rather than duplicating.
+
+## Audited gaps (external review, 2026-07)
+
+The 2026-07 audit rated inbound prompt-injection defence (`s29`) the **strongest** item across all clusters
+— page text is fenced as untrusted, task-override patterns are stripped, user-goal vs page-content sit at
+explicit different trust levels, and the trust boundary is enforced at the **action** layer too (tainted
+web arg → HITL), all default-on and wired. Two follow-ups here; the risk-tiering asks are routed away:
+
+- [ ] **`s28` — the injection defence is not yet proven against the agent on-harness.** `redteam.test.ts`
+      drives the sanitizer→taint→policy→egress **plane** with hand-built ZWSP/RLO/homoglyph strings, and
+      `content-guard.test.ts` covers the `INJECTION_PATTERN` strip — but the **agent** has never been run
+      against the `prompt-injection` **fixture** end-to-end (the phase-AI-5 DoD box for "agent does not
+      deviate" is still unchecked, pending the Electron-ABI eval env). Run it; and add the broader
+      adversarial fixtures (`s28`: fake-download bait, scroll-hide menu, hidden decoy, asserted
+      disabled-control trap) that no phase currently owns — the injection slice lives here, the rest are new
+      fixtures tracked in [AI-1](phase-ai-1-eval-harness.md).
+- [ ] **`s29` follow-up:** detection is a self-described **advisory regex v1** — novel phrasings can slip the
+      redactor and fall back on the model heeding `SECURITY_PREAMBLE`; and strict inbound-PII redaction is
+      **off by default and not wired to a user setting** (already tracked above). Consider a small
+      model-based classifier as a v2 layer *behind* the deterministic one.
+- **Routed elsewhere (not this track):** the audit's *approval-gate* asks — semantic classification of
+  purchase/payment/message-send/account-delete/share (the `financial` danger class exists but is assigned to
+  **zero** tools; `biometric` is unenforced metadata), a **prepare-vs-send** two-phase split, a
+  reversibility-default, and **resume-after-handoff** with payment-ambiguity/irreversible-action triggers
+  (`s20`/`s30`) — deepen the *authority* plane, not inbound content security. They belong to
+  [Phase 9 — Safe Autonomy & Delegation](../phase-9-safe-autonomy-delegation.md). The core approval gate +
+  CAPTCHA/2FA handoff are already built, wired, and default-on; these are the deltas.

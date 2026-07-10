@@ -49,3 +49,24 @@ replaces a class of brittle multi-step prose with one reliable primitive.
   redundant with tepegoz's existing tools (e.g. we already have tab CRUD tools).
 - `extract_content`-style large-payload actions are deferred (input-size concerns); `cache_content` +
   incremental reading covers the research loop for now.
+
+## Audited gaps (external review, 2026-07)
+
+The already-listed "remaining" items (native dropdowns are now shipped as `select_option`; page-quantized
+scroll, `send_keys`, **tab auto-switch on click**, popup-return-to-main still owed) all map to `s18` — keep
+those. The audit added one net-new action-vocabulary axis:
+
+- [ ] **`s16` — validation-aware form engine.** Field type/label/placeholder are *passively perceived* and
+      two widgets have deterministic actions (native `<select>` via `select_option`, file input via
+      `upload_create_item`), but the actual fills are generic model-driven `fill`, **validation rules are
+      never even captured** (the attribute allow-list omits `required`/`aria-required`/`pattern`/`min`/`max`/
+      `maxlength`/`autocomplete`/`inputmode`), there is **no** date/phone/currency/masked/custom-ARIA-dropdown/
+      autocomplete handling, and there is **no pre-submit "check required fields + surface error messages"**
+      step. Add: capture the validation attributes into the AI-2 allow-list; a pre-submit check that reads
+      required-but-empty fields and any visible error text and reports them *before* submitting; and
+      widget-specific fill helpers for the common typed inputs. (Perception half is AI-2; the actions +
+      pre-submit gate are AI-4.)
+- Note: `s18` (tab auto-switch / popup return-to-main) is the same axis as the "Tab auto-switch on click"
+  item above — the audit confirms same-origin iframe auto-entry works but tab-spawn detection + auto-switch
+  and OAuth/payment-popup-close return-to-main are unbuilt. Cross-reference
+  [AI-7](phase-ai-7-navigation-grounding.md) (navigation) — don't duplicate.

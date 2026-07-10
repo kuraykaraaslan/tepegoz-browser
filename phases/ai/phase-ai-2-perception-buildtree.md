@@ -59,3 +59,36 @@ attributes. The render-DOM approach fixes all three and adds new-element diffing
 ## Scope notes
 - `CdpDriver` and `MacroCdp` share one `webContents.debugger` attachment (only one active at a time) — keep the injection/read within that constraint.
 - The a11y snapshot may remain as a fallback path behind a flag until the render-DOM path is proven on the eval.
+
+## Audited gaps (external review, 2026-07)
+
+The 2026-07 audit confirmed the render-DOM perception is the live default and recognises elements by
+role/aria/semantic tag (not CSS class) — but surfaced two shortfalls beyond the already-tracked
+closed-shadow / cross-origin work:
+
+- [ ] **`s05` — no locator cascade or action-time occlusion re-check.** Each `ref` resolves to exactly **one**
+      address (an a11y `backendNodeId` or a render-DOM child-index path); a stale/failed locate forces a full
+      **re-snapshot**, not a second locator for the *same* element. Occlusion is checked only at **snapshot**
+      time (`isTopElement`); at click time `clickElement` does **no** occlusion re-verification
+      (`getBoxModel` isn't occlusion-aware) — only `fillElement` re-verifies (via focus retry) — so an
+      overlay that appears **between read and click** is not caught. The suggested cascade
+      (accessibility → text → semantic → CSS → coordinate) with an **auto-generated alternative selector** on
+      failure does not exist. Add: (a) a centre/corner `elementFromPoint` occlusion re-check inside
+      `clickElement` before dispatch (throw "occluded — re-read" instead of clicking the overlay), and (b)
+      an alternative-locator attempt for the same node before conceding `selector_stale`.
+- [ ] **`s04` — the default path bypasses the real accessible name.** The render-DOM `textOf()` derives a
+      name from `aria-label → placeholder → alt → innerText → title` but does **not** resolve
+      `aria-labelledby` or `<label for=>` association — a strict subset of Chromium's accessible name, which
+      the **a11y fallback** (`Accessibility.getFullAXTree`) computes fully. A `labelledby`-only control
+      surfaces with a weaker/blank name on the default path. Add `aria-labelledby`/`label-for` resolution to
+      `textOf()` (and consider a computed-ARIA-role for composite widgets, e.g. an `aria-checked` div with no
+      explicit `role`).
+- [ ] **`s23` (minor) — no page summary; refs are positional, not identity-stable.** The model gets
+      url/title + a capped element list + raw visible text but **no distilled summary**, and refs are
+      reassigned per snapshot (`i+1`, rebuilt every `browser_get_elements`) — the browser-use positional
+      `highlightIndex` model, not the stable `E12/E13` the suggestion pictured. The `*[n]` new-element
+      marker is the only cross-snapshot signal. *Documented design choice, not a bug* — listed only so a
+      future "distil a one-paragraph page summary" experiment has a home. Low priority.
+
+Also correct the doc's own line 18 overclaim: the interactivity heuristic does **not** classify on
+`class`/`data-*` (verified — there is no `className` branch); `data-testid` is captured only as an attribute.

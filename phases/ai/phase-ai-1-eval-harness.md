@@ -24,8 +24,9 @@ runs green on-harness** — scripted tier PASS against the real app after fixing
 > read extension catalog"; the harness now launches the `apps/desktop` **directory** so Electron resolves
 > the entry via `package.json "main"` and `getAppPath()` stays `apps/desktop`. Scripted tier passes green
 > (`blog_behind_menu`, task-success 100%) against the real BrowserHost + ToolGateway/Policy plane + scorer.
-> **Owed:** the live-tier competence run (real product model over the full 14-scenario registry) — the
-> environment is proven; it needs a provider API key.
+> **Owed:** the live-tier competence run (real product model over the full **23-scenario** registry —
+> `real-failures`(3) + `perception`(5) + `acceptance`(6) + `web-patterns`(9)) — the environment is proven;
+> it needs a provider API key.
 **Goal:** A repeatable, **honest** way to measure the agent's real competence, so every later change is
 justified by a pass-rate delta on the **real product model** against **real / representative pages** — not
 by a green offline test. This is the measurement backbone the rest of the track is scored against.
@@ -72,3 +73,45 @@ driving real pages with ground-truth scoring, plus a **held-out** set so fixes c
 - The live tier is deliberately **out of the blocking gate** (cost + real-web flakiness); its signal is the
   trend + the before/after delta on a change, not a hard CI pass.
 - Prefer the real product model for the headline metric; a weak local model "passing" is a false signal.
+
+## Audited gaps (external review, 2026-07) — eval rigor
+
+The 2026-07 suggestion audit found the backbone real and wired, but the **measurement is thin**: a single
+run per scenario, point estimates only, no wall-clock, and two metrics defined-but-dead in the live path.
+These make a "pass" less trustworthy than the anti-vanity contract demands. Each is a checkbox here; none
+changes agent behaviour (still measurement-only). The **first live run**
+([`eval-results-2026-07.md`](eval-results-2026-07.md)) already showed why these matter — N=1 sampling noise
+flipped several scenarios PASS↔FAIL (its finding #3, corroborating `s02`).
+
+- [x] **`s02` — repeated trials (≥3× per scenario) — LANDED** (`ac53932`). `TEPEGOZ_EVAL_REPEAT=N` (clamped
+      [1,10], default 1 for fast regression) runs each scenario N times and folds the trials into one result:
+      **majority verdict** for pass/fail, a per-scenario **k/N pass-frequency** table, **mean per-trial
+      pass-rate** (dev + held-out), tokens summed for honest cost. A one-off pass is no longer accepted as
+      the headline. **Remaining:** aggregate **step-count** across trials, and **wall-clock duration** —
+      still unmeasured (see `s26`); and actually *run* it at N≥3 for the defensible headline the live-run doc
+      still owes.
+- [ ] **`s26` — the missing metrics.** Of the eight the audit implies: task-success + token-count are
+      done+live; `toolErrorRate`/`navigationValidationFailureRate` are real-but-proxy "wrong-click" signals;
+      **absent entirely:** wall-clock **duration** (nothing measures it — not `AgentRunSummary`,
+      `StepOutcome`, nor `AcceptanceRunRecord`), **first-attempt success** (needs `s02`), **average action
+      count** (`toolCalls` is recorded but only as the denominator of `toolErrorRate`), and **dollar cost**
+      ("cost" today is token counts, no price-per-token). **Defined-but-dead in the live path:**
+      `recoverySuccessRate` (the 23-scenario registry triggers no `requiresRecovery`, so it's vacuously 1)
+      and the **human-intervention rate** (the eval auto-approves every HITL gate, so `approvalCount`=0).
+      Add a duration field end-to-end; wire recovery/intervention counts from real runs; report avg-actions,
+      first-attempt, and a currency estimate.
+- [ ] **`s27` — flaky detection + confidence intervals.** The `s02` repeat feature now surfaces a
+      per-scenario **k/N pass-frequency** — a real flaky *signal* (a `2/3` is visibly flaky) and the
+      prerequisite this needed. Still missing: a **confidence interval** beside the headline rate, and a
+      **cause classifier** (site-induced vs agent-induced variance). (The only `confidence` in code is the
+      LLM-judge's per-verdict self-report, not a statistical interval.) Real-web flakiness is still only
+      *acknowledged* as the reason the live tier is non-blocking, not quantified.
+- [ ] **`s03` — fixture coverage holes.** The set is genuinely broad (22 fixtures: form/login/cookie/modal/
+      pagination/table/iframe/shadow-dom/accordion/dynamic/two-dropdown-designs), but a **file-download**
+      fixture is entirely missing and there is **no deliberately malformed / broken-HTML / conflicting-selector**
+      stress fixture (every page is well-formed). Add both.
+- [ ] **`s28` — a real adversarial set** (see [AI-5](phase-ai-5-content-security.md)): today only the
+      `prompt-injection` fixture + `link-href` (same-name controls) are genuine traps. Missing: fake
+      "Download" ad/bait, a scroll-hide menu, a hidden decoy/honeypot, and an *asserted* disabled-control
+      trap. The security **plane** is well tested by `redteam.test.ts`, but with hand-built strings — the
+      **agent** has not been run against the injection fixture on-harness.

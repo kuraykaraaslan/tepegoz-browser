@@ -54,3 +54,31 @@ fix for the exact failure we saw, and it is code, not a prompt sentence.
   parallel-DAG work — those are orthogonal (durability, parallelism), this is single-run loop authority.
 - Multi-action batching (an actor emitting an action *sequence* per call) is **optional** and deferred; land
   the validator + memory + transient-state first, measure, then decide if batching is worth the complexity.
+
+## Audited gaps (external review, 2026-07)
+
+The 2026-07 audit confirmed the Observe→Decide→Act→Verify→Update loop, the goal-level validator, the error
+taxonomy, and the action-signature loop-detector are all real and wired. Three deepenings remain:
+
+- [ ] **`s15` — structured working-state (not chat-resident).** The model's actual working memory is a
+      **free-text `memory` string carried in the chat history** plus a transient last-perception blob — the
+      *opposite* of a structured state object. A structured record **does** exist
+      ([`run-lifecycle.ts` `AgentRunCheckpoint`](../../packages/agent-runtime/src/run-lifecycle.ts):
+      `url`/`title`/`tabId`/`lastSuccessfulStep`/`lastFailure`) but it is wired to the **journal for durable
+      resume**, never fed back into the model's context, and omits selected-records / filled-fields /
+      completed-subtasks / pending-verifications. Give the actor a typed working-state it reasons over
+      (open tabs, selected records, filled fields, done sub-tasks, pending verifications) instead of relying
+      on chat-resident prose.
+- [ ] **`s14` — run-level no-progress + replan-after-N.** The loop-detector keys on the **action signature**,
+      not the page-**state** hash: a real `sig` is computed but consumed only by `browser_update_page`'s
+      per-action `changed`, never as a cross-step "state unchanged for N steps → stop" signal. And "after N
+      failed steps, generate a new plan" is **not** built — `maxRecoveryAttempts` fails **closed** and ends
+      the run; the periodic `Planner.validateCompletion` only judges done/not-done and never regenerates a
+      path. Add a run-level state-hash no-progress detector and a genuine replan trigger.
+- [ ] **`s07` — a real Replanner role.** Of the suggested Planner/Executor/Verifier/Replanner split, only a
+      reactive one-action Executor and a **goal-level** (not per-step) Verifier operate live; the Planner's
+      step DAG is discarded to a guidance outline, and there is **no Replanner** — recovery is a static
+      per-error-kind hint string. When the no-progress detector (`s14`) or the completion validator rejects
+      progress, route to a `Planner.replan(goal, history, whatFailed)` that produces a *new* approach, rather
+      than only pushing a "keep going" nudge. (Per-step verification staying deterministic change-detection is
+      fine; the gap is the *replan*, not a second LLM verifier per step.)
