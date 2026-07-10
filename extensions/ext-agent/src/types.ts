@@ -108,7 +108,15 @@ export interface TokenUsageSnapshot {
  */
 export type AgentAutonomy = 'ask' | 'act' | 'auto' | 'dangerous';
 
-/** One selectable provider/model for the panel's model picker. */
+/** One user-selectable model within a provider (the panel's Model dropdown). */
+export interface AgentModelInfo {
+  /** Canonical model id sent to the provider (e.g. "claude-sonnet-4-6"). */
+  id: string;
+  /** Friendly display name, e.g. "Sonnet 4.6". */
+  label: string;
+}
+
+/** One selectable provider for the panel's Provider picker (plus its selectable models). */
 export interface AgentModelChoice {
   provider: AIProvider;
   /** Provider display name, e.g. "Claude", "OpenAI", "Gemini", "Local: <model>". */
@@ -117,12 +125,17 @@ export interface AgentModelChoice {
   keyLabel?: string;
   /** Whether it's usable right now (a cloud provider has a key; local has a selected model). */
   available: boolean;
+  /** Models the user can pin for this provider (the Model dropdown). Empty ⇒ only auto/tiered routing
+   *  (e.g. `local`, which selects its model in Settings). Pinning one overrides all tiers for the run. */
+  models: AgentModelInfo[];
 }
 
-/** The panel's current agent config: which provider the next run uses + the autonomy + effort level. */
+/** The panel's current agent config: which provider + model the next run uses + the autonomy + effort. */
 export interface AgentConfig {
   provider: AIProvider;
   choices: AgentModelChoice[];
+  /** The pinned model id for the current {@link provider} (`''` = auto/tiered routing). */
+  model: string;
   autonomy: AgentAutonomy;
   effort: AgentEffort;
 }
@@ -201,8 +214,11 @@ export interface AgentHostApi {
   getTokenUsage(): Promise<TokenUsageSnapshot>;
   /** Current provider + selectable choices + autonomy level (for the header selector + mode dropdown). */
   getAgentConfig(): Promise<AgentConfig>;
-  /** Set the per-run provider override (Agent panel model selector). */
+  /** Set the per-run provider override (Agent panel provider selector). */
   setAgentProvider(provider: AIProvider): Promise<void>;
+  /** Pin a specific model for `provider` (Agent panel Model dropdown); `''` clears the pin (auto/tiered).
+   *  Applied to ALL tiers and, if a run is active on this provider, takes effect on the next request. */
+  setAgentModel(provider: AIProvider, model: string): Promise<void>;
   /** Set the autonomy level (Agent panel mode dropdown). */
   setAgentAutonomy(level: AgentAutonomy): Promise<void>;
   /** Set the reasoning effort preset (Agent panel effort dropdown). */

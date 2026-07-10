@@ -389,6 +389,13 @@ export async function runAgent(
   // Resolve + register the provider (eval seam → vault/prefs) and get the id that drives routing.
   const provider = registerRunProvider(deps, prefs, localAvailable, effort);
 
+  // Per-run model pin (Agent panel Model dropdown): when the user pinned a model for the RESOLVED
+  // provider, route every tier (plan/exec/classify) to it instead of the router's per-tier choice. Read
+  // live by the gateway, so a mid-run switch (pushed by the IPC layer) lands on the next request. The
+  // host clears it when the run ends (the gateway is a process-global shared with other model callers).
+  const pinnedModel = prefs.agentModelOverride[provider] ?? '';
+  ModelGateway.setModelOverride(pinnedModel.length > 0 ? { provider, model: pinnedModel } : null);
+
   const route = ModelRouter.route({ capability: 'plan', costSaver, localAvailable, provider });
   // The reactive loop runs on the exec tier (cheaper/faster than the planning tier).
   const execRoute = ModelRouter.route({ capability: 'exec', costSaver, localAvailable, provider });

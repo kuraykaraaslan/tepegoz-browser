@@ -100,6 +100,8 @@ export const IpcChannels = {
   // Agent panel config: current provider + choices + autonomy level, and setters for each.
   agentGetConfig: 'agent:get-config',
   agentSetProvider: 'agent:set-provider',
+  /** Renderer→main: pin a specific model for a provider (Agent panel Model dropdown); '' clears it. */
+  agentSetModel: 'agent:set-model',
   agentSetAutonomy: 'agent:set-autonomy',
   /** Renderer→main: set the per-run reasoning-effort preset (Agent panel effort dropdown). */
   agentSetEffort: 'agent:set-effort',

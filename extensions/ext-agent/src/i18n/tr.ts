@@ -78,8 +78,11 @@ export const tr: AgentStrings = {
   paused: 'Duraklatıldı',
   modelLabel: 'Model',
   noModels: 'Uygun model yok',
-  // Bestecinin birleşik çalışma yapılandırması (dişli simgesi): model · otonomi · çaba tek denetimde.
+  // Bestecinin çalışma yapılandırması (dişli simgesi): sağlayıcı · model · otonomi · çaba, her biri kendi satırı.
   config: 'Yapılandırma',
+  provider: 'Sağlayıcı',
+  // Model açılır menüsündeki "sabitleme yok" seçeneği — çalışma göreve göre otomatik yönlendirilir.
+  modelAuto: 'Otomatik',
   autonomyLabel: 'Otonomi',
   // Otonomi 'ask' değilken gösterilen amber risk bandı (seviyeye duyarlı).
   risk: {

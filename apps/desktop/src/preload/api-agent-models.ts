@@ -55,6 +55,7 @@ export const agentModelsApi: Pick<
   | 'getTokenUsage'
   | 'getAgentConfig'
   | 'setAgentProvider'
+  | 'setAgentModel'
   | 'setAgentAutonomy'
   | 'setAgentEffort'
   | 'openAgentFile'
@@ -160,6 +161,8 @@ export const agentModelsApi: Pick<
   getTokenUsage: () => invoke<TokenUsageSnapshot>(IpcChannels.tokenUsageGet),
   getAgentConfig: () => invoke<AgentConfig>(IpcChannels.agentGetConfig),
   setAgentProvider: (provider: ProviderId) => invoke<void>(IpcChannels.agentSetProvider, provider),
+  setAgentModel: (provider: ProviderId, model: string) =>
+    invoke<void>(IpcChannels.agentSetModel, { provider, model }),
   setAgentAutonomy: (level: AgentAutonomy) => invoke<void>(IpcChannels.agentSetAutonomy, level),
   setAgentEffort: (level: AgentEffort) => invoke<void>(IpcChannels.agentSetEffort, level),
   openAgentFile: (path: string) => {

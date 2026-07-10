@@ -5,7 +5,6 @@ import { coreDict } from '@tepegoz/i18n';
 import { useT } from '@tepegoz/i18n/react';
 import type { AIProvider } from '@tepegoz/shared-types/providers';
 import { agentDict } from './i18n';
-import { AGENT_EFFORT_LEVELS } from './types';
 import type {
   AgentAutonomy,
   AgentConfig,
@@ -16,9 +15,9 @@ import type {
 } from './types';
 import { ConversationHistoryDropdown } from './conversation-history-dropdown';
 import { Dropdown } from './panel-dropdown';
+import { RunConfigMenu } from './panel-run-config';
 import { ScheduleTaskModal } from './schedule-task-modal';
 import {
-  AUTONOMY_ICON,
   CameraIcon,
   CheckIcon,
   CloseIcon,
@@ -36,8 +35,6 @@ import {
   StopIcon,
 } from './panel-icons';
 import {
-  AUTONOMY_DISABLED,
-  AUTONOMY_LEVELS_ALL,
   NOTICE_STYLE,
   PROSE_KINDS,
   STEP_KINDS,
@@ -380,6 +377,13 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
     void api.setAgentProvider(provider).then(() => api.getAgentConfig()).then(setConfig, () => {});
   }
 
+  function chooseModel(model: string): void {
+    const provider = config?.provider;
+    if (provider === undefined) return;
+    setConfig((prev) => (prev !== null ? { ...prev, model } : prev));
+    void api.setAgentModel(provider, model).then(() => api.getAgentConfig()).then(setConfig, () => {});
+  }
+
   function chooseAutonomy(level: AgentAutonomy): void {
     setConfig((prev) => (prev !== null ? { ...prev, autonomy: level } : prev));
     void api.setAgentAutonomy(level).catch(() => {});
@@ -473,8 +477,6 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
   }
 
   // ---- Derived values --------------------------------------------------------------------------
-  const availableChoices = config?.choices.filter((ch) => ch.available) ?? [];
-  const effort: AgentEffort = config?.effort ?? 'high';
   const notices = buildNotices(autonomy, a.risk).filter((n) => !dismissedNotices.has(n.id));
 
   const {
@@ -558,29 +560,6 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
             <CloseIcon className="h-4 w-4" />
           </button>
         </div>
-      </div>
-
-      {/* Model selector row */}
-      <div className="flex items-center border-b border-border px-2 py-1">
-        <Dropdown trigger={<span className="font-medium">{currentLabel}</span>} align="left">
-          {(close) =>
-            availableChoices.length === 0 ? (
-              <p className="px-2 py-1.5 text-xs text-text-secondary">{a.modelLabel}</p>
-            ) : (
-              availableChoices.map((ch) => (
-                <button
-                  key={ch.provider}
-                  type="button"
-                  onClick={() => { chooseProvider(ch.provider); close(); }}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-text-primary hover:bg-surface-overlay"
-                >
-                  <span className="flex-1">{ch.keyLabel !== undefined ? `${ch.label} · ${ch.keyLabel}` : ch.label}</span>
-                  {config?.provider === ch.provider && <CheckIcon className="h-4 w-4 text-amber-500" />}
-                </button>
-              ))
-            )
-          }
-        </Dropdown>
       </div>
 
       {/* Export failure banner (a blocked/failed chat-log export is never silent). */}
@@ -850,65 +829,32 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
 
               <div className="mx-1 h-4 w-px bg-border" />
 
+              {/* Run-config popover (gear): provider · model · autonomy · effort, each its own dropdown row. */}
               <Dropdown
                 direction="up"
+                menuClassName="w-72"
+                ariaLabel={a.config}
+                title={a.config}
                 trigger={
                   <span className="flex items-center gap-1.5">
-                    <AutonomyGlyph className="h-3.5 w-3.5 text-amber-500" />
-                    {a.autonomy[autonomy].title}
+                    <GearIcon className="h-3.5 w-3.5 text-text-secondary" />
+                    {a.config}
                   </span>
                 }
               >
-                {(close) =>
-                  AUTONOMY_LEVELS_ALL.map((level) => {
-                    const Glyph = AUTONOMY_ICON[level];
-                    const disabled = AUTONOMY_DISABLED.has(level);
-                    return (
-                      <button
-                        key={level}
-                        type="button"
-                        disabled={disabled}
-                        onClick={disabled ? undefined : () => { chooseAutonomy(level); close(); }}
-                        className={
-                          'flex w-full items-start gap-2 rounded-md px-2 py-2 text-left' +
-                          (disabled ? ' cursor-not-allowed opacity-40' : ' hover:bg-surface-overlay')
-                        }
-                      >
-                        <Glyph className={cn('mt-0.5 h-4 w-4 shrink-0', disabled ? 'text-red-500/50' : 'text-text-secondary')} />
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-medium text-text-primary">{a.autonomy[level].title}</span>
-                          <span className="block text-xs text-text-secondary">{a.autonomy[level].desc}</span>
-                        </span>
-                        {autonomy === level && <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />}
-                      </button>
-                    );
-                  })
-                }
-              </Dropdown>
-              <Dropdown
-                direction="up"
-                trigger={
-                  <span className="flex items-center gap-1.5">
-                    <GaugeIcon className="h-3.5 w-3.5 text-text-secondary" />
-                    {a.effort[effort].title}
-                  </span>
-                }
-              >
-                {(close) =>
-                  AGENT_EFFORT_LEVELS.map((level) => (
-                    <button
-                      key={level}
-                      type="button"
-                      onClick={() => { chooseEffort(level); close(); }}
-                      className="flex w-full items-start gap-2 rounded-md px-2 py-2 text-left hover:bg-surface-overlay"
-                    >
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-medium text-text-primary">{a.effort[level].title}</span>
-                        <span className="block text-xs text-text-secondary">{a.effort[level].desc}</span>
-                      </span>
-                      {effort === level && <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />}
-                    </button>
-                  ))
+                {() =>
+                  config === null ? (
+                    <p className="px-2 py-2 text-xs text-text-secondary">{a.history.loading}</p>
+                  ) : (
+                    <RunConfigMenu
+                      t={a}
+                      config={config}
+                      onProvider={chooseProvider}
+                      onModel={chooseModel}
+                      onAutonomy={chooseAutonomy}
+                      onEffort={chooseEffort}
+                    />
+                  )
                 }
               </Dropdown>
             </div>

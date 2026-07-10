@@ -75,8 +75,11 @@ export const en = {
   paused: 'Paused',
   modelLabel: 'Model',
   noModels: 'No model available',
-  // The composer's combined run-config popover (gear icon): model · autonomy · effort in one control.
+  // The composer's run-config popover (gear icon): provider · model · autonomy · effort, each its own row.
   config: 'Config',
+  provider: 'Provider',
+  // The Model dropdown's "no pin" option — the run auto-routes per task (planning/exec/classify tiers).
+  modelAuto: 'Auto',
   autonomyLabel: 'Autonomy',
   // Amber risk banner shown when autonomy is not 'ask' (level-aware).
   risk: {

@@ -77,6 +77,9 @@ export const PreferencesSchema = z.object({
   localActions: z.record(z.string().max(64), z.boolean()),
   // Agent panel per-run provider override (null = default resolution); autonomy level (default safe).
   agentProviderOverride: ProviderPrefSchema.nullable(),
+  // Agent panel per-provider model pin, keyed provider id → model id (absent/'' = auto/tiered routing).
+  // When set for the resolved provider it overrides ALL tiers for the run (plan/exec/classify).
+  agentModelOverride: z.record(z.string().max(64), z.string().max(64)),
   agentAutonomy: z.enum(['ask', 'act', 'auto', 'dangerous']),
   agentEffort: z.enum(AGENT_EFFORT_LEVELS),
   // Account-wide total-token quota (input+output) across runs; 0 = unlimited/off. Drives the Token
@@ -263,6 +266,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   localProvider: { mode: 'off', selectedModelId: '' },
   localActions: {},
   agentProviderOverride: null,
+  agentModelOverride: {},
   agentAutonomy: 'ask',
   agentEffort: 'high',
   agentTokenQuota: 0,

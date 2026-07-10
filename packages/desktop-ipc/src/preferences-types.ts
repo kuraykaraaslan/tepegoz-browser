@@ -122,6 +122,9 @@ export interface Preferences {
    *  default resolution: whole-agent-local, then the highest-priority stored key). Only applied when
    *  usable (a cloud provider needs a key; `'local'` needs an installed model). */
   agentProviderOverride: ProviderId | null;
+  /** Agent panel per-provider model pin, keyed provider id → model id. Absent key (or `''`) ⇒ auto/tiered
+   *  routing for that provider. When set for the resolved provider it overrides ALL tiers for the run. */
+  agentModelOverride: Record<string, string>;
   /** Agent autonomy: `'ask'` = HITL plan + per-tool approval (default, safe); `'auto'` = "act without
    *  asking" (the panel auto-approves; `deny`-class policy still hard-blocks). */
   agentAutonomy: AgentAutonomy;

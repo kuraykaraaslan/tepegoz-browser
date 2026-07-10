@@ -22,13 +22,14 @@ export function Dropdown({
   align = 'left',
   className,
   triggerClassName,
+  menuClassName = 'min-w-[11rem] max-w-[16rem]',
   showChevron = true,
   ariaLabel,
   title,
   children,
 }: {
   trigger: ReactNode; direction?: 'down' | 'up'; align?: 'left' | 'right';
-  className?: string; triggerClassName?: string; showChevron?: boolean;
+  className?: string; triggerClassName?: string; menuClassName?: string; showChevron?: boolean;
   ariaLabel?: string; title?: string; children: (close: () => void) => ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -88,7 +89,7 @@ export function Dropdown({
         {showChevron && <ChevronDown className="h-3 w-3 text-text-secondary" />}
       </button>
       {open && createPortal(
-        <div ref={menuRef} style={pos} className="min-w-[11rem] max-w-[16rem] rounded-lg border border-border bg-surface-raised p-1 shadow-lg">
+        <div ref={menuRef} style={pos} className={cn('rounded-lg border border-border bg-surface-raised p-1 shadow-lg', menuClassName)}>
           {children(() => setOpen(false))}
         </div>,
         document.body,

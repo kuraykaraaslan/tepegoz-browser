@@ -49,15 +49,39 @@ export class ModelGateway {
   private static readonly providers = new Map<AIProvider, ModelProvider>();
   private static egressInspector: EgressInspector | null = null;
   private static egressHandlers: EgressHandlers = {};
+  /**
+   * Active per-run model pin (Agent panel Model dropdown). When set, EVERY request this run makes —
+   * plan, exec, and cheap classify alike — is routed to this provider+model instead of the router's
+   * per-tier choice. Read live on each {@link complete} call, so changing it mid-run takes effect on the
+   * very next request. The app sets it at run start, updates it when the user switches model, and CLEARS
+   * it when the run ends (it's a process-global singleton shared with other model callers).
+   */
+  private static modelOverride: { provider: AIProvider; model: string } | null = null;
 
   static reset(): void {
     ModelGateway.providers.clear();
     ModelGateway.egressInspector = null;
     ModelGateway.egressHandlers = {};
+    ModelGateway.modelOverride = null;
   }
 
   static register(provider: ModelProvider): void {
     ModelGateway.providers.set(provider.id, provider);
+  }
+
+  /** True when an adapter for `provider` is registered for the current run — the app checks this before
+   *  pushing a live override so it never pins a model whose provider isn't wired up (would 503). */
+  static isProviderRegistered(provider: AIProvider): boolean {
+    return ModelGateway.providers.has(provider);
+  }
+
+  /**
+   * Pin (or clear, with `null`) the model for every subsequent request. Applied self-healingly in
+   * {@link complete}: if the pinned provider has no registered adapter the pin is ignored and the
+   * request falls back to its router-chosen model, so a stale/cross-provider pin never fails a call.
+   */
+  static setModelOverride(override: { provider: AIProvider; model: string } | null): void {
+    ModelGateway.modelOverride = override;
   }
 
   /**
@@ -117,22 +141,31 @@ export class ModelGateway {
       throw new AppError(GatewayMessages.TimeoutRequired, 400);
     }
 
-    const provider = ModelGateway.providers.get(req.provider);
+    // Apply the per-run model pin (Agent panel), but ONLY when its provider has a registered adapter —
+    // a stale/cross-provider pin self-heals to the router's original provider+model rather than 503-ing.
+    const pin = ModelGateway.modelOverride;
+    const effectiveReq: CanonRequest =
+      pin !== null && ModelGateway.providers.has(pin.provider)
+        ? { ...req, provider: pin.provider, model: pin.model }
+        : req;
+
+    const provider = ModelGateway.providers.get(effectiveReq.provider);
     if (provider === undefined) {
-      throw new AppError(GatewayMessages.noProviderRegistered(req.provider), 503);
+      throw new AppError(GatewayMessages.noProviderRegistered(effectiveReq.provider), 503);
     }
 
     // Egress Firewall (before the request leaves the device): a possible secret leak is routed to HITL
     // and throws if the user cancels (or fails closed with no handler); a warn is surfaced and allowed.
-    await ModelGateway.inspectEgress(req);
+    // Inspects payload content only (model-agnostic), so the pin above does not change the verdict.
+    await ModelGateway.inspectEgress(effectiveReq);
 
     const controller = new AbortController();
     const timer = setTimeout(() => {
       controller.abort();
     }, req.timeoutMs);
     try {
-      const res = await provider.complete(req, controller.signal);
-      TokenLedger.record(provider.id, req.model, req.capability, res.usage);
+      const res = await provider.complete(effectiveReq, controller.signal);
+      TokenLedger.record(provider.id, effectiveReq.model, effectiveReq.capability, res.usage);
       return res;
     } finally {
       clearTimeout(timer);

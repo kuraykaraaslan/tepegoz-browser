@@ -4,7 +4,7 @@ import type {
   AgentConversationDetail,
   AgentHistoryEvent,
 } from '@tepegoz/ext-agent/history';
-import type { CanonMessage } from '@tepegoz/model-gateway';
+import { ModelGateway, type CanonMessage } from '@tepegoz/model-gateway';
 import { randomUUID } from 'node:crypto';
 import { AgentConversationStore, type Db } from '@tepegoz/persistence';
 import TabManager from '../tabs';
@@ -54,18 +54,25 @@ export default class AgentService {
     const handoff = mainStrings().agent.handoff;
     AgentTabGroup.setTopic(groupId, displayPrompt);
     const history = conversations.get(groupId) ?? [];
-    const summary = await runAgent(
-      prompt,
-      hooks,
-      {
-        activeTabUrl,
-        tabUrl,
-        handoffStrings: { captcha: handoff.captcha, twofa: handoff.twofa },
-        localInference: { engine: llamaEngine(), resolveModel: () => ModelManager.resolveModel() },
-        ...(tokenBudget !== undefined ? { tokenBudget } : {}),
-      },
-      history,
-    );
+    let summary: AgentRunSummary;
+    try {
+      summary = await runAgent(
+        prompt,
+        hooks,
+        {
+          activeTabUrl,
+          tabUrl,
+          handoffStrings: { captcha: handoff.captcha, twofa: handoff.twofa },
+          localInference: { engine: llamaEngine(), resolveModel: () => ModelManager.resolveModel() },
+          ...(tokenBudget !== undefined ? { tokenBudget } : {}),
+        },
+        history,
+      );
+    } finally {
+      // Model pin is a process-global gateway singleton scoped to a run — clear it so it never leaks
+      // into other model callers (translate/typo/adaptors) between agent runs.
+      ModelGateway.setModelOverride(null);
+    }
     const note =
       summary.summary !== undefined && summary.summary.length > 0
         ? summary.summary

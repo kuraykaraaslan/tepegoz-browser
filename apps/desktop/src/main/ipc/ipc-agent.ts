@@ -34,7 +34,7 @@ import {
 } from '@tepegoz/desktop-ipc/schemas';
 import NotificationHost from '../notifications/notification-host';
 import type { ConfirmRequest } from '@tepegoz/capability-plane';
-import { TokenLedger } from '@tepegoz/model-gateway';
+import { ModelGateway, PROVIDER_MODEL_CATALOG, TokenLedger } from '@tepegoz/model-gateway';
 import { EventJournal } from '@tepegoz/persistence';
 import { AgentConversationStore } from '@tepegoz/persistence';
 import { TokenStore } from '@tepegoz/persistence';
@@ -237,12 +237,15 @@ function buildAgentConfig(): AgentConfig {
   const status = CredentialVault.status();
   const hasKey = (p: AIProvider): boolean => status[p];
   const localModel = prefs.localProvider.selectedModelId;
+  const modelsFor = (p: AIProvider): AgentModelChoice['models'] =>
+    PROVIDER_MODEL_CATALOG[p].map((m) => ({ id: m.id, label: m.label }));
   const cloudChoices: AgentModelChoice[] = RUNNABLE_AI_PROVIDERS.map((p) => {
     const keyLabel = CredentialVault.listMetaByProvider(p)[0]?.label;
     return {
       provider: p,
       label: CLOUD_PROVIDER_NAMES[p],
       available: hasKey(p),
+      models: modelsFor(p),
       ...(keyLabel !== undefined ? { keyLabel } : {}),
     };
   });
@@ -252,11 +255,15 @@ function buildAgentConfig(): AgentConfig {
       provider: 'local',
       label: localModel !== '' ? `Local: ${localModel}` : 'Local',
       available: localModel !== '',
+      // Local picks its model in Settings → Local models, not here.
+      models: [],
     },
   ];
+  const provider = effectiveAgentProvider(prefs, hasKey);
   return {
-    provider: effectiveAgentProvider(prefs, hasKey),
+    provider,
     choices,
+    model: prefs.agentModelOverride[provider] ?? '',
     autonomy: prefs.agentAutonomy,
     effort: prefs.agentEffort,
   };
@@ -704,6 +711,22 @@ export function registerAgentIpc(): void {
   handle(IpcChannels.agentSetProvider, (_event, payload): void => {
     const provider = z.enum(PROVIDER_IDS).parse(payload);
     PreferenceStore.update({ agentProviderOverride: provider });
+  });
+  handle(IpcChannels.agentSetModel, (_event, payload): void => {
+    const { provider, model } = z
+      .object({ provider: z.enum(PROVIDER_IDS), model: z.string().max(64) })
+      .parse(payload);
+    // Persist the per-provider pin ('' clears it → auto/tiered routing for that provider).
+    const next = { ...PreferenceStore.getAll().agentModelOverride };
+    if (model === '') delete next[provider];
+    else next[provider] = model;
+    PreferenceStore.update({ agentModelOverride: next });
+    // Instant mid-run switch: if a run is active on THIS provider (its adapter is registered), push the
+    // pin to the live gateway so the NEXT request uses it. A pin for a not-currently-running provider is
+    // only persisted — it applies when that provider next resolves at run start (self-healing gateway).
+    if (hasActiveAgentRun() && ModelGateway.isProviderRegistered(provider)) {
+      ModelGateway.setModelOverride(model === '' ? null : { provider, model });
+    }
   });
   handle(IpcChannels.agentSetAutonomy, (_event, payload): void => {
     const level: AgentAutonomy = z.enum(['ask', 'act', 'auto']).parse(payload);

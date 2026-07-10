@@ -15,6 +15,7 @@ const PREFS: Preferences = {
   localProvider: { mode: 'off', selectedModelId: '' },
   localActions: {},
   agentProviderOverride: null,
+  agentModelOverride: {},
   agentAutonomy: 'ask',
   agentEffort: 'high',
   agentTokenQuota: 0,

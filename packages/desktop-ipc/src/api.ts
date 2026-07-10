@@ -248,8 +248,10 @@ export interface TepegozApi {
   getTokenUsage(): Promise<TokenUsageSnapshot>;
   /** Agent panel: current provider + selectable choices + autonomy level. */
   getAgentConfig(): Promise<AgentConfig>;
-  /** Agent panel: set the per-run provider override (model selector). */
+  /** Agent panel: set the per-run provider override (provider selector). */
   setAgentProvider(provider: ProviderId): Promise<void>;
+  /** Agent panel: pin a specific model for `provider` (Model dropdown); `''` clears it (auto/tiered). */
+  setAgentModel(provider: ProviderId, model: string): Promise<void>;
   /** Agent panel: set the autonomy level (mode dropdown). */
   setAgentAutonomy(level: AgentAutonomy): Promise<void>;
   /** Agent panel: set the reasoning-effort preset (effort dropdown). */

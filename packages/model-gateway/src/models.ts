@@ -1,3 +1,5 @@
+import type { AIProvider } from '@tepegoz/shared-types';
+
 /**
  * Canonical Anthropic model IDs and effort levels — verified against the `claude-api` reference
  * (SDK @anthropic-ai/sdk 0.107.0). Centralized so the orchestrator and UI reference a single
@@ -83,3 +85,40 @@ export const LOCAL_MODEL = {
  * is the sweet spot for coding/agentic work.
  */
 export type EffortLevel = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+
+/** One user-selectable model within a provider (the Agent panel's Model dropdown). */
+export interface ProviderModelOption {
+  /** Canonical model id sent to the provider — MUST be a value from that provider's tier map above. */
+  id: string;
+  /** Friendly display name for the picker, e.g. "Opus 4.8". */
+  label: string;
+}
+
+/**
+ * Per-provider list of user-selectable models for the Agent panel's Model dropdown. The ids are read
+ * straight from each provider's tier map (single source — they can't drift), so this exposes exactly the
+ * models the runtime already knows how to drive. When the user pins one it overrides ALL tiers for the
+ * run (see {@link ModelGateway.setModelOverride}). `local` is intentionally empty: the on-device provider
+ * has its own downloaded-model selection (Settings → Local models), not a fixed cloud catalog.
+ */
+export const PROVIDER_MODEL_CATALOG: Record<AIProvider, readonly ProviderModelOption[]> = {
+  anthropic: [
+    { id: ANTHROPIC_MODEL.plan, label: 'Opus 4.8' },
+    { id: ANTHROPIC_MODEL.exec, label: 'Sonnet 4.6' },
+    { id: ANTHROPIC_MODEL.classify, label: 'Haiku 4.5' },
+  ],
+  openai: [
+    { id: OPENAI_MODEL.plan, label: 'GPT-4o' },
+    { id: OPENAI_MODEL.classify, label: 'GPT-4o mini' },
+  ],
+  gemini: [
+    { id: GEMINI_MODEL.plan, label: 'Gemini 2.5 Pro' },
+    { id: GEMINI_MODEL.exec, label: 'Gemini 2.5 Flash' },
+    { id: GEMINI_MODEL.classify, label: 'Gemini 2.5 Flash-Lite' },
+  ],
+  kimi: [
+    { id: KIMI_MODEL.plan, label: 'Kimi K2.6' },
+    { id: KIMI_MODEL.classify, label: 'Moonshot v1 8k' },
+  ],
+  local: [],
+};
