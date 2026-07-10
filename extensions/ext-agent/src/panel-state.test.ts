@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { serializeConversationLog, type Turn } from './panel-state';
+import {
+  applyAgentEvent,
+  emptyGroupState,
+  serializeConversationLog,
+  type GroupState,
+  type Turn,
+} from './panel-state';
 import type { AgentEvent } from './types';
 
 /** Build an AgentEvent with sane defaults for the fields the log doesn't vary. */
@@ -62,5 +68,72 @@ describe('serializeConversationLog', () => {
     // Optional metadata is omitted when absent (no stray "Provider:" line).
     expect(out).not.toContain('- Provider:');
     expect(out).not.toContain('- Group:');
+  });
+});
+
+describe('applyAgentEvent (event→run routing that drives the pause/steer/stop controls)', () => {
+  const evt = (kind: AgentEvent['kind'], runId: string): AgentEvent => ({
+    runId,
+    groupId: 'g1',
+    kind,
+    message: kind,
+    ts: 0,
+  });
+  const turn = (id: string, runId: string | null, events: AgentEvent[] = []): Turn => ({
+    id,
+    prompt: id,
+    runId,
+    events,
+  });
+  const group = (over: Partial<GroupState>): GroupState => ({ ...emptyGroupState(), ...over });
+
+  it('binds the freshly-started (unbound) last turn and populates the group runId (the pause-button fix)', () => {
+    const cur = group({ running: true, turns: [turn('t1', null)] });
+    const out = applyAgentEvent(cur, evt('plan', 'run-7'));
+    // Before the fix this stayed null, so onPauseResume/onCancel/steer all read a null runId and no-op'd.
+    expect(out.runId).toBe('run-7');
+    expect(out.turns[0]?.runId).toBe('run-7');
+    expect(out.turns[0]?.events).toHaveLength(1);
+    expect(out.running).toBe(true);
+  });
+
+  it('flips paused on a paused event and clears it on resumed (active turn)', () => {
+    const cur = group({ running: true, runId: 'run-7', turns: [turn('t1', 'run-7')] });
+    const paused = applyAgentEvent(cur, evt('paused', 'run-7'));
+    expect(paused.paused).toBe(true);
+    expect(paused.running).toBe(true); // a hold is not a stop — controls stay live
+    const resumed = applyAgentEvent(paused, evt('resumed', 'run-7'));
+    expect(resumed.paused).toBe(false);
+  });
+
+  it('a terminal event clears running / paused / runId', () => {
+    const cur = group({ running: true, paused: true, runId: 'run-7', turns: [turn('t1', 'run-7')] });
+    const out = applyAgentEvent(cur, evt('done', 'run-7'));
+    expect(out.running).toBe(false);
+    expect(out.paused).toBe(false);
+    expect(out.runId).toBeNull();
+  });
+
+  it('drops a straggler whose runId matches no turn (returns the same reference, no flag change)', () => {
+    const cur = group({ running: true, runId: 'run-7', turns: [turn('t1', 'run-7')] });
+    const out = applyAgentEvent(cur, evt('paused', 'run-OLD'));
+    expect(out).toBe(cur); // a stale run's event cannot flip the live run's paused/running/runId
+  });
+
+  it('routes a late terminal from an aborted run to its OWN turn without touching the new live run (5b race)', () => {
+    // run-1 was Stopped and run-2 started; run-1's late 'error' arrives while run-2 is the active turn.
+    const cur = group({
+      running: true,
+      paused: false,
+      runId: 'run-2',
+      turns: [turn('t1', 'run-1', [evt('plan', 'run-1')]), turn('t2', 'run-2', [evt('plan', 'run-2')])],
+    });
+    const out = applyAgentEvent(cur, evt('error', 'run-1'));
+    // The straggler lands on run-1's turn (t1)...
+    expect(out.turns[0]?.events.at(-1)?.kind).toBe('error');
+    // ...and does NOT terminate or re-flag the still-live run-2:
+    expect(out.running).toBe(true);
+    expect(out.runId).toBe('run-2');
+    expect(out.turns[1]?.events).toHaveLength(1); // run-2's turn untouched
   });
 });

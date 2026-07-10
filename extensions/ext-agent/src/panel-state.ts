@@ -107,6 +107,43 @@ export function emptyGroupState(): GroupState {
   };
 }
 
+/**
+ * Reduce one streamed agent event into a group's state. Routes the event to the turn that OWNS its run by
+ * `runId` — NOT by array position. A run's first event arrives before any turn is bound to it, so an
+ * unbound freshly-started last turn (runId `null`, just created when the run was launched) adopts this
+ * run's id. An event whose runId matches no turn and is not that first event is a STRAGGLER from a
+ * previous/aborted run (e.g. a late terminal after a Stop→restart); it is dropped (returns `cur` unchanged)
+ * so it cannot terminate or re-flag the new live run, nor render its text in the wrong turn. The
+ * group-level run flags (`running` / `paused` / `runId`) — which drive the pause/steer/stop controls —
+ * track the ACTIVE (last) turn only. Pure; unit-tested. Returns the SAME reference when nothing changed.
+ */
+export function applyAgentEvent(cur: GroupState, e: AgentEvent): GroupState {
+  const last = cur.turns.length - 1;
+  let idx = cur.turns.findIndex((t) => t.runId === e.runId);
+  if (idx === -1) {
+    if (cur.turns[last]?.runId === null) idx = last; // bind the just-started turn to this run
+    else return cur; // straggler — owns no turn and is not the active run
+  }
+  const turn = cur.turns[idx];
+  if (turn === undefined) return cur;
+  const newTurns = [...cur.turns];
+  newTurns[idx] = { ...turn, runId: turn.runId ?? e.runId, events: [...turn.events, e] };
+  const isTerminal = e.kind === 'done' || e.kind === 'error';
+  let { running, paused, runId } = cur;
+  if (idx === last) {
+    runId = isTerminal ? null : (runId ?? e.runId);
+    if (isTerminal) {
+      running = false;
+      paused = false;
+    } else if (e.kind === 'resumed') {
+      paused = false;
+    } else if (e.kind === 'paused') {
+      paused = true;
+    }
+  }
+  return { ...cur, turns: newTurns, running, paused, runId };
+}
+
 /** Serialize attachment content as a markdown preamble prepended to the prompt. */
 export function serializeAttachments(attachments: Attachment[], prompt: string): string {
   if (attachments.length === 0) return prompt;

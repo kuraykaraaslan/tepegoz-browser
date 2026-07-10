@@ -38,6 +38,7 @@ import {
   NOTICE_STYLE,
   PROSE_KINDS,
   STEP_KINDS,
+  applyAgentEvent,
   autoApprovesTool,
   buildNotices,
   emptyGroupState,
@@ -150,23 +151,10 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
       setGroupStates((prev) => {
         const gid = e.groupId;
         const cur = prev.get(gid) ?? emptyGroupState();
-        const last = cur.turns.length - 1;
-        const turn = cur.turns[last];
-        if (turn === undefined) return prev;
-        const updated: Turn = { ...turn, runId: turn.runId ?? e.runId, events: [...turn.events, e] };
+        const updated = applyAgentEvent(cur, e); // routes by runId; drops stragglers (returns cur unchanged)
+        if (updated === cur) return prev;
         const next = new Map(prev);
-        const newTurns = [...cur.turns.slice(0, last), updated];
-        const isTerminal = e.kind === 'done' || e.kind === 'error';
-        let paused = cur.paused;
-        if (isTerminal || e.kind === 'resumed') paused = false;
-        else if (e.kind === 'paused') paused = true;
-        next.set(gid, {
-          ...cur,
-          turns: newTurns,
-          running: isTerminal ? false : cur.running,
-          paused,
-          runId: isTerminal ? null : cur.runId,
-        });
+        next.set(gid, updated);
         return next;
       });
     });
@@ -236,6 +224,10 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
       ...s,
       turns: [...s.turns, newTurn],
       running: true,
+      // Clear any run-scoped state from a previous run so this one binds its OWN id on its first event
+      // (guards against a stale id/paused left when a prior run was Stopped before its terminal arrived).
+      paused: false,
+      runId: null,
       prompt: '',
       attachments: [],
       expandedFiles: new Set(),
@@ -276,7 +268,9 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
   function onCancel(): void {
     const { runId } = activeState;
     if (runId !== null) api.cancelAgent(runId);
-    mutateActive((s) => ({ ...s, running: false }));
+    // Drop the live-run flags immediately (the backend abort event may lag): a Stopped run must not keep
+    // showing pause/steer controls, and clearing runId narrows the window for a stray late event.
+    mutateActive((s) => ({ ...s, running: false, paused: false, runId: null }));
   }
 
   /** Composer submit: while a run is active this STEERS it (folds the message into the current run);
