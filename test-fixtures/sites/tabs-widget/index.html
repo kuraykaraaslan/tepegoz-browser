@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Account Settings</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #171a21;
+    --border: #262b36;
+    --muted: #9aa4b2;
+    --text: #e6e9ef;
+    --accent: #4f8cff;
+    --accent-soft: rgba(79, 140, 255, 0.14);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    padding: 40px 16px;
+  }
+  .app {
+    width: 100%;
+    max-width: 560px;
+  }
+  h1 {
+    font-size: 20px;
+    margin: 0 0 4px;
+  }
+  .sub {
+    color: var(--muted);
+    font-size: 13px;
+    margin: 0 0 20px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .tabbar {
+    display: flex;
+    gap: 4px;
+    padding: 8px;
+    border-bottom: 1px solid var(--border);
+    background: #12151b;
+  }
+  .tab {
+    appearance: none;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 14px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .tab:hover { color: var(--text); }
+  .tab[aria-selected="true"] {
+    color: var(--text);
+    background: var(--accent-soft);
+    border-color: var(--border);
+  }
+  .tab:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .panel {
+    display: none;
+    padding: 20px;
+  }
+  .panel.active { display: block; }
+  .panel h2 {
+    font-size: 15px;
+    margin: 0 0 12px;
+  }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .row:last-child { border-bottom: none; }
+  .row .k { color: var(--muted); }
+  .row .v { color: var(--text); }
+</style>
+</head>
+<body>
+  <div class="app">
+    <h1>Account Settings</h1>
+    <p class="sub">Manage your workspace preferences.</p>
+
+    <div class="card">
+      <div class="tabbar" role="tablist" aria-label="Account sections">
+        <button class="tab" id="tab-overview" role="tab" aria-controls="panel-overview" aria-selected="true" tabindex="0">Overview</button>
+        <button class="tab" id="tab-billing" role="tab" aria-controls="panel-billing" aria-selected="false" tabindex="-1">Billing</button>
+        <button class="tab" id="tab-security" role="tab" aria-controls="panel-security" aria-selected="false" tabindex="-1">Security</button>
+      </div>
+
+      <div class="panel active" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview">
+        <h2>Overview</h2>
+        <div class="row"><span class="k">Workspace</span><span class="v">Tepegoz Labs</span></div>
+        <div class="row"><span class="k">Members</span><span class="v">12</span></div>
+        <div class="row"><span class="k">Region</span><span class="v">EU-West</span></div>
+      </div>
+
+      <div class="panel" id="panel-billing" role="tabpanel" aria-labelledby="tab-billing">
+        <h2>Billing</h2>
+        <div class="row"><span class="k">Current plan</span><span class="v">Pro Annual</span></div>
+        <div class="row"><span class="k">Renews</span><span class="v">March 4, 2027</span></div>
+        <div class="row"><span class="k">Seats</span><span class="v">15</span></div>
+      </div>
+
+      <div class="panel" id="panel-security" role="tabpanel" aria-labelledby="tab-security">
+        <h2>Security</h2>
+        <div class="row"><span class="k">Two-factor</span><span class="v">Enabled</span></div>
+        <div class="row"><span class="k">Sessions</span><span class="v">3 active</span></div>
+        <div class="row"><span class="k">Plan</span><span class="v">Standard policy set</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
+      var panels = {
+        'tab-overview': document.getElementById('panel-overview'),
+        'tab-billing': document.getElementById('panel-billing'),
+        'tab-security': document.getElementById('panel-security')
+      };
+
+      function select(tab) {
+        tabs.forEach(function (t) {
+          var on = t === tab;
+          t.setAttribute('aria-selected', on ? 'true' : 'false');
+          t.tabIndex = on ? 0 : -1;
+        });
+        Object.keys(panels).forEach(function (id) {
+          panels[id].classList.toggle('active', id === tab.id);
+        });
+      }
+
+      tabs.forEach(function (tab) {
+        tab.addEventListener('click', function () { select(tab); });
+        tab.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            select(tab);
+          }
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

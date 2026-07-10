@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preferences</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, sans-serif;
+    margin: 0;
+    padding: 40px 20px;
+    background: #f4f5f7;
+    color: #1c1e21;
+    display: flex;
+    justify-content: center;
+  }
+  .card {
+    background: #ffffff;
+    border: 1px solid #dcdfe4;
+    border-radius: 12px;
+    padding: 28px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.06);
+  }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .sub { color: #6b7280; font-size: 13px; margin: 0 0 24px; }
+  .field { margin-bottom: 22px; }
+  label.field-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  /* Native select distractor */
+  select {
+    width: 100%;
+    padding: 10px 12px;
+    font: inherit;
+    border: 1px solid #cbd0d8;
+    border-radius: 8px;
+    background: #fff;
+  }
+  /* Custom dropdown */
+  .dropdown { position: relative; }
+  .trigger {
+    width: 100%;
+    text-align: left;
+    padding: 10px 12px;
+    font: inherit;
+    border: 1px solid #cbd0d8;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .trigger:hover { border-color: #9aa1ac; }
+  .trigger .chev { color: #6b7280; font-size: 12px; }
+  .listbox {
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 4px;
+    position: absolute;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #cbd0d8;
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    z-index: 10;
+  }
+  .listbox[hidden] { display: none; }
+  .option {
+    padding: 9px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .option:hover, .option:focus {
+    background: #eef2ff;
+    outline: none;
+  }
+  .option[aria-selected="true"] { background: #dbeafe; font-weight: 600; }
+  .result {
+    margin-top: 26px;
+    padding: 14px 16px;
+    background: #f0f2f5;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #17181c; color: #e6e7ea; }
+    .card { background: #212227; border-color: #34363d; box-shadow: none; }
+    .sub, .trigger .chev { color: #9aa1ac; }
+    select, .trigger, .listbox { background: #2a2c32; border-color: #3d3f47; color: #e6e7ea; }
+    .option:hover, .option:focus { background: #34373f; }
+    .option[aria-selected="true"] { background: #2f4463; }
+    .result { background: #2a2c32; }
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Interface Preferences</h1>
+    <p class="sub">Choose how the browser is displayed.</p>
+
+    <div class="field">
+      <label class="field-label" for="theme-select">Theme</label>
+      <select id="theme-select">
+        <option>System</option>
+        <option>Light</option>
+        <option>Dark</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <span class="field-label" id="lang-label">Language selector</span>
+      <div class="dropdown">
+        <button type="button" class="trigger" id="lang-trigger"
+                aria-haspopup="listbox" aria-expanded="false"
+                aria-labelledby="lang-label lang-trigger">
+          <span id="lang-current">Choose a language…</span>
+          <span class="chev" aria-hidden="true">▼</span>
+        </button>
+        <ul class="listbox" id="lang-listbox" role="listbox" aria-labelledby="lang-label" hidden>
+          <li class="option" role="option" tabindex="0" data-value="English">English</li>
+          <li class="option" role="option" tabindex="0" data-value="Deutsch">Deutsch</li>
+          <li class="option" role="option" tabindex="0" data-value="Türkçe">Türkçe</li>
+          <li class="option" role="option" tabindex="0" data-value="Français">Français</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="result" id="result">Selected: none</div>
+  </div>
+
+  <script>
+    (function () {
+      var trigger = document.getElementById('lang-trigger');
+      var listbox = document.getElementById('lang-listbox');
+      var current = document.getElementById('lang-current');
+      var result = document.getElementById('result');
+
+      function open() {
+        listbox.hidden = false;
+        trigger.setAttribute('aria-expanded', 'true');
+      }
+      function close() {
+        listbox.hidden = true;
+        trigger.setAttribute('aria-expanded', 'false');
+      }
+      function toggle() {
+        if (listbox.hidden) { open(); } else { close(); }
+      }
+
+      trigger.addEventListener('click', function (e) {
+        e.stopPropagation();
+        toggle();
+      });
+
+      function choose(opt) {
+        var value = opt.getAttribute('data-value');
+        var opts = listbox.querySelectorAll('.option');
+        for (var i = 0; i < opts.length; i++) {
+          opts[i].setAttribute('aria-selected', opts[i] === opt ? 'true' : 'false');
+        }
+        current.textContent = value;
+        result.textContent = 'Selected: ' + value;
+        close();
+      }
+
+      var options = listbox.querySelectorAll('.option');
+      options.forEach(function (opt) {
+        opt.addEventListener('click', function (e) {
+          e.stopPropagation();
+          choose(opt);
+        });
+        opt.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            choose(opt);
+          }
+        });
+      });
+
+      document.addEventListener('click', function () {
+        if (!listbox.hidden) { close(); }
+      });
+    })();
+  </script>
+</body>
+</html>

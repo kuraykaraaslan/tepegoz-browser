@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Help Center — FAQ</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #191c22;
+    --border: #2a2f38;
+    --text: #e6e8ec;
+    --muted: #9aa2ad;
+    --accent: #5b8cff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    padding: 40px 16px;
+  }
+  main {
+    width: 100%;
+    max-width: 560px;
+  }
+  h1 {
+    font-size: 22px;
+    margin: 0 0 6px;
+  }
+  p.lede {
+    margin: 0 0 24px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .accordion {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--card);
+  }
+  .item + .item {
+    border-top: 1px solid var(--border);
+  }
+  .acc-header {
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: 0;
+    color: var(--text);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+  }
+  .acc-header:hover { background: #20242c; }
+  .acc-header:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .chev {
+    color: var(--muted);
+    font-size: 13px;
+    transition: transform .15s ease;
+  }
+  .acc-header[aria-expanded="true"] .chev { transform: rotate(90deg); }
+  .panel {
+    display: none;
+    padding: 4px 18px 18px;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .panel.open { display: block; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Help Center</h1>
+  <p class="lede">Frequently asked questions. Tap a topic to read more.</p>
+
+  <div class="accordion" role="list">
+    <div class="item" role="listitem">
+      <button class="acc-header" type="button" aria-expanded="false" aria-controls="panel-returns" id="hdr-returns">
+        <span>Returns</span><span class="chev" aria-hidden="true">&#9656;</span>
+      </button>
+      <div class="panel" id="panel-returns" role="region" aria-labelledby="hdr-returns">
+        Items can be returned within 30 days of purchase in original condition. Refunds are issued to the original payment method once the item is received.
+      </div>
+    </div>
+
+    <div class="item" role="listitem">
+      <button class="acc-header" type="button" aria-expanded="false" aria-controls="panel-shipping" id="hdr-shipping">
+        <span>Shipping</span><span class="chev" aria-hidden="true">&#9656;</span>
+      </button>
+      <div class="panel" id="panel-shipping" role="region" aria-labelledby="hdr-shipping">
+        Orders ship the next business day from our warehouse. Delivery takes 3-5 business days for standard domestic addresses.
+      </div>
+    </div>
+
+    <div class="item" role="listitem">
+      <button class="acc-header" type="button" aria-expanded="false" aria-controls="panel-warranty" id="hdr-warranty">
+        <span>Warranty</span><span class="chev" aria-hidden="true">&#9656;</span>
+      </button>
+      <div class="panel" id="panel-warranty" role="region" aria-labelledby="hdr-warranty">
+        All products include a limited 12-month manufacturer warranty covering defects in materials and workmanship.
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  (function () {
+    var headers = document.querySelectorAll(".acc-header");
+    headers.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var panel = document.getElementById(btn.getAttribute("aria-controls"));
+        var isOpen = btn.getAttribute("aria-expanded") === "true";
+        btn.setAttribute("aria-expanded", isOpen ? "false" : "true");
+        if (isOpen) {
+          panel.classList.remove("open");
+        } else {
+          panel.classList.add("open");
+        }
+      });
+    });
+  })();
+</script>
+</body>
+</html>

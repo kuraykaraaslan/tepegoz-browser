@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Widget Catalog</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #1a1d24;
+    --border: #2a2f3a;
+    --text: #e6e9ef;
+    --muted: #9aa3b2;
+    --accent: #4f7cff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    padding: 32px 16px;
+  }
+  main {
+    width: 100%;
+    max-width: 560px;
+  }
+  h1 {
+    font-size: 1.4rem;
+    margin: 0 0 4px;
+  }
+  .sub {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin: 0 0 20px;
+  }
+  .catalog {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 8px;
+    min-height: 220px;
+  }
+  .page { display: none; }
+  .page.active { display: block; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 14px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  li:last-child { border-bottom: none; }
+  .name { font-weight: 600; }
+  .sku {
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 18px;
+  }
+  button {
+    font: inherit;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    cursor: pointer;
+  }
+  button:disabled {
+    background: #2a2f3a;
+    color: #5a6273;
+    cursor: not-allowed;
+  }
+  .status {
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Widget Catalog</h1>
+  <p class="sub">Browse our full range of widgets, one page at a time.</p>
+
+  <div class="catalog" id="catalog">
+    <section class="page active" data-page="1" aria-label="Catalog page 1">
+      <ul>
+        <li><span class="name">Red Widget</span><span class="sku">SKU-RED-11</span></li>
+        <li><span class="name">Green Widget</span><span class="sku">SKU-GRN-08</span></li>
+        <li><span class="name">Yellow Widget</span><span class="sku">SKU-YEL-27</span></li>
+        <li><span class="name">Amber Gadget</span><span class="sku">SKU-AMB-63</span></li>
+      </ul>
+    </section>
+
+    <section class="page" data-page="2" aria-label="Catalog page 2">
+      <ul>
+        <li><span class="name">Teal Widget</span><span class="sku">SKU-TEA-19</span></li>
+        <li><span class="name">Blue Gadget</span><span class="sku">SKU-BGAD-05</span></li>
+        <li><span class="name">Purple Widget</span><span class="sku">SKU-PUR-44</span></li>
+        <li><span class="name">Navy Sprocket</span><span class="sku">SKU-NVY-31</span></li>
+      </ul>
+    </section>
+
+    <section class="page" data-page="3" aria-label="Catalog page 3">
+      <ul>
+        <li><span class="name">Cyan Widget</span><span class="sku">SKU-CYN-77</span></li>
+        <li><span class="name">Blue Widget</span><span class="sku">SKU-BLUE-42</span></li>
+        <li><span class="name">Slate Widget</span><span class="sku">SKU-SLT-90</span></li>
+        <li><span class="name">Cobalt Gizmo</span><span class="sku">SKU-COB-56</span></li>
+      </ul>
+    </section>
+
+    <section class="page" data-page="4" aria-label="Catalog page 4">
+      <ul>
+        <li><span class="name">Orange Widget</span><span class="sku">SKU-ORG-12</span></li>
+        <li><span class="name">Pink Widget</span><span class="sku">SKU-PNK-33</span></li>
+        <li><span class="name">Black Widget</span><span class="sku">SKU-BLK-01</span></li>
+        <li><span class="name">White Widget</span><span class="sku">SKU-WHT-99</span></li>
+      </ul>
+    </section>
+  </div>
+
+  <div class="controls">
+    <button id="prev" type="button" disabled>Prev</button>
+    <span class="status" id="status">Page 1 of 4</span>
+    <button id="next" type="button">Next</button>
+  </div>
+</main>
+
+<script>
+  (function () {
+    var pages = Array.prototype.slice.call(document.querySelectorAll('.page'));
+    var total = pages.length;
+    var current = 1;
+    var prevBtn = document.getElementById('prev');
+    var nextBtn = document.getElementById('next');
+    var status = document.getElementById('status');
+
+    function render() {
+      pages.forEach(function (p) {
+        var n = parseInt(p.getAttribute('data-page'), 10);
+        if (n === current) {
+          p.classList.add('active');
+        } else {
+          p.classList.remove('active');
+        }
+      });
+      status.textContent = 'Page ' + current + ' of ' + total;
+      prevBtn.disabled = current === 1;
+      nextBtn.disabled = current === total;
+    }
+
+    prevBtn.addEventListener('click', function () {
+      if (current > 1) { current--; render(); }
+    });
+    nextBtn.addEventListener('click', function () {
+      if (current < total) { current++; render(); }
+    });
+
+    render();
+  })();
+</script>
+</body>
+</html>

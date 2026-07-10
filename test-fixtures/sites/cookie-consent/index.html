@@ -1,0 +1,143 @@
+<!doctype html>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, sans-serif;
+    margin: 0;
+    color: #1a1a2e;
+    background: #f4f5fb;
+  }
+  header {
+    padding: 20px 28px;
+    border-bottom: 1px solid #dcdde8;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo {
+    width: 28px; height: 28px;
+    border-radius: 7px;
+    background: #4b3ff5;
+    display: inline-block;
+  }
+  .brand { font-weight: 700; font-size: 18px; }
+  main { max-width: 720px; margin: 0 auto; padding: 40px 28px; }
+  .kicker { text-transform: uppercase; letter-spacing: .08em; font-size: 12px; color: #6a6a8a; margin: 0 0 8px; }
+  h1 { font-size: 40px; line-height: 1.1; margin: 0 0 16px; }
+  #headline { display: none; }
+  p.lede { font-size: 18px; line-height: 1.6; color: #3a3a55; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 28px; }
+  .card { background: #fff; border: 1px solid #e4e5ef; border-radius: 12px; padding: 18px; }
+  .card h3 { margin: 0 0 6px; font-size: 15px; }
+  .card p { margin: 0; font-size: 14px; color: #5a5a75; }
+
+  /* consent overlay */
+  #consent {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 16, 40, 0.72);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 24px;
+    z-index: 1000;
+  }
+  #consent[hidden] { display: none; }
+  .consent-box {
+    background: #ffffff;
+    color: #1a1a2e;
+    max-width: 560px;
+    width: 100%;
+    border-radius: 16px;
+    padding: 24px 26px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.35);
+  }
+  .consent-box h2 { margin: 0 0 8px; font-size: 20px; }
+  .consent-box p { margin: 0 0 18px; font-size: 14px; line-height: 1.55; color: #45455f; }
+  .consent-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn {
+    font: inherit;
+    font-weight: 600;
+    padding: 12px 22px;
+    border-radius: 10px;
+    cursor: pointer;
+    border: 1px solid transparent;
+  }
+  .btn-accept { background: #4b3ff5; color: #fff; }
+  .btn-reject { background: #ececf5; color: #2a2a44; border-color: #d6d6e6; }
+  .btn-settings { background: transparent; color: #4b3ff5; border-color: transparent; text-decoration: underline; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #0f1020; color: #e6e6f2; }
+    header { border-color: #26263f; }
+    .card { background: #16172b; border-color: #26263f; }
+    .card p { color: #a0a0c0; }
+    p.lede { color: #c2c2dc; }
+  }
+</style>
+
+<header>
+  <span class="logo" aria-hidden="true"></span>
+  <span class="brand">Tepegöz</span>
+</header>
+
+<main>
+  <p class="kicker">Product</p>
+  <h1 id="headline">Privacy-first browsing</h1>
+  <p class="lede">A local-first, agentic browser that keeps your data on your device. No trackers, no
+    profiles sold to anyone — just fast, private web browsing you control.</p>
+
+  <div class="grid">
+    <div class="card">
+      <h3>On-device</h3>
+      <p>Your history and index never leave the machine.</p>
+    </div>
+    <div class="card">
+      <h3>Agentic</h3>
+      <p>Delegate multi-step tasks to a sandboxed assistant.</p>
+    </div>
+    <div class="card">
+      <h3>Open</h3>
+      <p>Auditable, extensible, and built on web standards.</p>
+    </div>
+    <div class="card">
+      <h3>Secure</h3>
+      <p>Least-privilege by default, with policy enforcement.</p>
+    </div>
+  </div>
+</main>
+
+<div id="consent" role="dialog" aria-modal="true" aria-labelledby="consent-title">
+  <div class="consent-box">
+    <h2 id="consent-title">We value your privacy</h2>
+    <p>We use cookies to remember your preferences and measure basic, anonymized usage. Choose how you'd
+      like to continue. You can change this at any time.</p>
+    <div class="consent-actions">
+      <button type="button" class="btn btn-accept" id="accept">Accept all</button>
+      <button type="button" class="btn btn-reject" id="reject">Reject non-essential</button>
+      <button type="button" class="btn btn-settings" id="settings">Manage settings</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var overlay = document.getElementById('consent');
+    var headline = document.getElementById('headline');
+
+    function dismiss() {
+      overlay.hidden = true;
+      headline.style.display = 'block';
+    }
+
+    document.getElementById('accept').addEventListener('click', dismiss);
+    document.getElementById('reject').addEventListener('click', dismiss);
+
+    // Distractor: "Manage settings" does NOT dismiss or reveal; it only expands copy.
+    document.getElementById('settings').addEventListener('click', function () {
+      var box = document.querySelector('.consent-box p');
+      box.textContent = 'Essential cookies keep the site working and cannot be turned off. '
+        + 'Analytics and preference cookies are optional. Use the buttons above to continue.';
+    });
+  })();
+</script>

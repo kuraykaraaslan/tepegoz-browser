@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #171a21;
+    --border: #2a2f3a;
+    --text: #e6e9ef;
+    --muted: #98a0af;
+    --accent: #4c8bf5;
+    --accent-fg: #ffffff;
+    --field: #10131a;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, sans-serif;
+  }
+  .wrap {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .card {
+    width: 100%;
+    max-width: 360px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px 26px 24px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  }
+  .brand {
+    font-size: 13px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 4px;
+  }
+  h1 {
+    font-size: 21px;
+    margin: 0 0 20px;
+    font-weight: 600;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    color: var(--muted);
+    margin: 0 0 6px;
+  }
+  .field {
+    width: 100%;
+    padding: 11px 12px;
+    margin-bottom: 16px;
+    background: var(--field);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    color: var(--text);
+    font-size: 15px;
+    font-family: inherit;
+  }
+  .field:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(76,139,245,0.22);
+  }
+  button {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 9px;
+    background: var(--accent);
+    color: var(--accent-fg);
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  button:hover { filter: brightness(1.06); }
+  .hint {
+    margin: 16px 0 0;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .hint a { color: var(--accent); text-decoration: none; }
+  #error {
+    display: none;
+    margin: 0 0 14px;
+    font-size: 13px;
+    color: #ff8080;
+  }
+  #welcome {
+    display: none;
+    text-align: center;
+    padding: 8px 0 0;
+  }
+  #welcome h2 {
+    font-size: 20px;
+    margin: 6px 0 6px;
+    font-weight: 600;
+  }
+  #welcome p {
+    font-size: 14px;
+    color: var(--muted);
+    margin: 0;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <main class="card">
+      <p class="brand">Tepegoz Accounts</p>
+
+      <section id="loginView">
+        <h1>Sign in to continue</h1>
+        <form id="loginForm" novalidate>
+          <p id="error" role="alert">Incorrect username or password. Please try again.</p>
+
+          <label for="username">Username</label>
+          <input class="field" id="username" name="username" type="text" autocomplete="username" placeholder="your username">
+
+          <label for="password">Password</label>
+          <input class="field" id="password" name="password" type="password" autocomplete="current-password" placeholder="your password">
+
+          <button type="submit" id="loginBtn">Log in</button>
+        </form>
+        <p class="hint">Forgot your password? <a href="#" onclick="return false;">Reset it here</a></p>
+      </section>
+
+      <section id="welcome" aria-live="polite">
+        <h2 id="welcomeMsg"></h2>
+        <p>You are now signed in to your account.</p>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      var VALID_USER = "ada";
+      var VALID_PASS = "hunter2";
+
+      var form = document.getElementById("loginForm");
+      var userInput = document.getElementById("username");
+      var passInput = document.getElementById("password");
+      var errorEl = document.getElementById("error");
+      var loginView = document.getElementById("loginView");
+      var welcome = document.getElementById("welcome");
+      var welcomeMsg = document.getElementById("welcomeMsg");
+
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        var u = (userInput.value || "").trim();
+        var p = passInput.value || "";
+
+        if (u === VALID_USER && p === VALID_PASS) {
+          errorEl.style.display = "none";
+          welcomeMsg.textContent = "Welcome back, " + u;
+          loginView.style.display = "none";
+          welcome.style.display = "block";
+        } else {
+          errorEl.style.display = "block";
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

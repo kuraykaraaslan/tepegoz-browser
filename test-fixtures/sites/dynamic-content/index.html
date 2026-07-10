@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Acme Analytics — Dashboard</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui;
+    margin: 0;
+    background: #0f1115;
+    color: #e6e8ec;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 32px 16px;
+  }
+  .app { width: 100%; max-width: 720px; }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  h1 { font-size: 20px; margin: 0; }
+  .brand { font-size: 13px; color: #8b93a1; }
+  .card {
+    background: #181b22;
+    border: 1px solid #262a33;
+    border-radius: 12px;
+    padding: 24px;
+  }
+  .loading {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 28px 8px;
+    color: #9aa2b1;
+    font-size: 15px;
+  }
+  .spinner {
+    width: 26px; height: 26px;
+    border: 3px solid #2c313c;
+    border-top-color: #6ea8fe;
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+    flex: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #dashboard { display: none; }
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px;
+    margin-top: 4px;
+  }
+  .metric {
+    background: #10131a;
+    border: 1px solid #242833;
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .metric .label { font-size: 12px; color: #8b93a1; text-transform: uppercase; letter-spacing: .04em; }
+  .metric .value { font-size: 22px; font-weight: 600; margin-top: 6px; }
+  .headline {
+    margin: 22px 0 4px;
+    font-size: 17px;
+    font-weight: 600;
+    color: #d7f5e3;
+  }
+  .note { color: #9aa2b1; font-size: 13px; margin-top: 6px; }
+  footer { margin-top: 18px; font-size: 12px; color: #6b7280; text-align: center; }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Quarterly Performance Dashboard</h1>
+      <span class="brand">Acme Analytics</span>
+    </header>
+
+    <div class="card">
+      <div id="loading" class="loading" role="status" aria-live="polite">
+        <div class="spinner" aria-hidden="true"></div>
+        <span>Loading… fetching latest figures from the reporting service.</span>
+      </div>
+
+      <div id="dashboard" aria-live="polite"></div>
+    </div>
+
+    <footer>Data refreshes automatically. No action required.</footer>
+  </div>
+
+  <script>
+    (function () {
+      // The real figures arrive asynchronously (simulated AJAX). Until the
+      // response lands after ~1500ms, the page shows only the spinner and the
+      // Q3 figure is genuinely absent from the DOM.
+      var payload = {
+        quarters: [
+          { label: "Q1 Revenue", value: "$4.10M" },
+          { label: "Q2 Revenue", value: "$4.55M" },
+          { label: "Q3 Revenue", value: "$5.09M" },
+          { label: "Q4 Forecast", value: "$5.40M" }
+        ],
+        headline: "Q3 revenue up 12% versus the prior quarter, led by enterprise renewals.",
+        note: "Figures are unaudited and reflect the reporting period ending September 30."
+      };
+
+      function render() {
+        var dash = document.getElementById("dashboard");
+        var metricsHtml = payload.quarters.map(function (q) {
+          return '<div class="metric"><div class="label">' + q.label +
+                 '</div><div class="value">' + q.value + '</div></div>';
+        }).join("");
+
+        dash.innerHTML =
+          '<div class="metrics">' + metricsHtml + '</div>' +
+          '<p class="headline">' + payload.headline + '</p>' +
+          '<p class="note">' + payload.note + '</p>';
+
+        document.getElementById("loading").style.display = "none";
+        dash.style.display = "block";
+      }
+
+      window.setTimeout(render, 1500);
+    })();
+  </script>
+</body>
+</html>

@@ -18,9 +18,9 @@
     },
     {
       "id": "shadow_dom_nav",
-      "task": "Use the navigation widget to open the Target page and read it.",
+      "task": "Use the navigation widget to open Section B and read it.",
       "target": { "fixture": "shadow-dom-nav" },
-      "success": { "domAssertion": "reached the target page" },
+      "success": { "domAssertion": "reached section B" },
       "heldOut": false,
       "tags": ["perception", "shadow-dom", "ai-2b"]
     },

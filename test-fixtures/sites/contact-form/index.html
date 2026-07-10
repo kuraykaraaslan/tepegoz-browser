@@ -1,0 +1,135 @@
+<!doctype html>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, sans-serif;
+    margin: 0;
+    padding: 2rem 1rem;
+    background: #f4f5f7;
+    color: #1c1e21;
+    display: flex;
+    justify-content: center;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #16181c; color: #e6e8eb; }
+    .card { background: #22252b; border-color: #33373f; }
+    input, textarea { background: #1a1d22; color: #e6e8eb; border-color: #3a3f47; }
+    .confirm { background: #16321f; border-color: #2f6b45; color: #b9f0cc; }
+    .muted { color: #9aa0a8; }
+  }
+  .card {
+    width: 100%;
+    max-width: 460px;
+    background: #fff;
+    border: 1px solid #e2e5e9;
+    border-radius: 12px;
+    padding: 1.5rem 1.5rem 1.75rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  h1 { font-size: 1.3rem; margin: 0 0 0.25rem; }
+  .muted { color: #66707a; font-size: 0.85rem; margin: 0 0 1.25rem; }
+  label { display: block; font-size: 0.85rem; font-weight: 600; margin: 0 0 0.35rem; }
+  .field { margin-bottom: 1rem; }
+  input, textarea {
+    width: 100%;
+    padding: 0.6rem 0.7rem;
+    font: inherit;
+    border: 1px solid #cfd4da;
+    border-radius: 8px;
+    background: #fff;
+    color: inherit;
+  }
+  textarea { min-height: 90px; resize: vertical; }
+  .row { display: flex; gap: 0.75rem; }
+  button {
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 8px;
+    padding: 0.6rem 1.1rem;
+    border: 1px solid transparent;
+  }
+  .primary { background: #2f6bff; color: #fff; }
+  .primary:hover { background: #245ae0; }
+  .ghost { background: transparent; border-color: #cfd4da; color: inherit; }
+  .confirm {
+    margin-top: 1.25rem;
+    padding: 0.9rem 1rem;
+    background: #e9f9ef;
+    border: 1px solid #b7e5c8;
+    border-radius: 8px;
+    font-size: 0.95rem;
+  }
+  .err { color: #d23b3b; font-size: 0.8rem; margin-top: 0.35rem; min-height: 1rem; }
+</style>
+
+<div class="card">
+  <h1>Contact us</h1>
+  <p class="muted">Send us a note and we’ll get back to you.</p>
+
+  <form id="contactForm" novalidate>
+    <div class="field">
+      <label for="name">Name</label>
+      <input id="name" name="name" type="text" autocomplete="name" placeholder="Your name" />
+    </div>
+
+    <div class="field">
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com" />
+    </div>
+
+    <div class="field">
+      <label for="message">Message</label>
+      <textarea id="message" name="message" placeholder="How can we help?"></textarea>
+    </div>
+
+    <div class="err" id="err" aria-live="polite"></div>
+
+    <div class="row">
+      <button type="submit" class="primary" id="submitBtn">Submit</button>
+      <button type="reset" class="ghost" id="resetBtn">Clear</button>
+    </div>
+  </form>
+
+  <div id="confirmSlot"></div>
+</div>
+
+<script>
+  (function () {
+    var form = document.getElementById('contactForm');
+    var err = document.getElementById('err');
+    var slot = document.getElementById('confirmSlot');
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      err.textContent = '';
+
+      var name = document.getElementById('name').value.trim();
+      var email = document.getElementById('email').value.trim();
+      var message = document.getElementById('message').value.trim();
+
+      if (!name || !email || !message) {
+        err.textContent = 'Please fill in name, email, and message.';
+        return;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        err.textContent = 'Please enter a valid email address.';
+        return;
+      }
+
+      // Render confirmation only after a valid submit, echoing the entered name/email.
+      slot.innerHTML = '';
+      var box = document.createElement('div');
+      box.className = 'confirm';
+      box.setAttribute('role', 'status');
+      box.textContent = 'Thanks ' + name + ', we’ll reply to ' + email + ' shortly.';
+      slot.appendChild(box);
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', function () {
+      err.textContent = '';
+      slot.innerHTML = '';
+    });
+  })();
+</script>

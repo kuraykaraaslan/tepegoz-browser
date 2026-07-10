@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cloud Plan Pricing</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #171a21;
+    --border: #2a2f3a;
+    --text: #e6e9ef;
+    --muted: #9aa2b1;
+    --accent: #6ea8fe;
+    --row-alt: #1b1f28;
+    --highlight: #202634;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, sans-serif;
+  }
+  .wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 32px 20px 48px;
+  }
+  header h1 {
+    font-size: 24px;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  header p {
+    margin: 0 0 24px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .card-head {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .card-head h2 {
+    font-size: 15px;
+    margin: 0;
+    font-weight: 600;
+  }
+  .card-head .note {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  caption {
+    caption-side: top;
+    text-align: left;
+    padding: 12px 20px 4px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  thead th {
+    text-align: left;
+    padding: 12px 20px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    background: var(--highlight);
+  }
+  thead th.num, tbody td.num { text-align: right; }
+  tbody td {
+    padding: 13px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:nth-child(even) { background: var(--row-alt); }
+  .plan-name { font-weight: 600; }
+  .plan-sub { display: block; color: var(--muted); font-size: 12px; font-weight: 400; margin-top: 2px; }
+  .price { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .annual { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .badge {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background: rgba(110,168,254,0.15);
+    color: var(--accent);
+    vertical-align: middle;
+  }
+  footer { margin-top: 20px; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Cloud Plan Pricing</h1>
+      <p>Compare our subscription tiers. Prices shown are per seat. Cancel anytime.</p>
+    </header>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Subscription plans</h2>
+        <span class="note">Billed in USD</span>
+      </div>
+      <table>
+        <caption>Monthly price and annual total by plan</caption>
+        <thead>
+          <tr>
+            <th scope="col">Plan</th>
+            <th scope="col" class="num">Monthly price</th>
+            <th scope="col" class="num">Annual total</th>
+            <th scope="col" class="num">Seats included</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="plan-name">Basic</span><span class="plan-sub">For individuals</span></td>
+            <td class="num price">$9</td>
+            <td class="num annual">$108</td>
+            <td class="num">1</td>
+          </tr>
+          <tr>
+            <td><span class="plan-name">Pro</span><span class="plan-sub">For small teams</span></td>
+            <td class="num price">$29</td>
+            <td class="num annual">$348</td>
+            <td class="num">5</td>
+          </tr>
+          <tr>
+            <td><span class="plan-name">Deluxe</span><span class="badge">Popular</span><span class="plan-sub">For growing teams</span></td>
+            <td class="num price">$49</td>
+            <td class="num annual">$588</td>
+            <td class="num">15</td>
+          </tr>
+          <tr>
+            <td><span class="plan-name">Enterprise</span><span class="plan-sub">For large orgs</span></td>
+            <td class="num price">$99</td>
+            <td class="num annual">$1188</td>
+            <td class="num">50</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <footer>All plans include a 14-day free trial and 24/7 support. Taxes may apply at checkout.</footer>
+  </div>
+</body>
+</html>
