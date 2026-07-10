@@ -859,7 +859,7 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
               </Dropdown>
             </div>
 
-            <div className="flex items-center gap-1">
+            <div className="flex shrink-0 items-center gap-1">
               {running && (
                 <button
                   type="button"
@@ -871,26 +871,30 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
                   {activeState.paused ? <PlayIcon className="h-4 w-4" /> : <PauseIcon className="h-4 w-4" />}
                 </button>
               )}
-              {running && (
+              {running && prompt.trim().length === 0 && attachments.length === 0 ? (
+                // Running with an empty composer → the primary button STOPS the run (square). Type
+                // something and it becomes "steer" instead (fold the message into the live run).
                 <button
                   type="button"
                   onClick={onCancel}
                   aria-label={a.stop}
                   title={a.stop}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-overlay text-text-primary hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-overlay text-text-primary hover:bg-red-500/15 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
                 >
                   <StopIcon className="h-3.5 w-3.5" />
                 </button>
+              ) : (
+                // Idle → start the run; running WITH text → steer it into the live run.
+                <button
+                  type="submit"
+                  disabled={prompt.trim().length === 0 && attachments.length === 0}
+                  aria-label={running ? a.steer : a.send}
+                  title={running ? a.steer : a.send}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500 text-white hover:opacity-90 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+                >
+                  <SendIcon className="h-4 w-4" />
+                </button>
               )}
-              <button
-                type="submit"
-                disabled={prompt.trim().length === 0 && attachments.length === 0}
-                aria-label={running ? a.steer : a.send}
-                title={running ? a.steer : a.send}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500 text-white hover:opacity-90 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-              >
-                <SendIcon className="h-4 w-4" />
-              </button>
             </div>
           </div>
         </div>
