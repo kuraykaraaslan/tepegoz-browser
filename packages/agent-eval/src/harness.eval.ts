@@ -16,7 +16,7 @@ import {
 import { isRunnableProvider, type AIProvider, type EvalScenario } from '@tepegoz/shared-types';
 import { loadScenarios } from './scenario-registry';
 import { startFixtureServer, fixtureUrl, type FixtureServer } from './fixture-server';
-import { scoreScenario } from './scorer';
+import { scoreScenario, type ScoreResult } from './scorer';
 import { buildReport, formatReportTable, writeReport, type EvalReport, type ScenarioResult } from './report';
 import { judgeScenario, type JudgeMessages } from './judge';
 import { agreementRate, loadHumanLabels, type JudgeSample } from './calibration';
@@ -50,6 +50,10 @@ const appEntry = join(appDir, 'out', 'main', 'index.js');
 const MODE = process.env.TEPEGOZ_EVAL_MODE === 'live' ? 'live' : 'scripted';
 const PROVIDER_ID = process.env.TEPEGOZ_EVAL_PROVIDER ?? 'anthropic';
 const API_KEY = process.env.TEPEGOZ_EVAL_API_KEY ?? '';
+// Trials per scenario (`TEPEGOZ_EVAL_REPEAT=3`). N=1 is too noisy for a headline — the real agent flips
+// pass/fail run-to-run on model sampling — so a defensible number aggregates a per-scenario pass-frequency
+// over repeats. Clamped to [1,10]. Default 1 (fast regression / plumbing).
+const REPEAT = Math.min(10, Math.max(1, Math.trunc(Number(process.env.TEPEGOZ_EVAL_REPEAT ?? '1')) || 1));
 // Optional comma-separated scenario-id allowlist (`TEPEGOZ_EVAL_ONLY=native_select_country,blog_behind_menu`)
 // so an iteration re-runs just the target(s) + a tripwire instead of the whole registry — a full live
 // run is minutes-per-scenario under a low-TPM key. Empty → the full registry (baselines / boundaries).
@@ -298,6 +302,67 @@ function judgeComplete(): (m: JudgeMessages) => Promise<string> {
   };
 }
 
+/** Score ONE trial's output (ground-truth first; LLM-judge for judge-only scenarios in the live tier). */
+async function scoreTrial(
+  scenario: EvalScenario,
+  out: EvalOut,
+  judge: ((m: JudgeMessages) => Promise<string>) | null,
+  judgeSamples: JudgeSample[],
+): Promise<ScoreResult> {
+  const obs = { finalPageText: out.finalPageText ?? '', summary: out.summary ?? '' };
+  let score = scoreScenario({ scenario, ...obs });
+  if (score.method === 'deferred-judge' && judge !== null) {
+    const verdict = await judgeScenario(scenario, obs, judge);
+    score = { ok: verdict.pass, method: 'deferred-judge', reason: `judge: ${verdict.reason}` };
+    judgeSamples.push({ id: scenario.id, pass: verdict.pass });
+  }
+  return score;
+}
+
+/** Run a scenario {@link REPEAT} times and fold the trials into ONE {@link ScenarioResult}: `ok` is the
+ *  MAJORITY verdict, the reason carries the k/N pass-frequency, tokens are SUMMED (honest cost). Returns
+ *  the fold plus the raw pass count so the caller can also report a per-scenario frequency + mean. */
+async function runScenarioTrials(
+  scenario: EvalScenario,
+  plan: { entryUrl: string; env: Record<string, string> },
+  work: string,
+  logsDir: string,
+  judge: ((m: JudgeMessages) => Promise<string>) | null,
+  judgeSamples: JudgeSample[],
+): Promise<{ result: ScenarioResult; passes: number }> {
+  const scores: ScoreResult[] = [];
+  const outs: EvalOut[] = [];
+  for (let t = 0; t < REPEAT; t++) {
+    const logName = REPEAT > 1 ? `${scenario.id}.t${String(t + 1)}.log` : `${scenario.id}.log`;
+    const out = await runOne(scenario, plan.entryUrl, plan.env, work, join(logsDir, logName));
+    outs.push(out);
+    scores.push(await scoreTrial(scenario, out, judge, judgeSamples));
+  }
+  const passes = scores.filter((s) => s.ok).length;
+  const ok = passes * 2 >= REPEAT; // majority
+  const last = outs[outs.length - 1] ?? {};
+  const outcomes: StepOutcome[] = (last.steps ?? []).map((s) => ({ stepId: '', tool: s.tool, ok: s.ok }));
+  const inputTokens = outs.reduce((n, o) => n + (o.tokenUsage?.inputTokens ?? 0), 0);
+  const outputTokens = outs.reduce((n, o) => n + (o.tokenUsage?.outputTokens ?? 0), 0);
+  const failReason = scores.find((s) => !s.ok)?.reason;
+  const reason =
+    REPEAT > 1
+      ? `${String(passes)}/${String(REPEAT)} passed${!ok && failReason !== undefined ? ` — e.g. ${failReason}` : ''}`
+      : (scores[0]?.reason ?? 'no output');
+  const result: ScenarioResult = {
+    scenario,
+    score: { ok, method: scores[0]?.method ?? 'ground-truth', reason },
+    record: recordFromOutcomes({
+      scenarioId: scenario.id,
+      stoppedReason: (last.stoppedReason as ScenarioResult['record']['stoppedReason']) ?? 'tool_error',
+      outcomes,
+      tokenUsage: { inputTokens, outputTokens },
+      ok,
+    }),
+  };
+  return { result, passes };
+}
+
 test('agent-eval — drive the real app and score competence', async () => {
   test.setTimeout(1_800_000);
   if (!existsSync(appEntry)) {
@@ -323,6 +388,8 @@ test('agent-eval — drive the real app and score competence', async () => {
   const logsDir = join(archiveDir, `${runTag}-${MODE}-logs`);
   mkdirSync(logsDir, { recursive: true });
 
+  // Per-scenario pass frequency across REPEAT trials — feeds the honest mean pass-rate + frequency table.
+  const freq: Array<{ id: string; heldOut: boolean; passes: number }> = [];
   try {
     for (const scenario of scenarios) {
       const plan = planRun(scenario, server, work);
@@ -330,38 +397,9 @@ test('agent-eval — drive the real app and score competence', async () => {
         skipped.push(scenario.id);
         continue;
       }
-      const out = await runOne(scenario, plan.entryUrl, plan.env, work, join(logsDir, `${scenario.id}.log`));
-      const obs = { finalPageText: out.finalPageText ?? '', summary: out.summary ?? '' };
-      let score = scoreScenario({ scenario, ...obs });
-
-      // Open-ended scenario with no ground truth → LLM-judge (live tier only).
-      if (score.method === 'deferred-judge' && judge !== null) {
-        const verdict = await judgeScenario(scenario, obs, judge);
-        score = { ok: verdict.pass, method: 'deferred-judge', reason: `judge: ${verdict.reason}` };
-        judgeSamples.push({ id: scenario.id, pass: verdict.pass });
-      }
-
-      // Real per-step outcomes + token usage from the run (AI-1 observability) → honest toolCalls,
-      // toolErrors, navigationValidation counts, and cost, instead of the previous hard-coded zeros.
-      const outcomes: StepOutcome[] = (out.steps ?? []).map((s) => ({ stepId: '', tool: s.tool, ok: s.ok }));
-      results.push({
-        scenario,
-        score,
-        record: recordFromOutcomes({
-          scenarioId: scenario.id,
-          stoppedReason: (out.stoppedReason as ScenarioResult['record']['stoppedReason']) ?? 'tool_error',
-          outcomes,
-          ...(out.tokenUsage !== undefined
-            ? {
-                tokenUsage: {
-                  inputTokens: out.tokenUsage.inputTokens,
-                  outputTokens: out.tokenUsage.outputTokens,
-                },
-              }
-            : {}),
-          ok: score.ok,
-        }),
-      });
+      const { result, passes } = await runScenarioTrials(scenario, plan, work, logsDir, judge, judgeSamples);
+      results.push(result);
+      freq.push({ id: scenario.id, heldOut: scenario.heldOut, passes });
     }
   } finally {
     await server.close();
@@ -376,6 +414,21 @@ test('agent-eval — drive the real app and score competence', async () => {
     ...(judgeAgreement !== undefined ? { judgeAgreement } : {}),
   });
   console.log(formatReportTable(report));
+  if (REPEAT > 1) {
+    // The table above is the MAJORITY verdict per scenario; also surface the per-scenario pass-frequency
+    // and the MEAN per-trial pass-rate — the granular, less-noisy honest number for a flaky agent.
+    const pctOf = (n: number): string => `${(n * 100).toFixed(1)}%`;
+    const mean = (rows: typeof freq): number =>
+      rows.length === 0 ? 0 : rows.reduce((s, f) => s + f.passes / REPEAT, 0) / rows.length;
+    const devRows = freq.filter((f) => !f.heldOut);
+    const heldRows = freq.filter((f) => f.heldOut);
+    console.log(
+      `repeat=${String(REPEAT)} · MEAN per-trial pass-rate: dev ${pctOf(mean(devRows))} · held-out ${pctOf(mean(heldRows))}`,
+    );
+    for (const f of freq) {
+      console.log(`  ${String(f.passes)}/${String(REPEAT)}  ${f.heldOut ? '[held-out] ' : ''}${f.id}`);
+    }
+  }
   if (skipped.length > 0) {
     console.log(`skipped ${String(skipped.length)} scenario(s) not runnable in the ${MODE} tier: ${skipped.join(', ')}`);
   }
