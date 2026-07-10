@@ -76,14 +76,21 @@ export function normalizeHttpError(err: unknown): AppError {
   return new AppError(HttpMessages.UnknownHttpError, 503);
 }
 
-/** Max automatic retries for a 429. A 429 means the request was REJECTED (never processed), so a retry
- *  is safe even for a non-idempotent POST — nothing ran. Bounded so a persistently rate-limited endpoint
- *  still fails within a caller's own deadline instead of looping. */
-const MAX_RETRIES_429 = 6;
+/** Max automatic retries for a retryable failure — a 429, or a pre-send network error (see
+ *  {@link PRESEND_RETRY_CODES}). Both mean the request never reached / was never processed by the server,
+ *  so a retry can't double-execute even a non-idempotent POST. Bounded so a persistent failure still
+ *  fails within a caller's own deadline instead of looping. */
+const MAX_HTTP_RETRIES = 6;
 /** Upper bound on a single backoff wait (ms) — a huge server `Retry-After` cannot hang a run unbounded. */
 const MAX_BACKOFF_MS = 10_000;
 /** Random jitter added to each backoff (ms) to de-synchronise concurrent rate-limited callers. */
 const BACKOFF_JITTER_MS = 200;
+/** Axios/Node error `code`s where the request never left the machine — DNS resolution failed
+ *  (`ENOTFOUND`/`EAI_AGAIN`, e.g. a transient network blip) or the connection was refused
+ *  (`ECONNREFUSED`). Nothing was processed, so a retry is safe for ANY method. Deliberately EXCLUDES
+ *  ambiguous post-send failures (`ECONNRESET`/`ETIMEDOUT`/`ECONNABORTED`), which may have reached the
+ *  server and could double-execute a non-idempotent request. */
+const PRESEND_RETRY_CODES: ReadonlySet<string> = new Set(['ENOTFOUND', 'EAI_AGAIN', 'ECONNREFUSED']);
 
 /**
  * The wait (ms) a 429 asks for: prefer the `Retry-After` header (delta-seconds or an HTTP-date), then
@@ -150,20 +157,30 @@ export function createHttpClient(options: HttpClientOptions = {}): AxiosInstance
     config.baseURL = options.baseURL;
   }
   const instance = axios.create(config);
-  // Single boundary: a 429 (rate limited → request REJECTED, not processed) is backed off and retried,
-  // bounded + cancel-aware + honoring Retry-After; everything else — or a 429 past the retry budget —
-  // leaves as a mapped, redacted AppError. This is the one place retries are meant to live (see header).
+  // Single boundary: a retryable failure — a 429 (rate limited) or a pre-send network error (DNS blip /
+  // connection refused) — is backed off and retried, bounded + cancel-aware + honoring Retry-After. Both
+  // mean the request was never processed, so retrying is safe. Anything else — or a retry past the
+  // budget — leaves as a mapped, redacted AppError. This is the one place retries are meant to live.
   instance.interceptors.response.use(
     (response) => response,
     async (error: unknown) => {
-      if (axios.isAxiosError(error) && error.response?.status === 429 && error.config) {
-        const cfg = error.config as InternalAxiosRequestConfig & { retry429?: number };
-        const attempt = cfg.retry429 ?? 0;
+      if (axios.isAxiosError(error) && error.config) {
+        const cfg = error.config as InternalAxiosRequestConfig & { retryCount?: number };
         const signal = cfg.signal as AbortSignal | undefined;
-        if (attempt < MAX_RETRIES_429 && signal?.aborted !== true) {
-          cfg.retry429 = attempt + 1;
-          const wait = backoffMs(attempt, retryAfterMs(error.response.headers, extractProviderMessage(error.response.data)));
-          Logger.info('http 429: backing off before retry', { attempt: attempt + 1, waitMs: wait });
+        const is429 = error.response?.status === 429;
+        const isPreSend =
+          error.response === undefined && error.code !== undefined && PRESEND_RETRY_CODES.has(error.code);
+        const attempt = cfg.retryCount ?? 0;
+        if ((is429 || isPreSend) && attempt < MAX_HTTP_RETRIES && signal?.aborted !== true) {
+          cfg.retryCount = attempt + 1;
+          const hint = is429
+            ? retryAfterMs(error.response?.headers, extractProviderMessage(error.response?.data))
+            : null;
+          const wait = backoffMs(attempt, hint);
+          Logger.info(`http retry: ${is429 ? '429 rate-limited' : (error.code ?? 'network')} — backing off`, {
+            attempt: attempt + 1,
+            waitMs: wait,
+          });
           await delay(wait, signal);
           return instance(cfg);
         }

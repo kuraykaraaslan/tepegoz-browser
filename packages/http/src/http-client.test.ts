@@ -155,6 +155,32 @@ describe('createHttpClient — 429 retry', () => {
     expect(calls()).toBe(7); // MAX_RETRIES_429 (6) + the initial attempt
   });
 
+  it('retries a pre-send DNS failure (ENOTFOUND), then returns the eventual success', async () => {
+    const client = createHttpClient();
+    let calls = 0;
+    client.defaults.adapter = (config) => {
+      calls += 1;
+      if (calls <= 1) {
+        return Promise.reject(new AxiosError('getaddrinfo ENOTFOUND api.x', 'ENOTFOUND', config, {}));
+      }
+      return Promise.resolve({ status: 200, statusText: 'OK', headers: {}, data: { ok: true }, config } as AxiosResponse);
+    };
+    const res = await client.get('http://example.test/x');
+    expect(res.status).toBe(200);
+    expect(calls).toBe(2);
+  });
+
+  it('does NOT retry an ambiguous post-send error (ECONNRESET) — could have reached the server', async () => {
+    const client = createHttpClient();
+    let calls = 0;
+    client.defaults.adapter = (config) => {
+      calls += 1;
+      return Promise.reject(new AxiosError('socket hang up', 'ECONNRESET', config, {}));
+    };
+    await expect(client.get('http://example.test/x')).rejects.toBeInstanceOf(AppError);
+    expect(calls).toBe(1);
+  });
+
   it('does not enter a retry loop when the request signal is already aborted', async () => {
     const client = createHttpClient();
     const { adapter, calls } = stub429Then200(99, { error: { message: 'try again in 1ms' } });
