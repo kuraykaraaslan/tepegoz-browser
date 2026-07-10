@@ -63,6 +63,40 @@ describe('registerBrowserTools', () => {
     expect(result).toMatchObject({ ok: true, note: 'Selected "Türkiye" in the dropdown.' });
   });
 
+  it('select_option accepts a `text` alias for the option value', async () => {
+    // (The handler runs post-validation; the gateway's z.coerce handles a string `ref` on the real path.)
+    const selectOption = vi.fn(() => Promise.resolve({ selected: 'Türkiye', options: ['Germany', 'Türkiye'] }));
+    registerBrowserTools({ host: fakeHost({ selectOption }) });
+    const result = await CapabilityRegistry.get('browser_update_page')!.handler({
+      action: 'select_option',
+      ref: 4,
+      text: 'Türkiye', // used `text` instead of `value`
+    });
+    expect(selectOption).toHaveBeenCalledWith(4, 'Türkiye', undefined);
+    expect(result).toMatchObject({ ok: true, note: 'Selected "Türkiye" in the dropdown.' });
+  });
+
+  it('UpdatePageArgs coerces a string ref (weak-model shape) at validation', () => {
+    const cap = (() => {
+      registerBrowserTools({ host: fakeHost() });
+      return CapabilityRegistry.get('browser_update_page')!;
+    })();
+    const parsed = cap.inputSchema.safeParse({ action: 'select_option', ref: '4', value: 'Türkiye' });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect((parsed.data as { ref: number }).ref).toBe(4);
+  });
+
+  it('select_option with no option value → a clear recoveryHint (not a hard validation error)', async () => {
+    const selectOption = vi.fn(() => Promise.resolve({ selected: null, options: [] }));
+    registerBrowserTools({ host: fakeHost({ selectOption }) });
+    const result = (await CapabilityRegistry.get('browser_update_page')!.handler({
+      action: 'select_option',
+      ref: 4,
+    })) as Record<string, unknown>;
+    expect(selectOption).not.toHaveBeenCalled();
+    expect(result.recoveryHint).toContain('value');
+  });
+
   it('select_option miss → recoveryHint lists the available options', async () => {
     const selectOption = vi.fn(() => Promise.resolve({ selected: null, options: ['Germany', 'Türkiye'] }));
     registerBrowserTools({ host: fakeHost({ selectOption }) });

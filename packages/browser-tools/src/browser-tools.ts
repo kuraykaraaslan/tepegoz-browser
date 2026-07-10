@@ -19,7 +19,9 @@ const ValidatePageArgs = TargetTabArgs.extend({
   containsText: z.string().min(1).max(500).optional(),
   timeoutMs: z.number().int().positive().max(60_000).optional(),
 });
-const Ref = z.number().int().positive().max(10_000);
+// Coerce so a weak model that sends the ref as a string ("2") still validates — same value space, one
+// fewer way for the JSON-in-text decision path to trip on a shape nit. Non-numeric strings still reject.
+const Ref = z.coerce.number().int().positive().max(10_000);
 /** One page interaction, discriminated by `action` so each variant validates its own args. */
 const UpdatePageArgs = z.discriminatedUnion('action', [
   TargetTabArgs.extend({ action: z.literal('click'), ref: Ref }),
@@ -38,9 +40,24 @@ const UpdatePageArgs = z.discriminatedUnion('action', [
   TargetTabArgs.extend({
     action: z.literal('select_option'),
     ref: Ref,
-    value: z.string().min(1).max(1000),
+    // The option to choose, by label or value. Accept the common aliases a model reaches for (`text`,
+    // `option`, `label`) so a natural arg name doesn't hard-fail validation; resolved in the handler.
+    value: z.string().min(1).max(1000).optional(),
+    text: z.string().min(1).max(1000).optional(),
+    option: z.string().min(1).max(1000).optional(),
+    label: z.string().min(1).max(1000).optional(),
   }),
 ]);
+
+/** The option label/value a select_option call wants, tolerating the aliases above. */
+function selectOptionValue(args: {
+  value?: string | undefined;
+  text?: string | undefined;
+  option?: string | undefined;
+  label?: string | undefined;
+}): string | undefined {
+  return args.value ?? args.text ?? args.option ?? args.label;
+}
 
 interface PageFingerprint {
   url: string;
@@ -79,12 +96,22 @@ function structuralOnlyChange(before: PageFingerprint, after: PageFingerprint): 
 /** Result for a `select_option`: on a miss, surface the real option list so the model retries with an
  *  exact label rather than falling back to clicking the native (OS-popup) select. */
 function selectOptionResult(
-  value: string,
+  value: string | undefined,
   selected: string | null | undefined,
   optionLabels: string[] | undefined,
   after: { url: string; title: string },
   changed: boolean,
 ): { ok: true; url: string; title: string; changed: boolean; recoveryHint?: string; note?: string } {
+  if (value === undefined) {
+    return {
+      ok: true,
+      url: after.url,
+      title: after.title,
+      changed,
+      recoveryHint:
+        'select_option needs the option to choose — pass it as "value" (the option label or its value).',
+    };
+  }
   if (selected === null || selected === undefined) {
     const opts = (optionLabels ?? []).filter((o) => o.length > 0).join(', ');
     return {
@@ -234,15 +261,19 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
         case 'scroll_to_text':
           ({ found, count: matchCount } = await host.scrollToText(args.text, args.nth, args.tabId));
           break;
-        case 'select_option':
-          ({ selected, options: optionLabels } = await host.selectOption(args.ref, args.value, args.tabId));
+        case 'select_option': {
+          const optValue = selectOptionValue(args);
+          if (optValue !== undefined) {
+            ({ selected, options: optionLabels } = await host.selectOption(args.ref, optValue, args.tabId));
+          }
           break;
+        }
       }
       const after = await host.readPage(args.tabId);
       const changed = pageChanged(before, after);
       // select_option's meaningful result is whether an option matched, not the structural delta.
       if (args.action === 'select_option') {
-        return selectOptionResult(args.value, selected, optionLabels, after, changed);
+        return selectOptionResult(selectOptionValue(args), selected, optionLabels, after, changed);
       }
       // scroll_to_text is a content-addressed reveal: its meaningful result is `found`, not the structural
       // delta. On a hit, tell the model to re-read so the now-in-view target enters the index map; on a
