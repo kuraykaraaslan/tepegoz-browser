@@ -57,12 +57,12 @@ const ONLY = (process.env.TEPEGOZ_EVAL_ONLY ?? '')
   .split(',')
   .map((s) => s.trim())
   .filter((s) => s.length > 0);
-// The eval window launches MINIMIZED (window.ts, so a batch run never pops windows / steals focus while
-// the user works). A minimized/occluded window normally STOPS compositing — which breaks render-DOM
-// perception (`document.elementFromPoint` hit-testing returns null → zero actionable elements) and
-// screenshots. These Chromium switches keep the renderer painting while minimized so perception still
-// works. Dev-harness only (passed at launch), never in production.
-const KEEP_RENDERING_MINIMIZED = [
+// The eval window is shown INACTIVE (window.ts) so a batch run never steals focus while the user works —
+// but that leaves it in the BACKGROUND, where the user's active window can cover it. A covered/occluded
+// window normally STOPS compositing, which breaks render-DOM perception (`document.elementFromPoint`
+// returns null → zero actionable elements) and screenshots. These Chromium switches keep the renderer
+// painting even when backgrounded/occluded so perception stays reliable. Dev-harness only, never prod.
+const KEEP_RENDERING_WHEN_BACKGROUNDED = [
   '--disable-features=CalculateNativeWinOcclusion',
   '--disable-backgrounding-occluded-windows',
   '--disable-renderer-backgrounding',
@@ -240,7 +240,7 @@ async function runOne(
     ELECTRON_ENABLE_LOGGING: '1',
   });
   // Switches BEFORE the app path go to Chromium/Electron; the app path is the first positional arg.
-  const app = await electron.launch({ args: [...KEEP_RENDERING_MINIMIZED, appDir], env: launchEnv });
+  const app = await electron.launch({ args: [...KEEP_RENDERING_WHEN_BACKGROUNDED, appDir], env: launchEnv });
   // Capture the app's stdout/stderr (the `[eval] <kind>` step trace + Chromium logs) so a FAIL can be
   // diagnosed at step granularity. Best-effort — never fail the run on a log-write error.
   const logChunks: string[] = [];

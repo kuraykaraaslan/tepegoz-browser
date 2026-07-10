@@ -68,12 +68,10 @@ export function createWindow(): BrowserWindow {
     if (shown || win.isDestroyed()) return;
     shown = true;
     if (evalMode) {
-      // Invisible but FULLY COMPOSITED: a fully-transparent (opacity 0), shown-inactive window keeps
-      // painting its surface — so render-DOM perception (`elementFromPoint` hit-testing) AND screenshots
-      // still work — while the user sees nothing and focus is never stolen. Minimizing instead would stop
-      // compositing and blind perception. Also moved off-screen as belt-and-suspenders.
-      win.setOpacity(0);
-      win.setPosition(-2400, -2400);
+      // Shown INACTIVE: a normal, fully on-screen window (identical rendering to production, so perception
+      // has no compositing warm-up race) that simply never grabs the foreground — so a batch eval run does
+      // not steal focus while the user works. (Hiding/minimizing/opacity-0/off-screen all risk pausing or
+      // racing the compositor, which blinds render-DOM perception — verified empirically.)
       win.showInactive();
       return;
     }
