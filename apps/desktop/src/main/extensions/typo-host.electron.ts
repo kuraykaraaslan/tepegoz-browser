@@ -22,7 +22,6 @@ import type {
   TypoCheckInput,
   TypoCheckResult,
   TypoIssue,
-  TypoIssueKind,
   TypoSettings,
 } from '@tepegoz/ext-typo/types';
 import { z } from 'zod';
@@ -142,7 +141,7 @@ function mergeAiIssues(
     seen.add(key);
     issues.push({
       id: `${source}:${range.start}:${range.end}:${raw.text}`,
-      kind: raw.kind as TypoIssueKind,
+      kind: raw.kind,
       severity: raw.kind === 'style' ? 'info' : 'warning',
       source,
       start: range.start,

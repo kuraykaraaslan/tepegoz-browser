@@ -126,9 +126,9 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
         onCancel={actions.onCancel}
         onPauseResume={actions.onPauseResume}
         removeAttachment={attach.removeAttachment}
-        onAttachSelection={attach.onAttachSelection}
-        onAttachFiles={attach.onAttachFiles}
-        onAttachScreenshot={attach.onAttachScreenshot}
+        onAttachSelection={() => void attach.onAttachSelection()}
+        onAttachFiles={() => void attach.onAttachFiles()}
+        onAttachScreenshot={() => void attach.onAttachScreenshot()}
         chooseProvider={actions.chooseProvider}
         chooseModel={actions.chooseModel}
         chooseAutonomy={actions.chooseAutonomy}

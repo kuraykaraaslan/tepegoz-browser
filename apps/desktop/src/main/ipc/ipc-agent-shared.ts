@@ -1,5 +1,5 @@
 import { BrowserWindow } from 'electron';
-import { AppError, Logger } from '@tepegoz/libs';
+import { AppError } from '@tepegoz/libs';
 import {
   IpcChannels,
   isExtensionEnabled,

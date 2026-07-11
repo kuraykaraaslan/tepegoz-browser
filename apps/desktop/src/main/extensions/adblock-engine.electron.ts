@@ -106,7 +106,7 @@ function callBeforeRequest(
     try {
       engine.onBeforeRequest(details, resolve);
     } catch (err) {
-      reject(err);
+      reject(err instanceof Error ? err : new Error(String(err)));
     }
   });
 }
@@ -119,7 +119,7 @@ function callHeadersReceived(
     try {
       engine.onHeadersReceived(details, resolve);
     } catch (err) {
-      reject(err);
+      reject(err instanceof Error ? err : new Error(String(err)));
     }
   });
 }

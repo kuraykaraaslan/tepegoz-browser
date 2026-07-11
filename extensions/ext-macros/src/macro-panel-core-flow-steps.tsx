@@ -10,7 +10,7 @@ import { predicateEditor } from './macro-panel-core-predicate';
 export interface CsvHandlers {
   csvInputs: Record<string, string>;
   setCsvInputs: Dispatch<SetStateAction<Record<string, string>>>;
-  attachCsv: (location: StepLocation, step: Extract<Step, { kind: 'forEachRow' }>) => void;
+  attachCsv: (location: StepLocation, step: Extract<Step, { kind: 'forEachRow' }>) => void | Promise<void>;
 }
 
 function updateAssertMessage(

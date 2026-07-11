@@ -39,7 +39,7 @@ const typoContextMenuContributor: PageContextMenuContributor = {
     if (!ctx.isEditable || !typoHost.isActiveForPage(ctx.pageUrl) || ctx.webContents.isDestroyed()) {
       return [];
     }
-    const raw = await ctx.webContents.executeJavaScript(
+    const raw: unknown = await ctx.webContents.executeJavaScript(
       `window.__tepegozTypoIssueAt?.(${JSON.stringify(ctx.x)}, ${JSON.stringify(ctx.y)}) ?? null;`,
       true,
     );

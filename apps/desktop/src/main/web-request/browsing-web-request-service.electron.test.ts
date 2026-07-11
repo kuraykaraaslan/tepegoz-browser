@@ -10,7 +10,7 @@ function beforeDetails(id = 1): Electron.OnBeforeRequestListenerDetails {
     referrer: 'https://page.test/',
     timestamp: Date.now(),
     uploadData: [],
-  } as Electron.OnBeforeRequestListenerDetails;
+  };
 }
 
 function headersDetails(id = 1): Electron.OnHeadersReceivedListenerDetails {
@@ -24,7 +24,7 @@ function headersDetails(id = 1): Electron.OnHeadersReceivedListenerDetails {
     statusLine: 'HTTP/1.1 200 OK',
     statusCode: 200,
     responseHeaders: { server: ['fixture'] },
-  } as Electron.OnHeadersReceivedListenerDetails;
+  };
 }
 
 function fakeWebRequest() {

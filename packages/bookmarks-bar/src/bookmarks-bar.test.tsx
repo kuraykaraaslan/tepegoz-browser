@@ -44,7 +44,7 @@ describe('BookmarksBar', () => {
   it('asks the host to open a folder dropdown (native popup) with an anchor', () => {
     const { onOpenFolder } = renderBar([folder('f', 'Work', [bookmark('c', 'Child', 'https://c.com/')])]);
     fireEvent.click(screen.getByText('Work'));
-    expect(onOpenFolder).toHaveBeenCalledWith('f', expect.objectContaining({ x: expect.any(Number) }));
+    expect(onOpenFolder).toHaveBeenCalledWith('f', expect.objectContaining({ x: expect.any(Number) as unknown }));
   });
 
   it('fires the context menu with the node id + type on right-click', () => {

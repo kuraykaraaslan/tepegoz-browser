@@ -36,6 +36,7 @@ describe('CredentialVault (multi-key)', () => {
       anthropic: false,
       openai: false,
       gemini: false,
+      kimi: false,
       local: false,
     });
     expect(CredentialVault.listMeta()).toEqual([]);
@@ -185,6 +186,7 @@ describe('CredentialVault (multi-key)', () => {
       anthropic: true,
       openai: false,
       gemini: false,
+      kimi: false,
       local: false,
     });
     expect(CredentialVault.listMeta()).toHaveLength(1);
