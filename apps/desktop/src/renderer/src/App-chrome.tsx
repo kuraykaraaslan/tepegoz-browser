@@ -1,0 +1,152 @@
+import { type Dispatch, type SetStateAction } from 'react';
+import { coreDict, pick, type Locale } from '@tepegoz/i18n';
+import { BrowserChrome } from '@tepegoz/browser-chrome';
+import { BookmarksBar } from '@tepegoz/bookmarks-bar';
+import { BOOKMARK_ROOT_BAR } from '@tepegoz/bookmarks';
+import type { Preferences, TabsState } from '@tepegoz/desktop-ipc';
+import type { OmniboxQuickSettingTarget } from '@tepegoz/omnibox';
+import { browserDict, userMenuDict } from '../../i18n';
+import { ExtensionTray } from './components/ExtensionTray';
+import { MainMenuButton } from './components/MainMenuButton';
+import { TransferActivityButton } from './components/TransferActivityButton';
+import { UserMenuButton } from './components/UserMenuButton';
+import { NotificationBellButton } from './components/NotificationBellButton';
+import type { ExtensionDef } from './extensions/registry';
+import type { BookmarksBarResult } from './app-bookmarks';
+import type { ExtensionSurfacesResult } from './app-extension-surfaces';
+import type { OmniboxHistoryResult } from './app-omnibox-history';
+
+export interface AppChromeProps {
+  locale: Locale;
+  prefs: Preferences | null;
+  tabs: TabsState;
+  currentUrl: string;
+  renamingGroupId: string | null;
+  setRenamingGroupId: Dispatch<SetStateAction<string | null>>;
+  isMaximized: boolean;
+  enabledExtensions: ExtensionDef[];
+  extSurfaces: ExtensionSurfacesResult;
+  omniboxHistory: OmniboxHistoryResult;
+  bookmarks: BookmarksBarResult;
+  onOpenQuickSetting: (target: OmniboxQuickSettingTarget) => void;
+  onOmniboxDropdownHeightChange: (height: number) => void;
+}
+
+/**
+ * The window chrome: the tab strip / toolbar / omnibox (`BrowserChrome`) plus the toggleable bookmarks
+ * bar. Split out of `App.tsx` (ADR-0010 250-line cap). Renders above its own `I18nProvider`, so it
+ * resolves the strings it renders itself with `pick(dict, locale)` (child surfaces self-localize).
+ */
+export function AppChrome({
+  locale,
+  prefs,
+  tabs,
+  currentUrl,
+  renamingGroupId,
+  setRenamingGroupId,
+  isMaximized,
+  enabledExtensions,
+  extSurfaces,
+  omniboxHistory,
+  bookmarks,
+  onOpenQuickSetting,
+  onOmniboxDropdownHeightChange,
+}: AppChromeProps) {
+  const coreT = pick(coreDict, locale);
+  const browserT = pick(browserDict, locale);
+  const userMenuT = pick(userMenuDict, locale);
+
+  return (
+    <>
+      <BrowserChrome
+        t={{ common: coreT.common, window: coreT.window, browser: browserT }}
+        tabs={tabs.tabs}
+        tabGroups={tabs.groups}
+        renamingGroupId={renamingGroupId}
+        activeTabId={tabs.activeId}
+        onSelectTab={(id) => {
+          extSurfaces.closeSurface(); // close any extension surface when switching tabs
+          window.tepegoz.activateTab(id);
+        }}
+        onCloseTab={(id) => window.tepegoz.closeTab(id)}
+        onTabContextMenu={(id) => window.tepegoz.showTabContextMenu(id)}
+        onTabGroupContextMenu={(groupId) => window.tepegoz.showTabGroupContextMenu(groupId)}
+        onRenameTabGroupHandled={() => setRenamingGroupId(null)}
+        onNewTab={() => {
+          extSurfaces.closeSurface();
+          window.tepegoz.createTab();
+        }}
+        onMoveTab={(id, toIndex) => window.tepegoz.moveTab(id, toIndex)}
+        onMoveTabGroup={(groupId, toIndex) => window.tepegoz.moveTabGroup(groupId, toIndex)}
+        onAssignTabToGroup={(tabId, groupId) => window.tepegoz.assignTabToGroup(tabId, groupId)}
+        onToggleGroupCollapsed={(groupId, collapsed) =>
+          window.tepegoz.updateTabGroup(groupId, { collapsed })
+        }
+        onRenameTabGroup={(groupId, name) => window.tepegoz.updateTabGroup(groupId, { name })}
+        onTearBegin={(payload) => window.tepegoz.beginTabDrag(payload)}
+        onTearMove={({ screenX, screenY }) =>
+          window.tepegoz.moveTabDrag({ screenX, screenY, torn: true })
+        }
+        onTearEnd={({ screenX, screenY }) =>
+          window.tepegoz.endTabDrag({ screenX, screenY, torn: true })
+        }
+        onTearCancel={() => window.tepegoz.cancelTabDrag()}
+        onReportTabStripGeometry={(geometry) => window.tepegoz.reportTabStrip(geometry)}
+        isMaximized={isMaximized}
+        onMinimize={() => window.tepegoz.minimizeWindow()}
+        onToggleMaximize={() => window.tepegoz.toggleMaximizeWindow()}
+        onClose={() => window.tepegoz.closeWindow()}
+        currentUrl={currentUrl}
+        canGoBack={tabs.canGoBack}
+        canGoForward={tabs.canGoForward}
+        onBack={() => window.tepegoz.tabGoBack()}
+        onForward={() => window.tepegoz.tabGoForward()}
+        onReload={() => window.tepegoz.tabReload()}
+        onHome={() => window.tepegoz.tabHome()}
+        captionLeading={<NotificationBellButton />}
+        menu={<MainMenuButton label={browserT.menu} />}
+        onNavigate={(input) => window.tepegoz.navigateTab(input)}
+        onSuggest={omniboxHistory.onOmniboxSuggest}
+        onActivateTab={omniboxHistory.onActivateTabFromOmnibox}
+        onOpenQuickSetting={onOpenQuickSetting}
+        onOmniboxDropdownHeightChange={onOmniboxDropdownHeightChange}
+        isBookmarked={bookmarks.activeBookmarked}
+        canBookmark={bookmarks.canBookmark}
+        onToggleBookmark={() => void bookmarks.onToggleBookmark()}
+        toolbarActions={
+          <>
+            <TransferActivityButton />
+            <ExtensionTray
+              locale={locale}
+              extensions={enabledExtensions}
+              activeExtensionId={
+                extSurfaces.activeSurface?.id ?? extSurfaces.sidebarExtId ?? extSurfaces.popupOpenId ?? null
+              }
+              onExtensionAction={extSurfaces.runExtensionAction}
+            />
+            <UserMenuButton label={userMenuT.menuLabel} name={userMenuT.name} />
+          </>
+        }
+      />
+      {/* Chrome-style bookmarks bar (toggled from the Bookmarks menu). Rendered above the content row,
+          so contentRef's ResizeObserver reports the new top and main reflows the web view down.
+          Default-on: shown once prefs load unless explicitly turned off. */}
+      {prefs !== null && prefs.showBookmarksBar !== false && (
+        <BookmarksBar
+          nodes={bookmarks.barNodes}
+          barRootId={BOOKMARK_ROOT_BAR}
+          onOpen={(url) => window.tepegoz.navigateTab(url)}
+          onOpenFolder={(folderId, anchor) => {
+            // Seed a tight height (main self-resizes to the real content once it loads) so a small
+            // folder doesn't open as a tall window.
+            const rows = Math.max(1, bookmarks.findBarNode(folderId)?.children.length ?? 1);
+            window.tepegoz.openPopup('bookmark-folder', anchor, { id: folderId, height: rows * 32 + 12 });
+          }}
+          onMove={bookmarks.onBookmarkMove}
+          onContextMenu={(id, type) => window.tepegoz.showBookmarkContextMenu(id, type)}
+          labels={{ bar: browserT.bookmarksBar, empty: browserT.noBookmarksBar }}
+        />
+      )}
+    </>
+  );
+}

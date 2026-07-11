@@ -1,100 +1,32 @@
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { coreDict, localeDir, pick, resolveLocale, type Locale } from '@tepegoz/i18n';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { coreDict, pick } from '@tepegoz/i18n';
 import { I18nProvider } from '@tepegoz/i18n/react';
-import { Modal } from '@tepegoz/ui';
-import { browserDict, sidebarDict, userMenuDict } from '../../i18n';
-import {
-  INTERNAL_BOOKMARKS_URL,
-  INTERNAL_DOWNLOADS_URL,
-  INTERNAL_EXTENSIONS_URL,
-  INTERNAL_HISTORY_URL,
-  INTERNAL_NEWTAB_URL,
-  INTERNAL_SETTINGS_URL,
-  INTERNAL_UPLOADS_URL,
-  isExtensionEnabled,
-} from '@tepegoz/desktop-ipc';
+import { isExtensionEnabled } from '@tepegoz/desktop-ipc';
 import type {
   AppNotification,
   AutofillAvailablePayload,
   CredentialsStatus,
   ExtensionId,
-  LocalePref,
   LoginCredentialMeta,
-  NewTabBackground,
   NotificationPermissionRequest,
   Preferences,
   ProviderId,
   TabsState,
 } from '@tepegoz/desktop-ipc';
-import { NotificationPermissionPrompt, ToastStack } from '@tepegoz/notifications-ui';
-import { AutofillSuggestion } from '@tepegoz/password-ui';
-import { BOOKMARK_ROOT_BAR } from '@tepegoz/bookmarks';
-import { runNotificationAction } from './lib/notification-actions';
-import { extensionIdFromPageUrl, extensionPageUrl } from '../../shared/extension-urls';
-import { extensionDefById } from './extensions/registry';
+import { INTERNAL_SETTINGS_URL } from '@tepegoz/desktop-ipc';
+import { browserDict, sidebarDict } from '../../i18n';
 import { useExtensionCatalog } from './extensions/useExtensionCatalog';
-import { BrowserChrome } from '@tepegoz/browser-chrome';
-import { BookmarksBar } from '@tepegoz/bookmarks-bar';
-import { HistoryPage } from '@tepegoz/history-ui';
-import { DownloadsPage } from '@tepegoz/downloads-ui';
-import { UploadsPage } from '@tepegoz/uploads-ui';
-import type { OmniboxQuickSettingTarget } from '@tepegoz/omnibox';
-import { NewTabPage, type ResolvedNewTabBackground } from '@tepegoz/newtab-ui';
-import { BookmarksManager } from '@tepegoz/bookmarks-ui';
-import { ExtensionsPage } from './components/ExtensionsPage';
-import { ExtensionTray } from './components/ExtensionTray';
-import { MainMenuButton } from './components/MainMenuButton';
-import { TransferActivityButton } from './components/TransferActivityButton';
-import { UserMenuButton } from './components/UserMenuButton';
-import { NotificationBellButton } from './components/NotificationBellButton';
-import { SettingsPage } from './components/SettingsPage';
 import { CursorOverlay } from './components/CursorOverlay';
-import { applyTheme } from './lib/theme';
 import { useWindowMaximized } from './lib/useWindowMaximized';
-import { bookmarkDialogAnchor, useBookmarksBar } from './app-bookmarks';
-import { AGENT_EXTENSION_ID, AGENT_PANEL_OPEN_KEY, useExtensionSurfaces } from './app-extension-surfaces';
+import { useBookmarksBar } from './app-bookmarks';
+import { AGENT_PANEL_OPEN_KEY, useExtensionSurfaces } from './app-extension-surfaces';
 import { useOmniboxAndHistory } from './app-omnibox-history';
-
-function effectiveLocale(pref: LocalePref): Locale {
-  if (pref === 'en' || pref === 'tr') return pref;
-  return resolveLocale(navigator.language);
-}
-
-const EMPTY_TABS: TabsState = {
-  tabs: [],
-  groups: [],
-  activeId: null,
-  canGoBack: false,
-  canGoForward: false,
-};
-
-/** Fallback new-tab background while preferences are still loading (mirrors DEFAULT_PREFERENCES). */
-const DEFAULT_NEWTAB_BACKGROUND: NewTabBackground = {
-  kind: 'default',
-  color: '#1e293b',
-  svgId: '',
-  imageRef: '',
-  imageFit: 'cover',
-  imagePositionX: 50,
-  imagePositionY: 50,
-  imageZoom: 1,
-  opacity: 1,
-};
-
-const QUICK_SETTING_SECTION: Record<OmniboxQuickSettingTarget, string> = {
-  appearance: 'appearance',
-  language: 'language',
-  privacy: 'privacy',
-};
-
-function internalPageBase(url: string): string {
-  return url.split('#', 1)[0] ?? url;
-}
-
-function internalPageHash(url: string): string {
-  const hashIndex = url.indexOf('#');
-  return hashIndex >= 0 ? url.slice(hashIndex + 1) : '';
-}
+import { effectiveLocale, EMPTY_TABS, QUICK_SETTING_SECTION } from './App-helpers';
+import { useAppEffects } from './App-effects';
+import { AppChrome } from './App-chrome';
+import { AppContent } from './App-content';
+import { AppOverlays } from './App-overlays';
+import type { OmniboxQuickSettingTarget } from '@tepegoz/omnibox';
 
 export function App() {
   const [prefs, setPrefs] = useState<Preferences | null>(null);
@@ -134,8 +66,6 @@ export function App() {
   const [omniboxDropdownHeight, setOmniboxDropdownHeight] = useState(0);
   const [omniboxSnapshot, setOmniboxSnapshot] = useState<string | null>(null);
   const [omniboxViewHidden, setOmniboxViewHidden] = useState(false);
-  // Fetched-once data URLs for uploaded new-tab background images, keyed by their cas:// ref.
-  const [bgImageCache, setBgImageCache] = useState<Record<string, string>>({});
   const omniboxDropdownOpen = omniboxDropdownHeight > 0;
   const onOmniboxDropdownHeightChange = useCallback((height: number): void => {
     const next = Math.max(0, Math.ceil(height));
@@ -156,7 +86,6 @@ export function App() {
   const coreT = pick(coreDict, locale);
   const browserT = pick(browserDict, locale);
   const sidebarT = pick(sidebarDict, locale);
-  const userMenuT = pick(userMenuDict, locale);
 
   // Shown while a lazily code-split extension surface loads (localized; a11y status role).
   const surfaceFallback = (
@@ -194,59 +123,6 @@ export function App() {
     extSurfaces.closeSurface,
   );
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        const [p, s, ts] = await Promise.all([
-          window.tepegoz.getPreferences(),
-          window.tepegoz.getCredentialsStatus(),
-          window.tepegoz.getTabsState(),
-        ]);
-        setPrefs(p);
-        setStatus(s);
-        setTabs(ts);
-      } catch (err) {
-        // Preload bridge unavailable (dev mishap) — leave defaults; the chrome still renders.
-        console.warn('Initial IPC state fetch failed — rendering with defaults', err);
-      }
-    })();
-    const unsubTabs = window.tepegoz.onTabsState(setTabs);
-    const unsubRename = window.tepegoz.onTabGroupStartRename(setRenamingGroupId);
-    return () => {
-      unsubTabs();
-      unsubRename();
-    };
-  }, []);
-
-  // Transient toasts: append each pushed toast (capped to the newest 3; individual auto-dismiss timers
-  // live in the ToastStack).
-  useEffect(() => {
-    return window.tepegoz.onNotificationToast((toast) => {
-      setToasts((prev) => [...prev, toast].slice(-3));
-    });
-  }, []);
-
-  // Per-site Web Notification consent prompts from the main-process broker. Only one at a time (the
-  // broker serializes); a new one replaces any still-open prompt.
-  useEffect(() => {
-    return window.tepegoz.onNotificationPermissionRequest(setPermReq);
-  }, []);
-
-  // Autofill: main pushes matching credentials when a page finishes loading. Navigating away clears.
-  useEffect(() => {
-    return window.tepegoz.onAutofillAvailable((payload) => {
-      setAutofill(payload);
-    });
-  }, []);
-
-  // One-shot: does this OS support the glass (Win11 Mica) chrome?
-  useEffect(() => {
-    void window.tepegoz.getAppInfo().then(
-      (info) => setGlassAvailable(info.glassAvailable),
-      () => setGlassAvailable(false),
-    );
-  }, []);
-
   // Refresh the credentials list whenever the Passwords settings section is open.
   const refreshLogins = useCallback(async (): Promise<void> => {
     try {
@@ -264,154 +140,10 @@ export function App() {
     [permReq],
   );
 
-  // RTL-ready: mirror the active locale's writing direction onto <html dir> (both shipping locales are
-  // LTR, so this is a no-op today, but the whole surface is wired for a future RTL locale — ADR-0016).
-  useEffect(() => {
-    document.documentElement.dir = localeDir(locale);
-  }, [locale]);
-
-  const theme = prefs?.theme ?? 'system';
-  const themeColor = prefs?.themeColor ?? '';
-  useEffect(() => {
-    applyTheme(theme, themeColor);
-    // Only follow OS changes for the plain system mode (a custom color overrides it).
-    if (theme !== 'system' || themeColor !== '') return undefined;
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const onChange = (): void => {
-      applyTheme('system', '');
-    };
-    mq.addEventListener('change', onChange);
-    return () => {
-      mq.removeEventListener('change', onChange);
-    };
-  }, [theme, themeColor]);
-
-  // Mark the root for glass chrome so the `.glass` CSS makes the shell/bars translucent, in lockstep with
-  // the native Mica backdrop the main process applies. On non-Win11 the pref is on but main never enables
-  // the material, so the translucency would reveal the opaque shell — harmless, but keep the class off
-  // there by gating on the runtime capability (fetched into `glassAvailable`).
-  const glassChrome = prefs?.glassChrome ?? false;
-  useEffect(() => {
-    document.documentElement.classList.toggle('glass', glassChrome && glassAvailable);
-  }, [glassChrome, glassAvailable]);
-
   // Tell main where to lay out the active tab's web view (the content area below the chrome).
   const contentRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    const el = contentRef.current;
-    if (el === null) return undefined;
-    const report = (): void => {
-      const r = el.getBoundingClientRect();
-      window.tepegoz.setContentBounds({
-        x: Math.round(r.left),
-        y: Math.round(r.top),
-        width: Math.round(r.width),
-        height: Math.round(r.height),
-      });
-    };
-    report();
-    const observer = new ResizeObserver(report);
-    observer.observe(el);
-    window.addEventListener('resize', report);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener('resize', report);
-    };
-  }, []);
-
-  // Native WebContentsViews sit above the renderer DOM, so the omnibox list cannot simply z-index over
-  // a live page. While suggestions are open, paint a still of the page and detach the live view.
-  useEffect(() => {
-    let cancelled = false;
-    if (!omniboxDropdownOpen) {
-      setOmniboxViewHidden(false);
-      setOmniboxSnapshot(null);
-      return undefined;
-    }
-    window.tepegoz
-      .captureActiveTab()
-      .then((snap) => {
-        if (cancelled) return;
-        setOmniboxSnapshot(snap);
-        setOmniboxViewHidden(true);
-      })
-      .catch(() => {
-        if (!cancelled) setOmniboxViewHidden(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [omniboxDropdownOpen]);
-
-  // Keep prefs fresh when ANOTHER window changes them (the Bookmarks menu toggling the bookmarks bar,
-  // etc.) — main broadcasts on every prefs write. Refetch the full prefs so the bar re-renders live.
-  useEffect(() => {
-    return window.tepegoz.onPublicSettingsChanged(() => {
-      void window.tepegoz.getPreferences().then(setPrefs, () => {
-        /* bridge unavailable — keep the last known prefs */
-      });
-    });
-  }, []);
-
-  // Right-click on a toolbar extension icon → the native menu relays the chosen action back here so it
-  // runs against our authoritative React state: open its settings page, or remove (disable) it.
-  useEffect(() => {
-    return window.tepegoz.onExtensionContextMenuAction(({ id, action }) => {
-      if (action === 'page') {
-        extSurfaces.closeSurface();
-        window.tepegoz.navigateTab(extensionPageUrl(id));
-      } else {
-        onToggleExtension(id, false);
-      }
-    });
-  }, [onToggleExtension]);
-
-  // App shortcuts (single registry): the accelerators shown in the main menu are wired here. We
-  // preventDefault so Ctrl+R reloads the active TAB, not the app chrome.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      if (!e.ctrlKey && !e.metaKey) return;
-      const key = e.key.toLowerCase();
-      if (key === 't' && e.shiftKey) {
-        e.preventDefault();
-        extSurfaces.closeSurface();
-        window.tepegoz.reopenClosedTab(); // Ctrl+Shift+T — reopen the last-closed tab
-      } else if (key === 't') {
-        e.preventDefault();
-        extSurfaces.closeSurface();
-        window.tepegoz.createTab();
-      } else if (key === 'r') {
-        e.preventDefault();
-        window.tepegoz.tabReload();
-      } else if (key === ',') {
-        e.preventDefault();
-        extSurfaces.closeSurface();
-        window.tepegoz.navigateTab(INTERNAL_SETTINGS_URL); // opens/focuses the Settings tab
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-    };
-  }, []);
 
   const isMaximized = useWindowMaximized();
-  // Internal pages are tabs addressed tepegoz://… ; render them when active.
-  const currentBaseUrl = internalPageBase(currentUrl);
-  const newTabActive = currentBaseUrl === INTERNAL_NEWTAB_URL;
-  const settingsActive = currentBaseUrl === INTERNAL_SETTINGS_URL;
-  const extensionsActive = currentBaseUrl === INTERNAL_EXTENSIONS_URL;
-  const historyActive = currentBaseUrl === INTERNAL_HISTORY_URL;
-  const downloadsActive = currentBaseUrl === INTERNAL_DOWNLOADS_URL;
-  const uploadsActive = currentBaseUrl === INTERNAL_UPLOADS_URL;
-  const bookmarksActive = currentBaseUrl === INTERNAL_BOOKMARKS_URL;
-  const settingsSectionId = settingsActive ? internalPageHash(currentUrl) : '';
-  // An extension `page` surface: tepegoz://<extension-id> → render that extension's page component.
-  const pageExtIds = registry.filter((d) => d.manifest.surfaces.includes('page')).map((d) => d.id);
-  const pageExtId =
-    activeTab !== undefined ? extensionIdFromPageUrl(activeTab.url, pageExtIds) : null;
-  const PageSurface =
-    pageExtId !== null ? extensionDefById(registry, pageExtId)?.surfaces.page : undefined;
 
   const extensionStates = prefs?.extensions ?? [];
   const enabledExtensions = registry.filter((ext) => isExtensionEnabled(extensionStates, ext.id));
@@ -450,382 +182,79 @@ export function App() {
     if (!enabled && extSurfaces.sidebarExtId === id) extSurfaces.closeSidebar();
   }
 
-  const downloadList = useCallback(() => window.tepegoz.listDownloads(), []);
-  const downloadCommand = useCallback(
-    (input: Parameters<typeof window.tepegoz.commandDownload>[0]) =>
-      window.tepegoz.commandDownload(input),
-    [],
-  );
-  const downloadSubscribe = useCallback(
-    (callback: Parameters<typeof window.tepegoz.onDownloadsState>[0]) =>
-      window.tepegoz.onDownloadsState(callback),
-    [],
-  );
-  const uploadList = useCallback(() => window.tepegoz.listUploads(), []);
-  const uploadCommand = useCallback(
-    (input: Parameters<typeof window.tepegoz.commandUpload>[0]) =>
-      window.tepegoz.commandUpload(input),
-    [],
-  );
-  const uploadSubscribe = useCallback(
-    (callback: Parameters<typeof window.tepegoz.onUploadsState>[0]) =>
-      window.tepegoz.onUploadsState(callback),
-    [],
-  );
-  // New-tab shortcuts are the user's own list (independent of bookmarks), persisted in preferences.
-  // Add/edit/remove are plain array transforms over `prefs.newTabShortcuts` (capped at MAX_SHORTCUTS).
-  const newTabShortcuts = prefs?.newTabShortcuts ?? [];
-  const onAddShortcut = (title: string, url: string): void => {
-    const current = prefs?.newTabShortcuts ?? [];
-    if (current.length >= 10) return;
-    void onUpdatePrefs({
-      newTabShortcuts: [...current, { id: crypto.randomUUID(), title: title.trim() || url, url }],
-    });
-  };
-  const onEditShortcut = (id: string, title: string, url: string): void => {
-    const current = prefs?.newTabShortcuts ?? [];
-    void onUpdatePrefs({
-      newTabShortcuts: current.map((s) => (s.id === id ? { ...s, title: title.trim() || url, url } : s)),
-    });
-  };
-  const onRemoveShortcut = (id: string): void => {
-    const current = prefs?.newTabShortcuts ?? [];
-    void onUpdatePrefs({ newTabShortcuts: current.filter((s) => s.id !== id) });
-  };
-
-  // New-tab background: the stored descriptor plus any uploaded image resolved to a data URL. Uploaded
-  // bytes live in the main-process blob store; fetch each ref once and cache the data URL.
-  const newTabBackground = prefs?.newTabBackground ?? DEFAULT_NEWTAB_BACKGROUND;
-  useEffect(() => {
-    const { kind, imageRef } = newTabBackground;
-    if (kind !== 'image' || imageRef === '' || bgImageCache[imageRef] !== undefined) return;
-    void window.tepegoz.getNewTabBackgroundImage(imageRef).then((dataUrl) => {
-      if (dataUrl !== null) setBgImageCache((c) => ({ ...c, [imageRef]: dataUrl }));
-    });
-  }, [newTabBackground, bgImageCache]);
-  const resolvedNewTabBackground: ResolvedNewTabBackground = {
-    ...newTabBackground,
-    imageDataUrl:
-      newTabBackground.imageRef !== '' ? bgImageCache[newTabBackground.imageRef] : undefined,
-  };
-  const onChangeNewTabBackground = (patch: Partial<NewTabBackground>): void => {
-    void onUpdatePrefs({ newTabBackground: { ...newTabBackground, ...patch } });
-  };
-  const onPickNewTabBackgroundImage = async (): Promise<{ ref: string; dataUrl: string } | null> => {
-    const r = await window.tepegoz.pickNewTabBackgroundImage();
-    if (r.cancelled) return null;
-    setBgImageCache((c) => ({ ...c, [r.ref]: r.dataUrl }));
-    return { ref: r.ref, dataUrl: r.dataUrl };
-  };
-
-  // Submitting the new-tab search box navigates (URL or search query, resolved in main), then closes
-  // the now-orphaned newtab tab so the result replaces it in place — Chrome's new-tab-page behaviour.
-  const onNewTabSearch = useCallback(
-    (query: string) => {
-      const fromId = tabs.activeId;
-      window.tepegoz.navigateTab(query);
-      if (fromId !== null) window.tepegoz.closeTab(fromId);
-    },
-    [tabs.activeId],
-  );
+  useAppEffects({
+    prefs,
+    locale,
+    glassAvailable,
+    omniboxDropdownOpen,
+    contentRef,
+    extSurfaces,
+    onToggleExtension,
+    setPrefs,
+    setStatus,
+    setTabs,
+    setRenamingGroupId,
+    setToasts,
+    setPermReq,
+    setAutofill,
+    setGlassAvailable,
+    setOmniboxViewHidden,
+    setOmniboxSnapshot,
+  });
 
   const contentSnapshot = extSurfaces.resizeSnapshot ?? (omniboxViewHidden ? omniboxSnapshot : null);
 
   return (
     <I18nProvider locale={locale}>
       <div className="app-shell flex h-screen flex-col bg-surface-base text-text-primary">
-        <BrowserChrome
-          t={{ common: coreT.common, window: coreT.window, browser: browserT }}
-          tabs={tabs.tabs}
-          tabGroups={tabs.groups}
-          renamingGroupId={renamingGroupId}
-          activeTabId={tabs.activeId}
-          onSelectTab={(id) => {
-            extSurfaces.closeSurface(); // close any extension surface when switching tabs
-            window.tepegoz.activateTab(id);
-          }}
-          onCloseTab={(id) => window.tepegoz.closeTab(id)}
-          onTabContextMenu={(id) => window.tepegoz.showTabContextMenu(id)}
-          onTabGroupContextMenu={(groupId) => window.tepegoz.showTabGroupContextMenu(groupId)}
-          onRenameTabGroupHandled={() => setRenamingGroupId(null)}
-          onNewTab={() => {
-            extSurfaces.closeSurface();
-            window.tepegoz.createTab();
-          }}
-          onMoveTab={(id, toIndex) => window.tepegoz.moveTab(id, toIndex)}
-          onMoveTabGroup={(groupId, toIndex) => window.tepegoz.moveTabGroup(groupId, toIndex)}
-          onAssignTabToGroup={(tabId, groupId) => window.tepegoz.assignTabToGroup(tabId, groupId)}
-          onToggleGroupCollapsed={(groupId, collapsed) =>
-            window.tepegoz.updateTabGroup(groupId, { collapsed })
-          }
-          onRenameTabGroup={(groupId, name) => window.tepegoz.updateTabGroup(groupId, { name })}
-          onTearBegin={(payload) => window.tepegoz.beginTabDrag(payload)}
-          onTearMove={({ screenX, screenY }) =>
-            window.tepegoz.moveTabDrag({ screenX, screenY, torn: true })
-          }
-          onTearEnd={({ screenX, screenY }) =>
-            window.tepegoz.endTabDrag({ screenX, screenY, torn: true })
-          }
-          onTearCancel={() => window.tepegoz.cancelTabDrag()}
-          onReportTabStripGeometry={(geometry) => window.tepegoz.reportTabStrip(geometry)}
-          isMaximized={isMaximized}
-          onMinimize={() => window.tepegoz.minimizeWindow()}
-          onToggleMaximize={() => window.tepegoz.toggleMaximizeWindow()}
-          onClose={() => window.tepegoz.closeWindow()}
+        <AppChrome
+          locale={locale}
+          prefs={prefs}
+          tabs={tabs}
           currentUrl={currentUrl}
-          canGoBack={tabs.canGoBack}
-          canGoForward={tabs.canGoForward}
-          onBack={() => window.tepegoz.tabGoBack()}
-          onForward={() => window.tepegoz.tabGoForward()}
-          onReload={() => window.tepegoz.tabReload()}
-          onHome={() => window.tepegoz.tabHome()}
-          captionLeading={<NotificationBellButton />}
-          menu={<MainMenuButton label={browserT.menu} />}
-          onNavigate={(input) => window.tepegoz.navigateTab(input)}
-          onSuggest={omniboxHistory.onOmniboxSuggest}
-          onActivateTab={omniboxHistory.onActivateTabFromOmnibox}
+          renamingGroupId={renamingGroupId}
+          setRenamingGroupId={setRenamingGroupId}
+          isMaximized={isMaximized}
+          enabledExtensions={enabledExtensions}
+          extSurfaces={extSurfaces}
+          omniboxHistory={omniboxHistory}
+          bookmarks={bookmarks}
           onOpenQuickSetting={onOpenQuickSetting}
           onOmniboxDropdownHeightChange={onOmniboxDropdownHeightChange}
-          isBookmarked={bookmarks.activeBookmarked}
-          canBookmark={bookmarks.canBookmark}
-          onToggleBookmark={() => void bookmarks.onToggleBookmark()}
-          toolbarActions={
-            <>
-              <TransferActivityButton />
-              <ExtensionTray
-                locale={locale}
-                extensions={enabledExtensions}
-                activeExtensionId={
-                  extSurfaces.activeSurface?.id ?? extSurfaces.sidebarExtId ?? extSurfaces.popupOpenId ?? null
-                }
-                onExtensionAction={extSurfaces.runExtensionAction}
-              />
-              <UserMenuButton label={userMenuT.menuLabel} name={userMenuT.name} />
-            </>
-          }
         />
-        {/* Chrome-style bookmarks bar (toggled from the Bookmarks menu). Rendered above the content row,
-            so contentRef's ResizeObserver reports the new top and main reflows the web view down.
-            Default-on: shown once prefs load unless explicitly turned off. */}
-        {prefs !== null && prefs.showBookmarksBar !== false && (
-          <BookmarksBar
-            nodes={bookmarks.barNodes}
-            barRootId={BOOKMARK_ROOT_BAR}
-            onOpen={(url) => window.tepegoz.navigateTab(url)}
-            onOpenFolder={(folderId, anchor) => {
-              // Seed a tight height (main self-resizes to the real content once it loads) so a small
-              // folder doesn't open as a tall window.
-              const rows = Math.max(1, bookmarks.findBarNode(folderId)?.children.length ?? 1);
-              window.tepegoz.openPopup('bookmark-folder', anchor, { id: folderId, height: rows * 32 + 12 });
-            }}
-            onMove={bookmarks.onBookmarkMove}
-            onContextMenu={(id, type) => window.tepegoz.showBookmarkContextMenu(id, type)}
-            labels={{ bar: browserT.bookmarksBar, empty: browserT.noBookmarksBar }}
-          />
-        )}
-        {/* Opaque base so the glass (transparent .app-shell) is confined to the chrome bars and never
-          bleeds into the content/sidebar region between a web view detaching and an internal page paint. */}
-        <div className="relative flex flex-1 overflow-hidden bg-surface-base">
-          {/* Left region = the web-view area (its bounds are measured from contentRef, so they exclude
-            the sidebar); the resizable sidebar dock sits to its right. */}
-          <div ref={contentRef} className="relative flex-1 overflow-hidden">
-            {/* The active tab's web page is a separate WebContentsView laid over this area by main. The
-            internal app tabs (Settings/Extensions/History), extension `page` tabs, and open overlay
-            surfaces have no web view, so the chrome renders them here instead. */}
-            {contentSnapshot !== null && (
-              // A still of the page shown while the live web view is hidden for chrome overlays.
-              <img
-                src={contentSnapshot}
-                alt=""
-                aria-hidden="true"
-                draggable={false}
-                className="pointer-events-none absolute inset-0 h-full w-full object-cover object-left-top"
-              />
-            )}
-            {newTabActive && (
-              <div className="absolute inset-0 bg-surface-system">
-                <NewTabPage
-                  shortcuts={newTabShortcuts}
-                  onOpenShortcut={(url) => window.tepegoz.navigateTab(url)}
-                  onSearch={onNewTabSearch}
-                  onOpenAgent={() => extSurfaces.runExtensionAction(AGENT_EXTENSION_ID, 'click')}
-                  onAddShortcut={onAddShortcut}
-                  onEditShortcut={onEditShortcut}
-                  onRemoveShortcut={onRemoveShortcut}
-                  background={resolvedNewTabBackground}
-                  onChangeBackground={onChangeNewTabBackground}
-                  onPickBackgroundImage={onPickNewTabBackgroundImage}
-                />
-              </div>
-            )}
-            {settingsActive && (
-              <div className="absolute inset-0 bg-surface-system">
-                {prefs && status ? (
-                  <SettingsPage
-                    initialSectionId={settingsSectionId}
-                    prefs={prefs}
-                    status={status}
-                    onUpdatePrefs={onUpdatePrefs}
-                    onResetPrefs={onResetPrefs}
-                    onAddKey={onAddKey}
-                    onRemoveKeyById={onRemoveKeyById}
-                    onRenameKey={onRenameKey}
-                    onReorderKeys={onReorderKeys}
-                    loginCredentials={loginCredentials}
-                    onLoginSectionMount={refreshLogins}
-                    onAddLogin={(c) =>
-                      window.tepegoz.setLogin(c).then(async () => { await refreshLogins(); })
-                    }
-                    onRemoveLogin={(id) =>
-                      window.tepegoz.removeLogin(id).then(async () => { await refreshLogins(); })
-                    }
-                    onImportLogins={(data, fmt) =>
-                      window.tepegoz.importLogins(data, fmt).then(async (r) => {
-                        await refreshLogins();
-                        return r;
-                      })
-                    }
-                    onExportLogins={(fmt) => window.tepegoz.exportLogins(fmt)}
-                  />
-                ) : (
-                  <p className="px-6 py-8 text-sm text-text-secondary">…</p>
-                )}
-              </div>
-            )}
-            {extensionsActive && (
-              <div className="absolute inset-0 bg-surface-system">
-                <ExtensionsPage
-                  locale={locale}
-                  extensions={registry}
-                  states={extensionStates}
-                  onToggle={onToggleExtension}
-                />
-              </div>
-            )}
-            {historyActive && (
-              <div className="absolute inset-0 bg-surface-system">
-                <HistoryPage
-                  list={omniboxHistory.historyList}
-                  remove={omniboxHistory.historyRemove}
-                  clear={omniboxHistory.historyClear}
-                />
-              </div>
-            )}
-            {downloadsActive && (
-              <div className="absolute inset-0 bg-surface-system">
-                <DownloadsPage
-                  list={downloadList}
-                  command={downloadCommand}
-                  subscribe={downloadSubscribe}
-                />
-              </div>
-            )}
-            {uploadsActive && (
-              <div className="absolute inset-0 bg-surface-system">
-                <UploadsPage
-                  list={uploadList}
-                  command={uploadCommand}
-                  subscribe={uploadSubscribe}
-                />
-              </div>
-            )}
-            {bookmarksActive && (
-              <div className="absolute inset-0 bg-surface-system">
-                <BookmarksManager
-                  getTree={bookmarks.getBookmarkTree}
-                  refreshKey={bookmarks.bookmarksVersion}
-                  onMove={bookmarks.onBookmarkMove}
-                  onNewFolder={(parentId) =>
-                    window.tepegoz.openPopup('bookmark-add-folder', bookmarkDialogAnchor(), { id: parentId })
-                  }
-                  onOpen={(url) => window.tepegoz.navigateTab(url)}
-                  onContextMenu={(id, type) => window.tepegoz.showBookmarkContextMenu(id, type)}
-                />
-              </div>
-            )}
-            {PageSurface !== undefined && (
-              <div className="absolute inset-0 bg-surface-base">
-                <Suspense fallback={surfaceFallback}>
-                  <PageSurface onClose={extSurfaces.closeSurface} />
-                </Suspense>
-              </div>
-            )}
-            {extSurfaces.renderActiveSurface()}
-            {autofill !== null && (
-              <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
-                <div className="pointer-events-auto">
-                  <AutofillSuggestion
-                    url={autofill.url}
-                    matches={autofill.matches}
-                    onFill={(id) => {
-                      window.tepegoz.fillLogin(id);
-                      setAutofill(null);
-                    }}
-                    onDismiss={() => setAutofill(null)}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-          {extSurfaces.renderSidebar()}
-        </div>
-        {/* Transient toast overlay (channel `toast`); native OS notifications cover the over-page case. */}
-        <ToastStack
+        <AppContent
+          contentRef={contentRef}
+          contentSnapshot={contentSnapshot}
+          tabs={tabs}
+          currentUrl={currentUrl}
+          registry={registry}
+          prefs={prefs}
+          status={status}
+          locale={locale}
+          surfaceFallback={surfaceFallback}
+          extSurfaces={extSurfaces}
+          omniboxHistory={omniboxHistory}
+          bookmarks={bookmarks}
+          autofill={autofill}
+          setAutofill={setAutofill}
+          loginCredentials={loginCredentials}
+          refreshLogins={refreshLogins}
+          onUpdatePrefs={onUpdatePrefs}
+          onResetPrefs={onResetPrefs}
+          onAddKey={onAddKey}
+          onRemoveKeyById={onRemoveKeyById}
+          onRenameKey={onRenameKey}
+          onReorderKeys={onReorderKeys}
+          onToggleExtension={onToggleExtension}
+        />
+        <AppOverlays
+          locale={locale}
           toasts={toasts}
-          onDismiss={dismissToast}
-          onAction={(item, action) => {
-            runNotificationAction(item, action);
-            dismissToast(item.id);
-          }}
+          dismissToast={dismissToast}
+          permReq={permReq}
+          answerPermission={answerPermission}
+          bookmarks={bookmarks}
         />
-        {/* Per-site Web Notification consent prompt (blocking: no backdrop dismiss — the site awaits an answer). */}
-        <Modal
-          open={permReq !== null}
-          onClose={() => answerPermission(false, false)}
-          ariaLabel={permReq?.origin ?? ''}
-          closeOnBackdrop={false}
-        >
-          {permReq !== null && (
-            <NotificationPermissionPrompt
-              origin={permReq.origin}
-              capability={permReq.capability}
-              onDecision={answerPermission}
-            />
-          )}
-        </Modal>
-        {/* "Open all" confirmation for a large folder. */}
-        <Modal
-          open={bookmarks.openAllUrls !== null}
-          onClose={() => bookmarks.setOpenAllUrls(null)}
-          ariaLabel={browserT.bookmarkMenu.openAll}
-        >
-          {bookmarks.openAllUrls !== null && (
-            <div className="flex min-w-[20rem] flex-col gap-4 p-4">
-              <p className="text-sm text-text-primary">
-                {browserT.openAllConfirm} ({bookmarks.openAllUrls.length})
-              </p>
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => bookmarks.setOpenAllUrls(null)}
-                  className="rounded-md px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-overlay"
-                >
-                  {browserT.cancel}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    bookmarks.openAllUrls?.forEach((u) => window.tepegoz.createTabInBackground(u));
-                    bookmarks.setOpenAllUrls(null);
-                  }}
-                  className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-fg hover:bg-primary-hover"
-                >
-                  {browserT.bookmarkMenu.openAll}
-                </button>
-              </div>
-            </div>
-          )}
-        </Modal>
       </div>
       <CursorOverlay />
     </I18nProvider>

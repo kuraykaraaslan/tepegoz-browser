@@ -1,0 +1,132 @@
+import type { WebContents } from 'electron';
+import { AppError, Logger } from '@tepegoz/libs';
+import {
+  isInteractableRole,
+  markNewElements,
+  parseDomTree,
+  MAX_INTERACTABLE_ELEMENTS,
+  type RawInteractable,
+} from '@tepegoz/tool-executor';
+import {
+  axString,
+  AxTreeSchema,
+  CallResultSchema,
+  DomTreeResultSchema,
+  type RefTarget,
+  type SnapshotDeps,
+  type SnapshotResult,
+} from './cdp-driver-schemas.electron.js';
+import { buildDomTreeExpression } from './build-dom-tree-script.js';
+import { fileInputInfo } from './cdp-driver-dom.electron.js';
+import { mainFrameIsolatedContext } from './cdp-driver-session.electron.js';
+
+/**
+ * Perception concern for {@link CdpDriver}: reads the active page's actionable elements. Uses render-DOM
+ * perception (AI-2 default) with an accessibility-tree fallback, and populates the driver's per-tab
+ * `ref → node` map (passed in via {@link SnapshotDeps}) so subsequent action calls can resolve refs.
+ */
+
+/** Perception source: render-DOM (AI-2 default) unless `TEPEGOZ_PERCEPTION=a11y` forces the fallback. */
+function perceptionMode(): 'render-dom' | 'a11y' {
+  return process.env.TEPEGOZ_PERCEPTION === 'a11y' ? 'a11y' : 'render-dom';
+}
+
+/**
+ * Read the active page's actionable elements. Uses render-DOM perception (interactivity + occlusion
+ * + viewport + `href`/attributes) by default, falling back to the accessibility-tree snapshot when
+ * that path is disabled or errors. Both populate the per-tab `ref → node` map for action dispatch.
+ */
+export async function snapshotElements(
+  wc: WebContents,
+  deps: SnapshotDeps,
+): Promise<SnapshotResult> {
+  if (perceptionMode() === 'render-dom') {
+    try {
+      return await snapshotElementsRenderDom(wc, deps);
+    } catch (err) {
+      Logger.warn('render-DOM perception failed; falling back to a11y', { err: String(err) });
+    }
+  }
+  return snapshotElementsA11y(wc, deps);
+}
+
+/** Render-DOM perception (AI-2): inject `buildDomTree` in an isolated world, validate, map to refs. */
+async function snapshotElementsRenderDom(
+  wc: WebContents,
+  deps: SnapshotDeps,
+): Promise<SnapshotResult> {
+  await deps.ensure(wc);
+  const contextId = await mainFrameIsolatedContext(wc);
+  const raw: unknown = await wc.debugger.sendCommand('Runtime.evaluate', {
+    expression: buildDomTreeExpression(),
+    contextId,
+    returnByValue: true,
+    awaitPromise: false,
+    silent: true,
+  });
+  const call = CallResultSchema.safeParse(raw);
+  if (!call.success) throw new AppError('render-DOM perception returned no value', 502);
+  const tree = DomTreeResultSchema.safeParse(call.data.result.value);
+  if (!tree.success) throw new AppError('render-DOM perception payload malformed', 502);
+
+  const { interactables, paths, hashes } = parseDomTree(tree.data);
+
+  // Mark elements that appeared since the previous snapshot of the SAME page (e.g. a menu the
+  // agent just opened). A navigation (url change) or the first snapshot marks nothing new.
+  const prev = deps.prevSnapshots.get(wc);
+  const prevHashes = prev !== undefined && prev.url === tree.data.url ? prev.hashes : null;
+  const isNew = markNewElements(hashes, prevHashes);
+  interactables.forEach((raw, i) => {
+    if (isNew[i] === true) raw.isNew = true;
+  });
+  deps.prevSnapshots.set(wc, { url: tree.data.url, hashes: new Set(hashes) });
+
+  const refMap = new Map<number, RefTarget>();
+  interactables.forEach((_, i) => {
+    const path = paths[i];
+    if (path !== undefined) refMap.set(i + 1, { path });
+  });
+  deps.refMaps.set(wc, refMap);
+  return { url: tree.data.url, title: tree.data.title, elements: interactables };
+}
+
+/** Read the active page's actionable elements from the accessibility tree (fallback path). */
+async function snapshotElementsA11y(
+  wc: WebContents,
+  deps: SnapshotDeps,
+): Promise<SnapshotResult> {
+  await deps.ensure(wc);
+  const raw: unknown = await wc.debugger.sendCommand('Accessibility.getFullAXTree');
+  const parsed = AxTreeSchema.safeParse(raw);
+  if (!parsed.success) throw new AppError('Failed to read the page accessibility tree', 502);
+
+  const elements: RawInteractable[] = [];
+  const refMap = new Map<number, RefTarget>();
+  for (const node of parsed.data.nodes) {
+    if (node.ignored === true || node.backendDOMNodeId === undefined) continue;
+    const fileInput = await fileInputInfo(wc, { backendNodeId: node.backendDOMNodeId });
+    const role = axString(node.role?.value) || (fileInput !== null ? 'button' : '');
+    if (fileInput === null && (role === '' || !isInteractableRole(role))) continue;
+
+    const disabled = node.properties?.some(
+      (p) => p.name === 'disabled' && p.value?.value === true,
+    );
+    const el: RawInteractable = { role, name: axString(node.name?.value) };
+    const value = axString(node.value?.value);
+    if (value !== '') el.value = value;
+    if (disabled === true) el.disabled = true;
+    if (fileInput !== null) {
+      el.inputKind = 'file';
+      if (fileInput.accept.length > 0) el.accept = fileInput.accept;
+      if (fileInput.multiple) el.multiple = true;
+    }
+
+    elements.push(el);
+    // ref is 1-based, aligned with finalizeElements
+    refMap.set(elements.length, { backendNodeId: node.backendDOMNodeId });
+    if (elements.length >= MAX_INTERACTABLE_ELEMENTS) break;
+  }
+
+  deps.refMaps.set(wc, refMap);
+  return { url: wc.getURL(), title: wc.getTitle(), elements };
+}

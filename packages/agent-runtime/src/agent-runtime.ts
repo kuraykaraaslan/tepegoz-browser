@@ -1,185 +1,35 @@
-import { AppError, isDev } from '@tepegoz/libs';
 import {
-  AnthropicProvider,
-  GeminiProvider,
-  KimiProvider,
   ModelGateway,
   ModelRouter,
-  OpenAIProvider,
-  PROVIDER_MODEL_CATALOG,
   TokenLedger,
   type CanonMessage,
-  type EffortLevel,
-  type ModelProvider,
 } from '@tepegoz/model-gateway';
-import {
-  CapabilityRegistry,
-  ToolGateway,
-  type ConfirmRequest,
-  type InvokeContext,
-} from '@tepegoz/capability-plane';
-import {
-  Planner,
-  Reactor,
-  classifyRuntimeError,
-  type AgentFailure,
-  type RunControl,
-  type StepOutcome,
-} from '@tepegoz/orchestrator';
-import { TaintTracker, detectHandoff, inspectEgress, type HandoffKind } from '@tepegoz/security-policy';
-import {
-  isRunnableProvider,
-  RUNNABLE_AI_PROVIDERS,
-  type AIProvider,
-  type Plan,
-} from '@tepegoz/shared-types';
+import { CapabilityRegistry } from '@tepegoz/capability-plane';
+import { type AgentFailure } from '@tepegoz/orchestrator';
+import { inspectEgress } from '@tepegoz/security-policy';
+import { type Plan } from '@tepegoz/shared-types';
 import type { AgentEventKind } from '@tepegoz/ext-agent/types';
-import CredentialVault from '@tepegoz/credential-vault';
 import PreferenceStore from '@tepegoz/preferences';
-import { LocalProvider, type LocalProviderConfig } from '@tepegoz/local-inference';
 import {
   advanceRunPhase,
   checkpointForDecision,
   checkpointForPlan,
-  checkpointFromOutcome,
   terminalCheckpoint,
   type AgentRunCheckpoint,
   type AgentRunPhase,
 } from './run-lifecycle';
+import { EFFORT_MAX_TOKENS, planOrEgressStop, terminalMessageFor } from './agent-runtime-helpers';
+import { hotSwapRunProvider, registerRunProvider } from './agent-runtime-providers';
+import { runReactiveLoop } from './agent-runtime-loop';
+import type { AgentRunDeps, AgentRunHooks, AgentRunSummary } from './agent-runtime-types';
 
-/** The reasoning-effort preset (Agent panel) maps to a per-call max output-token budget: higher effort
- *  allows longer reasoning/summaries. Kept within Claude 4.x output limits. Applied to both the planning
- *  and the reactive-execution calls; the Anthropic adapter also receives the matching `output_config.effort`. */
-const EFFORT_MAX_TOKENS: Record<EffortLevel, number> = {
-  low: 2048,
-  medium: 4096,
-  high: 8192,
-  xhigh: 16384,
-  max: 32768,
-};
-
-/** Model-facing nudge injected (as a steer message) when the user resumes after a login handoff-hold:
- *  re-perceive the now-authenticated page and continue the ORIGINAL task rather than restart. English to
- *  match the other reactor-injected control messages (the model reasons in English internally). */
-const RESUME_AFTER_LOGIN =
-  'I have completed the sign-in on this page. Re-read the current page with browser_get_elements, then ' +
-  'continue the original task from where you left off — do not start over.';
-
-/** Best-effort URL string from a tool call's args (for the sensitive-site lockout). */
-function urlFromArgs(args: unknown): string | undefined {
-  if (args !== null && typeof args === 'object' && 'url' in args) {
-    const url = (args as { url?: unknown }).url;
-    if (typeof url === 'string' && url.length > 0) return url;
-  }
-  return undefined;
-}
-
-/** Best-effort tab id string from a tool call's args, for tab-scoped policy context. */
-function tabIdFromArgs(args: unknown): string | undefined {
-  if (args !== null && typeof args === 'object' && 'tabId' in args) {
-    const tabId = (args as { tabId?: unknown }).tabId;
-    if (typeof tabId === 'string' && tabId.length > 0) return tabId;
-  }
-  return undefined;
-}
-
-/** The sanitized page text a read tool returned, so it can be recorded as untrusted (taint). */
-function contentFromResult(result: unknown): string | undefined {
-  if (result !== null && typeof result === 'object' && 'content' in result) {
-    const content = (result as { content?: unknown }).content;
-    if (typeof content === 'string' && content.length > 0) return content;
-  }
-  return undefined;
-}
-
-/** The url a read tool's result reports (perception snapshot), for handoff/URL-aware checks. */
-function urlFromResult(result: unknown): string | undefined {
-  if (result !== null && typeof result === 'object' && 'url' in result) {
-    const url = (result as { url?: unknown }).url;
-    if (typeof url === 'string' && url.length > 0) return url;
-  }
-  return undefined;
-}
-
-export interface PlanApprovalDecision {
-  approved: boolean;
-  /** Step ids the user chose to skip (editable plan preview). */
-  skipStepIds?: string[];
-}
-
-export interface AgentRunHooks {
-  onEvent: (kind: AgentEventKind, message: string, detail?: string) => void;
-  /** Durable checkpoint seam: hosts may project this into the Event Journal for resume/replay. */
-  onCheckpoint?: (checkpoint: AgentRunCheckpoint) => void;
-  /** HITL before the loop: user reviews/edits the plan; resolve approved=false to abort. */
-  requestPlanApproval: (plan: Plan) => Promise<PlanApprovalDecision>;
-  /** HITL: resolve true to allow a gated tool call, false to deny. */
-  requestApproval: (req: ConfirmRequest) => Promise<boolean>;
-  /** Cooperative cancellation, checked between steps. */
-  signal: { readonly aborted: boolean };
-  /**
-   * Composed run-control gate (user pause/resume, connectivity hold, mid-run steering). Additive: when
-   * absent the run behaves exactly as before (signal-only). Forwarded verbatim to the reactor.
-   */
-  control?: RunControl;
-}
-
-/**
- * Host-injected seams so the runtime stays Electron- and app-free: a live "active tab URL" reader
- * (Policy Kernel site context) and the localized human-handoff copy (the only user-facing strings the
- * runtime emits that must be localized). The agent's built-in tools (and their concrete browser/journal
- * host) are registered separately at app startup via `ExtensionCapabilityService` (ADR-0021/0024), so
- * they are NOT passed here — this runtime just enumerates the single `CapabilityRegistry`.
- */
-export interface AgentRunDeps {
-  activeTabUrl: () => string | undefined;
-  /** Resolve a browser tab's committed URL for tabId-scoped browser tools. */
-  tabUrl?: (tabId: string) => string | undefined;
-  /** Localized human-handoff copy, one message per {@link HandoffKind} (captcha / twofa / login). */
-  handoffStrings: Record<HandoffKind, string>;
-  /**
-   * On-device inference config (engine + selected-model resolver). Injected by the Electron wiring;
-   * absent when the app didn't wire a local engine, in which case `'local'` routing is unavailable and
-   * the run falls back to a cloud provider. Keeps this package Electron-free.
-   */
-  localInference?: LocalProviderConfig;
-  /**
-   * Token budget seam (L7): the account-wide total-token quota + the persisted lifetime usage (from
-   * the SQLite Token Ledger). Seeds the in-memory ledger AFTER its per-run reset so the live quota
-   * indicator + 80% warning reflect CUMULATIVE spend, not just this run. Absent → no quota (unlimited).
-   * The host owns persistence + the pre-flight block + auto-refund; this only feeds the live status.
-   */
-  tokenBudget?: { quota: number; lifetimeUsed: number };
-  /**
-   * Test/eval seam (AI-1): a pre-resolved model provider. When present, `runAgent` registers this
-   * instance directly and SKIPS the vault/prefs resolution — so the eval harness can inject a scripted
-   * provider (deterministic fixtures) or a real cloud model (honest competence) without a stored key,
-   * while everything else (real BrowserHost, Policy/HITL plane, routing, ledger, egress firewall) runs
-   * exactly as in production. Absent → today's behavior (resolve from the safeStorage vault). The `id`
-   * drives the ModelRouter's per-capability model choice, unchanged.
-   */
-  provider?: { id: AIProvider; instance: ModelProvider };
-}
-
-export interface AgentRunSummary {
-  stoppedReason: string;
-  ok: boolean;
-  checkpoint?: AgentRunCheckpoint | undefined;
-  /** The agent's closing summary for this turn — appended to the conversation memory by the host. */
-  summary?: string;
-  /**
-   * Real per-run token usage read from the process-global {@link TokenLedger} at run end. Additive and
-   * optional (absent on early terminal returns like plan_rejected/egress_blocked). Lets the AI-1 eval
-   * harness report honest cost instead of the previous hard-coded 0, and any host surface a real total.
-   */
-  tokenUsage?: { inputTokens: number; outputTokens: number; totalTokens: number } | undefined;
-  /**
-   * The per-step tool outcomes of the reactive loop (tool id + ok + optional error), in order. Additive
-   * and optional. Lets the AI-1 eval harness compute real toolCalls/toolErrors and print a compact
-   * failure trace for triage, instead of reconstructing them by parsing event strings.
-   */
-  steps?: Array<{ tool: string; ok: boolean; error?: string | undefined }> | undefined;
-}
+export { hotSwapRunProvider };
+export type {
+  PlanApprovalDecision,
+  AgentRunHooks,
+  AgentRunDeps,
+  AgentRunSummary,
+} from './agent-runtime-types';
 
 /**
  * L3 orchestration entry point (Phase 1a end-to-end): user prompt → ModelRouter → Planner (DAG) →
@@ -188,170 +38,6 @@ export interface AgentRunSummary {
  * leaves the process. Provider-agnostic by design; Anthropic + OpenAI adapters ship today (see
  * RUNNABLE_AI_PROVIDERS). Electron-free: every app/OS concern is injected via {@link AgentRunDeps}.
  */
-/**
- * Build the model-provider adapter for a resolved provider id. `effort` is applied only by the
- * Anthropic adapter (its `output_config.effort`); the OpenAI tier models are plain chat models that
- * take no effort field, so it is ignored there (see {@link OpenAIProvider}).
- */
-/**
- * Resolve which provider serves the run, in priority order: (1) an explicit per-run override from the
- * Agent panel, when usable; (2) whole-agent-local (`mode:'default'`) when a model is available; (3) the
- * highest-priority stored key whose provider has an adapter. Throws {@link AppError} when none is usable.
- */
-function resolveProvider(
-  override: AIProvider | null,
-  mode: 'off' | 'simple' | 'default',
-  localAvailable: boolean,
-): { provider: AIProvider; apiKey: string } {
-  // 1) Explicit per-run override — honored ONLY when actually usable (local needs a model; a cloud
-  //    provider needs a stored key). An unusable override is ignored and we fall through.
-  if (override === 'local' && localAvailable) {
-    return { provider: 'local', apiKey: '' };
-  }
-  if (override !== null && override !== 'local' && isRunnableProvider(override)) {
-    const overrideKey = CredentialVault.getFirstKeyForProvider(override);
-    if (overrideKey !== null) return { provider: override, apiKey: overrideKey };
-  }
-  // 2) Whole-agent-local.
-  if (mode === 'default' && localAvailable) {
-    return { provider: 'local', apiKey: '' };
-  }
-  const storedKeys = CredentialVault.listMeta();
-  const runnable = storedKeys.find((m) => isRunnableProvider(m.provider));
-  if (runnable === undefined) {
-    if (storedKeys.length === 0) {
-      throw new AppError('No API key configured. Add one in Settings → Providers.', 401);
-    }
-    throw new AppError(
-      `No usable API key: this build can run ${RUNNABLE_AI_PROVIDERS.join(', ')}. ` +
-        `Add a key for one of these in Settings → Providers.`,
-      501,
-    );
-  }
-  // The raw key stays in main (getFirstKeyForProvider is main-only), never on IPC.
-  const apiKey = CredentialVault.getFirstKeyForProvider(runnable.provider);
-  if (apiKey === null) {
-    throw new AppError('No API key configured. Add one in Settings → Providers.', 401);
-  }
-  return { provider: runnable.provider, apiKey };
-}
-
-function providerFor(
-  provider: AIProvider,
-  apiKey: string,
-  effort: EffortLevel,
-  localConfig: LocalProviderConfig | undefined,
-): ModelProvider {
-  if (provider === 'local') {
-    if (localConfig === undefined) {
-      throw new AppError('On-device inference is not available on this machine.', 503);
-    }
-    return new LocalProvider(localConfig);
-  }
-  if (provider === 'openai') {
-    return new OpenAIProvider({ apiKey });
-  }
-  if (provider === 'gemini') {
-    return new GeminiProvider({ apiKey });
-  }
-  if (provider === 'kimi') {
-    return new KimiProvider({ apiKey });
-  }
-  return new AnthropicProvider({ apiKey, effort });
-}
-
-/**
- * Run the Planner, converting an Egress-Firewall block during PLANNING into a terminal failure
- * (symmetric with the reactor path, which already catches it) instead of throwing out of the run — so
- * the run lifecycle/journal stays consistent regardless of WHEN the block trips. Other planning errors
- * keep their existing behavior (surface at the IPC boundary).
- */
-/**
- * Register the model provider(s) for this run and return the resolved provider id (which drives the
- * ModelRouter's per-capability model choice). The eval/test seam takes priority: an injected provider
- * bypasses the vault entirely and is registered as-is. Otherwise resolve from the vault/prefs (per-run
- * override → whole-agent-local → highest-priority key), build the adapter, and also register the
- * on-device provider when available so a `local` capability offload resolves alongside a cloud run.
- */
-function registerRunProvider(
-  deps: AgentRunDeps,
-  prefs: { agentProviderOverride: AIProvider | null; localProvider: { mode: 'off' | 'simple' | 'default' } },
-  localAvailable: boolean,
-  effort: EffortLevel,
-): AIProvider {
-  if (deps.provider !== undefined) {
-    ModelGateway.register(deps.provider.instance);
-    return deps.provider.id;
-  }
-  const resolved = resolveProvider(prefs.agentProviderOverride, prefs.localProvider.mode, localAvailable);
-  ModelGateway.register(providerFor(resolved.provider, resolved.apiKey, effort, deps.localInference));
-  if (resolved.provider !== 'local' && localAvailable && deps.localInference !== undefined) {
-    ModelGateway.register(new LocalProvider(deps.localInference));
-  }
-  return resolved.provider;
-}
-
-/**
- * Live provider hot-swap for the ACTIVE run (Agent panel provider dropdown, mid-conversation). Resolves
- * the key, builds + registers the new adapter, and pins the gateway to {provider, model} so the NEXT
- * request routes to the new provider's API. SAFE by construction: on any failure (no key, unusable
- * provider) it returns `false` and leaves the run untouched on its current provider — it can only ADD a
- * registration + set the self-healing pin, never tear down the running provider. `model` empty → the
- * provider's primary catalog model (single-model "everything", consistent with the Model pin). `local`
- * is not hot-swappable here (it needs engine + on-device model wiring) — it applies at the next run.
- */
-export function hotSwapRunProvider(
-  provider: AIProvider,
-  opts: { effort: EffortLevel; model: string },
-): boolean {
-  if (provider === 'local' || !isRunnableProvider(provider)) return false;
-  const apiKey = CredentialVault.getFirstKeyForProvider(provider);
-  if (apiKey === null) return false;
-  ModelGateway.register(providerFor(provider, apiKey, opts.effort, undefined));
-  const model = opts.model.length > 0 ? opts.model : (PROVIDER_MODEL_CATALOG[provider][0]?.id ?? '');
-  if (model.length === 0) return false;
-  ModelGateway.setModelOverride({ provider, model });
-  return true;
-}
-
-async function planOrEgressStop(
-  input: Parameters<typeof Planner.plan>[0],
-): Promise<{ plan: Plan } | { egressFailure: AgentFailure }> {
-  try {
-    return { plan: await Planner.plan(input) };
-  } catch (err) {
-    const failure = classifyRuntimeError(err);
-    if (failure.kind === 'egress_blocked') return { egressFailure: failure };
-    throw err;
-  }
-}
-
-/** The terminal Console line for a finished run: the agent's own summary if any, else a distinct
- *  reason for a security stop (Egress Firewall), else a generic finished line. */
-function terminalMessageFor(
-  stoppedReason: string,
-  summary: string | undefined,
-  failure: AgentFailure | undefined,
-): string {
-  if (summary !== undefined && summary.length > 0) return summary;
-  if (failure?.kind === 'egress_blocked' && failure.message.length > 0) return failure.message;
-  const base = `Finished: ${stoppedReason}`;
-  // In development, surface the underlying failure detail (tool + error code + message) instead of the
-  // opaque stop reason, so the Console shows *why* a run stopped. Never in production — the raw message
-  // can carry page/tool internals and is noise for end users.
-  if (isDev && failure !== undefined) {
-    const detail = [
-      failure.tool !== undefined ? `tool=${failure.tool}` : undefined,
-      failure.code !== undefined ? `code=${failure.code}` : undefined,
-      failure.message.length > 0 ? failure.message : undefined,
-    ]
-      .filter((part): part is string => part !== undefined)
-      .join(' ');
-    if (detail.length > 0) return `${base} — ${detail}`;
-  }
-  return base;
-}
-
 export async function runAgent(
   prompt: string,
   hooks: AgentRunHooks,
@@ -499,106 +185,20 @@ export async function runAgent(
   const approvedPlan: Plan = { goal: plan.goal, steps };
   transition('execution_started');
 
-  // Taint corpus for THIS run: web/model text the agent perceives becomes untrusted, so any later
-  // side-effecting arg that lifts it escalates to HITL (Policy Kernel `taintedArgs`).
-  const taint = new TaintTracker();
-
-  // The approved plan becomes GUIDANCE for the reactive loop (not a rigid script): its steps are a
-  // suggested outline and the pruned steps are things to avoid. Execution is reactive — the model
-  // sees each page (via browser_get_elements) and picks the next action, so it can target live
-  // element refs and recover from a failed step. Static Executor.run stays for deterministic replays.
-  const outline = approvedPlan.steps.map((s) => `- ${s.tool}: ${s.rationale}`);
-  const avoid = plan.steps.filter((s) => skip.has(s.id)).map((s) => s.rationale || s.tool);
-
-  const result = await ToolGateway.runWithHandlers(
-    {
-      confirmHandler: hooks.requestApproval,
-      auditHandler: (entry) => {
-        hooks.onEvent('step_start', `${entry.toolName}: ${entry.decision}`, entry.reason);
-      },
-    },
-    () => Reactor.run(
-      {
-        goal: approvedPlan.goal.length > 0 ? approvedPlan.goal : prompt,
-        outline,
-        avoid,
-        tools,
-        provider: execRoute.provider,
-        model: execRoute.model,
-        maxTokens,
-        history,
-      },
-      {
-        signal: hooks.signal,
-        ...(hooks.control !== undefined ? { control: hooks.control } : {}),
-        // Planner-as-validator (AI-3): the actor's `finish` is only a claim — a periodic Planner pass is
-        // the sole completion authority, so a premature give-up is challenged and the run continues. The
-        // validator call goes through ModelGateway, so the Egress-Firewall inspector + TokenLedger apply.
-        validateCompletion: (ctx) =>
-          Planner.validateCompletion({
-            goal: ctx.goal,
-            memory: ctx.memory,
-            claimedSummary: ctx.claimedSummary,
-            recentObservations: ctx.recentObservations,
-            provider: execRoute.provider,
-            model: execRoute.model,
-            maxTokens,
-          }),
-        // Surface each step's decision rationale as a 'decision' event → the panel's Reasoning section.
-        onDecision: (tool, rationale) => {
-          if (rationale.length > 0) hooks.onEvent('decision', tool, rationale);
-        },
-        // The Policy Kernel gets the concrete site + taint of EACH tool call here (this is what
-        // makes the sensitive-site lockout and taint→HITL actually fire at runtime).
-        ctxFor: (tool, args): InvokeContext => {
-          const tabId = tabIdFromArgs(args);
-          const targetUrl =
-            urlFromArgs(args) ??
-            (tabId !== undefined ? deps.tabUrl?.(tabId) : undefined) ??
-            deps.activeTabUrl();
-          const ctx: InvokeContext = { taintedArgs: taint.isTainted(args) };
-          if (targetUrl !== undefined) ctx.targetUrl = targetUrl;
-          // create/upload-style tools require an idempotency key at the PEP. The agent supplies a fresh
-          // one per invocation — the reactor's loop detection and each tool's own guards (e.g.
-          // file_create_file's exists→409 check) handle accidental repeats.
-          if (CapabilityRegistry.get(tool)?.descriptor.requiresIdempotencyKey === true) {
-            ctx.idempotencyKey = globalThis.crypto.randomUUID();
-          }
-          return ctx;
-        },
-        onOutcome: (o: StepOutcome) => {
-          emitCheckpoint(checkpointFromOutcome(phase, o));
-          if (o.ok) {
-            // Record perceived page text as untrusted for subsequent steps' taint checks.
-            const content = contentFromResult(o.result);
-            if (content !== undefined) taint.record(content);
-            hooks.onEvent('step_ok', `${o.tool} ✓`);
-          } else {
-            hooks.onEvent('step_error', `${o.tool} ✗`, o.error?.message ?? 'failed');
-          }
-        },
-        // Human Handoff Controller: a CAPTCHA / 2FA / login wall in a perceived page hands control back
-        // to the user — deterministic, NO auto-solve (the agent holds no credentials), credit preserved.
-        // A login wall is RESUMABLE in-session: pause and wait for the user to sign in, then continue from
-        // the re-perceived (now authenticated) page — the agent must NOT "cleverly" work around the gate.
-        // CAPTCHA / 2FA stay terminal (solve-and-restart). Without a run-control (eval/tests) a login wall
-        // also terminates, so the harness still sees a definite stop rather than a silent hang.
-        guard: (o: StepOutcome) => {
-          const content = contentFromResult(o.result);
-          if (content === undefined) return null;
-          const signal = detectHandoff(content, urlFromResult(o.result));
-          if (signal === null) return null;
-          hooks.onEvent('handoff', deps.handoffStrings[signal.kind]);
-          if (signal.kind === 'login' && hooks.control !== undefined) {
-            hooks.control.enterHandoffHold(RESUME_AFTER_LOGIN);
-            hooks.onEvent('paused', 'paused'); // surface the Resume affordance while we wait for sign-in
-            return null; // hold at the next step gate — the run is NOT terminated
-          }
-          return 'handoff';
-        },
-      },
-    ),
-  );
+  const result = await runReactiveLoop({
+    prompt,
+    plan,
+    approvedPlan,
+    skip,
+    tools,
+    execRoute,
+    maxTokens,
+    history,
+    phase,
+    hooks,
+    deps,
+    emitCheckpoint,
+  });
   if (result.stoppedReason === 'handoff') {
     // The 'handoff' event above is the terminal, user-facing message — no generic "Finished" line.
     emitCheckpoint(terminalCheckpoint(transition('pause'), 'handoff'));

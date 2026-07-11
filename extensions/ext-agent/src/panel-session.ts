@@ -1,0 +1,201 @@
+import {
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type MutableRefObject,
+  type SetStateAction,
+} from 'react';
+import type { AgentAutonomy, AgentConfig, AgentHostApi } from './types';
+import {
+  applyAgentEvent,
+  autoApprovesTool,
+  emptyGroupState,
+  stateFromConversation,
+  type GroupState,
+} from './panel-state';
+
+/**
+ * State container for the Agent panel: per-group session state (keyed by tab-group id), the active
+ * group, run config, transient header UI flags, and every subscription/effect that keeps them in sync
+ * with the host. Extracted from `panel.tsx` (ADR-0010 file-size split). Returns raw state plus the
+ * `mutateGroup`/`mutateActive` helpers; behaviour handlers live in `useAgentActions`.
+ */
+export interface AgentSession {
+  config: AgentConfig | null;
+  setConfig: Dispatch<SetStateAction<AgentConfig | null>>;
+  dismissedNotices: Set<string>;
+  setDismissedNotices: Dispatch<SetStateAction<Set<string>>>;
+  scheduleOpen: boolean;
+  setScheduleOpen: Dispatch<SetStateAction<boolean>>;
+  logExported: boolean;
+  setLogExported: Dispatch<SetStateAction<boolean>>;
+  exportError: string | null;
+  setExportError: Dispatch<SetStateAction<string | null>>;
+  activeGroupId: string | null;
+  listRef: MutableRefObject<HTMLDivElement | null>;
+  autonomy: AgentAutonomy;
+  activeState: GroupState;
+  mutateGroup: (groupId: string, fn: (s: GroupState) => GroupState) => void;
+  mutateActive: (fn: (s: GroupState) => GroupState) => void;
+}
+
+export function useAgentSession(api: AgentHostApi): AgentSession {
+  const [config, setConfig] = useState<AgentConfig | null>(null);
+  const [dismissedNotices, setDismissedNotices] = useState<Set<string>>(new Set());
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  // Transient "log saved" confirmation shown on the header star after a successful export.
+  const [logExported, setLogExported] = useState(false);
+  // Transient export failure message (surfaced so a blocked/failed export is never silent).
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  // Active tab-group id — the agent session key.
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+
+  // Per-group state: keyed by groupId.
+  const [groupStates, setGroupStates] = useState<Map<string, GroupState>>(new Map());
+
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const autonomyRef = useRef<AgentAutonomy>('ask');
+  const autonomy: AgentAutonomy = config?.autonomy ?? 'ask';
+  useEffect(() => { autonomyRef.current = autonomy; }, [autonomy]);
+
+  // Helpers to read/mutate the active group's state.
+  const activeState: GroupState = activeGroupId !== null
+    ? (groupStates.get(activeGroupId) ?? emptyGroupState())
+    : emptyGroupState();
+
+  function mutateGroup(groupId: string, fn: (s: GroupState) => GroupState): void {
+    setGroupStates((prev) => {
+      const cur = prev.get(groupId) ?? emptyGroupState();
+      const next = new Map(prev);
+      next.set(groupId, fn(cur));
+      return next;
+    });
+  }
+
+  function mutateActive(fn: (s: GroupState) => GroupState): void {
+    if (activeGroupId === null) return;
+    mutateGroup(activeGroupId, fn);
+  }
+
+  // On mount: ensure the active tab is in a group and get the groupId.
+  useEffect(() => {
+    void api.ensureActiveGroup().then((gid) => {
+      setActiveGroupId(gid);
+    }, () => { /* no active tab */ });
+  }, [api]);
+
+  // Subscribe to active-group changes (when user switches tab groups).
+  useEffect(() => {
+    return api.onActiveGroupChange((gid) => {
+      if (gid !== null) {
+        // Ensure group exists in the state map (create empty entry if first visit).
+        setGroupStates((prev) => {
+          if (prev.has(gid)) return prev;
+          const next = new Map(prev);
+          next.set(gid, emptyGroupState());
+          return next;
+        });
+      }
+      setActiveGroupId(gid);
+    });
+  }, [api]);
+
+  useEffect(() => {
+    if (activeGroupId === null) return;
+    let cancelled = false;
+    void api.getCurrentAgentConversation(activeGroupId).then((detail) => {
+      if (cancelled || detail === null) return;
+      mutateGroup(activeGroupId, () => stateFromConversation(detail));
+    }, () => {});
+    return () => { cancelled = true; };
+  }, [api, activeGroupId]);
+
+  // Subscribe to agent events, approvals, plan previews, and token usage.
+  useEffect(() => {
+    const offEvent = api.onAgentEvent((e) => {
+      setGroupStates((prev) => {
+        const gid = e.groupId;
+        const cur = prev.get(gid) ?? emptyGroupState();
+        const updated = applyAgentEvent(cur, e); // routes by runId; drops stragglers (returns cur unchanged)
+        if (updated === cur) return prev;
+        const next = new Map(prev);
+        next.set(gid, updated);
+        return next;
+      });
+    });
+
+    const offApproval = api.onAgentApprovalRequest((req) => {
+      if (autoApprovesTool(autonomyRef.current, req.biometric)) {
+        api.respondAgentApproval(req.approvalId, true);
+      } else {
+        setGroupStates((prev) => {
+          const gid = req.groupId;
+          const cur = prev.get(gid) ?? emptyGroupState();
+          const next = new Map(prev);
+          next.set(gid, { ...cur, approval: req });
+          return next;
+        });
+      }
+    });
+
+    const offPlan = api.onAgentPlanPreview((preview) => {
+      if (autonomyRef.current !== 'ask') {
+        api.respondAgentPlan(preview.planId, true, []);
+      } else {
+        setGroupStates((prev) => {
+          const gid = preview.groupId;
+          const cur = prev.get(gid) ?? emptyGroupState();
+          const next = new Map(prev);
+          next.set(gid, { ...cur, planPreview: preview, skipIds: new Set() });
+          return next;
+        });
+      }
+    });
+
+    const offTokens = api.onTokenUsage((usage) => {
+      // Token usage is associated with the active group.
+      setGroupStates((prev) => {
+        const gid = activeGroupId;
+        if (gid === null) return prev;
+        const cur = prev.get(gid) ?? emptyGroupState();
+        const next = new Map(prev);
+        next.set(gid, { ...cur, tokens: usage });
+        return next;
+      });
+    });
+
+    void api.getAgentConfig().then(setConfig, () => { /* config unavailable */ });
+    return () => { offEvent(); offApproval(); offPlan(); offTokens(); };
+  }, [api, activeGroupId]);
+
+  // Auto-scroll conversation to bottom on new events.
+  useEffect(() => {
+    listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
+  }, [activeState.turns]);
+
+  // Reset dismissed notices when autonomy changes.
+  useEffect(() => {
+    setDismissedNotices(new Set());
+  }, [autonomy]);
+
+  return {
+    config,
+    setConfig,
+    dismissedNotices,
+    setDismissedNotices,
+    scheduleOpen,
+    setScheduleOpen,
+    logExported,
+    setLogExported,
+    exportError,
+    setExportError,
+    activeGroupId,
+    listRef,
+    autonomy,
+    activeState,
+    mutateGroup,
+    mutateActive,
+  };
+}

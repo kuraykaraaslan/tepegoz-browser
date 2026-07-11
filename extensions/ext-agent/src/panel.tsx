@@ -1,486 +1,59 @@
-import { useEffect, useRef, useState } from 'react';
-import { Modal, cn } from '@tepegoz/ui';
-import { Markdown } from '@tepegoz/markdown';
+import { cn } from '@tepegoz/ui';
 import { coreDict } from '@tepegoz/i18n';
 import { useT } from '@tepegoz/i18n/react';
-import type { AIProvider } from '@tepegoz/shared-types/providers';
 import { agentDict } from './i18n';
-import type {
-  AgentAutonomy,
-  AgentConfig,
-  AgentEvent,
-  AgentEffort,
-  AgentHostApi,
-  AgentConversationDetail,
-} from './types';
-import { ConversationHistoryDropdown } from './conversation-history-dropdown';
-import { Dropdown } from './panel-dropdown';
-import { RunConfigMenu } from './panel-run-config';
+import type { AgentHostApi } from './types';
 import { ScheduleTaskModal } from './schedule-task-modal';
-import {
-  CameraIcon,
-  CheckIcon,
-  CloseIcon,
-  CursorIcon,
-  GaugeIcon,
-  GearIcon,
-  KIND_DOT,
-  NewTaskIcon,
-  PaperclipIcon,
-  PauseIcon,
-  PlayIcon,
-  ScheduleIcon,
-  SendIcon,
-  SparkIcon,
-  StopIcon,
-} from './panel-icons';
-import {
-  NOTICE_STYLE,
-  PROSE_KINDS,
-  STEP_KINDS,
-  applyAgentEvent,
-  autoApprovesTool,
-  buildNotices,
-  emptyGroupState,
-  attachmentMeta,
-  serializeAttachments,
-  serializeConversationLog,
-  stateFromConversation,
-  type Attachment,
-  type GroupState,
-  type Turn,
-} from './panel-state';
+import { buildNotices } from './panel-state';
+import { useAgentSession } from './panel-session';
+import { useAgentActions } from './panel-actions';
+import { useAgentAttachments } from './panel-attachments';
+import { PanelHeader } from './panel-header';
+import { PanelThread } from './panel-thread';
+import { PanelComposer } from './panel-composer';
+import { PanelModals } from './panel-modals';
 
 /**
  * Agent extension panel (the "Do" surface). Each tab group gets its own agent session; the panel
  * switches context automatically when the active tab's group changes. Attachments (selected text,
  * files, screenshots) can be added as chips above the composer before sending a message.
+ *
+ * The panel is split (ADR-0010) across `panel-*` siblings: `useAgentSession` owns per-group state and
+ * host subscriptions, `useAgentActions` owns the behaviour handlers, and the header / thread / composer /
+ * modals are extracted presentational components. This file wires them together.
  */
 interface AgentPanelProps {
   api: AgentHostApi;
   onClose: () => void;
 }
 
-const BTN_PRIMARY =
-  'rounded-md bg-surface-overlay px-3 py-1.5 text-sm font-medium text-text-primary ' +
-  'hover:opacity-90 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus';
-const BTN_GHOST =
-  'rounded-md border border-border px-3 py-1.5 text-sm text-text-secondary ' +
-  'hover:bg-surface-overlay hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus';
-const ICON_BTN =
-  'rounded-md p-1.5 text-text-secondary hover:bg-surface-overlay hover:text-text-primary ' +
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus';
-
 export function AgentPanel({ api, onClose }: AgentPanelProps) {
   const a = useT(agentDict);
   const c = useT(coreDict);
-  const [config, setConfig] = useState<AgentConfig | null>(null);
-  const [dismissedNotices, setDismissedNotices] = useState<Set<string>>(new Set());
-  const [scheduleOpen, setScheduleOpen] = useState(false);
-  // Transient "log saved" confirmation shown on the header star after a successful export.
-  const [logExported, setLogExported] = useState(false);
-  // Transient export failure message (surfaced so a blocked/failed export is never silent).
-  const [exportError, setExportError] = useState<string | null>(null);
 
-  // Active tab-group id — the agent session key.
-  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+  const {
+    config, setConfig, dismissedNotices, setDismissedNotices, scheduleOpen, setScheduleOpen,
+    logExported, setLogExported, exportError, setExportError, activeGroupId, listRef, autonomy,
+    activeState, mutateGroup, mutateActive,
+  } = useAgentSession(api);
 
-  // Per-group state: keyed by groupId.
-  const [groupStates, setGroupStates] = useState<Map<string, GroupState>>(new Map());
-
-  const listRef = useRef<HTMLDivElement | null>(null);
-  const autonomyRef = useRef<AgentAutonomy>('ask');
-  const autonomy: AgentAutonomy = config?.autonomy ?? 'ask';
-  useEffect(() => { autonomyRef.current = autonomy; }, [autonomy]);
-
-  // On mount: ensure the active tab is in a group and get the groupId.
-  useEffect(() => {
-    void api.ensureActiveGroup().then((gid) => {
-      setActiveGroupId(gid);
-    }, () => { /* no active tab */ });
-  }, [api]);
-
-  // Subscribe to active-group changes (when user switches tab groups).
-  useEffect(() => {
-    return api.onActiveGroupChange((gid) => {
-      if (gid !== null) {
-        // Ensure group exists in the state map (create empty entry if first visit).
-        setGroupStates((prev) => {
-          if (prev.has(gid)) return prev;
-          const next = new Map(prev);
-          next.set(gid, emptyGroupState());
-          return next;
-        });
-      }
-      setActiveGroupId(gid);
-    });
-  }, [api]);
-
-  useEffect(() => {
-    if (activeGroupId === null) return;
-    let cancelled = false;
-    void api.getCurrentAgentConversation(activeGroupId).then((detail) => {
-      if (cancelled || detail === null) return;
-      mutateGroup(activeGroupId, () => stateFromConversation(detail));
-    }, () => {});
-    return () => { cancelled = true; };
-  }, [api, activeGroupId]);
-
-  // Helpers to read/mutate the active group's state.
-  const activeState: GroupState = activeGroupId !== null
-    ? (groupStates.get(activeGroupId) ?? emptyGroupState())
-    : emptyGroupState();
-
-  function mutateGroup(groupId: string, fn: (s: GroupState) => GroupState): void {
-    setGroupStates((prev) => {
-      const cur = prev.get(groupId) ?? emptyGroupState();
-      const next = new Map(prev);
-      next.set(groupId, fn(cur));
-      return next;
-    });
-  }
-
-  function mutateActive(fn: (s: GroupState) => GroupState): void {
-    if (activeGroupId === null) return;
-    mutateGroup(activeGroupId, fn);
-  }
-
-  // Subscribe to agent events, approvals, plan previews, and token usage.
-  useEffect(() => {
-    const offEvent = api.onAgentEvent((e) => {
-      setGroupStates((prev) => {
-        const gid = e.groupId;
-        const cur = prev.get(gid) ?? emptyGroupState();
-        const updated = applyAgentEvent(cur, e); // routes by runId; drops stragglers (returns cur unchanged)
-        if (updated === cur) return prev;
-        const next = new Map(prev);
-        next.set(gid, updated);
-        return next;
-      });
-    });
-
-    const offApproval = api.onAgentApprovalRequest((req) => {
-      if (autoApprovesTool(autonomyRef.current, req.biometric)) {
-        api.respondAgentApproval(req.approvalId, true);
-      } else {
-        setGroupStates((prev) => {
-          const gid = req.groupId;
-          const cur = prev.get(gid) ?? emptyGroupState();
-          const next = new Map(prev);
-          next.set(gid, { ...cur, approval: req });
-          return next;
-        });
-      }
-    });
-
-    const offPlan = api.onAgentPlanPreview((preview) => {
-      if (autonomyRef.current !== 'ask') {
-        api.respondAgentPlan(preview.planId, true, []);
-      } else {
-        setGroupStates((prev) => {
-          const gid = preview.groupId;
-          const cur = prev.get(gid) ?? emptyGroupState();
-          const next = new Map(prev);
-          next.set(gid, { ...cur, planPreview: preview, skipIds: new Set() });
-          return next;
-        });
-      }
-    });
-
-    const offTokens = api.onTokenUsage((usage) => {
-      // Token usage is associated with the active group.
-      setGroupStates((prev) => {
-        const gid = activeGroupId;
-        if (gid === null) return prev;
-        const cur = prev.get(gid) ?? emptyGroupState();
-        const next = new Map(prev);
-        next.set(gid, { ...cur, tokens: usage });
-        return next;
-      });
-    });
-
-    void api.getAgentConfig().then(setConfig, () => { /* config unavailable */ });
-    return () => { offEvent(); offApproval(); offPlan(); offTokens(); };
-  }, [api, activeGroupId]);
-
-  // Auto-scroll conversation to bottom on new events.
-  useEffect(() => {
-    listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
-  }, [activeState.turns]);
-
-  // Reset dismissed notices when autonomy changes.
-  useEffect(() => {
-    setDismissedNotices(new Set());
-  }, [autonomy]);
-
-  function onRun(): void {
-    const text = prompt.trim();
-    if (text.length === 0 || activeState.running || activeGroupId === null) return;
-    const groupId = activeGroupId;
-    const fullPrompt = serializeAttachments(attachments, text);
-    const id = `turn-${String(Date.now())}-${String(activeState.turns.length)}`;
-    const newTurn: Turn = { id, prompt: text, runId: null, events: [] };
-    mutateGroup(groupId, (s) => ({
-      ...s,
-      turns: [...s.turns, newTurn],
-      running: true,
-      // Clear any run-scoped state from a previous run so this one binds its OWN id on its first event
-      // (guards against a stale id/paused left when a prior run was Stopped before its terminal arrived).
-      paused: false,
-      runId: null,
-      prompt: '',
-      attachments: [],
-      expandedFiles: new Set(),
-    }));
-    void api.runAgent({
-      prompt: fullPrompt,
-      groupId,
-      displayPrompt: text,
-      attachmentMeta: attachmentMeta(attachments),
-    })
-      .catch((err: unknown) => {
-        const message = err instanceof Error && err.message.trim().length > 0
-          ? err.message
-          : a.runFailed;
-        const localRunId = `local-${id}`;
-        mutateGroup(groupId, (s) => {
-          const turns = s.turns.map((turn) => {
-            if (turn.id !== id) return turn;
-            if (turn.events.some((event) => event.kind === 'done' || event.kind === 'error')) return turn;
-            const runId = turn.runId ?? localRunId;
-            const event: AgentEvent = {
-              runId,
-              groupId,
-              kind: 'error',
-              message,
-              ts: Date.now(),
-            };
-            return { ...turn, runId, events: [...turn.events, event] };
-          });
-          return { ...s, turns, running: false, runId: null };
-        });
-      })
-      .finally(() => {
-        mutateGroup(groupId, (s) => ({ ...s, running: false }));
-      });
-  }
-
-  function onCancel(): void {
-    const { runId } = activeState;
-    if (runId !== null) api.cancelAgent(runId);
-    // Drop the live-run flags immediately (the backend abort event may lag): a Stopped run must not keep
-    // showing pause/steer controls, and clearing runId narrows the window for a stray late event.
-    mutateActive((s) => ({ ...s, running: false, paused: false, runId: null }));
-  }
-
-  /** Composer submit: while a run is active this STEERS it (folds the message into the current run);
-   *  otherwise it starts a new run. */
-  function onSubmit(): void {
-    const text = prompt.trim();
-    if (text.length === 0 || activeGroupId === null) return;
-    const { running, runId } = activeState;
-    if (running && runId !== null) {
-      api.steerAgent(runId, text);
-      mutateActive((s) => ({ ...s, prompt: '' }));
-      return;
-    }
-    onRun();
-  }
-
-  /** Toggle hold/resume on the active run (no-op when nothing is running). */
-  function onPauseResume(): void {
-    const { runId, paused } = activeState;
-    if (runId === null) return;
-    if (paused) api.resumeAgent(runId);
-    else api.pauseAgent(runId);
-  }
-
-  function onNewTask(): void {
-    if (activeState.running) onCancel();
-    if (activeGroupId !== null) api.newAgentConversation(activeGroupId);
-    mutateActive(() => emptyGroupState());
-  }
-
-  function onOpenConversation(detail: AgentConversationDetail): void {
-    if (activeGroupId === null) return;
-    mutateGroup(activeGroupId, () => stateFromConversation(detail));
-  }
-
-  /** Dump the full diagnostic bundle for this session — the chat transcript plus, gathered in the main
-   *  process, each group tab's perceived DOM + a PNG, the model-visible memory, the recent journal, and an
-   *  environment manifest — into a ~/tepegoz/ai_agent_export_<stamp>/ folder, then flash the header star.
-   *  Used to hand a complete, analyse-later snapshot of an agent run off for debugging. */
-  function onExportLog(): void {
-    if (activeState.turns.length === 0 || activeGroupId === null) return;
-    const content = serializeConversationLog(activeState.turns, {
-      exportedAt: Date.now(),
-      groupId: activeGroupId,
-      ...(config !== null
-        ? { provider: config.provider, autonomy: config.autonomy, effort: config.effort }
-        : {}),
-      tokens: activeState.tokens,
-    });
-    const title = activeState.turns[0]?.prompt.trim() ?? '';
-    const meta = {
-      ...(config !== null
-        ? { provider: config.provider, autonomy: config.autonomy, effort: config.effort }
-        : {}),
-      ...(activeState.tokens != null
-        ? {
-            tokens: {
-              inputTokens: activeState.tokens.inputTokens,
-              outputTokens: activeState.tokens.outputTokens,
-              totalTokens: activeState.tokens.totalTokens,
-            },
-          }
-        : {}),
-      ...(title.length > 0 ? { title } : {}),
-    };
-    void api
-      .exportAgentBundle({ chatContent: content, groupId: activeGroupId, meta })
-      .then(() => {
-        setExportError(null);
-        setLogExported(true);
-        setTimeout(() => { setLogExported(false); }, 2000);
-      })
-      .catch((err: unknown) => {
-        const msg = err instanceof Error && err.message.trim().length > 0 ? err.message : a.exportLog.failed;
-        setExportError(msg);
-        setTimeout(() => { setExportError(null); }, 6000);
-      });
-  }
-
-  function toggleReasoning(turnId: string): void {
-    mutateActive((s) => {
-      const next = new Set(s.openReasoning);
-      if (next.has(turnId)) next.delete(turnId); else next.add(turnId);
-      return { ...s, openReasoning: next };
-    });
-  }
-
-  function toggleSteps(turnId: string): void {
-    mutateActive((s) => {
-      const next = new Set(s.openSteps);
-      if (next.has(turnId)) next.delete(turnId); else next.add(turnId);
-      return { ...s, openSteps: next };
-    });
-  }
-
-  function chooseProvider(provider: AIProvider): void {
-    setConfig((prev) => (prev !== null ? { ...prev, provider } : prev));
-    void api.setAgentProvider(provider).then(() => api.getAgentConfig()).then(setConfig, () => {});
-  }
-
-  function chooseModel(model: string): void {
-    const provider = config?.provider;
-    if (provider === undefined) return;
-    setConfig((prev) => (prev !== null ? { ...prev, model } : prev));
-    void api.setAgentModel(provider, model).then(() => api.getAgentConfig()).then(setConfig, () => {});
-  }
-
-  function chooseAutonomy(level: AgentAutonomy): void {
-    setConfig((prev) => (prev !== null ? { ...prev, autonomy: level } : prev));
-    void api.setAgentAutonomy(level).catch(() => {});
-  }
-
-  function chooseEffort(level: AgentEffort): void {
-    setConfig((prev) => (prev !== null ? { ...prev, effort: level } : prev));
-    void api.setAgentEffort(level).catch(() => {});
-  }
-
-  function respond(approved: boolean): void {
-    const { approval } = activeState;
-    if (approval !== null) {
-      api.respondAgentApproval(approval.approvalId, approved);
-      mutateActive((s) => ({ ...s, approval: null }));
-    }
-  }
-
-  function toggleStep(id: string): void {
-    mutateActive((s) => {
-      const next = new Set(s.skipIds);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return { ...s, skipIds: next };
-    });
-  }
-
-  function respondPlan(approved: boolean): void {
-    const { planPreview, skipIds } = activeState;
-    if (planPreview === null) return;
-    if (approved) {
-      api.respondAgentPlan(planPreview.planId, true, [...skipIds]);
-    } else {
-      api.respondAgentPlan(planPreview.planId, false);
-      mutateActive((s) => ({ ...s, running: false }));
-    }
-    mutateActive((s) => ({ ...s, planPreview: null }));
-  }
-
-  // ---- Attachment actions -----------------------------------------------------------------------
-  function removeAttachment(id: string): void {
-    mutateActive((s) => {
-      const nextExpanded = new Set(s.expandedFiles);
-      nextExpanded.delete(id);
-      return { ...s, attachments: s.attachments.filter((a) => a.id !== id), expandedFiles: nextExpanded };
-    });
-  }
-
-  function addAttachment(att: Attachment): void {
-    mutateActive((s) => ({ ...s, attachments: [...s.attachments, att] }));
-  }
-
-  async function onAttachSelection(): Promise<void> {
-    try {
-      const text = await api.capturePageSelection();
-      if (text.trim().length === 0) return;
-      const lineCount = text.split('\n').length;
-      addAttachment({
-        id: `sel-${String(Date.now())}`,
-        kind: 'selection',
-        label: `${String(lineCount)} ${a.attach.lines}`,
-        content: text,
-      });
-    } catch { /* ignore */ }
-  }
-
-  async function onAttachFiles(): Promise<void> {
-    try {
-      const files = await api.pickAgentFiles();
-      for (const f of files) {
-        addAttachment({
-          id: `file-${String(Date.now())}-${f.name}`,
-          kind: 'file',
-          label: f.name,
-          content: f.content,
-        } satisfies Attachment);
-      }
-    } catch { /* ignore */ }
-  }
-
-  async function onAttachScreenshot(): Promise<void> {
-    try {
-      const dataUrl = await api.capturePageScreenshot();
-      if (dataUrl === null) return;
-      addAttachment({
-        id: `shot-${String(Date.now())}`,
-        kind: 'screenshot',
-        label: a.attach.screenshot,
-        content: dataUrl,
-      });
-    } catch { /* ignore */ }
-  }
+  const actions = useAgentActions({
+    api, a, config, setConfig, activeGroupId, activeState, mutateGroup, mutateActive,
+    setLogExported, setExportError,
+  });
+  const attach = useAgentAttachments({ api, a, mutateActive });
 
   // ---- Derived values --------------------------------------------------------------------------
   const notices = buildNotices(autonomy, a.risk).filter((n) => !dismissedNotices.has(n.id));
 
   const {
-    turns, approval, planPreview, running, skipIds, tokens, openReasoning, openSteps,
+    turns, approval, planPreview, running, paused, skipIds, tokens, openReasoning, openSteps,
     prompt, attachments, expandedFiles,
   } = activeState;
 
   // Gear tooltip: a one-glance summary of the current run config (provider · model · autonomy · effort),
   // shown on hover so the values are visible without opening the popover.
-  const configChoice = config?.choices.find((c) => c.provider === config.provider);
+  const configChoice = config?.choices.find((ch) => ch.provider === config.provider);
   const providerTip = configChoice
     ? configChoice.keyLabel !== undefined
       ? `${configChoice.label} · ${configChoice.keyLabel}`
@@ -507,465 +80,71 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
         autonomy !== 'ask' && 'outline outline-2 -outline-offset-2 outline-dashed outline-amber-500/70',
       )}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-border px-3 py-2">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onExportLog}
-            disabled={turns.length === 0}
-            aria-label={logExported ? a.exportLog.saved : a.exportLog.action}
-            title={logExported ? a.exportLog.saved : a.exportLog.action}
-            className="-m-0.5 rounded-md p-0.5 hover:bg-surface-overlay disabled:cursor-default disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-          >
-            {logExported ? (
-              <CheckIcon className="h-4 w-4 text-emerald-500" />
-            ) : (
-              <SparkIcon className="h-4 w-4 text-amber-500" />
-            )}
-          </button>
-          <h2 className="text-sm font-semibold text-text-primary">{a.title}</h2>
-        </div>
-        <div className="flex items-center gap-1.5">
-          {tokens !== null && tokens.quota > 0 ? (
-            // Quota indicator: cumulative lifetime usage against the account quota; amber at ≥80%.
-            <span
-              className={cn(
-                'rounded-full px-2 py-0.5 text-xs',
-                tokens.lifetimeTokens / tokens.quota >= 0.8
-                  ? 'bg-amber-500/15 text-amber-500'
-                  : 'bg-surface-overlay text-text-secondary',
-              )}
-              title={`${a.tokens}: ${String(tokens.inputTokens)} in / ${String(tokens.outputTokens)} out (this run)`}
-            >
-              {a.tokens}: {tokens.lifetimeTokens.toLocaleString()} / {tokens.quota.toLocaleString()}
-            </span>
-          ) : (
-            tokens !== null &&
-            tokens.totalTokens > 0 && (
-              <span
-                className="rounded-full bg-surface-overlay px-2 py-0.5 text-xs text-text-secondary"
-                title={`${a.tokens}: ${String(tokens.inputTokens)} in / ${String(tokens.outputTokens)} out`}
-              >
-                {a.tokens}: {tokens.totalTokens.toLocaleString()}
-              </span>
-            )
-          )}
-          <ConversationHistoryDropdown
-            api={api}
-            groupId={activeGroupId}
-            labels={a.history}
-            iconButtonClassName={ICON_BTN}
-            onOpenConversation={onOpenConversation}
-          />
-          {turns.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setScheduleOpen(true)}
-              aria-label={a.scheduleTask.action}
-              title={a.scheduleTask.action}
-              className={ICON_BTN}
-            >
-              <ScheduleIcon className="h-4 w-4" />
-            </button>
-          )}
-          <button type="button" onClick={onNewTask} aria-label={a.newTask} title={a.newTask} className={ICON_BTN}>
-            <NewTaskIcon className="h-4 w-4" />
-          </button>
-          <button type="button" onClick={onClose} aria-label={c.window.close} title={c.window.close} className={ICON_BTN}>
-            <CloseIcon className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
+      <PanelHeader
+        a={a}
+        c={c}
+        api={api}
+        activeGroupId={activeGroupId}
+        tokens={tokens}
+        turnCount={turns.length}
+        logExported={logExported}
+        exportError={exportError}
+        onExportLog={actions.onExportLog}
+        onNewTask={actions.onNewTask}
+        onClose={onClose}
+        onSchedule={() => setScheduleOpen(true)}
+        onOpenConversation={actions.onOpenConversation}
+        onDismissExportError={() => { setExportError(null); }}
+      />
 
-      {/* Export failure banner (a blocked/failed chat-log export is never silent). */}
-      {exportError !== null && (
-        <div
-          role="alert"
-          className="flex items-start gap-2 border-b border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-700 dark:text-red-300"
-        >
-          <span className="flex-1"><span className="font-semibold">{a.exportLog.failed}</span> {exportError}</span>
-          <button
-            type="button"
-            aria-label={c.window.close}
-            onClick={() => { setExportError(null); }}
-            className="shrink-0 opacity-60 hover:opacity-100 focus-visible:outline-none"
-          >
-            <CloseIcon className="h-3 w-3" />
-          </button>
-        </div>
-      )}
+      <PanelThread
+        a={a}
+        api={api}
+        listRef={listRef}
+        turns={turns}
+        running={running}
+        openReasoning={openReasoning}
+        openSteps={openSteps}
+        onToggleReasoning={actions.toggleReasoning}
+        onToggleSteps={actions.toggleSteps}
+      />
 
-      {/* Conversation thread */}
-      <div ref={listRef} className="flex-1 overflow-y-auto overflow-x-hidden p-3 text-sm" aria-live="polite">
-        {turns.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center text-center text-text-secondary">
-            <SparkIcon className="mb-2 h-6 w-6 text-text-disabled" />
-            <p>{running ? a.running : a.noActiveTasks}</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {turns.map((turn, ti) => {
-              const visible = turn.events;
-              const reasoning = visible.filter((e) => e.kind === 'plan' || e.kind === 'decision');
-              const steps = visible.filter((e) => STEP_KINDS.has(e.kind));
-              const response = visible.filter(
-                (e) => !STEP_KINDS.has(e.kind) && e.kind !== 'plan' && e.kind !== 'decision',
-              );
-              const reasoningOpen = openReasoning.has(turn.id);
-              const stepsOpen = openSteps.has(turn.id);
-              const latestStep = steps.at(-1);
-              const isLast = ti === turns.length - 1;
-              const working = isLast && running && !turn.events.some((e) => e.kind === 'done' || e.kind === 'error');
-              return (
-                <div key={turn.id} className="space-y-1.5">
-                  <div className="flex justify-end">
-                    <div
-                      className="max-w-[85%] rounded-2xl rounded-br-sm bg-amber-500/15 px-3 py-2 text-text-primary [overflow-wrap:anywhere]"
-                      aria-label={a.thread.you}
-                    >
-                      {turn.prompt}
-                    </div>
-                  </div>
+      <PanelComposer
+        a={a}
+        c={c}
+        notices={notices}
+        onDismissNotice={(id) => setDismissedNotices((prev) => new Set([...prev, id]))}
+        attachments={attachments}
+        expandedFiles={expandedFiles}
+        prompt={prompt}
+        running={running}
+        paused={paused}
+        config={config}
+        configTooltip={configTooltip}
+        mutateActive={mutateActive}
+        onSubmit={actions.onSubmit}
+        onCancel={actions.onCancel}
+        onPauseResume={actions.onPauseResume}
+        removeAttachment={attach.removeAttachment}
+        onAttachSelection={attach.onAttachSelection}
+        onAttachFiles={attach.onAttachFiles}
+        onAttachScreenshot={attach.onAttachScreenshot}
+        chooseProvider={actions.chooseProvider}
+        chooseModel={actions.chooseModel}
+        chooseAutonomy={actions.chooseAutonomy}
+        chooseEffort={actions.chooseEffort}
+      />
 
-                  {reasoning.length > 0 && (
-                    <div className="rounded-md border border-border bg-surface-raised">
-                      <button
-                        type="button"
-                        onClick={() => toggleReasoning(turn.id)}
-                        className="flex w-full items-center justify-between px-2 py-1.5 text-xs text-text-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-                      >
-                        <span className="flex items-center gap-1.5">
-                          <SparkIcon className="h-3.5 w-3.5 text-indigo-400" />
-                          {a.reasoning.title} ({reasoning.length})
-                        </span>
-                        <span>{reasoningOpen ? a.reasoning.hide : a.reasoning.show}</span>
-                      </button>
-                      {reasoningOpen && (
-                        <ul className="space-y-1 border-t border-border px-3 py-2 text-xs text-text-secondary">
-                          {reasoning.map((e, i) => (
-                            <li key={`r-${String(e.ts)}-${String(i)}`} className="[overflow-wrap:anywhere]">
-                              <span className="text-text-primary">{e.message}</span>
-                              {e.detail !== undefined && e.detail.length > 0 && (
-                                <span className="ml-1">— {e.detail}</span>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  )}
-
-                  {steps.length > 0 && (
-                    <div className="rounded-md border border-border bg-surface-raised">
-                      <button
-                        type="button"
-                        onClick={() => toggleSteps(turn.id)}
-                        className="flex w-full items-center justify-between gap-2 px-2 py-1.5 text-xs text-text-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-                      >
-                        <span className="flex min-w-0 items-center gap-1.5">
-                          <GaugeIcon className="h-3.5 w-3.5 shrink-0 text-text-secondary" />
-                          <span className="shrink-0">{a.progress} ({steps.length})</span>
-                          {working && !stepsOpen && latestStep !== undefined && (
-                            <span className="truncate text-text-disabled">· {latestStep.message}</span>
-                          )}
-                        </span>
-                        <span className="shrink-0">{stepsOpen ? a.reasoning.hide : a.reasoning.show}</span>
-                      </button>
-                      {stepsOpen && (
-                        <ul className="space-y-1 border-t border-border px-2 py-2">
-                          {steps.map((e, i) => (
-                            <li key={`s-${String(e.ts)}-${String(i)}`} className="flex items-start gap-2 px-1">
-                              <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', KIND_DOT[e.kind])} />
-                              <div className="min-w-0 flex-1">
-                                <span className="text-text-primary [overflow-wrap:anywhere]">{e.message}</span>
-                                {e.detail !== undefined && e.detail.length > 0 && (
-                                  <span className="ml-1 text-text-secondary [overflow-wrap:anywhere]">— {e.detail}</span>
-                                )}
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  )}
-
-                  {response.map((e, i) => {
-                    const isProse = PROSE_KINDS.has(e.kind);
-                    return (
-                      <div key={`${String(e.ts)}-${String(i)}`} className="flex items-start gap-2 rounded px-1">
-                        <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', KIND_DOT[e.kind])} />
-                        <div className="min-w-0 flex-1">
-                          {isProse ? (
-                            <Markdown
-                              source={e.message}
-                              onOpenLink={(u) => api.createTab(u)}
-                              onOpenFile={(p) => api.openAgentFile(p)}
-                              copyLabel={a.copy}
-                              className="text-text-primary"
-                            />
-                          ) : (
-                            <span className="text-text-primary [overflow-wrap:anywhere]">{e.message}</span>
-                          )}
-                          {e.detail !== undefined && e.detail.length > 0 && (
-                            <span className={cn('text-text-secondary [overflow-wrap:anywhere]', isProse ? 'mt-0.5 block text-xs' : 'ml-1')}>
-                              — {e.detail}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {working && (
-                    <div className="flex items-center gap-2 px-1 text-xs text-text-secondary">
-                      <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-amber-500" />
-                      {a.thread.working}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Notices strip */}
-      {notices.length > 0 && (
-        <div className="space-y-1.5 px-3 pt-2 pb-1">
-          {notices.map((n) => (
-            <div key={n.id} className={cn('flex items-start gap-2 rounded-md border px-3 py-2 text-xs', NOTICE_STYLE[n.severity])}>
-              <span className="flex-1"><span className="font-semibold">{n.title}</span> {n.body}</span>
-              <button
-                type="button"
-                aria-label={c.window.close}
-                onClick={() => setDismissedNotices((prev) => new Set([...prev, n.id]))}
-                className="shrink-0 opacity-60 hover:opacity-100 focus-visible:outline-none"
-              >
-                <CloseIcon className="h-3 w-3" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Composer */}
-      <form
-        className="px-3 pt-1.5 pb-4"
-        onSubmit={(e) => { e.preventDefault(); onSubmit(); }}
-      >
-        <div className="rounded-lg border border-border bg-surface-raised focus-within:ring-2 focus-within:ring-border-focus">
-          {/* Attachment chips */}
-          {attachments.length > 0 && (
-            <div className="flex flex-col gap-1 px-3 pt-2 pb-1">
-              {attachments.map((att) => {
-                const isFile = att.kind === 'file';
-                const expanded = isFile && expandedFiles.has(att.id);
-                return (
-                  <div key={att.id} className="flex flex-col gap-0.5">
-                    <span className="flex items-center gap-1 rounded-full bg-surface-overlay px-2 py-0.5 text-xs text-text-secondary self-start">
-                      {att.kind === 'selection' && <CursorIcon className="h-3 w-3 shrink-0" />}
-                      {att.kind === 'file' && <PaperclipIcon className="h-3 w-3 shrink-0" />}
-                      {att.kind === 'screenshot' && <CameraIcon className="h-3 w-3 shrink-0" />}
-                      {isFile ? (
-                        <button
-                          type="button"
-                          onClick={() => mutateActive((s) => {
-                            const next = new Set(s.expandedFiles);
-                            if (next.has(att.id)) next.delete(att.id); else next.add(att.id);
-                            return { ...s, expandedFiles: next };
-                          })}
-                          className="max-w-[14rem] truncate text-left underline-offset-2 hover:underline focus-visible:outline-none"
-                        >
-                          {att.label}
-                        </button>
-                      ) : (
-                        <span className="max-w-[10rem] truncate">{att.label}</span>
-                      )}
-                      <button
-                        type="button"
-                        aria-label={a.attach.removeLabel}
-                        onClick={() => removeAttachment(att.id)}
-                        className="ml-0.5 rounded-full p-0.5 hover:bg-surface-base focus-visible:outline-none"
-                      >
-                        <CloseIcon className="h-2.5 w-2.5" />
-                      </button>
-                    </span>
-                    {expanded && (
-                      <pre className="max-h-40 overflow-auto rounded-md bg-surface-base px-2 py-1.5 text-xs text-text-secondary [overflow-wrap:anywhere] whitespace-pre-wrap">
-                        {att.content}
-                      </pre>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          <textarea
-            rows={2}
-            value={prompt}
-            placeholder={running ? a.steerPlaceholder : a.runPlaceholder}
-            aria-label={running ? a.steerPlaceholder : a.runPlaceholder}
-            onChange={(e) => { const value = e.target.value; mutateActive((s) => ({ ...s, prompt: value })); }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSubmit(); }
-            }}
-            className="block w-full resize-none bg-transparent px-3 py-2 text-sm text-text-primary placeholder:text-text-disabled focus:outline-none disabled:opacity-60"
-          />
-          <div className="flex items-center justify-between px-2 pb-2">
-            <div className="flex min-w-0 items-center gap-0.5">
-              {/* Attachment buttons */}
-              <button
-                type="button"
-                title={a.attach.addSelection}
-                aria-label={a.attach.addSelection}
-                onClick={() => { void onAttachSelection(); }}
-                className={cn(ICON_BTN, 'p-1')}
-              >
-                <CursorIcon className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                title={a.attach.addFile}
-                aria-label={a.attach.addFile}
-                onClick={() => { void onAttachFiles(); }}
-                className={cn(ICON_BTN, 'p-1')}
-              >
-                <PaperclipIcon className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                title={a.attach.addScreenshot}
-                aria-label={a.attach.addScreenshot}
-                onClick={() => { void onAttachScreenshot(); }}
-                className={cn(ICON_BTN, 'p-1')}
-              >
-                <CameraIcon className="h-3.5 w-3.5" />
-              </button>
-
-              <div className="mx-1 h-4 w-px bg-border" />
-
-              {/* Run-config popover (gear): provider · model · autonomy · effort, each its own dropdown row. */}
-              <Dropdown
-                direction="up"
-                menuClassName="w-72"
-                ariaLabel={a.config}
-                title={configTooltip}
-                trigger={
-                  <span className="flex items-center gap-1.5">
-                    <GearIcon className="h-3.5 w-3.5 text-text-secondary" />
-                    {a.config}
-                  </span>
-                }
-              >
-                {() =>
-                  config === null ? (
-                    <p className="px-2 py-2 text-xs text-text-secondary">{a.history.loading}</p>
-                  ) : (
-                    <RunConfigMenu
-                      t={a}
-                      config={config}
-                      onProvider={chooseProvider}
-                      onModel={chooseModel}
-                      onAutonomy={chooseAutonomy}
-                      onEffort={chooseEffort}
-                    />
-                  )
-                }
-              </Dropdown>
-            </div>
-
-            <div className="flex shrink-0 items-center gap-1">
-              {running && (
-                <button
-                  type="button"
-                  onClick={onPauseResume}
-                  aria-label={activeState.paused ? a.resume : a.pause}
-                  title={activeState.paused ? a.resume : a.pause}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-overlay text-text-primary hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-                >
-                  {activeState.paused ? <PlayIcon className="h-4 w-4" /> : <PauseIcon className="h-4 w-4" />}
-                </button>
-              )}
-              {running && prompt.trim().length === 0 && attachments.length === 0 ? (
-                // Running with an empty composer → the primary button STOPS the run (square). Type
-                // something and it becomes "steer" instead (fold the message into the live run).
-                <button
-                  type="button"
-                  onClick={onCancel}
-                  aria-label={a.stop}
-                  title={a.stop}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-overlay text-text-primary hover:bg-red-500/15 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-                >
-                  <StopIcon className="h-3.5 w-3.5" />
-                </button>
-              ) : (
-                // Idle → start the run; running WITH text → steer it into the live run.
-                <button
-                  type="submit"
-                  disabled={prompt.trim().length === 0 && attachments.length === 0}
-                  aria-label={running ? a.steer : a.send}
-                  title={running ? a.steer : a.send}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500 text-white hover:opacity-90 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-                >
-                  <SendIcon className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </form>
-
-      {/* Plan preview modal */}
-      {planPreview !== null && (
-        <Modal open onClose={() => respondPlan(false)} title={a.planTitle} ariaLabel={a.planTitle} size="md" closeOnBackdrop={false}>
-          <p className="mt-1 text-xs text-text-secondary">{a.planBody}</p>
-          {planPreview.goal.length > 0 && <p className="mt-2 text-sm text-text-primary">{planPreview.goal}</p>}
-          <ul className="mt-3 space-y-1.5 overflow-auto">
-            {planPreview.steps.map((step, i) => (
-              <li key={step.id}>
-                <label className="flex cursor-pointer items-start gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={!skipIds.has(step.id)}
-                    onChange={() => { toggleStep(step.id); }}
-                    className="mt-0.5"
-                  />
-                  <span className="min-w-0">
-                    <span className="font-mono text-text-primary">{String(i + 1)}. {step.tool}</span>
-                    {step.rationale.length > 0 && (
-                      <span className="ml-1 break-words text-text-secondary">— {step.rationale}</span>
-                    )}
-                  </span>
-                </label>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-4 flex justify-end gap-2">
-            <button type="button" onClick={() => respondPlan(false)} className={BTN_GHOST}>{c.common.cancel}</button>
-            <button type="button" onClick={() => respondPlan(true)} disabled={skipIds.size === planPreview.steps.length} className={BTN_PRIMARY}>
-              {a.planRun}
-            </button>
-          </div>
-        </Modal>
-      )}
-
-      {/* HITL approval modal */}
-      {approval !== null && (
-        <Modal open onClose={() => respond(false)} title={a.approvalTitle} ariaLabel={a.approvalTitle} size="sm" closeOnBackdrop={false}>
-          <p className="mt-2 text-sm text-text-secondary">{a.approvalBody}</p>
-          <p className="mt-3 font-mono text-sm text-text-primary">{approval.toolName}</p>
-          <p className="text-xs text-text-secondary">{approval.reason}</p>
-          <pre className="mt-2 max-h-24 overflow-auto rounded bg-surface-base p-2 text-xs text-text-secondary">
-            {approval.argsPreview}
-          </pre>
-          {approval.biometric && <p className="mt-2 text-xs text-amber-600">{a.biometricNote}</p>}
-          <div className="mt-4 flex justify-end gap-2">
-            <button type="button" onClick={() => respond(false)} className={BTN_GHOST}>{a.deny}</button>
-            <button type="button" onClick={() => respond(true)} className={BTN_PRIMARY}>{a.approve}</button>
-          </div>
-        </Modal>
-      )}
+      <PanelModals
+        a={a}
+        c={c}
+        planPreview={planPreview}
+        approval={approval}
+        skipIds={skipIds}
+        onRespondPlan={actions.respondPlan}
+        onToggleStep={actions.toggleStep}
+        onRespond={actions.respond}
+      />
 
       <ScheduleTaskModal
         api={api}
