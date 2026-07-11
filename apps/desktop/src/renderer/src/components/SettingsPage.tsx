@@ -1,36 +1,8 @@
 import { useEffect, useState } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-  faBell,
-  faCircleInfo,
-  faCode,
-  faCreditCard,
-  faDesktop,
-  faDownload,
-  faFolderTree,
-  faGauge,
-  faGear,
-  faGlobe,
-  faKey,
-  faLock,
-  faMagnifyingGlass,
-  faPalette,
-  faPlug,
-  faRotateLeft,
-  faShield,
-  faSliders,
-  faUniversalAccess,
-} from '@fortawesome/free-solid-svg-icons';
-import {
-  ComingSoonCard,
-  SettingsLayout,
-  settingsDict,
-  type SettingsSection,
-} from '@tepegoz/settings-ui';
-import { AlertBanner, Button, Card, Toggle } from '@tepegoz/ui';
+import { SettingsLayout, settingsDict } from '@tepegoz/settings-ui';
+import { AlertBanner } from '@tepegoz/ui';
 import { coreDict } from '@tepegoz/i18n';
 import { useT } from '@tepegoz/i18n/react';
-import { SEARCH_ENGINES } from '@tepegoz/shared-types/search-engines';
 import type {
   CredentialsStatus,
   LoginCredentialMeta,
@@ -38,47 +10,9 @@ import type {
   Preferences,
   ProviderId,
 } from '@tepegoz/desktop-ipc';
-import { PROVIDERS } from './settings-shared';
-import { AppearanceSection, LanguageRegionSection } from './settings-appearance-language';
-import {
-  DefaultModelsSection,
-  LocalActionsSection,
-  LocalModelsSection,
-  ProvidersSection,
-  TokenBudgetSection,
-} from './settings-ai-panels';
-import { AdaptorsSection } from './settings-adaptors-section';
-import {
-  AboutSection,
-  DownloadSettingsSection,
-  FileOperationsSection,
-  PasswordsSection,
-  SearchStartupSection,
-  SitePermissionsSection,
-} from './settings-privacy-files';
-import { DeveloperSection } from './settings-developer';
+import { IconGear } from './SettingsPage-icons';
+import { buildSettingsSections } from './SettingsPage-sections';
 import { isDeveloperSettingsVisible, nodeEnv } from '../lib/developer-env';
-
-const ICON = 'h-4 w-4';
-const IconKey = () => <FontAwesomeIcon icon={faKey} className={ICON} aria-hidden />;
-const IconPalette = () => <FontAwesomeIcon icon={faPalette} className={ICON} aria-hidden />;
-const IconGlobe = () => <FontAwesomeIcon icon={faGlobe} className={ICON} aria-hidden />;
-const IconShield = () => <FontAwesomeIcon icon={faShield} className={ICON} aria-hidden />;
-const IconGauge = () => <FontAwesomeIcon icon={faGauge} className={ICON} aria-hidden />;
-const IconBell = () => <FontAwesomeIcon icon={faBell} className={ICON} aria-hidden />;
-const IconPlug = () => <FontAwesomeIcon icon={faPlug} className={ICON} aria-hidden />;
-const IconLock = () => <FontAwesomeIcon icon={faLock} className={ICON} aria-hidden />;
-const IconSearch = () => <FontAwesomeIcon icon={faMagnifyingGlass} className={ICON} aria-hidden />;
-const IconFiles = () => <FontAwesomeIcon icon={faFolderTree} className={ICON} aria-hidden />;
-const IconDownload = () => <FontAwesomeIcon icon={faDownload} className={ICON} aria-hidden />;
-const IconA11y = () => <FontAwesomeIcon icon={faUniversalAccess} className={ICON} aria-hidden />;
-const IconSliders = () => <FontAwesomeIcon icon={faSliders} className={ICON} aria-hidden />;
-const IconCard = () => <FontAwesomeIcon icon={faCreditCard} className={ICON} aria-hidden />;
-const IconDesktop = () => <FontAwesomeIcon icon={faDesktop} className={ICON} aria-hidden />;
-const IconReset = () => <FontAwesomeIcon icon={faRotateLeft} className={ICON} aria-hidden />;
-const IconInfo = () => <FontAwesomeIcon icon={faCircleInfo} className={ICON} aria-hidden />;
-const IconDeveloper = () => <FontAwesomeIcon icon={faCode} className={ICON} aria-hidden />;
-const IconGear = () => <FontAwesomeIcon icon={faGear} className="h-5 w-5" aria-hidden />;
 
 interface SettingsPageProps {
   initialSectionId?: string;
@@ -191,281 +125,28 @@ export function SettingsPage({
     );
   }
 
-  const G_GENERAL = s.groupGeneral;
-  const G_AI = s.groupAiAgent;
-  const G_PRIVACY = s.groupPrivacy;
-  const G_ADVANCED = s.groupAdvanced;
-  const G_ABOUT = s.groupAbout;
-  const developerVisible = isDeveloperSettingsVisible(nodeEnv);
-
-  const sections: SettingsSection[] = [
-    // ---------- General ----------
-    {
-      id: 'appearance',
-      group: G_GENERAL,
-      label: s.appearanceTitle,
-      icon: <IconPalette />,
-      searchText: `${s.appearanceTitle} ${s.theme} ${s.themeSystem} ${s.themeLight} ${s.themeDark} ${s.glassTitle} ${s.glassHint}`,
-      content: <AppearanceSection prefs={prefs} setPref={setPref} />,
-    },
-    {
-      id: 'language',
-      group: G_GENERAL,
-      label: s.languageRegionTitle,
-      icon: <IconGlobe />,
-      searchText: `${s.languageRegionTitle} ${s.languageLabel} ${s.regionLabel} ${s.dateFormatLabel}`,
-      content: <LanguageRegionSection prefs={prefs} setPref={setPref} />,
-    },
-    {
-      id: 'preferences',
-      group: G_GENERAL,
-      label: s.preferencesTitle,
-      icon: <IconSearch />,
-      searchText: `${s.preferencesTitle} ${s.searchEngineLabel} ${s.coming.onStartup.title} ${SEARCH_ENGINES.map((e) => e.name).join(' ')}`,
-      content: (
-        <div className="space-y-6">
-          <ComingSoonCard
-            title={s.coming.onStartup.title}
-            description={s.coming.onStartup.description}
-            items={s.coming.onStartup.items}
-          />
-          <SearchStartupSection prefs={prefs} setPref={setPref} />
-        </div>
-      ),
-    },
-    {
-      id: 'downloads',
-      group: G_GENERAL,
-      label: s.downloadsTitle,
-      icon: <IconDownload />,
-      searchText: `${s.downloadsTitle} ${s.downloadLocationLabel} ${s.downloadAskEachTime} ${s.clearDownloadsLabel}`,
-      content: <DownloadSettingsSection prefs={prefs} setPref={setPref} />,
-    },
-    {
-      id: 'accessibility',
-      group: G_GENERAL,
-      label: s.coming.accessibility.title,
-      icon: <IconA11y />,
-      searchText: `${s.coming.accessibility.title} ${s.coming.accessibility.description}`,
-      content: (
-        <ComingSoonCard
-          title={s.coming.accessibility.title}
-          description={s.coming.accessibility.description}
-        />
-      ),
-    },
-    {
-      id: 'notifications',
-      group: G_GENERAL,
-      label: s.notificationsTitle,
-      icon: <IconBell />,
-      searchText: `${s.notificationsTitle} ${s.notifications} ${s.notificationsDesc}`,
-      content: (
-        <Card title={s.notificationsTitle}>
-          <Toggle
-            id="notifications-enabled"
-            label={s.notifications}
-            description={s.notificationsDesc}
-            checked={prefs.notificationsEnabled}
-            onChange={(v) => {
-              setPref({ notificationsEnabled: v });
-            }}
-          />
-        </Card>
-      ),
-    },
-    // ---------- AI & Agent ----------
-    {
-      id: 'providers',
-      group: G_AI,
-      label: s.providersTitle,
-      icon: <IconKey />,
-      searchText: `${s.providersTitle} ${s.providersSubtitle} ${s.apiKey} ${s.addKey} ${s.defaultModels.title} ${s.defaultModels.subtitle} ${PROVIDERS.map((p) => s.providerNames[p]).join(' ')}`,
-      content: (
-        <div className="space-y-6">
-          <ProvidersSection
-            keys={status.keys}
-            encryptionAvailable={status.encryptionAvailable}
-            onAdd={onAddKey}
-            onRemoveById={onRemoveKeyById}
-            onRename={onRenameKey}
-            onReorder={onReorderKeys}
-            notify={notify}
-          />
-          <DefaultModelsSection prefs={prefs} setPref={setPref} />
-        </div>
-      ),
-    },
-    {
-      id: 'cost',
-      group: G_AI,
-      label: s.costTitle,
-      icon: <IconGauge />,
-      searchText: `${s.costTitle} ${s.localModel} ${s.localModelDesc} ${s.localActionsHint} ${s.localModels.title} ${s.tokenBudget.title} ${s.tokenBudget.desc}`,
-      content: (
-        <div className="space-y-6">
-          <TokenBudgetSection prefs={prefs} setPref={setPref} />
-          <LocalModelsSection />
-          <LocalActionsSection prefs={prefs} setPref={setPref} />
-        </div>
-      ),
-    },
-    {
-      id: 'connections',
-      group: G_AI,
-      label: s.adaptorInventoryTitle,
-      icon: <IconPlug />,
-      searchText: `${s.adaptorInventoryTitle} ${s.adaptorInventorySubtitle} MCP REST GraphQL OAuth`,
-      content: <AdaptorsSection />,
-    },
-    {
-      id: 'agent-controls',
-      group: G_AI,
-      label: s.coming.agentControls.title,
-      icon: <IconSliders />,
-      searchText: `${s.coming.agentControls.title} ${s.coming.agentControls.description}`,
-      content: (
-        <ComingSoonCard
-          title={s.coming.agentControls.title}
-          description={s.coming.agentControls.description}
-          items={s.coming.agentControls.items}
-        />
-      ),
-    },
-    // ---------- Privacy & security ----------
-    {
-      id: 'privacy',
-      group: G_PRIVACY,
-      label: s.privacyTitle,
-      icon: <IconShield />,
-      searchText: `${s.privacyTitle} ${s.telemetry} ${s.telemetryDesc} ${s.clearHistoryLabel}`,
-      content: (
-        <Card title={s.privacyTitle}>
-          <div className="space-y-4">
-            <Toggle
-              id="telemetry"
-              label={s.telemetry}
-              description={s.telemetryDesc}
-              checked={prefs.telemetryEnabled}
-              onChange={(v) => {
-                setPref({ telemetryEnabled: v });
-              }}
-            />
-            <div>
-              <p className="text-sm font-medium text-text-primary">{s.clearHistoryLabel}</p>
-              <p className="mb-2 text-xs text-text-secondary">{s.clearHistoryDesc}</p>
-              <Button size="sm" variant="outline" onClick={clearBrowsingHistory}>
-                {s.clearHistoryButton}
-              </Button>
-            </div>
-          </div>
-        </Card>
-      ),
-    },
-    {
-      id: 'site-permissions',
-      group: G_PRIVACY,
-      label: s.sitePermissionsTitle,
-      icon: <IconLock />,
-      searchText: `${s.sitePermissionsTitle} ${s.sitePermissionsSubtitle} ${s.sitePermissionNotifications}`,
-      content: (
-        <SitePermissionsSection
-          sitePermissions={prefs.sitePermissions}
-          onReset={resetSitePermission}
-        />
-      ),
-    },
-    {
-      id: 'passwords',
-      group: G_PRIVACY,
-      label: s.passwordsTitle,
-      icon: <IconLock />,
-      searchText: `${s.passwordsTitle} logins autofill credentials import export Google CSV`,
-      content: (
-        <PasswordsSection
-          credentials={loginCredentials}
-          onMount={onLoginSectionMount}
-          onAdd={onAddLogin}
-          onRemove={onRemoveLogin}
-          onImport={onImportLogins}
-          onExport={onExportLogins}
-        />
-      ),
-    },
-    {
-      id: 'autofill',
-      group: G_PRIVACY,
-      label: s.coming.autofill.title,
-      icon: <IconCard />,
-      searchText: `${s.coming.autofill.title} ${s.coming.autofill.description}`,
-      content: (
-        <ComingSoonCard
-          title={s.coming.autofill.title}
-          description={s.coming.autofill.description}
-          items={s.coming.autofill.items}
-        />
-      ),
-    },
-    // ---------- Advanced ----------
-    {
-      id: 'file-operations',
-      group: G_ADVANCED,
-      label: s.fileOps.title,
-      icon: <IconFiles />,
-      searchText: `${s.fileOps.title} ${s.fileOps.subtitle} ${s.fileOps.enable} ${s.fileOps.addFolder}`,
-      content: <FileOperationsSection prefs={prefs} setPref={setPref} />,
-    },
-    {
-      id: 'system',
-      group: G_ADVANCED,
-      label: s.coming.system.title,
-      icon: <IconDesktop />,
-      searchText: `${s.coming.system.title} ${s.coming.system.description}`,
-      content: (
-        <ComingSoonCard
-          title={s.coming.system.title}
-          description={s.coming.system.description}
-          items={s.coming.system.items}
-        />
-      ),
-    },
-    ...(developerVisible
-      ? [
-          {
-            id: 'developer',
-            group: G_ADVANCED,
-            label: s.developerTitle,
-            icon: <IconDeveloper />,
-            searchText: `${s.developerTitle} ${s.developerDesc} ${s.developerSearchPlaceholder} settings preferences public private`,
-            content: <DeveloperSection prefs={prefs} onUpdatePrefs={setDeveloperPref} />,
-          },
-        ]
-      : []),
-    {
-      id: 'reset',
-      group: G_ADVANCED,
-      label: s.resetTitle,
-      icon: <IconReset />,
-      searchText: `${s.resetTitle} ${s.resetDesc}`,
-      content: (
-        <Card title={s.resetTitle}>
-          <p className="mb-3 text-sm text-text-secondary">{s.resetDesc}</p>
-          <Button size="sm" variant="outline" onClick={resetToDefaults}>
-            {s.resetButton}
-          </Button>
-        </Card>
-      ),
-    },
-    // ---------- About ----------
-    {
-      id: 'about',
-      group: G_ABOUT,
-      label: s.aboutTitle,
-      icon: <IconInfo />,
-      searchText: `${s.aboutTitle} ${s.aboutProjectTitle} ${s.aboutVersion} ${s.aboutPlatform}`,
-      content: <AboutSection />,
-    },
-  ];
+  const sections = buildSettingsSections({
+    s,
+    prefs,
+    status,
+    developerVisible: isDeveloperSettingsVisible(nodeEnv),
+    setPref,
+    notify,
+    setDeveloperPref,
+    clearBrowsingHistory,
+    resetSitePermission,
+    resetToDefaults,
+    onAddKey,
+    onRemoveKeyById,
+    onRenameKey,
+    onReorderKeys,
+    loginCredentials,
+    onLoginSectionMount,
+    onAddLogin,
+    onRemoveLogin,
+    onImportLogins,
+    onExportLogins,
+  });
 
   return (
     <SettingsLayout

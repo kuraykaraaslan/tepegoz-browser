@@ -1,136 +1,28 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faChevronRight } from '@fortawesome/free-solid-svg-icons';
-import {
-  DndContext,
-  DragOverlay,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-  type DragStartEvent,
-} from '@dnd-kit/core';
+import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
 import { restrictToHorizontalAxis } from '@dnd-kit/modifiers';
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { cn } from '@tepegoz/ui';
-import { GROUP_PREFIX, resolveDrop } from './drop-resolver';
+import { GROUP_PREFIX } from './drop-resolver';
 import { TabChip, TabInner, chipClasses, groupColor, type GroupChipStyle } from './tab-chip';
 import { GroupHeader } from './group-header';
+import { useTabStripDrag } from './tab-strip-drag';
+import type { TabDescriptor, TabStripProps } from './tab-strip-types';
 
-/** The minimal tab shape the strip renders. Hosts pass their own richer tab objects (structural). */
-export interface TabDescriptor {
-  id: string;
-  title: string;
-  /** Page favicon URL (http(s)/data:), or null when the page has none yet. */
-  faviconUrl: string | null;
-  isLoading: boolean;
-  /** Pinned tabs render favicon-only at the front and have no close button (ADR-0020). */
-  pinned?: boolean;
-  /** Owning group id, or null/undefined when ungrouped. */
-  groupId?: string | null;
-}
-
-/** A tab group the strip renders as a colored container wrapping its contiguous member run. */
-export interface TabGroupDescriptor {
-  id: string;
-  name: string;
-  /** One of the fixed palette keys (see GROUP_COLORS); unknown values fall back to grey. */
-  color: string;
-  collapsed: boolean;
-}
-
-/** A tab or group being torn out of the strip (structural — matches the host's IPC drag item). */
-export interface TabTearItem {
-  kind: 'tab' | 'group';
-  id: string;
-}
-
-/** Payload emitted when a tab/group is torn out of the strip. Structural match for the desktop IPC. */
-export interface TabTearBegin {
-  item: TabTearItem;
-  title: string;
-  faviconUrl: string | null;
-  grabOffset: { x: number; y: number };
-  width: number;
-  height: number;
-  active: boolean;
-  pinned: boolean;
-  groupColor: string | null;
-}
-
-/** Cursor position in desktop-global screen coords (DIP), streamed during a torn drag. */
-export interface TabTearPoint {
-  screenX: number;
-  screenY: number;
-}
-
-/** This strip's geometry (client/page coords) so the host can hit-test cross-window drops. */
-export interface TabStripGeometryReport {
-  strip: { x: number; y: number; width: number; height: number };
-  slots: { id: string; left: number; width: number }[];
-}
-
-/** Pointer distance below the strip (or outside the window) before a drag counts as "torn out". */
-const TEAR_THRESHOLD_PX = 40;
-
-/** Localized strings, supplied by the host so the package stays i18n-agnostic. */
-export interface TabStripLabels {
-  /** aria-label for the whole tablist. */
-  tablist: string;
-  /** Shown for a tab that has no title yet. */
-  untitled: string;
-  /** aria-label for a tab's close button. */
-  closeTab: string;
-  /** aria-label for the new-tab button. */
-  newTab: string;
-  /** Fallback name for an unnamed group. */
-  unnamedGroup?: string;
-  /** aria-label for the group collapse/expand toggle. */
-  toggleGroup?: string;
-}
-
-export interface TabStripProps {
-  tabs: readonly TabDescriptor[];
-  /** Groups whose member tabs appear (in strip order); omit when the host has no grouping. */
-  groups?: readonly TabGroupDescriptor[] | undefined;
-  activeId: string | null;
-  labels: TabStripLabels;
-  /** A group whose inline name editor should open (e.g. from the native "Rename" menu item). */
-  renamingGroupId?: string | null | undefined;
-  onSelect: (id: string) => void;
-  /** Close a tab (close button + middle-click). */
-  onClose: (id: string) => void;
-  /** Open the native tab context menu (right-click a tab). */
-  onContextMenu: (id: string) => void;
-  /** Open the native group context menu (right-click a group header). */
-  onGroupContextMenu?: ((groupId: string) => void) | undefined;
-  onNew: () => void;
-  /** Drag-reorder a tab to `toIndex` (group membership is inferred by the host from neighbors). */
-  onMove?: ((id: string, toIndex: number) => void) | undefined;
-  /** Drag-reorder a whole group's run to `toIndex` among the non-member tabs. */
-  onMoveGroup?: ((groupId: string, toIndex: number) => void) | undefined;
-  /** Add a tab to a group (drag a tab onto the group's header). */
-  onAssignToGroup?: ((tabId: string, groupId: string) => void) | undefined;
-  /** Collapse/expand a group. */
-  onToggleGroupCollapsed?: ((groupId: string, collapsed: boolean) => void) | undefined;
-  /** Rename a group (inline edit committed on Enter/blur). */
-  onRenameGroup?: ((groupId: string, name: string) => void) | undefined;
-  /** Called once the external rename trigger (`renamingGroupId`) has been consumed. */
-  onRenameHandled?: (() => void) | undefined;
-  // ── Tab tear-off (drag a tab/group out of the strip into a new/another window) ──────────────────
-  /** A drag left the strip (torn out): the host shows a floating preview chip seeded by title/favicon.
-   *  `grabOffset` is where within the tab the pointer grabbed, so the chip stays held under the cursor. */
-  onTearBegin?: ((payload: TabTearBegin) => void) | undefined;
-  /** Cursor moved during a torn drag (screen coords) — reposition the floating preview. */
-  onTearMove?: ((point: TabTearPoint) => void) | undefined;
-  /** Torn drag released (screen coords) — the host performs the merge / new-window move. */
-  onTearEnd?: ((point: TabTearPoint) => void) | undefined;
-  /** Torn drag cancelled (Esc / invalid drop). */
-  onTearCancel?: (() => void) | undefined;
-  /** Report this strip's geometry (client coords) so the host can hit-test cross-window drops. */
-  onReportGeometry?: ((geometry: TabStripGeometryReport) => void) | undefined;
-}
+// Re-exported from their original home so external imports (`@tepegoz/tab-strip` barrel, tab-chip,
+// group-header) keep resolving these types from `./tab-strip` unchanged.
+export type {
+  TabDescriptor,
+  TabGroupDescriptor,
+  TabStripGeometryReport,
+  TabStripLabels,
+  TabStripProps,
+  TabTearBegin,
+  TabTearItem,
+  TabTearPoint,
+} from './tab-strip-types';
 
 /**
  * `@tepegoz/tab-strip` — the horizontal browser tab strip. Presentational + self-contained: favicon
@@ -162,20 +54,7 @@ export function TabStrip({
   onTearCancel,
   onReportGeometry,
 }: Readonly<TabStripProps>) {
-  const scrollerRef = useRef<HTMLDivElement>(null);
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
-  const [dragId, setDragId] = useState<string | null>(null);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
-  // Tear-off drag state. The dragged item + its preview seed are captured on drag start; `beganTearRef`
-  // latches once the pointer first leaves the strip (from then on the whole drag is "torn": the floating
-  // preview follows the cursor and the in-strip overlay is hidden). `lastPointRef` feeds the drop point.
-  const [torn, setTorn] = useState(false);
-  const dragBeginRef = useRef<{
-    payload: TabTearBegin;
-  } | null>(null);
-  const beganTearRef = useRef(false);
-  const tornRef = useRef(false);
-  const lastPointRef = useRef<TabTearPoint | null>(null);
 
   // An external "Rename" trigger (native menu) opens the inline editor, then is acknowledged so it fires once.
   useEffect(() => {
@@ -257,159 +136,23 @@ export function TabStrip({
     if (!group.collapsed) for (const m of members) segments.push(renderChip(m));
   }
 
-  // Report this strip's geometry (rect + per-tab slots, in client coords) so the host/main can hit-test
-  // a cross-window drop. Re-measured on mount, on any tab/group change, and on window resize.
-  const reportGeometry = useCallback((): void => {
-    const el = scrollerRef.current;
-    if (el === null || onReportGeometry === undefined) return;
-    const stripRect = el.getBoundingClientRect();
-    const slots: { id: string; left: number; width: number }[] = [];
-    el.querySelectorAll<HTMLElement>('[data-tab-id]').forEach((node) => {
-      const id = node.dataset.tabId;
-      if (id === undefined) return;
-      const r = node.getBoundingClientRect();
-      slots.push({ id, left: r.left, width: r.width });
-    });
-    onReportGeometry({
-      strip: { x: stripRect.left, y: stripRect.top, width: stripRect.width, height: stripRect.height },
-      slots,
-    });
-  }, [onReportGeometry]);
-
-  useEffect(() => {
-    reportGeometry();
-    window.addEventListener('resize', reportGeometry);
-    return () => window.removeEventListener('resize', reportGeometry);
-  }, [reportGeometry, tabs, groups]);
-
-  // Whether the pointer has been dragged out of the strip (below it, or off the window edge) → torn.
-  const isTorn = (clientX: number, clientY: number, rect: DOMRect): boolean => {
-    const belowStrip = clientY > rect.bottom + TEAR_THRESHOLD_PX;
-    const outsideWindow =
-      clientX < 0 || clientY < 0 || clientX > window.innerWidth || clientY > window.innerHeight;
-    return belowStrip || outsideWindow;
-  };
-
-  // While a drag is active, track the pointer at the window level (dnd-kit's pointer capture still lets
-  // window listeners fire). Once the pointer first leaves the strip we latch "torn" — from then on every
-  // move streams to the host (which drives the floating preview across the desktop), even if the pointer
-  // returns over a strip. `screenX/screenY` are desktop-global (DIP), exactly what main needs.
-  useEffect(() => {
-    if (dragId === null) return undefined;
-    const onPointerMove = (ev: PointerEvent): void => {
-      lastPointRef.current = { screenX: ev.screenX, screenY: ev.screenY };
-      if (beganTearRef.current) {
-        onTearMove?.({ screenX: ev.screenX, screenY: ev.screenY });
-        return;
-      }
-      const rect = scrollerRef.current?.getBoundingClientRect();
-      if (rect === undefined || !isTorn(ev.clientX, ev.clientY, rect)) return;
-      beganTearRef.current = true;
-      tornRef.current = true;
-      setTorn(true);
-      const begin = dragBeginRef.current;
-      if (begin !== null) onTearBegin?.(begin.payload);
-      onTearMove?.({ screenX: ev.screenX, screenY: ev.screenY });
-    };
-    window.addEventListener('pointermove', onPointerMove);
-    return () => window.removeEventListener('pointermove', onPointerMove);
-  }, [dragId, onTearBegin, onTearMove]);
-
-  /** Where the pointer grabbed within the dragged item (client px), from dnd-kit's activator event and
-   *  the item's initial rect. Falls back to a sensible chip anchor when unavailable. */
-  const grabOffsetOf = (event: DragStartEvent): { x: number; y: number } => {
-    const activator = event.activatorEvent;
-    const rect = event.active.rect.current.initial;
-    if (rect !== null && activator !== null && 'clientX' in activator && 'clientY' in activator) {
-      const ev = activator as { clientX: number; clientY: number };
-      return { x: ev.clientX - rect.left, y: ev.clientY - rect.top };
-    }
-    return { x: 16, y: 18 };
-  };
-
-  /** Clear all per-drag tear state (both the render flag and the handler refs). */
-  const resetTear = (): void => {
-    setTorn(false);
-    beganTearRef.current = false;
-    tornRef.current = false;
-    dragBeginRef.current = null;
-    lastPointRef.current = null;
-  };
-
-  const onDragStart = (event: DragStartEvent): void => {
-    const id = String(event.active.id);
-    setDragId(id);
-    resetTear();
-    // Where within the dragged item the pointer grabbed (client px), so the floating preview stays held
-    // under the cursor at that same point rather than jumping to a fixed corner offset.
-    const grabOffset = grabOffsetOf(event);
-    const rect = event.active.rect.current.initial;
-    const width = Math.ceil(rect?.width ?? 160);
-    const height = Math.ceil(rect?.height ?? 28);
-    // Capture the dragged item + the floating-preview chip seed now (from the current render's maps).
-    if (id.startsWith(GROUP_PREFIX)) {
-      const gid = id.slice(GROUP_PREFIX.length);
-      const g = groupById.get(gid);
-      const name = g !== undefined && g.name.trim().length > 0 ? g.name : (labels.unnamedGroup ?? 'Group');
-      dragBeginRef.current = {
-        payload: {
-          item: { kind: 'group', id: gid },
-          title: name,
-          faviconUrl: null,
-          grabOffset,
-          width,
-          height,
-          active: tabs.some((tab) => tab.groupId === gid && tab.id === activeId),
-          pinned: false,
-          groupColor: g?.color ?? null,
-        },
-      };
-    } else {
-      const t = tabById.get(id);
-      const group = t?.groupId != null ? groupById.get(t.groupId) : undefined;
-      dragBeginRef.current = {
-        payload: {
-          item: { kind: 'tab', id },
-          title: t !== undefined && t.title.length > 0 ? t.title : labels.untitled,
-          faviconUrl: t?.faviconUrl ?? null,
-          grabOffset,
-          width,
-          height,
-          active: id === activeId,
-          pinned: t?.pinned === true,
-          groupColor: group?.color ?? null,
-        },
-      };
-    }
-  };
-
-  const onDragEnd = (event: DragEndEvent): void => {
-    setDragId(null);
-    // A torn drop is owned by the host (merge into another window / new window) — discard the in-strip
-    // reorder entirely.
-    if (tornRef.current) {
-      const pt = lastPointRef.current;
-      resetTear();
-      if (pt !== null) onTearEnd?.(pt);
-      return;
-    }
-    resetTear();
-    const { active, over } = event;
-    if (over === null) return;
-    const tabGroupOf = (id: string): string | null => tabById.get(id)?.groupId ?? null;
-    const result = resolveDrop(items, String(active.id), String(over.id), tabGroupOf);
-    if (result === null) return;
-    if (result.kind === 'move-group') onMoveGroup?.(result.groupId, result.toIndex);
-    else if (result.kind === 'assign') onAssignToGroup?.(result.tabId, result.groupId);
-    else onMove?.(result.id, result.toIndex);
-  };
-
-  const onDragCancel = (): void => {
-    setDragId(null);
-    const wasTorn = tornRef.current;
-    resetTear();
-    if (wasTorn) onTearCancel?.();
-  };
+  const { scrollerRef, sensors, dragId, torn, onDragStart, onDragEnd, onDragCancel } = useTabStripDrag({
+    items,
+    tabById,
+    groupById,
+    tabs,
+    groups,
+    activeId,
+    labels,
+    onMove,
+    onMoveGroup,
+    onAssignToGroup,
+    onTearBegin,
+    onTearMove,
+    onTearEnd,
+    onTearCancel,
+    onReportGeometry,
+  });
 
   // Mouse wheels only emit vertical deltas; translate them to horizontal scroll so an overflowing
   // strip is reachable without a trackpad (and without a visible scrollbar).

@@ -1,11 +1,9 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faMagnifyingGlass,
   faWandMagicSparkles,
   faPlus,
-  faPen,
-  faTrash,
   faSliders,
 } from '@fortawesome/free-solid-svg-icons';
 import { useT } from '@tepegoz/i18n/react';
@@ -14,6 +12,15 @@ import { newtabDict } from './i18n';
 import { TepegozLogo } from './tepegoz-logo';
 import { NewTabBackgroundLayer, type ResolvedNewTabBackground } from './backgrounds';
 import { CustomizePanel } from './customize-panel';
+import {
+  MAX_SHORTCUTS,
+  hostOf,
+  initialOf,
+  type DialogState,
+  type MenuState,
+} from './newtab-page-helpers';
+import { ShortcutMenu } from './newtab-page-shortcut-menu';
+import { ShortcutDialog } from './newtab-page-shortcut-dialog';
 
 export type { NewTabShortcut };
 
@@ -39,34 +46,6 @@ export interface NewTabPageProps {
   /** Open the native image picker; resolves to the stored ref (+ data URL) or null when cancelled. */
   onPickBackgroundImage: () => Promise<{ ref: string; dataUrl: string } | null>;
 }
-
-/** How many shortcuts the grid shows (one Chrome-style row-of-five, two rows). */
-const MAX_SHORTCUTS = 10;
-
-function hostOf(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, '');
-  } catch {
-    return url;
-  }
-}
-
-function initialOf(shortcut: NewTabShortcut): string {
-  const base = shortcut.title.trim() || hostOf(shortcut.url);
-  return (base[0] ?? '?').toUpperCase();
-}
-
-/** Prepend a scheme if the user typed a bare host (`avantleap.com` → `https://avantleap.com`). Returns
- *  the trimmed input unchanged when it already has one, or is empty. Final validity is the host's call. */
-function normalizeUrl(raw: string): string {
-  const trimmed = raw.trim();
-  if (trimmed.length === 0) return '';
-  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) || trimmed.startsWith('tepegoz://')) return trimmed;
-  return `https://${trimmed}`;
-}
-
-type DialogState = { mode: 'add' } | { mode: 'edit'; shortcut: NewTabShortcut };
-type MenuState = { shortcut: NewTabShortcut; x: number; y: number };
 
 /**
  * The `tepegoz://newtab` start page — a Chrome-style new-tab page: the Tepegöz logo, a big centred
@@ -255,177 +234,6 @@ export function NewTabPage({
           onSave={saveDialog}
         />
       )}
-    </div>
-  );
-}
-
-/** Right-click menu on a shortcut tile — Edit / Remove. A transparent full-screen backdrop catches the
- *  next click (and right-click) to dismiss; Escape closes too. */
-function ShortcutMenu({
-  x,
-  y,
-  canEdit,
-  canRemove,
-  labels,
-  onEdit,
-  onRemove,
-  onClose,
-}: Readonly<{
-  x: number;
-  y: number;
-  canEdit: boolean;
-  canRemove: boolean;
-  labels: { edit: string; remove: string };
-  onEdit: () => void;
-  onRemove: () => void;
-  onClose: () => void;
-}>) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
-  return (
-    <div
-      className="fixed inset-0 z-50"
-      onClick={onClose}
-      onContextMenu={(e) => {
-        e.preventDefault();
-        onClose();
-      }}
-    >
-      <div
-        role="menu"
-        style={{ left: x, top: y }}
-        onClick={(e) => e.stopPropagation()}
-        className="fixed min-w-40 overflow-hidden rounded-lg border border-border bg-surface-base py-1 text-sm text-text-primary shadow-lg"
-      >
-        {canEdit && (
-          <button
-            type="button"
-            role="menuitem"
-            onClick={onEdit}
-            className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-surface-raised"
-          >
-            <FontAwesomeIcon icon={faPen} className="h-3.5 w-3.5 text-text-secondary" aria-hidden />
-            {labels.edit}
-          </button>
-        )}
-        {canRemove && (
-          <button
-            type="button"
-            role="menuitem"
-            onClick={onRemove}
-            className="flex w-full items-center gap-3 px-3 py-2 text-left text-error hover:bg-surface-raised"
-          >
-            <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" aria-hidden />
-            {labels.remove}
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/** The add/edit-shortcut modal — a Name + URL form (Chrome-style). Done is disabled until the URL is
- *  non-empty; the host normalizes + validates the final URL. */
-function ShortcutDialog({
-  title,
-  initialName,
-  initialUrl,
-  labels,
-  onCancel,
-  onSave,
-}: Readonly<{
-  title: string;
-  initialName: string;
-  initialUrl: string;
-  labels: { name: string; url: string; save: string; cancel: string };
-  onCancel: () => void;
-  onSave: (name: string, url: string) => void;
-}>) {
-  const [name, setName] = useState(initialName);
-  const [url, setUrl] = useState(initialUrl);
-  const nameRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    nameRef.current?.focus();
-    nameRef.current?.select();
-  }, []);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCancel();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onCancel]);
-
-  function submit(e: FormEvent): void {
-    e.preventDefault();
-    const finalUrl = normalizeUrl(url);
-    if (finalUrl.length === 0) return;
-    onSave(name.trim(), finalUrl);
-  }
-
-  const inputClass =
-    'w-full rounded-lg border border-border bg-surface-base px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-border-focus';
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onCancel}
-    >
-      <form
-        onSubmit={submit}
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm rounded-2xl border border-border bg-surface-base p-6 shadow-xl"
-      >
-        <h2 className="text-base font-semibold text-text-primary">{title}</h2>
-
-        <label className="mt-5 block">
-          <span className="text-xs font-medium text-text-secondary">{labels.name}</span>
-          <input
-            ref={nameRef}
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className={`mt-1.5 ${inputClass}`}
-          />
-        </label>
-
-        <label className="mt-4 block">
-          <span className="text-xs font-medium text-text-secondary">{labels.url}</span>
-          <input
-            type="text"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://"
-            inputMode="url"
-            className={`mt-1.5 ${inputClass}`}
-          />
-        </label>
-
-        <div className="mt-6 flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="rounded-full border border-border px-4 py-1.5 text-sm font-medium text-text-secondary hover:bg-surface-raised hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-          >
-            {labels.cancel}
-          </button>
-          <button
-            type="submit"
-            disabled={normalizeUrl(url).length === 0}
-            className="rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-primary-fg hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {labels.save}
-          </button>
-        </div>
-      </form>
     </div>
   );
 }

@@ -1,45 +1,12 @@
-import { z } from 'zod';
 import { type WebContents } from 'electron';
-import { Logger } from '@tepegoz/libs';
-import PreferenceStore from '@tepegoz/preferences';
 import {
-  normalizeTranslateLanguage,
-  normalizeTranslateOrigin,
-  shouldAutoTranslatePage,
-} from '@tepegoz/ext-translate/engine';
-import type { TranslatePageState } from '@tepegoz/ext-translate/types';
-import TabManager from '../tabs';
-import translateHost, { setTranslatePageState } from './translate-host.electron';
-
-const BINDING = '__tepegozTranslatePost';
-const MAX_PAGE_ITEMS = 260;
-const MAX_ITEM_CHARS = 1600;
-
-const BindingPayloadSchema = z.object({
-  requestId: z.string().min(1).max(128),
-  items: z
-    .array(
-      z.object({
-        id: z.string().min(1).max(128),
-        text: z.string().min(1).max(MAX_ITEM_CHARS),
-      }),
-    )
-    .max(MAX_PAGE_ITEMS),
-  sourceLanguage: z.string().min(1).max(16).optional(),
-  targetLanguage: z.string().min(1).max(16),
-  origin: z.string().max(2048).optional(),
-  reason: z.enum(['selection', 'page', 'manual']).optional(),
-});
-
-const DebuggerPayloadSchema = z.object({
-  name: z.string(),
-  payload: z.string(),
-});
-
-const PageScriptStateSchema = z.object({
-  sourceLanguage: z.string().max(16).optional(),
-  targetLanguage: z.string().max(16).optional(),
-});
+  BINDING,
+  MAX_ITEM_CHARS,
+  MAX_PAGE_ITEMS,
+  makeBindingListener,
+  type BindingListener,
+} from './translate-page-injector-binding.electron';
+import TranslatePageInjector from './translate-page-injector-controller.electron';
 
 export const TRANSLATE_PAGE_SCRIPT = `
 (() => {
@@ -283,93 +250,14 @@ export const TRANSLATE_PAGE_SCRIPT = `
 })();
 `;
 
-const listeners = new WeakMap<WebContents, (event: unknown, method: string, params?: unknown) => void>();
-let started = false;
-
-function originOf(url: string): string | undefined {
-  return normalizeTranslateOrigin(url) ?? undefined;
-}
-
-async function pageLanguage(wc: WebContents): Promise<string> {
-  const raw: unknown = await wc.executeJavaScript(
-    "(document.documentElement.getAttribute('lang') || document.body?.getAttribute('lang') || navigator.language || '').slice(0, 16)",
-    true,
-  );
-  return typeof raw === 'string' ? raw : '';
-}
+const listeners = new WeakMap<WebContents, BindingListener>();
 
 async function ensureBinding(wc: WebContents): Promise<void> {
   if (!wc.debugger.isAttached()) wc.debugger.attach('1.3');
   await wc.debugger.sendCommand('Runtime.enable');
   await wc.debugger.sendCommand('Runtime.addBinding', { name: BINDING }).catch(() => undefined);
   if (listeners.has(wc)) return;
-  const listener = (_event: unknown, method: string, params?: unknown): void => {
-    if (method !== 'Runtime.bindingCalled') return;
-    const parsed = DebuggerPayloadSchema.safeParse(params);
-    if (!parsed.success || parsed.data.name !== BINDING) return;
-    let payload: z.infer<typeof BindingPayloadSchema>;
-    try {
-      payload = BindingPayloadSchema.parse(JSON.parse(parsed.data.payload));
-    } catch {
-      return;
-    }
-    const url = wc.getURL();
-    const origin = originOf(url);
-    if (origin === undefined || !translateHost.isActiveForPage(origin)) return;
-    setTranslatePageState({
-      url,
-      origin,
-      sourceLanguage: normalizeTranslateLanguage(payload.sourceLanguage),
-      targetLanguage: normalizeTranslateLanguage(payload.targetLanguage, translateHost.targetLanguage()),
-      status: 'translating',
-      translatedItems: 0,
-      totalItems: payload.items.length,
-      engine: 'none',
-      error: null,
-      updatedAt: Date.now(),
-    });
-    void translateHost
-      .translateBatch({
-        items: payload.items,
-        sourceLanguage: payload.sourceLanguage,
-        targetLanguage: payload.targetLanguage,
-        origin,
-        reason: payload.reason ?? 'page',
-      })
-      .then((result) => {
-        if (wc.isDestroyed()) return;
-        const translatedItems = result.items.filter((item) => item.engine !== 'none').length;
-        setTranslatePageState({
-          url: wc.getURL(),
-          origin,
-          sourceLanguage: result.sourceLanguage,
-          targetLanguage: result.targetLanguage,
-          status: 'translated',
-          translatedItems,
-          totalItems: result.items.length,
-          engine: result.engine,
-          error: null,
-          updatedAt: Date.now(),
-        });
-        const message = JSON.stringify({ requestId: payload.requestId, result });
-        return wc.executeJavaScript(`window.__tepegozTranslateReceive?.(${message});`, true);
-      })
-      .catch((err) => {
-        Logger.warn('Translate page batch failed', { err: String(err) });
-        setTranslatePageState({
-          url: wc.getURL(),
-          origin,
-          sourceLanguage: normalizeTranslateLanguage(payload.sourceLanguage),
-          targetLanguage: normalizeTranslateLanguage(payload.targetLanguage, translateHost.targetLanguage()),
-          status: 'error',
-          translatedItems: 0,
-          totalItems: payload.items.length,
-          engine: 'none',
-          error: String(err),
-          updatedAt: Date.now(),
-        });
-      });
-  };
+  const listener = makeBindingListener(wc);
   listeners.set(wc, listener);
   wc.debugger.on('message', listener);
   wc.once('destroyed', () => {
@@ -381,118 +269,9 @@ async function ensureBinding(wc: WebContents): Promise<void> {
   });
 }
 
-async function inject(wc: WebContents): Promise<void> {
+export async function inject(wc: WebContents): Promise<void> {
   await ensureBinding(wc);
   await wc.executeJavaScript(TRANSLATE_PAGE_SCRIPT, true);
 }
-
-async function startTranslation(
-  wc: WebContents,
-  reason: 'page' | 'manual',
-  sourceLanguage?: string,
-): Promise<TranslatePageState | null> {
-  if (wc.isDestroyed()) return null;
-  const url = wc.getURL();
-  const origin = originOf(url);
-  if (origin === undefined || !translateHost.isActiveForPage(origin)) return null;
-  const targetLanguage = translateHost.targetLanguage();
-  const source = normalizeTranslateLanguage(sourceLanguage ?? (await pageLanguage(wc)));
-  await inject(wc);
-  await wc.executeJavaScript(
-    `window.__tepegozTranslateStart?.(${JSON.stringify({
-      targetLanguage,
-      sourceLanguage: source,
-      origin,
-      reason,
-    })}) ?? null;`,
-    true,
-  );
-  return translateHost.pageState();
-}
-
-async function maybeAutoTranslate(url: string, wc: WebContents): Promise<void> {
-  if (wc.isDestroyed()) return;
-  const origin = originOf(url);
-  if (origin === undefined) return;
-  const settings = PreferenceStore.getAll().translate;
-  const targetLanguage = translateHost.targetLanguage();
-  const sourceLanguage = await pageLanguage(wc).catch(() => '');
-  if (!shouldAutoTranslatePage(settings, sourceLanguage, targetLanguage, origin)) return;
-  await startTranslation(wc, 'page', sourceLanguage).catch((err) => {
-    Logger.warn('Automatic page translation failed', { url, err: String(err) });
-  });
-}
-
-const TranslatePageInjector = {
-  start(): void {
-    if (started) return;
-    started = true;
-    TabManager.onNavigation((url, wc) => {
-      void maybeAutoTranslate(url, wc);
-    });
-  },
-
-  async translateActive(): Promise<TranslatePageState | null> {
-    const wc = TabManager.activeWebContents();
-    return wc === null ? null : startTranslation(wc, 'manual');
-  },
-
-  async translateWebContents(wc: WebContents): Promise<TranslatePageState | null> {
-    return startTranslation(wc, 'manual');
-  },
-
-  async restoreActive(): Promise<TranslatePageState | null> {
-    const wc = TabManager.activeWebContents();
-    if (wc === null || wc.isDestroyed()) return null;
-    await inject(wc);
-    const raw: unknown = await wc.executeJavaScript('window.__tepegozTranslateRestore?.() ?? null;', true);
-    const parsed = PageScriptStateSchema.safeParse(raw);
-    const url = wc.getURL();
-    const origin = originOf(url) ?? '';
-    const restored: TranslatePageState = {
-      url,
-      origin,
-      sourceLanguage: normalizeTranslateLanguage(parsed.success ? parsed.data.sourceLanguage : undefined),
-      targetLanguage: normalizeTranslateLanguage(
-        parsed.success ? parsed.data.targetLanguage : undefined,
-        translateHost.targetLanguage(),
-      ),
-      status: 'restored',
-      translatedItems: 0,
-      totalItems: 0,
-      engine: 'none',
-      error: null,
-      updatedAt: Date.now(),
-    };
-    setTranslatePageState(restored);
-    return restored;
-  },
-
-  async restoreWebContents(wc: WebContents): Promise<TranslatePageState | null> {
-    if (wc.isDestroyed()) return null;
-    await inject(wc);
-    const raw: unknown = await wc.executeJavaScript('window.__tepegozTranslateRestore?.() ?? null;', true);
-    const parsed = PageScriptStateSchema.safeParse(raw);
-    const url = wc.getURL();
-    const origin = originOf(url) ?? '';
-    const restored: TranslatePageState = {
-      url,
-      origin,
-      sourceLanguage: normalizeTranslateLanguage(parsed.success ? parsed.data.sourceLanguage : undefined),
-      targetLanguage: normalizeTranslateLanguage(
-        parsed.success ? parsed.data.targetLanguage : undefined,
-        translateHost.targetLanguage(),
-      ),
-      status: 'restored',
-      translatedItems: 0,
-      totalItems: 0,
-      engine: 'none',
-      error: null,
-      updatedAt: Date.now(),
-    };
-    setTranslatePageState(restored);
-    return restored;
-  },
-};
 
 export default TranslatePageInjector;
