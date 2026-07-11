@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveNodePath, type PathNode } from './dom-path.js';
+import { resolveNodePath } from './dom-path.js';
 
 /** Minimal DOM-shaped node for testing the resolver without a real DOM (it is duck-typed). */
 interface TestNode {
@@ -15,7 +15,7 @@ const node = (id: string, children: TestNode[] = [], extra: Partial<TestNode> = 
   ...extra,
 });
 const resolve = (root: TestNode, path: number[][]): string | null =>
-  (resolveNodePath(root as unknown as PathNode, path) as unknown as TestNode | null)?.id ?? null;
+  (resolveNodePath(root, path) as unknown as TestNode | null)?.id ?? null;
 
 describe('resolveNodePath', () => {
   // document -> html -> [head, body -> [a, b, target]]
