@@ -87,6 +87,8 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   fileAccessSeeded: 'private',
   // Private — a purely cosmetic window-chrome preference; extensions have no need for it.
   glassChrome: 'private',
+  // Private — the user's window placement; a UI/footprint detail extensions have no need for.
+  windowBounds: 'private',
 };
 
 // --- Compile-time guards: pin the shared PublicSettings shape to the real Preferences projection. ---

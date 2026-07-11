@@ -196,6 +196,20 @@ export interface Preferences {
   /** Translucent "glass" chrome (Windows 11 Mica backdrop behind the tab/toolbar/bookmarks bars).
    *  Private (not exposed to extensions); only takes visible effect on Win11 — see `isMicaSupported`. */
   glassChrome: boolean;
+  /** Last main-window placement (position + size + maximized), restored on the next launch. `null` for a
+   *  fresh profile → the default size, OS-centered. Device-local (never synced — bounds are per-monitor);
+   *  a saved rectangle on a display that no longer exists is ignored and the window opens on the primary
+   *  screen. See `createWindow`. */
+  windowBounds: WindowBounds | null;
+}
+
+/** Persisted main-window placement — the restored (non-maximized) rectangle plus whether it was maximized. */
+export interface WindowBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  maximized: boolean;
 }
 
 /**

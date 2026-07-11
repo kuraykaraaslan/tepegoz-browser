@@ -1,6 +1,6 @@
-import { app, BrowserWindow, shell, type Rectangle } from 'electron';
+import { app, BrowserWindow, screen, shell, type Rectangle } from 'electron';
 import { join } from 'node:path';
-import { IpcChannels } from '@tepegoz/desktop-ipc';
+import { IpcChannels, type WindowBounds } from '@tepegoz/desktop-ipc';
 import PreferenceStore from '@tepegoz/preferences';
 import { isTrustedAppUrl } from './lib/trusted-origin';
 import { GLASS_BG, OPAQUE_BG, isMicaSupported } from './lib/glass';
@@ -18,6 +18,27 @@ const CHROME_WEB_PREFERENCES = {
   spellcheck: false,
   partition: APP_PARTITION,
 } as const;
+
+// Default main-window size for a fresh profile (no saved placement yet). The window opens OS-centered.
+const DEFAULT_WINDOW_WIDTH = 1280;
+const DEFAULT_WINDOW_HEIGHT = 854;
+const MIN_WINDOW_WIDTH = 640;
+const MIN_WINDOW_HEIGHT = 427;
+
+/**
+ * True when the saved rectangle still lands on a currently-connected display. Guards against restoring a
+ * window onto a monitor that was unplugged/rearranged since last launch (it would open off-screen and be
+ * unreachable). We require a real chunk of the title bar to fall inside some display's work area (not just
+ * a 1px touch), so a barely-overlapping ghost still counts as off-screen → falls back to the primary screen.
+ */
+function isBoundsOnScreen(b: WindowBounds): boolean {
+  return screen.getAllDisplays().some((display) => {
+    const wa = display.workArea;
+    const overlapW = Math.min(b.x + b.width, wa.x + wa.width) - Math.max(b.x, wa.x);
+    const overlapH = Math.min(b.y + b.height, wa.y + wa.height) - Math.max(b.y, wa.y);
+    return overlapW >= 100 && overlapH >= 50;
+  });
+}
 
 // Brand app icon (generated from resources/icon.svg via `pnpm --filter @tepegoz/desktop icons`).
 // Windows favors the multi-resolution .ico; other platforms use the 512px PNG.
@@ -41,11 +62,29 @@ export function createWindow(): BrowserWindow {
   // `.glass` styles make the shell/bars translucent so the material shows through (see lib/glass.ts).
   // `show:false` + reveal-on-paint (below) means the transparent fill never flashes the desktop.
   const glass = isMicaSupported() && PreferenceStore.getAll().glassChrome;
+  // The AI-1 eval harness launches the real app many times back-to-back; keep every launch OFF the
+  // user's active view (see `reveal`) and OFF the persisted placement so a batch run is deterministic.
+  const evalMode = process.env.TEPEGOZ_EVAL === '1';
+
+  // Restore the last placement — but never in eval mode (batch launches must be deterministic + fully
+  // on-screen), and never when the saved rectangle lands on a display that is no longer connected: in
+  // that case we drop x/y so Electron centers the window on the primary screen ("open on the first
+  // screen"), keeping the remembered size. `maximized` is applied after creation.
+  const saved = evalMode ? null : PreferenceStore.getAll().windowBounds;
+  let placement: Partial<Rectangle>;
+  if (saved === null) {
+    placement = { width: DEFAULT_WINDOW_WIDTH, height: DEFAULT_WINDOW_HEIGHT };
+  } else if (isBoundsOnScreen(saved)) {
+    placement = { x: saved.x, y: saved.y, width: saved.width, height: saved.height };
+  } else {
+    // Saved monitor is gone → keep the remembered size but let Electron center it on the primary screen.
+    placement = { width: saved.width, height: saved.height };
+  }
+
   const win = new BrowserWindow({
-    width: 1280,
-    height: 800,
-    minWidth: 800,
-    minHeight: 600,
+    ...placement,
+    minWidth: MIN_WINDOW_WIDTH,
+    minHeight: MIN_WINDOW_HEIGHT,
     show: false,
     frame: false,
     icon: ICON_PATH,
@@ -57,13 +96,14 @@ export function createWindow(): BrowserWindow {
     webPreferences: { ...CHROME_WEB_PREFERENCES },
   });
 
+  // Reopen maximized if that is how the user left it (the restored bounds above become the un-maximize
+  // target). Skipped in eval mode, which never restores a placement.
+  if (saved?.maximized) win.maximize();
+
   // Reveal the window robustly: prefer 'ready-to-show' (no white flash), but NEVER leave it stuck
   // hidden if that event is delayed or missed (e.g. a renderer load hiccup in dev). did-finish-load
   // and a timed fallback guarantee the window always appears. show() is idempotent.
   let shown = false;
-  // The AI-1 eval harness launches the real app many times back-to-back; keep every launch OFF the
-  // user's active view so a batch run never steals focus or pops windows while they work at the machine.
-  const evalMode = process.env.TEPEGOZ_EVAL === '1';
   const reveal = (): void => {
     if (shown || win.isDestroyed()) return;
     shown = true;
@@ -91,6 +131,40 @@ export function createWindow(): BrowserWindow {
   };
   win.on('maximize', emitMaximized);
   win.on('unmaximize', emitMaximized);
+
+  // Remember the window placement across launches. `getNormalBounds()` returns the RESTORED rectangle
+  // (ignoring the maximized/minimized frame), so we always persist a sane un-maximize target alongside
+  // the maximized flag. Eval launches are excluded (deterministic batch runs must not mutate prefs).
+  // Move/resize fire rapidly while dragging, so persistence is debounced onto a short timer.
+  if (!evalMode) {
+    let saveTimer: ReturnType<typeof setTimeout> | null = null;
+    const persistBounds = (): void => {
+      if (win.isDestroyed() || win.isMinimized()) return; // minimized bounds are meaningless; skip
+      const b = win.getNormalBounds();
+      PreferenceStore.update({
+        windowBounds: {
+          x: b.x,
+          y: b.y,
+          width: b.width,
+          height: b.height,
+          maximized: win.isMaximized(),
+        },
+      });
+    };
+    const scheduleSave = (): void => {
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(persistBounds, 400);
+    };
+    win.on('resize', scheduleSave);
+    win.on('move', scheduleSave);
+    win.on('maximize', scheduleSave);
+    win.on('unmaximize', scheduleSave);
+    // Flush synchronously on close so the final placement is never lost to a pending debounce timer.
+    win.on('close', () => {
+      if (saveTimer) clearTimeout(saveTimer);
+      persistBounds();
+    });
+  }
 
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('https://')) {

@@ -230,6 +230,16 @@ export const PreferencesSchema = z.object({
   fileAccessSeeded: z.boolean(),
   // Translucent "glass" chrome (Win11 Mica). Private — not projected to PublicSettings.
   glassChrome: z.boolean(),
+  // Last main-window placement (restored on next launch); null = fresh profile → default size, centered.
+  windowBounds: z
+    .object({
+      x: z.number().int(),
+      y: z.number().int(),
+      width: z.number().int().positive(),
+      height: z.number().int().positive(),
+      maximized: z.boolean(),
+    })
+    .nullable(),
 }) satisfies z.ZodType<Preferences>;
 
 /** Patch shape for partial updates — only provided keys are applied. */
@@ -332,4 +342,6 @@ export const DEFAULT_PREFERENCES: Preferences = {
   fileAccessSeeded: false,
   // Glass chrome on by default; the main process only applies Mica when the OS supports it (Win11).
   glassChrome: true,
+  // No saved placement yet — the first launch uses the default size, OS-centered on the primary screen.
+  windowBounds: null,
 };
