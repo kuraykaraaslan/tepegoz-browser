@@ -96,6 +96,17 @@ export default class CdpDriver {
     await wc.debugger.sendCommand('Page.enable');
     await wc.debugger.sendCommand('Runtime.enable');
     await wc.debugger.sendCommand('Network.enable');
+    // Make the page behave as focused even when its OS window is NOT — the agent must be able to fill and
+    // interact with a tab while the user has another window/app in front (and the eval window is shown
+    // inactive by design). Without this, a synthetic click on an input in an unfocused window does not
+    // make it `document.activeElement`, so the subsequent typing silently goes nowhere and every fill
+    // no-ops (measured on the AI-1 harness: `[fill] focus:false`, field empty). This is the standard,
+    // non-intrusive mechanism (what Puppeteer/Playwright enable by default); it does NOT steal OS focus
+    // and preserves the real-click-to-focus path. Best-effort — an older/edge target that lacks it must
+    // not break attach.
+    await wc.debugger
+      .sendCommand('Emulation.setFocusEmulationEnabled', { enabled: true })
+      .catch((err) => Logger.warn('focus emulation unavailable', { err: String(err) }));
   }
 
   /** Detach the debugger from the current WebContents (best-effort; swallows teardown races). */

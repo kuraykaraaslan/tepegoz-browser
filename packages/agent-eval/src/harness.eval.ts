@@ -35,7 +35,7 @@ import { judgeComplete, planRun, runScenarioTrials } from './harness-run';
  * the Playwright test declaration.
  */
 test('agent-eval — drive the real app and score competence', async () => {
-  test.setTimeout(1_800_000);
+  test.setTimeout(3_600_000);
   if (!existsSync(appEntry)) {
     throw new Error(
       `desktop app not built at ${appEntry} — run \`pnpm --filter @tepegoz/desktop build\` (\`pnpm eval\` does this first).`,

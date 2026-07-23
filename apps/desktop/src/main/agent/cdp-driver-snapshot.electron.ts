@@ -51,6 +51,38 @@ export async function snapshotElements(
   return snapshotElementsA11y(wc, deps);
 }
 
+/**
+ * Perception observability: how many actionable elements a snapshot yielded, and when ZERO, the page's
+ * own viewport dimensions + raw form-control count. A backgrounded/unsized window reports 0×0
+ * innerWidth/Height, which makes the in-viewport test reject every element and returns a silent empty
+ * set the agent cannot act on — the "no interactable elements" spiral. One low-frequency log per snapshot.
+ */
+async function logPerception(
+  wc: WebContents,
+  contextId: number,
+  url: string,
+  count: number,
+): Promise<void> {
+  if (count > 0) {
+    Logger.info('[perception] render-dom', { count, url });
+    return;
+  }
+  const vpRaw: unknown = await wc.debugger
+    .sendCommand('Runtime.evaluate', {
+      expression:
+        '({w: window.innerWidth, h: window.innerHeight, dq: document.querySelectorAll("a,button,input,select,textarea").length})',
+      contextId,
+      returnByValue: true,
+      silent: true,
+    })
+    .catch(() => null);
+  const vp = CallResultSchema.safeParse(vpRaw);
+  Logger.info('[perception] render-dom EMPTY', {
+    url,
+    viewport: vp.success ? JSON.stringify(vp.data.result.value) : 'unknown',
+  });
+}
+
 /** Render-DOM perception (AI-2): inject `buildDomTree` in an isolated world, validate, map to refs.
  *  `opts.viewportExpansionPx` widens the in-viewport test (AI-4 `s16` whole-form check). */
 async function snapshotElementsRenderDom(
@@ -73,6 +105,7 @@ async function snapshotElementsRenderDom(
   if (!tree.success) throw new AppError('render-DOM perception payload malformed', 502);
 
   const { interactables, paths, hashes } = parseDomTree(tree.data);
+  await logPerception(wc, contextId, tree.data.url, interactables.length);
 
   // Mark elements that appeared since the previous snapshot of the SAME page (e.g. a menu the
   // agent just opened). A navigation (url change) or the first snapshot marks nothing new.

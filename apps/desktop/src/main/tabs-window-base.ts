@@ -8,6 +8,7 @@ import { Logger } from '@tepegoz/libs';
 import { INTERNAL_NEWTAB_URL, IpcChannels, type TabsState } from '@tepegoz/desktop-ipc';
 import { TabStore } from '@tepegoz/tab-engine';
 import { internalPageUrl, toNavigationUrl } from './lib/navigation-url';
+import { resolveViewBounds } from './tabs-content-bounds';
 import ActionInterceptorService from './extensions/action-interceptors.electron';
 import TabManager from './tabs-manager';
 import {
@@ -44,6 +45,21 @@ export class WindowTabsBase {
   /** The owning chrome window (for the registry / focused-window resolution). */
   get window(): BrowserWindow {
     return this.win;
+  }
+
+  /**
+   * The rectangle to size a `WebContentsView` with — `this.bounds` once the renderer has reported a real
+   * content region, otherwise a non-zero fallback from the native window's own content size. A
+   * `WebContentsView` laid out at 0×0 gives its page `innerWidth/innerHeight === 0`, which makes the
+   * agent's render-DOM perception reject EVERY element (the "no interactable elements" blindness the AI-1
+   * harness exposed). `this.bounds` starts 0×0 and is only written by the renderer's ResizeObserver IPC
+   * (`setContentBounds`), which does not exist until the `App` chrome mounts; a tab whose page loads
+   * before that (fresh window, background tab, first-load race) would otherwise be blind. The fallback is
+   * a pure transient — the moment the renderer reports a non-zero region it wins. Decision lives in the
+   * pure {@link resolveViewBounds} so it is unit-testable without a window.
+   */
+  protected effectiveBounds(): Rectangle {
+    return resolveViewBounds(this.bounds, this.win.isDestroyed() ? null : this.win.getContentSize());
   }
 
   /** Tear down all views + state when the window closes (prevents stale tabs leaking). Called by the
@@ -128,6 +144,12 @@ export class WindowTabsBase {
     this.views.set(id, view);
     this.wireView(id, view);
 
+    // Size the view BEFORE the load, so the page never lays out at 0×0 (which blinds perception). A
+    // background tab is never `activate`d, so this is the ONLY place it is sized until first activation;
+    // a foreground tab gets re-sized in `activate` below. Uses the renderer's real bounds once known,
+    // else the native-window fallback.
+    view.setBounds(this.effectiveBounds());
+
     // A tab spawned FROM a grouped tab (window.open, "open link in new tab", duplicate, new-tab-right)
     // must join that group and sit right after its opener — never break out of the group run (ADR-0020).
     this.inheritGroup(id, opts?.openerId);
@@ -169,7 +191,7 @@ export class WindowTabsBase {
     const view = this.views.get(id);
     if (this.contentVisible && view !== undefined) {
       this.win.contentView.addChildView(view);
-      view.setBounds(this.bounds);
+      view.setBounds(this.effectiveBounds());
     }
     this.emitState();
   }

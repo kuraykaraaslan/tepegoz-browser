@@ -130,6 +130,10 @@ export class WindowTabsNav extends WindowTabsMoves {
 
   /** The content area (below the chrome), in DIP, as measured by the renderer. */
   setContentBounds(bounds: Rectangle): void {
+    // Ignore a zero-area report: the renderer momentarily measures 0×0 during layout thrash (or if the
+    // content element is transiently collapsed), and storing it would blind perception until the next
+    // report. The renderer stays the authority for any REAL (non-zero) region; a spurious 0 never wins.
+    if (bounds.width <= 0 || bounds.height <= 0) return;
     this.bounds = bounds;
     if (this.contentVisible) {
       this.activeView()?.setBounds(bounds);
@@ -144,7 +148,7 @@ export class WindowTabsNav extends WindowTabsMoves {
     if (view === undefined) return;
     if (visible) {
       this.win.contentView.addChildView(view);
-      view.setBounds(this.bounds);
+      view.setBounds(this.effectiveBounds());
     } else {
       this.win.contentView.removeChildView(view);
     }

@@ -135,6 +135,40 @@ async function waitForDomQuiet(
   });
 }
 
+/** Longest we wait for the page to acquire a non-zero layout viewport before perception. Short: with the
+ *  content-view bounds fix in place this resolves on the first frame; the cap only matters on a
+ *  pathological page and must never extend a run. */
+const VIEWPORT_READY_MS = 300;
+
+/**
+ * Wait (bounded) until the page has a non-zero layout viewport, so perception never runs against a
+ * 0×0 / unpainted view (which silently rejects every element — the AI-1 "no interactable elements"
+ * blindness). Resolves as soon as `innerWidth>0 && innerHeight>0`, or after its own deadline regardless.
+ * A safety net layered on top of the content-view bounds fix; strictly time-bounded and non-fatal.
+ */
+async function waitForViewport(wc: WebContents, ensure: EnsureAttached, timeoutMs: number): Promise<void> {
+  await ensure(wc);
+  const contextId = await mainFrameIsolatedContext(wc);
+  const budget = Math.max(0, Math.trunc(timeoutMs));
+  await wc.debugger.sendCommand('Runtime.evaluate', {
+    expression: `(() => new Promise((resolve) => {
+      const deadline = Date.now() + ${String(budget)};
+      const ready = () => (window.innerWidth > 0 && window.innerHeight > 0);
+      if (ready()) { resolve('ready'); return; }
+      const tick = () => {
+        if (ready()) { resolve('ready'); return; }
+        if (Date.now() >= deadline) { resolve('timeout'); return; }
+        (window.requestAnimationFrame || window.setTimeout)(tick);
+      };
+      tick();
+    }))()`,
+    contextId,
+    awaitPromise: true,
+    returnByValue: true,
+    silent: true,
+  });
+}
+
 /** Wait for a load triggered by an interaction to settle, then network and DOM quiescence. */
 export async function waitForPageSettled(
   wc: WebContents,
@@ -153,4 +187,8 @@ export async function waitForPageSettled(
   await waitForNetworkIdle(wc, ensure, SETTLE_MS, remaining()).catch(() => undefined);
   if (wc.isDestroyed()) return;
   await waitForDomQuiet(wc, ensure, SETTLE_MS, remaining()).catch(() => delay(SETTLE_MS));
+  if (wc.isDestroyed()) return;
+  // Last: ensure a non-zero layout viewport before the next perception. Capped + non-fatal so it can
+  // never extend or fail a settle.
+  await waitForViewport(wc, ensure, Math.min(VIEWPORT_READY_MS, remaining())).catch(() => undefined);
 }

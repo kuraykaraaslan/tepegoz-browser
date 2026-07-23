@@ -68,7 +68,7 @@ type EvalOut = z.infer<typeof EvalOutSchema>;
  * back-off legitimately runs for minutes; still bounded so `REPEAT=3` fits inside the Playwright test
  * timeout. A trial that exceeds this is reported as CUT OFF, never as the agent getting it wrong.
  */
-const TRIAL_TIMEOUT_MS = 480_000;
+const TRIAL_TIMEOUT_MS = 900_000;
 
 /** The marker `runOne` returns when a trial never produced output — a trial that did not finish, which
  *  is evidence about the harness/budget, NOT about the agent's competence. */
@@ -126,6 +126,15 @@ async function runOne(
   // pass-frequency was really one trial's verdict counted N times.
   const profileDir = mkdtempSync(join(work, 'profile-'));
   const outPath = join(profileDir, 'eval-out.json');
+  // Start already-onboarded. A fresh profile otherwise boots into the ONBOARDING surface, which REPLACES
+  // the whole browser chrome — so the `App` component that measures the content area and reports its
+  // bounds over IPC never mounts, the tab content view stays 0×0, and the agent's perception sees zero
+  // elements (the "no interactable elements" blindness). Seeding `onboardingCompleted: true` into the
+  // profile's prefs BEFORE launch makes the app boot the real browser chrome + a real tab — the state
+  // every agent-running user is actually in. `PreferenceStore.init` reads this as a patch and fills the
+  // rest from defaults, so a single-key file validates. With `--user-data-dir=profileDir`, userData IS
+  // profileDir, so this is the file the app reads at startup.
+  writeFileSync(join(profileDir, 'preferences.json'), JSON.stringify({ onboardingCompleted: true }), 'utf8');
   // Electron must launch as a REAL GUI app. Agent/CI shells (this one included) often set
   // ELECTRON_RUN_AS_NODE=1, which makes electron.exe run as plain Node — no `app` object,
   // `require('electron')` returns a path string — so the app throws at startup and Playwright

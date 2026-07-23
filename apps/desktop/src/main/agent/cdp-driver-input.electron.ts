@@ -1,5 +1,5 @@
 import type { WebContents } from 'electron';
-import { AppError } from '@tepegoz/libs';
+import { AppError, Logger } from '@tepegoz/libs';
 import { HumanInputAdapter } from '@tepegoz/human-input';
 import {
   DEFAULT_SCROLL_PX,
@@ -8,6 +8,7 @@ import {
   SelectResultSchema,
   type DriverCore,
   type KeySpec,
+  type NodeArg,
 } from './cdp-driver-schemas.electron.js';
 import { centerOf, fileInputInfo, isFocused, objectIdFor } from './cdp-driver-dom.electron.js';
 
@@ -17,6 +18,19 @@ import { centerOf, fileInputInfo, isFocused, objectIdFor } from './cdp-driver-do
  * click-to-focus (never DOM.focus on the active tab), verify+retry, randomized inter-action idle. State
  * lives in the driver class; it is lent here via {@link DriverCore} (ensure / resolveRef / settle).
  */
+
+/** Poll {@link isFocused} until the node is focused or the budget elapses. A synthetic click focuses the
+ *  element ASYNCHRONOUSLY (notably in a backgrounded/inactive window), so an immediate check races the
+ *  focus and reads false even when the click worked — measured on the AI-1 harness. ~500 ms is generous;
+ *  a real focus lands in a frame or two. */
+async function waitForFocus(wc: WebContents, node: NodeArg, timeoutMs = 500): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    if (await isFocused(wc, node)) return true;
+    if (Date.now() >= deadline) return false;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+}
 
 /** Dispatch a keyDown+keyUp for one key, with optional modifier bitmask (CDP: 2 = Ctrl). */
 async function sendKey(wc: WebContents, spec: KeySpec, modifiers = 0): Promise<void> {
@@ -96,13 +110,29 @@ export async function fillElement(
     // layout shifted (e.g. an overlay dismissed on the first click).
     await adapter.idle(); // human think/react pause between behaviors
     let target = { x, y };
+    let focused = false;
     for (let attempt = 0; attempt < 3; attempt++) {
       if (attempt > 0) {
         await adapter.idle(200, 70);
         target = await centerOf(wc, node);
       }
       await adapter.click(target.x, target.y);
-      if (await isFocused(wc, node)) break;
+      // Focus lands ASYNCHRONOUSLY after a synthetic click, especially in a backgrounded/inactive window
+      // (measured on the AI-1 harness: an immediate check reads false, yet a click seconds later reads
+      // true and the fill then works perfectly). Poll briefly so we don't type before focus settles.
+      focused = await waitForFocus(wc, node);
+      if (focused) break;
+    }
+    // Last resort: the trusted click(s) never took focus (e.g. an inactive window that even focus
+    // emulation didn't cover). A fill that silently types into nothing is worse than a programmatic
+    // focus, and the real click was already dispatched (so the trusted-gesture signal is present) —
+    // fall back to DOM.focus so the value reliably lands rather than no-oping.
+    if (!focused) {
+      // The window was almost certainly unfocused (eval, or the user switched apps): synthetic clicks
+      // don't focus an input there, so type would no-op. Log at warn so this stays visible if it ever
+      // fires in a context we thought was focused.
+      Logger.warn('fill: click did not focus target; using DOM.focus fallback');
+      await wc.debugger.sendCommand('DOM.focus', { ...node }).catch(() => undefined);
     }
     await adapter.idle(200, 70); // beat: click -> select-all
     // Ctrl+A with a text-less KeySpec => rawKeyDown, so it fires the accelerator without typing 'a'.
