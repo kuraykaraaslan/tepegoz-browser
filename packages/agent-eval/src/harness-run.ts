@@ -1,5 +1,5 @@
 import { _electron as electron } from '@playwright/test';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { recordFromOutcomes, type StepOutcome } from '@tepegoz/orchestrator';
@@ -63,6 +63,17 @@ const EvalOutSchema = z.object({
 });
 type EvalOut = z.infer<typeof EvalOutSchema>;
 
+/**
+ * How long one trial may take before the harness gives up on it. Generous because a live trial under 429
+ * back-off legitimately runs for minutes; still bounded so `REPEAT=3` fits inside the Playwright test
+ * timeout. A trial that exceeds this is reported as CUT OFF, never as the agent getting it wrong.
+ */
+const TRIAL_TIMEOUT_MS = 480_000;
+
+/** The marker `runOne` returns when a trial never produced output — a trial that did not finish, which
+ *  is evidence about the harness/budget, NOT about the agent's competence. */
+export const CUT_OFF = 'no output';
+
 async function waitForFile(path: string, timeoutMs: number): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -104,7 +115,17 @@ async function runOne(
   work: string,
   logPath: string,
 ): Promise<EvalOut> {
-  const outPath = join(work, `${scenario.id}.out.json`);
+  // A FRESH profile per trial (see below) doubles as this trial's unique identity, so the out-file is
+  // per-trial too.
+  //
+  // It used to be `${scenario.id}.out.json`, shared by every repeat of a scenario — and that single line
+  // invalidated every N>1 measurement the harness has ever produced. Trial 1 runs and writes the file;
+  // trial 2 launches, `waitForFile` finds trial 1's file INSTANTLY, the harness declares the trial done
+  // and calls `app.close()` — killing the app mid-run (hence the "target closed while handling command"
+  // and "Tab failed to load" errors) — and then scores trial 1's output AGAIN as trial 2's. A `k/N`
+  // pass-frequency was really one trial's verdict counted N times.
+  const profileDir = mkdtempSync(join(work, 'profile-'));
+  const outPath = join(profileDir, 'eval-out.json');
   // Electron must launch as a REAL GUI app. Agent/CI shells (this one included) often set
   // ELECTRON_RUN_AS_NODE=1, which makes electron.exe run as plain Node — no `app` object,
   // `require('electron')` returns a path string — so the app throws at startup and Playwright
@@ -121,8 +142,13 @@ async function runOne(
     TEPEGOZ_EVAL_OUT: outPath,
     ELECTRON_ENABLE_LOGGING: '1',
   });
+  // The fresh profile also keeps trials from inheriting each other's persisted session and window bounds
+  // — and keeps the harness out of the developer's real `AppData/Roaming/tepegoz` entirely.
   // Switches BEFORE the app path go to Chromium/Electron; the app path is the first positional arg.
-  const app = await electron.launch({ args: [...KEEP_RENDERING_WHEN_BACKGROUNDED, appDir], env: launchEnv });
+  const app = await electron.launch({
+    args: [`--user-data-dir=${profileDir}`, ...KEEP_RENDERING_WHEN_BACKGROUNDED, appDir],
+    env: launchEnv,
+  });
   // Capture the app's stdout/stderr (the `[eval] <kind>` step trace + Chromium logs) so a FAIL can be
   // diagnosed at step granularity. Best-effort — never fail the run on a log-write error.
   const logChunks: string[] = [];
@@ -131,14 +157,19 @@ async function runOne(
   proc.stderr?.on('data', (d: Buffer) => logChunks.push(d.toString()));
   // Headroom for a live run whose model calls back off on 429 rate limits (a scenario legitimately takes
   // longer under a low-TPM key). The overall Playwright test timeout still bounds the whole run.
-  const wrote = await waitForFile(outPath, 300_000);
+  //
+  // 300s was NOT enough: measured on a live gpt-4o run, 2 of 3 trials were still working (15 and 13 tool
+  // calls in) when the wait expired, and killing them produced empty output that the scorer could not
+  // distinguish from the agent answering wrongly. Every number was biased downward by whichever trials
+  // happened to be slow.
+  const wrote = await waitForFile(outPath, TRIAL_TIMEOUT_MS);
   await app.close().catch(() => undefined);
   try {
     writeFileSync(logPath, logChunks.join(''), 'utf8');
   } catch {
     // best-effort log capture
   }
-  if (!wrote) return { error: 'no output' };
+  if (!wrote) return { error: CUT_OFF };
   let raw: unknown;
   try {
     raw = JSON.parse(readFileSync(outPath, 'utf8'));
@@ -234,11 +265,16 @@ export async function runScenarioTrials(
     ? outs.filter((o) => tripEscaped(o.steps, siteBase, plan.entryUrl)).length
     : 0;
   const escaped = 'fixture' in scenario.target && escapes * 2 >= REPEAT;
+  // Trials the harness had to abandon are NOT competence evidence. Scored they look exactly like a wrong
+  // answer (empty page text + empty summary fail every assertion), so without calling them out a slow run
+  // reads as a stupid one and the whole pass-rate is quietly pessimistic.
+  const cutOff = outs.filter((o) => o.error === CUT_OFF).length;
+  const cutOffNote = cutOff > 0 ? ` — ${String(cutOff)} of ${String(REPEAT)} trial(s) CUT OFF before finishing (not agent error)` : '';
   const failReason = scores.find((s) => !s.ok)?.reason;
   const reason =
     REPEAT > 1
-      ? `${String(passes)}/${String(REPEAT)} passed${!ok && failReason !== undefined ? ` — e.g. ${failReason}` : ''}`
-      : (scores[0]?.reason ?? 'no output');
+      ? `${String(passes)}/${String(REPEAT)} passed${cutOffNote}${!ok && failReason !== undefined ? ` — e.g. ${failReason}` : ''}`
+      : `${scores[0]?.reason ?? CUT_OFF}${cutOffNote}`;
   const result: ScenarioResult = {
     scenario,
     score: { ok, method: scores[0]?.method ?? 'ground-truth', reason },

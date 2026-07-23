@@ -21,6 +21,8 @@ import TypoPageInjector from './extensions/typo-page-injector.electron';
 import typoContextMenuContributor from './extensions/typo-context-menu-contributor.electron';
 import translateHost, { translateCapabilityHost } from './extensions/translate-host.electron';
 import TranslatePageInjector from './extensions/translate-page-injector.electron';
+import videoPlayerHost from './extensions/video-player-host.electron';
+import VideoPlayerPageInjector from './extensions/video-player-page-injector.electron';
 import translateContextMenuContributor from './extensions/translate-context-menu-contributor.electron';
 import PageContextMenuContributionService from './menus/page-context-menu-contributions';
 import MacroService from './macro/macro-service.electron';
@@ -53,14 +55,13 @@ import { maybeRunEval } from './agent/agent-eval-runner.electron';
 import { webToolsHost } from './web/web-tools-host.electron';
 
 // Last-resort process-level hooks: an async error that escapes every boundary must be LOGGED, not a
-// silent crash. Exceptions still terminate (state is unknown); rejections are logged and survived.
+// silent crash. Both are logged and survived — a stray error in a single main-process event handler
+// (e.g. a tab's WebContents teardown listener) must never tear down the user's window(s)/app.
 process.on('unhandledRejection', (reason) => {
   Logger.error('Unhandled promise rejection in main', { reason: String(reason) });
 });
 process.on('uncaughtException', (err) => {
   Logger.error('Uncaught exception in main', { err: String(err), stack: err.stack ?? '' });
-  process.exitCode = 1;
-  app.quit();
 });
 
 // App-specific identity → userData at %APPDATA%/Tepegöz instead of the shared default "Electron" dir.
@@ -74,7 +75,12 @@ if (process.platform === 'win32') app.setAppUserModelId('com.tepegoz.browser');
 // taskbar name). Pin it explicitly BEFORE whenReady so EVERY app.getPath('userData') — stores, the
 // SQLite DB, and the browsing partitions — resolves here. One-time: carry the small settings files
 // over from the pre-rename "Tepegöz" folder so existing preferences + encrypted API keys survive.
-{
+// An explicit `--user-data-dir=…` WINS, exactly as it does in Chrome. Without this the pin below is
+// unconditional and silently discards the switch, so the app can only ever run against the one real
+// profile: a test harness cannot isolate a run, and two instances cannot be kept apart. The AI-1 eval
+// hit precisely that — it passed `--user-data-dir` per trial and every trial still opened the developer's
+// own profile and restored the previous trial's session on top of its own navigation.
+if (app.commandLine.getSwitchValue('user-data-dir').length === 0) {
   const appDataDir = app.getPath('appData');
   const legacyDir = join(appDataDir, 'Tepegöz');
   const userDataDir = join(appDataDir, 'tepegoz');
@@ -142,6 +148,8 @@ if (!app.requestSingleInstanceLock()) {
       translateHost.init();
       TranslatePageInjector.start();
       PageContextMenuContributionService.provide(translateContextMenuContributor);
+      videoPlayerHost.init();
+      VideoPlayerPageInjector.start();
       // Load the popup-blocker settings before any page can call window.open, and register its
       // `popup:open` interceptor with the generic action-interception plane (ADR-0022).
       popupBlockerHost.init();

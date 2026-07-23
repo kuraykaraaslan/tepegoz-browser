@@ -22,6 +22,8 @@ function fakeWebContents(): { wc: WebContents; emit: (method: string, params: un
       },
     },
     once: () => undefined,
+    isDestroyed: () => false,
+    getURL: () => 'http://127.0.0.1:5000/silent-api-failure/index.html',
   } as unknown as WebContents;
   return {
     wc,
@@ -134,6 +136,78 @@ describe('AI-8B CDP network recorder', () => {
     const seen = networkSince(wc, 0);
     expect(seen).toHaveLength(1);
     expect(seen[0]).toMatchObject({ status: 0, errorText: 'net::ERR_CONNECTION_REFUSED' });
+  });
+
+  it('does NOT record a request this browser itself blocked (adblock / CSP / mixed content)', () => {
+    // Tepegöz ships an adblocker. Recording its blocks as failures would make the product announce
+    // "your save failed" every time it successfully blocked a tracker — on a click that worked.
+    const { wc, emit } = fakeWebContents();
+    attachNetworkRecorder(wc);
+    emit('Network.requestWillBeSent', requestWillBeSent({ requestId: 'A' }));
+    emit('Network.loadingFailed', {
+      requestId: 'A',
+      type: 'Fetch',
+      errorText: 'net::ERR_BLOCKED_BY_CLIENT',
+      canceled: false,
+      blockedReason: 'inspector',
+    });
+    emit('Network.requestWillBeSent', requestWillBeSent({ requestId: 'B' }));
+    emit('Network.loadingFailed', {
+      requestId: 'B',
+      type: 'Fetch',
+      errorText: 'net::ERR_BLOCKED_BY_RESPONSE',
+      canceled: false,
+    });
+    expect(networkSince(wc, 0)).toEqual([]);
+  });
+
+  it('keeps only action-bearing failures, so page noise cannot evict the one that matters', () => {
+    const { wc, emit } = fakeWebContents();
+    attachNetworkRecorder(wc);
+    // The failure the feature exists to catch...
+    emit('Network.requestWillBeSent', requestWillBeSent({ requestId: 'save' }));
+    emit('Network.responseReceived', responseReceived({ requestId: 'save' }));
+    // ...followed by far more noise than the ring could hold, had it been allowed in.
+    for (let i = 0; i < 300; i++) {
+      emit('Network.requestWillBeSent', requestWillBeSent({ requestId: `img${String(i)}`, type: 'Image' }));
+      emit(
+        'Network.responseReceived',
+        responseReceived({
+          requestId: `img${String(i)}`,
+          type: 'Image',
+          response: { url: 'http://127.0.0.1:5000/x.png', status: 404 },
+        }),
+      );
+    }
+    const seen = networkSince(wc, 0);
+    expect(seen).toHaveLength(1);
+    expect(seen[0]?.status).toBe(507);
+  });
+
+  it('stamps the observation with the REQUEST start, so earlier in-flight traffic is not blamed on the action', () => {
+    const { wc, emit } = fakeWebContents();
+    attachNetworkRecorder(wc);
+    emit('Network.requestWillBeSent', requestWillBeSent()); // request starts BEFORE the action
+    const actionStartedAt = Date.now() + 1;
+    emit('Network.responseReceived', responseReceived()); // response lands DURING the action window
+    expect(networkSince(wc, actionStartedAt)).toEqual([]);
+  });
+
+  it('stores no query string or credentials, even though the event carries them', () => {
+    const { wc, emit } = fakeWebContents();
+    attachNetworkRecorder(wc);
+    emit(
+      'Network.requestWillBeSent',
+      requestWillBeSent({ request: { url: 'http://user:pw@127.0.0.1:5000/api?token=SECRET#f', method: 'POST' } }),
+    );
+    emit(
+      'Network.responseReceived',
+      responseReceived({ response: { url: 'http://user:pw@127.0.0.1:5000/api?token=SECRET#f', status: 500 } }),
+    );
+    const url = networkSince(wc, 0)[0]?.url ?? '';
+    expect(url).not.toContain('SECRET');
+    expect(url).not.toContain('pw');
+    expect(url).toContain('/api');
   });
 
   it('drops a malformed payload instead of throwing (a perception nicety must never break driving)', () => {

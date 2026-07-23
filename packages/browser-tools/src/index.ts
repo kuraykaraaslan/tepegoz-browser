@@ -17,6 +17,7 @@ export {
 export {
   describeNetworkFailures,
   displayUrl,
+  isActionBearingFailure,
   isReportableFailure,
   selectActionFailures,
   MAX_REPORTED_FAILURES,

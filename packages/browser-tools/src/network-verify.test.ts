@@ -49,7 +49,10 @@ describe('selectActionFailures', () => {
     expect(picked[0]?.status).toBe(0);
   });
 
-  it('ranks same-origin failures before third-party ones, then oldest first', () => {
+  it('DROPS third-party failures rather than ranking them last, and keeps same-origin oldest-first', () => {
+    // Ranking cross-origin last still reported it. A third-party analytics 500 — or a request this
+    // browser's own adblocker refused — is not the agent's action failing, and saying so would teach the
+    // agent to distrust clicks that worked.
     const picked = selectActionFailures(
       [
         obs({ url: 'https://cdn.other.example/api/x', ts: 10 }),
@@ -61,8 +64,12 @@ describe('selectActionFailures', () => {
     expect(picked.map((o) => o.url)).toEqual([
       'https://app.example.com/api/a',
       'https://app.example.com/api/b',
-      'https://cdn.other.example/api/x',
     ]);
+  });
+
+  it('reports nothing when the page url is unparseable — it cannot establish same-origin', () => {
+    expect(selectActionFailures([obs()], 'about:blank')).toEqual([]);
+    expect(selectActionFailures([obs()], '')).toEqual([]);
   });
 
   it('caps how many failures are reported so a broken page cannot flood the context', () => {
@@ -70,9 +77,9 @@ describe('selectActionFailures', () => {
     expect(selectActionFailures(many, PAGE)).toHaveLength(MAX_REPORTED_FAILURES);
   });
 
-  it('does not crash on an unparseable url and still reports it', () => {
-    const picked = selectActionFailures([obs({ url: 'not a url' })], PAGE);
-    expect(picked).toHaveLength(1);
+  it('does not crash on an unparseable url — and cannot claim it is same-origin', () => {
+    expect(() => selectActionFailures([obs({ url: 'not a url' })], PAGE)).not.toThrow();
+    expect(selectActionFailures([obs({ url: 'not a url' })], PAGE)).toEqual([]);
   });
 });
 
@@ -86,6 +93,11 @@ describe('displayUrl', () => {
     const shown = displayUrl('https://app.example.com/api/save?token=SECRET123&id=42#frag', PAGE);
     expect(shown).toBe('/api/save');
     expect(shown).not.toContain('SECRET123');
+  });
+
+  it('still strips the query on the UNPARSEABLE fallback path', () => {
+    // The fallback used to return the raw string, quietly voiding the guarantee the parsed path makes.
+    expect(displayUrl('::not a url::/p?token=SECRET123#f', PAGE)).not.toContain('SECRET123');
   });
 });
 

@@ -1,6 +1,10 @@
 import type { WebContents } from 'electron';
 import { Logger } from '@tepegoz/libs';
-import { isReportableFailure, type NetworkObservation } from '@tepegoz/browser-tools';
+import {
+  isActionBearingFailure,
+  isReportableFailure,
+  type NetworkObservation,
+} from '@tepegoz/browser-tools';
 import {
   NetworkFailedSchema,
   NetworkRequestSchema,
@@ -34,11 +38,33 @@ const MAX_URL_CHARS = 2048;
 /** Longest transport error text stored. */
 const MAX_ERROR_CHARS = 120;
 
+/**
+ * A url reduced to what may be stored and shown: no credentials, no query, no fragment. Stripped at
+ * RECORD time rather than at display time, so the sensitive parts never sit in memory for the life of a
+ * tab and no later formatting path can leak what it was told to hide.
+ */
+function safeUrl(raw: string): string {
+  try {
+    const u = new URL(raw);
+    u.username = '';
+    u.password = '';
+    u.search = '';
+    u.hash = '';
+    return u.toString().slice(0, MAX_URL_CHARS);
+  } catch {
+    return (raw.split(/[?#]/)[0] ?? '').slice(0, MAX_URL_CHARS);
+  }
+}
+
 interface Pending {
   method: string;
   type: string;
   url: string;
   redirects: number;
+  /** Host clock at `requestWillBeSent`. The action window is judged on when a request STARTED, not when
+   *  its response happened to land — otherwise a poll already in flight, or anything that fires while
+   *  `waitForPageSettled` waits for network idle, gets blamed on the interaction that did not cause it. */
+  startedAt: number;
 }
 
 interface TabNetwork {
@@ -50,7 +76,11 @@ const state = new WeakMap<WebContents, TabNetwork>();
 /** WebContents whose permanent listener is already installed (guards re-attach on tab switch). */
 const wired = new WeakSet<WebContents>();
 
-function push(net: TabNetwork, observation: NetworkObservation): void {
+function push(net: TabNetwork, observation: NetworkObservation, pageUrl: string): void {
+  // Ring ONLY what could ever be reported. A normal page load issues dozens of images/scripts/fonts; if
+  // those shared the buffer they would evict the single action-bearing failure this recorder exists to
+  // catch — and a page could do it deliberately to re-silence its own failed save.
+  if (!isActionBearingFailure(observation)) return;
   net.observations.push(observation);
   if (net.observations.length > MAX_OBSERVATIONS) {
     net.observations.splice(0, net.observations.length - MAX_OBSERVATIONS);
@@ -64,7 +94,13 @@ function push(net: TabNetwork, observation: NetworkObservation): void {
   // failing request, including subresource 404/403 noise the agent is correctly never shown — which made
   // a harness run look like the agent had been told about failures it never saw, and cost real debugging
   // time. A diagnostic log that does not match what was reported is worse than no log.
-  if (isReportableFailure(observation)) {
+  let pageOrigin: string | null;
+  try {
+    pageOrigin = new URL(pageUrl).origin;
+  } catch {
+    pageOrigin = null;
+  }
+  if (isReportableFailure(observation, pageOrigin)) {
     Logger.info('agent network failure observed', {
       status: observation.status,
       type: observation.type,
@@ -83,8 +119,10 @@ function trackRequest(net: TabNetwork, params: unknown): void {
   net.pending.set(requestId, {
     method: (request?.method ?? previous?.method ?? '').toUpperCase().slice(0, 16),
     type: type ?? previous?.type ?? '',
-    url: (request?.url ?? previous?.url ?? '').slice(0, MAX_URL_CHARS),
+    url: safeUrl(request?.url ?? previous?.url ?? ''),
     redirects: redirectResponse !== undefined ? (previous?.redirects ?? 0) + 1 : (previous?.redirects ?? 0),
+    // A redirect hop keeps the ORIGINAL start time — the chain is one request as far as causality goes.
+    startedAt: previous?.startedAt ?? Date.now(),
   });
   if (net.pending.size > MAX_PENDING) {
     const oldest = net.pending.keys().next();
@@ -92,42 +130,57 @@ function trackRequest(net: TabNetwork, params: unknown): void {
   }
 }
 
-function trackResponse(net: TabNetwork, params: unknown): void {
+function trackResponse(net: TabNetwork, params: unknown, pageUrl: string): void {
   const parsed = NetworkResponseSchema.safeParse(params);
   if (!parsed.success) return;
   const { requestId, type, response } = parsed.data;
   const pending = net.pending.get(requestId);
   net.pending.delete(requestId);
-  push(net, {
-    method: pending?.method ?? '',
-    url: response.url.slice(0, MAX_URL_CHARS),
-    status: Math.trunc(response.status),
-    type: type ?? pending?.type ?? '',
-    ts: Date.now(),
-    redirects: pending?.redirects ?? 0,
-  });
+  push(
+    net,
+    {
+      method: pending?.method ?? '',
+      url: safeUrl(response.url),
+      status: Math.trunc(response.status),
+      type: type ?? pending?.type ?? '',
+      ts: pending?.startedAt ?? Date.now(),
+      redirects: pending?.redirects ?? 0,
+    },
+    pageUrl,
+  );
 }
 
-function trackFailure(net: TabNetwork, params: unknown): void {
+function trackFailure(net: TabNetwork, params: unknown, pageUrl: string): void {
   const parsed = NetworkFailedSchema.safeParse(params);
   if (!parsed.success) return;
-  const { requestId, type, errorText, canceled } = parsed.data;
+  const { requestId, type, errorText, canceled, blockedReason } = parsed.data;
   const pending = net.pending.get(requestId);
   net.pending.delete(requestId);
   // A CANCELED request is normal traffic, not a failure: navigating away, an aborted fetch, a
   // React effect cleanup. Reporting it would cry wolf on every successful navigation.
   if (canceled === true || errorText === 'net::ERR_ABORTED') return;
+  // Neither is a request THIS BROWSER refused to send. Tepegöz ships its own adblocker, and CSP /
+  // mixed-content / extension rules block requests on perfectly healthy pages — attributing those to the
+  // agent's click would make the product report "your save failed" every time it successfully blocked a
+  // tracker. `blockedReason` is the CDP-native signal; the ERR_BLOCKED_* family covers the rest.
+  if (blockedReason !== undefined || (errorText !== undefined && errorText.startsWith('net::ERR_BLOCKED'))) {
+    return;
+  }
   const url = pending?.url ?? '';
   if (url.length === 0) return; // nothing identifiable to report
-  push(net, {
-    method: pending?.method ?? '',
-    url,
-    status: 0,
-    type: type ?? pending?.type ?? '',
-    ts: Date.now(),
-    redirects: pending?.redirects ?? 0,
-    ...(errorText !== undefined ? { errorText: errorText.slice(0, MAX_ERROR_CHARS) } : {}),
-  });
+  push(
+    net,
+    {
+      method: pending?.method ?? '',
+      url,
+      status: 0,
+      type: type ?? pending?.type ?? '',
+      ts: pending?.startedAt ?? Date.now(),
+      redirects: pending?.redirects ?? 0,
+      ...(errorText !== undefined ? { errorText: errorText.slice(0, MAX_ERROR_CHARS) } : {}),
+    },
+    pageUrl,
+  );
 }
 
 /**
@@ -140,9 +193,20 @@ export function attachNetworkRecorder(wc: WebContents): void {
   const net: TabNetwork = { observations: [], pending: new Map() };
   state.set(wc, net);
   wc.debugger.on('message', (_event: unknown, method: string, params?: unknown) => {
-    if (method === 'Network.requestWillBeSent') trackRequest(net, params);
-    else if (method === 'Network.responseReceived') trackResponse(net, params);
-    else if (method === 'Network.loadingFailed') trackFailure(net, params);
+    if (method === 'Network.requestWillBeSent') {
+      trackRequest(net, params);
+      return;
+    }
+    // The page the tab is on right now — the origin a failure has to match to count as THIS page's
+    // action failing. Read per event (a tab navigates) and defensively, since a destroyed tab throws.
+    let pageUrl = '';
+    try {
+      pageUrl = wc.isDestroyed() ? '' : wc.getURL();
+    } catch {
+      pageUrl = '';
+    }
+    if (method === 'Network.responseReceived') trackResponse(net, params, pageUrl);
+    else if (method === 'Network.loadingFailed') trackFailure(net, params, pageUrl);
   });
   wc.once('destroyed', () => {
     state.delete(wc);

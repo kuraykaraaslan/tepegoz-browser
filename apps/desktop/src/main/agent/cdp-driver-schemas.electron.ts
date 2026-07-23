@@ -76,6 +76,9 @@ export const NetworkFailedSchema = z
     type: z.string().optional(),
     errorText: z.string().optional(),
     canceled: z.boolean().optional(),
+    /** Set when the BROWSER refused the request (adblock/CSP/mixed-content/extension) — not a server
+     *  failure, and never the agent's action failing. */
+    blockedReason: z.string().optional(),
   })
   .passthrough();
 export const ResolveSchema = z.object({ object: z.object({ objectId: z.string() }).passthrough() });

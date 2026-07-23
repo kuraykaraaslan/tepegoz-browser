@@ -97,6 +97,34 @@ function providerForRun(): { id: AIProvider; instance: ModelProvider } {
   return { id, instance: new ScriptedProvider(parsed.data.replies, id) };
 }
 
+/**
+ * Navigate to the scenario's entry page through the REAL navigation path, retrying while the app still
+ * has no drivable tab.
+ *
+ * This bootstrap runs from `whenReady` BEFORE the window's first tab exists, and a clean profile has no
+ * session to restore — so `navigate` throws `No active page` for the first moment of a run. It was
+ * invisible until trials got isolated profiles, because every trial silently inherited the PREVIOUS
+ * trial's restored tab; the first trial of a batch passed and the rest died, which is exactly the
+ * pattern that made repeat runs meaningless.
+ */
+async function navigateWhenReady(url: string, timeoutMs = 20_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    // A brand-new profile opens with NO tab at all, and `navigateActive` returns early when there is no
+    // active tab record — so the agent would sit out the whole timeout on "No active page". Open the
+    // entry tab the way the UI does. (Whether a first-run window SHOULD come up tab-less is a separate
+    // product question this does not answer; it is simply not the eval's to decide.)
+    if (TabManager.activeWebContents() === null) TabManager.createTab(url);
+    try {
+      await browserHost.navigate(url);
+      return;
+    } catch (err) {
+      if (Date.now() >= deadline) throw err;
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+  }
+}
+
 export async function maybeRunEval(): Promise<void> {
   if (process.env.TEPEGOZ_EVAL !== '1') return;
 
@@ -117,7 +145,7 @@ export async function maybeRunEval(): Promise<void> {
     const provider = providerForRun();
 
     // Start the agent on the target page through the REAL navigation path.
-    await browserHost.navigate(fixtureUrl);
+    await navigateWhenReady(fixtureUrl);
 
     const handoff = mainStrings().agent.handoff;
     const hooks: AgentRunHooks = {

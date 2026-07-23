@@ -55,14 +55,31 @@ function isFailure(o: NetworkObservation): boolean {
 }
 
 /**
- * Would this observation ever be shown to the agent? The single predicate for "this failure matters",
- * shared by the selection above and by the host's diagnostic logging — so an operator reading the log
- * sees exactly the set the model could have seen. Keeping two filters in sync by hand is how a log
- * starts lying: an earlier version logged every subresource 403 and made a run look like the agent had
- * been told about failures it was correctly never shown.
+ * Could this observation EVER matter? Type + outcome only — the cheap test the recorder uses to decide
+ * what is worth keeping in its bounded ring, so ordinary page noise (images, scripts, fonts) can never
+ * evict the one action-bearing failure the feature exists to catch.
  */
-export function isReportableFailure(o: NetworkObservation): boolean {
+export function isActionBearingFailure(o: NetworkObservation): boolean {
   return ACTION_BEARING_TYPES.has(o.type) && isFailure(o);
+}
+
+/**
+ * Would this failure actually be shown to the agent? The single predicate for "this matters", shared by
+ * the selection below and by the host's diagnostic logging — so an operator reading the log sees exactly
+ * the set the model could have seen. Keeping two filters in sync by hand is how a log starts lying.
+ *
+ * **Same-origin is a FILTER, not a ranking.** A third-party request failing is not this action failing:
+ * an analytics endpoint returning 500, or — the case that actually bites here — a request this browser's
+ * OWN adblocker refused, would otherwise manufacture "the save failed" on a click that worked. That is
+ * the false alarm this module claims to prevent, and ranking cross-origin last did not prevent it.
+ *
+ * The deliberate cost: a site whose API lives on a different origin (`api.example.com`) has its failures
+ * missed. That is the right direction to err — this signal's whole contract is that silence proves
+ * nothing, while a false alarm actively teaches the agent to distrust actions that succeeded.
+ */
+export function isReportableFailure(o: NetworkObservation, pageOrigin: string | null): boolean {
+  if (!isActionBearingFailure(o)) return false;
+  return pageOrigin !== null && originOf(o.url) === pageOrigin;
 }
 
 /** The origin of `url`, or `null` when it is not parseable (data:/blob:/malformed). */
@@ -84,7 +101,9 @@ export function displayUrl(url: string, pageUrl: string): string {
   try {
     parsed = new URL(url);
   } catch {
-    return url.slice(0, MAX_URL_CHARS);
+    // Unparseable input must NOT take the stripping guarantee down with it: cut at the first `?`/`#`
+    // by hand, so a query string cannot ride the fallback path into the prompt.
+    return (url.split(/[?#]/)[0] ?? '').slice(0, MAX_URL_CHARS);
   }
   const bare = parsed.origin === originOf(pageUrl) ? parsed.pathname : `${parsed.origin}${parsed.pathname}`;
   return bare.slice(0, MAX_URL_CHARS);
@@ -101,28 +120,25 @@ export function selectActionFailures(
   pageUrl: string,
 ): NetworkObservation[] {
   const pageOrigin = originOf(pageUrl);
-  const relevant = observations.filter(isReportableFailure);
-  const sameOrigin = (o: NetworkObservation): boolean =>
-    pageOrigin !== null && originOf(o.url) === pageOrigin;
-  return relevant
+  return observations
+    .filter((o) => isReportableFailure(o, pageOrigin))
     .slice()
-    .sort((a, b) => {
-      const byOrigin = Number(sameOrigin(b)) - Number(sameOrigin(a));
-      return byOrigin !== 0 ? byOrigin : a.ts - b.ts;
-    })
+    .sort((a, b) => a.ts - b.ts) // oldest first: the request the interaction kicked off leads
     .slice(0, MAX_REPORTED_FAILURES);
 }
 
 /** One failure as a single line: `POST /api/save → 500`, or `POST /api/save → no response (net::…)`. */
 function failureLine(o: NetworkObservation, pageUrl: string): string {
-  const method = o.method.length > 0 ? o.method : 'GET';
+  // An unobserved method is left OUT, never defaulted to "GET" — everything on this line is presented to
+  // the model as something the browser saw, so a plausible guess dressed as evidence has no place here.
+  const method = o.method.length > 0 ? `${o.method} ` : '';
   const where = displayUrl(o.url, pageUrl);
   const outcome =
     o.status === 0
       ? `no response${o.errorText !== undefined && o.errorText.length > 0 ? ` (${o.errorText})` : ''}`
       : String(o.status);
   const via = o.redirects > 0 ? ` after ${String(o.redirects)} redirect(s)` : '';
-  return `${method} ${where} → ${outcome}${via}`;
+  return `${method}${where} → ${outcome}${via}`;
 }
 
 /**
