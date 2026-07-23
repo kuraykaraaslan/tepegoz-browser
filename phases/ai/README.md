@@ -56,10 +56,10 @@ loop control, action vocabulary, content-security) into our own packages. Real-g
 
 | Phase | File | Goal | Depends on | Status |
 |---|---|---|---|---|
-| AI-1 | [phase-ai-1-eval-harness.md](phase-ai-1-eval-harness.md) | Real-result eval loop (golden set + live harness + held-out) | Phase 1a | 🟡 In progress (backbone + live tier + judge + nightly CI code landed; **e2e `pnpm eval` now runs green on-harness** — scripted tier PASS vs. the real app after fixing two launch blockers, `e9f7fee`; live-tier competence numbers owed) |
+| AI-1 | [phase-ai-1-eval-harness.md](phase-ai-1-eval-harness.md) | Real-result eval loop (golden set + live harness + held-out) | Phase 1a | 🟡 In progress (backbone + live tier + judge + nightly CI landed. **2026-07-24: the live tier now produces VALID numbers** — fixed five defects that made every prior `REPEAT>1` figure invalid (per-trial profile+output file, onboarding seed, `--user-data-dir` honoured, tab-ready bootstrap, cut-off vs. fail split; see the dated note below). First real live measurement captured. Remaining: broaden the live sweep + flaky/CI intervals) |
 | AI-2 | [phase-ai-2-perception-buildtree.md](phase-ai-2-perception-buildtree.md) | Render-DOM perception (buildDomTree-style) replacing a11y-only | AI-1 | 🟡 In progress (PR1+PR2a+PR2b code landed: core perception + predicates + typed model + serialization + child-index→CDP click mapping + `href`/attrs + `*[n]` marking + cursor/viewport calibration + open-shadow/same-origin-iframe stitching; a11y fallback behind `TEPEGOZ_PERCEPTION`. Remaining: closed-shadow/cross-origin frames + on-harness measurement) |
 | AI-3 | [phase-ai-3-agent-loop.md](phase-ai-3-agent-loop.md) | Planner-as-validator loop + progress memory + state-every-step | AI-1 | 🟡 In progress (PR1+PR2 landed: progress-brain fields + transient page-state; planner-as-validator completion authority + periodic done-check + fail-closed cap. PR3 landed (code): stale-ref/re-click-loop guard via a host-computed structural page-signature — shadow/iframe-piercing, scroll-aware — + a loop-detector recovery nudge with idempotent reads exempted; mechanism deviation from the planned branch-path-hash subset guard, recorded. Remaining: on-harness measurement) |
-| AI-4 | [phase-ai-4-action-vocabulary.md](phase-ai-4-action-vocabulary.md) | Higher-level deterministic actions (scroll-to-text, dropdowns, form validation, …) | AI-2 | 🟡 In progress (PR1: `scroll_to_text` content-addressed reveal over the browser's native find; native dropdowns landed as `select_option`. **PR2 `s16` landed:** validation attributes captured end-to-end (`required`/`pattern`/`aria-invalid`/…) + the `browser_validate_form` pre-submit gate over a pure, ReDoS-safe `checkForm`, + a `form-validation` fixture. Remaining: page-quantized scroll + boundary detection, send-keys, tab auto-switch, typed-widget fill helpers + on-harness measurement) |
+| AI-4 | [phase-ai-4-action-vocabulary.md](phase-ai-4-action-vocabulary.md) | Higher-level deterministic actions (scroll-to-text, dropdowns, form validation, …) | AI-2 | 🟡 In progress (PR1: `scroll_to_text` content-addressed reveal over the browser's native find; native dropdowns landed as `select_option`. **PR2 `s16` landed:** validation attributes captured end-to-end (`required`/`pattern`/`aria-invalid`/…) + the `browser_validate_form` pre-submit gate over a pure, ReDoS-safe `checkForm`, + a `form-validation` fixture. **2026-07-24 measured (gpt-4o, N=3): 0/3 → 1/3** — the agent now perceives + fills empty AND pre-filled fields and one trial completes end-to-end; remaining failures are model escape/loop behaviour (AI-3/AI-7), not the form layer. Remaining: page-quantized scroll + boundary detection, send-keys, tab auto-switch, typed-widget fill helpers) |
 | AI-5 | [phase-ai-5-content-security.md](phase-ai-5-content-security.md) | Untrusted-content wrapping + injection/PII sanitizer | AI-2 | 🟡 In progress (PR1+PR2 landed: inbound content-guard — NFKC + injection redaction + forged-tag strip + threat taxonomy at the perception boundary; trusted-task fencing + security preamble; strict-mode PII redaction + GuardConfig. Remaining: strict-mode setting wiring + on-harness measurement) |
 | AI-6 | [phase-ai-6-consolidation.md](phase-ai-6-consolidation.md) | Retire prose patches (once subsumed) + institutionalise the loop | AI-2, AI-3 | ⬜ Not started |
 | AI-7 | [phase-ai-7-navigation-grounding.md](phase-ai-7-navigation-grounding.md) | Evidence-gated URLs + no escape-hatch (visible-nav-first; search/guess only after on-page route exhausted) | AI-2, AI-3, AI-4 | 🟡 In progress (PR1 code+unit-tests landed: pure candidate resolver + SSRF-safe sitemap/robots reader (same-origin construction, redirect-disabled) + `web_search_items` surfaced & gated as a steer + `s31` escape-rate metric + `escape-bait`/`url-hallucination-trap`/`sitemap-only-route` fixtures + the `/blog` blind-guess prose **removed** from reactor/planner. Remaining: the live N≥3 on-harness numbers — escape-rate down + traps flip to pass, held-out no-regress) |
@@ -69,6 +69,43 @@ Status legend: ⬜ Not started · 🟡 In progress · ✅ Done (DoD passed).
 
 **Recommended order:** AI-1 → AI-2 → AI-3 (these three close most observed failures) → AI-4 / AI-5 → AI-6.
 Each phase is one to two PRs.
+
+## 2026-07-24 — first VALID live-harness measurement, and what it exposed
+
+Driving the real app with a live model (openai gpt-4o) for the first time revealed that **neither the
+harness nor the agent's page-interaction layer actually worked end-to-end** — every prior on-harness
+number in this repo is suspect. Root causes found and fixed (all committed; each was a real product bug,
+not an eval artifact — they bite any tab driven before its chrome lays out, or while its window is
+unfocused):
+
+1. **Perception blindness (0×0 content view).** The tab `WebContentsView` starts 0×0 and is sized only
+   by a renderer IPC that doesn't exist until the `App` chrome mounts; a page loaded first got
+   `innerWidth/innerHeight 0`, so render-DOM perception rejected EVERY element and returned a silent
+   empty set. Fix: never lay a view out 0×0 (native-window fallback, sized at creation) + a bounded
+   viewport-ready wait. Proven: `[perception] render-dom EMPTY w:0,h:0` → `count:7`.
+2. **Fill typed into nothing.** In an unfocused/backgrounded window a synthetic click doesn't focus an
+   input (and focus lands async). Fix: focus emulation on attach + poll-for-focus + DOM.focus fallback.
+3. **Fill couldn't replace a pre-filled value.** Ctrl+A select-all is unreliable when unfocused. Fix:
+   deterministic `el.select()`.
+4. **One self-corrected error killed the run.** The reactor's recovery budget accumulated across the
+   whole run; an agent that fumbled args, recovered, then hit one fresh error later was killed. Fix:
+   a tool's success refreshes its recovery budget (regression-tested).
+5. **Harness could not produce a valid N>1 number.** Trials shared one output file (trial 2 scored trial
+   1's output and killed the app mid-run), shared the dev profile, and started behind the onboarding
+   surface (which replaces the chrome, so no content bounds ever reported). Fixes: per-trial profile +
+   output file, seed `onboardingCompleted`, honour `--user-data-dir`, tab-ready bootstrap, cut-off
+   reported distinctly. **Consequence: every `REPEAT>1` figure recorded before today is invalid.**
+
+**First honest numbers (openai gpt-4o, N=3, genuinely independent trials):**
+- `form_validation_required` (AI-4): **0/3 → 1/3**. Before the fixes the agent was blind (0 elements);
+  now it perceives, fills (empty AND pre-filled fields), and one trial completes the form end-to-end.
+- The remaining failures are now **agent behaviour, not infrastructure**: after filling, the model
+  (gpt-4o) sometimes escapes to a web search ("how do I confirm this saved?") or loops instead of
+  clicking Save and reading the result. That is exactly the competence AI-3 (loop) and AI-7 (escape
+  suppression) target — a real measured signal, no longer a blocked pipeline.
+- `silent_api_failure` (AI-8B): the network recorder is confirmed working live (observes real responses);
+  the scenario is gated by the same escape-after-fill behaviour, not by the AI-8B mechanism (whose
+  end-to-end 507 capture was demonstrated earlier).
 
 ## Interim state (to be retired in AI-6)
 
