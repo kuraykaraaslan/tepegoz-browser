@@ -2,6 +2,7 @@ import { CapabilityRegistry } from '@tepegoz/capability-plane';
 import { toolSuccess, type ToolDescriptor } from '@tepegoz/shared-types';
 import type { WebToolsHost } from './index';
 import { WebFetchInputSchema, WebSearchInputSchema } from './schemas';
+import { buildWebFetchContent, buildWebSearchContent, withGuardFlags } from './web-perception';
 
 export type { WebToolsHost } from './index';
 
@@ -33,17 +34,23 @@ export function registerWebTools(deps: { host: WebToolsHost }): void {
     inputSchema: WebSearchInputSchema,
     handler: async (input) => {
       const results = await host.search(input);
-      return toolSuccess(`Found ${String(results.length)} web result(s) for "${input.query}".`, {
-        content: { query: input.query, results },
-        artifacts: results.map((result, index) => ({
-          id: `web-result-${String(index + 1)}`,
-          kind: 'link',
-          title: result.title,
-          url: result.url,
-          ...(result.snippet !== undefined ? { summary: result.snippet } : {}),
-        })),
-        pageRefs: results.map((result) => ({ url: result.url, title: result.title })),
-      });
+      // Search titles/snippets are page-authored text any site can rank into the agent's context, so
+      // they are fenced exactly like browser perception. Verbatim URLs stay in artifacts/pageRefs.
+      const guarded = buildWebSearchContent(input.query, results);
+      return toolSuccess(
+        withGuardFlags(`Found ${String(results.length)} web result(s) for "${input.query}".`, guarded.flags),
+        {
+          content: guarded.content,
+          artifacts: results.map((result, index) => ({
+            id: `web-result-${String(index + 1)}`,
+            kind: 'link',
+            title: result.title,
+            url: result.url,
+            ...(result.snippet !== undefined ? { summary: result.snippet } : {}),
+          })),
+          pageRefs: results.map((result) => ({ url: result.url, title: result.title })),
+        },
+      );
     },
   });
 
@@ -55,8 +62,12 @@ export function registerWebTools(deps: { host: WebToolsHost }): void {
     inputSchema: WebFetchInputSchema,
     handler: async (input) => {
       const result = await host.fetch(input);
-      return toolSuccess(`Fetched ${result.finalUrl}${result.truncated ? ' (truncated)' : ''}.`, {
-        content: result,
+      // Bytes from an arbitrary URL the agent chose — the least trusted input in the product. Fenced
+      // and sanitized before the model sees it, and emitted as a STRING so the runtime taints it.
+      const guarded = buildWebFetchContent(result);
+      const status = `Fetched ${result.finalUrl} (HTTP ${String(result.status)})${result.truncated ? ', truncated' : ''}.`;
+      return toolSuccess(withGuardFlags(status, guarded.flags), {
+        content: guarded.content,
         pageRefs: [{ url: result.finalUrl, ...(result.title !== undefined ? { title: result.title } : {}) }],
       });
     },

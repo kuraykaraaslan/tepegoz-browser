@@ -46,6 +46,16 @@ export {
   type SitemapReader,
 } from './sitemap-reader';
 
+export {
+  buildWebFetchContent,
+  buildWebSearchContent,
+  renderSearchResultsText,
+  withGuardFlags,
+  MAX_WEB_FETCH_CHARS,
+  MAX_SNIPPET_CHARS,
+  type GuardedWebContent,
+} from './web-perception';
+
 export const DEFAULT_WEB_SEARCH_RESULTS = 5;
 export const MAX_WEB_SEARCH_RESULTS = 10;
 export const DEFAULT_WEB_FETCH_BYTES = 200_000;

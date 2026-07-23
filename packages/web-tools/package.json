@@ -18,6 +18,7 @@
   "dependencies": {
     "@tepegoz/capability-plane": "workspace:*",
     "@tepegoz/shared-types": "workspace:*",
+    "@tepegoz/tool-executor": "workspace:*",
     "zod": "3.23.8"
   },
   "devDependencies": {
