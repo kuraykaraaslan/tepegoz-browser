@@ -103,9 +103,15 @@ unfocused):
   (gpt-4o) sometimes escapes to a web search ("how do I confirm this saved?") or loops instead of
   clicking Save and reading the result. That is exactly the competence AI-3 (loop) and AI-7 (escape
   suppression) target — a real measured signal, no longer a blocked pipeline.
-- `silent_api_failure` (AI-8B): the network recorder is confirmed working live (observes real responses);
-  the scenario is gated by the same escape-after-fill behaviour, not by the AI-8B mechanism (whose
-  end-to-end 507 capture was demonstrated earlier).
+- `silent_api_failure` (AI-8B): **0/3 → 1/3** after wiring the network-failure signal into the agent's
+  save-confirmation decision. The passing trial is a genuine end-to-end AI-8B success — the recorder
+  observed the real 507 and the agent's summary named it. The network recorder is confirmed working live.
+  Remaining failures are the model escaping on some trials (AI-7), not the mechanism.
+
+**Bottom line:** the agent-interaction layer works end-to-end now (perceive → fill → submit → observe the
+network result). On gpt-4o the honest ceiling on these tasks is ~1/3, limited by the model escaping to a
+web search instead of finishing on-page — the concrete, measured target for AI-7 (escape suppression) and
+AI-3 (loop) next, no longer masked by infrastructure.
 
 ## Interim state (to be retired in AI-6)
 
