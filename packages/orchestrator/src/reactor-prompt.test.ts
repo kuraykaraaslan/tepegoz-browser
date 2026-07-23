@@ -104,6 +104,12 @@ describe('Reactor system prompt (coreference + browsing strategy)', () => {
     expect(prompt).toContain('never by blindly appending a guess');
   });
 
+  it('nudges a pre-submit form check (AI-4 s16)', async () => {
+    const prompt = await capture();
+    expect(prompt).toContain('browser_validate_form');
+    expect(prompt).toContain('Before submitting a form');
+  });
+
   it('requests the progress brain (memory ledger) so the actor tracks progress and does not give up', async () => {
     const prompt = await capture();
     expect(prompt).toContain('evaluation_previous_goal');

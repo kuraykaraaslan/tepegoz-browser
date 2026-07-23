@@ -40,7 +40,7 @@ export function buildDomTreeExpression(viewportExpansionPx = 0): string {
   // not a button — the real target is a descendant. Trims cursor-heuristic over-selection.
   const MAX_POINTER_AREA_FRAC = 0.5;
 
-  const ATTR_ALLOWLIST = ['type','name','placeholder','title','alt','aria-label','aria-expanded','aria-haspopup','aria-selected','aria-checked','data-testid'];
+  const ATTR_ALLOWLIST = ['type','name','placeholder','title','alt','aria-label','aria-expanded','aria-haspopup','aria-selected','aria-checked','data-testid','pattern','minlength','maxlength','min','max','autocomplete','inputmode','aria-required','aria-invalid'];
   const INTERACTIVE_TAGS = new Set(['A','BUTTON','INPUT','SELECT','TEXTAREA','SUMMARY','OPTION','LABEL']);
   const INTERACTIVE_ROLES = new Set(['button','link','checkbox','radio','switch','tab','menuitem','menuitemcheckbox','menuitemradio','option','combobox','textbox','searchbox','slider','spinbutton','treeitem']);
 
@@ -155,6 +155,11 @@ export function buildDomTreeExpression(viewportExpansionPx = 0): string {
     if ('value' in el && el.value != null && String(el.value) !== '') node.value = String(el.value).slice(0, MAX_TEXT);
     if (el.hasAttribute('disabled') || el.getAttribute('aria-disabled') === 'true') node.disabled = true;
     const attributes = attrsOf(el);
+    // AI-4 s16: a native \`required\` is a boolean property (getAttribute returns '' → dropped above), so
+    // surface it explicitly. \`pattern\`/\`maxlength\`/\`aria-*\` etc. carry string values via the allow-list.
+    if ((el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') && el.required === true) {
+      attributes.required = 'true';
+    }
     if (Object.keys(attributes).length > 0) node.attributes = attributes;
     if (el.tagName === 'INPUT') {
       node.inputType = (el.getAttribute('type') || 'text').toLowerCase();

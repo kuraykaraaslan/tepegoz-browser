@@ -39,10 +39,11 @@ function perceptionMode(): 'render-dom' | 'a11y' {
 export async function snapshotElements(
   wc: WebContents,
   deps: SnapshotDeps,
+  opts: { viewportExpansionPx?: number } = {},
 ): Promise<SnapshotResult> {
   if (perceptionMode() === 'render-dom') {
     try {
-      return await snapshotElementsRenderDom(wc, deps);
+      return await snapshotElementsRenderDom(wc, deps, opts);
     } catch (err) {
       Logger.warn('render-DOM perception failed; falling back to a11y', { err: String(err) });
     }
@@ -50,15 +51,17 @@ export async function snapshotElements(
   return snapshotElementsA11y(wc, deps);
 }
 
-/** Render-DOM perception (AI-2): inject `buildDomTree` in an isolated world, validate, map to refs. */
+/** Render-DOM perception (AI-2): inject `buildDomTree` in an isolated world, validate, map to refs.
+ *  `opts.viewportExpansionPx` widens the in-viewport test (AI-4 `s16` whole-form check). */
 async function snapshotElementsRenderDom(
   wc: WebContents,
   deps: SnapshotDeps,
+  opts: { viewportExpansionPx?: number } = {},
 ): Promise<SnapshotResult> {
   await deps.ensure(wc);
   const contextId = await mainFrameIsolatedContext(wc);
   const raw: unknown = await wc.debugger.sendCommand('Runtime.evaluate', {
-    expression: buildDomTreeExpression(),
+    expression: buildDomTreeExpression(opts.viewportExpansionPx),
     contextId,
     returnByValue: true,
     awaitPromise: false,

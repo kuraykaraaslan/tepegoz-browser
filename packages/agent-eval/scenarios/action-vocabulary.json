@@ -1,0 +1,12 @@
+{
+  "scenarios": [
+    {
+      "id": "form_validation_required",
+      "task": "Create an account on this page — full name \"Ada Lovelace\", email \"ada@example.com\", phone \"5551234567\" — then submit and read the confirmation.",
+      "target": { "fixture": "form-validation" },
+      "success": { "domAssertion": "all set" },
+      "heldOut": false,
+      "tags": ["form", "ai-4", "s16", "validation"]
+    }
+  ]
+}

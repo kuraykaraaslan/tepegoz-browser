@@ -366,7 +366,7 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
     if (closed) AgentTabGroup.releaseTab(agentGroupId, id);
     return closed;
   },
-  snapshotElements: (tabId) => CdpDriver.snapshotElements(requireWc(tabId)),
+  snapshotElements: (tabId, opts) => CdpDriver.snapshotElements(requireWc(tabId), opts ?? {}),
   captureScreenshot,
   clickElement: async (ref, tabId) => {
     resetForAgentAction();

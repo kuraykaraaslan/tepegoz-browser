@@ -131,6 +131,18 @@ export const ATTR_ALLOWLIST: ReadonlySet<string> = new Set([
   'aria-selected',
   'aria-checked',
   'data-testid',
+  // AI-4 s16 validation attributes: let the model + the form checker see a field's constraints and any
+  // page-flagged invalid state (required is surfaced by the page script from the boolean DOM property).
+  'required',
+  'aria-required',
+  'aria-invalid',
+  'pattern',
+  'minlength',
+  'maxlength',
+  'min',
+  'max',
+  'autocomplete',
+  'inputmode',
 ]);
 
 /** Filter → sanitize → cap a raw attribute map down to the allow-listed, model-safe subset. */

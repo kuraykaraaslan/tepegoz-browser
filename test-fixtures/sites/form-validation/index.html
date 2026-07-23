@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Aster — Register</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; max-width: 30rem; }
+      label { display: block; margin: 0.75rem 0 0.25rem; }
+      input { width: 100%; padding: 0.4rem; }
+      .error { color: #b00; }
+      [aria-invalid='true'] { outline: 2px solid #b00; }
+      #result { margin-top: 1rem; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <h1>Create your Aster account</h1>
+    <!--
+      AI-4 s16 form-validation fixture: three REQUIRED fields (phone also has a pattern). The success
+      string ("You're all set") is injected ONLY after every required field is filled and the phone
+      matches — so submitting with a missing/invalid field shows an error and cannot pass. The required
+      attributes are visible from the start (browser_validate_form surfaces empty ones before submit); a
+      failed submit also marks the offending fields aria-invalid and prints a visible error line.
+    -->
+    <form id="form" novalidate>
+      <label for="name">Full name</label>
+      <input id="name" name="name" required placeholder="Your name" />
+
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" required placeholder="you@example.com" />
+
+      <label for="phone">Phone (digits only)</label>
+      <input id="phone" name="phone" required pattern="[0-9]{7,15}" placeholder="5551234567" />
+
+      <button id="submit" type="submit">Create account</button>
+    </form>
+    <p id="result"></p>
+
+    <script>
+      const form = document.getElementById('form');
+      const fields = ['name', 'email', 'phone'].map((id) => document.getElementById(id));
+      const result = document.getElementById('result');
+      // Linear email check (no regex backtracking): exactly one @, non-empty local part, dotted domain.
+      const isEmail = (v) => {
+        if (/\s/.test(v)) return false;
+        const parts = v.split('@');
+        return parts.length === 2 && parts[0].length > 0 && parts[1].indexOf('.') > 0;
+      };
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const problems = [];
+        for (const el of fields) {
+          const empty = el.value.trim() === '';
+          // Enforce BOTH the pattern attribute and the email type, so a malformed value can never reach
+          // the success string (the ground truth must be gated behind a genuinely valid submit).
+          const badPattern = !empty && el.pattern && !new RegExp('^(?:' + el.pattern + ')$').test(el.value);
+          const badEmail = !empty && el.type === 'email' && !isEmail(el.value);
+          const bad = empty || badPattern || badEmail;
+          el.setAttribute('aria-invalid', String(bad));
+          if (empty) problems.push(el.name + ' is required');
+          else if (bad) problems.push(el.name + ' is invalid');
+        }
+        if (problems.length > 0) {
+          result.className = 'error';
+          result.textContent = problems.join('. ') + '.';
+        } else {
+          result.className = '';
+          result.textContent = "You're all set — welcome to Aster, " + fields[0].value + '!';
+        }
+      });
+    </script>
+  </body>
+</html>

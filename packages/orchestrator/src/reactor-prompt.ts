@@ -34,7 +34,14 @@ const BROWSING_STRATEGY =
   '404s wastes steps). If the destination is genuinely OFF this site or its URL is unknown, use ' +
   'web_search_items to find it instead of typing a guessed URL. Leaving the page (web_search or off-site ' +
   'navigation) is a LAST resort once the on-page route is exhausted — it is never a shortcut around a ' +
-  'menu, modal, or form you should just operate.';
+  'menu, modal, or form you should just operate.' +
+  // AI-4 s16: don't submit a form blind — a silent validation failure looks like a no-op and wastes steps.
+  '\nBefore submitting a form (a submit / save / sign-up / continue button), call browser_validate_form. ' +
+  'Its `requiredEmpty` list is BLOCKING — fill those fields, then re-check. Its `flaggedInvalid` and ' +
+  '`visibleErrors` are ADVISORY: a page usually sets them on a failed submit and only refreshes them on the ' +
+  'NEXT submit, so once the fields actually hold correct values, go ahead and submit rather than looping on ' +
+  'a stale warning. If it reports coverage "partial" it could not see every field — scroll through the rest ' +
+  'of the form and check them yourself instead of treating the result as a green light.';
 
 export function systemPrompt(req: ReactRequest): string {
   const toolList = req.tools.map((t) => `- ${t.id} (${t.dangerClass}): ${t.description}`).join('\n');

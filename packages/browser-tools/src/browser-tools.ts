@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { CapabilityRegistry } from '@tepegoz/capability-plane';
+import { checkForm, wrapUntrustedContent, MAX_INTERACTABLE_ELEMENTS } from '@tepegoz/tool-executor';
 import type { ToolDescriptor } from '@tepegoz/shared-types';
 import { buildElementsSnapshot, buildPageSnapshot } from './perception';
 import type { BrowserHost } from './host';
@@ -128,6 +129,10 @@ function selectOptionResult(
   return { ok: true, url: after.url, title: after.title, changed, note: `Selected "${selected}" in the dropdown.` };
 }
 
+/** Viewport expansion (CSS px per edge) used by the whole-form check, so a required field below the fold
+ *  is still inspected. Large enough for a normal long form without asking for the entire document. */
+const WHOLE_PAGE_EXPANSION_PX = 20_000;
+
 /** Build a `browser_*` builtin ToolDescriptor (mirrors `@tepegoz/file-operations`'s local helper). */
 function descriptor(
   id: string,
@@ -194,6 +199,53 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
     handler: async (args) => {
       const { url, title, elements } = await host.snapshotElements(args.tabId);
       return buildElementsSnapshot(elements, url, title);
+    },
+  });
+
+  CapabilityRegistry.register({
+    descriptor: descriptor(
+      'browser_validate_form',
+      'read',
+      'Pre-submit form check (AI-4 s16). Call this BEFORE clicking a submit/save/sign-up button to catch ' +
+        'problems that would silently fail the submission. args: { tabId?: string } — omit tabId for the ' +
+        'active tab. Returns { ok, coverage, content, requiredEmpty, flaggedInvalid, visibleErrors }. ' +
+        'BLOCKING: requiredEmpty (fill those, then re-check). ADVISORY only: flaggedInvalid and ' +
+        'visibleErrors — a page usually sets those on a failed submit and refreshes them on the NEXT one, ' +
+        'so they may be left over from an earlier attempt; do not loop on them once the fields are correct. ' +
+        'If coverage is "partial" the check could NOT see every field — scroll through the form and verify ' +
+        'the rest yourself instead of treating it as a green light. NOTE: this re-reads the page, so element ' +
+        'refs are refreshed — use the refs from THIS report, and re-read browser_get_elements before acting ' +
+        'on refs from an older listing.',
+      { aiTask: 'read_understand' },
+    ),
+    inputSchema: TargetTabArgs,
+    handler: async (args) => {
+      // Widen the viewport test so required fields BELOW THE FOLD are inspected too: a clean result from a
+      // viewport-only snapshot would be exactly the false "OK to submit" this tool exists to prevent.
+      const [{ url, title, elements }, page] = await Promise.all([
+        host.snapshotElements(args.tabId, { viewportExpansionPx: WHOLE_PAGE_EXPANSION_PX }),
+        host.readPage(args.tabId),
+      ]);
+      const snapshot = buildElementsSnapshot(elements, url, title);
+      // Only claim full coverage when the snapshot was not truncated by the element cap; `checkForm`
+      // independently degrades to `partial` when no validation constraints were captured at all (e.g. the
+      // accessibility-tree fallback, which carries no attributes).
+      const truncated = snapshot.elements.length >= MAX_INTERACTABLE_ELEMENTS;
+      const report = checkForm(snapshot.elements, page.text, {
+        coverage: truncated ? 'partial' : 'complete',
+      });
+      // The report embeds page-controlled labels/error text, so it crosses the AI-5 boundary exactly like
+      // every other page read: injection-redacted inside checkForm, then fenced as untrusted here.
+      return {
+        url,
+        title,
+        ok: report.ok,
+        coverage: report.coverage,
+        content: wrapUntrustedContent(report.summary, url),
+        requiredEmpty: report.requiredEmpty,
+        flaggedInvalid: report.flaggedInvalid,
+        visibleErrors: report.visibleErrors,
+      };
     },
   });
 

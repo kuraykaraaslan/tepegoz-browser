@@ -63,13 +63,25 @@ those. The audit added one net-new action-vocabulary axis:
         pure [`interactable.ts`](../../packages/tool-executor/src/interactable.ts). A native `required` is a
         boolean property (`getAttribute` returns `''` and was being dropped), so the script surfaces it from the
         DOM property — the model now SEES which fields are mandatory.
-  - [x] **Pre-submit gate:** `browser_validate_form` (read tool) reports required-but-empty fields, fields the
-        page flagged `aria-invalid`, and visible error text — *before* the submit click. Backed by the pure,
-        unit-tested [`checkForm`](../../packages/tool-executor/src/form-validation.ts); the tool composes the
-        EXISTING `snapshotElements` + `readPage` host primitives (no new Electron seam). Deliberately runs **no
-        regex against page-controlled `pattern` values** (ReDoS): the page's own `aria-invalid` + error text
-        carry the "currently invalid" signal. Error lines are sanitized (AI-5) before reaching the model.
-        A reactor `BROWSING_STRATEGY` line steers the model to call it before submitting.
+  - [x] **Pre-submit gate:** `browser_validate_form` (read tool) over the pure, unit-tested
+        [`checkForm`](../../packages/tool-executor/src/form-validation.ts). An adversarial review pass caught
+        four ways an earlier cut of this check would have *lied to the agent*; the shipped design fixes each:
+        - **Only `requiredEmpty` BLOCKS.** It is deterministic and self-clearing. `aria-invalid` and on-page
+          error text are **advisory**: a page sets them on a failed submit and only refreshes them on the NEXT
+          one, so blocking on them deadlocked the agent *after* it had already fixed every field.
+        - **Coverage is reported, never assumed.** The render-DOM snapshot is viewport-limited, so a clean
+          result from a partial view was a false "OK to submit" — the exact failure s16 exists to prevent. The
+          `BrowserHost.snapshotElements` seam gained `viewportExpansionPx` so the check reads the WHOLE page,
+          and the report still degrades to `coverage: 'partial'` when the element cap truncated it, when the
+          accessibility fallback captured no attributes, or when a required control is a custom/toggle widget
+          whose filled state is unreadable.
+        - **AI-5 boundary honoured.** Labels/error lines are injection-redacted (`sanitizeContent`) and
+          quote-neutralised so a hostile page cannot forge a verdict inside the checker's own prose, and the
+          whole report is fenced with `wrapUntrustedContent` like every other page read.
+        - **No regex against page-controlled `pattern` values** (ReDoS): the page's own `aria-invalid` + error
+          text carry the "currently invalid" signal.
+        A reactor `BROWSING_STRATEGY` line steers the model to call it before submitting, and spells out the
+        blocking-vs-advisory split so a stale warning cannot loop it.
   - [x] Fixture + scenario: `form-validation` (three required fields, one with a `pattern`; the ground truth
         "all set" is injected ONLY after a fully valid submit) + `form_validation_required`.
   - [ ] **Still owed:** widget-specific fill helpers for typed inputs (date/phone/currency/masked/

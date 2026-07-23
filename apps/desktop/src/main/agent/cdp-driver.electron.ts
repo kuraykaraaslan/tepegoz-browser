@@ -111,8 +111,11 @@ export default class CdpDriver {
    * + viewport + `href`/attributes) by default, falling back to the accessibility-tree snapshot when
    * that path is disabled or errors. Both populate the per-tab `ref → node` map for action dispatch.
    */
-  static async snapshotElements(wc: WebContents): Promise<SnapshotResult> {
-    return snapshotElementsImpl(wc, CdpDriver.snapshotDeps());
+  static async snapshotElements(
+    wc: WebContents,
+    opts: { viewportExpansionPx?: number } = {},
+  ): Promise<SnapshotResult> {
+    return snapshotElementsImpl(wc, CdpDriver.snapshotDeps(), opts);
   }
 
   /**

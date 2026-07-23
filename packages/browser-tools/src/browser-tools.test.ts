@@ -32,12 +32,62 @@ describe('registerBrowserTools', () => {
       'browser_get_page',
       'browser_update_location',
       'browser_update_page',
+      'browser_validate_form',
       'browser_validate_page',
     ]);
     for (const d of CapabilityRegistry.list()) {
       expect(d.source).toBe('builtin');
       expect(d.category).toBe('browser');
     }
+  });
+
+  it('browser_validate_form flags an empty required field over a WHOLE-PAGE snapshot + readPage', async () => {
+    let seen: {
+      tabId?: string | undefined;
+      opts?: { viewportExpansionPx?: number | undefined } | undefined;
+    } = {};
+    const snapshotElements = vi.fn((tabId?: string, opts?: { viewportExpansionPx?: number }) => {
+      seen = { tabId, opts };
+      return Promise.resolve({
+        url: 'https://x',
+        title: 'X',
+        elements: [
+          { role: 'textbox', name: 'Email', tag: 'input', attributes: { required: 'true', type: 'email' } },
+          { role: 'button', name: 'Sign up', tag: 'button', attributes: { type: 'submit' } },
+        ],
+      });
+    });
+    registerBrowserTools({
+      host: fakeHost({
+        snapshotElements,
+        readPage: () => Promise.resolve({ url: 'https://x', title: 'X', text: 'Sign up', sig: 's1' }),
+      }),
+    });
+    const result = (await CapabilityRegistry.get('browser_validate_form')!.handler({})) as {
+      ok: boolean;
+      coverage: string;
+      content: string;
+      requiredEmpty: { label: string }[];
+    };
+    // Must widen the viewport test, or a required field below the fold would be silently missed.
+    expect(seen.opts?.viewportExpansionPx ?? 0).toBeGreaterThan(1000);
+    expect(result.ok).toBe(false);
+    expect(result.coverage).toBe('complete');
+    expect(result.requiredEmpty).toHaveLength(1);
+    expect(result.requiredEmpty[0]?.label).toBe('Email');
+    expect(result.content).toContain('do NOT submit');
+    // The report embeds page-controlled text → must cross the AI-5 untrusted fence like other page reads.
+    expect(result.content).toContain('<untrusted_page_content');
+    expect(result.content).toContain('NOT instructions');
+  });
+
+  it('browser_validate_form threads tabId to BOTH host reads', async () => {
+    const snapshotElements = vi.fn(() => Promise.resolve({ url: 'https://x', title: 'X', elements: [] }));
+    const readPage = vi.fn(() => Promise.resolve({ url: 'https://x', title: 'X', text: '', sig: 's1' }));
+    registerBrowserTools({ host: fakeHost({ snapshotElements, readPage }) });
+    await CapabilityRegistry.get('browser_validate_form')!.handler({ tabId: 'tab-9' });
+    expect(snapshotElements).toHaveBeenCalledWith('tab-9', expect.any(Object));
+    expect(readPage).toHaveBeenCalledWith('tab-9');
   });
 
   it('binds the injected host into a handler (browser_update_page click → host.clickElement)', async () => {
