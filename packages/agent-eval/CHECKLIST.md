@@ -1,0 +1,49 @@
+# @tepegoz/agent-eval CHECKLIST
+
+Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+
+- [x] Support a data-driven scenario registry loaded from JSON without code changes.
+- [x] Support zod `safeParse` validation of the untrusted scenario registry on disk.
+- [x] Support recording malformed registry files as errors instead of crashing the run.
+- [x] Support duplicate scenario-id detection across registry files.
+- [x] Support a held-out scenario split reported separately from the development set.
+- [x] Support a deterministic local fixture server for real pages without cloud dependencies.
+- [x] Support loopback-only binding on an ephemeral port for the fixture server.
+- [x] Support path-traversal refusal when serving fixture files.
+- [x] Support ground-truth-first scoring over DOM assertions and expected values.
+- [x] Support failing closed when a scenario has no ground-truth assertion to check.
+- [x] Support an optional LLM judge for open-ended scenarios with a rubric.
+- [x] Support an injected model call so judge prompt building and parsing stay pure.
+- [x] Support `safeParse` of the untrusted judge verdict with a fail-closed fallback.
+- [x] Support extracting a judge verdict from fenced or prose-wrapped JSON output.
+- [x] Support judge-to-human agreement measurement over a calibration sample.
+- [x] Support surfacing judge disagreements by scenario id in the report.
+- [x] Support driving the real desktop app through an `_electron` Playwright driver.
+- [x] Support an env-gated eval hook that stays inert in production builds.
+- [x] Support a deterministic scripted tier that runs without a cloud API key.
+- [x] Support a live tier running the real product model over the registry.
+- [x] Support provider selection across the runnable model providers.
+- [x] Support repeating each scenario over multiple trials to reduce sampling noise.
+- [x] Support folding repeated trials into a majority verdict with pass frequency.
+- [x] Support a scenario-id allowlist for iterating on a single target.
+- [x] Support `safeParse` of the untrusted per-run output JSON written by the app.
+- [x] Support capturing per-scenario app logs for step-level failure diagnosis.
+- [x] Support token-usage accounting summed honestly across trials.
+- [x] Support an escape-rate metric for navigation grounding.
+- [x] Support excluding open-web scenarios from the on-page escape metric.
+- [x] Support a machine-readable JSON report artifact.
+- [x] Support a human-readable pass/fail table that shows every scenario.
+- [x] Support reporting the model id, scenario count, and threshold for honest headlines.
+- [x] Support a nightly out-of-band CI workflow that never blocks the build.
+- [x] Support warning on a pass-rate regression without failing CI.
+- [x] Support unit-testable pure modules with no browser dependency.
+- [x] Support dev-only packaging that is never shipped in the app.
+- [ ] Support scripted coverage for the full scenario registry.
+- [ ] Support a calibration sample large enough to make the agreement rate meaningful.
+- [ ] Support open-web scenarios against real live URLs.
+- [ ] Support per-scenario wall-clock duration metrics.
+- [ ] Support monetary cost estimation alongside token counts.
+- [ ] Support first-attempt-success and average-actions competence metrics.
+- [ ] Support recovery and human-intervention metrics in the live tier.
+- [ ] Support per-scenario timeout configuration.
+- [ ] Support trend comparison against a stored historical baseline.

@@ -1,0 +1,81 @@
+# @tepegoz/ext-translate CHECKLIST
+
+Status verified against the implementation and cross-referenced packages (2026-07-23); checked items have concrete code backing them.
+
+- [x] Support a compact toolbar popup surface.
+- [x] Support a full internal page surface.
+- [x] Support shared translation controls across popup and page surfaces.
+- [x] Support host-injected APIs without direct global bridge access.
+- [x] Support extension manifest metadata for popup and page surfaces.
+- [x] Support permissions for page reading, page writing, and network access.
+- [x] Support localized English and Turkish extension UI strings.
+- [x] Support automated key parity between English and Turkish dictionaries.
+- [x] Support a localized extension name and description for Turkish.
+- [x] Support registration in the extension catalog with a stable identifier.
+- [x] Support translation memory as the first lookup before any model call.
+- [x] Support persistent translation memory across sessions.
+- [x] Support schema validation of the persisted translation memory file.
+- [x] Support bounding translation memory growth with entry pruning.
+- [x] Support local on-device model translation when a model is installed.
+- [x] Support detecting whether a local model is actually available.
+- [x] Support user-approved cloud fallback when no local model can serve.
+- [x] Support asking for consent before the first cloud translation.
+- [x] Support remembering a cloud allow or deny decision.
+- [x] Support denying cloud fallback entirely through settings.
+- [x] Support falling through to the cloud policy when a present local model fails.
+- [x] Support reporting which engine produced each translated item.
+- [x] Support full-page translation of visible text nodes.
+- [x] Support translating user-facing element attributes.
+- [x] Support preserving original text nodes rather than destroying them.
+- [x] Support restoring a page to its original content after translation.
+- [x] Support restoring translated attributes to their original values.
+- [x] Support retranslating dynamically inserted content through a mutation observer.
+- [x] Support selection translation from the page context menu.
+- [x] Support page translation from the page context menu.
+- [x] Support localized context-menu labels.
+- [x] Support automatic translation of foreign-language pages.
+- [x] Support skipping auto-translation when source and target languages match.
+- [x] Support detecting the page source language from document metadata.
+- [x] Support resolving the target language from the application locale.
+- [x] Support per-site disabling of translation.
+- [x] Support origin-based site matching restricted to http and https.
+- [x] Support bounding the stored per-site disable list.
+- [x] Support a user-managed glossary of preferred term translations.
+- [x] Support adding and removing glossary terms.
+- [x] Support case-sensitive glossary matching as an option.
+- [x] Support scoping glossary terms to a language pair.
+- [x] Support deduplicating glossary terms on save.
+- [x] Support bounding the stored glossary size.
+- [x] Support batching page text to bound each model request.
+- [x] Support capping the character length of translatable text.
+- [x] Support schema validation of untrusted model translation output.
+- [x] Support discarding model output items that do not match a requested item.
+- [x] Support page translation status states for progress and errors.
+- [x] Support reporting translated and total item counts during a run.
+- [x] Support per-run duration measurement.
+- [x] Support passthrough behavior when the extension or site is disabled.
+- [x] Support an agent-callable text translation capability.
+- [x] Support input schema validation for the agent-callable capability.
+- [x] Support read danger-class classification for the translation capability.
+- [x] Support unit-tested pure translation helpers.
+- [x] Support unit-tested host behavior through injected ports.
+- [ ] Support translating into languages beyond English and Turkish.
+- [ ] Support a user-selectable target language independent of the app locale.
+- [ ] Support side-by-side or hover-original display modes.
+- [ ] Support translating text inside shadow roots.
+- [ ] Support translating text inside same-origin iframes.
+- [ ] Support canceling an in-flight page translation.
+- [ ] Support retrying a failed translation batch.
+- [ ] Support per-site always-translate preferences.
+- [ ] Support a per-site target language override.
+- [ ] Support viewing and clearing translation memory from the UI.
+- [ ] Support importing and exporting glossary terms.
+- [ ] Support searching and filtering glossary terms.
+- [ ] Support progressive display of translated content as batches complete.
+- [ ] Support a keyboard shortcut for translating the current page.
+- [ ] Support source-language detection confidence reporting.
+- [ ] Support screen-reader labels for translation controls.
+- [ ] Support keyboard-accessible glossary and settings controls.
+- [ ] Support right-to-left layout for translated target languages.
+- [ ] Support high-contrast status indicators.
+- [ ] Support reduced-motion friendly status updates.
