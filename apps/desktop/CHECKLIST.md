@@ -1,0 +1,61 @@
+# @tepegoz/desktop CHECKLIST
+
+Prepared from the app source and packaging config; status verified against the implementation (2026-07-23), and checked items have concrete code backing them.
+
+- [x] Support one secure window factory used by every window the app opens.
+- [x] Support context isolation on every renderer.
+- [x] Support renderer sandboxing.
+- [x] Support disabling Node integration in renderers.
+- [x] Support keeping web security enabled on every renderer.
+- [x] Support a typed contextBridge preload as the only renderer-to-main surface.
+- [x] Support rejecting IPC from frames outside an app-content allow-list.
+- [x] Support a Content-Security-Policy header for the trusted app chrome.
+- [x] Support keeping browsed pages in a separate session partition from app chrome.
+- [x] Support preserving each site's own CSP for browsed content.
+- [x] Support denying web permission requests by default.
+- [x] Support reflecting stored grants on synchronous permission checks.
+- [x] Support denying new-window requests from the app chrome.
+- [x] Support guarding chrome navigation away from app content.
+- [x] Support popup interception through an action-interceptor policy.
+- [x] Support ad and tracker blocking at the network layer.
+- [x] Support cosmetic filtering through injected page styles.
+- [x] Support tabbed browsing with a main-process tab manager.
+- [x] Support tab drag coordination across windows.
+- [x] Support persisting and restoring main-window bounds across launches.
+- [x] Support restoring a maximized window to its maximized state.
+- [x] Support skipping meaningless bounds while minimized.
+- [x] Support a single-instance lock.
+- [x] Support power-state awareness through the power monitor.
+- [x] Support relocating app data paths at startup.
+- [x] Support a local SQLite database for persistent browser data.
+- [x] Support unpacking native addons outside the asar archive.
+- [x] Support continuing to run when the database fails to open.
+- [x] Support internal pages served under an app-owned scheme.
+- [x] Support a renderer error boundary at the application root.
+- [x] Support first-party extensions loaded from a generated catalog.
+- [x] Support generating the extension catalog at build time.
+- [x] Support lazy code-split loading of extension surfaces.
+- [x] Support agent tool dispatch through a single capability gateway.
+- [x] Support policy evaluation before any agent tool runs.
+- [x] Support human approval prompts for risky agent actions.
+- [x] Support outbound egress inspection on the model chokepoint.
+- [x] Support local model inference through a native llama binding.
+- [x] Support Model Context Protocol server connections.
+- [x] Support storing secrets through the OS credential store.
+- [x] Support Windows, macOS, and Linux installer packaging.
+- [x] Support building each platform installer on its own runner.
+- [x] Support a Playwright smoke test against the packaged app.
+- [x] Support split type-checking for main and renderer sources.
+- [ ] Support code signing for distributed Windows installers.
+- [ ] Support code signing and notarization for distributed macOS builds.
+- [ ] Support automatic application updates.
+- [ ] Support crash reporting for released builds.
+- [ ] Support registering the app as the system default browser.
+- [ ] Support external link and protocol handoff from other applications.
+- [ ] Support a native application menu with standard accelerators.
+- [ ] Support global keyboard shortcuts outside the focused window.
+- [ ] Support private or incognito browsing sessions.
+- [ ] Support multiple user profiles with separate data directories.
+- [ ] Support importing data from other installed browsers.
+- [ ] Support reduced-motion and high-contrast rendering preferences.
+- [ ] Support an in-app diagnostics or about page reporting build metadata.

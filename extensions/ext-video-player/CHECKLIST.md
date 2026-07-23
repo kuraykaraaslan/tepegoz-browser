@@ -1,0 +1,65 @@
+# @tepegoz/ext-video-player CHECKLIST
+
+Prepared from extension package metadata and source because this extension has no README; status verified against the implementation (2026-07-23), and checked items have concrete code backing them.
+
+- [x] Support a compact toolbar popup surface.
+- [x] Support a full internal page surface.
+- [x] Support shared player controls across popup and page surfaces.
+- [x] Support host-injected APIs without direct global bridge access.
+- [x] Support extension manifest metadata for popup and page surfaces.
+- [x] Support permissions for page reading and page writing.
+- [x] Support localized English and Turkish extension UI strings.
+- [x] Support automated key parity between English and Turkish dictionaries.
+- [x] Support a localized extension name and description for Turkish.
+- [x] Support registration in the extension catalog with a stable identifier.
+- [x] Support replacing native video controls with one consistent player.
+- [x] Support suppressing the page's own controls on adopted videos.
+- [x] Support re-suppressing controls when a page restores them.
+- [x] Support detecting videos added to the page after load.
+- [x] Support rescanning the document through a mutation observer.
+- [x] Support releasing adopted videos removed from the document.
+- [x] Support a self-contained vendored player bundle with no external CDN fetch.
+- [x] Support pinning the vendored player version alongside the bundle.
+- [x] Support regenerating the vendored bundle through a dev-only script.
+- [x] Support reporting how many videos were adopted on the current page.
+- [x] Support schema validation of the untrusted page-state payload.
+- [x] Support bounding the reported adopted-video count.
+- [x] Support a master enable switch for the unified player.
+- [x] Support per-site disabling of the unified player.
+- [x] Support origin-based site matching restricted to http and https.
+- [x] Support bounding the stored per-site disable list.
+- [x] Support a per-site video scale preference.
+- [x] Support clamping per-site scale to a safe range.
+- [x] Support bounding the stored per-site scale map.
+- [x] Support a sensible default scale for YouTube.
+- [x] Support applying scale through a page-level stylesheet transform.
+- [x] Support a default playback speed preference.
+- [x] Support clamping playback speed to a safe range.
+- [x] Support a player chrome theme preference.
+- [x] Support auto-hiding controls after inactivity.
+- [x] Support toggling keyboard shortcuts for the player.
+- [x] Support keyboard shortcuts while the pointer is over a skinned player.
+- [x] Support fullscreen playback control.
+- [x] Support volume control.
+- [x] Support playback-rate control.
+- [x] Support rendering page-provided text tracks.
+- [x] Support re-mounting adopted videos when settings change.
+- [x] Support settings persistence through injected ports.
+- [x] Support sanitizing persisted settings on load.
+- [x] Support reloading the active tab from the settings surface.
+- [x] Support unit-tested host behavior through injected ports.
+- [ ] Support picture-in-picture playback.
+- [ ] Support skinning videos inside shadow roots.
+- [ ] Support skinning videos inside same-origin iframes.
+- [ ] Support applying the subtitle font size when a page exposes no text tracks.
+- [ ] Support loading external subtitle files.
+- [ ] Support integrity verification of the vendored player bundle.
+- [ ] Support regenerating the vendored bundle in continuous integration.
+- [ ] Support an agent-callable playback capability.
+- [ ] Support a per-site playback speed preference.
+- [ ] Support remembering playback position across sessions.
+- [ ] Support an audio-only or background playback mode.
+- [ ] Support screen-reader labels for player and settings controls.
+- [ ] Support high-contrast player chrome.
+- [ ] Support reduced-motion friendly control transitions.
+- [ ] Support package documentation for the extension surface and settings.
