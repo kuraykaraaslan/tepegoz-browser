@@ -45,7 +45,15 @@ const BROWSING_STRATEGY =
   '`visibleErrors` are ADVISORY: a page usually sets them on a failed submit and only refreshes them on the ' +
   'NEXT submit, so once the fields actually hold correct values, go ahead and submit rather than looping on ' +
   'a stale warning. If it reports coverage "partial" it could not see every field — scroll through the rest ' +
-  'of the form and check them yourself instead of treating the result as a green light.';
+  'of the form and check them yourself instead of treating the result as a green light.' +
+  // AI-8B: to judge whether a save/submit actually WORKED, click the control and READ browser_update_page's
+  // own result — a `networkWarning` there means the server rejected the request even if the page looks
+  // unchanged; its absence plus the expected page change means success. Confirm a save you triggered by
+  // observing THIS page (re-read it), never by leaving to web_search — the answer is on the page you are on.
+  '\nTo confirm whether a save/submit succeeded, click the control and read the result of that ' +
+  'browser_update_page call: a `networkWarning` means the request FAILED (e.g. a silent 4xx/5xx) even if ' +
+  'nothing visibly changed; no warning plus the expected change means it worked. Re-read the current page ' +
+  'to verify — do NOT web_search to find out whether your own action saved.';
 
 export function systemPrompt(req: ReactRequest): string {
   const toolList = req.tools.map((t) => `- ${t.id} (${t.dangerClass}): ${t.description}`).join('\n');
