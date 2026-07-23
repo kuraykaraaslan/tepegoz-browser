@@ -63,7 +63,7 @@ loop control, action vocabulary, content-security) into our own packages. Real-g
 | AI-5 | [phase-ai-5-content-security.md](phase-ai-5-content-security.md) | Untrusted-content wrapping + injection/PII sanitizer | AI-2 | 🟡 In progress (PR1+PR2 landed: inbound content-guard — NFKC + injection redaction + forged-tag strip + threat taxonomy at the perception boundary; trusted-task fencing + security preamble; strict-mode PII redaction + GuardConfig. Remaining: strict-mode setting wiring + on-harness measurement) |
 | AI-6 | [phase-ai-6-consolidation.md](phase-ai-6-consolidation.md) | Retire prose patches (once subsumed) + institutionalise the loop | AI-2, AI-3 | ⬜ Not started |
 | AI-7 | [phase-ai-7-navigation-grounding.md](phase-ai-7-navigation-grounding.md) | Evidence-gated URLs + no escape-hatch (visible-nav-first; search/guess only after on-page route exhausted) | AI-2, AI-3, AI-4 | 🟡 In progress (PR1 code+unit-tests landed: pure candidate resolver + SSRF-safe sitemap/robots reader (same-origin construction, redirect-disabled) + `web_search_items` surfaced & gated as a steer + `s31` escape-rate metric + `escape-bait`/`url-hallucination-trap`/`sitemap-only-route` fixtures + the `/blog` blind-guess prose **removed** from reactor/planner. Remaining: the live N≥3 on-harness numbers — escape-rate down + traps flip to pass, held-out no-regress) |
-| AI-8 | [phase-ai-8-beyond-the-port.md](phase-ai-8-beyond-the-port.md) | Net-new axes: real vision, network verification, table understanding, per-domain memory | AI-1, AI-2 | ⬜ Not started (external audit `s19`/`s10`/`s17`/`s22`) |
+| AI-8 | [phase-ai-8-beyond-the-port.md](phase-ai-8-beyond-the-port.md) | Net-new axes: real vision, network verification, table understanding, per-domain memory | AI-1, AI-2 | 🟡 In progress (**8A vanity flag cleared**: no prose steers the agent at the screenshot tool it is blind to, and the tool now says so itself — test-locked. The four capabilities themselves — vision pixels `s19`, network status `s10`, table structure `s17`, per-domain memory `s22` — remain unbuilt) |
 
 Status legend: ⬜ Not started · 🟡 In progress · ✅ Done (DoD passed).
 
@@ -90,10 +90,13 @@ in the phases below. Tally (30 original + `s31` added on review; `s02` landed vi
 right after the audit): **1 done · 10 mostly · 14 partial · 6 not-addressed.** *(Update 2026-07-23: **AI-7 PR1**
 landed the code for `s01` and `s31`, moving both to 🟢 (code + unit tests; on-harness live numbers still owed).)*
 
-> **One vanity risk to fix now:** `browser_get_screenshot` captures a real PNG, and the recovery/strategy
-> prose *recommends* it "as a visual fallback" — but `CanonMessage.content` is string-only and no provider
-> adapter carries images, so the model is **structurally blind** to the screenshot. Either wire the image
-> through (AI-8A) or stop recommending a blind tool. See [AI-8](phase-ai-8-beyond-the-port.md).
+> **~~One vanity risk to fix now~~ — ✅ FIXED 2026-07-23.** `browser_get_screenshot` captures a real PNG but
+> `CanonMessage.content` is string-only and no adapter carries images, so the model is **structurally blind**
+> to it — yet seven places (strategy/planner/recovery/tool descriptions/loop-nudge) recommended it "as a
+> visual fallback", and the tool's own text described *"this image"* to a model that never receives it. All
+> steers now point at capabilities that actually work (scroll / `scroll_to_text` / reveal + re-read), the
+> returned note states the pixels are NOT sent, and a unit test locks the honesty contract in.
+> **Real vision (wiring the image through) remains owed** — see [AI-8](phase-ai-8-beyond-the-port.md).
 
 Status: ✅ done · 🟢 mostly (wired, minor gaps) · 🟡 partial (some sub-points, or built-but-unwired/off-by-default/prompt-only) · ⬜ not-addressed.
 
@@ -123,7 +126,7 @@ Status: ✅ done · 🟢 mostly (wired, minor gaps) · 🟡 partial (some sub-po
 | s26 | Rich performance metrics | 🟡 | [AI-1](phase-ai-1-eval-harness.md) — success+tokens live; duration/first-attempt/avg-actions/$cost absent; recovery+intervention dead in live path |
 | s28 | Adversarial test set | 🟡 | [AI-1](phase-ai-1-eval-harness.md) + [AI-5](phase-ai-5-content-security.md) — injection + same-name traps only; fake-download/scroll-hide/decoy missing |
 | s20 | Approval gate; separate prepare from send | 🟡 | [Phase 9](../phase-9-safe-autonomy-delegation.md) — gate built+default-on; no prepare/send split, `financial` class unassigned, biometric unenforced |
-| s19 | Combine visual understanding with DOM | 🟡 | **[AI-8A](phase-ai-8-beyond-the-port.md)** (new) — screenshot captured but model is blind to pixels (vanity flag) |
+| s19 | Combine visual understanding with DOM | 🟡 | **[AI-8A](phase-ai-8-beyond-the-port.md)** — **vanity flag cleared** (nothing now recommends the blind tool; its own text says the pixels are not sent, test-locked). The capability itself — pixels reaching the model via a `CanonMessage` image type + adapters — is still unbuilt |
 | s10 | Observe the network layer (status codes/verify) | 🟡 | **[AI-8B](phase-ai-8-beyond-the-port.md)** (new) — Network enabled for idle-wait only; no status/response capture |
 | s02 | Run each scenario ≥3× | 🟢 | [AI-1](phase-ai-1-eval-harness.md) — **landed** (`TEPEGOZ_EVAL_REPEAT`: majority verdict + k/N pass-frequency + mean); step-count/duration aggregation still owed |
 | s27 | Flaky detection + confidence intervals | ⬜ | [AI-1](phase-ai-1-eval-harness.md) — point estimates only; needs s02 first |

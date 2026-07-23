@@ -23,7 +23,7 @@ describe('@tepegoz/screenshots', () => {
     expect(ScreenshotCaptureInputSchema.safeParse({ mode: 'whole-document' }).success).toBe(false);
   });
 
-  it('wraps screenshot metadata as untrusted visual page context', () => {
+  it('wraps capture metadata as untrusted context and states plainly that the pixels are NOT sent', () => {
     const snap = buildScreenshotSnapshot({
       url: 'https://example.com',
       title: 'Example',
@@ -42,5 +42,9 @@ describe('@tepegoz/screenshots', () => {
     expect(snap.content).toContain('Browser screenshot');
     expect(snap.content).toContain('untrusted');
     expect(snap.content).not.toBe('Browser screenshot');
+    // AI-8A honesty contract: the model receives text only, so the note must NOT invite it to "look at"
+    // the image, and must say the pixels are not sent. Guards against silently re-introducing the vanity.
+    expect(snap.content).toContain('are NOT sent to you');
+    expect(snap.content).not.toMatch(/visual fallback|in this image/i);
   });
 });

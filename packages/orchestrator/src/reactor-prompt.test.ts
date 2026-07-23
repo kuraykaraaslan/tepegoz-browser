@@ -87,9 +87,12 @@ describe('Reactor system prompt (coreference + browsing strategy)', () => {
     expect(await capture()).toContain('Prefer to stay in the CURRENT tab');
   });
 
-  it('mentions screenshot fallback and changed=false recovery', async () => {
+  it('does NOT steer to the blind screenshot tool; points at real reveal capabilities (AI-8A)', async () => {
     const prompt = await capture();
-    expect(prompt).toContain('browser_get_screenshot');
+    // The image never reaches the model (CanonMessage is text-only), so recommending it as a "visual
+    // fallback" was steering the agent at a tool it is structurally blind to.
+    expect(prompt).not.toContain('browser_get_screenshot');
+    expect(prompt).toContain('scroll_to_text');
     expect(prompt).toContain('changed=false');
   });
 

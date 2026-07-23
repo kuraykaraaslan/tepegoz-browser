@@ -18,8 +18,12 @@ const BROWSING_STRATEGY =
   'that tab. Use tab_update_item only when the tab must become visible/focused. Close tabs you opened ' +
   'with tab_delete_item when they are no longer needed. After browser_update_page or navigation, verify ' +
   'the result with browser_validate_page, browser_get_page, or browser_get_elements before continuing. ' +
-  'If browser_get_page/browser_get_elements do not expose enough information, use browser_get_screenshot ' +
-  'as a visual fallback. If browser_update_page returns changed=false, do not repeat the same ref blindly; ' +
+  // AI-8A: do NOT steer to browser_get_screenshot "as a visual fallback" — the image is not sent to the
+  // model (CanonMessage is text-only), so it reveals nothing about the page. Point at real capabilities.
+  'If browser_get_page/browser_get_elements do not expose enough information, the target is usually just ' +
+  'not in view or not revealed yet: scroll, use browser_update_page with scroll_to_text to bring a known ' +
+  'string into view, or open the menu/panel that holds it — then re-read. ' +
+  'If browser_update_page returns changed=false, do not repeat the same ref blindly; ' +
   're-read browser_get_elements and try a different actionable ref or finish with a clear limitation.' +
   // AI-7 navigation grounding: prefer a route you can SEE or VERIFY; never fabricate a URL. The escape
   // vectors (guessing a path, bailing to web_search) are gated behind exhausting the on-page route.

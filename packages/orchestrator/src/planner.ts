@@ -86,8 +86,10 @@ export default class Planner {
       'when working on that tab; use tab_update_item only when the tab must become visible/focused. ' +
       'After browser_update_page or navigation, verify the result with browser_validate_page, ' +
       'browser_get_page, or browser_get_elements before continuing. Clean up agent-opened tabs with ' +
-      'tab_delete_item when done. If text/a11y reads are insufficient, plan browser_get_screenshot as a ' +
-      'visual fallback. If an interaction reports changed=false, re-read browser_get_elements and try a ' +
+      'tab_delete_item when done. If text/a11y reads are insufficient, the target is usually not in view ' +
+      'yet — plan a scroll (or browser_update_page scroll_to_text) and a re-read rather than a screenshot ' +
+      '(the screenshot image is not sent to the model, so it reveals nothing). ' +
+      'If an interaction reports changed=false, re-read browser_get_elements and try a ' +
       'different ref instead of repeating the same action. ' +
       'If a target section/link may be behind a menu/drawer, plan to open it (click the menu/hamburger ' +
       'toggle) then re-read browser_get_elements. Prefer a route you can SEE or VERIFY: navigate to a link ' +

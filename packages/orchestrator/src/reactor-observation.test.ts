@@ -196,7 +196,10 @@ describe('Reactor.run (observation feedback + recovery)', () => {
     expect(prompts.some((p) => p.includes('text: Required'))).toBe(true);
   });
 
-  it('fixture: falls back to a screenshot when text/a11y has no useful elements', async () => {
+  // Observation PLUMBING only: the reactor faithfully runs whatever read the model picked and feeds its
+  // `content` back. It does not endorse screenshot-as-perception — the image never reaches the model
+  // (AI-8A), which is why the prompts no longer suggest it as a visual fallback.
+  it('fixture: feeds a read tool’s content back into the loop (screenshot capture path)', async () => {
     CapabilityRegistry.reset();
     CapabilityRegistry.register(fakeTool('browser_get_elements', 'read', { content: 'No actionable elements', elements: [] }));
     CapabilityRegistry.register(

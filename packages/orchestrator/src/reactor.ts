@@ -265,7 +265,7 @@ export default class Reactor {
               `Observation: You have chosen ${decision.tool} with identical arguments ${String(count)} ` +
                 'times without moving toward the goal. It may ALREADY have taken effect (e.g. the menu / ' +
                 'panel you are toggling is already open) or the ref may be stale — verify by re-reading ' +
-                'browser_get_elements (or browser_get_screenshot) rather than assuming. Then act on a ' +
+                'browser_get_elements (scroll first if the target may be off-screen) rather than assuming. Then act on a ' +
                 'DIFFERENT element to advance the goal; do NOT repeat this exact call.',
             );
             continue;

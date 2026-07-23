@@ -287,8 +287,8 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
         'Returns { ok, url, title, changed, recoveryHint?, note?, found? }. changed=true also fires when a ' +
         'click opens a menu/drawer/panel with no new page text (a `note` then says to re-read elements); ' +
         'scroll_to_text returns found=true|false. If ' +
-        'changed=false, re-read elements or use browser_get_screenshot before trying a different ref — ' +
-        'never repeat the same ref blindly.',
+        'changed=false, re-read elements (and scroll if the target may be off-screen) before trying a ' +
+        'different ref — never repeat the same ref blindly.',
     ),
     inputSchema: UpdatePageArgs,
     handler: async (args) => {
@@ -339,7 +339,7 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
             changed,
             found: false,
             recoveryHint:
-              'No matching text was found on the page. Try fewer or different words, or scroll and re-read; use browser_get_screenshot if unsure what is present.',
+              'No matching text was found on the page. Try fewer or different words, or scroll and re-read; use browser_get_page to see what text is actually present.',
           };
         }
         // Honest shortfall: fewer occurrences than the requested `nth` exist. Report it rather than
@@ -365,7 +365,7 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
           title: after.title,
           changed,
           recoveryHint:
-            'No visible or structural change was detected. Re-read browser_get_elements and try a different ref; use browser_get_screenshot if text/a11y is insufficient.',
+            'No visible or structural change was detected. Re-read browser_get_elements and try a different ref; if the target may be off-screen, scroll (or use scroll_to_text) and re-read.',
         };
       }
       // Structural-only: the actionable set moved (a menu/drawer/panel opened) but no new prose appeared.
