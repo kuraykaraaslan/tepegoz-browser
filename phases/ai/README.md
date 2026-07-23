@@ -108,10 +108,23 @@ unfocused):
   observed the real 507 and the agent's summary named it. The network recorder is confirmed working live.
   Remaining failures are the model escaping on some trials (AI-7), not the mechanism.
 
-**Bottom line:** the agent-interaction layer works end-to-end now (perceive → fill → submit → observe the
-network result). On gpt-4o the honest ceiling on these tasks is ~1/3, limited by the model escaping to a
-web search instead of finishing on-page — the concrete, measured target for AI-7 (escape suppression) and
-AI-3 (loop) next, no longer masked by infrastructure.
+A wider spot-check (gpt-4o, N=3 each) then corrected an over-broad reading of the two numbers above —
+escape is NOT the single ceiling:
+- `login_form`: **0/3, and it can never pass as written.** Every trial stops after ONE step because the
+  Human Handoff Controller detects a login screen and deliberately refuses to sign in ("Tepegöz has
+  paused and will not sign in for you"). The agent is behaving CORRECTLY; the scenario asks for something
+  the product intentionally will not do, so it is a permanent false negative silently depressing the
+  metric. **Action: re-scope it to assert the handoff fires (that IS the desired behaviour), or drop it.**
+- `cookie_consent`: **0/3**, escape rate 0 — the agent spends 11-15 steps and reports it "could not
+  dismiss the banner using the available buttons". A real interaction gap (clicking an overlay/banner
+  control), distinct from both the fill bugs fixed here and from escape. Not yet diagnosed.
+
+**Bottom line:** the agent-interaction layer now works end-to-end (perceive → fill → submit → observe the
+network result), proven by two scenarios going 0/3 → 1/3 including a live end-to-end AI-8B 507 capture.
+Beyond that the limiters are several and distinct — model escape (AI-7/AI-3), an unverified
+overlay/banner click path, and at least one eval scenario that contradicts a safety policy. Each is now
+measurable rather than masked by infrastructure, which is the real change: the harness can finally tell
+these apart.
 
 ## Interim state (to be retired in AI-6)
 
