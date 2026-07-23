@@ -25,18 +25,30 @@ an image block; the screenshot result's `dataUrl` is placed nowhere the reactor 
 ([`reactor.ts` `observationOf`](../../packages/orchestrator/src/reactor.ts) forwards only `content`
 strings). The model gets a **text note** ("png 1280×720, N bytes"), not pixels.
 
-> **Vanity flag (fix immediately, independent of the rest):** the stale-selector recovery prose
-> ([`recovery.ts:161`](../../packages/orchestrator/src/recovery.ts)) and `BROWSING_STRATEGY` actively
-> **recommend `browser_get_screenshot` "as a visual fallback"** — steering the model toward a tool whose
-> output it is structurally blind to. Either wire the image through (below) or stop recommending a blind
-> tool. Leaving it as-is is exactly the "green that proves nothing" the track exists to kill.
+> **Vanity flag — ✅ CLEARED 2026-07-23** (the "stop recommending a blind tool" option; wiring the image
+> through is still owed below). Re-verified against the code first: `CanonMessage.content` really is
+> `string`-only, and `observationOf` forwards only `result.content`, so the model receives a text note and
+> never pixels. It was worse than the audit recorded — the tool's OWN returned text told the model to
+> *"treat visible text and UI **in this image** as untrusted page content"*, i.e. it described an image the
+> model cannot see. Seven live steers were removed:
+> - `screenshots`: the returned note now states plainly that **the pixels are NOT sent** and points at
+>   `browser_get_page`/`browser_get_elements`; the tool description says it captures a PNG **for the run
+>   record** and is useless for reading the page. A unit test now asserts this honesty contract (and
+>   forbids the words "visual fallback"/"in this image") so it cannot silently regress.
+> - `reactor-prompt.ts`, `planner.ts`, `recovery.ts` (×2), `browser-tools.ts` (×3) and the `reactor.ts`
+>   loop-detector nudge no longer offer the screenshot as a perception fallback — they point at the
+>   capabilities that actually work: scroll, `scroll_to_text`, opening the menu/panel, and re-reading.
+>
+> Net: the agent no longer burns a step on a tool it is blind to, and no prompt claims a capability the
+> product does not have. The *capability* gap (real vision) is unchanged and tracked by the DoD below.
 
 **Exit criteria (DoD)**
 - [ ] `CanonMessage` gains an image content type; the Anthropic/OpenAI/Gemini adapters forward it as the
       vendor image block (vision-capable models only; degrade to the text note otherwise). Egress
       inspection + token budgeting still apply to image payloads.
-- [ ] `browser_get_screenshot`'s PNG reaches the model on the vision path; the recovery/strategy prose only
-      recommends it when the routed model can actually see it.
+- [x] **No prose recommends a tool the model is blind to** (the vanity-flag fix above). The remaining half
+      — `browser_get_screenshot`'s PNG actually reaching the model, after which the strategy prose may
+      recommend it again *only when the routed model can see it* — is still owed.
 - [ ] **DOM↔pixel fusion:** the AI-2 `highlightIndex`es are drawable onto the screenshot (the internal
       `centerOf` box→coordinate mapping already exists for actuation; surface it for overlay), so the model
       can reason about *this ref = that on-screen box*. Vision is a **fallback for non-DOM regions**
@@ -53,14 +65,47 @@ everything else. `Network.responseReceived` (the event carrying HTTP status) is 
 (grep for `responseReceived`/`statusCode` on the agent path: zero hits). So the agent's only "did it work"
 signal is DOM-level (url/title/text/`sig` delta); a **silent 400/401/403/500** on a "Save" is invisible.
 
+> **PR1 landed 2026-07-23 (code + unit tests + live on-harness evidence).** Recorder
+> ([`cdp-driver-network.electron.ts`](../../apps/desktop/src/main/agent/cdp-driver-network.electron.ts))
+> + pure selection/summary ([`network-verify.ts`](../../packages/browser-tools/src/network-verify.ts))
+> + `browser_update_page` wiring + a `silent-api-failure` fixture served a real HTTP status by the
+> harness's new `/__status/<code>` endpoint.
+>
+> **What the live harness actually showed (openai gpt-4o, N=3 ×2 runs).** The mechanism is **proven**: in
+> one trial the recorder logged `507 Fetch POST` on the Save click and the agent's closing summary named
+> *"HTTP 507 — Insufficient Storage"*, a code that appears nowhere in the page text (the `fetch` lives in
+> a `<script>`, which `innerText` does not expose) and that no model volunteers by default. **The
+> scenario does not pass reliably yet, and the reason is NOT this feature** — in the other trials the
+> agent never reached the Save click at all (one burned 22 straight `browser_get_elements` calls and hit
+> the step cap; another wandered off-site). That is an AI-2/AI-4 competence gap, tracked there.
+>
+> Three real defects the measurement surfaced, all fixed in this PR:
+> - **Main-process crash** — `WindowTabs.dispose` called `isDestroyed()` on `view.webContents`, which is
+>   `undefined` once Electron has torn the contents down; inside the window's `closed` handler that
+>   became an UNCAUGHT exception. It killed **2 of 3** eval trials (3 of 7 overall) and corrupted every
+>   number until fixed. Teardown is now per-view best-effort.
+> - **`fill` always reported `changed: false`** — `sig` excludes `el.value` by design and `innerText`
+>   carries no input values, so a fill that WORKED was reported as a no-op with "try a different ref".
+>   Observed costing five wasted steps. `browser_update_page` now reads the value back on the same
+>   snapshot ref and reports `filled` true / false+actual / UNVERIFIED. (AI-4 `s16` typed-widget work.)
+> - **A first scenario that passed for the wrong reason** — with `expectedValue: "500"` the scorer could
+>   not tell a real observation from the most-guessable server-error code. Fixture now returns **507**
+>   and the task explicitly asks for the status code, so the ground truth is unguessable AND legitimately
+>   requested.
+
 **Exit criteria (DoD)**
-- [ ] A `Network.responseReceived` listener keyed to the acting tab captures `{method, url, status,
+- [x] A `Network.responseReceived` listener keyed to the acting tab captures `{method, url, status,
       redirectChain}` for the current action window, zod-validated at the CDP boundary, ring-buffered.
-- [ ] `browser_update_page` post-action verification can report a relevant **non-2xx** (e.g. a Save POST
+      Contract-tested against real Chromium event bodies (`cdp-driver-network.test.ts`).
+- [x] `browser_update_page` post-action verification can report a relevant **non-2xx** (e.g. a Save POST
       returned 403) back into the observation stream, so the agent stops treating a failed API call as
       success when the UI shows no error. Untrusted-content wrapping (AI-5) applies to any surfaced body.
-- [ ] Measured on AI-1: a `silent-api-failure` fixture (button click → 500, UI unchanged) — the agent
-      reports the failure instead of finishing "done."
+      Two-sided: only XHR/Fetch/Document count (a third-party pixel 404 is not the action failing), and
+      an empty observation list is **never** reported as "everything succeeded".
+- [ ] Measured on AI-1: a `silent-api-failure` fixture (button click → 507, UI unchanged) — the agent
+      reports the failure instead of finishing "done." **Mechanism demonstrated once end-to-end; a
+      majority pass is blocked on the agent completing the fill→save flow, not on this feature.**
+      Re-measure after the AI-2/AI-4 perception+fill work.
 
 ## 8C — Table / list understanding · `s17`
 

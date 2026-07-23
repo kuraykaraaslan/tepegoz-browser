@@ -37,7 +37,7 @@ them** with `- [ ]` / `- [x]`. This keeps the process resumable across sessions.
 | 12 | [phase-12-developer-platform-marketplace.md](phase-12-developer-platform-marketplace.md) | Developer platform & marketplace economy (SDK/CLI + Site-Recipe Library + SBOM gate) | ⬜ Not started |
 | M | [phase-macros.md](phase-macros.md) | Macros extension (`@tepegoz/ext-macros`) — iMacros successor: record/edit/replay, robust selectors, agent capabilities (down-payment on Phase 6) | 🟡 Core shipped |
 | E | [phase-extras.md](phase-extras.md) | Extras — special-track, demand-gated items off the 0–12 critical path (e.g. DRM/Widevine) | ⬜ Not started |
-| AI | [ai/README.md](ai/README.md) | AI agent competence sub-track — real-result eval loop + render-DOM perception + planner-as-validator loop + richer actions + content-security (deepens 1a/1b; learn-from-not-adopt `browser-use`/`nanobrowser`) | ⬜ Not started (interim prompt heuristics shipped; retired in AI-6) |
+| AI | [ai/README.md](ai/README.md) | AI agent competence sub-track **v2** — a falsifiable "world's best browser agent" program: Measurement (valid baselines + external yardstick/H2H) → Core competence (escape fix, replanner, perception economy, obstructed pages, tabs/widgets, verified outcomes, measured ASR) → Frontier (evidence-gated vision, structured data, domain memory). v1 (AI-1..8, the `browser-use`/`nanobrowser` port) is archived in [ai/archive/](ai/archive/README.md) with its honest status history | 🟡 In progress (v1 backbone landed + default-on; v2 M1 next) |
 
 Status legend: ⬜ Not started · 🟡 In progress · ✅ Done (DoD passed)
 
