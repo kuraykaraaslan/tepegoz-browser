@@ -14,6 +14,13 @@ export interface StepOutcome {
   ok: boolean;
   result?: unknown;
   error?: ToolError;
+  /**
+   * Wall-clock milliseconds spent inside the ToolGateway for this step (policy evaluation + any HITL
+   * wait + the handler itself). Recorded here because this is the only place that brackets a single
+   * tool call; without it the eval harness can report *what* the agent did but never *how long* it
+   * took, which is half of a competence number.
+   */
+  durationMs: number;
 }
 
 export type StopReason =
@@ -51,6 +58,8 @@ export interface RunOptions {
   ctxFor?: (step: PlanStep) => InvokeContext;
   /** Cooperative cancellation, checked before each step (AbortSignal is structurally compatible). */
   signal?: { readonly aborted: boolean };
+  /** Injectable clock for step timing — lets tests assert durations deterministically. */
+  now?: () => number;
   /** Live progress hooks (Agent Console). Called before/after each step. */
   onStepStart?: (step: PlanStep) => void;
   onStepEnd?: (outcome: StepOutcome) => void;
@@ -101,10 +110,14 @@ export default class Executor {
 
       options.onStepStart?.(step);
       const stepCtx = options.ctxFor ? options.ctxFor(step) : ctx;
+      const startedAt = options.now?.() ?? Date.now();
       const result = await ToolGateway.invoke(step.tool, step.args, stepCtx);
+      // Measured even on the error path — a step that fails SLOWLY (a timeout, a long policy wait) is
+      // exactly the case a latency metric needs to surface.
+      const durationMs = Math.max(0, (options.now?.() ?? Date.now()) - startedAt);
       const outcome: StepOutcome = isToolError(result)
-        ? { stepId: step.id, tool: step.tool, args: step.args, ok: false, error: result }
-        : { stepId: step.id, tool: step.tool, args: step.args, ok: true, result };
+        ? { stepId: step.id, tool: step.tool, args: step.args, ok: false, error: result, durationMs }
+        : { stepId: step.id, tool: step.tool, args: step.args, ok: true, result, durationMs };
       outcomes.push(outcome);
       options.onStepEnd?.(outcome);
       if (!outcome.ok) {

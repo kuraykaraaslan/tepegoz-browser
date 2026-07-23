@@ -52,6 +52,7 @@ describe('agent run lifecycle', () => {
       args: { tabId: 'tab-1' },
       ok: true,
       result: { url: 'https://example.com', title: 'Example', content: 'hello' },
+      durationMs: 42,
     };
     expect(checkpointFromOutcome('executing', outcome)).toMatchObject({
       phase: 'executing',

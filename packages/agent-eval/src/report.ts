@@ -108,6 +108,7 @@ export function buildReport(input: ReportInput): EvalReport {
 /** A human-readable summary table (full pass/fail list — the eval must be able to show a fail). */
 export function formatReportTable(report: EvalReport): string {
   const pct = (n: number): string => `${(n * 100).toFixed(1)}%`;
+  const ms = (n: number): string => (n >= 1000 ? `${(n / 1000).toFixed(1)}s` : `${Math.round(n).toString()}ms`);
   const rows = report.scenarios.map(
     (s) =>
       `  ${s.ok ? 'PASS' : 'FAIL'}  ${s.heldOut ? '[held-out] ' : ''}${s.id}${s.escaped ? ' [escaped]' : ''} — ${s.reason}`,
@@ -122,6 +123,12 @@ export function formatReportTable(report: EvalReport): string {
       ` · held-out: ${pct(report.heldOut.metrics.taskSuccessRate)} (${String(report.heldOut.n)})`,
     `escape rate (AI-7, lower=better): dev ${pct(report.dev.metrics.escapeRate)}` +
       ` · held-out: ${pct(report.heldOut.metrics.escapeRate)}`,
+    `first-attempt success (no tool error, no recovery): dev ${pct(report.dev.metrics.firstAttemptSuccessRate)}` +
+      ` · held-out: ${pct(report.heldOut.metrics.firstAttemptSuccessRate)}`,
+    `dev cost: ${report.dev.metrics.avgToolCallsPerRun.toFixed(1)} actions/run` +
+      ` · ${Math.round(report.dev.metrics.avgTokensPerRun).toString()} tokens/run`,
+    `dev latency: step p50 ${ms(report.dev.metrics.stepLatencyP50Ms)} · p95 ${ms(report.dev.metrics.stepLatencyP95Ms)}` +
+      ` · run (sum-of-steps) p50 ${ms(report.dev.metrics.runDurationP50Ms)}`,
     `threshold ${report.thresholdMet ? 'met' : 'NOT met'}`,
     ...judgeLine,
     ...rows,

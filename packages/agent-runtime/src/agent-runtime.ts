@@ -244,6 +244,7 @@ export async function runAgent(
       return {
         tool: o.tool,
         ok: o.ok,
+        durationMs: o.durationMs,
         ...(o.error?.message !== undefined ? { error: o.error.message } : {}),
         ...(targetUrl !== undefined ? { targetUrl } : {}),
       };

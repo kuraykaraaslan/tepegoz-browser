@@ -51,6 +51,9 @@ const EvalOutSchema = z.object({
         error: z.string().optional(),
         // AI-7: the nav/fetch target URL (when the call had a `url` arg) — feeds the escape-rate metric.
         targetUrl: z.string().optional(),
+        // Per-step wall-clock from the reactor — feeds the latency metrics. Optional so a report from
+        // an older app build still parses (it simply contributes no timing).
+        durationMs: z.number().nonnegative().optional(),
       }),
     )
     .optional(),
@@ -216,7 +219,12 @@ export async function runScenarioTrials(
   const passes = scores.filter((s) => s.ok).length;
   const ok = passes * 2 >= REPEAT; // majority
   const last = outs[outs.length - 1] ?? {};
-  const outcomes: StepOutcome[] = (last.steps ?? []).map((s) => ({ stepId: '', tool: s.tool, ok: s.ok }));
+  const outcomes: StepOutcome[] = (last.steps ?? []).map((s) => ({
+    stepId: '',
+    tool: s.tool,
+    ok: s.ok,
+    durationMs: s.durationMs ?? 0,
+  }));
   const inputTokens = outs.reduce((n, o) => n + (o.tokenUsage?.inputTokens ?? 0), 0);
   const outputTokens = outs.reduce((n, o) => n + (o.tokenUsage?.outputTokens ?? 0), 0);
   // AI-7 escape rate (majority across trials), measured only over fixture "sites" (a sub-path directory);

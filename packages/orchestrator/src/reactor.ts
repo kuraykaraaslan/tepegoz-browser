@@ -276,10 +276,14 @@ export default class Reactor {
 
       options.onDecision?.(decision.tool, decision.rationale);
       const ctx = options.ctxFor ? options.ctxFor(decision.tool, decision.args) : {};
+      const startedAt = Date.now();
       const result = await ToolGateway.invoke(decision.tool, decision.args, ctx);
+      // Timed on both paths: a slow FAILURE (timeout, long HITL wait) is precisely what a latency
+      // metric has to show. This is the live agent loop, so it is the number that matters most.
+      const durationMs = Math.max(0, Date.now() - startedAt);
       const outcome: StepOutcome = isToolError(result)
-        ? { stepId: `r${String(step)}`, tool: decision.tool, args: decision.args, ok: false, error: result }
-        : { stepId: `r${String(step)}`, tool: decision.tool, args: decision.args, ok: true, result };
+        ? { stepId: `r${String(step)}`, tool: decision.tool, args: decision.args, ok: false, error: result, durationMs }
+        : { stepId: `r${String(step)}`, tool: decision.tool, args: decision.args, ok: true, result, durationMs };
       outcomes.push(outcome);
       options.onOutcome?.(outcome);
 

@@ -32,6 +32,12 @@ export interface AcceptanceRunRecord {
   approvalCount: number;
   approvalLatencyMs: number[];
   tokenUsage: { inputTokens: number; outputTokens: number; totalTokens: number };
+  /** Summed wall-clock of every step in the run (ms). Sum-of-steps, not end-to-end run time — it
+   *  excludes model thinking time between steps, so it is honest about what it does and does not cover. */
+  stepDurationMs: number;
+  /** Every individual step duration (ms), kept so the aggregate can compute a real percentile rather
+   *  than a mean-of-means across runs. */
+  stepDurationsMs: number[];
   recovered: boolean;
   navigationValidationCalls: number;
   navigationValidationFailures: number;
@@ -57,6 +63,41 @@ export interface AcceptanceMetrics {
    *  better — the navigation-grounding fix is meant to drive this down without regressing task success. */
   escapeRate: number;
   tokenUsage: { inputTokens: number; outputTokens: number; totalTokens: number };
+  /** Median duration of a single tool call (ms) across every step of every run. */
+  stepLatencyP50Ms: number;
+  /** 95th-percentile single-step duration (ms) — where the slow tail actually lives. */
+  stepLatencyP95Ms: number;
+  /** Median summed step time per run (ms). */
+  runDurationP50Ms: number;
+  /** Mean tool calls per run — "how many actions did it take", the avg-actions competence signal. */
+  avgToolCallsPerRun: number;
+  /** Mean total tokens per run — cost proxy that needs no price table. */
+  avgTokensPerRun: number;
+  /**
+   * Fraction of runs that succeeded cleanly: passed with NO tool error and NO recovery. A run that
+   * only got there after a failed action or a recovery nudge is real success but not first-attempt
+   * success, and conflating them hides exactly the competence delta this track is trying to move.
+   */
+  firstAttemptSuccessRate: number;
+}
+
+/** Per-1M-token prices for one model, supplied by the caller. Deliberately NOT hardcoded: vendor
+ *  prices change, and a stale constant baked into the repo would produce confidently wrong money. */
+export interface TokenRateUsd {
+  inputPerMillion: number;
+  outputPerMillion: number;
+}
+
+/**
+ * Estimate spend for a run. Returns `undefined` when no rate was supplied — an unknown price must
+ * read as "not measured", never as `$0.00`, which would look like a free run in the report.
+ */
+export function estimateCostUsd(
+  usage: { inputTokens: number; outputTokens: number },
+  rate?: TokenRateUsd,
+): number | undefined {
+  if (rate === undefined) return undefined;
+  return (usage.inputTokens * rate.inputPerMillion + usage.outputTokens * rate.outputPerMillion) / 1_000_000;
 }
 
 export const ACCEPTANCE_SCENARIOS: AcceptanceScenario[] = [
@@ -89,6 +130,14 @@ function median(values: number[]): number {
     : ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2;
 }
 
+/** Nearest-rank percentile (p in [0,1]); 0 for an empty set, matching {@link median}. */
+function percentile(values: number[], p: number): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const rank = Math.ceil(p * sorted.length);
+  return sorted[Math.min(sorted.length - 1, Math.max(0, rank - 1))] ?? 0;
+}
+
 function validationChangedFalse(outcome: StepOutcome): boolean {
   if (!outcome.ok || outcome.tool !== 'browser_validate_page') return false;
   const result = outcome.result;
@@ -110,6 +159,7 @@ export function recordFromOutcomes(input: {
   escapeEligible?: boolean | undefined;
 }): AcceptanceRunRecord {
   const usage = input.tokenUsage ?? { inputTokens: 0, outputTokens: 0 };
+  const stepDurationsMs = input.outcomes.map((o) => o.durationMs).filter((ms) => Number.isFinite(ms));
   return {
     scenarioId: input.scenarioId,
     requiresRecovery: input.requiresRecovery ?? false,
@@ -120,6 +170,8 @@ export function recordFromOutcomes(input: {
     approvalCount: input.approvalLatencyMs?.length ?? 0,
     approvalLatencyMs: input.approvalLatencyMs ?? [],
     tokenUsage: { ...usage, totalTokens: usage.inputTokens + usage.outputTokens },
+    stepDurationMs: stepDurationsMs.reduce((sum, ms) => sum + ms, 0),
+    stepDurationsMs,
     recovered: input.recovered ?? false,
     navigationValidationCalls: input.outcomes.filter((o) => o.tool === 'browser_validate_page').length,
     navigationValidationFailures: input.outcomes.filter(validationChangedFalse).length,
@@ -138,6 +190,7 @@ export function summarizeAcceptanceRuns(records: AcceptanceRunRecord[]): Accepta
   const toolCalls = records.reduce((sum, r) => sum + r.toolCalls, 0);
   const validationCalls = records.reduce((sum, r) => sum + r.navigationValidationCalls, 0);
   const escapeEligible = records.filter((r) => r.escapeEligible);
+  const allStepDurations = records.flatMap((r) => r.stepDurationsMs);
   const tokenUsage = records.reduce(
     (sum, r) => ({
       inputTokens: sum.inputTokens + r.tokenUsage.inputTokens,
@@ -161,5 +214,14 @@ export function summarizeAcceptanceRuns(records: AcceptanceRunRecord[]): Accepta
     escapeRate:
       escapeEligible.length === 0 ? 0 : escapeEligible.filter((r) => r.escaped).length / escapeEligible.length,
     tokenUsage,
+    stepLatencyP50Ms: median(allStepDurations),
+    stepLatencyP95Ms: percentile(allStepDurations, 0.95),
+    runDurationP50Ms: median(records.map((r) => r.stepDurationMs)),
+    avgToolCallsPerRun: records.length === 0 ? 0 : toolCalls / records.length,
+    avgTokensPerRun: records.length === 0 ? 0 : tokenUsage.totalTokens / records.length,
+    firstAttemptSuccessRate:
+      records.length === 0
+        ? 0
+        : records.filter((r) => r.ok && r.toolErrors === 0 && !r.recovered).length / records.length,
   };
 }
