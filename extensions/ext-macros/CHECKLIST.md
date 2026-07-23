@@ -1,41 +1,41 @@
 # @tepegoz/ext-macros CHECKLIST
 
-Prepared from the extension README only; implementation status was not inspected.
+Status verified against the implementation and cross-referenced packages (2026-07-23); checked items have concrete code backing them.
 
-- [ ] Support a Macro Studio sidebar for recording, editing, and running macros.
-- [ ] Support a My Macros internal page for saved macro management.
-- [ ] Support shared macro state across sidebar and page surfaces.
-- [ ] Support host-injected APIs without direct global bridge access.
-- [ ] Support recording browser automation steps.
-- [ ] Support stopping an active recording session.
-- [ ] Support naming recorded macros.
-- [ ] Support editing saved macro metadata.
-- [ ] Support editing recorded macro steps.
-- [ ] Support deleting saved macros.
-- [ ] Support listing saved macros with identifiers, names, step counts, and update times.
-- [ ] Support retrieving one saved macro's full deterministic representation.
-- [ ] Support saving a macro from a full deterministic representation.
-- [ ] Support running a saved macro from the UI.
-- [ ] Support running a draft macro without saving it first.
-- [ ] Support streaming macro run progress to the UI.
-- [ ] Support terminal macro run outcomes.
-- [ ] Support run identifiers for each execution.
-- [ ] Support run success, failure, and aborted states.
-- [ ] Support displaying the number of executed steps.
-- [ ] Support located error messages for failed steps.
-- [ ] Support binding initial variables before a macro run.
+- [x] Support a Macro Studio sidebar for recording, editing, and running macros.
+- [x] Support a My Macros internal page for saved macro management.
+- [x] Support shared macro state across sidebar and page surfaces.
+- [x] Support host-injected APIs without direct global bridge access.
+- [x] Support recording browser automation steps.
+- [x] Support stopping an active recording session.
+- [x] Support naming recorded macros.
+- [x] Support editing saved macro metadata.
+- [x] Support editing recorded macro steps.
+- [x] Support deleting saved macros.
+- [x] Support listing saved macros with identifiers, names, step counts, and update times.
+- [x] Support retrieving one saved macro's full deterministic representation.
+- [x] Support saving a macro from a full deterministic representation.
+- [x] Support running a saved macro from the UI.
+- [x] Support running a draft macro without saving it first.
+- [x] Support streaming macro run progress to the UI.
+- [x] Support terminal macro run outcomes.
+- [x] Support run identifiers for each execution.
+- [x] Support run success, failure, and aborted states.
+- [x] Support displaying the number of executed steps.
+- [x] Support located error messages for failed steps.
+- [x] Support binding initial variables before a macro run.
 - [ ] Support showing and editing macro variables.
-- [ ] Support macro steps for navigation.
-- [ ] Support macro steps for click actions.
-- [ ] Support macro steps for fill actions.
-- [ ] Support macro steps for key presses.
-- [ ] Support macro steps for scrolling.
-- [ ] Support macro steps for extraction.
-- [ ] Support macro steps for wait conditions.
-- [ ] Support control flow such as conditional branches.
-- [ ] Support control flow such as repeated steps.
-- [ ] Support CSV-driven macro workflows.
-- [ ] Support record/replay highlighting beside the visible page.
+- [x] Support macro steps for navigation.
+- [x] Support macro steps for click actions.
+- [x] Support macro steps for fill actions.
+- [x] Support macro steps for key presses.
+- [x] Support macro steps for scrolling.
+- [x] Support macro steps for extraction.
+- [x] Support macro steps for wait conditions.
+- [x] Support control flow such as conditional branches.
+- [x] Support control flow such as repeated steps.
+- [x] Support CSV-driven macro workflows.
+- [x] Support record/replay highlighting beside the visible page.
 - [ ] Support pause, resume, and cancel controls for active runs.
 - [ ] Support dry-run or validation workflows before saving.
 - [ ] Support macro duplication for safe editing.
@@ -45,20 +45,20 @@ Prepared from the extension README only; implementation status was not inspected
 - [ ] Support sorting saved macros by name, update time, and step count.
 - [ ] Support filtering macros by recent use or status.
 - [ ] Support confirmation before destructive macro deletion.
-- [ ] Support agent-callable macro listing capability.
-- [ ] Support agent-callable macro retrieval capability.
-- [ ] Support agent-callable macro creation capability.
-- [ ] Support agent-callable macro deletion capability.
-- [ ] Support agent-callable macro run capability.
-- [ ] Support agent-callable macro run-result retrieval capability.
-- [ ] Support idempotency keys for state-changing macro capabilities.
-- [ ] Support destructive classification for delete operations.
-- [ ] Support localized English and Turkish strings.
-- [ ] Support keyboard-accessible macro editor controls.
+- [x] Support agent-callable macro listing capability.
+- [x] Support agent-callable macro retrieval capability.
+- [x] Support agent-callable macro creation capability.
+- [x] Support agent-callable macro deletion capability.
+- [x] Support agent-callable macro run capability.
+- [x] Support agent-callable macro run-result retrieval capability.
+- [x] Support idempotency keys for state-changing macro capabilities.
+- [x] Support destructive classification for delete operations.
+- [x] Support localized English and Turkish strings.
+- [x] Support keyboard-accessible macro editor controls.
 - [ ] Support screen-reader-friendly macro lists and run status.
-- [ ] Support responsive layout for sidebar and full-page surfaces.
+- [x] Support responsive layout for sidebar and full-page surfaces.
 - [ ] Support safe display of selectors and extracted values.
-- [ ] Support host-owned persistence and CDP selector integration.
-- [ ] Support manifest metadata for sidebar and page surfaces.
-- [ ] Support permissions for tabs, page reading, and navigation.
-- [ ] Support testable UI and capability contracts through injected hosts.
+- [x] Support host-owned persistence and CDP selector integration.
+- [x] Support manifest metadata for sidebar and page surfaces.
+- [x] Support permissions for tabs, page reading, and navigation.
+- [x] Support testable UI and capability contracts through injected hosts.

@@ -1,56 +1,56 @@
 # @tepegoz/ext-popup-blocker CHECKLIST
 
-Prepared from the extension README only; implementation status was not inspected.
+Status verified against the implementation and cross-referenced packages (2026-07-23); checked items have concrete code backing them.
 
-- [ ] Support strict popup blocking by default.
-- [ ] Support a compact toolbar popup surface.
-- [ ] Support a full internal page for popup-blocker management.
-- [ ] Support shared popup-blocker controls across popup and page surfaces.
-- [ ] Support host-injected APIs without direct global bridge access.
-- [ ] Support enabling and disabling popup blocking.
-- [ ] Support enabling and disabling popup-blocked notifications.
-- [ ] Support listing recent blocked popup requests.
+- [x] Support strict popup blocking by default.
+- [x] Support a compact toolbar popup surface.
+- [x] Support a full internal page for popup-blocker management.
+- [x] Support shared popup-blocker controls across popup and page surfaces.
+- [x] Support host-injected APIs without direct global bridge access.
+- [x] Support enabling and disabling popup blocking.
+- [x] Support enabling and disabling popup-blocked notifications.
+- [x] Support listing recent blocked popup requests.
 - [ ] Support clearing recent blocked popup requests.
-- [ ] Support showing the source origin for each blocked request.
-- [ ] Support showing the requested popup URL when safe to display.
-- [ ] Support inline notification action to allow a blocked popup.
-- [ ] Support inline notification action to open a popup in the background.
-- [ ] Support inline notification action to redirect the current tab.
-- [ ] Support inline notification action to trust a site.
-- [ ] Support one-time allow decisions for blocked popups.
-- [ ] Support persistent trusted-origin allowlist entries.
+- [x] Support showing the source origin for each blocked request.
+- [x] Support showing the requested popup URL when safe to display.
+- [x] Support inline notification action to allow a blocked popup.
+- [x] Support inline notification action to open a popup in the background.
+- [x] Support inline notification action to redirect the current tab.
+- [x] Support inline notification action to trust a site.
+- [x] Support one-time allow decisions for blocked popups.
+- [x] Support persistent trusted-origin allowlist entries.
 - [ ] Support editing trusted origins.
-- [ ] Support deleting trusted origins.
+- [x] Support deleting trusted origins.
 - [ ] Support adding trusted origins manually.
 - [ ] Support validating trusted origin input.
-- [ ] Support seeded trusted origins for OAuth and SSO providers.
-- [ ] Support seeded trusted origins for payment and 3-D Secure providers.
-- [ ] Support seeded trusted origins for video-call providers.
-- [ ] Support seeded trusted origins for productivity suites.
-- [ ] Support full user control over seeded trusted origins after seeding.
-- [ ] Support popup block decisions through an action interceptor.
-- [ ] Support integration with generic popup-open browser actions.
-- [ ] Support no agent-callable capability requirement for blocking behavior.
-- [ ] Support host-side settings persistence through injected ports.
-- [ ] Support host-side notification delivery through injected ports.
-- [ ] Support host-side locale selection through injected ports.
-- [ ] Support opening blocked popups in background tabs through the host.
-- [ ] Support blocking ad-like unsolicited popups.
-- [ ] Support allowing user-initiated popups on trusted sites.
-- [ ] Support origin-based matching instead of unsafe string-prefix matching.
-- [ ] Support per-session recent blocked request state.
-- [ ] Support persistent trusted-origin state.
+- [x] Support seeded trusted origins for OAuth and SSO providers.
+- [x] Support seeded trusted origins for payment and 3-D Secure providers.
+- [x] Support seeded trusted origins for video-call providers.
+- [x] Support seeded trusted origins for productivity suites.
+- [x] Support full user control over seeded trusted origins after seeding.
+- [x] Support popup block decisions through an action interceptor.
+- [x] Support integration with generic popup-open browser actions.
+- [x] Support no agent-callable capability requirement for blocking behavior.
+- [x] Support host-side settings persistence through injected ports.
+- [x] Support host-side notification delivery through injected ports.
+- [x] Support host-side locale selection through injected ports.
+- [x] Support opening blocked popups in background tabs through the host.
+- [x] Support blocking ad-like unsolicited popups.
+- [x] Support allowing user-initiated popups on trusted sites.
+- [x] Support origin-based matching instead of unsafe string-prefix matching.
+- [x] Support per-session recent blocked request state.
+- [x] Support persistent trusted-origin state.
 - [ ] Support import and export of trusted-origin allowlists.
 - [ ] Support search and filtering within trusted origins.
-- [ ] Support empty states for no recent blocks and no trusted sites.
+- [x] Support empty states for no recent blocks and no trusted sites.
 - [ ] Support warning copy that explains why a popup was blocked.
-- [ ] Support accessible toggles and list controls.
-- [ ] Support localized English and Turkish strings.
-- [ ] Support compact layout for toolbar popup usage.
-- [ ] Support full-page layout for allowlist management.
+- [x] Support accessible toggles and list controls.
+- [x] Support localized English and Turkish strings.
+- [x] Support compact layout for toolbar popup usage.
+- [x] Support full-page layout for allowlist management.
 - [ ] Support high-contrast risk indicators.
 - [ ] Support reduced-motion friendly notification updates.
-- [ ] Support safe truncation of long origins and URLs.
+- [x] Support safe truncation of long origins and URLs.
 - [ ] Support confirmation before removing trusted origins in bulk.
 - [ ] Support policy-friendly audit summaries for popup decisions.
 - [ ] Support profile-specific trusted-origin settings.
@@ -59,6 +59,6 @@ Prepared from the extension README only; implementation status was not inspected
 - [ ] Support badge or count display for blocked popups.
 - [ ] Support reset-to-seed allowlist workflows.
 - [ ] Support diagnostics for why a popup was allowed or blocked.
-- [ ] Support manifest metadata for popup and page surfaces.
-- [ ] Support permissions for tabs and navigation.
-- [ ] Support testable host logic through injected ports.
+- [x] Support manifest metadata for popup and page surfaces.
+- [x] Support permissions for tabs and navigation.
+- [x] Support testable host logic through injected ports.

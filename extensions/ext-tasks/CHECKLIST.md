@@ -1,25 +1,25 @@
 # @tepegoz/ext-tasks CHECKLIST
 
-Prepared from extension package metadata only because this extension has no README; implementation status was not inspected.
+Status verified against the implementation and cross-referenced packages (2026-07-23); checked items have concrete code backing them.
 
-- [ ] Support an internal tasks page surface.
-- [ ] Support extension manifest metadata for the tasks feature.
-- [ ] Support exported task page components.
-- [ ] Support exported task wire types.
-- [ ] Support localized English and Turkish task UI strings.
-- [ ] Support saved agent task listing.
-- [ ] Support creating saved agent tasks.
-- [ ] Support editing saved agent tasks.
-- [ ] Support deleting saved agent tasks.
-- [ ] Support enabling and disabling saved tasks.
+- [x] Support an internal tasks page surface.
+- [x] Support extension manifest metadata for the tasks feature.
+- [x] Support exported task page components.
+- [x] Support exported task wire types.
+- [x] Support localized English and Turkish task UI strings.
+- [x] Support saved agent task listing.
+- [x] Support creating saved agent tasks.
+- [x] Support editing saved agent tasks.
+- [x] Support deleting saved agent tasks.
+- [x] Support enabling and disabling saved tasks.
 - [ ] Support task names and descriptions.
-- [ ] Support task prompt or instruction content.
-- [ ] Support task trigger definitions.
+- [x] Support task prompt or instruction content.
+- [x] Support task trigger definitions.
 - [ ] Support one-time scheduled task triggers.
-- [ ] Support recurring scheduled task triggers.
-- [ ] Support manual task run triggers.
-- [ ] Support task status values such as enabled, disabled, running, failed, and completed.
-- [ ] Support task run history.
+- [x] Support recurring scheduled task triggers.
+- [x] Support manual task run triggers.
+- [x] Support task status values such as enabled, disabled, running, failed, and completed.
+- [x] Support task run history.
 - [ ] Support redacted task run artifacts.
 - [ ] Support viewing the latest task run summary.
 - [ ] Support viewing task run errors.
@@ -33,32 +33,32 @@ Prepared from extension package metadata only because this extension has no READ
 - [ ] Support sorting tasks by name, next run, last run, and update time.
 - [ ] Support bulk enable and disable workflows.
 - [ ] Support bulk deletion with confirmation.
-- [ ] Support a task creation modal.
-- [ ] Support a task editing modal.
-- [ ] Support conversation or agent-session selection when creating a task.
-- [ ] Support choosing agent autonomy level per task.
+- [x] Support a task creation modal.
+- [x] Support a task editing modal.
+- [x] Support conversation or agent-session selection when creating a task.
+- [x] Support choosing agent autonomy level per task.
 - [ ] Support choosing reasoning effort per task.
 - [ ] Support choosing provider or model preference per task.
 - [ ] Support previewing the task plan before saving when the host supplies it.
-- [ ] Support human approval requirements for risky scheduled tasks.
+- [x] Support human approval requirements for risky scheduled tasks.
 - [ ] Support notification preferences for task completion and failure.
-- [ ] Support next-run time display.
+- [x] Support next-run time display.
 - [ ] Support relative time display for previous runs.
-- [ ] Support empty state for no saved tasks.
-- [ ] Support no-results state for filtered task lists.
+- [x] Support empty state for no saved tasks.
+- [x] Support no-results state for filtered task lists.
 - [ ] Support loading and retry states for task data.
-- [ ] Support host-injected list, create, update, delete, and run callbacks.
-- [ ] Support host-injected subscription callbacks for live task updates.
-- [ ] Support integration with the agent extension types.
-- [ ] Support integration with the headless tasks domain package.
-- [ ] Support UI atoms from the shared design-system package.
-- [ ] Support keyboard-accessible task table or list controls.
-- [ ] Support screen-reader-friendly task status and action labels.
-- [ ] Support responsive layout for internal browser pages.
-- [ ] Support high-contrast status badges.
+- [x] Support host-injected list, create, update, delete, and run callbacks.
+- [x] Support host-injected subscription callbacks for live task updates.
+- [x] Support integration with the agent extension types.
+- [x] Support integration with the headless tasks domain package.
+- [x] Support UI atoms from the shared design-system package.
+- [x] Support keyboard-accessible task table or list controls.
+- [x] Support screen-reader-friendly task status and action labels.
+- [x] Support responsive layout for internal browser pages.
+- [x] Support high-contrast status badges.
 - [ ] Support reduced-motion friendly live updates.
 - [ ] Support safe display of task prompts without leaking secrets.
 - [ ] Support redacted display of artifacts and errors.
 - [ ] Support import and export of task definitions.
-- [ ] Support stable task identifiers for deep links and tests.
-- [ ] Support future task trigger types without changing page ownership.
+- [x] Support stable task identifiers for deep links and tests.
+- [x] Support future task trigger types without changing page ownership.
