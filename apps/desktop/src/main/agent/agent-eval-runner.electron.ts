@@ -110,12 +110,17 @@ function providerForRun(): { id: AIProvider; instance: ModelProvider } {
 async function navigateWhenReady(url: string, timeoutMs = 20_000): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   for (;;) {
-    // A brand-new profile opens with NO tab at all, and `navigateActive` returns early when there is no
-    // active tab record — so the agent would sit out the whole timeout on "No active page". Open the
-    // entry tab the way the UI does. (Whether a first-run window SHOULD come up tab-less is a separate
-    // product question this does not answer; it is simply not the eval's to decide.)
-    if (TabManager.activeWebContents() === null) TabManager.createTab(url);
     try {
+      // A brand-new profile opens with NO tab at all, and `navigateActive` returns early when there is no
+      // active tab record — so the agent would sit out the whole timeout on "No active page". Open the
+      // entry tab the way the UI does, then wait for THAT load. Calling `navigate` as well would start a
+      // second load on the same tab and abort the first (`ERR_ABORTED`), leaving the page in a state
+      // where the next tool call blocked for minutes. (Whether a first-run window SHOULD come up
+      // tab-less is a separate product question this does not answer.)
+      if (TabManager.activeWebContents() === null && TabManager.createTab(url) !== null) {
+        await browserHost.waitForLoad();
+        return;
+      }
       await browserHost.navigate(url);
       return;
     } catch (err) {
