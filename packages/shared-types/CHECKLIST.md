@@ -1,34 +1,34 @@
 # @tepegoz/shared-types CHECKLIST
 
-Prepared from the package README only; implementation status was not inspected.
+Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
 
-- [ ] Support canonical zod schemas for cross-layer contracts.
-- [ ] Support inferred TypeScript types from the canonical schemas.
-- [ ] Support avoiding duplicated schema definitions across packages.
-- [ ] Support AI provider enums.
-- [ ] Support policy decision enums.
-- [ ] Support human-in-the-loop status enums.
-- [ ] Support risk level enums.
-- [ ] Support MCP transport enums.
-- [ ] Support event type enums.
-- [ ] Support tool source enums.
-- [ ] Support tool error code enums.
-- [ ] Support event journal record schemas.
-- [ ] Support event journal input schemas.
-- [ ] Support log sequence number fields.
-- [ ] Support device ID fields.
-- [ ] Support content-addressed blob reference fields.
-- [ ] Support tool name validation with the shared naming convention.
-- [ ] Support tool descriptor schemas.
-- [ ] Support tool error schemas.
-- [ ] Support safeParse validation at trust boundaries.
-- [ ] Support zod-free inferred types where downstream packages need type-only imports.
+- [x] Support canonical zod schemas for cross-layer contracts.
+- [x] Support inferred TypeScript types from the canonical schemas.
+- [x] Support avoiding duplicated schema definitions across packages.
+- [x] Support AI provider enums.
+- [x] Support policy decision enums.
+- [x] Support human-in-the-loop status enums.
+- [x] Support risk level enums.
+- [x] Support MCP transport enums.
+- [x] Support event type enums.
+- [x] Support tool source enums.
+- [x] Support tool error code enums.
+- [x] Support event journal record schemas.
+- [x] Support event journal input schemas.
+- [x] Support log sequence number fields.
+- [x] Support device ID fields.
+- [x] Support content-addressed blob reference fields.
+- [x] Support tool name validation with the shared naming convention.
+- [x] Support tool descriptor schemas.
+- [x] Support tool error schemas.
+- [x] Support safeParse validation at trust boundaries.
+- [x] Support zod-free inferred types where downstream packages need type-only imports.
 - [ ] Support schema versioning for shared contracts.
 - [ ] Support compatibility tests for enum values used by other packages.
 - [ ] Support documentation for adding new shared enums.
 - [ ] Support deprecation metadata for evolving fields.
 - [ ] Support strict unknown-field policies where security matters.
 - [ ] Support pass-through unknown-field policies where forward compatibility matters.
-- [ ] Support stable serialized wire shapes for IPC and persistence.
+- [x] Support stable serialized wire shapes for IPC and persistence.
 - [ ] Support future notification, password, task, and tab shared contracts.
-- [ ] Support dependency-light use by low-level packages.
+- [x] Support dependency-light use by low-level packages.

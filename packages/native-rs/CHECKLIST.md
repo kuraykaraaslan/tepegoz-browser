@@ -1,16 +1,16 @@
 # native-rs CHECKLIST
 
-Prepared from the package README only; implementation status was not inspected.
+Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
 
 - [ ] Support Rust-backed hot paths through napi-rs bindings.
-- [ ] Support egress anomaly scanning for outbound data.
-- [ ] Support Base64 exfiltration detection.
-- [ ] Support high-entropy secret detection.
+- [x] Support egress anomaly scanning for outbound data.
+- [x] Support Base64 exfiltration detection.
+- [x] Support high-entropy secret detection.
 - [ ] Support screenshot eviction decisions in native code.
 - [ ] Support WebP screenshot encoding.
 - [ ] Support checkpoint serialization hot paths.
 - [ ] Support checkpoint deserialization hot paths.
-- [ ] Support a local small-language-model bridge.
+- [x] Support a local small-language-model bridge.
 - [ ] Support Node and Electron ABI compatible builds.
 - [ ] Support Windows build artifacts.
 - [ ] Support macOS build artifacts.

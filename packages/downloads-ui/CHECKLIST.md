@@ -1,27 +1,27 @@
 # @tepegoz/downloads-ui CHECKLIST
 
-Prepared from the package README only; implementation status was not inspected.
+Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
 
-- [ ] Support a tepegoz downloads activity page.
-- [ ] Support injected callbacks for listing downloads.
-- [ ] Support injected callbacks for download commands.
-- [ ] Support injected subscription callbacks for live updates.
+- [x] Support a tepegoz downloads activity page.
+- [x] Support injected callbacks for listing downloads.
+- [x] Support injected callbacks for download commands.
+- [x] Support injected subscription callbacks for live updates.
 - [ ] Support sections for active, completed, failed, and canceled downloads.
-- [ ] Support progress bars for active downloads.
+- [x] Support progress bars for active downloads.
 - [ ] Support pause, resume, cancel, retry, open, and reveal actions when supplied.
-- [ ] Support dangerous-download warning rows.
-- [ ] Support quarantine or scan-pending status indicators.
+- [x] Support dangerous-download warning rows.
+- [x] Support quarantine or scan-pending status indicators.
 - [ ] Support search by filename and source host.
 - [ ] Support filtering by download status.
 - [ ] Support sorting by newest, oldest, filename, size, and risk.
-- [ ] Support clearing completed downloads through host action.
-- [ ] Support empty state for no downloads.
+- [x] Support clearing completed downloads through host action.
+- [x] Support empty state for no downloads.
 - [ ] Support loading and retry states for initial list retrieval.
 - [ ] Support keyboard navigation across download rows.
 - [ ] Support accessible labels for progress and action buttons.
-- [ ] Support localized English and Turkish strings from the package.
-- [ ] Support redacted display of local paths.
-- [ ] Support source URL display with safe truncation.
+- [x] Support localized English and Turkish strings from the package.
+- [x] Support redacted display of local paths.
+- [x] Support source URL display with safe truncation.
 - [ ] Support file-size and time formatting through host or utility props.
 - [ ] Support responsive layout for narrow internal pages.
 - [ ] Support toast or inline feedback after commands.
@@ -30,5 +30,5 @@ Prepared from the package README only; implementation status was not inspected.
 - [ ] Support badges for source type, risk, and completion status.
 - [ ] Support reduced-motion friendly progress updates.
 - [ ] Support high-contrast visual states.
-- [ ] Support subscription cleanup on unmount.
-- [ ] Support stable row identity for live updates.
+- [x] Support subscription cleanup on unmount.
+- [x] Support stable row identity for live updates.

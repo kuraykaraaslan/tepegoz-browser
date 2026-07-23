@@ -1,34 +1,34 @@
 # @tepegoz/password-provider-google-csv CHECKLIST
 
-Prepared from the package README only; implementation status was not inspected.
+Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
 
-- [ ] Support importing Google Password Manager CSV data.
-- [ ] Support exporting credentials in Google-compatible CSV format.
-- [ ] Support provider metadata identifying the Google CSV source.
-- [ ] Support read-only provider behavior for stored credential queries.
-- [ ] Support delegating imported credentials to the local vault provider.
-- [ ] Support delegating export to the local vault provider.
-- [ ] Support parsing header rows.
-- [ ] Support importing CSV files without header rows.
+- [x] Support importing Google Password Manager CSV data.
+- [x] Support exporting credentials in Google-compatible CSV format.
+- [x] Support provider metadata identifying the Google CSV source.
+- [x] Support read-only provider behavior for stored credential queries.
+- [x] Support delegating imported credentials to the local vault provider.
+- [x] Support delegating export to the local vault provider.
+- [x] Support parsing header rows.
+- [x] Support importing CSV files without header rows.
 - [ ] Support auto-detecting name, URL, username, password, and note columns.
-- [ ] Support quoted CSV fields.
-- [ ] Support embedded commas inside quoted fields.
-- [ ] Support escaped quotes inside quoted fields.
-- [ ] Support filtering rows that lack URL, username, or password.
-- [ ] Support row-level error collection.
+- [x] Support quoted CSV fields.
+- [x] Support embedded commas inside quoted fields.
+- [x] Support escaped quotes inside quoted fields.
+- [x] Support filtering rows that lack URL, username, or password.
+- [x] Support row-level error collection.
 - [ ] Support imported, skipped, and error counts.
-- [ ] Support preserving notes where the format allows it.
-- [ ] Support preserving display names where the format allows it.
-- [ ] Support URL normalization before local vault insertion.
-- [ ] Support duplicate handling through the delegated local provider.
+- [x] Support preserving notes where the format allows it.
+- [x] Support preserving display names where the format allows it.
+- [x] Support URL normalization before local vault insertion.
+- [x] Support duplicate handling through the delegated local provider.
 - [ ] Support safe handling of very large CSV input.
-- [ ] Support UTF-8 CSV data.
-- [ ] Support CRLF and LF line endings.
+- [x] Support UTF-8 CSV data.
+- [x] Support CRLF and LF line endings.
 - [ ] Support formula-injection-safe CSV export.
-- [ ] Support deterministic column ordering on export.
+- [x] Support deterministic column ordering on export.
 - [ ] Support clear errors when the local provider is unavailable.
-- [ ] Support no-secret logging during import failures.
-- [ ] Support tests for malformed and quoted CSV cases.
+- [x] Support no-secret logging during import failures.
+- [x] Support tests for malformed and quoted CSV cases.
 - [ ] Support future Google CSV column variants.
 - [ ] Support documentation for user import and export flows.
-- [ ] Support provider capability flags that communicate import and export only.
+- [x] Support provider capability flags that communicate import and export only.

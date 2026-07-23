@@ -1,34 +1,34 @@
 # @tepegoz/password-vault CHECKLIST
 
-Prepared from the package README only; implementation status was not inspected.
+Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
 
-- [ ] Support a local encrypted password provider.
-- [ ] Support initialization with injected database and crypto dependencies.
-- [ ] Support listing credential metadata.
-- [ ] Support finding credentials by identifier.
-- [ ] Support finding credentials by URL origin.
-- [ ] Support creating credentials with encrypted passwords.
-- [ ] Support updating credentials by normalized origin and username.
-- [ ] Support removing credentials by identifier.
-- [ ] Support decrypting credentials only through main-process-only APIs.
-- [ ] Support generic CSV import.
-- [ ] Support generic CSV export.
-- [ ] Support import result summaries with imported, skipped, and errors.
-- [ ] Support parsing CSV header rows.
-- [ ] Support required URL, username, and password validation during import.
+- [x] Support a local encrypted password provider.
+- [x] Support initialization with injected database and crypto dependencies.
+- [x] Support listing credential metadata.
+- [x] Support finding credentials by identifier.
+- [x] Support finding credentials by URL origin.
+- [x] Support creating credentials with encrypted passwords.
+- [x] Support updating credentials by normalized origin and username.
+- [x] Support removing credentials by identifier.
+- [x] Support decrypting credentials only through main-process-only APIs.
+- [x] Support generic CSV import.
+- [x] Support generic CSV export.
+- [x] Support import result summaries with imported, skipped, and errors.
+- [x] Support parsing CSV header rows.
+- [x] Support required URL, username, and password validation during import.
 - [ ] Support note fields during import and export.
-- [ ] Support password encryption before disk persistence.
-- [ ] Support raw password avoidance in IPC-safe metadata.
-- [ ] Support origin normalization for lookup and upsert.
-- [ ] Support duplicate handling for same origin and username.
-- [ ] Support SQLite CRUD over login credential records.
-- [ ] Support stable credential identifiers.
-- [ ] Support created-at and updated-at metadata.
-- [ ] Support provider capability flags for write, import, and export.
-- [ ] Support reset seams for tests.
-- [ ] Support secure errors that never include plaintext passwords.
-- [ ] Support migration-friendly record shapes from persistence tables.
+- [x] Support password encryption before disk persistence.
+- [x] Support raw password avoidance in IPC-safe metadata.
+- [x] Support origin normalization for lookup and upsert.
+- [x] Support duplicate handling for same origin and username.
+- [x] Support SQLite CRUD over login credential records.
+- [x] Support stable credential identifiers.
+- [x] Support created-at and updated-at metadata.
+- [x] Support provider capability flags for write, import, and export.
+- [x] Support reset seams for tests.
+- [x] Support secure errors that never include plaintext passwords.
+- [x] Support migration-friendly record shapes from persistence tables.
 - [ ] Support audit-friendly operation summaries without secrets.
 - [ ] Support future sync metadata without exposing decrypted values.
 - [ ] Support passkey or credential-type metadata extension.
-- [ ] Support documentation for safe main-process usage.
+- [x] Support documentation for safe main-process usage.

@@ -1,34 +1,34 @@
 # @tepegoz/desktop-ipc CHECKLIST
 
-Prepared from the package README only; implementation status was not inspected.
+Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
 
-- [ ] Support a preload-safe default entry with no runtime schema dependencies.
-- [ ] Support a main-process schema entry for runtime validation.
-- [ ] Support typed channel names grouped by domain and action.
-- [ ] Support a single shared API shape for the context bridge.
-- [ ] Support typed preferences shared across main, preload, renderer, and settings.
-- [ ] Support tab and tab-group wire types.
-- [ ] Support typed internal-page addresses.
-- [ ] Support encoded boundary errors with message and status code.
-- [ ] Support decoding boundary errors in renderer-safe code.
-- [ ] Support fail-closed public/private classification for settings.
-- [ ] Support curated read-only settings exposed to extensions.
-- [ ] Support type-only DTO re-exports from feature packages.
-- [ ] Support bookmark, history, password, macro, agent, and tab payload contracts.
-- [ ] Support one validator per untrusted IPC payload.
+- [x] Support a preload-safe default entry with no runtime schema dependencies.
+- [x] Support a main-process schema entry for runtime validation.
+- [x] Support typed channel names grouped by domain and action.
+- [x] Support a single shared API shape for the context bridge.
+- [x] Support typed preferences shared across main, preload, renderer, and settings.
+- [x] Support tab and tab-group wire types.
+- [x] Support typed internal-page addresses.
+- [x] Support encoded boundary errors with message and status code.
+- [x] Support decoding boundary errors in renderer-safe code.
+- [x] Support fail-closed public/private classification for settings.
+- [x] Support curated read-only settings exposed to extensions.
+- [x] Support type-only DTO re-exports from feature packages.
+- [x] Support bookmark, history, password, macro, agent, and tab payload contracts.
+- [x] Support one validator per untrusted IPC payload.
 - [ ] Support safeParse validation at every renderer-to-main boundary.
-- [ ] Support compile-time drift detection for new preference keys.
+- [x] Support compile-time drift detection for new preference keys.
 - [ ] Support preload bundle safety checks that prevent zod imports in the default entry.
-- [ ] Support stable IPC contracts for extension and internal page consumers.
-- [ ] Support structured channel naming for audit and debugging.
-- [ ] Support graceful propagation of policy-denied actions.
-- [ ] Support typed event subscriptions from main to renderer.
-- [ ] Support typed unsubscribe functions for renderer listeners.
-- [ ] Support explicit schemas for destructive or sensitive actions.
-- [ ] Support version-friendly DTO evolution with optional fields.
+- [x] Support stable IPC contracts for extension and internal page consumers.
+- [x] Support structured channel naming for audit and debugging.
+- [x] Support graceful propagation of policy-denied actions.
+- [x] Support typed event subscriptions from main to renderer.
+- [x] Support typed unsubscribe functions for renderer listeners.
+- [x] Support explicit schemas for destructive or sensitive actions.
+- [x] Support version-friendly DTO evolution with optional fields.
 - [ ] Support backwards-compatible internal-page DTOs during migrations.
-- [ ] Support renderer-safe metadata types that exclude secrets.
-- [ ] Support strongly typed agent approval and event flows.
-- [ ] Support shared enums for provider, locale, theme, and tool concepts.
+- [x] Support renderer-safe metadata types that exclude secrets.
+- [x] Support strongly typed agent approval and event flows.
+- [x] Support shared enums for provider, locale, theme, and tool concepts.
 - [ ] Support docs and examples for adding a new IPC channel.
 - [ ] Support tests that guard the two-entry package split.

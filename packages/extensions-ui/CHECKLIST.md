@@ -1,25 +1,25 @@
 # @tepegoz/extensions-ui CHECKLIST
 
-Prepared from the package README only; implementation status was not inspected.
+Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
 
-- [ ] Support a searchable extensions manager page.
-- [ ] Support extension cards with icon, name, description, metadata, and enabled state.
-- [ ] Support enable and disable toggles through injected callbacks.
-- [ ] Support filtering by extension name and description.
+- [x] Support a searchable extensions manager page.
+- [x] Support extension cards with icon, name, description, metadata, and enabled state.
+- [x] Support enable and disable toggles through injected callbacks.
+- [x] Support filtering by extension name and description.
 - [ ] Support empty state when no extensions are available.
-- [ ] Support no-results state for search.
+- [x] Support no-results state for search.
 - [ ] Support loading and retry states supplied by the host.
 - [ ] Support card badges for built-in, first-party, beta, and experimental extensions.
 - [ ] Support permission summaries on extension cards.
-- [ ] Support version display on extension cards.
+- [x] Support version display on extension cards.
 - [ ] Support extension detail entry points.
 - [ ] Support keyboard navigation across extension cards.
-- [ ] Support accessible toggle labels for each extension.
-- [ ] Support localized labels through the package dictionary.
-- [ ] Support responsive grid layout for narrow internal pages.
+- [x] Support accessible toggle labels for each extension.
+- [x] Support localized labels through the package dictionary.
+- [x] Support responsive grid layout for narrow internal pages.
 - [ ] Support high-contrast enabled and disabled states.
 - [ ] Support reduced-motion friendly card transitions.
-- [ ] Support host-provided icons without registry dependencies.
+- [x] Support host-provided icons without registry dependencies.
 - [ ] Support sorted display by recommended status, name, or enabled state.
 - [ ] Support category filters when the host supplies category metadata.
 - [ ] Support update availability indicators.
@@ -31,4 +31,4 @@ Prepared from the package README only; implementation status was not inspected.
 - [ ] Support stable card IDs for automated tests.
 - [ ] Support safe truncation for long extension names.
 - [ ] Support RTL layouts for localized text.
-- [ ] Support bridge-agnostic operation through injected items and callbacks.
+- [x] Support bridge-agnostic operation through injected items and callbacks.
