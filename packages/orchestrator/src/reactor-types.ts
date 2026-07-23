@@ -50,6 +50,15 @@ export interface ReactOptions {
   maxSteps?: number;
   loopThreshold?: number;
   /**
+   * M1: cap on IDENTICAL CONSECUTIVE read-only calls (same tool + args, back to back). Reads are exempt
+   * from the run-global loop detector by design (re-reading after each action is the encouraged
+   * state-every-step pattern) — but that exemption let a live trial burn 22 consecutive
+   * `browser_get_elements` calls unpunished. At the cap the actor gets ONE structured nudge; a further
+   * identical consecutive read stops the run as `loop_detected`. Any different call resets the streak.
+   * Default 5.
+   */
+  readLoopThreshold?: number;
+  /**
    * The completion validator (AI-3). Present ⇒ the actor's `finish` is only a claim; the validator is
    * the sole terminator. Absent ⇒ legacy behaviour (the actor's `finish` ends the run directly).
    */

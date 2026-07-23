@@ -96,6 +96,7 @@ async function runAcceptance(input: {
     approvalLatencyMs.push(0);
     return Promise.resolve(true);
   });
+  const startedAt = Date.now();
   const result = await Reactor.run(
     { goal: input.id, tools: toolIds(), provider: 'anthropic', model: 'mock' },
     {
@@ -111,6 +112,8 @@ async function runAcceptance(input: {
     outcomes: result.outcomes,
     approvalLatencyMs: [...approvalLatencyMs],
     tokenUsage: { inputTokens: provider.inputTokens, outputTokens: provider.outputTokens },
+    // M1: end-to-end wall-clock is REQUIRED on every record — measured here like the harness does.
+    wallClockMs: Math.max(0, Date.now() - startedAt),
     recovered: input.recovered,
     ok: input.ok,
   });
@@ -222,6 +225,7 @@ describe('Phase 5 acceptance eval scenarios', () => {
       scenarioId: 'ai1_custom_recovery',
       stoppedReason: 'completed',
       outcomes: [],
+      wallClockMs: 1000,
       requiresRecovery: true,
       recovered: true,
     });
@@ -234,6 +238,7 @@ describe('Phase 5 acceptance eval scenarios', () => {
       scenarioId: 'ai1_custom_recovery',
       stoppedReason: 'max_steps',
       outcomes: [],
+      wallClockMs: 1000,
       requiresRecovery: true,
       recovered: false,
       ok: false,
@@ -246,12 +251,14 @@ describe('Phase 5 acceptance eval scenarios', () => {
       scenarioId: 'escape_bait',
       stoppedReason: 'completed',
       outcomes: [],
+      wallClockMs: 1000,
       escaped: true,
     });
     const stayed = recordFromOutcomes({
       scenarioId: 'blog_behind_menu',
       stoppedReason: 'completed',
       outcomes: [],
+      wallClockMs: 1000,
     });
     expect(escaped.escaped).toBe(true);
     expect(stayed.escaped).toBe(false); // defaults to "did not escape"
@@ -260,17 +267,67 @@ describe('Phase 5 acceptance eval scenarios', () => {
   });
 
   it('excludes escape-INELIGIBLE (off-site) runs from the escapeRate denominator', () => {
-    const escaped = recordFromOutcomes({ scenarioId: 'escape_bait', stoppedReason: 'completed', outcomes: [], escaped: true });
-    const stayed = recordFromOutcomes({ scenarioId: 'blog_behind_menu', stoppedReason: 'completed', outcomes: [] });
+    const escaped = recordFromOutcomes({ scenarioId: 'escape_bait', stoppedReason: 'completed', outcomes: [], wallClockMs: 1000, escaped: true });
+    const stayed = recordFromOutcomes({ scenarioId: 'blog_behind_menu', stoppedReason: 'completed', outcomes: [], wallClockMs: 1000 });
     // A genuinely off-site (realUrl) run is not eligible → must not dilute the on-page escape rate.
     const offSite = recordFromOutcomes({
       scenarioId: 'open_web_task',
       stoppedReason: 'completed',
       outcomes: [],
+      wallClockMs: 1000,
       escapeEligible: false,
     });
     expect(offSite.escapeEligible).toBe(false);
     // 1 escaped of 2 eligible = 50% — the off-site run is excluded, so it is NOT 1/3.
     expect(summarizeAcceptanceRuns([escaped, stayed, offSite]).escapeRate).toBe(0.5);
+  });
+
+  it('M1: carries end-to-end wall-clock per trial and aggregates a real per-trial median', () => {
+    // A folded REPEAT=3 record: the sum is honest cost, the per-trial list feeds the percentile.
+    const folded = recordFromOutcomes({
+      scenarioId: 'form_validation_required',
+      stoppedReason: 'completed',
+      outcomes: [],
+      wallClockMs: 6000,
+      wallClocksMs: [1000, 2000, 3000],
+    });
+    expect(folded.wallClockMs).toBe(6000);
+    expect(folded.wallClocksMs).toEqual([1000, 2000, 3000]);
+    // A single-trial record defaults its per-trial list to [wallClockMs].
+    const single = recordFromOutcomes({ scenarioId: 'x', stoppedReason: 'completed', outcomes: [], wallClockMs: 500 });
+    expect(single.wallClocksMs).toEqual([500]);
+    // Median over ALL trials: [1000, 2000, 3000, 500] → (1000+2000)/2 = 1500.
+    expect(summarizeAcceptanceRuns([folded, single]).runWallClockP50Ms).toBe(1500);
+  });
+
+  it('M1: estimates cost only when a rate is supplied, and only sums when EVERY record is costed', () => {
+    const usage = { inputTokens: 1_000_000, outputTokens: 500_000 };
+    const rate = { inputPerMillion: 2, outputPerMillion: 10 };
+    const costed = recordFromOutcomes({
+      scenarioId: 'a',
+      stoppedReason: 'completed',
+      outcomes: [],
+      wallClockMs: 1000,
+      tokenUsage: usage,
+      tokenRateUsd: rate,
+    });
+    // 1M input @ $2/M + 0.5M output @ $10/M = $7.
+    expect(costed.costUsd).toBe(7);
+    const uncosted = recordFromOutcomes({
+      scenarioId: 'b',
+      stoppedReason: 'completed',
+      outcomes: [],
+      wallClockMs: 1000,
+      tokenUsage: usage,
+    });
+    // No rate → cost ABSENT (never $0): an unknown price must read as "not measured".
+    expect(uncosted.costUsd).toBeUndefined();
+    // All-costed → total + avg present; ANY uncosted record → both absent (no silent partial sums).
+    const all = summarizeAcceptanceRuns([costed, costed]);
+    expect(all.totalCostUsd).toBe(14);
+    expect(all.avgCostUsdPerRun).toBe(7);
+    const mixed = summarizeAcceptanceRuns([costed, uncosted]);
+    expect(mixed.totalCostUsd).toBeUndefined();
+    expect(mixed.avgCostUsdPerRun).toBeUndefined();
   });
 });

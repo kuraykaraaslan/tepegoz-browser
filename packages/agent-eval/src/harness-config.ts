@@ -1,5 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
+import { z } from 'zod';
+import type { TokenRateUsd } from '@tepegoz/orchestrator';
 
 /**
  * Static setup for the AI-1 eval driver: repo/app/fixture paths and the env-derived run knobs
@@ -35,6 +37,31 @@ export const ONLY = (process.env.TEPEGOZ_EVAL_ONLY ?? '')
   .split(',')
   .map((s) => s.trim())
   .filter((s) => s.length > 0);
+// Optional per-1M-token prices (`TEPEGOZ_EVAL_RATES={"inputPerMillion":2.5,"outputPerMillion":10}`) so
+// the report can carry $/run beside tokens. Env-supplied on purpose — vendor prices change, and a stale
+// constant baked into the repo would produce confidently wrong money (see `estimateCostUsd`). Untrusted
+// input → zod-safe; malformed or absent reads as "not measured", never as $0.
+const RatesSchema = z.object({
+  inputPerMillion: z.number().nonnegative(),
+  outputPerMillion: z.number().nonnegative(),
+});
+export const RATES: TokenRateUsd | undefined = (() => {
+  const raw = process.env.TEPEGOZ_EVAL_RATES;
+  if (raw === undefined || raw.trim().length === 0) return undefined;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    console.warn('[agent-eval] TEPEGOZ_EVAL_RATES is not valid JSON — cost will read "not measured"');
+    return undefined;
+  }
+  const safe = RatesSchema.safeParse(parsed);
+  if (!safe.success) {
+    console.warn('[agent-eval] TEPEGOZ_EVAL_RATES shape invalid — cost will read "not measured"');
+    return undefined;
+  }
+  return safe.data;
+})();
 // The eval window is shown INACTIVE (window.ts) so a batch run never steals focus while the user works —
 // but that leaves it in the BACKGROUND, where the user's active window can cover it. A covered/occluded
 // window normally STOPS compositing, which breaks render-DOM perception (`document.elementFromPoint`

@@ -17,6 +17,7 @@ import {
 } from './harness-config';
 import { latestArchivedRun, modelLabel, selectScenarios, trendLine } from './harness-report';
 import { judgeComplete, planRun, runScenarioTrials } from './harness-run';
+import { summarizeRepeat } from './statistics';
 
 /**
  * AI-1 eval driver. Launches the REAL app via `_electron` and drives each scenario through the
@@ -77,36 +78,28 @@ test('agent-eval — drive the real app and score competence', async () => {
   }
 
   const judgeAgreement = judgeSamples.length > 0 ? agreementRate(judgeSamples, loadHumanLabels(labelsPath)) : undefined;
+  // Read the newest comparable prior BEFORE building this run's report: it feeds both the trend line and
+  // the M1 cross-sweep flaky confirmation (flaky in BOTH sweeps → excluded from blocking gates).
+  const model = modelLabel();
+  const prior = latestArchivedRun(archiveDir, model, results.length);
+  const repeat =
+    REPEAT > 1 ? summarizeRepeat(freq, REPEAT, prior?.priorPasses) : undefined;
   const report = buildReport({
-    model: modelLabel(),
+    model,
     threshold: 0.8,
     generatedAt: runStartedAt,
     results,
     ...(judgeAgreement !== undefined ? { judgeAgreement } : {}),
+    ...(repeat !== undefined ? { repeat } : {}),
   });
+  // The majority-verdict table + (REPEAT>1) the pooled Wilson-CI line and per-scenario k/N + flaky tags.
   console.log(formatReportTable(report));
-  if (REPEAT > 1) {
-    // The table above is the MAJORITY verdict per scenario; also surface the per-scenario pass-frequency
-    // and the MEAN per-trial pass-rate — the granular, less-noisy honest number for a flaky agent.
-    const pctOf = (n: number): string => `${(n * 100).toFixed(1)}%`;
-    const mean = (rows: typeof freq): number =>
-      rows.length === 0 ? 0 : rows.reduce((s, f) => s + f.passes / REPEAT, 0) / rows.length;
-    const devRows = freq.filter((f) => !f.heldOut);
-    const heldRows = freq.filter((f) => f.heldOut);
-    console.log(
-      `repeat=${String(REPEAT)} · MEAN per-trial pass-rate: dev ${pctOf(mean(devRows))} · held-out ${pctOf(mean(heldRows))}`,
-    );
-    for (const f of freq) {
-      console.log(`  ${String(f.passes)}/${String(REPEAT)}  ${f.heldOut ? '[held-out] ' : ''}${f.id}`);
-    }
-  }
   if (skipped.length > 0) {
     console.log(`skipped ${String(skipped.length)} scenario(s) not runnable in the ${MODE} tier: ${skipped.join(', ')}`);
   }
-  // Read the newest prior archived run BEFORE writing this one, so the trend compares against the last
-  // run and not itself; then archive this run under a timestamped, git-ignored name for the before/after
-  // history the iterative loop depends on, and keep the fixed latest-pointer for existing tooling/CI.
-  const prior = latestArchivedRun(archiveDir, report.model, report.n);
+  // The prior was read BEFORE writing this run (above), so the trend compares against the last run and
+  // not itself; archive under a timestamped, git-ignored name for the before/after history the iterative
+  // loop depends on, and keep the fixed latest-pointer for existing tooling/CI.
   const artifact = writeReport(repoRoot, report);
   const archived = writeReport(archiveDir, report, `${runTag}-${MODE}.json`);
   console.log(trendLine(prior, report));

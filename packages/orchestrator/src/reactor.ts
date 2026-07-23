@@ -65,6 +65,42 @@ async function boundedGrounding(
   }
 }
 
+/**
+ * M1: identical-CONSECUTIVE-read streak guard — the read exemption's honest counterweight (a live
+ * trial burned 22 identical `browser_get_elements` calls unpunished). Re-reading after each ACTION is
+ * the encouraged pattern and never trips this; only the same read repeated back-to-back does. At the
+ * threshold: one 'nudge'; a further identical consecutive read: 'stop'. Any different call resets.
+ */
+export function createReadStreakGuard(
+  threshold: number,
+): (isRead: boolean, signature: string) => 'ok' | 'nudge' | 'stop' {
+  const cap = Math.max(2, threshold);
+  let streakSignature = '';
+  let count = 0;
+  let nudged = false;
+  return (isRead, signature) => {
+    if (!isRead) {
+      streakSignature = '';
+      count = 0;
+      nudged = false;
+      return 'ok';
+    }
+    if (signature === streakSignature) {
+      count += 1;
+    } else {
+      streakSignature = signature;
+      count = 1;
+      nudged = false;
+    }
+    if (count < cap) return 'ok';
+    if (!nudged) {
+      nudged = true;
+      return 'nudge';
+    }
+    return 'stop';
+  };
+}
+
 export default class Reactor {
   static async run(req: ReactRequest, options: ReactOptions = {}): Promise<ReactResult> {
     const maxSteps = options.maxSteps ?? 25;
@@ -78,6 +114,8 @@ export default class Reactor {
     const outcomes: StepOutcome[] = [];
     const signatureCounts = new Map<string, number>();
     const loopNudged = new Set<string>();
+    // M1: identical-consecutive-read guard (see `createReadStreakGuard`).
+    const readStreak = createReadStreakGuard(options.readLoopThreshold ?? 5);
     const recoveryCounts = new Map<string, number>();
     const maxDecisionRepairs = options.maxDecisionRepairs ?? 2;
     const maxRecoveryAttempts = options.maxRecoveryAttempts ?? 2;
@@ -250,6 +288,26 @@ export default class Reactor {
       }
 
       // Loop detection counts only STATE-CHANGING actions (reads are exempt — see `readOnlyTools`).
+      // The exemption's counterweight: an IDENTICAL read repeated back-to-back is not the encouraged
+      // read-after-act pattern, it is spinning — nothing changed since the same call one step ago.
+      // One structured nudge at the cap, then a hard `loop_detected` on a further identical repeat.
+      const streakVerdict = readStreak(
+        readOnlyTools.has(decision.tool),
+        `${decision.tool}:${stableStringify(decision.args)}`,
+      );
+      if (streakVerdict === 'nudge') {
+        pushObservation(
+          `Observation: You have made the exact same ${decision.tool} read several times in a row. ` +
+            'Re-reading an unchanged page again will not produce new information. ACT instead: ' +
+            'click/fill/scroll toward the goal, or finish with what you know. If you are waiting for ' +
+            'content to load, use browser_validate_page (it waits) instead of re-reading. Do NOT ' +
+            'repeat this exact read.',
+        );
+        continue;
+      }
+      if (streakVerdict === 'stop') {
+        return { outcomes, stoppedReason: 'loop_detected' };
+      }
       if (!readOnlyTools.has(decision.tool)) {
         const signature = `${decision.tool}:${stableStringify(decision.args)}`;
         const count = (signatureCounts.get(signature) ?? 0) + 1;

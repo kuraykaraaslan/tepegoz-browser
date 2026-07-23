@@ -23,6 +23,11 @@ export const EvalSuccessSchema = z.object({
   domAssertion: z.string().min(1).optional(),
   /** Value that MUST appear in the agent's closing summary for a pass (ground truth). */
   expectedValue: z.string().min(1).optional(),
+  /** The `StopReason` the run MUST end with (ground truth) — for scenarios whose DESIRED outcome is a
+   *  stop, not a page state: e.g. `"handoff"` when the product's correct behaviour is refusing to act
+   *  (sign-in walls, CAPTCHA). M1: `login_form` asserts this — the agent correctly never auto-submits
+   *  credentials, so a "Welcome back" page assertion was a permanent false negative. */
+  stoppedReason: z.string().min(1).optional(),
   /** Rubric for the optional LLM-judge on open-ended tasks (consumed in AI-1 PR2). */
   judgeRubric: z.string().min(1).optional(),
 });

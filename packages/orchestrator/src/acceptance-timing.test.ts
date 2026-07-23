@@ -31,6 +31,7 @@ function record(over: {
     scenarioId: over.id ?? 's',
     stoppedReason: over.stoppedReason ?? 'completed',
     outcomes: over.outcomes ?? [],
+    wallClockMs: 1000,
     ...(over.ok !== undefined ? { ok: over.ok } : {}),
     ...(over.recovered !== undefined ? { recovered: over.recovered } : {}),
     ...(over.tokens !== undefined ? { tokenUsage: over.tokens } : {}),
