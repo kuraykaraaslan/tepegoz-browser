@@ -63,6 +63,38 @@ export async function objectIdFor(wc: WebContents, node: NodeArg): Promise<strin
   return parsed.data.object.objectId;
 }
 
+/** Longest field value read back — a textarea can hold megabytes; the agent needs only the head of it. */
+const MAX_VALUE_CHARS = 2_000;
+
+/**
+ * Read back the CURRENT value of a form control so a `fill` can be VERIFIED instead of assumed.
+ *
+ * Returns `null` when the node has no value semantics (a div/button) or the read fails — deliberately
+ * NOT an empty string, so the caller can tell "this is not a field" from "this field is empty" and
+ * report an unverified fill honestly instead of inventing a result.
+ */
+export async function readValue(wc: WebContents, node: NodeArg): Promise<string | null> {
+  const objectId = await objectIdFor(wc, node).catch(() => null);
+  if (objectId === null) return null;
+  const raw: unknown = await wc.debugger
+    .sendCommand('Runtime.callFunctionOn', {
+      objectId,
+      functionDeclaration:
+        'function(){' +
+        'var el=this;' +
+        'if(!el)return null;' +
+        "if(el.tagName==='INPUT'||el.tagName==='TEXTAREA'||el.tagName==='SELECT')return String(el.value==null?'':el.value);" +
+        "if(el.isContentEditable===true)return String(el.textContent==null?'':el.textContent);" +
+        'return null;}',
+      returnByValue: true,
+    })
+    .catch(() => null);
+  const parsed = CallResultSchema.safeParse(raw);
+  if (!parsed.success) return null;
+  const value = parsed.data.result.value;
+  return typeof value === 'string' ? value.slice(0, MAX_VALUE_CHARS) : null;
+}
+
 /** True when the target node (or a descendant) is the document's active/focused element. */
 export async function isFocused(wc: WebContents, node: NodeArg): Promise<boolean> {
   let objectId: string;

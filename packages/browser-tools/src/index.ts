@@ -14,3 +14,11 @@ export {
   type PageSnapshot,
   type ElementsSnapshot,
 } from './perception';
+export {
+  describeNetworkFailures,
+  displayUrl,
+  isReportableFailure,
+  selectActionFailures,
+  MAX_REPORTED_FAILURES,
+  type NetworkObservation,
+} from './network-verify';

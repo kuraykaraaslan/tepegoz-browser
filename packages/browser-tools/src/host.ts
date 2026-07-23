@@ -1,4 +1,5 @@
 import type { RawInteractable } from '@tepegoz/tool-executor';
+import type { NetworkObservation } from './network-verify';
 
 /**
  * The browser operations the built-in `browser_*` agent tools need, abstracted away from
@@ -34,6 +35,16 @@ export interface BrowserHost {
   clickElement(ref: number, tabId?: string): Promise<void>;
   /** Focus the input identified by `ref` and replace its value with `text`. */
   fillElement(ref: number, text: string, tabId?: string): Promise<void>;
+  /**
+   * The current value of the form control at `ref` (from the latest {@link snapshotElements}), or `null`
+   * when the element has no value semantics or can no longer be read.
+   *
+   * Exists so a `fill` can be **verified** rather than assumed: typing into an input moves neither the
+   * page text nor the structural signature (`sig` excludes `el.value` by design), so the generic
+   * page-delta check reports a successful fill as `changed: false`. Measured on the AI-1 harness, that
+   * sent the agent into re-filling the same box. Must NOT re-snapshot — existing refs stay valid.
+   */
+  readElementValue(ref: number, tabId?: string): Promise<string | null>;
   /** Dispatch a single named key (Enter, Tab, Escape, ArrowDown, …) to the focused element. */
   pressKey(key: string, tabId?: string): Promise<void>;
   /** Scroll the page up or down (`amount` in CSS px; host picks a sensible default). */
@@ -54,4 +65,14 @@ export interface BrowserHost {
     value: string,
     tabId?: string,
   ): Promise<{ selected: string | null; options: string[] }>;
+  /**
+   * HTTP responses the host observed on `tabId` at or after `sinceMs` (host clock, `Date.now()`) —
+   * AI-8B post-action verification. Used to catch a **silent** non-2xx (a Save whose POST returns 403
+   * while the UI shows nothing), which no DOM-level delta can see.
+   *
+   * An empty array means **nothing was observed**, NOT "everything succeeded" — a host that does not
+   * observe the network (or a tab it is not attached to) returns empty, so callers must never turn this
+   * into a positive success claim. See `describeNetworkFailures`.
+   */
+  networkSince(sinceMs: number, tabId?: string): Promise<NetworkObservation[]>;
 }

@@ -1,0 +1,96 @@
+<!doctype html>
+<!--
+  AI-8B fixture — SILENT API FAILURE.
+
+  "Save changes" POSTs to `/__status/507` (the fixture server's reserved status endpoint, a real HTTP
+  507) and then does absolutely nothing with the outcome: no error banner, no toast, no disabled state,
+  no text change. This is the shape the audit called out — a page whose DOM cannot tell you the request
+  was rejected — so the ONLY way to know the save did not happen is the network layer.
+
+  The status is deliberately **507**, not 500. A first live run used 500 and the scorer passed it — but
+  500 is the code a model volunteers by default, so a plausible HALLUCINATION and a real observation were
+  indistinguishable and the scenario proved nothing. 507 is a real HTTP status no model guesses, so a
+  summary naming 507 is only explainable by the network observation actually reaching the model. Do not
+  change this back to a guessable code.
+
+  Deliberately NOT a lying UI (no fake "Saved!"): the point is that the page is *silent*, so an agent
+  reading only url/title/text/element-signature sees a plain no-op and, before AI-8B, would either
+  re-click a different ref or declare the task done.
+-->
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, sans-serif;
+    margin: 0;
+    padding: 2rem 1rem;
+    background: #f4f5f7;
+    color: #1c1e21;
+    display: flex;
+    justify-content: center;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #16181c; color: #e6e8eb; }
+    .card { background: #22252b; border-color: #33373f; }
+    input { background: #1a1d22; color: #e6e8eb; border-color: #3a3f47; }
+    .muted { color: #9aa0a8; }
+  }
+  .card {
+    width: 100%;
+    max-width: 460px;
+    background: #fff;
+    border: 1px solid #e2e5e9;
+    border-radius: 12px;
+    padding: 1.5rem 1.5rem 1.75rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  h1 { font-size: 1.3rem; margin: 0 0 0.25rem; }
+  .muted { color: #66707a; font-size: 0.85rem; margin: 0 0 1.25rem; }
+  label { display: block; font-size: 0.85rem; font-weight: 600; margin: 0 0 0.35rem; }
+  .field { margin-bottom: 1rem; }
+  input {
+    width: 100%;
+    padding: 0.6rem 0.7rem;
+    font: inherit;
+    border: 1px solid #cfd4da;
+    border-radius: 8px;
+    background: #fff;
+    color: inherit;
+  }
+  button {
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 8px;
+    padding: 0.6rem 1.1rem;
+    border: 1px solid transparent;
+    background: #2f6bff;
+    color: #fff;
+  }
+  button:hover { background: #245ae0; }
+</style>
+
+<div class="card">
+  <h1>Profile settings</h1>
+  <p class="muted">Update your display name and save.</p>
+
+  <div class="field">
+    <label for="displayName">Display name</label>
+    <input id="displayName" name="displayName" type="text" value="Ada Lovelace" />
+  </div>
+
+  <button id="saveBtn" type="button">Save changes</button>
+</div>
+
+<script>
+  (function () {
+    document.getElementById('saveBtn').addEventListener('click', function () {
+      // Fire-and-forget: the response is never inspected and the failure never surfaces in the DOM.
+      fetch('/__status/507', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ displayName: document.getElementById('displayName').value })
+      }).catch(function () { /* swallowed — this is the bug being modelled */ });
+    });
+  })();
+</script>

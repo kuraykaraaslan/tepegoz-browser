@@ -1,8 +1,14 @@
 import { z } from 'zod';
 import { CapabilityRegistry } from '@tepegoz/capability-plane';
-import { checkForm, wrapUntrustedContent, MAX_INTERACTABLE_ELEMENTS } from '@tepegoz/tool-executor';
+import {
+  checkForm,
+  sanitizeContent,
+  wrapUntrustedContent,
+  MAX_INTERACTABLE_ELEMENTS,
+} from '@tepegoz/tool-executor';
 import type { ToolDescriptor } from '@tepegoz/shared-types';
 import { buildElementsSnapshot, buildPageSnapshot } from './perception';
+import { describeNetworkFailures, selectActionFailures } from './network-verify';
 import type { BrowserHost } from './host';
 
 /**
@@ -132,6 +138,182 @@ function selectOptionResult(
 /** Viewport expansion (CSS px per edge) used by the whole-form check, so a required field below the fold
  *  is still inspected. Large enough for a normal long form without asking for the entire document. */
 const WHOLE_PAGE_EXPANSION_PX = 20_000;
+
+/** What `browser_update_page` reports back for one interaction. */
+interface InteractionResult {
+  ok: true;
+  url: string;
+  title: string;
+  changed: boolean;
+  recoveryHint?: string;
+  note?: string;
+  found?: boolean;
+  /** `fill` only: whether the field verifiably holds the requested text. Absent = not a fill, or the
+   *  value could not be read back (reported as UNVERIFIED, never as success). */
+  filled?: boolean;
+  /** AI-8B: set only when a request sent during this interaction failed. Absent means "nothing was
+   *  observed", never "everything succeeded". */
+  networkWarning?: string;
+}
+
+/** Longest field value quoted back to the model, and the sanitizing pass every page-controlled string
+ *  makes before it enters a prompt (a page script can rewrite an input's value on `input`). */
+const MAX_QUOTED_VALUE = 120;
+function safeValue(raw: string): string {
+  const { text } = sanitizeContent(raw);
+  return text.replace(/["'\r\n]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, MAX_QUOTED_VALUE);
+}
+
+/** Everything the post-action reporting rules need about one completed interaction. */
+interface InteractionContext {
+  before: PageFingerprint;
+  after: PageFingerprint;
+  changed: boolean;
+  /** True when a request sent during this interaction failed (AI-8B). Flips the no-change advice from
+   *  "try a different ref" — which is actively wrong here, the interaction DID reach the server — to
+   *  "the request was rejected". */
+  networkFailed: boolean;
+  found: boolean | undefined;
+  matchCount: number | undefined;
+  selected: string | null | undefined;
+  optionLabels: string[] | undefined;
+  /** `fill` only: the field's value read back after the fill; `null` when it could not be read. */
+  fieldValue: string | null | undefined;
+}
+
+/**
+ * A fill's success is whether the FIELD now holds the text — never the page delta.
+ *
+ * Typing into an input moves neither `innerText` nor the structural signature (`sig` excludes `el.value`
+ * by design, so a live clock cannot flip it), so `pageChanged` is false for a fill that WORKED and the
+ * generic no-change branch told the model to "try a different ref". Measured on the AI-1 harness
+ * (`silent_api_failure`, live gpt-4o): the agent re-filled the same box across five wasted steps, each
+ * time reasoning that "the previous attempt showed no visible change".
+ */
+function fillResult(text: string, ctx: InteractionContext): InteractionResult {
+  const { after, changed, fieldValue } = ctx;
+  const base = { ok: true as const, url: after.url, title: after.title, changed };
+  if (fieldValue === null || fieldValue === undefined) {
+    // Unreadable (not a form control, or the ref went stale). Claiming either outcome would be a guess.
+    return {
+      ...base,
+      note:
+        'The field value could not be read back, so this fill is UNVERIFIED — it may or may not have ' +
+        'taken. Re-read browser_get_elements and check the element value before assuming anything.',
+    };
+  }
+  if (fieldValue === text) {
+    return {
+      ...base,
+      filled: true,
+      note:
+        'The field now holds exactly the text you sent (verified by reading it back). A fill never ' +
+        'changes page text or structure, so changed=false here is EXPECTED and not a failure — do not ' +
+        'fill it again; move on to the next step.',
+    };
+  }
+  return {
+    ...base,
+    filled: false,
+    recoveryHint:
+      `After the fill the field holds "${safeValue(fieldValue)}" instead of the text you sent. ` +
+      'The page may have reformatted it (an input mask) — if that value is equivalent, continue; ' +
+      'otherwise the field may be read-only or controlled by a script, so try a different approach ' +
+      'rather than repeating the same fill.',
+  };
+}
+
+/** The `scroll_to_text` reveal's result: its meaningful outcome is `found`, not the structural delta. */
+function scrollToTextResult(
+  nthRequested: number,
+  ctx: InteractionContext,
+): InteractionResult {
+  const { after, changed, found, matchCount } = ctx;
+  if (found !== true) {
+    return {
+      ok: true,
+      url: after.url,
+      title: after.title,
+      changed,
+      found: false,
+      recoveryHint:
+        'No matching text was found on the page. Try fewer or different words, or scroll and re-read; use browser_get_page to see what text is actually present.',
+    };
+  }
+  // Honest shortfall: fewer occurrences than the requested `nth` exist. Report it rather than claiming
+  // success on the nth — the page is scrolled to the LAST (count-th) occurrence.
+  const note =
+    matchCount !== undefined && matchCount < nthRequested
+      ? `Found only ${String(matchCount)} occurrence(s) of that text (fewer than the ${String(nthRequested)} requested) and scrolled to the last one. Re-read browser_get_elements to act on it.`
+      : 'Scrolled the matching text into view. Re-read browser_get_elements to act on the now-visible controls.';
+  return { ok: true, url: after.url, title: after.title, changed, found: true, note };
+}
+
+/** Per-action reporting rules, split out so the handler stays a thin perceive→act→verify sequence. */
+function interactionResult(
+  args: z.infer<typeof UpdatePageArgs>,
+  ctx: InteractionContext,
+): InteractionResult {
+  const { before, after, changed } = ctx;
+  if (args.action === 'select_option') {
+    return selectOptionResult(selectOptionValue(args), ctx.selected, ctx.optionLabels, after, changed);
+  }
+  if (args.action === 'scroll_to_text') return scrollToTextResult(args.nth ?? 1, ctx);
+  if (args.action === 'fill') return fillResult(args.text, ctx);
+  // A scroll's effect is a viewport move, not a content/state change. Report `changed` plainly and skip
+  // BOTH the structural "a menu opened — do NOT repeat" note (false: scrolling changes the in-viewport
+  // actionable set by design, and scrolling again is a normal way to reach content) and the "no change"
+  // recovery hint. The model re-reads elements next to see what scrolled into view.
+  if (args.action === 'scroll') return { ok: true, url: after.url, title: after.title, changed };
+  if (!changed) {
+    return {
+      ok: true,
+      url: after.url,
+      title: after.title,
+      changed,
+      recoveryHint: ctx.networkFailed
+        ? // The interaction was NOT a miss: it reached the server, which rejected it. Steering the model to
+          // "try a different ref" here is the wrong repair and burns steps on a working control.
+          'The page did not change, but a request sent by this interaction failed (see networkWarning) — ' +
+          'so the control DID work and the server rejected the request. Do not just try another ref: read ' +
+          'the page for an error message, fix the underlying problem, or report the failure.'
+        : 'No visible or structural change was detected. Re-read browser_get_elements and try a different ref; if the target may be off-screen, scroll (or use scroll_to_text) and re-read.',
+    };
+  }
+  // Structural-only: the actionable set moved (a menu/drawer/panel opened) but no new prose appeared.
+  // Tell the model so it re-reads elements and acts on the newly revealed controls instead of assuming
+  // its click failed and repeating it — the exact loop this signal is here to break.
+  if (structuralOnlyChange(before, after)) {
+    return {
+      ok: true,
+      url: after.url,
+      title: after.title,
+      changed,
+      note: 'The set of actionable elements changed (e.g. a menu/drawer/panel opened) with no new page text. Re-read browser_get_elements and act on the newly revealed controls — do NOT repeat this interaction.',
+    };
+  }
+  return { ok: true, url: after.url, title: after.title, changed };
+}
+
+/**
+ * AI-8B: the warning for requests that failed inside this action's window, or `undefined` when none did.
+ *
+ * Never throws and never claims success — a host that cannot observe the network, or an error while
+ * asking it, degrades to `undefined` (= "nothing to report"), which is exactly how absence must read.
+ */
+async function networkWarning(
+  host: BrowserHost,
+  tabId: string | undefined,
+  sinceMs: number,
+  pageUrl: string,
+): Promise<string | undefined> {
+  try {
+    const observations = await host.networkSince(sinceMs, tabId);
+    return describeNetworkFailures(selectActionFailures(observations, pageUrl), pageUrl);
+  } catch {
+    return undefined;
+  }
+}
 
 /** Build a `browser_*` builtin ToolDescriptor (mirrors `@tepegoz/file-operations`'s local helper). */
 function descriptor(
@@ -284,25 +466,38 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
         '(a native select opens an OS popup that a click/press cannot drive — ALWAYS use this, never click ' +
         'then arrow/type; `value` matches the option label or value). Omit tabId for the active tab. ' +
         'File inputs must be handled through upload_create_item so path grants, approval, and audit apply. ' +
-        'Returns { ok, url, title, changed, recoveryHint?, note?, found? }. changed=true also fires when a ' +
+        'Returns { ok, url, title, changed, recoveryHint?, note?, found?, filled? }. ' +
+        'For "fill" the result to trust is `filled` — the field value is read back and compared, because a ' +
+        'fill never moves page text or structure, so changed=false is EXPECTED after a fill that worked. ' +
+        'Never re-fill a field that reported filled=true. changed=true also fires when a ' +
         'click opens a menu/drawer/panel with no new page text (a `note` then says to re-read elements); ' +
         'scroll_to_text returns found=true|false. If ' +
         'changed=false, re-read elements (and scroll if the target may be off-screen) before trying a ' +
-        'different ref — never repeat the same ref blindly.',
+        'different ref — never repeat the same ref blindly. ' +
+        'A `networkWarning` field appears when a request this interaction sent came back as an HTTP error ' +
+        '(e.g. a Save that POSTs and gets 403/500 while the page shows nothing) — treat it as evidence the ' +
+        'action did not really take effect and verify before reporting success. Its ABSENCE proves nothing.',
     ),
     inputSchema: UpdatePageArgs,
     handler: async (args) => {
       const before = await host.readPage(args.tabId);
+      // Action window opens here — after the `before` read, so only requests THIS interaction caused are
+      // attributed to it. Same host clock the recorder stamps observations with.
+      const actedAt = Date.now();
       let found: boolean | undefined;
       let matchCount: number | undefined;
       let selected: string | null | undefined;
       let optionLabels: string[] | undefined;
+      let fieldValue: string | null | undefined;
       switch (args.action) {
         case 'click':
           await host.clickElement(args.ref, args.tabId);
           break;
         case 'fill':
           await host.fillElement(args.ref, args.text, args.tabId);
+          // Read the value back on the SAME snapshot ref (no re-snapshot, so refs stay valid) — the only
+          // honest way to tell a fill that worked from one that silently did not.
+          fieldValue = await host.readElementValue(args.ref, args.tabId).catch(() => null);
           break;
         case 'press':
           await host.pressKey(args.key, args.tabId);
@@ -322,65 +517,21 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
         }
       }
       const after = await host.readPage(args.tabId);
-      const changed = pageChanged(before, after);
-      // select_option's meaningful result is whether an option matched, not the structural delta.
-      if (args.action === 'select_option') {
-        return selectOptionResult(selectOptionValue(args), selected, optionLabels, after, changed);
-      }
-      // scroll_to_text is a content-addressed reveal: its meaningful result is `found`, not the structural
-      // delta. On a hit, tell the model to re-read so the now-in-view target enters the index map; on a
-      // miss, steer it to different words rather than the generic "try another ref" hint.
-      if (args.action === 'scroll_to_text') {
-        if (found !== true) {
-          return {
-            ok: true,
-            url: after.url,
-            title: after.title,
-            changed,
-            found: false,
-            recoveryHint:
-              'No matching text was found on the page. Try fewer or different words, or scroll and re-read; use browser_get_page to see what text is actually present.',
-          };
-        }
-        // Honest shortfall: fewer occurrences than the requested `nth` exist. Report it rather than
-        // claiming success on the nth — the page is scrolled to the LAST (count-th) occurrence.
-        const nthRequested = args.nth ?? 1;
-        const note =
-          matchCount !== undefined && matchCount < nthRequested
-            ? `Found only ${String(matchCount)} occurrence(s) of that text (fewer than the ${String(nthRequested)} requested) and scrolled to the last one. Re-read browser_get_elements to act on it.`
-            : 'Scrolled the matching text into view. Re-read browser_get_elements to act on the now-visible controls.';
-        return { ok: true, url: after.url, title: after.title, changed, found: true, note };
-      }
-      // A scroll's effect is a viewport move, not a content/state change. Report `changed` plainly and skip
-      // BOTH the structural "a menu opened — do NOT repeat" note (false: scrolling changes the in-viewport
-      // actionable set by design, and scrolling again is a normal way to reach content) and the "no change"
-      // recovery hint. The model re-reads elements next to see what scrolled into view.
-      if (args.action === 'scroll') {
-        return { ok: true, url: after.url, title: after.title, changed };
-      }
-      if (!changed) {
-        return {
-          ok: true,
-          url: after.url,
-          title: after.title,
-          changed,
-          recoveryHint:
-            'No visible or structural change was detected. Re-read browser_get_elements and try a different ref; if the target may be off-screen, scroll (or use scroll_to_text) and re-read.',
-        };
-      }
-      // Structural-only: the actionable set moved (a menu/drawer/panel opened) but no new prose appeared.
-      // Tell the model so it re-reads elements and acts on the newly revealed controls instead of assuming
-      // its click failed and repeating it — the exact loop this signal is here to break.
-      if (structuralOnlyChange(before, after)) {
-        return {
-          ok: true,
-          url: after.url,
-          title: after.title,
-          changed,
-          note: 'The set of actionable elements changed (e.g. a menu/drawer/panel opened) with no new page text. Re-read browser_get_elements and act on the newly revealed controls — do NOT repeat this interaction.',
-        };
-      }
-      return { ok: true, url: after.url, title: after.title, changed };
+      // Post-action verification, DOM-level AND network-level (AI-8B): the structural delta alone cannot
+      // see a request the server rejected while the UI stayed put.
+      const warning = await networkWarning(host, args.tabId, actedAt, after.url);
+      const result = interactionResult(args, {
+        before,
+        after,
+        changed: pageChanged(before, after),
+        networkFailed: warning !== undefined,
+        found,
+        matchCount,
+        selected,
+        optionLabels,
+        fieldValue,
+      });
+      return warning === undefined ? result : { ...result, networkWarning: warning };
     },
   });
 }

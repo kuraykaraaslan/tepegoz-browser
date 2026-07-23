@@ -1,0 +1,12 @@
+{
+  "scenarios": [
+    {
+      "id": "silent_api_failure",
+      "task": "Change the display name to \"Grace Hopper\" and click Save changes. Then tell me whether it was actually saved — and if the save failed, state the exact HTTP status code the server returned.",
+      "target": { "fixture": "silent-api-failure" },
+      "success": { "expectedValue": "507" },
+      "heldOut": false,
+      "tags": ["network", "verification", "real-failure"]
+    }
+  ]
+}

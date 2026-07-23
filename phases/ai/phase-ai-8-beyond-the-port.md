@@ -65,14 +65,47 @@ everything else. `Network.responseReceived` (the event carrying HTTP status) is 
 (grep for `responseReceived`/`statusCode` on the agent path: zero hits). So the agent's only "did it work"
 signal is DOM-level (url/title/text/`sig` delta); a **silent 400/401/403/500** on a "Save" is invisible.
 
+> **PR1 landed 2026-07-23 (code + unit tests + live on-harness evidence).** Recorder
+> ([`cdp-driver-network.electron.ts`](../../apps/desktop/src/main/agent/cdp-driver-network.electron.ts))
+> + pure selection/summary ([`network-verify.ts`](../../packages/browser-tools/src/network-verify.ts))
+> + `browser_update_page` wiring + a `silent-api-failure` fixture served a real HTTP status by the
+> harness's new `/__status/<code>` endpoint.
+>
+> **What the live harness actually showed (openai gpt-4o, N=3 ×2 runs).** The mechanism is **proven**: in
+> one trial the recorder logged `507 Fetch POST` on the Save click and the agent's closing summary named
+> *"HTTP 507 — Insufficient Storage"*, a code that appears nowhere in the page text (the `fetch` lives in
+> a `<script>`, which `innerText` does not expose) and that no model volunteers by default. **The
+> scenario does not pass reliably yet, and the reason is NOT this feature** — in the other trials the
+> agent never reached the Save click at all (one burned 22 straight `browser_get_elements` calls and hit
+> the step cap; another wandered off-site). That is an AI-2/AI-4 competence gap, tracked there.
+>
+> Three real defects the measurement surfaced, all fixed in this PR:
+> - **Main-process crash** — `WindowTabs.dispose` called `isDestroyed()` on `view.webContents`, which is
+>   `undefined` once Electron has torn the contents down; inside the window's `closed` handler that
+>   became an UNCAUGHT exception. It killed **2 of 3** eval trials (3 of 7 overall) and corrupted every
+>   number until fixed. Teardown is now per-view best-effort.
+> - **`fill` always reported `changed: false`** — `sig` excludes `el.value` by design and `innerText`
+>   carries no input values, so a fill that WORKED was reported as a no-op with "try a different ref".
+>   Observed costing five wasted steps. `browser_update_page` now reads the value back on the same
+>   snapshot ref and reports `filled` true / false+actual / UNVERIFIED. (AI-4 `s16` typed-widget work.)
+> - **A first scenario that passed for the wrong reason** — with `expectedValue: "500"` the scorer could
+>   not tell a real observation from the most-guessable server-error code. Fixture now returns **507**
+>   and the task explicitly asks for the status code, so the ground truth is unguessable AND legitimately
+>   requested.
+
 **Exit criteria (DoD)**
-- [ ] A `Network.responseReceived` listener keyed to the acting tab captures `{method, url, status,
+- [x] A `Network.responseReceived` listener keyed to the acting tab captures `{method, url, status,
       redirectChain}` for the current action window, zod-validated at the CDP boundary, ring-buffered.
-- [ ] `browser_update_page` post-action verification can report a relevant **non-2xx** (e.g. a Save POST
+      Contract-tested against real Chromium event bodies (`cdp-driver-network.test.ts`).
+- [x] `browser_update_page` post-action verification can report a relevant **non-2xx** (e.g. a Save POST
       returned 403) back into the observation stream, so the agent stops treating a failed API call as
       success when the UI shows no error. Untrusted-content wrapping (AI-5) applies to any surfaced body.
-- [ ] Measured on AI-1: a `silent-api-failure` fixture (button click → 500, UI unchanged) — the agent
-      reports the failure instead of finishing "done."
+      Two-sided: only XHR/Fetch/Document count (a third-party pixel 404 is not the action failing), and
+      an empty observation list is **never** reported as "everything succeeded".
+- [ ] Measured on AI-1: a `silent-api-failure` fixture (button click → 507, UI unchanged) — the agent
+      reports the failure instead of finishing "done." **Mechanism demonstrated once end-to-end; a
+      majority pass is blocked on the agent completing the fill→save flow, not on this feature.**
+      Re-measure after the AI-2/AI-4 perception+fill work.
 
 ## 8C — Table / list understanding · `s17`
 

@@ -47,10 +47,37 @@ export const FrameTreeSchema = z
 export const IsolatedWorldSchema = z
   .object({ executionContextId: z.number().int().nonnegative() })
   .passthrough();
+/**
+ * `Network.requestWillBeSent`. `requestId`/`type` drive network-idle accounting; `request` and
+ * `redirectResponse` feed the AI-8B response recorder — both OPTIONAL so a payload shaped slightly
+ * differently by a Chromium revision degrades the recorder rather than breaking idle waiting.
+ */
 export const NetworkRequestSchema = z
-  .object({ requestId: z.string(), type: z.string().optional() })
+  .object({
+    requestId: z.string(),
+    type: z.string().optional(),
+    request: z.object({ method: z.string().optional(), url: z.string().optional() }).passthrough().optional(),
+    redirectResponse: z.object({ status: z.number().optional() }).passthrough().optional(),
+  })
   .passthrough();
 export const NetworkCompleteSchema = z.object({ requestId: z.string() }).passthrough();
+/** `Network.responseReceived` — the event carrying the HTTP status (AI-8B). */
+export const NetworkResponseSchema = z
+  .object({
+    requestId: z.string(),
+    type: z.string().optional(),
+    response: z.object({ url: z.string(), status: z.number() }).passthrough(),
+  })
+  .passthrough();
+/** `Network.loadingFailed` — a request that produced no response at all (DNS/refused/blocked). */
+export const NetworkFailedSchema = z
+  .object({
+    requestId: z.string(),
+    type: z.string().optional(),
+    errorText: z.string().optional(),
+    canceled: z.boolean().optional(),
+  })
+  .passthrough();
 export const ResolveSchema = z.object({ object: z.object({ objectId: z.string() }).passthrough() });
 export const CallResultSchema = z.object({ result: z.object({ value: z.unknown() }).passthrough() });
 /** `Runtime.callFunctionOn` returnByValue envelope for {@link SELECT_OPTION_FN}. */

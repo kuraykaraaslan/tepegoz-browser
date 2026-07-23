@@ -1,6 +1,7 @@
 import type { WebContents } from 'electron';
 import { AppError, Logger } from '@tepegoz/libs';
 import { HumanInputAdapter } from '@tepegoz/human-input';
+import type { NetworkObservation } from '@tepegoz/browser-tools';
 import {
   LOAD_TIMEOUT_MS,
   type DriverCore,
@@ -9,7 +10,8 @@ import {
   type SnapshotDeps,
   type SnapshotResult,
 } from './cdp-driver-schemas.electron.js';
-import { pathToObjectId } from './cdp-driver-dom.electron.js';
+import { pathToObjectId, readValue } from './cdp-driver-dom.electron.js';
+import { attachNetworkRecorder, networkSince } from './cdp-driver-network.electron.js';
 import { waitForPageSettled } from './cdp-driver-session.electron.js';
 import { snapshotElements as snapshotElementsImpl } from './cdp-driver-snapshot.electron.js';
 import {
@@ -77,6 +79,9 @@ export default class CdpDriver {
       );
     }
     CdpDriver.attached = wc;
+    // Subscribe BEFORE Network.enable so the first navigation's responses are not missed (AI-8B).
+    // Idempotent per WebContents, so re-attaching on a tab switch cannot double-subscribe.
+    attachNetworkRecorder(wc);
     // A tab that navigates/closes must not leave us pointing at a dead session.
     wc.debugger.once('detach', () => {
       if (CdpDriver.attached === wc) CdpDriver.attached = null;
@@ -159,6 +164,17 @@ export default class CdpDriver {
     return fillElementImpl(wc, ref, text, adapter, CdpDriver.core());
   }
 
+  /**
+   * The current value of the form control at `ref` (from this tab's latest snapshot), or `null` when the
+   * element has no value semantics / the ref went stale. Reads the SAME snapshot's ref — no re-snapshot,
+   * so existing refs stay valid. Lets `browser_update_page` verify a fill instead of assuming it.
+   */
+  static async readElementValue(wc: WebContents, ref: number): Promise<string | null> {
+    await CdpDriver.ensureAttached(wc);
+    const node = await CdpDriver.resolveRef(wc, ref);
+    return readValue(wc, node);
+  }
+
   static async selectOption(
     wc: WebContents,
     ref: number,
@@ -182,6 +198,14 @@ export default class CdpDriver {
     adapter?: HumanInputAdapter,
   ): Promise<void> {
     return scrollPageImpl(wc, direction, amount, adapter, CdpDriver.core());
+  }
+
+  /**
+   * HTTP responses observed on `wc` at or after `sinceMs` (host clock) — AI-8B post-action verification.
+   * Empty means "nothing observed" (e.g. a tab never attached), NOT "everything succeeded".
+   */
+  static networkSince(wc: WebContents, sinceMs: number): NetworkObservation[] {
+    return networkSince(wc, sinceMs);
   }
 
   /** Wait for a load triggered by an interaction to settle, then network and DOM quiescence. */

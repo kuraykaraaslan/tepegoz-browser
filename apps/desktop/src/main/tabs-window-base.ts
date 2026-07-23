@@ -2,6 +2,7 @@ import {
   WebContentsView,
   type BrowserWindow,
   type Rectangle,
+  type WebContents,
 } from 'electron';
 import { Logger } from '@tepegoz/libs';
 import { INTERNAL_NEWTAB_URL, IpcChannels, type TabsState } from '@tepegoz/desktop-ipc';
@@ -55,12 +56,24 @@ export class WindowTabsBase {
       this.persistTimer = null;
     }
     for (const view of this.views.values()) {
-      // Electron teardown order: detach from the window first, THEN close the contents — closing an
-      // attached view can race its compositor/storage teardown against the window's own destruction.
-      if (!this.win.isDestroyed()) this.win.contentView.removeChildView(view);
-      if (!view.webContents.isDestroyed()) {
-        unwireView(view);
-        view.webContents.close();
+      // This runs inside the window's `closed` handler, so ANY throw here becomes an uncaught
+      // main-process exception rather than a handled error — per view, teardown is best-effort.
+      // Observed in the AI-1 harness: a tab still loading when the window closed took down the whole
+      // main process (`TypeError: Cannot read properties of undefined (reading 'isDestroyed')`), losing
+      // 2 of 3 eval trials. The cause is `view.webContents` being UNDEFINED — once Electron has torn the
+      // contents down, the view exposes no `webContents` at all, so an `isDestroyed()` check on it is
+      // itself the thing that throws. Hence an existence check, plus a catch for the rest of the race.
+      try {
+        // Electron teardown order: detach from the window first, THEN close the contents — closing an
+        // attached view can race its compositor/storage teardown against the window's own destruction.
+        if (!this.win.isDestroyed()) this.win.contentView.removeChildView(view);
+        const contents = view.webContents as WebContents | undefined;
+        if (contents !== undefined && !contents.isDestroyed()) {
+          unwireView(view);
+          contents.close();
+        }
+      } catch (err) {
+        Logger.warn('tab view teardown failed', { err: String(err) });
       }
     }
     this.views.clear();

@@ -367,6 +367,16 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
     return closed;
   },
   snapshotElements: (tabId, opts) => CdpDriver.snapshotElements(requireWc(tabId), opts ?? {}),
+  // A stale ref / non-field element must read as "unverified", never as an error that fails the fill.
+  readElementValue: (ref, tabId) =>
+    CdpDriver.readElementValue(requireWc(tabId), ref).catch(() => null),
+  networkSince: (sinceMs, tabId) => {
+    // Deliberately tolerant: a missing/destroyed tab yields "nothing observed", never an error — the
+    // network signal is post-action EVIDENCE and must not be able to fail an otherwise-fine interaction.
+    const wc = tabId === undefined ? TabManager.activeWebContents() : TabManager.webContentsForTab(tabId);
+    if (wc === null || wc.isDestroyed()) return Promise.resolve([]);
+    return Promise.resolve(CdpDriver.networkSince(wc, sinceMs));
+  },
   captureScreenshot,
   clickElement: async (ref, tabId) => {
     resetForAgentAction();

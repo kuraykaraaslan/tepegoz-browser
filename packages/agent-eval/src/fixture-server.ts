@@ -27,6 +27,18 @@ export interface FixtureServer {
 export function startFixtureServer(rootDir: string): Promise<FixtureServer> {
   const server: Server = createServer((req, res) => {
     const rawPath = decodeURIComponent((req.url ?? '/').split('?')[0] ?? '/');
+    // Reserved endpoint (AI-8B): `/__status/500` answers with that HTTP status, so a fixture can exercise
+    // a REAL server failure rather than a simulated one. `__status` is not a fixture directory, so nothing
+    // under `sites/` can shadow it, and the code is clamped to the valid HTTP range.
+    const status = /^\/__status\/(\d{3})\/?$/.exec(rawPath);
+    if (status !== null) {
+      const code = Number(status[1]);
+      const safe = Number.isInteger(code) && code >= 100 && code <= 599 ? code : 500;
+      res
+        .writeHead(safe, { 'content-type': 'application/json; charset=utf-8' })
+        .end(JSON.stringify({ ok: safe < 400, status: safe }));
+      return;
+    }
     // Resolve within rootDir; a directory serves its index.html.
     let filePath = normalize(join(rootDir, rawPath));
     if (!filePath.startsWith(normalize(rootDir))) {
