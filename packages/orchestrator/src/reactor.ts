@@ -304,6 +304,18 @@ export default class Reactor {
         continue;
       }
 
+      // A successful call on this tool means the agent recovered — it is not stuck in a same-kind
+      // failure loop, which is the only thing the recovery budget exists to stop. Refresh that tool's
+      // budget so a fresh, self-correctable error LATER (e.g. one malformed-args click after several
+      // good calls) is fed back and retried rather than ending the whole run. Measured on the AI-1
+      // harness: an agent that fumbled `browser_update_page` args twice, corrected itself, filled the
+      // form, then fumbled the Save click once had the run killed on that single fresh error — the
+      // accumulated (never-reset) counter, not a genuine loop. Fail-closed still holds for a tool that
+      // ONLY ever errors (its budget never gets a success to refresh it).
+      for (const key of [...recoveryCounts.keys()]) {
+        if (key.endsWith(`:${outcome.tool}`)) recoveryCounts.delete(key);
+      }
+
       const halt = outcome.ok ? options.guard?.(outcome) : null;
       if (halt != null) return { outcomes, stoppedReason: halt };
 

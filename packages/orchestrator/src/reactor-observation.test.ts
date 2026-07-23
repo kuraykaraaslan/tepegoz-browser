@@ -132,6 +132,37 @@ describe('Reactor.run (observation feedback + recovery)', () => {
     expect(calls).toEqual(['browser_update_page', 'browser_get_elements']);
   });
 
+  it('refreshes a tool’s recovery budget on success, so a fresh error AFTER progress still recovers (not fatal)', async () => {
+    // Regression for an AI-1 live finding: an agent fumbled `browser_update_page` args, corrected itself
+    // and filled the form, then fumbled ONE later click — and the run was killed because the recovery
+    // counter accumulated across the whole run and was never reset by the successful calls in between.
+    // With maxRecoveryAttempts=1, WITHOUT the reset the 2nd error (after a success) would stop the run.
+    CapabilityRegistry.reset();
+    CapabilityRegistry.register(fakeTool('browser_get_elements', 'read', { content: 'els' }));
+    CapabilityRegistry.register(
+      fakeToolSequence('browser_update_page', 'state_changing', [
+        toolError('INTERNAL_ERROR', 'transient glitch', true), // err → recovery count 1
+        { ok: true, changed: true }, // success → budget for this tool refreshes
+        toolError('INTERNAL_ERROR', 'transient glitch', true), // fresh err → count 1 again (would be fatal without reset)
+        { ok: true, changed: true }, // success
+      ]),
+    );
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    // Distinct refs each turn so the loop detector (repeat-identical-action guard) does not fire — we are
+    // exercising the recovery-budget reset, not the loop guard.
+    script([
+      act('browser_update_page', { action: 'click', ref: 1 }),
+      act('browser_update_page', { action: 'click', ref: 2 }),
+      act('browser_update_page', { action: 'click', ref: 3 }),
+      act('browser_update_page', { action: 'click', ref: 4 }),
+      finish,
+    ]);
+    const res = await Reactor.run(req(), { maxRecoveryAttempts: 1 });
+    expect(res.stoppedReason).toBe('completed');
+    // All four interactions ran — the error that followed a success was fed back and recovered, not fatal.
+    expect(calls.filter((c) => c === 'browser_update_page')).toHaveLength(4);
+  });
+
   it('recovers from a malformed-args VALIDATION_ERROR: feeds the zod issues back, then completes on the corrected call', async () => {
     // A tool whose schema requires `text`; the gateway rejects the arg-less call BEFORE the handler runs
     // (so `calls` stays empty until the corrected call), attaching the zod issues as `details`.

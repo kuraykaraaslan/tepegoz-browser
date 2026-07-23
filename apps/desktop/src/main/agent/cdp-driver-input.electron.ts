@@ -32,6 +32,33 @@ async function waitForFocus(wc: WebContents, node: NodeArg, timeoutMs = 500): Pr
   }
 }
 
+/**
+ * Select ALL existing content of the focused field so the following {@link HumanInputAdapter.insertText}
+ * REPLACES it rather than appending. Deterministic (`el.select()` / `setSelectionRange` / a Range over a
+ * contenteditable) instead of a Ctrl+A keyboard accelerator — the accelerator does not reliably
+ * select-all in a backgrounded/unfocused window (measured on the AI-1 harness: a pre-filled field kept
+ * its old value, so the agent believed the fill failed and gave up). The trusted click already supplied
+ * the human gesture; this only guarantees the replace.
+ */
+async function selectAllContent(wc: WebContents, node: NodeArg): Promise<void> {
+  const objectId = await objectIdFor(wc, node).catch(() => null);
+  if (objectId === null) return;
+  await wc.debugger
+    .sendCommand('Runtime.callFunctionOn', {
+      objectId,
+      functionDeclaration:
+        'function(){' +
+        'var el=this;' +
+        "if(typeof el.select==='function'){el.select();return;}" +
+        "if(typeof el.setSelectionRange==='function'){el.setSelectionRange(0,(el.value||'').length);return;}" +
+        'if(el.isContentEditable){var r=document.createRange();r.selectNodeContents(el);' +
+        'var s=window.getSelection();s.removeAllRanges();s.addRange(r);}' +
+        '}',
+      returnByValue: true,
+    })
+    .catch(() => undefined);
+}
+
 /** Dispatch a keyDown+keyUp for one key, with optional modifier bitmask (CDP: 2 = Ctrl). */
 async function sendKey(wc: WebContents, spec: KeySpec, modifiers = 0): Promise<void> {
   const common = {
@@ -101,8 +128,8 @@ export async function fillElement(
   if (adapter === undefined) {
     // Background-tab teleport fallback (no visible cursor): programmatic focus is acceptable here.
     await wc.debugger.sendCommand('DOM.focus', { ...node });
-    // Select any existing value (Ctrl+A) so the insert replaces it, then type the new text.
-    await sendKey(wc, { key: 'a', code: 'KeyA', keyCode: 65 }, 2 /* Ctrl */);
+    // Select any existing value so the insert REPLACES it, then type the new text.
+    await selectAllContent(wc, node);
     await wc.debugger.sendCommand('Input.insertText', { text });
   } else {
     // Active tab: focus the field with a REAL trusted click (never DOM.focus). If the click lands
@@ -135,8 +162,9 @@ export async function fillElement(
       await wc.debugger.sendCommand('DOM.focus', { ...node }).catch(() => undefined);
     }
     await adapter.idle(200, 70); // beat: click -> select-all
-    // Ctrl+A with a text-less KeySpec => rawKeyDown, so it fires the accelerator without typing 'a'.
-    await adapter.pressKey({ key: 'a', code: 'KeyA', keyCode: 65 }, 2 /* Ctrl */);
+    // Deterministically select existing content so the type replaces it (Ctrl+A is unreliable in an
+    // unfocused window); the trusted click above is the human gesture.
+    await selectAllContent(wc, node);
     await adapter.idle(200, 70); // beat: select-all -> type
     await adapter.insertText(text);
   }
