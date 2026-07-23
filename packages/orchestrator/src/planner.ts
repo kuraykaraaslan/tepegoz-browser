@@ -90,9 +90,10 @@ export default class Planner {
       'visual fallback. If an interaction reports changed=false, re-read browser_get_elements and try a ' +
       'different ref instead of repeating the same action. ' +
       'If a target section/link may be behind a menu/drawer, plan to open it (click the menu/hamburger ' +
-      'toggle) then re-read browser_get_elements; if it may not be linked from the landing page, plan a ' +
-      'direct browser_update_location to a conventional path on the same origin (e.g. /blog) with a ' +
-      'verify step. ' +
+      'toggle) then re-read browser_get_elements. Prefer a route you can SEE or VERIFY: navigate to a link ' +
+      "the page (or the site's sitemap) actually shows — do NOT plan to guess a conventional path by " +
+      'appending it to the origin. When the destination is genuinely off this site or its URL is unknown, ' +
+      'plan a web_search_items instead of fabricating a URL. ' +
       'Output ONLY JSON of the form ' +
       '{"goal": string, "steps": [{"id": string, "tool": string, "args": object, "rationale": string, "dependsOn": string[]}]}. ' +
       `Use ONLY these tools (by exact id):\n${toolList}\n` +

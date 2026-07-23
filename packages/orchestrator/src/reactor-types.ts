@@ -72,6 +72,14 @@ export interface ReactOptions {
   onOutcome?: (outcome: StepOutcome) => void;
   /** Post-step guard (Human Handoff Controller): return a StopReason to halt (e.g. CAPTCHA/2FA). */
   guard?: (outcome: StepOutcome) => StopReason | null;
+  /**
+   * AI-7 navigation grounding. After each successful outcome, return a deterministic steer toward a route
+   * the agent can actually see or verify (a visible link / sitemap-backed path) — so it navigates there
+   * instead of fabricating a URL or bailing to `web_search`. Return null to stay silent (the general
+   * system-prompt ordering then governs). Additive: absent ⇒ the loop runs exactly as before. Must not
+   * throw (the reactor also fails open to "no hint"). The steer is injected once per distinct hint.
+   */
+  groundNavigation?: (outcome: StepOutcome, goal: string) => Promise<string | null>;
   /** Bounded self-repair attempts for malformed model decisions. */
   maxDecisionRepairs?: number;
   /** Bounded recovery attempts per failure kind+tool before fail-closed. */

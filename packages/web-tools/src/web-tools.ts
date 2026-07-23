@@ -25,7 +25,10 @@ export function registerWebTools(deps: { host: WebToolsHost }): void {
   CapabilityRegistry.register({
     descriptor: descriptor(
       'web_search_items',
-      'Search the public web for a query. Returns normalized link results with snippets.',
+      'Search the public web when the destination is genuinely off THE CURRENT site or its URL is ' +
+        'unknown. Returns normalized link results with snippets. This is NOT a shortcut around on-page ' +
+        'work: if the answer is reachable on the current page (via a link, menu, modal, or form), do that ' +
+        'instead — search only after the on-page route is exhausted.',
     ),
     inputSchema: WebSearchInputSchema,
     handler: async (input) => {

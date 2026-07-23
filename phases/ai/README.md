@@ -62,7 +62,7 @@ loop control, action vocabulary, content-security) into our own packages. Real-g
 | AI-4 | [phase-ai-4-action-vocabulary.md](phase-ai-4-action-vocabulary.md) | Higher-level deterministic actions (scroll-to-text, dropdowns, …) | AI-2 | 🟡 In progress (PR1 landed (code): `scroll_to_text` content-addressed reveal as a `browser_update_page` variant, over the browser's native find (same-origin frames incl.); unit-tested. Remaining: native dropdowns, page-quantized scroll + boundary detection, web-search, send-keys, tab auto-switch + on-harness measurement) |
 | AI-5 | [phase-ai-5-content-security.md](phase-ai-5-content-security.md) | Untrusted-content wrapping + injection/PII sanitizer | AI-2 | 🟡 In progress (PR1+PR2 landed: inbound content-guard — NFKC + injection redaction + forged-tag strip + threat taxonomy at the perception boundary; trusted-task fencing + security preamble; strict-mode PII redaction + GuardConfig. Remaining: strict-mode setting wiring + on-harness measurement) |
 | AI-6 | [phase-ai-6-consolidation.md](phase-ai-6-consolidation.md) | Retire prose patches (once subsumed) + institutionalise the loop | AI-2, AI-3 | ⬜ Not started |
-| AI-7 | [phase-ai-7-navigation-grounding.md](phase-ai-7-navigation-grounding.md) | Evidence-gated URLs + no escape-hatch (visible-nav-first; search/guess only after on-page route exhausted) | AI-2, AI-3, AI-4 | ⬜ Not started (external audit `s01`, `s31`) |
+| AI-7 | [phase-ai-7-navigation-grounding.md](phase-ai-7-navigation-grounding.md) | Evidence-gated URLs + no escape-hatch (visible-nav-first; search/guess only after on-page route exhausted) | AI-2, AI-3, AI-4 | 🟡 In progress (PR1 code+unit-tests landed: pure candidate resolver + SSRF-safe sitemap/robots reader (same-origin construction, redirect-disabled) + `web_search_items` surfaced & gated as a steer + `s31` escape-rate metric + `escape-bait`/`url-hallucination-trap`/`sitemap-only-route` fixtures + the `/blog` blind-guess prose **removed** from reactor/planner. Remaining: the live N≥3 on-harness numbers — escape-rate down + traps flip to pass, held-out no-regress) |
 | AI-8 | [phase-ai-8-beyond-the-port.md](phase-ai-8-beyond-the-port.md) | Net-new axes: real vision, network verification, table understanding, per-domain memory | AI-1, AI-2 | ⬜ Not started (external audit `s19`/`s10`/`s17`/`s22`) |
 
 Status legend: ⬜ Not started · 🟡 In progress · ✅ Done (DoD passed).
@@ -87,7 +87,8 @@ built — perception, the react loop + validator, the error taxonomy, the constr
 inbound content-security, and the HITL/handoff/egress plane — is **real, wired, and default-on**, not prose.
 The gaps are a handful of coherent axes (mostly *net-new* capabilities the port never scoped), now tracked
 in the phases below. Tally (30 original + `s31` added on review; `s02` landed via `TEPEGOZ_EVAL_REPEAT`
-right after the audit): **1 done · 10 mostly · 14 partial · 6 not-addressed.**
+right after the audit): **1 done · 10 mostly · 14 partial · 6 not-addressed.** *(Update 2026-07-23: **AI-7 PR1**
+landed the code for `s01` and `s31`, moving both to 🟢 (code + unit tests; on-harness live numbers still owed).)*
 
 > **One vanity risk to fix now:** `browser_get_screenshot` captures a real PNG, and the recovery/strategy
 > prose *recommends* it "as a visual fallback" — but `CanonMessage.content` is string-only and no provider
@@ -109,7 +110,7 @@ Status: ✅ done · 🟢 mostly (wired, minor gaps) · 🟡 partial (some sub-po
 | s03 | Expand fixture/benchmark set | 🟢 | [AI-1](phase-ai-1-eval-harness.md) — 22 fixtures/23 scenarios; missing file-download + broken-HTML; live run owed |
 | s04 | Prioritise a11y/role/semantic over CSS classes | 🟢 | [AI-2](phase-ai-2-perception-buildtree.md) — recognises by role/aria (not class); default path omits `aria-labelledby`/`label-for` |
 | s23 | Short structured context + stable short IDs | 🟢 | [AI-2](phase-ai-2-perception-buildtree.md) — capped/structured/sanitized; no page summary; refs positional not identity-stable |
-| s01 | **URL-guessing fix: visible-nav-first, guess only if DOM/sitemap backs it** | 🟡 | **[AI-7](phase-ai-7-navigation-grounding.md)** (new) — today prose-only and *contradicted*; no sitemap/robots parsing |
+| s01 | **URL-guessing fix: visible-nav-first, guess only if DOM/sitemap backs it** | 🟢 | **[AI-7](phase-ai-7-navigation-grounding.md)** — code landed: grounded candidate resolver + real sitemap/robots parsing; ungrounded origin+path never proposed; blind-guess prose removed. On-harness proof owed |
 | s05 | Multi-layer element finding + fallback | 🟡 | [AI-2](phase-ai-2-perception-buildtree.md) — one address per ref; no cascade/alt-locator; no action-time occlusion re-check |
 | s09 | Track page changes by diff, not whole DOM | 🟡 | [AI-2](phase-ai-2-perception-buildtree.md) — `*[n]` new-element marker only; full list still resent; token cut is collapse not diff |
 | s07 | Split Planner/Executor/Verifier/Replanner | 🟡 | [AI-3](phase-ai-3-agent-loop.md) — Executor + goal-level Verifier live; no per-step verify, **no Replanner** |
@@ -128,7 +129,7 @@ Status: ✅ done · 🟢 mostly (wired, minor gaps) · 🟡 partial (some sub-po
 | s27 | Flaky detection + confidence intervals | ⬜ | [AI-1](phase-ai-1-eval-harness.md) — point estimates only; needs s02 first |
 | s17 | Table/list understanding layer | ⬜ | **[AI-8C](phase-ai-8-beyond-the-port.md)** (new) — tables readable only as flat text |
 | s22 | Per-domain success memory (re-validated) | ⬜ | **[AI-8D](phase-ai-8-beyond-the-port.md)** (new) — nothing cached across runs |
-| s31 | Constrain the `web_search`/URL escape hatch; steer to on-page persistence + measure | ⬜ | **[AI-7](phase-ai-7-navigation-grounding.md)** — un-gated search tool; **empirically the top anti-pattern** (live-run finding #4) |
+| s31 | Constrain the `web_search`/URL escape hatch; steer to on-page persistence + measure | 🟢 | **[AI-7](phase-ai-7-navigation-grounding.md)** — code landed: search re-described + gated as a steer (not a block), grounded on-page candidate preferred, and an **escape-rate metric** + `escape-bait` fixture now measure it. Live before/after owed |
 
 New phases added by this audit: **[AI-7](phase-ai-7-navigation-grounding.md)** (navigation grounding, `s01`)
 and **[AI-8](phase-ai-8-beyond-the-port.md)** (net-new axes: `s19`/`s10`/`s17`/`s22`). Deepenings for

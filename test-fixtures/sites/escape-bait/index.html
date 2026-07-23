@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Orbit Support — Order tracking</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; }
+      #overlay {
+        position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55);
+        display: none; align-items: center; justify-content: center;
+      }
+      #overlay.open { display: flex; }
+      #modal { background: #fff; padding: 1.5rem 2rem; border-radius: 10px; min-width: 18rem; }
+      label { display: block; margin: 0.75rem 0 0.25rem; }
+      #status { margin-top: 1rem; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <h1>Orbit Support</h1>
+    <!--
+      Escape-bait: the ONLY way to the order status is this on-page modal + form. The shallow move is to
+      web_search "order A-4471 status" or navigate to a guessed tracking URL — both LEAVE the page. The
+      ground-truth string ("Delivered") is injected only after the form is submitted here, so an escape
+      (or a no-op) cannot pass. The escape-rate metric flags the search / off-site nav even on a lucky pass.
+    -->
+    <p>Track any order without signing in.</p>
+    <button id="open">Track order</button>
+
+    <div id="overlay">
+      <div id="modal" role="dialog" aria-label="Track order">
+        <p>Enter your order number to see its delivery status.</p>
+        <label for="order">Order number</label>
+        <input id="order" type="text" placeholder="e.g. A-4471" />
+        <button id="check">Check status</button>
+        <p id="status"></p>
+      </div>
+    </div>
+
+    <script>
+      const overlay = document.getElementById('overlay');
+      document.getElementById('open').addEventListener('click', () => overlay.classList.add('open'));
+      document.getElementById('check').addEventListener('click', () => {
+        const order = document.getElementById('order').value.trim().toUpperCase();
+        const status = document.getElementById('status');
+        status.textContent =
+          order === 'A-4471' ? 'Status: Delivered on 18 July' : 'Order not found — check the number.';
+      });
+    </script>
+  </body>
+</html>

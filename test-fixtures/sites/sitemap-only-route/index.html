@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Helios Docs — Home</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; }
+      nav a { margin-right: 1rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Helios</h1>
+    <!--
+      Sitemap-only route: the Setup Guide is NOT linked anywhere on the site (the nav below omits it, and
+      no menu hides it). Its only published trace is an entry in sitemap.xml (discovered via robots.txt).
+      A grounded agent must read the sitemap to find setup-guide.html — it must NOT fabricate the path.
+    -->
+    <nav><a href="index.html">Home</a><a href="pricing.html">Pricing</a></nav>
+    <main><p>Solar telemetry, batteries included.</p></main>
+  </body>
+</html>

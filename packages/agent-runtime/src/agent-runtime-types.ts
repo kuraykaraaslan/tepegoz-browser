@@ -41,6 +41,14 @@ export interface AgentRunDeps {
   activeTabUrl: () => string | undefined;
   /** Resolve a browser tab's committed URL for tabId-scoped browser tools. */
   tabUrl?: (tabId: string) => string | undefined;
+  /**
+   * AI-7 navigation grounding seam: discover the SAME-ORIGIN sitemap page URLs for the page the agent is
+   * on, so a conventional path is only proposed when the origin actually publishes it. Injected by the
+   * Electron wiring (over `@tepegoz/http`, SSRF-safe by same-origin construction — see web-tools'
+   * `createSitemapReader`); absent ⇒ grounding falls back to visible on-page links only. Keeps this
+   * package Electron-free.
+   */
+  discoverSitemap?: (pageUrl: string) => Promise<readonly string[]>;
   /** Localized human-handoff copy, one message per {@link HandoffKind} (captcha / twofa / login). */
   handoffStrings: Record<HandoffKind, string>;
   /**
@@ -80,9 +88,12 @@ export interface AgentRunSummary {
    */
   tokenUsage?: { inputTokens: number; outputTokens: number; totalTokens: number } | undefined;
   /**
-   * The per-step tool outcomes of the reactive loop (tool id + ok + optional error), in order. Additive
-   * and optional. Lets the AI-1 eval harness compute real toolCalls/toolErrors and print a compact
-   * failure trace for triage, instead of reconstructing them by parsing event strings.
+   * The per-step tool outcomes of the reactive loop (tool id + ok + optional error + the nav/fetch
+   * `targetUrl`, when the call had a `url` arg), in order. Additive and optional. Lets the AI-1 eval
+   * harness compute real toolCalls/toolErrors, the AI-7 escape rate (off-origin nav / search), and print
+   * a compact failure trace for triage, instead of reconstructing them by parsing event strings.
    */
-  steps?: Array<{ tool: string; ok: boolean; error?: string | undefined }> | undefined;
+  steps?:
+    | Array<{ tool: string; ok: boolean; error?: string | undefined; targetUrl?: string | undefined }>
+    | undefined;
 }

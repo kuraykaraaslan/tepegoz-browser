@@ -21,15 +21,20 @@ const BROWSING_STRATEGY =
   'If browser_get_page/browser_get_elements do not expose enough information, use browser_get_screenshot ' +
   'as a visual fallback. If browser_update_page returns changed=false, do not repeat the same ref blindly; ' +
   're-read browser_get_elements and try a different actionable ref or finish with a clear limitation.' +
+  // AI-7 navigation grounding: prefer a route you can SEE or VERIFY; never fabricate a URL. The escape
+  // vectors (guessing a path, bailing to web_search) are gated behind exhausting the on-page route.
   '\nWhen you cannot find a target section or link on the page, do NOT give up after reading only the ' +
-  'landing page. First REVEAL hidden navigation: a site\'s links are often behind a menu / hamburger / ' +
-  'drawer or an overflow ("☰", "Menu", "More") toggle, or below the fold — click that toggle with ' +
-  'browser_update_page (or scroll), then re-read browser_get_elements, because a collapsed menu\'s links ' +
-  'are NOT listed until it is opened. If the target is still not found, navigate directly to a ' +
-  'conventional path on the SAME site with browser_update_location by appending a likely path to the ' +
-  'origin (e.g. /blog, /posts, /articles, /about) and verify with browser_get_page or ' +
-  'browser_validate_page; if a path 404s or is empty, try another common candidate (a few at most), then ' +
-  'finish with a clear limitation.';
+  'landing page, and do NOT invent a URL. First REVEAL hidden navigation: a site\'s links are often behind ' +
+  'a menu / hamburger / drawer or an overflow ("☰", "Menu", "More") toggle, or below the fold — click that ' +
+  'toggle with browser_update_page (or scroll), then re-read browser_get_elements, because a collapsed ' +
+  'menu\'s links are NOT listed until it is opened. Prefer a route you can SEE or VERIFY: a link in ' +
+  'browser_get_elements (a "Navigation hint" observation points you to the best match) — navigate to its ' +
+  'href with browser_update_location. Use a conventional path (e.g. /blog) ONLY when a link or the site\'s ' +
+  'sitemap actually shows it — never by blindly appending a guess to the origin (a fabricated path that ' +
+  '404s wastes steps). If the destination is genuinely OFF this site or its URL is unknown, use ' +
+  'web_search_items to find it instead of typing a guessed URL. Leaving the page (web_search or off-site ' +
+  'navigation) is a LAST resort once the on-page route is exhausted — it is never a shortcut around a ' +
+  'menu, modal, or form you should just operate.';
 
 export function systemPrompt(req: ReactRequest): string {
   const toolList = req.tools.map((t) => `- ${t.id} (${t.dangerClass}): ${t.description}`).join('\n');

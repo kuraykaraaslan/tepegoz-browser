@@ -23,6 +23,16 @@ export {
 } from './reactor';
 export { type RunControl } from './run-control';
 export {
+  buildNavigationGuidance,
+  buildNavigationGroundingHook,
+  rankNavigationCandidates,
+  type NavCandidate,
+  type NavEvidence,
+  type NavGroundingInput,
+  type NavLink,
+  type SitemapDiscovery,
+} from './navigation-grounding';
+export {
   classifyRuntimeError,
   classifyToolFailure,
   recoveryAdviceFor,

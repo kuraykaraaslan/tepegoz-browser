@@ -1,6 +1,6 @@
 import type { CanonMessage, ModelRouter } from '@tepegoz/model-gateway';
 import { CapabilityRegistry, ToolGateway, type InvokeContext } from '@tepegoz/capability-plane';
-import { Planner, Reactor, type StepOutcome } from '@tepegoz/orchestrator';
+import { buildNavigationGroundingHook, Planner, Reactor, type StepOutcome } from '@tepegoz/orchestrator';
 import { TaintTracker, detectHandoff } from '@tepegoz/security-policy';
 import type { Plan } from '@tepegoz/shared-types';
 import { checkpointFromOutcome, type AgentRunCheckpoint, type AgentRunPhase } from './run-lifecycle';
@@ -119,6 +119,11 @@ export function runReactiveLoop(args: {
             model: execRoute.model,
             maxTokens,
           }),
+        // AI-7 navigation grounding: after each element read, steer the model toward a route it can see or
+        // verify (a visible link / same-origin sitemap-backed path) instead of fabricating a URL or bailing
+        // to web_search. The zod boundary + resolver live in orchestrator; `discoverSitemap` is the
+        // optional host fetch seam (absent ⇒ visible-link grounding only).
+        groundNavigation: buildNavigationGroundingHook(deps.discoverSitemap),
         // Surface each step's decision rationale as a 'decision' event → the panel's Reasoning section.
         onDecision: (tool, rationale) => {
           if (rationale.length > 0) hooks.onEvent('decision', tool, rationale);

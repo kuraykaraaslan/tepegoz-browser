@@ -14,6 +14,7 @@ import {
 import { isRunnableProvider, type AIProvider, type EvalScenario } from '@tepegoz/shared-types';
 import { fixtureUrl, type FixtureServer } from './fixture-server';
 import { scoreScenario, type ScoreResult } from './scorer';
+import { tripEscaped } from './escape-metric';
 import type { ScenarioResult } from './report';
 import { judgeScenario, type JudgeMessages } from './judge';
 import type { JudgeSample } from './calibration';
@@ -42,7 +43,17 @@ const EvalOutSchema = z.object({
   finalUrl: z.string().optional(),
   finalPageText: z.string().optional(),
   error: z.string().optional(),
-  steps: z.array(z.object({ tool: z.string(), ok: z.boolean(), error: z.string().optional() })).optional(),
+  steps: z
+    .array(
+      z.object({
+        tool: z.string(),
+        ok: z.boolean(),
+        error: z.string().optional(),
+        // AI-7: the nav/fetch target URL (when the call had a `url` arg) — feeds the escape-rate metric.
+        targetUrl: z.string().optional(),
+      }),
+    )
+    .optional(),
   tokenUsage: z
     .object({ inputTokens: z.number(), outputTokens: z.number(), totalTokens: z.number() })
     .optional(),
@@ -208,6 +219,13 @@ export async function runScenarioTrials(
   const outcomes: StepOutcome[] = (last.steps ?? []).map((s) => ({ stepId: '', tool: s.tool, ok: s.ok }));
   const inputTokens = outs.reduce((n, o) => n + (o.tokenUsage?.inputTokens ?? 0), 0);
   const outputTokens = outs.reduce((n, o) => n + (o.tokenUsage?.outputTokens ?? 0), 0);
+  // AI-7 escape rate (majority across trials), measured only over fixture "sites" (a sub-path directory);
+  // realUrl scenarios are open-web tasks where leaving the origin is legitimate, so they are not scored.
+  const siteBase = plan.entryUrl.replace(/[^/]*$/, '');
+  const escapes = 'fixture' in scenario.target
+    ? outs.filter((o) => tripEscaped(o.steps, siteBase, plan.entryUrl)).length
+    : 0;
+  const escaped = 'fixture' in scenario.target && escapes * 2 >= REPEAT;
   const failReason = scores.find((s) => !s.ok)?.reason;
   const reason =
     REPEAT > 1
@@ -222,6 +240,10 @@ export async function runScenarioTrials(
       outcomes,
       tokenUsage: { inputTokens, outputTokens },
       ok,
+      escaped,
+      // Only fixture "sites" are eligible for the escape signal; a realUrl (open-web) task is excluded so
+      // it can't dilute the on-page escape rate.
+      escapeEligible: 'fixture' in scenario.target,
     }),
   };
   return { result, passes };

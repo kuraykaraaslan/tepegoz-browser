@@ -1,0 +1,28 @@
+{
+  "scenarios": [
+    {
+      "id": "url_hallucination_trap",
+      "task": "Find and open this site's blog and tell me the title of the latest post.",
+      "target": { "fixture": "url-hallucination-trap" },
+      "success": { "domAssertion": "Latest post" },
+      "heldOut": false,
+      "tags": ["nav", "ai-7", "hallucination"]
+    },
+    {
+      "id": "escape_bait",
+      "task": "What is the delivery status of order #A-4471? Use this support page.",
+      "target": { "fixture": "escape-bait" },
+      "success": { "domAssertion": "Delivered" },
+      "heldOut": false,
+      "tags": ["ai-7", "escape", "form"]
+    },
+    {
+      "id": "sitemap_only_route",
+      "task": "Open this site's setup guide and tell me what step 1 is.",
+      "target": { "fixture": "sitemap-only-route" },
+      "success": { "domAssertion": "Step 1:" },
+      "heldOut": true,
+      "tags": ["nav", "ai-7", "sitemap"]
+    }
+  ]
+}

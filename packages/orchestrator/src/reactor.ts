@@ -36,6 +36,35 @@ import type {
 export { coerceDecisionShape, parseDecision, type Decision } from './reactor-decision';
 export type { CompletionContext, CompletionVerdict, ReactOptions, ReactRequest, ReactResult } from './reactor-types';
 
+/** Wall-clock budget for the AI-7 navigation-grounding hook per step. Bounds the hot loop against a slow
+ *  or hostile same-origin sitemap fetch (the in-flight fetch keeps running + is cached; the loop just does
+ *  not wait past this) so a user cancel never blocks on discovery. */
+const NAV_GROUNDING_BUDGET_MS = 8000;
+
+/** Read a live abort signal without control-flow narrowing (the signal mutates between reads, so an earlier
+ *  `=== true` guard must not narrow a later check to `false`). */
+function signalAborted(signal: { readonly aborted: boolean } | undefined): boolean {
+  return signal?.aborted === true;
+}
+
+/** Run the grounding hook with a wall-clock budget; resolves null on timeout or any hook error, so a steer
+ *  is strictly best-effort and can never stall or crash the loop. */
+async function boundedGrounding(
+  hook: (outcome: StepOutcome, goal: string) => Promise<string | null>,
+  outcome: StepOutcome,
+  goal: string,
+): Promise<string | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const budget = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), NAV_GROUNDING_BUDGET_MS);
+  });
+  try {
+    return await Promise.race([hook(outcome, goal).catch(() => null), budget]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
+
 export default class Reactor {
   static async run(req: ReactRequest, options: ReactOptions = {}): Promise<ReactResult> {
     const maxSteps = options.maxSteps ?? 25;
@@ -61,6 +90,8 @@ export default class Reactor {
     let latestMemory = '';
     let completionRejects = 0;
     let lastValidatedCount = -1;
+    // AI-7: the last navigation-grounding hint injected, so an identical steer is not re-pushed every read.
+    let lastNavHint = '';
 
     /** The compact tail of recent observations handed to the completion validator as page evidence. */
     const recentObservations = (): string[] =>
@@ -273,6 +304,20 @@ export default class Reactor {
       if (halt != null) return { outcomes, stoppedReason: halt };
 
       pushObservation(`Observation:\n${observationOf(outcome)}`);
+
+      // AI-7 navigation grounding: after the observation, surface a deterministic steer toward a route the
+      // agent can see/verify (visible link / sitemap-backed path). Best-effort and time-boxed so a slow
+      // discovery never stalls the loop; the hint is a short steer, so it is pushed as a plain message
+      // (NOT via pushObservation — it must never be mistaken for a large page-state blob and evict the real
+      // element snapshot just read). Only a hint that differs from the last one is injected.
+      if (options.groundNavigation !== undefined) {
+        const hint = await boundedGrounding(options.groundNavigation, outcome, req.goal);
+        if (signalAborted(options.signal)) return { outcomes, stoppedReason: 'aborted' };
+        if (hint !== null && hint.length > 0 && hint !== lastNavHint) {
+          lastNavHint = hint;
+          messages.push({ role: 'user', content: hint });
+        }
+      }
     }
   }
 }

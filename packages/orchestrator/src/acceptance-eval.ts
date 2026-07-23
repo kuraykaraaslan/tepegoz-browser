@@ -35,6 +35,14 @@ export interface AcceptanceRunRecord {
   recovered: boolean;
   navigationValidationCalls: number;
   navigationValidationFailures: number;
+  /** AI-7 escape signal: the run left the task's site or reached for `web_search` — i.e. it bailed off
+   *  the page instead of persisting on the on-page route. Meaningful for on-page-answerable scenarios (a
+   *  genuinely off-site task would be excluded); feeds {@link AcceptanceMetrics.escapeRate}. */
+  escaped: boolean;
+  /** Whether this run is eligible for the escape signal (an on-page-answerable / fixture scenario). A
+   *  genuinely off-site (realUrl) task is NOT eligible — leaving is legitimate there — and is excluded from
+   *  the {@link AcceptanceMetrics.escapeRate} denominator so it can't dilute the on-page escape signal. */
+  escapeEligible: boolean;
 }
 
 export interface AcceptanceMetrics {
@@ -45,6 +53,9 @@ export interface AcceptanceMetrics {
   approvalLatencyP50Ms: number;
   toolErrorRate: number;
   navigationValidationFailureRate: number;
+  /** AI-7 (`s31`): fraction of runs that escaped the on-page route (off-site nav / `web_search`). Lower is
+   *  better — the navigation-grounding fix is meant to drive this down without regressing task success. */
+  escapeRate: number;
   tokenUsage: { inputTokens: number; outputTokens: number; totalTokens: number };
 }
 
@@ -93,6 +104,10 @@ export function recordFromOutcomes(input: {
   recovered?: boolean | undefined;
   requiresRecovery?: boolean | undefined;
   ok?: boolean | undefined;
+  /** AI-7: did the run escape the on-page route (off-site nav / web_search)? Default false. */
+  escaped?: boolean | undefined;
+  /** AI-7: is this run eligible for the escape signal (on-page-answerable)? Default true. */
+  escapeEligible?: boolean | undefined;
 }): AcceptanceRunRecord {
   const usage = input.tokenUsage ?? { inputTokens: 0, outputTokens: 0 };
   return {
@@ -108,6 +123,8 @@ export function recordFromOutcomes(input: {
     recovered: input.recovered ?? false,
     navigationValidationCalls: input.outcomes.filter((o) => o.tool === 'browser_validate_page').length,
     navigationValidationFailures: input.outcomes.filter(validationChangedFalse).length,
+    escaped: input.escaped ?? false,
+    escapeEligible: input.escapeEligible ?? true,
   };
 }
 
@@ -120,6 +137,7 @@ export function summarizeAcceptanceRuns(records: AcceptanceRunRecord[]): Accepta
   );
   const toolCalls = records.reduce((sum, r) => sum + r.toolCalls, 0);
   const validationCalls = records.reduce((sum, r) => sum + r.navigationValidationCalls, 0);
+  const escapeEligible = records.filter((r) => r.escapeEligible);
   const tokenUsage = records.reduce(
     (sum, r) => ({
       inputTokens: sum.inputTokens + r.tokenUsage.inputTokens,
@@ -140,6 +158,8 @@ export function summarizeAcceptanceRuns(records: AcceptanceRunRecord[]): Accepta
       validationCalls === 0
         ? 0
         : records.reduce((sum, r) => sum + r.navigationValidationFailures, 0) / validationCalls,
+    escapeRate:
+      escapeEligible.length === 0 ? 0 : escapeEligible.filter((r) => r.escaped).length / escapeEligible.length,
     tokenUsage,
   };
 }

@@ -31,6 +31,16 @@ export type {
   AgentRunSummary,
 } from './agent-runtime-types';
 
+/** The navigation/fetch target of a tool call (its `url` arg), surfaced per-step so the AI-7 eval can
+ *  measure the escape rate (off-origin nav). `undefined` for tools with no URL arg (most). */
+function navTargetOf(args: unknown): string | undefined {
+  if (args !== null && typeof args === 'object' && 'url' in args) {
+    const url = (args as { url?: unknown }).url;
+    if (typeof url === 'string' && url.length > 0) return url;
+  }
+  return undefined;
+}
+
 /**
  * L3 orchestration entry point (Phase 1a end-to-end): user prompt → ModelRouter → Planner (DAG) →
  * sequential Executor through the single ToolGateway PEP (Policy Kernel + HITL) → live Agent Console
@@ -229,11 +239,15 @@ export async function runAgent(
       outputTokens: usage.outputTokens,
       totalTokens: usage.totalTokens,
     },
-    steps: result.outcomes.map((o) => ({
-      tool: o.tool,
-      ok: o.ok,
-      ...(o.error?.message !== undefined ? { error: o.error.message } : {}),
-    })),
+    steps: result.outcomes.map((o) => {
+      const targetUrl = navTargetOf(o.args);
+      return {
+        tool: o.tool,
+        ok: o.ok,
+        ...(o.error?.message !== undefined ? { error: o.error.message } : {}),
+        ...(targetUrl !== undefined ? { targetUrl } : {}),
+      };
+    }),
     ...(result.summary !== undefined && result.summary.length > 0
       ? { summary: result.summary }
       : {}),

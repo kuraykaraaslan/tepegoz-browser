@@ -93,11 +93,15 @@ describe('Reactor system prompt (coreference + browsing strategy)', () => {
     expect(prompt).toContain('changed=false');
   });
 
-  it('guides opening hidden menus/drawers and trying conventional URL paths before giving up', async () => {
+  it('reveals hidden menus but grounds navigation: prefer a seen/verified route, never fabricate a URL (AI-7)', async () => {
     const prompt = await capture();
+    // AI-3 persistence stays (open the menu, do not give up on the landing page)…
     expect(prompt).toContain('REVEAL hidden navigation');
     expect(prompt).toContain('collapsed menu');
-    expect(prompt).toContain('/blog');
+    // …but the blind "/blog" guess is gone — the ordering is now grounded (s01/s31).
+    expect(prompt).toContain('do NOT invent a URL');
+    expect(prompt).toContain('web_search_items');
+    expect(prompt).toContain('never by blindly appending a guess');
   });
 
   it('requests the progress brain (memory ledger) so the actor tracks progress and does not give up', async () => {

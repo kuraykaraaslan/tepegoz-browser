@@ -85,7 +85,7 @@ describe('Planner.plan', () => {
     expect(withoutHistory.system).not.toContain('earlier turns of the SAME conversation');
   });
 
-  it('guides opening menus/drawers and trying a conventional URL path', async () => {
+  it('guides opening menus/drawers and grounds navigation (see/verify a route; search over a guessed URL)', async () => {
     class CapturingProvider implements ModelProvider {
       readonly id = 'anthropic' as const;
       system = '';
@@ -104,7 +104,8 @@ describe('Planner.plan', () => {
     ModelGateway.register(provider);
     await Planner.plan({ intent: 'find the blog', tools, provider: 'anthropic' as const, model: 'claude-opus-4-8' });
     expect(provider.system).toContain('menu/hamburger');
-    expect(provider.system).toContain('/blog');
+    expect(provider.system).toContain('web_search_items');
+    expect(provider.system).toContain('do NOT plan to guess a conventional path');
   });
 });
 

@@ -40,6 +40,12 @@ export interface WebToolsHost {
   fetch(input: WebFetchResolvedInput): Promise<WebFetchResult>;
 }
 
+export {
+  createSitemapReader,
+  type SitemapFetch,
+  type SitemapReader,
+} from './sitemap-reader';
+
 export const DEFAULT_WEB_SEARCH_RESULTS = 5;
 export const MAX_WEB_SEARCH_RESULTS = 10;
 export const DEFAULT_WEB_FETCH_BYTES = 200_000;

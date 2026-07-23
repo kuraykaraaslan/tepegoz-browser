@@ -1,10 +1,12 @@
 import { createHttpClient } from '@tepegoz/http';
-import type {
-  WebFetchResolvedInput,
-  WebFetchResult,
-  WebSearchResolvedInput,
-  WebSearchResult,
-  WebToolsHost,
+import {
+  createSitemapReader,
+  type SitemapFetch,
+  type WebFetchResolvedInput,
+  type WebFetchResult,
+  type WebSearchResolvedInput,
+  type WebSearchResult,
+  type WebToolsHost,
 } from '@tepegoz/web-tools';
 
 const client = createHttpClient({
@@ -102,3 +104,31 @@ export const webToolsHost: WebToolsHost = {
   search,
   fetch: fetchPage,
 };
+
+// AI-7 sitemap/robots discovery over the shared HTTP seam. The reader only ever asks for SAME-ORIGIN URLs
+// (robots.txt / sitemap.xml of the page the agent is already on), so this fetch cannot become an SSRF
+// pivot; non-2xx is surfaced as a normal status (not thrown) so a missing sitemap is simply "ungrounded".
+const sitemapFetch: SitemapFetch = async (url, maxBytes) => {
+  try {
+    const response = await client.get<string>(url, {
+      responseType: 'text',
+      maxContentLength: maxBytes,
+      transformResponse: [(data: unknown) => String(data)],
+      validateStatus: () => true,
+      // Do NOT follow redirects: the reader guarantees a SAME-ORIGIN request, but a redirect could bounce
+      // it to a private-IP / metadata host (SSRF). A redirected robots/sitemap is treated as unreachable.
+      maxRedirects: 0,
+    });
+    return { status: response.status, text: String(response.data).slice(0, maxBytes) };
+  } catch {
+    return null;
+  }
+};
+
+// One reader for the process so its per-origin cache survives across runs in a session.
+const sitemapReader = createSitemapReader(sitemapFetch);
+
+/** Same-origin sitemap page URLs for the page the agent is on — the AI-7 `discoverSitemap` deps seam. */
+export function discoverSitemap(pageUrl: string): Promise<readonly string[]> {
+  return sitemapReader.discover(pageUrl);
+}

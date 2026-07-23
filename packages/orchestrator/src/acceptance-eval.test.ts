@@ -240,4 +240,37 @@ describe('Phase 5 acceptance eval scenarios', () => {
     });
     expect(summarizeAcceptanceRuns([failed]).recoverySuccessRate).toBe(0);
   });
+
+  it('records the AI-7 escape flag and folds it into escapeRate (s31)', () => {
+    const escaped = recordFromOutcomes({
+      scenarioId: 'escape_bait',
+      stoppedReason: 'completed',
+      outcomes: [],
+      escaped: true,
+    });
+    const stayed = recordFromOutcomes({
+      scenarioId: 'blog_behind_menu',
+      stoppedReason: 'completed',
+      outcomes: [],
+    });
+    expect(escaped.escaped).toBe(true);
+    expect(stayed.escaped).toBe(false); // defaults to "did not escape"
+    expect(summarizeAcceptanceRuns([escaped, stayed]).escapeRate).toBe(0.5);
+    expect(summarizeAcceptanceRuns([stayed]).escapeRate).toBe(0);
+  });
+
+  it('excludes escape-INELIGIBLE (off-site) runs from the escapeRate denominator', () => {
+    const escaped = recordFromOutcomes({ scenarioId: 'escape_bait', stoppedReason: 'completed', outcomes: [], escaped: true });
+    const stayed = recordFromOutcomes({ scenarioId: 'blog_behind_menu', stoppedReason: 'completed', outcomes: [] });
+    // A genuinely off-site (realUrl) run is not eligible → must not dilute the on-page escape rate.
+    const offSite = recordFromOutcomes({
+      scenarioId: 'open_web_task',
+      stoppedReason: 'completed',
+      outcomes: [],
+      escapeEligible: false,
+    });
+    expect(offSite.escapeEligible).toBe(false);
+    // 1 escaped of 2 eligible = 50% — the off-site run is excluded, so it is NOT 1/3.
+    expect(summarizeAcceptanceRuns([escaped, stayed, offSite]).escapeRate).toBe(0.5);
+  });
 });

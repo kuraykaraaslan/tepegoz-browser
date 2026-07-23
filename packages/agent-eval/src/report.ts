@@ -55,6 +55,9 @@ export interface EvalReport {
     stoppedReason: string;
     tags: string[];
     totalTokens: number;
+    /** AI-7: the run left the on-page route (off-site nav / web_search) — surfaced so an escape is visible
+     *  even when the scenario still passed. */
+    escaped: boolean;
   }>;
 }
 
@@ -97,6 +100,7 @@ export function buildReport(input: ReportInput): EvalReport {
       stoppedReason: r.record.stoppedReason,
       tags: r.scenario.tags,
       totalTokens: r.record.tokenUsage.totalTokens,
+      escaped: r.record.escaped,
     })),
   };
 }
@@ -105,7 +109,8 @@ export function buildReport(input: ReportInput): EvalReport {
 export function formatReportTable(report: EvalReport): string {
   const pct = (n: number): string => `${(n * 100).toFixed(1)}%`;
   const rows = report.scenarios.map(
-    (s) => `  ${s.ok ? 'PASS' : 'FAIL'}  ${s.heldOut ? '[held-out] ' : ''}${s.id} — ${s.reason}`,
+    (s) =>
+      `  ${s.ok ? 'PASS' : 'FAIL'}  ${s.heldOut ? '[held-out] ' : ''}${s.id}${s.escaped ? ' [escaped]' : ''} — ${s.reason}`,
   );
   const judgeLine =
     report.judge !== undefined
@@ -115,6 +120,8 @@ export function formatReportTable(report: EvalReport): string {
     `agent-eval · model=${report.model} · N=${String(report.n)} · threshold=${pct(report.threshold)}`,
     `dev task-success: ${pct(report.dev.metrics.taskSuccessRate)} (${String(report.dev.n)} scenarios)` +
       ` · held-out: ${pct(report.heldOut.metrics.taskSuccessRate)} (${String(report.heldOut.n)})`,
+    `escape rate (AI-7, lower=better): dev ${pct(report.dev.metrics.escapeRate)}` +
+      ` · held-out: ${pct(report.heldOut.metrics.escapeRate)}`,
     `threshold ${report.thresholdMet ? 'met' : 'NOT met'}`,
     ...judgeLine,
     ...rows,

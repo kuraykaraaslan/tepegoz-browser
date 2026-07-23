@@ -14,6 +14,7 @@ import {
 import { isRunnableProvider, type AIProvider } from '@tepegoz/shared-types';
 import TabManager from '../tabs';
 import { browserHost } from './browser-host.electron';
+import { discoverSitemap } from '../web/web-tools-host.electron';
 import { mainStrings } from '../lib/i18n-main';
 import { llamaEngine } from '../local-inference/llama-engine.electron';
 import ModelManager from '../model-catalog/model-manager.electron';
@@ -130,6 +131,7 @@ export async function maybeRunEval(): Promise<void> {
     const summary = await runAgent(prompt, hooks, {
       activeTabUrl,
       tabUrl,
+      discoverSitemap,
       handoffStrings: { captcha: handoff.captcha, twofa: handoff.twofa, login: handoff.login },
       localInference: { engine: llamaEngine(), resolveModel: () => ModelManager.resolveModel() },
       provider,

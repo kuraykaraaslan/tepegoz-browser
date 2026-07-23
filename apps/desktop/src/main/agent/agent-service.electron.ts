@@ -9,6 +9,7 @@ import { randomUUID } from 'node:crypto';
 import { AgentConversationStore, type Db } from '@tepegoz/persistence';
 import TabManager from '../tabs';
 import AgentTabGroup from './agent-tab-group.electron';
+import { discoverSitemap } from '../web/web-tools-host.electron';
 import { mainStrings } from '../lib/i18n-main';
 import { llamaEngine } from '../local-inference/llama-engine.electron';
 import ModelManager from '../model-catalog/model-manager.electron';
@@ -62,6 +63,7 @@ export default class AgentService {
         {
           activeTabUrl,
           tabUrl,
+          discoverSitemap,
           handoffStrings: { captcha: handoff.captcha, twofa: handoff.twofa, login: handoff.login },
           localInference: { engine: llamaEngine(), resolveModel: () => ModelManager.resolveModel() },
           ...(tokenBudget !== undefined ? { tokenBudget } : {}),

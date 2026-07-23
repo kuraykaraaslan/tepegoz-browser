@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Zephyr — Home</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; }
+      #drawer { display: none; }
+      #drawer.open { display: block; }
+      nav a { display: block; padding: 0.5rem 0; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <button id="menu" aria-label="Menu" aria-expanded="false">☰ Menu</button>
+      <h1>Zephyr</h1>
+    </header>
+    <!--
+      URL-hallucination trap: the blog is NOT at the conventional /blog or blog.html (both 404).
+      Its real route is "journal.html", listed ONLY inside this menu drawer — so the agent must open the
+      menu and follow the visible link rather than fabricating /blog and poking a dead path.
+    -->
+    <nav id="drawer" aria-label="Primary">
+      <a href="about.html">About</a>
+      <a href="journal.html">Blog</a>
+      <a href="pricing.html">Pricing</a>
+    </nav>
+    <main>
+      <p>Weather data for makers. Open the menu to browse.</p>
+    </main>
+    <script>
+      const btn = document.getElementById('menu');
+      const drawer = document.getElementById('drawer');
+      btn.addEventListener('click', () => {
+        const open = drawer.classList.toggle('open');
+        btn.setAttribute('aria-expanded', String(open));
+      });
+    </script>
+  </body>
+</html>
