@@ -70,3 +70,50 @@ The +44pt dev jump from the 429 fix is **removing an infra artifact**, not a com
 Live eval needs **no stray Electron instance** (single-instance lock makes a fresh launch quit → Playwright
 "Target page closed"); the runner kills strays first. The window is shown **inactive** (composited, focus not
 stolen); minimizing/hiding/opacity-0 pauses or races the compositor and **blinds render-DOM perception**.
+
+---
+
+# C1 Escape-Family Sweep — After PR1+PR2 (2026-07-24)
+
+First live measurement **after** C1 (typed working state `s15` + no-progress replan `s14`) landed on
+`main` (`d591523`, `1c5ddd0`). Recorded per the anti-vanity contract — **including that it did not work.**
+
+## How it was run
+- **Model:** OpenAI **gpt-4o** (`plan`+`exec`), `TEPEGOZ_EVAL_MODE=live`, **N=3** per scenario. **Not** the
+  Anthropic product default C1's DoD is stated on — so this is a dual-provider cross-check, not the DoD close.
+- Escape family: `form_validation_required, silent_api_failure, escape_bait, url_hallucination_trap,
+  sitemap_only_route`. 43.6 min wall-clock for 15 trials (escape trials burn the full 900s per-trial timeout).
+- **Caveat — C1 engagement UNVERIFIED.** The `[eval]` step trace does not echo the model's raw decision JSON,
+  so these logs cannot confirm gpt-4o emitted the typed `state` field (→ working-state injected) or that
+  replan fired. If gpt-4o did not emit `state`, PR1 was inert and this is really a *pre-C1* re-measurement.
+  Closing this blind spot (surface "workingStateInjected" + "replanCount" in the eval out-JSON) is the
+  immediate next task before any verdict on C1's design.
+
+## Result — no improvement over the pre-C1 baseline
+| scenario | pre-C1 (N=3) | after C1 (N=3) | note |
+|---|---|---|---|
+| `form_validation_required` | 1/3 | **1/3** [flaky] | 1 trial CUT OFF (escaped to `aster.co.uk`, timed out) |
+| `silent_api_failure` | 1/3 | **0/3** | escaped; summary missing "507" |
+| `escape_bait` | (owed) | **0/3** [escaped] | operated fixture, then `web_search_items` → `max_steps` (224k tok) |
+| `url_hallucination_trap` | (owed) | **2/3** [flaky] | 1 CUT OFF (escaped to `zephyrproject.org`) |
+| `sitemap_only_route` (held-out) | (owed) | **3/3** | the one clean win |
+
+Pooled family aggregates (the new report metric, dev per-trial, Wilson 95%):
+- **`ai-7`** (url_hallucination + escape_bait): pass **33.3%** [9.7–70.0] (2/6) · **escape 50.0%** [18.8–81.2] (3/6)
+- **`form`** (escape_bait + form_validation): pass **16.7%** [3.0–56.4] (1/6) · **escape 66.7%** [30.0–90.3] (4/6)
+
+**DoD targets (`form_validation_required` & `silent_api_failure` each ≥6/10): NOT met — no movement.**
+
+## Finding — the escape hatch survived C1's soft steers
+The agent still abandons on-page interaction and **escapes**: off-site nav to a real (unreachable) URL
+(`aster.co.uk`, `zephyrproject.org` → `ERR_FAILED`, spins to the 900s timeout) or **`web_search_items`**.
+C1's typed state + replan + escape prose are *advisory* — gpt-4o overrides them. This points at a **harder
+lever than C1 shipped**: gate/deny the escape tools (`web_search_items`, off-origin `browser_update_location`)
+while an on-page task is unfinished, rather than only steering against them. Candidate re-prioritization:
+promote a policy-level on-page constraint (Lane A) ahead of the remaining soft-state work.
+
+## Still owed
+- **Verify C1 actually engaged for gpt-4o** (instrument the out-JSON; re-run one escape scenario) — blocks any
+  design verdict.
+- The **Anthropic product-default** escape-family sweep (C1's real DoD model) — needs a funded Anthropic key.
+- N≥10 for claim-grade CIs once a lever actually moves the family.

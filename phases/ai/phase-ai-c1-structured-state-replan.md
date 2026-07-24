@@ -1,6 +1,8 @@
 # Phase C1 — Structured State & No-Progress Replan (Core)
 
-**Status:** 🟠 Measurement-owed (PR1 + PR2 code landed 2026-07-24; exit sweep owed)  ·
+**Status:** 🟠 Measurement-owed (PR1 + PR2 code landed 2026-07-24; **gpt-4o cross-check showed NO
+improvement** — see [ledger](eval-results-2026-07.md#c1-escape-family-sweep--after-pr1pr2-2026-07-24);
+C1 engagement UNVERIFIED, Anthropic DoD sweep still owed)  ·
 **Depends on:** [M1](phase-ai-m1-measurement-baseline.md) PR1  ·  **Track:** [`phases/ai` v2](README.md)
 
 **Goal:** Kill the **measured escape ceiling** — the model web-searching *"how do I confirm this
