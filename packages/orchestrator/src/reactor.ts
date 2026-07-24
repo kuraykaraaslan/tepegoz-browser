@@ -255,12 +255,16 @@ export default class Reactor {
     // the model always sees up-to-date structured progress. No-op while the ledger is empty (legacy path).
     const syncWorkingState = (): void => {
       if (isWorkingStateEmpty(workingState)) return;
+      const firstInjection = workingStateIndex === null;
       if (workingStateIndex !== null) {
         const prev = messages[workingStateIndex];
         if (prev !== undefined) messages[workingStateIndex] = { ...prev, content: COLLAPSED_WORKING_STATE_PLACEHOLDER };
       }
       messages.push({ role: 'user', content: `${WORKING_STATE_HEADER}\n${renderWorkingState(workingState)}` });
       workingStateIndex = messages.length - 1;
+      // C1 engagement signal (diagnostic): the model actually emitted a typed `state` and it is now being
+      // fed back. Logged ONCE per run so a sweep transcript can PROVE PR1 engaged (vs the model ignoring it).
+      if (firstInjection) Logger.info('[c1] typed working-state injected (model emitted structured `state`)');
     };
 
     // C1 PR2: when the run has stalled — `noProgressThreshold` state-changing actions with no observable
@@ -272,6 +276,8 @@ export default class Reactor {
       }
       replanCount += 1;
       const reason = `No observable page-state change across ${String(noProgressActs)} acting steps.`;
+      // C1 engagement signal (diagnostic): the no-progress detector tripped and PR2's replan is firing.
+      Logger.info('[c1] no-progress replan fired', { replanCount, reason });
       noProgressActs = 0; // give the new approach a fresh no-progress budget
       let guidance = '';
       try {

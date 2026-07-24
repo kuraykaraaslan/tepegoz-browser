@@ -83,11 +83,13 @@ First live measurement **after** C1 (typed working state `s15` + no-progress rep
   Anthropic product default C1's DoD is stated on — so this is a dual-provider cross-check, not the DoD close.
 - Escape family: `form_validation_required, silent_api_failure, escape_bait, url_hallucination_trap,
   sitemap_only_route`. 43.6 min wall-clock for 15 trials (escape trials burn the full 900s per-trial timeout).
-- **Caveat — C1 engagement UNVERIFIED.** The `[eval]` step trace does not echo the model's raw decision JSON,
-  so these logs cannot confirm gpt-4o emitted the typed `state` field (→ working-state injected) or that
-  replan fired. If gpt-4o did not emit `state`, PR1 was inert and this is really a *pre-C1* re-measurement.
-  Closing this blind spot (surface "workingStateInjected" + "replanCount" in the eval out-JSON) is the
-  immediate next task before any verdict on C1's design.
+- **C1 engagement — now VERIFIED (2026-07-24, instrumented re-run).** Added two diagnostic log lines to the
+  reactor (`[c1] typed working-state injected` / `[c1] no-progress replan fired`) and re-ran one trial:
+  - **PR1 fired:** `working-state injections: 1` — gpt-4o **does** emit the typed `state` and receives it
+    back. PR1 is *not* inert; the model simply overrides its own ledger and escapes anyway.
+  - **PR2 did NOT fire:** `replan fires: 0`. The trial escaped via **`web_search_items`** — a **read-class**
+    tool, which the no-progress detector treats as *neutral*, never a `stall`. **Escape ≠ stall, so replan is
+    architecturally blind to the escape mode.** This is the design gap, not a wiring bug.
 
 ## Result — no improvement over the pre-C1 baseline
 | scenario | pre-C1 (N=3) | after C1 (N=3) | note |
@@ -113,7 +115,9 @@ while an on-page task is unfinished, rather than only steering against them. Can
 promote a policy-level on-page constraint (Lane A) ahead of the remaining soft-state work.
 
 ## Still owed
-- **Verify C1 actually engaged for gpt-4o** (instrument the out-JSON; re-run one escape scenario) — blocks any
-  design verdict.
+- ~~Verify C1 actually engaged~~ **DONE** — PR1 fires, PR2 blind to escape (see verified note above).
+- **The escape lever (C1 PR3):** make an escape attempt (`web_search_items` / off-origin nav on an unfinished
+  on-page task) TRIGGER the replan, so the replanner injects an on-page approach before the agent wanders off.
+  Escape is a distinct failure mode from "stall"; PR2 must learn to see it. Then re-measure the family.
 - The **Anthropic product-default** escape-family sweep (C1's real DoD model) — needs a funded Anthropic key.
 - N≥10 for claim-grade CIs once a lever actually moves the family.
