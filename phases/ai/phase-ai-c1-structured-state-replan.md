@@ -1,8 +1,9 @@
 # Phase C1 — Structured State & No-Progress Replan (Core)
 
-**Status:** 🟠 Measurement-owed (PR1 + PR2 code landed 2026-07-24; **gpt-4o cross-check showed NO
-improvement** — see [ledger](eval-results-2026-07.md#c1-escape-family-sweep--after-pr1pr2-2026-07-24);
-C1 engagement UNVERIFIED, Anthropic DoD sweep still owed)  ·
+**Status:** 🟠 Measurement-owed / **re-prioritization pending** (PR1+PR2+PR3 landed 2026-07-24; all three
+levers **fire correctly but do NOT stop gpt-4o escaping** — verified from logs. Soft steering looks
+exhausted for gpt-4o; the **Anthropic DoD-model sweep is the deciding measurement** before any hard
+policy-gate is built. See [ledger](eval-results-2026-07.md).)  ·
 **Depends on:** [M1](phase-ai-m1-measurement-baseline.md) PR1  ·  **Track:** [`phases/ai` v2](README.md)
 
 **Goal:** Kill the **measured escape ceiling** — the model web-searching *"how do I confirm this
@@ -83,6 +84,18 @@ signal, and `maxRecoveryAttempts` fails **closed** instead of replanning
       **Owed:** the live N≥10 escape-family sweep (needs API keys) — including the DoD's *"replan-after-N
       fires in ≥1 recorded live trial and the trial recovers"* transcript; the prose-steer deletion +
       paired with/without sweep is done at that proving run, so the phase stays measurement-owed.
+
+### PR3 — escape→replan (re-cut after the first sweep) — ✅ landed 2026-07-24, but no gpt-4o effect
+The first sweep VERIFIED PR1 fires and PR2 is blind to escape (an escape via read-class `web_search_items`
+reads as `neutral`, never a `stall`). PR3 made an escape attempt force the replan
+([`reactor.ts`](../../packages/orchestrator/src/reactor.ts) `isEscapeTool`, wired in
+[`agent-runtime-loop.ts`](../../packages/agent-runtime/src/agent-runtime-loop.ts)).
+- [x] Escape-tool predicate (web search / off-origin nav) forces the replan; diagnostic `[c1]` logs.
+- **Measured (gpt-4o, N=3):** PR3 **fires correctly** (logs confirm escape→replan) but gpt-4o **ignores the
+  steer and escapes again** — pooled dev 25%→33% (CIs overlap, not significant), escape rate 50%→75%.
+- **Re-prioritization:** soft steering (PR1/PR2/PR3) is exhausted for gpt-4o. Candidate next lever is a
+  **policy-level gate** on the escape tools — but **do the Anthropic DoD-model sweep first**: if the DoD
+  model respects the steers, C1 is done on its target and the gate is unnecessary. Recorded in the ledger.
 
 ## Scope notes
 - Lane A (reactor-adjacent) — nothing else touches the reactor while this is in flight.

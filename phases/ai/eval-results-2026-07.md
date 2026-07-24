@@ -121,3 +121,42 @@ promote a policy-level on-page constraint (Lane A) ahead of the remaining soft-s
   Escape is a distinct failure mode from "stall"; PR2 must learn to see it. Then re-measure the family.
 - The **Anthropic product-default** escape-family sweep (C1's real DoD model) — needs a funded Anthropic key.
 - N≥10 for claim-grade CIs once a lever actually moves the family.
+
+---
+
+# C1 PR3 Re-measure — escape→replan fires, but gpt-4o ignores it (2026-07-24)
+
+After PR3 (`5a0cfb0`): an escape attempt (web search / off-origin nav) forces the replan. gpt-4o, N=3,
+same escape family, run off-screen via the new `TEPEGOZ_START_BACKGROUND=1` (perception confirmed intact).
+
+## PR3 engages — proven from the logs
+`[c1] escape attempt detected → forcing replan` and `[c1] no-progress replan fired` appear in every
+escaping trial (e.g. `escape_bait.t2`: escape_forced=2, replan_fired=2). **The mechanism works.**
+
+## …but it does not change behaviour
+The same trials show `web_search=2` alongside `escape_forced=2`: the agent escapes, gets the replan steer
+("stay on-page, do X"), and **escapes again** — gpt-4o overrides the advisory guidance until the replan
+budget (maxReplans=2) is spent, then keeps web-searching.
+
+| scenario | pre-PR3 (N=3) | post-PR3 (N=3) |
+|---|---|---|
+| form_validation_required | 1/3 | 0/3 |
+| silent_api_failure | 0/3 | 2/3 |
+| escape_bait | 0/3 | 0/3 |
+| url_hallucination_trap | 2/3 | 2/3 |
+| sitemap_only_route (held-out) | 3/3 | 3/3 |
+| **pooled dev per-trial** | 3/12 = 25% [8.9–53.2] | 4/12 = 33% [13.8–60.9] |
+
+CIs overlap → **not significant**; the form↔silent swap is N=3 sampling noise; dev escape rate 50%→75%.
+
+## Verdict — soft levers are exhausted for gpt-4o's escape behaviour
+Three C1 levers (PR1 typed state, PR2 stall-replan, PR3 escape-replan) all **fire correctly** and all fail
+to stop gpt-4o escaping. The evidence now points hard at a **policy-level gate** (deny `web_search_items` /
+off-origin nav while an on-page task is unfinished) rather than any further *steering*.
+
+## BUT — the decisive caveat: this is all gpt-4o, not C1's DoD model
+Every number here is **gpt-4o**, which is an unusually escape-prone model. C1's DoD is stated on the
+**Anthropic product default** (Opus/Sonnet), which is **unmeasured**. It is entirely possible the DoD model
+respects the typed state + steers and never escapes — in which case C1 already works on its target and a
+hard gate is unnecessary. **The right next step is the Anthropic escape sweep BEFORE building a gate** — a
+big product-affecting change should not be built to fix a model C1 was never scoped against.
