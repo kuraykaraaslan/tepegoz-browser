@@ -71,7 +71,7 @@ as genuinely open-ended judgement). AI-7's `/blog`-prose deletion already proved
 |---|---|---|---|---|---|
 | M1 | Measurement | [phase-ai-m1-measurement-baseline.md](phase-ai-m1-measurement-baseline.md) | Baseline Zero: statistics constitution wired, valid dual-provider baselines, scenario hygiene, diagnosis artifacts | — | ⬜ Not started |
 | M2 | Measurement | [phase-ai-m2-external-yardstick.md](phase-ai-m2-external-yardstick.md) | Bridge subset (credibility) + H2H battery (the only claim-bearing cross-agent instrument) | M1 (probe after C2; claim after C5+C7) | ⬜ Not started |
-| C1 | Core | [phase-ai-c1-structured-state-replan.md](phase-ai-c1-structured-state-replan.md) | Typed working-state + state-hash no-progress replan — kill the measured escape ceiling | M1 PR1 | ⬜ Not started |
+| C1 | Core | [phase-ai-c1-structured-state-replan.md](phase-ai-c1-structured-state-replan.md) | Typed working-state + state-hash no-progress replan — kill the measured escape ceiling | M1 PR1 | 🟡 In progress (PR1 landed; PR2 + sweep owed) |
 | C2 | Core | [phase-ai-c2-replanner.md](phase-ai-c2-replanner.md) | A real Replanner authority replacing static hint strings | C1 | ⬜ Not started |
 | C3 | Core | [phase-ai-c3-perception-economy.md](phase-ai-c3-perception-economy.md) | Read-dedupe by construction, identity-stable refs, diff updates | M1 | ⬜ Not started |
 | C4 | Core | [phase-ai-c4-obstructed-pages.md](phase-ai-c4-obstructed-pages.md) | Action-time occlusion re-check, locator cascade, cookie-consent fix, modal recovery | M1 (diagnosis) | ⬜ Not started |

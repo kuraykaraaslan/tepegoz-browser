@@ -2,6 +2,7 @@ import { Logger } from '@tepegoz/libs';
 import { ModelGateway, type CanonMessage } from '@tepegoz/model-gateway';
 import { ToolGateway } from '@tepegoz/capability-plane';
 import { wrapUserRequest } from '@tepegoz/tool-executor';
+import type { AgentWorkingState } from '@tepegoz/shared-types';
 import type { StepOutcome } from './executor';
 import {
   classifyRuntimeError,
@@ -12,6 +13,13 @@ import {
 import { parseDecision, type Decision } from './reactor-decision';
 import { isToolError, observationOf, observationWithRecovery, stableStringify } from './reactor-observation';
 import { COLLAPSED_STATE_PLACEHOLDER, STATE_COLLAPSE_THRESHOLD } from './reactor-page-state';
+import {
+  COLLAPSED_WORKING_STATE_PLACEHOLDER,
+  WORKING_STATE_HEADER,
+  isWorkingStateEmpty,
+  mergeWorkingState,
+  renderWorkingState,
+} from './reactor-working-state';
 import { systemPrompt } from './reactor-prompt';
 import type {
   CompletionContext,
@@ -126,6 +134,12 @@ export default class Reactor {
     // CLAIMS the validator has rejected (fail-closed guard), and the action count last validated
     // (so a periodic check fires once per cadence tick, not on every no-op turn).
     let latestMemory = '';
+    // C1 (s15): the actor's TYPED working ledger — the authoritative merge of every `state` patch it has
+    // proposed. Injected as a compact persistent block re-rendered at the tail each step (see
+    // `syncWorkingState`) so structured progress survives the transient page-state collapse, instead of
+    // riding free-text `memory` prose that gets buried and lost.
+    let workingState: AgentWorkingState = {};
+    let workingStateIndex: number | null = null;
     let completionRejects = 0;
     let lastValidatedCount = -1;
     // AI-7: the last navigation-grounding hint injected, so an identical steer is not re-pushed every read.
@@ -219,6 +233,19 @@ export default class Reactor {
       if (isState) lastStateIndex = messages.length - 1;
     };
 
+    // C1: re-inject the typed working ledger as a compact persistent block at the tail, collapsing the
+    // previous copy (mirrors the transient page-state collapse) so only the CURRENT ledger stays live and
+    // the model always sees up-to-date structured progress. No-op while the ledger is empty (legacy path).
+    const syncWorkingState = (): void => {
+      if (isWorkingStateEmpty(workingState)) return;
+      if (workingStateIndex !== null) {
+        const prev = messages[workingStateIndex];
+        if (prev !== undefined) messages[workingStateIndex] = { ...prev, content: COLLAPSED_WORKING_STATE_PLACEHOLDER };
+      }
+      messages.push({ role: 'user', content: `${WORKING_STATE_HEADER}\n${renderWorkingState(workingState)}` });
+      workingStateIndex = messages.length - 1;
+    };
+
     for (let step = 0; ; step++) {
       if (options.signal?.aborted === true) return { outcomes, stoppedReason: 'aborted' };
       // Run-control gate (additive; skipped entirely when `control` is absent — byte-identical legacy
@@ -240,6 +267,10 @@ export default class Reactor {
       // goal is already met — catching an actor stuck acting past completion.
       const periodicDone = await periodicCheck();
       if (periodicDone !== null) return periodicDone;
+
+      // C1: refresh the typed working ledger at the tail so THIS decision reasons over up-to-date
+      // structured progress (no-op on the first step / whenever the ledger is still empty).
+      syncWorkingState();
 
       let responseText: string;
       let decision: Decision;
@@ -274,6 +305,10 @@ export default class Reactor {
       decisionRepairs = 0;
       messages.push({ role: 'assistant', content: responseText });
       if (decision.memory !== undefined && decision.memory.length > 0) latestMemory = decision.memory;
+      // C1: fold the model's proposed ledger update into the authoritative snapshot. A malformed patch was
+      // already dropped to `undefined` at the decision boundary (`.catch`), so `state` here is valid-or-absent;
+      // an absent patch carries the prior ledger forward via the field-level merge.
+      if (decision.state !== undefined) workingState = mergeWorkingState(workingState, decision.state);
 
       if (decision.action === 'finish') {
         const settled = await settleClaim(decision.summary);

@@ -10,5 +10,6 @@ export * from './tool-descriptor';
 export * from './tool-result';
 export * from './dag-plan';
 export * from './eval-scenario';
+export * from './agent-working-state';
 export * from './macro-ir';
 export * from './macro-schema';

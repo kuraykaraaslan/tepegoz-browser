@@ -8,6 +8,7 @@ import {
 import { CapabilityRegistry, ToolGateway, type RegisteredTool } from '@tepegoz/capability-plane';
 import type { AIProvider, RiskLevel, ToolDescriptor } from '@tepegoz/shared-types';
 import Reactor from './reactor';
+import { COLLAPSED_WORKING_STATE_PLACEHOLDER, WORKING_STATE_HEADER } from './reactor-working-state';
 
 /**
  * Reactive-loop replay: a scripted provider returns one canned decision per turn, so the whole
@@ -299,5 +300,71 @@ describe('Reactor.run', () => {
     expect(res.stoppedReason).toBe('completed');
     expect(res.summary).toBe('auto-complete');
     expect(calls).toHaveLength(3); // periodic check fires after 3 actions and ends the run
+  });
+});
+
+/**
+ * C1 (s15): the typed working state is what the MODEL actually receives. A capturing provider snapshots
+ * the messages handed to it each turn, so we assert on the real injected context — not a unit render.
+ */
+class CapturingProvider implements ModelProvider {
+  readonly id: AIProvider = 'anthropic';
+  private turn = 0;
+  readonly turns: { role: string; content: string }[][] = [];
+  constructor(private readonly replies: string[]) {}
+  complete(req: CanonRequest): Promise<CanonResponse> {
+    this.turns.push(req.messages.map((m) => ({ role: m.role, content: m.content })));
+    const text = this.replies[this.turn] ?? '{"action":"finish","summary":"done"}';
+    this.turn += 1;
+    return Promise.resolve({ text, stopReason: 'end', usage: { inputTokens: 1, outputTokens: 1 }, toolCalls: [] });
+  }
+}
+
+const actWithState = (tool: string, state: Record<string, unknown>): string =>
+  JSON.stringify({ action: 'act', tool, args: {}, rationale: 'r', state });
+
+describe('Reactor.run typed working state (C1)', () => {
+  const req = () => ({ goal: 'do it', tools: tools(), provider: 'anthropic' as const, model: 'mock' });
+
+  it('injects the ledger into the messages the model receives, and merges across steps', async () => {
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    const provider = new CapturingProvider([
+      actWithState('browser_update_page', { completedSubtasks: ['added to cart'] }),
+      actWithState('browser_get_elements', { pendingVerifications: ['confirm order placed'] }),
+      finish,
+    ]);
+    ModelGateway.reset();
+    ModelGateway.register(provider);
+    await Reactor.run(req());
+
+    // Turn 0 saw no ledger yet (it is emitted on turn 0's decision).
+    const turn0 = provider.turns[0] ?? [];
+    expect(turn0.some((m) => m.content.includes(WORKING_STATE_HEADER))).toBe(false);
+
+    // Turn 1 receives the ledger with turn 0's sub-task.
+    const turn1 = provider.turns[1] ?? [];
+    const ledger1 = turn1.find((m) => m.content.includes(WORKING_STATE_HEADER));
+    expect(ledger1?.content).toContain('added to cart');
+
+    // Turn 2 receives the MERGED ledger (sub-task carried forward + the new pending verification), and only
+    // the latest block is live — the earlier one is collapsed to the placeholder.
+    const turn2 = provider.turns[2] ?? [];
+    const liveLedgers = turn2.filter((m) => m.content.includes(WORKING_STATE_HEADER));
+    expect(liveLedgers).toHaveLength(1);
+    expect(liveLedgers[0]?.content).toContain('added to cart');
+    expect(liveLedgers[0]?.content).toContain('confirm order placed');
+    expect(turn2.some((m) => m.content === COLLAPSED_WORKING_STATE_PLACEHOLDER)).toBe(true);
+  });
+
+  it('injects nothing when the model never emits state (byte-identical legacy path)', async () => {
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    const provider = new CapturingProvider([act('browser_get_elements'), act('browser_get_elements'), finish]);
+    ModelGateway.reset();
+    ModelGateway.register(provider);
+    await Reactor.run(req());
+    const injectedAnywhere = provider.turns.some((turn) =>
+      turn.some((m) => m.content.includes(WORKING_STATE_HEADER) || m.content === COLLAPSED_WORKING_STATE_PLACEHOLDER),
+    );
+    expect(injectedAnywhere).toBe(false);
   });
 });

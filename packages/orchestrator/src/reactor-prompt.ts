@@ -66,11 +66,14 @@ export function systemPrompt(req: ReactRequest): string {
     'observed so far, decide the SINGLE next step. To interact with a page, first call ' +
     'browser_get_elements to see the actionable elements and their refs, then use browser_update_page ' +
     'with a ref. Output ONLY JSON, no prose or markdown fences, of exactly one of:\n' +
-    '{"action":"act","tool":"<id>","args":{…},"rationale":"<why>","evaluation_previous_goal":"<did the last action achieve its goal? success/failure and why>","memory":"<concrete progress so far, counting explicitly e.g. \'opened 2 of 5 products\'>","next_goal":"<the immediate objective of THIS step>"}\n' +
-    '{"action":"finish","summary":"<what you accomplished>","memory":"<final progress>"}\n' +
-    'Always fill evaluation_previous_goal / memory / next_goal — memory is your running progress ledger: ' +
-    'carry forward what you have already done and what remains (with counts) so you never repeat a step or ' +
-    'give up while items remain. Finish as soon as the goal is met or is genuinely impossible. ' +
+    '{"action":"act","tool":"<id>","args":{…},"rationale":"<why>","evaluation_previous_goal":"<did the last action achieve its goal? success/failure and why>","memory":"<concrete progress so far, counting explicitly e.g. \'opened 2 of 5 products\'>","next_goal":"<the immediate objective of THIS step>","state":{"openTabs":[{"id":"<tabId>","title":"<title>"}],"selectedRecords":["<item you picked>"],"filledFields":[{"field":"<name>","value":"<value>"}],"completedSubtasks":["<sub-task done>"],"pendingVerifications":["<claimed but not yet confirmed>"]}}\n' +
+    '{"action":"finish","summary":"<what you accomplished>","memory":"<final progress>","state":{…}}\n' +
+    'Always fill evaluation_previous_goal / memory / next_goal. Also maintain `state` — your TYPED progress ' +
+    'ledger, echoed back to you every step as "Working state": include only the sections that apply, omit ' +
+    'the rest, and carry forward what you have already done. Move an item from `pendingVerifications` only ' +
+    'once you have actually confirmed it (e.g. a save you saw succeed). Between `memory` and `state`, never ' +
+    'repeat a step or give up while items remain, and do NOT finish while a verification is still pending. ' +
+    'Finish as soon as the goal is met or is genuinely impossible. ' +
     'Use ONLY these tools (by exact id):\n' +
     toolList +
     BROWSING_STRATEGY +

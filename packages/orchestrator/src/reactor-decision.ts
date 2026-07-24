@@ -1,4 +1,5 @@
 import { AppError, Logger } from '@tepegoz/libs';
+import { AgentWorkingStateSchema } from '@tepegoz/shared-types';
 import { z } from 'zod';
 import { ReactorMessages } from './messages';
 
@@ -6,11 +7,17 @@ import { ReactorMessages } from './messages';
  * The actor's progress "brain" (AI-3): a self-assessment carried on every decision. `memory` forces
  * explicit progress counting ("2 of 10 done") — a strong anti-loop / don't-give-up signal. All optional
  * so weak models that omit them still parse (json_object mode only guarantees valid JSON, not shape).
+ *
+ * C1: `state` is the TYPED companion to `memory` — the model's proposed update to its structured working
+ * ledger (see {@link AgentWorkingStateSchema}). `.catch(undefined)` makes a malformed patch NON-fatal: it
+ * is dropped (the reactor then carries the prior ledger forward via merge) rather than failing the whole
+ * decision and forcing a repair turn. `memory` stays for the completion validator and weak models.
  */
 const BRAIN_FIELDS = {
   evaluation_previous_goal: z.string().max(500).optional(),
   memory: z.string().max(1500).optional(),
   next_goal: z.string().max(500).optional(),
+  state: AgentWorkingStateSchema.optional().catch(undefined),
 };
 
 /** The model's next move: run one tool, or declare the goal met. Validated at the (untrusted) boundary. */

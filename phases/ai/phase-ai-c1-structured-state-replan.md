@@ -1,7 +1,7 @@
 # Phase C1 — Structured State & No-Progress Replan (Core)
 
-**Status:** ⬜ Not started  ·  **Depends on:** [M1](phase-ai-m1-measurement-baseline.md) PR1  ·
-**Track:** [`phases/ai` v2](README.md)
+**Status:** 🟡 In progress (PR1 landed 2026-07-24; PR2 + exit sweep owed)  ·
+**Depends on:** [M1](phase-ai-m1-measurement-baseline.md) PR1  ·  **Track:** [`phases/ai` v2](README.md)
 
 **Goal:** Kill the **measured escape ceiling** — the model web-searching *"how do I confirm this
 saved?"* or wandering off-site instead of finishing on-page. PR1 gives the actor a **zod-typed working
@@ -44,14 +44,22 @@ signal, and `maxRecoveryAttempts` fails **closed** instead of replanning
 
 ## Tasks
 
-### PR1 — typed working state (`s15`)
-- [ ] Schema in `@tepegoz/shared-types` (the only schema source): open tabs, selected records, filled
+### PR1 — typed working state (`s15`) — ✅ landed 2026-07-24
+- [x] Schema in `@tepegoz/shared-types` (the only schema source): open tabs, selected records, filled
       fields, completed sub-tasks, pending verifications — zod `safeParse` at the untrusted-model
       boundary, tolerant optionals like the existing decision schema
       ([`reactor-decision.ts`](../../packages/orchestrator/src/reactor-decision.ts)).
-- [ ] Runtime builds/updates it each step and injects it as the compact persistent context in place of
+      → [`agent-working-state.ts`](../../packages/shared-types/src/agent-working-state.ts); the `state`
+      field on the decision is `.catch(undefined)` so a malformed patch is dropped, never fatal.
+- [x] Runtime builds/updates it each step and injects it as the compact persistent context in place of
       chat-resident prose (composes with the existing transient page-state collapse in
       [`reactor-page-state.ts`](../../packages/orchestrator/src/reactor-page-state.ts)).
+      → [`reactor-working-state.ts`](../../packages/orchestrator/src/reactor-working-state.ts) (merge +
+      render) wired into [`reactor.ts`](../../packages/orchestrator/src/reactor.ts) `syncWorkingState`,
+      prompt updated in [`reactor-prompt.ts`](../../packages/orchestrator/src/reactor-prompt.ts). Injection
+      verified against the real message stream by a capturing-provider test (not just a unit render).
+      **Owed:** the N≥10 exit sweep on the product-default model (needs live API keys) — the DoD delta is
+      not yet in the ledger, so this phase stays measurement-owed per the anti-debt rule.
 
 ### PR2 — no-progress replan (`s14`)
 - [ ] Run-level state-hash detector over the structural page signature: unchanged state across N

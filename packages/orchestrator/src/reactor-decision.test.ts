@@ -70,6 +70,27 @@ describe('parseDecision (untrusted LLM output boundary)', () => {
     expect(parseDecision('{"action":"finish","summary":"ok"}')).toEqual({ action: 'finish', summary: 'ok' });
   });
 
+  it('parses the C1 typed working state (`state`) on a decision', () => {
+    const parsed = parseDecision(
+      '{"action":"act","tool":"browser_update_page","state":{"completedSubtasks":["added to cart"],"pendingVerifications":["confirm order"]}}',
+    );
+    expect(parsed.state).toEqual({
+      completedSubtasks: ['added to cart'],
+      pendingVerifications: ['confirm order'],
+    });
+  });
+
+  it('DROPS a malformed `state` to undefined instead of failing the whole decision (.catch)', () => {
+    // selectedRecords must be an array of strings — a bare string is malformed. The decision must still
+    // parse (the tool call is valid); only the bad ledger patch is discarded.
+    const parsed = parseDecision(
+      '{"action":"act","tool":"browser_get_elements","state":{"selectedRecords":"not-an-array"}}',
+    );
+    expect(parsed.state).toBeUndefined();
+    if (parsed.action !== 'act') throw new Error('expected act');
+    expect(parsed.tool).toBe('browser_get_elements');
+  });
+
   it('coerces weak-model near-miss shapes (missing action, "arguments" alias, envelope)', () => {
     // No `action`, tool present, OpenAI-style "arguments" key.
     expect(parseDecision('{"tool":"browser_get_elements","arguments":{"ref":"e1"}}')).toEqual({

@@ -117,7 +117,15 @@ describe('Reactor system prompt (coreference + browsing strategy)', () => {
     const prompt = await capture();
     expect(prompt).toContain('evaluation_previous_goal');
     expect(prompt).toContain('next_goal');
-    expect(prompt).toContain('running progress ledger');
+    expect(prompt).toContain('progress ledger');
+  });
+
+  it('requests the C1 typed working state (`state`) so progress is structured, not buried prose', async () => {
+    const prompt = await capture();
+    expect(prompt).toContain('"state"');
+    expect(prompt).toContain('pendingVerifications');
+    // The finish-while-pending guard is the honesty hook C6 later builds on.
+    expect(prompt).toContain('do NOT finish while a verification is still pending');
   });
 
   it('prepends the AI-5 security preamble (page content is untrusted data, not instructions)', async () => {

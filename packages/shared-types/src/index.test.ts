@@ -12,6 +12,7 @@ import {
   toolSuccess,
   EvalScenarioSchema,
   EvalScenarioFileSchema,
+  AgentWorkingStateSchema,
 } from './index';
 
 describe('shared-types contracts', () => {
@@ -101,6 +102,31 @@ describe('eval scenario contract (AI-1)', () => {
     const res = EvalScenarioFileSchema.safeParse({ scenarios: [base, { ...base, id: 'other' }] });
     expect(res.success).toBe(true);
     if (res.success) expect(res.data.scenarios).toHaveLength(2);
+  });
+});
+
+describe('agent working state contract (C1)', () => {
+  it('accepts a well-formed typed ledger and all sections are optional', () => {
+    expect(AgentWorkingStateSchema.safeParse({}).success).toBe(true);
+    const res = AgentWorkingStateSchema.safeParse({
+      openTabs: [{ id: 't1', title: 'Cart' }],
+      selectedRecords: ['Blue Widget'],
+      filledFields: [{ field: 'email', value: 'a@b.com' }],
+      completedSubtasks: ['added to cart'],
+      pendingVerifications: ['confirm order placed'],
+    });
+    expect(res.success).toBe(true);
+  });
+
+  it('rejects a mistyped section (untrusted model output — a bare string is not a list)', () => {
+    expect(AgentWorkingStateSchema.safeParse({ selectedRecords: 'not-an-array' }).success).toBe(false);
+    // A filled field must name the field.
+    expect(AgentWorkingStateSchema.safeParse({ filledFields: [{ value: 'x' }] }).success).toBe(false);
+  });
+
+  it('bounds section sizes so the injected ledger stays small', () => {
+    const many = Array.from({ length: 41 }, (_, i) => `item ${String(i)}`);
+    expect(AgentWorkingStateSchema.safeParse({ selectedRecords: many }).success).toBe(false);
   });
 });
 
