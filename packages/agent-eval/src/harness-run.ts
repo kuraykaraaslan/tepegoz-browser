@@ -252,7 +252,7 @@ export async function runScenarioTrials(
   logsDir: string,
   judge: ((m: JudgeMessages) => Promise<string>) | null,
   judgeSamples: JudgeSample[],
-): Promise<{ result: ScenarioResult; passes: number }> {
+): Promise<{ result: ScenarioResult; passes: number; escapes: number; escapeEligible: boolean }> {
   const scores: ScoreResult[] = [];
   const outs: EvalOut[] = [];
   // M1: END-TO-END wall-clock per trial (launch → result, model thinking included) — the wait a user
@@ -280,10 +280,11 @@ export async function runScenarioTrials(
   // AI-7 escape rate (majority across trials), measured only over fixture "sites" (a sub-path directory);
   // realUrl scenarios are open-web tasks where leaving the origin is legitimate, so they are not scored.
   const siteBase = plan.entryUrl.replace(/[^/]*$/, '');
-  const escapes = 'fixture' in scenario.target
+  const escapeEligible = 'fixture' in scenario.target;
+  const escapes = escapeEligible
     ? outs.filter((o) => tripEscaped(o.steps, siteBase, plan.entryUrl)).length
     : 0;
-  const escaped = 'fixture' in scenario.target && escapes * 2 >= REPEAT;
+  const escaped = escapeEligible && escapes * 2 >= REPEAT;
   // Trials the harness had to abandon are NOT competence evidence. Scored they look exactly like a wrong
   // answer (empty page text + empty summary fail every assertion), so without calling them out a slow run
   // reads as a stupid one and the whole pass-rate is quietly pessimistic.
@@ -309,8 +310,8 @@ export async function runScenarioTrials(
       escaped,
       // Only fixture "sites" are eligible for the escape signal; a realUrl (open-web) task is excluded so
       // it can't dilute the on-page escape rate.
-      escapeEligible: 'fixture' in scenario.target,
+      escapeEligible,
     }),
   };
-  return { result, passes };
+  return { result, passes, escapes, escapeEligible };
 }

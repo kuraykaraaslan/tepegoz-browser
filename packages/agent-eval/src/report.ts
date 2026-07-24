@@ -8,7 +8,7 @@ import {
 import type { EvalScenario } from '@tepegoz/shared-types';
 import type { ScoreResult } from './scorer';
 import type { Agreement } from './calibration';
-import type { RepeatSummary } from './statistics';
+import type { FamilyStat, Interval, RepeatSummary } from './statistics';
 
 /** One scenario's full outcome: the record fed to the metrics + the ground-truth score. */
 export interface ScenarioResult {
@@ -30,6 +30,9 @@ export interface ReportInput {
   judgeAgreement?: Agreement;
   /** M1: the per-scenario k/N + Wilson-CI + flaky repeat block (REPEAT>1 sweeps). */
   repeat?: RepeatSummary;
+  /** M1: per-tag pooled family aggregates (pass + escape rate, Wilson CIs) — the shape claim gates are
+   *  defined on. Empty/omitted when no family reaches the minimum size. */
+  families?: FamilyStat[];
 }
 
 export interface TierReport {
@@ -52,6 +55,9 @@ export interface EvalReport {
   /** M1: per-scenario k/N + Wilson CIs + flaky tags and the POOLED per-trial dev/held-out aggregates —
    *  the statistical-constitution shape claim gates are defined on (never a single scenario's flip). */
   repeat?: RepeatSummary;
+  /** M1: per-tag pooled family aggregates (pass + escape rate + Wilson CIs) — pooled family shape the
+   *  gates are defined on; e.g. the C1 escape family reads off the `ai-7` tag. */
+  families?: FamilyStat[];
   scenarios: Array<{
     id: string;
     heldOut: boolean;
@@ -98,6 +104,7 @@ export function buildReport(input: ReportInput): EvalReport {
         }
       : {}),
     ...(input.repeat !== undefined ? { repeat: input.repeat } : {}),
+    ...(input.families !== undefined && input.families.length > 0 ? { families: input.families } : {}),
     scenarios: input.results.map((r) => ({
       id: r.scenario.id,
       heldOut: r.scenario.heldOut,
@@ -128,6 +135,22 @@ function pooledLines(report: EvalReport): string[] {
         `  ${String(s.passes)}/${String(s.n)} [${pct(s.ci.lo)}–${pct(s.ci.hi)}]` +
         `${s.heldOut ? ' [held-out]' : ''}${flakyTag}  ${s.id}`
       );
+    }),
+  ];
+}
+
+/** Per-tag pooled family aggregates (pass + escape, Wilson 95%) — the pooled shape the gates read. */
+function familyLines(report: EvalReport): string[] {
+  const fams = report.families;
+  if (fams === undefined || fams.length === 0) return [];
+  const pct = (n: number): string => `${(n * 100).toFixed(1)}%`;
+  const ci = (s: { rate: number; ci: Interval; k: number; n: number }): string =>
+    `${pct(s.rate)} [${pct(s.ci.lo)}–${pct(s.ci.hi)}] (${String(s.k)}/${String(s.n)})`;
+  return [
+    'families (pooled dev per-trial, Wilson 95%):',
+    ...fams.map((f) => {
+      const escape = f.escape !== undefined ? ` · escape ${ci(f.escape)}` : '';
+      return `  ${f.tag} (${String(f.scenarios)} scen): pass ${ci(f.pass)}${escape}`;
     }),
   ];
 }
@@ -164,6 +187,7 @@ export function formatReportTable(report: EvalReport): string {
     `threshold ${report.thresholdMet ? 'met' : 'NOT met'}`,
     ...judgeLine,
     ...pooledLines(report),
+    ...familyLines(report),
     ...rows,
   ].join('\n');
 }

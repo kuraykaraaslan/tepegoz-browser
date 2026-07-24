@@ -60,6 +60,11 @@ export interface PooledStat {
   ci: Interval;
 }
 
+/** Pool k successes over n trials into a rate + Wilson CI (the one place a PooledStat is minted). */
+function poolCounts(k: number, n: number): PooledStat {
+  return { k, n, rate: n === 0 ? 0 : k / n, ci: wilsonInterval(k, n) };
+}
+
 export interface RepeatSummary {
   repeat: number;
   perScenario: RepeatScenarioStat[];
@@ -69,9 +74,7 @@ export interface RepeatSummary {
 }
 
 function pool(rows: ScenarioFrequency[], repeat: number): PooledStat {
-  const k = rows.reduce((sum, r) => sum + r.passes, 0);
-  const n = rows.length * repeat;
-  return { k, n, rate: n === 0 ? 0 : k / n, ci: wilsonInterval(k, n) };
+  return poolCounts(rows.reduce((sum, r) => sum + r.passes, 0), rows.length * repeat);
 }
 
 /**
@@ -104,4 +107,56 @@ export function summarizeRepeat(
       heldOut: pool(freq.filter((f) => f.heldOut), repeat),
     },
   };
+}
+
+/** One scenario's contribution to the family aggregates: its tags + this sweep's pass and escape counts. */
+export interface FamilyRow {
+  id: string;
+  heldOut: boolean;
+  tags: readonly string[];
+  /** Passes across the sweep's `repeat` trials. */
+  passes: number;
+  /** Escapes (off-page / web_search) across the eligible trials — only fixture "sites" are eligible. */
+  escapes: number;
+  /** Whether this scenario's target is escape-scorable at all (fixture, not a realUrl open-web task). */
+  escapeEligible: boolean;
+}
+
+/** A family = every scenario carrying one tag, pooled. The constitution defines claim gates on **pooled
+ *  family aggregates** (never a single scenario's flip); this is that shape, per tag, with an escape-rate
+ *  companion so the C1 escape family (e.g. the `ai-7` tag) reads off directly. */
+export interface FamilyStat {
+  tag: string;
+  /** Distinct dev scenarios in the family (held-out is excluded — it is reported separately, never pooled
+   *  into a dev signal). */
+  scenarios: number;
+  /** Pooled per-trial pass rate + Wilson CI. */
+  pass: PooledStat;
+  /** Pooled per-trial escape rate + Wilson CI over the eligible trials — absent when no scenario in the
+   *  family is escape-scorable. */
+  escape?: PooledStat;
+}
+
+/**
+ * Pool each tag's DEV scenarios into a {@link FamilyStat}: pass-rate and (where eligible) escape-rate, each
+ * with a Wilson CI over pooled per-trial counts. Families smaller than `minScenarios` are omitted — a
+ * one-scenario "family" is just that scenario (already in the per-scenario table) and pooling it would fake
+ * a family-level signal. Deterministic (tags sorted) so the report is stable in tests.
+ */
+export function summarizeFamilies(rows: FamilyRow[], repeat: number, minScenarios = 2): FamilyStat[] {
+  const dev = rows.filter((r) => !r.heldOut);
+  const tags = [...new Set(dev.flatMap((r) => [...r.tags]))].sort();
+  const out: FamilyStat[] = [];
+  for (const tag of tags) {
+    const fam = dev.filter((r) => r.tags.includes(tag));
+    if (fam.length < minScenarios) continue;
+    const pass = poolCounts(fam.reduce((s, r) => s + r.passes, 0), fam.length * repeat);
+    const eligible = fam.filter((r) => r.escapeEligible);
+    const stat: FamilyStat = { tag, scenarios: fam.length, pass };
+    if (eligible.length > 0) {
+      stat.escape = poolCounts(eligible.reduce((s, r) => s + r.escapes, 0), eligible.length * repeat);
+    }
+    out.push(stat);
+  }
+  return out;
 }

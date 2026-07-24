@@ -6,7 +6,7 @@ import { recordFromOutcomes } from '@tepegoz/orchestrator';
 import type { EvalScenario } from '@tepegoz/shared-types';
 import { buildReport, formatReportTable, writeReport, type ScenarioResult } from './report';
 import type { ScoreResult } from './scorer';
-import { summarizeRepeat } from './statistics';
+import { summarizeFamilies, summarizeRepeat } from './statistics';
 
 const scenario = (id: string, heldOut = false): EvalScenario => ({
   id,
@@ -105,6 +105,28 @@ describe('formatReportTable / writeReport', () => {
     expect(table).toContain('pooled per-trial (Wilson 95%)');
     expect(table).toContain('[flaky]');
     expect(table).toContain('1/3');
+  });
+
+  it('M1: carries per-tag pooled family aggregates and renders pass + escape CIs', () => {
+    const families = summarizeFamilies(
+      [
+        { id: 'a', heldOut: false, tags: ['escape'], passes: 2, escapes: 1, escapeEligible: true },
+        { id: 'b', heldOut: false, tags: ['escape'], passes: 1, escapes: 0, escapeEligible: true },
+      ],
+      3,
+    );
+    const report = buildReport({
+      model: 'm',
+      threshold: 0.8,
+      generatedAt: 't',
+      results: [result('a', true), result('b', false)],
+      families,
+    });
+    expect(report.families?.[0]).toMatchObject({ tag: 'escape', scenarios: 2 });
+    const table = formatReportTable(report);
+    expect(table).toContain('families (pooled dev per-trial, Wilson 95%)');
+    expect(table).toContain('escape (2 scen): pass');
+    expect(table).toContain('· escape'); // the escape-rate companion is rendered
   });
 
   it('M1: spend reads "not measured" without a rate — never $0', () => {

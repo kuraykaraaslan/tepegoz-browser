@@ -17,7 +17,7 @@ import {
 } from './harness-config';
 import { latestArchivedRun, modelLabel, selectScenarios, trendLine } from './harness-report';
 import { judgeComplete, planRun, runScenarioTrials } from './harness-run';
-import { summarizeRepeat } from './statistics';
+import { summarizeFamilies, summarizeRepeat, type FamilyRow } from './statistics';
 
 /**
  * AI-1 eval driver. Launches the REAL app via `_electron` and drives each scenario through the
@@ -60,8 +60,9 @@ test('agent-eval — drive the real app and score competence', async () => {
   const logsDir = join(archiveDir, `${runTag}-${MODE}-logs`);
   mkdirSync(logsDir, { recursive: true });
 
-  // Per-scenario pass frequency across REPEAT trials — feeds the honest mean pass-rate + frequency table.
-  const freq: Array<{ id: string; heldOut: boolean; passes: number }> = [];
+  // Per-scenario pass/escape frequency across REPEAT trials — feeds the honest mean pass-rate + the
+  // per-scenario k/N table AND the per-tag pooled family aggregates (carries tags + escape counts).
+  const familyRows: FamilyRow[] = [];
   try {
     for (const scenario of scenarios) {
       const plan = planRun(scenario, server, work);
@@ -69,9 +70,16 @@ test('agent-eval — drive the real app and score competence', async () => {
         skipped.push(scenario.id);
         continue;
       }
-      const { result, passes } = await runScenarioTrials(scenario, plan, work, logsDir, judge, judgeSamples);
+      const { result, passes, escapes, escapeEligible } = await runScenarioTrials(
+        scenario,
+        plan,
+        work,
+        logsDir,
+        judge,
+        judgeSamples,
+      );
       results.push(result);
-      freq.push({ id: scenario.id, heldOut: scenario.heldOut, passes });
+      familyRows.push({ id: scenario.id, heldOut: scenario.heldOut, tags: scenario.tags, passes, escapes, escapeEligible });
     }
   } finally {
     await server.close();
@@ -83,7 +91,16 @@ test('agent-eval — drive the real app and score competence', async () => {
   const model = modelLabel();
   const prior = latestArchivedRun(archiveDir, model, results.length);
   const repeat =
-    REPEAT > 1 ? summarizeRepeat(freq, REPEAT, prior?.priorPasses) : undefined;
+    REPEAT > 1
+      ? summarizeRepeat(
+          familyRows.map((f) => ({ id: f.id, heldOut: f.heldOut, passes: f.passes })),
+          REPEAT,
+          prior?.priorPasses,
+        )
+      : undefined;
+  // Per-tag pooled family aggregates (pass + escape, Wilson CIs) — meaningful even at REPEAT=1 (pooled
+  // across the family's scenarios), the shape M1's gate and C1's escape reading are defined on.
+  const families = summarizeFamilies(familyRows, REPEAT);
   const report = buildReport({
     model,
     threshold: 0.8,
@@ -91,6 +108,7 @@ test('agent-eval — drive the real app and score competence', async () => {
     results,
     ...(judgeAgreement !== undefined ? { judgeAgreement } : {}),
     ...(repeat !== undefined ? { repeat } : {}),
+    ...(families.length > 0 ? { families } : {}),
   });
   // The majority-verdict table + (REPEAT>1) the pooled Wilson-CI line and per-scenario k/N + flaky tags.
   console.log(formatReportTable(report));
