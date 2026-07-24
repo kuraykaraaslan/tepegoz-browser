@@ -159,3 +159,55 @@ describe('Planner security preamble (AI-5)', () => {
     expect(provider.system).toContain('UNTRUSTED DATA');
   });
 });
+
+describe('Planner.replan (C1 PR2 no-progress replanner — advisory boundary)', () => {
+  const replanReq = (reply: string) => {
+    ModelGateway.reset();
+    ModelGateway.register(new MockProvider(reply));
+    return {
+      goal: 'buy the blue widget',
+      workingState: { completedSubtasks: ['added to cart'], pendingVerifications: ['confirm order'] },
+      memory: 'stuck at checkout',
+      recentObservations: ['Observation: the Place Order button did nothing'],
+      reason: 'No observable page-state change across 6 acting steps.',
+      provider: 'anthropic' as const,
+      model: 'claude-opus-4-8',
+    };
+  };
+
+  it('returns the proposed new approach as guidance', async () => {
+    const res = await Planner.replan(replanReq(JSON.stringify({ approach: 'Open the account menu, then re-read.' })));
+    expect(res?.guidance).toBe('Open the account menu, then re-read.');
+  });
+
+  it('is ADVISORY: a malformed reply returns null (never throws) so the run continues', async () => {
+    await expect(Planner.replan(replanReq('I am not JSON'))).resolves.toBeNull();
+    await expect(Planner.replan(replanReq(JSON.stringify({ notApproach: 'x' })))).resolves.toBeNull();
+    await expect(Planner.replan(replanReq(JSON.stringify({ approach: '   ' })))).resolves.toBeNull();
+  });
+
+  it('renders the typed working state into the replan prompt', async () => {
+    class SysUserCapture implements ModelProvider {
+      readonly id = 'anthropic' as const;
+      user = '';
+      complete(request: CanonRequest): Promise<CanonResponse> {
+        this.user = request.messages.find((m) => m.role === 'user')?.content ?? '';
+        return Promise.resolve({ text: JSON.stringify({ approach: 'x' }), stopReason: 'end', usage: { inputTokens: 1, outputTokens: 1 }, toolCalls: [] });
+      }
+    }
+    const provider = new SysUserCapture();
+    ModelGateway.reset();
+    ModelGateway.register(provider);
+    await Planner.replan({
+      goal: 'buy the blue widget',
+      workingState: { completedSubtasks: ['added to cart'], pendingVerifications: ['confirm order'] },
+      memory: 'stuck at checkout',
+      recentObservations: ['Observation: the Place Order button did nothing'],
+      reason: 'No observable page-state change across 6 acting steps.',
+      provider: 'anthropic' as const,
+      model: 'claude-opus-4-8',
+    });
+    expect(provider.user).toContain('added to cart'); // from workingState.completedSubtasks
+    expect(provider.user).toContain('No observable page-state change'); // the reason
+  });
+});

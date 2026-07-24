@@ -1,6 +1,6 @@
 # Phase C1 — Structured State & No-Progress Replan (Core)
 
-**Status:** 🟡 In progress (PR1 landed 2026-07-24; PR2 + exit sweep owed)  ·
+**Status:** 🟠 Measurement-owed (PR1 + PR2 code landed 2026-07-24; exit sweep owed)  ·
 **Depends on:** [M1](phase-ai-m1-measurement-baseline.md) PR1  ·  **Track:** [`phases/ai` v2](README.md)
 
 **Goal:** Kill the **measured escape ceiling** — the model web-searching *"how do I confirm this
@@ -61,14 +61,26 @@ signal, and `maxRecoveryAttempts` fails **closed** instead of replanning
       **Owed:** the N≥10 exit sweep on the product-default model (needs live API keys) — the DoD delta is
       not yet in the ledger, so this phase stays measurement-owed per the anti-debt rule.
 
-### PR2 — no-progress replan (`s14`)
-- [ ] Run-level state-hash detector over the structural page signature: unchanged state across N
+### PR2 — no-progress replan (`s14`) — ✅ landed 2026-07-24
+- [x] Run-level state-hash detector over the structural page signature: unchanged state across N
       acting steps → a **replan trigger**, not a fail-closed stop.
-- [ ] The trigger re-invokes the planner with fresh evidence (goal, typed state, what failed) via
+      → [`reactor-progress.ts`](../../packages/orchestrator/src/reactor-progress.ts): a per-run tracker
+      classifies each outcome `progress | stall | neutral` from a read page-signature (url · title ·
+      digit-masked content hash, stable against clocks) + navigation + action-effect flags
+      (`changed`/`filled`/`found`). A healthy form-fill does not false-fire (a `filled:true` is progress);
+      varied-but-dead clicks accumulate stalls — the exact gap the identical-args loop detector misses.
+- [x] The trigger re-invokes the planner with fresh evidence (goal, typed state, what failed) via
       ModelGateway (Egress + TokenLedger apply, like `validateCompletion` today). A genuine *new
       approach*, not a "keep going" nudge — but the full Replanner *role* is
       [C2](phase-ai-c2-replanner.md); here it is the trigger + a single replan pass.
+      → `Planner.replan` (advisory: a malformed reply returns `null`, never throws) wired through
+      [`agent-runtime-loop.ts`](../../packages/agent-runtime/src/agent-runtime-loop.ts); the reactor's
+      `maybeReplan` fires it at ≥`noProgressThreshold` (default 6) stalls, bounded by `maxReplans`
+      (default 2), fail-open. Injection + firing verified against the real message stream in tests.
 - [ ] Exit sweep on a single-change branch; serialized per the constitution.
+      **Owed:** the live N≥10 escape-family sweep (needs API keys) — including the DoD's *"replan-after-N
+      fires in ≥1 recorded live trial and the trial recovers"* transcript; the prose-steer deletion +
+      paired with/without sweep is done at that proving run, so the phase stays measurement-owed.
 
 ## Scope notes
 - Lane A (reactor-adjacent) — nothing else touches the reactor while this is in flight.

@@ -368,3 +368,86 @@ describe('Reactor.run typed working state (C1)', () => {
     expect(injectedAnywhere).toBe(false);
   });
 });
+
+describe('Reactor.run no-progress replan (C1 PR2)', () => {
+  const goalReq = () => ({ goal: 'do it', tools: tools(), provider: 'anthropic' as const, model: 'mock' });
+
+  /** Register a read tool + an update tool whose result is fixed, so we can drive stall vs progress. */
+  function setupTools(updateResult: unknown): void {
+    CapabilityRegistry.reset();
+    ToolGateway.reset();
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    CapabilityRegistry.register(fakeTool('browser_get_elements', 'read', { content: 'els' }));
+    CapabilityRegistry.register(fakeTool('browser_update_page', 'state_changing', updateResult));
+  }
+
+  it('fires a bounded replan after N no-progress acts and injects the new approach', async () => {
+    // No `changed`/`filled`/`found` and a constant url ⇒ each VARIED update is a stall (exactly what the
+    // identical-args loop detector misses). Varied refs keep the loop detector from tripping first.
+    setupTools({ ok: true });
+    const provider = new CapturingProvider([
+      act('browser_update_page', { ref: 1 }),
+      act('browser_update_page', { ref: 2 }),
+      act('browser_update_page', { ref: 3 }),
+      act('browser_update_page', { ref: 4 }),
+      finish,
+    ]);
+    ModelGateway.reset();
+    ModelGateway.register(provider);
+    let replanCalls = 0;
+    const res = await Reactor.run(goalReq(), {
+      noProgressThreshold: 3,
+      maxReplans: 1,
+      replan: (ctx) => {
+        replanCalls += 1;
+        expect(ctx.reason).toContain('acting steps');
+        return Promise.resolve({ guidance: 'Open the menu and re-read.' });
+      },
+    });
+    expect(res.stoppedReason).toBe('completed');
+    expect(replanCalls).toBe(1); // bounded by maxReplans
+    // The 4th decision (turn index 3) must have seen the injected replan steer.
+    const turn3 = provider.turns[3] ?? [];
+    expect(turn3.some((m) => m.content.includes('Open the menu and re-read.'))).toBe(true);
+    expect(turn3.some((m) => m.content.includes('DIFFERENT approach'))).toBe(true);
+  });
+
+  it('does not replan while the run is making progress (actions report changed:true)', async () => {
+    setupTools({ changed: true, url: 'https://x', title: 'T' });
+    script([
+      act('browser_update_page', { ref: 1 }),
+      act('browser_update_page', { ref: 2 }),
+      act('browser_update_page', { ref: 3 }),
+      act('browser_update_page', { ref: 4 }),
+      finish,
+    ]);
+    let replanCalls = 0;
+    const res = await Reactor.run(goalReq(), {
+      noProgressThreshold: 3,
+      maxReplans: 2,
+      replan: () => {
+        replanCalls += 1;
+        return Promise.resolve(null);
+      },
+    });
+    expect(res.stoppedReason).toBe('completed');
+    expect(replanCalls).toBe(0);
+  });
+
+  it('fail-open: a throwing replan hook never kills the run', async () => {
+    setupTools({ ok: true });
+    script([
+      act('browser_update_page', { ref: 1 }),
+      act('browser_update_page', { ref: 2 }),
+      act('browser_update_page', { ref: 3 }),
+      act('browser_update_page', { ref: 4 }),
+      finish,
+    ]);
+    const res = await Reactor.run(goalReq(), {
+      noProgressThreshold: 3,
+      maxReplans: 1,
+      replan: () => Promise.reject(new Error('boom')),
+    });
+    expect(res.stoppedReason).toBe('completed');
+  });
+});

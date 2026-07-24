@@ -119,6 +119,20 @@ export function runReactiveLoop(args: {
             model: execRoute.model,
             maxTokens,
           }),
+        // C1 PR2 no-progress replan: when the reactor detects the world has not moved across N acting steps,
+        // ask the Planner for a genuinely NEW approach (through ModelGateway, so Egress + TokenLedger apply)
+        // instead of failing closed. Advisory — a null/failed reply leaves the run to continue as before.
+        replan: (ctx) =>
+          Planner.replan({
+            goal: ctx.goal,
+            workingState: ctx.workingState,
+            memory: ctx.memory,
+            recentObservations: ctx.recentObservations,
+            reason: ctx.reason,
+            provider: execRoute.provider,
+            model: execRoute.model,
+            maxTokens,
+          }),
         // AI-7 navigation grounding: after each element read, steer the model toward a route it can see or
         // verify (a visible link / same-origin sitemap-backed path) instead of fabricating a URL or bailing
         // to web_search. The zod boundary + resolver live in orchestrator; `discoverSitemap` is the

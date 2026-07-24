@@ -2,8 +2,15 @@ import { z } from 'zod';
 import { AppError, Logger } from '@tepegoz/libs';
 import { ModelGateway, type CanonMessage, type CanonRequest } from '@tepegoz/model-gateway';
 import { SECURITY_PREAMBLE, wrapUserRequest } from '@tepegoz/tool-executor';
-import { PlanSchema, type AIProvider, type Plan, type ToolDescriptor } from '@tepegoz/shared-types';
+import {
+  PlanSchema,
+  type AgentWorkingState,
+  type AIProvider,
+  type Plan,
+  type ToolDescriptor,
+} from '@tepegoz/shared-types';
 import { PlannerMessages } from './messages';
+import { renderWorkingState } from './reactor-working-state';
 
 /**
  * The completion-validation request: goal + the actor's progress evidence. `Planner.validateCompletion`
@@ -36,6 +43,30 @@ const CompletionSchema = z.object({
   final_answer: z.string().max(2000).optional(),
   reason: z.string().max(1000).optional(),
 });
+
+/**
+ * The replan request (C1 PR2): fired when the reactor detects no observable progress across N acting steps.
+ * The Planner proposes a genuinely DIFFERENT approach from the goal + the actor's typed/free-text ledger +
+ * recent page evidence. Advisory (a steer, not an authority), so a malformed reply yields `null`.
+ */
+export interface ReplanRequest {
+  goal: string;
+  /** The actor's typed working ledger (C1 PR1). */
+  workingState: AgentWorkingState;
+  /** The actor's free-text progress ledger (`memory`). */
+  memory: string;
+  /** Compact tail of recent page observations — ground truth to replan against. */
+  recentObservations: readonly string[];
+  /** Why the replan fired (surfaced to the model so it understands it is stuck). */
+  reason: string;
+  provider: AIProvider;
+  model: string;
+  maxTokens?: number;
+  timeoutMs?: number;
+}
+
+/** Untrusted-model boundary: the replan shape. `approach` is the new plan, in prose the actor can follow. */
+const ReplanSchema = z.object({ approach: z.string().max(2000) });
 
 /**
  * L3 Planner: natural-language intent → a validated {@link Plan} (DAG of tool-call steps). The LLM's
@@ -199,5 +230,64 @@ export default class Planner {
     }
     if (parsed.data.reason !== undefined && parsed.data.reason.length > 0) verdict.reason = parsed.data.reason;
     return verdict;
+  }
+
+  /**
+   * No-progress replanner (C1 PR2): the run is stuck (no observable page change across N acting steps).
+   * Propose a genuinely DIFFERENT approach — not "keep going". ADVISORY: the model output is untrusted and
+   * this is only a steer, so any parse/shape failure returns `null` (the run continues) rather than throwing.
+   * Goes through ModelGateway like {@link validateCompletion}, so the Egress Firewall + TokenLedger apply.
+   */
+  static async replan(req: ReplanRequest): Promise<{ guidance: string } | null> {
+    const system =
+      `${SECURITY_PREAMBLE}\n\n` +
+      'You are the REPLANNER for an agentic browser run that is STUCK: recent actions have not moved the ' +
+      'page toward the goal. Given the goal, the actor\'s working state, and recent page observations, ' +
+      'propose a genuinely DIFFERENT approach — do NOT restate what has already failed and do NOT say ' +
+      '"keep trying". Be concrete and imperative: 2–4 short steps that reference real capabilities (reveal ' +
+      'a hidden menu/drawer and re-read; scroll a target into view; open a different link; operate the form ' +
+      'directly). Prefer a route the agent can SEE or VERIFY on the page over guessing a URL or leaving the ' +
+      'site. Output ONLY JSON: {"approach": string}. No prose, no fences.';
+    const stateSummary = renderWorkingState(req.workingState);
+    const user =
+      `GOAL: ${req.goal}\n\n` +
+      `Why you are replanning: ${req.reason}\n\n` +
+      `Working state:\n${stateSummary.length > 0 ? stateSummary : '(empty)'}\n\n` +
+      `Actor progress ledger: ${req.memory.length > 0 ? req.memory : '(none recorded)'}\n\n` +
+      `Recent page observations:\n${req.recentObservations.length > 0 ? req.recentObservations.join('\n---\n') : '(none)'}`;
+
+    const canon: CanonRequest = {
+      provider: req.provider,
+      model: req.model,
+      capability: 'plan',
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+      maxTokens: req.maxTokens ?? 800,
+      timeoutMs: req.timeoutMs ?? 60_000,
+      responseFormat: 'json',
+    };
+
+    let response;
+    try {
+      response = await ModelGateway.complete(canon);
+    } catch (err) {
+      Logger.warn(PlannerMessages.ReplanUnusable, { err: String(err) });
+      return null;
+    }
+    let raw: unknown;
+    try {
+      raw = JSON.parse(extractJson(response.text));
+    } catch {
+      Logger.warn(PlannerMessages.ReplanUnusable, { raw: response.text.slice(0, 400) });
+      return null;
+    }
+    const parsed = ReplanSchema.safeParse(raw);
+    if (!parsed.success || parsed.data.approach.trim().length === 0) {
+      Logger.warn(PlannerMessages.ReplanUnusable, { raw: response.text.slice(0, 400) });
+      return null;
+    }
+    return { guidance: parsed.data.approach.trim() };
   }
 }

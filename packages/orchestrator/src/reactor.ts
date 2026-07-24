@@ -20,6 +20,7 @@ import {
   mergeWorkingState,
   renderWorkingState,
 } from './reactor-working-state';
+import { createProgressTracker } from './reactor-progress';
 import { systemPrompt } from './reactor-prompt';
 import type {
   CompletionContext,
@@ -42,7 +43,15 @@ import type {
 
 // Re-export the full public surface so existing importers of './reactor' are unaffected.
 export { coerceDecisionShape, parseDecision, type Decision } from './reactor-decision';
-export type { CompletionContext, CompletionVerdict, ReactOptions, ReactRequest, ReactResult } from './reactor-types';
+export type {
+  CompletionContext,
+  CompletionVerdict,
+  ReactOptions,
+  ReactRequest,
+  ReactResult,
+  ReplanContext,
+  ReplanResult,
+} from './reactor-types';
 
 /** Wall-clock budget for the AI-7 navigation-grounding hook per step. Bounds the hot loop against a slow
  *  or hostile same-origin sitemap fetch (the in-flight fetch keeps running + is cached; the loop just does
@@ -129,6 +138,14 @@ export default class Reactor {
     const maxRecoveryAttempts = options.maxRecoveryAttempts ?? 2;
     const planningInterval = Math.max(1, options.planningInterval ?? 3);
     const maxCompletionRejects = options.maxCompletionRejects ?? 3;
+    // C1 PR2 (s14): run-level no-progress detection. `progress` classifies each outcome; `noProgressActs`
+    // counts consecutive state-changing actions that moved nothing; past the threshold a single bounded
+    // replan pass injects a NEW approach instead of grinding on / failing closed.
+    const progress = createProgressTracker();
+    const noProgressThreshold = Math.max(2, options.noProgressThreshold ?? 6);
+    const maxReplans = options.maxReplans ?? 2;
+    let noProgressActs = 0;
+    let replanCount = 0;
     let decisionRepairs = 0;
     // Completion-authority state (AI-3 PR2): the actor's latest progress ledger, how many finish
     // CLAIMS the validator has rejected (fail-closed guard), and the action count last validated
@@ -246,6 +263,40 @@ export default class Reactor {
       workingStateIndex = messages.length - 1;
     };
 
+    // C1 PR2: when the run has stalled — `noProgressThreshold` state-changing actions with no observable
+    // page-state change — and the replan budget remains, ask the hook for a genuinely NEW approach and
+    // inject it as a steer. Fail-open: a hook error is logged and the run simply continues.
+    const maybeReplan = async (): Promise<void> => {
+      if (options.replan === undefined || noProgressActs < noProgressThreshold || replanCount >= maxReplans) {
+        return;
+      }
+      replanCount += 1;
+      const reason = `No observable page-state change across ${String(noProgressActs)} acting steps.`;
+      noProgressActs = 0; // give the new approach a fresh no-progress budget
+      let guidance = '';
+      try {
+        const res = await options.replan({
+          goal: req.goal,
+          workingState,
+          memory: latestMemory,
+          recentObservations: recentObservations(),
+          reason,
+        });
+        if (res !== null) guidance = res.guidance;
+      } catch (err) {
+        Logger.warn('replan hook failed; continuing without a new plan', { err: String(err) });
+        return;
+      }
+      if (guidance.length > 0) {
+        messages.push({
+          role: 'user',
+          content:
+            'Replan: the actions you have tried are not moving the page toward the goal. Do NOT keep ' +
+            `repeating them. Try this DIFFERENT approach instead:\n${guidance}`,
+        });
+      }
+    };
+
     for (let step = 0; ; step++) {
       if (options.signal?.aborted === true) return { outcomes, stoppedReason: 'aborted' };
       // Run-control gate (additive; skipped entirely when `control` is absent — byte-identical legacy
@@ -267,6 +318,9 @@ export default class Reactor {
       // goal is already met — catching an actor stuck acting past completion.
       const periodicDone = await periodicCheck();
       if (periodicDone !== null) return periodicDone;
+
+      // C1 PR2: if the run has stalled, inject a fresh approach BEFORE the next decision (bounded + fail-open).
+      await maybeReplan();
 
       // C1: refresh the typed working ledger at the tail so THIS decision reasons over up-to-date
       // structured progress (no-op on the first step / whenever the ledger is still empty).
@@ -379,6 +433,13 @@ export default class Reactor {
         : { stepId: `r${String(step)}`, tool: decision.tool, args: decision.args, ok: true, result, durationMs };
       outcomes.push(outcome);
       options.onOutcome?.(outcome);
+
+      // C1 PR2: fold this outcome into the run-level no-progress counter (a state-changing action that
+      // moved nothing is a 'stall'; a read of an unchanged page is neutral). `maybeReplan` at the loop top
+      // acts on it. Reads never stall — re-reading is the encouraged pattern (bounded by the streak guard).
+      const progressSignal = progress.observe(outcome, readOnlyTools.has(decision.tool));
+      if (progressSignal === 'progress') noProgressActs = 0;
+      else if (progressSignal === 'stall') noProgressActs += 1;
 
       // A policy/HITL denial is the user's hard "no" → stop. Recoverable failures are fed back with
       // a concrete recovery hint, but repeated same-kind failures fail closed instead of looping.

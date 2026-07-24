@@ -3,6 +3,7 @@ export {
   type PlanRequest,
   type CompletionValidationRequest,
   type CompletionValidation,
+  type ReplanRequest,
 } from './planner';
 export {
   default as Executor,
@@ -20,6 +21,8 @@ export {
   type ReactResult,
   type CompletionContext,
   type CompletionVerdict,
+  type ReplanContext,
+  type ReplanResult,
 } from './reactor';
 export { type RunControl } from './run-control';
 export {

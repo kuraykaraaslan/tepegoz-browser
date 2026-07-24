@@ -1,6 +1,6 @@
 import type { CanonMessage } from '@tepegoz/model-gateway';
 import type { InvokeContext } from '@tepegoz/capability-plane';
-import type { AIProvider, ToolDescriptor } from '@tepegoz/shared-types';
+import type { AgentWorkingState, AIProvider, ToolDescriptor } from '@tepegoz/shared-types';
 import type { StepOutcome, StopReason } from './executor';
 import type { RunControl } from './run-control';
 import type { AgentFailure } from './recovery';
@@ -46,6 +46,29 @@ export interface CompletionVerdict {
   reason?: string;
 }
 
+/**
+ * No-progress replan hook (C1 PR2 / `s14`). Fired when the world has not moved across N acting steps — the
+ * loop is stuck taking DIFFERENT-but-ineffective actions (the identical-args loop detector can't see this).
+ * The hook re-invokes the Planner with fresh evidence to propose a genuinely NEW approach; the reactor
+ * injects that as guidance and the run continues, instead of grinding out the step budget or failing closed.
+ * This is the *trigger + a single replan pass*; the full Replanner authority is [C2](phase-ai-c2).
+ */
+export interface ReplanContext {
+  goal: string;
+  /** The actor's typed working ledger (C1 PR1) — what it has done and what is pending. */
+  workingState: AgentWorkingState;
+  /** The actor's free-text progress ledger (`memory`). */
+  memory: string;
+  /** Compact tail of recent page observations — the ground-truth evidence to replan against. */
+  recentObservations: readonly string[];
+  /** Why the replan fired (e.g. "no observable page-state change across 6 acting steps"). */
+  reason: string;
+}
+export interface ReplanResult {
+  /** A concrete NEW approach to try — injected verbatim as a steer. Empty ⇒ nothing usable, no injection. */
+  guidance: string;
+}
+
 export interface ReactOptions {
   maxSteps?: number;
   loopThreshold?: number;
@@ -65,6 +88,18 @@ export interface ReactOptions {
   validateCompletion?: (ctx: CompletionContext) => Promise<CompletionVerdict>;
   /** Cadence for the periodic validator pass (in actions taken). Default 3. */
   planningInterval?: number;
+  /**
+   * C1 PR2 no-progress replan. When supplied AND `noProgressThreshold` consecutive state-changing actions
+   * pass with no observable page-state change, the reactor asks this hook for a NEW approach and injects it
+   * as guidance (fail-open: a hook error is swallowed, the run continues). Absent ⇒ the loop runs exactly as
+   * before. Bounded by `maxReplans` so a persistently-stuck run still terminates on the step budget.
+   */
+  replan?: (ctx: ReplanContext) => Promise<ReplanResult | null>;
+  /** Consecutive no-progress acting steps that trigger a replan. Default 6 (past a typical form-fill run so
+   *  it does not false-fire on a healthy multi-field form). */
+  noProgressThreshold?: number;
+  /** Replan passes allowed per run (each resets the no-progress budget). Default 2. */
+  maxReplans?: number;
   /** Rejected completion CLAIMS tolerated before conceding to the actor (fail-closed). Default 3. */
   maxCompletionRejects?: number;
   /** Per-call Policy Kernel context (targetUrl for the sensitive-site lockout, taintedArgs). */
