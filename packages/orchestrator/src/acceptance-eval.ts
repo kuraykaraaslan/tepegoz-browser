@@ -38,6 +38,16 @@ export interface AcceptanceRunRecord {
   /** Every individual step duration (ms), kept so the aggregate can compute a real percentile rather
    *  than a mean-of-means across runs. */
   stepDurationsMs: number[];
+  /** END-TO-END wall-clock (ms) — launch to result, model thinking time included; the number a user
+   *  actually waits. REQUIRED (M1: a record that does not measure it does not compile) — sum-of-steps
+   *  above is the honest fallback label, never a substitute. Summed across folded trials, like tokens. */
+  wallClockMs: number;
+  /** Per-trial end-to-end wall-clocks (ms), kept so the aggregate can compute a real per-run
+   *  percentile when a folded record spans REPEAT trials. */
+  wallClocksMs: number[];
+  /** Estimated spend for the run, when a price rate was supplied. ABSENT (not 0) when no rate is
+   *  known — an unknown price must read as "not measured", never as a free run. */
+  costUsd?: number;
   recovered: boolean;
   navigationValidationCalls: number;
   navigationValidationFailures: number;
@@ -69,6 +79,13 @@ export interface AcceptanceMetrics {
   stepLatencyP95Ms: number;
   /** Median summed step time per run (ms). */
   runDurationP50Ms: number;
+  /** Median END-TO-END wall-clock per trial (ms) — the wait a user actually experiences. */
+  runWallClockP50Ms: number;
+  /** Summed estimated spend across runs — present only when EVERY record carried a cost (a partial
+   *  sum would silently under-report; "not measured" must stay visible). */
+  totalCostUsd?: number;
+  /** Mean estimated spend per run — same presence rule as {@link AcceptanceMetrics.totalCostUsd}. */
+  avgCostUsdPerRun?: number;
   /** Mean tool calls per run — "how many actions did it take", the avg-actions competence signal. */
   avgToolCallsPerRun: number;
   /** Mean total tokens per run — cost proxy that needs no price table. */
@@ -157,10 +174,19 @@ export function recordFromOutcomes(input: {
   escaped?: boolean | undefined;
   /** AI-7: is this run eligible for the escape signal (on-page-answerable)? Default true. */
   escapeEligible?: boolean | undefined;
+  /** M1: END-TO-END wall-clock (ms), REQUIRED — the field is deliberately not optional so a caller
+   *  that does not measure it does not compile. Pass 0 only for a run that genuinely never started. */
+  wallClockMs: number;
+  /** M1: per-trial wall-clocks when this record folds REPEAT trials; defaults to `[wallClockMs]`. */
+  wallClocksMs?: number[] | undefined;
+  /** M1: per-1M-token prices; when supplied the record carries an estimated cost. */
+  tokenRateUsd?: TokenRateUsd | undefined;
 }): AcceptanceRunRecord {
   const usage = input.tokenUsage ?? { inputTokens: 0, outputTokens: 0 };
   const stepDurationsMs = input.outcomes.map((o) => o.durationMs).filter((ms) => Number.isFinite(ms));
+  const costUsd = estimateCostUsd(usage, input.tokenRateUsd);
   return {
+    ...(costUsd !== undefined ? { costUsd } : {}),
     scenarioId: input.scenarioId,
     requiresRecovery: input.requiresRecovery ?? false,
     ok: input.ok ?? input.stoppedReason === 'completed',
@@ -172,6 +198,8 @@ export function recordFromOutcomes(input: {
     tokenUsage: { ...usage, totalTokens: usage.inputTokens + usage.outputTokens },
     stepDurationMs: stepDurationsMs.reduce((sum, ms) => sum + ms, 0),
     stepDurationsMs,
+    wallClockMs: input.wallClockMs,
+    wallClocksMs: input.wallClocksMs ?? (input.wallClockMs > 0 ? [input.wallClockMs] : []),
     recovered: input.recovered ?? false,
     navigationValidationCalls: input.outcomes.filter((o) => o.tool === 'browser_validate_page').length,
     navigationValidationFailures: input.outcomes.filter(validationChangedFalse).length,
@@ -199,7 +227,14 @@ export function summarizeAcceptanceRuns(records: AcceptanceRunRecord[]): Accepta
     }),
     { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
   );
+  // Cost is summed ONLY when every record carries one: a partial sum would silently under-report,
+  // and "not measured" must stay visible rather than reading as a cheap run.
+  const allCosted = records.length > 0 && records.every((r) => r.costUsd !== undefined);
+  const totalCostUsd = allCosted ? records.reduce((sum, r) => sum + (r.costUsd ?? 0), 0) : undefined;
   return {
+    ...(totalCostUsd !== undefined
+      ? { totalCostUsd, avgCostUsdPerRun: totalCostUsd / records.length }
+      : {}),
     total: records.length,
     passed,
     taskSuccessRate: records.length === 0 ? 0 : passed / records.length,
@@ -217,6 +252,7 @@ export function summarizeAcceptanceRuns(records: AcceptanceRunRecord[]): Accepta
     stepLatencyP50Ms: median(allStepDurations),
     stepLatencyP95Ms: percentile(allStepDurations, 0.95),
     runDurationP50Ms: median(records.map((r) => r.stepDurationMs)),
+    runWallClockP50Ms: median(records.flatMap((r) => r.wallClocksMs)),
     avgToolCallsPerRun: records.length === 0 ? 0 : toolCalls / records.length,
     avgTokensPerRun: records.length === 0 ? 0 : tokenUsage.totalTokens / records.length,
     firstAttemptSuccessRate:

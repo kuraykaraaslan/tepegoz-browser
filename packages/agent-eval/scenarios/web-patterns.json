@@ -23,13 +23,14 @@
         "fixture": "login-form"
       },
       "success": {
-        "domAssertion": "Welcome back, ada"
+        "stoppedReason": "handoff"
       },
       "heldOut": false,
       "tags": [
         "web-pattern",
         "form",
-        "auth"
+        "auth",
+        "handoff"
       ]
     },
     {

@@ -121,7 +121,8 @@ describe('Reactor.run', () => {
     ToolGateway.setConfirmHandler(() => Promise.resolve(true));
     // Four identical browser_get_elements reads (a 'read' tool) — well past loopThreshold — must NOT trip
     // the detector: re-reading the page is the encouraged pattern, and the run-global signature counter
-    // would otherwise hard-stop a healthy multi-step task. Only maxSteps bounds a pure-read spin.
+    // would otherwise hard-stop a healthy multi-step task. A pure-read spin is bounded by maxSteps and,
+    // past the (default 5) consecutive-identical cap, by the M1 read-streak guard below.
     script([
       act('browser_get_elements'),
       act('browser_get_elements'),
@@ -137,6 +138,49 @@ describe('Reactor.run', () => {
       'browser_get_elements',
       'browser_get_elements',
     ]);
+  });
+
+  it('M1: caps IDENTICAL CONSECUTIVE reads — one nudge at the threshold, then loop_detected', async () => {
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    // The read exemption's counterweight: a live trial burned 22 consecutive identical
+    // browser_get_elements calls unpunished. With the default cap (5): reads 1–4 execute, the 5th is
+    // NUDGED (skipped, structured observation), and a further identical read stops the run.
+    const read = act('browser_get_elements');
+    script([read, read, read, read, read, read]);
+    const res = await Reactor.run(req());
+    expect(res.stoppedReason).toBe('loop_detected');
+    expect(calls).toEqual([
+      'browser_get_elements',
+      'browser_get_elements',
+      'browser_get_elements',
+      'browser_get_elements',
+    ]);
+  });
+
+  it('M1: the read streak resets on any different call — read-act-read never trips', async () => {
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    const read = act('browser_get_elements');
+    // Two identical reads, an action, two identical reads again: with cap 3 neither block reaches it.
+    script([read, read, act('browser_update_page', { action: 'click', ref: 1 }), read, read, finish]);
+    const res = await Reactor.run(req(), { readLoopThreshold: 3 });
+    expect(res.stoppedReason).toBe('completed');
+    expect(calls).toEqual([
+      'browser_get_elements',
+      'browser_get_elements',
+      'browser_update_page',
+      'browser_get_elements',
+      'browser_get_elements',
+    ]);
+  });
+
+  it('M1: reads with DIFFERENT args are a healthy pattern, not a streak', async () => {
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    // Paging/polling with changing args must never trip the cap (each signature differs).
+    const replies = Array.from({ length: 6 }, (_, i) => act('browser_get_elements', { page: i }));
+    script([...replies, finish]);
+    const res = await Reactor.run(req(), { readLoopThreshold: 3 });
+    expect(res.stoppedReason).toBe('completed');
+    expect(calls).toHaveLength(6);
   });
 
   it('stops when a state-changing action repeats past the nudge (Loop Detector)', async () => {

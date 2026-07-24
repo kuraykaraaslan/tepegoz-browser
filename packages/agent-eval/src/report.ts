@@ -8,6 +8,7 @@ import {
 import type { EvalScenario } from '@tepegoz/shared-types';
 import type { ScoreResult } from './scorer';
 import type { Agreement } from './calibration';
+import type { RepeatSummary } from './statistics';
 
 /** One scenario's full outcome: the record fed to the metrics + the ground-truth score. */
 export interface ScenarioResult {
@@ -27,6 +28,8 @@ export interface ReportInput {
   /** LLM-judge↔human agreement over the calibration sample (live tier only). Recorded so a drifting
    *  judge is visible rather than silently trusted. */
   judgeAgreement?: Agreement;
+  /** M1: the per-scenario k/N + Wilson-CI + flaky repeat block (REPEAT>1 sweeps). */
+  repeat?: RepeatSummary;
 }
 
 export interface TierReport {
@@ -46,6 +49,9 @@ export interface EvalReport {
   heldOut: TierReport;
   /** Judge↔human agreement (live tier), when a calibration sample was scored. */
   judge?: { agreementRate: number; n: number; disagreements: string[] };
+  /** M1: per-scenario k/N + Wilson CIs + flaky tags and the POOLED per-trial dev/held-out aggregates —
+   *  the statistical-constitution shape claim gates are defined on (never a single scenario's flip). */
+  repeat?: RepeatSummary;
   scenarios: Array<{
     id: string;
     heldOut: boolean;
@@ -91,6 +97,7 @@ export function buildReport(input: ReportInput): EvalReport {
           },
         }
       : {}),
+    ...(input.repeat !== undefined ? { repeat: input.repeat } : {}),
     scenarios: input.results.map((r) => ({
       id: r.scenario.id,
       heldOut: r.scenario.heldOut,
@@ -103,6 +110,26 @@ export function buildReport(input: ReportInput): EvalReport {
       escaped: r.record.escaped,
     })),
   };
+}
+
+/** The pooled per-trial CI lines + per-scenario k/N + flaky tags (REPEAT>1 sweeps only). */
+function pooledLines(report: EvalReport): string[] {
+  const rep = report.repeat;
+  if (rep === undefined || rep.repeat <= 1) return [];
+  const pct = (n: number): string => `${(n * 100).toFixed(1)}%`;
+  const ci = (s: { rate: number; ci: { lo: number; hi: number }; k: number; n: number }): string =>
+    `${pct(s.rate)} [${pct(s.ci.lo)}–${pct(s.ci.hi)}] (${String(s.k)}/${String(s.n)} trials)`;
+  return [
+    `pooled per-trial (Wilson 95%): dev ${ci(rep.pooled.dev)} · held-out ${ci(rep.pooled.heldOut)}`,
+    ...rep.perScenario.map((s) => {
+      let flakyTag = '';
+      if (s.flaky) flakyTag = s.flakyConfirmed === true ? ' [FLAKY×2 — excluded from gates]' : ' [flaky]';
+      return (
+        `  ${String(s.passes)}/${String(s.n)} [${pct(s.ci.lo)}–${pct(s.ci.hi)}]` +
+        `${s.heldOut ? ' [held-out]' : ''}${flakyTag}  ${s.id}`
+      );
+    }),
+  ];
 }
 
 /** A human-readable summary table (full pass/fail list — the eval must be able to show a fail). */
@@ -128,9 +155,15 @@ export function formatReportTable(report: EvalReport): string {
     `dev cost: ${report.dev.metrics.avgToolCallsPerRun.toFixed(1)} actions/run` +
       ` · ${Math.round(report.dev.metrics.avgTokensPerRun).toString()} tokens/run`,
     `dev latency: step p50 ${ms(report.dev.metrics.stepLatencyP50Ms)} · p95 ${ms(report.dev.metrics.stepLatencyP95Ms)}` +
-      ` · run (sum-of-steps) p50 ${ms(report.dev.metrics.runDurationP50Ms)}`,
+      ` · run (sum-of-steps) p50 ${ms(report.dev.metrics.runDurationP50Ms)}` +
+      ` · run (wall-clock) p50 ${ms(report.dev.metrics.runWallClockP50Ms)}`,
+    // Cost stays visibly "not measured" without a rate — an unknown price must never read as $0.
+    report.dev.metrics.avgCostUsdPerRun !== undefined
+      ? `dev spend: $${report.dev.metrics.avgCostUsdPerRun.toFixed(4)}/run · $${(report.dev.metrics.totalCostUsd ?? 0).toFixed(4)} total`
+      : 'dev spend: not measured (set TEPEGOZ_EVAL_RATES to per-1M-token prices)',
     `threshold ${report.thresholdMet ? 'met' : 'NOT met'}`,
     ...judgeLine,
+    ...pooledLines(report),
     ...rows,
   ].join('\n');
 }

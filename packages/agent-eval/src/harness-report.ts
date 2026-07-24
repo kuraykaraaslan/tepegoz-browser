@@ -12,13 +12,28 @@ import { MODE, ONLY, PROVIDER_ID } from './harness-config';
  * (non-`.eval.ts`) sibling so the eval runner's `*.eval.ts` glob does not collect it as its own spec.
  */
 
-/** A prior archived run — read (zod-safe) only to print a dev/held-out before→after trend line. */
+/** A prior archived run — read (zod-safe) to print a dev/held-out before→after trend line and (M1) to
+ *  confirm flakiness across two sweeps (`0<k<N` in both → excluded from blocking gates). */
 const PriorRunSchema = z.object({
   model: z.string(),
   n: z.number(),
   dev: z.object({ metrics: z.object({ taskSuccessRate: z.number() }) }),
   heldOut: z.object({ metrics: z.object({ taskSuccessRate: z.number() }) }),
+  repeat: z
+    .object({
+      perScenario: z.array(z.object({ id: z.string(), passes: z.number(), n: z.number() })),
+    })
+    .optional(),
 });
+
+export interface PriorRun {
+  model: string;
+  dev: number;
+  heldOut: number;
+  /** Per-scenario pass counts of the prior sweep (present when it ran with REPEAT>1) — feeds the
+   *  cross-sweep flaky confirmation. */
+  priorPasses?: Map<string, { passes: number; n: number }>;
+}
 
 /** Human-readable model label for the report headline: the ACTUAL routed plan+exec model ids (honest
  *  headline — a weak routed model must be visible), not just the provider string. */
@@ -32,7 +47,7 @@ export function modelLabel(): string {
 
 /** The newest archived run that is COMPARABLE to this one — same model AND same scenario-set size — so the
  *  trend delta is like-for-like (a scripted N=1 vs a live N=14 comparison is meaningless). Null if none. */
-export function latestArchivedRun(dir: string, model: string, n: number): { model: string; dev: number; heldOut: number } | null {
+export function latestArchivedRun(dir: string, model: string, n: number): PriorRun | null {
   let files: string[];
   try {
     files = readdirSync(dir)
@@ -49,10 +64,18 @@ export function latestArchivedRun(dir: string, model: string, n: number): { mode
       continue;
     }
     if (!parsed.success || parsed.data.model !== model || parsed.data.n !== n) continue;
+    const rep = parsed.data.repeat;
     return {
       model: parsed.data.model,
       dev: parsed.data.dev.metrics.taskSuccessRate,
       heldOut: parsed.data.heldOut.metrics.taskSuccessRate,
+      ...(rep !== undefined
+        ? {
+            priorPasses: new Map(
+              rep.perScenario.map((s) => [s.id, { passes: s.passes, n: s.n }] as const),
+            ),
+          }
+        : {}),
     };
   }
   return null;

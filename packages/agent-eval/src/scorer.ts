@@ -8,6 +8,9 @@ export interface ScoreInput {
   finalPageText: string;
   /** The agent's closing summary for the run (empty if it stopped without one). */
   summary: string;
+  /** How the run actually stopped (the runner's `StopReason` string) — checked when the scenario's
+   *  ground truth IS a stop (`success.stoppedReason`, e.g. a required human handoff). */
+  stoppedReason?: string;
 }
 
 export interface ScoreResult {
@@ -42,6 +45,17 @@ export function scoreScenario(input: ScoreInput): ScoreResult {
       return { ok: false, method: 'ground-truth', reason: `summary missing "${success.expectedValue}"` };
     }
     checks.push(`summary contains "${success.expectedValue}"`);
+  }
+  if (success.stoppedReason !== undefined) {
+    const actual = input.stoppedReason ?? '';
+    if (actual.toLowerCase() !== success.stoppedReason.toLowerCase()) {
+      return {
+        ok: false,
+        method: 'ground-truth',
+        reason: `run stopped with "${actual || '(none)'}" — expected "${success.stoppedReason}"`,
+      };
+    }
+    checks.push(`run stopped with "${success.stoppedReason}"`);
   }
 
   if (checks.length > 0) {

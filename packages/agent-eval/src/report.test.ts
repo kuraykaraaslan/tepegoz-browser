@@ -6,6 +6,7 @@ import { recordFromOutcomes } from '@tepegoz/orchestrator';
 import type { EvalScenario } from '@tepegoz/shared-types';
 import { buildReport, formatReportTable, writeReport, type ScenarioResult } from './report';
 import type { ScoreResult } from './scorer';
+import { summarizeRepeat } from './statistics';
 
 const scenario = (id: string, heldOut = false): EvalScenario => ({
   id,
@@ -26,6 +27,7 @@ function result(id: string, ok: boolean, heldOut = false): ScenarioResult {
       stoppedReason: ok ? 'completed' : 'max_steps',
       outcomes: [],
       tokenUsage: { inputTokens: 10, outputTokens: 5 },
+      wallClockMs: 1000,
       ok,
     }),
   };
@@ -82,5 +84,36 @@ describe('formatReportTable / writeReport', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  it('M1: carries the repeat block and renders pooled Wilson CIs + flaky tags', () => {
+    const report = buildReport({
+      model: 'm',
+      threshold: 0.8,
+      generatedAt: 't',
+      results: [result('a', true), result('b', false)],
+      repeat: summarizeRepeat(
+        [
+          { id: 'a', heldOut: false, passes: 3 },
+          { id: 'b', heldOut: false, passes: 1 },
+        ],
+        3,
+      ),
+    });
+    expect(report.repeat?.pooled.dev).toMatchObject({ k: 4, n: 6 });
+    const table = formatReportTable(report);
+    expect(table).toContain('pooled per-trial (Wilson 95%)');
+    expect(table).toContain('[flaky]');
+    expect(table).toContain('1/3');
+  });
+
+  it('M1: spend reads "not measured" without a rate — never $0', () => {
+    const table = formatReportTable(
+      buildReport({ model: 'm', threshold: 0.8, generatedAt: 't', results: [result('a', true)] }),
+    );
+    expect(table).toContain('not measured');
+    expect(table).not.toContain('$0.0000/run');
+    // Wall-clock line is always present (the record field is required).
+    expect(table).toContain('run (wall-clock) p50');
   });
 });

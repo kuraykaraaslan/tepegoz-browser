@@ -24,6 +24,7 @@ import {
   KEEP_RENDERING_WHEN_BACKGROUNDED,
   MODE,
   PROVIDER_ID,
+  RATES,
   REPEAT,
   appDir,
 } from './harness-config';
@@ -228,7 +229,11 @@ async function scoreTrial(
   judgeSamples: JudgeSample[],
 ): Promise<ScoreResult> {
   const obs = { finalPageText: out.finalPageText ?? '', summary: out.summary ?? '' };
-  let score = scoreScenario({ scenario, ...obs });
+  let score = scoreScenario({
+    scenario,
+    ...obs,
+    ...(out.stoppedReason !== undefined ? { stoppedReason: out.stoppedReason } : {}),
+  });
   if (score.method === 'deferred-judge' && judge !== null) {
     const verdict = await judgeScenario(scenario, obs, judge);
     score = { ok: verdict.pass, method: 'deferred-judge', reason: `judge: ${verdict.reason}` };
@@ -250,9 +255,14 @@ export async function runScenarioTrials(
 ): Promise<{ result: ScenarioResult; passes: number }> {
   const scores: ScoreResult[] = [];
   const outs: EvalOut[] = [];
+  // M1: END-TO-END wall-clock per trial (launch → result, model thinking included) — the wait a user
+  // actually experiences; sum-of-steps alone systematically under-reports it.
+  const wallClocksMs: number[] = [];
   for (let t = 0; t < REPEAT; t++) {
     const logName = REPEAT > 1 ? `${scenario.id}.t${String(t + 1)}.log` : `${scenario.id}.log`;
+    const startedAt = Date.now();
     const out = await runOne(scenario, plan.entryUrl, plan.env, work, join(logsDir, logName));
+    wallClocksMs.push(Math.max(0, Date.now() - startedAt));
     outs.push(out);
     scores.push(await scoreTrial(scenario, out, judge, judgeSamples));
   }
@@ -292,6 +302,9 @@ export async function runScenarioTrials(
       stoppedReason: (last.stoppedReason as ScenarioResult['record']['stoppedReason']) ?? 'tool_error',
       outcomes,
       tokenUsage: { inputTokens, outputTokens },
+      wallClockMs: wallClocksMs.reduce((sum, ms) => sum + ms, 0),
+      wallClocksMs,
+      tokenRateUsd: RATES,
       ok,
       escaped,
       // Only fixture "sites" are eligible for the escape signal; a realUrl (open-web) task is excluded so
