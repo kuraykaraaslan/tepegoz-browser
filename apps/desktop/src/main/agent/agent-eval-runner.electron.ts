@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { app } from 'electron';
 import { z } from 'zod';
 import { Logger } from '@tepegoz/libs';
+import { setStrictMode } from '@tepegoz/tool-executor';
 import { runAgent, type AgentRunHooks } from '@tepegoz/agent-runtime';
 import {
   AnthropicProvider,
@@ -132,6 +133,13 @@ async function navigateWhenReady(url: string, timeoutMs = 20_000): Promise<void>
 
 export async function maybeRunEval(): Promise<void> {
   if (process.env.TEPEGOZ_EVAL !== '1') return;
+
+  // C7 harness knob: force the hardened inbound strict guard ON for this eval run (measure the
+  // strict-mode ASR). Off by default, exactly like a real user without the Setting enabled.
+  if (process.env.TEPEGOZ_EVAL_STRICT === '1') {
+    setStrictMode(true);
+    Logger.info('[eval] strict inbound-guard mode ON (TEPEGOZ_EVAL_STRICT=1)');
+  }
 
   const prompt = process.env.TEPEGOZ_EVAL_PROMPT;
   const fixtureUrl = process.env.TEPEGOZ_EVAL_FIXTURE_URL;
