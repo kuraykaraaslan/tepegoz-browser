@@ -450,4 +450,48 @@ describe('Reactor.run no-progress replan (C1 PR2)', () => {
     });
     expect(res.stoppedReason).toBe('completed');
   });
+
+  /** C1 PR3: register a read-class escape tool + a normal read, so an escape does not trip the stall/loop
+   *  detectors on its own — only the escape predicate should force the replan. */
+  function setupEscapeTools(): void {
+    CapabilityRegistry.reset();
+    ToolGateway.reset();
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    CapabilityRegistry.register(fakeTool('web_search_items', 'read', { content: 'results' }));
+    CapabilityRegistry.register(fakeTool('browser_get_elements', 'read', { content: 'els' }));
+  }
+
+  it('C1 PR3: an escape-tool call forces a replan on the next step (no accumulated stalls needed)', async () => {
+    setupEscapeTools();
+    script([act('web_search_items', { q: 'how to save' }), act('browser_get_elements'), finish]);
+    let replanCalls = 0;
+    let sawEscapeReason = false;
+    const res = await Reactor.run(goalReq(), {
+      // Defaults (threshold 6, maxReplans 2): a single escape must still force the replan.
+      replan: (ctx) => {
+        replanCalls += 1;
+        if (ctx.reason.includes('acting steps')) sawEscapeReason = true;
+        return Promise.resolve({ guidance: 'Stay on the page; operate the form.' });
+      },
+      isEscapeTool: (tool) => tool === 'web_search_items',
+    });
+    expect(res.stoppedReason).toBe('completed');
+    expect(replanCalls).toBe(1);
+    expect(sawEscapeReason).toBe(true);
+  });
+
+  it('C1 PR3: without an escape predicate, the same escape does NOT trigger replan (legacy path)', async () => {
+    setupEscapeTools();
+    script([act('web_search_items', { q: 'how to save' }), act('browser_get_elements'), finish]);
+    let replanCalls = 0;
+    const res = await Reactor.run(goalReq(), {
+      replan: () => {
+        replanCalls += 1;
+        return Promise.resolve(null);
+      },
+      // no isEscapeTool
+    });
+    expect(res.stoppedReason).toBe('completed');
+    expect(replanCalls).toBe(0);
+  });
 });

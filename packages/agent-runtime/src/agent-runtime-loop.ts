@@ -133,6 +133,26 @@ export function runReactiveLoop(args: {
             model: execRoute.model,
             maxTokens,
           }),
+        // C1 PR3: an ESCAPE = a web search, or a navigation OFF the current tab's origin, while an on-page
+        // task is unfinished. The reactor forces its replan on the next step so the agent is steered back
+        // on-page instead of wandering off (the verified cause of C1's first-sweep miss). Off-origin is
+        // judged against the live active-tab url; a same-origin or in-page nav is NOT an escape.
+        isEscapeTool: (tool, args) => {
+          if (tool === 'web_search_items') return true;
+          if (tool === 'browser_update_location') {
+            const target = urlFromArgs(args);
+            if (target === undefined) return false;
+            const tabId = tabIdFromArgs(args);
+            const active = tabId !== undefined ? deps.tabUrl?.(tabId) : deps.activeTabUrl();
+            if (active === undefined) return false;
+            try {
+              return new URL(target).origin !== new URL(active).origin;
+            } catch {
+              return false;
+            }
+          }
+          return false;
+        },
         // AI-7 navigation grounding: after each element read, steer the model toward a route it can see or
         // verify (a visible link / same-origin sitemap-backed path) instead of fabricating a URL or bailing
         // to web_search. The zod boundary + resolver live in orchestrator; `discoverSitemap` is the

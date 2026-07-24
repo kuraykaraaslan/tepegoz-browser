@@ -447,6 +447,15 @@ export default class Reactor {
       if (progressSignal === 'progress') noProgressActs = 0;
       else if (progressSignal === 'stall') noProgressActs += 1;
 
+      // C1 PR3: an escape attempt (web search / off-origin nav) is the failure mode the stall detector is
+      // blind to — an escape via a read-class tool reads as 'neutral', so the agent wanders off unpunished
+      // (the verified cause of C1's first-sweep miss). Treat it as a hard no-progress event so `maybeReplan`
+      // fires next step and the Replanner steers back on-page, rather than letting the escape stand.
+      if (outcome.ok && options.isEscapeTool?.(decision.tool, decision.args) === true) {
+        noProgressActs = Math.max(noProgressActs, noProgressThreshold);
+        Logger.info('[c1] escape attempt detected → forcing replan', { tool: decision.tool });
+      }
+
       // A policy/HITL denial is the user's hard "no" → stop. Recoverable failures are fed back with
       // a concrete recovery hint, but repeated same-kind failures fail closed instead of looping.
       if (!outcome.ok) {

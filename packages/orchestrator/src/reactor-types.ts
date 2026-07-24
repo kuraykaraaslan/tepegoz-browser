@@ -100,6 +100,16 @@ export interface ReactOptions {
   noProgressThreshold?: number;
   /** Replan passes allowed per run (each resets the no-progress budget). Default 2. */
   maxReplans?: number;
+  /**
+   * C1 PR3: predicate marking an executed call as an ESCAPE — leaving the current on-page task via a web
+   * search or an off-origin navigation. Escape is a DISTINCT failure mode the no-progress detector cannot
+   * see (an escape through a read-class tool like `web_search_items` reads as `neutral`, never a `stall`),
+   * which is why C1's first sweep found the agent wandering off unpunished. When this returns true the
+   * reactor forces the replan to fire on the next step, so the Replanner steers the agent back on-page
+   * instead of letting it leave. The semantics (which tools/urls are escapes) live in the host, keeping the
+   * reactor generic. Absent ⇒ no escape handling (legacy).
+   */
+  isEscapeTool?: (tool: string, args: unknown) => boolean;
   /** Rejected completion CLAIMS tolerated before conceding to the actor (fail-closed). Default 3. */
   maxCompletionRejects?: number;
   /** Per-call Policy Kernel context (targetUrl for the sensitive-site lockout, taintedArgs). */
