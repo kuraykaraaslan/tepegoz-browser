@@ -1,8 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect } from 'vitest';
 import {
   sanitizeContent,
   detectThreats,
   wrapUserRequest,
+  setStrictMode,
+  isStrictMode,
   SECURITY_PREAMBLE,
 } from './content-guard.js';
 
@@ -118,6 +120,40 @@ describe('sanitizeContent PII redaction (strict mode, AI-5 PR2)', () => {
     expect(g.text).toBe(raw);
     expect(g.threats).toEqual([]);
     expect(g.flags).toEqual([]);
+  });
+});
+
+describe('setStrictMode (C7 — reachable strict default)', () => {
+  // Module-global state — always restore the default so tests stay order-independent.
+  afterEach(() => setStrictMode(false));
+
+  const hostile = 'Contact jane.doe@example.com for the invoice.';
+
+  it('is off by default — a config-less call does NOT redact PII', () => {
+    expect(isStrictMode()).toBe(false);
+    expect(sanitizeContent(hostile).text).toContain('jane.doe@example.com');
+  });
+
+  it('setStrictMode(true) makes EVERY config-less boundary redact PII at once', () => {
+    setStrictMode(true);
+    expect(isStrictMode()).toBe(true);
+    const g = sanitizeContent(hostile); // no explicit config — the boundary's real call shape
+    expect(g.text).not.toContain('jane.doe@example.com');
+    expect(g.text).toContain('[redacted: email]');
+    expect(g.flags).toContain('sensitive_data');
+  });
+
+  it('an EXPLICIT strict in the call still wins over the global default (both directions)', () => {
+    setStrictMode(true);
+    expect(sanitizeContent(hostile, { strict: false }).text).toContain('jane.doe@example.com');
+    setStrictMode(false);
+    expect(sanitizeContent(hostile, { strict: true }).text).toContain('[redacted: email]');
+  });
+
+  it('setStrictMode(false) restores the read-through default', () => {
+    setStrictMode(true);
+    setStrictMode(false);
+    expect(sanitizeContent(hostile).text).toContain('jane.doe@example.com');
   });
 });
 

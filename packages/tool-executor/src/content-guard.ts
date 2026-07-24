@@ -27,6 +27,24 @@ export interface GuardConfig {
 }
 const DEFAULT_CONFIG: Required<GuardConfig> = { enabled: true, strict: false };
 
+/**
+ * C7: process-global STRICT-mode default. `strict` PII redaction was landed-but-unreachable — no caller
+ * ever set it, so the hardened inbound mode could not be turned on. Rather than thread a flag through the
+ * ~6 perception boundaries that call {@link sanitizeContent} config-less, a single toggle here flips them
+ * all at once. A caller that passes an EXPLICIT `strict` still wins (tests, or a boundary that forces a
+ * mode); only config-less calls fall through to this default. Set it from the user Setting (main) or the
+ * eval harness knob. Default off — a browsing agent legitimately needs to read most page data.
+ */
+let strictModeDefault = false;
+/** Turn hardened strict inbound-guard mode on/off for every config-less {@link sanitizeContent} boundary. */
+export function setStrictMode(on: boolean): void {
+  strictModeDefault = on;
+}
+/** The current process-global strict-mode default (for a Settings surface / diagnostics). */
+export function isStrictMode(): boolean {
+  return strictModeDefault;
+}
+
 export interface Threat {
   kind: ThreatKind;
   /** A short excerpt of what matched (capped) — for the audit trail, never re-fed as instruction. */
@@ -117,7 +135,9 @@ export function detectThreats(text: string): Threat[] {
  * threats + flags for the taint/audit signal. Wrap the result with {@link wrapUntrustedContent}.
  */
 export function sanitizeContent(raw: string, config: GuardConfig = {}): GuardResult {
-  const { enabled, strict } = { ...DEFAULT_CONFIG, ...config };
+  const enabled = config.enabled ?? DEFAULT_CONFIG.enabled;
+  // An explicit `strict` in the call wins; otherwise fall through to the process-global default (C7).
+  const strict = config.strict ?? strictModeDefault;
   if (!enabled) return { text: raw, threats: [], flags: [] };
 
   const base = sanitizeText(raw.normalize('NFKC'));

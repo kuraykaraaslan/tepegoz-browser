@@ -9,6 +9,8 @@ export {
   sanitizeContent,
   detectThreats,
   wrapUserRequest,
+  setStrictMode,
+  isStrictMode,
   SECURITY_PREAMBLE,
   TRUSTED_TASK_OPEN,
   TRUSTED_TASK_CLOSE,
