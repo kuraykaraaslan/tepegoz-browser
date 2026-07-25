@@ -160,3 +160,33 @@ Every number here is **gpt-4o**, which is an unusually escape-prone model. C1's 
 respects the typed state + steers and never escapes — in which case C1 already works on its target and a
 hard gate is unnecessary. **The right next step is the Anthropic escape sweep BEFORE building a gate** — a
 big product-affecting change should not be built to fix a model C1 was never scoped against.
+
+---
+
+# C1 Anthropic sweep — first attempt INVALID; a likely C1 PR1 regression surfaced (2026-07-25)
+
+Ran the deciding measurement on C1's actual DoD model — **anthropic (plan=claude-opus-4-8,
+exec=claude-sonnet-4-6)** — validation trial (`form_validation_required`, N=1, background). The key
+**works** (the model responded), but the trial was **INVALID** for two reasons and answers nothing yet.
+
+## Two problems, one confounded run
+1. **Likely C1 PR1 regression — the `state` field truncates the decision JSON.** Two decisions came back
+   as *"Agent returned invalid JSON"*, each cut off mid-`state` (`…"next_goal":"…","state":{"openTabs":[],"selected`
+   ← truncated). The verbose Anthropic model emits rationale + memory + next_goal + the full typed `state`
+   object and hits the exec token budget (`max_tokens`), so the JSON never closes → parse fails. This did
+   NOT show on gpt-4o (terser output), which is exactly why a dual-provider check exists. **The typed
+   working state can break the run on a verbose model** — a real bug to fix (compact/cap `state`, raise the
+   decision budget, or salvage a truncated trailing field).
+2. **Page-load flake.** Same run logged `No active page` ×2 and `Popup failed to load ERR_FAILED`, ending
+   `stoppedReason: handoff` with **0 tokens / 0 actions** — the agent never had a page to work on. A launch
+   flake, not competence (and it muddies #1).
+
+## Verdict: the escape question on the DoD model is still UNANSWERED
+This is a transport/harness-invalid trial, not a competence read (per the anti-vanity rule, excluded). The
+central question — *does the Anthropic product-default escape, or respect C1's steers?* — remains open.
+
+## Owed (next, in order)
+1. **Fix the `state` truncation** (C1 PR1 follow-up) — a compact `state` contract and/or a larger decision
+   budget so a verbose model's JSON always closes; regression-test a truncated decision.
+2. Re-run the Anthropic validation clean (confirm the page-load flake was a one-off), then the full N=3
+   escape sweep — the actual deciding measurement.
