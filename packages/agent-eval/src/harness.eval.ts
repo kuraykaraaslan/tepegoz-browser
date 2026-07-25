@@ -70,14 +70,8 @@ test('agent-eval — drive the real app and score competence', async () => {
         skipped.push(scenario.id);
         continue;
       }
-      const { result, passes, escapes, escapeEligible, validN, escapeN } = await runScenarioTrials(
-        scenario,
-        plan,
-        work,
-        logsDir,
-        judge,
-        judgeSamples,
-      );
+      const { result, passes, escapes, escapeEligible, validN, escapeN, deadKey } =
+        await runScenarioTrials(scenario, plan, work, logsDir, judge, judgeSamples);
       results.push(result);
       familyRows.push({
         id: scenario.id,
@@ -89,6 +83,17 @@ test('agent-eval — drive the real app and score competence', async () => {
         escapeN,
         escapeEligible,
       });
+      if (deadKey) {
+        // The provider key ran out of credits / auth mid-sweep. Every remaining trial would fail the same
+        // way and score as a phantom competence miss — stop now and say so loudly, rather than burn the
+        // wall-clock (and let a dead key masquerade as a low pass-rate). Add credits and re-run.
+        const notRun = scenarios.slice(scenarios.indexOf(scenario) + 1).map((s) => s.id);
+        console.log(
+          `[eval] ABORTED — API key exhausted/unauthorized (billing/quota). ` +
+            `${String(notRun.length)} scenario(s) NOT run: ${notRun.join(', ') || '(none)'}`,
+        );
+        break;
+      }
     }
   } finally {
     await server.close();

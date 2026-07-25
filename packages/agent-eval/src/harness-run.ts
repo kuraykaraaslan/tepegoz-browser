@@ -87,12 +87,33 @@ const TRANSPORT_STOPPED_REASONS = new Set(['navigation_timeout', 'transient_erro
  *  retry, so this recovers the trial instead of losing the whole (paid) sweep to a flake. */
 const MAX_TRANSPORT_RETRIES = 2;
 
-/** True when a trial is transport-invalid (NOT competence evidence): it produced no output (CUT_OFF), or a
- *  transport error stopped the run. An ESCAPE that ends in a nav timeout (the agent navigated off-site to
- *  an unreachable URL and spun out) is a real competence FAILURE, so an escaped trial is never excused as
- *  transport — the escape flag is what tells the two apart. */
+/** A DEAD-KEY / account error: the provider rejected the request for BILLING / QUOTA / AUTH reasons, so
+ *  the model never reasoned about the task and NO retry can help — the key itself is exhausted or
+ *  unauthorized. Observed mid-sweep as `AppError: 400 {..."credit balance is too low ... Plans & Billing"}`.
+ *  Scored naively it looks like the agent failing every REMAINING scenario; really the sweep must stop and
+ *  those trials are UNMEASURED. (This is what silently turned a real Anthropic sweep into garbage the moment
+ *  the key ran out of credits.) */
+const DEAD_KEY_RE =
+  /credit balance|Plans & Billing|insufficient[_ ]?quota|\bquota\b|invalid[_ ]?api[_ ]?key|\b401\b|authentication_error|permission_error/i;
+
+/** A TRANSIENT infra error surfaced in the run's error string (rate limit / overload / network) — invalid
+ *  like a cold-start transport race and worth a retry, UNLIKE a dead key which no retry fixes. */
+const TRANSIENT_ERROR_RE = /\b429\b|rate[_ ]?limit|overloaded|\b529\b|\b503\b|ECONNRESET|ETIMEDOUT|socket hang up/i;
+
+/** True when the provider key is exhausted/unauthorized (billing/quota/auth) — the sweep should ABORT, not
+ *  keep launching doomed trials, and the affected trials are UNMEASURED, never competence fails. */
+export function isDeadKeyError(out: EvalOut): boolean {
+  return out.error !== undefined && out.error !== CUT_OFF && DEAD_KEY_RE.test(out.error);
+}
+
+/** True when a trial is INFRA-invalid (NOT competence evidence): no output (CUT_OFF), a transient API error
+ *  (rate limit / overload / network), or a transport error that stopped the run. An ESCAPE that ends in a
+ *  nav timeout (the agent navigated off-site to an unreachable URL and spun out) is a real competence
+ *  FAILURE, so an escaped trial is never excused — the escape flag tells the two apart. A dead-key error is
+ *  handled separately (it aborts rather than retries). */
 export function isTransportInvalid(out: EvalOut, escaped: boolean): boolean {
   if (out.error === CUT_OFF) return true;
+  if (out.error !== undefined && TRANSIENT_ERROR_RE.test(out.error)) return true;
   return !escaped && TRANSPORT_STOPPED_REASONS.has(out.stoppedReason ?? '');
 }
 
@@ -282,6 +303,9 @@ export async function runScenarioTrials(
   validN: number;
   /** Eligible VALID trials for the escape denominator (`validN` when escape-scorable, else 0). */
   escapeN: number;
+  /** The provider key ran out of credits / was unauthorized during this scenario — the caller must ABORT
+   *  the sweep (every remaining trial would just fail the same way). */
+  deadKey: boolean;
 }> {
   const scores: ScoreResult[] = [];
   // M1: END-TO-END wall-clock per trial (launch → result, model thinking included) — the wait a user
@@ -298,6 +322,7 @@ export async function runScenarioTrials(
   const allOuts: EvalOut[] = []; // every attempt incl. abandoned retries — honest token/cost accounting
   let transportInvalid = 0; // trials abandoned as transport-invalid even AFTER retries (excluded from k/N)
   let transportRetries = 0; // extra relaunches spent recovering cold-start flakes (cost, not competence)
+  let deadKey = false; // the provider key ran out of credits / auth mid-scenario — stop, don't keep launching
 
   for (let t = 0; t < REPEAT; t++) {
     const suffix = REPEAT > 1 ? `.t${String(t + 1)}` : '';
@@ -308,8 +333,14 @@ export async function runScenarioTrials(
       out = await runOne(scenario, plan.entryUrl, plan.env, work, join(logsDir, logName));
       wallClocksMs.push(Math.max(0, Date.now() - startedAt));
       allOuts.push(out);
+      if (isDeadKeyError(out)) break; // no retry — the key is exhausted/unauthorized, a relaunch can't help
       if (!isTransportInvalid(out, escapedTrial(out)) || attempt >= MAX_TRANSPORT_RETRIES) break;
       transportRetries++;
+    }
+    if (isDeadKeyError(out)) {
+      deadKey = true; // UNMEASURED (billing/quota/auth), never a competence fail — and abort the scenario
+      transportInvalid++;
+      break;
     }
     if (isTransportInvalid(out, escapedTrial(out))) {
       transportInvalid++; // NOT scored — a launch/navigation flake is not the agent getting it wrong
@@ -348,13 +379,16 @@ export async function runScenarioTrials(
       : transportRetries > 0
         ? ` — recovered ${String(transportRetries)} transport-flake(s) via retry`
         : '';
+  // A dead key (billing/quota/auth) makes the rest of the scenario UNMEASURED, never a competence fail —
+  // and signals the caller to abort the sweep rather than launch more doomed trials.
+  const deadKeyNote = deadKey ? ' — API key exhausted/unauthorized (billing/quota); sweep aborted' : '';
   const failReason = scores.find((s) => !s.ok)?.reason;
   const reason =
     validN === 0
-      ? `UNMEASURED — all ${String(REPEAT)} trial(s) transport-invalid${invalidNote}`
+      ? `UNMEASURED — ${deadKey ? 'API key exhausted/unauthorized (billing/quota)' : `all ${String(REPEAT)} trial(s) transport-invalid`}${invalidNote}`
       : REPEAT > 1
-        ? `${String(passes)}/${String(validN)} passed${invalidNote}${!ok && failReason !== undefined ? ` — e.g. ${failReason}` : ''}`
-        : `${scores[0]?.reason ?? CUT_OFF}${invalidNote}`;
+        ? `${String(passes)}/${String(validN)} passed${invalidNote}${deadKeyNote}${!ok && failReason !== undefined ? ` — e.g. ${failReason}` : ''}`
+        : `${scores[0]?.reason ?? CUT_OFF}${invalidNote}${deadKeyNote}`;
   const result: ScenarioResult = {
     scenario,
     score: { ok, method: scores[0]?.method ?? 'ground-truth', reason },
@@ -373,5 +407,5 @@ export async function runScenarioTrials(
       escapeEligible,
     }),
   };
-  return { result, passes, escapes, escapeEligible, validN, escapeN };
+  return { result, passes, escapes, escapeEligible, validN, escapeN, deadKey };
 }
