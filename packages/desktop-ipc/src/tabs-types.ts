@@ -59,6 +59,12 @@ export interface TabInfo {
   muted?: boolean;
   /** True when the tab's view has been discarded (sleeping) and will reload on next activation. */
   discarded?: boolean;
+  /**
+   * True when the tab is hidden: removed from the tab strip but kept ALIVE and continuously rendering
+   * (its view stays attached to the window, parked off-screen at a stable size) so the agent can keep
+   * driving it by id. Absent/false ⟺ a normal strip tab. Orthogonal to `pinned`/`groupId`.
+   */
+  hidden?: boolean;
 }
 
 export interface TabsState {

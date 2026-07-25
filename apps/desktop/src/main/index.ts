@@ -1,11 +1,15 @@
 import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { app, BrowserWindow, powerMonitor, session } from 'electron';
-import { Logger } from '@tepegoz/libs';
+import { KEEP_RENDERING_SWITCHES, Logger } from '@tepegoz/libs';
 import { installSecurity } from './security';
 import { abortActiveAgentRuns, registerIpc } from './ipc';
 import { initStores } from './stores.electron';
 import { initHosts, openWindow } from './browser-windows';
+import { initTray, revealAllWindows } from './tray';
+import { markQuitting } from './quit-state';
+import { emitSystemPause, emitSystemResume } from './power-lifecycle';
+import PreferenceStore from '@tepegoz/preferences';
 import { closeDatabase } from './db/database.electron';
 import TabManager, { BROWSING_PARTITION } from './tabs';
 import PopupWindowManager from './popup-window';
@@ -71,6 +75,18 @@ app.setName('Tepegöz');
 // (and notifications are attributed to Tepegöz) rather than the default Electron identity.
 if (process.platform === 'win32') app.setAppUserModelId('com.tepegoz.browser');
 
+// Keep the renderer compositing even when a chrome window is occluded, backgrounded, or hidden to the
+// tray — so a hidden tab (kept attached-but-occluded) and a tray-hidden window stay perceivable and
+// drivable by the agent. Once Chromium pauses the compositor for a non-visible surface, render-DOM
+// perception (`document.elementFromPoint` → null) and screenshots go blank. MUST run before whenReady
+// (Chromium reads switches at startup). Previously applied ONLY by the eval harness; now shipped in
+// production because background/hidden tabs the AI drives are a core capability. Trade-off: no
+// timer/occlusion throttling → higher idle CPU/battery on laptops (accepted for an agentic browser).
+for (const chromiumSwitch of KEEP_RENDERING_SWITCHES) {
+  if (chromiumSwitch.value === undefined) app.commandLine.appendSwitch(chromiumSwitch.name);
+  else app.commandLine.appendSwitch(chromiumSwitch.name, chromiumSwitch.value);
+}
+
 // Single Chrome-like user-data directory named `tepegoz` (app.setName above is only the display /
 // taskbar name). Pin it explicitly BEFORE whenReady so EVERY app.getPath('userData') — stores, the
 // SQLite DB, and the browsing partitions — resolves here. One-time: carry the small settings files
@@ -107,14 +123,10 @@ if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.on('second-instance', () => {
-    // Focus the last-focused chrome window (not an arbitrary one) when a second launch is intercepted.
-    const win = TabManager.focusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? null;
-    if (win) {
-      if (win.isMinimized()) {
-        win.restore();
-      }
-      win.focus();
-    }
+    // A second launch reveals the app — restoring every window from the tray / minimize (close-to-tray
+    // means the "missing" window is hidden, not gone), or opening a fresh one if somehow none exist.
+    if (TabManager.all().length === 0) openWindow();
+    else revealAllWindows();
   });
 
   void app
@@ -157,6 +169,8 @@ if (!app.requestSingleInstanceLock()) {
       registerIpc();
       initHosts();
       openWindow();
+      // The system-tray icon (close-to-tray target) — created once, after the first window exists.
+      initTray();
       TaskService.setRunner(runTaskAgent);
       // Let saved-task policy synthesis pre-approve routine write tools (click/type/navigate) on the
       // task's own origin. `destructive`/`financial` tools are deliberately excluded — they still pause
@@ -204,11 +218,24 @@ if (!app.requestSingleInstanceLock()) {
 
       // Sleep/resume hooks. Phase 1b: the Recovery Coordinator resumes durable tasks from their last
       // checkpoint on 'resume' (Opera Neon's "task drops on sleep" lesson).
+      // System power lifecycle. The pause/resume seam fires (gated on `pauseTasksOnSleep`) so the future
+      // task-runtime "resume interrupted work" feature can pause on sleep / power-save and continue on
+      // wake. Today the transitions are captured + logged; nothing subscribes to actually pause yet.
       powerMonitor.on('suspend', () => {
         Logger.info('System suspending');
+        if (PreferenceStore.getAll().pauseTasksOnSleep) emitSystemPause();
       });
       powerMonitor.on('resume', () => {
         Logger.info('System resumed');
+        if (PreferenceStore.getAll().pauseTasksOnSleep) emitSystemResume();
+      });
+      powerMonitor.on('on-battery', () => {
+        Logger.info('On battery power (power-save proxy)');
+        if (PreferenceStore.getAll().pauseTasksOnSleep) emitSystemPause();
+      });
+      powerMonitor.on('on-ac', () => {
+        Logger.info('On AC power');
+        if (PreferenceStore.getAll().pauseTasksOnSleep) emitSystemResume();
       });
 
       app.on('activate', () => {
@@ -233,6 +260,8 @@ if (!app.requestSingleInstanceLock()) {
   // usual, and will-quit (all windows gone) finally flushes + closes the SQLite connection — after
   // this, getDb() is null and any straggling handler no-ops.
   app.on('before-quit', () => {
+    // A real quit is underway — let the window close-interceptor (close-to-tray) allow windows to close.
+    markQuitting();
     abortActiveAgentRuns();
     TaskService.stop();
     void McpService.stop();

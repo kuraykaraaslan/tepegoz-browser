@@ -15,6 +15,8 @@ export function showTabContextMenu(win: BrowserWindow, tabId: string): void {
   const t = mainStrings();
   const hasOthers = state.tabs.length > 1;
   const hasRight = idx < state.tabs.length - 1;
+  // A tab can be hidden only while at least one OTHER tab stays visible (never leave an empty strip).
+  const visibleCount = state.tabs.filter((tab) => tab.hidden !== true).length;
   const tab = state.tabs[idx]!;
   const isPinned = tab.pinned;
   const inGroup = tab.groupId !== null;
@@ -46,6 +48,14 @@ export function showTabContextMenu(win: BrowserWindow, tabId: string): void {
       label: isPinned ? t.browser.unpinTab : t.browser.pinTab,
       click: () => {
         TabManager.setPinned(tabId, !isPinned);
+      },
+    },
+    {
+      // Hide: leave the strip but keep the tab alive + rendering (for the background/task AI).
+      label: t.browser.hideTab,
+      enabled: visibleCount > 1,
+      click: () => {
+        TabManager.hideTab(tabId);
       },
     },
     { type: 'separator' },

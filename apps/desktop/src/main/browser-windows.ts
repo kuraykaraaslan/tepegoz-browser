@@ -1,8 +1,12 @@
 import type { BrowserWindow } from 'electron';
 import PreferenceStore from '@tepegoz/preferences';
 import { SessionStore } from '@tepegoz/persistence';
-import { createWindow } from './window';
+import { createWindow, effectiveStartupMode, hideToTray } from './window';
 import TabManager from './tabs';
+import { isQuitting } from './quit-state';
+import { notifyHiddenToTrayOnce } from './tray';
+import { reconcileTrayPowerBlocker } from './power-lifecycle';
+import { handleWindowShortcut } from './keyboard-shortcuts';
 import NotificationHost from './notifications/notification-host';
 import PasswordHost from './password/password-host';
 import AutofillHost from './password/autofill-host';
@@ -49,19 +53,56 @@ export function openWindow(opts?: {
   if (opts?.size !== undefined) win.setSize(opts.size.width, opts.size.height);
   if (opts?.position !== undefined) win.setPosition(opts.position.x, opts.position.y);
   TabManager.register(win);
+  // Start-in-background parks the window off-screen on its first reveal (see window.ts); once it's shown
+  // (on- or off-screen), reconcile keep-awake so a start-parked window honors `keepAwakeInTray` too.
+  win.once('show', () => {
+    reconcileTrayPowerBlocker();
+  });
+  // App-level keyboard shortcuts (F11 fullscreen, kiosk exit) when the CHROME has focus. Web views wire
+  // the same handler in tabs-view-wiring so the shortcuts also work while a page is focused (and in kiosk).
+  win.webContents.on('before-input-event', (event, input) => {
+    if (handleWindowShortcut(win, input)) event.preventDefault();
+  });
+  // Close-to-tray: the X button hides the window (keeping every tab rendering for the agent) instead of
+  // closing/quitting. The pref is read LIVE so toggling needs no reconcile. Skipped when a real quit is
+  // underway, in eval mode, when the pref is off, or when the window has no tabs left (e.g. the last tab
+  // was just closed → let it close so the app can quit). Registered AFTER createWindow's bounds-persist
+  // close handler, so the real on-screen placement is captured before we park the window off-screen.
+  win.on('close', (event) => {
+    if (isQuitting() || process.env.TEPEGOZ_EVAL === '1' || !PreferenceStore.getAll().closeToTray) return;
+    if ((TabManager.forWindow(win)?.tabCount() ?? 0) === 0) return;
+    event.preventDefault();
+    hideToTray(win);
+    notifyHiddenToTrayOnce();
+    reconcileTrayPowerBlocker(); // start keep-awake if enabled + a window is now hidden
+  });
   win.on('closed', () => {
     TabManager.persistNow(); // capture the final tab set BEFORE unregister clears the store
     TabManager.unregister(win);
   });
-  const mode: TabBootstrap = opts?.tabs ?? 'restore';
-  // Onboarding only gates the very first real browser surface; restore-mode windows show it if pending.
-  if (mode === 'restore' && shouldShowOnboarding()) {
+  const bootstrap: TabBootstrap = opts?.tabs ?? 'restore';
+  const startup = effectiveStartupMode();
+  // Kiosk is a locked deployment surface — it skips onboarding and loads the chromeless renderer + a
+  // single tab pinned to the kiosk URL. Otherwise onboarding gates the first real browser surface.
+  if (startup === 'kiosk' && bootstrap !== 'none') {
+    loadBrowser(win, { kiosk: true });
+    bootstrapKioskTab(win);
+  } else if (bootstrap === 'restore' && shouldShowOnboarding()) {
     loadOnboarding(win);
   } else {
     loadBrowser(win);
-    bootstrapTabs(win, mode);
+    bootstrapTabs(win, bootstrap);
   }
   return win;
+}
+
+/** Kiosk seed: one tab pinned to the configured kiosk URL (or the new-tab page if unset, so a
+ *  misconfigured kiosk isn't a blank screen). */
+function bootstrapKioskTab(win: BrowserWindow): void {
+  const wt = TabManager.forWindow(win);
+  if (wt === undefined) return;
+  const url = PreferenceStore.getAll().kioskUrl.trim();
+  wt.createTab(url.length > 0 ? url : undefined);
 }
 
 /** Seed a just-loaded window's tabs per its bootstrap mode. */

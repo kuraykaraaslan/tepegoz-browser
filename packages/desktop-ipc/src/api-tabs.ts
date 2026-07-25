@@ -38,6 +38,11 @@ export interface TabsApi {
   moveTab(id: string, toIndex: number, intoGroupId?: string | null): void;
   /** Pin or unpin a tab (pinned tabs sit at the front and leave any group). */
   setTabPinned(id: string, pinned: boolean): void;
+  /** Hide or unhide a tab. A hidden tab leaves the strip but stays alive and rendering (the agent can
+   *  keep driving it by id); unhide brings it back into the strip. */
+  setTabHidden(id: string, hidden: boolean): void;
+  /** Pop the native "Hidden tabs" menu (list of hidden tabs to unhide), anchored to the sender window. */
+  showHiddenTabsMenu(): void;
   /** Create a group from `memberIds` (empty/omitted → the active tab). */
   createTabGroup(memberIds?: string[]): void;
   /** Reorder a whole group's run to `toIndex` among the non-member tabs. */

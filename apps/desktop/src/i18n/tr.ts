@@ -52,6 +52,16 @@ export const tr: AppStrings = {
     closeTabsRight: 'Sağdaki sekmeleri kapat',
     pinTab: 'Sekmeyi sabitle',
     unpinTab: 'Sabitlemeyi kaldır',
+    // Gizli sekmeler — şeritten kaldırılır ama canlı kalır ve render edilir (ajan sürmeye devam edebilir).
+    hideTab: 'Sekmeyi gizle',
+    unhideTab: 'Göster',
+    unhideAll: 'Tümünü göster',
+    hiddenTabs: 'Gizli sekmeler',
+    // Sistem tepsisi (kapatınca tepsiye) — uygulama çalışır durumda kalır; arka plan sekmeleri + ajan canlı.
+    trayShow: "Tepegöz'ü göster",
+    trayQuit: 'Çıkış',
+    trayTooltip: 'Tepegöz',
+    trayRunning: 'Tepegöz sistem tepsisinde çalışmaya devam ediyor.',
     addToNewGroup: 'Yeni gruba ekle',
     addToGroup: 'Gruba ekle',
     removeFromGroup: 'Gruptan çıkar',

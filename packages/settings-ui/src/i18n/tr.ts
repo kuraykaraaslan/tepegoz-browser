@@ -92,6 +92,30 @@ export const tr: SettingsStrings = {
   notificationsDesc:
     'Ajan devri, siteler ve sistem olayları için bildirim merkezini, toast’ları ve işletim sistemi bildirimlerini gösterir. Kapalıyken yalnızca merkez geçmişi tutar.',
 
+  // --- Sistem tepsisi ve güç ---
+  tray: {
+    title: 'Sistem tepsisi ve güç',
+    closeToTray: 'Kapatınca tepsiye',
+    closeToTrayDesc:
+      'Pencereyi kapatmak Tepegöz’ü sistem tepsisinde çalışır durumda tutar; arka plan sekmeleri ve ajan çalışmaya devam eder. Çıkış için tepsi simgesi menüsünü kullanın.',
+    keepAwake: 'Tepsideyken etkin tut',
+    keepAwakeDesc:
+      'Tepsideyken sistemin Tepegöz’ü askıya almasını engeller. Arka plan işleri için daha güvenilir, batarya maliyeti daha yüksek.',
+    pauseOnSleep: 'Uykuda duraklat',
+    pauseOnSleepDesc:
+      'Sistem uykuya veya batarya/güç tasarrufuna geçtiğinde arka plan ajan işini duraklatır, sistem uyandığında devam ettirir.',
+    startupMode: 'Başlangıç modu',
+    startupModeDesc: 'Tepegöz her açılışta — ve sistem açılışında otomatik başlarken — nasıl açılsın. Tüm modlarda sekmeler render eder.',
+    modeWindow: 'Pencere',
+    modeBackground: 'Arka plan (sistem tepsisi)',
+    modeKiosk: 'Kiosk (tam ekran, arayüz yok)',
+    kioskUrl: 'Kiosk URL',
+    kioskUrlPlaceholder: 'https://ornek.com',
+    launchAtLogin: 'Sistem açılışında başlat',
+    launchAtLoginDesc:
+      'Bilgisayarınıza giriş yaptığınızda Tepegöz’ü otomatik başlatır (Windows / macOS / Linux). Otomatik başlatma arka planda çalışır; ajan açılıştan itibaren hazır olur.',
+  },
+
   // --- Dosya işlemleri ---
   fileOps: {
     title: 'Dosya işlemleri',

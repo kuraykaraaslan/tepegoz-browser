@@ -89,6 +89,14 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   glassChrome: 'private',
   // Private — the user's window placement; a UI/footprint detail extensions have no need for.
   windowBounds: 'private',
+  // Private — close-to-tray + tray power behavior + the one-time tray hint flag; device-local chrome.
+  closeToTray: 'private',
+  keepAwakeInTray: 'private',
+  pauseTasksOnSleep: 'private',
+  startupMode: 'private',
+  kioskUrl: 'private',
+  launchAtLogin: 'private',
+  trayHintShown: 'private',
 };
 
 // --- Compile-time guards: pin the shared PublicSettings shape to the real Preferences projection. ---

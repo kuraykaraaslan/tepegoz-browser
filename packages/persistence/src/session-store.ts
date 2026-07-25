@@ -7,6 +7,8 @@ export interface PersistedTab {
   pinned: boolean;
   /** Owning group id (matches a `PersistedGroup.id`), or null when ungrouped. */
   groupId: string | null;
+  /** True when the tab was hidden (removed from the strip but kept alive/rendering). Absent ⟺ visible. */
+  hidden?: boolean;
 }
 
 /** A flat, JSON-safe per-tab-group setting value (mirrors `TabGroupSettingValue` in `@tepegoz/desktop-ipc`). */
@@ -161,11 +163,13 @@ function parseTabs(raw: unknown[]): PersistedTab[] | null {
     if (typeof t !== 'object' || t === null) return null;
     const o = t as Record<string, unknown>;
     if (typeof o.url !== 'string') return null;
-    out.push({
+    const tab: PersistedTab = {
       url: o.url,
       pinned: o.pinned === true,
       groupId: typeof o.groupId === 'string' ? o.groupId : null,
-    });
+    };
+    if (o.hidden === true) tab.hidden = true; // additive/optional → absent means visible (no version bump)
+    out.push(tab);
   }
   return out;
 }

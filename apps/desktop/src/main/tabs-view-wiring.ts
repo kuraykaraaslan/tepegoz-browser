@@ -7,6 +7,7 @@ import {
 import { HistoryStore } from '@tepegoz/persistence';
 import { type TabStore } from '@tepegoz/tab-engine';
 import { isWebUrl } from './lib/navigation-url';
+import { handleWindowShortcut } from './keyboard-shortcuts';
 import { getDb } from './db/database.electron';
 import ActionInterceptorService from './extensions/action-interceptors.electron';
 import { openPageContextMenu } from './menus/page-context-menu';
@@ -48,6 +49,7 @@ export interface ViewWiringHost {
 /** Every event `wireView` subscribes to — kept in sync so `unwireView` can drop exactly these. */
 const WIRED_EVENTS = [
   'input-event',
+  'before-input-event',
   'will-navigate',
   'will-redirect',
   'context-menu',
@@ -77,6 +79,12 @@ export function wireView(host: ViewWiringHost, id: string, view: WebContentsView
   // open) from an unsolicited auto-popup (which is blocked). See the window-open handler below.
   wc.on('input-event', (_e, input) => {
     if (isActivatingInput(input.type)) lastGestureAt.set(wc, Date.now());
+  });
+
+  // App-level shortcuts (F11 fullscreen, Ctrl/Cmd+Shift+Q to leave kiosk) also fire while a PAGE has
+  // focus — essential in kiosk, where the chromeless page owns all input.
+  wc.on('before-input-event', (event, input) => {
+    if (handleWindowShortcut(host.win, input)) event.preventDefault();
   });
 
   // Browsed pages are untrusted. Every path that creates a new browsing context (window.open,

@@ -44,8 +44,11 @@ export class WindowTabsClosing extends WindowTabsBase {
     }
     if (wasActive) {
       this.store.setActive(null);
-      const next = this.store.ids().at(-1);
+      // Reselect the last VISIBLE tab (never surface a hidden one). If only hidden tabs remain, unhide
+      // the last of them so the strip is never empty and there is always a visible active tab.
+      const next = this.lastVisibleId() ?? this.store.ids().at(-1);
       if (next !== undefined) {
+        if (this.store.get(next)?.hidden === true) this.store.setHidden(next, false);
         this.activate(next);
       } else {
         this.emitState();
@@ -53,6 +56,53 @@ export class WindowTabsClosing extends WindowTabsBase {
     } else {
       this.emitState();
     }
+  }
+
+  /** The last non-hidden tab id in strip order, or undefined when every tab is hidden. */
+  protected lastVisibleId(): string | undefined {
+    const ids = this.store.ids();
+    for (let i = ids.length - 1; i >= 0; i--) {
+      const id = ids[i]!;
+      if (this.store.get(id)?.hidden !== true) return id;
+    }
+    return undefined;
+  }
+
+  /**
+   * Hide a tab: remove it from the strip but keep its view ALIVE and continuously rendering so the agent
+   * can keep driving it by id (the future background/task AI's substrate). The view stays ATTACHED to the
+   * window, parked off-screen at a stable size — never detached, reloaded, or resized-to-reflow — so
+   * hiding is uninterrupted. No-op if it would leave zero visible tabs (an empty strip is a dead end).
+   */
+  hideTab(id: string): void {
+    const rec = this.store.get(id);
+    if (rec === undefined || rec.hidden === true) return;
+    const visibleCount = this.store.records().filter((r) => r.hidden !== true).length;
+    if (visibleCount <= 1) return; // keep at least one visible tab
+    const wasActive = this.store.activeId === id;
+    this.store.setHidden(id, true);
+    // Attach + park off-screen: the view keeps compositing but is invisible, at a stable size (no reflow).
+    this.parkHiddenView(id);
+    if (wasActive) {
+      // Bring the last visible tab forward. activate() attaches + sizes it and, via its hidden guard,
+      // leaves this now-parked view attached (still rendering).
+      const next = this.lastVisibleId();
+      if (next !== undefined) this.activate(next);
+      else this.emitState();
+    } else {
+      this.emitState();
+    }
+  }
+
+  /**
+   * Unhide a tab: it reappears in the strip. The view has been rendering all along (attached, parked),
+   * so this is a pure state flip — no reload, no reactivation. It returns to the content area only when
+   * the user next activates it (the one lazy resize), keeping unhide uninterrupted too.
+   */
+  unhideTab(id: string): void {
+    if (this.store.get(id)?.hidden !== true) return;
+    this.store.setHidden(id, false);
+    this.emitState();
   }
 
   /** Reload a specific tab (context menu) — distinct from reloadActive (omnibox/shortcut). */

@@ -1,6 +1,6 @@
 import { app, BrowserWindow, screen, shell, type Rectangle } from 'electron';
 import { join } from 'node:path';
-import { IpcChannels, type WindowBounds } from '@tepegoz/desktop-ipc';
+import { IpcChannels, type StartupMode, type WindowBounds } from '@tepegoz/desktop-ipc';
 import PreferenceStore from '@tepegoz/preferences';
 import { isTrustedAppUrl } from './lib/trusted-origin';
 import { GLASS_BG, OPAQUE_BG, isMicaSupported } from './lib/glass';
@@ -41,12 +41,109 @@ function isBoundsOnScreen(b: WindowBounds): boolean {
 }
 
 // Brand app icon (generated from resources/icon.svg via `pnpm --filter @tepegoz/desktop icons`).
-// Windows favors the multi-resolution .ico; other platforms use the 512px PNG.
-const ICON_PATH = join(
+// Windows favors the multi-resolution .ico; other platforms use the 512px PNG. Exported so the tray
+// (tray.ts) uses the same brand image.
+export const ICON_PATH = join(
   app.getAppPath(),
   'resources',
   process.platform === 'win32' ? 'icon.ico' : 'icon.png',
 );
+
+// ── Close-to-tray ────────────────────────────────────────────────────────────────────────────────────
+/** Off-desktop coordinates that "hide" a window to the tray while keeping it SHOWN — far outside any
+ *  real display, so it's invisible but its compositor keeps running (every tab keeps rendering). */
+const PARK_X = -32000;
+const PARK_Y = -32000;
+/** Real (on-screen) bounds saved when a window is parked to the tray, so `showFromTray` can restore them. */
+const trayParked = new Map<BrowserWindow, Rectangle>();
+
+/** True while `win` is hidden to the tray (parked off-screen, dropped from the taskbar). */
+export function isParkedToTray(win: BrowserWindow): boolean {
+  return trayParked.has(win);
+}
+
+/**
+ * Hide a window to the system tray. It stays SHOWN but is moved fully off-screen and removed from the
+ * taskbar — deliberately NOT `win.hide()`, which flips the page to `visibilityState: hidden` and pauses
+ * the compositor, blinding the agent's perception of every tab. Off-screen-but-shown keeps the renderer
+ * painting (the same state the keep-rendering switches in the app entry rely on).
+ */
+export function hideToTray(win: BrowserWindow): void {
+  if (win.isDestroyed() || trayParked.has(win)) return;
+  trayParked.set(win, win.getBounds());
+  win.setSkipTaskbar(true);
+  win.setPosition(PARK_X, PARK_Y);
+}
+
+/**
+ * Launch a window straight into the tray (start-in-background): shown OFF-SCREEN (so the compositor runs
+ * and every tab renders from the start) but dropped from the taskbar, its real placement saved for
+ * `showFromTray`. Unlike `hideToTray`, it `showInactive()`s the never-yet-shown window (off-screen,
+ * unfocused) rather than assuming it is already visible.
+ */
+export function startParkedInTray(win: BrowserWindow): void {
+  if (win.isDestroyed() || trayParked.has(win)) return;
+  trayParked.set(win, win.getBounds()); // the placement it would have opened at, restored on showFromTray
+  win.setPosition(PARK_X, PARK_Y);
+  win.setSkipTaskbar(true);
+  win.showInactive(); // shown (compositor active) but off-screen + unfocused
+}
+
+/**
+ * Bring a tray-hidden / background-started window back as a normal FOREGROUND window: restore its saved
+ * on-screen bounds + taskbar entry, and raise it above everything. A plain `focus()` from a tray click
+ * is a background-process activation, which Windows' foreground-lock ignores — so the window would come
+ * back on-screen but stuck BEHIND other apps. Flashing always-on-top forces it to the actual front.
+ */
+export function showFromTray(win: BrowserWindow): void {
+  if (win.isDestroyed()) return;
+  const saved = trayParked.get(win);
+  if (saved !== undefined) {
+    win.setBounds(saved); // move back on-screen from the off-screen park
+    trayParked.delete(win);
+  }
+  win.setSkipTaskbar(false);
+  if (win.isMinimized()) win.restore();
+  win.setAlwaysOnTop(true);
+  win.show();
+  win.focus();
+  win.moveTop();
+  win.setAlwaysOnTop(false); // relinquish — it just needed the kick to the front
+}
+
+/**
+ * The startup presentation mode for this launch: normally the `startupMode` pref, but the dev/CLI
+ * `TEPEGOZ_START_BACKGROUND=1` env or `--background` switch forces `background` without touching the pref.
+ */
+export function effectiveStartupMode(): StartupMode {
+  if (
+    process.env.TEPEGOZ_START_BACKGROUND === '1' ||
+    app.commandLine.hasSwitch('background') ||
+    process.argv.includes('--background')
+  ) {
+    return 'background';
+  }
+  return PreferenceStore.getAll().startupMode;
+}
+
+/** Present a window as a fullscreen locked kiosk (its renderer is loaded chromeless separately). */
+export function enterKiosk(win: BrowserWindow): void {
+  if (win.isDestroyed()) return;
+  win.show();
+  win.setKiosk(true);
+  win.focus();
+}
+
+/** Leave kiosk at the window level (the caller reloads the normal chrome + un-parks if needed). */
+export function exitKioskWindow(win: BrowserWindow): void {
+  if (!win.isDestroyed()) win.setKiosk(false);
+}
+
+/** Toggle the window between fullscreen and windowed (F11 / the View menu). No-op in kiosk. */
+export function toggleFullScreen(win: BrowserWindow): void {
+  if (win.isDestroyed() || win.isKiosk()) return;
+  win.setFullScreen(!win.isFullScreen());
+}
 
 /**
  * The SINGLE secure window factory (internal-ai-rules BLOCKING): every BrowserWindow is created here
@@ -115,6 +212,19 @@ export function createWindow(): BrowserWindow {
       win.showInactive();
       return;
     }
+    // Present per the startup mode (applies to EVERY launch — manual or at login). `background` parks the
+    // window off-screen (shown, so its compositor keeps every tab rendering) — the RELIABLE dev trigger is
+    // `TEPEGOZ_START_BACKGROUND=1` (a CLI `--background` is eaten by npm/turbo). `kiosk` goes fullscreen +
+    // locked; its chromeless renderer + kiosk-URL tab are set up by browser-windows.
+    const mode = effectiveStartupMode();
+    if (mode === 'background') {
+      startParkedInTray(win);
+      return;
+    }
+    if (mode === 'kiosk') {
+      enterKiosk(win);
+      return;
+    }
     win.show();
     win.focus();
   };
@@ -139,7 +249,9 @@ export function createWindow(): BrowserWindow {
   if (!evalMode) {
     let saveTimer: ReturnType<typeof setTimeout> | null = null;
     const persistBounds = (): void => {
-      if (win.isDestroyed() || win.isMinimized()) return; // minimized bounds are meaningless; skip
+      // Skip minimized (bounds meaningless) and tray-parked (off-screen sentinel) windows — persisting
+      // the parked position would corrupt the saved placement.
+      if (win.isDestroyed() || win.isMinimized() || isParkedToTray(win)) return;
       const b = win.getNormalBounds();
       PreferenceStore.update({
         windowBounds: {

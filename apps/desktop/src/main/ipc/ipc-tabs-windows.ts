@@ -19,6 +19,7 @@ import {
   TabGroupIdSchema,
   TabGroupMoveSchema,
   TabGroupUpdateSchema,
+  TabHiddenSchema,
   TabIdSchema,
   TabMoveSchema,
   TabPinSchema,
@@ -28,6 +29,8 @@ import TabManager from '../tabs';
 import PopupWindowManager from '../popup-window';
 import { manifestById } from '../../shared/extensions';
 import { showTabContextMenu } from '../menus/tab-context-menu';
+import { showHiddenTabsMenu } from '../menus/hidden-tabs-menu';
+import { markQuitting } from '../quit-state';
 import { showBookmarkContextMenu } from '../menus/bookmark-context-menu';
 import { showExtensionContextMenu } from '../menus/extension-context-menu';
 import { showGroupContextMenu } from '../menus/tab-group-context-menu';
@@ -101,6 +104,11 @@ export function registerTabsWindowsIpc(): void {
   onWindowAction(IpcChannels.tabsPin, TabPinSchema, (win, { id, pinned }) => {
     TabManager.forSenderWindow(win)?.setPinned(id, pinned);
   });
+  onWindowAction(IpcChannels.tabsSetHidden, TabHiddenSchema, (win, { id, hidden }) => {
+    const wt = TabManager.forSenderWindow(win);
+    if (hidden) wt?.hideTab(id);
+    else wt?.unhideTab(id);
+  });
   onWindowAction(IpcChannels.tabsGroupCreate, TabGroupCreateSchema, (win, { memberIds }) => {
     TabManager.forSenderWindow(win)?.createGroup(memberIds);
   });
@@ -135,6 +143,12 @@ export function registerTabsWindowsIpc(): void {
     }
     const win = BrowserWindow.fromWebContents(event.sender);
     if (win) showTabContextMenu(win, parsed.data);
+  });
+  // Native "Hidden tabs" menu (no payload) — needs the sender's window to anchor the popup.
+  ipcMain.on(IpcChannels.tabsHiddenMenu, (event: IpcMainEvent) => {
+    if (!isTrustedAppUrl(event.senderFrame?.url ?? '')) return;
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) showHiddenTabsMenu(win);
   });
   // Native bookmark context menu — also needs the sender's window to anchor the popup.
   ipcMain.on(IpcChannels.bookmarksContextMenu, (event: IpcMainEvent, payload: unknown) => {
@@ -287,6 +301,7 @@ export function registerTabsWindowsIpc(): void {
   });
   // Exit — quits the whole app regardless of the sender window (a popup can't use the window-close path).
   onSignal(IpcChannels.appQuit, () => {
+    markQuitting(); // real quit → windows may close (the close-to-tray interceptor stands down)
     app.quit();
   });
   onWindowAction(IpcChannels.tabsNavigate, NavigateInputSchema, (win, url) => {

@@ -29,8 +29,9 @@ export function loadOnboarding(win: BrowserWindow): void {
   loadRenderer(win, { surface: 'onboarding' });
 }
 
-/** Load the normal browser chrome into `win`. Tab bootstrapping (restore/default) is the caller's
- *  concern (`browser-windows.ts`), so this only swaps the renderer surface. */
-export function loadBrowser(win: BrowserWindow): void {
-  loadRenderer(win);
+/** Load the browser chrome into `win`. Tab bootstrapping (restore/default) is the caller's concern
+ *  (`browser-windows.ts`), so this only swaps the renderer surface. `kiosk` loads a CHROMELESS variant
+ *  (`?kiosk=1`) — the renderer hides the tab strip/toolbar and lets the web view fill the screen. */
+export function loadBrowser(win: BrowserWindow, opts?: { kiosk?: boolean }): void {
+  loadRenderer(win, opts?.kiosk === true ? { kiosk: '1' } : undefined);
 }

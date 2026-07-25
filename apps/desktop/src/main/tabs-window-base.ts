@@ -62,6 +62,31 @@ export class WindowTabsBase {
     return resolveViewBounds(this.bounds, this.win.isDestroyed() ? null : this.win.getContentSize());
   }
 
+  /** Whether `view` is currently a child of the window's content view (attached → composited). */
+  protected isAttached(view: WebContentsView): boolean {
+    return !this.win.isDestroyed() && this.win.contentView.children.includes(view);
+  }
+
+  /**
+   * Bounds for a HIDDEN tab's view: the SAME size as the content area (so the page never reflows — a
+   * stable viewport the agent can rely on) translated fully off the left of the window so it is clipped
+   * and invisible while staying attached + drawn, which keeps its renderer compositing. Position-only
+   * (never a size change), which is what makes hide/unhide uninterrupted.
+   */
+  protected parkedBounds(): Rectangle {
+    const b = this.effectiveBounds();
+    return { x: -(b.width + 8), y: b.y, width: b.width, height: b.height };
+  }
+
+  /** Attach (if a background tab was detached) + park a hidden tab's view off-screen so it keeps
+   *  rendering without being visible. No-op for view-less (internal) tabs. */
+  protected parkHiddenView(id: string): void {
+    const view = this.views.get(id);
+    if (view === undefined) return;
+    if (!this.isAttached(view)) this.win.contentView.addChildView(view);
+    view.setBounds(this.parkedBounds());
+  }
+
   /** Tear down all views + state when the window closes (prevents stale tabs leaking). Called by the
    *  registry on `unregister`. */
   dispose(): void {
@@ -132,6 +157,10 @@ export class WindowTabsBase {
         nodeIntegration: false,
         webSecurity: true,
         partition: BROWSING_PARTITION,
+        // Never throttle timers/rAF on a non-foreground tab. Complements the startup keep-rendering
+        // switches (see index.ts): a hidden tab (attached-occluded) the AI drives, and every background
+        // tab, must keep running at full rate — not just keep painting. Trade-off accepted (agentic browser).
+        backgroundThrottling: false,
       },
     });
     const id = this.store.add({
@@ -185,7 +214,11 @@ export class WindowTabsBase {
     const prevId = this.store.activeId;
     if (prevId !== null && prevId !== id) {
       const prevView = this.views.get(prevId);
-      if (prevView != null) this.win.contentView.removeChildView(prevView);
+      // Never detach a HIDDEN previous tab: hidden views stay attached (parked off-screen) so they keep
+      // rendering uninterrupted for the agent. Only a visible inactive tab is detached here.
+      if (prevView != null && this.store.get(prevId)?.hidden !== true) {
+        this.win.contentView.removeChildView(prevView);
+      }
     }
     this.store.setActive(id);
     const view = this.views.get(id);
@@ -235,6 +268,12 @@ export class WindowTabsBase {
       canGoBack: wc?.navigationHistory.canGoBack() ?? false,
       canGoForward: wc?.navigationHistory.canGoForward() ?? false,
     });
+  }
+
+  /** How many tabs this window holds (visible + hidden). Lets close-to-tray keep a window with tabs alive
+   *  while letting an empty window (e.g. after the last tab closed) actually close. */
+  tabCount(): number {
+    return this.store.ids().length;
   }
 
   /** The active tab's WebContentsView, or undefined for no-active / internal (view-less) tabs. */

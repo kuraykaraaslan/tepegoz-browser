@@ -46,6 +46,10 @@ export const IpcChannels = {
   // state is pushed back via `tabs:state`.
   tabsMove: 'tabs:move',
   tabsPin: 'tabs:pin',
+  /** Renderer→main: hide/unhide a tab (leaves the strip but keeps its view alive + rendering). */
+  tabsSetHidden: 'tabs:set-hidden',
+  /** Renderer→main: pop the native "Hidden tabs" menu (anchored to the caption button) to unhide. */
+  tabsHiddenMenu: 'tabs:hidden-menu',
   tabsGroupCreate: 'tabs:group-create',
   tabsGroupMove: 'tabs:group-move',
   tabsGroupUpdate: 'tabs:group-update',

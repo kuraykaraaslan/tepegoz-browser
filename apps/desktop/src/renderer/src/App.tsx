@@ -204,6 +204,17 @@ export function App() {
 
   const contentSnapshot = extSurfaces.resizeSnapshot ?? (omniboxViewHidden ? omniboxSnapshot : null);
 
+  // Chromeless kiosk surface (startupMode: 'kiosk' → loaded with ?kiosk=1): no tab strip / toolbar /
+  // overlays — the kiosk URL's web view (laid out by main over `contentRef`) fills the whole screen. The
+  // hooks above still run, so content bounds + tab state stay wired.
+  if (new URLSearchParams(window.location.search).get('kiosk') === '1') {
+    return (
+      <I18nProvider locale={locale}>
+        <div ref={contentRef} className="h-screen w-screen bg-surface-base" />
+      </I18nProvider>
+    );
+  }
+
   return (
     <I18nProvider locale={locale}>
       <div className="app-shell flex h-screen flex-col bg-surface-base text-text-primary">

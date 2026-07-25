@@ -53,7 +53,9 @@ export class WindowTabs extends WindowTabsNav {
       const url = (wc !== undefined && !wc.isDestroyed() ? wc.getURL() : '') || rec.url;
       if (rec.kind !== 'web' || !isWebUrl(url)) continue;
       if (rec.id === this.store.activeId) activeIndex = tabs.length;
-      tabs.push({ url, pinned: rec.pinned, groupId: rec.groupId });
+      const tab: PersistedTab = { url, pinned: rec.pinned, groupId: rec.groupId };
+      if (rec.hidden === true) tab.hidden = true; // survive restart as a hidden (kept-alive) tab
+      tabs.push(tab);
     }
     // Only persist groups that still own at least one persisted (web) tab.
     const liveGroups = new Set(
@@ -105,11 +107,29 @@ export class WindowTabs extends WindowTabsNav {
       if (t.pinned && id !== null && id !== undefined) this.store.setPinned(id, true);
     });
 
-    // 3. Activate the persisted active tab by its new id (robust to the normalized reordering).
-    const activeId =
+    // 3. Restore hidden state, then park each hidden tab's view (attached, off-screen, stable size) so it
+    //    keeps rendering exactly like a live hidden tab — never detached, never reloaded.
+    snap.tabs.forEach((t, i) => {
+      const id = createdIds[i];
+      if (t.hidden === true && id !== null && id !== undefined) this.store.setHidden(id, true);
+    });
+    for (const rec of this.store.records()) {
+      if (rec.hidden === true) this.parkHiddenView(rec.id);
+    }
+
+    // 4. Activate the persisted active tab by id (robust to the normalized reordering). If it — or the tab
+    //    createTab left active — is hidden, fall back to the last visible tab so a hidden tab is never
+    //    surfaced (a real snapshot always keeps ≥1 visible tab).
+    let activeId =
       snap.activeIndex >= 0 && snap.activeIndex < createdIds.length
         ? createdIds[snap.activeIndex]
         : undefined;
+    if (activeId !== undefined && activeId !== null && this.store.get(activeId)?.hidden === true) {
+      activeId = this.lastVisibleId() ?? undefined;
+    }
+    if ((activeId === undefined || activeId === null) && this.store.active()?.hidden === true) {
+      activeId = this.lastVisibleId() ?? undefined;
+    }
     if (activeId !== undefined && activeId !== null) this.activate(activeId);
     else this.emitState();
     return true;

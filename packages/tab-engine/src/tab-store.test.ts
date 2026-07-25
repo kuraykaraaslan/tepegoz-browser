@@ -258,6 +258,49 @@ describe('TabStore — pinning', () => {
   });
 });
 
+describe('TabStore — hidden', () => {
+  it('setHidden flips the flag without reordering or touching pin/group', () => {
+    const a = store.add(web());
+    const b = store.add(web());
+    const c = store.add(web());
+    const g = store.createGroup({ memberIds: [b] });
+    store.setPinned(a, true);
+    const before = store.ids();
+    store.setHidden(c, true);
+    expect(store.get(c)?.hidden).toBe(true);
+    expect(store.ids()).toEqual(before); // orthogonal to ordering → no reorder
+    expect(store.get(a)?.pinned).toBe(true); // pin survives
+    expect(store.get(b)?.groupId).toBe(g); // group survives
+    assertInvariants(store);
+  });
+
+  it('a hidden tab may still be pinned or grouped', () => {
+    const a = store.add(web());
+    store.setPinned(a, true);
+    store.setHidden(a, true);
+    expect(store.get(a)).toMatchObject({ pinned: true, hidden: true });
+  });
+
+  it('setHidden(false) clears the flag; unknown id is a no-op', () => {
+    const a = store.add(web());
+    store.setHidden(a, true);
+    store.setHidden(a, false);
+    expect(store.get(a)?.hidden).toBe(false);
+    expect(() => store.setHidden('999', true)).not.toThrow();
+  });
+
+  it('toState projects hidden only once set (absent by default) and keeps hidden tabs IN state', () => {
+    const a = store.add(web());
+    const b = store.add(web());
+    store.setActive(a);
+    store.setHidden(b, true);
+    const state = store.toState({ canGoBack: false, canGoForward: false });
+    expect('hidden' in state.tabs[0]!).toBe(false); // a: never set → omitted
+    expect(state.tabs[1]?.hidden).toBe(true); // b: hidden
+    expect(state.tabs).toHaveLength(2); // the agent must still see hidden tabs
+  });
+});
+
 describe('TabStore — moveTab drop semantics', () => {
   it('dropping strictly inside a group run joins the group (inferred)', () => {
     const a = store.add(web());

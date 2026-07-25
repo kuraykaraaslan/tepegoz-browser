@@ -101,6 +101,9 @@ export interface NewTabBackground {
   opacity: number;
 }
 
+/** How the app presents on launch: a normal window, hidden in the tray, or a fullscreen locked kiosk. */
+export type StartupMode = 'window' | 'background' | 'kiosk';
+
 export interface Preferences {
   theme: ThemePref;
   /**
@@ -201,6 +204,26 @@ export interface Preferences {
    *  a saved rectangle on a display that no longer exists is ignored and the window opens on the primary
    *  screen. See `createWindow`. */
   windowBounds: WindowBounds | null;
+  /** Close (X) hides the app to the system tray instead of quitting; all tabs keep rendering so the agent
+   *  keeps working. Quit only from the tray menu. Device-local (not exposed to extensions). */
+  closeToTray: boolean;
+  /** While hidden in the tray, prevent the OS from suspending the app (powerSaveBlocker) so background
+   *  work stays reliable — at a higher battery cost. Device-local. */
+  keepAwakeInTray: boolean;
+  /** Pause background agent/task work when the system suspends / enters power-save, and resume on wake.
+   *  Device-local. (The resume-work mechanism itself arrives with the task runtime.) */
+  pauseTasksOnSleep: boolean;
+  /** How the app presents on EVERY launch (manual or at login): a normal `window`, hidden in the tray
+   *  (`background`, parked off-screen but rendering), or a fullscreen locked-down `kiosk` (no chrome,
+   *  single `kioskUrl`). All keep tabs rendering for the agent. Device-local. */
+  startupMode: StartupMode;
+  /** The URL kiosk mode loads fullscreen with no chrome. Only used when `startupMode` is `kiosk`. */
+  kioskUrl: string;
+  /** Start Tepegöz automatically at system login (Windows Run key / macOS login item / Linux XDG
+   *  autostart). The auto-launch obeys `startupMode`. Device-local. */
+  launchAtLogin: boolean;
+  /** Whether the one-time "still running in the tray" hint has been shown (so it never nags again). */
+  trayHintShown: boolean;
 }
 
 /** Persisted main-window placement — the restored (non-maximized) rectangle plus whether it was maximized. */

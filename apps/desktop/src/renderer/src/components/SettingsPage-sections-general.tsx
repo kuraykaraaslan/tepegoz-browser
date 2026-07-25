@@ -1,7 +1,8 @@
 import { ComingSoonCard, type SettingsSection } from '@tepegoz/settings-ui';
 import { Card, Toggle } from '@tepegoz/ui';
 import { SEARCH_ENGINES } from '@tepegoz/shared-types/search-engines';
-import { PROVIDERS } from './settings-shared';
+import type { StartupMode } from '@tepegoz/desktop-ipc';
+import { PROVIDERS, Select } from './settings-shared';
 import { AppearanceSection, LanguageRegionSection } from './settings-appearance-language';
 import {
   DefaultModelsSection,
@@ -102,6 +103,90 @@ export function generalAndAiSections(ctx: SettingsSectionsCtx): SettingsSection[
               setPref({ notificationsEnabled: v });
             }}
           />
+        </Card>
+      ),
+    },
+    {
+      id: 'system-tray',
+      group: s.groupGeneral,
+      label: s.tray.title,
+      icon: <IconSliders />,
+      searchText: `${s.tray.title} ${s.tray.closeToTray} ${s.tray.keepAwake} ${s.tray.pauseOnSleep} ${s.tray.startupMode} ${s.tray.modeKiosk} ${s.tray.kioskUrl} ${s.tray.launchAtLogin}`,
+      content: (
+        <Card title={s.tray.title}>
+          <div className="space-y-5">
+            <Toggle
+              id="close-to-tray"
+              label={s.tray.closeToTray}
+              description={s.tray.closeToTrayDesc}
+              checked={prefs.closeToTray}
+              onChange={(v) => {
+                setPref({ closeToTray: v });
+              }}
+            />
+            <Toggle
+              id="keep-awake-in-tray"
+              label={s.tray.keepAwake}
+              description={s.tray.keepAwakeDesc}
+              checked={prefs.keepAwakeInTray}
+              onChange={(v) => {
+                setPref({ keepAwakeInTray: v });
+              }}
+            />
+            <Toggle
+              id="pause-tasks-on-sleep"
+              label={s.tray.pauseOnSleep}
+              description={s.tray.pauseOnSleepDesc}
+              checked={prefs.pauseTasksOnSleep}
+              onChange={(v) => {
+                setPref({ pauseTasksOnSleep: v });
+              }}
+            />
+            <div>
+              <Select
+                id="startup-mode"
+                label={s.tray.startupMode}
+                value={prefs.startupMode}
+                onChange={(v) => {
+                  setPref({ startupMode: v as StartupMode });
+                }}
+              >
+                <option value="window">{s.tray.modeWindow}</option>
+                <option value="background">{s.tray.modeBackground}</option>
+                <option value="kiosk">{s.tray.modeKiosk}</option>
+              </Select>
+              <p className="mt-1 text-xs text-text-secondary">{s.tray.startupModeDesc}</p>
+            </div>
+            {prefs.startupMode === 'kiosk' && (
+              <div>
+                <label
+                  htmlFor="kiosk-url"
+                  className="mb-1 block text-sm font-medium text-text-primary"
+                >
+                  {s.tray.kioskUrl}
+                </label>
+                <input
+                  id="kiosk-url"
+                  type="url"
+                  value={prefs.kioskUrl}
+                  placeholder={s.tray.kioskUrlPlaceholder}
+                  onChange={(e) => {
+                    setPref({ kioskUrl: e.target.value });
+                  }}
+                  className="w-full rounded-md border border-border bg-surface-base px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+                />
+              </div>
+            )}
+            <Toggle
+              id="launch-at-login"
+              label={s.tray.launchAtLogin}
+              description={s.tray.launchAtLoginDesc}
+              checked={prefs.launchAtLogin}
+              onChange={(v) => {
+                setPref({ launchAtLogin: v });
+              }}
+            />
+          </div>
         </Card>
       ),
     },

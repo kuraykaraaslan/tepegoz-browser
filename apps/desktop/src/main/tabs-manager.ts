@@ -95,6 +95,12 @@ export default class TabManager extends TabManagerBase {
   static setPinned(id: string, pinned: boolean): void {
     TabManager.focused()?.setPinned(id, pinned);
   }
+  static hideTab(id: string): void {
+    TabManager.focused()?.hideTab(id);
+  }
+  static unhideTab(id: string): void {
+    TabManager.focused()?.unhideTab(id);
+  }
   static navigateActive(rawUrl: string): void {
     TabManager.focused()?.navigateActive(rawUrl);
   }

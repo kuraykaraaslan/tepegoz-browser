@@ -61,6 +61,16 @@ export const en = {
     // Pinning + tab groups (ADR-0020).
     pinTab: 'Pin tab',
     unpinTab: 'Unpin tab',
+    // Hidden tabs — removed from the strip but kept alive & rendering (the agent can keep driving them).
+    hideTab: 'Hide tab',
+    unhideTab: 'Unhide',
+    unhideAll: 'Unhide all',
+    hiddenTabs: 'Hidden tabs',
+    // System tray (close-to-tray) — the app keeps running so background tabs + the agent stay live.
+    trayShow: 'Show Tepegöz',
+    trayQuit: 'Quit',
+    trayTooltip: 'Tepegöz',
+    trayRunning: 'Tepegöz is still running in the system tray.',
     addToNewGroup: 'Add tab to new group',
     addToGroup: 'Add tab to group',
     removeFromGroup: 'Remove from group',

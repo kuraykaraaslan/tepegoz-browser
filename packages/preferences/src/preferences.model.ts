@@ -240,6 +240,14 @@ export const PreferencesSchema = z.object({
       maximized: z.boolean(),
     })
     .nullable(),
+  // Close-to-tray + power behavior (device-local; private — not projected to PublicSettings).
+  closeToTray: z.boolean(),
+  keepAwakeInTray: z.boolean(),
+  pauseTasksOnSleep: z.boolean(),
+  startupMode: z.enum(['window', 'background', 'kiosk']),
+  kioskUrl: z.string().max(4096),
+  launchAtLogin: z.boolean(),
+  trayHintShown: z.boolean(),
 }) satisfies z.ZodType<Preferences>;
 
 /** Patch shape for partial updates — only provided keys are applied. */
@@ -344,4 +352,16 @@ export const DEFAULT_PREFERENCES: Preferences = {
   glassChrome: true,
   // No saved placement yet — the first launch uses the default size, OS-centered on the primary screen.
   windowBounds: null,
+  // Close (X) → tray so the browser keeps running (and the agent keeps driving tabs) in the background.
+  closeToTray: true,
+  // Battery-friendly power defaults: pause background work on sleep, but don't force-keep-awake in tray.
+  keepAwakeInTray: false,
+  pauseTasksOnSleep: true,
+  // Normal foreground window by default; opt in to background/kiosk.
+  startupMode: 'window',
+  kioskUrl: '',
+  // Do not auto-start at system login by default.
+  launchAtLogin: false,
+  // The one-time tray hint hasn't been shown yet.
+  trayHintShown: false,
 };

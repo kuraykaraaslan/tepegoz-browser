@@ -42,6 +42,36 @@ describe('SessionStore', () => {
     expect(SessionStore.load(db)).toEqual(snap);
   });
 
+  it('round-trips a hidden tab and omits the field for visible tabs', () => {
+    const snap = v3([
+      win({
+        tabs: [
+          { url: 'https://a.com/', pinned: false, groupId: null },
+          { url: 'https://b.com/', pinned: false, groupId: null, hidden: true },
+        ],
+        activeIndex: 0,
+      }),
+    ]);
+    SessionStore.save(db, snap);
+    const loaded = SessionStore.load(db);
+    expect(loaded).toEqual(snap); // hidden:true survives; the visible tab carries no `hidden` field
+    expect('hidden' in (loaded?.windows[0]?.tabs[0] ?? {})).toBe(false);
+  });
+
+  it('treats an explicit hidden:false (or absent) as visible — no field added', () => {
+    MetaStore.set(
+      db,
+      'session',
+      JSON.stringify({
+        version: 3,
+        windows: [
+          { tabs: [{ url: 'https://a.com/', pinned: false, groupId: null, hidden: false }], groups: [], activeIndex: 0 },
+        ],
+      }),
+    );
+    expect(SessionStore.load(db)?.windows[0]?.tabs[0]?.hidden).toBeUndefined();
+  });
+
   it('defaults a persisted group\'s settings to {} when absent or malformed', () => {
     MetaStore.set(
       db,

@@ -25,6 +25,9 @@ export const TabMoveSchema = z.object({
 /** `tabs:pin` — pin/unpin a tab. */
 export const TabPinSchema = z.object({ id: TabIdSchema, pinned: z.boolean() });
 
+/** `tabs:set-hidden` — hide/unhide a tab (hidden tabs leave the strip but keep rendering). */
+export const TabHiddenSchema = z.object({ id: TabIdSchema, hidden: z.boolean() });
+
 /** `tabs:group-create` — group these tabs (empty/omitted → the active tab). */
 export const TabGroupCreateSchema = z.object({
   memberIds: z.array(TabIdSchema).max(500).optional(),

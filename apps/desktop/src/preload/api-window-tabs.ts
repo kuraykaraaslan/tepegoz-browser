@@ -38,6 +38,8 @@ export const windowTabsApi: Pick<
   | 'reopenClosedTab'
   | 'moveTab'
   | 'setTabPinned'
+  | 'setTabHidden'
+  | 'showHiddenTabsMenu'
   | 'createTabGroup'
   | 'moveTabGroup'
   | 'updateTabGroup'
@@ -127,6 +129,12 @@ export const windowTabsApi: Pick<
   },
   setTabPinned: (id: string, pinned: boolean) => {
     ipcRenderer.send(IpcChannels.tabsPin, { id, pinned });
+  },
+  setTabHidden: (id: string, hidden: boolean) => {
+    ipcRenderer.send(IpcChannels.tabsSetHidden, { id, hidden });
+  },
+  showHiddenTabsMenu: () => {
+    ipcRenderer.send(IpcChannels.tabsHiddenMenu);
   },
   createTabGroup: (memberIds?: string[]) => {
     ipcRenderer.send(IpcChannels.tabsGroupCreate, { memberIds });

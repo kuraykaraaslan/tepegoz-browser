@@ -92,6 +92,30 @@ export const en = {
   notificationsDesc:
     'Show the notification center, toasts, and native OS notifications for agent handoffs, sites, and system events. When off, only the center keeps a history.',
 
+  // --- System tray & power ---
+  tray: {
+    title: 'System tray & power',
+    closeToTray: 'Close to tray',
+    closeToTrayDesc:
+      'Closing the window keeps Tepegöz running in the system tray, so background tabs and the agent keep working. Quit from the tray icon menu.',
+    keepAwake: 'Keep active in the tray',
+    keepAwakeDesc:
+      'Prevent the system from suspending Tepegöz while it runs in the tray. More reliable for background work, at a higher battery cost.',
+    pauseOnSleep: 'Pause on sleep',
+    pauseOnSleepDesc:
+      'Pause background agent work when the system sleeps or switches to battery / power-save, and resume it when the system wakes.',
+    startupMode: 'Startup mode',
+    startupModeDesc: 'How Tepegöz opens on every launch — and when auto-started at login. All modes keep tabs rendering.',
+    modeWindow: 'Window',
+    modeBackground: 'Background (system tray)',
+    modeKiosk: 'Kiosk (fullscreen, no chrome)',
+    kioskUrl: 'Kiosk URL',
+    kioskUrlPlaceholder: 'https://example.com',
+    launchAtLogin: 'Launch at system startup',
+    launchAtLoginDesc:
+      'Start Tepegöz automatically when you sign in to your computer (Windows / macOS / Linux). The auto-launch starts in the background so the agent is ready from boot.',
+  },
+
   // --- File operations ---
   fileOps: {
     title: 'File operations',

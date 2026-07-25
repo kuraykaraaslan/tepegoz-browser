@@ -34,6 +34,7 @@ import translateHost from '../extensions/translate-host.electron';
 import { builtinManifests } from '../../shared/extensions';
 import { handle } from './ipc-helpers';
 import { applyChromeGlass, isMicaSupported } from '../lib/glass';
+import { setLaunchAtLogin } from '../launch-at-login';
 
 /**
  * App info/preferences + public settings + onboarding + MCP/AI-adaptors/extensions + credentials
@@ -99,6 +100,11 @@ export function registerAppIpc(): void {
     }
     if (validated.translate !== undefined) {
       translateHost.init();
+    }
+    // Launch-at-login toggled — register/unregister the OS login item (Win Run key / mac login item /
+    // Linux XDG autostart), always with the background launcher so boot starts hidden + rendering.
+    if (validated.launchAtLogin !== undefined) {
+      setLaunchAtLogin(next.launchAtLogin);
     }
     // Glass toggled — apply the Mica backdrop live to every top-level chrome window (popups are children
     // and stay opaque). setBackgroundMaterial/setBackgroundColor take effect without recreating windows.

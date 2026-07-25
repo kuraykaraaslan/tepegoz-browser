@@ -11,6 +11,7 @@ import { MainMenuButton } from './components/MainMenuButton';
 import { TransferActivityButton } from './components/TransferActivityButton';
 import { UserMenuButton } from './components/UserMenuButton';
 import { NotificationBellButton } from './components/NotificationBellButton';
+import { HiddenTabsButton } from './components/HiddenTabsButton';
 import type { ExtensionDef } from './extensions/registry';
 import type { BookmarksBarResult } from './app-bookmarks';
 import type { ExtensionSurfacesResult } from './app-extension-surfaces';
@@ -56,12 +57,22 @@ export function AppChrome({
   const browserT = pick(browserDict, locale);
   const userMenuT = pick(userMenuDict, locale);
 
+  // Hidden tabs are removed from the strip but kept alive/rendering (see hideTab). Filter them out HERE,
+  // at the chrome host — the model keeps them in `tabs.tabs` so the agent still sees them, and the caption
+  // HiddenTabsButton lists them. A group whose every member is hidden also drops its header.
+  const visibleTabs = tabs.tabs.filter((t) => t.hidden !== true);
+  const hiddenCount = tabs.tabs.length - visibleTabs.length;
+  const visibleGroupIds = new Set(
+    visibleTabs.map((t) => t.groupId).filter((g): g is string => g !== null),
+  );
+  const visibleGroups = tabs.groups.filter((g) => visibleGroupIds.has(g.id));
+
   return (
     <>
       <BrowserChrome
         t={{ common: coreT.common, window: coreT.window, browser: browserT }}
-        tabs={tabs.tabs}
-        tabGroups={tabs.groups}
+        tabs={visibleTabs}
+        tabGroups={visibleGroups}
         renamingGroupId={renamingGroupId}
         activeTabId={tabs.activeId}
         onSelectTab={(id) => {
@@ -76,8 +87,26 @@ export function AppChrome({
           extSurfaces.closeSurface();
           window.tepegoz.createTab();
         }}
-        onMoveTab={(id, toIndex) => window.tepegoz.moveTab(id, toIndex)}
-        onMoveTabGroup={(groupId, toIndex) => window.tepegoz.moveTabGroup(groupId, toIndex)}
+        onMoveTab={(id, toIndex) => {
+          // The strip's drop index is over the VISIBLE tabs; translate it to the full store order (which
+          // still holds the hidden tabs) so interspersed hidden tabs don't skew placement. Identity when
+          // nothing is hidden, so today's drag behavior is unchanged.
+          const fullWithoutId = tabs.tabs.filter((t) => t.id !== id);
+          const anchor = fullWithoutId.filter((t) => t.hidden !== true)[toIndex];
+          const storeIndex = anchor
+            ? fullWithoutId.findIndex((t) => t.id === anchor.id)
+            : fullWithoutId.length;
+          window.tepegoz.moveTab(id, storeIndex);
+        }}
+        onMoveTabGroup={(groupId, toIndex) => {
+          // Same visible→store index translation, but over the group's NON-member tabs (moveGroup's basis).
+          const nonMembers = tabs.tabs.filter((t) => t.groupId !== groupId);
+          const anchor = nonMembers.filter((t) => t.hidden !== true)[toIndex];
+          const storeIndex = anchor
+            ? nonMembers.findIndex((t) => t.id === anchor.id)
+            : nonMembers.length;
+          window.tepegoz.moveTabGroup(groupId, storeIndex);
+        }}
         onAssignTabToGroup={(tabId, groupId) => window.tepegoz.assignTabToGroup(tabId, groupId)}
         onToggleGroupCollapsed={(groupId, collapsed) =>
           window.tepegoz.updateTabGroup(groupId, { collapsed })
@@ -103,7 +132,12 @@ export function AppChrome({
         onForward={() => window.tepegoz.tabGoForward()}
         onReload={() => window.tepegoz.tabReload()}
         onHome={() => window.tepegoz.tabHome()}
-        captionLeading={<NotificationBellButton />}
+        captionLeading={
+          <>
+            <HiddenTabsButton count={hiddenCount} label={browserT.hiddenTabs} />
+            <NotificationBellButton />
+          </>
+        }
         menu={<MainMenuButton label={browserT.menu} />}
         onNavigate={(input) => window.tepegoz.navigateTab(input)}
         onSuggest={omniboxHistory.onOmniboxSuggest}

@@ -267,6 +267,17 @@ export class TabStore {
   }
 
   /**
+   * Mark a tab hidden (removed from the strip but kept alive & rendering) or visible again. Orthogonal
+   * to pin/group ordering — a hidden tab may still be pinned or grouped — so this deliberately does NOT
+   * `normalize()`: strip order and every pin/group invariant stay exactly as they were.
+   */
+  setHidden(id: string, hidden: boolean): void {
+    const rec = this.tabs.get(id);
+    if (rec === undefined) return;
+    rec.hidden = hidden;
+  }
+
+  /**
    * Re-establish the ordering & grouping invariants (ADR-0020). Idempotent; a no-op when there are no
    * pins or groups (so plain reorders keep their exact result).
    */
@@ -347,6 +358,9 @@ export class TabStore {
       if (t.audible !== undefined) info.audible = t.audible;
       if (t.muted !== undefined) info.muted = t.muted;
       if (t.discarded !== undefined) info.discarded = t.discarded;
+      // Keep hidden tabs IN the state (do not filter): the agent's listTabs/webContentsForTab must still
+      // see them; the renderer filters them out of the visible strip.
+      if (t.hidden !== undefined) info.hidden = t.hidden;
       return info;
     });
     const groups: TabGroupInfo[] = this.groupsInOrder().map((g) => ({

@@ -79,6 +79,13 @@ const PREFS: Preferences = {
   fileAccessSeeded: false,
   glassChrome: true,
   windowBounds: null,
+  closeToTray: true,
+  keepAwakeInTray: false,
+  pauseTasksOnSleep: true,
+  startupMode: 'window',
+  kioskUrl: '',
+  launchAtLogin: false,
+  trayHintShown: false,
 };
 
 describe('developer settings model', () => {
