@@ -8,6 +8,7 @@ import {
   faRobot,
   faShieldHalved,
   faUserSecret,
+  faVideo,
   faWandMagicSparkles,
   type IconDefinition,
 } from '@fortawesome/free-solid-svg-icons';
@@ -25,6 +26,7 @@ const ICONS: Record<string, IconDefinition> = {
   'list-check': faListCheck,
   language: faLanguage,
   'shield-halved': faShieldHalved,
+  video: faVideo,
   'puzzle-piece': faPuzzlePiece,
 };
 

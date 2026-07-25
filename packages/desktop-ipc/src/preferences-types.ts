@@ -8,6 +8,7 @@ import type { AdblockSettings } from '@tepegoz/ext-adblock/types';
 import type { PopupBlockerSettings } from '@tepegoz/ext-popup-blocker/types';
 import type { TranslateSettings } from '@tepegoz/ext-translate/types';
 import type { TypoSettings } from '@tepegoz/ext-typo/types';
+import type { VideoPlayerSettings } from '@tepegoz/ext-video-player/types';
 import type { SearchEngine } from '@tepegoz/shared-types/search-engines';
 import type { FileAccessGrant } from '@tepegoz/shared-types/file-access';
 import type { AIProvider as ProviderId } from '@tepegoz/shared-types/providers';
@@ -183,6 +184,8 @@ export interface Preferences {
   typo: TypoSettings;
   /** Translate extension settings. Translation memory lives outside preferences. */
   translate: TranslateSettings;
+  /** Unified Player (ext-video-player) settings. Per-tab skinned-video counts stay session-only. */
+  videoPlayer: VideoPlayerSettings;
   /** One-time sentinel: true after the curated default trusted origins have been seeded into
    *  `popupBlocker.trustedOrigins`, so an intentionally removed default is never re-added. Not
    *  user-facing. */

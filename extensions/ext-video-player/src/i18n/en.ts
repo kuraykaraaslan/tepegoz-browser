@@ -1,0 +1,35 @@
+export const en = {
+  title: 'Unified Player',
+  description:
+    'Replaces the native controls of videos on every site with one consistent player. If a site breaks, pause the player for that site.',
+  enabled: 'Enabled',
+  enabledHint: 'Replace video controls with the unified player on every site',
+  currentSite: 'Current site',
+  noSite: 'No active web page',
+  pauseSite: 'Pause on this site',
+  resumeSite: 'Resume on this site',
+  videosOnPage: 'Videos on this page',
+  siteScale: 'Scale on this site',
+  defaultSpeed: 'Default speed',
+  subtitleSize: 'Subtitle size',
+  sizeSmall: 'Small',
+  sizeMedium: 'Medium',
+  sizeLarge: 'Large',
+  sizeXLarge: 'Extra large',
+  theme: 'Theme',
+  themeAuto: 'Auto',
+  themeDark: 'Dark',
+  themeLight: 'Light',
+  autoHide: 'Auto-hide controls',
+  autoHideHint: 'Fade the controls out while a video is playing',
+  keyboard: 'Keyboard shortcuts',
+  keyboardHint: 'Space, arrows, m and f while the pointer is over a player',
+  disabledSites: 'Paused sites',
+  disabledSitesEmpty: 'No paused sites.',
+  remove: 'Remove',
+  reload: 'Reload page',
+  bestEffort:
+    'First version: generic HTML5 videos and YouTube. Other custom players and DRM-protected videos may not be skinned yet.',
+};
+
+export type VideoPlayerStrings = typeof en;

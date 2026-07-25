@@ -211,6 +211,17 @@ export const PreferencesSchema = z.object({
       )
       .max(1000),
   }),
+  // Unified Player (ext-video-player) settings. Per-tab skinned-video counts stay session-only.
+  videoPlayer: z.object({
+    enabled: z.boolean(),
+    defaultSpeed: z.number().min(0.25).max(4),
+    subtitleFontSize: z.enum(['sm', 'md', 'lg', 'xl']),
+    theme: z.enum(['light', 'dark', 'auto']),
+    autoHideControls: z.boolean(),
+    enableKeyboard: z.boolean(),
+    disabledOrigins: z.array(z.string().max(2048)).max(500),
+    siteScales: z.record(z.string().max(2048), z.number().min(0.5).max(3)),
+  }),
   // One-time sentinel: true once the curated default trusted origins have been seeded (see the host's
   // PopupBlockerManager.init), so a user who removes a default never gets it back on next launch.
   popupBlockerSeeded: z.boolean(),
@@ -341,6 +352,16 @@ export const DEFAULT_PREFERENCES: Preferences = {
     cloudFallbackMode: 'ask',
     disabledOrigins: [],
     glossaryTerms: [],
+  },
+  videoPlayer: {
+    enabled: true,
+    defaultSpeed: 1,
+    subtitleFontSize: 'md',
+    theme: 'auto',
+    autoHideControls: true,
+    enableKeyboard: true,
+    disabledOrigins: [],
+    siteScales: { 'https://www.youtube.com': 1.4 },
   },
   // Seeded once by the main-process host (union of the curated defaults); starts empty + unseeded here.
   popupBlockerSeeded: false,

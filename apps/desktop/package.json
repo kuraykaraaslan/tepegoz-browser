@@ -62,6 +62,7 @@
     "@tepegoz/ext-translate": "workspace:*",
     "@tepegoz/ext-typo": "workspace:*",
     "@tepegoz/ext-user-agent": "workspace:*",
+    "@tepegoz/ext-video-player": "workspace:*",
     "@tepegoz/extension-catalog": "workspace:*",
     "@tepegoz/file-operations": "workspace:*",
     "@tepegoz/extension-host": "workspace:*",

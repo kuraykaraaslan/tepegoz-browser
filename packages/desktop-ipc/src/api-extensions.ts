@@ -21,6 +21,9 @@ import type {
   TranslateState,
   TranslateTextInput,
   TranslateTextResult,
+  VideoPlayerPageState,
+  VideoPlayerSettings,
+  VideoPlayerState,
 } from './contract';
 import type { AdaptorConnection } from './contract';
 import type { ExtensionId, ExtensionManifestWire, ExtensionContextMenuChoice } from './contract';
@@ -89,6 +92,13 @@ export interface ExtensionsApi {
   onTranslatePageState(callback: (state: TranslatePageState | null) => void): () => void;
   onTranslateCloudFallbackRequest(callback: (request: TranslateCloudFallbackRequest) => void): () => void;
   respondTranslateCloudFallback(response: TranslateCloudFallbackResponse): void;
+  // Unified Player (ext-video-player): settings, combined settings+page snapshot, per-site pause, and a
+  // live push of how many videos were skinned on the active tab.
+  getVideoPlayerSettings(): Promise<VideoPlayerSettings>;
+  setVideoPlayerSettings(patch: Partial<VideoPlayerSettings>): Promise<VideoPlayerSettings>;
+  getVideoPlayerState(): Promise<VideoPlayerState>;
+  setVideoPlayerSiteEnabled(origin: string, enabled: boolean): Promise<VideoPlayerSettings>;
+  onVideoPlayerPageState(callback: (state: VideoPlayerPageState | null) => void): () => void;
   /** Read-only status of every configured MCP server (Settings → Connections). Never returns secrets. */
   getMcpStatus(): Promise<McpServerStatusInfo[]>;
   /** Read-only adaptor inventory shown next to MCP tools in Settings. */

@@ -27,6 +27,9 @@ import {
   type TypoDictionaryInfo,
   type TypoSettings,
   type TypoState,
+  type VideoPlayerPageState,
+  type VideoPlayerSettings,
+  type VideoPlayerState,
 } from '@tepegoz/desktop-ipc';
 import { invoke } from './ipc-invoke';
 
@@ -82,6 +85,11 @@ export const settingsMiscApi: Pick<
   | 'onTranslatePageState'
   | 'onTranslateCloudFallbackRequest'
   | 'respondTranslateCloudFallback'
+  | 'getVideoPlayerSettings'
+  | 'setVideoPlayerSettings'
+  | 'getVideoPlayerState'
+  | 'setVideoPlayerSiteEnabled'
+  | 'onVideoPlayerPageState'
   | 'pickFileAccessFolder'
   | 'pickNewTabBackgroundImage'
   | 'getNewTabBackgroundImage'
@@ -192,6 +200,22 @@ export const settingsMiscApi: Pick<
   },
   respondTranslateCloudFallback: (response: TranslateCloudFallbackResponse) => {
     ipcRenderer.send(IpcChannels.translateCloudFallbackRespond, response);
+  },
+  // Unified Player (ext-video-player): settings + combined snapshot + per-site pause + live page-state push.
+  getVideoPlayerSettings: () => invoke<VideoPlayerSettings>(IpcChannels.videoPlayerGet),
+  setVideoPlayerSettings: (patch: Partial<VideoPlayerSettings>) =>
+    invoke<VideoPlayerSettings>(IpcChannels.videoPlayerSet, patch),
+  getVideoPlayerState: () => invoke<VideoPlayerState>(IpcChannels.videoPlayerState),
+  setVideoPlayerSiteEnabled: (origin: string, enabled: boolean) =>
+    invoke<VideoPlayerSettings>(IpcChannels.videoPlayerSiteSet, { origin, enabled }),
+  onVideoPlayerPageState: (callback: (state: VideoPlayerPageState | null) => void) => {
+    const listener = (_event: unknown, state: VideoPlayerPageState | null): void => {
+      callback(state);
+    };
+    ipcRenderer.on(IpcChannels.videoPlayerPageState, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.videoPlayerPageState, listener);
+    };
   },
   // File operations (Settings → File operations). The grant list rides on preferences; only the native
   // folder picker needs a bridge method (AI-driven consent reuses the agent HITL modal).

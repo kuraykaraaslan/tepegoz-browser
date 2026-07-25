@@ -22,6 +22,7 @@
     "@tepegoz/ext-popup-blocker": "workspace:*",
     "@tepegoz/ext-translate": "workspace:*",
     "@tepegoz/ext-typo": "workspace:*",
+    "@tepegoz/ext-video-player": "workspace:*",
     "@tepegoz/extension-sdk": "workspace:*",
     "@tepegoz/persistence": "workspace:*",
     "@tepegoz/shared-types": "workspace:*",

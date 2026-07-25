@@ -141,4 +141,20 @@ export const SURFACE_LOADERS: Record<
           },
       ),
   },
+  'com.tepegoz.video-player': {
+    popup: () =>
+      import('@tepegoz/ext-video-player/panel').then(
+        (m) =>
+          function VideoPlayerPopupSurface({ onClose }: ExtensionSurfaceProps) {
+            return <m.VideoPlayerPopup api={window.tepegoz} onClose={onClose} />;
+          },
+      ),
+    page: () =>
+      import('@tepegoz/ext-video-player/panel').then(
+        (m) =>
+          function VideoPlayerPageSurface({ onClose }: ExtensionSurfaceProps) {
+            return <m.VideoPlayerPage api={window.tepegoz} onClose={onClose} />;
+          },
+      ),
+  },
 };

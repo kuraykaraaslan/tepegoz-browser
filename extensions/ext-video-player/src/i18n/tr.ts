@@ -1,0 +1,35 @@
+import type { en } from './en';
+
+export const tr: typeof en = {
+  title: 'Birleşik Oynatıcı',
+  description:
+    'Her sitedeki videoların yerel kontrollerini tek tip bir oynatıcıyla değiştirir. Bir site bozulursa, o site için oynatıcıyı duraklatın.',
+  enabled: 'Etkin',
+  enabledHint: 'Her sitede video kontrollerini birleşik oynatıcıyla değiştir',
+  currentSite: 'Geçerli site',
+  noSite: 'Etkin web sayfası yok',
+  pauseSite: 'Bu sitede duraklat',
+  resumeSite: 'Bu sitede sürdür',
+  videosOnPage: 'Bu sayfadaki videolar',
+  siteScale: 'Bu sitede büyütme',
+  defaultSpeed: 'Varsayılan hız',
+  subtitleSize: 'Altyazı boyutu',
+  sizeSmall: 'Küçük',
+  sizeMedium: 'Orta',
+  sizeLarge: 'Büyük',
+  sizeXLarge: 'Çok büyük',
+  theme: 'Tema',
+  themeAuto: 'Otomatik',
+  themeDark: 'Koyu',
+  themeLight: 'Açık',
+  autoHide: 'Kontrolleri otomatik gizle',
+  autoHideHint: 'Video oynatılırken kontrolleri soldur',
+  keyboard: 'Klavye kısayolları',
+  keyboardHint: 'İşaretçi oynatıcı üzerindeyken Boşluk, oklar, m ve f',
+  disabledSites: 'Duraklatılan siteler',
+  disabledSitesEmpty: 'Duraklatılan site yok.',
+  remove: 'Kaldır',
+  reload: 'Sayfayı yenile',
+  bestEffort:
+    'İlk sürüm: genel HTML5 videoları ve YouTube. Diğer özel oynatıcılar ve DRM korumalı videolar henüz değiştirilmeyebilir.',
+};

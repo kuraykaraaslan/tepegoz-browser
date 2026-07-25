@@ -263,7 +263,9 @@ async function ensureBinding(wc: WebContents): Promise<void> {
   wc.once('destroyed', () => {
     const installed = listeners.get(wc);
     if (installed !== undefined) {
-      wc.debugger.removeListener('message', installed);
+      // The wc is already gone here — its native debugger/message listener is torn down with it.
+      // Touching wc.debugger on a destroyed WebContents throws "Object has been destroyed".
+      if (!wc.isDestroyed()) wc.debugger.removeListener('message', installed);
       listeners.delete(wc);
     }
   });

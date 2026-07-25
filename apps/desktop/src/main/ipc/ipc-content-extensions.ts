@@ -13,6 +13,8 @@ import {
   type TypoDictionaryInfo,
   type TypoSettings,
   type TypoState,
+  type VideoPlayerSettings,
+  type VideoPlayerState,
 } from '@tepegoz/desktop-ipc';
 import {
   AdblockPatchSchema,
@@ -31,6 +33,8 @@ import {
   TranslateSiteEnabledSchema,
   TranslateTextInputSchema,
   UserAgentSelectionSchema,
+  VideoPlayerPatchSchema,
+  VideoPlayerSiteEnabledSchema,
 } from '@tepegoz/desktop-ipc/schemas';
 import userAgentHost from '../extensions/user-agent-host.electron';
 import popupBlockerHost from '../extensions/popup-blocker-host.electron';
@@ -40,6 +44,10 @@ import typoHost from '../extensions/typo-host.electron';
 import TypoDictionaryManager from '../extensions/typo-dictionary-manager.electron';
 import translateHost, { respondTranslateCloudFallback } from '../extensions/translate-host.electron';
 import TranslatePageInjector from '../extensions/translate-page-injector.electron';
+import videoPlayerHost from '../extensions/video-player-host.electron';
+import VideoPlayerPageInjector, {
+  getVideoPlayerPageState,
+} from '../extensions/video-player-page-injector.electron';
 import { handle, handleAsync, onAction } from './ipc-helpers';
 
 /**
@@ -152,5 +160,25 @@ export function registerExtensionsIpc(): void {
   });
   onAction(IpcChannels.translateCloudFallbackRespond, TranslateCloudFallbackResponseSchema, (response) => {
     respondTranslateCloudFallback(response);
+  });
+
+  // Unified Player (ext-video-player): settings, combined snapshot, and per-site pause. After any change
+  // the active tab is re-skinned/refreshed live (no reload needed).
+  handle(IpcChannels.videoPlayerGet, (): VideoPlayerSettings => videoPlayerHost.get());
+  handleAsync(IpcChannels.videoPlayerSet, async (_event, payload): Promise<VideoPlayerSettings> => {
+    const patch = VideoPlayerPatchSchema.parse(payload) as Partial<VideoPlayerSettings>;
+    const next = videoPlayerHost.update(patch);
+    await VideoPlayerPageInjector.refreshActive();
+    return next;
+  });
+  handle(IpcChannels.videoPlayerState, (): VideoPlayerState => ({
+    settings: videoPlayerHost.get(),
+    page: getVideoPlayerPageState(),
+  }));
+  handleAsync(IpcChannels.videoPlayerSiteSet, async (_event, payload): Promise<VideoPlayerSettings> => {
+    const { origin, enabled } = VideoPlayerSiteEnabledSchema.parse(payload);
+    const next = videoPlayerHost.setSiteEnabled(origin, enabled);
+    await VideoPlayerPageInjector.refreshActive();
+    return next;
   });
 }

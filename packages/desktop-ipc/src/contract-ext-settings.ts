@@ -86,6 +86,22 @@ export type {
   TranslateTextResult,
 };
 
+// Unified Player (ext-video-player) settings/state shape is owned by the extension package. Erased.
+import type {
+  VideoPlayerPageState,
+  VideoPlayerSettings,
+  VideoPlayerState,
+  VideoPlayerSubtitleSize,
+  VideoPlayerTheme,
+} from '@tepegoz/ext-video-player/types';
+export type {
+  VideoPlayerPageState,
+  VideoPlayerSettings,
+  VideoPlayerState,
+  VideoPlayerSubtitleSize,
+  VideoPlayerTheme,
+};
+
 // Agent Console conversation history is extension-owned and local-profile only. The ext-agent package
 // owns zod-free public wire types; main-process validators live in its history-schemas subpath.
 import type {

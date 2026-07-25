@@ -133,5 +133,25 @@ export const TranslateCloudFallbackResponseSchema = z.object({
   remember: z.boolean(),
 });
 
+/** `video-player:set` payload — a partial settings patch (only provided keys change). */
+export const VideoPlayerPatchSchema = z
+  .object({
+    enabled: z.boolean(),
+    defaultSpeed: z.number().min(0.25).max(4),
+    subtitleFontSize: z.enum(['sm', 'md', 'lg', 'xl']),
+    theme: z.enum(['light', 'dark', 'auto']),
+    autoHideControls: z.boolean(),
+    enableKeyboard: z.boolean(),
+    disabledOrigins: z.array(z.string().max(2048)).max(500),
+    siteScales: z.record(z.string().max(2048), z.number().min(0.5).max(3)),
+  })
+  .partial();
+
+/** `video-player:site-set` payload — enable or pause the unified player for one http(s) origin. */
+export const VideoPlayerSiteEnabledSchema = z.object({
+  origin: z.string().min(1).max(2048),
+  enabled: z.boolean(),
+});
+
 /** `extension:context-menu` payload — the reverse-DNS id of the toolbar icon that was right-clicked. */
 export const ExtensionIdSchema = z.string().regex(EXTENSION_ID_RE).max(128);

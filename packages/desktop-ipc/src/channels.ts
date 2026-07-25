@@ -222,6 +222,13 @@ export const IpcChannels = {
   translateGlossaryRemove: 'translate-glossary:remove',
   translateCloudFallbackRequest: 'translate-cloud:request',
   translateCloudFallbackRespond: 'translate-cloud:respond',
+  // Unified Player (ext-video-player). `video-player:page-state` is a main→renderer push carrying the
+  // number of `<video>` elements skinned on the active tab.
+  videoPlayerGet: 'video-player:get',
+  videoPlayerSet: 'video-player:set',
+  videoPlayerState: 'video-player:state',
+  videoPlayerSiteSet: 'video-player:site-set',
+  videoPlayerPageState: 'video-player:page-state',
   mcpGetStatus: 'mcp:get-status',
   adaptorsList: 'adaptors:list',
   /** Renderer→main: the live AIAdaptor inventory (system + extension + MCP groups, each with its
