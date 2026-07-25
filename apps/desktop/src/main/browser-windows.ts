@@ -46,8 +46,11 @@ export function openWindow(opts?: {
   tabs?: TabBootstrap;
   position?: { x: number; y: number };
   size?: { width: number; height: number };
+  /** Force a normal foreground window, ignoring the background/kiosk startup mode (a tray click that
+   *  opens a fresh window after the last tab was closed). */
+  foreground?: boolean;
 }): BrowserWindow {
-  const win = createWindow();
+  const win = createWindow(opts?.foreground === true ? { forceForeground: true } : undefined);
   // Position/size BEFORE the window reveals (createWindow shows on ready-to-show) so a torn-off / restored
   // window appears where it belongs with no visible jump.
   if (opts?.size !== undefined) win.setSize(opts.size.width, opts.size.height);
@@ -81,7 +84,7 @@ export function openWindow(opts?: {
     TabManager.unregister(win);
   });
   const bootstrap: TabBootstrap = opts?.tabs ?? 'restore';
-  const startup = effectiveStartupMode();
+  const startup = opts?.foreground === true ? 'window' : effectiveStartupMode();
   // Kiosk is a locked deployment surface — it skips onboarding and loads the chromeless renderer + a
   // single tab pinned to the kiosk URL. Otherwise onboarding gates the first real browser surface.
   if (startup === 'kiosk' && bootstrap !== 'none') {

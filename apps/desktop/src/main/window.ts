@@ -154,7 +154,7 @@ export function toggleFullScreen(win: BrowserWindow): void {
  * renderer (browser-style custom title bar). The draggable region uses CSS `-webkit-app-region: drag`,
  * which also restores OS caption behaviors (snap, double-click-to-maximize, system menu).
  */
-export function createWindow(): BrowserWindow {
+export function createWindow(opts?: { forceForeground?: boolean }): BrowserWindow {
   // Windows 11 "glass": create the window with the Mica backdrop when supported + enabled. The renderer's
   // `.glass` styles make the shell/bars translucent so the material shows through (see lib/glass.ts).
   // `show:false` + reveal-on-paint (below) means the transparent fill never flashes the desktop.
@@ -215,8 +215,9 @@ export function createWindow(): BrowserWindow {
     // Present per the startup mode (applies to EVERY launch — manual or at login). `background` parks the
     // window off-screen (shown, so its compositor keeps every tab rendering) — the RELIABLE dev trigger is
     // `TEPEGOZ_START_BACKGROUND=1` (a CLI `--background` is eaten by npm/turbo). `kiosk` goes fullscreen +
-    // locked; its chromeless renderer + kiosk-URL tab are set up by browser-windows.
-    const mode = effectiveStartupMode();
+    // locked; its chromeless renderer + kiosk-URL tab are set up by browser-windows. `forceForeground`
+    // (a tray click that opens a fresh window) always shows normally, ignoring background/kiosk.
+    const mode = opts?.forceForeground === true ? 'window' : effectiveStartupMode();
     if (mode === 'background') {
       startParkedInTray(win);
       return;

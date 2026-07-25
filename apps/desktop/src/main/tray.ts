@@ -22,10 +22,25 @@ export function revealAllWindows(): void {
   reconcileTrayPowerBlocker(); // no window is hidden anymore → stop keep-awake
 }
 
+/**
+ * Tray-triggered "open the app": reveal existing windows, or open a FRESH one (with a new tab) when none
+ * exist — e.g. after the last tab was closed while running in the background (close-to-tray). The dynamic
+ * import breaks the tray ↔ browser-windows static cycle.
+ */
+function showOrOpenApp(): void {
+  if (TabManager.all().length > 0) {
+    revealAllWindows();
+    return;
+  }
+  void import('./browser-windows').then((m) => {
+    m.openWindow({ foreground: true }); // a tray click always opens a visible window, even in background mode
+  });
+}
+
 function buildTrayMenu(): Menu {
   const t = mainStrings();
   return Menu.buildFromTemplate([
-    { label: t.browser.trayShow, click: () => revealAllWindows() },
+    { label: t.browser.trayShow, click: () => showOrOpenApp() },
     { type: 'separator' },
     {
       label: t.browser.trayQuit,
@@ -43,10 +58,10 @@ export function initTray(): void {
   tray = new Tray(nativeImage.createFromPath(ICON_PATH));
   tray.setToolTip(mainStrings().browser.trayTooltip);
   tray.setContextMenu(buildTrayMenu());
-  // Windows/Linux convention: a single or double left-click on the tray icon shows the app (as a normal
-  // foreground window). Right-click opens the menu (Show / Quit).
-  tray.on('click', () => revealAllWindows());
-  tray.on('double-click', () => revealAllWindows());
+  // Windows/Linux convention: a single or double left-click on the tray icon shows the app (a fresh
+  // window with a new tab if none exist). Right-click opens the menu (Show / Quit).
+  tray.on('click', () => showOrOpenApp());
+  tray.on('double-click', () => showOrOpenApp());
 }
 
 /** Rebuild the tray menu + tooltip after a locale change (called from the prefs reconcile). */

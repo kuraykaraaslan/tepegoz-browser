@@ -2,7 +2,11 @@ import { resolve, join } from 'node:path';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import { createRequire } from 'node:module';
+import { spawn } from 'node:child_process';
 import { test, expect, _electron as electron, type ElectronApplication } from '@playwright/test';
+
+const electronPath = createRequire(import.meta.url)('electron') as string;
 
 /**
  * SPIKE (make-or-break, isolated): proves the shared "keep rendering while not visible" foundation in
@@ -312,12 +316,67 @@ test('kiosk mode: fullscreen + chromeless, locked to the kiosk URL, still render
       )
       .toBe(true);
     // Chromeless: the renderer shows NO tab strip.
-    expect(await page.locator('[role="tab"]').count()).toBe(0);
+    await expect(page.locator('[role="tab"]')).toHaveCount(0);
     // The kiosk URL's web view fills the screen and renders.
     await expect.poll(async () => (await probe(app, `:${port}`)).hit, { timeout: 15000 }).toBe('BUTTON');
   } finally {
     await app.close();
     server.close();
+    rmSync(profileDir, { recursive: true, force: true });
+  }
+});
+
+test('close-to-tray: closing the last tab keeps the app alive; reopening gives a FOREGROUND window', async () => {
+  const profileDir = join(process.cwd(), '.spike-lasttab');
+  rmSync(profileDir, { recursive: true, force: true });
+  mkdirSync(profileDir, { recursive: true });
+  // closeToTray defaults true; startupMode defaults 'window'; onboarding skipped.
+  writeFileSync(join(profileDir, 'preferences.json'), '{}');
+
+  const app: ElectronApplication = await electron.launch({
+    args: [`--user-data-dir=${profileDir}`, appDir],
+    env: guiEnv(),
+  });
+  try {
+    const page = await app.firstWindow();
+    await page.locator('[role="tab"]').first().waitFor();
+    // Close every tab — the last close tears the window down (its page context dies with it).
+    await page
+      .evaluate(async () => {
+        const api = (
+          window as unknown as {
+            tepegoz: { getTabsState(): Promise<{ tabs: { id: string }[] }>; closeTab(id: string): void };
+          }
+        ).tepegoz;
+        const st = await api.getTabsState();
+        for (const t of st.tabs) api.closeTab(t.id);
+      })
+      .catch(() => {
+        /* the last close destroys the window → evaluate may reject; expected */
+      });
+    await new Promise((r) => setTimeout(r, 1500));
+
+    // The app is STILL ALIVE (did NOT quit) with no chrome window — app.evaluate only resolves if alive.
+    const chromeCount = await app.evaluate(
+      ({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows().filter((w) => w.getParentWindow() === null).length,
+    );
+    expect(chromeCount).toBe(0);
+
+    // Reopen via a 2nd instance (single-instance lock → second-instance → openWindow foreground).
+    const p2 = spawn(electronPath, [`--user-data-dir=${profileDir}`, appDir], { env: guiEnv() });
+    await new Promise((r) => setTimeout(r, 3500));
+    p2.kill();
+
+    const after = await app.evaluate(({ BrowserWindow }) => {
+      const win = BrowserWindow.getAllWindows().find((w) => w.getParentWindow() === null);
+      return { has: win !== undefined, x: win?.getPosition()?.[0] ?? null, visible: win?.isVisible() ?? false };
+    });
+    expect(after.has).toBe(true); // a fresh window opened
+    expect(after.visible).toBe(true);
+    expect(after.x ?? -99999).toBeGreaterThanOrEqual(0); // FOREGROUND (on-screen), not parked in background
+  } finally {
+    await app.close();
     rmSync(profileDir, { recursive: true, force: true });
   }
 });

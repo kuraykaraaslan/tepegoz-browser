@@ -7,7 +7,7 @@ import { abortActiveAgentRuns, registerIpc } from './ipc';
 import { initStores } from './stores.electron';
 import { initHosts, openWindow } from './browser-windows';
 import { initTray, revealAllWindows } from './tray';
-import { markQuitting } from './quit-state';
+import { isQuitting, markQuitting } from './quit-state';
 import { emitSystemPause, emitSystemResume } from './power-lifecycle';
 import PreferenceStore from '@tepegoz/preferences';
 import { closeDatabase } from './db/database.electron';
@@ -125,7 +125,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on('second-instance', () => {
     // A second launch reveals the app — restoring every window from the tray / minimize (close-to-tray
     // means the "missing" window is hidden, not gone), or opening a fresh one if somehow none exist.
-    if (TabManager.all().length === 0) openWindow();
+    if (TabManager.all().length === 0) openWindow({ foreground: true });
     else revealAllWindows();
   });
 
@@ -249,9 +249,12 @@ if (!app.requestSingleInstanceLock()) {
     });
 
   app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
-      app.quit();
-    }
+    if (process.platform === 'darwin') return;
+    // Background mode: with close-to-tray on, keep the app ALIVE in the tray even when the last window/tab
+    // is gone — it quits only from the tray's Quit / the menu's Exit. Clicking the tray reopens a fresh
+    // window with a new tab (see showOrOpenApp). A real quit already set the quitting flag, so let it pass.
+    if (!isQuitting() && PreferenceStore.getAll().closeToTray) return;
+    app.quit();
   });
 
   // Quit orchestration, in dependency order. before-quit (windows still alive): stop the agent so no
