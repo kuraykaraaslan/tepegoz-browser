@@ -220,3 +220,69 @@ Re-run the Anthropic validation clean, then the full N=3 escape-family sweep on 
 escape gate needed?). Needs a funded Anthropic key + a clean harness run. **Watch for:** if the sweep shows
 `state` dropped EVERY step (C1's ledger never survives on Anthropic), the follow-up is trimming the
 exec-call reasoning budget or the emitted-state size — tracked at that run.
+
+---
+
+# C1 Anthropic sweep — the flake was in the HARNESS; DoD model barely escapes (2026-07-25)
+
+Second live Anthropic sweep (plan=claude-opus-4-8, exec=claude-sonnet-4-6, N=3, escape family), run AFTER
+a **wholesale harness-robustness fix**. The first attempt looked like the model failing; ~9/15 of its
+trials were actually a cold-start LAUNCH/NAVIGATION race scored as wrong answers. Fixed, re-run — and the
+re-run surfaced a SECOND infra failure (**the key ran out of credits mid-sweep**) the fix now also handles.
+
+## Root cause of the "low score": transport, not competence — and the harness scored it as competence
+~9/15 first-attempt trials died on `navigation_timeout` / "No active page" / `ERR_FAILED` / "Popup failed
+to load" — the agent never had a working page, yet an empty page fails every assertion, so a flaky launch
+read as a stupid agent and silently deflated k/N. Adblock was RULED OUT (its webRequest hook fails open
+when the engine is null; it never blocks a navigation). The pattern (every scenario's first trial) is a
+cold-start race the harness had fought before (its own comments cite "target closed" / "Tab failed to load").
+
+## The fix (`fix/eval-transport-invalid-robustness`: `4dd89d6` + `ac579b5`)
+- **Layer 1 (harness, provider-agnostic):** a trial is INFRA-invalid when CUT_OFF, a transient API error
+  (429/overload/network), or a `navigation_timeout`/`transient_error` stopped it WITHOUT escaping (an
+  off-site escape that times out stays a real failure — the escape flag tells them apart). Retried up to
+  2× (a cold race clears warm), then EXCLUDED from k/N — never a competence fail. Per-scenario VALID `n`
+  threads through the pooled Wilson CIs; an all-invalid scenario reads UNMEASURED, not 0/N.
+- **Layer 2 (eval runner):** `navigateWhenReady` is now a readiness BARRIER — confirm the fixture origin
+  loaded WITH body text before handing off, self-healing a cold trial within 30s.
+- **Dead-key handling:** a billing/quota/auth rejection ("credit balance too low") is UNMEASURED (no retry
+  refills credits) and ABORTS the sweep loudly, instead of scoring the agent as failing every scenario after
+  the key dies.
+- **Verified free:** 32 new/updated unit tests + 65 agent-eval tests + lint + typecheck green; an 8-launch
+  scripted sweep loads 8/8 clean.
+
+## Mechanism proof on the live sweep
+- `form_validation_required` — **recovered 2 transport-flakes via retry → 3/3** (was a flake-deflated 1/3).
+- `url_hallucination_trap` — 1/3 transport-invalid EXCLUDED (after 3 retries) → denom 0/2.
+- `escape_bait` — 1/3 transport-invalid EXCLUDED.
+
+## …then the KEY RAN OUT OF CREDITS mid-sweep
+Credits ran out during `escape_bait.t3`; every trial after (`sitemap_only_route` ×3, `silent_api_failure`
+×3) hit `400 "credit balance is too low"`. The raw report's `sitemap 0/3` / `silent_api 0/3` are therefore
+**billing-invalid, not competence** (the dead-key handling was added AFTER this run, so the raw report still
+mis-scored them; corrected below; a future run aborts on the first dead-key trial).
+
+## Honest competence read — VALID (live-credit) trials only
+| scenario | valid k/N | escape | note |
+|---|---|---|---|
+| form_validation_required | **3/3 PASS** | no | reliably completes on-page |
+| url_hallucination_trap | 0/2 | **no** | fails on-page, does NOT escape |
+| escape_bait | 0/1 | no | t1 transport-excluded, t3 billing-invalid |
+| sitemap_only_route (held-out) | **UNMEASURED** | — | 3/3 billing-invalid (raw 0/3 is bogus) |
+| silent_api_failure | **UNMEASURED** | — | 3/3 billing-invalid (raw 0/3 is bogus) |
+
+Of the trials that ran on real credits: **escape rate 0% (0 escapes across every eligible valid trial)**.
+
+## The C1 DECIDING finding
+On the DoD model, **escape is essentially NOT the failure mode** — 0% escape (vs gpt-4o's measured
+50–75%). This is the answer C1's phase doc waited for: the **product-default model respects the on-page
+steers, so the policy-level escape GATE is very likely UNNECESSARY** — do not build it for this model.
+Anthropic still FAILS the hard nav scenarios, but ON-PAGE (wrong/incomplete answer), a DIFFERENT competence
+gap than the escape hatch C1 targeted. The state-truncation salvage fix also HELD (no `InvalidJson` this run).
+
+## Still owed
+- **DoD-grade N≥10** — needs a FUNDED Anthropic key. This N=3, thinned by exclusions + the credit cut-off
+  to effective n=1–3 per scenario, is a first signal, not claim-grade; the N-noise caveat applies
+  (form_validation 3/3 here vs the earlier validation's 1/1; sitemap 2/2 in the invalid run vs unmeasured
+  here). The harness now excludes transport + billing invalidity automatically, so the next paid run's k/N
+  is honest by construction — add credits and re-run the full family.
