@@ -70,7 +70,7 @@ test('agent-eval — drive the real app and score competence', async () => {
         skipped.push(scenario.id);
         continue;
       }
-      const { result, passes, escapes, escapeEligible } = await runScenarioTrials(
+      const { result, passes, escapes, escapeEligible, validN, escapeN } = await runScenarioTrials(
         scenario,
         plan,
         work,
@@ -79,7 +79,16 @@ test('agent-eval — drive the real app and score competence', async () => {
         judgeSamples,
       );
       results.push(result);
-      familyRows.push({ id: scenario.id, heldOut: scenario.heldOut, tags: scenario.tags, passes, escapes, escapeEligible });
+      familyRows.push({
+        id: scenario.id,
+        heldOut: scenario.heldOut,
+        tags: scenario.tags,
+        passes,
+        n: validN,
+        escapes,
+        escapeN,
+        escapeEligible,
+      });
     }
   } finally {
     await server.close();
@@ -93,14 +102,14 @@ test('agent-eval — drive the real app and score competence', async () => {
   const repeat =
     REPEAT > 1
       ? summarizeRepeat(
-          familyRows.map((f) => ({ id: f.id, heldOut: f.heldOut, passes: f.passes })),
+          familyRows.map((f) => ({ id: f.id, heldOut: f.heldOut, passes: f.passes, n: f.n })),
           REPEAT,
           prior?.priorPasses,
         )
       : undefined;
   // Per-tag pooled family aggregates (pass + escape, Wilson CIs) — meaningful even at REPEAT=1 (pooled
   // across the family's scenarios), the shape M1's gate and C1's escape reading are defined on.
-  const families = summarizeFamilies(familyRows, REPEAT);
+  const families = summarizeFamilies(familyRows);
   const report = buildReport({
     model,
     threshold: 0.8,

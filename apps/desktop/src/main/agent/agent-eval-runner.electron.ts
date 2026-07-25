@@ -108,7 +108,8 @@ function providerForRun(): { id: AIProvider; instance: ModelProvider } {
  * trial's restored tab; the first trial of a batch passed and the rest died, which is exactly the
  * pattern that made repeat runs meaningless.
  */
-async function navigateWhenReady(url: string, timeoutMs = 20_000): Promise<void> {
+async function navigateWhenReady(url: string, timeoutMs = 30_000): Promise<void> {
+  const origin = new URL(url).origin;
   const deadline = Date.now() + timeoutMs;
   for (;;) {
     try {
@@ -120,10 +121,19 @@ async function navigateWhenReady(url: string, timeoutMs = 20_000): Promise<void>
       // tab-less is a separate product question this does not answer.)
       if (TabManager.activeWebContents() === null && TabManager.createTab(url) !== null) {
         await browserHost.waitForLoad();
-        return;
+      } else {
+        await browserHost.navigate(url);
       }
-      await browserHost.navigate(url);
-      return;
+      // Readiness BARRIER — not merely "the navigation call returned". A cold launch under sustained batch
+      // load races app startup (fresh profile + first paint + first navigation), so the load can resolve on
+      // an ABORTED/blank page (ERR_FAILED, a popup/tab load race, "No active page"). The agent then starts
+      // on nothing and its whole trip is scored as a phantom wrong answer — the dominant transport flake
+      // that quietly deflated every sweep. Confirm the fixture ORIGIN actually loaded WITH real body text
+      // before handing off; otherwise keep retrying within the deadline so the cold trial self-heals rather
+      // than poisoning the measurement. (The harness's transport-invalid retry is the backstop for the rest.)
+      const page = await browserHost.readPage();
+      if (page.url.startsWith(origin) && page.text.trim().length > 0) return;
+      throw new Error(`entry page not ready (url=${page.url}, textLen=${String(page.text.trim().length)})`);
     } catch (err) {
       if (Date.now() >= deadline) throw err;
       await new Promise((resolve) => setTimeout(resolve, 250));

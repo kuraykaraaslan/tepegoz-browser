@@ -75,6 +75,27 @@ const TRIAL_TIMEOUT_MS = 900_000;
  *  is evidence about the harness/budget, NOT about the agent's competence. */
 export const CUT_OFF = 'no output';
 
+/** stoppedReasons that mean a TRANSPORT/infra failure terminated the run before the agent could show
+ *  competence — a cold-start launch race, a failed fixture navigation, ERR_FAILED / "No active page" —
+ *  all funnelled into the broad `navigation_timeout` / `transient_error` bucket by the recovery
+ *  classifier. Scored naively these look identical to a wrong answer (empty page → every assertion
+ *  fails), which is exactly how a flaky machine has quietly deflated every k/N the harness ever
+ *  produced. They are RETRIED, then EXCLUDED from the denominator — never a competence fail. */
+const TRANSPORT_STOPPED_REASONS = new Set(['navigation_timeout', 'transient_error']);
+
+/** Extra relaunches for a transport-invalid trial. A cold-start race almost always clears on a warm
+ *  retry, so this recovers the trial instead of losing the whole (paid) sweep to a flake. */
+const MAX_TRANSPORT_RETRIES = 2;
+
+/** True when a trial is transport-invalid (NOT competence evidence): it produced no output (CUT_OFF), or a
+ *  transport error stopped the run. An ESCAPE that ends in a nav timeout (the agent navigated off-site to
+ *  an unreachable URL and spun out) is a real competence FAILURE, so an escaped trial is never excused as
+ *  transport — the escape flag is what tells the two apart. */
+export function isTransportInvalid(out: EvalOut, escaped: boolean): boolean {
+  if (out.error === CUT_OFF) return true;
+  return !escaped && TRANSPORT_STOPPED_REASONS.has(out.stoppedReason ?? '');
+}
+
 async function waitForFile(path: string, timeoutMs: number): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -252,49 +273,88 @@ export async function runScenarioTrials(
   logsDir: string,
   judge: ((m: JudgeMessages) => Promise<string>) | null,
   judgeSamples: JudgeSample[],
-): Promise<{ result: ScenarioResult; passes: number; escapes: number; escapeEligible: boolean }> {
+): Promise<{
+  result: ScenarioResult;
+  passes: number;
+  escapes: number;
+  escapeEligible: boolean;
+  /** VALID trials scored for this scenario (transport-invalid excluded) — the honest k/N denominator. */
+  validN: number;
+  /** Eligible VALID trials for the escape denominator (`validN` when escape-scorable, else 0). */
+  escapeN: number;
+}> {
   const scores: ScoreResult[] = [];
-  const outs: EvalOut[] = [];
   // M1: END-TO-END wall-clock per trial (launch → result, model thinking included) — the wait a user
   // actually experiences; sum-of-steps alone systematically under-reports it.
   const wallClocksMs: number[] = [];
+  // AI-7 escape is measured only over fixture "sites" (a sub-path directory); realUrl scenarios are
+  // open-web tasks where leaving the origin is legitimate, so they are not escape-scored.
+  const siteBase = plan.entryUrl.replace(/[^/]*$/, '');
+  const escapeEligible = 'fixture' in scenario.target;
+  const escapedTrial = (o: EvalOut): boolean =>
+    escapeEligible && tripEscaped(o.steps, siteBase, plan.entryUrl);
+
+  const validOuts: EvalOut[] = []; // scored trials (transport-invalid excluded) — the competence evidence
+  const allOuts: EvalOut[] = []; // every attempt incl. abandoned retries — honest token/cost accounting
+  let transportInvalid = 0; // trials abandoned as transport-invalid even AFTER retries (excluded from k/N)
+  let transportRetries = 0; // extra relaunches spent recovering cold-start flakes (cost, not competence)
+
   for (let t = 0; t < REPEAT; t++) {
-    const logName = REPEAT > 1 ? `${scenario.id}.t${String(t + 1)}.log` : `${scenario.id}.log`;
-    const startedAt = Date.now();
-    const out = await runOne(scenario, plan.entryUrl, plan.env, work, join(logsDir, logName));
-    wallClocksMs.push(Math.max(0, Date.now() - startedAt));
-    outs.push(out);
+    const suffix = REPEAT > 1 ? `.t${String(t + 1)}` : '';
+    let out: EvalOut = { error: CUT_OFF };
+    for (let attempt = 0; ; attempt++) {
+      const logName = `${scenario.id}${suffix}${attempt > 0 ? `.retry${String(attempt)}` : ''}.log`;
+      const startedAt = Date.now();
+      out = await runOne(scenario, plan.entryUrl, plan.env, work, join(logsDir, logName));
+      wallClocksMs.push(Math.max(0, Date.now() - startedAt));
+      allOuts.push(out);
+      if (!isTransportInvalid(out, escapedTrial(out)) || attempt >= MAX_TRANSPORT_RETRIES) break;
+      transportRetries++;
+    }
+    if (isTransportInvalid(out, escapedTrial(out))) {
+      transportInvalid++; // NOT scored — a launch/navigation flake is not the agent getting it wrong
+      continue;
+    }
+    validOuts.push(out);
     scores.push(await scoreTrial(scenario, out, judge, judgeSamples));
   }
+
   const passes = scores.filter((s) => s.ok).length;
-  const ok = passes * 2 >= REPEAT; // majority
-  const last = outs[outs.length - 1] ?? {};
+  const validN = scores.length; // the honest denominator — VALID trials only
+  const ok = validN > 0 && passes * 2 >= validN; // majority over valid trials (0 valid ⇒ not a pass)
+  // Prefer the last VALID out for the record; fall back to the last attempt so an all-invalid scenario
+  // still surfaces its transport stoppedReason instead of a bare default.
+  const last = validOuts[validOuts.length - 1] ?? allOuts[allOuts.length - 1] ?? {};
   const outcomes: StepOutcome[] = (last.steps ?? []).map((s) => ({
     stepId: '',
     tool: s.tool,
     ok: s.ok,
     durationMs: s.durationMs ?? 0,
   }));
-  const inputTokens = outs.reduce((n, o) => n + (o.tokenUsage?.inputTokens ?? 0), 0);
-  const outputTokens = outs.reduce((n, o) => n + (o.tokenUsage?.outputTokens ?? 0), 0);
-  // AI-7 escape rate (majority across trials), measured only over fixture "sites" (a sub-path directory);
-  // realUrl scenarios are open-web tasks where leaving the origin is legitimate, so they are not scored.
-  const siteBase = plan.entryUrl.replace(/[^/]*$/, '');
-  const escapeEligible = 'fixture' in scenario.target;
-  const escapes = escapeEligible
-    ? outs.filter((o) => tripEscaped(o.steps, siteBase, plan.entryUrl)).length
-    : 0;
-  const escaped = escapeEligible && escapes * 2 >= REPEAT;
-  // Trials the harness had to abandon are NOT competence evidence. Scored they look exactly like a wrong
-  // answer (empty page text + empty summary fail every assertion), so without calling them out a slow run
-  // reads as a stupid one and the whole pass-rate is quietly pessimistic.
-  const cutOff = outs.filter((o) => o.error === CUT_OFF).length;
-  const cutOffNote = cutOff > 0 ? ` — ${String(cutOff)} of ${String(REPEAT)} trial(s) CUT OFF before finishing (not agent error)` : '';
+  // Honest cost includes the abandoned attempts — they really did burn tokens/API spend.
+  const inputTokens = allOuts.reduce((n, o) => n + (o.tokenUsage?.inputTokens ?? 0), 0);
+  const outputTokens = allOuts.reduce((n, o) => n + (o.tokenUsage?.outputTokens ?? 0), 0);
+  const escapes = validOuts.filter((o) => escapedTrial(o)).length;
+  const escapeN = escapeEligible ? validN : 0; // escape denominator = valid eligible trials
+  const escaped = escapeEligible && validN > 0 && escapes * 2 >= validN;
+  // Transport-invalid trials are NOT competence evidence — surfaced explicitly so a flaky launch reads as
+  // "excluded", never as the agent getting it wrong (the pooled CI already drops them via a smaller n).
+  const invalidNote =
+    transportInvalid > 0
+      ? ` — ${String(transportInvalid)}/${String(REPEAT)} transport-invalid, EXCLUDED` +
+        (transportRetries > 0
+          ? ` (after ${String(transportRetries)} retr${transportRetries === 1 ? 'y' : 'ies'})`
+          : '')
+      : transportRetries > 0
+        ? ` — recovered ${String(transportRetries)} transport-flake(s) via retry`
+        : '';
   const failReason = scores.find((s) => !s.ok)?.reason;
   const reason =
-    REPEAT > 1
-      ? `${String(passes)}/${String(REPEAT)} passed${cutOffNote}${!ok && failReason !== undefined ? ` — e.g. ${failReason}` : ''}`
-      : `${scores[0]?.reason ?? CUT_OFF}${cutOffNote}`;
+    validN === 0
+      ? `UNMEASURED — all ${String(REPEAT)} trial(s) transport-invalid${invalidNote}`
+      : REPEAT > 1
+        ? `${String(passes)}/${String(validN)} passed${invalidNote}${!ok && failReason !== undefined ? ` — e.g. ${failReason}` : ''}`
+        : `${scores[0]?.reason ?? CUT_OFF}${invalidNote}`;
   const result: ScenarioResult = {
     scenario,
     score: { ok, method: scores[0]?.method ?? 'ground-truth', reason },
@@ -313,5 +373,5 @@ export async function runScenarioTrials(
       escapeEligible,
     }),
   };
-  return { result, passes, escapes, escapeEligible };
+  return { result, passes, escapes, escapeEligible, validN, escapeN };
 }

@@ -37,6 +37,11 @@ export interface ScenarioFrequency {
   id: string;
   heldOut: boolean;
   passes: number;
+  /** VALID trials this scenario contributed (transport-invalid trials are retried, then EXCLUDED — see
+   *  `runScenarioTrials`). This is the honest denominator: a launch/navigation flake scored as a wrong
+   *  answer is exactly how a flaky machine has quietly deflated every k/N the harness ever produced. May
+   *  be 0 when every trial was transport-invalid even after retries (the scenario is UNMEASURED). */
+  n: number;
 }
 
 export interface RepeatScenarioStat {
@@ -73,14 +78,19 @@ export interface RepeatSummary {
   pooled: { dev: PooledStat; heldOut: PooledStat };
 }
 
-function pool(rows: ScenarioFrequency[], repeat: number): PooledStat {
-  return poolCounts(rows.reduce((sum, r) => sum + r.passes, 0), rows.length * repeat);
+function pool(rows: ScenarioFrequency[]): PooledStat {
+  return poolCounts(
+    rows.reduce((sum, r) => sum + r.passes, 0),
+    rows.reduce((sum, r) => sum + r.n, 0),
+  );
 }
 
 /**
  * Fold the per-scenario pass frequencies of one sweep into the report's repeat block: per-scenario
  * k/N + Wilson CI + flaky tag (confirmed against a prior sweep when one is supplied), plus pooled
- * dev/held-out per-trial aggregates.
+ * dev/held-out per-trial aggregates. `repeat` is the configured trials-per-scenario (the report's
+ * headline label); the actual denominator is each scenario's VALID trial count `f.n` (≤ repeat) so a
+ * transport flake never counts as a competence fail.
  */
 export function summarizeRepeat(
   freq: ScenarioFrequency[],
@@ -90,21 +100,21 @@ export function summarizeRepeat(
   return {
     repeat,
     perScenario: freq.map((f) => {
-      const flaky = isFlaky(f.passes, repeat);
+      const flaky = isFlaky(f.passes, f.n);
       const prior = priorPasses?.get(f.id);
       return {
         id: f.id,
         heldOut: f.heldOut,
         passes: f.passes,
-        n: repeat,
-        ci: wilsonInterval(f.passes, repeat),
+        n: f.n,
+        ci: wilsonInterval(f.passes, f.n),
         flaky,
         ...(prior !== undefined ? { flakyConfirmed: flaky && isFlaky(prior.passes, prior.n) } : {}),
       };
     }),
     pooled: {
-      dev: pool(freq.filter((f) => !f.heldOut), repeat),
-      heldOut: pool(freq.filter((f) => f.heldOut), repeat),
+      dev: pool(freq.filter((f) => !f.heldOut)),
+      heldOut: pool(freq.filter((f) => f.heldOut)),
     },
   };
 }
@@ -114,10 +124,14 @@ export interface FamilyRow {
   id: string;
   heldOut: boolean;
   tags: readonly string[];
-  /** Passes across the sweep's `repeat` trials. */
+  /** Passes across this scenario's VALID trials. */
   passes: number;
-  /** Escapes (off-page / web_search) across the eligible trials — only fixture "sites" are eligible. */
+  /** VALID trials (transport-invalid excluded) — the honest pass denominator. */
+  n: number;
+  /** Escapes (off-page / web_search) across the eligible valid trials — only fixture "sites" are eligible. */
   escapes: number;
+  /** Eligible VALID trials — the honest escape denominator (0 when the scenario is not escape-scorable). */
+  escapeN: number;
   /** Whether this scenario's target is escape-scorable at all (fixture, not a realUrl open-web task). */
   escapeEligible: boolean;
 }
@@ -143,18 +157,23 @@ export interface FamilyStat {
  * one-scenario "family" is just that scenario (already in the per-scenario table) and pooling it would fake
  * a family-level signal. Deterministic (tags sorted) so the report is stable in tests.
  */
-export function summarizeFamilies(rows: FamilyRow[], repeat: number, minScenarios = 2): FamilyStat[] {
+export function summarizeFamilies(rows: FamilyRow[], minScenarios = 2): FamilyStat[] {
   const dev = rows.filter((r) => !r.heldOut);
   const tags = [...new Set(dev.flatMap((r) => [...r.tags]))].sort();
   const out: FamilyStat[] = [];
   for (const tag of tags) {
     const fam = dev.filter((r) => r.tags.includes(tag));
     if (fam.length < minScenarios) continue;
-    const pass = poolCounts(fam.reduce((s, r) => s + r.passes, 0), fam.length * repeat);
+    // Pool over VALID trials (each scenario's own n / escapeN), never the configured repeat — a
+    // transport-flaked trial must not enter the pass or escape denominator.
+    const pass = poolCounts(fam.reduce((s, r) => s + r.passes, 0), fam.reduce((s, r) => s + r.n, 0));
     const eligible = fam.filter((r) => r.escapeEligible);
     const stat: FamilyStat = { tag, scenarios: fam.length, pass };
     if (eligible.length > 0) {
-      stat.escape = poolCounts(eligible.reduce((s, r) => s + r.escapes, 0), eligible.length * repeat);
+      stat.escape = poolCounts(
+        eligible.reduce((s, r) => s + r.escapes, 0),
+        eligible.reduce((s, r) => s + r.escapeN, 0),
+      );
     }
     out.push(stat);
   }

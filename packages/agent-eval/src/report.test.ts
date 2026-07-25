@@ -94,8 +94,8 @@ describe('formatReportTable / writeReport', () => {
       results: [result('a', true), result('b', false)],
       repeat: summarizeRepeat(
         [
-          { id: 'a', heldOut: false, passes: 3 },
-          { id: 'b', heldOut: false, passes: 1 },
+          { id: 'a', heldOut: false, passes: 3, n: 3 },
+          { id: 'b', heldOut: false, passes: 1, n: 3 },
         ],
         3,
       ),
@@ -108,13 +108,10 @@ describe('formatReportTable / writeReport', () => {
   });
 
   it('M1: carries per-tag pooled family aggregates and renders pass + escape CIs', () => {
-    const families = summarizeFamilies(
-      [
-        { id: 'a', heldOut: false, tags: ['escape'], passes: 2, escapes: 1, escapeEligible: true },
-        { id: 'b', heldOut: false, tags: ['escape'], passes: 1, escapes: 0, escapeEligible: true },
-      ],
-      3,
-    );
+    const families = summarizeFamilies([
+      { id: 'a', heldOut: false, tags: ['escape'], passes: 2, n: 3, escapes: 1, escapeN: 3, escapeEligible: true },
+      { id: 'b', heldOut: false, tags: ['escape'], passes: 1, n: 3, escapes: 0, escapeN: 3, escapeEligible: true },
+    ]);
     const report = buildReport({
       model: 'm',
       threshold: 0.8,
