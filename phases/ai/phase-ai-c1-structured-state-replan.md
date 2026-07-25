@@ -63,6 +63,11 @@ signal, and `maxRecoveryAttempts` fails **closed** instead of replanning
       verified against the real message stream by a capturing-provider test (not just a unit render).
       **Owed:** the N≥10 exit sweep on the product-default model (needs live API keys) — the DoD delta is
       not yet in the ledger, so this phase stays measurement-owed per the anti-debt rule.
+- [x] **PR1 follow-up (2026-07-25):** a verbose model (Anthropic — reasoning eats the output cap)
+      truncated the decision JSON mid-`state`, failing the whole turn on `InvalidJson` (surfaced by the
+      invalid Anthropic run). `parseDecision` now **salvages** the intact decision and drops the
+      half-emitted trailing `state` (regression-tested; 138 orchestrator tests green). Unblocks the
+      Anthropic escape sweep. See [ledger](eval-results-2026-07.md).
 
 ### PR2 — no-progress replan (`s14`) — ✅ landed 2026-07-24
 - [x] Run-level state-hash detector over the structural page signature: unchanged state across N

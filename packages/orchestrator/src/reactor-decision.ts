@@ -101,14 +101,43 @@ export function coerceDecisionShape(raw: unknown): unknown {
   return normalizeAction(obj);
 }
 
+/**
+ * Recover a decision whose trailing typed `state` ledger was cut off by a verbose model hitting its
+ * output-token cap — the failure C1's `state` field introduced (seen on Anthropic, where extended
+ * reasoning eats the cap so the JSON truncates mid-`state`). `state` is the LAST, OPTIONAL,
+ * `.catch(undefined)` brain field BY DESIGN, so dropping a half-emitted `state` and re-closing the object
+ * yields the intact decision (tool call + prose) — the reactor then carries the prior merged ledger
+ * forward. Returns null when there is no recoverable `state` boundary (the caller then raises InvalidJson).
+ */
+function salvageTruncatedState(text: string): unknown {
+  const fenced = /```(?:json)?\s*([\s\S]*?)```/i.exec(text);
+  const body = fenced?.[1] ?? text;
+  const start = body.indexOf('{');
+  const stateAt = body.lastIndexOf('"state"');
+  if (start < 0 || stateAt <= start) return null;
+  // Everything before the (comma-separated) trailing `state` field, re-closed as one object.
+  const head = body.slice(start, stateAt).replace(/[\s,]*$/, '');
+  try {
+    return JSON.parse(`${head}}`);
+  } catch {
+    return null;
+  }
+}
+
 /** Parse the model's raw turn into a validated {@link Decision}. Throws AppError on malformed output. */
 export function parseDecision(text: string): Decision {
   let raw: unknown;
   try {
     raw = JSON.parse(extractJson(text));
   } catch {
-    Logger.warn(ReactorMessages.InvalidJson, { raw: text.slice(0, 400) });
-    throw new AppError(ReactorMessages.InvalidJson, 502);
+    // A verbose model can truncate the JSON mid-`state` at its token cap; recover the decision by dropping
+    // the incomplete trailing ledger before giving up (C1 state-truncation regression).
+    raw = salvageTruncatedState(text);
+    if (raw === null || raw === undefined) {
+      Logger.warn(ReactorMessages.InvalidJson, { raw: text.slice(0, 400) });
+      throw new AppError(ReactorMessages.InvalidJson, 502);
+    }
+    Logger.warn(ReactorMessages.DecisionStateTruncated, { raw: text.slice(0, 400) });
   }
   const parsed = DecisionSchema.safeParse(coerceDecisionShape(raw));
   if (!parsed.success) {

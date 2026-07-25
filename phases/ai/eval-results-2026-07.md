@@ -190,3 +190,33 @@ central question — *does the Anthropic product-default escape, or respect C1's
    budget so a verbose model's JSON always closes; regression-test a truncated decision.
 2. Re-run the Anthropic validation clean (confirm the page-load flake was a one-off), then the full N=3
    escape sweep — the actual deciding measurement.
+
+---
+
+# C1 state-truncation FIX landed — salvage a truncated decision (2026-07-25)
+
+Discharges owed item #1 above. A verbose model hits its output-token cap mid-`state`, so the decision JSON
+never closes → `parseDecision` threw `InvalidJson` and the whole turn failed. Fixed at the PARSE boundary,
+not by widening the budget.
+
+## Fix
+`parseDecision` ([`reactor-decision.ts`](../../packages/orchestrator/src/reactor-decision.ts)) now, on a
+`JSON.parse` failure, tries `salvageTruncatedState`: `state` is the LAST, OPTIONAL, `.catch(undefined)`
+brain field by design, so it drops a half-emitted trailing `state` and re-closes the object — recovering
+the intact decision (tool call + prose). The reactor then carries the prior MERGED ledger forward, so the
+run continues instead of failing. A truncation with no recoverable `state` boundary still raises
+`InvalidJson` (unchanged). Regression-tested in `reactor-decision.test.ts` (truncated-mid-`state` → act
+recovered, `state` undefined; pre-`state` truncation → still throws). **138 orchestrator unit tests green.**
+
+## Why salvage, not a bigger budget
+The exec budget is already `EFFORT_MAX_TOKENS.high = 8192`, and the truncation surfaced at a *tiny* `state`
+(`…"state":{"openTabs":[],"selected`) — the cap was consumed BEFORE the ledger, most likely the Anthropic
+model's extended reasoning eating the output cap, which a larger number would not reliably fix. Salvage
+makes the run robust to it regardless.
+
+## Still owed (this only UNBLOCKS it — no measurement yet)
+Re-run the Anthropic validation clean, then the full N=3 escape-family sweep on the product-default model
+(Opus/Sonnet) — the deciding measurement (do C1's soft steers work on the DoD model, or is a policy-level
+escape gate needed?). Needs a funded Anthropic key + a clean harness run. **Watch for:** if the sweep shows
+`state` dropped EVERY step (C1's ledger never survives on Anthropic), the follow-up is trimming the
+exec-call reasoning budget or the emitted-state size — tracked at that run.

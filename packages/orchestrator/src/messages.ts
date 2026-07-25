@@ -16,4 +16,7 @@ export const PlannerMessages = {
 export const ReactorMessages = {
   InvalidJson: 'Agent returned invalid JSON',
   MalformedDecision: 'Agent returned a malformed decision',
+  /** A verbose model hit its output-token cap mid-`state`; the trailing (optional) ledger was dropped and
+   *  the rest of the decision recovered — the run continues instead of failing the whole turn (C1). */
+  DecisionStateTruncated: 'Recovered a decision whose trailing typed-state ledger was truncated',
 } as const;

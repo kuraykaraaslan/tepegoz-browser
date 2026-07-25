@@ -107,4 +107,26 @@ describe('parseDecision (untrusted LLM output boundary)', () => {
       summary: 'ok',
     });
   });
+
+  it('salvages a decision whose trailing typed `state` was truncated at the token cap (C1)', () => {
+    // A verbose model (e.g. Anthropic, whose reasoning eats the output cap) hit max_tokens mid-`state`, so
+    // the JSON never closes. The tool call + prose are intact; only the incomplete trailing ledger is
+    // dropped, so the run CONTINUES instead of failing the whole turn on "invalid JSON".
+    const truncated =
+      '{"action":"act","tool":"browser_update_page","args":{"action":"fill","ref":3,"text":"x"},"rationale":"filling the form","memory":"2 of 5 done","next_goal":"submit","state":{"openTabs":[],"selected';
+    const parsed = parseDecision(truncated);
+    if (parsed.action !== 'act') throw new Error('expected act');
+    expect(parsed.tool).toBe('browser_update_page');
+    expect(parsed.args).toEqual({ action: 'fill', ref: 3, text: 'x' });
+    expect(parsed.memory).toBe('2 of 5 done');
+    expect(parsed.next_goal).toBe('submit');
+    expect(parsed.state).toBeUndefined(); // the truncated ledger is dropped, not fatal
+  });
+
+  it('still rejects a truncation with no recoverable `state` boundary', () => {
+    // Cut off BEFORE `state` (mid-args) — there is no intact decision to salvage → InvalidJson, as before.
+    expect(() =>
+      parseDecision('{"action":"act","tool":"browser_update_page","args":{"action":"fill","ref'),
+    ).toThrow();
+  });
 });
