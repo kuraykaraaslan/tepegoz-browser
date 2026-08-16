@@ -155,7 +155,9 @@ never leaves the main process.
 tepegoz-browser/
 ├─ docs/        # Competitor & user-feedback research that informs the product
 │              # (Atlas, Opera Neon, Perplexity Comet, Fellou, Claude extensions for ChatGPT/Gemini…)
-├─ phases/      # Executable, checkable development plan — one file per phase, ticked as we go
+├─ phases/      # Executable, checkable development plan — ticked as we go. One index plus four
+│              # folders by truth status: product/ (Phases 0–12, M, E) · ai-agent-super/ (AI
+│              # competence program) · tracks/ (one-off plans, not roadmap) · ai/ (tombstone)
 └─ README.md    # You are here
 ```
 

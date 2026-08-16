@@ -52,4 +52,5 @@ pnpm test:electron                 # native-dependent (better-sqlite3) tests und
 ## Layout
 
 `apps/desktop` (L0 Electron) · `packages/{shared-types,libs,i18n,persistence}` · `packages/native-rs`
-(Rust placeholder) · `docs/` (ADRs, threat model) · `phases/` (roadmap) · `e2e/` (Playwright).
+(Rust placeholder) · `docs/` (ADRs, threat model) · `phases/` (roadmap — `product/` · `ai-agent-super/`
+· `tracks/`) · `e2e/` (Playwright).

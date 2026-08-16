@@ -5,7 +5,7 @@ import type { AIProvider } from '@tepegoz/shared-types';
  * (SDK @anthropic-ai/sdk 0.107.0). Centralized so the orchestrator and UI reference a single
  * source instead of hardcoding strings.
  *
- * Role assignment per the architecture (docs/ROADMAP §5.6):
+ * Role assignment per the architecture (docs/technical-ai-doc.md §1 — "Tier roles"):
  *   - Opus 4.8   → planning (and vision-heavy execution, a later slice)
  *   - Sonnet 4.6 → standard execution
  *   - Haiku 4.5  → cheap classification

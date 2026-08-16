@@ -1,7 +1,13 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { AppError } from '@tepegoz/libs';
 import type { AIProvider } from '@tepegoz/shared-types';
-import type { CanonRequest, CanonResponse, CanonStopReason, CanonToolCall, ModelProvider } from '../types';
+import type {
+  CanonRequest,
+  CanonResponse,
+  CanonStopReason,
+  CanonToolCall,
+  ModelProvider,
+} from '../types';
 import type { EffortLevel } from '../models';
 import { GatewayMessages } from '../messages';
 
@@ -30,7 +36,13 @@ interface ProviderConfig {
 /** The subset of an Anthropic `Message` this adapter consumes. The real SDK `Message` is a
  *  structural supertype, so it is accepted directly by {@link fromAnthropicResult}. */
 export interface AnthropicCompletion {
-  content: ReadonlyArray<{ type: string; text?: string; id?: string; name?: string; input?: unknown }>;
+  content: ReadonlyArray<{
+    type: string;
+    text?: string;
+    id?: string;
+    name?: string;
+    input?: unknown;
+  }>;
   stop_reason: string | null;
   usage: { input_tokens: number; output_tokens: number };
 }
@@ -164,7 +176,8 @@ export class AnthropicProvider implements ModelProvider {
 
   /**
    * Count input tokens for a single prompt (`count_tokens`). Note: this only sizes ONE request —
-   * multi-step DAG totals are estimated from telemetry, not summed here (docs/ROADMAP §5.6).
+   * multi-step DAG totals are estimated from telemetry, not summed here
+   * (docs/technical-ai-doc.md §5 — "Budgets, quotas & limits").
    */
   async countInputTokens(req: CanonRequest): Promise<number> {
     const params = toAnthropicParams(req);

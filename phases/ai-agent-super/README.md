@@ -195,4 +195,4 @@ S4-verified trajectories, held-out contamination-gated).
   SHA-256 per file); every phase PR0 cites it as the base its delta was measured against.
 - [`history.md`](history.md) — v1 measurement history + the `browser-use`/`nanobrowser` build-vs-buy
   decision, preserved.
-- Eval loop runbook: [`../ai/eval-loop-runbook.md`](eval-loop-runbook.md) (moved here by S0).
+- Eval loop runbook: [`eval-loop-runbook.md`](eval-loop-runbook.md) (moved here by S0).
