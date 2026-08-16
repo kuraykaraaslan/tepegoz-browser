@@ -5,6 +5,7 @@ import {
   type ToolDescriptor,
 } from '@tepegoz/shared-types';
 import { sensitiveCategory } from './sensitive-site';
+import { isSameSite } from './registrable-domain';
 
 /**
  * Deterministic tool × argument risk classification (L8).
@@ -115,20 +116,6 @@ function flatten(value: unknown, path: string, out: { k: string; v: string }[], 
   }
 }
 
-function registrableHost(rawUrl: string | undefined): string | null {
-  if (rawUrl === undefined) return null;
-  try {
-    return new URL(rawUrl).hostname.toLowerCase();
-  } catch {
-    return null;
-  }
-}
-
-/** eTLD+1-ish comparison: last two labels. Deliberately conservative — see the note in `classifyRisk`. */
-function sameSite(a: string, b: string): boolean {
-  const tail = (h: string): string => h.split('.').slice(-2).join('.');
-  return tail(a) === tail(b);
-}
 
 export function classifyRisk(ctx: RiskClassificationContext): RiskClassification {
   const tiers: RiskTier[] = [FLOOR_BY_DANGER_CLASS[ctx.descriptor.dangerClass]];
@@ -163,16 +150,18 @@ export function classifyRisk(ctx: RiskClassificationContext): RiskClassification
   }
 
   // A submission that leaves the run's own site is an egress event regardless of the tool's id.
-  // `sameSite` compares the last two labels only: it is intentionally COARSE, and coarse in the safe
-  // direction here — it can call a same-owner host cross-site (extra friction) but will not miss a
-  // genuinely different registrable domain. A real PSL lookup belongs with the grant work in PR3.
-  const target = registrableHost(ctx.targetUrl);
-  const origin = registrableHost(ctx.originUrl);
-  if (target !== null && origin !== null && !sameSite(target, origin)) {
-    if (ctx.descriptor.dangerClass !== 'read') {
-      tiers.push('data-egress');
-      reasons.push('cross_site_target');
-    }
+  // Uses proper eTLD+1 resolution: comparing the last two labels — which an earlier draft of this file
+  // did — is wrong in the UNSAFE direction for multi-part suffixes, since `shop.com.tr` and
+  // `evil.com.tr` would both reduce to `com.tr` and be judged same-site, silently suppressing the
+  // egress signal on exactly the domains this product cares most about.
+  if (
+    ctx.targetUrl !== undefined &&
+    ctx.originUrl !== undefined &&
+    ctx.descriptor.dangerClass !== 'read' &&
+    !isSameSite(ctx.targetUrl, ctx.originUrl)
+  ) {
+    tiers.push('data-egress');
+    reasons.push('cross_site_target');
   }
 
   // A sensitive destination raises the tier even for an otherwise ordinary action: typing into a

@@ -90,6 +90,36 @@ exactly one of six tiers — `read` / `ui-write` / `data-egress` / `financial` /
   `state_changing` — used to pass straight through `act`. `auto` is unchanged: it is the level the
   user explicitly chose.
 
+### Plan-scoped grants (`follow_a_plan`)
+
+Approving a plan mints a **grant**: one informed consent covering the routine steps that plan implies,
+so the prompts that remain are the ones that deserve a human. A grant is narrow on three axes at once —
+**registrable domains** (eTLD+1), **risk tiers the plan actually contained**, and **`runId`** — and is
+revoked in the run's `finally`, so it cannot outlive its task. Being run-scoped and in-memory, it is
+never persisted; there is no user data at rest and therefore no sync-meta obligation. (Should S9's
+*remembered* grants persist one, that record is new user data and must carry `updated_at` / `version` /
+`tombstone`, a UUID PK and `device_id`.)
+
+Three things a grant can never do, enforced in the store rather than left to callers: cover `financial`
+/ `credential` / `destructive`; overturn a `deny`; or widen after minting — an off-scope action
+re-prompts, it does not extend the grant. An approved plan that contains a payment step still grants its
+routine steps, and the payment step still prompts.
+
+**Scope boundary: the registrable domain, resolved properly.** Comparing the last two labels of a
+hostname — which an earlier draft of the classifier did — is wrong in the *unsafe* direction for
+multi-part suffixes: `garanti.com.tr` and `evil.com.tr` both reduce to `com.tr` and would count as the
+same site, so one grant would span every `.com.tr` domain in existence, and the cross-site egress signal
+would be suppressed on exactly the domains this product cares most about. Resolution uses a **bounded
+suffix list** rather than the full Public Suffix List (~10k entries, a moving target, a supply-chain and
+freshness liability on a boundary that must be deterministic and auditable); every call site is
+**fail-closed**, so an unrecognised suffix yields a narrower-or-equal answer and at worst costs a
+prompt.
+
+**Sub-domain policy (explicit):** sub-domains of one registrable domain are the same site —
+`accounts.example.com` and `www.example.com` share a grant. Sites genuinely deploy login and checkout on
+separate labels, and the boundary an attacker controls is the registrable domain, not the label in front
+of it.
+
 **The sensitive-site lockout becomes an extensible category map** (`banking` / `government` / `crypto` /
 `password-manager` / `health`) instead of a flat keyword list, for two reasons. A match now carries a
 **category**, so a lockout can be explained rather than merely imposed. And the v1 list was entirely

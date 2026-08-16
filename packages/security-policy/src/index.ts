@@ -12,6 +12,17 @@ export {
   type RiskClassificationContext,
 } from './risk-classifier';
 export {
+  isSameSite,
+  registrableDomain,
+  registrableDomainOfHost,
+} from './registrable-domain';
+export {
+  default as PlanGrantStore,
+  type GrantCoverage,
+  type GrantCoverageQuery,
+  type PlanGrant,
+} from './plan-grants';
+export {
   resolveAutonomy,
   type AutonomyGateDecision,
   type AutonomyGateResult,

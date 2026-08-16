@@ -9,7 +9,8 @@ import {
 } from '@tepegoz/desktop-ipc';
 import { AgentRunInputSchema } from '@tepegoz/desktop-ipc/schemas';
 import type { ConfirmRequest } from '@tepegoz/capability-plane';
-import { resolveAutonomy } from '@tepegoz/security-policy';
+import { PlanGrantStore, resolveAutonomy } from '@tepegoz/security-policy';
+import { CapabilityRegistry } from '@tepegoz/capability-plane';
 import { TokenLedger } from '@tepegoz/model-gateway';
 import { EventJournal, TokenStore } from '@tepegoz/persistence';
 import type { Plan } from '@tepegoz/shared-types';
@@ -18,7 +19,8 @@ import AgentService, {
   type AgentRunSummary,
   type PlanApprovalDecision,
 } from '../agent/agent-service.electron';
-import { setCurrentAgentRun } from '../agent/browser-host.electron';
+import { browserHost, setCurrentAgentRun } from '../agent/browser-host.electron';
+import { planGrantScope } from '../agent/plan-grant-scope';
 import {
   createRunControl,
   hasActiveAgentRun,
@@ -203,6 +205,21 @@ export function registerAgentRunIpc(): void {
     const requestApproval = async (req: ConfirmRequest): Promise<boolean> => {
       const decision = await FileOperationsHost.consentDecision(req);
       if (decision.type === 'auto') return decision.approved;
+      // A plan the user approved already covers its own routine steps on its own sites. Checked before
+      // the autonomy level because it is the NARROWER authority — scoped to domains and classes the
+      // user actually saw — and it can never cover financial/credential/destructive.
+      const tier = req.risk?.tier;
+      if (tier !== undefined) {
+        const grant = PlanGrantStore.covers({ runId, targetUrl: req.targetUrl, tier });
+        if (grant.covered) {
+          Logger.info('Approval covered by the approved plan grant', {
+            runId,
+            toolName: req.toolName,
+            riskTier: tier,
+          });
+          return true;
+        }
+      }
       const gate = resolveAutonomy(
         req.policy,
         PreferenceStore.getAll().agentAutonomy,
@@ -220,10 +237,32 @@ export function registerAgentRunIpc(): void {
       }
       return promptApproval(req);
     };
+    /**
+     * Approving a plan is a single informed consent covering the ROUTINE steps that plan implies — so
+     * the prompts that remain are the ones that actually deserve a human. The grant is scoped to the
+     * plan's own sites and classes (never a run-wide default), excludes financial/credential/destructive
+     * by construction, and is revoked in this run's `finally`.
+     */
+    const mintPlanGrant = (plan: Plan): void => {
+      // Synchronous, so approval is not delayed: the active tab's committed URL is already in tab state.
+      const entryUrl = browserHost.listTabs().find((t) => t.active)?.url ?? null;
+      const scope = planGrantScope(plan, entryUrl, (toolId) =>
+        CapabilityRegistry.get(toolId)?.descriptor.dangerClass,
+      );
+      const grant = PlanGrantStore.mint(runId, scope.urls, scope.tiers);
+      Logger.info('Plan approved — minted a scoped grant', {
+        runId,
+        domains: grant.domains,
+        tiers: grant.tiers,
+      });
+    };
     const requestPlanApproval = (plan: Plan): Promise<PlanApprovalDecision> => {
       // Plan approval follows the same rule: any level above `ask` accepts the plan in main. The plan
       // itself is not a gated action — every step still passes the kernel + autonomy gate above.
-      if (PreferenceStore.getAll().agentAutonomy !== 'ask') return Promise.resolve({ approved: true });
+      if (PreferenceStore.getAll().agentAutonomy !== 'ask') {
+        mintPlanGrant(plan);
+        return Promise.resolve({ approved: true });
+      }
       const planId = `plan-${randomUUID()}`;
       const preview: AgentPlanPreview = {
         runId,
@@ -234,7 +273,13 @@ export function registerAgentRunIpc(): void {
       };
       if (!sender.isDestroyed()) sender.send(IpcChannels.agentPlanPreview, preview);
       return new Promise<PlanApprovalDecision>((resolve) => {
-        pendingPlans.set(planId, { runId, resolve });
+        // The grant is minted from the plan the user SAW and approved — never on rejection, and never
+        // on the fail-safe timeout below.
+        const settle = (decision: PlanApprovalDecision): void => {
+          if (decision.approved) mintPlanGrant(plan);
+          resolve(decision);
+        };
+        pendingPlans.set(planId, { runId, resolve: settle });
         setTimeout(() => {
           if (pendingPlans.delete(planId)) resolve({ approved: false }); // fail-safe reject
         }, 120_000);
@@ -297,6 +342,9 @@ export function registerAgentRunIpc(): void {
       }
       setCurrentAgentRun(null, null, null);
       unregisterRunControl(runId);
+      // A plan grant cannot outlive the task it was given for. Revoked in `finally`, so a crash or a
+      // cancel cannot leave one behind — which is also why grants never need to be persisted.
+      PlanGrantStore.revoke(runId);
       agentRunByGroup.delete(groupId);
       if (!sender.isDestroyed()) sender.send(IpcChannels.tokenUsage, tokenUsage());
     }
