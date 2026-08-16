@@ -1,5 +1,5 @@
-import type { ToolDescriptor } from '@tepegoz/shared-types';
-import type { PolicyResult } from '@tepegoz/security-policy';
+import type { RiskTier, ToolDescriptor } from '@tepegoz/shared-types';
+import type { PolicyResult, RiskClassification } from '@tepegoz/security-policy';
 
 /**
  * Minimal structural validator so a tool can bring ANY validation library (a zod schema satisfies
@@ -24,6 +24,8 @@ export interface InvokeContext {
   taintedArgs?: boolean;
   /** URL the action targets (sensitive-site lockout). */
   targetUrl?: string;
+  /** Origin the run started from, so a cross-site submission can be told from a same-site one. */
+  originUrl?: string;
   /** Required for create/upload-style tools (exactly-once-ish). */
   idempotencyKey?: string;
 }
@@ -34,6 +36,13 @@ export interface ConfirmRequest {
   policy: PolicyResult;
   args: unknown;
   targetUrl?: string | undefined;
+  /**
+   * The derived risk tier for THIS call (tool × arguments × target) — the six-class axis, distinct
+   * from the tool's self-declared `dangerClass`. Approvals are per-class rather than flat: the surface
+   * can say *what kind* of act is being asked for, and a grant can cover `ui-write` while never
+   * covering `credential`. Optional so an older confirm handler keeps compiling.
+   */
+  risk?: RiskClassification | undefined;
 }
 
 /** Audit record for every gated invocation (fed to the Event Journal later). */
@@ -41,4 +50,6 @@ export interface AuditEntry {
   toolName: string;
   decision: PolicyResult['decision'];
   reason: string;
+  /** Derived risk tier, so the audit trail records the class an action was approved AS. */
+  riskTier?: RiskTier;
 }

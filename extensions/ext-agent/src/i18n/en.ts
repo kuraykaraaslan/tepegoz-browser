@@ -13,6 +13,44 @@ export const en = {
   approvalTitle: 'Approval required',
   approvalBody: 'The agent wants to run a tool that changes state. Allow it?',
   biometricNote: 'This is a high-risk action (Windows Hello will be required in a later release).',
+  // Risk classes (S6-PR2). The class is derived in the main process from the tool AND its actual
+  // arguments, so the prompt can name what kind of act is being asked for. A flat "a tool wants to
+  // change state" trains people to click through; naming the act is what keeps consent meaningful.
+  riskClass: {
+    label: 'Risk class',
+    read: {
+      name: 'Read',
+      desc: 'Reads page content only. Nothing is changed or sent anywhere.',
+    },
+    'ui-write': {
+      name: 'Page change',
+      desc: 'Changes something on the page or in the app. Reversible, nothing sensitive.',
+    },
+    'data-egress': {
+      name: 'Data leaves',
+      desc: 'Sends data off this device or to another site. Check where it is going.',
+    },
+    financial: {
+      name: 'Money',
+      desc: 'Involves a payment or a financial account. Money can move.',
+    },
+    credential: {
+      name: 'Secret',
+      desc: 'Involves a password, one-time code, or card details.',
+    },
+    destructive: {
+      name: 'Irreversible',
+      desc: 'Deletes or overwrites data. This cannot be undone.',
+    },
+  },
+  // Why a site is locked out of automation, by category (sensitive-site lockout).
+  sensitiveSite: {
+    banking: 'This looks like a banking or payments site.',
+    government: 'This looks like a government service.',
+    crypto: 'This looks like a crypto exchange or wallet.',
+    'password-manager': 'This looks like a password manager.',
+    health: 'This looks like a health or medical service.',
+  },
   approve: 'Approve',
   deny: 'Deny',
   planTitle: 'Review the plan',

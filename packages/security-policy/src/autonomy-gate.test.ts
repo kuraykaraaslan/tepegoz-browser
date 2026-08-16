@@ -54,6 +54,41 @@ describe('resolveAutonomy — autonomy can only skip a prompt, never widen permi
   });
 });
 
+describe('resolveAutonomy with a derived risk tier (S6-PR2)', () => {
+  it('holds credential/financial/destructive under `act`, which the biometric flag alone missed', () => {
+    // A password fill is declared `state_changing`, so `biometric` is false and `act` used to
+    // auto-approve it. Classified on its arguments the call is `credential`, and now it stops.
+    expect(resolveAutonomy(ask(false), 'act', 'credential').decision).toBe('prompt');
+    expect(resolveAutonomy(ask(false), 'act', 'financial').decision).toBe('prompt');
+    expect(resolveAutonomy(ask(false), 'act', 'destructive').decision).toBe('prompt');
+  });
+
+  it('still lets `act` proceed on the grantable tiers', () => {
+    expect(resolveAutonomy(ask(false), 'act', 'read').decision).toBe('auto_approve');
+    expect(resolveAutonomy(ask(false), 'act', 'ui-write').decision).toBe('auto_approve');
+    expect(resolveAutonomy(ask(false), 'act', 'data-egress').decision).toBe('auto_approve');
+  });
+
+  it('names the held tier in the reason code', () => {
+    expect(resolveAutonomy(ask(false), 'act', 'credential').reason).toBe('autonomy_act_credential_held');
+  });
+
+  it('behaves exactly as before when no tier is supplied', () => {
+    expect(resolveAutonomy(ask(false), 'act').decision).toBe('auto_approve');
+    expect(resolveAutonomy(ask(true), 'act').decision).toBe('prompt');
+  });
+
+  it('does not change what `auto` means — that is the level the user chose', () => {
+    for (const tier of ['credential', 'financial', 'destructive'] as const) {
+      expect(resolveAutonomy(ask(false), 'auto', tier).decision).toBe('auto_approve');
+    }
+  });
+
+  it('still never lets a tier override a deny', () => {
+    expect(resolveAutonomy({ decision: 'deny', biometric: false }, 'auto', 'read').decision).toBe('prompt');
+  });
+});
+
 describe('resolveAutonomy composed with the real PolicyKernel', () => {
   const evaluate = (dangerClass: 'read' | 'state_changing' | 'destructive' | 'financial') =>
     PolicyKernel.evaluate({

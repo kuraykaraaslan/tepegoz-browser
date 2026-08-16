@@ -1,4 +1,4 @@
-import { PolicyKernel } from '@tepegoz/security-policy';
+import { classifyRisk, PolicyKernel } from '@tepegoz/security-policy';
 import type { ToolError, ToolErrorCode } from '@tepegoz/shared-types';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import CapabilityRegistry from './registry';
@@ -88,9 +88,23 @@ export default class ToolGateway {
       taintedArgs: ctx.taintedArgs ?? false,
       ...(ctx.targetUrl !== undefined ? { targetUrl: ctx.targetUrl } : {}),
     });
+    // Classified on the VALIDATED args, so the tier reflects what will actually run. This is the
+    // per-class axis that replaces flat per-tool approval: `dangerClass` says what the tool author
+    // claims, `risk.tier` says what this specific call does.
+    const risk = classifyRisk({
+      descriptor: tool.descriptor,
+      args: parsed.data,
+      ...(ctx.targetUrl !== undefined ? { targetUrl: ctx.targetUrl } : {}),
+      ...(ctx.originUrl !== undefined ? { originUrl: ctx.originUrl } : {}),
+    });
     const scoped = ToolGateway.handlerScope.getStore();
     const auditHandler = scoped !== undefined ? scoped.auditHandler : ToolGateway.auditHandler;
-    auditHandler?.({ toolName, decision: policy.decision, reason: policy.reason });
+    auditHandler?.({
+      toolName,
+      decision: policy.decision,
+      reason: policy.reason,
+      riskTier: risk.tier,
+    });
 
     if (policy.decision === 'deny') {
       return toolError('FORBIDDEN', `Blocked by policy: ${policy.reason}`, false);
@@ -103,6 +117,7 @@ export default class ToolGateway {
           toolName,
           policy,
           args: parsed.data,
+          risk,
           ...(ctx.targetUrl !== undefined ? { targetUrl: ctx.targetUrl } : {}),
         }));
       if (!approved) {

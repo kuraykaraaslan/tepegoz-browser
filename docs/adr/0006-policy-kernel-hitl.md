@@ -58,3 +58,42 @@ Concretely:
 The autonomy gate deliberately sits **outside** the kernel: `PolicyKernel.evaluate` stays a pure
 function of tool × taint × target, with no notion of user preference, so this ADR's "deterministic and
 pre-model" property is preserved intact.
+
+## Amendment 2026-08-16 — six derived risk tiers + a sensitive-site category map
+
+Recorded by [S6-PR2](../../phases/ai-agent-super/phase-s6-safety-control-plane.md). This ADR's original
+classification (`read` / `state_changing` / `destructive` / `financial`) is a **declared** class: the
+tool author supplies it at registration, and it cannot see arguments. That is too coarse for consent.
+Typing into a search box and typing into a password field are the same declared class, so a flat
+per-tool prompt has to describe both as *"a tool wants to change state"* — and an undifferentiated
+prompt is what trains a user to click through. Approval fatigue is itself a vulnerability.
+
+**Decision: keep `dangerClass`, add a derived `RiskTier`.** Every gated call is classified in main into
+exactly one of six tiers — `read` / `ui-write` / `data-egress` / `financial` / `credential` /
+`destructive` (`@tepegoz/shared-types`, the single schema source) — by `classifyRisk`
+(`@tepegoz/security-policy`) from the tool **and its validated arguments and target**.
+
+- The declared `dangerClass` is the **floor**; rules can only raise it. **Highest applicable tier
+  wins**, so adding a rule can only tighten a classification, never loosen one.
+- Deriving rather than replacing matters twice over. A declared class is argument-blind. And it is a
+  **trust input** — an extension author, possibly a compromised one, picks it — whereas the derived
+  tier is computed in main from the call itself, so a tool that lies about its class is still
+  classified on its behaviour.
+- Replacing the enum was rejected on top of that: `dangerClass` has ~75 declaration sites across
+  packages and extensions, and a wide migration would have bought none of the argument sensitivity
+  that was the actual point.
+- Classification is pure and deterministic — string and URL tests over already-`safeParse`d args,
+  never executed or interpreted — and is frozen in a tool × argument matrix test, so any change to a
+  row is a visible diff.
+- `act` autonomy now holds `financial` / `credential` / `destructive` **by tier**. The previous
+  `biometric` flag followed the declared class, so filling a password field — declared merely
+  `state_changing` — used to pass straight through `act`. `auto` is unchanged: it is the level the
+  user explicitly chose.
+
+**The sensitive-site lockout becomes an extensible category map** (`banking` / `government` / `crypto` /
+`password-manager` / `health`) instead of a flat keyword list, for two reasons. A match now carries a
+**category**, so a lockout can be explained rather than merely imposed. And the v1 list was entirely
+English/US-centric: `garanti.com.tr`, `turkiye.gov.tr`, `sgk.gov.tr` and every other Turkish bank and
+public service matched **nothing**, leaving the most sensitive category of site for this product's
+primary market silently unlocked. Matching stays hostname-based and over-matching remains the safe
+direction; absence from the map is still not a claim that a site is safe.

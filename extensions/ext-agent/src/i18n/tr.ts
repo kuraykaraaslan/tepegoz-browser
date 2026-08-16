@@ -15,6 +15,44 @@ export const tr: AgentStrings = {
   approvalTitle: 'Onay gerekli',
   approvalBody: 'Ajan, durumu değiştiren bir araç çalıştırmak istiyor. İzin veriyor musunuz?',
   biometricNote: 'Bu yüksek riskli bir işlem (Windows Hello ileri bir sürümde gerekli olacak).',
+  // Risk sınıfları (S6-PR2). Sınıf, ana süreçte aracın KENDİSİNDEN ve gerçek argümanlarından
+  // türetilir; böylece istem, ne tür bir işlem istendiğini adıyla söyleyebilir. Düz bir "bir araç
+  // durumu değiştirmek istiyor" uyarısı kullanıcıyı onaya alıştırır; işlemi adlandırmak onayı anlamlı kılar.
+  riskClass: {
+    label: 'Risk sınıfı',
+    read: {
+      name: 'Okuma',
+      desc: 'Yalnızca sayfa içeriğini okur. Hiçbir şey değişmez, hiçbir yere gönderilmez.',
+    },
+    'ui-write': {
+      name: 'Sayfa değişikliği',
+      desc: 'Sayfada veya uygulamada bir şeyi değiştirir. Geri alınabilir, hassas veri yok.',
+    },
+    'data-egress': {
+      name: 'Veri çıkışı',
+      desc: 'Veriyi bu cihazın dışına veya başka bir siteye gönderir. Nereye gittiğini kontrol edin.',
+    },
+    financial: {
+      name: 'Para',
+      desc: 'Bir ödeme veya finansal hesap söz konusu. Para hareket edebilir.',
+    },
+    credential: {
+      name: 'Gizli bilgi',
+      desc: 'Parola, tek kullanımlık kod veya kart bilgisi söz konusu.',
+    },
+    destructive: {
+      name: 'Geri alınamaz',
+      desc: 'Veriyi siler veya üzerine yazar. Bu işlem geri alınamaz.',
+    },
+  },
+  // Bir sitenin otomasyona neden kapatıldığı, kategoriye göre (hassas site kilidi).
+  sensitiveSite: {
+    banking: 'Bu bir bankacılık veya ödeme sitesine benziyor.',
+    government: 'Bu bir kamu hizmetine benziyor.',
+    crypto: 'Bu bir kripto borsası veya cüzdanına benziyor.',
+    'password-manager': 'Bu bir parola yöneticisine benziyor.',
+    health: 'Bu bir sağlık hizmetine benziyor.',
+  },
   approve: 'Onayla',
   deny: 'Reddet',
   planTitle: 'Planı gözden geçirin',

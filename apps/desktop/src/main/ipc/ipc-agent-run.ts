@@ -179,6 +179,9 @@ export function registerAgentRunIpc(): void {
         reason: req.policy.reason,
         biometric: req.policy.biometric,
         argsPreview: safeArgsPreview(req.args),
+        // Display only — main already decided. Lets the modal name the act instead of showing a flat
+        // "a tool wants to change state", which is what trains a user to click through.
+        ...(req.risk !== undefined ? { riskTier: req.risk.tier } : {}),
       };
       onEvent('awaiting_approval', `Approval needed: ${req.toolName}`, req.policy.reason);
       if (!sender.isDestroyed()) sender.send(IpcChannels.agentApprovalRequest, request);
@@ -200,13 +203,18 @@ export function registerAgentRunIpc(): void {
     const requestApproval = async (req: ConfirmRequest): Promise<boolean> => {
       const decision = await FileOperationsHost.consentDecision(req);
       if (decision.type === 'auto') return decision.approved;
-      const gate = resolveAutonomy(req.policy, PreferenceStore.getAll().agentAutonomy);
+      const gate = resolveAutonomy(
+        req.policy,
+        PreferenceStore.getAll().agentAutonomy,
+        req.risk?.tier,
+      );
       if (gate.decision === 'auto_approve') {
         Logger.info('Approval auto-granted by autonomy level', {
           runId,
           toolName: req.toolName,
           policyReason: req.policy.reason,
           autonomyReason: gate.reason,
+          riskTier: req.risk?.tier ?? 'unclassified',
         });
         return true;
       }

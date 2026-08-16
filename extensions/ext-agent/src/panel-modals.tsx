@@ -1,8 +1,19 @@
 import { Modal } from '@tepegoz/ui';
 import type { Resources } from '@tepegoz/i18n';
 import type { AgentStrings } from './i18n';
-import type { AgentApprovalRequest, AgentPlanPreview } from './types';
+import type { AgentApprovalRequest, AgentPlanPreview, RiskTier } from './types';
 import { BTN_GHOST, BTN_PRIMARY } from './panel-styles';
+
+/** Escalating visual weight, so the six classes are distinguishable at a glance and not just by text.
+ *  Token-styled (surface/border/text) rather than raw colours, so both themes stay consistent. */
+const RISK_TONE: Readonly<Record<RiskTier, string>> = {
+  read: 'border-border-subtle bg-surface-base text-text-secondary',
+  'ui-write': 'border-border-subtle bg-surface-base text-text-primary',
+  'data-egress': 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300',
+  financial: 'border-amber-600/50 bg-amber-600/10 text-amber-800 dark:text-amber-200',
+  credential: 'border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300',
+  destructive: 'border-red-600/50 bg-red-600/10 text-red-800 dark:text-red-200',
+};
 
 /**
  * The Agent panel's two blocking dialogs: the plan-preview modal (approve/skip steps before a run) and
@@ -69,6 +80,15 @@ export function PanelModals({
       {approval !== null && (
         <Modal open onClose={() => onRespond(false)} title={a.approvalTitle} ariaLabel={a.approvalTitle} size="sm" closeOnBackdrop={false}>
           <p className="mt-2 text-sm text-text-secondary">{a.approvalBody}</p>
+          {approval.riskTier !== undefined && (
+            <div className={`mt-3 rounded border px-2 py-1.5 ${RISK_TONE[approval.riskTier]}`}>
+              <p className="text-xs font-semibold uppercase tracking-wide opacity-70">
+                {a.riskClass.label}
+              </p>
+              <p className="text-sm font-medium">{a.riskClass[approval.riskTier].name}</p>
+              <p className="text-xs opacity-80">{a.riskClass[approval.riskTier].desc}</p>
+            </div>
+          )}
           <p className="mt-3 font-mono text-sm text-text-primary">{approval.toolName}</p>
           <p className="text-xs text-text-secondary">{approval.reason}</p>
           <pre className="mt-2 max-h-24 overflow-auto rounded bg-surface-base p-2 text-xs text-text-secondary">

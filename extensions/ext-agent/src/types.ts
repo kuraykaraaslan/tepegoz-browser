@@ -66,6 +66,13 @@ export interface AgentApprovalRequest {
   reason: string;
   biometric: boolean;
   argsPreview: string;
+  /**
+   * The risk class main derived for THIS call from the tool AND its arguments — so the prompt can say
+   * what kind of act is being asked for ("this would enter a password") instead of a flat "a tool wants
+   * to change state", which is what trains a user to click through. Display only: the decision was
+   * already made in main. Optional so an approval raised before classification still renders.
+   */
+  riskTier?: RiskTier;
 }
 
 export interface AgentPlanStep {
@@ -106,8 +113,8 @@ export interface TokenUsageSnapshot {
  * a UI package must not own it. See `resolveAutonomy` in `@tepegoz/security-policy` for the decision
  * this level feeds, which runs in main and never in this renderer.
  */
-import type { AgentAutonomy } from '@tepegoz/shared-types';
-export type { AgentAutonomy };
+import type { AgentAutonomy, RiskTier } from '@tepegoz/shared-types';
+export type { AgentAutonomy, RiskTier };
 
 /** One user-selectable model within a provider (the panel's Model dropdown). */
 export interface AgentModelInfo {

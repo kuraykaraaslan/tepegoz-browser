@@ -1,4 +1,4 @@
-import type { AgentAutonomy } from '@tepegoz/shared-types';
+import { NEVER_AUTO_GRANTABLE_TIERS, type AgentAutonomy, type RiskTier } from '@tepegoz/shared-types';
 import type { PolicyResult } from './policy-kernel';
 
 /**
@@ -33,6 +33,7 @@ export interface AutonomyGateResult {
 export function resolveAutonomy(
   policy: Pick<PolicyResult, 'decision' | 'biometric'>,
   autonomy: AgentAutonomy,
+  tier?: RiskTier,
 ): AutonomyGateResult {
   // Defence in depth: the gateway only calls the confirm handler for `ask`, but if a caller ever
   // routes a decided result through here, autonomy must not be able to change it.
@@ -44,9 +45,14 @@ export function resolveAutonomy(
       return { decision: 'auto_approve', reason: 'autonomy_auto' };
     case 'act':
       // High-risk (destructive / financial / tainted side-effect) still stops for a human.
-      return policy.biometric
-        ? { decision: 'prompt', reason: 'autonomy_act_biometric_held' }
-        : { decision: 'auto_approve', reason: 'autonomy_act' };
+      if (policy.biometric) return { decision: 'prompt', reason: 'autonomy_act_biometric_held' };
+      // The derived tier catches what `biometric` cannot. `biometric` follows the tool's DECLARED
+      // dangerClass, so filling a password field — declared merely `state_changing` — used to sail
+      // straight through `act`. Classified on its arguments it is `credential`, and `act` holds it.
+      if (tier !== undefined && NEVER_AUTO_GRANTABLE_TIERS.includes(tier)) {
+        return { decision: 'prompt', reason: `autonomy_act_${tier}_held` };
+      }
+      return { decision: 'auto_approve', reason: 'autonomy_act' };
     case 'ask':
       return { decision: 'prompt', reason: 'autonomy_ask' };
     default:

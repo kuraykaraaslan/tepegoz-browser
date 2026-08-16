@@ -1,5 +1,16 @@
 export { default as PolicyKernel, type PolicyContext, type PolicyResult } from './policy-kernel';
-export { isSensitiveSite } from './sensitive-site';
+export {
+  isSensitiveSite,
+  sensitiveCategory,
+  SENSITIVE_CATEGORIES,
+  SensitiveCategorySchema,
+  type SensitiveCategory,
+} from './sensitive-site';
+export {
+  classifyRisk,
+  type RiskClassification,
+  type RiskClassificationContext,
+} from './risk-classifier';
 export {
   resolveAutonomy,
   type AutonomyGateDecision,
