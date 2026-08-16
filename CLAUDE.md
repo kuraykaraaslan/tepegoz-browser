@@ -6,7 +6,8 @@ Guidance for Claude Code (and humans) working on **tepegoz-browser**.
 
 An agentic, security-by-design, local-first browser (Electron + TypeScript). Architecture and the
 task-by-task roadmap live in **[`phases/`](phases/)** and **[`docs/adr/`](docs/adr/)**. The full plan
-is `docs/ARCHITECTURE.md` (mirrors the approved plan). Read `phases/README.md` first.
+is `docs/ARCHITECTURE.md` — a thin index of the L0–L10 layer model pointing at the document that owns
+each piece. Read `phases/README.md` first.
 
 ## Binding design rules
 

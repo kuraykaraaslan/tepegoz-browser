@@ -29,9 +29,13 @@ The single source of truth until [S0](phase-s0-truth-and-repair.md)'s full-regis
   failure mode — 0% escape vs gpt-4o's 50–75%. The product-default model respects the on-page steers, so
   the policy-level escape gate is very likely UNNECESSARY. Anthropic still FAILS the hard nav scenarios,
   but ON-PAGE (wrong/incomplete answer) — a different competence gap.*
-- **Known artifact:** the root `agent-eval-report.json` carries the **pre-correction** numbers
-  (`sitemap_only_route 0/3`, `silent_api_failure 0/3`, pooled dev 3/10) — knowingly wrong; the corrected
-  reading is 3/7. [S0](phase-s0-truth-and-repair.md) removes that file.
+- **Known artifact — resolved 2026-08-16.** The root `agent-eval-report.json` carried the
+  **pre-correction** numbers (`sitemap_only_route 0/3`, `silent_api_failure 0/3`, pooled dev 3/10) —
+  knowingly wrong; the corrected reading is **3/7**. [S0](phase-s0-truth-and-repair.md) PR3 deleted it.
+  It turned out never to have been *committed* (only present on disk, already git-ignored), so the fix
+  was local deletion plus a documented regenerate path
+  ([runbook](eval-loop-runbook.md#regenerating-the-report-never-commit-it)) rather than a `git rm`.
+  **This ledger, not the JSON, is the record.**
 - **Judge calibration:** 1 human label of the required 25 → judge claim-barred.
 - **North-star scorecard:** 0 of 4 conditions have a publishable number.
 

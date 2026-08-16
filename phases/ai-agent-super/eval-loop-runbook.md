@@ -34,6 +34,29 @@ pnpm eval
 ### Output
 - stdout table (majority pass/fail + `k/N`), `agent-eval-report.json` (latest), and a git-ignored archive
   `agent-eval-runs/<ts>-<mode>.json` + per-scenario logs `agent-eval-runs/<ts>-<mode>-logs/<id>[.tN].log`.
+
+### Regenerating the report — never commit it
+
+`agent-eval-report.json` is a **regenerable artefact, not a source of truth.** Both it and
+`agent-eval-runs/` are git-ignored, and they must stay that way: a committed report goes stale the moment
+the scoring logic changes, and then it lies. This is not hypothetical —
+[S0](phase-s0-truth-and-repair.md) deleted a root report still showing `sitemap_only_route` 0/3 and
+`silent_api_failure` 0/3 long after the transport-invalid / dead-key exclusions (`isTransportInvalid`,
+`isDeadKeyError`, `UNMEASURED`) had corrected the reading to 3/7.
+
+To reproduce the number on demand, re-run the harness — it rewrites the report at the repo root:
+
+```powershell
+$env:TEPEGOZ_EVAL_MODE     = 'live'
+$env:TEPEGOZ_EVAL_PROVIDER = 'anthropic'
+$env:TEPEGOZ_EVAL_API_KEY  = '<key>'
+$env:TEPEGOZ_EVAL_REPEAT   = '3'          # N>=3 for anything you intend to quote
+pnpm eval
+```
+
+**The durable record is [`eval-results.md`](eval-results.md)**, where a human writes the number down with
+its model tier, N, exclusion accounting, Wilson CIs, and $/trial. The JSON is scratch; the ledger is the
+claim. If you need an old run, it is in `agent-eval-runs/<ts>-<mode>.json`, not in git.
 - The trend line compares only against a **like-for-like** prior archive (same model + scenario count).
 - Diagnose a FAIL from its `<id>.log`: the `[eval] <kind>` step trace (plan → decisions → step_ok/error →
   done) + `stoppedReason` + token count.

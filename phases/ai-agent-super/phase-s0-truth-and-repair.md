@@ -30,10 +30,18 @@ The evidence is a documented, reproducible drift across three surfaces:
    (≤1 measurement-owed at a time)** is already breached **×3**, hidden by the stale index. A roadmap that
    miscounts its own debt cannot gate honestly.
 
-3. **A knowingly-wrong report is committed.** The root `agent-eval-report.json` carries pre-correction
+3. **A knowingly-wrong report sits at the repo root.** `agent-eval-report.json` carries pre-correction
    numbers (`sitemap_only_route` 0/3, `silent_api_failure` 0/3, pooled 3/10) that the transport-invalid /
    dead-key exclusion logic (`isTransportInvalid`, `isDeadKeyError`, `UNMEASURED`) already superseded —
    the corrected reading is 3/7. It is a **regenerable artefact** masquerading as a source of truth.
+   **→ Correction (PR3, on the record):** this phase drafted the item as *"a knowingly-wrong report is
+   **committed**"*. It was not. `git ls-files` and `git log --all -- agent-eval-report.json` both come
+   back empty, and `.gitignore` already carried `agent-eval-report.json` + `agent-eval-runs/` before this
+   program began — so `git rm` had nothing to remove. The **hazard was real but local**: a wrong number
+   lying at the repo root where a reader takes it for truth. PR3 deletes the local file (byte-identical
+   to the archived run `agent-eval-runs/2026-07-25T12-34-44-813Z-live.json`, so nothing was lost) and
+   documents the regenerate command instead. Recorded rather than quietly re-scoped — a phase that
+   miswrote its own evidence must say so.
 
 4. **A referenced architecture doc does not exist.** [`../../CLAUDE.md`](../../CLAUDE.md) and
    [`../README.md`](../README.md) both point at `docs/ARCHITECTURE.md`, which is **absent**. The real
@@ -65,12 +73,16 @@ fixtures** — that is the point: freeze the exam before writing the answers.
       deleted; `constitution.md`, `eval-results.md`, `PROSE-LEDGER.md`, and the eval-loop runbook live
       under this folder; [`../README.md`](../README.md)'s "AI" row points at [`README.md`](README.md).
       *`phases/ai/README.md` remains as a tombstone stub recording where every item went.*
-- [ ] **The regenerable report is not tracked** — root `agent-eval-report.json` removed from the tree and
-      added to `.gitignore`; a documented regenerate command exists.
-- [ ] **The `docs/ARCHITECTURE.md` reference resolves** — either the file is created (mirroring the L0–L10
+- [x] **The regenerable report is not tracked** — root `agent-eval-report.json` removed from the tree and
+      added to `.gitignore`; a documented regenerate command exists. *Both git conditions were already
+      satisfied (never tracked, already ignored — see the [Why §3 correction](#why)); the local file is
+      deleted and the [regenerate command](eval-loop-runbook.md#regenerating-the-report-never-commit-it)
+      is documented, with the `.gitignore` entry now carrying the reason it must stay ignored.*
+- [x] **The `docs/ARCHITECTURE.md` reference resolves** — the **file is created** (mirroring the L0–L10
       model from [`../../README.md`](../../README.md) + L7 from
-      [`../../docs/technical-ai-doc.md`](../../docs/technical-ai-doc.md)) **or** the CLAUDE.md /
-      `phases/README.md` pointers are repaired to the real docs; the PR records which and why.
+      [`../../docs/technical-ai-doc.md`](../../docs/technical-ai-doc.md)); the PR records the choice and
+      its reason. *`CLAUDE.md`'s stale "mirrors the approved plan" gloss and `phases/README.md`'s
+      "to be moved into the repo" note are corrected to match what now exists.*
 - [ ] **First-ever full-registry baseline** in [`eval-results.md`](eval-results.md): **all 52 scenarios**
       (incl. the 24 `atk_*` — the first live adversarial numbers), Anthropic tier, **N=3**, per-family
       **Wilson 95% CIs**, **$/trial**, and **wall-clock/trial**, with flaky + transport-invalid /
@@ -125,15 +137,23 @@ fixtures** — that is the point: freeze the exam before writing the answers.
       authoritative roadmap), leaving `phases/ai/` as a tombstone dir (README stub only).
 
 ### PR3 — kill the wrong artefact + fix the architecture pointer
-- [ ] `git rm` the root **`agent-eval-report.json`**; add it (and the run-report glob) to `.gitignore`;
-      document the regenerate command against the [`../../packages/agent-eval`](../../packages/agent-eval)
-      `_electron` driver so the number is reproducible on demand, never committed.
-- [ ] Resolve the `docs/ARCHITECTURE.md` reference. **Preferred:** create
-      `docs/ARCHITECTURE.md` (this PR creates it) as a thin index mirroring the L0–L10 model
-      from [`../../README.md`](../../README.md) and linking the L7 detail in
-      [`../../docs/technical-ai-doc.md`](../../docs/technical-ai-doc.md) — no new content, single source of
-      truth preserved. **Fallback:** repoint the two references in [`../../CLAUDE.md`](../../CLAUDE.md) and
-      [`../README.md`](../README.md). The PR records the chosen option.
+- [x] ~~`git rm` the root **`agent-eval-report.json`**; add it (and the run-report glob) to
+      `.gitignore`~~ — **both already true** (see the [Why §3 correction](#why)): the file was never
+      tracked and `.gitignore` already carried `agent-eval-report.json` + `agent-eval-runs/`. The **local**
+      file is deleted (byte-identical to its archived run, nothing lost), and the regenerate command is
+      documented in [`eval-loop-runbook.md`](eval-loop-runbook.md#regenerating-the-report-never-commit-it)
+      against the [`../../packages/agent-eval`](../../packages/agent-eval) `_electron` driver, so the
+      number is reproducible on demand and never committed.
+- [x] Resolve the `docs/ARCHITECTURE.md` reference. **Chosen: the preferred option — the file is
+      created.** [`../../docs/ARCHITECTURE.md`](../../docs/ARCHITECTURE.md) is a thin index mirroring the
+      L0–L10 model from [`../../README.md`](../../README.md) and linking the L7 detail in
+      [`../../docs/technical-ai-doc.md`](../../docs/technical-ai-doc.md) — **no new content**, every row
+      points at the document that owns the material, single source of truth preserved. *Why preferred over
+      the repoint fallback:* the pointer appears in the **binding** working agreement
+      ([`../../CLAUDE.md`](../../CLAUDE.md)) as *the* architecture entry point, and repointing it at the
+      product README would send an engineer looking for the layer model into marketing prose. The index
+      also records that **`docs/ROADMAP.md` is deliberately not created** — [`../`](../README.md) already
+      is the roadmap.
 
 ### PR4 — first full-registry baseline (⏸ funded)
 - [ ] Run the **52-scenario** registry (all 8 files, incl. 24 `atk_*`) on the **Anthropic product tier**

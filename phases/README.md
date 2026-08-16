@@ -4,8 +4,10 @@ This folder is the **executable, checkable** counterpart of the development plan
 under `docs/` + the approved architecture plan). Each phase is its own file; we **tick tasks as we do
 them** with `- [ ]` / `- [x]`. This keeps the process resumable across sessions.
 
-> **Source plan:** `\home\kuray\.claude-personal\plans\docs-u-inceleyerek-otomasyon-moonlit-petal.md`
-> (to be moved into the repo as `docs/ARCHITECTURE.md` + `docs/ROADMAP.md`).
+> **Architecture:** [`../docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md) — the in-repo index of the
+> L0–L10 layer model and every owning document. **This folder is the roadmap** (no `docs/ROADMAP.md`;
+> the out-of-repo source plan `\home\kuray\.claude-personal\plans\docs-u-inceleyerek-otomasyon-moonlit-petal.md`
+> is superseded by what is realized here, in code, and in `../docs/adr/`).
 > **Compliance:** `//wsl.localhost/Ubuntu/home/kuray/internal-ai-rules` (BINDING — see plan §13).
 > **Language:** Project artifacts are **English-first**; Turkish is a first-class supported locale.
 > **Architecture / package map:** `../docs/package-map.md` (+ [ADR-0015](../docs/adr/0015-package-extraction-roadmap.md),
