@@ -9,7 +9,6 @@ import {
 import type { AgentAutonomy, AgentConfig, AgentHostApi } from './types';
 import {
   applyAgentEvent,
-  autoApprovesTool,
   emptyGroupState,
   stateFromConversation,
   type GroupState,
@@ -56,9 +55,9 @@ export function useAgentSession(api: AgentHostApi): AgentSession {
   const [groupStates, setGroupStates] = useState<Map<string, GroupState>>(new Map());
 
   const listRef = useRef<HTMLDivElement | null>(null);
-  const autonomyRef = useRef<AgentAutonomy>('ask');
+  // Display value only — it drives the mode dropdown's label. The approval DECISION is main's; there is
+  // deliberately no ref mirroring it into the IPC subscriptions any more.
   const autonomy: AgentAutonomy = config?.autonomy ?? 'ask';
-  useEffect(() => { autonomyRef.current = autonomy; }, [autonomy]);
 
   // Helpers to read/mutate the active group's state.
   const activeState: GroupState = activeGroupId !== null
@@ -126,32 +125,28 @@ export function useAgentSession(api: AgentHostApi): AgentSession {
       });
     });
 
+    // DISPLAY-ONLY. The renderer is untrusted, so it does NOT decide approvals — main reads the
+    // autonomy level from its own preference store and simply never sends a request it has already
+    // auto-approved. Anything that arrives here is a request main wants a HUMAN to answer; show it and
+    // relay the click (panel-actions.ts), nothing more.
     const offApproval = api.onAgentApprovalRequest((req) => {
-      if (autoApprovesTool(autonomyRef.current, req.biometric)) {
-        api.respondAgentApproval(req.approvalId, true);
-      } else {
-        setGroupStates((prev) => {
-          const gid = req.groupId;
-          const cur = prev.get(gid) ?? emptyGroupState();
-          const next = new Map(prev);
-          next.set(gid, { ...cur, approval: req });
-          return next;
-        });
-      }
+      setGroupStates((prev) => {
+        const gid = req.groupId;
+        const cur = prev.get(gid) ?? emptyGroupState();
+        const next = new Map(prev);
+        next.set(gid, { ...cur, approval: req });
+        return next;
+      });
     });
 
     const offPlan = api.onAgentPlanPreview((preview) => {
-      if (autonomyRef.current !== 'ask') {
-        api.respondAgentPlan(preview.planId, true, []);
-      } else {
-        setGroupStates((prev) => {
-          const gid = preview.groupId;
-          const cur = prev.get(gid) ?? emptyGroupState();
-          const next = new Map(prev);
-          next.set(gid, { ...cur, planPreview: preview, skipIds: new Set() });
-          return next;
-        });
-      }
+      setGroupStates((prev) => {
+        const gid = preview.groupId;
+        const cur = prev.get(gid) ?? emptyGroupState();
+        const next = new Map(prev);
+        next.set(gid, { ...cur, planPreview: preview, skipIds: new Set() });
+        return next;
+      });
     });
 
     const offTokens = api.onTokenUsage((usage) => {

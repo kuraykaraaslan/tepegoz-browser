@@ -11,5 +11,6 @@ export * from './tool-result';
 export * from './dag-plan';
 export * from './eval-scenario';
 export * from './agent-working-state';
+export * from './agent-autonomy';
 export * from './macro-ir';
 export * from './macro-schema';

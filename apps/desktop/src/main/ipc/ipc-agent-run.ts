@@ -9,6 +9,7 @@ import {
 } from '@tepegoz/desktop-ipc';
 import { AgentRunInputSchema } from '@tepegoz/desktop-ipc/schemas';
 import type { ConfirmRequest } from '@tepegoz/capability-plane';
+import { resolveAutonomy } from '@tepegoz/security-policy';
 import { TokenLedger } from '@tepegoz/model-gateway';
 import { EventJournal, TokenStore } from '@tepegoz/persistence';
 import type { Plan } from '@tepegoz/shared-types';
@@ -43,10 +44,9 @@ import {
   tokenUsage,
 } from './ipc-agent-shared';
 
-// Agent run + HITL counters (registerAgentIpc runs once at startup, so module scope is fine).
+// Agent run counter (registerAgentIpc runs once at startup, so module scope is fine). HITL ids are
+// randomUUID-based, not sequential — a predictable approval id is guessable by a compromised renderer.
 let runCounter = 0;
-let approvalCounter = 0;
-let planCounter = 0;
 
 /** Register the agent run handler (streams live events + round-trips HITL approvals). */
 export function registerAgentRunIpc(): void {
@@ -167,7 +167,10 @@ export function registerAgentRunIpc(): void {
     };
     /** Present the standard HITL approval modal and await the user's answer. */
     const promptApproval = (req: ConfirmRequest): Promise<boolean> => {
-      const approvalId = `appr-${String(++approvalCounter)}`;
+      // Unguessable id. A sequential counter let a compromised renderer spray approvals for ids main
+      // had not minted yet and win the race the moment one was registered; a UUID cannot be predicted,
+      // so only the request main actually sent can be answered.
+      const approvalId = `appr-${randomUUID()}`;
       const request: AgentApprovalRequest = {
         runId,
         groupId,
@@ -189,13 +192,31 @@ export function registerAgentRunIpc(): void {
     // File tools self-gate on their folder grant mode: an op within the granted mode runs silently,
     // one outside every grant is refused, and an escalation / grant-management tool falls through to the
     // standard approval modal so the user consents. Every other tool goes straight to the modal.
+    //
+    // The autonomy level is read HERE, in main, from the preference store — never from the renderer.
+    // The renderer is untrusted: it may display an approval and relay a human's click, but it must not
+    // decide one. If autonomy auto-approves, main resolves without ever sending the IPC, so there is no
+    // request for a compromised renderer to answer on the user's behalf.
     const requestApproval = async (req: ConfirmRequest): Promise<boolean> => {
       const decision = await FileOperationsHost.consentDecision(req);
       if (decision.type === 'auto') return decision.approved;
+      const gate = resolveAutonomy(req.policy, PreferenceStore.getAll().agentAutonomy);
+      if (gate.decision === 'auto_approve') {
+        Logger.info('Approval auto-granted by autonomy level', {
+          runId,
+          toolName: req.toolName,
+          policyReason: req.policy.reason,
+          autonomyReason: gate.reason,
+        });
+        return true;
+      }
       return promptApproval(req);
     };
     const requestPlanApproval = (plan: Plan): Promise<PlanApprovalDecision> => {
-      const planId = `plan-${String(++planCounter)}`;
+      // Plan approval follows the same rule: any level above `ask` accepts the plan in main. The plan
+      // itself is not a gated action — every step still passes the kernel + autonomy gate above.
+      if (PreferenceStore.getAll().agentAutonomy !== 'ask') return Promise.resolve({ approved: true });
+      const planId = `plan-${randomUUID()}`;
       const preview: AgentPlanPreview = {
         runId,
         groupId,

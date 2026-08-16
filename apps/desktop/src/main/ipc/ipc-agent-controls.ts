@@ -22,7 +22,12 @@ import {
 } from '../agent/agent-run-lock.electron';
 import { getDb } from '../db/database.electron';
 import { onAction } from './ipc-helpers';
-import { pendingApprovals, pendingPlans } from './ipc-agent-shared';
+import {
+  pendingApprovals,
+  pendingPlans,
+  settleApproval,
+  settlePlan,
+} from '../agent/hitl-registry';
 
 /** Register run-control (cancel/pause/resume/steer) + HITL response handlers. */
 export function registerAgentControlIpc(): void {
@@ -86,26 +91,22 @@ export function registerAgentControlIpc(): void {
     emitCurrentRunEvent('steered', text);
   });
 
+  // HITL responses are RELAYED by the renderer, never decided by it: the autonomy level is read in
+  // main (see `requestApproval` in ipc-agent-run.ts), and a response is applied only if it correlates
+  // to a request main actually minted. `onAction` has already `safeParse`d the payload; `settle*`
+  // rejects (and logs) anything uncorrelated.
   onAction(
     IpcChannels.agentApprovalResponse,
     AgentApprovalResponseSchema,
     ({ approvalId, approved }) => {
-      const entry = pendingApprovals.get(approvalId);
-      if (entry !== undefined) {
-        pendingApprovals.delete(approvalId);
-        entry.resolve(approved);
-      }
+      settleApproval(approvalId, approved);
     },
   );
   onAction(
     IpcChannels.agentPlanResponse,
     AgentPlanResponseSchema,
     ({ planId, approved, skipStepIds }) => {
-      const entry = pendingPlans.get(planId);
-      if (entry !== undefined) {
-        pendingPlans.delete(planId);
-        entry.resolve(skipStepIds !== undefined ? { approved, skipStepIds } : { approved });
-      }
+      settlePlan(planId, approved, skipStepIds);
     },
   );
 }

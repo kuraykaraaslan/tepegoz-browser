@@ -68,7 +68,7 @@ maps to a workstream with **one headline metric** it must move.
 | S3 | [phase-s3-reliability-actions.md](phase-s3-reliability-actions.md) | Dialogs, tab-spawn world model, wait-for, send-keys, hover/drag, nav verbs, typed widgets, click-time occlusion + locator cascade, cookie-consent fix | S0; S2 (refs) | ⬜ Not started |
 | S4 | [phase-s4-verified-outcomes.md](phase-s4-verified-outcomes.md) | Evidence-cited completion, fabricated-success ≈ 0, URL re-verify before mutation | S1 | ⬜ Not started |
 | S5 | [phase-s5-code-execution.md](phase-s5-code-execution.md) | Isolated-world code-exec (security-first) + structured table/list extraction | S2 | ⬜ Not started (ADR-0026) |
-| S6 | [phase-s6-safety-control-plane.md](phase-s6-safety-control-plane.md) | Autonomy-to-main (bug fix), risk tiers, `follow_a_plan` grants, advisory critic, strict-mode, ASR battery, credential broker | S0 (PR1 early); S3 (claim ASR) | ⬜ Not started |
+| S6 | [phase-s6-safety-control-plane.md](phase-s6-safety-control-plane.md) | Autonomy-to-main (bug fix), risk tiers, `follow_a_plan` grants, advisory critic, strict-mode, ASR battery, credential broker | S0 (PR1 early); S3 (claim ASR) | 🟡 **PR1 landed** 2026-08-16 (autonomy defect closed; deterministic, no sweep owed). PR0 + PR2–PR7 not started |
 | S7 | [phase-s7-speed.md](phase-s7-speed.md) | wall-clock/$ targets, adaptive validation, quick-mode encoding, visibility-gated realism | S1, S2 | ⬜ Not started |
 | S8 | [phase-s8-assistant-ux.md](phase-s8-assistant-ux.md) | Streaming narration, live step feed, plan-grant UX, risk-tier approvals, agent-active indicator, backgroundable runs, commerce flow | S1, S6, S4 | ⬜ Not started |
 | S9 | [phase-s9-memory-skills.md](phase-s9-memory-skills.md) | Per-domain advisory memory, skill/shortcut library, per-task remembered grants | S2, S6 | ⬜ Not started (ADR-0027) |
@@ -112,9 +112,13 @@ landed code, hiding an anti-debt breach **×3**. Audited against `git log`, the 
 | Harness robustness | `4dd89d6` (transport-invalid exclusion + readiness barrier), `ac579b5` (dead-key → `UNMEASURED` + sweep abort) | none — exclusion machinery the baseline depends on | **absorbed**, no debt |
 
 **Anti-debt state: 1 measurement-owed (S0) — compliant.** C1's and C7's owed sweeps do not each count
-as separate debt because both are discharged by the *same* S0 full-registry baseline; no other phase
-holds landed capability code. Every remaining S-phase reads ⬜ **Not started** truthfully: their code
-does not exist yet.
+as separate debt because both are discharged by the *same* S0 full-registry baseline.
+
+**Update 2026-08-16 — S6-PR1 landed; the count is unchanged.** The autonomy-enforcement fix carries
+**no measurement debt**: its DoD line is explicitly deterministic and testable offline ("No ⏸"), and it
+is discharged by unit + regression tests, not by a sweep. A phase only enters 🟠 when a *sweep* is owed,
+so S6 reads 🟡 in-progress and the anti-debt count stays at **1**. Every other S-phase reads ⬜ **Not
+started** truthfully: their code does not exist yet.
 
 ## Sequencing, lanes & measurement gates
 

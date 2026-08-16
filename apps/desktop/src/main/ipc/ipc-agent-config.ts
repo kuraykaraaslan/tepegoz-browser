@@ -23,6 +23,7 @@ import { collectAgentExportBundleFiles } from '../agent/export-bundle.electron';
 import {
   isRunnableProvider,
   RUNNABLE_AI_PROVIDERS,
+  SelectableAgentAutonomySchema,
   type AIProvider,
 } from '@tepegoz/shared-types';
 import CredentialVault from '@tepegoz/credential-vault';
@@ -128,7 +129,10 @@ export function registerAgentConfigIpc(): void {
     }
   });
   handle(IpcChannels.agentSetAutonomy, (_event, payload): void => {
-    const level: AgentAutonomy = z.enum(['ask', 'act', 'auto']).parse(payload);
+    // Only user-selectable levels cross this boundary — the reserved `dangerous` is rejected here, so
+    // the renderer cannot set a level the UI does not offer. (Even if it did, `resolveAutonomy` treats
+    // `dangerous` as `ask`; this is the outer of the two doors.)
+    const level: AgentAutonomy = SelectableAgentAutonomySchema.parse(payload);
     PreferenceStore.update({ agentAutonomy: level });
   });
   handle(IpcChannels.agentSetEffort, (_event, payload): void => {

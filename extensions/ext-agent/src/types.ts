@@ -101,12 +101,13 @@ export interface TokenUsageSnapshot {
 }
 
 /**
- * Agent autonomy level (graduated). `ask` = review the plan + every state-changing tool (default,
- * safe). `act` = auto-approve the plan + routine page changes, but STILL pause for destructive/financial
- * actions. `auto` = fully hands-off (auto-approve everything). At every level the `deny`-class
- * (sensitive-site lockout) still hard-blocks in the main process.
+ * Agent autonomy level (graduated) — **re-exported, not defined here.** The canonical definition lives
+ * in `@tepegoz/shared-types` because it is a security-relevant setting acted on by the main process;
+ * a UI package must not own it. See `resolveAutonomy` in `@tepegoz/security-policy` for the decision
+ * this level feeds, which runs in main and never in this renderer.
  */
-export type AgentAutonomy = 'ask' | 'act' | 'auto' | 'dangerous';
+import type { AgentAutonomy } from '@tepegoz/shared-types';
+export type { AgentAutonomy };
 
 /** One user-selectable model within a provider (the panel's Model dropdown). */
 export interface AgentModelInfo {

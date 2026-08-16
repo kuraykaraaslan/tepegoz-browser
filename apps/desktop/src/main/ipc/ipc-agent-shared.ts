@@ -16,7 +16,6 @@ import { mainStrings } from '../lib/i18n-main';
 import NotificationHost from '../notifications/notification-host';
 import PreferenceStore from '@tepegoz/preferences';
 import type { AgentConversationsState } from '@tepegoz/desktop-ipc';
-import type { PlanApprovalDecision } from '../agent/agent-service.electron';
 
 /**
  * Shared agent-IPC state + cross-concern helpers (split out of `ipc-agent.ts`, ADR-0010 250-line cap).
@@ -28,14 +27,10 @@ import type { PlanApprovalDecision } from '../agent/agent-service.electron';
 // input-action event wiring is process-scoped. Keep execution single-run until browser tools become
 // tabId-scoped end to end.
 export const agentRunByGroup = new Map<string, boolean>();
-export const pendingApprovals = new Map<
-  string,
-  { runId: string; resolve: (approved: boolean) => void }
->();
-export const pendingPlans = new Map<
-  string,
-  { runId: string; resolve: (decision: PlanApprovalDecision) => void }
->();
+// The outstanding-HITL maps live in `../agent/hitl-registry` (no Electron imports, so the
+// renderer-response correlation that guards them is unit-testable). Re-exported here so the existing
+// run/controls registrars keep their single import site.
+export { pendingApprovals, pendingPlans } from '../agent/hitl-registry';
 
 function listConversationsState(): AgentConversationsState {
   const db = getDb();

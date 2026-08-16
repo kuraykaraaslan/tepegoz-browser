@@ -1,6 +1,6 @@
 # Phase S6 — Safety & Control Plane (W4 Control & trust)
 
-**Status:** ⬜ Not started · **Depends on:** [Phase S0](phase-s0-truth-and-repair.md) (PR1 early, lane-independent), [Phase S3](phase-s3-reliability-actions.md) (claim-grade ASR only) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟡 In progress — **PR1 landed 2026-08-16** (the autonomy-enforcement defect is closed; deterministic, no sweep owed). PR0 + PR2–PR7 not started · **Depends on:** [Phase S0](phase-s0-truth-and-repair.md) (PR1 early, lane-independent), [Phase S3](phase-s3-reliability-actions.md) (claim-grade ASR only) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Close the standing autonomy-enforcement defect (the renderer, not the main-process kernel, currently decides what auto-approves), then raise the control plane to the Claude-for-Chrome safety bar: deterministic risk tiers, plan-scoped pre-approval (`follow_a_plan`), an advisory intent-alignment critic, a reachable strict mode, and a first-party credential broker that fills secrets without ever handing them to the model. This phase owns north-star condition 2 (safety) and runs the first claim-grade adversarial battery over the 24 `atk_*` scenarios. Autonomy end-state is ask/act default with `follow_a_plan` as the ceiling and the critic strictly advisory.
 
@@ -18,7 +18,7 @@ Sequencing: the claim-grade ASR sweep runs **after [S3](phase-s3-reliability-act
 
 ## Exit criteria (DoD)
 
-- [ ] Autonomy is main-enforced: unit + integration proof that a doctored renderer answering an approval it was **not** asked for is **rejected**, and that `agentAutonomy` is read only in main (PolicyKernel/ToolGateway consult the main-held level; the renderer approval path is display-only). No `⏸` — this is deterministic and testable offline.
+- [x] Autonomy is main-enforced: unit + integration proof that a doctored renderer answering an approval it was **not** asked for is **rejected**, and that `agentAutonomy` is read only in main (PolicyKernel/ToolGateway consult the main-held level; the renderer approval path is display-only). No `⏸` — this is deterministic and testable offline. **→ Landed 2026-08-16 (PR1).** `resolveAutonomy` ([autonomy-gate.ts](../../packages/security-policy/src/autonomy-gate.ts), 12 tests) is the only place a level becomes a decision and runs in main against `PreferenceStore`; the renderer path is display-only and `autoApprovesTool` is **deleted**; uncorrelated / guessed / replayed responses are rejected by [hitl-registry.ts](../../apps/desktop/src/main/agent/hitl-registry.ts) (9 tests). Recorded as a fixed defect in the [ADR-0006 amendment](../../docs/adr/0006-policy-kernel-hitl.md#amendment-2026-08-16--the-autonomy-level-is-main-enforced-a-fixed-defect).
 - [ ] Risk-tier classification is deterministic in the kernel: every tool×argument resolves to exactly one of `read` / `ui-write` / `data-egress` / `financial` / `credential` / `destructive`, unit-tested over a frozen tool×arg matrix; the category map is i18n-aware and covers Turkish banking/gov domains. No `⏸`.
 - [ ] `follow_a_plan`: approving a plan mints scoped grants (domains × tool-classes × `runId`, eTLD+1 matched, run-expiring), recorded in main and enforced by the kernel; unit + integration proof a grant does not extend across an off-scope redirect. No `⏸`.
 - [ ] Approvals per task on the acceptance family fall **≥50%** under `follow_a_plan` with **zero** auto-approved financial/credential/destructive actions (⏸ funded sweep, paired with/without `follow_a_plan`).
@@ -37,10 +37,10 @@ Sequencing: the claim-grade ASR sweep runs **after [S3](phase-s3-reliability-act
 - [ ] Record the frozen scenario counts and expected-shape in [eval-results.md](eval-results.md) as "awaiting funded key" rows.
 
 ### PR1 — autonomy-to-main (the bug fix; early, lane-independent, tiny)
-- [ ] Move the autonomy decision to main: the [ToolGateway](../../packages/capability-plane/src/tool-gateway.ts) approval flow consults [PolicyKernel](../../packages/security-policy/src/policy-kernel.ts) with the main-held autonomy level from [ipc-agent-config.ts](../../apps/desktop/src/main/ipc/ipc-agent-config.ts).
-- [ ] Make the renderer approval path **display-only**: remove `autoApprovesTool` auto-answer at [panel-session.ts:129-131](../../extensions/ext-agent/src/panel-session.ts); [panel-state.ts:22](../../extensions/ext-agent/src/panel-state.ts) no longer decides.
-- [ ] Regression test: a renderer answering an approval it was **not** asked for is rejected in main (correlate approval responses to outstanding requests by id).
-- [ ] zod `safeParse` the approval-response IPC at the main boundary; `AppError` on mismatch.
+- [x] Move the autonomy decision to main: the [ToolGateway](../../packages/capability-plane/src/tool-gateway.ts) approval flow consults [PolicyKernel](../../packages/security-policy/src/policy-kernel.ts) with the main-held autonomy level from [ipc-agent-config.ts](../../apps/desktop/src/main/ipc/ipc-agent-config.ts).
+- [x] Make the renderer approval path **display-only**: remove `autoApprovesTool` auto-answer at [panel-session.ts:129-131](../../extensions/ext-agent/src/panel-session.ts); [panel-state.ts:22](../../extensions/ext-agent/src/panel-state.ts) no longer decides.
+- [x] Regression test: a renderer answering an approval it was **not** asked for is rejected in main (correlate approval responses to outstanding requests by id).
+- [x] zod `safeParse` the approval-response IPC at the main boundary; `AppError` on mismatch.
 
 ### PR2 — risk-tier classes + category map
 - [ ] Add deterministic tool×argument classification in [PolicyKernel](../../packages/security-policy/src/policy-kernel.ts): `read` / `ui-write` / `data-egress` / `financial` / `credential` / `destructive`; classes are the schema source in [@tepegoz/shared-types](../../packages/shared-types).

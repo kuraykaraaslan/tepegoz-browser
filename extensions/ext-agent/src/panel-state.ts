@@ -1,3 +1,4 @@
+import { AGENT_AUTONOMY_LEVELS } from '@tepegoz/shared-types';
 import type {
   AgentApprovalRequest,
   AgentAutonomy,
@@ -11,19 +12,19 @@ import type {
 export type { Attachment };
 
 /**
- * Pure (non-JSX) types and helpers backing the Agent panel: per-turn/per-group state shapes, the
- * autonomy auto-approval rule, notice-building, and attachment serialization.
+ * Pure (non-JSX) types and helpers backing the Agent panel: per-turn/per-group state shapes,
+ * notice-building, and attachment serialization.
  * Extracted from `panel.tsx` (ADR-0010 file-size split).
+ *
+ * **No approval decision lives here.** `autoApprovesTool` used to auto-answer the approval IPC from
+ * this renderer-held autonomy level, which let a doctored renderer approve its own financial,
+ * credential and destructive tool calls. That decision now lives behind the trust boundary in main
+ * (`resolveAutonomy` in `@tepegoz/security-policy`); the constants below are for the mode dropdown's
+ * labels only.
  */
 
-export const AUTONOMY_LEVELS_ALL: readonly AgentAutonomy[] = ['ask', 'act', 'auto', 'dangerous'];
+export const AUTONOMY_LEVELS_ALL: readonly AgentAutonomy[] = AGENT_AUTONOMY_LEVELS;
 export const AUTONOMY_DISABLED = new Set<AgentAutonomy>(['dangerous']);
-
-export function autoApprovesTool(level: AgentAutonomy, biometric: boolean): boolean {
-  if (level === 'auto') return true;
-  if (level === 'act') return !biometric;
-  return false;
-}
 
 /** Event kinds whose message is model prose → rendered as markdown. */
 export const PROSE_KINDS = new Set<AgentEvent['kind']>(['done', 'error', 'handoff']);

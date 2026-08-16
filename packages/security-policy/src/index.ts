@@ -1,6 +1,11 @@
 export { default as PolicyKernel, type PolicyContext, type PolicyResult } from './policy-kernel';
 export { isSensitiveSite } from './sensitive-site';
 export {
+  resolveAutonomy,
+  type AutonomyGateDecision,
+  type AutonomyGateResult,
+} from './autonomy-gate';
+export {
   detectHandoff,
   HANDOFF_KINDS,
   type HandoffKind,
