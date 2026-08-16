@@ -1,0 +1,103 @@
+# Phase S11 — Benchmark & Head-to-Head (Claim)
+
+**Status:** ⬜ Not started · **Depends on:** [S3 bridge probe](phase-s3-reliability-actions.md), [S6 credential broker (ASR)](phase-s6-safety-control-plane.md), [S4 fabricated-success](phase-s4-verified-outcomes.md), [S9 repeat speedup](phase-s9-memory-skills.md) · **Track:** [AI Agent Super](README.md)
+
+**Goal:** Produce the dated, external, falsifiable evidence that turns the four north-star conditions of the [constitution](constitution.md) into published numbers — win or lose. Build an Online-Mind2Web-style live-web bridge (a frozen `realUrl` stratum) and run a pre-registered head-to-head against the shipping rivals. Nothing here is a scripted-fixture score: every deliverable is a live-web run scored on verified-completion (S4's metric) with a Wilson CI, plus a claim template that is withdrawn the instant it fails to reproduce.
+
+## Why
+
+**Zero of the four claim conditions has a number.** [eval-results.md](eval-results.md) records only 5/52 scenarios ever measured live; the Anthropic DoD sweep is N=3. The owner's explicit demand ([real-results, no vanity](../../CLAUDE.md)) is that offline scripted evals do not prove competence — a scripted-fixture pass is a regression fence, not a claim. Today `grep realUrl` over [packages/agent-eval](../../packages/agent-eval) returns **0** scenarios: there is no live-web stratum at all, so no claim can even be phrased.
+
+**Online-Mind2Web is the live benchmark that matters.** It is the harness the field reads. The reference points: **≥84%** verified-completion is bare-model parity with Opus 4.8 (i.e. tepegoz must beat "just call the model"); **≥90%** is leaderboard-credible. But **judge variance dominates leaderboards** — the headline `bu-max` 97% and `GPT-5.4` 93% numbers were **not scored by the same judge**, so cross-report deltas are noise. This is why the claim protocol below insists on one blind judge over identity-stripped artifacts, and why the [Never-list](constitution.md) forbids vendor-self-report anchoring and auto-judge headlines.
+
+**Our judge is not yet claim-grade.** [judge.ts](../../packages/agent-eval/src/judge.ts) is claim-barred by [calibration.ts](../../packages/agent-eval/src/calibration.ts) at **1/25** human labels — judge↔human agreement is computed against `calibration/human-labels.json`, and one label cannot establish agreement. A published benchmark number scored by an uncalibrated judge would be exactly the auto-judge headline the Never-list bans. So calibration to ≥25 labels is a hard precondition of any run, not a nicety.
+
+**v2's escape-gate priority was wrong.** The Anthropic N=3 sweep showed escape rate **0%** — the failures are on-page (wrong or incomplete answers), not the agent wandering off task. So the bridge stratum is scored on verified-completion, and `realUrl` tasks are **excluded from the escape denominator** ([escape-metric.ts](../../packages/agent-eval/src/escape-metric.ts)) — escape is not the axis this phase measures.
+
+**The rivals ship now.** Claude for Chrome, Comet, and ChatGPT agentic browsing are moving targets. The only defence against "they improved after you measured" is the dated-artifact + freshness-date discipline: **Version 1 is published even if tepegoz loses**, and it is stamped with the week it ran and the rival build strings.
+
+## Exit criteria (DoD)
+
+- [ ] A `realUrl` bridge stratum of **~30 live-web tasks** (Online-Mind2Web style), **≥10 Turkish-web**, is authored, rubric'd, and **frozen in PR0 before any capability or run code** (constitution: fixtures frozen first). (⏸ funded sweep to *score* it; authoring itself is not funding-blocked.)
+- [ ] Bridge **verified-completion with a Wilson CI is PUBLISHED** in [eval-results.md](eval-results.md). Honest first-run target: **CI lower bound ≥60%** — *the number itself is the deliverable, not a threshold to defend.* (⏸ funded sweep)
+- [ ] The judge reaches **≥25 human labels** in `calibration/human-labels.json` and the **judge↔human agreement rate is reported** alongside every bridge/H2H number. Below 25, no run is publishable. (precondition; label authoring not funding-blocked)
+- [ ] **All four north-star conditions have a dated number** in [eval-results.md](eval-results.md), win or lose (⏸ funded sweep + rival subscriptions):
+  - live-web verified-completion (this phase's bridge run);
+  - ASR / credential-broker success ([S6](phase-s6-safety-control-plane.md));
+  - fabricated-success rate ([S4](phase-s4-verified-outcomes.md));
+  - repeat-task speedup ([S9](phase-s9-memory-skills.md)).
+- [ ] A **pre-registered H2H protocol artifact** exists (task list + rubric + scoring plan) committed **before** any H2H run, with a **ToS-considerations section** for driving rival products.
+- [ ] An H2H run executes **same-week** on tepegoz + Claude for Chrome + Comet + ChatGPT agentic browsing at **N≥3 each**, **blind-scored from identity-stripped artifacts** on verified-completion, and lands as a **dated artifact** in [eval-results.md](eval-results.md) stamped with rival build strings. (⏸ funded sweep + subscriptions)
+- [ ] The **4-condition claim template with the withdrawal clause** is committed (the claim is withdrawn the moment it fails to reproduce).
+- [ ] **PROSE-LEDGER final audit line:** every row in [PROSE-LEDGER.md](PROSE-LEDGER.md) is either DELETED or justified-RETAINED, each paired with/without-sweep per the constitution rule for prose deletion.
+- [ ] Bridge/H2H run harness reuses the existing [Wilson CI + family pooling](../../packages/agent-eval/src/statistics.ts) and cost accounting ([TEPEGOZ_EVAL_RATES](../../packages/agent-eval)); no new stats path. Any UI surface added is EN+full-TR parity in the same PR.
+
+## Tasks
+
+### PR0 — fixture freeze (bridge subset + rubrics)
+
+- [ ] Add a `realUrl` scenario kind to the agent-eval registry schema in [packages/agent-eval](../../packages/agent-eval) via [@tepegoz/shared-types](../../packages/shared-types) — zod `safeParse` at load; `realUrl: string`, `rubric`, `turkishWeb: boolean`, `stratum: "bridge"`. No inline duplicate types.
+- [ ] Author **~30 tasks** in an `online-mind2web-bridge` registry file (Online-Mind2Web style: multi-step, real sites, answer-or-action outcomes), **≥10 Turkish-web** (e.g. e-devlet-style public info, Turkish retail, TR news). Each carries a **verified-completion rubric** (S4 metric), not a scripted assertion.
+- [ ] Wire the stratum into [escape-metric.ts](../../packages/agent-eval/src/escape-metric.ts) as **excluded from the escape denominator**; into [statistics.ts](../../packages/agent-eval/src/statistics.ts) family pooling as its own family `bridge`.
+- [ ] Freeze: record the fixture hash + count in [PROSE-LEDGER.md](PROSE-LEDGER.md) / [history.md](history.md) as the pre-run baseline. Split registry file(s) to stay under the 250-line cap.
+- [ ] **No run in PR0** — authoring + freeze only, so the numbers can never be reverse-fit to the fixtures.
+
+### PR1 — bridge harness plumbing
+
+- [ ] Extend the real-app driver [agent-eval-runner.electron.ts](../../packages/agent-eval) to accept `realUrl` scenarios: navigate via the readiness barrier (`navigateWhenReady`), honour `TEPEGOZ_EVAL=1`, and route outcome through [scorer.ts](../../packages/agent-eval/src/scorer.ts) → [judge.ts](../../packages/agent-eval/src/judge.ts) on verified-completion.
+- [ ] Ensure `isTransportInvalid` / `isDeadKeyError` / UNMEASURED classification (just landed on branch) applies to bridge trials so a dead key aborts the sweep rather than scoring 0.
+- [ ] Emit per-task cost via `TEPEGOZ_EVAL_RATES`; respect `TEPEGOZ_EVAL_STRICT`.
+
+### PR2 — judge calibration to ≥25 labels
+
+- [ ] Grow `calibration/human-labels.json` to **≥25 human labels** spanning the bridge stratum (incl. Turkish-web tasks) — hand-labelled verified-completion truth.
+- [ ] [calibration.ts](../../packages/agent-eval/src/calibration.ts): report judge↔human **agreement rate** and keep the claim-bar gate; a run below 25 labels stays claim-barred.
+- [ ] Record the agreement rate in [eval-results.md](eval-results.md) as a standing field printed next to every bridge/H2H number.
+
+### PR3 — bridge run + ledger entry (⏸ funded)
+
+- [ ] Run the frozen `realUrl` stratum on the DoD (Anthropic) tier with a funded key; N per task per the [statistics.ts](../../packages/agent-eval/src/statistics.ts) flaky/Wilson policy.
+- [ ] Publish **verified-completion + Wilson CI** (whole stratum and Turkish-web sub-stratum separately) into [eval-results.md](eval-results.md), dated, with the judge agreement rate.
+- [ ] Ledger the delta in [history.md](history.md); mark this DoD line ✅ only once the funded sweep is in. Until then this PR rests at 🟠 measurement-owed.
+
+### PR4 — H2H protocol (pre-registered artifact)
+
+- [ ] Write `phases/ai-agent-super/h2h-protocol.md`: the **pre-registered task list** (a named subset of the frozen bridge tasks), rivals (Claude for Chrome, Comet, ChatGPT agentic browsing), **N≥3 each**, **same-week** execution window, blind identity-stripped artifact capture, verified-completion scoring by the calibrated judge.
+- [ ] Include the **4-condition claim template** with the **withdrawal clause** ("the claim is withdrawn the moment it fails to reproduce") and the **freshness-date** requirement (stamp the week + rival build strings).
+- [ ] Include a **ToS-considerations section** for driving rival products (automation/account-terms flags; the Amazon v. Perplexity injunction noted as a live legal constraint on agentic commerce driving).
+- [ ] Commit the protocol **before** any H2H run so scoring cannot be reverse-fit.
+
+### PR5 — H2H execution + dated artifact (⏸ funded + subscriptions)
+
+- [ ] Execute the pre-registered protocol same-week across all four agents (funded tepegoz key + rival subscriptions).
+- [ ] Capture identity-stripped artifacts (screenshots/transcripts with product identity removed); blind-score verified-completion via the calibrated judge.
+- [ ] Publish the **dated H2H artifact** into [eval-results.md](eval-results.md) — **Version 1 ships win or lose**, stamped with the week and rival build strings.
+- [ ] Fill the remaining north-star numbers (pull ASR from [S6](phase-s6-safety-control-plane.md), fabricated-success from [S4](phase-s4-verified-outcomes.md), speedup from [S9](phase-s9-memory-skills.md)) into the single 4-condition line.
+- [ ] **Final PROSE-LEDGER audit**: walk every row in [PROSE-LEDGER.md](PROSE-LEDGER.md), DELETE or justify-RETAIN each with paired with/without-sweep evidence.
+
+## Fixtures
+
+New, all frozen in **PR0**, added to [packages/agent-eval](../../packages/agent-eval) as the `bridge` family / `realUrl` stratum:
+
+- `online-mind2web-bridge` registry — **~30 live-web tasks**, Online-Mind2Web style, each with a verified-completion rubric.
+- **≥10 Turkish-web** tasks within that set, scored as a named sub-stratum.
+- The pre-registered **H2H subset** is a named selection of these same frozen tasks (no new tasks authored for the H2H — reuse guarantees the comparison and the bridge measure the same thing).
+- ≥25 human calibration labels in `calibration/human-labels.json` (PR2) covering the stratum.
+- `realUrl` tasks are excluded from the escape denominator; they form their own Wilson/family-pooling family.
+
+## Prose steers
+
+- Owns the **final [PROSE-LEDGER.md](PROSE-LEDGER.md) audit** (DoD): the program-closing pass where every remaining row is DELETED or justified-RETAINED, each with paired with/without-sweep evidence.
+- No new speculative prose is introduced by this phase; the H2H protocol and claim template are pre-registered artifacts, not steers.
+
+## ADR
+
+None. This phase adds no architectural decision — it consumes the existing eval, judge, and stats substrate and produces external evidence. (New ADRs, if any arose from sibling phases, continue from 0025; this one claims none.)
+
+## Risks
+
+- **Rivals drift under us.** Mitigation: dated-artifact + freshness-date discipline (PR4/PR5) — every artifact stamps its week and the rival build strings, and **Version 1 is published even if tepegoz loses**. The claim template's withdrawal clause makes staleness self-correcting.
+- **Judge variance dominates the number.** Mitigation: single calibrated judge over identity-stripped artifacts (≥25 labels, agreement rate reported); the Never-list ban on auto-judge headlines and vendor-self-report anchoring is enforced by refusing to publish below the calibration bar.
+- **ToS / legal exposure from driving rival products.** Mitigation: the protocol's ToS-considerations section flags account/automation terms per rival; the Amazon v. Perplexity injunction is recorded as a live legal constraint on any commerce-driving H2H task. Spike-first: a manual ToS read of each rival precedes PR5.
+- **Funding gate.** Bridge scoring (PR3), H2H execution (PR5), and rival subscriptions are all ⏸ awaiting a funded key + subscriptions. Code + frozen fixtures + protocol land regardless; the phase rests at 🟠 measurement-owed until the funded sweeps run and the deltas are in [eval-results.md](eval-results.md).
+- **Reverse-fitting the number.** Mitigation: PR0 freezes fixtures and PR4 pre-registers the H2H before any run; the honest first-run bridge target (CI lower bound ≥60%) is stated as a deliverable, not a threshold to defend, so there is no incentive to tune fixtures toward a headline.

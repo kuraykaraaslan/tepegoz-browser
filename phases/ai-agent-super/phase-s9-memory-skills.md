@@ -1,0 +1,87 @@
+# Phase S9 — Memory & Skills (W-cross)
+
+**Status:** ⬜ Not started · **Depends on:** [S2](phase-s2-perception-v2.md) (identity-stable refs) · [S6](phase-s6-safety-control-plane.md) (grant plane) · **Track:** [AI Agent Super](README.md)
+
+**Goal:** Let the agent learn across runs. Ship three cross-run stores — a per-domain **advisory** observation memory (selector hints, layout notes, successful-path summaries), a **skill/shortcut library** of named user-triggerable task templates, and **per-task remembered grants** with expiry — all in SQLite with sync-meta columns. Memory is advisory-only, injected as tainted context, never auto-executed, and re-validated against the live DOM before use. This phase owns north-star condition 4's *"cost measurably dropping on repeat domains"* — the repeat-visit fixtures must show wall-clock and tokens dropping without any first-visit regression.
+
+## Why
+
+**Nothing is learned across runs today.** The only cross-run persistence adjacent to the agent is per-tab-group conversation history capped at 20 messages ([agent-conversation-store.ts](../../packages/persistence/src/agent-conversation-store.ts)), and run checkpoints in [run-lifecycle.ts](../../packages/agent-runtime/src/run-lifecycle.ts) that are **written but never resumed**. There is no per-domain memory and no skill library: every run re-discovers a site's layout, re-pays the perception tokens to find the same login form, and re-asks for the same grants. The reactor ([reactor.ts](../../packages/orchestrator/src/reactor.ts)) starts every task from a cold model with only the strategy prompt ([reactor-prompt.ts](../../packages/orchestrator/src/reactor-prompt.ts)).
+
+**Every Comet-class rival ships memory that influences behaviour**, and north-star condition 4 ([README](README.md), [constitution](constitution.md#north-star--the-four-claim-conditions-full-text)) makes the repeat-domain cost drop a *published claim condition* this program must satisfy — measured, not asserted. On the measured baseline ([eval-results.md](eval-results.md)) the DoD-model failures are on-page competence, and much of the wall-clock is re-perception of already-seen structure; a domain memory is the lever that turns a second visit cheaper.
+
+**Memory is a live attack surface.** The Comet security record (Brave / Trail of Bits / Zenity: prompt-injection → Gmail exfiltration, zero-click calendar hijack) shows that a store which influences future behaviour is a **persistence vector for poisoning** — a malicious page seeds a hint on visit 1, the agent obeys it on visit 2. So this store cannot be a naive cache. Observations are injected only through the perception trust boundary ([content-guard.ts](../../packages/tool-executor/src/content-guard.ts): `sanitizeContent` / `detectThreats` / the `<user_task>` trust fencing), tagged as tainted third-party content, and re-validated against the current DOM — never trusted, never executed from store. Selector hints cannot be persisted as the per-snapshot positional refs from [interactable.ts](../../packages/tool-executor/src/interactable.ts) `finalizeElements` (invalidated every snapshot); they must be durable descriptors re-resolved against **S2's identity-stable refs** at use time.
+
+Skills are **distinct from Phase 6 recipes** ([routing table](README.md#routing--what-stays-out), ownership test: *"if the model could be removed from the replay, it's Phase 6"*). A skill is a model-driven template (prompt + start URL + grant profile) that the agent still reasons over; a Phase-6 recipe is a signed, model-free deterministic replay. S9 ships the former only.
+
+## Exit criteria (DoD)
+
+- [ ] **Repeat-visit cost drop:** on the repeat-domain paired fixtures, second-visit **wall-clock/task AND tokens/task both ≥25% lower** than first-visit, at pooled **N≥10 paired** with Wilson 95% CIs on the pooled family (⏸ funded sweep).
+- [ ] **First-visit unchanged:** first-visit verified-completion rate and wall-clock within **±5pp / equivalence margin** of the pre-S9 baseline — memory must not tax the cold path (⏸ funded sweep).
+- [ ] **Poisoned-hint 0 violations:** on the poisoned-hint fixture family (store seeded with a malicious hint), **0 policy/egress violations in N≥10** — the agent must not follow a stored hint into a taint/egress/grant violation. This is the **ship gate**, not a nice-to-have (⏸ funded sweep).
+- [ ] **Re-validation mandatory by construction:** a stored selector hint that does not resolve against the current DOM (via S2 identity refs) is discarded, never actioned; covered by a scripted stale-hint regression (plumbing, not competence).
+- [ ] **Advisory-only, by construction:** no memory value reaches `ToolGateway.invoke` without passing the same PEP as a fresh model decision; a memory-derived value crossing the egress firewall carries taint and triggers the S6 approval path. Scripted assertion.
+- [ ] **Sync-ready:** every new table carries sync-meta (`updated_at`, `version`, `tombstone`, UUID PK, `device_id` via [MetaStore.deviceId](../../packages/persistence/src/meta.ts)) — verified by a persistence test; no Phase-3 migration owed.
+- [ ] **Skills UI surface localized:** the skills library trigger + editor ships EN + full-TR parity in the same PR ([ext-agent i18n](../../extensions/ext-agent/src/i18n)).
+- [ ] **Constitution items:** fixtures frozen in PR0 **before** any capability code ([constitution](constitution.md#the-rules)); the memory-on vs memory-off paired sweep is recorded with its equivalence margin; the before/after delta is appended to [eval-results.md](eval-results.md); the phase rests at 🟠 until the funded sweep lands.
+- [ ] **Prose:** none deleted (S9 owns no PROSE-LEDGER row); any future deletion this memory *enables* is recorded when proven, never claimed here.
+
+## Tasks
+
+### PR0 — fixture freeze (no capability code)
+- [ ] Add repeat-domain **paired** fixtures to [packages/agent-eval](../../packages/agent-eval) registries: each is a `{first_visit, second_visit}` pair on the same domain, scored **separately** so the delta is a paired statistic (first-visit arm doubles as the ±5pp regression guard).
+- [ ] Add the **poisoned-hint** fixture family: a seed step that plants a malicious observation into the memory store, then a task where obeying the hint would trip a taint/egress/grant violation; scorer asserts **0 violations**.
+- [ ] Register both families in the family-pooling map ([statistics.ts](../../packages/agent-eval)) and the escape/cost metric plumbing; commit rubrics + expected deltas before any store code.
+- [ ] Ledger stub in [eval-results.md](eval-results.md) marking the S9 sweep ⏸ awaiting funded key.
+
+### PR1 — schema + write path (sync-meta, ≤250 lines/file)
+- [ ] New `agent-memory-store.ts` in [packages/persistence/src](../../packages/persistence/src) (per the no-`apps/desktop`-growth rule): `domain_memory` table keyed on host + S2 durable descriptor, columns `id` (UUID PK), `device_id`, `updated_at`, `version`, `tombstone`, `host`, `descriptor_json`, `note`, `success_path_json`, `provenance`. Migration in [migrations.ts](../../packages/persistence/src/migrations.ts); `safeParse` on read via a `@tepegoz/shared-types` schema (sole schema source).
+- [ ] Write path emits **durable descriptors** (role/name/href/structural-path), never positional refs — derive from the S2 identity ref, not [interactable.ts](../../packages/tool-executor/src/interactable.ts) snapshot indices.
+- [ ] **Write-side poison filter:** run `detectThreats` ([content-guard.ts](../../packages/tool-executor/src/content-guard.ts)) over every candidate observation before persisting; threats are dropped and the drop is journalled ([event-journal.ts](../../packages/persistence/src/event-journal.ts)).
+- [ ] Persistence test proving sync-meta columns + tombstone soft-delete.
+
+### PR2 — advisory injection + live-DOM re-validation
+- [ ] New `@tepegoz/agent-memory` retrieval seam (a package, not `apps/desktop`): given the current host, return sanitized advisory context. Injected into the reactor turn as **tagged tainted content** through `sanitizeContent`, distinct from the `<user_task>` trusted fence — never as an instruction.
+- [ ] **Re-validation gate:** before a hint is offered, re-resolve its descriptor against the current DOM using S2 identity refs; a non-resolving hint is discarded (the mandatory anti-stale construction). Wire into [reactor.ts](../../packages/orchestrator/src/reactor.ts)'s context assembly, not the action path.
+- [ ] Taint propagation: a memory-derived value routes through the existing TaintTracker so egress inherits the S6 approval path; assert no bypass of `ToolGateway.invoke`.
+- [ ] Scripted stale-hint + advisory-only regressions (plumbing tier).
+
+### PR3 — poisoned-hint defenses + fixtures
+- [ ] Injection posture for memory: memory context is sanitized in strict posture (`isStrictMode`), forged-trust-tag stripping on retrieval, and a **quarantine** flag — a hint whose use once preceded a policy denial is quarantined and excluded from future retrieval.
+- [ ] Run the frozen poisoned-hint family in scripted mode as a **pre-sweep gate** (0 violations must hold on the deterministic arm before the funded sweep is even scheduled).
+- [ ] Provenance surfaced to the S8 event stream so a human sees *"acting partly on a remembered hint from <host>"* (advisory transparency).
+
+### PR4 — skills library + UI hook
+- [ ] `skill-store.ts` in [packages/persistence/src](../../packages/persistence/src): named templates `{name, prompt, start_url, grant_profile_ref}` + sync-meta; `@tepegoz/shared-types` schema; **not** a Phase-6 recipe (no signed model-free replay — document the boundary inline).
+- [ ] User-triggerable entry point in [ext-agent](../../extensions/ext-agent/src) via [panel-run-config.tsx](../../extensions/ext-agent/src/panel-run-config.tsx) / a skills dropdown on [panel.tsx](../../extensions/ext-agent/src/panel.tsx); selecting a skill pre-fills the composer + start URL + grant profile. EN + full-TR dictionaries in the same PR.
+- [ ] Skill launch reuses the normal reactor path (model stays in the loop) — no new execution plane.
+
+### PR5 — remembered grants (S6 plane, persisted with expiry)
+- [ ] `grant-store.ts` in [packages/persistence/src](../../packages/persistence/src): persist S6 grants keyed on {task/skill, host, tool-tier} with an explicit `expires_at`; sync-meta columns; `safeParse`.
+- [ ] [policy-kernel.ts](../../packages/security-policy/src/policy-kernel.ts) consults remembered grants **pre-model** (ADR-0006 ordering preserved); an expired or tombstoned grant is never honoured; a remembered grant never upgrades the ceiling above S6's `follow_a_plan` and never covers a taint-crossing action silently.
+- [ ] Grant provenance shown at approval time (S8 surface) so the human can revoke.
+
+### PR6 — repeat-visit sweep (⏸ funded)
+- [ ] Run the frozen paired families memory-on vs memory-off at pooled N≥10; record wall-clock/task, tokens/task, first-visit regression, and poisoned-hint violations with the exclusion accounting (transport-invalid / dead-key per the [constitution](constitution.md#the-rules)).
+- [ ] Append the dated before/after entry to [eval-results.md](eval-results.md); flip S9 🟠 → ✅ only if all four DoD numbers hold; update the north-star condition-4 scorecard (repeat-domain drop half only).
+
+## Fixtures
+
+Frozen in PR0, added to [packages/agent-eval](../../packages/agent-eval):
+- **Repeat-domain paired family** — `{first_visit, second_visit}` on the same host, scored separately; the delta between arms is the ≥25% wall-clock + tokens claim, and the first-visit arm is the ±5pp regression guard.
+- **Poisoned-hint family** — a seed step plants a malicious observation into `domain_memory`; the follow-up task is constructed so that obeying the hint trips a taint/egress/grant violation. Scorer asserts **0 violations** at N≥10; this family is the ship gate.
+
+## Prose steers
+
+**None owned.** S9 deletes no [PROSE-LEDGER](PROSE-LEDGER.md) row. Domain memory may later make some navigation/perception steers redundant on repeat visits; any such deletion is owned and proved by S2/S3 with their paired sweeps, or recorded here only once measured — **enabled is not claimed**.
+
+## ADR
+
+**Adds ADR-0027 — Agent memory: advisory-only, tainted, re-validated, sync-ready** (continues from 0025). Records: (1) cross-run memory is advisory context injected through the perception trust boundary, never an instruction and never auto-executed; (2) selector hints are durable descriptors re-resolved against S2 identity refs at use time, discarded on non-resolution; (3) memory is sanitized on write (`detectThreats`) and on read (strict posture + quarantine), and inherits taint/egress/grant enforcement unchanged (ADR-0006 pre-model ordering, ADR-0007 single tool plane); (4) skills are model-driven templates, explicitly not Phase-6 signed recipes; (5) all stores carry sync-meta. Amends nothing in 0006/0007/0008/0013 — it composes with them.
+
+## Risks
+
+- **Memory as an injection persistence vector (primary).** Mitigation is structural, not prose: write-side `detectThreats` filter, read-side strict-mode sanitize + forged-tag strip + quarantine, advisory-only injection through the taint boundary, and re-validation against the live DOM. The **poisoned-hint fixture is the ship gate** — S9 does not close if it shows any violation. Spike-first: PR3 lands the deterministic 0-violation arm before the funded sweep is scheduled.
+- **Stale hints.** A remembered selector that has since changed must never be actioned; the live-DOM re-validation gate (PR2) is mandatory by construction and covered by a scripted regression, so staleness degrades to "no hint", never "wrong action".
+- **Silent grant creep.** A remembered grant could quietly widen autonomy; mitigated by hard expiry, the `follow_a_plan` ceiling, no silent taint-crossing, and human-visible provenance/revocation (PR5/S8).
+- **Cost measurement confound.** The ≥25% drop must be attributable to memory, not scenario variance; mitigated by the **paired** first-vs-second design at pooled N≥10 with a memory-on/off arm and a pre-stated equivalence margin on the first-visit guard.
