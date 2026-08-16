@@ -62,7 +62,12 @@ fixtures** — that is the point: freeze the exam before writing the answers.
 
 - [x] **Zero broken `archive/` links** — `git grep -n 'archive/'` across `phases/` resolves to a real
       file for every hit (the archive restored under this folder, links repointed). *Verified stronger
-      than the gate asked: **all 839 relative links across all 53 `phases/**/*.md` resolve, 0 broken.***
+      than the gate asked: **every relative link across all `phases/**/*.md` resolves, 0 broken.***
+      The gate is now executable — `pnpm docs:links` ([`scripts/check-doc-links.mjs`](../../scripts/check-doc-links.mjs),
+      wired into CI) re-measures it on every push. *This line originally recorded a hand-counted "839
+      links". That number is not reproducible — the same tree measures 870 — so it was replaced with
+      the invariant plus the command that proves it, rather than a figure a later auditor would read as
+      drift.*
 - [x] **Zero index-drift items** — every phase status in the new [`README.md`](README.md) index audited
       against `git log`; no phase whose code has landed still reads "Not started"; the
       **measurement-owed count is restored to ≤1** (constitution anti-debt rule satisfied on the record).

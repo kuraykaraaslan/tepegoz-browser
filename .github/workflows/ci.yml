@@ -28,6 +28,8 @@ jobs:
         run: pnpm exec turbo run typecheck lint test build
       - name: Coverage gate (S80/B70/F80/L80 — scope in vitest.config.ts)
         run: pnpm run coverage
+      - name: Doc link gate (0 broken relative links under phases/ — S0 exit criterion)
+        run: pnpm run docs:links
       - name: Dependency audit (report high/critical)
         run: pnpm audit --audit-level=high || true
 
