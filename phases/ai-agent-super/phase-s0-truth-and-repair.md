@@ -97,9 +97,13 @@ fixtures** — that is the point: freeze the exam before writing the answers.
 - [ ] **Ledger + constitution hygiene** — the baseline entry records its **actual $/trial** (the
       constitution's "no sweep without a recorded cost" rule); the order-of-magnitude estimates in
       [`README.md`](README.md)'s budget table are replaced with actuals in the same entry. **(⏸ funded sweep)**
-- [ ] **Constitution compliance** — no new fixtures introduced (freeze-before-capability honoured by
+- [x] **Constitution compliance** — no new fixtures introduced (freeze-before-capability honoured by
       construction); no prose deleted (no paired-sweep obligation incurred); **i18n:** none (dev-only
       harness + docs; any Agent Console string touched → EN + full TR in the owning dict).
+      *Verified across PR0–PR3: zero scenarios added (recorded in [`fixture-freeze.md`](fixture-freeze.md));
+      all seven [`PROSE-LEDGER.md`](PROSE-LEDGER.md) rows still RETAINED, no `BROWSING_STRATEGY` steer
+      touched; no user-facing string touched — the only non-doc edits were `.gitignore` and a package
+      README pointer.*
 
 ## Tasks
 
