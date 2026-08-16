@@ -1,7 +1,7 @@
 # Eval Results Ledger — AI Agent Super
 
 The dated results ledger for this program. It **continues** the v2 ledger
-[`../ai/eval-results-2026-07.md`](../ai/eval-results-2026-07.md) (6 entries, 2026-07-10 → 2026-07-25);
+[`../ai/eval-results-2026-07.md`](eval-results-2026-07.md) (6 entries, 2026-07-10 → 2026-07-25);
 [S0](phase-s0-truth-and-repair.md) moves that file's history under this folder. Every phase exit records
 its before/after here — **a phase is incomplete until its delta is in this ledger** (anti-debt rule).
 

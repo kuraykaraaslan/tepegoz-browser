@@ -8,7 +8,8 @@ curated **structured table/list extraction** tool built on the same plane. Read-
 world may query the DOM but may never mutate page globals, and the script may never touch the network.
 Ship this **without** becoming a prompt-injection amplifier: the script input is model-authored, so a
 hostile page that persuades the model to write an exfiltrating script is the threat we design against
-first. This phase subsumes the retired v2 [F2 structured-data](../ai/phase-ai-f2-structured-data.md) track.
+first. This phase subsumes the retired v2 **F2 structured-data** track (document deleted by
+[S0](phase-s0-truth-and-repair.md) PR2; recover with `git show 0eaafcd:phases/ai/phase-ai-f2-structured-data.md`).
 
 ## Why
 

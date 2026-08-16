@@ -1,7 +1,7 @@
 # Prose Ledger — Consolidation as a DoD Rule (re-owned to S-phases)
 
-Supersedes [`../ai/PROSE-LEDGER.md`](../ai/PROSE-LEDGER.md); [S0](phase-s0-truth-and-repair.md) removes
-the old file. The **rule** is unchanged (see [`constitution.md`](constitution.md#consolidation-as-a-dod-rule)):
+Supersedes the v2 `phases/ai/PROSE-LEDGER.md`, which [S0](phase-s0-truth-and-repair.md) PR2 removed
+(`git show 0eaafcd:phases/ai/PROSE-LEDGER.md`). The **rule** is unchanged (see [`constitution.md`](constitution.md#consolidation-as-a-dod-rule)):
 every capability phase **deletes the prose steer it subsumes in the SAME PR** that proves the measured
 delta, gated by a paired with/without sweep at pooled N with a pre-stated equivalence margin. Each line
 ends **DELETED** (linking its proving sweep) or **RETAINED** (one-line justification). System-prompt

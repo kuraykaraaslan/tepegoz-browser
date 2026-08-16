@@ -1,6 +1,8 @@
 # Phase S0 — Truth & Repair (Foundation)
 
-**Status:** ⬜ Not started · **Depends on:** — (first phase of v3) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟠 **Measurement-owed** — PR0–PR3 landed 2026-08-16 (the entire drift repair, all
+funding-independent); PR4–PR6 are the ⏸ funded full-registry sweep · **Depends on:** — (first phase of
+v3) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Make this folder the **single authoritative** AI competence roadmap and repair the three-way
 drift between docs, code, and numbers before any capability work opens. Absorb the still-valid machinery
@@ -15,10 +17,12 @@ The evidence is a documented, reproducible drift across three surfaces:
 
 1. **The v1 archive was deleted.** Commit `e900567` removed `phases/ai/archive/` — 10 v1 documents
    including the `browser-use`/`nanobrowser` build-vs-buy record and the full v1 measurement history —
-   leaving **~15 broken `archive/` links** across `phases/ai/*` (e.g. [`phase-ai-m1`](../ai/phase-ai-m1-measurement-baseline.md)
-   references `archive/README-v1.md` and `archive/phase-ai-1-eval-harness.md`). The content is
+   leaving **~15 broken `archive/` links** across `phases/ai/*` (e.g. the retired `phase-ai-m1`
+   referenced `archive/README-v1.md` and `archive/phase-ai-1-eval-harness.md`). The content is
    recoverable verbatim: `git show 49396c5:phases/ai/archive/<file>`. The build-vs-buy decision itself is
    already preserved in [`history.md`](history.md); the rest of the archive is not.
+   **→ Closed by PR1:** the 10 files are restored under [`archive/`](archive/README.md), their links
+   repaired (including code links broken since the original demotion into `archive/`).
 
 2. **The index lies about landed work.** [`../ai/README.md`](../ai/README.md) shows **C1
    "Measurement-owed"** and **M1 / C7 "Not started"**, but M1-PR1 (`e01691b`, `f9e639d`), **all** C1 PRs,
@@ -48,14 +52,19 @@ fixtures** — that is the point: freeze the exam before writing the answers.
 
 ## Exit criteria (DoD)
 
-- [ ] **Zero broken `archive/` links** — `git grep -n 'archive/'` across `phases/` resolves to a real
-      file for every hit (the archive restored under this folder, links repointed).
-- [ ] **Zero index-drift items** — every phase status in the new [`README.md`](README.md) index audited
+- [x] **Zero broken `archive/` links** — `git grep -n 'archive/'` across `phases/` resolves to a real
+      file for every hit (the archive restored under this folder, links repointed). *Verified stronger
+      than the gate asked: **all 839 relative links across all 53 `phases/**/*.md` resolve, 0 broken.***
+- [x] **Zero index-drift items** — every phase status in the new [`README.md`](README.md) index audited
       against `git log`; no phase whose code has landed still reads "Not started"; the
       **measurement-owed count is restored to ≤1** (constitution anti-debt rule satisfied on the record).
-- [ ] **The retired v2 phase docs are gone and their machinery absorbed** — `phases/ai/phase-ai-{m1,m2,c1..c7,f1..f3}.md`
+      *See the [status-truth audit](README.md#status-truth-audit-s0-pr2-2026-08-16--what-is-actually-landed):
+      M1 + harness robustness absorbed (no debt), C1 and C7-PR1 sweeps folded into S0's one baseline →
+      **1 measurement-owed**.*
+- [x] **The retired v2 phase docs are gone and their machinery absorbed** — `phases/ai/phase-ai-{m1,m2,c1..c7,f1..f3}.md`
       deleted; `constitution.md`, `eval-results.md`, `PROSE-LEDGER.md`, and the eval-loop runbook live
       under this folder; [`../README.md`](../README.md)'s "AI" row points at [`README.md`](README.md).
+      *`phases/ai/README.md` remains as a tombstone stub recording where every item went.*
 - [ ] **The regenerable report is not tracked** — root `agent-eval-report.json` removed from the tree and
       added to `.gitignore`; a documented regenerate command exists.
 - [ ] **The `docs/ARCHITECTURE.md` reference resolves** — either the file is created (mirroring the L0–L10
@@ -90,29 +99,29 @@ fixtures** — that is the point: freeze the exam before writing the answers.
       scenarios incl. 24 `atk_*`, per-file SHA-256, regenerate command).
 
 ### PR1 — restore the v1 archive + repair links
-- [ ] Restore all 10 files: `git show 49396c5:phases/ai/archive/<file>` → write under
+- [x] Restore all 10 files: `git show 49396c5:phases/ai/archive/<file>` → write under
       **`phases/ai-agent-super/archive/`** (this folder owns history now; the build-vs-buy summary already
       lives in [`history.md`](history.md) and stays the canonical short form — the archive is the long form).
-- [ ] Repoint every `archive/` link. The dangling references live in the v2 phase docs about to be
+- [x] Repoint every `archive/` link. The dangling references live in the v2 phase docs about to be
       deleted in PR2, so scope PR1 to links that **survive** (in [`history.md`](history.md),
       [`README.md`](README.md), and any retained runbook); `git grep -n 'archive/'` must resolve clean at
       PR2 close.
-- [ ] Add a one-line archive `README` noting provenance (restored from `49396c5`, deleted by `e900567`).
+- [x] Add a one-line archive `README` noting provenance (restored from `49396c5`, deleted by `e900567`).
 
 ### PR2 — retire the v2 track, absorb its machinery
-- [ ] Delete `phases/ai/phase-ai-m1-measurement-baseline.md`, `-m2-external-yardstick.md`,
+- [x] Delete `phases/ai/phase-ai-m1-measurement-baseline.md`, `-m2-external-yardstick.md`,
       `-c1..-c7`, `-f1..-f3` (13 phase docs). Their residual scope is already mapped in
       [`README.md`](README.md#old-v2--new-s-residual-scope-map); nothing is silently dropped.
-- [ ] Confirm the spine files already created here — [`constitution.md`](constitution.md),
+- [x] Confirm the spine files already created here — [`constitution.md`](constitution.md),
       [`eval-results.md`](eval-results.md), [`PROSE-LEDGER.md`](PROSE-LEDGER.md),
       [`history.md`](history.md) — and **remove the originals** under `phases/ai/`; move the eval-loop
       runbook to this folder and repoint the [`README.md`](README.md#operations) link (currently
       `../ai/eval-loop-runbook.md`).
-- [ ] **Status-truth pass:** audit every landed AI PR against `git log`, correct the
+- [x] **Status-truth pass:** audit every landed AI PR against `git log`, correct the
       [`README.md`](README.md) phase index, and bring the **measurement-owed count to ≤1** — the C1 code
       is landed, so its exit sweep folds into S0's baseline; M1/C7 machinery is landed and recorded as
       absorbed, not "Not started".
-- [ ] Update [`../README.md`](../README.md)'s "AI" row to point at [`README.md`](README.md) (the sole
+- [x] Update [`../README.md`](../README.md)'s "AI" row to point at [`README.md`](README.md) (the sole
       authoritative roadmap), leaving `phases/ai/` as a tombstone dir (README stub only).
 
 ### PR3 — kill the wrong artefact + fix the architecture pointer

@@ -80,7 +80,7 @@ The 2026-07 suggestion audit found the backbone real and wired, but the **measur
 run per scenario, point estimates only, no wall-clock, and two metrics defined-but-dead in the live path.
 These make a "pass" less trustworthy than the anti-vanity contract demands. Each is a checkbox here; none
 changes agent behaviour (still measurement-only). The **first live run**
-([`eval-results-2026-07.md`](eval-results-2026-07.md)) already showed why these matter — N=1 sampling noise
+([`eval-results-2026-07.md`](../eval-results-2026-07.md)) already showed why these matter — N=1 sampling noise
 flipped several scenarios PASS↔FAIL (its finding #3, corroborating `s02`).
 
 - [x] **`s02` — repeated trials (≥3× per scenario) — LANDED** (`ac53932`). `TEPEGOZ_EVAL_REPEAT=N` (clamped

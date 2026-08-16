@@ -71,7 +71,7 @@ completion validator, and neither fires on a *search*, because a search is a leg
 a `finish`. So both escapes must pass through **one** gate: *is the visible on-page route exhausted?*
 
 This is **empirically confirmed, not hypothetical**: the first live-model run
-([`eval-results-2026-07.md`](eval-results-2026-07.md), finding #4) names the escape hatch *the biggest
+([`eval-results-2026-07.md`](../eval-results-2026-07.md), finding #4) names the escape hatch *the biggest
 remaining competence anti-pattern* — on hard multi-step tasks the agent navigated to a guessed `target.com`
 or web-searched "how to dismiss a cookie banner" instead of using the on-page widget, across
 `blog_behind_menu`, `shadow_dom_nav`, `div_button_products`, and the new `cookie-consent`/`login-form`/

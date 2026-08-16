@@ -62,7 +62,7 @@ maps to a workstream with **one headline metric** it must move.
 
 | ID | File | Goal | Depends on | Status |
 |---|---|---|---|---|
-| S0 | [phase-s0-truth-and-repair.md](phase-s0-truth-and-repair.md) | Absorb + retire the v2 track, repair all doc/code/number drift, first full-registry honest baseline, taxonomy that may re-cut this program | — | ⬜ Not started |
+| S0 | [phase-s0-truth-and-repair.md](phase-s0-truth-and-repair.md) | Absorb + retire the v2 track, repair all doc/code/number drift, first full-registry honest baseline, taxonomy that may re-cut this program | — | 🟠 **Measurement-owed** (PR0–PR3 landed 2026-08-16: freeze, archive, v2 retirement, artefact + pointer repair. PR4–PR6 = the ⏸ funded sweep) |
 | S1 | [phase-s1-foundation-native-loop.md](phase-s1-foundation-native-loop.md) | Native tool-calling + multimodal `CanonMessage` + streaming-to-UI (settled-to-Journal) | S0 | ⬜ Not started (ADR-0025) |
 | S2 | [phase-s2-perception-v2.md](phase-s2-perception-v2.md) | Identity-stable refs + diff/dedupe + compact serialization + label resolution + `get_page_text` | S0 | ⬜ Not started |
 | S3 | [phase-s3-reliability-actions.md](phase-s3-reliability-actions.md) | Dialogs, tab-spawn world model, wait-for, send-keys, hover/drag, nav verbs, typed widgets, click-time occlusion + locator cascade, cookie-consent fix | S0; S2 (refs) | ⬜ Not started |
@@ -98,6 +98,23 @@ delta not yet in the ledger — counts against the anti-debt rule) · ✅ Done (
 | F3 (domain memory) | → | [S9](phase-s9-memory-skills.md) |
 | M1 machinery (Wilson CIs, flaky, cost, wall-clock, family pooling) | → | **absorbed** (already landed; [S0](phase-s0-truth-and-repair.md) records the truth) |
 | M2 (external yardstick / H2H) | → | [S11](phase-s11-benchmark-h2h.md) |
+
+### Status-truth audit (S0 PR2, 2026-08-16) — what is actually landed
+
+The retired v2 index read **C1 "Measurement-owed"** and **M1 / C7 "Not started"** while all three had
+landed code, hiding an anti-debt breach **×3**. Audited against `git log`, the truth is:
+
+| v2 item | Landed code (commits) | Owed measurement | Debt home |
+|---|---|---|---|
+| **M1** measurement backbone | `e01691b`, `f9e639d` (merge `715a10e`) — cost, wall-clock, Wilson CIs, honest scenarios, read cap, per-tag pooled family aggregates | **none** — this *is* the measuring instrument, not a capability claim | **absorbed**, no debt |
+| **C1** typed state + escape | `d591523` (typed working state), `1c5ddd0` (no-progress replan), `f04aeb2` + `5a0cfb0` (escape→replan trigger), `68d6e90` (truncation salvage) — all default-on | exit sweep | **folded into S0** PR4 |
+| **C7-PR1** adversarial robustness | `1403a05` (`setStrictMode` reachable), `4cf2caa` (24-scenario frozen battery), `54848f4` (harness strict-mode knob) | first live `atk_*` numbers | **folded into S0** PR4 (N=3, caveated); claim-grade N≥10 is [S6](phase-s6-safety-control-plane.md)'s |
+| Harness robustness | `4dd89d6` (transport-invalid exclusion + readiness barrier), `ac579b5` (dead-key → `UNMEASURED` + sweep abort) | none — exclusion machinery the baseline depends on | **absorbed**, no debt |
+
+**Anti-debt state: 1 measurement-owed (S0) — compliant.** C1's and C7's owed sweeps do not each count
+as separate debt because both are discharged by the *same* S0 full-registry baseline; no other phase
+holds landed capability code. Every remaining S-phase reads ⬜ **Not started** truthfully: their code
+does not exist yet.
 
 ## Sequencing, lanes & measurement gates
 
@@ -174,4 +191,4 @@ S4-verified trajectories, held-out contamination-gated).
   SHA-256 per file); every phase PR0 cites it as the base its delta was measured against.
 - [`history.md`](history.md) — v1 measurement history + the `browser-use`/`nanobrowser` build-vs-buy
   decision, preserved.
-- Eval loop runbook: [`../ai/eval-loop-runbook.md`](../ai/eval-loop-runbook.md) (moved here by S0).
+- Eval loop runbook: [`../ai/eval-loop-runbook.md`](eval-loop-runbook.md) (moved here by S0).
