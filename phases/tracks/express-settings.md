@@ -11,7 +11,7 @@ sunucusundan gerçek sayfa olarak sunulması.
 İç sayfalar (`tepegoz://…`) şu an gerçek bir Electron protokolü değil; chrome renderer'ın "hangi
 React bileşenini göstereyim" diye eşleştirdiği bir string kuralı. Bu yüzden bu sayfaların **gerçek
 sayfa semantiği yok**: main process'in `WebContentsView` `context-menu` event'i fire etmiyor
-(bkz. [page-context-menu.ts:11-13](../apps/desktop/src/main/menus/page-context-menu.ts#L11-L13)),
+(bkz. [page-context-menu.ts:11-13](../../apps/desktop/src/main/menus/page-context-menu.ts#L11-L13)),
 dolayısıyla sağ tık menüsü çalışmıyor. Ctrl+F, view-source gibi native davranışlar da yok.
 
 Amaç: ayar sayfalarını gerçek bir `WebContentsView`'e yüklenen sayfalara dönüştürerek native sayfa
@@ -116,7 +116,7 @@ renderer / WebContentsView
 9. **Ayar UI entry'si.** `SettingsPage`'i yüklenebilir HTML'e taşı; `/api/prefs` fetch'lerinde
    token header'ı ekle.
 10. **`tepegoz://settings` yönlendirmesi.** `navigateActive`/`openInternalPage`
-    ([tabs.ts:468-473](../apps/desktop/src/main/tabs.ts#L468-L473)) settings için chrome-render yerine
+    ([tabs.ts:468-473](../../apps/desktop/src/main/tabs.ts#L468-L473)) settings için chrome-render yerine
     `http://127.0.0.1:<port>/` yükleyecek şekilde güncellenir. Adres çubuğu yine `tepegoz://settings`
     gösterir (URL maskeleme — kullanıcıya loopback IP'si sızmaz).
 11. **Yaşam döngüsü kapanışı (M11).** `before-quit`/`window-all-closed` → `server.close()`.

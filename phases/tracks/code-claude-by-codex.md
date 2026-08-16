@@ -7,7 +7,7 @@ ilgili dokumantasyon.
 
 Bu planin amaci `extensions/ext-agent` yuzeyini Claude Chrome benzeri cok adimli, cok sekmeli ve
 guvenilir bir tarayici ajani haline getirmek. Arastirma notu olarak
-[`docs/new/claude-versus.md`](../docs/new/claude-versus.md) kullanildi; uygulama onceligi ise guncel
+[`docs/new/claude-versus.md`](../../docs/new/claude-versus.md) kullanildi; uygulama onceligi ise guncel
 TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 
 ## Kayitli kararlar

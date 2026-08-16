@@ -43,9 +43,9 @@ them** with `- [ ]` / `- [x]`. This keeps the process resumable across sessions.
 
 Status legend: ⬜ Not started · 🟡 In progress · ✅ Done (DoD passed)
 
-## Current Claude-level agent hardening track
+## Completed hardening track (folded into Phases 1a / 1b / 2c)
 
-See [`../plans/code-claude-by-codex.md`](../plans/code-claude-by-codex.md) for the resumable plan and
+See [`tracks/code-claude-by-codex.md`](tracks/code-claude-by-codex.md) for the resumable plan and
 [`../docs/new/claude-versus.md`](../docs/new/claude-versus.md) for the research/status table. The completed
 work has been folded into Phase 1a/1b as follows:
 
