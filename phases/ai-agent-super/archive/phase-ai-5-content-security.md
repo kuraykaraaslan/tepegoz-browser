@@ -44,7 +44,7 @@ strip known injection patterns before it reaches the model, matching nanobrowser
 - Detection is **heuristic/regex** (fast, deterministic), explicitly a v1 — not a model-based classifier.
   Keep it advisory + layered; the authoritative security decisions stay in the Policy Kernel / Egress
   Firewall / HITL.
-- Coordinate with [Phase 2](../../phase-2-adapters-safe-browsing.md) (AgentThreatShield / Content Sanitizer)
+- Coordinate with [Phase 2](../../product/phase-2-adapters-safe-browsing.md) (AgentThreatShield / Content Sanitizer)
   so this inbound guard and that safe-browsing work share one taxonomy rather than duplicating.
 
 ## Audited gaps (external review, 2026-07)
@@ -71,5 +71,5 @@ web arg → HITL), all default-on and wired. Two follow-ups here; the risk-tieri
   **zero** tools; `biometric` is unenforced metadata), a **prepare-vs-send** two-phase split, a
   reversibility-default, and **resume-after-handoff** with payment-ambiguity/irreversible-action triggers
   (`s20`/`s30`) — deepen the *authority* plane, not inbound content security. They belong to
-  [Phase 9 — Safe Autonomy & Delegation](../../phase-9-safe-autonomy-delegation.md). The core approval gate +
+  [Phase 9 — Safe Autonomy & Delegation](../../product/phase-9-safe-autonomy-delegation.md). The core approval gate +
   CAPTCHA/2FA handoff are already built, wired, and default-on; these are the deltas.

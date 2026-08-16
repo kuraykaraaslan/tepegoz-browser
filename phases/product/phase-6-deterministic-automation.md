@@ -15,7 +15,7 @@ Effect Ledger + perception-observation events. Narrative: **"Demonstrate once, r
 > `forEachRow` with restart, a safe sandboxed expression language, located errors) driven over a CDP
 > **robust multi-selector engine** with auto-wait (`macro-cdp.ts`), a CDP recorder (`macro-recorder.ts`),
 > `MacroStore` (migration v5), and streamed run progress. It also lands the **agent-controllable
-> extension standard** ([ADR-0021](../docs/adr/0021-agent-controllable-extensions.md)): the macro tools
+> extension standard** ([ADR-0021](../../docs/adr/0021-agent-controllable-extensions.md)): the macro tools
 > (`macros_*`) + meta `extension_*` tools register into the single CapabilityRegistry behind the
 > ToolGateway PEP. Remaining for this phase proper: run→recipe **distillation** from a `TaskSucceeded`
 > chain, self-healing selectors (one scoped model replan), Watchers, the Scheduler, and the restricted

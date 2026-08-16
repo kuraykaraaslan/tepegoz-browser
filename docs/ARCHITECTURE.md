@@ -19,15 +19,15 @@ direct cross-layer imports are forbidden and **enforced in CI** by
 |------:|----------------|---|
 | **L0 — Core Shell** | Secure Electron windowing, fuses, sandboxing, typed IPC | [`apps/desktop`](../apps/desktop) · [ADR-0001](adr/0001-electron-react-typescript.md) |
 | **L1 — Persistence** | SQLite (WAL) + append-only Event Journal + content-addressed blob store | [`packages/persistence`](../packages/persistence) |
-| **L2 — Durability & Memory** | Checkpoint/resume, handoff, per-task tiered memory | [Phase 1b](../phases/phase-1b-agentic-deepening.md) |
+| **L2 — Durability & Memory** | Checkpoint/resume, handoff, per-task tiered memory | [Phase 1b](../phases/product/phase-1b-agentic-deepening.md) |
 | **L3 — Orchestrator** | Intent → DAG planner, parallel scheduler, loop detection | [`packages/orchestrator`](../packages/orchestrator) · [ADR-0013](adr/0013-agent-orchestration-hitl.md) |
 | **L4 — Perception & Tools** | Out-of-process CDP driver, DOM + accessibility perception, content sanitizer | [`packages/tool-executor`](../packages/tool-executor) · [ADR-0008](adr/0008-perception-cdp.md) |
 | **L5 — Capability Plane** | Tool gateway (single PEP), skills runtime, MCP client + server | [ADR-0007](adr/0007-capability-plane-mcp.md) |
-| **L6 — Integration Adapters** | Official-API-first connectors with browser fallback | [Phase 2](../phases/phase-2-adapters-safe-browsing.md) |
+| **L6 — Integration Adapters** | Official-API-first connectors with browser fallback | [Phase 2](../phases/product/phase-2-adapters-safe-browsing.md) |
 | **L7 — Model Gateway** | Provider-agnostic AI routing, transports, Token Ledger | **[`technical-ai-doc.md`](technical-ai-doc.md)** · [ADR-0005](adr/0005-provider-agnostic-ai.md) |
 | **L8 — Security Kernel** | Policy Kernel, Capability Broker, Egress Firewall, HITL, prompt/rules engine | [`THREAT-MODEL.md`](THREAT-MODEL.md) · [ADR-0006](adr/0006-policy-kernel-hitl.md) · [ADR-0024](adr/0024-action-interception-plane.md) |
 | **L9 — Browser UI** | Command Palette, Live Agent Console, browser shell, settings | [`package-map.md`](package-map.md) |
-| **L10 — Safe Browsing** | Adblock, Safe Browsing, AgentThreatShield, popup/permission guard | [Phase 2](../phases/phase-2-adapters-safe-browsing.md) |
+| **L10 — Safe Browsing** | Adblock, Safe Browsing, AgentThreatShield, popup/permission guard | [Phase 2](../phases/product/phase-2-adapters-safe-browsing.md) |
 
 > An ADR is cited only where one exists; the index of record is [`adr/`](adr/) (ADR-0024 is the current
 > head — new records continue from 0025).

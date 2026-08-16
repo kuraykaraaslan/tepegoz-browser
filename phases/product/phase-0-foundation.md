@@ -90,7 +90,7 @@ No product features; the decisions made here would force a full rewrite if wrong
       snapshot → start fresh, never crash-loop)
 - [ ] **Chromium security-update cadence** (upstream-intake side of the update story): pinned+watched
       `electron`, ≤2-week adoption SLA for security bumps, embedded engine version logged per release — see
-      [ADR-0019](../docs/adr/0019-chromium-update-cadence.md). This governs *which engine* we ship; the
+      [ADR-0019](../../docs/adr/0019-chromium-update-cadence.md). This governs *which engine* we ship; the
       auto-update runtime above governs *how* we ship it.
 
 ### Documentation & security
@@ -103,14 +103,14 @@ No product features; the decisions made here would force a full rewrite if wrong
 
 ### i18n infrastructure (DAY-0 — set up early to avoid pain later)
 
-> **Mechanism refactored ([ADR-0016](../docs/adr/0016-per-package-i18n.md)):** the monolithic `Resources`
+> **Mechanism refactored ([ADR-0016](../../docs/adr/0016-per-package-i18n.md)):** the monolithic `Resources`
 > catalog below became **per-package dictionaries + a React runtime**. `@tepegoz/i18n` keeps only the shared
 > core (`common`/`window`/`errors`) + `defineDict`/`pick`/`./react` (`useT`/`I18nProvider`)/`./testing`; each
 > package/extension owns `src/i18n/{en,tr,index}.ts`; React surfaces `useT(dict)`, the main process uses
 > `pick`/`mainStrings`. The en/tr-parity, no-hardcoded and main-process-i18n **outcomes** below still hold —
 > now enforced **per dict**.
 
-- [ ] choose + set up i18n library (chose a lightweight type-safe runtime: `defineDict` + `useT`/`I18nProvider`, not i18next; Electron renderer, no SSR) — **[ADR-0016](../docs/adr/0016-per-package-i18n.md)**
+- [ ] choose + set up i18n library (chose a lightweight type-safe runtime: `defineDict` + `useT`/`I18nProvider`, not i18next; Electron renderer, no SSR) — **[ADR-0016](../../docs/adr/0016-per-package-i18n.md)**
 - [x] `packages/i18n` locale bundle: `src/locales/en.ts` (**primary/source; fallback**) + `tr.ts` (full parity, first-class); namespaced (common, commandPalette, agentConsole, onboarding, errors) + `resolveLocale()`
 - [x] type-safe keys: `Resources = typeof en` contract → any missing/mismatched key in `tr` is a **build error** (verified)
 - [x] **"no hardcoded user-facing string" ESLint rule** — `eslint-plugin-i18next/no-literal-string` (`6.1.5`) on React surfaces (`**/*.tsx`) in **`jsx-text-only`** mode (flags visible JSX text, not className/aria/code strings) + allow-list (`**/i18n/**`, `**/locales/**`, `*.messages.ts`, `messages.ts`, tests). Repo scanned clean (1 pre-existing decorative `✕` glyph → JS-expression constant with a comment); every visible string comes from a dict via `useT`.

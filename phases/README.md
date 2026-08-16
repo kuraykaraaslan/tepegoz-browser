@@ -16,29 +16,42 @@ them** with `- [ ]` / `- [x]`. This keeps the process resumable across sessions.
 > contract, `tab-engine`, `browser-tools`, per-package i18n dicts). **New work targets a package, not
 > `apps/desktop` growth**, and respects the `../dependency-cruiser.cjs` layer rules.
 
+## Folder map
+
+Everything in this folder's root is either this index or a directory — planning documents live in
+exactly one of the four, chosen by **truth status**. Put a new document in the folder whose status it
+actually has; do not start a fifth pile.
+
+| Folder | What it holds | Truth status |
+|---|---|---|
+| [`product/`](product/) | The numbered product roadmap — Phases 0–12 plus M (Macros) and E (Extras) | Committed · sequenced · DoD-gated |
+| [`ai-agent-super/`](ai-agent-super/README.md) | The sole authoritative AI agent competence program (v3, S0–S12) | Committed · sequenced · measurement-gated |
+| [`tracks/`](tracks/README.md) | One-off plans outside the numbered roadmap — one complete, one deferred, one unapproved proposal | **Mixed — read that folder's index first. Not roadmap.** |
+| [`ai/`](ai/README.md) | The retired v2 AI track | Tombstone stub — redirects only, add nothing |
+
 ## Phase index & status
 
 | Phase | File | Goal | Status |
 |---|---|---|---|
-| 0 | [phase-0-foundation.md](phase-0-foundation.md) | Monorepo scaffold + core contracts + CI | 🟡 Core done (packaging/signing + release/update hardening + Phase-1a-bound i18n deferred) |
-| 1a | [phase-1a-walking-skeleton-mvp.md](phase-1a-walking-skeleton-mvp.md) | Walking-skeleton MVP (BYO-key local-first agentic core) | 🟡 In progress (agent console/runtime/tool plane/browser tools live; e2e + remaining gates pending) |
-| 1b | [phase-1b-agentic-deepening.md](phase-1b-agentic-deepening.md) | Parallel DAG + durable handoff + per-task memory + prompt/rules | 🟡 Early down-payments (tabId-scoped browser control + validation + visual fallback; durable resume/parallel DAG pending) |
-| 2 | [phase-2-adapters-safe-browsing.md](phase-2-adapters-safe-browsing.md) | Integration adapters + Safe-Browsing Suite | ⬜ Not started |
-| 2b | [phase-2b-daily-driver-ux.md](phase-2b-daily-driver-ux.md) | Daily-driver browser UX (tabs/PWA/DevTools) — parallel with Phase 2 | ⬜ Not started |
-| 2c | [phase-2c-classic-browser-essentials.md](phase-2c-classic-browser-essentials.md) | Classic browser essentials + downloads (find/print/PDF/reader/translate/bookmarks/private/permissions) — parallel with Phase 2/2b | 🟡 In progress (download/clipboard/upload manager slices) |
-| 3 | [phase-3-backend-cloud-extensions.md](phase-3-backend-cloud-extensions.md) | Managed subscription + cloud memory sync + extensions | ⬜ Not started |
-| 4 | [phase-4-maturation.md](phase-4-maturation.md) | Maturation (full extensions, cross-platform, enterprise) | ⬜ Not started |
-| 5 | [phase-5-vpn-network-privacy.md](phase-5-vpn-network-privacy.md) | Per-tab & per-group VPN tunnels + Tor (network privacy) | ⬜ Not started |
-| 6 | [phase-6-deterministic-automation.md](phase-6-deterministic-automation.md) | Deterministic replayable automation (RecipeCompiler + Watchers + Scheduler + Macros) | ⬜ Not started |
-| 7 | [phase-7-verifiable-accountability.md](phase-7-verifiable-accountability.md) | Verifiable accountability & proof-of-run (Notary + Dashboard + Dry-Run + Data Rights) | ⬜ Not started |
-| 8 | [phase-8-local-intelligence-sovereignty.md](phase-8-local-intelligence-sovereignty.md) | Local-first intelligence & sovereignty (air-gapped mode + Trust Mesh + semantic history/KG) | ⬜ Not started |
-| 9 | [phase-9-safe-autonomy-delegation.md](phase-9-safe-autonomy-delegation.md) | Safe autonomy & governed delegation (Mandates + Policy Bundles + Agent Endpoints) | ⬜ Not started |
-| 10 | [phase-10-daily-driver-delight.md](phase-10-daily-driver-delight.md) | Daily-driver delight (Time-Travel Tabs + Tab Janitor + Research Canvas + Magic Moment) | ⬜ Not started |
-| 10b | [phase-10b-accessibility-voice-reach.md](phase-10b-accessibility-voice-reach.md) | Accessibility, voice & inclusive reach (Assistive Mode + voice HITL + Guarded profiles) — parallel with 10 | ⬜ Not started |
-| 11 | [phase-11-regional-trust-kamu.md](phase-11-regional-trust-kamu.md) | Regional trust pack (e-Devlet/GİB/SGK/MHRS Kamu adapters + Locale-as-a-Plugin) | ⬜ Not started |
-| 12 | [phase-12-developer-platform-marketplace.md](phase-12-developer-platform-marketplace.md) | Developer platform & marketplace economy (SDK/CLI + Site-Recipe Library + SBOM gate) | ⬜ Not started |
-| M | [phase-macros.md](phase-macros.md) | Macros extension (`@tepegoz/ext-macros`) — iMacros successor: record/edit/replay, robust selectors, agent capabilities (down-payment on Phase 6) | 🟡 Core shipped |
-| E | [phase-extras.md](phase-extras.md) | Extras — special-track, demand-gated items off the 0–12 critical path (e.g. DRM/Widevine) | ⬜ Not started |
+| 0 | [phase-0-foundation.md](product/phase-0-foundation.md) | Monorepo scaffold + core contracts + CI | 🟡 Core done (packaging/signing + release/update hardening + Phase-1a-bound i18n deferred) |
+| 1a | [phase-1a-walking-skeleton-mvp.md](product/phase-1a-walking-skeleton-mvp.md) | Walking-skeleton MVP (BYO-key local-first agentic core) | 🟡 In progress (agent console/runtime/tool plane/browser tools live; e2e + remaining gates pending) |
+| 1b | [phase-1b-agentic-deepening.md](product/phase-1b-agentic-deepening.md) | Parallel DAG + durable handoff + per-task memory + prompt/rules | 🟡 Early down-payments (tabId-scoped browser control + validation + visual fallback; durable resume/parallel DAG pending) |
+| 2 | [phase-2-adapters-safe-browsing.md](product/phase-2-adapters-safe-browsing.md) | Integration adapters + Safe-Browsing Suite | ⬜ Not started |
+| 2b | [phase-2b-daily-driver-ux.md](product/phase-2b-daily-driver-ux.md) | Daily-driver browser UX (tabs/PWA/DevTools) — parallel with Phase 2 | ⬜ Not started |
+| 2c | [phase-2c-classic-browser-essentials.md](product/phase-2c-classic-browser-essentials.md) | Classic browser essentials + downloads (find/print/PDF/reader/translate/bookmarks/private/permissions) — parallel with Phase 2/2b | 🟡 In progress (download/clipboard/upload manager slices) |
+| 3 | [phase-3-backend-cloud-extensions.md](product/phase-3-backend-cloud-extensions.md) | Managed subscription + cloud memory sync + extensions | ⬜ Not started |
+| 4 | [phase-4-maturation.md](product/phase-4-maturation.md) | Maturation (full extensions, cross-platform, enterprise) | ⬜ Not started |
+| 5 | [phase-5-vpn-network-privacy.md](product/phase-5-vpn-network-privacy.md) | Per-tab & per-group VPN tunnels + Tor (network privacy) | ⬜ Not started |
+| 6 | [phase-6-deterministic-automation.md](product/phase-6-deterministic-automation.md) | Deterministic replayable automation (RecipeCompiler + Watchers + Scheduler + Macros) | ⬜ Not started |
+| 7 | [phase-7-verifiable-accountability.md](product/phase-7-verifiable-accountability.md) | Verifiable accountability & proof-of-run (Notary + Dashboard + Dry-Run + Data Rights) | ⬜ Not started |
+| 8 | [phase-8-local-intelligence-sovereignty.md](product/phase-8-local-intelligence-sovereignty.md) | Local-first intelligence & sovereignty (air-gapped mode + Trust Mesh + semantic history/KG) | ⬜ Not started |
+| 9 | [phase-9-safe-autonomy-delegation.md](product/phase-9-safe-autonomy-delegation.md) | Safe autonomy & governed delegation (Mandates + Policy Bundles + Agent Endpoints) | ⬜ Not started |
+| 10 | [phase-10-daily-driver-delight.md](product/phase-10-daily-driver-delight.md) | Daily-driver delight (Time-Travel Tabs + Tab Janitor + Research Canvas + Magic Moment) | ⬜ Not started |
+| 10b | [phase-10b-accessibility-voice-reach.md](product/phase-10b-accessibility-voice-reach.md) | Accessibility, voice & inclusive reach (Assistive Mode + voice HITL + Guarded profiles) — parallel with 10 | ⬜ Not started |
+| 11 | [phase-11-regional-trust-kamu.md](product/phase-11-regional-trust-kamu.md) | Regional trust pack (e-Devlet/GİB/SGK/MHRS Kamu adapters + Locale-as-a-Plugin) | ⬜ Not started |
+| 12 | [phase-12-developer-platform-marketplace.md](product/phase-12-developer-platform-marketplace.md) | Developer platform & marketplace economy (SDK/CLI + Site-Recipe Library + SBOM gate) | ⬜ Not started |
+| M | [phase-macros.md](product/phase-macros.md) | Macros extension (`@tepegoz/ext-macros`) — iMacros successor: record/edit/replay, robust selectors, agent capabilities (down-payment on Phase 6) | 🟡 Core shipped |
+| E | [phase-extras.md](product/phase-extras.md) | Extras — special-track, demand-gated items off the 0–12 critical path (e.g. DRM/Widevine) | ⬜ Not started |
 | AI | [ai-agent-super/README.md](ai-agent-super/README.md) | **The sole authoritative AI agent competence roadmap (v3).** Takes Do mode to a browser agent competitive with Claude for Chrome (reliability + safety) and Perplexity Comet (assistant UX), under a falsifiable four-condition "world's best" claim: S0 truth & repair → S1–S2 substrate (native tool-calling, streaming, perception v2) → S3–S5 reliability (actions, verified outcomes, code-exec) → S6–S9 control & trust (safety plane, assistant UX, memory/skills) → S10–S12 frontier (vision escalation, H2H benchmark, local model). Supersedes v2 ([ai/README.md](ai/README.md) is a tombstone); v1 (AI-1..8, the `browser-use`/`nanobrowser` port) is archived in [ai-agent-super/archive/](ai-agent-super/archive/README.md) with its honest status history | 🟡 In progress (v1+v2 backbone landed + default-on; S0 at 🟠 measurement-owed — repair done, full-registry baseline ⏸ awaiting a funded key; S6-PR1 landed — autonomy enforcement moved out of the renderer into main) |
 
 Status legend: ⬜ Not started · 🟡 In progress · ✅ Done (DoD passed)
@@ -154,7 +167,7 @@ multi-agent crews · agent-builds-agent · journal-mined proactive suggestions. 
 Phase 6 RecipeCompiler / Phase 7 Notary+fold / Phase 8 global index / Phase 1a–2b UI.)_
 
 **Special-track extras (cannot be done in routine development):** now live in their own
-[Phase E — Extras](phase-extras.md) (e.g. DRM/Widevine — castLabs ECS build + VMP signing). Off the 0–12
+[Phase E — Extras](product/phase-extras.md) (e.g. DRM/Widevine — castLabs ECS build + VMP signing). Off the 0–12
 critical path; demand-gated.
 
 **Deprioritized moonshots (with reason):**

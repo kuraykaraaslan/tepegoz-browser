@@ -4,7 +4,7 @@ A focused sub-track for making the **agent (Do mode)** genuinely capable on the 
 **commercial-grade, measurable, honest** — rather than accreting one prompt sentence per failure.
 
 > **Relationship to the main roadmap:** this is a deepening of the agent work in
-> [Phase 1a](../../phase-1a-walking-skeleton-mvp.md) / [Phase 1b](../../phase-1b-agentic-deepening.md).
+> [Phase 1a](../../product/phase-1a-walking-skeleton-mvp.md) / [Phase 1b](../../product/phase-1b-agentic-deepening.md).
 > It does **not** replace them; it sequences the competence upgrades those phases assume. Every
 > cross-cutting compliance gate in [`../README.md`](../../README.md) applies here too (zod boundary
 > `safeParse`, `AppError`, per-package i18n, determinism-first, DoD coverage, no `apps/desktop` growth).
@@ -160,7 +160,7 @@ Status: ✅ done · 🟢 mostly (wired, minor gaps) · 🟡 partial (some sub-po
 |---|---|:--:|---|
 | s24 | Constrain action space to schema-validated tools (no raw JS) | ✅ | Already done — no eval/JS tool exists; zod at the ToolGateway PEP + reactor decision schema |
 | s29 | Prompt-injection defence — page text is untrusted data | 🟢 | [AI-5](phase-ai-5-content-security.md) — strongest item; owes on-harness non-deviation run |
-| s30 | Human handoff at the right moment, specific message | 🟢 | Built (CAPTCHA/2FA, no auto-solve, credit preserved). Resume + payment/irreversible triggers → [Phase 9](../../phase-9-safe-autonomy-delegation.md) |
+| s30 | Human handoff at the right moment, specific message | 🟢 | Built (CAPTCHA/2FA, no auto-solve, credit preserved). Resume + payment/irreversible triggers → [Phase 9](../../product/phase-9-safe-autonomy-delegation.md) |
 | s08 | Observe→Decide→Act→Verify→Update loop | 🟢 | [AI-3](phase-ai-3-agent-loop.md) — live; observe/verify are model-elected, staleness caught reactively |
 | s06 | Pre/post-action state verification | 🟢 | [AI-3](phase-ai-3-agent-loop.md) — `pageChanged`/`sig` live; toast+network signals + click-time selection weaker |
 | s12 | Error taxonomy with per-type recovery | 🟢 | [AI-3](phase-ai-3-agent-loop.md) — 11-kind taxonomy wired; ~3 requested classes not distinct |
@@ -178,10 +178,10 @@ Status: ✅ done · 🟢 mostly (wired, minor gaps) · 🟡 partial (some sub-po
 | s13 | Smart recovery (modal-close, tab-switch, re-login) | 🟡 | [AI-3](phase-ai-3-agent-loop.md) — re-analyse + scroll-into-view real; modal-close/auto-tab-switch/re-login absent |
 | s18 | Tab/popup/iframe management | 🟡 | [AI-4](phase-ai-4-action-vocabulary.md) — same-origin iframe auto-entry done; tab-spawn detect/auto-switch + popup-return unbuilt |
 | s16 | Validation-aware form-filling engine | 🟢 | [AI-4](phase-ai-4-action-vocabulary.md) — code landed: validation attrs (`required`/`pattern`/`aria-invalid`/…) captured end-to-end + a `browser_validate_form` pre-submit gate. Hardened by review: only required-empty BLOCKS (stale `aria-invalid`/error text is advisory, so it can't deadlock), coverage is reported honestly (whole-page snapshot via a new `viewportExpansionPx` seam; `partial` when truncated/attribute-less), and the report is injection-redacted + untrusted-fenced. Typed-widget fill helpers + on-harness proof owed |
-| s21 | Site-specific skills vs general strategy | 🟡 | [Phase 2](../../phase-2-adapters-safe-browsing.md) — capability-plane seam + web-tools ships; no per-site DOM adapter |
+| s21 | Site-specific skills vs general strategy | 🟡 | [Phase 2](../../product/phase-2-adapters-safe-browsing.md) — capability-plane seam + web-tools ships; no per-site DOM adapter |
 | s26 | Rich performance metrics | 🟡 | [AI-1](phase-ai-1-eval-harness.md) — success+tokens live; duration/first-attempt/avg-actions/$cost absent; recovery+intervention dead in live path |
 | s28 | Adversarial test set | 🟡 | [AI-1](phase-ai-1-eval-harness.md) + [AI-5](phase-ai-5-content-security.md) — injection + same-name traps only; fake-download/scroll-hide/decoy missing |
-| s20 | Approval gate; separate prepare from send | 🟡 | [Phase 9](../../phase-9-safe-autonomy-delegation.md) — gate built+default-on; no prepare/send split, `financial` class unassigned, biometric unenforced |
+| s20 | Approval gate; separate prepare from send | 🟡 | [Phase 9](../../product/phase-9-safe-autonomy-delegation.md) — gate built+default-on; no prepare/send split, `financial` class unassigned, biometric unenforced |
 | s19 | Combine visual understanding with DOM | 🟡 | **[AI-8A](phase-ai-8-beyond-the-port.md)** — **vanity flag cleared** (nothing now recommends the blind tool; its own text says the pixels are not sent, test-locked). The capability itself — pixels reaching the model via a `CanonMessage` image type + adapters — is still unbuilt |
 | s10 | Observe the network layer (status codes/verify) | 🟡 | **[AI-8B](phase-ai-8-beyond-the-port.md)** (new) — Network enabled for idle-wait only; no status/response capture |
 | s02 | Run each scenario ≥3× | 🟢 | [AI-1](phase-ai-1-eval-harness.md) — **landed** (`TEPEGOZ_EVAL_REPEAT`: majority verdict + k/N pass-frequency + mean); step-count/duration aggregation still owed |
@@ -194,4 +194,4 @@ New phases added by this audit: **[AI-7](phase-ai-7-navigation-grounding.md)** (
 and **[AI-8](phase-ai-8-beyond-the-port.md)** (net-new axes: `s19`/`s10`/`s17`/`s22`). Deepenings for
 `s02`/`s26`/`s27`/`s03`/`s28`/`s04`/`s05`/`s23`/`s07`/`s14`/`s15`/`s16` are appended as **"Audited gaps"**
 task blocks inside the existing AI-1..AI-5 docs. `s20`/`s30` (safe-autonomy) and `s21` (site adapters) are
-routed to the main-roadmap [Phase 9](../../phase-9-safe-autonomy-delegation.md) / [Phase 2](../../phase-2-adapters-safe-browsing.md).
+routed to the main-roadmap [Phase 9](../../product/phase-9-safe-autonomy-delegation.md) / [Phase 2](../../product/phase-2-adapters-safe-browsing.md).

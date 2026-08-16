@@ -148,8 +148,8 @@ is per-dialogue, and macros are user-authored replays — neither is agent-learn
 ## Scope notes
 - **Route, don't duplicate:** the audit's *safe-autonomy* asks (semantic purchase/payment/message-send risk
   tiering, prepare/send split, reversibility-default, resume-after-handoff — `s20`/`s30`) belong to the main
-  roadmap's [Phase 9 — Safe Autonomy & Delegation](../../phase-9-safe-autonomy-delegation.md), not this track;
-  **site-specific DOM adapters** (`s21`) belong to [Phase 2 — Adapters & Safe Browsing](../../phase-2-adapters-safe-browsing.md).
+  roadmap's [Phase 9 — Safe Autonomy & Delegation](../../product/phase-9-safe-autonomy-delegation.md), not this track;
+  **site-specific DOM adapters** (`s21`) belong to [Phase 2 — Adapters & Safe Browsing](../../product/phase-2-adapters-safe-browsing.md).
   This phase is agent **perception/observation/memory** competence only.
 - Each sub-axis is independently shippable; do the cheapest-signal one first (8B network-verify and the 8A
   vanity-flag fix are the smallest) and let AI-1 numbers decide the order of the rest.

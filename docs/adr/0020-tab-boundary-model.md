@@ -49,7 +49,7 @@ would be an ambiguous concept that could silently accrue partition or capability
 `TabGroupInfo` now carries a `settings: Record<TabGroupSettingKey, TabGroupSettingValue>` bag (a flat,
 JSON-safe map — see `packages/desktop-ipc/src/contract.ts`) as the standard seam for feature toggles
 that vary **per tab group**: the Agent Console's open/closed state (`'agent.panelOpen'`) today; VPN/Tor
-connection bindings (Phase 5, `phases/phase-5-vpn-network-privacy.md`) later. This does **not** revisit
+connection bindings (Phase 5, `phases/product/phase-5-vpn-network-privacy.md`) later. This does **not** revisit
 the Decision above: `settings` carries no isolation/session/capability semantics — it never creates a
 partition, never gates a permission grant, and the Policy Kernel / ToolGateway PEP (ADR-0013) remains
 the sole security-policy axis. It is exactly the same kind of "binding/UI layer, not a partition axis"

@@ -10,8 +10,8 @@ Comet** (assistant UX) — and keeps every claim **falsifiable and honestly meas
 > ([`constitution.md`](constitution.md)), the results ledger ([`eval-results.md`](eval-results.md)), the
 > prose-debt ledger ([`PROSE-LEDGER.md`](PROSE-LEDGER.md)), the eval harness + frozen fixtures, and the
 > v1 measurement history + build-vs-buy decision ([`history.md`](history.md)) all continue. The broader
-> product phases ([1b](../phase-1b-agentic-deepening.md) / [6](../phase-6-deterministic-automation.md) /
-> [8](../phase-8-local-intelligence-sovereignty.md) / [9](../phase-9-safe-autonomy-delegation.md)) stay,
+> product phases ([1b](../product/phase-1b-agentic-deepening.md) / [6](../product/phase-6-deterministic-automation.md) /
+> [8](../product/phase-8-local-intelligence-sovereignty.md) / [9](../product/phase-9-safe-autonomy-delegation.md)) stay,
 > but their **AI-specific routing is dissolved** — this program now decides for itself what it owns; the
 > [routing section](#routing--what-stays-out) records the boundary.
 
@@ -170,9 +170,9 @@ never duplicate.**
 
 | Stays with | Material |
 |---|---|
-| [Phase 6](../phase-6-deterministic-automation.md) | Deterministic **model-free** signed recipes, self-healing selectors, success oracle. Ownership test: *"if the model could be removed from the replay, it's Phase 6."* S9's skills are model-driven templates, not recipes. |
-| [Phase 8](../phase-8-local-intelligence-sovereignty.md) | Provider trust mesh, knowledge graph, **learned** ModelRouter, speculative two-tier. S12 ships a *static* local tier, not a learned router. |
-| [Phase 9](../phase-9-safe-autonomy-delegation.md) | Transaction mandates, signed policy bundles (**publishes S6's measured ASR**), governed endpoints. |
+| [Phase 6](../product/phase-6-deterministic-automation.md) | Deterministic **model-free** signed recipes, self-healing selectors, success oracle. Ownership test: *"if the model could be removed from the replay, it's Phase 6."* S9's skills are model-driven templates, not recipes. |
+| [Phase 8](../product/phase-8-local-intelligence-sovereignty.md) | Provider trust mesh, knowledge graph, **learned** ModelRouter, speculative two-tier. S12 ships a *static* local tier, not a learned router. |
+| [Phase 9](../product/phase-9-safe-autonomy-delegation.md) | Transaction mandates, signed policy bundles (**publishes S6's measured ASR**), governed endpoints. |
 | **This program's own backlog** (evidence-gated, no other home now) | **True parallel background runs** (relaxes ADR-0013's one-run-at-a-time — needs a superseding ADR + real isolation; S8 ships "single run, backgroundable" first); deterministic action-replay caching (Phase-6 boundary preserved). |
 
 ## Never (inherited + program additions)
