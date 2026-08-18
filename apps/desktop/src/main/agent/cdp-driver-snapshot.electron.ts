@@ -175,10 +175,16 @@ async function snapshotElementsRenderDom(
   deps.prevSnapshots.set(wc, { url: tree.data.url, hashes: new Set(hashes) });
 
   // The action map MUST be keyed by whichever ref the model was shown, or a click resolves elsewhere.
+  // Each entry also records the element's identity (S3 PR5) so a stale path has a second chance before
+  // the expensive re-snapshot.
   const refMap = new Map<number, RefTarget>();
   interactables.forEach((raw, i) => {
     const path = paths[i];
-    if (path !== undefined) refMap.set(raw.ref ?? i + 1, { path });
+    if (path === undefined) return;
+    refMap.set(raw.ref ?? i + 1, {
+      path,
+      locators: { tag: raw.tag ?? '', role: raw.role, name: raw.name },
+    });
   });
   deps.refMaps.set(wc, refMap);
   return { url: tree.data.url, title: tree.data.title, elements: interactables };

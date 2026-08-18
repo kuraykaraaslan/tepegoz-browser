@@ -11,7 +11,7 @@ import {
   type SnapshotResult,
 } from './cdp-driver-schemas.electron.js';
 import type { RefRegistry } from '@tepegoz/tool-executor';
-import { pathToObjectId, readValue } from './cdp-driver-dom.electron.js';
+import { locatorsToObjectId, pathToObjectId, readValue } from './cdp-driver-dom.electron.js';
 import { attachNetworkRecorder, networkSince } from './cdp-driver-network.electron.js';
 import { waitForPageSettled } from './cdp-driver-session.electron.js';
 import { snapshotElements as snapshotElementsImpl } from './cdp-driver-snapshot.electron.js';
@@ -152,7 +152,20 @@ export default class CdpDriver {
     const target = refMap.get(ref);
     if (target === undefined) throw new AppError(`No element with ref ${String(ref)}`, 404);
     if ('backendNodeId' in target) return { backendNodeId: target.backendNodeId };
-    return { objectId: await pathToObjectId(wc, target.path) };
+    // S3 PR5 — locator cascade: the recorded child-index path first (exact and cheap), then the element's
+    // identity. A stale path used to cost a full re-snapshot, which renumbers every positional ref and
+    // takes the model's whole plan with it; a re-snapshot is now the LAST resort, not the first.
+    const byPath = await pathToObjectId(wc, target.path).catch(() => null);
+    if (byPath !== null) return { objectId: byPath };
+    const locators = target.locators;
+    if (locators !== undefined && locators.tag.length > 0) {
+      const byIdentity = await locatorsToObjectId(wc, locators);
+      if (byIdentity !== null) {
+        Logger.info('[input] ref re-found by identity after a stale path', { ref, tag: locators.tag });
+        return { objectId: byIdentity };
+      }
+    }
+    throw new AppError('Element is no longer on the page — read the page elements again first', 409);
   }
 
   static async setFileInputFiles(
@@ -167,7 +180,7 @@ export default class CdpDriver {
     wc: WebContents,
     ref: number,
     adapter?: HumanInputAdapter,
-  ): Promise<void> {
+  ): Promise<{ occludedBy: string | null }> {
     return clickElementImpl(wc, ref, adapter, CdpDriver.core());
   }
 

@@ -1,10 +1,11 @@
 import type { WebContents } from 'electron';
 import { AppError } from '@tepegoz/libs';
-import { resolveNodePath, type NodePath } from '@tepegoz/tool-executor';
+import { findByLocators, resolveNodePath, type ElementLocators, type NodePath } from '@tepegoz/tool-executor';
 import {
   attributesMap,
   BoxModelSchema,
   CallResultSchema,
+  ClickPointSchema,
   DescribeNodeSchema,
   EvalHandleSchema,
   ResolveSchema,
@@ -126,6 +127,28 @@ export async function isFocused(wc: WebContents, node: NodeArg): Promise<boolean
  * and same-origin iframe targets resolve where XPath cannot cross. A stale path (DOM changed) yields
  * `null` → no objectId → a 409 asking the agent to re-read the page.
  */
+/**
+ * Re-find a stale ref by identity (S3 PR5). Returns null when the cascade found nothing or found more
+ * than one candidate — ambiguity is a miss on purpose, because clicking a wrong-but-plausible element is
+ * worse than admitting the ref went stale.
+ */
+export async function locatorsToObjectId(
+  wc: WebContents,
+  locators: ElementLocators,
+): Promise<string | null> {
+  const contextId = await mainFrameIsolatedContext(wc);
+  const raw: unknown = await wc.debugger
+    .sendCommand('Runtime.evaluate', {
+      expression: `(${findByLocators.toString()})(document, ${JSON.stringify(locators)})`,
+      contextId,
+      returnByValue: false,
+      silent: true,
+    })
+    .catch(() => null);
+  const parsed = EvalHandleSchema.safeParse(raw);
+  return parsed.success ? (parsed.data.result.objectId ?? null) : null;
+}
+
 export async function pathToObjectId(wc: WebContents, path: NodePath): Promise<string> {
   const contextId = await mainFrameIsolatedContext(wc);
   const raw: unknown = await wc.debugger.sendCommand('Runtime.evaluate', {
@@ -139,4 +162,58 @@ export async function pathToObjectId(wc: WebContents, path: NodePath): Promise<s
     throw new AppError('Element is no longer on the page — read the page elements again first', 409);
   }
   return parsed.data.result.objectId;
+}
+
+/**
+ * Probe, immediately before dispatch, whether this element is still what a click at its box would hit
+ * (S3 PR5).
+ *
+ * `isTopElement` runs during the SCAN. A cookie banner or sticky overlay that appears between the
+ * snapshot and the click intercepts the gesture, and the click reads as "no visible change" — the direct
+ * cause of `cookie_consent` failing with zero escapes. Probing at dispatch time closes that window.
+ *
+ * It does not simply veto: it tries the centre and four inset points, and returns the first free one, so
+ * an element that is only PARTLY covered is still clicked rather than refused. Only when every probe
+ * point is blocked does it report the blocker, described well enough for the model to dismiss it.
+ */
+export async function probeClickPoint(
+  wc: WebContents,
+  node: NodeArg,
+): Promise<{ x: number; y: number; blocker: string | null }> {
+  const objectId = await objectIdFor(wc, node).catch(() => null);
+  if (objectId === null) return { x: 0, y: 0, blocker: null };
+  const raw: unknown = await wc.debugger
+    .sendCommand('Runtime.callFunctionOn', {
+      objectId,
+      returnByValue: true,
+      functionDeclaration: `function () {
+        const r = this.getBoundingClientRect();
+        if (r.width <= 0 || r.height <= 0) return { x: 0, y: 0, blocker: null };
+        const root = this.getRootNode();
+        const at = (fx, fy) => ({ x: r.left + r.width * fx, y: r.top + r.height * fy });
+        // Centre first, then four points inset from the corners: a banner usually covers one edge, not
+        // the whole control, and refusing a click the user could make would be its own failure.
+        const points = [at(0.5, 0.5), at(0.25, 0.25), at(0.75, 0.25), at(0.25, 0.75), at(0.75, 0.75)];
+        let blocker = null;
+        for (const p of points) {
+          const hit = (root && root.elementFromPoint) ? root.elementFromPoint(p.x, p.y) : document.elementFromPoint(p.x, p.y);
+          if (hit === null) continue;
+          if (hit === this || this.contains(hit) || hit.contains(this)) {
+            return { x: p.x, y: p.y, blocker: null };
+          }
+          if (blocker === null) {
+            const label = (hit.getAttribute('aria-label') || hit.textContent || '').replace(/\\s+/g, ' ').trim().slice(0, 60);
+            const role = hit.getAttribute('role') || '';
+            blocker = '<' + hit.tagName.toLowerCase() + (role ? ' role="' + role + '"' : '') + '>' + (label ? ' "' + label + '"' : '');
+          }
+        }
+        const c = at(0.5, 0.5);
+        return { x: c.x, y: c.y, blocker: blocker };
+      }`,
+    })
+    .catch(() => null);
+  const parsed = ClickPointSchema.safeParse(raw);
+  // A failed probe must never block a click that would otherwise work: unknown reads as "not occluded".
+  if (!parsed.success) return { x: 0, y: 0, blocker: null };
+  return parsed.data.result.value;
 }

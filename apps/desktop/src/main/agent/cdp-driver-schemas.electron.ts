@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { WebContents } from 'electron';
-import type { NodePath, RawInteractable, RefRegistry } from '@tepegoz/tool-executor';
+import type { ElementLocators, NodePath, RawInteractable, RefRegistry } from '@tepegoz/tool-executor';
 
 /**
  * Shared primitives for the {@link CdpDriver} facade: the trust-boundary zod schemas, the injected
@@ -140,6 +140,17 @@ export const DomTreeResultSchema = z.object({
   nodes: z.array(DomTreeNodeSchema),
 });
 
+/** The click-point probe result (S3 PR5): where to click, and what covers it when nothing is free. */
+export const ClickPointSchema = z.object({
+  result: z.object({
+    value: z.object({
+      x: z.number(),
+      y: z.number(),
+      blocker: z.string().nullable(),
+    }),
+  }),
+});
+
 /** CDP key-event fields for one named key. */
 export type KeySpec = { key: string; code: string; keyCode: number; text?: string };
 
@@ -169,7 +180,17 @@ export const delay = (ms: number): Promise<void> => new Promise((resolve) => set
  * boundaries) re-resolved lazily at action time (keeps a snapshot cheap — only the acted-on element
  * is resolved).
  */
-export type RefTarget = { backendNodeId: number } | { path: NodePath };
+export type RefTarget =
+  | { backendNodeId: number }
+  | {
+      path: NodePath;
+      /**
+       * S3 PR5: the identity this ref can be re-found by when its path goes stale. One locator per ref
+       * meant a miss cost a full re-snapshot — which renumbers every positional ref and takes the model's
+       * plan with it. Absent on the a11y fallback, which carries no such fields.
+       */
+      locators?: ElementLocators;
+    };
 /** A node handle any DOM.* command accepts — either an existing backend id or a live object handle. */
 export type NodeArg = { backendNodeId: number } | { objectId: string };
 

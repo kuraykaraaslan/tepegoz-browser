@@ -162,6 +162,8 @@ interface InteractionResult {
   filled?: boolean;
   /** `press`/`send_keys` only: chords this transport could not express, so they never reached the page. */
   unsupportedKeys?: string[];
+  /** `click` only: what covered the target. Present ⇒ the click was refused, not sent. */
+  occludedBy?: string;
   /** AI-8B: set only when a request sent during this interaction failed. Absent means "nothing was
    *  observed", never "everything succeeded". */
   networkWarning?: string;
@@ -192,6 +194,8 @@ interface InteractionContext {
   fieldValue: string | null | undefined;
   /** Chords the transport could not express (`press`/`send_keys`). */
   unsupportedKeys?: string[] | undefined;
+  /** `click` only: what covered the target, when the click was refused rather than sent. */
+  occludedBy?: string | null | undefined;
 }
 
 /**
@@ -298,6 +302,20 @@ function interactionResult(
   }
   if (args.action === 'scroll_to_text') return scrollToTextResult(args.nth ?? 1, ctx);
   if (args.action === 'press' || args.action === 'send_keys') return keysResult(ctx);
+  if (args.action === 'click' && ctx.occludedBy !== null && ctx.occludedBy !== undefined) {
+    return {
+      ok: true,
+      url: after.url,
+      title: after.title,
+      changed: false,
+      occludedBy: ctx.occludedBy,
+      recoveryHint:
+        `That element is covered by ${ctx.occludedBy}, so the click was NOT sent — clicking anyway would ` +
+        'have hit the overlay, not your target. Dismiss or close the covering element first (accept/reject ' +
+        'a consent banner, close a modal, or scroll it out of the way), then re-read browser_get_elements ' +
+        'and click again.',
+    };
+  }
   if (args.action === 'fill') return fillResult(args.text, ctx);
   // A scroll's effect is a viewport move, not a content/state change. Report `changed` plainly and skip
   // BOTH the structural "a menu opened — do NOT repeat" note (false: scrolling changes the in-viewport
@@ -608,9 +626,10 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
       let optionLabels: string[] | undefined;
       let fieldValue: string | null | undefined;
       let unsupportedKeys: string[] | undefined;
+      let occludedBy: string | null | undefined;
       switch (args.action) {
         case 'click':
-          await host.clickElement(args.ref, args.tabId);
+          ({ occludedBy } = await host.clickElement(args.ref, args.tabId));
           break;
         case 'fill':
           await host.fillElement(args.ref, args.text, args.tabId);
@@ -653,6 +672,7 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
         optionLabels,
         fieldValue,
         unsupportedKeys,
+        occludedBy,
       });
       return warning === undefined ? result : { ...result, networkWarning: warning };
     },

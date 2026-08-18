@@ -1,6 +1,6 @@
 # Phase S3 — Reliability Actions (W1 Reliability)
 
-**Status:** 🟡 In progress (PR0–PR2 landed 2026-08-18) · **Depends on:** [S0](phase-s0-truth-and-repair.md); [S2](phase-s2-perception-v2.md) (identity refs for the locator cascade) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟡 In progress (PR0–PR2, PR5 landed 2026-08-18) · **Depends on:** [S0](phase-s0-truth-and-repair.md); [S2](phase-s2-perception-v2.md) (identity refs for the locator cascade) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Close the missing action vocabulary and the two structural interaction gaps — snapshot-only
 occlusion and one-locator-per-ref — that make the agent fail on real sites. This targets the **measured**
@@ -160,18 +160,31 @@ re-snapshotting).
 - [ ] EN+TR strings for the dialog HITL surface.
 
 ### PR5 — click-time occlusion re-check + locator cascade (Lane B) — fixes `cookie_consent`
-- [ ] `elementFromPoint` probe in the isolated world immediately **before** dispatch in
+- [x] `elementFromPoint` probe in the isolated world immediately **before** dispatch in
       [cdp-driver-input.electron.ts](../../apps/desktop/src/main/agent/cdp-driver-input.electron.ts): if
       the target is no longer the top element, report an occlusion (so the reactor can dismiss the
       overlay) instead of clicking through it.
-- [ ] Record a **locator cascade** per ref at snapshot — css-path + text + role/name — in
+- [x] Record a **locator cascade** per ref at snapshot — css-path + text + role/name — in
       [interactable.ts](../../packages/tool-executor/src/interactable.ts) `finalizeElements`, building on
       the S2 identity work.
-- [ ] [dom-path.ts](../../packages/tool-executor/src/dom-path.ts) `resolveNodePath` retries **down the
+- [x] [dom-path.ts](../../packages/tool-executor/src/dom-path.ts) `resolveNodePath` retries **down the
       cascade** on a miss (css → text → role/name) before returning `null`; a full re-snapshot becomes
       the last resort, not the first.
-- [ ] Per the [S0](phase-s0-truth-and-repair.md) `cookie_consent` diagnosis, this is the PR that must
+- [x] Per the [S0](phase-s0-truth-and-repair.md) `cookie_consent` diagnosis, this is the PR that must
       move the sentinel.
+
+> **Mechanism notes (PR5).**
+> 1. The probe does **not** simply veto a covered element: it tries the centre and four inset points and
+>    clicks the first free one. A banner usually covers one edge, not the whole control, and refusing a
+>    click a user could make would be its own failure. Only when every probe point is blocked is the
+>    click refused — and then the blocker is named (tag · role · label) so the model can dismiss it.
+> 2. A **failed probe never blocks a click**: an unreadable result is treated as "not occluded", because
+>    a diagnostic that can veto real work is worse than the problem it detects.
+> 3. The cascade lives in `resolveRef`, not inside `resolveNodePath`: the path resolver is injected into
+>    the page verbatim via `.toString()` and must stay self-contained, so the *second* attempt is a
+>    separate injected function (`findByLocators`) and the driver sequences them. It refuses to guess —
+>    a match must agree on tag, role AND name, and be **unique**; ambiguity returns null and the model
+>    re-reads, which is the phase's own stated mitigation.
 
 ### PR6 — hover + drag (Lane B, drag **spike + stretch**)
 - [ ] `hover` variant reusing the [human-input](../../packages/human-input) Catmull-Rom mouse path;

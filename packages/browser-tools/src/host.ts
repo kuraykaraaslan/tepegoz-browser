@@ -66,8 +66,14 @@ export interface BrowserHost {
     tabId?: string,
     opts?: { viewportExpansionPx?: number },
   ): Promise<{ url: string; title: string; elements: RawInteractable[] }>;
-  /** Click the element identified by `ref` from the most recent {@link snapshotElements}. */
-  clickElement(ref: number, tabId?: string): Promise<void>;
+  /**
+   * Click the element identified by `ref` from the most recent {@link snapshotElements}.
+   *
+   * `occludedBy` names what covers the element when EVERY probe point on it is blocked, and the click is
+   * then NOT dispatched (S3 PR5): clicking through lands the gesture on the overlay, which is how a
+   * cookie banner turns a working control into a silent no-op. Null means the click was sent.
+   */
+  clickElement(ref: number, tabId?: string): Promise<{ occludedBy: string | null }>;
   /** Focus the input identified by `ref` and replace its value with `text`. */
   fillElement(ref: number, text: string, tabId?: string): Promise<void>;
   /**

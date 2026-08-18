@@ -15,7 +15,7 @@ function fakeHost(overrides?: Partial<BrowserHost>): BrowserHost {
     readPage: () => Promise.resolve({ url: 'https://x', title: 'X', text: 'hello', sig: 's1' }),
     waitForLoad: () => Promise.resolve({ url: 'https://x', title: 'X' }),
     snapshotElements: () => Promise.resolve({ url: 'https://x', title: 'X', elements: [] }),
-    clickElement: () => Promise.resolve(),
+    clickElement: () => Promise.resolve({ occludedBy: null }),
     fillElement: (_ref: number, text: string) => {
       lastFilled = text;
       return Promise.resolve();
@@ -122,7 +122,7 @@ describe('registerBrowserTools', () => {
   });
 
   it('binds the injected host into a handler (browser_update_page click → host.clickElement)', async () => {
-    const clickElement = vi.fn(() => Promise.resolve());
+    const clickElement = vi.fn(() => Promise.resolve({ occludedBy: null }));
     registerBrowserTools({ host: fakeHost({ clickElement }) });
     const cap = CapabilityRegistry.get('browser_update_page');
     expect(cap).toBeDefined();
@@ -196,7 +196,7 @@ describe('registerBrowserTools', () => {
       .fn()
       .mockResolvedValueOnce({ url: 'https://x', title: 'X', text: 'before', sig: 's1' })
       .mockResolvedValueOnce({ url: 'https://x/done', title: 'Done', text: 'after', sig: 's2' });
-    const clickElement = vi.fn(() => Promise.resolve());
+    const clickElement = vi.fn(() => Promise.resolve({ occludedBy: null }));
     registerBrowserTools({ host: fakeHost({ readPage, clickElement }) });
 
     const result = await CapabilityRegistry.get('browser_update_page')!.handler({
@@ -214,7 +214,7 @@ describe('registerBrowserTools', () => {
       .fn()
       .mockResolvedValueOnce({ url: 'https://x', title: 'X', text: 'same', sig: 'closed' })
       .mockResolvedValueOnce({ url: 'https://x', title: 'X', text: 'same', sig: 'open' });
-    const clickElement = vi.fn(() => Promise.resolve());
+    const clickElement = vi.fn(() => Promise.resolve({ occludedBy: null }));
     registerBrowserTools({ host: fakeHost({ readPage, clickElement }) });
 
     const result = (await CapabilityRegistry.get('browser_update_page')!.handler({
@@ -649,5 +649,31 @@ describe('send_keys chords (S3 PR2)', () => {
     registerBrowserTools({ host: fakeHost() });
     const tool = CapabilityRegistry.get('browser_update_page');
     expect(tool?.inputSchema.safeParse({ action: 'send_keys', keys: 'x'.repeat(500) }).success).toBe(false);
+  });
+});
+
+describe('click-time occlusion re-check (S3 PR5)', () => {
+  beforeEach(() => CapabilityRegistry.reset());
+
+  it('refuses the click and names the blocker instead of clicking through it', async () => {
+    const clickElement = vi.fn(() => Promise.resolve({ occludedBy: '<div role="dialog"> "We use cookies"' }));
+    registerBrowserTools({ host: fakeHost({ clickElement }) });
+    const tool = CapabilityRegistry.get('browser_update_page');
+    const parsed = tool?.inputSchema.safeParse({ action: 'click', ref: 3 });
+    if (parsed?.success !== true) throw new Error('args rejected');
+    const result = (await tool?.handler(parsed.data)) as Record<string, unknown>;
+    expect(result['occludedBy']).toBe('<div role="dialog"> "We use cookies"');
+    expect(result['changed']).toBe(false);
+    expect(String(result['recoveryHint'])).toContain('was NOT sent');
+    expect(String(result['recoveryHint'])).toContain('Dismiss or close');
+  });
+
+  it('says nothing about occlusion when the click went through', async () => {
+    registerBrowserTools({ host: fakeHost() });
+    const tool = CapabilityRegistry.get('browser_update_page');
+    const parsed = tool?.inputSchema.safeParse({ action: 'click', ref: 1 });
+    if (parsed?.success !== true) throw new Error('args rejected');
+    const result = (await tool?.handler(parsed.data)) as Record<string, unknown>;
+    expect(result['occludedBy']).toBeUndefined();
   });
 });

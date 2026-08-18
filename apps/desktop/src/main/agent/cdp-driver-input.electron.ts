@@ -11,7 +11,7 @@ import {
   type KeySpec,
   type NodeArg,
 } from './cdp-driver-schemas.electron.js';
-import { centerOf, fileInputInfo, isFocused, objectIdFor } from './cdp-driver-dom.electron.js';
+import { centerOf, fileInputInfo, isFocused, objectIdFor, probeClickPoint } from './cdp-driver-dom.electron.js';
 
 /**
  * Input/gesture concern for {@link CdpDriver}: dispatches real user input (clicks, typing, key presses,
@@ -100,10 +100,19 @@ export async function clickElement(
   ref: number,
   adapter: HumanInputAdapter | undefined,
   core: DriverCore,
-): Promise<void> {
+): Promise<{ occludedBy: string | null }> {
   await core.ensure(wc);
   const node = await core.resolveRef(wc, ref);
-  const { x, y } = await centerOf(wc, node);
+  const center = await centerOf(wc, node);
+  // S3 PR5: occlusion was only ever checked during the SCAN, so a banner or sticky overlay appearing
+  // between snapshot and click intercepted the gesture and the click read as "no visible change" — the
+  // direct cause of `cookie_consent` failing with zero escapes. Probe again, here, at dispatch time.
+  const probe = await probeClickPoint(wc, node);
+  if (probe.blocker !== null) {
+    Logger.info('[input] click refused: target is covered', { ref, blocker: probe.blocker });
+    return { occludedBy: probe.blocker };
+  }
+  const { x, y } = probe.x === 0 && probe.y === 0 ? center : probe;
   if (adapter === undefined) {
     const base = { x, y, button: 'left' as const, clickCount: 1 };
     await wc.debugger.sendCommand('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
@@ -114,6 +123,7 @@ export async function clickElement(
     await adapter.click(x, y);
   }
   await core.settle(wc);
+  return { occludedBy: null };
 }
 
 export async function fillElement(

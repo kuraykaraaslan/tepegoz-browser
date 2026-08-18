@@ -52,3 +52,85 @@ export function resolveNodePath(root: PathNode, path: NodePath): PathNode | null
   }
   return el;
 }
+
+/**
+ * The identity a stale ref can be re-found by (S3 PR5). Recorded at snapshot time alongside the path,
+ * from the same fields the S2 identity key is built from — so the cascade re-finds *that* element, not
+ * merely something plausible in the same place.
+ */
+export interface ElementLocators {
+  /** Lower-case tag name. */
+  tag: string;
+  /** ARIA role (explicit or derived). May be ''. */
+  role: string;
+  /** Accessible name as the scan resolved it. May be ''. */
+  name: string;
+}
+
+/**
+ * Re-find an element by identity when its child-index path no longer resolves (S3 PR5).
+ *
+ * One locator per ref meant a stale path cost a full re-snapshot — and a re-snapshot renumbers every
+ * positional ref, so the model's whole plan goes with it. This is the cheaper second attempt.
+ *
+ * **It refuses to guess.** A match must agree on tag, role AND name, and there must be exactly ONE such
+ * element: two identical controls are indistinguishable here for the same reason they are to a reader,
+ * and clicking a wrong-but-plausible element is worse than admitting the ref is stale. Returns null on
+ * no match and on ambiguity alike; the caller then re-snapshots, which is now the last resort rather
+ * than the first.
+ *
+ * Self-contained (no module scope) so the driver can inject it with `.toString()` — what runs in the
+ * page is exactly what is unit-tested here.
+ */
+export function findByLocators(root: PathNode, locators: ElementLocators): PathNode | null {
+  const wanted = {
+    tag: locators.tag.toLowerCase(),
+    role: locators.role.toLowerCase(),
+    name: locators.name.trim(),
+  };
+  const matches: PathNode[] = [];
+  const CAP = 8000;
+  let seen = 0;
+
+  const nameOf = (el: Record<string, unknown>): string => {
+    const get = el['getAttribute'] as ((n: string) => string | null) | undefined;
+    const aria = typeof get === 'function' ? (get.call(el, 'aria-label') ?? '') : '';
+    if (aria.trim().length > 0) return aria.trim();
+    const text = (el['innerText'] ?? el['textContent'] ?? '') as string;
+    return String(text).replace(/\s+/g, ' ').trim();
+  };
+
+  const roleOf = (el: Record<string, unknown>): string => {
+    const get = el['getAttribute'] as ((n: string) => string | null) | undefined;
+    const explicit = typeof get === 'function' ? (get.call(el, 'role') ?? '') : '';
+    return explicit.toLowerCase();
+  };
+
+  const visit = (node: PathNode): void => {
+    if (seen >= CAP || matches.length > 1) return;
+    const children = node.children;
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i];
+      if (child === undefined) continue;
+      seen += 1;
+      const el = child as unknown as Record<string, unknown>;
+      const rawTag = el['tagName'];
+      const tag = typeof rawTag === 'string' ? rawTag.toLowerCase() : '';
+      if (tag === wanted.tag) {
+        // Role may be implicit on the page (no role= attribute); an empty recorded role matches anything,
+        // which is what keeps a plain <button> findable without re-deriving the whole role algorithm here.
+        const role = roleOf(el);
+        const roleOk = wanted.role.length === 0 || role.length === 0 || role === wanted.role;
+        if (roleOk && nameOf(el) === wanted.name) matches.push(child);
+      }
+      if (child.shadowRoot !== null && child.shadowRoot !== undefined) visit(child.shadowRoot);
+      else if (child.tagName === 'IFRAME' && child.contentDocument !== null && child.contentDocument !== undefined) {
+        visit(child.contentDocument);
+      }
+      visit(child);
+    }
+  };
+
+  visit(root);
+  return matches.length === 1 ? (matches[0] ?? null) : null;
+}
