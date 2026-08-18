@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { WebContents } from 'electron';
-import type { NodePath, RawInteractable } from '@tepegoz/tool-executor';
+import type { NodePath, RawInteractable, RefRegistry } from '@tepegoz/tool-executor';
 
 /**
  * Shared primitives for the {@link CdpDriver} facade: the trust-boundary zod schemas, the injected
@@ -191,6 +191,11 @@ export interface SnapshotDeps {
   ensure: EnsureAttached;
   refMaps: WeakMap<WebContents, Map<number, RefTarget>>;
   prevSnapshots: WeakMap<WebContents, { url: string; hashes: Set<string> }>;
+  /**
+   * S2 PR1: per-tab identity → ref carry-over, so an element keeps its number across snapshots within a
+   * run. Present only when `TEPEGOZ_PERCEPTION_V2` is on; the positional path never reads it.
+   */
+  refRegistries: WeakMap<WebContents, RefRegistry>;
 }
 
 /** The AX-node value coerced to a trimmed string, or '' when absent/non-scalar. */

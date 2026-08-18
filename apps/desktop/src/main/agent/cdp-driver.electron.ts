@@ -10,6 +10,7 @@ import {
   type SnapshotDeps,
   type SnapshotResult,
 } from './cdp-driver-schemas.electron.js';
+import type { RefRegistry } from '@tepegoz/tool-executor';
 import { pathToObjectId, readValue } from './cdp-driver-dom.electron.js';
 import { attachNetworkRecorder, networkSince } from './cdp-driver-network.electron.js';
 import { waitForPageSettled } from './cdp-driver-session.electron.js';
@@ -47,6 +48,8 @@ export default class CdpDriver {
   private static readonly refMaps = new WeakMap<WebContents, Map<number, RefTarget>>();
   /** Per-tab previous render-DOM snapshot (url + element fingerprints) for `*[n]` new-element marking. */
   private static readonly prevSnapshots = new WeakMap<WebContents, { url: string; hashes: Set<string> }>();
+  /** S2 PR1: per-tab identity → ref carry-over for stable refs (unused on the positional path). */
+  private static readonly refRegistries = new WeakMap<WebContents, RefRegistry>();
 
   /** The state-owning collaborators the extracted input helpers borrow. */
   private static core(): DriverCore {
@@ -63,6 +66,7 @@ export default class CdpDriver {
       ensure: (wc) => CdpDriver.ensureAttached(wc),
       refMaps: CdpDriver.refMaps,
       prevSnapshots: CdpDriver.prevSnapshots,
+      refRegistries: CdpDriver.refRegistries,
     };
   }
 

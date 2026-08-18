@@ -63,6 +63,12 @@ export interface RawInteractable {
   attributes?: Record<string, string>;
   /** Set by the driver when this element is new since the previous same-page snapshot. */
   isNew?: boolean;
+  /**
+   * The identity-stable ref this element holds for the current page (S2 PR1). Absent ⇒ the legacy
+   * positional ref (index + 1). The driver's `ref → node` map MUST be keyed by whichever one is used,
+   * or an action resolves to the wrong element.
+   */
+  ref?: number;
   inputKind?: 'file';
   accept?: string;
   multiple?: boolean;
@@ -179,7 +185,7 @@ function cleanInto(raw: string | undefined, flags: Set<string>): string {
 
 /** Build one sanitized model-facing element from a raw node at 1-based `ref`. */
 function finalizeNode(node: RawInteractable, ref: number, flags: Set<string>): InteractableElement {
-  const el: InteractableElement = { ref, role: node.role, name: cleanInto(node.name, flags) };
+  const el: InteractableElement = { ref: node.ref ?? ref, role: node.role, name: cleanInto(node.name, flags) };
   if (node.tag !== undefined && node.tag.length > 0) el.tag = node.tag.toLowerCase();
   const href = cleanInto(node.href, flags);
   if (href.length > 0) el.href = href;
@@ -199,9 +205,10 @@ function finalizeNode(node: RawInteractable, ref: number, flags: Set<string>): I
 }
 
 /**
- * Sanitize + cap the raw interactable nodes into the model-facing element list, assigning sequential
- * 1-based refs. Returns the elements plus the aggregated sanitizer flags (taint signal). The caller's
- * `ref → backend node` map MUST be built in the SAME order so `ref` stays a valid action target.
+ * Sanitize + cap the raw interactable nodes into the model-facing element list. A node that carries its
+ * own identity-stable `ref` (S2 PR1) keeps it; otherwise refs are sequential 1-based positions. Returns
+ * the elements plus the aggregated sanitizer flags (taint signal). The caller's `ref → backend node` map
+ * MUST be keyed by whichever ref was used, or an action resolves to the wrong element.
  */
 export function finalizeElements(raw: RawInteractable[]): {
   elements: InteractableElement[];

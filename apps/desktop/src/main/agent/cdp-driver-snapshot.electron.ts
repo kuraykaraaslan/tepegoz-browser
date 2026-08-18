@@ -1,12 +1,18 @@
 import type { WebContents } from 'electron';
 import { AppError, Logger } from '@tepegoz/libs';
 import {
+  assignStableRefs,
+  createRefRegistry,
+  disambiguate,
   isInteractableRole,
   markNewElements,
   parseDomTree,
+  registryTable,
   MAX_INTERACTABLE_ELEMENTS,
   type RawInteractable,
+  type RefRegistry,
 } from '@tepegoz/tool-executor';
+import { StableRefTableSchema } from '@tepegoz/shared-types';
 import {
   axString,
   AxTreeSchema,
@@ -29,6 +35,48 @@ import { mainFrameIsolatedContext } from './cdp-driver-session.electron.js';
 /** Perception source: render-DOM (AI-2 default) unless `TEPEGOZ_PERCEPTION=a11y` forces the fallback. */
 function perceptionMode(): 'render-dom' | 'a11y' {
   return process.env.TEPEGOZ_PERCEPTION === 'a11y' ? 'a11y' : 'render-dom';
+}
+
+/**
+ * S2 PR1: identity-stable refs, off by default. The positional path stays the default AND the degraded
+ * fallback until the funded paired sweep says otherwise — a phase does not promote its own flag.
+ */
+function stableRefsEnabled(): boolean {
+  return process.env.TEPEGOZ_PERCEPTION_V2 === '1' || process.env.TEPEGOZ_PERCEPTION_V2 === 'true';
+}
+
+/**
+ * Assign identity-stable refs for this snapshot, carrying the per-tab registry forward. Returns `null`
+ * whenever stability is not achievable or not trustworthy — a disabled flag, a wholesale DOM rewrite, or
+ * a table the schema rejects — and the caller then uses positional refs, which always work.
+ *
+ * The registry is per (tab, url): a navigation is a different ref space, so it starts clean rather than
+ * handing the model a number that used to mean something else.
+ */
+function stableRefsFor(
+  wc: WebContents,
+  deps: SnapshotDeps,
+  url: string,
+  contentKeys: readonly string[],
+): number[] | null {
+  if (!stableRefsEnabled()) return null;
+  const existing = deps.refRegistries.get(wc);
+  const registry: RefRegistry =
+    existing !== undefined && existing.url === url ? existing : createRefRegistry(url);
+  const { refs, carryOverRate, degraded } = assignStableRefs(disambiguate(contentKeys), registry);
+  deps.refRegistries.set(wc, registry);
+  // The identity keys are built from page-controlled strings, so the table is validated before it is
+  // trusted — same trust boundary as the CDP payload itself.
+  if (StableRefTableSchema.safeParse(registryTable(registry)).success === false) {
+    Logger.warn('[perception] stable-ref table rejected by schema; using positional refs', { url });
+    deps.refRegistries.delete(wc);
+    return null;
+  }
+  if (degraded) {
+    Logger.info('[perception] stable refs degraded (wholesale DOM rewrite)', { url, carryOverRate });
+    return null;
+  }
+  return refs;
 }
 
 /**
@@ -105,6 +153,15 @@ async function snapshotElementsRenderDom(
   if (!tree.success) throw new AppError('render-DOM perception payload malformed', 502);
 
   const { interactables, paths, hashes } = parseDomTree(tree.data);
+  // S2 PR1: reuse the number an element already holds on this page, so "the crate I chose" survives a
+  // re-render. Null ⇒ positional refs (flag off, DOM rewritten wholesale, or a rejected table).
+  const stableRefs = stableRefsFor(wc, deps, tree.data.url, hashes);
+  if (stableRefs !== null) {
+    interactables.forEach((raw, i) => {
+      const ref = stableRefs[i];
+      if (ref !== undefined) raw.ref = ref;
+    });
+  }
   await logPerception(wc, contextId, tree.data.url, interactables.length);
 
   // Mark elements that appeared since the previous snapshot of the SAME page (e.g. a menu the
@@ -117,10 +174,11 @@ async function snapshotElementsRenderDom(
   });
   deps.prevSnapshots.set(wc, { url: tree.data.url, hashes: new Set(hashes) });
 
+  // The action map MUST be keyed by whichever ref the model was shown, or a click resolves elsewhere.
   const refMap = new Map<number, RefTarget>();
-  interactables.forEach((_, i) => {
+  interactables.forEach((raw, i) => {
     const path = paths[i];
-    if (path !== undefined) refMap.set(i + 1, { path });
+    if (path !== undefined) refMap.set(raw.ref ?? i + 1, { path });
   });
   deps.refMaps.set(wc, refMap);
   return { url: tree.data.url, title: tree.data.title, elements: interactables };

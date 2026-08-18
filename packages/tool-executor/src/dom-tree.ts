@@ -66,7 +66,7 @@ export interface ParsedDomTree {
  * Identity by tag + role + accessible name + link destination flags genuine new controls; duplicate
  * controls collide (they simply won't be individually marked new — the flag is advisory).
  */
-function nodeHash(node: DomTreeNode): string {
+export function nodeHash(node: DomTreeNode): string {
   return `${node.tag}|${node.role}|${node.name}|${node.href ?? ''}`;
 }
 

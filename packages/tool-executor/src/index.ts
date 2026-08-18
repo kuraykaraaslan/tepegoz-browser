@@ -35,3 +35,4 @@ export { checkForm } from './form-validation.js';
 export type { FormReport, FormIssue } from './form-validation.js';
 export { resolveNodePath } from './dom-path.js';
 export type { PathNode, NodePath, PathSegment } from './dom-path.js';
+export * from './stable-refs.js';

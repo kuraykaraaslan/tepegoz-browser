@@ -1,6 +1,6 @@
 # Phase S2 — Perception v2 (W2 Perception / token-economy engine for W3 Speed)
 
-**Status:** 🟡 In progress (PR0 landed 2026-08-18) · **Depends on:** [S0 Truth & Repair](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟡 In progress (PR0–PR1 landed 2026-08-18) · **Depends on:** [S0 Truth & Repair](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Give the model a stable, deduplicated, diff-based view of the page so it stops re-reading the whole world every step. Element references become identity-stable content hashes that survive snapshots within a run, unchanged regions are elided, and form-field labels are resolved during the scan so fields are named correctly. This is the clearest single perception delta against Claude for Chrome (its persistent cross-turn ref IDs) and it is simultaneously the token-economy engine that W3 Speed draws on.
 
@@ -19,7 +19,7 @@ Prior art gives us the shape of the win without the claim: browser-use's TSV ser
 - [ ] Tokens/step on the **perception + web-patterns** families down **≥30%** vs the S0 baseline (⏸ funded sweep · paired, pooled **N≥10**, via existing `TEPEGOZ_EVAL_RATES` cost plumbing in [statistics.ts](../../packages/agent-eval/src/statistics.ts)).
 - [ ] **Perception family** pooled pass **≥80%** with **Wilson lower bound ≥60%** at **N≥10** (⏸ funded sweep).
 - [ ] **No regression >5pp** pooled on the **web-patterns** family (⏸ funded sweep).
-- [ ] Identity-stable refs survive ≥N snapshots within a run for unchanged elements (deterministic assertion in the scripted tier — not funding-blocked).
+- [x] Identity-stable refs survive ≥N snapshots within a run for unchanged elements (deterministic assertion in the scripted tier — not funding-blocked).
 - [ ] `aria-labelledby` / `label[for]` resolved in the **default** render-DOM path; `label-for-form` fixture names every field correctly under scripted assertion.
 - [ ] New `browser_get_page_text` tool returns article-priority clean text + title + url (scripted assertion; parity with Claude for Chrome).
 - [x] Fixtures `ref-stability-across-rerender`, `label-for-form`, `dynamic-list-update` **frozen in PR0 before any capability code** (constitution: fixtures-first).
@@ -37,10 +37,23 @@ Prior art gives us the shape of the win without the claim: browser-use's TSV ser
 
 ### PR1 — identity-stable content-hash refs (env-flagged)
 
-- [ ] Compute `ref = hash(tag + role + accessible name + structural path)` where the path comes from [dom-path.ts `resolveNodePath`](../../packages/tool-executor/src/dom-path.ts); assign in [build-dom-tree-script.ts](../../apps/desktop/src/main/agent/build-dom-tree-script.ts), finalise in [interactable.ts `finalizeElements`](../../packages/tool-executor/src/interactable.ts).
-- [ ] Hold a **per-tab ref map** in [browser-host.electron.ts](../../apps/desktop/src/main/agent/browser-host.electron.ts) alongside the existing djb2 sig; refs survive snapshots within a run.
-- [ ] Gate the whole path behind an env flag (e.g. `TEPEGOZ_PERCEPTION_V2`) so the positional path stays the default and the degraded fallback.
-- [ ] zod safeParse the ref-map entries at the IPC boundary; `@tepegoz/shared-types` owns the `StableRef` schema.
+- [x] Compute `ref = hash(tag + role + accessible name + structural path)` where the path comes from [dom-path.ts `resolveNodePath`](../../packages/tool-executor/src/dom-path.ts); assign in [build-dom-tree-script.ts](../../apps/desktop/src/main/agent/build-dom-tree-script.ts), finalise in [interactable.ts `finalizeElements`](../../packages/tool-executor/src/interactable.ts).
+- [x] Hold a **per-tab ref map** in [browser-host.electron.ts](../../apps/desktop/src/main/agent/browser-host.electron.ts) alongside the existing djb2 sig; refs survive snapshots within a run.
+- [x] Gate the whole path behind an env flag (e.g. `TEPEGOZ_PERCEPTION_V2`) so the positional path stays the default and the degraded fallback.
+- [x] zod safeParse the ref-map entries at the IPC boundary; `@tepegoz/shared-types` owns the `StableRef` schema.
+
+> **Mechanism deviation (recorded, PR1 — this IS the spike the Risks section asked for).** The identity
+> key **excludes the structural path**: it is `tag | role | accessible name | href`, with an occurrence
+> suffix (`#0`, `#1`, …) separating duplicate controls in document order. Including the path would have
+> defeated the property being bought — `ref-stability-across-rerender` rebuilds the list at a new nesting
+> depth in reverse order, so every path changes while nothing about the elements does, and a
+> path-inclusive hash renumbers all of them. The cost is that two *identical* controls which swap places
+> swap refs; accepted, because nothing distinguishes them to a human reader either. The degraded mode the
+> Risks section requires is implemented as a **carry-over-rate floor** (30%): below it the registry resets
+> and refs go positional for that snapshot, logged, because on a wholesale rewrite stability was never
+> achievable. The zod boundary sits at the **CDP read site** (the driver), not inside `@tepegoz/tool-executor`
+> — that package is a pure leaf with no workspace dependencies, and `@tepegoz/shared-types` still owns the
+> `StableRef` schema as the single source.
 
 ### PR2 — diff serialisation + unchanged-region elision
 
