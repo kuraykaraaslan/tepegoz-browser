@@ -1,6 +1,6 @@
 # Phase S2 — Perception v2 (W2 Perception / token-economy engine for W3 Speed)
 
-**Status:** 🟡 In progress (PR0–PR2 landed 2026-08-18) · **Depends on:** [S0 Truth & Repair](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟡 In progress (PR0–PR3 landed 2026-08-18) · **Depends on:** [S0 Truth & Repair](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Give the model a stable, deduplicated, diff-based view of the page so it stops re-reading the whole world every step. Element references become identity-stable content hashes that survive snapshots within a run, unchanged regions are elided, and form-field labels are resolved during the scan so fields are named correctly. This is the clearest single perception delta against Claude for Chrome (its persistent cross-turn ref IDs) and it is simultaneously the token-economy engine that W3 Speed draws on.
 
@@ -20,7 +20,7 @@ Prior art gives us the shape of the win without the claim: browser-use's TSV ser
 - [ ] **Perception family** pooled pass **≥80%** with **Wilson lower bound ≥60%** at **N≥10** (⏸ funded sweep).
 - [ ] **No regression >5pp** pooled on the **web-patterns** family (⏸ funded sweep).
 - [x] Identity-stable refs survive ≥N snapshots within a run for unchanged elements (deterministic assertion in the scripted tier — not funding-blocked).
-- [ ] `aria-labelledby` / `label[for]` resolved in the **default** render-DOM path; `label-for-form` fixture names every field correctly under scripted assertion.
+- [x] `aria-labelledby` / `label[for]` resolved in the **default** render-DOM path; `label-for-form` fixture names every field correctly under scripted assertion.
 - [ ] New `browser_get_page_text` tool returns article-priority clean text + title + url (scripted assertion; parity with Claude for Chrome).
 - [x] Fixtures `ref-stability-across-rerender`, `label-for-form`, `dynamic-list-update` **frozen in PR0 before any capability code** (constitution: fixtures-first).
 - [ ] Paired with/without-flag sweep recorded as a **delta row in [eval-results.md](eval-results.md)** and the [PROSE-LEDGER](PROSE-LEDGER.md) (constitution: delta recorded; paired for any prose deletion).
@@ -72,9 +72,9 @@ Prior art gives us the shape of the win without the claim: browser-use's TSV ser
 
 ### PR3 — label resolution in the default scan pass
 
-- [ ] JOIN `aria-labelledby` and `label[for=…]` inside the single scan traversal in [build-dom-tree-script.ts `textOf`](../../apps/desktop/src/main/agent/build-dom-tree-script.ts) (cheap, same pass — no second walk).
-- [ ] Make the resolved name feed the accessible-name component of the PR1 hash so labels are both correct **and** identity-stable.
-- [ ] Bring the default path to parity with the a11y-fallback naming for the `label-for-form` fixture.
+- [x] JOIN `aria-labelledby` and `label[for=…]` inside the single scan traversal in [build-dom-tree-script.ts `textOf`](../../apps/desktop/src/main/agent/build-dom-tree-script.ts) (cheap, same pass — no second walk).
+- [x] Make the resolved name feed the accessible-name component of the PR1 hash so labels are both correct **and** identity-stable.
+- [x] Bring the default path to parity with the a11y-fallback naming for the `label-for-form` fixture.
 
 ### PR4 — `browser_get_page_text`
 

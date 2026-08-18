@@ -120,9 +120,45 @@ export function buildDomTreeExpression(viewportExpansionPx = 0): string {
     }
   };
 
+  const collapse = (s) => (s || '').replace(/\\s+/g, ' ').trim();
+
+  // S2 PR3: the two places an accessible name commonly lives that the render-DOM scan used to miss.
+  // Both are resolved WITHIN the element's own root (document or shadow root), because an id reference
+  // does not cross a shadow boundary — looking it up in the top document would silently grab a
+  // same-named element from somewhere else on the page.
+  const labelledByText = (el) => {
+    const ids = collapse(el.getAttribute('aria-labelledby'));
+    if (!ids) return '';
+    const root = el.getRootNode();
+    const parts = [];
+    // Order matters: aria-labelledby="a b" names the element "A B", not "B A".
+    for (const id of ids.split(' ')) {
+      const target = root.getElementById ? root.getElementById(id) : el.ownerDocument.getElementById(id);
+      if (target) { const t = collapse(target.innerText || target.textContent); if (t) parts.push(t); }
+    }
+    return parts.join(' ');
+  };
+
+  // \`el.labels\` covers BOTH a wrapping <label> and a detached <label for="…">, and only exists on the
+  // form controls that can have one — which is exactly the set that needs it.
+  const nativeLabelText = (el) => {
+    let labels = null;
+    try { labels = el.labels; } catch (e) { labels = null; }
+    if (!labels || labels.length === 0) return '';
+    const parts = [];
+    for (let i = 0; i < labels.length; i++) { const t = collapse(labels[i].innerText || labels[i].textContent); if (t) parts.push(t); }
+    return parts.join(' ');
+  };
+
   const textOf = (el) => {
+    // Accessible-name order (matches the a11y fallback this default path was regressing against):
+    // aria-labelledby → aria-label → native <label> → placeholder → alt → own text → title.
+    const referenced = labelledByText(el);
+    if (referenced) return referenced.slice(0, MAX_TEXT);
     const label = el.getAttribute('aria-label');
     if (label && label.trim()) return label.trim().slice(0, MAX_TEXT);
+    const native = nativeLabelText(el);
+    if (native) return native.slice(0, MAX_TEXT);
     if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
       const ph = el.getAttribute('placeholder');
       if (ph && ph.trim()) return ph.trim().slice(0, MAX_TEXT);
