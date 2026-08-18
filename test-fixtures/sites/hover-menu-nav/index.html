@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Atlas Tools</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; }
+      .menu { position: relative; display: inline-block; }
+      .trigger { padding: 0.5rem 0.9rem; background: #eee; border-radius: 6px; }
+      .items { display: none; position: absolute; left: 0; top: 100%; background: #fff;
+               border: 1px solid #ccc; padding: 0.4rem 0.8rem; }
+      /* Opens on HOVER ONLY — there is no click handler and no focus path. */
+      .menu:hover .items { display: block; }
+      .items a { display: block; padding: 0.3rem 0; }
+    </style>
+  </head>
+  <body>
+    <h1>Atlas Tools</h1>
+    <!--
+      S3 fixture — HOVER-REVEALED MENU.
+
+      The dropdown opens on :hover and nothing else: no click handler, no focus rule. Its links do not
+      exist in the actionable set until the pointer is actually over the trigger, so an agent with no
+      hover verb can never reach the warranty page.
+    -->
+    <div class="menu">
+      <span class="trigger">Services</span>
+      <div class="items">
+        <a href="warranty.html">Warranty registration</a>
+        <a href="index.html">Repairs</a>
+      </div>
+    </div>
+    <p>Hover the Services menu to see what we offer.</p>
+  </body>
+</html>

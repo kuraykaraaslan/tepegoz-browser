@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Meeting room booking</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; }
+      .cal { display: none; border: 1px solid #ccc; padding: 0.6rem; width: 16rem; }
+      .cal.open { display: block; }
+      .day { display: inline-block; width: 2rem; text-align: center; padding: 0.2rem;
+             cursor: pointer; border-radius: 4px; }
+      .day:hover { background: #eee; }
+      #status { margin-top: 1.5rem; font-weight: 600; }
+      input { padding: 0.45rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Book a meeting room</h1>
+    <!--
+      S3 fixture — DATEPICKER WIDGET.
+
+      The date input is readonly: typing into it does nothing. The value can only be set through the
+      widget — open the calendar, click a day. Raw text injection is exactly what this fixture is here
+      to catch, so the confirm step re-reads the input and rejects a value the widget never produced.
+    -->
+    <label for="date">Date</label>
+    <input id="date" type="text" readonly onclick="toggle()" aria-label="Date" />
+    <div class="cal" id="cal"></div>
+    <button onclick="confirmBooking()">Confirm booking</button>
+    <p id="status">No booking made.</p>
+
+    <script>
+      var picked = null;
+      function toggle() { document.getElementById('cal').classList.toggle('open'); }
+      function render() {
+        var cal = document.getElementById('cal');
+        cal.innerHTML = '<div>March 2027</div>';
+        for (var d = 1; d <= 28; d++) {
+          (function (day) {
+            var s = document.createElement('span');
+            s.className = 'day';
+            s.textContent = String(day);
+            s.setAttribute('role', 'button');
+            s.onclick = function () {
+              picked = '2027-03-' + (day < 10 ? '0' + day : day);
+              document.getElementById('date').value = picked;
+              cal.classList.remove('open');
+            };
+            cal.appendChild(s);
+          })(d);
+        }
+      }
+      function confirmBooking() {
+        var shown = document.getElementById('date').value;
+        // The booking is only real when the widget set it — a value typed straight in never matches.
+        document.getElementById('status').textContent =
+          picked !== null && picked === shown
+            ? 'Room booked for ' + picked
+            : 'Please choose a date from the calendar.';
+      }
+      render();
+    </script>
+  </body>
+</html>

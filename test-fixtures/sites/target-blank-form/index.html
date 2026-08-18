@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Quote request</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; max-width: 30rem; }
+      input, button { padding: 0.5rem; margin-bottom: 0.6rem; }
+      label { display: block; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <h1>Request a quote</h1>
+    <!--
+      S3 fixture — TARGET=_BLANK FORM.
+
+      The form submits into a NEW tab. The confirmation the task asks for is only on that tab; this
+      page stays exactly as it was. An agent that does not follow the spawned tab reports success it
+      never saw, or gives up on a page that looks unchanged.
+    -->
+    <form action="quote.html" method="get" target="_blank">
+      <label for="qty">Quantity</label>
+      <input id="qty" name="qty" type="text" />
+      <button type="submit">Request quote</button>
+    </form>
+  </body>
+</html>

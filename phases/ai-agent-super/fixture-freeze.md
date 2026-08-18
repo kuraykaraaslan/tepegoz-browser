@@ -171,3 +171,38 @@ now checks the **shipped** registry on every test run: every scenario parses, id
 fixture exists on disk, and no scenario asserts nothing. A scenario pointing at a missing fixture does not
 fail loudly at eval time — it fails as a "the agent could not do it" trial, which reads as incompetence
 and quietly poisons a pass rate.
+
+## S3-PR0 addition — 2026-08-18 (7 scenarios, 1 new registry)
+
+[S3](phase-s3-reliability-actions.md) PR0 freezes its exam **before** any of its capability code (nav
+verbs are PR1, the tab-spawn world model PR3, dialogs PR4, the occlusion re-check PR5). Every scenario
+fails today, on purpose and for a named reason.
+
+> **All eleven earlier hashes are byte-identical.** `cookie_consent` in `web-patterns.json` stays
+> untouched as the **regression sentinel** the PR5 occlusion re-check must move — its file hash is
+> unchanged from the S0 freeze, so a later delta on it is comparable.
+
+| Registry file | Scenarios | SHA-256 of file bytes |
+|---|---:|---|
+| `reliability-actions.json` | 7 | `3f55c9e330c355eecc6bd16837f0d94905bce4fe313ffdae681d450d57280315` |
+| **New total** | **70** | across 12 registry files |
+
+| Fixture | Why it fails today |
+|---|---|
+| `popup-follow` | A click calls `window.open`. Nothing on the acting page changes, and the reference the task needs exists only in the spawned tab, so the agent stalls on the old page. |
+| `target-blank-form` | The form submits into a new tab; the confirmation is only there. An agent that does not follow reports a success it never saw. **Held out.** |
+| `confirm-dialog-destructive` | The task is a rename; a destructive `window.confirm` sits beside it. Blind-accepting any dialog destroys the project. |
+| `beforeunload-trap` | Typing marks the draft dirty, so navigating raises the browser's own unload prompt — which no DOM action can dismiss. |
+| `datepicker-booking` | The date input is `readonly`: the value can only come from the widget, and the confirm step rejects a value the widget never produced. |
+| `hover-menu-nav` | The menu opens on `:hover` only — no click handler, no focus rule — so its links are not in the actionable set at all. **Held out.** |
+| `drag-reorder` | HTML5 drag-and-drop with no keyboard alternative. **STRETCH — explicitly not a DoD gate** (tagged `not-a-gate`); excluded from the pooled aggregate if the CDP drag spike ships HITL-only. |
+
+Two of seven are held out (~29%, matching the registry ratio).
+
+**Assertion debt.** Each scenario asserts the *outcome* (reference confirmed, quote reference read,
+report renamed, published page reached, room booked, warranty answer given, order changed). None of them
+can assert the *mechanism* — that a tab-spawn event fired, that a dialog was intercepted in main rather
+than in the page principal, that the occlusion probe ran. Those are unit-asserted in their PRs. Notably,
+`confirm_dialog_destructive` passing means *"the rename happened"*, **not** *"the agent would have
+refused the destructive confirm"* — the destructive path simply is not on the task's route, and a
+scenario that asserts an absence is weak evidence by construction.

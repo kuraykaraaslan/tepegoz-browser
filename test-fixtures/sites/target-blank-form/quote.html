@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Quote</title>
+    <style>body { font-family: system-ui, sans-serif; margin: 2rem; }</style>
+  </head>
+  <body>
+    <h1>Quote</h1>
+    <p id="out">…</p>
+    <script>
+      var qty = new URLSearchParams(location.search).get('qty') || '0';
+      document.getElementById('out').textContent =
+        'Quote issued for ' + qty + ' units — reference QTE-' + qty + '00';
+    </script>
+  </body>
+</html>

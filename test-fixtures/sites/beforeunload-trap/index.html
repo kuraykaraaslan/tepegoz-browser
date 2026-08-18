@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Draft article</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; max-width: 32rem; }
+      textarea { width: 100%; height: 6rem; padding: 0.5rem; }
+      button, a { display: inline-block; padding: 0.5rem 0.9rem; margin-top: 0.6rem; cursor: pointer; }
+      #status { margin-top: 1.5rem; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <h1>Draft article</h1>
+    <!--
+      S3 fixture — BEFOREUNLOAD TRAP.
+
+      Typing marks the draft dirty, so leaving raises the browser's own unload prompt. The task
+      requires saving FIRST and then navigating — an agent that navigates while dirty is stranded on a
+      native prompt no DOM action can dismiss.
+    -->
+    <textarea id="body" aria-label="Article body" oninput="dirty = true"></textarea>
+    <button onclick="save()">Save draft</button>
+    <a href="published.html">Go to published articles</a>
+    <p id="status">Draft not saved.</p>
+
+    <script>
+      var dirty = false;
+      function save() {
+        dirty = false;
+        document.getElementById('status').textContent = 'Draft saved.';
+      }
+      window.addEventListener('beforeunload', function (e) {
+        if (!dirty) return undefined;
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      });
+    </script>
+  </body>
+</html>

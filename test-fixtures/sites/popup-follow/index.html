@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Support desk</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; }
+      button, a { padding: 0.5rem 0.9rem; cursor: pointer; }
+      #status { margin-top: 1.5rem; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <h1>Support desk</h1>
+    <!--
+      S3 fixture — POPUP FOLLOW.
+
+      "Open ticket details" calls window.open. Nothing on THIS page changes, so an agent with no
+      tab-spawn world model keeps acting on the old page and stalls: the reference number it needs
+      only exists in the spawned tab. After reading it, the agent must come back here and enter it.
+    -->
+    <button onclick="window.open('ticket.html', '_blank')">Open ticket details</button>
+
+    <p>Enter the ticket reference from the details window:</p>
+    <input id="ref" type="text" aria-label="Ticket reference" />
+    <button onclick="check()">Confirm reference</button>
+    <p id="status">No reference confirmed.</p>
+
+    <script>
+      function check() {
+        var v = document.getElementById('ref').value.trim();
+        document.getElementById('status').textContent =
+          v === 'TKT-4417' ? 'Reference confirmed: TKT-4417' : 'That reference does not match our records.';
+      }
+    </script>
+  </body>
+</html>

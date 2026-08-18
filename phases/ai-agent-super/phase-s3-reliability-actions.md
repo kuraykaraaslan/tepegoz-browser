@@ -1,6 +1,6 @@
 # Phase S3 — Reliability Actions (W1 Reliability)
 
-**Status:** ⬜ Not started · **Depends on:** [S0](phase-s0-truth-and-repair.md); [S2](phase-s2-perception-v2.md) (identity refs for the locator cascade) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟡 In progress (PR0 landed 2026-08-18) · **Depends on:** [S0](phase-s0-truth-and-repair.md); [S2](phase-s2-perception-v2.md) (identity refs for the locator cascade) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Close the missing action vocabulary and the two structural interaction gaps — snapshot-only
 occlusion and one-locator-per-ref — that make the agent fail on real sites. This targets the **measured**
@@ -76,7 +76,7 @@ re-snapshotting).
       `AppError(400)`.
 - [ ] Dialog + popup interception documents its HITL fallback and **never** installs a page-principal
       `window.confirm`/`window.alert` override (security-plane invariant, [ADR-0024](../../docs/adr/0024-action-interception-plane.md)).
-- [ ] **Fixtures frozen before capability code** (PR0), each with a `test-fixtures/sites/<name>/index.html`
+- [x] **Fixtures frozen before capability code** (PR0), each with a `test-fixtures/sites/<name>/index.html`
       + a registry entry, and a green scripted plumbing run before any reactor/executor code lands.
 - [ ] **Prose steers** #1–#5 each moved **DELETED or RETAINED** by its **paired with/without sweep** at
       pooled N with the pre-stated equivalence margin; [PROSE-LEDGER.md](PROSE-LEDGER.md) updated in the
@@ -90,15 +90,15 @@ re-snapshotting).
 ## Tasks
 
 ### PR0 — fixture freeze
-- [ ] Add seven `test-fixtures/sites/*/index.html` deterministic pages (see [Fixtures](#fixtures)):
+- [x] Add seven `test-fixtures/sites/*/index.html` deterministic pages (see [Fixtures](#fixtures)):
       `popup-follow`, `target-blank-form`, `confirm-dialog-destructive`, `beforeunload-trap`,
       `datepicker-booking`, `hover-menu-nav`, `drag-reorder`.
-- [ ] Register them in a new `packages/agent-eval/scenarios/reliability-actions.json` (mirrors the
+- [x] Register them in a new `packages/agent-eval/scenarios/reliability-actions.json` (mirrors the
       `web-patterns.json` schema: `id / task / target.fixture / success.domAssertion / heldOut / tags`);
       hold out the check-set per the constitution.
-- [ ] Confirm `cookie_consent` in [web-patterns.json](../../packages/agent-eval/scenarios/web-patterns.json)
+- [x] Confirm `cookie_consent` in [web-patterns.json](../../packages/agent-eval/scenarios/web-patterns.json)
       stays untouched as the **regression sentinel**.
-- [ ] Green scripted plumbing run (`ScriptedProvider`) proving the fixtures load + score, labelled
+- [x] Green scripted plumbing run (`ScriptedProvider`) proving the fixtures load + score, labelled
       "plumbing/regression, NOT competence" — **no capability code in this PR** (the exam is frozen
       before the answer exists).
 

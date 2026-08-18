@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Playlist</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; }
+      li { padding: 0.4rem 0.6rem; margin-bottom: 0.3rem; border: 1px solid #ccc;
+           width: 14rem; cursor: grab; background: #fafafa; }
+      #status { margin-top: 1.5rem; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <h1>Playlist</h1>
+    <!--
+      S3 fixture — DRAG REORDER (STRETCH, explicitly NOT a DoD gate).
+
+      HTML5 drag-and-drop, driven only by dragstart/dragover/drop. There is no keyboard or button
+      alternative on purpose: this is the case that either works through real drag events or is
+      honestly reported as unsupported.
+    -->
+    <ul id="list">
+      <li draggable="true">Opening theme</li>
+      <li draggable="true">Interlude</li>
+      <li draggable="true">Finale</li>
+    </ul>
+    <p id="status">Order: Opening theme, Interlude, Finale</p>
+
+    <script>
+      var dragged = null;
+      var list = document.getElementById('list');
+      list.addEventListener('dragstart', function (e) { dragged = e.target; });
+      list.addEventListener('dragover', function (e) { e.preventDefault(); });
+      list.addEventListener('drop', function (e) {
+        e.preventDefault();
+        var target = e.target;
+        if (dragged && target && target.tagName === 'LI' && target !== dragged) {
+          list.insertBefore(dragged, target);
+          report();
+        }
+      });
+      function report() {
+        var names = [];
+        var items = list.querySelectorAll('li');
+        for (var i = 0; i < items.length; i++) names.push(items[i].textContent);
+        document.getElementById('status').textContent = 'Order: ' + names.join(', ');
+      }
+    </script>
+  </body>
+</html>

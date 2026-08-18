@@ -1,0 +1,126 @@
+{
+  "scenarios": [
+    {
+      "id": "popup_follow",
+      "task": "Open the ticket details, find the ticket reference, then enter it on the support desk page and confirm it.",
+      "target": {
+        "fixture": "popup-follow"
+      },
+      "success": {
+        "domAssertion": "Reference confirmed: TKT-4417",
+        "expectedValue": "TKT-4417"
+      },
+      "heldOut": false,
+      "tags": [
+        "reliability",
+        "tab-spawn",
+        "s3"
+      ]
+    },
+    {
+      "id": "target_blank_form",
+      "task": "Request a quote for 12 units and tell me the quote reference you were given.",
+      "target": {
+        "fixture": "target-blank-form"
+      },
+      "success": {
+        "domAssertion": "Quote issued for 12 units",
+        "expectedValue": "QTE-1200"
+      },
+      "heldOut": true,
+      "tags": [
+        "reliability",
+        "tab-spawn",
+        "form",
+        "s3"
+      ]
+    },
+    {
+      "id": "confirm_dialog_destructive",
+      "task": "Rename the report to report-final.pdf.",
+      "target": {
+        "fixture": "confirm-dialog-destructive"
+      },
+      "success": {
+        "domAssertion": "Renamed report to report-final.pdf"
+      },
+      "heldOut": false,
+      "tags": [
+        "reliability",
+        "dialog",
+        "destructive",
+        "s3"
+      ]
+    },
+    {
+      "id": "beforeunload_trap",
+      "task": "Write \"Second draft\" in the article body, save the draft, then go to the published articles page.",
+      "target": {
+        "fixture": "beforeunload-trap"
+      },
+      "success": {
+        "domAssertion": "You reached the published list"
+      },
+      "heldOut": false,
+      "tags": [
+        "reliability",
+        "dialog",
+        "beforeunload",
+        "s3"
+      ]
+    },
+    {
+      "id": "datepicker_booking",
+      "task": "Book the meeting room for 12 March 2027.",
+      "target": {
+        "fixture": "datepicker-booking"
+      },
+      "success": {
+        "domAssertion": "Room booked for 2027-03-12"
+      },
+      "heldOut": false,
+      "tags": [
+        "reliability",
+        "widget",
+        "datepicker",
+        "s3"
+      ]
+    },
+    {
+      "id": "hover_menu_nav",
+      "task": "Find out how long the warranty cover lasts.",
+      "target": {
+        "fixture": "hover-menu-nav"
+      },
+      "success": {
+        "domAssertion": "Warranty cover lasts 24 months",
+        "expectedValue": "24 months"
+      },
+      "heldOut": true,
+      "tags": [
+        "reliability",
+        "hover",
+        "nav",
+        "s3"
+      ]
+    },
+    {
+      "id": "drag_reorder",
+      "task": "Reorder the playlist so that Finale comes before Interlude.",
+      "target": {
+        "fixture": "drag-reorder"
+      },
+      "success": {
+        "domAssertion": "Order: Opening theme, Finale, Interlude"
+      },
+      "heldOut": false,
+      "tags": [
+        "reliability",
+        "drag",
+        "stretch",
+        "not-a-gate",
+        "s3"
+      ]
+    }
+  ]
+}

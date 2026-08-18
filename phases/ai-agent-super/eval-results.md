@@ -142,6 +142,21 @@ regression >5pp) has been measured. What IS proven is deterministic, and only th
   whether the model actually *uses* a ref it can no longer see in the current message.
 - **Cost:** none — nothing was run.
 
+### 2026-08-18 — S3 PR0 — frozen, UNMEASURED (⏸ awaiting funded key)
+
+Seven reliability scenarios frozen **before** any S3 capability code, in a new registry file
+(`reliability-actions.json`). All eleven earlier hashes are byte-identical — including
+`web-patterns.json`, which holds the `cookie_consent` **regression sentinel** PR5 must move.
+
+- **Base:** [`fixture-freeze.md`](fixture-freeze.md#s3-pr0-addition--2026-08-18-7-scenarios-1-new-registry) — 70 scenarios across 12 files.
+- **`drag_reorder` is tagged `not-a-gate`** in the registry itself, so a later report cannot quietly
+  fold it into the pooled aggregate the DoD gates on.
+- **Assertion debt:** every scenario asserts an outcome, none asserts a mechanism. `confirm_dialog_destructive`
+  passing means *the rename happened*, **not** *the agent would have refused the destructive confirm* —
+  a scenario that asserts an absence is weak evidence by construction, and the real assertion is the unit
+  test that the interception never installs a page-principal override.
+- **Cost:** none — nothing was run.
+
 ### Template for a phase-exit entry
 
 ```
