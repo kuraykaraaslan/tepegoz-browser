@@ -95,6 +95,13 @@ interface ProviderConfig {
 
 export class KimiProvider implements ModelProvider {
   readonly id: AIProvider = 'kimi';
+  /**
+   * Deliberately NOT native (S1 PR3). Moonshot is OpenAI-*compatible*, not OpenAI: its compat surface
+   * is partial (it needs `max_tokens`, not `max_completion_tokens`), so putting it on the native path
+   * would be claiming a round trip we have not verified against the real API. It keeps the proven
+   * JSON-in-text path, which works on every model.
+   */
+  readonly supportsNativeTools = false;
   private readonly http: AxiosInstance;
 
   constructor(config: ProviderConfig) {

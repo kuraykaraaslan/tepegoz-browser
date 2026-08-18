@@ -8,6 +8,7 @@ import type {
   ModelProvider,
 } from '../types';
 import { contentToText } from '../content';
+import { toGeminiParts, toolNamesById, type GeminiContent, type GeminiPart } from './gemini-content';
 
 /**
  * Google Gemini adapter (L7) — talks to the Generative Language REST API directly over the central
@@ -27,16 +28,6 @@ import { contentToText } from '../content';
  */
 
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
-
-interface GeminiPart {
-  text?: string;
-  functionCall?: { name: string; args?: unknown };
-}
-
-interface GeminiContent {
-  role: 'user' | 'model';
-  parts: GeminiPart[];
-}
 
 interface GeminiFunctionDeclaration {
   name: string;
@@ -94,12 +85,17 @@ function mapFinishReason(reason: string | null | undefined, hasToolCall: boolean
 export function toGeminiParams(req: CanonRequest): GeminiGenerateRequest {
   const systemParts: string[] = [];
   const contents: GeminiContent[] = [];
+  // Gemini correlates a function response by NAME, not by id, so the id → name index is built over the
+  // whole conversation before any part is emitted (S1 PR3).
+  const names = toolNamesById(req.messages);
   for (const m of req.messages) {
     if (m.role === 'system') {
+      // systemInstruction is text-only on this API, so a block system turn is flattened (an image in a
+      // system prompt is not a shape Gemini accepts at all).
       systemParts.push(contentToText(m.content));
       continue;
     }
-    contents.push({ role: mapRole(m.role), parts: [{ text: contentToText(m.content) }] });
+    contents.push({ role: mapRole(m.role), parts: toGeminiParts(m.content, names) });
   }
 
   const body: GeminiGenerateRequest = {
@@ -167,6 +163,8 @@ function sharedClient(baseURL: string, apiKey: string): AxiosInstance {
 
 export class GeminiProvider implements ModelProvider {
   readonly id: AIProvider = 'gemini';
+  /** generateContent carries tools natively (`functionDeclarations` + `functionCall`), mapped both ways. */
+  readonly supportsNativeTools = true;
   private readonly http: AxiosInstance;
 
   constructor(config: ProviderConfig) {

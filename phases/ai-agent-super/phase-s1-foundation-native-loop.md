@@ -1,6 +1,6 @@
 # Phase S1 — Foundation: Native Loop (Foundation)
 
-**Status:** 🟡 In progress (PR0–PR2 landed 2026-08-18) · **Depends on:** [S0 — Truth & Repair](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟡 In progress (PR0–PR3 landed 2026-08-18) · **Depends on:** [S0 — Truth & Repair](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Replace JSON-in-text decisions with native provider tool-calling wherever the provider supports it, and widen `CanonMessage.content` from a bare string to multimodal content blocks — the structural prerequisite for vision (S10). Stream response deltas to the renderer event stream so steps stop feeling slow, while keeping the Journal and the decision path settled-results-only. This is the substrate that S7 (speed), S8 (UX streaming), and S10 (vision) all build on; nothing above it can move until the canonical message shape and the decision transport are fixed here.
 
@@ -17,7 +17,7 @@ The live decision path parses JSON out of free text. [reactor-decision.ts](../..
 ## Exit criteria (DoD)
 
 - [ ] `CanonMessage.content` is `string | CanonContentBlock[]` (`text | image | tool_use | tool_result`) with the zod schema owned by `@tepegoz/shared-types` and re-exported by [types.ts](../../packages/model-gateway/src/types.ts); `safeParse` at the gateway trust boundary; no `@ts-ignore`, no file over 250 lines.
-- [ ] Per-provider `supportsNativeTools` capability flag exists in [packages/model-gateway/src/providers](../../packages/model-gateway/src/providers); anthropic/openai/gemini normalize native tool-call responses into `CanonToolCall`; kimi and local GGUF keep JSON-in-text via [json-grammar.ts](../../packages/local-inference/src/json-grammar.ts).
+- [x] Per-provider `supportsNativeTools` capability flag exists in [packages/model-gateway/src/providers](../../packages/model-gateway/src/providers); anthropic/openai/gemini normalize native tool-call responses into `CanonToolCall`; kimi and local GGUF keep JSON-in-text via [json-grammar.ts](../../packages/local-inference/src/json-grammar.ts).
 - [ ] `reactor.ts` decision acquisition is strategy-selected behind `TEPEGOZ_DECISION_MODE` (native tool_use when supported, JSON fallback otherwise), so a single-change paired sweep is possible.
 - [ ] `gateway.generateStream` emits deltas to the renderer event stream ([ipc-agent-run.ts](../../apps/desktop/src/main/ipc/ipc-agent-run.ts) path); the **revised** [streaming-guard.test.ts](../../packages/model-gateway/src/streaming-guard.test.ts) is green and proves no partial ever reaches the Journal or the decision path.
 - [ ] First-delta latency **< 2s p50 on a scripted run** (deterministic, non-funded — measured against `ScriptedProvider`).
@@ -45,9 +45,9 @@ The live decision path parses JSON out of free text. [reactor-decision.ts](../..
 - [x] Round-trip `tool_result` blocks back as follow-up `CanonMessage` content.
 
 ### PR3 — openai + gemini native
-- [ ] `supportsNativeTools = true` for openai; normalize function-call responses → `CanonToolCall` (own adapter PR to stay under 250 lines).
-- [ ] `supportsNativeTools = true` for gemini; normalize `functionCall` parts → `CanonToolCall`.
-- [ ] Leave kimi (`supportsNativeTools = false`, partial-compat) and local GGUF on the JSON-in-text path via [json-grammar.ts](../../packages/local-inference/src/json-grammar.ts).
+- [x] `supportsNativeTools = true` for openai; normalize function-call responses → `CanonToolCall` (own adapter PR to stay under 250 lines).
+- [x] `supportsNativeTools = true` for gemini; normalize `functionCall` parts → `CanonToolCall`.
+- [x] Leave kimi (`supportsNativeTools = false`, partial-compat) and local GGUF on the JSON-in-text path via [json-grammar.ts](../../packages/local-inference/src/json-grammar.ts).
 
 ### PR4 — reactor decision-mode strategy
 - [ ] In [reactor.ts](../../packages/orchestrator/src/reactor.ts) + [reactor-decision.ts](../../packages/orchestrator/src/reactor-decision.ts), make decision acquisition strategy-selected: native `tool_use` when `supportsNativeTools`, else the existing JSON parse.
