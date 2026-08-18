@@ -33,6 +33,28 @@ export interface BrowserHost {
   /** Wait for a page's current load to settle. */
   waitForLoad(tabId?: string, timeoutMs?: number): Promise<{ url: string; title: string }>;
   /**
+   * Move a tab through its own history, or reload it (S3 PR1). `moved` is false when there was nowhere
+   * to go — the honest answer for "back" at the start of a session, and the one thing a URL comparison
+   * cannot tell you, because a same-URL back step and a no-op look identical afterwards.
+   */
+  historyGo(
+    direction: 'back' | 'forward' | 'reload',
+    tabId?: string,
+  ): Promise<{ url: string; title: string; moved: boolean }>;
+  /**
+   * Wait until a condition holds, bounded by an explicit timeout (S3 PR1). Never an unbounded spin:
+   * `satisfied: false` after `waitedMs` is a truthful result, not an error, so the model can decide
+   * whether to wait again or act.
+   *
+   * - `text` — the visible page text contains `value`.
+   * - `selector` — a node matching the CSS `value` is present AND rendered.
+   * - `network_idle` — no in-flight requests for a short quiet period.
+   */
+  waitForCondition(
+    condition: { kind: 'text' | 'selector' | 'network_idle'; value?: string; timeoutMs: number },
+    tabId?: string,
+  ): Promise<{ satisfied: boolean; waitedMs: number }>;
+  /**
    * Read a page's actionable elements. The host keeps the `ref → node` map for the action calls below, so
    * `ref`s stay valid until the next snapshot.
    *

@@ -11,6 +11,7 @@ import CdpDriver from './cdp-driver.electron';
 import AgentTabGroup from './agent-tab-group.electron';
 import { showPageCursor, hidePageCursor, isUserControlActive, resetForAgentAction } from './page-cursor.electron';
 import { buildArticleTextExpression } from './article-text-script.js';
+import { buildWaitConditionExpression, clampWaitMs } from './wait-condition-script.js';
 
 /**
  * Desktop `BrowserHost` for `@tepegoz/browser-tools`: the Electron/WebContentsView operations behind
@@ -137,6 +138,67 @@ async function readPage(
     title,
     text: typeof shaped.text === 'string' ? shaped.text : '',
     sig: typeof shaped.sig === 'string' ? shaped.sig : '',
+  };
+}
+
+/**
+ * Move a tab through its own history, or reload it (S3 PR1).
+ *
+ * `moved` comes from the browser's own `canGoBack`/`canGoForward`, not from comparing URLs afterwards:
+ * a site that pushes the same URL twice makes a real back step look like a no-op, and a genuine no-op
+ * look like a step. Reload always counts as moved — it did do something.
+ */
+async function historyGo(
+  direction: 'back' | 'forward' | 'reload',
+  tabId?: string,
+): Promise<{ url: string; title: string; moved: boolean }> {
+  const wc = requireWc(tabId);
+  let moved = true;
+  if (direction === 'reload') {
+    wc.reload();
+  } else if (direction === 'back') {
+    moved = wc.navigationHistory.canGoBack();
+    if (moved) wc.navigationHistory.goBack();
+  } else {
+    moved = wc.navigationHistory.canGoForward();
+    if (moved) wc.navigationHistory.goForward();
+  }
+  if (moved) await waitForLoad(wc);
+  if (wc.isDestroyed()) throw new AppError('Active tab was closed during history navigation', 409);
+  return { url: wc.getURL(), title: wc.getTitle(), moved };
+}
+
+/**
+ * Wait until a condition holds, bounded by an explicit timeout (S3 PR1).
+ *
+ * `network_idle` reuses the driver's existing settle logic (load-stop → network idle → DOM quiescence)
+ * rather than inventing a second definition of "quiet" that could disagree with the one every
+ * interaction is already judged by. `text`/`selector` poll inside the page.
+ *
+ * An unsatisfied wait is a RESULT, never an error: the model needs to know it waited and the thing did
+ * not arrive, so it can act differently instead of retrying blind.
+ */
+async function waitForCondition(
+  condition: { kind: 'text' | 'selector' | 'network_idle'; value?: string; timeoutMs: number },
+  tabId?: string,
+): Promise<{ satisfied: boolean; waitedMs: number }> {
+  const wc = requireWc(tabId);
+  const timeoutMs = clampWaitMs(condition.timeoutMs);
+  const started = Date.now();
+  if (condition.kind === 'network_idle') {
+    await CdpDriver.waitForPageSettled(wc, timeoutMs);
+    return { satisfied: true, waitedMs: Date.now() - started };
+  }
+  const value = condition.value ?? '';
+  if (value.length === 0) return { satisfied: false, waitedMs: 0 };
+  const raw: unknown = await wc.executeJavaScript(
+    buildWaitConditionExpression(condition.kind, value, timeoutMs),
+    true,
+  );
+  const shaped = (raw ?? {}) as { satisfied?: unknown; waitedMs?: unknown };
+  return {
+    satisfied: shaped.satisfied === true,
+    waitedMs: typeof shaped.waitedMs === 'number' ? shaped.waitedMs : Date.now() - started,
   };
 }
 
@@ -355,6 +417,8 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
   navigate,
   readPage,
   readArticleText,
+  historyGo,
+  waitForCondition,
   waitForLoad: async (tabId, timeoutMs) => {
     const wc = requireWc(tabId);
     await waitForLoad(wc, timeoutMs);

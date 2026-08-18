@@ -26,6 +26,14 @@ const ValidatePageArgs = TargetTabArgs.extend({
   containsText: z.string().min(1).max(500).optional(),
   timeoutMs: z.number().int().positive().max(60_000).optional(),
 });
+const HistoryArgs = TargetTabArgs.extend({ direction: z.enum(['back', 'forward', 'reload']) });
+const WaitConditionArgs = TargetTabArgs.extend({
+  condition: z.enum(['text', 'selector', 'network_idle']),
+  value: z.string().min(1).max(500).optional(),
+  // Bounded by the schema as well as by the host: an unbounded wait is the failure mode this verb exists
+  // to remove, and a 10-minute "wait" would just be a hang with a nicer name.
+  timeoutMs: z.number().int().positive().max(30_000).optional(),
+});
 // Coerce so a weak model that sends the ref as a string ("2") still validates — same value space, one
 // fewer way for the JSON-in-text decision path to trip on a shape nit. Non-numeric strings still reject.
 const Ref = z.coerce.number().int().positive().max(10_000);
@@ -484,6 +492,46 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
       return args.containsText === undefined
         ? { url, title, ok }
         : { url, title, ok, containsText: args.containsText };
+    },
+  });
+
+  CapabilityRegistry.register({
+    descriptor: descriptor(
+      'browser_update_history',
+      'state_changing',
+      "Move a tab through its own history, or reload it. args: { direction: 'back'|'forward'|'reload', " +
+        'tabId?: string } — omit tabId for the active tab. Returns { url, title, moved }. ' +
+        '`moved: false` means there was nowhere to go (e.g. no previous page), NOT that the page failed ' +
+        'to change. Use this to leave a page you opened by mistake instead of guessing its previous URL.',
+    ),
+    inputSchema: HistoryArgs,
+    handler: (args) => host.historyGo(args.direction, args.tabId),
+  });
+
+  CapabilityRegistry.register({
+    descriptor: descriptor(
+      'browser_validate_condition',
+      'read',
+      'Wait until something is true, instead of guessing how long a page needs. args: ' +
+        "{ condition: 'text'|'selector'|'network_idle', value?: string, timeoutMs?: number, tabId?: " +
+        'string }. `value` is the text to appear (condition "text") or the CSS selector to become ' +
+        'VISIBLE (condition "selector"); "network_idle" needs no value. Returns ' +
+        '{ satisfied, waitedMs, condition }. `satisfied: false` is a real answer — it waited and the ' +
+        'thing did not arrive — so change approach rather than repeating the same wait.',
+      { aiTask: 'read_understand' },
+    ),
+    inputSchema: WaitConditionArgs,
+    handler: async (args) => {
+      const timeoutMs = args.timeoutMs ?? 5_000;
+      const result = await host.waitForCondition(
+        {
+          kind: args.condition,
+          ...(args.value !== undefined ? { value: args.value } : {}),
+          timeoutMs,
+        },
+        args.tabId,
+      );
+      return { ...result, condition: args.condition };
     },
   });
 

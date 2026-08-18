@@ -1,6 +1,6 @@
 # Phase S3 — Reliability Actions (W1 Reliability)
 
-**Status:** 🟡 In progress (PR0 landed 2026-08-18) · **Depends on:** [S0](phase-s0-truth-and-repair.md); [S2](phase-s2-perception-v2.md) (identity refs for the locator cascade) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟡 In progress (PR0–PR1 landed 2026-08-18) · **Depends on:** [S0](phase-s0-truth-and-repair.md); [S2](phase-s2-perception-v2.md) (identity refs for the locator cascade) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Close the missing action vocabulary and the two structural interaction gaps — snapshot-only
 occlusion and one-locator-per-ref — that make the agent fail on real sites. This targets the **measured**
@@ -103,15 +103,27 @@ re-snapshotting).
       before the answer exists).
 
 ### PR1 — nav verbs + `wait_for` (Lane A)
-- [ ] `browser_history` (`back | forward | reload`) as `webContents` calls in
+- [x] `browser_history` (`back | forward | reload`) as `webContents` calls in
       [browser-host.electron.ts](../../apps/desktop/src/main/agent/browser-host.electron.ts); tool +
       schema in [browser-tools.ts](../../packages/browser-tools/src/browser-tools.ts).
-- [ ] `wait_for` (`text | selector | network_idle`, bounded by an explicit timeout, returns a truthful
+- [x] `wait_for` (`text | selector | network_idle`, bounded by an explicit timeout, returns a truthful
       `{ satisfied, waitedMs }`) — resolves in the isolated world / via a bounded CDP `Network.*` idle
       probe; never an unbounded spin.
-- [ ] Reactor consumes the new observations in [reactor.ts](../../packages/orchestrator/src/reactor.ts) /
+- [x] Reactor consumes the new observations in [reactor.ts](../../packages/orchestrator/src/reactor.ts) /
       [reactor-decision.ts](../../packages/orchestrator/src/reactor-decision.ts) without breaking the
       non-streaming JSON-in-text contract (locked by the model-gateway streaming guard).
+
+> **Naming deviation (recorded, PR1).** The verbs ship as **`browser_update_history`** and
+> **`browser_validate_condition`**, not `browser_history` and `wait_for`. `ToolNameSchema` enforces
+> `{domain}_{verb}_{noun}` with an approved verb and the registry `parse`s it, so both of the doc's
+> literal names are rejected at registration. Same verbs, names the plane accepts.
+>
+> `moved` comes from the browser's own `canGoBack`/`canGoForward`, not from comparing URLs afterwards:
+> a site that pushes the same URL twice makes a real back step look like a no-op and a genuine no-op look
+> like a step. `network_idle` reuses the driver's existing settle logic rather than inventing a second
+> definition of "quiet" that could disagree with the one every interaction is already judged by. The
+> reactor needs no change to consume either — both are ordinary tool results on the existing observation
+> path.
 
 ### PR2 — `send_keys` chords (Lane A/B)
 - [ ] `send_keys` variant of `browser_update_page` in
