@@ -7,7 +7,7 @@ import {
   MAX_INTERACTABLE_ELEMENTS,
 } from '@tepegoz/tool-executor';
 import type { ToolDescriptor } from '@tepegoz/shared-types';
-import { buildElementsSnapshot, buildPageSnapshot } from './perception';
+import { buildElementsSnapshot, buildPageSnapshot, type ElementsDiffMemory } from './perception';
 import { describeNetworkFailures, selectActionFailures } from './network-verify';
 import type { BrowserHost } from './host';
 
@@ -338,6 +338,15 @@ function descriptor(
 export function registerBrowserTools(deps: { host: BrowserHost }): void {
   const { host } = deps;
 
+  /**
+   * What the model was last shown per tab, so the next listing can send only what moved (S2 PR2).
+   * Lives in this closure because the tool handler is the only place that knows both the tabId and what
+   * was rendered. Bounded by the number of tabs a run touches, and each entry is dropped the moment the
+   * tab's URL changes (a ref from another page addresses nothing here).
+   */
+  const diffMemory = new Map<string, ElementsDiffMemory>();
+  const ACTIVE_TAB = '<active>';
+
   CapabilityRegistry.register({
     descriptor: descriptor(
       'browser_get_page',
@@ -380,7 +389,10 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
     inputSchema: TargetTabArgs,
     handler: async (args) => {
       const { url, title, elements } = await host.snapshotElements(args.tabId);
-      return buildElementsSnapshot(elements, url, title);
+      const key = args.tabId ?? ACTIVE_TAB;
+      const snapshot = buildElementsSnapshot(elements, url, title, diffMemory.get(key));
+      diffMemory.set(key, snapshot.memory);
+      return snapshot;
     },
   });
 

@@ -22,6 +22,18 @@
  * impossible — and it is reported so the caller can stop claiming refs are stable.
  */
 
+/**
+ * Perception v2 (S2: identity-stable refs + diffing + compact serialization) — **off by default**.
+ *
+ * Read here rather than at each use site so the driver and the tool layer can never disagree about which
+ * arm a run is on: stable refs without diffing wastes the win, and diffing without stable refs would
+ * elide elements whose numbers had silently moved. One flag, one reader.
+ */
+export function isPerceptionV2Enabled(): boolean {
+  const raw = process.env.TEPEGOZ_PERCEPTION_V2;
+  return raw === '1' || raw === 'true';
+}
+
 /** Below this share of keys carried over from the previous snapshot, identity is not achievable. */
 export const MIN_CARRY_OVER_RATE = 0.3;
 

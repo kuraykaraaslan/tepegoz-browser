@@ -21,18 +21,24 @@ export {
   isInteractableRole,
   isEditableRole,
   finalizeElements,
-  renderElementsText,
   sanitizeLabel,
   MAX_INTERACTABLE_ELEMENTS,
   MAX_ELEMENT_LABEL,
   MAX_ATTR_VALUE,
   ATTR_ALLOWLIST,
 } from './interactable.js';
+export {
+  renderElementsText,
+  renderElement,
+  renderElementTsv,
+  TSV_HEADER,
+} from './element-render.js';
 export type { InteractableElement, RawInteractable } from './interactable.js';
-export { parseDomTree, markNewElements } from './dom-tree.js';
+export { parseDomTree, markNewElements, nodeHash } from './dom-tree.js';
 export type { DomTreeResult, DomTreeNode, ParsedDomTree } from './dom-tree.js';
 export { checkForm } from './form-validation.js';
 export type { FormReport, FormIssue } from './form-validation.js';
 export { resolveNodePath } from './dom-path.js';
 export type { PathNode, NodePath, PathSegment } from './dom-path.js';
 export * from './stable-refs.js';
+export * from './elements-diff.js';

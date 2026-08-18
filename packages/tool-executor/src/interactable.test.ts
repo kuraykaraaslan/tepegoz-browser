@@ -3,10 +3,10 @@ import {
   isInteractableRole,
   isEditableRole,
   finalizeElements,
-  renderElementsText,
   MAX_INTERACTABLE_ELEMENTS,
   type RawInteractable,
 } from './interactable.js';
+import { renderElementsText } from './element-render.js';
 
 describe('isInteractableRole', () => {
   it('accepts interactive control roles (case-insensitive)', () => {

@@ -1,10 +1,17 @@
 import {
   sanitizeContent,
   wrapUntrustedContent,
+  diffElements,
+  digestOf,
   finalizeElements,
+  isPerceptionV2Enabled,
+  renderDiffedElements,
   renderElementsText,
+  renderElementTsv,
+  TSV_HEADER,
   type InteractableElement,
   type RawInteractable,
+  type SnapshotDigest,
 } from '@tepegoz/tool-executor';
 
 /**
@@ -46,18 +53,67 @@ export interface ElementsSnapshot {
   content: string;
   /** Sanitizer flags aggregated over element labels (zero_width/bidi/mixed_script). */
   flags: string[];
+  /** Hand back on the next call for this tab to keep the listing diffed (S2 PR2). */
+  memory: ElementsDiffMemory;
 }
 
-/** Sanitize → ref-index → wrap the raw interactable nodes into a model-safe actionable snapshot. */
+/**
+ * What the model was shown last time on this page, so the next listing can send only what moved (S2
+ * PR2). The caller owns one of these per tab; a navigation drops it, because a ref from another page
+ * addresses nothing here.
+ */
+export interface ElementsDiffMemory {
+  url: string;
+  digest: SnapshotDigest;
+  step: number;
+}
+
+/**
+ * Render the listing the model reads. Perception v2 sends a compact table, diffed against the previous
+ * snapshot with runs of unchanged elements elided; otherwise the full pseudo-HTML listing, unchanged.
+ *
+ * Elision is sound ONLY because v2's refs are identity-stable: "42 elements unchanged, refs still valid"
+ * is actionable when a ref still means what it meant three steps ago, and a hole in the model's view when
+ * it does not. That is why one flag gates both.
+ */
+function renderListing(
+  elements: InteractableElement[],
+  previous: SnapshotDigest | null,
+): string {
+  if (!isPerceptionV2Enabled()) return renderElementsText(elements);
+  if (elements.length === 0) return '(no interactable elements found)';
+  const diff = diffElements(elements, previous);
+  const body = renderDiffedElements(elements, diff, (el, change) =>
+    change === 'changed' ? `~${renderElementTsv(el)}` : renderElementTsv(el),
+  );
+  return `${TSV_HEADER}\n${body}`;
+}
+
+/**
+ * Sanitize → ref-index → wrap the raw interactable nodes into a model-safe actionable snapshot.
+ *
+ * `memory` carries the previous snapshot of the SAME page (v2 only). Pass it and the returned
+ * `memory` back on the next call to keep diffing; omit it and every listing is a full one.
+ */
 export function buildElementsSnapshot(
   raw: RawInteractable[],
   url: string,
   title: string,
+  memory?: ElementsDiffMemory | null,
 ): ElementsSnapshot {
   const { elements, flags: elementFlags } = finalizeElements(raw);
+  const previous = memory?.url === url ? memory.digest : null;
+  const step = (previous?.step ?? 0) + 1;
   // The element labels are already per-label sanitized; guard the WHOLE listing for injection patterns
   // (a malicious link/button text saying "ignore your task…") before it is wrapped as untrusted.
-  const guarded = sanitizeContent(renderElementsText(elements));
+  const guarded = sanitizeContent(renderListing(elements, previous));
   const flags = [...new Set([...elementFlags, ...guarded.flags])];
-  return { url, title, elements, content: wrapUntrustedContent(guarded.text, url), flags };
+  return {
+    url,
+    title,
+    elements,
+    content: wrapUntrustedContent(guarded.text, url),
+    flags,
+    memory: { url, digest: digestOf(elements, step), step },
+  };
 }

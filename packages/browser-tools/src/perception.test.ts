@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect } from 'vitest';
 import { buildPageSnapshot, buildElementsSnapshot } from './perception';
 
 describe('buildPageSnapshot', () => {
@@ -52,5 +52,43 @@ describe('buildElementsSnapshot', () => {
     expect(snap.content).not.toContain('Ignore previous instructions');
     expect(snap.content).toContain('[filtered: possible prompt injection]');
     expect(snap.flags).toContain('injection');
+  });
+});
+
+describe('perception v2 listing (S2 PR2)', () => {
+  const saved = process.env.TEPEGOZ_PERCEPTION_V2;
+  const raw = (n: number) => ({ role: 'button', name: `Row ${String(n)}`, tag: 'button', ref: n });
+  const many = Array.from({ length: 8 }, (_, i) => raw(i + 1));
+
+  afterEach(() => {
+    if (saved === undefined) delete process.env.TEPEGOZ_PERCEPTION_V2;
+    else process.env.TEPEGOZ_PERCEPTION_V2 = saved;
+  });
+
+  it('is off by default: the listing is the unchanged pseudo-HTML, every element every time', () => {
+    delete process.env.TEPEGOZ_PERCEPTION_V2;
+    const first = buildElementsSnapshot(many, 'https://x.test/', 'X');
+    const second = buildElementsSnapshot(many, 'https://x.test/', 'X', first.memory);
+    expect(second.content).toContain('<button>Row 1</button>');
+    expect(second.content).not.toContain('unchanged since step');
+  });
+
+  it('elides an unchanged page on the second read once the flag is on', () => {
+    process.env.TEPEGOZ_PERCEPTION_V2 = '1';
+    const first = buildElementsSnapshot(many, 'https://x.test/', 'X');
+    // The first look is never elided — the model has not seen it yet.
+    expect(first.content).not.toContain('unchanged since step');
+    expect(first.content).toContain('ref\ttag\trole');
+    const second = buildElementsSnapshot(many, 'https://x.test/', 'X', first.memory);
+    expect(second.content).toContain('8 elements unchanged since step 1');
+    expect(second.content.length).toBeLessThan(first.content.length);
+  });
+
+  it('drops the memory on navigation — a ref from another page addresses nothing here', () => {
+    process.env.TEPEGOZ_PERCEPTION_V2 = '1';
+    const first = buildElementsSnapshot(many, 'https://x.test/', 'X');
+    const elsewhere = buildElementsSnapshot(many, 'https://y.test/', 'Y', first.memory);
+    expect(elsewhere.content).not.toContain('unchanged since step');
+    expect(elsewhere.memory.step).toBe(1);
   });
 });

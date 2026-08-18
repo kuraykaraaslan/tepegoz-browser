@@ -1,6 +1,6 @@
 # Phase S2 — Perception v2 (W2 Perception / token-economy engine for W3 Speed)
 
-**Status:** 🟡 In progress (PR0–PR1 landed 2026-08-18) · **Depends on:** [S0 Truth & Repair](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟡 In progress (PR0–PR2 landed 2026-08-18) · **Depends on:** [S0 Truth & Repair](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Give the model a stable, deduplicated, diff-based view of the page so it stops re-reading the whole world every step. Element references become identity-stable content hashes that survive snapshots within a run, unchanged regions are elided, and form-field labels are resolved during the scan so fields are named correctly. This is the clearest single perception delta against Claude for Chrome (its persistent cross-turn ref IDs) and it is simultaneously the token-economy engine that W3 Speed draws on.
 
@@ -57,10 +57,18 @@ Prior art gives us the shape of the win without the claim: browser-use's TSV ser
 
 ### PR2 — diff serialisation + unchanged-region elision
 
-- [ ] Generalise `*` (new-only) into **added / removed / changed** diff sections in [dom-tree.ts `markNewElements`](../../packages/tool-executor/src/dom-tree.ts), keyed off the per-tab ref map + reused djb2 sig.
-- [ ] Emit unchanged-region elision markers ("§ 42 elements unchanged since step 3") instead of re-listing stable elements.
-- [ ] Compact tabular (TSV-style) encoding in the serialiser; keep it behind the same flag. Measure **our own** token delta — no borrowed percentages.
-- [ ] Ensure elision respects the `SCAN_EMIT_CAP 300 / 200` caps rather than fighting them.
+- [x] Generalise `*` (new-only) into **added / removed / changed** diff sections in [dom-tree.ts `markNewElements`](../../packages/tool-executor/src/dom-tree.ts), keyed off the per-tab ref map + reused djb2 sig.
+- [x] Emit unchanged-region elision markers ("§ 42 elements unchanged since step 3") instead of re-listing stable elements.
+- [x] Compact tabular (TSV-style) encoding in the serialiser; keep it behind the same flag. Measure **our own** token delta — no borrowed percentages.
+- [x] Ensure elision respects the `SCAN_EMIT_CAP 300 / 200` caps rather than fighting them.
+
+> **Note (PR2).** A **relabelled** element reads as one removal plus one addition, not as `changed` —
+> the name is part of the PR1 identity, so a new label is a new identity. `changed` is reserved for a
+> genuine state change at the same identity (a value typed, a control disabled, `aria-expanded` flipped).
+> That is more useful to the model than a "changed" row would be, because it names the ref to use next.
+> Elision leaves runs shorter than four elements listed (local context around a change is worth more than
+> the tokens) and is gated by the same flag as stable refs: eliding under positional refs would hide
+> elements whose numbers had silently moved.
 
 ### PR3 — label resolution in the default scan pass
 
