@@ -1,5 +1,6 @@
 import type { AIProvider } from '@tepegoz/shared-types';
 import type { CanonRequest, CanonResponse, ModelProvider } from './types';
+import { contentLength } from './content';
 
 /**
  * Deterministic provider for tests and offline dev (also used as the default golden-LLM replay
@@ -29,7 +30,7 @@ export class MockProvider implements ModelProvider {
         });
       });
     }
-    const inputTokens = req.messages.reduce((n, m) => n + m.content.length, 0);
+    const inputTokens = req.messages.reduce((n, m) => n + contentLength(m.content), 0);
     return {
       text: this.reply,
       stopReason: 'end',

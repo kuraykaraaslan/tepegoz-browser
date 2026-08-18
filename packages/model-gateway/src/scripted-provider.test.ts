@@ -41,6 +41,34 @@ describe('ScriptedProvider', () => {
     expect(() => p.complete(req, ac.signal)).toThrow('aborted');
   });
 
+  it('replays a structured turn with native tool calls (the native-arm script)', async () => {
+    const p = new ScriptedProvider([
+      { toolCalls: [{ name: 'browser_get_elements', input: { tabId: 't1' } }] },
+      'done',
+    ]);
+    const ac = new AbortController();
+    const first = await p.complete(req, ac.signal);
+    expect(first.toolCalls).toEqual([{ name: 'browser_get_elements', input: { tabId: 't1' } }]);
+    // A turn carrying tool calls IS a tool_use turn — the script does not have to say so.
+    expect(first.stopReason).toBe('tool_use');
+    expect(first.text).toBe('');
+    const second = await p.complete(req, ac.signal);
+    expect(second.stopReason).toBe('end');
+    expect(second.toolCalls).toEqual([]);
+  });
+
+  it('accepts block content in the request without losing the token proxy', async () => {
+    const p = new ScriptedProvider(['x']);
+    const res = await p.complete(
+      {
+        ...req,
+        messages: [{ role: 'user', content: [{ type: 'text', text: 'twelve chars' }] }],
+      },
+      new AbortController().signal,
+    );
+    expect(res.usage.inputTokens).toBe('twelve chars'.length);
+  });
+
   it('reports token usage and carries the provider id', async () => {
     const p = new ScriptedProvider(['reply'], 'openai');
     expect(p.id).toBe('openai');

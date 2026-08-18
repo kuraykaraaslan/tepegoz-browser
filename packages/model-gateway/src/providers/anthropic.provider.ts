@@ -10,6 +10,7 @@ import type {
 } from '../types';
 import type { EffortLevel } from '../models';
 import { GatewayMessages } from '../messages';
+import { contentToText } from '../content';
 
 /**
  * Anthropic (Claude) adapter (L7) — normalizes the canonical request/response shapes to the
@@ -71,10 +72,10 @@ export function toAnthropicParams(
   const messages: Anthropic.MessageParam[] = [];
   for (const m of req.messages) {
     if (m.role === 'system') {
-      systemParts.push(m.content);
+      systemParts.push(contentToText(m.content));
       continue;
     }
-    messages.push({ role: m.role, content: m.content });
+    messages.push({ role: m.role, content: contentToText(m.content) });
   }
 
   const params: Anthropic.MessageCreateParamsNonStreaming = {

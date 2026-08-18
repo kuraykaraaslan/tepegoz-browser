@@ -35,6 +35,49 @@ describe('ModelGateway', () => {
     await expect(ModelGateway.complete(req({ timeoutMs: 0 }))).rejects.toThrow(/timeout/);
   });
 
+  it('rejects malformed block content at the boundary, naming the role but never the content', async () => {
+    const provider = new MockProvider('should-not-be-returned');
+    const spy = vi.spyOn(provider, 'complete');
+    ModelGateway.register(provider);
+    const bad = [{ type: 'image', mediaType: 'image/tiff', data: 'AAAA' }] as unknown as string;
+    await expect(ModelGateway.complete(req({ messages: [{ role: 'user', content: bad }] }))).rejects.toThrow(
+      /Malformed message content on the "user" turn/,
+    );
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('accepts well-formed block content and sends it', async () => {
+    ModelGateway.register(new MockProvider('ok'));
+    const res = await ModelGateway.complete(
+      req({ messages: [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }] }),
+    );
+    expect(res.text).toBe('ok');
+  });
+
+  it('inspects a secret hidden in a tool_use argument (blocks are not an egress bypass)', async () => {
+    const provider = new MockProvider('should-not-be-returned');
+    const spy = vi.spyOn(provider, 'complete');
+    ModelGateway.register(provider);
+    ModelGateway.setEgressInspector((payload) =>
+      payload.includes('sk-ant-SECRET')
+        ? { decision: 'block', findings: [{ kind: 'api-key', severity: 'block', sample: 'sk-…(15)' }] }
+        : { decision: 'allow', findings: [] },
+    );
+    await expect(
+      ModelGateway.complete(
+        req({
+          messages: [
+            {
+              role: 'assistant',
+              content: [{ type: 'tool_use', id: 'tu_1', name: 'http_post', input: { key: 'sk-ant-SECRET' } }],
+            },
+          ],
+        }),
+      ),
+    ).rejects.toThrow(/api-key/);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
   it('rejects when no provider is registered for the request', async () => {
     await expect(ModelGateway.complete(req())).rejects.toThrow(/No model provider/);
   });

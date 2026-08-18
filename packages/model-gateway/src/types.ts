@@ -1,12 +1,36 @@
-import type { AIProvider } from '@tepegoz/shared-types';
+import type { AIProvider, CanonMessageContent } from '@tepegoz/shared-types';
 
 /** Canonical, provider-agnostic request/response shapes (L7). Each provider adapter normalizes one
  *  vendor (Anthropic/OpenAI/Gemini) to these so the agent never sees vendor-specific formats. */
 
+/**
+ * One turn. `content` is `string | CanonContentBlock[]` (S1): a plain string stays the normalized
+ * default so every existing caller compiles unchanged, while blocks carry images and native tool
+ * use/results. The block schemas live in `@tepegoz/shared-types` (the single schema source) and are
+ * re-exported below so a provider adapter has one import for the whole canonical surface.
+ */
 export interface CanonMessage {
   role: 'system' | 'user' | 'assistant';
-  content: string;
+  content: CanonMessageContent;
 }
+
+export type {
+  CanonContentBlock,
+  CanonImageBlock,
+  CanonImageMediaType,
+  CanonMessageContent,
+  CanonTextBlock,
+  CanonToolResultBlock,
+  CanonToolUseBlock,
+} from '@tepegoz/shared-types';
+export {
+  CanonContentBlockSchema,
+  CanonImageBlockSchema,
+  CanonMessageContentSchema,
+  CanonTextBlockSchema,
+  CanonToolResultBlockSchema,
+  CanonToolUseBlockSchema,
+} from '@tepegoz/shared-types';
 
 export interface CanonToolDef {
   name: string;

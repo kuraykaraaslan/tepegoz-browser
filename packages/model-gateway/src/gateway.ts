@@ -1,6 +1,7 @@
 import { AppError } from '@tepegoz/libs';
-import type { AIProvider } from '@tepegoz/shared-types';
+import { CanonMessageContentSchema, type AIProvider } from '@tepegoz/shared-types';
 import type { CanonRequest, CanonResponse, ModelProvider } from './types';
+import { egressTextOf } from './content';
 import { GatewayMessages } from './messages';
 import { TokenLedger } from './token-ledger';
 
@@ -94,10 +95,31 @@ export class ModelGateway {
     ModelGateway.egressHandlers = handlers;
   }
 
+  /**
+   * Validate the widened message content at the trust boundary. `content` is now a union, and blocks
+   * arrive from callers that assemble them from tool results and captured images — untrusted shapes by
+   * the same argument that makes every other boundary here `safeParse`d.
+   *
+   * A plain string takes a `typeof` fast path: a string has no shape left to check, and the messages
+   * flowing through this loop carry whole page dumps every step, so re-walking them through zod would
+   * cost real time to prove something already known.
+   */
+  private static validateContent(req: CanonRequest): void {
+    for (const m of req.messages) {
+      if (typeof m.content === 'string') continue;
+      const parsed = CanonMessageContentSchema.safeParse(m.content);
+      if (!parsed.success) {
+        throw new AppError(GatewayMessages.invalidContent(m.role, parsed.error.issues[0]?.message ?? ''), 400);
+      }
+    }
+  }
+
   /** The full outbound body an adapter transmits: every message's content PLUS each tool's
-   *  name/description/inputSchema (adapters send tools too — inspect them, not just the messages). */
+   *  name/description/inputSchema (adapters send tools too — inspect them, not just the messages).
+   *  Block content contributes its text, tool arguments and tool results — see {@link egressTextOf}
+   *  for why raw image bytes are the one thing deliberately left out. */
   private static egressPayload(req: CanonRequest): string {
-    const parts = req.messages.map((m) => m.content);
+    const parts = req.messages.map((m) => egressTextOf(m.content));
     for (const t of req.tools ?? []) {
       parts.push(t.name, t.description, JSON.stringify(t.inputSchema));
     }
@@ -140,6 +162,7 @@ export class ModelGateway {
     if (!Number.isInteger(req.timeoutMs) || req.timeoutMs <= 0) {
       throw new AppError(GatewayMessages.TimeoutRequired, 400);
     }
+    ModelGateway.validateContent(req);
 
     // Apply the per-run model pin (Agent panel), but ONLY when its provider has a registered adapter —
     // a stale/cross-provider pin self-heals to the router's original provider+model rather than 503-ing.

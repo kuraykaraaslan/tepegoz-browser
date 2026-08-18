@@ -2,6 +2,7 @@ import { createHttpClient, type AxiosInstance } from '@tepegoz/http';
 import type { AIProvider } from '@tepegoz/shared-types';
 import type { CanonRequest, CanonResponse, ModelProvider } from '../types';
 import { fromOpenAIResult, type OpenAICompletion } from './openai.provider';
+import { contentToText } from '../content';
 
 /**
  * Kimi (Moonshot AI) adapter (L7) — talks to Moonshot's OpenAI-compatible Chat Completions REST
@@ -43,7 +44,12 @@ export function toKimiParams(req: CanonRequest): KimiChatRequest {
     model: req.model,
     max_tokens: req.maxTokens,
     // The `system` role is valid inline for the OpenAI-compatible API (unlike Anthropic), so no lifting.
-    messages: req.messages.map<KimiChatMessage>((m) => ({ role: m.role, content: m.content })),
+    // Kimi stays on the text-only path (S1: `supportsNativeTools` false), so block content is
+    // flattened rather than mapped — an image becomes an explicit marker, never a silent drop.
+    messages: req.messages.map<KimiChatMessage>((m) => ({
+      role: m.role,
+      content: contentToText(m.content),
+    })),
   };
   if (req.tools !== undefined && req.tools.length > 0) {
     body.tools = req.tools.map<KimiToolDef>((t) => ({

@@ -7,6 +7,7 @@ import type {
   CanonToolCall,
   ModelProvider,
 } from '../types';
+import { contentToText } from '../content';
 
 /**
  * Google Gemini adapter (L7) — talks to the Generative Language REST API directly over the central
@@ -95,10 +96,10 @@ export function toGeminiParams(req: CanonRequest): GeminiGenerateRequest {
   const contents: GeminiContent[] = [];
   for (const m of req.messages) {
     if (m.role === 'system') {
-      systemParts.push(m.content);
+      systemParts.push(contentToText(m.content));
       continue;
     }
-    contents.push({ role: mapRole(m.role), parts: [{ text: m.content }] });
+    contents.push({ role: mapRole(m.role), parts: [{ text: contentToText(m.content) }] });
   }
 
   const body: GeminiGenerateRequest = {
