@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Warehouse — Stock list</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; }
+      button { padding: 0.5rem 0.9rem; margin: 0 0.4rem 0.6rem 0; cursor: pointer; }
+      #status { margin-top: 1.5rem; font-weight: 600; }
+      .row { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Stock list</h1>
+    <!--
+      S2 fixture — REF STABILITY ACROSS RE-RENDER.
+
+      "Refresh stock" throws the whole list away and rebuilds it from the same data, in a DIFFERENT
+      wrapper nesting depth and with the rows emitted in reverse document order. The CONTENT is
+      semantically unchanged: the same three buttons, same labels, same behaviour.
+
+      With positional refs, every element is renumbered by that rebuild, so an agent that read the
+      list, refreshed, and then acted on "the ref I saw for Crate C" clicks the wrong crate. With
+      identity-stable refs (S2 PR1) the ref follows the element's identity, not its position, and
+      the click lands on Crate C.
+
+      The task deliberately requires reading BEFORE the refresh and acting AFTER it.
+    -->
+    <button id="refresh" onclick="rebuild()">Refresh stock</button>
+
+    <div id="list"></div>
+    <p id="status">No crate opened yet.</p>
+
+    <script>
+      var CRATES = [
+        { id: 'A', label: 'Open crate A', contents: 'bolts' },
+        { id: 'B', label: 'Open crate B', contents: 'washers' },
+        { id: 'C', label: 'Open crate C', contents: 'brass hinges' },
+      ];
+      var depth = 1;
+
+      function open(id) {
+        var crate = CRATES.filter(function (c) { return c.id === id; })[0];
+        document.getElementById('status').textContent =
+          'Opened crate ' + crate.id + ' — it contains ' + crate.contents + '.';
+      }
+
+      function rebuild() {
+        var list = document.getElementById('list');
+        list.innerHTML = '';
+        // Deeper wrapper nesting on each refresh: the structural path of every row changes even
+        // though nothing about the rows themselves does.
+        var host = list;
+        for (var d = 0; d < depth; d++) {
+          var wrap = document.createElement('div');
+          host.appendChild(wrap);
+          host = wrap;
+        }
+        depth = depth + 1;
+        // Reverse document order, so a positional ref cannot accidentally survive.
+        for (var i = CRATES.length - 1; i >= 0; i--) {
+          (function (crate) {
+            var row = document.createElement('div');
+            row.className = 'row';
+            var btn = document.createElement('button');
+            btn.textContent = crate.label;
+            btn.onclick = function () { open(crate.id); };
+            row.appendChild(btn);
+            host.appendChild(row);
+          })(CRATES[i]);
+        }
+      }
+
+      rebuild();
+    </script>
+  </body>
+</html>

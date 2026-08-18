@@ -1,6 +1,6 @@
 # Phase S2 — Perception v2 (W2 Perception / token-economy engine for W3 Speed)
 
-**Status:** ⬜ Not started · **Depends on:** [S0 Truth & Repair](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟡 In progress (PR0 landed 2026-08-18) · **Depends on:** [S0 Truth & Repair](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Give the model a stable, deduplicated, diff-based view of the page so it stops re-reading the whole world every step. Element references become identity-stable content hashes that survive snapshots within a run, unchanged regions are elided, and form-field labels are resolved during the scan so fields are named correctly. This is the clearest single perception delta against Claude for Chrome (its persistent cross-turn ref IDs) and it is simultaneously the token-economy engine that W3 Speed draws on.
 
@@ -22,7 +22,7 @@ Prior art gives us the shape of the win without the claim: browser-use's TSV ser
 - [ ] Identity-stable refs survive ≥N snapshots within a run for unchanged elements (deterministic assertion in the scripted tier — not funding-blocked).
 - [ ] `aria-labelledby` / `label[for]` resolved in the **default** render-DOM path; `label-for-form` fixture names every field correctly under scripted assertion.
 - [ ] New `browser_get_page_text` tool returns article-priority clean text + title + url (scripted assertion; parity with Claude for Chrome).
-- [ ] Fixtures `ref-stability-across-rerender`, `label-for-form`, `dynamic-list-update` **frozen in PR0 before any capability code** (constitution: fixtures-first).
+- [x] Fixtures `ref-stability-across-rerender`, `label-for-form`, `dynamic-list-update` **frozen in PR0 before any capability code** (constitution: fixtures-first).
 - [ ] Paired with/without-flag sweep recorded as a **delta row in [eval-results.md](eval-results.md)** and the [PROSE-LEDGER](PROSE-LEDGER.md) (constitution: delta recorded; paired for any prose deletion).
 - [ ] [PROSE-LEDGER](PROSE-LEDGER.md) **row 7** (browser_get_elements collapsed-menu note) moved to DELETED-or-RETAINED by the paired sweep.
 - [ ] i18n EN + full-TR parity for any user-facing surface (the new tool's approval/label strings) in the **same PR** (ADR-0016/0017).
@@ -31,9 +31,9 @@ Prior art gives us the shape of the win without the claim: browser-use's TSV ser
 
 ### PR0 — fixture freeze
 
-- [ ] Add `ref-stability-across-rerender`, `label-for-form`, `dynamic-list-update` scenarios + frozen HTML fixtures under [packages/agent-eval](../../packages/agent-eval) registry (perception family file).
-- [ ] Wire the three into the perception registry index; assert they run in the scripted tier and are **inert-safe** (no capability code exists yet — they encode the *target* behaviour).
-- [ ] Record the freeze hash in the ledger so PR1–PR4 cannot silently move ground-truth.
+- [x] Add `ref-stability-across-rerender`, `label-for-form`, `dynamic-list-update` scenarios + frozen HTML fixtures under [packages/agent-eval](../../packages/agent-eval) registry (perception family file).
+- [x] Wire the three into the perception registry index; assert they run in the scripted tier and are **inert-safe** (no capability code exists yet — they encode the *target* behaviour).
+- [x] Record the freeze hash in the ledger so PR1–PR4 cannot silently move ground-truth.
 
 ### PR1 — identity-stable content-hash refs (env-flagged)
 

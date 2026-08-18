@@ -95,6 +95,28 @@ against.
   `ScriptedProvider` and is a plumbing/latency assertion, **NOT** competence evidence.
 - **Cost:** none — nothing was run.
 
+### 2026-08-18 — S2 PR0 — frozen, UNMEASURED (⏸ awaiting funded key)
+
+Three perception scenarios frozen **before** any S2 capability code, in a **new** registry file
+(`perception-v2.json`, 3 scenarios) so all ten earlier registry hashes stay byte-identical — the same
+move S6-PR0 made, and the reason the S0 baseline denominator survives.
+
+| Scenario | Held out | Asserts (today) | Owed assertion |
+|---|:--:|---|---|
+| `ref_stability_across_rerender` | no | The right crate is opened after a full list rebuild. | "the same element kept the same ref across N snapshots" — deterministic, lands with PR1 |
+| `label_for_form` | no | The form is accepted, i.e. no value landed in the wrong field. | none — this one asserts its mechanism's consequence directly |
+| `dynamic_list_update` | **yes** | The newly added shift is claimed. | "nine unchanged rows elided, three reported, none missed" — lands with PR2 |
+
+- **Base:** [`fixture-freeze.md`](fixture-freeze.md#s2-pr0-addition--2026-08-18-3-scenarios-1-new-registry) — 63 scenarios across 11 files.
+- **Assertion debt:** the scenarios assert *behavioural consequences*, not mechanisms. A green
+  `ref_stability_across_rerender` means the agent got the right crate — the outcome that matters, but a
+  weaker claim than "refs were stable". The token-economy gate (≥30%) has **no** deterministic proxy at
+  all and is measurable only by the funded PR5 sweep.
+- **New plumbing guard:** `registry-integrity.test.ts` now checks the shipped registry every test run
+  (parses, unique ids, every named fixture exists, nothing unassertable). Plumbing/regression, NOT
+  competence.
+- **Cost:** none — nothing was run.
+
 ### Template for a phase-exit entry
 
 ```

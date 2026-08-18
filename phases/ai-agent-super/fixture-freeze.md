@@ -134,3 +134,40 @@ are also the two families with the richest recorded prior signal, which is what 
 **What S1 must NOT do to this exam.** No scenario edit, no registry addition, and — per the phase's
 "Prose steers: NONE" line — no prompt-prose change anywhere in the phase. A prose edit landing between
 the arms would silently make the sweep a two-variable comparison.
+
+## S2-PR0 addition — 2026-08-18 (3 scenarios, 1 new registry)
+
+[S2](phase-s2-perception-v2.md) PR0 freezes its exam **before** any of its capability code (stable refs
+are PR1, the diff serializer PR2, label resolution PR3). The three scenarios encode the *target*
+behaviour and are inert-safe today: they run, and they fail honestly, because the capability does not
+exist yet.
+
+> **All ten earlier hashes are byte-identical.** The scenarios went into a **new** file rather than into
+> `perception.json`, following the S6-PR0 precedent — appending to the existing file would have changed
+> its hash and broken the S0 baseline's denominator for the perception family. The new file carries the
+> `perception` tag, so the family aggregate still pools them together.
+
+| Registry file | Scenarios | SHA-256 of file bytes |
+|---|---:|---|
+| `perception-v2.json` | 3 | `3f0c878e9862374dcdbe0fccf4b433bcd8ce1db60202ad7c71eb9462b85564b1` |
+| **New total** | **63** | across 11 registry files |
+
+| Fixture | What it makes fail today |
+|---|---|
+| `ref-stability-across-rerender` | "Refresh stock" rebuilds the list at a new nesting depth, in reverse document order, with identical content. Positional refs renumber every row, so acting on a ref read before the refresh hits the wrong crate. |
+| `label-for-form` | No field carries `aria-label`, `placeholder`, or `title`; the names live in `label[for]` and `aria-labelledby` (one of them spanning two ids). The default render-DOM path cannot name them, so values land in the wrong fields and the page says so. |
+| `dynamic-list-update` | Of twelve rows, exactly one is added, one removed, one relabelled; nine are untouched. Held out — it is the check that the diff engine neither invents a change nor swallows one. |
+
+One of the three (`dynamic_list_update`) is held out, matching the registry's ~1/3 ratio.
+
+**Assertion debt.** These assert the *behavioural* consequence (right crate opened, form accepted, right
+shift claimed), not the mechanism. "The same element kept the same ref across N snapshots" and "tokens
+fell 30%" are asserted separately — the first as a deterministic unit assertion in PR1, the second only
+by the funded PR5 sweep. A green `ref_stability_across_rerender` means *the agent got the right crate*,
+which is the outcome that matters but is a weaker claim than *refs were stable*.
+
+**New plumbing guard.** [`registry-integrity.test.ts`](../../packages/agent-eval/src/registry-integrity.test.ts)
+now checks the **shipped** registry on every test run: every scenario parses, ids are unique, every named
+fixture exists on disk, and no scenario asserts nothing. A scenario pointing at a missing fixture does not
+fail loudly at eval time — it fails as a "the agent could not do it" trial, which reads as incompetence
+and quietly poisons a pass rate.

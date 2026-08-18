@@ -1,0 +1,54 @@
+{
+  "scenarios": [
+    {
+      "id": "ref_stability_across_rerender",
+      "task": "Read the stock list, then press \"Refresh stock\" and open crate C. Tell me what is in it.",
+      "target": {
+        "fixture": "ref-stability-across-rerender"
+      },
+      "success": {
+        "domAssertion": "Opened crate C",
+        "expectedValue": "brass hinges"
+      },
+      "heldOut": false,
+      "tags": [
+        "perception",
+        "ref-stability",
+        "s2"
+      ]
+    },
+    {
+      "id": "label_for_form",
+      "task": "Register the supplier: company name \"Northwind Tools\", contact person \"Dilek Aydın\", invoice e-mail address \"billing@northwind.test\". Then submit the form.",
+      "target": {
+        "fixture": "label-for-form"
+      },
+      "success": {
+        "domAssertion": "Registration accepted for Northwind Tools"
+      },
+      "heldOut": false,
+      "tags": [
+        "perception",
+        "labels",
+        "form",
+        "s2"
+      ]
+    },
+    {
+      "id": "dynamic_list_update",
+      "task": "Press \"Apply changes\" on the duty roster, then claim the newly added shift.",
+      "target": {
+        "fixture": "dynamic-list-update"
+      },
+      "success": {
+        "domAssertion": "Claimed shift: Nightshift sweep"
+      },
+      "heldOut": true,
+      "tags": [
+        "perception",
+        "diff",
+        "s2"
+      ]
+    }
+  ]
+}

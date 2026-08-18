@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Supplier registration</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; max-width: 32rem; }
+      .field { margin-bottom: 1rem; }
+      .caption { display: block; font-weight: 600; margin-bottom: 0.25rem; }
+      input { width: 100%; padding: 0.45rem; }
+      button { padding: 0.55rem 1.1rem; cursor: pointer; }
+      #status { margin-top: 1.5rem; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <h1>Supplier registration</h1>
+    <!--
+      S2 fixture — LABEL RESOLUTION IN THE DEFAULT SCAN PASS.
+
+      Not one field here carries aria-label, placeholder, title, or its own text. Every field's name
+      lives somewhere the render-DOM scan did NOT look:
+
+        - company  → a <label for="…"> that is NOT an ancestor of the input
+        - contact  → aria-labelledby pointing at a separate <span> id
+        - invoice  → aria-labelledby pointing at TWO ids that must be joined in order
+
+      The a11y fallback computes these names correctly; the default render-DOM path did not, which
+      is why this fixture exists — the default path was the regression, not the fallback. An agent
+      that cannot name the fields fills them in the wrong order, and the page says so.
+    -->
+    <form onsubmit="check(event)">
+      <div class="field">
+        <label class="caption" for="f1">Company name</label>
+        <input id="f1" name="company" type="text" />
+      </div>
+
+      <div class="field">
+        <span class="caption" id="lbl-contact">Contact person</span>
+        <input id="f2" name="contact" type="text" aria-labelledby="lbl-contact" />
+      </div>
+
+      <div class="field">
+        <span class="caption" id="lbl-invoice-1">Invoice</span>
+        <span class="caption" id="lbl-invoice-2">e-mail address</span>
+        <input id="f3" name="invoice" type="text" aria-labelledby="lbl-invoice-1 lbl-invoice-2" />
+      </div>
+
+      <button type="submit">Register supplier</button>
+    </form>
+
+    <p id="status">Not submitted yet.</p>
+
+    <script>
+      function check(e) {
+        e.preventDefault();
+        var company = document.getElementById('f1').value.trim();
+        var contact = document.getElementById('f2').value.trim();
+        var invoice = document.getElementById('f3').value.trim();
+        var ok =
+          company === 'Northwind Tools' &&
+          contact === 'Dilek Aydın' &&
+          invoice === 'billing@northwind.test';
+        document.getElementById('status').textContent = ok
+          ? 'Registration accepted for Northwind Tools'
+          : 'Rejected — a value is in the wrong field.';
+      }
+    </script>
+  </body>
+</html>

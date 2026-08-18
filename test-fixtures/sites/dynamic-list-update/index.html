@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Duty roster</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; }
+      button { padding: 0.45rem 0.9rem; margin: 0 0.4rem 0.6rem 0; cursor: pointer; }
+      li { margin-bottom: 0.35rem; }
+      #status { margin-top: 1.5rem; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <h1>Duty roster</h1>
+    <!--
+      S2 fixture — DIFF SECTIONS AND ELISION.
+
+      "Apply changes" mutates exactly three of twelve rows: one is ADDED (Nightshift sweep), one is
+      REMOVED (Loading bay), and one CHANGES its label (Gate check → Gate check (moved to 18:00)).
+      The other nine rows are untouched, byte for byte.
+
+      That is the shape the diff serializer has to get right: three rows reported as added/removed/
+      changed, nine elided as unchanged — and, critically, NOTHING missed. A diff that swallows the
+      changed row would let the agent claim a shift it can no longer take.
+    -->
+    <button id="apply" onclick="applyChanges()">Apply changes</button>
+
+    <ul id="roster"></ul>
+    <p id="status">No shift claimed yet.</p>
+
+    <script>
+      var ROWS = [
+        'Yard patrol', 'Gate check', 'Loading bay', 'Cold store', 'Forklift check',
+        'Weighbridge', 'Recycling run', 'Dock wash', 'Fuel log', 'Tyre check', 'Fire drill',
+      ];
+      var applied = false;
+
+      function claim(label) {
+        document.getElementById('status').textContent = 'Claimed shift: ' + label;
+      }
+
+      function render() {
+        var ul = document.getElementById('roster');
+        ul.innerHTML = '';
+        for (var i = 0; i < ROWS.length; i++) {
+          (function (label) {
+            var li = document.createElement('li');
+            var btn = document.createElement('button');
+            btn.textContent = 'Claim ' + label;
+            btn.onclick = function () { claim(label); };
+            li.appendChild(btn);
+            ul.appendChild(li);
+          })(ROWS[i]);
+        }
+      }
+
+      function applyChanges() {
+        if (applied) return;
+        applied = true;
+        // changed
+        ROWS[1] = 'Gate check (moved to 18:00)';
+        // removed
+        ROWS.splice(2, 1);
+        // added
+        ROWS.push('Nightshift sweep');
+        render();
+      }
+
+      render();
+    </script>
+  </body>
+</html>
