@@ -74,6 +74,13 @@ export interface BrowserHost {
    * cookie banner turns a working control into a silent no-op. Null means the click was sent.
    */
   clickElement(ref: number, tabId?: string): Promise<{ occludedBy: string | null }>;
+  /**
+   * Move the pointer over the element identified by `ref` and leave it there (S3 PR6).
+   *
+   * A `:hover` menu has no click handler and no focus rule, so its links are not in the actionable set
+   * until the pointer is genuinely over the trigger — no other verb can reveal them.
+   */
+  hoverElement(ref: number, tabId?: string): Promise<void>;
   /** Focus the input identified by `ref` and replace its value with `text`. */
   fillElement(ref: number, text: string, tabId?: string): Promise<void>;
   /**

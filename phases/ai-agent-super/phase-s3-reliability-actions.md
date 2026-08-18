@@ -1,6 +1,6 @@
 # Phase S3 — Reliability Actions (W1 Reliability)
 
-**Status:** 🟡 In progress (PR0–PR2, PR5 landed 2026-08-18) · **Depends on:** [S0](phase-s0-truth-and-repair.md); [S2](phase-s2-perception-v2.md) (identity refs for the locator cascade) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟡 In progress (PR0–PR2, PR5, PR6-hover landed 2026-08-18) · **Depends on:** [S0](phase-s0-truth-and-repair.md); [S2](phase-s2-perception-v2.md) (identity refs for the locator cascade) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Close the missing action vocabulary and the two structural interaction gaps — snapshot-only
 occlusion and one-locator-per-ref — that make the agent fail on real sites. This targets the **measured**
@@ -187,11 +187,23 @@ re-snapshotting).
 >    re-reads, which is the phase's own stated mitigation.
 
 ### PR6 — hover + drag (Lane B, drag **spike + stretch**)
-- [ ] `hover` variant reusing the [human-input](../../packages/human-input) Catmull-Rom mouse path;
+- [x] `hover` variant reusing the [human-input](../../packages/human-input) Catmull-Rom mouse path;
       `hover-menu-nav` asserts a hover-revealed menu link is then clickable.
 - [ ] **Spike:** `drag` via CDP `Input.dispatchDragEvent`; if the debugger/HTML5-DnD interaction is
       unreliable, ship HITL-only and **exclude `drag-reorder` from the DoD pooled aggregate** (stated in
       Risks).
+
+> **PR6 status.** `hover` landed. **`drag` did not**, and is not silently pending: the phase marks it
+> spike-first and explicitly **not a DoD gate**, and `drag_reorder` carries a `not-a-gate` tag in the
+> registry so no pooled aggregate can absorb it. Shipping a drag verb whose reliability had not been
+> spiked would be worse than not having one — the agent would believe it could reorder lists it cannot.
+> The CDP `Input.dispatchDragEvent` spike, and the HITL-only fallback if it proves unreliable, remain
+> open work for this phase.
+>
+> `hover` deliberately does **not** settle the page afterwards: a hover-revealed menu is a structural
+> change the caller observes by re-reading, and waiting for quiet after a pointer move would charge every
+> hover a page-load budget. A hover that revealed nothing reports that plainly and suggests clicking,
+> rather than reading as a failure to repeat.
 
 ### PR7 — typed widgets (Lane B)
 - [ ] Deterministic, rule-based fill strategies (datepicker / ARIA combobox / masked input) — a

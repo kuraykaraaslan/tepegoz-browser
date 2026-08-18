@@ -18,6 +18,7 @@ import { snapshotElements as snapshotElementsImpl } from './cdp-driver-snapshot.
 import {
   clickElement as clickElementImpl,
   fillElement as fillElementImpl,
+  hoverElement as hoverElementImpl,
   pressKey as pressKeyImpl,
   sendKeys as sendKeysImpl,
   scrollPage as scrollPageImpl,
@@ -174,6 +175,15 @@ export default class CdpDriver {
     paths: string[],
   ): Promise<{ accept: string; multiple: boolean }> {
     return setFileInputFilesImpl(wc, ref, paths, CdpDriver.core());
+  }
+
+  /** Move the pointer over an element (S3 PR6) — the only gesture a `:hover` menu responds to. */
+  static async hoverElement(
+    wc: WebContents,
+    ref: number,
+    adapter?: HumanInputAdapter,
+  ): Promise<void> {
+    return hoverElementImpl(wc, ref, adapter, CdpDriver.core());
   }
 
   static async clickElement(

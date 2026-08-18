@@ -40,6 +40,7 @@ const Ref = z.coerce.number().int().positive().max(10_000);
 /** One page interaction, discriminated by `action` so each variant validates its own args. */
 const UpdatePageArgs = z.discriminatedUnion('action', [
   TargetTabArgs.extend({ action: z.literal('click'), ref: Ref }),
+  TargetTabArgs.extend({ action: z.literal('hover'), ref: Ref }),
   TargetTabArgs.extend({ action: z.literal('fill'), ref: Ref, text: z.string().max(10_000) }),
   TargetTabArgs.extend({ action: z.literal('press'), key: z.string().min(1).max(40) }),
   TargetTabArgs.extend({ action: z.literal('send_keys'), keys: z.string().min(1).max(200) }),
@@ -302,6 +303,19 @@ function interactionResult(
   }
   if (args.action === 'scroll_to_text') return scrollToTextResult(args.nth ?? 1, ctx);
   if (args.action === 'press' || args.action === 'send_keys') return keysResult(ctx);
+  // A hover that revealed nothing is not a failure to repeat differently — some menus need the pointer to
+  // rest, and some triggers are simply not hover-driven. Say what happened and let the model re-read.
+  if (args.action === 'hover') {
+    return {
+      ok: true,
+      url: after.url,
+      title: after.title,
+      changed,
+      note: changed
+        ? 'Hovering revealed new content — re-read browser_get_elements to see and act on it.'
+        : 'The pointer is now over that element but nothing changed. It may not be a hover trigger; try clicking it instead.',
+    };
+  }
   if (args.action === 'click' && ctx.occludedBy !== null && ctx.occludedBy !== undefined) {
     return {
       ok: true,
@@ -589,7 +603,9 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
       'browser_update_page',
       'state_changing',
       'Perform ONE interaction on a page, using a `ref` from browser_get_elements on the same tab. args: ' +
-        'one of { action: "click", ref, tabId? } · { action: "fill", ref, text, tabId? } · ' +
+        'one of { action: "click", ref, tabId? } · { action: "hover", ref, tabId? } (the ONLY way to ' +
+        'open a menu that appears on :hover — it has no click handler, so its links are not listed ' +
+        'until the pointer is over the trigger) · { action: "fill", ref, text, tabId? } · ' +
         '{ action: "press", key, tabId? } (e.g. "Enter", "Tab", "Escape", "ArrowDown") · ' +
         '{ action: "send_keys", keys, tabId? } for a chord or a sequence ("Ctrl+A", "Shift+Tab", ' +
         '"Ctrl+A Delete") — an unsendable keystroke comes back in `unsupportedKeys` rather than failing ' +
@@ -630,6 +646,9 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
       switch (args.action) {
         case 'click':
           ({ occludedBy } = await host.clickElement(args.ref, args.tabId));
+          break;
+        case 'hover':
+          await host.hoverElement(args.ref, args.tabId);
           break;
         case 'fill':
           await host.fillElement(args.ref, args.text, args.tabId);

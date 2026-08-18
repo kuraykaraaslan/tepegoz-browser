@@ -126,6 +126,34 @@ export async function clickElement(
   return { occludedBy: null };
 }
 
+/**
+ * Move the pointer over an element and leave it there (S3 PR6).
+ *
+ * A `:hover` menu opens for no other gesture: it has no click handler and no focus rule, so its links
+ * are not in the actionable set at all until the pointer is genuinely over the trigger. This reuses the
+ * same Catmull-Rom path a click uses — the movement a real pointer makes is what the page's own
+ * `mouseover` handlers respond to.
+ *
+ * No settle afterwards: a hover-revealed menu is a structural change the caller observes by re-reading,
+ * and waiting for the page to go quiet after a pointer move would charge every hover a load budget.
+ */
+export async function hoverElement(
+  wc: WebContents,
+  ref: number,
+  adapter: HumanInputAdapter | undefined,
+  core: DriverCore,
+): Promise<void> {
+  await core.ensure(wc);
+  const node = await core.resolveRef(wc, ref);
+  const { x, y } = await centerOf(wc, node);
+  if (adapter === undefined) {
+    await wc.debugger.sendCommand('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
+  } else {
+    await adapter.idle(); // human think/react pause between behaviors
+    await adapter.moveTo(x, y);
+  }
+}
+
 export async function fillElement(
   wc: WebContents,
   ref: number,

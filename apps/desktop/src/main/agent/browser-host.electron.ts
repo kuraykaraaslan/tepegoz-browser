@@ -473,6 +473,10 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
     onCursorHide();
     return result;
   },
+  hoverElement: async (ref, tabId) => {
+    resetForAgentAction();
+    await CdpDriver.hoverElement(requireWc(tabId), ref, tabId === undefined ? browserAdapter : undefined);
+  },
   fillElement: async (ref, text, tabId) => {
     resetForAgentAction();
     await CdpDriver.fillElement(requireWc(tabId), ref, text, tabId === undefined ? browserAdapter : undefined);

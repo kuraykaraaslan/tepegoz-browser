@@ -16,6 +16,7 @@ function fakeHost(overrides?: Partial<BrowserHost>): BrowserHost {
     waitForLoad: () => Promise.resolve({ url: 'https://x', title: 'X' }),
     snapshotElements: () => Promise.resolve({ url: 'https://x', title: 'X', elements: [] }),
     clickElement: () => Promise.resolve({ occludedBy: null }),
+    hoverElement: () => Promise.resolve(),
     fillElement: (_ref: number, text: string) => {
       lastFilled = text;
       return Promise.resolve();
@@ -675,5 +676,41 @@ describe('click-time occlusion re-check (S3 PR5)', () => {
     if (parsed?.success !== true) throw new Error('args rejected');
     const result = (await tool?.handler(parsed.data)) as Record<string, unknown>;
     expect(result['occludedBy']).toBeUndefined();
+  });
+});
+
+describe('hover (S3 PR6)', () => {
+  beforeEach(() => CapabilityRegistry.reset());
+
+  const hover = async (host: BrowserHost): Promise<Record<string, unknown>> => {
+    registerBrowserTools({ host });
+    const tool = CapabilityRegistry.get('browser_update_page');
+    const parsed = tool?.inputSchema.safeParse({ action: 'hover', ref: 2 });
+    if (parsed?.success !== true) throw new Error('args rejected');
+    return (await tool?.handler(parsed.data)) as Record<string, unknown>;
+  };
+
+  it('moves the pointer over the ref', async () => {
+    const hoverElement = vi.fn(() => Promise.resolve());
+    await hover(fakeHost({ hoverElement }));
+    expect(hoverElement).toHaveBeenCalledWith(2, undefined);
+  });
+
+  it('tells the model to re-read when hovering revealed something', async () => {
+    let call = 0;
+    const readPage = () => {
+      call += 1;
+      return Promise.resolve({ url: 'https://x', title: 'X', text: 'hello', sig: call > 1 ? 's2' : 's1' });
+    };
+    const result = await hover(fakeHost({ readPage }));
+    expect(result['changed']).toBe(true);
+    expect(String(result['note'])).toContain('re-read');
+  });
+
+  it('suggests clicking instead when nothing is hover-driven, rather than reporting a failure', async () => {
+    const result = await hover(fakeHost());
+    expect(result['ok']).toBe(true);
+    expect(result['changed']).toBe(false);
+    expect(String(result['note'])).toContain('try clicking it instead');
   });
 });
