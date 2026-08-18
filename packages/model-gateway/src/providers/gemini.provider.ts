@@ -41,6 +41,7 @@ export interface GeminiGenerateRequest {
   systemInstruction?: { parts: Array<{ text: string }> };
   generationConfig: { maxOutputTokens: number; responseMimeType?: 'application/json' };
   tools?: Array<{ functionDeclarations: GeminiFunctionDeclaration[] }>;
+  toolConfig?: { functionCallingConfig: { mode: 'AUTO' | 'ANY'; allowedFunctionNames?: string[] } };
 }
 
 /** The subset of a generateContent response this adapter consumes. */
@@ -119,6 +120,12 @@ export function toGeminiParams(req: CanonRequest): GeminiGenerateRequest {
         })),
       },
     ];
+  }
+  if (req.toolChoice !== undefined && body.tools !== undefined) {
+    body.toolConfig =
+      req.toolChoice.type === 'tool'
+        ? { functionCallingConfig: { mode: 'ANY', allowedFunctionNames: [req.toolChoice.name] } }
+        : { functionCallingConfig: { mode: 'AUTO' } };
   }
   return body;
 }

@@ -10,7 +10,8 @@ import {
   recoveryAdviceFor,
   stopReasonForFailure,
 } from './recovery';
-import { parseDecision, type Decision } from './reactor-decision';
+import { parseDecision, parseNativeDecision, type Decision } from './reactor-decision';
+import { DECISION_TOOL_NAME, decisionToolDef, resolveDecisionMode } from './reactor-decision-mode';
 import { isToolError, observationOf, observationWithRecovery, stableStringify } from './reactor-observation';
 import { COLLAPSED_STATE_PLACEHOLDER, STATE_COLLAPSE_THRESHOLD } from './reactor-page-state';
 import {
@@ -42,7 +43,13 @@ import type {
  */
 
 // Re-export the full public surface so existing importers of './reactor' are unaffected.
-export { coerceDecisionShape, parseDecision, type Decision } from './reactor-decision';
+export { coerceDecisionShape, parseDecision, parseNativeDecision, type Decision } from './reactor-decision';
+export {
+  DECISION_TOOL_NAME,
+  decisionToolDef,
+  resolveDecisionMode,
+  type DecisionMode,
+} from './reactor-decision-mode';
 export type {
   CompletionContext,
   CompletionVerdict,
@@ -135,6 +142,10 @@ export default class Reactor {
     const readStreak = createReadStreakGuard(options.readLoopThreshold ?? 5);
     const recoveryCounts = new Map<string, number>();
     const maxDecisionRepairs = options.maxDecisionRepairs ?? 2;
+    // S1: pick the decision transport ONCE per run, so a run cannot straddle both arms mid-sweep.
+    // Everything else about the two arms is byte-identical — same system prompt, same Decision shape,
+    // same zod settle step — which is what makes a paired completion delta attributable to transport.
+    const decisionMode = resolveDecisionMode(req.provider, options.decisionMode);
     const maxRecoveryAttempts = options.maxRecoveryAttempts ?? 2;
     const planningInterval = Math.max(1, options.planningInterval ?? 3);
     const maxCompletionRejects = options.maxCompletionRejects ?? 3;
@@ -342,10 +353,16 @@ export default class Reactor {
           messages,
           maxTokens: req.maxTokens ?? 1500,
           timeoutMs: req.timeoutMs ?? 60_000,
-          responseFormat: 'json',
+          // Native: one required tool whose schema IS the decision, so the provider enforces the shape.
+          // JSON: the legacy json_object nudge, which only guarantees valid JSON, never valid shape.
+          ...(decisionMode === 'native'
+            ? { tools: [decisionToolDef()], toolChoice: { type: 'tool' as const, name: DECISION_TOOL_NAME } }
+            : { responseFormat: 'json' as const }),
         });
-        responseText = response.text;
-        decision = parseDecision(responseText);
+        decision = decisionMode === 'native' ? parseNativeDecision(response) : parseDecision(response.text);
+        // The native arm's turn is usually pure tool call with empty text; re-serializing the settled
+        // decision keeps the assistant history non-empty and structurally identical across both arms.
+        responseText = response.text.trim().length > 0 ? response.text : JSON.stringify(decision);
       } catch (err) {
         const failure = classifyRuntimeError(err);
         if (failure.kind === 'model_malformed' && decisionRepairs < maxDecisionRepairs) {

@@ -1,6 +1,8 @@
 import { AppError, Logger } from '@tepegoz/libs';
+import type { CanonResponse } from '@tepegoz/model-gateway';
 import { AgentWorkingStateSchema } from '@tepegoz/shared-types';
 import { z } from 'zod';
+import { DECISION_TOOL_NAME } from './reactor-decision-mode';
 import { ReactorMessages } from './messages';
 
 /**
@@ -139,10 +141,41 @@ export function parseDecision(text: string): Decision {
     }
     Logger.warn(ReactorMessages.DecisionStateTruncated, { raw: text.slice(0, 400) });
   }
+  return settleDecision(raw, text.slice(0, 400));
+}
+
+/** Settle a coerced-and-validated {@link Decision} out of an already-parsed object. Shared by both
+ *  arms, so a decision means the same thing however it arrived. */
+function settleDecision(raw: unknown, rawForLog: string): Decision {
   const parsed = DecisionSchema.safeParse(coerceDecisionShape(raw));
   if (!parsed.success) {
-    Logger.warn(ReactorMessages.MalformedDecision, { raw: text.slice(0, 400), issues: parsed.error.issues });
+    Logger.warn(ReactorMessages.MalformedDecision, { raw: rawForLog, issues: parsed.error.issues });
     throw new AppError(ReactorMessages.MalformedDecision, 502);
   }
   return parsed.data;
+}
+
+/**
+ * Parse a decision off the NATIVE arm (S1): the shape arrives as the input of the single
+ * {@link DECISION_TOOL_NAME} tool call, already structurally enforced by the provider, so there is no
+ * JSON to extract out of prose and nothing to truncate mid-field.
+ *
+ * Two deliberate fallbacks keep the arm from being *more* fragile than the one it replaces:
+ * a call under a different name is still accepted when it is the only one (a provider that renamed or
+ * mis-echoed the tool has still told us what it wants), and a turn with no call but with text falls
+ * back to the JSON path (a model that answered in prose despite a forced tool choice is a decision we
+ * can still read, not a dead turn).
+ */
+export function parseNativeDecision(response: CanonResponse): Decision {
+  const named = response.toolCalls.find((c) => c.name === DECISION_TOOL_NAME);
+  const call = named ?? (response.toolCalls.length === 1 ? response.toolCalls[0] : undefined);
+  if (call !== undefined) {
+    return settleDecision(call.input, JSON.stringify(call.input).slice(0, 400));
+  }
+  if (response.text.trim().length > 0) {
+    Logger.warn('native decision arm got prose instead of a tool call; falling back to JSON parse');
+    return parseDecision(response.text);
+  }
+  Logger.warn(ReactorMessages.EmptyNativeTurn, { stopReason: response.stopReason });
+  throw new AppError(ReactorMessages.EmptyNativeTurn, 502);
 }

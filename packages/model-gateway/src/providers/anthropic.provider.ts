@@ -98,6 +98,10 @@ export function toAnthropicParams(
       input_schema: t.inputSchema as Anthropic.Tool.InputSchema,
     }));
   }
+  if (req.toolChoice !== undefined && params.tools !== undefined) {
+    params.tool_choice =
+      req.toolChoice.type === 'tool' ? { type: 'tool', name: req.toolChoice.name } : { type: 'auto' };
+  }
   if (opts.thinking === true) {
     params.thinking = { type: 'adaptive', display: 'summarized' };
   }

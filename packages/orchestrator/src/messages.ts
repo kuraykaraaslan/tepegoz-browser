@@ -19,4 +19,7 @@ export const ReactorMessages = {
   /** A verbose model hit its output-token cap mid-`state`; the trailing (optional) ledger was dropped and
    *  the rest of the decision recovered — the run continues instead of failing the whole turn (C1). */
   DecisionStateTruncated: 'Recovered a decision whose trailing typed-state ledger was truncated',
+  /** The native arm asked for one tool and the model returned neither that call nor any text to fall
+   *  back on — an empty turn, which is a transport failure rather than a bad decision. */
+  EmptyNativeTurn: 'Agent returned an empty turn (no native decision call and no text)',
 } as const;

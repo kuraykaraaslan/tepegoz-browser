@@ -8,6 +8,7 @@ import {
 } from '@tepegoz/model-gateway';
 import type { ToolDescriptor } from '@tepegoz/shared-types';
 import Planner from './planner';
+import { contentToText } from '@tepegoz/model-gateway';
 
 const tools: Pick<ToolDescriptor, 'id' | 'description' | 'dangerClass'>[] = [
   { id: 'browser_get_page', description: 'read the current page', dangerClass: 'read' },
@@ -55,7 +56,7 @@ describe('Planner.plan', () => {
       readonly id = 'anthropic' as const;
       system = '';
       complete(request: CanonRequest): Promise<CanonResponse> {
-        this.system = request.messages.find((m) => m.role === 'system')?.content ?? '';
+        this.system = contentToText(request.messages.find((m) => m.role === 'system')?.content ?? '');
         return Promise.resolve({
           text: JSON.stringify(validPlan),
           stopReason: 'end',
@@ -90,7 +91,7 @@ describe('Planner.plan', () => {
       readonly id = 'anthropic' as const;
       system = '';
       complete(request: CanonRequest): Promise<CanonResponse> {
-        this.system = request.messages.find((m) => m.role === 'system')?.content ?? '';
+        this.system = contentToText(request.messages.find((m) => m.role === 'system')?.content ?? '');
         return Promise.resolve({
           text: JSON.stringify(validPlan),
           stopReason: 'end',
@@ -146,7 +147,7 @@ describe('Planner security preamble (AI-5)', () => {
     readonly id = 'anthropic' as const;
     system = '';
     complete(request: CanonRequest): Promise<CanonResponse> {
-      this.system = request.messages.find((m) => m.role === 'system')?.content ?? '';
+      this.system = contentToText(request.messages.find((m) => m.role === 'system')?.content ?? '');
       return Promise.resolve({ text: JSON.stringify(validPlan), stopReason: 'end', usage: { inputTokens: 1, outputTokens: 1 }, toolCalls: [] });
     }
   }
@@ -191,7 +192,7 @@ describe('Planner.replan (C1 PR2 no-progress replanner — advisory boundary)', 
       readonly id = 'anthropic' as const;
       user = '';
       complete(request: CanonRequest): Promise<CanonResponse> {
-        this.user = request.messages.find((m) => m.role === 'user')?.content ?? '';
+        this.user = contentToText(request.messages.find((m) => m.role === 'user')?.content ?? '');
         return Promise.resolve({ text: JSON.stringify({ approach: 'x' }), stopReason: 'end', usage: { inputTokens: 1, outputTokens: 1 }, toolCalls: [] });
       }
     }

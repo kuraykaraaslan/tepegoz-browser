@@ -8,6 +8,7 @@ import {
 import { CapabilityRegistry, ToolGateway, type RegisteredTool } from '@tepegoz/capability-plane';
 import type { AIProvider, RiskLevel, ToolDescriptor, ToolError } from '@tepegoz/shared-types';
 import Reactor from './reactor';
+import { contentToText } from '@tepegoz/model-gateway';
 
 /**
  * Observation-feedback slice of the reactive-loop replay: a scripted provider returns one canned
@@ -204,7 +205,7 @@ describe('Reactor.run (observation feedback + recovery)', () => {
     ModelGateway.register({
       id: 'anthropic',
       complete: (r: CanonRequest) => {
-        prompts.push(r.messages.map((m) => m.content).join('\n'));
+        prompts.push(r.messages.map((m) => contentToText(m.content)).join('\n'));
         const text = replies[turn] ?? finish;
         turn += 1;
         return Promise.resolve({

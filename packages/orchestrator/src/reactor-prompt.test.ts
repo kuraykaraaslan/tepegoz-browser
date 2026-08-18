@@ -8,6 +8,7 @@ import {
 import { CapabilityRegistry, ToolGateway, type RegisteredTool } from '@tepegoz/capability-plane';
 import type { AIProvider, RiskLevel, ToolDescriptor } from '@tepegoz/shared-types';
 import Reactor from './reactor';
+import { contentToText } from '@tepegoz/model-gateway';
 
 function fakeTool(id: string, dangerClass: RiskLevel, result: unknown): RegisteredTool<unknown> {
   const descriptor: ToolDescriptor = {
@@ -48,7 +49,7 @@ describe('Reactor system prompt (coreference + browsing strategy)', () => {
     readonly id: AIProvider = 'anthropic';
     system = '';
     complete(request: CanonRequest): Promise<CanonResponse> {
-      this.system = request.messages.find((m) => m.role === 'system')?.content ?? '';
+      this.system = contentToText(request.messages.find((m) => m.role === 'system')?.content ?? '');
       return Promise.resolve({
         text: finish,
         stopReason: 'end',
@@ -140,7 +141,7 @@ describe('Reactor system prompt (coreference + browsing strategy)', () => {
       readonly id: AIProvider = 'anthropic';
       goal = '';
       complete(request: CanonRequest): Promise<CanonResponse> {
-        this.goal = request.messages.find((m) => m.role === 'user')?.content ?? '';
+        this.goal = contentToText(request.messages.find((m) => m.role === 'user')?.content ?? '');
         return Promise.resolve({ text: finish, stopReason: 'end', usage: { inputTokens: 1, outputTokens: 1 }, toolCalls: [] });
       }
     }

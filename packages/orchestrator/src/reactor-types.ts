@@ -134,6 +134,13 @@ export interface ReactOptions {
    * throw (the reactor also fails open to "no hint"). The steer is injected once per distinct hint.
    */
   groundNavigation?: (outcome: StepOutcome, goal: string) => Promise<string | null>;
+  /**
+   * S1: which transport the decision rides on — `native` (one provider-enforced tool call) or `json`
+   * (the legacy JSON-in-text parse). Absent ⇒ resolved from `TEPEGOZ_DECISION_MODE`, defaulting to
+   * `auto` (native wherever the registered adapter supports it). Present only so a test can pin an arm
+   * without touching process env; the paired sweep flips the env var.
+   */
+  decisionMode?: 'native' | 'json' | 'auto';
   /** Bounded self-repair attempts for malformed model decisions. */
   maxDecisionRepairs?: number;
   /** Bounded recovery attempts per failure kind+tool before fail-closed. */

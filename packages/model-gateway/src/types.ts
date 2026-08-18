@@ -69,6 +69,13 @@ export interface CanonRequest {
   timeoutMs: number;
   tools?: CanonToolDef[];
   /**
+   * How the provider should pick among `tools`. `auto` is the vendor default (the model may answer in
+   * prose instead); `{ type: 'tool', name }` REQUIRES that one tool, which is what turns a native call
+   * into a schema-enforced output shape rather than a suggestion. Ignored by adapters that do not
+   * support native tools.
+   */
+  toolChoice?: { type: 'auto' } | { type: 'tool'; name: string };
+  /**
    * Ask the provider to constrain output to a single JSON object (OpenAI `json_object` mode) — used by
    * the Planner/Reactor whose output is JSON-parsed + zod-validated, so weaker models can't wrap it in
    * prose/fences. Providers that follow JSON instructions natively (Anthropic) may ignore it.

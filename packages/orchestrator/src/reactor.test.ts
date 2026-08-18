@@ -9,6 +9,7 @@ import { CapabilityRegistry, ToolGateway, type RegisteredTool } from '@tepegoz/c
 import type { AIProvider, RiskLevel, ToolDescriptor } from '@tepegoz/shared-types';
 import Reactor from './reactor';
 import { COLLAPSED_WORKING_STATE_PLACEHOLDER, WORKING_STATE_HEADER } from './reactor-working-state';
+import { contentToText } from '@tepegoz/model-gateway';
 
 /**
  * Reactive-loop replay: a scripted provider returns one canned decision per turn, so the whole
@@ -313,7 +314,7 @@ class CapturingProvider implements ModelProvider {
   readonly turns: { role: string; content: string }[][] = [];
   constructor(private readonly replies: string[]) {}
   complete(req: CanonRequest): Promise<CanonResponse> {
-    this.turns.push(req.messages.map((m) => ({ role: m.role, content: m.content })));
+    this.turns.push(req.messages.map((m) => ({ role: m.role, content: contentToText(m.content) })));
     const text = this.replies[this.turn] ?? '{"action":"finish","summary":"done"}';
     this.turn += 1;
     return Promise.resolve({ text, stopReason: 'end', usage: { inputTokens: 1, outputTokens: 1 }, toolCalls: [] });

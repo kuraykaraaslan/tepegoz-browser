@@ -3,6 +3,7 @@ import { ModelGateway, type CanonRequest, type CanonResponse, type ModelProvider
 import { CapabilityRegistry, ToolGateway, type RegisteredTool } from '@tepegoz/capability-plane';
 import type { AIProvider, RiskLevel, ToolDescriptor } from '@tepegoz/shared-types';
 import Reactor from './reactor';
+import { contentToText } from '@tepegoz/model-gateway';
 
 const calls: string[] = [];
 
@@ -83,7 +84,7 @@ describe('Reactor.run (transient page-state collapse)', () => {
       readonly turns: string[][] = [];
       constructor(private readonly replies: string[]) {}
       complete(request: CanonRequest): Promise<CanonResponse> {
-        this.turns.push(request.messages.map((m) => m.content));
+        this.turns.push(request.messages.map((m) => contentToText(m.content)));
         const text = this.replies[this.turns.length - 1] ?? finish;
         return Promise.resolve({ text, stopReason: 'end', usage: { inputTokens: 1, outputTokens: 1 }, toolCalls: [] });
       }

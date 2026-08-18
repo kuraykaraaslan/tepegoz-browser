@@ -1,6 +1,6 @@
 # Phase S1 — Foundation: Native Loop (Foundation)
 
-**Status:** 🟡 In progress (PR0–PR3 landed 2026-08-18) · **Depends on:** [S0 — Truth & Repair](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟡 In progress (PR0–PR4 landed 2026-08-18) · **Depends on:** [S0 — Truth & Repair](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Replace JSON-in-text decisions with native provider tool-calling wherever the provider supports it, and widen `CanonMessage.content` from a bare string to multimodal content blocks — the structural prerequisite for vision (S10). Stream response deltas to the renderer event stream so steps stop feeling slow, while keeping the Journal and the decision path settled-results-only. This is the substrate that S7 (speed), S8 (UX streaming), and S10 (vision) all build on; nothing above it can move until the canonical message shape and the decision transport are fixed here.
 
@@ -18,7 +18,7 @@ The live decision path parses JSON out of free text. [reactor-decision.ts](../..
 
 - [ ] `CanonMessage.content` is `string | CanonContentBlock[]` (`text | image | tool_use | tool_result`) with the zod schema owned by `@tepegoz/shared-types` and re-exported by [types.ts](../../packages/model-gateway/src/types.ts); `safeParse` at the gateway trust boundary; no `@ts-ignore`, no file over 250 lines.
 - [x] Per-provider `supportsNativeTools` capability flag exists in [packages/model-gateway/src/providers](../../packages/model-gateway/src/providers); anthropic/openai/gemini normalize native tool-call responses into `CanonToolCall`; kimi and local GGUF keep JSON-in-text via [json-grammar.ts](../../packages/local-inference/src/json-grammar.ts).
-- [ ] `reactor.ts` decision acquisition is strategy-selected behind `TEPEGOZ_DECISION_MODE` (native tool_use when supported, JSON fallback otherwise), so a single-change paired sweep is possible.
+- [x] `reactor.ts` decision acquisition is strategy-selected behind `TEPEGOZ_DECISION_MODE` (native tool_use when supported, JSON fallback otherwise), so a single-change paired sweep is possible.
 - [ ] `gateway.generateStream` emits deltas to the renderer event stream ([ipc-agent-run.ts](../../apps/desktop/src/main/ipc/ipc-agent-run.ts) path); the **revised** [streaming-guard.test.ts](../../packages/model-gateway/src/streaming-guard.test.ts) is green and proves no partial ever reaches the Journal or the decision path.
 - [ ] First-delta latency **< 2s p50 on a scripted run** (deterministic, non-funded — measured against `ScriptedProvider`).
 - [ ] **(⏸ funded sweep)** Paired single-change sweep, anthropic tier, web-patterns + acceptance pooled (15 scenarios × N=3/arm, JSON arm vs native arm): pooled completion within **±10pp equivalence**.
@@ -50,9 +50,20 @@ The live decision path parses JSON out of free text. [reactor-decision.ts](../..
 - [x] Leave kimi (`supportsNativeTools = false`, partial-compat) and local GGUF on the JSON-in-text path via [json-grammar.ts](../../packages/local-inference/src/json-grammar.ts).
 
 ### PR4 — reactor decision-mode strategy
-- [ ] In [reactor.ts](../../packages/orchestrator/src/reactor.ts) + [reactor-decision.ts](../../packages/orchestrator/src/reactor-decision.ts), make decision acquisition strategy-selected: native `tool_use` when `supportsNativeTools`, else the existing JSON parse.
-- [ ] Gate the strategy behind `TEPEGOZ_DECISION_MODE` (`native` | `json` | `auto`) so the paired sweep is a single controlled change.
-- [ ] Keep `coerceDecisionShape` + zod validation as the settle step for **both** arms; do **not** delete `salvageTruncatedState` yet (see Risks).
+- [x] In [reactor.ts](../../packages/orchestrator/src/reactor.ts) + [reactor-decision.ts](../../packages/orchestrator/src/reactor-decision.ts), make decision acquisition strategy-selected: native `tool_use` when `supportsNativeTools`, else the existing JSON parse.
+- [x] Gate the strategy behind `TEPEGOZ_DECISION_MODE` (`native` | `json` | `auto`) so the paired sweep is a single controlled change.
+- [x] Keep `coerceDecisionShape` + zod validation as the settle step for **both** arms; do **not** delete `salvageTruncatedState` yet (see Risks).
+
+> **Mechanism deviation (recorded, PR4).** The native arm exposes exactly ONE tool — the decision
+> itself (`agent_emit_decision`, schema mirroring `DecisionSchema`) — rather than publishing all ~30
+> browser tools as native tools. Two reasons, both load-bearing for this phase: (1) a native call
+> carries tool arguments and nothing else, so publishing the real tools would drop the progress brain
+> (`evaluation_previous_goal`/`memory`/`next_goal`) and the C1 typed `state` ledger — a capability
+> regression wearing a transport change's clothes; (2) changing the action space would make PR6 a
+> two-variable sweep, and the ±10pp equivalence gate would then be measuring tool selection as well as
+> transport. Both arms send the byte-identical system prompt and settle through the same zod step; the
+> only difference is whether the decision arrives inside prose or inside a provider-enforced schema.
+> Publishing the real tool schemas natively is a candidate for a later phase, on its own sweep.
 
 ### PR5 — ADR-0025 + streaming boundary
 - [ ] Author ADR-0025: deltas MAY flow to the renderer event stream; only settled + validated results reach the Journal and the decision path. Supersede the old "nothing partial streams anywhere" reading.
