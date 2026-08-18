@@ -157,6 +157,28 @@ Seven reliability scenarios frozen **before** any S3 capability code, in a new r
   test that the interception never installs a page-principal override.
 - **Cost:** none — nothing was run.
 
+### 2026-08-18 — S3 PR1–PR3, PR5–PR7 — code landed, MEASUREMENT-OWED (⏸ awaiting funded key)
+
+The reliability verbs and the two structural interaction fixes are in. **`cookie_consent` has not been
+re-measured**, and nothing here claims the sentinel moved — only the funded sweep can say that.
+
+| Landed | Owed |
+|---|---|
+| `browser_update_history` (back/forward/reload, honest `moved`) | — deterministic |
+| `browser_validate_condition` (text/selector/network_idle, bounded, honest `satisfied:false`) | — deterministic |
+| `send_keys` chords; the `KEY_MAP` hard-fail replaced by a reported no-op | — deterministic |
+| Tab-spawn **detection + reporting** | the policy-checked auto-follow + return-to-origin bookkeeping |
+| Click-time occlusion re-check + identity locator cascade | **`cookie_consent` ≥8/10 with Wilson LB >50%** |
+| `hover` | — deterministic |
+| Widget-driven fills **refused** rather than faked | the structured fill strategies + `browser_validate_form` integration |
+| — | **PR4 dialogs (not started — spike-first)**, the drag spike, the new-family ≥70% pooled gate, web-patterns ≥25pp, acceptance non-regression, prose steers #1–#5 |
+
+- **Base:** [`fixture-freeze.md`](fixture-freeze.md#s3-pr0-addition--2026-08-18-7-scenarios-1-new-registry) — 70 scenarios across 12 files, `cookie_consent` untouched.
+- **Prose steers #1–#5 remain RETAINED.** Not one has been deleted: each needs its paired with/without
+  sweep, and deleting a steer because its replacement mechanism *exists* is precisely the consolidation
+  shortcut the constitution forbids.
+- **Cost:** none — nothing was run.
+
 ### Template for a phase-exit entry
 
 ```

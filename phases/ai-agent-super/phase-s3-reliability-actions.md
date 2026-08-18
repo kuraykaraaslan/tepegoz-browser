@@ -1,6 +1,6 @@
 # Phase S3 — Reliability Actions (W1 Reliability)
 
-**Status:** 🟡 In progress (PR0–PR3, PR5, PR6-hover, PR7-refusal landed 2026-08-18) · **Depends on:** [S0](phase-s0-truth-and-repair.md); [S2](phase-s2-perception-v2.md) (identity refs for the locator cascade) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟠 Measurement-owed (PR0–PR3, PR5, PR6-hover, PR7-refusal landed 2026-08-18; PR4 + the drag spike NOT started, PR8 ⏸ funded) · **Depends on:** [S0](phase-s0-truth-and-repair.md); [S2](phase-s2-perception-v2.md) (identity refs for the locator cascade) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Close the missing action vocabulary and the two structural interaction gaps — snapshot-only
 occlusion and one-locator-per-ref — that make the agent fail on real sites. This targets the **measured**
@@ -175,6 +175,18 @@ re-snapshotting).
 - [ ] `confirm-dialog-destructive` asserts the agent does **not** blindly accept a destructive confirm;
       `beforeunload-trap` asserts the agent handles the unload prompt without stranding.
 - [ ] EN+TR strings for the dialog HITL surface.
+
+> **PR4 NOT STARTED — a deliberate call, not an omission.** The phase marks dialog handling
+> **spike-first**, and the spike is the whole question: whether `webContents.debugger` can own
+> `Page.javascriptDialogOpening` without conflicting with an open DevTools client (Chromium allows one
+> debugger client), and what the HITL fallback costs when it cannot. That spike has to run against a real
+> Electron window; it cannot be answered from unit tests.
+>
+> Shipping an unspiked dialog handler would have to pick one of two bad defaults: answer
+> `will-prevent-unload` automatically and **silently discard a user's unsaved work**, or leave the native
+> prompt up and **strand every run that meets one**. Neither is worth having by default, and the fixtures
+> (`confirm-dialog-destructive`, `beforeunload-trap`) exist precisely to keep the gap visible until the
+> spike is done. Nothing in this phase claims dialogs are handled.
 
 ### PR5 — click-time occlusion re-check + locator cascade (Lane B) — fixes `cookie_consent`
 - [x] `elementFromPoint` probe in the isolated world immediately **before** dispatch in
