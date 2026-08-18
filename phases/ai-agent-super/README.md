@@ -114,22 +114,23 @@ landed code, hiding an anti-debt breach **×3**. Audited against `git log`, the 
 **Anti-debt state: 1 measurement-owed (S0) — compliant.** C1's and C7's owed sweeps do not each count
 as separate debt because both are discharged by the *same* S0 full-registry baseline.
 
-**Update 2026-08-18 — S1 landed its code; the count rises to 2, and that is a STATED BREACH of the
-anti-debt rule, not an oversight.** [S1](phase-s1-foundation-native-loop.md) PR0–PR5 landed (transport,
-content blocks, native tool-calling on three adapters, the streaming boundary) and its DoD sweep — the
-paired native-vs-JSON comparison — cannot run without a funded key. So S0 and S1 both sit 🟠, and the
-rule says no new phase opens while more than one does.
+**Update 2026-08-18 — S1, S2 and S3 landed their code; the count rises to 4, and that is a STATED BREACH
+of the anti-debt rule, not an oversight.** [S1](phase-s1-foundation-native-loop.md) (transport, content blocks, native
+tool-calling on three adapters, the streaming boundary), [S2](phase-s2-perception-v2.md) (identity-stable
+refs, diffing + elision, label resolution, article text) and [S3](phase-s3-reliability-actions.md)
+(the reliability verbs) all landed their capability code in one pass, on the owner's explicit instruction
+to complete at least three phases. Each owes a sweep that cannot run without a funded key, so S0, S1, S2
+and S3 all sit 🟠 while the rule says no new phase opens while more than one does.
 
-Work continued into [S2](phase-s2-perception-v2.md) and [S3](phase-s3-reliability-actions.md) anyway, on
-the owner's explicit instruction to complete at least three phases in this pass. Recording the reason
-plainly, because the alternative — quietly letting the count read "1" — is exactly the vanity the rule
-exists to prevent:
+Recording the reason plainly, because the alternative — quietly letting the count read "1" — is exactly
+the vanity the rule exists to prevent:
 
 - Both debts are discharged by the **same** unavailable thing (a funded Anthropic key), not by two
   independent measurements someone could have run and did not. The rule's purpose — stopping a program
   from stacking unverified capability claims — is served by the fact that **no phase here claims ✅**.
 - Every S1/S2/S3 exit criterion that is deterministic is asserted in tests and green; every criterion
-  that needs a sweep stays ⏸ and unclaimed.
+  that needs a sweep stays ⏸ and unclaimed. **No phase in this pass reads ✅, and no capability flag was
+  promoted to default on deterministic evidence.**
 - The debt does not compound in cost: one funded full-registry run plus the per-phase paired sweeps
   discharges all of it, in the order the phases landed.
 

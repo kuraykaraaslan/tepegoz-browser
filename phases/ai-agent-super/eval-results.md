@@ -117,6 +117,31 @@ move S6-PR0 made, and the reason the S0 baseline denominator survives.
   competence.
 - **Cost:** none — nothing was run.
 
+### 2026-08-18 — S2 PR1–PR4 — code landed, MEASUREMENT-OWED (⏸ awaiting funded key)
+
+Perception v2's capability code is in. **No competence number exists**, and none of the DoD's three
+sweep gates (tokens −30%, perception family ≥80% with a Wilson lower bound ≥60%, web-patterns no
+regression >5pp) has been measured. What IS proven is deterministic, and only that:
+
+| DoD line | State |
+|---|---|
+| Identity-stable refs survive N snapshots | **Proven deterministically** — the re-render case from the frozen fixture is a unit assertion. |
+| `aria-labelledby` / `label[for]` in the default path | **Proven deterministically** — the real injected script is executed over a fake DOM. |
+| `browser_get_article` returns article-priority text | **Proven deterministically** — selection order, stub-root refusal, chrome stripping. |
+| Tokens/step −30% | ⏸ **unmeasured.** The TSV + elision path has no deterministic proxy for token cost; a smaller string is not a smaller bill. |
+| Perception family ≥80%, Wilson LB ≥60% | ⏸ unmeasured. |
+| web-patterns no regression >5pp | ⏸ unmeasured. |
+| [PROSE-LEDGER](PROSE-LEDGER.md) row 7 → DELETED/RETAINED | ⏸ blocked on the paired sweep. |
+
+- **The flag stays OFF.** `TEPEGOZ_PERCEPTION_V2` gates stable refs, diffing, elision and the TSV
+  listing together; the positional path remains the default and the degraded fallback. A phase does not
+  promote its own flag on deterministic evidence — promotion is what the PR5 sweep decides.
+- **Base:** [`fixture-freeze.md`](fixture-freeze.md#s2-pr0-addition--2026-08-18-3-scenarios-1-new-registry).
+- **Known risk carried forward:** elision hides unchanged elements from the listing. It is sound only
+  while refs are identity-stable, which is why one flag gates both — but a sweep is what will show
+  whether the model actually *uses* a ref it can no longer see in the current message.
+- **Cost:** none — nothing was run.
+
 ### Template for a phase-exit entry
 
 ```
