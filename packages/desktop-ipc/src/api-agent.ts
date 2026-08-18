@@ -9,6 +9,7 @@ import type {
   AgentBundleExportInput,
   AgentConfig,
   AgentEffort,
+  AgentDelta,
   AgentEvent,
   AgentFileAttachment,
   AgentPlanPreview,
@@ -63,6 +64,8 @@ export interface AgentApi {
   onAgentConversationsState(callback: (state: AgentConversationsState) => void): () => void;
   /** Subscribe to the live Agent Console event stream; returns an unsubscribe function. */
   onAgentEvent(callback: (event: AgentEvent) => void): () => void;
+  /** Streamed model fragments for the running task — ephemeral, never journaled (ADR-0025). */
+  onAgentDelta(callback: (delta: AgentDelta) => void): () => void;
   /** Subscribe to HITL approval prompts; returns an unsubscribe function. */
   onAgentApprovalRequest(callback: (request: AgentApprovalRequest) => void): () => void;
   /** Answer a HITL prompt (approve/deny a gated tool call). */

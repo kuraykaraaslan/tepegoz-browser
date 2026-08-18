@@ -1,6 +1,6 @@
 import { AppError } from '@tepegoz/libs';
 import { CanonMessageContentSchema, type AIProvider } from '@tepegoz/shared-types';
-import type { CanonRequest, CanonResponse, ModelProvider } from './types';
+import type { CanonRequest, CanonResponse, ModelDeltaSink, ModelProvider } from './types';
 import { egressTextOf } from './content';
 import { GatewayMessages } from './messages';
 import { TokenLedger } from './token-ledger';
@@ -110,6 +110,26 @@ export class ModelGateway {
   }
 
   /**
+   * Run the adapter, streaming when both the caller asked for it and the adapter can. An adapter with no
+   * streaming path still gets its settled text to the sink — as ONE delta, after the fact. That is the
+   * honest shape of "this provider cannot stream": the UI sees the output no earlier than it exists.
+   */
+  private static async callProvider(
+    provider: ModelProvider,
+    req: CanonRequest,
+    signal: AbortSignal,
+    onDelta?: ModelDeltaSink,
+  ): Promise<CanonResponse> {
+    if (onDelta === undefined) return provider.complete(req, signal);
+    if (provider.completeStream !== undefined) {
+      return provider.completeStream(req, signal, onDelta);
+    }
+    const res = await provider.complete(req, signal);
+    if (res.text.length > 0) onDelta(res.text);
+    return res;
+  }
+
+  /**
    * Validate the widened message content at the trust boundary. `content` is now a union, and blocks
    * arrive from callers that assemble them from tool results and captured images — untrusted shapes by
    * the same argument that makes every other boundary here `safeParse`d.
@@ -169,7 +189,23 @@ export class ModelGateway {
     }
   }
 
-  static async complete(req: CanonRequest): Promise<CanonResponse> {
+  /**
+   * Stream a model call: identical guards, identical settled result as {@link complete}, plus output
+   * fragments delivered to `onDelta` as they arrive.
+   *
+   * The invariant this exists to preserve (ADR-0025): a delta may reach the RENDERER; only the settled,
+   * validated response reaches the Journal or the decision path. Nothing in this method feeds a delta
+   * anywhere but the caller's sink.
+   */
+  static generateStream(req: CanonRequest, onDelta: ModelDeltaSink): Promise<CanonResponse> {
+    return ModelGateway.dispatch(req, onDelta);
+  }
+
+  static complete(req: CanonRequest): Promise<CanonResponse> {
+    return ModelGateway.dispatch(req);
+  }
+
+  private static async dispatch(req: CanonRequest, onDelta?: ModelDeltaSink): Promise<CanonResponse> {
     if (!Number.isInteger(req.maxTokens) || req.maxTokens <= 0) {
       throw new AppError(GatewayMessages.MaxTokensRequired, 400);
     }
@@ -201,7 +237,7 @@ export class ModelGateway {
       controller.abort();
     }, req.timeoutMs);
     try {
-      const res = await provider.complete(effectiveReq, controller.signal);
+      const res = await ModelGateway.callProvider(provider, effectiveReq, controller.signal, onDelta);
       TokenLedger.record(provider.id, effectiveReq.model, effectiveReq.capability, res.usage);
       return res;
     } finally {

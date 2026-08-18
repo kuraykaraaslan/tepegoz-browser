@@ -7,7 +7,7 @@ import type {
   LlamaModel,
 } from 'node-llama-cpp';
 import { Logger } from '@tepegoz/libs';
-import type { CanonMessage } from '@tepegoz/model-gateway';
+import { contentToText, type CanonMessage } from '@tepegoz/model-gateway';
 import type {
   GenerateOptions,
   GenerateResult,
@@ -98,20 +98,22 @@ class LlamaEngineElectron implements LlamaEngine {
     const entry = this.loaded.get(handle.modelId);
     if (entry === undefined) throw new Error('Local model not loaded.');
 
-    // Lift system turns; map the rest into chat history, prompting with the last user turn.
+    // Lift system turns; map the rest into chat history, prompting with the last user turn. Local GGUF
+    // is a text-only transport (S1 keeps it on the JSON-in-text path via the JSON grammar), so block
+    // content is flattened here — an image becomes an explicit marker, never a silent drop.
     const system = turns
       .filter((t) => t.role === 'system')
-      .map((t) => t.content)
+      .map((t) => contentToText(t.content))
       .join('\n\n');
     const rest = turns.filter((t) => t.role !== 'system');
-    const promptText = rest.length > 0 ? (rest[rest.length - 1]?.content ?? '') : '';
+    const promptText = rest.length > 0 ? contentToText(rest[rest.length - 1]?.content ?? '') : '';
     const history: ChatHistoryItem[] = [];
     if (system.length > 0) history.push({ type: 'system', text: system });
     for (const t of rest.slice(0, -1)) {
       history.push(
         t.role === 'assistant'
-          ? { type: 'model', response: [t.content] }
-          : { type: 'user', text: t.content },
+          ? { type: 'model', response: [contentToText(t.content)] }
+          : { type: 'user', text: contentToText(t.content) },
       );
     }
     entry.session.setChatHistory(history);
@@ -129,7 +131,7 @@ class LlamaEngineElectron implements LlamaEngine {
     const finish: GenerateResult['finish'] =
       res.stopReason === 'maxTokens' ? 'length' : res.stopReason === 'abort' ? 'abort' : 'stop';
     // Best-effort token counts (llama.cpp doesn't return usage from a chat prompt).
-    const inputTokens = entry.model.tokenize(system + rest.map((t) => t.content).join('\n')).length;
+    const inputTokens = entry.model.tokenize(system + rest.map((t) => contentToText(t.content)).join('\n')).length;
     const outputTokens = entry.model.tokenize(res.responseText).length;
     return { text: res.responseText, finish, inputTokens, outputTokens };
   }

@@ -15,6 +15,12 @@ export interface PlanApprovalDecision {
 
 export interface AgentRunHooks {
   onEvent: (kind: AgentEventKind, message: string, detail?: string) => void;
+  /**
+   * S1 PR5: receives UNSETTLED model-output fragments while a step runs, so the UI can show progress
+   * before the step settles. Absent ⇒ the run is non-streaming, exactly as before. A fragment is never
+   * journaled and never influences the loop (ADR-0025).
+   */
+  onModelDelta?: (delta: string) => void;
   /** Durable checkpoint seam: hosts may project this into the Event Journal for resume/replay. */
   onCheckpoint?: (checkpoint: AgentRunCheckpoint) => void;
   /** HITL before the loop: user reviews/edits the plan; resolve approved=false to abort. */

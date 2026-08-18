@@ -32,3 +32,4 @@ consequences (including rejected alternatives). Format is a lightweight [MADR](h
 | [0022](0022-file-operations-sandbox.md) | Folder-sandboxed file operations for the agent | Accepted |
 | [0023](0023-ai-adaptors.md) | AIAdaptor — typed capability groups over the tool plane | Accepted |
 | [0024](0024-action-interception-plane.md) | Synchronous action-interception plane for browser-mechanics hooks | Accepted |
+| [0025](0025-model-streaming-boundary.md) | Model streaming boundary — deltas to the renderer, settled results to the Journal | Accepted |

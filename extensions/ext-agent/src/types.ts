@@ -24,6 +24,21 @@ export type {
   AgentConversationsState,
 };
 
+/**
+ * An UNSETTLED fragment of model output, streamed while a step is still running (ADR-0025).
+ *
+ * Deliberately NOT an {@link AgentEvent}: an event is a record — journaled, persisted to conversation
+ * history, replayable. A delta is none of those. Keeping it off the event union is what makes "a delta
+ * is not a record" structural instead of a rule someone has to remember. It is also untrusted model
+ * output, so it is rendered as plain text and carries no authority.
+ */
+export interface AgentDelta {
+  runId: string;
+  groupId: string;
+  /** The fragment as produced. May be half a word or half a JSON object; nothing parses it. */
+  text: string;
+}
+
 export type AgentEventKind =
   | 'plan'
   | 'decision'
@@ -214,6 +229,8 @@ export interface AgentHostApi {
   /** Subscribe to active-tab-group changes. The callback receives the new groupId (null = no group). */
   onActiveGroupChange(callback: (groupId: string | null) => void): () => void;
   onAgentEvent(callback: (event: AgentEvent) => void): () => void;
+  /** Subscribe to streamed model fragments for the running task (ephemeral; see {@link AgentDelta}). */
+  onAgentDelta(callback: (delta: AgentDelta) => void): () => void;
   onAgentApprovalRequest(callback: (request: AgentApprovalRequest) => void): () => void;
   respondAgentApproval(approvalId: string, approved: boolean): void;
   onAgentPlanPreview(callback: (preview: AgentPlanPreview) => void): () => void;

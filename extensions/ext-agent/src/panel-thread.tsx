@@ -17,6 +17,12 @@ interface PanelThreadProps {
   listRef: MutableRefObject<HTMLDivElement | null>;
   turns: Turn[];
   running: boolean;
+  /**
+   * The tail of the model output currently streaming (ADR-0025). Rendered as PLAIN TEXT inside the
+   * working indicator — it is unsettled, unvalidated model output, so it is never markdown, never a
+   * link, and never carries authority. It disappears the moment a settled event supersedes it.
+   */
+  liveDelta: string;
   openReasoning: Set<string>;
   openSteps: Set<string>;
   onToggleReasoning: (turnId: string) => void;
@@ -29,6 +35,7 @@ export function PanelThread({
   listRef,
   turns,
   running,
+  liveDelta,
   openReasoning,
   openSteps,
   onToggleReasoning,
@@ -155,9 +162,11 @@ export function PanelThread({
                   );
                 })}
                 {working && (
-                  <div className="flex items-center gap-2 px-1 text-xs text-text-secondary">
-                    <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-amber-500" />
-                    {a.thread.working}
+                  <div className="flex items-start gap-2 px-1 text-xs text-text-secondary">
+                    <span className="mt-1 h-2 w-2 shrink-0 animate-pulse rounded-full bg-amber-500" />
+                    <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+                      {liveDelta.length > 0 ? liveDelta : a.thread.working}
+                    </span>
                   </div>
                 )}
               </div>

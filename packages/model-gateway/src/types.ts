@@ -104,4 +104,24 @@ export interface ModelProvider {
    */
   readonly supportsNativeTools?: boolean;
   complete(req: CanonRequest, signal: AbortSignal): Promise<CanonResponse>;
+  /**
+   * Same contract as {@link complete} — one **settled** {@link CanonResponse} — while emitting output
+   * fragments to `onDelta` as they arrive (S1 PR5). The return value is what every caller acts on; the
+   * deltas are for showing a human that something is happening.
+   *
+   * Optional: an adapter without it still streams *correctly*, just not *early* — the gateway emits the
+   * settled text as a single delta. That is a real degradation, honestly shaped, not simulated typing.
+   */
+  completeStream?(
+    req: CanonRequest,
+    signal: AbortSignal,
+    onDelta: ModelDeltaSink,
+  ): Promise<CanonResponse>;
 }
+
+/**
+ * Receives output fragments as the model produces them. Fragments are UNSETTLED and UNVALIDATED: they
+ * may be half a word, half a JSON object, or text the model goes on to revise. They may be shown; they
+ * may never be parsed, journaled, or acted on (ADR-0025).
+ */
+export type ModelDeltaSink = (delta: string) => void;

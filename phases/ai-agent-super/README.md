@@ -63,7 +63,7 @@ maps to a workstream with **one headline metric** it must move.
 | ID | File | Goal | Depends on | Status |
 |---|---|---|---|---|
 | S0 | [phase-s0-truth-and-repair.md](phase-s0-truth-and-repair.md) | Absorb + retire the v2 track, repair all doc/code/number drift, first full-registry honest baseline, taxonomy that may re-cut this program | — | 🟠 **Measurement-owed** (PR0–PR3 landed 2026-08-16: freeze, archive, v2 retirement, artefact + pointer repair. PR4–PR6 = the ⏸ funded sweep) |
-| S1 | [phase-s1-foundation-native-loop.md](phase-s1-foundation-native-loop.md) | Native tool-calling + multimodal `CanonMessage` + streaming-to-UI (settled-to-Journal) | S0 | 🟡 **PR0–PR4 landed** 2026-08-18 (paired set + "before" exclusion rate frozen; `CanonMessage.content` widened to `string | CanonContentBlock[]`, schema in shared-types, `safeParse` at the gateway; anthropic/openai/gemini native both directions + `supportsNativeTools` (kimi + local stay JSON); reactor transport strategy-selected behind `TEPEGOZ_DECISION_MODE` (single-tool deviation recorded); ADR-0025 lands in PR5) |
+| S1 | [phase-s1-foundation-native-loop.md](phase-s1-foundation-native-loop.md) | Native tool-calling + multimodal `CanonMessage` + streaming-to-UI (settled-to-Journal) | S0 | 🟠 **Measurement-owed** — PR0–PR5 landed 2026-08-18 (paired set + "before" exclusion rate frozen; `CanonMessage.content` widened to `string | CanonContentBlock[]`, schema in shared-types, `safeParse` at the gateway; anthropic/openai/gemini native both directions + `supportsNativeTools` (kimi + local stay JSON); reactor transport strategy-selected behind `TEPEGOZ_DECISION_MODE` (single-tool deviation recorded); ADR-0025 streaming boundary + `generateStream` → renderer; PR6 paired sweep ⏸ funded) |
 | S2 | [phase-s2-perception-v2.md](phase-s2-perception-v2.md) | Identity-stable refs + diff/dedupe + compact serialization + label resolution + `get_page_text` | S0 | ⬜ Not started |
 | S3 | [phase-s3-reliability-actions.md](phase-s3-reliability-actions.md) | Dialogs, tab-spawn world model, wait-for, send-keys, hover/drag, nav verbs, typed widgets, click-time occlusion + locator cascade, cookie-consent fix | S0; S2 (refs) | ⬜ Not started |
 | S4 | [phase-s4-verified-outcomes.md](phase-s4-verified-outcomes.md) | Evidence-cited completion, fabricated-success ≈ 0, URL re-verify before mutation | S1 | ⬜ Not started |
@@ -113,6 +113,29 @@ landed code, hiding an anti-debt breach **×3**. Audited against `git log`, the 
 
 **Anti-debt state: 1 measurement-owed (S0) — compliant.** C1's and C7's owed sweeps do not each count
 as separate debt because both are discharged by the *same* S0 full-registry baseline.
+
+**Update 2026-08-18 — S1 landed its code; the count rises to 2, and that is a STATED BREACH of the
+anti-debt rule, not an oversight.** [S1](phase-s1-foundation-native-loop.md) PR0–PR5 landed (transport,
+content blocks, native tool-calling on three adapters, the streaming boundary) and its DoD sweep — the
+paired native-vs-JSON comparison — cannot run without a funded key. So S0 and S1 both sit 🟠, and the
+rule says no new phase opens while more than one does.
+
+Work continued into [S2](phase-s2-perception-v2.md) and [S3](phase-s3-reliability-actions.md) anyway, on
+the owner's explicit instruction to complete at least three phases in this pass. Recording the reason
+plainly, because the alternative — quietly letting the count read "1" — is exactly the vanity the rule
+exists to prevent:
+
+- Both debts are discharged by the **same** unavailable thing (a funded Anthropic key), not by two
+  independent measurements someone could have run and did not. The rule's purpose — stopping a program
+  from stacking unverified capability claims — is served by the fact that **no phase here claims ✅**.
+- Every S1/S2/S3 exit criterion that is deterministic is asserted in tests and green; every criterion
+  that needs a sweep stays ⏸ and unclaimed.
+- The debt does not compound in cost: one funded full-registry run plus the per-phase paired sweeps
+  discharges all of it, in the order the phases landed.
+
+**When the key is funded, the sweeps run in landing order (S0 baseline first) and the count returns to
+compliance.** Until then, treat every capability in S1–S3 as *landed and deterministically tested*,
+never as *measured*.
 
 **Update 2026-08-16 — S6-PR1 landed; the count is unchanged.** The autonomy-enforcement fix carries
 **no measurement debt**: its DoD line is explicitly deterministic and testable offline ("No ⏸"), and it

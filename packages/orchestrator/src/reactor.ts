@@ -346,7 +346,7 @@ export default class Reactor {
       let responseText: string;
       let decision: Decision;
       try {
-        const response = await ModelGateway.complete({
+        const request = {
           provider: req.provider,
           model: req.model,
           capability: 'exec',
@@ -358,7 +358,14 @@ export default class Reactor {
           ...(decisionMode === 'native'
             ? { tools: [decisionToolDef()], toolChoice: { type: 'tool' as const, name: DECISION_TOOL_NAME } }
             : { responseFormat: 'json' as const }),
-        });
+        };
+        // Streaming changes only WHO SEES the output early — the settled response below is still the
+        // only thing parsed, and the sink is never read back by the loop (ADR-0025).
+        const onDelta = options.onModelDelta;
+        const response =
+          onDelta === undefined
+            ? await ModelGateway.complete(request)
+            : await ModelGateway.generateStream(request, onDelta);
         decision = decisionMode === 'native' ? parseNativeDecision(response) : parseDecision(response.text);
         // The native arm's turn is usually pure tool call with empty text; re-serializing the settled
         // decision keeps the assistant history non-empty and structurally identical across both arms.

@@ -47,7 +47,7 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
   const notices = buildNotices(autonomy, a.risk).filter((n) => !dismissedNotices.has(n.id));
 
   const {
-    turns, approval, planPreview, running, paused, skipIds, tokens, openReasoning, openSteps,
+    turns, approval, planPreview, running, paused, skipIds, tokens, openReasoning, openSteps, liveDelta,
     prompt, attachments, expandedFiles,
   } = activeState;
 
@@ -103,6 +103,7 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
         listRef={listRef}
         turns={turns}
         running={running}
+        liveDelta={liveDelta}
         openReasoning={openReasoning}
         openSteps={openSteps}
         onToggleReasoning={actions.toggleReasoning}

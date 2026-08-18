@@ -158,6 +158,9 @@ export function runReactiveLoop(args: {
         // to web_search. The zod boundary + resolver live in orchestrator; `discoverSitemap` is the
         // optional host fetch seam (absent ⇒ visible-link grounding only).
         groundNavigation: buildNavigationGroundingHook(deps.discoverSitemap),
+        // Stream model output to the UI while the step runs (ADR-0025). Forwarded verbatim: the runtime
+        // adds no meaning to a fragment, and nothing here reads it back.
+        ...(hooks.onModelDelta !== undefined ? { onModelDelta: hooks.onModelDelta } : {}),
         // Surface each step's decision rationale as a 'decision' event → the panel's Reasoning section.
         onDecision: (tool, rationale) => {
           if (rationale.length > 0) hooks.onEvent('decision', tool, rationale);

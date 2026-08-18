@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  appendLiveDelta,
   applyAgentEvent,
   emptyGroupState,
   serializeConversationLog,
@@ -135,5 +136,35 @@ describe('applyAgentEvent (event→run routing that drives the pause/steer/stop 
     expect(out.running).toBe(true);
     expect(out.runId).toBe('run-2');
     expect(out.turns[1]?.events).toHaveLength(1); // run-2's turn untouched
+  });
+});
+
+describe('streamed model fragments (ADR-0025)', () => {
+  const running = (): GroupState => ({
+    ...emptyGroupState(),
+    turns: [{ id: 't1', prompt: 'go', runId: 'run-1', events: [] }],
+    running: true,
+    runId: 'run-1',
+  });
+
+  it('accumulates fragments into the live tail', () => {
+    const after = appendLiveDelta(appendLiveDelta(running(), 'think'), 'ing…');
+    expect(after.liveDelta).toBe('thinking…');
+  });
+
+  it('keeps the tail bounded so a long turn cannot grow it without end', () => {
+    const after = appendLiveDelta(running(), 'x'.repeat(1000));
+    expect(after.liveDelta.length).toBe(400);
+  });
+
+  it('never puts a fragment in turns — the tail is not part of what gets persisted', () => {
+    const after = appendLiveDelta(running(), 'partial');
+    expect(after.turns[0]?.events).toEqual([]);
+  });
+
+  it('drops the tail as soon as a settled event supersedes it', () => {
+    const streaming = appendLiveDelta(running(), 'half a decis');
+    const settled = applyAgentEvent(streaming, ev('decision', 'browser_get_elements', T0));
+    expect(settled.liveDelta).toBe('');
   });
 });

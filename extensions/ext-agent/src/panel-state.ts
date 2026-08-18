@@ -88,6 +88,21 @@ export interface GroupState {
   prompt: string;
   attachments: Attachment[];
   expandedFiles: Set<string>;
+  /**
+   * The tail of the model output currently streaming (ADR-0025). Ephemeral by construction: it lives
+   * only in this renderer state, is cleared by the next settled event, and is never part of `turns` —
+   * which is what gets persisted and replayed.
+   */
+  liveDelta: string;
+}
+
+/** How much of the streaming tail to keep. A long turn would otherwise grow the indicator without end. */
+const LIVE_DELTA_TAIL = 400;
+
+/** Append a streamed fragment to the live tail, keeping only its last {@link LIVE_DELTA_TAIL} chars. */
+export function appendLiveDelta(cur: GroupState, text: string): GroupState {
+  const next = (cur.liveDelta + text).slice(-LIVE_DELTA_TAIL);
+  return next === cur.liveDelta ? cur : { ...cur, liveDelta: next };
 }
 
 export function emptyGroupState(): GroupState {
@@ -105,6 +120,7 @@ export function emptyGroupState(): GroupState {
     prompt: '',
     attachments: [],
     expandedFiles: new Set(),
+    liveDelta: '',
   };
 }
 
@@ -142,7 +158,9 @@ export function applyAgentEvent(cur: GroupState, e: AgentEvent): GroupState {
       paused = true;
     }
   }
-  return { ...cur, turns: newTurns, running, paused, runId };
+  // A settled event supersedes whatever was streaming toward it, so the tail is dropped here — the
+  // panel never shows a half-finished decision beside the finished one.
+  return { ...cur, turns: newTurns, running, paused, runId, liveDelta: '' };
 }
 
 /** Serialize attachment content as a markdown preamble prepended to the prompt. */

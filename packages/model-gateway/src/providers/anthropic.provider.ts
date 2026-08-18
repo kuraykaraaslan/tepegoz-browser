@@ -6,6 +6,7 @@ import type {
   CanonResponse,
   CanonStopReason,
   CanonToolCall,
+  ModelDeltaSink,
   ModelProvider,
 } from '../types';
 import type { EffortLevel } from '../models';
@@ -178,6 +179,39 @@ export class AnthropicProvider implements ModelProvider {
     let message: Anthropic.Message;
     try {
       message = await this.client.messages.create(params, { signal, timeout: req.timeoutMs });
+    } catch (err) {
+      if (signal.aborted) {
+        throw new AppError(GatewayMessages.RequestTimedOut, 503);
+      }
+      throw toAppError(err);
+    }
+    return fromAnthropicResult(message);
+  }
+
+  /**
+   * Streaming variant (S1 PR5). Returns the same settled {@link CanonResponse} `complete` does — the
+   * caller's contract is unchanged — while forwarding fragments as the API produces them.
+   *
+   * Both fragment kinds are forwarded: `text` for prose turns, and `inputJson` for the native decision
+   * arm, whose whole turn is a tool input and would otherwise stream nothing at all. Partial tool JSON is
+   * not pretty, but a sink that shows a human that work is happening is the point; nothing parses it.
+   */
+  async completeStream(
+    req: CanonRequest,
+    signal: AbortSignal,
+    onDelta: ModelDeltaSink,
+  ): Promise<CanonResponse> {
+    const params = toAnthropicParams(req, { effort: this.effort, thinking: this.thinking });
+    let message: Anthropic.Message;
+    try {
+      const stream = this.client.messages.stream(params, { signal, timeout: req.timeoutMs });
+      stream.on('text', (delta) => {
+        onDelta(delta);
+      });
+      stream.on('inputJson', (partial) => {
+        onDelta(partial);
+      });
+      message = await stream.finalMessage();
     } catch (err) {
       if (signal.aborted) {
         throw new AppError(GatewayMessages.RequestTimedOut, 503);

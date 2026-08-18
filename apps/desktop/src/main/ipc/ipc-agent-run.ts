@@ -86,6 +86,15 @@ export function registerAgentRunIpc(): void {
       if (!sender.isDestroyed()) sender.send(IpcChannels.agentEvent, e);
     };
     setCurrentAgentRun(runId, groupId, sendEvent);
+    /**
+     * Streamed model fragments (ADR-0025). Deliberately its own channel, not `agentEvent`: a delta is
+     * UNSETTLED model output, so unlike every event above it is never journaled, never written to
+     * conversation history, and never replayed. It exists only so the panel can show that work is
+     * happening before the step settles.
+     */
+    const onModelDelta = (text: string): void => {
+      if (!sender.isDestroyed()) sender.send(IpcChannels.agentDelta, { runId, groupId, text });
+    };
     const onEvent = (kind: AgentEventKind, message: string, detail?: string): void => {
       sendEvent({
         runId,
@@ -304,6 +313,7 @@ export function registerAgentRunIpc(): void {
         prompt,
         {
           onEvent,
+          onModelDelta,
           onCheckpoint,
           requestPlanApproval,
           requestApproval,

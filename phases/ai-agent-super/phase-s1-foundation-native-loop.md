@@ -1,6 +1,6 @@
 # Phase S1 — Foundation: Native Loop (Foundation)
 
-**Status:** 🟡 In progress (PR0–PR4 landed 2026-08-18) · **Depends on:** [S0 — Truth & Repair](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟠 Measurement-owed (PR0–PR5 landed 2026-08-18; PR6 ⏸ funded) · **Depends on:** [S0 — Truth & Repair](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Replace JSON-in-text decisions with native provider tool-calling wherever the provider supports it, and widen `CanonMessage.content` from a bare string to multimodal content blocks — the structural prerequisite for vision (S10). Stream response deltas to the renderer event stream so steps stop feeling slow, while keeping the Journal and the decision path settled-results-only. This is the substrate that S7 (speed), S8 (UX streaming), and S10 (vision) all build on; nothing above it can move until the canonical message shape and the decision transport are fixed here.
 
@@ -16,16 +16,16 @@ The live decision path parses JSON out of free text. [reactor-decision.ts](../..
 
 ## Exit criteria (DoD)
 
-- [ ] `CanonMessage.content` is `string | CanonContentBlock[]` (`text | image | tool_use | tool_result`) with the zod schema owned by `@tepegoz/shared-types` and re-exported by [types.ts](../../packages/model-gateway/src/types.ts); `safeParse` at the gateway trust boundary; no `@ts-ignore`, no file over 250 lines.
+- [x] `CanonMessage.content` is `string | CanonContentBlock[]` (`text | image | tool_use | tool_result`) with the zod schema owned by `@tepegoz/shared-types` and re-exported by [types.ts](../../packages/model-gateway/src/types.ts); `safeParse` at the gateway trust boundary; no `@ts-ignore`, no file over 250 lines.
 - [x] Per-provider `supportsNativeTools` capability flag exists in [packages/model-gateway/src/providers](../../packages/model-gateway/src/providers); anthropic/openai/gemini normalize native tool-call responses into `CanonToolCall`; kimi and local GGUF keep JSON-in-text via [json-grammar.ts](../../packages/local-inference/src/json-grammar.ts).
 - [x] `reactor.ts` decision acquisition is strategy-selected behind `TEPEGOZ_DECISION_MODE` (native tool_use when supported, JSON fallback otherwise), so a single-change paired sweep is possible.
-- [ ] `gateway.generateStream` emits deltas to the renderer event stream ([ipc-agent-run.ts](../../apps/desktop/src/main/ipc/ipc-agent-run.ts) path); the **revised** [streaming-guard.test.ts](../../packages/model-gateway/src/streaming-guard.test.ts) is green and proves no partial ever reaches the Journal or the decision path.
-- [ ] First-delta latency **< 2s p50 on a scripted run** (deterministic, non-funded — measured against `ScriptedProvider`).
+- [x] `gateway.generateStream` emits deltas to the renderer event stream ([ipc-agent-run.ts](../../apps/desktop/src/main/ipc/ipc-agent-run.ts) path); the **revised** [streaming-guard.test.ts](../../packages/model-gateway/src/streaming-guard.test.ts) is green and proves no partial ever reaches the Journal or the decision path.
+- [x] First-delta latency **< 2s p50 on a scripted run** (deterministic, non-funded — measured against `ScriptedProvider`).
 - [ ] **(⏸ funded sweep)** Paired single-change sweep, anthropic tier, web-patterns + acceptance pooled (15 scenarios × N=3/arm, JSON arm vs native arm): pooled completion within **±10pp equivalence**.
 - [ ] **(⏸ funded sweep)** Decision-parse / transport-invalid **exclusion rate falls to ~0 in the native arm**, against S0's baseline "before" exclusion rate — this is the falsifiable win.
 - [ ] Fixtures frozen in PR0 before any capability code lands (constitution); this phase adds **no new** scenarios and reuses the existing registry.
 - [ ] Delta recorded in [eval-results.md](eval-results.md) and the [PROSE-LEDGER.md](PROSE-LEDGER.md) run index; funded rows stay marked ⏸ until the sweep runs and the delta lands. Phase legitimately rests at 🟠 measurement-owed until then.
-- [ ] No prompt-prose change lands in this phase (attribution hygiene — see Prose steers). Any UI-string surface touched ships EN + full-TR parity in the same PR.
+- [x] No prompt-prose change lands in this phase (attribution hygiene — see Prose steers). Any UI-string surface touched ships EN + full-TR parity in the same PR.
 
 ## Tasks
 
@@ -66,10 +66,10 @@ The live decision path parses JSON out of free text. [reactor-decision.ts](../..
 > Publishing the real tool schemas natively is a candidate for a later phase, on its own sweep.
 
 ### PR5 — ADR-0025 + streaming boundary
-- [ ] Author ADR-0025: deltas MAY flow to the renderer event stream; only settled + validated results reach the Journal and the decision path. Supersede the old "nothing partial streams anywhere" reading.
-- [ ] Add `gateway.generateStream` with a delta callback; wire deltas to the renderer via the [ipc-agent-run.ts](../../apps/desktop/src/main/ipc/ipc-agent-run.ts) event stream.
-- [ ] **Rewrite** [streaming-guard.test.ts](../../packages/model-gateway/src/streaming-guard.test.ts) to lock the new invariant (partials reach the renderer; Journal + decision path stay settled-only). Do not delete it.
-- [ ] Add the scripted first-delta-<2s-p50 assertion.
+- [x] Author ADR-0025: deltas MAY flow to the renderer event stream; only settled + validated results reach the Journal and the decision path. Supersede the old "nothing partial streams anywhere" reading.
+- [x] Add `gateway.generateStream` with a delta callback; wire deltas to the renderer via the [ipc-agent-run.ts](../../apps/desktop/src/main/ipc/ipc-agent-run.ts) event stream.
+- [x] **Rewrite** [streaming-guard.test.ts](../../packages/model-gateway/src/streaming-guard.test.ts) to lock the new invariant (partials reach the renderer; Journal + decision path stay settled-only). Do not delete it.
+- [x] Add the scripted first-delta-<2s-p50 assertion.
 
 ### PR6 — paired native-vs-JSON sweep (⏸ funded)
 - [ ] Run the frozen 15-scenario set × N=3 on both `TEPEGOZ_DECISION_MODE` arms, anthropic tier.

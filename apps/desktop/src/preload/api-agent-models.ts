@@ -11,6 +11,7 @@ import {
   type AgentConversationSummary,
   type AgentConversationsState,
   type AgentEffort,
+  type AgentDelta,
   type AgentEvent,
   type AgentFileAttachment,
   type AgentPlanPreview,
@@ -47,6 +48,7 @@ export const agentModelsApi: Pick<
   | 'clearAgentConversations'
   | 'onAgentConversationsState'
   | 'onAgentEvent'
+  | 'onAgentDelta'
   | 'onAgentApprovalRequest'
   | 'respondAgentApproval'
   | 'onAgentPlanPreview'
@@ -123,6 +125,15 @@ export const agentModelsApi: Pick<
     ipcRenderer.on(IpcChannels.agentEvent, listener);
     return () => {
       ipcRenderer.removeListener(IpcChannels.agentEvent, listener);
+    };
+  },
+  onAgentDelta: (callback: (delta: AgentDelta) => void) => {
+    const listener = (_event: unknown, payload: AgentDelta): void => {
+      callback(payload);
+    };
+    ipcRenderer.on(IpcChannels.agentDelta, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.agentDelta, listener);
     };
   },
   onAgentApprovalRequest: (callback: (request: AgentApprovalRequest) => void) => {

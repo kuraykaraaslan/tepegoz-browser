@@ -120,6 +120,16 @@ export interface ReactOptions {
    * absent the loop runs exactly as before (signal-only). See {@link RunControl}.
    */
   control?: RunControl;
+  /**
+   * S1 PR5: receives UNSETTLED output fragments as the model produces them, so the UI can show that work
+   * is happening instead of waiting a whole step for the first character. Supplying it switches the
+   * decision call onto `ModelGateway.generateStream`.
+   *
+   * A fragment is not a decision: it is unvalidated, possibly half a token, and the loop never reads it.
+   * Only the settled response is parsed, journaled, or acted on (ADR-0025). Absent ⇒ the non-streaming
+   * path, unchanged.
+   */
+  onModelDelta?: (delta: string) => void;
   /** Fired when the model chooses to act, before the tool runs (Agent Console). */
   onDecision?: (tool: string, rationale: string) => void;
   /** Fired after each tool call resolves (drives taint recording + console step events). */

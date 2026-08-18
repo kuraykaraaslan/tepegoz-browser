@@ -8,6 +8,7 @@ import {
 } from 'react';
 import type { AgentAutonomy, AgentConfig, AgentHostApi } from './types';
 import {
+  appendLiveDelta,
   applyAgentEvent,
   emptyGroupState,
   stateFromConversation,
@@ -125,6 +126,19 @@ export function useAgentSession(api: AgentHostApi): AgentSession {
       });
     });
 
+    // Streamed model fragments (ADR-0025): DISPLAY ONLY. Unsettled, unvalidated output — shown so the
+    // user sees work happening, never parsed and never persisted (it lives outside `turns`).
+    const offDelta = api.onAgentDelta((d) => {
+      setGroupStates((prev) => {
+        const cur = prev.get(d.groupId) ?? emptyGroupState();
+        const updated = appendLiveDelta(cur, d.text);
+        if (updated === cur) return prev;
+        const next = new Map(prev);
+        next.set(d.groupId, updated);
+        return next;
+      });
+    });
+
     // DISPLAY-ONLY. The renderer is untrusted, so it does NOT decide approvals — main reads the
     // autonomy level from its own preference store and simply never sends a request it has already
     // auto-approved. Anything that arrives here is a request main wants a HUMAN to answer; show it and
@@ -162,7 +176,7 @@ export function useAgentSession(api: AgentHostApi): AgentSession {
     });
 
     void api.getAgentConfig().then(setConfig, () => { /* config unavailable */ });
-    return () => { offEvent(); offApproval(); offPlan(); offTokens(); };
+    return () => { offEvent(); offDelta(); offApproval(); offPlan(); offTokens(); };
   }, [api, activeGroupId]);
 
   // Auto-scroll conversation to bottom on new events.

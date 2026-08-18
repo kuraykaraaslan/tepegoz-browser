@@ -95,6 +95,8 @@ export const IpcChannels = {
   /** Renderer→main: open a native file picker and read selected files → AgentFileAttachment[]. */
   agentPickFiles: 'agent:pick-files',
   agentEvent: 'agent:event',
+  /** Main→renderer: an UNSETTLED model-output fragment while a step runs. Ephemeral, never journaled. */
+  agentDelta: 'agent:delta',
   agentApprovalRequest: 'agent:approval-request',
   agentApprovalResponse: 'agent:approval-response',
   agentPlanPreview: 'agent:plan-preview',
