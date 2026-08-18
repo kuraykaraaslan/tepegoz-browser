@@ -424,6 +424,8 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
     await waitForLoad(wc, timeoutMs);
     return { url: wc.getURL(), title: wc.getTitle() };
   },
+  listOpenTabs: () =>
+    TabManager.getState().tabs.map((t) => ({ id: t.id, url: t.url, title: t.title })),
   listTabs: () => {
     const state = TabManager.getState();
     return state.tabs.map((t) => ({

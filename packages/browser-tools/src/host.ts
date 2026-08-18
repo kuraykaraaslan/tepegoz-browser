@@ -30,6 +30,18 @@ export interface BrowserHost {
   readArticleText?(
     tabId?: string,
   ): Promise<{ url: string; title: string; text: string; source: string }>;
+  /**
+   * Every tab currently open, for tab-spawn detection (S3 PR3).
+   *
+   * A click that calls `window.open`, or a form with `target=_blank`, changes NOTHING on the acting
+   * page: the agent has no way to learn that the answer it needs is now in a tab it does not know about.
+   * Comparing this list either side of an interaction is what turns that invisible event into an
+   * observation.
+   *
+   * OPTIONAL: a host that cannot enumerate tabs simply omits it, and no spawn is reported — never a
+   * claim that no tab opened.
+   */
+  listOpenTabs?(): { id: string; url: string; title: string }[];
   /** Wait for a page's current load to settle. */
   waitForLoad(tabId?: string, timeoutMs?: number): Promise<{ url: string; title: string }>;
   /**

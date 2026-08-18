@@ -1,6 +1,6 @@
 # Phase S3 — Reliability Actions (W1 Reliability)
 
-**Status:** 🟡 In progress (PR0–PR2, PR5, PR6-hover landed 2026-08-18) · **Depends on:** [S0](phase-s0-truth-and-repair.md); [S2](phase-s2-perception-v2.md) (identity refs for the locator cascade) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟡 In progress (PR0–PR3, PR5, PR6-hover landed 2026-08-18) · **Depends on:** [S0](phase-s0-truth-and-repair.md); [S2](phase-s2-perception-v2.md) (identity refs for the locator cascade) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Close the missing action vocabulary and the two structural interaction gaps — snapshot-only
 occlusion and one-locator-per-ref — that make the agent fail on real sites. This targets the **measured**
@@ -136,7 +136,7 @@ re-snapshotting).
       regress.
 
 ### PR3 — tab-spawn world model (Lane A)
-- [ ] Hook `setWindowOpenHandler` / `did-create-window` in the tab-engine host
+- [~] Hook `setWindowOpenHandler` / `did-create-window` in the tab-engine host
       ([tab-engine](../../packages/tab-engine) + [tabs-view-wiring.ts](../../apps/desktop/src/main/tabs-view-wiring.ts));
       detect a click that opened tab T.
 - [ ] Emit an *"action opened tab T"* agent event and a **policy-checked** auto-follow (the
@@ -146,6 +146,23 @@ re-snapshotting).
       closes, the acting tab returns to the origin tab; the model is told *"your click opened tab T; you
       are now acting on it"*, sanitized like every observation.
 - [ ] EN+TR strings for the *"opened tab T"* console line in [ext-agent](../../extensions/ext-agent).
+
+> **Mechanism deviation (recorded, PR3).** Spawn detection compares the **open-tab set either side of
+> the interaction** rather than hooking `setWindowOpenHandler`/`did-create-window`. Both hooks already
+> carry the popup blocker and the ADR-0024 interception plane; threading an agent-run notion through them
+> would put agent state into browsing mechanics, and the observation needed here — *"a tab appeared while
+> I was acting"* — is exactly what the diff gives, with no coupling and no new failure mode when the two
+> paths disagree. The trade-off: a tab opened by something OTHER than this interaction inside the same
+> window would also be reported. That is a false positive the model can see and dismiss, which is the
+> safer direction of error.
+>
+> **The follow is NOT automatic.** The phase's own risk list names an attacker-controlled `window.open`
+> as an escape vector, and an unconditional follow walks into it. The spawn is reported with the tab's
+> id, url and title; the model decides, and every subsequent call still goes through the ToolGateway PEP.
+> **Still open in this PR:** the policy-checked auto-follow and the return-to-origin bookkeeping in
+> `reactor-working-state.ts` — the model is told to come back, but nothing enforces it yet. Because no
+> new agent EVENT was introduced, no new user-facing string was needed, so the EN+TR parity line is
+> vacuously satisfied rather than done.
 
 ### PR4 — dialog spike + handling (Lane A, **spike-first**)
 - [ ] **Spike:** confirm `webContents.debugger` can own `Page.javascriptDialogOpening` /

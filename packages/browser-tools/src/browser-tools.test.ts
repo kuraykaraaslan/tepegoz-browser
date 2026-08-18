@@ -17,6 +17,7 @@ function fakeHost(overrides?: Partial<BrowserHost>): BrowserHost {
     snapshotElements: () => Promise.resolve({ url: 'https://x', title: 'X', elements: [] }),
     clickElement: () => Promise.resolve({ occludedBy: null }),
     hoverElement: () => Promise.resolve(),
+    listOpenTabs: () => [{ id: 't1', url: 'https://x', title: 'X' }],
     fillElement: (_ref: number, text: string) => {
       lastFilled = text;
       return Promise.resolve();
@@ -712,5 +713,60 @@ describe('hover (S3 PR6)', () => {
     expect(result['ok']).toBe(true);
     expect(result['changed']).toBe(false);
     expect(String(result['note'])).toContain('try clicking it instead');
+  });
+});
+
+describe('tab-spawn world model (S3 PR3)', () => {
+  beforeEach(() => CapabilityRegistry.reset());
+
+  /** A host whose tab list grows the first time the interaction reads it back. */
+  function spawningHost(): BrowserHost {
+    let opened = false;
+    return fakeHost({
+      clickElement: () => {
+        opened = true;
+        return Promise.resolve({ occludedBy: null });
+      },
+      listOpenTabs: () =>
+        opened
+          ? [
+              { id: 't1', url: 'https://x', title: 'X' },
+              { id: 't2', url: 'https://x/ticket', title: 'Ticket details' },
+            ]
+          : [{ id: 't1', url: 'https://x', title: 'X' }],
+    });
+  }
+
+  const click = async (host: BrowserHost): Promise<Record<string, unknown>> => {
+    registerBrowserTools({ host });
+    const tool = CapabilityRegistry.get('browser_update_page');
+    const parsed = tool?.inputSchema.safeParse({ action: 'click', ref: 1 });
+    if (parsed?.success !== true) throw new Error('args rejected');
+    return (await tool?.handler(parsed.data)) as Record<string, unknown>;
+  };
+
+  it('reports a tab the interaction opened, with its id, url and title', async () => {
+    const result = await click(spawningHost());
+    expect(result['openedTabs']).toEqual([{ id: 't2', url: 'https://x/ticket', title: 'Ticket details' }]);
+    expect(String(result['note'])).toContain('opened a NEW TAB');
+    expect(String(result['note'])).toContain('t2');
+  });
+
+  it('explains why the acting page looks unchanged, so the click is not repeated', async () => {
+    const result = await click(spawningHost());
+    expect(String(result['note'])).toContain('did not change because the result');
+    expect(String(result['note'])).toContain('come back to this tab');
+  });
+
+  it('says nothing when no tab opened', async () => {
+    const result = await click(fakeHost({ listOpenTabs: () => [{ id: 't1', url: 'https://x', title: 'X' }] }));
+    expect(result['openedTabs']).toBeUndefined();
+  });
+
+  it('reports no spawn at all when the host cannot enumerate tabs', async () => {
+    const host = fakeHost();
+    delete (host as { listOpenTabs?: unknown }).listOpenTabs;
+    const result = await click(host);
+    expect(result['openedTabs']).toBeUndefined();
   });
 });

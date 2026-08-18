@@ -165,6 +165,8 @@ interface InteractionResult {
   unsupportedKeys?: string[];
   /** `click` only: what covered the target. Present ⇒ the click was refused, not sent. */
   occludedBy?: string;
+  /** Tabs this interaction opened. Present ⇒ act on them by `tabId`, and come back when done. */
+  openedTabs?: { id: string; url: string; title: string }[];
   /** AI-8B: set only when a request sent during this interaction failed. Absent means "nothing was
    *  observed", never "everything succeeded". */
   networkWarning?: string;
@@ -197,6 +199,8 @@ interface InteractionContext {
   unsupportedKeys?: string[] | undefined;
   /** `click` only: what covered the target, when the click was refused rather than sent. */
   occludedBy?: string | null | undefined;
+  /** Tabs that appeared during this interaction (S3 PR3). */
+  spawnedTabs?: { id: string; url: string; title: string }[] | undefined;
 }
 
 /**
@@ -294,6 +298,43 @@ function keysResult(ctx: InteractionContext): InteractionResult {
 }
 
 function interactionResult(
+  args: z.infer<typeof UpdatePageArgs>,
+  ctx: InteractionContext,
+): InteractionResult {
+  return withSpawnedTabs(interactionResultBody(args, ctx), ctx.spawnedTabs ?? []);
+}
+
+/**
+ * Fold a tab spawned by this interaction into the result (S3 PR3).
+ *
+ * The acting page does not change when a click calls `window.open` or a form submits with
+ * `target=_blank`, so without this the agent reads "nothing happened" and either repeats the click or
+ * gives up — while the answer it needs sits in a tab it has never heard of.
+ *
+ * It is REPORTED, not auto-followed. An attacker-controlled `window.open` is exactly the escape vector
+ * the phase's own risk list names, and an unconditional follow would walk straight into it. The model
+ * decides, with the tab's id in hand, and the ToolGateway still gates whatever it does next.
+ */
+function withSpawnedTabs(
+  result: InteractionResult,
+  spawned: { id: string; url: string; title: string }[],
+): InteractionResult {
+  if (spawned.length === 0) return result;
+  const named = spawned
+    .map((t) => `${t.id} ("${safeValue(t.title)}" — ${safeValue(t.url)})`)
+    .join(', ');
+  const note =
+    `This action opened a NEW TAB: ${named}. The page you acted on did not change because the result ` +
+    'went there. Pass that id as `tabId` to browser_get_page / browser_get_elements / ' +
+    'browser_update_page to work in it, and come back to this tab when you are done.';
+  return {
+    ...result,
+    openedTabs: spawned,
+    note: result.note === undefined ? note : `${result.note} ${note}`,
+  };
+}
+
+function interactionResultBody(
   args: z.infer<typeof UpdatePageArgs>,
   ctx: InteractionContext,
 ): InteractionResult {
@@ -633,6 +674,9 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
     inputSchema: UpdatePageArgs,
     handler: async (args) => {
       const before = await host.readPage(args.tabId);
+      // S3 PR3: a tab spawned by this interaction is invisible on the acting page, so the only way to
+      // notice it is to compare the open set either side of the action.
+      const tabsBefore = new Set((host.listOpenTabs?.() ?? []).map((t) => t.id));
       // Action window opens here — after the `before` read, so only requests THIS interaction caused are
       // attributed to it. Same host clock the recorder stamps observations with.
       const actedAt = Date.now();
@@ -676,6 +720,7 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
           break;
         }
       }
+      const spawnedTabs = (host.listOpenTabs?.() ?? []).filter((t) => !tabsBefore.has(t.id));
       const after = await host.readPage(args.tabId);
       // Post-action verification, DOM-level AND network-level (AI-8B): the structural delta alone cannot
       // see a request the server rejected while the UI stayed put.
@@ -692,6 +737,7 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
         fieldValue,
         unsupportedKeys,
         occludedBy,
+        spawnedTabs,
       });
       return warning === undefined ? result : { ...result, networkWarning: warning };
     },
