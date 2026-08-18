@@ -6,6 +6,7 @@ import {
   type CanonRequest,
   type GatewayEgressFinding,
 } from './index';
+import { AnthropicProvider } from './providers/anthropic.provider';
 
 function req(over: Partial<CanonRequest> = {}): CanonRequest {
   return {
@@ -185,5 +186,29 @@ describe('ModelGateway', () => {
     ModelGateway.register(new MockProvider('ok'));
     const res = await ModelGateway.complete(req({ messages: [{ role: 'user', content: 'sk-ant-SECRET' }] }));
     expect(res.text).toBe('ok');
+  });
+});
+
+describe('ModelGateway.supportsNativeTools', () => {
+  beforeEach(() => {
+    ModelGateway.reset();
+  });
+
+  it('is false when no adapter is registered (nothing absent can support anything)', () => {
+    expect(ModelGateway.supportsNativeTools('anthropic')).toBe(false);
+  });
+
+  it('reports the registered adapter capability', () => {
+    ModelGateway.register(new MockProvider());
+    expect(ModelGateway.supportsNativeTools('anthropic')).toBe(false);
+    ModelGateway.register(new AnthropicProvider({ client: {} as never }));
+    expect(ModelGateway.supportsNativeTools('anthropic')).toBe(true);
+  });
+
+  it('follows the per-run model pin, so a pinned JSON-only model is never called native', () => {
+    ModelGateway.register(new AnthropicProvider({ client: {} as never }));
+    ModelGateway.register(new MockProvider('ok', 0, 'openai'));
+    ModelGateway.setModelOverride({ provider: 'openai', model: 'gpt-4o' });
+    expect(ModelGateway.supportsNativeTools('anthropic')).toBe(false);
   });
 });

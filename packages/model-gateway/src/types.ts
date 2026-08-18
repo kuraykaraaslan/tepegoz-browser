@@ -42,6 +42,12 @@ export interface CanonToolDef {
 export interface CanonToolCall {
   name: string;
   input: unknown;
+  /**
+   * The provider's correlation handle for this call, when it issued one natively. A follow-up
+   * `tool_result` block must echo it back or the provider rejects the turn. Absent on the
+   * JSON-in-text path, where there is no call to correlate with.
+   */
+  id?: string;
 }
 
 export type CanonStopReason = 'end' | 'max_tokens' | 'tool_use' | 'error';
@@ -80,5 +86,15 @@ export interface CanonResponse {
 /** Provider adapter contract (provider pattern: base → concrete, selected by the gateway). */
 export interface ModelProvider {
   readonly id: AIProvider;
+  /**
+   * This adapter maps `CanonRequest.tools` onto the vendor's **native** tool-calling API and normalizes
+   * the response's tool calls into {@link CanonToolCall}. Absent or false ⇒ the JSON-in-text path, which
+   * stays the proven default for the providers we do not put on native (kimi's partial OpenAI compat,
+   * local GGUF via its JSON grammar).
+   *
+   * Optional rather than required so a one-off test double stays a three-line class; the flag is only
+   * ever read through {@link ModelGateway.supportsNativeTools}, which treats absent as false.
+   */
+  readonly supportsNativeTools?: boolean;
   complete(req: CanonRequest, signal: AbortSignal): Promise<CanonResponse>;
 }

@@ -95,7 +95,8 @@ describe('fromAnthropicResult', () => {
       }),
     );
     expect(res.text).toBe('calling');
-    expect(res.toolCalls).toEqual([{ name: 'tab_list_items', input: { all: true } }]);
+    // S1 PR2: the vendor's correlation id is now carried, so a tool_result can echo it back.
+    expect(res.toolCalls).toEqual([{ name: 'tab_list_items', input: { all: true }, id: 'tu_1' }]);
     expect(res.stopReason).toBe('tool_use');
   });
 

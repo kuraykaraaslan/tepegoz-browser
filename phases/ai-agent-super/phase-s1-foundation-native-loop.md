@@ -1,6 +1,6 @@
 # Phase S1 — Foundation: Native Loop (Foundation)
 
-**Status:** 🟡 In progress (PR0–PR1 landed 2026-08-18) · **Depends on:** [S0 — Truth & Repair](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟡 In progress (PR0–PR2 landed 2026-08-18) · **Depends on:** [S0 — Truth & Repair](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Replace JSON-in-text decisions with native provider tool-calling wherever the provider supports it, and widen `CanonMessage.content` from a bare string to multimodal content blocks — the structural prerequisite for vision (S10). Stream response deltas to the renderer event stream so steps stop feeling slow, while keeping the Journal and the decision path settled-results-only. This is the substrate that S7 (speed), S8 (UX streaming), and S10 (vision) all build on; nothing above it can move until the canonical message shape and the decision transport are fixed here.
 
@@ -40,9 +40,9 @@ The live decision path parses JSON out of free text. [reactor-decision.ts](../..
 - [x] `safeParse` the widened content at the gateway boundary; split files if the schema push crosses 250 lines.
 
 ### PR2 — anthropic native normalization
-- [ ] Add `supportsNativeTools = true` to the anthropic provider ([packages/model-gateway/src/providers](../../packages/model-gateway/src/providers)).
-- [ ] Normalize native `tool_use` response blocks into `CanonToolCall` (reuse the existing adapter mapping); map `CanonRequest.tools` into the Anthropic tools payload.
-- [ ] Round-trip `tool_result` blocks back as follow-up `CanonMessage` content.
+- [x] Add `supportsNativeTools = true` to the anthropic provider ([packages/model-gateway/src/providers](../../packages/model-gateway/src/providers)).
+- [x] Normalize native `tool_use` response blocks into `CanonToolCall` (reuse the existing adapter mapping); map `CanonRequest.tools` into the Anthropic tools payload.
+- [x] Round-trip `tool_result` blocks back as follow-up `CanonMessage` content.
 
 ### PR3 — openai + gemini native
 - [ ] `supportsNativeTools = true` for openai; normalize function-call responses → `CanonToolCall` (own adapter PR to stay under 250 lines).

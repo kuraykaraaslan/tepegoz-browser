@@ -11,6 +11,7 @@ import type {
 import type { EffortLevel } from '../models';
 import { GatewayMessages } from '../messages';
 import { contentToText } from '../content';
+import { toAnthropicContent } from './anthropic-content';
 
 /**
  * Anthropic (Claude) adapter (L7) — normalizes the canonical request/response shapes to the
@@ -75,7 +76,9 @@ export function toAnthropicParams(
       systemParts.push(contentToText(m.content));
       continue;
     }
-    messages.push({ role: m.role, content: contentToText(m.content) });
+    // Native: blocks map onto Anthropic's own content blocks (S1 PR2), so a tool call is a real tool
+    // call and an image is a real image — not JSON and a marker inside prose.
+    messages.push({ role: m.role, content: toAnthropicContent(m.content) });
   }
 
   const params: Anthropic.MessageCreateParamsNonStreaming = {
@@ -112,7 +115,10 @@ export function fromAnthropicResult(result: AnthropicCompletion): CanonResponse 
     if (block.type === 'text' && typeof block.text === 'string') {
       text += block.text;
     } else if (block.type === 'tool_use') {
-      toolCalls.push({ name: block.name ?? '', input: block.input });
+      // Carry the vendor id: the follow-up tool_result has to echo it back (see toAnthropicContent).
+      const call: CanonToolCall = { name: block.name ?? '', input: block.input };
+      if (block.id !== undefined) call.id = block.id;
+      toolCalls.push(call);
     }
   }
   return {
@@ -151,6 +157,8 @@ function toAppError(err: unknown): Error {
 
 export class AnthropicProvider implements ModelProvider {
   readonly id: AIProvider = 'anthropic';
+  /** Anthropic's Messages API carries tools natively — this adapter maps both directions (S1 PR2). */
+  readonly supportsNativeTools = true;
   private readonly client: Anthropic;
   private readonly effort: EffortLevel | undefined;
   private readonly thinking: boolean;

@@ -70,6 +70,20 @@ export class ModelGateway {
     ModelGateway.providers.set(provider.id, provider);
   }
 
+  /**
+   * Whether the adapter registered for `provider` maps tools onto the vendor's native tool-calling API.
+   * False for an unregistered provider — an absent adapter cannot support anything, and the caller's
+   * next step on false (the JSON-in-text path) is the safe one either way.
+   *
+   * Read through the same per-run model pin `complete` applies, so a run pinned to a JSON-only model
+   * cannot be told it is on the native path.
+   */
+  static supportsNativeTools(provider: AIProvider): boolean {
+    const pin = ModelGateway.modelOverride;
+    const effective = pin !== null && ModelGateway.providers.has(pin.provider) ? pin.provider : provider;
+    return ModelGateway.providers.get(effective)?.supportsNativeTools === true;
+  }
+
   /** True when an adapter for `provider` is registered for the current run — the app checks this before
    *  pushing a live override so it never pins a model whose provider isn't wired up (would 503). */
   static isProviderRegistered(provider: AIProvider): boolean {
