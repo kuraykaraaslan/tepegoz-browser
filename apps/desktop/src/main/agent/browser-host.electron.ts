@@ -481,8 +481,14 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
   },
   fillElement: async (ref, text, tabId) => {
     resetForAgentAction();
-    await CdpDriver.fillElement(requireWc(tabId), ref, text, tabId === undefined ? browserAdapter : undefined);
+    const result = await CdpDriver.fillElement(
+      requireWc(tabId),
+      ref,
+      text,
+      tabId === undefined ? browserAdapter : undefined,
+    );
     onCursorHide();
+    return result;
   },
   pressKey: async (key, tabId) => {
     resetForAgentAction();

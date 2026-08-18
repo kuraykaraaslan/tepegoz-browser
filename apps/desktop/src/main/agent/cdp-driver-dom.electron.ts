@@ -9,6 +9,7 @@ import {
   DescribeNodeSchema,
   EvalHandleSchema,
   ResolveSchema,
+  WidgetKindSchema,
   type NodeArg,
 } from './cdp-driver-schemas.electron.js';
 import { mainFrameIsolatedContext } from './cdp-driver-session.electron.js';
@@ -216,4 +217,39 @@ export async function probeClickPoint(
   // A failed probe must never block a click that would otherwise work: unknown reads as "not occluded".
   if (!parsed.success) return { x: 0, y: 0, blocker: null };
   return parsed.data.result.value;
+}
+
+/**
+ * Is this field one whose value only its own widget can set (S3 PR7)?
+ *
+ * A `readonly` date input, an ARIA combobox with a popup, or a control the page keeps in sync itself:
+ * typing into these does nothing, and a fill that "succeeds" into a field the page will ignore is the
+ * most expensive kind of false success — the agent goes on to submit a form that was never filled.
+ *
+ * `disabled` is deliberately reported too, for the same reason: it is the other way a fill silently
+ * cannot land.
+ */
+export async function widgetKindOf(
+  wc: WebContents,
+  node: NodeArg,
+): Promise<'readonly' | 'disabled' | 'combobox' | null> {
+  const objectId = await objectIdFor(wc, node).catch(() => null);
+  if (objectId === null) return null;
+  const raw: unknown = await wc.debugger
+    .sendCommand('Runtime.callFunctionOn', {
+      objectId,
+      returnByValue: true,
+      functionDeclaration: `function () {
+        if (this.disabled === true) return { kind: 'disabled' };
+        if (this.readOnly === true || this.getAttribute('readonly') !== null) return { kind: 'readonly' };
+        const role = (this.getAttribute('role') || '').toLowerCase();
+        const popup = this.getAttribute('aria-haspopup');
+        if (role === 'combobox' && popup !== null && popup !== 'false') return { kind: 'combobox' };
+        return { kind: null };
+      }`,
+    })
+    .catch(() => null);
+  const parsed = WidgetKindSchema.safeParse(raw);
+  // A failed probe must not block a fill that would work: unknown reads as "an ordinary field".
+  return parsed.success ? parsed.data.result.value.kind : null;
 }

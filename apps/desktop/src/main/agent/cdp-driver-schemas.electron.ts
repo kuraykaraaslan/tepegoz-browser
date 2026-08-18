@@ -151,6 +151,13 @@ export const ClickPointSchema = z.object({
   }),
 });
 
+/** Which kind of widget-driven field this is, if any (S3 PR7). */
+export const WidgetKindSchema = z.object({
+  result: z.object({
+    value: z.object({ kind: z.enum(['readonly', 'disabled', 'combobox']).nullable() }),
+  }),
+});
+
 /** CDP key-event fields for one named key. */
 export type KeySpec = { key: string; code: string; keyCode: number; text?: string };
 

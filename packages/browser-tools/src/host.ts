@@ -93,8 +93,15 @@ export interface BrowserHost {
    * until the pointer is genuinely over the trigger — no other verb can reveal them.
    */
   hoverElement(ref: number, tabId?: string): Promise<void>;
-  /** Focus the input identified by `ref` and replace its value with `text`. */
-  fillElement(ref: number, text: string, tabId?: string): Promise<void>;
+  /**
+   * Focus the input identified by `ref` and replace its value with `text`.
+   *
+   * `widget` is non-null when the field takes its value from its own widget (a `readonly` datepicker, an
+   * ARIA combobox with a popup) or cannot take one at all (`disabled`) — in which case NOTHING was typed
+   * (S3 PR7). Typing into such a field does nothing, and a fill that "succeeds" into a field the page
+   * ignores is the most expensive false success there is: the agent then submits a form it never filled.
+   */
+  fillElement(ref: number, text: string, tabId?: string): Promise<{ widget: 'readonly' | 'disabled' | 'combobox' | null }>;
   /**
    * The current value of the form control at `ref` (from the latest {@link snapshotElements}), or `null`
    * when the element has no value semantics or can no longer be read.

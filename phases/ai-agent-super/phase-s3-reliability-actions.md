@@ -1,6 +1,6 @@
 # Phase S3 — Reliability Actions (W1 Reliability)
 
-**Status:** 🟡 In progress (PR0–PR3, PR5, PR6-hover landed 2026-08-18) · **Depends on:** [S0](phase-s0-truth-and-repair.md); [S2](phase-s2-perception-v2.md) (identity refs for the locator cascade) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟡 In progress (PR0–PR3, PR5, PR6-hover, PR7-refusal landed 2026-08-18) · **Depends on:** [S0](phase-s0-truth-and-repair.md); [S2](phase-s2-perception-v2.md) (identity refs for the locator cascade) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Close the missing action vocabulary and the two structural interaction gaps — snapshot-only
 occlusion and one-locator-per-ref — that make the agent fail on real sites. This targets the **measured**
@@ -223,11 +223,23 @@ re-snapshotting).
 > rather than reading as a failure to repeat.
 
 ### PR7 — typed widgets (Lane B)
-- [ ] Deterministic, rule-based fill strategies (datepicker / ARIA combobox / masked input) — a
+- [~] Deterministic, rule-based fill strategies (datepicker / ARIA combobox / masked input) — a
       **structured plan**, no model call inside an action; errors honestly on an unrecognised widget.
 - [ ] Feed required-widget state honestly into `browser_validate_form` (a required combobox/date becomes
       reportable).
 - [ ] `datepicker-booking` asserts a date is set through the widget, not by raw text injection.
+
+> **PR7 status — the refusal landed, the fill strategies did not.** A `readonly` datepicker, a
+> `disabled` field, and an ARIA combobox with a popup now **refuse** a typed value and say NOTHING was
+> typed, naming the route that works (click the field, re-read, click the option). That is the half of
+> PR7 that removes a real failure: a fill which "succeeds" into a field the page ignores is the most
+> expensive false success there is, because the agent then submits a form it never filled — exactly what
+> `datepicker-booking` is built to catch.
+>
+> **Not built:** the structured fill *strategies* that would drive those widgets automatically, and the
+> `browser_validate_form` integration that would make a required widget-driven field reportable. Both
+> are still open. A probe that fails reads as "an ordinary field", so a broken detector can never block a
+> fill that would have worked.
 
 ### PR8 — exit sweep + steer deletions (⏸ funded)
 - [ ] Funded sweep across `cookie_consent`, the new family, web-patterns, acceptance; record the delta in

@@ -167,6 +167,8 @@ interface InteractionResult {
   occludedBy?: string;
   /** Tabs this interaction opened. Present ⇒ act on them by `tabId`, and come back when done. */
   openedTabs?: { id: string; url: string; title: string }[];
+  /** `fill` only: the field is widget-driven or disabled, so NOTHING was typed (S3 PR7). */
+  fillRefused?: 'readonly' | 'disabled' | 'combobox';
   /** AI-8B: set only when a request sent during this interaction failed. Absent means "nothing was
    *  observed", never "everything succeeded". */
   networkWarning?: string;
@@ -201,6 +203,8 @@ interface InteractionContext {
   occludedBy?: string | null | undefined;
   /** Tabs that appeared during this interaction (S3 PR3). */
   spawnedTabs?: { id: string; url: string; title: string }[] | undefined;
+  /** `fill` only: the widget kind that refused the typed value (S3 PR7). */
+  fillWidget?: 'readonly' | 'disabled' | 'combobox' | null | undefined;
 }
 
 /**
@@ -212,6 +216,39 @@ interface InteractionContext {
  * (`silent_api_failure`, live gpt-4o): the agent re-filled the same box across five wasted steps, each
  * time reasoning that "the previous attempt showed no visible change".
  */
+/**
+ * A fill that was REFUSED because the field is widget-driven (S3 PR7).
+ *
+ * The point is not to fail politely — it is to stop the agent believing a form is filled. It says
+ * nothing was typed, and names the only route that works: operate the widget.
+ */
+function widgetFillResult(
+  widget: 'readonly' | 'disabled' | 'combobox',
+  ctx: InteractionContext,
+): InteractionResult {
+  const { after } = ctx;
+  const why =
+    widget === 'disabled'
+      ? 'that field is disabled, so it cannot take a value at all'
+      : widget === 'readonly'
+        ? 'that field is read-only — its value is set by its own widget (a calendar, picker or list), not by typing'
+        : 'that field is a combobox whose value comes from its popup list, not from typing';
+  return {
+    ok: true,
+    url: after.url,
+    title: after.title,
+    changed: false,
+    filled: false,
+    fillRefused: widget,
+    recoveryHint:
+      `NOTHING was typed: ${why}. ` +
+      (widget === 'disabled'
+        ? 'Do whatever the page requires to enable it first (often another field or a checkbox), then re-read.'
+        : 'Click the field to open its widget, re-read browser_get_elements, then CLICK the option you want ' +
+          '(e.g. the day in the calendar). A value typed in would be ignored, and the form would submit empty.'),
+  };
+}
+
 function fillResult(text: string, ctx: InteractionContext): InteractionResult {
   const { after, changed, fieldValue } = ctx;
   const base = { ok: true as const, url: after.url, title: after.title, changed };
@@ -371,7 +408,11 @@ function interactionResultBody(
         'and click again.',
     };
   }
-  if (args.action === 'fill') return fillResult(args.text, ctx);
+  if (args.action === 'fill') {
+    const widget = ctx.fillWidget;
+    if (widget !== null && widget !== undefined) return widgetFillResult(widget, ctx);
+    return fillResult(args.text, ctx);
+  }
   // A scroll's effect is a viewport move, not a content/state change. Report `changed` plainly and skip
   // BOTH the structural "a menu opened — do NOT repeat" note (false: scrolling changes the in-viewport
   // actionable set by design, and scrolling again is a normal way to reach content) and the "no change"
@@ -687,6 +728,7 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
       let fieldValue: string | null | undefined;
       let unsupportedKeys: string[] | undefined;
       let occludedBy: string | null | undefined;
+      let fillWidget: 'readonly' | 'disabled' | 'combobox' | null | undefined;
       switch (args.action) {
         case 'click':
           ({ occludedBy } = await host.clickElement(args.ref, args.tabId));
@@ -695,7 +737,7 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
           await host.hoverElement(args.ref, args.tabId);
           break;
         case 'fill':
-          await host.fillElement(args.ref, args.text, args.tabId);
+          ({ widget: fillWidget } = await host.fillElement(args.ref, args.text, args.tabId));
           // Read the value back on the SAME snapshot ref (no re-snapshot, so refs stay valid) — the only
           // honest way to tell a fill that worked from one that silently did not.
           fieldValue = await host.readElementValue(args.ref, args.tabId).catch(() => null);
@@ -738,6 +780,7 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
         unsupportedKeys,
         occludedBy,
         spawnedTabs,
+        fillWidget,
       });
       return warning === undefined ? result : { ...result, networkWarning: warning };
     },

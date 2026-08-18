@@ -20,7 +20,7 @@ function fakeHost(overrides?: Partial<BrowserHost>): BrowserHost {
     listOpenTabs: () => [{ id: 't1', url: 'https://x', title: 'X' }],
     fillElement: (_ref: number, text: string) => {
       lastFilled = text;
-      return Promise.resolve();
+      return Promise.resolve({ widget: null });
     },
     pressKey: () => Promise.resolve({ sent: 1, unsupported: [] }),
     sendKeys: () => Promise.resolve({ sent: 1, unsupported: [] }),
@@ -307,7 +307,7 @@ describe('registerBrowserTools', () => {
   it('passes tabId through read/snapshot/action tools', async () => {
     const readPage = vi.fn(() => Promise.resolve({ url: 'https://x', title: 'X', text: 'hello', sig: 's1' }));
     const snapshotElements = vi.fn(() => Promise.resolve({ url: 'https://x', title: 'X', elements: [] }));
-    const fillElement = vi.fn(() => Promise.resolve());
+    const fillElement = vi.fn(() => Promise.resolve({ widget: null }));
     registerBrowserTools({ host: fakeHost({ readPage, snapshotElements, fillElement }) });
 
     await CapabilityRegistry.get('browser_get_page')!.handler({ tabId: 'tab-2' });
@@ -768,5 +768,42 @@ describe('tab-spawn world model (S3 PR3)', () => {
     delete (host as { listOpenTabs?: unknown }).listOpenTabs;
     const result = await click(host);
     expect(result['openedTabs']).toBeUndefined();
+  });
+});
+
+describe('typed widgets refuse a raw fill (S3 PR7)', () => {
+  beforeEach(() => CapabilityRegistry.reset());
+
+  const fill = async (host: BrowserHost): Promise<Record<string, unknown>> => {
+    registerBrowserTools({ host });
+    const tool = CapabilityRegistry.get('browser_update_page');
+    const parsed = tool?.inputSchema.safeParse({ action: 'fill', ref: 1, text: '2027-03-12' });
+    if (parsed?.success !== true) throw new Error('args rejected');
+    return (await tool?.handler(parsed.data)) as Record<string, unknown>;
+  };
+
+  it('says NOTHING was typed into a read-only datepicker, and names the route that works', async () => {
+    const result = await fill(fakeHost({ fillElement: () => Promise.resolve({ widget: 'readonly' }) }));
+    expect(result['filled']).toBe(false);
+    expect(result['fillRefused']).toBe('readonly');
+    expect(String(result['recoveryHint'])).toContain('NOTHING was typed');
+    expect(String(result['recoveryHint'])).toContain('CLICK the option');
+  });
+
+  it('explains a disabled field differently — enabling it is the fix, not clicking a widget', async () => {
+    const result = await fill(fakeHost({ fillElement: () => Promise.resolve({ widget: 'disabled' }) }));
+    expect(result['fillRefused']).toBe('disabled');
+    expect(String(result['recoveryHint'])).toContain('enable it first');
+  });
+
+  it('names the popup list for an ARIA combobox', async () => {
+    const result = await fill(fakeHost({ fillElement: () => Promise.resolve({ widget: 'combobox' }) }));
+    expect(String(result['recoveryHint'])).toContain('popup list');
+  });
+
+  it('leaves an ordinary field alone', async () => {
+    const result = await fill(fakeHost());
+    expect(result['fillRefused']).toBeUndefined();
+    expect(result['filled']).toBe(true);
   });
 });

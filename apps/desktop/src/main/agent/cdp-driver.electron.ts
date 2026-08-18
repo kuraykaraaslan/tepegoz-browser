@@ -199,7 +199,7 @@ export default class CdpDriver {
     ref: number,
     text: string,
     adapter?: HumanInputAdapter,
-  ): Promise<void> {
+  ): Promise<{ widget: 'readonly' | 'disabled' | 'combobox' | null }> {
     return fillElementImpl(wc, ref, text, adapter, CdpDriver.core());
   }
 

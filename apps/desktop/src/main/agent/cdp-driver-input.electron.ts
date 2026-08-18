@@ -11,7 +11,14 @@ import {
   type KeySpec,
   type NodeArg,
 } from './cdp-driver-schemas.electron.js';
-import { centerOf, fileInputInfo, isFocused, objectIdFor, probeClickPoint } from './cdp-driver-dom.electron.js';
+import {
+  centerOf,
+  fileInputInfo,
+  isFocused,
+  objectIdFor,
+  probeClickPoint,
+  widgetKindOf,
+} from './cdp-driver-dom.electron.js';
 
 /**
  * Input/gesture concern for {@link CdpDriver}: dispatches real user input (clicks, typing, key presses,
@@ -160,9 +167,17 @@ export async function fillElement(
   text: string,
   adapter: HumanInputAdapter | undefined,
   core: DriverCore,
-): Promise<void> {
+): Promise<{ widget: 'readonly' | 'disabled' | 'combobox' | null }> {
   await core.ensure(wc);
   const node = await core.resolveRef(wc, ref);
+  // S3 PR7: a readonly/disabled field, or an ARIA combobox with a popup, takes its value from its own
+  // widget. Typing does nothing, and a fill that "succeeds" into a field the page ignores is the most
+  // expensive false success there is — the agent goes on to submit a form it never filled.
+  const widget = await widgetKindOf(wc, node);
+  if (widget !== null) {
+    Logger.info('[input] fill refused: widget-driven field', { ref, widget });
+    return { widget };
+  }
   const { x, y } = await centerOf(wc, node);
   if (adapter === undefined) {
     // Background-tab teleport fallback (no visible cursor): programmatic focus is acceptable here.
@@ -208,6 +223,7 @@ export async function fillElement(
     await adapter.insertText(text);
   }
   await core.settle(wc);
+  return { widget: null };
 }
 
 /** Choose an option in a native `<select>` at `ref` (see {@link SELECT_OPTION_FN}). Deterministic —
