@@ -80,8 +80,19 @@ export interface BrowserHost {
    * sent the agent into re-filling the same box. Must NOT re-snapshot — existing refs stay valid.
    */
   readElementValue(ref: number, tabId?: string): Promise<string | null>;
-  /** Dispatch a single named key (Enter, Tab, Escape, ArrowDown, …) to the focused element. */
-  pressKey(key: string, tabId?: string): Promise<void>;
+  /**
+   * Dispatch a single named key (Enter, Tab, Escape, ArrowDown, …) to the focused element. A thin alias
+   * for {@link sendKeys} with one step — an unsupported key is REPORTED, never thrown (S3 PR2).
+   */
+  pressKey(key: string, tabId?: string): Promise<{ sent: number; unsupported: string[] }>;
+  /**
+   * Dispatch a chord or a sequence of chords (`Ctrl+A`, `Shift+Tab`, `Ctrl+A Delete`).
+   *
+   * Every step that can be sent IS sent; the rest come back in `unsupported`. A keystroke this transport
+   * cannot express is a fact to report, not a reason to end a step — the agent can nearly always reach
+   * the same goal another way if it is simply told what did not happen.
+   */
+  sendKeys(keys: string, tabId?: string): Promise<{ sent: number; unsupported: string[] }>;
   /** Scroll the page up or down (`amount` in CSS px; host picks a sensible default). */
   scrollPage(direction: 'up' | 'down', amount?: number, tabId?: string): Promise<void>;
   /** Content-addressed reveal: bring the `nth` (1-based, default 1) on-page occurrence of `text` into

@@ -42,6 +42,7 @@ const UpdatePageArgs = z.discriminatedUnion('action', [
   TargetTabArgs.extend({ action: z.literal('click'), ref: Ref }),
   TargetTabArgs.extend({ action: z.literal('fill'), ref: Ref, text: z.string().max(10_000) }),
   TargetTabArgs.extend({ action: z.literal('press'), key: z.string().min(1).max(40) }),
+  TargetTabArgs.extend({ action: z.literal('send_keys'), keys: z.string().min(1).max(200) }),
   TargetTabArgs.extend({
     action: z.literal('scroll'),
     direction: z.enum(['up', 'down']),
@@ -159,6 +160,8 @@ interface InteractionResult {
   /** `fill` only: whether the field verifiably holds the requested text. Absent = not a fill, or the
    *  value could not be read back (reported as UNVERIFIED, never as success). */
   filled?: boolean;
+  /** `press`/`send_keys` only: chords this transport could not express, so they never reached the page. */
+  unsupportedKeys?: string[];
   /** AI-8B: set only when a request sent during this interaction failed. Absent means "nothing was
    *  observed", never "everything succeeded". */
   networkWarning?: string;
@@ -187,6 +190,8 @@ interface InteractionContext {
   optionLabels: string[] | undefined;
   /** `fill` only: the field's value read back after the fill; `null` when it could not be read. */
   fieldValue: string | null | undefined;
+  /** Chords the transport could not express (`press`/`send_keys`). */
+  unsupportedKeys?: string[] | undefined;
 }
 
 /**
@@ -258,6 +263,31 @@ function scrollToTextResult(
 }
 
 /** Per-action reporting rules, split out so the handler stays a thin perceive→act→verify sequence. */
+/**
+ * Report a keystroke honestly (S3 PR2). A key this transport cannot express used to raise a 400 and end
+ * the step; it is now a normal result carrying `unsupportedKeys`, because the agent can usually reach
+ * the same goal another way — but only if it is told which keystrokes never landed.
+ */
+function keysResult(ctx: InteractionContext): InteractionResult {
+  const { after, changed } = ctx;
+  const unsupported = ctx.unsupportedKeys ?? [];
+  if (unsupported.length === 0) {
+    return { ok: true, url: after.url, title: after.title, changed };
+  }
+  return {
+    ok: true,
+    url: after.url,
+    title: after.title,
+    changed,
+    unsupportedKeys: unsupported,
+    recoveryHint:
+      `These keystrokes could not be sent: ${unsupported.join(', ')}. ` +
+      'Use a named key (Enter, Tab, Escape, Backspace, Delete, Arrow*, Home, End, PageUp, PageDown, ' +
+      'Space), a single character, or a chord over one of those (e.g. "Ctrl+A") — or reach the same ' +
+      'result by clicking a control instead.',
+  };
+}
+
 function interactionResult(
   args: z.infer<typeof UpdatePageArgs>,
   ctx: InteractionContext,
@@ -267,6 +297,7 @@ function interactionResult(
     return selectOptionResult(selectOptionValue(args), ctx.selected, ctx.optionLabels, after, changed);
   }
   if (args.action === 'scroll_to_text') return scrollToTextResult(args.nth ?? 1, ctx);
+  if (args.action === 'press' || args.action === 'send_keys') return keysResult(ctx);
   if (args.action === 'fill') return fillResult(args.text, ctx);
   // A scroll's effect is a viewport move, not a content/state change. Report `changed` plainly and skip
   // BOTH the structural "a menu opened — do NOT repeat" note (false: scrolling changes the in-viewport
@@ -542,6 +573,9 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
       'Perform ONE interaction on a page, using a `ref` from browser_get_elements on the same tab. args: ' +
         'one of { action: "click", ref, tabId? } · { action: "fill", ref, text, tabId? } · ' +
         '{ action: "press", key, tabId? } (e.g. "Enter", "Tab", "Escape", "ArrowDown") · ' +
+        '{ action: "send_keys", keys, tabId? } for a chord or a sequence ("Ctrl+A", "Shift+Tab", ' +
+        '"Ctrl+A Delete") — an unsendable keystroke comes back in `unsupportedKeys` rather than failing ' +
+        'the step · ' +
         '{ action: "scroll", direction: "up"|"down", amount?, tabId? } · ' +
         '{ action: "scroll_to_text", text, nth?, tabId? } to bring an off-screen target INTO view so it ' +
         'appears in browser_get_elements (use this instead of blind scrolling when you know the label/text; ' +
@@ -573,6 +607,7 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
       let selected: string | null | undefined;
       let optionLabels: string[] | undefined;
       let fieldValue: string | null | undefined;
+      let unsupportedKeys: string[] | undefined;
       switch (args.action) {
         case 'click':
           await host.clickElement(args.ref, args.tabId);
@@ -584,7 +619,10 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
           fieldValue = await host.readElementValue(args.ref, args.tabId).catch(() => null);
           break;
         case 'press':
-          await host.pressKey(args.key, args.tabId);
+          ({ unsupported: unsupportedKeys } = await host.pressKey(args.key, args.tabId));
+          break;
+        case 'send_keys':
+          ({ unsupported: unsupportedKeys } = await host.sendKeys(args.keys, args.tabId));
           break;
         case 'scroll':
           await host.scrollPage(args.direction, args.amount, args.tabId);
@@ -614,6 +652,7 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
         selected,
         optionLabels,
         fieldValue,
+        unsupportedKeys,
       });
       return warning === undefined ? result : { ...result, networkWarning: warning };
     },

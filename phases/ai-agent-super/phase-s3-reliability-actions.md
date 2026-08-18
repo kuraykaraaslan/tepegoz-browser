@@ -1,6 +1,6 @@
 # Phase S3 — Reliability Actions (W1 Reliability)
 
-**Status:** 🟡 In progress (PR0–PR1 landed 2026-08-18) · **Depends on:** [S0](phase-s0-truth-and-repair.md); [S2](phase-s2-perception-v2.md) (identity refs for the locator cascade) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟡 In progress (PR0–PR2 landed 2026-08-18) · **Depends on:** [S0](phase-s0-truth-and-repair.md); [S2](phase-s2-perception-v2.md) (identity refs for the locator cascade) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Close the missing action vocabulary and the two structural interaction gaps — snapshot-only
 occlusion and one-locator-per-ref — that make the agent fail on real sites. This targets the **measured**
@@ -126,13 +126,13 @@ re-snapshotting).
 > path.
 
 ### PR2 — `send_keys` chords (Lane A/B)
-- [ ] `send_keys` variant of `browser_update_page` in
+- [x] `send_keys` variant of `browser_update_page` in
       [browser-tools.ts](../../packages/browser-tools/src/browser-tools.ts) over the real-gesture path;
       accepts chords (`Ctrl+A`, `Shift+Tab`, `Enter`, sequences).
-- [ ] **Replace** the single-key `KEY_MAP` hard-fail in
+- [x] **Replace** the single-key `KEY_MAP` hard-fail in
       [cdp-driver-input.electron.ts](../../apps/desktop/src/main/agent/cdp-driver-input.electron.ts): an
       unrecognised key becomes a reported no-op, not `AppError(400)`.
-- [ ] Keep `press` as a thin single-key alias so existing scenarios (`form_validation_required`) don't
+- [x] Keep `press` as a thin single-key alias so existing scenarios (`form_validation_required`) don't
       regress.
 
 ### PR3 — tab-spawn world model (Lane A)

@@ -475,8 +475,23 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
   },
   pressKey: async (key, tabId) => {
     resetForAgentAction();
-    await CdpDriver.pressKey(requireWc(tabId), key, tabId === undefined ? browserAdapter : undefined);
+    const result = await CdpDriver.pressKey(
+      requireWc(tabId),
+      key,
+      tabId === undefined ? browserAdapter : undefined,
+    );
     onCursorHide();
+    return result;
+  },
+  sendKeys: async (keys, tabId) => {
+    resetForAgentAction();
+    const result = await CdpDriver.sendKeys(
+      requireWc(tabId),
+      keys,
+      tabId === undefined ? browserAdapter : undefined,
+    );
+    onCursorHide();
+    return result;
   },
   scrollPage: async (direction, amount, tabId) => {
     resetForAgentAction();

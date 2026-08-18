@@ -20,7 +20,8 @@ function fakeHost(overrides?: Partial<BrowserHost>): BrowserHost {
       lastFilled = text;
       return Promise.resolve();
     },
-    pressKey: () => Promise.resolve(),
+    pressKey: () => Promise.resolve({ sent: 1, unsupported: [] }),
+    sendKeys: () => Promise.resolve({ sent: 1, unsupported: [] }),
     scrollPage: () => Promise.resolve(),
     scrollToText: () => Promise.resolve({ found: true, count: 1 }),
     selectOption: () => Promise.resolve({ selected: 'Türkiye', options: ['Germany', 'Türkiye'] }),
@@ -604,5 +605,49 @@ describe('navigation verbs and bounded waiting (S3 PR1)', () => {
     registerBrowserTools({ host: fakeHost() });
     const tool = CapabilityRegistry.get('browser_validate_condition');
     expect(tool?.inputSchema.safeParse({ condition: 'text', value: 'x', timeoutMs: 600_000 }).success).toBe(false);
+  });
+});
+
+describe('send_keys chords (S3 PR2)', () => {
+  beforeEach(() => CapabilityRegistry.reset());
+
+  const interact = async (args: Record<string, unknown>, host: BrowserHost): Promise<Record<string, unknown>> => {
+    registerBrowserTools({ host });
+    const tool = CapabilityRegistry.get('browser_update_page');
+    const parsed = tool?.inputSchema.safeParse(args);
+    if (parsed?.success !== true) throw new Error('args rejected');
+    return (await tool?.handler(parsed.data)) as Record<string, unknown>;
+  };
+
+  it('passes a chord string straight through to the host', async () => {
+    const sendKeys = vi.fn(() => Promise.resolve({ sent: 2, unsupported: [] }));
+    const result = await interact({ action: 'send_keys', keys: 'Ctrl+A Delete' }, fakeHost({ sendKeys }));
+    expect(sendKeys).toHaveBeenCalledWith('Ctrl+A Delete', undefined);
+    expect(result['unsupportedKeys']).toBeUndefined();
+  });
+
+  it('reports keystrokes that never landed instead of failing the step', async () => {
+    const result = await interact(
+      { action: 'send_keys', keys: 'Hyper+K' },
+      fakeHost({ sendKeys: () => Promise.resolve({ sent: 0, unsupported: ['Hyper+K'] }) }),
+    );
+    expect(result['ok']).toBe(true);
+    expect(result['unsupportedKeys']).toEqual(['Hyper+K']);
+    expect(String(result['recoveryHint'])).toContain('could not be sent');
+  });
+
+  it('press degrades the same way — an unknown key no longer ends the step', async () => {
+    const result = await interact(
+      { action: 'press', key: 'F13' },
+      fakeHost({ pressKey: () => Promise.resolve({ sent: 0, unsupported: ['F13'] }) }),
+    );
+    expect(result['ok']).toBe(true);
+    expect(result['unsupportedKeys']).toEqual(['F13']);
+  });
+
+  it('bounds the chord string at the schema boundary', () => {
+    registerBrowserTools({ host: fakeHost() });
+    const tool = CapabilityRegistry.get('browser_update_page');
+    expect(tool?.inputSchema.safeParse({ action: 'send_keys', keys: 'x'.repeat(500) }).success).toBe(false);
   });
 });

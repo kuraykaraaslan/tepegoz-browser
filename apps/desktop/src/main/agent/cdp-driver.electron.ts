@@ -19,6 +19,7 @@ import {
   clickElement as clickElementImpl,
   fillElement as fillElementImpl,
   pressKey as pressKeyImpl,
+  sendKeys as sendKeysImpl,
   scrollPage as scrollPageImpl,
   selectOption as selectOptionImpl,
   setFileInputFiles as setFileInputFilesImpl,
@@ -202,8 +203,17 @@ export default class CdpDriver {
     wc: WebContents,
     key: string,
     adapter?: HumanInputAdapter,
-  ): Promise<void> {
+  ): Promise<{ sent: number; unsupported: string[] }> {
     return pressKeyImpl(wc, key, adapter, CdpDriver.core());
+  }
+
+  /** Chords + sequences (S3 PR2). An unsupported key is reported, never thrown. */
+  static async sendKeys(
+    wc: WebContents,
+    keys: string,
+    adapter?: HumanInputAdapter,
+  ): Promise<{ sent: number; unsupported: string[] }> {
+    return sendKeysImpl(wc, keys, adapter, CdpDriver.core());
   }
 
   static async scrollPage(

@@ -42,3 +42,4 @@ export { resolveNodePath } from './dom-path.js';
 export type { PathNode, NodePath, PathSegment } from './dom-path.js';
 export * from './stable-refs.js';
 export * from './elements-diff.js';
+export * from './key-chord.js';
