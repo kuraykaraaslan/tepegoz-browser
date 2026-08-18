@@ -101,3 +101,36 @@ console.log('TOTAL', tot);"
 4. **Held-out protection.** `heldOut` scenarios (partitioned by
    [`partitionHeldOut`](../../packages/agent-eval/src/scenario-registry.ts)) are never used to steer
    prompt or code changes — only to report.
+
+## S1-PR0 record — 2026-08-18 (0 new scenarios; the paired decision-mode set named)
+
+[S1](phase-s1-foundation-native-loop.md) adds **no scenarios**. Its paired sweep (PR6) is a
+**single-change** comparison of two decision transports — `TEPEGOZ_DECISION_MODE=json` vs `native` — over
+an *identical* input set, so what has to be frozen is **which 15 scenarios** both arms run, not new
+ground truth. Naming them here is what makes "the same exam, one variable changed" checkable afterwards.
+
+| Registry file | Scenarios | SHA-256 of file bytes | Unchanged since |
+|---|---:|---|---|
+| `web-patterns.json` | 9 | `5256f2d8ea3e03952621c8b940377cdd78806531ce579e0989aa327d6edea2b5` | S0 freeze |
+| `acceptance.json` | 6 | `e9edb7db1f07acd15e9e9f1e3b655831246ba3b12a45039d46e768086dba9f74` | S0 freeze |
+| **Paired set** | **15** | — | — |
+
+Both hashes are **byte-identical to the S0 freeze**; the 60-scenario total is unchanged.
+
+**The 15 (held-out marked `*`):** `cookie_consent`, `login_form`, `contact_form`, `pagination`*,
+`data_table`, `dynamic_content`*, `accordion`, `custom_dropdown`, `tabs_widget`* ·
+`headings_summary`, `native_select_country`, `dismiss_occluding_modal`, `infinite_scroll_find`*,
+`multi_tab_compare`, `compare_plans_judged`.
+
+Four are held out (~27%, matching the registry ratio) and stay report-only in both arms.
+`compare_plans_judged` is the one judge-scored scenario in the set — the judge is **claim-barred**
+(1 human label of 25), so it is reported but excluded from any claim-bearing pooled figure.
+
+**Why this set.** Both families are *transport-agnostic*: nothing in them is about how the decision is
+encoded, so a completion delta between the arms is attributable to the transport, not to the tasks. They
+are also the two families with the richest recorded prior signal, which is what an equivalence check
+(±10pp) needs to be meaningful at all.
+
+**What S1 must NOT do to this exam.** No scenario edit, no registry addition, and — per the phase's
+"Prose steers: NONE" line — no prompt-prose change anywhere in the phase. A prose edit landing between
+the arms would silently make the sweep a two-variable comparison.

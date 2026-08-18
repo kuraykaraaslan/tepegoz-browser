@@ -1,6 +1,6 @@
 # Phase S1 — Foundation: Native Loop (Foundation)
 
-**Status:** ⬜ Not started · **Depends on:** [S0 — Truth & Repair](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟡 In progress (PR0 landed 2026-08-18) · **Depends on:** [S0 — Truth & Repair](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Replace JSON-in-text decisions with native provider tool-calling wherever the provider supports it, and widen `CanonMessage.content` from a bare string to multimodal content blocks — the structural prerequisite for vision (S10). Stream response deltas to the renderer event stream so steps stop feeling slow, while keeping the Journal and the decision path settled-results-only. This is the substrate that S7 (speed), S8 (UX streaming), and S10 (vision) all build on; nothing above it can move until the canonical message shape and the decision transport are fixed here.
 
@@ -30,8 +30,8 @@ The live decision path parses JSON out of free text. [reactor-decision.ts](../..
 ## Tasks
 
 ### PR0 — fixture freeze (no capability code)
-- [ ] Confirm the paired-sweep set is the existing web-patterns + acceptance registries in [packages/agent-eval](../../packages/agent-eval); freeze the scenario list and record it in the run index so the JSON/native arms are provably the same 15 scenarios.
-- [ ] Record S0's baseline exclusion rate (`isTransportInvalid` / decision-parse) as the frozen "before" number in [eval-results.md](eval-results.md).
+- [x] Confirm the paired-sweep set is the existing web-patterns + acceptance registries in [packages/agent-eval](../../packages/agent-eval); freeze the scenario list and record it in the run index so the JSON/native arms are provably the same 15 scenarios.
+- [x] Record S0's baseline exclusion rate (`isTransportInvalid` / decision-parse) as the frozen "before" number in [eval-results.md](eval-results.md).
 
 ### PR1 — content-block schema + CanonMessage widening
 - [ ] Add `CanonContentBlock` zod schemas (`text | image | tool_use | tool_result`) to `@tepegoz/shared-types` (sole schema source per ADR-0010); derive the TS types from the schema.

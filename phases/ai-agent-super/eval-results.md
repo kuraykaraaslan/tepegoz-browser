@@ -65,6 +65,36 @@ exam and its expected shape, so a later sweep cannot quietly redefine what it wa
   [assertion-debt table](fixture-freeze.md#assertion-debt--read-before-quoting-either-family).
 - **Cost:** none — nothing was run.
 
+### 2026-08-18 — S1 PR0 — frozen, UNMEASURED (⏸ awaiting funded key)
+
+The paired decision-transport set is frozen **before** any S1 capability code: 15 scenarios
+(`web-patterns.json` 9 + `acceptance.json` 6), both files byte-identical to the S0 freeze, listed by id in
+[`fixture-freeze.md`](fixture-freeze.md#s1-pr0-record--2026-08-18-0-new-scenarios-the-paired-decision-mode-set-named).
+S1 adds **no** scenarios; PR6 runs this same set twice, once per `TEPEGOZ_DECISION_MODE` arm.
+
+**The frozen "before" — decision-transport invalidity on the JSON arm.** S1's falsifiable win is that the
+native arm drives the decision-parse / transport-invalid exclusion rate to ~0. That needs a *before*
+number, and the honest one available today is thin — it comes from the only live Anthropic sweeps on
+record ([v2 ledger](eval-results-2026-07.md), 2026-07-25), **not** from a full-registry run:
+
+| Recorded run | Trials | Decision-transport losses | Rate (of trials that actually ran) |
+|---|---:|---|---|
+| First C1 attempt (declared INVALID) | 1 run | **2 decisions** returned `InvalidJson`, each cut off mid-`state` | — (run excluded wholesale) |
+| Post-fix sweep, live-credit portion | 9 | **2 transport-invalid**, excluded after 3 retries (`url_hallucination_trap`, `escape_bait`) | **2/9 ≈ 22%** |
+| Same sweep, after the key died | 6 | 0 (all 6 dead-key/billing → UNMEASURED, a different exclusion axis) | n/a |
+
+**Caveats that must travel with these numbers.** n=9 is a first signal, not a baseline: the scenarios are
+the *escape* family (not the 15 frozen here), the salvage path that now catches mid-`state` truncation
+landed between the two rows, and dead-key exclusions are a separate axis S1 does not touch. The proper
+"before" is [S0](phase-s0-truth-and-repair.md) PR4's full-registry sweep; when it lands, **its** exclusion
+rate on these 15 supersedes this row as S1's comparison base. S1's PR6 states which base it measured
+against.
+
+- **Base:** [`fixture-freeze.md`](fixture-freeze.md) — 10 registry hashes unchanged; S1 added none.
+- **Assertion debt:** none new. The first-delta-latency gate (< 2s p50) is asserted **scripted** against
+  `ScriptedProvider` and is a plumbing/latency assertion, **NOT** competence evidence.
+- **Cost:** none — nothing was run.
+
 ### Template for a phase-exit entry
 
 ```
