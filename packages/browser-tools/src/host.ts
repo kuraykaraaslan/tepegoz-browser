@@ -17,6 +17,19 @@ export interface BrowserHost {
    *  drawer/menu/dropdown, swapping a tab panel) register as a change even when url/title/innerText do not
    *  move, so `browser_update_page` never mis-reports such a click as a no-op. */
   readPage(tabId?: string): Promise<{ url: string; title: string; text: string; sig: string }>;
+  /**
+   * Read a page's ARTICLE text: the content root the page itself declares (`article`/`main`/`[role=main]`),
+   * with navigation, headers, footers and asides removed. `source` names the root that was used, or
+   * `'body'` when no candidate was convincing — so a caller is never left guessing whether it got an
+   * article or the whole page.
+   *
+   * OPTIONAL: a host that cannot do content extraction simply omits it, and `browser_get_page_text`
+   * degrades to the same text `readPage` returns, labelled `'body'`. Never silently pretend to have
+   * extracted an article.
+   */
+  readArticleText?(
+    tabId?: string,
+  ): Promise<{ url: string; title: string; text: string; source: string }>;
   /** Wait for a page's current load to settle. */
   waitForLoad(tabId?: string, timeoutMs?: number): Promise<{ url: string; title: string }>;
   /**

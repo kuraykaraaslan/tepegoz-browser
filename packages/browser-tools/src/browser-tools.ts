@@ -364,6 +364,30 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
 
   CapabilityRegistry.register({
     descriptor: descriptor(
+      'browser_get_article',
+      'read',
+      "Read a page's ARTICLE text — the main content with navigation, headers, footers and sidebars " +
+        'removed. args: { tabId?: string } — omit tabId for the active tab. Returns ' +
+        '{ url, title, content, source }. Prefer this over browser_get_page when you want to READ or ' +
+        'summarise a page; `source` names the content root that was used, and `source: "body"` means no ' +
+        'article was found and this is the whole page. Use browser_get_page when you need every visible ' +
+        'string (including nav and banners), and browser_get_elements to ACT on the page.',
+      { aiTask: 'read_understand' },
+    ),
+    inputSchema: TargetTabArgs,
+    handler: async (args) => {
+      // A host without content extraction degrades to the same text browser_get_page returns, labelled
+      // 'body' — never a silent claim that an article was extracted when it was not.
+      const page =
+        host.readArticleText === undefined
+          ? { ...(await host.readPage(args.tabId)), source: 'body' }
+          : await host.readArticleText(args.tabId);
+      return { ...buildPageSnapshot(page.text, page.url, page.title), source: page.source };
+    },
+  });
+
+  CapabilityRegistry.register({
+    descriptor: descriptor(
       'browser_update_location',
       'state_changing',
       'The DEFAULT way to open a page: navigate a tab to a web URL (reuses the tab). ' +

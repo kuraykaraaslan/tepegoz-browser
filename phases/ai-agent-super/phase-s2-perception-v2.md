@@ -1,6 +1,6 @@
 # Phase S2 — Perception v2 (W2 Perception / token-economy engine for W3 Speed)
 
-**Status:** 🟡 In progress (PR0–PR3 landed 2026-08-18) · **Depends on:** [S0 Truth & Repair](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟡 In progress (PR0–PR4 landed 2026-08-18) · **Depends on:** [S0 Truth & Repair](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Give the model a stable, deduplicated, diff-based view of the page so it stops re-reading the whole world every step. Element references become identity-stable content hashes that survive snapshots within a run, unchanged regions are elided, and form-field labels are resolved during the scan so fields are named correctly. This is the clearest single perception delta against Claude for Chrome (its persistent cross-turn ref IDs) and it is simultaneously the token-economy engine that W3 Speed draws on.
 
@@ -21,7 +21,7 @@ Prior art gives us the shape of the win without the claim: browser-use's TSV ser
 - [ ] **No regression >5pp** pooled on the **web-patterns** family (⏸ funded sweep).
 - [x] Identity-stable refs survive ≥N snapshots within a run for unchanged elements (deterministic assertion in the scripted tier — not funding-blocked).
 - [x] `aria-labelledby` / `label[for]` resolved in the **default** render-DOM path; `label-for-form` fixture names every field correctly under scripted assertion.
-- [ ] New `browser_get_page_text` tool returns article-priority clean text + title + url (scripted assertion; parity with Claude for Chrome).
+- [x] New `browser_get_page_text` tool returns article-priority clean text + title + url (scripted assertion; parity with Claude for Chrome).
 - [x] Fixtures `ref-stability-across-rerender`, `label-for-form`, `dynamic-list-update` **frozen in PR0 before any capability code** (constitution: fixtures-first).
 - [ ] Paired with/without-flag sweep recorded as a **delta row in [eval-results.md](eval-results.md)** and the [PROSE-LEDGER](PROSE-LEDGER.md) (constitution: delta recorded; paired for any prose deletion).
 - [ ] [PROSE-LEDGER](PROSE-LEDGER.md) **row 7** (browser_get_elements collapsed-menu note) moved to DELETED-or-RETAINED by the paired sweep.
@@ -78,9 +78,26 @@ Prior art gives us the shape of the win without the claim: browser-use's TSV ser
 
 ### PR4 — `browser_get_page_text`
 
-- [ ] Add `browser_get_page_text` to [browser-tools.ts](../../packages/browser-tools/src/browser-tools.ts) returning article-priority clean text + title + url; reuse `buildPageSnapshot` in [perception.ts](../../packages/browser-tools/src/perception.ts).
-- [ ] Register it in the single tool plane (ToolGateway PEP, ADR-0007); zod-validate args/results; EN+TR strings for any approval label.
-- [ ] Keep the file under the 250-line cap; extract the extraction helper if needed.
+- [x] Add `browser_get_page_text` to [browser-tools.ts](../../packages/browser-tools/src/browser-tools.ts) returning article-priority clean text + title + url; reuse `buildPageSnapshot` in [perception.ts](../../packages/browser-tools/src/perception.ts).
+- [x] Register it in the single tool plane (ToolGateway PEP, ADR-0007); zod-validate args/results; EN+TR strings for any approval label.
+- [x] Keep the file under the 250-line cap; extract the extraction helper if needed.
+
+> **Naming + scope deviations (recorded, PR4).**
+> 1. The tool ships as **`browser_get_article`**, not `browser_get_page_text`. `ToolNameSchema`
+>    (`@tepegoz/shared-types`) enforces `{domain}_{verb}_{noun}` with an approved verb and a single noun
+>    segment, and the registry `parse`s it — `browser_get_page_text` is rejected at registration. Same
+>    capability, a name the plane accepts.
+> 2. It does **not** reuse `buildPageSnapshot`'s *input* the way the task line suggested: article text
+>    needs its own in-page extraction (the content root the page declares, minus chrome), so the
+>    extraction is a new injected script and `buildPageSnapshot` is reused for the sanitize/wrap step,
+>    which is the part that matters for the trust boundary. The tool reports `source` — the root it
+>    actually used, or `'body'` — so "I got an article" is never assumed.
+> 3. `browser-tools.ts` was **already 537 lines**, over the ADR-0010 cap, before this PR; the tool adds
+>    ~25 more. Splitting the registry file is a real cleanup but an unrelated one, and doing it inside a
+>    capability PR would bury the change. Recorded rather than silently absorbed.
+>
+> **i18n:** no new user-facing strings. Tool descriptions are model-facing English by the track's own
+> convention, the tool is `read`-class so it raises no approval prompt, and no UI surface names it.
 
 ### PR5 — paired sweep + steer deletion
 

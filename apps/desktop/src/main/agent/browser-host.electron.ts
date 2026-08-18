@@ -10,6 +10,7 @@ import TabManager from '../tabs';
 import CdpDriver from './cdp-driver.electron';
 import AgentTabGroup from './agent-tab-group.electron';
 import { showPageCursor, hidePageCursor, isUserControlActive, resetForAgentAction } from './page-cursor.electron';
+import { buildArticleTextExpression } from './article-text-script.js';
 
 /**
  * Desktop `BrowserHost` for `@tepegoz/browser-tools`: the Electron/WebContentsView operations behind
@@ -136,6 +137,26 @@ async function readPage(
     title,
     text: typeof shaped.text === 'string' ? shaped.text : '',
     sig: typeof shaped.sig === 'string' ? shaped.sig : '',
+  };
+}
+
+/**
+ * Read the page's article text (S2 PR4): the content root the page declares, minus the chrome every page
+ * agrees on. Runs in the page's main world like {@link readPage} — it only reads, and it clones before it
+ * strips, so nothing is mutated. A malformed result degrades to empty text labelled `'body'` rather than
+ * to a claim that an article was found.
+ */
+async function readArticleText(
+  tabId?: string,
+): Promise<{ url: string; title: string; text: string; source: string }> {
+  const wc = requireWc(tabId);
+  const result: unknown = await wc.executeJavaScript(buildArticleTextExpression(), true);
+  const shaped = (result ?? {}) as { text?: unknown; source?: unknown };
+  return {
+    url: wc.getURL(),
+    title: wc.getTitle(),
+    text: typeof shaped.text === 'string' ? shaped.text : '',
+    source: typeof shaped.source === 'string' ? shaped.source : 'body',
   };
 }
 
@@ -333,6 +354,7 @@ const browserAdapter = new HumanInputAdapter(cdpSend, onCursorMove, onInputActio
 export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
   navigate,
   readPage,
+  readArticleText,
   waitForLoad: async (tabId, timeoutMs) => {
     const wc = requireWc(tabId);
     await waitForLoad(wc, timeoutMs);
