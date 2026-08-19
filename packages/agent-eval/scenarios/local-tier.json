@@ -1,0 +1,44 @@
+{
+  "scenarios": [
+    {
+      "id": "local_simple_capability_classify",
+      "task": "Open the Products page and tell me the featured item.",
+      "target": { "fixture": "div-button-nav" },
+      "success": { "domAssertion": "Featured item", "expectedValue": "Acme Widget 3000" },
+      "heldOut": false,
+      "tags": ["local-tier", "simple-capability", "s12"]
+    },
+    {
+      "id": "local_simple_capability_extract",
+      "task": "This page lists 1000 parts with prices. Tell me the SKU of the cheapest one.",
+      "target": { "fixture": "table-1000-rows" },
+      "success": { "domAssertion": "SKU-0997", "expectedValue": "SKU-0997" },
+      "heldOut": false,
+      "tags": ["local-tier", "simple-capability", "s12"]
+    },
+    {
+      "id": "local_offline_subset_form_fill",
+      "task": "Fill in the contact form with the name Ada and the message 'hello', then submit it.",
+      "target": { "fixture": "label-for-form" },
+      "success": { "domAssertion": "Ada" },
+      "heldOut": false,
+      "tags": ["local-tier", "offline-subset", "s12"]
+    },
+    {
+      "id": "local_offline_subset_navigate",
+      "task": "Use the navigation widget to open Section B and read it.",
+      "target": { "fixture": "shadow-dom-nav" },
+      "success": { "domAssertion": "reached section B" },
+      "heldOut": false,
+      "tags": ["local-tier", "offline-subset", "s12"]
+    },
+    {
+      "id": "local_heldout_contamination_probe",
+      "task": "Open the article about online security and tell me its headline.",
+      "target": { "fixture": "link-href" },
+      "success": { "domAssertion": "Security best practices" },
+      "heldOut": true,
+      "tags": ["local-tier", "heldout-contamination", "s12"]
+    }
+  ]
+}

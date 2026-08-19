@@ -358,3 +358,29 @@ also where four of the twelve H2H tasks come from — declared in advance in
 [h2h-protocol.md](h2h-protocol.md), because a task mix that quietly favours the author is not a comparison.
 
 **Nothing here has been run.** Authoring is not funding-blocked; scoring is.
+
+---
+
+## S12-PR0 — local-tier exam (frozen 2026-08-19)
+
+Five scenarios in a new file. Total **122 across 18 files**.
+
+| Registry file | Scenarios | SHA-256 of file bytes |
+|---|---:|---|
+| `local-tier.json` | 5 | `c6307eea189aa4a6f73e46dbad193fecc2f8fceebf994983d0f8eb8983cbd216` |
+
+**These re-use existing fixture PAGES on purpose.** The point of S12a is the same exam on a different
+provider, so authoring new pages would change two things at once and make the local-vs-cloud arms
+incomparable. What is new is the tagging (`local-tier`, `simple-capability`, `offline-subset`,
+`heldout-contamination`), which is what lets the arms pool as their own families.
+
+`local_offline_subset_*` are deterministic fixture pages with no network egress — the subset whose
+completion rate would carry the **$0/task** floor claim.
+
+`local_heldout_contamination_probe` is the S12b ship gate in miniature: a scenario provably outside any
+training set. If S12b ever opens and a fixture appears in both training and eval, the ship blocks —
+a model that memorised the exam scores well on exactly what the exam exists to detect.
+
+**Nothing here has been run.** This one is not blocked on the funded key: it needs **downloaded weights
+and local compute**, which is a different unavailability and worth naming separately, since it is one the
+owner could resolve without spending anything on tokens.
