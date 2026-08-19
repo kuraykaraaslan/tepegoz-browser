@@ -7,6 +7,7 @@ import type { TabHost } from '@tepegoz/tab-engine';
 import { HumanInputAdapter, type CdpSend } from '@tepegoz/human-input';
 import { IpcChannels, type AgentEvent, type AgentEventKind } from '@tepegoz/desktop-ipc';
 import TabManager from '../tabs';
+import { isParkedToTray } from '../window-parked';
 import CdpDriver from './cdp-driver.electron';
 import AgentTabGroup from './agent-tab-group.electron';
 import { showPageCursor, hidePageCursor, isUserControlActive, resetForAgentAction } from './page-cursor.electron';
@@ -410,7 +411,34 @@ export function emitCurrentRunEvent(kind: AgentEventKind, message: string, detai
 const cdpSend: CdpSend = (method, params) =>
   requireWc().debugger.sendCommand(method, params);
 
-const browserAdapter = new HumanInputAdapter(cdpSend, onCursorMove, onInputAction, isUserControlActive);
+/**
+ * Is anything the agent is doing right now actually on screen? (S7 PR3)
+ *
+ * The adapter was already active-tab-only — a background tab gets no adapter and teleports. But
+ * "active tab" stopped meaning "visible" once tabs could be parked off-screen and windows hidden to
+ * the tray while still compositing. In those states the agent pays full human-realism pacing for a
+ * performance with no audience, which is the single largest avoidable chunk of wall-clock in a run.
+ *
+ * Every signal here already exists and already drives the parking itself — no new IPC, and nothing
+ * the renderer can influence. Unknown states resolve to "visible", so the pacing is only ever dropped
+ * on a state we positively recognise as unseen.
+ */
+function agentTabIsOnScreen(): boolean {
+  const win = TabManager.focusedWindow();
+  if (win === null || win.isDestroyed()) return true;
+  if (isParkedToTray(win) || win.isMinimized() || !win.isVisible()) return false;
+  const state = TabManager.getState();
+  const active = state.tabs.find((t) => t.id === state.activeId);
+  return active?.hidden !== true;
+}
+
+const browserAdapter = new HumanInputAdapter(
+  cdpSend,
+  onCursorMove,
+  onInputAction,
+  isUserControlActive,
+  agentTabIsOnScreen,
+);
 
 // --- BrowserHost + TabHost (one object satisfies both injected seams) ---
 

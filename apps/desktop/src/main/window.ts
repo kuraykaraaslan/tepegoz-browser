@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { IpcChannels, type StartupMode, type WindowBounds } from '@tepegoz/desktop-ipc';
 import PreferenceStore from '@tepegoz/preferences';
 import { isTrustedAppUrl } from './lib/trusted-origin';
+import { PARK_X, PARK_Y, isParkedToTray, trayParked } from './window-parked';
 import { GLASS_BG, OPAQUE_BG, isMicaSupported } from './lib/glass';
 
 /** App-chrome partition — shared by the main window and extension popups (both are trusted chrome).
@@ -52,15 +53,13 @@ export const ICON_PATH = join(
 // ── Close-to-tray ────────────────────────────────────────────────────────────────────────────────────
 /** Off-desktop coordinates that "hide" a window to the tray while keeping it SHOWN — far outside any
  *  real display, so it's invisible but its compositor keeps running (every tab keeps rendering). */
-const PARK_X = -32000;
-const PARK_Y = -32000;
-/** Real (on-screen) bounds saved when a window is parked to the tray, so `showFromTray` can restore them. */
-const trayParked = new Map<BrowserWindow, Rectangle>();
 
-/** True while `win` is hidden to the tray (parked off-screen, dropped from the taskbar). */
-export function isParkedToTray(win: BrowserWindow): boolean {
-  return trayParked.has(win);
-}
+/** Real (on-screen) bounds saved when a window is parked to the tray, so `showFromTray` can restore them. */
+
+
+// The parked-window registry lives in `./window-parked` — a leaf other modules can ask without
+// importing this file's Electron `app` usage. Re-exported so existing importers are unaffected.
+export { isParkedToTray };
 
 /**
  * Hide a window to the system tray. It stays SHOWN but is moved fully off-screen and removed from the

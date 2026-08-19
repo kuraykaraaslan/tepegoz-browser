@@ -35,7 +35,32 @@ export class HumanInputAdapter {
     private readonly onAction?: (kind: string, detail: string) => void,
     /** Return true to abort the current movement and yield to real user input. */
     private readonly shouldYield?: () => boolean,
+    /**
+     * Return false when nothing about this tab is on screen — a tab parked off-screen, a window hidden
+     * to the tray, a minimized window (S7 PR3). Absent means perceivable, so an un-wired caller keeps
+     * the full timing rather than silently losing it.
+     */
+    private readonly isPerceivable?: () => boolean,
   ) {}
+
+  /**
+   * Wait, unless nobody can see it.
+   *
+   * Every delay in this class exists for one of two audiences, and they are not the same audience:
+   * the **human**, for whom motion and pacing make the agent legible rather than alarming, and the
+   * **page**, for whom the event stream is a detection surface. When the tab is off-screen the first
+   * audience is absent, so the wait is pure wall-clock waste — but the second audience is still
+   * watching, so this drops the SLEEP and never an event. An invisible run dispatches exactly the same
+   * curved path, the same per-character insertText sequence, and the same press/release pairs; it just
+   * stops paying real seconds for pacing nobody perceives.
+   *
+   * Stated plainly because it is a genuine trade: inter-event *timing* is itself a weak detection
+   * signal, so an invisible run is marginally more machine-like than a visible one. It remains far
+   * more human-like than the existing background-tab path, which sends no adapter at all and teleports.
+   */
+  private wait(ms: number): Promise<void> {
+    return this.isPerceivable?.() === false ? Promise.resolve() : delay(ms);
+  }
 
   /**
    * Move the simulated cursor from the current position to (x, y) along a Catmull-Rom spline.
@@ -102,7 +127,7 @@ export class HumanInputAdapter {
       const waitMs = i === pauseAt
         ? Math.max(40, gaussianJitter(80, 40))
         : stepMs;
-      await delay(waitMs);
+      await this.wait(waitMs);
     }
 
     this.curX = x;
@@ -117,11 +142,11 @@ export class HumanInputAdapter {
     this.onAction?.('click', `(${Math.round(x)}, ${Math.round(y)})`);
     await this.moveTo(x, y);
     if (this.shouldYield?.()) return; // user took control before we reached target
-    await delay(Math.max(20, gaussianJitter(80, 30)));
+    await this.wait(Math.max(20, gaussianJitter(80, 30)));
 
     const base = { x, y, button: 'left' as const, clickCount: 1, modifiers: 0, pointerType: 'mouse' };
     await this.send('Input.dispatchMouseEvent', { type: 'mousePressed', ...base, buttons: 1 });
-    await delay(Math.max(10, gaussianJitter(60, 20)));
+    await this.wait(Math.max(10, gaussianJitter(60, 20)));
     await this.send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...base, buttons: 0 });
   }
 
@@ -172,7 +197,7 @@ export class HumanInputAdapter {
           pointerType: 'mouse',
         }).catch(() => undefined);
       }
-      await delay(50);
+      await this.wait(50);
     }
 
     // Spring-back: retract the overshoot so the net distance is effectivePx
@@ -186,7 +211,7 @@ export class HumanInputAdapter {
       cx += gaussianJitter(0, 1);
       cy += gaussianJitter(0, 1.5) * -sign;
       this.onCursorMove?.(cx, cy);
-      await delay(40);
+      await this.wait(40);
     }
 
     this.curX = cx;
@@ -212,7 +237,7 @@ export class HumanInputAdapter {
       ...common,
       ...(spec.text === undefined ? {} : { text: spec.text }),
     });
-    await delay(Math.max(15, gaussianJitter(70, 30)));
+    await this.wait(Math.max(15, gaussianJitter(70, 30)));
     await this.send('Input.dispatchKeyEvent', { type: 'keyUp', ...common });
   }
 
@@ -225,7 +250,7 @@ export class HumanInputAdapter {
     this.onAction?.('type', text.length > 30 ? `${text.slice(0, 30)}…` : text);
     for (const char of text) {
       await this.send('Input.insertText', { text: char });
-      await delay(Math.max(15, gaussianJitter(60, 25)));
+      await this.wait(Math.max(15, gaussianJitter(60, 25)));
     }
   }
 
@@ -236,6 +261,6 @@ export class HumanInputAdapter {
    * action, e.g. `idle(200, 70)` between a click and the follow-up keystroke.
    */
   async idle(meanMs = 600, stdMs = 150): Promise<void> {
-    await delay(Math.max(250, gaussianJitter(meanMs, stdMs)));
+    await this.wait(Math.max(250, gaussianJitter(meanMs, stdMs)));
   }
 }

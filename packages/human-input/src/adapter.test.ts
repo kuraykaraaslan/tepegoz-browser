@@ -64,3 +64,73 @@ describe('HumanInputAdapter.idle', () => {
     expect(resolved).toBe(true);
   });
 });
+
+/**
+ * Visibility-gated realism (S7 PR3). The claim is narrow and worth stating exactly: an off-screen run
+ * drops the WAITING and not a single event. If these two counts ever diverge, the optimisation has
+ * started removing a detection defence instead of removing waste.
+ */
+describe('HumanInputAdapter — off-screen pacing', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  function makeGated(perceivable: boolean): { adapter: HumanInputAdapter; calls: Recorded[] } {
+    const calls: Recorded[] = [];
+    const send = (method: string, params: Record<string, unknown>): Promise<unknown> => {
+      calls.push({ method, params });
+      return Promise.resolve(undefined);
+    };
+    return {
+      adapter: new HumanInputAdapter(send, undefined, undefined, undefined, () => perceivable),
+      calls,
+    };
+  }
+
+  /** Drain microtasks without advancing any timer — so a pending sleep stays pending. */
+  async function flush(): Promise<void> {
+    for (let i = 0; i < 500; i++) await Promise.resolve();
+  }
+
+  it('completes with NO timer advance when nothing is on screen', async () => {
+    const { adapter } = makeGated(false);
+    let done = false;
+    void adapter.insertText('hello world').then(() => { done = true; });
+    await flush();
+    expect(done).toBe(true);
+  });
+
+  it('still waits when the tab IS on screen — the visible path is untouched', async () => {
+    const { adapter } = makeGated(true);
+    let done = false;
+    void adapter.insertText('hello world').then(() => { done = true; });
+    await flush();
+    expect(done).toBe(false);
+    await vi.runAllTimersAsync();
+    expect(done).toBe(true);
+  });
+
+  it('dispatches the IDENTICAL event stream either way — timing goes, evidence does not', async () => {
+    const offscreen = makeGated(false);
+    void offscreen.adapter.insertText('hello world');
+    await flush();
+
+    const onscreen = makeGated(true);
+    const visible = onscreen.adapter.insertText('hello world');
+    await vi.runAllTimersAsync();
+    await visible;
+
+    expect(offscreen.calls.length).toBe(onscreen.calls.length);
+    expect(offscreen.calls.map((c) => c.method)).toEqual(onscreen.calls.map((c) => c.method));
+  });
+
+  it('keeps the full path when no visibility source is wired — absent means perceivable', async () => {
+    // An un-wired caller must not silently lose its pacing; the gate has to be asked for.
+    const { adapter } = makeAdapter();
+    let done = false;
+    void adapter.idle().then(() => { done = true; });
+    await flush();
+    expect(done).toBe(false);
+    await vi.runAllTimersAsync();
+    expect(done).toBe(true);
+  });
+});
