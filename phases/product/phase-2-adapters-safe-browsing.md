@@ -1,6 +1,6 @@
 # Phase 2 — Integration Adapters + Safe-Browsing Suite
 
-**Status:** ⬜ Not started  ·  **Estimate:** ~4–6 months  ·  **Depends on:** Phase 1b
+**Status:** 🟡 In progress (ExecutionRouter + per-site data clearing landed 2026-08-19)  ·  **Estimate:** ~4–6 months  ·  **Depends on:** Phase 1b
 **Goal:** Complete real daily tasks end-to-end (official-API first) + add daily-driver trust foundations
 (adblock, scam protection, cookie editor). **Stays local-first; no managed backend.**
 
@@ -16,7 +16,8 @@
 
 ### L6 — Integration Adapter Layer (extra requirement #5)
 - [~] `IntegrationAdapter` dual-backend: `ApiBackend` (official REST/SDK, **preferred**) + `BrowserBackend` (logged-in WebContentsView fallback) _(down-payment shipped: shared `AdaptorConnection` inventory model covers `mcp`, `rest`, `graphql`, `oauth_service`, and `local` adaptors with auth kind, permission scopes, state, tool count, and audit-required metadata; Settings surfaces them under one Adaptors panel. Real REST/GraphQL/OAuth adapter execution remains pending.)_
-- [ ] `ExecutionRouter`: **Official API > Browser-automation** (deterministic; decision+reason to event-log); on fallback the security class (read→state-changing) is re-evaluated
+- [x] `ExecutionRouter`: **Official API > Browser-automation** (deterministic; decision+reason to event-log); on fallback the security class (read→state-changing) is re-evaluated
+      _(landed: [execution-router.ts](../../packages/security-policy/src/execution-router.ts). Pure and deterministic — no model, no clock, no network. Falling back escalates the risk class because the two paths are **not** two ways of doing one thing: an API call has a declared scope and a revocable token, a browser fallback has the user's whole session and none. Even a READ escalates, since a browser read navigates a logged-in session. It also REFUSES when there is neither an adaptor nor a page, rather than guessing at one. **Not wired to a caller yet** — no adapter executes through it, because no REST/OAuth adapter exists to execute.)_
 - [ ] `Credential Vault` + OAuth Broker: Authorization Code + **PKCE**, least-scope, refresh rotation, per-profile isolation, DPAPI/safeStorage + AES-256-GCM; **OAuth token never raw-visible to the agent**
 - [ ] Reference adapters: **Google package** (Gmail read/draft/**send=HITL**, Drive→blob, Calendar) single OAuth client
 - [ ] **Canva = existing remote MCP** (`mcp__claude_ai_Canva__*`) — do NOT write a custom adapter (MCP-vs-adapter criterion → ADR)
@@ -33,7 +34,8 @@
 
 ### Cookie & Storage editor (extra requirement #8)
 - [ ] `CookieAndStorageInspector`: CDP/`session.cookies` **DevTools-only** inspect-edit; fully isolated from OAuth vault; **agent access off by default**
-- [ ] **Per-site data clearing** ("Forget this site" / `Clear-Site-Data`): cookies + storage + cache + service-worker + permissions in one action; isolated from OAuth vault — **ADR required**: clearing recorded as a `SiteDataCleared` event (append-only "shown=recorded", ADR-0004) + user warning on silent credential loss
+- [x] **Per-site data clearing** ("Forget this site" / `Clear-Site-Data`): cookies + storage + cache + service-worker + permissions in one action; isolated from OAuth vault — clearing recorded as a `SiteDataCleared` event (append-only "shown=recorded", ADR-0004) + user warning on silent credential loss
+      _(landed: [site-data.ts](../../packages/security-policy/src/site-data.ts) + [ipc-site-data.ts](../../apps/desktop/src/main/ipc/ipc-site-data.ts) + a Settings row, EN+TR. **Two-step by construction** — the first click PLANS, which is what produces the warnings; a one-click version would sign people out of sites they were using without telling them. The credential vault is never in scope and has its own predicate, because that is the invariant most likely to be broken by someone adding "and also clear saved passwords" to this button. **Owed:** the per-site ADR the line asks for (the behaviour is implemented and documented in code; the ADR is not written), permissions are not part of the clear, and the offline-data warning is deliberately not probed — a warning we are unsure of trains people to ignore warnings.)_
 
 ### Credentials & Passkey (daily-driver) — **ADR required** (trust model, at phase start)
 - [ ] **Full WebAuthn / passkey**: enable `navigator.credentials` in renderer + `setDevicePermissionHandler` (platform authenticator / Windows Hello bridge — shares the Windows Hello HITL path from Phase 1a)

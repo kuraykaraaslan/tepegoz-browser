@@ -36,8 +36,8 @@ actually has; do not start a fifth pile.
 | 0 | [phase-0-foundation.md](product/phase-0-foundation.md) | Monorepo scaffold + core contracts + CI | 🟡 Core done (packaging/signing + release/update hardening + Phase-1a-bound i18n deferred) |
 | 1a | [phase-1a-walking-skeleton-mvp.md](product/phase-1a-walking-skeleton-mvp.md) | Walking-skeleton MVP (BYO-key local-first agentic core) | 🟡 In progress (agent console/runtime/tool plane/browser tools live; e2e + remaining gates pending) |
 | 1b | [phase-1b-agentic-deepening.md](product/phase-1b-agentic-deepening.md) | Parallel DAG + durable handoff + per-task memory + prompt/rules | 🟡 Early down-payments (tabId-scoped browser control + validation + visual fallback; durable resume/parallel DAG pending) |
-| 2 | [phase-2-adapters-safe-browsing.md](product/phase-2-adapters-safe-browsing.md) | Integration adapters + Safe-Browsing Suite | ⬜ Not started |
-| 2b | [phase-2b-daily-driver-ux.md](product/phase-2b-daily-driver-ux.md) | Daily-driver browser UX (tabs/PWA/DevTools) — parallel with Phase 2 | ⬜ Not started |
+| 2 | [phase-2-adapters-safe-browsing.md](product/phase-2-adapters-safe-browsing.md) | Integration adapters + Safe-Browsing Suite | 🟡 In progress (ExecutionRouter with fallback risk re-classification; "forget this site" with warn-before-confirm) |
+| 2b | [phase-2b-daily-driver-ux.md](product/phase-2b-daily-driver-ux.md) | Daily-driver browser UX (tabs/PWA/DevTools) — parallel with Phase 2 | 🟡 In progress (DevTools boundary + ADR-0029, closing an inspect-element hole; honest per-tab resource accounting) |
 | 2c | [phase-2c-classic-browser-essentials.md](product/phase-2c-classic-browser-essentials.md) | Classic browser essentials + downloads (find/print/PDF/reader/translate/bookmarks/private/permissions) — parallel with Phase 2/2b | 🟡 In progress (download/clipboard/upload manager slices) |
 | 3 | [phase-3-backend-cloud-extensions.md](product/phase-3-backend-cloud-extensions.md) | Managed subscription + cloud memory sync + extensions | ⬜ Not started |
 | 4 | [phase-4-maturation.md](product/phase-4-maturation.md) | Maturation (full extensions, cross-platform, enterprise) | ⬜ Not started |
