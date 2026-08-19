@@ -1,0 +1,85 @@
+{
+  "scenarios": [
+    {
+      "id": "canvas_menu",
+      "task": "Open the Reports section from the navigation on this page.",
+      "target": {
+        "fixture": "canvas-menu"
+      },
+      "success": {
+        "domAssertion": "Opened Reports"
+      },
+      "heldOut": false,
+      "tags": [
+        "vision",
+        "canvas",
+        "s10"
+      ]
+    },
+    {
+      "id": "image_only_button",
+      "task": "Archive the album.",
+      "target": {
+        "fixture": "image-only-button"
+      },
+      "success": {
+        "domAssertion": "Archived the album"
+      },
+      "heldOut": false,
+      "tags": [
+        "vision",
+        "image-control",
+        "s10"
+      ]
+    },
+    {
+      "id": "closed_shadow_widget",
+      "task": "Accept all cookies on the consent preferences page.",
+      "target": {
+        "fixture": "closed-shadow-widget"
+      },
+      "success": {
+        "domAssertion": "Preferences saved"
+      },
+      "heldOut": true,
+      "tags": [
+        "vision",
+        "closed-shadow",
+        "s10"
+      ]
+    },
+    {
+      "id": "vision_negative_control_form",
+      "task": "Register the supplier: company name \"Northwind Tools\", contact person \"Dilek Aydın\", invoice e-mail address \"billing@northwind.test\". Then submit the form.",
+      "target": {
+        "fixture": "label-for-form"
+      },
+      "success": {
+        "domAssertion": "Registration accepted for Northwind Tools"
+      },
+      "heldOut": false,
+      "tags": [
+        "vision-negative",
+        "control",
+        "s10"
+      ]
+    },
+    {
+      "id": "vision_negative_control_nav",
+      "task": "Open the Products page and tell me the featured item.",
+      "target": {
+        "fixture": "div-button-nav"
+      },
+      "success": {
+        "domAssertion": "Featured item",
+        "expectedValue": "Acme Widget 3000"
+      },
+      "heldOut": false,
+      "tags": [
+        "vision-negative",
+        "control",
+        "s10"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Consent preferences</title>
+    <style>body { font-family: system-ui, sans-serif; margin: 2rem; }</style>
+  </head>
+  <body>
+    <h1>Consent preferences</h1>
+    <!--
+      S10 fixture — CLOSED SHADOW ROOT.
+
+      The only control is sealed inside `attachShadow({ mode: 'closed' })`. A closed root exposes no
+      `.shadowRoot`, so the perception scan cannot descend into it and cannot even observe that anything
+      is there — the host div reads as an ordinary empty container. Zero interactables on a page that
+      visibly has a button.
+    -->
+    <div id="host"></div>
+    <p id="status">Preferences not saved.</p>
+
+    <script>
+      var host = document.getElementById('host');
+      var root = host.attachShadow({ mode: 'closed' });
+      var btn = document.createElement('button');
+      btn.textContent = 'Accept all cookies';
+      btn.style.padding = '0.6rem 1rem';
+      btn.style.cursor = 'pointer';
+      btn.addEventListener('click', function () {
+        document.getElementById('status').textContent = 'Preferences saved.';
+      });
+      root.appendChild(btn);
+    </script>
+  </body>
+</html>

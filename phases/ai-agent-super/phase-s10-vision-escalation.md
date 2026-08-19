@@ -1,6 +1,6 @@
 # Phase S10 — Vision, Escalation-Only (W2 Perception)
 
-**Status:** ⬜ Not started · **Depends on:** [S1](phase-s1-foundation-native-loop.md) (multimodal `CanonMessage` image blocks) · gate threshold pre-registered in [S0](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟡 In progress (PR0–PR1 landed 2026-08-19) · **Depends on:** [S1](phase-s1-foundation-native-loop.md) (multimodal `CanonMessage` image blocks) · gate threshold pre-registered in [S0](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Add vision as an **escalation fallback** per [ADR-0008](../../docs/adr/) — never every step — for the pages the DOM/a11y path structurally cannot see: canvas/webgl surfaces, closed shadow roots, cross-origin iframes, and image-only controls. Deterministic triggers in the reactor decide when a step is blind; only then does a **token-budgeted, downscaled, set-of-marks-annotated** screenshot reach the model. This is the v2 F1 vision milestone **re-cut**: F1 assumed vision would lift the escape gate, but the measured DoD failures are on-page (see [`eval-results.md`](eval-results.md)), so S10's job is narrowed to *seeing the structurally-invisible* and its cost is bounded by a measured escalation-rate ceiling.
 
@@ -19,7 +19,7 @@ The gap is real, not theoretical. [`build-dom-tree-script.ts`](../../apps/deskto
 - [ ] **$/task on non-vision families unchanged (±10%)** vs the S0 baseline (the escalation ceiling + downscale budget must not leak cost into ordinary browsing). **(⏸ funded sweep, paired)**
 - [ ] The `image_injection` `atk_*` fixture (prompt-injection text rendered *inside* the screenshot) passes the S6 injection screen: the image goes through its **own** injection/redaction gate before reaching the model; ASR on this case stays within the S6 published bound. **(⏸ funded sweep — coordinate with [S6](phase-s6-safety-control-plane.md))**
 - [ ] Every sweep from S10 onward reports **escalation-rate** as a standing column in [`eval-results.md`](eval-results.md).
-- [ ] **Fixtures frozen in PR0 before any capability code** (constitution: fixture-freeze); the before/after **delta is recorded in [`eval-results.md`](eval-results.md)** and the ledger.
+- [x] **Fixtures frozen in PR0 before any capability code** (constitution: fixture-freeze); the before/after **delta is recorded in [`eval-results.md`](eval-results.md)** and the ledger.
 - [ ] No prose deletion in S10 (see [Prose steers](#prose-steers)); the "avoid screenshots" steer in `BROWSING_STRATEGY` is *replaced by mechanism*, tracked as its own paired sweep line if the prompt string changes.
 - [ ] **i18n EN + full TR parity in the same PR** for any UI surface (a "seeing the page" / vision-escalation indicator in [`ext-agent`](../../extensions/ext-agent), if surfaced).
 - [ ] Strict TS, zod `safeParse` at every new trust boundary (screenshot→model handoff, trigger config), `AppError` at boundaries, 250-line file cap (split by construction), no `apps/desktop` growth beyond the trigger hook — capture/budget/marks land in [`packages/screenshots`](../../packages/screenshots).
@@ -28,16 +28,76 @@ The gap is real, not theoretical. [`build-dom-tree-script.ts`](../../apps/deskto
 
 ### PR0 — fixture freeze
 
-- [ ] Add the vision family to [`packages/agent-eval`](../../packages/agent-eval): `canvas-menu` (a menu drawn on `<canvas>`, no DOM interactables), `image-only-button` (an `<img>`/background-image control with no text/aria), `closed-shadow-widget` (a control inside a closed shadow root). Frozen HTML fixtures + ground-truth in the scorer registry.
-- [ ] Add the `image_injection` `atk_*` scenario (injection instructions painted into the pixels) to the 24-strong `atk_*` battery — **never run live in ordinary sweeps** (S6 owns its execution), registered here for the gate.
-- [ ] Register a **negative** control set: a handful of ordinary DOM-visible fixtures re-tagged so the escalation-rate denominator is honest (escalation must NOT fire on them).
-- [ ] No capability code in this PR.
+- [x] Add the vision family to [`packages/agent-eval`](../../packages/agent-eval): `canvas-menu` (a menu drawn on `<canvas>`, no DOM interactables), `image-only-button` (an `<img>`/background-image control with no text/aria), `closed-shadow-widget` (a control inside a closed shadow root). Frozen HTML fixtures + ground-truth in the scorer registry.
+- [x] Add the `image_injection` `atk_*` scenario (injection instructions painted into the pixels) to the 24-strong `atk_*` battery — **never run live in ordinary sweeps** (S6 owns its execution), registered here for the gate.
+- [x] Register a **negative** control set: a handful of ordinary DOM-visible fixtures re-tagged so the escalation-rate denominator is honest (escalation must NOT fire on them).
+- [x] No capability code in this PR.
 
 ### PR1 — gate-evaluation record (deferred is a valid exit)
 
-- [ ] Evaluate the S10 capability against the **S0 taxonomy threshold pre-registered in [S0](phase-s0-truth-and-repair.md)**: does the measured share of registry failures attributable to structurally-invisible content clear the pre-registered bar that justifies building vision now?
-- [ ] Record the decision (build / defer) as a dated note in [`eval-results.md`](eval-results.md). **"Deferred" is a documented, valid exit** — if the S0 baseline shows structurally-blind pages are a negligible failure share, S10 rests at this record and does not build PR2–PR5.
-- [ ] If build: pre-register the escalation-rate ceiling (≤5%) and the family target (≥60%) here before PR3 lands any capture code.
+- [x] Evaluate the S10 capability against the **S0 taxonomy threshold pre-registered in [S0](phase-s0-truth-and-repair.md)**: does the measured share of registry failures attributable to structurally-invisible content clear the pre-registered bar that justifies building vision now?
+- [x] Record the decision (build / defer) as a dated note in [`eval-results.md`](eval-results.md). **"Deferred" is a documented, valid exit** — if the S0 baseline shows structurally-blind pages are a negligible failure share, S10 rests at this record and does not build PR2–PR5.
+- [x] If build: pre-register the escalation-rate ceiling (≤5%) and the family target (≥60%) here before PR3 lands any capture code.
+
+> **PR0 deviation (recorded).** `image_injection` did **not** go into `adversarial-battery.json`.
+> S6-PR0 froze that file as the claim-grade ASR battery, recording that its hash is unchanged "so the
+> battery S6 will claim against is provably the one frozen before any S6 code" — appending would have
+> broken that guarantee for convenience. It lands in a sibling registry instead, and S6 decides explicitly
+> whether to fold it into the published ASR denominator.
+>
+> **PR1 gate evaluation — ANSWERED "cannot answer yet", and that is the record.** The gate asks whether
+> the measured share of registry failures attributable to structurally-invisible content clears the
+> pre-registered bar. That share comes from [S0](phase-s0-truth-and-repair.md)'s full-registry baseline,
+> which is ⏸ unfunded, so **the gate is open, not passed**. Two consequences, both deliberate:
+>
+> 1. **Pre-registration stands anyway** (it is cheap and it is what stops a later run choosing its own
+>    bar): escalation-rate ceiling **≤5% of steps** on the non-vision registry, vision-family pooled
+>    **≥60%** verified completion at N≥10, `# Phase S10 — Vision, Escalation-Only (W2 Perception)
+
+**Status:** 🟡 In progress (PR0–PR1 landed 2026-08-19) · **Depends on:** [S1](phase-s1-foundation-native-loop.md) (multimodal `CanonMessage` image blocks) · gate threshold pre-registered in [S0](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
+
+**Goal:** Add vision as an **escalation fallback** per [ADR-0008](../../docs/adr/) — never every step — for the pages the DOM/a11y path structurally cannot see: canvas/webgl surfaces, closed shadow roots, cross-origin iframes, and image-only controls. Deterministic triggers in the reactor decide when a step is blind; only then does a **token-budgeted, downscaled, set-of-marks-annotated** screenshot reach the model. This is the v2 F1 vision milestone **re-cut**: F1 assumed vision would lift the escape gate, but the measured DoD failures are on-page (see [`eval-results.md`](eval-results.md)), so S10's job is narrowed to *seeing the structurally-invisible* and its cost is bounded by a measured escalation-rate ceiling.
+
+## Why
+
+There is **zero vision today**. [`CanonMessage.content`](../../packages/model-gateway/src/types.ts) is string-only (line 6), which structurally blocks any image reaching the model — that constraint is lifted by [S1](phase-s1-foundation-native-loop.md), which lands the multimodal content blocks S10 consumes. Screenshots are already *captured* end-to-end — `browser_get_screenshot` via [`packages/screenshots`](../../packages/screenshots) (maxEdge 1400) — but the bytes never leave the tool boundary, and the reactor strategy prompt ([`reactor-prompt.ts`](../../packages/orchestrator/src/reactor-prompt.ts) `BROWSING_STRATEGY`) actively steers *away* from screenshots. So the capability is 90% wired and 0% connected.
+
+The gap is real, not theoretical. [`build-dom-tree-script.ts`](../../apps/desktop/src/main/agent/build-dom-tree-script.ts) runs in an isolated world and pierces open shadow roots + same-origin iframes only; **canvas/webgl paint, closed shadow roots, and cross-origin iframes are invisible to it** — and equally invisible to the structural djb2 page signature in [`browser-host.electron.ts`](../../apps/desktop/src/main/agent/browser-host.electron.ts) `readPage`, so the loop cannot even *detect* that it is blind from the signature alone. On such a page [`interactable.ts`](../../packages/tool-executor/src/interactable.ts) `finalizeElements` emits 0 interactables while the page is plainly non-blank, or the only control is an unlabelled `<canvas>`/image — the exact failure class the DOM path can never resolve.
+
+[ADR-0008](../../docs/adr/) **already authorises** DOM/a11y-first perception with vision as a *fallback*. S10 is therefore **implementation of an existing decision**, not a new one — it adds an ADR status note, nothing more. The reference architecture is Claude for Chrome's hybrid: a11y-primary with a token-budgeted screenshot (≈28 px/token) and set-of-marks coordinate↔viewport mapping, escalated on demand. The program **Never-list** ([README](README.md#never-inherited--program-additions)) forbids *screenshots-every-step* vision — so the headline S10 metric is not "does vision help" but "does vision fire **rarely**", published as a measured escalation-rate.
+
+## Exit criteria (DoD)
+
+- [ ] The **vision-needing fixture family** (`canvas-menu`, `image-only-button`, `closed-shadow-widget`, plus `image_injection` counted in the safety plane) moves from **~0 → pooled ≥60% verified-completion at N≥10** with Wilson 95% CIs on the pooled aggregate. **(⏸ funded sweep)**
+- [ ] Escalation **fires on ≤5% of steps** measured across the **non-vision** registry — the [ADR-0008](../../docs/adr/) *"not every step"* clause expressed **as a measured number**, reported as a paired before/after with a pre-stated equivalence margin. **(⏸ funded sweep, paired)**
+- [ ] **$/task on non-vision families unchanged (±10%)** vs the S0 baseline (the escalation ceiling + downscale budget must not leak cost into ordinary browsing). **(⏸ funded sweep, paired)**
+- [ ] The `image_injection` `atk_*` fixture (prompt-injection text rendered *inside* the screenshot) passes the S6 injection screen: the image goes through its **own** injection/redaction gate before reaching the model; ASR on this case stays within the S6 published bound. **(⏸ funded sweep — coordinate with [S6](phase-s6-safety-control-plane.md))**
+- [ ] Every sweep from S10 onward reports **escalation-rate** as a standing column in [`eval-results.md`](eval-results.md).
+- [x] **Fixtures frozen in PR0 before any capability code** (constitution: fixture-freeze); the before/after **delta is recorded in [`eval-results.md`](eval-results.md)** and the ledger.
+- [ ] No prose deletion in S10 (see [Prose steers](#prose-steers)); the "avoid screenshots" steer in `BROWSING_STRATEGY` is *replaced by mechanism*, tracked as its own paired sweep line if the prompt string changes.
+- [ ] **i18n EN + full TR parity in the same PR** for any UI surface (a "seeing the page" / vision-escalation indicator in [`ext-agent`](../../extensions/ext-agent), if surfaced).
+- [ ] Strict TS, zod `safeParse` at every new trust boundary (screenshot→model handoff, trigger config), `AppError` at boundaries, 250-line file cap (split by construction), no `apps/desktop` growth beyond the trigger hook — capture/budget/marks land in [`packages/screenshots`](../../packages/screenshots).
+
+## Tasks
+
+### PR0 — fixture freeze
+
+- [x] Add the vision family to [`packages/agent-eval`](../../packages/agent-eval): `canvas-menu` (a menu drawn on `<canvas>`, no DOM interactables), `image-only-button` (an `<img>`/background-image control with no text/aria), `closed-shadow-widget` (a control inside a closed shadow root). Frozen HTML fixtures + ground-truth in the scorer registry.
+- [x] Add the `image_injection` `atk_*` scenario (injection instructions painted into the pixels) to the 24-strong `atk_*` battery — **never run live in ordinary sweeps** (S6 owns its execution), registered here for the gate.
+- [x] Register a **negative** control set: a handful of ordinary DOM-visible fixtures re-tagged so the escalation-rate denominator is honest (escalation must NOT fire on them).
+- [x] No capability code in this PR.
+
+### PR1 — gate-evaluation record (deferred is a valid exit)
+
+- [x] Evaluate the S10 capability against the **S0 taxonomy threshold pre-registered in [S0](phase-s0-truth-and-repair.md)**: does the measured share of registry failures attributable to structurally-invisible content clear the pre-registered bar that justifies building vision now?
+- [x] Record the decision (build / defer) as a dated note in [`eval-results.md`](eval-results.md). **"Deferred" is a documented, valid exit** — if the S0 baseline shows structurally-blind pages are a negligible failure share, S10 rests at this record and does not build PR2–PR5.
+- [x] If build: pre-register the escalation-rate ceiling (≤5%) and the family target (≥60%) here before PR3 lands any capture code.
+
+/task on non-vision families within **±10%** of the S0
+>    baseline.
+> 2. **The capability ships INERT.** PR2–PR4 land behind `TEPEGOZ_VISION` (default off), so production
+>    behaviour is unchanged and the gate stays genuinely open — building the mechanism does not
+>    pre-empt the decision to use it. Nothing here claims the gate was cleared.
 
 ### PR2 — trigger plumbing (Lane B, no capture yet)
 

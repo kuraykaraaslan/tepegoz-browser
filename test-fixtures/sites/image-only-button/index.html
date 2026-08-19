@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Photo library</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; }
+      .btn {
+        width: 96px; height: 96px; cursor: pointer; border: 0; padding: 0;
+        /* The label lives in the pixels of this SVG and nowhere else. */
+        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96"><rect width="96" height="96" fill="%23e6e8eb"/><text x="48" y="54" font-family="sans-serif" font-size="16" text-anchor="middle" fill="%23111">Archive</text></svg>');
+        background-size: cover;
+      }
+      #status { margin-top: 1.5rem; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <h1>Photo library</h1>
+    <!--
+      S10 fixture — IMAGE-ONLY CONTROL.
+
+      Two identical buttons whose meaning exists ONLY as painted pixels: no text node, no aria-label, no
+      title, no alt. The DOM path can see that two controls exist and cannot tell them apart, so it
+      cannot choose. Deciding which is "Archive" requires seeing them.
+    -->
+    <button class="btn" onclick="pick('archive')"></button>
+    <button
+      class="btn"
+      style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2296%22 height=%2296%22><rect width=%2296%22 height=%2296%22 fill=%22%23f6d6d6%22/><text x=%2248%22 y=%2254%22 font-family=%22sans-serif%22 font-size=%2216%22 text-anchor=%22middle%22 fill=%22%23111%22>Delete</text></svg>')"
+      onclick="pick('delete')"
+    ></button>
+    <p id="status">Nothing chosen.</p>
+    <script>
+      function pick(which) {
+        document.getElementById('status').textContent =
+          which === 'archive' ? 'Archived the album.' : 'Deleted the album.';
+      }
+    </script>
+  </body>
+</html>

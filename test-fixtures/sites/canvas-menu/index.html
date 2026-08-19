@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Atlas Charts</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; }
+      canvas { border: 1px solid #ccc; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <h1>Atlas Charts</h1>
+    <!--
+      S10 fixture — MENU PAINTED ON CANVAS.
+
+      The whole navigation is drawn with 2D canvas calls. There are no DOM nodes for the items: no
+      anchors, no buttons, no aria, no text. `buildDomTree` emits ZERO interactables here, while the
+      page is plainly not blank — which is exactly trigger (a), and (c) once canvas dominates the
+      viewport.
+
+      Clicking is handled by hit-testing the click coordinates against the painted rectangles, so the
+      only way to reach "Reports" is to know WHERE it is on screen.
+    -->
+    <canvas id="nav" width="640" height="220"></canvas>
+    <p id="status">Nothing opened.</p>
+
+    <script>
+      var ITEMS = [
+        { label: 'Dashboard', y: 30 },
+        { label: 'Reports', y: 100 },
+        { label: 'Settings', y: 170 }
+      ];
+      var canvas = document.getElementById('nav');
+      var ctx = canvas.getContext('2d');
+      function paint() {
+        ctx.fillStyle = '#f4f5f7';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.font = '20px system-ui, sans-serif';
+        for (var i = 0; i < ITEMS.length; i++) {
+          ctx.fillStyle = '#e6e8eb';
+          ctx.fillRect(20, ITEMS[i].y - 24, 240, 44);
+          ctx.fillStyle = '#1c1e21';
+          ctx.fillText(ITEMS[i].label, 34, ITEMS[i].y + 4);
+        }
+      }
+      canvas.addEventListener('click', function (e) {
+        var rect = canvas.getBoundingClientRect();
+        var y = e.clientY - rect.top;
+        for (var i = 0; i < ITEMS.length; i++) {
+          if (y >= ITEMS[i].y - 24 && y <= ITEMS[i].y + 20) {
+            document.getElementById('status').textContent = 'Opened ' + ITEMS[i].label;
+            return;
+          }
+        }
+      });
+      paint();
+    </script>
+  </body>
+</html>

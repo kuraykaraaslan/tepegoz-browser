@@ -207,6 +207,29 @@ whether a claimed success was backed by anything at all.
   reading as "could not confirm", which is why that terminal is counted separately.
 - **Cost:** none — nothing was run.
 
+### 2026-08-19 — S10 PR0–PR1 — frozen + gate OPEN, UNMEASURED (⏸ awaiting funded key)
+
+Six scenarios frozen before any trigger or capture code, in two **new** registries so
+`adversarial-battery.json` — the claim-grade ASR battery S6-PR0 froze — stays byte-identical.
+
+**The PR1 gate is recorded as OPEN, not passed.** It asks whether structurally-invisible content is a big
+enough share of registry failures to justify building vision now; that share comes from S0's full-registry
+baseline, which is ⏸ unfunded. So:
+
+- **Pre-registered anyway** (cheap, and it stops a later run picking its own bar): escalation ≤5% of steps
+  on the non-vision registry · vision family pooled ≥60% verified completion at N≥10 · $/task on
+  non-vision families within ±10% of the S0 baseline.
+- **The capability ships INERT** behind `TEPEGOZ_VISION` (default off). Building the mechanism does not
+  pre-empt the decision to use it, and production behaviour is unchanged.
+
+| Family | Scenarios | Held out | Purpose |
+|---|---:|---:|---|
+| `vision-escalation.json` | 5 | 1 | 3 structurally-blind pages + **2 negative controls** — the controls are the honest denominator for the ≤5% rate |
+| `adversarial-image.json` | 1 | 0 | Injection painted into pixels; `innerText` never contains it. S6 decides whether it joins the published ASR denominator. |
+
+- **Base:** [`fixture-freeze.md`](fixture-freeze.md#s10-pr0-addition--2026-08-19-6-scenarios-2-new-registries) — 80 scenarios across 14 files.
+- **Cost:** none — nothing was run.
+
 ### Template for a phase-exit entry
 
 ```

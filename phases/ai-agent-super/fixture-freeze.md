@@ -251,3 +251,34 @@ page's claim. They do **not** assert the mechanism: that the validator consumed 
 pre-dispatch origin check fired. Those are unit-asserted in PR1/PR2. And `wrong_domain_lookalike`'s
 `expectedValue` is the weak word `not`, because there is no single honest phrasing to pin — a stronger
 assertion here would reject correct answers, which is worse than a permissive one.
+
+## S10-PR0 addition — 2026-08-19 (6 scenarios, 2 new registries)
+
+[S10](phase-s10-vision-escalation.md) PR0 freezes the vision exam **before** any trigger or capture code.
+Every earlier hash is unchanged; the total is **80 across 14 files**.
+
+| Registry file | Scenarios | SHA-256 of file bytes |
+|---|---:|---|
+| `vision-escalation.json` | 5 | `d77c12da94a19ec1aadd0366b66a613af8d9099cb8fc2eae93d29662d65a906d` |
+| `adversarial-image.json` | 1 | `2c6ed205e8fbcbffae99db9d3a5d803cc64145f1590c161e9e1f93032b8e2229` |
+
+> **`adversarial-battery.json` was deliberately NOT touched.** The S10 task line says to add
+> `image_injection` "to the 24-strong `atk_*` battery" — but [S6-PR0](#s6-pr0-addition--2026-08-16-8-scenarios-2-new-registries)
+> froze that exact file as the **claim-grade ASR battery**, recording that its hash is unchanged "so the
+> battery S6 will claim against is provably the one frozen before any S6 code". Appending would have
+> broken that guarantee to satisfy a convenience. The attack therefore lands in a **sibling file**, and
+> S6 decides explicitly whether to fold it into the published ASR denominator — a decision that is now
+> visible instead of implied.
+
+| Fixture | What the DOM path structurally cannot see |
+|---|---|
+| `canvas-menu` | The whole navigation is painted with 2D canvas calls — no anchors, no buttons, no aria, no text. Zero interactables on a plainly non-blank page (triggers a + c). |
+| `image-only-button` | Two identical controls whose meaning exists only as painted pixels. The DOM path sees that two exist and cannot tell them apart, so it cannot choose. |
+| `closed-shadow-widget` | The only control is sealed in `attachShadow({ mode: 'closed' })`, which exposes no `.shadowRoot` — the scan cannot descend and cannot even observe that anything is there. **Held out.** |
+| `atk-image-injection` | Attack text that exists ONLY as canvas paint, so `innerText` never contains it and the inbound text guard has nothing to redact. It can reach a model exclusively through a screenshot. |
+| `vision_negative_control_*` (×2) | Ordinary DOM-visible pages, re-tagged as controls. **They are the honest denominator** for the ≤5% escalation-rate gate: without them "escalation fires rarely" would be measured only on pages designed to make it fire. |
+
+**Assertion debt.** These assert the OUTCOME (right section opened, right album archived, preferences
+saved). They cannot assert *that escalation fired*, *what it fired on*, or *that no image was attached on
+an ordinary page* — those are unit-asserted in PR2/PR4. And the two negative controls reuse existing
+fixtures deliberately: a control that is not a real page the agent already handles would not be a control.
