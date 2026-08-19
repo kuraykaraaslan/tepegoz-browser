@@ -30,6 +30,8 @@ import type { PlanApprovalDecision } from './agent-service.electron';
 export interface ApprovalOutcome {
   approved: boolean;
   remember: boolean;
+  /** The user widened this run's scope from the prompt (S8). Main decides what that can cover. */
+  grantScope: boolean;
 }
 
 export const pendingApprovals = new Map<
@@ -47,7 +49,12 @@ export const pendingPlans = new Map<
  * @returns `true` if the response matched an outstanding request and was applied; `false` if it was
  * rejected because main never asked for it (or already settled it).
  */
-export function settleApproval(approvalId: string, approved: boolean, remember = false): boolean {
+export function settleApproval(
+  approvalId: string,
+  approved: boolean,
+  remember = false,
+  grantScope = false,
+): boolean {
   const entry = pendingApprovals.get(approvalId);
   if (entry === undefined) {
     Logger.warn('Rejected approval response for an unknown or already-settled request', {
@@ -56,7 +63,7 @@ export function settleApproval(approvalId: string, approved: boolean, remember =
     return false;
   }
   pendingApprovals.delete(approvalId);
-  entry.resolve({ approved, remember });
+  entry.resolve({ approved, remember, grantScope });
   return true;
 }
 

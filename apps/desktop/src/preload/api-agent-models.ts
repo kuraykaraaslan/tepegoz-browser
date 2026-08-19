@@ -159,8 +159,13 @@ export const agentModelsApi: Pick<
       ipcRenderer.removeListener(IpcChannels.agentApprovalRequest, listener);
     };
   },
-  respondAgentApproval: (approvalId: string, approved: boolean, remember?: boolean) => {
-    ipcRenderer.send(IpcChannels.agentApprovalResponse, { approvalId, approved, remember });
+  respondAgentApproval: (
+    approvalId: string,
+    approved: boolean,
+    remember?: boolean,
+    grantScope?: boolean,
+  ) => {
+    ipcRenderer.send(IpcChannels.agentApprovalResponse, { approvalId, approved, remember, grantScope });
   },
   onAgentPlanPreview: (callback: (preview: AgentPlanPreview) => void) => {
     const listener = (_event: unknown, payload: AgentPlanPreview): void => {

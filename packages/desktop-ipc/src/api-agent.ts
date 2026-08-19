@@ -85,7 +85,12 @@ export interface AgentApi {
   /** Subscribe to HITL approval prompts; returns an unsubscribe function. */
   onAgentApprovalRequest(callback: (request: AgentApprovalRequest) => void): () => void;
   /** Answer a HITL prompt (approve/deny a gated tool call). */
-  respondAgentApproval(approvalId: string, approved: boolean, remember?: boolean): void;
+  respondAgentApproval(
+    approvalId: string,
+    approved: boolean,
+    remember?: boolean,
+    grantScope?: boolean,
+  ): void;
   /** Subscribe to the editable plan preview shown before the agent loop runs. */
   onAgentPlanPreview(callback: (preview: AgentPlanPreview) => void): () => void;
   /** Approve (optionally skipping some steps) or reject a proposed plan before execution. */

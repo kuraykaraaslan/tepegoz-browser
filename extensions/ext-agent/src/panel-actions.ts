@@ -231,10 +231,10 @@ export function useAgentActions(deps: AgentActionsDeps) {
     void api.setAgentStrictGuard(on).catch(() => {});
   }
 
-  function respond(approved: boolean, remember = false): void {
+  function respond(approved: boolean, remember = false, grantScope = false): void {
     const { approval } = activeState;
     if (approval !== null) {
-      api.respondAgentApproval(approval.approvalId, approved, remember);
+      api.respondAgentApproval(approval.approvalId, approved, remember, grantScope);
       mutateActive((s) => ({ ...s, approval: null }));
     }
   }

@@ -34,6 +34,9 @@ export const AgentApprovalResponseSchema = z.object({
   /** The user ticked "remember this for this skill". Main re-checks whether it MAY be remembered;
    *  a renderer asking to remember something ungrantable simply gets an ordinary approval. */
   remember: z.boolean().optional(),
+  /** The user chose "allow this on this site for the rest of the task" (S8). Main mints the scope;
+   *  the ungrantable tiers are stripped there, so this can never assemble a wider permission. */
+  grantScope: z.boolean().optional(),
 });
 
 export const AgentPlanResponseSchema = z.object({

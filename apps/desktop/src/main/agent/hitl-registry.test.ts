@@ -50,7 +50,7 @@ describe('HITL registry — a renderer cannot answer what main did not ask', () 
 
     expect(settleApproval('appr-real', true)).toBe(true);
     expect(resolve).toHaveBeenCalledTimes(1);
-    expect(resolve).toHaveBeenCalledWith({ approved: true, remember: false });
+    expect(resolve).toHaveBeenCalledWith({ approved: true, remember: false, grantScope: false });
 
     // A duplicated / replayed response finds nothing.
     expect(settleApproval('appr-real', true)).toBe(false);
@@ -63,7 +63,7 @@ describe('HITL registry — a renderer cannot answer what main did not ask', () 
 
     expect(settleApproval('appr-deny', false)).toBe(true);
     expect(resolve).toHaveBeenCalledTimes(1);
-    expect(resolve).toHaveBeenCalledWith({ approved: false, remember: false });
+    expect(resolve).toHaveBeenCalledWith({ approved: false, remember: false, grantScope: false });
   });
 
   it('carries the remember tick, and defaults it OFF when the renderer omits it', () => {
@@ -71,12 +71,20 @@ describe('HITL registry — a renderer cannot answer what main did not ask', () 
     const resolve = vi.fn();
     pendingApprovals.set('appr-remember', { runId: 'run-1', resolve });
     expect(settleApproval('appr-remember', true, true)).toBe(true);
-    expect(resolve).toHaveBeenCalledWith({ approved: true, remember: true });
+    expect(resolve).toHaveBeenCalledWith({ approved: true, remember: true, grantScope: false });
 
     const bare = vi.fn();
     pendingApprovals.set('appr-bare', { runId: 'run-1', resolve: bare });
     settleApproval('appr-bare', true);
-    expect(bare).toHaveBeenCalledWith({ approved: true, remember: false });
+    expect(bare).toHaveBeenCalledWith({ approved: true, remember: false, grantScope: false });
+  });
+
+  it('carries the run-scope tick, and defaults it OFF when the renderer omits it', () => {
+    // Same rule as `remember`: a missing field must never read as "yes, widen what this run may do".
+    const resolve = vi.fn();
+    pendingApprovals.set('appr-scope', { runId: 'run-1', resolve });
+    expect(settleApproval('appr-scope', true, false, true)).toBe(true);
+    expect(resolve).toHaveBeenCalledWith({ approved: true, remember: false, grantScope: true });
   });
 
   it('settles a correlated plan once, carrying its skipped steps', () => {

@@ -108,6 +108,12 @@ export interface AgentApprovalRequest {
   rememberSkill?: string;
   /** How long such a grant would last, so the modal can state the horizon it is asking for. */
   rememberDays?: number;
+  /**
+   * The site a one-tap run-scoped grant would cover, present only when main would honour one. Its
+   * absence is how a tier no grant may cover (money, secrets, deletion) simply never offers the
+   * control — the prompt must not offer what main would refuse.
+   */
+  scopeHost?: string;
 }
 
 export interface AgentPlanStep {
@@ -271,7 +277,12 @@ export interface AgentHostApi {
   /** Subscribe to streamed model fragments for the running task (ephemeral; see {@link AgentDelta}). */
   onAgentDelta(callback: (delta: AgentDelta) => void): () => void;
   onAgentApprovalRequest(callback: (request: AgentApprovalRequest) => void): () => void;
-  respondAgentApproval(approvalId: string, approved: boolean, remember?: boolean): void;
+  respondAgentApproval(
+    approvalId: string,
+    approved: boolean,
+    remember?: boolean,
+    grantScope?: boolean,
+  ): void;
   onAgentPlanPreview(callback: (preview: AgentPlanPreview) => void): () => void;
   respondAgentPlan(planId: string, approved: boolean, skipStepIds?: string[]): void;
   onTokenUsage(callback: (usage: TokenUsageSnapshot) => void): () => void;

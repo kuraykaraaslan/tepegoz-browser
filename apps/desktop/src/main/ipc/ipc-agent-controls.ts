@@ -38,7 +38,7 @@ export function registerAgentControlIpc(): void {
     for (const [id, entry] of pendingApprovals) {
       if (entry.runId === runId) {
         pendingApprovals.delete(id);
-        entry.resolve({ approved: false, remember: false });
+        entry.resolve({ approved: false, remember: false, grantScope: false });
       }
     }
     for (const [id, entry] of pendingPlans) {
@@ -98,8 +98,8 @@ export function registerAgentControlIpc(): void {
   onAction(
     IpcChannels.agentApprovalResponse,
     AgentApprovalResponseSchema,
-    ({ approvalId, approved, remember }) => {
-      settleApproval(approvalId, approved, remember ?? false);
+    ({ approvalId, approved, remember, grantScope }) => {
+      settleApproval(approvalId, approved, remember ?? false, grantScope ?? false);
     },
   );
   onAction(

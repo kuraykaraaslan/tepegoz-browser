@@ -136,3 +136,40 @@ describe('PlanGrantStore composed with the autonomy gate', () => {
     }
   });
 });
+
+describe('a human widening the grant at an approval (S8 PR4)', () => {
+  beforeEach(() => { PlanGrantStore.clear(); });
+
+  it('covers the site and class the user just allowed, for the rest of the run', () => {
+    PlanGrantStore.grantFromApproval('run-1', 'https://shop.test/cart', 'ui-write');
+    expect(
+      PlanGrantStore.covers({ runId: 'run-1', targetUrl: 'https://shop.test/checkout', tier: 'ui-write' }).covered,
+    ).toBe(true);
+  });
+
+  it('adds to an existing plan grant rather than replacing it', () => {
+    PlanGrantStore.mint('run-1', ['https://a.test/'], ['read']);
+    PlanGrantStore.grantFromApproval('run-1', 'https://b.test/', 'ui-write');
+    expect(PlanGrantStore.covers({ runId: 'run-1', targetUrl: 'https://a.test/x', tier: 'read' }).covered).toBe(true);
+    expect(PlanGrantStore.covers({ runId: 'run-1', targetUrl: 'https://b.test/x', tier: 'ui-write' }).covered).toBe(true);
+  });
+
+  it('still cannot produce a grant over money, secrets, or deletion — however many times it is clicked', () => {
+    // The ungrantable tiers are stripped here exactly as at mint time. A human answering prompts is how
+    // scope legitimately changes; it is not a way to assemble a permission the system refuses to hold.
+    for (const tier of ['financial', 'credential', 'destructive'] as const) {
+      PlanGrantStore.grantFromApproval('run-1', 'https://shop.test/', tier);
+      expect(
+        PlanGrantStore.covers({ runId: 'run-1', targetUrl: 'https://shop.test/x', tier }).covered,
+        `tier=${tier}`,
+      ).toBe(false);
+    }
+  });
+
+  it('does not leak to another run', () => {
+    PlanGrantStore.grantFromApproval('run-1', 'https://shop.test/', 'ui-write');
+    expect(
+      PlanGrantStore.covers({ runId: 'run-2', targetUrl: 'https://shop.test/', tier: 'ui-write' }).covered,
+    ).toBe(false);
+  });
+});

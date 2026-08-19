@@ -92,6 +92,27 @@ export default class PlanGrantStore {
     return grant;
   }
 
+  /**
+   * Widen a run's grant because a HUMAN said so at an approval prompt ("allow this kind of action on
+   * this site for the rest of the task").
+   *
+   * This does not break invariant 3 above — it is its complement. That invariant forbids the SYSTEM
+   * widening a grant it already holds, because a grant the agent can grow is not a grant. A person
+   * answering a prompt in front of them is the sanctioned way scope changes, and it is the same act
+   * as approving a plan, one step at a time. The ungrantable tiers are stripped here exactly as at
+   * mint time, so no amount of clicking can produce a grant covering money, secrets, or deletion.
+   */
+  static grantFromApproval(runId: string, url: string, tier: RiskTier): PlanGrant {
+    const existing = PlanGrantStore.grants.get(runId);
+    const grant: PlanGrant = {
+      runId,
+      domains: [...new Set([...(existing?.domains ?? []), ...grantableDomains([url])])],
+      tiers: grantableTiers([...(existing?.tiers ?? []), tier]),
+    };
+    PlanGrantStore.grants.set(runId, grant);
+    return grant;
+  }
+
   static get(runId: string): PlanGrant | undefined {
     return PlanGrantStore.grants.get(runId);
   }

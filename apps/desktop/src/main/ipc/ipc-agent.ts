@@ -20,7 +20,7 @@ export function abortActiveAgentRuns(): void {
   agentRunByGroup.clear();
   for (const [id, entry] of pendingApprovals) {
     pendingApprovals.delete(id);
-    entry.resolve({ approved: false, remember: false });
+    entry.resolve({ approved: false, remember: false, grantScope: false });
   }
   for (const [id, entry] of pendingPlans) {
     pendingPlans.delete(id);
