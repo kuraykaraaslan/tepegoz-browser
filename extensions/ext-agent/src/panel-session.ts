@@ -6,7 +6,9 @@ import {
   type MutableRefObject,
   type SetStateAction,
 } from 'react';
+import { AgentDeltaSchema } from '@tepegoz/shared-types';
 import type { AgentAutonomy, AgentConfig, AgentHostApi } from './types';
+import { createDeltaCoalescer } from './delta-coalescer';
 import {
   appendLiveDelta,
   applyAgentEvent,
@@ -38,6 +40,12 @@ export interface AgentSession {
   activeState: GroupState;
   mutateGroup: (groupId: string, fn: (s: GroupState) => GroupState) => void;
   mutateActive: (fn: (s: GroupState) => GroupState) => void;
+  /**
+   * How long the latest run took to produce its first visible fragment, in ms — measured in main from
+   * run start and reported on the first delta. Null before any run has streamed. This is the S8
+   * time-to-first-feedback metric: a felt-latency target judged by feel is not a target.
+   */
+  firstFeedbackMs: number | null;
 }
 
 export function useAgentSession(api: AgentHostApi): AgentSession {
@@ -46,6 +54,8 @@ export function useAgentSession(api: AgentHostApi): AgentSession {
   const [scheduleOpen, setScheduleOpen] = useState(false);
   // Transient "log saved" confirmation shown on the header star after a successful export.
   const [logExported, setLogExported] = useState(false);
+  /** Time-to-first-feedback for the latest run, in ms. Null until a run streams (S8 DoD ≤1.5s p50). */
+  const [firstFeedbackMs, setFirstFeedbackMs] = useState<number | null>(null);
   // Transient export failure message (surfaced so a blocked/failed export is never silent).
   const [exportError, setExportError] = useState<string | null>(null);
 
@@ -128,15 +138,33 @@ export function useAgentSession(api: AgentHostApi): AgentSession {
 
     // Streamed model fragments (ADR-0025): DISPLAY ONLY. Unsettled, unvalidated output — shown so the
     // user sees work happening, never parsed and never persisted (it lives outside `turns`).
-    const offDelta = api.onAgentDelta((d) => {
+    //
+    // Batched at ~40ms (S8 PR1) rather than applied per fragment: a fast provider emits one every few
+    // milliseconds, and a setState each would re-render the panel per token.
+    const coalescer = createDeltaCoalescer((batch) => {
       setGroupStates((prev) => {
-        const cur = prev.get(d.groupId) ?? emptyGroupState();
-        const updated = appendLiveDelta(cur, d.text);
-        if (updated === cur) return prev;
-        const next = new Map(prev);
-        next.set(d.groupId, updated);
-        return next;
+        let next: Map<string, GroupState> | null = null;
+        for (const [groupId, text] of batch) {
+          const cur = next?.get(groupId) ?? prev.get(groupId) ?? emptyGroupState();
+          const updated = appendLiveDelta(cur, text);
+          if (updated === cur) continue;
+          next ??= new Map(prev);
+          next.set(groupId, updated);
+        }
+        return next ?? prev;
       });
+    });
+    const offDelta = api.onAgentDelta((d) => {
+      // Validated on arrival even though main sent it: the SENDER is trusted, the raw model text it
+      // carries is not, and an unbounded fragment would grow this buffer without end.
+      const parsed = AgentDeltaSchema.safeParse(d);
+      if (!parsed.success) return;
+      if (parsed.data.firstFeedbackMs !== undefined) {
+        // Time-to-first-feedback (S8 DoD, ≤1.5s p50). Measured in main from run start, reported once,
+        // and recorded here rather than eyeballed — a felt-latency target judged by feel is not a target.
+        setFirstFeedbackMs(parsed.data.firstFeedbackMs);
+      }
+      coalescer.push(parsed.data.groupId, parsed.data.text);
     });
 
     // DISPLAY-ONLY. The renderer is untrusted, so it does NOT decide approvals — main reads the
@@ -176,7 +204,10 @@ export function useAgentSession(api: AgentHostApi): AgentSession {
     });
 
     void api.getAgentConfig().then(setConfig, () => { /* config unavailable */ });
-    return () => { offEvent(); offDelta(); offApproval(); offPlan(); offTokens(); };
+    return () => {
+      coalescer.dispose();
+      offEvent(); offDelta(); offApproval(); offPlan(); offTokens();
+    };
   }, [api, activeGroupId]);
 
   // Auto-scroll conversation to bottom on new events.
@@ -206,5 +237,6 @@ export function useAgentSession(api: AgentHostApi): AgentSession {
     activeState,
     mutateGroup,
     mutateActive,
+    firstFeedbackMs,
   };
 }

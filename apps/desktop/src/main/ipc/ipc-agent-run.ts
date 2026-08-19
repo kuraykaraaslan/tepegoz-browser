@@ -13,7 +13,12 @@ import { PlanGrantStore, REMEMBERED_GRANT_DAYS, resolveAutonomy } from '@tepegoz
 import { CapabilityRegistry } from '@tepegoz/capability-plane';
 import { TokenLedger } from '@tepegoz/model-gateway';
 import { EventJournal, TokenStore } from '@tepegoz/persistence';
-import type { Plan } from '@tepegoz/shared-types';
+import {
+  AgentDeltaSchema,
+  MAX_DELTA_TEXT,
+  NEVER_AUTO_GRANTABLE_TIERS,
+  type Plan,
+} from '@tepegoz/shared-types';
 import { randomUUID } from 'node:crypto';
 import AgentService, {
   type AgentRunSummary,
@@ -51,6 +56,16 @@ import {
   safeArgsPreview,
   tokenUsage,
 } from './ipc-agent-shared';
+
+/** The site a one-tap scope grant would cover, for the prompt to name. Null when unparseable — the
+ *  offer is then withheld rather than described vaguely. */
+function scopeHostField(url: string): { scopeHost?: string } {
+  try {
+    return { scopeHost: new URL(url).host };
+  } catch {
+    return {};
+  }
+}
 
 /** Fill the `{skill}` placeholder. A placeholder, not concatenation: Turkish puts the name first. */
 function fillSkill(template: string, skill: string): string {
@@ -107,8 +122,26 @@ export function registerAgentRunIpc(): void {
      * conversation history, and never replayed. It exists only so the panel can show that work is
      * happening before the step settles.
      */
+    // The FIRST fragment carries how long the user waited for it — the time-to-first-feedback
+    // measurement (S8). Only the first: paying for the metric on every token would be measuring
+    // something that by definition happens once.
+    const runStartedAt = Date.now();
+    let sentFirstDelta = false;
     const onModelDelta = (text: string): void => {
-      if (!sender.isDestroyed()) sender.send(IpcChannels.agentDelta, { runId, groupId, text });
+      if (sender.isDestroyed()) return;
+      const payload = {
+        runId,
+        groupId,
+        text: text.slice(0, MAX_DELTA_TEXT),
+        ...(sentFirstDelta ? {} : { firstFeedbackMs: Date.now() - runStartedAt }),
+      };
+      // Validated on the way OUT as well as the way in. The sender is trusted; the model text it
+      // carries is not, and a fragment that cannot satisfy its own schema is one the renderer should
+      // never be asked to render.
+      const parsed = AgentDeltaSchema.safeParse(payload);
+      if (!parsed.success) return;
+      sentFirstDelta = true;
+      sender.send(IpcChannels.agentDelta, parsed.data);
     };
     const onEvent = (kind: AgentEventKind, message: string, detail?: string): void => {
       sendEvent({
@@ -220,6 +253,13 @@ export function registerAgentRunIpc(): void {
         ...(mayOfferRemember(skillScope, facts) && skillScope !== null
           ? { rememberSkill: skillScope.name, rememberDays: REMEMBERED_GRANT_DAYS }
           : {}),
+        // The run-scoped one-tap grant is offered whenever there is something to scope it TO, and
+        // never for a tier a grant may not cover — the prompt must not offer what main would refuse.
+        ...(facts !== null &&
+        req.targetUrl !== undefined &&
+        !NEVER_AUTO_GRANTABLE_TIERS.includes(facts.tier)
+          ? scopeHostField(req.targetUrl)
+          : {}),
       };
       onEvent('awaiting_approval', `Approval needed: ${req.toolName}`, req.policy.reason);
       if (!sender.isDestroyed()) sender.send(IpcChannels.agentApprovalRequest, request);
@@ -229,6 +269,17 @@ export function registerAgentRunIpc(): void {
           resolve: (outcome) => {
             // The tick is relayed by the renderer; rememberGrant re-checks whether it MAY be
             // remembered, so a doctored renderer cannot store a grant the rules would refuse.
+            // S8: "allow this on this site for the rest of the task". The same act as approving a
+            // plan, taken one step at a time — and it cannot cover money, secrets or deletion,
+            // because grantFromApproval strips those tiers exactly as minting does.
+            if (outcome.approved && outcome.grantScope && facts !== null && req.targetUrl !== undefined) {
+              const grant = PlanGrantStore.grantFromApproval(runId, req.targetUrl, facts.tier);
+              Logger.info('User widened the run scope from an approval', {
+                runId,
+                domains: grant.domains,
+                tiers: grant.tiers,
+              });
+            }
             if (outcome.approved && outcome.remember) {
               const expiresAt = rememberGrant(historyDb, skillScope, facts);
               if (expiresAt !== null && skillScope !== null) {
