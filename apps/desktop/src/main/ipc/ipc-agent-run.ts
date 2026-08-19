@@ -111,8 +111,36 @@ export function registerAgentRunIpc(): void {
     setTrayAgentRunning(true);
     const sender = event.sender;
     const runId = `run-${String(++runCounter)}`;
+    /**
+     * Release everything this handler has CLAIMED: the global single-run lock, the per-group lock,
+     * the current-run pointer, the plan grant, and the tray indicator.
+     */
+    const releaseClaims = (): void => {
+      setCurrentAgentRun(null, null, null);
+      unregisterRunControl(runId);
+      setTrayAgentRunning(false);
+      PlanGrantStore.revoke(runId);
+      agentRunByGroup.delete(groupId);
+    };
+    /**
+     * Run one synchronous setup step, releasing every claim if it throws.
+     *
+     * The claims above are taken before the run’s own `try`/`finally` exists, and the setup between
+     * them is not merely bookkeeping — it opens a history turn, reads the skill store, reads the
+     * preference store and queries the token ledger. Any of those can throw. Without this, one
+     * sqlite error left the single-run lock held forever: `hasActiveAgentRun()` stayed true and the
+     * agent was dead for the whole session, with no error path that could ever clear it.
+     */
+    const setup = <T>(fn: () => T): T => {
+      try {
+        return fn();
+      } catch (err) {
+        releaseClaims();
+        throw err;
+      }
+    };
     const historyDb = getDb();
-    const history =
+    const history = setup(() =>
       historyDb === null
         ? null
         : AgentService.beginHistoryTurn(historyDb, {
@@ -121,15 +149,16 @@ export function registerAgentRunIpc(): void {
             prompt: displayPrompt ?? prompt,
             attachments: attachmentMeta ?? [],
             ts: Date.now(),
-          });
-    if (history !== null) broadcastConversationsState();
+          }),
+    );
+    if (history !== null) setup(() => { broadcastConversationsState(); });
     // S9: the scope a remembered grant may be matched against. Null for an ad-hoc task, and null
     // whenever the prompt no longer matches the named skill's stored one — see resolveSkillScope.
-    const skillScope = resolveSkillScope(historyDb, skillId, prompt);
-    const control = createRunControl(runId, () => {
+    const skillScope = setup(() => resolveSkillScope(historyDb, skillId, prompt));
+    const control = setup(() => createRunControl(runId, () => {
       // Phase 2 (resilience): kick the NetworkMonitor into active reconnect probing when a drop is seen
       // only on the model socket. No-op for now — pause/steer (Phase 1) do not need it.
-    });
+    }));
     const sendEvent = (e: AgentEvent): void => {
       if (!sender.isDestroyed()) sender.send(IpcChannels.agentEvent, e);
     };
@@ -438,9 +467,10 @@ export function registerAgentRunIpc(): void {
     // Token budget (L7): the account quota + the persisted lifetime BEFORE this run. Used for the
     // pre-flight gate, the live indicator seed, the auto-refund, and the 80% warning crossing check.
     const budgetDb = getDb();
-    const tokenQuota = PreferenceStore.getAll().agentTokenQuota;
-    const lifetimeUsedBefore =
-      budgetDb !== null ? TokenStore.lifetimeTotals(budgetDb).totalTokens : 0;
+    const tokenQuota = setup(() => PreferenceStore.getAll().agentTokenQuota);
+    const lifetimeUsedBefore = setup(() =>
+      budgetDb !== null ? TokenStore.lifetimeTotals(budgetDb).totalTokens : 0,
+    );
     let runSummary: AgentRunSummary | undefined;
     let runThrew = false;
 
@@ -498,15 +528,11 @@ export function registerAgentRunIpc(): void {
           Logger.warn('Token ledger persist failed', { err: String(err) });
         }
       }
-      setCurrentAgentRun(null, null, null);
-      unregisterRunControl(runId);
-      // Cleared here rather than on the done event: an indicator that survives a crash is worse than no
-      // indicator, because it says "still working" about a run that has stopped.
-      setTrayAgentRunning(false);
-      // A plan grant cannot outlive the task it was given for. Revoked in `finally`, so a crash or a
-      // cancel cannot leave one behind — which is also why grants never need to be persisted.
-      PlanGrantStore.revoke(runId);
-      agentRunByGroup.delete(groupId);
+      // The same release path the setup guard uses, so the two can never drift apart. Everything in
+      // it is idempotent: the tray indicator is cleared rather than toggled, the plan grant is deleted
+      // by key, and the locks are map deletes. A crash or a cancel cannot leave any of them claimed —
+      // which is also why grants never need to be persisted.
+      releaseClaims();
       if (!sender.isDestroyed()) sender.send(IpcChannels.tokenUsage, tokenUsage());
     }
   });
