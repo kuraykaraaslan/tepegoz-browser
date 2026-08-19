@@ -1,5 +1,6 @@
 import { SECURITY_PREAMBLE } from '@tepegoz/tool-executor';
 import type { ReactRequest } from './reactor-types';
+import { QUICK_MODE_INSTRUCTION } from './quick-decision';
 
 /** Coreference guidance — emitted only when there ARE earlier turns, so a follow-up like "research this"
  *  resolves its pronoun to the real subject instead of being taken literally. */
@@ -55,7 +56,12 @@ const BROWSING_STRATEGY =
   'nothing visibly changed; no warning plus the expected change means it worked. Re-read the current page ' +
   'to verify — do NOT web_search to find out whether your own action saved.';
 
-export function systemPrompt(req: ReactRequest): string {
+/**
+ * The system prompt. `quick` appends S7's compact output-format instruction, which is why it must
+ * default to false: a provider with quick mode off has to see a byte-identical prompt to the one it
+ * sees today, or the encoding sweep would be measuring two changes at once.
+ */
+export function systemPrompt(req: ReactRequest, quick = false): string {
   const toolList = req.tools.map((t) => `- ${t.id} (${t.dangerClass}): ${t.description}`).join('\n');
   const outline = req.outline && req.outline.length > 0 ? `\nSuggested approach:\n${req.outline.join('\n')}` : '';
   const avoid = req.avoid && req.avoid.length > 0 ? `\nDo NOT do (the user removed these): ${req.avoid.join('; ')}` : '';
@@ -79,6 +85,9 @@ export function systemPrompt(req: ReactRequest): string {
     BROWSING_STRATEGY +
     coref +
     outline +
-    avoid
+    avoid +
+    (quick ? `
+
+${QUICK_MODE_INSTRUCTION}` : '')
   );
 }

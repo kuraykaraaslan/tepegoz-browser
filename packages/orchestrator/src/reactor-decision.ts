@@ -3,6 +3,7 @@ import type { CanonResponse } from '@tepegoz/model-gateway';
 import { AgentWorkingStateSchema } from '@tepegoz/shared-types';
 import { z } from 'zod';
 import { DECISION_TOOL_NAME } from './reactor-decision-mode';
+import { decodeQuickDecision, looksCompact } from './quick-decision';
 import { ReactorMessages } from './messages';
 
 /**
@@ -126,8 +127,19 @@ function salvageTruncatedState(text: string): unknown {
   }
 }
 
-/** Parse the model's raw turn into a validated {@link Decision}. Throws AppError on malformed output. */
-export function parseDecision(text: string): Decision {
+/**
+ * Parse the model's raw turn into a validated {@link Decision}. Throws AppError on malformed output.
+ *
+ * `quick` enables S7's compact tab-separated encoding for providers it is switched on for. It is an
+ * ENCODING, not a second parser: a decoded line goes through the same coercion and the same zod
+ * safeParse as JSON, and a model that answers in JSON anyway falls straight through to the JSON path
+ * rather than failing. Nothing downstream can tell how a decision arrived.
+ */
+export function parseDecision(text: string, quick = false): Decision {
+  if (quick && looksCompact(text)) {
+    const compact = decodeQuickDecision(text);
+    if (compact !== null) return settleDecision(compact, text.slice(0, 400));
+  }
   let raw: unknown;
   try {
     raw = JSON.parse(extractJson(text));
