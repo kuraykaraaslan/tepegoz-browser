@@ -91,6 +91,7 @@ export async function setFileInputFiles(
   core: DriverCore,
 ): Promise<{ accept: string; multiple: boolean }> {
   await core.ensure(wc);
+  core.assertSameOrigin(wc);
   const node = await core.resolveRef(wc, ref);
   const info = await fileInputInfo(wc, node);
   if (info === null) throw new AppError('Target element is not a file input', 409);
@@ -109,6 +110,7 @@ export async function clickElement(
   core: DriverCore,
 ): Promise<{ occludedBy: string | null }> {
   await core.ensure(wc);
+  core.assertSameOrigin(wc);
   const node = await core.resolveRef(wc, ref);
   const center = await centerOf(wc, node);
   // S3 PR5: occlusion was only ever checked during the SCAN, so a banner or sticky overlay appearing
@@ -169,6 +171,7 @@ export async function fillElement(
   core: DriverCore,
 ): Promise<{ widget: 'readonly' | 'disabled' | 'combobox' | null }> {
   await core.ensure(wc);
+  core.assertSameOrigin(wc);
   const node = await core.resolveRef(wc, ref);
   // S3 PR7: a readonly/disabled field, or an ARIA combobox with a popup, takes its value from its own
   // widget. Typing does nothing, and a fill that "succeeds" into a field the page ignores is the most
@@ -235,6 +238,7 @@ export async function selectOption(
   core: DriverCore,
 ): Promise<{ selected: string | null; options: string[] }> {
   await core.ensure(wc);
+  core.assertSameOrigin(wc);
   const node = await core.resolveRef(wc, ref);
   const objectId = await objectIdFor(wc, node);
   const raw: unknown = await wc.debugger.sendCommand('Runtime.callFunctionOn', {

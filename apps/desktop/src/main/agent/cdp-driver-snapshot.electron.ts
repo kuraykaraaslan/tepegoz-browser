@@ -187,6 +187,9 @@ async function snapshotElementsRenderDom(
     });
   });
   deps.refMaps.set(wc, refMap);
+  // S4 PR2: remember WHERE these refs were located, so a mutating action can prove the page did not
+  // change origin underneath them.
+  deps.refOrigins.set(wc, tree.data.url);
   return { url: tree.data.url, title: tree.data.title, elements: interactables };
 }
 
@@ -228,5 +231,6 @@ async function snapshotElementsA11y(
   }
 
   deps.refMaps.set(wc, refMap);
+  deps.refOrigins.set(wc, wc.getURL());
   return { url: wc.getURL(), title: wc.getTitle(), elements };
 }

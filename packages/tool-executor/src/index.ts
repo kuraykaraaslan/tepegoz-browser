@@ -43,3 +43,4 @@ export type { PathNode, NodePath, PathSegment, ElementLocators } from './dom-pat
 export * from './stable-refs.js';
 export * from './elements-diff.js';
 export * from './key-chord.js';
+export * from './origin-guard.js';

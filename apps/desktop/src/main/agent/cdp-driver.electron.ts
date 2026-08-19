@@ -10,7 +10,7 @@ import {
   type SnapshotDeps,
   type SnapshotResult,
 } from './cdp-driver-schemas.electron.js';
-import type { RefRegistry } from '@tepegoz/tool-executor';
+import { isOriginSwap, originOf, originSwapMessage, type RefRegistry } from '@tepegoz/tool-executor';
 import { locatorsToObjectId, pathToObjectId, readValue } from './cdp-driver-dom.electron.js';
 import { attachNetworkRecorder, networkSince } from './cdp-driver-network.electron.js';
 import { waitForPageSettled } from './cdp-driver-session.electron.js';
@@ -52,6 +52,8 @@ export default class CdpDriver {
   private static readonly prevSnapshots = new WeakMap<WebContents, { url: string; hashes: Set<string> }>();
   /** S2 PR1: per-tab identity → ref carry-over for stable refs (unused on the positional path). */
   private static readonly refRegistries = new WeakMap<WebContents, RefRegistry>();
+  /** S4 PR2: the page URL each tab's ref map was built against. */
+  private static readonly refOrigins = new WeakMap<WebContents, string>();
 
   /** The state-owning collaborators the extracted input helpers borrow. */
   private static core(): DriverCore {
@@ -59,6 +61,9 @@ export default class CdpDriver {
       ensure: (wc) => CdpDriver.ensureAttached(wc),
       resolveRef: (wc, ref) => CdpDriver.resolveRef(wc, ref),
       settle: (wc) => CdpDriver.settle(wc),
+      assertSameOrigin: (wc) => {
+        CdpDriver.assertSameOrigin(wc);
+      },
     };
   }
 
@@ -69,6 +74,7 @@ export default class CdpDriver {
       refMaps: CdpDriver.refMaps,
       prevSnapshots: CdpDriver.prevSnapshots,
       refRegistries: CdpDriver.refRegistries,
+      refOrigins: CdpDriver.refOrigins,
     };
   }
 
@@ -145,6 +151,25 @@ export default class CdpDriver {
    * a11y path returns the stored `backendNodeId`; the render-DOM path re-resolves the stored XPath to
    * a fresh object handle against the current DOM (so a `ref` stays valid within its snapshot).
    */
+  /**
+   * S4 PR2 — the navigation-swap gate. Throws when the page changed origin since the ref map was built.
+   *
+   * Silent on an unknown origin: the check must be able to PROVE a swap before it refuses, and treating
+   * "I could not read the URL" as a swap would make ordinary pages unclickable. `AppError(409)` so the
+   * reactor observes it as a recoverable step failure and re-reads, rather than the run dying.
+   */
+  private static assertSameOrigin(wc: WebContents): void {
+    const located = CdpDriver.refOrigins.get(wc);
+    if (located === undefined) return;
+    const current = wc.getURL();
+    if (!isOriginSwap(located, current)) return;
+    Logger.warn('[input] refusing a state-changing action after a navigation swap', {
+      located: originOf(located),
+      current: originOf(current),
+    });
+    throw new AppError(originSwapMessage(located, current), 409);
+  }
+
   private static async resolveRef(wc: WebContents, ref: number): Promise<NodeArg> {
     const refMap = CdpDriver.refMaps.get(wc);
     if (refMap === undefined) {

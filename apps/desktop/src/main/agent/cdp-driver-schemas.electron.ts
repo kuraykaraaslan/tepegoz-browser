@@ -212,6 +212,15 @@ export interface DriverCore {
   ensure: EnsureAttached;
   resolveRef: (wc: WebContents, ref: number) => Promise<NodeArg>;
   settle: (wc: WebContents) => Promise<void>;
+  /**
+   * S4 PR2: refuse a state-changing action when the page changed ORIGIN since the ref was located.
+   *
+   * A ref is found on one page and acted on a moment later. If the page was replaced in between, the
+   * gesture lands somewhere the agent never looked — a look-alike page can accept a transfer and print a
+   * confirmation, and nothing in the DOM layer would know. Deterministic and pre-model (ADR-0006's
+   * spirit): no prose decides this.
+   */
+  assertSameOrigin: (wc: WebContents) => void;
 }
 
 /** Per-tab snapshot state the driver class lends to the extracted perception helpers. */
@@ -219,6 +228,8 @@ export interface SnapshotDeps {
   ensure: EnsureAttached;
   refMaps: WeakMap<WebContents, Map<number, RefTarget>>;
   prevSnapshots: WeakMap<WebContents, { url: string; hashes: Set<string> }>;
+  /** S4 PR2: the page URL each tab's ref map was built against, so a later action can prove a swap. */
+  refOrigins: WeakMap<WebContents, string>;
   /**
    * S2 PR1: per-tab identity → ref carry-over, so an element keeps its number across snapshots within a
    * run. Present only when `TEPEGOZ_PERCEPTION_V2` is on; the positional path never reads it.

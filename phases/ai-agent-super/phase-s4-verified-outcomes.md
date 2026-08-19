@@ -1,6 +1,6 @@
 # Phase S4 — Verified Outcomes (W1 Reliability)
 
-**Status:** 🟡 In progress (PR0–PR1 landed 2026-08-19) · **Depends on:** [S1](phase-s1-foundation-native-loop.md) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟡 In progress (PR0–PR2 landed 2026-08-19) · **Depends on:** [S1](phase-s1-foundation-native-loop.md) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Make the completion validator believe **evidence**, not the page's own success message, so
 fabricated-success ≈ 0 — north-star condition 3, a metric no rival publishes. A completion claim must
@@ -48,7 +48,7 @@ even with a funded key.
       **N≥10 per scenario**, reported as the **binomial 95% upper bound** — never a bare zero. (⏸ funded sweep)
 - [ ] **verified-completion-rate** is a first-class reported metric in `report.ts` for **every**
       subsequent program sweep (dev + held-out), alongside a **fabricated-success** column. (⏸ funded sweep)
-- [ ] Deterministic **URL re-verify before mutating actions** in the dispatch path: a click/fill/press/
+- [x] Deterministic **URL re-verify before mutating actions** in the dispatch path: a click/fill/press/
       select whose tab origin no longer matches the origin the ref was resolved against is refused
       (`AppError`), not silently retargeted. Unit-tested with a navigation-swap fixture; no model prose
       involved.
@@ -130,13 +130,31 @@ even with a funded key.
 
 ### PR2 — deterministic URL re-verify pre-dispatch
 
-- [ ] In the tool-executor dispatch path ([packages/tool-executor](../../packages/tool-executor/src/index.ts)
+- [x] In the tool-executor dispatch path ([packages/tool-executor](../../packages/tool-executor/src/index.ts)
       / dom-path resolution), before dispatching a **mutating** action (`click`/`fill`/`press`/
       `select_option`), compare the current tab origin against the origin the ref was resolved against;
       on mismatch, throw `AppError('navigation-swap: page origin changed since element was located', …)`.
-- [ ] Reuse the structural page-signature machinery already present (the djb2 sig in `readPage`) to
+- [x] Reuse the structural page-signature machinery already present (the djb2 sig in `readPage`) to
       detect the swap deterministically; **no model prose** decides this.
-- [ ] Unit test with the `wrong_domain_lookalike` fixture: swapped origin ⇒ refusal, same origin ⇒ pass.
+- [x] Unit test with the `wrong_domain_lookalike` fixture: swapped origin ⇒ refusal, same origin ⇒ pass.
+
+> **Mechanism notes (PR2).**
+> 1. The gate compares **origin**, and is deliberately narrow, because refusing a legitimate action is
+>    its own failure: `www.` is ignored on either side, an `http → https` **upgrade** passes (the
+>    downgrade does not), and query/hash changes are invisible to it.
+> 2. **It must be able to PROVE a swap to refuse.** An unparseable or empty URL on either side is not a
+>    swap — otherwise pages this check cannot read would become unclickable.
+> 3. It raises `AppError(409)`, so the reactor observes a recoverable step failure and re-reads, rather
+>    than the run dying — which is what the phase's risk note asks for.
+> 4. **Deviation from the task line:** the check does NOT reuse the djb2 page signature. That signature
+>    answers "did this page change?", which is true of every ordinary in-page interaction; the question
+>    here is "am I still on the same *site*?", and a URL origin answers it exactly while a content hash
+>    would false-refuse constantly. It also lives in the driver's ref-resolution path rather than in
+>    `@tepegoz/tool-executor`, because the recorded origin belongs to the per-tab ref map, which the
+>    driver owns — the *rule* is pure and unit-tested in `origin-guard.ts`, only its application is in main.
+> 5. The frozen `wrong_domain_lookalike` / `url_swap_before_submit` fixtures assert the OUTCOME on a real
+>    page; the refusal itself is asserted directly in `origin-gate.test.ts`, since a fixture cannot show
+>    that the click was never dispatched.
 
 ### PR3 — harness metric + report column
 
