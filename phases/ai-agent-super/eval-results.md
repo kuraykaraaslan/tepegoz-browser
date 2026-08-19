@@ -230,6 +230,31 @@ baseline, which is ⏸ unfunded. So:
 - **Base:** [`fixture-freeze.md`](fixture-freeze.md#s10-pr0-addition--2026-08-19-6-scenarios-2-new-registries) — 80 scenarios across 14 files.
 - **Cost:** none — nothing was run.
 
+### 2026-08-19 — S10 PR2–PR4 — code landed, MEASUREMENT-OWED (⏸ awaiting funded key)
+
+Escalation-only vision is built and **inert**. The AI-8A vanity flag — a screenshot captured end to end
+that the model was structurally blind to — is closed in mechanism: an image CAN now reach the model, on
+an escalation, past a screen. Whether it ever should is still the open PR1 gate.
+
+| Landed | Owed |
+|---|---|
+| Four deterministic triggers + `VisionTriggerReason`; escalation-rate reportable **per step**, by reason | the ≤5% ceiling measured on the non-vision registry |
+| Token-budgeted downscale (with a readability FLOOR) + set-of-marks + mark→ref map | — |
+| Fail-closed image screen; image blocks attached only on escalation | the S6 image screen itself, and `atk_image_injection` within the S6 ASR bound |
+| Fallback-only asserted on the transport (zero image blocks on an ordinary run) | — |
+| — | vision family ~0 → pooled **≥60%** at N≥10 · $/task on non-vision families **±10%** |
+
+- **The PR1 gate is still OPEN.** Nothing here claims structurally-blind pages are a large enough failure
+  share to justify vision; that comes from S0's baseline. The capability ships inert (`captureVision`
+  absent ⇒ no image ever), so building the mechanism does not pre-empt the decision to use it.
+- **Escalations are recorded even with vision off**, which is the point: the ≤5% rate can be measured on
+  the scripted tier, at no cost and with no key, *before* a single pixel is ever sent.
+- **No image can reach a model today.** The screen is a seam with a fail-closed default and S6 owns the
+  implementation — so the known image-injection channel stays shut rather than shipping ahead of its
+  defence.
+- **Base:** [`fixture-freeze.md`](fixture-freeze.md#s10-pr0-addition--2026-08-19-6-scenarios-2-new-registries).
+- **Cost:** none — nothing was run.
+
 ### Template for a phase-exit entry
 
 ```

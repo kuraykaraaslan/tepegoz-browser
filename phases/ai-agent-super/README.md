@@ -114,7 +114,14 @@ landed code, hiding an anti-debt breach **×3**. Audited against `git log`, the 
 **Anti-debt state: 1 measurement-owed (S0) — compliant.** C1's and C7's owed sweeps do not each count
 as separate debt because both are discharged by the *same* S0 full-registry baseline.
 
-**Update 2026-08-18 — S1, S2 and S3 landed their code; the count rises to 4, and that is a STATED BREACH
+**Update 2026-08-19 — S4 and S10 landed too; the count is now 6.** Same stated breach, same reason, and
+the same protections still hold: no phase reads ✅, no capability flag was promoted to default, and every
+sweep-bearing criterion stays ⏸ and unclaimed. Two additions worth naming because they are the kind of
+thing that quietly rots: **S10's PR1 gate is recorded OPEN, not passed** (its capability ships inert), and
+**S4's PROSE-LEDGER row 6 stays RETAINED** even though its mechanism now exists, because the constitution
+moves a row on a paired sweep and nothing else.
+
+**Update 2026-08-18 — S1, S2 and S3 landed their code; the count rose to 4, and that is a STATED BREACH
 of the anti-debt rule, not an oversight.** [S1](phase-s1-foundation-native-loop.md) (transport, content blocks, native
 tool-calling on three adapters, the streaming boundary), [S2](phase-s2-perception-v2.md) (identity-stable
 refs, diffing + elision, label resolution, article text) and [S3](phase-s3-reliability-actions.md)
