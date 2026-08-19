@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Meridian Supply — Catalogue</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; }
+      nav a { margin-right: 1rem; }
+      .drawer { display: none; border: 1px solid #ccc; padding: 0.6rem; margin-top: 0.8rem; width: 18rem; }
+      .drawer.open { display: block; }
+      button { padding: 0.5rem 0.9rem; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <h1>Meridian Supply</h1>
+    <!--
+      S9 fixture — REPEAT-DOMAIN PAIR (arm 1: first visit).
+
+      The part number lives behind a collapsed drawer whose contents are NOT in the actionable set until
+      it is opened. Finding it costs a first visitor a discovery loop: read, notice the toggle, open it,
+      re-read. That discovery is exactly what a domain memory should make unnecessary on a second visit —
+      and the page is deliberately identical on both arms, so any delta is memory, not a different task.
+    -->
+    <nav><a href="index.html">Home</a><a href="index.html">Support</a></nav>
+    <button id="toggle" onclick="document.getElementById('spec').classList.toggle('open')">
+      Technical details
+    </button>
+    <div class="drawer" id="spec">
+      <p>Part number: <strong>MS-4417-B</strong></p>
+      <p>Lead time: 5 working days.</p>
+    </div>
+    <p>Browse our catalogue of industrial fittings.</p>
+  </body>
+</html>
