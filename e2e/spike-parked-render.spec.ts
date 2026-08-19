@@ -49,8 +49,26 @@ interface ProbeResult {
 }
 
 /** In the MAIN process: capture + hit-test the WebContents whose URL contains `needle`. */
+/**
+ * Run a main-process evaluate, treating a torn-down execution context as "not yet" rather than as a
+ * failure.
+ *
+ * `app.evaluate` rejects with "Execution context was destroyed" when a navigation lands mid-call, and
+ * inside `expect.poll` that rejection ends the whole poll instead of retrying it. Since a poll exists
+ * precisely to wait for a state that has not settled, a transient teardown is the normal case, not an
+ * error — this made the kiosk assertion fail roughly one run in three. Real failures still surface:
+ * the poll keeps retrying and times out with the last value.
+ */
+async function pollEvaluate<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await fn();
+  } catch {
+    return fallback;
+  }
+}
+
 async function probe(app: ElectronApplication, needle: string): Promise<ProbeResult> {
-  return app.evaluate(async ({ webContents }, urlNeedle: string): Promise<ProbeResult> => {
+  return pollEvaluate(() => app.evaluate(async ({ webContents }, urlNeedle: string): Promise<ProbeResult> => {
     const wc = webContents.getAllWebContents().find((w) => w.getURL().includes(urlNeedle));
     if (wc === undefined) return { found: false };
     const img = await wc.capturePage();
@@ -58,7 +76,7 @@ async function probe(app: ElectronApplication, needle: string): Promise<ProbeRes
       '(() => { const el = document.elementFromPoint(Math.floor(window.innerWidth/2), Math.floor(window.innerHeight/2)); return { w: window.innerWidth, h: window.innerHeight, hit: el ? el.tagName : null }; })()',
     )) as { w: number; h: number; hit: string | null };
     return { found: true, empty: img.isEmpty(), width: dom.w, height: dom.h, hit: dom.hit };
-  }, needle);
+  }, needle), { found: false });
 }
 
 test('parked hidden tab + tray window keep compositing AND stay perceivable', async () => {
@@ -308,10 +326,14 @@ test('kiosk mode: fullscreen + chromeless, locked to the kiosk URL, still render
     await expect
       .poll(
         () =>
-          app.evaluate(({ BrowserWindow }) => {
-            const win = BrowserWindow.getAllWindows().find((w) => w.getParentWindow() === null);
-            return win?.isKiosk() ?? false;
-          }),
+          pollEvaluate(
+            () =>
+              app.evaluate(({ BrowserWindow }) => {
+                const win = BrowserWindow.getAllWindows().find((w) => w.getParentWindow() === null);
+                return win?.isKiosk() ?? false;
+              }),
+            false,
+          ),
         { timeout: 8000 },
       )
       .toBe(true);
