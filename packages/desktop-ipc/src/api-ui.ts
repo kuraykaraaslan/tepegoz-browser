@@ -10,6 +10,7 @@ import type {
   PageMenuContributionActionInput,
 } from './contract';
 import type { HistoryEntry } from './contract';
+import type { SiteClearPlan } from './contract';
 import type { BookmarkEntry, BookmarkNodeType, BookmarkTreeNode } from './contract';
 import type { BookmarkImportInput, BookmarkImportResult } from './contract';
 import type { BookmarkMenuAction } from './contract';
@@ -59,6 +60,14 @@ export interface UiApi {
   }): Promise<HistoryEntry[]>;
   deleteHistory(url: string): Promise<void>;
   clearHistory(): Promise<void>;
+  /**
+   * What a "forget this site" would cover and what it would break, WITHOUT doing it (Phase 2).
+   * Null when the URL has no site to scope to. The dialog is built from this, so the warning
+   * arrives before the confirmation rather than after the damage.
+   */
+  planSiteDataClear(url: string): Promise<SiteClearPlan | null>;
+  /** Perform the clear the user just confirmed; resolves with what was actually cleared. */
+  clearSiteData(url: string): Promise<SiteClearPlan | null>;
   // Bookmarks. Only http(s) pages are bookmarkable (internal tepegoz:// pages are rejected in main).
   /** All bookmarks, newest-first. */
   listBookmarks(): Promise<BookmarkEntry[]>;

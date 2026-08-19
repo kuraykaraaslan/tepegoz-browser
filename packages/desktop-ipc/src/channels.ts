@@ -185,6 +185,10 @@ export const IpcChannels = {
   historySearch: 'history:search',
   historyDelete: 'history:delete',
   historyClear: 'history:clear',
+  /** Renderer→main: plan a per-site data clear (what it would cover, what it would break). */
+  siteDataPlan: 'site-data:plan',
+  /** Renderer→main: perform the clear the user just confirmed. */
+  siteDataClear: 'site-data:clear',
   bookmarksList: 'bookmarks:list',
   bookmarksToggle: 'bookmarks:toggle',
   bookmarksIsBookmarked: 'bookmarks:is-bookmarked',

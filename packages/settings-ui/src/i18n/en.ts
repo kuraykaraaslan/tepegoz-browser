@@ -267,6 +267,23 @@ export const en = {
   telemetry: 'Share anonymous usage telemetry',
   telemetryDesc: 'Off by default. No page content or keys are ever sent.',
   clearHistoryLabel: 'Browsing history',
+  // "Forget this site" (Phase 2). The warnings are the point of the feature: a clear that silently
+  // signs someone out of a site they were using is the kind of help that costs trust everywhere else.
+  forgetSite: {
+    title: 'Forget a site',
+    desc: 'Remove one site’s cookies, storage, caches and service workers in a single step.',
+    placeholder: 'example.com',
+    review: 'Review',
+    confirmFor: 'This will clear everything {site} has stored on this device.',
+    confirm: 'Forget it',
+    cleared: 'Cleared everything stored by {site}.',
+    vaultUntouched: 'Saved passwords are not deleted — they stay in your password manager.',
+    warning: {
+      signs_you_out: 'You will be signed out of this site.',
+      holds_saved_credentials: 'Your password manager has a login saved for this site.',
+      has_offline_data: 'Offline features on this site will stop working until you reload it.',
+    },
+  },
   clearHistoryDesc: 'Remove the list of pages you have visited on this device.',
   clearHistoryButton: 'Clear history',
   historyCleared: 'Browsing history cleared.',

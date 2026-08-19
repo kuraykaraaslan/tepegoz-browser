@@ -4,6 +4,7 @@ import {
   type AppNotification,
   type BookmarkEntry,
   type BookmarkImportInput,
+  type SiteClearPlan,
   type BookmarkImportResult,
   type BookmarkMenuAction,
   type BookmarkNodeType,
@@ -24,6 +25,8 @@ export const bookmarksHistoryApi: Pick<
   | 'searchHistory'
   | 'deleteHistory'
   | 'clearHistory'
+  | 'planSiteDataClear'
+  | 'clearSiteData'
   | 'listBookmarks'
   | 'toggleBookmark'
   | 'isBookmarked'
@@ -52,6 +55,8 @@ export const bookmarksHistoryApi: Pick<
     invoke<HistoryEntry[]>(IpcChannels.historySearch, params),
   deleteHistory: (url: string) => invoke<void>(IpcChannels.historyDelete, url),
   clearHistory: () => invoke<void>(IpcChannels.historyClear),
+  planSiteDataClear: (url: string) => invoke<SiteClearPlan | null>(IpcChannels.siteDataPlan, url),
+  clearSiteData: (url: string) => invoke<SiteClearPlan | null>(IpcChannels.siteDataClear, url),
   listBookmarks: () => invoke<BookmarkEntry[]>(IpcChannels.bookmarksList),
   toggleBookmark: (url: string, title: string, favicon?: string | null) =>
     invoke<boolean>(IpcChannels.bookmarksToggle, { url, title, favicon }),

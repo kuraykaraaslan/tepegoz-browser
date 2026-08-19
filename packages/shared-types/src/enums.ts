@@ -82,6 +82,7 @@ export const EventTypeEnum = z.enum([
   'DownloadCanceled',
   'DownloadFailed',
   'ClipboardAccessed',
+  'SiteDataCleared',
   'UploadStaged',
   'UploadBound',
   'UploadSubmitting',

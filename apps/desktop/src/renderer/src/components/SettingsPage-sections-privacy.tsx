@@ -1,4 +1,6 @@
-import { ComingSoonCard, type SettingsSection } from '@tepegoz/settings-ui';
+import { useState } from 'react';
+import { ComingSoonCard, type SettingsSection, type SettingsStrings } from '@tepegoz/settings-ui';
+import type { SiteClearPlan } from '@tepegoz/shared-types';
 import { Button, Card, Toggle } from '@tepegoz/ui';
 import {
   AboutSection,
@@ -19,6 +21,69 @@ import {
 } from './SettingsPage-icons';
 import type { SettingsSectionsCtx } from './SettingsPage-sections';
 
+/**
+ * "Forget this site" (Phase 2). Two-step by construction: the first click PLANS, which is what
+ * produces the warnings, and only the second clears. A single-click version would be smaller and
+ * would sign people out of sites they were using without ever telling them.
+ */
+function ForgetSiteRow({ s }: { s: SettingsStrings }) {
+  const [url, setUrl] = useState('');
+  const [plan, setPlan] = useState<SiteClearPlan | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+
+  const preview = (): void => {
+    setDone(null);
+    void window.tepegoz.planSiteDataClear(url).then(setPlan, () => { setPlan(null); });
+  };
+  const confirm = (): void => {
+    void window.tepegoz.clearSiteData(url).then((cleared) => {
+      setPlan(null);
+      setDone(cleared?.site ?? null);
+    }, () => { setPlan(null); });
+  };
+
+  return (
+    <div>
+      <p className="text-sm font-medium text-text-primary">{s.forgetSite.title}</p>
+      <p className="mb-2 text-xs text-text-secondary">{s.forgetSite.desc}</p>
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          value={url}
+          placeholder={s.forgetSite.placeholder}
+          aria-label={s.forgetSite.title}
+          onChange={(e) => { setUrl(e.target.value); setPlan(null); setDone(null); }}
+          className="min-w-0 flex-1 rounded-md border border-border bg-surface-base px-2 py-1 text-sm text-text-primary placeholder:text-text-disabled focus:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+        />
+        <Button size="sm" variant="outline" disabled={url.trim().length === 0} onClick={preview}>
+          {s.forgetSite.review}
+        </Button>
+      </div>
+      {plan !== null && (
+        <div className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2">
+          <p className="text-sm text-text-primary">
+            {s.forgetSite.confirmFor.replace('{site}', plan.site)}
+          </p>
+          <ul className="mt-1 list-disc pl-5 text-xs text-text-secondary">
+            {plan.warnings.map((w) => (
+              <li key={w}>{s.forgetSite.warning[w]}</li>
+            ))}
+            <li>{s.forgetSite.vaultUntouched}</li>
+          </ul>
+          <Button size="sm" variant="outline" className="mt-2" onClick={confirm}>
+            {s.forgetSite.confirm}
+          </Button>
+        </div>
+      )}
+      {done !== null && (
+        <p className="mt-2 text-xs text-text-secondary">
+          {s.forgetSite.cleared.replace('{site}', done)}
+        </p>
+      )}
+    </div>
+  );
+}
+
 /** The "Privacy & security", "Advanced", and "About" section groups. Pure builders — deps via `ctx`. */
 export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSection[] {
   const { s, prefs, setPref, developerVisible } = ctx;
@@ -29,7 +94,7 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
       group: s.groupPrivacy,
       label: s.privacyTitle,
       icon: <IconShield />,
-      searchText: `${s.privacyTitle} ${s.telemetry} ${s.telemetryDesc} ${s.clearHistoryLabel}`,
+      searchText: `${s.privacyTitle} ${s.telemetry} ${s.telemetryDesc} ${s.clearHistoryLabel} ${s.forgetSite.title}`,
       content: (
         <Card title={s.privacyTitle}>
           <div className="space-y-4">
@@ -49,6 +114,7 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
                 {s.clearHistoryButton}
               </Button>
             </div>
+            <ForgetSiteRow s={s} />
           </div>
         </Card>
       ),

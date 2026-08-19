@@ -102,3 +102,7 @@ export type {
   TaskSaveInput,
   TasksState,
 };
+
+// Per-site data clearing (Phase 2). Type-only, so the sandboxed preload stays free of the policy
+// package's runtime. The PLAN is what the confirmation dialog is built from.
+export type { SiteClearPlan, SiteClearWarning, SiteDataKind } from '@tepegoz/shared-types';

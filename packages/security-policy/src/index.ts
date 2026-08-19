@@ -69,3 +69,10 @@ export {
   type StoredCredentialRef,
   type CredentialMatch,
 } from './credential-broker';
+export {
+  routeExecution,
+  type ExecutionBackend,
+  type ExecutionDecision,
+  type ExecutionRequest,
+} from './execution-router';
+export { clearsCredentialVault, planSiteClear, type SiteClearContext } from './site-data';
