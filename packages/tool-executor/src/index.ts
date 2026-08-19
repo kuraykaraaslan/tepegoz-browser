@@ -45,3 +45,4 @@ export * from './elements-diff.js';
 export * from './key-chord.js';
 export * from './origin-guard.js';
 export * from './image-guard.js';
+export * from './agent-memory.js';

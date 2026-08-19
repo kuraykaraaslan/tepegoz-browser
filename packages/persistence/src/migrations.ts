@@ -402,6 +402,66 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 13,
+    up: (db) => {
+      // S9 — cross-run agent memory, skills, and remembered grants.
+      //
+      // All three carry sync-meta from day 0 (UUID PK, device_id, updated_at, version, tombstone) so
+      // Phase-3 sync owes no migration. Deletes are SOFT: on a syncing store, a hard delete on one
+      // device is indistinguishable from a row that simply has not arrived yet.
+      //
+      // `quarantined` is deliberately separate from `tombstone`. A hint that led to a policy denial
+      // stops being offered but STAYS — so a user, or a later investigation, can still see what was
+      // planted and when. Deleting it would erase the evidence of the attack along with the attack.
+      db.exec(`
+        CREATE TABLE agent_domain_memory (
+          id              TEXT PRIMARY KEY,
+          host            TEXT NOT NULL,
+          note            TEXT NOT NULL,
+          descriptor_json TEXT,
+          provenance      TEXT NOT NULL CHECK (provenance IN ('page', 'run')),
+          quarantined     INTEGER NOT NULL DEFAULT 0,
+          device_id       TEXT NOT NULL,
+          updated_at      INTEGER NOT NULL,
+          version         INTEGER NOT NULL DEFAULT 1,
+          tombstone       INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE INDEX idx_agent_memory_host ON agent_domain_memory (host, tombstone, updated_at DESC);
+
+        -- A skill is a model-driven TEMPLATE (prompt + start url + expected grant profile), not a
+        -- Phase-6 signed recipe: launching one runs the ordinary reactor loop over a live page.
+        CREATE TABLE agent_skills (
+          id            TEXT PRIMARY KEY,
+          name          TEXT NOT NULL,
+          prompt        TEXT NOT NULL,
+          start_url     TEXT,
+          grant_profile TEXT,
+          device_id     TEXT NOT NULL,
+          updated_at    INTEGER NOT NULL,
+          version       INTEGER NOT NULL DEFAULT 1,
+          tombstone     INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE INDEX idx_agent_skills_name ON agent_skills (tombstone, name);
+
+        -- Remembered S6 grants. expires_at is NOT NULL by design: a grant without an expiry is
+        -- silent autonomy creep, and the tier CHECK keeps credential/financial/destructive out
+        -- entirely — those are never remembered, only ever asked.
+        CREATE TABLE agent_remembered_grants (
+          id         TEXT PRIMARY KEY,
+          scope      TEXT NOT NULL,
+          host       TEXT NOT NULL,
+          tier       TEXT NOT NULL CHECK (tier IN ('read', 'ui-write', 'data-egress')),
+          expires_at INTEGER NOT NULL,
+          device_id  TEXT NOT NULL,
+          updated_at INTEGER NOT NULL,
+          version    INTEGER NOT NULL DEFAULT 1,
+          tombstone  INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE INDEX idx_agent_grants_scope ON agent_remembered_grants (scope, host, tombstone, expires_at);
+      `);
+    },
+  },
 ];
 
 /**
