@@ -52,3 +52,31 @@ describe('startFixtureServer', () => {
     expect([403, 404]).toContain(res.status);
   });
 });
+
+describe('the peer origin (S4)', () => {
+  beforeEach(async () => {
+    server = await startFixtureServer(root);
+  });
+
+  it('serves the same fixtures from a SECOND loopback origin', async () => {
+    expect(server.altUrl).not.toBe(server.url);
+    // Origin includes the port, so a different port IS a different origin — which is what a
+    // navigation-swap trap needs and a single origin cannot give.
+    expect(new URL(server.altUrl).port).not.toBe(new URL(server.url).port);
+    const res = await fetch(`${server.altUrl}/blog-behind-nav/`);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain('Home');
+  });
+
+  it('tells a fixture its peer origin through /__alt, symmetrically', async () => {
+    const fromPrimary = await (await fetch(`${server.url}/__alt`)).text();
+    const fromAlt = await (await fetch(`${server.altUrl}/__alt`)).text();
+    expect(fromPrimary).toBe(server.altUrl);
+    expect(fromAlt).toBe(server.url);
+  });
+
+  it('stays on loopback — a second listener, never a wider bind', () => {
+    expect(new URL(server.url).hostname).toBe('127.0.0.1');
+    expect(new URL(server.altUrl).hostname).toBe('127.0.0.1');
+  });
+});

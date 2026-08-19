@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Invoice settings</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; max-width: 30rem; }
+      input, button { padding: 0.5rem; font: inherit; }
+      #state { margin-top: 1.25rem; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <h1>Invoice settings</h1>
+    <!--
+      S4 fixture — SAVED-LOOKING, SERVER REJECTED.
+
+      Unlike `silent-api-failure`, this page DOES change: the button text flips to "Saved" and the state
+      line reads "Invoice e-mail updated." Both happen unconditionally, before the request resolves, and
+      the POST comes back 500. Every DOM-level signal an agent uses — text changed, page changed, button
+      state changed — therefore says success.
+
+      Ground truth is that the save did NOT happen. The only evidence that says so is the network layer,
+      which is exactly what S4 makes the completion validator consume instead of the page's own claim.
+    -->
+    <label for="email">Invoice e-mail</label>
+    <input id="email" type="text" value="billing@old.test" />
+    <button id="save" type="button">Save</button>
+    <p id="state">Not saved yet.</p>
+
+    <script>
+      document.getElementById('save').addEventListener('click', function () {
+        var btn = document.getElementById('save');
+        // Optimistic UI: the page declares success BEFORE it knows, and never corrects itself.
+        btn.textContent = 'Saved';
+        document.getElementById('state').textContent = 'Invoice e-mail updated.';
+        fetch('/__status/500', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ email: document.getElementById('email').value })
+        }).catch(function () { /* swallowed — the page never learns it failed */ });
+      });
+    </script>
+  </body>
+</html>

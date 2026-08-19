@@ -1,6 +1,6 @@
 # Phase S4 — Verified Outcomes (W1 Reliability)
 
-**Status:** ⬜ Not started · **Depends on:** [S1](phase-s1-foundation-native-loop.md) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟡 In progress (PR0 landed 2026-08-19) · **Depends on:** [S1](phase-s1-foundation-native-loop.md) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Make the completion validator believe **evidence**, not the page's own success message, so
 fabricated-success ≈ 0 — north-star condition 3, a metric no rival publishes. A completion claim must
@@ -57,7 +57,7 @@ even with a funded key.
 - [ ] Honest **"cannot verify"** terminals (the product correctly refusing to claim success it can't
       back) are counted **separately** from failures in the report — a distinct terminal category, never
       folded into `taskSuccessRate` denominators as a competence failure.
-- [ ] **Fixtures frozen before capability code** — the ≥5 network-verification scenarios merge in PR0;
+- [x] **Fixtures frozen before capability code** — the ≥5 network-verification scenarios merge in PR0;
       no phase authors and passes its own exam in one PR ([constitution.md](constitution.md) fixture-freeze).
 - [ ] **Delta recorded** in [eval-results.md](eval-results.md); the paired before/after runs on a
       single-change branch (attribution rule).
@@ -70,18 +70,30 @@ even with a funded key.
 
 ### PR0 — fixture freeze (network-verification family → ≥5)
 
-- [ ] Grow [network-verification.json](../../packages/agent-eval/scenarios/network-verification.json)
+- [x] Grow [network-verification.json](../../packages/agent-eval/scenarios/network-verification.json)
       from 1 to **≥5** scenarios: keep `silent_api_failure`; add `saved_but_500`,
       `success_toast_over_error`, `wrong_domain_lookalike`, and one URL-swap trap.
-- [ ] Author the backing fixtures under `test-fixtures/sites/` served by
+- [x] Author the backing fixtures under `test-fixtures/sites/` served by
       [fixture-server.ts](../../packages/agent-eval/src/fixture-server.ts); reuse the reserved
       `/__status/<code>` endpoint so failures are **real server responses**, not simulated. Each ground
       truth encodes the honest answer (e.g. *"not saved; server returned 500"*) via `success.expectedValue`.
-- [ ] `wrong_domain_lookalike` navigates a mutating action onto a look-alike origin after ref resolution
+- [x] `wrong_domain_lookalike` navigates a mutating action onto a look-alike origin after ref resolution
       (drives the PR2 re-verify); `success_toast_over_error` paints a success toast over a `5xx`.
-- [ ] Register in [scenario-registry.ts](../../packages/agent-eval/src/scenario-registry.ts); add the
+- [x] Register in [scenario-registry.ts](../../packages/agent-eval/src/scenario-registry.ts); add the
       `verified`/`fabricated` ground-truth tags the PR3 metric reads.
-- [ ] Freeze: fixtures + expected values merged and green before any PR1 capability code.
+- [x] Freeze: fixtures + expected values merged and green before any PR1 capability code.
+
+> **Recorded at PR0.** (1) These scenarios grow an EXISTING registry, so `network-verification.json`'s
+> hash changed — a **disclosure event**, written up in [`fixture-freeze.md`](fixture-freeze.md#s4-pr0-addition--2026-08-19-4-scenarios-into-an-existing-registry--a-disclosure-event).
+> `silent_api_failure` is byte-identical inside the file, so the one previously-measured scenario stays
+> comparable. A new file was rejected because the DoD pools *this* family, and splitting it would leave
+> the fabricated-success denominator spread across two files.
+> (2) The cross-origin swap is REAL: the fixture server now runs a **second loopback listener on its own
+> port** (origin includes the port), discoverable by a fixture through the reserved `/__alt` endpoint.
+> Widening the bind to all interfaces to get a second hostname would have traded a genuine exposure
+> increase for the same test.
+> (3) `registerScenario` needed no change — [`scenario-registry.ts`](../../packages/agent-eval/src/scenario-registry.ts)
+> loads every `*.json` in the directory, so the task line is satisfied by construction rather than by an edit.
 
 ### PR1 — evidence-typed `validateCompletion`
 

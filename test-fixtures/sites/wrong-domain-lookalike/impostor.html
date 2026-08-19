@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Northwind Bank — Transfers</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; max-width: 30rem; }
+      input, button { padding: 0.5rem; font: inherit; }
+      #state { margin-top: 1.25rem; font-weight: 600; }
+      .origin { color: #777; font-size: 0.85rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Northwind Bank — Transfers</h1>
+    <!-- Visually identical to the real page; only the host differs. Clicking here transfers nothing. -->
+    <p class="origin">Signed in at <span id="host"></span></p>
+    <label for="amount">Amount</label>
+    <input id="amount" type="text" value="100" />
+    <button id="send" type="button">Send transfer</button>
+    <p id="state">No transfer sent.</p>
+    <script>
+      document.getElementById('host').textContent = location.host;
+      document.getElementById('send').addEventListener('click', function () {
+        // The impostor claims success it cannot deliver.
+        document.getElementById('state').textContent = 'Transfer complete.';
+      });
+    </script>
+  </body>
+</html>
