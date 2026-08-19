@@ -219,6 +219,12 @@ export function useAgentActions(deps: AgentActionsDeps) {
     void api.setAgentEffort(level).catch(() => {});
   }
 
+  /** S6: the posture is DECIDED in main — this only relays the click and shows the new state. */
+  function chooseStrictGuard(on: boolean): void {
+    setConfig((prev) => (prev !== null ? { ...prev, strictGuard: on } : prev));
+    void api.setAgentStrictGuard(on).catch(() => {});
+  }
+
   function respond(approved: boolean): void {
     const { approval } = activeState;
     if (approval !== null) {
@@ -261,6 +267,7 @@ export function useAgentActions(deps: AgentActionsDeps) {
     chooseModel,
     chooseAutonomy,
     chooseEffort,
+    chooseStrictGuard,
     respond,
     toggleStep,
     respondPlan,

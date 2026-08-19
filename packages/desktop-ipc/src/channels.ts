@@ -111,6 +111,8 @@ export const IpcChannels = {
   agentSetAutonomy: 'agent:set-autonomy',
   /** Renderer→main: set the per-run reasoning-effort preset (Agent panel effort dropdown). */
   agentSetEffort: 'agent:set-effort',
+  /** Renderer→main: toggle the hardened inbound guard (S6 PR5). Main is the only place it takes effect. */
+  agentSetStrictGuard: 'agent:set-strict-guard',
   /** Renderer→main: open a file the agent produced (fire-and-forget; gated to whitelisted folders). */
   agentOpenFile: 'agent:open-file',
   /** Renderer→main: write the current chat log to the ~/tepegoz folder and reveal it → absolute path. */

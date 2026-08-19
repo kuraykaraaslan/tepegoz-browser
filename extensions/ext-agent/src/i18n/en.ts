@@ -147,6 +147,14 @@ export const en = {
     xhigh: { title: 'Very high', desc: 'Extended reasoning, longer answers.' },
     max: { title: 'Max', desc: 'Maximum reasoning and token budget.' },
   },
+  // S6: the hardened inbound guard toggle. Off by default — a browsing agent legitimately needs to read
+  // most page data, so this trades some capability for a smaller inbound surface.
+  strictGuard: {
+    title: 'Hardened reading',
+    desc: 'Strip personal data out of pages before the agent reads them. Safer, but it may hide details a task needs.',
+    on: 'On',
+    off: 'Off',
+  },
   // Collapsible reasoning section (the agent's plan goal + per-step rationale).
   reasoning: {
     title: 'Reasoning',

@@ -81,6 +81,8 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   agentModelOverride: 'private',
   agentAutonomy: 'private',
   agentEffort: 'private',
+  // Private — a security posture is a main-process decision; no extension needs to read or set it.
+  agentStrictGuard: 'private',
   agentTokenQuota: 'private',
   // Private — local file-access configuration (a filesystem footprint that must never reach an extension).
   fileOperationsEnabled: 'private',

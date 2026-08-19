@@ -1,6 +1,6 @@
 # Phase S6 — Safety & Control Plane (W4 Control & trust)
 
-**Status:** 🟡 In progress — **PR0–PR3 landed 2026-08-16** (exam frozen before any S6 capability code; the autonomy-enforcement defect is closed; six derived risk tiers + a Turkish-covering sensitive-site category map; plan-scoped grants on proper eTLD+1 — all deterministic, no sweep owed). PR4 landed 2026-08-19; PR5–PR7 in progress · **Depends on:** [Phase S0](phase-s0-truth-and-repair.md) (PR1 early, lane-independent), [Phase S3](phase-s3-reliability-actions.md) (claim-grade ASR only) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟡 In progress — **PR0–PR3 landed 2026-08-16** (exam frozen before any S6 capability code; the autonomy-enforcement defect is closed; six derived risk tiers + a Turkish-covering sensitive-site category map; plan-scoped grants on proper eTLD+1 — all deterministic, no sweep owed). PR4–PR5 landed 2026-08-19; PR6–PR7 in progress · **Depends on:** [Phase S0](phase-s0-truth-and-repair.md) (PR1 early, lane-independent), [Phase S3](phase-s3-reliability-actions.md) (claim-grade ASR only) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Close the standing autonomy-enforcement defect (the renderer, not the main-process kernel, currently decides what auto-approves), then raise the control plane to the Claude-for-Chrome safety bar: deterministic risk tiers, plan-scoped pre-approval (`follow_a_plan`), an advisory intent-alignment critic, a reachable strict mode, and a first-party credential broker that fills secrets without ever handing them to the model. This phase owns north-star condition 2 (safety) and runs the first claim-grade adversarial battery over the 24 `atk_*` scenarios. Autonomy end-state is ask/act default with `follow_a_plan` as the ceiling and the critic strictly advisory.
 
@@ -76,9 +76,19 @@ Sequencing: the claim-grade ASR sweep runs **after [S3](phase-s3-reliability-act
 >    plumbing was added and concurrent runs cannot read each other's intent.
 
 ### PR5 — strict-mode wiring
-- [ ] Add the missing caller for [content-guard.ts](../../packages/tool-executor/src/content-guard.ts) `setStrictMode` — wire it to the main-held run config in [ipc-agent-config.ts](../../apps/desktop/src/main/ipc/ipc-agent-config.ts).
-- [ ] Expose strict mode as a run setting; i18n EN + full-TR for the toggle.
-- [ ] Guard the wiring with a test asserting `setStrictMode` is reached (regression against re-orphaning).
+- [x] Add the missing caller for [content-guard.ts](../../packages/tool-executor/src/content-guard.ts) `setStrictMode` — wire it to the main-held run config in [ipc-agent-config.ts](../../apps/desktop/src/main/ipc/ipc-agent-config.ts).
+- [x] Expose strict mode as a run setting; i18n EN + full-TR for the toggle.
+- [x] Guard the wiring with a test asserting `setStrictMode` is reached (regression against re-orphaning).
+
+> **Mechanism notes (PR5).** The setter is called from **one** tiny module (`strict-guard.ts`, three
+> imports) at IPC registration **and** on every toggle, so the persisted preference and the live
+> process-global default cannot drift. The regression test is shaped against the actual historic failure:
+> not "does strict mode redact correctly" (content-guard owns that) but **"is the setter still reached
+> from the preference"** — re-orphaning it is silent, so it needed a loud test, and the module was kept
+> Electron-free precisely so that test can exist. The toggle is `private` in the public-settings map: a
+> security posture is a main-process decision and no extension needs to read or set it. Default stays
+> **OFF** — a browsing agent legitimately needs to read most page data, and redacting by default would
+> break ordinary tasks to defend against an uncommon one.
 
 ### PR6 — credential broker (safeStorage + biometric fill)
 - [ ] The agent emits a "request credential for domain" **intent**; main resolves it against a `safeStorage`-backed store (existing "secrets only in main via safeStorage" rule).

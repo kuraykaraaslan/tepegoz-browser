@@ -29,6 +29,7 @@ import {
 import CredentialVault from '@tepegoz/credential-vault';
 import FileOperationsHost from '../file-operations/file-operations-host';
 import PreferenceStore from '@tepegoz/preferences';
+import { applyStrictGuard } from './strict-guard';
 import { handle, handleAsync, onAction } from './ipc-helpers';
 import { agentEnabled, requireAgentEnabled, tokenUsage } from './ipc-agent-shared';
 
@@ -89,11 +90,15 @@ function buildAgentConfig(): AgentConfig {
     model: prefs.agentModelOverride[provider] ?? '',
     autonomy: prefs.agentAutonomy,
     effort: prefs.agentEffort,
+    strictGuard: prefs.agentStrictGuard,
   };
 }
 
 /** Register agent panel config (provider/model/autonomy/effort), token-usage, and export handlers. */
 export function registerAgentConfigIpc(): void {
+  // Apply the persisted posture at registration, not only on change: a preference that is read once at
+  // startup and never applied is exactly how this setting became unreachable.
+  applyStrictGuard();
   handle(IpcChannels.tokenUsageGet, (): TokenUsageSnapshot => tokenUsage());
 
   // Agent panel config: current provider + selectable choices + autonomy level, and setters.
@@ -138,6 +143,14 @@ export function registerAgentConfigIpc(): void {
   handle(IpcChannels.agentSetEffort, (_event, payload): void => {
     const level = z.enum(AGENT_EFFORT_LEVELS).parse(payload);
     PreferenceStore.update({ agentEffort: level });
+  });
+  handle(IpcChannels.agentSetStrictGuard, (_event, payload): void => {
+    const on = z.boolean().parse(payload);
+    PreferenceStore.update({ agentStrictGuard: on });
+    // Applied IMMEDIATELY as well as persisted: the guard is a process-global default read by every
+    // config-less `sanitizeContent` boundary, so a toggle that only wrote a preference would take effect
+    // at some unrelated later moment — which is how the setting became unreachable in the first place.
+    applyStrictGuard();
   });
   // Write the current chat log to ~/tepegoz and reveal it in the OS file manager, so the user can grab
   // the full transcript to share. The transcript is rendered in the renderer (it owns the live

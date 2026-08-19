@@ -14,7 +14,7 @@ import { AUTONOMY_DISABLED, AUTONOMY_LEVELS_ALL } from './panel-state';
  * portal-in-portal outside-click conflict. Selecting a value applies it immediately and keeps the menu
  * open, so several settings can be changed in one visit.
  */
-type ConfigSection = 'provider' | 'model' | 'autonomy' | 'effort';
+type ConfigSection = 'provider' | 'model' | 'autonomy' | 'effort' | 'strictGuard';
 
 interface RunConfigMenuProps {
   t: AgentStrings;
@@ -23,11 +23,14 @@ interface RunConfigMenuProps {
   onModel: (model: string) => void;
   onAutonomy: (level: AgentAutonomy) => void;
   onEffort: (level: AgentEffort) => void;
+  /** S6: toggle the hardened inbound guard (PII stripped from page reads before the agent sees them). */
+  onStrictGuard: (on: boolean) => void;
 }
 
 export function RunConfigMenu({
   t,
   config,
+  onStrictGuard,
   onProvider,
   onModel,
   onAutonomy,
@@ -120,6 +123,21 @@ export function RunConfigMenu({
             {t.effort[level].title}
           </Option>
         ))}
+      </Section>
+
+      {/* Hardened reading (S6) — a security posture, so it reads as a plain on/off rather than a scale. */}
+      <Section
+        label={t.strictGuard.title}
+        value={config.strictGuard ? t.strictGuard.on : t.strictGuard.off}
+        open={open === 'strictGuard'}
+        onToggle={() => toggle('strictGuard')}
+      >
+        <Option selected={!config.strictGuard} onClick={() => onStrictGuard(false)} desc={t.strictGuard.desc}>
+          {t.strictGuard.off}
+        </Option>
+        <Option selected={config.strictGuard} onClick={() => onStrictGuard(true)} desc={t.strictGuard.desc}>
+          {t.strictGuard.on}
+        </Option>
       </Section>
     </div>
   );

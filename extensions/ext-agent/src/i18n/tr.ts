@@ -150,6 +150,14 @@ export const tr: AgentStrings = {
     xhigh: { title: 'Çok yüksek', desc: 'Genişletilmiş akıl yürütme, daha uzun yanıtlar.' },
     max: { title: 'Azami', desc: 'Azami akıl yürütme ve token bütçesi.' },
   },
+  // S6: sertleştirilmiş okuma anahtarı. Varsayılan kapalı — tarayıcı ajanı sayfa verisinin çoğunu meşru
+  // olarak okumak zorunda, yani bu ayar bir miktar yeteneği daha küçük bir giriş yüzeyiyle takas eder.
+  strictGuard: {
+    title: 'Sertleştirilmiş okuma',
+    desc: 'Ajan sayfaları okumadan önce kişisel verileri temizle. Daha güvenli, ama görevin ihtiyaç duyduğu ayrıntıları gizleyebilir.',
+    on: 'Açık',
+    off: 'Kapalı',
+  },
   // Katlanabilir akıl yürütme bölümü (ajanın plan hedefi + adım gerekçeleri).
   reasoning: {
     title: 'Akıl yürütme',

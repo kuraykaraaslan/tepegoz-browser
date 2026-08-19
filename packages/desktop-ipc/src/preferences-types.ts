@@ -135,6 +135,10 @@ export interface Preferences {
   /** Agent reasoning-effort preset for a run: raises reasoning depth (Anthropic `output_config.effort`)
    *  AND the per-call max-token budget. Set from the Agent panel effort dropdown. */
   agentEffort: AgentEffort;
+  /** S6: hardened inbound guard — redact PII out of page text before it can reach model context. Off by
+   *  default, because a browsing agent legitimately needs to read most page data; turning it on trades
+   *  some task capability for a smaller inbound surface. */
+  agentStrictGuard: boolean;
   /** Account-wide total-token quota (input+output) across runs; 0 = unlimited/off. Feeds the Token
    *  Ledger quota indicator, the 80% warning, and the pre-flight budget gate. Set in Settings → Agent. */
   agentTokenQuota: number;

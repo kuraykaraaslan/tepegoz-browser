@@ -161,6 +161,11 @@ export interface AgentConfig {
   model: string;
   autonomy: AgentAutonomy;
   effort: AgentEffort;
+  /**
+   * S6 PR5: hardened inbound guard — redacts PII out of page text before it can enter model context.
+   * Off by default; a browsing agent legitimately needs to read most page data.
+   */
+  strictGuard: boolean;
 }
 
 /** Input for the diagnostic-bundle export (the header star). The renderer supplies the rendered chat
@@ -248,6 +253,8 @@ export interface AgentHostApi {
   setAgentAutonomy(level: AgentAutonomy): Promise<void>;
   /** Set the reasoning effort preset (Agent panel effort dropdown). */
   setAgentEffort(level: AgentEffort): Promise<void>;
+  /** S6: toggle the hardened inbound guard. Display-only here — main decides and applies it. */
+  setAgentStrictGuard(on: boolean): Promise<void>;
   /** Open a file the agent produced (gated to the whitelisted folders in the main process). */
   openAgentFile(path: string): void;
   /** Write the current chat log to the ~/tepegoz folder and reveal it. Resolves to the absolute path. */

@@ -48,6 +48,7 @@ interface PanelComposerProps {
   chooseModel: (model: string) => void;
   chooseAutonomy: (level: AgentAutonomy) => void;
   chooseEffort: (level: AgentEffort) => void;
+  chooseStrictGuard: (on: boolean) => void;
 }
 
 export function PanelComposer({
@@ -74,6 +75,7 @@ export function PanelComposer({
   chooseModel,
   chooseAutonomy,
   chooseEffort,
+  chooseStrictGuard,
 }: PanelComposerProps) {
   return (
     <>
@@ -217,6 +219,7 @@ export function PanelComposer({
                       onModel={chooseModel}
                       onAutonomy={chooseAutonomy}
                       onEffort={chooseEffort}
+                      onStrictGuard={chooseStrictGuard}
                     />
                   )
                 }

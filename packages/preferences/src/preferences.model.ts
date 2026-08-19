@@ -82,6 +82,11 @@ export const PreferencesSchema = z.object({
   agentModelOverride: z.record(z.string().max(64), z.string().max(64)),
   agentAutonomy: z.enum(['ask', 'act', 'auto', 'dangerous']),
   agentEffort: z.enum(AGENT_EFFORT_LEVELS),
+  // S6 PR5: hardened inbound guard. `setStrictMode` landed in C7 and was UNREACHABLE — no caller ever
+  // set it, so the mode could not be turned on at all. This is that caller's source of truth. Default
+  // OFF, because a browsing agent legitimately needs to read most page data and redacting it by default
+  // would break ordinary tasks to defend against an uncommon one.
+  agentStrictGuard: z.boolean(),
   // Account-wide total-token quota (input+output) across runs; 0 = unlimited/off. Drives the Token
   // Ledger quota indicator, the 80% warning, and the pre-flight budget gate. Private (no public projection).
   agentTokenQuota: z.number().int().min(0).max(1_000_000_000),
@@ -298,6 +303,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   agentModelOverride: {},
   agentAutonomy: 'ask',
   agentEffort: 'high',
+  agentStrictGuard: false,
   agentTokenQuota: 0,
   defaultProvider: 'anthropic',
   region: '',

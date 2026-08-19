@@ -60,6 +60,7 @@ export const agentModelsApi: Pick<
   | 'setAgentModel'
   | 'setAgentAutonomy'
   | 'setAgentEffort'
+  | 'setAgentStrictGuard'
   | 'openAgentFile'
   | 'exportChatLog'
   | 'exportAgentBundle'
@@ -176,6 +177,7 @@ export const agentModelsApi: Pick<
     invoke<void>(IpcChannels.agentSetModel, { provider, model }),
   setAgentAutonomy: (level: AgentAutonomy) => invoke<void>(IpcChannels.agentSetAutonomy, level),
   setAgentEffort: (level: AgentEffort) => invoke<void>(IpcChannels.agentSetEffort, level),
+  setAgentStrictGuard: (on: boolean) => invoke<void>(IpcChannels.agentSetStrictGuard, on),
   openAgentFile: (path: string) => {
     ipcRenderer.send(IpcChannels.agentOpenFile, path);
   },

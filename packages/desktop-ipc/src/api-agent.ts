@@ -88,6 +88,8 @@ export interface AgentApi {
   setAgentAutonomy(level: AgentAutonomy): Promise<void>;
   /** Agent panel: set the reasoning-effort preset (effort dropdown). */
   setAgentEffort(level: AgentEffort): Promise<void>;
+  /** Agent panel: toggle the hardened inbound guard (PII redaction on page reads). */
+  setAgentStrictGuard(on: boolean): Promise<void>;
   /** Open a file the agent produced, gated to the whitelisted folders (fire-and-forget). */
   openAgentFile(path: string): void;
   /** Write the current chat log to the ~/tepegoz folder and reveal it. Resolves to the absolute path. */

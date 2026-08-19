@@ -134,6 +134,7 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
         chooseModel={actions.chooseModel}
         chooseAutonomy={actions.chooseAutonomy}
         chooseEffort={actions.chooseEffort}
+        chooseStrictGuard={actions.chooseStrictGuard}
       />
 
       <PanelModals
