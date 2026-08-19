@@ -19,3 +19,4 @@ export {
   type TabRecord,
 } from './types';
 export * from './task-metrics';
+export * from './connection-binding';

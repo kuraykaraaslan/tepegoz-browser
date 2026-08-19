@@ -77,3 +77,11 @@ export {
 } from './execution-router';
 export { clearsCredentialVault, planSiteClear, type SiteClearContext } from './site-data';
 export { mayOpenDevTools, type DevToolsVerdict } from './devtools-policy';
+export {
+  killSwitchVerdicts,
+  tabsBlockedByDrop,
+  type ConnectionStatus,
+  type KillSwitchReason,
+  type KillSwitchVerdict,
+  type TabEgressQuery,
+} from './kill-switch';
