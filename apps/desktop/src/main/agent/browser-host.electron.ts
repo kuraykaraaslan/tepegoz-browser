@@ -12,6 +12,7 @@ import CdpDriver from './cdp-driver.electron';
 import AgentTabGroup from './agent-tab-group.electron';
 import { showPageCursor, hidePageCursor, isUserControlActive, resetForAgentAction } from './page-cursor.electron';
 import { buildArticleTextExpression } from './article-text-script.js';
+import { runExtraction } from './extraction-sandbox.electron.js';
 import { fillCredential as brokerFill } from './credential-broker.electron.js';
 import { buildWaitConditionExpression, clampWaitMs } from './wait-condition-script.js';
 
@@ -442,10 +443,24 @@ const browserAdapter = new HumanInputAdapter(
 
 // --- BrowserHost + TabHost (one object satisfies both injected seams) ---
 
+/**
+ * Run a model-authored extraction script (S5).
+ *
+ * The page HTML is read out here and COPIED into the sandbox — the script never touches the live
+ * page, and the sandbox it does run in has no network. Both properties are measured, not asserted:
+ * see `e2e/spike-code-exec-sandbox.spec.ts`.
+ */
+async function runExtractionScript(script: string, tabId?: string): Promise<unknown> {
+  const wc = requireWc(tabId);
+  const html: unknown = await wc.executeJavaScript('document.documentElement.outerHTML', true);
+  return runExtraction({ html: typeof html === 'string' ? html : '', script });
+}
+
 export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
   navigate,
   readPage,
   readArticleText,
+  runExtractionScript,
   historyGo,
   waitForCondition,
   waitForLoad: async (tabId, timeoutMs) => {

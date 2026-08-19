@@ -27,6 +27,17 @@ export interface BrowserHost {
    * degrades to the same text `readPage` returns, labelled `'body'`. Never silently pretend to have
    * extracted an article.
    */
+  /**
+   * Run a MODEL-AUTHORED extraction script against a copy of the page (S5).
+   *
+   * OPTIONAL, and its absence is a refusal rather than a degradation: a host that cannot provide the
+   * proven sandbox must not fall back to running the script somewhere easier. `browser_analyze_page`
+   * is simply not registered when this is missing.
+   *
+   * The host is responsible for the sandbox contract (no network, no page principal, a copy of the
+   * DOM rather than the live one). See `extraction-sandbox.electron.ts` and the go/no-go spike.
+   */
+  runExtractionScript?(script: string, tabId?: string): Promise<unknown>;
   readArticleText?(
     tabId?: string,
   ): Promise<{ url: string; title: string; text: string; source: string }>;

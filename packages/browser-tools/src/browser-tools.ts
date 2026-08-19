@@ -5,6 +5,9 @@ import {
   sanitizeContent,
   wrapUntrustedContent,
   MAX_INTERACTABLE_ELEMENTS,
+  MAX_SCRIPT_CHARS,
+  acceptScript,
+  capResult,
 } from '@tepegoz/tool-executor';
 import { CredentialFillIntentSchema, type ToolDescriptor } from '@tepegoz/shared-types';
 import { buildElementsSnapshot, buildPageSnapshot, type ElementsDiffMemory } from './perception';
@@ -22,6 +25,10 @@ import type { BrowserHost } from './host';
 
 const TargetTabArgs = z.object({ tabId: z.string().min(1).max(128).optional() }).strip();
 const NavigateArgs = TargetTabArgs.extend({ url: z.string().min(1).max(4096) });
+/** S5: the script bound is enforced twice — here at the boundary, and again by `acceptScript`. */
+const ExtractionArgs = TargetTabArgs.extend({
+  script: z.string().min(1).max(MAX_SCRIPT_CHARS),
+});
 const ValidatePageArgs = TargetTabArgs.extend({
   containsText: z.string().min(1).max(500).optional(),
   timeoutMs: z.number().int().positive().max(60_000).optional(),
@@ -473,7 +480,7 @@ function descriptor(
   id: string,
   dangerClass: ToolDescriptor['dangerClass'],
   description: string,
-  opts: { aiTask?: ToolDescriptor['aiTask'] } = {},
+  opts: { aiTask?: ToolDescriptor['aiTask']; capability?: ToolDescriptor['capability'] } = {},
 ): ToolDescriptor {
   return {
     id,
@@ -484,6 +491,7 @@ function descriptor(
     requiresIdempotencyKey: false,
     aiTask: opts.aiTask ?? 'none',
     category: 'browser',
+    ...(opts.capability !== undefined ? { capability: opts.capability } : {}),
   };
 }
 
@@ -538,6 +546,38 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
       return { ...buildPageSnapshot(page.text, page.url, page.title), source: page.source };
     },
   });
+
+  // S5: model-authored extraction. Registered ONLY when the host can provide the proven sandbox —
+  // a missing sandbox means no tool, never a script run somewhere more convenient.
+  if (host.runExtractionScript !== undefined) {
+    const runScript = host.runExtractionScript.bind(host);
+    CapabilityRegistry.register({
+      descriptor: descriptor(
+        'browser_analyze_page',
+        'read',
+        'Run a small JavaScript expression over a COPY of the page and return what it evaluates to. args: { script: string, tabId?: string }. Use this to pull many values at once — every row of a table, every price in a list — instead of clicking through them one at a time. The script runs against a snapshot in a sandbox with no network and no access to the real page: it can read the DOM (querySelectorAll, textContent, attributes) and MUST NOT try to change the page, store anything, or fetch anything. Return a string or an array of strings. Results are capped and will say so when truncated.',
+        { aiTask: 'read_understand', capability: 'code_exec_read' },
+      ),
+      inputSchema: ExtractionArgs,
+      handler: async (args) => {
+        const accepted = acceptScript(args.script);
+        // A refusal is RETURNED, not thrown: the model wrote this script and can rewrite it, so the
+        // reason is more useful to it than an error is to the run.
+        if (!accepted.ok) return { refused: accepted.reason, content: '' };
+        // The hash reaches the journal through the tool result; the BODY never does. A
+        // model-authored script is composed from page content, so logging it verbatim would copy an
+        // injection payload into the audit record.
+        const raw = await runScript(accepted.script, args.tabId);
+        const capped = capResult(raw);
+        return {
+          scriptHash: accepted.hash,
+          content: capped.value,
+          truncated: capped.truncated,
+          ...(capped.items !== undefined ? { items: capped.items } : {}),
+        };
+      },
+    });
+  }
 
   CapabilityRegistry.register({
     descriptor: descriptor(

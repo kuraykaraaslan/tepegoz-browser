@@ -29,6 +29,14 @@ export const ToolDescriptorSchema = z.object({
   inputSchema: z.unknown(),
   /** create/upload-style tools must carry an idempotency key (exactly-once-ish). */
   requiresIdempotencyKey: z.boolean().default(false),
+  /**
+   * Code-execution class, for a tool that runs MODEL-AUTHORED code (S5).
+   *
+   * Declared by the tool author on the descriptor rather than supplied per call, because a caller
+   * that could name its own class could name the harmless one. Absent for every ordinary tool.
+   * `code_exec_write` is reserved and denied by the kernel in v1.
+   */
+  capability: z.enum(['code_exec_read', 'code_exec_write']).optional(),
   /** Provenance for trust/marketplace (Ed25519 signer id, etc.). */
   provenance: z.string().optional(),
   /**

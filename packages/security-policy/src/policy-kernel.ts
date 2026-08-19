@@ -15,6 +15,15 @@ export interface PolicyContext {
   taintedArgs: boolean;
   /** URL the action targets, for the sensitive-site lockout. Omit when not site-scoped. */
   targetUrl?: string;
+  /**
+   * The code-execution class of this call, when it runs model-authored code (S5).
+   *
+   * Deliberately NOT a new {@link RiskLevel}. A danger class describes what a tool DOES; this
+   * describes where its instructions came from, which is an independent axis — a read written by a
+   * model out of page content is a different thing from a read a tool author wrote, even though
+   * both only read.
+   */
+  capability?: 'code_exec_read' | 'code_exec_write';
 }
 
 export interface PolicyResult {
@@ -37,6 +46,18 @@ export default class PolicyKernel {
     const risk = ctx.descriptor.dangerClass;
     const highRisk = HIGH_RISK.has(risk);
 
+    // 0) Code execution, decided before anything else so no later branch can soften it.
+    //
+    // `code_exec_write` is reserved and DENIED in v1 — present as a class precisely so that enabling
+    // it is a visible change to this function with its own ADR and its own adversarial battery,
+    // rather than a flag someone flips. `code_exec_read` is allowed and JOURNALLED: the caller
+    // records the script HASH at this decision point (never the body — a model-authored script is
+    // composed from page content, and copying it into the audit log would preserve the payload in
+    // the one record meant to be trustworthy).
+    if (ctx.capability === 'code_exec_write') {
+      return { decision: 'deny', reason: 'code_exec_write_disabled', biometric: false };
+    }
+
     // 1) Sensitive-site lockout (bank/crypto/password/health): locked from automation by default.
     if (ctx.targetUrl !== undefined && isSensitiveSite(ctx.targetUrl)) {
       if (risk === 'read') {
@@ -53,7 +74,9 @@ export default class PolicyKernel {
     // 3) Base decision by danger class.
     switch (risk) {
       case 'read':
-        return { decision: 'allow', reason: 'read_allowed', biometric: false };
+        return ctx.capability === 'code_exec_read'
+          ? { decision: 'allow', reason: 'code_exec_read_journaled', biometric: false }
+          : { decision: 'allow', reason: 'read_allowed', biometric: false };
       case 'state_changing':
         return { decision: 'ask', reason: 'state_change_confirm', biometric: false };
       case 'destructive':

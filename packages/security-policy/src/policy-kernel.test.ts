@@ -79,3 +79,59 @@ describe('PolicyKernel.evaluate — sensitive-site lockout', () => {
     );
   });
 });
+
+/**
+ * Code execution (S5). The class is an axis of its own: it says where the instructions came from, not
+ * what the tool does.
+ */
+describe('PolicyKernel — model-authored code execution', () => {
+  const readTool = { id: 'browser_analyze_page', dangerClass: 'read' as const };
+
+  it('DENIES code_exec_write unconditionally — reserved, not merely unimplemented', () => {
+    // It exists as a class so that enabling it is a visible change to the kernel with its own ADR and
+    // its own adversarial battery, rather than a flag somebody flips.
+    const r = PolicyKernel.evaluate({
+      descriptor: readTool,
+      taintedArgs: false,
+      capability: 'code_exec_write',
+    });
+    expect(r.decision).toBe('deny');
+    expect(r.reason).toBe('code_exec_write_disabled');
+  });
+
+  it('denies code_exec_write even on a page nothing else objects to', () => {
+    const r = PolicyKernel.evaluate({
+      descriptor: { id: 'x_get_y', dangerClass: 'read' },
+      taintedArgs: false,
+      targetUrl: 'https://example.test/',
+      capability: 'code_exec_write',
+    });
+    expect(r.decision).toBe('deny');
+  });
+
+  it('allows code_exec_read but marks it JOURNALLED, so the reason itself records the obligation', () => {
+    const r = PolicyKernel.evaluate({
+      descriptor: readTool,
+      taintedArgs: false,
+      capability: 'code_exec_read',
+    });
+    expect(r.decision).toBe('allow');
+    expect(r.reason).toBe('code_exec_read_journaled');
+  });
+
+  it('does not let code_exec_read walk past the sensitive-site lockout', () => {
+    const r = PolicyKernel.evaluate({
+      descriptor: readTool,
+      taintedArgs: false,
+      targetUrl: 'https://www.chase.com/accounts',
+      capability: 'code_exec_read',
+    });
+    expect(r.decision).not.toBe('allow');
+  });
+
+  it('leaves an ordinary read exactly as it was', () => {
+    expect(PolicyKernel.evaluate({ descriptor: readTool, taintedArgs: false }).reason).toBe(
+      'read_allowed',
+    );
+  });
+});

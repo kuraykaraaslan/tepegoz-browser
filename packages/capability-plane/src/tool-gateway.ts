@@ -93,6 +93,11 @@ export default class ToolGateway {
       descriptor: tool.descriptor,
       taintedArgs: ctx.taintedArgs ?? false,
       ...(ctx.targetUrl !== undefined ? { targetUrl: ctx.targetUrl } : {}),
+      // Read off the DESCRIPTOR, never off the call. A caller that could name its own capability
+      // class could name the harmless one.
+      ...(tool.descriptor.capability !== undefined
+        ? { capability: tool.descriptor.capability }
+        : {}),
     });
     // Classified on the VALIDATED args, so the tier reflects what will actually run. This is the
     // per-class axis that replaces flat per-tool approval: `dangerClass` says what the tool author

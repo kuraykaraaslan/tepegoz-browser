@@ -33,5 +33,5 @@ consequences (including rejected alternatives). Format is a lightweight [MADR](h
 | [0023](0023-ai-adaptors.md) | AIAdaptor — typed capability groups over the tool plane | Accepted |
 | [0024](0024-action-interception-plane.md) | Synchronous action-interception plane for browser-mechanics hooks | Accepted |
 | [0025](0025-model-streaming-boundary.md) | Model streaming boundary — deltas to the renderer, settled results to the Journal | Accepted |
-| 0026 | _(reserved: agent code execution — written in S5)_ | Proposed |
+| [0026](0026-agent-code-execution.md) | Agent code execution — a sandbox proven by measurement (isolated world REFUTED), read-only, kernel-classed | Accepted |
 | [0027](0027-agent-memory.md) | Agent memory — advisory, tainted, re-validated; never a second instruction channel | Accepted |

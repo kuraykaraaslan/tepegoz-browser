@@ -46,3 +46,4 @@ export * from './key-chord.js';
 export * from './origin-guard.js';
 export * from './image-guard.js';
 export * from './agent-memory.js';
+export * from './extraction-caps.js';
