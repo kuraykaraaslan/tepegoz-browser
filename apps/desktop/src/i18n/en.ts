@@ -71,6 +71,9 @@ export const en = {
     trayQuit: 'Quit',
     trayTooltip: 'Tepegöz',
     trayRunning: 'Tepegöz is still running in the system tray.',
+    // Agent-active indicator (S8 PR5). A run that continues out of sight has to be visible SOMEWHERE,
+    // or "still working" is indistinguishable from "quietly stopped".
+    trayAgentRunning: 'Tepegöz — the agent is working',
     addToNewGroup: 'Add tab to new group',
     addToGroup: 'Add tab to group',
     removeFromGroup: 'Remove from group',

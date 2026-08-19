@@ -135,6 +135,8 @@ export const en = {
   // What approving a plan actually buys — stated on the modal, because an approval whose consequences
   // are invisible is not informed consent.
   planGrant: 'Approving covers the routine steps of this plan on the sites it names, for this task only. Money, passwords and deletions still ask every time.',
+  // Backgroundable run (S8 PR5). The window goes away; the task does not — and the tray says so.
+  background: 'Continue in the background',
   historyPage: {
     title: 'Agent history',
     search: 'Search conversations',

@@ -3,6 +3,9 @@ import { IpcChannels, type SkillRecord } from '@tepegoz/desktop-ipc';
 import { AgentSkillIdSchema, AgentSkillSaveSchema } from '@tepegoz/desktop-ipc/schemas';
 import { AgentMemoryStore } from '@tepegoz/persistence';
 import { getDb } from '../db/database.electron';
+import TabManager from '../tabs';
+import { hideToTray } from '../window';
+import { notifyHiddenToTrayOnce } from '../tray';
 import { handle } from './ipc-helpers';
 import { requireAgentEnabled } from './ipc-agent-shared';
 
@@ -21,6 +24,24 @@ import { requireAgentEnabled } from './ipc-agent-shared';
  * The renderer never supplies an id for a new skill — the main process mints the UUID. A renderer-chosen
  * primary key is a renderer choosing which row to overwrite.
  */
+/**
+ * Park the chrome window off-screen and let the run continue (S8 PR5).
+ *
+ * Reuses `hideToTray` rather than `win.hide()` for the reason that function documents: hiding flips
+ * the page to `visibilityState: hidden` and pauses the compositor, which blinds the agent on every
+ * tab. Parking keeps it painting. A pleasant side effect of S7 PR3: once nothing is on screen the
+ * human-realism pacing stops, so a backgrounded run is also a faster one.
+ */
+export function registerAgentBackgroundIpc(): void {
+  handle(IpcChannels.agentContinueInBackground, (): void => {
+    requireAgentEnabled();
+    const win = TabManager.focusedWindow();
+    if (win === null || win.isDestroyed()) return;
+    hideToTray(win);
+    notifyHiddenToTrayOnce();
+  });
+}
+
 export function registerAgentSkillsIpc(): void {
   const list = (): SkillRecord[] => {
     const db = getDb();

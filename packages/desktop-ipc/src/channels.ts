@@ -130,6 +130,9 @@ export const IpcChannels = {
   agentConversationsState: 'agent-conversations:state',
   // Skills library (S9): named prompt templates. Selecting one PRE-FILLS the composer; it never starts
   // a run, so the human keeps the send gesture that authorises the task.
+  /** Renderer→main: park the chrome window off-screen and keep the run going (S8). NOT window.hide():
+   *  that pauses the compositor and blinds the agent. Same parking the tray uses. */
+  agentContinueInBackground: 'agent:continue-in-background',
   agentSkillsList: 'agent-skills:list',
   agentSkillsSave: 'agent-skills:save',
   agentSkillsDelete: 'agent-skills:delete',

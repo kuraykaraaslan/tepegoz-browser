@@ -62,6 +62,7 @@ export const tr: AppStrings = {
     trayQuit: 'Çıkış',
     trayTooltip: 'Tepegöz',
     trayRunning: 'Tepegöz sistem tepsisinde çalışmaya devam ediyor.',
+    trayAgentRunning: 'Tepegöz — ajan çalışıyor',
     addToNewGroup: 'Yeni gruba ekle',
     addToGroup: 'Gruba ekle',
     removeFromGroup: 'Gruptan çıkar',

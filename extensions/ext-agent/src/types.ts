@@ -258,6 +258,8 @@ export interface AgentHostApi {
   clearAgentConversations(): Promise<void>;
   /** Skills library (S9). Every call resolves with the FULL list, so the panel never guesses the
    *  post-write state — it renders what the store actually holds. */
+  /** Park the window off-screen and let the run continue (S8). Moves the window, not the task. */
+  continueAgentInBackground(): Promise<void>;
   listAgentSkills(): Promise<AgentSkill[]>;
   /** Create (omit `id`) or update a skill. The main process mints the UUID, never the renderer. */
   saveAgentSkill(input: {

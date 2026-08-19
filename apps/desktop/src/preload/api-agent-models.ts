@@ -47,6 +47,7 @@ export const agentModelsApi: Pick<
   | 'openAgentConversation'
   | 'deleteAgentConversation'
   | 'clearAgentConversations'
+  | 'continueAgentInBackground'
   | 'listAgentSkills'
   | 'saveAgentSkill'
   | 'deleteAgentSkill'
@@ -114,6 +115,7 @@ export const agentModelsApi: Pick<
   deleteAgentConversation: (id: string) =>
     invoke<void>(IpcChannels.agentConversationsDelete, id),
   clearAgentConversations: () => invoke<void>(IpcChannels.agentConversationsClear),
+  continueAgentInBackground: () => invoke<void>(IpcChannels.agentContinueInBackground),
   listAgentSkills: () => invoke<SkillRecord[]>(IpcChannels.agentSkillsList),
   saveAgentSkill: (input: {
     id?: string;

@@ -56,7 +56,7 @@ function buildTrayMenu(): Menu {
 export function initTray(): void {
   if (tray !== null) return;
   tray = new Tray(nativeImage.createFromPath(ICON_PATH));
-  tray.setToolTip(mainStrings().browser.trayTooltip);
+  tray.setToolTip(tooltip());
   tray.setContextMenu(buildTrayMenu());
   // Windows/Linux convention: a single or double left-click on the tray icon shows the app (a fresh
   // window with a new tab if none exist). Right-click opens the menu (Show / Quit).
@@ -67,8 +67,33 @@ export function initTray(): void {
 /** Rebuild the tray menu + tooltip after a locale change (called from the prefs reconcile). */
 export function refreshTray(): void {
   if (tray === null) return;
-  tray.setToolTip(mainStrings().browser.trayTooltip);
+  tray.setToolTip(tooltip());
   tray.setContextMenu(buildTrayMenu());
+}
+
+/**
+ * Whether an agent run currently holds the lock. Pushed in from the run path rather than imported
+ * from it: the tray is a leaf the app entry initialises, and reaching into the agent run lock from
+ * here would tie the system-tray icon to the agent module graph.
+ */
+let agentRunning = false;
+
+function tooltip(): string {
+  const t = mainStrings().browser;
+  return agentRunning ? t.trayAgentRunning : t.trayTooltip;
+}
+
+/**
+ * Reflect an agent run in the tray (S8 PR5).
+ *
+ * The indicator matters most in exactly the state where the panel cannot serve as one: the window
+ * parked off-screen with the run still going. "Working" and "quietly stopped" must not look the same
+ * from outside, and the tray is the one surface that survives the window being gone.
+ */
+export function setTrayAgentRunning(running: boolean): void {
+  if (agentRunning === running) return;
+  agentRunning = running;
+  if (tray !== null) tray.setToolTip(tooltip());
 }
 
 /** Show a native "still running in the tray" notification the FIRST time a window hides to the tray, so

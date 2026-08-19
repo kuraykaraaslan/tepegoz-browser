@@ -266,6 +266,15 @@ export function useAgentActions(deps: AgentActionsDeps) {
    * that authorises a task away from the human, which is the one thing the skills library must not do.
    * Opening the start page is the same act as clicking a bookmark — visible, and still just a page.
    */
+  /**
+   * Park the window and let the run carry on. Fire-and-forget on purpose: the window is about to
+   * disappear, so there is no surface left to report a failure to, and a run that keeps going is the
+   * correct outcome either way.
+   */
+  function onContinueInBackground(): void {
+    void api.continueAgentInBackground().catch(() => undefined);
+  }
+
   function useSkill(skill: AgentSkill): void {
     const use = skillUse(skill);
     mutateActive((s) => ({ ...s, prompt: use.prompt, skillId: skill.id }));
@@ -291,5 +300,6 @@ export function useAgentActions(deps: AgentActionsDeps) {
     toggleStep,
     respondPlan,
     useSkill,
+    onContinueInBackground,
   };
 }

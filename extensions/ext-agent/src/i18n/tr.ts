@@ -127,6 +127,7 @@ export const tr: AgentStrings = {
     hint: 'Yalnızca bu site ve bu tür işlem için, yalnızca bu görev sürerken. Para, parola ve silme işlemleri her zaman sorar.',
   },
   planGrant: 'Onaylamak, bu planın adı geçen sitelerdeki rutin adımlarını yalnızca bu görev için kapsar. Para, parola ve silme işlemleri yine her seferinde sorar.',
+  background: 'Arka planda devam et',
   historyPage: {
     title: 'Ajan geçmişi',
     search: 'Konuşmalarda ara',

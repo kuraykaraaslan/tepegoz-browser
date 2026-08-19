@@ -11,6 +11,7 @@ import {
   CloseIcon,
   CursorIcon,
   GearIcon,
+  BackgroundIcon,
   PaperclipIcon,
   PauseIcon,
   PlayIcon,
@@ -41,6 +42,8 @@ interface PanelComposerProps {
   onSubmit: () => void;
   onCancel: () => void;
   onPauseResume: () => void;
+  /** Park the window and let the run continue (S8). Only offered while a run is live. */
+  onContinueInBackground: () => void;
   removeAttachment: (id: string) => void;
   onAttachSelection: () => void;
   onAttachFiles: () => void;
@@ -75,6 +78,7 @@ export function PanelComposer({
   onSubmit,
   onCancel,
   onPauseResume,
+  onContinueInBackground,
   removeAttachment,
   onAttachSelection,
   onAttachFiles,
@@ -240,6 +244,17 @@ export function PanelComposer({
             </div>
 
             <div className="flex shrink-0 items-center gap-1">
+              {running && (
+                <button
+                  type="button"
+                  onClick={onContinueInBackground}
+                  aria-label={a.background}
+                  title={a.background}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-overlay text-text-primary hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+                >
+                  <BackgroundIcon className="h-4 w-4" />
+                </button>
+              )}
               {running && (
                 <button
                   type="button"

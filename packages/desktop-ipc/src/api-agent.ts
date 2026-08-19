@@ -67,6 +67,11 @@ export interface AgentApi {
   onAgentConversationsState(callback: (state: AgentConversationsState) => void): () => void;
   // Skills library (S9). A skill is a stored prompt TEMPLATE; selecting one pre-fills the composer and
   // never starts a run, so the send gesture that authorises a task stays with the human.
+  /**
+   * Park the window off-screen and let the run continue (S8). The tray keeps showing that the agent
+   * is working; the run itself is untouched — this moves the window, not the task.
+   */
+  continueAgentInBackground(): Promise<void>;
   listAgentSkills(): Promise<SkillRecord[]>;
   /** Create (omit `id`) or update a skill. The main process mints the UUID — never the renderer. */
   saveAgentSkill(input: {

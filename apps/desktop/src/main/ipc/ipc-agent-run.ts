@@ -40,6 +40,7 @@ import {
 import FileOperationsHost from '../file-operations/file-operations-host';
 import { getDb } from '../db/database.electron';
 import { mainStrings } from '../lib/i18n-main';
+import { setTrayAgentRunning } from '../tray';
 import NotificationHost from '../notifications/notification-host';
 import PreferenceStore from '@tepegoz/preferences';
 import { handleAsync } from './ipc-helpers';
@@ -91,6 +92,9 @@ export function registerAgentRunIpc(): void {
       throw new AppError('An agent task is already running for this group', 409);
     }
     agentRunByGroup.set(groupId, true);
+    // S8: the run is visible outside the panel from the moment it starts — see the finally block, which
+    // clears it on every exit path including a crash.
+    setTrayAgentRunning(true);
     const sender = event.sender;
     const runId = `run-${String(++runCounter)}`;
     const historyDb = getDb();
@@ -474,6 +478,9 @@ export function registerAgentRunIpc(): void {
       }
       setCurrentAgentRun(null, null, null);
       unregisterRunControl(runId);
+      // Cleared here rather than on the done event: an indicator that survives a crash is worse than no
+      // indicator, because it says "still working" about a run that has stopped.
+      setTrayAgentRunning(false);
       // A plan grant cannot outlive the task it was given for. Revoked in `finally`, so a crash or a
       // cancel cannot leave one behind — which is also why grants never need to be persisted.
       PlanGrantStore.revoke(runId);

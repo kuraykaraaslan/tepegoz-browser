@@ -22,6 +22,9 @@ export const CloseIcon = ({ className }: { className?: string }) => <Svg classNa
 export const TrashIcon = ({ className }: { className?: string }) => (
   <Svg className={className}><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m2 0v12a1 1 0 01-1 1H7a1 1 0 01-1-1V7m4 4v6m4-6v6" /></Svg>
 );
+export const BackgroundIcon = ({ className }: { className?: string }) => (
+  <Svg className={className}><path d="M4 4h10v10H4zM8 20h12V8" /></Svg>
+);
 export const SkillsIcon = ({ className }: { className?: string }) => (
   <Svg className={className}><path d="M4 5.5A2.5 2.5 0 016.5 3H19v15H6.5A2.5 2.5 0 004 20.5zM19 18v3H6.5" /></Svg>
 );

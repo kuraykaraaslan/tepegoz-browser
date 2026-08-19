@@ -126,6 +126,7 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
         onSubmit={actions.onSubmit}
         onCancel={actions.onCancel}
         onPauseResume={actions.onPauseResume}
+        onContinueInBackground={actions.onContinueInBackground}
         removeAttachment={attach.removeAttachment}
         onAttachSelection={() => void attach.onAttachSelection()}
         onAttachFiles={() => void attach.onAttachFiles()}
