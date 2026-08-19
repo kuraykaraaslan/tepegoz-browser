@@ -23,6 +23,8 @@ import {
   mergeWorkingState,
   renderWorkingState,
 } from './reactor-working-state';
+import { isQuickModeEnabled } from './quick-decision';
+import { cadenceBounds, shouldValidate } from './should-validate';
 import { createProgressTracker } from './reactor-progress';
 import { systemPrompt } from './reactor-prompt';
 import type {
@@ -162,8 +164,15 @@ export default class Reactor {
     // Everything else about the two arms is byte-identical — same system prompt, same Decision shape,
     // same zod settle step — which is what makes a paired completion delta attributable to transport.
     const decisionMode = resolveDecisionMode(req.provider, options.decisionMode);
+    // S7 PR4: resolved ONCE per run, like the decision transport, so a run cannot straddle both
+    // encodings mid-sweep. Off for every provider unless TEPEGOZ_QUICK_MODE names it.
+    const quickMode = isQuickModeEnabled(req.provider);
     const maxRecoveryAttempts = options.maxRecoveryAttempts ?? 2;
-    const planningInterval = Math.max(1, options.planningInterval ?? 3);
+    // S7: the periodic validator pass is signal-driven, not modulo-driven. `planningInterval` is now
+    // the FLOOR (never validate more often than the old fixed cadence) and twice it is the ceiling
+    // (a frozen page still gets judged). No new budget — see should-validate.ts for why the floor is
+    // what makes this change safe without a sweep.
+    const cadence = cadenceBounds(options.planningInterval ?? 3);
     const maxCompletionRejects = options.maxCompletionRejects ?? 3;
     // C1 PR2 (s14): run-level no-progress detection. `progress` classifies each outcome; `noProgressActs`
     // counts consecutive state-changing actions that moved nothing; past the threshold a single bounded
@@ -178,6 +187,8 @@ export default class Reactor {
     // CLAIMS the validator has rejected (fail-closed guard), and the action count last validated
     // (so a periodic check fires once per cadence tick, not on every no-op turn).
     let latestMemory = '';
+    // S7: the world signature as of the last validation pass — the input to the adaptive cadence.
+    let sigAtLastValidation: string | null = null;
     // C1 (s15): the actor's TYPED working ledger — the authoritative merge of every `state` patch it has
     // proposed. Injected as a compact persistent block re-rendered at the tail each step (see
     // `syncWorkingState`) so structured progress survives the transient page-state collapse, instead of
@@ -217,15 +228,22 @@ export default class Reactor {
 
     /** Periodic validator pass: end the run iff the Planner judges the goal already met. Else null. */
     const periodicCheck = async (): Promise<ReactResult | null> => {
-      if (
-        validator === undefined ||
-        outcomes.length === 0 ||
-        outcomes.length % planningInterval !== 0 ||
-        outcomes.length === lastValidatedCount
-      ) {
+      if (validator === undefined || outcomes.length === 0 || outcomes.length === lastValidatedCount) {
         return null;
       }
+      const decision = shouldValidate(
+        {
+          // -1 means "never validated", so every action so far counts toward the floor.
+          actionsSinceValidation:
+            lastValidatedCount < 0 ? outcomes.length : outcomes.length - lastValidatedCount,
+          sigAtLastValidation: sigAtLastValidation,
+          currentSig: progress.worldSignature(),
+        },
+        cadence,
+      );
+      if (!decision.validate) return null;
       lastValidatedCount = outcomes.length;
+      sigAtLastValidation = progress.worldSignature();
       const verdict = await validate({
         goal: req.goal,
         memory: latestMemory,
@@ -298,7 +316,7 @@ export default class Reactor {
     };
 
     const messages: CanonMessage[] = [
-      { role: 'system', content: systemPrompt(req) },
+      { role: 'system', content: systemPrompt(req, quickMode) },
       ...(req.history ?? []),
       { role: 'user', content: `Goal:\n${wrapUserRequest(req.goal)}` },
     ];
@@ -424,7 +442,7 @@ export default class Reactor {
           onDelta === undefined
             ? await ModelGateway.complete(request)
             : await ModelGateway.generateStream(request, onDelta);
-        decision = decisionMode === 'native' ? parseNativeDecision(response) : parseDecision(response.text);
+        decision = decisionMode === 'native' ? parseNativeDecision(response) : parseDecision(response.text, quickMode);
         // The native arm's turn is usually pure tool call with empty text; re-serializing the settled
         // decision keeps the assistant history non-empty and structurally identical across both arms.
         responseText = response.text.trim().length > 0 ? response.text : JSON.stringify(decision);

@@ -64,6 +64,12 @@ function actionReportedEffect(result: unknown): boolean {
 }
 
 export interface ProgressTracker {
+  /**
+   * The perceived world as of the last outcome: page signature plus last url, or null before
+   * anything has been perceived. Read by the adaptive validation cadence (S7) to answer "has
+   * anything happened worth re-judging?" without a model call.
+   */
+  worldSignature(): string | null;
   /** Classify one finalized outcome. `isRead` marks an idempotent perception/verification tool (reads
    *  never stall — re-reading is the encouraged pattern and is separately bounded by the read-streak guard). */
   observe(outcome: StepOutcome, isRead: boolean): ProgressSignal;
@@ -74,6 +80,11 @@ export function createProgressTracker(): ProgressTracker {
   let pageSig: string | null = null; // last perceived-page signature (from reads)
   let lastUrl: string | null = null; // last url seen on ANY outcome (catches navigations)
   return {
+    worldSignature() {
+      // The url is folded in as well as the read signature: a state-changing action can navigate
+      // without a read following it, and that has certainly moved the world.
+      return pageSig === null && lastUrl === null ? null : `${pageSig ?? ''}|${lastUrl ?? ''}`;
+    },
     observe(outcome, isRead) {
       // A failed action moved nothing; a failed read is just a read (neutral).
       if (!outcome.ok) return isRead ? 'neutral' : 'stall';
