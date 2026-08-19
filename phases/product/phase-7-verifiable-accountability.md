@@ -1,6 +1,6 @@
 # Phase 7 — Verifiable Accountability & Proof-of-Run
 
-**Status:** ⬜ Not started  ·  **Estimate:** ~3–4 months  ·  **Depends on:** Phase 1a/1b (Event Journal, Token
+**Status:** 🟡 In progress (NotaryService algorithmic foundation landed 2026-08-19) · **Estimate:** ~3–4 months  ·  **Depends on:** Phase 1a/1b (Event Journal, Token
 Ledger, Effect Ledger, shadow workspace, plan-preview)
 **Goal:** Turn the event-sourced substrate into **proof**: convert "shown = recorded" into "recorded =
 mathematically provable." Six independent strategy lenses converged on the same primitive — hash-chain the
@@ -24,23 +24,36 @@ append-only Journal.
       complete end-to-end; erasure is itself an append-only recorded event
 - [ ] **i18n:** en+tr keys added for new surfaces (Notary/receipt UI, Accountability Dashboard, Dry-Run report,
       Cost/Risk contract, Data Rights panel, Compliance Pack export)
-- [ ] ADR accepted: **ADR-0014** (NotaryService: hash-chained Journal + signed Replay Receipts + anchoring)
+- [x] ADR accepted: **ADR-0014** (NotaryService: hash-chained Journal + signed Replay Receipts + anchoring)
+      _(lands as [ADR-0030](../../docs/adr/0030-notary-service.md) — ADR-0014 was already claimed by an earlier, unrelated, accepted ADR before this phase document was written; see the numbering note at the top of ADR-0030.)_
 - [ ] Coverage gate (S80/B70/F80/L80) + self-review/code-review + UAT signoff + migration-safe DB (chain fields
       are **additive**, append-only preserved)
+
+> **What actually runs today (2026-08-19).** The hash-chain math, the Ed25519 checkpoint signing, the
+> Replay Receipt format, and the standalone verifier are all real and tested — 49 tests in
+> `@tepegoz/notary`, plus an out-of-band check that the BUILT CLI runs as plain Node with no
+> `node_modules`. **None of it is wired into a live run.** No migration adds chain columns to the
+> `events` table, `EventJournal.append` does not compute a hash, and no signing key exists in
+> `safeStorage`. A receipt cannot be produced from a real task yet — only from data handed to
+> `buildReceipt` directly, which is how the whole test suite exercises it. The Accountability
+> Dashboard, Counterfactual Dry-Run, Cost & Risk Contract, and Data Rights export are untouched.
 
 ## Tasks
 
 ### L1/L7/L8 — NotaryService (the foundation)
-- [ ] Per-event **hash chain**: `prevHash` + `selfHash` over the canonical (payload/`blobRef`/ts/actor); folded
+- [~] Per-event **hash chain**: `prevHash` + `selfHash` over the canonical (payload/`blobRef`/ts/actor); folded
       periodically into **Ed25519-signed checkpoints** (signing key in `safeStorage`)
-- [ ] Portable, self-contained **Replay Receipt**: signed event subtree + authorizing **policy-IR snapshot** +
+      _(landed: [hash-chain.ts](../../packages/notary/src/hash-chain.ts) + [checkpoint.ts](../../packages/notary/src/checkpoint.ts). **Owed:** the `safeStorage`-backed key and wiring into `EventJournal.append` — nothing in `apps/desktop` calls this yet.)_
+- [~] Portable, self-contained **Replay Receipt**: signed event subtree + authorizing **policy-IR snapshot** +
       model/provider/cost (from Token Ledger) + `cas://` blob hashes
-- [ ] Standalone open-source **`tepegoz-verify` CLI**: re-folds events deterministically and validates the
+      _(landed: [replay-receipt.ts](../../packages/notary/src/replay-receipt.ts) — the event subtree + checkpoint. **Owed:** the policy-IR snapshot and Token Ledger fields are not part of the receipt shape yet.)_
+- [x] Standalone open-source **`tepegoz-verify` CLI**: re-folds events deterministically and validates the
       chain **without tepegöz installed** → PASS / FAIL / TAMPERED
+      _(landed: [cli.ts](../../packages/notary/src/cli.ts), bundled to a dependency-free single file by [scripts/build-cli.mjs](../../packages/notary/scripts/build-cli.mjs). Verified in-session by running the BUILT output — `node dist/tepegoz-verify.mjs receipt.json` — against a genuine and a hand-tampered receipt, not merely by compiling the source. PASS/TAMPERED/INVALID/usage-error map to exit codes 0/1/2/3.)_
 - [ ] Optional **opt-in** anchoring of the daily root hash to OpenTimestamps / RFC3161 (hash only, content never
-      sent) for non-repudiation of WHEN (keeps local-first default)
+      sent) for non-repudiation of WHEN (keeps local-first default) — not started
 - [ ] *Risk:* chaining over redacted payloads proves the redacted record is intact, not the original PII →
-      hash the pre-redaction content into a sealed **local-only** digest so redaction is itself provable
+      hash the pre-redaction content into a sealed **local-only** digest so redaction is itself provable — not started; recorded as an open risk in [ADR-0030](../../docs/adr/0030-notary-service.md)
 
 ### L9 — Accountability Dashboard + deterministic causal explainer
 - [ ] First-class Dashboard (not buried in Settings) folding the Journal into longitudinal views: per-domain

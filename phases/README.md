@@ -43,7 +43,7 @@ actually has; do not start a fifth pile.
 | 4 | [phase-4-maturation.md](product/phase-4-maturation.md) | Maturation (full extensions, cross-platform, enterprise) | ⬜ Not started |
 | 5 | [phase-5-vpn-network-privacy.md](product/phase-5-vpn-network-privacy.md) | Per-tab & per-group VPN tunnels + Tor (network privacy) | ⬜ Not started |
 | 6 | [phase-6-deterministic-automation.md](product/phase-6-deterministic-automation.md) | Deterministic replayable automation (RecipeCompiler + Watchers + Scheduler + Macros) | ⬜ Not started |
-| 7 | [phase-7-verifiable-accountability.md](product/phase-7-verifiable-accountability.md) | Verifiable accountability & proof-of-run (Notary + Dashboard + Dry-Run + Data Rights) | ⬜ Not started |
+| 7 | [phase-7-verifiable-accountability.md](product/phase-7-verifiable-accountability.md) | Verifiable accountability & proof-of-run (Notary + Dashboard + Dry-Run + Data Rights) | 🟡 In progress (NotaryService algorithmic core + standalone `tepegoz-verify` CLI landed, tested by running the built binary; not wired into a live run) |
 | 8 | [phase-8-local-intelligence-sovereignty.md](product/phase-8-local-intelligence-sovereignty.md) | Local-first intelligence & sovereignty (air-gapped mode + Trust Mesh + semantic history/KG) | ⬜ Not started |
 | 9 | [phase-9-safe-autonomy-delegation.md](product/phase-9-safe-autonomy-delegation.md) | Safe autonomy & governed delegation (Mandates + Policy Bundles + Agent Endpoints) | ⬜ Not started |
 | 10 | [phase-10-daily-driver-delight.md](product/phase-10-daily-driver-delight.md) | Daily-driver delight (Time-Travel Tabs + Tab Janitor + Research Canvas + Magic Moment) | ⬜ Not started |
