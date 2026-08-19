@@ -85,6 +85,10 @@ export async function runExtraction(input: ExtractionInput): Promise<unknown> {
       sandbox: true,
       nodeIntegration: false,
       webSecurity: true,
+      // The window is never shown, and Chromium throttles timers in unshown windows to roughly once a
+      // second. A script that awaits anything would then hit the extraction timeout for a reason that
+      // has nothing to do with the script. Same switch the tab views use, for the same reason.
+      backgroundThrottling: false,
     },
   });
   try {
