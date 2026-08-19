@@ -279,7 +279,7 @@ no number** — PR7 is the claim-grade sweep and it is hard-gated to run after [
   published ASR denominator.
 - **Cost:** none — nothing was run.
 
-### 2026-08-19 — S9 PR0–PR3 + PR5-store — code landed, MEASUREMENT-OWED (⏸ awaiting funded key)
+### 2026-08-19 — S9 PR0–PR5 — code landed, MEASUREMENT-OWED (⏸ awaiting funded key)
 
 Cross-run memory exists, and is built as an **attack surface first**: the Comet record is that a store
 which influences future behaviour is a place an attacker can leave instructions.
@@ -291,15 +291,20 @@ which influences future behaviour is a place an attacker can leave instructions.
 | Live-DOM re-validation: a hint whose element no longer resolves is discarded | — |
 | Advisory recall as `role: 'user'`, outside the trusted task fence, once per host | — |
 | Three tables with sync-meta from day 0; rows `safeParse`d on read and dropped on failure | — |
-| Remembered grants: `NOT NULL` expiry applied in-query, SQL `CHECK` excluding credential/financial/destructive | the **PolicyKernel consult** that would honour one pre-model |
+| Remembered grants: `NOT NULL` expiry applied in-query, SQL `CHECK` excluding credential/financial/destructive | — |
+| Grants consulted pre-model, scoped to a named skill and bound by its stored prompt; taint prompts never covered | a standalone grant manager (today: delete the skill) |
+| A skills library that pre-fills the composer and cannot start a run; `javascript:`/`file:`/`data:` start URLs refused | — |
 | — | **≥25% wall-clock AND tokens on the second visit**, pooled N≥10 paired |
 | — | first-visit within ±5pp (memory must not tax the cold path) |
 | — | **poisoned-hint 0 violations at N≥10 — the ship gate** |
-| [ADR-0027](../../docs/adr/0027-agent-memory.md) | the skills UI surface (and its EN+TR strings) |
+| [ADR-0027](../../docs/adr/0027-agent-memory.md) | — |
 
-- **The store is unreachable from a run today.** `recallMemory` is a seam with no host wiring, so nothing
-  is written or read in production — the mechanism landed, the behaviour is not switched on. Same ordering
-  as S10's image screen and S6's OS-auth gate: the capability waits.
+- **Domain memory is still unreachable from a run.** `recallMemory` is a seam with no host wiring, so no
+  hint is written or read in production — the mechanism landed, that behaviour is not switched on. Same
+  ordering as S10's image screen and S6's OS-auth gate: the capability waits.
+- **Skills and remembered grants ARE live**, and they are the two halves of one gesture: a skill is the
+  only scope that can hold a persistent grant, so the thing the user can name is also the thing they can
+  revoke. Deleting a skill takes its permissions with it.
 - **Persistence tests run under `pnpm test:electron`**, not `pnpm test` — the better-sqlite3 ABI note in
   CLAUDE.md. 15 store tests green there; 61 persistence tests total.
 - **The poisoned-hint scenario asserts an outcome, not the mechanism.** A pass means the agent did the

@@ -5,7 +5,7 @@
 - **Refines:** [ADR-0006](0006-policy-kernel-hitl.md) (deterministic policy kernel + HITL) ·
   **complements** [ADR-0003](0003-sqlite-persistence.md) (SQLite persistence) and
   [ADR-0014](0014-user-data-layout-db-connector.md) (user-data layout)
-- **Phase:** [S9 — Memory & Skills](../../phases/ai-agent-super/phase-s9-memory-skills.md) PR1–PR3, PR5
+- **Phase:** [S9 — Memory & Skills](../../phases/ai-agent-super/phase-s9-memory-skills.md) PR1–PR5
 
 ## Context
 
@@ -57,6 +57,20 @@ can see and revoke; it can never raise the ceiling.
 `version`, `tombstone`), so Phase-3 cloud sync owes no migration. Deletes are soft, because a hard delete
 on one device is indistinguishable from a row that never synced.
 
+**A skill can never start itself, and never chooses a scheme.** Selecting a skill fills the composer and
+stops — the send gesture that authorises a task stays with the human. Its stored start URL is validated
+to `http`/`https` before it reaches a tab: a skill row is persisted data that can arrive from an older
+build, a restored profile, or a future import path, and `javascript:` is a scheme.
+
+**A remembered grant is scoped to a named skill and bound by its stored prompt.** An ad-hoc typed task
+can neither mint nor match one — there would be nothing for the user to recognise or revoke weeks later.
+The renderer supplies the skill id and the main process honours it only while the run prompt still
+matches that skill's stored prompt, which is what stops an untrusted renderer from naming whichever
+skill holds the widest grant. Grants are consulted in order of narrowing authority: plan grant (one
+run) → remembered grant (one skill, one site, 30 days) → autonomy level (every run). A taint prompt is
+never covered: when the kernel asked *because* web-derived data reached a side-effecting call, a saved
+answer from last week is not consent for what the page said today.
+
 **A skill is a template, not a recipe.** A named prompt + start URL + expected grant profile, which still
 runs the ordinary reactor loop over a live page. The ownership test against Phase 6 is *"if the model
 could be removed from the replay, it's Phase 6"* — a skill is a starting point, not a signed
@@ -75,15 +89,22 @@ during development, and the sentence had to be reworded. The guard cannot tell w
 and we prefer that failure direction. Re-validation costs a DOM resolve per descriptor-bearing hint.
 Capping hints per host means a site with a lot to say gets partially remembered.
 
-**Deviation (placement).** There is no `@tepegoz/agent-memory` package. The decision layer lives in
+**Deviation (placement, twice).** There is no `@tepegoz/agent-memory` package. The decision layer lives in
 `@tepegoz/tool-executor`, which already owns `content-guard` (the write filter) and `dom-path`
 (`findByLocators`, the re-validation resolver); memory sits beside the two things it is made of rather
 than importing both across a new boundary. The tables are in `@tepegoz/persistence` with the other
 stores. Neither is `apps/desktop`, which is what the extraction rule protects.
 
-**Owed, and stated rather than implied.** The recall seam has no host wiring, so no production run reads
-or writes a row today — the mechanism landed, the behaviour is not switched on. The PolicyKernel consult
-that would actually honour a remembered grant pre-model is not built; the store and its guarantees are.
-The skills library has no UI surface yet. And the efficiency claim (≥25% wall-clock **and** tokens on a
+Nor does the grant consult live inside `policy-kernel.ts`, where the phase plan put it. The kernel is a
+pure function of (tool, taint, target) with no I/O, and giving it a database handle would make every
+security decision depend on storage being reachable. The coverage **rule** is pure and unit-tested in
+`security-policy/remembered-grants.ts`; the row-reading lives in the main process and is consulted at the
+same pre-model point as the plan grant. ADR-0006 ordering is preserved: the kernel decides first, and a
+grant is only ever consulted where it already said *ask*.
+
+**Owed, and stated rather than implied.** The domain-memory recall seam has no host wiring, so no
+production run reads or writes a *hint* today — that mechanism landed, that behaviour is not switched on.
+Revocation of a single saved permission means deleting the skill that holds it; a standalone grant manager
+is not built. And the efficiency claim (≥25% wall-clock **and** tokens on a
 repeat visit) plus the poisoned-hint ship gate (0 violations at N≥10) are **measurement-owed**, blocked
 on a funded model key.

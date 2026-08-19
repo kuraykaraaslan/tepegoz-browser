@@ -1,6 +1,6 @@
 # Phase S9 — Memory & Skills (W-cross)
 
-**Status:** 🟠 Measurement-owed (PR0–PR3 + PR5-store landed 2026-08-19; PR4 skills UI + PR6 sweep open) · **Depends on:** [S2](phase-s2-perception-v2.md) (identity-stable refs) · [S6](phase-s6-safety-control-plane.md) (grant plane) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟠 Measurement-owed (PR0–PR5 landed 2026-08-19; only the ⏸ funded PR6 sweep is open) · **Depends on:** [S2](phase-s2-perception-v2.md) (identity-stable refs) · [S6](phase-s6-safety-control-plane.md) (grant plane) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Let the agent learn across runs. Ship three cross-run stores — a per-domain **advisory** observation memory (selector hints, layout notes, successful-path summaries), a **skill/shortcut library** of named user-triggerable task templates, and **per-task remembered grants** with expiry — all in SQLite with sync-meta columns. Memory is advisory-only, injected as tainted context, never auto-executed, and re-validated against the live DOM before use. This phase owns north-star condition 4's *"cost measurably dropping on repeat domains"* — the repeat-visit fixtures must show wall-clock and tokens dropping without any first-visit regression.
 
@@ -83,13 +83,43 @@ Skills are **distinct from Phase 6 recipes** ([routing table](README.md#routing-
 
 ### PR4 — skills library + UI hook
 - [x] `skill-store.ts` in [packages/persistence/src](../../packages/persistence/src): named templates `{name, prompt, start_url, grant_profile_ref}` + sync-meta; `@tepegoz/shared-types` schema; **not** a Phase-6 recipe (no signed model-free replay — document the boundary inline).
-- [ ] User-triggerable entry point in [ext-agent](../../extensions/ext-agent/src) via [panel-run-config.tsx](../../extensions/ext-agent/src/panel-run-config.tsx) / a skills dropdown on [panel.tsx](../../extensions/ext-agent/src/panel.tsx); selecting a skill pre-fills the composer + start URL + grant profile. EN + full-TR dictionaries in the same PR.
-- [ ] Skill launch reuses the normal reactor path (model stays in the loop) — no new execution plane.
+- [x] User-triggerable entry point in [ext-agent](../../extensions/ext-agent/src) via [panel-run-config.tsx](../../extensions/ext-agent/src/panel-run-config.tsx) / a skills dropdown on [panel.tsx](../../extensions/ext-agent/src/panel.tsx); selecting a skill pre-fills the composer + start URL + grant profile. EN + full-TR dictionaries in the same PR.
+- [x] Skill launch reuses the normal reactor path (model stays in the loop) — no new execution plane.
 
 ### PR5 — remembered grants (S6 plane, persisted with expiry)
 - [x] `grant-store.ts` in [packages/persistence/src](../../packages/persistence/src): persist S6 grants keyed on {task/skill, host, tool-tier} with an explicit `expires_at`; sync-meta columns; `safeParse`.
-- [ ] [policy-kernel.ts](../../packages/security-policy/src/policy-kernel.ts) consults remembered grants **pre-model** (ADR-0006 ordering preserved); an expired or tombstoned grant is never honoured; a remembered grant never upgrades the ceiling above S6's `follow_a_plan` and never covers a taint-crossing action silently.
-- [ ] Grant provenance shown at approval time (S8 surface) so the human can revoke.
+- [x] [policy-kernel.ts](../../packages/security-policy/src/policy-kernel.ts) consults remembered grants **pre-model** (ADR-0006 ordering preserved); an expired or tombstoned grant is never honoured; a remembered grant never upgrades the ceiling above S6's `follow_a_plan` and never covers a taint-crossing action silently.
+- [x] Grant provenance shown at approval time (S8 surface) so the human can revoke.
+
+> **Mechanism + deviation notes (PR4, PR5).**
+> 1. **A skill never starts a run.** Selecting one fills the composer and stops; `skillUse()` returns
+>    `{prompt, openUrl}` with no third option to add later by accident, and the strings say "fills the
+>    box below", not "runs". A stored row that could start a run would move the gesture that authorises
+>    a task from the human to the database.
+> 2. **A stored start URL does not get to choose the scheme.** `safeStartUrl()` whitelists http/https
+>    and returns null on anything else (including unparseable input) before the URL reaches `createTab`.
+>    A skill row can arrive from an older build, a restored profile, or a future import/sync path, and
+>    `javascript:` is a scheme — this was a real hole in the first wiring, not a hypothetical one.
+> 3. **Placement deviation.** The kernel consult is NOT inside `policy-kernel.ts`. The kernel is a pure
+>    function of (tool, taint, target) with no I/O; giving it a database handle would make every
+>    security decision depend on storage being reachable. The coverage RULE is pure and unit-tested in
+>    `security-policy/remembered-grants.ts`; the row-reading lives in main's `remembered-grant-scope.ts`
+>    and is consulted at the same pre-model point in `requestApproval` as the plan grant. ADR-0006
+>    ordering is preserved: the kernel decides first, and a grant is only ever consulted where it
+>    already said *ask*.
+> 4. **Scope is a named skill, bound by the stored prompt.** An ad-hoc prompt can neither mint nor match
+>    a persistent grant. The renderer supplies `skillId`, and main honours it only while the run prompt
+>    still matches that skill's stored prompt — otherwise an untrusted renderer would simply name
+>    whichever skill holds the widest grant. Attachments change the prompt, so they too fall back to
+>    asking.
+> 5. **Consult order:** plan grant (one run) → remembered grant (one skill, one site, 30 days) →
+>    autonomy level (every run). Narrowest authority first.
+> 6. **Revocation is real but narrow.** Deleting a skill revokes every grant it held, which works
+>    because a skill is the only scope that can hold one. **Owed:** a standalone grant manager that
+>    lets a user drop one saved permission while keeping the skill.
+> 7. **New `grant` event kind**, persisted in conversation history and journalled as `HitlResolved`, so
+>    the transcript says *"Allowed by a permission you saved for X"* where the approval would have been.
+>    A persistent permission that acts invisibly is one nobody knows to revoke.
 
 ### PR6 — repeat-visit sweep (⏸ funded)
 - [ ] Run the frozen paired families memory-on vs memory-off at pooled N≥10; record wall-clock/task, tokens/task, first-visit regression, and poisoned-hint violations with the exclusion accounting (transport-invalid / dead-key per the [constitution](constitution.md#the-rules)).
