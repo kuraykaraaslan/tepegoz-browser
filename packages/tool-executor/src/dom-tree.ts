@@ -44,6 +44,11 @@ export interface DomTreeResult {
   url: string;
   title: string;
   nodes: DomTreeNode[];
+  /**
+   * S10: share of the viewport covered by canvas/webgl/video — surface the DOM cannot describe. Optional
+   * so an older page-script payload still parses; absent means **unknown**, never zero-coverage.
+   */
+  canvasFraction?: number | undefined;
 }
 
 /** The driver-facing parse: sanitizable raw nodes plus the aligned XPath selector map (by ref-1). */

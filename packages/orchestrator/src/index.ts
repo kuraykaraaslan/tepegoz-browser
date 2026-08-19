@@ -46,3 +46,4 @@ export {
 } from './recovery';
 export * from './acceptance-eval';
 export { assembleEvidence, classifyClaim, describeEvidence } from './completion-evidence';
+export { evaluateVisionTrigger, CANVAS_DOMINANCE, REPEAT_FAILURE_THRESHOLD } from './vision-trigger';

@@ -77,7 +77,17 @@ export interface BrowserHost {
   snapshotElements(
     tabId?: string,
     opts?: { viewportExpansionPx?: number },
-  ): Promise<{ url: string; title: string; elements: RawInteractable[] }>;
+  ): Promise<{
+    url: string;
+    title: string;
+    elements: RawInteractable[];
+    /**
+     * S10: share of the viewport covered by canvas/webgl/video — surface the DOM cannot describe.
+     * Absent means **unknown**, never "there is no canvas": a host that cannot measure it must not be
+     * read as evidence that the page is DOM-describable.
+     */
+    canvasFraction?: number | undefined;
+  }>;
   /**
    * Click the element identified by `ref` from the most recent {@link snapshotElements}.
    *

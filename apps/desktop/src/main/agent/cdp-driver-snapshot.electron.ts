@@ -190,7 +190,12 @@ async function snapshotElementsRenderDom(
   // S4 PR2: remember WHERE these refs were located, so a mutating action can prove the page did not
   // change origin underneath them.
   deps.refOrigins.set(wc, tree.data.url);
-  return { url: tree.data.url, title: tree.data.title, elements: interactables };
+  return {
+    url: tree.data.url,
+    title: tree.data.title,
+    elements: interactables,
+    ...(tree.data.canvasFraction !== undefined ? { canvasFraction: tree.data.canvasFraction } : {}),
+  };
 }
 
 /** Read the active page's actionable elements from the accessibility tree (fallback path). */

@@ -234,6 +234,9 @@ export async function runAgent(
     stoppedReason: result.stoppedReason,
     ok: result.stoppedReason === 'completed',
     ...(result.completionOutcome !== undefined ? { completionOutcome: result.completionOutcome } : {}),
+    ...(result.visionEscalations !== undefined && result.visionEscalations.length > 0
+      ? { visionEscalations: result.visionEscalations }
+      : {}),
     checkpoint: lastCheckpoint,
     tokenUsage: {
       inputTokens: usage.inputTokens,

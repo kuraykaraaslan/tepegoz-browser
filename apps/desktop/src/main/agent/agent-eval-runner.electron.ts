@@ -199,6 +199,10 @@ export async function maybeRunEval(): Promise<void> {
           ...(summary.completionOutcome !== undefined
             ? { completionOutcome: summary.completionOutcome }
             : {}),
+          // S10: the escalation rate is the phase's headline gate, so it rides on every run record.
+          ...(summary.visionEscalations !== undefined
+            ? { visionEscalations: summary.visionEscalations }
+            : {}),
           finalUrl: page.url,
           finalPageText: page.text,
           // AI-1 observability: real per-step outcomes + token usage from the run, so the harness scores

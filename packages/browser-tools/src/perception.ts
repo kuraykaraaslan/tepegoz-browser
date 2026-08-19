@@ -55,6 +55,8 @@ export interface ElementsSnapshot {
   flags: string[];
   /** Hand back on the next call for this tab to keep the listing diffed (S2 PR2). */
   memory: ElementsDiffMemory;
+  /** S10: viewport share the DOM cannot describe. Absent = unknown, and the trigger treats it as 0. */
+  canvasFraction?: number | undefined;
 }
 
 /**
@@ -100,6 +102,7 @@ export function buildElementsSnapshot(
   url: string,
   title: string,
   memory?: ElementsDiffMemory | null,
+  canvasFraction?: number,
 ): ElementsSnapshot {
   const { elements, flags: elementFlags } = finalizeElements(raw);
   const previous = memory?.url === url ? memory.digest : null;
@@ -115,5 +118,6 @@ export function buildElementsSnapshot(
     content: wrapUntrustedContent(guarded.text, url),
     flags,
     memory: { url, digest: digestOf(elements, step), step },
+    ...(canvasFraction !== undefined ? { canvasFraction } : {}),
   };
 }

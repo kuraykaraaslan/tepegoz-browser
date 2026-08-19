@@ -21,6 +21,8 @@ export interface ScenarioResult {
    * verdict, or from an app build that predates the field — absent is NOT "verified".
    */
   completionOutcome?: CompletionOutcome | undefined;
+  /** S10: escalation reasons the run judged, in order. Absent/empty = none. */
+  visionEscalations?: readonly string[] | undefined;
 }
 
 export interface ReportInput {
@@ -80,6 +82,8 @@ export interface EvalReport {
     escaped: boolean;
     /** S4: what the completion evidence supported, when the run reached a completion verdict. */
     completionOutcome?: CompletionOutcome;
+    /** S10: escalation reasons this run judged — present only when at least one fired. */
+    visionEscalations?: string[];
   }>;
 }
 
@@ -91,7 +95,11 @@ function tier(results: ScenarioResult[]): TierReport {
       results.map((r) => ({
         scored: r.score.ok,
         stoppedReason: r.record.stoppedReason,
+        // Steps, not runs, is the escalation denominator: one escalation in forty steps and one per step
+        // are identical per run and opposite in cost.
+        steps: r.record.toolCalls,
         ...(r.completionOutcome !== undefined ? { outcome: r.completionOutcome } : {}),
+        ...(r.visionEscalations !== undefined ? { visionEscalations: r.visionEscalations } : {}),
       })),
     ),
   };
@@ -135,6 +143,9 @@ export function buildReport(input: ReportInput): EvalReport {
       tags: r.scenario.tags,
       totalTokens: r.record.tokenUsage.totalTokens,
       ...(r.completionOutcome !== undefined ? { completionOutcome: r.completionOutcome } : {}),
+      ...(r.visionEscalations !== undefined && r.visionEscalations.length > 0
+        ? { visionEscalations: [...r.visionEscalations] }
+        : {}),
       escaped: r.record.escaped,
     })),
   };

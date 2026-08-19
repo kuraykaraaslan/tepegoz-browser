@@ -232,6 +232,30 @@ export function buildDomTreeExpression(viewportExpansionPx = 0): string {
   };
 
   visitRoot(document, []);
-  return { url: document.location.href, title: document.title, nodes };
+
+  // S10: how much of the viewport is painted surface the DOM cannot describe. A canvas/webgl region has
+  // no child nodes to scan, so a page whose content lives there reads as empty however carefully we walk
+  // it — this fraction is the only honest way for the loop to notice.
+  let canvasFraction = 0;
+  try {
+    const vw = window.innerWidth || 0;
+    const vh = window.innerHeight || 0;
+    if (vw > 0 && vh > 0) {
+      let painted = 0;
+      const surfaces = document.querySelectorAll('canvas,svg[data-webgl],video');
+      for (let i = 0; i < surfaces.length; i++) {
+        const r = surfaces[i].getBoundingClientRect();
+        // Intersect with the viewport: an off-screen canvas is not covering anything the agent needs.
+        const w = Math.max(0, Math.min(r.right, vw) - Math.max(r.left, 0));
+        const h = Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0));
+        painted += w * h;
+      }
+      canvasFraction = Math.min(1, painted / (vw * vh));
+    }
+  } catch (e) {
+    canvasFraction = 0;
+  }
+
+  return { url: document.location.href, title: document.title, nodes, canvasFraction };
 })()`;
 }

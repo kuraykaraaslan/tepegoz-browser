@@ -565,9 +565,9 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
     ),
     inputSchema: TargetTabArgs,
     handler: async (args) => {
-      const { url, title, elements } = await host.snapshotElements(args.tabId);
+      const { url, title, elements, canvasFraction } = await host.snapshotElements(args.tabId);
       const key = args.tabId ?? ACTIVE_TAB;
-      const snapshot = buildElementsSnapshot(elements, url, title, diffMemory.get(key));
+      const snapshot = buildElementsSnapshot(elements, url, title, diffMemory.get(key), canvasFraction);
       diffMemory.set(key, snapshot.memory);
       return snapshot;
     },

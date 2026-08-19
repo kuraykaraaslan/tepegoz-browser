@@ -95,3 +95,38 @@ describe('cannot-verify as its own terminal category', () => {
     expect(verificationLines(m, m)[2]).toContain('NOT failures');
   });
 });
+
+describe('vision escalation rate (S10)', () => {
+  it('is escalations per STEP, not per run', () => {
+    const m = verificationMetrics([
+      { scored: true, stoppedReason: 'completed', steps: 10, visionEscalations: ['blind_page'] },
+      { scored: true, stoppedReason: 'completed', steps: 10, visionEscalations: [] },
+    ]);
+    expect(m.visionEscalationRate).toBeCloseTo(1 / 20);
+  });
+
+  it('breaks the count down by reason, so an over-eager trigger is identifiable', () => {
+    const m = verificationMetrics([
+      {
+        scored: true,
+        stoppedReason: 'completed',
+        steps: 4,
+        visionEscalations: ['blind_page', 'canvas_dominant', 'blind_page'],
+      },
+    ]);
+    expect(m.visionEscalationsByReason).toEqual({ blind_page: 2, canvas_dominant: 1 });
+  });
+
+  it('is NOT MEASURED rather than 0% when no run reported a step count', () => {
+    const m = verificationMetrics([{ scored: true, stoppedReason: 'completed' }]);
+    expect(m.visionEscalationRate).toBeNull();
+    expect(verificationLines(m, m)[4]).toContain('not measured');
+  });
+
+  it('reports 0% honestly when steps ran and nothing escalated', () => {
+    // The negative-control case: this is the number the ≤5% ceiling is checked against.
+    const m = verificationMetrics([{ scored: true, stoppedReason: 'completed', steps: 12 }]);
+    expect(m.visionEscalationRate).toBe(0);
+    expect(verificationLines(m, m)[4]).toContain('0.0%');
+  });
+});

@@ -1,6 +1,6 @@
 # Phase S10 — Vision, Escalation-Only (W2 Perception)
 
-**Status:** 🟡 In progress (PR0–PR1 landed 2026-08-19) · **Depends on:** [S1](phase-s1-foundation-native-loop.md) (multimodal `CanonMessage` image blocks) · gate threshold pre-registered in [S0](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟡 In progress (PR0–PR2 landed 2026-08-19) · **Depends on:** [S1](phase-s1-foundation-native-loop.md) (multimodal `CanonMessage` image blocks) · gate threshold pre-registered in [S0](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Add vision as an **escalation fallback** per [ADR-0008](../../docs/adr/) — never every step — for the pages the DOM/a11y path structurally cannot see: canvas/webgl surfaces, closed shadow roots, cross-origin iframes, and image-only controls. Deterministic triggers in the reactor decide when a step is blind; only then does a **token-budgeted, downscaled, set-of-marks-annotated** screenshot reach the model. This is the v2 F1 vision milestone **re-cut**: F1 assumed vision would lift the escape gate, but the measured DoD failures are on-page (see [`eval-results.md`](eval-results.md)), so S10's job is narrowed to *seeing the structurally-invisible* and its cost is bounded by a measured escalation-rate ceiling.
 
@@ -18,7 +18,7 @@ The gap is real, not theoretical. [`build-dom-tree-script.ts`](../../apps/deskto
 - [ ] Escalation **fires on ≤5% of steps** measured across the **non-vision** registry — the [ADR-0008](../../docs/adr/) *"not every step"* clause expressed **as a measured number**, reported as a paired before/after with a pre-stated equivalence margin. **(⏸ funded sweep, paired)**
 - [ ] **$/task on non-vision families unchanged (±10%)** vs the S0 baseline (the escalation ceiling + downscale budget must not leak cost into ordinary browsing). **(⏸ funded sweep, paired)**
 - [ ] The `image_injection` `atk_*` fixture (prompt-injection text rendered *inside* the screenshot) passes the S6 injection screen: the image goes through its **own** injection/redaction gate before reaching the model; ASR on this case stays within the S6 published bound. **(⏸ funded sweep — coordinate with [S6](phase-s6-safety-control-plane.md))**
-- [ ] Every sweep from S10 onward reports **escalation-rate** as a standing column in [`eval-results.md`](eval-results.md).
+- [x] Every sweep from S10 onward reports **escalation-rate** as a standing column in [`eval-results.md`](eval-results.md).
 - [x] **Fixtures frozen in PR0 before any capability code** (constitution: fixture-freeze); the before/after **delta is recorded in [`eval-results.md`](eval-results.md)** and the ledger.
 - [ ] No prose deletion in S10 (see [Prose steers](#prose-steers)); the "avoid screenshots" steer in `BROWSING_STRATEGY` is *replaced by mechanism*, tracked as its own paired sweep line if the prompt string changes.
 - [ ] **i18n EN + full TR parity in the same PR** for any UI surface (a "seeing the page" / vision-escalation indicator in [`ext-agent`](../../extensions/ext-agent), if surfaced).
@@ -101,10 +101,27 @@ The gap is real, not theoretical. [`build-dom-tree-script.ts`](../../apps/deskto
 
 ### PR2 — trigger plumbing (Lane B, no capture yet)
 
-- [ ] Add deterministic **escalation triggers** in [`reactor.ts`](../../packages/orchestrator/src/reactor.ts) / [`reactor-observation.ts`](../../packages/orchestrator/src/reactor-observation.ts): (a) **0 interactables on a non-blank page** (cross-check `finalizeElements` emit count against a non-empty structural signature), (b) **occlusion persisting AFTER S3's click-time re-check**, (c) **canvas/webgl dominance** (a viewport-fraction signal surfaced from `build-dom-tree-script.ts`), (d) **≥2 consecutive action failures on the same target ref**.
-- [ ] A single zod-validated `VisionTriggerReason` union in [`@tepegoz/shared-types`](../../packages/shared-types) (sole schema source) — the reactor emits the reason, not a bare boolean, so the sweep can attribute escalations.
-- [ ] Trigger evaluation is **deterministic and pre-model** (no model call decides to escalate) — determinism-first; unit-test each trigger against the frozen fixtures.
-- [ ] Wire the reason into the agent event stream so PR-later UI + the sweep can count escalations per step. No image is captured yet — this PR only *decides*.
+- [x] Add deterministic **escalation triggers** in [`reactor.ts`](../../packages/orchestrator/src/reactor.ts) / [`reactor-observation.ts`](../../packages/orchestrator/src/reactor-observation.ts): (a) **0 interactables on a non-blank page** (cross-check `finalizeElements` emit count against a non-empty structural signature), (b) **occlusion persisting AFTER S3's click-time re-check**, (c) **canvas/webgl dominance** (a viewport-fraction signal surfaced from `build-dom-tree-script.ts`), (d) **≥2 consecutive action failures on the same target ref**.
+- [x] A single zod-validated `VisionTriggerReason` union in [`@tepegoz/shared-types`](../../packages/shared-types) (sole schema source) — the reactor emits the reason, not a bare boolean, so the sweep can attribute escalations.
+- [x] Trigger evaluation is **deterministic and pre-model** (no model call decides to escalate) — determinism-first; unit-test each trigger against the frozen fixtures.
+- [x] Wire the reason into the agent event stream so PR-later UI + the sweep can count escalations per step. No image is captured yet — this PR only *decides*.
+
+> **Mechanism notes (PR2).**
+> 1. **Trigger (a) was widened, deliberately.** "0 interactables on a non-blank page" does not catch
+>    `image-only-button`, where two controls DO exist and neither carries a name — from the agent's side
+>    that is the same problem: nothing to choose between. So `blind_page` fires on *no usable* elements
+>    (none at all, **or** none named), and the detail line says which.
+> 2. **It must be able to prove the page is non-blank.** With no page read in the tail, no escalation
+>    fires — escalating there would be guessing, and the ≤5% ceiling is exactly a promise not to guess.
+> 3. **Canvas dominance is a new page-script signal** (`canvasFraction`: canvas/webgl/video area
+>    intersected with the viewport). It is **optional through every layer**, and absent means *unknown*,
+>    never "no canvas" — a host that cannot measure it must not read as evidence the page is describable.
+> 4. **Observation only.** The trigger captures nothing and injects nothing into the conversation, so
+>    recording an escalation cannot change a run. That is what lets the escalation RATE be measured on the
+>    scripted tier, at no cost and with no key, before a single pixel is sent.
+> 5. **The rate is per STEP, not per run** — a run that escalates once in forty steps and one that
+>    escalates every step are identical per run and opposite in cost — and it prints "not measured" rather
+>    than 0% when no step count was reported.
 
 ### PR3 — budgeted capture + set-of-marks (Lane B, in `packages/screenshots`)
 

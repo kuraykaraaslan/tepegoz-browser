@@ -43,6 +43,8 @@ const EvalOutSchema = z.object({
   stoppedReason: z.string().optional(),
   /** S4: what the completion evidence supported, when the run reached a completion verdict. */
   completionOutcome: z.enum(['verified', 'attempted_unverified', 'contradicted']).optional(),
+  /** S10: escalations the run judged. Absent = none judged, which is the ordinary case. */
+  visionEscalations: z.array(z.object({ reason: z.string(), detail: z.string() })).optional(),
   finalUrl: z.string().optional(),
   finalPageText: z.string().optional(),
   error: z.string().optional(),
@@ -397,6 +399,9 @@ export async function runScenarioTrials(
     // S4: the LAST trial's verdict. Folding repeats into one outcome would need its own rule; the last
     // trial is the one whose page state and summary the score above was taken from.
     ...(last.completionOutcome !== undefined ? { completionOutcome: last.completionOutcome } : {}),
+    ...(last.visionEscalations !== undefined
+      ? { visionEscalations: last.visionEscalations.map((e) => e.reason) }
+      : {}),
     record: recordFromOutcomes({
       scenarioId: scenario.id,
       stoppedReason: (last.stoppedReason as ScenarioResult['record']['stoppedReason']) ?? 'tool_error',

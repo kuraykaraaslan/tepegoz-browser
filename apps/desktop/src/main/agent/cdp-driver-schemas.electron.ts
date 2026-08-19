@@ -138,6 +138,8 @@ export const DomTreeResultSchema = z.object({
   url: z.string(),
   title: z.string(),
   nodes: z.array(DomTreeNodeSchema),
+  /** S10: viewport share covered by canvas/webgl/video. Optional so an older payload still parses. */
+  canvasFraction: z.number().min(0).max(1).optional(),
 });
 
 /** The click-point probe result (S3 PR5): where to click, and what covers it when nothing is free. */
@@ -202,7 +204,13 @@ export type RefTarget =
 export type NodeArg = { backendNodeId: number } | { objectId: string };
 
 /** The read result every perception path returns. */
-export type SnapshotResult = { url: string; title: string; elements: RawInteractable[] };
+export type SnapshotResult = {
+  url: string;
+  title: string;
+  elements: RawInteractable[];
+  /** S10: viewport share the DOM cannot describe. Absent = unknown, never "no canvas". */
+  canvasFraction?: number | undefined;
+};
 
 /** Attach + enable the domains we need on `wc` (re-attaching if the active tab changed). */
 export type EnsureAttached = (wc: WebContents) => Promise<void>;

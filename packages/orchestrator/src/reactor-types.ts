@@ -6,6 +6,7 @@ import type {
   CompletionEvidence,
   CompletionOutcome,
   ToolDescriptor,
+  VisionEscalation,
 } from '@tepegoz/shared-types';
 import type { StepOutcome, StopReason } from './executor';
 import type { RunControl } from './run-control';
@@ -149,6 +150,13 @@ export interface ReactOptions {
    * path, unchanged.
    */
   onModelDelta?: (delta: string) => void;
+  /**
+   * S10 PR2: fired when a step is deterministically judged BLIND — the DOM path cannot answer, whatever
+   * the model does next. Observation only: nothing is captured and nothing is injected into the
+   * conversation, so this cannot change a run's behaviour. It exists so the escalation RATE can be
+   * measured before any pixel is ever sent.
+   */
+  onVisionEscalation?: (escalation: VisionEscalation) => void;
   /** Fired when the model chooses to act, before the tool runs (Agent Console). */
   onDecision?: (tool: string, rationale: string) => void;
   /** Fired after each tool call resolves (drives taint recording + console step events). */
@@ -179,6 +187,11 @@ export interface ReactOptions {
 export interface ReactResult {
   outcomes: StepOutcome[];
   stoppedReason: StopReason;
+  /**
+   * S10: every escalation this run judged, in order. The DoD's headline is that vision fires **rarely**,
+   * which is only checkable if each one is recorded with its reason.
+   */
+  visionEscalations?: VisionEscalation[];
   /**
    * What the evidence supported when the run ended (S4). `attempted_unverified` is the product behaving
    * CORRECTLY — refusing to claim a success it cannot back — and the harness counts it as its own

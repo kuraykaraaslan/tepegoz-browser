@@ -90,6 +90,12 @@ export interface AgentRunSummary {
    * its own category, never as a competence failure.
    */
   completionOutcome?: string | undefined;
+  /**
+   * S10: escalations this run judged (reason + what was observed). Reported so "vision fires rarely" is
+   * a measured number rather than an intention. Present even when no image was ever attached — the
+   * TRIGGER is what the rate is about.
+   */
+  visionEscalations?: { reason: string; detail: string }[] | undefined;
   checkpoint?: AgentRunCheckpoint | undefined;
   /** The agent's closing summary for this turn — appended to the conversation memory by the host. */
   summary?: string;

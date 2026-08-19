@@ -2,7 +2,7 @@ import { Logger } from '@tepegoz/libs';
 import { ModelGateway, type CanonMessage } from '@tepegoz/model-gateway';
 import { ToolGateway } from '@tepegoz/capability-plane';
 import { wrapUserRequest } from '@tepegoz/tool-executor';
-import type { AgentWorkingState, CompletionOutcome } from '@tepegoz/shared-types';
+import type { AgentWorkingState, CompletionOutcome, VisionEscalation } from '@tepegoz/shared-types';
 import type { StepOutcome } from './executor';
 import {
   classifyRuntimeError,
@@ -11,6 +11,7 @@ import {
   stopReasonForFailure,
 } from './recovery';
 import { assembleEvidence } from './completion-evidence';
+import { evaluateVisionTrigger } from './vision-trigger';
 import { parseDecision, parseNativeDecision, type Decision } from './reactor-decision';
 import { DECISION_TOOL_NAME, decisionToolDef, resolveDecisionMode } from './reactor-decision-mode';
 import { isToolError, observationOf, observationWithRecovery, stableStringify } from './reactor-observation';
@@ -186,6 +187,8 @@ export default class Reactor {
     // S4: the last completion verdict's outcome, so a run that ended any other way still reports what
     // the evidence said the last time it was asked.
     let lastOutcome: CompletionOutcome | undefined;
+    // S10: every escalation this run judged, so the rate can be reported.
+    const visionEscalations: VisionEscalation[] = [];
     const validate = async (ctx: CompletionContext): Promise<CompletionVerdict> => {
       if (validator === undefined) return { done: false };
       try {
@@ -220,6 +223,7 @@ export default class Reactor {
       }
       return {
         outcomes,
+        visionEscalations,
         stoppedReason: 'completed',
         summary: verdict.finalAnswer ?? latestMemory,
         ...(verdict.outcome !== undefined ? { completionOutcome: verdict.outcome } : {}),
@@ -233,7 +237,7 @@ export default class Reactor {
      * actor rather than burn the whole step budget.
      */
     const settleClaim = async (summary: string): Promise<ReactResult | null> => {
-      if (validator === undefined) return { outcomes, stoppedReason: 'completed', summary };
+      if (validator === undefined) return { outcomes, visionEscalations, stoppedReason: 'completed', summary };
       // S4: the claim is judged against what the run OBSERVED, not against what the page says about
       // itself. Assembled here because this is the only place that has every step outcome.
       const verdict = await validate({
@@ -247,6 +251,7 @@ export default class Reactor {
       if (verdict.done) {
         return {
           outcomes,
+          visionEscalations,
           stoppedReason: 'completed',
           summary: verdict.finalAnswer ?? summary,
           ...(verdict.outcome !== undefined ? { completionOutcome: verdict.outcome } : {}),
@@ -259,6 +264,7 @@ export default class Reactor {
       if (completionRejects > maxCompletionRejects) {
         return {
           outcomes,
+          visionEscalations,
           stoppedReason: 'completed',
           summary,
           ...(verdict.outcome !== undefined ? { completionOutcome: verdict.outcome } : {}),
@@ -349,13 +355,13 @@ export default class Reactor {
     };
 
     for (let step = 0; ; step++) {
-      if (options.signal?.aborted === true) return { outcomes, stoppedReason: 'aborted' };
+      if (options.signal?.aborted === true) return { outcomes, visionEscalations, stoppedReason: 'aborted' };
       // Run-control gate (additive; skipped entirely when `control` is absent — byte-identical legacy
       // path): hold the loop while paused-by-user or offline, then fold any mid-run steering messages the
       // user injected into the conversation before the next decision. Abort always wins over a hold.
       if (options.control !== undefined) {
         await options.control.waitWhileHeld();
-        if (options.control.aborted) return { outcomes, stoppedReason: 'aborted' };
+        if (options.control.aborted) return { outcomes, visionEscalations, stoppedReason: 'aborted' };
         for (const steer of options.control.drainSteer()) {
           messages.push({
             role: 'user',
@@ -364,7 +370,7 @@ export default class Reactor {
         }
       }
       if (outcomes.length >= maxSteps) {
-        return { outcomes, stoppedReason: 'max_steps', ...(lastOutcome !== undefined ? { completionOutcome: lastOutcome } : {}) };
+        return { outcomes, visionEscalations, stoppedReason: 'max_steps', ...(lastOutcome !== undefined ? { completionOutcome: lastOutcome } : {}) };
       }
 
       // Periodic validator pass (AI-3): every `planningInterval` actions the Planner checks whether the
@@ -420,7 +426,7 @@ export default class Reactor {
           });
           continue;
         }
-        return { outcomes, stoppedReason: stopReasonForFailure(failure), failure };
+        return { outcomes, visionEscalations, stoppedReason: stopReasonForFailure(failure), failure };
       }
       decisionRepairs = 0;
       messages.push({ role: 'assistant', content: responseText });
@@ -461,7 +467,7 @@ export default class Reactor {
         continue;
       }
       if (streakVerdict === 'stop') {
-        return { outcomes, stoppedReason: 'loop_detected' };
+        return { outcomes, visionEscalations, stoppedReason: 'loop_detected' };
       }
       if (!readOnlyTools.has(decision.tool)) {
         const signature = `${decision.tool}:${stableStringify(decision.args)}`;
@@ -483,7 +489,7 @@ export default class Reactor {
             );
             continue;
           }
-          return { outcomes, stoppedReason: 'loop_detected' };
+          return { outcomes, visionEscalations, stoppedReason: 'loop_detected' };
         }
       }
 
@@ -499,6 +505,17 @@ export default class Reactor {
         : { stepId: `r${String(step)}`, tool: decision.tool, args: decision.args, ok: true, result, durationMs };
       outcomes.push(outcome);
       options.onOutcome?.(outcome);
+
+      // S10 PR2: is this step BLIND — i.e. would a correct DOM read still leave nothing to act on?
+      // Deterministic and pre-model, and observation-only: nothing is captured, and nothing is injected
+      // into the conversation, so recording an escalation cannot itself change the run. The same reason
+      // is not recorded twice in a row — an unchanged blind page is one escalation, not one per step.
+      const escalation = evaluateVisionTrigger(outcomes);
+      if (escalation !== null && escalation.reason !== visionEscalations.at(-1)?.reason) {
+        visionEscalations.push(escalation);
+        Logger.info('[s10] vision escalation', escalation);
+        options.onVisionEscalation?.(escalation);
+      }
 
       // C1 PR2: fold this outcome into the run-level no-progress counter (a state-changing action that
       // moved nothing is a 'stall'; a read of an unchanged page is neutral). `maybeReplan` at the loop top
@@ -521,13 +538,13 @@ export default class Reactor {
       if (!outcome.ok) {
         const failure = classifyToolFailure(outcome);
         if (!failure.retryable) {
-          return { outcomes, stoppedReason: stopReasonForFailure(failure), failure };
+          return { outcomes, visionEscalations, stoppedReason: stopReasonForFailure(failure), failure };
         }
         const key = `${failure.kind}:${outcome.tool}`;
         const recoveryCount = (recoveryCounts.get(key) ?? 0) + 1;
         recoveryCounts.set(key, recoveryCount);
         if (recoveryCount > maxRecoveryAttempts) {
-          return { outcomes, stoppedReason: stopReasonForFailure(failure), failure };
+          return { outcomes, visionEscalations, stoppedReason: stopReasonForFailure(failure), failure };
         }
         pushObservation(`Observation:\n${observationWithRecovery(outcome, failure)}`);
         continue;
@@ -546,7 +563,7 @@ export default class Reactor {
       }
 
       const halt = outcome.ok ? options.guard?.(outcome) : null;
-      if (halt != null) return { outcomes, stoppedReason: halt };
+      if (halt != null) return { outcomes, visionEscalations, stoppedReason: halt };
 
       pushObservation(`Observation:\n${observationOf(outcome)}`);
 
@@ -557,7 +574,7 @@ export default class Reactor {
       // element snapshot just read). Only a hint that differs from the last one is injected.
       if (options.groundNavigation !== undefined) {
         const hint = await boundedGrounding(options.groundNavigation, outcome, req.goal);
-        if (signalAborted(options.signal)) return { outcomes, stoppedReason: 'aborted' };
+        if (signalAborted(options.signal)) return { outcomes, visionEscalations, stoppedReason: 'aborted' };
         if (hint !== null && hint.length > 0 && hint !== lastNavHint) {
           lastNavHint = hint;
           messages.push({ role: 'user', content: hint });

@@ -10,13 +10,17 @@ import { wilsonInterval } from './statistics';
  * this phase builds, so they are counted as their own terminal category.
  */
 
-/** What one run contributed, reduced to the three facts these metrics need. */
+/** What one run contributed, reduced to the facts these metrics need. */
 export interface VerificationInput {
   /** Did the ground-truth scorer accept the run's answer? */
   scored: boolean;
   stoppedReason: string;
   /** What the completion evidence supported. Absent = the run never reached a completion verdict. */
   outcome?: CompletionOutcome | undefined;
+  /** S10: escalation reasons this run judged, in order. Absent/empty = none. */
+  visionEscalations?: readonly string[] | undefined;
+  /** S10: steps the run took — the denominator for "escalation fires on ≤5% of steps". */
+  steps?: number | undefined;
 }
 
 export interface VerificationMetrics {
@@ -53,6 +57,16 @@ export interface VerificationMetrics {
    * `null` when every run was a cannot-verify.
    */
   verifiedTaskSuccessRate: number | null;
+  /**
+   * S10: escalations per step across these runs.
+   *
+   * The ADR-0008 "not every step" clause expressed as a NUMBER. Per step, not per run, because a run
+   * that escalates once in forty steps and one that escalates on every step are the same thing per run
+   * and opposite things in cost. `null` when no run reported a step count.
+   */
+  visionEscalationRate: number | null;
+  /** Escalations broken down by reason, so an over-eager trigger is identifiable rather than just visible. */
+  visionEscalationsByReason: Record<string, number>;
 }
 
 /** A run that asserted it was done — the only kind that can fabricate a success. */
@@ -75,6 +89,16 @@ export function verificationMetrics(runs: readonly VerificationInput[]): Verific
   const eligible = runs.filter((r) => r.outcome !== 'attempted_unverified');
   const eligiblePasses = eligible.filter((r) => r.scored).length;
 
+  const steps = runs.reduce((sum, r) => sum + (r.steps ?? 0), 0);
+  const byReason: Record<string, number> = {};
+  let escalations = 0;
+  for (const run of runs) {
+    for (const reason of run.visionEscalations ?? []) {
+      escalations += 1;
+      byReason[reason] = (byReason[reason] ?? 0) + 1;
+    }
+  }
+
   return {
     verifiedCompletionRate: withVerdict.length === 0 ? null : verified / withVerdict.length,
     fabricatedSuccessCount: fabricated,
@@ -84,6 +108,8 @@ export function verificationMetrics(runs: readonly VerificationInput[]): Verific
     cannotVerifyCount: cannotVerify,
     contradictedCount: contradicted,
     verifiedTaskSuccessRate: eligible.length === 0 ? null : eligiblePasses / eligible.length,
+    visionEscalationRate: steps === 0 ? null : escalations / steps,
+    visionEscalationsByReason: byReason,
   };
 }
 
@@ -102,5 +128,12 @@ export function verificationLines(dev: VerificationMetrics, heldOut: Verificatio
       ` · contradicted: dev ${String(dev.contradictedCount)} · held-out ${String(heldOut.contradictedCount)}`,
     `task success excluding cannot-verify: dev ${pct(dev.verifiedTaskSuccessRate)}` +
       ` · held-out ${pct(heldOut.verifiedTaskSuccessRate)}`,
+    `vision escalation (S10, ceiling 5% of steps): dev ${pct(dev.visionEscalationRate)}` +
+      ` · held-out ${pct(heldOut.visionEscalationRate)}` +
+      (Object.keys(dev.visionEscalationsByReason).length > 0
+        ? ` · by reason: ${Object.entries(dev.visionEscalationsByReason)
+            .map(([reason, n]) => `${reason} ${String(n)}`)
+            .join(', ')}`
+        : ''),
   ];
 }
