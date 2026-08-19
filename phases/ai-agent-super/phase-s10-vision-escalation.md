@@ -1,6 +1,6 @@
 # Phase S10 — Vision, Escalation-Only (W2 Perception)
 
-**Status:** 🟡 In progress (PR0–PR2 landed 2026-08-19) · **Depends on:** [S1](phase-s1-foundation-native-loop.md) (multimodal `CanonMessage` image blocks) · gate threshold pre-registered in [S0](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟡 In progress (PR0–PR3 landed 2026-08-19) · **Depends on:** [S1](phase-s1-foundation-native-loop.md) (multimodal `CanonMessage` image blocks) · gate threshold pre-registered in [S0](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Add vision as an **escalation fallback** per [ADR-0008](../../docs/adr/) — never every step — for the pages the DOM/a11y path structurally cannot see: canvas/webgl surfaces, closed shadow roots, cross-origin iframes, and image-only controls. Deterministic triggers in the reactor decide when a step is blind; only then does a **token-budgeted, downscaled, set-of-marks-annotated** screenshot reach the model. This is the v2 F1 vision milestone **re-cut**: F1 assumed vision would lift the escape gate, but the measured DoD failures are on-page (see [`eval-results.md`](eval-results.md)), so S10's job is narrowed to *seeing the structurally-invisible* and its cost is bounded by a measured escalation-rate ceiling.
 
@@ -125,10 +125,28 @@ The gap is real, not theoretical. [`build-dom-tree-script.ts`](../../apps/deskto
 
 ### PR3 — budgeted capture + set-of-marks (Lane B, in `packages/screenshots`)
 
-- [ ] Add a **pxPerToken-style budget** to [`packages/screenshots`](../../packages/screenshots): downscale so the encoded image respects a configured token budget (default ≈28 px/token, tuned against the S1 adapter's image-token accounting), bounded by the existing maxEdge 1400.
-- [ ] Draw a **set-of-marks overlay**: paint the [S2](phase-s2-perception-v2.md) ref ids onto the downscaled image with a coord↔viewport mapping, so the model names a mark the reactor can resolve back to a ref/locator.
-- [ ] Return a typed `AnnotatedScreenshot` (bytes + mark→ref map + scale factor), zod-validated at the boundary; the mark→ref map is the only channel by which a vision decision re-enters the deterministic action path.
-- [ ] Keep capture+annotate under the 250-line cap by splitting downscale / overlay / mapping into separate modules.
+- [x] Add a **pxPerToken-style budget** to [`packages/screenshots`](../../packages/screenshots): downscale so the encoded image respects a configured token budget (default ≈28 px/token, tuned against the S1 adapter's image-token accounting), bounded by the existing maxEdge 1400.
+- [x] Draw a **set-of-marks overlay**: paint the [S2](phase-s2-perception-v2.md) ref ids onto the downscaled image with a coord↔viewport mapping, so the model names a mark the reactor can resolve back to a ref/locator.
+- [x] Return a typed `AnnotatedScreenshot` (bytes + mark→ref map + scale factor), zod-validated at the boundary; the mark→ref map is the only channel by which a vision decision re-enters the deterministic action path.
+- [x] Keep capture+annotate under the 250-line cap by splitting downscale / overlay / mapping into separate modules.
+
+> **Mechanism notes (PR3).**
+> 1. **The overlay is drawn on an `OffscreenCanvas` in the isolated world.** The numbers have to be *in
+>    the pixels* — a model looking at a picture cannot use a list of coordinates it has no way to locate —
+>    and drawing needs a raster surface. The one already available is the page's own; a detached canvas is
+>    never inserted, so nothing about the live page changes, the page's scripts cannot observe it, and no
+>    image dependency enters the main process. **Honest limit:** the drawing itself is proven only
+>    on-harness; the unit tests cover the geometry, the map, the budget, and the degrade-to-null path.
+> 2. **The budget has a FLOOR as well as a ceiling.** Scaling until the token budget is met would
+>    eventually produce an unreadable thumbnail that costs tokens and answers nothing. Below
+>    `MIN_EDGE` the image is returned at the floor and `estimatedTokens` reports the real, higher cost —
+>    an honest overspend beats a cheap useless image, and the number says which happened. Dimensions are
+>    floored, not rounded, so the stated ceiling is a bound rather than a near-miss.
+> 3. **A mark that does not exist resolves to `null`, never to a guess.** The mark → ref map is the sole
+>    channel by which a vision answer re-enters the deterministic action path, so an unresolvable mark
+>    means the image did not help and the loop re-reads — a wrong-but-plausible click is worse.
+> 4. Elements too small to carry a legible mark are dropped: a number painted with nothing behind it is
+>    clutter that can only mislead.
 
 ### PR4 — adapter image-block wiring (consumes S1)
 
