@@ -24,6 +24,7 @@ import type {
   AgentConversationSummary,
   AgentConversationsState,
 } from './contract';
+import type { SkillRecord } from './contract';
 import type { LocalModelInfo } from './preferences-types';
 
 export interface AgentApi {
@@ -62,6 +63,19 @@ export interface AgentApi {
   deleteAgentConversation(id: string): Promise<void>;
   clearAgentConversations(): Promise<void>;
   onAgentConversationsState(callback: (state: AgentConversationsState) => void): () => void;
+  // Skills library (S9). A skill is a stored prompt TEMPLATE; selecting one pre-fills the composer and
+  // never starts a run, so the send gesture that authorises a task stays with the human.
+  listAgentSkills(): Promise<SkillRecord[]>;
+  /** Create (omit `id`) or update a skill. The main process mints the UUID — never the renderer. */
+  saveAgentSkill(input: {
+    id?: string;
+    name: string;
+    prompt: string;
+    startUrl?: string;
+    grantProfile?: string;
+  }): Promise<SkillRecord[]>;
+  /** Soft-delete a skill; resolves with the remaining list. */
+  deleteAgentSkill(id: string): Promise<SkillRecord[]>;
   /** Subscribe to the live Agent Console event stream; returns an unsubscribe function. */
   onAgentEvent(callback: (event: AgentEvent) => void): () => void;
   /** Streamed model fragments for the running task — ephemeral, never journaled (ADR-0025). */

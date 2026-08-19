@@ -107,6 +107,14 @@ describe('skills', () => {
     AgentMemoryStore.putSkill(db, { id: uuid(11), name: 'n', prompt: 'p' });
     expect(AgentMemoryStore.listSkills(db)[0]?.deviceId.length).toBeGreaterThan(0);
   });
+
+  it('forgets a skill softly, so a sync can still see the deletion', () => {
+    AgentMemoryStore.putSkill(db, { id: uuid(12), name: 'n', prompt: 'p' });
+    AgentMemoryStore.forgetSkill(db, uuid(12));
+    expect(AgentMemoryStore.listSkills(db)).toEqual([]);
+    const raw = db.prepare('SELECT tombstone FROM agent_skills WHERE id = ?').get(uuid(12));
+    expect((raw as { tombstone: number }).tombstone).toBe(1);
+  });
 });
 
 describe('remembered grants', () => {

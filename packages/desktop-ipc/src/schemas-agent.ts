@@ -82,3 +82,17 @@ export const HistorySearchParamsSchema = z.object({
   limit: z.number().int().min(1).max(200).default(50),
   offset: z.number().int().min(0).default(0),
 });
+
+/** `agent-skills:save` payload. Bounds mirror SkillRecordSchema in @tepegoz/shared-types, which stays
+ *  the single source for the stored shape; this validates only what crosses the IPC boundary. An
+ *  omitted `id` means "new skill" — the main process mints the UUID, never the renderer. */
+export const AgentSkillSaveSchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().min(1).max(80),
+  prompt: z.string().min(1).max(2000),
+  startUrl: z.string().max(2048).optional(),
+  grantProfile: z.string().max(80).optional(),
+});
+export type AgentSkillSaveInput = z.infer<typeof AgentSkillSaveSchema>;
+
+export const AgentSkillIdSchema = z.string().uuid();

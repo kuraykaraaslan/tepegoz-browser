@@ -23,6 +23,7 @@ import {
   type LocalModelInfo,
   type McpServerStatusInfo,
   type ProviderId,
+  type SkillRecord,
   type AdaptorConnection,
   type TepegozApi,
   type TokenUsageSnapshot,
@@ -46,6 +47,9 @@ export const agentModelsApi: Pick<
   | 'openAgentConversation'
   | 'deleteAgentConversation'
   | 'clearAgentConversations'
+  | 'listAgentSkills'
+  | 'saveAgentSkill'
+  | 'deleteAgentSkill'
   | 'onAgentConversationsState'
   | 'onAgentEvent'
   | 'onAgentDelta'
@@ -110,6 +114,15 @@ export const agentModelsApi: Pick<
   deleteAgentConversation: (id: string) =>
     invoke<void>(IpcChannels.agentConversationsDelete, id),
   clearAgentConversations: () => invoke<void>(IpcChannels.agentConversationsClear),
+  listAgentSkills: () => invoke<SkillRecord[]>(IpcChannels.agentSkillsList),
+  saveAgentSkill: (input: {
+    id?: string;
+    name: string;
+    prompt: string;
+    startUrl?: string;
+    grantProfile?: string;
+  }) => invoke<SkillRecord[]>(IpcChannels.agentSkillsSave, input),
+  deleteAgentSkill: (id: string) => invoke<SkillRecord[]>(IpcChannels.agentSkillsDelete, id),
   onAgentConversationsState: (callback: (state: AgentConversationsState) => void) => {
     const listener = (_event: unknown, payload: AgentConversationsState): void => {
       callback(payload);

@@ -2,9 +2,10 @@ import { cn } from '@tepegoz/ui';
 import type { Resources } from '@tepegoz/i18n';
 import type { AIProvider } from '@tepegoz/shared-types/providers';
 import type { AgentStrings } from './i18n';
-import type { AgentAutonomy, AgentConfig, AgentEffort } from './types';
+import type { AgentAutonomy, AgentConfig, AgentEffort, AgentSkill } from './types';
 import { Dropdown } from './panel-dropdown';
 import { RunConfigMenu } from './panel-run-config';
+import { SkillsPicker } from './panel-skills';
 import {
   CameraIcon,
   CloseIcon,
@@ -49,6 +50,13 @@ interface PanelComposerProps {
   chooseAutonomy: (level: AgentAutonomy) => void;
   chooseEffort: (level: AgentEffort) => void;
   chooseStrictGuard: (on: boolean) => void;
+  /** Skills library reads/writes. Notably absent: anything that could START a run.  */
+  skillsApi: {
+    listAgentSkills(): Promise<AgentSkill[]>;
+    saveAgentSkill(input: { name: string; prompt: string }): Promise<AgentSkill[]>;
+    deleteAgentSkill(id: string): Promise<AgentSkill[]>;
+  };
+  onUseSkill: (skill: AgentSkill) => void;
 }
 
 export function PanelComposer({
@@ -76,6 +84,8 @@ export function PanelComposer({
   chooseAutonomy,
   chooseEffort,
   chooseStrictGuard,
+  skillsApi,
+  onUseSkill,
 }: PanelComposerProps) {
   return (
     <>
@@ -192,6 +202,9 @@ export function PanelComposer({
               >
                 <CameraIcon className="h-3.5 w-3.5" />
               </button>
+
+              {/* Skills: pick a saved prompt. Fills the composer and stops — the send gesture stays human. */}
+              <SkillsPicker api={skillsApi} labels={a.skills} prompt={prompt} onUse={onUseSkill} />
 
               <div className="mx-1 h-4 w-px bg-border" />
 

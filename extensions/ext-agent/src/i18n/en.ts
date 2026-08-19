@@ -95,6 +95,22 @@ export const en = {
     full: 'Full conversation history',
     delete: 'Delete conversation',
   },
+  // Skills library (S9): stored prompt TEMPLATES. Picking one fills the composer — it never starts a
+  // run, so the wording says 'use', not 'run'. Never promise the user autonomy they did not grant.
+  skills: {
+    label: 'Skills',
+    title: 'Saved prompts you can reuse',
+    empty: 'No saved skills yet',
+    loading: 'Loading...',
+    save: 'Save this prompt as a skill',
+    saveTitle: 'Name this skill',
+    namePlaceholder: 'Weekly invoice check',
+    startUrl: 'Starts at',
+    grantProfile: 'Expects',
+    hint: 'Picking a skill fills the box below and opens its start page. Nothing runs until you press send.',
+    delete: 'Remove skill',
+    saveEmpty: 'Type a prompt first, then save it as a skill.',
+  },
   historyPage: {
     title: 'Agent history',
     search: 'Search conversations',

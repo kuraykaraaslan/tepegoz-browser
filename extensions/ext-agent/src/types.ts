@@ -5,6 +5,7 @@
  * agent's public wire shapes; the app re-exports them from its IPC contract.
  */
 import type { AIProvider } from '@tepegoz/shared-types/providers';
+import type { SkillRecord } from '@tepegoz/shared-types';
 import type { TaskDefinition, TaskSaveInput } from '@tepegoz/tasks';
 import type {
   AgentAttachmentMeta,
@@ -38,6 +39,13 @@ export interface AgentDelta {
   /** The fragment as produced. May be half a word or half a JSON object; nothing parses it. */
   text: string;
 }
+
+/**
+ * What the panel needs of a stored skill. Derived from @tepegoz/shared-types' SkillRecord rather than
+ * redeclared, so the wire shape has exactly one definition; sync-meta stays in the store where it
+ * belongs and never reaches the renderer.
+ */
+export type AgentSkill = Pick<SkillRecord, 'id' | 'name' | 'prompt' | 'startUrl' | 'grantProfile'>;
 
 export type AgentEventKind =
   | 'plan'
@@ -228,6 +236,18 @@ export interface AgentHostApi {
   openAgentConversation(input: AgentConversationOpenInput): Promise<AgentConversationDetail | null>;
   deleteAgentConversation(id: string): Promise<void>;
   clearAgentConversations(): Promise<void>;
+  /** Skills library (S9). Every call resolves with the FULL list, so the panel never guesses the
+   *  post-write state — it renders what the store actually holds. */
+  listAgentSkills(): Promise<AgentSkill[]>;
+  /** Create (omit `id`) or update a skill. The main process mints the UUID, never the renderer. */
+  saveAgentSkill(input: {
+    id?: string;
+    name: string;
+    prompt: string;
+    startUrl?: string;
+    grantProfile?: string;
+  }): Promise<AgentSkill[]>;
+  deleteAgentSkill(id: string): Promise<AgentSkill[]>;
   onAgentConversationsState(callback: (state: AgentConversationsState) => void): () => void;
   /** Ensure the active tab belongs to a group; creates one if needed. Returns the groupId. */
   ensureActiveGroup(): Promise<string>;

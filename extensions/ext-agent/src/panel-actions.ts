@@ -8,6 +8,7 @@ import type {
   AgentEffort,
   AgentEvent,
   AgentHostApi,
+  AgentSkill,
 } from './types';
 import {
   attachmentMeta,
@@ -18,6 +19,7 @@ import {
   type GroupState,
   type Turn,
 } from './panel-state';
+import { skillUse } from './skills-core';
 
 /**
  * Behaviour handlers for the Agent panel: run lifecycle (run/steer/pause/stop/new-task), config
@@ -253,6 +255,19 @@ export function useAgentActions(deps: AgentActionsDeps) {
     mutateActive((s) => ({ ...s, planPreview: null }));
   }
 
+  /**
+   * Use a saved skill: fill the composer with its prompt, and open its start page if it names one.
+   *
+   * It deliberately does NOT call `onRun`. A stored row that could start a run would move the gesture
+   * that authorises a task away from the human, which is the one thing the skills library must not do.
+   * Opening the start page is the same act as clicking a bookmark — visible, and still just a page.
+   */
+  function useSkill(skill: AgentSkill): void {
+    const use = skillUse(skill);
+    mutateActive((s) => ({ ...s, prompt: use.prompt }));
+    if (use.openUrl !== null) api.createTab(use.openUrl);
+  }
+
   return {
     onRun,
     onCancel,
@@ -271,5 +286,6 @@ export function useAgentActions(deps: AgentActionsDeps) {
     respond,
     toggleStep,
     respondPlan,
+    useSkill,
   };
 }

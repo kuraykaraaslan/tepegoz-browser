@@ -171,6 +171,12 @@ export class AgentMemoryStore {
     });
   }
 
+  /** Soft-delete a skill, for the same reason hints are soft-deleted. */
+  static forgetSkill(db: Db, id: string): void {
+    db.prepare(
+      'UPDATE agent_skills SET tombstone = 1, updated_at = ?, version = version + 1 WHERE id = ?',
+    ).run(Date.now(), id);
+  }
   /**
    * Grants that are live RIGHT NOW for a scope+host. Expiry is applied in the query, so an expired grant
    * is never returned even if nothing has swept it — a grant that outlives its window by however long the

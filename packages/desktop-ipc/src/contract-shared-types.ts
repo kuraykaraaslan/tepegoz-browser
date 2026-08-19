@@ -25,6 +25,10 @@ export type { FileAccessGrant, FileAccessMode };
 // `@tepegoz/desktop-ipc` consumers (used by `./ai-adaptor-types`'s `AIAdaptorAction`).
 export type { AiTask, RiskLevel, ToolSource } from '@tepegoz/shared-types';
 
+// A skill is a stored PROMPT TEMPLATE (name + prompt + optional start URL + expected grant profile),
+// owned by @tepegoz/shared-types. Type-only, so the sandboxed preload stays zod-free.
+export type { SkillRecord } from '@tepegoz/shared-types';
+
 // Provider identity is owned by @tepegoz/shared-types (the single schema source): AIProviderEnum and
 // this contract both derive from the SAME zod-free `providers` entry, which the sandboxed preload can
 // safely import at runtime. (MCP_TRANSPORTS below still mirrors McpTransportEnum — next candidate.)

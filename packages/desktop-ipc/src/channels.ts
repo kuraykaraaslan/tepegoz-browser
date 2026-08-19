@@ -128,6 +128,11 @@ export const IpcChannels = {
   agentConversationsDelete: 'agent-conversations:delete',
   agentConversationsClear: 'agent-conversations:clear',
   agentConversationsState: 'agent-conversations:state',
+  // Skills library (S9): named prompt templates. Selecting one PRE-FILLS the composer; it never starts
+  // a run, so the human keeps the send gesture that authorises the task.
+  agentSkillsList: 'agent-skills:list',
+  agentSkillsSave: 'agent-skills:save',
+  agentSkillsDelete: 'agent-skills:delete',
   // On-device model management (Settings → Providers → Local). `models:state` is a main→renderer push.
   modelsList: 'models:list',
   modelsDownload: 'models:download',

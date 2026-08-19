@@ -3,6 +3,7 @@ import { agentRunByGroup, pendingApprovals, pendingPlans } from './ipc-agent-sha
 import { registerAgentRunIpc } from './ipc-agent-run';
 import { registerAgentControlIpc } from './ipc-agent-controls';
 import { registerAgentConversationIpc } from './ipc-agent-conversations';
+import { registerAgentSkillsIpc } from './ipc-agent-skills';
 import { registerAgentConfigIpc } from './ipc-agent-config';
 
 /**
@@ -32,5 +33,6 @@ export function registerAgentIpc(): void {
   registerAgentRunIpc();
   registerAgentControlIpc();
   registerAgentConversationIpc();
+  registerAgentSkillsIpc();
   registerAgentConfigIpc();
 }
