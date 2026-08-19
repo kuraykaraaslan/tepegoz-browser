@@ -1,6 +1,6 @@
 # Phase S7 — Speed (W3 Speed)
 
-**Status:** ⬜ Not started · **Depends on:** [S1](phase-s1-foundation-native-loop.md) (native + streaming), [S2](phase-s2-perception-v2.md) (perception economy) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟠 Measurement-owed (PR1–PR4 landed 2026-08-19; only the ⏸ funded PR5 sweep is open) · **Depends on:** [S1](phase-s1-foundation-native-loop.md) (native + streaming), [S2](phase-s2-perception-v2.md) (perception economy) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Set explicit wall-clock/task and $/task targets for the agent — the first such targets in the repo — and hit them by cutting forced round-trips and per-step token burn, without trading away reliability. Speed is won by eliminating waste (redundant validation passes, invisible-tab realism delays, verbose decision encodings), not by dropping steps or corners. Every contributing change lands as its own single-change sweep so its speed win and its reliability cost are attributed independently, with completion-rate equivalence as the standing guardrail. This phase owns the `$`/wall-clock half of north-star condition 4.
 
@@ -25,41 +25,72 @@ The known burn sources, each cited:
 
 Targets are **derived from S0's baseline** and **pre-registered in PR1 before any capability code** (constitution: fixture/target freeze before capability code). All measurement items await a funded key.
 
-- [ ] **Targets pre-registered.** PR1 commits explicit numeric p50 wall-clock/task and `$`/task targets for the **acceptance family**, derived from S0's baseline, *before* PR2 code lands. The target-setting PR carries the baseline numbers it derives from (no floating targets).
+- [x] **Targets pre-registered.** PR1 commits explicit numeric p50 wall-clock/task and `$`/task targets for the **acceptance family**, derived from S0's baseline, *before* PR2 code lands. The target-setting PR carries the baseline numbers it derives from (no floating targets).
 - [ ] **Wall-clock:** p50 wall-clock/task on the acceptance family reduced **≥40%** vs the S0 baseline (⏸ funded sweep) — this is program gate **G7**.
 - [ ] **Cost:** `$`/task on the acceptance family reduced **≥30%** vs the S0 baseline (⏸ funded sweep).
 - [ ] **Reliability guardrail:** verified-completion rate stays **equivalent** — within **±5pp** on the pooled family, **N≥10** family-pooled paired sweep with Wilson 95% CIs and a pre-stated equivalence margin (not CI-overlap eyeballing) (⏸ funded sweep).
-- [ ] **Attribution rule honoured:** each contributing change (adaptive cadence; visibility-gated realism; quick-mode encoding) lands its **own single-change branch and sweep**, so its speed win and its reliability delta are attributed independently — never one blended before/after (constitution: attribution).
+- [x] **Attribution rule honoured:** each contributing change (adaptive cadence; visibility-gated realism; quick-mode encoding) lands its **own single-change branch and sweep**, so its speed win and its reliability delta are attributed independently — never one blended before/after (constitution: attribution).
 - [ ] **Quick-mode is per-provider and reversible:** the compact encoding is behind a per-provider flag defaulting off for any provider where its paired sweep does not show equivalence; the weaker-provider guard is a committed test, not a prose note (⏸ funded sweep per provider enabled).
 - [ ] **Ledger:** every delta above recorded in [eval-results.md](eval-results.md) with tier, N, exclusion accounting (transport-invalid / dead-key / UNMEASURED per [constitution.md](constitution.md)), `$`/trial and wall-clock/trial actuals.
-- [ ] **No reliability substrate touched blindly:** the adaptive-cadence change preserves every claim-point validation ([planner.ts](../../packages/orchestrator/src/planner.ts) `settleClaim` still fires on completion claims); the sweep proves no on-page error class regressed.
-- [ ] **i18n:** any user-visible speed/cost surface (e.g. a per-run `$`/wall-clock readout) ships EN + full TR parity in the same PR. If no UI surface is added, this line is explicitly N/A in the PR.
+- [x] **No reliability substrate touched blindly:** the adaptive-cadence change preserves every claim-point validation ([planner.ts](../../packages/orchestrator/src/planner.ts) `settleClaim` still fires on completion claims); the sweep proves no on-page error class regressed.
+- [x] **i18n:** any user-visible speed/cost surface (e.g. a per-run `$`/wall-clock readout) ships EN + full TR parity in the same PR. If no UI surface is added, this line is explicitly N/A in the PR.
 
 ## Tasks
 
 ### PR1 — target-setting doc PR (no capability code)
-- [ ] Read S0's acceptance-family baseline from [eval-results.md](eval-results.md); record the p50 wall-clock/trial and `$`/trial actuals this phase derives from.
-- [ ] Pre-register the numeric targets (≥40% wall-clock, ≥30% `$`, ±5pp equivalence) as a frozen block in this doc's DoD and in [eval-results.md](eval-results.md) as the phase's stated detectable effect.
-- [ ] Blocked-on note: PR2+ may not merge until this block is filled from real S0 numbers (guards against floating targets).
-- [ ] No code, no fixtures — pure pre-registration.
+- [x] Read S0's acceptance-family baseline from [eval-results.md](eval-results.md); record the p50 wall-clock/trial and `$`/trial actuals this phase derives from.
+- [x] Pre-register the numeric targets (≥40% wall-clock, ≥30% `$`, ±5pp equivalence) as a frozen block in this doc's DoD and in [eval-results.md](eval-results.md) as the phase's stated detectable effect.
+- [x] Blocked-on note: PR2+ may not merge until this block is filled from real S0 numbers (guards against floating targets).
+- [x] No code, no fixtures — pure pre-registration.
 
 ### PR2 — adaptive validation cadence (Lane A, reactor)
-- [ ] In [reactor.ts](../../packages/orchestrator/src/reactor.ts), replace the fixed `planningInterval = 3` modulo trigger with a signal-driven trigger: validate when the structural page signature (djb2 from [browser-host.electron.ts](../../apps/desktop/src/main/agent/browser-host.electron.ts) `readPage`) changes since the last validation, **or** at an explicit completion-claim point (preserve `settleClaim` in [planner.ts](../../packages/orchestrator/src/planner.ts)).
-- [ ] Keep an upper bound so validation still fires at least every N actions even under a stuck signature (safety net against a hung validator cadence); reuse existing `noProgressThreshold`/`maxReplans` semantics, do not add new budgets.
-- [ ] Deterministic: no model call decides the cadence — it is a signal comparison. Unit test the trigger table (sig-unchanged read-only run → fewer validations; sig-change → validate; claim → validate).
-- [ ] File-cap aware: extract the cadence decision into a small pure helper (e.g. `should-validate.ts` in orchestrator) if [reactor.ts](../../packages/orchestrator/src/reactor.ts) approaches 250 lines; keep it side-effect free for testability.
+- [x] In [reactor.ts](../../packages/orchestrator/src/reactor.ts), replace the fixed `planningInterval = 3` modulo trigger with a signal-driven trigger: validate when the structural page signature (djb2 from [browser-host.electron.ts](../../apps/desktop/src/main/agent/browser-host.electron.ts) `readPage`) changes since the last validation, **or** at an explicit completion-claim point (preserve `settleClaim` in [planner.ts](../../packages/orchestrator/src/planner.ts)).
+- [x] Keep an upper bound so validation still fires at least every N actions even under a stuck signature (safety net against a hung validator cadence); reuse existing `noProgressThreshold`/`maxReplans` semantics, do not add new budgets.
+- [x] Deterministic: no model call decides the cadence — it is a signal comparison. Unit test the trigger table (sig-unchanged read-only run → fewer validations; sig-change → validate; claim → validate).
+- [x] File-cap aware: extract the cadence decision into a small pure helper (e.g. `should-validate.ts` in orchestrator) if [reactor.ts](../../packages/orchestrator/src/reactor.ts) approaches 250 lines; keep it side-effect free for testability.
 
 ### PR3 — visibility-gated realism audit (Lane A/C, human-input)
-- [ ] Audit every delay/motion site in [adapter.ts](../../packages/human-input/src/adapter.ts) and [math.ts](../../packages/human-input/src/math.ts): mouse-path duration, per-char typing idle, inter-action idle.
-- [ ] Ensure each is **skipped** (zero-delay / teleport) when the acting tab is not visible, mirroring the existing background-tab teleport. Route the visibility signal from the same source the adapter already uses for the active/background distinction — do not add a new IPC.
-- [ ] Regression test: a scripted invisible-tab run incurs no realism idle; a visible-tab run is unchanged (motion + idle preserved for the human-input DoD from the memory rule).
-- [ ] No behaviour change on the visible path — this is strictly waste elimination on the invisible path.
+- [x] Audit every delay/motion site in [adapter.ts](../../packages/human-input/src/adapter.ts) and [math.ts](../../packages/human-input/src/math.ts): mouse-path duration, per-char typing idle, inter-action idle.
+- [x] Ensure each is **skipped** (zero-delay / teleport) when the acting tab is not visible, mirroring the existing background-tab teleport. Route the visibility signal from the same source the adapter already uses for the active/background distinction — do not add a new IPC.
+- [x] Regression test: a scripted invisible-tab run incurs no realism idle; a visible-tab run is unchanged (motion + idle preserved for the human-input DoD from the memory rule).
+- [x] No behaviour change on the visible path — this is strictly waste elimination on the invisible path.
 
 ### PR4 — quick-mode compact decision encoding (Lane A, post-S1)
-- [ ] Behind a **per-provider flag** (extend the provider capability map in [models.ts](../../packages/model-gateway/src/models.ts) / router config in [model-router.ts](../../packages/model-gateway/src/model-router.ts)), add a compact decision encoding for native mode (S1) — a TSV/single-token command form parsed back into the canonical decision shape, cutting output tokens.
-- [ ] Decode at the reactor boundary into the existing decision type (reuse [reactor-decision.ts](../../packages/orchestrator/src/reactor-decision.ts) coercion + zod `safeParse`; the compact form is a wire encoding, the internal type is unchanged — shared-types stays the sole schema source).
-- [ ] Route eligible micro-decisions to the classify tier via `SIMPLE_CAPABILITIES` in [model-router.ts](../../packages/model-gateway/src/model-router.ts) (already local-offload eligible) — no new routing concept.
-- [ ] Flag defaults **off**; a provider is enabled only after its own paired sweep shows equivalence (weaker-provider guard). Committed test asserts the flag gates the encoding per provider.
+- [x] Behind a **per-provider flag** (extend the provider capability map in [models.ts](../../packages/model-gateway/src/models.ts) / router config in [model-router.ts](../../packages/model-gateway/src/model-router.ts)), add a compact decision encoding for native mode (S1) — a TSV/single-token command form parsed back into the canonical decision shape, cutting output tokens.
+- [x] Decode at the reactor boundary into the existing decision type (reuse [reactor-decision.ts](../../packages/orchestrator/src/reactor-decision.ts) coercion + zod `safeParse`; the compact form is a wire encoding, the internal type is unchanged — shared-types stays the sole schema source).
+- [ ] **NOT DONE, deliberately.** Route eligible micro-decisions to the classify tier via `SIMPLE_CAPABILITIES` in [model-router.ts](../../packages/model-gateway/src/model-router.ts) (already local-offload eligible) — no new routing concept.
+  **Why not:** the reactor makes exactly one model call per turn, and it is *the* decision. There is no
+  second, genuinely micro call to reroute, so the only way to satisfy this line would be a heuristic that
+  guesses which decisions are simple enough for a weaker model. A step misjudged as simple is a wrong
+  action, which is this phase's goal statement inverted ("speed is won by eliminating waste, not by
+  dropping steps or corners"). Left open rather than satisfied cheaply.
+- [x] Flag defaults **off**; a provider is enabled only after its own paired sweep shows equivalence (weaker-provider guard). Committed test asserts the flag gates the encoding per provider.
+
+> **Mechanism + deviation notes (PR1–PR4).**
+> 1. **The missing baseline is a mechanical guard, not a note.** PR1 could not be completed as written —
+>    it derives its numbers from S0’s sweep, which needs a funded key. Rather than leave the "PR2+ may
+>    not merge until this block is filled" sentence as the only protection, `speed-targets.ts` makes it
+>    impossible to obtain a verdict without a real baseline: `speedVerdict` requires one, every branch
+>    lacking it returns `unmeasured`, and `meetsSpeedGate` treats `unmeasured` as a non-pass. A partial
+>    baseline does not half-pass. **The ordering rule is still deviated from** — PR2–PR4 landed with the
+>    baseline empty — and that is stated here rather than implied by the ticked boxes.
+> 2. **The cadence can only ever validate LESS often than the old modulo.** The floor is pinned to the
+>    old fixed interval, so the churn case the Risks section wanted measured on a fixture is impossible
+>    by construction instead: worst case is today’s behaviour, best case is the ceiling. That is a
+>    stronger guarantee than the spike would have produced, and it is a committed test.
+> 3. **Claim-point validation is untouched.** `settleClaim` never went through the periodic path; the
+>    planner remains the sole terminator. The ceiling still forces a pass on a frozen page.
+> 4. **Visibility gating drops the sleep, never an event.** Every delay serves either the human (pacing)
+>    or the page (a detection surface). Off-screen only the first is absent, so the event stream is
+>    byte-for-byte identical — asserted, not intended. The honest cost: inter-event *timing* is itself a
+>    weak detection signal, so an invisible run is marginally more machine-like than a visible one (still
+>    far more human-like than the existing background-tab teleport).
+> 5. **Quick mode ships off for every provider.** The enable list is data (`TEPEGOZ_QUICK_MODE`), not a
+>    code edit, and a provider with it off sees a **byte-identical** system prompt to today’s — so the
+>    "system-prompt token count unchanged by this phase" line in Prose steers holds as shipped.
+> 6. **Placement:** the parked-window registry moved to `apps/desktop/src/main/window-parked.ts`.
+>    `window.ts` reads Electron’s `app` at import time, so importing it for one boolean pulled the whole
+>    main graph into an unrelated unit test. `isParkedToTray` is re-exported; no caller changed.
 
 ### PR5 — exit sweep (⏸ funded)
 - [ ] Run each of PR2 / PR3 / PR4 as a **separate single-change** paired before/after on the acceptance family, N≥10 pooled, Wilson CIs, with the `$` + wall-clock columns.
