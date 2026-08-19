@@ -70,7 +70,7 @@ maps to a workstream with **one headline metric** it must move.
 | S5 | [phase-s5-code-execution.md](phase-s5-code-execution.md) | Isolated-world code-exec (security-first) + structured table/list extraction | S2 | ⬜ Not started (ADR-0026) |
 | S6 | [phase-s6-safety-control-plane.md](phase-s6-safety-control-plane.md) | Autonomy-to-main (bug fix), risk tiers, `follow_a_plan` grants, advisory critic, strict-mode, ASR battery, credential broker | S0 (PR1 early); S3 (claim ASR) | 🟡 **PR0–PR3 landed** 2026-08-16 (exam frozen; autonomy defect closed; six derived risk tiers + TR-covering sensitive-site map; plan-scoped grants on proper eTLD+1 — all deterministic, no sweep owed). 🟠 **Measurement-owed** — PR4–PR6 landed 2026-08-19 (advisory critic plane — post-kernel, cannot block, never sees argument values; strict-mode wiring — the C7 setter was unreachable and now has a tested caller + EN/TR toggle; credential broker — the agent has no shape a secret could arrive in, and it refuses every fill until an OS-auth gate exists); PR7 ASR sweep ⏸ funded |
 | S7 | [phase-s7-speed.md](phase-s7-speed.md) | wall-clock/$ targets, adaptive validation, quick-mode encoding, visibility-gated realism | S1, S2 | 🟠 **Measurement-owed** — PR1–PR4 landed 2026-08-19 (targets pre-registered with a mechanical missing-baseline guard; cadence that can never validate more often than before; realism pacing dropped only where nothing is on screen; quick mode off for every provider). Only the ⏸ funded PR5 sweep is open |
-| S8 | [phase-s8-assistant-ux.md](phase-s8-assistant-ux.md) | Streaming narration, live step feed, plan-grant UX, risk-tier approvals, agent-active indicator, backgroundable runs, commerce flow | S1, S6, S4 | ⬜ Not started |
+| S8 | [phase-s8-assistant-ux.md](phase-s8-assistant-ux.md) | Streaming narration, live step feed, plan-grant UX, risk-tier approvals, agent-active indicator, backgroundable runs, commerce flow | S1, S6, S4 | 🟠 **Measurement-owed** — PR1–PR6 landed 2026-08-19 (delta batching + validation + first-feedback instrumentation, run-level evidence chip, plan-grant copy, one-tap run scope, tray indicator + continue-in-background, and a real fix: `auto` mode could approve a payment). Per-step citation chips, the per-tab badge, and the two ⏸ funded metrics are open |
 | S9 | [phase-s9-memory-skills.md](phase-s9-memory-skills.md) | Per-domain advisory memory, skill/shortcut library, per-task remembered grants | S2, S6 | 🟠 **Measurement-owed** — PR0–PR5 landed 2026-08-19 (write-side poison filter, quarantine-not-delete, advisory-only recall outside the task fence, a skills library that cannot start itself, and skill-scoped remembered grants consulted pre-model; [ADR-0027](../../docs/adr/0027-agent-memory.md)). Only the ⏸ funded PR6 sweep is open |
 | S10 | [phase-s10-vision-escalation.md](phase-s10-vision-escalation.md) | Escalation-only vision (ADR-0008): triggers, budgeted downscale, set-of-marks | S1; gate from S0 | 🟠 **Measurement-owed** — PR0–PR4 landed 2026-08-19 (vision + negative-control fixtures frozen, ASR battery untouched; gate recorded as OPEN — capability ships inert behind `TEPEGOZ_VISION`; deterministic triggers + escalation-rate now measurable per step; token-budgeted downscale + set-of-marks; image blocks attached ONLY on escalation and ONLY past a fail-closed image screen; PR5 sweep ⏸ funded) |
 | S11 | [phase-s11-benchmark-h2h.md](phase-s11-benchmark-h2h.md) | realUrl bridge (≥10 TR) + pre-registered H2H + 4-condition claim | S3 (probe); S6+S4+S9 (claim) | ⬜ Not started |
@@ -113,6 +113,20 @@ landed code, hiding an anti-debt breach **×3**. Audited against `git log`, the 
 
 **Anti-debt state: 1 measurement-owed (S0) — compliant.** C1's and C7's owed sweeps do not each count
 as separate debt because both are discharged by the *same* S0 full-registry baseline.
+
+**Update 2026-08-19 (later still) — S7 and S8 landed too; the count is now 10.** The rule is unchanged
+and so is the reason: one unavailable funded key discharges every debt, and no phase reads ✅. Two
+things from this pair are worth pulling out of their phase docs, because they are the kind of thing a
+ledger exists to keep visible:
+
+- **S8 fixed a real hole rather than measuring one.** `auto` autonomy approved the financial tier
+  unconditionally — the single path in the codebase around a tier nothing else may cover. It was found
+  by reading the gate, not by a failing test. The fix is deliberately narrowed to `financial`; whether
+  `credential` and `destructive` follow is an **owner decision the phase doc asks for**.
+- **S7 replaced two "measure this later" risks with "impossible by construction".** The adaptive
+  cadence cannot validate more often than the modulo it replaces (the floor is that modulo), and the
+  visibility gate drops sleeps without dropping a single event (asserted element for element). Neither
+  needed the sweep it was scheduled for.
 
 **Update 2026-08-19 (later) — S6 and S9 landed too; the count is now 8.** The rule is unchanged and so
 is the reason. What is worth stating again, because it is what makes the breach survivable: **three

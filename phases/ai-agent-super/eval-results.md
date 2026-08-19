@@ -966,6 +966,30 @@ which influences future behaviour is a place an attacker can leave instructions.
   not change the prompt therefore holds as shipped.
 - **Cost:** none — nothing was run.
 
+### 2026-08-19 — S8 PR1–PR6 — code landed, MEASUREMENT-OWED (⏸ awaiting funded key)
+
+A UI phase, so it claims **no competence delta** by construction. Two mechanical metrics are
+instrumented and neither is measured. What it did produce, unexpectedly, is a **security fix**.
+
+| Landed | Owed |
+|---|---|
+| **`auto` mode could approve a payment.** One preference value was the single path around the financial tier — plan grants cannot cover it, remembered grants cannot, `act` holds it. Now held under `auto` too | the same decision for `credential` / `destructive` (**owner call, requested in the phase doc**) |
+| Delta batching at ~40ms that throttles rather than debounces, so a steady stream cannot defer the flush forever | — |
+| `AgentDeltaSchema` in shared-types, `safeParse`d on both sides, with a length cap that makes "display-only" enforceable | — |
+| Time-to-first-feedback measured in main and reported on the first delta only | the ≤1.5s p50 sweep |
+| Run-level evidence chip (Checked / Unconfirmed / Contradicted) — S4 built the verdict, nothing ever showed it | per-step citation chips |
+| One-tap run scope at the prompt, offered only where main would honour it | the approvals/task sweep (shared with S6) |
+| The plan modal now states what approving actually covers | — |
+| Tray agent-active indicator, cleared in the run `finally` so it cannot outlive a crash | the per-tab badge |
+| "Continue in the background" over the existing parking | — |
+
+- **No dogfooding score, and no plan for one.** The DoD asks for a dogfooding checklist marked
+  NOT claim-bearing. The checklist is not run here either — but the reason to say so plainly is that a
+  "UX score" would be the easiest vanity number in this whole program to invent.
+- **The security fix is the one thing in this phase that did not need a sweep to be worth landing.** It
+  was found by reading `resolveAutonomy` while wiring the commerce surface, not by a test failing.
+- **Approvals-per-task is shared with S6** and must be reported jointly, never counted twice.
+- **Cost:** none — nothing was run.
 ### Template for a phase-exit entry
 
 ```

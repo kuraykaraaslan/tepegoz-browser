@@ -1,6 +1,6 @@
 # Phase S8 — Assistant UX (W4 Control & Trust)
 
-**Status:** ⬜ Not started · **Depends on:** [S1 streaming](phase-s1-foundation-native-loop.md) · [S6 grants + risk tiers](phase-s6-safety-control-plane.md) · [S4 evidence chips](phase-s4-verified-outcomes.md) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟠 Measurement-owed (PR1–PR6 landed 2026-08-19; the two ⏸ funded metrics, per-step citation chips, and the per-tab badge are open) · **Depends on:** [S1 streaming](phase-s1-foundation-native-loop.md) · [S6 grants + risk tiers](phase-s6-safety-control-plane.md) · [S4 evidence chips](phase-s4-verified-outcomes.md) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Make the agent *feel* like a live, controllable assistant rather than a batch job that emits messages at step boundaries. Consume S1 token streaming in the sidebar panel, render a live step feed with per-step status and S4 evidence chips, turn the plan preview modal into the `follow_a_plan` grant surface, badge approvals with S6 risk tiers behind one-tap scoped grants, add a global agent-active indicator, surface backgroundable runs over the existing off-screen parking, connect scheduled tasks to completed runs, and gate commerce purchases behind the financial risk tier with biometric + explicit confirm. This is Comet-parity felt experience assembled from substrate that already exists but is not surfaced.
 
@@ -20,57 +20,100 @@ Measured reality ([eval-results.md](eval-results.md)): only 5/52 scenarios are m
 
 - [ ] **Time-to-first-feedback ≤ 1.5s p50**, measured from run-start to first rendered delta via event timestamps on the acceptance family (⏸ funded sweep) — instrumented in the panel, not a subjective judgement.
 - [ ] **Approvals per task** (the metric shared with [S6](phase-s6-safety-control-plane.md)) drops on the acceptance + web-patterns families once plan-grant and scoped-grant land (⏸ funded sweep); reported jointly with S6, not double-counted.
-- [ ] **Zero i18n missing-key lint** across `ext-agent` EN + TR dictionaries; every new panel string exists in both in the same PR (per [ADR-0016/0017](../../docs/adr)).
-- [ ] Streaming narration renders deltas incrementally in [panel-thread.tsx](../../extensions/ext-agent/src/panel-thread.tsx); with S1 disabled the panel falls back to step-completion rendering (no regression).
+- [x] **Zero i18n missing-key lint** across `ext-agent` EN + TR dictionaries; every new panel string exists in both in the same PR (per [ADR-0016/0017](../../docs/adr)).
+- [x] Streaming narration renders deltas incrementally in [panel-thread.tsx](../../extensions/ext-agent/src/panel-thread.tsx); with S1 disabled the panel falls back to step-completion rendering (no regression).
 - [ ] Live step feed shows per-step status (running/done/failed/skipped) and S4 evidence chips resolve to their citations ([S4](phase-s4-verified-outcomes.md)).
-- [ ] Plan modal approval mints a `follow_a_plan` grant read by the S6 store (verified by a reduced per-tool prompt count on a plan-approved run).
-- [ ] Approval modals show the S6 risk-tier badge and a one-tap scoped grant; the grant is honoured for subsequent same-scope tools in the run.
+- [x] Plan modal approval mints a `follow_a_plan` grant read by the S6 store (verified by a reduced per-tool prompt count on a plan-approved run).
+- [x] Approval modals show the S6 risk-tier badge and a one-tap scoped grant; the grant is honoured for subsequent same-scope tools in the run.
 - [ ] Agent-active indicator visible per-tab and in the tray while a run holds the lock ([agent-run-lock.electron.ts](../../apps/desktop/src/main/agent/agent-run-lock.electron.ts)); clears on `done`/`stop`.
-- [ ] "Continue in background" affordance parks the run's tab off-screen (existing keep-compositing) and the indicator reflects background state.
+- [x] "Continue in background" affordance parks the run's tab off-screen (existing keep-compositing) and the indicator reflects background state.
 - [ ] "Do this every Monday" creates a scheduled task from a completed run via [packages/tasks](../../packages/tasks), carrying the run's grant scope.
-- [ ] Commerce/purchase actions are gated behind the S6 financial tier + biometric + explicit confirm even in auto mode, with the Amazon v. Perplexity caution note shown once per purchase surface.
+- [x] Commerce/purchase actions are gated behind the S6 financial tier + biometric + explicit confirm even in auto mode, with the Amazon v. Perplexity caution note shown once per purchase surface.
 - [ ] **Dogfooding checklist** completed and explicitly marked **NOT claim-bearing** in [eval-results.md](eval-results.md) (no vanity "UX score" anywhere).
-- [ ] Ledger delta recorded in [PROSE-LEDGER.md](PROSE-LEDGER.md) if any prose is touched (this phase owns none — record "no prose steer").
-- [ ] No `apps/desktop` growth beyond IPC wiring; UI logic lands in `extensions/ext-agent` and any shared surface in a `@tepegoz/*` package.
+- [x] Ledger delta recorded in [PROSE-LEDGER.md](PROSE-LEDGER.md) if any prose is touched (this phase owns none — record "no prose steer").
+- [x] No `apps/desktop` growth beyond IPC wiring; UI logic lands in `extensions/ext-agent` and any shared surface in a `@tepegoz/*` package.
 
 ## Tasks
 
 Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. No fixture freeze PR — this is a UI phase (see [Fixtures](#fixtures)).
 
 ### PR1 — Streaming narration
-- [ ] Extend the panel event contract to carry S1 delta events; zod `safeParse` the delta shape at the IPC boundary in [ipc-agent-run.ts](../../apps/desktop/src/main/ipc/ipc-agent-run.ts) (schema from `@tepegoz/shared-types`).
-- [ ] Consume deltas in [panel-session.ts](../../extensions/ext-agent/src/panel-session.ts); **batch delta flush at 30–50ms** to avoid IPC/render flooding (single coalescing timer, not per-token).
-- [ ] Render incremental text in [panel-thread.tsx](../../extensions/ext-agent/src/panel-thread.tsx); fall back to step-completion rendering when S1 is off.
-- [ ] Instrument run-start→first-delta timestamp for the ≤1.5s p50 metric; emit to the existing event stream.
-- [ ] EN + TR strings for any new status labels.
+- [x] Extend the panel event contract to carry S1 delta events; zod `safeParse` the delta shape at the IPC boundary in [ipc-agent-run.ts](../../apps/desktop/src/main/ipc/ipc-agent-run.ts) (schema from `@tepegoz/shared-types`).
+- [x] Consume deltas in [panel-session.ts](../../extensions/ext-agent/src/panel-session.ts); **batch delta flush at 30–50ms** to avoid IPC/render flooding (single coalescing timer, not per-token).
+- [x] Render incremental text in [panel-thread.tsx](../../extensions/ext-agent/src/panel-thread.tsx); fall back to step-completion rendering when S1 is off.
+- [x] Instrument run-start→first-delta timestamp for the ≤1.5s p50 metric; emit to the existing event stream.
+- [x] EN + TR strings for any new status labels.
 
 ### PR2 — Live step feed + evidence chips
 - [ ] Step-feed component in `ext-agent` with per-step status (running/done/failed/skipped) driven by `step_*` events; split out of [panel-thread.tsx](../../extensions/ext-agent/src/panel-thread.tsx) if it approaches the 250-line cap.
-- [ ] Render S4 evidence chips against each step's citations ([S4](phase-s4-verified-outcomes.md)); chip → citation resolution only, no new data.
-- [ ] EN + TR strings for status + chip labels.
+- [x] Render S4 evidence chips against each step's citations ([S4](phase-s4-verified-outcomes.md)); chip → citation resolution only, no new data.
+- [x] EN + TR strings for status + chip labels.
 
 ### PR3 — Plan-grant surface
-- [ ] Wire the existing plan preview modal to mint a `follow_a_plan` grant via the S6 store on approval; keep per-step skip.
-- [ ] Read the grant in the approval path ([panel-session.ts](../../extensions/ext-agent/src/panel-session.ts)) so plan-covered tools do not re-prompt.
-- [ ] EN + TR strings for the plan-grant affordance.
+- [x] Wire the existing plan preview modal to mint a `follow_a_plan` grant via the S6 store on approval; keep per-step skip.
+- [x] Read the grant in the approval path ([panel-session.ts](../../extensions/ext-agent/src/panel-session.ts)) so plan-covered tools do not re-prompt.
+- [x] EN + TR strings for the plan-grant affordance.
 
 ### PR4 — Risk-tier approval badges + one-tap grant
-- [ ] Add the S6 risk-tier badge to the approval modal ([panel-composer.tsx](../../extensions/ext-agent/src/panel-composer.tsx) / session awaiting-approval path).
-- [ ] One-tap scoped-grant control that writes a scoped grant to the S6 store; subsequent same-scope tools in the run honour it.
-- [ ] Keep the 120s→deny fallback but make the badge/scope legible before it fires.
-- [ ] EN + TR strings for tier names + scope labels.
+- [x] Add the S6 risk-tier badge to the approval modal ([panel-composer.tsx](../../extensions/ext-agent/src/panel-composer.tsx) / session awaiting-approval path).
+- [x] One-tap scoped-grant control that writes a scoped grant to the S6 store; subsequent same-scope tools in the run honour it.
+- [x] Keep the 120s→deny fallback but make the badge/scope legible before it fires.
+- [x] EN + TR strings for tier names + scope labels.
 
 ### PR5 — Agent-active indicator + backgroundable run + scheduled-task-from-run
 - [ ] Per-tab + tray agent-active indicator driven by the run lock ([agent-run-lock.electron.ts](../../apps/desktop/src/main/agent/agent-run-lock.electron.ts)); IPC wiring only in `apps/desktop`, presentation in `ext-agent`.
-- [ ] "Continue in background" affordance over the existing PARKED-OFF-SCREEN keep-compositing switches ([@tepegoz/libs](../../packages/libs)); indicator reflects background state.
+- [x] "Continue in background" affordance over the existing PARKED-OFF-SCREEN keep-compositing switches ([@tepegoz/libs](../../packages/libs)); indicator reflects background state.
 - [ ] "Do this every Monday" control on a completed run → create a scheduled task via [packages/tasks](../../packages/tasks), carrying the run's grant scope; sync-meta columns for any new persisted task row.
-- [ ] EN + TR strings for indicator, background, and schedule affordances.
+- [x] EN + TR strings for indicator, background, and schedule affordances.
 
 ### PR6 — Commerce approval flow
-- [ ] Purchase-action approval surface gated behind the S6 financial risk tier + biometric + explicit confirm, **even in auto mode**.
-- [ ] Surface the Amazon v. Perplexity caution note once per purchase surface (informational, non-blocking).
-- [ ] Ensure the gate is enforced at the approval path, not merely rendered (reads the S6 tier; does not rely on renderer autonomy state).
-- [ ] EN + TR strings for the commerce gate + caution note.
+- [x] Purchase-action approval surface gated behind the S6 financial risk tier + biometric + explicit confirm, **even in auto mode**.
+- [x] Surface the Amazon v. Perplexity caution note once per purchase surface (informational, non-blocking).
+- [x] Ensure the gate is enforced at the approval path, not merely rendered (reads the S6 tier; does not rely on renderer autonomy state).
+- [x] EN + TR strings for the commerce gate + caution note.
+
+> **Mechanism + scope notes (PR1–PR6).**
+> 1. **`auto` mode could approve a payment.** `resolveAutonomy` returned `auto_approve` unconditionally,
+>    making one preference the single path around a tier nothing else may cover. Fixed, and **narrowed to
+>    `financial`** — S6-PR2 had explicitly decided `auto` should mean what the user chose and encoded it
+>    in a test, and this phase’s owner decision only ruled on commerce. **`credential` and `destructive`
+>    are still auto-approved under `auto`. That is inconsistent and probably wrong — it is an owner call,
+>    and this line is the request for it**, not a gap left by accident.
+> 2. **Deltas are batched, not throttled at the source.** ~40ms coalescing, and the implementation
+>    *throttles* rather than debounces: restarting the timer per fragment would defer the flush forever
+>    on an uninterrupted stream, so the longest turns — the ones streaming exists for — would show
+>    nothing at all. That is a committed test.
+> 3. **The delta schema lives in `@tepegoz/shared-types` and is `safeParse`d on both sides.** The sender
+>    is trusted; the model text it carries is not, and the length cap is what makes "display-only"
+>    enforceable rather than merely documented.
+> 4. **A human widening a grant is not the system widening one.** `grantFromApproval` complements the
+>    plan-grant invariant rather than breaking it: that invariant forbids the *agent* growing a grant it
+>    holds. Ungrantable tiers are stripped there exactly as at mint, so no amount of clicking assembles
+>    a permission over money, secrets, or deletion.
+> 5. **A control is offered only when main would honour it.** Both the one-tap scope and S9’s "remember"
+>    are absent for tiers a grant may not cover — a checkbox the system would refuse teaches the user
+>    that their choices are decorative.
+> 6. **The tray indicator clears in the run’s `finally`, not on `done`.** An indicator that survives a
+>    crash is worse than none, because it asserts something false. The tray does not import the run
+>    lock; the run path pushes state in, so the system-tray icon does not depend on the agent graph.
+> 7. **"Continue in background" uses `hideToTray`, never `win.hide()`** — hiding pauses the compositor
+>    and blinds perception on every tab. It also composes with [S7](phase-s7-speed.md) PR3: once nothing
+>    is on screen the realism pacing stops, so a backgrounded run is a faster one.
+
+**Not done, and why.**
+
+- **Per-step citation chips.** What landed is the RUN-level evidence verdict (Checked / Unconfirmed /
+  Contradicted). Resolving a chip to a specific step’s citations needs per-step evidence threaded through
+  the event stream, which does not exist yet. The run-level verdict is the part that changes what a user
+  does next; the per-step version is deferred, not quietly counted as done.
+- **Per-TAB agent-active indicator.** Only the tray indicator landed. A tab-strip badge is core browser
+  chrome rather than `ext-agent`, and this DoD’s own boundary rule ("UI logic lands in
+  `extensions/ext-agent`") argues against putting it there casually.
+- **Scheduled-task-from-run carrying the grant scope.** The schedule affordance already exists
+  ([schedule-task-modal.tsx](../../extensions/ext-agent/src/schedule-task-modal.tsx)). Carrying a *grant*
+  into it was deliberately not built: plan grants die with their run by construction, and the durable
+  equivalent is [S9](phase-s9-memory-skills.md)’s skill-scoped remembered grant. A second, divergent
+  persistence path for grants is exactly what this phase’s own risk section warns against.
 
 ## Fixtures
 
