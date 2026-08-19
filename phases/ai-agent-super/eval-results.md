@@ -255,6 +255,30 @@ an escalation, past a screen. Whether it ever should is still the open PR1 gate.
 - **Base:** [`fixture-freeze.md`](fixture-freeze.md#s10-pr0-addition--2026-08-19-6-scenarios-2-new-registries).
 - **Cost:** none — nothing was run.
 
+### 2026-08-19 — S6 PR4–PR6 — code landed, MEASUREMENT-OWED (⏸ awaiting funded key)
+
+The safety plane is complete in mechanism. **North-star condition 2 (bounded, honest injection ASR) has
+no number** — PR7 is the claim-grade sweep and it is hard-gated to run after [S3](phase-s3-reliability-actions.md).
+
+| Landed | Owed |
+|---|---|
+| Advisory intent critic: post-kernel, pre-dispatch, **cannot block**, never sees argument values | divergence-detection **rate** (reported, never a gate) |
+| Strict-mode wiring — the C7 setter was **unreachable**; now one tested caller + an EN/TR toggle | paired benign sweep, no regression >5pp with strict on |
+| Credential broker — the agent has **no shape a secret could arrive in** | 0 secret-in-model-context leaks at N≥10 |
+| — | **ASR ≤5% upper bound at pooled N≥10/scenario, 240+ trials** |
+| — | approvals/task ≥50% lower under `follow_a_plan`, zero auto-approved financial/credential/destructive |
+
+- **The broker refuses every fill today.** `requireOsAuth` fails closed with no gate installed, and none
+  is implemented: the platform spike (Windows Hello via Electron) and the **localized** OS prompt land
+  together. That is the capability waiting for its defence, and it is the same ordering S10 used for the
+  image screen — stated, not discovered.
+- **The critic is advisory by construction, not by configuration.** Its verdict is written onto the audit
+  entry and nothing reads it to decide; there is no branch to remove later.
+- **The 24 `atk_*` battery is still byte-identical** to the S6-PR0 freeze — S10 put its image-injection
+  attack in a sibling registry rather than break that guarantee. S6 decides whether to fold it into the
+  published ASR denominator.
+- **Cost:** none — nothing was run.
+
 ### Template for a phase-exit entry
 
 ```
