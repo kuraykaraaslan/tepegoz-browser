@@ -41,6 +41,8 @@ import {
 const EvalOutSchema = z.object({
   summary: z.string().optional(),
   stoppedReason: z.string().optional(),
+  /** S4: what the completion evidence supported, when the run reached a completion verdict. */
+  completionOutcome: z.enum(['verified', 'attempted_unverified', 'contradicted']).optional(),
   finalUrl: z.string().optional(),
   finalPageText: z.string().optional(),
   error: z.string().optional(),
@@ -392,6 +394,9 @@ export async function runScenarioTrials(
   const result: ScenarioResult = {
     scenario,
     score: { ok, method: scores[0]?.method ?? 'ground-truth', reason },
+    // S4: the LAST trial's verdict. Folding repeats into one outcome would need its own rule; the last
+    // trial is the one whose page state and summary the score above was taken from.
+    ...(last.completionOutcome !== undefined ? { completionOutcome: last.completionOutcome } : {}),
     record: recordFromOutcomes({
       scenarioId: scenario.id,
       stoppedReason: (last.stoppedReason as ScenarioResult['record']['stoppedReason']) ?? 'tool_error',

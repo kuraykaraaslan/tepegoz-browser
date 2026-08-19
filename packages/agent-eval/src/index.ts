@@ -11,3 +11,4 @@ export * from './scorer';
 export * from './report';
 export * from './judge';
 export * from './calibration';
+export * from './verification-metrics';

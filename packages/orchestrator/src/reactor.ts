@@ -2,7 +2,7 @@ import { Logger } from '@tepegoz/libs';
 import { ModelGateway, type CanonMessage } from '@tepegoz/model-gateway';
 import { ToolGateway } from '@tepegoz/capability-plane';
 import { wrapUserRequest } from '@tepegoz/tool-executor';
-import type { AgentWorkingState } from '@tepegoz/shared-types';
+import type { AgentWorkingState, CompletionOutcome } from '@tepegoz/shared-types';
 import type { StepOutcome } from './executor';
 import {
   classifyRuntimeError,
@@ -183,6 +183,9 @@ export default class Reactor {
 
     const validator = options.validateCompletion;
     /** Run the validator, fail-open to "not done" on error so a validator hiccup never kills the run. */
+    // S4: the last completion verdict's outcome, so a run that ended any other way still reports what
+    // the evidence said the last time it was asked.
+    let lastOutcome: CompletionOutcome | undefined;
     const validate = async (ctx: CompletionContext): Promise<CompletionVerdict> => {
       if (validator === undefined) return { done: false };
       try {
@@ -211,7 +214,16 @@ export default class Reactor {
         recentObservations: recentObservations(),
         evidence: assembleEvidence(outcomes),
       });
-      return verdict.done ? { outcomes, stoppedReason: 'completed', summary: verdict.finalAnswer ?? latestMemory } : null;
+      if (!verdict.done) {
+        lastOutcome = verdict.outcome;
+        return null;
+      }
+      return {
+        outcomes,
+        stoppedReason: 'completed',
+        summary: verdict.finalAnswer ?? latestMemory,
+        ...(verdict.outcome !== undefined ? { completionOutcome: verdict.outcome } : {}),
+      };
     };
 
     /**
@@ -232,9 +244,26 @@ export default class Reactor {
         recentObservations: recentObservations(),
         evidence: assembleEvidence(outcomes),
       });
-      if (verdict.done) return { outcomes, stoppedReason: 'completed', summary: verdict.finalAnswer ?? summary };
+      if (verdict.done) {
+        return {
+          outcomes,
+          stoppedReason: 'completed',
+          summary: verdict.finalAnswer ?? summary,
+          ...(verdict.outcome !== undefined ? { completionOutcome: verdict.outcome } : {}),
+        };
+      }
+      lastOutcome = verdict.outcome;
       completionRejects += 1;
-      if (completionRejects > maxCompletionRejects) return { outcomes, stoppedReason: 'completed', summary };
+      // Conceding to the actor after N rejections still carries WHY the validator kept rejecting — a
+      // conceded run that the evidence never supported must not read as a clean success.
+      if (completionRejects > maxCompletionRejects) {
+        return {
+          outcomes,
+          stoppedReason: 'completed',
+          summary,
+          ...(verdict.outcome !== undefined ? { completionOutcome: verdict.outcome } : {}),
+        };
+      }
       const reason = verdict.reason !== undefined && verdict.reason.length > 0 ? ` — ${verdict.reason}` : '';
       messages.push({
         role: 'user',
@@ -334,7 +363,9 @@ export default class Reactor {
           });
         }
       }
-      if (outcomes.length >= maxSteps) return { outcomes, stoppedReason: 'max_steps' };
+      if (outcomes.length >= maxSteps) {
+        return { outcomes, stoppedReason: 'max_steps', ...(lastOutcome !== undefined ? { completionOutcome: lastOutcome } : {}) };
+      }
 
       // Periodic validator pass (AI-3): every `planningInterval` actions the Planner checks whether the
       // goal is already met — catching an actor stuck acting past completion.

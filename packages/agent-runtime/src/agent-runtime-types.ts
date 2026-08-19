@@ -84,6 +84,12 @@ export interface AgentRunDeps {
 export interface AgentRunSummary {
   stoppedReason: string;
   ok: boolean;
+  /**
+   * What the completion evidence supported (S4). `attempted_unverified` is the product behaving
+   * CORRECTLY — refusing to claim a success it cannot back — so a host that reports it must count it as
+   * its own category, never as a competence failure.
+   */
+  completionOutcome?: string | undefined;
   checkpoint?: AgentRunCheckpoint | undefined;
   /** The agent's closing summary for this turn — appended to the conversation memory by the host. */
   summary?: string;

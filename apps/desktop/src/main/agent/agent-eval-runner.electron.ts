@@ -195,6 +195,10 @@ export async function maybeRunEval(): Promise<void> {
         {
           summary: summary.summary ?? '',
           stoppedReason: summary.stoppedReason,
+          // S4: what the evidence supported, so the harness can separate "could not confirm" from "failed".
+          ...(summary.completionOutcome !== undefined
+            ? { completionOutcome: summary.completionOutcome }
+            : {}),
           finalUrl: page.url,
           finalPageText: page.text,
           // AI-1 observability: real per-step outcomes + token usage from the run, so the harness scores

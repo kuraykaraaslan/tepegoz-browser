@@ -1,6 +1,6 @@
 # Phase S4 — Verified Outcomes (W1 Reliability)
 
-**Status:** 🟡 In progress (PR0–PR2 landed 2026-08-19) · **Depends on:** [S1](phase-s1-foundation-native-loop.md) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟡 In progress (PR0–PR3 landed 2026-08-19) · **Depends on:** [S1](phase-s1-foundation-native-loop.md) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Make the completion validator believe **evidence**, not the page's own success message, so
 fabricated-success ≈ 0 — north-star condition 3, a metric no rival publishes. A completion claim must
@@ -54,7 +54,7 @@ even with a funded key.
       involved.
 - [ ] **No completion-rate regression** on the acceptance + web-patterns families — paired with/without
       sweep, pre-stated **±5pp** equivalence margin at pooled N. (⏸ funded sweep)
-- [ ] Honest **"cannot verify"** terminals (the product correctly refusing to claim success it can't
+- [x] Honest **"cannot verify"** terminals (the product correctly refusing to claim success it can't
       back) are counted **separately** from failures in the report — a distinct terminal category, never
       folded into `taskSuccessRate` denominators as a competence failure.
 - [x] **Fixtures frozen before capability code** — the ≥5 network-verification scenarios merge in PR0;
@@ -158,17 +158,32 @@ even with a funded key.
 
 ### PR3 — harness metric + report column
 
-- [ ] Add `verifiedCompletionRate` and `fabricatedSuccessRate` to the metrics in
+- [x] Add `verifiedCompletionRate` and `fabricatedSuccessRate` to the metrics in
       [report.ts](../../packages/agent-eval/src/report.ts) (`ScenarioResult`/`TierReport`), computed from
       the scorer's ground truth ([scorer.ts](../../packages/agent-eval/src/scorer.ts)) crossed with the
       evidence-citation outcome — reported dev + held-out.
-- [ ] Add a **cannot-verify** terminal count as a distinct column, excluded from the `taskSuccessRate`
+- [x] Add a **cannot-verify** terminal count as a distinct column, excluded from the `taskSuccessRate`
       failure denominator; surface it in `formatReportTable`.
-- [ ] Wire the acceptance run ([acceptance.json](../../packages/agent-eval/scenarios/acceptance.json)
+- [x] Wire the acceptance run ([acceptance.json](../../packages/agent-eval/scenarios/acceptance.json)
       registry path) so verified-completion is reported for the acceptance family too, not only the trap
       family.
-- [ ] `fabricatedSuccessRate` printed as the **binomial 95% upper bound** via
+- [x] `fabricatedSuccessRate` printed as the **binomial 95% upper bound** via
       [statistics.ts](../../packages/agent-eval/src/statistics.ts), never a bare 0/k.
+
+> **Mechanism notes (PR3).**
+> 1. **`taskSuccessRate` was NOT redefined.** Changing that denominator in place would silently break
+>    comparability with every number already in [`eval-results.md`](eval-results.md), so cannot-verify
+>    exclusion ships as a SECOND metric, `verifiedTaskSuccessRate`, printed beside it.
+> 2. **Fabricated success needs no per-scenario "is this a trap" tag.** It is *claimed done* × *ground
+>    truth says wrong*, which is computable for every scenario in the registry — so the metric covers the
+>    acceptance family and every other, not only the trap family, satisfying the acceptance-wiring task
+>    line by construction.
+> 3. **An unmeasured rate prints "not measured", never 0%.** A 0% verified-completion rate reads as total
+>    failure; the absence of a measurement is a different statement and has to look different.
+> 4. The outcome is threaded end to end — reactor verdict → `ReactResult` → `AgentRunSummary` → the eval
+>    out-JSON → the harness — and is **absent, not `verified`**, on an app build that predates the field.
+> 5. Non-completed terminals carry the LAST verdict too, so a run that exhausted its steps while the
+>    validator kept answering "unverified" is distinguishable from one that merely ran long.
 
 ### PR4 — exit sweep + steer deletion
 

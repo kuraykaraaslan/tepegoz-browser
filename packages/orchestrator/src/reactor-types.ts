@@ -179,6 +179,12 @@ export interface ReactOptions {
 export interface ReactResult {
   outcomes: StepOutcome[];
   stoppedReason: StopReason;
+  /**
+   * What the evidence supported when the run ended (S4). `attempted_unverified` is the product behaving
+   * CORRECTLY — refusing to claim a success it cannot back — and the harness counts it as its own
+   * terminal category, never as a competence failure.
+   */
+  completionOutcome?: CompletionOutcome;
   failure?: AgentFailure | undefined;
   /** The model's closing summary when it finished on its own. */
   summary?: string;

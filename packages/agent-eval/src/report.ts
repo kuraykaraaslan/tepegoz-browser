@@ -5,16 +5,22 @@ import {
   type AcceptanceMetrics,
   type AcceptanceRunRecord,
 } from '@tepegoz/orchestrator';
-import type { EvalScenario } from '@tepegoz/shared-types';
+import type { CompletionOutcome, EvalScenario } from '@tepegoz/shared-types';
 import type { ScoreResult } from './scorer';
 import type { Agreement } from './calibration';
 import type { FamilyStat, Interval, RepeatSummary } from './statistics';
+import { verificationLines, verificationMetrics, type VerificationMetrics } from './verification-metrics';
 
 /** One scenario's full outcome: the record fed to the metrics + the ground-truth score. */
 export interface ScenarioResult {
   scenario: EvalScenario;
   record: AcceptanceRunRecord;
   score: ScoreResult;
+  /**
+   * What the run's completion evidence supported (S4). Absent for a run that never reached a completion
+   * verdict, or from an app build that predates the field — absent is NOT "verified".
+   */
+  completionOutcome?: CompletionOutcome | undefined;
 }
 
 export interface ReportInput {
@@ -38,6 +44,8 @@ export interface ReportInput {
 export interface TierReport {
   n: number;
   metrics: AcceptanceMetrics;
+  /** S4: verified-completion, fabricated-success (95% upper bound) and the cannot-verify terminal count. */
+  verification: VerificationMetrics;
 }
 
 export interface EvalReport {
@@ -70,11 +78,23 @@ export interface EvalReport {
     /** AI-7: the run left the on-page route (off-site nav / web_search) — surfaced so an escape is visible
      *  even when the scenario still passed. */
     escaped: boolean;
+    /** S4: what the completion evidence supported, when the run reached a completion verdict. */
+    completionOutcome?: CompletionOutcome;
   }>;
 }
 
 function tier(results: ScenarioResult[]): TierReport {
-  return { n: results.length, metrics: summarizeAcceptanceRuns(results.map((r) => r.record)) };
+  return {
+    n: results.length,
+    metrics: summarizeAcceptanceRuns(results.map((r) => r.record)),
+    verification: verificationMetrics(
+      results.map((r) => ({
+        scored: r.score.ok,
+        stoppedReason: r.record.stoppedReason,
+        ...(r.completionOutcome !== undefined ? { outcome: r.completionOutcome } : {}),
+      })),
+    ),
+  };
 }
 
 /**
@@ -114,6 +134,7 @@ export function buildReport(input: ReportInput): EvalReport {
       stoppedReason: r.record.stoppedReason,
       tags: r.scenario.tags,
       totalTokens: r.record.tokenUsage.totalTokens,
+      ...(r.completionOutcome !== undefined ? { completionOutcome: r.completionOutcome } : {}),
       escaped: r.record.escaped,
     })),
   };
@@ -186,6 +207,7 @@ export function formatReportTable(report: EvalReport): string {
       : 'dev spend: not measured (set TEPEGOZ_EVAL_RATES to per-1M-token prices)',
     `threshold ${report.thresholdMet ? 'met' : 'NOT met'}`,
     ...judgeLine,
+    ...verificationLines(report.dev.verification, report.heldOut.verification),
     ...pooledLines(report),
     ...familyLines(report),
     ...rows,

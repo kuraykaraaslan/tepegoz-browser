@@ -233,6 +233,7 @@ export async function runAgent(
   return {
     stoppedReason: result.stoppedReason,
     ok: result.stoppedReason === 'completed',
+    ...(result.completionOutcome !== undefined ? { completionOutcome: result.completionOutcome } : {}),
     checkpoint: lastCheckpoint,
     tokenUsage: {
       inputTokens: usage.inputTokens,
