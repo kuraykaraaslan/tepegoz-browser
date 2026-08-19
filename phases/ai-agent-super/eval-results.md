@@ -179,6 +179,34 @@ re-measured**, and nothing here claims the sentinel moved — only the funded sw
   shortcut the constitution forbids.
 - **Cost:** none — nothing was run.
 
+### 2026-08-19 — S4 PR0–PR3 — code landed, MEASUREMENT-OWED (⏸ awaiting funded key)
+
+Fabricated-success — north-star condition 3 — went from **unmeasurable** to *measurable but unmeasured*.
+The harness previously reported escape rate, first-attempt success and task success, and nothing about
+whether a claimed success was backed by anything at all.
+
+| Landed | Owed |
+|---|---|
+| Trap family 1 → 5, real cross-origin swap via a second loopback listener | — |
+| `CompletionEvidence` + deterministic downgrade (the model supplies wording, evidence supplies authority) | — |
+| Pre-dispatch origin gate on every ref-resolving state-changing action | — |
+| `verifiedCompletionRate`, `fabricatedSuccessUpperBound`, `cannotVerifyCount`, `contradictedCount`, `verifiedTaskSuccessRate` | — |
+| — | **fabricated-success = 0/k at N≥10 with the 95% upper bound** on the trap family |
+| — | no-regression paired sweep on acceptance + web-patterns (±5pp) |
+| — | [PROSE-LEDGER](PROSE-LEDGER.md) **row 6** deletion + the before/after system-prompt token count |
+
+- **Base:** [`fixture-freeze.md`](fixture-freeze.md#s4-pr0-addition--2026-08-19-4-scenarios-into-an-existing-registry--a-disclosure-event) — 74 scenarios across 12 files. `network-verification.json`'s hash changed (disclosed there); `silent_api_failure` is byte-identical inside it.
+- **PROSE-LEDGER row 6 stays RETAINED.** The steer is *subsumed in mechanism* — the validator now consumes
+  the recorder verdicts as typed evidence — but the constitution requires the paired with/without sweep
+  before a row moves, and deleting it because the replacement exists is precisely the consolidation
+  shortcut the rule forbids.
+- **`taskSuccessRate` is unchanged by design**, so every number already in this ledger stays comparable;
+  cannot-verify exclusion is reported as a second metric beside it.
+- **Direction of error, on purpose:** absence of evidence yields *unverified*, never *verified*. The gate
+  is on fabricated-success = 0, and this bias is what protects it — at the cost of some honest runs
+  reading as "could not confirm", which is why that terminal is counted separately.
+- **Cost:** none — nothing was run.
+
 ### Template for a phase-exit entry
 
 ```

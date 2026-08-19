@@ -1,6 +1,6 @@
 # Phase S4 — Verified Outcomes (W1 Reliability)
 
-**Status:** 🟡 In progress (PR0–PR3 landed 2026-08-19) · **Depends on:** [S1](phase-s1-foundation-native-loop.md) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟠 Measurement-owed (PR0–PR3 landed 2026-08-19; PR4 ⏸ funded) · **Depends on:** [S1](phase-s1-foundation-native-loop.md) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Make the completion validator believe **evidence**, not the page's own success message, so
 fabricated-success ≈ 0 — north-star condition 3, a metric no rival publishes. A completion claim must
