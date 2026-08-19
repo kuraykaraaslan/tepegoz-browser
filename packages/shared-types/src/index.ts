@@ -20,3 +20,4 @@ export * from './stable-ref';
 export * from './completion-evidence';
 export * from './vision-trigger';
 export * from './intent-critic';
+export * from './credential-broker';

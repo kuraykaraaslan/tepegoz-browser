@@ -6,7 +6,7 @@ import {
   wrapUntrustedContent,
   MAX_INTERACTABLE_ELEMENTS,
 } from '@tepegoz/tool-executor';
-import type { ToolDescriptor } from '@tepegoz/shared-types';
+import { CredentialFillIntentSchema, type ToolDescriptor } from '@tepegoz/shared-types';
 import { buildElementsSnapshot, buildPageSnapshot, type ElementsDiffMemory } from './perception';
 import { describeNetworkFailures, selectActionFailures } from './network-verify';
 import type { BrowserHost } from './host';
@@ -639,6 +639,32 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
         : { url, title, ok, containsText: args.containsText };
     },
   });
+
+  // S6 PR6: registered ONLY when the host can broker a credential. A tool the agent can call but that
+  // can never succeed is worse than no tool — it invites retries and hides the real blocker.
+  if (host.fillCredential !== undefined) {
+    CapabilityRegistry.register({
+      descriptor: descriptor(
+        'credential_update_field',
+        'state_changing',
+        'Fill a saved username or password into a login field WITHOUT ever seeing it. args: ' +
+          "{ ref: number, field: 'username'|'password', tabId?: string } — ref from " +
+          'browser_get_elements. The browser resolves the site from the current tab, finds the saved ' +
+          'credential for it, asks the user to confirm, and types the value itself. You never receive ' +
+          'the secret, so do not ask for it and do not try to read it back. Returns ' +
+          '{ filled, field, origin, reason? }; when filled is false the reason says why — hand off to ' +
+          'the user rather than retrying.',
+      ),
+      inputSchema: CredentialFillIntentSchema,
+      handler: async (args) => {
+        // Re-checked rather than captured, so the closure cannot hold a seam the host later removed.
+        if (host.fillCredential === undefined) {
+          return { filled: false, field: args.field, origin: '', reason: 'credential filling is unavailable' };
+        }
+        return host.fillCredential(args.ref, args.field, args.tabId);
+      },
+    });
+  }
 
   CapabilityRegistry.register({
     descriptor: descriptor(

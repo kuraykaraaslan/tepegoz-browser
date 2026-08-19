@@ -11,6 +11,7 @@ import CdpDriver from './cdp-driver.electron';
 import AgentTabGroup from './agent-tab-group.electron';
 import { showPageCursor, hidePageCursor, isUserControlActive, resetForAgentAction } from './page-cursor.electron';
 import { buildArticleTextExpression } from './article-text-script.js';
+import { fillCredential as brokerFill } from './credential-broker.electron.js';
 import { buildWaitConditionExpression, clampWaitMs } from './wait-condition-script.js';
 
 /**
@@ -457,6 +458,24 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
   snapshotElements: (tabId, opts) => CdpDriver.snapshotElements(requireWc(tabId), opts ?? {}),
   // A stale ref / non-field element must read as "unverified", never as an error that fails the fill.
   readElementValue: (ref, tabId) => CdpDriver.readElementValue(requireWc(tabId), ref).catch(() => null),
+  // S6 PR6: the broker fills through the SAME real-gesture path as any other fill — the secret's only
+  // journey is vault → main → page, and it never enters an argument the agent supplied or a result it
+  // receives.
+  fillCredential: (ref, field, tabId) =>
+    brokerFill(ref, field, tabId, {
+      pageUrl: (id) => requireWc(id).getURL(),
+      fill: async (target, text, id) => {
+        resetForAgentAction();
+        const result = await CdpDriver.fillElement(
+          requireWc(id),
+          target,
+          text,
+          id === undefined ? browserAdapter : undefined,
+        );
+        onCursorHide();
+        return result;
+      },
+    }),
   networkSince: (sinceMs, tabId) => {
     // Deliberately tolerant: a missing/destroyed tab yields "nothing observed", never an error — the
     // network signal is post-action EVIDENCE and must not be able to fail an otherwise-fine interaction.

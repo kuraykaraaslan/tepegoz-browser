@@ -1,6 +1,6 @@
 # Phase S6 — Safety & Control Plane (W4 Control & trust)
 
-**Status:** 🟡 In progress — **PR0–PR3 landed 2026-08-16** (exam frozen before any S6 capability code; the autonomy-enforcement defect is closed; six derived risk tiers + a Turkish-covering sensitive-site category map; plan-scoped grants on proper eTLD+1 — all deterministic, no sweep owed). PR4–PR5 landed 2026-08-19; PR6–PR7 in progress · **Depends on:** [Phase S0](phase-s0-truth-and-repair.md) (PR1 early, lane-independent), [Phase S3](phase-s3-reliability-actions.md) (claim-grade ASR only) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟡 In progress — **PR0–PR3 landed 2026-08-16** (exam frozen before any S6 capability code; the autonomy-enforcement defect is closed; six derived risk tiers + a Turkish-covering sensitive-site category map; plan-scoped grants on proper eTLD+1 — all deterministic, no sweep owed). PR4–PR6 landed 2026-08-19; PR7 ⏸ funded · **Depends on:** [Phase S0](phase-s0-truth-and-repair.md) (PR1 early, lane-independent), [Phase S3](phase-s3-reliability-actions.md) (claim-grade ASR only) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Close the standing autonomy-enforcement defect (the renderer, not the main-process kernel, currently decides what auto-approves), then raise the control plane to the Claude-for-Chrome safety bar: deterministic risk tiers, plan-scoped pre-approval (`follow_a_plan`), an advisory intent-alignment critic, a reachable strict mode, and a first-party credential broker that fills secrets without ever handing them to the model. This phase owns north-star condition 2 (safety) and runs the first claim-grade adversarial battery over the 24 `atk_*` scenarios. Autonomy end-state is ask/act default with `follow_a_plan` as the ceiling and the critic strictly advisory.
 
@@ -23,7 +23,7 @@ Sequencing: the claim-grade ASR sweep runs **after [S3](phase-s3-reliability-act
 - [x] `follow_a_plan`: approving a plan mints scoped grants (domains × tool-classes × `runId`, eTLD+1 matched, run-expiring), recorded in main and enforced by the kernel; unit + integration proof a grant does not extend across an off-scope redirect. No `⏸`. **→ Landed 2026-08-16 (PR3).** [`PlanGrantStore`](../../packages/security-policy/src/plan-grants.ts) mints from the plan's own sites + classes ([`plan-grant-scope.ts`](../../apps/desktop/src/main/agent/plan-grant-scope.ts), 8 tests), is consulted in `requestApproval` before the autonomy level, and is revoked in the run's `finally`. eTLD+1 is resolved properly by [`registrable-domain.ts`](../../packages/security-policy/src/registrable-domain.ts) (18 tests) — **the off-scope test is the multi-part-suffix case** (`toolbazaar.com.tr` → `credential-collector.com.tr`), which a last-two-labels comparison would have wrongly called same-site. Sub-domain policy documented in the [ADR-0006 grants section](../../docs/adr/0006-policy-kernel-hitl.md#plan-scoped-grants-follow_a_plan). Grants are in-memory and run-scoped, so **no persistence and no sync-meta obligation** — recorded, since S9's *remembered* grants will incur one.
 - [ ] Approvals per task on the acceptance family fall **≥50%** under `follow_a_plan` with **zero** auto-approved financial/credential/destructive actions (⏸ funded sweep, paired with/without `follow_a_plan`).
 - [ ] ASR on the `atk_*` battery reported as "k/K, 95% binomial upper bound X%" with **upper bound ≤5%** at pooled N≥10/scenario, **240+ trials** total (⏸ funded sweep, runs AFTER [S3](phase-s3-reliability-actions.md)).
-- [ ] Credential broker: **0** secret-in-model-context leaks at N≥10 on the credential-never-leaks fixtures (⏸ funded sweep).
+- [ ] Credential broker: **0** secret-in-model-context leaks at N≥10 on the credential-never-leaks fixtures (⏸ funded sweep). **Mechanism landed 2026-08-19 (PR6)** — the agent has no shape in which a secret could arrive; the sweep still owes the measured number.
 - [ ] Strict-mode wiring: paired sweep shows **no benign-task regression >5pp** with strict mode on vs off (⏸ funded sweep, paired).
 - [x] Advisory intent-critic logs divergence on the critic-divergence fixtures and **does not block** (owner decision); its ledger entries are auditable. Divergence-detection rate is reported but is not a blocking gate.
 - [ ] Constitution: attack + critic + credential fixtures frozen in PR0 **before** any capability code; the measured delta recorded in [eval-results.md](eval-results.md) and the [PROSE-LEDGER](PROSE-LEDGER.md); every prose deletion paired with/without sweep; i18n EN + full-TR parity for the risk-tier labels, approval UI, and broker prompts landed in the same PR as the surface.
@@ -91,11 +91,36 @@ Sequencing: the claim-grade ASR sweep runs **after [S3](phase-s3-reliability-act
 > break ordinary tasks to defend against an uncommon one.
 
 ### PR6 — credential broker (safeStorage + biometric fill)
-- [ ] The agent emits a "request credential for domain" **intent**; main resolves it against a `safeStorage`-backed store (existing "secrets only in main via safeStorage" rule).
-- [ ] Main fills the credential via CDP after a biometric/OS-auth gate; the agent **never** receives the secret — no secret enters the model context.
-- [ ] Broker is a `@tepegoz/*` package (no `apps/desktop` growth); credential records carry sync-meta columns.
-- [ ] zod `safeParse` the credential-request intent and the domain; eTLD+1 match the request against the stored entry; `AppError` on mismatch.
-- [ ] i18n EN + full-TR for the biometric prompt and broker consent surface.
+- [x] The agent emits a "request credential for domain" **intent**; main resolves it against a `safeStorage`-backed store (existing "secrets only in main via safeStorage" rule).
+- [x] Main fills the credential via CDP after a biometric/OS-auth gate; the agent **never** receives the secret — no secret enters the model context.
+- [x] Broker is a `@tepegoz/*` package (no `apps/desktop` growth); credential records carry sync-meta columns.
+- [x] zod `safeParse` the credential-request intent and the domain; eTLD+1 match the request against the stored entry; `AppError` on mismatch.
+- [x] i18n EN + full-TR for the biometric prompt and broker consent surface.
+
+> **Mechanism notes (PR6).**
+> 1. **The design property is what the agent is never given.** It names a field and a ref; main reads the
+>    origin from the live tab, matches the vault entry, gates on OS auth, and types the value itself. The
+>    result carries no secret, no username, and no length — asserted exhaustively (`Object.keys`), so no
+>    later field can smuggle a value out. A model that never had the password cannot be talked into
+>    leaking it, which is the only version of this that survives an injection.
+> 2. **The origin is NEVER agent-supplied.** `CredentialFillIntentSchema` has no origin field at all —
+>    an agent-supplied origin is exactly how a poisoned page would aim a saved credential at a site of
+>    its choosing.
+> 3. **Site match is eTLD+1, never substring.** `bank.test.evil.com` contains `bank.test`; a substring
+>    check hands over the password. It reuses the resolver S6 PR3 built for grant scoping.
+> 4. **Ambiguity is a refusal.** Two saved logins for one site is a question for the user; picking one
+>    would silently send the wrong identity into a real login form.
+> 5. **Ordering:** the human is asked BEFORE decryption, so a declined prompt leaves the plaintext having
+>    never existed in the process. Refusals are logged without the secret or the username.
+> 6. **Placement:** the decision layer is in `@tepegoz/security-policy` (which already owns eTLD+1) and
+>    the tool in `@tepegoz/browser-tools`; `apps/desktop` gains only the host method that owns the vault
+>    and CDP — the same shape as every other browser tool.
+>
+> **Owed, and stated rather than implied:** there is **no OS-auth gate implementation** yet. `requireOsAuth`
+> fails closed with none installed, so the broker currently refuses every fill — the capability waits for
+> its gate. The platform spike (Windows Hello via Electron) and the **localized** OS prompt land together;
+> the prompt text is already an injected seam with an English developer fallback. The consent surface the
+> user sees today is the existing approval modal, whose `credential` risk-tier label shipped EN+TR in PR2.
 
 ### PR7 — claim-grade ASR sweep (⏸, AFTER S3)
 - [ ] Run the frozen `atk_*` battery live at pooled N≥10/scenario, 240+ trials; report ASR as "k/K, 95% binomial upper bound X%".

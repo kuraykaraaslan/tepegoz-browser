@@ -52,3 +52,12 @@ export {
   type EgressDecision,
   type EgressVerdict,
 } from './egress-firewall';
+export {
+  setOsAuthGate,
+  hasOsAuthGate,
+  requireOsAuth,
+  matchCredential,
+  type OsAuthGate,
+  type StoredCredentialRef,
+  type CredentialMatch,
+} from './credential-broker';

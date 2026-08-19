@@ -123,6 +123,21 @@ export interface BrowserHost {
    */
   readElementValue(ref: number, tabId?: string): Promise<string | null>;
   /**
+   * S6 PR6 — the credential broker's fill. **The agent never receives a secret.**
+   *
+   * It asks for a *field* to be filled on a *ref*; main reads the origin from the live tab, matches a
+   * stored credential by eTLD+1, gates on OS auth, and types the value in itself. The result says
+   * whether it happened and where — never the value, the username, or even its length.
+   *
+   * OPTIONAL: a host with no vault or no OS-auth gate simply omits it, and the tool is not registered.
+   * There is no configuration in which this fills without the user present.
+   */
+  fillCredential?(
+    ref: number,
+    field: 'username' | 'password',
+    tabId?: string,
+  ): Promise<{ filled: boolean; field: 'username' | 'password'; origin: string; reason?: string }>;
+  /**
    * Dispatch a single named key (Enter, Tab, Escape, ArrowDown, …) to the focused element. A thin alias
    * for {@link sendKeys} with one step — an unsupported key is REPORTED, never thrown (S3 PR2).
    */
