@@ -2,6 +2,7 @@ import { classifyRisk, PolicyKernel } from '@tepegoz/security-policy';
 import type { ToolError, ToolErrorCode } from '@tepegoz/shared-types';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import CapabilityRegistry from './registry';
+import { critiqueIntent, summarizeArgs } from './intent-critic';
 import type { AuditEntry, ConfirmRequest, InvokeContext } from './types';
 
 /**
@@ -28,6 +29,8 @@ export default class ToolGateway {
   private static readonly handlerScope = new AsyncLocalStorage<{
     confirmHandler: ((req: ConfirmRequest) => Promise<boolean>) | null;
     auditHandler: ((entry: AuditEntry) => void) | null;
+    /** S6 PR4: the run's original request, so the advisory critic can judge alignment against it. */
+    goal: string;
   }>();
 
   /** Wire the HITL prompt (renderer/UI). Without it, every "ask" decision fails safe to denied. */
@@ -47,6 +50,8 @@ export default class ToolGateway {
     handlers: {
       confirmHandler?: ((req: ConfirmRequest) => Promise<boolean>) | null;
       auditHandler?: ((entry: AuditEntry) => void) | null;
+      /** The user's request for this run — supplied so the advisory critic has something to align to. */
+      goal?: string;
     },
     fn: () => Promise<T>,
   ): Promise<T> {
@@ -54,6 +59,7 @@ export default class ToolGateway {
       {
         confirmHandler: handlers.confirmHandler ?? null,
         auditHandler: handlers.auditHandler ?? null,
+        goal: handlers.goal ?? '',
       },
       fn,
     );
@@ -99,11 +105,29 @@ export default class ToolGateway {
     });
     const scoped = ToolGateway.handlerScope.getStore();
     const auditHandler = scoped !== undefined ? scoped.auditHandler : ToolGateway.auditHandler;
+
+    // S6 PR4 — the advisory critic plane. It runs AFTER the deterministic kernel and BEFORE dispatch, and
+    // it cannot change what happens next: the verdict is recorded on the audit entry and nothing reads it
+    // to decide. ADR-0006's "deterministic and pre-model" kernel is untouched because the kernel has
+    // already spoken. It never sees argument VALUES — only key names and shapes — so it cannot become a
+    // second channel for the secret the credential broker exists to keep out of model context.
+    const critic = await critiqueIntent(
+      {
+        goal: scoped?.goal ?? '',
+        toolName,
+        tier: risk.tier,
+        ...(ctx.targetUrl !== undefined ? { targetUrl: ctx.targetUrl } : {}),
+        argSummary: summarizeArgs(parsed.data),
+      },
+      risk.tier,
+    );
+
     auditHandler?.({
       toolName,
       decision: policy.decision,
       reason: policy.reason,
       riskTier: risk.tier,
+      ...(critic !== null ? { critic } : {}),
     });
 
     if (policy.decision === 'deny') {

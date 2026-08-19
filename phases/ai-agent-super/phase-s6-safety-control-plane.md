@@ -1,6 +1,6 @@
 # Phase S6 — Safety & Control Plane (W4 Control & trust)
 
-**Status:** 🟡 In progress — **PR0–PR3 landed 2026-08-16** (exam frozen before any S6 capability code; the autonomy-enforcement defect is closed; six derived risk tiers + a Turkish-covering sensitive-site category map; plan-scoped grants on proper eTLD+1 — all deterministic, no sweep owed). PR4–PR7 not started · **Depends on:** [Phase S0](phase-s0-truth-and-repair.md) (PR1 early, lane-independent), [Phase S3](phase-s3-reliability-actions.md) (claim-grade ASR only) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟡 In progress — **PR0–PR3 landed 2026-08-16** (exam frozen before any S6 capability code; the autonomy-enforcement defect is closed; six derived risk tiers + a Turkish-covering sensitive-site category map; plan-scoped grants on proper eTLD+1 — all deterministic, no sweep owed). PR4 landed 2026-08-19; PR5–PR7 in progress · **Depends on:** [Phase S0](phase-s0-truth-and-repair.md) (PR1 early, lane-independent), [Phase S3](phase-s3-reliability-actions.md) (claim-grade ASR only) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Close the standing autonomy-enforcement defect (the renderer, not the main-process kernel, currently decides what auto-approves), then raise the control plane to the Claude-for-Chrome safety bar: deterministic risk tiers, plan-scoped pre-approval (`follow_a_plan`), an advisory intent-alignment critic, a reachable strict mode, and a first-party credential broker that fills secrets without ever handing them to the model. This phase owns north-star condition 2 (safety) and runs the first claim-grade adversarial battery over the 24 `atk_*` scenarios. Autonomy end-state is ask/act default with `follow_a_plan` as the ceiling and the critic strictly advisory.
 
@@ -25,7 +25,7 @@ Sequencing: the claim-grade ASR sweep runs **after [S3](phase-s3-reliability-act
 - [ ] ASR on the `atk_*` battery reported as "k/K, 95% binomial upper bound X%" with **upper bound ≤5%** at pooled N≥10/scenario, **240+ trials** total (⏸ funded sweep, runs AFTER [S3](phase-s3-reliability-actions.md)).
 - [ ] Credential broker: **0** secret-in-model-context leaks at N≥10 on the credential-never-leaks fixtures (⏸ funded sweep).
 - [ ] Strict-mode wiring: paired sweep shows **no benign-task regression >5pp** with strict mode on vs off (⏸ funded sweep, paired).
-- [ ] Advisory intent-critic logs divergence on the critic-divergence fixtures and **does not block** (owner decision); its ledger entries are auditable. Divergence-detection rate is reported but is not a blocking gate.
+- [x] Advisory intent-critic logs divergence on the critic-divergence fixtures and **does not block** (owner decision); its ledger entries are auditable. Divergence-detection rate is reported but is not a blocking gate.
 - [ ] Constitution: attack + critic + credential fixtures frozen in PR0 **before** any capability code; the measured delta recorded in [eval-results.md](eval-results.md) and the [PROSE-LEDGER](PROSE-LEDGER.md); every prose deletion paired with/without sweep; i18n EN + full-TR parity for the risk-tier labels, approval UI, and broker prompts landed in the same PR as the surface.
 
 ## Tasks
@@ -55,10 +55,25 @@ Sequencing: the claim-grade ASR sweep runs **after [S3](phase-s3-reliability-act
 - [x] Integration test: an off-scope redirect (different eTLD+1) does not inherit the grant; explicit sub-domain policy documented.
 
 ### PR4 — advisory intent-critic plane (flagged)
-- [ ] Add a classify-tier (haiku) critic invoked by [ToolGateway](../../packages/capability-plane/src/tool-gateway.ts) **after** the deterministic kernel and before dispatch — a separate plane, so [ADR-0006](../../docs/adr/0006-policy-kernel-hitl.md) stays intact (kernel remains deterministic and pre-model).
-- [ ] Critic compares each **mutating** action (ui-write / data-egress / financial / credential / destructive) to the original request; runs only on mutating classes to bound cost.
-- [ ] ADVISORY: logs divergence to the run journal, **does not block** (owner decision); flag-gated so it can be enabled per sweep.
-- [ ] zod `safeParse` the critic verdict; the critic never sees secrets (respects the broker boundary from PR6).
+- [x] Add a classify-tier (haiku) critic invoked by [ToolGateway](../../packages/capability-plane/src/tool-gateway.ts) **after** the deterministic kernel and before dispatch — a separate plane, so [ADR-0006](../../docs/adr/0006-policy-kernel-hitl.md) stays intact (kernel remains deterministic and pre-model).
+- [x] Critic compares each **mutating** action (ui-write / data-egress / financial / credential / destructive) to the original request; runs only on mutating classes to bound cost.
+- [x] ADVISORY: logs divergence to the run journal, **does not block** (owner decision); flag-gated so it can be enabled per sweep.
+- [x] zod `safeParse` the critic verdict; the critic never sees secrets (respects the broker boundary from PR6).
+
+> **Mechanism notes (PR4).**
+> 1. **The critic is a seam, not a model call in L8.** `setIntentCritic` is injected by the app, so
+>    `@tepegoz/security-policy` and the capability plane stay free of a model dependency and the layering
+>    holds. Absent ⇒ nothing runs, which is the default.
+> 2. **It cannot change the decision, structurally.** The verdict is written onto the `AuditEntry` and
+>    **nothing reads it to decide**. There is no branch to remove later — a blocking critic would be one
+>    model deciding whether another may act, on the critical path, with a judgement nobody can verify.
+> 3. **Every failure mode is `null`:** no critic, a verdict that fails `safeParse`, a thrown critic. An
+>    advisory plane that could turn its own malfunction into a blocked or failed action would be neither.
+> 4. **It never sees argument VALUES** — only key names and shapes (`text: string(27)`, `card: {number,cvv}`).
+>    The credential broker exists to keep a secret out of model context; the critic must not re-open that
+>    channel, and the `CriticRequest` schema has no field for a value to travel in.
+> 5. The run's goal reaches the gateway through the existing `runWithHandlers` run scope, so no per-call
+>    plumbing was added and concurrent runs cannot read each other's intent.
 
 ### PR5 — strict-mode wiring
 - [ ] Add the missing caller for [content-guard.ts](../../packages/tool-executor/src/content-guard.ts) `setStrictMode` — wire it to the main-held run config in [ipc-agent-config.ts](../../apps/desktop/src/main/ipc/ipc-agent-config.ts).

@@ -3,6 +3,7 @@ import type { RiskLevel, ToolError } from '@tepegoz/shared-types';
 import CapabilityRegistry from './registry';
 import ToolGateway from './tool-gateway';
 import type { InputValidator } from './types';
+import { setIntentCritic } from './intent-critic';
 
 const passAny: InputValidator<Record<string, unknown>> = {
   safeParse: (d) => ({ success: true, data: (typeof d === 'object' && d !== null ? d : {}) as Record<string, unknown> }),
@@ -145,5 +146,60 @@ describe('CapabilityRegistry', () => {
     register({ id: 'browser_get_page', dangerClass: 'read' });
     expect(() => register({ id: 'browser_get_page', dangerClass: 'read' })).toThrow();
     expect(() => register({ id: 'BadName', dangerClass: 'read' })).toThrow();
+  });
+});
+
+describe('the advisory critic cannot change what happens (S6 PR4)', () => {
+  beforeEach(() => {
+    CapabilityRegistry.reset();
+    ToolGateway.reset();
+    setIntentCritic(null);
+  });
+
+  it('lets a call through even when the critic says it diverges', async () => {
+    // Advisory means advisory. A blocking critic would be one model deciding whether another may act,
+    // on the critical path, with a judgement nobody can verify.
+    register({ id: 'browser_update_page', dangerClass: 'state_changing', handler: () => ({ ok: true }) });
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    setIntentCritic(() => Promise.resolve({ aligned: false, reason: 'this is not what was asked' }));
+    const result = await ToolGateway.invoke('browser_update_page', { action: 'click', ref: 1 });
+    expect(result).toEqual({ ok: true });
+  });
+
+  it('records the divergence on the audit entry, beside the action it did not stop', async () => {
+    register({ id: 'browser_update_page', dangerClass: 'state_changing', handler: () => ({ ok: true }) });
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    setIntentCritic(() => Promise.resolve({ aligned: false, reason: 'diverges from the request' }));
+    const entries: { toolName: string; critic?: { aligned: boolean; reason: string } }[] = [];
+    await ToolGateway.runWithHandlers(
+      {
+        confirmHandler: () => Promise.resolve(true),
+        auditHandler: (e) => entries.push(e),
+        goal: 'summarise the article',
+      },
+      () => ToolGateway.invoke('browser_update_page', { action: 'click', ref: 1 }),
+    );
+    expect(entries[0]?.critic).toEqual({ aligned: false, reason: 'diverges from the request' });
+  });
+
+  it('never asks about a read, so an ordinary perception step costs nothing extra', async () => {
+    register({ id: 'browser_get_page', dangerClass: 'read', handler: () => ({ content: 'x' }) });
+    let asked = 0;
+    setIntentCritic(() => {
+      asked += 1;
+      return Promise.resolve({ aligned: true, reason: 'fine' });
+    });
+    await ToolGateway.invoke('browser_get_page', {});
+    expect(asked).toBe(0);
+  });
+
+  it('is silent on the audit entry when no critic is installed', async () => {
+    register({ id: 'browser_update_page', dangerClass: 'state_changing', handler: () => ({ ok: true }) });
+    const entries: { critic?: unknown }[] = [];
+    await ToolGateway.runWithHandlers(
+      { confirmHandler: () => Promise.resolve(true), auditHandler: (e) => entries.push(e) },
+      () => ToolGateway.invoke('browser_update_page', { action: 'click', ref: 1 }),
+    );
+    expect(entries[0]?.critic).toBeUndefined();
   });
 });

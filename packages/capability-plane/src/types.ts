@@ -52,4 +52,11 @@ export interface AuditEntry {
   reason: string;
   /** Derived risk tier, so the audit trail records the class an action was approved AS. */
   riskTier?: RiskTier;
+  /**
+   * S6 PR4: the advisory critic's verdict, when one ran. Present ⇒ a second opinion was taken on
+   * whether this action still serves the user's request. **It never changed the decision** — a
+   * divergence here means the call proceeded and was recorded as diverging, which is the whole point of
+   * an advisory plane.
+   */
+  critic?: { aligned: boolean; reason: string };
 }

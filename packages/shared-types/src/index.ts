@@ -19,3 +19,4 @@ export * from './canon-content';
 export * from './stable-ref';
 export * from './completion-evidence';
 export * from './vision-trigger';
+export * from './intent-critic';

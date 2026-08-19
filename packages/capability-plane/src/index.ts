@@ -7,3 +7,4 @@ export type {
   InvokeContext,
   RegisteredTool,
 } from './types';
+export * from './intent-critic';

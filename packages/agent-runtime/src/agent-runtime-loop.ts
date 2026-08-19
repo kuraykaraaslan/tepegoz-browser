@@ -85,16 +85,25 @@ export function runReactiveLoop(args: {
   const outline = approvedPlan.steps.map((s) => `- ${s.tool}: ${s.rationale}`);
   const avoid = plan.steps.filter((s) => skip.has(s.id)).map((s) => s.rationale || s.tool);
 
+  const goal = approvedPlan.goal.length > 0 ? approvedPlan.goal : prompt;
   return ToolGateway.runWithHandlers(
     {
       confirmHandler: hooks.requestApproval,
       auditHandler: (entry) => {
-        hooks.onEvent('step_start', `${entry.toolName}: ${entry.decision}`, entry.reason);
+        // S6 PR4: a divergence the advisory critic saw is surfaced with the step it belongs to. It did
+        // NOT stop the call — recording it beside the action is what makes an advisory plane auditable
+        // rather than decorative.
+        const divergence =
+          entry.critic !== undefined && !entry.critic.aligned
+            ? ` — intent divergence: ${entry.critic.reason}`
+            : '';
+        hooks.onEvent('step_start', `${entry.toolName}: ${entry.decision}`, `${entry.reason}${divergence}`);
       },
+      goal,
     },
     () => Reactor.run(
       {
-        goal: approvedPlan.goal.length > 0 ? approvedPlan.goal : prompt,
+        goal,
         outline,
         avoid,
         tools,
