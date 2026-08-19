@@ -9,7 +9,7 @@ import {
 } from '@tepegoz/desktop-ipc';
 import { AgentRunInputSchema } from '@tepegoz/desktop-ipc/schemas';
 import type { ConfirmRequest } from '@tepegoz/capability-plane';
-import { PlanGrantStore, resolveAutonomy } from '@tepegoz/security-policy';
+import { PlanGrantStore, REMEMBERED_GRANT_DAYS, resolveAutonomy } from '@tepegoz/security-policy';
 import { CapabilityRegistry } from '@tepegoz/capability-plane';
 import { TokenLedger } from '@tepegoz/model-gateway';
 import { EventJournal, TokenStore } from '@tepegoz/persistence';
@@ -21,6 +21,12 @@ import AgentService, {
 } from '../agent/agent-service.electron';
 import { browserHost, setCurrentAgentRun } from '../agent/browser-host.electron';
 import { planGrantScope } from '../agent/plan-grant-scope';
+import {
+  mayOfferRemember,
+  rememberGrant,
+  rememberedCoverage,
+  resolveSkillScope,
+} from '../agent/remembered-grant-scope';
 import {
   createRunControl,
   hasActiveAgentRun,
@@ -46,6 +52,11 @@ import {
   tokenUsage,
 } from './ipc-agent-shared';
 
+/** Fill the `{skill}` placeholder. A placeholder, not concatenation: Turkish puts the name first. */
+function fillSkill(template: string, skill: string): string {
+  return template.replace('{skill}', skill);
+}
+
 // Agent run counter (registerAgentIpc runs once at startup, so module scope is fine). HITL ids are
 // randomUUID-based, not sequential — a predictable approval id is guessable by a compromised renderer.
 let runCounter = 0;
@@ -56,7 +67,8 @@ export function registerAgentRunIpc(): void {
   // the raw API key and tool args never cross to the renderer (only a truncated preview does).
   handleAsync(IpcChannels.agentRun, async (event, payload): Promise<AgentRunResult> => {
     requireAgentEnabled();
-    const { prompt, groupId, displayPrompt, attachmentMeta } = AgentRunInputSchema.parse(payload);
+    const { prompt, groupId, displayPrompt, attachmentMeta, skillId } =
+      AgentRunInputSchema.parse(payload);
     if (hasActiveAgentRun()) {
       throw new AppError('An agent task is already running', 409);
     }
@@ -78,6 +90,9 @@ export function registerAgentRunIpc(): void {
             ts: Date.now(),
           });
     if (history !== null) broadcastConversationsState();
+    // S9: the scope a remembered grant may be matched against. Null for an ad-hoc task, and null
+    // whenever the prompt no longer matches the named skill's stored one — see resolveSkillScope.
+    const skillScope = resolveSkillScope(historyDb, skillId, prompt);
     const control = createRunControl(runId, () => {
       // Phase 2 (resilience): kick the NetworkMonitor into active reconnect probing when a drop is seen
       // only on the model socket. No-op for now — pause/steer (Phase 1) do not need it.
@@ -178,6 +193,11 @@ export function registerAgentRunIpc(): void {
     };
     /** Present the standard HITL approval modal and await the user's answer. */
     const promptApproval = (req: ConfirmRequest): Promise<boolean> => {
+      const facts = {
+        tier: req.risk?.tier ?? 'ui-write',
+        targetUrl: req.targetUrl,
+        policyReason: req.policy.reason,
+      } as const;
       // Unguessable id. A sequential counter let a compromised renderer spray approvals for ids main
       // had not minted yet and win the race the moment one was registered; a UUID cannot be predicted,
       // so only the request main actually sent can be answered.
@@ -193,13 +213,36 @@ export function registerAgentRunIpc(): void {
         // Display only — main already decided. Lets the modal name the act instead of showing a flat
         // "a tool wants to change state", which is what trains a user to click through.
         ...(req.risk !== undefined ? { riskTier: req.risk.tier } : {}),
+        // S9: offer "remember this" only when a grant would actually be honoured. A checkbox the
+        // system would refuse teaches the user that their choices are decorative.
+        ...(req.risk !== undefined && mayOfferRemember(skillScope, facts) && skillScope !== null
+          ? { rememberSkill: skillScope.name, rememberDays: REMEMBERED_GRANT_DAYS }
+          : {}),
       };
       onEvent('awaiting_approval', `Approval needed: ${req.toolName}`, req.policy.reason);
       if (!sender.isDestroyed()) sender.send(IpcChannels.agentApprovalRequest, request);
       return new Promise<boolean>((resolve) => {
-        pendingApprovals.set(approvalId, { runId, resolve });
+        pendingApprovals.set(approvalId, {
+          runId,
+          resolve: (outcome) => {
+            // The tick is relayed by the renderer; rememberGrant re-checks whether it MAY be
+            // remembered, so a doctored renderer cannot store a grant the rules would refuse.
+            if (outcome.approved && outcome.remember) {
+              const expiresAt = rememberGrant(historyDb, skillScope, facts);
+              if (expiresAt !== null && skillScope !== null) {
+                onEvent(
+                  'grant',
+                  fillSkill(mainStrings().agent.grants.remembered, skillScope.name),
+                  'remembered_grant',
+                );
+              }
+            }
+            resolve(outcome.approved);
+          },
+        });
         setTimeout(() => {
-          if (pendingApprovals.delete(approvalId)) resolve(false); // fail-safe deny on no response
+          // fail-safe deny on no response
+          if (pendingApprovals.delete(approvalId)) resolve(false);
         }, 120_000);
       });
     };
@@ -226,6 +269,32 @@ export function registerAgentRunIpc(): void {
             toolName: req.toolName,
             riskTier: tier,
           });
+          return true;
+        }
+      }
+      // A grant the user saved for THIS skill on THIS site. Checked after the plan grant (which is
+      // narrower still: one run) and before the autonomy level (which is broader: every run). It can
+      // never cover credential/financial/destructive, nor a taint prompt — see coversRemembered.
+      if (tier !== undefined) {
+        const remembered = rememberedCoverage(historyDb, skillScope, {
+          tier,
+          targetUrl: req.targetUrl,
+          policyReason: req.policy.reason,
+        });
+        if (remembered.covered && skillScope !== null) {
+          Logger.info('Approval covered by a remembered grant', {
+            runId,
+            skill: skillScope.name,
+            toolName: req.toolName,
+            riskTier: tier,
+          });
+          // Visible in the transcript, not only in the log: a persistent grant that acts invisibly is
+          // one the user cannot know to revoke.
+          onEvent(
+            'grant',
+            fillSkill(mainStrings().agent.grants.used, skillScope.name),
+            'remembered_grant',
+          );
           return true;
         }
       }

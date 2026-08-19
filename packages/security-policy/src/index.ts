@@ -23,6 +23,14 @@ export {
   type PlanGrant,
 } from './plan-grants';
 export {
+  REMEMBERED_GRANT_DAYS,
+  canRemember,
+  coversRemembered,
+  rememberedGrantExpiry,
+  type RememberedCoverageQuery,
+  type RememberedGrantView,
+} from './remembered-grants';
+export {
   resolveAutonomy,
   type AutonomyGateDecision,
   type AutonomyGateResult,

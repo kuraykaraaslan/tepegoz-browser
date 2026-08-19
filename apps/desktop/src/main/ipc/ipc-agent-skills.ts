@@ -53,7 +53,11 @@ export function registerAgentSkillsIpc(): void {
     if (db === null) return [];
     // Soft-delete, like every other row in this store: a hard delete on one device is indistinguishable
     // from a row that never synced.
-    AgentMemoryStore.forgetSkill(db, AgentSkillIdSchema.parse(payload));
+    const id = AgentSkillIdSchema.parse(payload);
+    AgentMemoryStore.forgetSkill(db, id);
+    // A skill is the ONLY scope that can hold a remembered grant, so deleting it must take its saved
+    // permissions with it — otherwise they would linger with no surface left to revoke them from.
+    AgentMemoryStore.revokeGrantsForScope(db, id);
     return list();
   });
 }

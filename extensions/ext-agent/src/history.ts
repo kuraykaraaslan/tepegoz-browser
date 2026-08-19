@@ -15,6 +15,7 @@ export const AGENT_HISTORY_EVENT_KINDS = [
   'awaiting_approval',
   'input_action',
   'handoff',
+  'grant',
   'done',
   'error',
 ] as const;

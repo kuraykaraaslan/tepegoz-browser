@@ -112,6 +112,12 @@ export const tr: AgentStrings = {
     delete: 'Beceriyi kaldır',
     saveEmpty: 'Önce bir istem yaz, sonra beceri olarak kaydet.',
   },
+  grants: {
+    remember: '“{skill}” için bunu hatırla',
+    rememberHint: 'Yalnızca bu site ve bu tür işlem için, {days} gün boyunca. Beceriyi silmek bunu geri alır.',
+    remembered: '“{skill}” için bu izin kaydedildi.',
+    used: '“{skill}” için kaydettiğin izinle yapıldı.',
+  },
   historyPage: {
     title: 'Ajan geçmişi',
     search: 'Konuşmalarda ara',

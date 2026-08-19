@@ -23,9 +23,18 @@ import type { PlanApprovalDecision } from './agent-service.electron';
  * down. The log is the audit trail.
  */
 
+/**
+ * What a settled approval carries. `remember` is the user asking for a persistent grant (S9); main
+ * still decides whether that is allowed — the renderer relays the tick, it does not grant anything.
+ */
+export interface ApprovalOutcome {
+  approved: boolean;
+  remember: boolean;
+}
+
 export const pendingApprovals = new Map<
   string,
-  { runId: string; resolve: (approved: boolean) => void }
+  { runId: string; resolve: (outcome: ApprovalOutcome) => void }
 >();
 export const pendingPlans = new Map<
   string,
@@ -38,7 +47,7 @@ export const pendingPlans = new Map<
  * @returns `true` if the response matched an outstanding request and was applied; `false` if it was
  * rejected because main never asked for it (or already settled it).
  */
-export function settleApproval(approvalId: string, approved: boolean): boolean {
+export function settleApproval(approvalId: string, approved: boolean, remember = false): boolean {
   const entry = pendingApprovals.get(approvalId);
   if (entry === undefined) {
     Logger.warn('Rejected approval response for an unknown or already-settled request', {
@@ -47,7 +56,7 @@ export function settleApproval(approvalId: string, approved: boolean): boolean {
     return false;
   }
   pendingApprovals.delete(approvalId);
-  entry.resolve(approved);
+  entry.resolve({ approved, remember });
   return true;
 }
 

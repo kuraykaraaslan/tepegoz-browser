@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Modal } from '@tepegoz/ui';
 import type { Resources } from '@tepegoz/i18n';
 import type { AgentStrings } from './i18n';
@@ -27,7 +28,7 @@ interface PanelModalsProps {
   skipIds: Set<string>;
   onRespondPlan: (approved: boolean) => void;
   onToggleStep: (id: string) => void;
-  onRespond: (approved: boolean) => void;
+  onRespond: (approved: boolean, remember?: boolean) => void;
 }
 
 export function PanelModals({
@@ -40,6 +41,11 @@ export function PanelModals({
   onToggleStep,
   onRespond,
 }: PanelModalsProps) {
+  // Reset per approval id: a tick meant for one prompt must never carry into the next.
+  const [remember, setRemember] = useState(false);
+  const approvalId = approval?.approvalId ?? null;
+  useEffect(() => { setRemember(false); }, [approvalId]);
+
   return (
     <>
       {/* Plan preview modal */}
@@ -95,9 +101,29 @@ export function PanelModals({
             {approval.argsPreview}
           </pre>
           {approval.biometric && <p className="mt-2 text-xs text-amber-600">{a.biometricNote}</p>}
+          {/* Offered only when main says a grant here would be honoured — see `rememberSkill`. Off by
+              default: a pre-ticked box is a permission taken, not given. */}
+          {approval.rememberSkill !== undefined && (
+            <label className="mt-3 flex cursor-pointer items-start gap-2">
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => { setRemember(e.target.checked); }}
+                className="mt-0.5"
+              />
+              <span className="min-w-0">
+                <span className="block text-sm text-text-primary">
+                  {a.grants.remember.replace('{skill}', approval.rememberSkill)}
+                </span>
+                <span className="block text-xs text-text-secondary">
+                  {a.grants.rememberHint.replace('{days}', String(approval.rememberDays ?? 0))}
+                </span>
+              </span>
+            </label>
+          )}
           <div className="mt-4 flex justify-end gap-2">
             <button type="button" onClick={() => onRespond(false)} className={BTN_GHOST}>{a.deny}</button>
-            <button type="button" onClick={() => onRespond(true)} className={BTN_PRIMARY}>{a.approve}</button>
+            <button type="button" onClick={() => onRespond(true, remember)} className={BTN_PRIMARY}>{a.approve}</button>
           </div>
         </Modal>
       )}

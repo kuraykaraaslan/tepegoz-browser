@@ -167,6 +167,17 @@ describe('remembered grants', () => {
     expect(AgentMemoryStore.liveGrants(db, 'other-task', 'billing.test')).toEqual([]);
   });
 
+  it('revokes EVERY grant a scope holds — deleting a skill takes its permissions with it', () => {
+    // A skill is the only scope that can mint a remembered grant, so if the skill goes and the grants
+    // stay, the user is left with permissions they have no surface to revoke.
+    for (const [n, host] of [[25, "billing.test"], [26, "shop.test"]] as const) {
+      AgentMemoryStore.putGrant(db, { id: uuid(n), scope: 'skill-1', host, tier: 'ui-write', expiresAt: Date.now() + hour });
+    }
+    AgentMemoryStore.revokeGrantsForScope(db, 'skill-1');
+    expect(AgentMemoryStore.liveGrants(db, 'skill-1', 'billing.test')).toEqual([]);
+    expect(AgentMemoryStore.liveGrants(db, 'skill-1', 'shop.test')).toEqual([]);
+  });
+
   it('REFUSES a credential-tier grant at the schema level — those are only ever asked', () => {
     expect(() =>
       AgentMemoryStore.putGrant(db, {

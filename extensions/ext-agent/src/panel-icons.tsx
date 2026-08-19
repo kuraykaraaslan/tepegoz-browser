@@ -90,6 +90,7 @@ export const KIND_DOT: Record<AgentEvent['kind'], string> = {
   awaiting_approval: 'bg-amber-500',
   input_action: 'bg-sky-400',
   handoff: 'bg-amber-500',
+  grant: 'bg-amber-500',
   paused: 'bg-amber-500',
   resumed: 'bg-green-500',
   steered: 'bg-indigo-400',

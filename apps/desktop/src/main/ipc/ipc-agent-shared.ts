@@ -131,6 +131,8 @@ export const JOURNAL_TYPE_BY_KIND: Partial<Record<AgentEventKind, EventType>> = 
   step_ok: 'AgentStepExecuted',
   step_error: 'AgentStepExecuted',
   awaiting_approval: 'HitlRequested',
+  // A grant answered the prompt (or was saved by one), which is a HITL resolution with a memory.
+  grant: 'HitlResolved',
   handoff: 'HandoffRequested',
   done: 'TaskSucceeded',
   error: 'TaskFailed',

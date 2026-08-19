@@ -38,6 +38,8 @@ export interface AgentApi {
     prompt: string;
     groupId: string;
     displayPrompt?: string;
+    /** The skill this run came from, when it started from one (S9). */
+    skillId?: string;
     attachmentMeta?: {
       kind: 'selection' | 'file' | 'screenshot';
       label: string;
@@ -83,7 +85,7 @@ export interface AgentApi {
   /** Subscribe to HITL approval prompts; returns an unsubscribe function. */
   onAgentApprovalRequest(callback: (request: AgentApprovalRequest) => void): () => void;
   /** Answer a HITL prompt (approve/deny a gated tool call). */
-  respondAgentApproval(approvalId: string, approved: boolean): void;
+  respondAgentApproval(approvalId: string, approved: boolean, remember?: boolean): void;
   /** Subscribe to the editable plan preview shown before the agent loop runs. */
   onAgentPlanPreview(callback: (preview: AgentPlanPreview) => void): () => void;
   /** Approve (optionally skipping some steps) or reject a proposed plan before execution. */

@@ -56,6 +56,9 @@ export type AgentEventKind =
   | 'awaiting_approval'
   | 'input_action'
   | 'handoff'
+  // A remembered grant was used or saved (S9). Its own kind because provenance for a PERSISTENT
+  // permission has to survive the run: a grant that acts invisibly is one nobody knows to revoke.
+  | 'grant'
   // Run-control (live, ephemeral — NOT journaled as step events; the durable record is the checkpoint):
   | 'paused'
   | 'resumed'
@@ -96,6 +99,15 @@ export interface AgentApprovalRequest {
    * already made in main. Optional so an approval raised before classification still renders.
    */
   riskTier?: RiskTier;
+  /**
+   * The skill this run is bound to, present ONLY when a grant for it would actually be honoured
+   * (main decides — see `mayOfferRemember`). Its absence is why the checkbox does not appear for an
+   * ad-hoc task, a credential/financial/destructive act, or a tainted call: offering a choice the
+   * system would refuse teaches the user that their choices are decorative.
+   */
+  rememberSkill?: string;
+  /** How long such a grant would last, so the modal can state the horizon it is asking for. */
+  rememberDays?: number;
 }
 
 export interface AgentPlanStep {
@@ -216,6 +228,8 @@ export interface AgentHostApi {
     prompt: string;
     groupId: string;
     displayPrompt?: string;
+    /** The skill this run came from (S9), when it started from one. */
+    skillId?: string;
     attachmentMeta?: AgentAttachmentMeta[];
   }): Promise<AgentRunResult>;
   cancelAgent(runId: string): void;
@@ -257,7 +271,7 @@ export interface AgentHostApi {
   /** Subscribe to streamed model fragments for the running task (ephemeral; see {@link AgentDelta}). */
   onAgentDelta(callback: (delta: AgentDelta) => void): () => void;
   onAgentApprovalRequest(callback: (request: AgentApprovalRequest) => void): () => void;
-  respondAgentApproval(approvalId: string, approved: boolean): void;
+  respondAgentApproval(approvalId: string, approved: boolean, remember?: boolean): void;
   onAgentPlanPreview(callback: (preview: AgentPlanPreview) => void): () => void;
   respondAgentPlan(planId: string, approved: boolean, skipStepIds?: string[]): void;
   onTokenUsage(callback: (usage: TokenUsageSnapshot) => void): () => void;

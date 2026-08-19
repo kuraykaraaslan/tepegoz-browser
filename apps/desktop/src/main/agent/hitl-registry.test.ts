@@ -50,7 +50,7 @@ describe('HITL registry — a renderer cannot answer what main did not ask', () 
 
     expect(settleApproval('appr-real', true)).toBe(true);
     expect(resolve).toHaveBeenCalledTimes(1);
-    expect(resolve).toHaveBeenCalledWith(true);
+    expect(resolve).toHaveBeenCalledWith({ approved: true, remember: false });
 
     // A duplicated / replayed response finds nothing.
     expect(settleApproval('appr-real', true)).toBe(false);
@@ -63,7 +63,20 @@ describe('HITL registry — a renderer cannot answer what main did not ask', () 
 
     expect(settleApproval('appr-deny', false)).toBe(true);
     expect(resolve).toHaveBeenCalledTimes(1);
-    expect(resolve).toHaveBeenCalledWith(false);
+    expect(resolve).toHaveBeenCalledWith({ approved: false, remember: false });
+  });
+
+  it('carries the remember tick, and defaults it OFF when the renderer omits it', () => {
+    // A missing field must never read as "yes, store a persistent grant".
+    const resolve = vi.fn();
+    pendingApprovals.set('appr-remember', { runId: 'run-1', resolve });
+    expect(settleApproval('appr-remember', true, true)).toBe(true);
+    expect(resolve).toHaveBeenCalledWith({ approved: true, remember: true });
+
+    const bare = vi.fn();
+    pendingApprovals.set('appr-bare', { runId: 'run-1', resolve: bare });
+    settleApproval('appr-bare', true);
+    expect(bare).toHaveBeenCalledWith({ approved: true, remember: false });
   });
 
   it('settles a correlated plan once, carrying its skipped steps', () => {

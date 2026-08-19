@@ -216,6 +216,17 @@ export class AgentMemoryStore {
     ).run({ ...grant, deviceId: MetaStore.deviceId(db), updatedAt: Date.now() });
   }
 
+  /**
+   * Revoke every grant a scope holds. Called when the skill that owned them is deleted: the only way
+   * to mint a remembered grant is a named skill, so deleting the skill must take its permissions with
+   * it. A grant whose scope no longer exists would be unrevokable through any surface the user has.
+   */
+  static revokeGrantsForScope(db: Db, scope: string): void {
+    db.prepare(
+      'UPDATE agent_remembered_grants SET tombstone = 1, updated_at = ?, version = version + 1 WHERE scope = ? AND tombstone = 0',
+    ).run(Date.now(), scope);
+  }
+
   static revokeGrant(db: Db, id: string): void {
     db.prepare(
       'UPDATE agent_remembered_grants SET tombstone = 1, updated_at = ?, version = version + 1 WHERE id = ?',

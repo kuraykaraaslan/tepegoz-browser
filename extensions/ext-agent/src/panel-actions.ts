@@ -64,12 +64,16 @@ export function useAgentActions(deps: AgentActionsDeps) {
       prompt: '',
       attachments: [],
       expandedFiles: new Set(),
+      skillId: null,
     }));
     void api.runAgent({
       prompt: fullPrompt,
       groupId,
       displayPrompt: text,
       attachmentMeta: attachmentMeta(activeState.attachments),
+      // Attachments change the task, so `fullPrompt` stops matching the stored skill and main simply
+      // refuses the binding — the run is asked about normally. That is the intended direction.
+      ...(activeState.skillId !== null ? { skillId: activeState.skillId } : {}),
     })
       .catch((err: unknown) => {
         const message = err instanceof Error && err.message.trim().length > 0
@@ -227,10 +231,10 @@ export function useAgentActions(deps: AgentActionsDeps) {
     void api.setAgentStrictGuard(on).catch(() => {});
   }
 
-  function respond(approved: boolean): void {
+  function respond(approved: boolean, remember = false): void {
     const { approval } = activeState;
     if (approval !== null) {
-      api.respondAgentApproval(approval.approvalId, approved);
+      api.respondAgentApproval(approval.approvalId, approved, remember);
       mutateActive((s) => ({ ...s, approval: null }));
     }
   }
@@ -264,7 +268,7 @@ export function useAgentActions(deps: AgentActionsDeps) {
    */
   function useSkill(skill: AgentSkill): void {
     const use = skillUse(skill);
-    mutateActive((s) => ({ ...s, prompt: use.prompt }));
+    mutateActive((s) => ({ ...s, prompt: use.prompt, skillId: skill.id }));
     if (use.openUrl !== null) api.createTab(use.openUrl);
   }
 

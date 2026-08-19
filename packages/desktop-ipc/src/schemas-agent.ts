@@ -5,6 +5,9 @@ export const AgentRunInputSchema = z.object({
   prompt: z.string().min(1).max(4000),
   groupId: z.string().min(1).max(64),
   displayPrompt: z.string().min(1).max(4000).optional(),
+  /** The skill this run came from (S9). Main binds a remembered grant to it ONLY when the prompt
+   *  still matches the stored one — an edited task is a new task, and a new task gets asked. */
+  skillId: z.string().uuid().optional(),
   attachmentMeta: z
     .array(
       z.object({
@@ -28,6 +31,9 @@ export const AgentSteerSchema = z.object({
 export const AgentApprovalResponseSchema = z.object({
   approvalId: z.string().min(1).max(64),
   approved: z.boolean(),
+  /** The user ticked "remember this for this skill". Main re-checks whether it MAY be remembered;
+   *  a renderer asking to remember something ungrantable simply gets an ordinary approval. */
+  remember: z.boolean().optional(),
 });
 
 export const AgentPlanResponseSchema = z.object({

@@ -111,6 +111,15 @@ export const en = {
     delete: 'Remove skill',
     saveEmpty: 'Type a prompt first, then save it as a skill.',
   },
+  // Remembered grants (S9). Only a named SKILL can hold one, so every string names the skill: a
+  // permission the user cannot point at is one they cannot revoke. {skill} and {days} are filled in
+  // by the caller — placeholders, not concatenation, because Turkish puts them in a different order.
+  grants: {
+    remember: 'Remember this for “{skill}”',
+    rememberHint: 'Only this site and this kind of action, for {days} days. Deleting the skill undoes it.',
+    remembered: 'Saved this permission for “{skill}”.',
+    used: 'Allowed by a permission you saved for “{skill}”.',
+  },
   historyPage: {
     title: 'Agent history',
     search: 'Search conversations',

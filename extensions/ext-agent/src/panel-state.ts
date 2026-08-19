@@ -33,7 +33,7 @@ export const PROSE_KINDS = new Set<AgentEvent['kind']>(['done', 'error', 'handof
  *  injected mid-run instruction is visible in the transcript. (`paused`/`resumed` drive the banner, not a
  *  list row.) */
 export const STEP_KINDS = new Set<AgentEvent['kind']>([
-  'step_start', 'step_ok', 'step_error', 'awaiting_approval', 'input_action', 'steered',
+  'step_start', 'step_ok', 'step_error', 'awaiting_approval', 'input_action', 'steered', 'grant',
 ]);
 
 /** Notice severities for the dynamic notices strip above the composer. */
@@ -94,6 +94,12 @@ export interface GroupState {
    * which is what gets persisted and replayed.
    */
   liveDelta: string;
+  /**
+   * The skill that filled this composer, if any (S9). Sent with the run so main can decide whether a
+   * remembered grant applies. Advisory: main re-checks that the prompt still matches the stored
+   * skill, so this field cannot be used to claim someone else's permissions.
+   */
+  skillId: string | null;
 }
 
 /** How much of the streaming tail to keep. A long turn would otherwise grow the indicator without end. */
@@ -121,6 +127,7 @@ export function emptyGroupState(): GroupState {
     attachments: [],
     expandedFiles: new Set(),
     liveDelta: '',
+    skillId: null,
   };
 }
 
@@ -196,6 +203,7 @@ const EVENT_KIND_LABEL: Record<AgentEvent['kind'], string> = {
   awaiting_approval: 'Awaiting approval',
   input_action: 'Input action',
   handoff: 'Handoff',
+  grant: 'Saved permission',
   paused: 'Paused',
   resumed: 'Resumed',
   steered: 'Steering',
