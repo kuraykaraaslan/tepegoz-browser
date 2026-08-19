@@ -71,7 +71,7 @@ maps to a workstream with **one headline metric** it must move.
 | S6 | [phase-s6-safety-control-plane.md](phase-s6-safety-control-plane.md) | Autonomy-to-main (bug fix), risk tiers, `follow_a_plan` grants, advisory critic, strict-mode, ASR battery, credential broker | S0 (PR1 early); S3 (claim ASR) | 🟡 **PR0–PR3 landed** 2026-08-16 (exam frozen; autonomy defect closed; six derived risk tiers + TR-covering sensitive-site map; plan-scoped grants on proper eTLD+1 — all deterministic, no sweep owed). 🟠 **Measurement-owed** — PR4–PR6 landed 2026-08-19 (advisory critic plane — post-kernel, cannot block, never sees argument values; strict-mode wiring — the C7 setter was unreachable and now has a tested caller + EN/TR toggle; credential broker — the agent has no shape a secret could arrive in, and it refuses every fill until an OS-auth gate exists); PR7 ASR sweep ⏸ funded |
 | S7 | [phase-s7-speed.md](phase-s7-speed.md) | wall-clock/$ targets, adaptive validation, quick-mode encoding, visibility-gated realism | S1, S2 | ⬜ Not started |
 | S8 | [phase-s8-assistant-ux.md](phase-s8-assistant-ux.md) | Streaming narration, live step feed, plan-grant UX, risk-tier approvals, agent-active indicator, backgroundable runs, commerce flow | S1, S6, S4 | ⬜ Not started |
-| S9 | [phase-s9-memory-skills.md](phase-s9-memory-skills.md) | Per-domain advisory memory, skill/shortcut library, per-task remembered grants | S2, S6 | ⬜ Not started (ADR-0027) |
+| S9 | [phase-s9-memory-skills.md](phase-s9-memory-skills.md) | Per-domain advisory memory, skill/shortcut library, per-task remembered grants | S2, S6 | 🟠 **Measurement-owed** — PR0–PR3 + the PR5 store landed 2026-08-19 (write-side poison filter, quarantine-not-delete, advisory-only recall outside the task fence, sync-meta on all three tables; [ADR-0027](../../docs/adr/0027-agent-memory.md) landed; the skills UI + the kernel grant consult are open) |
 | S10 | [phase-s10-vision-escalation.md](phase-s10-vision-escalation.md) | Escalation-only vision (ADR-0008): triggers, budgeted downscale, set-of-marks | S1; gate from S0 | 🟠 **Measurement-owed** — PR0–PR4 landed 2026-08-19 (vision + negative-control fixtures frozen, ASR battery untouched; gate recorded as OPEN — capability ships inert behind `TEPEGOZ_VISION`; deterministic triggers + escalation-rate now measurable per step; token-budgeted downscale + set-of-marks; image blocks attached ONLY on escalation and ONLY past a fail-closed image screen; PR5 sweep ⏸ funded) |
 | S11 | [phase-s11-benchmark-h2h.md](phase-s11-benchmark-h2h.md) | realUrl bridge (≥10 TR) + pre-registered H2H + 4-condition claim | S3 (probe); S6+S4+S9 (claim) | ⬜ Not started |
 | S12 | [phase-s12-local-model.md](phase-s12-local-model.md) | Local-LLM track: off-the-shelf baseline → fine-tune/distill → sovereign/offline | S0 (S12a); S4 (S12b) | ⬜ Not started (ADR-0028) |
@@ -113,6 +113,12 @@ landed code, hiding an anti-debt breach **×3**. Audited against `git log`, the 
 
 **Anti-debt state: 1 measurement-owed (S0) — compliant.** C1's and C7's owed sweeps do not each count
 as separate debt because both are discharged by the *same* S0 full-registry baseline.
+
+**Update 2026-08-19 (later) — S6 and S9 landed too; the count is now 8.** The rule is unchanged and so
+is the reason. What is worth stating again, because it is what makes the breach survivable: **three
+capabilities shipped INERT on purpose** — S10 attaches no image (no screen installed), S6 fills no
+credential (no OS-auth gate), and S9 reads and writes no memory (no host wiring). Each waits for its own
+defence or its own decision, and each says so in its phase doc rather than leaving it to be discovered.
 
 **Update 2026-08-19 — S4 and S10 landed too; the count is now 6.** Same stated breach, same reason, and
 the same protections still hold: no phase reads ✅, no capability flag was promoted to default, and every

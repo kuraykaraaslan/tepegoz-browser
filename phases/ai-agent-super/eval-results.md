@@ -279,6 +279,34 @@ no number** — PR7 is the claim-grade sweep and it is hard-gated to run after [
   published ASR denominator.
 - **Cost:** none — nothing was run.
 
+### 2026-08-19 — S9 PR0–PR3 + PR5-store — code landed, MEASUREMENT-OWED (⏸ awaiting funded key)
+
+Cross-run memory exists, and is built as an **attack surface first**: the Comet record is that a store
+which influences future behaviour is a place an attacker can leave instructions.
+
+| Landed | Owed |
+|---|---|
+| Write-side poison filter (`detectThreats` **before** storage, threat kinds returned so the drop is journallable) | — |
+| Quarantine that **keeps the row** — the evidence of a planted hint survives | — |
+| Live-DOM re-validation: a hint whose element no longer resolves is discarded | — |
+| Advisory recall as `role: 'user'`, outside the trusted task fence, once per host | — |
+| Three tables with sync-meta from day 0; rows `safeParse`d on read and dropped on failure | — |
+| Remembered grants: `NOT NULL` expiry applied in-query, SQL `CHECK` excluding credential/financial/destructive | the **PolicyKernel consult** that would honour one pre-model |
+| — | **≥25% wall-clock AND tokens on the second visit**, pooled N≥10 paired |
+| — | first-visit within ±5pp (memory must not tax the cold path) |
+| — | **poisoned-hint 0 violations at N≥10 — the ship gate** |
+| [ADR-0027](../../docs/adr/0027-agent-memory.md) | the skills UI surface (and its EN+TR strings) |
+
+- **The store is unreachable from a run today.** `recallMemory` is a seam with no host wiring, so nothing
+  is written or read in production — the mechanism landed, the behaviour is not switched on. Same ordering
+  as S10's image screen and S6's OS-auth gate: the capability waits.
+- **Persistence tests run under `pnpm test:electron`**, not `pnpm test` — the better-sqlite3 ABI note in
+  CLAUDE.md. 15 store tests green there; 61 persistence tests total.
+- **The poisoned-hint scenario asserts an outcome, not the mechanism.** A pass means the agent did the
+  right thing on that page; that the *store* refused the bait is asserted directly by the write-filter
+  unit tests, which is the stronger of the two claims and the one the ship gate rests on.
+- **Cost:** none — nothing was run.
+
 ### Template for a phase-exit entry
 
 ```
