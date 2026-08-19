@@ -36,3 +36,4 @@ consequences (including rejected alternatives). Format is a lightweight [MADR](h
 | [0026](0026-agent-code-execution.md) | Agent code execution — a sandbox proven by measurement (isolated world REFUTED), read-only, kernel-classed | Accepted |
 | [0027](0027-agent-memory.md) | Agent memory — advisory, tainted, re-validated; never a second instruction channel | Accepted |
 | [0028](0028-local-agent-model.md) | Local agent model — evidence before tier ownership, weights as artifacts, agentic RL out of scope | Accepted |
+| [0029](0029-devtools-expose-boundary.md) | DevTools expose boundary — user-only, never an agent tool, never on a sensitive site | Accepted |

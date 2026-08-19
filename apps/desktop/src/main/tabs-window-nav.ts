@@ -1,5 +1,6 @@
 import { type Rectangle, type WebContents } from 'electron';
 import { Logger } from '@tepegoz/libs';
+import { mayOpenDevTools, type DevToolsVerdict } from '@tepegoz/security-policy';
 import { internalPageUrl, isWebUrl, toNavigationUrl } from './lib/navigation-url';
 import ClipboardService from './clipboard/clipboard-service.electron';
 import DownloadService from './downloads/download-service.electron';
@@ -103,10 +104,37 @@ export class WindowTabsNav extends WindowTabsMoves {
     ClipboardService.copyImageAt(this.activeView()?.webContents, x, y);
   }
 
-  /** Open DevTools and inspect the element at the given view-relative coordinates (px). */
-  inspectActiveAt(x: number, y: number): void {
+  /**
+   * Open DevTools on the active tab (Phase 2b). The single place DevTools is opened, so the
+   * sensitive-site gate cannot be routed around by a new caller.
+   *
+   * Returns the verdict rather than swallowing it: a shortcut that silently does nothing reads as a
+   * broken browser, and the caller needs to be able to say why.
+   */
+  openDevToolsActive(): DevToolsVerdict {
     const wc = this.activeView()?.webContents;
-    if (wc === undefined) return;
+    if (wc === undefined) return { allowed: false, reason: 'no_page' };
+    const verdict = mayOpenDevTools(wc.getURL());
+    if (!verdict.allowed) {
+      Logger.info('Refused to open DevTools', { reason: verdict.reason });
+      return verdict;
+    }
+    if (wc.isDevToolsOpened()) wc.closeDevTools();
+    else wc.openDevTools();
+    return verdict;
+  }
+
+  /** Open DevTools and inspect the element at the given view-relative coordinates (px). */
+  inspectActiveAt(x: number, y: number): DevToolsVerdict {
+    const wc = this.activeView()?.webContents;
+    if (wc === undefined) return { allowed: false, reason: 'no_page' };
+    // Same gate as the shortcut. "Inspect element" is DevTools with a starting point, not a
+    // different capability, and it was previously the one way onto a bank page with a live console.
+    const verdict = mayOpenDevTools(wc.getURL());
+    if (!verdict.allowed) {
+      Logger.info('Refused to inspect element', { reason: verdict.reason });
+      return verdict;
+    }
     const px = Math.round(x);
     const py = Math.round(y);
     if (wc.isDevToolsOpened()) {
@@ -115,6 +143,7 @@ export class WindowTabsNav extends WindowTabsMoves {
       wc.once('devtools-opened', () => wc.inspectElement(px, py));
       wc.openDevTools();
     }
+    return verdict;
   }
 
   /** Navigate the active tab to the home / start page. */

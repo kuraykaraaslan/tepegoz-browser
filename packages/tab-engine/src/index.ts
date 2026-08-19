@@ -18,3 +18,4 @@ export {
   type TabKind,
   type TabRecord,
 } from './types';
+export * from './task-metrics';

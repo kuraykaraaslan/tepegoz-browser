@@ -76,3 +76,4 @@ export {
   type ExecutionRequest,
 } from './execution-router';
 export { clearsCredentialVault, planSiteClear, type SiteClearContext } from './site-data';
+export { mayOpenDevTools, type DevToolsVerdict } from './devtools-policy';

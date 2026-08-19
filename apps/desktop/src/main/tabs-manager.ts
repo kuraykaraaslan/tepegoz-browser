@@ -1,6 +1,7 @@
 import { type Rectangle, type WebContents } from 'electron';
 import { type TabGroupSettingValue, type TabsState } from '@tepegoz/desktop-ipc';
 import { type TabGroupColor } from '@tepegoz/tab-engine';
+import { type DevToolsVerdict } from '@tepegoz/security-policy';
 import { TabManagerBase } from './tabs-manager-base';
 import { EMPTY_TABS_STATE } from './tabs-shared';
 
@@ -143,8 +144,13 @@ export default class TabManager extends TabManagerBase {
   static copyImageAtActive(x: number, y: number): void {
     TabManager.focused()?.copyImageAtActive(x, y);
   }
-  static inspectActiveAt(x: number, y: number): void {
-    TabManager.focused()?.inspectActiveAt(x, y);
+  static inspectActiveAt(x: number, y: number): DevToolsVerdict {
+    return TabManager.focused()?.inspectActiveAt(x, y) ?? { allowed: false, reason: 'no_page' };
+  }
+
+  /** Toggle DevTools on the active tab (Phase 2b menu + F12). Gated on the sensitive-site list. */
+  static toggleDevTools(): DevToolsVerdict {
+    return TabManager.focused()?.openDevToolsActive() ?? { allowed: false, reason: 'no_page' };
   }
   static goHome(): void {
     TabManager.focused()?.goHome();
