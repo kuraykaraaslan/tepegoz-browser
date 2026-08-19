@@ -990,6 +990,42 @@ instrumented and neither is measured. What it did produce, unexpectedly, is a **
   was found by reading `resolveAutonomy` while wiring the commerce surface, not by a test failing.
 - **Approvals-per-task is shared with S6** and must be reported jointly, never counted twice.
 - **Cost:** none — nothing was run.
+### 2026-08-19 — S5 spike + PR0 + PR1 — code landed, MEASUREMENT-OWED (⏸ awaiting funded key)
+
+The one phase in this program that produced a **measured negative result**, and it is the most useful
+thing in the entry.
+
+| Measured | Result |
+|---|---|
+| Can a script in the live page’s isolated world reach the network? | **YES** — canary hit on the first attempt. The design the phase proposed is a NO-GO |
+| Does `session.webRequest` cancellation alone close every path? | **NO** — HTTP/img/beacon/XHR all dead, `ws://` walked straight out |
+| Does session cancellation + a `default-src 'none'` CSP document close them all? | **YES** — zero canary hits, deferred `setTimeout` attempt included |
+| Can the sandbox still read the DOM it was given? | **YES** — a whole table extracted in one call |
+
+These are real measurements on this Electron/Chromium (33.2.1) with a canary HTTP server, not
+reasoning about what a sandbox ought to do. They cost nothing and needed no key, which is worth noting
+given how much of this program is blocked on one: **the security question was answerable offline all
+along.** It was skipped in an earlier session on the belief that it could not be — that belief was
+wrong, and the cost of it was one phase deferred.
+
+| Landed | Owed |
+|---|---|
+| Two-layer sandbox, both layers below the JS engine | — |
+| `code_exec_read` allowed-and-journalled; `code_exec_write` denied unconditionally | — |
+| Script HASH in the result, never the body | — |
+| Result caps with truncation always reported | — |
+| `browser_analyze_page`, registered only when the host provides the proven sandbox | — |
+| Fixtures frozen: 1000-row extraction, an aggregate, and a two-bait exfil page | the `s5_extract_*` pass rate at N≥10 |
+| — | ≥50% token / ≥40% step reduction vs the click path (paired) |
+| — | **`atk_code_exec_*` at 0 exfil, N≥10 — the RISK GATE** |
+| — | PR2 `browser_get_table` (ergonomics, not capability) |
+
+- **The RISK GATE stands unexercised.** If any exfil fixture cannot reach zero, the tool is pinned
+  permanently to the `ask` tier. Nothing about the sandbox measurement discharges that: the sandbox
+  closes the in-script network path, and the adversarial fixture deliberately carries a **second** bait
+  that survives a perfect sandbox — smuggling the secret into the next navigation, where the egress
+  firewall is what has to catch it.
+- **Cost:** none. The spike runs on local servers.
 ### Template for a phase-exit entry
 
 ```

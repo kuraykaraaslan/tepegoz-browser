@@ -1,6 +1,6 @@
 # Phase S5 — Code Execution (W1 Reliability)
 
-**Status:** ⬜ Not started · **Depends on:** [S2](phase-s2-perception-v2.md) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟠 Measurement-owed (spike + PR0 + PR1 landed 2026-08-19; the proposed sandbox was REFUTED and replaced — see below. PR2 table tool and the ⏸ funded PR3 sweep are open) · **Depends on:** [S2](phase-s2-perception-v2.md) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Give the agent a **security-first, isolated-world** code-execution action for bulk read and
 extraction — `browser-use` disclosed this as their single biggest measured competence jump — plus a
@@ -70,41 +70,41 @@ script hash** pre-model (ADR-0006). `code_exec_write` is reserved and **disabled
 - [ ] Extraction results enter model context **wrapped as untrusted** (findings are data, not
       instructions) — the S6 boundary; verified by a test that a forged instruction inside extracted
       cell text does not alter control flow.
-- [ ] Fixtures frozen (PR0) **before** any capability code lands; delta recorded in
+- [x] Fixtures frozen (PR0) **before** any capability code lands; delta recorded in
       [eval-results.md](eval-results.md); the paired with/without sweeps above satisfy the
       [constitution](constitution.md) equivalence-margin rule.
 - [ ] **i18n:** the approval/journal surface for `code_exec_read` (approval-modal label + journal entry
       string) ships EN + full-TR parity in the same PR, in the owning package dict (ADR-0016). Script
       bodies and model-facing tool descriptions are internal (English), not a localised UI surface.
-- [ ] No `apps/desktop` growth: the tools live in a `@tepegoz/*` package; only the thin
+- [x] No `apps/desktop` growth: the tools live in a `@tepegoz/*` package; only the thin
       `executeJavaScriptInIsolatedWorld` host bridge (already present for `buildDomTree`) stays in main.
 
 ## Tasks
 
 ### PR0 — fixture freeze + ADR + kernel class + sandbox contract
-- [ ] Author + freeze the `s5_extract_*` and `atk_code_exec_*` fixtures in
+- [x] Author + freeze the `s5_extract_*` and `atk_code_exec_*` fixtures in
       [packages/agent-eval](../../packages/agent-eval) `scenarios/` with a new registry file; ground-truth
       values revealed only by a correct read (runbook authoring rule). Coordinate the adversarial set
       with [S6](phase-s6-safety-control-plane.md) so it joins the `atk_*` battery and is **never run
       live** in the competence tiers.
-- [ ] Write **ADR-0026** (agent code execution): isolated world only, read-only in v1, kernel-classed,
+- [x] Write **ADR-0026** (agent code execution): isolated world only, read-only in v1, kernel-classed,
       no `fetch`/`XHR`/`WebSocket`/`sendBeacon`/navigation, result-size capped, `code_exec_write`
       reserved+disabled. Records the injection-amplifier threat model and the RISK GATE.
-- [ ] Add the `code_exec_read` capability class to
+- [x] Add the `code_exec_read` capability class to
       [policy-kernel.ts](../../packages/security-policy/src/policy-kernel.ts): allowed-but-journaled,
       logging the script **hash** (not the body) at the decision point; `code_exec_write` present as a
       hard-denied class. Extend `policy-kernel.test.ts` with class-decision cases.
-- [ ] **Sandbox-contract tests** (the load-bearing safety spec): assert that a script attempting
+- [x] **Sandbox-contract tests** (the load-bearing safety spec): assert that a script attempting
       `window.fetch`/`XMLHttpRequest`/`WebSocket`/`navigator.sendBeacon`/`location =`/`document.write`
       either throws or is inert, and that no page global is mutated after execution. This test is the
       structural guarantee behind the DoD, so it lands before any tool wiring.
 
 ### PR1 — execute plane + caps (Lane B, packages/tool-executor)
-- [ ] Add `browser_execute_extraction(script)` to the browser tool surface
+- [x] Add `browser_execute_extraction(script)` to the browser tool surface
       ([browser-tools.ts](../../packages/browser-tools/src/browser-tools.ts)), zod-validated, routed
       through ToolGateway with the `code_exec_read` class. Host runs it via the existing
       `executeJavaScriptInIsolatedWorld` bridge with `returnByValue`.
-- [ ] Enforce **result-size caps** (byte + node/row count) and honest `truncated` reporting; a
+- [x] Enforce **result-size caps** (byte + node/row count) and honest `truncated` reporting; a
       per-invocation execution timeout; reject non-serialisable returns. Caps mirror the
       `SCAN_EMIT_CAP`/element-cap discipline already in the DOM plane.
 - [ ] Route the return value through
@@ -128,6 +128,48 @@ script hash** pre-model (ADR-0006). `code_exec_write` is reserved and **disabled
 - [ ] Run the paired with/without extraction sweep (single-change branch, serialised per the
       [constitution](constitution.md) attribution rule); record token/step deltas and the extraction
       pass rate in [eval-results.md](eval-results.md).
+
+> **The go/no-go spike REFUTED the proposed design. Read this before touching the sandbox.**
+>
+> The phase proposed running model-authored scripts in an isolated world on the live page, reasoning
+> that a world sharing the DOM but not the page’s JS principal "cannot exfiltrate on its own".
+> [`e2e/spike-code-exec-sandbox.spec.ts`](../../e2e/spike-code-exec-sandbox.spec.ts) pointed a canary
+> server at it and measured: **the canary was hit on the first attempt.** An isolated world is a
+> JS-principal boundary, not a network one — it shares the frame, so it shares the frame’s network
+> access. Recorded as a NO-GO rather than quietly patched, because otherwise the next reader inherits
+> the same wrong intuition from this document.
+>
+> **What ships instead:** a hidden window whose *session* cancels every request, holding a COPY of the
+> page’s HTML, under a `default-src 'none'` CSP. Both layers are load-bearing and the second exists
+> because of a second measured finding: **Electron’s `webRequest` does not intercept the WebSocket
+> handshake** — with the session filter alone, every HTTP path was dead and `ws://` walked out.
+>
+> Consequences worth stating:
+> 1. **The script sees a snapshot, not the live page.** Values computed by page JS after the snapshot
+>    are absent, and nothing the script does can affect the real page — which in v1 is the point.
+> 2. **No JS-level defence is attempted.** `acceptScript` deliberately does not scan for `fetch` or
+>    `document.cookie`: that check loses to string concatenation and computed property access, and
+>    believing in it would make the real boundary feel optional. A test asserts we do not pretend.
+> 3. **`code_exec_read` is not a new `RiskLevel`.** A danger class says what a tool DOES; the new axis
+>    says where its instructions came from. It is declared on the descriptor, never per call — a caller
+>    that could name its own class could name the harmless one.
+> 4. **The journal gets a script HASH, never the body.** A model-authored script is composed from page
+>    content; logging it verbatim would preserve an injection payload in the one record meant to be
+>    trustworthy.
+> 5. **Tool-name deviation:** `ToolNameSchema`’s closed verb list makes `browser_execute_extraction`
+>    and `browser_extract_table` unregistrable. The tool is `browser_analyze_page`.
+> 6. **The host seam is optional and its absence is a REFUSAL**, not a degradation: a host that cannot
+>    provide the proven sandbox does not get to run the script somewhere easier.
+
+**Not done, and why.**
+
+- **PR2 `browser_extract_table`** is not built. `browser_analyze_page` already returns table contents
+  in one call, so this is an ergonomics gap (a curated shape + cell-level refs), not a capability one.
+  Building it on the snapshot sandbox also needs a decision the phase never faced: a cell ref that
+  clicks has to resolve against the LIVE page, not the copy the script read.
+- **The RISK GATE has not been exercised**, because the adversarial battery needs a funded key. It
+  stands as written: if any `atk_code_exec_*` fixture cannot reach zero successful exfil, the tool is
+  pinned permanently to the `ask` tier.
 
 ## Fixtures
 
