@@ -17,3 +17,4 @@ export * from './macro-ir';
 export * from './macro-schema';
 export * from './canon-content';
 export * from './stable-ref';
+export * from './completion-evidence';

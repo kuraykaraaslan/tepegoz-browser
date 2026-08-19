@@ -45,3 +45,4 @@ export {
   type RecoveryAdvice,
 } from './recovery';
 export * from './acceptance-eval';
+export { assembleEvidence, classifyClaim, describeEvidence } from './completion-evidence';

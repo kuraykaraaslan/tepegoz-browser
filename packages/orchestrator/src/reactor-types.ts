@@ -1,6 +1,12 @@
 import type { CanonMessage } from '@tepegoz/model-gateway';
 import type { InvokeContext } from '@tepegoz/capability-plane';
-import type { AgentWorkingState, AIProvider, ToolDescriptor } from '@tepegoz/shared-types';
+import type {
+  AgentWorkingState,
+  AIProvider,
+  CompletionEvidence,
+  CompletionOutcome,
+  ToolDescriptor,
+} from '@tepegoz/shared-types';
 import type { StepOutcome, StopReason } from './executor';
 import type { RunControl } from './run-control';
 import type { AgentFailure } from './recovery';
@@ -37,9 +43,22 @@ export interface CompletionContext {
   trigger: 'claim' | 'periodic';
   /** Compact tail of recent observations, so the validator can judge against real page evidence. */
   recentObservations: readonly string[];
+  /**
+   * Typed evidence assembled from the run's own step results (S4): network verdicts, page checks, and
+   * whether any state-changing action happened at all.
+   *
+   * The point is that the validator stops taking the page's word for it. A `"Saved!"` toast painted over
+   * a 5xx used to PASS, because the only completion signal was visible text.
+   */
+  evidence: CompletionEvidence;
 }
 export interface CompletionVerdict {
   done: boolean;
+  /**
+   * What the evidence supported (S4). `attempted_unverified` and `contradicted` are both not-done, but
+   * they are different facts: one is "I could not confirm it", the other is "the server said no".
+   */
+  outcome?: CompletionOutcome;
   /** The authoritative final answer when `done` — wired to the run summary. */
   finalAnswer?: string;
   /** Why not done (fed back to the actor as guidance to continue). */

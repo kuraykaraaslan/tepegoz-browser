@@ -212,3 +212,85 @@ describe('Planner.replan (C1 PR2 no-progress replanner — advisory boundary)', 
     expect(provider.user).toContain('No observable page-state change'); // the reason
   });
 });
+
+describe('validateCompletion is evidence-authoritative (S4)', () => {
+  /** A validator model that always agrees with the claim — the failure mode S4 exists to defeat. */
+  class AlwaysDone implements ModelProvider {
+    readonly id = 'anthropic' as const;
+    prompt = '';
+    complete(request: CanonRequest): Promise<CanonResponse> {
+      this.prompt = contentToText(request.messages.find((m) => m.role === 'user')?.content ?? '');
+      return Promise.resolve({
+        text: JSON.stringify({ done: true, final_answer: 'Saved successfully.' }),
+        stopReason: 'end',
+        usage: { inputTokens: 1, outputTokens: 1 },
+        toolCalls: [],
+      });
+    }
+  }
+
+  const req = (evidence?: Parameters<typeof Planner.validateCompletion>[0]['evidence']) => ({
+    goal: 'save the address',
+    memory: 'clicked save',
+    claimedSummary: 'The address was saved.',
+    recentObservations: ['Saved! Your shipping address has been updated.'],
+    provider: 'anthropic' as const,
+    model: 'mock',
+    ...(evidence !== undefined ? { evidence } : {}),
+  });
+
+  beforeEach(() => {
+    ModelGateway.reset();
+  });
+
+  it('refuses done when a record CONTRADICTS the claim, however sure the model is', async () => {
+    ModelGateway.register(new AlwaysDone());
+    const verdict = await Planner.validateCompletion(
+      req({
+        mutating: true,
+        items: [{ id: 'n1', kind: 'network', verdict: 'contradicts', detail: 'POST returned 511' }],
+      }),
+    );
+    expect(verdict.done).toBe(false);
+    expect(verdict.outcome).toBe('contradicted');
+  });
+
+  it('downgrades a state-changing claim with nothing supporting it', async () => {
+    ModelGateway.register(new AlwaysDone());
+    const verdict = await Planner.validateCompletion(req({ mutating: true, items: [] }));
+    expect(verdict.done).toBe(false);
+    expect(verdict.outcome).toBe('attempted_unverified');
+  });
+
+  it('lets a supported claim through', async () => {
+    ModelGateway.register(new AlwaysDone());
+    const verdict = await Planner.validateCompletion(
+      req({
+        mutating: true,
+        items: [{ id: 'n1', kind: 'network', verdict: 'supports', detail: 'page changed after the action' }],
+      }),
+    );
+    expect(verdict.done).toBe(true);
+    expect(verdict.outcome).toBe('verified');
+  });
+
+  it('leaves the model in charge when no evidence was supplied (legacy callers unaffected)', async () => {
+    ModelGateway.register(new AlwaysDone());
+    const verdict = await Planner.validateCompletion(req());
+    expect(verdict.done).toBe(true);
+    expect(verdict.outcome).toBeUndefined();
+  });
+
+  it('tells the model what the evidence said, so its WORDING matches the verdict', async () => {
+    const provider = new AlwaysDone();
+    ModelGateway.register(provider);
+    await Planner.validateCompletion(
+      req({
+        mutating: true,
+        items: [{ id: 'n1', kind: 'network', verdict: 'contradicts', detail: 'POST returned 511' }],
+      }),
+    );
+    expect(provider.prompt).toContain('POST returned 511');
+    expect(provider.prompt).toContain('CONTRADICTS this claim');
+  });
+});

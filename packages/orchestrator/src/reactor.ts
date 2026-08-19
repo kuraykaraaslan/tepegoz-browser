@@ -10,6 +10,7 @@ import {
   recoveryAdviceFor,
   stopReasonForFailure,
 } from './recovery';
+import { assembleEvidence } from './completion-evidence';
 import { parseDecision, parseNativeDecision, type Decision } from './reactor-decision';
 import { DECISION_TOOL_NAME, decisionToolDef, resolveDecisionMode } from './reactor-decision-mode';
 import { isToolError, observationOf, observationWithRecovery, stableStringify } from './reactor-observation';
@@ -208,6 +209,7 @@ export default class Reactor {
         memory: latestMemory,
         trigger: 'periodic',
         recentObservations: recentObservations(),
+        evidence: assembleEvidence(outcomes),
       });
       return verdict.done ? { outcomes, stoppedReason: 'completed', summary: verdict.finalAnswer ?? latestMemory } : null;
     };
@@ -220,12 +222,15 @@ export default class Reactor {
      */
     const settleClaim = async (summary: string): Promise<ReactResult | null> => {
       if (validator === undefined) return { outcomes, stoppedReason: 'completed', summary };
+      // S4: the claim is judged against what the run OBSERVED, not against what the page says about
+      // itself. Assembled here because this is the only place that has every step outcome.
       const verdict = await validate({
         goal: req.goal,
         memory: latestMemory,
         claimedSummary: summary,
         trigger: 'claim',
         recentObservations: recentObservations(),
+        evidence: assembleEvidence(outcomes),
       });
       if (verdict.done) return { outcomes, stoppedReason: 'completed', summary: verdict.finalAnswer ?? summary };
       completionRejects += 1;

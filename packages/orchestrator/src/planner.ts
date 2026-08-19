@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { AppError, Logger } from '@tepegoz/libs';
 import { ModelGateway, type CanonMessage, type CanonRequest } from '@tepegoz/model-gateway';
+import type { CompletionEvidence, CompletionOutcome } from '@tepegoz/shared-types';
+import { classifyClaim, describeEvidence } from './completion-evidence';
 import { SECURITY_PREAMBLE, wrapUserRequest } from '@tepegoz/tool-executor';
 import {
   PlanSchema,
@@ -24,6 +26,15 @@ export interface CompletionValidationRequest {
   claimedSummary?: string | undefined;
   /** Compact tail of recent page observations — the ground-truth evidence to judge against. */
   recentObservations: readonly string[];
+  /**
+   * Typed evidence for the claim (S4). Present ⇒ the verdict's *authority* is deterministic: a claim
+   * whose evidence contradicts it, or a state-changing claim with nothing supporting it, is downgraded
+   * in CODE. The model is still asked, but only for the wording.
+   *
+   * Absent ⇒ legacy behaviour (the model decides alone), so callers with no evidence to give are
+   * unaffected.
+   */
+  evidence?: CompletionEvidence | undefined;
   provider: AIProvider;
   model: string;
   maxTokens?: number;
@@ -35,6 +46,12 @@ export interface CompletionValidation {
   done: boolean;
   finalAnswer?: string;
   reason?: string;
+  /**
+   * What the evidence supported, when evidence was supplied (S4). `attempted_unverified` and
+   * `contradicted` both mean `done: false`, but they are different facts and the harness counts them
+   * differently: one is "I could not confirm it", the other is "the server said no".
+   */
+  outcome?: CompletionOutcome;
 }
 
 /** Untrusted-model boundary: the verdict shape the validator must return. */
@@ -190,13 +207,22 @@ export default class Planner {
       'a premature "done" is worse than one more step. When done, put the exact answer the user wanted in ' +
       'final_answer; when not done, put what still remains in reason. ' +
       'Output ONLY JSON: {"done": boolean, "final_answer": string, "reason": string}. No prose, no fences.';
+    // S4: classify FIRST, deterministically. The model never gets to overturn the evidence — asking it to
+    // judge success from a page that may be lying is the exact failure this phase exists to remove.
+    const outcome = req.evidence === undefined ? undefined : classifyClaim(req.evidence);
     const user =
       `GOAL: ${req.goal}\n\n` +
       `Actor progress ledger: ${req.memory.length > 0 ? req.memory : '(none recorded)'}\n` +
       (req.claimedSummary !== undefined && req.claimedSummary.length > 0
         ? `\nThe actor CLAIMS it is done. Its summary: ${req.claimedSummary}\n`
         : '') +
-      `\nRecent page observations:\n${req.recentObservations.length > 0 ? req.recentObservations.join('\n---\n') : '(none)'}`;
+      `\nRecent page observations:\n${req.recentObservations.length > 0 ? req.recentObservations.join('\n---\n') : '(none)'}` +
+      (req.evidence === undefined ? '' : `\n\n${describeEvidence(req.evidence)}`) +
+      (outcome === 'contradicted'
+        ? '\n\nA record CONTRADICTS this claim. The action did not take effect. Say so plainly, and name what failed.'
+        : outcome === 'attempted_unverified'
+          ? '\n\nNothing confirms the state-changing action in this run. Do NOT claim it succeeded; say it was attempted and could not be confirmed.'
+          : '');
 
     const canon: CanonRequest = {
       provider: req.provider,
@@ -224,7 +250,12 @@ export default class Planner {
       Logger.warn(PlannerMessages.MalformedValidation, { raw: response.text.slice(0, 400), issues: parsed.error.issues });
       throw new AppError(PlannerMessages.MalformedValidation, 502);
     }
-    const verdict: CompletionValidation = { done: parsed.data.done };
+    // The model supplied wording; the verdict's authority is the evidence. A claim the evidence does
+    // not support cannot be talked into `done`.
+    const verdict: CompletionValidation = {
+      done: outcome === undefined ? parsed.data.done : outcome === 'verified' && parsed.data.done,
+    };
+    if (outcome !== undefined) verdict.outcome = outcome;
     if (parsed.data.final_answer !== undefined && parsed.data.final_answer.length > 0) {
       verdict.finalAnswer = parsed.data.final_answer;
     }

@@ -1,6 +1,6 @@
 # Phase S4 — Verified Outcomes (W1 Reliability)
 
-**Status:** 🟡 In progress (PR0 landed 2026-08-19) · **Depends on:** [S1](phase-s1-foundation-native-loop.md) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟡 In progress (PR0–PR1 landed 2026-08-19) · **Depends on:** [S1](phase-s1-foundation-native-loop.md) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Make the completion validator believe **evidence**, not the page's own success message, so
 fabricated-success ≈ 0 — north-star condition 3, a metric no rival publishes. A completion claim must
@@ -40,7 +40,7 @@ even with a funded key.
 
 ## Exit criteria (DoD)
 
-- [ ] `Planner.validateCompletion` consumes **typed evidence** (network-recorder verdicts,
+- [x] `Planner.validateCompletion` consumes **typed evidence** (network-recorder verdicts,
       `browser_validate_page` result, URL-match) and a completion claim that cannot cite an evidence id
       is returned as `attempted_unverified`, not `verified` — enforced by zod `safeParse` on the typed
       evidence bundle at the boundary.
@@ -97,20 +97,36 @@ even with a funded key.
 
 ### PR1 — evidence-typed `validateCompletion`
 
-- [ ] Define a `CompletionEvidence` schema in [@tepegoz/shared-types](../../packages/shared-types/) —
+- [x] Define a `CompletionEvidence` schema in [@tepegoz/shared-types](../../packages/shared-types/) —
       the sole schema source — carrying `{ networkVerdicts[], validatePageResults[], urlMatch }` with
       stable evidence ids; zod `safeParse` at the planner boundary.
-- [ ] Extend `CompletionValidationRequest` / `validateCompletion` in
+- [x] Extend `CompletionValidationRequest` / `validateCompletion` in
       [planner.ts](../../packages/orchestrator/src/planner.ts) to take the typed evidence bundle; a
       claim that cites no evidence id (or cites one whose verdict is a failure) returns
       `attempted_unverified`. Keep the model call for **wording**, not for the verdict — the downgrade is
       deterministic.
-- [ ] Wire the bundle at the `settleClaim` site in
+- [x] Wire the bundle at the `settleClaim` site in
       [reactor.ts](../../packages/orchestrator/src/reactor.ts): collect the recorder verdicts
       ([network-verify.ts](../../packages/browser-tools/src/network-verify.ts) selectors) since the last
       mutating action + the latest `browser_validate_page` result + current tab URL, pass them in.
-- [ ] File-cap: split the evidence-assembly helper into its own ≤250-line module rather than growing
+- [x] File-cap: split the evidence-assembly helper into its own ≤250-line module rather than growing
       `reactor.ts`.
+
+> **Mechanism notes (PR1).**
+> 1. The classification runs **before** the model call and the model cannot overturn it: `done` is
+>    `outcome === 'verified' && modelSaidDone`. Asking a model to judge success from a page that may be
+>    lying is precisely the failure this phase removes, so the model is left with the *wording* only.
+> 2. Evidence is assembled from observations the loop **already had** — `networkWarning` on an
+>    interaction, the result of a page check — which until now were prose the model might or might not
+>    heed. No new capture path was needed.
+> 3. `mutating` is carried explicitly so a **pure read task is not punished** for having nothing to
+>    verify. Without it, requiring evidence would downgrade every honest read to *unverified* and the
+>    metric would measure the wrong thing.
+> 4. **Absence of evidence yields `attempted_unverified`, never `verified`** — including when the bundle
+>    fails `safeParse`. Failing open here would reintroduce the fabricated success the phase exists to
+>    remove; the DoD gate is on fabricated-success = 0, and this bias is what protects it.
+> 5. `contradicted` and `attempted_unverified` are kept as **distinct outcomes** even though both mean
+>    not-done: one is "the server said no", the other "I could not confirm it", and PR3 counts them apart.
 
 ### PR2 — deterministic URL re-verify pre-dispatch
 

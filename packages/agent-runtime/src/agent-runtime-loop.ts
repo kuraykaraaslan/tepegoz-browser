@@ -109,12 +109,15 @@ export function runReactiveLoop(args: {
         // Planner-as-validator (AI-3): the actor's `finish` is only a claim — a periodic Planner pass is
         // the sole completion authority, so a premature give-up is challenged and the run continues. The
         // validator call goes through ModelGateway, so the Egress-Firewall inspector + TokenLedger apply.
+        // S4: the typed evidence rides along, so the verdict's AUTHORITY is deterministic — a claim the
+        // run's own observations contradict cannot be talked into `done` by a page that says otherwise.
         validateCompletion: (ctx) =>
           Planner.validateCompletion({
             goal: ctx.goal,
             memory: ctx.memory,
             claimedSummary: ctx.claimedSummary,
             recentObservations: ctx.recentObservations,
+            evidence: ctx.evidence,
             provider: execRoute.provider,
             model: execRoute.model,
             maxTokens,
