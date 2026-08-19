@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { test, expect, _electron as electron, type ElectronApplication } from '@playwright/test';
+import { pollEvaluate } from './poll-evaluate';
 
 /**
  * SPIKE (go/no-go, S5 PR0): **can a model-authored script be run against page content without giving it
@@ -163,11 +164,13 @@ test('ARM A: a script in the live page’s isolated world REACHES the network (t
     await expect
       .poll(
         () =>
-          app
-            .evaluate(({ webContents }) =>
-              webContents.getAllWebContents().map((w) => w.getURL()).join(' '),
-            )
-            .catch(() => ''),
+          pollEvaluate(
+            () =>
+              app.evaluate(({ webContents }) =>
+                webContents.getAllWebContents().map((w) => w.getURL()).join(' '),
+              ),
+            '',
+          ),
         { timeout: 20_000 },
       )
       .toContain(page.origin);

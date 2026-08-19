@@ -5,6 +5,7 @@ import type { AddressInfo } from 'node:net';
 import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
 import { test, expect, _electron as electron, type ElectronApplication } from '@playwright/test';
+import { pollEvaluate } from './poll-evaluate';
 
 const electronPath = createRequire(import.meta.url)('electron') as string;
 
@@ -49,24 +50,6 @@ interface ProbeResult {
 }
 
 /** In the MAIN process: capture + hit-test the WebContents whose URL contains `needle`. */
-/**
- * Run a main-process evaluate, treating a torn-down execution context as "not yet" rather than as a
- * failure.
- *
- * `app.evaluate` rejects with "Execution context was destroyed" when a navigation lands mid-call, and
- * inside `expect.poll` that rejection ends the whole poll instead of retrying it. Since a poll exists
- * precisely to wait for a state that has not settled, a transient teardown is the normal case, not an
- * error — this made the kiosk assertion fail roughly one run in three. Real failures still surface:
- * the poll keeps retrying and times out with the last value.
- */
-async function pollEvaluate<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
-  try {
-    return await fn();
-  } catch {
-    return fallback;
-  }
-}
-
 async function probe(app: ElectronApplication, needle: string): Promise<ProbeResult> {
   return pollEvaluate(() => app.evaluate(async ({ webContents }, urlNeedle: string): Promise<ProbeResult> => {
     const wc = webContents.getAllWebContents().find((w) => w.getURL().includes(urlNeedle));
@@ -236,10 +219,15 @@ test('--background arg launches PARKED (off-screen), no pref needed', async () =
     await expect
       .poll(
         () =>
-          app.evaluate(({ BrowserWindow }) => {
-            const win = BrowserWindow.getAllWindows().find((w) => w.getParentWindow() === null);
-            return win?.getPosition()?.[0] ?? 0;
-          }),
+          pollEvaluate(
+            () =>
+              app.evaluate(({ BrowserWindow }) => {
+                const win = BrowserWindow.getAllWindows().find((w) => w.getParentWindow() === null);
+                return win?.getPosition()?.[0] ?? 0;
+              }),
+            // 0 is "on screen", i.e. not-yet-parked — the correct "keep polling" answer here.
+            0,
+          ),
         { timeout: 8000 },
       )
       .toBeLessThan(-10000); // --background alone (no pref) parks off-screen
@@ -282,10 +270,15 @@ test('TEPEGOZ_START_BACKGROUND=1 env launches PARKED (the reliable pnpm-dev trig
     await expect
       .poll(
         () =>
-          app.evaluate(({ BrowserWindow }) => {
-            const win = BrowserWindow.getAllWindows().find((w) => w.getParentWindow() === null);
-            return win?.getPosition()?.[0] ?? 0;
-          }),
+          pollEvaluate(
+            () =>
+              app.evaluate(({ BrowserWindow }) => {
+                const win = BrowserWindow.getAllWindows().find((w) => w.getParentWindow() === null);
+                return win?.getPosition()?.[0] ?? 0;
+              }),
+            // 0 is "on screen", i.e. not-yet-parked — the correct "keep polling" answer here.
+            0,
+          ),
         { timeout: 8000 },
       )
       .toBeLessThan(-10000); // env var alone parks off-screen

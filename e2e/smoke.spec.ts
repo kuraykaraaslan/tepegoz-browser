@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { test, expect, _electron as electron, type ElectronApplication } from '@playwright/test';
+import { pollEvaluate } from './poll-evaluate';
 
 /**
  * Launch the app DIRECTORY, not `out/main/index.js`.
@@ -66,8 +67,12 @@ test('the app launches a browser window with chrome and a loaded tab', async () 
     await expect
       .poll(
         () =>
-          app.evaluate(({ webContents }) =>
-            webContents.getAllWebContents().map((w) => w.getURL()).join(' '),
+          pollEvaluate(
+            () =>
+              app.evaluate(({ webContents }) =>
+                webContents.getAllWebContents().map((w) => w.getURL()).join(' '),
+              ),
+            '',
           ),
         { timeout: 20_000 },
       )
