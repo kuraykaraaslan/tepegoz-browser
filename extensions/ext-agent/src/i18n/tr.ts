@@ -118,6 +118,15 @@ export const tr: AgentStrings = {
     remembered: '“{skill}” için bu izin kaydedildi.',
     used: '“{skill}” için kaydettiğin izinle yapıldı.',
   },
+  commerce: {
+    confirm: 'Bunun para harcayabileceğini anlıyorum',
+    caution: 'Otomatik satın alma hukuken tartışmalı (Amazon - Perplexity davası). Bazı siteler şartlarında bunu yasaklıyor; güvenmeden önce kontrol et.',
+  },
+  scope: {
+    grant: 'Bu görev bitene kadar {host} üzerinde buna izin ver',
+    hint: 'Yalnızca bu site ve bu tür işlem için, yalnızca bu görev sürerken. Para, parola ve silme işlemleri her zaman sorar.',
+  },
+  planGrant: 'Onaylamak, bu planın adı geçen sitelerdeki rutin adımlarını yalnızca bu görev için kapsar. Para, parola ve silme işlemleri yine her seferinde sorar.',
   historyPage: {
     title: 'Ajan geçmişi',
     search: 'Konuşmalarda ara',

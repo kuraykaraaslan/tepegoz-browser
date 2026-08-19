@@ -120,6 +120,21 @@ export const en = {
     remembered: 'Saved this permission for “{skill}”.',
     used: 'Allowed by a permission you saved for “{skill}”.',
   },
+  // Commerce gate (S8 PR6). A purchase is the one approval where a reflex click is expensive and
+  // irreversible, so it asks for a second, deliberate gesture — and says WHY, once, without blocking.
+  commerce: {
+    confirm: 'I understand this can spend money',
+    caution: 'Automated purchasing is contested legally (Amazon v. Perplexity). Some sites prohibit it in their terms — check before you rely on it.',
+  },
+  // Scope granted at an approval (S8). The wording names the SITE and the run, because a permission
+  // whose edges the user cannot see is one they cannot judge.
+  scope: {
+    grant: 'Allow this on {host} for the rest of this task',
+    hint: 'Only this site and this kind of action, and only until this task ends. Money, passwords and deletions always ask.',
+  },
+  // What approving a plan actually buys — stated on the modal, because an approval whose consequences
+  // are invisible is not informed consent.
+  planGrant: 'Approving covers the routine steps of this plan on the sites it names, for this task only. Money, passwords and deletions still ask every time.',
   historyPage: {
     title: 'Agent history',
     search: 'Search conversations',

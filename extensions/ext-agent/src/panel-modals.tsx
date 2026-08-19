@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Modal } from '@tepegoz/ui';
+import { Modal, cn } from '@tepegoz/ui';
 import type { Resources } from '@tepegoz/i18n';
 import type { AgentStrings } from './i18n';
 import type { AgentApprovalRequest, AgentPlanPreview, RiskTier } from './types';
@@ -28,7 +28,7 @@ interface PanelModalsProps {
   skipIds: Set<string>;
   onRespondPlan: (approved: boolean) => void;
   onToggleStep: (id: string) => void;
-  onRespond: (approved: boolean, remember?: boolean) => void;
+  onRespond: (approved: boolean, remember?: boolean, grantScope?: boolean) => void;
 }
 
 export function PanelModals({
@@ -43,8 +43,13 @@ export function PanelModals({
 }: PanelModalsProps) {
   // Reset per approval id: a tick meant for one prompt must never carry into the next.
   const [remember, setRemember] = useState(false);
+  // A purchase asks for a second, deliberate gesture. Reset per approval id like `remember`: a tick
+  // meant for one payment must never carry into the next one.
+  const [moneyOk, setMoneyOk] = useState(false);
+  const [scopeOk, setScopeOk] = useState(false);
   const approvalId = approval?.approvalId ?? null;
-  useEffect(() => { setRemember(false); }, [approvalId]);
+  useEffect(() => { setRemember(false); setMoneyOk(false); setScopeOk(false); }, [approvalId]);
+  const isPurchase = approval?.riskTier === 'financial';
 
   return (
     <>
@@ -52,6 +57,10 @@ export function PanelModals({
       {planPreview !== null && (
         <Modal open onClose={() => onRespondPlan(false)} title={a.planTitle} ariaLabel={a.planTitle} size="md" closeOnBackdrop={false}>
           <p className="mt-1 text-xs text-text-secondary">{a.planBody}</p>
+          {/* What approving actually buys. An approval whose consequences are invisible is not consent. */}
+          <p className="mt-2 rounded border border-border bg-surface-overlay px-2 py-1.5 text-xs text-text-secondary">
+            {a.planGrant}
+          </p>
           {planPreview.goal.length > 0 && <p className="mt-2 text-sm text-text-primary">{planPreview.goal}</p>}
           <ul className="mt-3 space-y-1.5 overflow-auto">
             {planPreview.steps.map((step, i) => (
@@ -101,6 +110,24 @@ export function PanelModals({
             {approval.argsPreview}
           </pre>
           {approval.biometric && <p className="mt-2 text-xs text-amber-600">{a.biometricNote}</p>}
+          {/* Commerce: an informational caution, not a blocker — the legal position is contested, and
+              telling the user once is honest where refusing outright would be us deciding for them. */}
+          {isPurchase && (
+            <>
+              <p className="mt-3 rounded border border-amber-500/40 bg-amber-500/10 px-2 py-1.5 text-xs text-text-secondary">
+                {a.commerce.caution}
+              </p>
+              <label className="mt-2 flex cursor-pointer items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={moneyOk}
+                  onChange={(e) => { setMoneyOk(e.target.checked); }}
+                  className="mt-0.5"
+                />
+                <span className="text-sm text-text-primary">{a.commerce.confirm}</span>
+              </label>
+            </>
+          )}
           {/* Offered only when main says a grant here would be honoured — see `rememberSkill`. Off by
               default: a pre-ticked box is a permission taken, not given. */}
           {approval.rememberSkill !== undefined && (
@@ -121,9 +148,34 @@ export function PanelModals({
               </span>
             </label>
           )}
+          {/* One-tap run scope. Offered only when main says a grant here would be honoured, so the
+              control simply is not there for money, secrets or deletion. */}
+          {approval.scopeHost !== undefined && (
+            <label className="mt-3 flex cursor-pointer items-start gap-2">
+              <input
+                type="checkbox"
+                checked={scopeOk}
+                onChange={(e) => { setScopeOk(e.target.checked); }}
+                className="mt-0.5"
+              />
+              <span className="min-w-0">
+                <span className="block text-sm text-text-primary">
+                  {a.scope.grant.replace('{host}', approval.scopeHost)}
+                </span>
+                <span className="block text-xs text-text-secondary">{a.scope.hint}</span>
+              </span>
+            </label>
+          )}
           <div className="mt-4 flex justify-end gap-2">
             <button type="button" onClick={() => onRespond(false)} className={BTN_GHOST}>{a.deny}</button>
-            <button type="button" onClick={() => onRespond(true, remember)} className={BTN_PRIMARY}>{a.approve}</button>
+            <button
+              type="button"
+              onClick={() => onRespond(true, remember, scopeOk)}
+              disabled={isPurchase && !moneyOk}
+              className={cn(BTN_PRIMARY, isPurchase && !moneyOk ? "opacity-40" : "")}
+            >
+              {a.approve}
+            </button>
           </div>
         </Modal>
       )}

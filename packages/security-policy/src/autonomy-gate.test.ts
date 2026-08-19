@@ -29,6 +29,7 @@ describe('resolveAutonomy — autonomy can only skip a prompt, never widen permi
     expect(resolveAutonomy(ask(false), 'auto').decision).toBe('auto_approve');
   });
 
+
   it('treats the reserved `dangerous` level as `ask`, not as an escalation', () => {
     expect(resolveAutonomy(ask(false), 'dangerous').decision).toBe('prompt');
     expect(resolveAutonomy(ask(true), 'dangerous').decision).toBe('prompt');
@@ -78,9 +79,20 @@ describe('resolveAutonomy with a derived risk tier (S6-PR2)', () => {
     expect(resolveAutonomy(ask(true), 'act').decision).toBe('prompt');
   });
 
-  it('does not change what `auto` means — that is the level the user chose', () => {
-    for (const tier of ['credential', 'financial', 'destructive'] as const) {
-      expect(resolveAutonomy(ask(false), 'auto', tier).decision).toBe('auto_approve');
+  it('holds MONEY even under `auto` — the one tier `auto` was a door around (S8)', () => {
+    // Supersedes the S6-PR2 rule that `auto` changes nothing: nothing else in the system may cover
+    // the financial tier — not a plan grant, not a remembered grant, not `act` — so a single setting
+    // must not be the exception. Narrowed to commerce, which is the case the owner ruled on.
+    const r = resolveAutonomy(ask(true), 'auto', 'financial');
+    expect(r.decision).toBe('prompt');
+    expect(r.reason).toBe('autonomy_auto_financial_held');
+  });
+
+  it('leaves the REST of `auto` exactly as the user chose it', () => {
+    // Deliberately unchanged, including credential and destructive. Widening beyond the owner
+    // decision would be taking a call that is theirs — phase-s8-assistant-ux.md asks for it.
+    for (const tier of ['credential', 'destructive', 'ui-write', 'data-egress', 'read'] as const) {
+      expect(resolveAutonomy(ask(false), 'auto', tier).decision, `tier=${tier}`).toBe('auto_approve');
     }
   });
 

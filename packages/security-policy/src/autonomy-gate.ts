@@ -17,6 +17,10 @@ import type { PolicyResult } from './policy-kernel';
  *    gateway fails closed before confirmation — and `allow` never needed a prompt in the first place.
  * 2. **Biometric survives every level except explicit `auto`.** Whatever the kernel marked as needing
  *    Windows-Hello-grade confirmation stays in front of a human under `act`.
+ * 3. **`financial` survives EVERY level, `auto` included.** No grant may cover that tier anywhere else
+ *    in the system, so a single autonomy setting must not be the one door around it. `auto` still means
+ *    "do the routine work without asking" — it never meant "spend my money without asking", and reading
+ *    one as the other grants a permission nobody made.
  *
  * Unknown values fail safe to `prompt`: this is called with a value read from a preference store, so
  * a stale or tampered level must degrade to *more* friction, never less.
@@ -42,6 +46,20 @@ export function resolveAutonomy(
 
   switch (autonomy) {
     case 'auto':
+      // Money stops for a human at EVERY level, including this one (S8 owner decision, commerce).
+      // `auto` used to approve a payment unconditionally, which made it the single path in the
+      // codebase around a tier nothing else may cover: plan grants cannot, remembered grants cannot,
+      // `act` holds it, and the kernel marks it biometric. "Do the routine work without asking" is
+      // what a user chooses `auto` for; "spend my money without asking" is a different choice, and
+      // reading one as the other grants a permission nobody made.
+      //
+      // Deliberately narrowed to `financial`. S6-PR2 decided `auto` should mean what the user chose
+      // and encoded that in a test; S8 overrides it for commerce specifically, which is the case the
+      // owner ruled on. `credential` and `destructive` are still auto-approved under `auto` — see the
+      // note in phase-s8-assistant-ux.md, which asks for that decision rather than assuming it.
+      if (tier === 'financial') {
+        return { decision: 'prompt', reason: 'autonomy_auto_financial_held' };
+      }
       return { decision: 'auto_approve', reason: 'autonomy_auto' };
     case 'act':
       // High-risk (destructive / financial / tainted side-effect) still stops for a human.
