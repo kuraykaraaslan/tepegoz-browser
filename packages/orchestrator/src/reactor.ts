@@ -67,6 +67,20 @@ export type {
  *  not wait past this) so a user cancel never blocks on discovery. */
 const NAV_GROUNDING_BUDGET_MS = 8000;
 
+/** The host of the page a step landed on, or null when the outcome says nothing about a page. Used to
+ *  recall cross-run notes once per site rather than once per step. */
+function urlFromOutcome(outcome: StepOutcome): string | null {
+  const result = outcome.result;
+  if (result === null || typeof result !== 'object') return null;
+  const url = (result as { url?: unknown }).url;
+  if (typeof url !== 'string' || url.length === 0) return null;
+  try {
+    return new URL(url).host;
+  } catch {
+    return null;
+  }
+}
+
 /** Read a live abort signal without control-flow narrowing (the signal mutates between reads, so an earlier
  *  `=== true` guard must not narrow a later check to `false`). */
 function signalAborted(signal: { readonly aborted: boolean } | undefined): boolean {
@@ -189,6 +203,8 @@ export default class Reactor {
     let lastOutcome: CompletionOutcome | undefined;
     // S10: every escalation this run judged, so the rate can be reported.
     const visionEscalations: VisionEscalation[] = [];
+    // S9: the host whose notes have already been injected this run.
+    let recalledHost: string | null = null;
     const validate = async (ctx: CompletionContext): Promise<CompletionVerdict> => {
       if (validator === undefined) return { done: false };
       try {
@@ -505,6 +521,19 @@ export default class Reactor {
         : { stepId: `r${String(step)}`, tool: decision.tool, args: decision.args, ok: true, result, durationMs };
       outcomes.push(outcome);
       options.onOutcome?.(outcome);
+
+      // S9: the page may have changed host. Recall is per HOST and once each — re-injecting the same
+      // notes every step would spend the token budget memory exists to save.
+      const arrivedAt = urlFromOutcome(outcome);
+      if (options.recallMemory !== undefined && arrivedAt !== null && arrivedAt !== recalledHost) {
+        recalledHost = arrivedAt;
+        const recalled = await options.recallMemory(arrivedAt).catch((err: unknown) => {
+          // Memory is advisory: a failed recall is a quieter run, never a failed one.
+          Logger.warn('[s9] memory recall failed; continuing without it', { err: String(err) });
+          return null;
+        });
+        if (recalled !== null && recalled.length > 0) pushObservation(recalled);
+      }
 
       // S10 PR2: is this step BLIND — i.e. would a correct DOM read still leave nothing to act on?
       // Deterministic and pre-model, and observation-only: nothing is captured, and nothing is injected

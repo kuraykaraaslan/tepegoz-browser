@@ -158,6 +158,19 @@ export interface ReactOptions {
    */
   onVisionEscalation?: (escalation: VisionEscalation) => void;
   /**
+   * S9: advisory cross-run memory for the page the run has arrived at. Returns the already-sanitized
+   * hint block, or null/'' for nothing to say.
+   *
+   * The host does retrieval AND live-DOM re-validation, so a hint whose element no longer exists never
+   * reaches here — staleness degrades to "no hint", never to a wrong action. What comes back is injected
+   * as an ORDINARY OBSERVATION (`role: 'user'`, outside the trusted task fence), so it can inform a
+   * decision but can never be one: every action it might suggest still goes through the ToolGateway PEP
+   * exactly like a fresh model decision.
+   *
+   * Absent ⇒ no memory, which is the default.
+   */
+  recallMemory?: (url: string) => Promise<string | null>;
+  /**
    * S10 PR4: capture + screen + annotate an image for THIS escalation, returning the content blocks to
    * show the model, or null to stay text-only.
    *
