@@ -1026,6 +1026,35 @@ wrong, and the cost of it was one phase deferred.
   that survives a perfect sandbox — smuggling the secret into the next navigation, where the egress
   firewall is what has to catch it.
 - **Cost:** none. The spike runs on local servers.
+### 2026-08-19 — S11 + S12 — code landed, MEASUREMENT-OWED
+
+Two phases whose deliverable is the **ability to make a claim**, not a claim.
+
+**S11 — live-web bridge.** `grep realUrl` over the registry returned nothing before this: there was no
+live-web stratum, so no claim could be phrased at all.
+
+| Landed | Owed |
+|---|---|
+| 30 live-web tasks, 10 Turkish-web, 7 held out, rubric-scored | the funded run that scores them |
+| ~⅓ freshness probes (today’s HN top story, today’s Resmî Gazete, the TCMB rate) | — |
+| `bridgeClaim` — refuses `publishable` below 25 human labels, on uncomputed agreement, or on an empty stratum | **the 25 human labels** (they need real run artifacts) |
+| First-run target judged on the Wilson **lower bound**; missing it does not block publishing | — |
+| [h2h-protocol.md](h2h-protocol.md) pre-registered: 12-task subset, N≥3, same week, blind, ToS section, falsification section | the H2H run (⏸ funded + rival subscriptions) |
+
+**S12 — local model.** The plumbing existed; the evidence never did.
+
+| Landed | Owed |
+|---|---|
+| An ownership ledger that starts EMPTY and cannot be filled without a ±5pp measurement over ≥10 trials | every one of those measurements |
+| 5 local-tier scenarios re-using existing pages (same exam, different provider) | the local-vs-cloud sweep |
+| [ADR-0028](../../docs/adr/0028-local-agent-model.md): S4-verified training data only, weights as artifacts, contamination check as ship blocker, agentic RL out of scope | — |
+
+- **S12 is NOT blocked on the funded key.** It needs downloaded weights and local compute. Distinguishing
+  the two blockers matters: one of them the owner can clear without spending anything on tokens.
+- **Two S12 PR1 items were found already done** (the GBNF binding, the on-device provider registration)
+  and are recorded as found rather than claimed as built. The real gap is narrower and sharper: the
+  reactor asks for `capability: 'exec'`, which no local route serves.
+- **Cost:** none. Nothing was run in either phase.
 ### Template for a phase-exit entry
 
 ```

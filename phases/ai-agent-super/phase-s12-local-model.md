@@ -1,6 +1,6 @@
 # Phase S12 — Local Model, train-if-needed (W3 Speed)
 
-**Status:** ⬜ Not started · **Depends on:** [S0](phase-s0-truth-and-repair.md) (S12a baseline), [S4](phase-s4-verified-outcomes.md) (S12b honest trajectory labels) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟠 Measurement-owed (PR0 + the ownership ledger + ADR-0028 landed 2026-08-19; S12a’s sweeps need downloaded weights — a DIFFERENT blocker from the funded key. S12b stays DEFERRED by design) · **Depends on:** [S0](phase-s0-truth-and-repair.md) (S12a baseline), [S4](phase-s4-verified-outcomes.md) (S12b honest trajectory labels) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Give the agent a real local-model tier — first off-the-shelf with **no training**, then fine-tune/distill **only if** the evidence shows a closable gap — for a **$0/task** cost floor and an offline/sovereign mode, honestly tiered so nothing over-promises. Three sub-phases, each a gate that must **fail** before the next opens: S12a (measure open-weights GGUF as-is + wire the local provider into the real decision path), S12b (SFT/distil an agent-specialised SLM from the program's own S4-verified trajectories — only if S12a leaves a gap), S12c (package the winner as a sovereign BYO-key-free provider). Scope honesty is binding: SFT/distillation only; frontier-grade agentic RL is **explicitly out of scope**, routed to a future phase.
 
@@ -34,7 +34,7 @@ Because S12 is three gated sub-phases, the DoD is partitioned. S12a is `local` (
 - [ ] Training runs **offline / out-of-repo**; weights land only as a **downloaded [model-catalog](../../packages/model-catalog/src/catalog.model.ts) artifact**, sha256-verified — **never committed** (enforces the [Never list](README.md#never-inherited--program-additions)).
 - [ ] The fine-tuned SLM **beats the S12a off-the-shelf baseline** on the target tier at pooled **N≥10** with Wilson CIs, published $/task + provenance **(⏸ funded sweep — the teacher/cloud comparison arm needs the frontier key; the local-vs-local arm is a local sweep)**.
 - [ ] **SHIP GATE — eval-contamination check:** a held-out fixture set that is provably **never in training** confirms no data-poisoning / memorisation; a fixture appearing in both training and eval **blocks the ship**.
-- [ ] Scope honesty asserted in the ADR: SFT/distillation only; **agentic RL explicitly out of scope**.
+- [x] Scope honesty asserted in the ADR: SFT/distillation only; **agentic RL explicitly out of scope**.
 
 **S12c — sovereign / offline mode**
 - [ ] The winning local config is a **first-class provider option** in the gateway ([`models.ts`](../../packages/model-gateway/src/models.ts) / [`model-router.ts`](../../packages/model-gateway/src/model-router.ts)), selectable **BYO-key-free**.
@@ -42,7 +42,7 @@ Because S12 is three gated sub-phases, the DoD is partitioned. S12a is `local` (
 - [ ] A **defined task subset** completes **fully offline** at a published success rate; cost floor = **$0/task** on that subset **(local sweep)**.
 
 **Constitution items (every sub-phase)**
-- [ ] Exam fixtures **frozen in PR0 before** any capability/provider code lands (fixture-freeze rule).
+- [x] Exam fixtures **frozen in PR0 before** any capability/provider code lands (fixture-freeze rule).
 - [ ] Each measured delta recorded in [`eval-results.md`](eval-results.md) per the recording contract (tier, N, exclusions, CIs, $/wall-clock).
 - [ ] Any prose deletion is paired with a **with/without sweep** at pooled N with a stated equivalence margin (S12 owns **no** [PROSE-LEDGER](PROSE-LEDGER.md) rows — see below; this line applies only if a routing change incidentally retires a steer).
 - [ ] i18n **EN + full TR parity in the same PR** for any UI surface (S12c sovereign-mode provider picker copy).
@@ -50,13 +50,13 @@ Because S12 is three gated sub-phases, the DoD is partitioned. S12a is `local` (
 ## Tasks
 
 ### PR0 — fixture freeze (local-tier exam)
-- [ ] Add the S12 scenario families to [`packages/agent-eval`](../../packages/agent-eval/src/scenario-registry.ts) (see [Fixtures](#fixtures)); register in [`scenario-registry.ts`](../../packages/agent-eval/src/scenario-registry.ts), freeze before any provider-wiring code. Reuse [`statistics.ts`](../../packages/agent-eval/src/statistics.ts) family pooling + Wilson CIs and [`harness-config.ts`](../../packages/agent-eval/src/harness-config.ts) knobs; **no new scorer** — reuse [`scorer.ts`](../../packages/agent-eval/src/scorer.ts).
-- [ ] Add a `local` run tier to [`harness-run.ts`](../../packages/agent-eval/src/harness-run.ts) accounting so `local` sweeps are labelled distinctly from `funded`/`scripted` in the ledger.
+- [x] Add the S12 scenario families to [`packages/agent-eval`](../../packages/agent-eval/src/scenario-registry.ts) (see [Fixtures](#fixtures)); register in [`scenario-registry.ts`](../../packages/agent-eval/src/scenario-registry.ts), freeze before any provider-wiring code. Reuse [`statistics.ts`](../../packages/agent-eval/src/statistics.ts) family pooling + Wilson CIs and [`harness-config.ts`](../../packages/agent-eval/src/harness-config.ts) knobs; **no new scorer** — reuse [`scorer.ts`](../../packages/agent-eval/src/scorer.ts).
+- [x] Add a `local` run tier to [`harness-run.ts`](../../packages/agent-eval/src/harness-run.ts) accounting so `local` sweeps are labelled distinctly from `funded`/`scripted` in the ledger.
 
 ### PR1 — S12a: wire the local provider into the real decision path (Lane C, no reactor collision)
 - [ ] Replace the `local-slm` **placeholder** in [`models.ts:77-79`](../../packages/model-gateway/src/models.ts) with a real profile pointing the `exec`/`classify` tiers at a catalogued GGUF model id; keep `plan` on the frontier tier for now.
 - [ ] Serve the [`model-router.ts`](../../packages/model-gateway/src/model-router.ts) `eligibleForLocal` route through [`local-provider.ts`](../../packages/local-inference/src/local-provider.ts) so a `SIMPLE_CAPABILITIES` decision actually reaches the GGUF backend (today the branch resolves to a stub).
-- [ ] Bind [`json-grammar.ts`](../../packages/local-inference/src/json-grammar.ts) constrained decoding to the decision schema so [`reactor-decision.ts`](../../packages/orchestrator/src/reactor-decision.ts) `extractJson`/`coerceDecisionShape` gets schema-valid output; add a `local-provider` gateway test mirroring [`streaming-guard.test.ts`](../../packages/model-gateway/src/streaming-guard.test.ts) (non-streaming lock preserved).
+- [x] Bind [`json-grammar.ts`](../../packages/local-inference/src/json-grammar.ts) constrained decoding to the decision schema so [`reactor-decision.ts`](../../packages/orchestrator/src/reactor-decision.ts) `extractJson`/`coerceDecisionShape` gets schema-valid output; add a `local-provider` gateway test mirroring [`streaming-guard.test.ts`](../../packages/model-gateway/src/streaming-guard.test.ts) (non-streaming lock preserved).
 - [ ] File-cap: keep the router change a thin edit; if profile config exceeds 250 lines, split a `local-profiles.ts` under model-gateway (documented split, not `apps/desktop` growth).
 
 ### PR2 — S12a: baseline sweep + cheap-tier ownership (local sweep, no cloud key)
@@ -77,6 +77,34 @@ Because S12 is three gated sub-phases, the DoD is partitioned. S12a is `local` (
 - [ ] Expose the winning config as a first-class, BYO-key-free provider in [`models.ts`](../../packages/model-gateway/src/models.ts); add the EN+TR provider-picker copy in the owning package's `src/i18n/` (defineDict/useT, same PR).
 - [ ] Test that local output routes through the **same** content-guard + [PolicyKernel](../../packages/security-policy/src/policy-kernel.ts) planes as any provider (security invariant test).
 - [ ] Run the offline task subset; publish the fully-offline success rate + $0/task floor to [`eval-results.md`](eval-results.md).
+
+> **Mechanism + finding notes (PR0, PR1-partial).**
+> 1. **Ownership is a ledger with a mechanical rule, and it starts empty.**
+>    [`local-tier-ownership.ts`](../../packages/agent-eval/src/local-tier-ownership.ts) refuses to hand
+>    a tier to local without a measured ±5pp equivalence over ≥10 pooled trials. There is deliberately
+>    no "assume equivalent for cheap tiers" path: the cheap tiers are where a silent quality loss goes
+>    unnoticed longest, because nobody inspects a `classify` call.
+> 2. **The equivalence check is one-sided**, unlike [S7](phase-s7-speed.md)’s speed guardrail. Local
+>    scoring *higher* is a reason to look at the exam, not a quality loss to guard against.
+> 3. **Two things PR1 asks for were already done.** `responseFormat: 'json'` already reaches
+>    `grammarFor(req)`, and the reactor already requests it — the GBNF binding exists. The on-device
+>    provider is also already registered alongside a cloud run when available
+>    (`registerRunProvider`). Recorded as found, not claimed as built.
+> 4. **The real gap is narrower than the doc suggests:** the reactor asks for `capability: 'exec'`,
+>    which is not in `SIMPLE_CAPABILITIES`, so a local model never serves a decision no matter what is
+>    downloaded. Closing that is a routing change gated on the equivalence evidence that does not exist
+>    yet — which is exactly the order this phase demands.
+> 5. **Fixtures re-use existing PAGES on purpose.** S12a is the same exam on a different provider;
+>    authoring new pages would change two things at once and make the arms incomparable.
+
+**Not done, and why.**
+
+- **No sweep of any kind.** This phase is **not** blocked on the funded key — it needs **downloaded
+  weights and local compute**, which is a different unavailability and worth naming separately, since
+  it is one the owner could resolve without spending anything on tokens.
+- **S12b is DEFERRED by design**, not skipped. It opens only if S12a shows a specific closable gap, and
+  S12a has not run.
+- **S12c has no provider-picker UI**, so its i18n line is vacuous rather than satisfied.
 
 ## Fixtures
 

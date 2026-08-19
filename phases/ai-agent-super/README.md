@@ -73,8 +73,8 @@ maps to a workstream with **one headline metric** it must move.
 | S8 | [phase-s8-assistant-ux.md](phase-s8-assistant-ux.md) | Streaming narration, live step feed, plan-grant UX, risk-tier approvals, agent-active indicator, backgroundable runs, commerce flow | S1, S6, S4 | 🟠 **Measurement-owed** — PR1–PR6 landed 2026-08-19 (delta batching + validation + first-feedback instrumentation, run-level evidence chip, plan-grant copy, one-tap run scope, tray indicator + continue-in-background, and a real fix: `auto` mode could approve a payment). Per-step citation chips, the per-tab badge, and the two ⏸ funded metrics are open |
 | S9 | [phase-s9-memory-skills.md](phase-s9-memory-skills.md) | Per-domain advisory memory, skill/shortcut library, per-task remembered grants | S2, S6 | 🟠 **Measurement-owed** — PR0–PR5 landed 2026-08-19 (write-side poison filter, quarantine-not-delete, advisory-only recall outside the task fence, a skills library that cannot start itself, and skill-scoped remembered grants consulted pre-model; [ADR-0027](../../docs/adr/0027-agent-memory.md)). Only the ⏸ funded PR6 sweep is open |
 | S10 | [phase-s10-vision-escalation.md](phase-s10-vision-escalation.md) | Escalation-only vision (ADR-0008): triggers, budgeted downscale, set-of-marks | S1; gate from S0 | 🟠 **Measurement-owed** — PR0–PR4 landed 2026-08-19 (vision + negative-control fixtures frozen, ASR battery untouched; gate recorded as OPEN — capability ships inert behind `TEPEGOZ_VISION`; deterministic triggers + escalation-rate now measurable per step; token-budgeted downscale + set-of-marks; image blocks attached ONLY on escalation and ONLY past a fail-closed image screen; PR5 sweep ⏸ funded) |
-| S11 | [phase-s11-benchmark-h2h.md](phase-s11-benchmark-h2h.md) | realUrl bridge (≥10 TR) + pre-registered H2H + 4-condition claim | S3 (probe); S6+S4+S9 (claim) | ⬜ Not started |
-| S12 | [phase-s12-local-model.md](phase-s12-local-model.md) | Local-LLM track: off-the-shelf baseline → fine-tune/distill → sovereign/offline | S0 (S12a); S4 (S12b) | ⬜ Not started (ADR-0028) |
+| S11 | [phase-s11-benchmark-h2h.md](phase-s11-benchmark-h2h.md) | realUrl bridge (≥10 TR) + pre-registered H2H + 4-condition claim | S3 (probe); S6+S4+S9 (claim) | 🟠 **Measurement-owed** — PR0 + PR4 + the publish gate landed 2026-08-19 (30 live-web tasks / 10 Turkish, a `bridgeClaim` that REFUSES to publish below 25 human labels, and [h2h-protocol.md](h2h-protocol.md) pre-registered). The 25 labels need real run artifacts; PR3/PR5 are ⏸ funded |
+| S12 | [phase-s12-local-model.md](phase-s12-local-model.md) | Local-LLM track: off-the-shelf baseline → fine-tune/distill → sovereign/offline | S0 (S12a); S4 (S12b) | 🟠 **Measurement-owed** — PR0 + the ownership ledger + [ADR-0028](../../docs/adr/0028-local-agent-model.md) landed 2026-08-19. The shipped ownership table is EMPTY and cannot be filled without a measurement. Blocked on **downloaded weights**, not on the funded key; S12b DEFERRED by design |
 
 Status legend: ⬜ Not started · 🟡 In progress · 🟠 **Measurement-owed** (code + frozen fixtures landed,
 delta not yet in the ledger — counts against the anti-debt rule) · ✅ Done (DoD passed, delta recorded).
@@ -113,6 +113,23 @@ landed code, hiding an anti-debt breach **×3**. Audited against `git log`, the 
 
 **Anti-debt state: 1 measurement-owed (S0) — compliant.** C1's and C7's owed sweeps do not each count
 as separate debt because both are discharged by the *same* S0 full-registry baseline.
+
+**Update 2026-08-19 (final) — S5, S11 and S12 landed; the count is 13 and every phase is now started.**
+The anti-debt rule has been breached for the length of this program and the reason has not changed:
+one unavailable funded key discharges nearly every debt, and no phase reads ✅. Three things from this
+last group change what the ledger means, though:
+
+- **S5 produced a measured NEGATIVE result, offline, for free.** The isolated-world sandbox this
+  program specified does not hold — a canary server was hit on the first attempt. S5 had been skipped
+  in an earlier session on the belief that network-inertness could not be proven without a funded key.
+  It needed two local HTTP servers. **One phase was deferred on a wrong belief**, and the correction is
+  worth more than the phase: the funding gate is real, but it is not as wide as it looked.
+- **Not every remaining debt is the same debt.** S12 is blocked on **downloaded weights and local
+  compute**, not on tokens. Filing it under "⏸ funded" would have hidden a blocker the owner can
+  actually clear.
+- **S11 makes the claim itself refusable.** `bridgeClaim` returns `publishable: false` below 25 human
+  labels, and `h2h-protocol.md` is pre-registered with a withdrawal clause and a falsification
+  section. The program can now state a number, or state exactly why it may not.
 
 **Update 2026-08-19 (later still) — S7 and S8 landed too; the count is now 10.** The rule is unchanged
 and so is the reason: one unavailable funded key discharges every debt, and no phase reads ✅. Two

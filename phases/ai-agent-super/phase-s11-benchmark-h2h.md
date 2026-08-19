@@ -1,6 +1,6 @@
 # Phase S11 — Benchmark & Head-to-Head (Claim)
 
-**Status:** ⬜ Not started · **Depends on:** [S3 bridge probe](phase-s3-reliability-actions.md), [S6 credential broker (ASR)](phase-s6-safety-control-plane.md), [S4 fabricated-success](phase-s4-verified-outcomes.md), [S9 repeat speedup](phase-s9-memory-skills.md) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟠 Measurement-owed (PR0 + PR4 + the publish gate landed 2026-08-19; the ⏸ funded runs and the 25 human labels are open) · **Depends on:** [S3 bridge probe](phase-s3-reliability-actions.md), [S6 credential broker (ASR)](phase-s6-safety-control-plane.md), [S4 fabricated-success](phase-s4-verified-outcomes.md), [S9 repeat speedup](phase-s9-memory-skills.md) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Produce the dated, external, falsifiable evidence that turns the four north-star conditions of the [constitution](constitution.md) into published numbers — win or lose. Build an Online-Mind2Web-style live-web bridge (a frozen `realUrl` stratum) and run a pre-registered head-to-head against the shipping rivals. Nothing here is a scripted-fixture score: every deliverable is a live-web run scored on verified-completion (S4's metric) with a Wilson CI, plus a claim template that is withdrawn the instant it fails to reproduce.
 
@@ -18,7 +18,7 @@
 
 ## Exit criteria (DoD)
 
-- [ ] A `realUrl` bridge stratum of **~30 live-web tasks** (Online-Mind2Web style), **≥10 Turkish-web**, is authored, rubric'd, and **frozen in PR0 before any capability or run code** (constitution: fixtures frozen first). (⏸ funded sweep to *score* it; authoring itself is not funding-blocked.)
+- [x] A `realUrl` bridge stratum of **~30 live-web tasks** (Online-Mind2Web style), **≥10 Turkish-web**, is authored, rubric'd, and **frozen in PR0 before any capability or run code** (constitution: fixtures frozen first). (⏸ funded sweep to *score* it; authoring itself is not funding-blocked.)
 - [ ] Bridge **verified-completion with a Wilson CI is PUBLISHED** in [eval-results.md](eval-results.md). Honest first-run target: **CI lower bound ≥60%** — *the number itself is the deliverable, not a threshold to defend.* (⏸ funded sweep)
 - [ ] The judge reaches **≥25 human labels** in `calibration/human-labels.json` and the **judge↔human agreement rate is reported** alongside every bridge/H2H number. Below 25, no run is publishable. (precondition; label authoring not funding-blocked)
 - [ ] **All four north-star conditions have a dated number** in [eval-results.md](eval-results.md), win or lose (⏸ funded sweep + rival subscriptions):
@@ -26,21 +26,21 @@
   - ASR / credential-broker success ([S6](phase-s6-safety-control-plane.md));
   - fabricated-success rate ([S4](phase-s4-verified-outcomes.md));
   - repeat-task speedup ([S9](phase-s9-memory-skills.md)).
-- [ ] A **pre-registered H2H protocol artifact** exists (task list + rubric + scoring plan) committed **before** any H2H run, with a **ToS-considerations section** for driving rival products.
+- [x] A **pre-registered H2H protocol artifact** exists (task list + rubric + scoring plan) committed **before** any H2H run, with a **ToS-considerations section** for driving rival products.
 - [ ] An H2H run executes **same-week** on tepegoz + Claude for Chrome + Comet + ChatGPT agentic browsing at **N≥3 each**, **blind-scored from identity-stripped artifacts** on verified-completion, and lands as a **dated artifact** in [eval-results.md](eval-results.md) stamped with rival build strings. (⏸ funded sweep + subscriptions)
-- [ ] The **4-condition claim template with the withdrawal clause** is committed (the claim is withdrawn the moment it fails to reproduce).
+- [x] The **4-condition claim template with the withdrawal clause** is committed (the claim is withdrawn the moment it fails to reproduce).
 - [ ] **PROSE-LEDGER final audit line:** every row in [PROSE-LEDGER.md](PROSE-LEDGER.md) is either DELETED or justified-RETAINED, each paired with/without-sweep per the constitution rule for prose deletion.
-- [ ] Bridge/H2H run harness reuses the existing [Wilson CI + family pooling](../../packages/agent-eval/src/statistics.ts) and cost accounting ([TEPEGOZ_EVAL_RATES](../../packages/agent-eval)); no new stats path. Any UI surface added is EN+full-TR parity in the same PR.
+- [x] Bridge/H2H run harness reuses the existing [Wilson CI + family pooling](../../packages/agent-eval/src/statistics.ts) and cost accounting ([TEPEGOZ_EVAL_RATES](../../packages/agent-eval)); no new stats path. Any UI surface added is EN+full-TR parity in the same PR.
 
 ## Tasks
 
 ### PR0 — fixture freeze (bridge subset + rubrics)
 
-- [ ] Add a `realUrl` scenario kind to the agent-eval registry schema in [packages/agent-eval](../../packages/agent-eval) via [@tepegoz/shared-types](../../packages/shared-types) — zod `safeParse` at load; `realUrl: string`, `rubric`, `turkishWeb: boolean`, `stratum: "bridge"`. No inline duplicate types.
-- [ ] Author **~30 tasks** in an `online-mind2web-bridge` registry file (Online-Mind2Web style: multi-step, real sites, answer-or-action outcomes), **≥10 Turkish-web** (e.g. e-devlet-style public info, Turkish retail, TR news). Each carries a **verified-completion rubric** (S4 metric), not a scripted assertion.
-- [ ] Wire the stratum into [escape-metric.ts](../../packages/agent-eval/src/escape-metric.ts) as **excluded from the escape denominator**; into [statistics.ts](../../packages/agent-eval/src/statistics.ts) family pooling as its own family `bridge`.
-- [ ] Freeze: record the fixture hash + count in [PROSE-LEDGER.md](PROSE-LEDGER.md) / [history.md](history.md) as the pre-run baseline. Split registry file(s) to stay under the 250-line cap.
-- [ ] **No run in PR0** — authoring + freeze only, so the numbers can never be reverse-fit to the fixtures.
+- [x] Add a `realUrl` scenario kind to the agent-eval registry schema in [packages/agent-eval](../../packages/agent-eval) via [@tepegoz/shared-types](../../packages/shared-types) — zod `safeParse` at load; `realUrl: string`, `rubric`, `turkishWeb: boolean`, `stratum: "bridge"`. No inline duplicate types.
+- [x] Author **~30 tasks** in an `online-mind2web-bridge` registry file (Online-Mind2Web style: multi-step, real sites, answer-or-action outcomes), **≥10 Turkish-web** (e.g. e-devlet-style public info, Turkish retail, TR news). Each carries a **verified-completion rubric** (S4 metric), not a scripted assertion.
+- [x] Wire the stratum into [escape-metric.ts](../../packages/agent-eval/src/escape-metric.ts) as **excluded from the escape denominator**; into [statistics.ts](../../packages/agent-eval/src/statistics.ts) family pooling as its own family `bridge`.
+- [x] Freeze: record the fixture hash + count in [PROSE-LEDGER.md](PROSE-LEDGER.md) / [history.md](history.md) as the pre-run baseline. Split registry file(s) to stay under the 250-line cap.
+- [x] **No run in PR0** — authoring + freeze only, so the numbers can never be reverse-fit to the fixtures.
 
 ### PR1 — bridge harness plumbing
 
@@ -51,7 +51,7 @@
 ### PR2 — judge calibration to ≥25 labels
 
 - [ ] Grow `calibration/human-labels.json` to **≥25 human labels** spanning the bridge stratum (incl. Turkish-web tasks) — hand-labelled verified-completion truth.
-- [ ] [calibration.ts](../../packages/agent-eval/src/calibration.ts): report judge↔human **agreement rate** and keep the claim-bar gate; a run below 25 labels stays claim-barred.
+- [x] [calibration.ts](../../packages/agent-eval/src/calibration.ts): report judge↔human **agreement rate** and keep the claim-bar gate; a run below 25 labels stays claim-barred.
 - [ ] Record the agreement rate in [eval-results.md](eval-results.md) as a standing field printed next to every bridge/H2H number.
 
 ### PR3 — bridge run + ledger entry (⏸ funded)
@@ -62,10 +62,10 @@
 
 ### PR4 — H2H protocol (pre-registered artifact)
 
-- [ ] Write `phases/ai-agent-super/h2h-protocol.md`: the **pre-registered task list** (a named subset of the frozen bridge tasks), rivals (Claude for Chrome, Comet, ChatGPT agentic browsing), **N≥3 each**, **same-week** execution window, blind identity-stripped artifact capture, verified-completion scoring by the calibrated judge.
-- [ ] Include the **4-condition claim template** with the **withdrawal clause** ("the claim is withdrawn the moment it fails to reproduce") and the **freshness-date** requirement (stamp the week + rival build strings).
-- [ ] Include a **ToS-considerations section** for driving rival products (automation/account-terms flags; the Amazon v. Perplexity injunction noted as a live legal constraint on agentic commerce driving).
-- [ ] Commit the protocol **before** any H2H run so scoring cannot be reverse-fit.
+- [x] Write `phases/ai-agent-super/h2h-protocol.md`: the **pre-registered task list** (a named subset of the frozen bridge tasks), rivals (Claude for Chrome, Comet, ChatGPT agentic browsing), **N≥3 each**, **same-week** execution window, blind identity-stripped artifact capture, verified-completion scoring by the calibrated judge.
+- [x] Include the **4-condition claim template** with the **withdrawal clause** ("the claim is withdrawn the moment it fails to reproduce") and the **freshness-date** requirement (stamp the week + rival build strings).
+- [x] Include a **ToS-considerations section** for driving rival products (automation/account-terms flags; the Amazon v. Perplexity injunction noted as a live legal constraint on agentic commerce driving).
+- [x] Commit the protocol **before** any H2H run so scoring cannot be reverse-fit.
 
 ### PR5 — H2H execution + dated artifact (⏸ funded + subscriptions)
 
@@ -74,6 +74,35 @@
 - [ ] Publish the **dated H2H artifact** into [eval-results.md](eval-results.md) — **Version 1 ships win or lose**, stamped with the week and rival build strings.
 - [ ] Fill the remaining north-star numbers (pull ASR from [S6](phase-s6-safety-control-plane.md), fabricated-success from [S4](phase-s4-verified-outcomes.md), speedup from [S9](phase-s9-memory-skills.md)) into the single 4-condition line.
 - [ ] **Final PROSE-LEDGER audit**: walk every row in [PROSE-LEDGER.md](PROSE-LEDGER.md), DELETE or justify-RETAIN each with paired with/without-sweep evidence.
+
+> **Mechanism notes (PR0, PR2-gate, PR4).**
+> 1. **The escape-denominator exclusion already existed.** `FamilyRow.escapeEligible` in
+>    [statistics.ts](../../packages/agent-eval/src/statistics.ts) is false for a `realUrl` target, and
+>    family pooling is tag-based, so `bridge` is a family without a code change. Nothing was added
+>    where something already worked — the PR0 line is satisfied by the existing shape, not by new code.
+> 2. **The publish gate is code, not a rule.** `bridgeClaim` returns `publishable: false` with stated
+>    blockers below 25 human labels, or when agreement was never computed for the run, or on an empty
+>    stratum. A calibration file can exist and overlap a run in zero scenarios — that is not
+>    calibration either, and it is a separate blocker for that reason.
+> 3. **The first-run target is judged on the Wilson lower bound**, and missing it does **not** block
+>    publication. Version 1 ships win or lose; that commitment is what removes the incentive to tune
+>    fixtures toward a headline, and there is a test asserting a bad number still publishes.
+> 4. **`stratum` is a typed field, not another tag.** A scripted-fixture pass is a regression fence and
+>    a bridge pass is evidence; conflating them is how a repo talks itself into an unearned claim.
+> 5. **The Turkish-web advantage is declared in advance.** Four of the twelve H2H tasks are Turkish-web
+>    — the stratum rivals are least likely to have tuned for. Stating that in the pre-registered
+>    protocol is the difference between a disclosed choice and a rigged one.
+
+**Not done, and why.**
+
+- **The 25 human calibration labels are not authored.** They are, by definition, *human* judgements of
+  real run artifacts — and there are no run artifacts, because scoring the stratum needs a funded key.
+  Manufacturing labels for runs that never happened would be the exact fabrication this phase exists to
+  prevent. The gate that blocks publication below 25 is built and tested; the labels are owed.
+- **PR1 harness plumbing is partially pre-existing and partially owed.** `realUrl` was already in the
+  target union and the runner already navigates; what is not verified is the end-to-end path on a live
+  URL, because verifying it means running it.
+- **No run of any kind.** PR3 and PR5 are ⏸ funded, and PR5 additionally needs rival subscriptions.
 
 ## Fixtures
 
