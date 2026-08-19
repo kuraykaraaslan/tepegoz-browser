@@ -39,6 +39,17 @@ export const EvalScenarioSchema = z.object({
   task: z.string().min(1),
   target: EvalTargetSchema,
   success: EvalSuccessSchema,
+  /**
+   * Which exam this scenario belongs to (S11). `bridge` is the live-web stratum whose verified-completion
+   * number is the published claim; absent means the ordinary scripted-fixture registry.
+   *
+   * A typed field rather than another tag, because the difference is load-bearing: a scripted-fixture
+   * pass is a regression fence, a bridge pass is evidence. Conflating them is how a repo talks itself
+   * into a claim it has not earned.
+   */
+  stratum: z.enum(['bridge']).optional(),
+  /** Part of the Turkish-web sub-stratum, reported separately (S11). Absent ⇒ not in it. */
+  turkishWeb: z.boolean().optional(),
   /** Held-out (never used while developing a fix) → reported separately from the dev metric. */
   heldOut: z.boolean().default(false),
   tags: z.array(z.string()).default([]),

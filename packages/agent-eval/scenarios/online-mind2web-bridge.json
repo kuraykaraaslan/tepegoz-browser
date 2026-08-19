@@ -1,0 +1,345 @@
+{
+  "scenarios": [
+    {
+      "id": "bridge_wikipedia_founding_year",
+      "task": "On this page, find the year the organisation behind Wikipedia was founded, and tell me the exact year.",
+      "target": { "realUrl": "https://en.wikipedia.org/wiki/Wikimedia_Foundation" },
+      "success": {
+        "judgeRubric": "PASS only if the answer states 2003 as the founding year of the Wikimedia Foundation. A hedge ('early 2000s') or a different entity's year is a FAIL."
+      },
+      "stratum": "bridge",
+      "heldOut": false,
+      "tags": ["bridge", "read", "s11"]
+    },
+    {
+      "id": "bridge_wikipedia_navigate_and_read",
+      "task": "Starting from this page, navigate to the article about the Turkish language and tell me which language family it belongs to.",
+      "target": { "realUrl": "https://en.wikipedia.org/wiki/Main_Page" },
+      "success": {
+        "judgeRubric": "PASS only if the agent actually navigated to the Turkish language article AND the answer names the Turkic language family. Answering from prior knowledge without visiting the page is a FAIL — the task is navigation, not recall."
+      },
+      "stratum": "bridge",
+      "heldOut": false,
+      "tags": ["bridge", "navigate", "s11"]
+    },
+    {
+      "id": "bridge_mdn_method_signature",
+      "task": "Look up what the second argument of JavaScript's Array.prototype.reduce does, and tell me in one sentence.",
+      "target": { "realUrl": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reduce" },
+      "success": {
+        "judgeRubric": "PASS only if the answer identifies it as the INITIAL VALUE of the accumulator, and ideally notes the behaviour when it is omitted. Naming it 'the callback' or 'thisArg' is a FAIL."
+      },
+      "stratum": "bridge",
+      "heldOut": false,
+      "tags": ["bridge", "read", "s11"]
+    },
+    {
+      "id": "bridge_mdn_compare_two_pages",
+      "task": "Find out whether Array.prototype.flat is available in Node.js, and tell me from which version.",
+      "target": { "realUrl": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat" },
+      "success": {
+        "judgeRubric": "PASS only if the answer names Node 11 (or 11.0.0) from the browser-compatibility data on the page. A vague 'modern versions' is a FAIL."
+      },
+      "stratum": "bridge",
+      "heldOut": true,
+      "tags": ["bridge", "read", "compat-table", "s11"]
+    },
+    {
+      "id": "bridge_github_open_issue_count",
+      "task": "Tell me roughly how many OPEN issues this repository currently has, and name the most recently updated one.",
+      "target": { "realUrl": "https://github.com/microsoft/TypeScript/issues" },
+      "success": {
+        "judgeRubric": "PASS only if the answer gives an open-issue count that matches the page at run time (±5% tolerance for churn) AND names an issue title actually visible at the top of the default sort. A count with no issue named is a FAIL."
+      },
+      "stratum": "bridge",
+      "heldOut": false,
+      "tags": ["bridge", "read", "live-count", "s11"]
+    },
+    {
+      "id": "bridge_github_find_license",
+      "task": "What licence is this project released under? Answer with the licence name only.",
+      "target": { "realUrl": "https://github.com/facebook/react" },
+      "success": {
+        "judgeRubric": "PASS only if the answer names the MIT licence. Any other licence, or a refusal to answer, is a FAIL."
+      },
+      "stratum": "bridge",
+      "heldOut": false,
+      "tags": ["bridge", "read", "s11"]
+    },
+    {
+      "id": "bridge_github_search_within_repo",
+      "task": "In this repository, find the file that defines the package version and tell me the version string it currently declares.",
+      "target": { "realUrl": "https://github.com/nodejs/node" },
+      "success": {
+        "judgeRubric": "PASS only if the agent located a real version-bearing file in THIS repo and reported the version it contains at run time. A version recalled from training rather than read off the page is a FAIL."
+      },
+      "stratum": "bridge",
+      "heldOut": true,
+      "tags": ["bridge", "search", "multi-step", "s11"]
+    },
+    {
+      "id": "bridge_npm_latest_version",
+      "task": "What is the latest published version of this package, and when was it published?",
+      "target": { "realUrl": "https://www.npmjs.com/package/zod" },
+      "success": {
+        "judgeRubric": "PASS only if BOTH the version string and the publish recency shown on the page at run time are reported. Reporting a version the page does not show is a FAIL, even if it was once true."
+      },
+      "stratum": "bridge",
+      "heldOut": false,
+      "tags": ["bridge", "read", "freshness", "s11"]
+    },
+    {
+      "id": "bridge_hackernews_top_story",
+      "task": "Tell me the title of the current top story and how many points it has.",
+      "target": { "realUrl": "https://news.ycombinator.com/" },
+      "success": {
+        "judgeRubric": "PASS only if the title and point count match the page at run time. This is a freshness probe — a plausible-sounding HN story that is not actually at the top is a FAIL."
+      },
+      "stratum": "bridge",
+      "heldOut": false,
+      "tags": ["bridge", "read", "freshness", "s11"]
+    },
+    {
+      "id": "bridge_hackernews_comment_navigation",
+      "task": "Open the comments of the current top story and summarise the single most upvoted comment in one sentence.",
+      "target": { "realUrl": "https://news.ycombinator.com/" },
+      "success": {
+        "judgeRubric": "PASS only if the agent navigated into the comments page AND the summary corresponds to a comment actually near the top of that thread. Summarising the article instead of a comment is a FAIL."
+      },
+      "stratum": "bridge",
+      "heldOut": true,
+      "tags": ["bridge", "navigate", "multi-step", "s11"]
+    },
+    {
+      "id": "bridge_arxiv_abstract_claim",
+      "task": "Find the most recent paper listed in the computation and language section and tell me, in one sentence, what it claims.",
+      "target": { "realUrl": "https://arxiv.org/list/cs.CL/recent" },
+      "success": {
+        "judgeRubric": "PASS only if the paper named appears in the recent listing at run time AND the one-sentence claim is recognisably that paper's abstract. A generic 'it improves language models' is a FAIL."
+      },
+      "stratum": "bridge",
+      "heldOut": false,
+      "tags": ["bridge", "read", "freshness", "s11"]
+    },
+    {
+      "id": "bridge_openlibrary_book_lookup",
+      "task": "Search this site for the book 'Snow Crash' and tell me its first publication year.",
+      "target": { "realUrl": "https://openlibrary.org/" },
+      "success": {
+        "judgeRubric": "PASS only if the agent used the site's own search AND reports 1992. Answering from prior knowledge without searching is a FAIL — the task is the search, not the fact."
+      },
+      "stratum": "bridge",
+      "heldOut": false,
+      "tags": ["bridge", "search", "s11"]
+    },
+    {
+      "id": "bridge_weather_today",
+      "task": "What is the current temperature in London according to this page?",
+      "target": { "realUrl": "https://wttr.in/London" },
+      "success": {
+        "judgeRubric": "PASS only if the temperature reported matches what the page shows at run time, with units. A seasonal guess is a FAIL."
+      },
+      "stratum": "bridge",
+      "heldOut": false,
+      "tags": ["bridge", "read", "freshness", "s11"]
+    },
+    {
+      "id": "bridge_stackoverflow_accepted_answer",
+      "task": "Find the accepted answer on this page and tell me its core recommendation in one sentence.",
+      "target": { "realUrl": "https://stackoverflow.com/questions/11227809/why-is-processing-a-sorted-array-faster-than-processing-an-unsorted-array" },
+      "success": {
+        "judgeRubric": "PASS only if the answer identifies branch prediction as the cause. Summarising a non-accepted answer, or the question itself, is a FAIL."
+      },
+      "stratum": "bridge",
+      "heldOut": false,
+      "tags": ["bridge", "read", "s11"]
+    },
+    {
+      "id": "bridge_w3c_spec_section",
+      "task": "In this specification, find what the 'defer' attribute does on a script element and tell me in one sentence.",
+      "target": { "realUrl": "https://html.spec.whatwg.org/multipage/scripting.html" },
+      "success": {
+        "judgeRubric": "PASS only if the answer states that the script is executed after the document has been parsed (deferred), not that it is asynchronous. This page is very large — a run that gives up is a FAIL, not an excuse."
+      },
+      "stratum": "bridge",
+      "heldOut": true,
+      "tags": ["bridge", "read", "large-page", "s11"]
+    },
+    {
+      "id": "bridge_caniuse_feature_support",
+      "task": "Does the CSS :has() selector work in Firefox? Answer yes or no, with the version it landed in if it did.",
+      "target": { "realUrl": "https://caniuse.com/css-has" },
+      "success": {
+        "judgeRubric": "PASS only if the answer reflects the support table on the page at run time, including a Firefox version number where the table shows one. A yes/no with no version is a partial and scores FAIL."
+      },
+      "stratum": "bridge",
+      "heldOut": false,
+      "tags": ["bridge", "read", "table", "s11"]
+    },
+    {
+      "id": "bridge_pypi_package_dependencies",
+      "task": "What Python versions does this package declare support for?",
+      "target": { "realUrl": "https://pypi.org/project/requests/" },
+      "success": {
+        "judgeRubric": "PASS only if the answer reports the Python version classifiers shown on the page at run time. A generic 'Python 3' is a FAIL."
+      },
+      "stratum": "bridge",
+      "heldOut": false,
+      "tags": ["bridge", "read", "s11"]
+    },
+    {
+      "id": "bridge_multi_hop_release_notes",
+      "task": "Find the most recent stable release of this project and tell me one thing that changed in it.",
+      "target": { "realUrl": "https://github.com/vitejs/vite/releases" },
+      "success": {
+        "judgeRubric": "PASS only if the release named is actually the most recent stable one on the page at run time AND the change described appears in its notes. Describing a change from an older release is a FAIL."
+      },
+      "stratum": "bridge",
+      "heldOut": true,
+      "tags": ["bridge", "multi-step", "freshness", "s11"]
+    },
+    {
+      "id": "bridge_form_search_filter",
+      "task": "Search this site for packages matching 'http client' and tell me the name of the first result.",
+      "target": { "realUrl": "https://www.npmjs.com/" },
+      "success": {
+        "judgeRubric": "PASS only if the agent used the site's search form AND names the package that is actually first in the results at run time."
+      },
+      "stratum": "bridge",
+      "heldOut": false,
+      "tags": ["bridge", "form", "search", "s11"]
+    },
+    {
+      "id": "bridge_cookie_banner_persist",
+      "task": "Find the section of this page that explains what data is collected, and summarise it in one sentence.",
+      "target": { "realUrl": "https://www.bbc.com/usingthebbc/privacy/" },
+      "success": {
+        "judgeRubric": "PASS only if the summary reflects content from THIS privacy page. A consent banner blocking the read is not an excuse — dismissing it is part of the task. A refusal is a FAIL."
+      },
+      "stratum": "bridge",
+      "heldOut": false,
+      "tags": ["bridge", "cookie-banner", "s11"]
+    },
+
+    {
+      "id": "bridge_tr_tdk_kelime_anlami",
+      "task": "Bu sözlükte 'özgürlük' kelimesini ara ve ilk anlamını bana Türkçe olarak söyle.",
+      "target": { "realUrl": "https://sozluk.gov.tr/" },
+      "success": {
+        "judgeRubric": "PASS only if the agent used the site's own search AND reports the first dictionary sense shown for 'özgürlük' at run time, in Turkish. Answering from prior knowledge without searching is a FAIL."
+      },
+      "stratum": "bridge",
+      "turkishWeb": true,
+      "heldOut": false,
+      "tags": ["bridge", "turkish-web", "search", "s11"]
+    },
+    {
+      "id": "bridge_tr_resmi_gazete_tarih",
+      "task": "Bugünkü Resmî Gazete'nin sayısını ve tarihini söyle.",
+      "target": { "realUrl": "https://www.resmigazete.gov.tr/" },
+      "success": {
+        "judgeRubric": "PASS only if BOTH the issue number and date match the page at run time. This is a freshness probe on a Turkish government site — a plausible-looking date that is not today's is a FAIL."
+      },
+      "stratum": "bridge",
+      "turkishWeb": true,
+      "heldOut": false,
+      "tags": ["bridge", "turkish-web", "freshness", "s11"]
+    },
+    {
+      "id": "bridge_tr_tcmb_kur",
+      "task": "Merkez Bankası'nın bugünkü dolar alış kurunu söyle.",
+      "target": { "realUrl": "https://www.tcmb.gov.tr/kurlar/today.xml" },
+      "success": {
+        "judgeRubric": "PASS only if the USD buying rate reported matches the published figure at run time. A rate recalled from training is a FAIL — this is precisely the value that changes daily."
+      },
+      "stratum": "bridge",
+      "turkishWeb": true,
+      "heldOut": true,
+      "tags": ["bridge", "turkish-web", "freshness", "structured-data", "s11"]
+    },
+    {
+      "id": "bridge_tr_wikipedia_sehir",
+      "task": "Bu ansiklopedide Trabzon şehrini bul ve nüfusunu söyle.",
+      "target": { "realUrl": "https://tr.wikipedia.org/wiki/Ana_Sayfa" },
+      "success": {
+        "judgeRubric": "PASS only if the agent navigated to the Trabzon article AND reports the population figure shown there at run time. Answering without visiting is a FAIL."
+      },
+      "stratum": "bridge",
+      "turkishWeb": true,
+      "heldOut": false,
+      "tags": ["bridge", "turkish-web", "navigate", "s11"]
+    },
+    {
+      "id": "bridge_tr_haber_manset",
+      "task": "Bu haber sitesinin şu anki ana manşetini ve kısa özetini söyle.",
+      "target": { "realUrl": "https://www.trthaber.com/" },
+      "success": {
+        "judgeRubric": "PASS only if the headline reported is actually the lead story at run time and the summary matches it. A generic 'Türkiye'de gündem' is a FAIL."
+      },
+      "stratum": "bridge",
+      "turkishWeb": true,
+      "heldOut": false,
+      "tags": ["bridge", "turkish-web", "freshness", "s11"]
+    },
+    {
+      "id": "bridge_tr_meteoroloji_hava",
+      "task": "İstanbul için bugünkü en yüksek sıcaklığı söyle.",
+      "target": { "realUrl": "https://www.mgm.gov.tr/" },
+      "success": {
+        "judgeRubric": "PASS only if the maximum temperature reported for Istanbul matches the page at run time, with units. Reaching it may require a city selection — that is part of the task, and giving up is a FAIL."
+      },
+      "stratum": "bridge",
+      "turkishWeb": true,
+      "heldOut": false,
+      "tags": ["bridge", "turkish-web", "form", "s11"]
+    },
+    {
+      "id": "bridge_tr_ptt_posta_kodu",
+      "task": "Bu sitede Ankara Çankaya için posta kodunu bul ve söyle.",
+      "target": { "realUrl": "https://postakodu.ptt.gov.tr/" },
+      "success": {
+        "judgeRubric": "PASS only if the agent used the site's own lookup (province/district selection) AND reports a postal code the site returns. A postal code recalled without using the site is a FAIL."
+      },
+      "stratum": "bridge",
+      "turkishWeb": true,
+      "heldOut": true,
+      "tags": ["bridge", "turkish-web", "form", "multi-step", "s11"]
+    },
+    {
+      "id": "bridge_tr_universite_bolum",
+      "task": "Bu üniversitenin bilgisayar mühendisliği bölümünün sayfasını bul ve bölüm başkanının adını söyle.",
+      "target": { "realUrl": "https://www.itu.edu.tr/" },
+      "success": {
+        "judgeRubric": "PASS only if the agent navigated to the computer engineering department page on THIS site and reports the head of department named there at run time. A name from elsewhere is a FAIL."
+      },
+      "stratum": "bridge",
+      "turkishWeb": true,
+      "heldOut": false,
+      "tags": ["bridge", "turkish-web", "navigate", "multi-step", "s11"]
+    },
+    {
+      "id": "bridge_tr_kitap_arama",
+      "task": "Bu sitede 'Tutunamayanlar' kitabını ara ve yazarını söyle.",
+      "target": { "realUrl": "https://www.iletisim.com.tr/" },
+      "success": {
+        "judgeRubric": "PASS only if the agent used the site's search AND reports Oğuz Atay as the author from the result page. Answering from prior knowledge without searching is a FAIL."
+      },
+      "stratum": "bridge",
+      "turkishWeb": true,
+      "heldOut": false,
+      "tags": ["bridge", "turkish-web", "search", "s11"]
+    },
+    {
+      "id": "bridge_tr_belediye_iletisim",
+      "task": "Bu belediyenin iletişim sayfasını bul ve çağrı merkezi numarasını söyle.",
+      "target": { "realUrl": "https://www.ibb.istanbul/" },
+      "success": {
+        "judgeRubric": "PASS only if the agent navigated to a contact page on THIS site and reports the call-centre number shown there. A number recalled from training is a FAIL."
+      },
+      "stratum": "bridge",
+      "turkishWeb": true,
+      "heldOut": false,
+      "tags": ["bridge", "turkish-web", "navigate", "s11"]
+    }
+  ]
+}

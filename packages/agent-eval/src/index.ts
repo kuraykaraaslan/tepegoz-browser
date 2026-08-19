@@ -13,3 +13,4 @@ export * from './judge';
 export * from './calibration';
 export * from './verification-metrics';
 export * from './speed-targets';
+export * from './bridge-claim';
