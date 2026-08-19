@@ -1,6 +1,6 @@
 # Phase 5 — VPN & Network Privacy (per-tab & per-group tunnels + Tor)
 
-**Status:** ⬜ Not started  ·  **Estimate:** ~4–6 months (5a, then optional 5b behind adoption)
+**Status:** 🟡 In progress (binding-resolution + kill-switch decision layer landed 2026-08-19; see [ADR-0011](../../docs/adr/0011-vpn-network-privacy.md)) · **Estimate:** ~4–6 months (5a, then optional 5b behind adoption)
 **Depends on:** Phase 3 (managed-backend seam) + Phase 2 (`NetworkFilterEngine` / per-partition session model) + Phase 2b (tab-engine + **tab groups** + tab/group context menu)
 **Goal:** Give the browser an **optional, fail-closed network-privacy layer** where **each tab — or a whole
 tab group — can bind to its own VPN/Tor connection** — BYO VPN config first, then optional managed exit
@@ -37,23 +37,34 @@ endpoint** (one loopback port per active connection), never an OS-level system p
   (never a flash of clear-path traffic mid-switch).
 
 ## Exit criteria (DoD)
-- [ ] **Binding selectable at all three scopes — General, Group, Tab**; **multiple connections active concurrently**; **default = Direct** (pure local-first preserved — no tunnel unless opted in)
-- [ ] **Binding inheritance works:** a tab inherits its group's connection, a group inherits General; `tab override → group → General default → Direct` resolves correctly on group move/add/remove and on changing the General default
+- [~] **Binding selectable at all three scopes — General, Group, Tab**; **multiple connections active concurrently**; **default = Direct** (pure local-first preserved — no tunnel unless opted in)
+      _(the RESOLUTION rule is landed and tested — [connection-binding.ts](../../packages/tab-engine/src/connection-binding.ts). Nothing selects a binding yet: no UI, no connection pool, so "multiple connections active concurrently" has nothing to be concurrent with.)_
+- [x] **Binding inheritance works:** a tab inherits its group's connection, a group inherits General; `tab override → group → General default → Direct` resolves correctly on group move/add/remove and on changing the General default
+      _(landed: `resolveBinding` + `affectedByGroupChange` + `affectedByGeneralChange`, 19 tests covering the resolution order and both re-resolution directions.)_
 - [ ] Tab **right-click → "Route this tab through…"** and group **right-click → "Route this group through…"** open a **Connection-picker Modal** (active connections + region/status + "Direct"); selection re-binds the tab/group; live per-tab **and** per-group indicators reflect it
-- [ ] **Fail-closed kill-switch per connection:** if a tunnel drops, **every tab resolving to it** (via direct override or group inheritance) is blocked — **no leak, no silent fallback to Direct** (verified by an automated leak test); rebinding-on-switch never leaks mid-transition
+- [~] **Fail-closed kill-switch per connection:** if a tunnel drops, **every tab resolving to it** (via direct override or group inheritance) is blocked — **no leak, no silent fallback to Direct** (verified by an automated leak test); rebinding-on-switch never leaks mid-transition
+      _(the DECISION function is landed and tested — [kill-switch.ts](../../packages/security-policy/src/kill-switch.ts), 8 tests including "an unknown connection blocks, never defaults to allowed". **Not done:** there is no real connection or real egress path yet for the decision to gate, so the "automated leak test" this line asks for — proving no packet actually escapes — cannot exist until `session.setProxy` wiring lands.)_
 - [ ] **DNS-leak prevention:** tunnel/DoH DNS only inside a tunneled tab's partition; verified by leak test (no plaintext resolver for any tunnel-bound tab)
 - [ ] **No cross-tab bleed:** a tab bound to connection A never egresses via B or Direct; distinct connections stay isolated (distinct partitions/ports; Tor streams isolated per connection)
-- [ ] **ADR-0011** written + Accepted (VPN & network-privacy architecture: three-scope binding — General/Group/Tab — with `tab→group→General→Direct` resolution over per-(profile,connection) SOCKS partitions, connection-pool lifecycle, reload-on-rebind trade-off, BYO vs managed, Tor trust model, reconciliation with "no system-proxy MITM")
+- [~] **ADR-0011** written + Accepted (VPN & network-privacy architecture: three-scope binding — General/Group/Tab — with `tab→group→General→Direct` resolution over per-(profile,connection) SOCKS partitions, connection-pool lifecycle, reload-on-rebind trade-off, BYO vs managed, Tor trust model, reconciliation with "no system-proxy MITM")
+      _([ADR-0011](../../docs/adr/0011-vpn-network-privacy.md) Accepted, but scoped explicitly to the binding-resolution + kill-switch layer only. It states plainly what it does not decide: the connection pool, WireGuard/Tor providers, SOCKS wiring, the Tor trust model, the picker UI.)_
 - [ ] **Threat Model updated** (`docs/THREAT-MODEL.md`): tunnel compromise, DNS leak, split-tunnel/per-tab misbinding leakage, **group-inheritance misbinding** (tab silently on the wrong exit after a group move), rebind-transition leak, **Tor exit-node** risk + a `VPN/Tor tunnel` trust-boundary entry + revisit note
 - [ ] **i18n:** en+tr full parity for all new surfaces (tab + group context-menu entries, connection-picker Modal, per-tab & per-group status/region indicator, reload-on-switch confirm, consent/disclosure copy)
 - [ ] Coverage (S80/B70/F80/L80) + self-review/code-review + UAT signoff + migration-safe DB
 
+> **What actually runs today (2026-08-19).** `resolveBinding`, `partitionKeyFor`,
+> `affectedByGroupChange`/`affectedByGeneralChange`, and `killSwitchVerdicts` are real, tested (27
+> tests), and pure — no Electron, no session, no proxy. **None of it is wired into a running tab.**
+> There is no connection pool, no `session.setProxy` call, no SOCKS bridge, and no UI — so every
+> tab in the browser is Direct today exactly as it was before this landed, and the DoD's automated
+> leak test cannot exist until there is a real egress path for it to test.
+
 ## Tasks
 
 ### L0 — Core Shell (connection pool + per-tab routing seam)
-- [ ] **Connection pool** in the **main process only**: several tunnels **up concurrently**, each with its own local SOCKS5 loopback port; up / down / rotate / health-poll per connection; renderer never touches tunnel handles (typed `contextBridge` status only)
+- [ ] **Connection pool** in the **main process only**: several tunnels **up concurrently**, each with its own local SOCKS5 loopback port; up / down / rotate / health-poll per connection; renderer never touches tunnel handles (typed `contextBridge` status only) — not started
 - [ ] **Partition-per-`(profile, connectionId)`** (`persist:tepegoz-profile-{id}--conn-{connId}`) → `session.setProxy({ proxyRules })` pointed at **that connection's** loopback SOCKS port — **explicitly NOT** an OS system proxy (preserves Phase 2 stance); `Direct` tabs stay on the plain profile partition
-- [ ] **Binding API** (main): `setGeneralBinding(profileId, connectionId | 'direct')` + `bindGroup(groupId, connectionId | 'direct' | 'inherit')` + `bindTab(tabId, connectionId | 'direct' | 'inherit')` — resolves `tab override → group → General default → Direct`, re-hosts affected `WebContents` on the target partition (reload-on-switch), records the binding, and surfaces resolved bindings to the renderer; re-resolves on group add/move/remove **and on General-default change**; bindings survive tab move/detach within the profile
+- [~] **Binding API** (main): `setGeneralBinding(profileId, connectionId | 'direct')` + `bindGroup(groupId, connectionId | 'direct' | 'inherit')` + `bindTab(tabId, connectionId | 'direct' | 'inherit')` — resolves `tab override → group → General default → Direct`, re-hosts affected `WebContents` on the target partition (reload-on-switch), records the binding, and surfaces resolved bindings to the renderer; re-resolves on group add/move/remove **and on General-default change**; bindings survive tab move/detach within the profile
 - [ ] `proxyBypassRules` for loopback/local so IPC + localhost dev are never tunneled; **deny-by-default** for everything else on any tunnel-bound partition
 
 ### L6/L7 — NetworkPrivacyProvider adapter (BYO 3rd-party, 5a)
