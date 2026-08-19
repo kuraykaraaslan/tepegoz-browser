@@ -90,6 +90,13 @@ describe('what may be offered for remembering', () => {
     expect(canRemember({ scope: 'skill-1', tier: 'ui-write', targetUrl: 'https://billing.test/x' })).toBe(true);
   });
 
+  it('REFUSES an unclassified call — a default tier would be a permission nobody was offered', () => {
+    // null = the action was never risk-classified. A grant is scoped by its tier, so there is
+    // nothing to scope one to; defaulting would let a renderer tick "remember" on a prompt that
+    // never showed the checkbox.
+    expect(canRemember(null)).toBe(false);
+  });
+
   it('does NOT offer what coverage would refuse — a decorative checkbox teaches the wrong lesson', () => {
     expect(canRemember({ scope: null, tier: 'ui-write', targetUrl: 'https://billing.test/x' })).toBe(false);
     expect(canRemember({ scope: 's', tier: 'credential', targetUrl: 'https://billing.test/x' })).toBe(false);

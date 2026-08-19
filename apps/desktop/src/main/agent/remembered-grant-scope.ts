@@ -73,9 +73,14 @@ export function rememberedCoverage(
   return coversRemembered(grants, { scope: scope.id, ...facts });
 }
 
-/** Whether the approval modal may offer "remember this" at all. */
-export function mayOfferRemember(scope: RunSkillScope | null, facts: ApprovalFacts): boolean {
-  return scope !== null && canRemember({ scope: scope.id, ...facts });
+/**
+ * Whether the approval modal may offer "remember this" at all.
+ *
+ * `facts` is null when the call was never risk-classified, and that refuses: a grant is scoped BY the
+ * risk tier, so an action with no tier has nothing to scope a stored permission to.
+ */
+export function mayOfferRemember(scope: RunSkillScope | null, facts: ApprovalFacts | null): boolean {
+  return canRemember(scope === null || facts === null ? null : { scope: scope.id, ...facts });
 }
 
 /**
@@ -87,9 +92,9 @@ export function mayOfferRemember(scope: RunSkillScope | null, facts: ApprovalFac
 export function rememberGrant(
   db: Db | null,
   scope: RunSkillScope | null,
-  facts: ApprovalFacts,
+  facts: ApprovalFacts | null,
 ): number | null {
-  if (db === null || scope === null || !mayOfferRemember(scope, facts)) return null;
+  if (db === null || scope === null || facts === null || !mayOfferRemember(scope, facts)) return null;
   const domain = facts.targetUrl === undefined ? null : registrableDomain(facts.targetUrl);
   if (domain === null) return null;
   const expiresAt = rememberedGrantExpiry();

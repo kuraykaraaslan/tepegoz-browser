@@ -86,13 +86,17 @@ export function rememberedGrantExpiry(now = Date.now()): number {
  * the prompt is shown: offering a checkbox the system would refuse to honour teaches the user that their
  * choices are decorative.
  */
-export function canRemember(q: {
-  scope: string | null;
-  tier: RiskTier;
-  policyReason?: string | undefined;
-  targetUrl?: string | undefined;
-}): boolean {
-  return (
-    coversRemembered([], { ...q, now: 0 }).reason === 'no_remembered_grant'
-  );
+export function canRemember(
+  q: {
+    scope: string | null;
+    tier: RiskTier;
+    policyReason?: string | undefined;
+    targetUrl?: string | undefined;
+  } | null,
+): boolean {
+  // Null means the call was never risk-classified. That refuses rather than defaulting a tier: a
+  // grant is scoped BY the tier, so an unclassified action has nothing to scope a permission to —
+  // and a default would let a doctored renderer tick "remember" on a prompt that never offered it.
+  if (q === null) return false;
+  return coversRemembered([], { ...q, now: 0 }).reason === 'no_remembered_grant';
 }

@@ -193,11 +193,13 @@ export function registerAgentRunIpc(): void {
     };
     /** Present the standard HITL approval modal and await the user's answer. */
     const promptApproval = (req: ConfirmRequest): Promise<boolean> => {
-      const facts = {
-        tier: req.risk?.tier ?? 'ui-write',
-        targetUrl: req.targetUrl,
-        policyReason: req.policy.reason,
-      } as const;
+      // Null when the call was never risk-classified. A default tier here would let a doctored
+      // renderer tick "remember" on an unclassified action and mint a grant the user was never
+      // offered — the classification is what the grant is scoped BY, so its absence must refuse.
+      const facts =
+        req.risk === undefined
+          ? null
+          : { tier: req.risk.tier, targetUrl: req.targetUrl, policyReason: req.policy.reason };
       // Unguessable id. A sequential counter let a compromised renderer spray approvals for ids main
       // had not minted yet and win the race the moment one was registered; a UUID cannot be predicted,
       // so only the request main actually sent can be answered.
@@ -215,7 +217,7 @@ export function registerAgentRunIpc(): void {
         ...(req.risk !== undefined ? { riskTier: req.risk.tier } : {}),
         // S9: offer "remember this" only when a grant would actually be honoured. A checkbox the
         // system would refuse teaches the user that their choices are decorative.
-        ...(req.risk !== undefined && mayOfferRemember(skillScope, facts) && skillScope !== null
+        ...(mayOfferRemember(skillScope, facts) && skillScope !== null
           ? { rememberSkill: skillScope.name, rememberDays: REMEMBERED_GRANT_DAYS }
           : {}),
       };
