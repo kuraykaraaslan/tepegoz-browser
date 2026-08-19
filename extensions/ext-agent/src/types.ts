@@ -5,7 +5,7 @@
  * agent's public wire shapes; the app re-exports them from its IPC contract.
  */
 import type { AIProvider } from '@tepegoz/shared-types/providers';
-import type { SkillRecord } from '@tepegoz/shared-types';
+import type { CompletionOutcome, SkillRecord } from '@tepegoz/shared-types';
 import type { TaskDefinition, TaskSaveInput } from '@tepegoz/tasks';
 import type {
   AgentAttachmentMeta,
@@ -135,6 +135,15 @@ export interface AgentRunResult {
   runId: string;
   stoppedReason: string;
   ok: boolean;
+  /**
+   * What the run’s own evidence actually supported (S4, surfaced by S8): `verified`, 
+   * `attempted_unverified`, or `contradicted`. Absent when the run never reached a completion
+   * verdict.
+   *
+   * This is the difference between "the agent says it worked" and "the agent showed that it worked",
+   * and it is the user’s to see. Reporting only `ok` shows them the first and calls it the second.
+   */
+  completionOutcome?: CompletionOutcome;
 }
 
 export interface TokenUsageSnapshot {

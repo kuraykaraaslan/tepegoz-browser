@@ -1,4 +1,5 @@
 import { AGENT_AUTONOMY_LEVELS } from '@tepegoz/shared-types';
+import type { CompletionOutcome } from '@tepegoz/shared-types';
 import type {
   AgentApprovalRequest,
   AgentAutonomy,
@@ -70,6 +71,12 @@ export interface Turn {
   prompt: string;
   runId: string | null;
   events: AgentEvent[];
+  /**
+   * What this run’s evidence supported (S4). Absent when the run never reached a completion verdict —
+   * deliberately not defaulted, because "we do not know" and "we could not confirm" are different
+   * things to tell someone and must not collapse into the same chip.
+   */
+  completionOutcome?: CompletionOutcome;
 }
 
 /** Per-group state stored in the panel (keyed by groupId). */

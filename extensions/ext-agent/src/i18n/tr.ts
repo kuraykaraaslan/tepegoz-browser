@@ -128,6 +128,14 @@ export const tr: AgentStrings = {
   },
   planGrant: 'Onaylamak, bu planın adı geçen sitelerdeki rutin adımlarını yalnızca bu görev için kapsar. Para, parola ve silme işlemleri yine her seferinde sorar.',
   background: 'Arka planda devam et',
+  evidence: {
+    verified: 'Doğrulandı',
+    verifiedHint: 'Ajan işlemi yaptıktan sonra sayfada teyit etti.',
+    attempted_unverified: 'Teyit edilmedi',
+    attempted_unverifiedHint: 'Ajan bunu yaptı ama sonucu teyit edemedi. Kendin kontrol etmen iyi olur.',
+    contradicted: 'Çelişkili',
+    contradictedHint: 'Sayfa, ajanın bildirdiğiyle çelişti. Buna güvenme.',
+  },
   historyPage: {
     title: 'Ajan geçmişi',
     search: 'Konuşmalarda ara',

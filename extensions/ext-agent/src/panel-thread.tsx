@@ -2,6 +2,7 @@ import type { MutableRefObject } from 'react';
 import { cn } from '@tepegoz/ui';
 import { Markdown } from '@tepegoz/markdown';
 import type { AgentStrings } from './i18n';
+import type { CompletionOutcome } from '@tepegoz/shared-types';
 import type { AgentHostApi } from './types';
 import { GaugeIcon, KIND_DOT, SparkIcon } from './panel-icons';
 import { PROSE_KINDS, STEP_KINDS, type Turn } from './panel-state';
@@ -28,6 +29,16 @@ interface PanelThreadProps {
   onToggleReasoning: (turnId: string) => void;
   onToggleSteps: (turnId: string) => void;
 }
+
+/**
+ * Escalating weight, so the three verdicts are distinguishable at a glance rather than only by text.
+ * Token-styled surfaces with a semantic accent, matching the risk-tier tones in `panel-modals`.
+ */
+const EVIDENCE_TONE: Record<CompletionOutcome, string> = {
+  verified: 'bg-green-500/10 text-green-600 dark:text-green-400',
+  attempted_unverified: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+  contradicted: 'bg-red-500/10 text-red-600 dark:text-red-400',
+};
 
 export function PanelThread({
   a,
@@ -161,6 +172,22 @@ export function PanelThread({
                     </div>
                   );
                 })}
+                {/* What the evidence supported (S4 → S8). Rendered only when the run reached a
+                    verdict: an absent chip means "no verdict", which is not the same as "unconfirmed"
+                    and must not be drawn as if it were. */}
+                {turn.completionOutcome !== undefined && (
+                  <div className="px-1 pt-1">
+                    <span
+                      title={a.evidence[`${turn.completionOutcome}Hint`]}
+                      className={cn(
+                        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px]',
+                        EVIDENCE_TONE[turn.completionOutcome],
+                      )}
+                    >
+                      {a.evidence[turn.completionOutcome]}
+                    </span>
+                  </div>
+                )}
                 {working && (
                   <div className="flex items-start gap-2 px-1 text-xs text-text-secondary">
                     <span className="mt-1 h-2 w-2 shrink-0 animate-pulse rounded-full bg-amber-500" />

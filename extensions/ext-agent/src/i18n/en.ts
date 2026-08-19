@@ -137,6 +137,17 @@ export const en = {
   planGrant: 'Approving covers the routine steps of this plan on the sites it names, for this task only. Money, passwords and deletions still ask every time.',
   // Backgroundable run (S8 PR5). The window goes away; the task does not — and the tray says so.
   background: 'Continue in the background',
+  // Evidence chip (S4 evidence, surfaced by S8). The distinction the user actually needs: did the
+  // agent SAY it worked, or did it SHOW that it worked? Reporting only success shows them the first
+  // and lets them read it as the second.
+  evidence: {
+    verified: 'Checked',
+    verifiedHint: 'The agent confirmed this on the page after doing it.',
+    attempted_unverified: 'Unconfirmed',
+    attempted_unverifiedHint: 'The agent did this but could not confirm the result. Worth checking yourself.',
+    contradicted: 'Contradicted',
+    contradictedHint: 'The page disagreed with what the agent reported. Do not rely on this.',
+  },
   historyPage: {
     title: 'Agent history',
     search: 'Search conversations',

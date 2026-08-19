@@ -16,7 +16,9 @@ import { EventJournal, TokenStore } from '@tepegoz/persistence';
 import {
   AgentDeltaSchema,
   MAX_DELTA_TEXT,
+  CompletionOutcomeSchema,
   NEVER_AUTO_GRANTABLE_TIERS,
+  type CompletionOutcome,
   type Plan,
 } from '@tepegoz/shared-types';
 import { randomUUID } from 'node:crypto';
@@ -66,6 +68,18 @@ function scopeHostField(url: string): { scopeHost?: string } {
   } catch {
     return {};
   }
+}
+
+/**
+ * The completion outcome, validated before it leaves main.
+ *
+ * The runtime carries it as a plain string, and this is a trust boundary like any other: a value that
+ * is not one of the three known outcomes is dropped rather than forwarded, because the renderer would
+ * otherwise render an unknown state as if it meant something.
+ */
+function completionOutcomeField(raw: string | undefined): { completionOutcome?: CompletionOutcome } {
+  const parsed = CompletionOutcomeSchema.safeParse(raw);
+  return parsed.success ? { completionOutcome: parsed.data } : {};
 }
 
 /** Fill the `{skill}` placeholder. A placeholder, not concatenation: Turkish puts the name first. */
@@ -451,7 +465,15 @@ export function registerAgentRunIpc(): void {
         { quota: tokenQuota, lifetimeUsed: lifetimeUsedBefore },
       );
       runSummary = summary;
-      return { runId, stoppedReason: summary.stoppedReason, ok: summary.ok };
+      return {
+        runId,
+        stoppedReason: summary.stoppedReason,
+        ok: summary.ok,
+        // S8: the panel shows what the evidence supported, not only that the run finished. Omitted
+        // rather than defaulted when there was no verdict — "unknown" and "unverified" are different
+        // claims and must not collapse into one chip.
+        ...completionOutcomeField(summary.completionOutcome),
+      };
     } catch (err) {
       runThrew = true;
       onEvent('error', err instanceof Error ? err.message : 'Agent run failed');

@@ -75,6 +75,16 @@ export function useAgentActions(deps: AgentActionsDeps) {
       // refuses the binding — the run is asked about normally. That is the intended direction.
       ...(activeState.skillId !== null ? { skillId: activeState.skillId } : {}),
     })
+      .then((result) => {
+        // The evidence verdict belongs to THIS turn, matched by its own id rather than by position:
+        // a run that resolves after the user has started another must not label the wrong answer.
+        if (result.completionOutcome === undefined) return;
+        const outcome = result.completionOutcome;
+        mutateGroup(groupId, (s) => ({
+          ...s,
+          turns: s.turns.map((turn) => (turn.id === id ? { ...turn, completionOutcome: outcome } : turn)),
+        }));
+      })
       .catch((err: unknown) => {
         const message = err instanceof Error && err.message.trim().length > 0
           ? err.message
