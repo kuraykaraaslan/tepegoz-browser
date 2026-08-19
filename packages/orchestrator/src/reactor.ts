@@ -515,6 +515,16 @@ export default class Reactor {
         visionEscalations.push(escalation);
         Logger.info('[s10] vision escalation', escalation);
         options.onVisionEscalation?.(escalation);
+        // Fallback-ONLY: this is the sole call site, reached only when a trigger fired. An ordinary step
+        // has no path to a screenshot, which is what the Never-list clause requires.
+        if (options.captureVision !== undefined) {
+          const blocks = await options.captureVision(escalation).catch((err: unknown) => {
+            // A failed capture degrades the step; it must never end the run.
+            Logger.warn('[s10] vision capture failed; continuing without it', { err: String(err) });
+            return null;
+          });
+          if (blocks !== null && blocks.length > 0) messages.push({ role: 'user', content: blocks });
+        }
       }
 
       // C1 PR2: fold this outcome into the run-level no-progress counter (a state-changing action that

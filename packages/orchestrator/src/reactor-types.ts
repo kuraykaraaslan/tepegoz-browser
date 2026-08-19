@@ -1,4 +1,4 @@
-import type { CanonMessage } from '@tepegoz/model-gateway';
+import type { CanonContentBlock, CanonMessage } from '@tepegoz/model-gateway';
 import type { InvokeContext } from '@tepegoz/capability-plane';
 import type {
   AgentWorkingState,
@@ -157,6 +157,16 @@ export interface ReactOptions {
    * measured before any pixel is ever sent.
    */
   onVisionEscalation?: (escalation: VisionEscalation) => void;
+  /**
+   * S10 PR4: capture + screen + annotate an image for THIS escalation, returning the content blocks to
+   * show the model, or null to stay text-only.
+   *
+   * Absent ⇒ **no image is ever attached**, which is the default: the host installs this only when
+   * vision is enabled, so the reactor stays free of the policy decision. Fallback-ONLY by construction —
+   * it is called on an escalation and nowhere else, so there is no path by which an ordinary step can
+   * acquire a screenshot.
+   */
+  captureVision?: (escalation: VisionEscalation) => Promise<CanonContentBlock[] | null>;
   /** Fired when the model chooses to act, before the tool runs (Agent Console). */
   onDecision?: (tool: string, rationale: string) => void;
   /** Fired after each tool call resolves (drives taint recording + console step events). */

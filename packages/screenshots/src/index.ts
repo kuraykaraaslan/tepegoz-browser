@@ -1,3 +1,4 @@
+export * from './vision-attach';
 export * from './vision-budget';
 export * from './vision-marks';
 export * from './vision-overlay-script';

@@ -1,6 +1,6 @@
 # Phase S10 — Vision, Escalation-Only (W2 Perception)
 
-**Status:** 🟡 In progress (PR0–PR3 landed 2026-08-19) · **Depends on:** [S1](phase-s1-foundation-native-loop.md) (multimodal `CanonMessage` image blocks) · gate threshold pre-registered in [S0](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟠 Measurement-owed (PR0–PR4 landed 2026-08-19; PR5 ⏸ funded) · **Depends on:** [S1](phase-s1-foundation-native-loop.md) (multimodal `CanonMessage` image blocks) · gate threshold pre-registered in [S0](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Add vision as an **escalation fallback** per [ADR-0008](../../docs/adr/) — never every step — for the pages the DOM/a11y path structurally cannot see: canvas/webgl surfaces, closed shadow roots, cross-origin iframes, and image-only controls. Deterministic triggers in the reactor decide when a step is blind; only then does a **token-budgeted, downscaled, set-of-marks-annotated** screenshot reach the model. This is the v2 F1 vision milestone **re-cut**: F1 assumed vision would lift the escape gate, but the measured DoD failures are on-page (see [`eval-results.md`](eval-results.md)), so S10's job is narrowed to *seeing the structurally-invisible* and its cost is bounded by a measured escalation-rate ceiling.
 
@@ -22,7 +22,7 @@ The gap is real, not theoretical. [`build-dom-tree-script.ts`](../../apps/deskto
 - [x] **Fixtures frozen in PR0 before any capability code** (constitution: fixture-freeze); the before/after **delta is recorded in [`eval-results.md`](eval-results.md)** and the ledger.
 - [ ] No prose deletion in S10 (see [Prose steers](#prose-steers)); the "avoid screenshots" steer in `BROWSING_STRATEGY` is *replaced by mechanism*, tracked as its own paired sweep line if the prompt string changes.
 - [ ] **i18n EN + full TR parity in the same PR** for any UI surface (a "seeing the page" / vision-escalation indicator in [`ext-agent`](../../extensions/ext-agent), if surfaced).
-- [ ] Strict TS, zod `safeParse` at every new trust boundary (screenshot→model handoff, trigger config), `AppError` at boundaries, 250-line file cap (split by construction), no `apps/desktop` growth beyond the trigger hook — capture/budget/marks land in [`packages/screenshots`](../../packages/screenshots).
+- [x] Strict TS, zod `safeParse` at every new trust boundary (screenshot→model handoff, trigger config), `AppError` at boundaries, 250-line file cap (split by construction), no `apps/desktop` growth beyond the trigger hook — capture/budget/marks land in [`packages/screenshots`](../../packages/screenshots).
 
 ## Tasks
 
@@ -150,9 +150,27 @@ The gap is real, not theoretical. [`build-dom-tree-script.ts`](../../apps/deskto
 
 ### PR4 — adapter image-block wiring (consumes S1)
 
-- [ ] On an escalation, attach the `AnnotatedScreenshot` as an **image content block** on the `CanonMessage` (the block type itself lands in [S1](phase-s1-foundation-native-loop.md)) via the model-gateway adapters ([`packages/model-gateway`](../../packages/model-gateway)) — Anthropic first (DoD tier), then the provider-agnostic path per [ADR-0005](../../docs/adr/).
-- [ ] **Route every image through the S6 injection screen before it reaches the model** — the screenshot is untrusted inbound content exactly like page text; wire the image handoff through the same [`content-guard.ts`](../../packages/tool-executor/src/content-guard.ts) discipline (S6 owns the image-side gate). This is the mitigation for the known image-injection attack.
-- [ ] Escalation stays **fallback-only**: no image is attached on the ordinary DOM-visible path; assert this in a gateway test so a regression that attaches screenshots-every-step fails CI (defends the Never-list clause).
+- [x] On an escalation, attach the `AnnotatedScreenshot` as an **image content block** on the `CanonMessage` (the block type itself lands in [S1](phase-s1-foundation-native-loop.md)) via the model-gateway adapters ([`packages/model-gateway`](../../packages/model-gateway)) — Anthropic first (DoD tier), then the provider-agnostic path per [ADR-0005](../../docs/adr/).
+- [x] **Route every image through the S6 injection screen before it reaches the model** — the screenshot is untrusted inbound content exactly like page text; wire the image handoff through the same [`content-guard.ts`](../../packages/tool-executor/src/content-guard.ts) discipline (S6 owns the image-side gate). This is the mitigation for the known image-injection attack.
+- [x] Escalation stays **fallback-only**: no image is attached on the ordinary DOM-visible path; assert this in a gateway test so a regression that attaches screenshots-every-step fails CI (defends the Never-list clause).
+
+> **Mechanism notes (PR4).**
+> 1. **The image screen FAILS CLOSED, and the screen itself is S6's.** With none installed, no image is
+>    attached and the escalation degrades to a text note that says so — including *"You have not seen this
+>    page"*, so the model cannot quietly believe it looked. Pixels bypass the text content-guard entirely
+>    (an instruction painted on a canvas never appears in `innerText`), so "nobody checked" and "it is
+>    safe" are different statements and only one may let pixels through. **The capability waits for its
+>    defence, not the reverse** — which is also why `atk-image-injection` is frozen and open.
+> 2. **A throwing screen is a refusal.** A defence that failed passed nothing.
+> 3. **Fallback-only is asserted on the TRANSPORT, not on a flag.** `vision-fallback-guard.test.ts`
+>    counts image blocks actually handed to the provider across a whole run: with the capture hook
+>    installed and an ordinary readable page, **zero**. That is the Never-list clause as a CI failure, and
+>    it catches the realistic regression — a refactor moving the capture call somewhere unconditional.
+> 4. **The reactor holds no policy.** `captureVision` absent ⇒ no image, ever; the host installs it only
+>    when vision is enabled. Escalations are still RECORDED without it, so the rate is measurable while
+>    the capability is off.
+> 5. **i18n:** no user-facing string was added. No vision indicator was surfaced in `ext-agent`, so the
+>    EN+TR parity line is vacuously satisfied rather than done — recorded so a later UI PR knows it owes one.
 
 ### PR5 — sweep (⏸ funded)
 

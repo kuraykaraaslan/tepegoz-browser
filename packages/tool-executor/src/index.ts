@@ -44,3 +44,4 @@ export * from './stable-refs.js';
 export * from './elements-diff.js';
 export * from './key-chord.js';
 export * from './origin-guard.js';
+export * from './image-guard.js';
