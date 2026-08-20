@@ -43,3 +43,4 @@ consequences (including rejected alternatives). Format is a lightweight [MADR](h
 | [0033](0033-transaction-mandate-kernel.md) | Transaction Mandate Kernel — bounded pre-model authority, replay-safe (decision layer) | Accepted (decision layer) |
 | [0034](0034-verifiable-policy-bundles.md) | Verifiable Policy Bundles — sealed narrowing enforced in the compiler (decision layer) | Accepted (decision layer) |
 | [0035](0035-governed-agent-endpoints.md) | Governed Agent Endpoints — sensitive-site lockout applies regardless of token (decision layer) | Accepted (decision layer) |
+| [0036](0036-kamu-adapter-trust-model.md) | Kamu public-service adapter trust model — read free, write force-asked with biometric (decision layer) | Accepted (decision layer) |

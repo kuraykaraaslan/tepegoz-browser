@@ -106,3 +106,14 @@ export {
   type AgentEndpointRequest,
   type AgentEndpointVerdict,
 } from './agent-endpoint-gate';
+export {
+  KAMU_DOMAINS,
+  classifyKamuStep,
+  isKamuDomain,
+  type KamuStepRequest,
+  type KamuVerdict,
+} from './kamu-policy';
+export {
+  checkLocalePackParity,
+  type LocalePackParity,
+} from './locale-pack-parity';
