@@ -21,8 +21,12 @@ function originOf(url: string): string | null {
  *    React-Refresh preamble and ws/http connect for HMR.
  *  - `style-src 'unsafe-inline'` stays in prod: React inline `style={}` attributes (sidebar width,
  *    popup anchoring) are CSP "inline styles".
- *  - `img-src` allows https/http/data: — the tab strip renders page favicons and the resize snapshot
- *    is a data: PNG.
+ *  - `img-src` allows data: (the tab strip's favicons — fetched by main on the PAGE'S OWN session and
+ *    inlined, never fetched here; see `tabs-favicon.electron.ts` — and the resize snapshot's PNG) and
+ *    https/http, which remains ONLY for stored bookmark icons imported from another browser. No tab
+ *    favicon may use it: the chrome has no proxy, so a remote favicon fetched here would be a
+ *    clear-path request to the site the user is viewing, tunnel or not. `TabFaviconSchema` enforces
+ *    that at the IPC boundary rather than leaving it to this comment.
  */
 function chromeCsp(dev: boolean): string {
   const script = dev ? "script-src 'self' 'unsafe-inline'" : "script-src 'self'";

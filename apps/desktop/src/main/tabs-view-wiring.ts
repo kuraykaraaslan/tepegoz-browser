@@ -1,6 +1,7 @@
 import {
   type BrowserWindow,
   type Rectangle,
+  type Session,
   type WebContents,
   type WebContentsView,
 } from 'electron';
@@ -11,6 +12,7 @@ import { handleWindowShortcut } from './keyboard-shortcuts';
 import { getDb } from './db/database.electron';
 import ActionInterceptorService from './extensions/action-interceptors.electron';
 import { openPageContextMenu } from './menus/page-context-menu';
+import { faviconDataUrl } from './tabs-favicon.electron';
 import {
   blockNonWeb,
   isActivatingInput,
@@ -24,7 +26,7 @@ import {
   lastGestureAt,
   MAX_TITLE_LENGTH,
   navigationObservers,
-  POPUP_WINDOW_OPTIONS,
+  popupWindowOptions,
 } from './tabs-shared';
 
 /**
@@ -34,6 +36,10 @@ import {
  * store, window, live bounds, and the `createTab`/`emitState` primitives) rather than the whole instance.
  */
 
+/** The favicon URL each view most recently ASKED for, so an out-of-order fetch cannot paint a stale
+ *  icon onto a page that has since navigated. Weak, so it dies with the webContents. */
+const requestedFavicon = new WeakMap<WebContents, string | null>();
+
 /** The owning `WindowTabs` collaborators a wired view's handlers reach back into. */
 export interface ViewWiringHost {
   readonly win: BrowserWindow;
@@ -41,7 +47,10 @@ export interface ViewWiringHost {
   /** The current content-area bounds (read lazily — the context menu anchors at click time). */
   getBounds(): Rectangle;
   /** Open a tab spawned by the page (window.open / target=_blank) as a child of the wired tab. */
-  createTab(rawUrl: string, opts: { background: boolean; openerId: string }): void;
+  createTab(
+    rawUrl: string,
+    opts: { background: boolean; openerId: string; session: Session },
+  ): void;
   /** Re-emit the window's TabsState after a handler mutates the store. */
   emitState(): void;
 }
@@ -107,7 +116,7 @@ export function wireView(host: ViewWiringHost, id: string, view: WebContentsView
       return { action: 'deny' };
     }
     if (needsNativeWindow(details.url) || wantsNativeWindow(details)) {
-      return { action: 'allow', overrideBrowserWindowOptions: POPUP_WINDOW_OPTIONS };
+      return { action: 'allow', overrideBrowserWindowOptions: popupWindowOptions(wc.session) };
     }
     // Plain new tab. Non-web schemes (file:/custom) that didn't need a native window are dropped.
     if (!isWebUrl(target)) return { action: 'deny' };
@@ -118,7 +127,10 @@ export function wireView(host: ViewWiringHost, id: string, view: WebContentsView
           ? false
           : id !== host.store.activeId;
     // Spawned by the page → the opener is THIS tab, so the new tab inherits its group (ADR-0020).
-    host.createTab(target, { background, openerId: id });
+    // The new tab inherits the OPENER'S session, not the Direct one. A page-opened tab is a
+    // continuation of the page that opened it, so a link opened from a tunnel-bound tab must stay on
+    // that tunnel — landing it on the clear path would be the same silent leak as the popup path above.
+    host.createTab(target, { background, openerId: id, session: wc.session });
     return { action: 'deny' };
   });
   // A natively-allowed popup opens its own top-level window; harden it the same way as a browsed view
@@ -173,8 +185,26 @@ export function wireView(host: ViewWiringHost, id: string, view: WebContentsView
   });
   // Electron sends every favicon a page declares; the last is typically the largest/most specific.
   wc.on('page-favicon-updated', (_e, favicons) => {
-    host.store.update(id, { faviconUrl: favicons.at(-1) ?? null });
-    host.emitState();
+    const source = favicons.at(-1) ?? null;
+    requestedFavicon.set(wc, source);
+    if (source === null) {
+      host.store.update(id, { faviconUrl: null });
+      host.emitState();
+      return;
+    }
+    // Fetched on the PAGE'S session, never handed to the chrome as a remote URL: the tab strip renders
+    // on the app partition, which has no proxy, so an `<img src="https://site/...">` there would be the
+    // browser chrome making a clear-path request to the site you are viewing — through a tunnel or not.
+    void faviconDataUrl(wc.session, source).then(
+      (dataUrl) => {
+        // Drop a late answer: the page may have navigated (or declared a newer icon) while we fetched.
+        if (wc.isDestroyed() || requestedFavicon.get(wc) !== source) return;
+        if (dataUrl === null) return;
+        host.store.update(id, { faviconUrl: dataUrl });
+        host.emitState();
+      },
+      () => undefined,
+    );
   });
   wc.on('did-start-loading', () => {
     host.store.update(id, { isLoading: true });
@@ -190,6 +220,7 @@ export function wireView(host: ViewWiringHost, id: string, view: WebContentsView
   // A committed top-level navigation means a new document — drop the old favicon so a stale icon
   // from the previous page can't linger (the new one arrives via page-favicon-updated).
   wc.on('did-navigate', () => {
+    requestedFavicon.delete(wc);
     host.store.update(id, { faviconUrl: null });
   });
   // Record the visit in browsing history (once per committed top-level navigation). Only http(s);
@@ -222,7 +253,7 @@ export function wirePopupWindow(wc: WebContents): void {
       return { action: 'deny' };
     }
     if (isWebUrl(target) || needsNativeWindow(details.url) || wantsNativeWindow(details)) {
-      return { action: 'allow', overrideBrowserWindowOptions: POPUP_WINDOW_OPTIONS };
+      return { action: 'allow', overrideBrowserWindowOptions: popupWindowOptions(wc.session) };
     }
     return { action: 'deny' };
   });

@@ -54,6 +54,8 @@ endpoint** (one loopback port per active connection), never an OS-level system p
       _(**measured for the connection itself**: the spike proves the SOCKS request carries `DOMAINNAME`, i.e. the hostname is resolved by the proxy and never by the user's resolver, and `assertFailClosed` rejects SOCKS4 — the variant that has no hostname form — outright. **Not covered:** Chromium's DNS *prefetch*/preconnect predictor and DoH, which are process-wide rather than per-session; that residual is now its own task below.)_
 - [~] **No cross-tab bleed:** a tab bound to connection A never egresses via B or Direct; distinct connections stay isolated (distinct partitions/ports; Tor streams isolated per connection)
       _(the partition/storage half is landed and tested: distinct connections get distinct partitions, an id that could collide throws instead of being sanitized into a shared cookie jar, and the spike shows a bound session's traffic reaching only the SOCKS endpoint. The **egress** half needs two live connections at once, which needs the pool; Tor stream isolation is untouched.)_
+- [x] **Nothing else reaches the network on a tunneled page's behalf.** A swept-for, not assumed, list: popups, tab-strip favicons, page-opened tabs, and the app's own HTTP
+      _(four paths the phase never listed, two of them live leaks. **Popups**: `window.open()` from a tunnel-bound page opened on the **clear path** — the options constant was pinned to the Direct partition; now `popupWindowOptions(openerSession)` via `webPreferences.session`. **Favicons**: the tab strip renders in the app chrome (no proxy, ever) and was handed the page's remote icon URL, so the browser chrome made a clear-path request to the viewed site on every navigation — main now fetches on the page's own session and inlines it ([tabs-favicon.electron.ts](../../apps/desktop/src/main/tabs-favicon.electron.ts)), with `TabFaviconSchema` rejecting a non-`data:` favicon at the IPC boundary and [spike-favicon-inline.spec.ts](../../e2e/spike-favicon-inline.spec.ts) measuring it in the shipping app. **Tab creation**: `createTab` now takes a `Session` (defaulting to the registry's Direct one), so a tab can exist on a tunnel partition at all, and a page-opened tab inherits its opener's session. **App-issued HTTP**: see the L8 row below.)_
 - [x] **Per-session parity — every browsing partition is wired like the base one.** Ad/tracker filtering (DNR), download quarantine, the User-Agent override and "forget this site" reach a tunnel partition, not just `persist:tepegoz-web`
       _(landed: [browsing-sessions.electron.ts](../../apps/desktop/src/main/network/browsing-sessions.electron.ts) — one registry, retro-applying registration, exactly-once per session, and **critical** attachers whose failure refuses the partition rather than serving it half-wired. This was NOT in the original task list and is the prerequisite the rest of the phase silently assumed: before it, a tunnel partition loaded pages perfectly with no filtering, no quarantine, the wrong UA, and cookies that survived a site clear.)_
 - [~] **ADR-0011** written + Accepted (VPN & network-privacy architecture: three-scope binding — General/Group/Tab — with `tab→group→General→Direct` resolution over per-connection SOCKS partitions, connection-pool lifecycle, reload-on-rebind trade-off, BYO vs managed, Tor trust model, reconciliation with "no system-proxy MITM")
@@ -65,16 +67,20 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 > **What actually runs today (2026-08-20).** Two layers, and the boundary between them is the honest part.
 >
 > **Decision layer (pure, no Electron):** `resolveBinding`, `partitionKeyFor`,
-> `affectedByGroupChange`/`affectedByGeneralChange`, `killSwitchVerdicts`, and now `tunnelProxyConfig`/
-> `assertFailClosed` — 60 tests.
+> `affectedByGroupChange`/`affectedByGeneralChange`, `killSwitchVerdicts`, `tunnelProxyConfig`/
+> `assertFailClosed`, and the app-HTTP egress route.
 >
 > **Enforcement seam (real Electron, running in the shipping app):** every browsing session is created
 > through `BrowsingSessions` and carries the full filtering/quarantine/User-Agent plane; `assertFailClosed`
 > gates the only `setProxy` call site; `ensureTunnelSession` verifies with `resolveProxy` that the tunnel
-> actually took effect and throws instead of degrading. Measured end-to-end against the shipping app by
-> [spike-tunnel-failclosed.spec.ts](../../e2e/spike-tunnel-failclosed.spec.ts): a bound session routes
-> through a live SOCKS endpoint with remote DNS, and when that endpoint dies the next request fails while
-> a **proven-reachable** clear path records nothing.
+> actually took effect and throws instead of degrading; tabs and popups are created on a `Session` rather
+> than a partition name, so they inherit their opener's network path; favicons are fetched on the page's
+> own session and inlined, so the proxy-less app chrome never fetches anything for a browsed page. Measured
+> end-to-end against the shipping app by
+> [spike-tunnel-failclosed.spec.ts](../../e2e/spike-tunnel-failclosed.spec.ts) (routes through a live SOCKS
+> endpoint with remote DNS; when that endpoint dies the next request fails while a **proven-reachable**
+> clear path records nothing) and
+> [spike-favicon-inline.spec.ts](../../e2e/spike-favicon-inline.spec.ts).
 >
 > **Still true, and not softened:** there is no connection pool, no WireGuard or Tor provider, and no UI —
 > so **every tab in the browser is Direct today**, exactly as before. Nothing the user can click creates a
@@ -129,7 +135,10 @@ endpoint** (one loopback port per active connection), never an OS-level system p
       _(the mechanism is landed and **measured**: proxy rules carry no `DIRECT` fallback and `assertFailClosed` rejects one in every spelling Chromium honours, so a dead endpoint yields `ERR_PROXY_CONNECTION_FAILED` rather than a clear-path request. Owed: the pool that reports the drop, and the per-connection scoping across two live connections.)_
 - [x] **No `DIRECT` fallback, ever** — the one-token property the whole kill-switch rests on, asserted at the only `setProxy` call site rather than trusted to review
 - [x] **WebRTC cannot escape the tunnel** — `disable_non_proxied_udp` per tunneled `WebContents`. _WebRTC opens UDP from the host stack while a SOCKS proxy carries TCP: without this a "tunneled" tab hands out the machine's real addresses in ICE candidates while every HTTP request goes through the tunnel. Was missing from this phase's DoD entirely._
+- [x] **The app's OWN outbound HTTP has a stated route, and it is fail-closed.** `@tepegoz/http` is axios on Node's stack, so `session.setProxy` never touched it: the agent's `web_fetch`, sitemap reads, model-provider calls and MCP HTTP transports left on the clear path whatever any tab was bound to — a decision nobody had made rather than a bug
+      _(**decided:** app-issued HTTP follows the **General** binding only. Tab/Group bindings answer "where does THIS page's traffic go" and a main-process request has no tab to inherit from. [egress-route.ts](../../packages/http/src/egress-route.ts) resolves it per request (so a long-lived provider client follows a General change) and **refuses** the request if a tunnel is in force with no transport installed — never a silent downgrade to Direct. Resolves to Direct today because nothing produces a SOCKS port yet; stops being inert when the pool lands.)_
 - [ ] **DNS prefetch / preconnect / DoH residual** — the per-connection path resolves remotely (measured: `DOMAINNAME` reaches the SOCKS server), but Chromium's predictor and DoH are process-wide, not per-session. Decide and verify: disable the predictor for tunnel-bound contexts, or prove it never resolves for them
+- [ ] **Partition teardown** — Electron can clear a partition's storage but not delete its directory, so a removed connection leaves its cookies/cache on disk. The pool's teardown needs an explicit clear step, or the "private" partition outlives the connection it belonged to
 - [ ] **Rebind safety:** the reload-on-switch transition is atomic w.r.t. egress — no request escapes on the old (or Direct) path once a re-bind is requested
 - [ ] **DNS-leak detection** + "cleartext-when-tunnel-expected" anomaly (per tab/partition) → agent-lockout + HITL on high risk
 - [ ] Account for the **encrypted-tunnel blind spot**: anomaly scoring shifts to metadata/timing/volume (payload is opaque inside the tunnel) — documented, not silently weakened

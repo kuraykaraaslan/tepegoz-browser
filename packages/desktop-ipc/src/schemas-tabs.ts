@@ -70,6 +70,23 @@ export const TabGroupAssignSchema = z.object({ tabId: TabIdSchema, groupId: TabG
 
 // ── Tab tear-off (drag out of the strip → new/another window) ──────────────────────────────────────
 
+/**
+ * A tab's favicon as it crosses the IPC boundary: an inline `data:image/...` URL, or nothing.
+ *
+ * Remote URLs are rejected on purpose. The tab strip renders in the trusted app chrome, which has no
+ * proxy, so a `https://` favicon there would be the BROWSER making a clear-path request to the site the
+ * user is viewing — including one they opened behind a VPN or Tor. Main fetches favicons on the page's
+ * own session and inlines them (`tabs-favicon.electron.ts`); this schema is what stops that invariant
+ * from being quietly undone later. The cap matches main's 64 KiB byte cap once base64-expanded.
+ */
+export const TabFaviconSchema = z
+  .string()
+  .max(131_072)
+  .refine((v) => /^data:image\//i.test(v), {
+    message: 'A tab favicon must be an inline data:image/ URL, never a remote one',
+  })
+  .nullable();
+
 /** The dragged item for `tabs:drag-begin` — a single tab or a whole group (its header). */
 const TabDragItemSchema = z.object({
   kind: z.enum(['tab', 'group']),
@@ -80,7 +97,7 @@ const TabDragItemSchema = z.object({
 export const TabDragBeginSchema = z.object({
   item: TabDragItemSchema,
   title: z.string().max(2048),
-  faviconUrl: z.string().max(8192).nullable(),
+  faviconUrl: TabFaviconSchema,
   grabOffset: z.object({ x: z.number(), y: z.number() }),
   width: z.number(),
   height: z.number(),

@@ -1,7 +1,8 @@
 # ADR-0011: VPN & network privacy — three-scope binding, per-connection partitions, fail-closed by construction
 
 - **Status:** Accepted (binding-resolution + kill-switch layer; **amended 2026-08-20** — per-session
-  wiring, the fail-closed egress configuration, and the verified `setProxy` call site — see Amendment)
+  wiring, the fail-closed egress configuration, the verified `setProxy` call site, and four further
+  clear-path escapes closed (popups, favicons, tab creation, app-issued HTTP) — see Amendment)
 - **Date:** 2026-08-19 (amended 2026-08-20)
 - **Refines:** the existing per-partition session model (Phase 2's `NetworkFilterEngine` stance: no
   system-proxy MITM) · **complements** [ADR-0020](0020-tab-boundary-model.md) (Tab Boundary Model)
@@ -183,6 +184,48 @@ Measured, both passing:
 VPN: there is still no tunnel carrying traffic off this machine. And it says nothing about Chromium's DNS
 *prefetch*/preconnect predictor or DoH, which are process-wide rather than per-session — that residual is
 recorded as its own DoD line rather than folded into the passing result above.
+
+### 5. Four more clear-path escapes, found by asking "what else reaches the network?"
+
+The seam above routes a *page's* traffic. Sweeping the rest of the process for anything that reaches the
+network on a browsed page's behalf turned up four more paths, none of which the phase document mentions.
+Two were live leaks.
+
+- **Popups.** `POPUP_WINDOW_OPTIONS` was a constant pinned to the Direct partition and returned from
+  `setWindowOpenHandler`, so a `window.open()` from a tunnel-bound page opened a window on the **clear
+  path** — and a popup reads to the user as a continuation of the same session, so nothing about it looks
+  wrong. It is now `popupWindowOptions(openerSession)` using `webPreferences.session`: the popup is on the
+  opener's exact session by construction, with no partition string that can drift.
+- **Favicons.** The tab strip renders in the app chrome, on `persist:tepegoz-app`, which has no proxy and
+  never will. `page-favicon-updated` handed it the page's remote icon URL and the chrome CSP allowed
+  `img-src https:` — so the *browser chrome* made a clear-path request to the server of the page being
+  viewed, on every navigation, tunnel or not. Main now fetches the icon on the page's own session and
+  inlines it (`tabs-favicon.electron.ts`, bounded: 64 KiB, 8 s, 200-only, image content-type allowlist,
+  per-session cache so a page cannot loop it). `TabFaviconSchema` rejects a non-`data:` favicon at the IPC
+  boundary, so the invariant is enforced rather than commented. `img-src https:` survives only for stored
+  bookmark icons imported from another browser — user-authored data, unrelated to what is open right now.
+- **Tab creation was not partition-aware.** Every `WebContentsView` was built with a hard-coded partition
+  string, so there was no way to put a tab on a tunnel session even though `ensureTunnelSession` returns
+  one. `createTab` now takes a `Session` and defaults to `BrowsingSessions.direct()` — which also makes
+  "no tab is ever hosted on a session the registry did not wire" true by construction rather than by
+  convention. A page-opened tab inherits its opener's session, which is the phase's own inheritance rule
+  applied at the only moment Electron allows it: a `WebContents` is bound to its session at creation.
+- **App-issued HTTP bypasses Electron entirely.** `@tepegoz/http` is axios on Node's stack, so
+  `session.setProxy` has no effect on it: the agent's `web_fetch`, sitemap reads, model-provider calls and
+  MCP HTTP transports leave on the clear path regardless of any binding. That is not a bug — it is a
+  decision nobody had made. **Decided here:** app-issued HTTP follows the **General** binding only. Tab
+  and Group bindings answer "where does THIS page's traffic go" and a main-process request has no tab to
+  inherit from; General is already defined as the profile-wide default. `egress-route.ts` implements it
+  fail-closed — if a tunnel is in force and no transport is installed to honour it, the request is
+  **refused**, never quietly sent direct. It resolves to Direct today because nothing produces a SOCKS
+  port yet, and stops being inert the moment the pool lands.
+
+**Measured, not asserted:** the favicon path has its own e2e against the shipping app
+(`spike-favicon-inline.spec.ts`) — a real page declares an icon, the origin records the fetch, and the tab
+state is asserted to carry `data:` and no `http`. The popup and tab-creation fixes are enforced by types
+(`webPreferences.session` takes a `Session`, not a string) rather than by a measurement, because with no
+connection pool there is still no second session in the running app for a tab to be opened from; that is
+stated here rather than dressed up as a test.
 
 ### Still not decided here
 

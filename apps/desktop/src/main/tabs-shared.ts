@@ -1,6 +1,7 @@
 import {
   type BrowserWindow,
   type BrowserWindowConstructorOptions,
+  type Session,
   type WebContents,
   type WebContentsView,
 } from 'electron';
@@ -48,17 +49,28 @@ export const MAX_TITLE_LENGTH = 2048;
  */
 export const BROWSING_PARTITION = DIRECT_PARTITION;
 
-/** Secure window options for page-opened popups (child windows): the same hardened, chrome-less profile
- *  and isolated browsing partition as a tab's view — no preload, so the page never reaches the bridge. */
-export const POPUP_WINDOW_OPTIONS: BrowserWindowConstructorOptions = {
-  webPreferences: {
-    contextIsolation: true,
-    sandbox: true,
-    nodeIntegration: false,
-    webSecurity: true,
-    partition: BROWSING_PARTITION,
-  },
-};
+/**
+ * Secure window options for page-opened popups (child windows): the same hardened, chrome-less profile
+ * as a tab's view — no preload, so the page never reaches the bridge.
+ *
+ * Takes the OPENER'S session rather than naming a partition. This used to be a constant pinned to
+ * {@link BROWSING_PARTITION}, which meant a `window.open()` from a tunnel-bound page opened a window on
+ * the **clear path** while the user had every reason to believe they were still inside the tunnel —
+ * a silent leak, and the worst kind, because the popup looks like a continuation of the same session.
+ * `webPreferences.session` is Electron's direct form of "this exact session", so the popup is on the
+ * opener's network path by construction and cannot drift from it.
+ */
+export function popupWindowOptions(openerSession: Session): BrowserWindowConstructorOptions {
+  return {
+    webPreferences: {
+      contextIsolation: true,
+      sandbox: true,
+      nodeIntegration: false,
+      webSecurity: true,
+      session: openerSession,
+    },
+  };
+}
 
 /** Notified after each committed top-level navigation: `(url, browsedWebContents, ownerWindow)`. The
  *  owner window lets an observer (e.g. autofill) target the chrome window that hosts the browsed page. */

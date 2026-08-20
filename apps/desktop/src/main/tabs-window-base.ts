@@ -2,6 +2,7 @@ import {
   WebContentsView,
   type BrowserWindow,
   type Rectangle,
+  type Session,
   type WebContents,
 } from 'electron';
 import { Logger } from '@tepegoz/libs';
@@ -12,11 +13,11 @@ import { resolveViewBounds } from './tabs-content-bounds';
 import ActionInterceptorService from './extensions/action-interceptors.electron';
 import TabManager from './tabs-manager';
 import {
-  BROWSING_PARTITION,
   homeUrl,
   internalTitleFor,
   searchUrlForQuery,
 } from './tabs-shared';
+import BrowsingSessions from './network/browsing-sessions.electron';
 import {
   unwireView,
   wireView as installViewHandlers,
@@ -124,7 +125,17 @@ export class WindowTabsBase {
   /** Create a new tab, or `null` if an enabled extension's `tab:create` interceptor blocked it. */
   createTab(
     rawUrl?: string,
-    opts?: { background?: boolean; openerId?: string | undefined },
+    opts?: {
+      background?: boolean;
+      openerId?: string | undefined;
+      /**
+       * The browsing session to host this tab's `WebContents` on — a Phase 5 tunnel partition, or the
+       * Direct one when omitted. A `WebContents` is bound to its session at CREATION and can never be
+       * moved, so this is the only moment a tab's network path can be chosen; anything later has to
+       * destroy the view and build a new one.
+       */
+      session?: Session;
+    },
   ): string | null {
     // A blank new tab (Ctrl+T, the "+" button, new-tab-to-the-right, startup) lands on the internal
     // new-tab page — the AI / Favorites / Blank chooser — rather than a web page. It's a view-less
@@ -156,7 +167,10 @@ export class WindowTabsBase {
         sandbox: true,
         nodeIntegration: false,
         webSecurity: true,
-        partition: BROWSING_PARTITION,
+        // A concrete Session, never a partition NAME: going through `BrowsingSessions` is what
+        // guarantees the filtering/quarantine/User-Agent plane is attached before the view can load
+        // anything. A partition string here would let a tab exist on a session nothing ever wired.
+        session: opts?.session ?? BrowsingSessions.direct(),
         // Never throttle timers/rAF on a non-foreground tab. Complements the startup keep-rendering
         // switches (see index.ts): a hidden tab (attached-occluded) the AI drives, and every background
         // tab, must keep running at full rate — not just keep painting. Trade-off accepted (agentic browser).

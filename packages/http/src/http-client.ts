@@ -5,6 +5,7 @@ import axios, {
 } from 'axios';
 import { AppError, Logger } from '@tepegoz/libs';
 import { HttpMessages } from './messages';
+import { resolveEgressAgents } from './egress-route';
 
 /**
  * The ONE outbound-HTTP seam for the whole app. Every REST integration (LLM providers, MCP HTTP
@@ -157,6 +158,21 @@ export function createHttpClient(options: HttpClientOptions = {}): AxiosInstance
     config.baseURL = options.baseURL;
   }
   const instance = axios.create(config);
+  // Every request states where it is allowed to go BEFORE it is sent. `resolveEgressAgents` returns null
+  // for the ordinary Direct case (nothing attached, byte-identical to before Phase 5) and throws when a
+  // tunnel is in force that cannot be honoured — which fails the request instead of quietly sending it
+  // out the clear path. Deliberately in the request interceptor and not at client construction: the
+  // General binding can change while a long-lived client (an LLM provider) is still in use.
+  instance.interceptors.request.use((cfg) => {
+    const agents = resolveEgressAgents();
+    if (agents !== null) {
+      cfg.httpAgent = agents.httpAgent;
+      cfg.httpsAgent = agents.httpsAgent;
+      // Stop axios consulting HTTP_PROXY/HTTPS_PROXY as well — one route per request, and it is ours.
+      cfg.proxy = false;
+    }
+    return cfg;
+  });
   // Single boundary: a retryable failure — a 429 (rate limited) or a pre-send network error (DNS blip /
   // connection refused) — is backed off and retried, bounded + cancel-aware + honoring Retry-After. Both
   // mean the request was never processed, so retrying is safe. Anything else — or a retry past the
