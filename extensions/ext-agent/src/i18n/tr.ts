@@ -69,10 +69,21 @@ export const tr: AgentStrings = {
     login:
       'Bir giriş ekranı algılandı. Tepegöz duraklattı ve sizin yerinize giriş yapmayacak. Sayfada giriş yapın, sonra “Devam et”e basın — görevi oradan sürdürür.',
   },
+  // Sekme-açılışı dünya modeli (S3 PR3). Bir tıklama/form gönderimi yeni bir sekme açtı (target=_blank,
+  // window.open). Ajana sekmenin kimliği araç sonucunda zaten bildirildi; bunlar reaktörün kendi yaptığı
+  // şeyin konsol satırları — POLİTİKA KONTROLLÜ bir geçiş (modelin kendi sekme değişikliğiyle aynı
+  // kapıdan geçer) ya da otomatik geçmemesinin nedeni.
+  tabSpawn: {
+    opened: 'Yeni bir sekme açıldı — şimdi onun üzerinde işlem yapılıyor.',
+    followBlocked:
+      'Yeni bir sekme açıldı ama otomatik olarak geçilmedi — bunun için onayınız gerekiyor ya da site kilitli.',
+    returnedToOrigin: 'O sekme kapandı — başladığı sayfaya dönüldü.',
+  },
   // Token Defteri kotası — %80 uyarısı (kümülatif kullanım eşiği aştığında bir kez gösterilir).
   quota: {
     warnTitle: 'Token kotanıza yaklaşıyorsunuz',
-    warnBody: "Bu hesap token kotasının %80'inden fazlasını kullandı. Ayarlar → Ajan'dan düzenleyin.",
+    warnBody:
+      "Bu hesap token kotasının %80'inden fazlasını kullandı. Ayarlar → Ajan'dan düzenleyin.",
   },
   // Agentic komut paleti (Sohbet/Yap/Üret/Görevler) — bu yüzeyin sahibi bu eklenti.
   commandPalette: {
@@ -114,25 +125,29 @@ export const tr: AgentStrings = {
   },
   grants: {
     remember: '“{skill}” için bunu hatırla',
-    rememberHint: 'Yalnızca bu site ve bu tür işlem için, {days} gün boyunca. Beceriyi silmek bunu geri alır.',
+    rememberHint:
+      'Yalnızca bu site ve bu tür işlem için, {days} gün boyunca. Beceriyi silmek bunu geri alır.',
     remembered: '“{skill}” için bu izin kaydedildi.',
     used: '“{skill}” için kaydettiğin izinle yapıldı.',
   },
   commerce: {
     confirm: 'Bunun para harcayabileceğini anlıyorum',
-    caution: 'Otomatik satın alma hukuken tartışmalı (Amazon - Perplexity davası). Bazı siteler şartlarında bunu yasaklıyor; güvenmeden önce kontrol et.',
+    caution:
+      'Otomatik satın alma hukuken tartışmalı (Amazon - Perplexity davası). Bazı siteler şartlarında bunu yasaklıyor; güvenmeden önce kontrol et.',
   },
   scope: {
     grant: 'Bu görev bitene kadar {host} üzerinde buna izin ver',
     hint: 'Yalnızca bu site ve bu tür işlem için, yalnızca bu görev sürerken. Para, parola ve silme işlemleri her zaman sorar.',
   },
-  planGrant: 'Onaylamak, bu planın adı geçen sitelerdeki rutin adımlarını yalnızca bu görev için kapsar. Para, parola ve silme işlemleri yine her seferinde sorar.',
+  planGrant:
+    'Onaylamak, bu planın adı geçen sitelerdeki rutin adımlarını yalnızca bu görev için kapsar. Para, parola ve silme işlemleri yine her seferinde sorar.',
   background: 'Arka planda devam et',
   evidence: {
     verified: 'Doğrulandı',
     verifiedHint: 'Ajan işlemi yaptıktan sonra sayfada teyit etti.',
     attempted_unverified: 'Teyit edilmedi',
-    attempted_unverifiedHint: 'Ajan bunu yaptı ama sonucu teyit edemedi. Kendin kontrol etmen iyi olur.',
+    attempted_unverifiedHint:
+      'Ajan bunu yaptı ama sonucu teyit edemedi. Kendin kontrol etmen iyi olur.',
     contradicted: 'Çelişkili',
     contradictedHint: 'Sayfa, ajanın bildirdiğiyle çelişti. Buna güvenme.',
   },
@@ -171,7 +186,10 @@ export const tr: AgentStrings = {
   },
   // Kademeli otonomi seviyeleri (besteci açılır menüsü).
   autonomy: {
-    ask: { title: 'Uygulamadan önce sor', desc: 'Planı ve durum değiştiren her adımı gözden geçirir.' },
+    ask: {
+      title: 'Uygulamadan önce sor',
+      desc: 'Planı ve durum değiştiren her adımı gözden geçirir.',
+    },
     act: {
       title: 'Sormadan uygula',
       desc: 'Rutin adımları çalıştırır; yıkıcı veya finansal işlemler için yine sorar.',

@@ -1,6 +1,6 @@
 # Phase S3 — Reliability Actions (W1 Reliability)
 
-**Status:** 🟠 Measurement-owed (PR0–PR3, PR5, PR6-hover, PR7-refusal landed 2026-08-18; PR4 + the drag spike NOT started, PR8 ⏸ funded) · **Depends on:** [S0](phase-s0-truth-and-repair.md); [S2](phase-s2-perception-v2.md) (identity refs for the locator cascade) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟠 Measurement-owed (PR0–PR2, PR5, PR6-hover, PR7-refusal landed 2026-08-18; PR3 fully landed 2026-08-20 — spawn detection + policy-checked auto-follow + return-to-origin + EN/TR; PR4 + the drag spike NOT started, PR8 ⏸ funded) · **Depends on:** [S0](phase-s0-truth-and-repair.md); [S2](phase-s2-perception-v2.md) (identity refs for the locator cascade) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Close the missing action vocabulary and the two structural interaction gaps — snapshot-only
 occlusion and one-locator-per-ref — that make the agent fail on real sites. This targets the **measured**
@@ -139,13 +139,11 @@ re-snapshotting).
 - [~] Hook `setWindowOpenHandler` / `did-create-window` in the tab-engine host
       ([tab-engine](../../packages/tab-engine) + [tabs-view-wiring.ts](../../apps/desktop/src/main/tabs-view-wiring.ts));
       detect a click that opened tab T.
-- [ ] Emit an *"action opened tab T"* agent event and a **policy-checked** auto-follow (the
+- [x] Emit an *"action opened tab T"* agent event and a **policy-checked** auto-follow (the
       PolicyKernel/ToolGateway decides — no unconditional follow).
-- [ ] Return-to-origin bookkeeping in
-      [reactor-working-state.ts](../../packages/orchestrator/src/reactor-working-state.ts): after a popup
-      closes, the acting tab returns to the origin tab; the model is told *"your click opened tab T; you
-      are now acting on it"*, sanitized like every observation.
-- [ ] EN+TR strings for the *"opened tab T"* console line in [ext-agent](../../extensions/ext-agent).
+- [x] Return-to-origin bookkeeping — after a popup closes, the acting tab returns to the origin tab; the
+      model is told *"your click opened tab T; you are now acting on it"*, sanitized like every observation.
+- [x] EN+TR strings for the *"opened tab T"* console line in [ext-agent](../../extensions/ext-agent).
 
 > **Mechanism deviation (recorded, PR3).** Spawn detection compares the **open-tab set either side of
 > the interaction** rather than hooking `setWindowOpenHandler`/`did-create-window`. Both hooks already
@@ -156,13 +154,33 @@ re-snapshotting).
 > window would also be reported. That is a false positive the model can see and dismiss, which is the
 > safer direction of error.
 >
-> **The follow is NOT automatic.** The phase's own risk list names an attacker-controlled `window.open`
-> as an escape vector, and an unconditional follow walks into it. The spawn is reported with the tab's
-> id, url and title; the model decides, and every subsequent call still goes through the ToolGateway PEP.
-> **Still open in this PR:** the policy-checked auto-follow and the return-to-origin bookkeeping in
-> `reactor-working-state.ts` — the model is told to come back, but nothing enforces it yet. Because no
-> new agent EVENT was introduced, no new user-facing string was needed, so the EN+TR parity line is
-> vacuously satisfied rather than done.
+> **The follow is NOT unconditional — it is the SAME `tab_update_item` a model-issued switch would get.**
+> [agent-runtime-loop.ts](../../packages/agent-runtime/src/agent-runtime-loop.ts)'s `advanceTabLifecycle`
+> runs after every step: on a fresh spawn it calls `ToolGateway.invoke('tab_update_item', { id: spawned },
+> { targetUrl: spawned.url, taintedArgs: true })` — the exact tool [tab-tools.ts](../../packages/tab-engine/src/tab-tools.ts)
+> already exposes to the model, through the exact same PEP, with `taintedArgs: true` because the
+> destination was the PAGE's choice. An attacker-controlled `window.open` still has to clear the Policy
+> Kernel (`state_changing` → `ask`, resolved by the run's own HITL/autonomy gate exactly like any other
+> click) — there is no separate fast path that bypasses confirmation. When the call does not resolve
+> `active: true` (denied, declined, or the tab is view-less), the run falls back to today's
+> reported-only behavior; the model still has the id and can switch itself. Every later step re-checks
+> whether the followed tab is still open (`deps.listTabs()`, not a dedicated close event — no such event
+> exists here, and polling reuses the same seam the spawn diff itself relies on); once it is gone, the
+> same PEP call returns the acting tab to origin and says so (`tabSpawnStrings.returnedToOrigin`).
+> Origin is the click's own explicit `tabId` when the model gave one, else whichever tab reads `active`
+> right now — and the fallback deliberately refuses to guess when "active" already equals the spawned tab
+> itself (a same-origin foreground click can auto-activate its own popup before this runs), leaving that
+> edge case at today's reported-only behavior rather than booking a return to the wrong tab.
+>
+> **Lives in `agent-runtime-loop.ts`, not `reactor-working-state.ts` (deviation from the task list
+> above).** The follow/origin pair is reactor-owned, host-facing bookkeeping — never something the model
+> declares or reads back — so it sits as plain closure state in the Electron-facing loop next to the
+> run's taint corpus, the same shape as `signatureCounts`/`recalledHost`-style per-run state elsewhere in
+> this codebase, rather than adding a model-visible field to `AgentWorkingState`'s merge/render machinery
+> for state the model has no business seeing or editing. Tested directly in
+> [agent-runtime-loop.test.ts](../../packages/agent-runtime/src/agent-runtime-loop.test.ts) (12 cases:
+> follow / policy-declined / already-following / return-to-origin / failed-step / origin-resolution edge
+> cases) rather than through a live fixture run, since the fixture sweep itself stays ⏸ funded.
 
 ### PR4 — dialog spike + handling (Lane A, **spike-first**)
 - [ ] **Spike:** confirm `webContents.debugger` can own `Page.javascriptDialogOpening` /

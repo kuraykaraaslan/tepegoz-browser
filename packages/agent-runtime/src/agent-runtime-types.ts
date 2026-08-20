@@ -48,6 +48,13 @@ export interface AgentRunDeps {
   /** Resolve a browser tab's committed URL for tabId-scoped browser tools. */
   tabUrl?: (tabId: string) => string | undefined;
   /**
+   * All open browser tabs, with which one is active (S3 PR3 tab-spawn world model). Absent ⇒ the
+   * runtime cannot resolve an "origin" tab or notice a followed tab closing, so it never auto-follows a
+   * spawned tab — the same degrade-to-status-quo the spawn DETECTION itself already uses when a host
+   * can't enumerate tabs.
+   */
+  listTabs?: () => { id: string; url: string; title: string; active: boolean }[];
+  /**
    * AI-7 navigation grounding seam: discover the SAME-ORIGIN sitemap page URLs for the page the agent is
    * on, so a conventional path is only proposed when the origin actually publishes it. Injected by the
    * Electron wiring (over `@tepegoz/http`, SSRF-safe by same-origin construction — see web-tools'
@@ -57,6 +64,8 @@ export interface AgentRunDeps {
   discoverSitemap?: (pageUrl: string) => Promise<readonly string[]>;
   /** Localized human-handoff copy, one message per {@link HandoffKind} (captcha / twofa / login). */
   handoffStrings: Record<HandoffKind, string>;
+  /** Localized tab-spawn console copy (S3 PR3) — see {@link AgentRunDeps.listTabs}. */
+  tabSpawnStrings: { opened: string; followBlocked: string; returnedToOrigin: string };
   /**
    * On-device inference config (engine + selected-model resolver). Injected by the Electron wiring;
    * absent when the app didn't wire a local engine, in which case `'local'` routing is unavailable and
@@ -112,6 +121,11 @@ export interface AgentRunSummary {
    * a compact failure trace for triage, instead of reconstructing them by parsing event strings.
    */
   steps?:
-    | Array<{ tool: string; ok: boolean; error?: string | undefined; targetUrl?: string | undefined }>
+    | Array<{
+        tool: string;
+        ok: boolean;
+        error?: string | undefined;
+        targetUrl?: string | undefined;
+      }>
     | undefined;
 }

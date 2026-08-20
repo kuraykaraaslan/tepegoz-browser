@@ -66,6 +66,16 @@ export const en = {
     login:
       'A login screen was detected. Tepegöz has paused and will not sign in for you. Log in on the page, then press Resume — it will continue the task from there.',
   },
+  // Tab-spawn world model (S3 PR3). A click/form-submit opened a new tab (target=_blank, window.open).
+  // The agent is already told the tab's id in the tool result; these are the console-line phrases for
+  // what the reactor itself does next — a POLICY-CHECKED follow (same gate a model-issued tab switch
+  // would get), or an explanation of why it did not follow automatically.
+  tabSpawn: {
+    opened: 'Opened a new tab — now acting on it.',
+    followBlocked:
+      'Opened a new tab, but did not switch to it automatically — that needs your approval or the site is locked out.',
+    returnedToOrigin: 'That tab closed — back on the page it started from.',
+  },
   // Token Ledger quota — the 80% warning (raised once when cumulative usage crosses the threshold).
   quota: {
     warnTitle: 'Approaching your token quota',
@@ -116,7 +126,8 @@ export const en = {
   // by the caller — placeholders, not concatenation, because Turkish puts them in a different order.
   grants: {
     remember: 'Remember this for “{skill}”',
-    rememberHint: 'Only this site and this kind of action, for {days} days. Deleting the skill undoes it.',
+    rememberHint:
+      'Only this site and this kind of action, for {days} days. Deleting the skill undoes it.',
     remembered: 'Saved this permission for “{skill}”.',
     used: 'Allowed by a permission you saved for “{skill}”.',
   },
@@ -124,7 +135,8 @@ export const en = {
   // irreversible, so it asks for a second, deliberate gesture — and says WHY, once, without blocking.
   commerce: {
     confirm: 'I understand this can spend money',
-    caution: 'Automated purchasing is contested legally (Amazon v. Perplexity). Some sites prohibit it in their terms — check before you rely on it.',
+    caution:
+      'Automated purchasing is contested legally (Amazon v. Perplexity). Some sites prohibit it in their terms — check before you rely on it.',
   },
   // Scope granted at an approval (S8). The wording names the SITE and the run, because a permission
   // whose edges the user cannot see is one they cannot judge.
@@ -134,7 +146,8 @@ export const en = {
   },
   // What approving a plan actually buys — stated on the modal, because an approval whose consequences
   // are invisible is not informed consent.
-  planGrant: 'Approving covers the routine steps of this plan on the sites it names, for this task only. Money, passwords and deletions still ask every time.',
+  planGrant:
+    'Approving covers the routine steps of this plan on the sites it names, for this task only. Money, passwords and deletions still ask every time.',
   // Backgroundable run (S8 PR5). The window goes away; the task does not — and the tray says so.
   background: 'Continue in the background',
   // Evidence chip (S4 evidence, surfaced by S8). The distinction the user actually needs: did the
@@ -144,7 +157,8 @@ export const en = {
     verified: 'Checked',
     verifiedHint: 'The agent confirmed this on the page after doing it.',
     attempted_unverified: 'Unconfirmed',
-    attempted_unverifiedHint: 'The agent did this but could not confirm the result. Worth checking yourself.',
+    attempted_unverifiedHint:
+      'The agent did this but could not confirm the result. Worth checking yourself.',
     contradicted: 'Contradicted',
     contradictedHint: 'The page disagreed with what the agent reported. Do not rely on this.',
   },
@@ -177,7 +191,8 @@ export const en = {
   // Amber risk banner shown when autonomy is not 'ask' (level-aware).
   risk: {
     actTitle: 'Acting without asking',
-    actBody: 'Runs routine steps on its own, but still pauses for destructive or financial actions.',
+    actBody:
+      'Runs routine steps on its own, but still pauses for destructive or financial actions.',
     autoTitle: 'Fully autonomous',
     autoBody: 'Takes actions on this page and the web without pausing — review the timeline.',
   },
@@ -189,7 +204,10 @@ export const en = {
       desc: 'Runs routine steps; still asks for destructive or financial actions.',
     },
     auto: { title: 'Auto', desc: 'Fully autonomous — takes actions without pausing.' },
-    dangerous: { title: 'Dangerous', desc: 'Coming soon — unrestricted mode with no safety gates.' },
+    dangerous: {
+      title: 'Dangerous',
+      desc: 'Coming soon — unrestricted mode with no safety gates.',
+    },
   },
   // Reasoning-effort presets (the composer effort dropdown). Higher effort → deeper reasoning + more tokens.
   effort: {

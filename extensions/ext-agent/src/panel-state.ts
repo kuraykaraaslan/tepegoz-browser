@@ -34,7 +34,13 @@ export const PROSE_KINDS = new Set<AgentEvent['kind']>(['done', 'error', 'handof
  *  injected mid-run instruction is visible in the transcript. (`paused`/`resumed` drive the banner, not a
  *  list row.) */
 export const STEP_KINDS = new Set<AgentEvent['kind']>([
-  'step_start', 'step_ok', 'step_error', 'awaiting_approval', 'input_action', 'steered', 'grant',
+  'step_start',
+  'step_ok',
+  'step_error',
+  'awaiting_approval',
+  'input_action',
+  'steered',
+  'grant',
 ]);
 
 /** Notice severities for the dynamic notices strip above the composer. */
@@ -57,12 +63,14 @@ export function buildNotices(
 ): Notice[] {
   if (autonomy === 'ask') return [];
   const auto = autonomy === 'auto';
-  return [{
-    id: 'autonomy',
-    severity: auto ? 'danger' : 'warning',
-    title: auto ? risk.autoTitle : risk.actTitle,
-    body: auto ? risk.autoBody : risk.actBody,
-  }];
+  return [
+    {
+      id: 'autonomy',
+      severity: auto ? 'danger' : 'warning',
+      title: auto ? risk.autoTitle : risk.actTitle,
+      body: auto ? risk.autoBody : risk.actBody,
+    },
+  ];
 }
 
 /** One conversation turn: the user's message + the agent events streamed for its run. */
@@ -152,7 +160,8 @@ export function applyAgentEvent(cur: GroupState, e: AgentEvent): GroupState {
   const last = cur.turns.length - 1;
   let idx = cur.turns.findIndex((t) => t.runId === e.runId);
   if (idx === -1) {
-    if (cur.turns[last]?.runId === null) idx = last; // bind the just-started turn to this run
+    if (cur.turns[last]?.runId === null)
+      idx = last; // bind the just-started turn to this run
     else return cur; // straggler — owns no turn and is not the active run
   }
   const turn = cur.turns[idx];
@@ -210,6 +219,7 @@ const EVENT_KIND_LABEL: Record<AgentEvent['kind'], string> = {
   awaiting_approval: 'Awaiting approval',
   input_action: 'Input action',
   handoff: 'Handoff',
+  tab_spawn: 'Tab',
   grant: 'Saved permission',
   paused: 'Paused',
   resumed: 'Resumed',
@@ -260,7 +270,14 @@ export function serializeConversationLog(turns: Turn[], meta: ConversationLogMet
 
   turns.forEach((turn, i) => {
     const promptText = turn.prompt.trim();
-    parts.push(`## Turn ${String(i + 1)}`, '', '**You:**', '', promptText.length > 0 ? promptText : '_(empty)_', '');
+    parts.push(
+      `## Turn ${String(i + 1)}`,
+      '',
+      '**You:**',
+      '',
+      promptText.length > 0 ? promptText : '_(empty)_',
+      '',
+    );
     if (turn.events.length === 0) {
       parts.push('_No agent events recorded._', '');
     } else {

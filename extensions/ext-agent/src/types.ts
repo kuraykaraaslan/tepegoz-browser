@@ -56,6 +56,9 @@ export type AgentEventKind =
   | 'awaiting_approval'
   | 'input_action'
   | 'handoff'
+  // A click/form-submit opened a new tab; the reactor followed it (or explained why it did not), or the
+  // followed tab closed and the reactor returned to the tab it started from (S3 PR3).
+  | 'tab_spawn'
   // A remembered grant was used or saved (S9). Its own kind because provenance for a PERSISTENT
   // permission has to survive the run: a grant that acts invisibly is one nobody knows to revoke.
   | 'grant'
@@ -136,7 +139,7 @@ export interface AgentRunResult {
   stoppedReason: string;
   ok: boolean;
   /**
-   * What the run’s own evidence actually supported (S4, surfaced by S8): `verified`, 
+   * What the run’s own evidence actually supported (S4, surfaced by S8): `verified`,
    * `attempted_unverified`, or `contradicted`. Absent when the run never reached a completion
    * verdict.
    *

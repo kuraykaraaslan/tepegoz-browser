@@ -37,6 +37,17 @@ function tabUrl(tabId: string): string | undefined {
   return tab !== undefined && tab.url.length > 0 ? tab.url : undefined;
 }
 
+/** All open tabs + which is active (S3 PR3 tab-spawn world model — origin/return-to-origin bookkeeping). */
+function listTabs(): { id: string; url: string; title: string; active: boolean }[] {
+  const state = TabManager.getState();
+  return state.tabs.map((t) => ({
+    id: t.id,
+    url: t.url,
+    title: t.title,
+    active: t.id === state.activeId,
+  }));
+}
+
 /**
  * Desktop adapter over the Electron-free `@tepegoz/agent-runtime`: injects the browser tool host,
  * journal reader, active-tab URL, and the localized handoff copy (`mainStrings().agent.handoff`).
@@ -53,6 +64,7 @@ export default class AgentService {
     tokenBudget?: { quota: number; lifetimeUsed: number },
   ): Promise<AgentRunSummary> {
     const handoff = mainStrings().agent.handoff;
+    const tabSpawn = mainStrings().agent.tabSpawn;
     AgentTabGroup.setTopic(groupId, displayPrompt);
     const history = conversations.get(groupId) ?? [];
     let summary: AgentRunSummary;
@@ -63,9 +75,18 @@ export default class AgentService {
         {
           activeTabUrl,
           tabUrl,
+          listTabs,
           discoverSitemap,
           handoffStrings: { captcha: handoff.captcha, twofa: handoff.twofa, login: handoff.login },
-          localInference: { engine: llamaEngine(), resolveModel: () => ModelManager.resolveModel() },
+          tabSpawnStrings: {
+            opened: tabSpawn.opened,
+            followBlocked: tabSpawn.followBlocked,
+            returnedToOrigin: tabSpawn.returnedToOrigin,
+          },
+          localInference: {
+            engine: llamaEngine(),
+            resolveModel: () => ModelManager.resolveModel(),
+          },
           ...(tokenBudget !== undefined ? { tokenBudget } : {}),
         },
         history,

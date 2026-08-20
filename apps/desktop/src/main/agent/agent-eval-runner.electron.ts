@@ -92,7 +92,9 @@ function providerForRun(): { id: AIProvider; instance: ModelProvider } {
   if (scriptPath === undefined) throw new Error('scripted tier needs TEPEGOZ_EVAL_SCRIPT');
   const parsed = RepliesFileSchema.safeParse(JSON.parse(readFileSync(scriptPath, 'utf8')));
   if (!parsed.success) {
-    throw new Error(`invalid replies file: ${parsed.error.issues.map((i) => i.message).join('; ')}`);
+    throw new Error(
+      `invalid replies file: ${parsed.error.issues.map((i) => i.message).join('; ')}`,
+    );
   }
   const id = (parsed.data.provider ?? 'anthropic') as AIProvider;
   return { id, instance: new ScriptedProvider(parsed.data.replies, id) };
@@ -133,7 +135,9 @@ async function navigateWhenReady(url: string, timeoutMs = 30_000): Promise<void>
       // than poisoning the measurement. (The harness's transport-invalid retry is the backstop for the rest.)
       const page = await browserHost.readPage();
       if (page.url.startsWith(origin) && page.text.trim().length > 0) return;
-      throw new Error(`entry page not ready (url=${page.url}, textLen=${String(page.text.trim().length)})`);
+      throw new Error(
+        `entry page not ready (url=${page.url}, textLen=${String(page.text.trim().length)})`,
+      );
     } catch (err) {
       if (Date.now() >= deadline) throw err;
       await new Promise((resolve) => setTimeout(resolve, 250));
@@ -171,8 +175,10 @@ export async function maybeRunEval(): Promise<void> {
     await navigateWhenReady(fixtureUrl);
 
     const handoff = mainStrings().agent.handoff;
+    const tabSpawn = mainStrings().agent.tabSpawn;
     const hooks: AgentRunHooks = {
-      onEvent: (kind, message, detail) => Logger.info(`[eval] ${kind}: ${message}`, { detail: detail ?? '' }),
+      onEvent: (kind, message, detail) =>
+        Logger.info(`[eval] ${kind}: ${message}`, { detail: detail ?? '' }),
       // Unattended eval: auto-approve the plan + every HITL gate. Reachable ONLY under TEPEGOZ_EVAL.
       requestPlanApproval: () => Promise.resolve({ approved: true }),
       requestApproval: () => Promise.resolve(true),
@@ -182,8 +188,14 @@ export async function maybeRunEval(): Promise<void> {
     const summary = await runAgent(prompt, hooks, {
       activeTabUrl,
       tabUrl,
+      listTabs: () => browserHost.listTabs(),
       discoverSitemap,
       handoffStrings: { captcha: handoff.captcha, twofa: handoff.twofa, login: handoff.login },
+      tabSpawnStrings: {
+        opened: tabSpawn.opened,
+        followBlocked: tabSpawn.followBlocked,
+        returnedToOrigin: tabSpawn.returnedToOrigin,
+      },
       localInference: { engine: llamaEngine(), resolveModel: () => ModelManager.resolveModel() },
       provider,
     });

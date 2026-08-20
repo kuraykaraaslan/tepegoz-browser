@@ -4,11 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import CredentialVault, { type SecretCrypto } from '@tepegoz/credential-vault';
 import PreferenceStore from '@tepegoz/preferences';
-import {
-  TokenLedger,
-  type CanonResponse,
-  type ModelProvider,
-} from '@tepegoz/model-gateway';
+import { TokenLedger, type CanonResponse, type ModelProvider } from '@tepegoz/model-gateway';
 import type { LlamaEngine, LocalProviderConfig } from '@tepegoz/local-inference';
 import { runAgent, type AgentRunDeps, type AgentRunHooks } from './agent-runtime';
 
@@ -22,6 +18,11 @@ const fakeCrypto: SecretCrypto = {
 const DEPS: AgentRunDeps = {
   activeTabUrl: () => undefined,
   handoffStrings: { captcha: 'captcha', twofa: '2fa', login: 'login' },
+  tabSpawnStrings: {
+    opened: 'opened',
+    followBlocked: 'follow-blocked',
+    returnedToOrigin: 'returned',
+  },
 };
 
 function hooks(): AgentRunHooks {
@@ -76,7 +77,9 @@ describe('runAgent guards (before any model/tool call)', () => {
   it('runs whole-agent-local (no vault key) when localProvider.mode is default and a model is available', async () => {
     // No API key stored at all, yet a run proceeds on-device: it must reach the LOCAL engine (not a
     // "no API key" error). A fake engine throws a sentinel to stop before real generation.
-    PreferenceStore.update({ localProvider: { mode: 'default', selectedModelId: 'tepegoz-slm-1' } });
+    PreferenceStore.update({
+      localProvider: { mode: 'default', selectedModelId: 'tepegoz-slm-1' },
+    });
     const engine: LlamaEngine = {
       isAvailable: () => true,
       load: () => Promise.resolve({ modelId: 'tepegoz-slm-1', ctxSize: 2048 }),
@@ -120,15 +123,22 @@ describe('runAgent guards (before any model/tool call)', () => {
     // any model call; the seam must instead reach the injected provider — proven by its sentinel throw.
     const injected: ModelProvider = {
       id: 'anthropic',
-      complete: (): Promise<CanonResponse> => Promise.reject(new Error('reached-injected-provider')),
+      complete: (): Promise<CanonResponse> =>
+        Promise.reject(new Error('reached-injected-provider')),
     };
     await expect(
-      runAgent('do a thing', hooks(), { ...DEPS, provider: { id: 'anthropic', instance: injected } }),
+      runAgent('do a thing', hooks(), {
+        ...DEPS,
+        provider: { id: 'anthropic', instance: injected },
+      }),
     ).rejects.toThrow('reached-injected-provider');
   });
 
   it('resets the token ledger at the start of each run (per-task counter, not session-cumulative)', async () => {
-    TokenLedger.record('anthropic', 'claude-opus-4-8', 'plan', { inputTokens: 100, outputTokens: 50 });
+    TokenLedger.record('anthropic', 'claude-opus-4-8', 'plan', {
+      inputTokens: 100,
+      outputTokens: 50,
+    });
     expect(TokenLedger.totals().totalTokens).toBeGreaterThan(0);
     // No key configured → the run throws in resolution, but the reset runs first.
     await expect(runAgent('x', hooks(), DEPS)).rejects.toThrow();
