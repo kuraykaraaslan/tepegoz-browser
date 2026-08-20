@@ -172,7 +172,10 @@ export const en = {
   keyModel: {
     label: 'Model',
     auto: 'Auto (recommended)',
-    hint: 'Each key runs on its own model — a key’s model applies while it is the top key of its provider. "Auto" routes per task (a capable model for planning, a cheaper one for simple steps).',
+    /** The gear button's own compact label when the key is on auto. */
+    autoShort: 'Auto',
+    hint: 'Use the gear on a key to pick the model it runs on — a key’s model applies while it is the topmost key of its provider.',
+    menuHint: 'Model for this key',
     saved: 'Model updated.',
   },
 
@@ -383,13 +386,13 @@ export const en = {
   network: {
     title: 'Network privacy',
     intro:
-      'Route a tab, a tab group, or everything through a SOCKS5 endpoint already running on this computer — Tor’s local port, a VPN client’s SOCKS port, or an SSH tunnel. Tepegöz does not provide the tunnel itself, and nothing is routed through one unless you choose it here or from a tab’s right-click menu.',
+      'Route a tab or a whole tab group through WireGuard, Tor, or a SOCKS5 endpoint you already run. Tepegöz does not provide the tunnel itself, and nothing is routed through one unless you choose it.',
     defaultRoute: 'Default route',
     defaultRouteHint:
       'Applies to every tab that has no route of its own and is not in a group with one. Changing it reloads the affected tabs.',
     direct: 'Direct (no tunnel)',
     connections: 'Connections',
-    noConnections: 'No connections yet. Add one below.',
+    noConnections: 'No connections added yet.',
     notedAs: 'Noted as: {note}',
     remove: 'Remove',
     removeHint:
@@ -397,9 +400,6 @@ export const en = {
     statusUp: 'connected',
     statusDown: 'not connected',
     statusConnecting: 'connecting',
-    addTitle: 'Add a connection',
-    addHint:
-      'Pick a type: a WireGuard .conf profile, a managed Tor instance (optionally chained through one of your VPNs), or a SOCKS5 port already running on this machine. A WireGuard profile without a DNS line is refused — without a resolver inside the tunnel, every site name would still be looked up on the normal connection.',
     labelPlaceholder: 'Name',
     notePlaceholder: 'Note (e.g. Tor, Mullvad SE)',
     portPlaceholder: 'Port',
@@ -418,7 +418,6 @@ export const en = {
     protocolTor: 'Tor',
     protocolByo: 'SOCKS',
     chainedVia: 'via {name}',
-    keychainTitle: 'The OS keychain is unavailable',
     keychainBody:
       'A WireGuard profile contains a private key, so it can only be imported when the operating system can encrypt it. Nothing will be written in plain text.',
     torUpstream: 'Upstream connection',

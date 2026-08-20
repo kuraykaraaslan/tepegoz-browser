@@ -172,7 +172,9 @@ export const tr: SettingsStrings = {
   keyModel: {
     label: 'Model',
     auto: 'Otomatik (önerilen)',
-    hint: 'Her anahtar kendi modeliyle çalışır — bir anahtarın modeli, o sağlayıcının en üstteki anahtarı olduğu sürece geçerlidir. “Otomatik” göreve göre yönlendirir (planlama için güçlü model, basit adımlar için daha ucuz).',
+    autoShort: 'Otomatik',
+    hint: 'Bir anahtarın çalışacağı modeli seçmek için satırındaki dişliyi kullanın — anahtarın modeli, o sağlayıcının en üstteki anahtarı olduğu sürece geçerlidir.',
+    menuHint: 'Bu anahtarın modeli',
     saved: 'Model güncellendi.',
   },
 
@@ -386,13 +388,13 @@ export const tr: SettingsStrings = {
   network: {
     title: 'Ağ gizliliği',
     intro:
-      'Bir sekmeyi, sekme grubunu ya da her şeyi bu bilgisayarda zaten çalışan bir SOCKS5 uç noktasından geçirin — Tor’un yerel portu, bir VPN istemcisinin SOCKS portu veya bir SSH tüneli. Tepegöz tünelin kendisini sağlamaz; burada ya da bir sekmenin sağ tık menüsünden seçmediğiniz sürece hiçbir şey tünelden geçmez.',
+      'Bir sekmeyi ya da bütün bir sekme grubunu WireGuard, Tor veya zaten çalıştırdığınız bir SOCKS5 uç noktası üzerinden yönlendirin. Tepegöz tüneli kendisi sağlamaz; siz seçmedikçe hiçbir şey tünelden geçmez.',
     defaultRoute: 'Varsayılan rota',
     defaultRouteHint:
       'Kendi rotası olmayan ve rotalı bir grupta bulunmayan her sekme için geçerlidir. Değiştirmek etkilenen sekmeleri yeniden yükler.',
     direct: 'Doğrudan (tünelsiz)',
     connections: 'Bağlantılar',
-    noConnections: 'Henüz bağlantı yok. Aşağıdan ekleyin.',
+    noConnections: 'Henüz bağlantı eklenmedi.',
     notedAs: 'Not: {note}',
     remove: 'Kaldır',
     removeHint:
@@ -400,9 +402,6 @@ export const tr: SettingsStrings = {
     statusUp: 'bağlı',
     statusDown: 'bağlı değil',
     statusConnecting: 'bağlanıyor',
-    addTitle: 'Bağlantı ekle',
-    addHint:
-      'Bir tür seçin: WireGuard .conf profili, yönetilen bir Tor örneği (isterseniz VPN’lerinizden birinin üzerinden zincirlenmiş) ya da bu makinede zaten çalışan bir SOCKS5 portu. DNS satırı olmayan WireGuard profili reddedilir — tünelin içinde bir çözücü olmadan her site adı yine normal bağlantı üzerinden sorulurdu.',
     labelPlaceholder: 'İsim',
     notePlaceholder: 'Not (örn. Tor, Mullvad SE)',
     portPlaceholder: 'Port',
@@ -421,7 +420,6 @@ export const tr: SettingsStrings = {
     protocolTor: 'Tor',
     protocolByo: 'SOCKS',
     chainedVia: '{name} üzerinden',
-    keychainTitle: 'İşletim sistemi anahtarlığı kullanılamıyor',
     keychainBody:
       'Bir WireGuard profili özel anahtar içerir; bu yüzden ancak işletim sistemi onu şifreleyebildiğinde içe aktarılabilir. Hiçbir şey düz metin olarak yazılmayacak.',
     torUpstream: 'Üst bağlantı',

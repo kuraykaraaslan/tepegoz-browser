@@ -5,18 +5,22 @@ import type {
   NetworkConnectionView,
   NetworkState,
 } from '@tepegoz/desktop-ipc';
-import { AlertBanner, Badge, Button, Card } from '@tepegoz/ui';
+import { AlertBanner, Badge, Button, Card, Input } from '@tepegoz/ui';
 import { AddConnectionRow } from './settings-network-forms';
+import { Select } from './settings-shared';
 
 /**
- * Network privacy (Phase 5) — the VPN/Tor profile manager and the profile-wide default route.
+ * Network privacy (Phase 5) — the VPN/Tor connection manager and the profile-wide default route.
+ *
+ * Laid out like Providers & API keys, and for the same reason: it is the same shape of thing. The card's
+ * subtitle carries the framing, one add row sits on top, and the list it feeds comes directly under it —
+ * rather than a heading and a paragraph stacked above every control.
  *
  * The honest framing is part of the design, not a caveat bolted on. This browser does not operate a VPN:
  * it runs WireGuard in user space through a helper it does not ship, runs Tor the same way, or points at
- * a SOCKS endpoint the user already has. Saying that plainly, at the top, is the difference between a
- * feature someone can reason about and one that implies protection it does not provide.
+ * a SOCKS endpoint the user already has.
  *
- * Three other things this surface refuses to fake:
+ * Three things this surface refuses to fake:
  *  - the exit region is the user's own NOTE, echoed back and labelled as theirs — the browser cannot
  *    verify where a tunnel comes out, so it does not claim to;
  *  - status is the live health the pool measured, in words as well as colour;
@@ -34,9 +38,10 @@ const EMPTY: NetworkState = {
   secretsAvailable: false,
 };
 
-function StatusBadge({ c, s }: { c: NetworkConnectionView; s: SettingsStrings }) {
+function statusBadge(c: NetworkConnectionView, s: SettingsStrings) {
   if (c.status === 'up') return <Badge variant="success" dot>{s.network.statusUp}</Badge>;
-  if (c.status === 'connecting') return <Badge variant="warning" dot>{s.network.statusConnecting}</Badge>;
+  if (c.status === 'connecting')
+    return <Badge variant="warning" dot>{s.network.statusConnecting}</Badge>;
   return <Badge variant="neutral" dot>{s.network.statusDown}</Badge>;
 }
 
@@ -63,42 +68,33 @@ function ConnectionRow({
 
   const toggle = (): void => {
     setBusy(true);
-    void window.tepegoz.setNetworkConnectionActive(c.id, c.status !== 'up').then(
-      () => {
-        setBusy(false);
-        onChanged();
-      },
-      () => {
-        setBusy(false);
-        onChanged();
-      },
-    );
+    const done = (): void => {
+      setBusy(false);
+      onChanged();
+    };
+    void window.tepegoz.setNetworkConnectionActive(c.id, c.status !== 'up').then(done, done);
   };
 
   return (
-    <li className="rounded-md border border-border bg-surface-sunken px-3 py-2">
-      <div className="flex items-center gap-3">
-        <span className="min-w-0 flex-1">
-          <span className="flex items-center gap-2">
-            <span className="truncate text-sm text-text-primary">{c.label}</span>
-            <Badge variant="info" size="sm">
-              {protocolLabel(c, s)}
-            </Badge>
-            {upstream !== undefined && (
-              <Badge variant="primary" size="sm">
-                {s.network.chainedVia.replace('{name}', upstream.label)}
-              </Badge>
-            )}
-          </span>
+    <li className="rounded-md border border-border px-3 py-2">
+      <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <span className="text-sm font-medium text-text-primary">{c.label}</span>
+          <span className="ml-2 text-xs text-text-secondary">{protocolLabel(c, s)}</span>
+          {upstream !== undefined && (
+            <span className="ml-2 text-xs text-text-secondary">
+              {s.network.chainedVia.replace('{name}', upstream.label)}
+            </span>
+          )}
           {c.note.length > 0 && (
             // Labelled as the user's own claim: the browser cannot verify where a tunnel exits, and
             // presenting it as fact would be inventing an assurance.
-            <span className="block truncate text-xs text-text-secondary">
+            <span className="ml-2 text-xs text-text-disabled">
               {s.network.notedAs.replace('{note}', c.note)}
             </span>
           )}
-        </span>
-        <StatusBadge c={c} s={s} />
+        </div>
+        {statusBadge(c, s)}
         <Button size="sm" variant="outline" disabled={busy} onClick={toggle}>
           {c.status === 'up' ? s.network.disconnect : s.network.connect}
         </Button>
@@ -134,34 +130,42 @@ function BinaryRow({
   const [draft, setDraft] = useState('');
   if (status.found) return null;
   return (
-    <div className="mt-2">
+    <div className="mt-4">
       <p className="text-xs text-text-secondary">
         {s.network.binaryMissing.replace('{name}', binary).replace('{dir}', status.path)}
       </p>
-      <div className="mt-1 flex items-center gap-2">
-        <input
-          type="text"
-          value={draft}
-          placeholder={s.network.binaryPathPlaceholder.replace('{name}', binary)}
-          aria-label={s.network.binaryPathPlaceholder.replace('{name}', binary)}
-          onChange={(e) => {
-            setDraft(e.target.value);
-          }}
-          className="min-w-0 flex-1 rounded-md border border-border bg-surface-base px-2 py-1 text-sm text-text-primary placeholder:text-text-disabled focus:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-        />
+      <form
+        className="mt-1 flex items-end gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void window.tepegoz
+            .setNetworkBinaryPath(binary, draft.trim())
+            .then(onChanged, () => undefined);
+        }}
+      >
+        <div className="min-w-48 flex-1">
+          <Input
+            id={`binary-${binary}`}
+            // The program's own name is the label; the placeholder carries the "full path" hint, so the
+            // two say different things instead of repeating.
+            label={binary}
+            placeholder={s.network.binaryPathPlaceholder.replace('{name}', binary)}
+            value={draft}
+            onChange={(e) => {
+              setDraft(e.target.value);
+            }}
+          />
+        </div>
         <Button
+          type="submit"
           size="sm"
           variant="outline"
+          className="mb-1 h-[38px]"
           disabled={draft.trim().length === 0}
-          onClick={() => {
-            void window.tepegoz
-              .setNetworkBinaryPath(binary, draft.trim())
-              .then(onChanged, () => undefined);
-          }}
         >
           {s.network.binarySave}
         </Button>
-      </div>
+      </form>
     </div>
   );
 }
@@ -180,55 +184,31 @@ export function NetworkPrivacySection({ s }: { s: SettingsStrings }) {
     return window.tepegoz.onNetworkState(setState);
   }, []);
 
-  const setGeneral = (value: string): void => {
-    void window.tepegoz
-      .setGeneralNetworkBinding(
-        value === 'direct' ? { kind: 'direct' } : { kind: 'connection', connectionId: value },
-      )
-      .then(refresh, () => undefined);
-  };
-
   const generalValue = state.general.kind === 'connection' ? state.general.connectionId : 'direct';
 
   return (
-    <Card title={s.network.title}>
-      <div className="space-y-4">
-        <p className="text-xs text-text-secondary">{s.network.intro}</p>
-
+    <div className="space-y-4">
+      <Card title={s.network.title} subtitle={s.network.intro}>
         {!state.secretsAvailable && (
-          <AlertBanner
-            variant="warning"
-            title={s.network.keychainTitle}
-            message={s.network.keychainBody}
-          />
+          <AlertBanner variant="warning" message={s.network.keychainBody} className="mb-4" />
         )}
 
-        <div>
-          <p className="text-sm font-medium text-text-primary">{s.network.defaultRoute}</p>
-          <p className="mb-2 text-xs text-text-secondary">{s.network.defaultRouteHint}</p>
-          <select
-            value={generalValue}
-            aria-label={s.network.defaultRoute}
-            onChange={(e) => {
-              setGeneral(e.target.value);
-            }}
-            className="w-full max-w-sm rounded-md border border-border bg-surface-base px-2 py-1 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-          >
-            <option value="direct">{s.network.direct}</option>
-            {state.connections.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        <AddConnectionRow
+          s={s}
+          connections={state.connections}
+          secretsAvailable={state.secretsAvailable}
+          onAdd={async (input: NetworkConnectionInput) => {
+            await window.tepegoz.addNetworkConnection(input);
+            refresh();
+          }}
+        />
 
-        <div>
-          <p className="text-sm font-medium text-text-primary">{s.network.connections}</p>
-          {state.connections.length === 0 ? (
-            <p className="mt-1 text-xs text-text-secondary">{s.network.noConnections}</p>
-          ) : (
-            <ul className="mt-2 space-y-2">
+        {state.connections.length === 0 ? (
+          <p className="mt-4 text-sm text-text-secondary">{s.network.noConnections}</p>
+        ) : (
+          <>
+            <p className="mb-2 mt-5 text-xs text-text-secondary">{s.network.removeHint}</p>
+            <ul className="space-y-1.5">
               {state.connections.map((c) => (
                 <ConnectionRow
                   key={c.id}
@@ -239,29 +219,38 @@ export function NetworkPrivacySection({ s }: { s: SettingsStrings }) {
                 />
               ))}
             </ul>
-          )}
-          <p className="mt-2 text-xs text-text-secondary">{s.network.removeHint}</p>
-        </div>
+          </>
+        )}
 
-        <div>
-          <p className="text-sm font-medium text-text-primary">{s.network.addTitle}</p>
-          <p className="mb-2 text-xs text-text-secondary">{s.network.addHint}</p>
-          <AddConnectionRow
-            s={s}
-            connections={state.connections}
-            secretsAvailable={state.secretsAvailable}
-            onAdd={async (input: NetworkConnectionInput) => {
-              await window.tepegoz.addNetworkConnection(input);
-              refresh();
-            }}
-          />
-        </div>
-
-        {/* Helper binaries, together rather than interleaved with the form: they are a one-time setup
-            step, not part of adding a connection, and only appear at all when one is missing. */}
+        {/* One-time setup, not part of adding a connection — and only rendered when one is missing. */}
         <BinaryRow s={s} binary="wireproxy" status={state.binaries.wireproxy} onChanged={refresh} />
         <BinaryRow s={s} binary="tor" status={state.binaries.tor} onChanged={refresh} />
-      </div>
-    </Card>
+      </Card>
+
+      <Card title={s.network.defaultRoute} subtitle={s.network.defaultRouteHint}>
+        <div className="w-full max-w-sm">
+          <Select
+            id="network-general"
+            value={generalValue}
+            onChange={(value) => {
+              void window.tepegoz
+                .setGeneralNetworkBinding(
+                  value === 'direct'
+                    ? { kind: 'direct' }
+                    : { kind: 'connection', connectionId: value },
+                )
+                .then(refresh, () => undefined);
+            }}
+          >
+            <option value="direct">{s.network.direct}</option>
+            {state.connections.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.label}
+              </option>
+            ))}
+          </Select>
+        </div>
+      </Card>
+    </div>
   );
 }
