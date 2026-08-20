@@ -46,6 +46,7 @@ async function navigate(url: string, tabId?: string): Promise<{ url: string; tit
     if (orphanId !== null && runGroupId !== null) {
       const newId = AgentTabGroup.openTab(runGroupId, url); // activates newId; throws if blocked
       TabManager.closeTab(orphanId); // orphan is no longer active → no reselection churn
+      setRunCurrentTab(newId); // the run's page replaced the newtab — follow it there
       const wc = requireWc(newId);
       await waitForLoad(wc);
       if (wc.isDestroyed()) throw new AppError('Active tab was closed during navigation', 409);
@@ -349,13 +350,51 @@ async function captureScreenshot(
   return truncated ? { ...result, truncated: true } : result;
 }
 
+/**
+ * The tab a run means when it names no `tabId` — its OWN working tab, not "whatever is active now".
+ *
+ * A run latches its working tab the first time it needs one, from the tab that is globally active at
+ * that moment. That first read is what makes "summarize this page" work: the page the user was looking
+ * at when they asked is the page the run binds to, even if it belongs to no group or to another one.
+ * From then on the run keeps driving that tab, and follows it only through its OWN navigations
+ * ({@link setRunCurrentTab}).
+ *
+ * Two things fall out of the latch. A user switching tabs mid-run no longer silently re-targets the
+ * agent — previously the next `tabId`-less action jumped to the newly-focused page. And two runs no
+ * longer resolve to the same tab, which is the property that lets them run at once.
+ *
+ * If the latched tab is gone (closed), the run re-latches onto whatever is active — a run whose page
+ * was closed under it should keep working, not die.
+ */
+function resolveRunTab(): WebContents | null {
+  const record = currentRunRecord();
+  if (record !== null && record.currentTabId !== null) {
+    const held = TabManager.webContentsForTab(record.currentTabId);
+    if (held !== null && !held.isDestroyed()) return held;
+  }
+  const active = TabManager.activeWebContents();
+  if (active !== null && record !== null) {
+    // Latch (or re-latch) so every later tabId-less action in this run means THIS tab.
+    record.currentTabId = TabManager.getState().activeId;
+  }
+  return active;
+}
+
 /** The target tab's WebContents for CDP-driven perception/action, or a 409 when there is none. */
 function requireWc(tabId?: string): WebContents {
-  const wc =
-    tabId === undefined ? TabManager.activeWebContents() : TabManager.webContentsForTab(tabId);
+  const wc = tabId === undefined ? resolveRunTab() : TabManager.webContentsForTab(tabId);
   if (wc === null)
     throw new AppError(tabId === undefined ? 'No active page' : `No web tab: ${tabId}`, 409);
   return wc;
+}
+
+/** The URL of the tab THIS run is working in — the Policy Kernel's site context, so the site a call is
+ *  judged against is always the site it will actually hit. */
+export function runActiveTabUrl(): string | undefined {
+  const wc = resolveRunTab();
+  if (wc === null || wc.isDestroyed()) return undefined;
+  const url = wc.getURL();
+  return url.length > 0 ? url : undefined;
 }
 
 // --- Cursor overlay wiring ---
@@ -395,6 +434,8 @@ function onCursorHide(wc: WebContents): void {
 interface RunChannel {
   groupId: string;
   send: (e: AgentEvent) => void;
+  /** The tab this run is working in — see {@link resolveRunTab}. Null until the run latches one. */
+  currentTabId: string | null;
 }
 
 /**
@@ -428,7 +469,28 @@ export function setCurrentAgentRun(
     runChannels.delete(runId);
     return;
   }
-  runChannels.set(runId, { groupId, send });
+  runChannels.set(runId, { groupId, send, currentTabId: null });
+}
+
+/**
+ * Register a run that has no renderer channel (the background task runner). It still needs its own
+ * working-tab latch and group, or an unattended task would drive whatever tab the user is looking at.
+ */
+export function registerHeadlessRun(runId: string, groupId: string): void {
+  runChannels.set(runId, { groupId, send: () => undefined, currentTabId: null });
+}
+
+/** The ambient run's record, or null outside a run. */
+function currentRunRecord(): RunChannel | null {
+  const runId = runScope.getStore();
+  if (runId === undefined) return null;
+  return runChannels.get(runId) ?? null;
+}
+
+/** Point the ambient run at a tab it just opened/activated, so later tabId-less actions follow it. */
+function setRunCurrentTab(tabId: string): void {
+  const record = currentRunRecord();
+  if (record !== null) record.currentTabId = tabId;
 }
 
 /** Drop one run's channel (its handler's teardown path). */
@@ -443,9 +505,7 @@ export function withAgentRunScope<T>(runId: string, fn: () => Promise<T>): Promi
 
 /** The group of the run owning the current async context (tab-ownership checks). */
 function currentGroupId(): string | null {
-  const runId = runScope.getStore();
-  if (runId === undefined) return null;
-  return runChannels.get(runId)?.groupId ?? null;
+  return currentRunRecord()?.groupId ?? null;
 }
 
 function onInputAction(kind: string, detail: string): void {
@@ -574,11 +634,19 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
       active: t.id === state.activeId,
     }));
   },
-  createTab: (url, groupName, background) =>
-    AgentTabGroup.openTab(currentGroupId() ?? '', url, groupName, background),
+  createTab: (url, groupName, background) => {
+    const id = AgentTabGroup.openTab(currentGroupId() ?? '', url, groupName, background);
+    // A foreground tab becomes the run's working tab; a background one deliberately does not, so the
+    // run keeps acting where it was until it explicitly switches.
+    if (background !== true) setRunCurrentTab(id);
+    return id;
+  },
   activateTab: (id) => {
     if (!TabManager.getState().tabs.some((t) => t.id === id)) return false;
     TabManager.activate(id);
+    // An explicit switch is exactly when the run means to change tabs — follow it, whether or not the
+    // tab turns out to be drivable (the run asked for it; a later action will report a view-less tab).
+    setRunCurrentTab(id);
     // Report success only when the tab is now the active AND drivable page: a view-less internal tab
     // (e.g. the newtab) activates but yields no page for the browser_* tools, so returning `true` there
     // is a false success that makes the model treat it as usable and flail. `false` steers it to navigate.

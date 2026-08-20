@@ -20,6 +20,8 @@ const h = vi.hoisted(() => {
       isDestroyed: () => false,
       getURL: () => url,
       getTitle: () => title,
+      // readPage evaluates a text+signature probe in the page; the shape is all these tests need.
+      executeJavaScript: () => Promise.resolve({ text: '', sig: '' }),
       debugger: {
         sendCommand: (method: string) => {
           sends.get(id)?.push(method);
@@ -149,6 +151,64 @@ describe('browserHost.navigate — view-less newtab replace-in-place', () => {
     expect(h.openTab).not.toHaveBeenCalled();
     expect(h.tabs.closeTab).not.toHaveBeenCalled();
     expect(h.tabs.navigateActive).toHaveBeenCalledWith('https://e.com');
+  });
+
+  it('latches the tab that was active when the run first needed one, then keeps it', async () => {
+    const userPage = h.wc('https://user-was-here.com', 'User page');
+    h.tabs.viewlessActiveTabId.mockReturnValue(null);
+    h.tabs.activeWebContents.mockReturnValue(userPage);
+    h.tabs.getState.mockReturnValue({ tabs: [{ id: 'tab-user' }], activeId: 'tab-user' });
+    h.tabs.webContentsForTab.mockImplementation((id) => (id === 'tab-user' ? userPage : null));
+
+    await withAgentRunScope('run-latch', async () => {
+      setCurrentAgentRun('run-latch', 'G', () => undefined);
+      // First tabId-less read binds the run to the page the user was looking at ("summarize this page"),
+      // even though that tab is in no agent group.
+      const first = await browserHost.readPage();
+      expect(first.url).toBe('https://user-was-here.com');
+
+      // The user now switches to another tab. The run must NOT follow — it keeps driving its own page.
+      const otherPage = h.wc('https://user-clicked-away.com', 'Elsewhere');
+      h.tabs.activeWebContents.mockReturnValue(otherPage);
+      h.tabs.getState.mockReturnValue({ tabs: [{ id: 'other' }], activeId: 'other' });
+
+      const second = await browserHost.readPage();
+      expect(second.url).toBe('https://user-was-here.com');
+    });
+    releaseAgentRun('run-latch');
+  });
+
+  it('gives two concurrent runs different working tabs from the same global active tab', async () => {
+    const pageA = h.wc('https://a.com', 'A');
+    const pageB = h.wc('https://b.com', 'B');
+    h.tabs.viewlessActiveTabId.mockReturnValue(null);
+    h.tabs.webContentsForTab.mockImplementation((id) =>
+      id === 'tab-a' ? pageA : id === 'tab-b' ? pageB : null,
+    );
+
+    setCurrentAgentRun('run-a', 'GA', () => undefined);
+    setCurrentAgentRun('run-b', 'GB', () => undefined);
+
+    // Run A latches while tab-a is active…
+    h.tabs.activeWebContents.mockReturnValue(pageA);
+    h.tabs.getState.mockReturnValue({ tabs: [{ id: 'tab-a' }], activeId: 'tab-a' });
+    await withAgentRunScope('run-a', () => browserHost.readPage());
+
+    // …run B latches while tab-b is active.
+    h.tabs.activeWebContents.mockReturnValue(pageB);
+    h.tabs.getState.mockReturnValue({ tabs: [{ id: 'tab-b' }], activeId: 'tab-b' });
+    await withAgentRunScope('run-b', () => browserHost.readPage());
+
+    // Now neither run is re-targeted by what happens to be active — they hold their own tabs.
+    h.tabs.activeWebContents.mockReturnValue(pageB);
+    h.tabs.getState.mockReturnValue({ tabs: [{ id: 'tab-b' }], activeId: 'tab-b' });
+    const a = await withAgentRunScope('run-a', () => browserHost.readPage());
+    const b = await withAgentRunScope('run-b', () => browserHost.readPage());
+
+    expect(a.url).toBe('https://a.com');
+    expect(b.url).toBe('https://b.com');
+    releaseAgentRun('run-a');
+    releaseAgentRun('run-b');
   });
 
   it("delivers a run's narration to that run's channel, not the most recent run's", () => {

@@ -39,11 +39,7 @@ import {
   rememberedCoverage,
   resolveSkillScope,
 } from '../agent/remembered-grant-scope';
-import {
-  createRunControl,
-  hasActiveAgentRun,
-  unregisterRunControl,
-} from '../agent/agent-run-lock.electron';
+import { createRunControl, unregisterRunControl } from '../agent/agent-run-lock.electron';
 import FileOperationsHost from '../file-operations/file-operations-host';
 import { getDb } from '../db/database.electron';
 import { mainStrings } from '../lib/i18n-main';
@@ -106,9 +102,11 @@ export function registerAgentRunIpc(): void {
     requireAgentEnabled();
     const { prompt, groupId, displayPrompt, attachmentMeta, skillId } =
       AgentRunInputSchema.parse(payload);
-    if (hasActiveAgentRun()) {
-      throw new AppError('An agent task is already running', 409);
-    }
+    // ONE run per tab group, not one per process. The process-wide gate is gone because the state that
+    // made it necessary is: each run now holds its own working tab (so two runs cannot fight over one
+    // page), its own CDP attachment, its own input adapter, its own token ledger, and its own event
+    // channel. What remains genuinely shared is a *preference* (the model override, which is meant to
+    // apply everywhere) and the user-control yield (where stopping every run is the point).
     if (agentRunByGroup.get(groupId) === true) {
       throw new AppError('An agent task is already running for this group', 409);
     }

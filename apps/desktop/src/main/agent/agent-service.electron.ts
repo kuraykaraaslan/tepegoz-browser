@@ -9,6 +9,7 @@ import { randomUUID } from 'node:crypto';
 import { AgentConversationStore, type Db } from '@tepegoz/persistence';
 import TabManager from '../tabs';
 import AgentTabGroup from './agent-tab-group.electron';
+import { runActiveTabUrl } from './browser-host.electron';
 import { discoverSitemap } from '../web/web-tools-host.electron';
 import { mainStrings } from '../lib/i18n-main';
 import { llamaEngine } from '../local-inference/llama-engine.electron';
@@ -24,12 +25,14 @@ const conversations = new Map<string, CanonMessage[]>();
 const activeConversationIds = new Map<string, string>();
 const MAX_HISTORY_MESSAGES = 20;
 
-/** The active web tab's committed URL (Policy Kernel site context) — the app's Electron-side seam. */
-function activeTabUrl(): string | undefined {
-  const state = TabManager.getState();
-  const active = state.tabs.find((t) => t.id === state.activeId);
-  return active !== undefined && active.url.length > 0 ? active.url : undefined;
-}
+/**
+ * The committed URL of the tab THIS run is working in (Policy Kernel site context).
+ *
+ * Deliberately the same resolution the browser tools use for a `tabId`-less action, not "the globally
+ * active tab": the site a call is JUDGED against has to be the site it will actually HIT, or a run
+ * could be cleared against one page and act on another the moment the user clicked a different tab.
+ */
+const activeTabUrl = runActiveTabUrl;
 
 /** A specific tab's committed URL (Policy Kernel site context for tabId-scoped browser tools). */
 function tabUrl(tabId: string): string | undefined {

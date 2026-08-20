@@ -20,7 +20,7 @@ fallback, full capability plane, **tepegoz's MCP SERVER surface**, local SLM.
 - [~] sync/async/multi-tab **single abstraction**; each branch isolated BrowserContext + Agent Console stream _(down-payment shipped: browser tools accept optional `tabId`, desktop `BrowserHost` resolves target `WebContents` by tab, `AgentRunDeps.tabUrl(tabId)` feeds the correct URL into policy context, and CDP element refs are isolated per WebContents. **Per-tab `HumanInputAdapter` landed** — an adapter is now keyed by `WebContents` (WeakMap) with its CDP transport bound to that one tab, closing a real bug where naming a `tabId` silently dropped humanization, cursor motion AND `input_action` narration (the action teleported); `isPerceivable` is now asked per tab, so a background-driven tab drops pacing but never events. 3 tests. Still pending: true parallel branch scheduler, isolated BrowserContexts per branch, and per-branch Agent Console streams.)_
 - [x] Tab-control foundation for multi-tab tasks: `tab_create_item`, `tab_list_items`, `tab_get_item`, `tab_update_item`, and `tab_delete_item` are available behind the CapabilityRegistry/ToolGateway; new tabs open in the background by default to avoid stealing focus.
 
-> **Concurrency blockers — the ordered list (surveyed 2026-08-20, five cleared the same day).** Agent
+> **Concurrency blockers — all six cleared 2026-08-20.** Agent
 > *conversations* are ALREADY tab-group-scoped end to end (session key = groupId;
 > `conversations`/`activeConversationIds` maps, the SQLite `group_id` column, `groupStates` in the panel,
 > and `groupId` on every IPC event), a **per-group** run lock already exists next to the process-global
@@ -39,15 +39,20 @@ fallback, full capability plane, **tepegoz's MCP SERVER surface**, local SLM.
 >    an ambient run scope. Out-of-band narration (input actions, pause/resume/steer) used to be
 >    delivered to whichever run started LAST, labelled with that run's ids.
 >
-> **The process-global lock deliberately STAYS, on one unresolved product question:** what does "the
-> active tab" mean for a run? An action that omits `tabId` resolves to `TabManager.activeWebContents()`
-> — the globally-active tab — and the model omits it freely, because the tool descriptions say "omit
-> tabId for the active tab". Two concurrent runs would therefore fight over one tab. Scoping "active"
-> to *the run's own group* fixes the fight but breaks the ordinary case where the user says "summarize
-> this page" about a tab OUTSIDE the agent's group — so it is a deliberate product/ADR call, not a
-> refactor. Until it is made, concurrency stays off and the per-group lock is the second line, not the
-> first. (Also still global, and fine: `ModelGateway.modelOverride` — it is a *preference*, so applying
-> to every live run is arguably correct — and `userHasControl`, where yielding all runs is desirable.)
+> 6. ~~"the active tab" is global, so two runs fight over one page~~ — **done**, and it is what let the
+>    process-global lock go. A run now holds its **own working tab**: it latches the globally-active tab
+>    the first time it needs one, then keeps driving that tab, following only its OWN navigations
+>    (foreground `createTab`, `activateTab`, the newtab replace-in-place). The latch is what preserves
+>    "summarize this page" — the page the user was looking at when they asked is the page the run binds
+>    to, group membership irrelevant — while making two runs resolve to different tabs. It also fixes a
+>    standing bug: a user switching tabs mid-run used to silently re-target the agent's next
+>    `tabId`-less action. Policy site context (`activeTabUrl`) resolves through the SAME path, so the
+>    site a call is judged against is always the site it will hit. Background tasks get their own latch
+>    + group via `registerHeadlessRun`, so an unattended task cannot drive the user's foreground tab.
+>
+> **The process-global lock is GONE (2026-08-20); the gate is now one run per tab group.** What is still
+> shared is deliberate: `ModelGateway.modelOverride` (a *preference* — applying to every live run is the
+> intent) and `userHasControl` (yielding every run when the human grabs the mouse is the point).
 >
 > Two constraints hold throughout: ADR-0020 — a group may carry a **binding/UI** setting but **never** a
 > policy/permission scope (so per-group *autonomy or permission* settings stay forbidden even once
@@ -62,7 +67,7 @@ fallback, full capability plane, **tepegoz's MCP SERVER surface**, local SLM.
 - [ ] **agent-agnostic Context Package** (goal + hashed guardrail set + memory ref + last checkpoint LSN + open nodes + artifact summaries); provider transcript NOT embedded
 - [ ] Recovery Coordinator + power-monitor resume; **handoff only at safe checkpoint boundaries**; rehydration protocol (rebuild CDP/MCP/sandbox/OAuth); different-model thinking-loss accepted + summary recovery
 - [x] Run-scope isolation foundation: HITL/audit callbacks are scoped with `ToolGateway.runWithHandlers`, so future resumed/parallel runs do not share mutable handler state.
-- [x] Cancel/start failure foundation: active run controllers are registered for cancellation, overlapping runs are fail-closed for now, and pre-stream startup failures surface in the Agent Console as `error` events.
+- [x] Cancel/start failure foundation: active run controllers are registered for cancellation, overlapping runs in the SAME tab group are fail-closed (the process-wide gate was retired 2026-08-20 — see the concurrency-blocker note above), and pre-stream startup failures surface in the Agent Console as `error` events.
 - [x] Recovery taxonomy: classify transient navigation timeouts, stale element refs, page-changed failures, policy denial, auth/handoff, validation/unknown failures, and malformed model output before retrying.
 - [x] Bounded recovery strategy: malformed model decisions get limited JSON repair attempts; recoverable tool failures feed back concrete next-step advice (`browser_get_elements`, `browser_validate_page`, `browser_get_page`) and repeated same-kind failures fail closed.
 
