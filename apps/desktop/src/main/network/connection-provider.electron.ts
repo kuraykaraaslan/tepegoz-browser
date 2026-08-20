@@ -1,19 +1,20 @@
 import { connect, type Socket } from 'node:net';
 import { Logger } from '@tepegoz/libs';
 import { isValidSocksPort } from '@tepegoz/security-policy';
+import type { NetworkConnectionKind } from '@tepegoz/shared-types';
 
 /**
- * What a network-privacy connection must be able to do, and the one provider that can do it today.
+ * What a network-privacy connection must be able to do, whatever protocol is behind it.
  *
- * The phase specifies three provider families: BYO WireGuard config, account-based (Mullvad/Proton), and
- * Tor. All three end in the same place — **a SOCKS5 endpoint on loopback** — and all three require
- * shipping a native binary that opens a listener, which is gated on Phase 0's unfinished code-signing.
+ * Every provider family the phase names — WireGuard, Tor, OpenVPN, an endpoint the user already runs —
+ * ends in the same place: **a SOCKS5 endpoint on loopback**. That is what lets a tab group bind to any of
+ * them without the routing layer knowing which, and what makes "a different protocol per group" a
+ * non-event rather than a special case.
  *
- * So the seam is defined here in terms of that endpoint, and the first provider is the one that needs no
- * binary at all: **bring your own local SOCKS**. A privacy-minded user very often already has one running
- * — Tor Browser's 9050, a VPN client's local SOCKS, `ssh -D`, a userspace WireGuard bridge they installed
- * themselves. Pointing at it is a real, shippable, testable feature today, and it is the same seam the
- * bundled providers will implement later, so nothing built on top of this has to be rewritten for them.
+ * So the seam is defined here in terms of that endpoint. Three providers implement it today —
+ * `wireguard-provider` (userspace, via wireproxy), `tor-provider`, and the `ByoSocksProvider` below, which
+ * points at an endpoint the user already runs. A layer-3 OpenVPN provider slots in the same way when its
+ * routing model is verified; nothing above this line will change for it.
  *
  * A provider owns liveness, not policy: it says whether its endpoint is answering. Whether a tab is
  * ALLOWED to use it is `killSwitchVerdicts`' job, and the two are kept apart on purpose — a provider that
@@ -22,7 +23,7 @@ import { isValidSocksPort } from '@tepegoz/security-policy';
 
 export interface NetworkPrivacyProvider {
   /** Stable discriminator recorded in config and shown in the UI. */
-  readonly kind: 'byo-socks';
+  readonly kind: NetworkConnectionKind;
   /** Bring the connection up, returning the loopback SOCKS5 port it listens on. */
   connect(): Promise<{ socksPort: number }>;
   disconnect(): Promise<void>;

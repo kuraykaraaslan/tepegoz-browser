@@ -9,6 +9,7 @@ const h = vi.hoisted(() => ({
   probe: vi.fn(),
   ensureTunnelSession: vi.fn(),
   invalidateTunnelVerification: vi.fn(),
+  blackholeTunnelSession: vi.fn(),
   release: vi.fn(),
 }));
 
@@ -33,6 +34,7 @@ vi.mock('./connection-provider.electron', () => ({
 vi.mock('./tunnel-session.electron', () => ({
   ensureTunnelSession: h.ensureTunnelSession,
   invalidateTunnelVerification: h.invalidateTunnelVerification,
+  blackholeTunnelSession: h.blackholeTunnelSession,
 }));
 vi.mock('./browsing-sessions.electron', () => ({ default: { release: h.release } }));
 
@@ -58,10 +60,12 @@ beforeEach(() => {
     h.probe,
     h.ensureTunnelSession,
     h.invalidateTunnelVerification,
+    h.blackholeTunnelSession,
     h.release,
   ]) {
     fn.mockReset();
   }
+  h.blackholeTunnelSession.mockResolvedValue(undefined);
   h.connect.mockResolvedValue({ socksPort: 9050 });
   h.disconnect.mockResolvedValue(undefined);
   h.probe.mockResolvedValue(true);
@@ -165,9 +169,19 @@ describe('health polling', () => {
     expect(h.invalidateTunnelVerification).toHaveBeenCalledWith('tor');
   });
 
+  it('BLACKHOLES the partition the moment the connection drops', async () => {
+    // A dead SOCKS port fails closed only while it stays dead. Loopback ports get recycled, and an
+    // unrelated local process that later bound this one would inherit a partition pointing at it — a
+    // stranger in the middle of traffic the user believes is tunneled.
+    h.probe.mockResolvedValue(false);
+    await ConnectionPool.pollOnce();
+    expect(h.blackholeTunnelSession).toHaveBeenCalledWith('tor');
+  });
+
   it('leaves a healthy connection alone', async () => {
     await ConnectionPool.pollOnce();
     expect(ConnectionPool.statusMap().get('tor')).toBe('up');
+    expect(h.blackholeTunnelSession).not.toHaveBeenCalled();
   });
 
   it('does not probe connections nobody brought up', async () => {

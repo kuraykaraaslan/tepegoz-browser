@@ -1,6 +1,6 @@
 # Phase 5 — VPN & Network Privacy (per-tab & per-group tunnels + Tor)
 
-**Status:** 🟡 5a working (2026-08-20) — connection pool + three-scope binding + reload-on-switch + native route pickers + Settings surface + per-tab indicator, **measured end-to-end in the shipping app**. The browser routes through a SOCKS5 endpoint the user already runs; **bundled WireGuard/Tor providers are blocked on Phase 0 code-signing**, and 5b on Phase 3. See [ADR-0011](../../docs/adr/0011-vpn-network-privacy.md) + its Amendment · **Estimate:** ~4–6 months (5a, then optional 5b behind adoption)
+**Status:** 🟡 5a working with **real tunnels** (2026-08-20) — userspace **WireGuard** (wireproxy) and **Tor** providers, **chained Tor-over-VPN**, connection pool + three-scope binding + reload-on-switch + native route pickers + profile manager + per-tab and **per-group** route badges. Nothing is bundled and nothing needs elevation. **OpenVPN is deferred** (layer-3; needs an adapter and an unverified Windows split-routing model). See [ADR-0011](../../docs/adr/0011-vpn-network-privacy.md) + its Amendment · **Estimate:** ~4–6 months (5a, then optional 5b behind adoption)
 **Depends on:** Phase 3 (managed-backend seam) + Phase 2 (`NetworkFilterEngine` / per-partition session model) + Phase 2b (tab-engine + **tab groups** + tab/group context menu)
 **Goal:** Give the browser an **optional, fail-closed network-privacy layer** where **each tab — or a whole
 tab group — can bind to its own VPN/Tor connection** — BYO VPN config first, then optional managed exit
@@ -69,34 +69,28 @@ endpoint** (one loopback port per active connection), never an OS-level system p
       _(parity enforced by the existing `keyPaths` tests in both `apps/desktop/src/i18n` and `@tepegoz/settings-ui`.)_
 - [ ] Coverage (S80/B70/F80/L80) + self-review/code-review + UAT signoff + migration-safe DB
 
-> **What actually runs today (2026-08-20).** 5a works, with one honest boundary: **the browser does not
-> provide a tunnel.** It routes through a SOCKS5 endpoint the user already runs — Tor's 9050, a VPN
-> client's local SOCKS, `ssh -D`, a userspace WireGuard bridge. That is a real, shippable provider that
-> needs no bundled binary and no code-signing, and it is the same seam the bundled providers will
-> implement later.
+> **What actually runs today (2026-08-20).** 5a works, with real tunnels, and one honest boundary:
+> **the browser bundles no VPN.** It runs WireGuard in user space through `wireproxy`, runs `tor` the same
+> way, or points at a SOCKS endpoint you already have — helper binaries it locates rather than ships.
 >
-> **End to end, measured in the shipping app** ([spike-tunnel-binding.spec.ts](../../e2e/spike-tunnel-binding.spec.ts)):
-> add a connection from Settings → set it as the default route → open a tab → its traffic arrives at the
-> SOCKS endpoint and a **proven-reachable** clear path records nothing → kill the endpoint → the health
-> poll flips it to `down`, the tab is reported blocked, and still nothing reaches the clear path.
+> **Why userspace first.** wireproxy and Tor own their own network stacks, so they need no TUN adapter, no
+> route changes and **no elevation** — and they **cannot leak by construction**: there is no route table to
+> misconfigure and no source address to mis-bind. Each connection is one more process on one more loopback
+> port, which is what makes "a different tunnel per tab group" cost nothing structural.
 >
-> **Live pieces:** the connection pool (health-polled, `connecting` never counted as usable), the
-> three-scope binding applied to live tabs with reload-on-switch, per-connection partitions that are
-> blackholed until verified, the per-session filtering/quarantine/UA plane, native route pickers on the
-> tab and group menus, a per-tab route badge that says *blocked* when the kill-switch is holding traffic,
-> and a Settings → Network privacy surface (en+tr).
+> **"VPN *and* Tor on one group"** is a chain: Tor with the VPN's SOCKS as its upstream, exposing its own
+> port. Either leg dying cuts the group, and the group's shield shows both halves.
 >
-> **Deliberately not built, and why:**
-> - **Bundled WireGuard / Tor providers.** Both mean shipping a native binary that opens a local
->   listener, which is gated on Phase 0's **Windows code-signing identity** (BLOCKING, not started, a
->   user action) plus a Rust toolchain in CI. The provider seam takes them without changes; nothing else
->   waits on them.
-> - **Tor stream isolation.** Needs Tor.
-> - **5b managed exit nodes.** Depends on the Phase 3 backend, which has not started.
+> **Measured end to end in the shipping app**
+> ([spike-tunnel-binding.spec.ts](../../e2e/spike-tunnel-binding.spec.ts)): a connection added through the
+> real bridge, set as the default route, a tab opened on it, traffic arriving at the SOCKS endpoint while a
+> **proven-reachable** clear path records nothing; the endpoint killed, the health poll flipping it down,
+> the tab reported blocked, and still nothing on the clear path.
 >
-> **Owed and stated:** two live connections measured simultaneously; Chromium's DNS
-> prefetch/preconnect predictor and DoH (process-wide, not per-session); HTTPS-only enforcement for
-> tunnel-bound tabs; coverage gates and UAT.
+> **Owed, and stated:** agent lockout when a tunnel drops (the verdict is computed, the run gate is not
+> wired); the explicit exit-IP check; rename / reorder / duplicate in the manager; **OpenVPN**, which needs
+> a real adapter, source-bound sockets and a Windows routing assumption that has not been verified —
+> deferred at the owner's request, and kept out of the schema enum so nothing promises it.
 
 > **Where the group binding will be stored (settled, no decision owed).** The Group scope writes into
 > `TabGroupInfo.settings` — the flat, JSON-safe per-group bag [ADR-0020](../../docs/adr/0020-tab-boundary-model.md)
@@ -122,21 +116,23 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 - [x] `proxyBypassRules` for loopback so IPC + localhost dev are never tunneled; **deny-by-default** for everything else on any tunnel-bound partition ([egress-proxy.ts](../../packages/security-policy/src/egress-proxy.ts), 16 tests). _Deliberately narrower than the line asked for: loopback literals only, **not** Chromium's `<local>` — a dotless-hostname bypass would send `http://intranet/` out the clear path and hand a LAN host the user's real address._
 
 ### L6/L7 — NetworkPrivacyProvider adapter (BYO 3rd-party, 5a)
-> **Gated on distribution, not on design.** Every provider below ends in a shipped native binary that
-> opens a local listener (userspace WireGuard bridge, `arti`/tor). That needs Phase 0's **Windows
-> code-signing identity** — BLOCKING, not started, and a user action nobody in this repo can close —
-> plus a Rust toolchain in CI (`packages/native-rs` is deliberately outside the JS build today).
-> Development is *not* blocked on either: the routing seam takes any local SOCKS port, and the leak
-> test stands one up in-process.
-- [x] `NetworkPrivacyProvider` interface (`connect`/`disconnect`/`probe`, exposes a local SOCKS port) — one **instance per active connection** ([connection-provider.electron.ts](../../apps/desktop/src/main/network/connection-provider.electron.ts)). _Capability-Plane registration is NOT done: a provider here is main-process-internal and reachable by no extension, so routing it through the plane would add an audit path with nothing on either end of it. Revisit if a provider ever becomes third-party._
+> **Nothing is bundled, so nothing here is gated on code-signing.** The userspace providers run helper
+> binaries the user supplies (`wireproxy`, `tor`) — located, not installed: override → `userData/bin` →
+> PATH, with the drop-in directory shown when one is missing. Shipping a third-party executable inside a
+> signed installer would be a distribution problem *and* would push a download on everyone who never turns
+> the feature on. Only a future bundling decision would need Phase 0's code-signing item.
+- [x] `NetworkPrivacyProvider` interface (`connect`/`disconnect`/`probe`, exposes a local SOCKS port) — one **instance per active connection** ([connection-provider.electron.ts](../../apps/desktop/src/main/network/connection-provider.electron.ts)). _Capability-Plane registration is NOT done: a provider here is main-process-internal and reachable by no extension, so routing it through the plane would add an audit path with nothing on either end of it._
+- [x] **`WireGuardProvider` — userspace, via `wireproxy`** ([wireguard-provider.electron.ts](../../apps/desktop/src/main/network/wireguard-provider.electron.ts)). No TUN adapter, no route changes, **no elevation**, unlimited concurrency — and it **cannot leak by construction**, because the process owns its own network stack and can only emit through the tunnel. `.conf` import is zod-shaped and parsed by a pure, tested module ([wireguard-config.ts](../../apps/desktop/src/main/network/wireguard-config.ts), 16 tests), which **REFUSES a profile with no `DNS` line**: wireproxy would fall back to the host resolver, sending every site name to the ISP in the clear while the traffic went through the tunnel.
+- [x] **Private keys never sit in plaintext at rest** ([vpn-secrets.electron.ts](../../apps/desktop/src/main/network/vpn-secrets.electron.ts)) — encrypted through `safeStorage`, and import is **refused outright** when the OS keychain is unavailable rather than degrading. _Honest gap: wireproxy takes a config path, not stdin, so the rendered config exists as a `0600` file from spawn until the listener answers, then is deleted._
 - [x] **`ByoSocksProvider` — the first shippable provider, with no binary to sign.** Points at a SOCKS5 endpoint the user already runs (Tor's 9050, a VPN client's SOCKS port, `ssh -D`, a self-installed WireGuard bridge); loopback-only, liveness-probed. _This is what makes 5a real today instead of blocked on code-signing._
-- [ ] `WireGuardConfigProvider`: import/parse `.conf`, **zod `safeParse` at the trust boundary** (untrusted user input); userspace WireGuard ↔ local SOCKS bridge; **multiple instances coexist** (distinct ports) — *native hot path candidate for `packages/native-rs` (Phase 1b crate)*
+- [x] `WireGuardConfigProvider`: import/parse `.conf` at the trust boundary; userspace WireGuard ↔ local SOCKS; **multiple instances coexist** (distinct ports) — _delivered as the userspace provider above; no native crate needed, and no binary bundled (helper binaries are **located**, not installed: override → `userData/bin` → PATH, with the drop-in directory shown when one is missing). The plan's pinned-hash auto-download is **not built** — inventing a hash to satisfy a design would be worse than telling the user where to put a file._
 - [ ] Account-based providers (Mullvad/Proton-style): credentials + config **only in main via `safeStorage`**; never bundled/logged (redaction); per-connection isolation (multiple regions live at once)
 - [ ] `ExecutionRouter`-style selection: deterministic provider/region pick when a tab requests a **new** connection; decision + reason → Event Journal
 
 ### Tor integration (5a)
-- [ ] `TorProvider`: embedded Tor (**arti**, Rust) *or* bundled tor daemon exposing a local SOCKS port; same connection-pool + per-tab binding seam as VPN; a Tor connection is just another entry in the pool
-- [ ] Per-tab **Tor / `.onion`** binding; new-circuit / circuit-rotation control surfaced in the Modal; **isolate streams per connection** (no circuit sharing across tabs bound to different Tor connections)
+- [x] `TorProvider`: a managed `tor` process exposing a local SOCKS port; same connection-pool + per-tab binding seam as VPN; a Tor connection is just another entry in the pool ([tor-provider.electron.ts](../../apps/desktop/src/main/network/tor-provider.electron.ts))
+- [x] **Isolated circuits per connection** — one `tor` process per connection, each with its own `DataDirectory`, so two Tor connections take different paths by construction rather than by configuration. _New-circuit / rotation controls are not surfaced; `.onion` works because it is just a hostname the Tor SOCKS endpoint resolves._
+- [x] **Chained routes — "this group is on the VPN AND on Tor".** A group resolves to exactly one route, so the combination is Tor with the VPN's loopback SOCKS as its `Socks5Proxy`, exposing its own port for the group. The kill-switch composes for free: the upstream dropping kills Tor's outbound and cuts the group, with nothing coordinating the two. The upstream is resolved **lazily at connect time** (a restarted tunnel lands on a new port), and a cycle guard refuses a chain that loops back on itself.
 - [ ] **Exit-node = untrusted** assumption documented (ADR-0011 + threat model); force HTTPS-only / warn on cleartext over a Tor exit
 
 ### L8 — Security Kernel (egress + kill-switch)
@@ -150,7 +146,8 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 - [x] **Partition teardown** — removing a connection wipes its partition's storage, cache, auth and host-resolver caches (`BrowsingSessions.release`), and refuses to touch the Direct partition. _Electron still cannot delete the directory itself; the contents are gone, the empty folder remains._
 - [x] **Rebind safety:** the reload-on-switch transition is atomic w.r.t. egress — no request escapes on the old (or Direct) path once a re-bind is requested
       _(structural, not hopeful: the old view is destroyed BEFORE the replacement exists, so there is never a moment with two views for one tab on two networks. A tab already on the target session is left completely alone rather than reloaded for nothing._
-- [ ] **DNS-leak detection** + "cleartext-when-tunnel-expected" anomaly (per tab/partition) → agent-lockout + HITL on high risk
+- [x] **Blackhole on drop** — every `status → down` re-applies the blackhole config to that connection's partition and drops its verification. _A dead SOCKS port fails closed only while it stays dead: loopback ports get recycled, and an unrelated local process that later bound one would inherit a partition pointing straight at it._
+- [ ] **DNS-leak detection** + "cleartext-when-tunnel-expected" anomaly (per tab/partition) → **agent-lockout** + HITL on high risk — _`BindingService.mayEgress` already computes the verdict; wiring it into the agent's run gate is owed_
 - [ ] Account for the **encrypted-tunnel blind spot**: anomaly scoring shifts to metadata/timing/volume (payload is opaque inside the tunnel) — documented, not silently weakened
 
 ### L9 — Browser UI
@@ -160,7 +157,8 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 - [x] **Per-tab tunnel indicator** — a shield on a tunneled tab, marked **inherited vs overridden** and switching to a warning glyph with a "not connected" accessible name the moment the kill-switch is holding that tab's traffic. A **Direct** tab draws nothing, because a badge on every tab makes the one that matters harder to see
       _(computed in MAIN and pushed; the untrusted renderer only displays it. A security indicator computed in the renderer is one a page-driven bug could talk into lying.)_
 - [x] **Connections overview + disclosure copy** in Settings → Network privacy: the list with live status, add/remove, the default-route picker, and plain statements that the browser does not provide the tunnel and that the exit note is the user's own unverified claim
-- [ ] **Per-group indicator** on the group header, and a legal/perf disclosure pass once a bundled provider exists
+- [x] **Per-group indicator** on the group header ([route-badge.tsx](../../packages/tab-strip/src/route-badge.tsx), 8 tests): a shield beside the group name — green / amber / red for a VPN leg, purple when Tor is carrying traffic and grey when it is not. A **chained** route splits one shield down the middle, one half per leg, because either leg dying cuts the group. Colour is never the only signal: every state is also named in the accessible name. A Direct group draws nothing.
+- [ ] A legal/perf disclosure pass once a bundled provider exists
 
 ### L10 — Safe-Browsing interplay
 - [x] Keep per-partition DNR (`@ghostery/adblocker-electron`) working **inside** every tunnel-bound partition; **no regression** to "NO system-proxy MITM"

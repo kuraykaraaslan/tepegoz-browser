@@ -40,3 +40,22 @@ export const AddNetworkConnectionSchema = z.object({
 });
 
 export const RemoveNetworkConnectionSchema = ConnectionIdSchema;
+
+/** Adding a Tor connection. `upstreamConnectionId` chains it through a VPN ("Tor over VPN"). */
+export const AddTorConnectionSchema = z.object({
+  label: z.string().min(1).max(64),
+  note: z.string().max(64),
+  upstreamConnectionId: ConnectionIdSchema.nullable(),
+});
+
+/** Connect / disconnect one connection on the spot, from the manager. */
+export const SetConnectionActiveSchema = z.object({
+  id: ConnectionIdSchema,
+  active: z.boolean(),
+});
+
+/** Point the app at a helper binary (wireproxy / tor) the user placed somewhere of their own choosing. */
+export const SetBinaryPathSchema = z.object({
+  binary: z.enum(['wireproxy', 'tor']),
+  path: z.string().max(1024),
+});

@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const h = vi.hoisted(() => ({
-  fromPartition: vi.fn((partition: string) => ({ partition })),
+  setProxy: vi.fn((config: { proxyRules: string }) => Promise.resolve(config.proxyRules)),
+  // A tunnel partition is blackholed the instant it exists, so the fake session must offer `setProxy`.
+  fromPartition: vi.fn((partition: string) => ({ partition, setProxy: h.setProxy })),
 }));
 
 vi.mock('electron', () => ({ session: { fromPartition: h.fromPartition } }));
@@ -14,6 +16,22 @@ const TUNNEL = 'persist:tepegoz-web--conn-vpn-a';
 beforeEach(() => {
   BrowsingSessions.resetForTests();
   h.fromPartition.mockClear();
+  h.setProxy.mockClear();
+});
+
+describe('a tunnel partition is fail-closed from the instant it exists', () => {
+  it('blackholes a NEW tunnel partition, before anything can be hosted on it', () => {
+    BrowsingSessions.ensure(TUNNEL);
+    // "No proxy configured" means DIRECT in Chromium, so an unbound tunnel partition would send a tab
+    // that believes it is tunneled straight out the clear path.
+    expect(h.setProxy).toHaveBeenCalledOnce();
+    expect(h.setProxy.mock.calls[0]?.[0].proxyRules.toUpperCase()).not.toContain('DIRECT');
+  });
+
+  it('never touches the proxy of the DIRECT partition', () => {
+    BrowsingSessions.ensure(DIRECT);
+    expect(h.setProxy).not.toHaveBeenCalled();
+  });
 });
 
 describe('session identity', () => {
@@ -38,8 +56,8 @@ describe('per-session wiring — the whole point of the registry', () => {
 
     BrowsingSessions.ensure(TUNNEL);
 
-    expect(filter).toHaveBeenCalledWith({ partition: TUNNEL }, TUNNEL);
-    expect(downloads).toHaveBeenCalledWith({ partition: TUNNEL }, TUNNEL);
+    expect(filter).toHaveBeenCalledWith(expect.objectContaining({ partition: TUNNEL }), TUNNEL);
+    expect(downloads).toHaveBeenCalledWith(expect.objectContaining({ partition: TUNNEL }), TUNNEL);
   });
 
   it('runs each attacher exactly once per session, however often ensure is called', () => {

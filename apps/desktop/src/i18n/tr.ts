@@ -79,6 +79,8 @@ export const tr: AppStrings = {
     routeTunneled: '{name} üzerinden yönlendiriliyor',
     routeTunneledInherited: 'Devralınan rota: {name}',
     routeBlocked: 'Engellendi — {name} bağlı değil',
+    routeLegVpn: 'VPN',
+    routeLegTor: 'Tor',
     addToNewGroup: 'Yeni gruba ekle',
     addToGroup: 'Gruba ekle',
     removeFromGroup: 'Gruptan çıkar',

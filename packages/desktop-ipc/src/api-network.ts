@@ -18,6 +18,10 @@ import type {
 export interface NetworkConnectionView {
   id: string;
   label: string;
+  /** Which connection this one chains through, if any (Tor over VPN). */
+  upstreamConnectionId: string | null;
+  /** Why it is not up, in the provider's own words. Blank when it is up or has never been tried. */
+  lastError: string | null;
   /** The user's own note about where it exits ("Tor", "Mullvad SE"). Their claim, never verified. */
   note: string;
   kind: NetworkConnection['kind'];
@@ -32,13 +36,53 @@ export interface TabNetworkRoute {
   egressAllowed: boolean;
 }
 
+/**
+ * A group's route, split into its two possible legs so the header badge can show both at once.
+ *
+ * A route can be a VPN, Tor, or **Tor chained through a VPN** — which is what "this group is on the VPN
+ * *and* on Tor" means, since a group resolves to exactly one route. Two legs, two half-shields.
+ */
+export interface GroupNetworkRoute {
+  /** The resolved connection, or null when the group is Direct. */
+  connectionId: string | null;
+  /** The VPN leg's health, or null when the route has no VPN leg (plain Tor). */
+  vpn: LiveConnectionStatus | null;
+  /** The Tor leg's health, or null when the route has no Tor leg (plain VPN). */
+  tor: LiveConnectionStatus | null;
+  /** Human name for the whole route ("FRA", or "Tor via FRA") — the badge's accessible name. */
+  label: string;
+}
+
+/** Whether a helper binary the userspace providers need is actually present. */
+export interface BinaryStatus {
+  found: boolean;
+  /** The resolved path when found, or the configured override when set but missing. */
+  path: string;
+}
+
+/** One file's outcome from an import. Reported per file, so one bad profile does not sink the batch. */
+export interface ProfileImportResult {
+  fileName: string;
+  connectionId: string | null;
+  /** Safe-to-show facts the parser found. Never any key material. */
+  summary: { endpoint: string; dns: string[]; fullTunnel: boolean } | null;
+  /** The parser's own message when the file was rejected — written to be shown to the user as-is. */
+  error: string | null;
+}
+
 export interface NetworkState {
   connections: NetworkConnectionView[];
   general: NetworkGeneralBinding;
   /** Per tab id. Only tabs of the window this state was sent to. */
   tabs: Record<string, TabNetworkRoute>;
-  /** Per group id: the connection it binds to, or null for an explicit Direct; absent = inherits. */
-  groups: Record<string, string | null>;
+  /** Per group id — the RESOLVED route, including one inherited from the General default. Absent only
+   *  when the group is Direct, so "no entry" reads the same as "no badge". */
+  groups: Record<string, GroupNetworkRoute>;
+  /** Helper binaries. The manager shows where to put a missing one instead of failing at connect time. */
+  binaries: { wireproxy: BinaryStatus; tor: BinaryStatus };
+  /** False when the OS keychain is unavailable — no WireGuard profile may be imported, because its
+   *  private key could then only be stored in plain text. */
+  secretsAvailable: boolean;
 }
 
 /** What a scope can be set to over the bridge. `inherit` is invalid for General — it is the floor. */
@@ -62,4 +106,10 @@ export interface NetworkApi {
   setGeneralNetworkBinding(binding: NetworkGeneralBinding): Promise<void>;
   addNetworkConnection(input: NetworkConnectionInput): Promise<void>;
   removeNetworkConnection(id: string): Promise<void>;
+  /** Open a file picker for WireGuard `.conf` profiles and import every one the user chose. */
+  importWireguardProfiles(): Promise<ProfileImportResult[]>;
+  addTorConnection(input: { label: string; note: string; upstreamConnectionId: string | null }): Promise<void>;
+  /** Bring one connection up or take it down on the spot. */
+  setNetworkConnectionActive(id: string, active: boolean): Promise<void>;
+  setNetworkBinaryPath(binary: 'wireproxy' | 'tor', path: string): Promise<void>;
 }

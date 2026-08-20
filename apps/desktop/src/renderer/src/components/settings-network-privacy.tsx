@@ -1,106 +1,163 @@
 import { useEffect, useState } from 'react';
 import type { SettingsStrings } from '@tepegoz/settings-ui';
 import type { NetworkConnectionView, NetworkState } from '@tepegoz/desktop-ipc';
-import { Badge, Button, Card } from '@tepegoz/ui';
+import { AlertBanner, Badge, Button, Card } from '@tepegoz/ui';
+import { AddByoSocksRow, AddTorRow, ImportWireGuardRow } from './settings-network-forms';
 
 /**
- * Network privacy (Phase 5) — the profile-wide default route and the connection list.
+ * Network privacy (Phase 5) — the VPN/Tor profile manager and the profile-wide default route.
  *
- * The honest framing is part of the design, not a caveat bolted on. This browser does not ship a VPN: it
- * routes a tab through a **SOCKS5 endpoint already running on this machine** (Tor's 9050, a VPN client's
- * local SOCKS, `ssh -D`, a userspace WireGuard bridge). Saying that plainly, at the top, is the difference
- * between a feature a user can reason about and one that quietly implies protection it does not provide.
+ * The honest framing is part of the design, not a caveat bolted on. This browser does not operate a VPN:
+ * it runs WireGuard in user space through a helper it does not ship, runs Tor the same way, or points at
+ * a SOCKS endpoint the user already has. Saying that plainly, at the top, is the difference between a
+ * feature someone can reason about and one that implies protection it does not provide.
  *
- * Two other things this surface refuses to fake:
- *  - the exit region is the user's own NOTE, echoed back and labelled as theirs. The browser cannot verify
- *    where a SOCKS endpoint comes out, so it does not claim to;
- *  - status is the live health the pool measured, in words as well as colour — "connected" / "not
- *    connected" — because a coloured dot alone is unreadable to a chunk of users and ambiguous to the rest.
+ * Three other things this surface refuses to fake:
+ *  - the exit region is the user's own NOTE, echoed back and labelled as theirs — the browser cannot
+ *    verify where a tunnel comes out, so it does not claim to;
+ *  - status is the live health the pool measured, in words as well as colour;
+ *  - when a connection is down, the provider's own message is shown verbatim. "wireproxy not found" and
+ *    "endpoint unreachable" need entirely different things from the user, and "could not connect" tells
+ *    them neither.
  */
 
-const EMPTY: NetworkState = { connections: [], general: { kind: 'direct' }, tabs: {}, groups: {} };
+const EMPTY: NetworkState = {
+  connections: [],
+  general: { kind: 'direct' },
+  tabs: {},
+  groups: {},
+  binaries: { wireproxy: { found: false, path: '' }, tor: { found: false, path: '' } },
+  secretsAvailable: false,
+};
 
-function StatusBadge({ status, s }: { status: NetworkConnectionView['status']; s: SettingsStrings }) {
-  if (status === 'up') return <Badge variant="success" dot>{s.network.statusUp}</Badge>;
-  if (status === 'connecting') return <Badge variant="warning" dot>{s.network.statusConnecting}</Badge>;
+function StatusBadge({ c, s }: { c: NetworkConnectionView; s: SettingsStrings }) {
+  if (c.status === 'up') return <Badge variant="success" dot>{s.network.statusUp}</Badge>;
+  if (c.status === 'connecting') return <Badge variant="warning" dot>{s.network.statusConnecting}</Badge>;
   return <Badge variant="neutral" dot>{s.network.statusDown}</Badge>;
 }
 
-function AddConnectionForm({ s, onAdded }: { s: SettingsStrings; onAdded: () => void }) {
-  const [label, setLabel] = useState('');
-  const [note, setNote] = useState('');
-  const [port, setPort] = useState('9050');
-  const [error, setError] = useState<string | null>(null);
+function protocolLabel(c: NetworkConnectionView, s: SettingsStrings): string {
+  if (c.kind === 'wireguard') return s.network.protocolWireguard;
+  if (c.kind === 'tor') return s.network.protocolTor;
+  return s.network.protocolByo;
+}
 
-  const portNumber = Number(port);
-  const portValid = Number.isInteger(portNumber) && portNumber >= 1 && portNumber <= 65535;
-  const canAdd = label.trim().length > 0 && portValid;
+/** One connection: what it is, whether it is carrying traffic, and the two things you can do to it. */
+function ConnectionRow({
+  c,
+  s,
+  connections,
+  onChanged,
+}: {
+  c: NetworkConnectionView;
+  s: SettingsStrings;
+  connections: readonly NetworkConnectionView[];
+  onChanged: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const upstream = connections.find((x) => x.id === c.upstreamConnectionId);
 
-  const submit = (): void => {
-    setError(null);
-    void window.tepegoz
-      .addNetworkConnection({ label: label.trim(), note: note.trim(), socksPort: portNumber })
-      .then(
-        () => {
-          setLabel('');
-          setNote('');
-          setPort('9050');
-          onAdded();
-        },
-        (err: unknown) => {
-          setError(String(err));
-        },
-      );
+  const toggle = (): void => {
+    setBusy(true);
+    void window.tepegoz.setNetworkConnectionActive(c.id, c.status !== 'up').then(
+      () => {
+        setBusy(false);
+        onChanged();
+      },
+      () => {
+        setBusy(false);
+        onChanged();
+      },
+    );
   };
 
-  const field =
-    'min-w-0 flex-1 rounded-md border border-border bg-surface-base px-2 py-1 text-sm text-text-primary placeholder:text-text-disabled focus:outline-none focus-visible:ring-2 focus-visible:ring-border-focus';
-
   return (
-    <div>
-      <p className="text-sm font-medium text-text-primary">{s.network.addTitle}</p>
-      <p className="mb-2 text-xs text-text-secondary">{s.network.addHint}</p>
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          type="text"
-          value={label}
-          placeholder={s.network.labelPlaceholder}
-          aria-label={s.network.labelPlaceholder}
-          onChange={(e) => {
-            setLabel(e.target.value);
+    <li className="rounded-md border border-border bg-surface-sunken px-3 py-2">
+      <div className="flex items-center gap-3">
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-2">
+            <span className="truncate text-sm text-text-primary">{c.label}</span>
+            <Badge variant="info" size="sm">
+              {protocolLabel(c, s)}
+            </Badge>
+            {upstream !== undefined && (
+              <Badge variant="primary" size="sm">
+                {s.network.chainedVia.replace('{name}', upstream.label)}
+              </Badge>
+            )}
+          </span>
+          {c.note.length > 0 && (
+            // Labelled as the user's own claim: the browser cannot verify where a tunnel exits, and
+            // presenting it as fact would be inventing an assurance.
+            <span className="block truncate text-xs text-text-secondary">
+              {s.network.notedAs.replace('{note}', c.note)}
+            </span>
+          )}
+        </span>
+        <StatusBadge c={c} s={s} />
+        <Button size="sm" variant="outline" disabled={busy} onClick={toggle}>
+          {c.status === 'up' ? s.network.disconnect : s.network.connect}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            void window.tepegoz.removeNetworkConnection(c.id).then(onChanged, () => undefined);
           }}
-          className={field}
-        />
-        <input
-          type="text"
-          value={note}
-          placeholder={s.network.notePlaceholder}
-          aria-label={s.network.notePlaceholder}
-          onChange={(e) => {
-            setNote(e.target.value);
-          }}
-          className={field}
-        />
-        <input
-          type="number"
-          value={port}
-          min={1}
-          max={65535}
-          placeholder={s.network.portPlaceholder}
-          aria-label={s.network.portPlaceholder}
-          onChange={(e) => {
-            setPort(e.target.value);
-          }}
-          className={`${field} max-w-28`}
-        />
-        <Button size="sm" variant="outline" disabled={!canAdd} onClick={submit}>
-          {s.network.add}
+        >
+          {s.network.remove}
         </Button>
       </div>
-      {!portValid && port.trim().length > 0 && (
-        <p className="mt-1 text-xs text-warning-fg">{s.network.portInvalid}</p>
+      {c.lastError !== null && c.status !== 'up' && (
+        <p className="mt-1 text-xs text-error-fg">{c.lastError}</p>
       )}
-      {error !== null && <p className="mt-1 text-xs text-error-fg">{error}</p>}
+    </li>
+  );
+}
+
+/** Where to put a helper binary that is missing, and a field for pointing at one elsewhere. */
+function BinaryRow({
+  s,
+  binary,
+  status,
+  onChanged,
+}: {
+  s: SettingsStrings;
+  binary: 'wireproxy' | 'tor';
+  status: { found: boolean; path: string };
+  onChanged: () => void;
+}) {
+  const [draft, setDraft] = useState('');
+  if (status.found) return null;
+  return (
+    <div className="mt-2">
+      <p className="text-xs text-text-secondary">
+        {s.network.binaryMissing.replace('{name}', binary).replace('{dir}', status.path)}
+      </p>
+      <div className="mt-1 flex items-center gap-2">
+        <input
+          type="text"
+          value={draft}
+          placeholder={s.network.binaryPathPlaceholder.replace('{name}', binary)}
+          aria-label={s.network.binaryPathPlaceholder.replace('{name}', binary)}
+          onChange={(e) => {
+            setDraft(e.target.value);
+          }}
+          className="min-w-0 flex-1 rounded-md border border-border bg-surface-base px-2 py-1 text-sm text-text-primary placeholder:text-text-disabled focus:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+        />
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={draft.trim().length === 0}
+          onClick={() => {
+            void window.tepegoz
+              .setNetworkBinaryPath(binary, draft.trim())
+              .then(onChanged, () => undefined);
+          }}
+        >
+          {s.network.binarySave}
+        </Button>
+      </div>
     </div>
   );
 }
@@ -127,16 +184,20 @@ export function NetworkPrivacySection({ s }: { s: SettingsStrings }) {
       .then(refresh, () => undefined);
   };
 
-  const remove = (id: string): void => {
-    void window.tepegoz.removeNetworkConnection(id).then(refresh, () => undefined);
-  };
-
   const generalValue = state.general.kind === 'connection' ? state.general.connectionId : 'direct';
 
   return (
     <Card title={s.network.title}>
       <div className="space-y-4">
         <p className="text-xs text-text-secondary">{s.network.intro}</p>
+
+        {!state.secretsAvailable && (
+          <AlertBanner
+            variant="warning"
+            title={s.network.keychainTitle}
+            message={s.network.keychainBody}
+          />
+        )}
 
         <div>
           <p className="text-sm font-medium text-text-primary">{s.network.defaultRoute}</p>
@@ -165,38 +226,26 @@ export function NetworkPrivacySection({ s }: { s: SettingsStrings }) {
           ) : (
             <ul className="mt-2 space-y-2">
               {state.connections.map((c) => (
-                <li
+                <ConnectionRow
                   key={c.id}
-                  className="flex items-center gap-3 rounded-md border border-border bg-surface-sunken px-3 py-2"
-                >
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm text-text-primary">{c.label}</span>
-                    {c.note.length > 0 && (
-                      // Labelled as the user's own claim: the browser cannot verify where a SOCKS
-                      // endpoint exits, and presenting it as fact would be inventing an assurance.
-                      <span className="block truncate text-xs text-text-secondary">
-                        {s.network.notedAs.replace('{note}', c.note)}
-                      </span>
-                    )}
-                  </span>
-                  <StatusBadge status={c.status} s={s} />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      remove(c.id);
-                    }}
-                  >
-                    {s.network.remove}
-                  </Button>
-                </li>
+                  c={c}
+                  s={s}
+                  connections={state.connections}
+                  onChanged={refresh}
+                />
               ))}
             </ul>
           )}
           <p className="mt-2 text-xs text-text-secondary">{s.network.removeHint}</p>
         </div>
 
-        <AddConnectionForm s={s} onAdded={refresh} />
+        <ImportWireGuardRow s={s} disabled={!state.secretsAvailable} onDone={refresh} />
+        <BinaryRow s={s} binary="wireproxy" status={state.binaries.wireproxy} onChanged={refresh} />
+
+        <AddTorRow s={s} connections={state.connections} disabled={false} onDone={refresh} />
+        <BinaryRow s={s} binary="tor" status={state.binaries.tor} onChanged={refresh} />
+
+        <AddByoSocksRow s={s} onDone={refresh} />
       </div>
     </Card>
   );

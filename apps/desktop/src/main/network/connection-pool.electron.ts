@@ -5,7 +5,13 @@ import type { ConnectionStatus } from '@tepegoz/security-policy';
 import type { LiveConnectionStatus, NetworkConnection } from '@tepegoz/shared-types';
 import BrowsingSessions from './browsing-sessions.electron';
 import { ByoSocksProvider, type NetworkPrivacyProvider } from './connection-provider.electron';
-import { ensureTunnelSession, invalidateTunnelVerification } from './tunnel-session.electron';
+import { WireGuardProvider } from './wireguard-provider.electron';
+import { TorProvider } from './tor-provider.electron';
+import {
+  blackholeTunnelSession,
+  ensureTunnelSession,
+  invalidateTunnelVerification,
+} from './tunnel-session.electron';
 
 /**
  * The pool of network-privacy connections — the thing that makes "multiple tunnels up at once" real, and
@@ -38,24 +44,68 @@ export interface PoolConnectionView {
   note: string;
   kind: NetworkConnection['kind'];
   status: LiveConnectionStatus;
+  /** Which connection this one chains through, if any (Tor over VPN). */
+  upstreamConnectionId: string | null;
+  /** Why it is not up, in the provider's own words — shown as-is, because "wireproxy not found" and
+   *  "endpoint unreachable" need entirely different things from the user. */
+  lastError: string | null;
 }
 
 interface Entry {
   config: NetworkConnection;
   provider: NetworkPrivacyProvider;
   status: LiveConnectionStatus;
+  /** The loopback port this connection is currently answering on; `null` whenever it is not up. Kept so
+   *  a chained connection (Tor over VPN) can be pointed at its upstream's live port. */
+  socksPort: number | null;
+  /** Why this connection is not up, in the user's words. Cleared on a successful connect. */
+  lastError: string | null;
 }
 
 type StatusListener = (id: string, status: LiveConnectionStatus) => void;
 
 const entries = new Map<string, Entry>();
 const listeners = new Set<StatusListener>();
+/** Ids whose `ensureUp` is in flight — the cycle guard for chained connections (Tor over VPN). */
+const connecting = new Set<string>();
 let timer: ReturnType<typeof setInterval> | null = null;
 
+/**
+ * Build the provider for a configured connection.
+ *
+ * The only place in the pool that knows protocols exist. Everything else — health, status, the
+ * kill-switch feed, partitions — works against "something that hands back a loopback SOCKS port", which
+ * is why adding a protocol is a case in this switch and nothing more.
+ */
 function providerFor(config: NetworkConnection): NetworkPrivacyProvider {
-  // One `kind` today. When bundled WireGuard/Tor providers land they slot in here and nothing above
-  // this line changes — the pool has never known what is behind the SOCKS port, on purpose.
-  return new ByoSocksProvider(config.socksPort);
+  switch (config.kind) {
+    case 'byo-socks':
+      return new ByoSocksProvider(config.socksPort);
+    case 'wireguard':
+      return new WireGuardProvider(config.id);
+    case 'tor':
+      return new TorProvider(
+        config.id,
+        // Chaining is resolved lazily, at connect time, so the upstream's CURRENT port is used — a
+        // wireproxy restart lands on a new ephemeral port, and a value captured at construction would
+        // quietly point Tor at whatever now holds the old one.
+        config.upstreamConnectionId === null
+          ? null
+          : async () => {
+              const up = await ConnectionPool.ensureUp(config.upstreamConnectionId as string);
+              if (up.socksPort === null) {
+                throw new Error(`Upstream connection ${String(config.upstreamConnectionId)} exposed no port`);
+              }
+              return up.socksPort;
+            },
+      );
+    default: {
+      // Exhaustive: every `kind` in the schema union has a case above. If one is added without a
+      // provider, this throws at load time rather than producing a connection that cannot connect.
+      const unreachable: never = config;
+      throw new Error(`No provider for connection kind: ${JSON.stringify(unreachable)}`);
+    }
+  }
 }
 
 function setStatus(id: string, status: LiveConnectionStatus): void {
@@ -63,6 +113,13 @@ function setStatus(id: string, status: LiveConnectionStatus): void {
   if (entry === undefined || entry.status === status) return;
   entry.status = status;
   Logger.info('Connection status changed', { id, status });
+  if (status === 'down') {
+    // Not merely bookkeeping. A dead SOCKS port fails closed only while it stays dead; loopback ports get
+    // recycled, and an unrelated local process that later binds this one would inherit a browser
+    // partition pointing straight at it. Blackholing makes the down state independent of that, and
+    // dropping the verification forces the way back up through `resolveProxy` again.
+    void blackholeTunnelSession(id);
+  }
   for (const listener of listeners) {
     try {
       listener(id, status);
@@ -79,6 +136,8 @@ function viewOf(entry: Entry): PoolConnectionView {
     note: entry.config.note,
     kind: entry.config.kind,
     status: entry.status,
+    upstreamConnectionId: entry.config.kind === 'tor' ? entry.config.upstreamConnectionId : null,
+    lastError: entry.lastError,
   };
 }
 
@@ -89,7 +148,7 @@ const ConnectionPool = {
     entries.clear();
     for (const config of PreferenceStore.getAll().networkConnections) {
       try {
-        entries.set(config.id, { config, provider: providerFor(config), status: 'down' });
+        entries.set(config.id, { config, provider: providerFor(config), status: 'down', socksPort: null, lastError: null });
       } catch (err) {
         // A persisted config we cannot build a provider for is reported, not silently dropped from view:
         // a connection the user configured and cannot see is worse than one shown as broken.
@@ -136,22 +195,38 @@ const ConnectionPool = {
    * Returns the session partition the connection routes through, which is what the binding layer needs
    * in order to re-host a tab on it.
    */
-  async ensureUp(id: string): Promise<{ partition: string }> {
+  async ensureUp(id: string): Promise<{ partition: string; socksPort: number | null }> {
     const entry = entries.get(id);
     if (entry === undefined) throw new Error(`No such connection: ${id}`);
-    if (entry.status === 'up') return { partition: partitionKeyFor({ connectionId: id }) };
+    const partition = partitionKeyFor({ connectionId: id });
+    if (entry.status === 'up') return { partition, socksPort: entry.socksPort };
 
+    // A chained connection resolves its upstream by calling back into this function. Without a guard, a
+    // config where A chains to B and B chains back to A would recurse until the stack gave out — so the
+    // cycle is refused with a message naming it, rather than crashing the main process.
+    if (connecting.has(id)) {
+      throw new Error(`Connection chain loops back to ${id}`);
+    }
+    connecting.add(id);
     setStatus(id, 'connecting');
     try {
       const { socksPort } = await entry.provider.connect();
       const bind = await ensureTunnelSession(id, socksPort);
+      entry.socksPort = socksPort;
+      entry.lastError = null;
       setStatus(id, 'up');
       ConnectionPool.startHealthPolling();
-      return { partition: bind.partition };
+      return { partition: bind.partition, socksPort };
     } catch (err) {
+      entry.socksPort = null;
+      // Kept verbatim for the UI: "wireproxy not found" and "endpoint unreachable" need entirely
+      // different things from the user, and a generic "could not connect" tells them neither.
+      entry.lastError = err instanceof Error ? err.message : String(err);
       setStatus(id, 'down');
       Logger.error('Connection failed to come up', { id, err: String(err) });
       throw err;
+    } finally {
+      connecting.delete(id);
     }
   },
 
@@ -162,13 +237,14 @@ const ConnectionPool = {
     const entry = entries.get(id);
     if (entry === undefined) return;
     setStatus(id, 'down');
+    entry.socksPort = null;
     invalidateTunnelVerification(id);
     await entry.provider.disconnect();
   },
 
   /** Add (or replace) a configured connection and persist it. */
   add(config: NetworkConnection): void {
-    entries.set(config.id, { config, provider: providerFor(config), status: 'down' });
+    entries.set(config.id, { config, provider: providerFor(config), status: 'down', socksPort: null, lastError: null });
     const rest = PreferenceStore.getAll().networkConnections.filter((c) => c.id !== config.id);
     PreferenceStore.update({ networkConnections: [...rest, config] });
   },

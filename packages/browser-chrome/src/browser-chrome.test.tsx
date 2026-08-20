@@ -23,6 +23,11 @@ const STRINGS: BrowserChromeStrings = {
     routeTunneled: 'Routed through {name}',
     routeTunneledInherited: 'Inherited route: {name}',
     routeBlocked: 'Blocked — {name} is not connected',
+    routeLegVpn: 'VPN',
+    routeLegTor: 'Tor',
+    routeStatusUp: 'connected',
+    routeStatusConnecting: 'connecting',
+    routeStatusDown: 'not connected',
   },
 };
 

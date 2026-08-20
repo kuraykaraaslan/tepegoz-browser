@@ -162,6 +162,9 @@ export interface Preferences {
   /** Phase 5 network privacy: the user's configured VPN/Tor connections (a local SOCKS endpoint each).
    *  Empty by default — the browser tunnels nothing unless the user adds a connection and binds to it. */
   networkConnections: NetworkConnection[];
+  /** Paths to the helper binaries the userspace providers run. Empty = search `userData/bin` then PATH.
+   *  Not bundled on purpose: neither is needed unless the feature is turned on. */
+  networkBinaries: { wireproxy: string; tor: string };
   /** The profile-wide DEFAULT binding every tab falls back to (`tab → group → General → Direct`).
    *  `{ kind: 'direct' }` by default: pure local-first is the floor this cannot fall below. */
   networkGeneralBinding: NetworkGeneralBinding;

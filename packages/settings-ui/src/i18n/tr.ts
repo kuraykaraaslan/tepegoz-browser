@@ -409,5 +409,30 @@ export const tr: SettingsStrings = {
     portPlaceholder: 'Port',
     portInvalid: '1 ile 65535 arasında bir port girin.',
     add: 'Ekle',
+    connect: 'Bağlan',
+    disconnect: 'Bağlantıyı kes',
+    protocolWireguard: 'WireGuard',
+    protocolTor: 'Tor',
+    protocolByo: 'SOCKS',
+    chainedVia: '{name} üzerinden',
+    keychainTitle: 'İşletim sistemi anahtarlığı kullanılamıyor',
+    keychainBody:
+      'Bir WireGuard profili özel anahtar içerir; bu yüzden ancak işletim sistemi onu şifreleyebildiğinde içe aktarılabilir. Hiçbir şey düz metin olarak yazılmayacak.',
+    importWgTitle: 'WireGuard profillerini içe aktar',
+    importWgHint:
+      'Bir veya birden fazla .conf dosyası seçin. Her biri, bir sekme grubuna bağlayabileceğiniz bir bağlantı olur. DNS satırı olmayan profil reddedilir — tünelin içinde bir çözücü olmadan her site adı yine normal bağlantı üzerinden sorulurdu.',
+    importWgButton: '.conf dosyalarını seç…',
+    importOk: '{file} — {endpoint}, DNS {dns}',
+    importFailed: '{file} içe aktarılmadı:',
+    addTorTitle: 'Tor bağlantısı ekle',
+    addTorHint:
+      'Kendi devreleriyle kendi Tor örneğini çalıştırır; böylece iki Tor bağlantısı farklı yollardan gider. Bir VPN üzerinden zincirlerseniz Tor-over-VPN olur: VPN sağlayıcısı Tor trafiği görür ama içeriğini görmez, Tor giriş düğümü de sizin yerinize VPN’in adresini görür.',
+    torUpstream: 'Üst bağlantı',
+    torUpstreamNone: 'Doğrudan Tor’a',
+    torUpstreamVia: '{name} üzerinden',
+    binaryMissing:
+      '{name} bulunamadı. {dir} klasörüne koyun ya da aşağıya tam yolunu yazın. Tepegöz bu dosyayı içinde getirmez.',
+    binaryPathPlaceholder: '{name} için tam yol',
+    binarySave: 'Yolu kaydet',
   },
 };

@@ -4,6 +4,7 @@ import {
   type NetworkConnectionInput,
   type NetworkGeneralBinding,
   type NetworkState,
+  type ProfileImportResult,
   type ScopeBindingInput,
   type TepegozApi,
 } from '@tepegoz/desktop-ipc';
@@ -20,6 +21,10 @@ export const networkApi: Pick<
   | 'setGeneralNetworkBinding'
   | 'addNetworkConnection'
   | 'removeNetworkConnection'
+  | 'importWireguardProfiles'
+  | 'addTorConnection'
+  | 'setNetworkConnectionActive'
+  | 'setNetworkBinaryPath'
 > = {
   getNetworkState: () => invoke<NetworkState>(IpcChannels.networkGetState),
   onNetworkState: (callback: (state: NetworkState) => void) => {
@@ -40,4 +45,12 @@ export const networkApi: Pick<
   addNetworkConnection: (input: NetworkConnectionInput) =>
     invoke<void>(IpcChannels.networkAddConnection, input),
   removeNetworkConnection: (id: string) => invoke<void>(IpcChannels.networkRemoveConnection, id),
+  importWireguardProfiles: () =>
+    invoke<ProfileImportResult[]>(IpcChannels.networkImportWireguard),
+  addTorConnection: (input: { label: string; note: string; upstreamConnectionId: string | null }) =>
+    invoke<void>(IpcChannels.networkAddTor, input),
+  setNetworkConnectionActive: (id: string, active: boolean) =>
+    invoke<void>(IpcChannels.networkSetActive, { id, active }),
+  setNetworkBinaryPath: (binary: 'wireproxy' | 'tor', path: string) =>
+    invoke<void>(IpcChannels.networkSetBinaryPath, { binary, path }),
 };

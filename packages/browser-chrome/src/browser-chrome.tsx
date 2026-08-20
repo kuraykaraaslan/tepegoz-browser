@@ -38,6 +38,11 @@ export interface BrowserChromeStrings {
     routeTunneled: string;
     routeTunneledInherited: string;
     routeBlocked: string;
+    routeLegVpn: string;
+    routeLegTor: string;
+    routeStatusUp: string;
+    routeStatusConnecting: string;
+    routeStatusDown: string;
   };
 }
 
@@ -189,6 +194,11 @@ export function BrowserChrome({
               routeTunneled: t.browser.routeTunneled,
               routeTunneledInherited: t.browser.routeTunneledInherited,
               routeBlocked: t.browser.routeBlocked,
+              routeLegVpn: t.browser.routeLegVpn,
+              routeLegTor: t.browser.routeLegTor,
+              routeLegUp: t.browser.routeStatusUp,
+              routeLegConnecting: t.browser.routeStatusConnecting,
+              routeLegDown: t.browser.routeStatusDown,
             }}
             onSelect={onSelectTab}
             onClose={onCloseTab}

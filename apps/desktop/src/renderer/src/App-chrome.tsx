@@ -16,7 +16,7 @@ import type { ExtensionDef } from './extensions/registry';
 import type { BookmarksBarResult } from './app-bookmarks';
 import type { ExtensionSurfacesResult } from './app-extension-surfaces';
 import type { OmniboxHistoryResult } from './app-omnibox-history';
-import { useNetworkState, withNetworkBadges } from './app-network-state';
+import { useNetworkState, withGroupRouteBadges, withNetworkBadges } from './app-network-state';
 
 export interface AppChromeProps {
   locale: Locale;
@@ -75,7 +75,10 @@ export function AppChrome({
   const visibleGroupIds = new Set(
     visibleTabs.map((t) => t.groupId).filter((g): g is string => g !== null),
   );
-  const visibleGroups = tabs.groups.filter((g) => visibleGroupIds.has(g.id));
+  const visibleGroups = withGroupRouteBadges(
+    tabs.groups.filter((g) => visibleGroupIds.has(g.id)),
+    network,
+  );
 
   return (
     <>

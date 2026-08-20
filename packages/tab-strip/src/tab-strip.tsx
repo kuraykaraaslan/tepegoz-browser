@@ -15,6 +15,8 @@ import type { TabDescriptor, TabStripProps } from './tab-strip-types';
 // group-header) keep resolving these types from `./tab-strip` unchanged.
 export type {
   TabDescriptor,
+  GroupRouteBadge,
+  RouteLegStatus,
   TabGroupDescriptor,
   TabNetworkBadge,
   TabStripGeometryReport,

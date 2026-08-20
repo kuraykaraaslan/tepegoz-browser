@@ -406,6 +406,31 @@ export const en = {
     portPlaceholder: 'Port',
     portInvalid: 'Enter a port between 1 and 65535.',
     add: 'Add',
+    connect: 'Connect',
+    disconnect: 'Disconnect',
+    protocolWireguard: 'WireGuard',
+    protocolTor: 'Tor',
+    protocolByo: 'SOCKS',
+    chainedVia: 'via {name}',
+    keychainTitle: 'The OS keychain is unavailable',
+    keychainBody:
+      'A WireGuard profile contains a private key, so it can only be imported when the operating system can encrypt it. Nothing will be written in plain text.',
+    importWgTitle: 'Import WireGuard profiles',
+    importWgHint:
+      'Pick one or more .conf files. Each becomes a connection you can bind a tab group to. A profile without a DNS line is refused — without a resolver inside the tunnel, every site name would still be looked up on the normal connection.',
+    importWgButton: 'Choose .conf files…',
+    importOk: '{file} — {endpoint}, DNS {dns}',
+    importFailed: '{file} was not imported:',
+    addTorTitle: 'Add a Tor connection',
+    addTorHint:
+      'Runs its own Tor instance with its own circuits, so two Tor connections take different paths. Chain it through a VPN to get Tor over VPN: the VPN provider sees Tor traffic but not its content, and the Tor entry sees the VPN’s address instead of yours.',
+    torUpstream: 'Upstream connection',
+    torUpstreamNone: 'Straight to Tor',
+    torUpstreamVia: 'Through {name}',
+    binaryMissing:
+      '{name} was not found. Put it in {dir}, or give its full path below. Tepegöz does not ship it.',
+    binaryPathPlaceholder: 'Full path to {name}',
+    binarySave: 'Save path',
   },
 };
 

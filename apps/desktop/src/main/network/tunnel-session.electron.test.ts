@@ -10,8 +10,10 @@ const h = vi.hoisted(() => {
       partition,
       // Not `async () => {}`: an async arrow with no await trips the lint rule, and the shape Electron
       // actually exposes is "returns a promise", which this states directly.
-      setProxy: vi.fn((): Promise<void> => {
-        order.push('setProxy');
+      // Recorded WITH its rules, because a tunnel partition receives two different proxy configs in a
+      // deliberate order: the blackhole at creation, then the real tunnel once verified.
+      setProxy: vi.fn((config: { proxyRules: string }): Promise<void> => {
+        order.push(config.proxyRules === 'socks5://127.0.0.1:1' ? 'blackhole' : 'setProxy');
         return Promise.resolve();
       }),
       resolveProxy: vi.fn((): Promise<string> => Promise.resolve(h.resolveProxyResult.value)),
@@ -46,7 +48,9 @@ describe('binding a tunnel session', () => {
       h.order.push('attach:filter');
     });
     await ensureTunnelSession('vpn-a', 1080);
-    expect(h.order).toEqual(['attach:filter', 'setProxy']);
+    // And the partition is blackholed before even that: no ordering of creation, wiring and binding
+    // leaves a window where the partition can reach the network unproxied.
+    expect(h.order).toEqual(['blackhole', 'attach:filter', 'setProxy']);
   });
 
   it('refuses the bind when the session still resolves to DIRECT — a tunnel in name only', async () => {

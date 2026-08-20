@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { NetworkState } from '@tepegoz/desktop-ipc';
-import type { TabDescriptor, TabNetworkBadge } from '@tepegoz/tab-strip';
+import type {
+  GroupRouteBadge,
+  TabDescriptor,
+  TabGroupDescriptor,
+  TabNetworkBadge,
+} from '@tepegoz/tab-strip';
 
 /**
  * The chrome's view of Phase 5 routing: which connections exist and where each tab currently goes.
@@ -15,7 +20,14 @@ import type { TabDescriptor, TabNetworkBadge } from '@tepegoz/tab-strip';
  * the untrusted process is one a page-driven bug could talk into lying.
  */
 
-const EMPTY: NetworkState = { connections: [], general: { kind: 'direct' }, tabs: {}, groups: {} };
+const EMPTY: NetworkState = {
+  connections: [],
+  general: { kind: 'direct' },
+  tabs: {},
+  groups: {},
+  binaries: { wireproxy: { found: false, path: '' }, tor: { found: false, path: '' } },
+  secretsAvailable: false,
+};
 
 export function useNetworkState(): NetworkState {
   const [state, setState] = useState<NetworkState>(EMPTY);
@@ -50,5 +62,22 @@ export function withNetworkBadges<T extends TabDescriptor>(
         blocked: !route.egressAllowed,
       },
     };
+  });
+}
+
+/**
+ * Attach the route shield to the groups the strip is about to render.
+ *
+ * A Direct group gets NO badge, exactly like a Direct tab: the absence is the signal, and a shield on
+ * every group would bury the ones that mean something.
+ */
+export function withGroupRouteBadges<T extends TabGroupDescriptor>(
+  groups: readonly T[],
+  network: NetworkState,
+): (T & { network?: GroupRouteBadge })[] {
+  return groups.map((group) => {
+    const route = network.groups[group.id];
+    if (route === undefined || route.connectionId === null) return group;
+    return { ...group, network: { vpn: route.vpn, tor: route.tor, label: route.label } };
   });
 }

@@ -78,6 +78,18 @@ const BindingService = {
     return groupBindings().get(groupId) ?? { kind: 'inherit' };
   },
 
+  /**
+   * Where a GROUP's traffic goes right now — its own binding, or whatever it inherits from General.
+   *
+   * Distinct from reading the raw group binding: a group on `inherit` under a tunneled General default is
+   * genuinely tunneled, and its header badge has to say so. Showing a badge only for an explicit group
+   * binding would leave the most common case ("everything through FRA") looking untunneled.
+   */
+  resolveForGroup(groupId: string): ResolvedBinding {
+    const group = groupBindings().get(groupId) ?? { kind: 'inherit' };
+    return resolveBinding({ kind: 'inherit' }, group, generalBinding());
+  },
+
   /** Where this tab's traffic goes right now, and which scope decided it. */
   resolveFor(tabId: string): ResolvedBinding {
     const groupId = groupOf(tabId);

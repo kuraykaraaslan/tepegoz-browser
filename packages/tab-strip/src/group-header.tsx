@@ -7,6 +7,7 @@ import { cn } from '@tepegoz/ui';
 import { GROUP_PREFIX } from './drop-resolver';
 import { groupColor } from './tab-chip';
 import type { TabGroupDescriptor, TabStripLabels } from './tab-strip';
+import { GroupRouteShield } from './route-badge';
 
 export interface GroupHeaderProps {
   group: TabGroupDescriptor;
@@ -91,6 +92,10 @@ export function GroupHeader({
             aria-hidden
           />
           <span className="max-w-32 truncate">{name}</span>
+          {/* Phase 5: where this group's traffic goes. Next to the name because the route is a property
+              of the group, the same way its colour is — and because a group is the scope people actually
+              bind a VPN to. */}
+          {group.network !== undefined && <GroupRouteShield badge={group.network} labels={labels} />}
           {group.collapsed && count > 0 && <span className="tabular-nums opacity-80">{count}</span>}
         </button>
       )}

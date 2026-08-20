@@ -5,6 +5,7 @@ import {
   assertFailClosed,
   proxyResolutionIsTunneled,
   tunnelProxyConfig,
+  BLACKHOLE_PROXY_CONFIG,
   TUNNEL_WEBRTC_POLICY,
 } from '@tepegoz/security-policy';
 import BrowsingSessions from './browsing-sessions.electron';
@@ -112,6 +113,38 @@ export function applyTunnelHardening(wc: WebContents): void {
 export function invalidateTunnelVerification(connectionId: string): void {
   if (!isValidConnectionId(connectionId)) return;
   verified.delete(partitionKeyFor({ connectionId }));
+}
+
+/**
+ * Point a connection's partition back at the blackhole, immediately, and forget its verification.
+ *
+ * Called the instant a connection goes down. A dead SOCKS port already fails closed — but only for as
+ * long as it stays dead: local ports are recycled, and an unrelated process that later binds the same
+ * loopback port would inherit a browser partition pointing straight at it. That is a stranger in the
+ * middle of traffic the user believes is tunneled, so "the port is dead" is not a durable enough
+ * guarantee to rest on.
+ *
+ * Blackholing instead makes the down state independent of what else happens on the machine, and forcing
+ * re-verification on the way back up means recovery cannot skip the `resolveProxy` check.
+ *
+ * Never throws: this runs on a health-poll callback, and a failure to blackhole must be logged loudly
+ * rather than allowed to take down the poll that noticed the drop in the first place.
+ */
+export async function blackholeTunnelSession(connectionId: string): Promise<void> {
+  if (!isValidConnectionId(connectionId)) return;
+  const partition = partitionKeyFor({ connectionId });
+  verified.delete(partition);
+  try {
+    const ses = BrowsingSessions.ensure(partition);
+    await ses.setProxy(BLACKHOLE_PROXY_CONFIG);
+    Logger.info('Tunnel partition blackholed after a drop', { connectionId, partition });
+  } catch (err) {
+    Logger.error('Could not blackhole a dropped tunnel partition', {
+      connectionId,
+      partition,
+      err: String(err),
+    });
+  }
 }
 
 export function resetTunnelSessionsForTests(): void {

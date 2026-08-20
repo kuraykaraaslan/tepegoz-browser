@@ -62,6 +62,12 @@ some path in the browser bypassing it. Both look exactly like everything working
 | A removed connection leaves its cookies on disk | `BrowsingSessions.release` wipes storage, cache, auth and host-resolver caches; refuses to touch the Direct partition |
 | Tunnel-bound partition runs unfiltered (no adblock/DNR, no download quarantine) | Per-session attacher registry; the filtering and quarantine attachers are **critical** — a session they cannot attach to is refused, not served |
 | The app's own HTTP (agent fetch, model calls) ignores the tunnel | `@tepegoz/http` egress route follows the **General** binding and **refuses** a request it cannot tunnel; never a silent downgrade |
+| A WireGuard profile's private key sits readable on disk | Stored encrypted through `safeStorage`; import is **refused** when the OS keychain is unavailable rather than degrading to plaintext. Residual: wireproxy takes a config path, not stdin, so the rendered config exists `0600` from spawn until the listener answers, then is deleted |
+| A helper binary is swapped for a hostile one | Located, never auto-downloaded: override → `userData/bin` → PATH, all under the user's control. No pinned-hash fetch is implemented, so nothing is executed that the user did not place |
+| A hostname leaks while the traffic is tunneled (WireGuard) | A `.conf` with no `DNS` line is **refused at import** — wireproxy would otherwise fall back to the host resolver. The resolver is carried into the generated config |
+| A chained route (Tor over VPN) half-fails | The chain is literal: Tor's outbound *is* the VPN's SOCKS port, so an upstream drop kills Tor's egress. Both legs are shown on the group shield; either one down cuts the group |
+| A chain config loops back on itself | Refused with a named error by the pool's cycle guard, rather than recursing until the stack gives out |
+| Two Tor groups share a circuit | One `tor` process per connection, each with its own `DataDirectory` — separate guards and circuits by construction, not by configuration |
 | Payload inspection is blind inside the tunnel | Accepted and documented: anomaly scoring for a tunneled tab must lean on metadata/timing/volume. Not silently weakened — recorded as owed work |
 
 **Exit-node / operator is untrusted.** A Tor exit or a VPN provider sees exactly what a plaintext ISP

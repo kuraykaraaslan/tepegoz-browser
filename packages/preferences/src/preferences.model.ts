@@ -121,6 +121,11 @@ export const PreferencesSchema = z.object({
   // could collide with another partition cannot be persisted in the first place.
   networkConnections: z.array(NetworkConnectionSchema).max(32),
   networkGeneralBinding: NetworkGeneralBindingSchema,
+  // Helper-binary overrides (wireproxy / tor). Blank = look in `userData/bin`, then PATH.
+  networkBinaries: z.object({
+    wireproxy: z.string().max(1024),
+    tor: z.string().max(1024),
+  }),
   // Home / new-tab page URL. Lenient string (validated/normalized at the UI); a blank value falls back
   // to the built-in default at the navigation site.
   homepageUrl: z.string().max(2048),
@@ -325,6 +330,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   customSearchEngines: [],
   networkConnections: [],
   networkGeneralBinding: { kind: 'direct' },
+  networkBinaries: { wireproxy: '', tor: '' },
   homepageUrl: 'https://duckduckgo.com/',
   showBookmarksBar: true,
   newTabShortcuts: [],

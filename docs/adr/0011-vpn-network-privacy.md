@@ -1,10 +1,10 @@
 # ADR-0011: VPN & network privacy — three-scope binding, per-connection partitions, fail-closed by construction
 
 - **Status:** Accepted (binding-resolution + kill-switch layer; **amended 2026-08-20** — per-session
-  wiring, the fail-closed egress configuration, the verified `setProxy` call site, four further clear-path
-  escapes closed (popups, favicons, tab creation, app-issued HTTP), and the working feature: connection
-  pool, applied bindings, re-hosting, blackholed unbound partitions and the driving surfaces — see
-  Amendment)
+  wiring, the fail-closed egress configuration, the verified `setProxy` call site, four clear-path escapes
+  closed (popups, favicons, tab creation, app-issued HTTP), the working feature (pool, bindings,
+  re-hosting, blackholed partitions, surfaces), and **real tunnels**: userspace WireGuard + Tor, chained
+  Tor-over-VPN, and blackhole-on-drop — see Amendment)
 - **Date:** 2026-08-19 (amended 2026-08-20)
 - **Refines:** the existing per-partition session model (Phase 2's `NetworkFilterEngine` stance: no
   system-proxy MITM) · **complements** [ADR-0020](0020-tab-boundary-model.md) (Tab Boundary Model)
@@ -294,9 +294,77 @@ two live connections measured simultaneously, Chromium's DNS prefetch/preconnect
 are process-wide, so the per-session `X-DNS-Prefetch-Control: off` stamp is a mitigation and not a
 closure — and HTTPS-only enforcement for tunnel-bound tabs.
 
+### 7. Real tunnels: WireGuard and Tor in user space, and how "VPN *and* Tor" is expressed
+
+Accepted. Until now the only provider was `ByoSocksProvider` — "point at a SOCKS port you already run".
+Two providers now produce tunnels themselves, and the choice of *which* two is the substance of this
+section.
+
+**Userspace first, and the ordering is not arbitrary.** `wireproxy` runs WireGuard over a private TCP/IP
+stack and exposes the result as a SOCKS5 listener; Tor already is one. Both therefore:
+
+- need **no TUN adapter, no route changes, and no elevation** — an untunneled tab cannot be affected by a
+  tunnel coming up, and the browser never asks for administrative rights;
+- **cannot leak by construction** — the process owns its own network stack and can only emit packets
+  through its tunnel. There is no route table to misconfigure and no source address to mis-bind, which
+  are the two ways a kernel-level VPN silently sends traffic the wrong way;
+- are **unlimited in number** — one more process on one more loopback port, which is what makes "a
+  different tunnel per tab group" cost nothing structural.
+
+OpenVPN is deliberately **absent from the schema enum**, not merely unimplemented. It is layer-3 with no
+common userspace stack, so it needs a real adapter plus source-bound sockets and a Windows routing
+assumption that is not yet verified. Adding the enum member before the provider exists would be a promise
+the code cannot keep.
+
+**The DNS refusal.** wireproxy resolves hostnames itself using the `DNS` line from `[Interface]`. With no
+such line it falls back to the host resolver — so the traffic would go through the tunnel while every
+site name went to the user's ISP in the clear. `parseWireGuardConfig` therefore **rejects a profile with
+no DNS**, with a message naming the fix, rather than accepting it or picking a resolver on the user's
+behalf. Choosing one would mean sending their browsing to a third party they did not select.
+
+**"This group is on the VPN *and* on Tor" is a chain, not two routes.** A group resolves to exactly one
+route, so the combination is Tor configured with the VPN's loopback SOCKS port as its `Socks5Proxy`,
+exposing its own port for the group to bind to. The kill-switch composes for free: if the upstream VPN
+drops, Tor's outbound dies with it and the group is cut, with nothing having to coordinate the two. The
+upstream is resolved **lazily, at connect time** — a restarted wireproxy lands on a new ephemeral port,
+and a value captured at construction would quietly point Tor at whatever now holds the old one. A cycle
+guard refuses a config that chains back to itself instead of recursing until the stack gives out.
+
+**One Tor process per connection**, each with its own `DataDirectory`. A shared process would be lighter,
+but two connections would then share guards and possibly circuits — and "these two groups take different
+paths through Tor" is the entire reason a user would create two Tor connections rather than one.
+
+**Secrets.** A WireGuard profile is a private key, so it is stored encrypted through `safeStorage` and
+referenced by connection id; `networkConnections` in preferences keeps only what is safe to show in a
+list. Import is **refused outright when the OS keychain is unavailable** — falling back to plaintext "so
+the feature works" would put a key on disk the user believes is protected. One honest gap: wireproxy
+takes a config path rather than stdin, so the rendered config exists as a `0600` file from spawn until
+the listener answers, then is deleted. That is the narrowest window available, not a comfortable one.
+
+**Helper binaries are located, not installed.** Neither is bundled: shipping a third-party executable
+inside a signed installer is a distribution problem, and neither is needed by anyone who does not turn the
+feature on. The search order is override → `userData/bin` → `PATH`, and a missing binary makes the
+connection report down with the directory to drop it in. The plan's pinned-hash auto-download is **not
+built** — inventing a hash to satisfy a design would be worse than telling the user where to put a file.
+
+**Blackhole on drop (zero-leak hardening #1).** A dead SOCKS port fails closed only while it stays dead;
+loopback ports are recycled, and an unrelated local process that later bound one would inherit a browser
+partition pointing straight at it. Every `status → down` therefore re-applies `BLACKHOLE_PROXY_CONFIG` to
+that partition and drops its verification, so recovery must pass `resolveProxy` again.
+
+**The group badge.** A shield beside the group name, because the group is the scope people actually bind a
+route to. Colour is never the only signal — every state also has words in the accessible name, since this
+particular red-vs-green is "protected" vs "not protected". A chained route splits one shield down the
+middle: VPN half in the health palette, Tor half purple when carrying traffic and grey when not. A Direct
+group draws nothing, because a shield on every group would bury the ones that mean something.
+
+**Not built, and stated rather than implied:** agent lockout on a dropped tunnel (zero-leak hardening #2),
+the explicit exit-IP check, and rename/reorder/duplicate in the manager.
+
 ### Still not decided here
 
-What remains after section 6: the **bundled** `WireGuardConfigProvider` / account providers /
-`TorProvider` and Tor's exit-node trust model and stream isolation — all gated on shipping a signed native
-binary, which is Phase 0's code-signing item and a prerequisite this ADR cannot close — and the 5b
-managed-exit track, which additionally needs the Phase 3 backend.
+What remains after section 7: the **OpenVPN** provider and the Windows split-routing model it depends on
+(source-bound sockets over a high-metric per-tunnel default route — unverified, and deferred at the
+owner's request); Tor's exit-node trust model and HTTPS-only enforcement for tunnel-bound tabs; and the 5b
+managed-exit track, which needs the Phase 3 backend. Bundling any helper binary in the installer remains
+gated on Phase 0 code-signing — and remains unnecessary, since nothing is bundled.

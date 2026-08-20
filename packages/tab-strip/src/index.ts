@@ -6,6 +6,8 @@
 export {
   TabStrip,
   type TabDescriptor,
+  type GroupRouteBadge,
+  type RouteLegStatus,
   type TabGroupDescriptor,
   type TabNetworkBadge,
   type TabStripGeometryReport,

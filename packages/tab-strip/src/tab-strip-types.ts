@@ -37,6 +37,27 @@ export interface TabGroupDescriptor {
   /** One of the fixed palette keys (see GROUP_COLORS); unknown values fall back to grey. */
   color: string;
   collapsed: boolean;
+  /** Network route (Phase 5) — absent for a Direct group, which draws no badge. */
+  network?: GroupRouteBadge;
+}
+
+/** Health of one leg of a route. Mirrors the pool's status vocabulary. */
+export type RouteLegStatus = 'up' | 'connecting' | 'down';
+
+/**
+ * What the group header needs to draw its shield: the health of each leg of the route.
+ *
+ * Two legs exist only for a chained route (Tor through a VPN) — which is what "this group is on the VPN
+ * AND on Tor" means, since a group resolves to exactly one route. Either leg dying cuts the group, so
+ * both are shown.
+ */
+export interface GroupRouteBadge {
+  /** VPN leg, or null when the route has none (plain Tor). */
+  vpn: RouteLegStatus | null;
+  /** Tor leg, or null when the route has none (plain VPN). */
+  tor: RouteLegStatus | null;
+  /** Route name for the accessible name / tooltip ("FRA", "Tor → FRA"). */
+  label: string;
 }
 
 /** A tab or group being torn out of the strip (structural — matches the host's IPC drag item). */
@@ -88,6 +109,12 @@ export interface TabStripLabels {
   routeTunneled?: string;
   routeTunneledInherited?: string;
   routeBlocked?: string;
+  /** Words for the group shield's legs — colour is never the only signal it carries. */
+  routeLegVpn?: string;
+  routeLegTor?: string;
+  routeLegUp?: string;
+  routeLegConnecting?: string;
+  routeLegDown?: string;
 }
 
 export interface TabStripProps {

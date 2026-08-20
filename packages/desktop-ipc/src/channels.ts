@@ -151,6 +151,10 @@ export const IpcChannels = {
   networkBindGroup: 'network:bind-group',
   networkSetGeneral: 'network:set-general',
   networkAddConnection: 'network:add-connection',
+  networkImportWireguard: 'network:import-wireguard',
+  networkAddTor: 'network:add-tor',
+  networkSetActive: 'network:set-active',
+  networkSetBinaryPath: 'network:set-binary-path',
   networkRemoveConnection: 'network:remove-connection',
   // Browser downloads (`tepegoz://downloads`). State is pushed live from the main-process DownloadService.
   downloadsList: 'downloads:list',

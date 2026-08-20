@@ -90,6 +90,8 @@ export const en = {
     routeTunneled: 'Routed through {name}',
     routeTunneledInherited: 'Inherited route: {name}',
     routeBlocked: 'Blocked — {name} is not connected',
+    routeLegVpn: 'VPN',
+    routeLegTor: 'Tor',
     addToNewGroup: 'Add tab to new group',
     addToGroup: 'Add tab to group',
     removeFromGroup: 'Remove from group',

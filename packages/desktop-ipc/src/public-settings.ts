@@ -59,6 +59,7 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   // is exactly the fact the feature exists to keep to itself. No extension gets to read it.
   networkConnections: 'private',
   networkGeneralBinding: 'private',
+  networkBinaries: 'private',
   homepageUrl: 'private',
   showBookmarksBar: 'private',
   // Private — new-tab personalization (the user's shortcut list + background); extensions have no need.
