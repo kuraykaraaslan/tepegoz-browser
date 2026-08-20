@@ -417,6 +417,14 @@ export const en = {
     protocolWireguard: 'WireGuard',
     protocolTor: 'Tor',
     protocolByo: 'SOCKS',
+    protocolOpenvpn: 'OpenVPN',
+    pickedEndpointOnly: 'Endpoint {endpoint}',
+    pickedOverrides:
+      'This profile asks for {list}. Tepegöz ignores those on purpose — they would put every tab in this tunnel and break DNS for the rest of the computer.',
+    adapterLabel: 'Adapter',
+    adapterPlaceholder: 'e.g. Tepegoz-FRA',
+    usernameLabel: 'Username',
+    passwordLabel: 'Password',
     chainedVia: 'via {name}',
     keychainBody:
       'A WireGuard profile contains a private key, so it can only be imported when the operating system can encrypt it. Nothing will be written in plain text.',

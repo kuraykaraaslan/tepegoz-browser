@@ -7,6 +7,8 @@ import BrowsingSessions from './browsing-sessions.electron';
 import { ByoSocksProvider, type NetworkPrivacyProvider } from './connection-provider.electron';
 import { WireGuardProvider } from './wireguard-provider.electron';
 import { TorProvider } from './tor-provider.electron';
+import { OpenVpnProvider } from './openvpn-provider.electron';
+import OpenVpnCredentials from './openvpn-credentials.electron';
 import {
   blackholeTunnelSession,
   ensureTunnelSession,
@@ -83,6 +85,12 @@ function providerFor(config: NetworkConnection): NetworkPrivacyProvider {
       return new ByoSocksProvider(config.socksPort);
     case 'wireguard':
       return new WireGuardProvider(config.id);
+    case 'openvpn':
+      return new OpenVpnProvider(
+        config.id,
+        config.adapterName,
+        config.requiresAuth ? OpenVpnCredentials.read(config.id) : null,
+      );
     case 'tor':
       return new TorProvider(
         config.id,

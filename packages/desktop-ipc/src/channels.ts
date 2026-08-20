@@ -153,7 +153,7 @@ export const IpcChannels = {
   networkBindGroup: 'network:bind-group',
   networkSetGeneral: 'network:set-general',
   networkAddConnection: 'network:add-connection',
-  networkPickWireguard: 'network:pick-wireguard',
+  networkPickProfile: 'network:pick-profile',
   networkSetActive: 'network:set-active',
   networkSetBinaryPath: 'network:set-binary-path',
   networkPickBinaryFolder: 'network:pick-binary-folder',

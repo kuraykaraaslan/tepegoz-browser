@@ -95,6 +95,18 @@ export type ScopeBindingInput =
  */
 export type NetworkConnectionInput =
   | { kind: 'wireguard'; label: string; note: string; sourcePath: string }
+  | {
+      kind: 'openvpn';
+      label: string;
+      note: string;
+      sourcePath: string;
+      /** Which TUN adapter this tunnel binds to. Blank lets OpenVPN pick, which only works for one
+       *  tunnel at a time — concurrent tunnels each need their own. */
+      adapterName: string;
+      /** Only used when the profile asks for them; stored through the OS keychain, never a file. */
+      username: string;
+      password: string;
+    }
   | { kind: 'tor'; label: string; note: string; upstreamConnectionId: string | null }
   | { kind: 'byo-socks'; label: string; note: string; socksPort: number };
 
@@ -105,13 +117,21 @@ export type NetworkConnectionInput =
  * chosen into a field, the user names it, and a single Add button commits. Nothing is persisted until
  * then — main re-reads the path at commit time rather than holding the profile in memory meanwhile.
  */
-export interface PickedWireguardProfile {
+export interface PickedVpnProfile {
   path: string;
   fileName: string;
   /** Safe-to-show facts from the parser. Never key material. */
   endpoint: string;
+  /** Resolvers the profile carries. WireGuard refuses to import without one; OpenVPN gets its DNS at
+   *  connect time from the server, so this is empty for it. */
   dns: string[];
+  /** True when the profile routes everything (WireGuard `AllowedIPs = 0.0.0.0/0`). */
   fullTunnel: boolean;
+  /** OpenVPN: the server will prompt for a username/password. */
+  requiresAuth: boolean;
+  /** Directives in the profile that we will deliberately ignore (`redirect-gateway`, `block-outside-dns`)
+   *  — shown before the user commits, because each one is something the profile asked for and will not get. */
+  overrides: string[];
 }
 
 export interface NetworkApi {
@@ -122,9 +142,9 @@ export interface NetworkApi {
   setGeneralNetworkBinding(binding: NetworkGeneralBinding): Promise<void>;
   addNetworkConnection(input: NetworkConnectionInput): Promise<void>;
   removeNetworkConnection(id: string): Promise<void>;
-  /** Open a file picker for a WireGuard `.conf` and parse it. `null` when the user cancelled; rejects
-   *  with the parser's own message when the file is not a usable profile. */
-  pickWireguardProfile(): Promise<PickedWireguardProfile | null>;
+  /** Open a file picker for a VPN profile and parse it. `null` when the user cancelled; rejects with the
+   *  parser's own message when the file is not a usable profile. */
+  pickVpnProfile(kind: 'wireguard' | 'openvpn'): Promise<PickedVpnProfile | null>;
   /** Bring one connection up or take it down on the spot. */
   setNetworkConnectionActive(id: string, active: boolean): Promise<void>;
   setNetworkBinaryPath(binary: 'wireproxy' | 'tor', path: string): Promise<void>;

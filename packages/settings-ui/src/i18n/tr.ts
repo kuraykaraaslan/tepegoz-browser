@@ -419,6 +419,14 @@ export const tr: SettingsStrings = {
     protocolWireguard: 'WireGuard',
     protocolTor: 'Tor',
     protocolByo: 'SOCKS',
+    protocolOpenvpn: 'OpenVPN',
+    pickedEndpointOnly: 'Uç nokta {endpoint}',
+    pickedOverrides:
+      'Bu profil {list} istiyor. Tepegöz bunları bilerek yok sayar — her sekmeyi bu tünele sokar ve bilgisayarın geri kalanının DNS’ini bozardı.',
+    adapterLabel: 'Adaptör',
+    adapterPlaceholder: 'örn. Tepegoz-FRA',
+    usernameLabel: 'Kullanıcı adı',
+    passwordLabel: 'Parola',
     chainedVia: '{name} üzerinden',
     keychainBody:
       'Bir WireGuard profili özel anahtar içerir; bu yüzden ancak işletim sistemi onu şifreleyebildiğinde içe aktarılabilir. Hiçbir şey düz metin olarak yazılmayacak.',

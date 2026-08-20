@@ -24,7 +24,7 @@ import PreferenceStore from '@tepegoz/preferences';
  * and a rude thing for a browser to do unasked.
  */
 
-export type VpnBinary = 'wireproxy' | 'tor';
+export type VpnBinary = 'wireproxy' | 'tor' | 'openvpn';
 
 export class MissingBinaryError extends Error {
   constructor(readonly binary: VpnBinary) {
@@ -48,8 +48,7 @@ function fileNames(binary: VpnBinary): string[] {
 }
 
 function configuredPath(binary: VpnBinary): string {
-  const paths = PreferenceStore.getAll().networkBinaries;
-  return binary === 'wireproxy' ? paths.wireproxy : paths.tor;
+  return PreferenceStore.getAll().networkBinaries[binary];
 }
 
 /**
@@ -82,6 +81,15 @@ function wellKnownPaths(binary: VpnBinary): string[] {
         join(home, 'scoop', 'apps', 'tor', 'current', 'tor.exe'),
         join(home, 'scoop', 'shims', 'tor.exe'),
         join('C:/ProgramData', 'chocolatey', 'bin', 'tor.exe'),
+      ];
+    }
+    if (binary === 'openvpn') {
+      // The community package — NOT OpenVPN Connect, which is a GUI client that holds one profile at a
+      // time and exposes no CLI to run several tunnels at once.
+      return [
+        join(programFiles, 'OpenVPN', 'bin', 'openvpn.exe'),
+        join(process.env['ProgramW6432'] ?? programFiles, 'OpenVPN', 'bin', 'openvpn.exe'),
+        join('C:/Program Files (x86)', 'OpenVPN', 'bin', 'openvpn.exe'),
       ];
     }
     return [
