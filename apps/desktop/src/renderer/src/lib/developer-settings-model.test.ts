@@ -27,6 +27,8 @@ const PREFS: Preferences = {
   searchEngineId: 'google',
   onboardingCompleted: false,
   customSearchEngines: [],
+  networkConnections: [],
+  networkGeneralBinding: { kind: 'direct' },
   homepageUrl: 'https://duckduckgo.com/',
   showBookmarksBar: true,
   newTabShortcuts: [],

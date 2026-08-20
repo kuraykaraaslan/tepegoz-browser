@@ -10,6 +10,7 @@ import type { TranslateSettings } from '@tepegoz/ext-translate/types';
 import type { TypoSettings } from '@tepegoz/ext-typo/types';
 import type { VideoPlayerSettings } from '@tepegoz/ext-video-player/types';
 import type { SearchEngine } from '@tepegoz/shared-types/search-engines';
+import type { NetworkConnection, NetworkGeneralBinding } from '@tepegoz/shared-types';
 import type { FileAccessGrant } from '@tepegoz/shared-types/file-access';
 import type { AIProvider as ProviderId } from '@tepegoz/shared-types/providers';
 import type { SitePermissionState } from '@tepegoz/shared-types/notifications';
@@ -158,6 +159,12 @@ export interface Preferences {
   onboardingCompleted: boolean;
   /** User-added search engines, merged with the built-in list in the picker + omnibox resolution. */
   customSearchEngines: SearchEngine[];
+  /** Phase 5 network privacy: the user's configured VPN/Tor connections (a local SOCKS endpoint each).
+   *  Empty by default — the browser tunnels nothing unless the user adds a connection and binds to it. */
+  networkConnections: NetworkConnection[];
+  /** The profile-wide DEFAULT binding every tab falls back to (`tab → group → General → Direct`).
+   *  `{ kind: 'direct' }` by default: pure local-first is the floor this cannot fall below. */
+  networkGeneralBinding: NetworkGeneralBinding;
   /** The home / new-tab page URL (opened for a new tab, the Home button, and a blank omnibox submit). */
   homepageUrl: string;
   /** Show the bookmarks bar strip under the nav toolbar (Chrome-style; toggled from the Bookmarks menu). */

@@ -118,14 +118,41 @@ function runObservers<T>(
   }
 }
 
+/**
+ * Merge a per-session response-header stamp into whatever the handler pipeline decided.
+ *
+ * Used for `X-DNS-Prefetch-Control: off` on tunnel-bound partitions. Chromium's DNS pre-resolution runs
+ * through the host resolver directly, NOT through the session's SOCKS proxy — so a page inside a tunnel
+ * can still cause the machine's own resolver to look up every hostname it links to, handing the user's
+ * ISP the browsing list the tunnel exists to hide. This header is the per-document control Chromium
+ * honours for exactly that, which makes it the only mitigation available at session granularity.
+ *
+ * Not applied to Direct partitions: prefetching is a real speed win, and nothing is being hidden there.
+ */
+function withStamp(
+  details: Electron.OnHeadersReceivedListenerDetails,
+  response: Electron.HeadersReceivedResponse,
+  stamp: Record<string, string>,
+): Electron.HeadersReceivedResponse {
+  if (response.cancel === true) return response;
+  const base = response.responseHeaders ?? details.responseHeaders ?? {};
+  const merged: Record<string, string[]> = {};
+  for (const [name, value] of Object.entries(base)) {
+    merged[name] = Array.isArray(value) ? value : [value];
+  }
+  for (const [name, value] of Object.entries(stamp)) merged[name] = [value];
+  return { ...response, responseHeaders: merged };
+}
+
 const BrowsingWebRequestService = {
   /**
    * Own the Electron webRequest listener set for ONE browsing session. Called once per browsing session
    * (via `BrowsingSessions.register`), not once per process — see {@link attachedTo}.
    */
-  attach(webRequest: WebRequestLike): void {
+  attach(webRequest: WebRequestLike, opts?: { stampResponseHeaders?: Record<string, string> }): void {
     if (attachedTo.has(webRequest)) return;
     attachedTo.add(webRequest);
+    const stamp = opts?.stampResponseHeaders;
 
     webRequest.onBeforeRequest((details, callback) => {
       void runBeforeRequest(details).then(callback, (err: unknown) => {
@@ -135,10 +162,16 @@ const BrowsingWebRequestService = {
     });
 
     webRequest.onHeadersReceived((details, callback) => {
-      void runHeadersReceived(details).then(callback, (err: unknown) => {
-        Logger.warn('webRequest onHeadersReceived pipeline failed open', { err: String(err) });
-        callback({});
-      });
+      void runHeadersReceived(details).then(
+        (response) => callback(stamp === undefined ? response : withStamp(details, response, stamp)),
+        (err: unknown) => {
+          Logger.warn('webRequest onHeadersReceived pipeline failed open', { err: String(err) });
+          // Even on a pipeline failure the stamp is applied: it is a per-SESSION privacy header, not a
+          // feature handler, and dropping it because some unrelated filter threw would silently
+          // re-enable the very behaviour it exists to suppress.
+          callback(stamp === undefined ? {} : withStamp(details, {}, stamp));
+        },
+      );
     });
 
     webRequest.onCompleted((details) => {

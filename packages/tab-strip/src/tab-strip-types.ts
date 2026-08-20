@@ -15,6 +15,19 @@ export interface TabDescriptor {
   pinned?: boolean;
   /** Owning group id, or null/undefined when ungrouped. */
   groupId?: string | null;
+  /** Network route (Phase 5). Absent for an ordinary Direct tab, which draws nothing: a badge on every
+   *  tab would be noise, and "no badge" already reads as "not tunneled". */
+  network?: TabNetworkBadge;
+}
+
+/** What the strip needs to draw a tab's route: a name to show and whether traffic is currently held. */
+export interface TabNetworkBadge {
+  /** The connection's display label. */
+  label: string;
+  /** True when the route came from the group or the General default rather than from this tab. */
+  inherited: boolean;
+  /** True when the kill-switch is holding this tab's traffic (its connection is not up). */
+  blocked: boolean;
 }
 
 /** A tab group the strip renders as a colored container wrapping its contiguous member run. */
@@ -71,6 +84,10 @@ export interface TabStripLabels {
   unnamedGroup?: string;
   /** aria-label for the group collapse/expand toggle. */
   toggleGroup?: string;
+  /** Route badge accessible names (Phase 5). `{name}` is replaced with the connection label. */
+  routeTunneled?: string;
+  routeTunneledInherited?: string;
+  routeBlocked?: string;
 }
 
 export interface TabStripProps {

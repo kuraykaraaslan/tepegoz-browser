@@ -5,7 +5,7 @@ import {
 } from '@tepegoz/persistence';
 import { isWebUrl } from './lib/navigation-url';
 import { asGroupColor } from './tabs-popup-policy';
-import { WindowTabsNav } from './tabs-window-nav';
+import { WindowTabsRehost } from './tabs-window-rehost';
 import { closedUrls } from './tabs-shared';
 
 export { BROWSING_PARTITION, type DetachedTab, type NavigationObserver } from './tabs-shared';
@@ -31,7 +31,7 @@ export { default } from './tabs-manager';
  * moves → navigation) that live in sibling `tabs-window-*` modules (ADR-0010 250-line cap); this final
  * class adds session restore/snapshot on top.
  */
-export class WindowTabs extends WindowTabsNav {
+export class WindowTabs extends WindowTabsRehost {
   // ── Session restore ────────────────────────────────────────────────────────────────────────────
 
   /** Reopen the most-recently-closed tab (Ctrl+Shift+T). No-op when the stack is empty. */

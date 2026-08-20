@@ -35,3 +35,4 @@ export * from './preferences-types';
 export * from './tabs-types';
 export * from './ai-adaptor-types';
 export * from './api';
+export * from './api-network';

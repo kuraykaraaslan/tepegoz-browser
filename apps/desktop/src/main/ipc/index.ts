@@ -5,6 +5,7 @@ import { registerDownloadsIpc } from './ipc-downloads';
 import { registerUploadsIpc } from './ipc-uploads';
 import { registerTasksIpc } from './ipc-tasks';
 import { registerSiteDataIpc } from './ipc-site-data';
+import { registerNetworkIpc } from './ipc-network';
 import { registerTabDragIpc } from '../tab-drag-coordinator';
 
 export { abortActiveAgentRuns } from './ipc-agent';
@@ -23,4 +24,5 @@ export function registerIpc(): void {
   registerUploadsIpc();
   registerTasksIpc();
   registerSiteDataIpc();
+  registerNetworkIpc();
 }

@@ -1,6 +1,7 @@
 import { Menu, type BrowserWindow, type MenuItemConstructorOptions } from 'electron';
 import { mainStrings } from '../lib/i18n-main';
 import TabManager from '../tabs';
+import { routeSubmenu } from './route-menu';
 
 /**
  * Native tab right-click menu, mirroring Chrome's tab context menu (the subset Phase 1a supports).
@@ -58,6 +59,10 @@ export function showTabContextMenu(win: BrowserWindow, tabId: string): void {
         TabManager.hideTab(tabId);
       },
     },
+    { type: 'separator' },
+    // Per-tab network route (Phase 5). Sits next to the group entry because it is the same kind of
+    // decision — "which context does this tab belong to" — at a different scope.
+    { label: t.browser.routeTabThrough, submenu: routeSubmenu('tab', tabId) },
     { type: 'separator' },
     { label: t.browser.addToGroup, submenu: groupSubmenu },
     ...(inGroup

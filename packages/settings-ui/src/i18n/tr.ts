@@ -383,4 +383,31 @@ export const tr: SettingsStrings = {
       items: ['Başlangıçta çalıştır', 'Donanım hızlandırma', 'Proxy ayarları'],
     },
   },
+  // --- Ağ gizliliği (Faz 5): yerel bir SOCKS uç noktası üzerinden sekme/grup bazında yönlendirme ---
+  network: {
+    title: 'Ağ gizliliği',
+    intro:
+      'Bir sekmeyi, sekme grubunu ya da her şeyi bu bilgisayarda zaten çalışan bir SOCKS5 uç noktasından geçirin — Tor’un yerel portu, bir VPN istemcisinin SOCKS portu veya bir SSH tüneli. Tepegöz tünelin kendisini sağlamaz; burada ya da bir sekmenin sağ tık menüsünden seçmediğiniz sürece hiçbir şey tünelden geçmez.',
+    defaultRoute: 'Varsayılan rota',
+    defaultRouteHint:
+      'Kendi rotası olmayan ve rotalı bir grupta bulunmayan her sekme için geçerlidir. Değiştirmek etkilenen sekmeleri yeniden yükler.',
+    direct: 'Doğrudan (tünelsiz)',
+    connections: 'Bağlantılar',
+    noConnections: 'Henüz bağlantı yok. Aşağıdan ekleyin.',
+    notedAs: 'Not: {note}',
+    remove: 'Kaldır',
+    removeHint:
+      'Bir bağlantıyı kaldırmak, onu kullanan sayfaların çerezlerini ve önbelleğini de siler ve sekmelerini varsayılan rotaya döndürür.',
+    statusUp: 'bağlı',
+    statusDown: 'bağlı değil',
+    statusConnecting: 'bağlanıyor',
+    addTitle: 'Bağlantı ekle',
+    addHint:
+      'Bu makinedeki (127.0.0.1) bir SOCKS5 portunu gösterin. Tor Browser genellikle 9050’yi dinler. Not tamamen sizin hatırlatmanızdır — hiçbir zaman doğrulanmaz.',
+    labelPlaceholder: 'İsim',
+    notePlaceholder: 'Not (örn. Tor, Mullvad SE)',
+    portPlaceholder: 'Port',
+    portInvalid: '1 ile 65535 arasında bir port girin.',
+    add: 'Ekle',
+  },
 };

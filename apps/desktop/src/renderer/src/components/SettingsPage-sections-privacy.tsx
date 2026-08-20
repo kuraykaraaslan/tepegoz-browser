@@ -9,6 +9,7 @@ import {
   SitePermissionsSection,
 } from './settings-privacy-files';
 import { DeveloperSection } from './settings-developer';
+import { NetworkPrivacySection } from './settings-network-privacy';
 import {
   IconCard,
   IconDesktop,
@@ -118,6 +119,16 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
           </div>
         </Card>
       ),
+    },
+    {
+      // Network privacy sits directly under "Privacy & security": it is a core browser routing setting,
+      // not an extension feature, and the tab/group context menus deep-link here to manage connections.
+      id: 'network-privacy',
+      group: s.groupPrivacy,
+      label: s.network.title,
+      icon: <IconShield />,
+      searchText: `${s.network.title} ${s.network.intro} ${s.network.defaultRoute} ${s.network.connections} SOCKS Tor VPN`,
+      content: <NetworkPrivacySection s={s} />,
     },
     {
       id: 'site-permissions',

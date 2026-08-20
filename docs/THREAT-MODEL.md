@@ -23,7 +23,8 @@
 ## Trust boundaries
 `renderer (untrusted UI)` ⇄ `preload (typed bridge)` ⇄ `main (privileged)` · `isolated webview
 (browsed pages)` · `CapabilitySandbox (3rd-party MCP/skill)` · `AI provider` · `integration adapters`
-· `MCP server (inbound)` · `cloud backend (Phase 3)`
+· `MCP server (inbound)` · `cloud backend (Phase 3)` · `VPN/Tor tunnel (local SOCKS endpoint +
+its operator, Phase 5)`
 
 ## Top threats → mitigations
 | Threat | Mitigation (where) |
@@ -38,11 +39,52 @@
 | Inbound MCP abuse | Bearer auth + rate-limit + schema validation + same policy gate |
 | Local DB exposure | userData ACLs; field encryption for sensitive data; synthetic test fixtures only |
 
+## Network-privacy tunnels (Phase 5)
+
+A tunnel-bound tab adds a trust boundary the rest of this document does not cover: `browsed page` ⇄
+`this browser` ⇄ **`local SOCKS endpoint`** ⇄ `tunnel operator (Tor exit, VPN provider, SSH host)` ⇄
+`destination`. The operator is a party the user chose and this browser cannot vouch for.
+
+The dominant risk here is not "the tunnel fails" — it is **the tunnel failing without saying so**, or
+some path in the browser bypassing it. Both look exactly like everything working.
+
+| Threat | Mitigation (where) |
+|---|---|
+| Tunnel drops mid-session → traffic silently continues on the clear path | Proxy rules carry **no `DIRECT` fallback** (`assertFailClosed`), so a dead endpoint yields `ERR_PROXY_CONNECTION_FAILED`; `killSwitchVerdicts` reports it per tab; health poll flips status within seconds. Measured: `e2e/spike-tunnel-failclosed.spec.ts` |
+| A partition exists but was never bound → Chromium treats "no proxy" as DIRECT | Every `--conn-` partition is **blackholed at creation** (`BLACKHOLE_PROXY_CONFIG`) and only replaced once `resolveProxy` confirms the real tunnel took effect |
+| DNS resolved locally → the ISP sees every site name despite the tunnel | SOCKS**5** only (SOCKS4 rejected — it has no hostname form), so the proxy resolves; `X-DNS-Prefetch-Control: off` stamped on tunnel partitions to suppress Chromium's pre-resolution, which does not go through the proxy. Measured (remote DNS): the SOCKS server receives `DOMAINNAME` |
+| WebRTC hands out the real address past a TCP proxy | `disable_non_proxied_udp` per tunneled `WebContents` |
+| Chrome UI fetches something on the page's behalf (favicons) over the clear path | Favicons fetched in main **on the page's own session** and inlined as `data:`; `TabFaviconSchema` rejects a remote favicon at the IPC boundary. Measured: `e2e/spike-favicon-inline.spec.ts` |
+| `window.open()` / a page-opened tab escapes to Direct | Popups and page-opened tabs are created on the **opener's session**, never on a named partition |
+| Group-inheritance misbinding — a tab silently on the wrong exit after a group move | Resolution is one pure function (`tab → group → General → Direct`) with `affectedBy*Change` deciding exactly who re-hosts; a tab with its own override is never moved by a scope above it. **Known gap:** pinning a tab clears its group membership, which silently re-resolves it to the General default |
+| Re-bind transition leaks on the old path | The old view is destroyed **before** the replacement exists; no moment has two views for one tab on two networks |
+| Two connections share one cookie jar (cross-tab bleed) | Partition key derived from a validated connection-id slug; an id that could collide **throws** instead of being sanitized |
+| A removed connection leaves its cookies on disk | `BrowsingSessions.release` wipes storage, cache, auth and host-resolver caches; refuses to touch the Direct partition |
+| Tunnel-bound partition runs unfiltered (no adblock/DNR, no download quarantine) | Per-session attacher registry; the filtering and quarantine attachers are **critical** — a session they cannot attach to is refused, not served |
+| The app's own HTTP (agent fetch, model calls) ignores the tunnel | `@tepegoz/http` egress route follows the **General** binding and **refuses** a request it cannot tunnel; never a silent downgrade |
+| Payload inspection is blind inside the tunnel | Accepted and documented: anomaly scoring for a tunneled tab must lean on metadata/timing/volume. Not silently weakened — recorded as owed work |
+
+**Exit-node / operator is untrusted.** A Tor exit or a VPN provider sees exactly what a plaintext ISP
+would, and can modify anything not protected by TLS. Nothing in this feature changes that; it moves who
+is in that position, on the user's instruction. HTTPS-only enforcement and a cleartext warning for
+tunnel-bound tabs are owed (Phase 5, Tor track).
+
+**The exit region is the user's claim.** A connection's note ("Tor", "Mullvad SE") is free text the user
+typed. The browser cannot verify where a loopback SOCKS port comes out and never presents it as fact.
+
 ## Residual risk (accepted, documented)
 - Prompt injection cannot be reduced to zero (industry-wide); we minimize blast radius via the Policy
   Kernel and publish a version-tagged attack-success-rate.
 - An agentic browser inherently sends page/DOM content (which may contain PII) to the model; mitigated
   by redaction, data minimization, local-SLM preprocessing for sensitive data, and explicit consent —
   **not** eliminated. No "100% secure" claim is made; ultimate responsibility rests with the user.
+
+- A tunnel moves trust rather than removing it: the exit operator sees what an ISP would. Chromium's
+  DNS **prefetch/preconnect predictor** and DoH are process-wide rather than per-session; the per-request
+  path is proven to resolve remotely, and prefetch is suppressed with `X-DNS-Prefetch-Control: off` on
+  tunnel partitions, but that header covers page-declared prefetch hints, not every predictor path. Not
+  claimed as closed.
+- No VPN/Tor transport is bundled. The browser routes through a SOCKS5 endpoint the user already runs;
+  shipping one is gated on Phase 0 code-signing. Anything that endpoint does is outside this model.
 
 _Revisit before each release and whenever a new trust boundary (e.g., managed proxy, extensions) lands._

@@ -16,6 +16,7 @@ import type { TabDescriptor, TabStripProps } from './tab-strip-types';
 export type {
   TabDescriptor,
   TabGroupDescriptor,
+  TabNetworkBadge,
   TabStripGeometryReport,
   TabStripLabels,
   TabStripProps,

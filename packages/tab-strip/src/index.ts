@@ -7,6 +7,7 @@ export {
   TabStrip,
   type TabDescriptor,
   type TabGroupDescriptor,
+  type TabNetworkBadge,
   type TabStripGeometryReport,
   type TabStripLabels,
   type TabStripProps,

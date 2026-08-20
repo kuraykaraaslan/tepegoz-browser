@@ -18,6 +18,8 @@
  *    Direct — pure local-first is the floor this cannot fall below.
  */
 
+import { isValidConnectionId as isValidId } from '@tepegoz/shared-types';
+
 /** What one scope (Tab or Group) can be set to. `inherit` defers to the next scope up. */
 export type ScopedBinding =
   | { kind: 'connection'; connectionId: string }
@@ -77,13 +79,9 @@ export function resolveBinding(
 export const DIRECT_PARTITION = 'persist:tepegoz-web';
 
 /** A connection id is a partition-name component, so it is constrained to what can never collide or
- *  escape: lowercase alphanumerics and single dashes. Two DIFFERENT connections whose ids normalized to
- *  the same partition would silently share one cookie jar — the cross-tab bleed the phase forbids. */
-export const CONNECTION_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-export function isValidConnectionId(connectionId: string): boolean {
-  return connectionId.length <= 64 && CONNECTION_ID_PATTERN.test(connectionId);
-}
+ *  escape. The rule itself lives in `@tepegoz/shared-types` — the schema source — because the
+ *  preferences store validates the very same ids and a second spelling here could drift from it. */
+export { CONNECTION_ID_PATTERN, isValidConnectionId } from '@tepegoz/shared-types';
 
 /**
  * The session-partition key a resolved binding hosts a tab's `WebContents` on.
@@ -98,7 +96,7 @@ export function isValidConnectionId(connectionId: string): boolean {
  */
 export function partitionKeyFor(resolved: ResolvedConnection): string {
   if (resolved.connectionId === null) return DIRECT_PARTITION;
-  if (!isValidConnectionId(resolved.connectionId)) {
+  if (!isValidId(resolved.connectionId)) {
     throw new Error(`Invalid connection id for a session partition: ${JSON.stringify(resolved.connectionId)}`);
   }
   return `${DIRECT_PARTITION}--conn-${resolved.connectionId}`;

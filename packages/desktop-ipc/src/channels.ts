@@ -143,6 +143,15 @@ export const IpcChannels = {
   modelsSelect: 'models:select',
   modelsDelete: 'models:delete',
   modelsState: 'models:state',
+  // Network privacy (Phase 5): the connection pool + the three-scope binding. State is pushed live so a
+  // dropped tunnel updates every indicator without the chrome polling for it.
+  networkGetState: 'network:get-state',
+  networkState: 'network:state',
+  networkBindTab: 'network:bind-tab',
+  networkBindGroup: 'network:bind-group',
+  networkSetGeneral: 'network:set-general',
+  networkAddConnection: 'network:add-connection',
+  networkRemoveConnection: 'network:remove-connection',
   // Browser downloads (`tepegoz://downloads`). State is pushed live from the main-process DownloadService.
   downloadsList: 'downloads:list',
   downloadsCommand: 'downloads:command',

@@ -48,7 +48,7 @@ function installFakeNet(): void {
 }
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
-const ok = (type = 'image/png', body = [PNG]) => ({ statusCode: 200, type, body });
+const ok = (type: string | null = 'image/png', body = [PNG]) => ({ statusCode: 200, type, body });
 
 const session = (name: string): Electron.Session => ({ name }) as unknown as Electron.Session;
 

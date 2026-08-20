@@ -3,6 +3,7 @@ import { IpcChannels } from '@tepegoz/desktop-ipc';
 import { TAB_GROUP_COLORS } from '@tepegoz/tab-engine';
 import { mainStrings } from '../lib/i18n-main';
 import TabManager from '../tabs';
+import { routeSubmenu } from './route-menu';
 
 /**
  * Native tab-group header right-click menu (ADR-0020), mirroring Chrome's group menu: rename (opens the
@@ -32,6 +33,10 @@ export function showGroupContextMenu(win: BrowserWindow, groupId: string): void 
       },
     },
     { label: t.browser.groupColor, submenu: colorItems },
+    { type: 'separator' },
+    // Per-group network route (Phase 5): members that inherit follow it; a member with its own override
+    // is left alone, which is the same most-specific-wins rule the resolution layer enforces.
+    { label: t.browser.routeGroupThrough, submenu: routeSubmenu('group', groupId) },
     { type: 'separator' },
     {
       label: t.browser.newTabInGroup,

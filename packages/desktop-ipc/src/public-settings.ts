@@ -55,6 +55,10 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   searchEngineId: 'private',
   onboardingCompleted: 'private',
   customSearchEngines: 'private',
+  // Private, and emphatically so: which tunnels a user has configured, and whether they are using one,
+  // is exactly the fact the feature exists to keep to itself. No extension gets to read it.
+  networkConnections: 'private',
+  networkGeneralBinding: 'private',
   homepageUrl: 'private',
   showBookmarksBar: 'private',
   // Private — new-tab personalization (the user's shortcut list + background); extensions have no need.

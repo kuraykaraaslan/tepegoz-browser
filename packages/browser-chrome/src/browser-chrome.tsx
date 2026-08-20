@@ -34,6 +34,10 @@ export interface BrowserChromeStrings {
     bookmarkRemove: string;
     unnamedGroup: string;
     toggleGroup: string;
+    /** Phase 5 route badge names; `{name}` is replaced with the connection label. */
+    routeTunneled: string;
+    routeTunneledInherited: string;
+    routeBlocked: string;
   };
 }
 
@@ -182,6 +186,9 @@ export function BrowserChrome({
               newTab: t.browser.newTab,
               unnamedGroup: t.browser.unnamedGroup,
               toggleGroup: t.browser.toggleGroup,
+              routeTunneled: t.browser.routeTunneled,
+              routeTunneledInherited: t.browser.routeTunneledInherited,
+              routeBlocked: t.browser.routeBlocked,
             }}
             onSelect={onSelectTab}
             onClose={onCloseTab}

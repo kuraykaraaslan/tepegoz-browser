@@ -1,8 +1,10 @@
 # ADR-0011: VPN & network privacy — three-scope binding, per-connection partitions, fail-closed by construction
 
 - **Status:** Accepted (binding-resolution + kill-switch layer; **amended 2026-08-20** — per-session
-  wiring, the fail-closed egress configuration, the verified `setProxy` call site, and four further
-  clear-path escapes closed (popups, favicons, tab creation, app-issued HTTP) — see Amendment)
+  wiring, the fail-closed egress configuration, the verified `setProxy` call site, four further clear-path
+  escapes closed (popups, favicons, tab creation, app-issued HTTP), and the working feature: connection
+  pool, applied bindings, re-hosting, blackholed unbound partitions and the driving surfaces — see
+  Amendment)
 - **Date:** 2026-08-19 (amended 2026-08-20)
 - **Refines:** the existing per-partition session model (Phase 2's `NetworkFilterEngine` stance: no
   system-proxy MITM) · **complements** [ADR-0020](0020-tab-boundary-model.md) (Tab Boundary Model)
@@ -227,9 +229,74 @@ state is asserted to carry `data:` and no `http`. The popup and tab-creation fix
 connection pool there is still no second session in the running app for a tab to be opened from; that is
 stated here rather than dressed up as a test.
 
+### 6. The feature, working: pool, bindings, re-hosting, and the surfaces that drive them
+
+Accepted. This closes the items section 5 listed as "still not decided here", except the two that are
+genuinely blocked.
+
+**The first provider ships no binary.** The phase names three provider families (BYO WireGuard, account
+providers, Tor) and every one of them ends in the same place — a **SOCKS5 endpoint on loopback** — and
+every one of them needs a signed native binary this repo cannot produce yet. So the seam is defined in
+terms of that endpoint, and the first provider is `ByoSocksProvider`: point at a SOCKS5 port the user
+already runs (Tor's 9050, a VPN client's local SOCKS, `ssh -D`, a userspace WireGuard bridge they
+installed). That is a real, shippable feature today for exactly the audience this phase is for, and it is
+the same seam the bundled providers implement later, so nothing above it is rewritten when they land.
+
+**The pool separates liveness from permission.** A provider answers "is my endpoint responding"; whether
+a tab may egress stays `killSwitchVerdicts`' job. Two rules keep that honest: `connecting` is never
+reported as usable — `statusMap` emits only `up`/`down`, and anything not confirmed up is `down` — and
+"up" means the endpoint answered **and** `ensureTunnelSession` verified with `resolveProxy` that Chromium
+adopted the proxy. A connection reported up that cannot carry traffic is the precise state in which a
+user believes they are protected and is not.
+
+**Applying a binding has one order, and it is the safety property.** `BindingService` resolves the scope,
+brings the connection up, verifies it, and only then re-hosts. If any step fails the tab is left exactly
+where it was — never moved optimistically (which would tell the user they are protected when the tunnel
+is dead) and never redirected to Direct (which is the leak). Applies are sequential, so two tabs moving
+onto one connection cannot race to bring it up.
+
+**Re-hosting is destroy-then-create, in that order.** Electron binds a `WebContents` to its session at
+creation, so a route change means a new view and a reload — the cost the phase accepted up front. The
+ordering is what makes the transition non-leaking: there is never a moment with two views for one tab
+alive on two networks. A tab already on the target session is left completely alone.
+
+**An unbound tunnel partition is blackholed.** This is the invariant that makes every *other* ordering
+safe. "No proxy configured" is not neutral in Chromium — it means DIRECT — so a `--conn-` partition that
+exists but has not been bound would send a tab that believes it is tunneled straight out the clear path.
+Every tunnel partition therefore gets `BLACKHOLE_PROXY_CONFIG` (a loopback port nothing listens on, no
+`DIRECT`) the instant it is created, replaced only after verification. The worst case across all orderings
+becomes "a request errors and a reload works", never "a request leaks". It is also what lets a **new tab**
+be born on the profile-wide default route synchronously, which it must be: a user who set "everything
+through Tor" and then pressed Ctrl+T getting a clear-path tab is the whole feature failing.
+
+**Storage teardown is part of removal.** Removing a connection wipes its partition's storage, cache, auth
+and host-resolver caches, and drops every binding that pointed at it. Without the second half, tabs would
+sit blocked on `unknown_connection_failclosed` with no route back — correctly blocked, and unfixable by
+the user, since the connection they would need is gone.
+
+**UI deviation, recorded rather than glossed.** The phase specifies a Connection-picker **Modal**. What
+landed is a **native submenu** on the tab and group context menus, plus a Settings surface for the General
+scope and connection management. The surrounding menus are already real OS menus built in main against
+authoritative state, so the picker's contents cannot be stale by the time they are clicked and the
+renderer learns nothing about the pool it does not already display. Not built: the "which tabs/groups use
+each connection" column, a member-count confirm, and the per-group header indicator. The per-tab indicator
+is computed in main and pushed — a security indicator computed in the untrusted renderer is one a
+page-driven bug could talk into lying.
+
+**Measured, not asserted.** `e2e/spike-tunnel-binding.spec.ts` runs the shipping app: a connection added
+through the real bridge, set as the default route, a new tab opened, its traffic arriving at the SOCKS
+endpoint while a **proven-reachable** clear path records nothing; then the endpoint is killed, the health
+poll flips it to `down`, the tab is reported blocked, and still nothing reaches the clear path.
+
+**Blocked, not skipped.** Bundled WireGuard/Tor providers (Phase 0 code-signing plus a Rust toolchain in
+CI), Tor stream isolation (needs Tor), and 5b managed exits (needs the Phase 3 backend). Open and stated:
+two live connections measured simultaneously, Chromium's DNS prefetch/preconnect predictor and DoH — which
+are process-wide, so the per-session `X-DNS-Prefetch-Control: off` stamp is a mitigation and not a
+closure — and HTTPS-only enforcement for tunnel-bound tabs.
+
 ### Still not decided here
 
-Unchanged from the original scope list: the connection pool and health-polling, `WireGuardConfigProvider`
-/ account providers / `TorProvider`, Tor's exit-node trust model and stream isolation, and every UI
-surface. Note also that shipping any of the transports is gated on Phase 0's code-signing item, which is
-a distribution prerequisite this ADR cannot close.
+What remains after section 6: the **bundled** `WireGuardConfigProvider` / account providers /
+`TorProvider` and Tor's exit-node trust model and stream isolation — all gated on shipping a signed native
+binary, which is Phase 0's code-signing item and a prerequisite this ADR cannot close — and the 5b
+managed-exit track, which additionally needs the Phase 3 backend.

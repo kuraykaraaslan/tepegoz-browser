@@ -79,6 +79,7 @@ export { clearsCredentialVault, planSiteClear, type SiteClearContext } from './s
 export { mayOpenDevTools, type DevToolsVerdict } from './devtools-policy';
 export {
   assertFailClosed,
+  BLACKHOLE_PROXY_CONFIG,
   isValidSocksPort,
   proxyResolutionIsTunneled,
   tunnelProxyConfig,

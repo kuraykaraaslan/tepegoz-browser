@@ -8,6 +8,7 @@
  */
 export * from './schemas-app';
 export * from './schemas-tabs';
+export * from './schemas-network';
 export * from './schemas-agent';
 export * from './schemas-bookmarks';
 export * from './schemas-extensions';

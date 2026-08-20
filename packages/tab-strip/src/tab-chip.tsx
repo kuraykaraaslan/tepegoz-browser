@@ -1,10 +1,15 @@
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faGlobe, faXmark } from '@fortawesome/free-solid-svg-icons';
+import {
+  faGlobe,
+  faShieldHalved,
+  faTriangleExclamation,
+  faXmark,
+} from '@fortawesome/free-solid-svg-icons';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@tepegoz/ui';
-import type { TabDescriptor, TabStripLabels } from './tab-strip';
+import type { TabDescriptor, TabNetworkBadge, TabStripLabels } from './tab-strip';
 
 /** Tailwind classes per group color: the header pill (solid) and the member-run container (tint + ring). */
 /** The group-color styling a grouped tab uses: header pill, edge border color, and a soft background tint. */
@@ -53,6 +58,35 @@ export function TabFavicon({ src, loading }: Readonly<{ src: string | null; load
   );
 }
 
+/**
+ * The tab's network route, when it has one.
+ *
+ * Drawn only for a TUNNELED tab: a badge on every tab would be noise, and its absence already reads as
+ * "not tunneled". It carries a text accessible name as well as a colour, because colour alone cannot
+ * distinguish "routed" from "routed but currently blocked" for a large share of users — and that is
+ * exactly the distinction that matters when a tunnel drops.
+ */
+function TabRouteBadge({
+  network,
+  labels,
+}: Readonly<{ network: TabNetworkBadge; labels: TabStripLabels }>) {
+  const template = network.blocked
+    ? (labels.routeBlocked ?? 'Blocked: {name} is not connected')
+    : network.inherited
+      ? (labels.routeTunneledInherited ?? 'Inherited route: {name}')
+      : (labels.routeTunneled ?? 'Routed through {name}');
+  const title = template.replace('{name}', network.label);
+  return (
+    <FontAwesomeIcon
+      icon={network.blocked ? faTriangleExclamation : faShieldHalved}
+      title={title}
+      aria-label={title}
+      role="img"
+      className={cn('h-3 w-3 shrink-0', network.blocked ? 'text-error' : 'text-primary')}
+    />
+  );
+}
+
 /** The favicon + (unless pinned) the title of a tab — shared by the live chip and the drag overlay. */
 export function TabInner({
   tab,
@@ -62,6 +96,7 @@ export function TabInner({
   return (
     <>
       <TabFavicon src={tab.faviconUrl} loading={tab.isLoading} />
+      {tab.network !== undefined && <TabRouteBadge network={tab.network} labels={labels} />}
       {!pinned && (
         <span className="hidden min-w-0 flex-1 truncate @min-[7rem]:block">
           {tab.isLoading && !tab.title ? '…' : tab.title || labels.untitled}

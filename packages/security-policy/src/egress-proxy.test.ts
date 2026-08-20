@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   assertFailClosed,
+  BLACKHOLE_PROXY_CONFIG,
   isValidSocksPort,
   proxyResolutionIsTunneled,
   tunnelProxyConfig,
@@ -108,6 +109,19 @@ describe('assertFailClosed — the contract every config must pass, however it w
   it('accepts a narrower bypass list, including none at all', () => {
     expect(() => assertFailClosed({ ...base, proxyBypassRules: '' })).not.toThrow();
     expect(() => assertFailClosed({ ...base, proxyBypassRules: 'localhost' })).not.toThrow();
+  });
+});
+
+describe('the blackhole an unbound tunnel partition holds', () => {
+  it('passes the same fail-closed contract as a real tunnel config', () => {
+    expect(() => assertFailClosed(BLACKHOLE_PROXY_CONFIG)).not.toThrow();
+  });
+
+  it('points somewhere nothing can answer, with no DIRECT escape', () => {
+    // "No proxy configured" is not neutral in Chromium — it means DIRECT. This is what makes a
+    // created-but-unbound tunnel partition fail closed instead of silently going out the clear path.
+    expect(BLACKHOLE_PROXY_CONFIG.proxyRules).toBe('socks5://127.0.0.1:1');
+    expect(BLACKHOLE_PROXY_CONFIG.proxyRules.toUpperCase()).not.toContain('DIRECT');
   });
 });
 

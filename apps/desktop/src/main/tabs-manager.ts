@@ -1,4 +1,4 @@
-import { type Rectangle, type WebContents } from 'electron';
+import { type Rectangle, type Session, type WebContents } from 'electron';
 import { type TabGroupSettingValue, type TabsState } from '@tepegoz/desktop-ipc';
 import { type TabGroupColor } from '@tepegoz/tab-engine';
 import { type DevToolsVerdict } from '@tepegoz/security-policy';
@@ -96,6 +96,34 @@ export default class TabManager extends TabManagerBase {
   static setPinned(id: string, pinned: boolean): void {
     TabManager.focused()?.setPinned(id, pinned);
   }
+  /**
+   * Move a tab onto a different browsing session (Phase 5 re-bind), in whichever window holds it.
+   *
+   * Routed by ownership rather than focus: a re-bind can affect tabs in several windows at once (a group
+   * binding changing, or the General default), and sending those to the FOCUSED window would silently
+   * leave every other window's tabs on the old network path.
+   */
+  static rehostTab(id: string, session: Session): boolean {
+    for (const wt of TabManager.all()) {
+      if (wt.hasTab(id)) return wt.rehostTab(id, session);
+    }
+    return false;
+  }
+
+  /** Every tab in every window, with its group — the input to Phase 5's binding re-resolution. */
+  static bindingStates(): { tabId: string; groupId: string | null }[] {
+    return TabManager.all().flatMap((wt) =>
+      wt.getState().tabs.map((t) => ({ tabId: t.id, groupId: t.groupId })),
+    );
+  }
+
+  /** Every group in every window, with its settings bag (where a group's binding is stored). */
+  static allGroups(): { id: string; settings: Record<string, TabGroupSettingValue> }[] {
+    return TabManager.all().flatMap((wt) =>
+      wt.getState().groups.map((g) => ({ id: g.id, settings: g.settings })),
+    );
+  }
+
   static hideTab(id: string): void {
     TabManager.focused()?.hideTab(id);
   }

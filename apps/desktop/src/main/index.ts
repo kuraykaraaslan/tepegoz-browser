@@ -13,6 +13,9 @@ import PreferenceStore from '@tepegoz/preferences';
 import { closeDatabase } from './db/database.electron';
 import TabManager from './tabs';
 import BrowsingSessions from './network/browsing-sessions.electron';
+import ConnectionPool from './network/connection-pool.electron';
+import BindingService from './network/binding-service.electron';
+import { broadcastNetworkState } from './ipc/ipc-network';
 import PopupWindowManager from './popup-window';
 import McpService from './mcp/supervisor.electron';
 import ExtensionCapabilityService from './extensions/capability-supervisor.electron';
@@ -151,8 +154,17 @@ if (!app.requestSingleInstanceLock()) {
       // refused outright rather than served unfiltered.
       BrowsingSessions.register(
         'web-request',
-        (ses) => {
-          BrowsingWebRequestService.attach(ses.webRequest);
+        (ses, partition) => {
+          BrowsingWebRequestService.attach(
+            ses.webRequest,
+            // Tunnel partitions only: Chromium pre-resolves hostnames through the host resolver, NOT
+            // through the session's SOCKS proxy, so a page inside a tunnel can still hand the user's
+            // own resolver the list of sites it links to. Direct partitions keep prefetching — it is a
+            // real speed win and nothing there is being hidden.
+            BrowsingSessions.isTunnelPartition(partition)
+              ? { stampResponseHeaders: { 'X-DNS-Prefetch-Control': 'off' } }
+              : {},
+          );
         },
         { critical: true },
       );
@@ -179,6 +191,14 @@ if (!app.requestSingleInstanceLock()) {
       // `popup:open` interceptor with the generic action-interception plane (ADR-0022).
       popupBlockerHost.init();
       ActionInterceptorService.provide(popupBlockerHost.interceptors);
+      // Network privacy (Phase 5): load the configured connections (nothing is dialled here — a
+      // connection comes up only when something binds to it) and push the routing picture to the chrome
+      // whenever a tunnel's health changes, so an indicator can never sit on a stale "protected".
+      ConnectionPool.init();
+      BindingService.installNewTabRoute();
+      ConnectionPool.onStatusChange(() => {
+        broadcastNetworkState();
+      });
       registerIpc();
       initHosts();
       openWindow();

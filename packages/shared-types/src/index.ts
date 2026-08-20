@@ -23,6 +23,7 @@ export * from './intent-critic';
 export * from './credential-broker';
 export * from './agent-delta';
 export * from './site-data';
+export * from './network-privacy';
 export * from './agent-memory';
 export * from './recipe-ir';
 export * from './mandate';

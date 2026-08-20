@@ -20,6 +20,9 @@ const STRINGS: BrowserChromeStrings = {
     bookmarkRemove: 'Remove bookmark',
     unnamedGroup: 'Group',
     toggleGroup: 'Toggle group',
+    routeTunneled: 'Routed through {name}',
+    routeTunneledInherited: 'Inherited route: {name}',
+    routeBlocked: 'Blocked — {name} is not connected',
   },
 };
 

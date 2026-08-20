@@ -380,6 +380,33 @@ export const en = {
       items: ['Launch at startup', 'Hardware acceleration', 'Proxy settings'],
     },
   },
+  // --- Network privacy (Phase 5): per-tab / per-group routing through a local SOCKS endpoint ---
+  network: {
+    title: 'Network privacy',
+    intro:
+      'Route a tab, a tab group, or everything through a SOCKS5 endpoint already running on this computer — Tor’s local port, a VPN client’s SOCKS port, or an SSH tunnel. Tepegöz does not provide the tunnel itself, and nothing is routed through one unless you choose it here or from a tab’s right-click menu.',
+    defaultRoute: 'Default route',
+    defaultRouteHint:
+      'Applies to every tab that has no route of its own and is not in a group with one. Changing it reloads the affected tabs.',
+    direct: 'Direct (no tunnel)',
+    connections: 'Connections',
+    noConnections: 'No connections yet. Add one below.',
+    notedAs: 'Noted as: {note}',
+    remove: 'Remove',
+    removeHint:
+      'Removing a connection also erases the cookies and cache of every page that used it, and sends its tabs back to the default route.',
+    statusUp: 'connected',
+    statusDown: 'not connected',
+    statusConnecting: 'connecting',
+    addTitle: 'Add a connection',
+    addHint:
+      'Point at a SOCKS5 port on this machine (127.0.0.1). Tor Browser usually listens on 9050. The note is your own reminder — it is never verified.',
+    labelPlaceholder: 'Name',
+    notePlaceholder: 'Note (e.g. Tor, Mullvad SE)',
+    portPlaceholder: 'Port',
+    portInvalid: 'Enter a port between 1 and 65535.',
+    add: 'Add',
+  },
 };
 
 export type SettingsStrings = typeof en;

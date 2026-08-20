@@ -13,6 +13,7 @@ import type { AgentApi } from './api-agent';
 import type { ExtensionsApi } from './api-extensions';
 import type { UiApi } from './api-ui';
 import type { LoginsApi } from './api-logins';
+import type { NetworkApi } from './api-network';
 
 /** The exact surface bridged to `window.tepegoz` in the renderer. */
 export interface TepegozApi
@@ -21,6 +22,7 @@ export interface TepegozApi
     AgentApi,
     ExtensionsApi,
     UiApi,
-    LoginsApi {
+    LoginsApi,
+    NetworkApi {
   readonly platform: string;
 }

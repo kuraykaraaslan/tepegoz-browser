@@ -16,6 +16,7 @@ import type { ExtensionDef } from './extensions/registry';
 import type { BookmarksBarResult } from './app-bookmarks';
 import type { ExtensionSurfacesResult } from './app-extension-surfaces';
 import type { OmniboxHistoryResult } from './app-omnibox-history';
+import { useNetworkState, withNetworkBadges } from './app-network-state';
 
 export interface AppChromeProps {
   locale: Locale;
@@ -63,7 +64,13 @@ export function AppChrome({
   // Hidden tabs are removed from the strip but kept alive/rendering (see hideTab). Filter them out HERE,
   // at the chrome host — the model keeps them in `tabs.tabs` so the agent still sees them, and the caption
   // HiddenTabsButton lists them. A group whose every member is hidden also drops its header.
-  const visibleTabs = tabs.tabs.filter((t) => t.hidden !== true);
+  // Phase 5 routing, pushed from main. Merged onto the tabs here so the strip stays presentational and
+  // the badge cannot be computed (or mis-computed) in the untrusted renderer.
+  const network = useNetworkState();
+  const visibleTabs = withNetworkBadges(
+    tabs.tabs.filter((t) => t.hidden !== true),
+    network,
+  );
   const hiddenCount = tabs.tabs.length - visibleTabs.length;
   const visibleGroupIds = new Set(
     visibleTabs.map((t) => t.groupId).filter((g): g is string => g !== null),

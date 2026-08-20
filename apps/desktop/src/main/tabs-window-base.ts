@@ -170,7 +170,10 @@ export class WindowTabsBase {
         // A concrete Session, never a partition NAME: going through `BrowsingSessions` is what
         // guarantees the filtering/quarantine/User-Agent plane is attached before the view can load
         // anything. A partition string here would let a tab exist on a session nothing ever wired.
-        session: opts?.session ?? BrowsingSessions.direct(),
+        // With no explicit session, the tab is born on the PROFILE-WIDE DEFAULT route rather than
+        // always on Direct: a user who set "everything through Tor" and then pressed Ctrl+T would
+        // otherwise get a clear-path tab, which is the failure the whole feature exists to prevent.
+        session: opts?.session ?? BrowsingSessions.defaultForNewTab(),
         // Never throttle timers/rAF on a non-foreground tab. Complements the startup keep-rendering
         // switches (see index.ts): a hidden tab (attached-occluded) the AI drives, and every background
         // tab, must keep running at full rate — not just keep painting. Trade-off accepted (agentic browser).

@@ -86,6 +86,22 @@ export function tunnelProxyConfig(port: number): TunnelProxyConfig {
   };
 }
 
+/**
+ * The configuration a tunnel partition holds until a real tunnel is verified on it.
+ *
+ * Port 1 on loopback, with no `DIRECT` fallback: nothing listens there, so every request fails with
+ * `ERR_PROXY_CONNECTION_FAILED`. It exists because "no proxy configured" is not a neutral state in
+ * Chromium — it means DIRECT. A `--conn-` partition that has been created but not yet bound would
+ * therefore send a tab that believes it is tunneled straight out the clear path. This makes the
+ * unbound state fail closed instead, so no ordering of session creation, binding and navigation can
+ * produce a leak; the worst case is a request that errors and a reload that works.
+ */
+export const BLACKHOLE_PROXY_CONFIG: TunnelProxyConfig = {
+  mode: 'fixed_servers',
+  proxyRules: 'socks5://127.0.0.1:1',
+  proxyBypassRules: TUNNEL_BYPASS_RULES,
+};
+
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]', '::1']);
 
 /**

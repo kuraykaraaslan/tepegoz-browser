@@ -1,6 +1,7 @@
 import { session, type Session } from 'electron';
 import { Logger } from '@tepegoz/libs';
 import { DIRECT_PARTITION } from '@tepegoz/tab-engine';
+import { BLACKHOLE_PROXY_CONFIG } from '@tepegoz/security-policy';
 
 /**
  * The registry of BROWSING sessions and the per-session wiring every one of them must carry.
@@ -27,6 +28,9 @@ import { DIRECT_PARTITION } from '@tepegoz/tab-engine';
  * no traffic — the correct outcome when we cannot prove the filtering/quarantine plane is attached.
  */
 
+/** Every tunnel partition is a `--conn-` sibling of the Direct one — see `partitionKeyFor`. */
+const TUNNEL_PREFIX = `${DIRECT_PARTITION}--conn-`;
+
 export type BrowsingSessionAttacher = (ses: Session, partition: string) => void;
 
 interface Registration {
@@ -44,6 +48,8 @@ const live = new Map<string, Session>();
  * into a silently unfiltered tunnel.
  */
 const poisoned = new Map<string, Error>();
+/** Supplies the session a new tab is born on; installed by the binding layer (see `defaultForNewTab`). */
+let newTabSessionProvider: (() => Session) | null = null;
 /** `${partition}\u0000${attacherId}` pairs already applied — the exactly-once guarantee. */
 const appliedPairs = new Set<string>();
 
@@ -114,6 +120,16 @@ const BrowsingSessions = {
     const ses = existing ?? session.fromPartition(partition);
     if (existing === undefined) {
       live.set(partition, ses);
+      // A tunnel partition is BLACKHOLED the instant it exists, before anything can be hosted on it.
+      // Without this, a partition created but not yet bound has no proxy at all — which in Chromium means
+      // DIRECT, i.e. a tab that believes it is tunneled going out the clear path. `ensureTunnelSession`
+      // replaces this with the real config only once it has verified the tunnel actually took effect, so
+      // the failure mode of every ordering is "requests fail", never "requests leak".
+      if (BrowsingSessions.isTunnelPartition(partition)) {
+        void ses.setProxy(BLACKHOLE_PROXY_CONFIG).catch((err: unknown) => {
+          Logger.error('Could not blackhole a new tunnel partition', { partition, err: String(err) });
+        });
+      }
       Logger.info('Browsing session created', { partition, attachers: registrations.size });
     }
     try {
@@ -134,6 +150,30 @@ const BrowsingSessions = {
     return BrowsingSessions.ensure(DIRECT_PARTITION);
   },
 
+  /**
+   * The session a NEW tab should be born on, per the profile-wide default route.
+   *
+   * Installed by the binding layer (which owns the General binding) rather than read from it here, so
+   * this module keeps its one job and there is no import cycle between sessions and bindings. Absent a
+   * provider — during startup, or in tests — it is the Direct session, which is the pre-Phase-5 behaviour.
+   */
+  defaultForNewTab(): Session {
+    try {
+      return newTabSessionProvider?.() ?? BrowsingSessions.direct();
+    } catch (err) {
+      // A provider that cannot answer must not silently produce a Direct tab under a tunneled default.
+      // Refusing outright is the fail-closed direction; the caller surfaces it rather than opening a tab
+      // on a network the user did not choose.
+      Logger.error('Default-route provider failed', { err: String(err) });
+      throw err;
+    }
+  },
+
+  /** Install the default-route provider. Called once by the binding layer at startup. */
+  setNewTabSessionProvider(provider: (() => Session) | null): void {
+    newTabSessionProvider = provider;
+  },
+
   /** Every live browsing session. The iteration order is creation order, base partition first. */
   all(): readonly { partition: string; session: Session }[] {
     return [...live].map(([partition, ses]) => ({ partition, session: ses }));
@@ -141,10 +181,50 @@ const BrowsingSessions = {
 
   /** Is this one of OUR browsing partitions? Guards call sites that must never touch app chrome. */
   isBrowsingPartition(partition: string): boolean {
-    return partition === DIRECT_PARTITION || partition.startsWith(`${DIRECT_PARTITION}--conn-`);
+    return partition === DIRECT_PARTITION || partition.startsWith(TUNNEL_PREFIX);
+  },
+
+  /** Is this a tunnel-bound partition, as opposed to the Direct one? Wiring that must differ between the
+   *  two — the DNS-prefetch suppression header, for one — asks here rather than pattern-matching itself. */
+  isTunnelPartition(partition: string): boolean {
+    return partition.startsWith(TUNNEL_PREFIX);
+  },
+
+  /**
+   * Tear a tunnel partition down for good: wipe its storage, caches and credentials, then forget it.
+   *
+   * Called when a connection is removed from the pool. Electron can clear a partition's CONTENTS but has
+   * no API to delete its directory, so without this a "private" partition outlives the connection it
+   * belonged to — the cookies from a VPN/Tor session sitting on disk indefinitely, under a name nothing
+   * reads any more, which is the opposite of what the user asked for when they removed it.
+   *
+   * Refuses the Direct partition outright: that one holds every ordinary tab's cookies and logins, and a
+   * "release" reaching it would be a silent mass sign-out.
+   */
+  async release(partition: string): Promise<void> {
+    if (!BrowsingSessions.isTunnelPartition(partition)) {
+      throw new Error(`Refusing to release a non-tunnel partition: ${partition}`);
+    }
+    const ses = live.get(partition);
+    live.delete(partition);
+    for (const id of registrations.keys()) appliedPairs.delete(pairKey(partition, id));
+    if (ses === undefined) return;
+    try {
+      await ses.clearStorageData();
+      await ses.clearCache();
+      await ses.clearAuthCache();
+      await ses.clearHostResolverCache();
+      Logger.info('Tunnel partition released', { partition });
+    } catch (err) {
+      // Reported, not swallowed: leftover data from a removed tunnel is exactly what the user believed
+      // they were deleting, so a failure here is something an operator must be able to see.
+      Logger.error('Failed to clear a released tunnel partition', { partition, err: String(err) });
+      throw err;
+    }
   },
 
   resetForTests(): void {
+    newTabSessionProvider = null;
     registrations.clear();
     live.clear();
     appliedPairs.clear();

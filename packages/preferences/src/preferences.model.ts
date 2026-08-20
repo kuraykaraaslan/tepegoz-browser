@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import { EXTENSION_ID_RE } from '@tepegoz/extension-sdk';
 import {
+  NetworkConnectionSchema,
+  NetworkGeneralBindingSchema,
+} from '@tepegoz/shared-types';
+import {
   AGENT_EFFORT_LEVELS,
   FILE_ACCESS_MODES,
   LOCALE_PREFS,
@@ -112,6 +116,11 @@ export const PreferencesSchema = z.object({
       }),
     )
     .max(50),
+  // Phase 5 network privacy. The connection list and the profile-wide default binding; both validated
+  // with the SAME schemas the rest of the app uses (`@tepegoz/shared-types`), so a connection id that
+  // could collide with another partition cannot be persisted in the first place.
+  networkConnections: z.array(NetworkConnectionSchema).max(32),
+  networkGeneralBinding: NetworkGeneralBindingSchema,
   // Home / new-tab page URL. Lenient string (validated/normalized at the UI); a blank value falls back
   // to the built-in default at the navigation site.
   homepageUrl: z.string().max(2048),
@@ -314,6 +323,8 @@ export const DEFAULT_PREFERENCES: Preferences = {
   searchEngineId: 'google',
   onboardingCompleted: false,
   customSearchEngines: [],
+  networkConnections: [],
+  networkGeneralBinding: { kind: 'direct' },
   homepageUrl: 'https://duckduckgo.com/',
   showBookmarksBar: true,
   newTabShortcuts: [],
