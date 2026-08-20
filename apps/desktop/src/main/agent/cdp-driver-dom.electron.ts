@@ -1,6 +1,12 @@
 import type { WebContents } from 'electron';
 import { AppError } from '@tepegoz/libs';
-import { findByLocators, resolveNodePath, type ElementLocators, type NodePath } from '@tepegoz/tool-executor';
+import {
+  findByLocators,
+  findWidgetOption,
+  resolveNodePath,
+  type ElementLocators,
+  type NodePath,
+} from '@tepegoz/tool-executor';
 import {
   attributesMap,
   BoxModelSchema,
@@ -10,6 +16,7 @@ import {
   EvalHandleSchema,
   ResolveSchema,
   WidgetKindSchema,
+  WidgetOptionSchema,
   type NodeArg,
 } from './cdp-driver-schemas.electron.js';
 import { mainFrameIsolatedContext } from './cdp-driver-session.electron.js';
@@ -35,13 +42,8 @@ export async function fileInputInfo(
 }
 
 /** The center point (CSS px, viewport-relative) of an element, after scrolling it into view. */
-export async function centerOf(
-  wc: WebContents,
-  node: NodeArg,
-): Promise<{ x: number; y: number }> {
-  await wc.debugger
-    .sendCommand('DOM.scrollIntoViewIfNeeded', { ...node })
-    .catch(() => undefined); // best-effort; getBoxModel below is the real guard
+export async function centerOf(wc: WebContents, node: NodeArg): Promise<{ x: number; y: number }> {
+  await wc.debugger.sendCommand('DOM.scrollIntoViewIfNeeded', { ...node }).catch(() => undefined); // best-effort; getBoxModel below is the real guard
   const raw: unknown = await wc.debugger.sendCommand('DOM.getBoxModel', { ...node });
   const box = BoxModelSchema.safeParse(raw);
   if (!box.success || box.data.model.content.length < 8) {
@@ -160,7 +162,10 @@ export async function pathToObjectId(wc: WebContents, path: NodePath): Promise<s
   });
   const parsed = EvalHandleSchema.safeParse(raw);
   if (!parsed.success || parsed.data.result.objectId === undefined) {
-    throw new AppError('Element is no longer on the page — read the page elements again first', 409);
+    throw new AppError(
+      'Element is no longer on the page — read the page elements again first',
+      409,
+    );
   }
   return parsed.data.result.objectId;
 }
@@ -252,4 +257,27 @@ export async function widgetKindOf(
   const parsed = WidgetKindSchema.safeParse(raw);
   // A failed probe must not block a fill that would work: unknown reads as "an ordinary field".
   return parsed.success ? parsed.data.result.value.kind : null;
+}
+
+/**
+ * Search the page for the option/day a widget's just-opened popup should be clicked at, for `matchText`
+ * (S3 PR7 fill strategy). Injects the SAME `findWidgetOption` algorithm the pure layer unit-tests (via
+ * `.toString()`) into the isolated world — document-scoped (not relative to the widget's own objectId),
+ * since the option element does not exist until the popup itself has rendered.
+ */
+export async function findWidgetOptionInPage(
+  wc: WebContents,
+  matchText: string,
+): Promise<{ x: number; y: number; label: string } | null> {
+  const contextId = await mainFrameIsolatedContext(wc);
+  const raw: unknown = await wc.debugger
+    .sendCommand('Runtime.evaluate', {
+      expression: `(${findWidgetOption.toString()})(document, ${JSON.stringify(matchText)})`,
+      contextId,
+      returnByValue: true,
+      silent: true,
+    })
+    .catch(() => null);
+  const parsed = WidgetOptionSchema.safeParse(raw);
+  return parsed.success ? parsed.data.result.value : null;
 }

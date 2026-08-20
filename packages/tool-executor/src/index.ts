@@ -40,6 +40,8 @@ export { checkForm } from './form-validation.js';
 export type { FormReport, FormIssue } from './form-validation.js';
 export { resolveNodePath, findByLocators } from './dom-path.js';
 export type { PathNode, NodePath, PathSegment, ElementLocators } from './dom-path.js';
+export { findWidgetOption } from './widget-option.js';
+export type { WidgetOptionNode, WidgetOptionRoot, WidgetOptionMatch } from './widget-option.js';
 export * from './stable-refs.js';
 export * from './elements-diff.js';
 export * from './key-chord.js';

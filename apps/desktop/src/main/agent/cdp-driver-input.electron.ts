@@ -14,6 +14,7 @@ import {
 import {
   centerOf,
   fileInputInfo,
+  findWidgetOptionInPage,
   isFocused,
   objectIdFor,
   probeClickPoint,
@@ -38,6 +39,63 @@ async function waitForFocus(wc: WebContents, node: NodeArg, timeoutMs = 500): Pr
     if (Date.now() >= deadline) return false;
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
+}
+
+/** Poll {@link findWidgetOptionInPage} until a matching option renders or the budget elapses (S3 PR7): a
+ *  popup can take a tick to open (a CSS transition, a JS timeout), so an immediate read races it the same
+ *  way an immediate focus check races a synthetic click — see {@link waitForFocus}. */
+async function waitForWidgetOption(
+  wc: WebContents,
+  text: string,
+  timeoutMs = 1000,
+): Promise<{ x: number; y: number; label: string } | null> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const found = await findWidgetOptionInPage(wc, text);
+    if (found !== null) return found;
+    if (Date.now() >= deadline) return null;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+}
+
+/** Dispatch a real click at an on-screen point — the raw-CDP / human-adapter branch every click-shaped
+ *  gesture in this file shares. */
+async function dispatchClick(
+  wc: WebContents,
+  adapter: HumanInputAdapter | undefined,
+  x: number,
+  y: number,
+): Promise<void> {
+  if (adapter === undefined) {
+    const base = { x, y, button: 'left' as const, clickCount: 1 };
+    await wc.debugger.sendCommand('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
+    await wc.debugger.sendCommand('Input.dispatchMouseEvent', { type: 'mousePressed', ...base });
+    await wc.debugger.sendCommand('Input.dispatchMouseEvent', { type: 'mouseReleased', ...base });
+  } else {
+    await adapter.idle();
+    await adapter.click(x, y);
+  }
+}
+
+/**
+ * Drive a widget-driven field's own popup instead of typing into it (S3 PR7 fill strategy): open it with
+ * a real click, wait for the option/day matching `text` to render, and click THAT — never set a value
+ * the page did not arrive at through its own widget, which is exactly the false success `widgetKindOf`
+ * exists to catch. Only attempted for `readonly`/`combobox` — a `disabled` field cannot be opened at all,
+ * so the caller never calls this for that kind.
+ */
+async function driveWidgetOption(
+  wc: WebContents,
+  node: NodeArg,
+  text: string,
+  adapter: HumanInputAdapter | undefined,
+): Promise<boolean> {
+  const { x, y } = await centerOf(wc, node);
+  await dispatchClick(wc, adapter, x, y);
+  const found = await waitForWidgetOption(wc, text);
+  if (found === null) return false;
+  await dispatchClick(wc, adapter, found.x, found.y);
+  return true;
 }
 
 /**
@@ -175,9 +233,15 @@ export async function fillElement(
   const node = await core.resolveRef(wc, ref);
   // S3 PR7: a readonly/disabled field, or an ARIA combobox with a popup, takes its value from its own
   // widget. Typing does nothing, and a fill that "succeeds" into a field the page ignores is the most
-  // expensive false success there is — the agent goes on to submit a form it never filled.
+  // expensive false success there is — the agent goes on to submit a form it never filled. For
+  // readonly/combobox, DRIVE the widget instead of refusing outright: open it and click the option/day
+  // matching `text`. A disabled field cannot be opened at all, so it goes straight to refusal.
   const widget = await widgetKindOf(wc, node);
   if (widget !== null) {
+    if (widget !== 'disabled' && (await driveWidgetOption(wc, node, text, adapter))) {
+      await core.settle(wc);
+      return { widget: null };
+    }
     Logger.info('[input] fill refused: widget-driven field', { ref, widget });
     return { widget };
   }

@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import type { WebContents } from 'electron';
-import type { ElementLocators, NodePath, RawInteractable, RefRegistry } from '@tepegoz/tool-executor';
+import type {
+  ElementLocators,
+  NodePath,
+  RawInteractable,
+  RefRegistry,
+} from '@tepegoz/tool-executor';
 
 /**
  * Shared primitives for the {@link CdpDriver} facade: the trust-boundary zod schemas, the injected
@@ -56,7 +61,10 @@ export const NetworkRequestSchema = z
   .object({
     requestId: z.string(),
     type: z.string().optional(),
-    request: z.object({ method: z.string().optional(), url: z.string().optional() }).passthrough().optional(),
+    request: z
+      .object({ method: z.string().optional(), url: z.string().optional() })
+      .passthrough()
+      .optional(),
     redirectResponse: z.object({ status: z.number().optional() }).passthrough().optional(),
   })
   .passthrough();
@@ -82,7 +90,9 @@ export const NetworkFailedSchema = z
   })
   .passthrough();
 export const ResolveSchema = z.object({ object: z.object({ objectId: z.string() }).passthrough() });
-export const CallResultSchema = z.object({ result: z.object({ value: z.unknown() }).passthrough() });
+export const CallResultSchema = z.object({
+  result: z.object({ value: z.unknown() }).passthrough(),
+});
 /** `Runtime.callFunctionOn` returnByValue envelope for {@link SELECT_OPTION_FN}. */
 export const SelectResultSchema = z.object({
   result: z.object({
@@ -116,7 +126,9 @@ export const SELECT_OPTION_FN =
   '}';
 /** Runtime.evaluate result envelope when we ask for a handle (not by-value). */
 export const EvalHandleSchema = z.object({
-  result: z.object({ objectId: z.string().optional(), subtype: z.string().optional() }).passthrough(),
+  result: z
+    .object({ objectId: z.string().optional(), subtype: z.string().optional() })
+    .passthrough(),
 });
 /** The render-DOM perception payload (page-controlled → validated here, the CDP trust boundary). */
 const DomTreeNodeSchema = z
@@ -160,6 +172,13 @@ export const WidgetKindSchema = z.object({
   }),
 });
 
+/** The option/day a widget fill strategy found inside a just-opened popup, if any (S3 PR7). */
+export const WidgetOptionSchema = z.object({
+  result: z.object({
+    value: z.object({ x: z.number(), y: z.number(), label: z.string() }).nullable(),
+  }),
+});
+
 /** CDP key-event fields for one named key. */
 export type KeySpec = { key: string; code: string; keyCode: number; text?: string };
 
@@ -181,7 +200,8 @@ export const KEY_MAP: Record<string, KeySpec> = {
   Space: { key: ' ', code: 'Space', keyCode: 32, text: ' ' },
 };
 
-export const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+export const delay = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * How a snapshot `ref` maps back to a DOM node. The accessibility path resolves directly by

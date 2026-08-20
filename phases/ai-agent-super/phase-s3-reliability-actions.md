@@ -1,6 +1,6 @@
 # Phase S3 — Reliability Actions (W1 Reliability)
 
-**Status:** 🟠 Measurement-owed (PR0–PR2, PR5, PR6-hover, PR7-refusal landed 2026-08-18; PR3 fully landed 2026-08-20 — spawn detection + policy-checked auto-follow + return-to-origin + EN/TR; PR4 + the drag spike NOT started, PR8 ⏸ funded) · **Depends on:** [S0](phase-s0-truth-and-repair.md); [S2](phase-s2-perception-v2.md) (identity refs for the locator cascade) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟠 Measurement-owed (PR0–PR2, PR5, PR6-hover landed 2026-08-18; PR3 + PR7 fully landed 2026-08-20 — PR3: spawn detection + policy-checked auto-follow + return-to-origin + EN/TR; PR7: widget-driven refusal (08-18) + the datepicker/combobox fill strategies (08-20); PR4 + the drag spike NOT started, PR8 ⏸ funded) · **Depends on:** [S0](phase-s0-truth-and-repair.md); [S2](phase-s2-perception-v2.md) (identity refs for the locator cascade) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Close the missing action vocabulary and the two structural interaction gaps — snapshot-only
 occlusion and one-locator-per-ref — that make the agent fail on real sites. This targets the **measured**
@@ -253,23 +253,52 @@ re-snapshotting).
 > rather than reading as a failure to repeat.
 
 ### PR7 — typed widgets (Lane B)
-- [~] Deterministic, rule-based fill strategies (datepicker / ARIA combobox / masked input) — a
+- [x] Deterministic, rule-based fill strategies (datepicker / ARIA combobox / masked input) — a
       **structured plan**, no model call inside an action; errors honestly on an unrecognised widget.
-- [ ] Feed required-widget state honestly into `browser_validate_form` (a required combobox/date becomes
-      reportable).
-- [ ] `datepicker-booking` asserts a date is set through the widget, not by raw text injection.
+- [x] Feed required-widget state honestly into `browser_validate_form` (a required combobox/date becomes
+      reportable) — investigated and recorded below; no code change was the correct outcome.
+- [x] `datepicker-booking` asserts a date is set through the widget, not by raw text injection.
 
-> **PR7 status — the refusal landed, the fill strategies did not.** A `readonly` datepicker, a
-> `disabled` field, and an ARIA combobox with a popup now **refuse** a typed value and say NOTHING was
-> typed, naming the route that works (click the field, re-read, click the option). That is the half of
-> PR7 that removes a real failure: a fill which "succeeds" into a field the page ignores is the most
-> expensive false success there is, because the agent then submits a form it never filled — exactly what
-> `datepicker-booking` is built to catch.
+> **PR7 status — the refusal landed 2026-08-18; the fill strategies + form-validation line landed
+> 2026-08-20.** A `readonly` datepicker, a `disabled` field, and an ARIA combobox with a popup used to
+> **refuse** a typed value outright. They still refuse when driving the widget fails, but `fillElement`
+> ([cdp-driver-input.electron.ts](../../apps/desktop/src/main/agent/cdp-driver-input.electron.ts)) now
+> tries first: for `readonly`/`combobox` (never `disabled` — it cannot be opened at all), a real click
+> opens the widget's own popup, then [`findWidgetOption`](../../packages/tool-executor/src/widget-option.ts)
+> — injected into the page via `.toString()`, unit-tested as plain TS (mirrors `resolveNodePath`'s own
+> "what is tested is exactly what runs") — finds the option/day matching the fill text and a second real
+> click picks it. Only on a miss does the original refusal fire, so a broken match can never block a fill
+> that would have worked, and nothing is ever set by writing a value directly.
 >
-> **Not built:** the structured fill *strategies* that would drive those widgets automatically, and the
-> `browser_validate_form` integration that would make a required widget-driven field reportable. Both
-> are still open. A probe that fails reads as "an ordinary field", so a broken detector can never block a
-> fill that would have worked.
+> **Matching cascade** (exact → diacritic-insensitive → day-of-month → substring): exact/diacritic text
+> covers an ARIA combobox option ("France"); day-of-month covers a calendar whose cells show a bare
+> number, not the whole date — parsed via the page's own `Date`, with BOTH the local- and UTC-parsed day
+> accepted (a date-only ISO string parses as UTC midnight, other formats as local midnight, and accepting
+> either avoids a timezone-dependent off-by-one instead of guessing which one the runtime meant).
+>
+> **Only the datepicker path is grounded against a real fixture** (`datepicker-booking` — traced by hand
+> against its actual markup: `readonly` input, `role="button"` day spans, `Room booked for 2027-03-12` on
+> a real widget click). **The combobox path shares the same primitive and the same detection signal
+> `widgetKindOf` already uses, but no ARIA-combobox fixture exists anywhere in `test-fixtures/` yet** — it
+> is deterministic and code-reviewed, not fixture-proven. A combobox/masked-input fixture is open work for
+> whoever picks up the PR8 sweep.
+>
+> **Masked input needed no new code.** It never trips `widgetKindOf` (not readonly/disabled/combobox), so
+> it already goes through the ordinary fill+verify path — whose `fillResult` already reports a
+> reformatted-but-equivalent value as a hint to continue, not a failure. That was true before this PR too;
+> recorded here so "masked input" in the DoD line above isn't mistaken for unaddressed scope.
+>
+> **`browser_validate_form`: investigated, no code change.** `isCheckableTextField`
+> ([form-validation.ts](../../packages/tool-executor/src/form-validation.ts)) already includes every
+> native `input`/`textarea`/`select` tag — so a `readonly` datepicker `<input>` (this fixture's own shape)
+> was ALREADY checked for required-emptiness correctly before this PR; the fill strategy above is what
+> makes its `.value` become non-empty through a real click. The only real gap is a **non-native** custom
+> widget (`role="combobox"` on a `<div>`, no `.value` ever), which `classify()` already treats as a
+> `skippedCustomRequired` **coverage note** (advisory, surfaced in `coverageNotes`) rather than silently
+> passing — by the file's own stated design ("a custom ARIA widget never reports a value... those are
+> counted toward coverage instead of being falsely flagged"). Inventing a heuristic for "has this specific
+> div been filled" without a real fixture to validate it against risks exactly what this checker exists to
+> prevent — a confident answer resting on an unverified guess — so none was added.
 
 ### PR8 — exit sweep + steer deletions (⏸ funded)
 - [ ] Funded sweep across `cookie_consent`, the new family, web-patterns, acceptance; record the delta in
