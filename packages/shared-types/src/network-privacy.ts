@@ -34,12 +34,11 @@ export const ConnectionIdSchema = z
  *   leak by construction.
  * - `byo-socks` points at an endpoint the user already runs; its properties are theirs, not ours.
  *
- * - `openvpn` is layer-3 with no common userspace stack, so it needs a real TUN adapter, a SOCKS server
- *   bound to that adapter's address, and a routing assumption about the host OS. That assumption fails
- *   SILENTLY when it fails, so an OpenVPN connection is not reported up until an egress check has
- *   measured that its traffic really does leave by a different path.
+ * `openvpn` is deliberately absent. It is layer-3 with no common userspace stack, so it needs a real TUN
+ * adapter plus source-bound sockets and a routing assumption that is not yet verified on Windows. Adding
+ * the enum member before the provider exists would be a promise the code cannot keep.
  */
-export const NETWORK_CONNECTION_KINDS = ['byo-socks', 'wireguard', 'tor', 'openvpn'] as const;
+export const NETWORK_CONNECTION_KINDS = ['byo-socks', 'wireguard', 'tor'] as const;
 export const NetworkConnectionKindSchema = z.enum(NETWORK_CONNECTION_KINDS);
 export type NetworkConnectionKind = z.infer<typeof NetworkConnectionKindSchema>;
 
@@ -80,17 +79,6 @@ export const NetworkConnectionSchema = z.discriminatedUnion('kind', [
     kind: z.literal('wireguard'),
     /** Display only (`de-fra.example.com:51820`) — the real config lives in the encrypted store. */
     endpoint: z.string().max(256),
-  }),
-  z.object({
-    ...connectionBase,
-    kind: z.literal('openvpn'),
-    /** Display only (`de-fra.example.com:1194`) — the profile lives in the encrypted store. */
-    endpoint: z.string().max(256),
-    /** The Windows adapter this tunnel binds to. Empty lets OpenVPN pick, which only works for one
-     *  tunnel at a time — concurrent tunnels each need their own. */
-    adapterName: z.string().max(128),
-    /** True when the server will prompt for a username/password (answered over the management socket). */
-    requiresAuth: z.boolean(),
   }),
   z.object({
     ...connectionBase,

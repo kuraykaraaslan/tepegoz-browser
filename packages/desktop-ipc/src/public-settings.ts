@@ -60,7 +60,6 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   networkConnections: 'private',
   networkGeneralBinding: 'private',
   networkBinaries: 'private',
-  networkEgressCheckUrl: 'private',
   homepageUrl: 'private',
   showBookmarksBar: 'private',
   // Private — new-tab personalization (the user's shortcut list + background); extensions have no need.
@@ -83,9 +82,9 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   // Private — on-device model config/footprint; the public cost-saver bool above is enough for extensions.
   localProvider: 'private',
   localActions: 'private',
-  // Private — agent panel per-run selections (provider + autonomy + effort) + token quota. The model
-  // pin is not here at all: it lives on the credential-vault key, never in preferences.
+  // Private — agent panel per-run selections (provider + model override + autonomy + effort) + token quota.
   agentProviderOverride: 'private',
+  agentModelOverride: 'private',
   agentAutonomy: 'private',
   agentEffort: 'private',
   // Private — a security posture is a main-process decision; no extension needs to read or set it.

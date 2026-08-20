@@ -3,7 +3,7 @@ import type { SettingsStrings } from '@tepegoz/settings-ui';
 import type {
   NetworkConnectionInput,
   NetworkConnectionView,
-  PickedVpnProfile,
+  PickedWireguardProfile,
 } from '@tepegoz/desktop-ipc';
 import { Button, Input } from '@tepegoz/ui';
 import { Select } from './settings-shared';
@@ -38,10 +38,7 @@ export function AddConnectionRow({
   const [note, setNote] = useState('');
   const [port, setPort] = useState('9050');
   const [upstream, setUpstream] = useState('');
-  const [picked, setPicked] = useState<PickedVpnProfile | null>(null);
-  const [adapter, setAdapter] = useState('');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [picked, setPicked] = useState<PickedWireguardProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Chaining Tor through Tor is not a meaningful thing to offer.
@@ -49,27 +46,20 @@ export function AddConnectionRow({
   const portNumber = Number(port);
   const portValid = Number.isInteger(portNumber) && portNumber >= 1 && portNumber <= 65535;
 
-  const needsFile = kind === 'wireguard' || kind === 'openvpn';
-  const fileBlocked = needsFile && !secretsAvailable;
-  const needsCredentials = kind === 'openvpn' && picked?.requiresAuth === true;
+  const wgBlocked = kind === 'wireguard' && !secretsAvailable;
   const canAdd =
     label.trim().length > 0 &&
-    !fileBlocked &&
-    (needsFile ? picked !== null : true) &&
-    (kind === 'byo-socks' ? portValid : true) &&
-    (!needsCredentials || username.trim().length > 0);
+    !wgBlocked &&
+    (kind === 'wireguard' ? picked !== null : kind === 'byo-socks' ? portValid : true);
 
   const pickFile = (): void => {
-    if (!needsFile) return;
     setError(null);
-    void window.tepegoz.pickVpnProfile(kind === 'openvpn' ? 'openvpn' : 'wireguard').then(
+    void window.tepegoz.pickWireguardProfile().then(
       (profile) => {
         if (profile === null) return;
         setPicked(profile);
         // The file name is the obvious name for the connection; the user can still overwrite it.
-        if (label.trim().length === 0) {
-          setLabel(profile.fileName.replace(/\.(conf|ovpn)$/i, '').slice(0, 64));
-        }
+        if (label.trim().length === 0) setLabel(profile.fileName.replace(/\.conf$/i, '').slice(0, 64));
       },
       (err: unknown) => {
         // The parser's own message ("no DNS line…") is what tells the user how to fix the file.
@@ -85,18 +75,9 @@ export function AddConnectionRow({
     const input: NetworkConnectionInput =
       kind === 'wireguard'
         ? { ...base, kind, sourcePath: picked?.path ?? '' }
-        : kind === 'openvpn'
-          ? {
-              ...base,
-              kind,
-              sourcePath: picked?.path ?? '',
-              adapterName: adapter.trim(),
-              username: username.trim(),
-              password,
-            }
-          : kind === 'tor'
-            ? { ...base, kind, upstreamConnectionId: upstream === '' ? null : upstream }
-            : { ...base, kind, socksPort: portNumber };
+        : kind === 'tor'
+          ? { ...base, kind, upstreamConnectionId: upstream === '' ? null : upstream }
+          : { ...base, kind, socksPort: portNumber };
 
     void onAdd(input).then(
       () => {
@@ -105,9 +86,6 @@ export function AddConnectionRow({
         setPicked(null);
         setUpstream('');
         setPort('9050');
-        setAdapter('');
-        setUsername('');
-        setPassword('');
       },
       (err: unknown) => {
         setError(err instanceof Error ? err.message : String(err));
@@ -135,7 +113,6 @@ export function AddConnectionRow({
             }}
           >
             <option value="wireguard">{s.network.protocolWireguard}</option>
-            <option value="openvpn">{s.network.protocolOpenvpn}</option>
             <option value="tor">{s.network.protocolTor}</option>
             <option value="byo-socks">{s.network.protocolByo}</option>
           </Select>
@@ -166,7 +143,7 @@ export function AddConnectionRow({
         </div>
 
         {/* The one protocol-specific field. */}
-        {needsFile && (
+        {kind === 'wireguard' && (
           <div className="min-w-36 flex-1">
             <span className="mb-1 block text-sm font-medium text-text-primary">
               {s.network.profileLabel}
@@ -225,63 +202,12 @@ export function AddConnectionRow({
 
       {/* What the parser found, shown before committing. The resolvers matter: they are the reason an
           import can be refused, and seeing them is how the user confirms names resolve in the tunnel. */}
-      {picked !== null && needsFile && (
+      {picked !== null && kind === 'wireguard' && (
         <p className="mt-1 text-xs text-text-secondary">
-          {picked.dns.length > 0
-            ? s.network.pickedSummary
-                .replace('{endpoint}', picked.endpoint)
-                .replace('{dns}', picked.dns.join(', '))
-            : s.network.pickedEndpointOnly.replace('{endpoint}', picked.endpoint)}
+          {s.network.pickedSummary
+            .replace('{endpoint}', picked.endpoint)
+            .replace('{dns}', picked.dns.join(', '))}
         </p>
-      )}
-      {/* Each override is something the profile asked for and will not get. Said BEFORE connecting,
-          because "why is my whole machine not on the VPN" is a bad thing to discover afterwards. */}
-      {picked !== null && picked.overrides.length > 0 && (
-        <p className="mt-1 text-xs text-warning-fg">
-          {s.network.pickedOverrides.replace('{list}', picked.overrides.join(', '))}
-        </p>
-      )}
-      {/* A second line, only for OpenVPN: an adapter is what makes concurrent tunnels possible, and the
-          credentials appear only when the profile actually asks for them. */}
-      {kind === 'openvpn' && picked !== null && (
-        <div className="mt-2 flex flex-wrap items-end gap-2">
-          <div className="w-44">
-            <Input
-              id="network-adapter"
-              label={s.network.adapterLabel}
-              placeholder={s.network.adapterPlaceholder}
-              value={adapter}
-              onChange={(e) => {
-                setAdapter(e.target.value);
-              }}
-            />
-          </div>
-          {needsCredentials && (
-            <>
-              <div className="w-36">
-                <Input
-                  id="network-username"
-                  label={s.network.usernameLabel}
-                  value={username}
-                  onChange={(e) => {
-                    setUsername(e.target.value);
-                  }}
-                />
-              </div>
-              <div className="w-36">
-                <Input
-                  id="network-password"
-                  label={s.network.passwordLabel}
-                  type="password"
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                  }}
-                />
-              </div>
-            </>
-          )}
-        </div>
       )}
       {kind === 'byo-socks' && !portValid && port.trim().length > 0 && (
         <p className="mt-1 text-xs text-warning-fg">{s.network.portInvalid}</p>

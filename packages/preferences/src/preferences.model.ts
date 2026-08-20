@@ -81,6 +81,9 @@ export const PreferencesSchema = z.object({
   localActions: z.record(z.string().max(64), z.boolean()),
   // Agent panel per-run provider override (null = default resolution); autonomy level (default safe).
   agentProviderOverride: ProviderPrefSchema.nullable(),
+  // Agent panel per-provider model pin, keyed provider id → model id (absent/'' = auto/tiered routing).
+  // When set for the resolved provider it overrides ALL tiers for the run (plan/exec/classify).
+  agentModelOverride: z.record(z.string().max(64), z.string().max(64)),
   agentAutonomy: z.enum(['ask', 'act', 'auto', 'dangerous']),
   agentEffort: z.enum(AGENT_EFFORT_LEVELS),
   // S6 PR5: hardened inbound guard. `setStrictMode` landed in C7 and was UNREACHABLE — no caller ever
@@ -122,9 +125,7 @@ export const PreferencesSchema = z.object({
   networkBinaries: z.object({
     wireproxy: z.string().max(1024),
     tor: z.string().max(1024),
-    openvpn: z.string().max(1024),
   }),
-  networkEgressCheckUrl: z.string().max(2048),
   // Home / new-tab page URL. Lenient string (validated/normalized at the UI); a blank value falls back
   // to the built-in default at the navigation site.
   homepageUrl: z.string().max(2048),
@@ -316,6 +317,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   localProvider: { mode: 'off', selectedModelId: '' },
   localActions: {},
   agentProviderOverride: null,
+  agentModelOverride: {},
   agentAutonomy: 'ask',
   agentEffort: 'high',
   agentStrictGuard: false,
@@ -328,8 +330,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   customSearchEngines: [],
   networkConnections: [],
   networkGeneralBinding: { kind: 'direct' },
-  networkBinaries: { wireproxy: '', tor: '', openvpn: '' },
-  networkEgressCheckUrl: '',
+  networkBinaries: { wireproxy: '', tor: '' },
   homepageUrl: 'https://duckduckgo.com/',
   showBookmarksBar: true,
   newTabShortcuts: [],

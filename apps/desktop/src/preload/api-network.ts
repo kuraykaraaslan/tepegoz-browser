@@ -4,7 +4,7 @@ import {
   type NetworkConnectionInput,
   type NetworkGeneralBinding,
   type NetworkState,
-  type PickedVpnProfile,
+  type PickedWireguardProfile,
   type ScopeBindingInput,
   type TepegozApi,
 } from '@tepegoz/desktop-ipc';
@@ -21,7 +21,7 @@ export const networkApi: Pick<
   | 'setGeneralNetworkBinding'
   | 'addNetworkConnection'
   | 'removeNetworkConnection'
-  | 'pickVpnProfile'
+  | 'pickWireguardProfile'
   | 'setNetworkConnectionActive'
   | 'setNetworkBinaryPath'
   | 'pickBinaryFolder'
@@ -45,8 +45,8 @@ export const networkApi: Pick<
   addNetworkConnection: (input: NetworkConnectionInput) =>
     invoke<void>(IpcChannels.networkAddConnection, input),
   removeNetworkConnection: (id: string) => invoke<void>(IpcChannels.networkRemoveConnection, id),
-  pickVpnProfile: (kind: 'wireguard' | 'openvpn') =>
-    invoke<PickedVpnProfile | null>(IpcChannels.networkPickProfile, kind),
+  pickWireguardProfile: () =>
+    invoke<PickedWireguardProfile | null>(IpcChannels.networkPickWireguard),
   setNetworkConnectionActive: (id: string, active: boolean) =>
     invoke<void>(IpcChannels.networkSetActive, { id, active }),
   setNetworkBinaryPath: (binary: 'wireproxy' | 'tor', path: string) =>

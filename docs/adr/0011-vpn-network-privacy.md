@@ -3,8 +3,8 @@
 - **Status:** Accepted (binding-resolution + kill-switch layer; **amended 2026-08-20** — per-session
   wiring, the fail-closed egress configuration, the verified `setProxy` call site, four clear-path escapes
   closed (popups, favicons, tab creation, app-issued HTTP), the working feature (pool, bindings,
-  re-hosting, blackholed partitions, surfaces), **real tunnels** (userspace WireGuard + Tor, chained
-  Tor-over-VPN, blackhole-on-drop), and **OpenVPN with a per-connect egress measurement** — see Amendment)
+  re-hosting, blackholed partitions, surfaces), and **real tunnels**: userspace WireGuard + Tor, chained
+  Tor-over-VPN, and blackhole-on-drop — see Amendment)
 - **Date:** 2026-08-19 (amended 2026-08-20)
 - **Refines:** the existing per-partition session model (Phase 2's `NetworkFilterEngine` stance: no
   system-proxy MITM) · **complements** [ADR-0020](0020-tab-boundary-model.md) (Tab Boundary Model)
@@ -361,71 +361,10 @@ group draws nothing, because a shield on every group would bury the ones that me
 **Not built, and stated rather than implied:** agent lockout on a dropped tunnel (zero-leak hardening #2),
 the explicit exit-IP check, and rename/reorder/duplicate in the manager.
 
-### 8. OpenVPN — and measuring the assumption instead of trusting a spike
-
-Accepted, with the honesty this one requires: **the routing model has not been verified against a live
-tunnel**, and the design is arranged so that not having verified it cannot cause a leak.
-
-**Why OpenVPN is the awkward one.** WireGuard and Tor run in user space and hand back a SOCKS port. OpenVPN
-is layer-3 with no common userspace stack, so it needs a real TUN adapter and the operating system's
-routing table — which is machine-wide, and therefore the opposite of what a per-tab VPN wants. Three
-things bridge that:
-
-1. **The tunnel takes no routes.** `openVpnArgs` filters the pushed `redirect-gateway`, `route`,
-   `route-ipv6` and `block-outside-dns`, and adds one default route on the tunnel's own interface with a
-   deliberately terrible metric. Each of those would otherwise act on the whole machine — the first two
-   would put every Direct tab in the tunnel, and `block-outside-dns` is a firewall rule that would break
-   name resolution for every untunneled tab and for the rest of the computer.
-2. **A SOCKS server bound to the tunnel's address** (`bound-socks-server.electron.ts`) carries the group's
-   traffic. Outbound sockets always pass `localAddress`; hostnames are resolved by a resolver bound to the
-   same address and pointed at the tunnel's pushed DNS, **A records only**, with no fallback to the system
-   resolver. It refuses to start at all when the tunnel pushed no DNS, because the alternative is a tunnel
-   that hides the traffic but not where it is going.
-3. **The result is measured before the connection is reported up.**
-
-**Point 3 is the substance of this section.** Point 2 rests on an assumption about the host OS: that under
-Windows' strong host model a bound socket's route lookup is constrained to the interface owning that
-address, where the high-metric route waits. Strong host mode is confirmed on the development machine
-(`WeakHostSend: Disabled` on every interface, one default route), but the *behaviour* is not — the
-community OpenVPN package is not installed there, so the make-or-break spike could not run.
-
-The failure mode is silent: the socket takes the physical route, pages load, the traffic left on the clear
-path. So rather than shipping on a spike that would have run once on one machine, `checkTunnelEgress`
-measures it **on every connect**, on that machine, with that adapter: two requests to one echo endpoint,
-one bound and one not, and the addresses must differ. Same address, or either request failing, and the
-connection stays down with a message saying exactly what was observed. Measuring per connection is
-strictly stronger than a one-off spike, and it is the only reason this provider is allowed to exist while
-the assumption is otherwise unverified. `e2e/spike-openvpn-split-routing.spec.ts` exists to learn the
-answer early and imports the very same function — the measurement and the thing measured are one piece of
-code — and it skips unless pointed at a live tunnel, so it neither fails CI nor pretends to have passed.
-
-**This is the one outbound request the browser makes on its own.** It is confined to connecting an OpenVPN
-tunnel — an act whose entire point is changing where traffic comes from — the endpoint is a preference so
-it can be self-hosted, and both requests go to the same place, so it learns nothing either alone would not.
-
-**Control channel and launcher.** Everything runs over OpenVPN's management interface on loopback:
-readiness, the adapter address, the pushed DNS, credential prompts, shutdown. That choice is what keeps
-the launcher swappable — an elevated child cannot inherit our pipes, but a socket works either way. The
-port is protected with a per-session random token, without which any local process could take over the
-tunnel. Launching uses `Start-Process -Verb RunAs`: **only `openvpn.exe` is elevated, Tepegöz never is**,
-which is worth one UAC prompt per tunnel. OpenVPN's Interactive Service would remove the prompt and is a
-straight substitution behind the same management conversation.
-
-**Credentials** for a profile that asks for them are stored through the OS keychain and answered over the
-management socket, never as `--auth-user-pass <file>`: OpenVPN re-reads an auth file on every
-renegotiation, so a file cannot simply be deleted after start.
-
-**Known gaps, stated:** the routing behaviour is unverified against a live tunnel (mitigated as above);
-`tapctl` adapter creation is not implemented, so concurrent OpenVPN tunnels require adapters the user has
-already created and names in the connection; and the provider itself has no runtime test, because there is
-nothing here to run it against. Its parts do — the profile parser, the management line parser and the
-bound SOCKS server are unit-tested, including the two silent failure modes (unbound socket, system
-resolver).
-
 ### Still not decided here
 
-What remains after section 8: Tor's exit-node trust model and HTTPS-only enforcement for tunnel-bound
-tabs; `tapctl` adapter creation, without which concurrent OpenVPN tunnels need adapters the user made
-themselves; OpenVPN's Interactive Service, which would remove the per-tunnel UAC prompt; and the 5b
+What remains after section 7: the **OpenVPN** provider and the Windows split-routing model it depends on
+(source-bound sockets over a high-metric per-tunnel default route — unverified, and deferred at the
+owner's request); Tor's exit-node trust model and HTTPS-only enforcement for tunnel-bound tabs; and the 5b
 managed-exit track, which needs the Phase 3 backend. Bundling any helper binary in the installer remains
 gated on Phase 0 code-signing — and remains unnecessary, since nothing is bundled.

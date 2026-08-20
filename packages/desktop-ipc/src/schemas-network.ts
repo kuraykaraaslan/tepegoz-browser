@@ -50,14 +50,6 @@ export const AddNetworkConnectionSchema = z.discriminatedUnion('kind', [
   }),
   z.object({
     ...connectionInputBase,
-    kind: z.literal('openvpn'),
-    sourcePath: z.string().min(1).max(4096),
-    adapterName: z.string().max(128),
-    username: z.string().max(256),
-    password: z.string().max(256),
-  }),
-  z.object({
-    ...connectionInputBase,
     kind: z.literal('tor'),
     upstreamConnectionId: ConnectionIdSchema.nullable(),
   }),
@@ -84,6 +76,3 @@ export const SetBinaryPathSchema = z.object({
 
 /** Which helper binary a folder pick is for. */
 export const VpnBinarySchema = z.enum(['wireproxy', 'tor']);
-
-/** Which kind of profile a file pick is for. */
-export const VpnProfileKindSchema = z.enum(['wireguard', 'openvpn']);

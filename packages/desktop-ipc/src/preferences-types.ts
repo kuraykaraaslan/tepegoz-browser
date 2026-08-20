@@ -127,6 +127,9 @@ export interface Preferences {
    *  default resolution: whole-agent-local, then the highest-priority stored key). Only applied when
    *  usable (a cloud provider needs a key; `'local'` needs an installed model). */
   agentProviderOverride: ProviderId | null;
+  /** Agent panel per-provider model pin, keyed provider id → model id. Absent key (or `''`) ⇒ auto/tiered
+   *  routing for that provider. When set for the resolved provider it overrides ALL tiers for the run. */
+  agentModelOverride: Record<string, string>;
   /** Agent autonomy: `'ask'` = HITL plan + per-tool approval (default, safe); `'auto'` = "act without
    *  asking" (the panel auto-approves; `deny`-class policy still hard-blocks). */
   agentAutonomy: AgentAutonomy;
@@ -161,10 +164,7 @@ export interface Preferences {
   networkConnections: NetworkConnection[];
   /** Paths to the helper binaries the userspace providers run. Empty = search `userData/bin` then PATH.
    *  Not bundled on purpose: neither is needed unless the feature is turned on. */
-  networkBinaries: { wireproxy: string; tor: string; openvpn: string };
-  /** Where an OpenVPN connection's egress check asks "what address am I coming from". Blank = the
-   *  built-in default. Only ever contacted when connecting an OpenVPN tunnel. */
-  networkEgressCheckUrl: string;
+  networkBinaries: { wireproxy: string; tor: string };
   /** The profile-wide DEFAULT binding every tab falls back to (`tab → group → General → Direct`).
    *  `{ kind: 'direct' }` by default: pure local-first is the floor this cannot fall below. */
   networkGeneralBinding: NetworkGeneralBinding;

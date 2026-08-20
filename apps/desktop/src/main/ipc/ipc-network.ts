@@ -7,7 +7,7 @@ import {
   type BinaryStatus,
   type GroupNetworkRoute,
   type NetworkState,
-  type PickedVpnProfile,
+  type PickedWireguardProfile,
   type TabNetworkRoute,
 } from '@tepegoz/desktop-ipc';
 import {
@@ -17,7 +17,6 @@ import {
   RemoveNetworkConnectionSchema,
   SetBinaryPathSchema,
   VpnBinarySchema,
-  VpnProfileKindSchema,
   SetConnectionActiveSchema,
   SetGeneralBindingSchema,
 } from '@tepegoz/desktop-ipc/schemas';
@@ -31,8 +30,6 @@ import {
 } from '../network/vpn-binaries.electron';
 import VpnSecrets from '../network/vpn-secrets.electron';
 import { parseWireGuardConfig, summarize } from '../network/wireguard-config';
-import { parseOpenVpnProfile, summarizeOpenVpn } from '../network/openvpn-config';
-import OpenVpnCredentials from '../network/openvpn-credentials.electron';
 import TabManager from '../tabs';
 import BindingService from '../network/binding-service.electron';
 import ConnectionPool from '../network/connection-pool.electron';
@@ -204,22 +201,6 @@ export function registerNetworkIpc(): void {
       const summary = summarize(parseWireGuardConfig(text));
       VpnSecrets.save(id, text);
       ConnectionPool.add({ ...meta, id, label: input.label, kind: 'wireguard', endpoint: summary.endpoint });
-    } else if (input.kind === 'openvpn') {
-      const text = readFileSync(input.sourcePath, 'utf8');
-      const summary = summarizeOpenVpn(parseOpenVpnProfile(text));
-      VpnSecrets.save(id, text);
-      if (summary.authUserPass && input.username.length > 0) {
-        OpenVpnCredentials.save(id, { username: input.username, password: input.password });
-      }
-      ConnectionPool.add({
-        ...meta,
-        id,
-        label: input.label,
-        kind: 'openvpn',
-        endpoint: summary.endpoint,
-        adapterName: input.adapterName,
-        requiresAuth: summary.authUserPass,
-      });
     } else if (input.kind === 'tor') {
       if (input.upstreamConnectionId !== null && !ConnectionPool.has(input.upstreamConnectionId)) {
         throw new Error(`No such upstream connection: ${input.upstreamConnectionId}`);
@@ -240,54 +221,37 @@ export function registerNetworkIpc(): void {
     return Promise.resolve();
   });
 
-  handleAsync(IpcChannels.networkPickProfile, async (event, payload): Promise<PickedVpnProfile | null> => {
-    const kind = VpnProfileKindSchema.parse(payload);
-    if (!VpnSecrets.isAvailable()) {
-      // Refused before the picker opens: both profile kinds carry key material, and the only place to
-      // put it without the keychain would be plain text on disk.
-      throw new Error('The OS keychain is unavailable, so a VPN profile cannot be stored safely');
-    }
-    const win = BrowserWindow.fromWebContents(event.sender);
-    const opts: Electron.OpenDialogOptions = {
-      title: kind === 'wireguard' ? 'WireGuard profile' : 'OpenVPN profile',
-      filters: [
-        kind === 'wireguard'
-          ? { name: 'WireGuard', extensions: ['conf'] }
-          : { name: 'OpenVPN', extensions: ['ovpn'] },
-      ],
-      properties: ['openFile'],
-    };
-    const { canceled, filePaths } =
-      win === null ? await dialog.showOpenDialog(opts) : await dialog.showOpenDialog(win, opts);
-    const filePath = filePaths[0];
-    if (canceled || filePath === undefined) return null;
+  handleAsync(
+    IpcChannels.networkPickWireguard,
+    async (event): Promise<PickedWireguardProfile | null> => {
+      if (!VpnSecrets.isAvailable()) {
+        // Refused before the picker opens: a WireGuard profile is a private key, and the only place to
+        // put it would be plain text on disk.
+        throw new Error('The OS keychain is unavailable, so a WireGuard profile cannot be stored safely');
+      }
+      const win = BrowserWindow.fromWebContents(event.sender);
+      const opts: Electron.OpenDialogOptions = {
+        title: 'WireGuard profile',
+        filters: [{ name: 'WireGuard', extensions: ['conf'] }],
+        properties: ['openFile'],
+      };
+      const { canceled, filePaths } =
+        win === null ? await dialog.showOpenDialog(opts) : await dialog.showOpenDialog(win, opts);
+      const filePath = filePaths[0];
+      if (canceled || filePath === undefined) return null;
 
-    // Parsed at PICK time so the form can show what it found and refuse early — and parsed AGAIN at
-    // commit, because the file could change in between and the rules must hold on what actually runs.
-    const text = readFileSync(filePath, 'utf8');
-    const base = { path: filePath, fileName: basename(filePath) };
-    if (kind === 'wireguard') {
-      const summary = summarize(parseWireGuardConfig(text));
+      // Parsed at PICK time so the form can show what it found and refuse early — and parsed AGAIN at
+      // commit, because the file could change in between and the DNS rule must hold on what runs.
+      const summary = summarize(parseWireGuardConfig(readFileSync(filePath, 'utf8')));
       return {
-        ...base,
+        path: filePath,
+        fileName: basename(filePath),
         endpoint: summary.endpoint,
         dns: summary.dns,
         fullTunnel: summary.fullTunnel,
-        requiresAuth: false,
-        overrides: [],
       };
-    }
-    const summary = summarizeOpenVpn(parseOpenVpnProfile(text));
-    return {
-      ...base,
-      endpoint: summary.endpoint,
-      // OpenVPN learns its resolvers from the server at connect time, not from the file.
-      dns: [],
-      fullTunnel: true,
-      requiresAuth: summary.authUserPass,
-      overrides: summary.overrides,
-    };
-  });
+    },
+  );
 
   handleAsync(IpcChannels.networkSetActive, async (_event, payload): Promise<void> => {
     const { id, active } = SetConnectionActiveSchema.parse(payload);

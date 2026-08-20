@@ -68,11 +68,6 @@ some path in the browser bypassing it. Both look exactly like everything working
 | A chained route (Tor over VPN) half-fails | The chain is literal: Tor's outbound *is* the VPN's SOCKS port, so an upstream drop kills Tor's egress. Both legs are shown on the group shield; either one down cuts the group |
 | A chain config loops back on itself | Refused with a named error by the pool's cycle guard, rather than recursing until the stack gives out |
 | Two Tor groups share a circuit | One `tor` process per connection, each with its own `DataDirectory` — separate guards and circuits by construction, not by configuration |
-| An OpenVPN tunnel takes the whole machine's default route | Pushed `redirect-gateway`/`route`/`route-ipv6` are filtered out and one default route is added on the tunnel's own interface with a deliberately terrible metric, so ordinary traffic never finds it |
-| An OpenVPN tunnel breaks DNS for every other tab | Pushed `block-outside-dns` — a machine-wide firewall rule — is filtered out; the tunnel's own resolvers are used only by its own SOCKS server |
-| A source-bound socket silently takes the physical route anyway | The assumption is UNVERIFIED against a live tunnel, so it is measured on every connect (bound vs unbound exit address); a connection whose traffic did not change path stays down |
-| A local process hijacks a tunnel through OpenVPN's management port | The port carries a per-session random token, written `0600` and deleted once OpenVPN has read it |
-| An OpenVPN password sits in plaintext for the life of the tunnel | Stored via the OS keychain and answered over the management socket — never `--auth-user-pass <file>`, which OpenVPN re-reads on every renegotiation |
 | Payload inspection is blind inside the tunnel | Accepted and documented: anomaly scoring for a tunneled tab must lean on metadata/timing/volume. Not silently weakened — recorded as owed work |
 
 **Exit-node / operator is untrusted.** A Tor exit or a VPN provider sees exactly what a plaintext ISP

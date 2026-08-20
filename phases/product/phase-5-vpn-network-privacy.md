@@ -87,16 +87,10 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 > **proven-reachable** clear path records nothing; the endpoint killed, the health poll flipping it down,
 > the tab reported blocked, and still nothing on the clear path.
 >
-> **OpenVPN is here too**, with one honest caveat: it needs a real TUN adapter and a Windows routing
-> assumption that could not be verified on this machine (no community OpenVPN package, so the spike is
-> written and skipped). Because that assumption fails SILENTLY, it is **measured on every connect**
-> instead — traffic that did not change path leaves the connection down. It also needs `openvpn.exe` and
-> one UAC prompt per tunnel; only that process is elevated, never the browser.
->
 > **Owed, and stated:** agent lockout when a tunnel drops (the verdict is computed, the run gate is not
-> wired); `tapctl` adapter creation, without which concurrent OpenVPN tunnels need adapters the user made
-> themselves; the Interactive Service, which would remove the UAC prompt; rename / reorder / duplicate in
-> the manager.
+> wired); the explicit exit-IP check; rename / reorder / duplicate in the manager; **OpenVPN**, which needs
+> a real adapter, source-bound sockets and a Windows routing assumption that has not been verified —
+> deferred at the owner's request, and kept out of the schema enum so nothing promises it.
 
 > **Where the group binding will be stored (settled, no decision owed).** The Group scope writes into
 > `TabGroupInfo.settings` — the flat, JSON-safe per-group bag [ADR-0020](../../docs/adr/0020-tab-boundary-model.md)
@@ -131,11 +125,8 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 - [x] **`WireGuardProvider` — userspace, via `wireproxy`** ([wireguard-provider.electron.ts](../../apps/desktop/src/main/network/wireguard-provider.electron.ts)). No TUN adapter, no route changes, **no elevation**, unlimited concurrency — and it **cannot leak by construction**, because the process owns its own network stack and can only emit through the tunnel. `.conf` import is zod-shaped and parsed by a pure, tested module ([wireguard-config.ts](../../apps/desktop/src/main/network/wireguard-config.ts), 16 tests), which **REFUSES a profile with no `DNS` line**: wireproxy would fall back to the host resolver, sending every site name to the ISP in the clear while the traffic went through the tunnel.
 - [x] **Private keys never sit in plaintext at rest** ([vpn-secrets.electron.ts](../../apps/desktop/src/main/network/vpn-secrets.electron.ts)) — encrypted through `safeStorage`, and import is **refused outright** when the OS keychain is unavailable rather than degrading. _Honest gap: wireproxy takes a config path, not stdin, so the rendered config exists as a `0600` file from spawn until the listener answers, then is deleted._
 - [x] **`ByoSocksProvider` — the first shippable provider, with no binary to sign.** Points at a SOCKS5 endpoint the user already runs (Tor's 9050, a VPN client's SOCKS port, `ssh -D`, a self-installed WireGuard bridge); loopback-only, liveness-probed. _This is what makes 5a real today instead of blocked on code-signing._
-- [x] **`OpenVpnProvider`** — TUN adapter + a SOCKS server bound to the adapter's address + tunnel DNS, driven over the management interface, launched with `Start-Process -Verb RunAs` so **only `openvpn.exe` is elevated, never Tepegöz**. Pushed `redirect-gateway` / `route` / `block-outside-dns` are filtered out and one deliberately-unattractive default route is added on the tunnel's own interface ([openvpn-config.ts](../../apps/desktop/src/main/network/openvpn-config.ts) 17 tests, [openvpn-management.ts](../../apps/desktop/src/main/network/openvpn-management.ts) 13 tests, [bound-socks-server.electron.ts](../../apps/desktop/src/main/network/bound-socks-server.electron.ts) 9 tests)
-      _(**the routing model is NOT verified against a live tunnel** — the community OpenVPN package is not installed on the development machine, so [spike-openvpn-split-routing.spec.ts](../../e2e/spike-openvpn-split-routing.spec.ts) is written and SKIPPED rather than passing. Because the failure mode is silent, the assumption is instead **measured on every connect**: two requests to one echo endpoint, bound and unbound, and a connection whose traffic did not change path stays down. Measuring per connection is stronger than a one-off spike; the spike imports the same function so the two cannot diverge.)_
 - [x] `WireGuardConfigProvider`: import/parse `.conf` at the trust boundary; userspace WireGuard ↔ local SOCKS; **multiple instances coexist** (distinct ports) — _delivered as the userspace provider above; no native crate needed, and no binary bundled (helper binaries are **located**, not installed: override → `userData/bin` → PATH, with the drop-in directory shown when one is missing). The plan's pinned-hash auto-download is **not built** — inventing a hash to satisfy a design would be worse than telling the user where to put a file._
-- [x] **Credentials only in main via `safeStorage`**, never bundled or logged — an OpenVPN `auth-user-pass` profile's username/password is stored through the OS keychain and answered over the **management socket**, never as `--auth-user-pass <file>`: OpenVPN re-reads an auth file on every renegotiation, so a file cannot simply be deleted after start ([openvpn-credentials.electron.ts](../../apps/desktop/src/main/network/openvpn-credentials.electron.ts))
-- [ ] Account-based providers (Mullvad/Proton-style) as a first-class kind, with region selection
+- [ ] Account-based providers (Mullvad/Proton-style): credentials + config **only in main via `safeStorage`**; never bundled/logged (redaction); per-connection isolation (multiple regions live at once)
 - [ ] `ExecutionRouter`-style selection: deterministic provider/region pick when a tab requests a **new** connection; decision + reason → Event Journal
 
 ### Tor integration (5a)
