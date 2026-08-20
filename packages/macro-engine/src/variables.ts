@@ -8,6 +8,8 @@ import { evalExpr, type Scope } from './expr';
  */
 export class VariableStore {
   private readonly vars = new Map<string, MacroValue>();
+  /** Names last set from untrusted web content (`extract`) — never storage, just a run-scoped flag. */
+  private readonly taintedNames = new Set<string>();
 
   constructor(initial?: Record<string, MacroValue>) {
     if (initial) for (const [k, v] of Object.entries(initial)) this.vars.set(k, v);
@@ -20,8 +22,10 @@ export class VariableStore {
     return this.vars.get(name);
   }
 
+  /** A fresh assignment (`setVar`, CSV row binding, declared initial) — always clears prior taint. */
   set(name: string, value: MacroValue): void {
     this.vars.set(name, value);
+    this.taintedNames.delete(name);
   }
 
   /** Append `value` to an array variable, creating/promoting as needed (for looped `extract`). */
@@ -30,6 +34,26 @@ export class VariableStore {
     if (Array.isArray(cur)) cur.push(value);
     else if (cur === undefined) this.vars.set(name, [value]);
     else this.vars.set(name, [toStr(cur), value]);
+  }
+
+  /** Mark `name`'s current value as derived from untrusted web content (called after `extract`). */
+  taint(name: string): void {
+    this.taintedNames.add(name);
+  }
+
+  /**
+   * Conservative check: does any `{{...}}` block in `template` reference a tainted variable? Scans
+   * identifier-like tokens inside each block rather than fully parsing the expression — a superset
+   * match is the safe direction (never misses a real reference, may rarely over-flag).
+   */
+  isTemplateTainted(template: string): boolean {
+    if (this.taintedNames.size === 0) return false;
+    const blocks = template.match(/\{\{[^{}]+\}\}/g) ?? [];
+    for (const block of blocks) {
+      const idents = block.slice(2, -2).match(/[A-Za-z_]\w*/g) ?? [];
+      if (idents.some((id) => this.taintedNames.has(id))) return true;
+    }
+    return false;
   }
 
   /** Evaluate a safe expression against the current variables. */

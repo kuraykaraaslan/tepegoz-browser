@@ -1,5 +1,5 @@
 import type { Macro, Step } from '@tepegoz/shared-types';
-import type { MacroHost } from './host';
+import type { MacroHost, MacroPolicyStepKind } from './host';
 import { VariableStore } from './variables';
 import { evalPredicate } from './predicate';
 import { MacroAborted, MacroError } from './errors';
@@ -14,6 +14,16 @@ const DEFAULT_MIN_STEP_INTERVAL_MS = 50;
 
 /** Step kinds that perform a real browser operation — the ones the pacing floor applies to. */
 const PACED_KINDS = new Set<Step['kind']>(['navigate', 'click', 'fill', 'press', 'scroll', 'extract']);
+
+/** State-changing step kinds — the ones `host.checkPolicy` re-gates once per attempt, before dispatch. */
+const POLICY_GATED_KINDS = new Set<Step['kind']>(['navigate', 'click', 'fill', 'press', 'scroll']);
+
+/** Does this step's own argument (URL/fill value) reference a variable last set by `extract`? */
+function stepIsTainted(step: Step, vars: VariableStore): boolean {
+  if (step.kind === 'navigate') return vars.isTemplateTainted(step.url);
+  if (step.kind === 'fill') return vars.isTemplateTainted(step.value);
+  return false;
+}
 
 export interface RunOptions {
   /** Initial variable bindings (e.g. from the agent / UI). */
@@ -87,6 +97,17 @@ export async function runMacro(
     }
     opts.onProgress?.({ phase: 'step', path, kind: step.kind });
 
+    // Per-step Policy Kernel re-pass (L8), BEFORE the retry loop below: a rejection here is never
+    // retried or skipped by the step's own `onError` policy — that config governs page-interaction
+    // flakiness, not security decisions.
+    if (host.checkPolicy && POLICY_GATED_KINDS.has(step.kind)) {
+      try {
+        await host.checkPolicy(step.kind as MacroPolicyStepKind, stepIsTainted(step, vars));
+      } catch (err) {
+        throw new MacroError(err instanceof Error ? err.message : String(err), path, step.kind);
+      }
+    }
+
     // Per-step error policy (answers iMacros' !ERRORIGNORE/FAIL_IF_FOUND): stop | skip | retry(N).
     const onError = 'onError' in step ? (step.onError ?? 'stop') : 'stop';
     const maxRetries = 'retries' in step && typeof step.retries === 'number' ? step.retries : 0;
@@ -137,6 +158,9 @@ export async function runMacro(
         const value = await host.extract(step.target, step.attr);
         if (step.append === true) vars.append(step.into, value);
         else vars.set(step.into, value);
+        // Read from the live page — untrusted web content (L8 taint), even though the macro author
+        // fully controls the SELECTOR that produced it.
+        vars.taint(step.into);
         return;
       }
       case 'waitFor': {

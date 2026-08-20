@@ -45,8 +45,16 @@ without the Manifest-V3 death, the opaque error codes, or the `EVAL` security ho
 
 - [ ] A user can build a **non-trivial macro entirely in the editor** (nested `if`/loop, per-step
       error policy, variables, CSV) without recording, run it, and see located progress.
-- [ ] Every **state-changing step re-passes the Policy Kernel** at run time; sensitive-site lockout
-      holds in both record and replay; tainted values are never inlined.
+- [~] Every **state-changing step re-passes the Policy Kernel** at run time; sensitive-site lockout
+      holds in both record and replay; tainted values are never inlined. _(landed: `MacroHost.checkPolicy`
+      re-passes `PolicyKernel.evaluate` before every navigate/click/fill/press/scroll against the current
+      page — a lockout `deny` is never skippable/retryable by the step's own `onError`, and a NEWLY
+      elevated `ask` (tainted-value escalation) fails closed with no confirm handler wired yet. Recorder
+      refuses to start on a sensitive site and drops captures mid-recording if a nav lands on one. An
+      `extract`ed variable is tainted at the `VariableStore` level and flows through `{{...}}`
+      interpolation into `navigate`/`fill`, escalating to `tainted_side_effect`; a fresh `setVar`/CSV
+      binding clears it. Remaining: a real mid-run confirm UI (today's `ask` fails closed rather than
+      re-prompting) — the "Persisted-value redaction" IR-authoring item below is separate and unchanged.)_
 - [ ] A broken selector **self-heals** (one scoped model replan) or fails with the exact predicate.
 - [ ] Macros can be **scheduled / triggered / watched** unattended under a restricted profile.
 - [ ] i18n en+tr for every new surface; zod `safeParse` at each new IPC/IR boundary; coverage gate;
@@ -109,9 +117,16 @@ without the Manifest-V3 death, the opaque error codes, or the `EVAL` security ho
 - [ ] **Default timeout / retry settings** per macro.
 
 ### M6 — Security / policy
-- [ ] **Per-step PEP re-pass** — today only navigation + run-start HITL; every state-changing step
-      through the Policy Kernel (noted as a follow-up in `macro-host.electron.ts`).
-- [ ] **Sensitive-site lockout** in both record and replay.
+- [x] **Per-step PEP re-pass** — `MacroHost.checkPolicy` re-passes the deterministic Policy Kernel
+      before every navigate/click/fill/press/scroll, gated on the CURRENT page URL + a taint flag;
+      never skippable/retryable by the step's own `onError` policy. Baseline "this is a state change"
+      asks are already covered by the run-start `macros_create_run` HITL; only a NEWLY elevated reason
+      (sensitive-site, taint) re-gates, and fails closed (denied) with no confirm handler wired. (8
+      interpreter tests.)
+- [x] **Sensitive-site lockout** in both record and replay _(replay: `checkPolicy`'s `PolicyKernel`
+      hard-denies a sensitive-site navigate/click/fill/press/scroll. Record: `MacroRecorder.start`
+      refuses to begin on a sensitive site, and drops any capture that lands on one mid-recording — the
+      SAME `isSensitiveSite` check, so a macro can never be authored FROM a sensitive site either.)_
 - [ ] **Persisted-value redaction** — tainted/secret values never inlined into the IR (partly done).
 
 ### M7 — Agent integration (on the M0 standard)

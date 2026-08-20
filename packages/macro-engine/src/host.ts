@@ -8,6 +8,9 @@ import type { SelectorChain } from '@tepegoz/shared-types';
  * host (poll until resolve or timeout) — the interpreter never sleeps a fixed interval to "wait" for
  * an element (the core iMacros fix).
  */
+/** The state-changing step kinds `checkPolicy` is asked to re-gate, one call per step. */
+export type MacroPolicyStepKind = 'navigate' | 'click' | 'fill' | 'press' | 'scroll';
+
 export interface MacroHost {
   /** Navigate the active tab; resolve once loading settles. */
   navigate(url: string): Promise<void>;
@@ -36,4 +39,15 @@ export interface MacroHost {
   highlight?(chain: SelectorChain): Promise<void>;
   /** Sleep `ms` (only used by the explicit `waitMs` step — never as an implicit element wait). */
   sleep(ms: number): Promise<void>;
+  /**
+   * Per-step Policy Kernel re-pass (L8), called immediately before EVERY state-changing step
+   * (navigate/click/fill/press/scroll) against the CURRENT page — the answer to "the whole run was
+   * approved once at start, but conditions can change mid-run" (navigating onto a sensitive site,
+   * a value derived from `extract`ed page content about to be typed/submitted). `tainted` is true when
+   * the step's own argument (URL/fill value) references a variable last set by `extract`. Reject/throw
+   * (ideally a `PolicyDeniedError`) to abort the step — the interpreter never lets a macro's own
+   * `onError: skip | retry` swallow or retry a policy rejection. Optional: a host that omits it (e.g.
+   * the test fake) runs with no re-gating, same as before this existed.
+   */
+  checkPolicy?(kind: MacroPolicyStepKind, tainted: boolean): Promise<void>;
 }

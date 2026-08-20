@@ -27,3 +27,17 @@ export class MacroAborted extends Error {
     this.name = 'MacroAborted';
   }
 }
+
+/**
+ * Raised by a {@link MacroHost}'s `checkPolicy` to block a state-changing step (sensitive-site
+ * lockout, tainted-argument escalation, or a declined confirmation). Hosts throw this instead of a
+ * plain `Error` so the reason reads clearly in logs/tests; the interpreter itself treats ANY
+ * `checkPolicy` rejection as non-skippable/non-retryable regardless of the step's `onError` policy —
+ * security decisions are never overridable by a macro's own error-handling config.
+ */
+export class PolicyDeniedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'PolicyDeniedError';
+  }
+}

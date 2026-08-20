@@ -2,6 +2,6 @@ export { runMacro, type RunOptions, type RunProgress, type RunResult } from './i
 export { evalPredicate } from './predicate';
 export { VariableStore } from './variables';
 export { evalExpr, type Scope } from './expr';
-export { MacroError, MacroAborted } from './errors';
+export { MacroError, MacroAborted, PolicyDeniedError } from './errors';
 export { type MacroValue, toStr, toNum, toBool } from './value';
-export type { MacroHost } from './host';
+export type { MacroHost, MacroPolicyStepKind } from './host';

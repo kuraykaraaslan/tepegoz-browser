@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { WebContents } from 'electron';
 import { AppError, Logger } from '@tepegoz/libs';
 import type { Step } from '@tepegoz/shared-types';
+import { isSensitiveSite } from '@tepegoz/security-policy';
 import { BINDING, CAPTURE_SRC, CaptureSchema, toStep } from '@tepegoz/ext-macros/capture-script';
 
 /**
@@ -14,6 +15,11 @@ import { BINDING, CAPTURE_SRC, CaptureSchema, toStep } from '@tepegoz/ext-macros
  * NOTE: the capture script runs in the page's main world for simplicity; moving it to an isolated
  * world (like Chrome DevTools Recorder) is a hardening follow-up. Only a user-initiated "Record" starts
  * it, and it is read-only (it observes events; it never acts).
+ *
+ * **Sensitive-site lockout (L8):** recording never starts on a bank/crypto/password/health page, and a
+ * capture landing on one mid-recording (e.g. an in-page nav or a click that opens one) is silently
+ * dropped rather than turned into a Step — the SAME `isSensitiveSite` check the Policy Kernel and the
+ * replay-time `checkPolicy` re-pass use, so a macro can never be authored FROM a sensitive site either.
  */
 export default class MacroRecorder {
   private static active: { wc: WebContents; scriptId?: string; onStep: (step: Step) => void } | null =
@@ -22,6 +28,9 @@ export default class MacroRecorder {
   /** Start recording on `wc`; `onStep` is invoked for each captured Step. One recording at a time. */
   static async start(wc: WebContents, onStep: (step: Step) => void): Promise<void> {
     if (MacroRecorder.active !== null) throw new AppError('A recording is already in progress', 409);
+    if (isSensitiveSite(wc.getURL())) {
+      throw new AppError('Cannot record on a sensitive site (bank/crypto/password/health)', 403);
+    }
     if (!wc.debugger.isAttached()) wc.debugger.attach('1.3');
     await wc.debugger.sendCommand('Runtime.enable');
     await wc.debugger.sendCommand('Page.enable');
@@ -33,6 +42,9 @@ export default class MacroRecorder {
         .object({ name: z.string(), payload: z.string() })
         .safeParse(params);
       if (!parsed.success || parsed.data.name !== BINDING) return;
+      // Mid-recording lockout: an in-page nav or a click that opened a sensitive page must not turn
+      // into a captured Step, even though the debugger session stays attached and running.
+      if (isSensitiveSite(wc.getURL())) return;
       let cap: z.infer<typeof CaptureSchema> | null = null;
       try {
         cap = CaptureSchema.parse(JSON.parse(parsed.data.payload));

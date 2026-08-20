@@ -1,12 +1,24 @@
 import { AppError } from '@tepegoz/libs';
 import type { WebContents } from 'electron';
-import type { MacroHost } from '@tepegoz/macro-engine';
+import type { MacroHost, MacroPolicyStepKind } from '@tepegoz/macro-engine';
+import { PolicyDeniedError } from '@tepegoz/macro-engine';
 import type { SelectorChain } from '@tepegoz/shared-types';
 import { HumanInputAdapter } from '@tepegoz/human-input';
+import { PolicyKernel } from '@tepegoz/security-policy';
 import TabManager from '../tabs';
 import MacroCdp from '../agent/macro-cdp.electron';
 import { browserHost } from '../agent/browser-host.electron';
 import { showPageCursor, hidePageCursor, isUserControlActive } from '../agent/page-cursor.electron';
+
+/** A `checkPolicy` "ask" needing a fresh (mid-run) confirmation — a NEWLY elevated risk that the
+ *  run-start approval couldn't have foreseen (a step landed on a sensitive site, or a value about to
+ *  be used came from `extract`ed page content). */
+export interface MacroPolicyAskRequest {
+  kind: MacroPolicyStepKind;
+  reason: string;
+  targetUrl: string;
+  biometric: boolean;
+}
 
 /**
  * Desktop {@link MacroHost} for `@tepegoz/macro-engine`: implements the deterministic runtime's
@@ -15,7 +27,11 @@ import { showPageCursor, hidePageCursor, isUserControlActive } from '../agent/pa
  * element. Navigation reuses the app's scheme-allow-listed browser navigation path.
  *
  * The macro RUN as a whole is gated at the capability boundary (`macros_create_run` is state_changing
- * → HITL, ADR-0021); finer per-element-step PEP re-gating is a Phase-6 hardening follow-up.
+ * → HITL, ADR-0021). On top of that, `checkPolicy` re-passes the same deterministic Policy Kernel (L8)
+ * before every state-changing step against the CURRENT page: the baseline "this is a state change" ask
+ * is already covered by that run-start approval, so only a NEWLY elevated reason (sensitive-site
+ * lockout, a tainted value about to be used) re-gates here — a hard `deny` for lockout, an `ask` for
+ * everything else, defaulting to fail-CLOSED (denied) when no `confirmPolicyAsk` is wired.
  */
 export interface MacroHostDeps {
   /** Read + parse a CSV blob (by content hash) into row records. Injected (blob store lives in main). */
@@ -26,6 +42,9 @@ export interface MacroHostDeps {
   onCursorMove?: (x: number, y: number) => void;
   /** Called after each action completes to hide the overlay cursor. */
   onCursorHide?: () => void;
+  /** Resolve a mid-run policy "ask". Omit (or resolve false) to fail closed — the step is denied and
+   *  the run stops, same as ToolGateway's HITL default with no confirm handler wired. */
+  confirmPolicyAsk?: (req: MacroPolicyAskRequest) => Promise<boolean>;
 }
 
 function requireWc(): WebContents {
@@ -119,5 +138,26 @@ export function createMacroHost(deps: MacroHostDeps): MacroHost {
       await resolve(chain);
     },
     sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
+    checkPolicy: async (kind, tainted) => {
+      const targetUrl = requireWc().getURL();
+      const policy = PolicyKernel.evaluate({
+        descriptor: { id: `macro_${kind}`, dangerClass: 'state_changing' },
+        taintedArgs: tainted,
+        targetUrl,
+      });
+      if (policy.decision === 'deny') {
+        throw new PolicyDeniedError(`Blocked by policy: ${policy.reason}`);
+      }
+      // 'state_change_confirm' is the baseline ask for any state-changing step — already covered by
+      // the run-start HITL approval (macros_create_run). Only a NEWLY elevated reason re-prompts here.
+      if (policy.decision === 'ask' && policy.reason !== 'state_change_confirm') {
+        const approved =
+          deps.confirmPolicyAsk !== undefined &&
+          (await deps.confirmPolicyAsk({ kind, reason: policy.reason, targetUrl, biometric: policy.biometric }));
+        if (!approved) {
+          throw new PolicyDeniedError(`Denied at confirmation: ${policy.reason}`);
+        }
+      }
+    },
   };
 }
