@@ -38,3 +38,5 @@ consequences (including rejected alternatives). Format is a lightweight [MADR](h
 | [0028](0028-local-agent-model.md) | Local agent model — evidence before tier ownership, weights as artifacts, agentic RL out of scope | Accepted |
 | [0029](0029-devtools-expose-boundary.md) | DevTools expose boundary — user-only, never an agent tool, never on a sensitive site | Accepted |
 | [0030](0030-notary-service.md) | NotaryService — hash-chained Journal, signed checkpoints, standalone-verifiable Replay Receipts | Accepted |
+| [0031](0031-recipe-compiler-trust-model.md) | RecipeCompiler trust model — taint-safe IR + model-free success oracle (foundation layer) | Accepted (foundation layer) |
+| [0032](0032-restricted-unattended-trust-profile.md) | Restricted unattended trust profile — sealed narrowing, financial/destructive never auto-run (decision layer) | Accepted (decision layer) |
