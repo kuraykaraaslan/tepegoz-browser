@@ -40,3 +40,6 @@ consequences (including rejected alternatives). Format is a lightweight [MADR](h
 | [0030](0030-notary-service.md) | NotaryService — hash-chained Journal, signed checkpoints, standalone-verifiable Replay Receipts | Accepted |
 | [0031](0031-recipe-compiler-trust-model.md) | RecipeCompiler trust model — taint-safe IR + model-free success oracle (foundation layer) | Accepted (foundation layer) |
 | [0032](0032-restricted-unattended-trust-profile.md) | Restricted unattended trust profile — sealed narrowing, financial/destructive never auto-run (decision layer) | Accepted (decision layer) |
+| [0033](0033-transaction-mandate-kernel.md) | Transaction Mandate Kernel — bounded pre-model authority, replay-safe (decision layer) | Accepted (decision layer) |
+| [0034](0034-verifiable-policy-bundles.md) | Verifiable Policy Bundles — sealed narrowing enforced in the compiler (decision layer) | Accepted (decision layer) |
+| [0035](0035-governed-agent-endpoints.md) | Governed Agent Endpoints — sensitive-site lockout applies regardless of token (decision layer) | Accepted (decision layer) |

@@ -1,6 +1,6 @@
 # Phase 9 — Safe Autonomy & Governed Delegation
 
-**Status:** ⬜ Not started  ·  **Estimate:** ~4–6 months  ·  **Depends on:** Phase 1a/1b (Policy Kernel, HITL,
+**Status:** 🟡 In progress (Mandate kernel + Policy Bundle narrowing + Agent Endpoint gate decision layers landed 2026-08-20) · **Estimate:** ~4–6 months  ·  **Depends on:** Phase 1a/1b (Policy Kernel, HITL,
 Windows Hello, Effect Ledger fencing, tepegöz-as-MCP-server) + Phase 2 (IntegrationAdapters, Credential Vault)
 + Phase 7 (NotaryService)
 **Goal:** The killer agentic use cases — buy/book/pay, agent-to-agent delegation, inbound MCP — are exactly
@@ -11,21 +11,32 @@ those liabilities into flagship trust features — **without widening the securi
 **Branch examples:** `feat/mandate-kernel`, `feat/policy-bundles`, `feat/governed-agent-endpoints`
 
 ## Exit criteria (DoD)
-- [ ] **Transaction Mandate**: the agent can transact ONLY inside an active, signed mandate; anything outside is
+- [~] **Transaction Mandate**: the agent can transact ONLY inside an active, signed mandate; anything outside is
       denied **pre-model** at the Capability Broker; every consumption is journaled + notarized; revoke is
       instant; replay never double-charges (Effect Ledger fencing)
-- [ ] **Verifiable Policy Bundle**: a signed, versioned bundle installs with scope review; a child bundle can
+      _(landed: [mandate-kernel.ts](../../packages/security-policy/src/mandate-kernel.ts) — `mandateCovers` + `consumeMandate`, 17 tests including replay returning the same verdict across expiry/revocation. **Owed:** signing, wiring into the Capability Broker, journaling, and notarization — nothing here is called by a real run yet.)_
+- [~] **Verifiable Policy Bundle**: a signed, versioned bundle installs with scope review; a child bundle can
       **never widen** a parent (sealed narrowing enforced at compile-to-IR); each notarized receipt embeds the
       bundle hash in force
-- [ ] **Governed Agent Endpoint**: an external client calls a scoped Bearer token; every inbound call re-flows
+      _(landed: [policy-bundle-narrowing.ts](../../packages/security-policy/src/policy-bundle-narrowing.ts) — `bundleNarrows` + `bundleChainNarrows`, 11 tests. **Owed:** signing, the marketplace install/scope-review flow, the curated bundles themselves, and embedding the bundle hash in a receipt.)_
+- [~] **Governed Agent Endpoint**: an external client calls a scoped Bearer token; every inbound call re-flows
       the full Policy Kernel + HITL + Egress + Effect Ledger; sensitive-site lockout holds regardless of token;
       revocation + per-caller audit + kill-switch work
+      _(landed: [agent-endpoint-gate.ts](../../packages/security-policy/src/agent-endpoint-gate.ts) — `tokenCovers` + `withinRateLimit`, 10 tests directly asserting the sensitive-site lockout is checked BEFORE the token's own scope. **Owed:** an actual listening surface, token minting, and the full Policy Kernel/HITL/Egress/Effect-Ledger re-flow this line asks for — only the token's own scope check exists today.)_
 - [ ] **i18n:** en+tr keys added for new surfaces (Mandate authoring/consumption UI, Policy Bundle install/scope
       review, Agent Endpoints settings + External-Agents console)
-- [ ] ADRs accepted: **ADR-0016** (Transaction Mandate Kernel), **ADR-0017** (Verifiable Policy Bundles),
+- [x] ADRs accepted: **ADR-0016** (Transaction Mandate Kernel), **ADR-0017** (Verifiable Policy Bundles),
       **ADR-0018** (Governed Agent Endpoints)
+      _(land as [ADR-0033](../../docs/adr/0033-transaction-mandate-kernel.md), [ADR-0034](../../docs/adr/0034-verifiable-policy-bundles.md), [ADR-0035](../../docs/adr/0035-governed-agent-endpoints.md) — all three numbers were already claimed before this phase document was written; see each ADR's numbering note.)_
 - [ ] Red-team: injection cannot exceed an active mandate, widen a bundle, or escalate a scoped token
 - [ ] Coverage gate (S80/B70/F80/L80) + self-review/code-review + UAT signoff + migration-safe DB
+
+> **What actually runs today (2026-08-20).** The Mandate coverage/consumption logic, the Policy Bundle
+> narrowing check, and the Agent Endpoint token gate are all real and tested (38 tests across
+> `@tepegoz/shared-types` and `@tepegoz/security-policy`). **None of them is reachable from a live
+> call.** There is no Capability Broker wiring, no signing, no listening HTTP/MCP surface, no minting
+> UI, and no journaling. Every test in this phase constructs its own mandate/bundle/token fixtures —
+> nothing here has ever seen a real one.
 
 ## Tasks
 

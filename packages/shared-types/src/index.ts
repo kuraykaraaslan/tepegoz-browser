@@ -25,3 +25,6 @@ export * from './agent-delta';
 export * from './site-data';
 export * from './agent-memory';
 export * from './recipe-ir';
+export * from './mandate';
+export * from './policy-bundle';
+export * from './agent-endpoint';

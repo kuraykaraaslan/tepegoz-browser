@@ -85,3 +85,24 @@ export {
   type KillSwitchVerdict,
   type TabEgressQuery,
 } from './kill-switch';
+export {
+  mandateCovers,
+  consumeMandate,
+  type MandateCoverage,
+  type MandateDenialReason,
+  type MandateConsumptionRecord,
+  type ConsumptionVerdict,
+} from './mandate-kernel';
+export {
+  bundleNarrows,
+  bundleChainNarrows,
+  type NarrowingVerdict,
+  type NarrowingViolation,
+} from './policy-bundle-narrowing';
+export {
+  tokenCovers,
+  withinRateLimit,
+  type AgentEndpointDenialReason,
+  type AgentEndpointRequest,
+  type AgentEndpointVerdict,
+} from './agent-endpoint-gate';
