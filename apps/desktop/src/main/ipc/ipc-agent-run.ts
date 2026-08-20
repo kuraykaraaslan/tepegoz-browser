@@ -26,7 +26,12 @@ import AgentService, {
   type AgentRunSummary,
   type PlanApprovalDecision,
 } from '../agent/agent-service.electron';
-import { browserHost, setCurrentAgentRun } from '../agent/browser-host.electron';
+import {
+  browserHost,
+  releaseAgentRun,
+  setCurrentAgentRun,
+  withAgentRunScope,
+} from '../agent/browser-host.electron';
 import { planGrantScope } from '../agent/plan-grant-scope';
 import {
   mayOfferRemember,
@@ -77,7 +82,9 @@ function scopeHostField(url: string): { scopeHost?: string } {
  * is not one of the three known outcomes is dropped rather than forwarded, because the renderer would
  * otherwise render an unknown state as if it meant something.
  */
-function completionOutcomeField(raw: string | undefined): { completionOutcome?: CompletionOutcome } {
+function completionOutcomeField(raw: string | undefined): {
+  completionOutcome?: CompletionOutcome;
+} {
   const parsed = CompletionOutcomeSchema.safeParse(raw);
   return parsed.success ? { completionOutcome: parsed.data } : {};
 }
@@ -112,11 +119,12 @@ export function registerAgentRunIpc(): void {
     const sender = event.sender;
     const runId = `run-${String(++runCounter)}`;
     /**
-     * Release everything this handler has CLAIMED: the global single-run lock, the per-group lock,
-     * the current-run pointer, the plan grant, and the tray indicator.
+     * Release everything this handler has CLAIMED: the run lock, the per-group lock, this run's event
+     * channel, the plan grant, and the tray indicator. Releases only THIS run's channel — a shared
+     * "current run" pointer would let one run's teardown mute another's.
      */
     const releaseClaims = (): void => {
-      setCurrentAgentRun(null, null, null);
+      releaseAgentRun(runId);
       unregisterRunControl(runId);
       setTrayAgentRunning(false);
       PlanGrantStore.revoke(runId);
@@ -151,14 +159,19 @@ export function registerAgentRunIpc(): void {
             ts: Date.now(),
           }),
     );
-    if (history !== null) setup(() => { broadcastConversationsState(); });
+    if (history !== null)
+      setup(() => {
+        broadcastConversationsState();
+      });
     // S9: the scope a remembered grant may be matched against. Null for an ad-hoc task, and null
     // whenever the prompt no longer matches the named skill's stored one — see resolveSkillScope.
     const skillScope = setup(() => resolveSkillScope(historyDb, skillId, prompt));
-    const control = setup(() => createRunControl(runId, () => {
-      // Phase 2 (resilience): kick the NetworkMonitor into active reconnect probing when a drop is seen
-      // only on the model socket. No-op for now — pause/steer (Phase 1) do not need it.
-    }));
+    const control = setup(() =>
+      createRunControl(runId, () => {
+        // Phase 2 (resilience): kick the NetworkMonitor into active reconnect probing when a drop is seen
+        // only on the model socket. No-op for now — pause/steer (Phase 1) do not need it.
+      }),
+    );
     const sendEvent = (e: AgentEvent): void => {
       if (!sender.isDestroyed()) sender.send(IpcChannels.agentEvent, e);
     };
@@ -248,7 +261,9 @@ export function registerAgentRunIpc(): void {
         });
       }
     };
-    const onCheckpoint: NonNullable<Parameters<typeof AgentService.run>[1]['onCheckpoint']> = (checkpoint) => {
+    const onCheckpoint: NonNullable<Parameters<typeof AgentService.run>[1]['onCheckpoint']> = (
+      checkpoint,
+    ) => {
       const db = getDb();
       if (db === null) return;
       let payload: unknown = checkpoint;
@@ -319,7 +334,12 @@ export function registerAgentRunIpc(): void {
             // S8: "allow this on this site for the rest of the task". The same act as approving a
             // plan, taken one step at a time — and it cannot cover money, secrets or deletion,
             // because grantFromApproval strips those tiers exactly as minting does.
-            if (outcome.approved && outcome.grantScope && facts !== null && req.targetUrl !== undefined) {
+            if (
+              outcome.approved &&
+              outcome.grantScope &&
+              facts !== null &&
+              req.targetUrl !== undefined
+            ) {
               const grant = PlanGrantStore.grantFromApproval(runId, req.targetUrl, facts.tier);
               Logger.info('User widened the run scope from an approval', {
                 runId,
@@ -424,8 +444,10 @@ export function registerAgentRunIpc(): void {
     const mintPlanGrant = (plan: Plan): void => {
       // Synchronous, so approval is not delayed: the active tab's committed URL is already in tab state.
       const entryUrl = browserHost.listTabs().find((t) => t.active)?.url ?? null;
-      const scope = planGrantScope(plan, entryUrl, (toolId) =>
-        CapabilityRegistry.get(toolId)?.descriptor.dangerClass,
+      const scope = planGrantScope(
+        plan,
+        entryUrl,
+        (toolId) => CapabilityRegistry.get(toolId)?.descriptor.dangerClass,
       );
       const grant = PlanGrantStore.mint(runId, scope.urls, scope.tiers);
       Logger.info('Plan approved — minted a scoped grant', {
@@ -474,66 +496,82 @@ export function registerAgentRunIpc(): void {
     let runSummary: AgentRunSummary | undefined;
     let runThrew = false;
 
-    try {
-      // Pre-flight budget gate: block BEFORE planning when the account quota is already spent.
-      if (tokenQuota > 0 && lifetimeUsedBefore >= tokenQuota) {
-        throw new AppError('Token quota reached. Increase it in Settings → Agent, or reset usage.', 429);
-      }
-      const summary = await AgentService.run(
-        prompt,
-        {
-          onEvent,
-          onModelDelta,
-          onCheckpoint,
-          requestPlanApproval,
-          requestApproval,
-          signal: control.signal,
-          control,
-        },
-        groupId,
-        displayPrompt ?? prompt,
-        { quota: tokenQuota, lifetimeUsed: lifetimeUsedBefore },
-      );
-      runSummary = summary;
-      return {
-        runId,
-        stoppedReason: summary.stoppedReason,
-        ok: summary.ok,
-        // S8: the panel shows what the evidence supported, not only that the run finished. Omitted
-        // rather than defaulted when there was no verdict — "unknown" and "unverified" are different
-        // claims and must not collapse into one chip.
-        ...completionOutcomeField(summary.completionOutcome),
-      };
-    } catch (err) {
-      runThrew = true;
-      onEvent('error', err instanceof Error ? err.message : 'Agent run failed');
-      throw err;
-    } finally {
-      // Persist THIS run's usage to the SQLite Token Ledger (provider+model+capability), then auto-refund
-      // when the run failed for a reason outside the user's control, and raise the 80% warning if this
-      // run crossed the threshold. Best-effort: a ledger write must never break the run's teardown.
-      const persistDb = getDb();
-      if (persistDb !== null) {
+    // Two per-run scopes around the whole run, INCLUDING its `finally`:
+    //  - the run's own token accumulator (the finally reads its entries back to persist them), and
+    //  - the run's identity, so out-of-band narration from deep inside the call stack (the input
+    //    adapter, tab ownership) reaches THIS run's panel and not whichever run started most recently.
+    return withAgentRunScope(runId, () =>
+      TokenLedger.runScoped(async () => {
         try {
-          TokenStore.recordRun(persistDb, {
-            correlationId: runId,
-            ts: Date.now(),
-            entries: TokenLedger.snapshotEntries(),
-          });
-          const refundable =
-            runThrew || (runSummary !== undefined && REFUNDABLE_STOP_REASONS.has(runSummary.stoppedReason));
-          if (refundable) TokenStore.refundRun(persistDb, runId, Date.now());
-          maybeWarnQuota(tokenQuota, lifetimeUsedBefore, TokenStore.lifetimeTotals(persistDb).totalTokens);
+          // Pre-flight budget gate: block BEFORE planning when the account quota is already spent.
+          if (tokenQuota > 0 && lifetimeUsedBefore >= tokenQuota) {
+            throw new AppError(
+              'Token quota reached. Increase it in Settings → Agent, or reset usage.',
+              429,
+            );
+          }
+          const summary = await AgentService.run(
+            prompt,
+            {
+              onEvent,
+              onModelDelta,
+              onCheckpoint,
+              requestPlanApproval,
+              requestApproval,
+              signal: control.signal,
+              control,
+            },
+            groupId,
+            displayPrompt ?? prompt,
+            { quota: tokenQuota, lifetimeUsed: lifetimeUsedBefore },
+          );
+          runSummary = summary;
+          return {
+            runId,
+            stoppedReason: summary.stoppedReason,
+            ok: summary.ok,
+            // S8: the panel shows what the evidence supported, not only that the run finished. Omitted
+            // rather than defaulted when there was no verdict — "unknown" and "unverified" are different
+            // claims and must not collapse into one chip.
+            ...completionOutcomeField(summary.completionOutcome),
+          };
         } catch (err) {
-          Logger.warn('Token ledger persist failed', { err: String(err) });
+          runThrew = true;
+          onEvent('error', err instanceof Error ? err.message : 'Agent run failed');
+          throw err;
+        } finally {
+          // Persist THIS run's usage to the SQLite Token Ledger (provider+model+capability), then auto-refund
+          // when the run failed for a reason outside the user's control, and raise the 80% warning if this
+          // run crossed the threshold. Best-effort: a ledger write must never break the run's teardown.
+          const persistDb = getDb();
+          if (persistDb !== null) {
+            try {
+              TokenStore.recordRun(persistDb, {
+                correlationId: runId,
+                ts: Date.now(),
+                entries: TokenLedger.snapshotEntries(),
+              });
+              const refundable =
+                runThrew ||
+                (runSummary !== undefined && REFUNDABLE_STOP_REASONS.has(runSummary.stoppedReason));
+              if (refundable) TokenStore.refundRun(persistDb, runId, Date.now());
+              maybeWarnQuota(
+                tokenQuota,
+                lifetimeUsedBefore,
+                TokenStore.lifetimeTotals(persistDb).totalTokens,
+              );
+            } catch (err) {
+              Logger.warn('Token ledger persist failed', { err: String(err) });
+            }
+          }
+          // The same release path the setup guard uses, so the two can never drift apart. Everything in
+          // it is idempotent: the tray indicator is cleared rather than toggled, the plan grant is deleted
+          // by key, and the locks are map deletes. A crash or a cancel cannot leave any of them claimed —
+          // which is also why grants never need to be persisted.
+          releaseClaims();
+          if (!sender.isDestroyed()) sender.send(IpcChannels.tokenUsage, tokenUsage());
         }
-      }
-      // The same release path the setup guard uses, so the two can never drift apart. Everything in
-      // it is idempotent: the tray indicator is cleared rather than toggled, the plan grant is deleted
-      // by key, and the locks are map deletes. A crash or a cancel cannot leave any of them claimed —
-      // which is also why grants never need to be persisted.
-      releaseClaims();
-      if (!sender.isDestroyed()) sender.send(IpcChannels.tokenUsage, tokenUsage());
-    }
+      }),
+    );
   });
 }

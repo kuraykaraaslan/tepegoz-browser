@@ -170,8 +170,25 @@ export default class TabManager extends TabManagerBase {
   static activeWebContents(): WebContents | null {
     return TabManager.focused()?.activeWebContents() ?? null;
   }
+  /**
+   * Resolve a tab id to its live view, in WHICHEVER window owns it.
+   *
+   * A tab id is unique across the session, so resolving one has no business depending on which window
+   * happens to hold focus. It used to: this asked only the focused window, so an agent run (or an
+   * upload, or a background task) addressing a tab in another window silently got `null` — and a tab
+   * torn off into a new window became unreachable to the run that opened it. The focused window is
+   * still tried first, so the common single-window case does no extra work.
+   */
   static webContentsForTab(id: string): WebContents | null {
-    return TabManager.focused()?.webContentsForTab(id) ?? null;
+    const focused = TabManager.focused();
+    const here = focused?.webContentsForTab(id) ?? null;
+    if (here !== null) return here;
+    for (const wt of TabManager.all()) {
+      if (wt === focused || wt.window.isDestroyed()) continue;
+      const wc = wt.webContentsForTab(id);
+      if (wc !== null) return wc;
+    }
+    return null;
   }
   static captureActive(): Promise<string | null> {
     return TabManager.focused()?.captureActive() ?? Promise.resolve(null);

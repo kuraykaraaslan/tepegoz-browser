@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { AppError } from '@tepegoz/libs';
 import type { WebContents } from 'electron';
 import type { BrowserHost } from '@tepegoz/browser-tools';
@@ -41,8 +42,9 @@ async function navigate(url: string, tabId?: string): Promise<{ url: string; tit
     // web tab INSIDE this run's group (create-or-reuse + ownership), then close the orphan so the result
     // replaces the newtab in place (Chrome parity). Only for an active agent run (group known).
     const orphanId = TabManager.viewlessActiveTabId();
-    if (orphanId !== null && currentAgentGroupId !== null) {
-      const newId = AgentTabGroup.openTab(currentAgentGroupId, url); // activates newId; throws if blocked
+    const runGroupId = currentGroupId();
+    if (orphanId !== null && runGroupId !== null) {
+      const newId = AgentTabGroup.openTab(runGroupId, url); // activates newId; throws if blocked
       TabManager.closeTab(orphanId); // orphan is no longer active → no reselection churn
       const wc = requireWc(newId);
       await waitForLoad(wc);
@@ -390,39 +392,91 @@ function onCursorHide(wc: WebContents): void {
 
 // --- Input-action event wiring (agent progress panel) ---
 
-let currentAgentRunId: string | null = null;
-let currentAgentGroupId: string | null = null;
-let currentAgentSend: ((e: AgentEvent) => void) | null = null;
+interface RunChannel {
+  groupId: string;
+  send: (e: AgentEvent) => void;
+}
 
-/** Called by ipc.ts at the start/end of each agentRun to bind the active run's event channel. */
+/**
+ * Every live run's event channel, keyed by runId — not a single "current run" pointer.
+ *
+ * A pointer was last-writer-wins: a second run starting re-pointed it, and the first run's
+ * out-of-band narration (input actions, pause/resume/steer) would then be delivered to the SECOND
+ * run's panel, labelled with the second run's ids. Keyed by runId, each event reaches the run that
+ * actually produced it.
+ */
+const runChannels = new Map<string, RunChannel>();
+
+/**
+ * Which run the current async context belongs to.
+ *
+ * The narration callers (the input adapter, tab ownership) are deep inside the run's own call stack
+ * and cannot be handed a runId, so they read it from the ambient scope the same way `ToolGateway`
+ * resolves its handlers. Callers that DO know the run (the IPC control handlers) name it explicitly
+ * via {@link emitRunEvent} instead of relying on ambience.
+ */
+const runScope = new AsyncLocalStorage<string>();
+
+/** Called by ipc.ts at the start/end of each agentRun to bind (or release) that run's event channel. */
 export function setCurrentAgentRun(
   runId: string | null,
   groupId: string | null,
   send: ((e: AgentEvent) => void) | null,
 ): void {
-  currentAgentRunId = runId;
-  currentAgentGroupId = groupId;
-  currentAgentSend = send;
+  if (runId === null) return; // release is per-run — see releaseAgentRun
+  if (groupId === null || send === null) {
+    runChannels.delete(runId);
+    return;
+  }
+  runChannels.set(runId, { groupId, send });
+}
+
+/** Drop one run's channel (its handler's teardown path). */
+export function releaseAgentRun(runId: string): void {
+  runChannels.delete(runId);
+}
+
+/** Run `fn` with `runId` as the ambient run, so in-run narration reaches the right panel. */
+export function withAgentRunScope<T>(runId: string, fn: () => Promise<T>): Promise<T> {
+  return runScope.run(runId, fn);
+}
+
+/** The group of the run owning the current async context (tab-ownership checks). */
+function currentGroupId(): string | null {
+  const runId = runScope.getStore();
+  if (runId === undefined) return null;
+  return runChannels.get(runId)?.groupId ?? null;
 }
 
 function onInputAction(kind: string, detail: string): void {
   emitCurrentRunEvent('input_action', `${kind} ${detail}`);
 }
 
-/** Emit a live event on the CURRENTLY-active agent run's channel (out-of-band from the reactor loop) —
- *  used by input-action narration and by the run-control handlers (paused/resumed/steered). No-op when no
- *  run is bound. */
-export function emitCurrentRunEvent(kind: AgentEventKind, message: string, detail?: string): void {
-  if (currentAgentRunId === null || currentAgentGroupId === null || currentAgentSend === null)
-    return;
-  currentAgentSend({
-    runId: currentAgentRunId,
-    groupId: currentAgentGroupId,
+/** Emit a live event on a NAMED run's channel. No-op when that run has no channel bound. */
+export function emitRunEvent(
+  runId: string,
+  kind: AgentEventKind,
+  message: string,
+  detail?: string,
+): void {
+  const channel = runChannels.get(runId);
+  if (channel === undefined) return;
+  channel.send({
+    runId,
+    groupId: channel.groupId,
     kind,
     message,
     ...(detail !== undefined ? { detail } : {}),
     ts: Date.now(),
   });
+}
+
+/** Emit on the run owning the current async context — input-action narration, out-of-band from the
+ *  reactor loop. No-op outside a run. */
+export function emitCurrentRunEvent(kind: AgentEventKind, message: string, detail?: string): void {
+  const runId = runScope.getStore();
+  if (runId === undefined) return;
+  emitRunEvent(runId, kind, message, detail);
 }
 
 /** CDP transport bound to ONE tab — never `requireWc()`, so an adapter cannot drift onto another tab. */
@@ -521,7 +575,7 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
     }));
   },
   createTab: (url, groupName, background) =>
-    AgentTabGroup.openTab(currentAgentGroupId ?? '', url, groupName, background),
+    AgentTabGroup.openTab(currentGroupId() ?? '', url, groupName, background),
   activateTab: (id) => {
     if (!TabManager.getState().tabs.some((t) => t.id === id)) return false;
     TabManager.activate(id);
@@ -532,7 +586,7 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
   },
   closeTab: (id) => {
     if (!TabManager.getState().tabs.some((t) => t.id === id)) return false;
-    const agentGroupId = currentAgentGroupId;
+    const agentGroupId = currentGroupId();
     if (agentGroupId === null || !AgentTabGroup.ownsTab(agentGroupId, id)) return false;
     TabManager.closeTab(id);
     const closed = !TabManager.getState().tabs.some((t) => t.id === id);

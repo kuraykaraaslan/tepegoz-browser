@@ -90,7 +90,11 @@ vi.mock('@tepegoz/human-input', () => ({
 }));
 
 // Imported AFTER the mocks so the module wires against them.
-const { browserHost, setCurrentAgentRun } = await import('./browser-host.electron');
+const { browserHost, emitRunEvent, releaseAgentRun, setCurrentAgentRun, withAgentRunScope } =
+  await import('./browser-host.electron');
+
+/** Everything the agent drives runs inside its run's scope — that is how the host learns whose run it is. */
+const inRun = <T>(fn: () => Promise<T>): Promise<T> => withAgentRunScope('run-1', fn);
 
 describe('browserHost.navigate — view-less newtab replace-in-place', () => {
   beforeEach(() => {
@@ -102,7 +106,7 @@ describe('browserHost.navigate — view-less newtab replace-in-place', () => {
   });
 
   it('opens the page as a grouped web tab and closes the orphan newtab', async () => {
-    const res = await browserHost.navigate('https://e.com');
+    const res = await inRun(() => browserHost.navigate('https://e.com'));
 
     // The page is opened through the group-aware/ownership path in THIS run's group…
     expect(h.openTab).toHaveBeenCalledWith('G', 'https://e.com');
@@ -119,7 +123,7 @@ describe('browserHost.navigate — view-less newtab replace-in-place', () => {
     h.openTab.mockImplementation(() => {
       throw new Error('Tab creation was blocked by an extension');
     });
-    await expect(browserHost.navigate('https://e.com')).rejects.toThrow();
+    await expect(inRun(() => browserHost.navigate('https://e.com'))).rejects.toThrow();
     expect(h.tabs.closeTab).not.toHaveBeenCalled();
   });
 
@@ -127,7 +131,7 @@ describe('browserHost.navigate — view-less newtab replace-in-place', () => {
     h.tabs.viewlessActiveTabId.mockReturnValue(null);
     h.tabs.activeWebContents.mockReturnValue(h.wc());
 
-    await browserHost.navigate('https://e.com');
+    await inRun(() => browserHost.navigate('https://e.com'));
 
     expect(h.tabs.navigateActive).toHaveBeenCalledWith('https://e.com');
     expect(h.openTab).not.toHaveBeenCalled();
@@ -135,15 +139,31 @@ describe('browserHost.navigate — view-less newtab replace-in-place', () => {
   });
 
   it('falls through to navigateActive when there is no active agent run', async () => {
-    setCurrentAgentRun(null, null, null);
+    releaseAgentRun('run-1');
     h.tabs.viewlessActiveTabId.mockReturnValue('newtab-1'); // view-less, but no run → do not open/close
     h.tabs.activeWebContents.mockReturnValue(h.wc());
 
+    // Deliberately NOT wrapped in a run scope — this is the "no run is driving" path.
     await browserHost.navigate('https://e.com');
 
     expect(h.openTab).not.toHaveBeenCalled();
     expect(h.tabs.closeTab).not.toHaveBeenCalled();
     expect(h.tabs.navigateActive).toHaveBeenCalledWith('https://e.com');
+  });
+
+  it("delivers a run's narration to that run's channel, not the most recent run's", () => {
+    const a: string[] = [];
+    const b: string[] = [];
+    setCurrentAgentRun('run-a', 'GA', (e) => a.push(`${e.groupId}:${e.message}`));
+    setCurrentAgentRun('run-b', 'GB', (e) => b.push(`${e.groupId}:${e.message}`));
+
+    // run-b registered LAST. Under the old single-pointer model this reached run-b's panel.
+    emitRunEvent('run-a', 'paused', 'paused');
+
+    expect(a).toEqual(['GA:paused']);
+    expect(b).toEqual([]);
+    releaseAgentRun('run-a');
+    releaseAgentRun('run-b');
   });
 });
 

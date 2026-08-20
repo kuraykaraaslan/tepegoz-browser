@@ -20,25 +20,40 @@ fallback, full capability plane, **tepegoz's MCP SERVER surface**, local SLM.
 - [~] sync/async/multi-tab **single abstraction**; each branch isolated BrowserContext + Agent Console stream _(down-payment shipped: browser tools accept optional `tabId`, desktop `BrowserHost` resolves target `WebContents` by tab, `AgentRunDeps.tabUrl(tabId)` feeds the correct URL into policy context, and CDP element refs are isolated per WebContents. **Per-tab `HumanInputAdapter` landed** — an adapter is now keyed by `WebContents` (WeakMap) with its CDP transport bound to that one tab, closing a real bug where naming a `tabId` silently dropped humanization, cursor motion AND `input_action` narration (the action teleported); `isPerceivable` is now asked per tab, so a background-driven tab drops pacing but never events. 3 tests. Still pending: true parallel branch scheduler, isolated BrowserContexts per branch, and per-branch Agent Console streams.)_
 - [x] Tab-control foundation for multi-tab tasks: `tab_create_item`, `tab_list_items`, `tab_get_item`, `tab_update_item`, and `tab_delete_item` are available behind the CapabilityRegistry/ToolGateway; new tabs open in the background by default to avoid stealing focus.
 
-> **Concurrency blockers — the ordered list (surveyed 2026-08-20).** Agent *conversations* are ALREADY
-> tab-group-scoped end to end (session key = groupId; `conversations`/`activeConversationIds` maps,
-> the SQLite `group_id` column, `groupStates` in the panel, and `groupId` on every IPC event), a
-> **per-group** run lock already exists next to the process-global one, and the panel already swaps
-> content on group switch. What still forces the global lock is only the shared **page-driving** layer.
-> In dependency order:
-> 1. ~~one `HumanInputAdapter` for all tabs~~ — **done** (per-`WebContents`, see the row above).
-> 2. `CdpDriver.attached` is a single `WebContents`; `ensureAttached` **detaches the rival tab**. Element
->    refs are already per-tab (WeakMap) — only the attachment is a singleton.
-> 3. `TabManager.focused()` scoping: `getState`/`activeWebContents`/**`webContentsForTab`** all resolve
->    against the last-focused window, so a run cannot address a tab in another window.
-> 4. `TokenLedger` statics + `TokenLedger.reset()` at every run start — a second run starting would
->    reset the ledger the first is still accounting against. Must become run-scoped.
+> **Concurrency blockers — the ordered list (surveyed 2026-08-20, five cleared the same day).** Agent
+> *conversations* are ALREADY tab-group-scoped end to end (session key = groupId;
+> `conversations`/`activeConversationIds` maps, the SQLite `group_id` column, `groupStates` in the panel,
+> and `groupId` on every IPC event), a **per-group** run lock already exists next to the process-global
+> one, and the panel already swaps content on group switch. What forced the global lock was the shared
+> **page-driving** layer:
+> 1. ~~one `HumanInputAdapter` for all tabs~~ — **done**, per-`WebContents` (see the row above).
+> 2. ~~`CdpDriver.attached` is a single `WebContents`; `ensureAttached` detaches the rival tab~~ —
+>    **done**: attachments are a per-tab `WeakSet`, so two tabs can be driven at once. Stated cost: N
+>    driven tabs keep N sessions' domains enabled until those tabs are destroyed.
+> 3. ~~`TabManager.webContentsForTab` resolves only against the focused window~~ — **done**: it now
+>    searches every window (focused first), so a torn-off tab stays reachable by the run that opened it.
+> 4. ~~`TokenLedger` statics + `reset()` at every run start~~ — **done**: per-run accumulators under an
+>    `AsyncLocalStorage` scope wrapping the run *and its `finally`*, plus an ambient ledger for
+>    out-of-run callers (translate/typo extensions). A run's `reset()` can no longer zero another's.
+> 5. ~~a single `currentAgentRunId/GroupId/Send` pointer~~ — **done**: a runId-keyed channel map +
+>    an ambient run scope. Out-of-band narration (input actions, pause/resume/steer) used to be
+>    delivered to whichever run started LAST, labelled with that run's ids.
 >
-> Only after 2–4 does dropping the process-global lock become safe. Two constraints hold throughout:
-> ADR-0020 — a group may carry a **binding/UI** setting but **never** a policy/permission scope (so
-> per-group *autonomy or permission* settings stay forbidden even once per-group runs exist) — and the
-> group lifecycle is not the conversation lifecycle: `TabStore.normalize()` **prunes an empty group**,
-> so a conversation must outlive the group id it was opened under.
+> **The process-global lock deliberately STAYS, on one unresolved product question:** what does "the
+> active tab" mean for a run? An action that omits `tabId` resolves to `TabManager.activeWebContents()`
+> — the globally-active tab — and the model omits it freely, because the tool descriptions say "omit
+> tabId for the active tab". Two concurrent runs would therefore fight over one tab. Scoping "active"
+> to *the run's own group* fixes the fight but breaks the ordinary case where the user says "summarize
+> this page" about a tab OUTSIDE the agent's group — so it is a deliberate product/ADR call, not a
+> refactor. Until it is made, concurrency stays off and the per-group lock is the second line, not the
+> first. (Also still global, and fine: `ModelGateway.modelOverride` — it is a *preference*, so applying
+> to every live run is arguably correct — and `userHasControl`, where yielding all runs is desirable.)
+>
+> Two constraints hold throughout: ADR-0020 — a group may carry a **binding/UI** setting but **never** a
+> policy/permission scope (so per-group *autonomy or permission* settings stay forbidden even once
+> per-group runs exist) — and the group lifecycle is not the conversation lifecycle:
+> `TabStore.normalize()` **prunes an empty group**, so a conversation must outlive the group id it was
+> opened under.
 
 ### L2 — Durable handoff (extra requirement #1)
 - [ ] XState node state machine (PENDING→READY→LEASED→RUNNING→{SUCCEEDED|FAILED|AWAITING_HITL|COMPENSATING})

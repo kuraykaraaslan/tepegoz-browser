@@ -87,4 +87,51 @@ describe('TokenLedger', () => {
     expect(TokenLedger.budgetStatus()).toMatchObject({ quota: 0, used: 0 });
     expect(TokenLedger.quotaExhausted()).toBe(false);
   });
+
+  describe('runScoped — concurrent runs do not share counters', () => {
+    it('keeps two overlapping runs’ usage entirely separate', async () => {
+      // Interleaved on purpose: each `await` hands control to the other run, which is exactly the
+      // interleaving that made the old static counters wrong.
+      const runA = TokenLedger.runScoped(async () => {
+        TokenLedger.record('anthropic', 'm', 'plan', { inputTokens: 10, outputTokens: 10 });
+        await Promise.resolve();
+        TokenLedger.record('anthropic', 'm', 'plan', { inputTokens: 5, outputTokens: 5 });
+        return TokenLedger.totals().totalTokens;
+      });
+      const runB = TokenLedger.runScoped(async () => {
+        TokenLedger.record('openai', 'g', 'exec', { inputTokens: 100, outputTokens: 100 });
+        await Promise.resolve();
+        return TokenLedger.totals().totalTokens;
+      });
+
+      expect(await runA).toBe(30);
+      expect(await runB).toBe(200);
+    });
+
+    it('scopes the quota/baseline too, so one run cannot gate another', async () => {
+      await TokenLedger.runScoped(async () => {
+        TokenLedger.setQuota(1000);
+        TokenLedger.setBaseline(999);
+        expect(TokenLedger.quotaExhausted()).toBe(false);
+        await TokenLedger.runScoped(() => {
+          // A nested (independent) run starts clean — it does not inherit the outer quota.
+          expect(TokenLedger.budgetStatus()).toMatchObject({ quota: 0, used: 0 });
+          return Promise.resolve();
+        });
+        // …and the outer run's own state survived the inner one untouched.
+        expect(TokenLedger.budgetStatus()).toMatchObject({ quota: 1000, used: 999 });
+      });
+    });
+
+    it("a run's reset() cannot clear the ambient (out-of-run) ledger", async () => {
+      TokenLedger.record('anthropic', 'm', 'classify', { inputTokens: 7, outputTokens: 7 });
+      await TokenLedger.runScoped(() => {
+        TokenLedger.record('anthropic', 'm', 'plan', { inputTokens: 1, outputTokens: 1 });
+        TokenLedger.reset();
+        return Promise.resolve();
+      });
+      // The extension/ambient path (translate, typo, direct ModelGateway calls) is untouched.
+      expect(TokenLedger.totals().totalTokens).toBe(14);
+    });
+  });
 });

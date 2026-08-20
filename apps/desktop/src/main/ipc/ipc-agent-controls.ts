@@ -13,7 +13,7 @@ import {
   type AgentRunCheckpoint,
 } from '@tepegoz/agent-runtime';
 import { randomUUID } from 'node:crypto';
-import { emitCurrentRunEvent } from '../agent/browser-host.electron';
+import { emitRunEvent } from '../agent/browser-host.electron';
 import {
   agentRunControl,
   pauseAgentRun,
@@ -78,17 +78,17 @@ export function registerAgentControlIpc(): void {
   // running agent. The panel labels 'paused'/'resumed' from its own dict, so no main-process UI string.
   onAction(IpcChannels.agentPause, AgentRunIdSchema, (runId) => {
     pauseAgentRun(runId);
-    emitCurrentRunEvent('paused', 'paused');
+    emitRunEvent(runId, 'paused', 'paused');
     journalRunCheckpoint(runId, holdCheckpoint('user'));
   });
   onAction(IpcChannels.agentResume, AgentRunIdSchema, (runId) => {
     resumeAgentRun(runId);
-    emitCurrentRunEvent('resumed', 'resumed');
+    emitRunEvent(runId, 'resumed', 'resumed');
     journalRunCheckpoint(runId, resumeCheckpoint());
   });
   onAction(IpcChannels.agentSteer, AgentSteerSchema, ({ runId, text }) => {
     steerAgentRun(runId, text);
-    emitCurrentRunEvent('steered', text);
+    emitRunEvent(runId, 'steered', text);
   });
 
   // HITL responses are RELAYED by the renderer, never decided by it: the autonomy level is read in

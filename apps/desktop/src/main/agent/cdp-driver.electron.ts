@@ -40,9 +40,10 @@ import {
  * `dispatchKeyEvent`) at the element's on-screen box — so clicks/typing behave like a human and can't be
  * observed or tampered with by page JS.
  *
- * One debugger attachment is kept on the currently-active WebContents; switching tabs re-attaches. The
- * `ref → backendNodeId` map from the latest snapshot is what the action calls resolve against, so a
- * `ref` is only valid until the next {@link snapshotElements}. Page-controlled labels stay untrusted —
+ * A debugger attachment is kept **per driven tab** (they are independent Electron sessions), so two
+ * runs can drive two tabs without tearing down each other's. The `ref → backendNodeId` map from each
+ * tab's latest snapshot is what that tab's action calls resolve against, so a `ref` is only valid until
+ * the next {@link snapshotElements} on the SAME tab. Page-controlled labels stay untrusted —
  * sanitization + taint happen downstream in `@tepegoz/browser-tools` perception.
  *
  * This file is the facade: the per-concern logic lives in the sibling `cdp-driver-*.electron.ts` modules
@@ -50,8 +51,23 @@ import {
  * attachment state and lends it to those pure helpers via {@link DriverCore} / {@link SnapshotDeps}.
  */
 export default class CdpDriver {
-  /** The WebContents the debugger is currently attached to (null when detached). */
-  private static attached: WebContents | null = null;
+  /**
+   * The tabs the debugger is currently attached to.
+   *
+   * A **set**, not a single WebContents: attaching used to detach whatever tab was attached before, so
+   * two runs driving two tabs would tear down each other's session on every action. Electron's
+   * `webContents.debugger` is per-WebContents and each attachment is independent — the "one at a time"
+   * shape was bookkeeping, never a protocol constraint. A `WeakSet` because membership must die with the
+   * tab; nothing iterates it, and nothing needs to.
+   *
+   * Trade-off, stated: an attached tab keeps `Network`/`Page`/`Runtime` domains enabled, so N driven
+   * tabs cost N enabled sessions rather than one. Both listeners this installs are already
+   * idempotent-per-tab and bounded, and a tab is detached the moment it is destroyed — but tabs the
+   * agent has driven do stay attached until then, where previously only the last one did. No cap is
+   * imposed on purpose: evicting an attachment mid-run would break a live run's refs to save memory
+   * nobody has measured a problem with.
+   */
+  private static readonly attached = new WeakSet<WebContents>();
   /** Per-tab ref (1-based) → node target maps, from each tab's latest snapshot. */
   private static readonly refMaps = new WeakMap<WebContents, Map<number, RefTarget>>();
   /** Per-tab previous render-DOM snapshot (url + element fingerprints) for `*[n]` new-element marking. */
@@ -87,28 +103,27 @@ export default class CdpDriver {
     };
   }
 
-  /** Attach + enable the domains we need on `wc`, re-attaching if the active tab changed. */
+  /** Attach + enable the domains we need on `wc`. Idempotent per tab; never touches another tab. */
   private static async ensureAttached(wc: WebContents): Promise<void> {
-    if (CdpDriver.attached === wc && wc.debugger.isAttached()) return;
-    CdpDriver.detach();
+    if (CdpDriver.attached.has(wc) && wc.debugger.isAttached()) return;
     try {
       wc.debugger.attach('1.3');
     } catch (err) {
       throw new AppError(`Cannot drive the page (is DevTools open on it?): ${String(err)}`, 409);
     }
-    CdpDriver.attached = wc;
+    CdpDriver.attached.add(wc);
     // Subscribe BEFORE Network.enable so the first navigation's responses are not missed (AI-8B).
     // Idempotent per WebContents, so re-attaching on a tab switch cannot double-subscribe.
     attachNetworkRecorder(wc);
     // S3 PR4: same idempotent-per-tab shape — auto-decline any JS dialog and suppress `beforeunload`
     // (see cdp-driver-dialogs.electron.ts for why, and the spike that cleared the DevTools-conflict risk).
     attachDialogInterceptor(wc);
-    // A tab that navigates/closes must not leave us pointing at a dead session.
+    // A tab that navigates/closes must not leave us thinking its session is live.
     wc.debugger.once('detach', () => {
-      if (CdpDriver.attached === wc) CdpDriver.attached = null;
+      CdpDriver.attached.delete(wc);
     });
     wc.once('destroyed', () => {
-      if (CdpDriver.attached === wc) CdpDriver.attached = null;
+      CdpDriver.attached.delete(wc);
       CdpDriver.refMaps.delete(wc);
       CdpDriver.prevSnapshots.delete(wc);
     });
@@ -130,17 +145,16 @@ export default class CdpDriver {
       .catch((err) => Logger.warn('focus emulation unavailable', { err: String(err) }));
   }
 
-  /** Detach the debugger from the current WebContents (best-effort; swallows teardown races). */
-  private static detach(): void {
-    const wc = CdpDriver.attached;
-    if (wc !== null && !wc.isDestroyed() && wc.debugger.isAttached()) {
+  /** Detach the debugger from ONE tab (best-effort; swallows teardown races). */
+  static detach(wc: WebContents): void {
+    if (!wc.isDestroyed() && wc.debugger.isAttached()) {
       try {
         wc.debugger.detach();
       } catch (err) {
         Logger.warn('CDP detach failed', { err: String(err) });
       }
     }
-    CdpDriver.attached = null;
+    CdpDriver.attached.delete(wc);
   }
 
   /**
