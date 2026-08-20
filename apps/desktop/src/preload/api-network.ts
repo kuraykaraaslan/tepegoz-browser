@@ -24,6 +24,7 @@ export const networkApi: Pick<
   | 'pickWireguardProfile'
   | 'setNetworkConnectionActive'
   | 'setNetworkBinaryPath'
+  | 'pickBinaryFolder'
 > = {
   getNetworkState: () => invoke<NetworkState>(IpcChannels.networkGetState),
   onNetworkState: (callback: (state: NetworkState) => void) => {
@@ -50,4 +51,6 @@ export const networkApi: Pick<
     invoke<void>(IpcChannels.networkSetActive, { id, active }),
   setNetworkBinaryPath: (binary: 'wireproxy' | 'tor', path: string) =>
     invoke<void>(IpcChannels.networkSetBinaryPath, { binary, path }),
+  pickBinaryFolder: (binary: 'wireproxy' | 'tor') =>
+    invoke<string | null>(IpcChannels.networkPickBinaryFolder, binary),
 };

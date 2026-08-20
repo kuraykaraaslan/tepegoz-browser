@@ -427,7 +427,11 @@ export const tr: SettingsStrings = {
     torUpstreamVia: '{name} üzerinden',
     binaryMissing:
       '{name} bulunamadı. {dir} klasörüne koyun ya da aşağıya tam yolunu yazın. Tepegöz bu dosyayı içinde getirmez.',
-    binaryPathPlaceholder: '{name} için tam yol',
-    binarySave: 'Yolu kaydet',
+    helpersHint:
+      'WireGuard ve Tor bağlantıları bu iki programı çalıştırır. Tepegöz bunları içinde getirmez — alışılmış kurulum konumlarında ve PATH’te arar; ya da bulundukları klasörü siz gösterebilirsiniz.',
+    binaryAutoDetected: '(otomatik bulundu)',
+    binaryBrowse: 'Gözat…',
+    binaryChange: 'Değiştir…',
+    binaryClear: 'Temizle',
   },
 };

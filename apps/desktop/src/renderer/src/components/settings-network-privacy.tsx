@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
 import type { SettingsStrings } from '@tepegoz/settings-ui';
 import type {
+  BinaryStatus,
   NetworkConnectionInput,
   NetworkConnectionView,
   NetworkState,
 } from '@tepegoz/desktop-ipc';
-import { AlertBanner, Badge, Button, Card, Input } from '@tepegoz/ui';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCircleCheck, faCircleExclamation } from '@fortawesome/free-solid-svg-icons';
+import { AlertBanner, Badge, Button, Card, cn } from '@tepegoz/ui';
 import { AddConnectionRow } from './settings-network-forms';
 import { Select } from './settings-shared';
 
@@ -34,7 +37,7 @@ const EMPTY: NetworkState = {
   general: { kind: 'direct' },
   tabs: {},
   groups: {},
-  binaries: { wireproxy: { found: false, path: '' }, tor: { found: false, path: '' } },
+  binaries: { wireproxy: { found: false, path: '', isOverride: false, dropInDir: '' }, tor: { found: false, path: '', isOverride: false, dropInDir: '' } },
   secretsAvailable: false,
 };
 
@@ -115,7 +118,13 @@ function ConnectionRow({
   );
 }
 
-/** Where to put a helper binary that is missing, and a field for pointing at one elsewhere. */
+/**
+ * One helper binary: whether it is there, and how to point at it if not.
+ *
+ * Always rendered, not only when something is missing. A green tick against a resolved path is the only
+ * way a user can tell "detection found it" from "nothing has been tried yet" — and this is the one part
+ * of the feature that silently decides whether a whole protocol works at all.
+ */
 function BinaryRow({
   s,
   binary,
@@ -124,49 +133,66 @@ function BinaryRow({
 }: {
   s: SettingsStrings;
   binary: 'wireproxy' | 'tor';
-  status: { found: boolean; path: string };
+  status: BinaryStatus;
   onChanged: () => void;
 }) {
-  const [draft, setDraft] = useState('');
-  if (status.found) return null;
+  const [error, setError] = useState<string | null>(null);
+
+  const browse = (): void => {
+    setError(null);
+    void window.tepegoz.pickBinaryFolder(binary).then(
+      (found) => {
+        if (found !== null) onChanged();
+      },
+      (err: unknown) => {
+        // Names the folder that was searched: the usual mistake is picking the parent of the right one.
+        setError(err instanceof Error ? err.message : String(err));
+      },
+    );
+  };
+
   return (
-    <div className="mt-4">
-      <p className="text-xs text-text-secondary">
-        {s.network.binaryMissing.replace('{name}', binary).replace('{dir}', status.path)}
-      </p>
-      <form
-        className="mt-1 flex items-end gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void window.tepegoz
-            .setNetworkBinaryPath(binary, draft.trim())
-            .then(onChanged, () => undefined);
-        }}
-      >
-        <div className="min-w-48 flex-1">
-          <Input
-            id={`binary-${binary}`}
-            // The program's own name is the label; the placeholder carries the "full path" hint, so the
-            // two say different things instead of repeating.
-            label={binary}
-            placeholder={s.network.binaryPathPlaceholder.replace('{name}', binary)}
-            value={draft}
-            onChange={(e) => {
-              setDraft(e.target.value);
-            }}
-          />
-        </div>
-        <Button
-          type="submit"
-          size="sm"
-          variant="outline"
-          className="mb-1 h-[38px]"
-          disabled={draft.trim().length === 0}
-        >
-          {s.network.binarySave}
+    <li className="rounded-md border border-border px-3 py-2">
+      <div className="flex items-center gap-2">
+        <FontAwesomeIcon
+          icon={status.found ? faCircleCheck : faCircleExclamation}
+          className={cn('h-4 w-4 shrink-0', status.found ? 'text-success' : 'text-text-disabled')}
+          aria-hidden
+        />
+        <span className="shrink-0 text-sm font-medium text-text-primary">{binary}</span>
+        {status.found ? (
+          // `min-w-0` on the flexible middle is what lets the path truncate instead of shoving the
+          // button off the row; the full value stays available as the title.
+          <span className="min-w-0 flex-1 truncate text-xs text-text-secondary" title={status.path}>
+            {status.path}
+          </span>
+        ) : (
+          <span className="min-w-0 flex-1 text-xs text-text-secondary">
+            {s.network.binaryMissing.replace('{name}', binary).replace('{dir}', status.dropInDir)}
+          </span>
+        )}
+        {status.found && !status.isOverride && (
+          <span className="shrink-0 text-xs text-text-disabled">{s.network.binaryAutoDetected}</span>
+        )}
+        <Button size="sm" variant="outline" className="shrink-0" onClick={browse}>
+          {status.found ? s.network.binaryChange : s.network.binaryBrowse}
         </Button>
-      </form>
-    </div>
+        {status.isOverride && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="shrink-0"
+            onClick={() => {
+              // Clearing the override removes nothing — it hands the search back to detection.
+              void window.tepegoz.setNetworkBinaryPath(binary, '').then(onChanged, () => undefined);
+            }}
+          >
+            {s.network.binaryClear}
+          </Button>
+        )}
+      </div>
+      {error !== null && <p className="mt-1 text-xs text-error-fg">{error}</p>}
+    </li>
   );
 }
 
@@ -222,9 +248,13 @@ export function NetworkPrivacySection({ s }: { s: SettingsStrings }) {
           </>
         )}
 
-        {/* One-time setup, not part of adding a connection — and only rendered when one is missing. */}
-        <BinaryRow s={s} binary="wireproxy" status={state.binaries.wireproxy} onChanged={refresh} />
-        <BinaryRow s={s} binary="tor" status={state.binaries.tor} onChanged={refresh} />
+        {/* One-time setup, kept apart from adding a connection. Shown always: a tick against a found
+            path is the only way to tell detection succeeded from nothing having been tried. */}
+        <p className="mb-2 mt-5 text-xs text-text-secondary">{s.network.helpersHint}</p>
+        <ul className="space-y-1.5">
+          <BinaryRow s={s} binary="wireproxy" status={state.binaries.wireproxy} onChanged={refresh} />
+          <BinaryRow s={s} binary="tor" status={state.binaries.tor} onChanged={refresh} />
+        </ul>
       </Card>
 
       <Card title={s.network.defaultRoute} subtitle={s.network.defaultRouteHint}>

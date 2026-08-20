@@ -156,6 +156,7 @@ export const IpcChannels = {
   networkPickWireguard: 'network:pick-wireguard',
   networkSetActive: 'network:set-active',
   networkSetBinaryPath: 'network:set-binary-path',
+  networkPickBinaryFolder: 'network:pick-binary-folder',
   networkRemoveConnection: 'network:remove-connection',
   // Browser downloads (`tepegoz://downloads`). State is pushed live from the main-process DownloadService.
   downloadsList: 'downloads:list',

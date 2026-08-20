@@ -425,8 +425,12 @@ export const en = {
     torUpstreamVia: 'Through {name}',
     binaryMissing:
       '{name} was not found. Put it in {dir}, or give its full path below. Tepegöz does not ship it.',
-    binaryPathPlaceholder: 'Full path to {name}',
-    binarySave: 'Save path',
+    helpersHint:
+      'WireGuard and Tor connections run these two programs. Tepegöz does not ship them — it looks for them in the usual install locations and on PATH, or you can point at the folder you keep them in.',
+    binaryAutoDetected: '(found automatically)',
+    binaryBrowse: 'Browse…',
+    binaryChange: 'Change…',
+    binaryClear: 'Clear',
   },
 };
 

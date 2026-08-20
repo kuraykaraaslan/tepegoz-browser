@@ -53,11 +53,16 @@ export interface GroupNetworkRoute {
   label: string;
 }
 
-/** Whether a helper binary the userspace providers need is actually present. */
+/** Whether a helper binary the userspace providers need is actually present, and how it was found. */
 export interface BinaryStatus {
   found: boolean;
-  /** The resolved path when found, or the configured override when set but missing. */
+  /** Absolute path when found; empty otherwise. */
   path: string;
+  /** True when that path came from the user's explicit setting rather than auto-detection — the UI
+   *  offers to clear an override, but has nothing to clear when detection found it. */
+  isOverride: boolean;
+  /** Where the UI suggests dropping the file when it is missing. */
+  dropInDir: string;
 }
 
 export interface NetworkState {
@@ -123,4 +128,7 @@ export interface NetworkApi {
   /** Bring one connection up or take it down on the spot. */
   setNetworkConnectionActive(id: string, active: boolean): Promise<void>;
   setNetworkBinaryPath(binary: 'wireproxy' | 'tor', path: string): Promise<void>;
+  /** Open a folder picker and search it for the binary. Resolves to the path found (and saves it), or
+   *  `null` when the user cancelled; rejects naming the folder when nothing was found in it. */
+  pickBinaryFolder(binary: 'wireproxy' | 'tor'): Promise<string | null>;
 }

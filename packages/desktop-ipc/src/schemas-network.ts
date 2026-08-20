@@ -73,3 +73,6 @@ export const SetBinaryPathSchema = z.object({
   binary: z.enum(['wireproxy', 'tor']),
   path: z.string().max(1024),
 });
+
+/** Which helper binary a folder pick is for. */
+export const VpnBinarySchema = z.enum(['wireproxy', 'tor']);

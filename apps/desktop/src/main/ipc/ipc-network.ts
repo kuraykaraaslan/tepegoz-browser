@@ -16,12 +16,18 @@ import {
   BindTabNetworkSchema,
   RemoveNetworkConnectionSchema,
   SetBinaryPathSchema,
+  VpnBinarySchema,
   SetConnectionActiveSchema,
   SetGeneralBindingSchema,
 } from '@tepegoz/desktop-ipc/schemas';
 import { isValidConnectionId } from '@tepegoz/shared-types';
 import PreferenceStore from '@tepegoz/preferences';
-import { binDir, locateBinary, type VpnBinary } from '../network/vpn-binaries.electron';
+import {
+  binDir,
+  findBinaryInFolder,
+  locateBinary,
+  type VpnBinary,
+} from '../network/vpn-binaries.electron';
 import VpnSecrets from '../network/vpn-secrets.electron';
 import { parseWireGuardConfig, summarize } from '../network/wireguard-config';
 import TabManager from '../tabs';
@@ -134,12 +140,16 @@ export function networkStateFor(win: BrowserWindow): NetworkState {
 }
 
 function binaryStatus(binary: VpnBinary): BinaryStatus {
+  const override = PreferenceStore.getAll().networkBinaries[binary];
   try {
-    return { found: true, path: locateBinary(binary) };
+    const path = locateBinary(binary);
+    // `isOverride` is what lets the UI offer to clear a manual path and stay quiet when detection found
+    // it on its own — there is nothing to undo in that case.
+    return { found: true, path, isOverride: override.length > 0 && path === override, dropInDir: binDir() };
   } catch {
-    // Not an error state to hide: the manager shows the drop-in directory, which is far more useful
-    // than discovering at connect time that nothing happens.
-    return { found: false, path: binDir() };
+    // Not an error state to hide: the manager shows where to put the file, which is far more useful than
+    // discovering at connect time that nothing happens.
+    return { found: false, path: '', isOverride: override.length > 0, dropInDir: binDir() };
   }
 }
 
@@ -256,6 +266,32 @@ export function registerNetworkIpc(): void {
     PreferenceStore.update({ networkBinaries: { ...current, [binary]: path } });
     broadcastNetworkState();
     return Promise.resolve();
+  });
+
+  handleAsync(IpcChannels.networkPickBinaryFolder, async (event, payload): Promise<string | null> => {
+    const binary = VpnBinarySchema.parse(payload);
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const opts: Electron.OpenDialogOptions = {
+      title: binary,
+      // A FOLDER, not the executable: "where did I put Tor Browser" is a question people can answer;
+      // "which of these forty files is the executable" is not.
+      properties: ['openDirectory'],
+    };
+    const { canceled, filePaths } =
+      win === null ? await dialog.showOpenDialog(opts) : await dialog.showOpenDialog(win, opts);
+    const folder = filePaths[0];
+    if (canceled || folder === undefined) return null;
+
+    const found = findBinaryInFolder(binary, folder);
+    if (found === null) {
+      // Naming the folder matters: the usual mistake is picking the parent of the one that has it.
+      throw new Error(`${binary} was not found anywhere under ${folder}`);
+    }
+    const current = PreferenceStore.getAll().networkBinaries;
+    PreferenceStore.update({ networkBinaries: { ...current, [binary]: found } });
+    Logger.info('Helper binary located by folder pick', { binary, found });
+    broadcastNetworkState();
+    return found;
   });
 
   handleAsync(IpcChannels.networkRemoveConnection, async (_event, payload): Promise<void> => {
