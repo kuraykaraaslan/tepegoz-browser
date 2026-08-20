@@ -117,3 +117,10 @@ export {
   checkLocalePackParity,
   type LocalePackParity,
 } from './locale-pack-parity';
+export {
+  evaluateSupplyChain,
+  declaredWithinRequestedScope,
+  declaredVsActualMismatch,
+  type InstallTier,
+  type SupplyChainVerdict,
+} from './supply-chain-gate';

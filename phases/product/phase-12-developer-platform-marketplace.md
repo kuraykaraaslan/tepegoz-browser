@@ -1,6 +1,6 @@
 # Phase 12 — Developer Platform & Marketplace Economy
 
-**Status:** ⬜ Not started  ·  **Estimate:** ~6+ months (scope branches on adoption data)  ·  **Depends on:**
+**Status:** 🟡 In progress (SupplyChainGate decision layer landed 2026-08-20) · **Estimate:** ~6+ months (scope branches on adoption data)  ·  **Depends on:**
 Phase 1b (SkillRuntime/MCP) + Phase 2 (Adapter SDK skeleton) + Phase 3 (gateway billing) + Phase 4
 (marketplace signing) + Phase 6 (RecipeCompiler) + Phase 9 (Policy Bundles)
 **Goal:** Phase 4 lists a signed marketplace as distribution **plumbing** with no DX, no economics, and no
@@ -17,17 +17,25 @@ signing pipeline without new security scatter. **The heavy economics are adoptio
       runs a skill in CI **deterministically with NO model and NO network** (golden fixture)
 - [ ] **Site-Recipe Library**: on a known site the orchestrator prefers a signed, crowdsourced deterministic
       recipe over vision/guessing; the Loop Detector flags drift for community fixes
-- [ ] **SupplyChainGate**: an installable package without a valid SBOM + attestation is blocked (or quarantined
+- [~] **SupplyChainGate**: an installable package without a valid SBOM + attestation is blocked (or quarantined
       sandboxed, no credentials); declared-capabilities ⊄ requested-scopes is rejected; first-run
       declared-vs-actual mismatch → block/HITL
+      _(landed: [supply-chain-gate.ts](../../packages/security-policy/src/supply-chain-gate.ts) — `evaluateSupplyChain` (three tiers: quarantined/signed_basic/attested — this phase document itself states two DIFFERENT policies for the unsigned case in different lines; [ADR-0037](../../docs/adr/0037-supply-chain-gate.md) resolves it toward quarantine-not-block and says so explicitly), `declaredWithinRequestedScope`, `declaredVsActualMismatch`. 14 tests. **Owed:** the cryptography this gate consumes as pre-verified booleans (no signature/SBOM-hash/attestation checking exists), the install flow, quarantine sandboxing, and the tamper-evident install-receipt event.)_
 - [ ] **Marketplace economics**: a paid skill verifies entitlement and **still runs 100% locally** in the
       sandbox via a signed offline entitlement token; a backend outage does not brick the purchase
 - [ ] **i18n:** en+tr keys added for new surfaces (CLI help/output, marketplace listing/scope-review/permission
       receipt, recipe-health UI, template gallery)
-- [ ] ADRs accepted: **ADR-0020** (site-recipe library + SBOM/SLSA supply-chain attestation), **ADR-0021**
+- [~] ADRs accepted: **ADR-0020** (site-recipe library + SBOM/SLSA supply-chain attestation), **ADR-0021**
       (marketplace economics + offline entitlement)
+      _(the SBOM/supply-chain half lands as [ADR-0037](../../docs/adr/0037-supply-chain-gate.md) — ADR-0020 was already claimed before this phase document was written. The site-recipe-library half of ADR-0020, and ADR-0021 in full, are not written — no code landed for either.)_
 - [ ] Each opened economics bet decided with cost/risk analysis (adoption-gated, like Phase 4)
 - [ ] Coverage gate (S80/B70/F80/L80) + self-review/code-review + UAT signoff + migration-safe DB
+
+> **What actually runs today (2026-08-20).** `evaluateSupplyChain`, `declaredWithinRequestedScope`, and
+> `declaredVsActualMismatch` are real and tested (14 tests). **None of it verifies anything itself.**
+> This gate consumes signature/SBOM/attestation verification as pre-computed booleans; nothing in this
+> repo currently produces those booleans, so nothing calls this gate with real data yet. There is no
+> `tepegoz-sign` CLI, no install flow, no marketplace, no SDK, and no recipe test harness.
 
 ## Tasks
 
@@ -59,14 +67,15 @@ signing pipeline without new security scatter. **The heavy economics are adoptio
 
 ### L5/L8 — SBOM + SLSA provenance attestation gate
 - [ ] Require every installable skill/adapter/extension/MCP package to ship a **CycloneDX SBOM** + an
-      **in-toto/SLSA build-provenance attestation**, both Ed25519-signed
-- [ ] A deterministic **SupplyChainGate** (pre-install, pre-model) verifies signature, SBOM-to-artifact hash
+      **in-toto/SLSA build-provenance attestation**, both Ed25519-signed — not started (this is a publishing-pipeline requirement; the gate that would CONSUME the result is landed, nothing produces one yet)
+- [~] A deterministic **SupplyChainGate** (pre-install, pre-model) verifies signature, SBOM-to-artifact hash
       match, no dependency on a local deny-list, and **declared-capabilities ⊆ requested-scopes**; at first run
       it checks declared vs what the ToolGateway actually sees (mismatch → block/HITL) and writes a
       tamper-evident install-receipt event
+      _(landed: the tiering + scope + mismatch DECISIONS. **Not landed:** the actual signature/hash verification (this gate consumes those as pre-verified booleans), the install-receipt event, and the block/HITL action itself — `declaredVsActualMismatch` only detects, it does not act.)_
 - [ ] A `tepegoz-sign` CLI auto-generates SBOM + attestation in CI; unsigned packages still installable only in
       an explicit **"unverified, sandboxed, no-credentials" quarantine tier**; enterprises get an exportable
-      SBOM-equivalent for all installed skills
+      SBOM-equivalent for all installed skills — not started; the QUARANTINE TIER this line names is the policy `evaluateSupplyChain` implements for the unsigned case (see the ADR-0037 numbering note on the phase's own internal disagreement about this)
 - [ ] Moves from "signed = trusted" to "**attested + scoped + SBOM-diffed + declared-vs-actual-enforced**"
 - [ ] *Risk:* reproducible builds for arbitrary toolchains are hard; publisher friction → tier it
       (unsigned-blocked / signed-basic / attested-premium); `tepegoz-sign` auto-generates; declared-vs-actual

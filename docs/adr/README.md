@@ -44,3 +44,4 @@ consequences (including rejected alternatives). Format is a lightweight [MADR](h
 | [0034](0034-verifiable-policy-bundles.md) | Verifiable Policy Bundles — sealed narrowing enforced in the compiler (decision layer) | Accepted (decision layer) |
 | [0035](0035-governed-agent-endpoints.md) | Governed Agent Endpoints — sensitive-site lockout applies regardless of token (decision layer) | Accepted (decision layer) |
 | [0036](0036-kamu-adapter-trust-model.md) | Kamu public-service adapter trust model — read free, write force-asked with biometric (decision layer) | Accepted (decision layer) |
+| [0037](0037-supply-chain-gate.md) | SupplyChainGate — signed/SBOM/attestation tiering + declared-vs-actual enforcement (decision layer) | Accepted (decision layer) |
