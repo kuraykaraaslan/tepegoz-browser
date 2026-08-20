@@ -588,9 +588,6 @@ importers:
 
   packages/agent-eval:
     dependencies:
-      '@tepegoz/libs':
-        specifier: workspace:*
-        version: link:../libs
       '@tepegoz/model-gateway':
         specifier: workspace:*
         version: link:../model-gateway
@@ -1502,6 +1499,28 @@ importers:
       react-dom:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(lightningcss@1.32.0)
+
+  packages/notary:
+    dependencies:
+      '@tepegoz/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      zod:
+        specifier: 3.23.8
+        version: 3.23.8
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.0
+      esbuild:
+        specifier: 0.21.5
+        version: 0.21.5
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
