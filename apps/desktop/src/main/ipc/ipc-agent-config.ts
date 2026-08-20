@@ -1,6 +1,6 @@
 import { shell } from 'electron';
 import { z } from 'zod';
-import { Logger } from '@tepegoz/libs';
+import { AppError, Logger } from '@tepegoz/libs';
 import {
   AGENT_EFFORT_LEVELS,
   IpcChannels,
@@ -87,7 +87,9 @@ function buildAgentConfig(): AgentConfig {
   return {
     provider,
     choices,
-    model: prefs.agentModelOverride[provider] ?? '',
+    // The model shown/used is the one pinned on the KEY this provider resolves to (Settings →
+    // Providers pins it per key), not a per-provider preference.
+    model: CredentialVault.modelForProvider(provider),
     autonomy: prefs.agentAutonomy,
     effort: prefs.agentEffort,
     strictGuard: prefs.agentStrictGuard,
@@ -113,7 +115,7 @@ export function registerAgentConfigIpc(): void {
       const prefs = PreferenceStore.getAll();
       hotSwapRunProvider(provider, {
         effort: prefs.agentEffort,
-        model: prefs.agentModelOverride[provider] ?? '',
+        model: CredentialVault.modelForProvider(provider),
       });
     }
   });
@@ -121,11 +123,19 @@ export function registerAgentConfigIpc(): void {
     const { provider, model } = z
       .object({ provider: z.enum(PROVIDER_IDS), model: z.string().max(64) })
       .parse(payload);
-    // Persist the per-provider pin ('' clears it → auto/tiered routing for that provider).
-    const next = { ...PreferenceStore.getAll().agentModelOverride };
-    if (model === '') delete next[provider];
-    else next[provider] = model;
-    PreferenceStore.update({ agentModelOverride: next });
+    // Same catalog gate as the Settings path: only an id the runtime can actually route to reaches the
+    // vault ('' = auto). Two writers, one invariant.
+    if (model !== '' && !PROVIDER_MODEL_CATALOG[provider].some((m) => m.id === model)) {
+      throw new AppError(`Unknown model '${model}' for provider '${provider}'.`, 400);
+    }
+    // The pin lives on the KEY, so the Console's dropdown writes the SAME record Settings → Providers
+    // edits: the provider's highest-priority key — the one a run resolves to. '' clears it (auto/tiered
+    // routing). A provider with no stored key has nothing to pin (it cannot run either), so this is a
+    // no-op there rather than a hidden preference that would silently outrank the key later.
+    const topKey = CredentialVault.listMetaByProvider(provider)[0];
+    if (topKey !== undefined) {
+      CredentialVault.setKeyModel(topKey.id, model);
+    }
     // Instant mid-run switch: if a run is active on THIS provider (its adapter is registered), push the
     // pin to the live gateway so the NEXT request uses it. A pin for a not-currently-running provider is
     // only persisted — it applies when that provider next resolves at run start (self-healing gateway).

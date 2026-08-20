@@ -15,12 +15,15 @@ export const LOCALES: readonly LocalePref[] = LOCALE_PREFS;
 export function Select({
   id,
   label,
+  ariaLabel,
   value,
   onChange,
   children,
 }: {
   id: string;
   label?: string;
+  /** Accessible name for a select with no VISIBLE label (e.g. one sitting inside a dense list row). */
+  ariaLabel?: string;
   value: string;
   onChange: (value: string) => void;
   children: ReactNode;
@@ -32,6 +35,7 @@ export function Select({
       )}
       <select
         id={id}
+        {...(ariaLabel !== undefined ? { 'aria-label': ariaLabel } : {})}
         value={value}
         onChange={(e) => {
           onChange(e.target.value);

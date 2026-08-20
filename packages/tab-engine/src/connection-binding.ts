@@ -102,6 +102,39 @@ export function partitionKeyFor(resolved: ResolvedConnection): string {
   return `${DIRECT_PARTITION}--conn-${resolved.connectionId}`;
 }
 
+/**
+ * The binding a tab must be given IN ITS OWN RIGHT when it is about to lose its group involuntarily.
+ *
+ * Pinning strips group membership (ADR-0020: pinned ⊥ grouped, a Chrome-parity ordering invariant). That
+ * is a decision about the tab STRIP — the user pinned a tab; they did not ask to change its network
+ * route. But losing the group also loses the scope that was deciding that route, so resolution would
+ * silently fall to General: a tab inheriting a tunnel would drop to Direct, sending traffic the user
+ * believed was tunneled out over the clear path, with no prompt and no reload they could attribute.
+ *
+ * The fix is to keep the ROUTE while dropping the MEMBERSHIP: materialize whatever the group was
+ * deciding as the tab's own explicit override, so `resolveBinding` returns the identical destination
+ * before and after. Nothing is re-hosted, nothing reloads, nothing leaks — most-specific-wins is
+ * preserved, the tab simply now owns the decision because there is no longer a group to inherit it from.
+ *
+ * Deliberately narrow — returns `null` (nothing to do) unless the GROUP was the deciding scope:
+ * - the tab already holds its own override ⇒ the group never decided it,
+ * - the tab has no group, or the group is itself on `inherit` ⇒ resolution already reached General, so
+ *   leaving the group changes nothing and materializing would only freeze the tab against a later
+ *   General change it should still follow.
+ *
+ * Note this is for an INVOLUNTARY exit. An explicit drag OUT of a group is a decision about membership,
+ * and there the phase's stated "a tab dragged out falls back to the General default" is the right
+ * behaviour — do not route that through here.
+ */
+export function bindingOnInvoluntaryGroupExit(
+  tab: ScopedBinding,
+  group: ScopedBinding | null,
+): ScopedBinding | null {
+  if (tab.kind !== 'inherit') return null;
+  if (group === null || group.kind === 'inherit') return null;
+  return group;
+}
+
 export interface TabBindingState {
   tabId: string;
   binding: ScopedBinding;

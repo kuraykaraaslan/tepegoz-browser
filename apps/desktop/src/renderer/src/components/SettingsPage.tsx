@@ -24,6 +24,7 @@ interface SettingsPageProps {
   onAddKey: (provider: ProviderId, label: string, apiKey: string) => Promise<void>;
   onRemoveKeyById: (id: string) => Promise<void>;
   onRenameKey: (id: string, label: string) => Promise<void>;
+  onSetKeyModel: (id: string, model: string) => Promise<void>;
   onReorderKeys: (orderedIds: string[]) => Promise<void>;
   loginCredentials: LoginCredentialMeta[];
   onLoginSectionMount: () => Promise<void>;
@@ -48,6 +49,7 @@ export function SettingsPage({
   onAddKey,
   onRemoveKeyById,
   onRenameKey,
+  onSetKeyModel,
   onReorderKeys,
   loginCredentials,
   onLoginSectionMount,
@@ -139,6 +141,7 @@ export function SettingsPage({
     onAddKey,
     onRemoveKeyById,
     onRenameKey,
+    onSetKeyModel,
     onReorderKeys,
     loginCredentials,
     onLoginSectionMount,

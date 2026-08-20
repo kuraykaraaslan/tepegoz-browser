@@ -17,6 +17,10 @@ const ProviderIdSchema = z.enum(PROVIDER_IDS);
 /** A stored-key id (generated uuid). Bounded to keep the untrusted payload small. */
 const KeyIdSchema = z.string().min(1).max(128);
 
+/** A pinned model id, or '' for auto/tiered routing. Membership in the provider's catalog is checked
+ *  by the handler (this file must not pull the model-gateway into the contract package). */
+const KeyModelSchema = z.string().max(64);
+
 /** `credentials:add` payload — the only channel that carries a raw key (renderer → main). */
 export const AddProviderKeyInputSchema = z.object({
   provider: ProviderIdSchema,
@@ -33,6 +37,12 @@ export const RemoveKeyByIdSchema = z.object({
 export const RenameProviderKeyInputSchema = z.object({
   keyId: KeyIdSchema,
   label: z.string().min(1).max(64),
+});
+
+/** `credentials:set-model` payload — pins the model ONE key runs with ('' clears the pin). */
+export const SetProviderKeyModelSchema = z.object({
+  keyId: KeyIdSchema,
+  model: KeyModelSchema,
 });
 
 /** `credentials:reorder` payload — the full key-id list in the new priority order (top = default). */

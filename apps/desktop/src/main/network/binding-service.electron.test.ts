@@ -191,3 +191,44 @@ describe('removing a connection', () => {
     expect(BindingService.resolveFor('a').resolved).toEqual({ connectionId: 'mullvad' });
   });
 });
+
+describe('preserving a route when pinning strips a tab out of its group', () => {
+  it("keeps the group's tunnel: a leak would mean the tab silently drops to General on pin", async () => {
+    await BindingService.bindGroup('g1', { kind: 'connection', connectionId: 'tor' });
+    expect(BindingService.resolveFor('a').resolved).toEqual({ connectionId: 'tor' });
+    h.rehostTab.mockClear(); // only interested in what preserveRouteOnGroupExit itself triggers
+
+    // The pin handler fires this BEFORE clearing the tab's groupId (see WindowTabsGroups.setPinned).
+    BindingService.preserveRouteOnGroupExit('a', 'g1');
+    // Simulate what pinning does next: the tab now belongs to no group.
+    h.tabs = h.tabs.map((t) => (t.tabId === 'a' ? { ...t, groupId: null } : t));
+
+    const after = BindingService.resolveFor('a');
+    expect(after.resolved).toEqual({ connectionId: 'tor' }); // unchanged — no leak
+    expect(after.source).toBe('tab'); // now owned by the tab itself, not inherited
+    // No re-host: the destination never moved, so nothing needed to.
+    expect(h.rehostTab).not.toHaveBeenCalled();
+  });
+
+  it('does nothing when the tab already had its own override', async () => {
+    await BindingService.bindGroup('g1', { kind: 'connection', connectionId: 'tor' });
+    await BindingService.bindTab('a', { kind: 'direct' });
+    h.rehostTab.mockClear();
+
+    BindingService.preserveRouteOnGroupExit('a', 'g1');
+    h.tabs = h.tabs.map((t) => (t.tabId === 'a' ? { ...t, groupId: null } : t));
+
+    // Still Direct — the group's tunnel was never this tab's route to begin with.
+    expect(BindingService.resolveFor('a').resolved).toEqual({ connectionId: null });
+  });
+
+  it('does nothing when the group itself was inheriting (resolution already at General)', () => {
+    h.prefs.networkGeneralBinding = { kind: 'connection', connectionId: 'tor' };
+
+    BindingService.preserveRouteOnGroupExit('a', 'g1'); // g1 has no binding set — inherit
+    h.tabs = h.tabs.map((t) => (t.tabId === 'a' ? { ...t, groupId: null } : t));
+
+    // Still following General, not frozen onto a copy that would stop tracking it.
+    expect(BindingService.resolveFor('a')).toEqual({ resolved: { connectionId: 'tor' }, source: 'general' });
+  });
+});

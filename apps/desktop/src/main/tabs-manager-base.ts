@@ -4,7 +4,12 @@ import { Logger } from '@tepegoz/libs';
 import { EventJournal, SessionStore } from '@tepegoz/persistence';
 import { getDb } from './db/database.electron';
 import { WindowTabs } from './tabs';
-import { navigationObservers, type NavigationObserver } from './tabs-shared';
+import {
+  involuntaryGroupExitObservers,
+  navigationObservers,
+  type InvoluntaryGroupExitObserver,
+  type NavigationObserver,
+} from './tabs-shared';
 
 /**
  * Registry + session-wide concerns of the static `TabManager` facade, split out of `tabs.ts` (ADR-0010
@@ -98,6 +103,16 @@ export class TabManagerBase {
   static onNavigation(fn: NavigationObserver): () => void {
     navigationObservers.add(fn);
     return () => { navigationObservers.delete(fn); };
+  }
+
+  /**
+   * Subscribe to a tab losing its group for a reason that was not about membership (today: pinning).
+   * Fired BEFORE the group is cleared, so the subscriber can still read the scope about to vanish.
+   * Returns an unsubscribe fn.
+   */
+  static onInvoluntaryGroupExit(fn: InvoluntaryGroupExitObserver): () => void {
+    involuntaryGroupExitObservers.add(fn);
+    return () => { involuntaryGroupExitObservers.delete(fn); };
   }
 
   /** Apply a resolved User-Agent to every open web tab across all windows and reload. */

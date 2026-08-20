@@ -49,6 +49,7 @@ export const settingsMiscApi: Pick<
   | 'addProviderKey'
   | 'removeProviderKeyById'
   | 'renameProviderKey'
+  | 'setProviderKeyModel'
   | 'reorderProviderKeys'
   | 'getUserAgent'
   | 'setUserAgent'
@@ -118,6 +119,8 @@ export const settingsMiscApi: Pick<
     invoke<CredentialsStatus>(IpcChannels.credentialsRemoveById, { keyId: id }),
   renameProviderKey: (id: string, label: string) =>
     invoke<CredentialsStatus>(IpcChannels.credentialsRename, { keyId: id, label }),
+  setProviderKeyModel: (id: string, model: string) =>
+    invoke<CredentialsStatus>(IpcChannels.credentialsSetModel, { keyId: id, model }),
   reorderProviderKeys: (orderedIds: string[]) =>
     invoke<CredentialsStatus>(IpcChannels.credentialsReorder, { orderedIds }),
   getUserAgent: () => invoke<string | null>(IpcChannels.userAgentGet),

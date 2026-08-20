@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   affectedByGeneralChange,
   affectedByGroupChange,
+  bindingOnInvoluntaryGroupExit,
   isValidConnectionId,
   partitionKeyFor,
   resolveBinding,
@@ -154,5 +155,45 @@ describe('re-resolution on a GENERAL change', () => {
     // entry for it, and that must not be read as "leave this tab alone".
     const tabs = [tab('a', inherit, 'g-never-bound')];
     expect(affectedByGeneralChange(tabs, new Map())).toEqual(['a']);
+  });
+});
+
+describe('preserving a route across an INVOLUNTARY group exit (pinning)', () => {
+  it("materializes the group's connection as the tab's own, so pinning cannot drop it to Direct", () => {
+    // The leak this exists to stop: tab inherits a tunnel from its group, user pins it, group is
+    // cleared, resolution falls to a Direct General — traffic the user believed was tunneled goes clear.
+    expect(bindingOnInvoluntaryGroupExit(inherit, conn('tor'))).toEqual(conn('tor'));
+  });
+
+  it("materializes an explicit group Direct too — a pin must not silently ADD a tunnel either", () => {
+    // Opposite direction, same principle: group says Direct, General says VPN. Pinning must not push
+    // this tab onto a tunnel the user never chose for it.
+    expect(bindingOnInvoluntaryGroupExit(inherit, direct)).toEqual(direct);
+  });
+
+  it('does nothing when the tab already holds its own override — the group never decided it', () => {
+    expect(bindingOnInvoluntaryGroupExit(conn('vpn-a'), conn('vpn-b'))).toBeNull();
+    expect(bindingOnInvoluntaryGroupExit(direct, conn('vpn-b'))).toBeNull();
+  });
+
+  it('does nothing when the group was itself inheriting — resolution already reached General', () => {
+    // Freezing an explicit copy here would be worse than doing nothing: the tab would stop following a
+    // later General change it should still follow.
+    expect(bindingOnInvoluntaryGroupExit(inherit, inherit)).toBeNull();
+  });
+
+  it('does nothing for a tab that has no group at all', () => {
+    expect(bindingOnInvoluntaryGroupExit(inherit, null)).toBeNull();
+  });
+
+  it('leaves the RESOLVED destination identical before and after the exit', () => {
+    // The property that makes this safe to do with no re-host: same destination ⇒ nothing to move.
+    const general = { kind: 'direct' as const };
+    const before = resolveBinding(inherit, conn('tor'), general);
+    const preserved = bindingOnInvoluntaryGroupExit(inherit, conn('tor'));
+    const after = resolveBinding(preserved ?? inherit, null, general);
+    expect(after.resolved).toEqual(before.resolved);
+    expect(before.source).toBe('group');
+    expect(after.source).toBe('tab'); // the scope moved; the destination did not
   });
 });

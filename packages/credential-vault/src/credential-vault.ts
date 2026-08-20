@@ -13,7 +13,7 @@ import { VaultMessages } from './messages';
  * BYO-key vault (L7 / electron-desktop-security). API keys are encrypted with the OS keychain
  * (Electron `safeStorage` → Windows DPAPI) and persisted as base64 ciphertext in userData. Raw keys
  * NEVER leave the main process — the renderer only ever learns metadata ({@link ProviderKeyMeta}:
- * id/provider/label/createdAt/last4) or per-provider boolean status.
+ * id/provider/label/createdAt/last4/model) or per-provider boolean status.
  *
  * Storage is an id-keyed COLLECTION so a provider can hold any number of keys, each with a user label.
  * The on-disk shape is versioned (`{ version: 2, keys: KeyRecord[] }`); a legacy flat map
@@ -121,6 +121,9 @@ export default class CredentialVault {
       label: r.label,
       createdAt: typeof r.createdAt === 'number' ? r.createdAt : Date.now(),
       last4: typeof r.last4 === 'string' ? r.last4 : '',
+      // Added after v2 shipped: records written before per-key model pinning carry no `model`, and ''
+      // is exactly the "auto/tiered routing" value — so an absent field needs no file-version bump.
+      model: typeof r.model === 'string' ? r.model : '',
       ciphertext: r.ciphertext,
     };
   }
@@ -141,6 +144,7 @@ export default class CredentialVault {
       label: MIGRATED_LABEL,
       createdAt: Date.now(),
       last4,
+      model: '',
       ciphertext,
     };
   }
@@ -156,7 +160,10 @@ export default class CredentialVault {
     return CredentialVault.crypto?.isAvailable() ?? false;
   }
 
-  /** Add a new key for `provider` under `label`. Returns the renderer-safe metadata (no secret). */
+  /**
+   * Add a new key for `provider` under `label`. A new key starts on auto (`model: ''`); the model is
+   * pinned afterwards, per key, via {@link setKeyModel}. Returns the renderer-safe metadata (no secret).
+   */
   static addKey(provider: AIProvider, label: string, apiKey: string): ProviderKeyMeta {
     const p = AIProviderEnum.parse(provider);
     const key = apiKey.trim();
@@ -177,6 +184,7 @@ export default class CredentialVault {
       label: lbl,
       createdAt: Date.now(),
       last4: key.slice(-4),
+      model: '',
       ciphertext: crypto.encrypt(key).toString('base64'),
     };
     CredentialVault.store.push(record);
@@ -205,6 +213,30 @@ export default class CredentialVault {
     }
     rec.label = lbl;
     CredentialVault.persist();
+  }
+
+  /**
+   * Pin the model the key with `id` runs with ('' clears the pin → auto/tiered routing). Throws 404 if
+   * no such key. The value is stored verbatim (bounded by the caller's schema); this vault deliberately
+   * knows nothing about model catalogs — the IPC boundary validates the id against the provider's list.
+   */
+  static setKeyModel(id: string, model: string): void {
+    const rec = CredentialVault.store.find((k) => k.id === id);
+    if (rec === undefined) {
+      throw new AppError(VaultMessages.KeyNotFound, 404);
+    }
+    rec.model = model.trim();
+    CredentialVault.persist();
+  }
+
+  /**
+   * The model pinned on the key a run for `provider` would actually use — that provider's
+   * highest-priority key, the SAME record {@link getFirstKeyForProvider} decrypts. `''` when the
+   * provider has no key, or its top key is on auto.
+   */
+  static modelForProvider(provider: AIProvider): string {
+    const p = AIProviderEnum.parse(provider);
+    return CredentialVault.store.find((k) => k.provider === p)?.model ?? '';
   }
 
   /**
@@ -284,6 +316,7 @@ export default class CredentialVault {
       label: rec.label,
       createdAt: rec.createdAt,
       last4: rec.last4,
+      model: rec.model,
     };
   }
 

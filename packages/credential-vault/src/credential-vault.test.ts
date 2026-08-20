@@ -80,9 +80,55 @@ describe('CredentialVault (multi-key)', () => {
         'id',
         'label',
         'last4',
+        'model',
         'provider',
       ]);
     }
+  });
+
+  it('pins a model PER KEY; the provider-level model follows the top key of that provider', () => {
+    CredentialVault.init({ crypto: fakeCrypto, filePath });
+    const a = CredentialVault.addKey('anthropic', 'A', 'sk-a');
+    const b = CredentialVault.addKey('anthropic', 'B', 'sk-b');
+    // A new key starts on auto; the model is pinned afterwards, independently per key.
+    expect(a.model).toBe('');
+    expect(b.model).toBe('');
+    CredentialVault.setKeyModel(a.id, 'claude-opus-4-8');
+    CredentialVault.setKeyModel(b.id, 'claude-haiku-4-5');
+    expect(CredentialVault.listMetaByProvider('anthropic').map((m) => m.model)).toEqual([
+      'claude-opus-4-8',
+      'claude-haiku-4-5',
+    ]);
+    // A run resolves the provider's TOP key, so that key's pin is the effective one.
+    expect(CredentialVault.modelForProvider('anthropic')).toBe('claude-opus-4-8');
+    CredentialVault.reorderKeys([b.id, a.id]);
+    expect(CredentialVault.modelForProvider('anthropic')).toBe('claude-haiku-4-5');
+    // '' clears the pin (auto/tiered routing); a provider with no key has no pin either.
+    CredentialVault.setKeyModel(b.id, '');
+    expect(CredentialVault.modelForProvider('anthropic')).toBe('');
+    expect(CredentialVault.modelForProvider('openai')).toBe('');
+    expect(() => {
+      CredentialVault.setKeyModel('ghost', 'claude-opus-4-8');
+    }).toThrow(/No stored key/i);
+  });
+
+  it('persists the per-key model across a reload, and defaults it to auto for pre-model records', () => {
+    CredentialVault.init({ crypto: fakeCrypto, filePath });
+    const a = CredentialVault.addKey('gemini', 'G', 'g-key');
+    CredentialVault.setKeyModel(a.id, 'gemini-2.5-flash');
+    CredentialVault.reset();
+    CredentialVault.init({ crypto: fakeCrypto, filePath });
+    expect(CredentialVault.listMeta()[0]?.model).toBe('gemini-2.5-flash');
+    // A v2 record written before per-key pinning has no `model` field at all → auto, key still usable.
+    const raw = JSON.parse(readFileSync(filePath, 'utf8')) as {
+      keys: Record<string, unknown>[];
+    };
+    delete raw.keys[0]?.model;
+    writeFileSync(filePath, JSON.stringify(raw));
+    CredentialVault.reset();
+    CredentialVault.init({ crypto: fakeCrypto, filePath });
+    expect(CredentialVault.listMeta()[0]?.model).toBe('');
+    expect(CredentialVault.getKeyById(a.id)).toBe('g-key');
   });
 
   it('removes a key by id (and clears provider status when the last one goes)', () => {

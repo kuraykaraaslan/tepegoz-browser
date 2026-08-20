@@ -22,12 +22,16 @@ export interface AppApi {
   getCredentialsStatus(): Promise<CredentialsStatus>;
   /** Every stored key's metadata (no secret). Any number of keys per provider. */
   listCredentials(): Promise<ProviderKeyMeta[]>;
-  /** Renderer → main only (user-entered key). The raw key never flows back to the renderer. */
+  /** Renderer → main only (user-entered key). The raw key never flows back to the renderer. A new key
+   *  starts on auto; its model is pinned afterwards with {@link AppApi.setProviderKeyModel}. */
   addProviderKey(provider: ProviderId, label: string, apiKey: string): Promise<CredentialsStatus>;
   /** Remove one stored key by its id. */
   removeProviderKeyById(id: string): Promise<CredentialsStatus>;
   /** Rename one stored key by its id (label only — the secret is untouched). */
   renameProviderKey(id: string, label: string): Promise<CredentialsStatus>;
+  /** Pin the model one stored key runs with ('' = auto). Applies when that key is its provider's
+   *  highest-priority one — the key a run actually resolves to. */
+  setProviderKeyModel(id: string, model: string): Promise<CredentialsStatus>;
   /** Reorder all keys (drag-drop priority). The top key's provider becomes the default provider. */
   reorderProviderKeys(orderedIds: string[]): Promise<CredentialsStatus>;
   // Custom window chrome (frameless): caption controls.

@@ -1,6 +1,8 @@
 import { type TabGroupSettingValue } from '@tepegoz/desktop-ipc';
 import { type TabGroupColor } from '@tepegoz/tab-engine';
+import { Logger } from '@tepegoz/libs';
 import { WindowTabsClosing } from './tabs-window-closing';
+import { involuntaryGroupExitObservers } from './tabs-shared';
 
 /**
  * Tab groups, ordering & pinning layer of the per-window model, split out of `tabs.ts` (ADR-0010
@@ -110,6 +112,19 @@ export class WindowTabsGroups extends WindowTabsClosing {
   /** Pin / unpin a tab (moves to the pinned run; pinning clears group membership). */
   setPinned(id: string, pinned: boolean): void {
     if (!this.store.has(id)) return;
+    // Pinning strips the group. Anything scoped to that group — today the VPN/Tor route — has to be
+    // told BEFORE the membership is gone, while the group scope is still readable. An observer must
+    // never be able to stop a pin, so a thrown callback is logged and swallowed.
+    const losingGroupId = pinned ? (this.store.get(id)?.groupId ?? null) : null;
+    if (losingGroupId !== null) {
+      for (const observe of involuntaryGroupExitObservers) {
+        try {
+          observe(id, losingGroupId);
+        } catch (err) {
+          Logger.warn('involuntary group-exit observer failed', { err: String(err) });
+        }
+      }
+    }
     this.store.setPinned(id, pinned);
     this.emitState();
   }

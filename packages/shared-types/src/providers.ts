@@ -55,4 +55,11 @@ export interface ProviderKeyMeta {
   createdAt: number;
   /** Last four characters of the key — a non-secret fingerprint. May be '' for legacy-migrated keys. */
   last4: string;
+  /**
+   * The model this key runs with, pinned PER KEY (not per provider): two Anthropic keys can sit on
+   * different models. `''` = auto (the router's per-tier choice: capable for planning, cheap for
+   * simple steps). A run resolves the provider's highest-priority key, so THAT key's pin is the one
+   * that applies. Always a model id from the provider's catalog — validated at the IPC boundary.
+   */
+  model: string;
 }

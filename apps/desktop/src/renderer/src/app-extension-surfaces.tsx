@@ -12,6 +12,7 @@ import type { ContentBounds, TabGroupSettingValue } from '@tepegoz/desktop-ipc';
 import type { Locale } from '@tepegoz/i18n';
 import { extensionLabel, extensionPageUrl } from '../../shared/extension-urls';
 import { extensionDefById, type ExtensionDef } from './extensions/registry';
+import { AGENT_EXTENSION_ID, AGENT_PANEL_OPEN_KEY, nextAgentDock } from './agent-dock';
 
 /** The overlay surface kinds (everything except `page`, which opens as its own internal tab). */
 export type OverlaySurfaceKind = 'popup' | 'modal' | 'panel';
@@ -20,10 +21,7 @@ export interface ActiveSurface {
   kind: OverlaySurfaceKind;
 }
 
-/** The Agent Console's extension id + the `TabGroupSettingKey` remembering its open/closed state per
- *  tab group (the existing sidebar toggle button doubles as the per-group control — no new UI). */
-export const AGENT_EXTENSION_ID = 'com.tepegoz.agent';
-export const AGENT_PANEL_OPEN_KEY = 'agent.panelOpen';
+export { AGENT_EXTENSION_ID, AGENT_PANEL_OPEN_KEY } from './agent-dock';
 
 /** Sidebar dock width bounds (px); the user drags the edge to resize between these. */
 const SIDEBAR_MIN_WIDTH = 280;
@@ -68,6 +66,9 @@ export function useExtensionSurfaces(
   const [activeSurface, setActiveSurface] = useState<ActiveSurface | null>(null);
   // The extension docked in the resizable sidebar (persists across tab switches, Chrome-style), or null.
   const [sidebarExtId, setSidebarExtId] = useState<string | null>(null);
+  // Mirrors `sidebarExtId` for the toggle/close callbacks (they must read the CURRENT dock without
+  // taking a stale closure, and without doing IPC inside a state updater).
+  const sidebarExtIdRef = useRef<string | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
   const [resizingSidebar, setResizingSidebar] = useState(false);
   // A still PNG of the page shown in place of the (briefly hidden) live web view during a resize drag,
@@ -78,24 +79,50 @@ export function useExtensionSurfaces(
   const [popupOpenId, setPopupOpenId] = useState<string | null>(null);
   const popupOpenIdRef = useRef<string | null>(null);
 
-  // Restore the active tab group's own Agent Console open/closed state on switch. A group with no
-  // explicit value yet (new group) is left alone — no forced default, no surprise toggle. Never yanks
-  // away some other extension the user deliberately docked (only acts when the sidebar is empty or
-  // already showing the agent).
+  // Follow the active tab's group: restore that group's own Agent Console state, and close the panel
+  // on an ungrouped tab (no group → no agent session → an open-but-inert panel). The rule itself lives
+  // in `nextAgentDock` so it is unit-tested.
   useEffect(() => {
-    if (activeGroupId === null || activeGroupAgentPanelOpen === undefined) return;
-    setSidebarExtId((cur) => {
-      if (cur !== null && cur !== AGENT_EXTENSION_ID) return cur;
-      return activeGroupAgentPanelOpen ? AGENT_EXTENSION_ID : null;
-    });
+    setSidebarExtId((cur) => nextAgentDock(cur, activeGroupId, activeGroupAgentPanelOpen));
   }, [activeGroupId, activeGroupAgentPanelOpen]);
 
   const closeSurface = useCallback(() => {
     setActiveSurface(null);
   }, []);
+
+  /**
+   * Persist the Agent Console's open/closed state on the active tab group, so a later switch back
+   * restores exactly what the user left. An ungrouped tab has no group to remember it on: opening
+   * ensures one first (the same group the panel's own session keys on, so the two never disagree);
+   * closing has nothing to record and nothing to restore.
+   */
+  const rememberAgentPanelOpen = useCallback(
+    (open: boolean): void => {
+      if (activeGroupId !== null) {
+        window.tepegoz.updateTabGroup(activeGroupId, {
+          settings: { [AGENT_PANEL_OPEN_KEY]: open },
+        });
+        return;
+      }
+      if (!open) return;
+      void window.tepegoz.ensureActiveGroup().then(
+        (gid) => {
+          window.tepegoz.updateTabGroup(gid, { settings: { [AGENT_PANEL_OPEN_KEY]: true } });
+        },
+        () => {
+          /* no active tab — nothing to remember it on */
+        },
+      );
+    },
+    [activeGroupId],
+  );
+
+  // The panel's own close button (and the "extension was disabled" path). An explicit close is a
+  // decision worth remembering, or the next group switch would bring the panel straight back.
   const closeSidebar = useCallback(() => {
+    if (sidebarExtIdRef.current === AGENT_EXTENSION_ID) rememberAgentPanelOpen(false);
     setSidebarExtId(null);
-  }, []);
+  }, [rememberAgentPanelOpen]);
 
   // Resolve a toolbar icon click/double-click (or a menu request) to its bound surface. `anchor` is the
   // clicked icon's rect (for popups); absent for menu-triggered actions.
@@ -115,15 +142,9 @@ export function useExtensionSurfaces(
         // A dock beside the page (web view stays visible); toggles on re-trigger. For the Agent Console
         // specifically, also remember the resulting open/closed state on the active tab group, so
         // switching groups later restores each one's own state (TabGroupSettingKey standard).
-        setSidebarExtId((cur) => {
-          const next = cur === id ? null : id;
-          if (id === AGENT_EXTENSION_ID && activeGroupId !== null) {
-            window.tepegoz.updateTabGroup(activeGroupId, {
-              settings: { [AGENT_PANEL_OPEN_KEY]: next === id },
-            });
-          }
-          return next;
-        });
+        const next = sidebarExtIdRef.current === id ? null : id;
+        setSidebarExtId(next);
+        if (id === AGENT_EXTENSION_ID) rememberAgentPanelOpen(next === id);
         return;
       }
       if (action === 'popup') {
@@ -142,7 +163,7 @@ export function useExtensionSurfaces(
         cur !== null && cur.id === id && cur.kind === action ? null : { id, kind: action },
       );
     },
-    [registry, activeGroupId],
+    [registry, rememberAgentPanelOpen],
   );
 
   // Drag the sidebar's inner edge to resize (clamped). The native web view swallows pointer events when
@@ -206,6 +227,11 @@ export function useExtensionSurfaces(
       runExtensionAction(id, 'click');
     });
   }, [runExtensionAction]);
+
+  // Keep the docked-sidebar ref in sync (read by runExtensionAction/closeSidebar).
+  useEffect(() => {
+    sidebarExtIdRef.current = sidebarExtId;
+  }, [sidebarExtId]);
 
   // Keep the popup-open ref in sync (read by runExtensionAction to toggle without stale closures).
   useEffect(() => {

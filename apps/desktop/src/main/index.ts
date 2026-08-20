@@ -196,6 +196,7 @@ if (!app.requestSingleInstanceLock()) {
       // whenever a tunnel's health changes, so an indicator can never sit on a stale "protected".
       ConnectionPool.init();
       BindingService.installNewTabRoute();
+      BindingService.installGroupExitGuard();
       ConnectionPool.onStatusChange(() => {
         broadcastNetworkState();
       });

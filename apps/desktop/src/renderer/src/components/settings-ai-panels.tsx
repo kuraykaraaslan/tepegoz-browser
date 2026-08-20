@@ -7,5 +7,5 @@
 
 export { McpConnectionsSection } from './settings-ai-panels-mcp';
 export { ProvidersSection } from './settings-ai-panels-providers';
-export { DefaultModelsSection, LocalModelsSection } from './settings-ai-panels-models';
+export { LocalModelsSection } from './settings-ai-panels-models';
 export { LocalActionsSection, TokenBudgetSection } from './settings-ai-panels-cost';

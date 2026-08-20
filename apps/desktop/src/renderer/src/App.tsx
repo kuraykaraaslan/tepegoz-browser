@@ -160,6 +160,9 @@ export function App() {
   async function onRenameKey(id: string, label: string): Promise<void> {
     setStatus(await window.tepegoz.renameProviderKey(id, label));
   }
+  async function onSetKeyModel(id: string, model: string): Promise<void> {
+    setStatus(await window.tepegoz.setProviderKeyModel(id, model));
+  }
   async function onReorderKeys(orderedIds: string[]): Promise<void> {
     setStatus(await window.tepegoz.reorderProviderKeys(orderedIds));
     // The top key defines the default provider; main synced it, so refresh prefs too.
@@ -268,6 +271,7 @@ export function App() {
           onAddKey={onAddKey}
           onRemoveKeyById={onRemoveKeyById}
           onRenameKey={onRenameKey}
+          onSetKeyModel={onSetKeyModel}
           onReorderKeys={onReorderKeys}
           onToggleExtension={onToggleExtension}
         />

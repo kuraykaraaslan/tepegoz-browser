@@ -93,6 +93,18 @@ export interface DetachedTab {
 export const closedUrls: string[] = [];
 /** Observers notified after every committed top-level navigation (did-stop-loading), across all windows. */
 export const navigationObservers = new Set<NavigationObserver>();
+/**
+ * Notified with `(tabId, groupId)` immediately BEFORE a tab loses its group for a reason the user did
+ * not aim at its membership — today only pinning, which clears the group to keep the pinned run and the
+ * group run from competing (ADR-0020). Fired before the mutation so an observer can still read the
+ * group scope that is about to disappear.
+ *
+ * A callback registry rather than a direct call so the tab layer stays unaware of who cares: the network
+ * binding service already depends on `TabManager`, and calling back the other way would make that pair
+ * circular. Nothing here may throw — see the fire site.
+ */
+export type InvoluntaryGroupExitObserver = (tabId: string, groupId: string) => void;
+export const involuntaryGroupExitObservers = new Set<InvoluntaryGroupExitObserver>();
 /** Last discrete user-input time per browsed webContents — the popup blocker only blocks popups that
  *  open WITHOUT a recent gesture. Keyed weakly so entries vanish when the webContents is GC'd. */
 export const lastGestureAt = new WeakMap<WebContents, number>();

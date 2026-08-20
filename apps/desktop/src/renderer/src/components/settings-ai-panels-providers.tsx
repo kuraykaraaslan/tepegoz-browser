@@ -8,6 +8,7 @@ import { useT } from '@tepegoz/i18n/react';
 import { isRunnableProvider } from '@tepegoz/desktop-ipc';
 import type { ProviderId, ProviderKeyMeta } from '@tepegoz/desktop-ipc';
 import { PROVIDERS, Select } from './settings-shared';
+import { KeyModelMenu, useProviderModels } from './settings-ai-panels-key-model';
 
 /**
  * AI & Agent settings panels: providers & API keys. Split out of `settings-ai-panels.tsx`
@@ -20,6 +21,10 @@ export type Notify = (variant: 'success' | 'error', message: string) => void;
  * Providers & API keys. One "add" row (provider dropdown + label + key) feeds a SINGLE drag-reorderable
  * list of every stored key. Priority is order: the topmost key is the default (its provider becomes the
  * default provider). The raw key never returns — a row shows only its label + a non-secret `…last4`.
+ *
+ * The model is pinned PER KEY, from the gear on the key's own row — so it is offered only once the key
+ * exists, and two keys for the same provider can run different models. A key's pin applies whenever a
+ * run resolves to it (the top key of its provider).
  */
 export function ProvidersSection({
   keys,
@@ -27,6 +32,7 @@ export function ProvidersSection({
   onAdd,
   onRemoveById,
   onRename,
+  onSetModel,
   onReorder,
   notify,
 }: {
@@ -35,6 +41,7 @@ export function ProvidersSection({
   onAdd: (provider: ProviderId, label: string, apiKey: string) => Promise<void>;
   onRemoveById: (id: string) => Promise<void>;
   onRename: (id: string, label: string) => Promise<void>;
+  onSetModel: (id: string, model: string) => Promise<void>;
   onReorder: (orderedIds: string[]) => Promise<void>;
   notify: Notify;
 }) {
@@ -46,6 +53,7 @@ export function ProvidersSection({
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState('');
   const [dragId, setDragId] = useState<string | null>(null);
+  const modelsByProvider = useProviderModels();
 
   async function add(): Promise<void> {
     const key = keyValue.trim();
@@ -65,6 +73,15 @@ export function ProvidersSection({
     try {
       await onRemoveById(id);
       notify('success', s.keyRemoved);
+    } catch {
+      notify('error', c.errors.upstreamDown);
+    }
+  }
+
+  async function setKeyModel(id: string, next: string): Promise<void> {
+    try {
+      await onSetModel(id, next);
+      notify('success', s.keyModel.saved);
     } catch {
       notify('error', c.errors.upstreamDown);
     }
@@ -173,7 +190,9 @@ export function ProvidersSection({
         <p className="mt-4 text-sm text-text-secondary">{s.noKeysYet}</p>
       ) : (
         <>
-          <p className="mb-2 mt-5 text-xs text-text-secondary">{s.reorderHint}</p>
+          <p className="mb-2 mt-5 text-xs text-text-secondary">
+            {s.reorderHint} {s.keyModel.hint}
+          </p>
           <ul className="space-y-1.5">
             {keys.map((k, index) => {
               const isRenaming = renamingId === k.id;
@@ -246,11 +265,19 @@ export function ProvidersSection({
                         )}
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
-                        {index === 0 && (
+                        <KeyModelMenu
+                          keyId={k.id}
+                          models={modelsByProvider.get(k.provider)}
+                          value={k.model}
+                          onChange={(v) => void setKeyModel(k.id, v)}
+                        />
+                        {/* The badge KEEPS its slot on every row (visibility, not conditional
+                            rendering) so the model pickers line up in one column down the list. */}
+                        <span className={cn('shrink-0', index !== 0 && 'invisible')}>
                           <Badge variant="success" dot>
                             {s.defaultBadge}
                           </Badge>
-                        )}
+                        </span>
                         <Button
                           size="sm"
                           variant="outline"

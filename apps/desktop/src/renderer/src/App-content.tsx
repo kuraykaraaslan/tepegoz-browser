@@ -56,6 +56,7 @@ export interface AppContentProps {
   onAddKey: (provider: ProviderId, label: string, apiKey: string) => Promise<void>;
   onRemoveKeyById: (id: string) => Promise<void>;
   onRenameKey: (id: string, label: string) => Promise<void>;
+  onSetKeyModel: (id: string, model: string) => Promise<void>;
   onReorderKeys: (orderedIds: string[]) => Promise<void>;
   onToggleExtension: (id: ExtensionId, enabled: boolean) => void;
 }
@@ -87,6 +88,7 @@ export function AppContent({
   onAddKey,
   onRemoveKeyById,
   onRenameKey,
+  onSetKeyModel,
   onReorderKeys,
   onToggleExtension,
 }: AppContentProps) {
@@ -176,6 +178,7 @@ export function AppContent({
                   onAddKey={onAddKey}
                   onRemoveKeyById={onRemoveKeyById}
                   onRenameKey={onRenameKey}
+                  onSetKeyModel={onSetKeyModel}
                   onReorderKeys={onReorderKeys}
                   loginCredentials={loginCredentials}
                   onLoginSectionMount={refreshLogins}

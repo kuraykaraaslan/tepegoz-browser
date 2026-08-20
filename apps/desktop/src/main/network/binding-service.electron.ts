@@ -3,6 +3,7 @@ import PreferenceStore from '@tepegoz/preferences';
 import {
   affectedByGeneralChange,
   affectedByGroupChange,
+  bindingOnInvoluntaryGroupExit,
   partitionKeyFor,
   resolveBinding,
   type GeneralBinding,
@@ -181,6 +182,29 @@ const BindingService = {
     await BindingService.apply(affectedByGeneralChange(states, groupBindings()));
   },
 
+  /**
+   * Keep a tab's ROUTE when it involuntarily loses the group that was deciding it (today: pinning,
+   * which clears group membership to keep the pinned run and the group run from competing, ADR-0020).
+   *
+   * Without this the tab's resolution silently falls to General the instant it is unpinned from its
+   * group — a tab inheriting a tunnel drops to Direct, and traffic the user believed was tunneled goes
+   * out over the clear path because they pinned a tab. Materializing the group's binding as the tab's
+   * own override keeps `resolveBinding` returning the identical destination, so there is nothing to
+   * re-host: no reload, no gap, and nothing to leak through. Must be called BEFORE the membership is
+   * cleared, while the group scope is still readable.
+   */
+  preserveRouteOnGroupExit(tabId: string, groupId: string): void {
+    const group = groupBindings().get(groupId) ?? { kind: 'inherit' as const };
+    const preserved = bindingOnInvoluntaryGroupExit(BindingService.tabBinding(tabId), group);
+    if (preserved === null) return;
+    tabBindings.set(tabId, preserved);
+    Logger.info('Preserved a tab route across an involuntary group exit', {
+      tabId,
+      groupId,
+      binding: preserved.kind === 'connection' ? preserved.connectionId : preserved.kind,
+    });
+  },
+
   /** Forget a closed tab's override so a recycled id cannot inherit a stranger's route. */
   forgetTab(tabId: string): void {
     tabBindings.delete(tabId);
@@ -231,6 +255,16 @@ const BindingService = {
    * only because a tunnel partition is BLACKHOLED from the instant it exists: the worst case is the
    * first request failing and a reload working, never a clear-path request.
    */
+  /**
+   * Subscribe to tabs losing their group involuntarily, so a pin cannot silently change a route.
+   * Registered once at startup next to {@link installNewTabRoute}.
+   */
+  installGroupExitGuard(): void {
+    TabManager.onInvoluntaryGroupExit((tabId, groupId) => {
+      BindingService.preserveRouteOnGroupExit(tabId, groupId);
+    });
+  },
+
   installNewTabRoute(): void {
     BrowsingSessions.setNewTabSessionProvider(() => {
       const general = generalBinding();

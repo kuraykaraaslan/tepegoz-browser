@@ -17,7 +17,11 @@ import {
   RemoveKeyByIdSchema,
   RenameProviderKeyInputSchema,
   ReorderKeysSchema,
+  SetProviderKeyModelSchema,
 } from '@tepegoz/desktop-ipc/schemas';
+import { PROVIDER_MODEL_CATALOG } from '@tepegoz/model-gateway';
+import { AppError } from '@tepegoz/libs';
+import type { AIProvider } from '@tepegoz/shared-types';
 import McpService from '../mcp/supervisor.electron';
 import ExtensionCapabilityService from '../extensions/capability-supervisor.electron';
 import FileOperationsHost from '../file-operations/file-operations-host';
@@ -47,6 +51,18 @@ function credentialsStatus(): CredentialsStatus {
     providers: CredentialVault.status(),
     keys: CredentialVault.listMeta(),
   };
+}
+
+/**
+ * A per-key model pin is only meaningful if the RUNTIME can actually route to it, so the id must be one
+ * the provider's catalog lists (the same list the picker is built from). '' = auto/tiered routing.
+ * Rejecting here — at the trust boundary — keeps an unroutable id out of the vault entirely.
+ */
+function assertModelInCatalog(provider: AIProvider, model: string): void {
+  if (model === '') return;
+  if (!PROVIDER_MODEL_CATALOG[provider].some((m) => m.id === model)) {
+    throw new AppError(`Unknown model '${model}' for provider '${provider}'.`, 400);
+  }
 }
 
 /**
@@ -188,6 +204,17 @@ export function registerAppIpc(): void {
   handle(IpcChannels.credentialsRename, (_event, payload): CredentialsStatus => {
     const { keyId, label } = RenameProviderKeyInputSchema.parse(payload);
     CredentialVault.renameKey(keyId, label);
+    return credentialsStatus();
+  });
+
+  handle(IpcChannels.credentialsSetModel, (_event, payload): CredentialsStatus => {
+    const { keyId, model } = SetProviderKeyModelSchema.parse(payload);
+    const meta = CredentialVault.listMeta().find((k) => k.id === keyId);
+    if (meta === undefined) {
+      throw new AppError('Key not found.', 404);
+    }
+    assertModelInCatalog(meta.provider, model);
+    CredentialVault.setKeyModel(keyId, model);
     return credentialsStatus();
   });
 

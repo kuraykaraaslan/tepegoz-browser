@@ -27,6 +27,7 @@ export interface SettingsSectionsCtx {
   onAddKey: (provider: ProviderId, label: string, apiKey: string) => Promise<void>;
   onRemoveKeyById: (id: string) => Promise<void>;
   onRenameKey: (id: string, label: string) => Promise<void>;
+  onSetKeyModel: (id: string, model: string) => Promise<void>;
   onReorderKeys: (orderedIds: string[]) => Promise<void>;
   loginCredentials: LoginCredentialMeta[];
   onLoginSectionMount: () => Promise<void>;

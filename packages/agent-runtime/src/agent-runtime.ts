@@ -10,6 +10,7 @@ import { inspectEgress } from '@tepegoz/security-policy';
 import { type Plan } from '@tepegoz/shared-types';
 import type { AgentEventKind } from '@tepegoz/ext-agent/types';
 import PreferenceStore from '@tepegoz/preferences';
+import CredentialVault from '@tepegoz/credential-vault';
 import {
   advanceRunPhase,
   checkpointForDecision,
@@ -117,11 +118,13 @@ export async function runAgent(
   // Resolve + register the provider (eval seam → vault/prefs) and get the id that drives routing.
   const provider = registerRunProvider(deps, prefs, localAvailable, effort);
 
-  // Per-run model pin (Agent panel Model dropdown): when the user pinned a model for the RESOLVED
-  // provider, route every tier (plan/exec/classify) to it instead of the router's per-tier choice. Read
-  // live by the gateway, so a mid-run switch (pushed by the IPC layer) lands on the next request. The
-  // host clears it when the run ends (the gateway is a process-global shared with other model callers).
-  const pinnedModel = prefs.agentModelOverride[provider] ?? '';
+  // Per-run model pin: the model is pinned on the KEY (Settings → Providers, or the Agent panel's Model
+  // dropdown, which writes the same record), so read it off the key this run resolved to — the
+  // provider's highest-priority one. When set, every tier (plan/exec/classify) routes to it instead of
+  // the router's per-tier choice. Read live by the gateway, so a mid-run switch (pushed by the IPC
+  // layer) lands on the next request. The host clears it when the run ends (the gateway is a
+  // process-global shared with other model callers). An injected eval provider has no key → no pin.
+  const pinnedModel = deps.provider === undefined ? CredentialVault.modelForProvider(provider) : '';
   ModelGateway.setModelOverride(pinnedModel.length > 0 ? { provider, model: pinnedModel } : null);
 
   const route = ModelRouter.route({ capability: 'plan', costSaver, localAvailable, provider });

@@ -5,7 +5,6 @@ import type { StartupMode } from '@tepegoz/desktop-ipc';
 import { PROVIDERS, Select } from './settings-shared';
 import { AppearanceSection, LanguageRegionSection } from './settings-appearance-language';
 import {
-  DefaultModelsSection,
   LocalActionsSection,
   LocalModelsSection,
   ProvidersSection,
@@ -196,7 +195,7 @@ export function generalAndAiSections(ctx: SettingsSectionsCtx): SettingsSection[
       group: s.groupAiAgent,
       label: s.providersTitle,
       icon: <IconKey />,
-      searchText: `${s.providersTitle} ${s.providersSubtitle} ${s.apiKey} ${s.addKey} ${s.defaultModels.title} ${s.defaultModels.subtitle} ${PROVIDERS.map((p) => s.providerNames[p]).join(' ')}`,
+      searchText: `${s.providersTitle} ${s.providersSubtitle} ${s.apiKey} ${s.addKey} ${s.keyModel.label} ${s.keyModel.hint} ${PROVIDERS.map((p) => s.providerNames[p]).join(' ')}`,
       content: (
         <div className="space-y-6">
           <ProvidersSection
@@ -205,10 +204,10 @@ export function generalAndAiSections(ctx: SettingsSectionsCtx): SettingsSection[
             onAdd={ctx.onAddKey}
             onRemoveById={ctx.onRemoveKeyById}
             onRename={ctx.onRenameKey}
+            onSetModel={ctx.onSetKeyModel}
             onReorder={ctx.onReorderKeys}
             notify={notify}
           />
-          <DefaultModelsSection prefs={prefs} setPref={setPref} />
         </div>
       ),
     },
