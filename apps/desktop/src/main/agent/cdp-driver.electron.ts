@@ -1,7 +1,7 @@
 import type { WebContents } from 'electron';
 import { AppError, Logger } from '@tepegoz/libs';
 import { HumanInputAdapter } from '@tepegoz/human-input';
-import type { NetworkObservation } from '@tepegoz/browser-tools';
+import type { InterceptedDialog, NetworkObservation } from '@tepegoz/browser-tools';
 import {
   LOAD_TIMEOUT_MS,
   type DriverCore,
@@ -10,8 +10,14 @@ import {
   type SnapshotDeps,
   type SnapshotResult,
 } from './cdp-driver-schemas.electron.js';
-import { isOriginSwap, originOf, originSwapMessage, type RefRegistry } from '@tepegoz/tool-executor';
+import {
+  isOriginSwap,
+  originOf,
+  originSwapMessage,
+  type RefRegistry,
+} from '@tepegoz/tool-executor';
 import { locatorsToObjectId, pathToObjectId, readValue } from './cdp-driver-dom.electron.js';
+import { attachDialogInterceptor, interceptionsSince } from './cdp-driver-dialogs.electron.js';
 import { attachNetworkRecorder, networkSince } from './cdp-driver-network.electron.js';
 import { waitForPageSettled } from './cdp-driver-session.electron.js';
 import { snapshotElements as snapshotElementsImpl } from './cdp-driver-snapshot.electron.js';
@@ -49,7 +55,10 @@ export default class CdpDriver {
   /** Per-tab ref (1-based) → node target maps, from each tab's latest snapshot. */
   private static readonly refMaps = new WeakMap<WebContents, Map<number, RefTarget>>();
   /** Per-tab previous render-DOM snapshot (url + element fingerprints) for `*[n]` new-element marking. */
-  private static readonly prevSnapshots = new WeakMap<WebContents, { url: string; hashes: Set<string> }>();
+  private static readonly prevSnapshots = new WeakMap<
+    WebContents,
+    { url: string; hashes: Set<string> }
+  >();
   /** S2 PR1: per-tab identity → ref carry-over for stable refs (unused on the positional path). */
   private static readonly refRegistries = new WeakMap<WebContents, RefRegistry>();
   /** S4 PR2: the page URL each tab's ref map was built against. */
@@ -85,15 +94,15 @@ export default class CdpDriver {
     try {
       wc.debugger.attach('1.3');
     } catch (err) {
-      throw new AppError(
-        `Cannot drive the page (is DevTools open on it?): ${String(err)}`,
-        409,
-      );
+      throw new AppError(`Cannot drive the page (is DevTools open on it?): ${String(err)}`, 409);
     }
     CdpDriver.attached = wc;
     // Subscribe BEFORE Network.enable so the first navigation's responses are not missed (AI-8B).
     // Idempotent per WebContents, so re-attaching on a tab switch cannot double-subscribe.
     attachNetworkRecorder(wc);
+    // S3 PR4: same idempotent-per-tab shape — auto-decline any JS dialog and suppress `beforeunload`
+    // (see cdp-driver-dialogs.electron.ts for why, and the spike that cleared the DevTools-conflict risk).
+    attachDialogInterceptor(wc);
     // A tab that navigates/closes must not leave us pointing at a dead session.
     wc.debugger.once('detach', () => {
       if (CdpDriver.attached === wc) CdpDriver.attached = null;
@@ -187,11 +196,17 @@ export default class CdpDriver {
     if (locators !== undefined && locators.tag.length > 0) {
       const byIdentity = await locatorsToObjectId(wc, locators);
       if (byIdentity !== null) {
-        Logger.info('[input] ref re-found by identity after a stale path', { ref, tag: locators.tag });
+        Logger.info('[input] ref re-found by identity after a stale path', {
+          ref,
+          tag: locators.tag,
+        });
         return { objectId: byIdentity };
       }
     }
-    throw new AppError('Element is no longer on the page — read the page elements again first', 409);
+    throw new AppError(
+      'Element is no longer on the page — read the page elements again first',
+      409,
+    );
   }
 
   static async setFileInputFiles(
@@ -279,6 +294,15 @@ export default class CdpDriver {
    */
   static networkSince(wc: WebContents, sinceMs: number): NetworkObservation[] {
     return networkSince(wc, sinceMs);
+  }
+
+  /**
+   * Dialogs/`beforeunload` prompts intercepted on `wc` at or after `sinceMs` (S3 PR4) — an auto-declined
+   * `window.confirm`/`alert`/`prompt`, or a suppressed unsaved-changes prompt. Empty means "nothing
+   * observed", NOT "nothing happened".
+   */
+  static interceptionsSince(wc: WebContents, sinceMs: number): InterceptedDialog[] {
+    return interceptionsSince(wc, sinceMs);
   }
 
   /** Wait for a load triggered by an interaction to settle, then network and DOM quiescence. */

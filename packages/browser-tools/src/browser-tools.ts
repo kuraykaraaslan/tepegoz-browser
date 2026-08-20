@@ -125,7 +125,14 @@ function selectOptionResult(
   optionLabels: string[] | undefined,
   after: { url: string; title: string },
   changed: boolean,
-): { ok: true; url: string; title: string; changed: boolean; recoveryHint?: string; note?: string } {
+): {
+  ok: true;
+  url: string;
+  title: string;
+  changed: boolean;
+  recoveryHint?: string;
+  note?: string;
+} {
   if (value === undefined) {
     return {
       ok: true,
@@ -149,7 +156,13 @@ function selectOptionResult(
         ' Call select_option again with one of the exact labels.',
     };
   }
-  return { ok: true, url: after.url, title: after.title, changed, note: `Selected "${selected}" in the dropdown.` };
+  return {
+    ok: true,
+    url: after.url,
+    title: after.title,
+    changed,
+    note: `Selected "${selected}" in the dropdown.`,
+  };
 }
 
 /** Viewport expansion (CSS px per edge) used by the whole-form check, so a required field below the fold
@@ -186,7 +199,11 @@ interface InteractionResult {
 const MAX_QUOTED_VALUE = 120;
 function safeValue(raw: string): string {
   const { text } = sanitizeContent(raw);
-  return text.replace(/["'\r\n]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, MAX_QUOTED_VALUE);
+  return text
+    .replace(/["'\r\n]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, MAX_QUOTED_VALUE);
 }
 
 /** Everything the post-action reporting rules need about one completed interaction. */
@@ -290,10 +307,7 @@ function fillResult(text: string, ctx: InteractionContext): InteractionResult {
 }
 
 /** The `scroll_to_text` reveal's result: its meaningful outcome is `found`, not the structural delta. */
-function scrollToTextResult(
-  nthRequested: number,
-  ctx: InteractionContext,
-): InteractionResult {
+function scrollToTextResult(nthRequested: number, ctx: InteractionContext): InteractionResult {
   const { after, changed, found, matchCount } = ctx;
   if (found !== true) {
     return {
@@ -384,7 +398,13 @@ function interactionResultBody(
 ): InteractionResult {
   const { before, after, changed } = ctx;
   if (args.action === 'select_option') {
-    return selectOptionResult(selectOptionValue(args), ctx.selected, ctx.optionLabels, after, changed);
+    return selectOptionResult(
+      selectOptionValue(args),
+      ctx.selected,
+      ctx.optionLabels,
+      after,
+      changed,
+    );
   }
   if (args.action === 'scroll_to_text') return scrollToTextResult(args.nth ?? 1, ctx);
   if (args.action === 'press' || args.action === 'send_keys') return keysResult(ctx);
@@ -470,6 +490,39 @@ async function networkWarning(
   try {
     const observations = await host.networkSince(sinceMs, tabId);
     return describeNetworkFailures(selectActionFailures(observations, pageUrl), pageUrl);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * S3 PR4: the note for a JS dialog auto-declined, or a `beforeunload` prompt suppressed, inside this
+ * action's window — or `undefined` when neither happened. Never throws, and a host that does not
+ * implement `interceptionsSince` (or errors asking it) degrades to `undefined` exactly like
+ * {@link networkWarning} — absence must never be read as "nothing happened".
+ *
+ * A `beforeunload` prompt was ALWAYS suppressed rather than left up (S3 PR4's whole point — a native OS
+ * dialog no DOM action can dismiss would otherwise strand the run), so its note explains the navigation
+ * did NOT happen, not merely that a prompt appeared.
+ */
+async function interceptionNote(
+  host: BrowserHost,
+  tabId: string | undefined,
+  sinceMs: number,
+): Promise<string | undefined> {
+  try {
+    const events = (await host.interceptionsSince?.(sinceMs, tabId)) ?? [];
+    if (events.length === 0) return undefined;
+    return events
+      .map((e) =>
+        e.kind === 'dialog'
+          ? `A page dialog appeared during this action ("${safeValue(e.message)}") and was automatically ` +
+            'declined — Tepegöz never accepts a page dialog on its own. If you need this, decide ' +
+            'deliberately and repeat the action.'
+          : "This action was blocked by the page's own unsaved-changes warning (beforeunload) — the " +
+            'navigation/reload did NOT happen. Save or discard your changes first, then try again.',
+      )
+      .join(' ');
   } catch {
     return undefined;
   }
@@ -584,10 +637,16 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
       'browser_update_location',
       'state_changing',
       'The DEFAULT way to open a page: navigate a tab to a web URL (reuses the tab). ' +
-        'args: { url: string, tabId?: string } — omit tabId for the active tab. Returns { url, title }.',
+        'args: { url: string, tabId?: string } — omit tabId for the active tab. Returns ' +
+        '{ url, title, note? } — `note` explains a beforeunload prompt that blocked the navigation (S3 PR4).',
     ),
     inputSchema: NavigateArgs,
-    handler: (args) => host.navigate(args.url, args.tabId),
+    handler: async (args) => {
+      const actedAt = Date.now();
+      const result = await host.navigate(args.url, args.tabId);
+      const note = await interceptionNote(host, args.tabId, actedAt);
+      return note === undefined ? result : { ...result, note };
+    },
   });
 
   CapabilityRegistry.register({
@@ -607,7 +666,13 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
     handler: async (args) => {
       const { url, title, elements, canvasFraction } = await host.snapshotElements(args.tabId);
       const key = args.tabId ?? ACTIVE_TAB;
-      const snapshot = buildElementsSnapshot(elements, url, title, diffMemory.get(key), canvasFraction);
+      const snapshot = buildElementsSnapshot(
+        elements,
+        url,
+        title,
+        diffMemory.get(key),
+        canvasFraction,
+      );
       diffMemory.set(key, snapshot.memory);
       return snapshot;
     },
@@ -699,7 +764,12 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
       handler: async (args) => {
         // Re-checked rather than captured, so the closure cannot hold a seam the host later removed.
         if (host.fillCredential === undefined) {
-          return { filled: false, field: args.field, origin: '', reason: 'credential filling is unavailable' };
+          return {
+            filled: false,
+            field: args.field,
+            origin: '',
+            reason: 'credential filling is unavailable',
+          };
         }
         return host.fillCredential(args.ref, args.field, args.tabId);
       },
@@ -711,12 +781,18 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
       'browser_update_history',
       'state_changing',
       "Move a tab through its own history, or reload it. args: { direction: 'back'|'forward'|'reload', " +
-        'tabId?: string } — omit tabId for the active tab. Returns { url, title, moved }. ' +
+        'tabId?: string } — omit tabId for the active tab. Returns { url, title, moved, note? }. ' +
         '`moved: false` means there was nowhere to go (e.g. no previous page), NOT that the page failed ' +
-        'to change. Use this to leave a page you opened by mistake instead of guessing its previous URL.',
+        'to change. Use this to leave a page you opened by mistake instead of guessing its previous URL. ' +
+        '`note` explains a beforeunload prompt that blocked the move (S3 PR4).',
     ),
     inputSchema: HistoryArgs,
-    handler: (args) => host.historyGo(args.direction, args.tabId),
+    handler: async (args) => {
+      const actedAt = Date.now();
+      const result = await host.historyGo(args.direction, args.tabId);
+      const note = await interceptionNote(host, args.tabId, actedAt);
+      return note === undefined ? result : { ...result, note };
+    },
   });
 
   CapabilityRegistry.register({
@@ -823,7 +899,11 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
         case 'select_option': {
           const optValue = selectOptionValue(args);
           if (optValue !== undefined) {
-            ({ selected, options: optionLabels } = await host.selectOption(args.ref, optValue, args.tabId));
+            ({ selected, options: optionLabels } = await host.selectOption(
+              args.ref,
+              optValue,
+              args.tabId,
+            ));
           }
           break;
         }
@@ -833,6 +913,10 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
       // Post-action verification, DOM-level AND network-level (AI-8B): the structural delta alone cannot
       // see a request the server rejected while the UI stayed put.
       const warning = await networkWarning(host, args.tabId, actedAt, after.url);
+      // S3 PR4: a confirm()/alert() the click raised, or a beforeunload the click's navigation tripped
+      // (e.g. clicking an <a href>), is otherwise invisible to the model — it already got auto-declined
+      // at the host boundary, so this is purely the report.
+      const dialogNote = await interceptionNote(host, args.tabId, actedAt);
       const result = interactionResult(args, {
         before,
         after,
@@ -848,7 +932,13 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
         spawnedTabs,
         fillWidget,
       });
-      return warning === undefined ? result : { ...result, networkWarning: warning };
+      const withWarning = warning === undefined ? result : { ...result, networkWarning: warning };
+      return dialogNote === undefined
+        ? withWarning
+        : {
+            ...withWarning,
+            note: withWarning.note === undefined ? dialogNote : `${withWarning.note} ${dialogNote}`,
+          };
     },
   });
 }

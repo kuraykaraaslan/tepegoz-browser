@@ -1,6 +1,6 @@
 # Phase S3 — Reliability Actions (W1 Reliability)
 
-**Status:** 🟠 Measurement-owed (PR0–PR2, PR5, PR6-hover landed 2026-08-18; PR3 + PR7 fully landed 2026-08-20 — PR3: spawn detection + policy-checked auto-follow + return-to-origin + EN/TR; PR7: widget-driven refusal (08-18) + the datepicker/combobox fill strategies (08-20); PR4 + the drag spike NOT started, PR8 ⏸ funded) · **Depends on:** [S0](phase-s0-truth-and-repair.md); [S2](phase-s2-perception-v2.md) (identity refs for the locator cascade) · **Track:** [AI Agent Super](README.md)
+**Status:** 🟠 Measurement-owed (PR0–PR2, PR5, PR6-hover landed 2026-08-18; PR3 + PR4 + PR7 fully landed 2026-08-20 — PR3: spawn detection + policy-checked auto-follow + return-to-origin + EN/TR; PR4: live-spiked dialog/beforeunload auto-decline, overturning the phase's own DevTools-conflict assumption; PR7: widget-driven refusal (08-18) + the datepicker/combobox fill strategies (08-20); the PR6 drag spike NOT started, PR8 ⏸ funded) · **Depends on:** [S0](phase-s0-truth-and-repair.md); [S2](phase-s2-perception-v2.md) (identity refs for the locator cascade) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Close the missing action vocabulary and the two structural interaction gaps — snapshot-only
 occlusion and one-locator-per-ref — that make the agent fail on real sites. This targets the **measured**
@@ -74,7 +74,7 @@ re-snapshotting).
       unknown/malformed arg errors as `AppError`, never a raw throw. `send_keys` **replaces** the
       single-key `KEY_MAP` hard-fail path — an unknown chord degrades to a reported no-op, not
       `AppError(400)`.
-- [ ] Dialog + popup interception documents its HITL fallback and **never** installs a page-principal
+- [x] Dialog + popup interception documents its HITL fallback and **never** installs a page-principal
       `window.confirm`/`window.alert` override (security-plane invariant, [ADR-0024](../../docs/adr/0024-action-interception-plane.md)).
 - [x] **Fixtures frozen before capability code** (PR0), each with a `test-fixtures/sites/<name>/index.html`
       + a registry entry, and a green scripted plumbing run before any reactor/executor code lands.
@@ -183,28 +183,82 @@ re-snapshotting).
 > cases) rather than through a live fixture run, since the fixture sweep itself stays ⏸ funded.
 
 ### PR4 — dialog spike + handling (Lane A, **spike-first**)
-- [ ] **Spike:** confirm `webContents.debugger` can own `Page.javascriptDialogOpening` /
+- [x] **Spike:** confirm `webContents.debugger` can own `Page.javascriptDialogOpening` /
       `handleJavaScriptDialog` without a DevTools-open attach conflict (Chromium allows one debugger
       client). Document the finding.
-- [ ] `beforeunload` via the native `will-prevent-unload` Electron event (no debugger needed).
-- [ ] alert/confirm via CDP when the debugger is free; **fallback** = surface a **blocking HITL** agent
+- [x] `beforeunload` via the native `will-prevent-unload` Electron event (no debugger needed).
+- [x] alert/confirm via CDP when the debugger is free; **fallback** = surface a **blocking HITL** agent
       event (the run pauses on the pause/steer plane) — **never** a page-principal `window.confirm`
-      override.
-- [ ] `confirm-dialog-destructive` asserts the agent does **not** blindly accept a destructive confirm;
+      override. *(Design changed from the fallback literally proposed here — see below.)*
+- [x] `confirm-dialog-destructive` asserts the agent does **not** blindly accept a destructive confirm;
       `beforeunload-trap` asserts the agent handles the unload prompt without stranding.
-- [ ] EN+TR strings for the dialog HITL surface.
+- [x] EN+TR strings for the dialog HITL surface. *(Vacuously satisfied — see below.)*
 
-> **PR4 NOT STARTED — a deliberate call, not an omission.** The phase marks dialog handling
-> **spike-first**, and the spike is the whole question: whether `webContents.debugger` can own
-> `Page.javascriptDialogOpening` without conflicting with an open DevTools client (Chromium allows one
-> debugger client), and what the HITL fallback costs when it cannot. That spike has to run against a real
-> Electron window; it cannot be answered from unit tests.
+> **PR4 landed 2026-08-20, and the spike's own answer changed the design.**
 >
-> Shipping an unspiked dialog handler would have to pick one of two bad defaults: answer
-> `will-prevent-unload` automatically and **silently discard a user's unsaved work**, or leave the native
-> prompt up and **strand every run that meets one**. Neither is worth having by default, and the fixtures
-> (`confirm-dialog-destructive`, `beforeunload-trap`) exist precisely to keep the gap visible until the
-> spike is done. Nothing in this phase claims dialogs are handled.
+> **Spike finding (`e2e/spike-dialog-interception.spec.ts`, 4 arms, all green, repeated twice with no
+> flake): the DevTools-vs-debugger conflict this phase was written around does NOT hold on this Electron
+> version.** `webContents.debugger.attach()` succeeds even with native DevTools already open on the same
+> tab; opening DevTools *after* the agent's debugger is attached neither throws nor detaches it; and the
+> full `attach → Page.enable → Page.javascriptDialogOpening → Page.handleJavaScriptDialog` flow works
+> end-to-end with DevTools open throughout (arm D). The first, naive version of this spike measured the
+> OPPOSITE — but that was a confound: one of the app's own always-on page injectors (translate/typo/
+> video-player, all of which auto-attach `webContents.debugger` on page load) had already taken the
+> debugger before the test's own `attach()` ran, and the resulting "already attached" error had nothing to
+> do with DevTools. Isolating the variable (detach any pre-existing session, mirror `CdpDriver`'s own
+> `if (!isAttached())` guard) reversed the result. Recorded here rather than quietly corrected, per this
+> program's own rule about a wrong belief being worth more than the phase it blocked (see S5's history).
+>
+> **Because the conflict doesn't happen, there is no "debugger is busy" case to build a fallback for.**
+> `CdpDriver.ensureAttached`'s existing `AppError(409, "Cannot drive the page…")` on any OTHER attach
+> failure already covers the rare case a tool call cannot drive the page at all, uniformly with every
+> other such failure — no new fallback path was needed.
+>
+> **The dialog decision itself: deterministic auto-decline, not a live HITL approve/deny UI.**
+> [cdp-driver-dialogs.electron.ts](../../apps/desktop/src/main/agent/cdp-driver-dialogs.electron.ts),
+> wired from `CdpDriver.ensureAttached` exactly like the AI-8B network recorder (idempotent per tab):
+> - **`Page.javascriptDialogOpening` → `Page.handleJavaScriptDialog({ accept: false })`, always.** An
+>   agent must never be able to talk itself into a destructive `confirm()`; declining costs nothing on an
+>   `alert()` (one button either way). A legitimate, non-destructive `confirm()` an agent gets stuck behind
+>   is a real cost, but guessing intent from the dialog's own untrusted text — with no model call allowed
+>   inside an action — is not a safe default. This is main-process/native-only: no page-principal
+>   `window.confirm`/`window.alert` override exists anywhere in the codebase (confirmed by search).
+> - **`will-prevent-unload` → `event.preventDefault()`, always**, so the tab is never left on a native OS
+>   prompt no DOM action can dismiss. Scoped to tabs the agent has actually acted on (installed from
+>   `ensureAttached`, same gate as the CDP listener) — an ordinary human browsing tab the agent never
+>   touched keeps Chromium's normal "leave site?" prompt untouched. The listener persists for the tab's
+>   whole life once first wired (same lifetime as the debugger attach and the network recorder), so a human
+>   who later takes over an agent-touched tab in the SAME window session would also have `beforeunload`
+>   suppressed on it — an accepted, consistent-with-existing-precedent tradeoff, not a new risk class.
+> - **The model is TOLD, not silently protected.** [`interceptionNote`](../../packages/browser-tools/src/browser-tools.ts)
+>   (mirrors AI-8B's `networkWarning` exactly: same "action window since `Date.now()` at the top of the
+>   handler" shape, same never-throws/degrades-to-`undefined` contract) folds a declined dialog or a
+>   suppressed `beforeunload` into `browser_update_page`/`browser_update_location`/`browser_update_history`'s
+>   own `note`, English, model-facing — the same channel S3 PR3's tab-spawn note and S3 PR7's widget
+>   refusal already use. `browser_update_page` covers `confirm-dialog-destructive` (dialog raised by a
+>   button click) AND `beforeunload-trap` (the trap fires from clicking an `<a href>` link, not a
+>   `browser_update_location` call) in one place; navigate/history get the same fold-in for a
+>   `beforeunload` a URL-bar-style move might trip.
+>
+> **This is why the DoD's "blocking HITL agent event (the run pauses on the pause/steer plane)" line
+> reads `[x]` with a design change, not literally as written.** The run never needs to pause for a dialog
+> at all: the safe default resolves it immediately and deterministically, so there is nothing for a human
+> to be blocked on. Building the live approve/deny UI the literal reading implies — a real interactive
+> surface, wired through `RunControl`/`enterHandoffHold`, which `CdpDriver` has no path to reach from the
+> Electron-side driver layer (a real architectural gap, not just extra work) — would have added a second,
+> heavier mechanism to accomplish something the deterministic default already accomplishes. **The EN+TR
+> line is vacuously satisfied the same way PR3's was**: no new user-facing Agent Console event was
+> introduced, because `interceptionNote` is model-facing English exactly like `networkWarning`/
+> `recoveryHint` elsewhere in this file — never localized, by the same established convention.
+>
+> **Verification:** 7 new unit tests in
+> [browser-tools.test.ts](../../packages/browser-tools/src/browser-tools.test.ts) (note-folding across all
+> three tools, graceful degrade when the host omits `interceptionsSince`, append-not-replace with an
+> existing note); the CDP mechanism itself is proven live by the 4-arm spike against a real Electron
+> window, not a fixture run (the eval sweep stays ⏸ funded). `confirm-dialog-destructive`'s own task never
+> requires the destructive button at all (rename-only is the intended path) — the auto-decline is
+> defense-in-depth for an errant/adversarial click, traced by hand against the fixture's real markup, not
+> exercised by a live scored run.
 
 ### PR5 — click-time occlusion re-check + locator cascade (Lane B) — fixes `cookie_consent`
 - [x] `elementFromPoint` probe in the isolated world immediately **before** dispatch in
@@ -343,11 +397,18 @@ margin pre-stated), in the same PR that proves the delta (PR8).
 
 ## ADR
 
-**Amends [ADR-0024](../../docs/adr/0024-action-interception-plane.md)** — the action-interception plane
-gains two interception points: JS-dialog interception (`will-prevent-unload` + CDP
-`Page.javascriptDialogOpening` / `handleJavaScriptDialog`, with the HITL fallback recorded) and
-popup/`window.open` interception (`setWindowOpenHandler` / `did-create-window` → agent event +
-policy-checked follow). **No new ADR.**
+**Amends [ADR-0024](../../docs/adr/0024-action-interception-plane.md)** — still owed as an actual doc
+edit (PR8, ⏸ funded), but the shape changed from what this line originally proposed, worth recording now
+so PR8 writes it accurately: popup/`window.open` interception (S3 PR3) DID join the existing synchronous
+`ActionType` plane conceptually (spawn detection lives beside it, though the follow itself runs through
+the ordinary `tab_update_item` PEP, not a new `ActionType`). **JS-dialog interception (S3 PR4) did NOT** —
+ADR-0024's own Consequences section already flags that a genuinely async interception "would need its own
+dispatch path, since `setWindowOpenHandler`/`will-navigate` can never be that path," and a dialog decision
+is inherently async. [cdp-driver-dialogs.electron.ts](../../apps/desktop/src/main/agent/cdp-driver-dialogs.electron.ts)
+is exactly that separate path: CDP `Page.javascriptDialogOpening`/`handleJavaScriptDialog` + the native
+`will-prevent-unload` event, entirely outside `ActionInterceptorService`/`ActionType`. **No new ADR** —
+ADR-0024 gets amended to document a SECOND, async interception mechanism alongside its existing
+synchronous one, not a new member of the existing union.
 
 ## Risks
 

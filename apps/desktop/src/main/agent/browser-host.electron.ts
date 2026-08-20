@@ -10,7 +10,12 @@ import TabManager from '../tabs';
 import { isParkedToTray } from '../window-parked';
 import CdpDriver from './cdp-driver.electron';
 import AgentTabGroup from './agent-tab-group.electron';
-import { showPageCursor, hidePageCursor, isUserControlActive, resetForAgentAction } from './page-cursor.electron';
+import {
+  showPageCursor,
+  hidePageCursor,
+  isUserControlActive,
+  resetForAgentAction,
+} from './page-cursor.electron';
 import { buildArticleTextExpression } from './article-text-script.js';
 import { runExtraction } from './extraction-sandbox.electron.js';
 import { fillCredential as brokerFill } from './credential-broker.electron.js';
@@ -238,7 +243,8 @@ async function scrollToText(
   tabId?: string,
 ): Promise<{ found: boolean; count: number }> {
   const wc = requireWc(tabId);
-  const n = nth !== undefined && Number.isFinite(nth) && nth > 0 ? Math.min(Math.floor(nth), 50) : 1;
+  const n =
+    nth !== undefined && Number.isFinite(nth) && nth > 0 ? Math.min(Math.floor(nth), 50) : 1;
   const raw: unknown = await wc.executeJavaScript(
     `(() => {
       try {
@@ -265,7 +271,8 @@ async function scrollToText(
     true,
   );
   const shaped = (raw as { found?: unknown; count?: unknown } | null) ?? {};
-  const count = typeof shaped.count === 'number' && Number.isFinite(shaped.count) ? shaped.count : 0;
+  const count =
+    typeof shaped.count === 'number' && Number.isFinite(shaped.count) ? shaped.count : 0;
   return { found: shaped.found === true, count };
 }
 
@@ -291,7 +298,8 @@ async function pageDimensions(wc: WebContents): Promise<PageDimensions> {
   const height = (raw as { height?: unknown }).height;
   return {
     width: typeof width === 'number' && Number.isFinite(width) ? Math.max(1, Math.round(width)) : 1,
-    height: typeof height === 'number' && Number.isFinite(height) ? Math.max(1, Math.round(height)) : 1,
+    height:
+      typeof height === 'number' && Number.isFinite(height) ? Math.max(1, Math.round(height)) : 1,
   };
 }
 
@@ -305,19 +313,19 @@ function resizeForMaxEdge(image: Electron.NativeImage, maxEdge: number): Electro
   });
 }
 
-async function captureScreenshot(input: ScreenshotCaptureInput = {}): Promise<ScreenshotCaptureResult> {
+async function captureScreenshot(
+  input: ScreenshotCaptureInput = {},
+): Promise<ScreenshotCaptureResult> {
   const wc = requireWc(input.tabId);
   const mode = input.mode ?? 'viewport';
   const maxEdge = input.maxEdge ?? 1400;
   const page = await pageDimensions(wc);
-  const truncated =
-    mode === 'fullPage' && page.width * page.height > SCREENSHOT_MAX_CAPTURE_PIXELS;
-  const captureHeight =
-    truncated ? Math.max(1, Math.floor(SCREENSHOT_MAX_CAPTURE_PIXELS / page.width)) : page.height;
+  const truncated = mode === 'fullPage' && page.width * page.height > SCREENSHOT_MAX_CAPTURE_PIXELS;
+  const captureHeight = truncated
+    ? Math.max(1, Math.floor(SCREENSHOT_MAX_CAPTURE_PIXELS / page.width))
+    : page.height;
   const rect =
-    mode === 'fullPage'
-      ? { x: 0, y: 0, width: page.width, height: captureHeight }
-      : undefined;
+    mode === 'fullPage' ? { x: 0, y: 0, width: page.width, height: captureHeight } : undefined;
   const raw = await wc.capturePage(rect);
   if (raw.isEmpty()) throw new AppError('Could not capture page screenshot', 502);
   const image = resizeForMaxEdge(raw, maxEdge);
@@ -341,8 +349,10 @@ async function captureScreenshot(input: ScreenshotCaptureInput = {}): Promise<Sc
 
 /** The target tab's WebContents for CDP-driven perception/action, or a 409 when there is none. */
 function requireWc(tabId?: string): WebContents {
-  const wc = tabId === undefined ? TabManager.activeWebContents() : TabManager.webContentsForTab(tabId);
-  if (wc === null) throw new AppError(tabId === undefined ? 'No active page' : `No web tab: ${tabId}`, 409);
+  const wc =
+    tabId === undefined ? TabManager.activeWebContents() : TabManager.webContentsForTab(tabId);
+  if (wc === null)
+    throw new AppError(tabId === undefined ? 'No active page' : `No web tab: ${tabId}`, 409);
   return wc;
 }
 
@@ -397,7 +407,8 @@ function onInputAction(kind: string, detail: string): void {
  *  used by input-action narration and by the run-control handlers (paused/resumed/steered). No-op when no
  *  run is bound. */
 export function emitCurrentRunEvent(kind: AgentEventKind, message: string, detail?: string): void {
-  if (currentAgentRunId === null || currentAgentGroupId === null || currentAgentSend === null) return;
+  if (currentAgentRunId === null || currentAgentGroupId === null || currentAgentSend === null)
+    return;
   currentAgentSend({
     runId: currentAgentRunId,
     groupId: currentAgentGroupId,
@@ -409,8 +420,7 @@ export function emitCurrentRunEvent(kind: AgentEventKind, message: string, detai
 }
 
 // Single module-level adapter — curX/curY accumulate across agent actions within a session.
-const cdpSend: CdpSend = (method, params) =>
-  requireWc().debugger.sendCommand(method, params);
+const cdpSend: CdpSend = (method, params) => requireWc().debugger.sendCommand(method, params);
 
 /**
  * Is anything the agent is doing right now actually on screen? (S7 PR3)
@@ -500,7 +510,8 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
   },
   snapshotElements: (tabId, opts) => CdpDriver.snapshotElements(requireWc(tabId), opts ?? {}),
   // A stale ref / non-field element must read as "unverified", never as an error that fails the fill.
-  readElementValue: (ref, tabId) => CdpDriver.readElementValue(requireWc(tabId), ref).catch(() => null),
+  readElementValue: (ref, tabId) =>
+    CdpDriver.readElementValue(requireWc(tabId), ref).catch(() => null),
   // S6 PR6: the broker fills through the SAME real-gesture path as any other fill — the secret's only
   // journey is vault → main → page, and it never enters an argument the agent supplied or a result it
   // receives.
@@ -522,9 +533,16 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
   networkSince: (sinceMs, tabId) => {
     // Deliberately tolerant: a missing/destroyed tab yields "nothing observed", never an error — the
     // network signal is post-action EVIDENCE and must not be able to fail an otherwise-fine interaction.
-    const wc = tabId === undefined ? TabManager.activeWebContents() : TabManager.webContentsForTab(tabId);
+    const wc =
+      tabId === undefined ? TabManager.activeWebContents() : TabManager.webContentsForTab(tabId);
     if (wc === null || wc.isDestroyed()) return Promise.resolve([]);
     return Promise.resolve(CdpDriver.networkSince(wc, sinceMs));
+  },
+  interceptionsSince: (sinceMs, tabId) => {
+    const wc =
+      tabId === undefined ? TabManager.activeWebContents() : TabManager.webContentsForTab(tabId);
+    if (wc === null || wc.isDestroyed()) return Promise.resolve([]);
+    return Promise.resolve(CdpDriver.interceptionsSince(wc, sinceMs));
   },
   captureScreenshot,
   clickElement: async (ref, tabId) => {
@@ -539,7 +557,11 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
   },
   hoverElement: async (ref, tabId) => {
     resetForAgentAction();
-    await CdpDriver.hoverElement(requireWc(tabId), ref, tabId === undefined ? browserAdapter : undefined);
+    await CdpDriver.hoverElement(
+      requireWc(tabId),
+      ref,
+      tabId === undefined ? browserAdapter : undefined,
+    );
   },
   fillElement: async (ref, text, tabId) => {
     resetForAgentAction();
@@ -574,7 +596,12 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
   },
   scrollPage: async (direction, amount, tabId) => {
     resetForAgentAction();
-    await CdpDriver.scrollPage(requireWc(tabId), direction, amount, tabId === undefined ? browserAdapter : undefined);
+    await CdpDriver.scrollPage(
+      requireWc(tabId),
+      direction,
+      amount,
+      tabId === undefined ? browserAdapter : undefined,
+    );
     onCursorHide();
   },
   scrollToText: (text, nth, tabId) => {

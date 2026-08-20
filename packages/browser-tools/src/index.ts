@@ -6,7 +6,7 @@
  * in `@tepegoz/tab-engine`; journal tools in `@tepegoz/journal-tools`. Extracted from `apps/desktop` per
  * docs/package-map.md.
  */
-export { type BrowserHost } from './host';
+export { type BrowserHost, type InterceptedDialog } from './host';
 export { registerBrowserTools } from './browser-tools';
 export {
   buildPageSnapshot,

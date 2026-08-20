@@ -85,7 +85,12 @@ describe('registerBrowserTools', () => {
         url: 'https://x',
         title: 'X',
         elements: [
-          { role: 'textbox', name: 'Email', tag: 'input', attributes: { required: 'true', type: 'email' } },
+          {
+            role: 'textbox',
+            name: 'Email',
+            tag: 'input',
+            attributes: { required: 'true', type: 'email' },
+          },
           { role: 'button', name: 'Sign up', tag: 'button', attributes: { type: 'submit' } },
         ],
       });
@@ -93,7 +98,8 @@ describe('registerBrowserTools', () => {
     registerBrowserTools({
       host: fakeHost({
         snapshotElements,
-        readPage: () => Promise.resolve({ url: 'https://x', title: 'X', text: 'Sign up', sig: 's1' }),
+        readPage: () =>
+          Promise.resolve({ url: 'https://x', title: 'X', text: 'Sign up', sig: 's1' }),
       }),
     });
     const result = (await CapabilityRegistry.get('browser_validate_form')!.handler({})) as {
@@ -115,8 +121,12 @@ describe('registerBrowserTools', () => {
   });
 
   it('browser_validate_form threads tabId to BOTH host reads', async () => {
-    const snapshotElements = vi.fn(() => Promise.resolve({ url: 'https://x', title: 'X', elements: [] }));
-    const readPage = vi.fn(() => Promise.resolve({ url: 'https://x', title: 'X', text: '', sig: 's1' }));
+    const snapshotElements = vi.fn(() =>
+      Promise.resolve({ url: 'https://x', title: 'X', elements: [] }),
+    );
+    const readPage = vi.fn(() =>
+      Promise.resolve({ url: 'https://x', title: 'X', text: '', sig: 's1' }),
+    );
     registerBrowserTools({ host: fakeHost({ snapshotElements, readPage }) });
     await CapabilityRegistry.get('browser_validate_form')!.handler({ tabId: 'tab-9' });
     expect(snapshotElements).toHaveBeenCalledWith('tab-9', expect.any(Object));
@@ -135,7 +145,9 @@ describe('registerBrowserTools', () => {
   });
 
   it('select_option → host.selectOption and reports the chosen label', async () => {
-    const selectOption = vi.fn(() => Promise.resolve({ selected: 'Türkiye', options: ['Germany', 'Türkiye'] }));
+    const selectOption = vi.fn(() =>
+      Promise.resolve({ selected: 'Türkiye', options: ['Germany', 'Türkiye'] }),
+    );
     registerBrowserTools({ host: fakeHost({ selectOption }) });
     const result = await CapabilityRegistry.get('browser_update_page')!.handler({
       action: 'select_option',
@@ -148,7 +160,9 @@ describe('registerBrowserTools', () => {
 
   it('select_option accepts a `text` alias for the option value', async () => {
     // (The handler runs post-validation; the gateway's z.coerce handles a string `ref` on the real path.)
-    const selectOption = vi.fn(() => Promise.resolve({ selected: 'Türkiye', options: ['Germany', 'Türkiye'] }));
+    const selectOption = vi.fn(() =>
+      Promise.resolve({ selected: 'Türkiye', options: ['Germany', 'Türkiye'] }),
+    );
     registerBrowserTools({ host: fakeHost({ selectOption }) });
     const result = await CapabilityRegistry.get('browser_update_page')!.handler({
       action: 'select_option',
@@ -164,7 +178,11 @@ describe('registerBrowserTools', () => {
       registerBrowserTools({ host: fakeHost() });
       return CapabilityRegistry.get('browser_update_page')!;
     })();
-    const parsed = cap.inputSchema.safeParse({ action: 'select_option', ref: '4', value: 'Türkiye' });
+    const parsed = cap.inputSchema.safeParse({
+      action: 'select_option',
+      ref: '4',
+      value: 'Türkiye',
+    });
     expect(parsed.success).toBe(true);
     if (parsed.success) expect((parsed.data as { ref: number }).ref).toBe(4);
   });
@@ -181,7 +199,9 @@ describe('registerBrowserTools', () => {
   });
 
   it('select_option miss → recoveryHint lists the available options', async () => {
-    const selectOption = vi.fn(() => Promise.resolve({ selected: null, options: ['Germany', 'Türkiye'] }));
+    const selectOption = vi.fn(() =>
+      Promise.resolve({ selected: null, options: ['Germany', 'Türkiye'] }),
+    );
     registerBrowserTools({ host: fakeHost({ selectOption }) });
     const result = (await CapabilityRegistry.get('browser_update_page')!.handler({
       action: 'select_option',
@@ -305,8 +325,12 @@ describe('registerBrowserTools', () => {
   });
 
   it('passes tabId through read/snapshot/action tools', async () => {
-    const readPage = vi.fn(() => Promise.resolve({ url: 'https://x', title: 'X', text: 'hello', sig: 's1' }));
-    const snapshotElements = vi.fn(() => Promise.resolve({ url: 'https://x', title: 'X', elements: [] }));
+    const readPage = vi.fn(() =>
+      Promise.resolve({ url: 'https://x', title: 'X', text: 'hello', sig: 's1' }),
+    );
+    const snapshotElements = vi.fn(() =>
+      Promise.resolve({ url: 'https://x', title: 'X', elements: [] }),
+    );
     const fillElement = vi.fn(() => Promise.resolve({ widget: null }));
     registerBrowserTools({ host: fakeHost({ readPage, snapshotElements, fillElement }) });
 
@@ -345,7 +369,8 @@ describe('registerBrowserTools', () => {
     // move at all. Before AI-8B this was indistinguishable from a missed click.
     registerBrowserTools({
       host: fakeHost({
-        readPage: () => Promise.resolve({ url: 'https://x/settings', title: 'X', text: 'same', sig: 's1' }),
+        readPage: () =>
+          Promise.resolve({ url: 'https://x/settings', title: 'X', text: 'same', sig: 's1' }),
         networkSince: () => Promise.resolve([response({ url: 'https://x/api/save' })]),
       }),
     });
@@ -495,7 +520,11 @@ describe('registerBrowserTools', () => {
   it('passes the target tabId to the network read', async () => {
     const networkSince = vi.fn(() => Promise.resolve<NetworkObservation[]>([]));
     registerBrowserTools({ host: fakeHost({ networkSince }) });
-    await CapabilityRegistry.get('browser_update_page')!.handler({ action: 'click', ref: 1, tabId: 'tab-2' });
+    await CapabilityRegistry.get('browser_update_page')!.handler({
+      action: 'click',
+      ref: 1,
+      tabId: 'tab-2',
+    });
     expect(networkSince).toHaveBeenCalledWith(expect.any(Number), 'tab-2');
   });
 });
@@ -514,7 +543,12 @@ describe('browser_get_article', () => {
     const result = await run(
       fakeHost({
         readArticleText: () =>
-          Promise.resolve({ url: 'https://x', title: 'X', text: 'the article body', source: 'article' }),
+          Promise.resolve({
+            url: 'https://x',
+            title: 'X',
+            text: 'the article body',
+            source: 'article',
+          }),
       }),
     );
     expect(result['source']).toBe('article');
@@ -551,17 +585,28 @@ describe('browser_get_article', () => {
 describe('navigation verbs and bounded waiting (S3 PR1)', () => {
   beforeEach(() => CapabilityRegistry.reset());
 
-  const call = async (id: string, args: Record<string, unknown>, host: BrowserHost): Promise<Record<string, unknown>> => {
+  const call = async (
+    id: string,
+    args: Record<string, unknown>,
+    host: BrowserHost,
+  ): Promise<Record<string, unknown>> => {
     registerBrowserTools({ host });
     const tool = CapabilityRegistry.get(id);
     const parsed = tool?.inputSchema.safeParse(args);
-    if (parsed?.success !== true) throw new Error('args rejected: ' + JSON.stringify(parsed?.error?.issues));
+    if (parsed?.success !== true)
+      throw new Error('args rejected: ' + JSON.stringify(parsed?.error?.issues));
     return (await tool?.handler(parsed.data)) as Record<string, unknown>;
   };
 
   it('browser_update_history passes the direction through and reports where it landed', async () => {
-    const historyGo = vi.fn(() => Promise.resolve({ url: 'https://x/prev', title: 'Prev', moved: true }));
-    const result = await call('browser_update_history', { direction: 'back' }, fakeHost({ historyGo }));
+    const historyGo = vi.fn(() =>
+      Promise.resolve({ url: 'https://x/prev', title: 'Prev', moved: true }),
+    );
+    const result = await call(
+      'browser_update_history',
+      { direction: 'back' },
+      fakeHost({ historyGo }),
+    );
     expect(historyGo).toHaveBeenCalledWith('back', undefined);
     expect(result).toEqual({ url: 'https://x/prev', title: 'Prev', moved: true });
   });
@@ -570,7 +615,9 @@ describe('navigation verbs and bounded waiting (S3 PR1)', () => {
     const result = await call(
       'browser_update_history',
       { direction: 'back' },
-      fakeHost({ historyGo: () => Promise.resolve({ url: 'https://x', title: 'X', moved: false }) }),
+      fakeHost({
+        historyGo: () => Promise.resolve({ url: 'https://x', title: 'X', moved: false }),
+      }),
     );
     expect(result['moved']).toBe(false);
   });
@@ -598,22 +645,34 @@ describe('navigation verbs and bounded waiting (S3 PR1)', () => {
 
   it('needs no value for network_idle', async () => {
     const waitForCondition = vi.fn(() => Promise.resolve({ satisfied: true, waitedMs: 120 }));
-    const result = await call('browser_validate_condition', { condition: 'network_idle' }, fakeHost({ waitForCondition }));
-    expect(waitForCondition).toHaveBeenCalledWith({ kind: 'network_idle', timeoutMs: 5000 }, undefined);
+    const result = await call(
+      'browser_validate_condition',
+      { condition: 'network_idle' },
+      fakeHost({ waitForCondition }),
+    );
+    expect(waitForCondition).toHaveBeenCalledWith(
+      { kind: 'network_idle', timeoutMs: 5000 },
+      undefined,
+    );
     expect(result['satisfied']).toBe(true);
   });
 
   it('refuses an unbounded wait at the schema boundary', () => {
     registerBrowserTools({ host: fakeHost() });
     const tool = CapabilityRegistry.get('browser_validate_condition');
-    expect(tool?.inputSchema.safeParse({ condition: 'text', value: 'x', timeoutMs: 600_000 }).success).toBe(false);
+    expect(
+      tool?.inputSchema.safeParse({ condition: 'text', value: 'x', timeoutMs: 600_000 }).success,
+    ).toBe(false);
   });
 });
 
 describe('send_keys chords (S3 PR2)', () => {
   beforeEach(() => CapabilityRegistry.reset());
 
-  const interact = async (args: Record<string, unknown>, host: BrowserHost): Promise<Record<string, unknown>> => {
+  const interact = async (
+    args: Record<string, unknown>,
+    host: BrowserHost,
+  ): Promise<Record<string, unknown>> => {
     registerBrowserTools({ host });
     const tool = CapabilityRegistry.get('browser_update_page');
     const parsed = tool?.inputSchema.safeParse(args);
@@ -623,7 +682,10 @@ describe('send_keys chords (S3 PR2)', () => {
 
   it('passes a chord string straight through to the host', async () => {
     const sendKeys = vi.fn(() => Promise.resolve({ sent: 2, unsupported: [] }));
-    const result = await interact({ action: 'send_keys', keys: 'Ctrl+A Delete' }, fakeHost({ sendKeys }));
+    const result = await interact(
+      { action: 'send_keys', keys: 'Ctrl+A Delete' },
+      fakeHost({ sendKeys }),
+    );
     expect(sendKeys).toHaveBeenCalledWith('Ctrl+A Delete', undefined);
     expect(result['unsupportedKeys']).toBeUndefined();
   });
@@ -650,7 +712,9 @@ describe('send_keys chords (S3 PR2)', () => {
   it('bounds the chord string at the schema boundary', () => {
     registerBrowserTools({ host: fakeHost() });
     const tool = CapabilityRegistry.get('browser_update_page');
-    expect(tool?.inputSchema.safeParse({ action: 'send_keys', keys: 'x'.repeat(500) }).success).toBe(false);
+    expect(
+      tool?.inputSchema.safeParse({ action: 'send_keys', keys: 'x'.repeat(500) }).success,
+    ).toBe(false);
   });
 });
 
@@ -658,7 +722,9 @@ describe('click-time occlusion re-check (S3 PR5)', () => {
   beforeEach(() => CapabilityRegistry.reset());
 
   it('refuses the click and names the blocker instead of clicking through it', async () => {
-    const clickElement = vi.fn(() => Promise.resolve({ occludedBy: '<div role="dialog"> "We use cookies"' }));
+    const clickElement = vi.fn(() =>
+      Promise.resolve({ occludedBy: '<div role="dialog"> "We use cookies"' }),
+    );
     registerBrowserTools({ host: fakeHost({ clickElement }) });
     const tool = CapabilityRegistry.get('browser_update_page');
     const parsed = tool?.inputSchema.safeParse({ action: 'click', ref: 3 });
@@ -701,7 +767,12 @@ describe('hover (S3 PR6)', () => {
     let call = 0;
     const readPage = () => {
       call += 1;
-      return Promise.resolve({ url: 'https://x', title: 'X', text: 'hello', sig: call > 1 ? 's2' : 's1' });
+      return Promise.resolve({
+        url: 'https://x',
+        title: 'X',
+        text: 'hello',
+        sig: call > 1 ? 's2' : 's1',
+      });
     };
     const result = await hover(fakeHost({ readPage }));
     expect(result['changed']).toBe(true);
@@ -747,7 +818,9 @@ describe('tab-spawn world model (S3 PR3)', () => {
 
   it('reports a tab the interaction opened, with its id, url and title', async () => {
     const result = await click(spawningHost());
-    expect(result['openedTabs']).toEqual([{ id: 't2', url: 'https://x/ticket', title: 'Ticket details' }]);
+    expect(result['openedTabs']).toEqual([
+      { id: 't2', url: 'https://x/ticket', title: 'Ticket details' },
+    ]);
     expect(String(result['note'])).toContain('opened a NEW TAB');
     expect(String(result['note'])).toContain('t2');
   });
@@ -759,7 +832,9 @@ describe('tab-spawn world model (S3 PR3)', () => {
   });
 
   it('says nothing when no tab opened', async () => {
-    const result = await click(fakeHost({ listOpenTabs: () => [{ id: 't1', url: 'https://x', title: 'X' }] }));
+    const result = await click(
+      fakeHost({ listOpenTabs: () => [{ id: 't1', url: 'https://x', title: 'X' }] }),
+    );
     expect(result['openedTabs']).toBeUndefined();
   });
 
@@ -768,6 +843,86 @@ describe('tab-spawn world model (S3 PR3)', () => {
     delete (host as { listOpenTabs?: unknown }).listOpenTabs;
     const result = await click(host);
     expect(result['openedTabs']).toBeUndefined();
+  });
+});
+
+describe('dialog / beforeunload interception (S3 PR4)', () => {
+  beforeEach(() => CapabilityRegistry.reset());
+
+  const click = async (host: BrowserHost): Promise<Record<string, unknown>> => {
+    registerBrowserTools({ host });
+    const tool = CapabilityRegistry.get('browser_update_page');
+    const parsed = tool?.inputSchema.safeParse({ action: 'click', ref: 1 });
+    if (parsed?.success !== true) throw new Error('args rejected');
+    return (await tool?.handler(parsed.data)) as Record<string, unknown>;
+  };
+
+  it('reports a confirm() the click raised and was auto-declined, folded into the note', async () => {
+    const result = await click(
+      fakeHost({
+        interceptionsSince: () =>
+          Promise.resolve([{ kind: 'dialog', message: 'Delete ALL project files?', ts: 999 }]),
+      }),
+    );
+    expect(String(result['note'])).toContain('Delete ALL project files?');
+    expect(String(result['note'])).toContain('automatically');
+    expect(String(result['note'])).toContain('declined');
+  });
+
+  it("reports a beforeunload that blocked the click's own navigation (e.g. an <a href>)", async () => {
+    const result = await click(
+      fakeHost({
+        interceptionsSince: () => Promise.resolve([{ kind: 'beforeunload', message: '', ts: 999 }]),
+      }),
+    );
+    expect(String(result['note'])).toContain('unsaved-changes warning');
+    expect(String(result['note'])).toContain('did NOT happen');
+  });
+
+  it('says nothing when nothing was intercepted', async () => {
+    const result = await click(fakeHost({ interceptionsSince: () => Promise.resolve([]) }));
+    expect(result['note']).toBeUndefined();
+  });
+
+  it('degrades to no note (never an error) when the host does not implement interceptionsSince', async () => {
+    const host = fakeHost();
+    expect((host as { interceptionsSince?: unknown }).interceptionsSince).toBeUndefined();
+    const result = await click(host);
+    expect(result['note']).toBeUndefined();
+  });
+
+  it('appends to an existing note (e.g. a spawned-tab note) rather than replacing it', async () => {
+    const result = await click(
+      fakeHost({
+        clickElement: () => Promise.resolve({ occludedBy: null }),
+        listOpenTabs: () => [{ id: 't1', url: 'https://x', title: 'X' }],
+        interceptionsSince: () =>
+          Promise.resolve([{ kind: 'dialog', message: 'Are you sure?', ts: 999 }]),
+      }),
+    );
+    expect(String(result['note'])).toContain('Are you sure?');
+  });
+
+  it('folds a beforeunload note into browser_update_location (navigate)', async () => {
+    registerBrowserTools({
+      host: fakeHost({
+        interceptionsSince: () => Promise.resolve([{ kind: 'beforeunload', message: '', ts: 999 }]),
+      }),
+    });
+    const tool = CapabilityRegistry.get('browser_update_location');
+    const result = (await tool?.handler({ url: 'https://x/next' })) as Record<string, unknown>;
+    expect(String(result['note'])).toContain('did NOT happen');
+  });
+
+  it('folds a beforeunload note into browser_update_history (back/forward/reload)', async () => {
+    registerBrowserTools({
+      host: fakeHost({
+        interceptionsSince: () => Promise.resolve([{ kind: 'beforeunload', message: '', ts: 999 }]),
+      }),
+    });
+    const tool = CapabilityRegistry.get('browser_update_history');
+    const result = (await tool?.handler({ direction: 'back' })) as Record<string, unknown>;
+    expect(String(result['note'])).toContain('did NOT happen');
   });
 });
 
@@ -783,7 +938,9 @@ describe('typed widgets refuse a raw fill (S3 PR7)', () => {
   };
 
   it('says NOTHING was typed into a read-only datepicker, and names the route that works', async () => {
-    const result = await fill(fakeHost({ fillElement: () => Promise.resolve({ widget: 'readonly' }) }));
+    const result = await fill(
+      fakeHost({ fillElement: () => Promise.resolve({ widget: 'readonly' }) }),
+    );
     expect(result['filled']).toBe(false);
     expect(result['fillRefused']).toBe('readonly');
     expect(String(result['recoveryHint'])).toContain('NOTHING was typed');
@@ -791,13 +948,17 @@ describe('typed widgets refuse a raw fill (S3 PR7)', () => {
   });
 
   it('explains a disabled field differently — enabling it is the fix, not clicking a widget', async () => {
-    const result = await fill(fakeHost({ fillElement: () => Promise.resolve({ widget: 'disabled' }) }));
+    const result = await fill(
+      fakeHost({ fillElement: () => Promise.resolve({ widget: 'disabled' }) }),
+    );
     expect(result['fillRefused']).toBe('disabled');
     expect(String(result['recoveryHint'])).toContain('enable it first');
   });
 
   it('names the popup list for an ARIA combobox', async () => {
-    const result = await fill(fakeHost({ fillElement: () => Promise.resolve({ widget: 'combobox' }) }));
+    const result = await fill(
+      fakeHost({ fillElement: () => Promise.resolve({ widget: 'combobox' }) }),
+    );
     expect(String(result['recoveryHint'])).toContain('popup list');
   });
 

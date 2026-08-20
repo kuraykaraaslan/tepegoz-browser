@@ -2,6 +2,20 @@ import type { RawInteractable } from '@tepegoz/tool-executor';
 import type { NetworkObservation } from './network-verify';
 
 /**
+ * A JS dialog auto-declined, or a `beforeunload` prompt suppressed, on a tab (S3 PR4). Never a
+ * page-principal `window.confirm`/`window.alert` override — always a main-process/native interception.
+ */
+export interface InterceptedDialog {
+  /** 'dialog' = alert/confirm/prompt auto-declined via CDP; 'beforeunload' = a native unsaved-changes
+   *  prompt suppressed so the tab is never silently stranded on it. */
+  kind: 'dialog' | 'beforeunload';
+  /** The dialog's own message (page-controlled — untrusted). Empty for `beforeunload`, which carries none. */
+  message: string;
+  /** Host-clock ms (`Date.now()`) — the SAME clock the action window is measured on. */
+  ts: number;
+}
+
+/**
  * The browser operations the built-in `browser_*` agent tools need, abstracted away from
  * Electron. The desktop app implements this over its TabManager + WebContentsView; a headless/remote
  * browser-agent could implement it differently. Keeping the tools behind this seam is what lets
@@ -122,7 +136,11 @@ export interface BrowserHost {
    * (S3 PR7). Typing into such a field does nothing, and a fill that "succeeds" into a field the page
    * ignores is the most expensive false success there is: the agent then submits a form it never filled.
    */
-  fillElement(ref: number, text: string, tabId?: string): Promise<{ widget: 'readonly' | 'disabled' | 'combobox' | null }>;
+  fillElement(
+    ref: number,
+    text: string,
+    tabId?: string,
+  ): Promise<{ widget: 'readonly' | 'disabled' | 'combobox' | null }>;
   /**
    * The current value of the form control at `ref` (from the latest {@link snapshotElements}), or `null`
    * when the element has no value semantics or can no longer be read.
@@ -168,7 +186,11 @@ export interface BrowserHost {
    *  same-origin frames, and explicitly scrolls the match to centre. Resolves `{ found, count }` where
    *  `count` is how many occurrences were located (≤ nth) — so a shortfall (`count < nth`) is honest
    *  rather than reported as "no match". The primitive for targets that aren't yet in view. */
-  scrollToText(text: string, nth?: number, tabId?: string): Promise<{ found: boolean; count: number }>;
+  scrollToText(
+    text: string,
+    nth?: number,
+    tabId?: string,
+  ): Promise<{ found: boolean; count: number }>;
   /** Choose an `<option>` in the native `<select>` at `ref`, matching `value` against option text or
    *  value (exact → diacritic-insensitive → substring) and firing `input`+`change` so page scripts react.
    *  A native select opens an OS popup that DOM clicks can't drive, so this is the deterministic way to
@@ -189,4 +211,14 @@ export interface BrowserHost {
    * into a positive success claim. See `describeNetworkFailures`.
    */
   networkSince(sinceMs: number, tabId?: string): Promise<NetworkObservation[]>;
+  /**
+   * Dialogs/`beforeunload` prompts intercepted on `tabId` at or after `sinceMs` (S3 PR4) — an
+   * auto-declined `window.confirm`/`alert`/`prompt`, or a suppressed unsaved-changes prompt that would
+   * otherwise strand the run on a native OS dialog no DOM action can dismiss.
+   *
+   * OPTIONAL: a host that cannot observe this simply omits it, and no interception is ever reported —
+   * never a claim that nothing happened. An empty array means the same: "nothing observed", not "nothing
+   * happened".
+   */
+  interceptionsSince?(sinceMs: number, tabId?: string): Promise<InterceptedDialog[]>;
 }
