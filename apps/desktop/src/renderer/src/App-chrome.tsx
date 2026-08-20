@@ -3,7 +3,7 @@ import { coreDict, pick, type Locale } from '@tepegoz/i18n';
 import { BrowserChrome } from '@tepegoz/browser-chrome';
 import { BookmarksBar } from '@tepegoz/bookmarks-bar';
 import { BOOKMARK_ROOT_BAR } from '@tepegoz/bookmarks';
-import type { Preferences, TabsState } from '@tepegoz/desktop-ipc';
+import type { ExtensionId, Preferences, TabsState } from '@tepegoz/desktop-ipc';
 import type { OmniboxQuickSettingTarget } from '@tepegoz/omnibox';
 import { browserDict, userMenuDict } from '../../i18n';
 import { ExtensionTray } from './components/ExtensionTray';
@@ -26,6 +26,8 @@ export interface AppChromeProps {
   setRenamingGroupId: Dispatch<SetStateAction<string | null>>;
   isMaximized: boolean;
   enabledExtensions: ExtensionDef[];
+  /** Persist a new toolbar order after a pinned icon is dragged. */
+  onReorderPinned: (ids: ExtensionId[]) => void;
   extSurfaces: ExtensionSurfacesResult;
   omniboxHistory: OmniboxHistoryResult;
   bookmarks: BookmarksBarResult;
@@ -47,6 +49,7 @@ export function AppChrome({
   setRenamingGroupId,
   isMaximized,
   enabledExtensions,
+  onReorderPinned,
   extSurfaces,
   omniboxHistory,
   bookmarks,
@@ -153,6 +156,9 @@ export function AppChrome({
             <ExtensionTray
               locale={locale}
               extensions={enabledExtensions}
+              extensionStates={prefs?.extensions ?? []}
+              pinnedIds={prefs?.pinnedExtensions ?? []}
+              onReorderPinned={onReorderPinned}
               activeExtensionId={
                 extSurfaces.activeSurface?.id ?? extSurfaces.sidebarExtId ?? extSurfaces.popupOpenId ?? null
               }

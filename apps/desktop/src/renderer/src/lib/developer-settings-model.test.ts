@@ -44,6 +44,7 @@ const PREFS: Preferences = {
   downloadDirectory: '',
   downloadAskEachTime: false,
   extensions: [],
+  pinnedExtensions: [],
   userAgent: null,
   mcpServers: [],
   notificationsEnabled: true,

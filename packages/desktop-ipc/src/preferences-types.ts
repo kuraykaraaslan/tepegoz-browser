@@ -13,7 +13,7 @@ import type { SearchEngine } from '@tepegoz/shared-types/search-engines';
 import type { FileAccessGrant } from '@tepegoz/shared-types/file-access';
 import type { AIProvider as ProviderId } from '@tepegoz/shared-types/providers';
 import type { SitePermissionState } from '@tepegoz/shared-types/notifications';
-import type { ExtensionState } from './contract';
+import type { ExtensionId, ExtensionState } from './contract';
 
 // Canonical value lists — the ONE place these unions are spelled out. The zod validators (schemas.ts,
 // preferences.model.ts) build their z.enum from these same arrays, so schema/type drift is impossible.
@@ -172,6 +172,9 @@ export interface Preferences {
   downloadAskEachTime: boolean;
   /** Per-extension status (managed at tepegoz://extensions). Unlisted extensions default to enabled. */
   extensions: ExtensionState[];
+  /** Extension ids pinned as toolbar icons, in toolbar order (Chrome-style). Empty = only the puzzle
+   *  button shows; the user pins from the Extensions panel. Unknown/disabled ids are ignored. */
+  pinnedExtensions: ExtensionId[];
   /** Active User-Agent override for browsed pages (User-Agent switcher extension); null = default. */
   userAgent: string | null;
   /** External MCP servers whose tools the agent may use (routed through the ToolGateway PEP). */

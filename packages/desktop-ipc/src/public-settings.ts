@@ -64,6 +64,7 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   downloadAskEachTime: 'private',
   // Private — secret-adjacent or a browsing/footprint signal that must never reach an extension.
   extensions: 'private',
+  pinnedExtensions: 'private',
   userAgent: 'private',
   mcpServers: 'private',
   sitePermissions: 'private',

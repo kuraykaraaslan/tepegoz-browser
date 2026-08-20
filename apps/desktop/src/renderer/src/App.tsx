@@ -172,6 +172,17 @@ export function App() {
     extSurfaces.closeSurface();
     window.tepegoz.navigateTab(`${INTERNAL_SETTINGS_URL}#${QUICK_SETTING_SECTION[target]}`);
   }
+  // Chrome-style toolbar pinning. The pinned array's ORDER is the icon order, so a drag-reorder and a
+  // pin/unpin are both just a rewrite of `prefs.pinnedExtensions`.
+  function onReorderPinned(ids: ExtensionId[]): void {
+    onUpdatePrefs({ pinnedExtensions: ids }).catch((err: unknown) => {
+      console.error('Pinned extension reorder failed', err); // prefs unchanged in main → UI consistent
+    });
+  }
+  function onUnpinExtension(id: ExtensionId): void {
+    const pinned = prefs?.pinnedExtensions ?? [];
+    if (pinned.includes(id)) onReorderPinned(pinned.filter((p) => p !== id));
+  }
   function onToggleExtension(id: ExtensionId, enabled: boolean): void {
     const next = extensionStates.filter((e) => e.id !== id);
     next.push({ id, status: enabled ? 'enabled' : 'disabled' });
@@ -190,6 +201,7 @@ export function App() {
     contentRef,
     extSurfaces,
     onToggleExtension,
+    onUnpinExtension,
     setPrefs,
     setStatus,
     setTabs,
@@ -227,6 +239,7 @@ export function App() {
           setRenamingGroupId={setRenamingGroupId}
           isMaximized={isMaximized}
           enabledExtensions={enabledExtensions}
+          onReorderPinned={onReorderPinned}
           extSurfaces={extSurfaces}
           omniboxHistory={omniboxHistory}
           bookmarks={bookmarks}

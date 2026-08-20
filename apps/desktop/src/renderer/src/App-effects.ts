@@ -22,6 +22,7 @@ export interface AppEffectsParams {
   contentRef: RefObject<HTMLDivElement | null>;
   extSurfaces: ExtensionSurfacesResult;
   onToggleExtension: (id: ExtensionId, enabled: boolean) => void;
+  onUnpinExtension: (id: ExtensionId) => void;
   setPrefs: Dispatch<SetStateAction<Preferences | null>>;
   setStatus: Dispatch<SetStateAction<CredentialsStatus | null>>;
   setTabs: Dispatch<SetStateAction<TabsState>>;
@@ -48,6 +49,7 @@ export function useAppEffects(params: AppEffectsParams): void {
     contentRef,
     extSurfaces,
     onToggleExtension,
+    onUnpinExtension,
     setPrefs,
     setStatus,
     setTabs,
@@ -201,18 +203,21 @@ export function useAppEffects(params: AppEffectsParams): void {
     });
   }, [setPrefs]);
 
-  // Right-click on a toolbar extension icon → the native menu relays the chosen action back here so it
-  // runs against our authoritative React state: open its settings page, or remove (disable) it.
+  // Right-click on a toolbar extension icon (or an Extensions-panel row) → the native menu relays the
+  // chosen action back here so it runs against our authoritative React state: open its settings page,
+  // unpin it from the toolbar, or remove (disable) it.
   useEffect(() => {
     return window.tepegoz.onExtensionContextMenuAction(({ id, action }) => {
       if (action === 'page') {
         extSurfaces.closeSurface();
         window.tepegoz.navigateTab(extensionPageUrl(id));
+      } else if (action === 'unpin') {
+        onUnpinExtension(id);
       } else {
         onToggleExtension(id, false);
       }
     });
-  }, [onToggleExtension, extSurfaces]);
+  }, [onToggleExtension, onUnpinExtension, extSurfaces]);
 
   // App shortcuts (single registry): the accelerators shown in the main menu are wired here. We
   // preventDefault so Ctrl+R reloads the active TAB, not the app chrome.

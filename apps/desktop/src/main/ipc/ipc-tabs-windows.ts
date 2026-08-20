@@ -33,6 +33,7 @@ import { showHiddenTabsMenu } from '../menus/hidden-tabs-menu';
 import { markQuitting } from '../quit-state';
 import { showBookmarkContextMenu } from '../menus/bookmark-context-menu';
 import { showExtensionContextMenu } from '../menus/extension-context-menu';
+import { chromeWindowFor } from '../lib/chrome-window';
 import { showGroupContextMenu } from '../menus/tab-group-context-menu';
 import {
   getPageMenuContext,
@@ -64,6 +65,8 @@ const NOTIFICATIONS_WIDTH = 360;
 const BOOKMARK_FOLDER_WIDTH = 280;
 /** Native bookmark rename / add-folder dialog popup width (px). */
 const BOOKMARK_DIALOG_WIDTH = 320;
+/** Native Extensions panel popup width (px) — the puzzle button's Chrome-style pin/run list. */
+const EXTENSIONS_PANEL_WIDTH = 320;
 
 /** Register the window/tabs/tab-groups + native context menus + popup/submenu/page-menu handlers. */
 export function registerTabsWindowsIpc(): void {
@@ -161,6 +164,18 @@ export function registerTabsWindowsIpc(): void {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (win) showBookmarkContextMenu(win, parsed.data.id, parsed.data.type, parsed.data.variant);
   });
+  // The Extensions panel popup asking for an extension's click action. The panel is its own window, so
+  // it cannot resolve surfaces itself — main closes it and relays the request to the owning chrome
+  // window, where the existing `runExtensionAction` routing takes over.
+  onWindowAction(IpcChannels.extensionOpenRequest, ExtensionIdSchema, (win, id) => {
+    if (manifestById(id) === undefined) {
+      Logger.warn('Ignored extension:open-request for an unknown extension', { id });
+      return;
+    }
+    PopupWindowManager.close();
+    const chrome = chromeWindowFor(win);
+    if (!chrome.isDestroyed()) chrome.webContents.send(IpcChannels.extensionOpen, id);
+  });
   // Native extension-icon context menu — also needs the sender's window to anchor + to push the choice.
   ipcMain.on(IpcChannels.extensionContextMenu, (event: IpcMainEvent, payload: unknown) => {
     if (!isTrustedAppUrl(event.senderFrame?.url ?? '')) return;
@@ -221,6 +236,16 @@ export function registerTabsWindowsIpc(): void {
         query: { surface: 'notifications' },
         anchor,
         width: NOTIFICATIONS_WIDTH,
+        ...(height !== undefined ? { height } : {}),
+      });
+    } else if (surface === 'extensions-panel') {
+      // The puzzle button's panel: every enabled extension, with pin toggles (Chrome's extensions menu).
+      PopupWindowManager.open({
+        parent: win,
+        key: 'extensions-panel',
+        query: { surface: 'extensions-panel' },
+        anchor,
+        width: EXTENSIONS_PANEL_WIDTH,
         ...(height !== undefined ? { height } : {}),
       });
     } else if (surface === 'ext' && id !== undefined) {

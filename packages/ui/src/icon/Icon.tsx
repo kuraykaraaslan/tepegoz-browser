@@ -27,6 +27,8 @@ import {
   faQrcode,
   faScrewdriverWrench,
   faShareNodes,
+  faThumbtack,
+  faThumbtackSlash,
   faTrashCan,
   faUser,
   faUserPlus,
@@ -72,6 +74,9 @@ const ICONS = {
   help: faCircleQuestion,
   chevronRight: faChevronRight,
   ellipsisVertical: faEllipsisVertical,
+  // Toolbar pinning (Extensions panel)
+  pin: faThumbtack,
+  unpin: faThumbtackSlash,
   // User (profile) menu
   user: faUser,
   userCircle: faCircleUser,

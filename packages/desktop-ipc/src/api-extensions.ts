@@ -111,6 +111,9 @@ export interface ExtensionsApi {
   listExtensionManifests(): Promise<ExtensionManifestWire[]>;
   /** Subscribe to "open this extension panel" requests; returns an unsubscribe fn. */
   onOpenExtension(callback: (id: ExtensionId) => void): () => void;
+  /** Ask main to relay an "open this extension" request to the owning chrome window. Used by the
+   *  Extensions panel popup, which runs in its own window and cannot reach the chrome's surface state. */
+  requestOpenExtension(id: ExtensionId): void;
   /** Pop the native right-click menu for a toolbar extension icon (Settings page / Remove), acted on in
    *  the main process; the chosen action is pushed back via `onExtensionContextMenuAction`. */
   showExtensionContextMenu(id: ExtensionId): void;

@@ -20,9 +20,9 @@ export type ExtensionManifestWire = Omit<ExtensionManifest, 'mcpServer'>;
 /** Per-extension status (managed at tepegoz://extensions). More states (e.g. 'error') may be added. */
 export type ExtensionStatus = 'enabled' | 'disabled';
 
-/** The action chosen from a toolbar extension icon's right-click menu: open its settings page, or
- *  remove (disable) it. */
-export type ExtensionContextMenuAction = 'page' | 'remove';
+/** The action chosen from a toolbar extension icon's right-click menu: open its settings page, unpin it
+ *  from the toolbar, or remove (disable) it. */
+export type ExtensionContextMenuAction = 'page' | 'unpin' | 'remove';
 export interface ExtensionContextMenuChoice {
   id: ExtensionId;
   action: ExtensionContextMenuAction;

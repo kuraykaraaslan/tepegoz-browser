@@ -83,6 +83,7 @@ export const agentModelsApi: Pick<
   | 'listAiAdaptors'
   | 'listExtensionManifests'
   | 'onOpenExtension'
+  | 'requestOpenExtension'
   | 'showExtensionContextMenu'
   | 'onExtensionContextMenuAction'
 > = {
@@ -237,6 +238,9 @@ export const agentModelsApi: Pick<
     return () => {
       ipcRenderer.removeListener(IpcChannels.extensionOpen, listener);
     };
+  },
+  requestOpenExtension: (id: ExtensionId) => {
+    ipcRenderer.send(IpcChannels.extensionOpenRequest, id);
   },
   showExtensionContextMenu: (id: ExtensionId) => {
     ipcRenderer.send(IpcChannels.extensionContextMenu, id);

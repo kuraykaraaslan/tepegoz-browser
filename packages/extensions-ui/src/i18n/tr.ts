@@ -9,4 +9,12 @@ export const tr: ExtensionsStrings = {
   // Araç çubuğu simgesi sağ-tık menüsü.
   settingsPage: 'Ayarlar sayfası',
   remove: 'Kaldır',
+  // Araç çubuğuna sabitleme + bulmaca düğmesinin Eklentiler paneli.
+  pin: 'Araç çubuğuna sabitle',
+  unpin: 'Araç çubuğundan kaldır',
+  moreOptions: 'Diğer seçenekler',
+  noneEnabled: 'Etkin eklenti yok',
+  // Panel grup başlıkları (manifest izinlerinden türetilir; henüz site bazında izin modeli yok).
+  groupPageAccess: 'Sayfa içeriğini okuyabilir veya değiştirebilir',
+  groupNoAccess: 'Sayfa erişimi gerekmiyor',
 };

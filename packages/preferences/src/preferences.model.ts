@@ -148,6 +148,9 @@ export const PreferencesSchema = z.object({
   // Required (not .default) so the schema input matches Preferences; init always merges the default
   // (extensions: []) first, and PreferencesPatchSchema (.partial) makes it optional on read/patch.
   extensions: z.array(ExtensionStateSchema),
+  // Toolbar-pinned extension ids, IN TOOLBAR ORDER (the array order is the icon order, so a drag-
+  // reorder just rewrites it). Reuses the manifest id rule; unknown/disabled ids are ignored by the UI.
+  pinnedExtensions: z.array(ExtensionIdSchema).max(64),
   // Active User-Agent override for browsed pages (User-Agent switcher extension); null = default.
   userAgent: z.string().max(512).nullable(),
   // External MCP servers whose tools the agent may use (routed through the ToolGateway PEP).
@@ -328,6 +331,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   downloadDirectory: '',
   downloadAskEachTime: false,
   extensions: [],
+  pinnedExtensions: [],
   userAgent: null,
   mcpServers: [],
   notificationsEnabled: true,

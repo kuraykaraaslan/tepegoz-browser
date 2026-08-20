@@ -164,7 +164,11 @@ export const IpcChannels = {
   tasksState: 'tasks:state',
   /** Renderer→main: the identity of every built-in extension (from the validated on-disk catalog). */
   extensionsListManifests: 'extensions:list-manifests',
+  /** Main→renderer push: run this extension's click action (relayed from the Extensions panel popup,
+   *  which lives in its own window and so cannot touch the chrome's surface state directly). */
   extensionOpen: 'extension:open',
+  /** Popup→main: ask main to relay `extensionOpen` to the owning chrome window (and close the popup). */
+  extensionOpenRequest: 'extension:open-request',
   /** Renderer→main: pop the native context menu for a toolbar extension icon (settings page / remove). */
   extensionContextMenu: 'extension:context-menu',
   /** Main→renderer push: the action chosen from an extension icon's context menu (`page` | `remove`). */
