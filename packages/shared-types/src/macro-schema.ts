@@ -23,7 +23,8 @@ const MAX_CHILDREN = 200;
 const MAX_CHAIN = 16;
 const MAX_BOOL = 32;
 
-const SelectorSchema: z.ZodType<Selector> = z.object({
+/** Exported: also the validator for a model-proposed replacement selector (self-healing, M2). */
+export const SelectorSchema: z.ZodType<Selector> = z.object({
   kind: SelectorKindEnum,
   value: Bounded,
   wildcard: z.boolean().optional(),

@@ -2,13 +2,16 @@ import { AppError } from '@tepegoz/libs';
 import type { WebContents } from 'electron';
 import type { MacroHost, MacroPolicyStepKind } from '@tepegoz/macro-engine';
 import { PolicyDeniedError } from '@tepegoz/macro-engine';
-import type { SelectorChain } from '@tepegoz/shared-types';
+import type { Selector, SelectorChain } from '@tepegoz/shared-types';
 import { HumanInputAdapter } from '@tepegoz/human-input';
 import { PolicyKernel } from '@tepegoz/security-policy';
 import TabManager from '../tabs';
 import MacroCdp from '../agent/macro-cdp.electron';
 import { browserHost } from '../agent/browser-host.electron';
 import { showPageCursor, hidePageCursor, isUserControlActive } from '../agent/page-cursor.electron';
+
+/** Bounded resolve attempt for a HEALED (single-candidate) chain — never the run's own `waitFor` wait. */
+const HEAL_RESOLVE_TIMEOUT_MS = 3_000;
 
 /** A `checkPolicy` "ask" needing a fresh (mid-run) confirmation — a NEWLY elevated risk that the
  *  run-start approval couldn't have foreseen (a step landed on a sensitive site, or a value about to
@@ -45,6 +48,9 @@ export interface MacroHostDeps {
   /** Resolve a mid-run policy "ask". Omit (or resolve false) to fail closed — the step is denied and
    *  the run stops, same as ToolGateway's HITL default with no confirm handler wired. */
   confirmPolicyAsk?: (req: MacroPolicyAskRequest) => Promise<boolean>;
+  /** M2 self-healing selector: ONE scoped model call, tried only after the deterministic chain fails
+   *  to resolve. Omit (or resolve `null`) to keep today's behaviour — fail with the exact predicate. */
+  healSelector?: (chain: SelectorChain) => Promise<Selector | null>;
 }
 
 function requireWc(): WebContents {
@@ -72,9 +78,22 @@ export function createMacroHost(deps: MacroHostDeps): MacroHost {
   const resolve = async (chain: SelectorChain, timeoutMs?: number): Promise<number> => {
     const wc = requireWc();
     const id = await MacroCdp.resolveChain(wc, chain, timeoutMs);
-    if (id === null) throw new AppError('element not found (selector chain did not resolve)', 404);
-    if (highlightOn) await MacroCdp.highlight(wc, id);
-    return id;
+    if (id !== null) {
+      if (highlightOn) await MacroCdp.highlight(wc, id);
+      return id;
+    }
+    // M2 self-heal: ONE scoped attempt with a fresh, model-proposed single-candidate chain, before
+    // giving up. No healer wired, a decline, or a still-unresolved heal all fall through to the SAME
+    // exact-predicate error the caller (macro-engine) reports as the located failure.
+    const healed = deps.healSelector === undefined ? null : await deps.healSelector(chain).catch(() => null);
+    if (healed !== null) {
+      const healedId = await MacroCdp.resolveChain(wc, [healed], HEAL_RESOLVE_TIMEOUT_MS);
+      if (healedId !== null) {
+        if (highlightOn) await MacroCdp.highlight(wc, healedId);
+        return healedId;
+      }
+    }
+    throw new AppError('element not found (selector chain did not resolve)', 404);
   };
 
   return {

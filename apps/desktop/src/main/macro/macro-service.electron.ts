@@ -8,6 +8,7 @@ import { parseCsv } from '@tepegoz/ext-macros/csv';
 import { BlobStore, MacroStore, type Db } from '@tepegoz/persistence';
 import { getDb } from '../db/database.electron';
 import { createMacroHost } from './macro-host.electron';
+import { healSelector } from './macro-selector-healer.electron';
 import MacroRecorder from '../agent/macro-recorder.electron';
 import TabManager from '../tabs';
 
@@ -59,6 +60,7 @@ async function executeMacro(
       const bytes = BlobStore.get(db(), hash);
       return Promise.resolve(bytes === undefined ? [] : parseCsv(bytes.toString('utf8')));
     },
+    healSelector,
     ...(cursorOpts === undefined
       ? {}
       : { onCursorMove: cursorOpts.onCursorMove, onCursorHide: cursorOpts.onCursorHide }),

@@ -55,7 +55,15 @@ without the Manifest-V3 death, the opaque error codes, or the `EVAL` security ho
       interpolation into `navigate`/`fill`, escalating to `tainted_side_effect`; a fresh `setVar`/CSV
       binding clears it. Remaining: a real mid-run confirm UI (today's `ask` fails closed rather than
       re-prompting) — the "Persisted-value redaction" IR-authoring item below is separate and unchanged.)_
-- [ ] A broken selector **self-heals** (one scoped model replan) or fails with the exact predicate.
+- [x] A broken selector **self-heals** (one scoped model replan) or fails with the exact predicate.
+      _(landed: `macro-selector-healer.electron.ts` — on a `resolve()` miss for click/fill/extract,
+      ONE scoped model call picks a replacement from a page-enumerated, DETERMINISTICALLY-locatored
+      candidate list (the model only picks an index, never authors CSS/XPath, so a hallucinated
+      selector is structurally impossible); a decline, no candidates, no provider key, or any error all
+      fall through to the exact-predicate `MacroError` unchanged. Reuses `@tepegoz/tool-executor`'s
+      `finalizeElements` sanitizer + `wrapUntrustedContent` (page text is untrusted model input).
+      Remaining: persisting the healed selector back into the saved macro ("then re-save") is a
+      follow-up, not required by this DoD line as written.)_
 - [ ] Macros can be **scheduled / triggered / watched** unattended under a restricted profile.
 - [ ] i18n en+tr for every new surface; zod `safeParse` at each new IPC/IR boundary; coverage gate;
       **no AI attribution trailer**.
@@ -89,8 +97,9 @@ without the Manifest-V3 death, the opaque error codes, or the `EVAL` security ho
       (URL/text joker-character requests).
 - [ ] **Visual / OCR click (XClick)** — screenshot + template/OCR match for non-DOM targets (canvas,
       video, PDF). *(the analysis's biggest "future" ask; large.)*
-- [ ] **Self-healing selectors** — on a miss, one scoped AI re-bind (Phase-6 "one scoped replan"),
-      then re-save; enabled by the M0 standard + `agent-runtime`.
+- [~] **Self-healing selectors** — on a miss, one scoped AI re-bind (Phase-6 "one scoped replan"),
+      then re-save; enabled by the M0 standard + `agent-runtime`. _(re-bind landed — see the top DoD
+      line; re-saving the healed selector back into the macro is still open.)_
 - [ ] **iframe / shadow-DOM** element support.
 
 ### M3 — Recorder
