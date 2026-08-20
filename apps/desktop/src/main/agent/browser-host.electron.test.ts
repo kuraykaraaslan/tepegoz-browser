@@ -9,15 +9,42 @@ import type { WebContents } from 'electron';
  */
 
 const h = vi.hoisted(() => {
-  const wc = (url = 'https://e.com', title = 'E'): WebContents =>
-    ({
+  let nextWcId = 1;
+  /** Every CDP command each fake tab received, keyed by its WebContents id. */
+  const sends = new Map<number, string[]>();
+  const wc = (url = 'https://e.com', title = 'E'): WebContents => {
+    const id = nextWcId++;
+    sends.set(id, []);
+    return {
+      id,
       isDestroyed: () => false,
       getURL: () => url,
       getTitle: () => title,
-      debugger: { sendCommand: vi.fn(() => Promise.resolve({})) },
-    }) as unknown as WebContents;
+      debugger: {
+        sendCommand: (method: string) => {
+          sends.get(id)?.push(method);
+          return Promise.resolve({});
+        },
+      },
+    } as unknown as WebContents;
+  };
+  type Adapter = unknown;
   return {
     wc,
+    sends,
+    /** Constructor args of every HumanInputAdapter the host built (one per tab). */
+    adapterArgs: [] as unknown[][],
+    cdp: {
+      clickElement: vi.fn<(wc: WebContents, ref: number, a?: Adapter) => Promise<unknown>>(() =>
+        Promise.resolve({ ok: true }),
+      ),
+      fillElement: vi.fn<(wc: WebContents, ref: number, t: string, a?: Adapter) => Promise<unknown>>(
+        () => Promise.resolve({ ok: true }),
+      ),
+      scrollPage: vi.fn<(wc: WebContents, d: string, n?: number, a?: Adapter) => Promise<void>>(() =>
+        Promise.resolve(),
+      ),
+    },
     tabs: {
       viewlessActiveTabId: vi.fn<() => string | null>(() => null),
       activeTabId: vi.fn<() => string | null>(() => null),
@@ -41,7 +68,12 @@ vi.mock('./agent-tab-group.electron', () => ({
   default: { openTab: h.openTab, ownsTab: vi.fn(() => false), releaseTab: vi.fn() },
 }));
 vi.mock('./cdp-driver.electron', () => ({
-  default: { waitForPageSettled: vi.fn(() => Promise.resolve()) },
+  default: {
+    waitForPageSettled: vi.fn(() => Promise.resolve()),
+    clickElement: h.cdp.clickElement,
+    fillElement: h.cdp.fillElement,
+    scrollPage: h.cdp.scrollPage,
+  },
 }));
 vi.mock('./page-cursor.electron', () => ({
   showPageCursor: vi.fn(),
@@ -49,7 +81,13 @@ vi.mock('./page-cursor.electron', () => ({
   isUserControlActive: vi.fn(() => false),
   resetForAgentAction: vi.fn(),
 }));
-vi.mock('@tepegoz/human-input', () => ({ HumanInputAdapter: class {} }));
+vi.mock('@tepegoz/human-input', () => ({
+  HumanInputAdapter: class {
+    constructor(...args: unknown[]) {
+      h.adapterArgs.push(args);
+    }
+  },
+}));
 
 // Imported AFTER the mocks so the module wires against them.
 const { browserHost, setCurrentAgentRun } = await import('./browser-host.electron');
@@ -129,5 +167,58 @@ describe('browserHost.activateTab — truthful only for a drivable page', () => 
     h.tabs.getState.mockReturnValue({ tabs: [], activeId: null });
     expect(browserHost.activateTab('missing')).toBe(false);
     expect(h.tabs.activate).not.toHaveBeenCalled();
+  });
+});
+
+describe('per-tab HumanInputAdapter — every action gets real gestures', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    h.adapterArgs.length = 0;
+  });
+
+  it('passes an adapter even when a tabId is named (a background action must not teleport)', async () => {
+    const target = h.wc('https://bg.com');
+    h.tabs.webContentsForTab.mockReturnValue(target);
+
+    await browserHost.clickElement(1, 'tab-bg');
+
+    // The regression this locks: the adapter used to be passed ONLY when tabId was undefined, so a
+    // tabId-targeted action silently lost humanization, cursor motion and its input_action narration.
+    const adapter = h.cdp.clickElement.mock.calls[0]?.[2];
+    expect(adapter).toBeDefined();
+  });
+
+  it('gives each tab its own adapter and reuses it for that same tab', async () => {
+    const tabA = h.wc('https://a.com');
+    const tabB = h.wc('https://b.com');
+
+    h.tabs.webContentsForTab.mockReturnValue(tabA);
+    await browserHost.clickElement(1, 'tab-a');
+    await browserHost.fillElement(2, 'x', 'tab-a');
+    h.tabs.webContentsForTab.mockReturnValue(tabB);
+    await browserHost.clickElement(1, 'tab-b');
+
+    const first = h.cdp.clickElement.mock.calls[0]?.[2];
+    const reused = h.cdp.fillElement.mock.calls[0]?.[3];
+    const other = h.cdp.clickElement.mock.calls[1]?.[2];
+
+    expect(reused).toBe(first); // same tab ⇒ same adapter (cursor position accumulates per tab)
+    expect(other).not.toBe(first); // different tab ⇒ its own adapter, no shared cursor state
+  });
+
+  it("binds each adapter's CDP transport to its OWN tab, not to whatever is active", async () => {
+    const target = h.wc('https://bg.com');
+    const activeElsewhere = h.wc('https://active.com');
+    h.tabs.webContentsForTab.mockReturnValue(target);
+    h.tabs.activeWebContents.mockReturnValue(activeElsewhere);
+
+    await browserHost.clickElement(1, 'tab-bg');
+
+    // Drive the transport the adapter was constructed with; it must reach the tab it was made for.
+    const cdpSend = h.adapterArgs.at(-1)?.[0] as (m: string, p?: unknown) => Promise<unknown>;
+    await cdpSend('Input.dispatchMouseEvent', { type: 'mouseMoved' });
+
+    expect(h.sends.get(target.id)).toContain('Input.dispatchMouseEvent');
+    expect(h.sends.get(activeElsewhere.id)).toEqual([]);
   });
 });

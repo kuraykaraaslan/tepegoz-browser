@@ -59,6 +59,18 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 > tab in the browser is Direct today exactly as it was before this landed, and the DoD's automated
 > leak test cannot exist until there is a real egress path for it to test.
 
+> **Where the group binding will be stored (settled, no decision owed).** The Group scope writes into
+> `TabGroupInfo.settings` — the flat, JSON-safe per-group bag [ADR-0020](../../docs/adr/0020-tab-boundary-model.md)
+> added for exactly this, with `vpn.connectionId` / `tor.enabled` already **reserved** as key names
+> (`packages/desktop-ipc/src/tabs-types.ts`). Nothing else needs designing here: `settings` is a
+> **binding/UI** layer and carries no isolation semantics, which is consistent with this phase's own
+> "groups are a binding/UI layer, not a partition axis" — the partition key stays `(profile, connection)`,
+> so N groups on one connection share one partition. Two lifecycle facts the writer must handle:
+> `TabStore.normalize()` **prunes an empty group** (its binding dies with it — fine, since no member
+> remains to route), and **pinning a tab clears its group membership**, which silently re-resolves that
+> tab from the group binding to the General default. That second one is a real mis-binding path and
+> belongs in the Threat Model row already listed below ("group-inheritance misbinding").
+
 ## Tasks
 
 ### L0 — Core Shell (connection pool + per-tab routing seam)

@@ -370,16 +370,22 @@ function sendCursorPosition(x: number, y: number, visible: boolean): void {
   });
 }
 
-function onCursorMove(x: number, y: number): void {
-  const wc = TabManager.activeWebContents();
-  if (wc !== null) showPageCursor(wc, x, y);
-  sendCursorPosition(x, y, true);
+/** Is `wc` the tab the user is actually looking at right now? Governs the CHROME overlay only. */
+function isVisibleTab(wc: WebContents): boolean {
+  const active = TabManager.activeWebContents();
+  return active !== null && !active.isDestroyed() && active.id === wc.id;
 }
 
-function onCursorHide(): void {
-  const wc = TabManager.activeWebContents();
-  if (wc !== null) hidePageCursor(wc);
-  sendCursorPosition(0, 0, false);
+function onCursorMove(wc: WebContents, x: number, y: number): void {
+  if (!wc.isDestroyed()) showPageCursor(wc, x, y);
+  // The chrome-level overlay is drawn over the CONTENT AREA, so it may only follow the tab currently
+  // occupying it — a background tab's cursor there would point at a page the user cannot see.
+  if (isVisibleTab(wc)) sendCursorPosition(x, y, true);
+}
+
+function onCursorHide(wc: WebContents): void {
+  if (!wc.isDestroyed()) hidePageCursor(wc);
+  if (isVisibleTab(wc)) sendCursorPosition(0, 0, false);
 }
 
 // --- Input-action event wiring (agent progress panel) ---
@@ -419,22 +425,26 @@ export function emitCurrentRunEvent(kind: AgentEventKind, message: string, detai
   });
 }
 
-// Single module-level adapter — curX/curY accumulate across agent actions within a session.
-const cdpSend: CdpSend = (method, params) => requireWc().debugger.sendCommand(method, params);
+/** CDP transport bound to ONE tab — never `requireWc()`, so an adapter cannot drift onto another tab. */
+function cdpSendFor(wc: WebContents): CdpSend {
+  return (method, params) => wc.debugger.sendCommand(method, params);
+}
 
 /**
- * Is anything the agent is doing right now actually on screen? (S7 PR3)
+ * Is what the agent is doing on THIS tab actually on screen? (S7 PR3)
  *
- * The adapter was already active-tab-only — a background tab gets no adapter and teleports. But
- * "active tab" stopped meaning "visible" once tabs could be parked off-screen and windows hidden to
+ * "Active tab" stopped meaning "visible" once tabs could be parked off-screen and windows hidden to
  * the tray while still compositing. In those states the agent pays full human-realism pacing for a
  * performance with no audience, which is the single largest avoidable chunk of wall-clock in a run.
  *
- * Every signal here already exists and already drives the parking itself — no new IPC, and nothing
- * the renderer can influence. Unknown states resolve to "visible", so the pacing is only ever dropped
- * on a state we positively recognise as unseen.
+ * Now asked PER TAB rather than of the focused window: a tab being driven in the background is
+ * genuinely unseen, so it drops the sleeps — while still dispatching the identical event stream (the
+ * adapter drops pacing, never events). Every signal here already exists and already drives the parking
+ * itself — no new IPC, and nothing the renderer can influence. Unknown states resolve to "visible", so
+ * pacing is only ever dropped on a state we positively recognise as unseen.
  */
-function agentTabIsOnScreen(): boolean {
+function tabIsOnScreen(wc: WebContents): boolean {
+  if (!isVisibleTab(wc)) return false; // not the tab in the content area ⇒ nobody is watching it
   const win = TabManager.focusedWindow();
   if (win === null || win.isDestroyed()) return true;
   if (isParkedToTray(win) || win.isMinimized() || !win.isVisible()) return false;
@@ -443,13 +453,34 @@ function agentTabIsOnScreen(): boolean {
   return active?.hidden !== true;
 }
 
-const browserAdapter = new HumanInputAdapter(
-  cdpSend,
-  onCursorMove,
-  onInputAction,
-  isUserControlActive,
-  agentTabIsOnScreen,
-);
+/**
+ * One {@link HumanInputAdapter} PER TAB, so every agent action goes through real gesture synthesis.
+ *
+ * Previously a single module-level adapter was passed only when the caller named no `tabId`, which
+ * meant a tabId-targeted action silently lost humanization, cursor motion AND its `input_action`
+ * narration — it teleported. Keying the adapter by tab fixes that, and is also what lets two runs
+ * drive two tabs without sharing one adapter's accumulated cursor position.
+ *
+ * A `WeakMap` because the entry must die with the tab: keyed by the `WebContents` itself, a closed tab
+ * takes its adapter with it and there is no id-keyed map to sweep.
+ */
+const adapters = new WeakMap<WebContents, HumanInputAdapter>();
+
+function adapterFor(wc: WebContents): HumanInputAdapter {
+  const existing = adapters.get(wc);
+  if (existing !== undefined) return existing;
+  const adapter = new HumanInputAdapter(
+    cdpSendFor(wc),
+    (x, y) => {
+      onCursorMove(wc, x, y);
+    },
+    onInputAction,
+    isUserControlActive,
+    () => tabIsOnScreen(wc),
+  );
+  adapters.set(wc, adapter);
+  return adapter;
+}
 
 // --- BrowserHost + TabHost (one object satisfies both injected seams) ---
 
@@ -520,13 +551,9 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
       pageUrl: (id) => requireWc(id).getURL(),
       fill: async (target, text, id) => {
         resetForAgentAction();
-        const result = await CdpDriver.fillElement(
-          requireWc(id),
-          target,
-          text,
-          id === undefined ? browserAdapter : undefined,
-        );
-        onCursorHide();
+        const wc = requireWc(id);
+        const result = await CdpDriver.fillElement(wc, target, text, adapterFor(wc));
+        onCursorHide(wc);
         return result;
       },
     }),
@@ -547,62 +574,42 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
   captureScreenshot,
   clickElement: async (ref, tabId) => {
     resetForAgentAction();
-    const result = await CdpDriver.clickElement(
-      requireWc(tabId),
-      ref,
-      tabId === undefined ? browserAdapter : undefined,
-    );
-    onCursorHide();
+    const wc = requireWc(tabId);
+    const result = await CdpDriver.clickElement(wc, ref, adapterFor(wc));
+    onCursorHide(wc);
     return result;
   },
   hoverElement: async (ref, tabId) => {
     resetForAgentAction();
-    await CdpDriver.hoverElement(
-      requireWc(tabId),
-      ref,
-      tabId === undefined ? browserAdapter : undefined,
-    );
+    const wc = requireWc(tabId);
+    await CdpDriver.hoverElement(wc, ref, adapterFor(wc));
   },
   fillElement: async (ref, text, tabId) => {
     resetForAgentAction();
-    const result = await CdpDriver.fillElement(
-      requireWc(tabId),
-      ref,
-      text,
-      tabId === undefined ? browserAdapter : undefined,
-    );
-    onCursorHide();
+    const wc = requireWc(tabId);
+    const result = await CdpDriver.fillElement(wc, ref, text, adapterFor(wc));
+    onCursorHide(wc);
     return result;
   },
   pressKey: async (key, tabId) => {
     resetForAgentAction();
-    const result = await CdpDriver.pressKey(
-      requireWc(tabId),
-      key,
-      tabId === undefined ? browserAdapter : undefined,
-    );
-    onCursorHide();
+    const wc = requireWc(tabId);
+    const result = await CdpDriver.pressKey(wc, key, adapterFor(wc));
+    onCursorHide(wc);
     return result;
   },
   sendKeys: async (keys, tabId) => {
     resetForAgentAction();
-    const result = await CdpDriver.sendKeys(
-      requireWc(tabId),
-      keys,
-      tabId === undefined ? browserAdapter : undefined,
-    );
-    onCursorHide();
+    const wc = requireWc(tabId);
+    const result = await CdpDriver.sendKeys(wc, keys, adapterFor(wc));
+    onCursorHide(wc);
     return result;
   },
   scrollPage: async (direction, amount, tabId) => {
     resetForAgentAction();
-    await CdpDriver.scrollPage(
-      requireWc(tabId),
-      direction,
-      amount,
-      tabId === undefined ? browserAdapter : undefined,
-    );
-    onCursorHide();
+    const wc = requireWc(tabId);
+    await CdpDriver.scrollPage(wc, direction, amount, adapterFor(wc));
+    onCursorHide(wc);
   },
   scrollToText: (text, nth, tabId) => {
     // Narrate to the Agent Console for parity with the adapter-driven actions (this reveal bypasses the

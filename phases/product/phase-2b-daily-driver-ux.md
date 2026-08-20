@@ -35,7 +35,17 @@ work lives in Phase 2; agent orchestration (multi-tab parallelism) stays in Phas
 
 ### L9 — Advanced tab system
 - [ ] Tab groups (color/name/collapse), **split view** (2+ tabs side-by-side in one window), **workspaces** (named tab sets; distinct from Phase 3 multi-profile — profile ≠ workspace), **full session restore** (named sessions, recently-closed list, multi-window restore). _(Vertical tabs out of scope.)_
-- [ ] Builds on Phase 1a basic tab shell + basic restore; does NOT clash with Phase 1b agent multi-tab parallelism (that is internal orchestration; this is user-facing UI). **ADR required — "Tab Boundary Model"**: the `BrowserContext` boundary of workspace/split-view; user-facing grouping must NOT leak agent-branch policy isolation.
+- [ ] Builds on Phase 1a basic tab shell + basic restore; does NOT clash with Phase 1b agent multi-tab parallelism (that is internal orchestration; this is user-facing UI). **ADR required — "Tab Boundary Model"**: the `BrowserContext` boundary of workspace/split-view; user-facing grouping must NOT leak agent-branch policy isolation. _(ADR written + Accepted: [ADR-0020](../../docs/adr/0020-tab-boundary-model.md), incl. the 2026-07-06 addendum introducing `TabGroupInfo.settings` as the standard **binding/UI** seam — `agent.panelOpen` today, `vpn.connectionId`/`tor.enabled` reserved for Phase 5.)_
+
+> **What a tab group may and may not carry (ADR-0020, restated because it keeps being asked).** Two
+> features legitimately vary per group: the **agent conversation** (already group-keyed end to end —
+> see the concurrency-blockers note in [Phase 1b](phase-1b-agentic-deepening.md)) and the **VPN/Tor
+> binding** (Phase 5's three-scope `tab → group → General → Direct`). Both are bindings, not boundaries:
+> the partition axis stays `(profile, connection)` and the policy axis stays the Policy Kernel/ToolGateway
+> PEP. **Per-group autonomy levels, permission grants, or trust profiles are therefore out of scope by
+> design, not merely unbuilt** — group membership is user-mutable chrome UI and must never be readable as
+> a policy scope. Two lifecycle facts any group-scoped feature has to handle: `normalize()` **prunes an
+> empty group** (so group id ≠ durable feature key), and pinning a tab clears its group membership.
 
 ### L9 — PWA support
 - [ ] Web app manifest parse + **install** (app icon, standalone window), **service worker** lifecycle, **offline** operation, **push notification**, **background sync**.
