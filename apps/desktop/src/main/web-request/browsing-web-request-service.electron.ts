@@ -26,7 +26,17 @@ const headersReceivedHandlers = new Map<string, HeadersReceivedHandler>();
 const completedHandlers = new Map<string, CompletedHandler>();
 const errorOccurredHandlers = new Map<string, ErrorOccurredHandler>();
 
-let initialized = false;
+/**
+ * The sessions this multiplexer has already been attached to.
+ *
+ * Deliberately a set and not a boolean. Phase 5 gives a tunnel-bound tab its OWN session partition, and
+ * Electron's webRequest listeners are per-session — a one-shot `initialized` flag meant the first session
+ * to arrive got the entire filtering plane (adblock, Shield, header rewriting) and every later one got
+ * nothing, silently, while still loading pages perfectly. The handler maps below stay process-wide, so
+ * every attached session runs the SAME pipeline; only the Electron-side listener registration is per
+ * session. Attaching twice to one session would double-run every filter, hence the guard.
+ */
+const attachedTo = new WeakSet<WebRequestLike>();
 
 function isDecisiveBeforeResponse(
   response: Electron.CallbackResponse | void,
@@ -109,9 +119,13 @@ function runObservers<T>(
 }
 
 const BrowsingWebRequestService = {
-  init(webRequest: WebRequestLike): void {
-    if (initialized) return;
-    initialized = true;
+  /**
+   * Own the Electron webRequest listener set for ONE browsing session. Called once per browsing session
+   * (via `BrowsingSessions.register`), not once per process — see {@link attachedTo}.
+   */
+  attach(webRequest: WebRequestLike): void {
+    if (attachedTo.has(webRequest)) return;
+    attachedTo.add(webRequest);
 
     webRequest.onBeforeRequest((details, callback) => {
       void runBeforeRequest(details).then(callback, (err: unknown) => {
@@ -169,7 +183,8 @@ const BrowsingWebRequestService = {
     headersReceivedHandlers.clear();
     completedHandlers.clear();
     errorOccurredHandlers.clear();
-    initialized = false;
+    // `attachedTo` is intentionally NOT reset: it is keyed by the session's own webRequest object, so a
+    // test that wants a fresh attachment makes a fresh fake — there is no process-wide flag to unstick.
   },
 };
 

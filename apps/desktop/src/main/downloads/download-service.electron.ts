@@ -1,4 +1,4 @@
-import { session, type WebContents } from 'electron';
+import { type WebContents } from 'electron';
 import {
   type DownloadCommandAction,
   type DownloadCreateInput,
@@ -23,11 +23,11 @@ import {
   type DownloadState,
 } from './download-service-store.electron';
 import { handleWillDownload } from './download-service-lifecycle.electron';
+import BrowsingSessions from '../network/browsing-sessions.electron';
 import { runCommand } from './download-service-commands.electron';
 
 export type { DownloadTrustProvider } from './download-service-model.electron';
 
-const BROWSING_PARTITION = 'persist:tepegoz-web';
 
 class DownloadService {
   private static initialized = false;
@@ -43,9 +43,19 @@ class DownloadService {
         DownloadService.ctx.records.set(record.id, record);
       }
     }
-    session.fromPartition(BROWSING_PARTITION).on('will-download', (_event, item, wc) => {
-      handleWillDownload(DownloadService.ctx, item, wc);
-    });
+    // Every browsing session, present and future — a download started from a VPN/Tor-bound tab must go
+    // through the same quarantine path as one from a Direct tab. Registered as CRITICAL: a session we
+    // cannot attach the quarantine handler to is one no tab may be hosted on, because the alternative is
+    // a partition where files land on disk unscanned and nothing says so.
+    BrowsingSessions.register(
+      'downloads',
+      (ses) => {
+        ses.on('will-download', (_event, item, wc) => {
+          handleWillDownload(DownloadService.ctx, item, wc);
+        });
+      },
+      { critical: true },
+    );
   }
 
   static list(): DownloadRecord[] {

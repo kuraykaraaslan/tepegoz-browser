@@ -1,7 +1,8 @@
-# ADR-0011: VPN & network privacy — three-scope binding, per-(profile,connection) partitions, fail-closed by construction
+# ADR-0011: VPN & network privacy — three-scope binding, per-connection partitions, fail-closed by construction
 
-- **Status:** Accepted (binding-resolution + kill-switch layer only — see Consequences)
-- **Date:** 2026-08-19
+- **Status:** Accepted (binding-resolution + kill-switch layer; **amended 2026-08-20** — per-session
+  wiring, the fail-closed egress configuration, and the verified `setProxy` call site — see Amendment)
+- **Date:** 2026-08-19 (amended 2026-08-20)
 - **Refines:** the existing per-partition session model (Phase 2's `NetworkFilterEngine` stance: no
   system-proxy MITM) · **complements** [ADR-0020](0020-tab-boundary-model.md) (Tab Boundary Model)
 - **Phase:** [Phase 5 — VPN & Network Privacy](../../phases/product/phase-5-vpn-network-privacy.md), L0
@@ -33,8 +34,9 @@ them (a connection pool, a SOCKS bridge, session wiring):
   whose **group is on `inherit`** both fall to General, and the function treats them identically on
   purpose: from General's point of view there is no difference between "no group to ask" and "the group
   had nothing to say".
-- **`partitionKeyFor`** returns the exact `persist:tepegoz-profile-{id}--conn-{connId}` shape the phase
-  specifies, keyed by `(profile, connection)` and never by group — groups are a binding/UI layer, so N
+- **`partitionKeyFor`** returns a `--conn-{connId}` partition, keyed by connection and never by group
+  (**amended 2026-08-20**: the recorded `persist:tepegoz-profile-{id}--conn-{connId}` shape was wrong — see the
+  Amendment) — groups are a binding/UI layer, so N
   groups sharing a connection share one partition, and Direct resolves to the plain existing profile
   partition untouched.
 - **`affectedByGroupChange` / `affectedByGeneralChange`** answer "which tabs must reload" for a re-bind,
@@ -83,3 +85,108 @@ unstarted below rather than assumed satisfied by this layer.
 **Owed, and stated rather than implied.** Everything in the "Scope" list above. The Threat Model update,
 the i18n surfaces, and the automated leak/DNS-leak tests are all unstarted — this ADR covers the
 foundation two of the phase's many DoD lines, not the phase.
+
+---
+
+## Amendment (2026-08-20) — enforcement: partitions, per-session wiring, and a verified `setProxy`
+
+Accepted. This amendment covers three of the items the original explicitly left undecided, and states
+plainly which ones it still does not touch.
+
+### 1. The partition key was wrong, and the fix is "do not rename anything"
+
+The original recorded `persist:tepegoz-profile-{id}--conn-{connId}`, on the stated assumption that Direct
+resolved to "the plain existing profile partition untouched". That assumption did not hold: the browser
+has never had a per-profile partition. Every browsed page in the product lives in one hard-coded
+`persist:tepegoz-web` (`apps/desktop/src/main/tabs-shared.ts`), and profile isolation — where it exists,
+on the unmerged multi-profile work — is done a level up, by running each profile as its own process over
+its own `userData` directory. Shipping the recorded shape would therefore have RENAMED the partition
+every existing user's cookies, logins and site storage live behind: a silent mass sign-out, delivered by
+a privacy feature, to users who never enabled it.
+
+The key is now derived from one exported constant:
+
+- `DIRECT_PARTITION = 'persist:tepegoz-web'` — byte-identical to what the browser already uses, and now
+  the single definition (`tabs-shared.ts` re-exports it rather than restating the literal, so the two
+  cannot drift into two cookie jars).
+- `partitionKeyFor({ connectionId })` → `persist:tepegoz-web--conn-{connId}`, a sibling *next to* the
+  existing partition rather than a replacement for it. Phase 5 only ever adds.
+- A connection id that is not a safe partition component **throws** instead of being sanitized. Quietly
+  normalizing `vpn/a` and `vpn-a` onto one partition would put two connections' traffic in one cookie
+  jar — the cross-tab bleed the phase forbids — and a throw at the binding boundary is recoverable
+  where that bleed is not.
+
+### 2. Every browsing subsystem is per-session now, because "one browsing session" was load-bearing
+
+This is the structural change, and it is larger than the proxy work it enables. Every main-process
+subsystem that needs a `Session` reached for `session.fromPartition('persist:tepegoz-web')` directly and
+attached itself once at startup: the webRequest multiplexer (behind a one-shot `initialized` flag, so a
+second session got **nothing**), download quarantine, the User-Agent override, "forget this site".
+
+A tunnel partition under that model loads pages perfectly and has no ad/tracker filtering, no download
+quarantine, the wrong User-Agent, and cookies that survive a site clear. Every one of those is a privacy
+regression *inside the privacy feature*, and none of them is visible to the user.
+
+`BrowsingSessions` (`apps/desktop/src/main/network/browsing-sessions.electron.ts`) inverts it: sessions
+are created through one registry, subsystems `register()` per-session wiring instead of attaching once,
+registration retro-applies to already-live sessions (so startup order cannot matter), and each attacher
+runs exactly once per session. Attachers whose absence is a privacy regression rather than a missing
+nicety — the filtering plane, download quarantine — are marked **critical**: if one cannot attach, the
+partition is refused permanently rather than served half-wired. No session means no `WebContents` can be
+hosted on it, which means no traffic. That is the fail-closed answer, and the permanence matters: an
+exactly-once registry that allowed a retry would skip the attacher that failed and hand back a session
+that looks wired and is not.
+
+### 3. Fail-closed is a property of a value, checked at one call site
+
+`@tepegoz/security-policy/egress-proxy.ts` makes "cannot leak" checkable rather than asserted:
+
+- `tunnelProxyConfig(port)` emits `socks5://127.0.0.1:{port}` with **no `,DIRECT` fallback**. That single
+  absent token *is* the kill-switch: with it, Chromium reads a dead tunnel as "go out the clear path";
+  without it, the same dead tunnel yields `ERR_PROXY_CONNECTION_FAILED` and nothing leaves the machine.
+- `assertFailClosed(config)` rejects a `DIRECT` fallback in every spelling Chromium honours, SOCKS4 (no
+  hostname form → the resolver sees every site name), a non-loopback proxy address, an empty rule set,
+  and a bypass list wider than loopback — notably **not** Chromium's `<local>`, which would send
+  `http://intranet/` out the clear path and hand a LAN host the user's real address.
+- `TUNNEL_WEBRTC_POLICY = 'disable_non_proxied_udp'`, applied per `WebContents`. WebRTC opens UDP straight
+  from the host stack and a SOCKS proxy carries TCP, so without this a page in a "tunneled" tab hands out
+  the machine's real addresses in ICE candidates while every HTTP request goes through the tunnel.
+
+`ensureTunnelSession` (`main/network/tunnel-session.electron.ts`) is the **only** place a session is put
+behind a tunnel, and it verifies rather than assumes. Ordering is load-bearing: the session is created
+through `BrowsingSessions` **first**, so the filtering/quarantine/UA plane is attached before any proxy
+exists to carry traffic. `setProxy` resolving means Chromium accepted the rules, not that it applies them,
+so the bind completes only once `resolveProxy()` reports a SOCKS route for an ordinary https URL; a
+`DIRECT` answer aborts the bind. A throw from this function must never be caught into "fall back to
+Direct" — falling back **is** the leak.
+
+### 4. The automated leak test now exists, and what it actually proves
+
+The original recorded that the DoD's leak test "cannot exist until `session.setProxy` wiring lands,
+because there is no real egress path for it to test". Both halves are addressed:
+`e2e/spike-tunnel-failclosed.spec.ts` runs the shipping app against a real local SOCKS5 endpoint stood up
+in-process — no shipped WireGuard/Tor binary, no code-signing, offline. It imports the shipping
+`tunnelProxyConfig`/`partitionKeyFor` rather than restating them, so it cannot drift from production.
+
+Measured, both passing:
+
+- **Routed with remote DNS.** A tunnel-bound session reaches a `.test` host that resolves nowhere, and the
+  SOCKS server records the request as `DOMAINNAME` — the hostname went to the proxy, not to the user's
+  resolver.
+- **Fail-closed on drop.** With Chromium's resolver pointed at a reachable address so that a clear-path
+  request *would* succeed — proven by an untunneled control request that does hit the direct origin — the
+  SOCKS endpoint is killed mid-session. The next request fails, and the direct origin records nothing.
+  The control is what makes this a measurement and not a tautology: without it, "no direct hit" could
+  simply mean the detector was blind.
+
+**What it does not prove.** It exercises Chromium's proxy behaviour and our configuration, not a real
+VPN: there is still no tunnel carrying traffic off this machine. And it says nothing about Chromium's DNS
+*prefetch*/preconnect predictor or DoH, which are process-wide rather than per-session — that residual is
+recorded as its own DoD line rather than folded into the passing result above.
+
+### Still not decided here
+
+Unchanged from the original scope list: the connection pool and health-polling, `WireGuardConfigProvider`
+/ account providers / `TorProvider`, Tor's exit-node trust model and stream isolation, and every UI
+surface. Note also that shipping any of the transports is gated on Phase 0's code-signing item, which is
+a distribution prerequisite this ADR cannot close.

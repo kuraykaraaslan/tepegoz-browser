@@ -78,6 +78,17 @@ export {
 export { clearsCredentialVault, planSiteClear, type SiteClearContext } from './site-data';
 export { mayOpenDevTools, type DevToolsVerdict } from './devtools-policy';
 export {
+  assertFailClosed,
+  isValidSocksPort,
+  proxyResolutionIsTunneled,
+  tunnelProxyConfig,
+  UnsafeProxyConfigError,
+  TUNNEL_BYPASS_RULES,
+  TUNNEL_WEBRTC_POLICY,
+  type ProxyRejectionReason,
+  type TunnelProxyConfig,
+} from './egress-proxy';
+export {
   killSwitchVerdicts,
   tabsBlockedByDrop,
   type ConnectionStatus,

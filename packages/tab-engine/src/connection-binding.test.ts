@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   affectedByGeneralChange,
   affectedByGroupChange,
+  isValidConnectionId,
   partitionKeyFor,
   resolveBinding,
   type ScopedBinding,
@@ -61,18 +62,38 @@ describe('resolving a binding — most-specific wins', () => {
 });
 
 describe('partition keys', () => {
-  it('Direct uses the plain profile partition — untouched by Phase 5', () => {
-    expect(partitionKeyFor('p1', { connectionId: null })).toBe('persist:tepegoz-profile-p1');
+  it('Direct uses the partition the browser ALREADY uses — no rename, no orphaned user data', () => {
+    // This exact string is what every existing profile's cookies/logins live behind today
+    // (`apps/desktop/src/main/tabs-shared.ts`). If this test ever needs updating, the change it is
+    // reporting is "we just signed every user out of every site".
+    expect(partitionKeyFor({ connectionId: null })).toBe('persist:tepegoz-web');
   });
 
-  it('a tunneled resolution is keyed by (profile, connection)', () => {
-    expect(partitionKeyFor('p1', { connectionId: 'vpn-a' })).toBe('persist:tepegoz-profile-p1--conn-vpn-a');
+  it('a tunneled resolution hangs off the same base as a `--conn-` sibling', () => {
+    expect(partitionKeyFor({ connectionId: 'vpn-a' })).toBe('persist:tepegoz-web--conn-vpn-a');
   });
 
   it('two groups on the SAME connection share one partition — groups are a binding layer, not a partition axis', () => {
-    const a = partitionKeyFor('p1', { connectionId: 'vpn-a' });
-    const b = partitionKeyFor('p1', { connectionId: 'vpn-a' });
+    const a = partitionKeyFor({ connectionId: 'vpn-a' });
+    const b = partitionKeyFor({ connectionId: 'vpn-a' });
     expect(a).toBe(b);
+  });
+
+  it('distinct connections never share a partition', () => {
+    expect(partitionKeyFor({ connectionId: 'vpn-a' })).not.toBe(partitionKeyFor({ connectionId: 'vpn-b' }));
+  });
+
+  it('rejects an id that could collide or escape rather than sanitizing it into a shared jar', () => {
+    for (const bad of ['vpn/a', 'vpn a', '../etc', 'VPN-A', 'vpn--a', '-vpn', 'vpn-', '', 'x'.repeat(65)]) {
+      expect(isValidConnectionId(bad)).toBe(false);
+      expect(() => partitionKeyFor({ connectionId: bad })).toThrow();
+    }
+  });
+
+  it('accepts ordinary generated ids', () => {
+    for (const ok of ['vpn-a', 'tor-1', 'wg0', 'mullvad-se-sto-001']) {
+      expect(isValidConnectionId(ok)).toBe(true);
+    }
   });
 });
 

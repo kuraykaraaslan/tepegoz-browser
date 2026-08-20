@@ -8,7 +8,7 @@ import type { SiteClearPlan } from '@tepegoz/shared-types';
 import { EventJournal } from '@tepegoz/persistence';
 import { passwordVault } from '@tepegoz/password-vault';
 import { APP_PARTITION } from '../window';
-import { BROWSING_PARTITION } from '../tabs';
+import BrowsingSessions from '../network/browsing-sessions.electron';
 import { getDb } from '../db/database.electron';
 import { handleAsync } from './ipc-helpers';
 
@@ -25,9 +25,13 @@ import { handleAsync } from './ipc-helpers';
  * 2. **The credential vault is never in scope.** Saved passwords are user-authored data that outlives a
  *    site being forgotten. The plan *mentions* them because that is useful to know; deleting them is a
  *    different act, and it has to be asked for separately.
- * 3. **Only the BROWSING partition is touched.** The app's own chrome partition holds the browser's UI
+ * 3. **Only BROWSING partitions are touched.** The app's own chrome partition holds the browser's UI
  *    state, not the site's data, and a "forget this site" that reached into it would be clearing
  *    something the user never asked about.
+ * 4. **EVERY browsing partition, not just the Direct one.** Since Phase 5 a tab bound to a VPN/Tor
+ *    connection stores its cookies in that connection's own partition. A clear that stopped at the base
+ *    partition would report success and leave the site logged in behind the tunnel — the one copy of
+ *    that data the user is least likely to think to look for.
  *
  * The clear is recorded in the Event Journal (`SiteDataCleared`, ADR-0004 "shown = recorded"): a
  * destructive action nobody can find afterwards is one nobody can reason about.
@@ -54,14 +58,15 @@ async function hasSavedCredentials(url: string): Promise<boolean> {
 
 /** Does this site have cookies right now? A cookie is the cheapest honest proxy for "a session to lose". */
 async function hasActiveSession(origins: readonly string[]): Promise<boolean> {
-  try {
-    const ses = session.fromPartition(BROWSING_PARTITION);
-    for (const origin of origins) {
-      const cookies = await ses.cookies.get({ url: origin });
-      if (cookies.length > 0) return true;
+  for (const { partition, session: ses } of BrowsingSessions.all()) {
+    try {
+      for (const origin of origins) {
+        const cookies = await ses.cookies.get({ url: origin });
+        if (cookies.length > 0) return true;
+      }
+    } catch (err) {
+      Logger.warn('Cookie probe failed while planning a site clear', { partition, err: String(err) });
     }
-  } catch (err) {
-    Logger.warn('Cookie probe failed while planning a site clear', { err: String(err) });
   }
   return false;
 }
@@ -86,20 +91,22 @@ export function registerSiteDataIpc(): void {
     const plan = await buildPlan(SiteUrlSchema.parse(payload));
     if (plan === null) return null;
 
-    // The browsing partition only. APP_PARTITION is the browser's own chrome; a site clear that reached
-    // into it would be clearing something the user never asked about.
-    const ses = session.fromPartition(BROWSING_PARTITION);
-    if (ses === session.fromPartition(APP_PARTITION)) {
-      Logger.warn('Refusing a site clear: browsing and chrome share a partition');
-      return null;
+    // Browsing partitions only, and ALL of them. APP_PARTITION is the browser's own chrome; a site clear
+    // that reached into it would be clearing something the user never asked about.
+    const appSession = session.fromPartition(APP_PARTITION);
+    const targets = BrowsingSessions.all().filter((s) => s.session !== appSession);
+    if (targets.length !== BrowsingSessions.all().length) {
+      Logger.warn('Refusing a site clear on a partition shared with the app chrome');
     }
-    for (const origin of plan.origins) {
-      try {
-        await ses.clearStorageData({ origin, storages: [...plan.kinds] });
-      } catch (err) {
-        // One failing origin must not abandon the others — a partial clear is bad, a silently abandoned
-        // one is worse.
-        Logger.warn('Site data clear failed for an origin', { origin, err: String(err) });
+    for (const { partition, session: ses } of targets) {
+      for (const origin of plan.origins) {
+        try {
+          await ses.clearStorageData({ origin, storages: [...plan.kinds] });
+        } catch (err) {
+          // One failing origin (or partition) must not abandon the others — a partial clear is bad, a
+          // silently abandoned one is worse.
+          Logger.warn('Site data clear failed for an origin', { partition, origin, err: String(err) });
+        }
       }
     }
 
@@ -120,7 +127,7 @@ export function registerSiteDataIpc(): void {
         Logger.warn('Site data clear journal append failed', { err: String(err) });
       }
     }
-    Logger.info('Cleared site data', { site: plan.site });
+    Logger.info('Cleared site data', { site: plan.site, partitions: targets.length });
     return plan;
   });
 }

@@ -14,7 +14,7 @@ import {
   INTERNAL_UPLOADS_URL,
   type TabsState,
 } from '@tepegoz/desktop-ipc';
-import { type TabGroup, type TabRecord } from '@tepegoz/tab-engine';
+import { DIRECT_PARTITION, type TabGroup, type TabRecord } from '@tepegoz/tab-engine';
 import { allSearchEngines, buildSearchUrl } from '@tepegoz/shared-types/search-engines';
 import PreferenceStore from '@tepegoz/preferences';
 import { mainLocale, mainStrings } from './lib/i18n-main';
@@ -40,8 +40,13 @@ export function searchUrlForQuery(query: string): string {
 }
 /** Cap for page-controlled titles before they reach the history DB (hostile-page DoS guard). */
 export const MAX_TITLE_LENGTH = 2048;
-/** The isolated session partition every browsed page lives in (shared with the User-Agent switcher). */
-export const BROWSING_PARTITION = 'persist:tepegoz-web';
+/**
+ * The isolated session partition every UNTUNNELED browsed page lives in. Re-exported from
+ * `@tepegoz/tab-engine` so the name has exactly one definition: `partitionKeyFor` derives every Phase 5
+ * `--conn-{id}` tunnel partition from this same base, and a second literal here would let the two drift
+ * into two different cookie jars.
+ */
+export const BROWSING_PARTITION = DIRECT_PARTITION;
 
 /** Secure window options for page-opened popups (child windows): the same hardened, chrome-less profile
  *  and isolated browsing partition as a tab's view — no preload, so the page never reaches the bridge. */

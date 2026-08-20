@@ -1,6 +1,6 @@
 import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { app, BrowserWindow, powerMonitor, session } from 'electron';
+import { app, BrowserWindow, powerMonitor } from 'electron';
 import { KEEP_RENDERING_SWITCHES, Logger } from '@tepegoz/libs';
 import { installSecurity } from './security';
 import { abortActiveAgentRuns, registerIpc } from './ipc';
@@ -11,7 +11,8 @@ import { isQuitting, markQuitting } from './quit-state';
 import { emitSystemPause, emitSystemResume } from './power-lifecycle';
 import PreferenceStore from '@tepegoz/preferences';
 import { closeDatabase } from './db/database.electron';
-import TabManager, { BROWSING_PARTITION } from './tabs';
+import TabManager from './tabs';
+import BrowsingSessions from './network/browsing-sessions.electron';
 import PopupWindowManager from './popup-window';
 import McpService from './mcp/supervisor.electron';
 import ExtensionCapabilityService from './extensions/capability-supervisor.electron';
@@ -142,10 +143,22 @@ if (!app.requestSingleInstanceLock()) {
       // Apply the persisted User-Agent override to the browsing session BEFORE the first tab opens
       // (a no-op default when the extension is disabled).
       userAgentHost.init();
-      // Own the single Electron webRequest listener set for the shared browsing partition. Feature
-      // services register with this multiplexer so Electron's "last listener wins" behavior cannot
-      // make them silently replace each other.
-      BrowsingWebRequestService.init(session.fromPartition(BROWSING_PARTITION).webRequest);
+      // Own the Electron webRequest listener set for EVERY browsing session — the base partition and
+      // every Phase 5 `--conn-` tunnel partition created later. Feature services register with this
+      // multiplexer so Electron's "last listener wins" behavior cannot make them silently replace each
+      // other; the multiplexer in turn registers with `BrowsingSessions` so a session created after
+      // startup is not born without a filtering plane. CRITICAL: a session this cannot attach to is
+      // refused outright rather than served unfiltered.
+      BrowsingSessions.register(
+        'web-request',
+        (ses) => {
+          BrowsingWebRequestService.attach(ses.webRequest);
+        },
+        { critical: true },
+      );
+      // Create the base browsing session now, so every attacher registered above has run before the
+      // first tab can load anything.
+      BrowsingSessions.direct();
       // Browser downloads: attach the browsing-session will-download handler before any page can start
       // a download, load the SQLite projection, and route every file through quarantine first.
       DownloadService.init();

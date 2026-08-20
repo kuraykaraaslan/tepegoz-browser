@@ -86,7 +86,7 @@ describe('BrowsingWebRequestService', () => {
 
   it('runs before-request handlers in order and stops at the first cancel/redirect', async () => {
     const fake = fakeWebRequest();
-    BrowsingWebRequestService.init(fake.webRequest);
+    BrowsingWebRequestService.attach(fake.webRequest);
     const uploadObserver = vi.fn();
     const late = vi.fn();
 
@@ -103,7 +103,7 @@ describe('BrowsingWebRequestService', () => {
 
   it('merges response headers while preserving the original headers', async () => {
     const fake = fakeWebRequest();
-    BrowsingWebRequestService.init(fake.webRequest);
+    BrowsingWebRequestService.attach(fake.webRequest);
 
     BrowsingWebRequestService.onHeadersReceived('a', () => ({
       responseHeaders: { 'x-a': ['1'] },
@@ -121,7 +121,7 @@ describe('BrowsingWebRequestService', () => {
 
   it('fails open on handler errors and continues to later handlers', async () => {
     const fake = fakeWebRequest();
-    BrowsingWebRequestService.init(fake.webRequest);
+    BrowsingWebRequestService.attach(fake.webRequest);
 
     BrowsingWebRequestService.onBeforeRequest('bad', () => {
       throw new Error('boom');
@@ -135,7 +135,7 @@ describe('BrowsingWebRequestService', () => {
 
   it('keeps completed and error observers independent', () => {
     const fake = fakeWebRequest();
-    BrowsingWebRequestService.init(fake.webRequest);
+    BrowsingWebRequestService.attach(fake.webRequest);
     const completedA = vi.fn();
     const completedB = vi.fn();
     const failed = vi.fn();
@@ -155,5 +155,35 @@ describe('BrowsingWebRequestService', () => {
     expect(failed).toHaveBeenCalledWith(
       expect.objectContaining({ id: 2, error: 'net::ERR_FAILED' }),
     );
+  });
+  it('attaches to MORE THAN ONE session, running the same pipeline on each (Phase 5 tunnel partitions)', async () => {
+    // The regression this replaces: a one-shot `initialized` flag gave the first session the whole
+    // filtering plane and every later one — every VPN/Tor tunnel partition — nothing at all, silently.
+    const direct = fakeWebRequest();
+    const tunnel = fakeWebRequest();
+    BrowsingWebRequestService.attach(direct.webRequest);
+    BrowsingWebRequestService.attach(tunnel.webRequest);
+
+    const blocked: string[] = [];
+    BrowsingWebRequestService.onBeforeRequest('adblock', (details) => {
+      blocked.push(details.url);
+      return { cancel: true };
+    });
+
+    await expect(direct.before(beforeDetails(1))).resolves.toEqual({ cancel: true });
+    await expect(tunnel.before(beforeDetails(2))).resolves.toEqual({ cancel: true });
+    expect(blocked).toHaveLength(2);
+  });
+
+  it('attaching the SAME session twice does not double-run the pipeline', async () => {
+    const fake = fakeWebRequest();
+    BrowsingWebRequestService.attach(fake.webRequest);
+    BrowsingWebRequestService.attach(fake.webRequest);
+    const seen = vi.fn();
+    BrowsingWebRequestService.onBeforeRequest('count', (details) => {
+      seen(details.id);
+    });
+    await fake.before(beforeDetails(1));
+    expect(seen).toHaveBeenCalledTimes(1);
   });
 });
