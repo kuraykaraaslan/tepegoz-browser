@@ -28,25 +28,39 @@ export const BindGroupNetworkSchema = z.object({
 
 export const SetGeneralBindingSchema = NetworkGeneralBindingSchema;
 
-/**
- * Adding a connection. The port is the security-relevant field: it must be a real TCP port, and it is
- * only ever used as a LOOPBACK address (`assertFailClosed` re-checks that at the proxy boundary, so a
- * mistake here still cannot produce a remote proxy).
- */
-export const AddNetworkConnectionSchema = z.object({
+const connectionInputBase = {
   label: z.string().min(1).max(64),
   note: z.string().max(64),
-  socksPort: z.number().int().min(1).max(65535),
-});
+};
+
+/**
+ * Adding a connection — one schema, discriminated by protocol.
+ *
+ * The security-relevant field differs per arm and each is validated here: a SOCKS port must be a real TCP
+ * port (and is only ever used as a LOOPBACK address — `assertFailClosed` re-checks that at the proxy
+ * boundary, so a mistake here still cannot produce a remote proxy); a WireGuard source path is re-read and
+ * re-parsed in main, so a profile that would resolve DNS outside the tunnel is refused at commit as well
+ * as at pick.
+ */
+export const AddNetworkConnectionSchema = z.discriminatedUnion('kind', [
+  z.object({
+    ...connectionInputBase,
+    kind: z.literal('wireguard'),
+    sourcePath: z.string().min(1).max(4096),
+  }),
+  z.object({
+    ...connectionInputBase,
+    kind: z.literal('tor'),
+    upstreamConnectionId: ConnectionIdSchema.nullable(),
+  }),
+  z.object({
+    ...connectionInputBase,
+    kind: z.literal('byo-socks'),
+    socksPort: z.number().int().min(1).max(65535),
+  }),
+]);
 
 export const RemoveNetworkConnectionSchema = ConnectionIdSchema;
-
-/** Adding a Tor connection. `upstreamConnectionId` chains it through a VPN ("Tor over VPN"). */
-export const AddTorConnectionSchema = z.object({
-  label: z.string().min(1).max(64),
-  note: z.string().max(64),
-  upstreamConnectionId: ConnectionIdSchema.nullable(),
-});
 
 /** Connect / disconnect one connection on the spot, from the manager. */
 export const SetConnectionActiveSchema = z.object({

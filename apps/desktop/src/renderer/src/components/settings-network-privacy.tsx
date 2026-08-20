@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
 import type { SettingsStrings } from '@tepegoz/settings-ui';
-import type { NetworkConnectionView, NetworkState } from '@tepegoz/desktop-ipc';
+import type {
+  NetworkConnectionInput,
+  NetworkConnectionView,
+  NetworkState,
+} from '@tepegoz/desktop-ipc';
 import { AlertBanner, Badge, Button, Card } from '@tepegoz/ui';
-import { AddByoSocksRow, AddTorRow, ImportWireGuardRow } from './settings-network-forms';
+import { AddConnectionRow } from './settings-network-forms';
 
 /**
  * Network privacy (Phase 5) — the VPN/Tor profile manager and the profile-wide default route.
@@ -239,13 +243,24 @@ export function NetworkPrivacySection({ s }: { s: SettingsStrings }) {
           <p className="mt-2 text-xs text-text-secondary">{s.network.removeHint}</p>
         </div>
 
-        <ImportWireGuardRow s={s} disabled={!state.secretsAvailable} onDone={refresh} />
+        <div>
+          <p className="text-sm font-medium text-text-primary">{s.network.addTitle}</p>
+          <p className="mb-2 text-xs text-text-secondary">{s.network.addHint}</p>
+          <AddConnectionRow
+            s={s}
+            connections={state.connections}
+            secretsAvailable={state.secretsAvailable}
+            onAdd={async (input: NetworkConnectionInput) => {
+              await window.tepegoz.addNetworkConnection(input);
+              refresh();
+            }}
+          />
+        </div>
+
+        {/* Helper binaries, together rather than interleaved with the form: they are a one-time setup
+            step, not part of adding a connection, and only appear at all when one is missing. */}
         <BinaryRow s={s} binary="wireproxy" status={state.binaries.wireproxy} onChanged={refresh} />
-
-        <AddTorRow s={s} connections={state.connections} disabled={false} onDone={refresh} />
         <BinaryRow s={s} binary="tor" status={state.binaries.tor} onChanged={refresh} />
-
-        <AddByoSocksRow s={s} onDone={refresh} />
       </div>
     </Card>
   );

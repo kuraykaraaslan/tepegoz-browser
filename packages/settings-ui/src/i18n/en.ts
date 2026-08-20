@@ -169,12 +169,11 @@ export const en = {
     kimi: 'Kimi (Moonshot)',
     local: 'Local (on-device)',
   },
-  defaultModels: {
-    title: 'Default model per provider',
-    subtitle:
-      'Pin which model each provider uses for agent runs. "Auto" routes per task (a capable model for planning, a cheaper one for simple steps). You can also change this from the Agent Console.',
+  keyModel: {
+    label: 'Model',
     auto: 'Auto (recommended)',
-    empty: 'Add a provider key to choose its model.',
+    hint: 'Each key runs on its own model — a key’s model applies while it is the top key of its provider. "Auto" routes per task (a capable model for planning, a cheaper one for simple steps).',
+    saved: 'Model updated.',
   },
 
   // --- Cost & performance ---
@@ -400,12 +399,19 @@ export const en = {
     statusConnecting: 'connecting',
     addTitle: 'Add a connection',
     addHint:
-      'Point at a SOCKS5 port on this machine (127.0.0.1). Tor Browser usually listens on 9050. The note is your own reminder — it is never verified.',
+      'Pick a type: a WireGuard .conf profile, a managed Tor instance (optionally chained through one of your VPNs), or a SOCKS5 port already running on this machine. A WireGuard profile without a DNS line is refused — without a resolver inside the tunnel, every site name would still be looked up on the normal connection.',
     labelPlaceholder: 'Name',
     notePlaceholder: 'Note (e.g. Tor, Mullvad SE)',
     portPlaceholder: 'Port',
     portInvalid: 'Enter a port between 1 and 65535.',
     add: 'Add',
+    kindLabel: 'Type',
+    nameLabel: 'Name',
+    noteLabel: 'Note',
+    portLabel: 'Port',
+    profileLabel: 'Profile',
+    chooseFile: 'Choose .conf…',
+    pickedSummary: 'Endpoint {endpoint} · DNS {dns}',
     connect: 'Connect',
     disconnect: 'Disconnect',
     protocolWireguard: 'WireGuard',
@@ -415,15 +421,6 @@ export const en = {
     keychainTitle: 'The OS keychain is unavailable',
     keychainBody:
       'A WireGuard profile contains a private key, so it can only be imported when the operating system can encrypt it. Nothing will be written in plain text.',
-    importWgTitle: 'Import WireGuard profiles',
-    importWgHint:
-      'Pick one or more .conf files. Each becomes a connection you can bind a tab group to. A profile without a DNS line is refused — without a resolver inside the tunnel, every site name would still be looked up on the normal connection.',
-    importWgButton: 'Choose .conf files…',
-    importOk: '{file} — {endpoint}, DNS {dns}',
-    importFailed: '{file} was not imported:',
-    addTorTitle: 'Add a Tor connection',
-    addTorHint:
-      'Runs its own Tor instance with its own circuits, so two Tor connections take different paths. Chain it through a VPN to get Tor over VPN: the VPN provider sees Tor traffic but not its content, and the Tor entry sees the VPN’s address instead of yours.',
     torUpstream: 'Upstream connection',
     torUpstreamNone: 'Straight to Tor',
     torUpstreamVia: 'Through {name}',

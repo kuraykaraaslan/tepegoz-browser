@@ -169,12 +169,11 @@ export const tr: SettingsStrings = {
     kimi: 'Kimi (Moonshot)',
     local: 'Yerel (cihazda)',
   },
-  defaultModels: {
-    title: 'Sağlayıcı başına varsayılan model',
-    subtitle:
-      'Her sağlayıcının ajan çalışmalarında kullanacağı modeli sabitleyin. “Otomatik” göreve göre yönlendirir (planlama için güçlü model, basit adımlar için daha ucuz). Bunu Ajan Konsolu’ndan da değiştirebilirsiniz.',
+  keyModel: {
+    label: 'Model',
     auto: 'Otomatik (önerilen)',
-    empty: 'Modelini seçmek için bir sağlayıcı anahtarı ekleyin.',
+    hint: 'Her anahtar kendi modeliyle çalışır — bir anahtarın modeli, o sağlayıcının en üstteki anahtarı olduğu sürece geçerlidir. “Otomatik” göreve göre yönlendirir (planlama için güçlü model, basit adımlar için daha ucuz).',
+    saved: 'Model güncellendi.',
   },
 
   // --- Maliyet ve performans ---
@@ -403,12 +402,19 @@ export const tr: SettingsStrings = {
     statusConnecting: 'bağlanıyor',
     addTitle: 'Bağlantı ekle',
     addHint:
-      'Bu makinedeki (127.0.0.1) bir SOCKS5 portunu gösterin. Tor Browser genellikle 9050’yi dinler. Not tamamen sizin hatırlatmanızdır — hiçbir zaman doğrulanmaz.',
+      'Bir tür seçin: WireGuard .conf profili, yönetilen bir Tor örneği (isterseniz VPN’lerinizden birinin üzerinden zincirlenmiş) ya da bu makinede zaten çalışan bir SOCKS5 portu. DNS satırı olmayan WireGuard profili reddedilir — tünelin içinde bir çözücü olmadan her site adı yine normal bağlantı üzerinden sorulurdu.',
     labelPlaceholder: 'İsim',
     notePlaceholder: 'Not (örn. Tor, Mullvad SE)',
     portPlaceholder: 'Port',
     portInvalid: '1 ile 65535 arasında bir port girin.',
     add: 'Ekle',
+    kindLabel: 'Tür',
+    nameLabel: 'İsim',
+    noteLabel: 'Not',
+    portLabel: 'Port',
+    profileLabel: 'Profil',
+    chooseFile: '.conf seç…',
+    pickedSummary: 'Uç nokta {endpoint} · DNS {dns}',
     connect: 'Bağlan',
     disconnect: 'Bağlantıyı kes',
     protocolWireguard: 'WireGuard',
@@ -418,15 +424,6 @@ export const tr: SettingsStrings = {
     keychainTitle: 'İşletim sistemi anahtarlığı kullanılamıyor',
     keychainBody:
       'Bir WireGuard profili özel anahtar içerir; bu yüzden ancak işletim sistemi onu şifreleyebildiğinde içe aktarılabilir. Hiçbir şey düz metin olarak yazılmayacak.',
-    importWgTitle: 'WireGuard profillerini içe aktar',
-    importWgHint:
-      'Bir veya birden fazla .conf dosyası seçin. Her biri, bir sekme grubuna bağlayabileceğiniz bir bağlantı olur. DNS satırı olmayan profil reddedilir — tünelin içinde bir çözücü olmadan her site adı yine normal bağlantı üzerinden sorulurdu.',
-    importWgButton: '.conf dosyalarını seç…',
-    importOk: '{file} — {endpoint}, DNS {dns}',
-    importFailed: '{file} içe aktarılmadı:',
-    addTorTitle: 'Tor bağlantısı ekle',
-    addTorHint:
-      'Kendi devreleriyle kendi Tor örneğini çalıştırır; böylece iki Tor bağlantısı farklı yollardan gider. Bir VPN üzerinden zincirlerseniz Tor-over-VPN olur: VPN sağlayıcısı Tor trafiği görür ama içeriğini görmez, Tor giriş düğümü de sizin yerinize VPN’in adresini görür.',
     torUpstream: 'Üst bağlantı',
     torUpstreamNone: 'Doğrudan Tor’a',
     torUpstreamVia: '{name} üzerinden',

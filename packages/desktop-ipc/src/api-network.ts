@@ -60,16 +60,6 @@ export interface BinaryStatus {
   path: string;
 }
 
-/** One file's outcome from an import. Reported per file, so one bad profile does not sink the batch. */
-export interface ProfileImportResult {
-  fileName: string;
-  connectionId: string | null;
-  /** Safe-to-show facts the parser found. Never any key material. */
-  summary: { endpoint: string; dns: string[]; fullTunnel: boolean } | null;
-  /** The parser's own message when the file was rejected — written to be shown to the user as-is. */
-  error: string | null;
-}
-
 export interface NetworkState {
   connections: NetworkConnectionView[];
   general: NetworkGeneralBinding;
@@ -91,11 +81,32 @@ export type ScopeBindingInput =
   | { kind: 'direct' }
   | { kind: 'connection'; connectionId: string };
 
-/** Adding a connection: the user-supplied half. `id` is derived in main from the label. */
-export interface NetworkConnectionInput {
-  label: string;
-  note: string;
-  socksPort: number;
+/**
+ * Adding a connection — one call for every protocol, discriminated by `kind`.
+ *
+ * One entry point rather than one per protocol, because from the user's side "add a connection" is a
+ * single act with a type attached; splitting it produced three stacked forms that all did the same thing.
+ * `id` is derived in main from the label.
+ */
+export type NetworkConnectionInput =
+  | { kind: 'wireguard'; label: string; note: string; sourcePath: string }
+  | { kind: 'tor'; label: string; note: string; upstreamConnectionId: string | null }
+  | { kind: 'byo-socks'; label: string; note: string; socksPort: number };
+
+/**
+ * A `.conf` the user picked, parsed but NOT yet stored.
+ *
+ * The two-step (pick, then add) is what lets the unified form behave like every other one: the file is
+ * chosen into a field, the user names it, and a single Add button commits. Nothing is persisted until
+ * then — main re-reads the path at commit time rather than holding the profile in memory meanwhile.
+ */
+export interface PickedWireguardProfile {
+  path: string;
+  fileName: string;
+  /** Safe-to-show facts from the parser. Never key material. */
+  endpoint: string;
+  dns: string[];
+  fullTunnel: boolean;
 }
 
 export interface NetworkApi {
@@ -106,9 +117,9 @@ export interface NetworkApi {
   setGeneralNetworkBinding(binding: NetworkGeneralBinding): Promise<void>;
   addNetworkConnection(input: NetworkConnectionInput): Promise<void>;
   removeNetworkConnection(id: string): Promise<void>;
-  /** Open a file picker for WireGuard `.conf` profiles and import every one the user chose. */
-  importWireguardProfiles(): Promise<ProfileImportResult[]>;
-  addTorConnection(input: { label: string; note: string; upstreamConnectionId: string | null }): Promise<void>;
+  /** Open a file picker for a WireGuard `.conf` and parse it. `null` when the user cancelled; rejects
+   *  with the parser's own message when the file is not a usable profile. */
+  pickWireguardProfile(): Promise<PickedWireguardProfile | null>;
   /** Bring one connection up or take it down on the spot. */
   setNetworkConnectionActive(id: string, active: boolean): Promise<void>;
   setNetworkBinaryPath(binary: 'wireproxy' | 'tor', path: string): Promise<void>;

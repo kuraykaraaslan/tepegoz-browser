@@ -19,6 +19,8 @@ export const IpcChannels = {
   credentialsAdd: 'credentials:add',
   credentialsRemoveById: 'credentials:remove-by-id',
   credentialsRename: 'credentials:rename',
+  /** Pin the model ONE stored key runs with ('' = auto/tiered routing). */
+  credentialsSetModel: 'credentials:set-model',
   /** Reorder keys (drag-and-drop priority); the top key's provider becomes the default. */
   credentialsReorder: 'credentials:reorder',
   windowMinimize: 'window:minimize',
@@ -151,8 +153,7 @@ export const IpcChannels = {
   networkBindGroup: 'network:bind-group',
   networkSetGeneral: 'network:set-general',
   networkAddConnection: 'network:add-connection',
-  networkImportWireguard: 'network:import-wireguard',
-  networkAddTor: 'network:add-tor',
+  networkPickWireguard: 'network:pick-wireguard',
   networkSetActive: 'network:set-active',
   networkSetBinaryPath: 'network:set-binary-path',
   networkRemoveConnection: 'network:remove-connection',

@@ -7,12 +7,11 @@ import {
   type BinaryStatus,
   type GroupNetworkRoute,
   type NetworkState,
-  type ProfileImportResult,
+  type PickedWireguardProfile,
   type TabNetworkRoute,
 } from '@tepegoz/desktop-ipc';
 import {
   AddNetworkConnectionSchema,
-  AddTorConnectionSchema,
   BindGroupNetworkSchema,
   BindTabNetworkSchema,
   RemoveNetworkConnectionSchema,
@@ -20,7 +19,7 @@ import {
   SetConnectionActiveSchema,
   SetGeneralBindingSchema,
 } from '@tepegoz/desktop-ipc/schemas';
-import { isValidConnectionId, type NetworkConnection } from '@tepegoz/shared-types';
+import { isValidConnectionId } from '@tepegoz/shared-types';
 import PreferenceStore from '@tepegoz/preferences';
 import { binDir, locateBinary, type VpnBinary } from '../network/vpn-binaries.electron';
 import VpnSecrets from '../network/vpn-secrets.electron';
@@ -181,98 +180,68 @@ export function registerNetworkIpc(): void {
 
   handleAsync(IpcChannels.networkAddConnection, async (_event, payload): Promise<void> => {
     const input = AddNetworkConnectionSchema.parse(payload);
-    const connection: NetworkConnection = {
-      id: freshConnectionId(input.label),
-      label: input.label,
-      kind: 'byo-socks',
-      socksPort: input.socksPort,
-      note: input.note,
-      // Sync-meta down-payment: recorded now so Phase 3's account sync is not a schema migration.
-      updatedAt: Date.now(),
-      version: 1,
-    };
-    ConnectionPool.add(connection);
-    Logger.info('Network connection added', { id: connection.id });
+    const id = freshConnectionId(input.label);
+    // Sync-meta down-payment: recorded now so Phase 3's account sync is not a schema migration.
+    const meta = { note: input.note, updatedAt: Date.now(), version: 1 };
+
+    if (input.kind === 'wireguard') {
+      const text = readFileSync(input.sourcePath, 'utf8');
+      // Re-parsed, not trusted from the pick: this is the copy that will actually run, and the DNS rule
+      // has to hold on it.
+      const summary = summarize(parseWireGuardConfig(text));
+      VpnSecrets.save(id, text);
+      ConnectionPool.add({ ...meta, id, label: input.label, kind: 'wireguard', endpoint: summary.endpoint });
+    } else if (input.kind === 'tor') {
+      if (input.upstreamConnectionId !== null && !ConnectionPool.has(input.upstreamConnectionId)) {
+        throw new Error(`No such upstream connection: ${input.upstreamConnectionId}`);
+      }
+      ConnectionPool.add({
+        ...meta,
+        id,
+        label: input.label,
+        kind: 'tor',
+        upstreamConnectionId: input.upstreamConnectionId,
+      });
+    } else {
+      ConnectionPool.add({ ...meta, id, label: input.label, kind: 'byo-socks', socksPort: input.socksPort });
+    }
+
+    Logger.info('Network connection added', { id, kind: input.kind });
     broadcastNetworkState();
     return Promise.resolve();
   });
 
   handleAsync(
-    IpcChannels.networkImportWireguard,
-    async (event): Promise<ProfileImportResult[]> => {
+    IpcChannels.networkPickWireguard,
+    async (event): Promise<PickedWireguardProfile | null> => {
       if (!VpnSecrets.isAvailable()) {
-        // Refused up front rather than after the picker: a WireGuard profile is a private key, and the
-        // only place to put it would be plain text on disk.
+        // Refused before the picker opens: a WireGuard profile is a private key, and the only place to
+        // put it would be plain text on disk.
         throw new Error('The OS keychain is unavailable, so a WireGuard profile cannot be stored safely');
       }
       const win = BrowserWindow.fromWebContents(event.sender);
       const opts: Electron.OpenDialogOptions = {
-        title: 'WireGuard profiles',
+        title: 'WireGuard profile',
         filters: [{ name: 'WireGuard', extensions: ['conf'] }],
-        properties: ['openFile', 'multiSelections'],
+        properties: ['openFile'],
       };
       const { canceled, filePaths } =
         win === null ? await dialog.showOpenDialog(opts) : await dialog.showOpenDialog(win, opts);
-      if (canceled) return [];
+      const filePath = filePaths[0];
+      if (canceled || filePath === undefined) return null;
 
-      const results: ProfileImportResult[] = [];
-      for (const filePath of filePaths.slice(0, 32)) {
-        const fileName = basename(filePath);
-        try {
-          const text = readFileSync(filePath, 'utf8');
-          // Parsed BEFORE anything is stored, so a file that would resolve DNS outside the tunnel is
-          // rejected without ever becoming a connection the user could bind a group to.
-          const summary = summarize(parseWireGuardConfig(text));
-          const id = freshConnectionId(fileName.replace(/\.conf$/i, ''));
-          VpnSecrets.save(id, text);
-          ConnectionPool.add({
-            id,
-            label: fileName.replace(/\.conf$/i, '').slice(0, 64) || id,
-            kind: 'wireguard',
-            endpoint: summary.endpoint,
-            note: '',
-            updatedAt: Date.now(),
-            version: 1,
-          });
-          results.push({
-            fileName,
-            connectionId: id,
-            summary: { endpoint: summary.endpoint, dns: summary.dns, fullTunnel: summary.fullTunnel },
-            error: null,
-          });
-        } catch (err) {
-          // One bad file does not sink the batch, and its own message is carried through: "no DNS line"
-          // tells the user exactly what to fix, where "import failed" tells them nothing.
-          results.push({
-            fileName,
-            connectionId: null,
-            summary: null,
-            error: err instanceof Error ? err.message : String(err),
-          });
-        }
-      }
-      broadcastNetworkState();
-      return results;
+      // Parsed at PICK time so the form can show what it found and refuse early — and parsed AGAIN at
+      // commit, because the file could change in between and the DNS rule must hold on what runs.
+      const summary = summarize(parseWireGuardConfig(readFileSync(filePath, 'utf8')));
+      return {
+        path: filePath,
+        fileName: basename(filePath),
+        endpoint: summary.endpoint,
+        dns: summary.dns,
+        fullTunnel: summary.fullTunnel,
+      };
     },
   );
-
-  handleAsync(IpcChannels.networkAddTor, async (_event, payload): Promise<void> => {
-    const input = AddTorConnectionSchema.parse(payload);
-    if (input.upstreamConnectionId !== null && !ConnectionPool.has(input.upstreamConnectionId)) {
-      throw new Error(`No such upstream connection: ${input.upstreamConnectionId}`);
-    }
-    ConnectionPool.add({
-      id: freshConnectionId(input.label),
-      label: input.label,
-      kind: 'tor',
-      upstreamConnectionId: input.upstreamConnectionId,
-      note: input.note,
-      updatedAt: Date.now(),
-      version: 1,
-    });
-    broadcastNetworkState();
-    return Promise.resolve();
-  });
 
   handleAsync(IpcChannels.networkSetActive, async (_event, payload): Promise<void> => {
     const { id, active } = SetConnectionActiveSchema.parse(payload);
