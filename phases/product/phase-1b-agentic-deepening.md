@@ -54,6 +54,14 @@ fallback, full capability plane, **tepegoz's MCP SERVER surface**, local SLM.
 > shared is deliberate: `ModelGateway.modelOverride` (a *preference* — applying to every live run is the
 > intent) and `userHasControl` (yielding every run when the human grabs the mouse is the point).
 >
+> **Consequence handled the same day — unwatched approvals.** The Agent panel draws ONE group at a
+> time, so an approval raised for another group landed in that group's state and was never drawn: the
+> run would sit invisible until the 120s fail-safe rejected it, and the user would watch a task "fail"
+> for no observable reason. Main now compares the request's group with the group of the tab the user is
+> actually looking at, and pushes a centre/toast/native notification only when they differ (silent for
+> the watched group, whose modal is already on screen — a duplicate there is the noise that teaches
+> people to ignore the channel). en+tr.
+>
 > Two constraints hold throughout: ADR-0020 — a group may carry a **binding/UI** setting but **never** a
 > policy/permission scope (so per-group *autonomy or permission* settings stay forbidden even once
 > per-group runs exist) — and the group lifecycle is not the conversation lifecycle:

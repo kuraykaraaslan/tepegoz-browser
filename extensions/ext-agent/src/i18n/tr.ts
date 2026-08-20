@@ -80,6 +80,9 @@ export const tr: AgentStrings = {
     returnedToOrigin: 'O sekme kapandı — başladığı sayfaya dönüldü.',
   },
   // Token Defteri kotası — %80 uyarısı (kümülatif kullanım eşiği aştığında bir kez gösterilir).
+  notifications: {
+    approvalNeededTitle: 'Başka bir görev onayınızı bekliyor',
+  },
   quota: {
     warnTitle: 'Token kotanıza yaklaşıyorsunuz',
     warnBody:

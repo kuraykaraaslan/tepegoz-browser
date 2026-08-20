@@ -32,6 +32,7 @@ import {
   setCurrentAgentRun,
   withAgentRunScope,
 } from '../agent/browser-host.electron';
+import TabManager from '../tabs';
 import { planGrantScope } from '../agent/plan-grant-scope';
 import {
   mayOfferRemember,
@@ -88,6 +89,34 @@ function completionOutcomeField(raw: string | undefined): {
 /** Fill the `{skill}` placeholder. A placeholder, not concatenation: Turkish puts the name first. */
 function fillSkill(template: string, skill: string): string {
   return template.replace('{skill}', skill);
+}
+
+/** The tab group the user is actually looking at, or null when the active tab is in none. */
+function watchedGroupId(): string | null {
+  const state = TabManager.getState();
+  return state.tabs.find((t) => t.id === state.activeId)?.groupId ?? null;
+}
+
+/**
+ * Raise an OS/centre notification when an approval belongs to a group the user is NOT looking at.
+ *
+ * The Agent panel renders one group at a time, so a request raised for another group lands in that
+ * group's state and is simply never drawn. With one run per process that could not happen — the run
+ * was always the one you started. Now that runs are per tab group and concurrent, an unwatched
+ * request would sit invisible until the 120s fail-safe rejected it, and the user would see a task
+ * "fail" for no reason they could observe. Silent for the group being watched: the modal is already
+ * on screen there, and a duplicate notification for it would be noise that trains the user to ignore
+ * the channel.
+ */
+function notifyIfUnwatched(groupId: string, toolName: string, reason: string): void {
+  if (watchedGroupId() === groupId) return;
+  NotificationHost.push({
+    source: 'agent',
+    kind: 'warning',
+    title: mainStrings().agent.notifications.approvalNeededTitle,
+    body: `${toolName}: ${reason}`,
+    channels: ['center', 'toast', 'native'],
+  });
 }
 
 // Agent run counter (registerAgentIpc runs once at startup, so module scope is fine). HITL ids are
@@ -323,6 +352,7 @@ export function registerAgentRunIpc(): void {
       };
       onEvent('awaiting_approval', `Approval needed: ${req.toolName}`, req.policy.reason);
       if (!sender.isDestroyed()) sender.send(IpcChannels.agentApprovalRequest, request);
+      notifyIfUnwatched(groupId, req.toolName, req.policy.reason);
       return new Promise<boolean>((resolve) => {
         pendingApprovals.set(approvalId, {
           runId,

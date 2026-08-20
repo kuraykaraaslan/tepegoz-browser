@@ -76,6 +76,12 @@ export const en = {
       'Opened a new tab, but did not switch to it automatically — that needs your approval or the site is locked out.',
     returnedToOrigin: 'That tab closed — back on the page it started from.',
   },
+  // Raised when an approval belongs to a tab group the user is NOT currently looking at. Runs are
+  // per tab group and concurrent, and the panel draws one group at a time, so without this the
+  // request would sit unseen until it timed out.
+  notifications: {
+    approvalNeededTitle: 'Another task needs your approval',
+  },
   // Token Ledger quota — the 80% warning (raised once when cumulative usage crosses the threshold).
   quota: {
     warnTitle: 'Approaching your token quota',
