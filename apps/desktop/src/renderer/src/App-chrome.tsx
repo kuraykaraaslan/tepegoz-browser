@@ -1,6 +1,8 @@
 import { type Dispatch, type SetStateAction } from 'react';
 import { coreDict, pick, type Locale } from '@tepegoz/i18n';
 import { BrowserChrome } from '@tepegoz/browser-chrome';
+import { FindBar } from '@tepegoz/find-bar';
+import { useFindInPage } from './app-find';
 import { BookmarksBar } from '@tepegoz/bookmarks-bar';
 import { BOOKMARK_ROOT_BAR } from '@tepegoz/bookmarks';
 import type { ExtensionId, Preferences, TabsState } from '@tepegoz/desktop-ipc';
@@ -57,6 +59,7 @@ export function AppChrome({
   onOpenQuickSetting,
   onOmniboxDropdownHeightChange,
 }: AppChromeProps) {
+  const find = useFindInPage();
   const coreT = pick(coreDict, locale);
   const browserT = pick(browserDict, locale);
   const userMenuT = pick(userMenuDict, locale);
@@ -196,6 +199,26 @@ export function AppChrome({
           onContextMenu={(id, type) => window.tepegoz.showBookmarkContextMenu(id, type)}
           labels={{ bar: browserT.bookmarksBar, empty: browserT.noBookmarksBar }}
         />
+      )}
+      {/* Find-in-page (Ctrl+F). Rendered in the chrome's flow rather than floated over the page: the
+          active tab is a native WebContentsView that composites ABOVE the renderer's DOM, so an
+          overlay would sit behind it. Being in the flow also means contentRef's ResizeObserver
+          reports the new top and main reflows the web view down, exactly like the bookmarks bar. */}
+      {find.open && (
+        <div className="flex justify-end pr-3">
+          <FindBar
+            key={find.focusKey}
+            query={find.query}
+            activeMatch={find.activeMatch}
+            totalMatches={find.totalMatches}
+            matchCase={find.matchCase}
+            onQueryChange={find.setQuery}
+            onNext={find.next}
+            onPrevious={find.previous}
+            onToggleMatchCase={find.toggleMatchCase}
+            onClose={find.close}
+          />
+        </div>
       )}
     </>
   );

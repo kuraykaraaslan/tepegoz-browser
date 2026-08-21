@@ -75,6 +75,14 @@ export const IpcChannels = {
   tabsDragCancel: 'tabs:drag-cancel',
   /** Renderer→main: this window's tab-strip geometry (client coords) for cross-window drop hit-testing. */
   tabsReportStrip: 'tabs:report-strip',
+  /** Find-in-page (Ctrl+F). Runs against the sender window's ACTIVE tab; internal pages have no view. */
+  findStart: 'find:start',
+  /** Stop the search and clear the page's selection/highlights. */
+  findStop: 'find:stop',
+  /** main→renderer: Chromium's match counts for the query that is still in flight. */
+  findResult: 'find:result',
+  /** main→renderer: Ctrl+F arrived while the PAGE had focus, so the chrome must open the bar itself. */
+  findOpen: 'find:open',
   /** Renderer→main: open a fresh empty browser window (main-menu "New window"). */
   windowNew: 'window:new',
   agentRun: 'agent:run',

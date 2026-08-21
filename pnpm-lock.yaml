@@ -50,6 +50,9 @@ importers:
       '@ghostery/adblocker-electron':
         specifier: 2.18.1
         version: 2.18.1(electron@33.4.11)
+      '@tepegoz/find-bar':
+        specifier: workspace:*
+        version: link:../../packages/find-bar
       better-sqlite3:
         specifier: ^11.7.0
         version: 11.10.0

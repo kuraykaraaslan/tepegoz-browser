@@ -1,5 +1,6 @@
 import { registerAgentIpc } from './ipc-agent';
 import { registerTabsWindowsIpc } from './ipc-tabs-windows';
+import { registerFindIpc } from './ipc-find';
 import { registerContentIpc } from './ipc-content';
 import { registerDownloadsIpc } from './ipc-downloads';
 import { registerUploadsIpc } from './ipc-uploads';
@@ -12,12 +13,13 @@ export { abortActiveAgentRuns } from './ipc-agent';
 
 /** Register every typed IPC handler. The IPC layer lives in this `ipc/` folder, split by domain
  *  (ADR-0010 250-line cap): agent run/config/HITL (`./ipc-agent`), window/tabs/tab-groups/native-menus/
- *  popups (`./ipc-tabs-windows`), and everything else — prefs/credentials/MCP/extensions/notifications/
+ *  popups (`./ipc-tabs-windows`), find-in-page (`./ipc-find`), and everything else — prefs/credentials/MCP/extensions/notifications/
  *  history/bookmarks/user-agent/popup-blocker/macros/local-models (`./ipc-content`). Shared low-level
  *  wiring helpers are in `./ipc-helpers`. */
 export function registerIpc(): void {
   registerAgentIpc();
   registerTabsWindowsIpc();
+  registerFindIpc();
   registerTabDragIpc();
   registerContentIpc();
   registerDownloadsIpc();

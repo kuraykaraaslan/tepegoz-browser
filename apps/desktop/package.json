@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@ghostery/adblocker-electron": "2.18.1",
+    "@tepegoz/find-bar": "workspace:*",
     "better-sqlite3": "^11.7.0",
     "node-llama-cpp": "^3.19.0",
     "nspell": "2.1.5",

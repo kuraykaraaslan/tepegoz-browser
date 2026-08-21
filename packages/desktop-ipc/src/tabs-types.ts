@@ -130,3 +130,22 @@ export interface TabStripGeometry {
   /** The draggable tab slots, left-to-right. */
   slots: TabStripSlot[];
 }
+
+/** Payload for `find:start` — one find-in-page request against the sender window's ACTIVE tab.
+ *  `findNext` false starts a fresh search (first match), true steps within the current one; Chromium
+ *  needs that distinction because a re-started search resets the active ordinal. */
+export interface FindInPageQuery {
+  query: string;
+  forward: boolean;
+  findNext: boolean;
+  matchCase: boolean;
+}
+
+/** Payload for `find:result` — Chromium's `found-in-page` counts, echoed with the query they belong to
+ *  so the renderer can drop a late result for a query the user has already typed past. */
+export interface FindInPageResult {
+  query: string;
+  /** 1-based index of the highlighted match; 0 when there is none. */
+  activeMatchOrdinal: number;
+  matches: number;
+}
