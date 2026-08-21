@@ -160,9 +160,17 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
   - [ ] It prompts directly rather than through a `PermissionGuard` seam. Credential entry is not a
         capability grant, and forcing it through the permission engine would have meant modelling
         "username+password" as a permission — recorded as a deliberate deviation, not an oversight.
-- [ ] **Certificate-error interstitial** (`certificate-error` event) — full-page block/proceed warning; a
-      "proceed anyway" is a per-site **HITL** decision journaled as an observation; **sensitive-site lockout
-      forbids proceed**
+- [x] **Certificate-error warning** (`certificate-error` event) — block/proceed warning; "proceed anyway"
+      is a per-site HITL decision; **sensitive-site lockout forbids proceed** (hard-blocked with NO prompt
+      shown, so the habit is never taught). `main/auth/certificate-broker.ts` + `@tepegoz/cert-warning-ui`,
+      8 broker tests + 6 dialog tests. Exceptions are **in-memory only** and die with the process — a
+      persisted exception is a permanent transport-security downgrade. Cancel/backdrop/timeout/no-window
+      all refuse; a refusal is not remembered, so a transient error can be retried.
+  - [ ] **Deviation:** a blocking modal, not a **full-page interstitial**. The internal-page mechanism
+        addresses canonical parameterless `tepegoz://` URLs and does not fit a per-navigation state
+        carrying the failed URL + error code. Same security properties, different presentation.
+  - [ ] The proceed decision is logged but **not journaled as an Event Journal observation** as this line
+        asks.
 - [ ] **`beforeunload` confirmation** — honor the page's unload prompt (leave/stay) via a localized dialog;
       agent-driven navigations record the prompt but never auto-dismiss a real data-loss warning
 
