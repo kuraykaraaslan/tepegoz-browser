@@ -118,14 +118,18 @@ export function registerTabsWindowsIpc(): void {
   onWindowAction(IpcChannels.tabsGroupMove, TabGroupMoveSchema, (win, { groupId, toIndex }) => {
     TabManager.forSenderWindow(win)?.moveGroup(groupId, toIndex);
   });
-  onWindowAction(IpcChannels.tabsGroupUpdate, TabGroupUpdateSchema, (win, { groupId, name, color, collapsed, settings }) => {
-    const wt = TabManager.forSenderWindow(win);
-    if (wt === undefined) return;
-    if (name !== undefined) wt.renameGroup(groupId, name);
-    if (color !== undefined) wt.recolorGroup(groupId, color);
-    if (collapsed !== undefined) wt.setGroupCollapsed(groupId, collapsed);
-    if (settings !== undefined) wt.updateGroupSettings(groupId, settings);
-  });
+  onWindowAction(
+    IpcChannels.tabsGroupUpdate,
+    TabGroupUpdateSchema,
+    (win, { groupId, name, color, collapsed, settings }) => {
+      const wt = TabManager.forSenderWindow(win);
+      if (wt === undefined) return;
+      if (name !== undefined) wt.renameGroup(groupId, name);
+      if (color !== undefined) wt.recolorGroup(groupId, color);
+      if (collapsed !== undefined) wt.setGroupCollapsed(groupId, collapsed);
+      if (settings !== undefined) wt.updateGroupSettings(groupId, settings);
+    },
+  );
   onWindowAction(IpcChannels.tabsGroupAssign, TabGroupAssignSchema, (win, { tabId, groupId }) => {
     TabManager.forSenderWindow(win)?.assignToGroup(tabId, groupId);
   });
@@ -270,7 +274,10 @@ export function registerTabsWindowsIpc(): void {
         width: BOOKMARK_FOLDER_WIDTH,
         ...(height !== undefined ? { height } : {}),
       });
-    } else if ((surface === 'bookmark-rename' || surface === 'bookmark-add-folder') && id !== undefined) {
+    } else if (
+      (surface === 'bookmark-rename' || surface === 'bookmark-add-folder') &&
+      id !== undefined
+    ) {
       // Rename / add-folder dialog as a native window so the page stays visible behind it. The mode is
       // carried by the surface name; `id` is the target node (rename) or parent folder (add-folder).
       PopupWindowManager.open({
@@ -357,11 +364,21 @@ export function registerTabsWindowsIpc(): void {
     TabManager.forWindow(win)?.setContentVisible(visible);
   });
 
-  handleAsync(IpcChannels.tabsCapture, (event): Promise<string | null> =>
-    TabManager.forSender(event.sender)?.captureActive() ?? Promise.resolve(null),
+  handleAsync(
+    IpcChannels.tabsCapture,
+    (event): Promise<string | null> =>
+      TabManager.forSender(event.sender)?.captureActive() ?? Promise.resolve(null),
   );
 
-  handle(IpcChannels.tabsGetState, (event): TabsState =>
-    TabManager.forSender(event.sender)?.getState() ?? { tabs: [], groups: [], activeId: null, canGoBack: false, canGoForward: false },
+  handle(
+    IpcChannels.tabsGetState,
+    (event): TabsState =>
+      TabManager.forSender(event.sender)?.getState() ?? {
+        tabs: [],
+        groups: [],
+        activeId: null,
+        canGoBack: false,
+        canGoForward: false,
+      },
   );
 }

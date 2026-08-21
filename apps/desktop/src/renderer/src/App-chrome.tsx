@@ -173,7 +173,10 @@ export function AppChrome({
               pinnedIds={prefs?.pinnedExtensions ?? []}
               onReorderPinned={onReorderPinned}
               activeExtensionId={
-                extSurfaces.activeSurface?.id ?? extSurfaces.sidebarExtId ?? extSurfaces.popupOpenId ?? null
+                extSurfaces.activeSurface?.id ??
+                extSurfaces.sidebarExtId ??
+                extSurfaces.popupOpenId ??
+                null
               }
               onExtensionAction={extSurfaces.runExtensionAction}
             />
@@ -193,7 +196,10 @@ export function AppChrome({
             // Seed a tight height (main self-resizes to the real content once it loads) so a small
             // folder doesn't open as a tall window.
             const rows = Math.max(1, bookmarks.findBarNode(folderId)?.children.length ?? 1);
-            window.tepegoz.openPopup('bookmark-folder', anchor, { id: folderId, height: rows * 32 + 12 });
+            window.tepegoz.openPopup('bookmark-folder', anchor, {
+              id: folderId,
+              height: rows * 32 + 12,
+            });
           }}
           onMove={bookmarks.onBookmarkMove}
           onContextMenu={(id, type) => window.tepegoz.showBookmarkContextMenu(id, type)}

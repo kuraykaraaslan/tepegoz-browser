@@ -239,7 +239,8 @@ export const windowTabsApi: Pick<
   newWindow: () => {
     ipcRenderer.send(IpcChannels.windowNew);
   },
-  ensureActiveGroup: () => invoke<{ groupId: string }>(IpcChannels.agentEnsureGroup).then((r) => r.groupId),
+  ensureActiveGroup: () =>
+    invoke<{ groupId: string }>(IpcChannels.agentEnsureGroup).then((r) => r.groupId),
   onActiveGroupChange: (callback: (groupId: string | null) => void) => {
     // Derive active group from tab state changes — no separate push needed.
     let lastGroupId: string | null | undefined = undefined;

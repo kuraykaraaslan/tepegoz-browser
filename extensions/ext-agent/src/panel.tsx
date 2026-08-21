@@ -32,14 +32,35 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
   const c = useT(coreDict);
 
   const {
-    config, setConfig, dismissedNotices, setDismissedNotices, scheduleOpen, setScheduleOpen,
-    logExported, setLogExported, exportError, setExportError, activeGroupId, listRef, autonomy,
-    activeState, mutateGroup, mutateActive,
+    config,
+    setConfig,
+    dismissedNotices,
+    setDismissedNotices,
+    scheduleOpen,
+    setScheduleOpen,
+    logExported,
+    setLogExported,
+    exportError,
+    setExportError,
+    activeGroupId,
+    listRef,
+    autonomy,
+    activeState,
+    mutateGroup,
+    mutateActive,
   } = useAgentSession(api);
 
   const actions = useAgentActions({
-    api, a, config, setConfig, activeGroupId, activeState, mutateGroup, mutateActive,
-    setLogExported, setExportError,
+    api,
+    a,
+    config,
+    setConfig,
+    activeGroupId,
+    activeState,
+    mutateGroup,
+    mutateActive,
+    setLogExported,
+    setExportError,
   });
   const attach = useAgentAttachments({ api, a, mutateActive });
 
@@ -47,8 +68,19 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
   const notices = buildNotices(autonomy, a.risk).filter((n) => !dismissedNotices.has(n.id));
 
   const {
-    turns, approval, planPreview, running, paused, skipIds, tokens, openReasoning, openSteps, liveDelta,
-    prompt, attachments, expandedFiles,
+    turns,
+    approval,
+    planPreview,
+    running,
+    paused,
+    skipIds,
+    tokens,
+    openReasoning,
+    openSteps,
+    liveDelta,
+    prompt,
+    attachments,
+    expandedFiles,
   } = activeState;
 
   // Gear tooltip: a one-glance summary of the current run config (provider · model · autonomy · effort),
@@ -77,7 +109,8 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
     <div
       className={cn(
         'absolute inset-0 flex flex-col bg-surface-base',
-        autonomy !== 'ask' && 'outline outline-2 -outline-offset-2 outline-dashed outline-amber-500/70',
+        autonomy !== 'ask' &&
+          'outline outline-2 -outline-offset-2 outline-dashed outline-amber-500/70',
       )}
     >
       <PanelHeader
@@ -94,7 +127,9 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
         onClose={onClose}
         onSchedule={() => setScheduleOpen(true)}
         onOpenConversation={actions.onOpenConversation}
-        onDismissExportError={() => { setExportError(null); }}
+        onDismissExportError={() => {
+          setExportError(null);
+        }}
       />
 
       <PanelThread
