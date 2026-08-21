@@ -12,7 +12,6 @@
     "preview": "electron-vite preview",
     "generate:catalog": "vite-node scripts/generate-extension-catalog.ts",
     "icons": "node scripts/generate-icons.mjs",
-    "rebuild": "electron-rebuild -f -o better-sqlite3",
     "package:dir": "electron-vite build && electron-builder --dir --config electron-builder.yml",
     "package:win": "electron-vite build && electron-builder --win --config electron-builder.yml",
     "package:mac": "electron-vite build && electron-builder --mac --config electron-builder.yml",
@@ -28,7 +27,6 @@
     "@tepegoz/auth-prompt-ui": "workspace:*",
     "@tepegoz/cert-warning-ui": "workspace:*",
     "@tepegoz/find-bar": "workspace:*",
-    "better-sqlite3": "^11.7.0",
     "node-llama-cpp": "^3.19.0",
     "nspell": "2.1.5",
     "react": "^18.3.1",
@@ -37,7 +35,6 @@
   },
   "//devDependencies": "@tepegoz/* workspace packages are bundled into out/ by electron-vite (they expose TS source via `exports`), so they are BUILD-TIME deps, not runtime node_modules deps. Keeping them here (not in `dependencies`) is what lets electron-builder package the app: it only collects production deps, and pnpm symlinks these to ../../packages/* (outside apps/desktop), which electron-builder cannot pack into the asar.",
   "devDependencies": {
-    "@electron/rebuild": "^3.7.0",
     "@fortawesome/fontawesome-svg-core": "^7.2.0",
     "@fortawesome/free-solid-svg-icons": "^7.2.0",
     "@fortawesome/react-fontawesome": "^3.3.1",

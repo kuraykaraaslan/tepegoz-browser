@@ -37,8 +37,8 @@ const WORKSPACE_PACKAGES = [
   '@tepegoz/ext-translate',
   '@tepegoz/ext-typo',
   '@tepegoz/ext-video-player',
-  // Bundled into main (TS source). Its native dep `better-sqlite3` stays external (real npm module,
-  // rebuilt against the Electron ABI via `pnpm --filter @tepegoz/desktop run rebuild`).
+  // Bundled into main (TS source). Its database is `node:sqlite`, a built-in module — nothing native
+  // to keep external and nothing to rebuild.
   '@tepegoz/persistence',
 ];
 

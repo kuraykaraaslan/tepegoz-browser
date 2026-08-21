@@ -5,7 +5,7 @@
   "description": "Agentic automation browser — observable, security-by-design, local-first (cloud-optional). Windows 11 primary.",
   "packageManager": "pnpm@10.30.3",
   "engines": {
-    "node": ">=22.12.0",
+    "node": ">=24.0.0",
     "pnpm": ">=10"
   },
   "type": "module",
@@ -15,7 +15,6 @@
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "test": "turbo run test",
-    "test:electron": "node scripts/test-electron.mjs",
     "coverage": "vitest run --coverage --config vitest.coverage.config.ts",
     "docs:links": "node scripts/check-doc-links.mjs",
     "format": "prettier --write .",

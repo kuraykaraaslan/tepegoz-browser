@@ -9,10 +9,10 @@ import { HistoryStore, migrate, openDatabase, type Db } from '@tepegoz/persisten
  * Event Journal, blob store, kv settings, and browsing history all live here (Chrome keeps its History
  * as SQLite likewise). Opened once after `app.whenReady()`.
  *
- * `better-sqlite3` is a native module that must match the Electron ABI (rebuilt via
- * `pnpm --filter @tepegoz/desktop run rebuild`). If it can't load — e.g. a dev checkout that skipped
- * the rebuild — we log and **degrade gracefully**: `getDb()` returns null and history/journal writes
- * no-op, rather than crashing the whole browser.
+ * The database is `node:sqlite`, built into the runtime. It used to be `better-sqlite3`, whose `.node`
+ * binary had to match the Electron ABI and therefore had to be rebuilt from source on every machine;
+ * the failure was silent, so this opener degrades rather than throws — history/journal no-op and the
+ * browser still runs. That fallback is kept: a corrupt or unwritable user-data directory is still real.
  */
 let db: Db | null = null;
 let initialized = false;

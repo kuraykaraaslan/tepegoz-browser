@@ -1,6 +1,6 @@
 name: Release
 
-# Tag-driven, per-OS matrix. Native modules (better-sqlite3, …) and OS installers cannot be
+# Tag-driven, per-OS matrix. OS installers cannot be
 # cross-compiled, so each OS builds on its own runner.
 on:
   push:
@@ -21,15 +21,16 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22.12.0'
+          node-version: '24.11.1'
           cache: pnpm
-      - name: Install (frozen lockfile, native rebuild per-OS)
+      - name: Install (frozen lockfile)
         run: pnpm install --frozen-lockfile
       - name: Typecheck · lint · test · build
         run: pnpm exec turbo run typecheck lint test build
 
       # Package the per-OS installers. Each `package:*` script runs `electron-vite build` first, then
-      # electron-builder, which rebuilds better-sqlite3 against the Electron ABI for that platform.
+      # electron-builder. The database is `node:sqlite` (in-runtime, nothing to rebuild); `npmRebuild`
+      # stays on for node-llama-cpp, whose prebuilds are N-API and therefore ABI-independent.
       # NOTE: all builds are UNSIGNED (dev-only). Code signing is still BLOCKING for public
       # distribution — wire the signing secrets in apps/desktop/electron-builder.yml once identities
       # exist: Windows Authenticode (CSC_LINK/CSC_KEY_PASSWORD) or Azure Trusted Signing; macOS

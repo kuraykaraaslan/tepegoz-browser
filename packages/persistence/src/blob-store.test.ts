@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { skipWithoutNativeSqlite } from './native-abi';
 import { openDatabase, migrate, BlobStore, type Db } from './index';
 
-describe.skipIf(skipWithoutNativeSqlite())('BlobStore', () => {
+describe('BlobStore', () => {
   let db: Db;
   beforeEach(() => {
     db = openDatabase(':memory:');

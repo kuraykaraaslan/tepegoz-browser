@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { skipWithoutNativeSqlite } from './native-abi';
 import { defaultTaskPolicy, type TaskDefinition } from '@tepegoz/tasks';
 import { migrate } from './migrations';
 import { openDatabase, type Db } from './db';
@@ -25,7 +24,7 @@ function task(id: string, updatedAt: number): TaskDefinition {
   };
 }
 
-describe.skipIf(skipWithoutNativeSqlite())('TaskStore', () => {
+describe('TaskStore', () => {
   it('stores and lists saved tasks newest first', () => {
     const db = memoryDb();
     TaskStore.upsert(db, task('old', 10));

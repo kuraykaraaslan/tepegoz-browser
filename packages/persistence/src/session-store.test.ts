@@ -1,5 +1,4 @@
 import { beforeEach, describe, it, expect } from 'vitest';
-import { skipWithoutNativeSqlite } from './native-abi';
 import { openDatabase, type Db } from './db';
 import { migrate } from './migrations';
 import { MetaStore } from './meta';
@@ -20,7 +19,7 @@ const win = (over: Partial<WindowSnapshot> = {}): WindowSnapshot => ({
 
 const v3 = (windows: WindowSnapshot[]): SessionSnapshot => ({ version: 3, windows });
 
-describe.skipIf(skipWithoutNativeSqlite())('SessionStore', () => {
+describe('SessionStore', () => {
   it('returns null when no session was ever saved', () => {
     expect(SessionStore.load(db)).toBeNull();
   });

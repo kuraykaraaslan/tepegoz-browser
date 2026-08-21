@@ -1,12 +1,11 @@
 import { beforeEach, describe, it, expect } from 'vitest';
-import { skipWithoutNativeSqlite } from './native-abi';
 import { openDatabase, type Db } from './db';
 import { migrate } from './migrations';
 import { AgentMemoryStore } from './agent-memory-store';
 
 /**
  * The store's contract (S9 PR1). NOTE: like every persistence suite here, this needs the
- * better-sqlite3 addon built for the running ABI — it runs under `pnpm test:electron`, not `pnpm test`.
+ * a real SQLite database, which `node:sqlite` provides in-process with no native dependency.
  */
 
 let db: Db;
@@ -17,7 +16,7 @@ beforeEach(() => {
 
 const uuid = (n: number): string => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 
-describe.skipIf(skipWithoutNativeSqlite())('domain memory', () => {
+describe('domain memory', () => {
   it('stores and reads a hint back for its host', () => {
     AgentMemoryStore.putHint(db, {
       id: uuid(1),
@@ -118,7 +117,7 @@ describe.skipIf(skipWithoutNativeSqlite())('domain memory', () => {
   });
 });
 
-describe.skipIf(skipWithoutNativeSqlite())('skills', () => {
+describe('skills', () => {
   it('stores and lists a skill template', () => {
     AgentMemoryStore.putSkill(db, {
       id: uuid(10),
@@ -145,7 +144,7 @@ describe.skipIf(skipWithoutNativeSqlite())('skills', () => {
   });
 });
 
-describe.skipIf(skipWithoutNativeSqlite())('remembered grants', () => {
+describe('remembered grants', () => {
   const hour = 60 * 60 * 1000;
 
   it('returns a live grant', () => {

@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import { skipWithoutNativeSqlite } from './native-abi';
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { EventInput } from '@tepegoz/shared-types';
 import { openDatabase, migrate, EventJournal, MetaStore, type Db } from './index';
@@ -16,7 +15,7 @@ function makeEvent(correlationId: string): EventInput {
   };
 }
 
-describe.skipIf(skipWithoutNativeSqlite())('EventJournal', () => {
+describe('EventJournal', () => {
   let db: Db;
   beforeEach(() => {
     db = openDatabase(':memory:');

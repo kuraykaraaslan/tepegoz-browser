@@ -13,7 +13,7 @@ interface Migration {
   up: (db: Db) => void;
 }
 
-/** Contain better-sqlite3's `any` pragma return in one typed place. */
+/** Contain the `unknown` pragma return in one typed place. */
 function userVersion(db: Db): number {
   const v: unknown = db.pragma('user_version', { simple: true });
   return typeof v === 'number' ? v : 0;

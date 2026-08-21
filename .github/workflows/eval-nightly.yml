@@ -20,13 +20,11 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22.12.0'
+          node-version: '24.11.1'
           cache: pnpm
       - name: Install (frozen lockfile)
         run: pnpm install --frozen-lockfile
       # Same Electron-ABI native addon + virtual display the e2e job uses (the eval launches the real app).
-      - name: Rebuild native addon for the Electron ABI (better-sqlite3)
-        run: pnpm --filter @tepegoz/desktop run rebuild
       - name: Install Playwright system libraries (Electron/Chromium)
         run: pnpm exec playwright install-deps chromium
       # Live tier when a model key is configured (repo secret EVAL_API_KEY + vars EVAL_MODE/EVAL_PROVIDER),

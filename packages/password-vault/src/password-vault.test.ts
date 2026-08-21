@@ -3,8 +3,7 @@ import type { LoginCredential, LoginCredentialMeta, SecretCrypto } from '@tepego
 
 /**
  * In-memory stand-in for the SQLite-backed PasswordStore so the vault's logic (encrypt-on-write,
- * dedupe, decrypt, import, export) is testable under the Node runner — better-sqlite3's native
- * addon only loads under Electron's ABI (see phases/README.md ABI note).
+ * dedupe, decrypt, import, export) is testable without a database at all — the store is the seam.
  */
 interface StoredRow {
   id: string;

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { skipWithoutNativeSqlite } from './native-abi';
 import { migrate, openDatabase } from './index';
 import { DownloadStore, type PersistedDownload } from './download-store';
 
@@ -23,7 +22,7 @@ function download(overrides: Partial<PersistedDownload> = {}): PersistedDownload
   };
 }
 
-describe.skipIf(skipWithoutNativeSqlite())('DownloadStore', () => {
+describe('DownloadStore', () => {
   it('persists and updates download projections', () => {
     const db = openDatabase(':memory:');
     migrate(db);

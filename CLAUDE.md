@@ -55,27 +55,23 @@ pnpm install                       # frozen in CI
 pnpm dev                           # launch the Electron GUI (clears ELECTRON_RUN_AS_NODE)
 pnpm exec turbo run typecheck lint test build
 pnpm e2e                           # Playwright _electron smoke
-pnpm test:electron                 # native-dependent (better-sqlite3) tests under Electron's Node
 ```
 
-> **`better-sqlite3` ABI note.** One `.node` file matches one ABI. A fresh `pnpm install` fetches the
-> **Node** prebuild (ABI 127 for Node 22); running the GUI needs the **Electron** ABI
-> (`pnpm --filter @tepegoz/desktop rebuild` — ABI 148 for Electron 43). You cannot have both at once.
+> **No native database.** The DB is Node's built-in `node:sqlite` (`packages/persistence/src/db.ts`
+> presents the small better-sqlite3-shaped surface the stores speak). Nothing to rebuild, no ABI to
+> match, no compiler required — `pnpm test` and `pnpm e2e` run the same SQLite the app ships.
 >
-> better-sqlite3 publishes **no Electron prebuilds at any version**, so the Electron-ABI build always
-> compiles from source and therefore needs a C++ toolchain (MSVC Build Tools on Windows). Without one you
-> can still develop, test and launch the app — the DB degrades with a logged
-> "Database unavailable … history/journal disabled" — but you cannot run `pnpm e2e` locally. CI has the
-> toolchain on both runners.
+> This replaced `better-sqlite3`, which publishes **no Electron prebuilds at any version**, so its
+> Electron-ABI build always compiled from source. That one fact had grown a `rebuild` script, a
+> `test:electron` runner, `electron-rebuild` steps in three workflows, and a skip-guard that let 63
+> tests sit out any run on a machine configured for the other ABI. All of it is gone.
 >
-> The SQLite-backed suites therefore **skip, with a reason**, when the addon does not match the current
-> runtime — they used to hard-fail, which left `pnpm exec turbo run typecheck lint test` permanently red
-> on any machine that had launched the app, with 63 failures explained away in prose. A suite that is
-> always red stops being read.
+> Caveat worth knowing: `node:sqlite` is still marked experimental upstream, which is why the Node floor
+> is **>= 24** (what Electron 43 embeds — the app and the tests run the same runtime). If it ever needs
+> reversing, `db.ts` is the only file that talks to it.
 >
-> A skip is not a pass, so it is gated: `TEPEGOZ_REQUIRE_NATIVE=1` turns the skip back into a hard
-> failure, and **both CI and `pnpm test:electron` set it**. The tests must actually run somewhere; those
-> are the places. See `packages/persistence/src/native-abi.ts`.
+> `node-llama-cpp` is still native, but its prebuilds are N-API and therefore ABI-independent;
+> `npmRebuild` stays on in electron-builder for it.
 
 ## Layout
 

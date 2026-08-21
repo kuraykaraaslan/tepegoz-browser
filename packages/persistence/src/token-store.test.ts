@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { skipWithoutNativeSqlite } from './native-abi';
 import { migrate, openDatabase } from './index';
 import { TokenStore, type TokenUsageEntry } from './token-store';
 
@@ -15,7 +14,7 @@ function entry(over: Partial<TokenUsageEntry> = {}): TokenUsageEntry {
   };
 }
 
-describe.skipIf(skipWithoutNativeSqlite())('TokenStore', () => {
+describe('TokenStore', () => {
   it('persists a run and reports lifetime totals across restarts', () => {
     const db = openDatabase(':memory:');
     migrate(db);
