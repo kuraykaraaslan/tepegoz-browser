@@ -30,11 +30,16 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text-summary', 'text'],
-      // Measured floor of the widened scope on 2026-08-21: S77.90 / B85.88 / F83.84 / L77.90.
+      // Measured floor on 2026-08-21 after the Electron 43 upgrade: S78.95 / B85.87 / F85.76 / L78.95.
+      // Measured on a CLEAN tree, which is the only number CI can reproduce — measuring with
+      // work-in-progress present reads ~0.15 high and puts the gate permanently just out of reach.
+      // Up from S77.90 / F83.84 because the SQLite-backed suites stopped skipping: the on-disk addon had
+      // been built for the Electron ABI, so 63 persistence tests and the bookmarks store tests had been
+      // silently sitting out every run. 1845 tests, 0 skipped.
       // Worth reading against the gate it replaces (S80 / B70 / F80 / L80 over 28 packages): doubling
       // the scope cost 2 points of statements and RAISED the branch bar by 15, because B70 was slack
       // enough that no package was ever held to it. Ratchet up; never widen `exclude` to protect these.
-      thresholds: { statements: 77, branches: 85, functions: 83, lines: 77 },
+      thresholds: { statements: 78, branches: 85, functions: 85, lines: 78 },
       include: [
         'packages/agent-eval/src/**',
         'packages/agent-runtime/src/**',

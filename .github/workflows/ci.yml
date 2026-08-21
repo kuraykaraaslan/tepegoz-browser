@@ -45,8 +45,10 @@ jobs:
       - name: Dependency audit (high/critical fails the build)
         # No `|| true`. This step carried one for its whole life, which made a named security gate
         # incapable of ever going red — the worst kind of gate, because the checkmark reads as a result.
-        # If a high/critical advisory lands with no fix available, pin the exception explicitly here with
-        # the advisory id and a date, so the waiver is visible in review instead of implied by a suffix.
+        # There are currently ZERO waived advisories: everything was fixed by upgrading rather than
+        # excused. If one ever lands with no fix available, add it to `pnpm.auditConfig.ignoreGhsas` with
+        # the advisory id and a review date, so the exception is visible in review instead of implied by
+        # a suffix — and never bring `|| true` back.
         run: pnpm audit --audit-level=high
 
   e2e:

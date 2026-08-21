@@ -12,9 +12,13 @@ appId: com.tepegoz.browser
 productName: Tepegöz
 
 # pnpm's hoisted linker installs electron at the monorepo-root node_modules, not apps/desktop's, so
-# electron-builder can't auto-detect it from projectDir — pin the version explicitly. Keep this in
-# sync with the `electron` devDependency (currently ^33.2.1 → resolved 33.4.11).
-electronVersion: 33.4.11
+# electron-builder can't auto-detect it from projectDir — pin the version explicitly.
+#
+# This MUST match the resolved `electron` devDependency, and nothing used to check: the dependency was
+# bumped while this line still said 33.4.11, so the packager would have shipped an installer built
+# against a different Electron than the one the app was developed and tested on. `electron-version.test.ts`
+# now fails when the two drift.
+electronVersion: 43.4.1
 
 directories:
   # Installer + unpacked output → apps/desktop/dist/ (turbo `build` already lists dist/** as output;

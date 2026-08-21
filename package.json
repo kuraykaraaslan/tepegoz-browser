@@ -50,23 +50,8 @@
       "tar": ">=7.5.7",
       "js-yaml": ">=4.3.1",
       "ip-address": ">=10.3.1",
-      "fast-uri": ">=3.1.4"
-    },
-    "auditConfig": {
-      "ignoreGhsas": [
-        "GHSA-532v-xpq5-8h95",
-        "GHSA-8337-3p73-46f4",
-        "GHSA-jjp3-mq3x-295m",
-        "GHSA-9wfr-w7mm-pc7f",
-        "GHSA-v3j7-r9gq-3gjw",
-        "GHSA-h7rp-cf8h-j98x",
-        "GHSA-9f4c-93c8-jc8g",
-        "GHSA-jmr9-qjv8-65gv",
-        "GHSA-fx2h-pf6j-xcff",
-        "GHSA-p2f4-r6v6-j797",
-        "GHSA-7g7r-gx96-252g"
-      ]
-    },
-    "//auditConfig": "DATED WAIVERS — 2026-08-21. `pnpm audit --audit-level=high` is a real CI gate now (it ran with `|| true` for its whole life and could never go red). These are the advisories that survive, listed so the debt is visible in review instead of implied by a suffix. Every one needs a version bump that is an owner decision, not a lockfile edit. REVIEW BY 2026-09-21. (1) electron ^33.2.1 — SEVEN high advisories, needs >=39.8.10. This is the urgent one: Electron 33 is out of support, and GHSA-h7rp-cf8h-j98x is a CONTEXT ISOLATION BYPASS via Function.prototype.bind — contextIsolation is the boundary docs/THREAT-MODEL.md and every webPreferences block rest on. GHSA-9f4c (sandboxed iframe escapes allow-popups), GHSA-9wfr (renderer command-line switch injection) and GHSA-v3j7 (custom-protocol CORS bypass, and the app serves chrome over a custom protocol) hit the same boundary. GHSA-jmr9 (extract-zip) is transitive through electron and clears with it. A 33->39 migration is real work; nothing else on this list matters as much. (2) vite ^5.4.11 -> >=6.4.3 (GHSA-fx2h, `server.fs.deny` bypass on Windows) — dev server only, not shipped; coupled to the electron-vite major. (3) electron-builder ^25.1.8 -> 26.x (GHSA-p2f4 leaks PRIVATE-TOKEN on cross-origin redirect, GHSA-7g7r uncontrolled search path) — packaging/update path, so it DOES ship; bump with the release pipeline change, not alongside it."
+      "fast-uri": ">=3.1.4",
+      "vite": "^7.3.6"
+    }
   }
 }

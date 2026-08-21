@@ -8,11 +8,16 @@ import { z } from 'zod';
  * user learns that forgetting a site will sign them out **before** confirming rather than afterwards.
  */
 
+/**
+ * The storage buckets a "forget this site" clear removes. These are passed straight to Electron's
+ * `session.clearStorageData({ storages })`, so the list must stay a subset of what Chromium still has:
+ * `websql` was dropped when Chromium removed Web SQL Database, and Electron's typings dropped it too, so
+ * naming it here is now a type error rather than a no-op.
+ */
 export const SITE_DATA_KINDS = [
   'cookies',
   'localstorage',
   'indexdb',
-  'websql',
   'cachestorage',
   'serviceworkers',
   'shadercache',

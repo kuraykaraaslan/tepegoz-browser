@@ -60,7 +60,13 @@ pnpm test:electron                 # native-dependent (better-sqlite3) tests und
 
 > **`better-sqlite3` ABI note.** One `.node` file matches one ABI. A fresh `pnpm install` fetches the
 > **Node** prebuild (ABI 127 for Node 22); running the GUI needs the **Electron** ABI
-> (`pnpm --filter @tepegoz/desktop rebuild`). You cannot have both at once.
+> (`pnpm --filter @tepegoz/desktop rebuild` — ABI 148 for Electron 43). You cannot have both at once.
+>
+> better-sqlite3 publishes **no Electron prebuilds at any version**, so the Electron-ABI build always
+> compiles from source and therefore needs a C++ toolchain (MSVC Build Tools on Windows). Without one you
+> can still develop, test and launch the app — the DB degrades with a logged
+> "Database unavailable … history/journal disabled" — but you cannot run `pnpm e2e` locally. CI has the
+> toolchain on both runners.
 >
 > The SQLite-backed suites therefore **skip, with a reason**, when the addon does not match the current
 > runtime — they used to hard-fail, which left `pnpm exec turbo run typecheck lint test` permanently red
