@@ -60,21 +60,22 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       lifecycle, and the "release from quarantine" HITL gate
 
 ### L9 — Classic essentials (Chromium/Electron surfaces)
-- [ ] **Find-in-page** (Ctrl+F): Chromium `webContents.findInPage` + match count + next/prev + highlight
+- [x] **Find-in-page** (Ctrl+F): Chromium `webContents.findInPage` + match count + next/prev + highlight
   — `@tepegoz/find-bar` (chrome leaf, own en/tr dict) + `main/find-in-page.ts` + `ipc/ipc-find.ts`;
   Ctrl+F is handled in MAIN because the key arrives while the page has focus. Results are echoed with
   the query they were requested for so a slow `found-in-page` cannot flicker stale counts, and
   navigating away zeroes the counters. Match-case toggle included. 10 unit tests.
   - [x] The bar, the shortcut and the plumbing landed: `@tepegoz/find-bar` + `main/find-in-page.ts` +
         `ipc/ipc-find.ts`, 10 unit tests, plus a stale-query guard and a navigation reset.
-  - [ ] **NOT verified end to end, and there is contrary evidence.** In `e2e/find-in-page.spec.ts`
-        (kept as `fixme`) the bar opens and the query reaches main, but `webContents.findInPage()`
-        emits **no `found-in-page` event**, so the counters stay at zero. This is not our plumbing:
-        calling `findInPage` straight from main, with no app code involved, is equally silent — on the
-        tab's `WebContentsView` *and* on the chrome `BrowserWindow`'s own webContents, with
-        `show()`/`focus()` forced (Electron 33.4.11). The likely cause is Playwright's CDP attachment
-        rather than the app, but **that is a hypothesis, not a measurement**, so this line stays open
-        until a non-CDP run confirms it.
+  - [x] **Verified end to end.** `e2e/find-in-page.spec.ts` passes against the real app: the bar
+        opens, the counter reads 1/3, Enter steps to 2/3, Escape closes.
+  - [x] It did not work when first written, and the cause was ours. Electron's `findNext` option means
+        "this request OPENS a find session", not "go to the next match"; we had it inverted, and
+        Chromium answers a follow-up with no open session by emitting **nothing** — no event, no error.
+        An earlier revision of this file blamed Playwright's CDP attachment; that was wrong and is
+        retracted. Bisecting the running app ruled out webPreferences, the browsing session, per-tab
+        zoom and an attached debugger before the options object was the only thing left. The broker now
+        also promotes a follow-up to an opener when no session is open, and four unit tests cover it.
   - [ ] Switching tabs does not re-sync the counters to the newly-active tab (the bar keeps the
         previous tab's numbers until the next keystroke).
   - [ ] Separate harness constraint found here: `keyboard.press('Control+f')` never reaches Electron's
