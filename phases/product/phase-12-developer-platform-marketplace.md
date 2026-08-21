@@ -30,7 +30,7 @@ signing pipeline without new security scatter. **The heavy economics are adoptio
   (marketplace economics + offline entitlement)
   _(the SBOM/supply-chain half lands as [ADR-0037](../../docs/adr/0037-supply-chain-gate.md) — ADR-0020 was already claimed before this phase document was written. The site-recipe-library half of ADR-0020, and ADR-0021 in full, are not written — no code landed for either.)_
 - [ ] Each opened economics bet decided with cost/risk analysis (adoption-gated, like Phase 4)
-- [ ] Coverage gate (S80/B70/F80/L80) + self-review/code-review + UAT signoff + migration-safe DB
+- [ ] Coverage gate (S78/B85/F85/L78) + self-review/code-review + UAT signoff + migration-safe DB
 
 > **What actually runs today (2026-08-20).** `evaluateSupplyChain`, `declaredWithinRequestedScope`, and
 > `declaredVsActualMismatch` are real and tested (14 tests). **None of it verifies anything itself.**

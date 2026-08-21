@@ -26,7 +26,7 @@ in. A thin, focused adapter pack on the Phase-2 adapter + Phase-1a Policy Kernel
       mode, locale-pack install/management); the pack itself ships Turkish-first copy
 - [x] ADR accepted: **ADR-0022** (Kamu public-service adapter trust model)
       _(lands as [ADR-0036](../../docs/adr/0036-kamu-adapter-trust-model.md) — ADR-0022 was already claimed before this phase document was written; see the numbering note in that ADR.)_
-- [ ] Coverage gate (S80/B70/F80/L80) + self-review/code-review + UAT signoff + migration-safe DB
+- [ ] Coverage gate (S78/B85/F85/L78) + self-review/code-review + UAT signoff + migration-safe DB
 
 > **What actually runs today (2026-08-20).** `classifyKamuStep` and `checkLocalePackParity` are real
 > and tested (17 tests total). **Neither is called from anywhere real.** There is no Kamu recipe, no

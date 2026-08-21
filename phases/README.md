@@ -78,9 +78,22 @@ auto-update **signature verification**, which cannot be honestly tested without 
 that gate. Until then **no phase may assert a signed-artifact guarantee**, and Phase 0's DoD closes
 explicitly without it.
 
-**Horizontal gates.** Coverage (S80/B70/F80/L80), i18n en+tr parity and UAT signoff appear as a separate
-box in _every_ phase's DoD but are one body of work. They are done once and ticked everywhere — not
-re-litigated per phase.
+**Horizontal gates.** Coverage (**S78/B85/F85/L78 over 61 packages**), i18n en+tr parity and UAT signoff
+appear as a separate box in _every_ phase's DoD but are one body of work. They are done once and ticked
+everywhere — not re-litigated per phase.
+
+> **Why the coverage numbers changed, and why it is not a relaxation (2026-08-21).** The gate used to read
+> S80/B70/F80/L80 over **27** packages — a scope that left out `credential-vault` (the key crypto),
+> `desktop-ipc`, `human-input`, `notary`, `macro-engine`, `http` and `agent-runtime`, and all of
+> `apps/desktop`. It has been widened to every package that ships unit tests (61), and the thresholds set
+> to the floor that scope actually measures on a clean tree.
+>
+> Measured both ways so the comparison is not a matter of opinion: on the **original 27-package scope**
+> today's code scores **S91.29 / B88.85 / F91.84 / L91.29** — the old gate is still passed, with margin.
+> The headline statement fell from 80 to 78 only because the denominator grew 2.2×, while the **branch**
+> bar rose from 70 to 85, because B70 was slack enough that nothing was ever held to it.
+>
+> Ratchet these up as coverage lands. Never widen the exclusion list to protect a number.
 
 ## Completed hardening track (folded into Phases 1a / 1b / 2c)
 
@@ -170,7 +183,7 @@ These apply in every phase; a phase DoD does not close without them:
 - [ ] **Zod boundary `safeParse`:** IPC, LLM tool-call args (untrusted!), MCP, Skills, adapters, Journal, Policy inputs
 - [ ] **AppError contract:** service throws → boundary catches → `{message, statusCode}`
 - [ ] **Security:** renderer = untrusted; secure `createWindow()` + fuses; secrets only in main + `safeStorage`; redaction in Journal/logs
-- [ ] **DoD gates:** self-review/code-review + coverage (S80/B70/F80/L80) + migration-safe DB + UAT signoff
+- [ ] **DoD gates:** self-review/code-review + coverage (S78/B85/F85/L78 over 61 packages) + migration-safe DB + UAT signoff
 - [ ] **i18n day-0 (mandatory) — per-package ([ADR-0016](../docs/adr/0016-per-package-i18n.md)):** the owning package/extension declares its feature strings in its **own** `src/i18n/{en,tr,index}.ts` via `defineDict({ en, tr })` (typing `tr` as `typeof en` → a missing/mismatched Turkish key is a **build error**, per dict) + a co-located parity test (`keyPaths` from `@tepegoz/i18n/testing`). Only the shared core (`common` · `window` · `errors`) lives in `@tepegoz/i18n`. React surfaces **self-localize** via `@tepegoz/i18n/react` `useT(dict)` — no `t` prop-drilling; presentational **leaf** packages stay string-free and take `labels` via props; the **main process stays React-free** and resolves strings with `pick(dict, mainLocale())` (`mainStrings()`) — native menu/dialog/notification/tray included. **NO hardcoded UI strings.** **en (source) + tr (full parity), first-class** — each phase ships its surfaces' strings in the **owner's** dict, in the same PR — never deferred.
 - [ ] **Determinism-first:** rule-based CDP wherever possible; the model is used only for understanding/ambiguity
 - [ ] **At phase start** re-read the relevant ruleset `_manifest.json` `blocking_rules` (especially `database-change-delivery.md` + `deployment-readiness.md` before any release/migration)

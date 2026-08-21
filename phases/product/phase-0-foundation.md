@@ -7,7 +7,7 @@ No product features; the decisions made here would force a full rewrite if wrong
 
 ## Exit criteria (DoD)
 
-- [ ] `pnpm install --frozen-lockfile && turbo run lint typecheck test build` passes clean
+- [x] `pnpm install --frozen-lockfile && turbo run lint typecheck test build` passes clean _(verified on merged `main` 2026-08-21: 243/243. It had NOT been passing locally — the SQLite suites died on an ABI mismatch, which is now moot: the DB is `node:sqlite`, so there is no native module and nothing to rebuild. `format:check`, `depcruise`, `docs:links` and a real `pnpm audit` were added to the same CI job.)_
 - [ ] CI per-OS matrix (windows/macos/ubuntu) green; native modules rebuilt on each runner
 - [ ] shared-types zod contracts + sample round-trip tests exist
 - [ ] Secure `createWindow()` factory + fuses + typed IPC skeleton opens a working empty window
@@ -70,7 +70,7 @@ No product features; the decisions made here would force a full rewrite if wrong
 ### CI/CD
 
 - [x] `.github/workflows/ci.yml` — push/PR: frozen-lockfile install → turbo typecheck/lint/test/build + `pnpm audit` (report) + **AI-trailer commit-policy job**
-- [ ] coverage gate (S80/B70/F80/L80) + reject focused/skipped tests — _deferred: enforce thresholds once substantive logic lands (Phase 1a)_
+- [ ] coverage gate (S78/B85/F85/L78) + reject focused/skipped tests — _deferred: enforce thresholds once substantive logic lands (Phase 1a)_
 - [x] `.github/workflows/release.yml` — tag-driven **per-OS matrix** (fail-fast:false), native rebuild per-OS; packaging/signing step = TODO (see below)
 - [ ] Start Windows code-signing identity (Azure Trusted Signing / EV) — _**deferred to the production gate**, permanently, per the ship line. Distribution concern, not a build concern; revisit only when a real release is cut. Everything below that depends on a certificate (update **signature verification**) is deferred with it and may not be claimed until then._
 
