@@ -1,0 +1,42 @@
+# Dependency intake. ADR-0019 states the repo watches `electron` with a ≤2-week adoption SLA for
+# Chromium security bumps and calls a watcher "already the repo's mechanism" — it was not; there was no
+# watcher config at all, so the pinned Electron drifted SIX majors behind (33 → 43) with nothing raising
+# a hand. This is that mechanism.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: '/'
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    # The engine we ship is the one class of vulnerability our own code cannot mitigate, so it gets its
+    # own PR, its own label, and is never batched with routine dependency noise.
+    groups:
+      electron-engine:
+        patterns:
+          - electron
+      build-tooling:
+        patterns:
+          - electron-builder
+          - electron-vite
+          - vite
+          - vitest
+          - '@vitest/*'
+          - turbo
+          - typescript
+          - prettier
+          - eslint
+          - 'eslint-*'
+          - 'typescript-eslint'
+      everything-else:
+        patterns:
+          - '*'
+        exclude-patterns:
+          - electron
+    labels:
+      - dependencies
+    commit-message:
+      # Matches the repo's conventional-commit style; the CI commit-policy job rejects AI trailers, and
+      # Dependabot adds none.
+      prefix: build(deps)
+      prefix-development: build(deps-dev)

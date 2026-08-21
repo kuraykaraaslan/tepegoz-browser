@@ -320,7 +320,7 @@ importers:
         specifier: ^1.6.20
         version: 1.6.20
       electron:
-        specifier: ^43.4.1
+        specifier: 43.4.1
         version: 43.4.1
       electron-builder:
         specifier: ^26.15.3

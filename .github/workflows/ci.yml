@@ -14,7 +14,15 @@ concurrency:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    # Phase 0 DoD: per-OS matrix. This job was ubuntu-only, which meant `turbo run typecheck lint test
+    # build` had never run on the platform package.json calls PRIMARY. Path handling, line endings and
+    # case-sensitivity all differ, and `node:sqlite` (the database) is a per-platform build inside the
+    # runtime — "it passes on Linux" says nothing about the other two.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -27,14 +35,19 @@ jobs:
       - name: Typecheck · lint · test · build
         run: pnpm exec turbo run typecheck lint test build
       - name: Formatting (prettier)
+        if: matrix.os == 'ubuntu-latest'
         run: pnpm run format:check
       - name: Module boundaries (dependency-cruiser — no static import cycles, layer rules)
+        if: matrix.os == 'ubuntu-latest'
         run: pnpm run depcruise
       - name: Coverage gate (scope + thresholds in vitest.coverage.config.ts)
+        if: matrix.os == 'ubuntu-latest'
         run: pnpm run coverage
       - name: Doc link gate (0 broken relative links under phases/ and docs/)
+        if: matrix.os == 'ubuntu-latest'
         run: pnpm run docs:links phases docs
       - name: Dependency audit (high/critical fails the build)
+        if: matrix.os == 'ubuntu-latest'
         # No `|| true`. This step carried one for its whole life, which made a named security gate
         # incapable of ever going red — the worst kind of gate, because the checkmark reads as a result.
         # There are currently ZERO waived advisories: everything was fixed by upgrading rather than
@@ -55,7 +68,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -72,9 +85,9 @@ jobs:
       - name: Playwright _electron smoke (headless via xvfb)
         if: runner.os == 'Linux'
         run: xvfb-run -a pnpm e2e
-      - name: Playwright _electron smoke (Windows)
-        # No xvfb: the Windows runner has a real desktop session, so Electron launches directly.
-        if: runner.os == 'Windows'
+      - name: Playwright _electron smoke (native desktop session)
+        # No xvfb needed: the Windows and macOS runners have a real desktop session.
+        if: runner.os != 'Linux'
         run: pnpm e2e
 
   commit-policy:

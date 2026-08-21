@@ -140,9 +140,19 @@ if (!app.requestSingleInstanceLock()) {
     .then(() => {
       // macOS: the BrowserWindow `icon` is ignored (the dock uses the app bundle), so set it here
       // for dev/unpackaged runs. Windows/Linux get the brand icon via the window itself.
+      // The embedded engine, logged once per run. ADR-0019 governs how quickly a Chromium security
+      // bump is adopted; a claim about which engine shipped is only checkable if each run says so. This
+      // line is what a crash report or a user's log is read against.
+      Logger.info('Engine', {
+        electron: process.versions.electron,
+        chromium: process.versions.chrome,
+        node: process.versions.node,
+      });
+
       if (process.platform === 'darwin') {
         app.dock?.setIcon(join(app.getAppPath(), 'resources', 'icon.png'));
       }
+
       installSecurity();
       initStores();
       // Apply the persisted User-Agent override to the browsing session BEFORE the first tab opens

@@ -1,5 +1,5 @@
 import { BrowserWindow } from 'electron';
-import { join } from 'node:path';
+import { chromeFilePath } from './chrome-url';
 import { Logger } from '@tepegoz/libs';
 import {
   IpcChannels,
@@ -77,7 +77,7 @@ function loadPreviewSurface(win: BrowserWindow, payload: TabDragBegin): void {
   const loaded =
     devUrl !== undefined && devUrl.length > 0
       ? win.loadURL(`${devUrl}?${new URLSearchParams(query).toString()}`)
-      : win.loadFile(join(__dirname, '../renderer/index.html'), { query });
+      : win.loadFile(chromeFilePath(), { query });
   void loaded.catch((err: unknown) => {
     Logger.warn('Drag preview failed to load', { err: String(err) });
   });

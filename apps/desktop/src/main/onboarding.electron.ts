@@ -1,6 +1,6 @@
 import type { BrowserWindow } from 'electron';
-import { join } from 'node:path';
 import PreferenceStore from '@tepegoz/preferences';
+import { chromeFilePath } from './chrome-url';
 
 /**
  * Renderer-load helpers for a chrome window: the onboarding surface vs the normal browser chrome. Kept
@@ -8,17 +8,24 @@ import PreferenceStore from '@tepegoz/preferences';
  * and multi-window session restore — can import these without an import cycle.
  */
 
-function loadRenderer(win: BrowserWindow, query?: Record<string, string>): void {
+/**
+ * Load the chrome into a window. THE single place that decides where chrome HTML comes from: the Vite
+ * dev server when it is running, `app://chrome` otherwise. Exported because the popup and tab-drag
+ * windows used to carry their own copy of this branch — three copies of "which URL is our own UI" is
+ * three chances to disagree with `isTrustedAppUrl`.
+ */
+export function loadChrome(win: BrowserWindow, query?: Record<string, string>): void {
   const devUrl = process.env['ELECTRON_RENDERER_URL'];
   if (devUrl !== undefined && devUrl.length > 0) {
     const suffix = query === undefined ? '' : `?${new URLSearchParams(query).toString()}`;
     void win.loadURL(`${devUrl}${suffix}`);
-  } else {
-    void win.loadFile(
-      join(__dirname, '../renderer/index.html'),
-      query === undefined ? undefined : { query },
-    );
+    return;
   }
+  void win.loadFile(chromeFilePath(), query === undefined ? undefined : { query });
+}
+
+function loadRenderer(win: BrowserWindow, query?: Record<string, string>): void {
+  loadChrome(win, query);
 }
 
 export function shouldShowOnboarding(): boolean {

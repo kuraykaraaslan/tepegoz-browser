@@ -12,6 +12,10 @@ build/
 # Native modules (rebuilt per-OS in CI)
 *.node
 
+# Throwaway Electron profiles from local debugging (`--user-data-dir=.something-profile`). These hold a
+# live leveldb whose LOCK file cannot even be read while the app runs, which breaks `prettier --check`.
+.*-profile/
+
 # Test / coverage
 coverage/
 test-results/
