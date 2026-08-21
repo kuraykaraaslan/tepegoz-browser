@@ -32,7 +32,7 @@ help the agent debug a stuck page, and it looks helpful right up until a prompt-
 scriptable console on an authenticated session.
 
 **DevTools does not open on a sensitive site.** The gate is
-[`mayOpenDevTools`](../../packages/security-policy/src/devtools-policy.ts), which reuses the *same*
+[`mayOpenDevTools`](../../packages/security-policy/src/devtools-policy.ts), which reuses the _same_
 sensitive-site list the kernel already locks automation out of. One list, one meaning: the sites where a
 session is worth the most are the sites where the most powerful surface stays shut.
 

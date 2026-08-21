@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { migrate, openDatabase, type Db } from '@tepegoz/persistence';
+import { migrate, openDatabase, type Db, skipWithoutNativeSqlite } from '@tepegoz/persistence';
 import { BOOKMARK_ROOT_OTHER, BookmarkTreeStore } from './bookmark-tree-store';
 import { importBookmarksHtmlToStore } from './bookmark-import';
 
@@ -10,7 +10,7 @@ beforeEach(() => {
   migrate(db);
 });
 
-describe('importBookmarksHtmlToStore', () => {
+describe.skipIf(skipWithoutNativeSqlite())('importBookmarksHtmlToStore', () => {
   it('imports nested folders and skips duplicates or unsupported schemes', () => {
     BookmarkTreeStore.createBookmark(db, {
       parentId: BOOKMARK_ROOT_OTHER,

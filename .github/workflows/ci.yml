@@ -25,19 +25,44 @@ jobs:
       - name: Install (frozen lockfile)
         run: pnpm install --frozen-lockfile
       - name: Typecheck · lint · test · build
+        # TEPEGOZ_REQUIRE_NATIVE=1: the SQLite-backed suites SKIP locally when better-sqlite3 is built
+        # for the Electron ABI (see packages/persistence/src/native-abi.ts). CI has the Node prebuild, so
+        # here a skip is a build break — that is what keeps "skipped locally" from quietly becoming
+        # "never runs anywhere".
+        env:
+          TEPEGOZ_REQUIRE_NATIVE: '1'
         run: pnpm exec turbo run typecheck lint test build
-      - name: Coverage gate (S80/B70/F80/L80 — scope in vitest.config.ts)
+      - name: Formatting (prettier)
+        run: pnpm run format:check
+      - name: Module boundaries (dependency-cruiser — no static import cycles, layer rules)
+        run: pnpm run depcruise
+      - name: Coverage gate (scope + thresholds in vitest.coverage.config.ts)
+        env:
+          TEPEGOZ_REQUIRE_NATIVE: '1'
         run: pnpm run coverage
-      - name: Doc link gate (0 broken relative links under phases/ — S0 exit criterion)
-        run: pnpm run docs:links
-      - name: Dependency audit (report high/critical)
-        run: pnpm audit --audit-level=high || true
+      - name: Doc link gate (0 broken relative links under phases/ and docs/)
+        run: pnpm run docs:links phases docs
+      - name: Dependency audit (high/critical fails the build)
+        # No `|| true`. This step carried one for its whole life, which made a named security gate
+        # incapable of ever going red — the worst kind of gate, because the checkmark reads as a result.
+        # If a high/critical advisory lands with no fix available, pin the exception explicitly here with
+        # the advisory id and a date, so the waiver is visible in review instead of implied by a suffix.
+        run: pnpm audit --audit-level=high
 
   e2e:
     # Playwright `_electron` smoke (Phase 1a DoD): launches the BUILT app and asserts real window
     # behavior. Separate job because it needs the Electron-ABI native addon + a virtual display, which
     # would conflict with `verify`'s Node-ABI install.
-    runs-on: ubuntu-latest
+    #
+    # Windows is in the matrix because package.json calls Windows 11 the PRIMARY target and it had zero
+    # CI coverage: the release workflow PACKAGED a Windows installer that no job had ever launched. The
+    # platform-specific surface here is real (window chrome, tray, DPAPI/safeStorage, path handling), so
+    # a Linux-only smoke cannot stand in for it.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -50,9 +75,15 @@ jobs:
       - name: Rebuild native addon for the Electron ABI (better-sqlite3)
         run: pnpm --filter @tepegoz/desktop run rebuild
       - name: Install Playwright system libraries (Electron/Chromium)
+        if: runner.os == 'Linux'
         run: pnpm exec playwright install-deps chromium
       - name: Playwright _electron smoke (headless via xvfb)
+        if: runner.os == 'Linux'
         run: xvfb-run -a pnpm e2e
+      - name: Playwright _electron smoke (Windows)
+        # No xvfb: the Windows runner has a real desktop session, so Electron launches directly.
+        if: runner.os == 'Windows'
+        run: pnpm e2e
 
   commit-policy:
     runs-on: ubuntu-latest

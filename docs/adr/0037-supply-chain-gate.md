@@ -16,8 +16,8 @@ file.
 A registry without a quality bar produces a thin, low-quality long tail — Phase 4 lists signing as
 distribution plumbing with no DX, no economics, and no quality bar of its own. "Signed" alone answers
 only "who published this", never "does it declare what it actually does" or "does it do what it
-declared". The phase's own framing states the target precisely: move from *signed = trusted* to
-*attested + scoped + SBOM-diffed + declared-vs-actual-enforced* — four separate, checkable claims instead
+declared". The phase's own framing states the target precisely: move from _signed = trusted_ to
+_attested + scoped + SBOM-diffed + declared-vs-actual-enforced_ — four separate, checkable claims instead
 of one binary one.
 
 The phase's own text also contains a real tension worth resolving explicitly rather than silently:
@@ -43,7 +43,7 @@ which is what keeps it pure and fast to test while leaving the actual signature/
 checking to whichever code owns those primitives.
 
 **`declaredWithinRequestedScope` corrects a literal reading of the phase's own DoD text.** "Declared-
-capabilities ⊆ requested-scopes is rejected", read literally, rejects the *safe* case. The property
+capabilities ⊆ requested-scopes is rejected", read literally, rejects the _safe_ case. The property
 actually worth enforcing — and the one this function checks — is the reverse: a package whose declared
 needs are **not** fully covered by what scope review disclosed to the user is the one that gets
 rejected, because it is asking for something the user never saw named.

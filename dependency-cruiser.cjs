@@ -10,16 +10,23 @@ module.exports = {
     {
       name: 'no-circular',
       severity: 'error',
-      comment: 'Circular dependencies break modular boundaries and make reasoning impossible.',
+      comment:
+        'Circular dependencies break modular boundaries and make reasoning impossible. The concrete ' +
+        'hazard is ESM evaluation order: in a static cycle, whichever module is evaluated first sees ' +
+        'the other half-built. A cycle that has to travel through a DYNAMIC import does not have that ' +
+        'hazard — the deferred side is fully evaluated before it is ever reached — so `viaOnly` limits ' +
+        'the rule to cycles made entirely of static edges. That is the semantics, not an exemption: a ' +
+        'dynamic import used to dodge this rule (rather than to defer real work) still leaves the ' +
+        'design smell, and belongs in review, not in a linter.',
       from: {},
-      to: { circular: true },
+      to: { circular: true, viaOnly: { dependencyTypesNot: ['dynamic-import'] } },
     },
-    {
-      name: 'no-orphans',
-      severity: 'warn',
-      from: { orphan: true, pathNot: ['\\.d\\.ts$', '(^|/)index\\.ts$', '\\.test\\.ts$'] },
-      to: {},
-    },
+    // `no-orphans` was removed, not silenced. With `tsPreCompilationDeps` off (see options — it has to
+    // be, for `no-circular` to mean anything), a module imported only via `import type` has no visible
+    // importer, so the rule called `password-core/src/types.ts` a dead file while 70 modules import it.
+    // 15 of its 17 findings were false. A gate that is 88% wrong teaches people to skim past the output,
+    // which costs more than the two real hits it found. Dead-file detection needs a type-aware tool
+    // (knip / ts-prune); this config keeps the rules it can actually enforce.
     {
       name: 'not-to-dev-dep',
       severity: 'error',
@@ -365,7 +372,15 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: 'node_modules' },
+    // Build output is bundled, so every code-split chunk cross-references its siblings and every rule
+    // fires on it. Cruising `apps` picked up `apps/desktop/out/**` and reported 198 phantom
+    // `no-circular` errors about generated chunks — which is why this gate had never been green, and so
+    // had never been wired into CI. Source only.
+    exclude: { path: '(^|/)(out|dist|build|coverage|node_modules)/' },
     tsConfig: { fileName: 'tsconfig.base.json' },
+    // Left OFF deliberately. `no-circular` — the rule that is an ERROR here — is about ESM evaluation
+    // order, and `import type` edges are erased before any code runs, so counting them would fail the
+    // build on cycles that cannot exist at runtime (24 of them, all type-only or JSX-component).
     enhancedResolveOptions: {
       exportsFields: ['exports'],
       conditionNames: ['import', 'types'],

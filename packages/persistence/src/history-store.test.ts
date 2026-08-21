@@ -1,4 +1,5 @@
 import { beforeEach, describe, it, expect } from 'vitest';
+import { skipWithoutNativeSqlite } from './native-abi';
 import { openDatabase, type Db } from './db';
 import { migrate } from './migrations';
 import { HistoryStore } from './history-store';
@@ -9,7 +10,7 @@ beforeEach(() => {
   migrate(db);
 });
 
-describe('HistoryStore', () => {
+describe.skipIf(skipWithoutNativeSqlite())('HistoryStore', () => {
   it('records a visit and lists it', () => {
     HistoryStore.record(db, { url: 'https://a.com/', title: 'A', ts: 100 });
     const list = HistoryStore.list(db);

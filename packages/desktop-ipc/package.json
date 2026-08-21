@@ -24,6 +24,7 @@
     "@tepegoz/ext-typo": "workspace:*",
     "@tepegoz/ext-video-player": "workspace:*",
     "@tepegoz/extension-sdk": "workspace:*",
+    "@tepegoz/navigation": "workspace:*",
     "@tepegoz/persistence": "workspace:*",
     "@tepegoz/shared-types": "workspace:*",
     "@tepegoz/tasks": "workspace:*",

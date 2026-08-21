@@ -80,8 +80,8 @@ trust boundary; `session.setProxy` interacting with the existing partition model
 and belongs in its own ADR amendment or a follow-up ADR when it lands, not folded into this one by
 implication.
 
-**Negative / accepted.** A pure resolution layer proves the *decision* is correct; it says nothing yet
-about whether the *enforcement* — the actual `session.setProxy` call, the actual SOCKS bridge — holds up
+**Negative / accepted.** A pure resolution layer proves the _decision_ is correct; it says nothing yet
+about whether the _enforcement_ — the actual `session.setProxy` call, the actual SOCKS bridge — holds up
 under a real dropped connection. That is precisely why the DoD's automated leak test is listed as
 unstarted below rather than assumed satisfied by this layer.
 
@@ -112,7 +112,7 @@ The key is now derived from one exported constant:
 - `DIRECT_PARTITION = 'persist:tepegoz-web'` — byte-identical to what the browser already uses, and now
   the single definition (`tabs-shared.ts` re-exports it rather than restating the literal, so the two
   cannot drift into two cookie jars).
-- `partitionKeyFor({ connectionId })` → `persist:tepegoz-web--conn-{connId}`, a sibling *next to* the
+- `partitionKeyFor({ connectionId })` → `persist:tepegoz-web--conn-{connId}`, a sibling _next to_ the
   existing partition rather than a replacement for it. Phase 5 only ever adds.
 - A connection id that is not a safe partition component **throws** instead of being sanitized. Quietly
   normalizing `vpn/a` and `vpn-a` onto one partition would put two connections' traffic in one cookie
@@ -128,7 +128,7 @@ second session got **nothing**), download quarantine, the User-Agent override, "
 
 A tunnel partition under that model loads pages perfectly and has no ad/tracker filtering, no download
 quarantine, the wrong User-Agent, and cookies that survive a site clear. Every one of those is a privacy
-regression *inside the privacy feature*, and none of them is visible to the user.
+regression _inside the privacy feature_, and none of them is visible to the user.
 
 `BrowsingSessions` (`apps/desktop/src/main/network/browsing-sessions.electron.ts`) inverts it: sessions
 are created through one registry, subsystems `register()` per-session wiring instead of attaching once,
@@ -145,7 +145,7 @@ that looks wired and is not.
 `@tepegoz/security-policy/egress-proxy.ts` makes "cannot leak" checkable rather than asserted:
 
 - `tunnelProxyConfig(port)` emits `socks5://127.0.0.1:{port}` with **no `,DIRECT` fallback**. That single
-  absent token *is* the kill-switch: with it, Chromium reads a dead tunnel as "go out the clear path";
+  absent token _is_ the kill-switch: with it, Chromium reads a dead tunnel as "go out the clear path";
   without it, the same dead tunnel yields `ERR_PROXY_CONNECTION_FAILED` and nothing leaves the machine.
 - `assertFailClosed(config)` rejects a `DIRECT` fallback in every spelling Chromium honours, SOCKS4 (no
   hostname form → the resolver sees every site name), a non-loopback proxy address, an empty rule set,
@@ -177,19 +177,19 @@ Measured, both passing:
   SOCKS server records the request as `DOMAINNAME` — the hostname went to the proxy, not to the user's
   resolver.
 - **Fail-closed on drop.** With Chromium's resolver pointed at a reachable address so that a clear-path
-  request *would* succeed — proven by an untunneled control request that does hit the direct origin — the
+  request _would_ succeed — proven by an untunneled control request that does hit the direct origin — the
   SOCKS endpoint is killed mid-session. The next request fails, and the direct origin records nothing.
   The control is what makes this a measurement and not a tautology: without it, "no direct hit" could
   simply mean the detector was blind.
 
 **What it does not prove.** It exercises Chromium's proxy behaviour and our configuration, not a real
 VPN: there is still no tunnel carrying traffic off this machine. And it says nothing about Chromium's DNS
-*prefetch*/preconnect predictor or DoH, which are process-wide rather than per-session — that residual is
+_prefetch_/preconnect predictor or DoH, which are process-wide rather than per-session — that residual is
 recorded as its own DoD line rather than folded into the passing result above.
 
 ### 5. Four more clear-path escapes, found by asking "what else reaches the network?"
 
-The seam above routes a *page's* traffic. Sweeping the rest of the process for anything that reaches the
+The seam above routes a _page's_ traffic. Sweeping the rest of the process for anything that reaches the
 network on a browsed page's behalf turned up four more paths, none of which the phase document mentions.
 Two were live leaks.
 
@@ -200,7 +200,7 @@ Two were live leaks.
   opener's exact session by construction, with no partition string that can drift.
 - **Favicons.** The tab strip renders in the app chrome, on `persist:tepegoz-app`, which has no proxy and
   never will. `page-favicon-updated` handed it the page's remote icon URL and the chrome CSP allowed
-  `img-src https:` — so the *browser chrome* made a clear-path request to the server of the page being
+  `img-src https:` — so the _browser chrome_ made a clear-path request to the server of the page being
   viewed, on every navigation, tunnel or not. Main now fetches the icon on the page's own session and
   inlines it (`tabs-favicon.electron.ts`, bounded: 64 KiB, 8 s, 200-only, image content-type allowlist,
   per-session cache so a page cannot loop it). `TabFaviconSchema` rejects a non-`data:` favicon at the IPC
@@ -260,7 +260,7 @@ creation, so a route change means a new view and a reload — the cost the phase
 ordering is what makes the transition non-leaking: there is never a moment with two views for one tab
 alive on two networks. A tab already on the target session is left completely alone.
 
-**An unbound tunnel partition is blackholed.** This is the invariant that makes every *other* ordering
+**An unbound tunnel partition is blackholed.** This is the invariant that makes every _other_ ordering
 safe. "No proxy configured" is not neutral in Chromium — it means DIRECT — so a `--conn-` partition that
 exists but has not been bound would send a tab that believes it is tunneled straight out the clear path.
 Every tunnel partition therefore gets `BLACKHOLE_PROXY_CONFIG` (a loopback port nothing listens on, no
@@ -294,10 +294,10 @@ two live connections measured simultaneously, Chromium's DNS prefetch/preconnect
 are process-wide, so the per-session `X-DNS-Prefetch-Control: off` stamp is a mitigation and not a
 closure — and HTTPS-only enforcement for tunnel-bound tabs.
 
-### 7. Real tunnels: WireGuard and Tor in user space, and how "VPN *and* Tor" is expressed
+### 7. Real tunnels: WireGuard and Tor in user space, and how "VPN _and_ Tor" is expressed
 
 Accepted. Until now the only provider was `ByoSocksProvider` — "point at a SOCKS port you already run".
-Two providers now produce tunnels themselves, and the choice of *which* two is the substance of this
+Two providers now produce tunnels themselves, and the choice of _which_ two is the substance of this
 section.
 
 **Userspace first, and the ordering is not arbitrary.** `wireproxy` runs WireGuard over a private TCP/IP
@@ -322,7 +322,7 @@ site name went to the user's ISP in the clear. `parseWireGuardConfig` therefore 
 no DNS**, with a message naming the fix, rather than accepting it or picking a resolver on the user's
 behalf. Choosing one would mean sending their browsing to a third party they did not select.
 
-**"This group is on the VPN *and* on Tor" is a chain, not two routes.** A group resolves to exactly one
+**"This group is on the VPN _and_ on Tor" is a chain, not two routes.** A group resolves to exactly one
 route, so the combination is Tor configured with the VPN's loopback SOCKS port as its `Socks5Proxy`,
 exposing its own port for the group to bind to. The kill-switch composes for free: if the upstream VPN
 drops, Tor's outbound dies with it and the group is cut, with nothing having to coordinate the two. The

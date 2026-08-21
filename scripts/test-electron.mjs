@@ -26,7 +26,9 @@ function runVitest(args) {
   return new Promise((resolve) => {
     const child = spawn(electronPath, [vitestBin, ...args], {
       stdio: 'inherit',
-      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+      // TEPEGOZ_REQUIRE_NATIVE: this runner exists to execute the SQLite-backed suites against the
+      // Electron ABI. If the addon still will not load here, that is a real failure — never a skip.
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', TEPEGOZ_REQUIRE_NATIVE: '1' },
     });
     child.on('exit', (code) => resolve(code ?? 0));
   });

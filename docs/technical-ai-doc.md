@@ -17,12 +17,12 @@ through a single `ModelGateway.complete()` entry point that selects a registered
 Routing is deterministic (`ModelRouter`): each capability maps to a tier, and each tier maps to a concrete
 model per provider — adding a provider is a data change plus one adapter, not a routing branch.
 
-| Provider | Transport | Adapter | Plan tier | Exec tier | Classify tier |
-|---|---|---|---|---|---|
-| **Anthropic (Claude)** — default | `@anthropic-ai/sdk` (vendor SDK) | `providers/anthropic.provider.ts` | `claude-opus-4-8` | `claude-sonnet-4-6` | `claude-haiku-4-5` |
-| **OpenAI (GPT)** | REST via `@tepegoz/http` (no SDK) | `providers/openai.provider.ts` | `gpt-4o` | `gpt-4o` | `gpt-4o-mini` |
-| **Google (Gemini)** | REST via `@tepegoz/http` (no SDK) | `providers/gemini.provider.ts` | `gemini-2.5-pro` | `gemini-2.5-flash` | `gemini-2.5-flash-lite` |
-| **On-device (Local SLM)** | `@tepegoz/local-inference` (llama.cpp) | `local-provider.ts` | selected GGUF | selected GGUF | selected GGUF |
+| Provider                         | Transport                              | Adapter                           | Plan tier         | Exec tier           | Classify tier           |
+| -------------------------------- | -------------------------------------- | --------------------------------- | ----------------- | ------------------- | ----------------------- |
+| **Anthropic (Claude)** — default | `@anthropic-ai/sdk` (vendor SDK)       | `providers/anthropic.provider.ts` | `claude-opus-4-8` | `claude-sonnet-4-6` | `claude-haiku-4-5`      |
+| **OpenAI (GPT)**                 | REST via `@tepegoz/http` (no SDK)      | `providers/openai.provider.ts`    | `gpt-4o`          | `gpt-4o`            | `gpt-4o-mini`           |
+| **Google (Gemini)**              | REST via `@tepegoz/http` (no SDK)      | `providers/gemini.provider.ts`    | `gemini-2.5-pro`  | `gemini-2.5-flash`  | `gemini-2.5-flash-lite` |
+| **On-device (Local SLM)**        | `@tepegoz/local-inference` (llama.cpp) | `local-provider.ts`               | selected GGUF     | selected GGUF       | selected GGUF           |
 
 - **Tier roles.** `plan` = highest-capability planning; `exec` = the reactive perceive→decide→act loop;
   `classify` = cheap read/understand/summarize/classify. Reasoning depth for Anthropic is set via
@@ -106,7 +106,7 @@ model per provider — adding a provider is a data change plus one adapter, not 
 
 ### Known limits (Phase 1a)
 
-- Vision, true parallel-DAG execution, durable resume across restarts, and on-device model *execution*
+- Vision, true parallel-DAG execution, durable resume across restarts, and on-device model _execution_
   (the engine backend) are Phase 1b — the routing/adapters ship now.
 - `count_tokens` pre-flight sizing is Anthropic-only and not yet wired into routing.
 - Gemini/OpenAI tier model ids are tunable defaults (edit `models.ts`); they are not verified against a

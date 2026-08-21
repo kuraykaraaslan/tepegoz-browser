@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { skipWithoutNativeSqlite } from './native-abi';
 import { defaultTaskPolicy, type TaskDefinition } from '@tepegoz/tasks';
 import { migrate } from './migrations';
 import { openDatabase, type Db } from './db';
@@ -24,14 +25,17 @@ function task(id: string, updatedAt: number): TaskDefinition {
   };
 }
 
-describe('TaskStore', () => {
+describe.skipIf(skipWithoutNativeSqlite())('TaskStore', () => {
   it('stores and lists saved tasks newest first', () => {
     const db = memoryDb();
     TaskStore.upsert(db, task('old', 10));
     TaskStore.upsert(db, task('new', 20));
 
     expect(TaskStore.list(db).map((row) => row.id)).toEqual(['new', 'old']);
-    expect(TaskStore.get(db, 'new')?.triggers[0]).toMatchObject({ type: 'interval', everyMinutes: 5 });
+    expect(TaskStore.get(db, 'new')?.triggers[0]).toMatchObject({
+      type: 'interval',
+      everyMinutes: 5,
+    });
   });
 
   it('round-trips the sourceConversationId column (migration v11)', () => {

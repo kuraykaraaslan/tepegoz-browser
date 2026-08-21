@@ -4,11 +4,13 @@
 - **Date:** 2026-06-30
 
 ## Context
+
 Every competitor was breached through the model layer: prompt injection (CometJacking, ShadowPrompt)
 and excessive agency (1Password vault takeover, zero-click Drive wipe, `file://` leakage). Relying on
 model guardrails is insufficient — "polite" phrasing bypasses them.
 
 ## Decision
+
 Security is enforced by a **deterministic Policy Kernel that runs BEFORE the model**, not by model
 guardrails. Tool calls are classified (`read` / `state_changing` / `destructive` / `financial`);
 web-derived data is **tainted** ("untrusted read-only payload"); tainted + state-changing → forced
@@ -18,6 +20,7 @@ managers) are locked out of automation by default. An Egress Firewall blocks exf
 tool-call arguments are treated as untrusted input and zod-validated.
 
 ## Consequences
+
 - The whole critical-vulnerability class is closed in deterministic code, model-independent.
 - Some autonomy is intentionally gated; UX mitigates with scoped trust profiles + reason codes to
   avoid permission fatigue.
@@ -29,7 +32,7 @@ Recorded by [S6-PR1](../../phases/ai-agent-super/phase-s6-safety-control-plane.m
 defect that was fixed, not a decision that was taken** — the behaviour below was never intended by this
 ADR, and the record exists so it cannot be mistaken for a design choice or reintroduced.
 
-**The defect.** The kernel classified correctly and asked for confirmation, but the *answer* was decided
+**The defect.** The kernel classified correctly and asked for confirmation, but the _answer_ was decided
 in the **renderer**: `autoApprovesTool` in the agent panel auto-answered the approval IPC from a
 renderer-held `agentAutonomy` value. The kernel and the tool gateway never read `agentAutonomy` at all.
 A doctored or compromised renderer could therefore approve its own `financial`, `credential` and
@@ -65,7 +68,7 @@ Recorded by [S6-PR2](../../phases/ai-agent-super/phase-s6-safety-control-plane.m
 classification (`read` / `state_changing` / `destructive` / `financial`) is a **declared** class: the
 tool author supplies it at registration, and it cannot see arguments. That is too coarse for consent.
 Typing into a search box and typing into a password field are the same declared class, so a flat
-per-tool prompt has to describe both as *"a tool wants to change state"* — and an undifferentiated
+per-tool prompt has to describe both as _"a tool wants to change state"_ — and an undifferentiated
 prompt is what trains a user to click through. Approval fatigue is itself a vulnerability.
 
 **Decision: keep `dangerClass`, add a derived `RiskTier`.** Every gated call is classified in main into
@@ -97,7 +100,7 @@ so the prompts that remain are the ones that deserve a human. A grant is narrow 
 **registrable domains** (eTLD+1), **risk tiers the plan actually contained**, and **`runId`** — and is
 revoked in the run's `finally`, so it cannot outlive its task. Being run-scoped and in-memory, it is
 never persisted; there is no user data at rest and therefore no sync-meta obligation. (Should S9's
-*remembered* grants persist one, that record is new user data and must carry `updated_at` / `version` /
+_remembered_ grants persist one, that record is new user data and must carry `updated_at` / `version` /
 `tombstone`, a UUID PK and `device_id`.)
 
 Three things a grant can never do, enforced in the store rather than left to callers: cover `financial`
@@ -106,7 +109,7 @@ re-prompts, it does not extend the grant. An approved plan that contains a payme
 routine steps, and the payment step still prompts.
 
 **Scope boundary: the registrable domain, resolved properly.** Comparing the last two labels of a
-hostname — which an earlier draft of the classifier did — is wrong in the *unsafe* direction for
+hostname — which an earlier draft of the classifier did — is wrong in the _unsafe_ direction for
 multi-part suffixes: `garanti.com.tr` and `evil.com.tr` both reduce to `com.tr` and would count as the
 same site, so one grant would span every `.com.tr` domain in existence, and the cross-site egress signal
 would be suppressed on exactly the domains this product cares most about. Resolution uses a **bounded

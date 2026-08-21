@@ -10,13 +10,13 @@
 
 Every provider adapter was non-streaming, and a test —
 [`streaming-guard.test.ts`](../../packages/model-gateway/src/streaming-guard.test.ts) — locked that in.
-Its stated invariant was right: *"streaming is NOT written to the DB — only a full, validated response is
-committed to the Journal."* Its **mechanism** was the problem. It enforced that invariant by asserting
+Its stated invariant was right: _"streaming is NOT written to the DB — only a full, validated response is
+committed to the Journal."_ Its **mechanism** was the problem. It enforced that invariant by asserting
 that no adapter can stream **at all**, which conflates two different questions:
 
 1. **May a partial response influence state?** No — it is unvalidated, possibly half a token, and the
    model may revise it. Nothing durable or decision-bearing may read it.
-2. **May a partial response be *shown to a human*?** That is a UI question, and the answer "no" costs the
+2. **May a partial response be _shown to a human_?** That is a UI question, and the answer "no" costs the
    user the entire duration of a model call with no feedback. It is the mechanical cause of pain 3 and 4
    in [`history.md`](../../phases/ai-agent-super/history.md) ("too slow", "weak control feel").
 
@@ -33,8 +33,8 @@ Concretely:
 - `ModelGateway.generateStream(req, onDelta)` runs the **identical** guards as `complete` — required
   `max_tokens`/timeout, content `safeParse`, the per-run model pin, the Egress Firewall, the Token Ledger
   — and returns the **same settled `CanonResponse`**. Deltas go to the caller's sink and nowhere else.
-- `ModelProvider.completeStream` is **optional**. An adapter without it still streams *correctly*, just
-  not *early*: the gateway emits the settled text as a single delta. That is the honest shape of "this
+- `ModelProvider.completeStream` is **optional**. An adapter without it still streams _correctly_, just
+  not _early_: the gateway emits the settled text as a single delta. That is the honest shape of "this
   provider cannot stream" — never simulated typing over an already-complete string.
 - The reactor streams only when a sink is supplied (`ReactOptions.onModelDelta`). The decision is parsed
   from the settled response in both cases; the sink is never read back by the loop.

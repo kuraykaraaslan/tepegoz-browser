@@ -19,7 +19,7 @@ gates are summarized in `phases/README.md`; ADR-0010 records deviations.
 **Every working session that touches a phase MUST end with the Phase Status Report** — what closed, and
 how much is left. Format and the rules that keep it honest: [`phases/README.md`](phases/README.md#session-close-out--the-phase-status-report-standing-rule).
 
-The short version: landed code is **not** a closed phase (✅ needs DoD passed *and* the delta in the
+The short version: landed code is **not** a closed phase (✅ needs DoD passed _and_ the delta in the
 results ledger); "how many left" counts against ✅, never against "started"; a session that closed
 nothing prints **"hiçbiri"**; and blockers are named by **kind** (API spend ≠ downloaded weights ≠ rival
 subscriptions).
@@ -59,10 +59,17 @@ pnpm test:electron                 # native-dependent (better-sqlite3) tests und
 ```
 
 > **`better-sqlite3` ABI note.** One `.node` file matches one ABI. A fresh `pnpm install` fetches the
-> **Node** prebuild (ABI 127 for Node 22) — so CI and `pnpm test` pass. Running the GUI needs the
-> **Electron** ABI (`pnpm --filter @tepegoz/desktop rebuild`); after that, `pnpm test` can't load the
-> addon under Node. Don't flip the binary back and forth — run the persistence tests with
-> **`pnpm test:electron`** (Electron-as-Node, same 130 binary as the app). CI is unaffected.
+> **Node** prebuild (ABI 127 for Node 22); running the GUI needs the **Electron** ABI
+> (`pnpm --filter @tepegoz/desktop rebuild`). You cannot have both at once.
+>
+> The SQLite-backed suites therefore **skip, with a reason**, when the addon does not match the current
+> runtime — they used to hard-fail, which left `pnpm exec turbo run typecheck lint test` permanently red
+> on any machine that had launched the app, with 63 failures explained away in prose. A suite that is
+> always red stops being read.
+>
+> A skip is not a pass, so it is gated: `TEPEGOZ_REQUIRE_NATIVE=1` turns the skip back into a hard
+> failure, and **both CI and `pnpm test:electron` set it**. The tests must actually run somewhere; those
+> are the places. See `packages/persistence/src/native-abi.ts`.
 
 ## Layout
 

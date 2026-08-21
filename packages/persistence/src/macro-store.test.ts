@@ -1,4 +1,5 @@
 import { beforeEach, describe, it, expect } from 'vitest';
+import { skipWithoutNativeSqlite } from './native-abi';
 import type { Macro } from '@tepegoz/shared-types';
 import { openDatabase, type Db } from './db';
 import { migrate } from './migrations';
@@ -21,7 +22,7 @@ const macro = (id: string, name: string): Macro => ({
   ],
 });
 
-describe('MacroStore', () => {
+describe.skipIf(skipWithoutNativeSqlite())('MacroStore', () => {
   it('saves and reads back the full IR', () => {
     MacroStore.save(db, macro('m1', 'Login'), 1000);
     const got = MacroStore.get(db, 'm1');

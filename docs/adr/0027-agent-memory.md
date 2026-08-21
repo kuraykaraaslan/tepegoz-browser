@@ -14,7 +14,7 @@ re-discovers the same drawer, and re-spends the same tokens. That is the ordinar
 browser agent remember things.
 
 The uncomfortable case is the other one. A store that shapes future behaviour is a place an attacker can
-leave instructions, and a browser visits attacker-controlled pages *by definition*. The attack is not
+leave instructions, and a browser visits attacker-controlled pages _by definition_. The attack is not
 hypothetical and not novel — it is **seed on visit 1, cash on visit 2**: a page publishes a "site tip for
 automated assistants", the agent writes it down as a helpful fact about the domain, and on the next visit
 that text arrives in the context window wearing the user's own trust. Retrieval-time filtering does not
@@ -31,15 +31,15 @@ properties, each enforced by construction rather than by convention:
 1. **Filtered on WRITE, not only on read.** `decideWrite` runs `detectThreats` before anything is
    persisted, and returns the threat kinds with the refusal so the drop is journallable. A silent discard
    would hide an attack in progress. Retrieval-side sanitization still runs — a stored note is
-   third-party text *every* time it is used, not just the first time.
+   third-party text _every_ time it is used, not just the first time.
 2. **Advisory by construction.** Recalled notes are injected as `role: 'user'` observations **outside**
    the trusted task fence. They can inform a decision and can never be one; anything they suggest still
    crosses the ToolGateway PEP exactly like a fresh model decision. The policy ceiling is therefore
    unchanged by what a site remembers about itself.
 3. **Re-validated against the live DOM.** A hint carries a durable descriptor (`tag`/`role`/`name`),
    never a positional ref, and is discarded if that descriptor no longer resolves. Staleness must degrade
-   to *no hint*, never to a wrong click.
-4. **Quarantine keeps the row.** A hint whose use preceded a *policy denial* stops being offered and
+   to _no hint_, never to a wrong click.
+4. **Quarantine keeps the row.** A hint whose use preceded a _policy denial_ stops being offered and
    **stays**, flagged. Deleting it would erase the evidence along with the attack. Quarantine requires a
    denial, never mere task failure: conflating the two would quarantine the whole store on a bad day.
 
@@ -47,7 +47,7 @@ properties, each enforced by construction rather than by convention:
 an older build, or left by a poisoning attempt that predates the write filter, is untrusted input exactly
 like page text — a store that trusts itself is one an attacker only has to reach once.
 
-**Remembered grants cannot creep.** `expires_at` is `NOT NULL`, expiry is applied *in the query* so an
+**Remembered grants cannot creep.** `expires_at` is `NOT NULL`, expiry is applied _in the query_ so an
 unswept grant is still dead, a grant is scoped to a task **and** a host (never global), and a SQL `CHECK`
 keeps `credential`, `financial`, and `destructive` out of the table entirely. Those tiers are only ever
 asked. A remembered grant skips re-asking for something the user already agreed to, inside a window they
@@ -68,12 +68,12 @@ The renderer supplies the skill id and the main process honours it only while th
 matches that skill's stored prompt, which is what stops an untrusted renderer from naming whichever
 skill holds the widest grant. Grants are consulted in order of narrowing authority: plan grant (one
 run) → remembered grant (one skill, one site, 30 days) → autonomy level (every run). A taint prompt is
-never covered: when the kernel asked *because* web-derived data reached a side-effecting call, a saved
+never covered: when the kernel asked _because_ web-derived data reached a side-effecting call, a saved
 answer from last week is not consent for what the page said today.
 
 **A skill is a template, not a recipe.** A named prompt + start URL + expected grant profile, which still
-runs the ordinary reactor loop over a live page. The ownership test against Phase 6 is *"if the model
-could be removed from the replay, it's Phase 6"* — a skill is a starting point, not a signed
+runs the ordinary reactor loop over a live page. The ownership test against Phase 6 is _"if the model
+could be removed from the replay, it's Phase 6"_ — a skill is a starting point, not a signed
 deterministic replay.
 
 ## Consequences
@@ -100,10 +100,10 @@ pure function of (tool, taint, target) with no I/O, and giving it a database han
 security decision depend on storage being reachable. The coverage **rule** is pure and unit-tested in
 `security-policy/remembered-grants.ts`; the row-reading lives in the main process and is consulted at the
 same pre-model point as the plan grant. ADR-0006 ordering is preserved: the kernel decides first, and a
-grant is only ever consulted where it already said *ask*.
+grant is only ever consulted where it already said _ask_.
 
 **Owed, and stated rather than implied.** The domain-memory recall seam has no host wiring, so no
-production run reads or writes a *hint* today — that mechanism landed, that behaviour is not switched on.
+production run reads or writes a _hint_ today — that mechanism landed, that behaviour is not switched on.
 Revocation of a single saved permission means deleting the skill that holds it; a standalone grant manager
 is not built. And the efficiency claim (≥25% wall-clock **and** tokens on a
 repeat visit) plus the poisoned-hint ship gate (0 violations at N≥10) are **measurement-owed**, blocked

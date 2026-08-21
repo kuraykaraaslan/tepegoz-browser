@@ -1,4 +1,5 @@
 import { beforeEach, describe, it, expect } from 'vitest';
+import { skipWithoutNativeSqlite } from './native-abi';
 import { openDatabase, type Db } from './db';
 import { migrate } from './migrations';
 import { MetaStore } from './meta';
@@ -19,7 +20,7 @@ const win = (over: Partial<WindowSnapshot> = {}): WindowSnapshot => ({
 
 const v3 = (windows: WindowSnapshot[]): SessionSnapshot => ({ version: 3, windows });
 
-describe('SessionStore', () => {
+describe.skipIf(skipWithoutNativeSqlite())('SessionStore', () => {
   it('returns null when no session was ever saved', () => {
     expect(SessionStore.load(db)).toBeNull();
   });
@@ -32,7 +33,15 @@ describe('SessionStore', () => {
           { url: 'https://b.com/', pinned: false, groupId: 'g1' },
           { url: 'https://c.com/', pinned: false, groupId: 'g1' },
         ],
-        groups: [{ id: 'g1', name: 'Work', color: 'red', collapsed: false, settings: { 'agent.panelOpen': true } }],
+        groups: [
+          {
+            id: 'g1',
+            name: 'Work',
+            color: 'red',
+            collapsed: false,
+            settings: { 'agent.panelOpen': true },
+          },
+        ],
         activeIndex: 1,
         bounds: { x: 10, y: 20, width: 1200, height: 800 },
       }),
@@ -65,14 +74,18 @@ describe('SessionStore', () => {
       JSON.stringify({
         version: 3,
         windows: [
-          { tabs: [{ url: 'https://a.com/', pinned: false, groupId: null, hidden: false }], groups: [], activeIndex: 0 },
+          {
+            tabs: [{ url: 'https://a.com/', pinned: false, groupId: null, hidden: false }],
+            groups: [],
+            activeIndex: 0,
+          },
         ],
       }),
     );
     expect(SessionStore.load(db)?.windows[0]?.tabs[0]?.hidden).toBeUndefined();
   });
 
-  it('defaults a persisted group\'s settings to {} when absent or malformed', () => {
+  it("defaults a persisted group's settings to {} when absent or malformed", () => {
     MetaStore.set(
       db,
       'session',
@@ -119,7 +132,11 @@ describe('SessionStore', () => {
   });
 
   it('upconverts a legacy v1 snapshot (string[] tabs) to v3', () => {
-    MetaStore.set(db, 'session', JSON.stringify({ tabs: ['https://a.com/', 'https://b.com/'], activeIndex: 1 }));
+    MetaStore.set(
+      db,
+      'session',
+      JSON.stringify({ tabs: ['https://a.com/', 'https://b.com/'], activeIndex: 1 }),
+    );
     expect(SessionStore.load(db)).toEqual(
       v3([
         {
@@ -135,8 +152,14 @@ describe('SessionStore', () => {
   });
 
   it('overwrites the previous snapshot on save', () => {
-    SessionStore.save(db, v3([win({ tabs: [{ url: 'https://a.com/', pinned: false, groupId: null }] })]));
-    SessionStore.save(db, v3([win({ tabs: [{ url: 'https://x.com/', pinned: false, groupId: null }] })]));
+    SessionStore.save(
+      db,
+      v3([win({ tabs: [{ url: 'https://a.com/', pinned: false, groupId: null }] })]),
+    );
+    SessionStore.save(
+      db,
+      v3([win({ tabs: [{ url: 'https://x.com/', pinned: false, groupId: null }] })]),
+    );
     expect(SessionStore.load(db)?.windows[0]?.tabs.map((t) => t.url)).toEqual(['https://x.com/']);
   });
 

@@ -93,7 +93,7 @@ so a stale thunk for a removed extension is inert.
 so the Settings → **Cost & performance** "run locally" list is fully data-driven for extensions too:
 
 - `aiTask?: AiTask` — the LLM/cognitive work an action entails (`none | read_understand | summarize |
-  classify | extract | redact | plan | decide`). `'none'`/absent ⇒ a purely mechanical action → never
+classify | extract | redact | plan | decide`). `'none'`/absent ⇒ a purely mechanical action → never
   local-toggleable.
 - `localCapable?: boolean` — override; absent ⇒ derived from `aiTask` (present and not `'none'`), via the
   shared `isLocalCapable()` in `@tepegoz/shared-types`.
@@ -122,7 +122,7 @@ three `registerXxxTools({ host })` factories once at startup, next to `FileOpera
 This does **not** weaken the single-PEP invariant: every one is still policy-gated, HITL-guarded, and
 audited exactly as before, and the ids/danger-classes are unchanged (a pure ownership + registration-path
 move, not a rename). It **does** change the kill-switch surface: disabling `com.tepegoz.agent` no longer
-unregisters these tools. That is acceptable because the agent *runtime* that invokes tools only runs when
+unregisters these tools. That is acceptable because the agent _runtime_ that invokes tools only runs when
 the extension is enabled, so a registered-but-unreachable browser tool is inert — the same posture as the
 always-on `file_*` and `extension_*` builtins. Only `ext-macros` remains on the extension-supervisor
 kill-switch path (its tools genuinely are its domain).
