@@ -4,4 +4,9 @@
  */
 export const CapabilityMessages = {
   toolAlreadyRegistered: (id: string): string => `Tool already registered: ${id}`,
+  toolNeedsValidator: (id: string): string =>
+    `Tool ${id} registered without an input validator — every tool argument is LLM-produced and must be validated before execution`,
+  toolNeedsHandler: (id: string): string => `Tool ${id} registered without a handler`,
+  toolValidatorTooPermissive: (id: string): string =>
+    `Tool ${id} registered with a validator that accepts anything (it said yes to a function value) — that is not validation`,
 } as const;

@@ -29,3 +29,32 @@ describe('jsonSchemaValidator', () => {
     }
   });
 });
+
+describe('a schema that constrains nothing is not validation', () => {
+  // `{}` is valid JSON Schema, compiles without complaint, and accepts EVERY value — including a
+  // function. An MCP server is a remote party, so this cannot be caught by reviewing our own code: it
+  // has to fail closed here. Found when CapabilityRegistry started refusing rubber-stamp validators and
+  // real MCP tools stopped registering.
+  it('treats an empty schema as no schema (empty object only)', () => {
+    const v = jsonSchemaValidator({});
+    expect(v.safeParse({}).success).toBe(true);
+    expect(v.safeParse({ anything: 1 }).success).toBe(false);
+    expect(v.safeParse(() => undefined).success).toBe(false);
+  });
+
+  it('treats an annotations-only schema the same way', () => {
+    const v = jsonSchemaValidator({ title: 'Tool input', description: 'anything goes' });
+    expect(v.safeParse({ anything: 1 }).success).toBe(false);
+  });
+
+  it('still honours a schema that DOES constrain', () => {
+    const v = jsonSchemaValidator({
+      type: 'object',
+      properties: { path: { type: 'string' } },
+      required: ['path'],
+    });
+    expect(v.safeParse({ path: '/tmp/x' }).success).toBe(true);
+    expect(v.safeParse({}).success).toBe(false);
+    expect(v.safeParse(() => undefined).success).toBe(false);
+  });
+});

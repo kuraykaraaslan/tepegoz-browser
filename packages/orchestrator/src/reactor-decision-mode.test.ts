@@ -69,7 +69,14 @@ function fakeTool(id: string, dangerClass: RiskLevel): RegisteredTool<unknown> {
   };
   return {
     descriptor,
-    inputSchema: { safeParse: (data: unknown) => ({ success: true, data }) },
+    inputSchema: {
+      // Objects only. A validator that says yes to everything is refused at registration —
+      // see CapabilityRegistry.register.
+      safeParse: (data: unknown) =>
+        typeof data === 'object' && data !== null
+          ? { success: true as const, data }
+          : { success: false as const, error: { issues: ['expected an object'] } },
+    },
     handler: () => {
       calls.push(id);
       return { ok: true };

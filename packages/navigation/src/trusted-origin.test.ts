@@ -45,13 +45,27 @@ describe('isTrustedAppUrl', () => {
     ).toBe(false);
   });
 
-  it('matches case-insensitively, because Windows paths are', () => {
+  it('folds case ONLY where the filesystem does', () => {
+    const differentlyCased = 'file:///c:/APP/out/renderer/INDEX.HTML';
+    // Windows: the same file, so the same document.
     expect(
-      isTrustedAppUrl('file:///c:/APP/out/renderer/INDEX.HTML', {
+      isTrustedAppUrl(differentlyCased, {
         isPackaged: true,
         chromeUrl: CHROME,
+        caseInsensitivePaths: true,
       }),
     ).toBe(true);
+    // Linux: a DIFFERENT file. Folding case here would hand the IPC sender allow-list to a document
+    // that merely looks like the chrome, which is the bug this whole parameter exists to avoid.
+    expect(
+      isTrustedAppUrl(differentlyCased, {
+        isPackaged: true,
+        chromeUrl: CHROME,
+        caseInsensitivePaths: false,
+      }),
+    ).toBe(false);
+    // Strict by default.
+    expect(isTrustedAppUrl(differentlyCased, { isPackaged: true, chromeUrl: CHROME })).toBe(false);
   });
 
   it('trusts the localhost dev server ONLY when not packaged', () => {

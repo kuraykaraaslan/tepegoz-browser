@@ -15,5 +15,11 @@ import { chromeDocumentUrl } from '../chrome-url';
  * is cheap, and a cached value would be one more thing to invalidate.
  */
 export function isTrustedAppUrl(rawUrl: string): boolean {
-  return isTrusted(rawUrl, { isPackaged: app.isPackaged, chromeUrl: chromeDocumentUrl() });
+  return isTrusted(rawUrl, {
+    isPackaged: app.isPackaged,
+    chromeUrl: chromeDocumentUrl(),
+    // Windows paths fold case; Linux paths do not, and folding there would make a differently-cased
+    // path — a genuinely different file — compare equal to the chrome.
+    caseInsensitivePaths: process.platform === 'win32',
+  });
 }
