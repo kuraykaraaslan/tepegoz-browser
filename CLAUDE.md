@@ -14,6 +14,21 @@ each piece. Read `phases/README.md` first.
 This project **must** comply with `//wsl.localhost/Ubuntu/home/kuray/internal-ai-rules`. Cross-cutting
 gates are summarized in `phases/README.md`; ADR-0010 records deviations.
 
+## Session close-out (standing rule)
+
+**Every working session that touches a phase MUST end with the Phase Status Report** — what closed, and
+how much is left. Format and the rules that keep it honest: [`phases/README.md`](phases/README.md#session-close-out--the-phase-status-report-standing-rule).
+
+The short version: landed code is **not** a closed phase (✅ needs DoD passed *and* the delta in the
+results ledger); "how many left" counts against ✅, never against "started"; a session that closed
+nothing prints **"hiçbiri"**; and blockers are named by **kind** (API spend ≠ downloaded weights ≠ rival
+subscriptions).
+
+> This lives in `CLAUDE.md` rather than only in agent memory on purpose: memory is keyed per machine and
+> per absolute path, so the same repo opened from WSL, another checkout, or another machine is a
+> different key and would silently lose the rule. `CLAUDE.md` travels with the code, so the rule applies
+> from Windows, WSL, and CI alike.
+
 ## Git (non-negotiable)
 
 - **Branch-based:** `<type>/<short-scope>` → self-review PR → `main`. Only trivial+reversible changes
