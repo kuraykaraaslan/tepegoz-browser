@@ -55,6 +55,43 @@ export type CanonStopReason = 'end' | 'max_tokens' | 'tool_use' | 'error';
 export interface CanonUsage {
   inputTokens: number;
   outputTokens: number;
+  /**
+   * Input tokens served from a provider-side prompt cache at a fraction of the normal rate. Absent when
+   * the provider does not report caching (or none was requested) — **absent is not zero**: a zero here
+   * is the load-bearing signal that a requested cache never hit, which is worse than not caching at all
+   * (the write premium is paid for nothing). See {@link CanonCacheHint}.
+   */
+  cacheReadTokens?: number;
+  /** Input tokens written INTO the cache on this call, billed at a premium over normal input. */
+  cacheWriteTokens?: number;
+}
+
+/**
+ * A caller's promise about which parts of THIS request are byte-identical to the last one, so a
+ * provider that supports prompt caching can charge a fraction for them.
+ *
+ * Provider-agnostic on purpose (ADR-0005): the caller states *stability*, an adapter decides what to do
+ * with it. Adapters without a cache ignore the hint entirely.
+ *
+ * **This is a promise, not a request.** Prompt caching is a prefix match — a single changed byte
+ * anywhere before a breakpoint invalidates it and the write premium is charged for a 0% hit rate, which
+ * costs MORE than not caching. A caller that mutates earlier messages between requests (the Reactor's
+ * transient page-state collapse does exactly this) must point `lastStableMessageIndex` strictly before
+ * every index it may still rewrite.
+ */
+export interface CanonCacheHint {
+  /**
+   * The tool definitions + system prompt never change for the life of a run. Covers both: vendors
+   * render `tools` before `system`, so one breakpoint on the system block spans the pair.
+   */
+  systemAndTools?: boolean;
+  /**
+   * Index into `messages` of the last turn whose bytes are guaranteed never to change on a subsequent
+   * request in this run. Omit (or a negative value) when no message qualifies.
+   */
+  lastStableMessageIndex?: number;
+  /** Cache lifetime. `1h` survives a whole eval sweep; `5m` (the vendor default) survives one task. */
+  ttl?: '5m' | '1h';
 }
 
 export interface CanonRequest {
@@ -81,6 +118,11 @@ export interface CanonRequest {
    * prose/fences. Providers that follow JSON instructions natively (Anthropic) may ignore it.
    */
   responseFormat?: 'json';
+  /**
+   * Which parts of this request the caller guarantees are byte-stable, so a caching provider can charge
+   * a fraction for them. Absent ⇒ no caching is attempted, which is always safe.
+   */
+  cache?: CanonCacheHint;
 }
 
 export interface CanonResponse {

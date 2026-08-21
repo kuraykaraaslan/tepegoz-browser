@@ -35,6 +35,10 @@ describe('TokenLedger', () => {
       capability: 'plan',
       inputTokens: 15,
       outputTokens: 60,
+      // A provider that reports no cache counters snapshots as zero, never as absent — the persisted
+      // row shape has to be the same for every provider.
+      cacheReadTokens: 0,
+      cacheWriteTokens: 0,
       calls: 2,
     });
     expect(rows).toContainEqual({
@@ -43,6 +47,8 @@ describe('TokenLedger', () => {
       capability: 'exec',
       inputTokens: 1,
       outputTokens: 2,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 0,
       calls: 1,
     });
   });

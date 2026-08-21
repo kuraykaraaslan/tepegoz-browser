@@ -10,6 +10,7 @@ import type { ScoreResult } from './scorer';
 import type { Agreement } from './calibration';
 import type { FamilyStat, Interval, RepeatSummary } from './statistics';
 import { verificationLines, verificationMetrics, type VerificationMetrics } from './verification-metrics';
+import { cacheHealth, cacheHealthLine } from './cache-health';
 
 /** One scenario's full outcome: the record fed to the metrics + the ground-truth score. */
 export interface ScenarioResult {
@@ -216,6 +217,9 @@ export function formatReportTable(report: EvalReport): string {
     report.dev.metrics.avgCostUsdPerRun !== undefined
       ? `dev spend: $${report.dev.metrics.avgCostUsdPerRun.toFixed(4)}/run · $${(report.dev.metrics.totalCostUsd ?? 0).toFixed(4)} total`
       : 'dev spend: not measured (set TEPEGOZ_EVAL_RATES to per-1M-token prices)',
+    // Caching is unfalsifiable unless the counters are stated: a silently-invalidated prefix looks
+    // exactly like a working one from the outside, and costs more.
+    cacheHealthLine(cacheHealth(report.dev.metrics.tokenUsage)),
     `threshold ${report.thresholdMet ? 'met' : 'NOT met'}`,
     ...judgeLine,
     ...verificationLines(report.dev.verification, report.heldOut.verification),

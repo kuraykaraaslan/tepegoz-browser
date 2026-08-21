@@ -26,6 +26,7 @@ import {
   PROVIDER_ID,
   RATES,
   REPEAT,
+  RUN_CEILING,
   appDir,
 } from './harness-config';
 
@@ -63,7 +64,15 @@ const EvalOutSchema = z.object({
     )
     .optional(),
   tokenUsage: z
-    .object({ inputTokens: z.number(), outputTokens: z.number(), totalTokens: z.number() })
+    .object({
+      inputTokens: z.number(),
+      outputTokens: z.number(),
+      totalTokens: z.number(),
+      // Optional so a report from an app build predating prompt caching still parses; a missing
+      // counter contributes 0 and shows up as "cache not used" rather than as a parse failure.
+      cacheReadTokens: z.number().optional(),
+      cacheWriteTokens: z.number().optional(),
+    })
     .optional(),
 });
 type EvalOut = z.infer<typeof EvalOutSchema>;
@@ -151,7 +160,14 @@ export function planRun(
     : scenario.target.realUrl;
   return {
     entryUrl,
-    env: { TEPEGOZ_EVAL_MODE: 'live', TEPEGOZ_EVAL_PROVIDER: PROVIDER_ID, TEPEGOZ_EVAL_API_KEY: API_KEY },
+    env: {
+      TEPEGOZ_EVAL_MODE: 'live',
+      TEPEGOZ_EVAL_PROVIDER: PROVIDER_ID,
+      TEPEGOZ_EVAL_API_KEY: API_KEY,
+      // Only forwarded when set, so an unset ceiling stays absent rather than arriving as the string
+      // "0" that the app then has to interpret.
+      ...(RUN_CEILING > 0 ? { TEPEGOZ_EVAL_RUN_CEILING: String(RUN_CEILING) } : {}),
+    },
   };
 }
 
@@ -369,6 +385,8 @@ export async function runScenarioTrials(
   // Honest cost includes the abandoned attempts — they really did burn tokens/API spend.
   const inputTokens = allOuts.reduce((n, o) => n + (o.tokenUsage?.inputTokens ?? 0), 0);
   const outputTokens = allOuts.reduce((n, o) => n + (o.tokenUsage?.outputTokens ?? 0), 0);
+  const cacheReadTokens = allOuts.reduce((n, o) => n + (o.tokenUsage?.cacheReadTokens ?? 0), 0);
+  const cacheWriteTokens = allOuts.reduce((n, o) => n + (o.tokenUsage?.cacheWriteTokens ?? 0), 0);
   const escapes = validOuts.filter((o) => escapedTrial(o)).length;
   const escapeN = escapeEligible ? validN : 0; // escape denominator = valid eligible trials
   const escaped = escapeEligible && validN > 0 && escapes * 2 >= validN;
@@ -406,7 +424,7 @@ export async function runScenarioTrials(
       scenarioId: scenario.id,
       stoppedReason: (last.stoppedReason as ScenarioResult['record']['stoppedReason']) ?? 'tool_error',
       outcomes,
-      tokenUsage: { inputTokens, outputTokens },
+      tokenUsage: { inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens },
       wallClockMs: wallClocksMs.reduce((sum, ms) => sum + ms, 0),
       wallClocksMs,
       tokenRateUsd: RATES,

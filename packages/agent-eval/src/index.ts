@@ -12,6 +12,7 @@ export * from './report';
 export * from './judge';
 export * from './calibration';
 export * from './verification-metrics';
+export * from './cache-health';
 export * from './speed-targets';
 export * from './bridge-claim';
 export * from './local-tier-ownership';

@@ -5,6 +5,8 @@ import type { CanonUsage } from './types';
 interface LedgerEntry {
   inputTokens: number;
   outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
   calls: number;
 }
 
@@ -16,6 +18,10 @@ export interface LedgerEntryView {
   capability: string;
   inputTokens: number;
   outputTokens: number;
+  /** Input tokens served from the provider's prompt cache (a fraction of the normal rate). */
+  cacheReadTokens: number;
+  /** Input tokens written into the provider's prompt cache (a premium over the normal rate). */
+  cacheWriteTokens: number;
   calls: number;
 }
 
@@ -49,10 +55,12 @@ interface LedgerState {
   baseline: number;
   /** Total-token quota for the account (0 = unlimited/off). */
   quota: number;
+  /** Total-token ceiling for THIS run alone (0 = off). See {@link TokenLedger.setRunCeiling}. */
+  runCeiling: number;
 }
 
 function newState(): LedgerState {
-  return { entries: new Map(), budgets: new Map(), baseline: 0, quota: 0 };
+  return { entries: new Map(), budgets: new Map(), baseline: 0, quota: 0, runCeiling: 0 };
 }
 
 /**
@@ -101,6 +109,7 @@ export class TokenLedger {
     s.budgets.clear();
     s.baseline = 0;
     s.quota = 0;
+    s.runCeiling = 0;
   }
 
   /** Seed the persisted lifetime total (input+output) so budgetStatus reflects cumulative usage. */
@@ -113,6 +122,31 @@ export class TokenLedger {
     state().quota = Number.isFinite(totalTokens) && totalTokens > 0 ? totalTokens : 0;
   }
 
+  /**
+   * Cap the total tokens ONE run may spend (0 = off). Distinct from {@link setQuota}, which is the
+   * account's lifetime budget: this bounds a single task's blast radius.
+   *
+   * It exists because a single run can be pathological. The measured worst case in this repo is an
+   * `escape_bait` trial that burned **224k tokens** flailing into `max_steps` — 4.5x the ~50k a trial is
+   * budgeted at. Over a sweep, a handful of those is a material fraction of the whole budget, spent on
+   * exactly the runs that learn the least. `maxSteps` does not bound this: 25 cheap steps and 25
+   * enormous ones are the same number of steps.
+   */
+  static setRunCeiling(totalTokens: number): void {
+    state().runCeiling = Number.isFinite(totalTokens) && totalTokens > 0 ? totalTokens : 0;
+  }
+
+  /**
+   * True once this run has spent its ceiling. Checked BEFORE dispatching a call, so the ceiling is a
+   * bound on what has already been billed — the call that crosses it still completes and is counted.
+   * An exact cap is not achievable client-side (a request's token count is only known after it runs),
+   * and pretending otherwise would be a worse lie than a slightly-overshooting bound.
+   */
+  static runCeilingReached(): boolean {
+    const ceiling = state().runCeiling;
+    return ceiling > 0 && TokenLedger.totals().totalTokens >= ceiling;
+  }
+
   /** Set a per-capability output-token budget (e.g. classify=200, plan=2000). */
   static setBudget(capability: string, maxOutputTokens: number): void {
     state().budgets.set(capability, maxOutputTokens);
@@ -121,9 +155,17 @@ export class TokenLedger {
   static record(provider: AIProvider, model: string, capability: string, usage: CanonUsage): void {
     const entries = state().entries;
     const k = key(provider, model, capability);
-    const cur = entries.get(k) ?? { inputTokens: 0, outputTokens: 0, calls: 0 };
+    const cur = entries.get(k) ?? {
+      inputTokens: 0,
+      outputTokens: 0,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 0,
+      calls: 0,
+    };
     cur.inputTokens += usage.inputTokens;
     cur.outputTokens += usage.outputTokens;
+    cur.cacheReadTokens += usage.cacheReadTokens ?? 0;
+    cur.cacheWriteTokens += usage.cacheWriteTokens ?? 0;
     cur.calls += 1;
     entries.set(k, cur);
   }
@@ -137,16 +179,39 @@ export class TokenLedger {
   }
 
   /** Aggregate usage across every provider/model/capability (feeds the live quota indicator). */
-  static totals(): { inputTokens: number; outputTokens: number; totalTokens: number; calls: number } {
+  static totals(): {
+    inputTokens: number;
+    outputTokens: number;
+    cacheReadTokens: number;
+    cacheWriteTokens: number;
+    totalTokens: number;
+    calls: number;
+  } {
     let inputTokens = 0;
     let outputTokens = 0;
+    let cacheReadTokens = 0;
+    let cacheWriteTokens = 0;
     let calls = 0;
     for (const e of state().entries.values()) {
       inputTokens += e.inputTokens;
       outputTokens += e.outputTokens;
+      cacheReadTokens += e.cacheReadTokens;
+      cacheWriteTokens += e.cacheWriteTokens;
       calls += e.calls;
     }
-    return { inputTokens, outputTokens, totalTokens: inputTokens + outputTokens, calls };
+    // Cache counters are ADDITIVE, not a breakdown: vendors report `inputTokens` as the tokens that
+    // were NOT served from or written to the cache. Leaving them out of the total would make a
+    // well-cached run look nearly free to the quota gate while it processed just as many tokens.
+    // They are counted at face value here — the quota is denominated in tokens; the price DISCOUNT on a
+    // cached token is a cost concern, and it is applied in `estimateCostUsd`, not here.
+    return {
+      inputTokens,
+      outputTokens,
+      cacheReadTokens,
+      cacheWriteTokens,
+      totalTokens: inputTokens + outputTokens + cacheReadTokens + cacheWriteTokens,
+      calls,
+    };
   }
 
   /** Per-(provider,model,capability) breakdown of THIS run — persisted to the SQLite Token Ledger. */
@@ -165,6 +230,8 @@ export class TokenLedger {
         capability,
         inputTokens: e.inputTokens,
         outputTokens: e.outputTokens,
+        cacheReadTokens: e.cacheReadTokens,
+        cacheWriteTokens: e.cacheWriteTokens,
         calls: e.calls,
       });
     }

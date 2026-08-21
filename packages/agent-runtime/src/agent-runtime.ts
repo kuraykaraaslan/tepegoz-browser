@@ -77,6 +77,10 @@ export async function runAgent(
     TokenLedger.setQuota(deps.tokenBudget.quota);
     TokenLedger.setBaseline(deps.tokenBudget.lifetimeUsed);
   }
+  // Per-run ceiling, also after the reset so it bounds THIS run's spend rather than the session's.
+  if (deps.runTokenCeiling !== undefined) {
+    TokenLedger.setRunCeiling(deps.runTokenCeiling);
+  }
 
   // Egress Firewall (L8) over the single ModelGateway chokepoint: EVERY outbound model request (the
   // Planner + every reactive turn, which accumulate perceived/tainted page text) is inspected before it
@@ -244,6 +248,8 @@ export async function runAgent(
     tokenUsage: {
       inputTokens: usage.inputTokens,
       outputTokens: usage.outputTokens,
+      cacheReadTokens: usage.cacheReadTokens,
+      cacheWriteTokens: usage.cacheWriteTokens,
       totalTokens: usage.totalTokens,
     },
     steps: result.outcomes.map((o) => {

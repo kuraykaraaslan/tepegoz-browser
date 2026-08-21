@@ -79,9 +79,12 @@ maps to a workstream with **one headline metric** it must move.
 Status legend: ⬜ Not started · 🟡 In progress · 🟠 **Measurement-owed** (code + frozen fixtures landed,
 delta not yet in the ledger — counts against the anti-debt rule) · ✅ Done (DoD passed, delta recorded).
 
-> **Because eval is unfunded** (owner decision — see below), phases legitimately rest at 🟠
-> measurement-owed once code + fixtures land; the funded sweep is what converts 🟠 → ✅. This is expected
-> and tracked, not drift.
+> **Update 2026-08-21 — the funding gate was mostly a pricing error.** Phases rested at 🟠 on the belief
+> that the sweeps cost $2,500–8,000. Re-priced against the ledger's real token counts they cost
+> ~$300–900, and the S0 baseline that discharges most of this debt costs **~$17**, not $150–500. The
+> owner's **$50 API budget** is therefore enough to close **S0 and S3 at the DoD tier** and start
+> collapsing the count — see [`budget.md`](budget.md). The free-tier and no-model tiers discharge more still.
+> Until a sweep runs, 🟠 remains the honest resting state and no phase reads ✅.
 
 ### Old (v2) → new (S) residual-scope map
 
@@ -213,23 +216,47 @@ one PR); **attribution** (each exit sweep on a single-change branch, serialized)
 with/without sweep); **judge discipline** (secondary LLM judge claim-barred until ≥25 human labels;
 today: 1).
 
-## Budget — eval spend (owner: unfunded for now)
+## Budget — eval spend (owner: $50 of API, 2026-08-21)
 
-Live measurement needs a **funded Anthropic key**; the owner has chosen to **plan without a budget** for
-now. Consequence: every DoD sweep below is marked **⏸ awaiting funded key**. Code and frozen fixtures may
-land; **no phase reaches ✅ until its sweep runs and the delta is in [`eval-results.md`](eval-results.md)**.
-[S0](phase-s0-truth-and-repair.md) measures the real $/trial and replaces these order-of-magnitude
-estimates with actuals; the rule is **no sweep without a ledger entry recording its actual cost**.
+**The full plan is [`budget.md`](budget.md); it is binding and this section is a summary.**
 
-| Sweep | Trials | Est. cost (⏸) |
-|---|---|---|
-| S0 full-registry baseline (52 × N=3, Anthropic tier) | ~156 | $150–500 |
-| One family paired sweep (before+after, ~7 × N=10 × 2 arms) | ~140 | $150–400 |
-| Claim-grade ASR (24 `atk_*` × N≥10) | ~240 | $250–700 |
-| Program total (~2 full-registry + ~14 paired + ASR + bridge/H2H) | ~2,500–3,500 | **$2,500–8,000** |
+The table that used to sit here priced the program at **$2,500–8,000** and the S0 baseline at
+**$150–500**. Those were order-of-magnitude guesses, and multiplying the ledger's real token counts
+(13.8k–224k/trial) by real per-1M prices shows they over-stated the program by **4–10×**. The corrected
+figure is **~$550–780 at the DoD tier**, and the owner's budget is **$50 of API spend — not
+subscriptions**, which is enough to close **two phases at the real product model**.
 
-S12a's local-baseline sweeps run on **local compute (no cloud key)** and are the one measurement track
-not funding-blocked — an early, cheap cost win.
+| Sweep | Trials | Tier | Cost |
+|---|---:|---|---:|
+| T2 calibration (replaces the guesses with a measurement) | 6 | DoD + cache | **~$1** |
+| T3a S0 full-registry baseline (52 × N=3) → **S0 ✅** | 156 | DoD + cache | **~$30** |
+| T3b S3 `reliability-actions` paired (7 × N=5 × 2 arms) → **S3 ✅** | 70 | DoD + cache | **~$13** |
+| S2 / S4 paired sweeps, both arms same tier | ~140 each | free cloud tier | **$0** |
+| Deterministic / scripted-adversarial (the S5 trick) | — | no model | **$0** |
+| *Reserve* (overrun, re-runs, transport-invalid retries) | | | **~$6** |
+| Claim-grade ASR (24 `atk_*` × N≥10) | 240 | DoD + cache | ~$46 — **the next purchase** |
+| H2H battery | — | rival **subscriptions** | ~$60/mo — **not an API cost; out of scope** |
+
+S3's N=5 is **claim-grade by the constitution's pooled route** (7 × 5 = 35 pooled trials/arm, inside the
+sanctioned 30–70 band with Wilson CIs) — the cheaper of two paths the constitution already allows.
+
+The spending rule: **no paid token is spent on a question a free tier can answer.** Prompt caching
+(`cache_control` appears nowhere in the repo today) is the first piece of work, but it is worth **~25%,
+not the ~45% a naive agent-loop estimate suggests** — the reactor's transient-state collapse already
+keeps history compact, *and* it mutates messages in place, so a tail breakpoint would be invalidated
+every step and cost 1.25× for a 0% hit rate. [`budget.md` §2](budget.md#2-correction-to-the-caching-lever--it-is-worth-25-not-45)
+has the lag-2 breakpoint design and the mandatory `cache_read_input_tokens` assertion.
+
+**No north-star condition gets a publishable number for $50.** [S11](phase-s11-benchmark-h2h.md) needs
+rival subscriptions and [S12](phase-s12-local-model.md) needs downloaded weights — neither is an API
+cost, and the H2H month is a separate owner decision this budget deliberately declines.
+
+S12a's local-baseline sweeps still run on **local compute (no cloud key)**, but local cannot drive the
+agent loop (1.5B/3B weights at 8192 ctx) — it is a cheap-*capability* track, not a free eval tier.
+
+The **tier-label amendment** to [`constitution.md`](constitution.md) is **no longer on the critical
+path** (the plan runs at the DoD tier) but stays open for Step 4's free-tier sweeps —
+[`budget.md` §7](budget.md#7-constitution-amendment--no-longer-required-kept-on-the-shelf).
 
 ## Routing — what stays out
 
@@ -258,6 +285,9 @@ S4-verified trajectories, held-out contamination-gated).
 - [`eval-results.md`](eval-results.md) — the dated results ledger (continues the v2 ledger; every phase
   exit records before/after here).
 - [`constitution.md`](constitution.md) — the statistical constitution + consolidation-as-DoD rule.
+- [`budget.md`](budget.md) — the binding $50 measurement plan: the corrected cost model, the caching
+  correction (lag-2 breakpoints; the reactor mutates messages in place), the four spending tiers, and
+  the shelved tier-label amendment.
 - [`PROSE-LEDGER.md`](PROSE-LEDGER.md) — the prose-debt ledger, re-owned to S-phases.
 - [`fixture-freeze.md`](fixture-freeze.md) — the frozen baseline exam (8 registries, 52 scenarios,
   SHA-256 per file); every phase PR0 cites it as the base its delta was measured against.

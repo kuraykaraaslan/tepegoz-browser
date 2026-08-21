@@ -80,6 +80,13 @@ export interface AgentRunDeps {
    */
   tokenBudget?: { quota: number; lifetimeUsed: number };
   /**
+   * Total-token ceiling for THIS run (0/absent = off). Distinct from `tokenBudget.quota`, which is the
+   * account's lifetime budget: this bounds one task's blast radius. Once reached the gateway refuses to
+   * send another request and the run stops — a pathological run cannot spend an unbounded share of a
+   * sweep's budget just because it stayed under `maxSteps`.
+   */
+  runTokenCeiling?: number | undefined;
+  /**
    * Test/eval seam (AI-1): a pre-resolved model provider. When present, `runAgent` registers this
    * instance directly and SKIPS the vault/prefs resolution — so the eval harness can inject a scripted
    * provider (deterministic fixtures) or a real cloud model (honest competence) without a stored key,
@@ -113,7 +120,16 @@ export interface AgentRunSummary {
    * optional (absent on early terminal returns like plan_rejected/egress_blocked). Lets the AI-1 eval
    * harness report honest cost instead of the previous hard-coded 0, and any host surface a real total.
    */
-  tokenUsage?: { inputTokens: number; outputTokens: number; totalTokens: number } | undefined;
+  tokenUsage?:
+    | {
+        inputTokens: number;
+        outputTokens: number;
+        /** Additive to `inputTokens`, not a breakdown — vendors report the uncached count there. */
+        cacheReadTokens: number;
+        cacheWriteTokens: number;
+        totalTokens: number;
+      }
+    | undefined;
   /**
    * The per-step tool outcomes of the reactive loop (tool id + ok + optional error + the nav/fetch
    * `targetUrl`, when the call had a `url` arg), in order. Additive and optional. Lets the AI-1 eval

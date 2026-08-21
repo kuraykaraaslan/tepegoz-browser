@@ -31,7 +31,7 @@ export interface AcceptanceRunRecord {
   toolErrors: number;
   approvalCount: number;
   approvalLatencyMs: number[];
-  tokenUsage: { inputTokens: number; outputTokens: number; totalTokens: number };
+  tokenUsage: EvalTokenUsage;
   /** Summed wall-clock of every step in the run (ms). Sum-of-steps, not end-to-end run time — it
    *  excludes model thinking time between steps, so it is honest about what it does and does not cover. */
   stepDurationMs: number;
@@ -72,7 +72,7 @@ export interface AcceptanceMetrics {
   /** AI-7 (`s31`): fraction of runs that escaped the on-page route (off-site nav / `web_search`). Lower is
    *  better — the navigation-grounding fix is meant to drive this down without regressing task success. */
   escapeRate: number;
-  tokenUsage: { inputTokens: number; outputTokens: number; totalTokens: number };
+  tokenUsage: EvalTokenUsage;
   /** Median duration of a single tool call (ms) across every step of every run. */
   stepLatencyP50Ms: number;
   /** 95th-percentile single-step duration (ms) — where the slow tail actually lives. */
@@ -98,23 +98,80 @@ export interface AcceptanceMetrics {
   firstAttemptSuccessRate: number;
 }
 
+/**
+ * Token spend for one run or aggregate.
+ *
+ * The two cache counters are ADDITIVE to `inputTokens`, not a breakdown of it: vendors report
+ * `inputTokens` as the tokens that were neither served from nor written to the prompt cache. They are
+ * carried separately because they are priced differently (see {@link estimateCostUsd}) and because a
+ * sweep needs to be able to PROVE caching worked — a run of writes with no reads means a silently
+ * invalidated prefix that is costing money rather than saving it.
+ */
+export interface EvalTokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+  totalTokens: number;
+}
+
 /** Per-1M-token prices for one model, supplied by the caller. Deliberately NOT hardcoded: vendor
  *  prices change, and a stale constant baked into the repo would produce confidently wrong money. */
 export interface TokenRateUsd {
   inputPerMillion: number;
   outputPerMillion: number;
+  /**
+   * Price multiplier for input tokens served from the provider's prompt cache. Vendors discount these
+   * heavily (Anthropic: ~0.1x). Omitted ⇒ 1, i.e. a cached token is priced like an uncached one —
+   * conservative, and the only honest default when the caller has not told us the discount.
+   */
+  cacheReadMultiplier?: number | undefined;
+  /** Price multiplier for input tokens WRITTEN to the cache (Anthropic: ~1.25x). Omitted ⇒ 1. */
+  cacheWriteMultiplier?: number | undefined;
 }
 
 /**
  * Estimate spend for a run. Returns `undefined` when no rate was supplied — an unknown price must
  * read as "not measured", never as `$0.00`, which would look like a free run in the report.
+ *
+ * Cached tokens are priced separately because vendors bill them separately: `inputTokens` counts only
+ * what was NOT cached, and the cache counters are additive at their own multipliers. Pricing all three
+ * at the full input rate would over-report a cached sweep's spend — which is the direction that makes a
+ * budget look unaffordable when it is not.
  */
+/** Fill in the cache counters a caller may omit and derive the additive total. One place, so a new
+ *  call site cannot quietly compute `totalTokens` without the cached half. */
+export function normalizeUsage(usage: {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens?: number;
+  cacheWriteTokens?: number;
+}): EvalTokenUsage {
+  const cacheReadTokens = usage.cacheReadTokens ?? 0;
+  const cacheWriteTokens = usage.cacheWriteTokens ?? 0;
+  return {
+    inputTokens: usage.inputTokens,
+    outputTokens: usage.outputTokens,
+    cacheReadTokens,
+    cacheWriteTokens,
+    totalTokens: usage.inputTokens + usage.outputTokens + cacheReadTokens + cacheWriteTokens,
+  };
+}
+
 export function estimateCostUsd(
-  usage: { inputTokens: number; outputTokens: number },
+  usage: {
+    inputTokens: number;
+    outputTokens: number;
+    cacheReadTokens?: number;
+    cacheWriteTokens?: number;
+  },
   rate?: TokenRateUsd,
 ): number | undefined {
   if (rate === undefined) return undefined;
-  return (usage.inputTokens * rate.inputPerMillion + usage.outputTokens * rate.outputPerMillion) / 1_000_000;
+  const cacheRead = (usage.cacheReadTokens ?? 0) * (rate.cacheReadMultiplier ?? 1);
+  const cacheWrite = (usage.cacheWriteTokens ?? 0) * (rate.cacheWriteMultiplier ?? 1);
+  const inputUnits = usage.inputTokens + cacheRead + cacheWrite;
+  return (inputUnits * rate.inputPerMillion + usage.outputTokens * rate.outputPerMillion) / 1_000_000;
 }
 
 export const ACCEPTANCE_SCENARIOS: AcceptanceScenario[] = [
@@ -166,7 +223,9 @@ export function recordFromOutcomes(input: {
   stoppedReason: StopReason;
   outcomes: StepOutcome[];
   approvalLatencyMs?: number[] | undefined;
-  tokenUsage?: { inputTokens: number; outputTokens: number } | undefined;
+  tokenUsage?:
+    | { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number }
+    | undefined;
   recovered?: boolean | undefined;
   requiresRecovery?: boolean | undefined;
   ok?: boolean | undefined;
@@ -195,7 +254,7 @@ export function recordFromOutcomes(input: {
     toolErrors: input.outcomes.filter((o) => !o.ok).length,
     approvalCount: input.approvalLatencyMs?.length ?? 0,
     approvalLatencyMs: input.approvalLatencyMs ?? [],
-    tokenUsage: { ...usage, totalTokens: usage.inputTokens + usage.outputTokens },
+    tokenUsage: normalizeUsage(usage),
     stepDurationMs: stepDurationsMs.reduce((sum, ms) => sum + ms, 0),
     stepDurationsMs,
     wallClockMs: input.wallClockMs,
@@ -219,13 +278,15 @@ export function summarizeAcceptanceRuns(records: AcceptanceRunRecord[]): Accepta
   const validationCalls = records.reduce((sum, r) => sum + r.navigationValidationCalls, 0);
   const escapeEligible = records.filter((r) => r.escapeEligible);
   const allStepDurations = records.flatMap((r) => r.stepDurationsMs);
-  const tokenUsage = records.reduce(
+  const tokenUsage = records.reduce<EvalTokenUsage>(
     (sum, r) => ({
       inputTokens: sum.inputTokens + r.tokenUsage.inputTokens,
       outputTokens: sum.outputTokens + r.tokenUsage.outputTokens,
+      cacheReadTokens: sum.cacheReadTokens + r.tokenUsage.cacheReadTokens,
+      cacheWriteTokens: sum.cacheWriteTokens + r.tokenUsage.cacheWriteTokens,
       totalTokens: sum.totalTokens + r.tokenUsage.totalTokens,
     }),
-    { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+    { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, totalTokens: 0 },
   );
   // Cost is summed ONLY when every record carries one: a partial sum would silently under-report,
   // and "not measured" must stay visible rather than reading as a cheap run.

@@ -10,6 +10,7 @@ import {
   recoveryAdviceFor,
   stopReasonForFailure,
 } from './recovery';
+import { stableIndexBefore } from './cache-window';
 import { assembleEvidence } from './completion-evidence';
 import { evaluateVisionTrigger } from './vision-trigger';
 import { parseDecision, parseNativeDecision, type Decision } from './reactor-decision';
@@ -325,6 +326,18 @@ export default class Reactor {
     // blob is fed back, the previous one is collapsed to a placeholder so DOM dumps never accumulate
     // across a long run — the compact decisions (with their `memory`) remain the persistent history.
     let lastStateIndex: number | null = null;
+    /**
+     * The last message index this run promises never to rewrite — the prompt-cache breakpoint.
+     *
+     * Both collapses below mutate a message IN PLACE, and prompt caching is a prefix match, so a
+     * breakpoint at the tail would be invalidated on every single step: the cache-write premium would
+     * be paid for a 0% hit rate, which costs more than not caching at all. Everything strictly before
+     * the two live indices is already collapsed (or was never collapsible) and is safe forever.
+     *
+     * Recomputed wherever either index moves, so the promise can never drift from the mutation that
+     * would break it.
+     */
+    let cacheStableIndex: number | null = null;
     const pushObservation = (content: string): void => {
       const isState = content.length > STATE_COLLAPSE_THRESHOLD;
       if (isState && lastStateIndex !== null) {
@@ -333,6 +346,7 @@ export default class Reactor {
       }
       messages.push({ role: 'user', content });
       if (isState) lastStateIndex = messages.length - 1;
+      cacheStableIndex = stableIndexBefore(lastStateIndex, workingStateIndex);
     };
 
     // C1: re-inject the typed working ledger as a compact persistent block at the tail, collapsing the
@@ -347,6 +361,7 @@ export default class Reactor {
       }
       messages.push({ role: 'user', content: `${WORKING_STATE_HEADER}\n${renderWorkingState(workingState)}` });
       workingStateIndex = messages.length - 1;
+      cacheStableIndex = stableIndexBefore(lastStateIndex, workingStateIndex);
       // C1 engagement signal (diagnostic): the model actually emitted a typed `state` and it is now being
       // fed back. Logged ONCE per run so a sweep transcript can PROVE PR1 engaged (vs the model ignoring it).
       if (firstInjection) Logger.info('[c1] typed working-state injected (model emitted structured `state`)');
@@ -429,6 +444,10 @@ export default class Reactor {
           messages,
           maxTokens: req.maxTokens ?? 1500,
           timeoutMs: req.timeoutMs ?? 60_000,
+          // The stable-prefix promise (see `cacheStableIndex`). `1h` because a sweep runs many tasks
+          // back to back against the same system prompt and tool set — the 5-minute default would
+          // expire the shared half between trials and re-pay for it every time.
+          cache: { systemAndTools: true, ...(cacheStableIndex !== null && { lastStableMessageIndex: cacheStableIndex }), ttl: '1h' as const },
           // Native: one required tool whose schema IS the decision, so the provider enforces the shape.
           // JSON: the legacy json_object nudge, which only guarantees valid JSON, never valid shape.
           ...(decisionMode === 'native'
