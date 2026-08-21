@@ -193,6 +193,9 @@ export interface Preferences {
   notificationsEnabled: boolean;
   /** Per-origin web-capability permissions (currently the Web Notification API consent state). */
   sitePermissions: Record<string, SitePermissions>;
+  /** Per-origin page zoom, keyed by origin → zoom factor (1 = 100%). Origins left at 100% are absent,
+   *  so this never becomes an implicit history of every site visited. */
+  siteZoomFactors: Record<string, number>;
   /** Popup Blocker (strict) extension settings. */
   popupBlocker: PopupBlockerSettings;
   /** Adblock Shield extension settings. Recent blocked URLs stay session-only and are not persisted. */

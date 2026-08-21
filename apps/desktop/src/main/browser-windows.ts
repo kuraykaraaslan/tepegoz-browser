@@ -7,6 +7,7 @@ import { isQuitting } from './quit-state';
 import { notifyHiddenToTrayOnce } from './tray';
 import { reconcileTrayPowerBlocker } from './power-lifecycle';
 import { handleWindowShortcut } from './keyboard-shortcuts';
+import { handleZoomShortcut } from './site-zoom';
 import NotificationHost from './notifications/notification-host';
 import PasswordHost from './password/password-host';
 import AutofillHost from './password/autofill-host';
@@ -64,6 +65,12 @@ export function openWindow(opts?: {
   // App-level keyboard shortcuts (F11 fullscreen, kiosk exit) when the CHROME has focus. Web views wire
   // the same handler in tabs-view-wiring so the shortcuts also work while a page is focused (and in kiosk).
   win.webContents.on('before-input-event', (event, input) => {
+    // Zoom targets the active PAGE even when the chrome (omnibox) holds focus, which is why the
+    // webContents is resolved here rather than inside the handler.
+    if (handleZoomShortcut(input, TabManager.forSenderWindow(win)?.activeWebContents() ?? null)) {
+      event.preventDefault();
+      return;
+    }
     if (handleWindowShortcut(win, input)) event.preventDefault();
   });
   // Close-to-tray: the X button hides the window (keeping every tab rendering for the agent) instead of

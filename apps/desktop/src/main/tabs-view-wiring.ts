@@ -9,6 +9,7 @@ import { HistoryStore } from '@tepegoz/persistence';
 import { type TabStore } from '@tepegoz/tab-engine';
 import { isWebUrl } from './lib/navigation-url';
 import { handleWindowShortcut } from './keyboard-shortcuts';
+import { applyStoredZoom, handleZoomShortcut } from './site-zoom';
 import { getDb } from './db/database.electron';
 import ActionInterceptorService from './extensions/action-interceptors.electron';
 import { openPageContextMenu } from './menus/page-context-menu';
@@ -93,6 +94,11 @@ export function wireView(host: ViewWiringHost, id: string, view: WebContentsView
   // App-level shortcuts (F11 fullscreen, Ctrl/Cmd+Shift+Q to leave kiosk) also fire while a PAGE has
   // focus — essential in kiosk, where the chromeless page owns all input.
   wc.on('before-input-event', (event, input) => {
+    // Zoom first: it is the only one of these that acts on THIS page rather than the window.
+    if (handleZoomShortcut(input, wc)) {
+      event.preventDefault();
+      return;
+    }
     if (handleWindowShortcut(host.win, input)) event.preventDefault();
   });
 
@@ -231,6 +237,12 @@ export function wireView(host: ViewWiringHost, id: string, view: WebContentsView
       const title = (wc.getTitle() || url).slice(0, MAX_TITLE_LENGTH);
       HistoryStore.record(db, { url, title, ts: Date.now() });
     }
+  });
+  // Re-apply the origin's remembered zoom on every committed navigation: Chromium's own zoom is
+  // per-session and per-webContents, so crossing to another origin would otherwise keep the previous
+  // site's level.
+  wc.on('did-navigate', () => {
+    applyStoredZoom(wc);
   });
   wc.on('did-navigate', sync);
   wc.on('did-navigate-in-page', sync);
