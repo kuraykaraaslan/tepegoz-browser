@@ -10,11 +10,7 @@ import {
 } from '@tepegoz/tasks';
 import { TaskStore } from '@tepegoz/persistence';
 import { getDb } from '../db/database.electron';
-import {
-  computeNextRunAt,
-  now,
-  type TaskRunLauncher,
-} from './task-service-support.electron';
+import { computeNextRunAt, now, type TaskRunLauncher } from './task-service-support.electron';
 import { broadcast, getTask, runtime } from './task-service-state.electron';
 import { enqueue } from './task-service-scheduler.electron';
 
@@ -33,7 +29,7 @@ export function setWriteToolIdsProvider(provider: (() => string[]) | null): void
 
 export function saveTask(input: TaskSaveInput): TaskDefinition {
   const db = getDb();
-  if (db === null) throw new AppError('Database unavailable', 503);
+  if (db === null) throw new AppError('Database unavailable', 503, 'databaseUnavailable');
   const existing = input.id !== undefined ? TaskStore.get(db, input.id) : null;
   const at = now();
   const targetOrigin = input.targetOrigin ?? originOf(input.targetUrl);
@@ -80,7 +76,7 @@ export function deleteTask(id: string): void {
 
 export function runCommand(input: TaskCommandInput): void {
   const task = getTask(input.id);
-  if (task === null) throw new AppError('Task not found', 404);
+  if (task === null) throw new AppError('Task not found', 404, 'taskNotFound');
   if (input.action === 'run') {
     enqueue(task, { type: 'manual' });
     return;

@@ -120,9 +120,11 @@ class UploadService {
   static async create(input: UploadCreateInput, wc?: WebContents | null): Promise<{ id: string }> {
     const target = wc ?? null;
     if (target === null || target.isDestroyed()) {
-      throw new AppError('No active web page can receive this upload', 404);
+      throw new AppError('No active web page can receive this upload', 404, 'uploadNoActivePage');
     }
-    const paths = await Promise.all(input.paths.map((p) => FileOperationsHost.assertReadableFile(p)));
+    const paths = await Promise.all(
+      input.paths.map((p) => FileOperationsHost.assertReadableFile(p)),
+    );
     const files = await Promise.all(paths.map((p) => fileRecord(p)));
     const now = Date.now();
     const targetUrl = target.getURL();
@@ -167,22 +169,27 @@ class UploadService {
 
   static async command(id: string, action: UploadCommandAction): Promise<void> {
     const record = UploadService.records.get(id);
-    if (record === undefined) throw new AppError('Upload not found', 404);
+    if (record === undefined) throw new AppError('Upload not found', 404, 'uploadNotFound');
     if (action === 'cancel') {
       await UploadService.cancel(record);
     } else if (action === 'clear') {
       UploadService.remove(id, 'UploadCleared');
     } else {
-      throw new AppError('Unsupported upload command', 400);
+      throw new AppError('Unsupported upload command', 400, 'unsupportedCommand');
     }
   }
 
   private static async cancel(record: ActiveUpload): Promise<void> {
     const wc =
-      record.tabId !== undefined ? TabManager.webContentsForTab(record.tabId) : TabManager.activeWebContents();
+      record.tabId !== undefined
+        ? TabManager.webContentsForTab(record.tabId)
+        : TabManager.activeWebContents();
     if (wc !== null && record.ref !== undefined && !wc.isDestroyed()) {
       await CdpDriver.setFileInputFiles(wc, record.ref, []).catch((err: unknown) => {
-        Logger.warn('Failed to clear file input during upload cancel', { id: record.id, err: String(err) });
+        Logger.warn('Failed to clear file input during upload cancel', {
+          id: record.id,
+          err: String(err),
+        });
       });
     }
     UploadService.patch(record.id, { status: 'canceled', updatedAt: Date.now() });
@@ -195,7 +202,9 @@ class UploadService {
     const files = (details.uploadData ?? [])
       .map((entry) => entry.file)
       .filter((path): path is string => typeof path === 'string' && path.length > 0);
-    const uploadId = files.map((path) => UploadService.pathToUploadId.get(path)).find((id) => id !== undefined);
+    const uploadId = files
+      .map((path) => UploadService.pathToUploadId.get(path))
+      .find((id) => id !== undefined);
     if (uploadId === undefined) return;
     const record = UploadService.records.get(uploadId);
     if (record === undefined) return;
@@ -245,7 +254,10 @@ class UploadService {
     UploadService.upsert({ ...current, ...patch, updatedAt: patch.updatedAt ?? Date.now() });
   }
 
-  private static remove(id: string, auditType: Parameters<typeof EventJournal.append>[1]['type']): void {
+  private static remove(
+    id: string,
+    auditType: Parameters<typeof EventJournal.append>[1]['type'],
+  ): void {
     const record = UploadService.records.get(id);
     if (record !== undefined) {
       UploadService.dropPrivateIndexes(record);
@@ -267,7 +279,10 @@ class UploadService {
     }
   }
 
-  private static appendAudit(type: Parameters<typeof EventJournal.append>[1]['type'], record?: ActiveUpload): void {
+  private static appendAudit(
+    type: Parameters<typeof EventJournal.append>[1]['type'],
+    record?: ActiveUpload,
+  ): void {
     const db = getDb();
     if (db === null || record === undefined) return;
     try {

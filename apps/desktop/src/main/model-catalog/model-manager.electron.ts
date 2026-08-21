@@ -26,7 +26,10 @@ const ModelCatalogEntrySchema = z.object({
   license: z.string().max(64).default(''),
 });
 type ModelCatalogEntry = z.infer<typeof ModelCatalogEntrySchema>;
-const CatalogFileSchema = z.object({ version: z.literal(1), models: z.array(ModelCatalogEntrySchema) });
+const CatalogFileSchema = z.object({
+  version: z.literal(1),
+  models: z.array(ModelCatalogEntrySchema),
+});
 
 interface ActiveDownload {
   downloadedSize: number;
@@ -98,7 +101,7 @@ const ModelManager = {
 
   async download(id: string): Promise<void> {
     const entry = catalog().find((m) => m.id === id);
-    if (entry === undefined) throw new AppError('Unknown model id', 404);
+    if (entry === undefined) throw new AppError('Unknown model id', 404, 'unknownModel');
     if (active.has(id)) return; // already downloading
     mkdirSync(modelsDir(), { recursive: true });
     const controller = new AbortController();
@@ -125,7 +128,7 @@ const ModelManager = {
         Logger.info('Model download canceled', { id });
       } else {
         Logger.warn('Model download failed', { id, err: String(err) });
-        throw new AppError('Model download failed', 502);
+        throw new AppError('Model download failed', 502, 'modelDownloadFailed');
       }
     } finally {
       active.delete(id);
@@ -140,7 +143,8 @@ const ModelManager = {
   /** Make `id` the active on-device model AND switch the agent to run on it (provider override =
    *  'local'), so "Use" is immediately effective. The user can switch back via the agent model selector. */
   select(id: string): void {
-    if (!existsSync(modelFilePath(id))) throw new AppError('Model not installed', 400);
+    if (!existsSync(modelFilePath(id)))
+      throw new AppError('Model not installed', 400, 'modelNotInstalled');
     const prefs = PreferenceStore.getAll();
     PreferenceStore.update({
       localProvider: { ...prefs.localProvider, selectedModelId: id },

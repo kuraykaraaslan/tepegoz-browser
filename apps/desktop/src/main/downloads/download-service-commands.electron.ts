@@ -18,7 +18,7 @@ export async function runCommand(
   action: DownloadCommandAction,
 ): Promise<void> {
   const record = state.records.get(id);
-  if (record === undefined) throw new AppError('Download not found', 404);
+  if (record === undefined) throw new AppError('Download not found', 404, 'downloadNotFound');
   if (action === 'pause') {
     record.item?.pause();
     patch(state, id, {
@@ -44,16 +44,19 @@ export async function runCommand(
   } else if (action === 'clear') {
     removeRecord(state, id);
   } else {
-    throw new AppError('Unsupported download command', 400);
+    throw new AppError('Unsupported download command', 400, 'unsupportedCommand');
   }
 }
 
 async function release(state: DownloadState, id: string): Promise<void> {
   const record = state.records.get(id);
-  if (record === undefined) throw new AppError('Download not found', 404);
-  if (record.status !== 'quarantined') throw new AppError('Download is not ready to release', 409);
-  if (record.trustVerdict === 'blocked') throw new AppError('Download was blocked by trust policy', 403);
-  if (record.quarantinePath === undefined) throw new AppError('Quarantine file is missing', 404);
+  if (record === undefined) throw new AppError('Download not found', 404, 'downloadNotFound');
+  if (record.status !== 'quarantined')
+    throw new AppError('Download is not ready to release', 409, 'downloadNotReadyToRelease');
+  if (record.trustVerdict === 'blocked')
+    throw new AppError('Download was blocked by trust policy', 403, 'downloadBlocked');
+  if (record.quarantinePath === undefined)
+    throw new AppError('Quarantine file is missing', 404, 'downloadFileMissing');
 
   let finalPath = record.finalPath ?? uniquePath(downloadDirectory(), record.filename);
   if (PreferenceStore.getAll().downloadAskEachTime) {
@@ -80,9 +83,9 @@ async function release(state: DownloadState, id: string): Promise<void> {
 
 async function openDownload(state: DownloadState, id: string): Promise<void> {
   const record = state.records.get(id);
-  if (record === undefined) throw new AppError('Download not found', 404);
+  if (record === undefined) throw new AppError('Download not found', 404, 'downloadNotFound');
   if (record.status !== 'completed' || record.finalPath === undefined) {
-    throw new AppError('Download has not been released yet', 409);
+    throw new AppError('Download has not been released yet', 409, 'downloadNotReleased');
   }
   const err = await shell.openPath(record.finalPath);
   if (err.length > 0) throw new AppError(err, 500);
@@ -90,8 +93,9 @@ async function openDownload(state: DownloadState, id: string): Promise<void> {
 
 function reveal(state: DownloadState, id: string): void {
   const record = state.records.get(id);
-  if (record === undefined) throw new AppError('Download not found', 404);
+  if (record === undefined) throw new AppError('Download not found', 404, 'downloadNotFound');
   const path = record.finalPath ?? record.quarantinePath;
-  if (path === undefined) throw new AppError('Download file path is unavailable', 404);
+  if (path === undefined)
+    throw new AppError('Download file path is unavailable', 404, 'downloadFileMissing');
   shell.showItemInFolder(path);
 }

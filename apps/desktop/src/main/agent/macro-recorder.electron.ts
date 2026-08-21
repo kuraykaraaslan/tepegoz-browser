@@ -22,14 +22,22 @@ import { BINDING, CAPTURE_SRC, CaptureSchema, toStep } from '@tepegoz/ext-macros
  * replay-time `checkPolicy` re-pass use, so a macro can never be authored FROM a sensitive site either.
  */
 export default class MacroRecorder {
-  private static active: { wc: WebContents; scriptId?: string; onStep: (step: Step) => void } | null =
-    null;
+  private static active: {
+    wc: WebContents;
+    scriptId?: string;
+    onStep: (step: Step) => void;
+  } | null = null;
 
   /** Start recording on `wc`; `onStep` is invoked for each captured Step. One recording at a time. */
   static async start(wc: WebContents, onStep: (step: Step) => void): Promise<void> {
-    if (MacroRecorder.active !== null) throw new AppError('A recording is already in progress', 409);
+    if (MacroRecorder.active !== null)
+      throw new AppError('A recording is already in progress', 409, 'recordingInProgress');
     if (isSensitiveSite(wc.getURL())) {
-      throw new AppError('Cannot record on a sensitive site (bank/crypto/password/health)', 403);
+      throw new AppError(
+        'Cannot record on a sensitive site (bank/crypto/password/health)',
+        403,
+        'recordingSensitiveSite',
+      );
     }
     if (!wc.debugger.isAttached()) wc.debugger.attach('1.3');
     await wc.debugger.sendCommand('Runtime.enable');
@@ -38,9 +46,7 @@ export default class MacroRecorder {
 
     const listener = (_e: unknown, method: string, params?: unknown): void => {
       if (method !== 'Runtime.bindingCalled') return;
-      const parsed = z
-        .object({ name: z.string(), payload: z.string() })
-        .safeParse(params);
+      const parsed = z.object({ name: z.string(), payload: z.string() }).safeParse(params);
       if (!parsed.success || parsed.data.name !== BINDING) return;
       // Mid-recording lockout: an in-page nav or a click that opened a sensitive page must not turn
       // into a captured Step, even though the debugger session stays attached and running.
@@ -61,7 +67,9 @@ export default class MacroRecorder {
     });
     const scriptId = z.object({ identifier: z.string() }).safeParse(res);
     // Also inject into the already-loaded page so recording works without a reload.
-    await wc.debugger.sendCommand('Runtime.evaluate', { expression: CAPTURE_SRC }).catch(() => undefined);
+    await wc.debugger
+      .sendCommand('Runtime.evaluate', { expression: CAPTURE_SRC })
+      .catch(() => undefined);
 
     MacroRecorder.active = {
       wc,

@@ -55,7 +55,7 @@ export function agentEnabled(): boolean {
 
 /** Throw a 403 at the boundary when the Agent extension is disabled (for request/response handlers). */
 export function requireAgentEnabled(): void {
-  if (!agentEnabled()) throw new AppError('Agent extension is disabled', 403);
+  if (!agentEnabled()) throw new AppError('Agent extension is disabled', 403, 'extensionDisabled');
 }
 
 /** Live token snapshot: this run's counter (in-memory ledger) + the account quota and persisted

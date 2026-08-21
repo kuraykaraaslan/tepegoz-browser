@@ -211,7 +211,7 @@ export function registerAppIpc(): void {
     const { keyId, model } = SetProviderKeyModelSchema.parse(payload);
     const meta = CredentialVault.listMeta().find((k) => k.id === keyId);
     if (meta === undefined) {
-      throw new AppError('Key not found.', 404);
+      throw new AppError('Key not found.', 404, 'keyNotFound');
     }
     assertModelInCatalog(meta.provider, model);
     CredentialVault.setKeyModel(keyId, model);

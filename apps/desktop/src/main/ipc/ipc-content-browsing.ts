@@ -57,11 +57,22 @@ const MAX_NEWTAB_BG_BYTES = 8 * 1024 * 1024;
 /** Sniff an image MIME from magic bytes (defense in depth beyond the dialog filter). Returns null when
  *  the content isn't a recognized image, so a mislabelled/hostile file is rejected on upload. */
 function sniffImageMime(bytes: Buffer): string | null {
-  if (bytes.length >= 4 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47)
+  if (
+    bytes.length >= 4 &&
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47
+  )
     return 'image/png';
-  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg';
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff)
+    return 'image/jpeg';
   if (bytes.length >= 6 && bytes.toString('ascii', 0, 4) === 'GIF8') return 'image/gif';
-  if (bytes.length >= 12 && bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP')
+  if (
+    bytes.length >= 12 &&
+    bytes.toString('ascii', 0, 4) === 'RIFF' &&
+    bytes.toString('ascii', 8, 12) === 'WEBP'
+  )
     return 'image/webp';
   // SVG is text — accept when an <svg tag appears near the head (past any XML/doctype prolog).
   if (bytes.toString('utf8', 0, Math.min(bytes.length, 512)).toLowerCase().includes('<svg'))
@@ -97,15 +108,19 @@ export function registerBrowsingIpc(): void {
         properties: ['openFile'],
         filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'] }],
       };
-      const result = win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts);
+      const result = win
+        ? await dialog.showOpenDialog(win, opts)
+        : await dialog.showOpenDialog(opts);
       const filePath = result.filePaths[0];
-      if (result.canceled || filePath === undefined) return { ref: '', dataUrl: '', cancelled: true };
+      if (result.canceled || filePath === undefined)
+        return { ref: '', dataUrl: '', cancelled: true };
       const db = getDb();
-      if (db === null) throw new AppError('Storage is unavailable', 500);
+      if (db === null) throw new AppError('Storage is unavailable', 500, 'storageUnavailable');
       const bytes = await readFile(filePath);
-      if (bytes.length > MAX_NEWTAB_BG_BYTES) throw new AppError('Image is too large (max 8 MB)', 413);
+      if (bytes.length > MAX_NEWTAB_BG_BYTES)
+        throw new AppError('Image is too large (max 8 MB)', 413, 'imageTooLarge');
       const mime = sniffImageMime(bytes);
-      if (mime === null) throw new AppError('Unsupported image type', 415);
+      if (mime === null) throw new AppError('Unsupported image type', 415, 'unsupportedImageType');
       // put() inserts with refcount 0 and there is no unref API, so replacing the image leaves an orphan
       // blob — harmless (deduped by hash; a future GC can sweep refcount-0 rows).
       const ref = BlobStore.put(db, bytes);

@@ -56,7 +56,7 @@ export function registerToolsIpc(): void {
   // governs the agent-capability path (ADR-0024), so the direct IPC path can't outlive the extension.
   const requireMacrosEnabled = (): void => {
     if (!isExtensionEnabled(PreferenceStore.getAll().extensions, macrosManifest.id)) {
-      throw new AppError('Macros extension is disabled', 403);
+      throw new AppError('Macros extension is disabled', 403, 'extensionDisabled');
     }
   };
   handle(IpcChannels.macrosList, (): MacroSummary[] => {

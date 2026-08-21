@@ -28,7 +28,6 @@ import { runCommand } from './download-service-commands.electron';
 
 export type { DownloadTrustProvider } from './download-service-model.electron';
 
-
 class DownloadService {
   private static initialized = false;
   private static readonly ctx: DownloadState = createState();
@@ -82,7 +81,7 @@ class DownloadService {
   static create(input: DownloadCreateInput, wc?: WebContents | null): { idempotencyKey?: string } {
     const target = wc ?? null;
     if (target === null || target.isDestroyed()) {
-      throw new AppError('No active web page can start this download', 404);
+      throw new AppError('No active web page can start this download', 404, 'downloadNoActivePage');
     }
     DownloadService.downloadURL(target, input.url, {
       actor: input.actor ?? 'agent',

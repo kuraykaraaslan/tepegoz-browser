@@ -28,7 +28,7 @@ const MAX_RECENT = 50;
 /** The app DB, or a 503 if it isn't ready yet (matches the other main services' guard). */
 function db(): Db {
   const d = getDb();
-  if (d === null) throw new AppError('Database not ready', 503);
+  if (d === null) throw new AppError('Database not ready', 503, 'databaseUnavailable');
   return d;
 }
 
@@ -129,14 +129,23 @@ const MacroService = {
   },
 
   /** Start a saved-macro run; `emit` streams located progress to the renderer. Returns the runId. */
-  run(input: MacroRunInput, emit: (p: MacroRunProgress) => void, cursorOpts?: MacroCursorOpts): string {
+  run(
+    input: MacroRunInput,
+    emit: (p: MacroRunProgress) => void,
+    cursorOpts?: MacroCursorOpts,
+  ): string {
     const macro = MacroStore.get(db(), input.macroId);
     if (macro === null) throw new AppError(`Unknown macro: ${input.macroId}`, 404);
     return startRun(macro, input.variables, emit, cursorOpts);
   },
 
   /** Start an UNSAVED-DRAFT run (record/edit → play without persisting). Returns the runId. */
-  runDraft(macro: Macro, variables: Record<string, string> | undefined, emit: (p: MacroRunProgress) => void, cursorOpts?: MacroCursorOpts): string {
+  runDraft(
+    macro: Macro,
+    variables: Record<string, string> | undefined,
+    emit: (p: MacroRunProgress) => void,
+    cursorOpts?: MacroCursorOpts,
+  ): string {
     return startRun(macro, variables, emit, cursorOpts);
   },
 
