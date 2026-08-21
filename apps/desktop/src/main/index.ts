@@ -14,6 +14,7 @@ import { emitSystemPause, emitSystemResume } from './power-lifecycle';
 import PreferenceStore from '@tepegoz/preferences';
 import { closeDatabase } from './db/database.electron';
 import TabManager from './tabs';
+import { openPageContextMenu } from './menus/page-context-menu';
 import BrowsingSessions from './network/browsing-sessions.electron';
 import ConnectionPool from './network/connection-pool.electron';
 import BindingService from './network/binding-service.electron';
@@ -30,7 +31,7 @@ import typoHost, { typoCapabilityHost } from './extensions/typo-host.electron';
 import TypoPageInjector from './extensions/typo-page-injector.electron';
 import typoContextMenuContributor from './extensions/typo-context-menu-contributor.electron';
 import translateHost, { translateCapabilityHost } from './extensions/translate-host.electron';
-import TranslatePageInjector from './extensions/translate-page-injector.electron';
+import TranslatePageInjector from './extensions/translate-page-injector-controller.electron';
 import videoPlayerHost from './extensions/video-player-host.electron';
 import VideoPlayerPageInjector from './extensions/video-player-page-injector.electron';
 import translateContextMenuContributor from './extensions/translate-context-menu-contributor.electron';
@@ -123,7 +124,6 @@ if (app.commandLine.getSwitchValue('user-data-dir').length === 0) {
   app.setPath('userData', userDataDir);
 }
 
-
 // Single instance: a second launch focuses the existing window rather than fighting over the cache.
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -207,6 +207,12 @@ if (!app.requestSingleInstanceLock()) {
       // Without a handler Chromium rejects a bad certificate silently; explain it instead.
       registerCertificateHandler(app);
       registerIpc();
+      // Composition root wires the page context menu to the tab layer's right-click signal. The tab
+      // layer deliberately does not import the menu (that made it depend on its own consumer — see
+      // `contextMenuObservers`), so this subscription is what makes right-click open anything at all.
+      TabManager.onContextMenu((win, wc, params, viewBounds, nav) => {
+        void openPageContextMenu(win, wc, params, viewBounds, nav);
+      });
       initHosts();
       openWindow();
       // The system-tray icon (close-to-tray target) — created once, after the first window exists.

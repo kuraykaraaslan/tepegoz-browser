@@ -12,7 +12,6 @@ import { handleWindowShortcut } from './keyboard-shortcuts';
 import { applyStoredZoom, handleZoomShortcut } from './site-zoom';
 import { getDb } from './db/database.electron';
 import ActionInterceptorService from './extensions/action-interceptors.electron';
-import { openPageContextMenu } from './menus/page-context-menu';
 import { faviconDataUrl } from './tabs-favicon.electron';
 import {
   blockNonWeb,
@@ -23,6 +22,7 @@ import {
   wantsNativeWindow,
 } from './tabs-popup-policy';
 import {
+  contextMenuObservers,
   hadRecentGesture,
   lastGestureAt,
   MAX_TITLE_LENGTH,
@@ -149,13 +149,25 @@ export function wireView(host: ViewWiringHost, id: string, view: WebContentsView
   // native popup windows (`wirePopupWindow`) skip this second check, they have no tracked tab id.
   wc.on('will-navigate', (event, url) => {
     blockNonWeb(event, url);
-    if (ActionInterceptorService.shouldBlock('navigation:navigate', { tabId: id, url, isRedirect: false })) {
+    if (
+      ActionInterceptorService.shouldBlock('navigation:navigate', {
+        tabId: id,
+        url,
+        isRedirect: false,
+      })
+    ) {
       event.preventDefault();
     }
   });
   wc.on('will-redirect', (event, url) => {
     blockNonWeb(event, url);
-    if (ActionInterceptorService.shouldBlock('navigation:navigate', { tabId: id, url, isRedirect: true })) {
+    if (
+      ActionInterceptorService.shouldBlock('navigation:navigate', {
+        tabId: id,
+        url,
+        isRedirect: true,
+      })
+    ) {
       event.preventDefault();
     }
   });
@@ -165,10 +177,14 @@ export function wireView(host: ViewWiringHost, id: string, view: WebContentsView
   // `params` (selection/link/media/editable) picks the menu variant in the renderer.
   wc.on('context-menu', (_e, params) => {
     if (!host.win.isDestroyed()) {
-      void openPageContextMenu(host.win, wc, params, host.getBounds(), {
+      // Report the right-click; do not decide what opens. The menu drives `TabManager`, so importing
+      // it here made the tab layer depend on its own consumer (see `contextMenuObservers`).
+      const nav = {
         canGoBack: wc.navigationHistory.canGoBack(),
         canGoForward: wc.navigationHistory.canGoForward(),
-      });
+      };
+      for (const observe of contextMenuObservers)
+        observe(host.win, wc, params, host.getBounds(), nav);
     }
   });
 

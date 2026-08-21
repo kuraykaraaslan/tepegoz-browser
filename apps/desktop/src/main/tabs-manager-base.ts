@@ -3,11 +3,14 @@ import { BrowserWindow, type WebContents } from 'electron';
 import { Logger } from '@tepegoz/libs';
 import { EventJournal, SessionStore } from '@tepegoz/persistence';
 import { getDb } from './db/database.electron';
-import { WindowTabs } from './tabs';
+import { WindowTabs } from './tabs-window';
 import {
   involuntaryGroupExitObservers,
+  contextMenuObservers,
+  setSessionPersister,
   navigationObservers,
   type InvoluntaryGroupExitObserver,
+  type ContextMenuObserver,
   type NavigationObserver,
 } from './tabs-shared';
 
@@ -102,7 +105,18 @@ export class TabManagerBase {
    *  unsubscribe fn. */
   static onNavigation(fn: NavigationObserver): () => void {
     navigationObservers.add(fn);
-    return () => { navigationObservers.delete(fn); };
+    return () => {
+      navigationObservers.delete(fn);
+    };
+  }
+
+  /** Register a callback invoked when a browsed page is right-clicked, in ANY window. Returns an
+   *  unsubscribe fn. The tab layer does not know what a context menu is; `index.ts` wires the menu. */
+  static onContextMenu(fn: ContextMenuObserver): () => void {
+    contextMenuObservers.add(fn);
+    return () => {
+      contextMenuObservers.delete(fn);
+    };
   }
 
   /**
@@ -112,7 +126,9 @@ export class TabManagerBase {
    */
   static onInvoluntaryGroupExit(fn: InvoluntaryGroupExitObserver): () => void {
     involuntaryGroupExitObservers.add(fn);
-    return () => { involuntaryGroupExitObservers.delete(fn); };
+    return () => {
+      involuntaryGroupExitObservers.delete(fn);
+    };
   }
 
   /** Apply a resolved User-Agent to every open web tab across all windows and reload. */
@@ -160,3 +176,10 @@ export class TabManagerBase {
     }
   }
 }
+
+// Install the session-persist command the window layer calls. Done here, at module scope, so a window
+// created before any explicit startup wiring still persists: `tabs-window-base` cannot import this
+// module (that is the cycle), so the arrow has to be pushed from this side.
+setSessionPersister(() => {
+  TabManagerBase.persistNow();
+});

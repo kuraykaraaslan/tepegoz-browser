@@ -42,8 +42,10 @@ import adblockHost from '../extensions/adblock-host.electron';
 import AdblockEngineService from '../extensions/adblock-engine.electron';
 import typoHost from '../extensions/typo-host.electron';
 import TypoDictionaryManager from '../extensions/typo-dictionary-manager.electron';
-import translateHost, { respondTranslateCloudFallback } from '../extensions/translate-host.electron';
-import TranslatePageInjector from '../extensions/translate-page-injector.electron';
+import translateHost, {
+  respondTranslateCloudFallback,
+} from '../extensions/translate-host.electron';
+import TranslatePageInjector from '../extensions/translate-page-injector-controller.electron';
 import videoPlayerHost from '../extensions/video-player-host.electron';
 import VideoPlayerPageInjector, {
   getVideoPlayerPageState,
@@ -158,9 +160,13 @@ export function registerExtensionsIpc(): void {
   handle(IpcChannels.translateGlossaryRemove, (_event, payload): TranslateSettings => {
     return translateHost.removeGlossaryTerm(TranslateGlossaryIdSchema.parse(payload));
   });
-  onAction(IpcChannels.translateCloudFallbackRespond, TranslateCloudFallbackResponseSchema, (response) => {
-    respondTranslateCloudFallback(response);
-  });
+  onAction(
+    IpcChannels.translateCloudFallbackRespond,
+    TranslateCloudFallbackResponseSchema,
+    (response) => {
+      respondTranslateCloudFallback(response);
+    },
+  );
 
   // Unified Player (ext-video-player): settings, combined snapshot, and per-site pause. After any change
   // the active tab is re-skinned/refreshed live (no reload needed).
@@ -175,10 +181,13 @@ export function registerExtensionsIpc(): void {
     settings: videoPlayerHost.get(),
     page: getVideoPlayerPageState(),
   }));
-  handleAsync(IpcChannels.videoPlayerSiteSet, async (_event, payload): Promise<VideoPlayerSettings> => {
-    const { origin, enabled } = VideoPlayerSiteEnabledSchema.parse(payload);
-    const next = videoPlayerHost.setSiteEnabled(origin, enabled);
-    await VideoPlayerPageInjector.refreshActive();
-    return next;
-  });
+  handleAsync(
+    IpcChannels.videoPlayerSiteSet,
+    async (_event, payload): Promise<VideoPlayerSettings> => {
+      const { origin, enabled } = VideoPlayerSiteEnabledSchema.parse(payload);
+      const next = videoPlayerHost.setSiteEnabled(origin, enabled);
+      await VideoPlayerPageInjector.refreshActive();
+      return next;
+    },
+  );
 }

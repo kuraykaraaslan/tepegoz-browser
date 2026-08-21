@@ -14,7 +14,7 @@ import {
   type TaskRunRecord,
   type TaskSaveInput,
   type TaskTrigger,
-} from './index';
+} from './tasks.model';
 
 export const TaskStatusSchema = z.enum(TASK_STATUSES);
 export const TaskRunStatusSchema = z.enum(TASK_RUN_STATUSES);
@@ -27,8 +27,16 @@ export const TaskPolicySchema = z.object({
   allowedOrigins: z.array(z.string().min(1).max(2048)).max(50),
   allowedReadTools: z.array(z.string().min(1).max(128)).max(200),
   preapprovedWriteTools: z.array(z.string().min(1).max(128)).max(200),
-  maxRunDurationMs: z.number().int().min(30_000).max(6 * 60 * 60 * 1000),
-  cooldownMs: z.number().int().min(0).max(24 * 60 * 60 * 1000),
+  maxRunDurationMs: z
+    .number()
+    .int()
+    .min(30_000)
+    .max(6 * 60 * 60 * 1000),
+  cooldownMs: z
+    .number()
+    .int()
+    .min(0)
+    .max(24 * 60 * 60 * 1000),
   notifyOnStart: z.boolean(),
   notifyOnDone: z.boolean(),
   notifyOnError: z.boolean(),
@@ -39,7 +47,11 @@ const ManualTriggerSchema = z.object({ type: z.literal('manual') });
 const IntervalTriggerSchema = z.object({
   type: z.literal('interval'),
   enabled: z.boolean(),
-  everyMinutes: z.number().int().min(MIN_TASK_INTERVAL_MINUTES).max(60 * 24 * 30),
+  everyMinutes: z
+    .number()
+    .int()
+    .min(MIN_TASK_INTERVAL_MINUTES)
+    .max(60 * 24 * 30),
   startAt: z.number().int().nonnegative().optional(),
 });
 
@@ -48,7 +60,11 @@ const PageChangeTriggerSchema = z.object({
   enabled: z.boolean(),
   url: z.string().min(1).max(4096),
   selector: z.string().min(1).max(1024).optional(),
-  everyMinutes: z.number().int().min(MIN_TASK_INTERVAL_MINUTES).max(60 * 24 * 30),
+  everyMinutes: z
+    .number()
+    .int()
+    .min(MIN_TASK_INTERVAL_MINUTES)
+    .max(60 * 24 * 30),
   changeMode: TaskPageChangeModeSchema,
   fireOnFirstCheck: z.literal(false),
 });
@@ -125,7 +141,10 @@ export const TaskArtifactRecordSchema = z.object({
   title: z.string().min(1).max(256),
   summary: z.string().max(2048).optional(),
   mimeType: z.string().max(256).optional(),
-  blobRef: z.string().regex(/^cas:\/\/[a-f0-9]{64}$/).optional(),
+  blobRef: z
+    .string()
+    .regex(/^cas:\/\/[a-f0-9]{64}$/)
+    .optional(),
   path: z.string().max(4096).optional(),
   url: z.string().max(4096).optional(),
   createdAt: z.number().int().nonnegative(),

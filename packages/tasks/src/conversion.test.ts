@@ -11,7 +11,11 @@ import { TaskSaveInputSchema } from './schemas';
 
 describe('conversion / presetToTrigger', () => {
   it('maps "continuous" to the engine floor (5 min interval)', () => {
-    expect(presetToTrigger('continuous')).toEqual({ type: 'interval', enabled: true, everyMinutes: 5 });
+    expect(presetToTrigger('continuous')).toEqual({
+      type: 'interval',
+      enabled: true,
+      everyMinutes: 5,
+    });
   });
 
   it('clamps a custom interval below the minimum', () => {
@@ -29,7 +33,11 @@ describe('conversion / presetToTrigger', () => {
 
   it('builds a pageChange trigger with url + optional selector', () => {
     expect(
-      presetToTrigger('pageChange', { url: 'https://example.com', everyMinutes: 10, selector: '.price' }),
+      presetToTrigger('pageChange', {
+        url: 'https://example.com',
+        everyMinutes: 10,
+        selector: '.price',
+      }),
     ).toEqual({
       type: 'pageChange',
       enabled: true,
@@ -40,15 +48,18 @@ describe('conversion / presetToTrigger', () => {
       fireOnFirstCheck: false,
     });
     // Empty selector is dropped rather than stored as ''.
-    expect(presetToTrigger('pageChange', { url: 'https://example.com', selector: '  ' })).not.toHaveProperty(
-      'selector',
-    );
+    expect(
+      presetToTrigger('pageChange', { url: 'https://example.com', selector: '  ' }),
+    ).not.toHaveProperty('selector');
   });
 });
 
 describe('conversion / synthesizePolicy', () => {
   it('notify keeps empty allowlists (pauses on every write)', () => {
-    const policy = synthesizePolicy('notify', { targetOrigin: 'https://x.com', writeToolIds: ['browser_click'] });
+    const policy = synthesizePolicy('notify', {
+      targetOrigin: 'https://x.com',
+      writeToolIds: ['browser_click'],
+    });
     expect(policy.allowedOrigins).toEqual([]);
     expect(policy.preapprovedWriteTools).toEqual([]);
   });

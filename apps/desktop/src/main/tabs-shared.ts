@@ -1,6 +1,7 @@
 import {
   type BrowserWindow,
   type BrowserWindowConstructorOptions,
+  type Rectangle,
   type Session,
   type WebContents,
   type WebContentsView,
@@ -74,7 +75,21 @@ export function popupWindowOptions(openerSession: Session): BrowserWindowConstru
 
 /** Notified after each committed top-level navigation: `(url, browsedWebContents, ownerWindow)`. The
  *  owner window lets an observer (e.g. autofill) target the chrome window that hosts the browsed page. */
-export type NavigationObserver = (url: string, webContents: WebContents, owner: BrowserWindow) => void;
+export type NavigationObserver = (
+  url: string,
+  webContents: WebContents,
+  owner: BrowserWindow,
+) => void;
+
+/** Notified when a browsed page is right-clicked. The tab layer REPORTS the event and knows nothing
+ *  about menus; the composition root decides what opens. See `contextMenuObservers`. */
+export type ContextMenuObserver = (
+  owner: BrowserWindow,
+  webContents: WebContents,
+  params: Electron.ContextMenuParams,
+  viewBounds: Rectangle,
+  nav: { canGoBack: boolean; canGoForward: boolean },
+) => void;
 
 /** A tab pulled out of one window, ready to be adopted by another (tear-off / merge). The
  *  `WebContentsView` (and its live webContents) is kept ALIVE across the move — never reloaded. */
@@ -93,6 +108,32 @@ export interface DetachedTab {
 export const closedUrls: string[] = [];
 /** Observers notified after every committed top-level navigation (did-stop-loading), across all windows. */
 export const navigationObservers = new Set<NavigationObserver>();
+/**
+ * Observers notified on a page right-click, across all windows.
+ *
+ * This indirection exists to keep the dependency pointing ONE way. `tabs-view-wiring` used to import
+ * `menus/page-context-menu` directly, and that menu drives `TabManager` — closing the loop
+ * `tabs -> ... -> tabs-view-wiring -> page-context-menu -> tabs`. Beyond the `no-circular` error that is
+ * an ESM initialization-order hazard: whichever module evaluates first sees the other half-built. The
+ * tab layer now emits, and `index.ts` subscribes the menu at startup.
+ */
+export const contextMenuObservers = new Set<ContextMenuObserver>();
+
+/**
+ * Session-persist command, installed by `TabManagerBase` at startup.
+ *
+ * `tabs-window-base` needed exactly ONE thing from the manager — a debounced "write the session now" —
+ * and importing the manager for it made the window class chain depend on the registry that owns the
+ * window class chain. Registering the command here keeps the arrow pointing one way; before any window
+ * exists there is nothing to persist, so the no-op default is correct rather than merely safe.
+ */
+let persistSessionNow: () => void = () => {};
+export function setSessionPersister(fn: () => void): void {
+  persistSessionNow = fn;
+}
+export function persistSession(): void {
+  persistSessionNow();
+}
 /**
  * Notified with `(tabId, groupId)` immediately BEFORE a tab loses its group for a reason the user did
  * not aim at its membership — today only pinning, which clears the group to keep the pinned run and the
