@@ -20,7 +20,13 @@ const devtoolsish = (id: string): RegisteredTool<unknown> => ({
     inputSchema: { type: 'object' },
     requiresIdempotencyKey: false,
   },
-  inputSchema: { safeParse: (data: unknown) => ({ success: true, data }) },
+  inputSchema: {
+    // Objects only — a validator that accepts anything is rejected at registration, by design.
+    safeParse: (data: unknown) =>
+      typeof data === 'object' && data !== null
+        ? { success: true as const, data }
+        : { success: false as const, error: { issues: ['expected an object'] } },
+  },
   handler: () => null,
 });
 

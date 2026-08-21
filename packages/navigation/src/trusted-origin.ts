@@ -24,6 +24,16 @@ export interface TrustedOriginOptions {
    * locked out. Every caller in this repo passes it.
    */
   chromeUrl?: string;
+  /**
+   * Whether the host filesystem treats paths case-insensitively (Windows: yes; Linux: no; macOS: it
+   * depends on how the volume was formatted).
+   *
+   * This is a security parameter, not a convenience. Folding case on a case-SENSITIVE filesystem makes
+   * `/app/Index.html` and `/app/index.html` compare equal while being two different files — so a
+   * document that is not the chrome would be trusted by the IPC sender allow-list. Defaults to `false`,
+   * which is the strict reading; the desktop adapter passes `process.platform === 'win32'`.
+   */
+  caseInsensitivePaths?: boolean;
 }
 
 /** Strip query + hash so `index.html?surface=onboarding` matches `index.html`. */
@@ -47,9 +57,11 @@ export function isTrustedAppUrl(rawUrl: string, opts: TrustedOriginOptions): boo
     } catch {
       return false;
     }
-    // Case-insensitive: Windows paths are, and `pathToFileURL` percent-encodes identically on both
-    // sides, so this compares the same normalised form the loader produced.
-    return documentOf(u).toLowerCase() === documentOf(chrome).toLowerCase();
+    const fold = (value: string): string =>
+      opts.caseInsensitivePaths === true ? value.toLowerCase() : value;
+    // `pathToFileURL` percent-encodes identically on both sides, so this compares the same normalised
+    // form the loader produced.
+    return fold(documentOf(u)) === fold(documentOf(chrome));
   }
 
   if (opts.isPackaged) return false;

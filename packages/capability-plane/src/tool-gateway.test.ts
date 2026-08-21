@@ -5,11 +5,17 @@ import ToolGateway from './tool-gateway';
 import type { InputValidator } from './types';
 import { setIntentCritic } from './intent-critic';
 
+/**
+ * Accepts any OBJECT — and rejects anything that is not one, which is what every real tool schema does.
+ * It used to return `success: true` unconditionally, coercing a non-object to `{}`. That is a rubber
+ * stamp, not a validator, and `CapabilityRegistry.register` now refuses one: a tool whose validator says
+ * yes to everything sends LLM-produced arguments straight into its handler.
+ */
 const passAny: InputValidator<Record<string, unknown>> = {
-  safeParse: (d) => ({
-    success: true,
-    data: (typeof d === 'object' && d !== null ? d : {}) as Record<string, unknown>,
-  }),
+  safeParse: (d) =>
+    typeof d === 'object' && d !== null && !Array.isArray(d)
+      ? { success: true, data: d as Record<string, unknown> }
+      : { success: false, error: { issues: ['expected an object'] } },
 };
 
 const needsFoo: InputValidator<{ foo: string }> = {

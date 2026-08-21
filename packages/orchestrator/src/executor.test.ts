@@ -3,11 +3,13 @@ import { CapabilityRegistry, ToolGateway, type InputValidator } from '@tepegoz/c
 import type { Plan, PlanStep, RiskLevel } from '@tepegoz/shared-types';
 import Executor from './executor';
 
+/** Accepts any OBJECT, and rejects anything that is not one — what every real tool schema does. A
+ *  validator that accepts everything is refused by `CapabilityRegistry.register`. */
 const passAny: InputValidator<Record<string, unknown>> = {
-  safeParse: (d) => ({
-    success: true,
-    data: (typeof d === 'object' && d !== null ? d : {}) as Record<string, unknown>,
-  }),
+  safeParse: (d) =>
+    typeof d === 'object' && d !== null && !Array.isArray(d)
+      ? { success: true, data: d as Record<string, unknown> }
+      : { success: false, error: { issues: ['expected an object'] } },
 };
 
 function reg(

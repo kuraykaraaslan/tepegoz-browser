@@ -45,7 +45,14 @@ function fakeTool(id: string, dangerClass: RiskLevel, result: unknown): Register
   };
   return {
     descriptor,
-    inputSchema: { safeParse: (data: unknown) => ({ success: true, data }) },
+    inputSchema: {
+      // Objects only. A validator that says yes to everything is refused at registration —
+      // see CapabilityRegistry.register.
+      safeParse: (data: unknown) =>
+        typeof data === 'object' && data !== null
+          ? { success: true as const, data }
+          : { success: false as const, error: { issues: ['expected an object'] } },
+    },
     handler: () => result,
   };
 }
@@ -137,7 +144,14 @@ describe('recalling notes for a site', () => {
         inputSchema: { type: 'object' },
         requiresIdempotencyKey: false,
       },
-      inputSchema: { safeParse: (data: unknown) => ({ success: true, data }) },
+      inputSchema: {
+        // Objects only. A validator that says yes to everything is refused at registration —
+        // see CapabilityRegistry.register.
+        safeParse: (data: unknown) =>
+          typeof data === 'object' && data !== null
+            ? { success: true as const, data }
+            : { success: false as const, error: { issues: ['expected an object'] } },
+      },
       handler: () => {
         hop += 1;
         return { url: hop === 1 ? 'https://shop.test/a' : 'https://other.test/b', content: 'x' };
