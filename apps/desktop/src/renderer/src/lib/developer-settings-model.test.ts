@@ -1,107 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import type { Preferences } from '@tepegoz/desktop-ipc';
+import { DEFAULT_PREFERENCES } from '@tepegoz/preferences/model';
 import {
   buildBooleanPreferencePatch,
   buildJsonPreferencePatch,
   listDeveloperPreferenceRows,
 } from './developer-settings-model';
 
-const PREFS: Preferences = {
-  theme: 'system',
-  themeColor: '',
-  locale: 'system',
-  telemetryEnabled: false,
-  useLocalModelForSimpleTasks: false,
-  localProvider: { mode: 'off', selectedModelId: '' },
-  localActions: {},
-  agentProviderOverride: null,
-  agentAutonomy: 'ask',
-  agentEffort: 'high',
-  agentModelOverride: {},
-  agentStrictGuard: false,
-  agentTokenQuota: 0,
-  defaultProvider: 'anthropic',
-  region: '',
-  dateFormat: 'medium',
-  searchEngineId: 'google',
-  onboardingCompleted: false,
-  customSearchEngines: [],
-  networkConnections: [],
-  networkGeneralBinding: { kind: 'direct' },
-  networkBinaries: { wireproxy: '', tor: '' },
-  homepageUrl: 'https://duckduckgo.com/',
-  showBookmarksBar: true,
-  newTabShortcuts: [],
-  newTabBackground: {
-    kind: 'default',
-    color: '#1e293b',
-    svgId: '',
-    imageRef: '',
-    imageFit: 'cover',
-    imagePositionX: 50,
-    imagePositionY: 50,
-    imageZoom: 1,
-    opacity: 1,
-  },
-  downloadDirectory: '',
-  downloadAskEachTime: false,
-  extensions: [],
-  pinnedExtensions: [],
-  userAgent: null,
-  mcpServers: [],
-  notificationsEnabled: true,
-  sitePermissions: {},
-  popupBlocker: { enabled: true, showNotifications: true, trustedOrigins: [] },
-  adblock: {
-    enabled: true,
-    blockingMode: 'ads-and-trackers',
-    cosmeticFiltering: true,
-    disabledOrigins: [],
-  },
-  typo: {
-    enabled: true,
-    autoDetectLanguage: true,
-    languages: ['tr', 'en'],
-    defaultLanguage: 'tr',
-    localLlmMode: 'auto',
-    externalAiMode: 'manual',
-    disabledOrigins: [],
-    ignoredWords: [],
-  },
-  translate: {
-    enabled: true,
-    autoTranslateForeignPages: true,
-    targetLanguageMode: 'app-locale',
-    displayMode: 'replace',
-    engineMode: 'local-first',
-    cloudFallbackMode: 'ask',
-    disabledOrigins: [],
-    glossaryTerms: [],
-  },
-  videoPlayer: {
-    enabled: true,
-    defaultSpeed: 1,
-    subtitleFontSize: 'md',
-    theme: 'auto',
-    autoHideControls: true,
-    enableKeyboard: true,
-    disabledOrigins: [],
-    siteScales: { 'https://www.youtube.com': 1.4 },
-  },
-  popupBlockerSeeded: false,
-  fileOperationsEnabled: true,
-  fileAccessGrants: [],
-  fileAccessSeeded: false,
-  glassChrome: true,
-  windowBounds: null,
-  closeToTray: true,
-  keepAwakeInTray: false,
-  pauseTasksOnSleep: true,
-  startupMode: 'window',
-  kioskUrl: '',
-  launchAtLogin: false,
-  trayHintShown: false,
-};
+/**
+ * The defaults ARE a complete `Preferences` (the constant is typed as one), so deriving the fixture
+ * from them keeps this test honest for free. The previous hand-written literal had to be extended by
+ * hand for every new preference and silently broke `tsc` twice when it was not.
+ */
+const PREFS = DEFAULT_PREFERENCES;
 
 describe('developer settings model', () => {
   it('lists every top-level preference key without pseudo flags', () => {
