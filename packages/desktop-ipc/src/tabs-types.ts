@@ -132,8 +132,9 @@ export interface TabStripGeometry {
 }
 
 /** Payload for `find:start` — one find-in-page request against the sender window's ACTIVE tab.
- *  `findNext` false starts a fresh search (first match), true steps within the current one; Chromium
- *  needs that distinction because a re-started search resets the active ordinal. */
+ *  `findNext` marks the OPENING request of a find session (true), versus a follow-up step within the
+ *  session already open (false) — it is not "go to the next match". Chromium answers a follow-up that
+ *  has no open session with silence: no event, no error. */
 export interface FindInPageQuery {
   query: string;
   forward: boolean;

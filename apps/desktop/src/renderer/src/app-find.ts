@@ -55,7 +55,13 @@ export function useFindInPage(): FindInPageController {
     };
   }, []);
 
-  /** Start a fresh search (typing, or flipping match-case) — resets to the first match. */
+  /**
+   * Start a fresh search (typing, or flipping match-case) — resets to the first match.
+   *
+   * `findNext: true` OPENS a session; it does not mean "step to the next match". Chromium answers a
+   * `findNext: false` request that has no open session with nothing at all — no `found-in-page`, no
+   * error — which is exactly how this shipped broken.
+   */
   const restart = useCallback((next: string, nextMatchCase: boolean) => {
     if (next === '') {
       window.tepegoz.stopFindInPage();
@@ -66,7 +72,7 @@ export function useFindInPage(): FindInPageController {
     window.tepegoz.findInPage({
       query: next,
       forward: true,
-      findNext: false,
+      findNext: true,
       matchCase: nextMatchCase,
     });
   }, []);
@@ -79,13 +85,14 @@ export function useFindInPage(): FindInPageController {
     [restart],
   );
 
+  /** Step within the OPEN session — `findNext: false` is the follow-up request, not the opener. */
   const step = useCallback((forward: boolean) => {
     const current = queryRef.current;
     if (current === '') return;
     window.tepegoz.findInPage({
       query: current,
       forward,
-      findNext: true,
+      findNext: false,
       matchCase: matchCaseRef.current,
     });
   }, []);

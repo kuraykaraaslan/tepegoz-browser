@@ -76,16 +76,26 @@ function ensureSession(win: BrowserWindow, wc: WebContents): FindSession {
 }
 
 /**
- * Run or step a find on `wc`. `findNext: false` restarts the search from the top (what typing does);
- * `true` steps within the current one (what Enter / the arrows do).
+ * Run or step a find on `wc`.
+ *
+ * `findNext` is Chromium's "is this the opening request of a find session", NOT "go to the next
+ * match": **true opens** a session (what typing does), **false is a follow-up** within the open one
+ * (what Enter and the arrows do). Getting this backwards is silent — a `findNext: false` request with
+ * no open session returns no `found-in-page` event and no error, so the bar just sits at zero.
  */
 export function runFindInPage(win: BrowserWindow, wc: WebContents, input: FindInPageQuery): void {
   if (wc.isDestroyed()) return;
   const session = ensureSession(win, wc);
+
+  // Safety net for the silent failure above: a follow-up request is only meaningful while a session
+  // is open. If nothing is open — the bar just opened, or a navigation cleared it — promote it to an
+  // opener rather than sending a request Chromium will answer with nothing.
+  const opening = input.findNext || session.query === '';
+
   session.query = input.query;
   wc.findInPage(input.query, {
     forward: input.forward,
-    findNext: input.findNext,
+    findNext: opening,
     matchCase: input.matchCase,
   });
 }

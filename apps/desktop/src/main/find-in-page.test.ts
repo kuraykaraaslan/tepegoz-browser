@@ -102,6 +102,74 @@ describe('runFindInPage', () => {
   });
 });
 
+describe('findNext semantics (the bug this feature shipped with)', () => {
+  // Measured on Electron 33.4.11: `findInPage(text, { findNext: false })` with no open find session
+  // emits NO `found-in-page` event and no error. `findNext` means "this opens a session", not "go to
+  // the next match", and having it backwards made every first search silently return nothing.
+  it('opens a session when nothing is being searched, even if the caller says follow-up', () => {
+    runFindInPage(asWin(win), asWc(wc), {
+      query: 'alpha',
+      forward: true,
+      findNext: false,
+      matchCase: false,
+    });
+    expect(wc.findInPage).toHaveBeenCalledWith('alpha', expect.objectContaining({ findNext: true }));
+  });
+
+  it('passes a follow-up through once a session is open, so stepping keeps the match set', () => {
+    const open = { query: 'alpha', forward: true, findNext: true, matchCase: false };
+    runFindInPage(asWin(win), asWc(wc), open);
+    runFindInPage(asWin(win), asWc(wc), { ...open, findNext: false });
+
+    expect(wc.findInPage).toHaveBeenLastCalledWith(
+      'alpha',
+      expect.objectContaining({ findNext: false }),
+    );
+  });
+
+  it('re-opens after a stop, rather than stepping into a session that was closed', () => {
+    runFindInPage(asWin(win), asWc(wc), {
+      query: 'alpha',
+      forward: true,
+      findNext: true,
+      matchCase: false,
+    });
+    stopFindInPage(asWc(wc));
+    runFindInPage(asWin(win), asWc(wc), {
+      query: 'alpha',
+      forward: true,
+      findNext: false,
+      matchCase: false,
+    });
+
+    expect(wc.findInPage).toHaveBeenLastCalledWith(
+      'alpha',
+      expect.objectContaining({ findNext: true }),
+    );
+  });
+
+  it('re-opens after a navigation cleared the session', () => {
+    runFindInPage(asWin(win), asWc(wc), {
+      query: 'alpha',
+      forward: true,
+      findNext: true,
+      matchCase: false,
+    });
+    wc.emit('did-start-navigation');
+    runFindInPage(asWin(win), asWc(wc), {
+      query: 'alpha',
+      forward: true,
+      findNext: false,
+      matchCase: false,
+    });
+
+    expect(wc.findInPage).toHaveBeenLastCalledWith(
+      'alpha',
+      expect.objectContaining({ findNext: true }),
+    );
+  });
+});
+
 describe('navigation', () => {
   it('zeroes the counters when the page navigates away from the searched document', () => {
     runFindInPage(asWin(win), asWc(wc), {

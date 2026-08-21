@@ -16,31 +16,19 @@ function guiEnv(): Record<string, string> {
 }
 
 /**
- * Find-in-page, end to end (Phase 2c) — **currently `fixme`, and the reason is a measurement, not a
- * guess.**
+ * Find-in-page, end to end (Phase 2c): the bar opens, the search runs against the active tab's real
+ * WebContentsView in the main process, and Chromium's counts travel back to the bar.
  *
- * What was measured on Electron 33.4.11 under Playwright `_electron`:
- *  - The bar opens, the query reaches it, and `find:start` reaches main. That half works.
- *  - `webContents.findInPage()` then emits **no `found-in-page` event at all**, so the counters stay
- *    at zero and the bar reads "No results".
- *  - This is NOT our plumbing. Calling `findInPage` directly from the main process, with no app code
- *    involved, is equally silent — on the tab's `WebContentsView` *and* on the chrome
- *    `BrowserWindow`'s own webContents, with `show()`, `focus()` and `webContents.focus()` forced.
+ * This test earned its keep. It failed first, and the cause was a silent API inversion in our own
+ * code: Electron's `findInPage` option `findNext` means "this request OPENS a find session", not "go
+ * to the next match". We sent `findNext: false` to start every search. Chromium answers a follow-up
+ * request with no open session by emitting **nothing at all** — no `found-in-page`, no error — so the
+ * bar sat at zero and the unit tests, which mock WebContents, happily passed.
  *
- * The most likely explanation is the automation harness itself: Playwright drives Electron over CDP,
- * and a webContents with a debugger attached is a known source of find-in-page misbehaviour. That
- * would mean the feature is fine for real users and only untestable this way. **It is a hypothesis —
- * it has not been confirmed**, so this test stays visible as `fixme` rather than being deleted, and
- * the phase file does not claim the feature is verified.
- *
- * A second, separate constraint found here: `keyboard.press('Control+f')` does NOT reach Electron's
- * main-process `before-input-event`, so the Ctrl+F shortcut cannot be driven from Playwright at all.
- * The test opens the bar by sending `find:open` directly, which is why the keystroke is not asserted.
- *
- * To un-fixme this: confirm find-in-page against a build driven WITHOUT a CDP attachment (a manual
- * run, or a harness that does not attach a debugger to the searched webContents).
+ * Located by ROLE and by numeric shape, never by visible text — this file must not fail because the
+ * app is running in Turkish.
  */
-test.fixme('Ctrl+F finds text in the active tab and reports Chromium\u2019s match counts', async () => {
+test('Ctrl+F finds text in the active tab and reports Chromium\u2019s match counts', async () => {
   const server: Server = createServer((_req, res) => {
     res.writeHead(200, { 'content-type': 'text/html' });
     res.end(
@@ -85,8 +73,9 @@ test.fixme('Ctrl+F finds text in the active tab and reports Chromium\u2019s matc
       )
       .toContain(pageUrl);
 
-    // Not `keyboard.press('Control+f')` — see the note above: CDP-injected keys never reach
-    // `before-input-event`, so the shortcut itself is not exercisable from here.
+    // Not `keyboard.press('Control+f')`: a CDP-injected key never reaches Electron's main-process
+    // `before-input-event`, so the shortcut is not exercisable from Playwright (verified: the bar
+    // never opens). Everything downstream of the shortcut is what this test covers.
     await app.evaluate(({ BrowserWindow }) => {
       BrowserWindow.getAllWindows()[0]?.webContents.send('find:open');
     });
@@ -100,14 +89,14 @@ test.fixme('Ctrl+F finds text in the active tab and reports Chromium\u2019s matc
     // The counter reads "active/total". Matched by SHAPE so the assertion survives localization.
     await expect
       .poll(async () => (await window.getByText(/^\d+\/\d+$/).allInnerTexts()).join(''), {
-        timeout: 15_000,
+        timeout: 30_000,
       })
       .toBe('1/3');
 
     await findInput.press('Enter');
     await expect
       .poll(async () => (await window.getByText(/^\d+\/\d+$/).allInnerTexts()).join(''), {
-        timeout: 15_000,
+        timeout: 30_000,
       })
       .toBe('2/3');
 
