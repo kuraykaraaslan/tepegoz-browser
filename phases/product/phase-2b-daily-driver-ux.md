@@ -15,7 +15,7 @@ work lives in Phase 2; agent orchestration (multi-tab parallelism) stays in Phas
 - [ ] **Default-browser registration** works (http/https handler + inbound-link routing to the existing window) and a **Task Manager** shows per-tab CPU/memory via `app.getAppMetrics`
 - [ ] **i18n:** en+tr keys added for new surfaces (tab/workspace UI, PWA install/permission prompts, DevTools menu, default-browser prompt, Task Manager)
 - [ ] ADRs accepted for: Tab Boundary Model, PWA security model, DevTools expose boundary (no code before acceptance)
-- [ ] Coverage gate (S80/B70/F80/L80) + self-review/code-review + UAT signoff + migration-safe
+- [ ] Coverage gate (S78/B85/F85/L78) + self-review/code-review + UAT signoff + migration-safe
 
 ## Landed so far (2026-08-19)
 

@@ -28,7 +28,7 @@ Phase 1b already builds**. Competitors' intelligence lives in the cloud; they li
       semantic-history search + KG/Memory-Audit, router explainer, Low-Data meter)
 - [ ] ADRs accepted: **ADR-0015** (Sovereign egress class + Provider Trust Mesh), **ADR-0019** (global
       semantic history / Personal Knowledge Graph projection + PII-honeypot mitigations)
-- [ ] Coverage gate (S80/B70/F80/L80) + self-review/code-review + UAT signoff + migration-safe DB
+- [ ] Coverage gate (S78/B85/F85/L78) + self-review/code-review + UAT signoff + migration-safe DB
 
 ## Tasks
 

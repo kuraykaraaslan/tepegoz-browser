@@ -38,7 +38,7 @@ success criteria (min / strong / failure-signal + metrics) and a handover note f
   `acceptance-eval.test.ts`.
 - Token accounting — provider+model+capability, lifetime totals, quota status — is in the SQLite Token
   Ledger (`packages/persistence/token-store.ts`) + the in-memory `TokenLedger.budgetStatus()`.
-- Coverage gate (S80/B70/F80/L80) runs in CI (`vitest.coverage.config.ts` scope).
+- Coverage gate (S78/B85/F85/L78) runs in CI (`vitest.coverage.config.ts` scope).
 
 ## Handover note — L7 Model Gateway + DoD slice
 
