@@ -2,11 +2,13 @@ import { pick, type Locale } from '@tepegoz/i18n';
 import { Modal } from '@tepegoz/ui';
 import { NotificationPermissionPrompt, ToastStack } from '@tepegoz/notifications-ui';
 import { AuthPrompt } from '@tepegoz/auth-prompt-ui';
+import { CertWarning } from '@tepegoz/cert-warning-ui';
 import type { AppNotification, NotificationPermissionRequest } from '@tepegoz/desktop-ipc';
 import { browserDict } from '../../i18n';
 import { runNotificationAction } from './lib/notification-actions';
 import type { BookmarksBarResult } from './app-bookmarks';
 import { useBasicAuth } from './app-basic-auth';
+import { useCertWarning } from './app-cert-warning';
 
 export interface AppOverlaysProps {
   locale: Locale;
@@ -31,6 +33,7 @@ export function AppOverlays({
   bookmarks,
 }: AppOverlaysProps) {
   const basicAuth = useBasicAuth();
+  const certWarning = useCertWarning();
   const browserT = pick(browserDict, locale);
 
   return (
@@ -74,6 +77,25 @@ export function AppOverlays({
             isProxy={basicAuth.request.isProxy}
             onSubmit={basicAuth.submit}
             onCancel={basicAuth.cancel}
+          />
+        )}
+      </Modal>
+      {/* TLS certificate warning. Blocking: main holds Chromium's callback until an explicit answer,
+          and every non-answer (backdrop, timeout, window death) refuses the connection. */}
+      <Modal
+        open={certWarning.request !== null}
+        onClose={certWarning.refuse}
+        ariaLabel={certWarning.request?.origin ?? ''}
+        closeOnBackdrop={false}
+      >
+        {certWarning.request !== null && (
+          <CertWarning
+            origin={certWarning.request.origin}
+            errorCode={certWarning.request.errorCode}
+            issuer={certWarning.request.issuer}
+            expiry={certWarning.request.expiry}
+            onBack={certWarning.refuse}
+            onProceed={certWarning.proceed}
           />
         )}
       </Modal>

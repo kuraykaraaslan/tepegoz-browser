@@ -25,11 +25,13 @@ import {
   CasRefSchema,
   NotificationIdSchema,
   BasicAuthResponseSchema,
+  CertificateErrorResponseSchema,
   NotificationPermissionResponseSchema,
 } from '@tepegoz/desktop-ipc/schemas';
 import NotificationStore from '@tepegoz/notifications';
 import WebPermissionBroker from '../web-permissions/permission-broker';
 import { resolveBasicAuth } from '../auth/basic-auth-broker';
+import { resolveCertificateError } from '../auth/certificate-broker';
 import { BlobStore, HistoryStore } from '@tepegoz/persistence';
 import { BookmarkTreeStore, importBookmarksHtmlToStore, isBookmarkable } from '@tepegoz/bookmarks';
 import FileOperationsHost from '../file-operations/file-operations-host';
@@ -149,6 +151,12 @@ export function registerBrowsingIpc(): void {
   // credentials, so it is validated and forwarded — never logged, never persisted.
   onAction(IpcChannels.authBasicRespond, BasicAuthResponseSchema, (res) => {
     resolveBasicAuth(res);
+  });
+
+  // TLS certificate warning answer (renderer → main). Anything other than an explicit proceed leaves
+  // the broker's default in place, which is to refuse the connection.
+  onAction(IpcChannels.certificateErrorRespond, CertificateErrorResponseSchema, (res) => {
+    resolveCertificateError(res);
   });
 
   // Browsing history (tepegoz://history).

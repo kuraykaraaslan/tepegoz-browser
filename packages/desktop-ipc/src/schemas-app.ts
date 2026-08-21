@@ -61,3 +61,9 @@ export const BasicAuthResponseSchema = z.object({
   password: z.string().max(1024),
   cancelled: z.boolean(),
 });
+
+/** `cert:respond` payload — the user's proceed/refuse answer to a TLS certificate warning. */
+export const CertificateErrorResponseSchema = z.object({
+  requestId: z.string().max(64),
+  proceed: z.boolean(),
+});

@@ -5,6 +5,7 @@ import { KEEP_RENDERING_SWITCHES, Logger } from '@tepegoz/libs';
 import { installSecurity } from './security';
 import { abortActiveAgentRuns, registerIpc } from './ipc';
 import { registerBasicAuthHandler } from './auth/basic-auth-broker';
+import { registerCertificateHandler } from './auth/certificate-broker';
 import { initStores } from './stores.electron';
 import { initHosts, openWindow } from './browser-windows';
 import { initTray, revealAllWindows } from './tray';
@@ -203,6 +204,8 @@ if (!app.requestSingleInstanceLock()) {
       });
       // 401/407 challenges need a handler or Chromium cancels the request outright.
       registerBasicAuthHandler(app);
+      // Without a handler Chromium rejects a bad certificate silently; explain it instead.
+      registerCertificateHandler(app);
       registerIpc();
       initHosts();
       openWindow();

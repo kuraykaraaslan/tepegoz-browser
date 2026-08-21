@@ -31,6 +31,7 @@ export default defineConfig({
         'packages/browser-chrome/src/**',
         'packages/browser-tools/src/**',
         'packages/capability-plane/src/**',
+        'packages/cert-warning-ui/src/**',
         'packages/extension-sdk/src/**',
         'packages/find-bar/src/**',
         'packages/journal-tools/src/**',

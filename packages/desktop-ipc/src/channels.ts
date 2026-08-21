@@ -286,6 +286,10 @@ export const IpcChannels = {
   notificationsMarkAllRead: 'notifications:mark-all-read',
   notificationsState: 'notifications:state',
   notificationsToast: 'notifications:toast',
+  /** main→renderer: a TLS certificate error is waiting on the user. */
+  certificateErrorRequest: 'cert:request',
+  /** renderer→main: proceed past the certificate error, or refuse. */
+  certificateErrorRespond: 'cert:respond',
   /** main→renderer: an HTTP 401/407 challenge is waiting on the user. */
   authBasicRequest: 'auth:basic-request',
   /** renderer→main: the credentials, or a cancellation. */

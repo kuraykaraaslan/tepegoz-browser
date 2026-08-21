@@ -111,6 +111,16 @@ module.exports = {
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
     {
+      name: 'cert-warning-ui-is-a-leaf',
+      severity: 'error',
+      comment:
+        '@tepegoz/cert-warning-ui is a presentational chrome leaf (the TLS certificate warning): it ' +
+        'must never import back into the desktop app. The certificate details are injected and the ' +
+        'decision leaves through a callback. See docs/package-map.md.',
+      from: { path: '^packages/cert-warning-ui/' },
+      to: { path: '^apps/' },
+    },
+    {
       name: 'auth-prompt-ui-is-a-leaf',
       severity: 'error',
       comment:

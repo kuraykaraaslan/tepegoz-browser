@@ -7,6 +7,8 @@ import type {
   ContentBounds,
   BasicAuthRequest,
   BasicAuthResponse,
+  CertificateErrorRequest,
+  CertificateErrorResponse,
 } from './contract';
 import type {
   PageMenuAction,
@@ -124,6 +126,10 @@ export interface UiApi {
   onBasicAuthRequest(callback: (request: BasicAuthRequest) => void): () => void;
   /** Renderer→main: the credentials, or a cancellation. Never stored on either side. */
   respondBasicAuth(response: BasicAuthResponse): void;
+  /** Main→renderer: a TLS certificate error needs a decision. */
+  onCertificateErrorRequest(callback: (request: CertificateErrorRequest) => void): () => void;
+  /** Renderer→main: proceed past it, or refuse. */
+  respondCertificateError(response: CertificateErrorResponse): void;
   // File operations (Settings → File operations). The grant list is read/written through preferences
   // (`getPreferences().fileAccessGrants` / `updatePreferences({ fileAccessGrants })`); the AI-driven
   // consent reuses the agent HITL modal. Only the native folder picker needs its own bridge method.
