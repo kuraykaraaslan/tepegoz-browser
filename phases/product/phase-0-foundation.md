@@ -1,6 +1,18 @@
 # Phase 0 — Foundation Scaffold & Core Contracts
 
-**Status:** 🟡 In progress · **Estimate:** ~6–8 weeks · **Depends on:** none (start)
+**Status:** 🟡 In progress — **DoD complete except one observation** · **Estimate:** ~6–8 weeks · **Depends on:** none (start)
+
+> **Where this actually stands (2026-08-22).** Six of the seven exit criteria are met and evidenced. The
+> seventh — Windows code-signing — is **not part of this DoD**: the ship line permanently defers it to the
+> production gate. What holds the phase at 🟡 is a single unobserved fact: the per-OS CI matrix is
+> configured but has never been watched go green, and macOS has never executed this suite. That is an
+> **observation**, not a cost — no key, no certificate, no purchase. Look at one CI run and this phase
+> closes, or it reports a real macOS failure and the work is named.
+>
+> The five open task boxes below are: two permanently-deferred code-signing lines, and three release-runtime
+> items ([ADR-0038](../../docs/adr/0038-release-update-hardening.md)) explicitly gated to the first public
+> release — the certificate-dependent half of which cannot honestly be built before one exists.
+
 **Goal:** The type-safe, modular, compliant backbone everything sits on + immutable cross-layer contracts.
 No product features; the decisions made here would force a full rewrite if wrong.
 **Branch:** `chore/scaffold`
@@ -8,7 +20,7 @@ No product features; the decisions made here would force a full rewrite if wrong
 ## Exit criteria (DoD)
 
 - [x] `pnpm install --frozen-lockfile && turbo run lint typecheck test build` passes clean _(verified on merged `main` 2026-08-21: 243/243. It had NOT been passing locally — the SQLite suites died on an ABI mismatch, which is now moot: the DB is `node:sqlite`, so there is no native module and nothing to rebuild. `format:check`, `depcruise`, `docs:links` and a real `pnpm audit` were added to the same CI job.)_
-- [x] CI per-OS matrix (windows/macos/ubuntu) green _(both `verify` and `e2e` now run on all three; the repo-wide gates — prettier, depcruise, coverage, doc links, audit — run once on Linux since they are platform-independent. "Native modules rebuilt on each runner" no longer applies: the database is `node:sqlite`, in-runtime, and the only remaining native dep (`node-llama-cpp`) ships N-API prebuilds.)_
+- [ ] CI per-OS matrix (windows/macos/ubuntu) green — _**configured, not yet observed green.** Both `verify` and `e2e` now run on all three (the platform-independent gates — prettier, depcruise, coverage, doc links, audit — run once on Linux). Two of the three platforms are covered by evidence: the full pipeline and all 20 e2e specs were run on **Windows** locally, and Linux is what CI has always run. **macOS has never executed this suite.** Ticking this on configuration alone is precisely the "landed code is not a closed phase" trap, so it stays open until a run is actually looked at. "Native modules rebuilt on each runner" no longer applies: the database is `node:sqlite`, in-runtime, and the only remaining native dep (`node-llama-cpp`) ships N-API prebuilds._
 - [x] shared-types zod contracts + sample round-trip tests exist _(`ipc-round-trip.test.ts`: every one of the 72 exported schemas is walked for types that cannot survive JSON — Date/BigInt/Map/Set/function/symbol/NaN — plus explicit parse→JSON→parse equality on representative payloads. All 72 pass. The walker has its own self-test, so a walker that silently returned nothing could not make the suite vacuously green.)_
 - [x] Secure `createWindow()` factory + fuses + typed IPC skeleton opens a working empty window _(6 of 7 Electron fuses closed — runAsNode, NODE_OPTIONS, --inspect, asar integrity, onlyLoadAppFromAsar, cookie encryption — verified by reading the wire back out of a packaged `Tepegöz.exe` and launching it. `grantFileProtocolExtraPrivileges` stays open with the reason recorded in `electron-builder.yml`. `isTrustedAppUrl` no longer trusts the file:// SCHEME — it matches the chrome's exact document URL.)_
 - [x] Threat Model Lite + Risk Register + ~9 ADRs + READMEs + CHANGELOG written
