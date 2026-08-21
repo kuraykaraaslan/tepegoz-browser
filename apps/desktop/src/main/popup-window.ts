@@ -1,5 +1,5 @@
 import { BrowserWindow, screen, type Rectangle } from 'electron';
-import { join } from 'node:path';
+import { chromeFilePath } from './chrome-url';
 import { Logger } from '@tepegoz/libs';
 import { IpcChannels } from '@tepegoz/desktop-ipc';
 import { createPopupWindow } from './window';
@@ -300,7 +300,7 @@ function loadSurface(win: BrowserWindow, query: Record<string, string>, key: str
   const loaded =
     devUrl !== undefined && devUrl.length > 0
       ? win.loadURL(`${devUrl}?${search}`)
-      : win.loadFile(join(__dirname, '../renderer/index.html'), { query });
+      : win.loadFile(chromeFilePath(), { query });
   void loaded.catch((err: unknown) => {
     Logger.warn('Popup failed to load', { key, err: String(err) });
   });

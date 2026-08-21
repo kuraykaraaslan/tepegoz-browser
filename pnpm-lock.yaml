@@ -320,7 +320,7 @@ importers:
         specifier: ^1.6.20
         version: 1.6.20
       electron:
-        specifier: ^43.4.1
+        specifier: 43.4.1
         version: 43.4.1
       electron-builder:
         specifier: ^26.15.3
@@ -1067,6 +1067,9 @@ importers:
       '@tepegoz/extension-sdk':
         specifier: workspace:*
         version: link:../extension-sdk
+      '@tepegoz/navigation':
+        specifier: workspace:*
+        version: link:../navigation
       '@tepegoz/persistence':
         specifier: workspace:*
         version: link:../persistence

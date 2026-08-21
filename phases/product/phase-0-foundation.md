@@ -8,12 +8,12 @@ No product features; the decisions made here would force a full rewrite if wrong
 ## Exit criteria (DoD)
 
 - [x] `pnpm install --frozen-lockfile && turbo run lint typecheck test build` passes clean _(verified on merged `main` 2026-08-21: 243/243. It had NOT been passing locally — the SQLite suites died on an ABI mismatch, which is now moot: the DB is `node:sqlite`, so there is no native module and nothing to rebuild. `format:check`, `depcruise`, `docs:links` and a real `pnpm audit` were added to the same CI job.)_
-- [ ] CI per-OS matrix (windows/macos/ubuntu) green; native modules rebuilt on each runner
-- [ ] shared-types zod contracts + sample round-trip tests exist
-- [ ] Secure `createWindow()` factory + fuses + typed IPC skeleton opens a working empty window
+- [x] CI per-OS matrix (windows/macos/ubuntu) green _(both `verify` and `e2e` now run on all three; the repo-wide gates — prettier, depcruise, coverage, doc links, audit — run once on Linux since they are platform-independent. "Native modules rebuilt on each runner" no longer applies: the database is `node:sqlite`, in-runtime, and the only remaining native dep (`node-llama-cpp`) ships N-API prebuilds.)_
+- [x] shared-types zod contracts + sample round-trip tests exist _(`ipc-round-trip.test.ts`: every one of the 72 exported schemas is walked for types that cannot survive JSON — Date/BigInt/Map/Set/function/symbol/NaN — plus explicit parse→JSON→parse equality on representative payloads. All 72 pass. The walker has its own self-test, so a walker that silently returned nothing could not make the suite vacuously green.)_
+- [x] Secure `createWindow()` factory + fuses + typed IPC skeleton opens a working empty window _(6 of 7 Electron fuses closed — runAsNode, NODE_OPTIONS, --inspect, asar integrity, onlyLoadAppFromAsar, cookie encryption — verified by reading the wire back out of a packaged `Tepegöz.exe` and launching it. `grantFileProtocolExtraPrivileges` stays open with the reason recorded in `electron-builder.yml`. `isTrustedAppUrl` no longer trusts the file:// SCHEME — it matches the chrome's exact document URL.)_
 - [x] Threat Model Lite + Risk Register + ~9 ADRs + READMEs + CHANGELOG written
 - [ ] Windows code-signing identity — _**permanently deferred to the production gate** (ship-line decision, 2026-08-21). NOT a v1 blocker and NOT part of this DoD; v1 builds, CI, e2e and UAT all run unsigned._
-- [ ] Release & update hardening designed (auto-update + signed rollback + crashReporter + safe-mode + corrupt-profile recovery) — _runtime flow activated before first public release_
+- [x] Release & update hardening **designed** — [ADR-0038](../../docs/adr/0038-release-update-hardening.md) _(recovery ladder normal→degraded→safe-mode→fresh-profile; opt-in redacted crash reports; verify-then-stage-then-swap updates; never delete user data to recover. Runtime flow is activated before the first public release, and the certificate-dependent half cannot honestly be built before then.)_
 
 ## Tasks
 
@@ -32,7 +32,7 @@ No product features; the decisions made here would force a full rewrite if wrong
 - [x] `eslint.config.mjs` (flat config; typescript-eslint strict **type-checked** + `no-floating-promises`) + `.prettierrc.json` + `.editorconfig`
 - [x] `dependency-cruiser.cjs` — no-circular + no-orphans + not-to-dev-dep (concrete per-package layer rules **have since landed** as the packagization completed: no-app/no-electron + presentational-leaf rules — see `dependency-cruiser.cjs`)
 - [x] `electron.vite.config.ts` (main/preload/renderer 3 targets; preload forced **CJS `index.js`** for sandbox) — `apps/desktop` builds green
-- [ ] `electron-builder.yml` (Windows NSIS, appId `com.tepegoz.browser` **frozen**, fuses block, `asarUnpack: ['**/*.node']`, `electron-updater`)
+- [x] `electron-builder.yml` (Windows NSIS, appId `com.tepegoz.browser` **frozen**, fuses block, `asarUnpack: ['**/*.node']`) _(`electronFuses` block present and asserted by `electron-fuses.test.ts`; `electronVersion` is asserted to match the resolved dependency by `electron-version.test.ts`, after it silently drifted six majors behind. `electron-updater` is deliberately NOT wired — ADR-0038 §4: a half-configured feed is how an unsigned build reaches a user.)_
 
 ### shared-types (single source of truth)
 
@@ -50,7 +50,7 @@ No product features; the decisions made here would force a full rewrite if wrong
 ### core-shell (L0) skeleton
 
 - [x] single `createWindow()` factory (contextIsolation/sandbox/nodeIntegration:false/webSecurity:true) + `setWindowOpenHandler` deny + `will-navigate` deny + permission deny-by-default (`src/main/{window,security}.ts`)
-- [ ] Electron fuses (runAsNode=false, onlyLoadAppFromAsar, asar integrity, cookie encryption) — packaging step (with electron-builder)
+- [x] Electron fuses (runAsNode=false, onlyLoadAppFromAsar, asar integrity, cookie encryption) — packaging step (with electron-builder) _(all four closed, plus NODE_OPTIONS and --inspect. Read back from the packaged binary; the app was then launched and CDP confirmed the chrome renders, because a fuse that bricks the UI is not hardening.)_
 - [x] power-monitor suspend/resume hooks (Recovery Coordinator hook point, Phase 1b) + per-profile partition (`persist:tepegoz-app`) — _`--use-system-ca`: deferred (verify correct Electron/Node mechanism); Electron fuses → packaging step_
 - [x] preload: typed `contextBridge` (`window.tepegoz`); NO raw `ipcRenderer`; `src/shared/ipc-contract.ts` channel registry; main validates sender allow-list + output schema (`src/main/ipc.ts`)
 
@@ -70,7 +70,7 @@ No product features; the decisions made here would force a full rewrite if wrong
 ### CI/CD
 
 - [x] `.github/workflows/ci.yml` — push/PR: frozen-lockfile install → turbo typecheck/lint/test/build + `pnpm audit` (report) + **AI-trailer commit-policy job**
-- [ ] coverage gate (S78/B85/F85/L78) + reject focused/skipped tests — _deferred: enforce thresholds once substantive logic lands (Phase 1a)_
+- [x] coverage gate (S78/B85/F85/L78) _(enforced in CI over 61 packages. On the original 27-package scope today's code measures S91.29/B88.85/F91.84/L91.29.)_ — _still open: reject focused/skipped tests_
 - [x] `.github/workflows/release.yml` — tag-driven **per-OS matrix** (fail-fast:false), native rebuild per-OS; packaging/signing step = TODO (see below)
 - [ ] Start Windows code-signing identity (Azure Trusted Signing / EV) — _**deferred to the production gate**, permanently, per the ship line. Distribution concern, not a build concern; revisit only when a real release is cut. Everything below that depends on a certificate (update **signature verification**) is deferred with it and may not be claimed until then._
 
@@ -88,10 +88,15 @@ No product features; the decisions made here would force a full rewrite if wrong
 - [ ] **Safe-mode boot** (launch with extensions + agent disabled for recovery) + **corrupt-profile recovery**
       (migration-repair / fail-safe fresh-start — generalizes the existing `SessionStore` fail-safe: malformed
       snapshot → start fresh, never crash-loop)
-- [ ] **Chromium security-update cadence** (upstream-intake side of the update story): pinned+watched
+- [x] **Chromium security-update cadence** (upstream-intake side of the update story): pinned+watched
       `electron`, ≤2-week adoption SLA for security bumps, embedded engine version logged per release — see
       [ADR-0019](../../docs/adr/0019-chromium-update-cadence.md). This governs _which engine_ we ship; the
-      auto-update runtime above governs _how_ we ship it.
+      auto-update runtime above governs _how_ we ship it. _(`electron` is now EXACTLY pinned, as ADR-0019
+      requires — it had drifted to a `^` range. `.github/dependabot.yml` gives the engine its own PR group
+      and label, separate from routine dependency noise; ADR-0019 called a watcher "already the repo's
+      mechanism" and none existed, which is how the pin fell six majors behind. The embedded
+      Electron/Chromium/Node versions are logged once per run, so "which engine shipped" is checkable
+      from a log rather than asserted.)_
 
 ### Documentation & security
 
@@ -110,13 +115,13 @@ No product features; the decisions made here would force a full rewrite if wrong
 > `pick`/`mainStrings`. The en/tr-parity, no-hardcoded and main-process-i18n **outcomes** below still hold —
 > now enforced **per dict**.
 
-- [ ] choose + set up i18n library (chose a lightweight type-safe runtime: `defineDict` + `useT`/`I18nProvider`, not i18next; Electron renderer, no SSR) — **[ADR-0016](../../docs/adr/0016-per-package-i18n.md)**
+- [x] choose + set up i18n library (chose a lightweight type-safe runtime: `defineDict` + `useT`/`I18nProvider`, not i18next; Electron renderer, no SSR) — **[ADR-0016](../../docs/adr/0016-per-package-i18n.md)**
 - [x] `packages/i18n` locale bundle: `src/locales/en.ts` (**primary/source; fallback**) + `tr.ts` (full parity, first-class); namespaced (common, commandPalette, agentConsole, onboarding, errors) + `resolveLocale()`
 - [x] type-safe keys: `Resources = typeof en` contract → any missing/mismatched key in `tr` is a **build error** (verified)
 - [x] **"no hardcoded user-facing string" ESLint rule** — `eslint-plugin-i18next/no-literal-string` (`6.1.5`) on React surfaces (`**/*.tsx`) in **`jsx-text-only`** mode (flags visible JSX text, not className/aria/code strings) + allow-list (`**/i18n/**`, `**/locales/**`, `*.messages.ts`, `messages.ts`, tests). Repo scanned clean (1 pre-existing decorative `✕` glyph → JS-expression constant with a comment); every visible string comes from a dict via `useT`.
 - [x] locale-aware formatting (date/number/plural/relative-time) + RTL-ready skeleton — `@tepegoz/i18n`: Intl wrappers `formatDate/Time/Number/Currency/RelativeTime/List` + `pluralCategory`/`selectPlural` (CLDR); `localeDir()`/`RTL_LOCALES`/`ALL_SUPPORTED_LTR` direction skeleton wired to `<html dir>` in the renderer (both shipping locales LTR; a first RTL locale is a one-line change). 13 tests.
-- [ ] main-process user-facing text (native menu, dialog, notification, tray) reads from i18n — React-free, via `pick(dict, mainLocale())` → `mainStrings()` over the app's own dicts (ADR-0016)
-- [ ] language selection: OS language default + override in settings; runtime language switch (no restart)
+- [x] main-process user-facing text (native menu, dialog, notification, tray) reads from i18n — React-free, via `pick(dict, mainLocale())` → `mainStrings()` over the app's own dicts (ADR-0016) _(17 main-process modules resolve through `mainStrings()`, menus and tray included)_
+- [x] language selection: OS language default + override in settings; runtime language switch (no restart) _(`mainLocale()` resolves per call, so a locale change is picked up without a restart; the settings surface offers `system` plus explicit locales)_
 - [x] Turkish IME/keyboard pipeline skeleton (ç/ğ/ı/ö/ş/ü, Turkish-Q/F, dead keys) — `@tepegoz/i18n/turkish`: locale-correct `turkishUpper/Lower/Compare` (fixes the dotted/dotless `i↔İ`, `ı↔I` that JS defaults get wrong) + `TURKISH_SPECIAL_LETTERS` + `IME_MATRIX` (Q/F × 7 letters + dead-key cases) as structured data. **regression matrix EXECUTED (Playwright keystroke sim) in Phase 1a** — skeleton = data + case-folding here.
 
 ### Test infrastructure

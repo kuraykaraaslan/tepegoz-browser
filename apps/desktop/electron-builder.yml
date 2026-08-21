@@ -42,8 +42,48 @@ files:
 asarUnpack:
   - '**/*.node'
 
-# Rebuild native deps (better-sqlite3) against the Electron ABI during packaging.
+# Rebuild native deps during packaging. The database is `node:sqlite` (in-runtime, nothing to rebuild);
+# this stays on for node-llama-cpp, whose prebuilds are N-API and therefore ABI-independent.
 npmRebuild: true
+
+# ── Electron fuses (Phase 0 DoD) ───────────────────────────────────────────────────────────────────
+# Fuses are flipped in the packaged binary itself, so they are the only layer that still holds when an
+# attacker controls the command line or the environment — `webPreferences` cannot help there. Every one
+# below is OFF-by-default-dangerous, and this project's own threat model already assumes the renderer is
+# hostile.
+electronFuses:
+  # ELECTRON_RUN_AS_NODE turns the shipped browser into a general-purpose Node interpreter running with
+  # the app's identity. Nothing here relies on it: the repo strips the variable in twelve places
+  # (dev launcher, eval harness, every e2e spec) precisely because it is a footgun. Closing the fuse
+  # deletes the footgun instead of routing around it.
+  runAsNode: false
+  # Cookies at rest are encrypted with the OS keychain rather than stored in the clear.
+  enableCookieEncryption: true
+  # NODE_OPTIONS and --inspect are code-injection channels into the main process. A browser must not
+  # accept either from whoever can set an env var or write a shortcut.
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  # Verify the asar's integrity header before executing anything from it, and refuse to look anywhere
+  # else for app code. The pair is what makes tampering with the installed app fail closed rather than
+  # silently succeed; `onlyLoadAppFromAsar` alone would still run an unvalidated asar.
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+  # LEFT OPEN, deliberately, and this is the one to revisit.
+  #
+  # The chrome is loaded with `loadFile()`, so it lives at `file://…/app.asar/out/renderer/index.html`,
+  # and resolving a path INSIDE an asar over file:// is one of the privileges this fuse grants. Closing
+  # it produces a packaged app that boots, opens its window, and renders nothing — observed, not feared.
+  #
+  # Serving the chrome from a custom `app://` scheme fixes that and was built and verified end to end
+  # (packaged, fuse closed, CDP showing the chrome live at app://chrome/index.html). It was reverted
+  # because Playwright's Electron support does not surface windows on non-standard schemes:
+  # `firstWindow()` never resolves, and the whole e2e suite goes blind. Trading a working e2e gate — a
+  # DoD item in its own right — for one fuse is a bad trade.
+  #
+  # The exposure this fuse covers was addressed at the other end instead: `isTrustedAppUrl` no longer
+  # trusts the file:// SCHEME, it matches the chrome's exact document URL (`chrome-url.ts`).
+  # Revisit when Playwright learns custom schemes, or when the e2e suite drives Electron over raw CDP.
+  grantFileProtocolExtraPrivileges: true
 
 win:
   target: nsis
