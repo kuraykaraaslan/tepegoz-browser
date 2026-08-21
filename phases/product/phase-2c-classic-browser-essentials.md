@@ -60,7 +60,13 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       lifecycle, and the "release from quarantine" HITL gate
 
 ### L9 — Classic essentials (Chromium/Electron surfaces)
-- [ ] **Find-in-page** (Ctrl+F): Chromium `webContents.findInPage` + match count + next/prev + highlight
+- [x] **Find-in-page** (Ctrl+F): Chromium `webContents.findInPage` + match count + next/prev + highlight
+  — `@tepegoz/find-bar` (chrome leaf, own en/tr dict) + `main/find-in-page.ts` + `ipc/ipc-find.ts`;
+  Ctrl+F is handled in MAIN because the key arrives while the page has focus. Results are echoed with
+  the query they were requested for so a slow `found-in-page` cannot flicker stale counts, and
+  navigating away zeroes the counters. Match-case toggle included. 10 unit tests.
+  - [ ] Switching tabs does not re-sync the counters to the newly-active tab (the bar keeps the
+        previous tab's numbers until the next keystroke).
 - [ ] **Print + print-preview** (Ctrl+P): `webContents.print` / `printToPDF`; respects sensitive-site rules
 - [ ] Built-in **PDF viewer** (Chromium PDF plugin surface; open-in-tab + save routes through Download Manager)
 - [ ] **Reader mode** (Readability extraction → clean, localized reading view; opt-in per page)
@@ -78,11 +84,27 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
 ### L9 — Bookmarks 2.0
 - [ ] Extend the flat `BookmarkStore` (Phase 1a) with **folders/tags hierarchy** + full-text search
       (migration-safe, additive schema; existing bookmarks preserved)
+  - [x] Folder hierarchy + search: `BookmarkTreeStore` (two fixed roots, create/move/remove, explicit
+        ordering, cycle guard on reparent, cascade delete, root-protection, `listFlat` projection,
+        `search` over url+title). Migration-safe and additive.
+  - [ ] **Tags do not exist** — the store models folders only. The word "tags" in this line is unearned.
 - [ ] **Bookmark Manager UI** (searchable tree; create/rename/move/delete folders; import/export standard
       HTML bookmarks file)
+  - [x] `@tepegoz/bookmarks-ui` + `tepegoz://bookmarks`: searchable tree, new-folder, drag reorder/reparent
+        (dnd-kit), rename/delete through the host's native context menu.
+  - [ ] **Export to HTML is missing** — only import exists. `parseBookmarksHtml` has no serializing
+        counterpart, so a user cannot get their bookmarks back out.
 - [ ] **Import from Chrome/Firefox** — parse their exported Netscape-format HTML bookmarks (+ optional
       profile auto-detect); folder structure preserved; zod `safeParse` on each parsed entry (reuses the
       same import seam as the password Google-CSV provider already shipped)
+  - [x] Netscape HTML parsing (Chrome/Edge/Firefox/Brave), folder structure preserved, per-source
+        "Imported from X" root, url-scheme gate (`isBookmarkable`), duplicate skip, favicon restricted to
+        http(s)/`data:image` and length-capped, recursion depth capped at 64.
+  - [ ] **No zod `safeParse` on parsed entries** — validation is imperative, and two inputs stay
+        unbounded: an entry's **title length** and the **total node count** of an imported file. An
+        exported bookmarks file is untrusted input, so this is the cross-cutting gate below going
+        unmet on a path that has already shipped.
+  - [ ] Profile auto-detect (marked optional in this line) does not exist.
 
 ### L8/L9 — Private / disposable / guest mode
 - [ ] Ephemeral **non-persisted session** (in-memory partition, no `persist:` prefix) on top of the existing
