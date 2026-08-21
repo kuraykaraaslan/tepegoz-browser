@@ -111,6 +111,16 @@ module.exports = {
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
     {
+      name: 'find-bar-is-a-leaf',
+      severity: 'error',
+      comment:
+        '@tepegoz/find-bar is a presentational chrome leaf (the Ctrl+F bar): it must never import back ' +
+        'into the desktop app. findInPage runs in main; the query, counts and actions are injected. ' +
+        'See docs/package-map.md.',
+      from: { path: '^packages/find-bar/' },
+      to: { path: '^apps/' },
+    },
+    {
       name: 'window-controls-is-a-leaf',
       severity: 'error',
       comment:
