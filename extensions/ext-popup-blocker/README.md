@@ -13,6 +13,7 @@ registers as a `popup:open` action interceptor instead (ADR-0024): `apps/desktop
 popup-blocking logic, it only asks the generic `ActionInterceptorService` "should this be blocked?".
 
 ## Exports
+
 - **`popupBlockerManifest`** — the extension manifest (`com.tepegoz.popup-blocker`, popup + page surfaces, `tabs`/`navigate` permissions).
 - **`PopupBlockerPopup`** — popup surface (compact card: toggles + recent blocked requests).
 - **`PopupBlockerPage`** — page surface at `tepegoz://com.tepegoz.popup-blocker` (toggles + trusted-sites allowlist).
@@ -28,7 +29,9 @@ popup-blocking logic, it only asks the generic `ActionInterceptorService` "shoul
   dependency seam.
 
 ## i18n
+
 Own `src/i18n/{en,tr}.ts` dictionary (English + Turkish, parity-tested); consumed via `useT` from `@tepegoz/i18n/react`.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

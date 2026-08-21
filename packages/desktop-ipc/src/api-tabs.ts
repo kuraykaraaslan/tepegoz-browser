@@ -5,6 +5,8 @@
  */
 import type { ContentBounds } from './contract';
 import type {
+  FindInPageQuery,
+  FindInPageResult,
   TabDragBegin,
   TabDragPoint,
   TabGroupColor,
@@ -88,6 +90,16 @@ export interface TabsApi {
   cancelTabDrag(): void;
   /** Report this window's strip geometry (client coords) so main can hit-test cross-window drops. */
   reportTabStrip(geometry: TabStripGeometry): void;
+  // Find-in-page (Ctrl+F). The bar lives in the chrome; the search runs on the active tab's view in
+  // main, so the page never sees the query as page-level input.
+  /** Run/step a find on the active tab. Fire-and-forget; counts arrive via `onFindResult`. */
+  findInPage(query: FindInPageQuery): void;
+  /** Stop finding and clear the page's highlight + selection. */
+  stopFindInPage(): void;
+  /** Main→renderer: match counts for an in-flight query. */
+  onFindResult(callback: (result: FindInPageResult) => void): () => void;
+  /** Main→renderer: Ctrl+F was pressed while the page had focus — open the bar. */
+  onFindOpen(callback: () => void): () => void;
   /** Open a fresh empty browser window (main-menu "New window"). */
   newWindow(): void;
 }

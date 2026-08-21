@@ -19,8 +19,20 @@ export const SCRIPTS: Record<string, Script> = {
         JSON.stringify({
           goal: 'Open the blog and read the latest post title',
           steps: [
-            { id: 's1', tool: 'browser_update_location', args: { url: blogUrl }, rationale: 'go to the blog', dependsOn: [] },
-            { id: 's2', tool: 'browser_get_page', args: {}, rationale: 'read the blog', dependsOn: ['s1'] },
+            {
+              id: 's1',
+              tool: 'browser_update_location',
+              args: { url: blogUrl },
+              rationale: 'go to the blog',
+              dependsOn: [],
+            },
+            {
+              id: 's2',
+              tool: 'browser_get_page',
+              args: {},
+              rationale: 'read the blog',
+              dependsOn: ['s1'],
+            },
           ],
         }),
         act('browser_update_location', { url: blogUrl }, 'navigate straight to the blog page'),

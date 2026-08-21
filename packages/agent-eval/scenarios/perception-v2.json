@@ -11,11 +11,7 @@
         "expectedValue": "brass hinges"
       },
       "heldOut": false,
-      "tags": [
-        "perception",
-        "ref-stability",
-        "s2"
-      ]
+      "tags": ["perception", "ref-stability", "s2"]
     },
     {
       "id": "label_for_form",
@@ -27,12 +23,7 @@
         "domAssertion": "Registration accepted for Northwind Tools"
       },
       "heldOut": false,
-      "tags": [
-        "perception",
-        "labels",
-        "form",
-        "s2"
-      ]
+      "tags": ["perception", "labels", "form", "s2"]
     },
     {
       "id": "dynamic_list_update",
@@ -44,11 +35,7 @@
         "domAssertion": "Claimed shift: Nightshift sweep"
       },
       "heldOut": true,
-      "tags": [
-        "perception",
-        "diff",
-        "s2"
-      ]
+      "tags": ["perception", "diff", "s2"]
     }
   ]
 }

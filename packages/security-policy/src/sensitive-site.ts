@@ -110,7 +110,16 @@ const CATEGORY_MAP: Readonly<Record<SensitiveCategory, CategoryRules>> = {
     suffixes: ['passbolt.com', 'proton.me'],
   },
   health: {
-    substrings: ['mychart', 'healthcare', 'medical', 'patient', 'nhs', 'saglik', 'sağlık', 'hastane'],
+    substrings: [
+      'mychart',
+      'healthcare',
+      'medical',
+      'patient',
+      'nhs',
+      'saglik',
+      'sağlık',
+      'hastane',
+    ],
     suffixes: ['enabiz.gov.tr', 'saglik.gov.tr'],
   },
 };

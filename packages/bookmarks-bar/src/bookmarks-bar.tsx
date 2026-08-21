@@ -92,7 +92,11 @@ function ItemInner({ node }: { node: BookmarkBarNode }) {
       )}
       <span className="min-w-0 truncate">{label}</span>
       {node.type === 'folder' && (
-        <FontAwesomeIcon icon={faChevronDown} className="h-2.5 w-2.5 shrink-0 opacity-60" aria-hidden />
+        <FontAwesomeIcon
+          icon={faChevronDown}
+          className="h-2.5 w-2.5 shrink-0 opacity-60"
+          aria-hidden
+        />
       )}
     </>
   );
@@ -108,9 +112,10 @@ function SortableBarItem({
   onActivate: (node: BookmarkBarNode, anchor: HTMLElement) => void;
   onContextMenu: (id: string, type: BookmarkBarNodeType) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } = useSortable({
-    id: node.id,
-  });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } =
+    useSortable({
+      id: node.id,
+    });
   const style: CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -219,7 +224,12 @@ export function BookmarksBar({
         >
           <SortableContext items={ids} strategy={horizontalListSortingStrategy}>
             {nodes.map((n) => (
-              <SortableBarItem key={n.id} node={n} onActivate={onActivate} onContextMenu={onContextMenu} />
+              <SortableBarItem
+                key={n.id}
+                node={n}
+                onActivate={onActivate}
+                onContextMenu={onContextMenu}
+              />
             ))}
           </SortableContext>
           <DragOverlay>

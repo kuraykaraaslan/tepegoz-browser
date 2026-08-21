@@ -57,9 +57,11 @@ export class ScriptedProvider implements ModelProvider {
     const toolCalls = [...(turn.toolCalls ?? [])];
     // A turn that carries tool calls but no explicit stop reason IS a tool_use turn — scripting the
     // stop reason by hand every time would be a footgun the native arm silently fails on.
-    const stopReason: CanonStopReason = turn.stopReason ?? (toolCalls.length > 0 ? 'tool_use' : 'end');
+    const stopReason: CanonStopReason =
+      turn.stopReason ?? (toolCalls.length > 0 ? 'tool_use' : 'end');
     const inputTokens = req.messages.reduce((n, m) => n + contentLength(m.content), 0);
-    const outputTokens = text.length + toolCalls.reduce((n, c) => n + JSON.stringify(c.input).length, 0);
+    const outputTokens =
+      text.length + toolCalls.reduce((n, c) => n + JSON.stringify(c.input).length, 0);
     return Promise.resolve({ text, stopReason, usage: { inputTokens, outputTokens }, toolCalls });
   }
 }

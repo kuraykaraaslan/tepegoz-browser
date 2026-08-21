@@ -48,7 +48,9 @@ test('the puzzle button opens the Extensions panel, and pinning there adds a too
     const panel = await panelOpened;
 
     // Every enabled extension is listed, grouped by the page access its manifest declares.
-    await expect(panel.getByRole('heading', { name: 'Can read or change page content' })).toBeVisible();
+    await expect(
+      panel.getByRole('heading', { name: 'Can read or change page content' }),
+    ).toBeVisible();
     await expect(panel.getByRole('heading', { name: 'No page access needed' })).toBeVisible();
     const row = panel.getByRole('listitem').filter({ hasText: 'Adblock Shield' });
     await expect(row).toHaveCount(1);

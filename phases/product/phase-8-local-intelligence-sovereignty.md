@@ -1,6 +1,6 @@
 # Phase 8 — Local-First Intelligence & Sovereignty
 
-**Status:** ⬜ Not started  ·  **Estimate:** ~4–6 months  ·  **Depends on:** Phase 1b (local SLM,
+**Status:** ⬜ Not started · **Estimate:** ~4–6 months · **Depends on:** Phase 1b (local SLM,
 HybridRetriever, ModelRouter, Taint/Provenance) + Phase 7 (NotaryService, for attestations)
 **Goal:** Push the local SLM + ModelRouter + Egress/Taint seams into categories **no cloud-centric rival can
 touch**: a true zero-egress air-gapped mode, data-sensitivity-aware provider routing with cryptographic proof,
@@ -11,6 +11,7 @@ Phase 1b already builds**. Competitors' intelligence lives in the cloud; they li
 `feat/learned-model-router`, `feat/turkish-engine`, `feat/low-data-mode`
 
 ## Exit criteria (DoD)
+
 - [ ] **Sovereign / Air-Gapped Mode** is kernel-enforced (not a toggle): with it on, the Capability Broker
       blocks every cloud/BackendTransport egress and a signed **Egress Attestation** verifies "zero outbound
       model calls"
@@ -32,6 +33,7 @@ Phase 1b already builds**. Competitors' intelligence lives in the cloud; they li
 ## Tasks
 
 ### L7/L8 — Sovereign / Air-Gapped Mode
+
 - [ ] A sealed Policy-IR profile (one-way narrowing) that **hard-disables** every BackendTransport and cloud
       provider at the **Capability Broker** level — a kernel-enforced egress class, so even a prompt-injected
       agent cannot route to cloud (NOT a settings toggle)
@@ -42,6 +44,7 @@ Phase 1b already builds**. Competitors' intelligence lives in the cloud; they li
       calls"); pairs with NotaryService
 
 ### L7/L8 — Provider Trust Mesh (route by data-sensitivity, with proof)
+
 - [ ] Extend ModelRouter into a policy-driven mesh: each context chunk carries its taint/provenance + a
       **data-class** label; Policy-IR rules bind data-classes to allowed providers/regions
       (`taint=PII → local SLM only`, `taint=financial → EU-region endpoint only`, `public → any`)
@@ -49,10 +52,11 @@ Phase 1b already builds**. Competitors' intelligence lives in the cloud; they li
       Notary record which data-class went to which provider/region → provable "PII never left this device /
       left only to EU." Subsumes the per-call "KVKK Mode" data-residency enforcement
 - [ ] Region-pinned endpoints (EU Anthropic/Azure) as first-class routing targets
-- [ ] *Risk:* taint granularity must be accurate or guarantees are hollow → **fail closed** (unknown taint →
+- [ ] _Risk:_ taint granularity must be accurate or guarantees are hollow → **fail closed** (unknown taint →
       local SLM, the most conservative target); journal every routing decision (auditable, not silent)
 
 ### L1/L2 — Global on-device semantic history + Personal Knowledge Graph
+
 - [ ] **(a) Semantic history:** a profile-level FTS5 + sqlite-vec index over sanitized page main-content + tool
       outputs (reuse the exact RRF BM25+cosine ranker, bge-m3/e5 embeddings), wired into the deterministic
       omnibox as a **NON-AI** "search my history semantically" mode + exposed as a read tool
@@ -61,11 +65,12 @@ Phase 1b already builds**. Competitors' intelligence lives in the cloud; they li
       `cas://` blob), surfaced in the Memory Audit Panel with per-node **forget** tombstone
 - [ ] Auto-promote to hnswlib/LanceDB ANN above the measured 50–100k threshold (the Phase 1b switch point)
 - [ ] Optional deterministic **proactive recall** ("You researched this vendor on 12 March")
-- [ ] *Risk (ADR-0019):* PII honeypot → derived projection (deletable + rebuildable from events), default OFF
+- [ ] _Risk (ADR-0019):_ PII honeypot → derived projection (deletable + rebuildable from events), default OFF
       behind Memory-Audit opt-in, encrypted per-profile partition, never synced unless E2EE CloudSync is on,
       sensitive-site lockout excludes bank/health pages from indexing, honors "Forget this site" tombstones
 
 ### L7/L1/L2 — Quality/cost-aware learned ModelRouter + speculative two-tier
+
 - [ ] Replace the static cost-saver toggle with a **deterministic-by-record learned router**: a feature vector
       per task-node (capability, risk class, token estimate, page-stability, prior success on this site/intent
       cluster) feeds a small on-device contextual-bandit picking {local-SLM, Haiku, Sonnet, Opus} to maximize
@@ -75,18 +80,20 @@ Phase 1b already builds**. Competitors' intelligence lives in the cloud; they li
       cloud verifies in parallel; **only read/low-risk steps commit optimistically** (Policy-Kernel-enforced),
       state-changing always waits for the verified tier, divergence rolls back via the Effect Ledger before any
       side-effect
-- [ ] *Risk:* the learned component decides **quality/cost only, never security**; Policy Kernel stays
+- [ ] _Risk:_ the learned component decides **quality/cost only, never security**; Policy Kernel stays
       deterministic + pre-model; Console marks "draft → confirmed/corrected"
 
 ### L4/L7 — Turkish-first engine layer (below the UI)
+
 - [ ] Extend the Content Sanitizer with **Turkish i/İ/ı/I confusable + casing attack rules** and Turkish-aware
       Unicode normalization (a real homoglyph injection vector)
 - [ ] A deterministic morphology-aware **intent normalizer** (local lexicon + lemmatizer) that canonicalizes
       Turkish verb forms before the SLM classifier, improving the cost-saver local path
 - [ ] Turkish honorific/formality-aware output style (siz/sen, resmî/samimi) for agent-composed drafts/form-fills
-- [ ] *Risk:* keep deterministic (rule/lexicon based); SLM is fallback not primary, so it stays replayable
+- [ ] _Risk:_ keep deterministic (rule/lexicon based); SLM is fallback not primary, so it stays replayable
 
 ### L7/L4/L2 — Low-Data / Offline-Resilient "Düşük Veri" mode
+
 - [ ] A named profile that routes classify/summarize/redact/loop-detect entirely to the local SLM (cloud only
       for genuine planning ambiguity); strips images and uses **a11y-tree-only** perception (no vision) to slash
       tokens/bandwidth; checkpoints aggressively so a dropped connection resumes from the L2 checkpoint
@@ -96,5 +103,6 @@ Phase 1b already builds**. Competitors' intelligence lives in the cloud; they li
       coverage (no silent quality regression)
 
 ### Cross-cutting (as in every phase)
+
 - [ ] i18n en+tr for all new surfaces; zod `safeParse` at every IPC/routing/index trust boundary; AppError
       contract; renderer-untrusted security; determinism-first; DoD coverage gate; **NO AI attribution trailer**

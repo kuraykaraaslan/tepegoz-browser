@@ -15,7 +15,11 @@ export interface EscapeStep {
 /** Tools whose `targetUrl` leaving the site counts as an escape: same-tab navigation, off-page fetch, and
  *  opening a NEW TAB at a URL (bailing off the on-page route by spawning a tab is just as much an escape).
  *  A urlless new tab (about:blank) has no `targetUrl`, so the guard below correctly ignores it. */
-const NAV_TOOLS: ReadonlySet<string> = new Set(['browser_update_location', 'web_get_page', 'tab_create_item']);
+const NAV_TOOLS: ReadonlySet<string> = new Set([
+  'browser_update_location',
+  'web_get_page',
+  'tab_create_item',
+]);
 
 /**
  * Did this run escape the on-page route? True if it called `web_search_items`, or navigated/fetched to a

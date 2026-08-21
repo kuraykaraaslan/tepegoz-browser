@@ -8,6 +8,7 @@ callbacks and the menu itself is a host-supplied `ReactNode` (button + its dropd
 package stays bridge-agnostic and owns no strings of its own.
 
 ## Exports
+
 - **`NavToolbar`** — the toolbar row; composes `Omnibox` and renders the nav buttons, the optional
   bookmark star (hidden unless `onToggleBookmark` is supplied), the `actions` slot, and `menu`.
 - **`NAV_BTN`** — the shared Tailwind class string for a 32px toolbar icon button, exported so hosts
@@ -17,6 +18,7 @@ package stays bridge-agnostic and owns no strings of its own.
 - **`NavToolbarProps`** — the full injected-props contract.
 
 ## Usage
+
 ```tsx
 <NavToolbar
   canGoBack={canGoBack}
@@ -35,4 +37,5 @@ package stays bridge-agnostic and owns no strings of its own.
 ```
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

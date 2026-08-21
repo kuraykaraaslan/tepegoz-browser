@@ -14,6 +14,21 @@ each piece. Read `phases/README.md` first.
 This project **must** comply with `//wsl.localhost/Ubuntu/home/kuray/internal-ai-rules`. Cross-cutting
 gates are summarized in `phases/README.md`; ADR-0010 records deviations.
 
+## Session close-out (standing rule)
+
+**Every working session that touches a phase MUST end with the Phase Status Report** — what closed, and
+how much is left. Format and the rules that keep it honest: [`phases/README.md`](phases/README.md#session-close-out--the-phase-status-report-standing-rule).
+
+The short version: landed code is **not** a closed phase (✅ needs DoD passed _and_ the delta in the
+results ledger); "how many left" counts against ✅, never against "started"; a session that closed
+nothing prints **"hiçbiri"**; and blockers are named by **kind** (API spend ≠ downloaded weights ≠ rival
+subscriptions).
+
+> This lives in `CLAUDE.md` rather than only in agent memory on purpose: memory is keyed per machine and
+> per absolute path, so the same repo opened from WSL, another checkout, or another machine is a
+> different key and would silently lose the rule. `CLAUDE.md` travels with the code, so the rule applies
+> from Windows, WSL, and CI alike.
+
 ## Git (non-negotiable)
 
 - **Branch-based:** `<type>/<short-scope>` → self-review PR → `main`. Only trivial+reversible changes
@@ -40,14 +55,23 @@ pnpm install                       # frozen in CI
 pnpm dev                           # launch the Electron GUI (clears ELECTRON_RUN_AS_NODE)
 pnpm exec turbo run typecheck lint test build
 pnpm e2e                           # Playwright _electron smoke
-pnpm test:electron                 # native-dependent (better-sqlite3) tests under Electron's Node
 ```
 
-> **`better-sqlite3` ABI note.** One `.node` file matches one ABI. A fresh `pnpm install` fetches the
-> **Node** prebuild (ABI 127 for Node 22) — so CI and `pnpm test` pass. Running the GUI needs the
-> **Electron** ABI (`pnpm --filter @tepegoz/desktop rebuild`); after that, `pnpm test` can't load the
-> addon under Node. Don't flip the binary back and forth — run the persistence tests with
-> **`pnpm test:electron`** (Electron-as-Node, same 130 binary as the app). CI is unaffected.
+> **No native database.** The DB is Node's built-in `node:sqlite` (`packages/persistence/src/db.ts`
+> presents the small better-sqlite3-shaped surface the stores speak). Nothing to rebuild, no ABI to
+> match, no compiler required — `pnpm test` and `pnpm e2e` run the same SQLite the app ships.
+>
+> This replaced `better-sqlite3`, which publishes **no Electron prebuilds at any version**, so its
+> Electron-ABI build always compiled from source. That one fact had grown a `rebuild` script, a
+> `test:electron` runner, `electron-rebuild` steps in three workflows, and a skip-guard that let 63
+> tests sit out any run on a machine configured for the other ABI. All of it is gone.
+>
+> Caveat worth knowing: `node:sqlite` is still marked experimental upstream, which is why the Node floor
+> is **>= 24** (what Electron 43 embeds — the app and the tests run the same runtime). If it ever needs
+> reversing, `db.ts` is the only file that talks to it.
+>
+> `node-llama-cpp` is still native, but its prebuilds are N-API and therefore ABI-independent;
+> `npmRebuild` stays on in electron-builder for it.
 
 ## Layout
 

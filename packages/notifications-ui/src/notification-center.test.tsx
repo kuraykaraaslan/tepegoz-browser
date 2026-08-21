@@ -28,9 +28,7 @@ function renderCenter(over: Partial<NotificationCenterProps> = {}) {
     onMarkAllRead: vi.fn(),
     onAction: vi.fn(),
   };
-  const { container } = render(
-    <NotificationCenter items={[notif()]} {...handlers} {...over} />,
-  );
+  const { container } = render(<NotificationCenter items={[notif()]} {...handlers} {...over} />);
   return { container, ...handlers };
 }
 
@@ -139,10 +137,16 @@ describe('NotificationCenter', () => {
 
   it('moves row focus with Arrow / Home / End keys (autoFocus starts on the first row)', () => {
     const { container } = renderCenter({
-      items: [notif({ id: 'a', title: 'A' }), notif({ id: 'b', title: 'B' }), notif({ id: 'c', title: 'C' })],
+      items: [
+        notif({ id: 'a', title: 'A' }),
+        notif({ id: 'b', title: 'B' }),
+        notif({ id: 'c', title: 'C' }),
+      ],
       autoFocus: true,
     });
-    const rows = Array.from(container.querySelectorAll<HTMLButtonElement>('button[data-notif-row]'));
+    const rows = Array.from(
+      container.querySelectorAll<HTMLButtonElement>('button[data-notif-row]'),
+    );
     expect(rows).toHaveLength(3);
     const list = screen.getByRole('list', { name: 'Notifications' });
     expect(document.activeElement).toBe(rows[0]);

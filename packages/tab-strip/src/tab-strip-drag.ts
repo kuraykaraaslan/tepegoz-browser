@@ -102,7 +102,12 @@ export function useTabStripDrag({
       slots.push({ id, left: r.left, width: r.width });
     });
     onReportGeometry({
-      strip: { x: stripRect.left, y: stripRect.top, width: stripRect.width, height: stripRect.height },
+      strip: {
+        x: stripRect.left,
+        y: stripRect.top,
+        width: stripRect.width,
+        height: stripRect.height,
+      },
       slots,
     });
   }, [onReportGeometry]);
@@ -181,7 +186,8 @@ export function useTabStripDrag({
     if (id.startsWith(GROUP_PREFIX)) {
       const gid = id.slice(GROUP_PREFIX.length);
       const g = groupById.get(gid);
-      const name = g !== undefined && g.name.trim().length > 0 ? g.name : (labels.unnamedGroup ?? 'Group');
+      const name =
+        g !== undefined && g.name.trim().length > 0 ? g.name : (labels.unnamedGroup ?? 'Group');
       dragBeginRef.current = {
         payload: {
           item: { kind: 'group', id: gid },

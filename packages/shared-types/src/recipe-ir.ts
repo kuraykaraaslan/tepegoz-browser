@@ -27,13 +27,7 @@ export const RecipeValueSchema: z.ZodType<RecipeValue> = z.lazy(() =>
     z.array(RecipeValueSchema).max(200),
   ]),
 );
-export type RecipeValue =
-  | string
-  | number
-  | boolean
-  | null
-  | { variable: string }
-  | RecipeValue[];
+export type RecipeValue = string | number | boolean | null | { variable: string } | RecipeValue[];
 
 export function isVariableRef(v: RecipeValue): v is { variable: string } {
   return typeof v === 'object' && v !== null && !Array.isArray(v) && 'variable' in v;

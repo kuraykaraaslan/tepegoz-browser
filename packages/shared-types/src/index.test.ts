@@ -90,7 +90,9 @@ describe('eval scenario contract (AI-1)', () => {
     expect(
       EvalScenarioSchema.safeParse({ ...base, target: { realUrl: 'https://example.com' } }).success,
     ).toBe(true);
-    expect(EvalScenarioSchema.safeParse({ ...base, target: { realUrl: 'not-a-url' } }).success).toBe(false);
+    expect(
+      EvalScenarioSchema.safeParse({ ...base, target: { realUrl: 'not-a-url' } }).success,
+    ).toBe(false);
   });
 
   it('requires a non-empty id and task (untrusted registry input)', () => {
@@ -119,9 +121,13 @@ describe('agent working state contract (C1)', () => {
   });
 
   it('rejects a mistyped section (untrusted model output — a bare string is not a list)', () => {
-    expect(AgentWorkingStateSchema.safeParse({ selectedRecords: 'not-an-array' }).success).toBe(false);
+    expect(AgentWorkingStateSchema.safeParse({ selectedRecords: 'not-an-array' }).success).toBe(
+      false,
+    );
     // A filled field must name the field.
-    expect(AgentWorkingStateSchema.safeParse({ filledFields: [{ value: 'x' }] }).success).toBe(false);
+    expect(AgentWorkingStateSchema.safeParse({ filledFields: [{ value: 'x' }] }).success).toBe(
+      false,
+    );
   });
 
   it('bounds section sizes so the injected ledger stays small', () => {

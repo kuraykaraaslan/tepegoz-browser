@@ -78,10 +78,7 @@ export interface ElementsDiffMemory {
  * is actionable when a ref still means what it meant three steps ago, and a hole in the model's view when
  * it does not. That is why one flag gates both.
  */
-function renderListing(
-  elements: InteractableElement[],
-  previous: SnapshotDigest | null,
-): string {
+function renderListing(elements: InteractableElement[], previous: SnapshotDigest | null): string {
   if (!isPerceptionV2Enabled()) return renderElementsText(elements);
   if (elements.length === 0) return '(no interactable elements found)';
   const diff = diffElements(elements, previous);

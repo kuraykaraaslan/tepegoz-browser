@@ -46,7 +46,11 @@ export interface EquivalenceEvidence {
 
 export type OwnershipVerdict =
   | { owns: true; reason: 'equivalent'; deltaPp: number }
-  | { owns: false; reason: 'unmeasured' | 'too_few_trials' | 'quality_loss'; deltaPp: number | null };
+  | {
+      owns: false;
+      reason: 'unmeasured' | 'too_few_trials' | 'quality_loss';
+      deltaPp: number | null;
+    };
 
 /**
  * May local own this capability?

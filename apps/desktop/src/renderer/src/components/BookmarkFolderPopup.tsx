@@ -3,7 +3,12 @@ import { pick, resolveLocale, type Locale } from '@tepegoz/i18n';
 import { I18nProvider } from '@tepegoz/i18n/react';
 import { bookmarksUiDict } from '@tepegoz/bookmarks-ui/i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBookmark, faChevronDown, faChevronRight, faFolder } from '@fortawesome/free-solid-svg-icons';
+import {
+  faBookmark,
+  faChevronDown,
+  faChevronRight,
+  faFolder,
+} from '@fortawesome/free-solid-svg-icons';
 import type { BookmarkMenuAction, BookmarkTreeNode } from '@tepegoz/desktop-ipc';
 import { BOOKMARK_ROOT_BAR } from '@tepegoz/bookmarks';
 import { applyTheme } from '../lib/theme';
@@ -33,9 +38,23 @@ function findNode(nodes: readonly BookmarkTreeNode[], id: string): BookmarkTreeN
 function Favicon({ src }: { src: string | null | undefined }) {
   const [failed, setFailed] = useState(false);
   if (src === null || src === undefined || src.length === 0 || failed) {
-    return <FontAwesomeIcon icon={faBookmark} className="h-4 w-4 shrink-0 text-text-secondary" aria-hidden />;
+    return (
+      <FontAwesomeIcon
+        icon={faBookmark}
+        className="h-4 w-4 shrink-0 text-text-secondary"
+        aria-hidden
+      />
+    );
   }
-  return <img src={src} alt="" aria-hidden className="h-4 w-4 shrink-0 rounded-sm object-contain" onError={() => setFailed(true)} />;
+  return (
+    <img
+      src={src}
+      alt=""
+      aria-hidden
+      className="h-4 w-4 shrink-0 rounded-sm object-contain"
+      onError={() => setFailed(true)}
+    />
+  );
 }
 
 const ROW =
@@ -88,7 +107,11 @@ function FolderBranch({ node, depth }: { node: BookmarkTreeNode; depth: number }
           openItemMenu(node.id, 'folder');
         }}
       >
-        <FontAwesomeIcon icon={open ? faChevronDown : faChevronRight} className="h-2.5 w-2.5 shrink-0 opacity-70" aria-hidden />
+        <FontAwesomeIcon
+          icon={open ? faChevronDown : faChevronRight}
+          className="h-2.5 w-2.5 shrink-0 opacity-70"
+          aria-hidden
+        />
         <FontAwesomeIcon icon={faFolder} className="h-4 w-4 shrink-0" aria-hidden />
         <span className="min-w-0 flex-1 truncate">{node.title.length > 0 ? node.title : '—'}</span>
       </button>
@@ -134,7 +157,8 @@ export function BookmarkFolderPopup({ folderId }: { folderId: string }) {
   useEffect(() => {
     const el = contentRef.current;
     if (el === null) return;
-    const report = (): void => window.tepegoz.resizePopup(Math.ceil(el.getBoundingClientRect().height));
+    const report = (): void =>
+      window.tepegoz.resizePopup(Math.ceil(el.getBoundingClientRect().height));
     report();
     const observer = new ResizeObserver(report);
     observer.observe(el);
@@ -148,7 +172,11 @@ export function BookmarkFolderPopup({ folderId }: { folderId: string }) {
         const prefs = await window.tepegoz.getPreferences();
         if (cancelled) return;
         applyTheme(prefs.theme, prefs.themeColor);
-        setLocale(prefs.locale === 'en' || prefs.locale === 'tr' ? prefs.locale : resolveLocale(navigator.language));
+        setLocale(
+          prefs.locale === 'en' || prefs.locale === 'tr'
+            ? prefs.locale
+            : resolveLocale(navigator.language),
+        );
       } catch {
         /* bridge unavailable */
       }

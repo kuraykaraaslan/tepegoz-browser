@@ -45,5 +45,10 @@ export {
   type RecoveryAdvice,
 } from './recovery';
 export * from './acceptance-eval';
+export { stableIndexBefore } from './cache-window';
 export { assembleEvidence, classifyClaim, describeEvidence } from './completion-evidence';
-export { evaluateVisionTrigger, CANVAS_DOMINANCE, REPEAT_FAILURE_THRESHOLD } from './vision-trigger';
+export {
+  evaluateVisionTrigger,
+  CANVAS_DOMINANCE,
+  REPEAT_FAILURE_THRESHOLD,
+} from './vision-trigger';

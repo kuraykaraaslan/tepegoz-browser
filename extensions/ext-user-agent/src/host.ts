@@ -44,8 +44,7 @@ export function createUserAgentHost(ports: UserAgentPorts): UserAgentHost {
   let current: string | null = null;
 
   /** The concrete UA to send on the wire: the selection, or the captured default when null/disabled. */
-  const effective = (): string =>
-    (ports.isEnabled() ? current : null) ?? ports.defaultUserAgent();
+  const effective = (): string => (ports.isEnabled() ? current : null) ?? ports.defaultUserAgent();
 
   return {
     init(): void {

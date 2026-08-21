@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, type MutableRefObject } from 'react';
-import { buildOmniboxSuggestions, parseOmniboxQuery, type OmniboxSuggestion } from '@tepegoz/omnibox';
+import {
+  buildOmniboxSuggestions,
+  parseOmniboxQuery,
+  type OmniboxSuggestion,
+} from '@tepegoz/omnibox';
 import type { TabsState } from '@tepegoz/desktop-ipc';
 
 export interface OmniboxSuggestLabels {

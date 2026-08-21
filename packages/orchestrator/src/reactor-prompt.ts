@@ -29,12 +29,12 @@ const BROWSING_STRATEGY =
   // AI-7 navigation grounding: prefer a route you can SEE or VERIFY; never fabricate a URL. The escape
   // vectors (guessing a path, bailing to web_search) are gated behind exhausting the on-page route.
   '\nWhen you cannot find a target section or link on the page, do NOT give up after reading only the ' +
-  'landing page, and do NOT invent a URL. First REVEAL hidden navigation: a site\'s links are often behind ' +
+  "landing page, and do NOT invent a URL. First REVEAL hidden navigation: a site's links are often behind " +
   'a menu / hamburger / drawer or an overflow ("☰", "Menu", "More") toggle, or below the fold — click that ' +
   'toggle with browser_update_page (or scroll), then re-read browser_get_elements, because a collapsed ' +
-  'menu\'s links are NOT listed until it is opened. Prefer a route you can SEE or VERIFY: a link in ' +
+  "menu's links are NOT listed until it is opened. Prefer a route you can SEE or VERIFY: a link in " +
   'browser_get_elements (a "Navigation hint" observation points you to the best match) — navigate to its ' +
-  'href with browser_update_location. Use a conventional path (e.g. /blog) ONLY when a link or the site\'s ' +
+  "href with browser_update_location. Use a conventional path (e.g. /blog) ONLY when a link or the site's " +
   'sitemap actually shows it — never by blindly appending a guess to the origin (a fabricated path that ' +
   '404s wastes steps). If the destination is genuinely OFF this site or its URL is unknown, use ' +
   'web_search_items to find it instead of typing a guessed URL. Leaving the page (web_search or off-site ' +
@@ -62,9 +62,15 @@ const BROWSING_STRATEGY =
  * sees today, or the encoding sweep would be measuring two changes at once.
  */
 export function systemPrompt(req: ReactRequest, quick = false): string {
-  const toolList = req.tools.map((t) => `- ${t.id} (${t.dangerClass}): ${t.description}`).join('\n');
-  const outline = req.outline && req.outline.length > 0 ? `\nSuggested approach:\n${req.outline.join('\n')}` : '';
-  const avoid = req.avoid && req.avoid.length > 0 ? `\nDo NOT do (the user removed these): ${req.avoid.join('; ')}` : '';
+  const toolList = req.tools
+    .map((t) => `- ${t.id} (${t.dangerClass}): ${t.description}`)
+    .join('\n');
+  const outline =
+    req.outline && req.outline.length > 0 ? `\nSuggested approach:\n${req.outline.join('\n')}` : '';
+  const avoid =
+    req.avoid && req.avoid.length > 0
+      ? `\nDo NOT do (the user removed these): ${req.avoid.join('; ')}`
+      : '';
   const coref = req.history && req.history.length > 0 ? COREFERENCE_INSTRUCTION : '';
   return (
     `${SECURITY_PREAMBLE}\n\n` +
@@ -86,8 +92,10 @@ export function systemPrompt(req: ReactRequest, quick = false): string {
     coref +
     outline +
     avoid +
-    (quick ? `
+    (quick
+      ? `
 
-${QUICK_MODE_INSTRUCTION}` : '')
+${QUICK_MODE_INSTRUCTION}`
+      : '')
   );
 }

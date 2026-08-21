@@ -18,4 +18,5 @@ preference); this package just renders when asked.
 ```
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

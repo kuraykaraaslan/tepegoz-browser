@@ -11,6 +11,7 @@ dictionary (`useT(passwordUiDict)`) and does not depend on `@tepegoz/ui` — its
 local Tailwind token classes that mirror the shared atoms rather than importing them.
 
 ## Exports
+
 - **`CredentialsSettings`** — the saved-credentials list + add/edit form + delete, for the settings
   page.
 - **`ImportExportPanel`** — CSV import (drag-drop or file picker) and Google-CSV export.
@@ -20,6 +21,7 @@ local Tailwind token classes that mirror the shared atoms rather than importing 
 - **`passwordUiDict`** — the package's own i18n dictionary.
 
 ## Usage
+
 ```tsx
 <CredentialsSettings
   credentials={credentials}
@@ -41,4 +43,5 @@ local Tailwind token classes that mirror the shared atoms rather than importing 
 ```
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

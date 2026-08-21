@@ -137,7 +137,11 @@ export function registerAgentRunIpc(): void {
     // channel. What remains genuinely shared is a *preference* (the model override, which is meant to
     // apply everywhere) and the user-control yield (where stopping every run is the point).
     if (agentRunByGroup.get(groupId) === true) {
-      throw new AppError('An agent task is already running for this group', 409);
+      throw new AppError(
+        'An agent task is already running for this group',
+        409,
+        'agentRunInProgress',
+      );
     }
     agentRunByGroup.set(groupId, true);
     // S8: the run is visible outside the panel from the moment it starts — see the finally block, which

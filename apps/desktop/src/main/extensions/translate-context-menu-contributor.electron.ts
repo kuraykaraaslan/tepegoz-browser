@@ -6,7 +6,7 @@ import type {
   PageContextMenuContributor,
 } from '../menus/page-context-menu-contributions';
 import translateHost from './translate-host.electron';
-import TranslatePageInjector from './translate-page-injector.electron';
+import TranslatePageInjector from './translate-page-injector-controller.electron';
 
 function labels(): {
   title: string;

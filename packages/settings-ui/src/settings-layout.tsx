@@ -37,7 +37,12 @@ export interface SettingsLayoutProps {
  * title reuses the shared-core `common.settings`. Section content is host-supplied. Extracted from
  * `apps/desktop` per docs/package-map.md.
  */
-export function SettingsLayout({ titleIcon, sections, initialSectionId, banner }: SettingsLayoutProps) {
+export function SettingsLayout({
+  titleIcon,
+  sections,
+  initialSectionId,
+  banner,
+}: SettingsLayoutProps) {
   const t = useT(settingsDict);
   const title = useT(coreDict).common.settings;
   const firstSectionId = sections[0]?.id ?? '';

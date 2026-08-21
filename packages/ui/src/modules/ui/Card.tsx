@@ -30,7 +30,7 @@ export function Card({
   ...rest
 }: CardProps) {
   const isInteractive = !!onClick;
-  const isHoverable   = hoverable || isInteractive;
+  const isHoverable = hoverable || isInteractive;
 
   // `as` overrides the auto-detected tag; fallback: button when interactive, div otherwise
   const Tag = as ?? (isInteractive ? 'button' : 'div');
@@ -42,13 +42,14 @@ export function Card({
       onClick={onClick}
       className={cn(
         'rounded-xl border border-border overflow-hidden text-left',
-        variant === 'raised'  && 'bg-surface-raised shadow-sm',
-        variant === 'flat'    && 'bg-surface-base',
+        variant === 'raised' && 'bg-surface-raised shadow-sm',
+        variant === 'flat' && 'bg-surface-base',
         variant === 'outline' && 'bg-transparent',
         isHoverable && 'transition-shadow hover:shadow-md hover:border-border-focus cursor-pointer',
-        isInteractive && 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus w-full',
+        isInteractive &&
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus w-full',
         loading && 'pointer-events-none',
-        className
+        className,
       )}
       {...rest}
     >
@@ -72,9 +73,7 @@ export function Card({
           )}
           {children && <div className="px-6 py-4">{children}</div>}
           {footer && (
-            <div className="px-6 py-3 border-t border-border bg-surface-base">
-              {footer}
-            </div>
+            <div className="px-6 py-3 border-t border-border bg-surface-base">{footer}</div>
           )}
         </>
       )}

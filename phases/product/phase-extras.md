@@ -1,6 +1,6 @@
 # Phase E — Extras (special-track, demand-gated)
 
-**Status:** ⬜ Not started  ·  **Estimate:** n/a (each item is its own track)  ·  **Depends on:** demand, not a phase
+**Status:** ⬜ Not started · **Estimate:** n/a (each item is its own track) · **Depends on:** demand, not a phase
 
 **Goal:** Home for capabilities that are **sound but cannot be done in routine feature development** — they
 need a separate build/signing track, a third-party license, or upstream infrastructure we don't control, and
@@ -14,6 +14,7 @@ late) keeps the cost and the decision explicit.
 ## Items
 
 ### DRM / protected media (Widevine / EME)
+
 - [ ] **Decision-gated, not started.** Standard Electron ships **no Widevine**, so Netflix/Spotify-class
       protected media will not play. Enabling it is **not a routine feature PR**:
   - Requires **castLabs' ECS (Electron for Content Security) build** in place of vanilla Electron, plus a

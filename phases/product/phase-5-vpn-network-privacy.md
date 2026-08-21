@@ -44,6 +44,7 @@ endpoint** (one loopback port per active connection), never an OS-level system p
   a flash of clear-path traffic mid-switch.
 
 ## Exit criteria (DoD)
+
 - [x] **Binding selectable at all three scopes — General, Group, Tab**; **multiple connections active concurrently**; **default = Direct** (pure local-first preserved — no tunnel unless opted in)
       _(General from Settings → Network privacy; Group and Tab from their native right-click menus. The pool holds several connections at once, each with its own partition and SOCKS port; measured with one live endpoint end-to-end, **not yet with two simultaneously**.)_
 - [x] **Binding inheritance works:** a tab inherits its group's connection, a group inherits General; `tab override → group → General default → Direct` resolves correctly on group move/add/remove and on changing the General default
@@ -55,7 +56,7 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 - [x] **DNS-leak prevention:** tunnel DNS only inside a tunneled tab's partition; verified by leak test (no plaintext resolver for any tunnel-bound tab)
       _(**measured**: the SOCKS server receives `DOMAINNAME`, so the hostname is resolved by the proxy and never locally, and `assertFailClosed` rejects SOCKS4 — the variant with no hostname form. Chromium's pre-resolution does NOT go through the proxy, so tunnel partitions are stamped with `X-DNS-Prefetch-Control: off`. **Residual, stated not closed:** that header covers page-declared prefetch hints; the predictor and DoH are process-wide, not per-session — see the L8 row below.)_
 - [~] **No cross-tab bleed:** a tab bound to connection A never egresses via B or Direct; distinct connections stay isolated (distinct partitions/ports; Tor streams isolated per connection)
-      _(storage isolation is landed and tested — distinct partitions, and an id that could collide **throws** instead of being sanitized into a shared jar — and a bound tab is measured reaching only its own SOCKS endpoint. **Owed:** the A-vs-B case with two live endpoints at once, and Tor stream isolation, which needs Tor.)_
+  _(storage isolation is landed and tested — distinct partitions, and an id that could collide **throws** instead of being sanitized into a shared jar — and a bound tab is measured reaching only its own SOCKS endpoint. **Owed:** the A-vs-B case with two live endpoints at once, and Tor stream isolation, which needs Tor.)_
 - [x] **Nothing else reaches the network on a tunneled page's behalf.** A swept-for, not assumed, list: popups, tab-strip favicons, page-opened tabs, new tabs, and the app's own HTTP
       _(popups and page-opened tabs are created on the **opener's session**; a new tab is born on the profile-wide default route, not Direct; favicons are fetched in main on the page's own session and inlined ([tabs-favicon.electron.ts](../../apps/desktop/src/main/tabs-favicon.electron.ts), measured by [spike-favicon-inline.spec.ts](../../e2e/spike-favicon-inline.spec.ts)); app-issued HTTP follows the General binding fail-closed. Two of these were live leaks.)_
 - [x] **Per-session parity — every browsing partition is wired like the base one.** Ad/tracker filtering (DNR), download quarantine, the User-Agent override and "forget this site" reach a tunnel partition, not just `persist:tepegoz-web`
@@ -78,7 +79,7 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 > misconfigure and no source address to mis-bind. Each connection is one more process on one more loopback
 > port, which is what makes "a different tunnel per tab group" cost nothing structural.
 >
-> **"VPN *and* Tor on one group"** is a chain: Tor with the VPN's SOCKS as its upstream, exposing its own
+> **"VPN _and_ Tor on one group"** is a chain: Tor with the VPN's SOCKS as its upstream, exposing its own
 > port. Either leg dying cuts the group, and the group's shield shows both halves.
 >
 > **Measured end to end in the shipping app**
@@ -107,6 +108,7 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 ## Tasks
 
 ### L0 — Core Shell (connection pool + per-tab routing seam)
+
 - [x] **Connection pool** in the **main process only**: several tunnels **up concurrently**, each with its own local SOCKS5 loopback port; up / down / health-poll per connection; renderer never touches tunnel handles (typed `contextBridge` status only)
       _([connection-pool.electron.ts](../../apps/desktop/src/main/network/connection-pool.electron.ts), 14 tests. Two properties worth naming: `connecting` is never reported as usable to the kill-switch, and "up" means the endpoint answered AND Chromium confirmed the proxy took effect — not "the provider said yes". `rotate` is not implemented: it is a Tor-circuit operation and Tor is not here yet._
 - [x] **Per-session subsystem registry** — every browsing session is created through one place and carries the same wiring (webRequest/DNR, download quarantine, User-Agent), with **critical** attachers whose failure refuses the partition instead of serving it unfiltered ([browsing-sessions.electron.ts](../../apps/desktop/src/main/network/browsing-sessions.electron.ts), 12 tests). _Not in the original plan; the prerequisite everything below assumed._
@@ -116,11 +118,13 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 - [x] `proxyBypassRules` for loopback so IPC + localhost dev are never tunneled; **deny-by-default** for everything else on any tunnel-bound partition ([egress-proxy.ts](../../packages/security-policy/src/egress-proxy.ts), 16 tests). _Deliberately narrower than the line asked for: loopback literals only, **not** Chromium's `<local>` — a dotless-hostname bypass would send `http://intranet/` out the clear path and hand a LAN host the user's real address._
 
 ### L6/L7 — NetworkPrivacyProvider adapter (BYO 3rd-party, 5a)
+
 > **Nothing is bundled, so nothing here is gated on code-signing.** The userspace providers run helper
 > binaries the user supplies (`wireproxy`, `tor`) — located, not installed: override → `userData/bin` →
 > PATH, with the drop-in directory shown when one is missing. Shipping a third-party executable inside a
-> signed installer would be a distribution problem *and* would push a download on everyone who never turns
+> signed installer would be a distribution problem _and_ would push a download on everyone who never turns
 > the feature on. Only a future bundling decision would need Phase 0's code-signing item.
+
 - [x] `NetworkPrivacyProvider` interface (`connect`/`disconnect`/`probe`, exposes a local SOCKS port) — one **instance per active connection** ([connection-provider.electron.ts](../../apps/desktop/src/main/network/connection-provider.electron.ts)). _Capability-Plane registration is NOT done: a provider here is main-process-internal and reachable by no extension, so routing it through the plane would add an audit path with nothing on either end of it._
 - [x] **`WireGuardProvider` — userspace, via `wireproxy`** ([wireguard-provider.electron.ts](../../apps/desktop/src/main/network/wireguard-provider.electron.ts)). No TUN adapter, no route changes, **no elevation**, unlimited concurrency — and it **cannot leak by construction**, because the process owns its own network stack and can only emit through the tunnel. `.conf` import is zod-shaped and parsed by a pure, tested module ([wireguard-config.ts](../../apps/desktop/src/main/network/wireguard-config.ts), 16 tests), which **REFUSES a profile with no `DNS` line**: wireproxy would fall back to the host resolver, sending every site name to the ISP in the clear while the traffic went through the tunnel.
 - [x] **Private keys never sit in plaintext at rest** ([vpn-secrets.electron.ts](../../apps/desktop/src/main/network/vpn-secrets.electron.ts)) — encrypted through `safeStorage`, and import is **refused outright** when the OS keychain is unavailable rather than degrading. _Honest gap: wireproxy takes a config path, not stdin, so the rendered config exists as a `0600` file from spawn until the listener answers, then is deleted._
@@ -130,12 +134,14 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 - [ ] `ExecutionRouter`-style selection: deterministic provider/region pick when a tab requests a **new** connection; decision + reason → Event Journal
 
 ### Tor integration (5a)
+
 - [x] `TorProvider`: a managed `tor` process exposing a local SOCKS port; same connection-pool + per-tab binding seam as VPN; a Tor connection is just another entry in the pool ([tor-provider.electron.ts](../../apps/desktop/src/main/network/tor-provider.electron.ts))
 - [x] **Isolated circuits per connection** — one `tor` process per connection, each with its own `DataDirectory`, so two Tor connections take different paths by construction rather than by configuration. _New-circuit / rotation controls are not surfaced; `.onion` works because it is just a hostname the Tor SOCKS endpoint resolves._
 - [x] **Chained routes — "this group is on the VPN AND on Tor".** A group resolves to exactly one route, so the combination is Tor with the VPN's loopback SOCKS as its `Socks5Proxy`, exposing its own port for the group. The kill-switch composes for free: the upstream dropping kills Tor's outbound and cuts the group, with nothing coordinating the two. The upstream is resolved **lazily at connect time** (a restarted tunnel lands on a new port), and a cycle guard refuses a chain that loops back on itself.
 - [ ] **Exit-node = untrusted** assumption documented (ADR-0011 + threat model); force HTTPS-only / warn on cleartext over a Tor exit
 
 ### L8 — Security Kernel (egress + kill-switch)
+
 - [x] Extend the **Egress Firewall**: **fail-closed kill-switch scoped per connection** — a connection dropping ⇒ **all tabs resolving to it** (direct override or group inheritance) have egress blocked (no fallback to the clear path); other connections' tabs unaffected
       _(mechanism + reporting both landed and **measured end-to-end**: no `DIRECT` fallback in the rules, the pool's health poll flips a dropped connection within seconds, and the affected tab is reported `egressAllowed: false`. Owed: the per-connection scoping demonstrated across two live connections at once.)_
 - [x] **No `DIRECT` fallback, ever** — the one-token property the whole kill-switch rests on, asserted at the only `setProxy` call site rather than trusted to review
@@ -151,6 +157,7 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 - [ ] Account for the **encrypted-tunnel blind spot**: anomaly scoring shifts to metadata/timing/volume (payload is opaque inside the tunnel) — documented, not silently weakened
 
 ### L9 — Browser UI
+
 - [x] **Selection at all three scopes**: **General** — Settings → Network privacy; **Group** — group context menu → "Route this group through…"; **Tab** — tab context menu → "Route this tab through…"
 - [x] **Route picker** listing live connections with status **in words** (not colour alone), a **Direct** option, an **"Inherit"** option (Tab → group, Group → General), the reload-on-switch notice, and a link to manage connections; all copy via the per-package dictionaries (en+tr)
       _(**deviation:** a NATIVE submenu rather than a React Modal — the surrounding menus are already OS menus built in main against authoritative state, so the list cannot be stale when clicked. The "which tabs/groups use each" column and a member-count confirm are not built; the reload notice is stated inline instead.)_
@@ -161,11 +168,13 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 - [ ] A legal/perf disclosure pass once a bundled provider exists
 
 ### L10 — Safe-Browsing interplay
+
 - [x] Keep per-partition DNR (`@ghostery/adblocker-electron`) working **inside** every tunnel-bound partition; **no regression** to "NO system-proxy MITM"
       _(the multiplexer attaches per session instead of once per process — its one-shot `initialized` flag meant the first session got the whole filtering plane and every later one got nothing, silently. Registered as a **critical** attacher, so a session it cannot attach to is refused rather than served unfiltered.)_
 - [x] Document filter-vs-tunnel ordering: the per-session webRequest pipeline (DNR/adblock/Shield) runs **before** anything reaches the connection's SOCKS endpoint, on every partition alike — the multiplexer is attached per session, so a tunnel-bound request is filtered by exactly the same handlers, in the same order, as a Direct one
 
 ### 5b — Managed own-infra (optional; rides the Phase 3 backend)
-- [ ] *Tepegöz-managed exit nodes* behind the **Phase 3 Zero-Trust gateway** + billing/quota/rate-limit + abuse protection — each managed exit is just another poolable connection a tab can bind to — *clearly tagged 5b; deferred behind adoption data*
+
+- [ ] _Tepegöz-managed exit nodes_ behind the **Phase 3 Zero-Trust gateway** + billing/quota/rate-limit + abuse protection — each managed exit is just another poolable connection a tab can bind to — _clearly tagged 5b; deferred behind adoption data_
 - [ ] **License/legal review** (the original Phase 4 caveat: abuse liability, lawful-use ToS, jurisdiction) recorded in **ADR-0011**
 - [ ] Managed-exit selection plugs into the **same** `NetworkPrivacyProvider` + connection-pool seam (no rewrite of 5a)

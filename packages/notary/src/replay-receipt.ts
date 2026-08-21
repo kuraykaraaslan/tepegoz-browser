@@ -5,7 +5,12 @@ import {
   type ChainableEvent,
   type ChainedEvent,
 } from './hash-chain';
-import { signCheckpoint, verifyCheckpoint, type Checkpoint, type SigningKeyPair } from './checkpoint';
+import {
+  signCheckpoint,
+  verifyCheckpoint,
+  type Checkpoint,
+  type SigningKeyPair,
+} from './checkpoint';
 
 /**
  * A Replay Receipt (Phase 7 NotaryService) — a portable, self-contained proof of what the agent did on
@@ -87,7 +92,8 @@ export type ReceiptVerdict =
  */
 export function verifyReceipt(receipt: ReplayReceipt): ReceiptVerdict {
   if (receipt.version !== 1) return { status: 'INVALID', reason: 'unsupported receipt version' };
-  if (receipt.events.length === 0) return { status: 'INVALID', reason: 'receipt carries no events' };
+  if (receipt.events.length === 0)
+    return { status: 'INVALID', reason: 'receipt carries no events' };
   if (receipt.events.some((e) => e.correlationId !== receipt.correlationId)) {
     return { status: 'TAMPERED', reason: 'an event does not belong to this receipt’s run' };
   }
@@ -105,7 +111,10 @@ export function verifyReceipt(receipt: ReplayReceipt): ReceiptVerdict {
     // The chain is internally intact, but the checkpoint was signed over a DIFFERENT root than the one
     // these events actually produce — a checkpoint copied from another run, or a root edited after
     // signing without re-signing.
-    return { status: 'TAMPERED', reason: 'checkpoint does not attest to this receipt’s chain root' };
+    return {
+      status: 'TAMPERED',
+      reason: 'checkpoint does not attest to this receipt’s chain root',
+    };
   }
 
   const sigVerdict = verifyCheckpoint(receipt.checkpoint);

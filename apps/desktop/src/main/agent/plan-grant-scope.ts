@@ -64,9 +64,7 @@ export function planGrantScope(
     collectUrls(step.args, urls, 0);
     const dangerClass = lookupDangerClass(step.tool);
     if (dangerClass === undefined) continue; // unknown tool → contributes nothing
-    tiers.add(
-      classifyRisk({ descriptor: { id: step.tool, dangerClass }, args: step.args }).tier,
-    );
+    tiers.add(classifyRisk({ descriptor: { id: step.tool, dangerClass }, args: step.args }).tier);
   }
 
   return { urls: [...urls], tiers: [...tiers] };

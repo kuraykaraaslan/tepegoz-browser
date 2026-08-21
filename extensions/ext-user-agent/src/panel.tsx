@@ -123,7 +123,9 @@ export function UserAgentPicker({
                   )}
                 >
                   <span className="min-w-0">
-                    <span className="block font-medium text-text-primary">{presetLabel(preset)}</span>
+                    <span className="block font-medium text-text-primary">
+                      {presetLabel(preset)}
+                    </span>
                     {preset.ua !== null && (
                       <span className="block truncate font-mono text-xs text-text-secondary">
                         {preset.ua}
@@ -164,7 +166,11 @@ export function UserAgentPicker({
             }}
             className="h-9 flex-1 rounded-md border border-border bg-surface-raised px-3 font-mono text-xs text-text-primary placeholder:text-text-disabled focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
           />
-          <button type="submit" disabled={busy || custom.trim().length === 0} className={BTN_PRIMARY}>
+          <button
+            type="submit"
+            disabled={busy || custom.trim().length === 0}
+            className={BTN_PRIMARY}
+          >
             {x.apply}
           </button>
         </form>

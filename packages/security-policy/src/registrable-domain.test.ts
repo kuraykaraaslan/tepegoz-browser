@@ -40,7 +40,9 @@ describe('registrableDomainOfHost', () => {
 
 describe('registrableDomain (URL form)', () => {
   it('resolves from a full URL and fails soft on garbage', () => {
-    expect(registrableDomain('https://internet.garanti.com.tr/hesaplar?x=1')).toBe('garanti.com.tr');
+    expect(registrableDomain('https://internet.garanti.com.tr/hesaplar?x=1')).toBe(
+      'garanti.com.tr',
+    );
     expect(registrableDomain('not a url')).toBeNull();
     expect(registrableDomain('')).toBeNull();
   });
@@ -49,7 +51,9 @@ describe('registrableDomain (URL form)', () => {
 describe('isSameSite — the grant-scope boundary', () => {
   it('treats sub-domains of one registrable domain as the same site (documented policy)', () => {
     expect(isSameSite('https://mail.example.com/a', 'https://www.example.com/b')).toBe(true);
-    expect(isSameSite('https://accounts.garanti.com.tr/', 'https://www.garanti.com.tr/')).toBe(true);
+    expect(isSameSite('https://accounts.garanti.com.tr/', 'https://www.garanti.com.tr/')).toBe(
+      true,
+    );
   });
 
   it('NEVER merges two registrable domains that only share a multi-part suffix', () => {

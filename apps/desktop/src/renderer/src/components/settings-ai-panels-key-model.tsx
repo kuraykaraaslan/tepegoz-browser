@@ -181,7 +181,11 @@ export function KeyModelMenu({
           open && 'border-border-focus',
         )}
       >
-        <FontAwesomeIcon icon={faGear} className="h-3.5 w-3.5 shrink-0 text-text-secondary" aria-hidden />
+        <FontAwesomeIcon
+          icon={faGear}
+          className="h-3.5 w-3.5 shrink-0 text-text-secondary"
+          aria-hidden
+        />
         <span className="flex-1 truncate text-left">{current?.label ?? s.keyModel.autoShort}</span>
         <FontAwesomeIcon
           icon={faChevronDown}

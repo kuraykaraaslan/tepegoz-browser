@@ -14,7 +14,7 @@ import {
   type TaskPolicy,
   type TaskSaveInput,
   type TaskTrigger,
-} from './index';
+} from './tasks.model';
 
 /** The three schedule shapes offered when converting a chat: "sürekli / belli aralıklarla / sayfa güncellenirse". */
 export const SCHEDULE_PRESETS = ['continuous', 'interval', 'pageChange'] as const;
@@ -34,7 +34,10 @@ export interface PresetTriggerOptions {
  * Map a schedule preset to a concrete non-manual {@link TaskTrigger}. `continuous` is honestly the engine
  * floor (every {@link MIN_TASK_INTERVAL_MINUTES} minutes) — there is no sub-5-minute or always-on mode.
  */
-export function presetToTrigger(preset: SchedulePreset, opts: PresetTriggerOptions = {}): TaskTrigger {
+export function presetToTrigger(
+  preset: SchedulePreset,
+  opts: PresetTriggerOptions = {},
+): TaskTrigger {
   if (preset === 'continuous') {
     return { type: 'interval', enabled: true, everyMinutes: MIN_TASK_INTERVAL_MINUTES };
   }
@@ -75,7 +78,8 @@ export function synthesizePolicy(
 ): TaskPolicy {
   const base = defaultTaskPolicy();
   if (preset === 'notify') return base;
-  const origin = ctx.targetOrigin !== undefined && ctx.targetOrigin.length > 0 ? ctx.targetOrigin : null;
+  const origin =
+    ctx.targetOrigin !== undefined && ctx.targetOrigin.length > 0 ? ctx.targetOrigin : null;
   return {
     ...base,
     allowedOrigins: origin === null ? [] : [origin],
@@ -131,7 +135,9 @@ export interface BuildTaskFromConversationInput {
  * "Run now" works) plus the schedule trigger from the preset. Policy is left unset — the host synthesizes
  * it from `autonomy`.
  */
-export function buildTaskSaveInputFromConversation(input: BuildTaskFromConversationInput): TaskSaveInput {
+export function buildTaskSaveInputFromConversation(
+  input: BuildTaskFromConversationInput,
+): TaskSaveInput {
   const prompt = (input.prompt ?? input.conversation.firstPrompt).trim();
   const name = (input.name ?? deriveTaskName(input.conversation.firstPrompt)).trim();
   const targetUrl = input.targetUrl?.trim();

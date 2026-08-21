@@ -95,7 +95,9 @@ export function GroupHeader({
           {/* Phase 5: where this group's traffic goes. Next to the name because the route is a property
               of the group, the same way its colour is — and because a group is the scope people actually
               bind a VPN to. */}
-          {group.network !== undefined && <GroupRouteShield badge={group.network} labels={labels} />}
+          {group.network !== undefined && (
+            <GroupRouteShield badge={group.network} labels={labels} />
+          )}
           {group.collapsed && count > 0 && <span className="tabular-nums opacity-80">{count}</span>}
         </button>
       )}

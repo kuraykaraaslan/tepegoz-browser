@@ -25,7 +25,10 @@ const EMPTY: NetworkState = {
   general: { kind: 'direct' },
   tabs: {},
   groups: {},
-  binaries: { wireproxy: { found: false, path: '', isOverride: false, dropInDir: '' }, tor: { found: false, path: '', isOverride: false, dropInDir: '' } },
+  binaries: {
+    wireproxy: { found: false, path: '', isOverride: false, dropInDir: '' },
+    tor: { found: false, path: '', isOverride: false, dropInDir: '' },
+  },
   secretsAvailable: false,
 };
 

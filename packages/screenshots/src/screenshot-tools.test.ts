@@ -6,19 +6,20 @@ describe('screenshot tools', () => {
   it('registers browser_get_screenshot as a read browser tool', async () => {
     CapabilityRegistry.reset();
     const host: ScreenshotToolsHost = {
-      captureScreenshot: (input) => Promise.resolve({
-        url: 'https://example.com',
-        title: 'Example',
-        mode: input.mode ?? 'viewport',
-        mimeType: 'image/png',
-        dataUrl: 'data:image/png;base64,AA==',
-        width: 1,
-        height: 1,
-        pageWidth: 1,
-        pageHeight: 1,
-        byteLength: 1,
-        capturedAt: 1,
-      }),
+      captureScreenshot: (input) =>
+        Promise.resolve({
+          url: 'https://example.com',
+          title: 'Example',
+          mode: input.mode ?? 'viewport',
+          mimeType: 'image/png',
+          dataUrl: 'data:image/png;base64,AA==',
+          width: 1,
+          height: 1,
+          pageWidth: 1,
+          pageHeight: 1,
+          byteLength: 1,
+          capturedAt: 1,
+        }),
     };
 
     registerScreenshotTools({ host });

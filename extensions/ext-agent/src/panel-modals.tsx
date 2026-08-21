@@ -48,20 +48,33 @@ export function PanelModals({
   const [moneyOk, setMoneyOk] = useState(false);
   const [scopeOk, setScopeOk] = useState(false);
   const approvalId = approval?.approvalId ?? null;
-  useEffect(() => { setRemember(false); setMoneyOk(false); setScopeOk(false); }, [approvalId]);
+  useEffect(() => {
+    setRemember(false);
+    setMoneyOk(false);
+    setScopeOk(false);
+  }, [approvalId]);
   const isPurchase = approval?.riskTier === 'financial';
 
   return (
     <>
       {/* Plan preview modal */}
       {planPreview !== null && (
-        <Modal open onClose={() => onRespondPlan(false)} title={a.planTitle} ariaLabel={a.planTitle} size="md" closeOnBackdrop={false}>
+        <Modal
+          open
+          onClose={() => onRespondPlan(false)}
+          title={a.planTitle}
+          ariaLabel={a.planTitle}
+          size="md"
+          closeOnBackdrop={false}
+        >
           <p className="mt-1 text-xs text-text-secondary">{a.planBody}</p>
           {/* What approving actually buys. An approval whose consequences are invisible is not consent. */}
           <p className="mt-2 rounded border border-border bg-surface-overlay px-2 py-1.5 text-xs text-text-secondary">
             {a.planGrant}
           </p>
-          {planPreview.goal.length > 0 && <p className="mt-2 text-sm text-text-primary">{planPreview.goal}</p>}
+          {planPreview.goal.length > 0 && (
+            <p className="mt-2 text-sm text-text-primary">{planPreview.goal}</p>
+          )}
           <ul className="mt-3 space-y-1.5 overflow-auto">
             {planPreview.steps.map((step, i) => (
               <li key={step.id}>
@@ -69,13 +82,19 @@ export function PanelModals({
                   <input
                     type="checkbox"
                     checked={!skipIds.has(step.id)}
-                    onChange={() => { onToggleStep(step.id); }}
+                    onChange={() => {
+                      onToggleStep(step.id);
+                    }}
                     className="mt-0.5"
                   />
                   <span className="min-w-0">
-                    <span className="font-mono text-text-primary">{String(i + 1)}. {step.tool}</span>
+                    <span className="font-mono text-text-primary">
+                      {String(i + 1)}. {step.tool}
+                    </span>
                     {step.rationale.length > 0 && (
-                      <span className="ml-1 break-words text-text-secondary">— {step.rationale}</span>
+                      <span className="ml-1 break-words text-text-secondary">
+                        — {step.rationale}
+                      </span>
                     )}
                   </span>
                 </label>
@@ -83,8 +102,15 @@ export function PanelModals({
             ))}
           </ul>
           <div className="mt-4 flex justify-end gap-2">
-            <button type="button" onClick={() => onRespondPlan(false)} className={BTN_GHOST}>{c.common.cancel}</button>
-            <button type="button" onClick={() => onRespondPlan(true)} disabled={skipIds.size === planPreview.steps.length} className={BTN_PRIMARY}>
+            <button type="button" onClick={() => onRespondPlan(false)} className={BTN_GHOST}>
+              {c.common.cancel}
+            </button>
+            <button
+              type="button"
+              onClick={() => onRespondPlan(true)}
+              disabled={skipIds.size === planPreview.steps.length}
+              className={BTN_PRIMARY}
+            >
               {a.planRun}
             </button>
           </div>
@@ -93,7 +119,14 @@ export function PanelModals({
 
       {/* HITL approval modal */}
       {approval !== null && (
-        <Modal open onClose={() => onRespond(false)} title={a.approvalTitle} ariaLabel={a.approvalTitle} size="sm" closeOnBackdrop={false}>
+        <Modal
+          open
+          onClose={() => onRespond(false)}
+          title={a.approvalTitle}
+          ariaLabel={a.approvalTitle}
+          size="sm"
+          closeOnBackdrop={false}
+        >
           <p className="mt-2 text-sm text-text-secondary">{a.approvalBody}</p>
           {approval.riskTier !== undefined && (
             <div className={`mt-3 rounded border px-2 py-1.5 ${RISK_TONE[approval.riskTier]}`}>
@@ -121,7 +154,9 @@ export function PanelModals({
                 <input
                   type="checkbox"
                   checked={moneyOk}
-                  onChange={(e) => { setMoneyOk(e.target.checked); }}
+                  onChange={(e) => {
+                    setMoneyOk(e.target.checked);
+                  }}
                   className="mt-0.5"
                 />
                 <span className="text-sm text-text-primary">{a.commerce.confirm}</span>
@@ -135,7 +170,9 @@ export function PanelModals({
               <input
                 type="checkbox"
                 checked={remember}
-                onChange={(e) => { setRemember(e.target.checked); }}
+                onChange={(e) => {
+                  setRemember(e.target.checked);
+                }}
                 className="mt-0.5"
               />
               <span className="min-w-0">
@@ -155,7 +192,9 @@ export function PanelModals({
               <input
                 type="checkbox"
                 checked={scopeOk}
-                onChange={(e) => { setScopeOk(e.target.checked); }}
+                onChange={(e) => {
+                  setScopeOk(e.target.checked);
+                }}
                 className="mt-0.5"
               />
               <span className="min-w-0">
@@ -167,12 +206,14 @@ export function PanelModals({
             </label>
           )}
           <div className="mt-4 flex justify-end gap-2">
-            <button type="button" onClick={() => onRespond(false)} className={BTN_GHOST}>{a.deny}</button>
+            <button type="button" onClick={() => onRespond(false)} className={BTN_GHOST}>
+              {a.deny}
+            </button>
             <button
               type="button"
               onClick={() => onRespond(true, remember, scopeOk)}
               disabled={isPurchase && !moneyOk}
-              className={cn(BTN_PRIMARY, isPurchase && !moneyOk ? "opacity-40" : "")}
+              className={cn(BTN_PRIMARY, isPurchase && !moneyOk ? 'opacity-40' : '')}
             >
               {a.approve}
             </button>

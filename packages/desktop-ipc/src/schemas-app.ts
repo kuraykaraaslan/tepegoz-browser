@@ -52,3 +52,18 @@ export const ReorderKeysSchema = z.object({
 
 /** A content-addressed blob reference (`newtab:get-background-image` payload). */
 export const CasRefSchema = z.string().startsWith('cas://').max(128);
+
+/** `auth:basic-respond` payload. Credential fields are length-capped like any other renderer string;
+ *  they are forwarded to Chromium and never stored, so nothing here is validated against a vault. */
+export const BasicAuthResponseSchema = z.object({
+  requestId: z.string().max(64),
+  username: z.string().max(1024),
+  password: z.string().max(1024),
+  cancelled: z.boolean(),
+});
+
+/** `cert:respond` payload — the user's proceed/refuse answer to a TLS certificate warning. */
+export const CertificateErrorResponseSchema = z.object({
+  requestId: z.string().max(64),
+  proceed: z.boolean(),
+});

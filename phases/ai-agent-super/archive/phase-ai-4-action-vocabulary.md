@@ -1,6 +1,6 @@
 # Phase AI-4 — Higher-Level Deterministic Actions
 
-**Status:** 🟡 In progress (**PR1 (code):** `scroll_to_text` — the flagship content-addressed reveal — as a `browser_update_page` action variant over the browser's native find (same-origin frames included). **Native dropdowns landed** as `select_option`. **PR2 `s16` landed 2026-07-23 (code + unit tests):** validation attributes captured end-to-end + the `browser_validate_form` pre-submit gate (see *Audited gaps* below). Unit-tested (plumbing/regression); on-harness measurement owed. Remaining: page-quantized scroll + boundary detection, send-keys, tab auto-switch, and the `s16` typed-widget fill helpers.)  ·  **Depends on:** [AI-2](phase-ai-2-perception-buildtree.md)  ·  **Track:** [`phases/ai`](README.md)
+**Status:** 🟡 In progress (**PR1 (code):** `scroll_to_text` — the flagship content-addressed reveal — as a `browser_update_page` action variant over the browser's native find (same-origin frames included). **Native dropdowns landed** as `select_option`. **PR2 `s16` landed 2026-07-23 (code + unit tests):** validation attributes captured end-to-end + the `browser_validate_form` pre-submit gate (see _Audited gaps_ below). Unit-tested (plumbing/regression); on-harness measurement owed. Remaining: page-quantized scroll + boundary detection, send-keys, tab auto-switch, and the `s16` typed-widget fill helpers.) · **Depends on:** [AI-2](phase-ai-2-perception-buildtree.md) · **Track:** [`phases/ai`](README.md)
 **Goal:** Give the agent a small set of **higher-level, deterministic** actions that encode competence in
 code — so it doesn't need a prose rule (or several fragile clicks) for each common web pattern. Ported
 selectively from nanobrowser's action vocabulary, registered behind the same CapabilityRegistry/ToolGateway
@@ -14,6 +14,7 @@ scroll", or "search for X" are today either impossible or left to prose + luck. 
 replaces a class of brittle multi-step prose with one reliable primitive.
 
 ## What to add (each replaces a fragile prose rule)
+
 - **`scroll_to_text(text, nth?)`** — ✅ **PR1 (code):** content-addressed scroll to bring an off-viewport
   target into the index map. The primary deterministic "reveal a target that isn't in view" primitive.
   Shipped as a `browser_update_page` action variant over the browser's native find (same-origin frames
@@ -31,6 +32,7 @@ replaces a class of brittle multi-step prose with one reliable primitive.
   agent keeps operating on the right page (complements the AI navigation fix already shipped).
 
 ## Exit criteria (DoD)
+
 - [ ] Each new action registered with a **zod `safeParse`d** arg schema behind CapabilityRegistry/ToolGateway; danger-class + HITL/idempotency policy set correctly (reads vs state-changing).
 - [ ] `scroll_to_text`, native-dropdown, and page-quantized scroll each have a **local fixture** in the [AI-1](phase-ai-1-eval-harness.md) harness and pass; the real-site metric improves on tasks that need them (before/after recorded).
 - [ ] Actions reuse the real-gesture human-input path where they actuate (click/type/scroll); determinism-first preserved (rule-based, no model call inside an action).
@@ -39,12 +41,14 @@ replaces a class of brittle multi-step prose with one reliable primitive.
 - [ ] Coverage + self-review; acceptance metrics green.
 
 ## Tasks
+
 - [ ] Extend the `BrowserHost` / `TabHost` seams and the desktop host ([`browser-host.electron.ts`](../../../apps/desktop/src/main/agent/browser-host.electron.ts) + [`cdp-driver.electron.ts`](../../../apps/desktop/src/main/agent/cdp-driver.electron.ts)) with the primitives each action needs (scroll-to-text, dropdown option read/select, element-scoped + page scroll with boundary info, new-tab detection).
 - [ ] Register the actions in [`packages/browser-tools/src/browser-tools.ts`](../../../packages/browser-tools/src/browser-tools.ts) with descriptions + zod schemas; keep the descriptions terse and behavioural.
 - [ ] Fixtures + eval scenarios per action; measure the pass-rate delta on the real model.
 - [ ] Prefer composing existing host primitives for pure-composition actions (e.g. a link/list reader over the AI-2 snapshot) — package-level only, no Electron change — before adding a new host method.
 
 ## Scope notes
+
 - Do **not** port nanobrowser wholesale — add only actions that measurably help (scored by AI-1). Skip ones
   redundant with tepegoz's existing tools (e.g. we already have tab CRUD tools).
 - `extract_content`-style large-payload actions are deferred (input-size concerns); `cache_content` +
@@ -65,21 +69,17 @@ those. The audit added one net-new action-vocabulary axis:
         DOM property — the model now SEES which fields are mandatory.
   - [x] **Pre-submit gate:** `browser_validate_form` (read tool) over the pure, unit-tested
         [`checkForm`](../../../packages/tool-executor/src/form-validation.ts). An adversarial review pass caught
-        four ways an earlier cut of this check would have *lied to the agent*; the shipped design fixes each:
-        - **Only `requiredEmpty` BLOCKS.** It is deterministic and self-clearing. `aria-invalid` and on-page
-          error text are **advisory**: a page sets them on a failed submit and only refreshes them on the NEXT
-          one, so blocking on them deadlocked the agent *after* it had already fixed every field.
-        - **Coverage is reported, never assumed.** The render-DOM snapshot is viewport-limited, so a clean
-          result from a partial view was a false "OK to submit" — the exact failure s16 exists to prevent. The
-          `BrowserHost.snapshotElements` seam gained `viewportExpansionPx` so the check reads the WHOLE page,
-          and the report still degrades to `coverage: 'partial'` when the element cap truncated it, when the
-          accessibility fallback captured no attributes, or when a required control is a custom/toggle widget
-          whose filled state is unreadable.
-        - **AI-5 boundary honoured.** Labels/error lines are injection-redacted (`sanitizeContent`) and
-          quote-neutralised so a hostile page cannot forge a verdict inside the checker's own prose, and the
-          whole report is fenced with `wrapUntrustedContent` like every other page read.
-        - **No regex against page-controlled `pattern` values** (ReDoS): the page's own `aria-invalid` + error
-          text carry the "currently invalid" signal.
+        four ways an earlier cut of this check would have _lied to the agent_; the shipped design fixes each: - **Only `requiredEmpty` BLOCKS.** It is deterministic and self-clearing. `aria-invalid` and on-page
+        error text are **advisory**: a page sets them on a failed submit and only refreshes them on the NEXT
+        one, so blocking on them deadlocked the agent _after_ it had already fixed every field. - **Coverage is reported, never assumed.** The render-DOM snapshot is viewport-limited, so a clean
+        result from a partial view was a false "OK to submit" — the exact failure s16 exists to prevent. The
+        `BrowserHost.snapshotElements` seam gained `viewportExpansionPx` so the check reads the WHOLE page,
+        and the report still degrades to `coverage: 'partial'` when the element cap truncated it, when the
+        accessibility fallback captured no attributes, or when a required control is a custom/toggle widget
+        whose filled state is unreadable. - **AI-5 boundary honoured.** Labels/error lines are injection-redacted (`sanitizeContent`) and
+        quote-neutralised so a hostile page cannot forge a verdict inside the checker's own prose, and the
+        whole report is fenced with `wrapUntrustedContent` like every other page read. - **No regex against page-controlled `pattern` values** (ReDoS): the page's own `aria-invalid` + error
+        text carry the "currently invalid" signal.
         A reactor `BROWSING_STRATEGY` line steers the model to call it before submitting, and spells out the
         blocking-vs-advisory split so a stale warning cannot loop it.
   - [x] Fixture + scenario: `form-validation` (three required fields, one with a `pattern`; the ground truth

@@ -63,7 +63,8 @@ export function decideWrite(candidate: MemoryObservation): WriteDecision {
   // Sanitize anyway: passing detectThreats is not the same as being clean, and what is stored should be
   // what would have been shown.
   const { text } = sanitizeContent(trimmed.slice(0, MAX_NOTE));
-  if (text.trim().length === 0) return { store: false, reason: 'nothing survived sanitization', threats: [] };
+  if (text.trim().length === 0)
+    return { store: false, reason: 'nothing survived sanitization', threats: [] };
   return { store: true, observation: { ...candidate, note: text.trim() } };
 }
 
@@ -109,7 +110,9 @@ export function selectHints(
  */
 export function renderHints(hints: readonly StoredHint[], host: string): string {
   if (hints.length === 0) return '';
-  const lines = hints.map((h) => `- ${h.note}${h.provenance === 'page' ? ' (seen on the page)' : ''}`);
+  const lines = hints.map(
+    (h) => `- ${h.note}${h.provenance === 'page' ? ' (seen on the page)' : ''}`,
+  );
   // The framing is sanitized below like everything else, so it must not itself READ like an override
   // phrase — an earlier wording ("they never override the current task") was redacted by our own
   // injection filter. A useful reminder that the guard cannot tell whose text it is looking at.
@@ -130,6 +133,9 @@ export function renderHints(hints: readonly StoredHint[], host: string): string 
  * hint that led to a refused action is one an attacker may have planted, whereas a hint that merely did
  * not help is just stale. Conflating the two would quarantine the whole store on a bad day.
  */
-export function shouldQuarantine(outcome: { hintWasOffered: boolean; policyDenied: boolean }): boolean {
+export function shouldQuarantine(outcome: {
+  hintWasOffered: boolean;
+  policyDenied: boolean;
+}): boolean {
   return outcome.hintWasOffered && outcome.policyDenied;
 }

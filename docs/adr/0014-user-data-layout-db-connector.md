@@ -4,12 +4,14 @@
 - **Date:** 2026-07-01
 
 ## Context
+
 All app state (settings, browsing history, agent journal, extension state, cache) should live in one
 Chrome-like user-data directory, with structured data behind a DB connector. The `@tepegoz/persistence`
 package (better-sqlite3 + WAL + forward-only migrations + EventJournal/BlobStore/MetaStore + `kv`,
 ADR-0003/0004) already existed but was unused by the app.
 
 ## Decision
+
 - **One user-data directory, named `tepegoz`**, under the OS roaming app-data dir (`%APPDATA%/tepegoz`
   on Windows). Pinned via `app.setPath('userData', join(app.getPath('appData'), 'tepegoz'))` **before**
   `whenReady` so every `app.getPath('userData')` (stores, DB, Chromium partitions) resolves there.
@@ -19,8 +21,8 @@ ADR-0003/0004) already existed but was unused by the app.
   cache is left behind — a fresh cache is fine).
 - **Chrome-like mixed layout:** Preferences stay **JSON** (`preferences.json`); API keys stay
   **encrypted JSON** (`credentials.enc.json`, safeStorage/DPAPI); History + agent Event Journal + blobs
-  + `kv` are **SQLite** in a single `tepegoz.db`; installed (third-party) extensions get an
-  `Extensions/` folder (scaffold). Chromium cache/cookies stay in `Partitions/…` (Electron-managed).
+  - `kv` are **SQLite** in a single `tepegoz.db`; installed (third-party) extensions get an
+    `Extensions/` folder (scaffold). Chromium cache/cookies stay in `Partitions/…` (Electron-managed).
 - **Single DB connector:** a main-process `DatabaseService` (`db/database.electron.ts`) opens
   `userData/tepegoz.db`, runs `migrate()`, and exposes `getDb()`. `@tepegoz/persistence` is **bundled**
   into main (TS source, in WORKSPACE_PACKAGES); its native dep **better-sqlite3 stays external** and is
@@ -34,6 +36,7 @@ ADR-0003/0004) already existed but was unused by the app.
   completing the DoD "→ Event Journal".
 
 ## Consequences
+
 - A single place holds everything the user cares about; cloud sync later is not a schema migration
   (the `kv` table already carries `updated_at`/`version`/`tombstone`, ADR-0004).
 - The native module is the one runtime dependency that must match the Electron ABI; the graceful-degrade

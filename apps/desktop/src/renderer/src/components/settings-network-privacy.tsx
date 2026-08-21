@@ -37,15 +37,31 @@ const EMPTY: NetworkState = {
   general: { kind: 'direct' },
   tabs: {},
   groups: {},
-  binaries: { wireproxy: { found: false, path: '', isOverride: false, dropInDir: '' }, tor: { found: false, path: '', isOverride: false, dropInDir: '' } },
+  binaries: {
+    wireproxy: { found: false, path: '', isOverride: false, dropInDir: '' },
+    tor: { found: false, path: '', isOverride: false, dropInDir: '' },
+  },
   secretsAvailable: false,
 };
 
 function statusBadge(c: NetworkConnectionView, s: SettingsStrings) {
-  if (c.status === 'up') return <Badge variant="success" dot>{s.network.statusUp}</Badge>;
+  if (c.status === 'up')
+    return (
+      <Badge variant="success" dot>
+        {s.network.statusUp}
+      </Badge>
+    );
   if (c.status === 'connecting')
-    return <Badge variant="warning" dot>{s.network.statusConnecting}</Badge>;
-  return <Badge variant="neutral" dot>{s.network.statusDown}</Badge>;
+    return (
+      <Badge variant="warning" dot>
+        {s.network.statusConnecting}
+      </Badge>
+    );
+  return (
+    <Badge variant="neutral" dot>
+      {s.network.statusDown}
+    </Badge>
+  );
 }
 
 function protocolLabel(c: NetworkConnectionView, s: SettingsStrings): string {
@@ -172,7 +188,9 @@ function BinaryRow({
           </span>
         )}
         {status.found && !status.isOverride && (
-          <span className="shrink-0 text-xs text-text-disabled">{s.network.binaryAutoDetected}</span>
+          <span className="shrink-0 text-xs text-text-disabled">
+            {s.network.binaryAutoDetected}
+          </span>
         )}
         <Button size="sm" variant="outline" className="shrink-0" onClick={browse}>
           {status.found ? s.network.binaryChange : s.network.binaryBrowse}
@@ -252,7 +270,12 @@ export function NetworkPrivacySection({ s }: { s: SettingsStrings }) {
             path is the only way to tell detection succeeded from nothing having been tried. */}
         <p className="mb-2 mt-5 text-xs text-text-secondary">{s.network.helpersHint}</p>
         <ul className="space-y-1.5">
-          <BinaryRow s={s} binary="wireproxy" status={state.binaries.wireproxy} onChanged={refresh} />
+          <BinaryRow
+            s={s}
+            binary="wireproxy"
+            status={state.binaries.wireproxy}
+            onChanged={refresh}
+          />
           <BinaryRow s={s} binary="tor" status={state.binaries.tor} onChanged={refresh} />
         </ul>
       </Card>

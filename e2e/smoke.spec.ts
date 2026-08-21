@@ -30,9 +30,15 @@ test('the app launches a browser window with chrome and a loaded tab', async () 
   // wiring, and pinning that to someone else's uptime makes a green run mean less, not more.
   const server: Server = createServer((_req, res) => {
     res.writeHead(200, { 'content-type': 'text/html' });
-    res.end('<!doctype html><html><head><title>Tepegoz Smoke Page</title></head><body>ok</body></html>');
+    res.end(
+      '<!doctype html><html><head><title>Tepegoz Smoke Page</title></head><body>ok</body></html>',
+    );
   });
-  await new Promise<void>((r) => { server.listen(0, '127.0.0.1', () => { r(); }); });
+  await new Promise<void>((r) => {
+    server.listen(0, '127.0.0.1', () => {
+      r();
+    });
+  });
   const pageUrl = `http://127.0.0.1:${String((server.address() as AddressInfo).port)}/`;
 
   // Isolated profile: a temp --user-data-dir with a preferences.json present but WITHOUT
@@ -70,7 +76,10 @@ test('the app launches a browser window with chrome and a loaded tab', async () 
           pollEvaluate(
             () =>
               app.evaluate(({ webContents }) =>
-                webContents.getAllWebContents().map((w) => w.getURL()).join(' '),
+                webContents
+                  .getAllWebContents()
+                  .map((w) => w.getURL())
+                  .join(' '),
               ),
             '',
           ),
@@ -80,10 +89,9 @@ test('the app launches a browser window with chrome and a loaded tab', async () 
     // ANY tab, not the first: navigating from the internal new-tab page opens the web page in its own
     // tab rather than replacing an internal one.
     await expect
-      .poll(
-        async () => (await window.locator('[role="tab"]').allInnerTexts()).join(' | '),
-        { timeout: 20_000 },
-      )
+      .poll(async () => (await window.locator('[role="tab"]').allInnerTexts()).join(' | '), {
+        timeout: 20_000,
+      })
       .toContain('Smoke');
   } finally {
     await app.close();

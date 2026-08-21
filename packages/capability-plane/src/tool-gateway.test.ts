@@ -6,12 +6,19 @@ import type { InputValidator } from './types';
 import { setIntentCritic } from './intent-critic';
 
 const passAny: InputValidator<Record<string, unknown>> = {
-  safeParse: (d) => ({ success: true, data: (typeof d === 'object' && d !== null ? d : {}) as Record<string, unknown> }),
+  safeParse: (d) => ({
+    success: true,
+    data: (typeof d === 'object' && d !== null ? d : {}) as Record<string, unknown>,
+  }),
 };
 
 const needsFoo: InputValidator<{ foo: string }> = {
   safeParse: (d) => {
-    if (typeof d === 'object' && d !== null && typeof (d as Record<string, unknown>).foo === 'string') {
+    if (
+      typeof d === 'object' &&
+      d !== null &&
+      typeof (d as Record<string, unknown>).foo === 'string'
+    ) {
       return { success: true, data: d as { foo: string } };
     }
     return { success: false, error: { issues: ['foo required'] } };
@@ -75,16 +82,26 @@ describe('ToolGateway.invoke', () => {
   it('denies a destructive action on a sensitive site (lockout, no prompt)', async () => {
     register({ id: 'file_delete_item', dangerClass: 'destructive' });
     ToolGateway.setConfirmHandler(() => Promise.resolve(true)); // even with approval...
-    const res = asError(await ToolGateway.invoke('file_delete_item', {}, { targetUrl: 'https://mybank.com' }));
+    const res = asError(
+      await ToolGateway.invoke('file_delete_item', {}, { targetUrl: 'https://mybank.com' }),
+    );
     expect(res.code).toBe('FORBIDDEN');
     expect(res.message).toContain('sensitive_site_lockout');
   });
 
   it('requires an idempotencyKey for create/upload tools', async () => {
-    register({ id: 'mail_create_message', dangerClass: 'state_changing', requiresIdempotencyKey: true });
+    register({
+      id: 'mail_create_message',
+      dangerClass: 'state_changing',
+      requiresIdempotencyKey: true,
+    });
     ToolGateway.setConfirmHandler(() => Promise.resolve(true));
-    expect(asError(await ToolGateway.invoke('mail_create_message', {})).code).toBe('VALIDATION_ERROR');
-    expect(await ToolGateway.invoke('mail_create_message', {}, { idempotencyKey: 'k1' })).toBe('ok');
+    expect(asError(await ToolGateway.invoke('mail_create_message', {})).code).toBe(
+      'VALIDATION_ERROR',
+    );
+    expect(await ToolGateway.invoke('mail_create_message', {}, { idempotencyKey: 'k1' })).toBe(
+      'ok',
+    );
   });
 
   it('wraps a throwing handler in INTERNAL_ERROR (retryable)', async () => {
@@ -112,7 +129,9 @@ describe('ToolGateway.invoke', () => {
     register({ id: 'form_update_field', dangerClass: 'state_changing' });
     const seen: string[] = [];
     let releaseA: (() => void) | undefined;
-    const gateA = new Promise<void>((resolve) => { releaseA = resolve; });
+    const gateA = new Promise<void>((resolve) => {
+      releaseA = resolve;
+    });
 
     const runA = ToolGateway.runWithHandlers(
       {
@@ -159,15 +178,25 @@ describe('the advisory critic cannot change what happens (S6 PR4)', () => {
   it('lets a call through even when the critic says it diverges', async () => {
     // Advisory means advisory. A blocking critic would be one model deciding whether another may act,
     // on the critical path, with a judgement nobody can verify.
-    register({ id: 'browser_update_page', dangerClass: 'state_changing', handler: () => ({ ok: true }) });
+    register({
+      id: 'browser_update_page',
+      dangerClass: 'state_changing',
+      handler: () => ({ ok: true }),
+    });
     ToolGateway.setConfirmHandler(() => Promise.resolve(true));
-    setIntentCritic(() => Promise.resolve({ aligned: false, reason: 'this is not what was asked' }));
+    setIntentCritic(() =>
+      Promise.resolve({ aligned: false, reason: 'this is not what was asked' }),
+    );
     const result = await ToolGateway.invoke('browser_update_page', { action: 'click', ref: 1 });
     expect(result).toEqual({ ok: true });
   });
 
   it('records the divergence on the audit entry, beside the action it did not stop', async () => {
-    register({ id: 'browser_update_page', dangerClass: 'state_changing', handler: () => ({ ok: true }) });
+    register({
+      id: 'browser_update_page',
+      dangerClass: 'state_changing',
+      handler: () => ({ ok: true }),
+    });
     ToolGateway.setConfirmHandler(() => Promise.resolve(true));
     setIntentCritic(() => Promise.resolve({ aligned: false, reason: 'diverges from the request' }));
     const entries: { toolName: string; critic?: { aligned: boolean; reason: string } }[] = [];
@@ -194,7 +223,11 @@ describe('the advisory critic cannot change what happens (S6 PR4)', () => {
   });
 
   it('is silent on the audit entry when no critic is installed', async () => {
-    register({ id: 'browser_update_page', dangerClass: 'state_changing', handler: () => ({ ok: true }) });
+    register({
+      id: 'browser_update_page',
+      dangerClass: 'state_changing',
+      handler: () => ({ ok: true }),
+    });
     const entries: { critic?: unknown }[] = [];
     await ToolGateway.runWithHandlers(
       { confirmHandler: () => Promise.resolve(true), auditHandler: (e) => entries.push(e) },

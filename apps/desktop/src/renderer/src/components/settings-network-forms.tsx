@@ -59,7 +59,8 @@ export function AddConnectionRow({
         if (profile === null) return;
         setPicked(profile);
         // The file name is the obvious name for the connection; the user can still overwrite it.
-        if (label.trim().length === 0) setLabel(profile.fileName.replace(/\.conf$/i, '').slice(0, 64));
+        if (label.trim().length === 0)
+          setLabel(profile.fileName.replace(/\.conf$/i, '').slice(0, 64));
       },
       (err: unknown) => {
         // The parser's own message ("no DNS line…") is what tells the user how to fix the file.

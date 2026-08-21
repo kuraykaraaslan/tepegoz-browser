@@ -13,7 +13,7 @@ creating/closing a tab (`TabManager.createTab`/`closeTab`), and navigating (`wil
 extension's entire decision (settings, trusted-origin allowlist, block predicate, "blocked"
 notification) lived in `apps/desktop/src/main/popup-blocker.ts`, a desktop-owned class `TabManager`
 called directly. That is the wrong owner: an extension's behavior should live in the extension, and
-desktop core should own only the mechanics of *performing* an action, not the policy for *whether*
+desktop core should own only the mechanics of _performing_ an action, not the policy for _whether_
 to perform it.
 
 ADR-0021 already solved the analogous problem for **agent-invokable tools**: an extension declares
@@ -33,7 +33,7 @@ therefore synchronous by necessity, not by choice.
 
 1. **A synchronous interceptor contract in `@tepegoz/extension-sdk`** (`action-interceptors.ts`). A
    fixed, closed union `ActionType` (`'popup:open' | 'tab:create' | 'tab:close' |
-   'navigation:navigate'`, `domain:kebab-action` — matching `IpcChannels`' naming convention) is the
+'navigation:navigate'`, `domain:kebab-action` — matching `IpcChannels`' naming convention) is the
    single source of truth; each member has a typed `ActionContext[T]`. An extension declares
    interceptors with `defineActionInterceptors(extensionId, [{ actionType, shouldBlock, onBlocked? }])`
    — `shouldBlock` MUST be synchronous and side-effect-free; `onBlocked` is a separate, optional side
@@ -83,6 +83,6 @@ The agent's built-in `browser_*` / `tab_*` / `journal_search_events` tools have 
 `com.tepegoz.agent` extension into always-on, package-owned builtins (see the 2026-07-06 update in
 [ADR-0021](0021-agent-controllable-extensions.md) for the full rationale). Consequently, **disabling the
 Agent extension no longer unregisters those tools** — the ADR-0021 capability kill-switch now applies only
-to `ext-macros`'s `macros_*`. This is orthogonal to *this* ADR's action-interception plane (popup/tab/
+to `ext-macros`'s `macros_*`. This is orthogonal to _this_ ADR's action-interception plane (popup/tab/
 navigation hooks), which is unchanged: `TabManager.createTab` still degrades to plain-browser behavior
 when no interceptor is registered, regardless of the agent's enabled state.

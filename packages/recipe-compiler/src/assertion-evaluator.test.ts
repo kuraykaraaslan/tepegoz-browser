@@ -61,33 +61,43 @@ describe('url_pattern', () => {
 
 describe('text_present', () => {
   it('passes when the text appears anywhere on the page', () => {
-    expect(evaluateAssertion({ kind: 'text_present', text: 'Order confirmed' }, snapshot()).passed).toBe(
-      true,
-    );
+    expect(
+      evaluateAssertion({ kind: 'text_present', text: 'Order confirmed' }, snapshot()).passed,
+    ).toBe(true);
   });
 
   it('fails when it does not', () => {
-    expect(evaluateAssertion({ kind: 'text_present', text: 'Payment declined' }, snapshot()).passed).toBe(
-      false,
-    );
+    expect(
+      evaluateAssertion({ kind: 'text_present', text: 'Payment declined' }, snapshot()).passed,
+    ).toBe(false);
   });
 });
 
 describe('effect_journaled', () => {
   it('passes when the exact event type was journaled this run', () => {
-    const v = evaluateAssertion({ kind: 'effect_journaled', eventType: 'TaskSucceeded' }, snapshot());
+    const v = evaluateAssertion(
+      { kind: 'effect_journaled', eventType: 'TaskSucceeded' },
+      snapshot(),
+    );
     expect(v.passed).toBe(true);
   });
 
   it('fails on an event that was never journaled — catches a run that never actually committed', () => {
-    const v = evaluateAssertion({ kind: 'effect_journaled', eventType: 'UploadCompleted' }, snapshot());
+    const v = evaluateAssertion(
+      { kind: 'effect_journaled', eventType: 'UploadCompleted' },
+      snapshot(),
+    );
     expect(v.passed).toBe(false);
   });
 });
 
 describe('numeric_extracted', () => {
-  const assertion = (comparator: 'eq' | 'gt' | 'lt' | 'gte' | 'lte', value: number) =>
-    ({ kind: 'numeric_extracted' as const, selector: {}, comparator, value });
+  const assertion = (comparator: 'eq' | 'gt' | 'lt' | 'gte' | 'lte', value: number) => ({
+    kind: 'numeric_extracted' as const,
+    selector: {},
+    comparator,
+    value,
+  });
 
   it('passes eq/gt/lt/gte/lte correctly against an extracted value', () => {
     expect(evaluateAssertion(assertion('eq', 129.5), snapshot()).passed).toBe(true);

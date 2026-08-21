@@ -63,7 +63,11 @@ function checkpointMessage(root: string, signedAt: number): Buffer {
   return Buffer.from(`tepegoz-checkpoint-v1:${root}:${String(signedAt)}`, 'utf8');
 }
 
-export function signCheckpoint(root: string, keyPair: SigningKeyPair, signedAt = Date.now()): Checkpoint {
+export function signCheckpoint(
+  root: string,
+  keyPair: SigningKeyPair,
+  signedAt = Date.now(),
+): Checkpoint {
   const privateKey = createPrivateKey({ key: keyPair.privateKeyPem, format: 'pem', type: 'pkcs8' });
   const signature = nodeSign(null, checkpointMessage(root, signedAt), privateKey);
   return {
@@ -74,7 +78,8 @@ export function signCheckpoint(root: string, keyPair: SigningKeyPair, signedAt =
   };
 }
 
-export type CheckpointVerdict = { valid: true } | { valid: false; reason: 'bad_signature' | 'bad_key' };
+export type CheckpointVerdict =
+  { valid: true } | { valid: false; reason: 'bad_signature' | 'bad_key' };
 
 /**
  * Verify a checkpoint against the public key it CARRIES (never a caller-trusted key), because the

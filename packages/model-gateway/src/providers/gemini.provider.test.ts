@@ -50,7 +50,9 @@ describe('toGeminiParams', () => {
   it('maps canon tools to a single functionDeclarations group', () => {
     const params = toGeminiParams(
       req({
-        tools: [{ name: 'browser_get_page', description: 'read page', inputSchema: { type: 'object' } }],
+        tools: [
+          { name: 'browser_get_page', description: 'read page', inputSchema: { type: 'object' } },
+        ],
       }),
     );
     expect(params.tools).toEqual([
@@ -66,7 +68,9 @@ describe('toGeminiParams', () => {
 describe('fromGeminiResult', () => {
   function response(over: Partial<GeminiGenerateResponse> = {}): GeminiGenerateResponse {
     return {
-      candidates: [{ content: { parts: [{ text: 'hello' }], role: 'model' }, finishReason: 'STOP' }],
+      candidates: [
+        { content: { parts: [{ text: 'hello' }], role: 'model' }, finishReason: 'STOP' },
+      ],
       usageMetadata: { promptTokenCount: 12, candidatesTokenCount: 3 },
       ...over,
     };
@@ -98,12 +102,14 @@ describe('fromGeminiResult', () => {
 
   it('maps finish reasons to the canon contract', () => {
     expect(
-      fromGeminiResult(response({ candidates: [{ content: { parts: [] }, finishReason: 'MAX_TOKENS' }] }))
-        .stopReason,
+      fromGeminiResult(
+        response({ candidates: [{ content: { parts: [] }, finishReason: 'MAX_TOKENS' }] }),
+      ).stopReason,
     ).toBe('max_tokens');
     expect(
-      fromGeminiResult(response({ candidates: [{ content: { parts: [] }, finishReason: 'SAFETY' }] }))
-        .stopReason,
+      fromGeminiResult(
+        response({ candidates: [{ content: { parts: [] }, finishReason: 'SAFETY' }] }),
+      ).stopReason,
     ).toBe('error');
     expect(
       fromGeminiResult(response({ candidates: [{ content: { parts: [] }, finishReason: null }] }))

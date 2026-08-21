@@ -26,6 +26,7 @@ import {
   PROVIDER_ID,
   RATES,
   REPEAT,
+  RUN_CEILING,
   appDir,
 } from './harness-config';
 
@@ -63,7 +64,15 @@ const EvalOutSchema = z.object({
     )
     .optional(),
   tokenUsage: z
-    .object({ inputTokens: z.number(), outputTokens: z.number(), totalTokens: z.number() })
+    .object({
+      inputTokens: z.number(),
+      outputTokens: z.number(),
+      totalTokens: z.number(),
+      // Optional so a report from an app build predating prompt caching still parses; a missing
+      // counter contributes 0 and shows up as "cache not used" rather than as a parse failure.
+      cacheReadTokens: z.number().optional(),
+      cacheWriteTokens: z.number().optional(),
+    })
     .optional(),
 });
 type EvalOut = z.infer<typeof EvalOutSchema>;
@@ -102,7 +111,8 @@ const DEAD_KEY_RE =
 
 /** A TRANSIENT infra error surfaced in the run's error string (rate limit / overload / network) — invalid
  *  like a cold-start transport race and worth a retry, UNLIKE a dead key which no retry fixes. */
-const TRANSIENT_ERROR_RE = /\b429\b|rate[_ ]?limit|overloaded|\b529\b|\b503\b|ECONNRESET|ETIMEDOUT|socket hang up/i;
+const TRANSIENT_ERROR_RE =
+  /\b429\b|rate[_ ]?limit|overloaded|\b529\b|\b503\b|ECONNRESET|ETIMEDOUT|socket hang up/i;
 
 /** True when the provider key is exhausted/unauthorized (billing/quota/auth) — the sweep should ABORT, not
  *  keep launching doomed trials, and the affected trials are UNMEASURED, never competence fails. */
@@ -146,12 +156,20 @@ export function planRun(
     return { entryUrl, env: { TEPEGOZ_EVAL_MODE: 'scripted', TEPEGOZ_EVAL_SCRIPT: scriptPath } };
   }
   // live
-  const entryUrl = 'fixture' in scenario.target
-    ? `${fixtureUrl(server.url, scenario.target.fixture)}index.html`
-    : scenario.target.realUrl;
+  const entryUrl =
+    'fixture' in scenario.target
+      ? `${fixtureUrl(server.url, scenario.target.fixture)}index.html`
+      : scenario.target.realUrl;
   return {
     entryUrl,
-    env: { TEPEGOZ_EVAL_MODE: 'live', TEPEGOZ_EVAL_PROVIDER: PROVIDER_ID, TEPEGOZ_EVAL_API_KEY: API_KEY },
+    env: {
+      TEPEGOZ_EVAL_MODE: 'live',
+      TEPEGOZ_EVAL_PROVIDER: PROVIDER_ID,
+      TEPEGOZ_EVAL_API_KEY: API_KEY,
+      // Only forwarded when set, so an unset ceiling stays absent rather than arriving as the string
+      // "0" that the app then has to interpret.
+      ...(RUN_CEILING > 0 ? { TEPEGOZ_EVAL_RUN_CEILING: String(RUN_CEILING) } : {}),
+    },
   };
 }
 
@@ -181,7 +199,11 @@ async function runOne(
   // every agent-running user is actually in. `PreferenceStore.init` reads this as a patch and fills the
   // rest from defaults, so a single-key file validates. With `--user-data-dir=profileDir`, userData IS
   // profileDir, so this is the file the app reads at startup.
-  writeFileSync(join(profileDir, 'preferences.json'), JSON.stringify({ onboardingCompleted: true }), 'utf8');
+  writeFileSync(
+    join(profileDir, 'preferences.json'),
+    JSON.stringify({ onboardingCompleted: true }),
+    'utf8',
+  );
   // Electron must launch as a REAL GUI app. Agent/CI shells (this one included) often set
   // ELECTRON_RUN_AS_NODE=1, which makes electron.exe run as plain Node — no `app` object,
   // `require('electron')` returns a path string — so the app throws at startup and Playwright
@@ -241,7 +263,8 @@ async function runOne(
 /** A driver-side judge model call (independent of the agent under test), built from the live env key. */
 export function judgeComplete(): (m: JudgeMessages) => Promise<string> {
   if (!isRunnableProvider(PROVIDER_ID as AIProvider) || API_KEY.length === 0) {
-    return () => Promise.resolve('{"pass":false,"confidence":0,"reason":"no judge model configured"}');
+    return () =>
+      Promise.resolve('{"pass":false,"confidence":0,"reason":"no judge model configured"}');
   }
   const id = PROVIDER_ID as AIProvider;
   let provider: ModelProvider;
@@ -249,14 +272,22 @@ export function judgeComplete(): (m: JudgeMessages) => Promise<string> {
   else if (id === 'gemini') provider = new GeminiProvider({ apiKey: API_KEY });
   else if (id === 'kimi') provider = new KimiProvider({ apiKey: API_KEY });
   else provider = new AnthropicProvider({ apiKey: API_KEY });
-  const route = ModelRouter.route({ capability: 'exec', costSaver: false, localAvailable: false, provider: id });
+  const route = ModelRouter.route({
+    capability: 'exec',
+    costSaver: false,
+    localAvailable: false,
+    provider: id,
+  });
   return async ({ system, user }) => {
     const res = await provider.complete(
       {
         provider: id,
         model: route.model,
         capability: 'classify',
-        messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: user },
+        ],
         maxTokens: 512,
         timeoutMs: 60_000,
         responseFormat: 'json',
@@ -369,6 +400,8 @@ export async function runScenarioTrials(
   // Honest cost includes the abandoned attempts — they really did burn tokens/API spend.
   const inputTokens = allOuts.reduce((n, o) => n + (o.tokenUsage?.inputTokens ?? 0), 0);
   const outputTokens = allOuts.reduce((n, o) => n + (o.tokenUsage?.outputTokens ?? 0), 0);
+  const cacheReadTokens = allOuts.reduce((n, o) => n + (o.tokenUsage?.cacheReadTokens ?? 0), 0);
+  const cacheWriteTokens = allOuts.reduce((n, o) => n + (o.tokenUsage?.cacheWriteTokens ?? 0), 0);
   const escapes = validOuts.filter((o) => escapedTrial(o)).length;
   const escapeN = escapeEligible ? validN : 0; // escape denominator = valid eligible trials
   const escaped = escapeEligible && validN > 0 && escapes * 2 >= validN;
@@ -385,7 +418,9 @@ export async function runScenarioTrials(
         : '';
   // A dead key (billing/quota/auth) makes the rest of the scenario UNMEASURED, never a competence fail —
   // and signals the caller to abort the sweep rather than launch more doomed trials.
-  const deadKeyNote = deadKey ? ' — API key exhausted/unauthorized (billing/quota); sweep aborted' : '';
+  const deadKeyNote = deadKey
+    ? ' — API key exhausted/unauthorized (billing/quota); sweep aborted'
+    : '';
   const failReason = scores.find((s) => !s.ok)?.reason;
   const reason =
     validN === 0
@@ -404,9 +439,10 @@ export async function runScenarioTrials(
       : {}),
     record: recordFromOutcomes({
       scenarioId: scenario.id,
-      stoppedReason: (last.stoppedReason as ScenarioResult['record']['stoppedReason']) ?? 'tool_error',
+      stoppedReason:
+        (last.stoppedReason as ScenarioResult['record']['stoppedReason']) ?? 'tool_error',
       outcomes,
-      tokenUsage: { inputTokens, outputTokens },
+      tokenUsage: { inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens },
       wallClockMs: wallClocksMs.reduce((sum, ms) => sum + ms, 0),
       wallClocksMs,
       tokenRateUsd: RATES,

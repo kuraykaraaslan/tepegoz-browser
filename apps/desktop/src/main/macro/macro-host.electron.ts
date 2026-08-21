@@ -85,7 +85,8 @@ export function createMacroHost(deps: MacroHostDeps): MacroHost {
     // M2 self-heal: ONE scoped attempt with a fresh, model-proposed single-candidate chain, before
     // giving up. No healer wired, a decline, or a still-unresolved heal all fall through to the SAME
     // exact-predicate error the caller (macro-engine) reports as the located failure.
-    const healed = deps.healSelector === undefined ? null : await deps.healSelector(chain).catch(() => null);
+    const healed =
+      deps.healSelector === undefined ? null : await deps.healSelector(chain).catch(() => null);
     if (healed !== null) {
       const healedId = await MacroCdp.resolveChain(wc, [healed], HEAL_RESOLVE_TIMEOUT_MS);
       if (healedId !== null) {
@@ -172,7 +173,12 @@ export function createMacroHost(deps: MacroHostDeps): MacroHost {
       if (policy.decision === 'ask' && policy.reason !== 'state_change_confirm') {
         const approved =
           deps.confirmPolicyAsk !== undefined &&
-          (await deps.confirmPolicyAsk({ kind, reason: policy.reason, targetUrl, biometric: policy.biometric }));
+          (await deps.confirmPolicyAsk({
+            kind,
+            reason: policy.reason,
+            targetUrl,
+            biometric: policy.biometric,
+          }));
         if (!approved) {
           throw new PolicyDeniedError(`Denied at confirmation: ${policy.reason}`);
         }

@@ -42,19 +42,27 @@ describe('toKimiParams', () => {
 
   it('sets json_object response_format only when responseFormat is json', () => {
     expect(toKimiParams(req()).response_format).toBeUndefined();
-    expect(toKimiParams(req({ responseFormat: 'json' })).response_format).toEqual({ type: 'json_object' });
+    expect(toKimiParams(req({ responseFormat: 'json' })).response_format).toEqual({
+      type: 'json_object',
+    });
   });
 
   it('maps canon tools to OpenAI-compatible function tool definitions', () => {
     const params = toKimiParams(
       req({
-        tools: [{ name: 'browser_get_page', description: 'read page', inputSchema: { type: 'object' } }],
+        tools: [
+          { name: 'browser_get_page', description: 'read page', inputSchema: { type: 'object' } },
+        ],
       }),
     );
     expect(params.tools).toEqual([
       {
         type: 'function',
-        function: { name: 'browser_get_page', description: 'read page', parameters: { type: 'object' } },
+        function: {
+          name: 'browser_get_page',
+          description: 'read page',
+          parameters: { type: 'object' },
+        },
       },
     ]);
   });

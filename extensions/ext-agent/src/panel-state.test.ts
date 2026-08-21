@@ -11,7 +11,14 @@ import type { AgentEvent } from './types';
 
 /** Build an AgentEvent with sane defaults for the fields the log doesn't vary. */
 function ev(kind: AgentEvent['kind'], message: string, ts: number, detail?: string): AgentEvent {
-  return { runId: 'run-1', groupId: 'g1', kind, message, ts, ...(detail !== undefined ? { detail } : {}) };
+  return {
+    runId: 'run-1',
+    groupId: 'g1',
+    kind,
+    message,
+    ts,
+    ...(detail !== undefined ? { detail } : {}),
+  };
 }
 
 // A fixed epoch-ms so the UTC timestamps in the transcript are deterministic.
@@ -60,10 +67,10 @@ describe('serializeConversationLog', () => {
     expect(serializeConversationLog([], { exportedAt: T0, groupId: null })).toContain(
       '_No messages in this conversation._',
     );
-    const out = serializeConversationLog(
-      [{ id: 't1', prompt: '   ', runId: null, events: [] }],
-      { exportedAt: T0, groupId: null },
-    );
+    const out = serializeConversationLog([{ id: 't1', prompt: '   ', runId: null, events: [] }], {
+      exportedAt: T0,
+      groupId: null,
+    });
     expect(out).toContain('_(empty)_');
     expect(out).toContain('_No agent events recorded._');
     // Optional metadata is omitted when absent (no stray "Provider:" line).
@@ -108,7 +115,12 @@ describe('applyAgentEvent (event→run routing that drives the pause/steer/stop 
   });
 
   it('a terminal event clears running / paused / runId', () => {
-    const cur = group({ running: true, paused: true, runId: 'run-7', turns: [turn('t1', 'run-7')] });
+    const cur = group({
+      running: true,
+      paused: true,
+      runId: 'run-7',
+      turns: [turn('t1', 'run-7')],
+    });
     const out = applyAgentEvent(cur, evt('done', 'run-7'));
     expect(out.running).toBe(false);
     expect(out.paused).toBe(false);
@@ -127,7 +139,10 @@ describe('applyAgentEvent (event→run routing that drives the pause/steer/stop 
       running: true,
       paused: false,
       runId: 'run-2',
-      turns: [turn('t1', 'run-1', [evt('plan', 'run-1')]), turn('t2', 'run-2', [evt('plan', 'run-2')])],
+      turns: [
+        turn('t1', 'run-1', [evt('plan', 'run-1')]),
+        turn('t2', 'run-2', [evt('plan', 'run-2')]),
+      ],
     });
     const out = applyAgentEvent(cur, evt('error', 'run-1'));
     // The straggler lands on run-1's turn (t1)...

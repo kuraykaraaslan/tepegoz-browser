@@ -107,7 +107,9 @@ export function LocalActionsSection({
                         }}
                       />
                     ) : (
-                      <span className="shrink-0 text-xs text-text-disabled">{s.nativeNoAiLabel}</span>
+                      <span className="shrink-0 text-xs text-text-disabled">
+                        {s.nativeNoAiLabel}
+                      </span>
                     )}
                   </li>
                 ))}

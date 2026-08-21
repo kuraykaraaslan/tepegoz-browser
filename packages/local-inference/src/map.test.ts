@@ -18,7 +18,12 @@ function req(over: Partial<CanonRequest> = {}): CanonRequest {
 
 describe('toLocalTurns / grammarFor', () => {
   it('passes turns through unchanged', () => {
-    const r = req({ messages: [{ role: 'system', content: 's' }, { role: 'user', content: 'u' }] });
+    const r = req({
+      messages: [
+        { role: 'system', content: 's' },
+        { role: 'user', content: 'u' },
+      ],
+    });
     expect(toLocalTurns(r)).toBe(r.messages);
   });
 
@@ -34,9 +39,15 @@ describe('toLocalTurns / grammarFor', () => {
 
 describe('fromLocalResult', () => {
   it('maps finish reasons to the canon contract', () => {
-    expect(fromLocalResult({ text: 'a', finish: 'stop', inputTokens: 1, outputTokens: 2 }).stopReason).toBe('end');
-    expect(fromLocalResult({ text: 'a', finish: 'length', inputTokens: 1, outputTokens: 2 }).stopReason).toBe('max_tokens');
-    expect(fromLocalResult({ text: '', finish: 'abort', inputTokens: 1, outputTokens: 0 }).stopReason).toBe('error');
+    expect(
+      fromLocalResult({ text: 'a', finish: 'stop', inputTokens: 1, outputTokens: 2 }).stopReason,
+    ).toBe('end');
+    expect(
+      fromLocalResult({ text: 'a', finish: 'length', inputTokens: 1, outputTokens: 2 }).stopReason,
+    ).toBe('max_tokens');
+    expect(
+      fromLocalResult({ text: '', finish: 'abort', inputTokens: 1, outputTokens: 0 }).stopReason,
+    ).toBe('error');
   });
 
   it('carries text + usage and never emits tool calls', () => {

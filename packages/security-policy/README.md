@@ -1,6 +1,6 @@
 # @tepegoz/security-policy (L8)
 
-The **deterministic Policy Kernel** (ADR-0006): security enforced in plain code *before* the model,
+The **deterministic Policy Kernel** (ADR-0006): security enforced in plain code _before_ the model,
 never delegated to model guardrails. Given a tool call's danger class, taint, and target site it
 returns allow/deny/ask plus a stable machine-readable reason code (Permission Debug) and whether
 HIGH-RISK actions require biometric (Windows Hello) confirmation. Also owns the supporting
@@ -10,6 +10,7 @@ I/O — so it is fully unit-testable and consumed by `@tepegoz/capability-plane`
 decision point behind the ToolGateway PEP.
 
 ## Exports
+
 - **`PolicyKernel.evaluate(ctx)`** — the core decision function; `PolicyContext` in, `PolicyResult`
   (`decision`/`reason`/`biometric`) out. Locks out sensitive sites, forces HITL on tainted
   state-changing calls, and gates by danger class (`read`/`state_changing`/`destructive`/`financial`).
@@ -23,4 +24,5 @@ decision point behind the ToolGateway PEP.
   outbound data for exfiltration risk (secrets/high-entropy blobs) and returns an `EgressVerdict`.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test` · `pnpm build`

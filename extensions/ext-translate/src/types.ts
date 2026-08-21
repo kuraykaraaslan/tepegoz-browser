@@ -131,6 +131,8 @@ export interface TranslateHostApi {
   removeTranslateGlossaryTerm(id: string): Promise<TranslateSettings>;
   getActiveTabUrl(): Promise<string | null>;
   onTranslatePageState(callback: (state: TranslatePageState | null) => void): () => void;
-  onTranslateCloudFallbackRequest(callback: (request: TranslateCloudFallbackRequest) => void): () => void;
+  onTranslateCloudFallbackRequest(
+    callback: (request: TranslateCloudFallbackRequest) => void,
+  ): () => void;
   respondTranslateCloudFallback(response: TranslateCloudFallbackResponse): void;
 }

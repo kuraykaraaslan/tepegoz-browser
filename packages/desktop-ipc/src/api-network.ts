@@ -82,9 +82,7 @@ export interface NetworkState {
 
 /** What a scope can be set to over the bridge. `inherit` is invalid for General — it is the floor. */
 export type ScopeBindingInput =
-  | { kind: 'inherit' }
-  | { kind: 'direct' }
-  | { kind: 'connection'; connectionId: string };
+  { kind: 'inherit' } | { kind: 'direct' } | { kind: 'connection'; connectionId: string };
 
 /**
  * Adding a connection — one call for every protocol, discriminated by `kind`.

@@ -40,11 +40,7 @@ export interface WebToolsHost {
   fetch(input: WebFetchResolvedInput): Promise<WebFetchResult>;
 }
 
-export {
-  createSitemapReader,
-  type SitemapFetch,
-  type SitemapReader,
-} from './sitemap-reader';
+export { createSitemapReader, type SitemapFetch, type SitemapReader } from './sitemap-reader';
 
 export {
   buildWebFetchContent,

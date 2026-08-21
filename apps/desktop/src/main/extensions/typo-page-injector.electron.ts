@@ -22,7 +22,10 @@ const DebuggerPayloadSchema = z.object({
   payload: z.string(),
 });
 
-const listeners = new WeakMap<WebContents, (event: unknown, method: string, params?: unknown) => void>();
+const listeners = new WeakMap<
+  WebContents,
+  (event: unknown, method: string, params?: unknown) => void
+>();
 let started = false;
 
 function originOf(url: string): string | undefined {

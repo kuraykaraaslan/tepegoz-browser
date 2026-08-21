@@ -19,7 +19,9 @@ describe('@tepegoz/screenshots', () => {
   });
 
   it('validates screenshot capture inputs', () => {
-    expect(ScreenshotCaptureInputSchema.safeParse({ mode: 'fullPage', maxEdge: 2048 }).success).toBe(true);
+    expect(
+      ScreenshotCaptureInputSchema.safeParse({ mode: 'fullPage', maxEdge: 2048 }).success,
+    ).toBe(true);
     expect(ScreenshotCaptureInputSchema.safeParse({ mode: 'whole-document' }).success).toBe(false);
   });
 

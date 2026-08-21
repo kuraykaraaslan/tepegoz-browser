@@ -142,7 +142,12 @@ describe('Reactor system prompt (coreference + browsing strategy)', () => {
       goal = '';
       complete(request: CanonRequest): Promise<CanonResponse> {
         this.goal = contentToText(request.messages.find((m) => m.role === 'user')?.content ?? '');
-        return Promise.resolve({ text: finish, stopReason: 'end', usage: { inputTokens: 1, outputTokens: 1 }, toolCalls: [] });
+        return Promise.resolve({
+          text: finish,
+          stopReason: 'end',
+          usage: { inputTokens: 1, outputTokens: 1 },
+          toolCalls: [],
+        });
       }
     }
     const provider = new GoalCapture();

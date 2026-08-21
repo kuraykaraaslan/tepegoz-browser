@@ -73,7 +73,10 @@ function stableRefsFor(
     return null;
   }
   if (degraded) {
-    Logger.info('[perception] stable refs degraded (wholesale DOM rewrite)', { url, carryOverRate });
+    Logger.info('[perception] stable refs degraded (wholesale DOM rewrite)', {
+      url,
+      carryOverRate,
+    });
     return null;
   }
   return refs;
@@ -199,10 +202,7 @@ async function snapshotElementsRenderDom(
 }
 
 /** Read the active page's actionable elements from the accessibility tree (fallback path). */
-async function snapshotElementsA11y(
-  wc: WebContents,
-  deps: SnapshotDeps,
-): Promise<SnapshotResult> {
+async function snapshotElementsA11y(wc: WebContents, deps: SnapshotDeps): Promise<SnapshotResult> {
   await deps.ensure(wc);
   const raw: unknown = await wc.debugger.sendCommand('Accessibility.getFullAXTree');
   const parsed = AxTreeSchema.safeParse(raw);
@@ -216,9 +216,7 @@ async function snapshotElementsA11y(
     const role = axString(node.role?.value) || (fileInput !== null ? 'button' : '');
     if (fileInput === null && (role === '' || !isInteractableRole(role))) continue;
 
-    const disabled = node.properties?.some(
-      (p) => p.name === 'disabled' && p.value?.value === true,
-    );
+    const disabled = node.properties?.some((p) => p.name === 'disabled' && p.value?.value === true);
     const el: RawInteractable = { role, name: axString(node.name?.value) };
     const value = axString(node.value?.value);
     if (value !== '') el.value = value;

@@ -86,7 +86,11 @@ describe('verifying a chain', () => {
   it('catches a chain that does not actually start from genesis', () => {
     const chained = chainEvents([event()]);
     const forged = [{ ...chained[0]!, prevHash: 'f'.repeat(64) }];
-    expect(verifyChain(forged)).toMatchObject({ valid: false, reason: 'broken_genesis', atIndex: 0 });
+    expect(verifyChain(forged)).toMatchObject({
+      valid: false,
+      reason: 'broken_genesis',
+      atIndex: 0,
+    });
   });
 
   it('catches a FORGED selfHash that does not match its own recomputed value', () => {
@@ -94,7 +98,11 @@ describe('verifying a chain', () => {
     // predecessor, but claims a self-hash that its own content does not produce.
     const chained = chainEvents([event({ id: 'a' }), event({ id: 'b' })]);
     const forged = [chained[0]!, { ...chained[1]!, selfHash: 'f'.repeat(64) }];
-    expect(verifyChain(forged)).toMatchObject({ valid: false, reason: 'hash_mismatch', atIndex: 1 });
+    expect(verifyChain(forged)).toMatchObject({
+      valid: false,
+      reason: 'hash_mismatch',
+      atIndex: 1,
+    });
   });
 });
 

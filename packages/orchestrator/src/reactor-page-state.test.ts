@@ -1,5 +1,10 @@
 import { beforeEach, describe, it, expect } from 'vitest';
-import { ModelGateway, type CanonRequest, type CanonResponse, type ModelProvider } from '@tepegoz/model-gateway';
+import {
+  ModelGateway,
+  type CanonRequest,
+  type CanonResponse,
+  type ModelProvider,
+} from '@tepegoz/model-gateway';
 import { CapabilityRegistry, ToolGateway, type RegisteredTool } from '@tepegoz/capability-plane';
 import type { AIProvider, RiskLevel, ToolDescriptor } from '@tepegoz/shared-types';
 import Reactor from './reactor';
@@ -26,7 +31,11 @@ function fakeTool(id: string, dangerClass: RiskLevel, result: unknown): Register
   };
 }
 
-function fakeToolSequence(id: string, dangerClass: RiskLevel, results: unknown[]): RegisteredTool<unknown> {
+function fakeToolSequence(
+  id: string,
+  dangerClass: RiskLevel,
+  results: unknown[],
+): RegisteredTool<unknown> {
   let index = 0;
   const descriptor: ToolDescriptor = {
     id,
@@ -69,7 +78,12 @@ beforeEach(() => {
 });
 
 describe('Reactor.run (transient page-state collapse)', () => {
-  const req = (goal = 'do it') => ({ goal, tools: tools(), provider: 'anthropic' as const, model: 'mock' });
+  const req = (goal = 'do it') => ({
+    goal,
+    tools: tools(),
+    provider: 'anthropic' as const,
+    model: 'mock',
+  });
 
   it('keeps only the latest page-state blob live, collapsing superseded ones (AI-3 transient state)', async () => {
     // Two distinct LARGE observations (> collapse threshold); the earlier one must be collapsed by the
@@ -77,7 +91,9 @@ describe('Reactor.run (transient page-state collapse)', () => {
     const big1 = `ELEMENTS-ONE ${'A'.repeat(1000)}`;
     const big2 = `ELEMENTS-TWO ${'B'.repeat(1000)}`;
     CapabilityRegistry.reset();
-    CapabilityRegistry.register(fakeToolSequence('browser_get_elements', 'read', [{ content: big1 }, { content: big2 }]));
+    CapabilityRegistry.register(
+      fakeToolSequence('browser_get_elements', 'read', [{ content: big1 }, { content: big2 }]),
+    );
 
     class RecordingProvider implements ModelProvider {
       readonly id: AIProvider = 'anthropic';
@@ -86,7 +102,12 @@ describe('Reactor.run (transient page-state collapse)', () => {
       complete(request: CanonRequest): Promise<CanonResponse> {
         this.turns.push(request.messages.map((m) => contentToText(m.content)));
         const text = this.replies[this.turns.length - 1] ?? finish;
-        return Promise.resolve({ text, stopReason: 'end', usage: { inputTokens: 1, outputTokens: 1 }, toolCalls: [] });
+        return Promise.resolve({
+          text,
+          stopReason: 'end',
+          usage: { inputTokens: 1, outputTokens: 1 },
+          toolCalls: [],
+        });
       }
     }
     const provider = new RecordingProvider([

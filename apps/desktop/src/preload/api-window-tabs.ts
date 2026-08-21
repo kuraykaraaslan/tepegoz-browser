@@ -2,6 +2,8 @@ import { ipcRenderer } from 'electron';
 import {
   IpcChannels,
   type ContentBounds,
+  type FindInPageQuery,
+  type FindInPageResult,
   type PageMenuAction,
   type PageMenuContext,
   type PageMenuContributionActionInput,
@@ -58,6 +60,10 @@ export const windowTabsApi: Pick<
   | 'endTabDrag'
   | 'cancelTabDrag'
   | 'reportTabStrip'
+  | 'findInPage'
+  | 'stopFindInPage'
+  | 'onFindResult'
+  | 'onFindOpen'
   | 'newWindow'
   | 'ensureActiveGroup'
   | 'onActiveGroupChange'
@@ -191,6 +197,30 @@ export const windowTabsApi: Pick<
       ipcRenderer.removeListener(IpcChannels.tabsState, listener);
     };
   },
+  findInPage: (query: FindInPageQuery) => {
+    ipcRenderer.send(IpcChannels.findStart, query);
+  },
+  stopFindInPage: () => {
+    ipcRenderer.send(IpcChannels.findStop);
+  },
+  onFindResult: (callback: (result: FindInPageResult) => void) => {
+    const listener = (_event: unknown, result: FindInPageResult): void => {
+      callback(result);
+    };
+    ipcRenderer.on(IpcChannels.findResult, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.findResult, listener);
+    };
+  },
+  onFindOpen: (callback: () => void) => {
+    const listener = (): void => {
+      callback();
+    };
+    ipcRenderer.on(IpcChannels.findOpen, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.findOpen, listener);
+    };
+  },
   beginTabDrag: (payload: TabDragBegin) => {
     ipcRenderer.send(IpcChannels.tabsDragBegin, payload);
   },
@@ -209,7 +239,8 @@ export const windowTabsApi: Pick<
   newWindow: () => {
     ipcRenderer.send(IpcChannels.windowNew);
   },
-  ensureActiveGroup: () => invoke<{ groupId: string }>(IpcChannels.agentEnsureGroup).then((r) => r.groupId),
+  ensureActiveGroup: () =>
+    invoke<{ groupId: string }>(IpcChannels.agentEnsureGroup).then((r) => r.groupId),
   onActiveGroupChange: (callback: (groupId: string | null) => void) => {
     // Derive active group from tab state changes — no separate push needed.
     let lastGroupId: string | null | undefined = undefined;

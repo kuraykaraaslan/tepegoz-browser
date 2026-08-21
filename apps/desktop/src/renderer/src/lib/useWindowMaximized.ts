@@ -9,7 +9,10 @@ export function useWindowMaximized(): boolean {
 
   useEffect(() => {
     const api = window.tepegoz;
-    void api.isWindowMaximized().then(setMaximized).catch(() => undefined);
+    void api
+      .isWindowMaximized()
+      .then(setMaximized)
+      .catch(() => undefined);
     return api.onWindowMaximizedChange(setMaximized);
   }, []);
 

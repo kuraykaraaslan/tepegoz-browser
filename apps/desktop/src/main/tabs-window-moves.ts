@@ -18,8 +18,7 @@ export class WindowTabsMoves extends WindowTabsGroups {
   detachTab(id: string): DetachedTab | null {
     const rec = this.store.get(id);
     if (rec === undefined) return null;
-    const group =
-      rec.groupId !== null ? this.store.getGroup(rec.groupId) ?? null : null;
+    const group = rec.groupId !== null ? (this.store.getGroup(rec.groupId) ?? null) : null;
     const view = this.views.get(id) ?? null;
     if (view !== null) {
       this.win.contentView.removeChildView(view);

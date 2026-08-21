@@ -166,7 +166,11 @@ export function TaskModal({ api, initial, onClose, onSaved }: TaskModalProps) {
                 <select
                   value={form.changeMode}
                   disabled={busy}
-                  onChange={(e) => patch({ changeMode: e.target.value === 'elementText' ? 'elementText' : 'textHash' })}
+                  onChange={(e) =>
+                    patch({
+                      changeMode: e.target.value === 'elementText' ? 'elementText' : 'textHash',
+                    })
+                  }
                   className={INPUT}
                 >
                   <option value="textHash">{t.schedule.changeModeTextHash}</option>

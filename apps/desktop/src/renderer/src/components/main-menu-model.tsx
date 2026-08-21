@@ -92,7 +92,12 @@ function action(
 export function buildMainMenuModel(copy: MainMenuCopy, actions: MainMenuActions): MenuItem[] {
   return [
     { id: 'new-tab', label: copy.newTab, shortcut: 'Ctrl+T', onSelect: actions.newTab },
-    { id: 'reopen-tab', label: copy.reopenTab, shortcut: 'Ctrl+Shift+T', onSelect: actions.reopenTab },
+    {
+      id: 'reopen-tab',
+      label: copy.reopenTab,
+      shortcut: 'Ctrl+Shift+T',
+      onSelect: actions.reopenTab,
+    },
     { id: 'reload', label: copy.reload, shortcut: 'Ctrl+R', onSelect: actions.reload },
     {
       kind: 'actions',
@@ -100,7 +105,12 @@ export function buildMainMenuModel(copy: MainMenuCopy, actions: MainMenuActions)
       items: [
         action('new-window', copy.menu.newWindow, copy.menu.short.newWindow, 'newWindow'),
         action('new-incognito', copy.menu.newIncognito, copy.menu.short.newIncognito, 'incognito'),
-        action('delete-data', copy.menu.deleteBrowsingData, copy.menu.short.deleteBrowsingData, 'trash'),
+        action(
+          'delete-data',
+          copy.menu.deleteBrowsingData,
+          copy.menu.short.deleteBrowsingData,
+          'trash',
+        ),
       ],
     },
     { kind: 'separator' },
@@ -110,8 +120,20 @@ export function buildMainMenuModel(copy: MainMenuCopy, actions: MainMenuActions)
       id: 'data-actions',
       items: [
         action('passwords', copy.menu.passwords, copy.menu.short.passwords, 'key'),
-        action('downloads', copy.menu.downloads, copy.menu.short.downloads, 'download', actions.openDownloads),
-        action('uploads', copy.menu.uploads, copy.menu.short.uploads, 'upload', actions.openUploads),
+        action(
+          'downloads',
+          copy.menu.downloads,
+          copy.menu.short.downloads,
+          'download',
+          actions.openDownloads,
+        ),
+        action(
+          'uploads',
+          copy.menu.uploads,
+          copy.menu.short.uploads,
+          'upload',
+          actions.openUploads,
+        ),
         action('tasks', copy.menu.tasks, copy.menu.short.tasks, 'tasks', actions.openTasks),
         action('tab-groups', copy.menu.tabGroups, copy.menu.short.tabGroups, 'layers'),
       ],

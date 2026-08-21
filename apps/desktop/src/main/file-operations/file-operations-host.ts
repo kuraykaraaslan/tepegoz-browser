@@ -84,9 +84,37 @@ const MAX_WALK_ENTRIES = 20_000;
  * unattended, so "open the file I made" must never become "run the program I made". Documents open fine.
  */
 const BLOCKED_OPEN_EXT = new Set([
-  '.exe', '.bat', '.cmd', '.com', '.scr', '.pif', '.msi', '.msp', '.cpl', '.reg', '.hta',
-  '.ps1', '.psm1', '.vbs', '.vbe', '.js', '.jse', '.wsf', '.wsh', '.lnk', '.url', '.inf',
-  '.jar', '.sh', '.bash', '.desktop', '.app', '.command', '.py', '.rb', '.pl',
+  '.exe',
+  '.bat',
+  '.cmd',
+  '.com',
+  '.scr',
+  '.pif',
+  '.msi',
+  '.msp',
+  '.cpl',
+  '.reg',
+  '.hta',
+  '.ps1',
+  '.psm1',
+  '.vbs',
+  '.vbe',
+  '.js',
+  '.jse',
+  '.wsf',
+  '.wsh',
+  '.lnk',
+  '.url',
+  '.inf',
+  '.jar',
+  '.sh',
+  '.bash',
+  '.desktop',
+  '.app',
+  '.command',
+  '.py',
+  '.rb',
+  '.pl',
 ]);
 
 /** Classify a stat/dirent as the compact kind the tools surface. */
@@ -172,9 +200,7 @@ const grantStore: GrantStore = {
 };
 
 /** Outcome the agent-run confirm handler acts on: run/deny silently, or defer to the HITL modal. */
-export type FileConsentDecision =
-  | { type: 'auto'; approved: boolean }
-  | { type: 'fallthrough' };
+export type FileConsentDecision = { type: 'auto'; approved: boolean } | { type: 'fallthrough' };
 
 export default class FileOperationsHost {
   private static started = false;

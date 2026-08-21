@@ -103,7 +103,8 @@ function requireKey(value: string | null, what: string): string {
  * user — every rejection here is something they can fix in the file.
  */
 export function parseWireGuardConfig(text: string): WireGuardConfig {
-  if (text.length > 128_000) throw new WireGuardConfigError('This file is too large to be a WireGuard config');
+  if (text.length > 128_000)
+    throw new WireGuardConfigError('This file is too large to be a WireGuard config');
   const parsed = sections(text);
   const iface = parsed.find((s) => s.name === 'interface');
   if (iface === undefined) throw new WireGuardConfigError('No [Interface] section found');

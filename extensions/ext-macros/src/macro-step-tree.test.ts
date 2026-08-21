@@ -21,7 +21,10 @@ describe('macro step tree mutations', () => {
       },
     ];
 
-    const next = appendStepToContainer(steps, [{ index: 0, slot: 'then' }], { kind: 'waitMs', ms: 300 });
+    const next = appendStepToContainer(steps, [{ index: 0, slot: 'then' }], {
+      kind: 'waitMs',
+      ms: 300,
+    });
     const block = next[0];
 
     expect(block?.kind).toBe('if');
@@ -45,8 +48,15 @@ describe('macro step tree mutations', () => {
       },
     ];
     const bodyPath = [{ index: 0, slot: 'body' as const }];
-    const updated = updateStepAtLocation(steps, { containerPath: bodyPath, index: 0 }, () => ({ kind: 'waitMs', ms: 150 }));
-    const inserted = insertStepAfterLocation(updated, { containerPath: bodyPath, index: 0 }, { kind: 'waitMs', ms: 175 });
+    const updated = updateStepAtLocation(steps, { containerPath: bodyPath, index: 0 }, () => ({
+      kind: 'waitMs',
+      ms: 150,
+    }));
+    const inserted = insertStepAfterLocation(
+      updated,
+      { containerPath: bodyPath, index: 0 },
+      { kind: 'waitMs', ms: 175 },
+    );
     const moved = moveStepAtLocation(inserted, { containerPath: bodyPath, index: 2 }, -1);
     const deleted = deleteStepAtLocation(moved, { containerPath: bodyPath, index: 0 });
     const block = deleted[0];

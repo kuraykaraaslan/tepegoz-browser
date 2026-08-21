@@ -6,8 +6,8 @@ Tepegöz watches the web with a single, focused eye — it understands a page, p
 and carries out real tasks on your behalf, while every action stays observable, reversible, and
 under your control.
 
-> **The name.** *Tepegöz* is the one-eyed giant of Turkish mythology — most famously the monster
-> of the *Book of Dede Korkut* (Dede Korkut Kitabı). The single eye is the product metaphor: **one
+> **The name.** _Tepegöz_ is the one-eyed giant of Turkish mythology — most famously the monster
+> of the _Book of Dede Korkut_ (Dede Korkut Kitabı). The single eye is the product metaphor: **one
 > agent, one focused gaze on the page**, acting deliberately rather than blindly.
 
 ---
@@ -32,11 +32,11 @@ timeline. Risky or irreversible steps stop and ask you first.
 
 Three principles shape every decision:
 
-- **Local-first.** The full agentic experience runs on *your* machine with *your* own AI key
+- **Local-first.** The full agentic experience runs on _your_ machine with _your_ own AI key
   (Bring-Your-Own-Key). There is **zero dependency on a managed backend** to get value. A managed
   cloud tier is optional and added later — never required.
 - **Security by design.** The renderer and any web content are treated as **untrusted**. A
-  rule-based **Policy Kernel** classifies every tool call *before* the model runs, an **Egress
+  rule-based **Policy Kernel** classifies every tool call _before_ the model runs, an **Egress
   Firewall** blocks data exfiltration, and **sensitive sites** (banking, crypto, health, password
   managers) are locked out of automation by default.
 - **Observable & reversible.** Everything the agent does is recorded in an append-only **Event
@@ -46,8 +46,9 @@ Three principles shape every decision:
 ## Key features (target final state)
 
 ### Agentic automation
+
 - **Command Palette** (`Ctrl+K`) with four modes — **Chat / Do / Make / Tasks** — as the primary way
-  to drive the browser, alongside a deterministic address bar that *never* silently starts an AI thread.
+  to drive the browser, alongside a deterministic address bar that _never_ silently starts an AI thread.
 - **Editable plan preview** — the agent shows its planned steps (each tagged read / state-changing /
   destructive / financial, with a cost estimate) and lets you edit before anything runs.
 - **Live Agent Console** — per-step URL, action, progress, checkpoint, token cost, and errors, with a
@@ -63,14 +64,16 @@ Three principles shape every decision:
   your credits preserved.
 
 ### Real-world task completion
+
 - **Integration adapters** with an **official-API-first** router — Google **Gmail / Drive / Calendar**
   (sending email is always human-confirmed), with a logged-in browser fallback only when no API exists.
 - **Canva** via its existing remote **MCP** connector — no bespoke adapter.
-- **MCP client *and* server.** Tepegöz consumes external MCP tools, and **exposes its own** browser /
+- **MCP client _and_ server.** Tepegöz consumes external MCP tools, and **exposes its own** browser /
   tab / DOM / journal tools to external clients (Claude, ChatGPT, Cursor…) over stdio + Streamable HTTP,
   behind Bearer auth, rate limiting, and the same policy gate as its internal surface.
 
 ### Trustworthy daily driver
+
 - **Safe-Browsing Suite** — ad/tracker blocking (EasyList/EasyPrivacy, per-partition, no system-proxy
   MITM), Google Safe Browsing v5 (hash-prefix lookups; your URLs are never sent), and an
   **AgentThreatShield** that scores phishing/scam and egress anomalies on-device.
@@ -79,16 +82,18 @@ Three principles shape every decision:
   off by default.
 
 ### Privacy & provider choice
+
 - **Provider-agnostic Model Gateway.** Claude is the default (Opus for planning, Sonnet for execution,
   Haiku for classification), with OpenAI and Gemini adapters. Keys live only in the main process,
   encrypted via OS `safeStorage`.
 - **Token Ledger** — live quota indicator, 80% warning, and auto-refund on system errors, CAPTCHAs, or
   detected loops.
 - **Optional cloud tier (later).** A managed proxy (no key needed), **opt-in end-to-end-encrypted**
-  cross-device memory sync (raw screenshots are *never* synced), and browser bookmark/password/tab sync
+  cross-device memory sync (raw screenshots are _never_ synced), and browser bookmark/password/tab sync
   — all pluggable, so turning them on requires **no rewrite**.
 
 ### Built for everyone, including Turkey
+
 - **English-first, Turkish first-class.** Every user-facing string comes from a type-safe i18n catalog
   with full English ⇄ Turkish parity — no hardcoded UI text, enforced by lint.
 - **Turkish IME done right.** A dedicated input pipeline for Turkish-Q/F layouts, dead keys, and
@@ -100,19 +105,19 @@ Three principles shape every decision:
 Tepegöz is a layered, modular monorepo. Layers communicate only through typed, validated contracts;
 direct cross-layer imports are forbidden and enforced in CI.
 
-| Layer | Responsibility |
-|------:|----------------|
-| **L0 — Core Shell** | Secure Electron windowing, fuses, sandboxing, typed IPC |
-| **L1 — Persistence** | SQLite (WAL) + append-only Event Journal + content-addressed blob store |
-| **L2 — Durability & Memory** | Checkpoint/resume, handoff, per-task tiered memory |
-| **L3 — Orchestrator** | Intent → DAG planner, parallel scheduler, loop detection |
-| **L4 — Perception & Tools** | Out-of-process CDP driver, DOM + accessibility perception, content sanitizer |
-| **L5 — Capability Plane** | Tool gateway (single PEP), skills runtime, MCP client + server |
-| **L6 — Integration Adapters** | Official-API-first connectors with browser fallback |
-| **L7 — Model Gateway** | Provider-agnostic AI routing, transports, Token Ledger |
-| **L8 — Security Kernel** | Policy Kernel, Capability Broker, Egress Firewall, HITL, prompt/rules engine |
-| **L9 — Browser UI** | Command Palette, Live Agent Console, browser shell, settings |
-| **L10 — Safe Browsing** | Adblock, Safe Browsing, AgentThreatShield, popup/permission guard |
+|                         Layer | Responsibility                                                               |
+| ----------------------------: | ---------------------------------------------------------------------------- |
+|           **L0 — Core Shell** | Secure Electron windowing, fuses, sandboxing, typed IPC                      |
+|          **L1 — Persistence** | SQLite (WAL) + append-only Event Journal + content-addressed blob store      |
+|  **L2 — Durability & Memory** | Checkpoint/resume, handoff, per-task tiered memory                           |
+|         **L3 — Orchestrator** | Intent → DAG planner, parallel scheduler, loop detection                     |
+|   **L4 — Perception & Tools** | Out-of-process CDP driver, DOM + accessibility perception, content sanitizer |
+|     **L5 — Capability Plane** | Tool gateway (single PEP), skills runtime, MCP client + server               |
+| **L6 — Integration Adapters** | Official-API-first connectors with browser fallback                          |
+|        **L7 — Model Gateway** | Provider-agnostic AI routing, transports, Token Ledger                       |
+|      **L8 — Security Kernel** | Policy Kernel, Capability Broker, Egress Firewall, HITL, prompt/rules engine |
+|           **L9 — Browser UI** | Command Palette, Live Agent Console, browser shell, settings                 |
+|       **L10 — Safe Browsing** | Adblock, Safe Browsing, AgentThreatShield, popup/permission guard            |
 
 **Cross-cutting foundations:** event-sourced state, a strict Zod boundary on every untrusted input
 (IPC, LLM tool-call args, MCP, adapters), a uniform `AppError` contract, redacted logging, and an
@@ -169,14 +174,14 @@ the layers described above.
 Development is sequenced so that the highest-risk, hardest-to-reverse decisions come first, and so that
 **real user value ships before any cloud dependency exists.**
 
-| Phase | Goal | Status |
-|------:|------|--------|
-| **0** | Monorepo scaffold, core contracts, security backbone, CI | ⬜ Not started |
-| **1a** | Walking-skeleton MVP — BYO-key, local-first agentic core, one end-to-end task | ⬜ Not started |
+|  Phase | Goal                                                                           | Status         |
+| -----: | ------------------------------------------------------------------------------ | -------------- |
+|  **0** | Monorepo scaffold, core contracts, security backbone, CI                       | ⬜ Not started |
+| **1a** | Walking-skeleton MVP — BYO-key, local-first agentic core, one end-to-end task  | ⬜ Not started |
 | **1b** | Agentic deepening — parallel DAG, durable handoff, per-task memory, MCP server | ⬜ Not started |
-| **2** | Integration adapters (Google, Canva) + Safe-Browsing Suite | ⬜ Not started |
-| **3** | Optional managed subscription + E2EE cloud memory sync + extensions | ⬜ Not started |
-| **4** | Maturation — full extensions, cross-platform (macOS/Linux), enterprise | ⬜ Not started |
+|  **2** | Integration adapters (Google, Canva) + Safe-Browsing Suite                     | ⬜ Not started |
+|  **3** | Optional managed subscription + E2EE cloud memory sync + extensions            | ⬜ Not started |
+|  **4** | Maturation — full extensions, cross-platform (macOS/Linux), enterprise         | ⬜ Not started |
 
 Full, task-level detail lives in [`phases/`](phases/) and its [index](phases/README.md).
 
@@ -195,4 +200,4 @@ These are non-negotiable and apply to every phase:
 
 ---
 
-*Tepegöz — one eye on the web, both hands on the wheel kept by you.*
+_Tepegöz — one eye on the web, both hands on the wheel kept by you._

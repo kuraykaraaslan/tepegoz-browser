@@ -58,7 +58,7 @@ fixture-freeze-style discipline (elsewhere in this repo) argues for.
 
 **Negative / accepted.** `evaluateAssertion` judges a snapshot it is handed; it cannot itself detect that
 a distiller mis-classified a page-derived value as a literal instead of a variable. That is a property of
-the *distiller*, not of this schema or evaluator, and is out of scope for this ADR.
+the _distiller_, not of this schema or evaluator, and is out of scope for this ADR.
 
 **Owed, and stated rather than implied.** This ADR covers exactly two of the phase's five task groups.
 Untouched: the distiller itself (folding a `TaskSucceeded` event chain into a Recipe), the CDP "Record

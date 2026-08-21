@@ -25,7 +25,8 @@ export function UserMenuPopup() {
   useEffect(() => {
     const el = contentRef.current;
     if (el === null) return;
-    const report = (): void => window.tepegoz.resizePopup(Math.ceil(el.getBoundingClientRect().height));
+    const report = (): void =>
+      window.tepegoz.resizePopup(Math.ceil(el.getBoundingClientRect().height));
     report();
     const observer = new ResizeObserver(report);
     observer.observe(el);
@@ -36,7 +37,9 @@ export function UserMenuPopup() {
     void window.tepegoz.getPreferences().then(
       (p) => {
         applyTheme(p.theme, p.themeColor);
-        setLocale(p.locale === 'en' || p.locale === 'tr' ? p.locale : resolveLocale(navigator.language));
+        setLocale(
+          p.locale === 'en' || p.locale === 'tr' ? p.locale : resolveLocale(navigator.language),
+        );
       },
       () => {
         /* bridge unavailable — fall back to defaults */

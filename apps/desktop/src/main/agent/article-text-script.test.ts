@@ -33,7 +33,8 @@ function build(node: Node): Record<string, unknown> {
     get: () => collect(self),
   });
   self['querySelectorAll'] = (sel: string) => descendants(self).filter((d) => matchesAny(d, sel));
-  self['querySelector'] = (sel: string) => descendants(self).find((d) => matchesAny(d, sel)) ?? null;
+  self['querySelector'] = (sel: string) =>
+    descendants(self).find((d) => matchesAny(d, sel)) ?? null;
   self['removeChild'] = (child: Record<string, unknown>) => {
     const kids = self['children'] as Record<string, unknown>[];
     const at = kids.indexOf(child);
@@ -81,7 +82,8 @@ function run(body: Node): { text: string; source: string } {
   const document = {
     body: bodyEl,
     querySelector: (sel: string) =>
-      descendants(bodyEl).find((d) => matchesAny(d, sel)) ?? (matchesAny(bodyEl, sel) ? bodyEl : null),
+      descendants(bodyEl).find((d) => matchesAny(d, sel)) ??
+      (matchesAny(bodyEl, sel) ? bodyEl : null),
   };
   const context = vm.createContext({ document });
   return vm.runInContext(buildArticleTextExpression(), context) as { text: string; source: string };
@@ -96,7 +98,10 @@ describe('article-text extraction', () => {
       tag: 'body',
       children: [
         { tag: 'nav', children: [para('Home Products Support')] },
-        { tag: 'article', children: [long('The real content.'), { tag: 'footer', children: [para('© Acme')] }] },
+        {
+          tag: 'article',
+          children: [long('The real content.'), { tag: 'footer', children: [para('© Acme')] }],
+        },
         { tag: 'footer', children: [para('Cookie notice and legal links')] },
       ],
     });
@@ -145,7 +150,14 @@ describe('article-text extraction', () => {
       children: [
         {
           tag: 'article',
-          children: [long('Visible body.'), { tag: 'div', attrs: { 'aria-hidden': 'true' }, children: [para('SEO keyword stuffing')] }],
+          children: [
+            long('Visible body.'),
+            {
+              tag: 'div',
+              attrs: { 'aria-hidden': 'true' },
+              children: [para('SEO keyword stuffing')],
+            },
+          ],
         },
       ],
     });
@@ -154,7 +166,10 @@ describe('article-text extraction', () => {
 
   it('reports empty text rather than throwing when there is no body', () => {
     const context = vm.createContext({ document: { body: null, querySelector: () => null } });
-    const result = vm.runInContext(buildArticleTextExpression(), context) as { text: string; source: string };
+    const result = vm.runInContext(buildArticleTextExpression(), context) as {
+      text: string;
+      source: string;
+    };
     expect(result).toEqual({ text: '', source: 'body' });
   });
 

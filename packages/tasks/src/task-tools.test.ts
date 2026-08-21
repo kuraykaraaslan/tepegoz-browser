@@ -26,7 +26,9 @@ describe('task tools', () => {
 
     registerTaskTools({ host });
 
-    const ids = CapabilityRegistry.list().map((tool) => tool.id).sort();
+    const ids = CapabilityRegistry.list()
+      .map((tool) => tool.id)
+      .sort();
     expect(ids).toEqual([
       'task_create_item',
       'task_create_run',
@@ -34,18 +36,24 @@ describe('task tools', () => {
       'task_list_items',
       'task_update_item',
     ]);
-    expect(CapabilityRegistry.get('task_create_item')?.descriptor.requiresIdempotencyKey).toBe(true);
+    expect(CapabilityRegistry.get('task_create_item')?.descriptor.requiresIdempotencyKey).toBe(
+      true,
+    );
     const runTool = CapabilityRegistry.get('task_create_run');
     expect(runTool?.descriptor.requiresIdempotencyKey).toBe(true);
-    expect(runTool?.inputSchema.safeParse({
-      id: 'task-1',
-      action: 'disable',
-      idempotencyKey: 'k',
-    }).success).toBe(false);
-    expect(runTool!.handler({
-      id: 'task-1',
-      action: 'run',
-      idempotencyKey: 'k',
-    })).toMatchObject({ ok: true });
+    expect(
+      runTool?.inputSchema.safeParse({
+        id: 'task-1',
+        action: 'disable',
+        idempotencyKey: 'k',
+      }).success,
+    ).toBe(false);
+    expect(
+      runTool!.handler({
+        id: 'task-1',
+        action: 'run',
+        idempotencyKey: 'k',
+      }),
+    ).toMatchObject({ ok: true });
   });
 });

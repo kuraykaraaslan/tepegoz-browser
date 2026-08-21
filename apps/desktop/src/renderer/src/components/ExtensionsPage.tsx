@@ -1,10 +1,6 @@
 import { ExtensionsGrid, type ExtensionCardItem } from '@tepegoz/extensions-ui';
 import type { Locale } from '@tepegoz/i18n';
-import {
-  isExtensionEnabled,
-  type ExtensionId,
-  type ExtensionState,
-} from '@tepegoz/desktop-ipc';
+import { isExtensionEnabled, type ExtensionId, type ExtensionState } from '@tepegoz/desktop-ipc';
 import { extensionLabel } from '../../../shared/extension-urls';
 import type { ExtensionDef } from '../extensions/registry';
 

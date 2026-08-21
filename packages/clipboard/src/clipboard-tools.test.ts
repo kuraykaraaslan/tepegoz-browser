@@ -18,6 +18,8 @@ describe('clipboard tools', () => {
       'clipboard_get_text',
     ]);
     expect(tools.every((tool) => tool.dangerClass === 'state_changing')).toBe(true);
-    expect(tools.find((tool) => tool.id === 'clipboard_create_text')?.requiresIdempotencyKey).toBe(true);
+    expect(tools.find((tool) => tool.id === 'clipboard_create_text')?.requiresIdempotencyKey).toBe(
+      true,
+    );
   });
 });

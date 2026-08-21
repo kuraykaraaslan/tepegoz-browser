@@ -17,12 +17,6 @@ import type { NetworkApi } from './api-network';
 
 /** The exact surface bridged to `window.tepegoz` in the renderer. */
 export interface TepegozApi
-  extends AppApi,
-    TabsApi,
-    AgentApi,
-    ExtensionsApi,
-    UiApi,
-    LoginsApi,
-    NetworkApi {
+  extends AppApi, TabsApi, AgentApi, ExtensionsApi, UiApi, LoginsApi, NetworkApi {
   readonly platform: string;
 }

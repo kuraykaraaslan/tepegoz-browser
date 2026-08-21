@@ -71,7 +71,10 @@ const TRANSITIONS: Record<AgentRunPhase, Partial<Record<AgentRunTransition, Agen
   cancelled: {},
 };
 
-export function advanceRunPhase(phase: AgentRunPhase, transition: AgentRunTransition): AgentRunPhase {
+export function advanceRunPhase(
+  phase: AgentRunPhase,
+  transition: AgentRunTransition,
+): AgentRunPhase {
   const next = TRANSITIONS[phase][transition];
   if (next === undefined) {
     throw new Error(`Invalid agent run transition: ${phase} -> ${transition}`);
@@ -100,10 +103,18 @@ function pageFromResult(outcome: StepOutcome): AgentPageCheckpoint | undefined {
   const tabId = tabIdFromArgs(outcome.args);
   if (url === undefined && title === undefined && tabId === undefined) return undefined;
   const snapshotRef = `runtime://${outcome.stepId}`;
-  return { ...(tabId !== undefined ? { tabId } : {}), ...(url !== undefined ? { url } : {}), ...(title !== undefined ? { title } : {}), snapshotRef };
+  return {
+    ...(tabId !== undefined ? { tabId } : {}),
+    ...(url !== undefined ? { url } : {}),
+    ...(title !== undefined ? { title } : {}),
+    snapshotRef,
+  };
 }
 
-export function checkpointFromOutcome(phase: AgentRunPhase, outcome: StepOutcome): AgentRunCheckpoint {
+export function checkpointFromOutcome(
+  phase: AgentRunPhase,
+  outcome: StepOutcome,
+): AgentRunCheckpoint {
   if (outcome.ok) {
     const page = pageFromResult(outcome);
     const lastSuccessfulStep: AgentStepCheckpoint = {
@@ -150,7 +161,9 @@ export function terminalCheckpoint(
     phase,
     ts: Date.now(),
     stoppedReason,
-    ...(failure !== undefined ? { lastFailure: failure, recovery: recoveryAdviceFor(failure) } : {}),
+    ...(failure !== undefined
+      ? { lastFailure: failure, recovery: recoveryAdviceFor(failure) }
+      : {}),
   };
 }
 

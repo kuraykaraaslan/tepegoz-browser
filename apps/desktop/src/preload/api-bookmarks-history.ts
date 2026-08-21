@@ -10,6 +10,10 @@ import {
   type BookmarkNodeType,
   type BookmarkTreeNode,
   type HistoryEntry,
+  type BasicAuthRequest,
+  type BasicAuthResponse,
+  type CertificateErrorRequest,
+  type CertificateErrorResponse,
   type NotificationPermissionRequest,
   type NotificationPermissionResponse,
   type NotificationState,
@@ -47,6 +51,10 @@ export const bookmarksHistoryApi: Pick<
   | 'markNotificationRead'
   | 'markAllNotificationsRead'
   | 'onNotificationPermissionRequest'
+  | 'onBasicAuthRequest'
+  | 'respondBasicAuth'
+  | 'onCertificateErrorRequest'
+  | 'respondCertificateError'
   | 'respondNotificationPermission'
 > = {
   getHistory: (params?: { limit?: number; offset?: number }) =>
@@ -134,5 +142,29 @@ export const bookmarksHistoryApi: Pick<
   },
   respondNotificationPermission: (response: NotificationPermissionResponse) => {
     ipcRenderer.send(IpcChannels.notificationPermissionRespond, response);
+  },
+  onBasicAuthRequest: (callback: (request: BasicAuthRequest) => void) => {
+    const listener = (_event: unknown, request: BasicAuthRequest): void => {
+      callback(request);
+    };
+    ipcRenderer.on(IpcChannels.authBasicRequest, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.authBasicRequest, listener);
+    };
+  },
+  respondBasicAuth: (response: BasicAuthResponse) => {
+    ipcRenderer.send(IpcChannels.authBasicRespond, response);
+  },
+  onCertificateErrorRequest: (callback: (request: CertificateErrorRequest) => void) => {
+    const listener = (_event: unknown, request: CertificateErrorRequest): void => {
+      callback(request);
+    };
+    ipcRenderer.on(IpcChannels.certificateErrorRequest, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.certificateErrorRequest, listener);
+    };
+  },
+  respondCertificateError: (response: CertificateErrorResponse) => {
+    ipcRenderer.send(IpcChannels.certificateErrorRespond, response);
   },
 };

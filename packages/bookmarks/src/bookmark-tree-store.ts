@@ -115,13 +115,26 @@ export class BookmarkTreeStore {
     const now = Date.now();
     const id = randomUUID();
     const siblings = BookmarkTreeStore.childRows(db, node.parentId).map((r) => r.id);
-    const at = node.index === undefined ? siblings.length : Math.max(0, Math.min(node.index, siblings.length));
+    const at =
+      node.index === undefined
+        ? siblings.length
+        : Math.max(0, Math.min(node.index, siblings.length));
     const order = [...siblings.slice(0, at), id, ...siblings.slice(at)];
     const run = db.transaction(() => {
       db.prepare(
         `INSERT INTO bookmark_nodes (id, parent_id, node_type, title, url, favicon, position, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      ).run(id, node.parentId, node.type, node.title, node.url, node.favicon ?? null, at * POSITION_GAP, now, now);
+      ).run(
+        id,
+        node.parentId,
+        node.type,
+        node.title,
+        node.url,
+        node.favicon ?? null,
+        at * POSITION_GAP,
+        now,
+        now,
+      );
       BookmarkTreeStore.renumber(db, order);
     });
     run();
@@ -134,7 +147,13 @@ export class BookmarkTreeStore {
 
   static createBookmark(
     db: Db,
-    input: { parentId: string; title: string; url: string; favicon?: string | null; index?: number },
+    input: {
+      parentId: string;
+      title: string;
+      url: string;
+      favicon?: string | null;
+      index?: number;
+    },
   ): string {
     return BookmarkTreeStore.insert(db, { ...input, type: 'bookmark' });
   }

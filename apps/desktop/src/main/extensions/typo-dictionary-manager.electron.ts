@@ -176,7 +176,14 @@ function toInfo(entry: TypoDictionaryCatalogEntry): TypoDictionaryInfo {
     installed,
     downloading: dl !== undefined,
     progress: dl !== undefined && dl.totalSize > 0 ? dl.downloadedSize / dl.totalSize : 0,
-    status: dl !== undefined ? 'downloading' : installed ? 'installed' : error !== null ? 'error' : 'available',
+    status:
+      dl !== undefined
+        ? 'downloading'
+        : installed
+          ? 'installed'
+          : error !== null
+            ? 'error'
+            : 'available',
     error,
   };
 }
@@ -207,7 +214,15 @@ function downloadFile(
         const location = res.headers.location;
         if (status >= 300 && status < 400 && location !== undefined) {
           res.resume();
-          resolve(downloadFile(new URL(location, url).toString(), targetPath, signal, onProgress, redirects + 1));
+          resolve(
+            downloadFile(
+              new URL(location, url).toString(),
+              targetPath,
+              signal,
+              onProgress,
+              redirects + 1,
+            ),
+          );
           return;
         }
         if (status < 200 || status >= 300) {
@@ -251,7 +266,7 @@ async function fetchDictionaryFile(
   });
   if (sha256File(partPath) !== meta.sha256) {
     rmSync(partPath, { force: true });
-    throw new AppError('Dictionary checksum mismatch', 502);
+    throw new AppError('Dictionary checksum mismatch', 502, 'dictionaryChecksumMismatch');
   }
   rmSync(finalPath, { force: true });
   renameSync(partPath, finalPath);
@@ -270,7 +285,7 @@ const TypoDictionaryManager = {
 
   async download(id: string): Promise<void> {
     const entry = catalog().find((d) => d.id === id);
-    if (entry === undefined) throw new AppError('Unknown dictionary id', 404);
+    if (entry === undefined) throw new AppError('Unknown dictionary id', 404, 'dictionaryNotFound');
     if (active.has(id)) return;
     lastErrors.delete(id);
     mkdirSync(dictionaryDir(id), { recursive: true });
@@ -307,7 +322,9 @@ const TypoDictionaryManager = {
         if (dl !== undefined) dl.error = 'Download failed';
         lastErrors.set(id, 'Download failed');
         Logger.warn('Typo dictionary download failed', { id, err: String(err) });
-        throw err instanceof AppError ? err : new AppError('Dictionary download failed', 502);
+        throw err instanceof AppError
+          ? err
+          : new AppError('Dictionary download failed', 502, 'dictionaryDownloadFailed');
       }
     } finally {
       active.delete(id);

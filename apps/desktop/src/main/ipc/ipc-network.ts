@@ -94,7 +94,12 @@ function groupRouteFor(groupId: string): GroupNetworkRoute | null {
     // Bound to a connection the pool has never heard of. Shown as a dead route rather than hidden: the
     // kill-switch is blocking these tabs, and a group that looks Direct while nothing loads is worse
     // than one that looks broken.
-    return { connectionId: resolved.connectionId, vpn: 'down', tor: null, label: resolved.connectionId };
+    return {
+      connectionId: resolved.connectionId,
+      vpn: 'down',
+      tor: null,
+      label: resolved.connectionId,
+    };
   }
   if (connection.kind !== 'tor') {
     return {
@@ -105,7 +110,9 @@ function groupRouteFor(groupId: string): GroupNetworkRoute | null {
     };
   }
   const upstream =
-    connection.upstreamConnectionId === null ? undefined : ConnectionPool.get(connection.upstreamConnectionId);
+    connection.upstreamConnectionId === null
+      ? undefined
+      : ConnectionPool.get(connection.upstreamConnectionId);
   return {
     connectionId: connection.id,
     vpn: upstream?.status ?? null,
@@ -145,7 +152,12 @@ function binaryStatus(binary: VpnBinary): BinaryStatus {
     const path = locateBinary(binary);
     // `isOverride` is what lets the UI offer to clear a manual path and stay quiet when detection found
     // it on its own — there is nothing to undo in that case.
-    return { found: true, path, isOverride: override.length > 0 && path === override, dropInDir: binDir() };
+    return {
+      found: true,
+      path,
+      isOverride: override.length > 0 && path === override,
+      dropInDir: binDir(),
+    };
   } catch {
     // Not an error state to hide: the manager shows where to put the file, which is far more useful than
     // discovering at connect time that nothing happens.
@@ -200,7 +212,13 @@ export function registerNetworkIpc(): void {
       // has to hold on it.
       const summary = summarize(parseWireGuardConfig(text));
       VpnSecrets.save(id, text);
-      ConnectionPool.add({ ...meta, id, label: input.label, kind: 'wireguard', endpoint: summary.endpoint });
+      ConnectionPool.add({
+        ...meta,
+        id,
+        label: input.label,
+        kind: 'wireguard',
+        endpoint: summary.endpoint,
+      });
     } else if (input.kind === 'tor') {
       if (input.upstreamConnectionId !== null && !ConnectionPool.has(input.upstreamConnectionId)) {
         throw new Error(`No such upstream connection: ${input.upstreamConnectionId}`);
@@ -213,7 +231,13 @@ export function registerNetworkIpc(): void {
         upstreamConnectionId: input.upstreamConnectionId,
       });
     } else {
-      ConnectionPool.add({ ...meta, id, label: input.label, kind: 'byo-socks', socksPort: input.socksPort });
+      ConnectionPool.add({
+        ...meta,
+        id,
+        label: input.label,
+        kind: 'byo-socks',
+        socksPort: input.socksPort,
+      });
     }
 
     Logger.info('Network connection added', { id, kind: input.kind });
@@ -227,7 +251,9 @@ export function registerNetworkIpc(): void {
       if (!VpnSecrets.isAvailable()) {
         // Refused before the picker opens: a WireGuard profile is a private key, and the only place to
         // put it would be plain text on disk.
-        throw new Error('The OS keychain is unavailable, so a WireGuard profile cannot be stored safely');
+        throw new Error(
+          'The OS keychain is unavailable, so a WireGuard profile cannot be stored safely',
+        );
       }
       const win = BrowserWindow.fromWebContents(event.sender);
       const opts: Electron.OpenDialogOptions = {
@@ -268,31 +294,34 @@ export function registerNetworkIpc(): void {
     return Promise.resolve();
   });
 
-  handleAsync(IpcChannels.networkPickBinaryFolder, async (event, payload): Promise<string | null> => {
-    const binary = VpnBinarySchema.parse(payload);
-    const win = BrowserWindow.fromWebContents(event.sender);
-    const opts: Electron.OpenDialogOptions = {
-      title: binary,
-      // A FOLDER, not the executable: "where did I put Tor Browser" is a question people can answer;
-      // "which of these forty files is the executable" is not.
-      properties: ['openDirectory'],
-    };
-    const { canceled, filePaths } =
-      win === null ? await dialog.showOpenDialog(opts) : await dialog.showOpenDialog(win, opts);
-    const folder = filePaths[0];
-    if (canceled || folder === undefined) return null;
+  handleAsync(
+    IpcChannels.networkPickBinaryFolder,
+    async (event, payload): Promise<string | null> => {
+      const binary = VpnBinarySchema.parse(payload);
+      const win = BrowserWindow.fromWebContents(event.sender);
+      const opts: Electron.OpenDialogOptions = {
+        title: binary,
+        // A FOLDER, not the executable: "where did I put Tor Browser" is a question people can answer;
+        // "which of these forty files is the executable" is not.
+        properties: ['openDirectory'],
+      };
+      const { canceled, filePaths } =
+        win === null ? await dialog.showOpenDialog(opts) : await dialog.showOpenDialog(win, opts);
+      const folder = filePaths[0];
+      if (canceled || folder === undefined) return null;
 
-    const found = findBinaryInFolder(binary, folder);
-    if (found === null) {
-      // Naming the folder matters: the usual mistake is picking the parent of the one that has it.
-      throw new Error(`${binary} was not found anywhere under ${folder}`);
-    }
-    const current = PreferenceStore.getAll().networkBinaries;
-    PreferenceStore.update({ networkBinaries: { ...current, [binary]: found } });
-    Logger.info('Helper binary located by folder pick', { binary, found });
-    broadcastNetworkState();
-    return found;
-  });
+      const found = findBinaryInFolder(binary, folder);
+      if (found === null) {
+        // Naming the folder matters: the usual mistake is picking the parent of the one that has it.
+        throw new Error(`${binary} was not found anywhere under ${folder}`);
+      }
+      const current = PreferenceStore.getAll().networkBinaries;
+      PreferenceStore.update({ networkBinaries: { ...current, [binary]: found } });
+      Logger.info('Helper binary located by folder pick', { binary, found });
+      broadcastNetworkState();
+      return found;
+    },
+  );
 
   handleAsync(IpcChannels.networkRemoveConnection, async (_event, payload): Promise<void> => {
     const id = RemoveNetworkConnectionSchema.parse(payload);

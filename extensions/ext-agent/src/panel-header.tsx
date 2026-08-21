@@ -107,10 +107,22 @@ export function PanelHeader({
               <ScheduleIcon className="h-4 w-4" />
             </button>
           )}
-          <button type="button" onClick={onNewTask} aria-label={a.newTask} title={a.newTask} className={ICON_BTN}>
+          <button
+            type="button"
+            onClick={onNewTask}
+            aria-label={a.newTask}
+            title={a.newTask}
+            className={ICON_BTN}
+          >
             <NewTaskIcon className="h-4 w-4" />
           </button>
-          <button type="button" onClick={onClose} aria-label={c.window.close} title={c.window.close} className={ICON_BTN}>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={c.window.close}
+            title={c.window.close}
+            className={ICON_BTN}
+          >
             <CloseIcon className="h-4 w-4" />
           </button>
         </div>
@@ -122,7 +134,9 @@ export function PanelHeader({
           role="alert"
           className="flex items-start gap-2 border-b border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-700 dark:text-red-300"
         >
-          <span className="flex-1"><span className="font-semibold">{a.exportLog.failed}</span> {exportError}</span>
+          <span className="flex-1">
+            <span className="font-semibold">{a.exportLog.failed}</span> {exportError}
+          </span>
           <button
             type="button"
             aria-label={c.window.close}

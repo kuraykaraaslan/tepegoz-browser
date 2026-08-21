@@ -30,12 +30,18 @@ describe('isKamuDomain', () => {
 
 describe('classifyKamuStep', () => {
   it('allows a READ step on a Kamu domain with ZERO approval', () => {
-    const v = classifyKamuStep({ targetUrl: 'https://www.turkiye.gov.tr/randevu', isStateChanging: false });
+    const v = classifyKamuStep({
+      targetUrl: 'https://www.turkiye.gov.tr/randevu',
+      isStateChanging: false,
+    });
     expect(v).toEqual({ decision: 'allow', reason: 'read_only_zero_approval' });
   });
 
   it('force-asks a STATE-CHANGING step, with biometric, regardless of the tool’s own declared class', () => {
-    const v = classifyKamuStep({ targetUrl: 'https://www.turkiye.gov.tr/basvuru', isStateChanging: true });
+    const v = classifyKamuStep({
+      targetUrl: 'https://www.turkiye.gov.tr/basvuru',
+      isStateChanging: true,
+    });
     expect(v).toEqual({ decision: 'ask', biometric: true, reason: 'kamu_write_forced_hitl' });
   });
 

@@ -23,12 +23,24 @@ export const GROUP_COLORS: Record<string, GroupChipStyle> = {
   grey: { pill: 'bg-slate-500 text-white', border: 'border-slate-400', tint: 'bg-slate-400/15' },
   blue: { pill: 'bg-blue-500 text-white', border: 'border-blue-400', tint: 'bg-blue-400/15' },
   red: { pill: 'bg-red-500 text-white', border: 'border-red-400', tint: 'bg-red-400/15' },
-  yellow: { pill: 'bg-yellow-400 text-black', border: 'border-yellow-400', tint: 'bg-yellow-400/15' },
+  yellow: {
+    pill: 'bg-yellow-400 text-black',
+    border: 'border-yellow-400',
+    tint: 'bg-yellow-400/15',
+  },
   green: { pill: 'bg-green-500 text-white', border: 'border-green-400', tint: 'bg-green-400/15' },
   pink: { pill: 'bg-pink-500 text-white', border: 'border-pink-400', tint: 'bg-pink-400/15' },
-  purple: { pill: 'bg-purple-500 text-white', border: 'border-purple-400', tint: 'bg-purple-400/15' },
+  purple: {
+    pill: 'bg-purple-500 text-white',
+    border: 'border-purple-400',
+    tint: 'bg-purple-400/15',
+  },
   cyan: { pill: 'bg-cyan-500 text-white', border: 'border-cyan-400', tint: 'bg-cyan-400/15' },
-  orange: { pill: 'bg-orange-500 text-white', border: 'border-orange-400', tint: 'bg-orange-400/15' },
+  orange: {
+    pill: 'bg-orange-500 text-white',
+    border: 'border-orange-400',
+    tint: 'bg-orange-400/15',
+  },
 };
 
 export function groupColor(color: string): GroupChipStyle {
@@ -112,7 +124,11 @@ export function TabInner({
  * top/left/right (bottom open, merging into the content), inactive tabs show only a colored bottom line
  * plus a soft color tint so the run reads as one cohesive group.
  */
-export function chipClasses(tab: TabDescriptor, active: boolean, group: GroupChipStyle | null): string {
+export function chipClasses(
+  tab: TabDescriptor,
+  active: boolean,
+  group: GroupChipStyle | null,
+): string {
   const pinned = tab.pinned === true;
   // Resolve the color/edge classes without nesting ternaries (readability + lint).
   let color: string;
@@ -147,7 +163,15 @@ export interface TabChipProps {
 }
 
 /** One tab in the strip — a sortable dnd-kit item. Pinned tabs render favicon-only, no close button. */
-export function TabChip({ tab, active, group, labels, onSelect, onClose, onContextMenu }: Readonly<TabChipProps>) {
+export function TabChip({
+  tab,
+  active,
+  group,
+  labels,
+  onSelect,
+  onClose,
+  onContextMenu,
+}: Readonly<TabChipProps>) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: tab.id,
   });

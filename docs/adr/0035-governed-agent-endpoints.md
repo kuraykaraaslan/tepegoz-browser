@@ -24,7 +24,7 @@ the fact.
 The one question this ADR exists to answer precisely: what happens when a validly-scoped token targets a
 site the interactive Policy Kernel would already refuse to touch — a bank, a password manager, a health
 portal? A Bearer token is exactly the kind of artifact that can be minted wrong, leaked, or replayed; if
-it could be scoped to reach a locked-out site, an inbound endpoint would be *more* dangerous than the
+it could be scoped to reach a locked-out site, an inbound endpoint would be _more_ dangerous than the
 browser itself, which defeats the point of calling it "governed" at all.
 
 ## Decision
@@ -58,7 +58,8 @@ the endpoint. Nothing here parses an HTTP request, validates a Bearer header, or
 listening surface.
 
 **Owed, and stated rather than implied.** Token minting + the Settings UI, the full Policy Kernel + HITL
-+ Egress Firewall + Effect Ledger re-flow on every inbound call (this ADR covers only the token's own
-scope check, which is one input to that larger flow), the "External Agents" live console, per-session
-Replay Receipts (depends on [ADR-0030](0030-notary-service.md)), and short-lived capability-scoped A2A
-grants are all untouched.
+
+- Egress Firewall + Effect Ledger re-flow on every inbound call (this ADR covers only the token's own
+  scope check, which is one input to that larger flow), the "External Agents" live console, per-session
+  Replay Receipts (depends on [ADR-0030](0030-notary-service.md)), and short-lived capability-scoped A2A
+  grants are all untouched.

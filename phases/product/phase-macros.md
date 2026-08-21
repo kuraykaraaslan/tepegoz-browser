@@ -8,8 +8,8 @@ Record→Replay + Macros surfaces).
 extension — record, edit, and replay browser automations that survive dynamic (React/Angular) DOMs,
 with real control flow, robust selectors + auto-wait, unlimited variables/arrays, CSV data-driven
 loops, and agent-callable capabilities behind the single Policy Enforcement Point.
-Narrative (from `docs/iMacros Şikayet ve Öneri Analizi.md`): *"Everything iMacros users begged for —
-without the Manifest-V3 death, the opaque error codes, or the `EVAL` security hole."*
+Narrative (from `docs/iMacros Şikayet ve Öneri Analizi.md`): _"Everything iMacros users begged for —
+without the Manifest-V3 death, the opaque error codes, or the `EVAL` security hole."_
 **Branch examples:** `feat/ext-macros`, `feat/macros-editor`, `feat/macros-visual-ocr`,
 `feat/macros-scheduler`
 
@@ -46,15 +46,15 @@ without the Manifest-V3 death, the opaque error codes, or the `EVAL` security ho
 - [ ] A user can build a **non-trivial macro entirely in the editor** (nested `if`/loop, per-step
       error policy, variables, CSV) without recording, run it, and see located progress.
 - [~] Every **state-changing step re-passes the Policy Kernel** at run time; sensitive-site lockout
-      holds in both record and replay; tainted values are never inlined. _(landed: `MacroHost.checkPolicy`
-      re-passes `PolicyKernel.evaluate` before every navigate/click/fill/press/scroll against the current
-      page — a lockout `deny` is never skippable/retryable by the step's own `onError`, and a NEWLY
-      elevated `ask` (tainted-value escalation) fails closed with no confirm handler wired yet. Recorder
-      refuses to start on a sensitive site and drops captures mid-recording if a nav lands on one. An
-      `extract`ed variable is tainted at the `VariableStore` level and flows through `{{...}}`
-      interpolation into `navigate`/`fill`, escalating to `tainted_side_effect`; a fresh `setVar`/CSV
-      binding clears it. Remaining: a real mid-run confirm UI (today's `ask` fails closed rather than
-      re-prompting) — the "Persisted-value redaction" IR-authoring item below is separate and unchanged.)_
+  holds in both record and replay; tainted values are never inlined. _(landed: `MacroHost.checkPolicy`
+  re-passes `PolicyKernel.evaluate` before every navigate/click/fill/press/scroll against the current
+  page — a lockout `deny` is never skippable/retryable by the step's own `onError`, and a NEWLY
+  elevated `ask` (tainted-value escalation) fails closed with no confirm handler wired yet. Recorder
+  refuses to start on a sensitive site and drops captures mid-recording if a nav lands on one. An
+  `extract`ed variable is tainted at the `VariableStore` level and flows through `{{...}}`
+  interpolation into `navigate`/`fill`, escalating to `tainted_side_effect`; a fresh `setVar`/CSV
+  binding clears it. Remaining: a real mid-run confirm UI (today's `ask` fails closed rather than
+  re-prompting) — the "Persisted-value redaction" IR-authoring item below is separate and unchanged.)_
 - [x] A broken selector **self-heals** (one scoped model replan) or fails with the exact predicate.
       _(landed: `macro-selector-healer.electron.ts` — on a `resolve()` miss for click/fill/extract,
       ONE scoped model call picks a replacement from a page-enumerated, DETERMINISTICALLY-locatored
@@ -73,11 +73,12 @@ without the Manifest-V3 death, the opaque error codes, or the `EVAL` security ho
 ## Tasks
 
 ### M1 — Editor / UX
+
 - [x] **Nested block editing** — edit inside `if` / `repeat` / `forEachRow` bodies (add/edit/reorder
-      child steps), not just top-level. *(highest-impact gap)*
+      child steps), not just top-level. _(highest-impact gap)_
 - [x] **Add every simple step kind from scratch** — `navigate`/`click`/`fill`/`press`/`scroll`/
-      `extract`/`setVar`/`waitFor`/`waitLoad`/`waitMs` via the Add-step picker. *(block kinds
-      `if`/`repeat`/`forEachRow`/`assert` now covered by the nested editor.)*
+      `extract`/`setVar`/`waitFor`/`waitLoad`/`waitMs` via the Add-step picker. _(block kinds
+      `if`/`repeat`/`forEachRow`/`assert` now covered by the nested editor.)_
 - [x] **Richer inline editors** — selector input for `click`/`fill`/`extract`; key select for `press`;
       direction for `scroll`; name+expression for `setVar`; URL/timeout for `navigate`/`waitFor`/
       `waitLoad`; predicate builder for `assert`/`if`; repeat mode config; CSV row loop config +
@@ -91,18 +92,20 @@ without the Manifest-V3 death, the opaque error codes, or the `EVAL` security ho
 - [ ] **Undo/redo** in the editor + a delete confirmation.
 
 ### M2 — Selector engine (the analysis's core demands)
+
 - [ ] **Stronger recorded chains** — add `data-testid`/`aria`/`role+name` candidates and
       **relative/axis XPath** ("the button to the right of X").
 - [ ] **Wildcard / RegExp UI** — surface the IR's existing `wildcard`/`regex` flags in the editor
       (URL/text joker-character requests).
 - [ ] **Visual / OCR click (XClick)** — screenshot + template/OCR match for non-DOM targets (canvas,
-      video, PDF). *(the analysis's biggest "future" ask; large.)*
+      video, PDF). _(the analysis's biggest "future" ask; large.)_
 - [~] **Self-healing selectors** — on a miss, one scoped AI re-bind (Phase-6 "one scoped replan"),
-      then re-save; enabled by the M0 standard + `agent-runtime`. _(re-bind landed — see the top DoD
-      line; re-saving the healed selector back into the macro is still open.)_
+  then re-save; enabled by the M0 standard + `agent-runtime`. _(re-bind landed — see the top DoD
+  line; re-saving the healed selector back into the macro is still open.)_
 - [ ] **iframe / shadow-DOM** element support.
 
 ### M3 — Recorder
+
 - [ ] **More event types** — `select` (dropdown), checkbox/radio, keyboard (Enter/Tab), file upload,
       copy/paste.
 - [ ] **Isolated-world capture** — move the capture script off the page main world (hardening; noted
@@ -111,21 +114,24 @@ without the Manifest-V3 death, the opaque error codes, or the `EVAL` security ho
 - [ ] **Sensitive-site lockout** in the recorder (no capture on bank/health/etc.).
 
 ### M4 — Data & variables
+
 - [ ] **CSV management UI** — upload/preview/column-map on top of the existing `attachMacroCsv`.
 - [ ] **Export extracted data** — dump `extract` results to CSV/JSON (the scraping output).
 - [ ] **Expression language growth** — date/time functions, `random`, JSON parsing (still sandboxed).
 - [ ] **Global / persistent variables** shared across macros.
 
 ### M5 — Reliability & execution
+
 - [ ] **Adjustable speed / step-delay UI** — the engine floor is 50 ms; expose slow/normal/fast.
 - [x] **Per-step error policy** — `onError: stop | skip | retry` + `retries` on every browser-action
       step (IR + zod + engine + a per-row editor control). Correctly fixes the iMacros
-      `!ERRORIGNORE`-swallows-`FAIL_IF_FOUND` problem. *(3 engine tests.)*
+      `!ERRORIGNORE`-swallows-`FAIL_IF_FOUND` problem. _(3 engine tests.)_
 - [ ] **Run history & replay-diff** — journal every run (Event Journal wiring exists); show the failing
       step vs the recorded golden trace.
 - [ ] **Default timeout / retry settings** per macro.
 
 ### M6 — Security / policy
+
 - [x] **Per-step PEP re-pass** — `MacroHost.checkPolicy` re-passes the deterministic Policy Kernel
       before every navigate/click/fill/press/scroll, gated on the CURRENT page URL + a taint flag;
       never skippable/retryable by the step's own `onError` policy. Baseline "this is a state change"
@@ -139,22 +145,26 @@ without the Manifest-V3 death, the opaque error codes, or the `EVAL` security ho
 - [ ] **Persisted-value redaction** — tainted/secret values never inlined into the IR (partly done).
 
 ### M7 — Agent integration (on the M0 standard)
+
 - [ ] **`macros_update_item`** — let the agent edit an existing macro (today only create/delete).
 - [ ] **Distil a successful agent run into a macro** (Phase-6 RecipeCompiler) + "write a macro that
       does X".
 - [ ] **Stream `macros_get_run` progress** to the agent.
 
 ### M8 — Scheduling & automation (Phase-6 continuation)
+
 - [ ] **Scheduler** — cron-like background runs under the restricted unattended profile.
 - [ ] **Watchers** — "run when this element/value changes" (price-watch etc.).
 - [ ] **Triggers** — run on page open / URL match.
 
 ### M9 — Import / export & sharing
+
 - [ ] **Macro export/import (JSON)** — backup & sharing.
 - [ ] **iMacros `.iim` importer** — migration hook the analysis emphasizes (own format kept as source).
 - [ ] **Signed sharing** — export a macro as a signed SKILL.md (Phase-6).
 
 ### M10 — Test & verification
+
 - [ ] **CSV parser + selector-engine unit tests** (engine has 18; CDP/recorder/panel currently
       untested — headless limits).
 - [ ] **Playwright `_electron` e2e** — record → replay on a dynamic page; assert extracted value +

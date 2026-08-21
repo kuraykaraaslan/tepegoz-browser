@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { verificationLines, verificationMetrics, type VerificationInput } from './verification-metrics';
+import {
+  verificationLines,
+  verificationMetrics,
+  type VerificationInput,
+} from './verification-metrics';
 
 const run = (over: Partial<VerificationInput> = {}): VerificationInput => ({
   scored: true,
@@ -51,7 +55,9 @@ describe('fabricatedSuccessRate', () => {
   it('reports a 95% UPPER BOUND, never a bare zero', () => {
     // "0 in 4" and "0 in 200" are different claims; the bound is what distinguishes them.
     const few = verificationMetrics(Array.from({ length: 4 }, () => run({ outcome: 'verified' })));
-    const many = verificationMetrics(Array.from({ length: 200 }, () => run({ outcome: 'verified' })));
+    const many = verificationMetrics(
+      Array.from({ length: 200 }, () => run({ outcome: 'verified' })),
+    );
     expect(few.fabricatedSuccessCount).toBe(0);
     expect(many.fabricatedSuccessCount).toBe(0);
     expect(few.fabricatedSuccessUpperBound).toBeGreaterThan(many.fabricatedSuccessUpperBound ?? 1);

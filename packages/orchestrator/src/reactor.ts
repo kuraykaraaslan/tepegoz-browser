@@ -10,11 +10,17 @@ import {
   recoveryAdviceFor,
   stopReasonForFailure,
 } from './recovery';
+import { stableIndexBefore } from './cache-window';
 import { assembleEvidence } from './completion-evidence';
 import { evaluateVisionTrigger } from './vision-trigger';
 import { parseDecision, parseNativeDecision, type Decision } from './reactor-decision';
 import { DECISION_TOOL_NAME, decisionToolDef, resolveDecisionMode } from './reactor-decision-mode';
-import { isToolError, observationOf, observationWithRecovery, stableStringify } from './reactor-observation';
+import {
+  isToolError,
+  observationOf,
+  observationWithRecovery,
+  stableStringify,
+} from './reactor-observation';
 import { COLLAPSED_STATE_PLACEHOLDER, STATE_COLLAPSE_THRESHOLD } from './reactor-page-state';
 import {
   COLLAPSED_WORKING_STATE_PLACEHOLDER,
@@ -47,7 +53,12 @@ import type {
  */
 
 // Re-export the full public surface so existing importers of './reactor' are unaffected.
-export { coerceDecisionShape, parseDecision, parseNativeDecision, type Decision } from './reactor-decision';
+export {
+  coerceDecisionShape,
+  parseDecision,
+  parseNativeDecision,
+  type Decision,
+} from './reactor-decision';
 export {
   DECISION_TOOL_NAME,
   decisionToolDef,
@@ -152,7 +163,9 @@ export default class Reactor {
     // detector below: re-reading the page after each action is the encouraged state-every-step pattern, and
     // because `signatureCounts` is run-global (non-consecutive) counting them would trip a healthy
     // multi-step task on its 3rd identical re-read. A read-only spin is still bounded by `maxSteps`.
-    const readOnlyTools = new Set(req.tools.filter((t) => t.dangerClass === 'read').map((t) => t.id));
+    const readOnlyTools = new Set(
+      req.tools.filter((t) => t.dangerClass === 'read').map((t) => t.id),
+    );
     const outcomes: StepOutcome[] = [];
     const signatureCounts = new Map<string, number>();
     const loopNudged = new Set<string>();
@@ -228,7 +241,11 @@ export default class Reactor {
 
     /** Periodic validator pass: end the run iff the Planner judges the goal already met. Else null. */
     const periodicCheck = async (): Promise<ReactResult | null> => {
-      if (validator === undefined || outcomes.length === 0 || outcomes.length === lastValidatedCount) {
+      if (
+        validator === undefined ||
+        outcomes.length === 0 ||
+        outcomes.length === lastValidatedCount
+      ) {
         return null;
       }
       const decision = shouldValidate(
@@ -271,7 +288,8 @@ export default class Reactor {
      * actor rather than burn the whole step budget.
      */
     const settleClaim = async (summary: string): Promise<ReactResult | null> => {
-      if (validator === undefined) return { outcomes, visionEscalations, stoppedReason: 'completed', summary };
+      if (validator === undefined)
+        return { outcomes, visionEscalations, stoppedReason: 'completed', summary };
       // S4: the claim is judged against what the run OBSERVED, not against what the page says about
       // itself. Assembled here because this is the only place that has every step outcome.
       const verdict = await validate({
@@ -304,7 +322,8 @@ export default class Reactor {
           ...(verdict.outcome !== undefined ? { completionOutcome: verdict.outcome } : {}),
         };
       }
-      const reason = verdict.reason !== undefined && verdict.reason.length > 0 ? ` — ${verdict.reason}` : '';
+      const reason =
+        verdict.reason !== undefined && verdict.reason.length > 0 ? ` — ${verdict.reason}` : '';
       messages.push({
         role: 'user',
         content:
@@ -325,14 +344,28 @@ export default class Reactor {
     // blob is fed back, the previous one is collapsed to a placeholder so DOM dumps never accumulate
     // across a long run — the compact decisions (with their `memory`) remain the persistent history.
     let lastStateIndex: number | null = null;
+    /**
+     * The last message index this run promises never to rewrite — the prompt-cache breakpoint.
+     *
+     * Both collapses below mutate a message IN PLACE, and prompt caching is a prefix match, so a
+     * breakpoint at the tail would be invalidated on every single step: the cache-write premium would
+     * be paid for a 0% hit rate, which costs more than not caching at all. Everything strictly before
+     * the two live indices is already collapsed (or was never collapsible) and is safe forever.
+     *
+     * Recomputed wherever either index moves, so the promise can never drift from the mutation that
+     * would break it.
+     */
+    let cacheStableIndex: number | null = null;
     const pushObservation = (content: string): void => {
       const isState = content.length > STATE_COLLAPSE_THRESHOLD;
       if (isState && lastStateIndex !== null) {
         const prev = messages[lastStateIndex];
-        if (prev !== undefined) messages[lastStateIndex] = { ...prev, content: COLLAPSED_STATE_PLACEHOLDER };
+        if (prev !== undefined)
+          messages[lastStateIndex] = { ...prev, content: COLLAPSED_STATE_PLACEHOLDER };
       }
       messages.push({ role: 'user', content });
       if (isState) lastStateIndex = messages.length - 1;
+      cacheStableIndex = stableIndexBefore(lastStateIndex, workingStateIndex);
     };
 
     // C1: re-inject the typed working ledger as a compact persistent block at the tail, collapsing the
@@ -343,20 +376,30 @@ export default class Reactor {
       const firstInjection = workingStateIndex === null;
       if (workingStateIndex !== null) {
         const prev = messages[workingStateIndex];
-        if (prev !== undefined) messages[workingStateIndex] = { ...prev, content: COLLAPSED_WORKING_STATE_PLACEHOLDER };
+        if (prev !== undefined)
+          messages[workingStateIndex] = { ...prev, content: COLLAPSED_WORKING_STATE_PLACEHOLDER };
       }
-      messages.push({ role: 'user', content: `${WORKING_STATE_HEADER}\n${renderWorkingState(workingState)}` });
+      messages.push({
+        role: 'user',
+        content: `${WORKING_STATE_HEADER}\n${renderWorkingState(workingState)}`,
+      });
       workingStateIndex = messages.length - 1;
+      cacheStableIndex = stableIndexBefore(lastStateIndex, workingStateIndex);
       // C1 engagement signal (diagnostic): the model actually emitted a typed `state` and it is now being
       // fed back. Logged ONCE per run so a sweep transcript can PROVE PR1 engaged (vs the model ignoring it).
-      if (firstInjection) Logger.info('[c1] typed working-state injected (model emitted structured `state`)');
+      if (firstInjection)
+        Logger.info('[c1] typed working-state injected (model emitted structured `state`)');
     };
 
     // C1 PR2: when the run has stalled — `noProgressThreshold` state-changing actions with no observable
     // page-state change — and the replan budget remains, ask the hook for a genuinely NEW approach and
     // inject it as a steer. Fail-open: a hook error is logged and the run simply continues.
     const maybeReplan = async (): Promise<void> => {
-      if (options.replan === undefined || noProgressActs < noProgressThreshold || replanCount >= maxReplans) {
+      if (
+        options.replan === undefined ||
+        noProgressActs < noProgressThreshold ||
+        replanCount >= maxReplans
+      ) {
         return;
       }
       replanCount += 1;
@@ -389,13 +432,15 @@ export default class Reactor {
     };
 
     for (let step = 0; ; step++) {
-      if (options.signal?.aborted === true) return { outcomes, visionEscalations, stoppedReason: 'aborted' };
+      if (options.signal?.aborted === true)
+        return { outcomes, visionEscalations, stoppedReason: 'aborted' };
       // Run-control gate (additive; skipped entirely when `control` is absent — byte-identical legacy
       // path): hold the loop while paused-by-user or offline, then fold any mid-run steering messages the
       // user injected into the conversation before the next decision. Abort always wins over a hold.
       if (options.control !== undefined) {
         await options.control.waitWhileHeld();
-        if (options.control.aborted) return { outcomes, visionEscalations, stoppedReason: 'aborted' };
+        if (options.control.aborted)
+          return { outcomes, visionEscalations, stoppedReason: 'aborted' };
         for (const steer of options.control.drainSteer()) {
           messages.push({
             role: 'user',
@@ -404,7 +449,12 @@ export default class Reactor {
         }
       }
       if (outcomes.length >= maxSteps) {
-        return { outcomes, visionEscalations, stoppedReason: 'max_steps', ...(lastOutcome !== undefined ? { completionOutcome: lastOutcome } : {}) };
+        return {
+          outcomes,
+          visionEscalations,
+          stoppedReason: 'max_steps',
+          ...(lastOutcome !== undefined ? { completionOutcome: lastOutcome } : {}),
+        };
       }
 
       // Periodic validator pass (AI-3): every `planningInterval` actions the Planner checks whether the
@@ -429,10 +479,21 @@ export default class Reactor {
           messages,
           maxTokens: req.maxTokens ?? 1500,
           timeoutMs: req.timeoutMs ?? 60_000,
+          // The stable-prefix promise (see `cacheStableIndex`). `1h` because a sweep runs many tasks
+          // back to back against the same system prompt and tool set — the 5-minute default would
+          // expire the shared half between trials and re-pay for it every time.
+          cache: {
+            systemAndTools: true,
+            ...(cacheStableIndex !== null && { lastStableMessageIndex: cacheStableIndex }),
+            ttl: '1h' as const,
+          },
           // Native: one required tool whose schema IS the decision, so the provider enforces the shape.
           // JSON: the legacy json_object nudge, which only guarantees valid JSON, never valid shape.
           ...(decisionMode === 'native'
-            ? { tools: [decisionToolDef()], toolChoice: { type: 'tool' as const, name: DECISION_TOOL_NAME } }
+            ? {
+                tools: [decisionToolDef()],
+                toolChoice: { type: 'tool' as const, name: DECISION_TOOL_NAME },
+              }
             : { responseFormat: 'json' as const }),
         };
         // Streaming changes only WHO SEES the output early — the settled response below is still the
@@ -442,7 +503,10 @@ export default class Reactor {
           onDelta === undefined
             ? await ModelGateway.complete(request)
             : await ModelGateway.generateStream(request, onDelta);
-        decision = decisionMode === 'native' ? parseNativeDecision(response) : parseDecision(response.text, quickMode);
+        decision =
+          decisionMode === 'native'
+            ? parseNativeDecision(response)
+            : parseDecision(response.text, quickMode);
         // The native arm's turn is usually pure tool call with empty text; re-serializing the settled
         // decision keeps the assistant history non-empty and structurally identical across both arms.
         responseText = response.text.trim().length > 0 ? response.text : JSON.stringify(decision);
@@ -460,15 +524,22 @@ export default class Reactor {
           });
           continue;
         }
-        return { outcomes, visionEscalations, stoppedReason: stopReasonForFailure(failure), failure };
+        return {
+          outcomes,
+          visionEscalations,
+          stoppedReason: stopReasonForFailure(failure),
+          failure,
+        };
       }
       decisionRepairs = 0;
       messages.push({ role: 'assistant', content: responseText });
-      if (decision.memory !== undefined && decision.memory.length > 0) latestMemory = decision.memory;
+      if (decision.memory !== undefined && decision.memory.length > 0)
+        latestMemory = decision.memory;
       // C1: fold the model's proposed ledger update into the authoritative snapshot. A malformed patch was
       // already dropped to `undefined` at the decision boundary (`.catch`), so `state` here is valid-or-absent;
       // an absent patch carries the prior ledger forward via the field-level merge.
-      if (decision.state !== undefined) workingState = mergeWorkingState(workingState, decision.state);
+      if (decision.state !== undefined)
+        workingState = mergeWorkingState(workingState, decision.state);
 
       if (decision.action === 'finish') {
         const settled = await settleClaim(decision.summary);
@@ -478,7 +549,10 @@ export default class Reactor {
 
       // The model's tool choice is untrusted — an unregistered id is fed back as an error, never run.
       if (!known.has(decision.tool)) {
-        messages.push({ role: 'user', content: `Observation: unknown tool "${decision.tool}". Choose a listed tool.` });
+        messages.push({
+          role: 'user',
+          content: `Observation: unknown tool "${decision.tool}". Choose a listed tool.`,
+        });
         continue;
       }
 
@@ -535,8 +609,22 @@ export default class Reactor {
       // metric has to show. This is the live agent loop, so it is the number that matters most.
       const durationMs = Math.max(0, Date.now() - startedAt);
       const outcome: StepOutcome = isToolError(result)
-        ? { stepId: `r${String(step)}`, tool: decision.tool, args: decision.args, ok: false, error: result, durationMs }
-        : { stepId: `r${String(step)}`, tool: decision.tool, args: decision.args, ok: true, result, durationMs };
+        ? {
+            stepId: `r${String(step)}`,
+            tool: decision.tool,
+            args: decision.args,
+            ok: false,
+            error: result,
+            durationMs,
+          }
+        : {
+            stepId: `r${String(step)}`,
+            tool: decision.tool,
+            args: decision.args,
+            ok: true,
+            result,
+            durationMs,
+          };
       outcomes.push(outcome);
       options.onOutcome?.(outcome);
 
@@ -570,7 +658,8 @@ export default class Reactor {
             Logger.warn('[s10] vision capture failed; continuing without it', { err: String(err) });
             return null;
           });
-          if (blocks !== null && blocks.length > 0) messages.push({ role: 'user', content: blocks });
+          if (blocks !== null && blocks.length > 0)
+            messages.push({ role: 'user', content: blocks });
         }
       }
 
@@ -595,13 +684,23 @@ export default class Reactor {
       if (!outcome.ok) {
         const failure = classifyToolFailure(outcome);
         if (!failure.retryable) {
-          return { outcomes, visionEscalations, stoppedReason: stopReasonForFailure(failure), failure };
+          return {
+            outcomes,
+            visionEscalations,
+            stoppedReason: stopReasonForFailure(failure),
+            failure,
+          };
         }
         const key = `${failure.kind}:${outcome.tool}`;
         const recoveryCount = (recoveryCounts.get(key) ?? 0) + 1;
         recoveryCounts.set(key, recoveryCount);
         if (recoveryCount > maxRecoveryAttempts) {
-          return { outcomes, visionEscalations, stoppedReason: stopReasonForFailure(failure), failure };
+          return {
+            outcomes,
+            visionEscalations,
+            stoppedReason: stopReasonForFailure(failure),
+            failure,
+          };
         }
         pushObservation(`Observation:\n${observationWithRecovery(outcome, failure)}`);
         continue;
@@ -631,7 +730,8 @@ export default class Reactor {
       // element snapshot just read). Only a hint that differs from the last one is injected.
       if (options.groundNavigation !== undefined) {
         const hint = await boundedGrounding(options.groundNavigation, outcome, req.goal);
-        if (signalAborted(options.signal)) return { outcomes, visionEscalations, stoppedReason: 'aborted' };
+        if (signalAborted(options.signal))
+          return { outcomes, visionEscalations, stoppedReason: 'aborted' };
         if (hint !== null && hint.length > 0 && hint !== lastNavHint) {
           lastNavHint = hint;
           messages.push({ role: 'user', content: hint });

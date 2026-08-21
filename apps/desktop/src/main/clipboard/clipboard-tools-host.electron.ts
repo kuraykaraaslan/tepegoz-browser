@@ -18,5 +18,9 @@ export const clipboardToolsHost: ClipboardToolsHost = {
   readText: (input: ClipboardReadTextInput) =>
     ClipboardService.readText({ ...input, actor: 'agent', origin: input.origin ?? activeOrigin() }),
   writeText: (input: ClipboardWriteTextInput) =>
-    ClipboardService.writeText({ ...input, actor: 'agent', origin: input.origin ?? activeOrigin() }),
+    ClipboardService.writeText({
+      ...input,
+      actor: 'agent',
+      origin: input.origin ?? activeOrigin(),
+    }),
 };

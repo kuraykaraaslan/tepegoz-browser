@@ -81,7 +81,12 @@ beforeEach(() => {
 });
 
 describe('vision is fallback-only', () => {
-  const req = () => ({ goal: 'do it', tools: tools(), provider: 'anthropic' as const, model: 'mock' });
+  const req = () => ({
+    goal: 'do it',
+    tools: tools(),
+    provider: 'anthropic' as const,
+    model: 'mock',
+  });
 
   it('sends NO image on an ordinary page, even with the capture hook installed', async () => {
     // A page the DOM can read: named elements, and an action that works.
@@ -91,7 +96,9 @@ describe('vision is fallback-only', () => {
         content: 'a page with plenty of readable text on it, and a named control to act on',
       }),
     );
-    CapabilityRegistry.register(fakeTool('browser_update_page', 'state_changing', { ok: true, changed: true }));
+    CapabilityRegistry.register(
+      fakeTool('browser_update_page', 'state_changing', { ok: true, changed: true }),
+    );
     ToolGateway.setConfirmHandler(() => Promise.resolve(true));
 
     const provider = new RecordingProvider([
@@ -114,12 +121,19 @@ describe('vision is fallback-only', () => {
     // A blind page: content, but nothing actionable in it.
     CapabilityRegistry.register(
       fakeTool('browser_get_page', 'read', {
-        content: 'A navigation menu and some figures are painted on this page, but nothing is in the DOM.',
+        content:
+          'A navigation menu and some figures are painted on this page, but nothing is in the DOM.',
       }),
     );
-    CapabilityRegistry.register(fakeTool('browser_get_elements', 'read', { elements: [], content: 'none' }));
+    CapabilityRegistry.register(
+      fakeTool('browser_get_elements', 'read', { elements: [], content: 'none' }),
+    );
 
-    const provider = new RecordingProvider([act('browser_get_page'), act('browser_get_elements'), finish]);
+    const provider = new RecordingProvider([
+      act('browser_get_page'),
+      act('browser_get_elements'),
+      finish,
+    ]);
     ModelGateway.register(provider);
     const captureVision = vi.fn(() =>
       Promise.resolve([{ type: 'image' as const, mediaType: 'image/png' as const, data: 'QUJD' }]),
@@ -132,10 +146,18 @@ describe('vision is fallback-only', () => {
 
   it('sends no image at all when the host installs no capture hook', async () => {
     CapabilityRegistry.register(
-      fakeTool('browser_get_page', 'read', { content: 'A page with content but nothing actionable in it.' }),
+      fakeTool('browser_get_page', 'read', {
+        content: 'A page with content but nothing actionable in it.',
+      }),
     );
-    CapabilityRegistry.register(fakeTool('browser_get_elements', 'read', { elements: [], content: 'none' }));
-    const provider = new RecordingProvider([act('browser_get_page'), act('browser_get_elements'), finish]);
+    CapabilityRegistry.register(
+      fakeTool('browser_get_elements', 'read', { elements: [], content: 'none' }),
+    );
+    const provider = new RecordingProvider([
+      act('browser_get_page'),
+      act('browser_get_elements'),
+      finish,
+    ]);
     ModelGateway.register(provider);
 
     const res = await Reactor.run(req());
@@ -146,13 +168,23 @@ describe('vision is fallback-only', () => {
 
   it('degrades rather than dying when the capture throws', async () => {
     CapabilityRegistry.register(
-      fakeTool('browser_get_page', 'read', { content: 'A page with content but nothing actionable in it.' }),
+      fakeTool('browser_get_page', 'read', {
+        content: 'A page with content but nothing actionable in it.',
+      }),
     );
-    CapabilityRegistry.register(fakeTool('browser_get_elements', 'read', { elements: [], content: 'none' }));
-    const provider = new RecordingProvider([act('browser_get_page'), act('browser_get_elements'), finish]);
+    CapabilityRegistry.register(
+      fakeTool('browser_get_elements', 'read', { elements: [], content: 'none' }),
+    );
+    const provider = new RecordingProvider([
+      act('browser_get_page'),
+      act('browser_get_elements'),
+      finish,
+    ]);
     ModelGateway.register(provider);
 
-    const res = await Reactor.run(req(), { captureVision: () => Promise.reject(new Error('no debugger')) });
+    const res = await Reactor.run(req(), {
+      captureVision: () => Promise.reject(new Error('no debugger')),
+    });
     expect(res.stoppedReason).toBe('completed');
     expect(imagesSent(provider)).toBe(0);
   });

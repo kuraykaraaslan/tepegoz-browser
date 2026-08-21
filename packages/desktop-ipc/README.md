@@ -11,6 +11,7 @@ on rather than duplicating.
 ## Exports
 
 ### `.` (zod-free — preload-safe)
+
 - **`Preferences`** — the full persisted-preferences shape (theme, locale, telemetry, default AI
   provider, extensions, MCP servers, agent/local-model config, file-access grants, …). Owned here; the
   `@tepegoz/preferences` package pins its zod schema to this type via `satisfies`.
@@ -33,6 +34,7 @@ on rather than duplicating.
   they erase away and add nothing to the preload bundle.
 
 ### `./schemas` (zod — main-process only)
+
 - Zod validators for every untrusted IPC payload arriving from the renderer: credentials
   (`AddProviderKeyInputSchema`, `RemoveKeyByIdSchema`, `ReorderKeysSchema`, …), tabs
   (`TabMoveSchema`, `TabPinSchema`, `TabGroupCreateSchema`, …), history, bookmarks, popups, logins,
@@ -40,9 +42,11 @@ on rather than duplicating.
   boundary before a handler ever sees the payload.
 
 ## Notes
+
 - The two-entry split (`exports` in `package.json`: `"."` and `"./schemas"`) is the single most
   important fact about this package — importing zod from the default entry would break the sandboxed
   preload bundle.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint`

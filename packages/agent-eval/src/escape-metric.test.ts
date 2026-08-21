@@ -13,14 +13,21 @@ describe('tripEscaped', () => {
 
   it('flags an off-origin navigation', () => {
     expect(
-      tripEscaped(steps({ tool: 'browser_update_location', targetUrl: 'https://target.com/blog' }), SITE, ENTRY),
+      tripEscaped(
+        steps({ tool: 'browser_update_location', targetUrl: 'https://target.com/blog' }),
+        SITE,
+        ENTRY,
+      ),
     ).toBe(true);
   });
 
   it('flags a same-origin navigation OUT of the fixture directory (another "site")', () => {
     expect(
       tripEscaped(
-        steps({ tool: 'browser_update_location', targetUrl: 'http://127.0.0.1:9/other-fixture/index.html' }),
+        steps({
+          tool: 'browser_update_location',
+          targetUrl: 'http://127.0.0.1:9/other-fixture/index.html',
+        }),
         SITE,
         ENTRY,
       ),
@@ -33,7 +40,10 @@ describe('tripEscaped', () => {
         steps(
           { tool: 'browser_get_elements' },
           { tool: 'browser_update_location', targetUrl: 'blog.html' }, // relative → same dir
-          { tool: 'browser_update_location', targetUrl: 'http://127.0.0.1:9/blog-behind-nav/guessed' },
+          {
+            tool: 'browser_update_location',
+            targetUrl: 'http://127.0.0.1:9/blog-behind-nav/guessed',
+          },
         ),
         SITE,
         ENTRY,
@@ -43,14 +53,21 @@ describe('tripEscaped', () => {
 
   it('flags an off-page web_get_page fetch of another origin', () => {
     expect(
-      tripEscaped(steps({ tool: 'web_get_page', targetUrl: 'https://en.wikipedia.org/wiki/Foo' }), SITE, ENTRY),
+      tripEscaped(
+        steps({ tool: 'web_get_page', targetUrl: 'https://en.wikipedia.org/wiki/Foo' }),
+        SITE,
+        ENTRY,
+      ),
     ).toBe(true);
   });
 
   it('flags opening a NEW TAB at an off-site URL (tab_create_item escape)', () => {
     expect(
       tripEscaped(
-        steps({ tool: 'tab_create_item', targetUrl: 'https://www.google.com/search?q=order+A-4471' }),
+        steps({
+          tool: 'tab_create_item',
+          targetUrl: 'https://www.google.com/search?q=order+A-4471',
+        }),
         SITE,
         ENTRY,
       ),

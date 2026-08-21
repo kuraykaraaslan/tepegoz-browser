@@ -7,11 +7,11 @@ describe('agent conversation history helpers', () => {
   });
 
   it('maps terminal events to conversation status', () => {
-    expect(terminalStatusFromEvents([{ runId: 'r', groupId: 'g', kind: 'done', message: 'ok', ts: 1 }])).toBe(
-      'completed',
-    );
-    expect(terminalStatusFromEvents([{ runId: 'r', groupId: 'g', kind: 'error', message: 'no', ts: 1 }])).toBe(
-      'error',
-    );
+    expect(
+      terminalStatusFromEvents([{ runId: 'r', groupId: 'g', kind: 'done', message: 'ok', ts: 1 }]),
+    ).toBe('completed');
+    expect(
+      terminalStatusFromEvents([{ runId: 'r', groupId: 'g', kind: 'error', message: 'no', ts: 1 }]),
+    ).toBe('error');
   });
 });

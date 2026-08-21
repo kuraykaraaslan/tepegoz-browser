@@ -22,9 +22,7 @@ describe('Anthropic native content mapping', () => {
   });
 
   it('maps an image to a base64 source rather than a text marker', () => {
-    const blocks: CanonContentBlock[] = [
-      { type: 'image', mediaType: 'image/png', data: 'QUJD' },
-    ];
+    const blocks: CanonContentBlock[] = [{ type: 'image', mediaType: 'image/png', data: 'QUJD' }];
     expect(toAnthropicContent(blocks)).toEqual([
       { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'QUJD' } },
     ]);

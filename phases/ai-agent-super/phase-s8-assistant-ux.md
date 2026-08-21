@@ -2,17 +2,17 @@
 
 **Status:** 🟠 Measurement-owed (PR1–PR6 landed 2026-08-19; the two ⏸ funded metrics, per-step citation chips, and the per-tab badge are open) · **Depends on:** [S1 streaming](phase-s1-foundation-native-loop.md) · [S6 grants + risk tiers](phase-s6-safety-control-plane.md) · [S4 evidence chips](phase-s4-verified-outcomes.md) · **Track:** [AI Agent Super](README.md)
 
-**Goal:** Make the agent *feel* like a live, controllable assistant rather than a batch job that emits messages at step boundaries. Consume S1 token streaming in the sidebar panel, render a live step feed with per-step status and S4 evidence chips, turn the plan preview modal into the `follow_a_plan` grant surface, badge approvals with S6 risk tiers behind one-tap scoped grants, add a global agent-active indicator, surface backgroundable runs over the existing off-screen parking, connect scheduled tasks to completed runs, and gate commerce purchases behind the financial risk tier with biometric + explicit confirm. This is Comet-parity felt experience assembled from substrate that already exists but is not surfaced.
+**Goal:** Make the agent _feel_ like a live, controllable assistant rather than a batch job that emits messages at step boundaries. Consume S1 token streaming in the sidebar panel, render a live step feed with per-step status and S4 evidence chips, turn the plan preview modal into the `follow_a_plan` grant surface, badge approvals with S6 risk tiers behind one-tap scoped grants, add a global agent-active indicator, surface backgroundable runs over the existing off-screen parking, connect scheduled tasks to completed runs, and gate commerce purchases behind the financial risk tier with biometric + explicit confirm. This is Comet-parity felt experience assembled from substrate that already exists but is not surfaced.
 
 ## Why
 
-Today the assistant *feels* like a black box that reports after the fact. The concrete evidence:
+Today the assistant _feels_ like a black box that reports after the fact. The concrete evidence:
 
 - **No token streaming.** The panel event stream is `plan`/`decision`/`step_*`/`awaiting_approval`/`handoff`/`done` over `IpcChannels.agentEvent` in [ipc-agent-run.ts](../../apps/desktop/src/main/ipc/ipc-agent-run.ts); [panel-session.ts](../../extensions/ext-agent/src/panel-session.ts) consumes it and [panel-thread.tsx](../../extensions/ext-agent/src/panel-thread.tsx) renders messages **only on step completion**. Time-to-first-visible-feedback is one full model turn. S1 introduces delta events at the gateway; this phase is their first consumer.
 - **Approvals are flat modals with a blunt timer.** Per-tool approval is a modal with a 120s→deny fallback ([panel-composer.tsx](../../extensions/ext-agent/src/panel-composer.tsx) / [panel-session.ts](../../extensions/ext-agent/src/panel-session.ts) awaiting-approval handling). There is no risk tier shown, no scope, no memory of a prior grant — every tool re-prompts. S6 defines the tiers and grant store; this phase renders them.
 - **The plan modal is disconnected from grants.** A plan preview modal with per-step skip exists but does not produce a `follow_a_plan` grant — approving a plan does not lower the per-tool prompt rate. S6 defines the grant; this phase makes the plan modal the surface that mints it.
 - **Background work and scheduling exist but are invisible as assistant features.** Backgrounded-window keep-compositing (PARKED-OFF-SCREEN) switches are in prod ([@tepegoz/libs](../../packages/libs)), and scheduled tasks exist in [packages/tasks](../../packages/tasks) — but neither is surfaced in the panel. Comet's felt advantage is exactly this: background parallel assistants and per-task remembered grants. We have the substrate; we have not exposed it.
-- **Commerce is in scope but ungated in UI.** Owner decision: commerce is IN scope (S8 program-level). A purchase action today would flow through the same flat approval as any click. The Amazon v. Perplexity injunction is a live legal constraint that must be *surfaced* to the user (a caution, not a blocker), and purchases must be gated behind the S6 financial tier + biometric + explicit confirm **even in auto mode**.
+- **Commerce is in scope but ungated in UI.** Owner decision: commerce is IN scope (S8 program-level). A purchase action today would flow through the same flat approval as any click. The Amazon v. Perplexity injunction is a live legal constraint that must be _surfaced_ to the user (a caution, not a blocker), and purchases must be gated behind the S6 financial tier + biometric + explicit confirm **even in auto mode**.
 
 Measured reality ([eval-results.md](eval-results.md)): only 5/52 scenarios are measured live; Anthropic N=3 failures are on-page, not escape. This phase claims **no** competence delta — it is instrumented mechanicals only (feedback latency, approval count) and an explicitly non-claim-bearing dogfooding pass. See [constitution.md](constitution.md) for the honesty rules this DoD obeys.
 
@@ -38,6 +38,7 @@ Measured reality ([eval-results.md](eval-results.md)): only 5/52 scenarios are m
 Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. No fixture freeze PR — this is a UI phase (see [Fixtures](#fixtures)).
 
 ### PR1 — Streaming narration
+
 - [x] Extend the panel event contract to carry S1 delta events; zod `safeParse` the delta shape at the IPC boundary in [ipc-agent-run.ts](../../apps/desktop/src/main/ipc/ipc-agent-run.ts) (schema from `@tepegoz/shared-types`).
 - [x] Consume deltas in [panel-session.ts](../../extensions/ext-agent/src/panel-session.ts); **batch delta flush at 30–50ms** to avoid IPC/render flooding (single coalescing timer, not per-token).
 - [x] Render incremental text in [panel-thread.tsx](../../extensions/ext-agent/src/panel-thread.tsx); fall back to step-completion rendering when S1 is off.
@@ -45,34 +46,40 @@ Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. N
 - [x] EN + TR strings for any new status labels.
 
 ### PR2 — Live step feed + evidence chips
+
 - [ ] Step-feed component in `ext-agent` with per-step status (running/done/failed/skipped) driven by `step_*` events; split out of [panel-thread.tsx](../../extensions/ext-agent/src/panel-thread.tsx) if it approaches the 250-line cap.
 - [x] Render S4 evidence chips against each step's citations ([S4](phase-s4-verified-outcomes.md)); chip → citation resolution only, no new data.
 - [x] EN + TR strings for status + chip labels.
 
 ### PR3 — Plan-grant surface
+
 - [x] Wire the existing plan preview modal to mint a `follow_a_plan` grant via the S6 store on approval; keep per-step skip.
 - [x] Read the grant in the approval path ([panel-session.ts](../../extensions/ext-agent/src/panel-session.ts)) so plan-covered tools do not re-prompt.
 - [x] EN + TR strings for the plan-grant affordance.
 
 ### PR4 — Risk-tier approval badges + one-tap grant
+
 - [x] Add the S6 risk-tier badge to the approval modal ([panel-composer.tsx](../../extensions/ext-agent/src/panel-composer.tsx) / session awaiting-approval path).
 - [x] One-tap scoped-grant control that writes a scoped grant to the S6 store; subsequent same-scope tools in the run honour it.
 - [x] Keep the 120s→deny fallback but make the badge/scope legible before it fires.
 - [x] EN + TR strings for tier names + scope labels.
 
 ### PR5 — Agent-active indicator + backgroundable run + scheduled-task-from-run
+
 - [ ] Per-tab + tray agent-active indicator driven by the run lock ([agent-run-lock.electron.ts](../../apps/desktop/src/main/agent/agent-run-lock.electron.ts)); IPC wiring only in `apps/desktop`, presentation in `ext-agent`.
 - [x] "Continue in background" affordance over the existing PARKED-OFF-SCREEN keep-compositing switches ([@tepegoz/libs](../../packages/libs)); indicator reflects background state.
 - [ ] "Do this every Monday" control on a completed run → create a scheduled task via [packages/tasks](../../packages/tasks), carrying the run's grant scope; sync-meta columns for any new persisted task row.
 - [x] EN + TR strings for indicator, background, and schedule affordances.
 
 ### PR6 — Commerce approval flow
+
 - [x] Purchase-action approval surface gated behind the S6 financial risk tier + biometric + explicit confirm, **even in auto mode**.
 - [x] Surface the Amazon v. Perplexity caution note once per purchase surface (informational, non-blocking).
 - [x] Ensure the gate is enforced at the approval path, not merely rendered (reads the S6 tier; does not rely on renderer autonomy state).
 - [x] EN + TR strings for the commerce gate + caution note.
 
 > **Mechanism + scope notes (PR1–PR6).**
+>
 > 1. **`auto` mode could approve a payment.** `resolveAutonomy` returned `auto_approve` unconditionally,
 >    making one preference the single path around a tier nothing else may cover. Fixed, and **narrowed to
 >    `financial`** — S6-PR2 had explicitly decided `auto` should mean what the user chose and encoded it
@@ -80,14 +87,14 @@ Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. N
 >    are still auto-approved under `auto`. That is inconsistent and probably wrong — it is an owner call,
 >    and this line is the request for it**, not a gap left by accident.
 > 2. **Deltas are batched, not throttled at the source.** ~40ms coalescing, and the implementation
->    *throttles* rather than debounces: restarting the timer per fragment would defer the flush forever
+>    _throttles_ rather than debounces: restarting the timer per fragment would defer the flush forever
 >    on an uninterrupted stream, so the longest turns — the ones streaming exists for — would show
 >    nothing at all. That is a committed test.
 > 3. **The delta schema lives in `@tepegoz/shared-types` and is `safeParse`d on both sides.** The sender
 >    is trusted; the model text it carries is not, and the length cap is what makes "display-only"
 >    enforceable rather than merely documented.
 > 4. **A human widening a grant is not the system widening one.** `grantFromApproval` complements the
->    plan-grant invariant rather than breaking it: that invariant forbids the *agent* growing a grant it
+>    plan-grant invariant rather than breaking it: that invariant forbids the _agent_ growing a grant it
 >    holds. Ungrantable tiers are stripped there exactly as at mint, so no amount of clicking assembles
 >    a permission over money, secrets, or deletion.
 > 5. **A control is offered only when main would honour it.** Both the one-tap scope and S9’s "remember"
@@ -110,7 +117,7 @@ Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. N
   chrome rather than `ext-agent`, and this DoD’s own boundary rule ("UI logic lands in
   `extensions/ext-agent`") argues against putting it there casually.
 - **Scheduled-task-from-run carrying the grant scope.** The schedule affordance already exists
-  ([schedule-task-modal.tsx](../../extensions/ext-agent/src/schedule-task-modal.tsx)). Carrying a *grant*
+  ([schedule-task-modal.tsx](../../extensions/ext-agent/src/schedule-task-modal.tsx)). Carrying a _grant_
   into it was deliberately not built: plan grants die with their run by construction, and the durable
   equivalent is [S9](phase-s9-memory-skills.md)’s skill-scoped remembered grant. A second, divergent
   persistence path for grants is exactly what this phase’s own risk section warns against.
@@ -129,9 +136,9 @@ None. This phase surfaces existing substrate and consumes S1/S4/S6 contracts; it
 
 ## Risks
 
-- **IPC delta flooding.** Per-token IPC would swamp the renderer. *Mitigation:* coalesce delta flush at 30–50ms (PR1) — a single timer, never per-token; the batch window is the tuning knob, not the render loop.
-- **UX work absorbing unbounded scope.** UI polish invites endless additions. *Mitigation:* the non-goals below are binding; anything outside them is deferred, not negotiated in-phase.
-- **Commerce legal / ToS exposure.** Automating purchases carries live legal risk (Amazon v. Perplexity injunction). *Mitigation:* surface the caution note (PR6), gate behind the S6 financial tier + biometric + explicit confirm even in auto mode, and enforce at the approval path — never rely on renderer-side autonomy state.
-- **Grant-store race with S6.** Plan/scoped grants must read the same S6 store the kernel reads. *Mitigation:* PR3/PR4 depend on S6 landing its store first; if S6 slips, these PRs rest at 🟠 measurement-owed rather than shipping a divergent grant path.
+- **IPC delta flooding.** Per-token IPC would swamp the renderer. _Mitigation:_ coalesce delta flush at 30–50ms (PR1) — a single timer, never per-token; the batch window is the tuning knob, not the render loop.
+- **UX work absorbing unbounded scope.** UI polish invites endless additions. _Mitigation:_ the non-goals below are binding; anything outside them is deferred, not negotiated in-phase.
+- **Commerce legal / ToS exposure.** Automating purchases carries live legal risk (Amazon v. Perplexity injunction). _Mitigation:_ surface the caution note (PR6), gate behind the S6 financial tier + biometric + explicit confirm even in auto mode, and enforce at the approval path — never rely on renderer-side autonomy state.
+- **Grant-store race with S6.** Plan/scoped grants must read the same S6 store the kernel reads. _Mitigation:_ PR3/PR4 depend on S6 landing its store first; if S6 slips, these PRs rest at 🟠 measurement-owed rather than shipping a divergent grant path.
 
 **Non-goals (explicit):** voice interaction; multi-run / parallel-assistant UI (deferred to the parallel-runs backlog phase — one run at a time remains enforced by [agent-run-lock.electron.ts](../../apps/desktop/src/main/agent/agent-run-lock.electron.ts)); any vanity "UX score" or subjective competence claim.

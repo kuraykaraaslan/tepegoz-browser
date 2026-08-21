@@ -7,6 +7,7 @@ every action as a callback so it stays bridge-agnostic. The data model (`AppNoti
 `NotificationAction`) is owned by `@tepegoz/shared-types`, not by this package.
 
 ## Exports
+
 - **`NotificationCenter`** — the notification list panel: per-row dismiss/mark-read, header bulk
   actions (mark-all-read, clear-all), unread emphasis, and Up/Down/Home/End keyboard navigation.
 - **`ToastStack`** — a bottom-right stack of transient, auto-dismissing toasts (`AlertBanner`-styled).
@@ -16,6 +17,7 @@ every action as a callback so it stays bridge-agnostic. The data model (`AppNoti
   surfaces.
 
 ## Usage
+
 ```tsx
 <NotificationCenter
   items={notifications}
@@ -34,4 +36,5 @@ every action as a callback so it stays bridge-agnostic. The data model (`AppNoti
 ```
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

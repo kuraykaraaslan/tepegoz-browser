@@ -5,15 +5,7 @@
 
 /** One of the fixed Chrome-style tab-group colors (ADR-0020). */
 export type TabGroupColor =
-  | 'grey'
-  | 'blue'
-  | 'red'
-  | 'yellow'
-  | 'green'
-  | 'pink'
-  | 'purple'
-  | 'cyan'
-  | 'orange';
+  'grey' | 'blue' | 'red' | 'yellow' | 'green' | 'pink' | 'purple' | 'cyan' | 'orange';
 
 /**
  * A per-tab-group setting key. Namespaced `"<feature>.<name>"` — known first-party keys today:
@@ -129,4 +121,24 @@ export interface TabStripGeometry {
   strip: { x: number; y: number; width: number; height: number };
   /** The draggable tab slots, left-to-right. */
   slots: TabStripSlot[];
+}
+
+/** Payload for `find:start` — one find-in-page request against the sender window's ACTIVE tab.
+ *  `findNext` marks the OPENING request of a find session (true), versus a follow-up step within the
+ *  session already open (false) — it is not "go to the next match". Chromium answers a follow-up that
+ *  has no open session with silence: no event, no error. */
+export interface FindInPageQuery {
+  query: string;
+  forward: boolean;
+  findNext: boolean;
+  matchCase: boolean;
+}
+
+/** Payload for `find:result` — Chromium's `found-in-page` counts, echoed with the query they belong to
+ *  so the renderer can drop a late result for a query the user has already typed past. */
+export interface FindInPageResult {
+  query: string;
+  /** 1-based index of the highlighted match; 0 when there is none. */
+  activeMatchOrdinal: number;
+  matches: number;
 }

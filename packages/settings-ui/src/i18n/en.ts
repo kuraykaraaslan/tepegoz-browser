@@ -35,7 +35,8 @@ export const en = {
     forest: 'Forest',
   },
   glassTitle: 'Glass effect',
-  glassHint: 'Make the tab bar and toolbar translucent, showing your desktop through them (Windows 11).',
+  glassHint:
+    'Make the tab bar and toolbar translucent, showing your desktop through them (Windows 11).',
 
   // --- Language & region ---
   languageRegionTitle: 'Language & region',
@@ -105,7 +106,8 @@ export const en = {
     pauseOnSleepDesc:
       'Pause background agent work when the system sleeps or switches to battery / power-save, and resume it when the system wakes.',
     startupMode: 'Startup mode',
-    startupModeDesc: 'How Tepegöz opens on every launch — and when auto-started at login. All modes keep tabs rendering.',
+    startupModeDesc:
+      'How Tepegöz opens on every launch — and when auto-started at login. All modes keep tabs rendering.',
     modeWindow: 'Window',
     modeBackground: 'Background (system tray)',
     modeKiosk: 'Kiosk (fullscreen, no chrome)',

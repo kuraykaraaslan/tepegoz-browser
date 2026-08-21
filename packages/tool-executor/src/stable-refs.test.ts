@@ -16,8 +16,16 @@ function node(name: string, path: number[][]): DomTreeNode {
 describe('identity-stable refs', () => {
   it('keeps a ref across a re-render that changes every structural path', () => {
     // The fixture case: same three controls, rebuilt at a deeper nesting depth in reverse order.
-    const before = [node('Open crate A', [[0]]), node('Open crate B', [[1]]), node('Open crate C', [[2]])];
-    const after = [node('Open crate C', [[0, 0, 2]]), node('Open crate B', [[0, 0, 1]]), node('Open crate A', [[0, 0, 0]])];
+    const before = [
+      node('Open crate A', [[0]]),
+      node('Open crate B', [[1]]),
+      node('Open crate C', [[2]]),
+    ];
+    const after = [
+      node('Open crate C', [[0, 0, 2]]),
+      node('Open crate B', [[0, 0, 1]]),
+      node('Open crate A', [[0, 0, 0]]),
+    ];
     const registry = createRefRegistry('http://fixture/');
 
     const first = assignStableRefs(disambiguate(before.map(nodeHash)), registry);
@@ -33,9 +41,14 @@ describe('identity-stable refs', () => {
 
   it('gives a genuinely new element a fresh number without disturbing the others', () => {
     const registry = createRefRegistry('http://fixture/');
-    const first = assignStableRefs(disambiguate([node('Claim A', [[0]]), node('Claim B', [[1]])].map(nodeHash)), registry);
+    const first = assignStableRefs(
+      disambiguate([node('Claim A', [[0]]), node('Claim B', [[1]])].map(nodeHash)),
+      registry,
+    );
     const second = assignStableRefs(
-      disambiguate([node('Claim A', [[0]]), node('Claim B', [[1]]), node('Claim C', [[2]])].map(nodeHash)),
+      disambiguate(
+        [node('Claim A', [[0]]), node('Claim B', [[1]]), node('Claim C', [[2]])].map(nodeHash),
+      ),
       registry,
     );
     expect(second.refs.slice(0, 2)).toEqual(first.refs);
@@ -45,9 +58,15 @@ describe('identity-stable refs', () => {
 
   it('never recycles a retired element’s number onto a different element', () => {
     const registry = createRefRegistry('http://fixture/');
-    const first = assignStableRefs(disambiguate([node('Old', [[0]]), node('Kept', [[1]])].map(nodeHash)), registry);
+    const first = assignStableRefs(
+      disambiguate([node('Old', [[0]]), node('Kept', [[1]])].map(nodeHash)),
+      registry,
+    );
     // "Old" disappears; a different control appears in its place.
-    const second = assignStableRefs(disambiguate([node('Kept', [[0]]), node('Fresh', [[1]])].map(nodeHash)), registry);
+    const second = assignStableRefs(
+      disambiguate([node('Kept', [[0]]), node('Fresh', [[1]])].map(nodeHash)),
+      registry,
+    );
     const oldRef = first.refs[0];
     expect(second.refs).not.toContain(oldRef);
   });

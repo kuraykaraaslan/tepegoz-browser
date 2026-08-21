@@ -6,6 +6,7 @@ philosophy `@tepegoz/model-catalog` follows for on-device models. Depends only o
 (for the extension manifest shape) and zod; no Electron.
 
 ## Exports
+
 - **`CatalogFileSchema`** / **`CatalogFile`** / **`CATALOG_VERSION`** — the on-disk catalog file
   envelope and its schema version.
 - **`loadCatalog(raw)`** — validates a parsed catalog file at the trust boundary; returns a
@@ -13,4 +14,5 @@ philosophy `@tepegoz/model-catalog` follows for on-device models. Depends only o
   entries individually rather than discarding the whole file.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test` · `pnpm build`

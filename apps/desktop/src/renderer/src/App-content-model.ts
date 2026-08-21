@@ -77,7 +77,9 @@ export function useAppContentModel(
   const onEditShortcut = (id: string, title: string, url: string): void => {
     const current = prefs?.newTabShortcuts ?? [];
     void onUpdatePrefs({
-      newTabShortcuts: current.map((s) => (s.id === id ? { ...s, title: title.trim() || url, url } : s)),
+      newTabShortcuts: current.map((s) =>
+        s.id === id ? { ...s, title: title.trim() || url, url } : s,
+      ),
     });
   };
   const onRemoveShortcut = (id: string): void => {
@@ -103,7 +105,10 @@ export function useAppContentModel(
   const onChangeNewTabBackground = (patch: Partial<NewTabBackground>): void => {
     void onUpdatePrefs({ newTabBackground: { ...newTabBackground, ...patch } });
   };
-  const onPickNewTabBackgroundImage = async (): Promise<{ ref: string; dataUrl: string } | null> => {
+  const onPickNewTabBackgroundImage = async (): Promise<{
+    ref: string;
+    dataUrl: string;
+  } | null> => {
     const r = await window.tepegoz.pickNewTabBackgroundImage();
     if (r.cancelled) return null;
     setBgImageCache((c) => ({ ...c, [r.ref]: r.dataUrl }));

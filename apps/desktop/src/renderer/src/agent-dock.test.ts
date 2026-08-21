@@ -14,7 +14,7 @@ describe('nextAgentDock', () => {
     expect(nextAgentDock(OTHER, null, undefined)).toBe(OTHER);
   });
 
-  it('restores the group\'s remembered open state', () => {
+  it("restores the group's remembered open state", () => {
     expect(nextAgentDock(null, 'g1', true)).toBe(AGENT_EXTENSION_ID);
     expect(nextAgentDock(AGENT_EXTENSION_ID, 'g1', false)).toBeNull();
   });

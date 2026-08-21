@@ -9,11 +9,7 @@ import {
   type EffortLevel,
   type ModelProvider,
 } from '@tepegoz/model-gateway';
-import {
-  isRunnableProvider,
-  RUNNABLE_AI_PROVIDERS,
-  type AIProvider,
-} from '@tepegoz/shared-types';
+import { isRunnableProvider, RUNNABLE_AI_PROVIDERS, type AIProvider } from '@tepegoz/shared-types';
 import CredentialVault from '@tepegoz/credential-vault';
 import { LocalProvider, type LocalProviderConfig } from '@tepegoz/local-inference';
 import type { AgentRunDeps } from './agent-runtime-types';
@@ -45,7 +41,11 @@ function resolveProvider(
   const runnable = storedKeys.find((m) => isRunnableProvider(m.provider));
   if (runnable === undefined) {
     if (storedKeys.length === 0) {
-      throw new AppError('No API key configured. Add one in Settings → Providers.', 401);
+      throw new AppError(
+        'No API key configured. Add one in Settings → Providers.',
+        401,
+        'noApiKey',
+      );
     }
     throw new AppError(
       `No usable API key: this build can run ${RUNNABLE_AI_PROVIDERS.join(', ')}. ` +
@@ -56,7 +56,7 @@ function resolveProvider(
   // The raw key stays in main (getFirstKeyForProvider is main-only), never on IPC.
   const apiKey = CredentialVault.getFirstKeyForProvider(runnable.provider);
   if (apiKey === null) {
-    throw new AppError('No API key configured. Add one in Settings → Providers.', 401);
+    throw new AppError('No API key configured. Add one in Settings → Providers.', 401, 'noApiKey');
   }
   return { provider: runnable.provider, apiKey };
 }
@@ -74,7 +74,11 @@ function providerFor(
 ): ModelProvider {
   if (provider === 'local') {
     if (localConfig === undefined) {
-      throw new AppError('On-device inference is not available on this machine.', 503);
+      throw new AppError(
+        'On-device inference is not available on this machine.',
+        503,
+        'inferenceUnavailable',
+      );
     }
     return new LocalProvider(localConfig);
   }
@@ -99,7 +103,10 @@ function providerFor(
  */
 export function registerRunProvider(
   deps: AgentRunDeps,
-  prefs: { agentProviderOverride: AIProvider | null; localProvider: { mode: 'off' | 'simple' | 'default' } },
+  prefs: {
+    agentProviderOverride: AIProvider | null;
+    localProvider: { mode: 'off' | 'simple' | 'default' };
+  },
   localAvailable: boolean,
   effort: EffortLevel,
 ): AIProvider {
@@ -107,8 +114,14 @@ export function registerRunProvider(
     ModelGateway.register(deps.provider.instance);
     return deps.provider.id;
   }
-  const resolved = resolveProvider(prefs.agentProviderOverride, prefs.localProvider.mode, localAvailable);
-  ModelGateway.register(providerFor(resolved.provider, resolved.apiKey, effort, deps.localInference));
+  const resolved = resolveProvider(
+    prefs.agentProviderOverride,
+    prefs.localProvider.mode,
+    localAvailable,
+  );
+  ModelGateway.register(
+    providerFor(resolved.provider, resolved.apiKey, effort, deps.localInference),
+  );
   if (resolved.provider !== 'local' && localAvailable && deps.localInference !== undefined) {
     ModelGateway.register(new LocalProvider(deps.localInference));
   }
@@ -132,7 +145,8 @@ export function hotSwapRunProvider(
   const apiKey = CredentialVault.getFirstKeyForProvider(provider);
   if (apiKey === null) return false;
   ModelGateway.register(providerFor(provider, apiKey, opts.effort, undefined));
-  const model = opts.model.length > 0 ? opts.model : (PROVIDER_MODEL_CATALOG[provider][0]?.id ?? '');
+  const model =
+    opts.model.length > 0 ? opts.model : (PROVIDER_MODEL_CATALOG[provider][0]?.id ?? '');
   if (model.length === 0) return false;
   ModelGateway.setModelOverride({ provider, model });
   return true;

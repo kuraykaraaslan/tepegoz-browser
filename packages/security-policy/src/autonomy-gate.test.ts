@@ -29,7 +29,6 @@ describe('resolveAutonomy — autonomy can only skip a prompt, never widen permi
     expect(resolveAutonomy(ask(false), 'auto').decision).toBe('auto_approve');
   });
 
-
   it('treats the reserved `dangerous` level as `ask`, not as an escalation', () => {
     expect(resolveAutonomy(ask(false), 'dangerous').decision).toBe('prompt');
     expect(resolveAutonomy(ask(true), 'dangerous').decision).toBe('prompt');
@@ -71,7 +70,9 @@ describe('resolveAutonomy with a derived risk tier (S6-PR2)', () => {
   });
 
   it('names the held tier in the reason code', () => {
-    expect(resolveAutonomy(ask(false), 'act', 'credential').reason).toBe('autonomy_act_credential_held');
+    expect(resolveAutonomy(ask(false), 'act', 'credential').reason).toBe(
+      'autonomy_act_credential_held',
+    );
   });
 
   it('behaves exactly as before when no tier is supplied', () => {
@@ -92,12 +93,16 @@ describe('resolveAutonomy with a derived risk tier (S6-PR2)', () => {
     // Deliberately unchanged, including credential and destructive. Widening beyond the owner
     // decision would be taking a call that is theirs — phase-s8-assistant-ux.md asks for it.
     for (const tier of ['credential', 'destructive', 'ui-write', 'data-egress', 'read'] as const) {
-      expect(resolveAutonomy(ask(false), 'auto', tier).decision, `tier=${tier}`).toBe('auto_approve');
+      expect(resolveAutonomy(ask(false), 'auto', tier).decision, `tier=${tier}`).toBe(
+        'auto_approve',
+      );
     }
   });
 
   it('still never lets a tier override a deny', () => {
-    expect(resolveAutonomy({ decision: 'deny', biometric: false }, 'auto', 'read').decision).toBe('prompt');
+    expect(resolveAutonomy({ decision: 'deny', biometric: false }, 'auto', 'read').decision).toBe(
+      'prompt',
+    );
   });
 });
 

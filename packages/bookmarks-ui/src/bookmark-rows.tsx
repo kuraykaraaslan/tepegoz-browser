@@ -17,10 +17,22 @@ export const TREE_PREFIX = 'tree:';
 export function Favicon({ src }: { src: string | null | undefined }) {
   const [failed, setFailed] = useState(false);
   if (src === null || src === undefined || src.length === 0 || failed) {
-    return <FontAwesomeIcon icon={faBookmark} className="h-4 w-4 shrink-0 text-text-secondary" aria-hidden />;
+    return (
+      <FontAwesomeIcon
+        icon={faBookmark}
+        className="h-4 w-4 shrink-0 text-text-secondary"
+        aria-hidden
+      />
+    );
   }
   return (
-    <img src={src} alt="" aria-hidden className="h-4 w-4 shrink-0 rounded-sm object-contain" onError={() => setFailed(true)} />
+    <img
+      src={src}
+      alt=""
+      aria-hidden
+      className="h-4 w-4 shrink-0 rounded-sm object-contain"
+      onError={() => setFailed(true)}
+    />
   );
 }
 
@@ -47,7 +59,12 @@ export function FolderRow({
 }) {
   const dndId = `${TREE_PREFIX}${node.id}`;
   const { setNodeRef: setDropRef, isOver } = useDroppable({ id: dndId });
-  const { setNodeRef: setDragRef, attributes, listeners, isDragging } = useDraggable({
+  const {
+    setNodeRef: setDragRef,
+    attributes,
+    listeners,
+    isDragging,
+  } = useDraggable({
     id: dndId,
     disabled: !draggable,
   });
@@ -66,7 +83,9 @@ export function FolderRow({
       <div
         ref={setRef}
         className={`flex cursor-pointer select-none items-center gap-1.5 rounded-md py-1.5 pr-2 text-sm ${
-          isSelected ? 'bg-surface-overlay text-text-primary' : 'text-text-secondary hover:bg-surface-overlay/60'
+          isSelected
+            ? 'bg-surface-overlay text-text-primary'
+            : 'text-text-secondary hover:bg-surface-overlay/60'
         } ${isOver ? 'ring-2 ring-border-focus' : ''}`}
         style={{ paddingLeft: 8 + depth * 14, opacity: isDragging ? 0.4 : 1 }}
         onClick={() => onSelect(node.id)}
@@ -87,7 +106,11 @@ export function FolderRow({
               onToggle(node.id);
             }}
           >
-            <FontAwesomeIcon icon={isOpen ? faChevronDown : faChevronRight} className="h-2.5 w-2.5 opacity-70" aria-hidden />
+            <FontAwesomeIcon
+              icon={isOpen ? faChevronDown : faChevronRight}
+              className="h-2.5 w-2.5 opacity-70"
+              aria-hidden
+            />
           </button>
         ) : (
           <span className="w-2.5 shrink-0" />
@@ -128,9 +151,10 @@ export function ItemRow({
   onSelectFolder: (id: string) => void;
   onContextMenu: (id: string, type: BookmarkNodeType) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } = useSortable({
-    id: node.id,
-  });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } =
+    useSortable({
+      id: node.id,
+    });
   const style: CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -153,16 +177,24 @@ export function ItemRow({
       {...listeners}
     >
       {node.type === 'folder' ? (
-        <FontAwesomeIcon icon={faFolder} className="h-4 w-4 shrink-0 text-text-secondary" aria-hidden />
+        <FontAwesomeIcon
+          icon={faFolder}
+          className="h-4 w-4 shrink-0 text-text-secondary"
+          aria-hidden
+        />
       ) : (
         <Favicon src={node.favicon} />
       )}
       <button
         type="button"
         className="min-w-0 flex-1 text-left"
-        onClick={() => (node.type === 'folder' ? onSelectFolder(node.id) : node.url !== null && onOpen(node.url))}
+        onClick={() =>
+          node.type === 'folder' ? onSelectFolder(node.id) : node.url !== null && onOpen(node.url)
+        }
       >
-        <p className="truncate text-sm text-text-primary">{node.title.length > 0 ? node.title : node.url}</p>
+        <p className="truncate text-sm text-text-primary">
+          {node.title.length > 0 ? node.title : node.url}
+        </p>
         {node.type === 'bookmark' && node.url !== null && (
           <p className="truncate text-xs text-text-secondary">{node.url}</p>
         )}

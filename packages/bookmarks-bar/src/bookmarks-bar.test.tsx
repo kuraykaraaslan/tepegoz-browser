@@ -12,7 +12,10 @@ function folder(id: string, title: string, children: BookmarkBarNode[]): Bookmar
   return { id, type: 'folder', title, url: null, favicon: null, children };
 }
 
-function renderBar(nodes: BookmarkBarNode[], over: Partial<Parameters<typeof BookmarksBar>[0]> = {}) {
+function renderBar(
+  nodes: BookmarkBarNode[],
+  over: Partial<Parameters<typeof BookmarksBar>[0]> = {},
+) {
   const props = {
     nodes,
     barRootId: 'root-bar',
@@ -42,9 +45,14 @@ describe('BookmarksBar', () => {
   });
 
   it('asks the host to open a folder dropdown (native popup) with an anchor', () => {
-    const { onOpenFolder } = renderBar([folder('f', 'Work', [bookmark('c', 'Child', 'https://c.com/')])]);
+    const { onOpenFolder } = renderBar([
+      folder('f', 'Work', [bookmark('c', 'Child', 'https://c.com/')]),
+    ]);
     fireEvent.click(screen.getByText('Work'));
-    expect(onOpenFolder).toHaveBeenCalledWith('f', expect.objectContaining({ x: expect.any(Number) as unknown }));
+    expect(onOpenFolder).toHaveBeenCalledWith(
+      'f',
+      expect.objectContaining({ x: expect.any(Number) as unknown }),
+    );
   });
 
   it('fires the context menu with the node id + type on right-click', () => {

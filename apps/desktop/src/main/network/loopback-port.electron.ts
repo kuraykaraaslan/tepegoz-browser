@@ -49,7 +49,8 @@ export async function waitForSocksPort(
   for (;;) {
     if (hasDied()) throw new Error('the process exited before its listener came up');
     if (await probeSocksPort(port, 500)) return;
-    if (Date.now() > deadline) throw new Error(`no listener on 127.0.0.1:${String(port)} after ${String(timeoutMs)}ms`);
+    if (Date.now() > deadline)
+      throw new Error(`no listener on 127.0.0.1:${String(port)} after ${String(timeoutMs)}ms`);
     await new Promise((r) => setTimeout(r, 200));
   }
 }

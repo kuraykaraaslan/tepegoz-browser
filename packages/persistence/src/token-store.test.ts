@@ -22,9 +22,16 @@ describe('TokenStore', () => {
     TokenStore.recordRun(db, {
       correlationId: 'run-1',
       ts: 1000,
-      entries: [entry(), entry({ capability: 'exec', model: 'claude-sonnet-4-6', outputTokens: 50 })],
+      entries: [
+        entry(),
+        entry({ capability: 'exec', model: 'claude-sonnet-4-6', outputTokens: 50 }),
+      ],
     });
-    TokenStore.recordRun(db, { correlationId: 'run-2', ts: 2000, entries: [entry({ inputTokens: 10, outputTokens: 5 })] });
+    TokenStore.recordRun(db, {
+      correlationId: 'run-2',
+      ts: 2000,
+      entries: [entry({ inputTokens: 10, outputTokens: 5 })],
+    });
 
     const totals = TokenStore.lifetimeTotals(db);
     expect(totals.inputTokens).toBe(210); // 100 + 100 + 10
@@ -49,7 +56,11 @@ describe('TokenStore', () => {
     const db = openDatabase(':memory:');
     migrate(db);
     TokenStore.recordRun(db, { correlationId: 'run-ok', ts: 1, entries: [entry()] }); // 300
-    TokenStore.recordRun(db, { correlationId: 'run-bad', ts: 2, entries: [entry({ outputTokens: 900 })] }); // 1000
+    TokenStore.recordRun(db, {
+      correlationId: 'run-bad',
+      ts: 2,
+      entries: [entry({ outputTokens: 900 })],
+    }); // 1000
 
     expect(TokenStore.lifetimeTotals(db).totalTokens).toBe(1300);
     const refunded = TokenStore.refundRun(db, 'run-bad', 3);
@@ -72,7 +83,12 @@ describe('TokenStore', () => {
       correlationId: 'r1',
       ts: 1,
       entries: [
-        entry({ capability: 'classify', model: 'claude-haiku-4-5', inputTokens: 5, outputTokens: 5 }),
+        entry({
+          capability: 'classify',
+          model: 'claude-haiku-4-5',
+          inputTokens: 5,
+          outputTokens: 5,
+        }),
         entry({ inputTokens: 500, outputTokens: 500 }),
       ],
     });

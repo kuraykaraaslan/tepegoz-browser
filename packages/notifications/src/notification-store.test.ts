@@ -138,13 +138,20 @@ describe('NotificationInputSchema + toNotification', () => {
         source: 'system',
         title: 'x',
         body: '',
-        actions: Array.from({ length: 5 }, (_, i) => ({ id: `a${i}`, label: 'A', type: 'dismiss' })),
+        actions: Array.from({ length: 5 }, (_, i) => ({
+          id: `a${i}`,
+          label: 'A',
+          type: 'dismiss',
+        })),
       }).success,
     ).toBe(false);
   });
 
   it('rejects an empty title and an out-of-set channel', () => {
-    expect(NotificationInputSchema.safeParse({ kind: 'info', source: 'system', title: '', body: '' }).success).toBe(false);
+    expect(
+      NotificationInputSchema.safeParse({ kind: 'info', source: 'system', title: '', body: '' })
+        .success,
+    ).toBe(false);
     expect(
       NotificationInputSchema.safeParse({
         kind: 'info',

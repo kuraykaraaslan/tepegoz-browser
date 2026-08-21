@@ -2,10 +2,7 @@ import { z } from 'zod';
 import { type WebContents } from 'electron';
 import { Logger } from '@tepegoz/libs';
 import PreferenceStore from '@tepegoz/preferences';
-import {
-  normalizeTranslateLanguage,
-  shouldAutoTranslatePage,
-} from '@tepegoz/ext-translate/engine';
+import { normalizeTranslateLanguage, shouldAutoTranslatePage } from '@tepegoz/ext-translate/engine';
 import type { TranslatePageState } from '@tepegoz/ext-translate/types';
 import TabManager from '../tabs';
 import translateHost, { setTranslatePageState } from './translate-host.electron';
@@ -86,14 +83,19 @@ const TranslatePageInjector = {
     const wc = TabManager.activeWebContents();
     if (wc === null || wc.isDestroyed()) return null;
     await inject(wc);
-    const raw: unknown = await wc.executeJavaScript('window.__tepegozTranslateRestore?.() ?? null;', true);
+    const raw: unknown = await wc.executeJavaScript(
+      'window.__tepegozTranslateRestore?.() ?? null;',
+      true,
+    );
     const parsed = PageScriptStateSchema.safeParse(raw);
     const url = wc.getURL();
     const origin = originOf(url) ?? '';
     const restored: TranslatePageState = {
       url,
       origin,
-      sourceLanguage: normalizeTranslateLanguage(parsed.success ? parsed.data.sourceLanguage : undefined),
+      sourceLanguage: normalizeTranslateLanguage(
+        parsed.success ? parsed.data.sourceLanguage : undefined,
+      ),
       targetLanguage: normalizeTranslateLanguage(
         parsed.success ? parsed.data.targetLanguage : undefined,
         translateHost.targetLanguage(),
@@ -112,14 +114,19 @@ const TranslatePageInjector = {
   async restoreWebContents(wc: WebContents): Promise<TranslatePageState | null> {
     if (wc.isDestroyed()) return null;
     await inject(wc);
-    const raw: unknown = await wc.executeJavaScript('window.__tepegozTranslateRestore?.() ?? null;', true);
+    const raw: unknown = await wc.executeJavaScript(
+      'window.__tepegozTranslateRestore?.() ?? null;',
+      true,
+    );
     const parsed = PageScriptStateSchema.safeParse(raw);
     const url = wc.getURL();
     const origin = originOf(url) ?? '';
     const restored: TranslatePageState = {
       url,
       origin,
-      sourceLanguage: normalizeTranslateLanguage(parsed.success ? parsed.data.sourceLanguage : undefined),
+      sourceLanguage: normalizeTranslateLanguage(
+        parsed.success ? parsed.data.sourceLanguage : undefined,
+      ),
       targetLanguage: normalizeTranslateLanguage(
         parsed.success ? parsed.data.targetLanguage : undefined,
         translateHost.targetLanguage(),

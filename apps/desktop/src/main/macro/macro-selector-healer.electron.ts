@@ -10,8 +10,18 @@ import {
   OpenAIProvider,
   OPENAI_MODEL,
 } from '@tepegoz/model-gateway';
-import { isRunnableProvider, SelectorSchema, type AIProvider, type Selector, type SelectorChain } from '@tepegoz/shared-types';
-import { finalizeElements, wrapUntrustedContent, type RawInteractable } from '@tepegoz/tool-executor';
+import {
+  isRunnableProvider,
+  SelectorSchema,
+  type AIProvider,
+  type Selector,
+  type SelectorChain,
+} from '@tepegoz/shared-types';
+import {
+  finalizeElements,
+  wrapUntrustedContent,
+  type RawInteractable,
+} from '@tepegoz/tool-executor';
 import CredentialVault from '@tepegoz/credential-vault';
 import TabManager from '../tabs';
 
@@ -149,9 +159,9 @@ export async function healSelector(chain: SelectorChain): Promise<Selector | nul
   } catch {
     return null;
   }
-  const rawCandidates = z.array(RawCandidateSchema).safeParse(
-    typeof raw === 'string' ? (extractJson(raw) ?? []) : raw,
-  );
+  const rawCandidates = z
+    .array(RawCandidateSchema)
+    .safeParse(typeof raw === 'string' ? (extractJson(raw) ?? []) : raw);
   if (!rawCandidates.success || rawCandidates.data.length === 0) return null;
 
   const paths = rawCandidates.data.map((c) => c.path);

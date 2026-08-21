@@ -3,7 +3,9 @@ import { createUserAgentHost, type UserAgentPorts } from './host';
 
 const DEFAULT_UA = 'Mozilla/5.0 (DefaultBrowser)';
 
-function fakePorts(overrides?: Partial<UserAgentPorts> & { persisted?: string | null; enabled?: boolean }) {
+function fakePorts(
+  overrides?: Partial<UserAgentPorts> & { persisted?: string | null; enabled?: boolean },
+) {
   const state = { persisted: overrides?.persisted ?? null, enabled: overrides?.enabled ?? true };
   const ports: UserAgentPorts & { session: string[]; tabs: string[] } = {
     getPersisted: () => state.persisted,

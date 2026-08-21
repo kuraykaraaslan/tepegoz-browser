@@ -3,8 +3,7 @@ import type { LoginCredential, LoginCredentialMeta, SecretCrypto } from '@tepego
 
 /**
  * In-memory stand-in for the SQLite-backed PasswordStore so the vault's logic (encrypt-on-write,
- * dedupe, decrypt, import, export) is testable under the Node runner — better-sqlite3's native
- * addon only loads under Electron's ABI (see phases/README.md ABI note).
+ * dedupe, decrypt, import, export) is testable without a database at all — the store is the seam.
  */
 interface StoredRow {
   id: string;
@@ -38,8 +37,7 @@ function toFull(r: StoredRow): LoginCredential {
 
 vi.mock('./password-store', () => ({
   PasswordStore: {
-    list: () =>
-      [...rows.values()].sort((a, b) => b.updatedAt - a.updatedAt).map(toMeta),
+    list: () => [...rows.values()].sort((a, b) => b.updatedAt - a.updatedAt).map(toMeta),
     findById: (_db: unknown, id: string) => {
       const r = rows.get(id);
       return r ? toFull(r) : null;
@@ -86,7 +84,11 @@ beforeEach(() => {
 
 describe('PasswordVault.set', () => {
   it('encrypts the password and normalizes the URL to an origin', async () => {
-    const meta = await vault.set({ url: 'https://example.com/login?next=1', username: 'alice', password: 's3cret' });
+    const meta = await vault.set({
+      url: 'https://example.com/login?next=1',
+      username: 'alice',
+      password: 's3cret',
+    });
     expect(meta.url).toBe('https://example.com');
     expect(meta.username).toBe('alice');
     // Metadata never carries the password.
@@ -149,7 +151,7 @@ describe('PasswordVault import/export', () => {
     const csv = [
       'name,url,username,password,note',
       'Example,https://example.com,alice,s3cret,note',
-      ',,,,',                          // skipped (missing fields)
+      ',,,,', // skipped (missing fields)
       'Bank,https://bank.test,bob,hunter2,',
     ].join('\n');
 
@@ -161,7 +163,12 @@ describe('PasswordVault import/export', () => {
   });
 
   it('exports a decrypted CSV round-trippable back through import', async () => {
-    await vault.set({ url: 'https://a.test', username: 'alice', password: 'p,1', title: 'Acme, Inc.' });
+    await vault.set({
+      url: 'https://a.test',
+      username: 'alice',
+      password: 'p,1',
+      title: 'Acme, Inc.',
+    });
     const csv = await vault.export();
     expect(csv.split('\n')[0]).toBe('name,url,username,password,note');
     expect(csv).toContain('"Acme, Inc."');

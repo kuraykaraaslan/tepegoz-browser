@@ -28,7 +28,10 @@ describe('blind_page', () => {
     // The `image-only-button` shape: two controls, both meaningless to a DOM reader.
     const trigger = evaluateVisionTrigger([
       pageRead,
-      elements([{ ref: 1, name: '', tag: 'button' }, { ref: 2, name: '   ', tag: 'button' }]),
+      elements([
+        { ref: 1, name: '', tag: 'button' },
+        { ref: 2, name: '   ', tag: 'button' },
+      ]),
     ]);
     expect(trigger?.reason).toBe('blind_page');
     expect(trigger?.detail).toContain('none of them named');
@@ -37,7 +40,10 @@ describe('blind_page', () => {
   it('does NOT fire when even one element is named', () => {
     const trigger = evaluateVisionTrigger([
       pageRead,
-      elements([{ ref: 1, name: '', tag: 'button' }, { ref: 2, name: 'Archive', tag: 'button' }]),
+      elements([
+        { ref: 1, name: '', tag: 'button' },
+        { ref: 2, name: 'Archive', tag: 'button' },
+      ]),
     ]);
     expect(trigger).toBeNull();
   });
@@ -64,10 +70,7 @@ describe('canvas_dominant', () => {
   });
 
   it('does not fire on an incidental small canvas', () => {
-    const trigger = evaluateVisionTrigger([
-      pageRead,
-      elements([{ ref: 1, name: 'Save' }], 0.05),
-    ]);
+    const trigger = evaluateVisionTrigger([pageRead, elements([{ ref: 1, name: 'Save' }], 0.05)]);
     expect(trigger).toBeNull();
   });
 
@@ -81,26 +84,46 @@ describe('persistent_occlusion', () => {
   it('fires only after the click-time re-check has refused more than once', () => {
     const occluded = step('browser_update_page', { changed: false, occludedBy: '<div> "cookies"' });
     expect(evaluateVisionTrigger([elements([{ ref: 1, name: 'Accept' }]), occluded])).toBeNull();
-    const trigger = evaluateVisionTrigger([elements([{ ref: 1, name: 'Accept' }]), occluded, occluded]);
+    const trigger = evaluateVisionTrigger([
+      elements([{ ref: 1, name: 'Accept' }]),
+      occluded,
+      occluded,
+    ]);
     expect(trigger?.reason).toBe('persistent_occlusion');
   });
 });
 
 describe('repeated_action_failure', () => {
   it('fires when the same target is acted on repeatedly with no effect', () => {
-    const noop = step('browser_update_page', { changed: false }, { args: { action: 'click', ref: 7 } });
+    const noop = step(
+      'browser_update_page',
+      { changed: false },
+      { args: { action: 'click', ref: 7 } },
+    );
     const trigger = evaluateVisionTrigger([elements([{ ref: 7, name: 'Next' }]), noop, noop]);
     expect(trigger?.reason).toBe('repeated_action_failure');
   });
 
   it('does not fire for repeated actions on DIFFERENT targets', () => {
-    const a = step('browser_update_page', { changed: false }, { args: { action: 'click', ref: 1 } });
-    const b = step('browser_update_page', { changed: false }, { args: { action: 'click', ref: 2 } });
+    const a = step(
+      'browser_update_page',
+      { changed: false },
+      { args: { action: 'click', ref: 1 } },
+    );
+    const b = step(
+      'browser_update_page',
+      { changed: false },
+      { args: { action: 'click', ref: 2 } },
+    );
     expect(evaluateVisionTrigger([elements([{ ref: 1, name: 'A' }]), a, b])).toBeNull();
   });
 
   it('does not fire when the action actually worked', () => {
-    const ok = step('browser_update_page', { changed: true }, { args: { action: 'click', ref: 7 } });
+    const ok = step(
+      'browser_update_page',
+      { changed: true },
+      { args: { action: 'click', ref: 7 } },
+    );
     expect(evaluateVisionTrigger([elements([{ ref: 7, name: 'Next' }]), ok, ok])).toBeNull();
   });
 });

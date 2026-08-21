@@ -278,7 +278,9 @@ export function VideoPlayerControls({
                 key={origin}
                 className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-1.5"
               >
-                <span className="min-w-0 truncate font-mono text-xs text-text-primary">{origin}</span>
+                <span className="min-w-0 truncate font-mono text-xs text-text-primary">
+                  {origin}
+                </span>
                 <button
                   type="button"
                   className={BTN_GHOST}

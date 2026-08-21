@@ -41,7 +41,11 @@ export function linkifyText(value: string): MdNode[] | null {
     }
     if (path.length === 0) continue;
     if (match.index > last) out.push({ type: 'text', value: value.slice(last, match.index) });
-    out.push({ type: 'link', url: FILE_LINK_SCHEME + path, children: [{ type: 'text', value: path }] });
+    out.push({
+      type: 'link',
+      url: FILE_LINK_SCHEME + path,
+      children: [{ type: 'text', value: path }],
+    });
     last = end;
   }
   if (out.length === 0) return null;

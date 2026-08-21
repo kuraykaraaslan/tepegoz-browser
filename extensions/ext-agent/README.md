@@ -20,6 +20,7 @@ user rather than attempting to solve it. Approvals distinguish routine state-cha
 biometric-gated (high-risk) ones.
 
 ## Exports
+
 - **`agentManifest`** — the extension manifest (`com.tepegoz.agent`, sidebar surface, `tabs`/`read-page`/`navigate` permissions).
 - **`AgentPanel`** — the sidebar surface (chat thread, composer, plan review, approvals, replay timeline).
 - **`AgentEvent`** / **`AgentEventKind`** (types) — the run event stream (`plan`, `decision`, `step_start`, `step_ok`, `step_error`, `awaiting_approval`, `input_action`, `handoff`, `done`, `error`).
@@ -30,7 +31,9 @@ biometric-gated (high-risk) ones.
 - **`AgentHostApi`** (type) — the host contract: run/cancel/reset a run, approvals, plan responses, provider/autonomy/effort config, file/screenshot capture, tab creation.
 
 ## i18n
+
 Own `src/i18n/{en,tr}.ts` dictionary (English + Turkish, parity-tested); consumed via `useT` from `@tepegoz/i18n/react`.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

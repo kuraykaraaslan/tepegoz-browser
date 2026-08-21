@@ -57,18 +57,18 @@ describe('evaluateSupplyChain — three tiers', () => {
 
 describe('declaredWithinRequestedScope', () => {
   it('passes when everything declared was actually shown to the user', () => {
-    const v = declaredWithinRequestedScope(['browser_get_page', 'browser_update_page'], [
-      'browser_get_page',
-      'browser_update_page',
-      'file_read_item',
-    ]);
+    const v = declaredWithinRequestedScope(
+      ['browser_get_page', 'browser_update_page'],
+      ['browser_get_page', 'browser_update_page', 'file_read_item'],
+    );
     expect(v).toEqual({ withinScope: true });
   });
 
   it('REJECTS a package asking for more than what was disclosed at scope review', () => {
-    const v = declaredWithinRequestedScope(['browser_get_page', 'credential_update_field'], [
-      'browser_get_page',
-    ]);
+    const v = declaredWithinRequestedScope(
+      ['browser_get_page', 'credential_update_field'],
+      ['browser_get_page'],
+    );
     expect(v).toEqual({ withinScope: false, undisclosed: ['credential_update_field'] });
   });
 
@@ -88,20 +88,26 @@ describe('declaredVsActualMismatch — the first-run check', () => {
   });
 
   it('catches a tool the package invoked but never declared — the mismatch that blocks/HITLs', () => {
-    const mismatch = declaredVsActualMismatch(['browser_get_page'], ['browser_get_page', 'file_delete_item']);
+    const mismatch = declaredVsActualMismatch(
+      ['browser_get_page'],
+      ['browser_get_page', 'file_delete_item'],
+    );
     expect(mismatch).toEqual(['file_delete_item']);
   });
 
   it('does not flag a declared capability the package simply never happened to use', () => {
     // Declaring more than you use is over-cautious, not dishonest — only USING more than declared is
     // the mismatch this function exists to catch.
-    expect(declaredVsActualMismatch(['browser_get_page', 'file_delete_item'], ['browser_get_page'])).toEqual(
-      [],
-    );
+    expect(
+      declaredVsActualMismatch(['browser_get_page', 'file_delete_item'], ['browser_get_page']),
+    ).toEqual([]);
   });
 
   it('deduplicates a repeatedly-invoked undeclared tool into one finding', () => {
-    const mismatch = declaredVsActualMismatch([], ['file_delete_item', 'file_delete_item', 'file_delete_item']);
+    const mismatch = declaredVsActualMismatch(
+      [],
+      ['file_delete_item', 'file_delete_item', 'file_delete_item'],
+    );
     expect(mismatch).toEqual(['file_delete_item']);
   });
 });

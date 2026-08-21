@@ -13,30 +13,32 @@ function ports(overrides: Partial<TranslateHostPorts> = {}): TranslateHostPorts 
     isExtensionEnabled: () => true,
     getResolvedLocale: () => 'tr',
     localAvailable: () => true,
-    runLocalBatch: (input) => Promise.resolve({
-      sourceLanguage: input.sourceLanguage ?? 'en',
-      targetLanguage: input.targetLanguage ?? 'tr',
-      items: input.items.map((item) => ({
-        id: item.id,
-        text: item.text,
-        translatedText: `L:${item.text}`,
+    runLocalBatch: (input) =>
+      Promise.resolve({
+        sourceLanguage: input.sourceLanguage ?? 'en',
+        targetLanguage: input.targetLanguage ?? 'tr',
+        items: input.items.map((item) => ({
+          id: item.id,
+          text: item.text,
+          translatedText: `L:${item.text}`,
+          engine: 'local-llm',
+        })),
         engine: 'local-llm',
-      })),
-      engine: 'local-llm',
-      durationMs: 1,
-    }),
-    runCloudBatch: (input) => Promise.resolve({
-      sourceLanguage: input.sourceLanguage ?? 'en',
-      targetLanguage: input.targetLanguage ?? 'tr',
-      items: input.items.map((item) => ({
-        id: item.id,
-        text: item.text,
-        translatedText: `C:${item.text}`,
+        durationMs: 1,
+      }),
+    runCloudBatch: (input) =>
+      Promise.resolve({
+        sourceLanguage: input.sourceLanguage ?? 'en',
+        targetLanguage: input.targetLanguage ?? 'tr',
+        items: input.items.map((item) => ({
+          id: item.id,
+          text: item.text,
+          translatedText: `C:${item.text}`,
+          engine: 'external-ai',
+        })),
         engine: 'external-ai',
-      })),
-      engine: 'external-ai',
-      durationMs: 1,
-    }),
+        durationMs: 1,
+      }),
     requestCloudFallback: (request) =>
       Promise.resolve({ requestId: request.requestId, allow: true, remember: true }),
     memoryLookup: (key) => memory.get(key) ?? null,

@@ -1,9 +1,22 @@
 import { AppError } from '@tepegoz/libs';
 import { CanonMessageContentSchema, type AIProvider } from '@tepegoz/shared-types';
-import type { CanonRequest, CanonResponse, ModelDeltaSink, ModelProvider } from './types';
+import type {
+  CanonRequest,
+  CanonResponse,
+  CanonUsage,
+  ModelDeltaSink,
+  ModelProvider,
+} from './types';
 import { egressTextOf } from './content';
+import { cacheEffect } from './cache-plan';
 import { GatewayMessages } from './messages';
 import { TokenLedger } from './token-ledger';
+
+/**
+ * Notified when one call wrote tokens INTO the prompt cache and read none back — the signature of a
+ * silently-invalidated prefix, which costs more than not caching at all. Advisory only.
+ */
+export type CacheWasteHandler = (writeTokens: number) => void;
 
 /**
  * Egress inspection seam (L8 defense-in-depth). The gateway stays a pure L7 transport — it does NOT
@@ -49,6 +62,7 @@ export interface EgressHandlers {
 export class ModelGateway {
   private static readonly providers = new Map<AIProvider, ModelProvider>();
   private static egressInspector: EgressInspector | null = null;
+  private static cacheWasteHandler: CacheWasteHandler | null = null;
   private static egressHandlers: EgressHandlers = {};
   /**
    * Active per-run model pin (Agent panel Model dropdown). When set, EVERY request this run makes —
@@ -80,7 +94,8 @@ export class ModelGateway {
    */
   static supportsNativeTools(provider: AIProvider): boolean {
     const pin = ModelGateway.modelOverride;
-    const effective = pin !== null && ModelGateway.providers.has(pin.provider) ? pin.provider : provider;
+    const effective =
+      pin !== null && ModelGateway.providers.has(pin.provider) ? pin.provider : provider;
     return ModelGateway.providers.get(effective)?.supportsNativeTools === true;
   }
 
@@ -104,7 +119,19 @@ export class ModelGateway {
    * run. `confirmBlock` gates a block-severity finding through HITL (resolve true to send); when it is
    * absent the gateway fails CLOSED (throws) so a block never silently sends. `onWarn` is advisory.
    */
-  static setEgressInspector(inspector: EgressInspector | null, handlers: EgressHandlers = {}): void {
+  /**
+   * Register the sink for wasted-cache reports (null clears it). Injected like the egress seam so the
+   * gateway stays transport-only and the host decides whether a wasted write is a log line, a telemetry
+   * counter, or an eval-harness assertion.
+   */
+  static setCacheWasteHandler(handler: CacheWasteHandler | null): void {
+    ModelGateway.cacheWasteHandler = handler;
+  }
+
+  static setEgressInspector(
+    inspector: EgressInspector | null,
+    handlers: EgressHandlers = {},
+  ): void {
     ModelGateway.egressInspector = inspector;
     ModelGateway.egressHandlers = handlers;
   }
@@ -143,8 +170,34 @@ export class ModelGateway {
       if (typeof m.content === 'string') continue;
       const parsed = CanonMessageContentSchema.safeParse(m.content);
       if (!parsed.success) {
-        throw new AppError(GatewayMessages.invalidContent(m.role, parsed.error.issues[0]?.message ?? ''), 400);
+        throw new AppError(
+          GatewayMessages.invalidContent(m.role, parsed.error.issues[0]?.message ?? ''),
+          400,
+        );
       }
+    }
+  }
+
+  /**
+   * Surface a prompt cache that is costing money instead of saving it.
+   *
+   * Caching is a prefix match, so a caller that mutates any byte before its breakpoint pays the
+   * cache-**write** premium on every call and never reads a token back. Nothing about that is visible
+   * from the outside: the requests succeed, the answers are fine, and the bill is quietly higher than
+   * with no caching at all. The counters are the only tell, so a wasted write is reported the moment
+   * it is measured rather than left for whoever eventually reconciles a sweep's spend.
+   *
+   * Advisory: it never blocks, retries, or alters the request. One wasted write is also normal — a cold
+   * cache has to be written before it can be read — so this reads as a signal over a run, not an error.
+   */
+  private static warnOnWastedCache(req: CanonRequest, usage: CanonUsage): void {
+    const effect = cacheEffect(req.cache, usage);
+    if (!effect.wasted) return;
+    try {
+      ModelGateway.cacheWasteHandler?.(effect.writeTokens);
+    } catch {
+      // Advisory means advisory: the model call has already succeeded and the caller is owed its
+      // answer. A telemetry sink that throws must not turn a good response into a failed request.
     }
   }
 
@@ -205,7 +258,10 @@ export class ModelGateway {
     return ModelGateway.dispatch(req);
   }
 
-  private static async dispatch(req: CanonRequest, onDelta?: ModelDeltaSink): Promise<CanonResponse> {
+  private static async dispatch(
+    req: CanonRequest,
+    onDelta?: ModelDeltaSink,
+  ): Promise<CanonResponse> {
     if (!Number.isInteger(req.maxTokens) || req.maxTokens <= 0) {
       throw new AppError(GatewayMessages.MaxTokensRequired, 400);
     }
@@ -213,6 +269,13 @@ export class ModelGateway {
       throw new AppError(GatewayMessages.TimeoutRequired, 400);
     }
     ModelGateway.validateContent(req);
+
+    // Per-run token ceiling (before egress, before the pin): a run that has already spent its budget
+    // must not send one more request. Throws rather than returning a degraded answer — a silent
+    // truncation would look like the model choosing to stop, which is the failure this repo forbids.
+    if (TokenLedger.runCeilingReached()) {
+      throw new AppError(GatewayMessages.RunTokenCeilingReached, 429);
+    }
 
     // Apply the per-run model pin (Agent panel), but ONLY when its provider has a registered adapter —
     // a stale/cross-provider pin self-heals to the router's original provider+model rather than 503-ing.
@@ -237,8 +300,14 @@ export class ModelGateway {
       controller.abort();
     }, req.timeoutMs);
     try {
-      const res = await ModelGateway.callProvider(provider, effectiveReq, controller.signal, onDelta);
+      const res = await ModelGateway.callProvider(
+        provider,
+        effectiveReq,
+        controller.signal,
+        onDelta,
+      );
       TokenLedger.record(provider.id, effectiveReq.model, effectiveReq.capability, res.usage);
+      ModelGateway.warnOnWastedCache(effectiveReq, res.usage);
       return res;
     } finally {
       clearTimeout(timer);

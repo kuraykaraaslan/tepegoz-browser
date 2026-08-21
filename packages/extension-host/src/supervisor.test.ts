@@ -7,7 +7,10 @@ import { extensionManagementCapabilities } from './meta';
 import type { CapabilityRegistryPort, ExtensionInfo, ExtensionManagementHost } from './types';
 
 /** An in-memory CapabilityRegistry stand-in. */
-function fakeRegistry(): CapabilityRegistryPort & { ids: () => string[]; call: (id: string, a: unknown) => unknown } {
+function fakeRegistry(): CapabilityRegistryPort & {
+  ids: () => string[];
+  call: (id: string, a: unknown) => unknown;
+} {
   const map = new Map<string, RegisteredTool>();
   return {
     register: (t) => {
@@ -80,7 +83,14 @@ describe('ExtensionCapabilitySupervisor', () => {
   it('does not clobber a same-id tool already registered by another source', () => {
     const registry = fakeRegistry();
     registry.register({
-      descriptor: { id: 'demo_get_double', description: 'x', dangerClass: 'read', source: 'builtin', inputSchema: {}, requiresIdempotencyKey: false },
+      descriptor: {
+        id: 'demo_get_double',
+        description: 'x',
+        dangerClass: 'read',
+        source: 'builtin',
+        inputSchema: {},
+        requiresIdempotencyKey: false,
+      },
       inputSchema: z.object({}),
       handler: () => 'builtin',
     });
@@ -102,9 +112,10 @@ describe('extensionManagementCapabilities', () => {
       permissions: ['tabs'],
       capabilities: ['macros_list_items'],
     };
-    const setEnabled = vi.fn(
-      (_id: string, en: boolean): ExtensionInfo => ({ ...info, enabled: en }),
-    );
+    const setEnabled = vi.fn((_id: string, en: boolean): ExtensionInfo => ({
+      ...info,
+      enabled: en,
+    }));
     const host: ExtensionManagementHost = {
       list: () => [info],
       get: (id) => (id === info.id ? info : undefined),
@@ -115,10 +126,16 @@ describe('extensionManagementCapabilities', () => {
     sup.provide(extensionManagementCapabilities(), host);
     sup.reconcile();
 
-    expect([...registry.ids()].sort((a, b) => a.localeCompare(b))).toEqual(['extension_get_item', 'extension_list_items', 'extension_update_item']);
+    expect([...registry.ids()].sort((a, b) => a.localeCompare(b))).toEqual([
+      'extension_get_item',
+      'extension_list_items',
+      'extension_update_item',
+    ]);
     expect(registry.call('extension_list_items', {})).toEqual([info]);
     expect(registry.call('extension_get_item', { id: 'com.tepegoz.macros' })).toEqual(info);
-    expect(registry.call('extension_update_item', { id: 'com.tepegoz.macros', enabled: false })).toEqual({ ...info, enabled: false });
+    expect(
+      registry.call('extension_update_item', { id: 'com.tepegoz.macros', enabled: false }),
+    ).toEqual({ ...info, enabled: false });
     expect(setEnabled).toHaveBeenCalledWith('com.tepegoz.macros', false);
   });
 });

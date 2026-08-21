@@ -11,12 +11,7 @@ import { TabStore } from '@tepegoz/tab-engine';
 import { internalPageUrl, toNavigationUrl } from './lib/navigation-url';
 import { resolveViewBounds } from './tabs-content-bounds';
 import ActionInterceptorService from './extensions/action-interceptors.electron';
-import TabManager from './tabs-manager';
-import {
-  homeUrl,
-  internalTitleFor,
-  searchUrlForQuery,
-} from './tabs-shared';
+import { homeUrl, internalTitleFor, searchUrlForQuery, persistSession } from './tabs-shared';
 import BrowsingSessions from './network/browsing-sessions.electron';
 import {
   unwireView,
@@ -60,7 +55,10 @@ export class WindowTabsBase {
    * pure {@link resolveViewBounds} so it is unit-testable without a window.
    */
   protected effectiveBounds(): Rectangle {
-    return resolveViewBounds(this.bounds, this.win.isDestroyed() ? null : this.win.getContentSize());
+    return resolveViewBounds(
+      this.bounds,
+      this.win.isDestroyed() ? null : this.win.getContentSize(),
+    );
   }
 
   /** Whether `view` is currently a child of the window's content view (attached → composited). */
@@ -340,7 +338,7 @@ export class WindowTabsBase {
     if (this.persistTimer !== null) clearTimeout(this.persistTimer);
     this.persistTimer = setTimeout(() => {
       this.persistTimer = null;
-      TabManager.persistNow();
+      persistSession();
     }, 400);
   }
 }

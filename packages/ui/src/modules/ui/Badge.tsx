@@ -9,9 +9,9 @@ type BadgeSize = 'sm' | 'md' | 'lg';
 
 const variantMap: Record<BadgeVariant, string> = {
   success: 'bg-success-subtle text-success-fg',
-  error:   'bg-error-subtle text-error-fg',
+  error: 'bg-error-subtle text-error-fg',
   warning: 'bg-warning-subtle text-warning-fg',
-  info:    'bg-info-subtle text-info-fg',
+  info: 'bg-info-subtle text-info-fg',
   neutral: 'bg-surface-sunken text-text-secondary',
   primary: 'bg-primary-subtle text-primary',
 };
@@ -24,9 +24,9 @@ const sizeMap: Record<BadgeSize, string> = {
 
 const dotColorMap: Record<BadgeVariant, string> = {
   success: 'bg-success',
-  error:   'bg-error',
+  error: 'bg-error',
   warning: 'bg-warning',
-  info:    'bg-info',
+  info: 'bg-info',
   neutral: 'bg-text-disabled',
   primary: 'bg-primary',
 };
@@ -63,7 +63,7 @@ export function Badge<C extends React.ElementType = 'span'>({
         'inline-flex items-center gap-1 rounded-full font-medium',
         variantMap[variant],
         sizeMap[size],
-        className
+        className,
       )}
       {...rest}
     >

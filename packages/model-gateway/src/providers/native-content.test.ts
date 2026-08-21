@@ -12,7 +12,9 @@ const roundTrip: CanonMessage[] = [
   { role: 'user', content: 'find the accept button' },
   {
     role: 'assistant',
-    content: [{ type: 'tool_use', id: 'call_1', name: 'browser_get_elements', input: { tabId: 't1' } }],
+    content: [
+      { type: 'tool_use', id: 'call_1', name: 'browser_get_elements', input: { tabId: 't1' } },
+    ],
   },
   { role: 'user', content: [{ type: 'tool_result', toolUseId: 'call_1', content: '[3] Accept' }] },
 ];
@@ -81,7 +83,11 @@ describe('OpenAI native mapping', () => {
           message: {
             content: null,
             tool_calls: [
-              { id: 'call_9', type: 'function', function: { name: 'browser_update_page', arguments: '{"ref":3}' } },
+              {
+                id: 'call_9',
+                type: 'function',
+                function: { name: 'browser_update_page', arguments: '{"ref":3}' },
+              },
             ],
           },
           finish_reason: 'tool_calls',
@@ -90,7 +96,9 @@ describe('OpenAI native mapping', () => {
       usage: { prompt_tokens: 1, completion_tokens: 2 },
     });
     expect(res.stopReason).toBe('tool_use');
-    expect(res.toolCalls).toEqual([{ name: 'browser_update_page', input: { ref: 3 }, id: 'call_9' }]);
+    expect(res.toolCalls).toEqual([
+      { name: 'browser_update_page', input: { ref: 3 }, id: 'call_9' },
+    ]);
   });
 });
 
@@ -137,7 +145,9 @@ describe('Gemini native mapping', () => {
 
   it('still reads a functionCall response back out', () => {
     const res = fromGeminiResult({
-      candidates: [{ content: { parts: [{ functionCall: { name: 'tab_list_items', args: { all: true } } }] } }],
+      candidates: [
+        { content: { parts: [{ functionCall: { name: 'tab_list_items', args: { all: true } } }] } },
+      ],
     });
     expect(res.stopReason).toBe('tool_use');
     expect(res.toolCalls).toEqual([{ name: 'tab_list_items', input: { all: true } }]);

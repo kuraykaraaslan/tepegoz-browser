@@ -64,7 +64,9 @@ describe('where it looks', () => {
     h.desktop = join(h.home, 'Desktop');
     const paths = searchPaths('tor');
     // The nested layout matters: pointing at the Tor Browser root alone would find nothing.
-    expect(paths.some((p) => p.includes(join('Tor Browser', 'Browser', 'TorBrowser', 'Tor')))).toBe(true);
+    expect(paths.some((p) => p.includes(join('Tor Browser', 'Browser', 'TorBrowser', 'Tor')))).toBe(
+      true,
+    );
   });
 
   it('never yields a path containing a control character (the backslash-escape trap)', () => {

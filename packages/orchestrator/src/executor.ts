@@ -116,7 +116,14 @@ export default class Executor {
       // exactly the case a latency metric needs to surface.
       const durationMs = Math.max(0, (options.now?.() ?? Date.now()) - startedAt);
       const outcome: StepOutcome = isToolError(result)
-        ? { stepId: step.id, tool: step.tool, args: step.args, ok: false, error: result, durationMs }
+        ? {
+            stepId: step.id,
+            tool: step.tool,
+            args: step.args,
+            ok: false,
+            error: result,
+            durationMs,
+          }
         : { stepId: step.id, tool: step.tool, args: step.args, ok: true, result, durationMs };
       outcomes.push(outcome);
       options.onStepEnd?.(outcome);

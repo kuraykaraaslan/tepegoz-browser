@@ -48,8 +48,7 @@ export class MacroStore {
   /** The full IR for one macro, or null. Parsing failure (corrupt row) returns null, not a throw. */
   static get(db: Db, id: string): Macro | null {
     const row = db.prepare('SELECT ir FROM macros WHERE id = ?').get(id) as
-      | { ir: string }
-      | undefined;
+      { ir: string } | undefined;
     if (row === undefined) return null;
     try {
       return JSON.parse(row.ir) as Macro;

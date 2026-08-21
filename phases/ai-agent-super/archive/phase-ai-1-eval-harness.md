@@ -2,8 +2,8 @@
 
 **Status:** 🟡 In progress (PR1 backbone + PR2 live-tier/judge/nightly-CI code landed; **e2e `pnpm eval` now
 runs green on-harness** — scripted tier PASS against the real app after fixing two launch blockers, commit
-`e9f7fee`; the live-tier competence numbers are the remaining owed measurement) ·  **Depends on:** Phase 1a
-·  **Track:** [`phases/ai`](README.md)
+`e9f7fee`; the live-tier competence numbers are the remaining owed measurement) · **Depends on:** Phase 1a
+· **Track:** [`phases/ai`](README.md)
 
 > **PR1 backbone:** `@tepegoz/agent-eval` (data-driven zod registry loader, local fixture server,
 > ground-truth scorer, honest metrics report), the `runAgent` provider-injection seam, the
@@ -27,9 +27,9 @@ runs green on-harness** — scripted tier PASS against the real app after fixing
 > **Owed:** the live-tier competence run (real product model over the full **23-scenario** registry —
 > `real-failures`(3) + `perception`(5) + `acceptance`(6) + `web-patterns`(9)) — the environment is proven;
 > it needs a provider API key.
-**Goal:** A repeatable, **honest** way to measure the agent's real competence, so every later change is
-justified by a pass-rate delta on the **real product model** against **real / representative pages** — not
-by a green offline test. This is the measurement backbone the rest of the track is scored against.
+> **Goal:** A repeatable, **honest** way to measure the agent's real competence, so every later change is
+> justified by a pass-rate delta on the **real product model** against **real / representative pages** — not
+> by a green offline test. This is the measurement backbone the rest of the track is scored against.
 
 ## Why (the anti-vanity contract)
 
@@ -39,6 +39,7 @@ decisions. That is **not** evidence the agent can do a task. This phase adds the
 driving real pages with ground-truth scoring, plus a **held-out** set so fixes can't be overfit to the eval.
 
 ## Exit criteria (DoD)
+
 - [x] `pnpm eval` runs the **full agent** (`runAgent`) with the **real product model** against a scenario set and emits an `AcceptanceMetrics`-shaped report (task-success-rate, per-scenario pass/fail, tokens, N, threshold) plus a machine-readable JSON artifact. _(Live tier: `TEPEGOZ_EVAL_MODE=live` injects the real provider from an env key over the full registry; scripted tier for no-key runs. Report + JSON artifact via `buildReport`/`writeReport`. End-to-end run happens in the Electron-ABI env.)_
 - [x] Scenarios are a **data-driven, zod-validated registry** (not a hard-coded tuple); a new scenario is one JSON entry. _(`EvalScenarioSchema` in `@tepegoz/shared-types`; `loadScenarios` safeParses `packages/agent-eval/scenarios/*.json`.)_
 - [x] Two target types work: **local HTML fixtures** (deterministic regression) and **real-site** scenarios (honest competence), each tagged; a **held-out** subset is reported separately and never used during development. _(Both `target` shapes in the schema; `test-fixtures/sites/*`; live driver navigates `realUrl` targets; `heldOut` split reported separately in `buildReport`.)_
@@ -50,26 +51,31 @@ driving real pages with ground-truth scoring, plus a **held-out** set so fixes c
 ## Tasks
 
 ### Scenario model (data-driven)
+
 - [x] `EvalScenario` zod schema: `{ id, task, target: { fixture: string } | { realUrl: string }, success: { domAssertion?, expectedValue?, judgeRubric? }, heldOut: boolean, tags: string[] }`; loaded + `safeParse`d at run time. Reuse `@tepegoz/shared-types` where a shape already exists. _(`packages/shared-types/src/eval-scenario.ts`.)_
 - [x] Seed the registry with the real failures observed to date (view-less-newtab navigation, blog-behind-a-menu, blog-not-linked-from-landing) plus the existing 5 acceptance scenarios re-expressed in the new shape. _(`packages/agent-eval/scenarios/{real-failures,acceptance}.json`; the recovery/handoff acceptance behaviors stay in the offline `acceptance-eval` tier — they test agent internals, not page competence.)_
 - [x] Evolve `ACCEPTANCE_SCENARIO_IDS` (hard-coded tuple in `packages/orchestrator/src/acceptance-eval.ts`) into the loaded registry (keep `recordFromOutcomes` / `summarizeAcceptanceRuns` / `AcceptanceMetrics`). _(Widened `scenarioId` to `string`; helpers + metrics contract unchanged; registry now drives the id set.)_
 
 ### Local fixture server (deterministic real pages)
+
 - [x] `test-fixtures/sites/` static HTML pages that reproduce the hard cases: hamburger/drawer nav, blog-behind-nav, infinite-scroll list, native `<select>`, occluding modal, multi-tab flow.
 - [x] A tiny static server (`http.createServer`) the harness points the agent at; no cloud dependency for the page. _(`packages/agent-eval/src/fixture-server.ts`.)_
 
 ### Full-loop harness
+
 - [x] **Provider-injection seam on `runAgent`** (`packages/agent-runtime/src/agent-runtime.ts`): today it self-resolves the provider from vault/prefs and calls `ModelGateway.register` internally. Add an optional `deps.provider` so the harness can inject the real cloud model, a `LocalProvider` (GGUF) for cheap smoke, or a scripted provider — without going through the vault. _(`deps.provider?: { id, instance }`; `registerRunProvider` bypasses the vault when present. `ScriptedProvider` added to `@tepegoz/model-gateway`.)_
 - [x] Register a real `BrowserHost` (or a headless CDP host over the fixture pages) via `registerBrowserTools({ host })`; reuse the `fakeHost` pattern only for offline plumbing tests. _(Chose max fidelity: the `_electron` driver launches the REAL app; the env-gated `agent-eval-runner.electron.ts` drives the run over the real `browserHost` + Policy plane.)_
 - [x] Per scenario: run to completion (bounded steps + token budget), then score: DOM/value assertion primary; LLM-judge secondary; record an `AcceptanceRunRecord`; aggregate to `AcceptanceMetrics`. _(Driver + `scoreScenario` (ground-truth) + `recordFromOutcomes` + `buildReport`. LLM-judge secondary = PR2.)_
 - [x] Honest reporting: emit the full pass/fail list, the held-out metric separately, the model id + N + threshold; **no cherry-picking**. A scenario the agent gets wrong MUST show as a fail (the eval's job is to be able to fail). _(`buildReport` / `formatReportTable` / `writeReport`; scorer returns a fail for a missing assertion and defers judge-only scenarios as a fail.)_
 
 ### CI / cadence
+
 - [x] Offline scripted acceptance stays in `turbo run test` (blocking). _(Unchanged — `acceptance-eval.test.ts` + all new unit tiers stay in `turbo run test`.)_
 - [x] `pnpm eval` script + a nightly workflow (non-blocking) that stores the metrics artifact and warns on a pass-rate regression trend. _(`pnpm eval` + `playwright.eval.config.ts` + `_electron` driver; `.github/workflows/eval-nightly.yml` uploads the artifact + `::warning::` on regression.)_
 
 ## Non-goals / scope notes
-- No agent-behaviour change lands in this phase — it only measures. (AI-2/AI-3/AI-4 are scored *by* it.)
+
+- No agent-behaviour change lands in this phase — it only measures. (AI-2/AI-3/AI-4 are scored _by_ it.)
 - The live tier is deliberately **out of the blocking gate** (cost + real-web flakiness); its signal is the
   trend + the before/after delta on a change, not a hard CI pass.
 - Prefer the real product model for the headline metric; a weak local model "passing" is a false signal.
@@ -88,7 +94,7 @@ flipped several scenarios PASS↔FAIL (its finding #3, corroborating `s02`).
       **majority verdict** for pass/fail, a per-scenario **k/N pass-frequency** table, **mean per-trial
       pass-rate** (dev + held-out), tokens summed for honest cost. A one-off pass is no longer accepted as
       the headline. **Remaining:** aggregate **step-count** across trials, and **wall-clock duration** —
-      still unmeasured (see `s26`); and actually *run* it at N≥3 for the defensible headline the live-run doc
+      still unmeasured (see `s26`); and actually _run_ it at N≥3 for the defensible headline the live-run doc
       still owes.
 - [ ] **`s26` — the missing metrics.** Of the eight the audit implies: task-success + token-count are
       done+live; `toolErrorRate`/`navigationValidationFailureRate` are real-but-proxy "wrong-click" signals;
@@ -101,17 +107,17 @@ flipped several scenarios PASS↔FAIL (its finding #3, corroborating `s02`).
       Add a duration field end-to-end; wire recovery/intervention counts from real runs; report avg-actions,
       first-attempt, and a currency estimate.
 - [ ] **`s27` — flaky detection + confidence intervals.** The `s02` repeat feature now surfaces a
-      per-scenario **k/N pass-frequency** — a real flaky *signal* (a `2/3` is visibly flaky) and the
+      per-scenario **k/N pass-frequency** — a real flaky _signal_ (a `2/3` is visibly flaky) and the
       prerequisite this needed. Still missing: a **confidence interval** beside the headline rate, and a
       **cause classifier** (site-induced vs agent-induced variance). (The only `confidence` in code is the
       LLM-judge's per-verdict self-report, not a statistical interval.) Real-web flakiness is still only
-      *acknowledged* as the reason the live tier is non-blocking, not quantified.
+      _acknowledged_ as the reason the live tier is non-blocking, not quantified.
 - [ ] **`s03` — fixture coverage holes.** The set is genuinely broad (22 fixtures: form/login/cookie/modal/
       pagination/table/iframe/shadow-dom/accordion/dynamic/two-dropdown-designs), but a **file-download**
       fixture is entirely missing and there is **no deliberately malformed / broken-HTML / conflicting-selector**
       stress fixture (every page is well-formed). Add both.
 - [ ] **`s28` — a real adversarial set** (see [AI-5](phase-ai-5-content-security.md)): today only the
       `prompt-injection` fixture + `link-href` (same-name controls) are genuine traps. Missing: fake
-      "Download" ad/bait, a scroll-hide menu, a hidden decoy/honeypot, and an *asserted* disabled-control
+      "Download" ad/bait, a scroll-hide menu, a hidden decoy/honeypot, and an _asserted_ disabled-control
       trap. The security **plane** is well tested by `redteam.test.ts`, but with hand-built strings — the
       **agent** has not been run against the injection fixture on-harness.

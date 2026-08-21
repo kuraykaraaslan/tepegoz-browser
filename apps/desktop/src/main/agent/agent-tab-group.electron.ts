@@ -20,9 +20,10 @@ const AgentTabGroup = {
    *  tool call) — today nothing registers that interceptor, so this path is unreachable in practice. */
   openTab(agentGroupId: string, url?: string, groupName?: string, background?: boolean): string {
     const s = store.get(agentGroupId);
-    const id = background === undefined
-      ? TabManager.createTab(url)
-      : TabManager.createTab(url, { background });
+    const id =
+      background === undefined
+        ? TabManager.createTab(url)
+        : TabManager.createTab(url, { background });
     if (id === null) throw new Error('Tab creation was blocked by an extension');
     if (s.tabGroupId !== null && TabManager.hasGroup(s.tabGroupId)) {
       TabManager.assignToGroup(id, s.tabGroupId);

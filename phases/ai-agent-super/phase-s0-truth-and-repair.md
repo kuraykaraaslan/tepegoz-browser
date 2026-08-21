@@ -34,8 +34,8 @@ The evidence is a documented, reproducible drift across three surfaces:
    numbers (`sitemap_only_route` 0/3, `silent_api_failure` 0/3, pooled 3/10) that the transport-invalid /
    dead-key exclusion logic (`isTransportInvalid`, `isDeadKeyError`, `UNMEASURED`) already superseded —
    the corrected reading is 3/7. It is a **regenerable artefact** masquerading as a source of truth.
-   **→ Correction (PR3, on the record):** this phase drafted the item as *"a knowingly-wrong report is
-   **committed**"*. It was not. `git ls-files` and `git log --all -- agent-eval-report.json` both come
+   **→ Correction (PR3, on the record):** this phase drafted the item as _"a knowingly-wrong report is
+   **committed**"_. It was not. `git ls-files` and `git log --all -- agent-eval-report.json` both come
    back empty, and `.gitignore` already carried `agent-eval-report.json` + `agent-eval-runs/` before this
    program began — so `git rm` had nothing to remove. The **hazard was real but local**: a wrong number
    lying at the repo root where a reader takes it for truth. PR3 deletes the local file (byte-identical
@@ -61,33 +61,33 @@ fixtures** — that is the point: freeze the exam before writing the answers.
 ## Exit criteria (DoD)
 
 - [x] **Zero broken `archive/` links** — `git grep -n 'archive/'` across `phases/` resolves to a real
-      file for every hit (the archive restored under this folder, links repointed). *Verified stronger
-      than the gate asked: **every relative link across all `phases/**/*.md` resolves, 0 broken.***
+      file for every hit (the archive restored under this folder, links repointed). _Verified stronger
+      than the gate asked: **every relative link across all `phases/**/*.md` resolves, 0 broken.**_
       The gate is now executable — `pnpm docs:links` ([`scripts/check-doc-links.mjs`](../../scripts/check-doc-links.mjs),
-      wired into CI) re-measures it on every push. *This line originally recorded a hand-counted "839
+      wired into CI) re-measures it on every push. _This line originally recorded a hand-counted "839
       links". That number is not reproducible — the same tree measures 870 — so it was replaced with
       the invariant plus the command that proves it, rather than a figure a later auditor would read as
-      drift.*
+      drift._
 - [x] **Zero index-drift items** — every phase status in the new [`README.md`](README.md) index audited
       against `git log`; no phase whose code has landed still reads "Not started"; the
       **measurement-owed count is restored to ≤1** (constitution anti-debt rule satisfied on the record).
-      *See the [status-truth audit](README.md#status-truth-audit-s0-pr2-2026-08-16--what-is-actually-landed):
+      _See the [status-truth audit](README.md#status-truth-audit-s0-pr2-2026-08-16--what-is-actually-landed):
       M1 + harness robustness absorbed (no debt), C1 and C7-PR1 sweeps folded into S0's one baseline →
-      **1 measurement-owed**.*
+      **1 measurement-owed**._
 - [x] **The retired v2 phase docs are gone and their machinery absorbed** — `phases/ai/phase-ai-{m1,m2,c1..c7,f1..f3}.md`
       deleted; `constitution.md`, `eval-results.md`, `PROSE-LEDGER.md`, and the eval-loop runbook live
       under this folder; [`../README.md`](../README.md)'s "AI" row points at [`README.md`](README.md).
-      *`phases/ai/README.md` remains as a tombstone stub recording where every item went.*
+      _`phases/ai/README.md` remains as a tombstone stub recording where every item went._
 - [x] **The regenerable report is not tracked** — root `agent-eval-report.json` removed from the tree and
-      added to `.gitignore`; a documented regenerate command exists. *Both git conditions were already
+      added to `.gitignore`; a documented regenerate command exists. _Both git conditions were already
       satisfied (never tracked, already ignored — see the [Why §3 correction](#why)); the local file is
       deleted and the [regenerate command](eval-loop-runbook.md#regenerating-the-report-never-commit-it)
-      is documented, with the `.gitignore` entry now carrying the reason it must stay ignored.*
+      is documented, with the `.gitignore` entry now carrying the reason it must stay ignored._
 - [x] **The `docs/ARCHITECTURE.md` reference resolves** — the **file is created** (mirroring the L0–L10
       model from [`../../README.md`](../../README.md) + L7 from
       [`../../docs/technical-ai-doc.md`](../../docs/technical-ai-doc.md)); the PR records the choice and
-      its reason. *`CLAUDE.md`'s stale "mirrors the approved plan" gloss and `phases/README.md`'s
-      "to be moved into the repo" note are corrected to match what now exists.*
+      its reason. _`CLAUDE.md`'s stale "mirrors the approved plan" gloss and `phases/README.md`'s
+      "to be moved into the repo" note are corrected to match what now exists._
 - [ ] **First-ever full-registry baseline** in [`eval-results.md`](eval-results.md): **all 52 scenarios**
       (incl. the 24 `atk_*` — the first live adversarial numbers), Anthropic tier, **N=3**, per-family
       **Wilson 95% CIs**, **$/trial**, and **wall-clock/trial**, with flaky + transport-invalid /
@@ -105,14 +105,15 @@ fixtures** — that is the point: freeze the exam before writing the answers.
 - [x] **Constitution compliance** — no new fixtures introduced (freeze-before-capability honoured by
       construction); no prose deleted (no paired-sweep obligation incurred); **i18n:** none (dev-only
       harness + docs; any Agent Console string touched → EN + full TR in the owning dict).
-      *Verified across PR0–PR3: zero scenarios added (recorded in [`fixture-freeze.md`](fixture-freeze.md));
+      _Verified across PR0–PR3: zero scenarios added (recorded in [`fixture-freeze.md`](fixture-freeze.md));
       all seven [`PROSE-LEDGER.md`](PROSE-LEDGER.md) rows still RETAINED, no `BROWSING_STRATEGY` steer
       touched; no user-facing string touched — the only non-doc edits were `.gitignore` and a package
-      README pointer.*
+      README pointer._
 
 ## Tasks
 
 ### PR0 — fixture freeze (no-op, on the record)
+
 - [x] State explicitly in the PR body that S0 adds **zero** scenarios to
       [`../../packages/agent-eval`](../../packages/agent-eval) — the frozen 52-scenario / 8-registry set is
       the baseline exam. Record the exact registry file list + a content hash so later phases prove they
@@ -120,6 +121,7 @@ fixtures** — that is the point: freeze the exam before writing the answers.
       scenarios incl. 24 `atk_*`, per-file SHA-256, regenerate command).
 
 ### PR1 — restore the v1 archive + repair links
+
 - [x] Restore all 10 files: `git show 49396c5:phases/ai/archive/<file>` → write under
       **`phases/ai-agent-super/archive/`** (this folder owns history now; the build-vs-buy summary already
       lives in [`history.md`](history.md) and stays the canonical short form — the archive is the long form).
@@ -130,6 +132,7 @@ fixtures** — that is the point: freeze the exam before writing the answers.
 - [x] Add a one-line archive `README` noting provenance (restored from `49396c5`, deleted by `e900567`).
 
 ### PR2 — retire the v2 track, absorb its machinery
+
 - [x] Delete `phases/ai/phase-ai-m1-measurement-baseline.md`, `-m2-external-yardstick.md`,
       `-c1..-c7`, `-f1..-f3` (13 phase docs). Their residual scope is already mapped in
       [`README.md`](README.md#old-v2--new-s-residual-scope-map); nothing is silently dropped.
@@ -146,6 +149,7 @@ fixtures** — that is the point: freeze the exam before writing the answers.
       authoritative roadmap), leaving `phases/ai/` as a tombstone dir (README stub only).
 
 ### PR3 — kill the wrong artefact + fix the architecture pointer
+
 - [x] ~~`git rm` the root **`agent-eval-report.json`**; add it (and the run-report glob) to
       `.gitignore`~~ — **both already true** (see the [Why §3 correction](#why)): the file was never
       tracked and `.gitignore` already carried `agent-eval-report.json` + `agent-eval-runs/`. The **local**
@@ -157,14 +161,15 @@ fixtures** — that is the point: freeze the exam before writing the answers.
       created.** [`../../docs/ARCHITECTURE.md`](../../docs/ARCHITECTURE.md) is a thin index mirroring the
       L0–L10 model from [`../../README.md`](../../README.md) and linking the L7 detail in
       [`../../docs/technical-ai-doc.md`](../../docs/technical-ai-doc.md) — **no new content**, every row
-      points at the document that owns the material, single source of truth preserved. *Why preferred over
-      the repoint fallback:* the pointer appears in the **binding** working agreement
-      ([`../../CLAUDE.md`](../../CLAUDE.md)) as *the* architecture entry point, and repointing it at the
+      points at the document that owns the material, single source of truth preserved. _Why preferred over
+      the repoint fallback:_ the pointer appears in the **binding** working agreement
+      ([`../../CLAUDE.md`](../../CLAUDE.md)) as _the_ architecture entry point, and repointing it at the
       product README would send an engineer looking for the layer model into marketing prose. The index
       also records that **`docs/ROADMAP.md` is deliberately not created** — [`../`](../README.md) already
       is the roadmap.
 
 ### PR4 — first full-registry baseline (⏸ funded)
+
 - [ ] Run the **52-scenario** registry (all 8 files, incl. 24 `atk_*`) on the **Anthropic product tier**
       (`claude-opus-4-8` plan / `claude-sonnet-4-6` exec / `claude-haiku-4-5` classify), **N=3**, via the
       [`../../packages/agent-eval`](../../packages/agent-eval) `_electron` driver (`TEPEGOZ_EVAL=1`) with
@@ -178,6 +183,7 @@ fixtures** — that is the point: freeze the exam before writing the answers.
       claim-grade ASR is [S6](phase-s6-safety-control-plane.md)'s N≥10 job).
 
 ### PR5 — ledger entry + failure taxonomy + re-cut checkpoint (⏸ funded)
+
 - [ ] Dated entry in [`eval-results.md`](eval-results.md): per-family baseline table (k/N, Wilson CI,
       $/trial, wall-clock/trial for all 52) + the actual sweep cost; replace the budget-table estimates in
       [`README.md`](README.md) with the measured $/trial actual.
@@ -190,6 +196,7 @@ fixtures** — that is the point: freeze the exam before writing the answers.
       pre-registered humility M1 carried — the data outranks the plan.
 
 ### PR6 — cookie_consent diagnosis (⏸ funded, no fix)
+
 - [ ] From the baseline transcripts, diagnose why `cookie_consent` sits **0/3** — name the mechanism
       (occlusion at snapshot time, missing dialog handling, ref invalidation, banner outside the scan cap,
       etc.) and write it into the taxonomy doc as [S3](phase-s3-reliability-actions.md)'s owned input.
@@ -208,7 +215,7 @@ regenerates the table. Later phases cite that file as the base their delta is me
 ## Prose steers
 
 **None.** S0 deletes no capability prose and adds none, so it incurs no paired with/without-sweep
-obligation under the consolidation-as-DoD rule. (Deleting the retired v2 *phase docs* in PR2 is roadmap
+obligation under the consolidation-as-DoD rule. (Deleting the retired v2 _phase docs_ in PR2 is roadmap
 surgery, not a `BROWSING_STRATEGY` steer removal — no [`PROSE-LEDGER.md`](PROSE-LEDGER.md) row is
 retired.)
 
@@ -221,16 +228,16 @@ record. (The first new ADR of this program, **0025**, is authored by [S1](phase-
 
 - **Funded key unavailable → PR4–PR6 are hard-blocked.** The whole program's measurement rests on this
   baseline; without the key S0 cannot reach ✅ and legitimately rests at 🟠 measurement-owed after
-  PR1–PR3 land. *Mitigation:* PR0–PR3 (the entire drift repair) are **funding-independent** and land day
+  PR1–PR3 land. _Mitigation:_ PR0–PR3 (the entire drift repair) are **funding-independent** and land day
   one, restoring anti-debt compliance immediately; the sweep is the only ⏸ portion. This is the owner's
   accepted posture (plan-without-budget), not drift.
-- **Flaky live sites deflate k/N.** *Mitigation:* the already-landed `isTransportInvalid` /
+- **Flaky live sites deflate k/N.** _Mitigation:_ the already-landed `isTransportInvalid` /
   `isDeadKeyError` / `UNMEASURED` classification + `navigateWhenReady` readiness barrier keep
   launch/transport failures out of the denominator; PR4 spot-checks the excluded set against transcripts
   so a genuine failure is never laundered into `UNMEASURED`.
-- **Restoring the archive re-introduces stale internal links.** *Mitigation:* PR1 restores content but
+- **Restoring the archive re-introduces stale internal links.** _Mitigation:_ PR1 restores content but
   only repoints links that survive PR2's deletions; the exit gate is a clean `git grep 'archive/'`
   measured **after** PR2, not before.
-- **The re-cut could invalidate downstream phase drafts.** *Mitigation:* this is a feature, not a bug —
+- **The re-cut could invalidate downstream phase drafts.** _Mitigation:_ this is a feature, not a bug —
   the checkpoint is pre-registered (PR5) and the residual-scope map in [`README.md`](README.md) makes
-  re-ordering a table edit, not a rewrite. Spike-first is unnecessary; the taxonomy *is* the spike.
+  re-ordering a table edit, not a rewrite. Spike-first is unnecessary; the taxonomy _is_ the spike.

@@ -47,7 +47,11 @@ interface PatternRule {
 // necessarily lags real-world formats, so the model-egress path routes a block to HITL (never a silent
 // send), and unmatched-but-suspicious tokens still surface as high_entropy/base64_blob 'warn' below.
 const SECRET_RULES: readonly PatternRule[] = [
-  { kind: 'private_key', severity: 'block', re: /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/g },
+  {
+    kind: 'private_key',
+    severity: 'block',
+    re: /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/g,
+  },
   { kind: 'secret_token', severity: 'block', re: /\bsk-ant-[A-Za-z0-9_-]{20,}/g },
   { kind: 'secret_token', severity: 'block', re: /\bsk-[A-Za-z0-9]{20,}\b/g },
   // Stripe secret + restricted keys use an UNDERSCORE (the sk- rule above never matches them).
@@ -61,12 +65,20 @@ const SECRET_RULES: readonly PatternRule[] = [
   // SendGrid API key (SG.<id>.<secret>).
   { kind: 'secret_token', severity: 'block', re: /\bSG\.[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}/g },
   { kind: 'secret_token', severity: 'block', re: /\bAIza[0-9A-Za-z_-]{35,}/g },
-  { kind: 'secret_token', severity: 'block', re: /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g },
+  {
+    kind: 'secret_token',
+    severity: 'block',
+    re: /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g,
+  },
   { kind: 'secret_token', severity: 'block', re: /\bBearer\s+[A-Za-z0-9._-]{20,}/gi },
 ];
 
 const PII_RULES: readonly PatternRule[] = [
-  { kind: 'pii_email', severity: 'warn', re: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g },
+  {
+    kind: 'pii_email',
+    severity: 'warn',
+    re: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g,
+  },
   { kind: 'pii_iban', severity: 'warn', re: /\b[A-Z]{2}\d{2}[A-Z0-9]{11,30}\b/g },
 ];
 

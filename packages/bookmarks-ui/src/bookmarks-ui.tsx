@@ -125,7 +125,8 @@ export function BookmarksManager({
     });
   }, []);
 
-  const stripTree = (id: string): string => (id.startsWith(TREE_PREFIX) ? id.slice(TREE_PREFIX.length) : id);
+  const stripTree = (id: string): string =>
+    id.startsWith(TREE_PREFIX) ? id.slice(TREE_PREFIX.length) : id;
 
   const handleDragStart = (e: DragStartEvent): void => setActiveId(String(e.active.id));
   const handleDragEnd = (e: DragEndEvent): void => {
@@ -229,7 +230,10 @@ export function BookmarksManager({
             ) : children.length === 0 ? (
               <p className="py-8 text-center text-sm text-text-secondary">{t.emptyFolder}</p>
             ) : (
-              <SortableContext items={children.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+              <SortableContext
+                items={children.map((c) => c.id)}
+                strategy={verticalListSortingStrategy}
+              >
                 <ul className="mx-auto max-w-3xl">
                   {children.map((c) => (
                     <ItemRow
@@ -249,7 +253,11 @@ export function BookmarksManager({
           {activeNode !== null ? (
             <div className="flex items-center gap-3 rounded-md bg-surface-overlay px-2 py-2 shadow-lg">
               {activeNode.type === 'folder' ? (
-                <FontAwesomeIcon icon={faFolder} className="h-4 w-4 text-text-secondary" aria-hidden />
+                <FontAwesomeIcon
+                  icon={faFolder}
+                  className="h-4 w-4 text-text-secondary"
+                  aria-hidden
+                />
               ) : (
                 <Favicon src={activeNode.favicon} />
               )}

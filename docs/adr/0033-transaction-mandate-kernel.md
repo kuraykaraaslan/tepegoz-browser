@@ -18,7 +18,7 @@ referring to this file.
 Buy/book/pay is named explicitly as where excessive-agency disasters actually happen — real money moving
 because an injected instruction or a misjudged step told the agent to. The existing `financial` danger
 class already forces HITL and biometric confirmation on every such call (ADR-0006). What it does not yet
-provide is a *bound*: a way for a user to say, once, "the agent may spend up to this much, on these
+provide is a _bound_: a way for a user to say, once, "the agent may spend up to this much, on these
 sites, until this time" and have that bound enforced **before** a model call, rather than trusting the
 model to stay inside an intent it was merely told about.
 

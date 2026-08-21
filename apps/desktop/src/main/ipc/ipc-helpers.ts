@@ -11,6 +11,31 @@ import { mainStrings } from '../lib/i18n-main';
  * `channel`/`schema`/`fn` as parameters, so hoisting them here is a pure relocation.
  */
 
+/**
+ * Validate an `invoke` payload at the boundary. `safeParse` — never `.parse()` — because a raw
+ * `ZodError` is not an `AppError`, so `toBoundary` would map malformed RENDERER input to a 500
+ * "Internal error" and log it as a main-process fault. A bad payload is a 400, and the renderer only
+ * ever learns the generic localized string (the zod issue path stays in the main-process log).
+ */
+export function parsePayload<T>(schema: z.ZodType<T>, payload: unknown): T {
+  const parsed = schema.safeParse(payload);
+  if (parsed.success) return parsed.data;
+  Logger.warn('Rejected IPC payload: schema mismatch', {
+    issues: parsed.error.issues.map((i) => i.path.join('.')).join(','),
+  });
+  throw new AppError(mainStrings().errors.badRequest, 400);
+}
+
+/**
+ * Resolve an `AppError.code` against the ACTIVE locale. This is the human-facing boundary — the only
+ * place a translation belongs. The English `message` keeps going to the log (and, on the tool path,
+ * to the model, whose recovery matching is keyed on that exact text).
+ */
+function localizeError(code: string): string | undefined {
+  const errors: Record<string, string> = mainStrings().errors;
+  return errors[code];
+}
+
 /** Reject IPC from frames that are not our own app content (exact-host allow-list). */
 export function assertTrustedSender(event: IpcMainInvokeEvent): void {
   const url = event.senderFrame?.url ?? '';
@@ -36,7 +61,7 @@ export function handle<T>(
       assertTrustedSender(event);
       return fn(event, payload);
     } catch (err) {
-      const boundary = toBoundary(err);
+      const boundary = toBoundary(err, localizeError);
       Logger.error(`IPC ${channel} failed`, {
         statusCode: boundary.statusCode,
         message: boundary.message,
@@ -57,7 +82,7 @@ export function handleAsync<T>(
       assertTrustedSender(event);
       return await fn(event, payload);
     } catch (err) {
-      const boundary = toBoundary(err);
+      const boundary = toBoundary(err, localizeError);
       Logger.error(`IPC ${channel} failed`, {
         statusCode: boundary.statusCode,
         message: boundary.message,
@@ -65,6 +90,11 @@ export function handleAsync<T>(
       throw new Error(encodeBoundaryMessage(boundary.message, boundary.statusCode));
     }
   });
+}
+
+/** Tear down a handler registered by {@link handle}/{@link handleAsync} (test + `detach()` seam). */
+export function removeHandler(channel: IpcChannel): void {
+  ipcMain.removeHandler(channel);
 }
 
 /** Browser tabs (fire-and-forget). Validate sender + payload; ignore anything untrusted/malformed. */

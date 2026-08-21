@@ -9,6 +9,7 @@ GBNF grammar constrains the small local model's output to a single well-formed J
 model physically cannot emit prose or markdown fences around it.
 
 ## Exports
+
 - **`LocalProvider`** — the `ModelProvider` adapter; resolves the selected model via
   `config.resolveModel()`, keeps it warm (`engine.load` is idempotent per model id), and applies the
   JSON grammar + sampling knobs before calling `engine.generate`.
@@ -25,4 +26,5 @@ model physically cannot emit prose or markdown fences around it.
   canonical `CanonResponse`.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test` · `pnpm build`

@@ -10,7 +10,9 @@ export const uploadToolsHost: UploadToolsHost = {
   createUpload: (input: UploadCreateInput) =>
     UploadService.create(
       { ...input, actor: 'agent' },
-      input.tabId !== undefined ? TabManager.webContentsForTab(input.tabId) : TabManager.activeWebContents(),
+      input.tabId !== undefined
+        ? TabManager.webContentsForTab(input.tabId)
+        : TabManager.activeWebContents(),
     ),
   commandUpload: async (input: UploadCommandInput) => {
     await UploadService.command(input.id, input.action);

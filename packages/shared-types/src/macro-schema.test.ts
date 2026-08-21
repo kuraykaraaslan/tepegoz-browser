@@ -21,7 +21,9 @@ const base: Macro = {
       kind: 'if',
       cond: { kind: 'textPresent', text: 'Welcome' },
       then: [{ kind: 'click', target: [{ kind: 'text', value: 'Continue' }] }],
-      else: [{ kind: 'assert', predicate: { kind: 'textAbsent', text: 'Error' }, severity: 'hard' }],
+      else: [
+        { kind: 'assert', predicate: { kind: 'textAbsent', text: 'Error' }, severity: 'hard' },
+      ],
     },
     {
       kind: 'repeat',

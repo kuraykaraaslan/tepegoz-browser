@@ -71,9 +71,10 @@ export function useAgentSession(api: AgentHostApi): AgentSession {
   const autonomy: AgentAutonomy = config?.autonomy ?? 'ask';
 
   // Helpers to read/mutate the active group's state.
-  const activeState: GroupState = activeGroupId !== null
-    ? (groupStates.get(activeGroupId) ?? emptyGroupState())
-    : emptyGroupState();
+  const activeState: GroupState =
+    activeGroupId !== null
+      ? (groupStates.get(activeGroupId) ?? emptyGroupState())
+      : emptyGroupState();
 
   function mutateGroup(groupId: string, fn: (s: GroupState) => GroupState): void {
     setGroupStates((prev) => {
@@ -91,9 +92,14 @@ export function useAgentSession(api: AgentHostApi): AgentSession {
 
   // On mount: ensure the active tab is in a group and get the groupId.
   useEffect(() => {
-    void api.ensureActiveGroup().then((gid) => {
-      setActiveGroupId(gid);
-    }, () => { /* no active tab */ });
+    void api.ensureActiveGroup().then(
+      (gid) => {
+        setActiveGroupId(gid);
+      },
+      () => {
+        /* no active tab */
+      },
+    );
   }, [api]);
 
   // Subscribe to active-group changes (when user switches tab groups).
@@ -115,11 +121,16 @@ export function useAgentSession(api: AgentHostApi): AgentSession {
   useEffect(() => {
     if (activeGroupId === null) return;
     let cancelled = false;
-    void api.getCurrentAgentConversation(activeGroupId).then((detail) => {
-      if (cancelled || detail === null) return;
-      mutateGroup(activeGroupId, () => stateFromConversation(detail));
-    }, () => {});
-    return () => { cancelled = true; };
+    void api.getCurrentAgentConversation(activeGroupId).then(
+      (detail) => {
+        if (cancelled || detail === null) return;
+        mutateGroup(activeGroupId, () => stateFromConversation(detail));
+      },
+      () => {},
+    );
+    return () => {
+      cancelled = true;
+    };
   }, [api, activeGroupId]);
 
   // Subscribe to agent events, approvals, plan previews, and token usage.
@@ -203,10 +214,16 @@ export function useAgentSession(api: AgentHostApi): AgentSession {
       });
     });
 
-    void api.getAgentConfig().then(setConfig, () => { /* config unavailable */ });
+    void api.getAgentConfig().then(setConfig, () => {
+      /* config unavailable */
+    });
     return () => {
       coalescer.dispose();
-      offEvent(); offDelta(); offApproval(); offPlan(); offTokens();
+      offEvent();
+      offDelta();
+      offApproval();
+      offPlan();
+      offTokens();
     };
   }, [api, activeGroupId]);
 

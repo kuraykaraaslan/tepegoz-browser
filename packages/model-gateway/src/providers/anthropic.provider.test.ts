@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { toAnthropicParams, fromAnthropicResult, type AnthropicCompletion } from './anthropic.provider';
+import {
+  toAnthropicParams,
+  fromAnthropicResult,
+  type AnthropicCompletion,
+} from './anthropic.provider';
 import type { CanonRequest } from '../types';
 
 function req(over: Partial<CanonRequest> = {}): CanonRequest {
@@ -42,7 +46,9 @@ describe('toAnthropicParams', () => {
   it('maps canon tools to Anthropic tool definitions', () => {
     const params = toAnthropicParams(
       req({
-        tools: [{ name: 'browser_get_page', description: 'read page', inputSchema: { type: 'object' } }],
+        tools: [
+          { name: 'browser_get_page', description: 'read page', inputSchema: { type: 'object' } },
+        ],
       }),
     );
     expect(params.tools).toEqual([
@@ -77,7 +83,12 @@ describe('fromAnthropicResult', () => {
 
   it('concatenates text blocks and reads usage', () => {
     const res = fromAnthropicResult(
-      completion({ content: [{ type: 'text', text: 'foo' }, { type: 'text', text: 'bar' }] }),
+      completion({
+        content: [
+          { type: 'text', text: 'foo' },
+          { type: 'text', text: 'bar' },
+        ],
+      }),
     );
     expect(res.text).toBe('foobar');
     expect(res.usage).toEqual({ inputTokens: 12, outputTokens: 3 });
@@ -101,7 +112,9 @@ describe('fromAnthropicResult', () => {
   });
 
   it('maps stop reasons to the canon contract', () => {
-    expect(fromAnthropicResult(completion({ stop_reason: 'max_tokens' })).stopReason).toBe('max_tokens');
+    expect(fromAnthropicResult(completion({ stop_reason: 'max_tokens' })).stopReason).toBe(
+      'max_tokens',
+    );
     expect(fromAnthropicResult(completion({ stop_reason: 'refusal' })).stopReason).toBe('error');
     expect(fromAnthropicResult(completion({ stop_reason: 'pause_turn' })).stopReason).toBe('end');
     expect(fromAnthropicResult(completion({ stop_reason: null })).stopReason).toBe('end');

@@ -23,7 +23,11 @@ export const SEARCH_ENGINES: readonly SearchEngine[] = [
   { id: 'yahoo', name: 'Yahoo', searchUrlTemplate: 'https://search.yahoo.com/search?p={q}' },
   { id: 'yandex', name: 'Yandex', searchUrlTemplate: 'https://yandex.com/search/?text={q}' },
   { id: 'ecosia', name: 'Ecosia', searchUrlTemplate: 'https://www.ecosia.org/search?q={q}' },
-  { id: 'startpage', name: 'Startpage', searchUrlTemplate: 'https://www.startpage.com/sp/search?query={q}' },
+  {
+    id: 'startpage',
+    name: 'Startpage',
+    searchUrlTemplate: 'https://www.startpage.com/sp/search?query={q}',
+  },
   { id: 'baidu', name: 'Baidu', searchUrlTemplate: 'https://www.baidu.com/s?wd={q}' },
   { id: 'qwant', name: 'Qwant', searchUrlTemplate: 'https://www.qwant.com/?q={q}' },
 ];

@@ -73,6 +73,7 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   userAgent: 'private',
   mcpServers: 'private',
   sitePermissions: 'private',
+  siteZoomFactors: 'private',
   popupBlocker: 'private',
   adblock: 'private',
   typo: 'private',

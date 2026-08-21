@@ -46,7 +46,7 @@ function loadExtensionCatalog(): void {
     Logger.warn('Skipped invalid extension manifest in catalog', { error });
   }
   if (entries.length === 0) {
-    throw new AppError('No valid built-in extensions found in the catalog', 500);
+    throw new AppError('No valid built-in extensions found in the catalog', 500, 'catalogEmpty');
   }
   initBuiltinManifests(entries);
 }

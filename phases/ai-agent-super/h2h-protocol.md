@@ -28,20 +28,20 @@ thing.
 
 **The H2H subset (12 tasks), fixed here:**
 
-| # | Task id | Why it is in the subset |
-|---|---|---|
-| 1 | `bridge_wikipedia_navigate_and_read` | Multi-hop navigation, unambiguous ground truth |
-| 2 | `bridge_mdn_compare_two_pages` | Reading a compatibility table, not prose |
-| 3 | `bridge_github_open_issue_count` | Live count — cannot be answered from training |
-| 4 | `bridge_github_search_within_repo` | In-site search plus a file read |
-| 5 | `bridge_hackernews_comment_navigation` | Navigating into a thread and summarising the right thing |
-| 6 | `bridge_npm_latest_version` | Freshness probe with two required facts |
-| 7 | `bridge_caniuse_feature_support` | Structured table with a version answer |
-| 8 | `bridge_cookie_banner_persist` | A consent banner in the way — dismissing it is part of the task |
-| 9 | `bridge_tr_resmi_gazete_tarih` | Turkish government site, freshness |
-| 10 | `bridge_tr_meteoroloji_hava` | Turkish site requiring a form interaction |
-| 11 | `bridge_tr_ptt_posta_kodu` | Turkish multi-step lookup |
-| 12 | `bridge_tr_universite_bolum` | Turkish multi-hop navigation |
+| #   | Task id                                | Why it is in the subset                                         |
+| --- | -------------------------------------- | --------------------------------------------------------------- |
+| 1   | `bridge_wikipedia_navigate_and_read`   | Multi-hop navigation, unambiguous ground truth                  |
+| 2   | `bridge_mdn_compare_two_pages`         | Reading a compatibility table, not prose                        |
+| 3   | `bridge_github_open_issue_count`       | Live count — cannot be answered from training                   |
+| 4   | `bridge_github_search_within_repo`     | In-site search plus a file read                                 |
+| 5   | `bridge_hackernews_comment_navigation` | Navigating into a thread and summarising the right thing        |
+| 6   | `bridge_npm_latest_version`            | Freshness probe with two required facts                         |
+| 7   | `bridge_caniuse_feature_support`       | Structured table with a version answer                          |
+| 8   | `bridge_cookie_banner_persist`         | A consent banner in the way — dismissing it is part of the task |
+| 9   | `bridge_tr_resmi_gazete_tarih`         | Turkish government site, freshness                              |
+| 10  | `bridge_tr_meteoroloji_hava`           | Turkish site requiring a form interaction                       |
+| 11  | `bridge_tr_ptt_posta_kodu`             | Turkish multi-step lookup                                       |
+| 12  | `bridge_tr_universite_bolum`           | Turkish multi-hop navigation                                    |
 
 Four of twelve are Turkish-web, deliberately: it is the stratum our rivals are least likely to have
 tuned for, and it is the one our users actually live in. That advantage is **declared here in advance**
@@ -102,8 +102,8 @@ Driving a rival's product to measure it raises questions we would rather answer 
   quietly dropped.
 - **No account abuse.** One ordinary paid account per rival, used as a user would. No scraping of rival
   infrastructure, no rate-limit evasion, no scripted account creation.
-- **No commerce tasks in the H2H.** The subset above is read/navigate only, on purpose. *Amazon v.
-  Perplexity* is a live legal constraint on agentic commerce driving, and a benchmark is not a reason to
+- **No commerce tasks in the H2H.** The subset above is read/navigate only, on purpose. _Amazon v.
+  Perplexity_ is a live legal constraint on agentic commerce driving, and a benchmark is not a reason to
   test its edges with someone else's account.
 - **Publication.** Rivals are named factually with their build strings and the date. No claim is made
   about their products beyond what these runs measured.

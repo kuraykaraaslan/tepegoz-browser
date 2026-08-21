@@ -5,7 +5,7 @@ import { AgentMemoryStore } from './agent-memory-store';
 
 /**
  * The store's contract (S9 PR1). NOTE: like every persistence suite here, this needs the
- * better-sqlite3 addon built for the running ABI — it runs under `pnpm test:electron`, not `pnpm test`.
+ * a real SQLite database, which `node:sqlite` provides in-process with no native dependency.
  */
 
 let db: Db;
@@ -35,7 +35,12 @@ describe('domain memory', () => {
   });
 
   it('carries sync-meta on every row, so Phase-3 owes no migration', () => {
-    AgentMemoryStore.putHint(db, { id: uuid(3), host: 'shop.test', note: 'note', provenance: 'run' });
+    AgentMemoryStore.putHint(db, {
+      id: uuid(3),
+      host: 'shop.test',
+      note: 'note',
+      provenance: 'run',
+    });
     const hint = AgentMemoryStore.hintsForHost(db, 'shop.test')[0];
     expect(hint?.deviceId.length).toBeGreaterThan(0);
     expect(hint?.version).toBe(1);
@@ -44,15 +49,30 @@ describe('domain memory', () => {
   });
 
   it('bumps the version on update, so a sync can order two edits', () => {
-    AgentMemoryStore.putHint(db, { id: uuid(4), host: 'shop.test', note: 'first', provenance: 'run' });
-    AgentMemoryStore.putHint(db, { id: uuid(4), host: 'shop.test', note: 'second', provenance: 'run' });
+    AgentMemoryStore.putHint(db, {
+      id: uuid(4),
+      host: 'shop.test',
+      note: 'first',
+      provenance: 'run',
+    });
+    AgentMemoryStore.putHint(db, {
+      id: uuid(4),
+      host: 'shop.test',
+      note: 'second',
+      provenance: 'run',
+    });
     const hint = AgentMemoryStore.hintsForHost(db, 'shop.test')[0];
     expect(hint?.note).toBe('second');
     expect(hint?.version).toBe(2);
   });
 
   it('QUARANTINE keeps the row — the evidence of a planted hint must survive', () => {
-    AgentMemoryStore.putHint(db, { id: uuid(5), host: 'shop.test', note: 'planted', provenance: 'page' });
+    AgentMemoryStore.putHint(db, {
+      id: uuid(5),
+      host: 'shop.test',
+      note: 'planted',
+      provenance: 'page',
+    });
     AgentMemoryStore.quarantine(db, uuid(5));
     const hints = AgentMemoryStore.hintsForHost(db, 'shop.test');
     // Still present, and flagged: deleting it would erase the attack along with the attack.
@@ -61,7 +81,12 @@ describe('domain memory', () => {
   });
 
   it('forget is a SOFT delete — a hard delete is indistinguishable from an unsynced row', () => {
-    AgentMemoryStore.putHint(db, { id: uuid(6), host: 'shop.test', note: 'note', provenance: 'run' });
+    AgentMemoryStore.putHint(db, {
+      id: uuid(6),
+      host: 'shop.test',
+      note: 'note',
+      provenance: 'run',
+    });
     AgentMemoryStore.forget(db, uuid(6));
     expect(AgentMemoryStore.hintsForHost(db, 'shop.test')).toEqual([]);
     const raw = db.prepare('SELECT tombstone FROM agent_domain_memory WHERE id = ?').get(uuid(6));
@@ -76,7 +101,9 @@ describe('domain memory', () => {
       descriptor: { tag: 'button', role: 'button', name: 'Technical details' },
       provenance: 'run',
     });
-    expect(AgentMemoryStore.hintsForHost(db, 'shop.test')[0]?.descriptor?.name).toBe('Technical details');
+    expect(AgentMemoryStore.hintsForHost(db, 'shop.test')[0]?.descriptor?.name).toBe(
+      'Technical details',
+    );
   });
 
   it('DROPS a row that fails validation instead of trusting its own database', () => {
@@ -170,8 +197,17 @@ describe('remembered grants', () => {
   it('revokes EVERY grant a scope holds — deleting a skill takes its permissions with it', () => {
     // A skill is the only scope that can mint a remembered grant, so if the skill goes and the grants
     // stay, the user is left with permissions they have no surface to revoke.
-    for (const [n, host] of [[25, "billing.test"], [26, "shop.test"]] as const) {
-      AgentMemoryStore.putGrant(db, { id: uuid(n), scope: 'skill-1', host, tier: 'ui-write', expiresAt: Date.now() + hour });
+    for (const [n, host] of [
+      [25, 'billing.test'],
+      [26, 'shop.test'],
+    ] as const) {
+      AgentMemoryStore.putGrant(db, {
+        id: uuid(n),
+        scope: 'skill-1',
+        host,
+        tier: 'ui-write',
+        expiresAt: Date.now() + hour,
+      });
     }
     AgentMemoryStore.revokeGrantsForScope(db, 'skill-1');
     expect(AgentMemoryStore.liveGrants(db, 'skill-1', 'billing.test')).toEqual([]);

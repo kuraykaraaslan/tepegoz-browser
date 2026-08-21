@@ -30,26 +30,31 @@ The live decision path parses JSON out of free text. [reactor-decision.ts](../..
 ## Tasks
 
 ### PR0 — fixture freeze (no capability code)
+
 - [x] Confirm the paired-sweep set is the existing web-patterns + acceptance registries in [packages/agent-eval](../../packages/agent-eval); freeze the scenario list and record it in the run index so the JSON/native arms are provably the same 15 scenarios.
 - [x] Record S0's baseline exclusion rate (`isTransportInvalid` / decision-parse) as the frozen "before" number in [eval-results.md](eval-results.md).
 
 ### PR1 — content-block schema + CanonMessage widening
+
 - [x] Add `CanonContentBlock` zod schemas (`text | image | tool_use | tool_result`) to `@tepegoz/shared-types` (sole schema source per ADR-0010); derive the TS types from the schema.
 - [x] Re-export from [types.ts](../../packages/model-gateway/src/types.ts); widen `CanonMessage.content` to `string | CanonContentBlock[]`; keep string as the normalized default so existing callers compile unchanged.
 - [x] Update mock + `ScriptedProvider` ([packages/agent-eval](../../packages/agent-eval)) to accept and round-trip block content.
 - [x] `safeParse` the widened content at the gateway boundary; split files if the schema push crosses 250 lines.
 
 ### PR2 — anthropic native normalization
+
 - [x] Add `supportsNativeTools = true` to the anthropic provider ([packages/model-gateway/src/providers](../../packages/model-gateway/src/providers)).
 - [x] Normalize native `tool_use` response blocks into `CanonToolCall` (reuse the existing adapter mapping); map `CanonRequest.tools` into the Anthropic tools payload.
 - [x] Round-trip `tool_result` blocks back as follow-up `CanonMessage` content.
 
 ### PR3 — openai + gemini native
+
 - [x] `supportsNativeTools = true` for openai; normalize function-call responses → `CanonToolCall` (own adapter PR to stay under 250 lines).
 - [x] `supportsNativeTools = true` for gemini; normalize `functionCall` parts → `CanonToolCall`.
 - [x] Leave kimi (`supportsNativeTools = false`, partial-compat) and local GGUF on the JSON-in-text path via [json-grammar.ts](../../packages/local-inference/src/json-grammar.ts).
 
 ### PR4 — reactor decision-mode strategy
+
 - [x] In [reactor.ts](../../packages/orchestrator/src/reactor.ts) + [reactor-decision.ts](../../packages/orchestrator/src/reactor-decision.ts), make decision acquisition strategy-selected: native `tool_use` when `supportsNativeTools`, else the existing JSON parse.
 - [x] Gate the strategy behind `TEPEGOZ_DECISION_MODE` (`native` | `json` | `auto`) so the paired sweep is a single controlled change.
 - [x] Keep `coerceDecisionShape` + zod validation as the settle step for **both** arms; do **not** delete `salvageTruncatedState` yet (see Risks).
@@ -66,12 +71,14 @@ The live decision path parses JSON out of free text. [reactor-decision.ts](../..
 > Publishing the real tool schemas natively is a candidate for a later phase, on its own sweep.
 
 ### PR5 — ADR-0025 + streaming boundary
+
 - [x] Author ADR-0025: deltas MAY flow to the renderer event stream; only settled + validated results reach the Journal and the decision path. Supersede the old "nothing partial streams anywhere" reading.
 - [x] Add `gateway.generateStream` with a delta callback; wire deltas to the renderer via the [ipc-agent-run.ts](../../apps/desktop/src/main/ipc/ipc-agent-run.ts) event stream.
 - [x] **Rewrite** [streaming-guard.test.ts](../../packages/model-gateway/src/streaming-guard.test.ts) to lock the new invariant (partials reach the renderer; Journal + decision path stay settled-only). Do not delete it.
 - [x] Add the scripted first-delta-<2s-p50 assertion.
 
 ### PR6 — paired native-vs-JSON sweep (⏸ funded)
+
 - [ ] Run the frozen 15-scenario set × N=3 on both `TEPEGOZ_DECISION_MODE` arms, anthropic tier.
 - [ ] Record pooled completion equivalence + native-arm exclusion rate in [eval-results.md](eval-results.md); flip the phase to ✅ only when the delta lands.
 

@@ -29,7 +29,10 @@ describe('loadCatalog', () => {
   it('loads valid entries and defaults recommended/firstParty', () => {
     const { entries, errors } = loadCatalog({
       version: 1,
-      models: [GOOD, { ...GOOD, id: 'other', name: 'Other', recommended: undefined, firstParty: undefined }],
+      models: [
+        GOOD,
+        { ...GOOD, id: 'other', name: 'Other', recommended: undefined, firstParty: undefined },
+      ],
     });
     expect(errors).toEqual([]);
     expect(entries.map((e) => e.id)).toEqual(['tepegoz-slm-1', 'other']);

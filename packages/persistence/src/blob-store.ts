@@ -23,8 +23,7 @@ export class BlobStore {
   static get(db: Db, ref: string): Buffer | undefined {
     const hash = ref.startsWith(CAS_PREFIX) ? ref.slice(CAS_PREFIX.length) : ref;
     const row = db.prepare('SELECT bytes FROM blobs WHERE hash = ?').get(hash) as
-      | { bytes: Buffer }
-      | undefined;
+      { bytes: Buffer } | undefined;
     return row?.bytes;
   }
 

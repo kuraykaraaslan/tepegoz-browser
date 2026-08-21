@@ -5,7 +5,7 @@ import type { WebContents } from 'electron';
  * Unit tests for the agent BrowserHost's navigation/activation logic — the fix that stops the agent
  * from forking the view-less newtab into an ungrouped tab (and then flailing on "No active page").
  * Every Electron/native seam (`../tabs`, the CDP driver, the page cursor, human-input) is mocked so the
- * host's pure control flow runs under the Node ABI without loading Electron or better-sqlite3.
+ * host's pure control flow runs without loading Electron.
  */
 
 const h = vi.hoisted(() => {
@@ -40,11 +40,11 @@ const h = vi.hoisted(() => {
       clickElement: vi.fn<(wc: WebContents, ref: number, a?: Adapter) => Promise<unknown>>(() =>
         Promise.resolve({ ok: true }),
       ),
-      fillElement: vi.fn<(wc: WebContents, ref: number, t: string, a?: Adapter) => Promise<unknown>>(
-        () => Promise.resolve({ ok: true }),
-      ),
-      scrollPage: vi.fn<(wc: WebContents, d: string, n?: number, a?: Adapter) => Promise<void>>(() =>
-        Promise.resolve(),
+      fillElement: vi.fn<
+        (wc: WebContents, ref: number, t: string, a?: Adapter) => Promise<unknown>
+      >(() => Promise.resolve({ ok: true })),
+      scrollPage: vi.fn<(wc: WebContents, d: string, n?: number, a?: Adapter) => Promise<void>>(
+        () => Promise.resolve(),
       ),
     },
     tabs: {

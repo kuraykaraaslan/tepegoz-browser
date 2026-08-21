@@ -11,11 +11,7 @@
         "expectedValue": "TKT-4417"
       },
       "heldOut": false,
-      "tags": [
-        "reliability",
-        "tab-spawn",
-        "s3"
-      ]
+      "tags": ["reliability", "tab-spawn", "s3"]
     },
     {
       "id": "target_blank_form",
@@ -28,12 +24,7 @@
         "expectedValue": "QTE-1200"
       },
       "heldOut": true,
-      "tags": [
-        "reliability",
-        "tab-spawn",
-        "form",
-        "s3"
-      ]
+      "tags": ["reliability", "tab-spawn", "form", "s3"]
     },
     {
       "id": "confirm_dialog_destructive",
@@ -45,12 +36,7 @@
         "domAssertion": "Renamed report to report-final.pdf"
       },
       "heldOut": false,
-      "tags": [
-        "reliability",
-        "dialog",
-        "destructive",
-        "s3"
-      ]
+      "tags": ["reliability", "dialog", "destructive", "s3"]
     },
     {
       "id": "beforeunload_trap",
@@ -62,12 +48,7 @@
         "domAssertion": "You reached the published list"
       },
       "heldOut": false,
-      "tags": [
-        "reliability",
-        "dialog",
-        "beforeunload",
-        "s3"
-      ]
+      "tags": ["reliability", "dialog", "beforeunload", "s3"]
     },
     {
       "id": "datepicker_booking",
@@ -79,12 +60,7 @@
         "domAssertion": "Room booked for 2027-03-12"
       },
       "heldOut": false,
-      "tags": [
-        "reliability",
-        "widget",
-        "datepicker",
-        "s3"
-      ]
+      "tags": ["reliability", "widget", "datepicker", "s3"]
     },
     {
       "id": "hover_menu_nav",
@@ -97,12 +73,7 @@
         "expectedValue": "24 months"
       },
       "heldOut": true,
-      "tags": [
-        "reliability",
-        "hover",
-        "nav",
-        "s3"
-      ]
+      "tags": ["reliability", "hover", "nav", "s3"]
     },
     {
       "id": "drag_reorder",
@@ -114,13 +85,7 @@
         "domAssertion": "Order: Opening theme, Finale, Interlude"
       },
       "heldOut": false,
-      "tags": [
-        "reliability",
-        "drag",
-        "stretch",
-        "not-a-gate",
-        "s3"
-      ]
+      "tags": ["reliability", "drag", "stretch", "not-a-gate", "s3"]
     }
   ]
 }

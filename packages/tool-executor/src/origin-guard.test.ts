@@ -3,7 +3,9 @@ import { isOriginSwap, originOf, originSwapMessage } from './origin-guard.js';
 
 describe('isOriginSwap', () => {
   it('catches a different host — the look-alike case', () => {
-    expect(isOriginSwap('https://bank.test/transfer', 'https://bank-secure.test/transfer')).toBe(true);
+    expect(isOriginSwap('https://bank.test/transfer', 'https://bank-secure.test/transfer')).toBe(
+      true,
+    );
   });
 
   it('catches a different PORT, which is a different origin even on the same host', () => {

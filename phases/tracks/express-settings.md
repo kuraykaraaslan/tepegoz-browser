@@ -18,7 +18,7 @@ Amaç: ayar sayfalarını gerçek bir `WebContentsView`'e yüklenen sayfalara d�
 davranışlarını kazanmak.
 
 > **Mimari uyarı (kayda geçirildi).** Express, projenin bağlayıcı kurallarına (`renderer is
-> untrusted; typed contextBridge only`, security-by-design, local-first) yeni bir HTTP trust
+untrusted; typed contextBridge only`, security-by-design, local-first) yeni bir HTTP trust
 > boundary ve dinleyen bir TCP soketi ekler. Aşağıdaki sertleştirme önlemlerinin **tamamı birlikte**
 > uygulanmadıkça bu yaklaşım bir güvenlik regresyonudur. Daha düşük saldırı yüzeyli alternatif
 > (`protocol.handle('tepegoz', …)`, soketsiz) Ek A'da kayıtlıdır ve context-menu sorununu bedavaya
@@ -26,16 +26,16 @@ davranışlarını kazanmak.
 
 ## 2. Tehdit modeli
 
-| # | Tehdit | Vektör | Karşı önlem |
-|---|--------|--------|-------------|
-| T1 | LAN'daki başka makine sunucuya erişir | `0.0.0.0` bind | M1 loopback-only bind |
-| T2 | Kötü niyetli web sitesi kurbanın tarayıcısından istek attırır | DNS rebinding (`Host: evil.com` → 127.0.0.1) | M3 Host allowlist + M4 Origin doğrulama |
-| T3 | Yerel başka bir uygulama/sayfa `fetch('http://127.0.0.1:port')` yapar | Localhost erişilebilir | M5 per-session gizli token |
-| T4 | Cross-origin form/GET ile mutasyon (CSRF) | `<form action=127.0.0.1>` | M6 custom-header token (preflight zorlar) + M4 |
-| T5 | Ayar sayfasında XSS → token/ayar sızması | Enjeksiyon | M7 sıkı CSP + M9 sanitizasyon |
-| T6 | Güvenilmez body ile bozuk/kötü ayar yazımı | HTTP gövdesi | M8 her mutasyonda zod `safeParse` |
-| T7 | Secret'ların (safeStorage) HTTP'den okunması/yazılması | Ayrıcalık yükseltme | M10 secret'lar HTTP yolundan asla geçmez |
-| T8 | Port tahmini / kalıcı dinleme | Sabit port, sızıntı | M2 ephemeral port + M11 yaşam döngüsü |
+| #   | Tehdit                                                                | Vektör                                       | Karşı önlem                                    |
+| --- | --------------------------------------------------------------------- | -------------------------------------------- | ---------------------------------------------- |
+| T1  | LAN'daki başka makine sunucuya erişir                                 | `0.0.0.0` bind                               | M1 loopback-only bind                          |
+| T2  | Kötü niyetli web sitesi kurbanın tarayıcısından istek attırır         | DNS rebinding (`Host: evil.com` → 127.0.0.1) | M3 Host allowlist + M4 Origin doğrulama        |
+| T3  | Yerel başka bir uygulama/sayfa `fetch('http://127.0.0.1:port')` yapar | Localhost erişilebilir                       | M5 per-session gizli token                     |
+| T4  | Cross-origin form/GET ile mutasyon (CSRF)                             | `<form action=127.0.0.1>`                    | M6 custom-header token (preflight zorlar) + M4 |
+| T5  | Ayar sayfasında XSS → token/ayar sızması                              | Enjeksiyon                                   | M7 sıkı CSP + M9 sanitizasyon                  |
+| T6  | Güvenilmez body ile bozuk/kötü ayar yazımı                            | HTTP gövdesi                                 | M8 her mutasyonda zod `safeParse`              |
+| T7  | Secret'ların (safeStorage) HTTP'den okunması/yazılması                | Ayrıcalık yükseltme                          | M10 secret'lar HTTP yolundan asla geçmez       |
+| T8  | Port tahmini / kalıcı dinleme                                         | Sabit port, sızıntı                          | M2 ephemeral port + M11 yaşam döngüsü          |
 
 ## 3. Güvenlik önlemleri (hepsi zorunlu)
 
@@ -53,7 +53,7 @@ davranışlarını kazanmak.
   reddederiz (M4). Cookie kullanılmaz (CSRF yüzeyini kapatır). Token, yüklenen sayfaya güvenli
   kanaldan (aşağıda M14) enjekte edilir.
 - **M7 — Sıkı CSP.** Served her yanıt: `Content-Security-Policy: default-src 'self'; script-src
-  'self'; style-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'`. Inline
+'self'; style-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'`. Inline
   script yok (gerekirse nonce). Ek olarak `X-Content-Type-Options: nosniff`,
   `Referrer-Policy: no-referrer`.
 - **M8 — HTTP sınırında zod `safeParse`.** Her mutasyon gövdesi güvenilmezdir; `@tepegoz/shared-types`

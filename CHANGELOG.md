@@ -6,6 +6,7 @@ All notable changes to this project are documented here. Format follows
 ## [Unreleased]
 
 ### Added
+
 - Phase 0 foundation: pnpm + Turborepo monorepo, strict TypeScript, ESLint (flat, type-checked),
   Prettier, dependency-cruiser.
 - `@tepegoz/shared-types` — zod contracts (Event Journal, ToolDescriptor/ToolName, error envelope, enums).
@@ -20,8 +21,10 @@ All notable changes to this project are documented here. Format follows
 - ADRs 0001–0010, Threat Model Lite, known-issues, handover skeleton.
 
 ### Security
+
 - Renderer treated as untrusted (contextIsolation/sandbox/nodeIntegration:false/webSecurity:true);
   BYO keys stored only in the main process via `safeStorage`; logs/journal redaction.
 
 ### Operational
+
 - `turbo` pinned to 2.5.5 (2.10.1 crashes on Windows). Dev launcher clears `ELECTRON_RUN_AS_NODE`.

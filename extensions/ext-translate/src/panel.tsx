@@ -116,7 +116,9 @@ function GlossaryEditor({
 
   return (
     <div>
-      <h3 className="text-xs font-medium uppercase tracking-wide text-text-secondary">{x.glossary}</h3>
+      <h3 className="text-xs font-medium uppercase tracking-wide text-text-secondary">
+        {x.glossary}
+      </h3>
       <p className="mt-1 text-xs text-text-tertiary">{x.glossaryHint}</p>
       <div className="mt-2 grid grid-cols-[1fr_1fr_auto] gap-2">
         <input
@@ -294,16 +296,31 @@ export function TranslateControls({
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-xs font-medium uppercase tracking-wide text-text-secondary">{x.page}</h3>
-        <p className="text-sm text-text-secondary">{x.status}: {statusText(page)}</p>
+        <h3 className="text-xs font-medium uppercase tracking-wide text-text-secondary">
+          {x.page}
+        </h3>
+        <p className="text-sm text-text-secondary">
+          {x.status}: {statusText(page)}
+        </p>
         <p className="text-xs text-text-tertiary">
-          {x.targetLanguage}: {page?.targetLanguage ?? 'app'} · {x.engine}: {page?.engine ?? x.localFirst}
+          {x.targetLanguage}: {page?.targetLanguage ?? 'app'} · {x.engine}:{' '}
+          {page?.engine ?? x.localFirst}
         </p>
         <div className="flex gap-2">
-          <button type="button" className={BTN_PRIMARY} disabled={busy} onClick={() => void translatePage()}>
+          <button
+            type="button"
+            className={BTN_PRIMARY}
+            disabled={busy}
+            onClick={() => void translatePage()}
+          >
             {x.translatePage}
           </button>
-          <button type="button" className={BTN_GHOST} disabled={busy} onClick={() => void restorePage()}>
+          <button
+            type="button"
+            className={BTN_GHOST}
+            disabled={busy}
+            onClick={() => void restorePage()}
+          >
             {x.restoreOriginal}
           </button>
         </div>
@@ -321,7 +338,12 @@ export function TranslateControls({
             setSample(event.currentTarget.value);
           }}
         />
-        <button type="button" className={BTN_PRIMARY} disabled={busy} onClick={() => void quickTranslate()}>
+        <button
+          type="button"
+          className={BTN_PRIMARY}
+          disabled={busy}
+          onClick={() => void quickTranslate()}
+        >
           {x.translate}
         </button>
         {result !== null && (
@@ -341,7 +363,10 @@ export function TranslateControls({
               className={`${INPUT} mt-2`}
               value={settings.cloudFallbackMode}
               onChange={(event) => {
-                void patch({ cloudFallbackMode: event.currentTarget.value as TranslateSettings['cloudFallbackMode'] });
+                void patch({
+                  cloudFallbackMode: event.currentTarget
+                    .value as TranslateSettings['cloudFallbackMode'],
+                });
               }}
             >
               <option value="ask">{x.ask}</option>
@@ -363,7 +388,9 @@ export function TranslateControls({
                     key={origin}
                     className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-1.5"
                   >
-                    <span className="min-w-0 truncate font-mono text-xs text-text-primary">{origin}</span>
+                    <span className="min-w-0 truncate font-mono text-xs text-text-primary">
+                      {origin}
+                    </span>
                     <button
                       type="button"
                       className={BTN_GHOST}

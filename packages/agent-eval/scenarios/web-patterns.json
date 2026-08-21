@@ -10,11 +10,7 @@
         "domAssertion": "Privacy-first browsing"
       },
       "heldOut": false,
-      "tags": [
-        "web-pattern",
-        "consent",
-        "interaction"
-      ]
+      "tags": ["web-pattern", "consent", "interaction"]
     },
     {
       "id": "login_form",
@@ -26,12 +22,7 @@
         "stoppedReason": "handoff"
       },
       "heldOut": false,
-      "tags": [
-        "web-pattern",
-        "form",
-        "auth",
-        "handoff"
-      ]
+      "tags": ["web-pattern", "form", "auth", "handoff"]
     },
     {
       "id": "contact_form",
@@ -43,10 +34,7 @@
         "domAssertion": "Thanks Deniz"
       },
       "heldOut": false,
-      "tags": [
-        "web-pattern",
-        "form"
-      ]
+      "tags": ["web-pattern", "form"]
     },
     {
       "id": "pagination",
@@ -58,11 +46,7 @@
         "domAssertion": "SKU-BLUE-42"
       },
       "heldOut": true,
-      "tags": [
-        "web-pattern",
-        "pagination",
-        "nav"
-      ]
+      "tags": ["web-pattern", "pagination", "nav"]
     },
     {
       "id": "data_table",
@@ -74,11 +58,7 @@
         "expectedValue": "$49"
       },
       "heldOut": false,
-      "tags": [
-        "web-pattern",
-        "table",
-        "read"
-      ]
+      "tags": ["web-pattern", "table", "read"]
     },
     {
       "id": "dynamic_content",
@@ -90,11 +70,7 @@
         "domAssertion": "Q3 revenue up 12%"
       },
       "heldOut": true,
-      "tags": [
-        "web-pattern",
-        "dynamic",
-        "wait"
-      ]
+      "tags": ["web-pattern", "dynamic", "wait"]
     },
     {
       "id": "accordion",
@@ -106,11 +82,7 @@
         "domAssertion": "3-5 business days"
       },
       "heldOut": false,
-      "tags": [
-        "web-pattern",
-        "accordion",
-        "reveal"
-      ]
+      "tags": ["web-pattern", "accordion", "reveal"]
     },
     {
       "id": "custom_dropdown",
@@ -122,11 +94,7 @@
         "domAssertion": "Selected: Türkçe"
       },
       "heldOut": false,
-      "tags": [
-        "web-pattern",
-        "dropdown",
-        "interaction"
-      ]
+      "tags": ["web-pattern", "dropdown", "interaction"]
     },
     {
       "id": "tabs_widget",
@@ -138,11 +106,7 @@
         "domAssertion": "Pro Annual"
       },
       "heldOut": true,
-      "tags": [
-        "web-pattern",
-        "tabs",
-        "reveal"
-      ]
+      "tags": ["web-pattern", "tabs", "reveal"]
     }
   ]
 }

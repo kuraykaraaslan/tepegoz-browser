@@ -24,7 +24,7 @@
     "@tepegoz/extension-sdk": "workspace:*",
     "@tepegoz/i18n": "workspace:*",
     "@tepegoz/ui": "workspace:*",
-    "zod": "3.23.8"
+    "zod": "3.25.76"
   },
   "peerDependencies": {
     "react": "^18 || ^19"
@@ -32,6 +32,6 @@
   "devDependencies": {
     "@types/react": "^18.3.18",
     "typescript": "^5.7.2",
-    "vitest": "^2.1.8"
+    "vitest": "^3.2.6"
   }
 }

@@ -62,7 +62,13 @@ describe('assembling evidence from a run', () => {
   it('records a failed step as inconclusive, not as a contradiction', () => {
     // A tool that errored says nothing about whether the goal was met — only that this step was not it.
     const evidence = assembleEvidence([
-      { stepId: 's', tool: 'browser_update_page', ok: false, error: { code: 'FORBIDDEN', message: 'denied', isError: true, retryable: false }, durationMs: 1 },
+      {
+        stepId: 's',
+        tool: 'browser_update_page',
+        ok: false,
+        error: { code: 'FORBIDDEN', message: 'denied', isError: true, retryable: false },
+        durationMs: 1,
+      },
     ]);
     expect(evidence.items[0]?.verdict).toBe('inconclusive');
   });
@@ -89,7 +95,10 @@ describe('assembling evidence from a run', () => {
 
 describe('classifyClaim at the boundary', () => {
   it('treats an unparseable bundle as NO evidence, never as verification', () => {
-    const bad = { mutating: true, items: [{ id: '', kind: 'network', verdict: 'nope', detail: '' }] } as never;
+    const bad = {
+      mutating: true,
+      items: [{ id: '', kind: 'network', verdict: 'nope', detail: '' }],
+    } as never;
     expect(classifyClaim(bad)).toBe('attempted_unverified');
   });
 });

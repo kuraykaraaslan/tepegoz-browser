@@ -116,10 +116,9 @@ async function withTimeout(run: Promise<unknown>): Promise<unknown> {
     return await Promise.race([
       run,
       new Promise<never>((_resolve, reject) => {
-        timer = setTimeout(
-          () => { reject(new AppError('Extraction script timed out', 408)); },
-          EXTRACTION_TIMEOUT_MS,
-        );
+        timer = setTimeout(() => {
+          reject(new AppError('Extraction script timed out', 408));
+        }, EXTRACTION_TIMEOUT_MS);
       }),
     ]);
   } finally {

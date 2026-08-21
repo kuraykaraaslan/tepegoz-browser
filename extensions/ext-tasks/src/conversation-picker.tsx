@@ -72,7 +72,9 @@ export function ConversationPicker({ api, open, onClose, onPick }: ConversationP
                     className="w-full rounded-md px-2 py-2 text-left hover:bg-surface-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
                   >
                     <p className="truncate text-sm font-medium text-text-primary">{item.title}</p>
-                    <p className="mt-0.5 line-clamp-2 text-xs text-text-secondary">{item.preview}</p>
+                    <p className="mt-0.5 line-clamp-2 text-xs text-text-secondary">
+                      {item.preview}
+                    </p>
                     <p className="mt-1 text-xs text-text-disabled">
                       {new Date(item.updatedAt).toLocaleString()} · {item.turnCount} {t.turns}
                     </p>

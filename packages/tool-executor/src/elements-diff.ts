@@ -50,7 +50,13 @@ function detailOf(el: InteractableElement): string {
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
     .map(([k, v]) => `${k}=${v}`)
     .join(',');
-  return [el.role, el.href ?? '', el.value ?? '', el.disabled === true ? 'disabled' : '', attrs].join('|');
+  return [
+    el.role,
+    el.href ?? '',
+    el.value ?? '',
+    el.disabled === true ? 'disabled' : '',
+    attrs,
+  ].join('|');
 }
 
 /** Capture what this snapshot showed, to diff the next one against. */

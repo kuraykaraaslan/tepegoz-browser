@@ -21,8 +21,12 @@ describe('translate engine helpers', () => {
   it('checks site enablement and auto-translate language differences', () => {
     const settings = { ...DEFAULT_TRANSLATE_SETTINGS, disabledOrigins: ['https://example.test'] };
     expect(isTranslateEnabledForOrigin(settings, 'https://example.test/page')).toBe(false);
-    expect(shouldAutoTranslatePage(DEFAULT_TRANSLATE_SETTINGS, 'en', 'tr', 'https://example.test')).toBe(true);
-    expect(shouldAutoTranslatePage(DEFAULT_TRANSLATE_SETTINGS, 'tr', 'tr', 'https://example.test')).toBe(false);
+    expect(
+      shouldAutoTranslatePage(DEFAULT_TRANSLATE_SETTINGS, 'en', 'tr', 'https://example.test'),
+    ).toBe(true);
+    expect(
+      shouldAutoTranslatePage(DEFAULT_TRANSLATE_SETTINGS, 'tr', 'tr', 'https://example.test'),
+    ).toBe(false);
   });
 
   it('batches by item and character limits', () => {

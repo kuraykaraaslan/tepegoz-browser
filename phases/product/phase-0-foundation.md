@@ -12,7 +12,7 @@ No product features; the decisions made here would force a full rewrite if wrong
 - [ ] shared-types zod contracts + sample round-trip tests exist
 - [ ] Secure `createWindow()` factory + fuses + typed IPC skeleton opens a working empty window
 - [x] Threat Model Lite + Risk Register + ~9 ADRs + READMEs + CHANGELOG written
-- [ ] Windows code-signing identity acquisition started (BLOCKING for distribution)
+- [ ] Windows code-signing identity — _**permanently deferred to the production gate** (ship-line decision, 2026-08-21). NOT a v1 blocker and NOT part of this DoD; v1 builds, CI, e2e and UAT all run unsigned._
 - [ ] Release & update hardening designed (auto-update + signed rollback + crashReporter + safe-mode + corrupt-profile recovery) — _runtime flow activated before first public release_
 
 ## Tasks
@@ -72,7 +72,7 @@ No product features; the decisions made here would force a full rewrite if wrong
 - [x] `.github/workflows/ci.yml` — push/PR: frozen-lockfile install → turbo typecheck/lint/test/build + `pnpm audit` (report) + **AI-trailer commit-policy job**
 - [ ] coverage gate (S80/B70/F80/L80) + reject focused/skipped tests — _deferred: enforce thresholds once substantive logic lands (Phase 1a)_
 - [x] `.github/workflows/release.yml` — tag-driven **per-OS matrix** (fail-fast:false), native rebuild per-OS; packaging/signing step = TODO (see below)
-- [ ] Start Windows code-signing identity (Azure Trusted Signing / EV) — **BLOCKING (distribution)** — _user action_
+- [ ] Start Windows code-signing identity (Azure Trusted Signing / EV) — _**deferred to the production gate**, permanently, per the ship line. Distribution concern, not a build concern; revisit only when a real release is cut. Everything below that depends on a certificate (update **signature verification**) is deferred with it and may not be claimed until then._
 
 ### Release & update hardening (pre-distribution; runtime flow activated before first public release)
 
@@ -90,8 +90,8 @@ No product features; the decisions made here would force a full rewrite if wrong
       snapshot → start fresh, never crash-loop)
 - [ ] **Chromium security-update cadence** (upstream-intake side of the update story): pinned+watched
       `electron`, ≤2-week adoption SLA for security bumps, embedded engine version logged per release — see
-      [ADR-0019](../../docs/adr/0019-chromium-update-cadence.md). This governs *which engine* we ship; the
-      auto-update runtime above governs *how* we ship it.
+      [ADR-0019](../../docs/adr/0019-chromium-update-cadence.md). This governs _which engine_ we ship; the
+      auto-update runtime above governs _how_ we ship it.
 
 ### Documentation & security
 

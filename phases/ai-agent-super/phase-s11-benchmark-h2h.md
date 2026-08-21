@@ -18,8 +18,8 @@
 
 ## Exit criteria (DoD)
 
-- [x] A `realUrl` bridge stratum of **~30 live-web tasks** (Online-Mind2Web style), **≥10 Turkish-web**, is authored, rubric'd, and **frozen in PR0 before any capability or run code** (constitution: fixtures frozen first). (⏸ funded sweep to *score* it; authoring itself is not funding-blocked.)
-- [ ] Bridge **verified-completion with a Wilson CI is PUBLISHED** in [eval-results.md](eval-results.md). Honest first-run target: **CI lower bound ≥60%** — *the number itself is the deliverable, not a threshold to defend.* (⏸ funded sweep)
+- [x] A `realUrl` bridge stratum of **~30 live-web tasks** (Online-Mind2Web style), **≥10 Turkish-web**, is authored, rubric'd, and **frozen in PR0 before any capability or run code** (constitution: fixtures frozen first). (⏸ funded sweep to _score_ it; authoring itself is not funding-blocked.)
+- [ ] Bridge **verified-completion with a Wilson CI is PUBLISHED** in [eval-results.md](eval-results.md). Honest first-run target: **CI lower bound ≥60%** — _the number itself is the deliverable, not a threshold to defend._ (⏸ funded sweep)
 - [ ] The judge reaches **≥25 human labels** in `calibration/human-labels.json` and the **judge↔human agreement rate is reported** alongside every bridge/H2H number. Below 25, no run is publishable. (precondition; label authoring not funding-blocked)
 - [ ] **All four north-star conditions have a dated number** in [eval-results.md](eval-results.md), win or lose (⏸ funded sweep + rival subscriptions):
   - live-web verified-completion (this phase's bridge run);
@@ -76,6 +76,7 @@
 - [ ] **Final PROSE-LEDGER audit**: walk every row in [PROSE-LEDGER.md](PROSE-LEDGER.md), DELETE or justify-RETAIN each with paired with/without-sweep evidence.
 
 > **Mechanism notes (PR0, PR2-gate, PR4).**
+>
 > 1. **The escape-denominator exclusion already existed.** `FamilyRow.escapeEligible` in
 >    [statistics.ts](../../packages/agent-eval/src/statistics.ts) is false for a `realUrl` target, and
 >    family pooling is tag-based, so `bridge` is a family without a code change. Nothing was added
@@ -95,7 +96,7 @@
 
 **Not done, and why.**
 
-- **The 25 human calibration labels are not authored.** They are, by definition, *human* judgements of
+- **The 25 human calibration labels are not authored.** They are, by definition, _human_ judgements of
   real run artifacts — and there are no run artifacts, because scoring the stratum needs a funded key.
   Manufacturing labels for runs that never happened would be the exact fabrication this phase exists to
   prevent. The gate that blocks publication below 25 is built and tested; the labels are owed.

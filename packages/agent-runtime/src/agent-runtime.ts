@@ -1,9 +1,4 @@
-import {
-  ModelGateway,
-  ModelRouter,
-  TokenLedger,
-  type CanonMessage,
-} from '@tepegoz/model-gateway';
+import { ModelGateway, ModelRouter, TokenLedger, type CanonMessage } from '@tepegoz/model-gateway';
 import { CapabilityRegistry } from '@tepegoz/capability-plane';
 import { type AgentFailure } from '@tepegoz/orchestrator';
 import { inspectEgress } from '@tepegoz/security-policy';
@@ -77,6 +72,10 @@ export async function runAgent(
     TokenLedger.setQuota(deps.tokenBudget.quota);
     TokenLedger.setBaseline(deps.tokenBudget.lifetimeUsed);
   }
+  // Per-run ceiling, also after the reset so it bounds THIS run's spend rather than the session's.
+  if (deps.runTokenCeiling !== undefined) {
+    TokenLedger.setRunCeiling(deps.runTokenCeiling);
+  }
 
   // Egress Firewall (L8) over the single ModelGateway chokepoint: EVERY outbound model request (the
   // Planner + every reactive turn, which accumulate perceived/tainted page text) is inspected before it
@@ -88,7 +87,11 @@ export async function runAgent(
     // Advisory (PII / encoded blob): surface to the Console, still send.
     onWarn: (findings) => {
       const summary = findings.map((f) => `${f.kind} (${f.sample})`).join(', ');
-      hooks.onEvent('decision', 'Egress warning: possible PII/encoded data in the model request', summary);
+      hooks.onEvent(
+        'decision',
+        'Egress warning: possible PII/encoded data in the model request',
+        summary,
+      );
     },
     // Possible secret (block-severity): route to HITL — the user chooses to send or cancel (origin-blind
     // detection can't tell a real secret from token-shaped page content it was asked to read, so a hard
@@ -236,7 +239,9 @@ export async function runAgent(
   return {
     stoppedReason: result.stoppedReason,
     ok: result.stoppedReason === 'completed',
-    ...(result.completionOutcome !== undefined ? { completionOutcome: result.completionOutcome } : {}),
+    ...(result.completionOutcome !== undefined
+      ? { completionOutcome: result.completionOutcome }
+      : {}),
     ...(result.visionEscalations !== undefined && result.visionEscalations.length > 0
       ? { visionEscalations: result.visionEscalations }
       : {}),
@@ -244,6 +249,8 @@ export async function runAgent(
     tokenUsage: {
       inputTokens: usage.inputTokens,
       outputTokens: usage.outputTokens,
+      cacheReadTokens: usage.cacheReadTokens,
+      cacheWriteTokens: usage.cacheWriteTokens,
       totalTokens: usage.totalTokens,
     },
     steps: result.outcomes.map((o) => {

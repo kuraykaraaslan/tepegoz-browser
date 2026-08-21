@@ -74,7 +74,10 @@ export function decisionToolDef(): CanonToolDef {
  * - `json` — force the legacy arm, even on a native-capable provider. This is the "before" arm.
  * - `auto` (default, and any unrecognised value) — native where the registered adapter supports it.
  */
-export function resolveDecisionMode(provider: AIProvider, override?: DecisionMode | 'auto'): DecisionMode {
+export function resolveDecisionMode(
+  provider: AIProvider,
+  override?: DecisionMode | 'auto',
+): DecisionMode {
   const requested = override ?? process.env.TEPEGOZ_DECISION_MODE ?? 'auto';
   if (requested === 'json') return 'json';
   // `native` and `auto` agree on the outcome: forcing a transport the registered adapter cannot speak

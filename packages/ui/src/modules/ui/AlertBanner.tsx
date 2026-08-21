@@ -2,15 +2,33 @@
 import { cn } from '../../libs/utils/cn';
 import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCircleCheck, faTriangleExclamation, faCircleXmark, faCircleInfo, faXmark } from '@fortawesome/free-solid-svg-icons';
+import {
+  faCircleCheck,
+  faTriangleExclamation,
+  faCircleXmark,
+  faCircleInfo,
+  faXmark,
+} from '@fortawesome/free-solid-svg-icons';
 
 type AlertVariant = 'success' | 'warning' | 'error' | 'info';
 
 const variantMap: Record<AlertVariant, { container: string; defaultIcon: React.ReactNode }> = {
-  success: { container: 'bg-success-subtle border-success text-success-fg', defaultIcon: <FontAwesomeIcon icon={faCircleCheck} className="w-4 h-4" /> },
-  warning: { container: 'bg-warning-subtle border-warning text-warning-fg', defaultIcon: <FontAwesomeIcon icon={faTriangleExclamation} className="w-4 h-4" /> },
-  error:   { container: 'bg-error-subtle border-error text-error-fg',       defaultIcon: <FontAwesomeIcon icon={faCircleXmark} className="w-4 h-4" /> },
-  info:    { container: 'bg-info-subtle border-info text-info-fg',          defaultIcon: <FontAwesomeIcon icon={faCircleInfo} className="w-4 h-4" /> },
+  success: {
+    container: 'bg-success-subtle border-success text-success-fg',
+    defaultIcon: <FontAwesomeIcon icon={faCircleCheck} className="w-4 h-4" />,
+  },
+  warning: {
+    container: 'bg-warning-subtle border-warning text-warning-fg',
+    defaultIcon: <FontAwesomeIcon icon={faTriangleExclamation} className="w-4 h-4" />,
+  },
+  error: {
+    container: 'bg-error-subtle border-error text-error-fg',
+    defaultIcon: <FontAwesomeIcon icon={faCircleXmark} className="w-4 h-4" />,
+  },
+  info: {
+    container: 'bg-info-subtle border-info text-info-fg',
+    defaultIcon: <FontAwesomeIcon icon={faCircleInfo} className="w-4 h-4" />,
+  },
 };
 
 export type AlertAction = {
@@ -47,11 +65,7 @@ export function AlertBanner({
   return (
     <div
       role="alert"
-      className={cn(
-        'flex items-start gap-3 rounded-lg border p-4',
-        container,
-        className
-      )}
+      className={cn('flex items-start gap-3 rounded-lg border p-4', container, className)}
     >
       <span aria-hidden="true" className="mt-0.5 shrink-0 font-bold">
         {icon ?? defaultIcon}

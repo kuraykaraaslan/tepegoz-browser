@@ -38,7 +38,7 @@ a user-approved boundary.
      reads too (reads are `dangerClass: 'read'`, which the PolicyKernel auto-allows).
    - **Mode gate at the HITL seam** — for a mutating op the confirm handler consults
      `FileAccessPolicy.decide(realPath, requiredMode)`: `allow` (≤ grant mode → run silently), `ask`
-     (exceeds grant mode → prompt), or `deny` (no grant). Mode is gated *here*, not in the handler, so
+     (exceeds grant mode → prompt), or `deny` (no grant). Mode is gated _here_, not in the handler, so
      an **approved** escalation still runs (the handler only re-checks membership, which approval never
      widens).
 

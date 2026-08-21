@@ -33,7 +33,9 @@ function renderIssues(details: unknown): string {
     });
   if (lines.length === 0) return '';
   const joined = lines.join('; ');
-  return joined.length > MAX_OBSERVATION_CHARS ? `${joined.slice(0, MAX_OBSERVATION_CHARS)}…` : joined;
+  return joined.length > MAX_OBSERVATION_CHARS
+    ? `${joined.slice(0, MAX_OBSERVATION_CHARS)}…`
+    : joined;
 }
 
 /** The observation text fed back to the model after a tool call — a read tool's already-wrapped
@@ -47,10 +49,14 @@ export function observationOf(outcome: StepOutcome): string {
   }
   const result = outcome.result;
   const text =
-    result !== null && typeof result === 'object' && typeof (result as { content?: unknown }).content === 'string'
+    result !== null &&
+    typeof result === 'object' &&
+    typeof (result as { content?: unknown }).content === 'string'
       ? (result as { content: string }).content
       : stableStringify(result);
-  return text.length > MAX_OBSERVATION_CHARS ? `${text.slice(0, MAX_OBSERVATION_CHARS)}\n…[truncated]` : text;
+  return text.length > MAX_OBSERVATION_CHARS
+    ? `${text.slice(0, MAX_OBSERVATION_CHARS)}\n…[truncated]`
+    : text;
 }
 
 export function observationWithRecovery(outcome: StepOutcome, failure: AgentFailure): string {

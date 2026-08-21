@@ -137,3 +137,12 @@ export const CreateTabInputSchema = z.string().max(4096).optional();
 /** `tabs:create-background` payload — a required URL to open in a background tab. */
 export const CreateBackgroundTabSchema = z.string().min(1).max(4096);
 export const ContentVisibleSchema = z.boolean();
+
+/** `find:start` payload. The query is length-capped like every other renderer-supplied string; an empty
+ *  query is rejected here rather than handed to Chromium, which throws on it. */
+export const FindInPageQuerySchema = z.object({
+  query: z.string().min(1).max(1024),
+  forward: z.boolean(),
+  findNext: z.boolean(),
+  matchCase: z.boolean(),
+});

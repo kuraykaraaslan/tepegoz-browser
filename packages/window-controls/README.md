@@ -7,12 +7,14 @@ package has zero dependencies beyond React and FontAwesome and has no dependency
 bridge. The host keeps its own `useWindowMaximized` hook for the underlying subscription.
 
 ## Exports
+
 - **`WindowControls`** — renders the three caption buttons; swaps the maximize/restore icon and
   aria-label based on `isMaximized`.
 - **`WindowControlsLabels`** — localized aria-labels (`minimize`, `maximize`, `restore`, `close`).
 - **`WindowControlsProps`** — the full injected-props contract.
 
 ## Usage
+
 ```tsx
 <WindowControls
   isMaximized={isMaximized}
@@ -24,4 +26,5 @@ bridge. The host keeps its own `useWindowMaximized` hook for the underlying subs
 ```
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint`

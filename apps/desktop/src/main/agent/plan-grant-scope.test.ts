@@ -84,7 +84,9 @@ describe('planGrantScope', () => {
 
   it('ignores non-http schemes in arguments', () => {
     const scope = planGrantScope(
-      plan([{ tool: 'browser_update_page', args: { s: 'file:///etc/passwd javascript:alert(1)' } }]),
+      plan([
+        { tool: 'browser_update_page', args: { s: 'file:///etc/passwd javascript:alert(1)' } },
+      ]),
       null,
       lookup,
     );

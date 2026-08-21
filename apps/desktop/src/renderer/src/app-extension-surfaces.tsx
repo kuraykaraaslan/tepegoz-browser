@@ -43,7 +43,11 @@ export interface ExtensionSurfacesResult {
   resizeSnapshot: string | null;
   closeSurface: () => void;
   closeSidebar: () => void;
-  runExtensionAction: (id: string, trigger: 'click' | 'doubleClick', anchor?: ContentBounds) => void;
+  runExtensionAction: (
+    id: string,
+    trigger: 'click' | 'doubleClick',
+    anchor?: ContentBounds,
+  ) => void;
   onSidebarResizeStart: (e: ReactPointerEvent) => void;
   renderActiveSurface: () => ReactNode;
   renderSidebar: () => ReactNode;

@@ -13,7 +13,7 @@ interface Migration {
   up: (db: Db) => void;
 }
 
-/** Contain better-sqlite3's `any` pragma return in one typed place. */
+/** Contain the `unknown` pragma return in one typed place. */
 function userVersion(db: Db): number {
   const v: unknown = db.pragma('user_version', { simple: true });
   return typeof v === 'number' ? v : 0;
@@ -181,23 +181,42 @@ const MIGRATIONS: Migration[] = [
       );
       // Two fixed roots (deterministic ids so code references them by constant; UI relabels via i18n).
       insertNode.run({
-        id: ROOT_BAR, parentId: null, nodeType: 'folder', title: 'Bookmarks bar',
-        url: null, position: 0, createdAt: now, updatedAt: now,
+        id: ROOT_BAR,
+        parentId: null,
+        nodeType: 'folder',
+        title: 'Bookmarks bar',
+        url: null,
+        position: 0,
+        createdAt: now,
+        updatedAt: now,
       });
       insertNode.run({
-        id: ROOT_OTHER, parentId: null, nodeType: 'folder', title: 'Other bookmarks',
-        url: null, position: POSITION_GAP, createdAt: now, updatedAt: now,
+        id: ROOT_OTHER,
+        parentId: null,
+        nodeType: 'folder',
+        title: 'Other bookmarks',
+        url: null,
+        position: POSITION_GAP,
+        createdAt: now,
+        updatedAt: now,
       });
 
       // Migrate the existing flat bookmarks into the Bar root, preserving order (oldest → first).
-      const flat = db
-        .prepare('SELECT url, title, ts FROM bookmarks ORDER BY ts ASC')
-        .all() as { url: string; title: string; ts: number }[];
+      const flat = db.prepare('SELECT url, title, ts FROM bookmarks ORDER BY ts ASC').all() as {
+        url: string;
+        title: string;
+        ts: number;
+      }[];
       flat.forEach((b, i) => {
         insertNode.run({
-          id: randomUUID(), parentId: ROOT_BAR, nodeType: 'bookmark',
-          title: b.title, url: b.url, position: i * POSITION_GAP,
-          createdAt: b.ts, updatedAt: b.ts,
+          id: randomUUID(),
+          parentId: ROOT_BAR,
+          nodeType: 'bookmark',
+          title: b.title,
+          url: b.url,
+          position: i * POSITION_GAP,
+          createdAt: b.ts,
+          updatedAt: b.ts,
         });
       });
 

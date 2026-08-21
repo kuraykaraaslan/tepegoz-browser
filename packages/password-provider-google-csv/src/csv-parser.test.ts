@@ -12,7 +12,13 @@ describe('parseGoogleCsv', () => {
     ].join('\n');
 
     expect(parseGoogleCsv(csv)).toEqual([
-      { name: 'Example', url: 'https://example.com', username: 'alice', password: 's3cret', note: 'my note' },
+      {
+        name: 'Example',
+        url: 'https://example.com',
+        username: 'alice',
+        password: 's3cret',
+        note: 'my note',
+      },
       { name: 'Bank', url: 'https://bank.test', username: 'bob', password: 'hunter2', note: '' },
     ]);
   });
@@ -32,10 +38,10 @@ describe('parseGoogleCsv', () => {
   it('skips rows missing url, username, or password', () => {
     const csv = [
       HEADER,
-      ',https://a.test,,pw,',            // no username
-      'Name,,user,pw,',                  // no url
-      'Name,https://b.test,user,,',      // no password
-      'Ok,https://c.test,user,pw,',      // valid
+      ',https://a.test,,pw,', // no username
+      'Name,,user,pw,', // no url
+      'Name,https://b.test,user,,', // no password
+      'Ok,https://c.test,user,pw,', // valid
     ].join('\n');
     expect(parseGoogleCsv(csv)).toEqual([
       { name: 'Ok', url: 'https://c.test', username: 'user', password: 'pw', note: '' },
@@ -43,12 +49,15 @@ describe('parseGoogleCsv', () => {
   });
 
   it('handles quoted fields containing commas and escaped quotes', () => {
-    const csv = [
-      HEADER,
-      '"Acme, Inc.",https://acme.test,dave,"pa,ss""word","line1"',
-    ].join('\n');
+    const csv = [HEADER, '"Acme, Inc.",https://acme.test,dave,"pa,ss""word","line1"'].join('\n');
     expect(parseGoogleCsv(csv)).toEqual([
-      { name: 'Acme, Inc.', url: 'https://acme.test', username: 'dave', password: 'pa,ss"word', note: 'line1' },
+      {
+        name: 'Acme, Inc.',
+        url: 'https://acme.test',
+        username: 'dave',
+        password: 'pa,ss"word',
+        note: 'line1',
+      },
     ]);
   });
 
@@ -67,7 +76,13 @@ describe('serializeGoogleCsv', () => {
 
   it('quotes and escapes fields with commas, quotes, or newlines', () => {
     const rows: CsvRow[] = [
-      { name: 'Acme, Inc.', url: 'https://acme.test', username: 'dave', password: 'pa"ss', note: 'a\nb' },
+      {
+        name: 'Acme, Inc.',
+        url: 'https://acme.test',
+        username: 'dave',
+        password: 'pa"ss',
+        note: 'a\nb',
+      },
     ];
     expect(serializeGoogleCsv(rows)).toBe(
       `${HEADER}\n"Acme, Inc.",https://acme.test,dave,"pa""ss","a\nb"`,

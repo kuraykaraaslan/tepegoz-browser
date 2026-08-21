@@ -47,6 +47,15 @@ const RepliesFileSchema = z.object({
 });
 
 /** The active web tab's committed URL (Policy Kernel site context) — mirrors AgentService's seam. */
+/**
+ * Per-trial total-token ceiling from the harness env (`TEPEGOZ_EVAL_RUN_CEILING`). 0/absent/garbage all
+ * mean "off" — a malformed value must never silently become a tight ceiling that fails every trial.
+ */
+function evalRunCeiling(): number {
+  const raw = Number(process.env.TEPEGOZ_EVAL_RUN_CEILING ?? '0');
+  return Number.isFinite(raw) && raw > 0 ? Math.trunc(raw) : 0;
+}
+
 function activeTabUrl(): string | undefined {
   const state = TabManager.getState();
   const active = state.tabs.find((t) => t.id === state.activeId);
@@ -197,6 +206,10 @@ export async function maybeRunEval(): Promise<void> {
         returnedToOrigin: tabSpawn.returnedToOrigin,
       },
       localInference: { engine: llamaEngine(), resolveModel: () => ModelManager.resolveModel() },
+      // Per-trial token ceiling (`TEPEGOZ_EVAL_RUN_CEILING`, 0 = off). `maxSteps` bounds how MANY steps
+      // a trial takes, never how large they are — the worst run measured in this repo burned 224k tokens
+      // inside the step cap. Over a sweep, a few of those are a material slice of the budget.
+      runTokenCeiling: evalRunCeiling(),
       provider,
     });
 
@@ -220,7 +233,13 @@ export async function maybeRunEval(): Promise<void> {
           // AI-1 observability: real per-step outcomes + token usage from the run, so the harness scores
           // honest toolCalls/toolErrors/cost instead of the previous hard-coded zeros.
           steps: summary.steps ?? [],
-          tokenUsage: summary.tokenUsage ?? { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+          tokenUsage: summary.tokenUsage ?? {
+            inputTokens: 0,
+            outputTokens: 0,
+            cacheReadTokens: 0,
+            cacheWriteTokens: 0,
+            totalTokens: 0,
+          },
         },
         null,
         2,

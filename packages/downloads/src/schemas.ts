@@ -39,7 +39,10 @@ export const DownloadRecordSchema = z.object({
   updatedAt: z.number().int().nonnegative(),
   completedAt: z.number().int().nonnegative().optional(),
   error: z.string().max(2048).optional(),
-  sha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+  sha256: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/)
+    .optional(),
   provenance: DownloadProvenanceSchema,
 }) satisfies z.ZodType<DownloadRecord>;
 

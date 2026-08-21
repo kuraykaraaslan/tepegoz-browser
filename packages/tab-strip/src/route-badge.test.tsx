@@ -47,10 +47,14 @@ describe('a single-leg route', () => {
   });
 
   it('colours a plain Tor route purple when it is carrying traffic, grey when it is not', () => {
-    const { container } = render(<GroupRouteShield badge={badge({ tor: 'up', label: 'Tor' })} labels={LABELS} />);
+    const { container } = render(
+      <GroupRouteShield badge={badge({ tor: 'up', label: 'Tor' })} labels={LABELS} />,
+    );
     expect(container.querySelector('.text-purple-400')).not.toBeNull();
     cleanup();
-    const grey = render(<GroupRouteShield badge={badge({ tor: 'down', label: 'Tor' })} labels={LABELS} />);
+    const grey = render(
+      <GroupRouteShield badge={badge({ tor: 'down', label: 'Tor' })} labels={LABELS} />,
+    );
     expect(grey.container.querySelector('.text-text-disabled')).not.toBeNull();
   });
 
@@ -80,7 +84,10 @@ describe('a chained route — Tor through a VPN', () => {
 
   it('shows the VPN half healthy while the Tor half is still coming up', () => {
     const { container } = render(
-      <GroupRouteShield badge={badge({ vpn: 'up', tor: 'down', label: 'Tor → FRA' })} labels={LABELS} />,
+      <GroupRouteShield
+        badge={badge({ vpn: 'up', tor: 'down', label: 'Tor → FRA' })}
+        labels={LABELS}
+      />,
     );
     expect(container.querySelector('.text-success')).not.toBeNull();
     expect(container.querySelector('.text-text-disabled')).not.toBeNull();
@@ -88,7 +95,12 @@ describe('a chained route — Tor through a VPN', () => {
   });
 
   it('shows a dead VPN half under a Tor half that cannot possibly be up', () => {
-    render(<GroupRouteShield badge={badge({ vpn: 'down', tor: 'down', label: 'Tor → FRA' })} labels={LABELS} />);
+    render(
+      <GroupRouteShield
+        badge={badge({ vpn: 'down', tor: 'down', label: 'Tor → FRA' })}
+        labels={LABELS}
+      />,
+    );
     expect(shieldName()).toBe('Tor → FRA — VPN: not connected, Tor: not connected');
   });
 });

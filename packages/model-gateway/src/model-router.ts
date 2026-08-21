@@ -107,6 +107,13 @@ export class ModelRouter {
     }
 
     const reason = eligibleForLocal ? 'local_unavailable_cloud_fallback' : `${tier}_cloud`;
-    return { tier, transport: 'cloud', provider, model: PROVIDER_MODELS[provider][tier], effort, reason };
+    return {
+      tier,
+      transport: 'cloud',
+      provider,
+      model: PROVIDER_MODELS[provider][tier],
+      effort,
+      reason,
+    };
   }
 }

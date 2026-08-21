@@ -2,12 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Badge, Button, Card, DataTable, type TableColumn } from '@tepegoz/ui';
 import { useT } from '@tepegoz/i18n/react';
 import type { AgentConversationDetail } from '@tepegoz/ext-agent/history';
-import type {
-  TaskArtifactRecord,
-  TaskDefinition,
-  TaskRunRecord,
-  TasksState,
-} from '@tepegoz/tasks';
+import type { TaskArtifactRecord, TaskDefinition, TaskRunRecord, TasksState } from '@tepegoz/tasks';
 import { tasksDict } from './i18n';
 import type { TasksHostApi } from './types';
 import { TaskModal } from './task-modal';
@@ -166,7 +161,11 @@ export function TasksPage({ api }: Readonly<{ api: TasksHostApi; onClose: () => 
                   {t.actions.viewChat}
                 </Button>
               )}
-              <Button size="xs" variant="ghost" onClick={() => setModalInitial(formStateFromTask(task))}>
+              <Button
+                size="xs"
+                variant="ghost"
+                onClick={() => setModalInitial(formStateFromTask(task))}
+              >
                 {t.actions.edit}
               </Button>
               <Button size="xs" variant="danger" onClick={() => del(task.id)}>
@@ -181,7 +180,11 @@ export function TasksPage({ api }: Readonly<{ api: TasksHostApi; onClose: () => 
   );
 
   const visibleRuns = useMemo(
-    () => (selectedTaskId === null ? runs : runs.filter((run) => run.taskId === selectedTaskId)).slice(0, 12),
+    () =>
+      (selectedTaskId === null ? runs : runs.filter((run) => run.taskId === selectedTaskId)).slice(
+        0,
+        12,
+      ),
     [runs, selectedTaskId],
   );
   const visibleArtifacts = useMemo(
@@ -269,7 +272,9 @@ export function TasksPage({ api }: Readonly<{ api: TasksHostApi; onClose: () => 
               <ul className="space-y-2">
                 {visibleArtifacts.map((artifact) => (
                   <li key={artifact.id} className="flex items-center gap-2 text-xs">
-                    <span className="min-w-0 flex-1 truncate text-text-primary">{artifact.title}</span>
+                    <span className="min-w-0 flex-1 truncate text-text-primary">
+                      {artifact.title}
+                    </span>
                     <span className="shrink-0 text-text-secondary">{artifact.kind}</span>
                   </li>
                 ))}

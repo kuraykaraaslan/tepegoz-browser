@@ -31,6 +31,9 @@ agent-eval-runs/
 # Packaged artifacts
 /release/
 
+# Agent-local state (Claude Code plugin cache, session scratch) — machine-specific, never source.
+.claude/
+
 # OS / editor
 .DS_Store
 Thumbs.db

@@ -33,10 +33,7 @@ export function AutofillSuggestion({ url, matches, onFill, onDismiss }: Autofill
               <span className="autofill-suggestion__item-title">{m.title || url}</span>
               <span className="autofill-suggestion__item-username">{m.username}</span>
             </div>
-            <button
-              className="autofill-suggestion__fill"
-              onClick={() => onFill(m.id)}
-            >
+            <button className="autofill-suggestion__fill" onClick={() => onFill(m.id)}>
               {t.autofillFill}
             </button>
           </li>

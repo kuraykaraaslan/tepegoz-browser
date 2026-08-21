@@ -17,14 +17,14 @@ referring to this file.
 `sensitive-site.ts`'s existing `government` category already covers the whole `gov.tr` tree, and gates it
 the way every sensitive site is gated: a read prompts for confirmation, a state-changing action is denied
 outright with no path to proceed. That is the correct default for an ordinary, unreviewed agent action
-reaching a government site — but it is the *wrong* rule for the thing this phase actually wants to ship:
+reaching a government site — but it is the _wrong_ rule for the thing this phase actually wants to ship:
 a signed, version-pinned Kamu recipe whose write step — submitting a randevu, confirming a beyanname — is
 the entire reason the recipe was authored. An outright deny with no override would make read-write Kamu
 automation categorically impossible, which is the opposite of the phase's stated goal.
 
 The two things that cannot be true at once are (1) "state-changing on a government site is always
 denied, no exceptions" and (2) "a reviewed Kamu recipe can actually submit an appointment request" — so
-the phase needs a *second*, narrower rule for a *specifically identified* class of traffic, not a
+the phase needs a _second_, narrower rule for a _specifically identified_ class of traffic, not a
 loosening of the first rule.
 
 ## Decision
@@ -44,7 +44,7 @@ traffic already identified as coming from a reviewed Kamu recipe.**
 - **`not_kamu` is a fall-through signal, not a refusal.** A step outside the four named domains gets no
   opinion from this module at all — the caller is expected to route it back to the ordinary
   sensitive-site + danger-class rules, exactly as it would for any other site. This module narrows what
-  is *possible* for Kamu traffic specifically; it has no authority to loosen anything else.
+  is _possible_ for Kamu traffic specifically; it has no authority to loosen anything else.
 
 ## Consequences
 
@@ -55,7 +55,7 @@ lockout system. 9 tests cover both the domain-scoping precision (subdomain match
 `gov.tr` site outside the four is explicitly NOT covered) and the read/write split.
 
 **Negative / accepted.** This module has no way to know, on its own, that a given step actually came from
-a *reviewed, signed* Kamu recipe rather than an ordinary agent action that happens to target
+a _reviewed, signed_ Kamu recipe rather than an ordinary agent action that happens to target
 `turkiye.gov.tr` — that provenance check is the caller's responsibility, and is not built. Calling
 `classifyKamuStep` for an unreviewed action would incorrectly grant it zero-approval reads.
 

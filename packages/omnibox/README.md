@@ -8,6 +8,7 @@ callbacks, so the package has no dependency on the Electron bridge — and the c
 never starts an AI thread or a search on its own.
 
 ## Exports
+
 - **`Omnibox`** — the address-bar input; renders the calc chip and the suggestions listbox.
 - **`OmniboxProps`** — its injected-props contract (`currentUrl`, `placeholder`, `onNavigate`,
   `onCalcResult`, `onSuggest`, `onActivateTab`).
@@ -21,6 +22,7 @@ never starts an AI thread or a search on its own.
   suggestion data types.
 
 ## Usage
+
 ```tsx
 <Omnibox
   currentUrl={activeTab.url}
@@ -32,4 +34,5 @@ never starts an AI thread or a search on its own.
 ```
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

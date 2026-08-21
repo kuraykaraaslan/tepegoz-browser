@@ -38,7 +38,10 @@ export function registerWebTools(deps: { host: WebToolsHost }): void {
       // they are fenced exactly like browser perception. Verbatim URLs stay in artifacts/pageRefs.
       const guarded = buildWebSearchContent(input.query, results);
       return toolSuccess(
-        withGuardFlags(`Found ${String(results.length)} web result(s) for "${input.query}".`, guarded.flags),
+        withGuardFlags(
+          `Found ${String(results.length)} web result(s) for "${input.query}".`,
+          guarded.flags,
+        ),
         {
           content: guarded.content,
           artifacts: results.map((result, index) => ({
@@ -68,7 +71,9 @@ export function registerWebTools(deps: { host: WebToolsHost }): void {
       const status = `Fetched ${result.finalUrl} (HTTP ${String(result.status)})${result.truncated ? ', truncated' : ''}.`;
       return toolSuccess(withGuardFlags(status, guarded.flags), {
         content: guarded.content,
-        pageRefs: [{ url: result.finalUrl, ...(result.title !== undefined ? { title: result.title } : {}) }],
+        pageRefs: [
+          { url: result.finalUrl, ...(result.title !== undefined ? { title: result.title } : {}) },
+        ],
       });
     },
   });

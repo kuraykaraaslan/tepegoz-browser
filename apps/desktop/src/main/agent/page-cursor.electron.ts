@@ -50,7 +50,7 @@ function attachListener(wc: WebContents): void {
             `(function(){` +
               `var s=document.getElementById('${HIDE_STYLE_ID}');if(s)s.remove();` +
               `var e=document.getElementById('__tpz_c');if(e)e.style.display='none';` +
-            `})()`,
+              `})()`,
           );
         }
       }
@@ -96,7 +96,7 @@ export function showPageCursor(wc: WebContents, x: number, y: number): void {
       `e.style.left='${x.toFixed(1)}px';` +
       `e.style.top='${y.toFixed(1)}px';` +
       `e.style.display='block';` +
-    `})()`,
+      `})()`,
   );
 }
 
@@ -112,6 +112,6 @@ export function hidePageCursor(wc: WebContents): void {
     `(function(){` +
       `var s=document.getElementById('${HIDE_STYLE_ID}');if(s)s.remove();` +
       `var e=document.getElementById('__tpz_c');if(e)e.style.display='none';` +
-    `})()`,
+      `})()`,
   );
 }

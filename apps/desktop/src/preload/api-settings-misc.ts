@@ -143,12 +143,9 @@ export const settingsMiscApi: Pick<
   setTypoSettings: (patch: Partial<TypoSettings>) =>
     invoke<TypoSettings>(IpcChannels.typoSet, patch),
   getTypoState: () => invoke<TypoState>(IpcChannels.typoState),
-  checkTypoText: (input: TypoCheckInput) =>
-    invoke<TypoCheckResult>(IpcChannels.typoCheck, input),
-  listTypoDictionaries: () =>
-    invoke<TypoDictionaryInfo[]>(IpcChannels.typoDictionariesList),
-  downloadTypoDictionary: (id: string) =>
-    invoke<void>(IpcChannels.typoDictionaryDownload, id),
+  checkTypoText: (input: TypoCheckInput) => invoke<TypoCheckResult>(IpcChannels.typoCheck, input),
+  listTypoDictionaries: () => invoke<TypoDictionaryInfo[]>(IpcChannels.typoDictionariesList),
+  downloadTypoDictionary: (id: string) => invoke<void>(IpcChannels.typoDictionaryDownload, id),
   cancelTypoDictionaryDownload: (id: string) => {
     ipcRenderer.send(IpcChannels.typoDictionaryCancel, id);
   },
@@ -173,10 +170,8 @@ export const settingsMiscApi: Pick<
   getTranslateState: () => invoke<TranslateState>(IpcChannels.translateState),
   translateText: (input: TranslateTextInput) =>
     invoke<TranslateTextResult>(IpcChannels.translateText, input),
-  startPageTranslation: () =>
-    invoke<TranslatePageState | null>(IpcChannels.translatePageStart),
-  restorePageOriginal: () =>
-    invoke<TranslatePageState | null>(IpcChannels.translatePageRestore),
+  startPageTranslation: () => invoke<TranslatePageState | null>(IpcChannels.translatePageStart),
+  restorePageOriginal: () => invoke<TranslatePageState | null>(IpcChannels.translatePageRestore),
   setTranslateSiteEnabled: (origin: string, enabled: boolean) =>
     invoke<TranslateSettings>(IpcChannels.translateSiteSet, { origin, enabled }),
   addTranslateGlossaryTerm: (term: Omit<TranslateGlossaryTerm, 'id'>) =>

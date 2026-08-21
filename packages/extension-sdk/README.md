@@ -6,6 +6,7 @@ the agent-callable capability contract an extension may declare (ADR-0021). Depe
 `@tepegoz/shared-types` and zod.
 
 ## Exports
+
 - **`ExtensionManifestSchema`** (+ `defineExtension`/`validateManifest`) — the manifest shape: reverse-DNS
   `id` (`EXTENSION_ID_RE`), `name`/`version`/`description`, an icon slug, the declared `surfaces`
   (`popup`/`modal`/`panel`/`sidebar`/`page`), toolbar `actions` (click/double-click bindings, defaulted
@@ -44,4 +45,5 @@ the agent-callable capability contract an extension may declare (ADR-0021). Depe
   `defineActionInterceptors`.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm build` · `pnpm test` · `pnpm lint`

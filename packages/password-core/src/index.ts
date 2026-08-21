@@ -11,3 +11,4 @@ export type {
   SecretCrypto,
 } from './types';
 export { PasswordProviderRegistry } from './registry';
+export { normalizeOrigin } from './origin';

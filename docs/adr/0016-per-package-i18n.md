@@ -8,6 +8,7 @@
   `browser`) still stands.
 
 ## Context
+
 `@tepegoz/i18n` began as a **monolithic catalog**: one `en`/`tr` object with every namespace
 (`browser`, `agentConsole`, `settings`, `userAgent`, …). Every consumer imported the whole `Resources`
 tree — the renderer did `const t = resources[locale]` and prop-drilled `t` into components/extensions,
@@ -20,6 +21,7 @@ while keeping the en/tr parity guarantee (a build error today) and not coupling 
 presentational leaves or the non-React main process to React.
 
 ## Decision
+
 - **Shared core stays central.** `@tepegoz/i18n` keeps only the cross-cutting namespaces
   `common`, `window`, `errors` (as `resources`/`Resources` + `coreDict`). Everything else moves out.
 - **Each owner ships its own dictionary.** A package/extension declares its feature strings in
@@ -42,6 +44,7 @@ presentational leaves or the non-React main process to React.
   (`common`/`window`/`browser`) the app composes from `useT(coreDict)` + its own `browserDict`.
 
 ## Consequences
+
 - Feature strings live with the feature; extracting/owning a surface no longer means editing the central
   catalog. Parity is enforced per dict at build time + a co-located runtime test.
 - The `browser` namespace is genuinely shared (native menus **and** the chrome); it stays **app-owned** as

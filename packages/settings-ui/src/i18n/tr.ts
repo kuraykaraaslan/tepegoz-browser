@@ -34,7 +34,8 @@ export const tr: SettingsStrings = {
     forest: 'Orman',
   },
   glassTitle: 'Cam efekti',
-  glassHint: 'Sekme çubuğunu ve araç çubuğunu saydamlaştırarak arkasındaki masaüstünü gösterir (Windows 11).',
+  glassHint:
+    'Sekme çubuğunu ve araç çubuğunu saydamlaştırarak arkasındaki masaüstünü gösterir (Windows 11).',
 
   // --- Dil ve bölge ---
   languageRegionTitle: 'Dil ve bölge',
@@ -105,7 +106,8 @@ export const tr: SettingsStrings = {
     pauseOnSleepDesc:
       'Sistem uykuya veya batarya/güç tasarrufuna geçtiğinde arka plan ajan işini duraklatır, sistem uyandığında devam ettirir.',
     startupMode: 'Başlangıç modu',
-    startupModeDesc: 'Tepegöz her açılışta — ve sistem açılışında otomatik başlarken — nasıl açılsın. Tüm modlarda sekmeler render eder.',
+    startupModeDesc:
+      'Tepegöz her açılışta — ve sistem açılışında otomatik başlarken — nasıl açılsın. Tüm modlarda sekmeler render eder.',
     modeWindow: 'Pencere',
     modeBackground: 'Arka plan (sistem tepsisi)',
     modeKiosk: 'Kiosk (tam ekran, arayüz yok)',
@@ -280,7 +282,8 @@ export const tr: SettingsStrings = {
     warning: {
       signs_you_out: 'Bu sitedeki oturumun kapanacak.',
       holds_saved_credentials: 'Parola yöneticinde bu site için kayıtlı bir giriş var.',
-      has_offline_data: 'Bu sitenin çevrimdışı özellikleri, sayfayı yeniden yükleyene kadar çalışmayacak.',
+      has_offline_data:
+        'Bu sitenin çevrimdışı özellikleri, sayfayı yeniden yükleyene kadar çalışmayacak.',
     },
   },
   clearHistoryDesc: 'Bu cihazda ziyaret ettiğiniz sayfaların listesini kaldırır.',

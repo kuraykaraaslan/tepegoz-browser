@@ -33,4 +33,6 @@ await build({
   // special-cases the literal first line — the duplicate became a syntax error.
 });
 
-console.log('built dist/tepegoz-verify.mjs (standalone — bundled, no node_modules required to run)');
+console.log(
+  'built dist/tepegoz-verify.mjs (standalone — bundled, no node_modules required to run)',
+);

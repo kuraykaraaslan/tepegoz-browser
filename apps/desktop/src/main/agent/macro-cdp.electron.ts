@@ -104,7 +104,10 @@ export default class MacroCdp {
     }
   }
 
-  private static async centerOf(wc: WebContents, backendNodeId: number): Promise<{ x: number; y: number }> {
+  private static async centerOf(
+    wc: WebContents,
+    backendNodeId: number,
+  ): Promise<{ x: number; y: number }> {
     await wc.debugger
       .sendCommand('DOM.scrollIntoViewIfNeeded', { backendNodeId })
       .catch(() => undefined);
@@ -145,10 +148,18 @@ export default class MacroCdp {
       // No visible cursor: programmatic focus + select-all + insert is acceptable.
       await wc.debugger.sendCommand('DOM.focus', { backendNodeId });
       await wc.debugger.sendCommand('Input.dispatchKeyEvent', {
-        type: 'keyDown', modifiers: 2, key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65,
+        type: 'keyDown',
+        modifiers: 2,
+        key: 'a',
+        code: 'KeyA',
+        windowsVirtualKeyCode: 65,
       });
       await wc.debugger.sendCommand('Input.dispatchKeyEvent', {
-        type: 'keyUp', modifiers: 2, key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65,
+        type: 'keyUp',
+        modifiers: 2,
+        key: 'a',
+        code: 'KeyA',
+        windowsVirtualKeyCode: 65,
       });
       await wc.debugger.sendCommand('Input.insertText', { text });
     } else {
@@ -192,7 +203,9 @@ export default class MacroCdp {
 
   /** Read the element's text, or a named attribute, by calling a function ON that specific node. */
   static async extract(wc: WebContents, backendNodeId: number, attr?: string): Promise<string> {
-    const resolvedRaw: unknown = await wc.debugger.sendCommand('DOM.resolveNode', { backendNodeId });
+    const resolvedRaw: unknown = await wc.debugger.sendCommand('DOM.resolveNode', {
+      backendNodeId,
+    });
     const resolved = ResolveSchema.safeParse(resolvedRaw);
     if (!resolved.success) return '';
     const fn =
@@ -227,11 +240,7 @@ export default class MacroCdp {
     await wc.debugger.sendCommand('Overlay.hideHighlight').catch(() => undefined);
   }
 
-  static async pressKey(
-    wc: WebContents,
-    key: string,
-    adapter?: HumanInputAdapter,
-  ): Promise<void> {
+  static async pressKey(wc: WebContents, key: string, adapter?: HumanInputAdapter): Promise<void> {
     const spec = KEY_MAP[key];
     if (spec === undefined) throw new AppError(`Unsupported key: ${key}`, 400);
     if (adapter === undefined) {
@@ -262,7 +271,11 @@ export default class MacroCdp {
     if (adapter === undefined) {
       const deltaY = (direction === 'down' ? 1 : -1) * (amount ?? 600);
       await wc.debugger.sendCommand('Input.dispatchMouseEvent', {
-        type: 'mouseWheel', x: 10, y: 10, deltaX: 0, deltaY,
+        type: 'mouseWheel',
+        x: 10,
+        y: 10,
+        deltaX: 0,
+        deltaY,
       });
     } else {
       await adapter.idle(); // human think/react pause between behaviors

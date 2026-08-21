@@ -34,13 +34,20 @@ function ForgetSiteRow({ s }: { s: SettingsStrings }) {
 
   const preview = (): void => {
     setDone(null);
-    void window.tepegoz.planSiteDataClear(url).then(setPlan, () => { setPlan(null); });
+    void window.tepegoz.planSiteDataClear(url).then(setPlan, () => {
+      setPlan(null);
+    });
   };
   const confirm = (): void => {
-    void window.tepegoz.clearSiteData(url).then((cleared) => {
-      setPlan(null);
-      setDone(cleared?.site ?? null);
-    }, () => { setPlan(null); });
+    void window.tepegoz.clearSiteData(url).then(
+      (cleared) => {
+        setPlan(null);
+        setDone(cleared?.site ?? null);
+      },
+      () => {
+        setPlan(null);
+      },
+    );
   };
 
   return (
@@ -53,7 +60,11 @@ function ForgetSiteRow({ s }: { s: SettingsStrings }) {
           value={url}
           placeholder={s.forgetSite.placeholder}
           aria-label={s.forgetSite.title}
-          onChange={(e) => { setUrl(e.target.value); setPlan(null); setDone(null); }}
+          onChange={(e) => {
+            setUrl(e.target.value);
+            setPlan(null);
+            setDone(null);
+          }}
           className="min-w-0 flex-1 rounded-md border border-border bg-surface-base px-2 py-1 text-sm text-text-primary placeholder:text-text-disabled focus:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
         />
         <Button size="sm" variant="outline" disabled={url.trim().length === 0} onClick={preview}>

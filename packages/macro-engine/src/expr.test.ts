@@ -2,7 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { evalExpr, type Scope } from './expr';
 import type { MacroValue } from './value';
 
-const scopeOf = (vars: Record<string, MacroValue>): Scope => (n) => vars[n];
+const scopeOf =
+  (vars: Record<string, MacroValue>): Scope =>
+  (n) =>
+    vars[n];
 
 describe('evalExpr', () => {
   it('arithmetic with precedence', () => {

@@ -109,7 +109,8 @@ export function bridgeClaim(
 
 /** Ledger lines. Prints "not measured" rather than a 0% that would read as a measured failure. */
 export function bridgeLines(claim: BridgeClaim): string[] {
-  const pct = (n: number | null): string => (n === null ? 'not measured' : `${(n * 100).toFixed(1)}%`);
+  const pct = (n: number | null): string =>
+    n === null ? 'not measured' : `${(n * 100).toFixed(1)}%`;
   const stratum = (label: string, r: StratumResult): string =>
     `${label}: ${pct(r.rate)} (${String(r.verified)}/${String(r.n)}` +
     `${r.loCI === null ? '' : `, 95% CI ${pct(r.loCI)}–${pct(r.hiCI)}`})`;
@@ -124,7 +125,9 @@ export function bridgeLines(claim: BridgeClaim): string[] {
     `transport-invalid trials excluded: ${String(claim.excluded)}`,
     claim.publishable
       ? `PUBLISHABLE — first-run target (CI lower bound ≥${String(FIRST_RUN_LOWER_BOUND_TARGET * 100)}%): ${
-          claim.meetsFirstRunTarget ? 'met' : 'not met (published anyway — the number is the deliverable)'
+          claim.meetsFirstRunTarget
+            ? 'met'
+            : 'not met (published anyway — the number is the deliverable)'
         }`
       : `NOT PUBLISHABLE — ${claim.blockers.join('; ')}`,
   ];

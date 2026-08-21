@@ -46,8 +46,7 @@ function renderTagged(el: InteractableElement, tag: string): string {
   if (el.href !== undefined) attrs.push(`href="${el.href}"`);
   for (const [key, value] of Object.entries(el.attributes ?? {})) attrs.push(`${key}="${value}"`);
   const open = attrs.length > 0 ? `${tag} ${attrs.join(' ')}` : tag;
-  const body =
-    el.name.length > 0 ? `<${open}>${el.name}</${tag}>` : `<${open} />`;
+  const body = el.name.length > 0 ? `<${open}>${el.name}</${tag}>` : `<${open} />`;
   return [`${refToken(el)}${body}`, ...elementAnnotations(el)].join(' ');
 }
 
@@ -93,7 +92,8 @@ export function renderElementTsv(el: InteractableElement): string {
     if (el.accept !== undefined) state.push(`accept="${cell(el.accept)}"`);
     if (el.multiple === true) state.push('multiple');
   }
-  for (const [key, value] of Object.entries(el.attributes ?? {})) state.push(`${key}="${cell(value)}"`);
+  for (const [key, value] of Object.entries(el.attributes ?? {}))
+    state.push(`${key}="${cell(value)}"`);
   return [
     refToken(el),
     el.tag ?? '',

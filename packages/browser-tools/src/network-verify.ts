@@ -105,7 +105,8 @@ export function displayUrl(url: string, pageUrl: string): string {
     // by hand, so a query string cannot ride the fallback path into the prompt.
     return (url.split(/[?#]/)[0] ?? '').slice(0, MAX_URL_CHARS);
   }
-  const bare = parsed.origin === originOf(pageUrl) ? parsed.pathname : `${parsed.origin}${parsed.pathname}`;
+  const bare =
+    parsed.origin === originOf(pageUrl) ? parsed.pathname : `${parsed.origin}${parsed.pathname}`;
   return bare.slice(0, MAX_URL_CHARS);
 }
 

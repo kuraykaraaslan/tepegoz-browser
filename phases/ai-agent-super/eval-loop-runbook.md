@@ -23,15 +23,17 @@ pnpm eval
 ```
 
 ### Knobs (env)
-| Var | Effect |
-|---|---|
-| `TEPEGOZ_EVAL_MODE=live` | real model over the full registry (else scripted, 1 scenario) |
-| `TEPEGOZ_EVAL_PROVIDER` / `TEPEGOZ_EVAL_API_KEY` | which model + its key (provider-agnostic by design) |
-| **`TEPEGOZ_EVAL_REPEAT=3`** | **run each scenario N times** — the table shows the MAJORITY verdict, plus a MEAN per-trial pass-rate + per-scenario `k/N` frequency. **Use N≥3 for any headline** — N=1 flips run-to-run. |
-| `TEPEGOZ_EVAL_ONLY=id1,id2` | run only these scenario ids (fast iterations; a full live run is minutes-per-scenario) |
-| `TEPEGOZ_PERCEPTION=a11y` | force the accessibility-tree fallback (default is render-DOM) |
+
+| Var                                              | Effect                                                                                                                                                                                     |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `TEPEGOZ_EVAL_MODE=live`                         | real model over the full registry (else scripted, 1 scenario)                                                                                                                              |
+| `TEPEGOZ_EVAL_PROVIDER` / `TEPEGOZ_EVAL_API_KEY` | which model + its key (provider-agnostic by design)                                                                                                                                        |
+| **`TEPEGOZ_EVAL_REPEAT=3`**                      | **run each scenario N times** — the table shows the MAJORITY verdict, plus a MEAN per-trial pass-rate + per-scenario `k/N` frequency. **Use N≥3 for any headline** — N=1 flips run-to-run. |
+| `TEPEGOZ_EVAL_ONLY=id1,id2`                      | run only these scenario ids (fast iterations; a full live run is minutes-per-scenario)                                                                                                     |
+| `TEPEGOZ_PERCEPTION=a11y`                        | force the accessibility-tree fallback (default is render-DOM)                                                                                                                              |
 
 ### Output
+
 - stdout table (majority pass/fail + `k/N`), `agent-eval-report.json` (latest), and a git-ignored archive
   `agent-eval-runs/<ts>-<mode>.json` + per-scenario logs `agent-eval-runs/<ts>-<mode>-logs/<id>[.tN].log`.
 
@@ -57,11 +59,13 @@ pnpm eval
 **The durable record is [`eval-results.md`](eval-results.md)**, where a human writes the number down with
 its model tier, N, exclusion accounting, Wilson CIs, and $/trial. The JSON is scratch; the ledger is the
 claim. If you need an old run, it is in `agent-eval-runs/<ts>-<mode>.json`, not in git.
+
 - The trend line compares only against a **like-for-like** prior archive (same model + scenario count).
 - Diagnose a FAIL from its `<id>.log`: the `[eval] <kind>` step trace (plan → decisions → step_ok/error →
   done) + `stoppedReason` + token count.
 
 ## Gotchas (learned the hard way)
+
 - **Single-instance lock** → always kill stray Electron before a run (step 0).
 - **Window must stay composited.** The eval window is shown **inactive** (no focus steal) but on-screen.
   Minimizing / hiding / opacity-0 / off-screen **pauses or races the compositor** → `elementFromPoint`
@@ -72,9 +76,10 @@ claim. If you need an old run, it is in `agent-eval-runs/<ts>-<mode>.json`, not 
   client now backs off + retries 429s (and pre-send DNS blips), but heavy back-to-back scenarios still get
   starved — prefer `TEPEGOZ_EVAL_ONLY` subsets, or a higher-TPM key, for N≥3.
 - **A 429/DNS hard-fail is NOT a competence failure.** Separate transport failures (`stoppedReason:
-  tool_error` at ~0 tokens, or a log full of "backing off") from real agent misses.
+tool_error` at ~0 tokens, or a log full of "backing off") from real agent misses.
 
 ## Authoring a fixture (data-driven — one JSON entry + one HTML)
+
 - Add `test-fixtures/sites/<dir>/index.html` (self-contained: inline CSS/JS, no external assets) and a
   scenario entry in `packages/agent-eval/scenarios/*.json`.
 - **Gate the ground-truth string:** the `domAssertion` text must be ABSENT from the initial visible
@@ -84,6 +89,7 @@ claim. If you need an old run, it is in `agent-eval-runs/<ts>-<mode>.json`, not 
 - Mark `heldOut: true` for the never-tuned honesty subset — reported separately, never used to design a fix.
 
 ## Iteration discipline (the anti-vanity contract)
+
 1. **Baseline** the live tier (N≥3) → the honest "before".
 2. **Diagnose** each dev-set FAIL from its log; classify **systematic → code** vs open-ended → general.
 3. **Fix ONE root cause per iteration**, in **code** not prose, in provider-neutral layers (so all models
@@ -93,5 +99,6 @@ claim. If you need an old run, it is in `agent-eval-runs/<ts>-<mode>.json`, not 
 6. **Record** honest before/after (with caveats) — see `eval-results-2026-07.md`.
 
 ## Concurrent-work note
+
 This branch often carries parallel WIP. Commit **explicit paths only** — `git commit -- <path>` (never
 `git add .` + bare `commit`), or a concurrent actor's staged files get swept into your commit.

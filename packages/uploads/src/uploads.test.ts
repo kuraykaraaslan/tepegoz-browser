@@ -38,7 +38,9 @@ describe('@tepegoz/uploads', () => {
     expect(classifyUploadRisk({ filename: 'setup.exe' })).toBe('executable');
     expect(classifyUploadRisk({ filename: 'script.sh' })).toBe('script');
     expect(classifyUploadRisk({ filename: 'bundle.zip' })).toBe('archive');
-    expect(classifyUploadRisk({ filename: 'movie.mov', sizeBytes: 30 * 1024 * 1024 })).toBe('large');
+    expect(classifyUploadRisk({ filename: 'movie.mov', sizeBytes: 30 * 1024 * 1024 })).toBe(
+      'large',
+    );
     expect(classifyUploadRisk({ filename: 'notes.txt' })).toBe('normal');
   });
 

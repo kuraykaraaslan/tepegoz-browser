@@ -34,7 +34,7 @@ patched, because the next person to read the phase doc would otherwise inherit t
 Three properties, each enforced below the JavaScript engine:
 
 1. **Session-level request cancellation.** Everything but `about:` and `data:` is cancelled. It is a
-   property of the *session*, not a window around the call, so a `setTimeout` firing after the script
+   property of the _session_, not a window around the call, so a `setTimeout` firing after the script
    returns is just as dead — the spike fires exactly that deferred attempt.
 2. **`default-src 'none'` CSP**, delivered in the sandbox document's markup so it is in force from parse
    time. This layer exists because of a second measured finding: **Electron's `webRequest` does not

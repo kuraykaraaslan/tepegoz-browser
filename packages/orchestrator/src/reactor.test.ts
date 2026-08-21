@@ -81,11 +81,20 @@ beforeEach(() => {
 });
 
 describe('Reactor.run', () => {
-  const req = (goal = 'do it') => ({ goal, tools: tools(), provider: 'anthropic' as const, model: 'mock' });
+  const req = (goal = 'do it') => ({
+    goal,
+    tools: tools(),
+    provider: 'anthropic' as const,
+    model: 'mock',
+  });
 
   it('runs the perceive→act→finish cycle, invoking each chosen tool in order', async () => {
     ToolGateway.setConfirmHandler(() => Promise.resolve(true));
-    script([act('browser_get_elements'), act('browser_update_page', { action: 'click', ref: 1 }), finish]);
+    script([
+      act('browser_get_elements'),
+      act('browser_update_page', { action: 'click', ref: 1 }),
+      finish,
+    ]);
     const res = await Reactor.run(req());
     expect(res.stoppedReason).toBe('completed');
     expect(res.summary).toBe('done');
@@ -163,7 +172,14 @@ describe('Reactor.run', () => {
     ToolGateway.setConfirmHandler(() => Promise.resolve(true));
     const read = act('browser_get_elements');
     // Two identical reads, an action, two identical reads again: with cap 3 neither block reaches it.
-    script([read, read, act('browser_update_page', { action: 'click', ref: 1 }), read, read, finish]);
+    script([
+      read,
+      read,
+      act('browser_update_page', { action: 'click', ref: 1 }),
+      read,
+      read,
+      finish,
+    ]);
     const res = await Reactor.run(req(), { readLoopThreshold: 3 });
     expect(res.stoppedReason).toBe('completed');
     expect(calls).toEqual([
@@ -296,7 +312,11 @@ describe('Reactor.run', () => {
     const res = await Reactor.run(req(), {
       planningInterval: 3,
       validateCompletion: (ctx) =>
-        Promise.resolve(ctx.trigger === 'periodic' ? { done: true, finalAnswer: 'auto-complete' } : { done: false }),
+        Promise.resolve(
+          ctx.trigger === 'periodic'
+            ? { done: true, finalAnswer: 'auto-complete' }
+            : { done: false },
+        ),
     });
     expect(res.stoppedReason).toBe('completed');
     expect(res.summary).toBe('auto-complete');
@@ -317,7 +337,12 @@ class CapturingProvider implements ModelProvider {
     this.turns.push(req.messages.map((m) => ({ role: m.role, content: contentToText(m.content) })));
     const text = this.replies[this.turn] ?? '{"action":"finish","summary":"done"}';
     this.turn += 1;
-    return Promise.resolve({ text, stopReason: 'end', usage: { inputTokens: 1, outputTokens: 1 }, toolCalls: [] });
+    return Promise.resolve({
+      text,
+      stopReason: 'end',
+      usage: { inputTokens: 1, outputTokens: 1 },
+      toolCalls: [],
+    });
   }
 }
 
@@ -325,7 +350,12 @@ const actWithState = (tool: string, state: Record<string, unknown>): string =>
   JSON.stringify({ action: 'act', tool, args: {}, rationale: 'r', state });
 
 describe('Reactor.run typed working state (C1)', () => {
-  const req = () => ({ goal: 'do it', tools: tools(), provider: 'anthropic' as const, model: 'mock' });
+  const req = () => ({
+    goal: 'do it',
+    tools: tools(),
+    provider: 'anthropic' as const,
+    model: 'mock',
+  });
 
   it('injects the ledger into the messages the model receives, and merges across steps', async () => {
     ToolGateway.setConfirmHandler(() => Promise.resolve(true));
@@ -359,19 +389,32 @@ describe('Reactor.run typed working state (C1)', () => {
 
   it('injects nothing when the model never emits state (byte-identical legacy path)', async () => {
     ToolGateway.setConfirmHandler(() => Promise.resolve(true));
-    const provider = new CapturingProvider([act('browser_get_elements'), act('browser_get_elements'), finish]);
+    const provider = new CapturingProvider([
+      act('browser_get_elements'),
+      act('browser_get_elements'),
+      finish,
+    ]);
     ModelGateway.reset();
     ModelGateway.register(provider);
     await Reactor.run(req());
     const injectedAnywhere = provider.turns.some((turn) =>
-      turn.some((m) => m.content.includes(WORKING_STATE_HEADER) || m.content === COLLAPSED_WORKING_STATE_PLACEHOLDER),
+      turn.some(
+        (m) =>
+          m.content.includes(WORKING_STATE_HEADER) ||
+          m.content === COLLAPSED_WORKING_STATE_PLACEHOLDER,
+      ),
     );
     expect(injectedAnywhere).toBe(false);
   });
 });
 
 describe('Reactor.run no-progress replan (C1 PR2)', () => {
-  const goalReq = () => ({ goal: 'do it', tools: tools(), provider: 'anthropic' as const, model: 'mock' });
+  const goalReq = () => ({
+    goal: 'do it',
+    tools: tools(),
+    provider: 'anthropic' as const,
+    model: 'mock',
+  });
 
   /** Register a read tool + an update tool whose result is fixed, so we can drive stall vs progress. */
   function setupTools(updateResult: unknown): void {

@@ -10,13 +10,7 @@ import {
 } from '@tepegoz/shared-types';
 import { macrosDict } from './i18n';
 import type { MacrosHostApi } from './types';
-import {
-  BTN,
-  BTN_GHOST,
-  type AddableKind,
-  emptyDraft,
-  newStepOfKind,
-} from './macro-step-helpers';
+import { BTN, BTN_GHOST, type AddableKind, emptyDraft, newStepOfKind } from './macro-step-helpers';
 import {
   appendStepToContainer,
   deleteStepAtLocation,
@@ -47,7 +41,9 @@ export function MacrosCore({ api }: Readonly<{ api: MacrosHostApi }>) {
   useEffect(() => {
     refresh();
     const offStep = api.onMacroRecordStep((s) => {
-      setDraft((prev) => (prev === null ? prev : { ...prev, steps: appendStepToContainer(prev.steps, [], s.step) }));
+      setDraft((prev) =>
+        prev === null ? prev : { ...prev, steps: appendStepToContainer(prev.steps, [], s.step) },
+      );
     });
     const offRun = api.onMacroRunProgress((p) => {
       setProgress(p);
@@ -72,8 +68,10 @@ export function MacrosCore({ api }: Readonly<{ api: MacrosHostApi }>) {
   const patchStep = (location: StepLocation, fn: (step: Step) => Step): void =>
     patchSteps((steps) => updateStepAtLocation(steps, location, fn));
 
-  const setErrorPolicy = (location: StepLocation, patch: { onError?: StepErrorPolicy; retries?: number }): void =>
-    patchStep(location, (step) => ({ ...step, ...patch }));
+  const setErrorPolicy = (
+    location: StepLocation,
+    patch: { onError?: StepErrorPolicy; retries?: number },
+  ): void => patchStep(location, (step) => ({ ...step, ...patch }));
 
   const moveStep = (location: StepLocation, dir: -1 | 1): void =>
     patchSteps((steps) => moveStepAtLocation(steps, location, dir));
@@ -87,7 +85,10 @@ export function MacrosCore({ api }: Readonly<{ api: MacrosHostApi }>) {
   const addStep = (containerPath: StepContainerPath, kind: AddableKind): void =>
     patchSteps((steps) => appendStepToContainer(steps, containerPath, newStepOfKind(kind)));
 
-  async function attachCsv(location: StepLocation, step: Extract<Step, { kind: 'forEachRow' }>): Promise<void> {
+  async function attachCsv(
+    location: StepLocation,
+    step: Extract<Step, { kind: 'forEachRow' }>,
+  ): Promise<void> {
     const key = stepLocationKey(location);
     const content = csvInputs[key] ?? '';
     if (content.trim().length === 0) return;
@@ -172,10 +173,18 @@ export function MacrosCore({ api }: Readonly<{ api: MacrosHostApi }>) {
     return (
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <button type="button" className={BTN_GHOST} onClick={() => void stopIfRecording().then(() => setDraft(null))}>
+          <button
+            type="button"
+            className={BTN_GHOST}
+            onClick={() => void stopIfRecording().then(() => setDraft(null))}
+          >
             {'←'} {t.cancel}
           </button>
-          <button type="button" className={cn(BTN, recording && 'ring-2 ring-red-500')} onClick={() => void toggleRecord()}>
+          <button
+            type="button"
+            className={cn(BTN, recording && 'ring-2 ring-red-500')}
+            onClick={() => void toggleRecord()}
+          >
             {recording ? t.stopRecording : t.record}
           </button>
           {recording && <span className="text-xs text-red-500">{t.recording}</span>}
@@ -195,7 +204,12 @@ export function MacrosCore({ api }: Readonly<{ api: MacrosHostApi }>) {
         {progressLine}
 
         <div className="flex gap-2">
-          <button type="button" className={BTN} onClick={() => void runDraft()} disabled={draft.steps.length === 0 || runId !== null}>
+          <button
+            type="button"
+            className={BTN}
+            onClick={() => void runDraft()}
+            disabled={draft.steps.length === 0 || runId !== null}
+          >
             {t.run}
           </button>
           {runId !== null && (
@@ -203,7 +217,12 @@ export function MacrosCore({ api }: Readonly<{ api: MacrosHostApi }>) {
               {t.cancel}
             </button>
           )}
-          <button type="button" className={BTN_GHOST} onClick={() => void saveDraft()} disabled={draft.name.trim().length === 0 || draft.steps.length === 0}>
+          <button
+            type="button"
+            className={BTN_GHOST}
+            onClick={() => void saveDraft()}
+            disabled={draft.name.trim().length === 0 || draft.steps.length === 0}
+          >
             {t.save}
           </button>
         </div>
@@ -226,21 +245,33 @@ export function MacrosCore({ api }: Readonly<{ api: MacrosHostApi }>) {
       {progressLine}
 
       <div>
-        <h3 className="mb-1 text-xs font-medium uppercase tracking-wide text-text-secondary">{t.steps}</h3>
+        <h3 className="mb-1 text-xs font-medium uppercase tracking-wide text-text-secondary">
+          {t.steps}
+        </h3>
         {macros.length === 0 ? (
           <p className="text-sm text-text-secondary">{t.empty}</p>
         ) : (
           <ul className="space-y-1.5">
             {macros.map((m) => (
-              <li key={m.id} className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2">
+              <li
+                key={m.id}
+                className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2"
+              >
                 <span className="min-w-0">
-                  <span className="block truncate text-sm font-medium text-text-primary">{m.name}</span>
+                  <span className="block truncate text-sm font-medium text-text-primary">
+                    {m.name}
+                  </span>
                   <span className="text-xs text-text-secondary">
                     {m.stepCount} {t.stepsCount}
                   </span>
                 </span>
                 <span className="flex shrink-0 gap-1.5">
-                  <button type="button" className={BTN} onClick={() => void runSaved(m.id)} disabled={runId !== null}>
+                  <button
+                    type="button"
+                    className={BTN}
+                    onClick={() => void runSaved(m.id)}
+                    disabled={runId !== null}
+                  >
                     {t.run}
                   </button>
                   <button type="button" className={BTN_GHOST} onClick={() => void editSaved(m.id)}>

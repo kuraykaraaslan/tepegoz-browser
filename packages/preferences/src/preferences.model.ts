@@ -1,9 +1,6 @@
 import { z } from 'zod';
 import { EXTENSION_ID_RE } from '@tepegoz/extension-sdk';
-import {
-  NetworkConnectionSchema,
-  NetworkGeneralBindingSchema,
-} from '@tepegoz/shared-types';
+import { NetworkConnectionSchema, NetworkGeneralBindingSchema } from '@tepegoz/shared-types';
 import {
   AGENT_EFFORT_LEVELS,
   FILE_ACCESS_MODES,
@@ -180,6 +177,9 @@ export const PreferencesSchema = z.object({
       clipboardWrite: z.enum(SITE_PERMISSION_STATES).optional(),
     }),
   ),
+  // Per-origin page zoom, keyed by origin → zoom FACTOR (1 = 100%). Only non-default origins are
+  // stored; resetting to 100% deletes the key, so this cannot grow into a record of every site visited.
+  siteZoomFactors: z.record(z.string().max(2048), z.number().min(0.25).max(5)),
   // Popup Blocker (strict) settings — block popups by default, allowing only trusted origins.
   popupBlocker: z.object({
     enabled: z.boolean(),
@@ -353,6 +353,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   mcpServers: [],
   notificationsEnabled: true,
   sitePermissions: {},
+  siteZoomFactors: {},
   popupBlocker: { enabled: true, showNotifications: true, trustedOrigins: [] },
   adblock: {
     enabled: true,

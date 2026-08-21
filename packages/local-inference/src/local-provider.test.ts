@@ -30,7 +30,12 @@ class FakeLlamaEngine implements LlamaEngine {
   }
 }
 
-const CANNED: GenerateResult = { text: '{"action":"finish"}', finish: 'stop', inputTokens: 7, outputTokens: 4 };
+const CANNED: GenerateResult = {
+  text: '{"action":"finish"}',
+  finish: 'stop',
+  inputTokens: 7,
+  outputTokens: 4,
+};
 
 function req(over: Partial<CanonRequest> = {}): CanonRequest {
   return {
@@ -51,14 +56,20 @@ describe('LocalProvider', () => {
   it('throws a 503 when no model is selected', async () => {
     const engine = new FakeLlamaEngine(CANNED);
     const provider = new LocalProvider({ engine, resolveModel: () => null });
-    await expect(provider.complete(req(), new AbortController().signal)).rejects.toThrow(/local model/i);
+    await expect(provider.complete(req(), new AbortController().signal)).rejects.toThrow(
+      /local model/i,
+    );
   });
 
   it('loads the selected model and maps the result', async () => {
     const engine = new FakeLlamaEngine(CANNED);
     const provider = new LocalProvider({
       engine,
-      resolveModel: () => ({ modelId: 'tepegoz-slm-1', modelPath: '/models/x.gguf', ctxSize: 4096 }),
+      resolveModel: () => ({
+        modelId: 'tepegoz-slm-1',
+        modelPath: '/models/x.gguf',
+        ctxSize: 4096,
+      }),
     });
     const res = await provider.complete(req(), new AbortController().signal);
     expect(engine.loadCalls).toEqual(['tepegoz-slm-1']);

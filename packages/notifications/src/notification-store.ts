@@ -20,7 +20,9 @@ export default class NotificationStore {
   /** Add a center item (newest-first). If it carries a `dedupeKey`, it replaces the prior match. */
   static add(item: AppNotification): void {
     if (item.dedupeKey !== undefined) {
-      NotificationStore.items = NotificationStore.items.filter((i) => i.dedupeKey !== item.dedupeKey);
+      NotificationStore.items = NotificationStore.items.filter(
+        (i) => i.dedupeKey !== item.dedupeKey,
+      );
     }
     NotificationStore.items.unshift(item);
     if (NotificationStore.items.length > CAP) NotificationStore.items.length = CAP;
@@ -58,7 +60,9 @@ export default class NotificationStore {
   /** Mark every item read (no-op if all already read). */
   static markAllRead(): void {
     if (NotificationStore.items.every((i) => i.read)) return;
-    NotificationStore.items = NotificationStore.items.map((i) => (i.read ? i : { ...i, read: true }));
+    NotificationStore.items = NotificationStore.items.map((i) =>
+      i.read ? i : { ...i, read: true },
+    );
     NotificationStore.emit();
   }
 

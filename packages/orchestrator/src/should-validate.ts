@@ -50,7 +50,8 @@ export function shouldValidate(
   state: ValidationCadenceState,
   bounds: ValidationCadenceBounds,
 ): ValidationDecision {
-  if (state.actionsSinceValidation < bounds.floor) return { validate: false, reason: 'below_floor' };
+  if (state.actionsSinceValidation < bounds.floor)
+    return { validate: false, reason: 'below_floor' };
   // A signature we have never validated against counts as changed: the first pass must happen.
   if (state.currentSig !== null && state.currentSig !== state.sigAtLastValidation) {
     return { validate: true, reason: 'page_changed' };

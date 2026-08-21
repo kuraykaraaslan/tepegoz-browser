@@ -25,8 +25,14 @@ describe('TokenLedger', () => {
   });
 
   it('snapshots per-(provider,model,capability) rows for persistence', () => {
-    TokenLedger.record('anthropic', 'claude-opus-4-8', 'plan', { inputTokens: 10, outputTokens: 40 });
-    TokenLedger.record('anthropic', 'claude-opus-4-8', 'plan', { inputTokens: 5, outputTokens: 20 });
+    TokenLedger.record('anthropic', 'claude-opus-4-8', 'plan', {
+      inputTokens: 10,
+      outputTokens: 40,
+    });
+    TokenLedger.record('anthropic', 'claude-opus-4-8', 'plan', {
+      inputTokens: 5,
+      outputTokens: 20,
+    });
     TokenLedger.record('openai', 'gpt-4o', 'exec', { inputTokens: 1, outputTokens: 2 });
     const rows = TokenLedger.snapshotEntries();
     expect(rows).toContainEqual({
@@ -35,6 +41,10 @@ describe('TokenLedger', () => {
       capability: 'plan',
       inputTokens: 15,
       outputTokens: 60,
+      // A provider that reports no cache counters snapshots as zero, never as absent — the persisted
+      // row shape has to be the same for every provider.
+      cacheReadTokens: 0,
+      cacheWriteTokens: 0,
       calls: 2,
     });
     expect(rows).toContainEqual({
@@ -43,6 +53,8 @@ describe('TokenLedger', () => {
       capability: 'exec',
       inputTokens: 1,
       outputTokens: 2,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 0,
       calls: 1,
     });
   });

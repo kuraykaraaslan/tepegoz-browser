@@ -80,7 +80,10 @@ export function nodeHash(node: DomTreeNode): string {
  * fingerprint `i` was NOT present before. `prevHashes === null` (a fresh page, or the first snapshot)
  * marks nothing new — "new" means appeared-since-an-action-on-this-page, not present-on-first-load.
  */
-export function markNewElements(hashes: readonly string[], prevHashes: ReadonlySet<string> | null): boolean[] {
+export function markNewElements(
+  hashes: readonly string[],
+  prevHashes: ReadonlySet<string> | null,
+): boolean[] {
   if (prevHashes === null) return hashes.map(() => false);
   return hashes.map((h) => !prevHashes.has(h));
 }

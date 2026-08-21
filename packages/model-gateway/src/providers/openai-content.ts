@@ -19,8 +19,7 @@ export interface OpenAIToolCall {
 
 /** A content part, used only when a turn carries an image (a text-only turn stays a plain string). */
 export type OpenAIContentPart =
-  | { type: 'text'; text: string }
-  | { type: 'image_url'; image_url: { url: string } };
+  { type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } };
 
 export interface OpenAIChatMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
@@ -68,7 +67,8 @@ function expand(message: CanonMessage): OpenAIChatMessage[] {
   const textOnly = parts.every((p) => p.type === 'text');
   // Keep the plain-string form whenever it is faithful: it is what every existing turn sends, and the
   // parts array is only required once an image is in play.
-  const content = hasImage || !textOnly ? parts : parts.map((p) => (p.type === 'text' ? p.text : '')).join('\n');
+  const content =
+    hasImage || !textOnly ? parts : parts.map((p) => (p.type === 'text' ? p.text : '')).join('\n');
   if (toolCalls.length > 0) {
     // `content: null` is the API's shape for an assistant turn that is purely a tool call.
     const assistant: OpenAIChatMessage = {

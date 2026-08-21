@@ -10,6 +10,7 @@ browser operations are injected via a `MacroHost`, implemented by the app over t
 in `main/macro/macro-host.electron.ts`.
 
 ## Exports
+
 - **`runMacro`** — executes a `Macro` (from `@tepegoz/shared-types`) against a `MacroHost`; `RunOptions`
   in (initial variables, cancellation signal, `onProgress`, wait/step-count/pacing overrides), `RunResult`
   out (`ok`/`aborted`/`stepsRun`/final `variables`). Enforces a runaway-loop guard (`maxSteps`, default
@@ -27,4 +28,5 @@ in `main/macro/macro-host.electron.ts`.
 - **`MacroValue`**, **`toStr`**, **`toNum`**, **`toBool`** — the macro value type and its coercions.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test` · `pnpm build`

@@ -77,16 +77,21 @@ export function ConversationHistoryDropdown({
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    void api.listAgentConversations({ query, limit: RECENT_LIMIT }).then((next) => {
-      if (cancelled) return;
-      setItems(next);
-      setLoading(false);
-    }, () => {
-      if (cancelled) return;
-      setItems([]);
-      setLoading(false);
-    });
-    return () => { cancelled = true; };
+    void api.listAgentConversations({ query, limit: RECENT_LIMIT }).then(
+      (next) => {
+        if (cancelled) return;
+        setItems(next);
+        setLoading(false);
+      },
+      () => {
+        if (cancelled) return;
+        setItems([]);
+        setLoading(false);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
   }, [api, query]);
 
   useEffect(() => {
@@ -112,7 +117,9 @@ export function ConversationHistoryDropdown({
     >
       {(close) => (
         <div className="w-full">
-          <label className="sr-only" htmlFor="agent-conversation-history-search">{labels.search}</label>
+          <label className="sr-only" htmlFor="agent-conversation-history-search">
+            {labels.search}
+          </label>
           <input
             id="agent-conversation-history-search"
             value={query}
@@ -138,10 +145,12 @@ export function ConversationHistoryDropdown({
                         onClick={() => {
                           if (groupId === null) return;
                           markRead(item.id, item.updatedAt);
-                          void api.openAgentConversation({ id: item.id, groupId }).then((detail) => {
-                            if (detail !== null) onOpenConversation(detail);
-                            close();
-                          });
+                          void api
+                            .openAgentConversation({ id: item.id, groupId })
+                            .then((detail) => {
+                              if (detail !== null) onOpenConversation(detail);
+                              close();
+                            });
                         }}
                         className="flex w-full items-start gap-2 rounded-md py-2 pl-2 pr-9 text-left hover:bg-surface-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
                       >
@@ -154,7 +163,9 @@ export function ConversationHistoryDropdown({
                           )}
                         />
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium text-text-primary">{item.title}</span>
+                          <span className="block truncate text-sm font-medium text-text-primary">
+                            {item.title}
+                          </span>
                           <span className="mt-0.5 block line-clamp-2 text-xs text-text-secondary [overflow-wrap:anywhere]">
                             {item.preview}
                           </span>
@@ -177,7 +188,10 @@ export function ConversationHistoryDropdown({
           </div>
           <button
             type="button"
-            onClick={() => { api.createTab(FULL_HISTORY_URL); close(); }}
+            onClick={() => {
+              api.createTab(FULL_HISTORY_URL);
+              close();
+            }}
             className="mt-2 w-full border-t border-border px-2 pt-2 text-left text-sm font-medium text-text-primary hover:text-amber-500 focus-visible:outline-none"
           >
             {labels.full}

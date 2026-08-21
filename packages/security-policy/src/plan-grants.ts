@@ -1,7 +1,4 @@
-import {
-  NEVER_AUTO_GRANTABLE_TIERS,
-  type RiskTier,
-} from '@tepegoz/shared-types';
+import { NEVER_AUTO_GRANTABLE_TIERS, type RiskTier } from '@tepegoz/shared-types';
 import { registrableDomain } from './registrable-domain';
 
 /**

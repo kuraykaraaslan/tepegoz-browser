@@ -56,7 +56,10 @@ export function makeBindingListener(wc: WebContents): BindingListener {
       url,
       origin,
       sourceLanguage: normalizeTranslateLanguage(payload.sourceLanguage),
-      targetLanguage: normalizeTranslateLanguage(payload.targetLanguage, translateHost.targetLanguage()),
+      targetLanguage: normalizeTranslateLanguage(
+        payload.targetLanguage,
+        translateHost.targetLanguage(),
+      ),
       status: 'translating',
       translatedItems: 0,
       totalItems: payload.items.length,
@@ -96,7 +99,10 @@ export function makeBindingListener(wc: WebContents): BindingListener {
           url: wc.getURL(),
           origin,
           sourceLanguage: normalizeTranslateLanguage(payload.sourceLanguage),
-          targetLanguage: normalizeTranslateLanguage(payload.targetLanguage, translateHost.targetLanguage()),
+          targetLanguage: normalizeTranslateLanguage(
+            payload.targetLanguage,
+            translateHost.targetLanguage(),
+          ),
           status: 'error',
           translatedItems: 0,
           totalItems: payload.items.length,

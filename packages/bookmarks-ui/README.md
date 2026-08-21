@@ -11,6 +11,7 @@ of the other chrome leaves in this batch, it does own its own dictionary (`./i18
 title. It has no dependency on the Electron bridge.
 
 ## Exports
+
 - **`BookmarksManager`** — the two-pane bookmark manager view.
 - **`BookmarkManagerNode`** — a tree node the manager renders (`id`, `type`, `title`, `url`,
   optional `favicon`, `children`); structurally compatible with the host's richer
@@ -20,6 +21,7 @@ title. It has no dependency on the Electron bridge.
 - **`bookmarksUiDict`** / **`BookmarksUiStrings`** — the package's own i18n dictionary.
 
 ## Usage
+
 ```tsx
 <BookmarksManager
   getTree={() => window.tepegoz.bookmarks.getTree()}
@@ -32,4 +34,5 @@ title. It has no dependency on the Electron bridge.
 ```
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

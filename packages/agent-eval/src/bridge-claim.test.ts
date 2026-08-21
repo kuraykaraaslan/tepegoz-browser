@@ -20,7 +20,11 @@ describe('the publish gate', () => {
   it('REFUSES to publish a number scored by an uncalibrated judge', () => {
     // The Never-list bans auto-judge headlines. Enforced here rather than remembered: one human label
     // is not a check, and the run does not get to argue.
-    const claim = bridgeClaim([trial(), trial()], { n: 1, agreements: 1, rate: 1, disagreements: [] }, 1);
+    const claim = bridgeClaim(
+      [trial(), trial()],
+      { n: 1, agreements: 1, rate: 1, disagreements: [] },
+      1,
+    );
     expect(claim.publishable).toBe(false);
     expect(claim.blockers.join(' ')).toContain('calibration');
   });
@@ -94,7 +98,11 @@ describe('the numbers', () => {
   });
 
   it('meets the target once there are enough trials behind the rate', () => {
-    const claim = bridgeClaim(Array.from({ length: 30 }, () => trial()), calibrated, 30);
+    const claim = bridgeClaim(
+      Array.from({ length: 30 }, () => trial()),
+      calibrated,
+      30,
+    );
     expect(claim.meetsFirstRunTarget).toBe(true);
   });
 });

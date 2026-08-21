@@ -24,7 +24,12 @@ export const CanonTextBlockSchema = z.object({
  * type is a request we cannot honestly send, and silently dropping it would make the model *look* like
  * it saw a picture it never received.
  */
-export const CANON_IMAGE_MEDIA_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'] as const;
+export const CANON_IMAGE_MEDIA_TYPES = [
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+  'image/gif',
+] as const;
 export type CanonImageMediaType = (typeof CANON_IMAGE_MEDIA_TYPES)[number];
 
 /** A raster image as base64 bytes (no data: prefix — adapters add whatever envelope their vendor wants). */

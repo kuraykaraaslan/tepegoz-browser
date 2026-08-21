@@ -60,7 +60,13 @@ export interface CheckFormOptions {
 }
 
 /** Input types that carry no user-entered text value (so "required-empty" does not apply). */
-const NON_VALUE_TYPES: ReadonlySet<string> = new Set(['submit', 'button', 'reset', 'image', 'hidden']);
+const NON_VALUE_TYPES: ReadonlySet<string> = new Set([
+  'submit',
+  'button',
+  'reset',
+  'image',
+  'hidden',
+]);
 /** Toggle inputs whose "required" means CHECKED — checked state is not in the snapshot, so a required
  *  toggle is deliberately NOT reported (better silent than a permanent false "empty"). */
 const TOGGLE_TYPES: ReadonlySet<string> = new Set(['checkbox', 'radio']);
@@ -99,7 +105,11 @@ function isCheckableTextField(el: InteractableElement): boolean {
  *  strip quotes/newlines (so it cannot close a quote and forge a verdict), and cap. */
 function safeLabel(raw: string): string {
   const { text } = sanitizeContent(raw);
-  return text.replace(/["'\r\n]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
+  return text
+    .replace(/["'\r\n]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80);
 }
 
 function labelOf(el: InteractableElement): string {
@@ -152,7 +162,8 @@ function classify(elements: readonly InteractableElement[]): Classified {
 
   for (const el of elements) {
     const attrs = el.attributes;
-    if (attrs?.required !== undefined || attrs?.['aria-required'] !== undefined) sawAnyConstraint = true;
+    if (attrs?.required !== undefined || attrs?.['aria-required'] !== undefined)
+      sawAnyConstraint = true;
     if (attrs?.['aria-invalid'] === 'true') {
       sawAnyConstraint = true;
       flaggedInvalid.push({ ref: el.ref, label: labelOf(el), reason: 'flagged-invalid' });
@@ -176,7 +187,8 @@ export function checkForm(
   pageText = '',
   options: CheckFormOptions = {},
 ): FormReport {
-  const { requiredEmpty, flaggedInvalid, sawAnyConstraint, skippedCustomRequired } = classify(elements);
+  const { requiredEmpty, flaggedInvalid, sawAnyConstraint, skippedCustomRequired } =
+    classify(elements);
   const coverageNotes: string[] = [];
   const visibleErrors = scanVisibleErrors(pageText);
 
@@ -184,7 +196,9 @@ export function checkForm(
     coverageNotes.push('only the fields in view were inspected (the snapshot is viewport-limited)');
   }
   if (!sawAnyConstraint && elements.length > 0) {
-    coverageNotes.push('no validation constraints were captured for this page, so required fields cannot be detected');
+    coverageNotes.push(
+      'no validation constraints were captured for this page, so required fields cannot be detected',
+    );
   }
   if (skippedCustomRequired > 0) {
     coverageNotes.push(
@@ -200,7 +214,8 @@ export function checkForm(
       `${String(flaggedInvalid.length)} field(s) are marked invalid by the page (may be left over from an earlier submit): ${listIssues(flaggedInvalid)}`,
     );
   }
-  if (visibleErrors.length > 0) advisory.push(`error text on the page (may be stale): ${visibleErrors.join(' | ')}`);
+  if (visibleErrors.length > 0)
+    advisory.push(`error text on the page (may be stale): ${visibleErrors.join(' | ')}`);
   const advisoryText = advisory.length > 0 ? ` Advisory — ${advisory.join('; ')}.` : '';
 
   let summary: string;

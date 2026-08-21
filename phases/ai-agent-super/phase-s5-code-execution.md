@@ -24,7 +24,7 @@ tepegoz has **zero** JS execution and **no** structured extraction. `INTERACTABL
 [interactable.ts](../../packages/tool-executor/src/interactable.ts) has no `grid`/`row`/`cell`/
 `columnheader`; `buildDomTree` in
 [build-dom-tree-script.ts](../../apps/desktop/src/main/agent/build-dom-tree-script.ts) emits only
-interactive nodes; `browser_get_page` flattens to capped `innerText`, so *"open the cheapest row"* is
+interactive nodes; `browser_get_page` flattens to capped `innerText`, so _"open the cheapest row"_ is
 luck on flat text. Extracting a 1000-row table today means a click-and-read loop that exhausts the
 budget.
 
@@ -82,6 +82,7 @@ script hash** pre-model (ADR-0006). `code_exec_write` is reserved and **disabled
 ## Tasks
 
 ### PR0 — fixture freeze + ADR + kernel class + sandbox contract
+
 - [x] Author + freeze the `s5_extract_*` and `atk_code_exec_*` fixtures in
       [packages/agent-eval](../../packages/agent-eval) `scenarios/` with a new registry file; ground-truth
       values revealed only by a correct read (runbook authoring rule). Coordinate the adversarial set
@@ -100,6 +101,7 @@ script hash** pre-model (ADR-0006). `code_exec_write` is reserved and **disabled
       structural guarantee behind the DoD, so it lands before any tool wiring.
 
 ### PR1 — execute plane + caps (Lane B, packages/tool-executor)
+
 - [x] Add `browser_execute_extraction(script)` to the browser tool surface
       ([browser-tools.ts](../../packages/browser-tools/src/browser-tools.ts)), zod-validated, routed
       through ToolGateway with the `code_exec_read` class. Host runs it via the existing
@@ -113,6 +115,7 @@ script hash** pre-model (ADR-0006). `code_exec_write` is reserved and **disabled
       enters context — identical to any page read.
 
 ### PR2 — curated `browser_extract_table` (F2's clickable-cell design)
+
 - [ ] Add `browser_extract_table(ref)` built on the same isolated-world plane, taking an **S2 identity
       ref** as the table anchor: returns headers, rows, cells, row/column association, pagination
       awareness, capped + honest-truncation serialisation.
@@ -123,6 +126,7 @@ script hash** pre-model (ADR-0006). `code_exec_write` is reserved and **disabled
 - [ ] Add the `code_exec_read` approval-modal + journal strings to the owning package dict, EN + full-TR.
 
 ### PR3 — adversarial fixtures + sweep
+
 - [ ] Run the frozen `atk_code_exec_*` battery on-harness (all planes ON) at N≥10 each; any success →
       fix cycle or the RISK GATE trips (permanent `ask`-tier gating recorded in the ledger + ADR-0026).
 - [ ] Run the paired with/without extraction sweep (single-change branch, serialised per the
@@ -139,12 +143,13 @@ script hash** pre-model (ADR-0006). `code_exec_write` is reserved and **disabled
 > access. Recorded as a NO-GO rather than quietly patched, because otherwise the next reader inherits
 > the same wrong intuition from this document.
 >
-> **What ships instead:** a hidden window whose *session* cancels every request, holding a COPY of the
+> **What ships instead:** a hidden window whose _session_ cancels every request, holding a COPY of the
 > page’s HTML, under a `default-src 'none'` CSP. Both layers are load-bearing and the second exists
 > because of a second measured finding: **Electron’s `webRequest` does not intercept the WebSocket
 > handshake** — with the session filter alone, every HTTP path was dead and `ws://` walked out.
 >
 > Consequences worth stating:
+>
 > 1. **The script sees a snapshot, not the live page.** Values computed by page JS after the snapshot
 >    are absent, and nothing the script does can affect the real page — which in v1 is the point.
 > 2. **No JS-level defence is attempted.** `acceptScript` deliberately does not scan for `fetch` or
@@ -195,8 +200,7 @@ carried no PROSE-LEDGER row. (Row 7 — collapsed-menu `get_elements` note — s
 Adds **ADR-0026** — agent code execution: isolated world only (never page-principal), read-only in v1
 (no page-global mutation), PolicyKernel-classed (`code_exec_read` journaled by script hash;
 `code_exec_write` reserved + disabled), no `fetch`/`XHR`/`WebSocket`/`sendBeacon`/navigation inside the
-world, result-size capped, and the RISK-GATE commitment. Amends nothing; continues the ADR sequence from
-0025.
+world, result-size capped, and the RISK-GATE commitment. Amends nothing; continues the ADR sequence from 0025.
 
 ## Risks
 

@@ -166,7 +166,10 @@ export function summarizeFamilies(rows: FamilyRow[], minScenarios = 2): FamilySt
     if (fam.length < minScenarios) continue;
     // Pool over VALID trials (each scenario's own n / escapeN), never the configured repeat — a
     // transport-flaked trial must not enter the pass or escape denominator.
-    const pass = poolCounts(fam.reduce((s, r) => s + r.passes, 0), fam.reduce((s, r) => s + r.n, 0));
+    const pass = poolCounts(
+      fam.reduce((s, r) => s + r.passes, 0),
+      fam.reduce((s, r) => s + r.n, 0),
+    );
     const eligible = fam.filter((r) => r.escapeEligible);
     const stat: FamilyStat = { tag, scenarios: fam.length, pass };
     if (eligible.length > 0) {

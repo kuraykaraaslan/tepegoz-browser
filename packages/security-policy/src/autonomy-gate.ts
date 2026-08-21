@@ -1,4 +1,8 @@
-import { NEVER_AUTO_GRANTABLE_TIERS, type AgentAutonomy, type RiskTier } from '@tepegoz/shared-types';
+import {
+  NEVER_AUTO_GRANTABLE_TIERS,
+  type AgentAutonomy,
+  type RiskTier,
+} from '@tepegoz/shared-types';
 import type { PolicyResult } from './policy-kernel';
 
 /**
@@ -41,7 +45,8 @@ export function resolveAutonomy(
 ): AutonomyGateResult {
   // Defence in depth: the gateway only calls the confirm handler for `ask`, but if a caller ever
   // routes a decided result through here, autonomy must not be able to change it.
-  if (policy.decision === 'deny') return { decision: 'prompt', reason: 'autonomy_cannot_override_deny' };
+  if (policy.decision === 'deny')
+    return { decision: 'prompt', reason: 'autonomy_cannot_override_deny' };
   if (policy.decision === 'allow') return { decision: 'auto_approve', reason: 'policy_allowed' };
 
   switch (autonomy) {

@@ -10,6 +10,7 @@ every owner uses. See [ADR-0016](../../docs/adr/0016-per-package-i18n.md).
 ## Exports
 
 ### `@tepegoz/i18n` (framework-agnostic — safe for main/backend)
+
 - `resources` (`Record<Locale, Resources>`) and `coreDict` — the shared core (`common`/`window`/`errors`).
   `Resources = typeof en` makes any missing/mismatched core key a **build error**; a parity test asserts
   equal key sets.
@@ -19,16 +20,20 @@ every owner uses. See [ADR-0016](../../docs/adr/0016-per-package-i18n.md).
   process). `type Dict<T>`.
 
 ### `@tepegoz/i18n/react` (React runtime — renderer/UI packages/extensions)
+
 - `I18nProvider({ locale, children })` — mount once near the root (both `App` and `PopupApp`).
 - `useLocale()` and `useT(dict)` — self-localize a component from its own dict (with `en` fallback).
 
 ### `@tepegoz/i18n/testing`
+
 - `keyPaths(obj)` — the helper each owner's parity test uses.
 
 ## Adding a string
+
 Add it to the **owner** package's `src/i18n/en.ts` **and** `tr.ts` (the compiler + that package's parity
 test enforce en/tr parity). Only genuinely cross-cutting strings (`common`/`window`/`errors`) go here.
 Consume it with `useT(ownerDict)` in React, or `pick(ownerDict, locale)` in the main process.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test` · `pnpm build`

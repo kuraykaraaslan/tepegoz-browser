@@ -4,6 +4,7 @@
 - **Date:** 2026-07-01
 
 ## Context
+
 Phase 1a's Definition of Done is one concrete end-to-end agentic task that is **observable** and
 **security-by-design**: a user prompt must flow through planning, the deterministic Policy Kernel, a
 human-in-the-loop gate, tool execution, and a live console — with no security decision delegated to
@@ -12,13 +13,14 @@ capability-plane, security-policy, tool-executor); this ADR records how they are
 Electron app.
 
 ## Decision
+
 - **Main-process `AgentService` orchestrates; the renderer only displays + answers HITL.** Flow:
   prompt → `ModelRouter` (capability→tier + cost-saver) → provider registered from the safeStorage
   vault key (raw key never leaves main) → `Planner` (Intent→DAG, LLM output zod-validated, unknown
   tools rejected) → **plan-preview HITL** → sequential `Executor` through the single `ToolGateway`
   PEP (Policy Kernel + **per-tool HITL**) → built-in browser/tab tools on the isolated active tab.
-- **Two HITL gates, both fail-safe.** (1) *Plan preview before the loop:* the whole DAG is shown; the
-  user may prune steps and must approve — reject or a timeout runs **nothing**. (2) *Per-tool:* any
+- **Two HITL gates, both fail-safe.** (1) _Plan preview before the loop:_ the whole DAG is shown; the
+  user may prune steps and must approve — reject or a timeout runs **nothing**. (2) _Per-tool:_ any
   `state_changing`/`destructive`/`financial` (or tainted, or sensitive-site) call is gated at the
   ToolGateway; no confirm handler / no response = **deny**. Both round-trip main→renderer→main via a
   pending-promise map keyed by a per-run id.
@@ -34,6 +36,7 @@ Electron app.
   cleanly; only a **redacted** args preview crosses to the renderer, never raw args or the key.
 
 ## Consequences
+
 - The end-to-end task works with security enforced deterministically **before** the model and a human
   gate **before** any side effect — a prompt-injected model cannot widen its own authority.
 - Concurrency: `ToolGateway` confirm/audit handlers are process-global statics, so Phase 1a assumes

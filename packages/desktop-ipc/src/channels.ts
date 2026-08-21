@@ -75,6 +75,14 @@ export const IpcChannels = {
   tabsDragCancel: 'tabs:drag-cancel',
   /** Renderer→main: this window's tab-strip geometry (client coords) for cross-window drop hit-testing. */
   tabsReportStrip: 'tabs:report-strip',
+  /** Find-in-page (Ctrl+F). Runs against the sender window's ACTIVE tab; internal pages have no view. */
+  findStart: 'find:start',
+  /** Stop the search and clear the page's selection/highlights. */
+  findStop: 'find:stop',
+  /** main→renderer: Chromium's match counts for the query that is still in flight. */
+  findResult: 'find:result',
+  /** main→renderer: Ctrl+F arrived while the PAGE had focus, so the chrome must open the bar itself. */
+  findOpen: 'find:open',
   /** Renderer→main: open a fresh empty browser window (main-menu "New window"). */
   windowNew: 'window:new',
   agentRun: 'agent:run',
@@ -278,6 +286,14 @@ export const IpcChannels = {
   notificationsMarkAllRead: 'notifications:mark-all-read',
   notificationsState: 'notifications:state',
   notificationsToast: 'notifications:toast',
+  /** main→renderer: a TLS certificate error is waiting on the user. */
+  certificateErrorRequest: 'cert:request',
+  /** renderer→main: proceed past the certificate error, or refuse. */
+  certificateErrorRespond: 'cert:respond',
+  /** main→renderer: an HTTP 401/407 challenge is waiting on the user. */
+  authBasicRequest: 'auth:basic-request',
+  /** renderer→main: the credentials, or a cancellation. */
+  authBasicRespond: 'auth:basic-respond',
   notificationPermissionRequest: 'notifications:permission-request',
   notificationPermissionRespond: 'notifications:permission-respond',
   // Login credential manager (channels use "logins:" prefix to avoid SAST false positives on the

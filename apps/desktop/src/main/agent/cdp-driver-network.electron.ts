@@ -120,7 +120,8 @@ function trackRequest(net: TabNetwork, params: unknown): void {
     method: (request?.method ?? previous?.method ?? '').toUpperCase().slice(0, 16),
     type: type ?? previous?.type ?? '',
     url: safeUrl(request?.url ?? previous?.url ?? ''),
-    redirects: redirectResponse !== undefined ? (previous?.redirects ?? 0) + 1 : (previous?.redirects ?? 0),
+    redirects:
+      redirectResponse !== undefined ? (previous?.redirects ?? 0) + 1 : (previous?.redirects ?? 0),
     // A redirect hop keeps the ORIGINAL start time — the chain is one request as far as causality goes.
     startedAt: previous?.startedAt ?? Date.now(),
   });
@@ -163,7 +164,10 @@ function trackFailure(net: TabNetwork, params: unknown, pageUrl: string): void {
   // mixed-content / extension rules block requests on perfectly healthy pages — attributing those to the
   // agent's click would make the product report "your save failed" every time it successfully blocked a
   // tracker. `blockedReason` is the CDP-native signal; the ERR_BLOCKED_* family covers the rest.
-  if (blockedReason !== undefined || (errorText !== undefined && errorText.startsWith('net::ERR_BLOCKED'))) {
+  if (
+    blockedReason !== undefined ||
+    (errorText !== undefined && errorText.startsWith('net::ERR_BLOCKED'))
+  ) {
     return;
   }
   const url = pending?.url ?? '';

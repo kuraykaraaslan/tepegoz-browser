@@ -56,7 +56,9 @@ describe('detectHandoff', () => {
   it('still fires on a bare 2FA/OTP token WHEN a challenge cue is adjacent', () => {
     expect(detectHandoff('Enter your 2FA code to continue')?.kind).toBe('twofa');
     expect(detectHandoff('Type the OTP we sent to your email')?.kind).toBe('twofa');
-    expect(detectHandoff('Please enter the security code from your authenticator')?.kind).toBe('twofa');
+    expect(detectHandoff('Please enter the security code from your authenticator')?.kind).toBe(
+      'twofa',
+    );
     expect(detectHandoff('Type the passcode from the SMS we just sent you')?.kind).toBe('twofa');
     expect(detectHandoff('Enter one of your backup codes to sign in')?.kind).toBe('twofa');
   });
@@ -66,8 +68,12 @@ describe('detectHandoff', () => {
   });
 
   it('detects bot-wall interstitials by their fixed copy', () => {
-    expect(detectHandoff('Checking your browser before you access example.com')?.kind).toBe('captcha');
-    expect(detectHandoff('example.com needs to review the security of your connection')?.kind).toBe('captcha');
+    expect(detectHandoff('Checking your browser before you access example.com')?.kind).toBe(
+      'captcha',
+    );
+    expect(detectHandoff('example.com needs to review the security of your connection')?.kind).toBe(
+      'captcha',
+    );
     expect(detectHandoff('Press & Hold to confirm you are human')?.kind).toBe('captcha');
   });
 
@@ -97,7 +103,9 @@ describe('detectHandoff', () => {
   it('detects a login wall from gated wall copy (accessibility-tree fallback, no attrs)', () => {
     expect(detectHandoff('Please log in to continue to your feed')?.kind).toBe('login');
     expect(detectHandoff('You must be logged in to like this post')?.kind).toBe('login');
-    expect(detectHandoff('Your session has expired. Sign in again to continue.')?.kind).toBe('login');
+    expect(detectHandoff('Your session has expired. Sign in again to continue.')?.kind).toBe(
+      'login',
+    );
   });
 
   it('does NOT fire on a bare "Log In" / "Sign Up" nav link (the /explore false-positive)', () => {
@@ -113,7 +121,9 @@ describe('detectHandoff', () => {
   });
 
   it('does NOT fire when login is merely a topic/nav mention (no password field, no wall copy)', () => {
-    expect(detectHandoff('Sign in with your account or create a new one', 'https://site.test/')).toBeNull();
+    expect(
+      detectHandoff('Sign in with your account or create a new one', 'https://site.test/'),
+    ).toBeNull();
     expect(detectHandoff('How to log in to your router — a step-by-step guide')).toBeNull();
     expect(detectHandoff('This article explains why password managers matter.')).toBeNull();
   });

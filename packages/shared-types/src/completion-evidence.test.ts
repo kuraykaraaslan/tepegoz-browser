@@ -5,7 +5,10 @@ import {
   type CompletionEvidence,
 } from './completion-evidence';
 
-const item = (verdict: 'supports' | 'contradicts' | 'inconclusive', id = 'n1'): CompletionEvidence['items'][number] => ({
+const item = (
+  verdict: 'supports' | 'contradicts' | 'inconclusive',
+  id = 'n1',
+): CompletionEvidence['items'][number] => ({
   id,
   kind: 'network',
   verdict,
@@ -29,7 +32,9 @@ describe('classifyCompletion', () => {
 
   it('downgrades a mutating claim with NO supporting record to attempted_unverified', () => {
     expect(classifyCompletion({ mutating: true, items: [] })).toBe('attempted_unverified');
-    expect(classifyCompletion({ mutating: true, items: [item('inconclusive')] })).toBe('attempted_unverified');
+    expect(classifyCompletion({ mutating: true, items: [item('inconclusive')] })).toBe(
+      'attempted_unverified',
+    );
   });
 
   it('does not punish a pure read for having nothing to verify', () => {
@@ -37,13 +42,18 @@ describe('classifyCompletion', () => {
   });
 
   it('still contradicts a read task when a record actively disagrees', () => {
-    expect(classifyCompletion({ mutating: false, items: [item('contradicts')] })).toBe('contradicted');
+    expect(classifyCompletion({ mutating: false, items: [item('contradicts')] })).toBe(
+      'contradicted',
+    );
   });
 });
 
 describe('CompletionEvidenceSchema', () => {
   it('rejects an unknown verdict rather than coercing it to something safe-looking', () => {
-    const bad = { mutating: true, items: [{ id: 'x', kind: 'network', verdict: 'probably', detail: '' }] };
+    const bad = {
+      mutating: true,
+      items: [{ id: 'x', kind: 'network', verdict: 'probably', detail: '' }],
+    };
     expect(CompletionEvidenceSchema.safeParse(bad).success).toBe(false);
   });
 

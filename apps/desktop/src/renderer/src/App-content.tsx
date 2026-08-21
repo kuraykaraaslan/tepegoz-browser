@@ -1,4 +1,10 @@
-import { Suspense, type Dispatch, type MutableRefObject, type ReactNode, type SetStateAction } from 'react';
+import {
+  Suspense,
+  type Dispatch,
+  type MutableRefObject,
+  type ReactNode,
+  type SetStateAction,
+} from 'react';
 import type { Locale } from '@tepegoz/i18n';
 import {
   INTERNAL_BOOKMARKS_URL,
@@ -134,151 +140,151 @@ export function AppContent({
   // into the content/sidebar region between a web view detaching and an internal page paint.
   return (
     <div className="relative flex flex-1 overflow-hidden bg-surface-base">
-        {/* Left region = the web-view area (its bounds are measured from contentRef, so they exclude
+      {/* Left region = the web-view area (its bounds are measured from contentRef, so they exclude
           the sidebar); the resizable sidebar dock sits to its right. */}
-        <div ref={contentRef} className="relative flex-1 overflow-hidden">
-          {/* The active tab's web page is a separate WebContentsView laid over this area by main. The
+      <div ref={contentRef} className="relative flex-1 overflow-hidden">
+        {/* The active tab's web page is a separate WebContentsView laid over this area by main. The
           internal app tabs (Settings/Extensions/History), extension `page` tabs, and open overlay
           surfaces have no web view, so the chrome renders them here instead. */}
-          {contentSnapshot !== null && (
-            // A still of the page shown while the live web view is hidden for chrome overlays.
-            <img
-              src={contentSnapshot}
-              alt=""
-              aria-hidden="true"
-              draggable={false}
-              className="pointer-events-none absolute inset-0 h-full w-full object-cover object-left-top"
+        {contentSnapshot !== null && (
+          // A still of the page shown while the live web view is hidden for chrome overlays.
+          <img
+            src={contentSnapshot}
+            alt=""
+            aria-hidden="true"
+            draggable={false}
+            className="pointer-events-none absolute inset-0 h-full w-full object-cover object-left-top"
+          />
+        )}
+        {newTabActive && (
+          <div className="absolute inset-0 bg-surface-system">
+            <NewTabPage
+              shortcuts={newTabShortcuts}
+              onOpenShortcut={(url) => window.tepegoz.navigateTab(url)}
+              onSearch={onNewTabSearch}
+              onOpenAgent={() => extSurfaces.runExtensionAction(AGENT_EXTENSION_ID, 'click')}
+              onAddShortcut={onAddShortcut}
+              onEditShortcut={onEditShortcut}
+              onRemoveShortcut={onRemoveShortcut}
+              background={resolvedNewTabBackground}
+              onChangeBackground={onChangeNewTabBackground}
+              onPickBackgroundImage={onPickNewTabBackgroundImage}
             />
-          )}
-          {newTabActive && (
-            <div className="absolute inset-0 bg-surface-system">
-              <NewTabPage
-                shortcuts={newTabShortcuts}
-                onOpenShortcut={(url) => window.tepegoz.navigateTab(url)}
-                onSearch={onNewTabSearch}
-                onOpenAgent={() => extSurfaces.runExtensionAction(AGENT_EXTENSION_ID, 'click')}
-                onAddShortcut={onAddShortcut}
-                onEditShortcut={onEditShortcut}
-                onRemoveShortcut={onRemoveShortcut}
-                background={resolvedNewTabBackground}
-                onChangeBackground={onChangeNewTabBackground}
-                onPickBackgroundImage={onPickNewTabBackgroundImage}
-              />
-            </div>
-          )}
-          {settingsActive && (
-            <div className="absolute inset-0 bg-surface-system">
-              {prefs && status ? (
-                <SettingsPage
-                  initialSectionId={settingsSectionId}
-                  prefs={prefs}
-                  status={status}
-                  onUpdatePrefs={onUpdatePrefs}
-                  onResetPrefs={onResetPrefs}
-                  onAddKey={onAddKey}
-                  onRemoveKeyById={onRemoveKeyById}
-                  onRenameKey={onRenameKey}
-                  onSetKeyModel={onSetKeyModel}
-                  onReorderKeys={onReorderKeys}
-                  loginCredentials={loginCredentials}
-                  onLoginSectionMount={refreshLogins}
-                  onAddLogin={(c) =>
-                    window.tepegoz.setLogin(c).then(async () => { await refreshLogins(); })
-                  }
-                  onRemoveLogin={(id) =>
-                    window.tepegoz.removeLogin(id).then(async () => { await refreshLogins(); })
-                  }
-                  onImportLogins={(data, fmt) =>
-                    window.tepegoz.importLogins(data, fmt).then(async (r) => {
-                      await refreshLogins();
-                      return r;
-                    })
-                  }
-                  onExportLogins={(fmt) => window.tepegoz.exportLogins(fmt)}
-                />
-              ) : (
-                <p className="px-6 py-8 text-sm text-text-secondary">…</p>
-              )}
-            </div>
-          )}
-          {extensionsActive && (
-            <div className="absolute inset-0 bg-surface-system">
-              <ExtensionsPage
-                locale={locale}
-                extensions={registry}
-                states={extensionStates}
-                onToggle={onToggleExtension}
-              />
-            </div>
-          )}
-          {historyActive && (
-            <div className="absolute inset-0 bg-surface-system">
-              <HistoryPage
-                list={omniboxHistory.historyList}
-                remove={omniboxHistory.historyRemove}
-                clear={omniboxHistory.historyClear}
-              />
-            </div>
-          )}
-          {downloadsActive && (
-            <div className="absolute inset-0 bg-surface-system">
-              <DownloadsPage
-                list={downloadList}
-                command={downloadCommand}
-                subscribe={downloadSubscribe}
-              />
-            </div>
-          )}
-          {uploadsActive && (
-            <div className="absolute inset-0 bg-surface-system">
-              <UploadsPage
-                list={uploadList}
-                command={uploadCommand}
-                subscribe={uploadSubscribe}
-              />
-            </div>
-          )}
-          {bookmarksActive && (
-            <div className="absolute inset-0 bg-surface-system">
-              <BookmarksManager
-                getTree={bookmarks.getBookmarkTree}
-                refreshKey={bookmarks.bookmarksVersion}
-                onMove={bookmarks.onBookmarkMove}
-                onNewFolder={(parentId) =>
-                  window.tepegoz.openPopup('bookmark-add-folder', bookmarkDialogAnchor(), { id: parentId })
+          </div>
+        )}
+        {settingsActive && (
+          <div className="absolute inset-0 bg-surface-system">
+            {prefs && status ? (
+              <SettingsPage
+                initialSectionId={settingsSectionId}
+                prefs={prefs}
+                status={status}
+                onUpdatePrefs={onUpdatePrefs}
+                onResetPrefs={onResetPrefs}
+                onAddKey={onAddKey}
+                onRemoveKeyById={onRemoveKeyById}
+                onRenameKey={onRenameKey}
+                onSetKeyModel={onSetKeyModel}
+                onReorderKeys={onReorderKeys}
+                loginCredentials={loginCredentials}
+                onLoginSectionMount={refreshLogins}
+                onAddLogin={(c) =>
+                  window.tepegoz.setLogin(c).then(async () => {
+                    await refreshLogins();
+                  })
                 }
-                onOpen={(url) => window.tepegoz.navigateTab(url)}
-                onContextMenu={(id, type) => window.tepegoz.showBookmarkContextMenu(id, type)}
+                onRemoveLogin={(id) =>
+                  window.tepegoz.removeLogin(id).then(async () => {
+                    await refreshLogins();
+                  })
+                }
+                onImportLogins={(data, fmt) =>
+                  window.tepegoz.importLogins(data, fmt).then(async (r) => {
+                    await refreshLogins();
+                    return r;
+                  })
+                }
+                onExportLogins={(fmt) => window.tepegoz.exportLogins(fmt)}
+              />
+            ) : (
+              <p className="px-6 py-8 text-sm text-text-secondary">…</p>
+            )}
+          </div>
+        )}
+        {extensionsActive && (
+          <div className="absolute inset-0 bg-surface-system">
+            <ExtensionsPage
+              locale={locale}
+              extensions={registry}
+              states={extensionStates}
+              onToggle={onToggleExtension}
+            />
+          </div>
+        )}
+        {historyActive && (
+          <div className="absolute inset-0 bg-surface-system">
+            <HistoryPage
+              list={omniboxHistory.historyList}
+              remove={omniboxHistory.historyRemove}
+              clear={omniboxHistory.historyClear}
+            />
+          </div>
+        )}
+        {downloadsActive && (
+          <div className="absolute inset-0 bg-surface-system">
+            <DownloadsPage
+              list={downloadList}
+              command={downloadCommand}
+              subscribe={downloadSubscribe}
+            />
+          </div>
+        )}
+        {uploadsActive && (
+          <div className="absolute inset-0 bg-surface-system">
+            <UploadsPage list={uploadList} command={uploadCommand} subscribe={uploadSubscribe} />
+          </div>
+        )}
+        {bookmarksActive && (
+          <div className="absolute inset-0 bg-surface-system">
+            <BookmarksManager
+              getTree={bookmarks.getBookmarkTree}
+              refreshKey={bookmarks.bookmarksVersion}
+              onMove={bookmarks.onBookmarkMove}
+              onNewFolder={(parentId) =>
+                window.tepegoz.openPopup('bookmark-add-folder', bookmarkDialogAnchor(), {
+                  id: parentId,
+                })
+              }
+              onOpen={(url) => window.tepegoz.navigateTab(url)}
+              onContextMenu={(id, type) => window.tepegoz.showBookmarkContextMenu(id, type)}
+            />
+          </div>
+        )}
+        {PageSurface !== undefined && (
+          <div className="absolute inset-0 bg-surface-base">
+            <Suspense fallback={surfaceFallback}>
+              <PageSurface onClose={extSurfaces.closeSurface} />
+            </Suspense>
+          </div>
+        )}
+        {extSurfaces.renderActiveSurface()}
+        {autofill !== null && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
+            <div className="pointer-events-auto">
+              <AutofillSuggestion
+                url={autofill.url}
+                matches={autofill.matches}
+                onFill={(id) => {
+                  window.tepegoz.fillLogin(id);
+                  setAutofill(null);
+                }}
+                onDismiss={() => setAutofill(null)}
               />
             </div>
-          )}
-          {PageSurface !== undefined && (
-            <div className="absolute inset-0 bg-surface-base">
-              <Suspense fallback={surfaceFallback}>
-                <PageSurface onClose={extSurfaces.closeSurface} />
-              </Suspense>
-            </div>
-          )}
-          {extSurfaces.renderActiveSurface()}
-          {autofill !== null && (
-            <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
-              <div className="pointer-events-auto">
-                <AutofillSuggestion
-                  url={autofill.url}
-                  matches={autofill.matches}
-                  onFill={(id) => {
-                    window.tepegoz.fillLogin(id);
-                    setAutofill(null);
-                  }}
-                  onDismiss={() => setAutofill(null)}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-        {extSurfaces.renderSidebar()}
+          </div>
+        )}
+      </div>
+      {extSurfaces.renderSidebar()}
     </div>
   );
 }
-
-

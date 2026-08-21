@@ -26,7 +26,10 @@ type TransferItem =
 
 const MAX_ITEMS = 10;
 
-function formatBytes(value: number, units: { b: string; kb: string; mb: string; gb: string }): string {
+function formatBytes(
+  value: number,
+  units: { b: string; kb: string; mb: string; gb: string },
+): string {
   if (value < 1024) return `${value} ${units.b}`;
   if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} ${units.kb}`;
   if (value < 1024 * 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(1)} ${units.mb}`;
@@ -64,7 +67,8 @@ export function TransferActivityPopup() {
   useEffect(() => {
     const el = contentRef.current;
     if (el === null) return undefined;
-    const report = (): void => window.tepegoz.resizePopup(Math.ceil(el.getBoundingClientRect().height));
+    const report = (): void =>
+      window.tepegoz.resizePopup(Math.ceil(el.getBoundingClientRect().height));
     report();
     const observer = new ResizeObserver(report);
     observer.observe(el);
@@ -75,7 +79,9 @@ export function TransferActivityPopup() {
     void window.tepegoz.getPreferences().then(
       (p) => {
         applyTheme(p.theme, p.themeColor);
-        setLocale(p.locale === 'en' || p.locale === 'tr' ? p.locale : resolveLocale(navigator.language));
+        setLocale(
+          p.locale === 'en' || p.locale === 'tr' ? p.locale : resolveLocale(navigator.language),
+        );
       },
       () => {
         /* bridge unavailable */
@@ -169,8 +175,14 @@ function TransferActivityContent({
         </ul>
       )}
       <div className="grid grid-cols-2 border-t border-border text-xs font-medium">
-        <FooterButton label={t.fullDownloads} onClick={() => navigateInternal(INTERNAL_DOWNLOADS_URL)} />
-        <FooterButton label={t.fullUploads} onClick={() => navigateInternal(INTERNAL_UPLOADS_URL)} />
+        <FooterButton
+          label={t.fullDownloads}
+          onClick={() => navigateInternal(INTERNAL_DOWNLOADS_URL)}
+        />
+        <FooterButton
+          label={t.fullUploads}
+          onClick={() => navigateInternal(INTERNAL_UPLOADS_URL)}
+        />
       </div>
     </div>
   );
@@ -189,7 +201,9 @@ function DownloadTransferRow({ item, locale }: { item: DownloadRecord; locale: L
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{item.filename}</p>
         <p className="mt-0.5 truncate text-xs text-text-secondary">{detail}</p>
-        <p className="mt-0.5 truncate text-xs text-text-muted">{item.provenance.sourceOrigin ?? item.url}</p>
+        <p className="mt-0.5 truncate text-xs text-text-muted">
+          {item.provenance.sourceOrigin ?? item.url}
+        </p>
       </div>
     </li>
   );
@@ -207,7 +221,9 @@ function UploadTransferRow({ item, locale }: { item: UploadRecord; locale: Local
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{uploadTitle(item, tu.files)}</p>
         <p className="mt-0.5 truncate text-xs text-text-secondary">{detail}</p>
-        <p className="mt-0.5 truncate text-xs text-text-muted">{item.targetOrigin ?? item.targetUrl ?? '-'}</p>
+        <p className="mt-0.5 truncate text-xs text-text-muted">
+          {item.targetOrigin ?? item.targetUrl ?? '-'}
+        </p>
       </div>
     </li>
   );
@@ -236,7 +252,11 @@ function FooterButton({ label, onClick }: { label: string; onClick: () => void }
       className="flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-surface-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
     >
       <span className="truncate">{label}</span>
-      <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-3 w-3 text-text-secondary" aria-hidden />
+      <FontAwesomeIcon
+        icon={faArrowUpRightFromSquare}
+        className="h-3 w-3 text-text-secondary"
+        aria-hidden
+      />
     </button>
   );
 }

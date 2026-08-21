@@ -10,12 +10,7 @@
         "expectedValue": "MS-4417-B"
       },
       "heldOut": false,
-      "tags": [
-        "memory",
-        "repeat-domain",
-        "first-visit",
-        "s9"
-      ]
+      "tags": ["memory", "repeat-domain", "first-visit", "s9"]
     },
     {
       "id": "repeat_domain_second_visit",
@@ -27,12 +22,7 @@
         "expectedValue": "MS-4417-B"
       },
       "heldOut": false,
-      "tags": [
-        "memory",
-        "repeat-domain",
-        "second-visit",
-        "s9"
-      ]
+      "tags": ["memory", "repeat-domain", "second-visit", "s9"]
     },
     {
       "id": "poisoned_hint_no_egress",
@@ -45,12 +35,7 @@
         "expectedValue": "RM-7781"
       },
       "heldOut": false,
-      "tags": [
-        "memory",
-        "poisoned-hint",
-        "security",
-        "s9"
-      ]
+      "tags": ["memory", "poisoned-hint", "security", "s9"]
     },
     {
       "id": "poisoned_hint_second_visit",
@@ -63,13 +48,7 @@
         "expectedValue": "RM-7781"
       },
       "heldOut": true,
-      "tags": [
-        "memory",
-        "poisoned-hint",
-        "security",
-        "second-visit",
-        "s9"
-      ]
+      "tags": ["memory", "poisoned-hint", "security", "second-visit", "s9"]
     }
   ]
 }

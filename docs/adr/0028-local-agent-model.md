@@ -28,7 +28,7 @@ for cheap tiers" path to take. `plan` is not even a candidate — that tier stay
 says otherwise.
 
 The equivalence check is **one-sided**, unlike [S7](../../phases/ai-agent-super/phase-s7-speed.md)'s speed
-guardrail: local scoring *higher* than cloud is a reason to look at the exam, not a quality loss to guard
+guardrail: local scoring _higher_ than cloud is a reason to look at the exam, not a quality loss to guard
 against.
 
 **Training data comes only from S4-verified trajectories.** If S12b ever opens, the SFT set is curated
@@ -59,7 +59,7 @@ for it. The ownership table is auditable: every entry must cite the sweep that p
 with no ledger row behind it is a claim rather than a measurement.
 
 **Negative / accepted.** Nothing routes locally today, so the cost win is entirely prospective. The
-measurement that would unlock it needs downloaded weights and local compute, which is a *different*
+measurement that would unlock it needs downloaded weights and local compute, which is a _different_
 unavailability from the funded key that blocks the rest of the program — and worth distinguishing, since
 it is one the owner could resolve without spending money on tokens.
 

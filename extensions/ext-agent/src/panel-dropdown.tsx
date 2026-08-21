@@ -28,9 +28,16 @@ export function Dropdown({
   title,
   children,
 }: {
-  trigger: ReactNode; direction?: 'down' | 'up'; align?: 'left' | 'right';
-  className?: string; triggerClassName?: string; menuClassName?: string; showChevron?: boolean;
-  ariaLabel?: string; title?: string; children: (close: () => void) => ReactNode;
+  trigger: ReactNode;
+  direction?: 'down' | 'up';
+  align?: 'left' | 'right';
+  className?: string;
+  triggerClassName?: string;
+  menuClassName?: string;
+  showChevron?: boolean;
+  ariaLabel?: string;
+  title?: string;
+  children: (close: () => void) => ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -69,7 +76,9 @@ export function Dropdown({
       setOpen(false);
     }
     document.addEventListener('mousedown', onDoc);
-    return () => { document.removeEventListener('mousedown', onDoc); };
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+    };
   }, [open]);
 
   return (
@@ -79,7 +88,9 @@ export function Dropdown({
         type="button"
         aria-label={ariaLabel}
         title={title}
-        onClick={() => { setOpen((v) => !v); }}
+        onClick={() => {
+          setOpen((v) => !v);
+        }}
         className={cn(
           'flex items-center gap-1 rounded-md px-2 py-1 text-sm text-text-primary hover:bg-surface-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus',
           triggerClassName,
@@ -88,12 +99,20 @@ export function Dropdown({
         {trigger}
         {showChevron && <ChevronDown className="h-3 w-3 text-text-secondary" />}
       </button>
-      {open && createPortal(
-        <div ref={menuRef} style={pos} className={cn('rounded-lg border border-border bg-surface-raised p-1 shadow-lg', menuClassName)}>
-          {children(() => setOpen(false))}
-        </div>,
-        document.body,
-      )}
+      {open &&
+        createPortal(
+          <div
+            ref={menuRef}
+            style={pos}
+            className={cn(
+              'rounded-lg border border-border bg-surface-raised p-1 shadow-lg',
+              menuClassName,
+            )}
+          >
+            {children(() => setOpen(false))}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

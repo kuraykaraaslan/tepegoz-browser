@@ -26,10 +26,7 @@ export interface TabEgressQuery {
 }
 
 export type KillSwitchReason =
-  | 'direct'
-  | 'connection_up'
-  | 'connection_down_failclosed'
-  | 'unknown_connection_failclosed';
+  'direct' | 'connection_up' | 'connection_down_failclosed' | 'unknown_connection_failclosed';
 
 export interface KillSwitchVerdict {
   tabId: string;
@@ -68,7 +65,5 @@ export function tabsBlockedByDrop(
   tabs: readonly TabEgressQuery[],
   droppedConnectionId: string,
 ): readonly string[] {
-  return tabs
-    .filter((t) => t.resolvedConnectionId === droppedConnectionId)
-    .map((t) => t.tabId);
+  return tabs.filter((t) => t.resolvedConnectionId === droppedConnectionId).map((t) => t.tabId);
 }

@@ -7,6 +7,7 @@ check used by the IPC sender allow-list. Zero-dep and Electron-free — the desk
 every load entry point.
 
 ## Exports
+
 - **`isWebUrl(url)`** — true only for `http(s)://` URLs; the only schemes ever loaded into an
   untrusted browsing view. Pure.
 - **`internalPageUrl(input, internalUrls)`** — the canonical `tepegoz://…` URL if `input` addresses one
@@ -25,4 +26,5 @@ every load entry point.
   allow-list and the navigation guard.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

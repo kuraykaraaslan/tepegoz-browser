@@ -43,7 +43,9 @@ describe('loadScenarios', () => {
   });
 
   it('skips a schema-invalid scenario file (untrusted input) with a reason', () => {
-    write('bad.json', { scenarios: [{ id: '', task: 't', target: { fixture: 'x' }, success: {} }] });
+    write('bad.json', {
+      scenarios: [{ id: '', task: 't', target: { fixture: 'x' }, success: {} }],
+    });
     const { scenarios, errors } = loadScenarios(dir);
     expect(scenarios).toEqual([]);
     expect(errors[0]?.reason).toContain('schema');

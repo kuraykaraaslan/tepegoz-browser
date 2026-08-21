@@ -8,6 +8,7 @@ plus a central registry that aggregates across all of them. Its only dependency 
 one crypto contract without a circular import.
 
 ## Exports
+
 - **`PasswordProviderRegistry`** — static registry: `register(provider)`, `get(id)`, `list()`,
   `findByUrl(url)` (normalizes the URL to its origin and aggregates `findByUrl` results across every
   registered provider — so autofill/UI never need to know which provider owns a credential),
@@ -28,4 +29,5 @@ one crypto contract without a circular import.
 - **`SecretCrypto`** — re-exported from `@tepegoz/credential-vault`.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

@@ -65,5 +65,7 @@ export const CompletionOutcomeSchema = z.enum(COMPLETION_OUTCOMES);
 export function classifyCompletion(evidence: CompletionEvidence): CompletionOutcome {
   if (evidence.items.some((item) => item.verdict === 'contradicts')) return 'contradicted';
   if (!evidence.mutating) return 'verified';
-  return evidence.items.some((item) => item.verdict === 'supports') ? 'verified' : 'attempted_unverified';
+  return evidence.items.some((item) => item.verdict === 'supports')
+    ? 'verified'
+    : 'attempted_unverified';
 }

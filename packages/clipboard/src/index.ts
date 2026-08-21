@@ -60,7 +60,9 @@ export function redactClipboardPreview(text: string, maxChars = 160): string {
     .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g, '[email]')
     .replace(/\b(?:sk|pk|ak|pat)_[A-Za-z0-9_-]{16,}\b/g, '[secret]')
     .replace(/\b(?:Bearer\s+)?[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\b/g, '[token]');
-  return withoutSecrets.length <= maxChars ? withoutSecrets : `${withoutSecrets.slice(0, maxChars)}...`;
+  return withoutSecrets.length <= maxChars
+    ? withoutSecrets
+    : `${withoutSecrets.slice(0, maxChars)}...`;
 }
 
 export function createClipboardAuditMetadata(input: {

@@ -3,7 +3,11 @@ import { diffElements, digestOf, renderDiffedElements } from './elements-diff.js
 import { renderElementTsv } from './element-render.js';
 import type { InteractableElement } from './interactable.js';
 
-function el(ref: number, name: string, over: Partial<InteractableElement> = {}): InteractableElement {
+function el(
+  ref: number,
+  name: string,
+  over: Partial<InteractableElement> = {},
+): InteractableElement {
   return { ref, role: 'button', name, tag: 'button', ...over };
 }
 
@@ -85,7 +89,13 @@ describe('compact tabular rendering', () => {
 
   it('folds value, disabled and attributes into one state column', () => {
     const row = renderElementTsv(
-      el(2, 'Email', { role: 'textbox', tag: 'input', value: 'a@b', disabled: true, attributes: { required: 'true' } }),
+      el(2, 'Email', {
+        role: 'textbox',
+        tag: 'input',
+        value: 'a@b',
+        disabled: true,
+        attributes: { required: 'true' },
+      }),
     );
     expect(row.split('\t')[5]).toBe('value="a@b" disabled required="true"');
   });

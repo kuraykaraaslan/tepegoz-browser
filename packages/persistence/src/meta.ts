@@ -5,8 +5,7 @@ import type { Db } from './db';
 export class MetaStore {
   static get(db: Db, key: string): string | undefined {
     const row = db.prepare('SELECT value FROM meta WHERE key = ?').get(key) as
-      | { value: string }
-      | undefined;
+      { value: string } | undefined;
     return row?.value;
   }
 

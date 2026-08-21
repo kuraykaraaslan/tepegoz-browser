@@ -6,11 +6,11 @@
 
 ## Why
 
-Element references are **positional and invalidated every snapshot**. [interactable.ts `finalizeElements`](../../packages/tool-executor/src/interactable.ts) assigns 1-based positional refs, and only `*` marks new elements via [dom-tree.ts `markNewElements`](../../packages/tool-executor/src/dom-tree.ts). So an unchanged page hands the model the full ≤200-element list again on the next step — burning tokens (pain 3) and disorienting the model, because the same button is `*[7]` this step and `*[4]` next step (pain 2). The reactor only *bounds* this with the ×5 [`readLoopThreshold`](../../packages/orchestrator/src/reactor.ts) streak guard; it never dedupes or diffs the view.
+Element references are **positional and invalidated every snapshot**. [interactable.ts `finalizeElements`](../../packages/tool-executor/src/interactable.ts) assigns 1-based positional refs, and only `*` marks new elements via [dom-tree.ts `markNewElements`](../../packages/tool-executor/src/dom-tree.ts). So an unchanged page hands the model the full ≤200-element list again on the next step — burning tokens (pain 3) and disorienting the model, because the same button is `*[7]` this step and `*[4]` next step (pain 2). The reactor only _bounds_ this with the ×5 [`readLoopThreshold`](../../packages/orchestrator/src/reactor.ts) streak guard; it never dedupes or diffs the view.
 
 There is **no read-dedupe and no diffing**. The perception cost is paid in full every read even when nothing moved. A structural **djb2 page signature already exists** in [browser-host.electron.ts `readPage`](../../apps/desktop/src/main/agent/browser-host.electron.ts) for change detection — the diff engine can reuse it rather than inventing a second change oracle.
 
-Labels are wrong on forms. In the render-DOM default path, [build-dom-tree-script.ts `textOf`](../../apps/desktop/src/main/agent/build-dom-tree-script.ts) does not resolve `aria-labelledby` or `label[for=…]`, so a field whose visible name lives in a sibling `<label>` or a referenced node comes through unnamed or mislabelled (pain 1 on forms). The [a11y fallback](../../apps/desktop/src/main/agent/cdp-driver-snapshot.electron.ts) (`TEPEGOZ_PERCEPTION=a11y`) actually computes a *better* accessible name — the default path is the regression, not the fallback.
+Labels are wrong on forms. In the render-DOM default path, [build-dom-tree-script.ts `textOf`](../../apps/desktop/src/main/agent/build-dom-tree-script.ts) does not resolve `aria-labelledby` or `label[for=…]`, so a field whose visible name lives in a sibling `<label>` or a referenced node comes through unnamed or mislabelled (pain 1 on forms). The [a11y fallback](../../apps/desktop/src/main/agent/cdp-driver-snapshot.electron.ts) (`TEPEGOZ_PERCEPTION=a11y`) actually computes a _better_ accessible name — the default path is the regression, not the fallback.
 
 Prior art gives us the shape of the win without the claim: browser-use's TSV serialisation cut its own token count ~40%. We do not inherit that number — we measure **our own** token delta through the existing cost plumbing.
 
@@ -32,7 +32,7 @@ Prior art gives us the shape of the win without the claim: browser-use's TSV ser
 ### PR0 — fixture freeze
 
 - [x] Add `ref-stability-across-rerender`, `label-for-form`, `dynamic-list-update` scenarios + frozen HTML fixtures under [packages/agent-eval](../../packages/agent-eval) registry (perception family file).
-- [x] Wire the three into the perception registry index; assert they run in the scripted tier and are **inert-safe** (no capability code exists yet — they encode the *target* behaviour).
+- [x] Wire the three into the perception registry index; assert they run in the scripted tier and are **inert-safe** (no capability code exists yet — they encode the _target_ behaviour).
 - [x] Record the freeze hash in the ledger so PR1–PR4 cannot silently move ground-truth.
 
 ### PR1 — identity-stable content-hash refs (env-flagged)
@@ -47,7 +47,7 @@ Prior art gives us the shape of the win without the claim: browser-use's TSV ser
 > suffix (`#0`, `#1`, …) separating duplicate controls in document order. Including the path would have
 > defeated the property being bought — `ref-stability-across-rerender` rebuilds the list at a new nesting
 > depth in reverse order, so every path changes while nothing about the elements does, and a
-> path-inclusive hash renumbers all of them. The cost is that two *identical* controls which swap places
+> path-inclusive hash renumbers all of them. The cost is that two _identical_ controls which swap places
 > swap refs; accepted, because nothing distinguishes them to a human reader either. The degraded mode the
 > Risks section requires is implemented as a **carry-over-rate floor** (30%): below it the registry resets
 > and refs go positional for that snapshot, logged, because on a wholesale rewrite stability was never
@@ -83,11 +83,12 @@ Prior art gives us the shape of the win without the claim: browser-use's TSV ser
 - [x] Keep the file under the 250-line cap; extract the extraction helper if needed.
 
 > **Naming + scope deviations (recorded, PR4).**
+>
 > 1. The tool ships as **`browser_get_article`**, not `browser_get_page_text`. `ToolNameSchema`
 >    (`@tepegoz/shared-types`) enforces `{domain}_{verb}_{noun}` with an approved verb and a single noun
 >    segment, and the registry `parse`s it — `browser_get_page_text` is rejected at registration. Same
 >    capability, a name the plane accepts.
-> 2. It does **not** reuse `buildPageSnapshot`'s *input* the way the task line suggested: article text
+> 2. It does **not** reuse `buildPageSnapshot`'s _input_ the way the task line suggested: article text
 >    needs its own in-page extraction (the content root the page declares, minus chrome), so the
 >    extraction is a new injected script and `buildPageSnapshot` is reused for the sanitize/wrap step,
 >    which is the part that matters for the trust boundary. The tool reports `source` — the root it

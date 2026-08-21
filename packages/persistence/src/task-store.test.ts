@@ -31,7 +31,10 @@ describe('TaskStore', () => {
     TaskStore.upsert(db, task('new', 20));
 
     expect(TaskStore.list(db).map((row) => row.id)).toEqual(['new', 'old']);
-    expect(TaskStore.get(db, 'new')?.triggers[0]).toMatchObject({ type: 'interval', everyMinutes: 5 });
+    expect(TaskStore.get(db, 'new')?.triggers[0]).toMatchObject({
+      type: 'interval',
+      everyMinutes: 5,
+    });
   });
 
   it('round-trips the sourceConversationId column (migration v11)', () => {

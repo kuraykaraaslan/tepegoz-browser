@@ -21,7 +21,11 @@ describe('download tools', () => {
       'download_list_items',
       'download_update_item',
     ]);
-    expect(tools.find((tool) => tool.id === 'download_create_item')?.requiresIdempotencyKey).toBe(true);
-    expect(tools.find((tool) => tool.id === 'download_update_item')?.dangerClass).toBe('state_changing');
+    expect(tools.find((tool) => tool.id === 'download_create_item')?.requiresIdempotencyKey).toBe(
+      true,
+    );
+    expect(tools.find((tool) => tool.id === 'download_update_item')?.dangerClass).toBe(
+      'state_changing',
+    );
   });
 });

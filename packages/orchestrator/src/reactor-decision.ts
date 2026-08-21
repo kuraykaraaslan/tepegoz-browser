@@ -32,7 +32,11 @@ const DecisionSchema = z.discriminatedUnion('action', [
     rationale: z.string().max(500).default(''),
     ...BRAIN_FIELDS,
   }),
-  z.object({ action: z.literal('finish'), summary: z.string().max(1000).default(''), ...BRAIN_FIELDS }),
+  z.object({
+    action: z.literal('finish'),
+    summary: z.string().max(1000).default(''),
+    ...BRAIN_FIELDS,
+  }),
 ]);
 export type Decision = z.infer<typeof DecisionSchema>;
 

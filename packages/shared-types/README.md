@@ -5,6 +5,7 @@ package consumes `z.infer` types from here — schemas are never copied. All tru
 (`safeParse`) validate against these.
 
 ## Exports
+
 - **Enums** (`z.enum`): `AIProviderEnum`, `PolicyDecisionEnum`, `HITLStatusEnum`, `RiskLevelEnum`,
   `McpTransportEnum`, `EventTypeEnum`, `ToolSourceEnum`, `ToolErrorCodeEnum`.
 - **Event Journal**: `EventSchema` / `EventRecord` (append-only fact; `lsn`, `deviceId`, `cas://` blobRef),
@@ -12,4 +13,5 @@ package consumes `z.infer` types from here — schemas are never copied. All tru
 - **Tools**: `ToolNameSchema` (`{domain}_{verb}_{noun}`), `ToolDescriptorSchema`, `ToolErrorSchema`.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test` · `pnpm build`

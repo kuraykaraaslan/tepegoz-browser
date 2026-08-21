@@ -28,7 +28,8 @@ describe('the PolicyBundle shape', () => {
 
   it('accepts a parentId, and omits it cleanly when this is a root bundle', () => {
     expect(
-      PolicyBundleSchema.safeParse(bundle({ parentId: '00000000-0000-4000-8000-000000000002' })).success,
+      PolicyBundleSchema.safeParse(bundle({ parentId: '00000000-0000-4000-8000-000000000002' }))
+        .success,
     ).toBe(true);
     expect(PolicyBundleSchema.parse(bundle()).parentId).toBeUndefined();
   });

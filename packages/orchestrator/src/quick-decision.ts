@@ -39,7 +39,10 @@ export function quickModeProviders(env: NodeJS.ProcessEnv = process.env): Set<st
   );
 }
 
-export function isQuickModeEnabled(provider: AIProvider, env: NodeJS.ProcessEnv = process.env): boolean {
+export function isQuickModeEnabled(
+  provider: AIProvider,
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
   const on = quickModeProviders(env);
   return on.has(provider) || on.has('all');
 }
@@ -88,7 +91,12 @@ export function decodeQuickDecision(text: string): Record<string, unknown> | nul
 
   if (kind === 'F') {
     // F <TAB> summary <TAB> rationale <TAB> memory
-    return { action: 'finish', summary: rest[0]?.trim() ?? '', ...field(1, 'rationale'), ...field(2, 'memory') };
+    return {
+      action: 'finish',
+      summary: rest[0]?.trim() ?? '',
+      ...field(1, 'rationale'),
+      ...field(2, 'memory'),
+    };
   }
   // A <TAB> tool <TAB> args-json <TAB> rationale <TAB> memory
   const tool = rest[0]?.trim();

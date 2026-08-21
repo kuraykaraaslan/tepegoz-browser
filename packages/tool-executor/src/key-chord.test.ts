@@ -9,7 +9,9 @@ describe('parseChords', () => {
 
   it('parses a single modifier', () => {
     expect(parseChords('Ctrl+A').steps).toEqual([{ modifiers: MODIFIER_BITS.Control, key: 'A' }]);
-    expect(parseChords('Shift+Tab').steps).toEqual([{ modifiers: MODIFIER_BITS.Shift, key: 'Tab' }]);
+    expect(parseChords('Shift+Tab').steps).toEqual([
+      { modifiers: MODIFIER_BITS.Shift, key: 'Tab' },
+    ]);
   });
 
   it('combines modifiers and accepts the spellings a model actually reaches for', () => {

@@ -46,7 +46,10 @@ describe('the kill switch — fail closed, never a silent fallback to Direct', (
   it('BLOCKS a tab resolved to a connection the status map has never heard of', () => {
     // A connection removed from the pool entirely has no entry. Silence about health is not evidence
     // of health — this is the branch that stops a missing entry from defaulting to "must be fine".
-    const verdicts = killSwitchVerdicts([{ tabId: 't1', resolvedConnectionId: 'ghost-conn' }], new Map());
+    const verdicts = killSwitchVerdicts(
+      [{ tabId: 't1', resolvedConnectionId: 'ghost-conn' }],
+      new Map(),
+    );
     expect(verdicts).toEqual([
       { tabId: 't1', allowed: false, reason: 'unknown_connection_failclosed' },
     ]);

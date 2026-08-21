@@ -54,11 +54,18 @@ describe('@tepegoz/tasks', () => {
   });
 
   it('calculates the next interval fire time', () => {
-    expect(nextIntervalRunAt({ type: 'interval', enabled: false, everyMinutes: 5 }, 1000)).toBeNull();
-    expect(nextIntervalRunAt({ type: 'interval', enabled: true, everyMinutes: 5, startAt: 10_000 }, 1000))
-      .toBe(10_000);
-    expect(nextIntervalRunAt({ type: 'interval', enabled: true, everyMinutes: 5, startAt: 0 }, 301_000))
-      .toBe(600_000);
+    expect(
+      nextIntervalRunAt({ type: 'interval', enabled: false, everyMinutes: 5 }, 1000),
+    ).toBeNull();
+    expect(
+      nextIntervalRunAt(
+        { type: 'interval', enabled: true, everyMinutes: 5, startAt: 10_000 },
+        1000,
+      ),
+    ).toBe(10_000);
+    expect(
+      nextIntervalRunAt({ type: 'interval', enabled: true, everyMinutes: 5, startAt: 0 }, 301_000),
+    ).toBe(600_000);
   });
 
   it('maintains task, run, and artifact projections', () => {
@@ -92,12 +99,14 @@ describe('@tepegoz/tasks', () => {
       allowedReadTools: ['browser_get_page'],
       preapprovedWriteTools: ['browser_update_page'],
     };
-    expect(TaskSaveInputSchema.safeParse({
-      name: 'Watch',
-      prompt: 'Watch this page',
-      triggers: [{ type: 'manual' }],
-      policy,
-    }).success).toBe(true);
+    expect(
+      TaskSaveInputSchema.safeParse({
+        name: 'Watch',
+        prompt: 'Watch this page',
+        triggers: [{ type: 'manual' }],
+        policy,
+      }).success,
+    ).toBe(true);
     expect(taskCanUseTool(policy, 'browser_get_page', 'read')).toBe(true);
     expect(taskCanUseTool(policy, 'browser_update_page', 'write')).toBe(true);
     expect(taskCanUseTool(policy, 'download_create_item', 'write')).toBe(false);

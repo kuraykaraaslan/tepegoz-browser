@@ -42,9 +42,9 @@ describe('remarkFileLinks plugin', () => {
     };
     remarkFileLinks()(tree);
     const para = tree.children[0] as { children: { type: string; url?: string }[] };
-    expect(para.children.some((c) => c.type === 'link' && c.url?.startsWith(FILE_LINK_SCHEME))).toBe(
-      true,
-    );
+    expect(
+      para.children.some((c) => c.type === 'link' && c.url?.startsWith(FILE_LINK_SCHEME)),
+    ).toBe(true);
     // the fenced code block value is unchanged (not a `text` node)
     expect((tree.children[1] as { value: string }).value).toBe('cat /home/k/secret.txt');
   });

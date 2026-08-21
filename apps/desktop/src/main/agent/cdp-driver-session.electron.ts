@@ -146,7 +146,11 @@ const VIEWPORT_READY_MS = 300;
  * blindness). Resolves as soon as `innerWidth>0 && innerHeight>0`, or after its own deadline regardless.
  * A safety net layered on top of the content-view bounds fix; strictly time-bounded and non-fatal.
  */
-async function waitForViewport(wc: WebContents, ensure: EnsureAttached, timeoutMs: number): Promise<void> {
+async function waitForViewport(
+  wc: WebContents,
+  ensure: EnsureAttached,
+  timeoutMs: number,
+): Promise<void> {
   await ensure(wc);
   const contextId = await mainFrameIsolatedContext(wc);
   const budget = Math.max(0, Math.trunc(timeoutMs));
@@ -190,5 +194,7 @@ export async function waitForPageSettled(
   if (wc.isDestroyed()) return;
   // Last: ensure a non-zero layout viewport before the next perception. Capped + non-fatal so it can
   // never extend or fail a settle.
-  await waitForViewport(wc, ensure, Math.min(VIEWPORT_READY_MS, remaining())).catch(() => undefined);
+  await waitForViewport(wc, ensure, Math.min(VIEWPORT_READY_MS, remaining())).catch(
+    () => undefined,
+  );
 }

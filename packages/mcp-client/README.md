@@ -8,6 +8,7 @@ Electron-free: the SDK `Client` and `StdioClientTransport` are injected by the d
 the trust boundary.
 
 ## Exports
+
 - **`McpSupervisor`** / **`McpSupervisorDeps`** — manages every configured server's lifetime: connect on
   start, exponential-backoff reconnect on failure/drop, unregister a server's tools on disconnect, and
   `reconcile()` on config changes. One shared `NameMapper` keeps synthetic tool ids unique across servers.
@@ -26,4 +27,5 @@ the trust boundary.
   — zod re-validation schemas for MCP SDK responses.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

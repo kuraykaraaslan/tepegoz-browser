@@ -6,12 +6,14 @@ import type {
   CanonResponse,
   CanonStopReason,
   CanonToolCall,
+  CanonUsage,
   ModelDeltaSink,
   ModelProvider,
 } from '../types';
 import type { EffortLevel } from '../models';
 import { GatewayMessages } from '../messages';
 import { contentToText } from '../content';
+import { contentChars, stableMessageIndex, ttlOf, worthCaching } from '../cache-plan';
 import { toAnthropicContent } from './anthropic-content';
 
 /**
@@ -47,7 +49,13 @@ export interface AnthropicCompletion {
     input?: unknown;
   }>;
   stop_reason: string | null;
-  usage: { input_tokens: number; output_tokens: number };
+  usage: {
+    input_tokens: number;
+    output_tokens: number;
+    /** Present only when prompt caching was in play; `null` on calls that did not use it. */
+    cache_read_input_tokens?: number | null;
+    cache_creation_input_tokens?: number | null;
+  };
 }
 
 function mapStopReason(reason: string | null): CanonStopReason {
@@ -72,7 +80,16 @@ export function toAnthropicParams(
 ): Anthropic.MessageCreateParamsNonStreaming {
   const systemParts: string[] = [];
   const messages: Anthropic.MessageParam[] = [];
-  for (const m of req.messages) {
+  // Canonical indices are NOT Anthropic indices: system turns are lifted out to the top-level `system`
+  // field below, so every one of them shifts the mapping by one. Track the translation as we go rather
+  // than reconstructing it afterwards — an off-by-one here puts the cache breakpoint on the WRONG turn,
+  // which fails silently and expensively (see cache-plan.ts).
+  const stableCanonIndex = stableMessageIndex(req.cache);
+  let stableAnthropicIndex: number | null = null;
+  let stablePrefixChars = 0;
+  for (const [canonIndex, m] of req.messages.entries()) {
+    const withinStablePrefix = stableCanonIndex !== null && canonIndex <= stableCanonIndex;
+    if (withinStablePrefix) stablePrefixChars += contentChars(m.content);
     if (m.role === 'system') {
       systemParts.push(contentToText(m.content));
       continue;
@@ -80,6 +97,7 @@ export function toAnthropicParams(
     // Native: blocks map onto Anthropic's own content blocks (S1 PR2), so a tool call is a real tool
     // call and an image is a real image — not JSON and a marker inside prose.
     messages.push({ role: m.role, content: toAnthropicContent(m.content) });
+    if (withinStablePrefix) stableAnthropicIndex = messages.length - 1;
   }
 
   const params: Anthropic.MessageCreateParamsNonStreaming = {
@@ -101,7 +119,9 @@ export function toAnthropicParams(
   }
   if (req.toolChoice !== undefined && params.tools !== undefined) {
     params.tool_choice =
-      req.toolChoice.type === 'tool' ? { type: 'tool', name: req.toolChoice.name } : { type: 'auto' };
+      req.toolChoice.type === 'tool'
+        ? { type: 'tool', name: req.toolChoice.name }
+        : { type: 'auto' };
   }
   if (opts.thinking === true) {
     params.thinking = { type: 'adaptive', display: 'summarized' };
@@ -109,7 +129,73 @@ export function toAnthropicParams(
   if (opts.effort !== undefined) {
     params.output_config = { effort: opts.effort };
   }
+  applyCacheBreakpoints(params, req, stableAnthropicIndex, stablePrefixChars);
   return params;
+}
+
+/**
+ * Attach `cache_control` breakpoints for a {@link CanonCacheHint}.
+ *
+ * Two breakpoints at most (the API allows four). The first spans tools + system, which never change for
+ * the life of a run; the second sits on the last turn the caller PROMISED it will not rewrite. Anything
+ * after it is the volatile suffix — for the Reactor that is the current page state, which is fresh every
+ * step and could never have been cached anyway.
+ *
+ * Each breakpoint is size-gated independently: a prefix below the vendor minimum does not cache, so
+ * marking it buys nothing and only adds a way to be wrong.
+ */
+function applyCacheBreakpoints(
+  params: Anthropic.MessageCreateParamsNonStreaming,
+  req: CanonRequest,
+  stableAnthropicIndex: number | null,
+  stablePrefixChars: number,
+): void {
+  const hint = req.cache;
+  if (hint === undefined) return;
+  const ttl = ttlOf(hint);
+
+  if (hint.systemAndTools === true && typeof params.system === 'string') {
+    // Vendors render `tools` before `system`, so one breakpoint on the system block spans the pair —
+    // but only the system text is ours to attach to, and only its own size is guaranteed present.
+    const toolChars = (params.tools ?? []).reduce((n, t) => n + JSON.stringify(t).length, 0);
+    if (worthCaching(params.system.length + toolChars)) {
+      params.system = [
+        { type: 'text', text: params.system, cache_control: { type: 'ephemeral', ttl } },
+      ];
+    }
+  }
+
+  if (stableAnthropicIndex === null || !worthCaching(stablePrefixChars)) return;
+  const target = params.messages[stableAnthropicIndex];
+  if (target === undefined) return;
+  // `cache_control` rides on a content BLOCK, so a plain-string turn is widened to a one-block array.
+  // Mapping to blocks changes no bytes the model sees; it only gives the marker somewhere to live.
+  const blocks: Anthropic.ContentBlockParam[] =
+    typeof target.content === 'string'
+      ? [{ type: 'text', text: target.content }]
+      : [...target.content];
+  const last = blocks[blocks.length - 1];
+  if (last === undefined || !acceptsCacheControl(last)) return;
+  blocks[blocks.length - 1] = { ...last, cache_control: { type: 'ephemeral', ttl } };
+  params.messages[stableAnthropicIndex] = { ...target, content: blocks };
+}
+
+/**
+ * The block kinds `cache_control` may ride on. Not every content block accepts it — a `thinking` block
+ * rejects it at the type level and at the API — so the marker is only ever attached to a kind that
+ * carries it. These four are exactly what {@link toAnthropicContent} emits.
+ */
+type CacheableBlock = Extract<
+  Anthropic.ContentBlockParam,
+  { type: 'text' | 'image' | 'tool_use' | 'tool_result' }
+>;
+function acceptsCacheControl(block: Anthropic.ContentBlockParam): block is CacheableBlock {
+  return (
+    block.type === 'text' ||
+    block.type === 'image' ||
+    block.type === 'tool_use' ||
+    block.type === 'tool_result'
+  );
 }
 
 /** Pure: Anthropic completion → canonical response (text concat + tool calls + usage). */
@@ -126,12 +212,17 @@ export function fromAnthropicResult(result: AnthropicCompletion): CanonResponse 
       toolCalls.push(call);
     }
   }
-  return {
-    text,
-    stopReason: mapStopReason(result.stop_reason),
-    usage: { inputTokens: result.usage.input_tokens, outputTokens: result.usage.output_tokens },
-    toolCalls,
+  const usage: CanonUsage = {
+    inputTokens: result.usage.input_tokens,
+    outputTokens: result.usage.output_tokens,
   };
+  // Carried only when the vendor reported them. Absent stays absent: a zero here means "a cache was in
+  // play and nothing hit", which the caller acts on, so it must never be manufactured from a null.
+  const read = result.usage.cache_read_input_tokens;
+  const written = result.usage.cache_creation_input_tokens;
+  if (typeof read === 'number') usage.cacheReadTokens = read;
+  if (typeof written === 'number') usage.cacheWriteTokens = written;
+  return { text, stopReason: mapStopReason(result.stop_reason), usage, toolCalls };
 }
 
 /**

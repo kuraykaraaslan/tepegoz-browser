@@ -45,9 +45,47 @@ export interface NavGroundingInput {
 
 /** Very common English/Turkish words that carry no navigation intent — dropped before scoring. */
 const STOPWORDS: ReadonlySet<string> = new Set([
-  'the', 'a', 'an', 'and', 'or', 'to', 'of', 'in', 'on', 'for', 'this', 'that', 'my', 'me', 'i',
-  'find', 'open', 'go', 'get', 'read', 'tell', 'show', 'page', 'site', 'website', 'please', 'its',
-  've', 'bir', 'bu', 'şu', 'o', 'ile', 'için', 'bana', 'aç', 'bul', 'git', 'oku', 'sayfa', 'site',
+  'the',
+  'a',
+  'an',
+  'and',
+  'or',
+  'to',
+  'of',
+  'in',
+  'on',
+  'for',
+  'this',
+  'that',
+  'my',
+  'me',
+  'i',
+  'find',
+  'open',
+  'go',
+  'get',
+  'read',
+  'tell',
+  'show',
+  'page',
+  'site',
+  'website',
+  'please',
+  'its',
+  've',
+  'bir',
+  'bu',
+  'şu',
+  'o',
+  'ile',
+  'için',
+  'bana',
+  'aç',
+  'bul',
+  'git',
+  'oku',
+  'sayfa',
+  'site',
 ]);
 
 /** Split a string into lower-cased alphanumeric tokens (Unicode letters kept, so Turkish survives). */
@@ -242,8 +280,10 @@ const MAX_HINT_LABEL = 120;
 export function buildNavigationGuidance(input: NavGroundingInput): string | null {
   const [top] = rankNavigationCandidates(input);
   if (top === undefined) return null;
-  const label = top.label.length > MAX_HINT_LABEL ? `${top.label.slice(0, MAX_HINT_LABEL)}…` : top.label;
-  const evidence = top.evidence === 'visible-link' ? 'a link visible on this page' : "the site's sitemap";
+  const label =
+    top.label.length > MAX_HINT_LABEL ? `${top.label.slice(0, MAX_HINT_LABEL)}…` : top.label;
+  const evidence =
+    top.evidence === 'visible-link' ? 'a link visible on this page' : "the site's sitemap";
   return (
     `Navigation hint: "${label}" (${top.url}) matches your goal and is grounded by ${evidence}. ` +
     'Navigate there with browser_update_location instead of guessing a URL or leaving the page to ' +

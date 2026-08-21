@@ -131,16 +131,7 @@ export function isTerminalDownloadStatus(status: DownloadStatus): boolean {
   return ['completed', 'blocked', 'canceled', 'failed'].includes(status);
 }
 
-const EXECUTABLE_EXTS = new Set([
-  '.app',
-  '.bat',
-  '.cmd',
-  '.com',
-  '.exe',
-  '.msi',
-  '.ps1',
-  '.scr',
-]);
+const EXECUTABLE_EXTS = new Set(['.app', '.bat', '.cmd', '.com', '.exe', '.msi', '.ps1', '.scr']);
 const SCRIPT_EXTS = new Set(['.js', '.jse', '.sh', '.vbs', '.wsf']);
 const ARCHIVE_EXTS = new Set(['.7z', '.bz2', '.gz', '.rar', '.tar', '.xz', '.zip']);
 
@@ -167,7 +158,10 @@ export function releaseNeedsApproval(record: DownloadRecord): boolean {
   return record.risk === 'executable' || record.risk === 'script';
 }
 
-export function commandNeedsApproval(record: DownloadRecord, action: DownloadCommandAction): boolean {
+export function commandNeedsApproval(
+  record: DownloadRecord,
+  action: DownloadCommandAction,
+): boolean {
   if (action === 'release') return releaseNeedsApproval(record);
   if (action === 'open') return record.risk !== 'normal' || record.trustVerdict !== 'safe';
   return false;

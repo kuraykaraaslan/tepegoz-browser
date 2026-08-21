@@ -24,7 +24,11 @@ export interface TypoHostPorts {
   isExtensionEnabled(): boolean;
   dictionaries(): TypoDictionaryInfo[];
   dictionaryFor(language: string): TypoDictionaryAdapter | null | undefined;
-  aiReview?(input: TypoCheckInput, base: TypoCheckResult, settings: TypoSettings): Promise<TypoCheckResult>;
+  aiReview?(
+    input: TypoCheckInput,
+    base: TypoCheckResult,
+    settings: TypoSettings,
+  ): Promise<TypoCheckResult>;
 }
 
 export interface TypoHost {
@@ -129,7 +133,9 @@ export function createTypoHost(ports: TypoHostPorts): TypoHost {
       const disabled = settings.disabledOrigins.filter((item) => item !== normalized);
       settings = {
         ...settings,
-        disabledOrigins: enabled ? disabled : [...disabled, normalized].slice(0, MAX_DISABLED_ORIGINS),
+        disabledOrigins: enabled
+          ? disabled
+          : [...disabled, normalized].slice(0, MAX_DISABLED_ORIGINS),
       };
       return persist();
     },
@@ -140,7 +146,8 @@ export function createTypoHost(ports: TypoHostPorts): TypoHost {
       if (cleaned.length === 0) return cloneSettings(settings);
       const exists = settings.ignoredWords.some(
         (item) =>
-          item.language === lang && item.word.toLocaleLowerCase(lang) === cleaned.toLocaleLowerCase(lang),
+          item.language === lang &&
+          item.word.toLocaleLowerCase(lang) === cleaned.toLocaleLowerCase(lang),
       );
       if (!exists) {
         settings = {

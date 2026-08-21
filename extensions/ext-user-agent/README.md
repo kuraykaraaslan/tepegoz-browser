@@ -10,6 +10,7 @@ entirely by this extension; the host only ever receives and applies the resolved
 for the default). This extension does not register any agent-callable capabilities.
 
 ## Exports
+
 - **`userAgentManifest`** — the extension manifest (`com.tepegoz.user-agent`, popup + page surfaces, `tabs`/`network` permissions).
 - **`UserAgentPopup`** — popup surface (compact card).
 - **`UserAgentPage`** — page surface at `tepegoz://com.tepegoz.user-agent`.
@@ -20,7 +21,9 @@ for the default). This extension does not register any agent-callable capabiliti
 - **`UserAgentHostApi`** (type) — the host contract (`getUserAgent` / `setUserAgent`).
 
 ## i18n
+
 Own `src/i18n/{en,tr}.ts` dictionary (English + Turkish, parity-tested); consumed via `useT` from `@tepegoz/i18n/react`.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

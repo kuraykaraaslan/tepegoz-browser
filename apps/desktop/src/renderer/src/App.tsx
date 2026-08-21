@@ -134,7 +134,11 @@ export function App() {
   const answerPermission = useCallback(
     (allow: boolean, remember: boolean) => {
       if (permReq === null) return;
-      window.tepegoz.respondNotificationPermission({ requestId: permReq.requestId, allow, remember });
+      window.tepegoz.respondNotificationPermission({
+        requestId: permReq.requestId,
+        allow,
+        remember,
+      });
       setPermReq(null);
     },
     [permReq],
@@ -217,7 +221,8 @@ export function App() {
     setOmniboxSnapshot,
   });
 
-  const contentSnapshot = extSurfaces.resizeSnapshot ?? (omniboxViewHidden ? omniboxSnapshot : null);
+  const contentSnapshot =
+    extSurfaces.resizeSnapshot ?? (omniboxViewHidden ? omniboxSnapshot : null);
 
   // Chromeless kiosk surface (startupMode: 'kiosk' → loaded with ?kiosk=1): no tab strip / toolbar /
   // overlays — the kiosk URL's web view (laid out by main over `contentRef`) fills the whole screen. The

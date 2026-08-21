@@ -24,7 +24,10 @@ export function isWorkingStateEmpty(s: AgentWorkingState): boolean {
  * explicit empty array, which lets the model deliberately clear one (e.g. a pending verification once it
  * confirms). So the model can update the ledger incrementally OR re-emit a full snapshot; both work.
  */
-export function mergeWorkingState(prev: AgentWorkingState, patch: AgentWorkingState): AgentWorkingState {
+export function mergeWorkingState(
+  prev: AgentWorkingState,
+  patch: AgentWorkingState,
+): AgentWorkingState {
   return {
     openTabs: patch.openTabs ?? prev.openTabs,
     selectedRecords: patch.selectedRecords ?? prev.selectedRecords,

@@ -9,7 +9,12 @@ import type { CompletionOutcome, EvalScenario } from '@tepegoz/shared-types';
 import type { ScoreResult } from './scorer';
 import type { Agreement } from './calibration';
 import type { FamilyStat, Interval, RepeatSummary } from './statistics';
-import { verificationLines, verificationMetrics, type VerificationMetrics } from './verification-metrics';
+import {
+  verificationLines,
+  verificationMetrics,
+  type VerificationMetrics,
+} from './verification-metrics';
+import { cacheHealth, cacheHealthLine } from './cache-health';
 
 /** One scenario's full outcome: the record fed to the metrics + the ground-truth score. */
 export interface ScenarioResult {
@@ -132,7 +137,9 @@ export function buildReport(input: ReportInput): EvalReport {
         }
       : {}),
     ...(input.repeat !== undefined ? { repeat: input.repeat } : {}),
-    ...(input.families !== undefined && input.families.length > 0 ? { families: input.families } : {}),
+    ...(input.families !== undefined && input.families.length > 0
+      ? { families: input.families }
+      : {}),
     scenarios: input.results.map((r) => ({
       id: r.scenario.id,
       heldOut: r.scenario.heldOut,
@@ -162,7 +169,8 @@ function pooledLines(report: EvalReport): string[] {
     `pooled per-trial (Wilson 95%): dev ${ci(rep.pooled.dev)} · held-out ${ci(rep.pooled.heldOut)}`,
     ...rep.perScenario.map((s) => {
       let flakyTag = '';
-      if (s.flaky) flakyTag = s.flakyConfirmed === true ? ' [FLAKY×2 — excluded from gates]' : ' [flaky]';
+      if (s.flaky)
+        flakyTag = s.flakyConfirmed === true ? ' [FLAKY×2 — excluded from gates]' : ' [flaky]';
       return (
         `  ${String(s.passes)}/${String(s.n)} [${pct(s.ci.lo)}–${pct(s.ci.hi)}]` +
         `${s.heldOut ? ' [held-out]' : ''}${flakyTag}  ${s.id}`
@@ -190,14 +198,17 @@ function familyLines(report: EvalReport): string[] {
 /** A human-readable summary table (full pass/fail list — the eval must be able to show a fail). */
 export function formatReportTable(report: EvalReport): string {
   const pct = (n: number): string => `${(n * 100).toFixed(1)}%`;
-  const ms = (n: number): string => (n >= 1000 ? `${(n / 1000).toFixed(1)}s` : `${Math.round(n).toString()}ms`);
+  const ms = (n: number): string =>
+    n >= 1000 ? `${(n / 1000).toFixed(1)}s` : `${Math.round(n).toString()}ms`;
   const rows = report.scenarios.map(
     (s) =>
       `  ${s.ok ? 'PASS' : 'FAIL'}  ${s.heldOut ? '[held-out] ' : ''}${s.id}${s.escaped ? ' [escaped]' : ''} — ${s.reason}`,
   );
   const judgeLine =
     report.judge !== undefined
-      ? [`judge↔human agreement: ${pct(report.judge.agreementRate)} (${String(report.judge.n)} labelled)`]
+      ? [
+          `judge↔human agreement: ${pct(report.judge.agreementRate)} (${String(report.judge.n)} labelled)`,
+        ]
       : [];
   return [
     `agent-eval · model=${report.model} · N=${String(report.n)} · threshold=${pct(report.threshold)}`,
@@ -216,6 +227,9 @@ export function formatReportTable(report: EvalReport): string {
     report.dev.metrics.avgCostUsdPerRun !== undefined
       ? `dev spend: $${report.dev.metrics.avgCostUsdPerRun.toFixed(4)}/run · $${(report.dev.metrics.totalCostUsd ?? 0).toFixed(4)} total`
       : 'dev spend: not measured (set TEPEGOZ_EVAL_RATES to per-1M-token prices)',
+    // Caching is unfalsifiable unless the counters are stated: a silently-invalidated prefix looks
+    // exactly like a working one from the outside, and costs more.
+    cacheHealthLine(cacheHealth(report.dev.metrics.tokenUsage)),
     `threshold ${report.thresholdMet ? 'met' : 'NOT met'}`,
     ...judgeLine,
     ...verificationLines(report.dev.verification, report.heldOut.verification),
@@ -226,7 +240,11 @@ export function formatReportTable(report: EvalReport): string {
 }
 
 /** Write the JSON artifact and return its path. */
-export function writeReport(dir: string, report: EvalReport, fileName = 'agent-eval-report.json'): string {
+export function writeReport(
+  dir: string,
+  report: EvalReport,
+  fileName = 'agent-eval-report.json',
+): string {
   const path = join(dir, fileName);
   writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
   return path;

@@ -14,7 +14,11 @@ describe('resolveDrop', () => {
 
   it('reorders a tab and reports its index in the tab-only projection', () => {
     // Drag '4' to where '3' is → tab order becomes 0,1,2,4,3 → '4' at index 3.
-    expect(resolveDrop(ITEMS, '4', '3', groupOf)).toEqual({ kind: 'move-tab', id: '4', toIndex: 3 });
+    expect(resolveDrop(ITEMS, '4', '3', groupOf)).toEqual({
+      kind: 'move-tab',
+      id: '4',
+      toIndex: 3,
+    });
   });
 
   it('dropping a tab onto a group header joins that group explicitly', () => {

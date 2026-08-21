@@ -26,7 +26,13 @@ export function BrandMark({ className }: BrandMarkProps) {
         <circle cx="131" cy="151" r="8.5" fill="#FFFFFF" />
       </g>
       {/* Stem */}
-      <path d="M120 210 L120 250" fill="none" stroke="#FFFFFF" strokeWidth="9" strokeLinecap="round" />
+      <path
+        d="M120 210 L120 250"
+        fill="none"
+        stroke="#FFFFFF"
+        strokeWidth="9"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }

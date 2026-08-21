@@ -92,9 +92,13 @@ export function selectScenarios(loaded: EvalScenario[]): EvalScenario[] {
 }
 
 /** One-line dev/held-out before→after trend vs. the newest prior archived run. */
-export function trendLine(prior: { model: string; dev: number; heldOut: number } | null, report: EvalReport): string {
+export function trendLine(
+  prior: { model: string; dev: number; heldOut: number } | null,
+  report: EvalReport,
+): string {
   const pct = (n: number): string => `${(n * 100).toFixed(1)}%`;
-  if (prior === null) return 'trend: (no comparable prior run — same model + scenario set — this is the baseline)';
+  if (prior === null)
+    return 'trend: (no comparable prior run — same model + scenario set — this is the baseline)';
   const arrow = (d: number): string => {
     if (d > 0) return `▲ +${pct(d)}`;
     if (d < 0) return `▼ ${pct(d)}`;

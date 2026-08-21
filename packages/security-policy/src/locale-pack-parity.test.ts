@@ -8,7 +8,10 @@ const base = {
 
 describe('locale-pack parity', () => {
   it('passes an exact structural match', () => {
-    const pack = { common: { save: 'Kaydet', cancel: 'İptal' }, errors: { notFound: 'Bulunamadı' } };
+    const pack = {
+      common: { save: 'Kaydet', cancel: 'İptal' },
+      errors: { notFound: 'Bulunamadı' },
+    };
     expect(checkLocalePackParity(base, pack)).toEqual({
       ok: true,
       missingKeys: [],
@@ -37,7 +40,10 @@ describe('locale-pack parity', () => {
   it('catches a SHAPE MISMATCH — a string turned into a nested object at the same path', () => {
     // This is the failure that actually breaks a caller: t('common.save') expects a string and gets an
     // object, which is a different bug from the key simply being absent.
-    const pack = { common: { save: { nested: 'oops' }, cancel: 'İptal' }, errors: { notFound: 'x' } };
+    const pack = {
+      common: { save: { nested: 'oops' }, cancel: 'İptal' },
+      errors: { notFound: 'x' },
+    };
     const r = checkLocalePackParity(base, pack);
     expect(r.ok).toBe(false);
     expect(r.shapeMismatches).toEqual(['common.save']);

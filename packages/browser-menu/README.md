@@ -11,6 +11,7 @@ host window, top-level Escape/dismissal, or (for flyout rows) the submenu's open
 those are driven by the host via the `flyout` prop.
 
 ## Exports
+
 - **`Menu`** — renders a `MenuItem[]` model with keyboard navigation.
 - **`MenuProps`** — `items`, `ariaLabel`, optional `className`/`autoFocus`, and `flyout` hooks.
 - **`MenuFlyout`** — host hooks (`onOpen`/`onClose`) for flyout ("submenu") parent rows; this app
@@ -19,6 +20,7 @@ those are driven by the host via the `flyout` prop.
   label, header, zoom, actions-group, and flyout-parent variants).
 
 ## Usage
+
 ```tsx
 <Menu
   items={[
@@ -33,4 +35,5 @@ those are driven by the host via the `flyout` prop.
 ```
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

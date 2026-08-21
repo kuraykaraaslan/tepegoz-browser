@@ -128,7 +128,9 @@ export class WindowTabsClosing extends WindowTabsBase {
    *  the chrome, no web view. A new-tab experience for internal pages, mirroring Chrome's chrome://. */
   openInternalPage(url: string): void {
     const baseUrl = internalBaseUrl(url);
-    const existing = this.store.records().find((rec) => rec.kind === 'internal' && internalBaseUrl(rec.url) === baseUrl)?.id;
+    const existing = this.store
+      .records()
+      .find((rec) => rec.kind === 'internal' && internalBaseUrl(rec.url) === baseUrl)?.id;
     if (existing !== undefined) {
       this.store.update(existing, { url, title: internalTitleFor(url) });
       this.activate(existing);

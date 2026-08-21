@@ -28,7 +28,12 @@ export interface CustomizePanelProps {
  * surface, a solid color (optionally + an SVG pattern), or an uploaded image — and a dimness level.
  * Presentational: every change is reported via `onChange`; the host owns persistence.
  */
-export function CustomizePanel({ background, onChange, onPickImage, onClose }: Readonly<CustomizePanelProps>) {
+export function CustomizePanel({
+  background,
+  onChange,
+  onPickImage,
+  onClose,
+}: Readonly<CustomizePanelProps>) {
   const t = useT(newtabDict).customize;
   const color = background.color || FALLBACK_COLOR;
   const [adjusting, setAdjusting] = useState(false);
@@ -115,7 +120,9 @@ export function CustomizePanel({ background, onChange, onPickImage, onClose }: R
             <label className="flex h-7 cursor-pointer items-center gap-1.5 rounded-full border border-border px-2.5 text-xs text-text-primary">
               <span
                 className="h-3.5 w-3.5 rounded-full border border-border"
-                style={{ background: 'conic-gradient(red, yellow, lime, cyan, blue, magenta, red)' }}
+                style={{
+                  background: 'conic-gradient(red, yellow, lime, cyan, blue, magenta, red)',
+                }}
                 aria-hidden
               />
               {t.customColor}

@@ -18,7 +18,10 @@ import { EMPTY_TABS_STATE } from './tabs-shared';
 export default class TabManager extends TabManagerBase {
   // ── Facade (delegates to the focused window) ───────────────────────────────────────────────────
 
-  static createTab(rawUrl?: string, opts?: { background?: boolean; openerId?: string | undefined }): string | null {
+  static createTab(
+    rawUrl?: string,
+    opts?: { background?: boolean; openerId?: string | undefined },
+  ): string | null {
     return TabManager.focused()?.createTab(rawUrl, opts) ?? null;
   }
   static activeTabId(): string | null {

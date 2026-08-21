@@ -2,10 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { resolveLocale, type Locale } from '@tepegoz/i18n';
 import { I18nProvider, useT } from '@tepegoz/i18n/react';
 import { Menu } from '@tepegoz/browser-menu';
-import {
-  buildPageContextMenuModel,
-  type PageContextMenuContext,
-} from '@tepegoz/page-context-menu';
+import { buildPageContextMenuModel, type PageContextMenuContext } from '@tepegoz/page-context-menu';
 import { pageContextMenuDict } from '@tepegoz/page-context-menu/i18n';
 import type {
   PageMenuAction,
@@ -52,7 +49,8 @@ export function PageContextMenuPopup() {
   useEffect(() => {
     const el = contentRef.current;
     if (el === null) return;
-    const report = (): void => window.tepegoz.resizePopup(Math.ceil(el.getBoundingClientRect().height));
+    const report = (): void =>
+      window.tepegoz.resizePopup(Math.ceil(el.getBoundingClientRect().height));
     report();
     const observer = new ResizeObserver(report);
     observer.observe(el);
@@ -63,7 +61,9 @@ export function PageContextMenuPopup() {
     void window.tepegoz.getPreferences().then(
       (p) => {
         applyTheme(p.theme, p.themeColor);
-        setLocale(p.locale === 'en' || p.locale === 'tr' ? p.locale : resolveLocale(navigator.language));
+        setLocale(
+          p.locale === 'en' || p.locale === 'tr' ? p.locale : resolveLocale(navigator.language),
+        );
       },
       () => {
         /* bridge unavailable — fall back to defaults */

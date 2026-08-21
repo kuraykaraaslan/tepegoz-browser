@@ -138,7 +138,10 @@ async function runModelBatch(
     provider,
     model: modelFor(provider),
     capability: 'extract',
-    maxTokens: Math.min(6000, Math.max(800, input.items.reduce((sum, item) => sum + item.text.length, 0) * 2)),
+    maxTokens: Math.min(
+      6000,
+      Math.max(800, input.items.reduce((sum, item) => sum + item.text.length, 0) * 2),
+    ),
     timeoutMs: provider === 'local' ? 60_000 : 40_000,
     responseFormat: 'json',
     messages: [
@@ -182,23 +185,24 @@ async function requestCloudFallback(
   });
   const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? null;
   const dialogOptions: MessageBoxOptions = {
-      type: 'question',
-      buttons: ['Allow and remember', 'Deny and remember', 'Not now'],
-      defaultId: 0,
-      cancelId: 2,
-      title: 'Cloud translation requested',
-      message: 'A page translation needs cloud fallback.',
-      detail:
-        `${request.origin}\n` +
-        `Target: ${request.targetLanguage}\n` +
-        `Text: ${request.textCharCount.toLocaleString()} characters`,
-    };
-  const nativeResponse = (win === null ? dialog.showMessageBox(dialogOptions) : dialog.showMessageBox(win, dialogOptions))
-    .then((choice): TranslateCloudFallbackResponse => ({
-      requestId: request.requestId,
-      allow: choice.response === 0,
-      remember: choice.response === 0 || choice.response === 1,
-    }));
+    type: 'question',
+    buttons: ['Allow and remember', 'Deny and remember', 'Not now'],
+    defaultId: 0,
+    cancelId: 2,
+    title: 'Cloud translation requested',
+    message: 'A page translation needs cloud fallback.',
+    detail:
+      `${request.origin}\n` +
+      `Target: ${request.targetLanguage}\n` +
+      `Text: ${request.textCharCount.toLocaleString()} characters`,
+  };
+  const nativeResponse = (
+    win === null ? dialog.showMessageBox(dialogOptions) : dialog.showMessageBox(win, dialogOptions)
+  ).then((choice): TranslateCloudFallbackResponse => ({
+    requestId: request.requestId,
+    allow: choice.response === 0,
+    remember: choice.response === 0 || choice.response === 1,
+  }));
   const timeout = new Promise<TranslateCloudFallbackResponse>((resolve) => {
     const timer = setTimeout(() => {
       resolve({ requestId: request.requestId, allow: false, remember: false });

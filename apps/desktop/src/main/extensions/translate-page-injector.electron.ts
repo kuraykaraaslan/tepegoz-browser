@@ -6,7 +6,6 @@ import {
   makeBindingListener,
   type BindingListener,
 } from './translate-page-injector-binding.electron';
-import TranslatePageInjector from './translate-page-injector-controller.electron';
 
 export const TRANSLATE_PAGE_SCRIPT = `
 (() => {
@@ -275,5 +274,3 @@ export async function inject(wc: WebContents): Promise<void> {
   await ensureBinding(wc);
   await wc.executeJavaScript(TRANSLATE_PAGE_SCRIPT, true);
 }
-
-export default TranslatePageInjector;

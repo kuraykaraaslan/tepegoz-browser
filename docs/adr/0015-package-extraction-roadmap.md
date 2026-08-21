@@ -4,6 +4,7 @@
 - **Date:** 2026-07-01
 
 ## Context
+
 `apps/desktop` has accumulated several cohesive, self-contained parts that are logically packages in
 their own right — the omnibox/`url-bar` (`Toolbar.tsx` + `omnibox-calc.ts`), the tab strip, window
 controls, navigation-URL parsing (`navigation-url.ts`, pure TS), the credential vault, the preferences
@@ -13,6 +14,7 @@ a durable, checkable decision about **which seams are packages** and **how** to 
 can proceed one PR at a time across sessions without re-litigating scope.
 
 ## Decision
+
 - **One desktop app is retained.** `apps/desktop` stays the single application; reusable parts move into
   `packages/*` and the app **consumes** them. We do **not** split into multiple apps.
 - **The seams to extract are catalogued in [`docs/package-map.md`](../package-map.md)** (a living
@@ -36,6 +38,7 @@ can proceed one PR at a time across sessions without re-litigating scope.
   (per-package `typecheck lint test build`, `depcruise` clean, `@tepegoz/desktop` build + e2e smoke).
 
 ## Consequences
+
 - Clear, agreed module boundaries; new work targets a package instead of growing `apps/desktop`.
 - `dependency-cruiser.cjs` gains concrete layer rules incrementally "as those packages land" (as its
   own comment anticipates), tightening enforcement over time.

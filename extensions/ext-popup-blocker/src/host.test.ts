@@ -5,7 +5,10 @@ import type { PopupBlockerSettings } from './types';
 function fakePorts(overrides?: {
   popupBlocker?: Partial<PopupBlockerSettings>;
   seeded?: boolean;
-}): PopupBlockerPorts & { pushed: unknown[]; prefs: { popupBlocker: PopupBlockerSettings; popupBlockerSeeded: boolean } } {
+}): PopupBlockerPorts & {
+  pushed: unknown[];
+  prefs: { popupBlocker: PopupBlockerSettings; popupBlockerSeeded: boolean };
+} {
   const state = {
     prefs: {
       popupBlocker: {
@@ -52,7 +55,9 @@ describe('createPopupBlockerHost', () => {
 
     // A user-removed default must not come back on a second init() (already seeded).
     const afterUserRemoval = ports.prefs.popupBlocker.trustedOrigins.slice(1);
-    ports.updatePrefs({ popupBlocker: { ...ports.prefs.popupBlocker, trustedOrigins: afterUserRemoval } });
+    ports.updatePrefs({
+      popupBlocker: { ...ports.prefs.popupBlocker, trustedOrigins: afterUserRemoval },
+    });
     host.init();
     expect(ports.prefs.popupBlocker.trustedOrigins).toEqual(afterUserRemoval);
   });
@@ -60,17 +65,25 @@ describe('createPopupBlockerHost', () => {
   it('shouldBlock blocks by default and allows trusted origins', () => {
     const host = createPopupBlockerHost(fakePorts());
     const shouldBlock = host.interceptors.interceptors[0]!.shouldBlock;
-    expect(shouldBlock({ sourceOrigin: 'https://ads.example', url: 'https://ads.example/x' })).toBe(true);
+    expect(shouldBlock({ sourceOrigin: 'https://ads.example', url: 'https://ads.example/x' })).toBe(
+      true,
+    );
 
     host.trustOrigin('https://ads.example');
-    expect(shouldBlock({ sourceOrigin: 'https://ads.example', url: 'https://ads.example/x' })).toBe(false);
+    expect(shouldBlock({ sourceOrigin: 'https://ads.example', url: 'https://ads.example/x' })).toBe(
+      false,
+    );
   });
 
   it('shouldBlock is false when the feature toggle is off, regardless of trust list', () => {
-    const host = createPopupBlockerHost(fakePorts({ popupBlocker: { enabled: false }, seeded: true }));
+    const host = createPopupBlockerHost(
+      fakePorts({ popupBlocker: { enabled: false }, seeded: true }),
+    );
     host.init(); // loads `enabled: false` from prefs — settings start at the hardcoded default otherwise
     const shouldBlock = host.interceptors.interceptors[0]!.shouldBlock;
-    expect(shouldBlock({ sourceOrigin: 'https://ads.example', url: 'https://ads.example/x' })).toBe(false);
+    expect(shouldBlock({ sourceOrigin: 'https://ads.example', url: 'https://ads.example/x' })).toBe(
+      false,
+    );
   });
 
   it('onBlocked records a recent request and pushes a notification with 4 actions', () => {
@@ -110,7 +123,13 @@ describe('createPopupBlockerHost', () => {
   it('trustOrigin is a no-op for an empty or already-trusted origin', () => {
     const spy = vi.fn();
     const ports = fakePorts();
-    const host = createPopupBlockerHost({ ...ports, updatePrefs: (p) => { spy(p); ports.updatePrefs(p); } });
+    const host = createPopupBlockerHost({
+      ...ports,
+      updatePrefs: (p) => {
+        spy(p);
+        ports.updatePrefs(p);
+      },
+    });
     host.trustOrigin('https://a.example');
     spy.mockClear();
     host.trustOrigin('https://a.example'); // already trusted

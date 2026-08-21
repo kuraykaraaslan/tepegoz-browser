@@ -39,7 +39,11 @@ export function snapshot(state: DownloadState): DownloadsState {
   return { items: list(state) };
 }
 
-export function pushPending(state: DownloadState, url: string, provenance: DownloadProvenance): void {
+export function pushPending(
+  state: DownloadState,
+  url: string,
+  provenance: DownloadProvenance,
+): void {
   const existing = state.pendingByUrl.get(url) ?? [];
   existing.push(provenance);
   state.pendingByUrl.set(url, existing);

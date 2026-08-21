@@ -9,6 +9,7 @@ arrays and adds the mutable store on top. Framework-agnostic and Electron-free �
 notification's `channels`.
 
 ## Exports
+
 - **`NotificationStore`** (default export) — static, newest-first ring buffer (cap 200): `add(item)`
   (replaces any prior item sharing the new item's `dedupeKey`), `dismiss(id)`, `dismissAll()`,
   `markRead(id)`, `markAllRead()`, `list()` (defensive copy), `unreadCount()`, `state()` (the
@@ -27,4 +28,5 @@ notification's `channels`.
   from `@tepegoz/shared-types/notifications`.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

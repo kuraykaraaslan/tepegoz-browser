@@ -15,7 +15,10 @@ describe('rankNavigationCandidates', () => {
       elements: [link('Blog', 'blog.html'), link('Pricing', 'pricing.html')],
     });
     expect(out).toHaveLength(1);
-    expect(out[0]).toMatchObject({ evidence: 'visible-link', url: 'https://example.com/blog.html' });
+    expect(out[0]).toMatchObject({
+      evidence: 'visible-link',
+      url: 'https://example.com/blog.html',
+    });
     expect(out[0]?.label).toBe('Blog');
   });
 
@@ -46,7 +49,10 @@ describe('rankNavigationCandidates', () => {
       sitemapUrls: ['https://example.com/docs/guide.html', 'https://example.com/pricing.html'],
     });
     expect(out).toHaveLength(1);
-    expect(out[0]).toMatchObject({ evidence: 'sitemap', url: 'https://example.com/docs/guide.html' });
+    expect(out[0]).toMatchObject({
+      evidence: 'sitemap',
+      url: 'https://example.com/docs/guide.html',
+    });
   });
 
   it('excludes the current page, fragments, mailto/js hrefs, and non-link roles', () => {
@@ -76,7 +82,11 @@ describe('rankNavigationCandidates', () => {
     const out = rankNavigationCandidates({
       goal: 'blog',
       currentUrl: 'https://example.com/',
-      elements: [link('Blog', '/blog'), link('Our blog', '/blog/'), link('Blog again', '/blog#recent')],
+      elements: [
+        link('Blog', '/blog'),
+        link('Our blog', '/blog/'),
+        link('Blog again', '/blog#recent'),
+      ],
     });
     expect(out).toHaveLength(1);
   });

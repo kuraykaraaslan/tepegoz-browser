@@ -43,7 +43,7 @@ itself a child of `Paranoid-Default` can be laxer than `Paranoid-Default` — is
 tested directly (11 tests), rather than left to a publisher's honesty or a manual review that can miss
 one added tool in a long list.
 
-**Negative / accepted.** This is a scope check only. It says nothing about whether a bundle's *signature*
+**Negative / accepted.** This is a scope check only. It says nothing about whether a bundle's _signature_
 is valid, whether its provenance chain is authentic, or whether its declared red-team attack-success-rate
 is real — those are separate, unimplemented concerns the phase's DoD also names.
 

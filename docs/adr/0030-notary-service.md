@@ -16,7 +16,7 @@ referring to this file.
 ## Context
 
 The Journal already records "what the agent did" as an append-only, event-sourced fact
-(ADR-0004: *shown = recorded*). What it does not yet provide is a way for someone who is **not** running
+(ADR-0004: _shown = recorded_). What it does not yet provide is a way for someone who is **not** running
 tepegöz — an auditor, an insurer, a regulator, an opposing party in a dispute — to check that a specific
 record is genuine, without trusting the vendor who produced it to also grade its own homework. That
 capability is the precondition Phase 7 names for regulated FinServ/health/legal adoption, and it is the
@@ -41,7 +41,7 @@ Receipt a standalone CLI can verify with nothing installed but Node.**
 Landed in `@tepegoz/notary` (a new, dependency-light package — `zod` only):
 
 - **`selfHashOf` / `chainEvents` / `verifyChain`** (`hash-chain.ts`) fold each event's identifying fields
-  plus the *previous* event's hash into 64 hex characters, over a canonical (key-sorted) JSON encoding.
+  plus the _previous_ event's hash into 64 hex characters, over a canonical (key-sorted) JSON encoding.
   Editing an event changes its own hash, which changes what the next event was chained against, so the
   break is detectable however far downstream it is checked. `verifyChain` reports **which** invariant
   broke — a `hash_mismatch` (this event's own fields were altered) reads differently from a `broken_link`
@@ -58,7 +58,7 @@ Landed in `@tepegoz/notary` (a new, dependency-light package — `zod` only):
   chained, plus its checkpoint — self-contained, so `verifyReceipt` needs nothing else. It returns one of
   three verdicts, and the distinction is the point: `PASS`, `TAMPERED` (the document contradicts itself —
   the case the feature exists to catch), or `INVALID` (wrong shape entirely — a usage error, like the
-  wrong file, never itself evidence of tampering). A checkpoint that verifies over the *wrong* root is
+  wrong file, never itself evidence of tampering). A checkpoint that verifies over the _wrong_ root is
   `TAMPERED`, not a caveated pass — a receipt is a binary claim.
 - **`tepegoz-verify`** (`cli.ts`, bundled by `scripts/build-cli.mjs`) is a plain Node script — `zod`
   parses the untrusted file at the boundary, `verifyReceipt` judges it, exit codes double as the
@@ -81,12 +81,12 @@ against both a genuine and a hand-tampered receipt.
 TypeScript source resolved by Vite/Vitest — but a plain `tsc` build under that setting emits extension-
 less relative imports that Node's own ESM loader refuses to resolve. A `tsc`-only build of the CLI would
 have failed on a real machine before reading a single receipt. `scripts/build-cli.mjs` bundles with
-esbuild (already a transitive workspace dependency, pinned explicitly here) instead, so the *shipped*
+esbuild (already a transitive workspace dependency, pinned explicitly here) instead, so the _shipped_
 artifact has no relative imports left to resolve — the standalone claim was checked by actually running
 the standalone artifact, not assumed from the source compiling.
 
 **Negative / accepted.** Chaining hashes over the Journal's already-redacted payload proves the
-*redacted* record is intact — it says nothing about whether the pre-redaction content matched, which the
+_redacted_ record is intact — it says nothing about whether the pre-redaction content matched, which the
 phase doc names as an open risk. Sealing a pre-redaction digest is not built.
 
 **Owed, and stated rather than implied.** Nothing in `apps/desktop` calls this package yet: no migration

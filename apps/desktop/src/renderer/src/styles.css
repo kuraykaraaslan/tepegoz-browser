@@ -51,6 +51,9 @@
 @source "../../../../../packages/nav-toolbar/src";
 @source "../../../../../packages/bookmarks-bar/src";
 @source "../../../../../packages/bookmarks-ui/src";
+@source "../../../../../packages/cert-warning-ui/src";
+@source "../../../../../packages/auth-prompt-ui/src";
+@source "../../../../../packages/find-bar/src";
 @source "../../../../../packages/browser-chrome/src";
 @source "../../../../../packages/browser-menu/src";
 @source "../../../../../extensions/ext-adblock/src";

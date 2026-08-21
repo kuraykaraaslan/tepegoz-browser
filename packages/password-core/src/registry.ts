@@ -1,12 +1,5 @@
 import type { LoginCredential, LoginCredentialMeta, PasswordProvider } from './types';
-
-function normalizeOrigin(url: string): string {
-  try {
-    return new URL(url).origin;
-  } catch {
-    return url;
-  }
-}
+import { normalizeOrigin } from './origin';
 
 /**
  * Central registry for password providers. Register providers at startup; the registry aggregates

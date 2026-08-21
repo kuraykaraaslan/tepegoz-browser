@@ -90,7 +90,9 @@ export interface ExtensionsApi {
   addTranslateGlossaryTerm(term: Omit<TranslateGlossaryTerm, 'id'>): Promise<TranslateSettings>;
   removeTranslateGlossaryTerm(id: string): Promise<TranslateSettings>;
   onTranslatePageState(callback: (state: TranslatePageState | null) => void): () => void;
-  onTranslateCloudFallbackRequest(callback: (request: TranslateCloudFallbackRequest) => void): () => void;
+  onTranslateCloudFallbackRequest(
+    callback: (request: TranslateCloudFallbackRequest) => void,
+  ): () => void;
   respondTranslateCloudFallback(response: TranslateCloudFallbackResponse): void;
   // Unified Player (ext-video-player): settings, combined settings+page snapshot, per-site pause, and a
   // live push of how many videos were skinned on the active tab.

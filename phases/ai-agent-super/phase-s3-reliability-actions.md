@@ -20,7 +20,7 @@ site needs and today's loop lacks:
 
 - **Missing verbs (verified absent from the vocabulary).** [browser-tools.ts](../../packages/browser-tools/src/browser-tools.ts)
   / [ToolGateway](../../packages/tool-executor/src/interactable.ts) expose `click | fill | press |
-  scroll | scroll_to_text | select_option` only. There is **no** hover, drag, right-click, key
+scroll | scroll_to_text | select_option` only. There is **no** hover, drag, right-click, key
   chords/send-keys (`press` is single-key `KEY_MAP` only — an unknown key raises a hard
   `AppError(400)` in [cdp-driver-input.electron.ts](../../apps/desktop/src/main/agent/cdp-driver-input.electron.ts)),
   no back/forward/reload, no `wait_for`, no JS-dialog handling (**no** `Page.javascriptDialogOpening`
@@ -44,7 +44,7 @@ site needs and today's loop lacks:
   (`validate_form` before submit).
 
 Mechanism (what this phase builds): a **tab-spawn world model** hooked off `setWindowOpenHandler` /
-`did-create-window` in the tab-engine host that emits an *"action opened tab T"* agent event, does a
+`did-create-window` in the tab-engine host that emits an _"action opened tab T"_ agent event, does a
 policy-checked auto-follow, and books return-to-origin in
 [reactor-working-state.ts](../../packages/orchestrator/src/reactor-working-state.ts); **dialog handling**
 via the native `will-prevent-unload` for `beforeunload` and `webContents.debugger`
@@ -76,20 +76,20 @@ re-snapshotting).
       `AppError(400)`.
 - [x] Dialog + popup interception documents its HITL fallback and **never** installs a page-principal
       `window.confirm`/`window.alert` override (security-plane invariant, [ADR-0024](../../docs/adr/0024-action-interception-plane.md)).
-- [x] **Fixtures frozen before capability code** (PR0), each with a `test-fixtures/sites/<name>/index.html`
-      + a registry entry, and a green scripted plumbing run before any reactor/executor code lands.
+- [x] **Fixtures frozen before capability code** (PR0), each with a `test-fixtures/sites/<name>/index.html` + a registry entry, and a green scripted plumbing run before any reactor/executor code lands.
 - [ ] **Prose steers** #1–#5 each moved **DELETED or RETAINED** by its **paired with/without sweep** at
       pooled N with the pre-stated equivalence margin; [PROSE-LEDGER.md](PROSE-LEDGER.md) updated in the
       proving PR with the before/after system-prompt token count (⏸ funded sweep).
 - [ ] **Delta recorded** in [eval-results.md](eval-results.md) (a phase is incomplete until its number is
       in the ledger; ⏸ funded sweep — the phase legitimately rests at 🟠 until the funded sweep runs).
 - [ ] **i18n:** new tool descriptions are model-facing English; any new Agent Console string
-      (the *"opened tab T"* / *"agent waiting on a page dialog"* HITL surface in
+      (the _"opened tab T"_ / _"agent waiting on a page dialog"_ HITL surface in
       [ext-agent](../../extensions/ext-agent)) ships **EN + full TR parity in the same PR**.
 
 ## Tasks
 
 ### PR0 — fixture freeze
+
 - [x] Add seven `test-fixtures/sites/*/index.html` deterministic pages (see [Fixtures](#fixtures)):
       `popup-follow`, `target-blank-form`, `confirm-dialog-destructive`, `beforeunload-trap`,
       `datepicker-booking`, `hover-menu-nav`, `drag-reorder`.
@@ -103,6 +103,7 @@ re-snapshotting).
       before the answer exists).
 
 ### PR1 — nav verbs + `wait_for` (Lane A)
+
 - [x] `browser_history` (`back | forward | reload`) as `webContents` calls in
       [browser-host.electron.ts](../../apps/desktop/src/main/agent/browser-host.electron.ts); tool +
       schema in [browser-tools.ts](../../packages/browser-tools/src/browser-tools.ts).
@@ -126,6 +127,7 @@ re-snapshotting).
 > path.
 
 ### PR2 — `send_keys` chords (Lane A/B)
+
 - [x] `send_keys` variant of `browser_update_page` in
       [browser-tools.ts](../../packages/browser-tools/src/browser-tools.ts) over the real-gesture path;
       accepts chords (`Ctrl+A`, `Shift+Tab`, `Enter`, sequences).
@@ -136,20 +138,21 @@ re-snapshotting).
       regress.
 
 ### PR3 — tab-spawn world model (Lane A)
+
 - [~] Hook `setWindowOpenHandler` / `did-create-window` in the tab-engine host
-      ([tab-engine](../../packages/tab-engine) + [tabs-view-wiring.ts](../../apps/desktop/src/main/tabs-view-wiring.ts));
-      detect a click that opened tab T.
-- [x] Emit an *"action opened tab T"* agent event and a **policy-checked** auto-follow (the
+  ([tab-engine](../../packages/tab-engine) + [tabs-view-wiring.ts](../../apps/desktop/src/main/tabs-view-wiring.ts));
+  detect a click that opened tab T.
+- [x] Emit an _"action opened tab T"_ agent event and a **policy-checked** auto-follow (the
       PolicyKernel/ToolGateway decides — no unconditional follow).
 - [x] Return-to-origin bookkeeping — after a popup closes, the acting tab returns to the origin tab; the
-      model is told *"your click opened tab T; you are now acting on it"*, sanitized like every observation.
-- [x] EN+TR strings for the *"opened tab T"* console line in [ext-agent](../../extensions/ext-agent).
+      model is told _"your click opened tab T; you are now acting on it"_, sanitized like every observation.
+- [x] EN+TR strings for the _"opened tab T"_ console line in [ext-agent](../../extensions/ext-agent).
 
 > **Mechanism deviation (recorded, PR3).** Spawn detection compares the **open-tab set either side of
 > the interaction** rather than hooking `setWindowOpenHandler`/`did-create-window`. Both hooks already
 > carry the popup blocker and the ADR-0024 interception plane; threading an agent-run notion through them
-> would put agent state into browsing mechanics, and the observation needed here — *"a tab appeared while
-> I was acting"* — is exactly what the diff gives, with no coupling and no new failure mode when the two
+> would put agent state into browsing mechanics, and the observation needed here — _"a tab appeared while
+> I was acting"_ — is exactly what the diff gives, with no coupling and no new failure mode when the two
 > paths disagree. The trade-off: a tab opened by something OTHER than this interaction inside the same
 > window would also be reported. That is a false positive the model can see and dismiss, which is the
 > safer direction of error.
@@ -157,7 +160,7 @@ re-snapshotting).
 > **The follow is NOT unconditional — it is the SAME `tab_update_item` a model-issued switch would get.**
 > [agent-runtime-loop.ts](../../packages/agent-runtime/src/agent-runtime-loop.ts)'s `advanceTabLifecycle`
 > runs after every step: on a fresh spawn it calls `ToolGateway.invoke('tab_update_item', { id: spawned },
-> { targetUrl: spawned.url, taintedArgs: true })` — the exact tool [tab-tools.ts](../../packages/tab-engine/src/tab-tools.ts)
+{ targetUrl: spawned.url, taintedArgs: true })` — the exact tool [tab-tools.ts](../../packages/tab-engine/src/tab-tools.ts)
 > already exposes to the model, through the exact same PEP, with `taintedArgs: true` because the
 > destination was the PAGE's choice. An attacker-controlled `window.open` still has to clear the Policy
 > Kernel (`state_changing` → `ask`, resolved by the run's own HITL/autonomy gate exactly like any other
@@ -183,23 +186,24 @@ re-snapshotting).
 > cases) rather than through a live fixture run, since the fixture sweep itself stays ⏸ funded.
 
 ### PR4 — dialog spike + handling (Lane A, **spike-first**)
+
 - [x] **Spike:** confirm `webContents.debugger` can own `Page.javascriptDialogOpening` /
       `handleJavaScriptDialog` without a DevTools-open attach conflict (Chromium allows one debugger
       client). Document the finding.
 - [x] `beforeunload` via the native `will-prevent-unload` Electron event (no debugger needed).
 - [x] alert/confirm via CDP when the debugger is free; **fallback** = surface a **blocking HITL** agent
       event (the run pauses on the pause/steer plane) — **never** a page-principal `window.confirm`
-      override. *(Design changed from the fallback literally proposed here — see below.)*
+      override. _(Design changed from the fallback literally proposed here — see below.)_
 - [x] `confirm-dialog-destructive` asserts the agent does **not** blindly accept a destructive confirm;
       `beforeunload-trap` asserts the agent handles the unload prompt without stranding.
-- [x] EN+TR strings for the dialog HITL surface. *(Vacuously satisfied — see below.)*
+- [x] EN+TR strings for the dialog HITL surface. _(Vacuously satisfied — see below.)_
 
 > **PR4 landed 2026-08-20, and the spike's own answer changed the design.**
 >
 > **Spike finding (`e2e/spike-dialog-interception.spec.ts`, 4 arms, all green, repeated twice with no
 > flake): the DevTools-vs-debugger conflict this phase was written around does NOT hold on this Electron
 > version.** `webContents.debugger.attach()` succeeds even with native DevTools already open on the same
-> tab; opening DevTools *after* the agent's debugger is attached neither throws nor detaches it; and the
+> tab; opening DevTools _after_ the agent's debugger is attached neither throws nor detaches it; and the
 > full `attach → Page.enable → Page.javascriptDialogOpening → Page.handleJavaScriptDialog` flow works
 > end-to-end with DevTools open throughout (arm D). The first, naive version of this spike measured the
 > OPPOSITE — but that was a confound: one of the app's own always-on page injectors (translate/typo/
@@ -217,6 +221,7 @@ re-snapshotting).
 > **The dialog decision itself: deterministic auto-decline, not a live HITL approve/deny UI.**
 > [cdp-driver-dialogs.electron.ts](../../apps/desktop/src/main/agent/cdp-driver-dialogs.electron.ts),
 > wired from `CdpDriver.ensureAttached` exactly like the AI-8B network recorder (idempotent per tab):
+>
 > - **`Page.javascriptDialogOpening` → `Page.handleJavaScriptDialog({ accept: false })`, always.** An
 >   agent must never be able to talk itself into a destructive `confirm()`; declining costs nothing on an
 >   `alert()` (one button either way). A legitimate, non-destructive `confirm()` an agent gets stuck behind
@@ -261,6 +266,7 @@ re-snapshotting).
 > exercised by a live scored run.
 
 ### PR5 — click-time occlusion re-check + locator cascade (Lane B) — fixes `cookie_consent`
+
 - [x] `elementFromPoint` probe in the isolated world immediately **before** dispatch in
       [cdp-driver-input.electron.ts](../../apps/desktop/src/main/agent/cdp-driver-input.electron.ts): if
       the target is no longer the top element, report an occlusion (so the reactor can dismiss the
@@ -275,6 +281,7 @@ re-snapshotting).
       move the sentinel.
 
 > **Mechanism notes (PR5).**
+>
 > 1. The probe does **not** simply veto a covered element: it tries the centre and four inset points and
 >    clicks the first free one. A banner usually covers one edge, not the whole control, and refusing a
 >    click a user could make would be its own failure. Only when every probe point is blocked is the
@@ -282,12 +289,13 @@ re-snapshotting).
 > 2. A **failed probe never blocks a click**: an unreadable result is treated as "not occluded", because
 >    a diagnostic that can veto real work is worse than the problem it detects.
 > 3. The cascade lives in `resolveRef`, not inside `resolveNodePath`: the path resolver is injected into
->    the page verbatim via `.toString()` and must stay self-contained, so the *second* attempt is a
+>    the page verbatim via `.toString()` and must stay self-contained, so the _second_ attempt is a
 >    separate injected function (`findByLocators`) and the driver sequences them. It refuses to guess —
 >    a match must agree on tag, role AND name, and be **unique**; ambiguity returns null and the model
 >    re-reads, which is the phase's own stated mitigation.
 
 ### PR6 — hover + drag (Lane B, drag **spike + stretch**)
+
 - [x] `hover` variant reusing the [human-input](../../packages/human-input) Catmull-Rom mouse path;
       `hover-menu-nav` asserts a hover-revealed menu link is then clickable.
 - [ ] **Spike:** `drag` via CDP `Input.dispatchDragEvent`; if the debugger/HTML5-DnD interaction is
@@ -307,6 +315,7 @@ re-snapshotting).
 > rather than reading as a failure to repeat.
 
 ### PR7 — typed widgets (Lane B)
+
 - [x] Deterministic, rule-based fill strategies (datepicker / ARIA combobox / masked input) — a
       **structured plan**, no model call inside an action; errors honestly on an unrecognised widget.
 - [x] Feed required-widget state honestly into `browser_validate_form` (a required combobox/date becomes
@@ -355,6 +364,7 @@ re-snapshotting).
 > prevent — a confident answer resting on an unverified guess — so none was added.
 
 ### PR8 — exit sweep + steer deletions (⏸ funded)
+
 - [ ] Funded sweep across `cookie_consent`, the new family, web-patterns, acceptance; record the delta in
       [eval-results.md](eval-results.md).
 - [ ] Paired with/without sweep for each of prose steers **#1–#5**; move each **DELETED/RETAINED** in
@@ -366,15 +376,15 @@ re-snapshotting).
 
 New, frozen in **PR0** under `test-fixtures/sites/` + `packages/agent-eval/scenarios/reliability-actions.json`:
 
-| Fixture | Asserts |
-|---|---|
-| `popup-follow` | a click opens a tab; agent follows, acts, returns to origin |
-| `target-blank-form` | `target=_blank` form submit; agent completes on the spawned tab, not stranded |
-| `confirm-dialog-destructive` | agent does not blindly accept a destructive `window.confirm` |
-| `beforeunload-trap` | agent handles a `beforeunload` prompt without stranding |
-| `datepicker-booking` | a date is set through the widget, not raw text injection |
-| `hover-menu-nav` | a hover-revealed menu link becomes clickable and is followed |
-| `drag-reorder` | drag reorders a list (**stretch**, not a DoD gate) |
+| Fixture                      | Asserts                                                                       |
+| ---------------------------- | ----------------------------------------------------------------------------- |
+| `popup-follow`               | a click opens a tab; agent follows, acts, returns to origin                   |
+| `target-blank-form`          | `target=_blank` form submit; agent completes on the spawned tab, not stranded |
+| `confirm-dialog-destructive` | agent does not blindly accept a destructive `window.confirm`                  |
+| `beforeunload-trap`          | agent handles a `beforeunload` prompt without stranding                       |
+| `datepicker-booking`         | a date is set through the widget, not raw text injection                      |
+| `hover-menu-nav`             | a hover-revealed menu link becomes clickable and is followed                  |
+| `drag-reorder`               | drag reorders a list (**stretch**, not a DoD gate)                            |
 
 **Regression sentinel (unchanged):** `cookie_consent` in
 [web-patterns.json](../../packages/agent-eval/scenarios/web-patterns.json) — the occlusion-re-check

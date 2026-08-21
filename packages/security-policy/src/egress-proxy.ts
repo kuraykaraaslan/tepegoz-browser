@@ -56,7 +56,10 @@ export type ProxyRejectionReason =
   | 'bypass_too_broad';
 
 export class UnsafeProxyConfigError extends Error {
-  constructor(readonly reason: ProxyRejectionReason, detail: string) {
+  constructor(
+    readonly reason: ProxyRejectionReason,
+    detail: string,
+  ) {
     super(`Refusing an unsafe tunnel proxy config (${reason}): ${detail}`);
     this.name = 'UnsafeProxyConfigError';
   }
@@ -116,7 +119,10 @@ export function assertFailClosed(config: TunnelProxyConfig): void {
   const rules = config.proxyRules.trim();
   if (rules.length === 0) throw new UnsafeProxyConfigError('empty_rules', '(empty)');
 
-  const entries = rules.split(/[,;]/).map((e) => e.trim()).filter((e) => e.length > 0);
+  const entries = rules
+    .split(/[,;]/)
+    .map((e) => e.trim())
+    .filter((e) => e.length > 0);
   for (const entry of entries) {
     if (/^direct$/i.test(entry)) {
       throw new UnsafeProxyConfigError('direct_fallback', rules);

@@ -9,9 +9,9 @@ import { HistoryStore } from '@tepegoz/persistence';
 import { type TabStore } from '@tepegoz/tab-engine';
 import { isWebUrl } from './lib/navigation-url';
 import { handleWindowShortcut } from './keyboard-shortcuts';
+import { applyStoredZoom, handleZoomShortcut } from './site-zoom';
 import { getDb } from './db/database.electron';
 import ActionInterceptorService from './extensions/action-interceptors.electron';
-import { openPageContextMenu } from './menus/page-context-menu';
 import { faviconDataUrl } from './tabs-favicon.electron';
 import {
   blockNonWeb,
@@ -22,6 +22,7 @@ import {
   wantsNativeWindow,
 } from './tabs-popup-policy';
 import {
+  contextMenuObservers,
   hadRecentGesture,
   lastGestureAt,
   MAX_TITLE_LENGTH,
@@ -93,6 +94,11 @@ export function wireView(host: ViewWiringHost, id: string, view: WebContentsView
   // App-level shortcuts (F11 fullscreen, Ctrl/Cmd+Shift+Q to leave kiosk) also fire while a PAGE has
   // focus — essential in kiosk, where the chromeless page owns all input.
   wc.on('before-input-event', (event, input) => {
+    // Zoom first: it is the only one of these that acts on THIS page rather than the window.
+    if (handleZoomShortcut(input, wc)) {
+      event.preventDefault();
+      return;
+    }
     if (handleWindowShortcut(host.win, input)) event.preventDefault();
   });
 
@@ -143,13 +149,25 @@ export function wireView(host: ViewWiringHost, id: string, view: WebContentsView
   // native popup windows (`wirePopupWindow`) skip this second check, they have no tracked tab id.
   wc.on('will-navigate', (event, url) => {
     blockNonWeb(event, url);
-    if (ActionInterceptorService.shouldBlock('navigation:navigate', { tabId: id, url, isRedirect: false })) {
+    if (
+      ActionInterceptorService.shouldBlock('navigation:navigate', {
+        tabId: id,
+        url,
+        isRedirect: false,
+      })
+    ) {
       event.preventDefault();
     }
   });
   wc.on('will-redirect', (event, url) => {
     blockNonWeb(event, url);
-    if (ActionInterceptorService.shouldBlock('navigation:navigate', { tabId: id, url, isRedirect: true })) {
+    if (
+      ActionInterceptorService.shouldBlock('navigation:navigate', {
+        tabId: id,
+        url,
+        isRedirect: true,
+      })
+    ) {
       event.preventDefault();
     }
   });
@@ -159,10 +177,14 @@ export function wireView(host: ViewWiringHost, id: string, view: WebContentsView
   // `params` (selection/link/media/editable) picks the menu variant in the renderer.
   wc.on('context-menu', (_e, params) => {
     if (!host.win.isDestroyed()) {
-      void openPageContextMenu(host.win, wc, params, host.getBounds(), {
+      // Report the right-click; do not decide what opens. The menu drives `TabManager`, so importing
+      // it here made the tab layer depend on its own consumer (see `contextMenuObservers`).
+      const nav = {
         canGoBack: wc.navigationHistory.canGoBack(),
         canGoForward: wc.navigationHistory.canGoForward(),
-      });
+      };
+      for (const observe of contextMenuObservers)
+        observe(host.win, wc, params, host.getBounds(), nav);
     }
   });
 
@@ -231,6 +253,12 @@ export function wireView(host: ViewWiringHost, id: string, view: WebContentsView
       const title = (wc.getTitle() || url).slice(0, MAX_TITLE_LENGTH);
       HistoryStore.record(db, { url, title, ts: Date.now() });
     }
+  });
+  // Re-apply the origin's remembered zoom on every committed navigation: Chromium's own zoom is
+  // per-session and per-webContents, so crossing to another origin would otherwise keep the previous
+  // site's level.
+  wc.on('did-navigate', () => {
+    applyStoredZoom(wc);
   });
   wc.on('did-navigate', sync);
   wc.on('did-navigate-in-page', sync);

@@ -3,7 +3,11 @@ import { useT } from '@tepegoz/i18n/react';
 import { coreDict } from '@tepegoz/i18n';
 import { Badge, BrandMark, Button, cn } from '@tepegoz/ui';
 import { WindowControls } from '@tepegoz/window-controls';
-import type { BookmarkImportResult, BrowserImportSource, LoginImportResult } from '@tepegoz/desktop-ipc';
+import type {
+  BookmarkImportResult,
+  BrowserImportSource,
+  LoginImportResult,
+} from '@tepegoz/desktop-ipc';
 import { onboardingDict } from './i18n';
 import { AccountStep, FinishStep, WelcomeStep } from './onboarding-surface-steps';
 import { ImportStep } from './onboarding-surface-import';

@@ -164,12 +164,22 @@ export function analyzeTypoText(
         ? detectTypoLanguage(input.text, fallbackLanguage)
         : fallbackLanguage;
   if (!isTypoEnabledForOrigin(settings, input.origin)) {
-    return { language, issues: [], sourcesUsed: [], durationMs: (deps.now?.() ?? Date.now()) - started };
+    return {
+      language,
+      issues: [],
+      sourcesUsed: [],
+      durationMs: (deps.now?.() ?? Date.now()) - started,
+    };
   }
 
   const dictionary = deps.dictionaryFor(language);
   if (dictionary === null || dictionary === undefined) {
-    return { language, issues: [], sourcesUsed: [], durationMs: (deps.now?.() ?? Date.now()) - started };
+    return {
+      language,
+      issues: [],
+      sourcesUsed: [],
+      durationMs: (deps.now?.() ?? Date.now()) - started,
+    };
   }
 
   const ignored = ignoredSet(settings.ignoredWords);

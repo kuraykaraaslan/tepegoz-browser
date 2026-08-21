@@ -15,7 +15,10 @@ describe('createSitemapReader.discover', () => {
     const reader = createSitemapReader(
       mockFetch({
         'https://ex.com/robots.txt': 'User-agent: *\nSitemap: https://ex.com/sitemap.xml',
-        'https://ex.com/sitemap.xml': SITEMAP(['https://ex.com/blog.html', 'https://ex.com/pricing.html']),
+        'https://ex.com/sitemap.xml': SITEMAP([
+          'https://ex.com/blog.html',
+          'https://ex.com/pricing.html',
+        ]),
       }),
     );
     const urls = await reader.discover('https://ex.com/index.html');
@@ -31,7 +34,9 @@ describe('createSitemapReader.discover', () => {
 
   it('discovers a sitemap under the PAGE directory (multi-tenant sub-path site)', async () => {
     const reader = createSitemapReader(
-      mockFetch({ 'http://127.0.0.1:9/site-a/sitemap.xml': SITEMAP(['http://127.0.0.1:9/site-a/deep.html']) }),
+      mockFetch({
+        'http://127.0.0.1:9/site-a/sitemap.xml': SITEMAP(['http://127.0.0.1:9/site-a/deep.html']),
+      }),
     );
     const urls = await reader.discover('http://127.0.0.1:9/site-a/index.html');
     expect(urls).toEqual(['http://127.0.0.1:9/site-a/deep.html']);
@@ -63,8 +68,7 @@ describe('createSitemapReader.discover', () => {
   it('follows a sitemap index one bounded level to its child sitemaps', async () => {
     const reader = createSitemapReader(
       mockFetch({
-        'https://ex.com/sitemap.xml':
-          `<sitemapindex><sitemap><loc>https://ex.com/s1.xml</loc></sitemap></sitemapindex>`,
+        'https://ex.com/sitemap.xml': `<sitemapindex><sitemap><loc>https://ex.com/s1.xml</loc></sitemap></sitemapindex>`,
         'https://ex.com/s1.xml': SITEMAP(['https://ex.com/deep-post.html']),
       }),
     );
@@ -89,7 +93,9 @@ describe('createSitemapReader.discover', () => {
   });
 
   it('caches per origin+dir — a second discover does not re-fetch', async () => {
-    const fetch = vi.fn(mockFetch({ 'https://ex.com/sitemap.xml': SITEMAP(['https://ex.com/a.html']) }));
+    const fetch = vi.fn(
+      mockFetch({ 'https://ex.com/sitemap.xml': SITEMAP(['https://ex.com/a.html']) }),
+    );
     const reader = createSitemapReader(fetch);
     await reader.discover('https://ex.com/');
     const calls = fetch.mock.calls.length;
@@ -104,7 +110,10 @@ describe('createSitemapReader.discover', () => {
       }),
     );
     const urls = await reader.discover('http://127.0.0.1:9/docs/index.html');
-    expect(urls).toEqual(['http://127.0.0.1:9/docs/setup-guide.html', 'http://127.0.0.1:9/docs/api/ref.html']);
+    expect(urls).toEqual([
+      'http://127.0.0.1:9/docs/setup-guide.html',
+      'http://127.0.0.1:9/docs/api/ref.html',
+    ]);
   });
 
   it('resolves a RELATIVE robots.txt Sitemap: directive against the robots URL', async () => {
@@ -118,7 +127,9 @@ describe('createSitemapReader.discover', () => {
   });
 
   it('drops a non-2xx source (treated as unreachable)', async () => {
-    const reader = createSitemapReader(() => Promise.resolve({ status: 404, text: SITEMAP(['https://ex.com/x']) }));
+    const reader = createSitemapReader(() =>
+      Promise.resolve({ status: 404, text: SITEMAP(['https://ex.com/x']) }),
+    );
     expect(await reader.discover('https://ex.com/')).toEqual([]);
   });
 });

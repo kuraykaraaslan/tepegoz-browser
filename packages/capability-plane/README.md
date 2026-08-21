@@ -9,6 +9,7 @@ agent can never bypass policy regardless of which tool source it called. Electro
 confirm handler and audit sink are wired in by the app at runtime.
 
 ## Exports
+
 - **`CapabilityRegistry`** — the single map of registered tools (`register`/`unregister`/`get`/`list`);
   enforces the `{domain}_{verb}_{noun}` naming convention (`ToolNameSchema`) at registration.
 - **`ToolGateway`** — the PEP itself: `invoke(toolName, rawArgs, ctx)` runs the full
@@ -19,4 +20,5 @@ confirm handler and audit sink are wired in by the app at runtime.
   — supporting types for registering a tool and driving one invocation.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test` · `pnpm build`

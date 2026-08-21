@@ -7,10 +7,24 @@ import type {
   ProviderCapabilities,
 } from './types';
 
-const CAPS: ProviderCapabilities = { canWrite: true, canImport: false, canExport: false, canSync: false };
+const CAPS: ProviderCapabilities = {
+  canWrite: true,
+  canImport: false,
+  canExport: false,
+  canSync: false,
+};
 
 function meta(id: string, url: string, username: string): LoginCredentialMeta {
-  return { id, url, username, title: '', notes: '', providerId: id.split(':')[0]!, createdAt: 0, updatedAt: 0 };
+  return {
+    id,
+    url,
+    username,
+    title: '',
+    notes: '',
+    providerId: id.split(':')[0]!,
+    createdAt: 0,
+    updatedAt: 0,
+  };
 }
 
 function full(m: LoginCredentialMeta): LoginCredential {
@@ -69,8 +83,12 @@ describe('PasswordProviderRegistry', () => {
   });
 
   it('aggregates list_all across providers', async () => {
-    PasswordProviderRegistry.register(makeProvider('local', [meta('local:1', 'https://a.test', 'alice')]));
-    PasswordProviderRegistry.register(makeProvider('vault', [meta('vault:1', 'https://b.test', 'bob')]));
+    PasswordProviderRegistry.register(
+      makeProvider('local', [meta('local:1', 'https://a.test', 'alice')]),
+    );
+    PasswordProviderRegistry.register(
+      makeProvider('vault', [meta('vault:1', 'https://b.test', 'bob')]),
+    );
     const all = await PasswordProviderRegistry.list_all();
     expect(all.map((c) => c.id).sort()).toEqual(['local:1', 'vault:1']);
   });

@@ -3,7 +3,8 @@ import type { UserAgentStrings } from './en';
 /** Turkish — first-class; must match the English (source) shape exactly. */
 export const tr: UserAgentStrings = {
   title: 'User-Agent',
-  description: 'Tarayıcının sitelere kendini nasıl tanıttığını seçin. Bir hazır ayar seçin ya da kendinizinkini yapıştırın.',
+  description:
+    'Tarayıcının sitelere kendini nasıl tanıttığını seçin. Bir hazır ayar seçin ya da kendinizinkini yapıştırın.',
   current: 'Geçerli',
   presets: 'Hazır ayarlar',
   default: 'Varsayılan (Tepegöz)',

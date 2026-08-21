@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { CapabilityRegistry } from '@tepegoz/capability-plane';
 import type { ToolDescriptor } from '@tepegoz/shared-types';
-import type { TaskCommandInput, TaskDefinition, TaskSaveInput } from './index';
+import type { TaskCommandInput, TaskDefinition, TaskSaveInput } from './tasks.model';
 import { TaskCommandInputSchema, TaskSaveInputSchema } from './schemas';
 
 export interface TaskToolsHost {

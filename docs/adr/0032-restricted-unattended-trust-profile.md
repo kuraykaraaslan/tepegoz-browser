@@ -23,7 +23,7 @@ the system itself refuses to let widen.
 This is the same shape of problem this repo has already solved once, in a different corner: the
 AI-agent-super program's remembered grants ([ADR-0027](0027-agent-memory.md)) and its `auto`-autonomy fix
 both exist because a persistent permission is exactly the kind of thing that quietly grows scope if
-nothing structurally prevents it. The Scheduler is the same risk with the human's *absence* as the
+nothing structurally prevents it. The Scheduler is the same risk with the human's _absence_ as the
 constant, rather than time.
 
 ## Decision
@@ -38,9 +38,9 @@ authoring approved — never assumed from reading the implementation.**
   policy, which is what makes "no override exists for this tier" a property of the code rather than a
   claim about how it is currently configured.
 - **The sealed-narrowing ceiling is per-recipe.** `InteractiveProfile.approvedToolIds` is the set of tools
-  *this specific recipe* actually invoked while a human was watching — not "every tool the user has ever
+  _this specific recipe_ actually invoked while a human was watching — not "every tool the user has ever
   approved anywhere". A tool outside that set is refused with its own distinct reason
-  (`not_in_interactive_profile`), checked *after* the tier check, so an investigator reading a refusal
+  (`not_in_interactive_profile`), checked _after_ the tier check, so an investigator reading a refusal
   reason for a `destructive` step always sees `never_unattended_tier` — the true cause — never a
   coincidentally-also-true narrower one.
 - **`state_changing` is the only tier state-changing steps can cross, and only when the human explicitly
@@ -58,7 +58,7 @@ makes a refusal's stated reason trustworthy.
 **Negative / accepted.** This module answers one yes/no per step; it does not itself pause a run,
 journal a `HitlRequested`, push a notification, or resume on approval. The phase's actual guarantee —
 "any step needing HITL pauses… never auto-approves" — depends on a scheduler that calls this function and
-then *acts* correctly on a `false` verdict, which does not exist yet.
+then _acts_ correctly on a `false` verdict, which does not exist yet.
 
 **Owed, and stated rather than implied.** The AutomationScheduler itself (persisted as journal events,
 survives restart), the pause/notify/resume mechanism, per-run journaled audit, and the fail-closed

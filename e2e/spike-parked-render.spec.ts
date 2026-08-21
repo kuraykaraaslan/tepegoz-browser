@@ -34,7 +34,10 @@ function guiEnv(): Record<string, string> {
 }
 
 interface Bridge {
-  getTabsState(): Promise<{ tabs: { id: string; url: string; hidden?: boolean }[]; activeId: string | null }>;
+  getTabsState(): Promise<{
+    tabs: { id: string; url: string; hidden?: boolean }[];
+    activeId: string | null;
+  }>;
   createTab(url?: string): void;
   setTabHidden(id: string, hidden: boolean): void;
 }
@@ -51,15 +54,19 @@ interface ProbeResult {
 
 /** In the MAIN process: capture + hit-test the WebContents whose URL contains `needle`. */
 async function probe(app: ElectronApplication, needle: string): Promise<ProbeResult> {
-  return pollEvaluate(() => app.evaluate(async ({ webContents }, urlNeedle: string): Promise<ProbeResult> => {
-    const wc = webContents.getAllWebContents().find((w) => w.getURL().includes(urlNeedle));
-    if (wc === undefined) return { found: false };
-    const img = await wc.capturePage();
-    const dom = (await wc.executeJavaScript(
-      '(() => { const el = document.elementFromPoint(Math.floor(window.innerWidth/2), Math.floor(window.innerHeight/2)); return { w: window.innerWidth, h: window.innerHeight, hit: el ? el.tagName : null }; })()',
-    )) as { w: number; h: number; hit: string | null };
-    return { found: true, empty: img.isEmpty(), width: dom.w, height: dom.h, hit: dom.hit };
-  }, needle), { found: false });
+  return pollEvaluate(
+    () =>
+      app.evaluate(async ({ webContents }, urlNeedle: string): Promise<ProbeResult> => {
+        const wc = webContents.getAllWebContents().find((w) => w.getURL().includes(urlNeedle));
+        if (wc === undefined) return { found: false };
+        const img = await wc.capturePage();
+        const dom = (await wc.executeJavaScript(
+          '(() => { const el = document.elementFromPoint(Math.floor(window.innerWidth/2), Math.floor(window.innerHeight/2)); return { w: window.innerWidth, h: window.innerHeight, hit: el ? el.tagName : null }; })()',
+        )) as { w: number; h: number; hit: string | null };
+        return { found: true, empty: img.isEmpty(), width: dom.w, height: dom.h, hit: dom.hit };
+      }, needle),
+    { found: false },
+  );
 }
 
 test('parked hidden tab + tray window keep compositing AND stay perceivable', async () => {
@@ -103,7 +110,9 @@ test('parked hidden tab + tray window keep compositing AND stay perceivable', as
       win?.setSkipTaskbar(true);
       win?.setPosition(-32000, -32000); // hideToTray: shown but off every display
     });
-    await expect.poll(async () => (await probe(app, `:${port}`)).empty, { timeout: 8000 }).toBe(false);
+    await expect
+      .poll(async () => (await probe(app, `:${port}`)).empty, { timeout: 8000 })
+      .toBe(false);
     const trayProbe = await probe(app, `:${port}`);
     expect(trayProbe.hit).toBe('BUTTON'); // tray-parked window → perception still works
     // Un-park before the next check.
@@ -128,7 +137,9 @@ test('parked hidden tab + tray window keep compositing AND stay perceivable', as
     );
 
     // It keeps compositing AND stays perceivable while hidden (parked off-screen).
-    await expect.poll(async () => (await probe(app, `:${port}`)).empty, { timeout: 8000 }).toBe(false);
+    await expect
+      .poll(async () => (await probe(app, `:${port}`)).empty, { timeout: 8000 })
+      .toBe(false);
     const hiddenProbe = await probe(app, `:${port}`);
     expect(hiddenProbe.found).toBe(true);
     expect(hiddenProbe.empty).toBe(false); // screenshot path alive
@@ -157,7 +168,10 @@ test('start-in-background launches PARKED (off-screen) but keeps rendering', asy
   mkdirSync(profileDir, { recursive: true });
   // startupMode:'background' → launch parked in the tray. The file existing (no `onboardingCompleted`
   // key) also skips onboarding.
-  writeFileSync(join(profileDir, 'preferences.json'), JSON.stringify({ startupMode: 'background' }));
+  writeFileSync(
+    join(profileDir, 'preferences.json'),
+    JSON.stringify({ startupMode: 'background' }),
+  );
 
   const app: ElectronApplication = await electron.launch({
     args: [`--user-data-dir=${profileDir}`, appDir],
@@ -181,7 +195,9 @@ test('start-in-background launches PARKED (off-screen) but keeps rendering', asy
       (u: string) => (window as unknown as { tepegoz: Bridge }).tepegoz.createTab(u),
       pageUrl,
     );
-    await expect.poll(async () => (await probe(app, `:${port}`)).hit, { timeout: 15000 }).toBe('BUTTON');
+    await expect
+      .poll(async () => (await probe(app, `:${port}`)).hit, { timeout: 15000 })
+      .toBe('BUTTON');
     const bg = await probe(app, `:${port}`);
     expect(bg.empty).toBe(false); // renders while the whole app is backgrounded
     expect(bg.hit).toBe('BUTTON');
@@ -237,7 +253,9 @@ test('--background arg launches PARKED (off-screen), no pref needed', async () =
       (u: string) => (window as unknown as { tepegoz: Bridge }).tepegoz.createTab(u),
       pageUrl,
     );
-    await expect.poll(async () => (await probe(app, `:${port}`)).hit, { timeout: 15000 }).toBe('BUTTON');
+    await expect
+      .poll(async () => (await probe(app, `:${port}`)).hit, { timeout: 15000 })
+      .toBe('BUTTON');
   } finally {
     await app.close();
     server.close();
@@ -286,7 +304,9 @@ test('TEPEGOZ_START_BACKGROUND=1 env launches PARKED (the reliable pnpm-dev trig
       (u: string) => (window as unknown as { tepegoz: Bridge }).tepegoz.createTab(u),
       pageUrl,
     );
-    await expect.poll(async () => (await probe(app, `:${port}`)).hit, { timeout: 15000 }).toBe('BUTTON');
+    await expect
+      .poll(async () => (await probe(app, `:${port}`)).hit, { timeout: 15000 })
+      .toBe('BUTTON');
   } finally {
     await app.close();
     server.close();
@@ -307,7 +327,10 @@ test('kiosk mode: fullscreen + chromeless, locked to the kiosk URL, still render
 
   const profileDir = join(process.cwd(), `.spike-kiosk-${port}`);
   mkdirSync(profileDir, { recursive: true });
-  writeFileSync(join(profileDir, 'preferences.json'), JSON.stringify({ startupMode: 'kiosk', kioskUrl }));
+  writeFileSync(
+    join(profileDir, 'preferences.json'),
+    JSON.stringify({ startupMode: 'kiosk', kioskUrl }),
+  );
 
   const app: ElectronApplication = await electron.launch({
     args: [`--user-data-dir=${profileDir}`, appDir],
@@ -333,7 +356,9 @@ test('kiosk mode: fullscreen + chromeless, locked to the kiosk URL, still render
     // Chromeless: the renderer shows NO tab strip.
     await expect(page.locator('[role="tab"]')).toHaveCount(0);
     // The kiosk URL's web view fills the screen and renders.
-    await expect.poll(async () => (await probe(app, `:${port}`)).hit, { timeout: 15000 }).toBe('BUTTON');
+    await expect
+      .poll(async () => (await probe(app, `:${port}`)).hit, { timeout: 15000 })
+      .toBe('BUTTON');
   } finally {
     await app.close();
     server.close();
@@ -360,7 +385,10 @@ test('close-to-tray: closing the last tab keeps the app alive; reopening gives a
       .evaluate(async () => {
         const api = (
           window as unknown as {
-            tepegoz: { getTabsState(): Promise<{ tabs: { id: string }[] }>; closeTab(id: string): void };
+            tepegoz: {
+              getTabsState(): Promise<{ tabs: { id: string }[] }>;
+              closeTab(id: string): void;
+            };
           }
         ).tepegoz;
         const st = await api.getTabsState();
@@ -385,7 +413,11 @@ test('close-to-tray: closing the last tab keeps the app alive; reopening gives a
 
     const after = await app.evaluate(({ BrowserWindow }) => {
       const win = BrowserWindow.getAllWindows().find((w) => w.getParentWindow() === null);
-      return { has: win !== undefined, x: win?.getPosition()?.[0] ?? null, visible: win?.isVisible() ?? false };
+      return {
+        has: win !== undefined,
+        x: win?.getPosition()?.[0] ?? null,
+        visible: win?.isVisible() ?? false,
+      };
     });
     expect(after.has).toBe(true); // a fresh window opened
     expect(after.visible).toBe(true);

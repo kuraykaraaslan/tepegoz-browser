@@ -19,7 +19,9 @@ describe('the AgentEndpointToken shape', () => {
   });
 
   it('refuses an EMPTY allowedDangerClasses — a token with no danger classes at all cannot act', () => {
-    expect(AgentEndpointTokenSchema.safeParse(token({ allowedDangerClasses: [] })).success).toBe(false);
+    expect(AgentEndpointTokenSchema.safeParse(token({ allowedDangerClasses: [] })).success).toBe(
+      false,
+    );
   });
 
   it('refuses an unrecognised danger class', () => {
@@ -29,7 +31,9 @@ describe('the AgentEndpointToken shape', () => {
   });
 
   it('accepts an optional rate limit, and omits it cleanly when unset', () => {
-    expect(AgentEndpointTokenSchema.safeParse(token({ rateLimitPerMinute: 10 })).success).toBe(true);
+    expect(AgentEndpointTokenSchema.safeParse(token({ rateLimitPerMinute: 10 })).success).toBe(
+      true,
+    );
     expect(AgentEndpointTokenSchema.parse(token()).rateLimitPerMinute).toBeUndefined();
   });
 });

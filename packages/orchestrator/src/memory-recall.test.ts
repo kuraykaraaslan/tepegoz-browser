@@ -25,7 +25,12 @@ class RecordingProvider implements ModelProvider {
     this.requests.push({ ...req, messages: [...req.messages] });
     const text = this.replies[this.turn] ?? '{"action":"finish","summary":"done"}';
     this.turn += 1;
-    return Promise.resolve({ text, stopReason: 'end', usage: { inputTokens: 1, outputTokens: 1 }, toolCalls: [] });
+    return Promise.resolve({
+      text,
+      stopReason: 'end',
+      usage: { inputTokens: 1, outputTokens: 1 },
+      toolCalls: [],
+    });
   }
 }
 
@@ -46,11 +51,17 @@ function fakeTool(id: string, dangerClass: RiskLevel, result: unknown): Register
 }
 
 const tools = () =>
-  CapabilityRegistry.list().map((d) => ({ id: d.id, description: d.description, dangerClass: d.dangerClass }));
-const act = (tool: string): string => JSON.stringify({ action: 'act', tool, args: {}, rationale: 'r' });
+  CapabilityRegistry.list().map((d) => ({
+    id: d.id,
+    description: d.description,
+    dangerClass: d.dangerClass,
+  }));
+const act = (tool: string): string =>
+  JSON.stringify({ action: 'act', tool, args: {}, rationale: 'r' });
 const finish = JSON.stringify({ action: 'finish', summary: 'done' });
 
-const NOTE = 'Notes remembered from an earlier visit to shop.test: the part number is behind a drawer.';
+const NOTE =
+  'Notes remembered from an earlier visit to shop.test: the part number is behind a drawer.';
 
 beforeEach(() => {
   ModelGateway.reset();
@@ -66,10 +77,17 @@ function allText(provider: RecordingProvider): string {
 }
 
 describe('recalling notes for a site', () => {
-  const req = () => ({ goal: 'do it', tools: tools(), provider: 'anthropic' as const, model: 'mock' });
+  const req = () => ({
+    goal: 'do it',
+    tools: tools(),
+    provider: 'anthropic' as const,
+    model: 'mock',
+  });
 
   it('injects the remembered notes once the run lands on the site', async () => {
-    CapabilityRegistry.register(fakeTool('browser_get_page', 'read', { url: 'https://shop.test/a', content: 'x' }));
+    CapabilityRegistry.register(
+      fakeTool('browser_get_page', 'read', { url: 'https://shop.test/a', content: 'x' }),
+    );
     const provider = new RecordingProvider([act('browser_get_page'), finish]);
     ModelGateway.register(provider);
     await Reactor.run(req(), { recallMemory: () => Promise.resolve(NOTE) });
@@ -78,7 +96,9 @@ describe('recalling notes for a site', () => {
 
   it('injects them as an OBSERVATION, never inside the trusted task fence', async () => {
     // This is the whole safety property: a remembered note can inform a decision, never be one.
-    CapabilityRegistry.register(fakeTool('browser_get_page', 'read', { url: 'https://shop.test/a', content: 'x' }));
+    CapabilityRegistry.register(
+      fakeTool('browser_get_page', 'read', { url: 'https://shop.test/a', content: 'x' }),
+    );
     const provider = new RecordingProvider([act('browser_get_page'), finish]);
     ModelGateway.register(provider);
     await Reactor.run(req(), { recallMemory: () => Promise.resolve(NOTE) });
@@ -90,9 +110,15 @@ describe('recalling notes for a site', () => {
   });
 
   it('recalls ONCE per host — re-injecting every step would spend what memory saves', async () => {
-    CapabilityRegistry.register(fakeTool('browser_get_page', 'read', { url: 'https://shop.test/a', content: 'x' }));
+    CapabilityRegistry.register(
+      fakeTool('browser_get_page', 'read', { url: 'https://shop.test/a', content: 'x' }),
+    );
     const recallMemory = vi.fn(() => Promise.resolve(NOTE));
-    const provider = new RecordingProvider([act('browser_get_page'), act('browser_get_page'), finish]);
+    const provider = new RecordingProvider([
+      act('browser_get_page'),
+      act('browser_get_page'),
+      finish,
+    ]);
     ModelGateway.register(provider);
     await Reactor.run(req(), { recallMemory });
     expect(recallMemory).toHaveBeenCalledTimes(1);
@@ -100,9 +126,7 @@ describe('recalling notes for a site', () => {
 
   it('recalls again when the run moves to a different site', async () => {
     let hop = 0;
-    CapabilityRegistry.register(
-      fakeTool('browser_get_page', 'read', { content: 'x' }),
-    );
+    CapabilityRegistry.register(fakeTool('browser_get_page', 'read', { content: 'x' }));
     CapabilityRegistry.reset();
     CapabilityRegistry.register({
       descriptor: {
@@ -120,7 +144,11 @@ describe('recalling notes for a site', () => {
       },
     });
     const recallMemory = vi.fn(() => Promise.resolve(NOTE));
-    const provider = new RecordingProvider([act('browser_get_page'), act('browser_get_page'), finish]);
+    const provider = new RecordingProvider([
+      act('browser_get_page'),
+      act('browser_get_page'),
+      finish,
+    ]);
     ModelGateway.register(provider);
     await Reactor.run(req(), { recallMemory });
     expect(recallMemory).toHaveBeenCalledTimes(2);
@@ -129,15 +157,21 @@ describe('recalling notes for a site', () => {
   });
 
   it('runs quietly, not fatally, when recall fails', async () => {
-    CapabilityRegistry.register(fakeTool('browser_get_page', 'read', { url: 'https://shop.test/a', content: 'x' }));
+    CapabilityRegistry.register(
+      fakeTool('browser_get_page', 'read', { url: 'https://shop.test/a', content: 'x' }),
+    );
     const provider = new RecordingProvider([act('browser_get_page'), finish]);
     ModelGateway.register(provider);
-    const res = await Reactor.run(req(), { recallMemory: () => Promise.reject(new Error('db locked')) });
+    const res = await Reactor.run(req(), {
+      recallMemory: () => Promise.reject(new Error('db locked')),
+    });
     expect(res.stoppedReason).toBe('completed');
   });
 
   it('injects nothing at all when the host has nothing to say', async () => {
-    CapabilityRegistry.register(fakeTool('browser_get_page', 'read', { url: 'https://shop.test/a', content: 'x' }));
+    CapabilityRegistry.register(
+      fakeTool('browser_get_page', 'read', { url: 'https://shop.test/a', content: 'x' }),
+    );
     const provider = new RecordingProvider([act('browser_get_page'), finish]);
     ModelGateway.register(provider);
     await Reactor.run(req(), { recallMemory: () => Promise.resolve('') });
@@ -145,7 +179,9 @@ describe('recalling notes for a site', () => {
   });
 
   it('does nothing when no recall seam is installed — memory is off by default', async () => {
-    CapabilityRegistry.register(fakeTool('browser_get_page', 'read', { url: 'https://shop.test/a', content: 'x' }));
+    CapabilityRegistry.register(
+      fakeTool('browser_get_page', 'read', { url: 'https://shop.test/a', content: 'x' }),
+    );
     const provider = new RecordingProvider([act('browser_get_page'), finish]);
     ModelGateway.register(provider);
     await Reactor.run(req());

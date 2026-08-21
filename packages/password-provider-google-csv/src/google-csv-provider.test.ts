@@ -67,7 +67,13 @@ describe('GoogleCsvProvider.import', () => {
     const result = await provider.import(csv);
     expect(result.imported).toBe(1);
     expect(saved).toEqual([
-      { url: 'https://example.com', username: 'alice', password: 's3cret', title: 'Example', notes: 'hi' },
+      {
+        url: 'https://example.com',
+        username: 'alice',
+        password: 's3cret',
+        title: 'Example',
+        notes: 'hi',
+      },
     ]);
   });
 
@@ -95,7 +101,9 @@ describe('GoogleCsvProvider.set / export', () => {
 
   it('throws when the local vault is not registered', async () => {
     // set() surfaces the missing-vault error synchronously; normalize to a rejection.
-    await expect((async () => provider.set({ url: 'https://a.test', username: 'u', password: 'p' }))()).rejects.toThrow();
+    await expect(
+      (async () => provider.set({ url: 'https://a.test', username: 'u', password: 'p' }))(),
+    ).rejects.toThrow();
   });
 
   it('delegates export to the local vault', async () => {

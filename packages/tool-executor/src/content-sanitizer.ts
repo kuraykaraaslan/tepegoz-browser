@@ -56,7 +56,9 @@ export function sanitizeText(raw: string): SanitizeResult {
 /** Sanitize visible segments and replace hidden ones with a visible placeholder. */
 export function sanitizeSegments(segments: ContentSegment[]): string {
   return segments
-    .map((segment) => (segment.hidden === true ? HIDDEN_PLACEHOLDER : sanitizeText(segment.text).text))
+    .map((segment) =>
+      segment.hidden === true ? HIDDEN_PLACEHOLDER : sanitizeText(segment.text).text,
+    )
     .join('\n');
 }
 

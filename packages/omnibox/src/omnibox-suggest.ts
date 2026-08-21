@@ -9,13 +9,7 @@
  */
 
 export type OmniboxSuggestionKind =
-  | 'navigate'
-  | 'search'
-  | 'history'
-  | 'bookmark'
-  | 'tab'
-  | 'calc'
-  | 'quick-setting';
+  'navigate' | 'search' | 'history' | 'bookmark' | 'tab' | 'calc' | 'quick-setting';
 
 export type OmniboxQuickSettingTarget = 'appearance' | 'language' | 'privacy';
 
@@ -101,17 +95,7 @@ const QUICK_SETTINGS: ReadonlyArray<{
   {
     target: 'appearance',
     label: 'quickAppearance',
-    terms: [
-      'appearance',
-      'theme',
-      'color',
-      'glass',
-      'görünüm',
-      'gorunum',
-      'tema',
-      'renk',
-      'cam',
-    ],
+    terms: ['appearance', 'theme', 'color', 'glass', 'görünüm', 'gorunum', 'tema', 'renk', 'cam'],
   },
   {
     target: 'language',
@@ -121,7 +105,16 @@ const QUICK_SETTINGS: ReadonlyArray<{
   {
     target: 'privacy',
     label: 'quickPrivacy',
-    terms: ['privacy', 'telemetry', 'history', 'gizlilik', 'mahremiyet', 'telemetri', 'geçmiş', 'gecmis'],
+    terms: [
+      'privacy',
+      'telemetry',
+      'history',
+      'gizlilik',
+      'mahremiyet',
+      'telemetri',
+      'geçmiş',
+      'gecmis',
+    ],
   },
 ];
 

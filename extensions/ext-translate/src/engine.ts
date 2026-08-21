@@ -82,14 +82,16 @@ export function glossaryTermsFor(
   return terms.filter((term) => {
     const termSource = normalizeTranslateLanguage(term.sourceLanguage, source);
     const termTarget = normalizeTranslateLanguage(term.targetLanguage, target);
-    return term.source.trim().length > 0 && term.target.trim().length > 0 && termSource === source && termTarget === target;
+    return (
+      term.source.trim().length > 0 &&
+      term.target.trim().length > 0 &&
+      termSource === source &&
+      termTarget === target
+    );
   });
 }
 
-export function applyGlossaryTerms(
-  text: string,
-  terms: readonly TranslateGlossaryTerm[],
-): string {
+export function applyGlossaryTerms(text: string, terms: readonly TranslateGlossaryTerm[]): string {
   let out = text;
   for (const term of terms) {
     const source = term.source.trim();

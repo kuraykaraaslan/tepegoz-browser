@@ -10,7 +10,10 @@ import { predicateEditor } from './macro-panel-core-predicate';
 export interface CsvHandlers {
   csvInputs: Record<string, string>;
   setCsvInputs: Dispatch<SetStateAction<Record<string, string>>>;
-  attachCsv: (location: StepLocation, step: Extract<Step, { kind: 'forEachRow' }>) => void | Promise<void>;
+  attachCsv: (
+    location: StepLocation,
+    step: Extract<Step, { kind: 'forEachRow' }>,
+  ) => void | Promise<void>;
 }
 
 function updateAssertMessage(
@@ -35,7 +38,13 @@ function updateForEachMaxRows(
   const maxRows = raw.trim().length === 0 ? undefined : Math.max(1, Number(raw));
   const next: Step =
     maxRows === undefined
-      ? { kind: 'forEachRow', csvBlobHash: step.csvBlobHash, as: step.as, onEnd: step.onEnd, body: step.body }
+      ? {
+          kind: 'forEachRow',
+          csvBlobHash: step.csvBlobHash,
+          as: step.as,
+          onEnd: step.onEnd,
+          body: step.body,
+        }
       : { ...step, maxRows };
   updateStep(location, next);
 }
@@ -52,11 +61,15 @@ export function flowStepBody(
     return (
       <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 text-text-primary">
         {t.stepAssert}
-        {predicateEditor(t, step.predicate, (predicate) => updateStep(location, { ...step, predicate }))}
+        {predicateEditor(t, step.predicate, (predicate) =>
+          updateStep(location, { ...step, predicate }),
+        )}
         <select
           value={step.severity}
           aria-label={t.severity}
-          onChange={(e) => updateStep(location, { ...step, severity: e.target.value === 'soft' ? 'soft' : 'hard' })}
+          onChange={(e) =>
+            updateStep(location, { ...step, severity: e.target.value === 'soft' ? 'soft' : 'hard' })
+          }
           className={cn(FIELD, 'w-20')}
         >
           <option value="hard">{t.severityHard}</option>
@@ -108,7 +121,13 @@ export function flowStepBody(
             min={1}
             value={step.count}
             aria-label={t.count}
-            onChange={(e) => updateStep(location, { kind: 'repeat', count: Math.max(1, Number(e.target.value)), body: step.body })}
+            onChange={(e) =>
+              updateStep(location, {
+                kind: 'repeat',
+                count: Math.max(1, Number(e.target.value)),
+                body: step.body,
+              })
+            }
             className={cn(FIELD, 'w-20')}
           />
         ) : (
@@ -145,7 +164,12 @@ export function flowStepBody(
           <select
             value={step.onEnd}
             aria-label={t.csvOnEnd}
-            onChange={(e) => updateStep(location, { ...step, onEnd: e.target.value === 'restart' ? 'restart' : 'stop' })}
+            onChange={(e) =>
+              updateStep(location, {
+                ...step,
+                onEnd: e.target.value === 'restart' ? 'restart' : 'stop',
+              })
+            }
             className={cn(FIELD, 'w-24')}
           >
             <option value="stop">{t.csvStop}</option>

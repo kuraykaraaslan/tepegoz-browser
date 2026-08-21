@@ -29,6 +29,43 @@ export interface NotificationPermissionResponse {
   remember: boolean;
 }
 
+/** Main → renderer: an HTTP 401/407 challenge needs credentials. `realm` is server-supplied and
+ *  untrusted — display-only, already length-capped by main. */
+export interface BasicAuthRequest {
+  requestId: string;
+  origin: string;
+  realm: string;
+  /** True when a network PROXY issued the challenge rather than the page being visited. */
+  isProxy: boolean;
+}
+
+/** Renderer → main: the user's answer to a basic-auth challenge. Credentials are passed straight to
+ *  Chromium's callback and are never persisted, journaled or logged. */
+export interface BasicAuthResponse {
+  requestId: string;
+  username: string;
+  password: string;
+  cancelled: boolean;
+}
+
+/** Main → renderer: a TLS certificate error is waiting on the user. All fields are display-only and
+ *  already length-capped by main; `issuer` in particular is attacker-controlled. */
+export interface CertificateErrorRequest {
+  requestId: string;
+  origin: string;
+  /** Chromium's error code, e.g. `net::ERR_CERT_AUTHORITY_INVALID`. */
+  errorCode: string;
+  issuer: string;
+  /** ISO-8601 expiry of the offered certificate. */
+  expiry: string;
+}
+
+/** Renderer → main: whether to proceed past the certificate error. */
+export interface CertificateErrorResponse {
+  requestId: string;
+  proceed: boolean;
+}
+
 /** Content-area rectangle (DIP) where the active tab's web view is laid out, below the chrome. */
 export interface ContentBounds {
   x: number;

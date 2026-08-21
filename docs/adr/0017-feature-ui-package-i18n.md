@@ -6,9 +6,10 @@
   [ADR-0016](0016-per-package-i18n.md) for the three feature-UI packages named below.
 
 ## Context
+
 [ADR-0016](0016-per-package-i18n.md) moved feature strings next to their owner but kept the extracted
 UI packages as **string-free presentational leaves**: `history-ui`, `extensions-ui` and `settings-ui`
-took their copy via `labels` props, and the *app* owned the `history`/`extensions`/`settings`
+took their copy via `labels` props, and the _app_ owned the `history`/`extensions`/`settings`
 namespaces in `apps/desktop/src/i18n`. In practice this left the app dictionary holding strings that no
 app-shell surface renders — each namespace's only real consumer is its `-ui` package (plus the native
 menu / tab title in the main process). The distribution therefore still didn't match "strings live with
@@ -18,6 +19,7 @@ We accept the trade-off ADR-0016 rejected (these leaves stop being generic, app-
 exchange for a dictionary layout where each feature package is the single home of its strings.
 
 ## Decision
+
 - **`history-ui`, `extensions-ui`, `settings-ui` each own their dictionary.** Every one declares
   `src/i18n/{en,tr,index}.ts` via `defineDict({ en, tr })` + a co-located parity test (`keyPaths` from
   `@tepegoz/i18n/testing`), mirroring the extension packages. Each exposes a React-free `./i18n` subpath
@@ -36,6 +38,7 @@ exchange for a dictionary layout where each feature package is the single home o
   app-owned (the chrome frame + native menus).
 
 ## Consequences
+
 - Feature strings live in the feature package; the app dictionary shrinks to true app-shell chrome.
 - Parity stays a build error per dict (`typeof en` typing on `tr`) plus a co-located runtime test.
 - These three packages gain a `@tepegoz/i18n` dependency and are no longer reusable outside this app —

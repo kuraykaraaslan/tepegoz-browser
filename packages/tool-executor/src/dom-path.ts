@@ -45,9 +45,9 @@ export function resolveNodePath(root: PathNode, path: NodePath): PathNode | null
     if (node === null) return null;
     el = node;
     if (s < path.length - 1) {
-      cur =
-        (el.shadowRoot ?? null) ??
-        (el.tagName === 'IFRAME' ? (el.contentDocument ?? null) : null);
+      // `?? null ??` in the middle was a no-op (`a ?? null ?? b` is just `a ?? b`); TS 5.9 reports it
+      // as an always-nullish operand. Same traversal: pierce an open shadow root, else an iframe doc.
+      cur = el.shadowRoot ?? (el.tagName === 'IFRAME' ? (el.contentDocument ?? null) : null);
     }
   }
   return el;
@@ -124,7 +124,11 @@ export function findByLocators(root: PathNode, locators: ElementLocators): PathN
         if (roleOk && nameOf(el) === wanted.name) matches.push(child);
       }
       if (child.shadowRoot !== null && child.shadowRoot !== undefined) visit(child.shadowRoot);
-      else if (child.tagName === 'IFRAME' && child.contentDocument !== null && child.contentDocument !== undefined) {
+      else if (
+        child.tagName === 'IFRAME' &&
+        child.contentDocument !== null &&
+        child.contentDocument !== undefined
+      ) {
         visit(child.contentDocument);
       }
       visit(child);

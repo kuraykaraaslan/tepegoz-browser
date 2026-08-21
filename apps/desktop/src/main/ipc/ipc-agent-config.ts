@@ -35,7 +35,10 @@ import { agentEnabled, requireAgentEnabled, tokenUsage } from './ipc-agent-share
 
 /** The effective provider the NEXT run resolves to (mirrors `resolveProvider`, non-throwing for the
  *  panel's display). `local` availability is proxied by "a model is selected" here. */
-function effectiveAgentProvider(prefs: Preferences, hasKey: (p: AIProvider) => boolean): AIProvider {
+function effectiveAgentProvider(
+  prefs: Preferences,
+  hasKey: (p: AIProvider) => boolean,
+): AIProvider {
   const localAvailable = prefs.localProvider.selectedModelId !== '';
   const ov = prefs.agentProviderOverride;
   if (ov === 'local' && localAvailable) return 'local';
