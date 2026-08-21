@@ -62,6 +62,9 @@ export function FindBar({
       <input
         ref={inputRef}
         type="text"
+        // Stable handle for e2e: locating the bar by role alone is ambiguous once other chrome
+        // surfaces render their own text inputs.
+        data-testid="find-input"
         value={query}
         placeholder={t.placeholder}
         aria-label={t.placeholder}

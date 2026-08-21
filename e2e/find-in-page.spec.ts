@@ -80,9 +80,9 @@ test('Ctrl+F finds text in the active tab and reports Chromium\u2019s match coun
       BrowserWindow.getAllWindows()[0]?.webContents.send('find:open');
     });
 
-    // Located by ROLE, not by visible text: this file must not fail because the app runs in Turkish.
-    // The omnibox is a `combobox`, so the only `textbox` on screen is the find bar's input.
-    const findInput = window.getByRole('textbox').first();
+    // By test id, not by role or text: role alone is ambiguous once other chrome surfaces render
+    // their own inputs, and visible text would make this fail whenever the app runs in Turkish.
+    const findInput = window.getByTestId('find-input');
     await expect(findInput).toBeVisible();
     await findInput.fill('needle');
 
