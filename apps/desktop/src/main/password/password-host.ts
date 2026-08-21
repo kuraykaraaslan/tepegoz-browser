@@ -1,9 +1,6 @@
-import { ipcMain } from 'electron';
-import { AppError, Logger, toBoundary } from '@tepegoz/libs';
+import { AppError } from '@tepegoz/libs';
 import {
-  encodeBoundaryMessage,
   IpcChannels,
-  type IpcChannel,
   type LoginCredentialMeta,
   type LoginImportResult,
 } from '@tepegoz/desktop-ipc';
@@ -14,42 +11,24 @@ import {
   LoginSetSchema,
 } from '@tepegoz/desktop-ipc/schemas';
 import { PasswordProviderRegistry } from '@tepegoz/password-core';
-import type { IpcMainInvokeEvent } from 'electron';
-import { isTrustedAppUrl } from '../lib/trusted-origin';
+import { handleAsync, parsePayload } from '../ipc/ipc-helpers';
 import { mainStrings } from '../lib/i18n-main';
 
-function assertTrustedSender(event: IpcMainInvokeEvent): void {
-  const url = event.senderFrame?.url ?? '';
-  if (!isTrustedAppUrl(url)) {
-    Logger.warn('Rejected password IPC from untrusted sender', { url });
-    throw new AppError(mainStrings().errors.forbidden, 403);
-  }
-}
+/**
+ * Login-vault IPC. The sender allow-list, the AppError→boundary mapping and the payload validation all
+ * come from the ONE `ipc-helpers` boundary — this file used to carry byte-identical private copies of
+ * `assertTrustedSender`/`handle`/`handleAsync`, which meant a fix to the trust check had to be made in
+ * three places to actually hold. There is one copy now.
+ *
+ * Every handler is async so the boundary awaits the provider: a rejected write must reach the renderer
+ * as a failure, not be dropped by a fire-and-forget `void`.
+ */
 
-function handle<T>(channel: IpcChannel, fn: (event: IpcMainInvokeEvent, payload: unknown) => T): void {
-  ipcMain.handle(channel, (event, payload: unknown): T => {
-    try {
-      assertTrustedSender(event);
-      return fn(event, payload);
-    } catch (err) {
-      const boundary = toBoundary(err);
-      Logger.error(`IPC ${channel} failed`, { statusCode: boundary.statusCode, message: boundary.message });
-      throw new Error(encodeBoundaryMessage(boundary.message, boundary.statusCode));
-    }
-  });
-}
-
-function handleAsync<T>(channel: IpcChannel, fn: (event: IpcMainInvokeEvent, payload: unknown) => Promise<T>): void {
-  ipcMain.handle(channel, async (event, payload: unknown): Promise<T> => {
-    try {
-      assertTrustedSender(event);
-      return await fn(event, payload);
-    } catch (err) {
-      const boundary = toBoundary(err);
-      Logger.error(`IPC ${channel} failed`, { statusCode: boundary.statusCode, message: boundary.message });
-      throw new Error(encodeBoundaryMessage(boundary.message, boundary.statusCode));
-    }
-  });
+/** The local vault, or a 503 — a missing provider is an environment fault, not a renderer fault. */
+function localProvider() {
+  const local = PasswordProviderRegistry.get('local');
+  if (!local) throw new AppError(mainStrings().errors.upstreamDown, 503);
+  return local;
 }
 
 export default class PasswordHost {
@@ -59,10 +38,8 @@ export default class PasswordHost {
     });
 
     handleAsync(IpcChannels.loginsSet, async (_event, payload): Promise<LoginCredentialMeta> => {
-      const input = LoginSetSchema.parse(payload);
-      const local = PasswordProviderRegistry.get('local');
-      if (!local) throw new AppError('Local vault not registered', 500);
-      return local.set({
+      const input = parsePayload(LoginSetSchema, payload);
+      return localProvider().set({
         url: input.url,
         username: input.username,
         password: input.secret,
@@ -71,24 +48,25 @@ export default class PasswordHost {
       });
     });
 
-    handle(IpcChannels.loginsRemove, (_event, payload): void => {
-      const id = LoginIdSchema.parse(payload);
-      const local = PasswordProviderRegistry.get('local');
-      if (!local) throw new AppError('Local vault not registered', 500);
-      void local.remove(id);
+    // Awaited on purpose: `void local.remove(id)` reported success to the renderer even when the
+    // delete failed, and lost the error to an unhandled rejection. A password the user deleted must
+    // either be gone or the UI must say it isn't.
+    handleAsync(IpcChannels.loginsRemove, async (_event, payload): Promise<void> => {
+      const id = parsePayload(LoginIdSchema, payload);
+      await localProvider().remove(id);
     });
 
     handleAsync(IpcChannels.loginsImport, async (_event, payload): Promise<LoginImportResult> => {
-      const { data, format } = LoginImportSchema.parse(payload);
-      const local = PasswordProviderRegistry.get('local');
-      if (!local?.import) throw new AppError('Import not supported', 501);
+      const { data, format } = parsePayload(LoginImportSchema, payload);
+      const local = localProvider();
+      if (!local.import) throw new AppError(mainStrings().errors.badState, 501);
       return local.import(data, format);
     });
 
     handleAsync(IpcChannels.loginsExport, async (_event, payload): Promise<string> => {
-      const format = LoginExportSchema.parse(payload);
-      const local = PasswordProviderRegistry.get('local');
-      if (!local?.export) throw new AppError('Export not supported', 501);
+      const format = parsePayload(LoginExportSchema, payload);
+      const local = localProvider();
+      if (!local.export) throw new AppError(mainStrings().errors.badState, 501);
       return local.export(format);
     });
   }

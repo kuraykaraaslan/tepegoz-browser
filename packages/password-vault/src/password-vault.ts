@@ -9,16 +9,9 @@ import type {
   ImportResult,
   SecretCrypto,
 } from '@tepegoz/password-core';
+import { normalizeOrigin } from '@tepegoz/password-core';
 import { PasswordStore } from './password-store';
 import { VaultMessages } from './messages';
-
-function normalizeOrigin(url: string): string {
-  try {
-    return new URL(url).origin;
-  } catch {
-    return url;
-  }
-}
 
 function uuid(): string {
   return crypto.randomUUID();
