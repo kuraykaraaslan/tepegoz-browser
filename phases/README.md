@@ -52,7 +52,7 @@ actually has; do not start a fifth pile.
 | 12 | [phase-12-developer-platform-marketplace.md](product/phase-12-developer-platform-marketplace.md) | Developer platform & marketplace economy (SDK/CLI + Site-Recipe Library + SBOM gate) | ⏸ **Frozen (out of v1).** 🟡 In progress (SupplyChainGate decision layer landed, ADR-0037 accepted; no SDK, install flow, or real verification exists yet) |
 | M | [phase-macros.md](product/phase-macros.md) | Macros extension (`@tepegoz/ext-macros`) — iMacros successor: record/edit/replay, robust selectors, agent capabilities (down-payment on Phase 6) | 🟡 Core shipped |
 | E | [phase-extras.md](product/phase-extras.md) | Extras — special-track, demand-gated items off the 0–12 critical path (e.g. DRM/Widevine) | ⏸ **Frozen (out of v1).** ⬜ Not started |
-| AI | [ai-agent-super/README.md](ai-agent-super/README.md) | **The sole authoritative AI agent competence roadmap (v3).** Takes Do mode to a browser agent competitive with Claude for Chrome (reliability + safety) and Perplexity Comet (assistant UX), under a falsifiable four-condition "world's best" claim: S0 truth & repair → S1–S2 substrate (native tool-calling, streaming, perception v2) → S3–S5 reliability (actions, verified outcomes, code-exec) → S6–S9 control & trust (safety plane, assistant UX, memory/skills) → S10–S12 frontier (vision escalation, H2H benchmark, local model). Supersedes v2 ([ai/README.md](ai/README.md) is a tombstone); v1 (AI-1..8, the `browser-use`/`nanobrowser` port) is archived in [ai-agent-super/archive/](ai-agent-super/archive/README.md) with its honest status history | 🟡 In progress — **all 13 phases (S0–S12) have landed their capability code and every one sits at 🟠 measurement-owed.** Nothing reads ✅: the full-registry baseline, every paired sweep and the H2H are ⏸ awaiting a funded key, and S12 additionally needs downloaded local weights. Three capabilities ship deliberately inert (S6 credential fill, S9 hint recall, S10 vision) and S5 records a **measured refutation** of its own specified sandbox. See [ai-agent-super/README.md](ai-agent-super/README.md) for the per-phase rows and the stated anti-debt breach |
+| AI | [ai-agent-super/README.md](ai-agent-super/README.md) | **The sole authoritative AI agent competence roadmap (v3).** Takes Do mode to a browser agent competitive with Claude for Chrome (reliability + safety) and Perplexity Comet (assistant UX), under a falsifiable four-condition "world's best" claim: S0 truth & repair → S1–S2 substrate (native tool-calling, streaming, perception v2) → S3–S5 reliability (actions, verified outcomes, code-exec) → S6–S9 control & trust (safety plane, assistant UX, memory/skills) → S10–S12 frontier (vision escalation, H2H benchmark, local model). Supersedes v2 ([ai/README.md](ai/README.md) is a tombstone); v1 (AI-1..8, the `browser-use`/`nanobrowser` port) is archived in [ai-agent-super/archive/](ai-agent-super/archive/README.md) with its honest status history | 🟡 In progress — **all 13 phases (S0–S12) have landed their capability code and every one sits at 🟠 measurement-owed.** Nothing reads ✅. Blockers, separated by KIND (2026-08-21): the full-registry baseline and the paired sweeps need **API spend** — re-priced from the old $2,500–8,000 guess to **~$550–780**, with the owner's **$50 budget enough to close S0 and S3** ([budget.md](ai-agent-super/budget.md), Step 1 machinery landed); S12 needs **downloaded local weights**; the H2H needs **rival subscriptions** (~$60/mo) and is out of scope for an API budget. Three capabilities ship deliberately inert (S6 credential fill, S9 hint recall, S10 vision) and S5 records a **measured refutation** of its own specified sandbox. See [ai-agent-super/README.md](ai-agent-super/README.md) for the per-phase rows and the stated anti-debt breach |
 
 Status legend: ⬜ Not started · 🟡 In progress · ✅ Done (DoD passed) · ⏸ Frozen (out of v1 — see the ship line below)
 
@@ -180,6 +180,49 @@ These apply in every phase; a phase DoD does not close without them:
 2. Do tasks in order; tick each finished one with `- [x]`.
 3. When all of a phase's DoD checkboxes are ticked, set Status to ✅ and update the table above.
 4. Move to the next phase.
+5. Close the session with the **Phase Status Report** below.
+
+## Session close-out — the Phase Status Report (standing rule)
+
+**Every working session that touches a phase ends with this report.** Owner instruction, 2026-08-21.
+It is not a summary of what was done — that belongs in the prose above it. It answers exactly two
+questions the owner should never have to re-derive: **what closed, and how much is left.**
+
+### The format
+
+```
+## Faz durumu — <program(s) touched> · <date>
+
+**Sayaç:** N ✅ · N 🟠 · N 🟡 · N ⬜  (toplam N)
+**Anti-debt:** N measurement-owed — <compliant | STATED BREACH (limit 1)>
+
+| Faz | Önce | Sonra | Not |
+|---|---|---|---|
+| <only the phases this session touched>     |
+| **Kapanan (🟠/🟡 → ✅)** | | | **<list, or "hiçbiri">** |
+
+**Sıradaki ✅'e engel:** <the single nearest blocker, named by KIND>
+```
+
+### The rules that make it honest
+
+These exist because each one has already been got wrong in this repo at least once.
+
+1. **Landed code is not a closed phase.** A phase reaches ✅ only when its DoD passed **and** its delta
+   is recorded in its program's results ledger. Anything less is 🟠 measurement-owed. Reporting "13/13
+   phases done" when 13 sit at 🟠 is precisely the vanity the constitution forbids.
+2. **"Kaç faz kaldı" counts against ✅**, never against "started". A program where every phase has begun
+   and none has closed has **all** of its phases left.
+3. **A session that closed nothing says so.** The `Kapanan` row reads **"hiçbiri"** in plain sight. Most
+   sessions legitimately close nothing; hiding that turns the report into decoration.
+4. **Name the blocker by KIND, not just by name.** "Unfunded" is not one blocker: an API-token cost, a
+   downloaded-weights cost, and a rival-subscription cost are three different asks, and only one of them
+   is cleared by a key. Filing them together hides the ones the owner could clear today
+   ([budget.md §3](ai-agent-super/budget.md#3-what-50-of-api-still-cannot-buy--stated-once-plainly)).
+5. **Only touched phases get rows.** The counter covers the whole program; the table covers this
+   session. A table that re-lists all thirteen every time stops being read.
+6. **The counter must reconcile with the source of truth** — this file's index and the program's own
+   phase index. If they disagree, the report says so instead of picking the flattering one.
 
 ## Deferred / adoption-gated backlog (from the beyond-phases synthesis)
 
