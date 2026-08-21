@@ -83,6 +83,8 @@ export function settlePlan(
     return false;
   }
   pendingPlans.delete(planId);
-  entry.resolve(skipStepIds !== undefined ? { approved, skipStepIds: [...skipStepIds] } : { approved });
+  entry.resolve(
+    skipStepIds !== undefined ? { approved, skipStepIds: [...skipStepIds] } : { approved },
+  );
   return true;
 }

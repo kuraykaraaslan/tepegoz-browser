@@ -4,15 +4,15 @@
 
 ## Context (why this change)
 
-The observation was that the **extension-API logic** and the **AIAdaptor logic** feel *two-headed*
-(*çift başlılık*), and the ask was for a single, flatter model. Investigation showed:
+The observation was that the **extension-API logic** and the **AIAdaptor logic** feel _two-headed_
+(_çift başlılık_), and the ask was for a single, flatter model. Investigation showed:
 
 - There is **one** tool plane — `CapabilityRegistry` + `ToolGateway` (ADR-0007). Around it sit three
-  **legitimately separate** layers that only *look* duplicated because they share the words
+  **legitimately separate** layers that only _look_ duplicated because they share the words
   "adapter / adaptor / provider":
   1. **`ModelProvider`** — the real LLM-vendor adapter (Anthropic / OpenAI / local) in
      `@tepegoz/model-gateway`. Spelled "adapt**e**r".
-  2. **`AIAdapt**o**r`** — a Settings-UI **projection** that *groups* registered tools for
+  2. **`AIAdapt**o**r`** — a Settings-UI **projection** that _groups_ registered tools for
      "Cost & performance"; it registers nothing (ADR-0023). `apps/desktop/src/main/agent/ai-adaptors.ts`.
   3. **`ToolSource='adapter'`** — a reserved-but-unused enum value (`tool-descriptor.ts`).
 - The **big** duplication is already gone on this branch: browser/tab/journal tools used to be
@@ -23,7 +23,7 @@ The observation was that the **extension-API logic** and the **AIAdaptor logic**
   `@tepegoz/desktop-ipc`): the **single** typed `contextBridge` between renderer and main — every method
   funnels through `invoke<T>(channel)` → IPC → a main handler (zod validation + the ADR-0009 security
   boundary). It just happens to expose both `listAiAdaptors()` and `listExtensionManifests()`, which is a
-  *symptom*, not a cause.
+  _symptom_, not a cause.
 
 **What remains** (the real, smaller "two-headedness"): a naming collision, some dead grouping code + stale
 docs, and a **dormant second tool-calling protocol** (native provider tool-calls) that no production code
@@ -32,7 +32,7 @@ uses. This plan removes all three.
 ## Decisions
 
 1. **Rename** the tool-group concept `AIAdaptor` → **`CapabilityGroup`**, so "adapter/provider" means
-   *only* the LLM-vendor layer. Also remove the unused `ToolSource='adapter'`.
+   _only_ the LLM-vendor layer. Also remove the unused `ToolSource='adapter'`.
 2. **Re-split** the Agent extension's tools (currently collapsed into one "Agent" group) into
    **Browser / Tabs / Journal** sub-groups via per-capability `category`.
 3. **Unify tool-calling** by deleting the dormant native plumbing → a single JSON-decision protocol.
@@ -41,10 +41,10 @@ uses. This plan removes all three.
 
 - The native tool-calling path is **100 % dead in production**: `CanonRequest.tools` is set by no
   production caller; `CanonResponse.toolCalls` is read by nobody outside the two cloud providers + their
-  unit tests. (Reactor/Planner build the tool list into the *system prompt* and use `responseFormat:'json'`;
+  unit tests. (Reactor/Planner build the tool list into the _system prompt_ and use `responseFormat:'json'`;
   their `ReactRequest.tools`/`PlanRequest.tools` are a **different** field.)
 - **Local models can't do native tool-calling**: `packages/local-inference/src/map-response.ts` hardcodes
-  `toolCalls: []` (GBNF-grammar JSON path). This is *why* the provider-agnostic JSON protocol exists.
+  `toolCalls: []` (GBNF-grammar JSON path). This is _why_ the provider-agnostic JSON protocol exists.
 - `category` already flows from `capability()` → `ToolDescriptor.category` → registry — **no tool-plane
   type change** needed for Part 3.
 - Agent's 7 tools today: `category:'browser'` ×6 (incl. `tab_list_items`, `tab_create_item`),
@@ -62,11 +62,11 @@ uses. This plan removes all three.
 
 Keep each diff clean and avoid re-editing renamed files:
 
-| PR | Parts | Nature | Why isolated |
-|----|-------|--------|--------------|
-| **A** | Part 4 | pure deletion of dead plumbing | isolated to `model-gateway` + `local-inference`; zero runtime change |
-| **B** | Parts 2 + 3 | behavioral (grouping) on the **current** names | clean behavioral diff before the rename |
-| **C** | Part 1 | mechanical rename + ADRs | huge rename kept separate from behavior |
+| PR    | Parts       | Nature                                         | Why isolated                                                         |
+| ----- | ----------- | ---------------------------------------------- | -------------------------------------------------------------------- |
+| **A** | Part 4      | pure deletion of dead plumbing                 | isolated to `model-gateway` + `local-inference`; zero runtime change |
+| **B** | Parts 2 + 3 | behavioral (grouping) on the **current** names | clean behavioral diff before the rename                              |
+| **C** | Part 1      | mechanical rename + ADRs                       | huge rename kept separate from behavior                              |
 
 Branch per repo rules: `chore/single-tool-protocol`, `feat/capability-group-subgroups`,
 `refactor/aiadaptor-to-capability-group` (or similar `<type>/<scope>`), each self-review PR → `main`.
@@ -78,12 +78,13 @@ Branch per repo rules: `chore/single-tool-protocol`, `feat/capability-group-subg
 **Recommendation:** keep the JSON-decision protocol as the single mechanism; delete the unused native
 `CanonToolDef` / `CanonToolCall` / `CanonRequest.tools` / `CanonResponse.toolCalls`.
 Rationale: option "standardize on native" is impossible (local has no native tool channel); option "native
-for cloud + JSON for local" *adds* a second protocol (more çift başlılık, two message-threading formats,
+for cloud + JSON for local" _adds_ a second protocol (more çift başlılık, two message-threading formats,
 loses the `coerceDecisionShape` salvage weak models need); deleting the dead path achieves "one mechanism"
 at **zero runtime risk** (the path is provably unused). Leave the door open in an ADR to reintroduce native
 calling behind a provider-capability flag if a future cloud-only quality need justifies it.
 
 **Deletions**
+
 - `packages/model-gateway/src/types.ts`: remove `interface CanonToolDef`, `interface CanonToolCall`, the
   `tools?` field on `CanonRequest`, the `toolCalls` field on `CanonResponse`. (Optionally drop `'tool_use'`
   from `CanonStopReason` and map those to `'end'` in providers — low value; keeping is fine.)
@@ -110,7 +111,7 @@ three `toolCalls` cases), `reactor.test.ts` / `planner.test.ts` (drop `toolCalls
   `{ file, extensions }`); fix the file header + `SYSTEM_TITLES` comment (only builtin category is now
   `file`; browser/tabs/journal are `source:'extension'`).
 - `packages/desktop-ipc/src/ai-adaptor-types.ts`: fix the `AIAdaptorKind` + `AIAdaptor` doc comments — drop
-  "browser / journal" from the list of *system* groups.
+  "browser / journal" from the list of _system_ groups.
 - `docs/adr/0023-ai-adaptors.md`: fix Decision §2 bullet 3 ("browser-tools → browser/journal") and the
   §Consequences line — no longer true.
 - **Do not** delete the settings-ui `adaptors.browser`/`.journal` keys — Part 3 repurposes them as
@@ -128,8 +129,14 @@ when absent (preserves Macros as one group). Exactly what ADR-0023 §Consequence
    `browser`×4, `tabs`×2, `journal`×1.
 
 2. **`apps/desktop/src/main/agent/ai-adaptors.ts`** — sub-split in `adaptorMetaOf`:
+
    ```ts
-   interface AdaptorMeta { id: string; kind: AIAdaptorKind; provenance?: string; category?: string; }
+   interface AdaptorMeta {
+     id: string;
+     kind: AIAdaptorKind;
+     provenance?: string;
+     category?: string;
+   }
 
    function adaptorMetaOf(d: ToolDescriptor): AdaptorMeta {
      if (d.source === 'extension') {
@@ -151,7 +158,7 @@ when absent (preserves Macros as one group). Exactly what ADR-0023 §Consequence
      `manifestById(meta.provenance)` + `extensionLabel`); the category label is localized in the renderer.
 
 3. **Wire `category` + localize in the renderer** (ADR-0023 "split localization by stability", one level
-   deeper — the extension *name* is dynamic → resolved in main; the *category* is a stable known key →
+   deeper — the extension _name_ is dynamic → resolved in main; the _category_ is a stable known key →
    localized in the renderer):
    - `packages/desktop-ipc/src/ai-adaptor-types.ts`: add `category?: string` to `AIAdaptor`.
    - `apps/desktop/src/renderer/src/components/settings-ai-panels.tsx` — extend `adaptorTitle`
@@ -187,6 +194,7 @@ when absent (preserves Macros as one group). Exactly what ADR-0023 §Consequence
 and `adaptorKinds`→`groupKinds`.
 
 **Files (~12, all in-repo consumers):**
+
 - `packages/desktop-ipc/src/`: rename `ai-adaptor-types.ts` → `capability-group-types.ts` (symbols + docs);
   `contract.ts` (re-export path + comments); `channels.ts` (key + value + comment); `api.ts` (import +
   `listCapabilityGroups()` signature + comments).

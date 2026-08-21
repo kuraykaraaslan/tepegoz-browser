@@ -18,7 +18,11 @@ export function useAgentAttachments({ api, a, mutateActive }: AgentAttachmentDep
     mutateActive((s) => {
       const nextExpanded = new Set(s.expandedFiles);
       nextExpanded.delete(id);
-      return { ...s, attachments: s.attachments.filter((a) => a.id !== id), expandedFiles: nextExpanded };
+      return {
+        ...s,
+        attachments: s.attachments.filter((a) => a.id !== id),
+        expandedFiles: nextExpanded,
+      };
     });
   }
 
@@ -37,7 +41,9 @@ export function useAgentAttachments({ api, a, mutateActive }: AgentAttachmentDep
         label: `${String(lineCount)} ${a.attach.lines}`,
         content: text,
       });
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   async function onAttachFiles(): Promise<void> {
@@ -51,7 +57,9 @@ export function useAgentAttachments({ api, a, mutateActive }: AgentAttachmentDep
           content: f.content,
         } satisfies Attachment);
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   async function onAttachScreenshot(): Promise<void> {
@@ -64,7 +72,9 @@ export function useAgentAttachments({ api, a, mutateActive }: AgentAttachmentDep
         label: a.attach.screenshot,
         content: dataUrl,
       });
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   return { removeAttachment, addAttachment, onAttachSelection, onAttachFiles, onAttachScreenshot };

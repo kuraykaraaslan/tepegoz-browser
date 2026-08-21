@@ -40,7 +40,9 @@ vi.mock('../tabs', () => ({
     },
   },
 }));
-vi.mock('./browsing-sessions.electron', () => ({ default: { direct: h.direct, ensure: h.ensure } }));
+vi.mock('./browsing-sessions.electron', () => ({
+  default: { direct: h.direct, ensure: h.ensure },
+}));
 vi.mock('./connection-pool.electron', () => ({
   default: { ensureUp: h.ensureUp, statusMap: h.statusMap },
 }));
@@ -71,7 +73,10 @@ beforeEach(() => {
 
 describe('resolution over live state', () => {
   it('defaults every tab to Direct', () => {
-    expect(BindingService.resolveFor('c')).toEqual({ resolved: { connectionId: null }, source: 'general' });
+    expect(BindingService.resolveFor('c')).toEqual({
+      resolved: { connectionId: null },
+      source: 'general',
+    });
   });
 
   it('reads a group binding out of the settings bag ADR-0020 reserved', async () => {
@@ -229,6 +234,9 @@ describe('preserving a route when pinning strips a tab out of its group', () => 
     h.tabs = h.tabs.map((t) => (t.tabId === 'a' ? { ...t, groupId: null } : t));
 
     // Still following General, not frozen onto a copy that would stop tracking it.
-    expect(BindingService.resolveFor('a')).toEqual({ resolved: { connectionId: 'tor' }, source: 'general' });
+    expect(BindingService.resolveFor('a')).toEqual({
+      resolved: { connectionId: 'tor' },
+      source: 'general',
+    });
   });
 });

@@ -16,7 +16,10 @@ const direct: ScopedBinding = { kind: 'direct' };
 
 describe('resolving a binding — most-specific wins', () => {
   it('a TAB override wins over everything, even a different group binding', () => {
-    const r = resolveBinding(conn('vpn-a'), conn('vpn-b'), { kind: 'connection', connectionId: 'vpn-c' });
+    const r = resolveBinding(conn('vpn-a'), conn('vpn-b'), {
+      kind: 'connection',
+      connectionId: 'vpn-c',
+    });
     expect(r).toEqual({ resolved: { connectionId: 'vpn-a' }, source: 'tab' });
   });
 
@@ -81,11 +84,23 @@ describe('partition keys', () => {
   });
 
   it('distinct connections never share a partition', () => {
-    expect(partitionKeyFor({ connectionId: 'vpn-a' })).not.toBe(partitionKeyFor({ connectionId: 'vpn-b' }));
+    expect(partitionKeyFor({ connectionId: 'vpn-a' })).not.toBe(
+      partitionKeyFor({ connectionId: 'vpn-b' }),
+    );
   });
 
   it('rejects an id that could collide or escape rather than sanitizing it into a shared jar', () => {
-    for (const bad of ['vpn/a', 'vpn a', '../etc', 'VPN-A', 'vpn--a', '-vpn', 'vpn-', '', 'x'.repeat(65)]) {
+    for (const bad of [
+      'vpn/a',
+      'vpn a',
+      '../etc',
+      'VPN-A',
+      'vpn--a',
+      '-vpn',
+      'vpn-',
+      '',
+      'x'.repeat(65),
+    ]) {
       expect(isValidConnectionId(bad)).toBe(false);
       expect(() => partitionKeyFor({ connectionId: bad })).toThrow();
     }
@@ -165,7 +180,7 @@ describe('preserving a route across an INVOLUNTARY group exit (pinning)', () => 
     expect(bindingOnInvoluntaryGroupExit(inherit, conn('tor'))).toEqual(conn('tor'));
   });
 
-  it("materializes an explicit group Direct too — a pin must not silently ADD a tunnel either", () => {
+  it('materializes an explicit group Direct too — a pin must not silently ADD a tunnel either', () => {
     // Opposite direction, same principle: group says Direct, General says VPN. Pinning must not push
     // this tab onto a tunnel the user never chose for it.
     expect(bindingOnInvoluntaryGroupExit(inherit, direct)).toEqual(direct);

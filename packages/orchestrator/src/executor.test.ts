@@ -58,9 +58,12 @@ describe('Executor.run', () => {
     // 0→120 for the first step, 120→200 for the second (start/end read per step).
     const ticks = [0, 120, 120, 200];
     let i = 0;
-    const r = await Executor.run(plan([step('s1', 'browser_get_page'), step('s2', 'tab_list_items')]), {
-      now: () => ticks[i++] ?? 200,
-    });
+    const r = await Executor.run(
+      plan([step('s1', 'browser_get_page'), step('s2', 'tab_list_items')]),
+      {
+        now: () => ticks[i++] ?? 200,
+      },
+    );
     expect(r.outcomes.map((o) => o.durationMs)).toEqual([120, 80]);
   });
 
@@ -70,7 +73,9 @@ describe('Executor.run', () => {
     });
     const ticks = [0, 5_000];
     let i = 0;
-    const r = await Executor.run(plan([step('s1', 'browser_get_page')]), { now: () => ticks[i++] ?? 5_000 });
+    const r = await Executor.run(plan([step('s1', 'browser_get_page')]), {
+      now: () => ticks[i++] ?? 5_000,
+    });
     expect(r.outcomes[0]?.ok).toBe(false);
     expect(r.outcomes[0]?.durationMs).toBe(5_000);
   });

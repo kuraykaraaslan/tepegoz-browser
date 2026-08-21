@@ -69,7 +69,9 @@ describe('renderWorkingState', () => {
   });
 
   it('renders a tab with its id and title', () => {
-    expect(renderWorkingState({ openTabs: [{ id: 't1', title: 'Checkout' }] })).toContain('- Open tabs: [t1] Checkout');
+    expect(renderWorkingState({ openTabs: [{ id: 't1', title: 'Checkout' }] })).toContain(
+      '- Open tabs: [t1] Checkout',
+    );
   });
 });
 

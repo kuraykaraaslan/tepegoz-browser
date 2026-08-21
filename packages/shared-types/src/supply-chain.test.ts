@@ -17,7 +17,9 @@ describe('the PackageManifest shape', () => {
   });
 
   it('accepts an EMPTY declaredCapabilities — a package that needs nothing declares that explicitly', () => {
-    expect(PackageManifestSchema.safeParse(manifest({ declaredCapabilities: [] })).success).toBe(true);
+    expect(PackageManifestSchema.safeParse(manifest({ declaredCapabilities: [] })).success).toBe(
+      true,
+    );
   });
 
   it('accepts every verification flag as false — an unsigned, unattested package is still a valid manifest to reason about', () => {

@@ -6,7 +6,7 @@ owed" drift. These are part of **every phase's DoD** — a phase is not ✅ unti
 
 ## North star — the four claim conditions (full text)
 
-tepegoz claims *world's best browser agent* **only** when, at a dated release, **all four** hold:
+tepegoz claims _world's best browser agent_ **only** when, at a dated release, **all four** hold:
 
 1. **Head-to-head win.** It wins or ties a **pre-registered H2H battery** — ≥20 identical real-site
    tasks (≥10 Turkish-web, where no rival optimizes), task list + per-task rubrics committed to this
@@ -14,8 +14,8 @@ tepegoz claims *world's best browser agent* **only** when, at a dated release, *
    for Chrome, and Perplexity Comet, each at N≥3, scored blind from identity-stripped artifacts — on
    **verified-completion rate**: completions backed by network/page evidence, not model say-so.
 2. **Bounded, honest injection ASR.** Published prompt-injection attack-success-rate on a corpus that
-   includes externally-sourced attacks, reported as *"k successes in K trials, 95% binomial upper bound
-   X%"* — upper bound ≤5% initially; a ≤1%-bound statement only at ≥300 pooled clean trials. Never
+   includes externally-sourced attacks, reported as _"k successes in K trials, 95% binomial upper bound
+   X%"_ — upper bound ≤5% initially; a ≤1%-bound statement only at ≥300 pooled clean trials. Never
    framed as "beats Claude's ~1%" (incommensurable corpora).
 3. **Fabricated-success ≈ 0.** On trap fixtures where the page lies about success ("Saved!" over a 5xx),
    the agent reports the truth — a metric no rival publishes.
@@ -38,7 +38,7 @@ even if tepegoz loses — losing honestly prices the gap.
   No phase authors and passes its own exam in one PR (a PR0-per-phase discipline).
 - **Attribution.** Parallel development is allowed; parallel exit measurement is not. Each phase's
   before/after runs on a branch containing only that phase's change; exit sweeps are serialized.
-- **Anti-debt rule.** *Owed measurement* is a first-class status (🟠) in the phase index; a phase is
+- **Anti-debt rule.** _Owed measurement_ is a first-class status (🟠) in the phase index; a phase is
   incomplete until its delta is recorded in [`eval-results.md`](eval-results.md); **no new phase opens
   while more than one phase sits measurement-owed.**
 - **Judge discipline.** The secondary LLM judge is claim-barred until its calibration set reaches **≥25
@@ -47,7 +47,7 @@ even if tepegoz loses — losing honestly prices the gap.
 - **Transport/dead-key hygiene** (landed on `fix/eval-transport-invalid-robustness`, binding going
   forward): trials that die on transport-invalid causes (cut-off, transient 429/503/timeout that did
   **not** escape, cold-start nav failure) are retried ≤2× then **excluded from k/N**, never counted as
-  competence failures; an escape that *ends* in a nav timeout stays a real failure. Dead-key trials
+  competence failures; an escape that _ends_ in a nav timeout stays a real failure. Dead-key trials
   (billing/quota/auth) are marked **UNMEASURED** and abort the sweep. Abandoned-retry tokens are summed
   into cost accounting but excluded from k/N.
 
@@ -66,8 +66,8 @@ minimal general framing ("verify after acting", "don't give up early").
 
 The owner has chosen to plan **without an eval budget** for now. This does not weaken the constitution —
 it makes the 🟠 **measurement-owed** status the expected resting state for a phase whose code + frozen
-fixtures have landed but whose funded sweep has not run. The anti-debt rule still applies to *opening new
-phases*: because many phases will legitimately sit 🟠 at once under an unfunded regime, phase **code**
+fixtures have landed but whose funded sweep has not run. The anti-debt rule still applies to _opening new
+phases_: because many phases will legitimately sit 🟠 at once under an unfunded regime, phase **code**
 work may proceed in parallel per the lane discipline, but the **✅ close** of any phase — and therefore
-any capability *claim* — remains gated on its ledger entry. No number is ever reported, and no north-star
+any capability _claim_ — remains gated on its ledger entry. No number is ever reported, and no north-star
 condition is ever declared met, from an unfunded or scripted-only run.

@@ -76,8 +76,7 @@ export function macrosCapabilities(): ExtensionCapabilitySet<MacrosCapabilityHos
       dangerClass: 'state_changing',
       requiresIdempotencyKey: true,
       inputSchema: RunArgs,
-      handler: (args, host) =>
-        host.run({ macroId: args.macroId, variables: args.variables }),
+      handler: (args, host) => host.run({ macroId: args.macroId, variables: args.variables }),
     }),
     capability<z.infer<typeof RunIdArgs>, MacrosCapabilityHost>({
       id: 'macros_get_run',

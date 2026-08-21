@@ -133,9 +133,9 @@ describe('buildOmniboxSuggestions', () => {
 
   it('matches Turkish quick-settings aliases deterministically', () => {
     const out = buildOmniboxSuggestions('gizlilik', SOURCES, LABELS);
-    expect(out.some((s) => s.action.type === 'openQuickSetting' && s.action.target === 'privacy')).toBe(
-      true,
-    );
+    expect(
+      out.some((s) => s.action.type === 'openQuickSetting' && s.action.target === 'privacy'),
+    ).toBe(true);
   });
 
   it('tab: scope only returns open tabs and drops the primary action', () => {

@@ -26,7 +26,10 @@ export interface DownloadsPageProps {
   subscribe: (callback: (state: DownloadsState) => void) => () => void;
 }
 
-function formatBytes(value: number, units: { b: string; kb: string; mb: string; gb: string }): string {
+function formatBytes(
+  value: number,
+  units: { b: string; kb: string; mb: string; gb: string },
+): string {
   if (value < 1024) return `${value} ${units.b}`;
   if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} ${units.kb}`;
   if (value < 1024 * 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(1)} ${units.mb}`;
@@ -84,7 +87,9 @@ export function DownloadsPage({ list, command, subscribe }: Readonly<DownloadsPa
       </div>
 
       <div className="flex-1 overflow-auto px-8 py-4">
-        {loading && <p className="mx-auto max-w-4xl py-4 text-sm text-text-secondary">{t.loading}</p>}
+        {loading && (
+          <p className="mx-auto max-w-4xl py-4 text-sm text-text-secondary">{t.loading}</p>
+        )}
         {!loading && items.length === 0 && (
           <p className="mx-auto max-w-4xl py-8 text-sm text-text-secondary">{t.empty}</p>
         )}
@@ -117,7 +122,9 @@ function DownloadRow({
     <li className="flex gap-3 py-4">
       <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-surface-raised text-text-secondary">
         <FontAwesomeIcon
-          icon={item.status === 'blocked' ? faBan : item.risk === 'archive' ? faBoxArchive : faDownload}
+          icon={
+            item.status === 'blocked' ? faBan : item.risk === 'archive' ? faBoxArchive : faDownload
+          }
           className="h-4 w-4"
           aria-hidden
         />
@@ -135,13 +142,12 @@ function DownloadRow({
             {t.risk[item.risk]}
           </span>
         </div>
-        <p className="mt-1 truncate text-xs text-text-secondary">{item.provenance.sourceOrigin ?? item.url}</p>
+        <p className="mt-1 truncate text-xs text-text-secondary">
+          {item.provenance.sourceOrigin ?? item.url}
+        </p>
         <div className="mt-2 flex items-center gap-3">
           <div className="h-1.5 min-w-0 flex-1 rounded-full bg-surface-raised">
-            <div
-              className="h-1.5 rounded-full bg-primary"
-              style={{ width: `${percent ?? 0}%` }}
-            />
+            <div className="h-1.5 rounded-full bg-primary" style={{ width: `${percent ?? 0}%` }} />
           </div>
           <span className="w-40 shrink-0 text-right text-xs text-text-secondary">{details}</span>
         </div>
@@ -153,25 +159,55 @@ function DownloadRow({
         )}
         <div className="mt-3 flex flex-wrap gap-2">
           {item.status === 'in_progress' && (
-            <ActionButton label={t.action.pause} icon={faPause} onClick={() => onCommand({ id: item.id, action: 'pause' })} />
+            <ActionButton
+              label={t.action.pause}
+              icon={faPause}
+              onClick={() => onCommand({ id: item.id, action: 'pause' })}
+            />
           )}
           {item.status === 'paused' && (
-            <ActionButton label={t.action.resume} icon={faPlay} onClick={() => onCommand({ id: item.id, action: 'resume' })} />
+            <ActionButton
+              label={t.action.resume}
+              icon={faPlay}
+              onClick={() => onCommand({ id: item.id, action: 'resume' })}
+            />
           )}
-          {(item.status === 'requested' || item.status === 'in_progress' || item.status === 'paused') && (
-            <ActionButton label={t.action.cancel} icon={faBan} onClick={() => onCommand({ id: item.id, action: 'cancel' })} />
+          {(item.status === 'requested' ||
+            item.status === 'in_progress' ||
+            item.status === 'paused') && (
+            <ActionButton
+              label={t.action.cancel}
+              icon={faBan}
+              onClick={() => onCommand({ id: item.id, action: 'cancel' })}
+            />
           )}
           {item.status === 'quarantined' && (
-            <ActionButton label={t.action.release} icon={faUpRightFromSquare} onClick={() => onCommand({ id: item.id, action: 'release' })} />
+            <ActionButton
+              label={t.action.release}
+              icon={faUpRightFromSquare}
+              onClick={() => onCommand({ id: item.id, action: 'release' })}
+            />
           )}
           {item.status === 'completed' && (
-            <ActionButton label={t.action.open} icon={faUpRightFromSquare} onClick={() => onCommand({ id: item.id, action: 'open' })} />
+            <ActionButton
+              label={t.action.open}
+              icon={faUpRightFromSquare}
+              onClick={() => onCommand({ id: item.id, action: 'open' })}
+            />
           )}
           {(item.status === 'completed' || item.status === 'quarantined') && (
-            <ActionButton label={t.action.reveal} icon={faFolderOpen} onClick={() => onCommand({ id: item.id, action: 'reveal' })} />
+            <ActionButton
+              label={t.action.reveal}
+              icon={faFolderOpen}
+              onClick={() => onCommand({ id: item.id, action: 'reveal' })}
+            />
           )}
           {['completed', 'blocked', 'canceled', 'failed'].includes(item.status) && (
-            <ActionButton label={t.action.clear} icon={faTrash} onClick={() => onCommand({ id: item.id, action: 'clear' })} />
+            <ActionButton
+              label={t.action.clear}
+              icon={faTrash}
+              onClick={() => onCommand({ id: item.id, action: 'clear' })}
+            />
           )}
         </div>
       </div>

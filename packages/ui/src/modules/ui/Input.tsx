@@ -2,7 +2,13 @@
 import { cn } from '../../libs/utils/cn';
 import { forwardRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye, faEyeSlash, faXmark, faChevronUp, faChevronDown } from '@fortawesome/free-solid-svg-icons';
+import {
+  faEye,
+  faEyeSlash,
+  faXmark,
+  faChevronUp,
+  faChevronDown,
+} from '@fortawesome/free-solid-svg-icons';
 
 type InputState = 'default' | 'error' | 'success';
 
@@ -29,37 +35,40 @@ type InputProps = {
   className?: string;
 } & React.InputHTMLAttributes<HTMLInputElement>;
 
-export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({
-  id,
-  label,
-  hint,
-  error,
-  success,
-  required,
-  prefixIcon,
-  suffixIcon,
-  clearable,
-  onClear,
-  showCount,
-  maxLength,
-  showPasswordLabel = 'Show password',
-  hidePasswordLabel = 'Hide password',
-  requiredLabel = '(required)',
-  readOnlyLabel = '(read-only)',
-  clearLabel = 'Clear',
-  className,
-  value,
-  onChange,
-  readOnly,
-  type,
-  step,
-  min,
-  max,
-  ...props
-}, ref) {
+export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
+  {
+    id,
+    label,
+    hint,
+    error,
+    success,
+    required,
+    prefixIcon,
+    suffixIcon,
+    clearable,
+    onClear,
+    showCount,
+    maxLength,
+    showPasswordLabel = 'Show password',
+    hidePasswordLabel = 'Hide password',
+    requiredLabel = '(required)',
+    readOnlyLabel = '(read-only)',
+    clearLabel = 'Clear',
+    className,
+    value,
+    onChange,
+    readOnly,
+    type,
+    step,
+    min,
+    max,
+    ...props
+  },
+  ref,
+) {
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === 'password';
-  const isNumber   = type === 'number';
+  const isNumber = type === 'number';
 
   const resolvedType = isPassword ? (showPassword ? 'text' : 'password') : type;
 
@@ -82,7 +91,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus',
     'disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-surface-sunken',
     'read-only:bg-surface-sunken read-only:cursor-default',
-    state === 'error'   && 'border-error ring-1 ring-error bg-error-subtle',
+    state === 'error' && 'border-error ring-1 ring-error bg-error-subtle',
     state === 'success' && 'border-success ring-1 ring-success bg-success-subtle',
     state === 'default' && 'border-border bg-surface-base',
     hasPrefix && 'pl-9',
@@ -94,16 +103,16 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({
   function increment() {
     const current = Number(value ?? 0);
     const stepVal = Number(step ?? 1);
-    const maxVal  = max !== undefined ? Number(max) : Infinity;
-    const next    = Math.min(current + stepVal, maxVal);
+    const maxVal = max !== undefined ? Number(max) : Infinity;
+    const next = Math.min(current + stepVal, maxVal);
     onChange?.({ target: { value: String(next) } } as React.ChangeEvent<HTMLInputElement>);
   }
 
   function decrement() {
     const current = Number(value ?? 0);
     const stepVal = Number(step ?? 1);
-    const minVal  = min !== undefined ? Number(min) : -Infinity;
-    const next    = Math.max(current - stepVal, minVal);
+    const minVal = min !== undefined ? Number(min) : -Infinity;
+    const next = Math.max(current - stepVal, minVal);
     onChange?.({ target: { value: String(next) } } as React.ChangeEvent<HTMLInputElement>);
   }
 
@@ -113,7 +122,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({
         {label}
         {required && (
           <>
-            <span className="text-error ml-1" aria-hidden="true">*</span>
+            <span className="text-error ml-1" aria-hidden="true">
+              *
+            </span>
             <span className="sr-only">{requiredLabel}</span>
           </>
         )}
@@ -143,7 +154,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({
           step={step}
           min={min}
           max={max}
-          className={cn(inputBaseClass, isNumber && '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none')}
+          className={cn(
+            inputBaseClass,
+            isNumber &&
+              '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none',
+          )}
           {...props}
         />
 
@@ -206,17 +221,28 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({
       <div className="flex items-center justify-between gap-2">
         <div className="flex-1">
           {hint && !error && !success && (
-            <p id={`${id}-hint`} className="text-xs text-text-secondary">{hint}</p>
+            <p id={`${id}-hint`} className="text-xs text-text-secondary">
+              {hint}
+            </p>
           )}
           {error && (
-            <p id={`${id}-error`} className="text-xs text-error" role="alert">{error}</p>
+            <p id={`${id}-error`} className="text-xs text-error" role="alert">
+              {error}
+            </p>
           )}
           {success && !error && (
-            <p id={`${id}-success`} className="text-xs text-success-fg">{success}</p>
+            <p id={`${id}-success`} className="text-xs text-success-fg">
+              {success}
+            </p>
           )}
         </div>
         {showCount && maxLength && (
-          <p className={cn('text-xs shrink-0', charCount >= maxLength ? 'text-error' : 'text-text-disabled')}>
+          <p
+            className={cn(
+              'text-xs shrink-0',
+              charCount >= maxLength ? 'text-error' : 'text-text-disabled',
+            )}
+          >
             {charCount}/{maxLength}
           </p>
         )}

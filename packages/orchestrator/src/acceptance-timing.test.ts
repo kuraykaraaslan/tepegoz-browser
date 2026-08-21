@@ -19,14 +19,16 @@ function step(tool: string, durationMs: number, ok = true): StepOutcome {
       };
 }
 
-function record(over: {
-  id?: string;
-  outcomes?: StepOutcome[];
-  stoppedReason?: StopReason;
-  ok?: boolean;
-  recovered?: boolean;
-  tokens?: { inputTokens: number; outputTokens: number };
-} = {}): AcceptanceRunRecord {
+function record(
+  over: {
+    id?: string;
+    outcomes?: StepOutcome[];
+    stoppedReason?: StopReason;
+    ok?: boolean;
+    recovered?: boolean;
+    tokens?: { inputTokens: number; outputTokens: number };
+  } = {},
+): AcceptanceRunRecord {
   return recordFromOutcomes({
     scenarioId: over.id ?? 's',
     stoppedReason: over.stoppedReason ?? 'completed',
@@ -46,7 +48,11 @@ describe('step timing on the run record', () => {
   });
 
   it('counts a FAILED step’s duration too — a slow failure is the case latency must surface', () => {
-    const rec = record({ outcomes: [step('slow', 5_000, false)], stoppedReason: 'tool_error', ok: false });
+    const rec = record({
+      outcomes: [step('slow', 5_000, false)],
+      stoppedReason: 'tool_error',
+      ok: false,
+    });
     expect(rec.stepDurationMs).toBe(5_000);
   });
 
@@ -76,7 +82,10 @@ describe('latency + cost metrics', () => {
 
   it('reports average actions and tokens per run', () => {
     const metrics = summarizeAcceptanceRuns([
-      record({ outcomes: [step('a', 1), step('b', 1)], tokens: { inputTokens: 100, outputTokens: 50 } }),
+      record({
+        outcomes: [step('a', 1), step('b', 1)],
+        tokens: { inputTokens: 100, outputTokens: 50 },
+      }),
       record({ outcomes: [step('c', 1)], tokens: { inputTokens: 200, outputTokens: 50 } }),
     ]);
     expect(metrics.avgToolCallsPerRun).toBe(1.5);
@@ -96,7 +105,9 @@ describe('latency + cost metrics', () => {
 
 describe('firstAttemptSuccessRate', () => {
   it('counts a clean pass', () => {
-    expect(summarizeAcceptanceRuns([record({ outcomes: [step('a', 1)] })]).firstAttemptSuccessRate).toBe(1);
+    expect(
+      summarizeAcceptanceRuns([record({ outcomes: [step('a', 1)] })]).firstAttemptSuccessRate,
+    ).toBe(1);
   });
 
   it('excludes a run that only passed after a tool error', () => {
@@ -130,6 +141,11 @@ describe('estimateCostUsd', () => {
   });
 
   it('is zero for a run that spent no tokens', () => {
-    expect(estimateCostUsd({ inputTokens: 0, outputTokens: 0 }, { inputPerMillion: 3, outputPerMillion: 15 })).toBe(0);
+    expect(
+      estimateCostUsd(
+        { inputTokens: 0, outputTokens: 0 },
+        { inputPerMillion: 3, outputPerMillion: 15 },
+      ),
+    ).toBe(0);
   });
 });

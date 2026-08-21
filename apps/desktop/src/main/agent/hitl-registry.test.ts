@@ -1,10 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  pendingApprovals,
-  pendingPlans,
-  settleApproval,
-  settlePlan,
-} from './hitl-registry';
+import { pendingApprovals, pendingPlans, settleApproval, settlePlan } from './hitl-registry';
 
 vi.mock('@tepegoz/libs', () => ({ Logger: { warn: vi.fn(), info: vi.fn() } }));
 

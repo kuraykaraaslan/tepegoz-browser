@@ -7,7 +7,8 @@ export const GatewayMessages = {
   TimeoutRequired: 'timeout is required and must be a positive integer',
   UnknownProviderError: 'Unknown model-provider error',
   RequestTimedOut: 'Model request aborted (timeout)',
-  RunTokenCeilingReached: 'This run has reached its token ceiling; no further model requests were sent',
+  RunTokenCeilingReached:
+    'This run has reached its token ceiling; no further model requests were sent',
   noProviderRegistered: (provider: string): string =>
     `No model provider registered for "${provider}"`,
   /** Message names the offending role + the first zod issue — never the content itself, which can

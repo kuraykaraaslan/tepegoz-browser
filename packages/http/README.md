@@ -5,6 +5,7 @@ pulling a vendor SDK, so timeouts, redaction, and error mapping live in one plac
 no Electron imports).
 
 ## Exports
+
 - **`createHttpClient(options)`** — a configured `AxiosInstance`. Sets a default JSON content type and
   a per-request timeout (default 30s, overridable per call), and installs a response interceptor that
   maps every rejection to an `AppError` (see below). Pass `baseURL` / `headers` for a provider client.
@@ -14,14 +15,19 @@ no Electron imports).
 - **`HttpMessages`** — constant client messages.
 
 ## Usage
+
 ```ts
 import { createHttpClient } from '@tepegoz/http';
 
-const api = createHttpClient({ baseURL: 'https://api.example.com', headers: { Authorization: `Bearer ${key}` } });
+const api = createHttpClient({
+  baseURL: 'https://api.example.com',
+  headers: { Authorization: `Bearer ${key}` },
+});
 const res = await api.post('/thing', body, { signal, timeout: 30_000 }); // rejects as AppError on failure
 ```
 
 Do **not** construct `axios` directly or add a provider SDK — extend this package instead.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test` · `pnpm build`

@@ -16,8 +16,25 @@ export type Scope = (name: string) => MacroValue | undefined;
 
 const MAX_LEN = 4096;
 const FUNCS = new Set([
-  'len', 'upper', 'lower', 'trim', 'contains', 'startsWith', 'endsWith', 'substr', 'replace',
-  'number', 'string', 'int', 'abs', 'floor', 'ceil', 'round', 'min', 'max', 'indexOf',
+  'len',
+  'upper',
+  'lower',
+  'trim',
+  'contains',
+  'startsWith',
+  'endsWith',
+  'substr',
+  'replace',
+  'number',
+  'string',
+  'int',
+  'abs',
+  'floor',
+  'ceil',
+  'round',
+  'min',
+  'max',
+  'indexOf',
 ]);
 
 type Tok =

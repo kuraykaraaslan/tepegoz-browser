@@ -25,26 +25,32 @@ export interface RunSnapshot {
   extractedNumerics: Readonly<Record<string, number>>;
 }
 
-export type AssertionVerdict =
-  | { passed: true }
-  | { passed: false; reason: string };
+export type AssertionVerdict = { passed: true } | { passed: false; reason: string };
 
 /**
  * Evaluate one assertion. Every branch is a plain comparison — nothing here can be "mostly right"; an
  * assertion either holds against the snapshot or it does not, which is what makes it usable as a hard
  * gate on a side-effecting step.
  */
-export function evaluateAssertion(assertion: RecipeAssertion, snapshot: RunSnapshot): AssertionVerdict {
+export function evaluateAssertion(
+  assertion: RecipeAssertion,
+  snapshot: RunSnapshot,
+): AssertionVerdict {
   switch (assertion.kind) {
     case 'url_pattern': {
       const matches = urlMatchesPattern(snapshot.url, assertion.pattern);
       return matches
         ? { passed: true }
-        : { passed: false, reason: `url "${snapshot.url}" does not match pattern "${assertion.pattern}"` };
+        : {
+            passed: false,
+            reason: `url "${snapshot.url}" does not match pattern "${assertion.pattern}"`,
+          };
     }
     case 'text_present': {
       const found = snapshot.pageText.includes(assertion.text);
-      return found ? { passed: true } : { passed: false, reason: `text "${assertion.text}" not found on page` };
+      return found
+        ? { passed: true }
+        : { passed: false, reason: `text "${assertion.text}" not found on page` };
     }
     case 'effect_journaled': {
       const found = snapshot.journaledEffects.includes(assertion.eventType);

@@ -90,8 +90,8 @@ No product features; the decisions made here would force a full rewrite if wrong
       snapshot → start fresh, never crash-loop)
 - [ ] **Chromium security-update cadence** (upstream-intake side of the update story): pinned+watched
       `electron`, ≤2-week adoption SLA for security bumps, embedded engine version logged per release — see
-      [ADR-0019](../../docs/adr/0019-chromium-update-cadence.md). This governs *which engine* we ship; the
-      auto-update runtime above governs *how* we ship it.
+      [ADR-0019](../../docs/adr/0019-chromium-update-cadence.md). This governs _which engine_ we ship; the
+      auto-update runtime above governs _how_ we ship it.
 
 ### Documentation & security
 

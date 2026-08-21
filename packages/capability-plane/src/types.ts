@@ -6,9 +6,9 @@ import type { PolicyResult, RiskClassification } from '@tepegoz/security-policy'
  * this) without coupling the capability plane to a specific zod instance.
  */
 export interface InputValidator<T> {
-  safeParse(data: unknown):
-    | { success: true; data: T }
-    | { success: false; error: { issues: unknown } };
+  safeParse(
+    data: unknown,
+  ): { success: true; data: T } | { success: false; error: { issues: unknown } };
 }
 
 export interface RegisteredTool<T = unknown> {

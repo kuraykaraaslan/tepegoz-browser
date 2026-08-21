@@ -124,9 +124,7 @@ export class HumanInputAdapter {
       prevX = px;
       prevY = py;
 
-      const waitMs = i === pauseAt
-        ? Math.max(40, gaussianJitter(80, 40))
-        : stepMs;
+      const waitMs = i === pauseAt ? Math.max(40, gaussianJitter(80, 40)) : stepMs;
       await this.wait(waitMs);
     }
 
@@ -144,7 +142,14 @@ export class HumanInputAdapter {
     if (this.shouldYield?.()) return; // user took control before we reached target
     await this.wait(Math.max(20, gaussianJitter(80, 30)));
 
-    const base = { x, y, button: 'left' as const, clickCount: 1, modifiers: 0, pointerType: 'mouse' };
+    const base = {
+      x,
+      y,
+      button: 'left' as const,
+      clickCount: 1,
+      modifiers: 0,
+      pointerType: 'mouse',
+    };
     await this.send('Input.dispatchMouseEvent', { type: 'mousePressed', ...base, buttons: 1 });
     await this.wait(Math.max(10, gaussianJitter(60, 20)));
     await this.send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...base, buttons: 0 });

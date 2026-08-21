@@ -31,7 +31,10 @@ export function loadScenarios(dir: string): LoadedRegistry {
       .filter((f) => f.endsWith('.json'))
       .sort();
   } catch (err) {
-    return { scenarios, errors: [{ file: dir, reason: `cannot read registry dir: ${String(err)}` }] };
+    return {
+      scenarios,
+      errors: [{ file: dir, reason: `cannot read registry dir: ${String(err)}` }],
+    };
   }
 
   for (const file of files) {
@@ -45,7 +48,10 @@ export function loadScenarios(dir: string): LoadedRegistry {
     }
     const parsed = EvalScenarioFileSchema.safeParse(raw);
     if (!parsed.success) {
-      errors.push({ file, reason: `schema: ${parsed.error.issues.map((i) => `${i.path.join('.')} ${i.message}`).join('; ')}` });
+      errors.push({
+        file,
+        reason: `schema: ${parsed.error.issues.map((i) => `${i.path.join('.')} ${i.message}`).join('; ')}`,
+      });
       continue;
     }
     for (const scenario of parsed.data.scenarios) {

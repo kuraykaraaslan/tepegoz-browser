@@ -29,8 +29,11 @@ function makeHarness(): { wc: WebContents; adapter: HumanInputAdapter; calls: Re
   return { wc, adapter, calls };
 }
 
-const has = (calls: Recorded[], method: string, pred?: (p: Record<string, unknown>) => boolean): boolean =>
-  calls.some((c) => c.method === method && (pred === undefined || pred(c.params)));
+const has = (
+  calls: Recorded[],
+  method: string,
+  pred?: (p: Record<string, unknown>) => boolean,
+): boolean => calls.some((c) => c.method === method && (pred === undefined || pred(c.params)));
 
 describe('MacroCdp.fill — human (adapter) path', () => {
   beforeEach(() => vi.useFakeTimers());
@@ -49,8 +52,12 @@ describe('MacroCdp.fill — human (adapter) path', () => {
     expect(has(calls, 'DOM.focus')).toBe(false);
 
     // Select-all is the Ctrl (modifiers:2) accelerator on KeyA, and it must not type the letter 'a'.
-    expect(has(calls, 'Input.dispatchKeyEvent', (p) => p.modifiers === 2 && p.code === 'KeyA')).toBe(true);
-    expect(has(calls, 'Input.dispatchKeyEvent', (p) => p.code === 'KeyA' && typeof p.text === 'string')).toBe(false);
+    expect(
+      has(calls, 'Input.dispatchKeyEvent', (p) => p.modifiers === 2 && p.code === 'KeyA'),
+    ).toBe(true);
+    expect(
+      has(calls, 'Input.dispatchKeyEvent', (p) => p.code === 'KeyA' && typeof p.text === 'string'),
+    ).toBe(false);
 
     // Typing is per-character (no paste-shaped single insert).
     const inserts = calls.filter((c) => c.method === 'Input.insertText');

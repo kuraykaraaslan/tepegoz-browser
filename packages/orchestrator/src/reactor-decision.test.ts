@@ -67,7 +67,10 @@ describe('parseDecision (untrusted LLM output boundary)', () => {
   });
 
   it('omits absent brain fields (weak models that skip them still parse)', () => {
-    expect(parseDecision('{"action":"finish","summary":"ok"}')).toEqual({ action: 'finish', summary: 'ok' });
+    expect(parseDecision('{"action":"finish","summary":"ok"}')).toEqual({
+      action: 'finish',
+      summary: 'ok',
+    });
   });
 
   it('parses the C1 typed working state (`state`) on a decision', () => {

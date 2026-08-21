@@ -8,6 +8,7 @@ source (`list`/`remove`/`clear`) is injected by the host, so the package has no 
 Electron bridge.
 
 ## Exports
+
 - **`HistoryPage`** — the history manager view.
 - **`HistoryItem`** — the minimal history entry the view renders (`url`, `title`, `ts`); hosts pass
   their own richer entries (structural).
@@ -16,6 +17,7 @@ Electron bridge.
 - **`historyDict`** / **`HistoryStrings`** — the package's own i18n dictionary.
 
 ## Usage
+
 ```tsx
 <HistoryPage
   list={(query, offset) => window.tepegoz.history.search(query, offset)}
@@ -25,4 +27,5 @@ Electron bridge.
 ```
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

@@ -9,6 +9,7 @@ stream; the real axios stream + file append live in the desktop app
 (`main/model-catalog/model-manager.electron.ts`).
 
 ## Exports
+
 - **`ModelEntrySchema`** / **`ModelEntry`** — one catalog entry (id, name, url, sizeBytes, sha256,
   quant, ctx, paramsB, `recommended`/`firstParty` flags, license, optional `minRamBytes`).
 - **`CatalogFileSchema`** / **`CATALOG_VERSION`** — the on-disk catalog file envelope.
@@ -25,4 +26,5 @@ stream; the real axios stream + file append live in the desktop app
   case-insensitive digest comparison, used to verify a finished download end-to-end.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test` · `pnpm build`

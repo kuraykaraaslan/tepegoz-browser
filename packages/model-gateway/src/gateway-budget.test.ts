@@ -79,7 +79,12 @@ describe('ModelGateway — wasted-cache reporting', () => {
 
   it('reports a write that read nothing back', async () => {
     ModelGateway.register(
-      new UsageProvider({ inputTokens: 10, outputTokens: 2, cacheWriteTokens: 900, cacheReadTokens: 0 }),
+      new UsageProvider({
+        inputTokens: 10,
+        outputTokens: 2,
+        cacheWriteTokens: 900,
+        cacheReadTokens: 0,
+      }),
     );
     const onWaste = vi.fn();
     ModelGateway.setCacheWasteHandler(onWaste);
@@ -90,7 +95,12 @@ describe('ModelGateway — wasted-cache reporting', () => {
 
   it('stays silent on a healthy cache hit', async () => {
     ModelGateway.register(
-      new UsageProvider({ inputTokens: 10, outputTokens: 2, cacheWriteTokens: 0, cacheReadTokens: 900 }),
+      new UsageProvider({
+        inputTokens: 10,
+        outputTokens: 2,
+        cacheWriteTokens: 0,
+        cacheReadTokens: 900,
+      }),
     );
     const onWaste = vi.fn();
     ModelGateway.setCacheWasteHandler(onWaste);
@@ -101,7 +111,12 @@ describe('ModelGateway — wasted-cache reporting', () => {
 
   it('stays silent when the caller never asked for caching', async () => {
     ModelGateway.register(
-      new UsageProvider({ inputTokens: 10, outputTokens: 2, cacheWriteTokens: 900, cacheReadTokens: 0 }),
+      new UsageProvider({
+        inputTokens: 10,
+        outputTokens: 2,
+        cacheWriteTokens: 900,
+        cacheReadTokens: 0,
+      }),
     );
     const onWaste = vi.fn();
     ModelGateway.setCacheWasteHandler(onWaste);
@@ -112,12 +127,19 @@ describe('ModelGateway — wasted-cache reporting', () => {
 
   it('is advisory — a reporting failure must never break the model call', async () => {
     ModelGateway.register(
-      new UsageProvider({ inputTokens: 10, outputTokens: 2, cacheWriteTokens: 900, cacheReadTokens: 0 }),
+      new UsageProvider({
+        inputTokens: 10,
+        outputTokens: 2,
+        cacheWriteTokens: 900,
+        cacheReadTokens: 0,
+      }),
     );
     ModelGateway.setCacheWasteHandler(() => {
       throw new Error('telemetry is down');
     });
-    await expect(ModelGateway.complete(req({ cache: { systemAndTools: true } }))).resolves.toMatchObject({
+    await expect(
+      ModelGateway.complete(req({ cache: { systemAndTools: true } })),
+    ).resolves.toMatchObject({
       text: 'ok',
     });
   });

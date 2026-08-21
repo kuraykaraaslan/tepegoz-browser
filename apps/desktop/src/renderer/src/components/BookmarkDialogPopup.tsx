@@ -30,7 +30,8 @@ export function BookmarkDialogPopup({ mode, id }: { mode: DialogMode; id: string
   useEffect(() => {
     const el = contentRef.current;
     if (el === null) return;
-    const report = (): void => window.tepegoz.resizePopup(Math.ceil(el.getBoundingClientRect().height));
+    const report = (): void =>
+      window.tepegoz.resizePopup(Math.ceil(el.getBoundingClientRect().height));
     report();
     const observer = new ResizeObserver(report);
     observer.observe(el);
@@ -44,7 +45,11 @@ export function BookmarkDialogPopup({ mode, id }: { mode: DialogMode; id: string
         const prefs = await window.tepegoz.getPreferences();
         if (cancelled) return;
         applyTheme(prefs.theme, prefs.themeColor);
-        setLocale(prefs.locale === 'en' || prefs.locale === 'tr' ? prefs.locale : resolveLocale(navigator.language));
+        setLocale(
+          prefs.locale === 'en' || prefs.locale === 'tr'
+            ? prefs.locale
+            : resolveLocale(navigator.language),
+        );
       } catch {
         /* bridge unavailable */
       }

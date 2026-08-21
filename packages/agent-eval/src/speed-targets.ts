@@ -117,15 +117,14 @@ export function speedVerdict(
 /** True only when all three pre-registered targets are met. An `unmeasured` anywhere is not a pass. */
 export function meetsSpeedGate(verdict: SpeedVerdict): boolean {
   return (
-    verdict.wallClock === 'met' &&
-    verdict.cost === 'met' &&
-    verdict.completionEquivalence === 'met'
+    verdict.wallClock === 'met' && verdict.cost === 'met' && verdict.completionEquivalence === 'met'
   );
 }
 
 /** Ledger lines. Prints "not measured" and never a 0% that would read as a measured result. */
 export function speedLines(verdict: SpeedVerdict): string[] {
-  const pct = (n: number | null): string => (n === null ? 'not measured' : `${(n * 100).toFixed(1)}%`);
+  const pct = (n: number | null): string =>
+    n === null ? 'not measured' : `${(n * 100).toFixed(1)}%`;
   return [
     `wall-clock p50 reduction (target ≥${String(WALL_CLOCK_TARGET_REDUCTION * 100)}%): ` +
       `${pct(verdict.wallClockReduction)} — ${verdict.wallClock}`,

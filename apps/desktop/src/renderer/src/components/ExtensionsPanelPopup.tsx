@@ -34,7 +34,8 @@ export function ExtensionsPanelPopup() {
   useEffect(() => {
     const el = contentRef.current;
     if (el === null) return;
-    const report = (): void => window.tepegoz.resizePopup(Math.ceil(el.getBoundingClientRect().height));
+    const report = (): void =>
+      window.tepegoz.resizePopup(Math.ceil(el.getBoundingClientRect().height));
     report();
     const observer = new ResizeObserver(report);
     observer.observe(el);
@@ -53,12 +54,15 @@ export function ExtensionsPanelPopup() {
       if (cancelled) return;
       applyTheme(prefs.theme, prefs.themeColor);
       setLocale(
-        prefs.locale === 'en' || prefs.locale === 'tr' ? prefs.locale : resolveLocale(navigator.language),
+        prefs.locale === 'en' || prefs.locale === 'tr'
+          ? prefs.locale
+          : resolveLocale(navigator.language),
       );
       setPinnedIds(prefs.pinnedExtensions);
       try {
         const list = await window.tepegoz.listExtensionManifests();
-        if (!cancelled) setManifests(list.filter((m) => isExtensionEnabled(prefs.extensions, m.id)));
+        if (!cancelled)
+          setManifests(list.filter((m) => isExtensionEnabled(prefs.extensions, m.id)));
       } catch {
         /* ignore — the footer still offers "Manage extensions" */
       }

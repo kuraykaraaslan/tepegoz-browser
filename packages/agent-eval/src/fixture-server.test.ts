@@ -10,7 +10,10 @@ let server: FixtureServer;
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'agent-eval-fx-'));
   mkdirSync(join(root, 'blog-behind-nav'));
-  writeFileSync(join(root, 'blog-behind-nav', 'index.html'), '<!doctype html><title>Landing</title><h1>Home</h1>');
+  writeFileSync(
+    join(root, 'blog-behind-nav', 'index.html'),
+    '<!doctype html><title>Landing</title><h1>Home</h1>',
+  );
 });
 afterEach(async () => {
   await server.close();

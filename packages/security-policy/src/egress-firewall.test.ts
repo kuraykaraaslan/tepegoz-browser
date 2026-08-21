@@ -40,7 +40,9 @@ describe('inspectEgress — secrets (block)', () => {
     expect(EgressFirewall.isBlocked('rk_test_51H8xEXAMPLEstripeKEY0123456789abcdEF')).toBe(true);
     expect(EgressFirewall.isBlocked('github_pat_11ABCDEFG0aBcDeFgHiJkL_mNoPqRsTuVwXyZ')).toBe(true);
     expect(EgressFirewall.isBlocked('xoxb-1234567890-ABCDEFGHIJKLMNOP')).toBe(true);
-    expect(EgressFirewall.isBlocked('SG.ABCDEFGHIJKLMNOPqrstuv.ABCDEFGHIJKLMNOPqrstuvwxyz012345')).toBe(true);
+    expect(
+      EgressFirewall.isBlocked('SG.ABCDEFGHIJKLMNOPqrstuv.ABCDEFGHIJKLMNOPqrstuvwxyz012345'),
+    ).toBe(true);
   });
 });
 

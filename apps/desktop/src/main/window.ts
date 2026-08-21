@@ -56,7 +56,6 @@ export const ICON_PATH = join(
 
 /** Real (on-screen) bounds saved when a window is parked to the tray, so `showFromTray` can restore them. */
 
-
 // The parked-window registry lives in `./window-parked` — a leaf other modules can ask without
 // importing this file's Electron `app` usage. Re-exported so existing importers are unaffected.
 export { isParkedToTray };

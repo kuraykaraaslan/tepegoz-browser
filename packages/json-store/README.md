@@ -6,6 +6,7 @@ Tiny, crash-safe JSON file helpers for main-process stores (Node-only, no Electr
 untrusted (could be corrupted, tampered with, or from an older schema version).
 
 ## Exports
+
 - **`readJsonFile(filePath)`** — reads and `JSON.parse`s the file; returns `undefined` if the file
   doesn't exist or fails to parse (never throws). The result is `unknown` — validate it before use.
 - **`writeJsonFile(filePath, data)`** — crash-safe write: serializes `data`, writes to a sibling
@@ -15,4 +16,5 @@ untrusted (could be corrupted, tampered with, or from an older schema version).
   silently overwritten with an empty map on the next mutation.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

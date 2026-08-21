@@ -10,6 +10,7 @@ notification-center bell) next to the caption buttons. String-free: it takes a s
 itself — the host builds it from `useT(coreDict)` plus its own `browserDict`.
 
 ## Exports
+
 - **`BrowserChrome`** — renders the title row + navigation row, wiring tab/group/window/navigation
   props down into `TabStrip`, `WindowControls`, and `NavToolbar`.
 - **`BrowserChromeStrings`** — the exact string slices this chrome renders (`common.appName`,
@@ -19,6 +20,7 @@ itself — the host builds it from `useT(coreDict)` plus its own `browserDict`.
   caption, navigation, omnibox, bookmark star, and slot props).
 
 ## Usage
+
 ```tsx
 <BrowserChrome
   t={{ common: coreT.common, window: coreT.window, browser: browserT }}
@@ -47,4 +49,5 @@ itself — the host builds it from `useT(coreDict)` plus its own `browserDict`.
 ```
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

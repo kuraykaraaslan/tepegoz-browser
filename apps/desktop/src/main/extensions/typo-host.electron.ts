@@ -43,7 +43,7 @@ const dictionaryCache = new Map<string, { id: string; spell: NSpellInstance }>()
 function getNspellFactory(): NSpellFactory {
   if (nspellFactory !== null) return nspellFactory;
   const loaded = require('nspell') as NSpellFactory | { default?: NSpellFactory };
-  nspellFactory = typeof loaded === 'function' ? loaded : loaded.default ?? null;
+  nspellFactory = typeof loaded === 'function' ? loaded : (loaded.default ?? null);
   if (nspellFactory === null) throw new Error('nspell module did not expose a factory');
   return nspellFactory;
 }
@@ -108,7 +108,10 @@ function registerExternalProvider(): AIProvider | null {
   return meta.provider;
 }
 
-function resolveAiRange(text: string, raw: z.infer<typeof AiIssueSchema>): { start: number; end: number } | null {
+function resolveAiRange(
+  text: string,
+  raw: z.infer<typeof AiIssueSchema>,
+): { start: number; end: number } | null {
   const explicitStart = raw.start;
   const explicitEnd = raw.end;
   if (

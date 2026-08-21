@@ -36,11 +36,17 @@ describe('matching a credential to the page', () => {
   ];
 
   it('matches the saved login for the site', () => {
-    expect(matchCredential('https://bank.test/login', saved)).toEqual({ ok: true, credentialId: 'c1' });
+    expect(matchCredential('https://bank.test/login', saved)).toEqual({
+      ok: true,
+      credentialId: 'c1',
+    });
   });
 
   it('matches across subdomains of the same registrable site', () => {
-    expect(matchCredential('https://secure.bank.test/login', saved)).toEqual({ ok: true, credentialId: 'c1' });
+    expect(matchCredential('https://secure.bank.test/login', saved)).toEqual({
+      ok: true,
+      credentialId: 'c1',
+    });
   });
 
   it('REFUSES a look-alike that merely contains the site name', () => {

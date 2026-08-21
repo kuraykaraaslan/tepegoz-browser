@@ -16,7 +16,10 @@ import type { AssertionVerdict } from './assertion-evaluator';
  * live page and a model seam neither of which this package touches — they are owed, not implemented,
  * and this function does not pretend otherwise by retrying anything itself.
  */
-export function shouldHaltOnFailure(tier: AssertionTier | undefined, verdict: AssertionVerdict): boolean {
+export function shouldHaltOnFailure(
+  tier: AssertionTier | undefined,
+  verdict: AssertionVerdict,
+): boolean {
   if (verdict.passed) return false;
   return (tier ?? 'hard') === 'hard';
 }

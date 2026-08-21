@@ -31,11 +31,14 @@ export interface RecoveryAdvice {
 
 // The Egress Firewall's block/deny messages (model-gateway messages.ts) both carry this stable phrase.
 const EGRESS_BLOCK_RE = /outbound model request/i;
-const MODEL_MALFORMED_RE = /invalid json|malformed (?:decision|plan)|returned invalid|returned a malformed/i;
+const MODEL_MALFORMED_RE =
+  /invalid json|malformed (?:decision|plan)|returned invalid|returned a malformed/i;
 const AUTH_HANDOFF_RE = /captcha|2fa|two[-\s]?factor|otp|one[-\s]?time|verification code/i;
-const STALE_SELECTOR_RE = /stale|detached|no such element|element .*not found|ref\b|snapshot|not visible/i;
+const STALE_SELECTOR_RE =
+  /stale|detached|no such element|element .*not found|ref\b|snapshot|not visible/i;
 const NAVIGATION_TIMEOUT_RE = /timeout|timed out|navigation|load|net::|did-stop-loading/i;
-const PAGE_CHANGED_RE = /page changed|frame detached|execution context|context destroyed|navigated|target closed/i;
+const PAGE_CHANGED_RE =
+  /page changed|frame detached|execution context|context destroyed|navigated|target closed/i;
 // A browser_* read/interaction ran with no drivable page (on the view-less newtab, or a stale tabId).
 // Distinct so the advice is "open a page first" instead of the generic "transient, retry" flail.
 const NO_ACTIVE_PAGE_RE = /no active page|no web tab/i;
@@ -120,7 +123,12 @@ export function classifyToolFailure(outcome: Pick<StepOutcome, 'tool' | 'error'>
   if (code === 'VALIDATION_ERROR') {
     return { ...base, kind: 'validation', retryable: true };
   }
-  if (retryableOf(error) || code === 'RATE_LIMITED' || code === 'UPSTREAM_ERROR' || code === 'INTERNAL_ERROR') {
+  if (
+    retryableOf(error) ||
+    code === 'RATE_LIMITED' ||
+    code === 'UPSTREAM_ERROR' ||
+    code === 'INTERNAL_ERROR'
+  ) {
     return { ...base, kind: 'transient', retryable: true };
   }
   return { ...base, kind: 'unknown', retryable: false };
@@ -198,12 +206,14 @@ export function recoveryAdviceFor(failure: AgentFailure): RecoveryAdvice {
     case 'policy_denied':
       return {
         retryable: false,
-        instruction: 'Policy or user approval denied this action. Stop or ask the user for a safer alternative.',
+        instruction:
+          'Policy or user approval denied this action. Stop or ask the user for a safer alternative.',
       };
     case 'auth_handoff':
       return {
         retryable: false,
-        instruction: 'Authentication or CAPTCHA needs human handoff. Do not try to solve it automatically.',
+        instruction:
+          'Authentication or CAPTCHA needs human handoff. Do not try to solve it automatically.',
       };
     case 'egress_blocked':
       return {

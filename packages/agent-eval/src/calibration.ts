@@ -29,7 +29,10 @@ export interface Agreement {
 }
 
 /** Pure: judge↔human agreement over scenarios present in both sets (matched by id). */
-export function agreementRate(judge: readonly JudgeSample[], human: readonly HumanLabel[]): Agreement {
+export function agreementRate(
+  judge: readonly JudgeSample[],
+  human: readonly HumanLabel[],
+): Agreement {
   const humanById = new Map(human.map((h) => [h.id, h.pass]));
   let n = 0;
   let agreements = 0;

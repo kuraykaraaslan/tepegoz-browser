@@ -36,7 +36,12 @@ type TurkicRegion = {
 
 /** Order is irrelevant — the picker sorts by localized label. */
 export const TURKIC_REGIONS: readonly TurkicRegion[] = [
-  { code: 'TRN', tr: 'Kuzey Kıbrıs Türk Cumhuriyeti (KKTC)', en: 'Turkish Republic of Northern Cyprus', baseIso: 'TR' },
+  {
+    code: 'TRN',
+    tr: 'Kuzey Kıbrıs Türk Cumhuriyeti (KKTC)',
+    en: 'Turkish Republic of Northern Cyprus',
+    baseIso: 'TR',
+  },
   { code: 'TAT', tr: 'Tataristan', en: 'Tatarstan', baseIso: 'RU' },
   { code: 'BAK', tr: 'Başkurdistan', en: 'Bashkortostan', baseIso: 'RU' },
   { code: 'CHU', tr: 'Çuvaşistan', en: 'Chuvashia', baseIso: 'RU' },

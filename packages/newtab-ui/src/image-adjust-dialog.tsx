@@ -2,7 +2,11 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark } from '@fortawesome/free-solid-svg-icons';
 import { useT } from '@tepegoz/i18n/react';
-import { NEWTAB_IMAGE_FITS, type NewTabBackground, type NewTabImageFit } from '@tepegoz/desktop-ipc';
+import {
+  NEWTAB_IMAGE_FITS,
+  type NewTabBackground,
+  type NewTabImageFit,
+} from '@tepegoz/desktop-ipc';
 import { newtabDict } from './i18n';
 import { imageBackgroundStyle } from './backgrounds';
 
@@ -75,7 +79,12 @@ export function ImageAdjustDialog({
   function onPointerDown(e: ReactPointerEvent<HTMLDivElement>): void {
     if (imageDataUrl === undefined) return;
     e.currentTarget.setPointerCapture(e.pointerId);
-    dragRef.current = { cx: e.clientX, cy: e.clientY, x: localRef.current.x, y: localRef.current.y };
+    dragRef.current = {
+      cx: e.clientX,
+      cy: e.clientY,
+      x: localRef.current.x,
+      y: localRef.current.y,
+    };
   }
   function onPointerMove(e: ReactPointerEvent<HTMLDivElement>): void {
     const d = dragRef.current;
@@ -206,7 +215,9 @@ export function ImageAdjustDialog({
                   title={t.positions[p.id]}
                   onClick={() => onChange({ imagePositionX: p.x, imagePositionY: p.y })}
                   className={`flex h-7 w-7 items-center justify-center rounded-md border transition-colors ${
-                    active ? 'border-border-focus bg-surface-raised' : 'border-border hover:bg-surface-raised'
+                    active
+                      ? 'border-border-focus bg-surface-raised'
+                      : 'border-border hover:bg-surface-raised'
                   }`}
                 >
                   <span

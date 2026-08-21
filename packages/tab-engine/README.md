@@ -17,10 +17,11 @@ not be conflated with the agent's policy-isolation axis.
 It also owns the agent's built-in **`tab_*` capabilities** (`registerTabTools`): tab enumeration/creation
 is a tab-domain operation, registered as always-on `source: 'builtin'` tools behind the ToolGateway PEP
 (ADR-0021/0024 update — no longer scoped to the Agent extension), bound to an injected `TabHost` that the
-app implements over its `TabManager`. These drive the *live* tabs and are a separate concern from
+app implements over its `TabManager`. These drive the _live_ tabs and are a separate concern from
 `TabStore`'s pure record state; they co-locate here because both belong to the tab domain.
 
 ## Exports
+
 - **`registerTabTools({ host })`** — registers the `tab_*` agent tools (`tab_list_items`,
   `tab_get_item`, `tab_create_item`, `tab_update_item`, `tab_delete_item`) into the
   `CapabilityRegistry`, bound to an injected `TabHost`. Always-on; the app calls it once at startup.
@@ -39,4 +40,5 @@ app implements over its `TabManager`. These drive the *live* tabs and are a sepa
 - **`TabRecord`** — the wire `TabInfo` shape plus the engine-only `kind` discriminator.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

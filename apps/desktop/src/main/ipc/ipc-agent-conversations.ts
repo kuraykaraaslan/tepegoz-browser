@@ -25,29 +25,23 @@ export function registerAgentConversationIpc(): void {
     AgentService.newConversation(groupId);
   });
 
-  handle(
-    IpcChannels.agentConversationsList,
-    (_event, payload): AgentConversationSummary[] => {
-      requireAgentEnabled();
-      const db = getDb();
-      if (db === null) return [];
-      const input = AgentConversationListInputSchema.parse(payload ?? {});
-      return AgentConversationStore.list(db, {
-        ...(input.query !== undefined ? { query: input.query } : {}),
-        ...(input.limit !== undefined ? { limit: input.limit } : {}),
-        ...(input.offset !== undefined ? { offset: input.offset } : {}),
-      });
-    },
-  );
-  handle(
-    IpcChannels.agentConversationsGet,
-    (_event, payload): AgentConversationDetail | null => {
-      requireAgentEnabled();
-      const db = getDb();
-      if (db === null) return null;
-      return AgentConversationStore.get(db, AgentConversationIdSchema.parse(payload));
-    },
-  );
+  handle(IpcChannels.agentConversationsList, (_event, payload): AgentConversationSummary[] => {
+    requireAgentEnabled();
+    const db = getDb();
+    if (db === null) return [];
+    const input = AgentConversationListInputSchema.parse(payload ?? {});
+    return AgentConversationStore.list(db, {
+      ...(input.query !== undefined ? { query: input.query } : {}),
+      ...(input.limit !== undefined ? { limit: input.limit } : {}),
+      ...(input.offset !== undefined ? { offset: input.offset } : {}),
+    });
+  });
+  handle(IpcChannels.agentConversationsGet, (_event, payload): AgentConversationDetail | null => {
+    requireAgentEnabled();
+    const db = getDb();
+    if (db === null) return null;
+    return AgentConversationStore.get(db, AgentConversationIdSchema.parse(payload));
+  });
   handle(
     IpcChannels.agentConversationsCurrent,
     (_event, payload): AgentConversationDetail | null => {
@@ -57,16 +51,13 @@ export function registerAgentConversationIpc(): void {
       return AgentService.currentConversation(db, AgentNewConversationSchema.parse(payload));
     },
   );
-  handle(
-    IpcChannels.agentConversationsOpen,
-    (_event, payload): AgentConversationDetail | null => {
-      requireAgentEnabled();
-      const db = getDb();
-      if (db === null) return null;
-      const input = AgentConversationOpenInputSchema.parse(payload);
-      return AgentService.openConversation(db, input.id, input.groupId);
-    },
-  );
+  handle(IpcChannels.agentConversationsOpen, (_event, payload): AgentConversationDetail | null => {
+    requireAgentEnabled();
+    const db = getDb();
+    if (db === null) return null;
+    const input = AgentConversationOpenInputSchema.parse(payload);
+    return AgentService.openConversation(db, input.id, input.groupId);
+  });
   handle(IpcChannels.agentConversationsDelete, (_event, payload): void => {
     requireAgentEnabled();
     const db = getDb();
@@ -122,9 +113,15 @@ export function registerAgentConversationIpc(): void {
     const mime = (name: string): string => {
       const ext = name.slice(name.lastIndexOf('.') + 1).toLowerCase();
       const map: Record<string, string> = {
-        pdf: 'application/pdf', txt: 'text/plain', md: 'text/markdown',
-        json: 'application/json', csv: 'text/csv', html: 'text/html',
-        js: 'text/javascript', ts: 'text/typescript', py: 'text/x-python',
+        pdf: 'application/pdf',
+        txt: 'text/plain',
+        md: 'text/markdown',
+        json: 'application/json',
+        csv: 'text/csv',
+        html: 'text/html',
+        js: 'text/javascript',
+        ts: 'text/typescript',
+        py: 'text/x-python',
       };
       return map[ext] ?? 'application/octet-stream';
     };

@@ -128,7 +128,10 @@ export default class PopupWindowManager {
       setTimeout(() => {
         if (win.isDestroyed()) return;
         const focused = BrowserWindow.getFocusedWindow();
-        if (focused === win || (PopupWindowManager.subWin !== null && focused === PopupWindowManager.subWin)) {
+        if (
+          focused === win ||
+          (PopupWindowManager.subWin !== null && focused === PopupWindowManager.subWin)
+        ) {
           return;
         }
         PopupWindowManager.close();
@@ -162,7 +165,11 @@ export default class PopupWindowManager {
     const surface = resolveSurfaceTheme();
     const win = createPopupWindow(parent, bounds, surface.color);
     PopupWindowManager.subWin = win;
-    loadSurface(win, { ...opts.query, theme: surface.theme, themeColor: surface.themeColor }, 'menu-sub');
+    loadSurface(
+      win,
+      { ...opts.query, theme: surface.theme, themeColor: surface.themeColor },
+      'menu-sub',
+    );
 
     // Reveal on measure (like the primary), but WITHOUT stealing focus — else the primary popup blurs
     // and closes when the flyout opens.
@@ -195,7 +202,8 @@ export default class PopupWindowManager {
     const b = sender.getBounds();
     const area = screen.getDisplayMatching(b).workArea;
     const maxH = area.y + area.height - b.y - GAP;
-    const smallFloor = isSub || (isPrimary && (PopupWindowManager.openKey?.startsWith('bookmark-') ?? false));
+    const smallFloor =
+      isSub || (isPrimary && (PopupWindowManager.openKey?.startsWith('bookmark-') ?? false));
     const floor = smallFloor ? SUBMENU_MIN_HEIGHT : MIN_HEIGHT;
     const next = Math.max(floor, Math.min(height, maxH));
     // Arm/reschedule the reveal on EVERY measure — even a no-op one below, whose bounds don't change,
@@ -321,7 +329,11 @@ function anchorToBounds(
 
 /** Place the submenu just LEFT of the primary popup, top-aligned to the hovered row (`anchor.y`).
  *  Falls back to the right side if there's no room on the left. Clamped to the display work area. */
-function subAnchorToBounds(parent: BrowserWindow, anchor: Rectangle, desiredHeight?: number): Rectangle {
+function subAnchorToBounds(
+  parent: BrowserWindow,
+  anchor: Rectangle,
+  desiredHeight?: number,
+): Rectangle {
   const pb = parent.getBounds();
   const area = screen.getDisplayMatching(pb).workArea;
   const width = SUBMENU_WIDTH;

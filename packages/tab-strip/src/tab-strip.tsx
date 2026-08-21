@@ -139,23 +139,24 @@ export function TabStrip({
     if (!group.collapsed) for (const m of members) segments.push(renderChip(m));
   }
 
-  const { scrollerRef, sensors, dragId, torn, onDragStart, onDragEnd, onDragCancel } = useTabStripDrag({
-    items,
-    tabById,
-    groupById,
-    tabs,
-    groups,
-    activeId,
-    labels,
-    onMove,
-    onMoveGroup,
-    onAssignToGroup,
-    onTearBegin,
-    onTearMove,
-    onTearEnd,
-    onTearCancel,
-    onReportGeometry,
-  });
+  const { scrollerRef, sensors, dragId, torn, onDragStart, onDragEnd, onDragCancel } =
+    useTabStripDrag({
+      items,
+      tabById,
+      groupById,
+      tabs,
+      groups,
+      activeId,
+      labels,
+      onMove,
+      onMoveGroup,
+      onAssignToGroup,
+      onTearBegin,
+      onTearMove,
+      onTearEnd,
+      onTearCancel,
+      onReportGeometry,
+    });
 
   // Mouse wheels only emit vertical deltas; translate them to horizontal scroll so an overflowing
   // strip is reachable without a trackpad (and without a visible scrollbar).
@@ -175,7 +176,12 @@ export function TabStrip({
       const colors = groupColor(g.color);
       const name = g.name.trim().length > 0 ? g.name : (labels.unnamedGroup ?? 'Group');
       return (
-        <div className={cn('flex h-7 items-center gap-1 rounded-md px-2 text-xs font-medium', colors.pill)}>
+        <div
+          className={cn(
+            'flex h-7 items-center gap-1 rounded-md px-2 text-xs font-medium',
+            colors.pill,
+          )}
+        >
           <FontAwesomeIcon icon={faChevronRight} className="h-2.5 w-2.5 rotate-90" aria-hidden />
           <span className="max-w-32 truncate">{name}</span>
         </div>

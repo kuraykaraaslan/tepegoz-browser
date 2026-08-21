@@ -32,7 +32,8 @@ interface SkillsLabels {
   saveEmpty: string;
 }
 
-const ROW = 'flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left hover:bg-surface-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus';
+const ROW =
+  'flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left hover:bg-surface-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus';
 
 export function SkillsPicker({
   api,
@@ -88,7 +89,9 @@ export function SkillsPicker({
           <p className="px-2 py-1.5 text-[11px] leading-snug text-text-secondary">{labels.hint}</p>
           <div className="my-1 h-px bg-border" />
 
-          {skills === null && <p className="px-2 py-2 text-xs text-text-secondary">{labels.loading}</p>}
+          {skills === null && (
+            <p className="px-2 py-2 text-xs text-text-secondary">{labels.loading}</p>
+          )}
           {skills !== null && skills.length === 0 && (
             <p className="px-2 py-2 text-xs text-text-secondary">{labels.empty}</p>
           )}
@@ -143,10 +146,17 @@ export function SkillsPicker({
                 maxLength={80}
                 placeholder={labels.namePlaceholder}
                 aria-label={labels.saveTitle}
-                onChange={(e) => { setName(e.target.value); }}
+                onChange={(e) => {
+                  setName(e.target.value);
+                }}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') { e.preventDefault(); save(close); }
-                  if (e.key === 'Escape') { setNaming(false); }
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    save(close);
+                  }
+                  if (e.key === 'Escape') {
+                    setNaming(false);
+                  }
                 }}
                 className="min-w-0 flex-1 rounded-md border border-border bg-surface-base px-2 py-1 text-xs text-text-primary placeholder:text-text-disabled focus:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
               />
@@ -157,7 +167,9 @@ export function SkillsPicker({
               className={cn(ROW, 'text-xs text-text-secondary')}
               disabled={prompt.trim().length === 0}
               title={prompt.trim().length === 0 ? labels.saveEmpty : labels.save}
-              onClick={() => { setNaming(true); }}
+              onClick={() => {
+                setNaming(true);
+              }}
             >
               {labels.save}
             </button>

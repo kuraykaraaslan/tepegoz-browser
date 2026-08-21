@@ -59,7 +59,11 @@ export function describePredicate(t: MacrosStrings, predicate: Predicate): strin
   }
 }
 
-export function predicateEditor(t: MacrosStrings, predicate: Predicate, onChange: (next: Predicate) => void) {
+export function predicateEditor(
+  t: MacrosStrings,
+  predicate: Predicate,
+  onChange: (next: Predicate) => void,
+) {
   const predicateLabels: Record<EditablePredicateKind | 'advanced', string> = {
     textPresent: t.predTextPresent,
     textAbsent: t.predTextAbsent,
@@ -77,11 +81,14 @@ export function predicateEditor(t: MacrosStrings, predicate: Predicate, onChange
         value={editableKind}
         aria-label={t.predicate}
         onChange={(e) => {
-          if (e.target.value !== 'advanced') onChange(makePredicate(e.target.value as EditablePredicateKind));
+          if (e.target.value !== 'advanced')
+            onChange(makePredicate(e.target.value as EditablePredicateKind));
         }}
         className={cn(FIELD, 'w-36')}
       >
-        {editableKind === 'advanced' && <option value="advanced">{predicateLabels.advanced}</option>}
+        {editableKind === 'advanced' && (
+          <option value="advanced">{predicateLabels.advanced}</option>
+        )}
         {EDITABLE_PREDICATE_KINDS.map((kind) => (
           <option key={kind} value={kind}>
             {predicateLabels[kind]}
@@ -98,7 +105,9 @@ export function predicateEditor(t: MacrosStrings, predicate: Predicate, onChange
         />
       ) : null}
       {predicate.kind === 'elementExists' || predicate.kind === 'elementVisible'
-        ? selectorInput(t, predicate.target[0]?.value ?? '', (v) => onChange({ ...predicate, target: cssChain(v) }))
+        ? selectorInput(t, predicate.target[0]?.value ?? '', (v) =>
+            onChange({ ...predicate, target: cssChain(v) }),
+          )
         : null}
       {predicate.kind === 'varCompare' ? (
         <>
@@ -133,7 +142,9 @@ export function predicateEditor(t: MacrosStrings, predicate: Predicate, onChange
         </>
       ) : null}
       {editableKind === 'advanced' && (
-        <span className="min-w-0 flex-1 truncate font-mono text-text-secondary">{describePredicate(t, predicate)}</span>
+        <span className="min-w-0 flex-1 truncate font-mono text-text-secondary">
+          {describePredicate(t, predicate)}
+        </span>
       )}
     </span>
   );

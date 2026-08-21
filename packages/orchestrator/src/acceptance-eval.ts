@@ -171,12 +171,17 @@ export function estimateCostUsd(
   const cacheRead = (usage.cacheReadTokens ?? 0) * (rate.cacheReadMultiplier ?? 1);
   const cacheWrite = (usage.cacheWriteTokens ?? 0) * (rate.cacheWriteMultiplier ?? 1);
   const inputUnits = usage.inputTokens + cacheRead + cacheWrite;
-  return (inputUnits * rate.inputPerMillion + usage.outputTokens * rate.outputPerMillion) / 1_000_000;
+  return (
+    (inputUnits * rate.inputPerMillion + usage.outputTokens * rate.outputPerMillion) / 1_000_000
+  );
 }
 
 export const ACCEPTANCE_SCENARIOS: AcceptanceScenario[] = [
   { id: 'headings_summary', title: 'Extract headings from the page and summarize them.' },
-  { id: 'multi_tab_research', title: 'Open three sources across tabs and produce a comparison table.' },
+  {
+    id: 'multi_tab_research',
+    title: 'Open three sources across tabs and produce a comparison table.',
+  },
   {
     id: 'form_fill_stop_before_submit',
     title: 'Fill a form with provided information and stop before submitting.',
@@ -200,7 +205,7 @@ function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
   return sorted.length % 2 === 1
-    ? sorted[mid] ?? 0
+    ? (sorted[mid] ?? 0)
     : ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2;
 }
 
@@ -215,7 +220,11 @@ function percentile(values: number[], p: number): number {
 function validationChangedFalse(outcome: StepOutcome): boolean {
   if (!outcome.ok || outcome.tool !== 'browser_validate_page') return false;
   const result = outcome.result;
-  return typeof result === 'object' && result !== null && (result as { changed?: unknown }).changed === false;
+  return (
+    typeof result === 'object' &&
+    result !== null &&
+    (result as { changed?: unknown }).changed === false
+  );
 }
 
 export function recordFromOutcomes(input: {
@@ -224,7 +233,12 @@ export function recordFromOutcomes(input: {
   outcomes: StepOutcome[];
   approvalLatencyMs?: number[] | undefined;
   tokenUsage?:
-    | { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number }
+    | {
+        inputTokens: number;
+        outputTokens: number;
+        cacheReadTokens?: number;
+        cacheWriteTokens?: number;
+      }
     | undefined;
   recovered?: boolean | undefined;
   requiresRecovery?: boolean | undefined;
@@ -242,7 +256,9 @@ export function recordFromOutcomes(input: {
   tokenRateUsd?: TokenRateUsd | undefined;
 }): AcceptanceRunRecord {
   const usage = input.tokenUsage ?? { inputTokens: 0, outputTokens: 0 };
-  const stepDurationsMs = input.outcomes.map((o) => o.durationMs).filter((ms) => Number.isFinite(ms));
+  const stepDurationsMs = input.outcomes
+    .map((o) => o.durationMs)
+    .filter((ms) => Number.isFinite(ms));
   const costUsd = estimateCostUsd(usage, input.tokenRateUsd);
   return {
     ...(costUsd !== undefined ? { costUsd } : {}),
@@ -260,7 +276,8 @@ export function recordFromOutcomes(input: {
     wallClockMs: input.wallClockMs,
     wallClocksMs: input.wallClocksMs ?? (input.wallClockMs > 0 ? [input.wallClockMs] : []),
     recovered: input.recovered ?? false,
-    navigationValidationCalls: input.outcomes.filter((o) => o.tool === 'browser_validate_page').length,
+    navigationValidationCalls: input.outcomes.filter((o) => o.tool === 'browser_validate_page')
+      .length,
     navigationValidationFailures: input.outcomes.filter(validationChangedFalse).length,
     escaped: input.escaped ?? false,
     escapeEligible: input.escapeEligible ?? true,
@@ -291,7 +308,9 @@ export function summarizeAcceptanceRuns(records: AcceptanceRunRecord[]): Accepta
   // Cost is summed ONLY when every record carries one: a partial sum would silently under-report,
   // and "not measured" must stay visible rather than reading as a cheap run.
   const allCosted = records.length > 0 && records.every((r) => r.costUsd !== undefined);
-  const totalCostUsd = allCosted ? records.reduce((sum, r) => sum + (r.costUsd ?? 0), 0) : undefined;
+  const totalCostUsd = allCosted
+    ? records.reduce((sum, r) => sum + (r.costUsd ?? 0), 0)
+    : undefined;
   return {
     ...(totalCostUsd !== undefined
       ? { totalCostUsd, avgCostUsdPerRun: totalCostUsd / records.length }
@@ -300,15 +319,20 @@ export function summarizeAcceptanceRuns(records: AcceptanceRunRecord[]): Accepta
     passed,
     taskSuccessRate: records.length === 0 ? 0 : passed / records.length,
     recoverySuccessRate:
-      recoveryRuns.length === 0 ? 1 : recoveryRuns.filter((r) => r.ok && r.recovered).length / recoveryRuns.length,
+      recoveryRuns.length === 0
+        ? 1
+        : recoveryRuns.filter((r) => r.ok && r.recovered).length / recoveryRuns.length,
     approvalLatencyP50Ms: median(records.flatMap((r) => r.approvalLatencyMs)),
-    toolErrorRate: toolCalls === 0 ? 0 : records.reduce((sum, r) => sum + r.toolErrors, 0) / toolCalls,
+    toolErrorRate:
+      toolCalls === 0 ? 0 : records.reduce((sum, r) => sum + r.toolErrors, 0) / toolCalls,
     navigationValidationFailureRate:
       validationCalls === 0
         ? 0
         : records.reduce((sum, r) => sum + r.navigationValidationFailures, 0) / validationCalls,
     escapeRate:
-      escapeEligible.length === 0 ? 0 : escapeEligible.filter((r) => r.escaped).length / escapeEligible.length,
+      escapeEligible.length === 0
+        ? 0
+        : escapeEligible.filter((r) => r.escaped).length / escapeEligible.length,
     tokenUsage,
     stepLatencyP50Ms: median(allStepDurations),
     stepLatencyP95Ms: percentile(allStepDurations, 0.95),

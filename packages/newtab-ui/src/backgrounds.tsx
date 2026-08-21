@@ -26,7 +26,13 @@ export const NEWTAB_COLOR_PRESETS = [
 /** Relative luminance (0..1) of a #rgb / #rrggbb color; ~0 for black, ~1 for white. */
 function relLuma(hex: string): number {
   const h = hex.replace('#', '');
-  const n = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+  const n =
+    h.length === 3
+      ? h
+          .split('')
+          .map((c) => c + c)
+          .join('')
+      : h;
   const r = parseInt(n.slice(0, 2), 16) / 255;
   const g = parseInt(n.slice(2, 4), 16) / 255;
   const b = parseInt(n.slice(4, 6), 16) / 255;
@@ -78,7 +84,12 @@ function DiagonalPattern({ color }: PatternProps) {
   return (
     <Tiled size={18}>
       {() => (
-        <path d="M-4 4 L4 -4 M0 18 L18 0 M14 22 L22 14" stroke={ink} strokeWidth={1.5} fill="none" />
+        <path
+          d="M-4 4 L4 -4 M0 18 L18 0 M14 22 L22 14"
+          stroke={ink}
+          strokeWidth={1.5}
+          fill="none"
+        />
       )}
     </Tiled>
   );
@@ -182,13 +193,26 @@ export function imageBackgroundStyle(
  * `kind: 'default'`. `opacity` fades the whole layer toward the theme surface beneath it.
  */
 export function NewTabBackgroundLayer({ background }: { background: ResolvedNewTabBackground }) {
-  const { kind, color, svgId, imageFit, imagePositionX, imagePositionY, imageZoom, opacity, imageDataUrl } =
-    background;
+  const {
+    kind,
+    color,
+    svgId,
+    imageFit,
+    imagePositionX,
+    imagePositionY,
+    imageZoom,
+    opacity,
+    imageDataUrl,
+  } = background;
   if (kind === 'default') return null;
   const preset = NEWTAB_SVG_PRESETS.find((p) => p.id === svgId);
   const Pattern = preset?.Pattern;
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden" style={{ opacity }} aria-hidden>
+    <div
+      className="pointer-events-none absolute inset-0 overflow-hidden"
+      style={{ opacity }}
+      aria-hidden
+    >
       {kind === 'color' && (
         <>
           <div className="absolute inset-0" style={{ backgroundColor: color }} />
@@ -202,7 +226,13 @@ export function NewTabBackgroundLayer({ background }: { background: ResolvedNewT
       {kind === 'image' && imageDataUrl !== undefined && (
         <div
           className="absolute inset-0"
-          style={imageBackgroundStyle(imageDataUrl, imageFit, imagePositionX, imagePositionY, imageZoom)}
+          style={imageBackgroundStyle(
+            imageDataUrl,
+            imageFit,
+            imagePositionX,
+            imagePositionY,
+            imageZoom,
+          )}
         />
       )}
     </div>

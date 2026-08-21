@@ -22,7 +22,9 @@ describe('buildDomTreeExpression', () => {
   });
 
   it('interpolates the shared element cap so the emit cap tracks it', () => {
-    expect(buildDomTreeExpression()).toContain(`EMIT_CAP = ${String(MAX_INTERACTABLE_ELEMENTS + 100)}`);
+    expect(buildDomTreeExpression()).toContain(
+      `EMIT_CAP = ${String(MAX_INTERACTABLE_ELEMENTS + 100)}`,
+    );
   });
 
   it('defaults to a strictly on-screen viewport and honours the expansion knob', () => {

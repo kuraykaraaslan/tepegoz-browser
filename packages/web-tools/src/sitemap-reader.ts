@@ -17,7 +17,10 @@ import { z } from 'zod';
 
 /** Injected same-origin text fetch. Returns null on any transport failure (unreachable → simply
  *  ungrounded, never an error). The host implementation MUST enforce the caller's byte cap. */
-export type SitemapFetch = (url: string, maxBytes: number) => Promise<{ status: number; text: string } | null>;
+export type SitemapFetch = (
+  url: string,
+  maxBytes: number,
+) => Promise<{ status: number; text: string } | null>;
 
 /** The fetch result shape, validated at the (untrusted) host boundary before use. */
 const FetchResultSchema = z.object({ status: z.number(), text: z.string() });

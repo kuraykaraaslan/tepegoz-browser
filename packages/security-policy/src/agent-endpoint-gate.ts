@@ -24,8 +24,7 @@ export type AgentEndpointDenialReason =
   | 'unresolvable_target';
 
 export type AgentEndpointVerdict =
-  | { allowed: true }
-  | { allowed: false; reason: AgentEndpointDenialReason };
+  { allowed: true } | { allowed: false; reason: AgentEndpointDenialReason };
 
 export interface AgentEndpointRequest {
   toolId: string;

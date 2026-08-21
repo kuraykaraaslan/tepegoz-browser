@@ -89,7 +89,9 @@ function sanitize(input: VideoPlayerSettings): VideoPlayerSettings {
   return {
     enabled: input.enabled,
     defaultSpeed: clampSpeed(input.defaultSpeed),
-    subtitleFontSize: SUBTITLE_SIZES.includes(input.subtitleFontSize) ? input.subtitleFontSize : 'md',
+    subtitleFontSize: SUBTITLE_SIZES.includes(input.subtitleFontSize)
+      ? input.subtitleFontSize
+      : 'md',
     theme: THEMES.includes(input.theme) ? input.theme : 'auto',
     autoHideControls: input.autoHideControls,
     enableKeyboard: input.enableKeyboard,
@@ -134,7 +136,9 @@ export function createVideoPlayerHost(ports: VideoPlayerHostPorts): VideoPlayerH
       const without = settings.disabledOrigins.filter((item) => item !== normalized);
       settings = {
         ...settings,
-        disabledOrigins: enabled ? without : [...without, normalized].slice(0, MAX_DISABLED_ORIGINS),
+        disabledOrigins: enabled
+          ? without
+          : [...without, normalized].slice(0, MAX_DISABLED_ORIGINS),
       };
       return persist();
     },

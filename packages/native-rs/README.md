@@ -5,6 +5,7 @@ Rust hot-path crate (napi-rs) for Tepegöz. **Not yet built** — this is a docu
 does not require a Rust toolchain at this stage.
 
 Planned (see plan §7, ADR-0001):
+
 - Egress anomaly / Base64-exfiltration scanner (ported from the MVP TypeScript version)
 - Screenshot eviction + WebP encoding
 - Checkpoint (de)serialization hot path

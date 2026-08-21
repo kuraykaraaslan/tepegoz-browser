@@ -20,23 +20,22 @@ const COUNTRIES: readonly { iso2: string; iso3: string }[] = getCountryDataList(
   iso3: c.iso3,
 }));
 /** alpha-3 → alpha-2, so alpha-3 region values still format via Intl (which needs alpha-2). */
-const ISO3_TO_ISO2: Record<string, string> = Object.fromEntries(COUNTRIES.map((c) => [c.iso3, c.iso2]));
+const ISO3_TO_ISO2: Record<string, string> = Object.fromEntries(
+  COUNTRIES.map((c) => [c.iso3, c.iso2]),
+);
 /** Per-locale display-name overrides where the CLDR/Intl label isn't wanted (TR → "Turkey" in English). */
 const REGION_NAME_OVERRIDES: Record<string, Partial<Record<LocalePref, string>>> = {
   TR: { en: 'Turkey' },
 };
 /** Flag shown next to each UI language (a language is not a country, so this is a sensible mapping). */
-const LOCALE_FLAG: Record<LocalePref, string | undefined> = { system: undefined, en: 'GB', tr: 'TR' };
+const LOCALE_FLAG: Record<LocalePref, string | undefined> = {
+  system: undefined,
+  en: 'GB',
+  tr: 'TR',
+};
 /** The named preset colors (name shown as a hover tooltip); keys map to `settingsDict.themeColorNames`. */
 type ThemeColorName =
-  | 'slate'
-  | 'steel'
-  | 'graphite'
-  | 'turquoise'
-  | 'violet'
-  | 'maroon'
-  | 'amber'
-  | 'forest';
+  'slate' | 'steel' | 'graphite' | 'turquoise' | 'violet' | 'maroon' | 'amber' | 'forest';
 /** Preset single-color themes — muted, dark tones (no eye-searing brights). Incl. a brand turquoise. */
 export const THEME_PRESETS: readonly { color: string; name: ThemeColorName }[] = [
   { color: '#1e293b', name: 'slate' },
@@ -50,7 +49,10 @@ export const THEME_PRESETS: readonly { color: string; name: ThemeColorName }[] =
 ];
 const DEFAULT_CUSTOM_COLOR = '#334155';
 
-const THEME_PREVIEW: Record<ThemePref, { bg: string; surface: string; text: string; accent: string }> = {
+const THEME_PREVIEW: Record<
+  ThemePref,
+  { bg: string; surface: string; text: string; accent: string }
+> = {
   light: { bg: '#f3f4f6', surface: '#ffffff', text: '#111827', accent: '#0ea5e9' },
   dark: { bg: '#0b1220', surface: '#131c31', text: '#e5e7eb', accent: '#38bdf8' },
   // Neutral mid palette; the split background hints at "follows the OS".
@@ -69,7 +71,9 @@ function ThemePreview({ theme }: { theme: ThemePref }) {
       <div className="mx-2 mt-2 rounded" style={{ backgroundColor: p.surface, height: 10 }} />
       <div className="mx-2 mt-1 flex gap-1">
         <span style={{ backgroundColor: p.accent, width: 18, height: 6, borderRadius: 2 }} />
-        <span style={{ backgroundColor: p.text, opacity: 0.4, width: 44, height: 6, borderRadius: 2 }} />
+        <span
+          style={{ backgroundColor: p.text, opacity: 0.4, width: 44, height: 6, borderRadius: 2 }}
+        />
       </div>
     </div>
   );
@@ -286,7 +290,9 @@ export function LanguageRegionSection({
       flagSrc: turkicFlagFor(r.code),
       label: uiLocale === 'tr' ? r.tr : r.en,
     }));
-    const merged = [...countries, ...turkic].sort((a, b) => a.label.localeCompare(b.label, uiLocale));
+    const merged = [...countries, ...turkic].sort((a, b) =>
+      a.label.localeCompare(b.label, uiLocale),
+    );
     return [{ value: '', label: s.regionSystem }, ...merged];
   }, [uiLocale, s.regionSystem]);
 

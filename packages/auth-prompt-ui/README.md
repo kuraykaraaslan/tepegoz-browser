@@ -22,9 +22,11 @@ The server-supplied `realm` is shown but labelled and visually subordinate: it i
 text and must never read as app copy.
 
 ## Exports
+
 - **`AuthPrompt`** — the dialog. Username + masked password, submit and cancel.
 - **`AuthPromptProps`** — the injected-props contract.
 - **`authPromptDict`** — this package's `en`/`tr` dictionary.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

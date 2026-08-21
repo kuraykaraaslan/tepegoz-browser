@@ -16,7 +16,10 @@ const BindingPayloadSchema = z.object({
   url: z.string().max(4096),
 });
 
-const listeners = new WeakMap<WebContents, (event: unknown, method: string, params?: unknown) => void>();
+const listeners = new WeakMap<
+  WebContents,
+  (event: unknown, method: string, params?: unknown) => void
+>();
 let started = false;
 
 let pageState: VideoPlayerPageState | null = null;

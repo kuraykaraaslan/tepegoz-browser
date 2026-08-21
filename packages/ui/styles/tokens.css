@@ -5,143 +5,143 @@
 :root {
   /* Tepegöz brand: cyan accent (#06AEC4) + deep-navy/slate (#0C2135 / #1C3D5E). Navy text on the
      bright cyan keeps primary surfaces legible (AA) while staying on-brand. */
-  --primary:         #06AEC4;
-  --primary-hover:   #0598AB;
-  --primary-active:  #047E8E;
-  --primary-subtle:  #E4F8FB;
-  --primary-fg:      #0C2135;
+  --primary: #06aec4;
+  --primary-hover: #0598ab;
+  --primary-active: #047e8e;
+  --primary-subtle: #e4f8fb;
+  --primary-fg: #0c2135;
 
-  --secondary:        #1C3D5E;
-  --secondary-hover:  #264E75;
-  --secondary-active: #16314B;
-  --secondary-subtle: #E8EEF4;
-  --secondary-fg:     #ffffff;
+  --secondary: #1c3d5e;
+  --secondary-hover: #264e75;
+  --secondary-active: #16314b;
+  --secondary-subtle: #e8eef4;
+  --secondary-fg: #ffffff;
 
-  --surface-base:    #ffffff;
-  --surface-raised:  #f9fafb;
+  --surface-base: #ffffff;
+  --surface-raised: #f9fafb;
   --surface-overlay: #f3f4f6;
-  --surface-sunken:  #e5e7eb;
+  --surface-sunken: #e5e7eb;
   /* Background for internal/system pages (Settings, Extensions, History, Bookmarks). A dimmed, duller
      shade of --surface-base so the trusted chrome recedes below the theme instead of glaring at full
      brightness — derived from surface-base, so it tracks a custom theme color automatically. */
-  --surface-system:  color-mix(in srgb, var(--surface-base) 95%, #000);
+  --surface-system: color-mix(in srgb, var(--surface-base) 95%, #000);
 
-  --text-primary:    #111827;
-  --text-secondary:  #6b7280;
-  --text-disabled:   #9ca3af;
-  --text-inverse:    #ffffff;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --text-disabled: #9ca3af;
+  --text-inverse: #ffffff;
 
-  --border:          #e5e7eb;
-  --border-strong:   #d1d5db;
-  --border-focus:    #06AEC4;
+  --border: #e5e7eb;
+  --border-strong: #d1d5db;
+  --border-focus: #06aec4;
 
-  --success:         #22c55e;
-  --success-subtle:  #f0fdf4;
-  --success-fg:      #14532d;
+  --success: #22c55e;
+  --success-subtle: #f0fdf4;
+  --success-fg: #14532d;
 
-  --warning:         #f59e0b;
-  --warning-subtle:  #fffbeb;
-  --warning-fg:      #78350f;
+  --warning: #f59e0b;
+  --warning-subtle: #fffbeb;
+  --warning-fg: #78350f;
 
-  --error:           #ef4444;
-  --error-subtle:    #fef2f2;
-  --error-fg:        #7f1d1d;
+  --error: #ef4444;
+  --error-subtle: #fef2f2;
+  --error-fg: #7f1d1d;
 
-  --info:            #06b6d4;
-  --info-subtle:     #ecfeff;
-  --info-fg:         #164e63;
+  --info: #06b6d4;
+  --info-subtle: #ecfeff;
+  --info-fg: #164e63;
 }
 
 .dark {
   /* Brighter cyan reads better on the navy surfaces; dark navy text stays on the cyan fills. */
-  --primary:          #22C6DA;
-  --primary-hover:    #51D6E6;
-  --primary-subtle:   #0B3A44;
-  --primary-active:   #06AEC4;
-  --primary-fg:       #08222B;
+  --primary: #22c6da;
+  --primary-hover: #51d6e6;
+  --primary-subtle: #0b3a44;
+  --primary-active: #06aec4;
+  --primary-fg: #08222b;
 
-  --secondary:        #3A6B9A;
-  --secondary-hover:  #4F82B5;
-  --secondary-active: #1C3D5E;
-  --secondary-subtle: #16314B;
-  --secondary-fg:     #ffffff;
+  --secondary: #3a6b9a;
+  --secondary-hover: #4f82b5;
+  --secondary-active: #1c3d5e;
+  --secondary-subtle: #16314b;
+  --secondary-fg: #ffffff;
 
-  --text-inverse:     #0C2135;
+  --text-inverse: #0c2135;
 
   /* Brand navy/slate surfaces (logo background = #0C2135). */
-  --surface-base:    #0C2135;
-  --surface-raised:  #14334E;
-  --surface-overlay: #1C3D5E;
-  --surface-sunken:  #14334E;
+  --surface-base: #0c2135;
+  --surface-raised: #14334e;
+  --surface-overlay: #1c3d5e;
+  --surface-sunken: #14334e;
   /* Dark/custom themes glare more than light ones, so dim system pages harder here (~18% toward black). */
-  --surface-system:  color-mix(in srgb, var(--surface-base) 82%, #000);
+  --surface-system: color-mix(in srgb, var(--surface-base) 82%, #000);
 
-  --text-primary:    #EAF2F8;
-  --text-secondary:  #8FA8BF;
-  --text-disabled:   #4F6B85;
+  --text-primary: #eaf2f8;
+  --text-secondary: #8fa8bf;
+  --text-disabled: #4f6b85;
 
-  --border:          #1C3D5E;
-  --border-strong:   #2A547A;
-  --border-focus:    #22C6DA;
+  --border: #1c3d5e;
+  --border-strong: #2a547a;
+  --border-focus: #22c6da;
 
-  --success:         #4ade80;
-  --success-subtle:  #052e16;
-  --success-fg:      #bbf7d0;
+  --success: #4ade80;
+  --success-subtle: #052e16;
+  --success-fg: #bbf7d0;
 
-  --warning:         #fbbf24;
-  --warning-subtle:  #451a03;
-  --warning-fg:      #fef3c7;
+  --warning: #fbbf24;
+  --warning-subtle: #451a03;
+  --warning-fg: #fef3c7;
 
-  --error:           #f87171;
-  --error-subtle:    #450a0a;
-  --error-fg:        #fee2e2;
+  --error: #f87171;
+  --error-subtle: #450a0a;
+  --error-fg: #fee2e2;
 
-  --info:            #22d3ee;
-  --info-subtle:     #083344;
-  --info-fg:         #cffafe;
+  --info: #22d3ee;
+  --info-subtle: #083344;
+  --info-fg: #cffafe;
 }
 
 @theme inline {
-  --color-primary:         var(--primary);
-  --color-primary-hover:   var(--primary-hover);
-  --color-primary-active:  var(--primary-active);
-  --color-primary-subtle:  var(--primary-subtle);
-  --color-primary-fg:      var(--primary-fg);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-primary-subtle: var(--primary-subtle);
+  --color-primary-fg: var(--primary-fg);
 
-  --color-secondary:        var(--secondary);
-  --color-secondary-hover:  var(--secondary-hover);
-  --color-secondary-fg:     var(--secondary-fg);
+  --color-secondary: var(--secondary);
+  --color-secondary-hover: var(--secondary-hover);
+  --color-secondary-fg: var(--secondary-fg);
   --color-secondary-active: var(--secondary-active);
   --color-secondary-subtle: var(--secondary-subtle);
 
-  --color-surface-base:    var(--surface-base);
-  --color-surface-raised:  var(--surface-raised);
+  --color-surface-base: var(--surface-base);
+  --color-surface-raised: var(--surface-raised);
   --color-surface-overlay: var(--surface-overlay);
-  --color-surface-sunken:  var(--surface-sunken);
-  --color-surface-system:  var(--surface-system);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-system: var(--surface-system);
 
-  --color-text-primary:    var(--text-primary);
-  --color-text-secondary:  var(--text-secondary);
-  --color-text-disabled:   var(--text-disabled);
-  --color-text-inverse:    var(--text-inverse);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-disabled: var(--text-disabled);
+  --color-text-inverse: var(--text-inverse);
 
-  --color-border:          var(--border);
-  --color-border-strong:   var(--border-strong);
-  --color-border-focus:    var(--border-focus);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-border-focus: var(--border-focus);
 
-  --color-success:         var(--success);
-  --color-success-subtle:  var(--success-subtle);
-  --color-success-fg:      var(--success-fg);
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
+  --color-success-fg: var(--success-fg);
 
-  --color-warning:         var(--warning);
-  --color-warning-subtle:  var(--warning-subtle);
-  --color-warning-fg:      var(--warning-fg);
+  --color-warning: var(--warning);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-warning-fg: var(--warning-fg);
 
-  --color-error:           var(--error);
-  --color-error-subtle:    var(--error-subtle);
-  --color-error-fg:        var(--error-fg);
+  --color-error: var(--error);
+  --color-error-subtle: var(--error-subtle);
+  --color-error-fg: var(--error-fg);
 
-  --color-info:            var(--info);
-  --color-info-subtle:     var(--info-subtle);
-  --color-info-fg:         var(--info-fg);
+  --color-info: var(--info);
+  --color-info-subtle: var(--info-subtle);
+  --color-info-fg: var(--info-fg);
 }

@@ -18,7 +18,10 @@ function makeWebContents() {
       return wc.on(event, fn);
     },
     off(event: string, fn: (...args: unknown[]) => void) {
-      listeners.set(event, (listeners.get(event) ?? []).filter((l) => l !== fn));
+      listeners.set(
+        event,
+        (listeners.get(event) ?? []).filter((l) => l !== fn),
+      );
       return wc;
     },
     emit(event: string, ...args: unknown[]) {
@@ -83,7 +86,12 @@ describe('runFindInPage', () => {
 
   it('echoes the LATEST query, so a result arriving after a retype is identifiable as stale', () => {
     const run = (query: string) => {
-      runFindInPage(asWin(win), asWc(wc), { query, forward: true, findNext: false, matchCase: false });
+      runFindInPage(asWin(win), asWc(wc), {
+        query,
+        forward: true,
+        findNext: false,
+        matchCase: false,
+      });
     };
     run('alp');
     run('alpha');
@@ -96,7 +104,12 @@ describe('runFindInPage', () => {
 
   it('subscribes once per view no matter how many searches run on it', () => {
     for (const query of ['a', 'ab', 'abc']) {
-      runFindInPage(asWin(win), asWc(wc), { query, forward: true, findNext: false, matchCase: false });
+      runFindInPage(asWin(win), asWc(wc), {
+        query,
+        forward: true,
+        findNext: false,
+        matchCase: false,
+      });
     }
     expect(wc.listenerCount('found-in-page')).toBe(1);
   });
@@ -113,7 +126,10 @@ describe('findNext semantics (the bug this feature shipped with)', () => {
       findNext: false,
       matchCase: false,
     });
-    expect(wc.findInPage).toHaveBeenCalledWith('alpha', expect.objectContaining({ findNext: true }));
+    expect(wc.findInPage).toHaveBeenCalledWith(
+      'alpha',
+      expect.objectContaining({ findNext: true }),
+    );
   });
 
   it('passes a follow-up through once a session is open, so stepping keeps the match set', () => {

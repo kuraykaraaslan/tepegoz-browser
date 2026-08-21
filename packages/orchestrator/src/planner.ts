@@ -247,7 +247,10 @@ export default class Planner {
     }
     const parsed = CompletionSchema.safeParse(raw);
     if (!parsed.success) {
-      Logger.warn(PlannerMessages.MalformedValidation, { raw: response.text.slice(0, 400), issues: parsed.error.issues });
+      Logger.warn(PlannerMessages.MalformedValidation, {
+        raw: response.text.slice(0, 400),
+        issues: parsed.error.issues,
+      });
       throw new AppError(PlannerMessages.MalformedValidation, 502);
     }
     // The model supplied wording; the verdict's authority is the evidence. A claim the evidence does
@@ -259,7 +262,8 @@ export default class Planner {
     if (parsed.data.final_answer !== undefined && parsed.data.final_answer.length > 0) {
       verdict.finalAnswer = parsed.data.final_answer;
     }
-    if (parsed.data.reason !== undefined && parsed.data.reason.length > 0) verdict.reason = parsed.data.reason;
+    if (parsed.data.reason !== undefined && parsed.data.reason.length > 0)
+      verdict.reason = parsed.data.reason;
     return verdict;
   }
 
@@ -273,7 +277,7 @@ export default class Planner {
     const system =
       `${SECURITY_PREAMBLE}\n\n` +
       'You are the REPLANNER for an agentic browser run that is STUCK: recent actions have not moved the ' +
-      'page toward the goal. Given the goal, the actor\'s working state, and recent page observations, ' +
+      "page toward the goal. Given the goal, the actor's working state, and recent page observations, " +
       'propose a genuinely DIFFERENT approach — do NOT restate what has already failed and do NOT say ' +
       '"keep trying". Be concrete and imperative: 2–4 short steps that reference real capabilities (reveal ' +
       'a hidden menu/drawer and re-read; scroll a target into view; open a different link; operate the form ' +

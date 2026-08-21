@@ -10,7 +10,13 @@ import type { ChainableEvent } from './hash-chain';
 /** A fake writable stream that just collects what was written, so assertions read the printed text. */
 function sink(): { write: (s: string) => boolean; text: () => string } {
   let buf = '';
-  return { write: (s: string) => { buf += s; return true; }, text: () => buf };
+  return {
+    write: (s: string) => {
+      buf += s;
+      return true;
+    },
+    text: () => buf,
+  };
 }
 
 const keys = generateSigningKeyPair();
@@ -25,8 +31,12 @@ const ev = (id: string): ChainableEvent => ({
 });
 
 let dir: string;
-beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'tepegoz-verify-')); });
-afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
+beforeEach(() => {
+  dir = mkdtempSync(join(tmpdir(), 'tepegoz-verify-'));
+});
+afterEach(() => {
+  rmSync(dir, { recursive: true, force: true });
+});
 
 function writeReceipt(receipt: ReplayReceipt): string {
   const path = join(dir, 'receipt.json');
@@ -86,11 +96,7 @@ describe('tepegoz-verify — the standalone CLI', () => {
   it('exits 3 with a clear message for a file that does not exist — never a raw stack trace', () => {
     const out = sink();
     const err = sink();
-    const code = main(
-      ['node', 'cli.js', join(dir, 'does-not-exist.json')],
-      out,
-      err,
-    );
+    const code = main(['node', 'cli.js', join(dir, 'does-not-exist.json')], out, err);
     expect(code).toBe(3);
     expect(err.text()).toContain('cannot read');
   });

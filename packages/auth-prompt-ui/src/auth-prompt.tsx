@@ -51,9 +51,7 @@ export function AuthPrompt({ origin, realm, isProxy, onSubmit, onCancel }: AuthP
       <p className="break-all text-sm font-medium text-text-primary">{origin}</p>
 
       {realm !== '' && (
-        <p className="break-all text-xs text-text-secondary">
-          {`${t.realm}: ${realm}`}
-        </p>
+        <p className="break-all text-xs text-text-secondary">{`${t.realm}: ${realm}`}</p>
       )}
 
       <label className="flex flex-col gap-1 text-xs text-text-secondary">

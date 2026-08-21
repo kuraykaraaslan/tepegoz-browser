@@ -6,17 +6,23 @@ import { registerWebTools } from './web-tools';
 const host: WebToolsHost = {
   search: () =>
     Promise.resolve([
-      { title: 'Example', url: 'https://example.com', snippet: 'An example result.', source: 'provider' },
+      {
+        title: 'Example',
+        url: 'https://example.com',
+        snippet: 'An example result.',
+        source: 'provider',
+      },
     ]),
-  fetch: () => Promise.resolve({
-    url: 'https://example.com',
-    finalUrl: 'https://example.com',
-    status: 200,
-    title: 'Example',
-    mimeType: 'text/html',
-    text: 'Example Domain',
-    truncated: false,
-  }),
+  fetch: () =>
+    Promise.resolve({
+      url: 'https://example.com',
+      finalUrl: 'https://example.com',
+      status: 200,
+      title: 'Example',
+      mimeType: 'text/html',
+      text: 'Example Domain',
+      truncated: false,
+    }),
 };
 
 describe('registerWebTools', () => {
@@ -36,9 +42,11 @@ describe('registerWebTools', () => {
   it('rejects non-http fetch URLs at the schema boundary', () => {
     CapabilityRegistry.reset();
     registerWebTools({ host });
-      expect(CapabilityRegistry.get('web_get_page')?.inputSchema.safeParse({
-      url: 'file:///secret.txt',
-      maxBytes: 1024,
-    }).success).toBe(false);
+    expect(
+      CapabilityRegistry.get('web_get_page')?.inputSchema.safeParse({
+        url: 'file:///secret.txt',
+        maxBytes: 1024,
+      }).success,
+    ).toBe(false);
   });
 });

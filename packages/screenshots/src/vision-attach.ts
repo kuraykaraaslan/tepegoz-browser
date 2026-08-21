@@ -16,8 +16,7 @@ import { describeMarks, type AnnotatedScreenshot } from './vision-marks';
 
 /** The canonical block shapes, structurally identical to `@tepegoz/shared-types`' `CanonContentBlock`. */
 export type VisionBlock =
-  | { type: 'text'; text: string }
-  | { type: 'image'; mediaType: 'image/png'; data: string };
+  { type: 'text'; text: string } | { type: 'image'; mediaType: 'image/png'; data: string };
 
 export interface VisionAttachment {
   blocks: VisionBlock[];
@@ -47,7 +46,10 @@ export function buildVisionAttachment(
     const text =
       `${why} The image was NOT attached: ${verdict.reason ?? 'the inbound image screen refused it'}. ` +
       'You have not seen this page — do not describe it. Try another on-page route, or report the limit.';
-    return { blocks: [{ type: 'text', text: wrapUntrustedContent(text, url) }], imageAttached: false };
+    return {
+      blocks: [{ type: 'text', text: wrapUntrustedContent(text, url) }],
+      imageAttached: false,
+    };
   }
 
   const legend =

@@ -59,7 +59,10 @@ function groupBindings(): Map<string, ScopedBinding> {
   for (const group of TabManager.allGroups()) {
     const raw = group.settings[GROUP_BINDING_KEY];
     if (typeof raw !== 'string' || raw.length === 0) continue;
-    map.set(group.id, raw === DIRECT_SENTINEL ? { kind: 'direct' } : { kind: 'connection', connectionId: raw });
+    map.set(
+      group.id,
+      raw === DIRECT_SENTINEL ? { kind: 'direct' } : { kind: 'connection', connectionId: raw },
+    );
   }
   return map;
 }
@@ -108,10 +111,12 @@ const BindingService = {
    */
   mayEgress(tabId: string): boolean {
     const resolved = BindingService.resolveFor(tabId).resolved;
-    return killSwitchVerdicts(
-      [{ tabId, resolvedConnectionId: resolved.connectionId }],
-      ConnectionPool.statusMap(),
-    )[0]?.allowed === true;
+    return (
+      killSwitchVerdicts(
+        [{ tabId, resolvedConnectionId: resolved.connectionId }],
+        ConnectionPool.statusMap(),
+      )[0]?.allowed === true
+    );
   },
 
   /**
@@ -156,7 +161,11 @@ const BindingService = {
   async bindGroup(groupId: string, binding: ScopedBinding): Promise<void> {
     TabManager.updateGroupSettings(groupId, {
       [GROUP_BINDING_KEY]:
-        binding.kind === 'inherit' ? '' : binding.kind === 'direct' ? DIRECT_SENTINEL : binding.connectionId,
+        binding.kind === 'inherit'
+          ? ''
+          : binding.kind === 'direct'
+            ? DIRECT_SENTINEL
+            : binding.connectionId,
     });
     const states = TabManager.bindingStates().map((t) => ({
       tabId: t.tabId,
@@ -233,7 +242,8 @@ const BindingService = {
    */
   async releaseConnection(connectionId: string): Promise<void> {
     for (const [tabId, binding] of [...tabBindings]) {
-      if (binding.kind === 'connection' && binding.connectionId === connectionId) tabBindings.delete(tabId);
+      if (binding.kind === 'connection' && binding.connectionId === connectionId)
+        tabBindings.delete(tabId);
     }
     for (const [groupId, binding] of groupBindings()) {
       if (binding.kind === 'connection' && binding.connectionId === connectionId) {

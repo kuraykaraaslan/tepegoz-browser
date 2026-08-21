@@ -36,7 +36,8 @@ function persist(origin: string, factor: number): void {
 
 /** The ladder step next to `factor` in `direction` (+1 in, -1 out); clamped at both ends. */
 function step(factor: number, direction: 1 | -1): number {
-  if (direction === 1) return ZOOM_STEPS.find((s) => s > factor + EPSILON) ?? ZOOM_STEPS.at(-1) ?? 1;
+  if (direction === 1)
+    return ZOOM_STEPS.find((s) => s > factor + EPSILON) ?? ZOOM_STEPS.at(-1) ?? 1;
   return [...ZOOM_STEPS].reverse().find((s) => s < factor - EPSILON) ?? ZOOM_STEPS[0];
 }
 

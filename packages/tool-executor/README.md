@@ -7,6 +7,7 @@ element list the perception layer hands to the planner for click/fill targeting.
 no Electron, no DOM access itself — it operates on plain data structures produced by a browser host.
 
 ## Exports
+
 - **`sanitizeText`** / **`sanitizeSegments`** — strip injection-prone characters from untrusted text;
   returns a `SanitizeResult` (segments + whether anything was stripped).
 - **`wrapUntrustedContent`** — wraps sanitized web content with a boundary marker so the model can tell
@@ -21,4 +22,5 @@ no Electron, no DOM access itself — it operates on plain data structures produ
 - **`sanitizeLabel`** — per-element label sanitizer (reuses the content sanitizer rules).
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test` · `pnpm build`

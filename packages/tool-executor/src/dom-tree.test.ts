@@ -18,7 +18,12 @@ describe('parseDomTree', () => {
     );
     expect(interactables).toHaveLength(2);
     expect(paths).toEqual([[[0, 1, 0]], [[0, 1, 1]]]);
-    expect(interactables[0]).toMatchObject({ tag: 'a', role: 'link', name: 'Blog', href: 'blog.html' });
+    expect(interactables[0]).toMatchObject({
+      tag: 'a',
+      role: 'link',
+      name: 'Blog',
+      href: 'blog.html',
+    });
   });
 
   it('carries tag / value / disabled / attributes through', () => {
@@ -59,7 +64,11 @@ describe('parseDomTree', () => {
         },
       ]),
     );
-    expect(interactables[0]).toMatchObject({ inputKind: 'file', accept: 'image/*', multiple: true });
+    expect(interactables[0]).toMatchObject({
+      inputKind: 'file',
+      accept: 'image/*',
+      multiple: true,
+    });
   });
 
   it('does not treat a non-file input as a file picker', () => {
@@ -78,7 +87,9 @@ describe('parseDomTree', () => {
 
   it('drops empty href/value/attributes rather than emitting empties', () => {
     const { interactables } = parseDomTree(
-      result([{ tag: 'div', path: [[0]], role: '', name: 'Click', href: '', value: '', attributes: {} }]),
+      result([
+        { tag: 'div', path: [[0]], role: '', name: 'Click', href: '', value: '', attributes: {} },
+      ]),
     );
     expect(interactables[0]).toEqual({ tag: 'div', role: '', name: 'Click' });
   });
@@ -97,9 +108,13 @@ describe('parseDomTree', () => {
   });
 
   it('fingerprints by identity, not structural position', () => {
-    const a = parseDomTree(result([{ tag: 'a', path: [[0, 1, 0]], role: 'link', name: 'Blog', href: 'b.html' }]));
+    const a = parseDomTree(
+      result([{ tag: 'a', path: [[0, 1, 0]], role: 'link', name: 'Blog', href: 'b.html' }]),
+    );
     // Same element, shifted position (a sibling was inserted before it) → SAME fingerprint.
-    const b = parseDomTree(result([{ tag: 'a', path: [[0, 1, 5]], role: 'link', name: 'Blog', href: 'b.html' }]));
+    const b = parseDomTree(
+      result([{ tag: 'a', path: [[0, 1, 5]], role: 'link', name: 'Blog', href: 'b.html' }]),
+    );
     expect(a.hashes[0]).toBe(b.hashes[0]);
   });
 });
@@ -111,6 +126,11 @@ describe('markNewElements', () => {
 
   it('marks only the fingerprints absent from the previous same-page set', () => {
     const prev = new Set(['home', 'about']);
-    expect(markNewElements(['home', 'blog', 'about', 'contact'], prev)).toEqual([false, true, false, true]);
+    expect(markNewElements(['home', 'blog', 'about', 'contact'], prev)).toEqual([
+      false,
+      true,
+      false,
+      true,
+    ]);
   });
 });

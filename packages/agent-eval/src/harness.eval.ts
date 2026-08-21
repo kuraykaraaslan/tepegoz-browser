@@ -99,7 +99,8 @@ test('agent-eval — drive the real app and score competence', async () => {
     await server.close();
   }
 
-  const judgeAgreement = judgeSamples.length > 0 ? agreementRate(judgeSamples, loadHumanLabels(labelsPath)) : undefined;
+  const judgeAgreement =
+    judgeSamples.length > 0 ? agreementRate(judgeSamples, loadHumanLabels(labelsPath)) : undefined;
   // Read the newest comparable prior BEFORE building this run's report: it feeds both the trend line and
   // the M1 cross-sweep flaky confirmation (flaky in BOTH sweeps → excluded from blocking gates).
   const model = modelLabel();
@@ -127,7 +128,9 @@ test('agent-eval — drive the real app and score competence', async () => {
   // The majority-verdict table + (REPEAT>1) the pooled Wilson-CI line and per-scenario k/N + flaky tags.
   console.log(formatReportTable(report));
   if (skipped.length > 0) {
-    console.log(`skipped ${String(skipped.length)} scenario(s) not runnable in the ${MODE} tier: ${skipped.join(', ')}`);
+    console.log(
+      `skipped ${String(skipped.length)} scenario(s) not runnable in the ${MODE} tier: ${skipped.join(', ')}`,
+    );
   }
   // The prior was read BEFORE writing this run (above), so the trend compares against the last run and
   // not itself; archive under a timestamped, git-ignored name for the before/after history the iterative

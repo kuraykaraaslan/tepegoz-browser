@@ -29,17 +29,17 @@ status note, measurement, or claim was touched. Recover the untouched originals 
 
 ## Contents
 
-| File | What it holds |
-|---|---|
-| [`README-v1.md`](README-v1.md) | The v1 track index + the 30-signal (`s01`…`s30`) status table and the 2026-07-24 invalidation note |
-| [`phase-ai-1-eval-harness.md`](phase-ai-1-eval-harness.md) | The `_electron` eval harness, scenario registry, scorer + judge |
-| [`phase-ai-2-perception-buildtree.md`](phase-ai-2-perception-buildtree.md) | The render-DOM `buildDomTree` port (default-on perception) |
-| [`phase-ai-3-agent-loop.md`](phase-ai-3-agent-loop.md) | Progress brain, planner-as-validator, loop detector, recovery taxonomy |
-| [`phase-ai-4-action-vocabulary.md`](phase-ai-4-action-vocabulary.md) | `scroll_to_text`, `select_option`, fill read-back, `browser_validate_form` |
-| [`phase-ai-5-content-security.md`](phase-ai-5-content-security.md) | Inbound content-guard + `SECURITY_PREAMBLE` |
-| [`phase-ai-6-consolidation.md`](phase-ai-6-consolidation.md) | Never started as a phase; re-scoped to the consolidation-as-DoD rule |
-| [`phase-ai-7-navigation-grounding.md`](phase-ai-7-navigation-grounding.md) | Grounded candidate resolver + SSRF-safe sitemap reader + escape metric |
-| [`phase-ai-8-beyond-the-port.md`](phase-ai-8-beyond-the-port.md) | Network recorder + the screenshot-honesty fix |
+| File                                                                       | What it holds                                                                                      |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| [`README-v1.md`](README-v1.md)                                             | The v1 track index + the 30-signal (`s01`…`s30`) status table and the 2026-07-24 invalidation note |
+| [`phase-ai-1-eval-harness.md`](phase-ai-1-eval-harness.md)                 | The `_electron` eval harness, scenario registry, scorer + judge                                    |
+| [`phase-ai-2-perception-buildtree.md`](phase-ai-2-perception-buildtree.md) | The render-DOM `buildDomTree` port (default-on perception)                                         |
+| [`phase-ai-3-agent-loop.md`](phase-ai-3-agent-loop.md)                     | Progress brain, planner-as-validator, loop detector, recovery taxonomy                             |
+| [`phase-ai-4-action-vocabulary.md`](phase-ai-4-action-vocabulary.md)       | `scroll_to_text`, `select_option`, fill read-back, `browser_validate_form`                         |
+| [`phase-ai-5-content-security.md`](phase-ai-5-content-security.md)         | Inbound content-guard + `SECURITY_PREAMBLE`                                                        |
+| [`phase-ai-6-consolidation.md`](phase-ai-6-consolidation.md)               | Never started as a phase; re-scoped to the consolidation-as-DoD rule                               |
+| [`phase-ai-7-navigation-grounding.md`](phase-ai-7-navigation-grounding.md) | Grounded candidate resolver + SSRF-safe sitemap reader + escape metric                             |
+| [`phase-ai-8-beyond-the-port.md`](phase-ai-8-beyond-the-port.md)           | Network recorder + the screenshot-honesty fix                                                      |
 
 > **These documents are history, not a plan.** Their unchecked boxes are v1 intent, superseded by the
 > v3 phase index in [`../README.md`](../README.md). Read them for the measurement record and the

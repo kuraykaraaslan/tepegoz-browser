@@ -17,19 +17,32 @@ export type FlagOption = {
 };
 
 /** Renders a flag: a bundled custom image, else the ISO country SVG, else a globe fallback. */
-function OptionFlag({ iso2, flagSrc }: { iso2?: string | undefined; flagSrc?: string | undefined }) {
+function OptionFlag({
+  iso2,
+  flagSrc,
+}: {
+  iso2?: string | undefined;
+  flagSrc?: string | undefined;
+}) {
   if (flagSrc) {
-    return <img src={flagSrc} alt="" className="h-auto w-5 shrink-0 rounded-[2px] object-cover shadow-sm" />;
+    return (
+      <img
+        src={flagSrc}
+        alt=""
+        className="h-auto w-5 shrink-0 rounded-[2px] object-cover shadow-sm"
+      />
+    );
   }
   const FlagComp = iso2
     ? (Flags[iso2 as keyof typeof Flags] as
-        | React.ComponentType<React.SVGProps<SVGSVGElement>>
-        | undefined)
+        React.ComponentType<React.SVGProps<SVGSVGElement>> | undefined)
     : undefined;
   if (FlagComp) {
     return <FlagComp className="h-auto w-5 shrink-0 rounded-[2px] shadow-sm" />;
   }
-  return <FontAwesomeIcon icon={faGlobe} className="w-5 shrink-0 text-text-secondary" aria-hidden />;
+  return (
+    <FontAwesomeIcon icon={faGlobe} className="w-5 shrink-0 text-text-secondary" aria-hidden />
+  );
 }
 
 /**
@@ -134,7 +147,8 @@ export function FlagSelect({
 
   // Keep the highlighted option scrolled into view.
   useEffect(() => {
-    if (open) listRef.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'nearest' });
+    if (open)
+      listRef.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'nearest' });
   }, [active, open]);
 
   function onKeyDown(e: React.KeyboardEvent) {
@@ -165,7 +179,13 @@ export function FlagSelect({
   const panel: ReactNode = open && rect && (
     <div
       id={portalId}
-      style={{ position: 'fixed', top: rect.bottom + 4, left: rect.left, width: rect.width, zIndex: 9999 }}
+      style={{
+        position: 'fixed',
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9999,
+      }}
       className="rounded-md border border-border bg-surface-raised shadow-lg"
       onKeyDown={onKeyDown}
     >
@@ -182,12 +202,7 @@ export function FlagSelect({
           />
         </div>
       )}
-      <ul
-        ref={listRef}
-        role="listbox"
-        aria-label={label}
-        className="max-h-60 overflow-y-auto py-1"
-      >
+      <ul ref={listRef} role="listbox" aria-label={label} className="max-h-60 overflow-y-auto py-1">
         {filtered.length === 0 && (
           <li className="px-3 py-2 text-sm text-text-secondary">{noResultsLabel}</li>
         )}
@@ -205,19 +220,23 @@ export function FlagSelect({
                 onClick={() => commit(opt.value)}
                 className={cn(
                   'flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors',
-                  isSelected
-                    ? 'bg-primary-subtle font-medium text-primary'
-                    : 'text-text-primary',
+                  isSelected ? 'bg-primary-subtle font-medium text-primary' : 'text-text-primary',
                   isActive && !isSelected && 'bg-surface-overlay',
                 )}
               >
                 <OptionFlag iso2={opt.iso2} flagSrc={opt.flagSrc} />
                 <span className="flex-1 truncate">{opt.label}</span>
                 {(opt.code ?? opt.iso2) && (
-                  <span className="shrink-0 text-xs text-text-secondary">{opt.code ?? opt.iso2}</span>
+                  <span className="shrink-0 text-xs text-text-secondary">
+                    {opt.code ?? opt.iso2}
+                  </span>
                 )}
                 {isSelected && (
-                  <FontAwesomeIcon icon={faCheck} className="h-3 w-3 shrink-0 text-primary" aria-hidden />
+                  <FontAwesomeIcon
+                    icon={faCheck}
+                    className="h-3 w-3 shrink-0 text-primary"
+                    aria-hidden
+                  />
                 )}
               </button>
             </li>
@@ -256,7 +275,11 @@ export function FlagSelect({
               <span className="truncate text-text-disabled">{placeholder}</span>
             )}
           </span>
-          <FontAwesomeIcon icon={faChevronDown} className="h-3 w-3 shrink-0 text-text-disabled" aria-hidden />
+          <FontAwesomeIcon
+            icon={faChevronDown}
+            className="h-3 w-3 shrink-0 text-text-disabled"
+            aria-hidden
+          />
         </Button>
       </div>
       {typeof document !== 'undefined' && createPortal(panel, document.body)}

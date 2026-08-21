@@ -91,7 +91,11 @@ const BACKOFF_JITTER_MS = 200;
  *  (`ECONNREFUSED`). Nothing was processed, so a retry is safe for ANY method. Deliberately EXCLUDES
  *  ambiguous post-send failures (`ECONNRESET`/`ETIMEDOUT`/`ECONNABORTED`), which may have reached the
  *  server and could double-execute a non-idempotent request. */
-const PRESEND_RETRY_CODES: ReadonlySet<string> = new Set(['ENOTFOUND', 'EAI_AGAIN', 'ECONNREFUSED']);
+const PRESEND_RETRY_CODES: ReadonlySet<string> = new Set([
+  'ENOTFOUND',
+  'EAI_AGAIN',
+  'ECONNREFUSED',
+]);
 
 /**
  * The wait (ms) a 429 asks for: prefer the `Retry-After` header (delta-seconds or an HTTP-date), then
@@ -99,8 +103,13 @@ const PRESEND_RETRY_CODES: ReadonlySet<string> = new Set(['ENOTFOUND', 'EAI_AGAI
  * Returns null when neither is present, so the caller falls back to exponential backoff. Pure — unit
  * tested; `now` is injected so the HTTP-date branch is deterministic in tests.
  */
-export function retryAfterMs(headers: unknown, message: string | undefined, now = Date.now()): number | null {
-  const bag = typeof headers === 'object' && headers !== null ? (headers as Record<string, unknown>) : {};
+export function retryAfterMs(
+  headers: unknown,
+  message: string | undefined,
+  now = Date.now(),
+): number | null {
+  const bag =
+    typeof headers === 'object' && headers !== null ? (headers as Record<string, unknown>) : {};
   const rawHeader = bag['retry-after'] ?? bag['Retry-After'];
   if (typeof rawHeader === 'string' && rawHeader.length > 0) {
     const secs = Number(rawHeader);
@@ -121,7 +130,9 @@ export function retryAfterMs(headers: unknown, message: string | undefined, now 
  *  both capped at {@link MAX_BACKOFF_MS}, plus jitter. Pure except for the jitter draw. */
 export function backoffMs(attempt: number, hintMs: number | null): number {
   const base = hintMs ?? 500 * 2 ** attempt;
-  return Math.min(MAX_BACKOFF_MS, Math.max(0, base)) + Math.floor(Math.random() * BACKOFF_JITTER_MS);
+  return (
+    Math.min(MAX_BACKOFF_MS, Math.max(0, base)) + Math.floor(Math.random() * BACKOFF_JITTER_MS)
+  );
 }
 
 /** A cancel-aware delay: resolves after `ms`, or rejects (RequestCanceled) the instant `signal` aborts,
@@ -185,7 +196,9 @@ export function createHttpClient(options: HttpClientOptions = {}): AxiosInstance
         const signal = cfg.signal as AbortSignal | undefined;
         const is429 = error.response?.status === 429;
         const isPreSend =
-          error.response === undefined && error.code !== undefined && PRESEND_RETRY_CODES.has(error.code);
+          error.response === undefined &&
+          error.code !== undefined &&
+          PRESEND_RETRY_CODES.has(error.code);
         const attempt = cfg.retryCount ?? 0;
         if ((is429 || isPreSend) && attempt < MAX_HTTP_RETRIES && signal?.aborted !== true) {
           cfg.retryCount = attempt + 1;
@@ -193,10 +206,13 @@ export function createHttpClient(options: HttpClientOptions = {}): AxiosInstance
             ? retryAfterMs(error.response?.headers, extractProviderMessage(error.response?.data))
             : null;
           const wait = backoffMs(attempt, hint);
-          Logger.info(`http retry: ${is429 ? '429 rate-limited' : (error.code ?? 'network')} — backing off`, {
-            attempt: attempt + 1,
-            waitMs: wait,
-          });
+          Logger.info(
+            `http retry: ${is429 ? '429 rate-limited' : (error.code ?? 'network')} — backing off`,
+            {
+              attempt: attempt + 1,
+              waitMs: wait,
+            },
+          );
           await delay(wait, signal);
           return instance(cfg);
         }

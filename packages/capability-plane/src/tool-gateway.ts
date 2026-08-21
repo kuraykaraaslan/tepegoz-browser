@@ -71,7 +71,11 @@ export default class ToolGateway {
     ToolGateway.auditHandler = null;
   }
 
-  static async invoke(toolName: string, rawArgs: unknown, ctx: InvokeContext = {}): Promise<unknown> {
+  static async invoke(
+    toolName: string,
+    rawArgs: unknown,
+    ctx: InvokeContext = {},
+  ): Promise<unknown> {
     const tool = CapabilityRegistry.get(toolName);
     if (tool === undefined) {
       return toolError('NOT_FOUND', `Unknown tool: ${toolName}`, false);
@@ -86,7 +90,12 @@ export default class ToolGateway {
 
     const parsed = tool.inputSchema.safeParse(rawArgs);
     if (!parsed.success) {
-      return toolError('VALIDATION_ERROR', `Invalid arguments for ${toolName}`, false, parsed.error.issues);
+      return toolError(
+        'VALIDATION_ERROR',
+        `Invalid arguments for ${toolName}`,
+        false,
+        parsed.error.issues,
+      );
     }
 
     const policy = PolicyKernel.evaluate({
@@ -139,7 +148,8 @@ export default class ToolGateway {
       return toolError('FORBIDDEN', `Blocked by policy: ${policy.reason}`, false);
     }
     if (policy.decision === 'ask') {
-      const confirmHandler = scoped !== undefined ? scoped.confirmHandler : ToolGateway.confirmHandler;
+      const confirmHandler =
+        scoped !== undefined ? scoped.confirmHandler : ToolGateway.confirmHandler;
       const approved =
         confirmHandler !== null &&
         (await confirmHandler({

@@ -27,7 +27,11 @@ export function SearchStartupSection({
 
   function addEngine(): void {
     if (!canAdd) return;
-    const engine = { id: `custom-${crypto.randomUUID()}`, name: name.trim(), searchUrlTemplate: url.trim() };
+    const engine = {
+      id: `custom-${crypto.randomUUID()}`,
+      name: name.trim(),
+      searchUrlTemplate: url.trim(),
+    };
     setPref({ customSearchEngines: [...prefs.customSearchEngines, engine] });
     setName('');
     setUrl('');
@@ -97,7 +101,9 @@ export function SearchStartupSection({
         )}
 
         <div className="mt-4 space-y-2">
-          <span className="block text-sm font-medium text-text-primary">{s.searchEngineCustom}</span>
+          <span className="block text-sm font-medium text-text-primary">
+            {s.searchEngineCustom}
+          </span>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
             <Input
               id="custom-engine-name"

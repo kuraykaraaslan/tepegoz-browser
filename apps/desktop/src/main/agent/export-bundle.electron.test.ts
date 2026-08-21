@@ -113,7 +113,10 @@ describe('collectAgentExportBundleFiles', () => {
     const png = files.find((f) => f.relPath === 'tabs/tab-1.png');
     expect(png?.encoding).toBe('base64');
     expect(png?.content).toBe('QUJD');
-    const tabs = manifestOf(files).tabs as { dom: { status: string }; screenshot: { status: string } }[];
+    const tabs = manifestOf(files).tabs as {
+      dom: { status: string };
+      screenshot: { status: string };
+    }[];
     expect(tabs[0]?.dom.status).toBe('ok');
     expect(tabs[0]?.screenshot.status).toBe('ok');
   });

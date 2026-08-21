@@ -55,7 +55,9 @@ export function McpConnectionsSection({
             </span>
           </div>
           <Badge
-            variant={srv.state === 'ready' ? 'success' : srv.state === 'error' ? 'error' : 'neutral'}
+            variant={
+              srv.state === 'ready' ? 'success' : srv.state === 'error' ? 'error' : 'neutral'
+            }
             dot
           >
             {labels.stateLabel[srv.state]}

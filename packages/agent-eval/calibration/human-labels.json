@@ -1,6 +1,4 @@
 {
   "_comment": "Small human-labelled calibration sample: the expected human verdict for a CORRECT run of each judged scenario. The live driver compares the LLM-judge's verdict against these and records the agreement rate in the report, so a drifting judge is visible rather than silently trusted. Grow this as judged scenarios are added.",
-  "labels": [
-    { "id": "compare_plans_judged", "pass": true }
-  ]
+  "labels": [{ "id": "compare_plans_judged", "pass": true }]
 }

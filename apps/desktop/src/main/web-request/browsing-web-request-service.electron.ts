@@ -149,7 +149,10 @@ const BrowsingWebRequestService = {
    * Own the Electron webRequest listener set for ONE browsing session. Called once per browsing session
    * (via `BrowsingSessions.register`), not once per process — see {@link attachedTo}.
    */
-  attach(webRequest: WebRequestLike, opts?: { stampResponseHeaders?: Record<string, string> }): void {
+  attach(
+    webRequest: WebRequestLike,
+    opts?: { stampResponseHeaders?: Record<string, string> },
+  ): void {
     if (attachedTo.has(webRequest)) return;
     attachedTo.add(webRequest);
     const stamp = opts?.stampResponseHeaders;
@@ -163,7 +166,8 @@ const BrowsingWebRequestService = {
 
     webRequest.onHeadersReceived((details, callback) => {
       void runHeadersReceived(details).then(
-        (response) => callback(stamp === undefined ? response : withStamp(details, response, stamp)),
+        (response) =>
+          callback(stamp === undefined ? response : withStamp(details, response, stamp)),
         (err: unknown) => {
           Logger.warn('webRequest onHeadersReceived pipeline failed open', { err: String(err) });
           // Even on a pipeline failure the stamp is applied: it is a per-SESSION privacy header, not a

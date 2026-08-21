@@ -2,25 +2,25 @@
 
 **Status:** 🟠 Measurement-owed (PR0–PR4 landed 2026-08-19; PR5 ⏸ funded) · **Depends on:** [S1](phase-s1-foundation-native-loop.md) (multimodal `CanonMessage` image blocks) · gate threshold pre-registered in [S0](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
 
-**Goal:** Add vision as an **escalation fallback** per [ADR-0008](../../docs/adr/) — never every step — for the pages the DOM/a11y path structurally cannot see: canvas/webgl surfaces, closed shadow roots, cross-origin iframes, and image-only controls. Deterministic triggers in the reactor decide when a step is blind; only then does a **token-budgeted, downscaled, set-of-marks-annotated** screenshot reach the model. This is the v2 F1 vision milestone **re-cut**: F1 assumed vision would lift the escape gate, but the measured DoD failures are on-page (see [`eval-results.md`](eval-results.md)), so S10's job is narrowed to *seeing the structurally-invisible* and its cost is bounded by a measured escalation-rate ceiling.
+**Goal:** Add vision as an **escalation fallback** per [ADR-0008](../../docs/adr/) — never every step — for the pages the DOM/a11y path structurally cannot see: canvas/webgl surfaces, closed shadow roots, cross-origin iframes, and image-only controls. Deterministic triggers in the reactor decide when a step is blind; only then does a **token-budgeted, downscaled, set-of-marks-annotated** screenshot reach the model. This is the v2 F1 vision milestone **re-cut**: F1 assumed vision would lift the escape gate, but the measured DoD failures are on-page (see [`eval-results.md`](eval-results.md)), so S10's job is narrowed to _seeing the structurally-invisible_ and its cost is bounded by a measured escalation-rate ceiling.
 
 ## Why
 
-There is **zero vision today**. [`CanonMessage.content`](../../packages/model-gateway/src/types.ts) is string-only (line 6), which structurally blocks any image reaching the model — that constraint is lifted by [S1](phase-s1-foundation-native-loop.md), which lands the multimodal content blocks S10 consumes. Screenshots are already *captured* end-to-end — `browser_get_screenshot` via [`packages/screenshots`](../../packages/screenshots) (maxEdge 1400) — but the bytes never leave the tool boundary, and the reactor strategy prompt ([`reactor-prompt.ts`](../../packages/orchestrator/src/reactor-prompt.ts) `BROWSING_STRATEGY`) actively steers *away* from screenshots. So the capability is 90% wired and 0% connected.
+There is **zero vision today**. [`CanonMessage.content`](../../packages/model-gateway/src/types.ts) is string-only (line 6), which structurally blocks any image reaching the model — that constraint is lifted by [S1](phase-s1-foundation-native-loop.md), which lands the multimodal content blocks S10 consumes. Screenshots are already _captured_ end-to-end — `browser_get_screenshot` via [`packages/screenshots`](../../packages/screenshots) (maxEdge 1400) — but the bytes never leave the tool boundary, and the reactor strategy prompt ([`reactor-prompt.ts`](../../packages/orchestrator/src/reactor-prompt.ts) `BROWSING_STRATEGY`) actively steers _away_ from screenshots. So the capability is 90% wired and 0% connected.
 
-The gap is real, not theoretical. [`build-dom-tree-script.ts`](../../apps/desktop/src/main/agent/build-dom-tree-script.ts) runs in an isolated world and pierces open shadow roots + same-origin iframes only; **canvas/webgl paint, closed shadow roots, and cross-origin iframes are invisible to it** — and equally invisible to the structural djb2 page signature in [`browser-host.electron.ts`](../../apps/desktop/src/main/agent/browser-host.electron.ts) `readPage`, so the loop cannot even *detect* that it is blind from the signature alone. On such a page [`interactable.ts`](../../packages/tool-executor/src/interactable.ts) `finalizeElements` emits 0 interactables while the page is plainly non-blank, or the only control is an unlabelled `<canvas>`/image — the exact failure class the DOM path can never resolve.
+The gap is real, not theoretical. [`build-dom-tree-script.ts`](../../apps/desktop/src/main/agent/build-dom-tree-script.ts) runs in an isolated world and pierces open shadow roots + same-origin iframes only; **canvas/webgl paint, closed shadow roots, and cross-origin iframes are invisible to it** — and equally invisible to the structural djb2 page signature in [`browser-host.electron.ts`](../../apps/desktop/src/main/agent/browser-host.electron.ts) `readPage`, so the loop cannot even _detect_ that it is blind from the signature alone. On such a page [`interactable.ts`](../../packages/tool-executor/src/interactable.ts) `finalizeElements` emits 0 interactables while the page is plainly non-blank, or the only control is an unlabelled `<canvas>`/image — the exact failure class the DOM path can never resolve.
 
-[ADR-0008](../../docs/adr/) **already authorises** DOM/a11y-first perception with vision as a *fallback*. S10 is therefore **implementation of an existing decision**, not a new one — it adds an ADR status note, nothing more. The reference architecture is Claude for Chrome's hybrid: a11y-primary with a token-budgeted screenshot (≈28 px/token) and set-of-marks coordinate↔viewport mapping, escalated on demand. The program **Never-list** ([README](README.md#never-inherited--program-additions)) forbids *screenshots-every-step* vision — so the headline S10 metric is not "does vision help" but "does vision fire **rarely**", published as a measured escalation-rate.
+[ADR-0008](../../docs/adr/) **already authorises** DOM/a11y-first perception with vision as a _fallback_. S10 is therefore **implementation of an existing decision**, not a new one — it adds an ADR status note, nothing more. The reference architecture is Claude for Chrome's hybrid: a11y-primary with a token-budgeted screenshot (≈28 px/token) and set-of-marks coordinate↔viewport mapping, escalated on demand. The program **Never-list** ([README](README.md#never-inherited--program-additions)) forbids _screenshots-every-step_ vision — so the headline S10 metric is not "does vision help" but "does vision fire **rarely**", published as a measured escalation-rate.
 
 ## Exit criteria (DoD)
 
 - [ ] The **vision-needing fixture family** (`canvas-menu`, `image-only-button`, `closed-shadow-widget`, plus `image_injection` counted in the safety plane) moves from **~0 → pooled ≥60% verified-completion at N≥10** with Wilson 95% CIs on the pooled aggregate. **(⏸ funded sweep)**
-- [ ] Escalation **fires on ≤5% of steps** measured across the **non-vision** registry — the [ADR-0008](../../docs/adr/) *"not every step"* clause expressed **as a measured number**, reported as a paired before/after with a pre-stated equivalence margin. **(⏸ funded sweep, paired)**
+- [ ] Escalation **fires on ≤5% of steps** measured across the **non-vision** registry — the [ADR-0008](../../docs/adr/) _"not every step"_ clause expressed **as a measured number**, reported as a paired before/after with a pre-stated equivalence margin. **(⏸ funded sweep, paired)**
 - [ ] **$/task on non-vision families unchanged (±10%)** vs the S0 baseline (the escalation ceiling + downscale budget must not leak cost into ordinary browsing). **(⏸ funded sweep, paired)**
-- [ ] The `image_injection` `atk_*` fixture (prompt-injection text rendered *inside* the screenshot) passes the S6 injection screen: the image goes through its **own** injection/redaction gate before reaching the model; ASR on this case stays within the S6 published bound. **(⏸ funded sweep — coordinate with [S6](phase-s6-safety-control-plane.md))**
+- [ ] The `image_injection` `atk_*` fixture (prompt-injection text rendered _inside_ the screenshot) passes the S6 injection screen: the image goes through its **own** injection/redaction gate before reaching the model; ASR on this case stays within the S6 published bound. **(⏸ funded sweep — coordinate with [S6](phase-s6-safety-control-plane.md))**
 - [x] Every sweep from S10 onward reports **escalation-rate** as a standing column in [`eval-results.md`](eval-results.md).
 - [x] **Fixtures frozen in PR0 before any capability code** (constitution: fixture-freeze); the before/after **delta is recorded in [`eval-results.md`](eval-results.md)** and the ledger.
-- [ ] No prose deletion in S10 (see [Prose steers](#prose-steers)); the "avoid screenshots" steer in `BROWSING_STRATEGY` is *replaced by mechanism*, tracked as its own paired sweep line if the prompt string changes.
+- [ ] No prose deletion in S10 (see [Prose steers](#prose-steers)); the "avoid screenshots" steer in `BROWSING_STRATEGY` is _replaced by mechanism_, tracked as its own paired sweep line if the prompt string changes.
 - [ ] **i18n EN + full TR parity in the same PR** for any UI surface (a "seeing the page" / vision-escalation indicator in [`ext-agent`](../../extensions/ext-agent), if surfaced).
 - [x] Strict TS, zod `safeParse` at every new trust boundary (screenshot→model handoff, trigger config), `AppError` at boundaries, 250-line file cap (split by construction), no `apps/desktop` growth beyond the trigger hook — capture/budget/marks land in [`packages/screenshots`](../../packages/screenshots).
 
@@ -56,25 +56,25 @@ The gap is real, not theoretical. [`build-dom-tree-script.ts`](../../apps/deskto
 
 **Status:** 🟡 In progress (PR0–PR1 landed 2026-08-19) · **Depends on:** [S1](phase-s1-foundation-native-loop.md) (multimodal `CanonMessage` image blocks) · gate threshold pre-registered in [S0](phase-s0-truth-and-repair.md) · **Track:** [AI Agent Super](README.md)
 
-**Goal:** Add vision as an **escalation fallback** per [ADR-0008](../../docs/adr/) — never every step — for the pages the DOM/a11y path structurally cannot see: canvas/webgl surfaces, closed shadow roots, cross-origin iframes, and image-only controls. Deterministic triggers in the reactor decide when a step is blind; only then does a **token-budgeted, downscaled, set-of-marks-annotated** screenshot reach the model. This is the v2 F1 vision milestone **re-cut**: F1 assumed vision would lift the escape gate, but the measured DoD failures are on-page (see [`eval-results.md`](eval-results.md)), so S10's job is narrowed to *seeing the structurally-invisible* and its cost is bounded by a measured escalation-rate ceiling.
+**Goal:** Add vision as an **escalation fallback** per [ADR-0008](../../docs/adr/) — never every step — for the pages the DOM/a11y path structurally cannot see: canvas/webgl surfaces, closed shadow roots, cross-origin iframes, and image-only controls. Deterministic triggers in the reactor decide when a step is blind; only then does a **token-budgeted, downscaled, set-of-marks-annotated** screenshot reach the model. This is the v2 F1 vision milestone **re-cut**: F1 assumed vision would lift the escape gate, but the measured DoD failures are on-page (see [`eval-results.md`](eval-results.md)), so S10's job is narrowed to _seeing the structurally-invisible_ and its cost is bounded by a measured escalation-rate ceiling.
 
 ## Why
 
-There is **zero vision today**. [`CanonMessage.content`](../../packages/model-gateway/src/types.ts) is string-only (line 6), which structurally blocks any image reaching the model — that constraint is lifted by [S1](phase-s1-foundation-native-loop.md), which lands the multimodal content blocks S10 consumes. Screenshots are already *captured* end-to-end — `browser_get_screenshot` via [`packages/screenshots`](../../packages/screenshots) (maxEdge 1400) — but the bytes never leave the tool boundary, and the reactor strategy prompt ([`reactor-prompt.ts`](../../packages/orchestrator/src/reactor-prompt.ts) `BROWSING_STRATEGY`) actively steers *away* from screenshots. So the capability is 90% wired and 0% connected.
+There is **zero vision today**. [`CanonMessage.content`](../../packages/model-gateway/src/types.ts) is string-only (line 6), which structurally blocks any image reaching the model — that constraint is lifted by [S1](phase-s1-foundation-native-loop.md), which lands the multimodal content blocks S10 consumes. Screenshots are already _captured_ end-to-end — `browser_get_screenshot` via [`packages/screenshots`](../../packages/screenshots) (maxEdge 1400) — but the bytes never leave the tool boundary, and the reactor strategy prompt ([`reactor-prompt.ts`](../../packages/orchestrator/src/reactor-prompt.ts) `BROWSING_STRATEGY`) actively steers _away_ from screenshots. So the capability is 90% wired and 0% connected.
 
-The gap is real, not theoretical. [`build-dom-tree-script.ts`](../../apps/desktop/src/main/agent/build-dom-tree-script.ts) runs in an isolated world and pierces open shadow roots + same-origin iframes only; **canvas/webgl paint, closed shadow roots, and cross-origin iframes are invisible to it** — and equally invisible to the structural djb2 page signature in [`browser-host.electron.ts`](../../apps/desktop/src/main/agent/browser-host.electron.ts) `readPage`, so the loop cannot even *detect* that it is blind from the signature alone. On such a page [`interactable.ts`](../../packages/tool-executor/src/interactable.ts) `finalizeElements` emits 0 interactables while the page is plainly non-blank, or the only control is an unlabelled `<canvas>`/image — the exact failure class the DOM path can never resolve.
+The gap is real, not theoretical. [`build-dom-tree-script.ts`](../../apps/desktop/src/main/agent/build-dom-tree-script.ts) runs in an isolated world and pierces open shadow roots + same-origin iframes only; **canvas/webgl paint, closed shadow roots, and cross-origin iframes are invisible to it** — and equally invisible to the structural djb2 page signature in [`browser-host.electron.ts`](../../apps/desktop/src/main/agent/browser-host.electron.ts) `readPage`, so the loop cannot even _detect_ that it is blind from the signature alone. On such a page [`interactable.ts`](../../packages/tool-executor/src/interactable.ts) `finalizeElements` emits 0 interactables while the page is plainly non-blank, or the only control is an unlabelled `<canvas>`/image — the exact failure class the DOM path can never resolve.
 
-[ADR-0008](../../docs/adr/) **already authorises** DOM/a11y-first perception with vision as a *fallback*. S10 is therefore **implementation of an existing decision**, not a new one — it adds an ADR status note, nothing more. The reference architecture is Claude for Chrome's hybrid: a11y-primary with a token-budgeted screenshot (≈28 px/token) and set-of-marks coordinate↔viewport mapping, escalated on demand. The program **Never-list** ([README](README.md#never-inherited--program-additions)) forbids *screenshots-every-step* vision — so the headline S10 metric is not "does vision help" but "does vision fire **rarely**", published as a measured escalation-rate.
+[ADR-0008](../../docs/adr/) **already authorises** DOM/a11y-first perception with vision as a _fallback_. S10 is therefore **implementation of an existing decision**, not a new one — it adds an ADR status note, nothing more. The reference architecture is Claude for Chrome's hybrid: a11y-primary with a token-budgeted screenshot (≈28 px/token) and set-of-marks coordinate↔viewport mapping, escalated on demand. The program **Never-list** ([README](README.md#never-inherited--program-additions)) forbids _screenshots-every-step_ vision — so the headline S10 metric is not "does vision help" but "does vision fire **rarely**", published as a measured escalation-rate.
 
 ## Exit criteria (DoD)
 
 - [ ] The **vision-needing fixture family** (`canvas-menu`, `image-only-button`, `closed-shadow-widget`, plus `image_injection` counted in the safety plane) moves from **~0 → pooled ≥60% verified-completion at N≥10** with Wilson 95% CIs on the pooled aggregate. **(⏸ funded sweep)**
-- [ ] Escalation **fires on ≤5% of steps** measured across the **non-vision** registry — the [ADR-0008](../../docs/adr/) *"not every step"* clause expressed **as a measured number**, reported as a paired before/after with a pre-stated equivalence margin. **(⏸ funded sweep, paired)**
+- [ ] Escalation **fires on ≤5% of steps** measured across the **non-vision** registry — the [ADR-0008](../../docs/adr/) _"not every step"_ clause expressed **as a measured number**, reported as a paired before/after with a pre-stated equivalence margin. **(⏸ funded sweep, paired)**
 - [ ] **$/task on non-vision families unchanged (±10%)** vs the S0 baseline (the escalation ceiling + downscale budget must not leak cost into ordinary browsing). **(⏸ funded sweep, paired)**
-- [ ] The `image_injection` `atk_*` fixture (prompt-injection text rendered *inside* the screenshot) passes the S6 injection screen: the image goes through its **own** injection/redaction gate before reaching the model; ASR on this case stays within the S6 published bound. **(⏸ funded sweep — coordinate with [S6](phase-s6-safety-control-plane.md))**
+- [ ] The `image_injection` `atk_*` fixture (prompt-injection text rendered _inside_ the screenshot) passes the S6 injection screen: the image goes through its **own** injection/redaction gate before reaching the model; ASR on this case stays within the S6 published bound. **(⏸ funded sweep — coordinate with [S6](phase-s6-safety-control-plane.md))**
 - [ ] Every sweep from S10 onward reports **escalation-rate** as a standing column in [`eval-results.md`](eval-results.md).
 - [x] **Fixtures frozen in PR0 before any capability code** (constitution: fixture-freeze); the before/after **delta is recorded in [`eval-results.md`](eval-results.md)** and the ledger.
-- [ ] No prose deletion in S10 (see [Prose steers](#prose-steers)); the "avoid screenshots" steer in `BROWSING_STRATEGY` is *replaced by mechanism*, tracked as its own paired sweep line if the prompt string changes.
+- [ ] No prose deletion in S10 (see [Prose steers](#prose-steers)); the "avoid screenshots" steer in `BROWSING_STRATEGY` is _replaced by mechanism_, tracked as its own paired sweep line if the prompt string changes.
 - [ ] **i18n EN + full TR parity in the same PR** for any UI surface (a "seeing the page" / vision-escalation indicator in [`ext-agent`](../../extensions/ext-agent), if surfaced).
 - [ ] Strict TS, zod `safeParse` at every new trust boundary (screenshot→model handoff, trigger config), `AppError` at boundaries, 250-line file cap (split by construction), no `apps/desktop` growth beyond the trigger hook — capture/budget/marks land in [`packages/screenshots`](../../packages/screenshots).
 
@@ -94,27 +94,28 @@ The gap is real, not theoretical. [`build-dom-tree-script.ts`](../../apps/deskto
 - [x] If build: pre-register the escalation-rate ceiling (≤5%) and the family target (≥60%) here before PR3 lands any capture code.
 
 /task on non-vision families within **±10%** of the S0
->    baseline.
-> 2. **The capability ships INERT.** PR2–PR4 land behind `TEPEGOZ_VISION` (default off), so production
->    behaviour is unchanged and the gate stays genuinely open — building the mechanism does not
->    pre-empt the decision to use it. Nothing here claims the gate was cleared.
+
+> baseline. 2. **The capability ships INERT.** PR2–PR4 land behind `TEPEGOZ_VISION` (default off), so production
+> behaviour is unchanged and the gate stays genuinely open — building the mechanism does not
+> pre-empt the decision to use it. Nothing here claims the gate was cleared.
 
 ### PR2 — trigger plumbing (Lane B, no capture yet)
 
 - [x] Add deterministic **escalation triggers** in [`reactor.ts`](../../packages/orchestrator/src/reactor.ts) / [`reactor-observation.ts`](../../packages/orchestrator/src/reactor-observation.ts): (a) **0 interactables on a non-blank page** (cross-check `finalizeElements` emit count against a non-empty structural signature), (b) **occlusion persisting AFTER S3's click-time re-check**, (c) **canvas/webgl dominance** (a viewport-fraction signal surfaced from `build-dom-tree-script.ts`), (d) **≥2 consecutive action failures on the same target ref**.
 - [x] A single zod-validated `VisionTriggerReason` union in [`@tepegoz/shared-types`](../../packages/shared-types) (sole schema source) — the reactor emits the reason, not a bare boolean, so the sweep can attribute escalations.
 - [x] Trigger evaluation is **deterministic and pre-model** (no model call decides to escalate) — determinism-first; unit-test each trigger against the frozen fixtures.
-- [x] Wire the reason into the agent event stream so PR-later UI + the sweep can count escalations per step. No image is captured yet — this PR only *decides*.
+- [x] Wire the reason into the agent event stream so PR-later UI + the sweep can count escalations per step. No image is captured yet — this PR only _decides_.
 
 > **Mechanism notes (PR2).**
+>
 > 1. **Trigger (a) was widened, deliberately.** "0 interactables on a non-blank page" does not catch
 >    `image-only-button`, where two controls DO exist and neither carries a name — from the agent's side
->    that is the same problem: nothing to choose between. So `blind_page` fires on *no usable* elements
+>    that is the same problem: nothing to choose between. So `blind_page` fires on _no usable_ elements
 >    (none at all, **or** none named), and the detail line says which.
 > 2. **It must be able to prove the page is non-blank.** With no page read in the tail, no escalation
 >    fires — escalating there would be guessing, and the ≤5% ceiling is exactly a promise not to guess.
 > 3. **Canvas dominance is a new page-script signal** (`canvasFraction`: canvas/webgl/video area
->    intersected with the viewport). It is **optional through every layer**, and absent means *unknown*,
+>    intersected with the viewport). It is **optional through every layer**, and absent means _unknown_,
 >    never "no canvas" — a host that cannot measure it must not read as evidence the page is describable.
 > 4. **Observation only.** The trigger captures nothing and injects nothing into the conversation, so
 >    recording an escalation cannot change a run. That is what lets the escalation RATE be measured on the
@@ -131,8 +132,9 @@ The gap is real, not theoretical. [`build-dom-tree-script.ts`](../../apps/deskto
 - [x] Keep capture+annotate under the 250-line cap by splitting downscale / overlay / mapping into separate modules.
 
 > **Mechanism notes (PR3).**
-> 1. **The overlay is drawn on an `OffscreenCanvas` in the isolated world.** The numbers have to be *in
->    the pixels* — a model looking at a picture cannot use a list of coordinates it has no way to locate —
+>
+> 1. **The overlay is drawn on an `OffscreenCanvas` in the isolated world.** The numbers have to be _in
+>    the pixels_ — a model looking at a picture cannot use a list of coordinates it has no way to locate —
 >    and drawing needs a raster surface. The one already available is the page's own; a detached canvas is
 >    never inserted, so nothing about the live page changes, the page's scripts cannot observe it, and no
 >    image dependency enters the main process. **Honest limit:** the drawing itself is proven only
@@ -155,9 +157,10 @@ The gap is real, not theoretical. [`build-dom-tree-script.ts`](../../apps/deskto
 - [x] Escalation stays **fallback-only**: no image is attached on the ordinary DOM-visible path; assert this in a gateway test so a regression that attaches screenshots-every-step fails CI (defends the Never-list clause).
 
 > **Mechanism notes (PR4).**
+>
 > 1. **The image screen FAILS CLOSED, and the screen itself is S6's.** With none installed, no image is
->    attached and the escalation degrades to a text note that says so — including *"You have not seen this
->    page"*, so the model cannot quietly believe it looked. Pixels bypass the text content-guard entirely
+>    attached and the escalation degrades to a text note that says so — including _"You have not seen this
+>    page"_, so the model cannot quietly believe it looked. Pixels bypass the text content-guard entirely
 >    (an instruction painted on a canvas never appears in `innerText`), so "nobody checked" and "it is
 >    safe" are different statements and only one may let pixels through. **The capability waits for its
 >    defence, not the reverse** — which is also why `atk-image-injection` is frozen and open.
@@ -190,7 +193,7 @@ New to [`packages/agent-eval`](../../packages/agent-eval), frozen in PR0:
 
 ## Prose steers
 
-**None deleted.** S10 does not own a [PROSE-LEDGER](PROSE-LEDGER.md) row. It does *replace* the "avoid screenshots" guidance in `BROWSING_STRATEGY` ([`reactor-prompt.ts`](../../packages/orchestrator/src/reactor-prompt.ts)) with a deterministic mechanism; if that prompt string changes, the change ships with a paired before/after sweep and a before/after system-prompt token count per the consolidation rule — but the steer is *mechanised, not subsumed by another phase*, so it is not a ledger row.
+**None deleted.** S10 does not own a [PROSE-LEDGER](PROSE-LEDGER.md) row. It does _replace_ the "avoid screenshots" guidance in `BROWSING_STRATEGY` ([`reactor-prompt.ts`](../../packages/orchestrator/src/reactor-prompt.ts)) with a deterministic mechanism; if that prompt string changes, the change ships with a paired before/after sweep and a before/after system-prompt token count per the consolidation rule — but the steer is _mechanised, not subsumed by another phase_, so it is not a ledger row.
 
 ## ADR
 
@@ -199,8 +202,8 @@ New to [`packages/agent-eval`](../../packages/agent-eval), frozen in PR0:
 
 ## Risks
 
-- **Image injection bypassing the text-side content-guard.** A screenshot is untrusted inbound content, but pixels skip the text redaction path — the known attack. *Mitigation:* PR4 routes every image through the S6 image injection screen; the `image_injection` `atk_*` fixture **is the gate** — S10 does not ✅ until that case passes within the S6 ASR bound. **Spike-first:** validate the image→content-guard handoff on the frozen `image_injection` fixture before wiring live adapters.
+- **Image injection bypassing the text-side content-guard.** A screenshot is untrusted inbound content, but pixels skip the text redaction path — the known attack. _Mitigation:_ PR4 routes every image through the S6 image injection screen; the `image_injection` `atk_*` fixture **is the gate** — S10 does not ✅ until that case passes within the S6 ASR bound. **Spike-first:** validate the image→content-guard handoff on the frozen `image_injection` fixture before wiring live adapters.
 - **Vision cost blow-up.** Screenshots are token-expensive; unbounded escalation would wreck $/task. *Mitigation:* the ≤5% escalation-rate DoD + the token-budgeted downscale bound it *by measurement*, and the "$/task on non-vision families unchanged (±10%)" gate fails the phase if cost leaks. The deterministic pre-model trigger (no model call to decide escalation) keeps the decision cheap.
-- **Trigger false-positives** (escalating on ordinary pages). *Mitigation:* negative-control fixtures in the denominator; the ≤5% rate is measured against them, so an over-eager trigger fails the DoD before it ships.
-- **Set-of-marks mis-mapping** (model names a mark that resolves to the wrong ref). *Mitigation:* the mark→ref map is the sole re-entry channel and is zod-validated; a mark with no live locator ([`dom-path.ts`](../../packages/tool-executor/src/dom-path.ts) returns null on miss) is dropped, never guessed.
-- **Dependency slip on S1.** No image can reach the model until S1's multimodal blocks land; PR2/PR3 (triggers + capture) are independent and can proceed in Lane B, but PR4/PR5 are gated on S1. *Mitigation:* sequence PR4 behind the S1 substrate; keep PR2/PR3 shippable and measured for escalation-rate on scripted tiers meanwhile.
+- **Trigger false-positives** (escalating on ordinary pages). _Mitigation:_ negative-control fixtures in the denominator; the ≤5% rate is measured against them, so an over-eager trigger fails the DoD before it ships.
+- **Set-of-marks mis-mapping** (model names a mark that resolves to the wrong ref). _Mitigation:_ the mark→ref map is the sole re-entry channel and is zod-validated; a mark with no live locator ([`dom-path.ts`](../../packages/tool-executor/src/dom-path.ts) returns null on miss) is dropped, never guessed.
+- **Dependency slip on S1.** No image can reach the model until S1's multimodal blocks land; PR2/PR3 (triggers + capture) are independent and can proceed in Lane B, but PR4/PR5 are gated on S1. _Mitigation:_ sequence PR4 behind the S1 substrate; keep PR2/PR3 shippable and measured for escalation-rate on scripted tiers meanwhile.

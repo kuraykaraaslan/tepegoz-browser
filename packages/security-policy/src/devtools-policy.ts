@@ -19,8 +19,7 @@ import { isSensitiveSite } from './sensitive-site';
  */
 
 export type DevToolsVerdict =
-  | { allowed: true }
-  | { allowed: false; reason: 'sensitive_site' | 'no_page' };
+  { allowed: true } | { allowed: false; reason: 'sensitive_site' | 'no_page' };
 
 export function mayOpenDevTools(url: string | null | undefined): DevToolsVerdict {
   if (url === null || url === undefined || url.trim().length === 0) {

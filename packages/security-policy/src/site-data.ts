@@ -1,8 +1,4 @@
-import {
-  SITE_DATA_KINDS,
-  type SiteClearPlan,
-  type SiteClearWarning,
-} from '@tepegoz/shared-types';
+import { SITE_DATA_KINDS, type SiteClearPlan, type SiteClearWarning } from '@tepegoz/shared-types';
 import { registrableDomain } from './registrable-domain';
 
 /**
@@ -46,8 +42,9 @@ export function planSiteClear(url: string, ctx: SiteClearContext = {}): SiteClea
     site,
     // Both schemes and both host forms: a site that redirected http→https years ago still has cookies
     // under the old origin, and leaving them behind makes "forget" a word that is not quite true.
-    origins: [`https://${site}`, `http://${site}`, `https://www.${site}`, `http://${site}`]
-      .filter((o, i, all) => all.indexOf(o) === i),
+    origins: [`https://${site}`, `http://${site}`, `https://www.${site}`, `http://${site}`].filter(
+      (o, i, all) => all.indexOf(o) === i,
+    ),
     kinds: [...SITE_DATA_KINDS],
     warnings,
   };

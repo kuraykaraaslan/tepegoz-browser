@@ -9,6 +9,7 @@ taking `labels` props: the counter has to choose between "no results" and `n/m` 
 part of its behaviour, not decoration.
 
 ## Exports
+
 - **`FindBar`** — the bar: query input, `n/m` counter, match-case toggle, prev/next steppers, close.
   Focuses and selects its input on mount, so re-pressing Ctrl+F retypes over the previous query.
   Enter / Shift+Enter step matches and Escape closes, handled on the input so those keys never reach
@@ -17,6 +18,7 @@ part of its behaviour, not decoration.
 - **`findBarDict`** — this package's `en`/`tr` dictionary.
 
 ## Usage
+
 ```tsx
 <FindBar
   query={query}
@@ -32,4 +34,5 @@ part of its behaviour, not decoration.
 ```
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

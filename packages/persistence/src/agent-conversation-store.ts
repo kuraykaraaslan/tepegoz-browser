@@ -76,7 +76,10 @@ function boundedLimit(limit: number): number {
 }
 
 export class AgentConversationStore {
-  static list(db: Db, input: { query?: string; limit?: number; offset?: number } = {}): AgentConversationSummary[] {
+  static list(
+    db: Db,
+    input: { query?: string; limit?: number; offset?: number } = {},
+  ): AgentConversationSummary[] {
     const limit = boundedLimit(input.limit ?? 50);
     const offset = Math.max(0, Math.trunc(input.offset ?? 0));
     const query = input.query?.trim() ?? '';
@@ -100,11 +103,12 @@ export class AgentConversationStore {
 
   static get(db: Db, id: string): AgentConversationDetail | null {
     const row = db.prepare('SELECT * FROM agent_conversations WHERE id = ?').get(id) as
-      | ConversationRow
-      | undefined;
+      ConversationRow | undefined;
     if (row === undefined) return null;
     const turns = db
-      .prepare('SELECT * FROM agent_conversation_turns WHERE conversation_id = ? ORDER BY created_at ASC')
+      .prepare(
+        'SELECT * FROM agent_conversation_turns WHERE conversation_id = ? ORDER BY created_at ASC',
+      )
       .all(id) as TurnRow[];
     return { summary: rowToSummary(row), turns: turns.map(rowToTurn) };
   }
@@ -144,8 +148,7 @@ export class AgentConversationStore {
 
   static appendEvent(db: Db, turnId: string, event: AgentHistoryEvent): void {
     const row = db.prepare('SELECT * FROM agent_conversation_turns WHERE id = ?').get(turnId) as
-      | TurnRow
-      | undefined;
+      TurnRow | undefined;
     if (row === undefined) return;
     const events = [...parseJson<AgentHistoryEvent[]>(row.events_json, []), event];
     const status = terminalStatusFromEvents(events);
@@ -168,7 +171,9 @@ export class AgentConversationStore {
 
   private static refreshSummary(db: Db, conversationId: string, runId: string, ts: number): void {
     const turns = db
-      .prepare('SELECT * FROM agent_conversation_turns WHERE conversation_id = ? ORDER BY created_at ASC')
+      .prepare(
+        'SELECT * FROM agent_conversation_turns WHERE conversation_id = ? ORDER BY created_at ASC',
+      )
       .all(conversationId) as TurnRow[];
     const firstPrompt = turns[0]?.prompt ?? '';
     const { title } = summarizeConversationPrompt(firstPrompt);
@@ -184,9 +189,9 @@ export class AgentConversationStore {
 }
 
 function latestResponse(events: AgentHistoryEvent[], fallback?: string): string | null {
-  const prose = [...events].reverse().find((event) =>
-    event.kind === 'done' || event.kind === 'error' || event.kind === 'handoff'
-  );
+  const prose = [...events]
+    .reverse()
+    .find((event) => event.kind === 'done' || event.kind === 'error' || event.kind === 'handoff');
   const text = prose?.message ?? fallback ?? null;
   return text === null ? null : text.slice(0, 4000);
 }

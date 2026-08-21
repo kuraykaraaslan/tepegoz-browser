@@ -163,9 +163,11 @@ describe('CredentialVault (multi-key)', () => {
     const b = CredentialVault.addKey('anthropic', 'B', 'sk-b');
     CredentialVault.reorderKeys(['ghost', b.id]); // 'ghost' ignored; A unlisted → stays at end
     expect(CredentialVault.listMeta().map((m) => m.label)).toEqual(['B', 'A']);
-    expect(CredentialVault.listMeta().map((m) => m.id).sort((x, y) => x.localeCompare(y))).toEqual(
-      [a.id, b.id].sort((x, y) => x.localeCompare(y)),
-    );
+    expect(
+      CredentialVault.listMeta()
+        .map((m) => m.id)
+        .sort((x, y) => x.localeCompare(y)),
+    ).toEqual([a.id, b.id].sort((x, y) => x.localeCompare(y)));
   });
 
   it('renames a key by id, and throws 404 for an unknown id', () => {
@@ -209,13 +211,23 @@ describe('CredentialVault (multi-key)', () => {
     expect(list[0]?.last4).toBe('7777'); // recovered by a single decrypt during migration
     expect(CredentialVault.getFirstKeyForProvider('anthropic')).toBe('sk-legacy-7777');
     // migration is persisted as v2 on disk immediately
-    const onDisk = JSON.parse(readFileSync(filePath, 'utf8')) as { version: number; keys: unknown[] };
+    const onDisk = JSON.parse(readFileSync(filePath, 'utf8')) as {
+      version: number;
+      keys: unknown[];
+    };
     expect(onDisk.version).toBe(2);
     expect(onDisk.keys).toHaveLength(1);
   });
 
   it('keeps valid v2 records when one record is corrupt (per-entry tolerance)', () => {
-    const good = { id: 'k1', provider: 'anthropic', label: 'ok', createdAt: 1, last4: 'aaaa', ciphertext: enc('sk-good') };
+    const good = {
+      id: 'k1',
+      provider: 'anthropic',
+      label: 'ok',
+      createdAt: 1,
+      last4: 'aaaa',
+      ciphertext: enc('sk-good'),
+    };
     const bad = { id: 'k2', provider: 'anthropic', label: 42 }; // malformed
     writeFileSync(filePath, JSON.stringify({ version: 2, keys: [good, bad] }), 'utf8');
     CredentialVault.init({ crypto: fakeCrypto, filePath });
@@ -224,8 +236,22 @@ describe('CredentialVault (multi-key)', () => {
   });
 
   it('drops unknown-provider records on load', () => {
-    const grok = { id: 'g', provider: 'grok', label: 'x', createdAt: 1, last4: '', ciphertext: enc('x') };
-    const ok = { id: 'a', provider: 'anthropic', label: 'ok', createdAt: 2, last4: 'kkkk', ciphertext: enc('k') };
+    const grok = {
+      id: 'g',
+      provider: 'grok',
+      label: 'x',
+      createdAt: 1,
+      last4: '',
+      ciphertext: enc('x'),
+    };
+    const ok = {
+      id: 'a',
+      provider: 'anthropic',
+      label: 'ok',
+      createdAt: 2,
+      last4: 'kkkk',
+      ciphertext: enc('k'),
+    };
     writeFileSync(filePath, JSON.stringify({ version: 2, keys: [grok, ok] }), 'utf8');
     CredentialVault.init({ crypto: fakeCrypto, filePath });
     expect(CredentialVault.status()).toEqual({

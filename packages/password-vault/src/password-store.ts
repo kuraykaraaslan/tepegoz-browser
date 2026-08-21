@@ -34,17 +34,14 @@ function toFull(row: CredentialRow): LoginCredential {
 export class PasswordStore {
   static list(db: Db, providerId = 'local'): LoginCredentialMeta[] {
     const rows = db
-      .prepare(
-        'SELECT * FROM login_credentials WHERE provider_id = ? ORDER BY updated_at DESC',
-      )
+      .prepare('SELECT * FROM login_credentials WHERE provider_id = ? ORDER BY updated_at DESC')
       .all(providerId) as CredentialRow[];
     return rows.map(toMeta);
   }
 
   static findById(db: Db, id: string): LoginCredential | null {
-    const row = db
-      .prepare('SELECT * FROM login_credentials WHERE id = ?')
-      .get(id) as CredentialRow | undefined;
+    const row = db.prepare('SELECT * FROM login_credentials WHERE id = ?').get(id) as
+      CredentialRow | undefined;
     return row ? toFull(row) : null;
   }
 

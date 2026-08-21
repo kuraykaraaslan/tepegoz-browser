@@ -52,6 +52,8 @@ describe('@tepegoz/downloads', () => {
 
   it('validates command input at IPC/tool boundaries', () => {
     expect(DownloadCommandInputSchema.safeParse({ id: 'd1', action: 'pause' }).success).toBe(true);
-    expect(DownloadCommandInputSchema.safeParse({ id: 'd1', action: 'delete' }).success).toBe(false);
+    expect(DownloadCommandInputSchema.safeParse({ id: 'd1', action: 'delete' }).success).toBe(
+      false,
+    );
   });
 });

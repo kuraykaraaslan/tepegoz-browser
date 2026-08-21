@@ -131,7 +131,9 @@ class LlamaEngineElectron implements LlamaEngine {
     const finish: GenerateResult['finish'] =
       res.stopReason === 'maxTokens' ? 'length' : res.stopReason === 'abort' ? 'abort' : 'stop';
     // Best-effort token counts (llama.cpp doesn't return usage from a chat prompt).
-    const inputTokens = entry.model.tokenize(system + rest.map((t) => contentToText(t.content)).join('\n')).length;
+    const inputTokens = entry.model.tokenize(
+      system + rest.map((t) => contentToText(t.content)).join('\n'),
+    ).length;
     const outputTokens = entry.model.tokenize(res.responseText).length;
     return { text: res.responseText, finish, inputTokens, outputTokens };
   }

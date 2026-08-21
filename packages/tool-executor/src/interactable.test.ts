@@ -42,7 +42,9 @@ describe('finalizeElements', () => {
   });
 
   it('strips zero-width injection from labels and reports the flag', () => {
-    const raw: RawInteractable[] = [{ role: 'button', name: 'Cli' + String.fromCharCode(0x200b) + 'ck me' }];
+    const raw: RawInteractable[] = [
+      { role: 'button', name: 'Cli' + String.fromCharCode(0x200b) + 'ck me' },
+    ];
     const { elements, flags } = finalizeElements(raw);
     expect(elements[0]?.name).toBe('Click me');
     expect(flags).toContain('zero_width');
@@ -76,7 +78,12 @@ describe('finalizeElements', () => {
         role: 'button',
         name: 'Menu',
         tag: 'button',
-        attributes: { 'aria-expanded': 'false', onclick: 'evil()', style: 'x', 'data-testid': 'nav' },
+        attributes: {
+          'aria-expanded': 'false',
+          onclick: 'evil()',
+          style: 'x',
+          'data-testid': 'nav',
+        },
       },
     ]);
     expect(elements[0]?.attributes).toEqual({ 'aria-expanded': 'false', 'data-testid': 'nav' });
@@ -84,7 +91,12 @@ describe('finalizeElements', () => {
 
   it('sanitizes attribute values and reports the flag', () => {
     const { elements, flags } = finalizeElements([
-      { role: 'button', name: 'x', tag: 'button', attributes: { title: 'a' + String.fromCharCode(0x200b) + 'b' } },
+      {
+        role: 'button',
+        name: 'x',
+        tag: 'button',
+        attributes: { title: 'a' + String.fromCharCode(0x200b) + 'b' },
+      },
     ]);
     expect(elements[0]?.attributes?.title).toBe('ab');
     expect(flags).toContain('zero_width');

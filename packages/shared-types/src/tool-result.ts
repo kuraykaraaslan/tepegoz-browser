@@ -10,7 +10,10 @@ export const ToolArtifactRefSchema = z.object({
   title: z.string().min(1).max(256),
   mimeType: z.string().max(256).optional(),
   summary: z.string().max(2048).optional(),
-  blobRef: z.string().regex(/^cas:\/\/[a-f0-9]{64}$/).optional(),
+  blobRef: z
+    .string()
+    .regex(/^cas:\/\/[a-f0-9]{64}$/)
+    .optional(),
   url: z.string().max(4096).optional(),
 });
 export type ToolArtifactRef = z.infer<typeof ToolArtifactRefSchema>;

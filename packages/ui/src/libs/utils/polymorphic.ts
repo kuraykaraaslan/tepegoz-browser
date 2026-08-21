@@ -8,10 +8,7 @@
  *     as, ...rest
  *   }: PolymorphicProps<C, ButtonOwnProps>) { ... }
  */
-export type PolymorphicProps<
-  C extends React.ElementType,
-  OwnProps = {}
-> = OwnProps &
+export type PolymorphicProps<C extends React.ElementType, OwnProps = {}> = OwnProps &
   Omit<React.ComponentPropsWithRef<C>, keyof OwnProps> & {
     as?: C;
   };

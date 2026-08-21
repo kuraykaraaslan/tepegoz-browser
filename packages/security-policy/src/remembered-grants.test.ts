@@ -30,11 +30,15 @@ describe('remembered grant coverage', () => {
 
   it('matches on eTLD+1, so a subdomain of the granted site is covered', () => {
     // The user granted "billing.test"; app.billing.test is the same site, not a different one.
-    expect(coversRemembered([grant()], query({ targetUrl: 'https://app.billing.test/x' })).covered).toBe(true);
+    expect(
+      coversRemembered([grant()], query({ targetUrl: 'https://app.billing.test/x' })).covered,
+    ).toBe(true);
   });
 
   it('never covers another site', () => {
-    expect(coversRemembered([grant()], query({ targetUrl: 'https://other.test/x' })).covered).toBe(false);
+    expect(coversRemembered([grant()], query({ targetUrl: 'https://other.test/x' })).covered).toBe(
+      false,
+    );
   });
 
   it('never covers an AD-HOC task — only a named skill can hold a persistent grant', () => {
@@ -69,7 +73,9 @@ describe('remembered grant coverage', () => {
   });
 
   it('never covers a sensitive-site read', () => {
-    expect(coversRemembered([grant()], query({ policyReason: 'sensitive_site_read' })).covered).toBe(false);
+    expect(
+      coversRemembered([grant()], query({ policyReason: 'sensitive_site_read' })).covered,
+    ).toBe(false);
   });
 
   it('refuses without a target URL rather than treating the grant as run-wide', () => {
@@ -81,13 +87,18 @@ describe('remembered grant coverage', () => {
   });
 
   it('refuses when there is simply no grant', () => {
-    expect(coversRemembered([], query())).toEqual({ covered: false, reason: 'no_remembered_grant' });
+    expect(coversRemembered([], query())).toEqual({
+      covered: false,
+      reason: 'no_remembered_grant',
+    });
   });
 });
 
 describe('what may be offered for remembering', () => {
   it('offers an ordinary skill-scoped page change', () => {
-    expect(canRemember({ scope: 'skill-1', tier: 'ui-write', targetUrl: 'https://billing.test/x' })).toBe(true);
+    expect(
+      canRemember({ scope: 'skill-1', tier: 'ui-write', targetUrl: 'https://billing.test/x' }),
+    ).toBe(true);
   });
 
   it('REFUSES an unclassified call — a default tier would be a permission nobody was offered', () => {
@@ -98,11 +109,20 @@ describe('what may be offered for remembering', () => {
   });
 
   it('does NOT offer what coverage would refuse — a decorative checkbox teaches the wrong lesson', () => {
-    expect(canRemember({ scope: null, tier: 'ui-write', targetUrl: 'https://billing.test/x' })).toBe(false);
-    expect(canRemember({ scope: 's', tier: 'credential', targetUrl: 'https://billing.test/x' })).toBe(false);
+    expect(
+      canRemember({ scope: null, tier: 'ui-write', targetUrl: 'https://billing.test/x' }),
+    ).toBe(false);
+    expect(
+      canRemember({ scope: 's', tier: 'credential', targetUrl: 'https://billing.test/x' }),
+    ).toBe(false);
     expect(canRemember({ scope: 's', tier: 'ui-write', targetUrl: undefined })).toBe(false);
     expect(
-      canRemember({ scope: 's', tier: 'ui-write', targetUrl: 'https://b.test/x', policyReason: 'tainted_side_effect' }),
+      canRemember({
+        scope: 's',
+        tier: 'ui-write',
+        targetUrl: 'https://b.test/x',
+        policyReason: 'tainted_side_effect',
+      }),
     ).toBe(false);
   });
 });

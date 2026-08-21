@@ -92,8 +92,14 @@ export interface CacheEffect {
 }
 
 export function cacheEffect(hint: CanonCacheHint | undefined, usage: CanonUsage): CacheEffect {
-  const requested = hint !== undefined && (hint.systemAndTools === true || stableMessageIndex(hint) !== null);
+  const requested =
+    hint !== undefined && (hint.systemAndTools === true || stableMessageIndex(hint) !== null);
   const readTokens = usage.cacheReadTokens ?? 0;
   const writeTokens = usage.cacheWriteTokens ?? 0;
-  return { requested, readTokens, writeTokens, wasted: requested && writeTokens > 0 && readTokens === 0 };
+  return {
+    requested,
+    readTokens,
+    writeTokens,
+    wasted: requested && writeTokens > 0 && readTokens === 0,
+  };
 }

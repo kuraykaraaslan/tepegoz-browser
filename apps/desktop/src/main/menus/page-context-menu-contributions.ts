@@ -57,9 +57,7 @@ export class PageContextMenuContributionService {
     this.contributors.set(contributor.id, contributor);
   }
 
-  async collect(
-    ctx: PageContextMenuContributionContext,
-  ): Promise<PageMenuContributionSection[]> {
+  async collect(ctx: PageContextMenuContributionContext): Promise<PageMenuContributionSection[]> {
     this.activeCtx = ctx;
     const menuId = ctx.menuId;
     const collected: PageMenuContributionSection[] = [];

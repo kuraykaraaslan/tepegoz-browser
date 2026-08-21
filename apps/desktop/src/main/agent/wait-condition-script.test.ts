@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import vm from 'node:vm';
-import { MAX_WAIT_MS, MIN_WAIT_MS, buildWaitConditionExpression, clampWaitMs } from './wait-condition-script.js';
+import {
+  MAX_WAIT_MS,
+  MIN_WAIT_MS,
+  buildWaitConditionExpression,
+  clampWaitMs,
+} from './wait-condition-script.js';
 
 /**
  * The wait script decides whether to keep waiting, so it is run for real (`vm`) against a page whose
@@ -53,7 +58,10 @@ describe('clampWaitMs', () => {
 
 describe('waiting for a condition', () => {
   it('resolves immediately when the condition already holds', async () => {
-    const result = await run('text', 'Order placed', 5_000, { text: 'Order placed', selectorHits: noMatch });
+    const result = await run('text', 'Order placed', 5_000, {
+      text: 'Order placed',
+      selectorHits: noMatch,
+    });
     expect(result.satisfied).toBe(true);
     expect(result.waitedMs).toBe(0);
   });
@@ -69,7 +77,10 @@ describe('waiting for a condition', () => {
   });
 
   it('gives up at the timeout and says so, instead of hanging or throwing', async () => {
-    const result = await run('text', 'Never appears', 300, { text: 'nothing', selectorHits: noMatch });
+    const result = await run('text', 'Never appears', 300, {
+      text: 'nothing',
+      selectorHits: noMatch,
+    });
     expect(result.satisfied).toBe(false);
     expect(result.waitedMs).toBeGreaterThanOrEqual(300);
   });

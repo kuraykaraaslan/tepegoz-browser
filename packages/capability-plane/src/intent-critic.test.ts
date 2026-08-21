@@ -25,7 +25,13 @@ describe('which calls the critic sees', () => {
   });
 
   it('looks at every mutating tier', () => {
-    for (const tier of ['ui-write', 'data-egress', 'financial', 'credential', 'destructive'] as const) {
+    for (const tier of [
+      'ui-write',
+      'data-egress',
+      'financial',
+      'credential',
+      'destructive',
+    ] as const) {
       expect(shouldCritique(tier)).toBe(true);
     }
   });
@@ -53,7 +59,9 @@ describe('what the critic is allowed to see', () => {
   });
 
   it('summarises a nested object by its keys only', () => {
-    expect(summarizeArgs({ card: { number: '4111111111111111', cvv: '123' } })).toBe('card: {number,cvv}');
+    expect(summarizeArgs({ card: { number: '4111111111111111', cvv: '123' } })).toBe(
+      'card: {number,cvv}',
+    );
   });
 
   it('reports an array by length', () => {
@@ -68,7 +76,9 @@ describe('what the critic is allowed to see', () => {
 
 describe('the verdict is advisory and fail-quiet', () => {
   it('returns the verdict when the critic answers in shape', async () => {
-    setIntentCritic(() => Promise.resolve({ aligned: false, reason: 'emails a file the user never mentioned' }));
+    setIntentCritic(() =>
+      Promise.resolve({ aligned: false, reason: 'emails a file the user never mentioned' }),
+    );
     const verdict = await critiqueIntent(req, 'data-egress');
     expect(verdict).toEqual({ aligned: false, reason: 'emails a file the user never mentioned' });
   });

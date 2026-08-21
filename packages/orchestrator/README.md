@@ -7,6 +7,7 @@ package never talks to a vendor API directly. Sits below `@tepegoz/agent-runtime
 Electron/app-facing seams (browser host, journal, HITL, live events) this package's callers need.
 
 ## Exports
+
 - **`Planner`** — `PlanRequest` in, produces the step DAG the Executor runs.
 - **`Executor`** — runs a plan's steps sequentially through the ToolGateway PEP; `RunOptions` in,
   `RunResult`/`StepOutcome`/`StopReason` out.
@@ -14,4 +15,5 @@ Electron/app-facing seams (browser host, journal, HITL, live events) this packag
   (continue/retry/replan/stop); `ReactRequest`/`ReactOptions`/`ReactResult`/`Decision` types.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test` · `pnpm build`

@@ -6,12 +6,14 @@ dictionary (`useT(extensionsDict)`); the extension list, manifest labels, icons,
 all come from the host as `items`, so the package carries no app-specific extension/registry logic.
 
 ## Exports
+
 - **`ExtensionsGrid`** — the searchable card grid.
 - **`ExtensionCardItem`** — one card's data (`id`, `icon`, `name`, `description`, `meta`, `enabled`);
   hosts map their own extension/manifest objects into this shape.
 - **`extensionsDict`** / **`ExtensionsStrings`** — the package's own i18n dictionary.
 
 ## Usage
+
 ```tsx
 <ExtensionsGrid
   items={extensions.map((e) => ({
@@ -27,4 +29,5 @@ all come from the host as `items`, so the package carries no app-specific extens
 ```
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

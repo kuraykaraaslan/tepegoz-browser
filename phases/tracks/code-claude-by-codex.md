@@ -7,7 +7,7 @@ ilgili dokumantasyon.
 
 Bu planin amaci `extensions/ext-agent` yuzeyini Claude Chrome benzeri cok adimli, cok sekmeli ve
 guvenilir bir tarayici ajani haline getirmek. Arastirma notu olarak
-[`docs/new/claude-versus.md`](../../docs/new/claude-versus.md) kullanildi; uygulama onceligi ise guncel
+[`docs/research/competitors/claude-versus.md`](../../docs/research/competitors/claude-versus.md) kullanildi; uygulama onceligi ise guncel
 TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 
 ## Kayitli kararlar
@@ -24,126 +24,126 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
   1. Bu dosyadaki ilgili checkbox/durum satiri.
   2. Asil faz dosyalari: `phases/README.md` ve is hangi faza denk geliyorsa o faz dosyasi
      (`phase-1a`, `phase-1b`, `phase-6` vb.).
-  Plan ve fazlar ayrismayacak; commit atmadan once tamamlanan isler iki tarafta da isaretlenecek.
+     Plan ve fazlar ayrismayacak; commit atmadan once tamamlanan isler iki tarafta da isaretlenecek.
 
 ## Faz Durumu
 
-| Faz | Durum | Not |
-|-----|-------|-----|
-| 1. Agent Reliability | Tamamlandi | Run izolasyonu, state machine/checkpoint, hata siniflandirmasi, recovery ve eval testleri tamamlandi. |
+| Faz                    | Durum      | Not                                                                                                                                                             |
+| ---------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Agent Reliability   | Tamamlandi | Run izolasyonu, state machine/checkpoint, hata siniflandirmasi, recovery ve eval testleri tamamlandi.                                                           |
 | 2. Browser Reliability | Tamamlandi | TabId scoped browser tools, sayfa dogrulama, screenshot/fullPage visual fallback, action recovery, fixtures ve download/upload/clipboard brokerlari tamamlandi. |
-| 3. Task Productization | Tamamlandi | Task domain/persistence/scheduler, background runner, `tepegoz://tasks`, task tools ve preapproved policy entegrasyonu tamamlandi. |
-| 4. Tool Ecosystem | Tamamlandi | Web search/get-page tools, genel adaptör inventory, MCP metadata ve normalize tool result sozlesmesi tamamlandi. |
-| 5. Acceptance/Eval | Tamamlandi | Claude benzeri is senaryolari icin deterministik kabul seti ve metrik ozeti eklendi. |
+| 3. Task Productization | Tamamlandi | Task domain/persistence/scheduler, background runner, `tepegoz://tasks`, task tools ve preapproved policy entegrasyonu tamamlandi.                              |
+| 4. Tool Ecosystem      | Tamamlandi | Web search/get-page tools, genel adaptör inventory, MCP metadata ve normalize tool result sozlesmesi tamamlandi.                                                |
+| 5. Acceptance/Eval     | Tamamlandi | Claude benzeri is senaryolari icin deterministik kabul seti ve metrik ozeti eklendi.                                                                            |
 
 ## Faz 1 — Agent Reliability
 
 - [x] `ToolGateway.runWithHandlers` eklendi; HITL/audit handler context'i run bazinda izole edildi.
 - [x] `agent-runtime`, tool cagrilarini scoped handler context'iyle calistiriyor.
 - [x] Main process tarafinda run controller kaydi eklendi; `cancelAgent` gercek calisan run'i iptal
-  edebiliyor.
+      edebiliyor.
 - [x] Gecici tek aktif run korumasi eklendi; mevcut UI/host sinirlari netlesene kadar paralel run
-  cakismalari engelleniyor.
+      cakismalari engelleniyor.
 - [x] Panel, event stream baslamadan reddedilen `runAgent` hatalarini ayni turn icinde yerel `error`
-  event'i olarak gosteriyor.
+      event'i olarak gosteriyor.
 - [x] Panel hata fallback metinleri EN/TR i18n sozluklerine eklendi.
 - [x] Agent Console konusma gecmisi yerlestirildi: yerel SQLite projection, header history dropdown,
-  secilen konusmayi panele geri yukleme ve ext-agent page surface'i (`tepegoz://com.tepegoz.agent`).
+      secilen konusmayi panele geri yukleme ve ext-agent page surface'i (`tepegoz://com.tepegoz.agent`).
 - [x] Run state machine'i acik durum gecisleriyle toparla: requested, planning, awaiting plan,
-  executing, paused, done, error, cancelled.
+      executing, paused, done, error, cancelled.
 - [x] Resume/checkpoint tasarla: son basarili adim, sayfa/tab snapshot referansi ve kullanici karari
-  birlikte saklanmali.
+      birlikte saklanmali.
 - [x] Hata siniflandirmasi ekle: transient, policy denied, page changed, selector stale, navigation
-  timeout, auth/handoff, model malformed.
+      timeout, auth/handoff, model malformed.
 - [x] Retry/recovery stratejisi ekle: selector stale ise yeniden snapshot, navigation timeout ise
-  validate/read fallback, model malformed ise bounded repair.
+      validate/read fallback, model malformed ise bounded repair.
 - [x] Eval harness ekle: runtime kararlarini mock host ile deterministik test eden senaryolar.
 
 ## Faz 2 — Browser Reliability
 
 - [x] Sekme araclari genisletildi: `tab_create_item`, `tab_get_item`, `tab_update_item`,
-  `tab_delete_item`.
+      `tab_delete_item`.
 - [x] `tab_create_item` varsayilan olarak arka planda sekme aciyor ve active durumunu donduruyor.
 - [x] Desktop TabHost, sekme aktive etme/kapatma/arka planda olusturma aksiyonlarini destekliyor.
 - [x] BrowserHost aktif-sekme odakli API'den tab-aware API'ye tasindi:
-  `navigate`, `readPage`, `snapshotElements`, `clickElement`, `fillElement`, `pressKey`,
-  `scrollPage`.
+      `navigate`, `readPage`, `snapshotElements`, `clickElement`, `fillElement`, `pressKey`,
+      `scrollPage`.
 - [x] `browser_*` tool semalari opsiyonel `tabId` kabul ediyor.
 - [x] Desktop browser host hedef `WebContents`'i `tabId` ile cozuyor; arka plan sekme aksiyonlarinda
-  gorunur human-input adapter'ina bagimli kalmiyor.
+      gorunur human-input adapter'ina bagimli kalmiyor.
 - [x] CDP element ref map'leri `WebContents` bazinda ayrildi; bir sekmenin snapshot'i diger sekmenin
-  ref'lerini gecersiz kilmiyor.
+      ref'lerini gecersiz kilmiyor.
 - [x] Agent runtime, `tabId` iceren tool cagrilarinda hedef URL'yi `tabUrl(tabId)` ile alip policy
-  context'ine isliyor.
+      context'ine isliyor.
 - [x] `browser_validate_page` eklendi: load bekleme, sayfa okuma ve opsiyonel metin dogrulama yapiyor.
 - [x] Planner/reactor prompt'lari navigasyon ve sayfa aksiyonlari sonrasi dogrulama yapacak sekilde
-  guncellendi.
+      guncellendi.
 - [x] Screenshot/vision fallback ekle: `@tepegoz/screenshots` ve `browser_get_screenshot` hedef
-  sekmeden viewport veya bounded fullPage PNG alip modele kontrollu, untrusted visual context olarak aktarir.
+      sekmeden viewport veya bounded fullPage PNG alip modele kontrollu, untrusted visual context olarak aktarir.
 - [x] Download/upload/clipboard araclarini policy-gated sekilde ekle.
   - [x] Slice 1: `@tepegoz/downloads` ve `@tepegoz/clipboard` domain paketleri, IPC/preload
-    kontratlari, preferences alanlari ve phase/layer kurallari eklendi.
+        kontratlari, preferences alanlari ve phase/layer kurallari eklendi.
   - [x] Slice 2: DownloadService + quarantine + Electron `will-download` adapter + SQLite projection +
-    redacted Event Journal audit eklendi.
+        redacted Event Journal audit eklendi.
   - [x] Slice 3: `@tepegoz/downloads-ui`, `tepegoz://downloads`, main-menu action ve download settings.
   - [x] Slice 4: ClipboardService + generic WebPermissionBroker; notification akisi korunarak clipboard
-    read/write site izinleri eklendi.
+        read/write site izinleri eklendi.
   - [x] Slice 5: `download_*` / `clipboard_*` capability tools + HITL/idempotency entegrasyonu.
   - [x] Upload Slice 1: `@tepegoz/uploads` domain paketi, zod schemas, `upload_*` tool registration,
-    IPC contract kanallari ve layer kurali eklendi.
+        IPC contract kanallari ve layer kurali eklendi.
   - [x] Upload Slice 2: UploadService + CDP file input binding + file sandbox preflight + redacted audit.
   - [x] Upload Slice 3: `tepegoz://uploads` UI, preload/IPC wiring, menu/navigation ve phase/docs tamamlama.
   - [x] Combined transfer activity: toolbar indicator + tek popup icinde recent download/upload listesi.
 - [x] Action recovery ekle: click/fill sonrasi beklenen degisim yoksa `changed=false` + recovery hint ile
-  yeniden element snapshot ve alternatif selector denemesi promptlanir.
+      yeniden element snapshot ve alternatif selector denemesi promptlanir.
 - [x] Form ve tablo senaryolari icin fixtures ekle.
 
 ## Faz 3 — Task Productization
 
 - [x] Saved tasks modeli: kullanicinin tekrarli gorevleri isim, prompt, izin kapsami ve hedef tab/site
-  ile kaydetmesi.
+      ile kaydetmesi.
   - [x] Slice 1 foundation: `@tepegoz/tasks` public types, reducers/selectors, zod schemas, layer kuralı
-    ve Capability Plane descriptorlari eklendi.
+        ve Capability Plane descriptorlari eklendi.
   - [x] Slice 5 UI/IPC: `tasks:*` IPC/preload bridge, `@tepegoz/tasks-ui`, `tepegoz://tasks` internal
-    page ve Agent panelden disabled task draft kaydetme affordance'i eklendi.
+        page ve Agent panelden disabled task draft kaydetme affordance'i eklendi.
   - [x] Slice 6 tools: `task_*` Capability Plane tools desktop `TaskService` host'una baglandi.
 - [x] Artifacts modeli: ajan ciktilarini panelde indirilebilir/yeniden kullanilabilir nesneler olarak
-  tutma.
+      tutma.
   - [x] Slice 2 projection: `task_runs`, `task_artifacts` ve `task_trigger_state` SQLite tabloları ile
-    `TaskStore` eklendi.
+        `TaskStore` eklendi.
 - [x] Scheduler: kullanici onayli, sinirli ve gorunur zamanlanmis gorevler.
   - [x] Trigger contract: `manual`, `interval`, `pageChange`, disabled `external` placeholder ve
-    preapproved-write policy modeli tanimlandi.
+        preapproved-write policy modeli tanimlandi.
   - [x] Slice 3 service: desktop `TaskService`, interval scheduler, page-change baseline/diff, queue
-    coalescing, notifications ve redacted Event Journal audit eklendi.
+        coalescing, notifications ve redacted Event Journal audit eklendi.
 - [x] Templates: Faz 3 V1'de template kutuphanesi ertelendi; Agent paneldeki "Save as task" draft
-  affordance'i sonraki Tasks yeniden kurgusuna kadar kaldirildi. Hazir arastirma/form/tablo/fiyat
-  template seti Faz 5 acceptance/eval senaryolarina devredildi.
+      affordance'i sonraki Tasks yeniden kurgusuna kadar kaldirildi. Hazir arastirma/form/tablo/fiyat
+      template seti Faz 5 acceptance/eval senaryolarina devredildi.
 - [x] Run dashboard: calisan/biten/hata alan gorevleri ve replay linklerini tek yerde gosterme.
   - [x] Slice 4 launcher: panel run ve task run ortak agent-run lock kullaniyor; scheduled/background
-    task run'lari renderer sender olmadan AgentService'e baglanabiliyor.
+        task run'lari renderer sender olmadan AgentService'e baglanabiliyor.
   - [x] Slice 5 dashboard: saved task listesi, run-now, enable/disable, run history ve artifact listesi
-    renderer state push ile guncelleniyor.
+        renderer state push ile guncelleniyor.
   - [x] Slice 6 policy: background task run'lari state-changing tool HITL'ini yalnizca saved task'in
-    exact origin + preapproved write tool policy'si icindeyse otomatik onayliyor; aksi halde paused/notify.
+        exact origin + preapproved write tool policy'si icindeyse otomatik onayliyor; aksi halde paused/notify.
 
 ## Faz 4 — Tool Ecosystem
 
 - [x] Web search/fetch araclarini mevcut `ToolGateway` ve `PolicyKernel` uzerinden yayinla.
   - [x] `@tepegoz/web-tools` Electron-free paket olarak eklendi; `web_search_items` ve
-    `web_get_page` tool'lari desktop HTTP host'u enjekte edilerek CapabilityRegistry'ye kaydediliyor.
+        `web_get_page` tool'lari desktop HTTP host'u enjekte edilerek CapabilityRegistry'ye kaydediliyor.
 - [x] Servis/adaptor izin modeli: Gmail/Drive/Docs benzeri hesap baglantilari ve MCP/REST/GraphQL
-  gibi tool provider'lar ayni "Adaptors" inventory modeli altinda gorunur olmali.
+      gibi tool provider'lar ayni "Adaptors" inventory modeli altinda gorunur olmali.
   - [x] `AdaptorConnection` public contract'i eklendi: `mcp`, `rest`, `graphql`, `oauth_service`,
-    `local` kind'lari; capability scopes; auth kind; auditRequired; state; toolCount.
+        `local` kind'lari; capability scopes; auth kind; auditRequired; state; toolCount.
   - [x] Settings `Adaptors` ekrani MCP, local/native ve gelecekte REST/GraphQL/OAuth adaptörleri ayni
-    listede gosterecek sekilde baglandi.
+        listede gosterecek sekilde baglandi.
 - [x] MCP araclarini kategori, risk ve arguman semasi ile panelde gorunur kil.
   - [x] `AIAdaptorAction` artik `inputSchema`, `requiresIdempotencyKey` ve `category` tasiyor;
-    Settings tool satirlari schema/idempotency/kategori rozetlerini gosteriyor.
+        Settings tool satirlari schema/idempotency/kategori rozetlerini gosteriyor.
 - [x] Tool sonuc sozlesmelerini normalize et: ok/error, summary, artifact refs, page refs.
   - [x] `ToolSuccessSchema`, `ToolResultSchema` ve `toolSuccess()` eklendi; web ve MCP tool
-    sonuclari `ok/summary/content/artifacts/pageRefs` zarfi ile donuyor.
+        sonuclari `ok/summary/content/artifacts/pageRefs` zarfi ile donuyor.
 
 ## Faz 5 — Acceptance/Eval
 
@@ -153,11 +153,11 @@ TypeScript sozlesmeleri, ADR'ler ve mevcut kod gercekligi uzerinden verildi.
 - [x] Kabul senaryosu: "Sayfa degisti/tiklama tutmadi; kendini toparlayip tekrar dene."
 - [x] Kabul senaryosu: "CAPTCHA/2FA gorunce otomatik cozme, handoff ver."
 - [x] Metrikler: task success rate, recovery success rate, approval latency, tool error rate,
-  navigation validation failure rate, token usage.
+      navigation validation failure rate, token usage.
   - [x] `@tepegoz/orchestrator` icinde `ACCEPTANCE_SCENARIOS`, `recordFromOutcomes` ve
-    `summarizeAcceptanceRuns` eklendi.
+        `summarizeAcceptanceRuns` eklendi.
   - [x] `acceptance-eval.test.ts` deterministik scripted-model + fake tools ile bes senaryoyu ve
-    metrikleri no-network/no-key olarak kosuyor.
+        metrikleri no-network/no-key olarak kosuyor.
 
 ## Dogrulama Kaydi
 
@@ -326,7 +326,7 @@ Faz 3 Task Productization icin aktif siradaki isler:
 - [x] Task Slice 2: `pnpm --filter @tepegoz/persistence typecheck/lint`
 - [x] Task Slice 2: `pnpm --filter @tepegoz/shared-types test/typecheck/lint`
 - [ ] Task Slice 2: `pnpm --filter @tepegoz/persistence test` — blocked by local native ABI mismatch:
-  `better-sqlite3.node` was compiled for NODE_MODULE_VERSION 130; current Node requires 127.
+      `better-sqlite3.node` was compiled for NODE_MODULE_VERSION 130; current Node requires 127.
 - [x] Task Slice 3: `pnpm --filter @tepegoz/desktop typecheck/lint`
 - [x] Task Slice 3: `pnpm --filter @tepegoz/tasks test/typecheck/lint`
 - [x] Task Slice 4: `pnpm --filter @tepegoz/desktop typecheck/lint`
@@ -337,17 +337,17 @@ Faz 3 Task Productization icin aktif siradaki isler:
 - [x] Task Slice 5: `pnpm --filter @tepegoz/ui typecheck/lint`
 - [x] Task Slice 5: `git diff --check`
 - [ ] Task Slice 5: source-scoped `depcruise packages apps/desktop/src` — blocked by existing repo-wide
-  `not-to-dev-dep` / generated `out/` / menu cycle debt; new `tasks-ui-is-a-leaf` rule was added.
+      `not-to-dev-dep` / generated `out/` / menu cycle debt; new `tasks-ui-is-a-leaf` rule was added.
 - [x] Task Slice 6: `pnpm --filter @tepegoz/capability-plane test/typecheck/lint`
 - [x] Task Slice 6: `pnpm --filter @tepegoz/tasks test/typecheck/lint`
 - [x] Task Slice 6: `pnpm --filter @tepegoz/desktop typecheck/lint`
 - [x] Upload Slice 3: `git diff --check`
 - [ ] Upload Slice 3: `pnpm depcruise` — blocked by stale generated desktop output:
-  `apps/desktop/out/main/node-B4hO7KOT.js` references a missing file during dependency extraction.
+      `apps/desktop/out/main/node-B4hO7KOT.js` references a missing file during dependency extraction.
 - [ ] Upload Slice 3: source-scoped `depcruise packages apps/desktop/src` — blocked by existing repo-wide
-  `not-to-dev-dep` / menu cycle debt; includes the same React peer/dev classification already present in
-  other UI leaf packages.
+      `not-to-dev-dep` / menu cycle debt; includes the same React peer/dev classification already present in
+      other UI leaf packages.
 - [ ] `pnpm --filter @tepegoz/persistence test` — blocked by local native ABI mismatch:
-  `better-sqlite3.node` was compiled for NODE_MODULE_VERSION 130; current Node requires 127.
+      `better-sqlite3.node` was compiled for NODE_MODULE_VERSION 130; current Node requires 127.
 
 Bu dosya bundan sonra da her committe asil faz dosyalariyla birlikte guncellenecek.

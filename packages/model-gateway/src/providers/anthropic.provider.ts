@@ -119,7 +119,9 @@ export function toAnthropicParams(
   }
   if (req.toolChoice !== undefined && params.tools !== undefined) {
     params.tool_choice =
-      req.toolChoice.type === 'tool' ? { type: 'tool', name: req.toolChoice.name } : { type: 'auto' };
+      req.toolChoice.type === 'tool'
+        ? { type: 'tool', name: req.toolChoice.name }
+        : { type: 'auto' };
   }
   if (opts.thinking === true) {
     params.thinking = { type: 'adaptive', display: 'summarized' };
@@ -155,12 +157,11 @@ function applyCacheBreakpoints(
   if (hint.systemAndTools === true && typeof params.system === 'string') {
     // Vendors render `tools` before `system`, so one breakpoint on the system block spans the pair —
     // but only the system text is ours to attach to, and only its own size is guaranteed present.
-    const toolChars = (params.tools ?? []).reduce(
-      (n, t) => n + JSON.stringify(t).length,
-      0,
-    );
+    const toolChars = (params.tools ?? []).reduce((n, t) => n + JSON.stringify(t).length, 0);
     if (worthCaching(params.system.length + toolChars)) {
-      params.system = [{ type: 'text', text: params.system, cache_control: { type: 'ephemeral', ttl } }];
+      params.system = [
+        { type: 'text', text: params.system, cache_control: { type: 'ephemeral', ttl } },
+      ];
     }
   }
 
@@ -170,7 +171,9 @@ function applyCacheBreakpoints(
   // `cache_control` rides on a content BLOCK, so a plain-string turn is widened to a one-block array.
   // Mapping to blocks changes no bytes the model sees; it only gives the marker somewhere to live.
   const blocks: Anthropic.ContentBlockParam[] =
-    typeof target.content === 'string' ? [{ type: 'text', text: target.content }] : [...target.content];
+    typeof target.content === 'string'
+      ? [{ type: 'text', text: target.content }]
+      : [...target.content];
   const last = blocks[blocks.length - 1];
   if (last === undefined || !acceptsCacheControl(last)) return;
   blocks[blocks.length - 1] = { ...last, cache_control: { type: 'ephemeral', ttl } };

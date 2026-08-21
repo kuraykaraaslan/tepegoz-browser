@@ -3,8 +3,4 @@ export { PopupBlockerPopup, PopupBlockerPage, PopupBlockerControls } from './pan
 export { popupBlockerDict, type PopupBlockerStrings } from './i18n';
 export { DEFAULT_TRUSTED_POPUP_ORIGINS } from './default-trusted-origins';
 export type { PopupBlockerHostApi, PopupBlockerSettings } from './types';
-export {
-  createPopupBlockerHost,
-  type PopupBlockerHost,
-  type PopupBlockerPorts,
-} from './host';
+export { createPopupBlockerHost, type PopupBlockerHost, type PopupBlockerPorts } from './host';

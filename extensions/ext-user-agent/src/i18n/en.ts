@@ -1,7 +1,8 @@
 /** English is the source shape for this extension's own strings; `tr.ts` must match it exactly. */
 export const en = {
   title: 'User-Agent',
-  description: 'Choose how this browser identifies itself to sites. Pick a preset or paste your own.',
+  description:
+    'Choose how this browser identifies itself to sites. Pick a preset or paste your own.',
   current: 'Current',
   presets: 'Presets',
   default: 'Default (Tepegöz)',

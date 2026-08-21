@@ -151,7 +151,11 @@ function moveItemToWindow(
 }
 
 /** Tear a tab/group out of `sourceWin` into a brand-new window at the drop point. */
-function tearOffToNewWindow(sourceWin: BrowserWindow, item: TabDragItem, point: TabDragPoint): void {
+function tearOffToNewWindow(
+  sourceWin: BrowserWindow,
+  item: TabDragItem,
+  point: TabDragPoint,
+): void {
   const src = TabManager.forWindow(sourceWin);
   if (src === undefined) return;
   const ids = item.kind === 'group' ? src.groupMemberIds(item.id) : [item.id];
@@ -199,7 +203,14 @@ export function registerTabDragIpc(): void {
     const height = Math.max(24, Math.round(payload.height));
     preview.setSize(width, height);
     loadPreviewSurface(preview, payload);
-    session = { sourceWin: win, item: payload.item, preview, grabOffset: payload.grabOffset, width, height };
+    session = {
+      sourceWin: win,
+      item: payload.item,
+      preview,
+      grabOffset: payload.grabOffset,
+      width,
+      height,
+    };
   });
   onWindowAction(IpcChannels.tabsDragMove, TabDragPointSchema, (_win, point) => {
     if (session === null) return;

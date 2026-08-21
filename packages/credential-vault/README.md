@@ -7,6 +7,7 @@ sees metadata or a per-provider boolean status. Electron-free, so the core is un
 runtime; the Electron wiring lives in the desktop app's `stores.electron.ts`.
 
 ## Exports
+
 - **`CredentialVault`** (default export) — static store over an id-keyed collection, so a provider can
   hold any number of labeled keys, ordered by priority (first = default):
   - `init({ crypto, filePath })` — loads the on-disk file; a legacy flat `{ provider: base64 }` map is
@@ -25,8 +26,10 @@ runtime; the Electron wiring lives in the desktop app's `stores.electron.ts`.
   per-provider "has a key" status map.
 
 ## Notes
+
 - Malformed or unknown-provider records are dropped individually on load, so one corrupt entry can't
   discard the whole vault.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

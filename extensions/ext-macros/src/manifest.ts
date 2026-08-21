@@ -10,14 +10,16 @@ export const macrosManifest = defineExtension({
   id: 'com.tepegoz.macros',
   name: 'Macros',
   version: '0.1.0',
-  description: 'Record, edit, and replay deterministic browser automations — a modern iMacros successor.',
+  description:
+    'Record, edit, and replay deterministic browser automations — a modern iMacros successor.',
   icon: 'wand-magic-sparkles',
   surfaces: ['sidebar', 'page'],
   actions: { click: 'sidebar', doubleClick: 'page' },
   labels: {
     tr: {
       name: 'Makrolar',
-      description: 'Belirlenimci tarayıcı otomasyonlarını kaydet, düzenle ve yeniden oynat — modern iMacros halefi.',
+      description:
+        'Belirlenimci tarayıcı otomasyonlarını kaydet, düzenle ve yeniden oynat — modern iMacros halefi.',
     },
   },
   permissions: ['tabs', 'read-page', 'navigate'],

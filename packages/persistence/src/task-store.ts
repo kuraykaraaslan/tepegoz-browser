@@ -102,7 +102,9 @@ function rowToTask(row: TaskRow): TaskDefinition {
     }),
     ...(row.target_url !== null ? { targetUrl: row.target_url } : {}),
     ...(row.target_origin !== null ? { targetOrigin: row.target_origin } : {}),
-    ...(row.source_conversation_id !== null ? { sourceConversationId: row.source_conversation_id } : {}),
+    ...(row.source_conversation_id !== null
+      ? { sourceConversationId: row.source_conversation_id }
+      : {}),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     ...(row.last_run_at !== null ? { lastRunAt: row.last_run_at } : {}),
@@ -222,14 +224,18 @@ function triggerStateParams(state: TaskTriggerStateRecord): Record<string, unkno
 export class TaskStore {
   static list(db: Db, limit = 500): TaskDefinition[] {
     const n = Math.max(1, Math.min(Math.trunc(limit), 1000));
-    const rows = db.prepare('SELECT * FROM tasks ORDER BY updated_at DESC LIMIT ?').all(n) as TaskRow[];
+    const rows = db
+      .prepare('SELECT * FROM tasks ORDER BY updated_at DESC LIMIT ?')
+      .all(n) as TaskRow[];
     return rows.map(rowToTask);
   }
 
   static due(db: Db, now: number, limit = 100): TaskDefinition[] {
     const n = Math.max(1, Math.min(Math.trunc(limit), 500));
     const rows = db
-      .prepare("SELECT * FROM tasks WHERE status = 'enabled' AND next_run_at IS NOT NULL AND next_run_at <= ? ORDER BY next_run_at ASC LIMIT ?")
+      .prepare(
+        "SELECT * FROM tasks WHERE status = 'enabled' AND next_run_at IS NOT NULL AND next_run_at <= ? ORDER BY next_run_at ASC LIMIT ?",
+      )
       .all(now, n) as TaskRow[];
     return rows.map(rowToTask);
   }
@@ -272,7 +278,9 @@ export class TaskStore {
     const n = Math.max(1, Math.min(Math.trunc(limit), 1000));
     const rows =
       taskId === undefined
-        ? (db.prepare('SELECT * FROM task_runs ORDER BY queued_at DESC LIMIT ?').all(n) as TaskRunRow[])
+        ? (db
+            .prepare('SELECT * FROM task_runs ORDER BY queued_at DESC LIMIT ?')
+            .all(n) as TaskRunRow[])
         : (db
             .prepare('SELECT * FROM task_runs WHERE task_id = ? ORDER BY queued_at DESC LIMIT ?')
             .all(taskId, n) as TaskRunRow[]);
@@ -304,9 +312,13 @@ export class TaskStore {
     const n = Math.max(1, Math.min(Math.trunc(limit), 1000));
     const rows =
       taskId === undefined
-        ? (db.prepare('SELECT * FROM task_artifacts ORDER BY created_at DESC LIMIT ?').all(n) as TaskArtifactRow[])
+        ? (db
+            .prepare('SELECT * FROM task_artifacts ORDER BY created_at DESC LIMIT ?')
+            .all(n) as TaskArtifactRow[])
         : (db
-            .prepare('SELECT * FROM task_artifacts WHERE task_id = ? ORDER BY created_at DESC LIMIT ?')
+            .prepare(
+              'SELECT * FROM task_artifacts WHERE task_id = ? ORDER BY created_at DESC LIMIT ?',
+            )
             .all(taskId, n) as TaskArtifactRow[]);
     return rows.map(rowToArtifact);
   }
@@ -324,9 +336,13 @@ export class TaskStore {
   static listTriggerState(db: Db, taskId?: string): TaskTriggerStateRecord[] {
     const rows =
       taskId === undefined
-        ? (db.prepare('SELECT * FROM task_trigger_state ORDER BY next_check_at ASC').all() as TaskTriggerStateRow[])
+        ? (db
+            .prepare('SELECT * FROM task_trigger_state ORDER BY next_check_at ASC')
+            .all() as TaskTriggerStateRow[])
         : (db
-            .prepare('SELECT * FROM task_trigger_state WHERE task_id = ? ORDER BY next_check_at ASC')
+            .prepare(
+              'SELECT * FROM task_trigger_state WHERE task_id = ? ORDER BY next_check_at ASC',
+            )
             .all(taskId) as TaskTriggerStateRow[]);
     return rows.map(rowToTriggerState);
   }

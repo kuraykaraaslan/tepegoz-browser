@@ -31,12 +31,16 @@ export function fieldStepBody(
     );
   }
   if (step.kind === 'click') {
-    return selectorInput(t, step.target[0]?.value ?? '', (v) => updateStep(location, { ...step, target: cssChain(v) }));
+    return selectorInput(t, step.target[0]?.value ?? '', (v) =>
+      updateStep(location, { ...step, target: cssChain(v) }),
+    );
   }
   if (step.kind === 'fill') {
     return (
       <span className="flex min-w-0 flex-1 items-center gap-1">
-        {selectorInput(t, step.target[0]?.value ?? '', (v) => updateStep(location, { ...step, target: cssChain(v) }))}
+        {selectorInput(t, step.target[0]?.value ?? '', (v) =>
+          updateStep(location, { ...step, target: cssChain(v) }),
+        )}
         <input
           type="text"
           value={step.value}
@@ -74,7 +78,9 @@ export function fieldStepBody(
         <select
           value={step.direction}
           aria-label={t.direction}
-          onChange={(e) => updateStep(location, { ...step, direction: e.target.value === 'up' ? 'up' : 'down' })}
+          onChange={(e) =>
+            updateStep(location, { ...step, direction: e.target.value === 'up' ? 'up' : 'down' })
+          }
           className={cn(FIELD, 'w-24')}
         >
           <option value="down">{t.scrollDown}</option>
@@ -86,7 +92,9 @@ export function fieldStepBody(
   if (step.kind === 'extract') {
     return (
       <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 text-text-primary">
-        {selectorInput(t, step.target[0]?.value ?? '', (v) => updateStep(location, { ...step, target: cssChain(v) }))}
+        {selectorInput(t, step.target[0]?.value ?? '', (v) =>
+          updateStep(location, { ...step, target: cssChain(v) }),
+        )}
         {'→'}
         <input
           type="text"
@@ -140,7 +148,9 @@ export function fieldStepBody(
           min={1}
           value={step.ms}
           aria-label={t.durationMs}
-          onChange={(e) => updateStep(location, { kind: 'waitMs', ms: Math.max(1, Number(e.target.value)) })}
+          onChange={(e) =>
+            updateStep(location, { kind: 'waitMs', ms: Math.max(1, Number(e.target.value)) })
+          }
           className={cn(FIELD, 'w-20')}
         />
         {'ms'}
@@ -156,7 +166,9 @@ export function fieldStepBody(
           value={step.target[0]?.value ?? ''}
           placeholder={t.selectorPlaceholder}
           aria-label={t.stepWaitFor}
-          onChange={(e) => updateStep(location, { ...step, target: [{ kind: 'css', value: e.target.value }] })}
+          onChange={(e) =>
+            updateStep(location, { ...step, target: [{ kind: 'css', value: e.target.value }] })
+          }
           className={cn(FIELD, 'min-w-0 flex-1')}
         />
         <input
@@ -164,7 +176,9 @@ export function fieldStepBody(
           min={1}
           value={step.timeoutMs ?? DEFAULT_ELEMENT_TIMEOUT_MS}
           aria-label={t.durationMs}
-          onChange={(e) => updateStep(location, { ...step, timeoutMs: Math.max(1, Number(e.target.value)) })}
+          onChange={(e) =>
+            updateStep(location, { ...step, timeoutMs: Math.max(1, Number(e.target.value)) })
+          }
           className={cn(FIELD, 'w-20')}
         />
         {'ms'}
@@ -180,7 +194,9 @@ export function fieldStepBody(
           min={1}
           value={step.timeoutMs ?? DEFAULT_LOAD_TIMEOUT_MS}
           aria-label={t.durationMs}
-          onChange={(e) => updateStep(location, { ...step, timeoutMs: Math.max(1, Number(e.target.value)) })}
+          onChange={(e) =>
+            updateStep(location, { ...step, timeoutMs: Math.max(1, Number(e.target.value)) })
+          }
           className={cn(FIELD, 'w-24')}
         />
         {'ms'}

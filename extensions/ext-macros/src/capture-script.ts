@@ -70,8 +70,10 @@ export function chainFrom(cap: Capture): SelectorChain {
   const chain: SelectorChain = [];
   if (cap.id !== undefined && cap.id.length > 0) chain.push({ kind: 'css', value: `#${cap.id}` });
   if (cap.css !== undefined && cap.css.length > 0) chain.push({ kind: 'css', value: cap.css });
-  if (cap.attr !== undefined) chain.push({ kind: 'attr', value: cap.attr.value, attr: cap.attr.name });
-  if (cap.xpath !== undefined && cap.xpath.length > 0) chain.push({ kind: 'xpath', value: cap.xpath });
+  if (cap.attr !== undefined)
+    chain.push({ kind: 'attr', value: cap.attr.value, attr: cap.attr.name });
+  if (cap.xpath !== undefined && cap.xpath.length > 0)
+    chain.push({ kind: 'xpath', value: cap.xpath });
   if (cap.text !== undefined && cap.text.length > 0) chain.push({ kind: 'text', value: cap.text });
   return chain.length > 0 ? chain : [{ kind: 'css', value: 'body' }];
 }

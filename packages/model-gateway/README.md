@@ -9,6 +9,7 @@ cost-saver toggle. Every provider adapter normalizes its vendor's wire format to
 `CanonRequest`/`CanonResponse` shapes, so the rest of the stack never sees vendor-specific formats.
 
 ## Exports
+
 - **`ModelGateway`** — `register(provider)` / `complete(req)`; the max-tokens/timeout guard + Token
   Ledger recording live here.
 - **`ModelRouter`** — pure `route(input)`: capability → `{ tier, transport, provider, model, effort }`;
@@ -25,9 +26,11 @@ cost-saver toggle. Every provider adapter normalizes its vendor's wire format to
   and reasoning-effort tiers so callers never hardcode a model string.
 
 ## Notes
+
 - Anthropic and OpenAI take deliberately different transports: Anthropic goes through its official SDK,
   OpenAI goes through the central `@tepegoz/http` client with no vendor SDK — see the adapters' doc
   comments for the reasoning per provider.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test` · `pnpm build`

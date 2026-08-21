@@ -44,7 +44,9 @@ export interface TranslateHostPorts {
   localAvailable(): boolean;
   runLocalBatch(input: TranslateRunBatchInput): Promise<TranslateBatchResult>;
   runCloudBatch(input: TranslateRunBatchInput): Promise<TranslateBatchResult>;
-  requestCloudFallback(request: TranslateCloudFallbackRequest): Promise<TranslateCloudFallbackResponse>;
+  requestCloudFallback(
+    request: TranslateCloudFallbackRequest,
+  ): Promise<TranslateCloudFallbackResponse>;
   memoryLookup(key: string): string | null;
   memoryStore(key: string, value: string): void;
 }
@@ -168,9 +170,10 @@ function mergeResults(
       }
     );
   });
-  const engine = items.find((item) => item.engine !== 'memory' && item.engine !== 'none')?.engine
-    ?? items.find((item) => item.engine === 'memory')?.engine
-    ?? 'none';
+  const engine =
+    items.find((item) => item.engine !== 'memory' && item.engine !== 'none')?.engine ??
+    items.find((item) => item.engine === 'memory')?.engine ??
+    'none';
   return { sourceLanguage, targetLanguage, items, engine, durationMs: Date.now() - startedAt };
 }
 
@@ -270,11 +273,18 @@ export function createTranslateHost(ports: TranslateHostPorts): TranslateHost {
     async translateBatch(input: TranslateBatchInput): Promise<TranslateBatchResult> {
       const startedAt = Date.now();
       const sourceLanguage = normalizeTranslateLanguage(input.sourceLanguage);
-      const targetLanguage = normalizeTranslateLanguage(input.targetLanguage, this.targetLanguage());
+      const targetLanguage = normalizeTranslateLanguage(
+        input.targetLanguage,
+        this.targetLanguage(),
+      );
       if (!ports.isExtensionEnabled() || !isTranslateEnabledForOrigin(settings, input.origin)) {
         return passthroughBatch(input, sourceLanguage, targetLanguage, startedAt);
       }
-      const glossaryTerms = glossaryTermsFor(settings.glossaryTerms, sourceLanguage, targetLanguage);
+      const glossaryTerms = glossaryTermsFor(
+        settings.glossaryTerms,
+        sourceLanguage,
+        targetLanguage,
+      );
       const translated = new Map<string, TranslateBatchResultItem>();
       const pending: TranslateBatchItem[] = [];
       for (const item of input.items) {
@@ -288,7 +298,13 @@ export function createTranslateHost(ports: TranslateHostPorts): TranslateHost {
         }
       }
       for (const batch of createTranslateBatches(pending)) {
-        const batchResult = await runEngine(input, sourceLanguage, targetLanguage, batch, glossaryTerms);
+        const batchResult = await runEngine(
+          input,
+          sourceLanguage,
+          targetLanguage,
+          batch,
+          glossaryTerms,
+        );
         if (batchResult === null) continue;
         for (const item of batchResult.items) {
           const text = item.text;
@@ -296,7 +312,10 @@ export function createTranslateHost(ports: TranslateHostPorts): TranslateHost {
           const next = { ...item, translatedText: glossaryApplied };
           translated.set(item.id, next);
           if (next.engine !== 'none') {
-            ports.memoryStore(translationMemoryKey(sourceLanguage, targetLanguage, text), glossaryApplied);
+            ports.memoryStore(
+              translationMemoryKey(sourceLanguage, targetLanguage, text),
+              glossaryApplied,
+            );
           }
         }
       }
@@ -309,7 +328,9 @@ export function createTranslateHost(ports: TranslateHostPorts): TranslateHost {
       const disabled = settings.disabledOrigins.filter((item) => item !== normalized);
       settings = {
         ...settings,
-        disabledOrigins: enabled ? disabled : [...disabled, normalized].slice(0, MAX_DISABLED_ORIGINS),
+        disabledOrigins: enabled
+          ? disabled
+          : [...disabled, normalized].slice(0, MAX_DISABLED_ORIGINS),
       };
       return persist();
     },

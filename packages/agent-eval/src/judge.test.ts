@@ -13,7 +13,10 @@ const scenario: EvalScenario = {
 
 describe('buildJudgePrompt', () => {
   it('includes the task, rubric, summary, and page evidence', () => {
-    const { system, user } = buildJudgePrompt(scenario, { finalPageText: 'Plan B $20', summary: 'Plan B is cheaper' });
+    const { system, user } = buildJudgePrompt(scenario, {
+      finalPageText: 'Plan B $20',
+      summary: 'Plan B is cheaper',
+    });
     expect(system).toContain('JSON');
     expect(user).toContain('Compare the two plans');
     expect(user).toContain('The summary must name the cheaper plan.');
@@ -32,7 +35,9 @@ describe('parseJudgeVerdict (untrusted model output)', () => {
   });
 
   it('unwraps a fenced verdict', () => {
-    const v = parseJudgeVerdict('```json\n{"pass":false,"confidence":0.2,"reason":"no plan named"}\n```');
+    const v = parseJudgeVerdict(
+      '```json\n{"pass":false,"confidence":0.2,"reason":"no plan named"}\n```',
+    );
     expect(v.pass).toBe(false);
   });
 
@@ -41,7 +46,10 @@ describe('parseJudgeVerdict (untrusted model output)', () => {
   });
 
   it('fails closed on a malformed verdict (out-of-range confidence)', () => {
-    expect(parseJudgeVerdict('{"pass":true,"confidence":5}')).toMatchObject({ pass: false, confidence: 0 });
+    expect(parseJudgeVerdict('{"pass":true,"confidence":5}')).toMatchObject({
+      pass: false,
+      confidence: 0,
+    });
   });
 });
 

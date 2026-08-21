@@ -29,7 +29,10 @@ export const API_KEY = process.env.TEPEGOZ_EVAL_API_KEY ?? '';
 // Trials per scenario (`TEPEGOZ_EVAL_REPEAT=3`). N=1 is too noisy for a headline — the real agent flips
 // pass/fail run-to-run on model sampling — so a defensible number aggregates a per-scenario pass-frequency
 // over repeats. Clamped to [1,10]. Default 1 (fast regression / plumbing).
-export const REPEAT = Math.min(10, Math.max(1, Math.trunc(Number(process.env.TEPEGOZ_EVAL_REPEAT ?? '1')) || 1));
+export const REPEAT = Math.min(
+  10,
+  Math.max(1, Math.trunc(Number(process.env.TEPEGOZ_EVAL_REPEAT ?? '1')) || 1),
+);
 // Optional comma-separated scenario-id allowlist (`TEPEGOZ_EVAL_ONLY=native_select_country,blog_behind_menu`)
 // so an iteration re-runs just the target(s) + a tripwire instead of the whole registry — a full live
 // run is minutes-per-scenario under a low-TPM key. Empty → the full registry (baselines / boundaries).
@@ -71,7 +74,9 @@ export const RATES: TokenRateUsd | undefined = (() => {
   try {
     parsed = JSON.parse(raw);
   } catch {
-    console.warn('[agent-eval] TEPEGOZ_EVAL_RATES is not valid JSON — cost will read "not measured"');
+    console.warn(
+      '[agent-eval] TEPEGOZ_EVAL_RATES is not valid JSON — cost will read "not measured"',
+    );
     return undefined;
   }
   const safe = RatesSchema.safeParse(parsed);

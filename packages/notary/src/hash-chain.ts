@@ -80,7 +80,11 @@ export function chainEvents(
 
 export type ChainVerdict =
   | { valid: true }
-  | { valid: false; reason: 'empty' | 'broken_genesis' | 'broken_link' | 'hash_mismatch'; atIndex: number };
+  | {
+      valid: false;
+      reason: 'empty' | 'broken_genesis' | 'broken_link' | 'hash_mismatch';
+      atIndex: number;
+    };
 
 /**
  * Verify a previously-chained sequence.

@@ -36,13 +36,21 @@ export function scoreScenario(input: ScoreInput): ScoreResult {
 
   if (success.domAssertion !== undefined) {
     if (!includesCI(input.finalPageText, success.domAssertion)) {
-      return { ok: false, method: 'ground-truth', reason: `final page missing "${success.domAssertion}"` };
+      return {
+        ok: false,
+        method: 'ground-truth',
+        reason: `final page missing "${success.domAssertion}"`,
+      };
     }
     checks.push(`page contains "${success.domAssertion}"`);
   }
   if (success.expectedValue !== undefined) {
     if (!includesCI(input.summary, success.expectedValue)) {
-      return { ok: false, method: 'ground-truth', reason: `summary missing "${success.expectedValue}"` };
+      return {
+        ok: false,
+        method: 'ground-truth',
+        reason: `summary missing "${success.expectedValue}"`,
+      };
     }
     checks.push(`summary contains "${success.expectedValue}"`);
   }

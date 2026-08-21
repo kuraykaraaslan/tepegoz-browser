@@ -29,7 +29,12 @@ function markerAt(params: ReturnType<typeof toAnthropicParams>, index: number): 
 describe('toAnthropicParams — prompt-cache breakpoints', () => {
   it('sets no marker at all when the request carries no hint', () => {
     const params = toAnthropicParams(
-      req({ messages: [{ role: 'system', content: BIG }, { role: 'user', content: BIG }] }),
+      req({
+        messages: [
+          { role: 'system', content: BIG },
+          { role: 'user', content: BIG },
+        ],
+      }),
     );
     expect(typeof params.system).toBe('string');
     expect(markerAt(params, 0)).toBeUndefined();
@@ -38,7 +43,10 @@ describe('toAnthropicParams — prompt-cache breakpoints', () => {
   it('caches the system prompt (which spans the tools rendered before it)', () => {
     const params = toAnthropicParams(
       req({
-        messages: [{ role: 'system', content: BIG }, { role: 'user', content: 'hi' }],
+        messages: [
+          { role: 'system', content: BIG },
+          { role: 'user', content: 'hi' },
+        ],
         cache: { systemAndTools: true, ttl: '1h' },
       }),
     );
@@ -82,7 +90,10 @@ describe('toAnthropicParams — prompt-cache breakpoints', () => {
   it('widens a plain-string turn to a block so the marker has somewhere to live', () => {
     const params = toAnthropicParams(
       req({
-        messages: [{ role: 'user', content: BIG }, { role: 'user', content: 'now' }],
+        messages: [
+          { role: 'user', content: BIG },
+          { role: 'user', content: 'now' },
+        ],
         cache: { lastStableMessageIndex: 0 },
       }),
     );
@@ -94,7 +105,10 @@ describe('toAnthropicParams — prompt-cache breakpoints', () => {
   it('skips the message breakpoint when the promised prefix is too small to cache', () => {
     const params = toAnthropicParams(
       req({
-        messages: [{ role: 'user', content: 'tiny' }, { role: 'user', content: 'now' }],
+        messages: [
+          { role: 'user', content: 'tiny' },
+          { role: 'user', content: 'now' },
+        ],
         cache: { lastStableMessageIndex: 0 },
       }),
     );

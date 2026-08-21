@@ -156,7 +156,11 @@ export function AboutSection() {
           <Button size="sm" variant="outline" onClick={() => open('https://kuray.dev')}>
             {s.aboutWebsite}
           </Button>
-          <Button size="sm" variant="outline" onClick={() => open('https://github.com/kuraykaraaslan')}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => open('https://github.com/kuraykaraaslan')}
+          >
             {s.aboutGithub}
           </Button>
           <Button
@@ -189,7 +193,13 @@ export function PasswordsSection({
 }: {
   credentials: LoginCredentialMeta[];
   onMount: () => Promise<void>;
-  onAdd: (c: { url: string; username: string; password: string; title?: string; notes?: string }) => Promise<void>;
+  onAdd: (c: {
+    url: string;
+    username: string;
+    password: string;
+    title?: string;
+    notes?: string;
+  }) => Promise<void>;
   onRemove: (id: string) => Promise<void>;
   onImport: (data: string, format: string) => Promise<LoginImportResult>;
   onExport: (format: string) => Promise<string>;

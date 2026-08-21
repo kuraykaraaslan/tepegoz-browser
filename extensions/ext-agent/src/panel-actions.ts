@@ -42,8 +42,16 @@ export interface AgentActionsDeps {
 
 export function useAgentActions(deps: AgentActionsDeps) {
   const {
-    api, a, config, setConfig, activeGroupId, activeState, mutateGroup, mutateActive,
-    setLogExported, setExportError,
+    api,
+    a,
+    config,
+    setConfig,
+    activeGroupId,
+    activeState,
+    mutateGroup,
+    mutateActive,
+    setLogExported,
+    setExportError,
   } = deps;
 
   function onRun(): void {
@@ -66,15 +74,16 @@ export function useAgentActions(deps: AgentActionsDeps) {
       expandedFiles: new Set(),
       skillId: null,
     }));
-    void api.runAgent({
-      prompt: fullPrompt,
-      groupId,
-      displayPrompt: text,
-      attachmentMeta: attachmentMeta(activeState.attachments),
-      // Attachments change the task, so `fullPrompt` stops matching the stored skill and main simply
-      // refuses the binding — the run is asked about normally. That is the intended direction.
-      ...(activeState.skillId !== null ? { skillId: activeState.skillId } : {}),
-    })
+    void api
+      .runAgent({
+        prompt: fullPrompt,
+        groupId,
+        displayPrompt: text,
+        attachmentMeta: attachmentMeta(activeState.attachments),
+        // Attachments change the task, so `fullPrompt` stops matching the stored skill and main simply
+        // refuses the binding — the run is asked about normally. That is the intended direction.
+        ...(activeState.skillId !== null ? { skillId: activeState.skillId } : {}),
+      })
       .then((result) => {
         // The evidence verdict belongs to THIS turn, matched by its own id rather than by position:
         // a run that resolves after the user has started another must not label the wrong answer.
@@ -82,18 +91,20 @@ export function useAgentActions(deps: AgentActionsDeps) {
         const outcome = result.completionOutcome;
         mutateGroup(groupId, (s) => ({
           ...s,
-          turns: s.turns.map((turn) => (turn.id === id ? { ...turn, completionOutcome: outcome } : turn)),
+          turns: s.turns.map((turn) =>
+            turn.id === id ? { ...turn, completionOutcome: outcome } : turn,
+          ),
         }));
       })
       .catch((err: unknown) => {
-        const message = err instanceof Error && err.message.trim().length > 0
-          ? err.message
-          : a.runFailed;
+        const message =
+          err instanceof Error && err.message.trim().length > 0 ? err.message : a.runFailed;
         const localRunId = `local-${id}`;
         mutateGroup(groupId, (s) => {
           const turns = s.turns.map((turn) => {
             if (turn.id !== id) return turn;
-            if (turn.events.some((event) => event.kind === 'done' || event.kind === 'error')) return turn;
+            if (turn.events.some((event) => event.kind === 'done' || event.kind === 'error'))
+              return turn;
             const runId = turn.runId ?? localRunId;
             const event: AgentEvent = {
               runId,
@@ -188,19 +199,25 @@ export function useAgentActions(deps: AgentActionsDeps) {
       .then(() => {
         setExportError(null);
         setLogExported(true);
-        setTimeout(() => { setLogExported(false); }, 2000);
+        setTimeout(() => {
+          setLogExported(false);
+        }, 2000);
       })
       .catch((err: unknown) => {
-        const msg = err instanceof Error && err.message.trim().length > 0 ? err.message : a.exportLog.failed;
+        const msg =
+          err instanceof Error && err.message.trim().length > 0 ? err.message : a.exportLog.failed;
         setExportError(msg);
-        setTimeout(() => { setExportError(null); }, 6000);
+        setTimeout(() => {
+          setExportError(null);
+        }, 6000);
       });
   }
 
   function toggleReasoning(turnId: string): void {
     mutateActive((s) => {
       const next = new Set(s.openReasoning);
-      if (next.has(turnId)) next.delete(turnId); else next.add(turnId);
+      if (next.has(turnId)) next.delete(turnId);
+      else next.add(turnId);
       return { ...s, openReasoning: next };
     });
   }
@@ -208,21 +225,28 @@ export function useAgentActions(deps: AgentActionsDeps) {
   function toggleSteps(turnId: string): void {
     mutateActive((s) => {
       const next = new Set(s.openSteps);
-      if (next.has(turnId)) next.delete(turnId); else next.add(turnId);
+      if (next.has(turnId)) next.delete(turnId);
+      else next.add(turnId);
       return { ...s, openSteps: next };
     });
   }
 
   function chooseProvider(provider: AIProvider): void {
     setConfig((prev) => (prev !== null ? { ...prev, provider } : prev));
-    void api.setAgentProvider(provider).then(() => api.getAgentConfig()).then(setConfig, () => {});
+    void api
+      .setAgentProvider(provider)
+      .then(() => api.getAgentConfig())
+      .then(setConfig, () => {});
   }
 
   function chooseModel(model: string): void {
     const provider = config?.provider;
     if (provider === undefined) return;
     setConfig((prev) => (prev !== null ? { ...prev, model } : prev));
-    void api.setAgentModel(provider, model).then(() => api.getAgentConfig()).then(setConfig, () => {});
+    void api
+      .setAgentModel(provider, model)
+      .then(() => api.getAgentConfig())
+      .then(setConfig, () => {});
   }
 
   function chooseAutonomy(level: AgentAutonomy): void {
@@ -252,7 +276,8 @@ export function useAgentActions(deps: AgentActionsDeps) {
   function toggleStep(id: string): void {
     mutateActive((s) => {
       const next = new Set(s.skipIds);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return { ...s, skipIds: next };
     });
   }

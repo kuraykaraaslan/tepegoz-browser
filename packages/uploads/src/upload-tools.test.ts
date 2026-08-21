@@ -21,7 +21,11 @@ describe('upload tools', () => {
       'upload_list_items',
       'upload_update_item',
     ]);
-    expect(tools.find((tool) => tool.id === 'upload_create_item')?.requiresIdempotencyKey).toBe(true);
-    expect(tools.find((tool) => tool.id === 'upload_update_item')?.dangerClass).toBe('state_changing');
+    expect(tools.find((tool) => tool.id === 'upload_create_item')?.requiresIdempotencyKey).toBe(
+      true,
+    );
+    expect(tools.find((tool) => tool.id === 'upload_update_item')?.dangerClass).toBe(
+      'state_changing',
+    );
   });
 });

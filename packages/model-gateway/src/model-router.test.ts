@@ -17,18 +17,32 @@ describe('ModelRouter.route — tier selection', () => {
 
   it('routes unknown/execution capabilities to the Sonnet tier at high effort', () => {
     const d = ModelRouter.route({ capability: 'browse', costSaver: false });
-    expect(d).toMatchObject({ tier: 'exec', model: ANTHROPIC_MODEL.exec, effort: 'high', reason: 'exec_cloud' });
+    expect(d).toMatchObject({
+      tier: 'exec',
+      model: ANTHROPIC_MODEL.exec,
+      effort: 'high',
+      reason: 'exec_cloud',
+    });
   });
 
   it('routes simple capabilities to the Haiku tier at low effort', () => {
     const d = ModelRouter.route({ capability: 'classify', costSaver: false });
-    expect(d).toMatchObject({ tier: 'classify', model: ANTHROPIC_MODEL.classify, effort: 'low', reason: 'classify_cloud' });
+    expect(d).toMatchObject({
+      tier: 'classify',
+      model: ANTHROPIC_MODEL.classify,
+      effort: 'low',
+      reason: 'classify_cloud',
+    });
   });
 });
 
 describe('ModelRouter.route — cost-saver offload', () => {
   it('falls back to cloud when cost-saver is on but no local SLM is available (Phase 1a no-op)', () => {
-    const d = ModelRouter.route({ capability: 'summarize', costSaver: true, localAvailable: false });
+    const d = ModelRouter.route({
+      capability: 'summarize',
+      costSaver: true,
+      localAvailable: false,
+    });
     expect(d.transport).toBe('cloud');
     expect(d.model).toBe(ANTHROPIC_MODEL.classify);
     expect(d.reason).toBe('local_unavailable_cloud_fallback');
@@ -59,7 +73,11 @@ describe('ModelRouter.route — cost-saver offload', () => {
     expect(plan.transport).toBe('cloud');
     expect(plan.reason).toBe('plan_cloud');
 
-    const exec = ModelRouter.route({ capability: 'execute_step', costSaver: true, localAvailable: true });
+    const exec = ModelRouter.route({
+      capability: 'execute_step',
+      costSaver: true,
+      localAvailable: true,
+    });
     expect(exec.transport).toBe('cloud');
     expect(exec.reason).toBe('exec_cloud');
   });
@@ -73,15 +91,17 @@ describe('ModelRouter.route — provider-specific model maps', () => {
   });
 
   it('routes each OpenAI tier to its model', () => {
-    expect(ModelRouter.route({ capability: 'browse', costSaver: false, provider: 'openai' }).model).toBe(
-      OPENAI_MODEL.exec,
-    );
-    expect(ModelRouter.route({ capability: 'classify', costSaver: false, provider: 'openai' }).model).toBe(
-      OPENAI_MODEL.classify,
-    );
+    expect(
+      ModelRouter.route({ capability: 'browse', costSaver: false, provider: 'openai' }).model,
+    ).toBe(OPENAI_MODEL.exec);
+    expect(
+      ModelRouter.route({ capability: 'classify', costSaver: false, provider: 'openai' }).model,
+    ).toBe(OPENAI_MODEL.classify);
   });
 
   it('defaults to the Anthropic map when no provider is given', () => {
-    expect(ModelRouter.route({ capability: 'plan', costSaver: false }).model).toBe(ANTHROPIC_MODEL.plan);
+    expect(ModelRouter.route({ capability: 'plan', costSaver: false }).model).toBe(
+      ANTHROPIC_MODEL.plan,
+    );
   });
 });

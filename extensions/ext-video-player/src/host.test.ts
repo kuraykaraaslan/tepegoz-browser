@@ -30,7 +30,12 @@ describe('createVideoPlayerHost', () => {
       fakePorts({
         persisted: {
           defaultSpeed: 99,
-          disabledOrigins: ['example.com', 'https://example.com/path', 'chrome://x', 'http://a.test/y'],
+          disabledOrigins: [
+            'example.com',
+            'https://example.com/path',
+            'chrome://x',
+            'http://a.test/y',
+          ],
         },
       }),
     );
@@ -69,7 +74,9 @@ describe('createVideoPlayerHost', () => {
   });
 
   it('resolves skin options, mapping auto/light/dark theme', () => {
-    const host = createVideoPlayerHost(fakePorts({ persisted: { theme: 'auto', defaultSpeed: 1.5 } }));
+    const host = createVideoPlayerHost(
+      fakePorts({ persisted: { theme: 'auto', defaultSpeed: 1.5 } }),
+    );
     host.init();
     expect(host.skinOptions(null)).toEqual({
       defaultSpeed: 1.5,

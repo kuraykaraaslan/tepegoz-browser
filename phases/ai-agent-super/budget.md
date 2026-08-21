@@ -19,11 +19,11 @@ Those were order-of-magnitude guesses written before anyone multiplied real toke
 
 **Measured token counts** (v2 ledger, [`eval-results-2026-07.md`](eval-results-2026-07.md)):
 
-| Trial shape | Tokens | Source |
-|---|---|---|
-| Clean pass (`native_select_country`, after the `select_option` fix) | **13.8k** | ledger, `select_option` finding |
-| Flailing (same scenario before the fix — Tab/scroll/screenshot loop) | **110k** | same finding |
-| Escape into `max_steps` (`escape_bait`) | **224k** | ledger row, worst observed |
+| Trial shape                                                          | Tokens    | Source                          |
+| -------------------------------------------------------------------- | --------- | ------------------------------- |
+| Clean pass (`native_select_country`, after the `select_option` fix)  | **13.8k** | ledger, `select_option` finding |
+| Flailing (same scenario before the fix — Tab/scroll/screenshot loop) | **110k**  | same finding                    |
+| Escape into `max_steps` (`escape_bait`)                              | **224k**  | ledger row, worst observed      |
 
 `maxSteps` is 25 ([`executor.ts:90`](../../packages/orchestrator/src/executor.ts#L90)) and input dominates
 by roughly 10:1 — the page state is re-sent every step, the output is one small tool call. Working
@@ -33,11 +33,11 @@ figure because the transient-state collapse (§2) keeps long runs from growing l
 **Current first-party prices** (per 1M tokens; the repo deliberately refuses to bake these into code —
 see `TEPEGOZ_EVAL_RATES` in [`harness-config.ts`](../../packages/agent-eval/src/harness-config.ts#L40)):
 
-| Model | In | Out |
-|---|---|---|
-| `claude-opus-4-8` (the plan tier) | $5 | $25 |
-| `claude-sonnet-4-6` (the exec tier) | $3 | $15 |
-| `claude-haiku-4-5` | $1 | $5 |
+| Model                               | In  | Out |
+| ----------------------------------- | --- | --- |
+| `claude-opus-4-8` (the plan tier)   | $5  | $25 |
+| `claude-sonnet-4-6` (the exec tier) | $3  | $15 |
+| `claude-haiku-4-5`                  | $1  | $5  |
 
 Prompt caching: cache **write** ≈ 1.25×, cache **read** ≈ **0.1×**; default TTL 5 min, `ttl: "1h"` option.
 
@@ -46,17 +46,17 @@ Prompt caching: cache **write** ≈ 1.25×, cache **read** ≈ **0.1×**; defaul
 The DoD tier is a **mix**: the planner runs on opus-4-8, the executor on sonnet-4-6, and most steps are
 executor decisions — roughly an 20/80 token split.
 
-| Tier | $/trial | $50 buys |
-|---|---:|---:|
-| **DoD default (plan opus-4-8 + exec sonnet-4-6)** | **~$0.22** | ~225 trials |
-| DoD default **+ prompt caching** | **~$0.19** | **~260 trials** |
-| All-sonnet-4-6 + caching | ~$0.15 | ~330 trials |
-| All-haiku-4-5 + caching | ~$0.05 | ~1,000 trials |
+| Tier                                              |    $/trial |        $50 buys |
+| ------------------------------------------------- | ---------: | --------------: |
+| **DoD default (plan opus-4-8 + exec sonnet-4-6)** | **~$0.22** |     ~225 trials |
+| DoD default **+ prompt caching**                  | **~$0.19** | **~260 trials** |
+| All-sonnet-4-6 + caching                          |     ~$0.15 |     ~330 trials |
+| All-haiku-4-5 + caching                           |     ~$0.05 |   ~1,000 trials |
 
 **Re-priced program total: ~$550–780 at the DoD tier** — not $2,500–8,000. The old table over-stated the
 program by **4–10×**.
 
-> ⚠️ **These are estimates from three logged token counts.** The rule below is that the *first* dollar
+> ⚠️ **These are estimates from three logged token counts.** The rule below is that the _first_ dollar
 > spent replaces them with a measurement. No sweep is committed to before that happens.
 
 ## 2. Correction to the caching lever — it is worth ~25%, not ~45%
@@ -66,25 +66,25 @@ agent-loop assumption that a growing message history is re-sent verbatim each st
 [`reactor.ts`](../../packages/orchestrator/src/reactor.ts#L328-L349) refutes that**, in two ways that
 pull in opposite directions:
 
-1. **The history is already compact.** `pushObservation` collapses the *previous* large page-state blob
+1. **The history is already compact.** `pushObservation` collapses the _previous_ large page-state blob
    to `COLLAPSED_STATE_PLACEHOLDER` whenever a new one arrives (AI-3 transient page-state), and
    `syncWorkingState` does the same for the typed working ledger. DOM dumps never accumulate. So the
    cacheable prefix — system + `SECURITY_PREAMBLE` + tool definitions + collapsed history — is **small**,
    and the bulk of each request is the **current** page state, which is fresh every step and inherently
    uncacheable. The saving is therefore **~20–30% of input, not 70%**.
 2. **Naive placement would cache nothing at all.** Both collapses **mutate a message in place**
-   (`messages[lastStateIndex] = {...prev, content: PLACEHOLDER}`). Caching is a *prefix match* — a byte
+   (`messages[lastStateIndex] = {...prev, content: PLACEHOLDER}`). Caching is a _prefix match_ — a byte
    change anywhere in the prefix invalidates everything after it. A breakpoint at the tail would be
    invalidated on **every single step**, yielding a 0% hit rate while still paying the 1.25× write
    premium. **Net worse than no caching.**
 
 **The fix:** place the rolling breakpoint with a **lag of two steps**, behind the collapsible region.
-The message at step *N−1* is collapsed during step *N* and never touched again, so at step *N* the
-prefix through step *N−2* is byte-stable. Pin a second, permanent breakpoint after tools + system, with
+The message at step _N−1_ is collapsed during step _N_ and never touched again, so at step _N_ the
+prefix through step _N−2_ is byte-stable. Pin a second, permanent breakpoint after tools + system, with
 `ttl: "1h"` so it survives a whole sweep rather than one trial.
 
 **Verification is not optional:** `usage.cache_read_input_tokens` must be non-zero across steps. If it
-reads zero, a silent invalidator is still live and caching is *costing* money, not saving it.
+reads zero, a silent invalidator is still live and caching is _costing_ money, not saving it.
 
 This correction is in the plan rather than quietly fixed because it is the difference between a lever
 that pays and a lever that charges 25% for nothing.
@@ -99,8 +99,8 @@ that pays and a lever that charges 25% for nothing.
 - **North-star condition 2 (claim-grade ASR) does not fit — and should not run yet anyway.** 24 `atk_*`
   × N≥10 = 240 trials ≈ **$46**, which would consume the whole budget and leave the competence baseline
   unmeasured. The constitution independently requires it to run **after**
-  [S3](phase-s3-reliability-actions.md): *ASR measured at 1/3 benign competence is inflated by
-  incompetence, not defence.* Budget and constitution agree on the ordering. It is the **next purchase**.
+  [S3](phase-s3-reliability-actions.md): _ASR measured at 1/3 benign competence is inflated by
+  incompetence, not defence._ Budget and constitution agree on the ordering. It is the **next purchase**.
 - **≥25 human judge labels.** Costs $0 and owner **time**. The cheapest north-star-adjacent unblock in
   the program, absent from this budget because money is not what it needs.
 
@@ -114,12 +114,12 @@ first two **✅ phases** and the honest competence baseline every later claim is
 Four tiers, cheapest first. A sweep may escalate a tier only by naming, in its ledger entry, what the
 tier below could not answer.
 
-| Tier | Cost | What it can prove | What it may never claim |
-|---|---|---|---|
-| **T0 — no model** | $0 | Mechanism *exists and fires*: deterministic gates, scripted-adversarial providers, refutations. The [S5](phase-s5-code-execution.md) trick — a phase deferred on a wrong belief, refuted by two local HTTP servers. | Competence. Labelled "plumbing/regression, NOT competence" per the ledger contract. |
-| **T1 — free cloud tier** | $0 | Mechanism-firing **rates** at N≥10 across the registry, on a frontier-class model. Rate limits make it slow, not expensive. | The DoD number. Every row carries its tier label. |
-| **T2 — calibration** | ~$1 | The real tokens/trial and $/trial. Gates everything below it. | Anything else. |
-| **T3 — the $50** | ~$44 | Two phase closes at the **DoD tier**: the S0 baseline and the S3 paired sweep. | Anything a lower tier could have answered. |
+| Tier                     | Cost | What it can prove                                                                                                                                                                                                   | What it may never claim                                                             |
+| ------------------------ | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| **T0 — no model**        | $0   | Mechanism _exists and fires_: deterministic gates, scripted-adversarial providers, refutations. The [S5](phase-s5-code-execution.md) trick — a phase deferred on a wrong belief, refuted by two local HTTP servers. | Competence. Labelled "plumbing/regression, NOT competence" per the ledger contract. |
+| **T1 — free cloud tier** | $0   | Mechanism-firing **rates** at N≥10 across the registry, on a frontier-class model. Rate limits make it slow, not expensive.                                                                                         | The DoD number. Every row carries its tier label.                                   |
+| **T2 — calibration**     | ~$1  | The real tokens/trial and $/trial. Gates everything below it.                                                                                                                                                       | Anything else.                                                                      |
+| **T3 — the $50**         | ~$44 | Two phase closes at the **DoD tier**: the S0 baseline and the S3 paired sweep.                                                                                                                                      | Anything a lower tier could have answered.                                          |
 
 ## 5. The plan
 
@@ -128,17 +128,17 @@ tier below could not answer.
 All four shipped on `feat/ai-budget-caching-ceiling`, deterministic and test-covered. **No measurement is
 claimed by any of it** — this is the machinery a funded sweep runs on, not a result.
 
-| Lever | Landed as |
-|---|---|
-| L0 | `CanonCacheHint` on `CanonRequest` (provider-agnostic, ADR-0005) → `cache_control` in the Anthropic adapter; `stableIndexBefore` in the orchestrator computes the promise from the two indices the Reactor may still rewrite; size-gated per breakpoint; `ttl: '1h'`. |
-| L1 | `TokenLedger.setRunCeiling` + a pre-dispatch gate in the gateway (429, never a silent truncation); `runTokenCeiling` on `runAgent`; `TEPEGOZ_EVAL_RUN_CEILING` forwarded to the app by the harness. |
-| L2 | Already existed: `modelLabel()` reports `provider (plan=…, exec=…)` into every report and archive row. Widened rather than duplicated. |
-| L3 | `TEPEGOZ_EVAL_RATES` gained `cacheReadMultiplier` / `cacheWriteMultiplier`; `estimateCostUsd` prices the three input classes separately. |
+| Lever | Landed as                                                                                                                                                                                                                                                             |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| L0    | `CanonCacheHint` on `CanonRequest` (provider-agnostic, ADR-0005) → `cache_control` in the Anthropic adapter; `stableIndexBefore` in the orchestrator computes the promise from the two indices the Reactor may still rewrite; size-gated per breakpoint; `ttl: '1h'`. |
+| L1    | `TokenLedger.setRunCeiling` + a pre-dispatch gate in the gateway (429, never a silent truncation); `runTokenCeiling` on `runAgent`; `TEPEGOZ_EVAL_RUN_CEILING` forwarded to the app by the harness.                                                                   |
+| L2    | Already existed: `modelLabel()` reports `provider (plan=…, exec=…)` into every report and archive row. Widened rather than duplicated.                                                                                                                                |
+| L3    | `TEPEGOZ_EVAL_RATES` gained `cacheReadMultiplier` / `cacheWriteMultiplier`; `estimateCostUsd` prices the three input classes separately.                                                                                                                              |
 
 **Two corrections the implementation forced, both of which would have produced wrong money:**
 
 - **Cache counters are ADDITIVE, not a breakdown.** Vendors report `inputTokens` as the tokens that were
-  *neither* cached nor written. An earlier draft of the ledger excluded the cache counters from
+  _neither_ cached nor written. An earlier draft of the ledger excluded the cache counters from
   `totalTokens`, which would have made a well-cached run look nearly free to the quota gate.
 - **Pricing all input at the full rate over-reports a cached sweep.** Cache reads bill at ~0.1x and
   writes at ~1.25x. Without the multipliers the harness would have priced the $50 plan as unaffordable
@@ -148,14 +148,14 @@ Caching is unfalsifiable unless the counters are stated, so the sweep report now
 `healthy` / `weak` / **`WASTED`** / `not-used` (`cache-health.ts`). A wasted cache is the failure that
 survives for months precisely because nothing says it out loud.
 
-*(Original plan, for the record:)*
+_(Original plan, for the record:)_
 
-| # | Lever | Why it pays |
-|---|---|---|
+| #      | Lever                                                                                                               | Why it pays                                                                                                                                                                                                                             |
+| ------ | ------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **L0** | **Prompt caching, with the lag-2 rolling breakpoint of §2.** `cache_control` appears **nowhere** in the repo today. | ~25% off every paid trial — ~$11 of this budget — plus lower wall-clock, which is [S7](phase-s7-speed.md)'s headline metric improved for free. **Must ship with the `cache_read_input_tokens` assertion**; done naively it loses money. |
-| **L1** | **Per-trial token ceiling.** Today one `escape_bait` trial can burn 224k tokens — 4.5× the budgeting assumption. | On a $50 budget a handful of those is a measurable fraction of the whole. Turns the budget into a guarantee rather than a hope. |
-| **L2** | **Tier label in the harness**, written into every ledger row. | The DoD-tier plan below does not *need* the §7 amendment — but the label is what lets a future cheap-tier row be honest instead of forbidden. |
-| **L3** | **Wire `TEPEGOZ_EVAL_RATES`** into the sweep launcher with current prices. | The report already refuses to print $0 for an unknown price. Give it the prices. |
+| **L1** | **Per-trial token ceiling.** Today one `escape_bait` trial can burn 224k tokens — 4.5× the budgeting assumption.    | On a $50 budget a handful of those is a measurable fraction of the whole. Turns the budget into a guarantee rather than a hope.                                                                                                         |
+| **L2** | **Tier label in the harness**, written into every ledger row.                                                       | The DoD-tier plan below does not _need_ the §7 amendment — but the label is what lets a future cheap-tier row be honest instead of forbidden.                                                                                           |
+| **L3** | **Wire `TEPEGOZ_EVAL_RATES`** into the sweep launcher with current prices.                                          | The report already refuses to print $0 for an unknown price. Give it the prices.                                                                                                                                                        |
 
 None of these needs a key.
 
@@ -175,7 +175,7 @@ up. The plan adapts to the measurement; the measurement is never adjusted to fit
 
 **52 scenarios × N=3 = 156 trials**, DoD tier (plan opus-4-8 / exec sonnet-4-6), caching on.
 
-- **Coverage 5/52 → 52/52.** Today *"only 5 of 52 scenarios have EVER been measured live"*; the 24
+- **Coverage 5/52 → 52/52.** Today _"only 5 of 52 scenarios have EVER been measured live"_; the 24
   `atk_*`, all 9 web-patterns, and everything else have **no valid current number**.
 - **[S0](phase-s0-truth-and-repair.md) closes 🟠 → ✅** — the program's first ✅, and the base every other
   phase's before/after is measured against.
@@ -185,13 +185,13 @@ up. The plan adapts to the measurement; the measurement is never adjusted to fit
 
 **7 `reliability-actions` scenarios × N=5 × 2 arms = 70 trials**, same tier, capability flags off/on.
 
-This is the sweep that attacks the owner's **pain #1** — *"can't complete tasks on real sites"* — and
+This is the sweep that attacks the owner's **pain #1** — _"can't complete tasks on real sites"_ — and
 [S3](phase-s3-reliability-actions.md) is the phase with the most landed code (PR0–PR7: dialogs,
 tab-spawn, wait-for, send-keys, hover, typed widgets, click-time occlusion + locator cascade, the
 `cookie_consent` fix).
 
-**N=5 is claim-grade here, by the pooled route.** The constitution requires *"N≥10 per scenario **or**
-family-pooled 30–70 trials"* — 7 × 5 = **35 pooled trials per arm**, inside that band, with Wilson 95%
+**N=5 is claim-grade here, by the pooled route.** The constitution requires _"N≥10 per scenario **or**
+family-pooled 30–70 trials"_ — 7 × 5 = **35 pooled trials per arm**, inside that band, with Wilson 95%
 CIs on the pooled family aggregate. This is not a corner cut; it is the cheaper of two paths the
 constitution already sanctions.
 
@@ -208,35 +208,35 @@ free tier is still a paired sweep **as long as both arms run on the same tier**.
 
 **Local (`packages/local-inference`) is deliberately NOT a tier here.** The catalogue ships 1.5B/3B
 models at 8192 ctx — page state alone overflows that — and `plan` is excluded from
-`LOCAL_CANDIDATE_CAPABILITIES` by design. Local can own cheap *capabilities*
+`LOCAL_CANDIDATE_CAPABILITIES` by design. Local can own cheap _capabilities_
 ([S12a](phase-s12-local-model.md)'s ownership table); it cannot drive the agent loop, and pretending
 otherwise would be exactly the vanity this program forbids.
 
 ## 6. The budget table
 
-| Sweep | Trials | Tier | Cost |
-|---|---:|---|---:|
-| T2 calibration | 6 | DoD + cache | **~$1** |
-| T3a S0 full-registry baseline (52 × N=3) → **S0 ✅** | 156 | DoD + cache | **~$30** |
-| T3b S3 `reliability-actions` paired (7 × N=5 × 2 arms) → **S3 ✅** | 70 | DoD + cache | **~$13** |
-| S2 / S4 paired sweeps, both arms same tier | ~140 each | free cloud tier | **$0** |
-| Deterministic / scripted-adversarial (the S5 trick) | — | no model | **$0** |
-| **Committed total** | **232** | | **~$44** |
-| *Reserve* (calibration overrun, re-runs, transport-invalid retries) | | | **~$6** |
-| Claim-grade ASR (24 `atk_*` × N≥10) | 240 | DoD + cache | ~$46 — **the next purchase** |
-| H2H battery | — | rival **subscriptions** | ~$60/mo — **not an API cost; out of scope** |
+| Sweep                                                               |    Trials | Tier                    |                                        Cost |
+| ------------------------------------------------------------------- | --------: | ----------------------- | ------------------------------------------: |
+| T2 calibration                                                      |         6 | DoD + cache             |                                     **~$1** |
+| T3a S0 full-registry baseline (52 × N=3) → **S0 ✅**                |       156 | DoD + cache             |                                    **~$30** |
+| T3b S3 `reliability-actions` paired (7 × N=5 × 2 arms) → **S3 ✅**  |        70 | DoD + cache             |                                    **~$13** |
+| S2 / S4 paired sweeps, both arms same tier                          | ~140 each | free cloud tier         |                                      **$0** |
+| Deterministic / scripted-adversarial (the S5 trick)                 |         — | no model                |                                      **$0** |
+| **Committed total**                                                 |   **232** |                         |                                    **~$44** |
+| _Reserve_ (calibration overrun, re-runs, transport-invalid retries) |           |                         |                                     **~$6** |
+| Claim-grade ASR (24 `atk_*` × N≥10)                                 |       240 | DoD + cache             |                ~$46 — **the next purchase** |
+| H2H battery                                                         |         — | rival **subscriptions** | ~$60/mo — **not an API cost; out of scope** |
 
 ## 7. Constitution amendment — no longer required, kept on the shelf
 
 An earlier draft needed [`constitution.md`](constitution.md) amended, because a $20 budget could only
-afford a cheap tier and the constitution says *"every internal number comes from the **real product
-model** driving the real app."*
+afford a cheap tier and the constitution says _"every internal number comes from the **real product
+model** driving the real app."_
 
 **At $50 the plan runs at the DoD tier and the amendment is unnecessary.** It is recorded here only
 because Step 4's free-tier sweeps will eventually need it:
 
 > Every ledger row carries an explicit **tier label**. A number measured on a non-default tier is a
-> valid, publishable *internal* number, labelled with its tier. The **north-star claim** — and only the
+> valid, publishable _internal_ number, labelled with its tier. The **north-star claim** — and only the
 > claim — requires the DoD product tier. "Real product model" binds the claim, not every measurement.
 
 Still an open owner decision, but no longer on the critical path.

@@ -15,4 +15,5 @@ Pure and app-free (the store takes `Db`, `isBookmarkable` is a pure function), s
 import from the sandboxed renderer without pulling in native modules.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test` · `pnpm build`

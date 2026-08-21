@@ -79,7 +79,8 @@ export function openWindow(opts?: {
   // was just closed → let it close so the app can quit). Registered AFTER createWindow's bounds-persist
   // close handler, so the real on-screen placement is captured before we park the window off-screen.
   win.on('close', (event) => {
-    if (isQuitting() || process.env.TEPEGOZ_EVAL === '1' || !PreferenceStore.getAll().closeToTray) return;
+    if (isQuitting() || process.env.TEPEGOZ_EVAL === '1' || !PreferenceStore.getAll().closeToTray)
+      return;
     if ((TabManager.forWindow(win)?.tabCount() ?? 0) === 0) return;
     event.preventDefault();
     hideToTray(win);

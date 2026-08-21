@@ -1,10 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import {
-  ModelGateway,
-
-  type CanonResponse,
-  type ModelProvider,
-} from '@tepegoz/model-gateway';
+import { ModelGateway, type CanonResponse, type ModelProvider } from '@tepegoz/model-gateway';
 import { CapabilityRegistry, ToolGateway, type RegisteredTool } from '@tepegoz/capability-plane';
 import type { AIProvider, RiskLevel, ToolDescriptor } from '@tepegoz/shared-types';
 import Reactor from './reactor';
@@ -22,11 +17,20 @@ class ScriptedProvider implements ModelProvider {
   complete(): Promise<CanonResponse> {
     const text = this.replies[this.turn] ?? '{"action":"finish","summary":"done"}';
     this.turn += 1;
-    return Promise.resolve({ text, stopReason: 'end', usage: { inputTokens: 1, outputTokens: 1 }, toolCalls: [] });
+    return Promise.resolve({
+      text,
+      stopReason: 'end',
+      usage: { inputTokens: 1, outputTokens: 1 },
+      toolCalls: [],
+    });
   }
 }
 
-function fakeTool(id: string, dangerClass: RiskLevel, result: () => unknown): RegisteredTool<unknown> {
+function fakeTool(
+  id: string,
+  dangerClass: RiskLevel,
+  result: () => unknown,
+): RegisteredTool<unknown> {
   const descriptor: ToolDescriptor = {
     id,
     description: `fake ${id}`,
@@ -43,9 +47,19 @@ function fakeTool(id: string, dangerClass: RiskLevel, result: () => unknown): Re
 }
 
 const tools = () =>
-  CapabilityRegistry.list().map((d) => ({ id: d.id, description: d.description, dangerClass: d.dangerClass }));
-const req = () => ({ goal: 'read the page', tools: tools(), provider: 'anthropic' as const, model: 'mock' });
-const read = (n: number) => JSON.stringify({ action: 'act', tool: 'browser_get_page', args: { n }, rationale: 'r' });
+  CapabilityRegistry.list().map((d) => ({
+    id: d.id,
+    description: d.description,
+    dangerClass: d.dangerClass,
+  }));
+const req = () => ({
+  goal: 'read the page',
+  tools: tools(),
+  provider: 'anthropic' as const,
+  model: 'mock',
+});
+const read = (n: number) =>
+  JSON.stringify({ action: 'act', tool: 'browser_get_page', args: { n }, rationale: 'r' });
 
 const ACTIONS = 12;
 /** What the old fixed `planningInterval = 3` modulo would have spent on the same run. */

@@ -44,7 +44,9 @@
       "id": "compare_plans_judged",
       "task": "Compare both plans and explain which is cheaper and by how much.",
       "target": { "fixture": "multi-tab" },
-      "success": { "judgeRubric": "Pass if the summary correctly identifies Plan B as the cheaper plan (ground truth: Plan B is $20/mo, Plan A is $30/mo). Naming Plan B as cheaper AND giving either the price difference ($10/mo) or the prices is sufficient — restating BOTH prices verbatim is NOT required. Fail only if it names the wrong plan or gives no comparison." },
+      "success": {
+        "judgeRubric": "Pass if the summary correctly identifies Plan B as the cheaper plan (ground truth: Plan B is $20/mo, Plan A is $30/mo). Naming Plan B as cheaper AND giving either the price difference ($10/mo) or the prices is sufficient — restating BOTH prices verbatim is NOT required. Fail only if it names the wrong plan or gives no comparison."
+      },
       "heldOut": false,
       "tags": ["multi-tab", "judge"]
     }

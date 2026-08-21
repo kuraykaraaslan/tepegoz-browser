@@ -19,7 +19,11 @@ export const SearchArgs = z.object({
   pattern: z.string().min(1).max(256),
   limit: z.number().int().positive().max(1000).optional(),
 });
-export const CreateFileArgs = z.object({ path: PathArg, content: ContentArg, encoding: EncodingArg.optional() });
+export const CreateFileArgs = z.object({
+  path: PathArg,
+  content: ContentArg,
+  encoding: EncodingArg.optional(),
+});
 export const UpdateFileArgs = z.object({
   path: PathArg,
   content: ContentArg,

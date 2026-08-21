@@ -27,7 +27,11 @@ function el(
   };
 }
 
-const root = (children: FakeEl[]): FakeEl => ({ children, shadowRoot: null, contentDocument: null });
+const root = (children: FakeEl[]): FakeEl => ({
+  children,
+  shadowRoot: null,
+  contentDocument: null,
+});
 
 describe('locator cascade', () => {
   it('re-finds an element by tag, role and name after its path went stale', () => {
@@ -68,7 +72,9 @@ describe('locator cascade', () => {
     const target = el('BUTTON', 'Inside shadow');
     const host = el('DIV', '');
     host.shadowRoot = root([target]);
-    expect(findByLocators(root([host]), { tag: 'button', role: '', name: 'Inside shadow' })).toBe(target);
+    expect(findByLocators(root([host]), { tag: 'button', role: '', name: 'Inside shadow' })).toBe(
+      target,
+    );
   });
 
   it('pierces a same-origin iframe document', () => {
@@ -76,11 +82,15 @@ describe('locator cascade', () => {
     const frame = el('IFRAME', '');
     frame.tagName = 'IFRAME';
     frame.contentDocument = root([target]);
-    expect(findByLocators(root([frame]), { tag: 'button', role: '', name: 'Inside frame' })).toBe(target);
+    expect(findByLocators(root([frame]), { tag: 'button', role: '', name: 'Inside frame' })).toBe(
+      target,
+    );
   });
 
   it('collapses whitespace the way the scan does, so a reformatted label still matches', () => {
     const target = el('BUTTON', '  Accept   all\n');
-    expect(findByLocators(root([target]), { tag: 'button', role: '', name: 'Accept all' })).toBe(target);
+    expect(findByLocators(root([target]), { tag: 'button', role: '', name: 'Accept all' })).toBe(
+      target,
+    );
   });
 });

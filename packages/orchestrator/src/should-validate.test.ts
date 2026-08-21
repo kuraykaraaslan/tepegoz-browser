@@ -40,9 +40,9 @@ describe('adaptive validation cadence', () => {
   });
 
   it('holds between the floor and the ceiling while the page is unchanged', () => {
-    expect(shouldValidate(state({ actionsSinceValidation: bounds.ceiling - 1 }), bounds).reason).toBe(
-      'page_unchanged',
-    );
+    expect(
+      shouldValidate(state({ actionsSinceValidation: bounds.ceiling - 1 }), bounds).reason,
+    ).toBe('page_unchanged');
   });
 
   it('treats a never-validated signature as changed, so the first pass still happens', () => {
@@ -51,9 +51,9 @@ describe('adaptive validation cadence', () => {
 
   it('does not validate on an unperceived world rather than guessing it changed', () => {
     // No read has landed yet: there is no evidence to judge, so the ceiling is the only trigger.
-    expect(shouldValidate(state({ currentSig: null, sigAtLastValidation: null }), bounds).validate).toBe(
-      false,
-    );
+    expect(
+      shouldValidate(state({ currentSig: null, sigAtLastValidation: null }), bounds).validate,
+    ).toBe(false);
   });
 
   it('derives its bounds from the existing interval — no new budget to tune', () => {

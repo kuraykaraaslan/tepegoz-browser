@@ -22,9 +22,7 @@ import { isValidConnectionId as isValidId } from '@tepegoz/shared-types';
 
 /** What one scope (Tab or Group) can be set to. `inherit` defers to the next scope up. */
 export type ScopedBinding =
-  | { kind: 'connection'; connectionId: string }
-  | { kind: 'direct' }
-  | { kind: 'inherit' };
+  { kind: 'connection'; connectionId: string } | { kind: 'direct' } | { kind: 'inherit' };
 
 /** General has nowhere further to defer to, so it cannot be `inherit` — it IS the floor above Direct. */
 export type GeneralBinding = { kind: 'connection'; connectionId: string } | { kind: 'direct' };
@@ -49,7 +47,8 @@ export function resolveBinding(
   group: ScopedBinding | null,
   general: GeneralBinding,
 ): ResolvedBinding {
-  if (tab.kind === 'connection') return { resolved: { connectionId: tab.connectionId }, source: 'tab' };
+  if (tab.kind === 'connection')
+    return { resolved: { connectionId: tab.connectionId }, source: 'tab' };
   if (tab.kind === 'direct') return { resolved: { connectionId: null }, source: 'tab' };
 
   // tab.kind === 'inherit' from here down.
@@ -62,7 +61,10 @@ export function resolveBinding(
   }
 
   return {
-    resolved: general.kind === 'connection' ? { connectionId: general.connectionId } : { connectionId: null },
+    resolved:
+      general.kind === 'connection'
+        ? { connectionId: general.connectionId }
+        : { connectionId: null },
     source: 'general',
   };
 }
@@ -97,7 +99,9 @@ export { CONNECTION_ID_PATTERN, isValidConnectionId } from '@tepegoz/shared-type
 export function partitionKeyFor(resolved: ResolvedConnection): string {
   if (resolved.connectionId === null) return DIRECT_PARTITION;
   if (!isValidId(resolved.connectionId)) {
-    throw new Error(`Invalid connection id for a session partition: ${JSON.stringify(resolved.connectionId)}`);
+    throw new Error(
+      `Invalid connection id for a session partition: ${JSON.stringify(resolved.connectionId)}`,
+    );
   }
   return `${DIRECT_PARTITION}--conn-${resolved.connectionId}`;
 }

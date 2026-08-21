@@ -21,7 +21,10 @@ export interface StepListHandlers {
   addKind: AddableKind;
   setAddKind: (kind: AddableKind) => void;
   updateStep: (location: StepLocation, next: Step) => void;
-  setErrorPolicy: (location: StepLocation, patch: { onError?: StepErrorPolicy; retries?: number }) => void;
+  setErrorPolicy: (
+    location: StepLocation,
+    patch: { onError?: StepErrorPolicy; retries?: number },
+  ) => void;
   moveStep: (location: StepLocation, dir: -1 | 1) => void;
   deleteStep: (location: StepLocation) => void;
   insertAfter: (location: StepLocation, step: Step) => void;
@@ -65,25 +68,54 @@ export function StepList({
   const stepBody = (step: Step, location: StepLocation): ReactNode =>
     fieldStepBody(t, step, location, h.updateStep) ??
     flowStepBody(t, step, location, h.updateStep, h.csv) ?? (
-      <span className="min-w-0 flex-1 truncate font-mono text-text-primary">{describeStep(step)}</span>
+      <span className="min-w-0 flex-1 truncate font-mono text-text-primary">
+        {describeStep(step)}
+      </span>
     );
 
   const renderStepChildren = (step: Step, location: StepLocation): ReactNode => {
     if (step.kind === 'if') {
-      const thenPath: StepContainerPath = [...location.containerPath, { index: location.index, slot: 'then' }];
-      const elsePath: StepContainerPath = [...location.containerPath, { index: location.index, slot: 'else' }];
+      const thenPath: StepContainerPath = [
+        ...location.containerPath,
+        { index: location.index, slot: 'then' },
+      ];
+      const elsePath: StepContainerPath = [
+        ...location.containerPath,
+        { index: location.index, slot: 'else' },
+      ];
       return (
         <div className="mt-2 space-y-2 border-l border-border pl-3">
-          <StepList steps={step.then} containerPath={thenPath} label={t.thenBranch} depth={depth + 1} h={h} />
-          <StepList steps={step.else ?? []} containerPath={elsePath} label={t.elseBranch} depth={depth + 1} h={h} />
+          <StepList
+            steps={step.then}
+            containerPath={thenPath}
+            label={t.thenBranch}
+            depth={depth + 1}
+            h={h}
+          />
+          <StepList
+            steps={step.else ?? []}
+            containerPath={elsePath}
+            label={t.elseBranch}
+            depth={depth + 1}
+            h={h}
+          />
         </div>
       );
     }
     if (step.kind === 'repeat' || step.kind === 'forEachRow') {
-      const bodyPath: StepContainerPath = [...location.containerPath, { index: location.index, slot: 'body' }];
+      const bodyPath: StepContainerPath = [
+        ...location.containerPath,
+        { index: location.index, slot: 'body' },
+      ];
       return (
         <div className="mt-2 border-l border-border pl-3">
-          <StepList steps={step.body} containerPath={bodyPath} label={t.bodyBranch} depth={depth + 1} h={h} />
+          <StepList
+            steps={step.body}
+            containerPath={bodyPath}
+            label={t.bodyBranch}
+            depth={depth + 1}
+            h={h}
+          />
         </div>
       );
     }
@@ -110,7 +142,11 @@ export function StepList({
               </option>
             ))}
           </select>
-          <button type="button" className={ICON_BTN} onClick={() => h.addStep(containerPath, h.addKind)}>
+          <button
+            type="button"
+            className={ICON_BTN}
+            onClick={() => h.addStep(containerPath, h.addKind)}
+          >
             {'+'} {t.addStep}
           </button>
         </span>
@@ -119,7 +155,10 @@ export function StepList({
         {steps.map((s, i) => {
           const location: StepLocation = { containerPath, index: i };
           return (
-            <li key={stepLocationKey(location)} className="rounded-md border border-border bg-surface-raised px-2 py-1.5 text-xs">
+            <li
+              key={stepLocationKey(location)}
+              className="rounded-md border border-border bg-surface-raised px-2 py-1.5 text-xs"
+            >
               <div className="flex items-center gap-1.5">
                 <span className="w-5 shrink-0 text-text-disabled">{i + 1}</span>
                 {stepBody(s, location)}
@@ -129,7 +168,9 @@ export function StepList({
                       value={('onError' in s ? s.onError : undefined) ?? 'stop'}
                       aria-label={t.onError}
                       title={t.onError}
-                      onChange={(e) => h.setErrorPolicy(location, { onError: e.target.value as StepErrorPolicy })}
+                      onChange={(e) =>
+                        h.setErrorPolicy(location, { onError: e.target.value as StepErrorPolicy })
+                      }
                       className={cn(FIELD, 'w-16')}
                     >
                       <option value="stop">{t.onStop}</option>
@@ -143,23 +184,49 @@ export function StepList({
                         value={s.retries ?? 0}
                         aria-label={t.retries}
                         title={t.retries}
-                        onChange={(e) => h.setErrorPolicy(location, { retries: Math.max(0, Number(e.target.value)) })}
+                        onChange={(e) =>
+                          h.setErrorPolicy(location, {
+                            retries: Math.max(0, Number(e.target.value)),
+                          })
+                        }
                         className={cn(FIELD, 'w-12')}
                       />
                     )}
                   </span>
                 )}
                 <span className="flex shrink-0 gap-1">
-                  <button type="button" className={ICON_BTN} aria-label={t.moveUp} disabled={i === 0} onClick={() => h.moveStep(location, -1)}>
+                  <button
+                    type="button"
+                    className={ICON_BTN}
+                    aria-label={t.moveUp}
+                    disabled={i === 0}
+                    onClick={() => h.moveStep(location, -1)}
+                  >
                     {'↑'}
                   </button>
-                  <button type="button" className={ICON_BTN} aria-label={t.moveDown} disabled={i === steps.length - 1} onClick={() => h.moveStep(location, 1)}>
+                  <button
+                    type="button"
+                    className={ICON_BTN}
+                    aria-label={t.moveDown}
+                    disabled={i === steps.length - 1}
+                    onClick={() => h.moveStep(location, 1)}
+                  >
                     {'↓'}
                   </button>
-                  <button type="button" className={ICON_BTN} aria-label={t.insertWait} onClick={() => h.insertAfter(location, { kind: 'waitMs', ms: DEFAULT_WAIT_MS })}>
+                  <button
+                    type="button"
+                    className={ICON_BTN}
+                    aria-label={t.insertWait}
+                    onClick={() => h.insertAfter(location, { kind: 'waitMs', ms: DEFAULT_WAIT_MS })}
+                  >
                     {'+⏱'}
                   </button>
-                  <button type="button" className={ICON_BTN} aria-label={t.delete} onClick={() => h.deleteStep(location)}>
+                  <button
+                    type="button"
+                    className={ICON_BTN}
+                    aria-label={t.delete}
+                    onClick={() => h.deleteStep(location)}
+                  >
                     {'✕'}
                   </button>
                 </span>
@@ -169,7 +236,9 @@ export function StepList({
           );
         })}
       </ol>
-      {steps.length === 0 && <p className="text-sm text-text-secondary">{isTopLevel ? t.emptyDraft : t.emptyBranch}</p>}
+      {steps.length === 0 && (
+        <p className="text-sm text-text-secondary">{isTopLevel ? t.emptyDraft : t.emptyBranch}</p>
+      )}
     </div>
   );
 }

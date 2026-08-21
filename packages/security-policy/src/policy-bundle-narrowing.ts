@@ -13,8 +13,7 @@ export type NarrowingViolation =
   | { kind: 'domain_added'; domain: string };
 
 export type NarrowingVerdict =
-  | { narrows: true }
-  | { narrows: false; violations: NarrowingViolation[] };
+  { narrows: true } | { narrows: false; violations: NarrowingViolation[] };
 
 /**
  * Does `child` narrow (or at most match) `parent` — never exceed it on any axis?

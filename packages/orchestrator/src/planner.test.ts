@@ -17,7 +17,12 @@ const tools: Pick<ToolDescriptor, 'id' | 'description' | 'dangerClass'>[] = [
 function req(reply: string) {
   ModelGateway.reset();
   ModelGateway.register(new MockProvider(reply));
-  return { intent: 'summarize the page', tools, provider: 'anthropic' as const, model: 'claude-opus-4-8' };
+  return {
+    intent: 'summarize the page',
+    tools,
+    provider: 'anthropic' as const,
+    model: 'claude-opus-4-8',
+  };
 }
 
 const validPlan = {
@@ -46,7 +51,10 @@ describe('Planner.plan', () => {
   });
 
   it('rejects a plan that references an unregistered tool', async () => {
-    const evil = { goal: '', steps: [{ id: 's1', tool: 'secret_get_files', args: {}, rationale: '', dependsOn: [] }] };
+    const evil = {
+      goal: '',
+      steps: [{ id: 's1', tool: 'secret_get_files', args: {}, rationale: '', dependsOn: [] }],
+    };
     await expect(Planner.plan(req(JSON.stringify(evil)))).rejects.toThrow(/unknown tool/);
   });
 
@@ -56,7 +64,9 @@ describe('Planner.plan', () => {
       readonly id = 'anthropic' as const;
       system = '';
       complete(request: CanonRequest): Promise<CanonResponse> {
-        this.system = contentToText(request.messages.find((m) => m.role === 'system')?.content ?? '');
+        this.system = contentToText(
+          request.messages.find((m) => m.role === 'system')?.content ?? '',
+        );
         return Promise.resolve({
           text: JSON.stringify(validPlan),
           stopReason: 'end',
@@ -65,7 +75,12 @@ describe('Planner.plan', () => {
         });
       }
     }
-    const base = { intent: 'summarize the page', tools, provider: 'anthropic' as const, model: 'claude-opus-4-8' };
+    const base = {
+      intent: 'summarize the page',
+      tools,
+      provider: 'anthropic' as const,
+      model: 'claude-opus-4-8',
+    };
 
     const withHistory = new CapturingProvider();
     ModelGateway.reset();
@@ -91,7 +106,9 @@ describe('Planner.plan', () => {
       readonly id = 'anthropic' as const;
       system = '';
       complete(request: CanonRequest): Promise<CanonResponse> {
-        this.system = contentToText(request.messages.find((m) => m.role === 'system')?.content ?? '');
+        this.system = contentToText(
+          request.messages.find((m) => m.role === 'system')?.content ?? '',
+        );
         return Promise.resolve({
           text: JSON.stringify(validPlan),
           stopReason: 'end',
@@ -103,7 +120,12 @@ describe('Planner.plan', () => {
     const provider = new CapturingProvider();
     ModelGateway.reset();
     ModelGateway.register(provider);
-    await Planner.plan({ intent: 'find the blog', tools, provider: 'anthropic' as const, model: 'claude-opus-4-8' });
+    await Planner.plan({
+      intent: 'find the blog',
+      tools,
+      provider: 'anthropic' as const,
+      model: 'claude-opus-4-8',
+    });
     expect(provider.system).toContain('menu/hamburger');
     expect(provider.system).toContain('web_search_items');
     expect(provider.system).toContain('do NOT plan to guess a conventional path');
@@ -124,12 +146,16 @@ function vreq(reply: string) {
 
 describe('Planner.validateCompletion (completion authority, untrusted boundary)', () => {
   it('parses a done verdict with the authoritative final answer', async () => {
-    const v = await Planner.validateCompletion(vreq(JSON.stringify({ done: true, final_answer: 'Latest post: Hello World' })));
+    const v = await Planner.validateCompletion(
+      vreq(JSON.stringify({ done: true, final_answer: 'Latest post: Hello World' })),
+    );
     expect(v).toEqual({ done: true, finalAnswer: 'Latest post: Hello World' });
   });
 
   it('parses a not-done verdict carrying the remaining-work reason', async () => {
-    const v = await Planner.validateCompletion(vreq(JSON.stringify({ done: false, reason: 'the blog page was never opened' })));
+    const v = await Planner.validateCompletion(
+      vreq(JSON.stringify({ done: false, reason: 'the blog page was never opened' })),
+    );
     expect(v).toEqual({ done: false, reason: 'the blog page was never opened' });
   });
 
@@ -138,7 +164,9 @@ describe('Planner.validateCompletion (completion authority, untrusted boundary)'
   });
 
   it('rejects a verdict missing the done boolean (malformed shape)', async () => {
-    await expect(Planner.validateCompletion(vreq(JSON.stringify({ final_answer: 'x' })))).rejects.toThrow(/malformed/i);
+    await expect(
+      Planner.validateCompletion(vreq(JSON.stringify({ final_answer: 'x' }))),
+    ).rejects.toThrow(/malformed/i);
   });
 });
 
@@ -148,7 +176,12 @@ describe('Planner security preamble (AI-5)', () => {
     system = '';
     complete(request: CanonRequest): Promise<CanonResponse> {
       this.system = contentToText(request.messages.find((m) => m.role === 'system')?.content ?? '');
-      return Promise.resolve({ text: JSON.stringify(validPlan), stopReason: 'end', usage: { inputTokens: 1, outputTokens: 1 }, toolCalls: [] });
+      return Promise.resolve({
+        text: JSON.stringify(validPlan),
+        stopReason: 'end',
+        usage: { inputTokens: 1, outputTokens: 1 },
+        toolCalls: [],
+      });
     }
   }
 
@@ -156,7 +189,12 @@ describe('Planner security preamble (AI-5)', () => {
     const provider = new SysCapture();
     ModelGateway.reset();
     ModelGateway.register(provider);
-    await Planner.plan({ intent: 'summarize', tools, provider: 'anthropic' as const, model: 'claude-opus-4-8' });
+    await Planner.plan({
+      intent: 'summarize',
+      tools,
+      provider: 'anthropic' as const,
+      model: 'claude-opus-4-8',
+    });
     expect(provider.system).toContain('UNTRUSTED DATA');
   });
 });
@@ -167,7 +205,10 @@ describe('Planner.replan (C1 PR2 no-progress replanner — advisory boundary)', 
     ModelGateway.register(new MockProvider(reply));
     return {
       goal: 'buy the blue widget',
-      workingState: { completedSubtasks: ['added to cart'], pendingVerifications: ['confirm order'] },
+      workingState: {
+        completedSubtasks: ['added to cart'],
+        pendingVerifications: ['confirm order'],
+      },
       memory: 'stuck at checkout',
       recentObservations: ['Observation: the Place Order button did nothing'],
       reason: 'No observable page-state change across 6 acting steps.',
@@ -177,14 +218,20 @@ describe('Planner.replan (C1 PR2 no-progress replanner — advisory boundary)', 
   };
 
   it('returns the proposed new approach as guidance', async () => {
-    const res = await Planner.replan(replanReq(JSON.stringify({ approach: 'Open the account menu, then re-read.' })));
+    const res = await Planner.replan(
+      replanReq(JSON.stringify({ approach: 'Open the account menu, then re-read.' })),
+    );
     expect(res?.guidance).toBe('Open the account menu, then re-read.');
   });
 
   it('is ADVISORY: a malformed reply returns null (never throws) so the run continues', async () => {
     await expect(Planner.replan(replanReq('I am not JSON'))).resolves.toBeNull();
-    await expect(Planner.replan(replanReq(JSON.stringify({ notApproach: 'x' })))).resolves.toBeNull();
-    await expect(Planner.replan(replanReq(JSON.stringify({ approach: '   ' })))).resolves.toBeNull();
+    await expect(
+      Planner.replan(replanReq(JSON.stringify({ notApproach: 'x' }))),
+    ).resolves.toBeNull();
+    await expect(
+      Planner.replan(replanReq(JSON.stringify({ approach: '   ' }))),
+    ).resolves.toBeNull();
   });
 
   it('renders the typed working state into the replan prompt', async () => {
@@ -193,7 +240,12 @@ describe('Planner.replan (C1 PR2 no-progress replanner — advisory boundary)', 
       user = '';
       complete(request: CanonRequest): Promise<CanonResponse> {
         this.user = contentToText(request.messages.find((m) => m.role === 'user')?.content ?? '');
-        return Promise.resolve({ text: JSON.stringify({ approach: 'x' }), stopReason: 'end', usage: { inputTokens: 1, outputTokens: 1 }, toolCalls: [] });
+        return Promise.resolve({
+          text: JSON.stringify({ approach: 'x' }),
+          stopReason: 'end',
+          usage: { inputTokens: 1, outputTokens: 1 },
+          toolCalls: [],
+        });
       }
     }
     const provider = new SysUserCapture();
@@ -201,7 +253,10 @@ describe('Planner.replan (C1 PR2 no-progress replanner — advisory boundary)', 
     ModelGateway.register(provider);
     await Planner.replan({
       goal: 'buy the blue widget',
-      workingState: { completedSubtasks: ['added to cart'], pendingVerifications: ['confirm order'] },
+      workingState: {
+        completedSubtasks: ['added to cart'],
+        pendingVerifications: ['confirm order'],
+      },
       memory: 'stuck at checkout',
       recentObservations: ['Observation: the Place Order button did nothing'],
       reason: 'No observable page-state change across 6 acting steps.',
@@ -267,7 +322,14 @@ describe('validateCompletion is evidence-authoritative (S4)', () => {
     const verdict = await Planner.validateCompletion(
       req({
         mutating: true,
-        items: [{ id: 'n1', kind: 'network', verdict: 'supports', detail: 'page changed after the action' }],
+        items: [
+          {
+            id: 'n1',
+            kind: 'network',
+            verdict: 'supports',
+            detail: 'page changed after the action',
+          },
+        ],
       }),
     );
     expect(verdict.done).toBe(true);

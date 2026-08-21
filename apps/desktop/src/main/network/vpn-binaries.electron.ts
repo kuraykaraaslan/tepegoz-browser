@@ -91,7 +91,13 @@ function wellKnownPaths(binary: VpnBinary): string[] {
       join('C:/ProgramData', 'chocolatey', 'bin', 'wireproxy.exe'),
     ];
   }
-  const unix = ['/usr/bin', '/usr/local/bin', '/opt/homebrew/bin', '/opt/local/bin', join(home, '.local', 'bin')];
+  const unix = [
+    '/usr/bin',
+    '/usr/local/bin',
+    '/opt/homebrew/bin',
+    '/opt/local/bin',
+    join(home, '.local', 'bin'),
+  ];
   const extra =
     binary === 'tor' && process.platform === 'darwin'
       ? ['/Applications/Tor Browser.app/Contents/MacOS/Tor/tor']

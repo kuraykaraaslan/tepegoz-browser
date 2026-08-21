@@ -11,11 +11,7 @@ export {
   type RiskClassification,
   type RiskClassificationContext,
 } from './risk-classifier';
-export {
-  isSameSite,
-  registrableDomain,
-  registrableDomainOfHost,
-} from './registrable-domain';
+export { isSameSite, registrableDomain, registrableDomainOfHost } from './registrable-domain';
 export {
   default as PlanGrantStore,
   type GrantCoverage,
@@ -125,10 +121,7 @@ export {
   type KamuStepRequest,
   type KamuVerdict,
 } from './kamu-policy';
-export {
-  checkLocalePackParity,
-  type LocalePackParity,
-} from './locale-pack-parity';
+export { checkLocalePackParity, type LocalePackParity } from './locale-pack-parity';
 export {
   evaluateSupplyChain,
   declaredWithinRequestedScope,

@@ -12,7 +12,8 @@ export const userAgentManifest = defineExtension({
   labels: {
     tr: {
       name: 'User-Agent',
-      description: 'Tarayıcının sitelere kendini nasıl tanıttığını değiştir — listeden bir User-Agent seç.',
+      description:
+        'Tarayıcının sitelere kendini nasıl tanıttığını değiştir — listeden bir User-Agent seç.',
     },
   },
   permissions: ['tabs', 'network'],

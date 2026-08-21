@@ -27,7 +27,8 @@ const ApplySuggestionPayloadSchema = z.object({
 
 function localeTitle(word: string): string {
   const pref = PreferenceStore.getAll().locale;
-  const locale = pref === 'system' ? (app.getLocale().toLowerCase().startsWith('tr') ? 'tr' : 'en') : pref;
+  const locale =
+    pref === 'system' ? (app.getLocale().toLowerCase().startsWith('tr') ? 'tr' : 'en') : pref;
   const label = locale === 'tr' ? 'Yazım' : 'Spelling';
   return `${label}: ${word}`;
 }
@@ -36,7 +37,11 @@ const typoContextMenuContributor: PageContextMenuContributor = {
   id: TYPO_EXTENSION_ID,
 
   async collect(ctx: PageContextMenuContributionContext) {
-    if (!ctx.isEditable || !typoHost.isActiveForPage(ctx.pageUrl) || ctx.webContents.isDestroyed()) {
+    if (
+      !ctx.isEditable ||
+      !typoHost.isActiveForPage(ctx.pageUrl) ||
+      ctx.webContents.isDestroyed()
+    ) {
       return [];
     }
     const raw: unknown = await ctx.webContents.executeJavaScript(
@@ -64,10 +69,7 @@ const typoContextMenuContributor: PageContextMenuContributor = {
     ];
   },
 
-  async runAction(
-    input: PageMenuContributionActionInput,
-    ctx: PageContextMenuContributionContext,
-  ) {
+  async runAction(input: PageMenuContributionActionInput, ctx: PageContextMenuContributionContext) {
     if (input.actionId !== 'apply-suggestion' || ctx.webContents.isDestroyed()) return;
     const parsed = ApplySuggestionPayloadSchema.safeParse(input.payload);
     if (!parsed.success) return;

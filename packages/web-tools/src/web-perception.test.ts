@@ -50,7 +50,9 @@ describe('buildWebFetchContent', () => {
   });
 
   it('caps very long bodies', () => {
-    const { content } = buildWebFetchContent(fetchResult({ text: 'a'.repeat(MAX_WEB_FETCH_CHARS + 5_000) }));
+    const { content } = buildWebFetchContent(
+      fetchResult({ text: 'a'.repeat(MAX_WEB_FETCH_CHARS + 5_000) }),
+    );
     expect(content).not.toContain('a'.repeat(MAX_WEB_FETCH_CHARS + 1));
   });
 
@@ -69,7 +71,9 @@ describe('buildWebSearchContent', () => {
   });
 
   it('keeps result urls verbatim so navigation and AI-7 grounding still work', () => {
-    const { content } = buildWebSearchContent('cats', [hit({ url: 'https://example.test/deep/path?q=1' })]);
+    const { content } = buildWebSearchContent('cats', [
+      hit({ url: 'https://example.test/deep/path?q=1' }),
+    ]);
     expect(content).toContain('https://example.test/deep/path?q=1');
   });
 
@@ -101,7 +105,9 @@ describe('renderSearchResultsText', () => {
   });
 
   it('caps an over-long snippet', () => {
-    const text = renderSearchResultsText('q', [hit({ snippet: 'x'.repeat(MAX_SNIPPET_CHARS + 200) })]);
+    const text = renderSearchResultsText('q', [
+      hit({ snippet: 'x'.repeat(MAX_SNIPPET_CHARS + 200) }),
+    ]);
     expect(text).not.toContain('x'.repeat(MAX_SNIPPET_CHARS + 1));
   });
 

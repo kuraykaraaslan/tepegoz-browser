@@ -59,7 +59,12 @@ describe('verifying a receipt — the standalone-CLI contract: nothing but the d
   });
 
   it('is TAMPERED when the checkpoint is copied from a DIFFERENT run', () => {
-    const other = buildReceipt('run-2', 'device-1', [ev({ id: 'x', correlationId: 'run-2' })], keys)!;
+    const other = buildReceipt(
+      'run-2',
+      'device-1',
+      [ev({ id: 'x', correlationId: 'run-2' })],
+      keys,
+    )!;
     const swapped: ReplayReceipt = { ...receipt, checkpoint: other.checkpoint };
     const verdict = verifyReceipt(swapped);
     expect(verdict.status).toBe('TAMPERED');

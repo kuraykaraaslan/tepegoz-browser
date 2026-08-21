@@ -12,10 +12,12 @@ tool (the `@tepegoz/file-operations` pattern). Persistence-free: the concrete re
 > `browser_*` (`@tepegoz/browser-tools`) and `tab_*` (`@tepegoz/tab-engine`) tools.
 
 ## Exports
+
 - **`registerJournalTools({ host })`** — registers `journal_search_events` into the `CapabilityRegistry`,
   bound to an injected `JournalReader`. Always-on; the app calls it once at startup.
 - **`JournalReader`** / **`JournalEntry`** — the read-side seam into the append-only Event Journal (a
   compact, already-redacted projection).
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

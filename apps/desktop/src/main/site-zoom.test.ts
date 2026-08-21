@@ -25,7 +25,15 @@ const asWc = (wc: ReturnType<typeof makeWebContents>) => wc as unknown as WebCon
 
 /** A Ctrl+key keyDown, the shape `before-input-event` delivers. */
 function ctrl(key: string, over: Partial<Input> = {}): Input {
-  return { type: 'keyDown', key, control: true, meta: false, alt: false, shift: false, ...over } as Input;
+  return {
+    type: 'keyDown',
+    key,
+    control: true,
+    meta: false,
+    alt: false,
+    shift: false,
+    ...over,
+  } as Input;
 }
 
 beforeEach(() => {

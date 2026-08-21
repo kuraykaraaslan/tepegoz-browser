@@ -83,7 +83,9 @@ export function evaluateVisionTrigger(
   const recent = outcomes.slice(-Math.max(1, opts.tail ?? DEFAULT_TAIL));
   if (recent.length === 0) return null;
 
-  const lastElements = [...recent].reverse().find((o) => o.ok && Array.isArray(shape<ElementsShape>(o.result).elements));
+  const lastElements = [...recent]
+    .reverse()
+    .find((o) => o.ok && Array.isArray(shape<ElementsShape>(o.result).elements));
 
   if (lastElements !== undefined) {
     const fraction = canvasFractionOf(lastElements.result);

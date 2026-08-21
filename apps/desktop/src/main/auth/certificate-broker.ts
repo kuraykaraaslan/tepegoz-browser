@@ -50,7 +50,12 @@ function originOfUrl(url: string): string {
   }
 }
 
-function prompt(origin: string, errorCode: string, issuer: string, expiry: string): Promise<boolean> {
+function prompt(
+  origin: string,
+  errorCode: string,
+  issuer: string,
+  expiry: string,
+): Promise<boolean> {
   const target = TabManager.focusedWindow();
   if (target === null || target.isDestroyed()) return Promise.resolve(false);
 

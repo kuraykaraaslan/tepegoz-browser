@@ -1,4 +1,9 @@
-import { CriticVerdictSchema, type CriticRequest, type CriticVerdict, type RiskTier } from '@tepegoz/shared-types';
+import {
+  CriticVerdictSchema,
+  type CriticRequest,
+  type CriticVerdict,
+  type RiskTier,
+} from '@tepegoz/shared-types';
 
 /**
  * The advisory intent-critic plane (S6 PR4).
@@ -81,7 +86,10 @@ export function hasIntentCritic(): boolean {
  * verdict shape, a thrown critic. An advisory plane that could turn its own malfunction into a blocked
  * or failed action would be neither advisory nor safe.
  */
-export async function critiqueIntent(req: CriticRequest, tier: RiskTier | undefined): Promise<CriticVerdict | null> {
+export async function critiqueIntent(
+  req: CriticRequest,
+  tier: RiskTier | undefined,
+): Promise<CriticVerdict | null> {
   if (critic === null || !shouldCritique(tier)) return null;
   try {
     const raw = await critic(req);

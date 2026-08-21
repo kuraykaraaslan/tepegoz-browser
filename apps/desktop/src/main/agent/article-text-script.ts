@@ -12,7 +12,15 @@
  */
 
 /** Content roots in descending order of how explicitly the page declares "this is the content". */
-const CONTENT_SELECTORS = ['article', 'main', '[role="main"]', '#content', '#main', '.post', '.article'];
+const CONTENT_SELECTORS = [
+  'article',
+  'main',
+  '[role="main"]',
+  '#content',
+  '#main',
+  '.post',
+  '.article',
+];
 
 /** Elements that are chrome on essentially every page. Removed from the CLONE, never from the page. */
 const CHROME_SELECTORS = [

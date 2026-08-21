@@ -7,12 +7,7 @@ import { AnthropicProvider } from './providers/anthropic.provider';
 import { ModelGateway } from './gateway';
 import { MockProvider } from './mock-provider';
 import { TokenLedger } from './token-ledger';
-import type {
-  CanonRequest,
-  CanonResponse,
-  ModelDeltaSink,
-  ModelProvider,
-} from './types';
+import type { CanonRequest, CanonResponse, ModelDeltaSink, ModelProvider } from './types';
 
 /**
  * Guard for the streaming boundary (ADR-0025): **a delta may reach the renderer; only a settled,
@@ -111,7 +106,9 @@ describe('the streaming boundary (ADR-0025)', () => {
   it('delivers fragments to the sink but returns the SETTLED response to the caller', async () => {
     const seen: string[] = [];
     ModelGateway.register(new StreamingProvider(['par', 'tial'], 'the settled answer'));
-    const res = await ModelGateway.generateStream(req({ provider: 'anthropic' }), (d) => seen.push(d));
+    const res = await ModelGateway.generateStream(req({ provider: 'anthropic' }), (d) =>
+      seen.push(d),
+    );
     expect(seen).toEqual(['par', 'tial']);
     // What the caller acts on is the settled text — never the concatenated fragments.
     expect(res.text).toBe('the settled answer');
@@ -128,7 +125,9 @@ describe('the streaming boundary (ADR-0025)', () => {
   it('degrades honestly for an adapter with no streaming path: one delta, after settling', async () => {
     const seen: string[] = [];
     ModelGateway.register(new MockProvider('whole answer'));
-    const res = await ModelGateway.generateStream(req({ provider: 'anthropic' }), (d) => seen.push(d));
+    const res = await ModelGateway.generateStream(req({ provider: 'anthropic' }), (d) =>
+      seen.push(d),
+    );
     // Not simulated typing: exactly one fragment, and it is the settled text.
     expect(seen).toEqual(['whole answer']);
     expect(res.text).toBe('whole answer');
@@ -139,7 +138,10 @@ describe('the streaming boundary (ADR-0025)', () => {
     ModelGateway.register(new StreamingProvider(['leak sk-ant-SECRET'], 'settled'));
     ModelGateway.setEgressInspector((payload) =>
       payload.includes('sk-ant-SECRET')
-        ? { decision: 'block', findings: [{ kind: 'api-key', severity: 'block', sample: 'sk-…(15)' }] }
+        ? {
+            decision: 'block',
+            findings: [{ kind: 'api-key', severity: 'block', sample: 'sk-…(15)' }],
+          }
         : { decision: 'allow', findings: [] },
     );
     await expect(

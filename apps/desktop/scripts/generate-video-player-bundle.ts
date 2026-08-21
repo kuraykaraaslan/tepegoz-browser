@@ -32,4 +32,6 @@ const file =
 
 writeFileSync(out, file);
 // eslint-disable-next-line no-console
-console.log(`[generate-video-player-bundle] ${out} (${bundle.length} bytes of JS, v${pkg.version})`);
+console.log(
+  `[generate-video-player-bundle] ${out} (${bundle.length} bytes of JS, v${pkg.version})`,
+);

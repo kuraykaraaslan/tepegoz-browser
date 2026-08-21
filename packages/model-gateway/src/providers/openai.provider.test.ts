@@ -44,19 +44,27 @@ describe('toOpenAIParams', () => {
 
   it('sets json_object response_format only when responseFormat is json', () => {
     expect(toOpenAIParams(req()).response_format).toBeUndefined();
-    expect(toOpenAIParams(req({ responseFormat: 'json' })).response_format).toEqual({ type: 'json_object' });
+    expect(toOpenAIParams(req({ responseFormat: 'json' })).response_format).toEqual({
+      type: 'json_object',
+    });
   });
 
   it('maps canon tools to OpenAI function tool definitions', () => {
     const params = toOpenAIParams(
       req({
-        tools: [{ name: 'browser_get_page', description: 'read page', inputSchema: { type: 'object' } }],
+        tools: [
+          { name: 'browser_get_page', description: 'read page', inputSchema: { type: 'object' } },
+        ],
       }),
     );
     expect(params.tools).toEqual([
       {
         type: 'function',
-        function: { name: 'browser_get_page', description: 'read page', parameters: { type: 'object' } },
+        function: {
+          name: 'browser_get_page',
+          description: 'read page',
+          parameters: { type: 'object' },
+        },
       },
     ]);
   });
@@ -86,7 +94,10 @@ describe('fromOpenAIResult', () => {
             message: {
               content: null,
               tool_calls: [
-                { type: 'function', function: { name: 'tab_list_items', arguments: '{"all":true}' } },
+                {
+                  type: 'function',
+                  function: { name: 'tab_list_items', arguments: '{"all":true}' },
+                },
               ],
             },
             finish_reason: 'tool_calls',
@@ -119,16 +130,32 @@ describe('fromOpenAIResult', () => {
   it('skips non-function (custom) tool calls', () => {
     const res = fromOpenAIResult(
       completion({
-        choices: [{ message: { content: '', tool_calls: [{ type: 'custom' }] }, finish_reason: 'tool_calls' }],
+        choices: [
+          {
+            message: { content: '', tool_calls: [{ type: 'custom' }] },
+            finish_reason: 'tool_calls',
+          },
+        ],
       }),
     );
     expect(res.toolCalls).toEqual([]);
   });
 
   it('maps finish reasons to the canon contract', () => {
-    expect(fromOpenAIResult(completion({ choices: [{ message: { content: '' }, finish_reason: 'length' }] })).stopReason).toBe('max_tokens');
-    expect(fromOpenAIResult(completion({ choices: [{ message: { content: '' }, finish_reason: 'content_filter' }] })).stopReason).toBe('error');
-    expect(fromOpenAIResult(completion({ choices: [{ message: { content: '' }, finish_reason: null }] })).stopReason).toBe('end');
+    expect(
+      fromOpenAIResult(
+        completion({ choices: [{ message: { content: '' }, finish_reason: 'length' }] }),
+      ).stopReason,
+    ).toBe('max_tokens');
+    expect(
+      fromOpenAIResult(
+        completion({ choices: [{ message: { content: '' }, finish_reason: 'content_filter' }] }),
+      ).stopReason,
+    ).toBe('error');
+    expect(
+      fromOpenAIResult(completion({ choices: [{ message: { content: '' }, finish_reason: null }] }))
+        .stopReason,
+    ).toBe('end');
   });
 
   it('defaults usage to zero when the API omits it', () => {

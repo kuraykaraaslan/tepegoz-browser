@@ -1,6 +1,6 @@
 # @tepegoz/page-context-menu
 
-Presentational leaf: the *model* for the Chrome-style web-page right-click context menu. It does not
+Presentational leaf: the _model_ for the Chrome-style web-page right-click context menu. It does not
 render anything itself — `buildPageContextMenuModel` builds a generic `MenuItem[]` (the same model
 type consumed by `@tepegoz/browser-menu`'s `<Menu>`), branching on the right-click context (editable
 field, link, image, video/audio, text selection, or the generic page menu). The host captures the
@@ -10,6 +10,7 @@ render as disabled, keyboard-skipped placeholders (e.g. Cast, Lens, reading mode
 convention the main (hamburger) menu uses. Owns its own content strings (see `./i18n`).
 
 ## Exports
+
 - **`buildPageContextMenuModel`** — `(t, ctx, actions) => MenuItem[]`, the pure model builder.
 - **`PageContextMenuContext`** — everything captured at right-click time (`canGoBack`,
   `canGoForward`, `selectionText`, `linkUrl`, `srcUrl`, `mediaType`, `isEditable`, and the
@@ -21,6 +22,7 @@ convention the main (hamburger) menu uses. Owns its own content strings (see `./
   `context-menu` event `params.mediaType`).
 
 ## Usage
+
 ```tsx
 const items = buildPageContextMenuModel(t, ctx, {
   back: () => goBack(),
@@ -31,8 +33,9 @@ const items = buildPageContextMenuModel(t, ctx, {
   // ...remaining wired actions
 });
 
-<Menu items={items} ariaLabel={t.pageContextMenu} autoFocus />
+<Menu items={items} ariaLabel={t.pageContextMenu} autoFocus />;
 ```
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

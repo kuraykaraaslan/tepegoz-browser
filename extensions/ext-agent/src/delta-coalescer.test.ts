@@ -2,8 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DELTA_FLUSH_MS, createDeltaCoalescer } from './delta-coalescer';
 
 describe('delta coalescing', () => {
-  beforeEach(() => { vi.useFakeTimers(); });
-  afterEach(() => { vi.useRealTimers(); });
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('turns many fragments into ONE flush', () => {
     // The whole point: a fast provider emits a fragment every few ms, and a setState per fragment
@@ -41,7 +45,9 @@ describe('delta coalescing', () => {
 
   it('does not flush an empty buffer — a render that changes nothing still costs one', () => {
     let calls = 0;
-    const c = createDeltaCoalescer(() => { calls += 1; });
+    const c = createDeltaCoalescer(() => {
+      calls += 1;
+    });
     vi.advanceTimersByTime(DELTA_FLUSH_MS * 3);
     c.flush();
     expect(calls).toBe(0);
@@ -57,7 +63,9 @@ describe('delta coalescing', () => {
 
   it('drops the buffer and the timer on dispose', () => {
     let calls = 0;
-    const c = createDeltaCoalescer(() => { calls += 1; });
+    const c = createDeltaCoalescer(() => {
+      calls += 1;
+    });
     c.push('g1', 'x');
     c.dispose();
     vi.advanceTimersByTime(DELTA_FLUSH_MS * 3);
@@ -66,7 +74,9 @@ describe('delta coalescing', () => {
 
   it('ignores an empty fragment rather than scheduling a flush for it', () => {
     let calls = 0;
-    const c = createDeltaCoalescer(() => { calls += 1; });
+    const c = createDeltaCoalescer(() => {
+      calls += 1;
+    });
     c.push('g1', '');
     vi.advanceTimersByTime(DELTA_FLUSH_MS * 2);
     expect(calls).toBe(0);

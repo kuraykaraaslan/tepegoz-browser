@@ -72,7 +72,9 @@ function createFixtureListener(rootDir: string, altOrigin: () => string): Server
       res.writeHead(404).end('not found');
       return;
     }
-    res.writeHead(200, { 'content-type': CONTENT_TYPES[extname(filePath)] ?? 'application/octet-stream' });
+    res.writeHead(200, {
+      'content-type': CONTENT_TYPES[extname(filePath)] ?? 'application/octet-stream',
+    });
     createReadStream(filePath).pipe(res);
   });
 }

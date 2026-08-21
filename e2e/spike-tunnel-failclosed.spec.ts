@@ -108,7 +108,10 @@ async function bindTunnel(
   const config = tunnelProxyConfig(socksPort);
   assertFailClosed(config); // the same gate `ensureTunnelSession` runs before it ever calls setProxy
   return app.evaluate(
-    async ({ session }, arg: { partition: string; config: ReturnType<typeof tunnelProxyConfig> }) => {
+    async (
+      { session },
+      arg: { partition: string; config: ReturnType<typeof tunnelProxyConfig> },
+    ) => {
       const ses = session.fromPartition(arg.partition);
       await ses.setProxy(arg.config);
       return ses.resolveProxy('https://tepegoz-proxy-probe.invalid/');

@@ -23,7 +23,11 @@ export interface Writable {
   write(chunk: string): unknown;
 }
 
-export function main(argv: readonly string[], out: Writable = process.stdout, err: Writable = process.stderr): number {
+export function main(
+  argv: readonly string[],
+  out: Writable = process.stdout,
+  err: Writable = process.stderr,
+): number {
   const path = argv[2];
   if (path === undefined) {
     err.write('usage: tepegoz-verify <receipt.json>\n');
@@ -34,7 +38,9 @@ export function main(argv: readonly string[], out: Writable = process.stdout, er
   try {
     raw = readFileSync(path, 'utf8');
   } catch (readErr) {
-    err.write(`cannot read ${path}: ${readErr instanceof Error ? readErr.message : String(readErr)}\n`);
+    err.write(
+      `cannot read ${path}: ${readErr instanceof Error ? readErr.message : String(readErr)}\n`,
+    );
     return 3;
   }
 
@@ -54,7 +60,9 @@ export function main(argv: readonly string[], out: Writable = process.stdout, er
 
   const verdict = verifyReceipt(receipt);
   if (verdict.status === 'PASS') {
-    out.write(`PASS — ${receipt.correlationId} verified (${String(receipt.events.length)} events)\n`);
+    out.write(
+      `PASS — ${receipt.correlationId} verified (${String(receipt.events.length)} events)\n`,
+    );
     return 0;
   }
   if (verdict.status === 'TAMPERED') {
@@ -68,7 +76,8 @@ export function main(argv: readonly string[], out: Writable = process.stdout, er
 // Only run when invoked directly (`node cli.js …` / the `tepegoz-verify` bin) — never as a side effect
 // of another module importing this file, which is what would happen without this guard given `main` is
 // also exported for the test suite.
-const isDirectRun = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
+const isDirectRun =
+  process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isDirectRun) {
   process.exitCode = main(process.argv);
 }

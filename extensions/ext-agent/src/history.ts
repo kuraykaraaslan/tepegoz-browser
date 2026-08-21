@@ -1,9 +1,4 @@
-export const AGENT_CONVERSATION_STATUSES = [
-  'active',
-  'completed',
-  'error',
-  'canceled',
-] as const;
+export const AGENT_CONVERSATION_STATUSES = ['active', 'completed', 'error', 'canceled'] as const;
 export type AgentConversationStatus = (typeof AGENT_CONVERSATION_STATUSES)[number];
 
 export const AGENT_HISTORY_EVENT_KINDS = [
@@ -91,7 +86,9 @@ export function summarizeConversationPrompt(prompt: string): { title: string; pr
 export function terminalStatusFromEvents(
   events: readonly AgentHistoryEvent[],
 ): AgentConversationStatus {
-  const last = [...events].reverse().find((event) => event.kind === 'done' || event.kind === 'error');
+  const last = [...events]
+    .reverse()
+    .find((event) => event.kind === 'done' || event.kind === 'error');
   if (last?.kind === 'error') return 'error';
   if (last?.kind === 'done') return 'completed';
   return 'active';

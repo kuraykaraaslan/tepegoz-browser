@@ -42,8 +42,10 @@ function legWord(status: RouteLegStatus, labels: TabStripLabels): string {
 /** "FRA — connected", or "Tor → FRA: Tor not connected, VPN connected". Always says it in words. */
 function describe(badge: GroupRouteBadge, labels: TabStripLabels): string {
   const parts: string[] = [];
-  if (badge.vpn !== null) parts.push(`${labels.routeLegVpn ?? 'VPN'}: ${legWord(badge.vpn, labels)}`);
-  if (badge.tor !== null) parts.push(`${labels.routeLegTor ?? 'Tor'}: ${legWord(badge.tor, labels)}`);
+  if (badge.vpn !== null)
+    parts.push(`${labels.routeLegVpn ?? 'VPN'}: ${legWord(badge.vpn, labels)}`);
+  if (badge.tor !== null)
+    parts.push(`${labels.routeLegTor ?? 'Tor'}: ${legWord(badge.tor, labels)}`);
   return `${badge.label} — ${parts.join(', ')}`;
 }
 

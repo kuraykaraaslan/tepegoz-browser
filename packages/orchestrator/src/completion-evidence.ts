@@ -23,7 +23,11 @@ const MAX_ITEMS = 50;
 const MAX_DETAIL = 500;
 
 /** Tools whose success or failure the claim actually depends on. */
-const MUTATING_TOOLS = new Set(['browser_update_page', 'browser_update_location', 'browser_update_history']);
+const MUTATING_TOOLS = new Set([
+  'browser_update_page',
+  'browser_update_location',
+  'browser_update_history',
+]);
 
 /** A `browser_update_page` result, in the shape the evidence assembler needs. */
 interface InteractionShape {
@@ -75,7 +79,12 @@ function itemsForStep(outcome: StepOutcome, index: number): EvidenceItem[] {
     return items;
   }
   if (!outcome.ok) {
-    items.push({ id: `${id}:err`, kind: 'page_validation', verdict: 'inconclusive', detail: clip(outcome.error?.message ?? 'step failed') });
+    items.push({
+      id: `${id}:err`,
+      kind: 'page_validation',
+      verdict: 'inconclusive',
+      detail: clip(outcome.error?.message ?? 'step failed'),
+    });
     return items;
   }
   if (outcome.tool === 'browser_validate_page' || outcome.tool === 'browser_validate_condition') {
@@ -95,7 +104,11 @@ function itemsForStep(outcome: StepOutcome, index: number): EvidenceItem[] {
       id: `${id}:act`,
       kind: 'page_validation',
       verdict: refused || !moved ? 'inconclusive' : 'supports',
-      detail: refused ? 'the action was refused' : moved ? 'the page changed after the action' : 'the page did not change',
+      detail: refused
+        ? 'the action was refused'
+        : moved
+          ? 'the page changed after the action'
+          : 'the page did not change',
     });
   }
   return items;
@@ -124,7 +137,9 @@ export function assembleEvidence(
       id: 'url:match',
       kind: 'url_match',
       verdict: same ? 'supports' : 'contradicts',
-      detail: same ? `still on ${clip(match.actual)}` : `page is now ${clip(match.actual)}, not ${clip(match.expected)}`,
+      detail: same
+        ? `still on ${clip(match.actual)}`
+        : `page is now ${clip(match.actual)}, not ${clip(match.expected)}`,
     });
   }
   return { items, mutating: recent.some(isMutating) };

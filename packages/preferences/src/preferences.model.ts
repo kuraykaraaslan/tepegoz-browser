@@ -1,9 +1,6 @@
 import { z } from 'zod';
 import { EXTENSION_ID_RE } from '@tepegoz/extension-sdk';
-import {
-  NetworkConnectionSchema,
-  NetworkGeneralBindingSchema,
-} from '@tepegoz/shared-types';
+import { NetworkConnectionSchema, NetworkGeneralBindingSchema } from '@tepegoz/shared-types';
 import {
   AGENT_EFFORT_LEVELS,
   FILE_ACCESS_MODES,

@@ -44,7 +44,9 @@ const DATE_STYLE_IDS = new Set<string>(['short', 'medium', 'long', 'full']);
 export function formatDateByFormat(value: Date | number, locale: string, format: string): string {
   const d = value instanceof Date ? value : new Date(value);
   if (DATE_STYLE_IDS.has(format)) {
-    return new Intl.DateTimeFormat(locale, { dateStyle: format as 'short' | 'medium' | 'long' | 'full' }).format(d);
+    return new Intl.DateTimeFormat(locale, {
+      dateStyle: format as 'short' | 'medium' | 'long' | 'full',
+    }).format(d);
   }
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');

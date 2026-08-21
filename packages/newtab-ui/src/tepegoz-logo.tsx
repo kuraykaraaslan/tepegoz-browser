@@ -30,10 +30,23 @@ function EmblemMark({ className }: Readonly<{ className?: string }>) {
       <circle cx="50" cy="49" r="7" style={{ fill: 'var(--cyan, #06AEC4)' }} />
       <circle cx="72" cy="49" r="7" style={{ fill: 'var(--cyan, #06AEC4)' }} />
       <circle cx="94" cy="49" r="7" style={{ fill: 'var(--cyan, #06AEC4)' }} />
-      <rect x="128" y="24" width="84" height="48" rx="13" style={{ fill: 'var(--cyan, #06AEC4)' }} />
-      <path d="M150 45 H172 V40 L190 49 L172 58 V53 H150 Z" style={{ fill: 'var(--eye, #FFFFFF)' }} />
+      <rect
+        x="128"
+        y="24"
+        width="84"
+        height="48"
+        rx="13"
+        style={{ fill: 'var(--cyan, #06AEC4)' }}
+      />
+      <path
+        d="M150 45 H172 V40 L190 49 L172 58 V53 H150 Z"
+        style={{ fill: 'var(--eye, #FFFFFF)' }}
+      />
       {/* Shield body → security-first. */}
-      <path d="M28 108 Q120 90 212 108 L212 150 Q212 214 120 256 Q28 214 28 150 Z" style={{ fill: 'var(--navy, #0C2135)' }} />
+      <path
+        d="M28 108 Q120 90 212 108 L212 150 Q212 214 120 256 Q28 214 28 150 Z"
+        style={{ fill: 'var(--navy, #0C2135)' }}
+      />
       <path d="M40 162 Q120 70 200 162 Q120 254 40 162 Z" style={{ fill: 'var(--eye, #FFFFFF)' }} />
       <g style={{ clipPath: 'url(#tepegoz-eye-clip)' }}>
         <circle cx="120" cy="162" r="50" style={{ fill: 'var(--cyan, #06AEC4)' }} />
@@ -42,7 +55,12 @@ function EmblemMark({ className }: Readonly<{ className?: string }>) {
       </g>
       <path
         d="M120 210 L120 250"
-        style={{ fill: 'none', stroke: 'var(--eye, #FFFFFF)', strokeWidth: 9, strokeLinecap: 'round' }}
+        style={{
+          fill: 'none',
+          stroke: 'var(--eye, #FFFFFF)',
+          strokeWidth: 9,
+          strokeLinecap: 'round',
+        }}
       />
     </svg>
   );
@@ -50,7 +68,11 @@ function EmblemMark({ className }: Readonly<{ className?: string }>) {
 
 export function TepegozLogo({ label, className }: Readonly<TepegozLogoProps>) {
   return (
-    <span role="img" aria-label={label} className={`inline-flex items-center gap-3 ${className ?? ''}`}>
+    <span
+      role="img"
+      aria-label={label}
+      className={`inline-flex items-center gap-3 ${className ?? ''}`}
+    >
       <EmblemMark className="tepegoz-emblem h-10 w-auto" />
       <span
         aria-hidden

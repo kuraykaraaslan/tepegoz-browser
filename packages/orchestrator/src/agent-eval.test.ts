@@ -36,7 +36,13 @@ const GOLDEN_PLAN = JSON.stringify({
   goal: 'read the page then file a record',
   steps: [
     { id: 's1', tool: 'data_get_item', args: {}, rationale: 'read', dependsOn: [] },
-    { id: 's2', tool: 'data_create_item', args: { name: 'x' }, rationale: 'write', dependsOn: ['s1'] },
+    {
+      id: 's2',
+      tool: 'data_create_item',
+      args: { name: 'x' },
+      rationale: 'write',
+      dependsOn: ['s1'],
+    },
   ],
 });
 
@@ -135,7 +141,9 @@ describe('agent-eval: golden replay', () => {
       new MockProvider(
         JSON.stringify({
           goal: 'escape',
-          steps: [{ id: 'x', tool: 'system_delete_everything', args: {}, rationale: '', dependsOn: [] }],
+          steps: [
+            { id: 'x', tool: 'system_delete_everything', args: {}, rationale: '', dependsOn: [] },
+          ],
         }),
       ),
     );

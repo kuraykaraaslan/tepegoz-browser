@@ -7,11 +7,7 @@ import {
   AgentSteerSchema,
 } from '@tepegoz/desktop-ipc/schemas';
 import { EventJournal } from '@tepegoz/persistence';
-import {
-  holdCheckpoint,
-  resumeCheckpoint,
-  type AgentRunCheckpoint,
-} from '@tepegoz/agent-runtime';
+import { holdCheckpoint, resumeCheckpoint, type AgentRunCheckpoint } from '@tepegoz/agent-runtime';
 import { randomUUID } from 'node:crypto';
 import { emitRunEvent } from '../agent/browser-host.electron';
 import {
@@ -22,12 +18,7 @@ import {
 } from '../agent/agent-run-lock.electron';
 import { getDb } from '../db/database.electron';
 import { onAction } from './ipc-helpers';
-import {
-  pendingApprovals,
-  pendingPlans,
-  settleApproval,
-  settlePlan,
-} from '../agent/hitl-registry';
+import { pendingApprovals, pendingPlans, settleApproval, settlePlan } from '../agent/hitl-registry';
 
 /** Register run-control (cancel/pause/resume/steer) + HITL response handlers. */
 export function registerAgentControlIpc(): void {

@@ -102,7 +102,9 @@ function MenuRow({ item, flyout }: { item: MenuItem; flyout?: MenuFlyout | undef
     return <div className="mb-1 border-b border-border px-3 py-2">{item.content}</div>;
   }
   if (item.kind === 'label') {
-    return <div className="px-3 pb-1 pt-2 text-xs font-semibold text-text-secondary">{item.text}</div>;
+    return (
+      <div className="px-3 pb-1 pt-2 text-xs font-semibold text-text-secondary">{item.text}</div>
+    );
   }
   if (item.kind === 'zoom') {
     return <ZoomRow item={item} />;
@@ -111,7 +113,8 @@ function MenuRow({ item, flyout }: { item: MenuItem; flyout?: MenuFlyout | undef
     return <ActionsRow items={item.items} flyout={flyout} />;
   }
   if (item.flyout === true) {
-    const open = (el: HTMLButtonElement): void => flyout?.onOpen?.(item.id, el.getBoundingClientRect());
+    const open = (el: HTMLButtonElement): void =>
+      flyout?.onOpen?.(item.id, el.getBoundingClientRect());
     return (
       <button
         type="button"
@@ -131,7 +134,10 @@ function MenuRow({ item, flyout }: { item: MenuItem; flyout?: MenuFlyout | undef
         className={itemClass(item.danger, item.disabled)}
       >
         {item.icon !== undefined && (
-          <span aria-hidden="true" className="flex h-4 w-4 items-center justify-center text-text-secondary">
+          <span
+            aria-hidden="true"
+            className="flex h-4 w-4 items-center justify-center text-text-secondary"
+          >
             {item.icon}
           </span>
         )}
@@ -151,7 +157,10 @@ function MenuRow({ item, flyout }: { item: MenuItem; flyout?: MenuFlyout | undef
       className={itemClass(item.danger, item.disabled)}
     >
       {item.icon !== undefined && (
-        <span aria-hidden="true" className="flex h-4 w-4 items-center justify-center text-text-secondary">
+        <span
+          aria-hidden="true"
+          className="flex h-4 w-4 items-center justify-center text-text-secondary"
+        >
           {item.icon}
         </span>
       )}
@@ -187,7 +196,8 @@ function ActionsRow({ items, flyout }: { items: MenuAction[]; flyout?: MenuFlyou
             a.danger === true
               ? 'text-error hover:bg-error-subtle'
               : 'text-text-secondary hover:bg-surface-overlay hover:text-text-primary',
-            a.disabled === true && 'cursor-not-allowed opacity-50 hover:bg-transparent hover:text-text-secondary',
+            a.disabled === true &&
+              'cursor-not-allowed opacity-50 hover:bg-transparent hover:text-text-secondary',
           )}
         >
           <span aria-hidden="true" className="flex h-4 w-4 items-center justify-center">
@@ -213,7 +223,13 @@ function ZoomRow({ item }: { item: Extract<MenuItem, { kind: 'zoom' }> }) {
     <div className="flex w-full items-center gap-3 px-3 py-2">
       <span className="min-w-0 flex-1 truncate">{item.label}</span>
       <div className="flex shrink-0 items-center gap-1">
-        <button type="button" aria-label={t.zoom.zoomOut} disabled={item.disabled} onClick={item.onZoomOut} className={btn}>
+        <button
+          type="button"
+          aria-label={t.zoom.zoomOut}
+          disabled={item.disabled}
+          onClick={item.onZoomOut}
+          className={btn}
+        >
           −
         </button>
         <button
@@ -221,11 +237,20 @@ function ZoomRow({ item }: { item: Extract<MenuItem, { kind: 'zoom' }> }) {
           aria-label={t.zoom.reset}
           disabled={item.disabled}
           onClick={item.onReset}
-          className={cn('w-12 text-center text-xs tabular-nums text-text-secondary', item.disabled === true && 'cursor-not-allowed opacity-50')}
+          className={cn(
+            'w-12 text-center text-xs tabular-nums text-text-secondary',
+            item.disabled === true && 'cursor-not-allowed opacity-50',
+          )}
         >
           {item.value}%
         </button>
-        <button type="button" aria-label={t.zoom.zoomIn} disabled={item.disabled} onClick={item.onZoomIn} className={btn}>
+        <button
+          type="button"
+          aria-label={t.zoom.zoomIn}
+          disabled={item.disabled}
+          onClick={item.onZoomIn}
+          className={btn}
+        >
           +
         </button>
       </div>

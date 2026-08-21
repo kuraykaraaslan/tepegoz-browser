@@ -87,7 +87,12 @@ export function ImportExportPanel({ onImport, onExport }: Readonly<ImportExportP
         }}
       />
 
-      <button type="button" className={BTN_OUTLINE} disabled={busy} onClick={() => void handleExport()}>
+      <button
+        type="button"
+        className={BTN_OUTLINE}
+        disabled={busy}
+        onClick={() => void handleExport()}
+      >
         {t.exportToGoogle}
       </button>
 

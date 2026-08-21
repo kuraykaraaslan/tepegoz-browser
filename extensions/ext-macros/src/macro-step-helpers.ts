@@ -20,14 +20,38 @@ export const uuid = (): string => crypto.randomUUID();
 
 /** Named keys the `press` step supports (mirrors the engine/CDP KEY_MAP). */
 export const PRESS_KEYS = [
-  'Enter', 'Tab', 'Escape', 'Backspace', 'Delete', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
-  'Home', 'End', 'PageUp', 'PageDown', 'Space',
+  'Enter',
+  'Tab',
+  'Escape',
+  'Backspace',
+  'Delete',
+  'ArrowUp',
+  'ArrowDown',
+  'ArrowLeft',
+  'ArrowRight',
+  'Home',
+  'End',
+  'PageUp',
+  'PageDown',
+  'Space',
 ] as const;
 
 /** The step kinds the editor can add from scratch (recorded macros may contain any kind). */
 export const ADDABLE_KINDS = [
-  'navigate', 'click', 'fill', 'press', 'scroll', 'extract', 'setVar', 'waitFor', 'waitLoad', 'waitMs',
-  'assert', 'if', 'repeat', 'forEachRow',
+  'navigate',
+  'click',
+  'fill',
+  'press',
+  'scroll',
+  'extract',
+  'setVar',
+  'waitFor',
+  'waitLoad',
+  'waitMs',
+  'assert',
+  'if',
+  'repeat',
+  'forEachRow',
 ] as const;
 export type AddableKind = (typeof ADDABLE_KINDS)[number];
 
@@ -38,7 +62,14 @@ export const defaultPredicate = (): Predicate => ({ kind: 'textPresent', text: '
 
 /** Step kinds that carry a per-step error policy (browser actions). */
 export const ERROR_POLICY_KINDS = new Set<Step['kind']>([
-  'navigate', 'click', 'fill', 'press', 'scroll', 'extract', 'waitFor', 'waitLoad',
+  'navigate',
+  'click',
+  'fill',
+  'press',
+  'scroll',
+  'extract',
+  'waitFor',
+  'waitLoad',
 ]);
 
 export function newStepOfKind(kind: AddableKind): Step {
@@ -66,7 +97,11 @@ export function newStepOfKind(kind: AddableKind): Step {
     case 'assert':
       return { kind: 'assert', predicate: defaultPredicate(), severity: 'hard' };
     case 'if':
-      return { kind: 'if', cond: defaultPredicate(), then: [{ kind: 'waitMs', ms: DEFAULT_WAIT_MS }] };
+      return {
+        kind: 'if',
+        cond: defaultPredicate(),
+        then: [{ kind: 'waitMs', ms: DEFAULT_WAIT_MS }],
+      };
     case 'repeat':
       return { kind: 'repeat', count: 3, body: [{ kind: 'waitMs', ms: DEFAULT_WAIT_MS }] };
     case 'forEachRow':
@@ -79,7 +114,6 @@ export function newStepOfKind(kind: AddableKind): Step {
       };
   }
 }
-
 
 /** A one-line human summary of a step (read-only rows / nested bodies). */
 export function describeStep(step: Step): string {

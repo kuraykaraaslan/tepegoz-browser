@@ -39,7 +39,14 @@ function runScript(roots: FakeElement[]): { name: string; tag: string }[] {
       getAttribute: (n: string) => spec.attrs[n] ?? null,
       hasAttribute: (n: string) => n in spec.attrs,
       // Everything is a 20×20 box at the origin, visible and on top: geometry is not what is under test.
-      getBoundingClientRect: () => ({ width: 20, height: 20, top: 0, left: 0, right: 20, bottom: 20 }),
+      getBoundingClientRect: () => ({
+        width: 20,
+        height: 20,
+        top: 0,
+        left: 0,
+        right: 20,
+        bottom: 20,
+      }),
       contains: () => true,
     };
     if (spec.attrs['id'] !== undefined) byId.set(spec.attrs['id'], el);
@@ -73,7 +80,12 @@ function runScript(roots: FakeElement[]): { name: string; tag: string }[] {
   const win: Record<string, unknown> = {
     innerWidth: 800,
     innerHeight: 600,
-    getComputedStyle: () => ({ visibility: 'visible', display: 'block', opacity: '1', cursor: 'auto' }),
+    getComputedStyle: () => ({
+      visibility: 'visible',
+      display: 'block',
+      opacity: '1',
+      cursor: 'auto',
+    }),
   };
   root['defaultView'] = win;
 

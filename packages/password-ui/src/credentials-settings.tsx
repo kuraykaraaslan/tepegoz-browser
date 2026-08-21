@@ -5,7 +5,13 @@ import { passwordUiDict } from './i18n';
 
 export interface CredentialsSettingsProps {
   credentials: LoginCredentialMeta[];
-  onAdd: (credential: { url: string; username: string; password: string; title?: string; notes?: string }) => Promise<void>;
+  onAdd: (credential: {
+    url: string;
+    username: string;
+    password: string;
+    title?: string;
+    notes?: string;
+  }) => Promise<void>;
   onRemove: (id: string) => Promise<void>;
 }
 
@@ -54,7 +60,13 @@ export function CredentialsSettings({ credentials, onAdd, onRemove }: Credential
     if (!canSave) return;
     setSaving(true);
     try {
-      await onAdd({ url: form.url, username: form.username, password: form.password, title: form.title, notes: form.notes });
+      await onAdd({
+        url: form.url,
+        username: form.username,
+        password: form.password,
+        title: form.title,
+        notes: form.notes,
+      });
       setForm(EMPTY_FORM);
       setShowForm(false);
     } finally {

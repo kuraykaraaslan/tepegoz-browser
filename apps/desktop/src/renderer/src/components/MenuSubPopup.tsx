@@ -36,7 +36,8 @@ export function MenuSubPopup({ kind }: { kind: string }) {
   useEffect(() => {
     const el = contentRef.current;
     if (el === null) return;
-    const report = (): void => window.tepegoz.resizePopup(Math.ceil(el.getBoundingClientRect().height));
+    const report = (): void =>
+      window.tepegoz.resizePopup(Math.ceil(el.getBoundingClientRect().height));
     report();
     const observer = new ResizeObserver(report);
     observer.observe(el);
@@ -60,7 +61,9 @@ export function MenuSubPopup({ kind }: { kind: string }) {
       if (cancelled) return;
       applyTheme(prefs.theme, prefs.themeColor);
       const loc: Locale =
-        prefs.locale === 'en' || prefs.locale === 'tr' ? prefs.locale : resolveLocale(navigator.language);
+        prefs.locale === 'en' || prefs.locale === 'tr'
+          ? prefs.locale
+          : resolveLocale(navigator.language);
       setLocale(loc);
 
       if (kind === 'history') {
@@ -73,14 +76,16 @@ export function MenuSubPopup({ kind }: { kind: string }) {
         if (cancelled) return;
         const m = pick(menuDict, loc);
         setItems([
-          ...list.slice(0, RECENT_HISTORY_COUNT).map(
-            (e): MenuItem => ({
-              id: `h:${e.url}`,
-              label: e.title.length > 0 ? e.title : e.url,
-              onSelect: () => act(() => window.tepegoz.navigateTab(e.url)),
-            }),
-          ),
-          { id: 'history-all', label: m.showFullHistory, onSelect: () => act(() => window.tepegoz.navigateTab(INTERNAL_HISTORY_URL)) },
+          ...list.slice(0, RECENT_HISTORY_COUNT).map((e): MenuItem => ({
+            id: `h:${e.url}`,
+            label: e.title.length > 0 ? e.title : e.url,
+            onSelect: () => act(() => window.tepegoz.navigateTab(e.url)),
+          })),
+          {
+            id: 'history-all',
+            label: m.showFullHistory,
+            onSelect: () => act(() => window.tepegoz.navigateTab(INTERNAL_HISTORY_URL)),
+          },
         ]);
       } else if (kind === 'bookmarks') {
         const m = pick(menuDict, loc);
@@ -113,14 +118,12 @@ export function MenuSubPopup({ kind }: { kind: string }) {
           { kind: 'separator' },
           ...(bms.length === 0
             ? [{ id: 'bm-empty', label: m.noBookmarks, disabled: true } as MenuItem]
-            : bms.map(
-                (bm): MenuItem => ({
-                  id: `bm:${bm.url}`,
-                  label: bm.title.length > 0 ? bm.title : bm.url,
-                  icon: <Icon name="bookmark" />,
-                  onSelect: () => act(() => window.tepegoz.navigateTab(bm.url)),
-                }),
-              )),
+            : bms.map((bm): MenuItem => ({
+                id: `bm:${bm.url}`,
+                label: bm.title.length > 0 ? bm.title : bm.url,
+                icon: <Icon name="bookmark" />,
+                onSelect: () => act(() => window.tepegoz.navigateTab(bm.url)),
+              }))),
         ]);
       } else if (kind === 'extensions') {
         const x = pick(extensionsDict, loc);
@@ -133,15 +136,17 @@ export function MenuSubPopup({ kind }: { kind: string }) {
         if (cancelled) return;
         const enabled = manifests.filter((m) => isExtensionEnabled(prefs.extensions, m.id));
         setItems([
-          ...enabled.map(
-            (m): MenuItem => ({
-              id: `ext:${m.id}`,
-              label: extensionLabel(m, loc).name,
-              icon: iconNodeFor(m.icon),
-              onSelect: () => act(() => window.tepegoz.navigateTab(extensionPageUrl(m.id))),
-            }),
-          ),
-          { id: 'ext-manage', label: x.manage, onSelect: () => act(() => window.tepegoz.navigateTab(INTERNAL_EXTENSIONS_URL)) },
+          ...enabled.map((m): MenuItem => ({
+            id: `ext:${m.id}`,
+            label: extensionLabel(m, loc).name,
+            icon: iconNodeFor(m.icon),
+            onSelect: () => act(() => window.tepegoz.navigateTab(extensionPageUrl(m.id))),
+          })),
+          {
+            id: 'ext-manage',
+            label: x.manage,
+            onSelect: () => act(() => window.tepegoz.navigateTab(INTERNAL_EXTENSIONS_URL)),
+          },
         ]);
       }
     })();

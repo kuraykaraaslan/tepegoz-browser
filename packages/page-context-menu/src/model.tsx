@@ -5,13 +5,7 @@ import type { PageContextMenuStrings } from './i18n/en';
 
 /** The media kind under the cursor (mirrors Electron's `context-menu` params.mediaType). */
 export type PageContextMenuMediaType =
-  | 'none'
-  | 'image'
-  | 'audio'
-  | 'video'
-  | 'canvas'
-  | 'file'
-  | 'plugin';
+  'none' | 'image' | 'audio' | 'video' | 'canvas' | 'file' | 'plugin';
 
 export type PageMenuContributionPlacement = 'top' | 'before-edit' | 'before-inspect' | 'bottom';
 
@@ -225,18 +219,17 @@ export function buildPageContextMenuModel(
   ctx: PageContextMenuContext,
   actions: PageContextMenuActions,
 ): MenuItem[] {
-  const core =
-    ctx.isEditable
-      ? editableMenu(t, ctx, actions)
-      : ctx.linkUrl.length > 0
-        ? linkMenu(t, ctx, actions)
-        : ctx.mediaType === 'image'
-          ? imageMenu(t, actions)
-          : ctx.mediaType === 'video' || ctx.mediaType === 'audio'
-            ? mediaMenu(t, actions)
-            : ctx.selectionText.length > 0
-              ? selectionMenu(t, ctx, actions)
-              : defaultMenu(t, ctx, actions);
+  const core = ctx.isEditable
+    ? editableMenu(t, ctx, actions)
+    : ctx.linkUrl.length > 0
+      ? linkMenu(t, ctx, actions)
+      : ctx.mediaType === 'image'
+        ? imageMenu(t, actions)
+        : ctx.mediaType === 'video' || ctx.mediaType === 'audio'
+          ? mediaMenu(t, actions)
+          : ctx.selectionText.length > 0
+            ? selectionMenu(t, ctx, actions)
+            : defaultMenu(t, ctx, actions);
   return mergeContributions(ctx, actions, core);
 }
 

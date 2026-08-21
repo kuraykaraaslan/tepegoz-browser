@@ -52,9 +52,7 @@ export interface StoredCredentialRef {
   origin: string;
 }
 
-export type CredentialMatch =
-  | { ok: true; credentialId: string }
-  | { ok: false; reason: string };
+export type CredentialMatch = { ok: true; credentialId: string } | { ok: false; reason: string };
 
 /**
  * Choose the stored credential for a page origin, or refuse with a reason the agent can act on.
@@ -62,10 +60,16 @@ export type CredentialMatch =
  * Ambiguity is a refusal, not a coin flip: two saved logins for one site is a question for the user, and
  * picking one would silently send the wrong identity to a real login form.
  */
-export function matchCredential(pageOrigin: string, stored: readonly StoredCredentialRef[]): CredentialMatch {
+export function matchCredential(
+  pageOrigin: string,
+  stored: readonly StoredCredentialRef[],
+): CredentialMatch {
   const site = registrableDomain(pageOrigin);
   if (site === null) {
-    return { ok: false, reason: 'the current page has no resolvable site, so no credential can be matched to it' };
+    return {
+      ok: false,
+      reason: 'the current page has no resolvable site, so no credential can be matched to it',
+    };
   }
   const candidates = stored.filter((entry) => isSameSite(entry.origin, pageOrigin));
   if (candidates.length === 0) {

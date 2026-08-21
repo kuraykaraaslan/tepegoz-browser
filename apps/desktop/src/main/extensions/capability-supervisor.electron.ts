@@ -72,7 +72,8 @@ const supervisor = new ExtensionCapabilitySupervisor({
     has: (toolId) => CapabilityRegistry.get(toolId) !== undefined,
   },
   // The reserved host id is always on so the agent can always discover/manage extensions.
-  isEnabled: (extId) => extId === EXTENSION_HOST_ID || isExtensionEnabled(currentExtensions(), extId),
+  isEnabled: (extId) =>
+    extId === EXTENSION_HOST_ID || isExtensionEnabled(currentExtensions(), extId),
   log: (msg, meta) => {
     Logger.info(msg, meta);
   },

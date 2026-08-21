@@ -65,7 +65,10 @@ test('Ctrl+F finds text in the active tab and reports Chromium\u2019s match coun
           pollEvaluate(
             () =>
               app.evaluate(({ webContents }) =>
-                webContents.getAllWebContents().map((w) => w.getURL()).join(' '),
+                webContents
+                  .getAllWebContents()
+                  .map((w) => w.getURL())
+                  .join(' '),
               ),
             '',
           ),

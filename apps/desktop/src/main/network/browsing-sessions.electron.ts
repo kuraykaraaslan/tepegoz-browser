@@ -127,7 +127,10 @@ const BrowsingSessions = {
       // the failure mode of every ordering is "requests fail", never "requests leak".
       if (BrowsingSessions.isTunnelPartition(partition)) {
         void ses.setProxy(BLACKHOLE_PROXY_CONFIG).catch((err: unknown) => {
-          Logger.error('Could not blackhole a new tunnel partition', { partition, err: String(err) });
+          Logger.error('Could not blackhole a new tunnel partition', {
+            partition,
+            err: String(err),
+          });
         });
       }
       Logger.info('Browsing session created', { partition, attachers: registrations.size });

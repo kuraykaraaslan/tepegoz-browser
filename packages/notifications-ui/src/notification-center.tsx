@@ -147,7 +147,10 @@ function Row({
         item.read ? 'opacity-70' : 'bg-surface-overlay/40',
       )}
     >
-      <span aria-hidden="true" className={cn('mt-0.5 shrink-0 rounded-md border p-1', visual.container)}>
+      <span
+        aria-hidden="true"
+        className={cn('mt-0.5 shrink-0 rounded-md border p-1', visual.container)}
+      >
         {visual.icon}
       </span>
       <div className="min-w-0 flex-1">

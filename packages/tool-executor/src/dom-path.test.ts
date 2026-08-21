@@ -55,7 +55,12 @@ describe('resolveNodePath', () => {
     });
     const root = node('#document', [node('html', [node('body', [iframe])])]);
     // html[0].body[0].iframe[0] -> into contentDocument -> ihtml[0].framed-link[0]
-    expect(resolve(root, [[0, 0, 0], [0, 0]])).toBe('framed-link');
+    expect(
+      resolve(root, [
+        [0, 0, 0],
+        [0, 0],
+      ]),
+    ).toBe('framed-link');
   });
 
   it('returns null when a mid-path node has no shadow root or frame to cross', () => {

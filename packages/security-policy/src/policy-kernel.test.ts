@@ -16,7 +16,11 @@ function evaluate(
 
 describe('PolicyKernel.evaluate — base danger class', () => {
   it('allows reads', () => {
-    expect(evaluate('read')).toEqual({ decision: 'allow', reason: 'read_allowed', biometric: false });
+    expect(evaluate('read')).toEqual({
+      decision: 'allow',
+      reason: 'read_allowed',
+      biometric: false,
+    });
   });
   it('asks before state-changing actions', () => {
     expect(evaluate('state_changing')).toEqual({

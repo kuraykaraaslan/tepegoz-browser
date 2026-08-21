@@ -8,6 +8,7 @@ is now a thin adapter over `runAgent`. The provider is registered from the safeS
 time; the raw key never leaves the main process. Extracted from `apps/desktop` per `docs/package-map.md`.
 
 ## Exports
+
 - **`runAgent`** — the L3 orchestration entry point for one agent turn; drives Planner → Executor →
   Reactor over the injected deps and hooks, emitting live progress events.
 - **`AgentRunDeps`** — the injected host seams: `browserHost` (a `BrowserHost`), `journal`
@@ -20,4 +21,5 @@ time; the raw key never leaves the main process. Extracted from `apps/desktop` p
 - **`PlanApprovalDecision`** — the user's plan-review outcome (`approved` + optional `skipStepIds`).
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

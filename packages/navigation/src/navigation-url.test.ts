@@ -67,9 +67,7 @@ describe('internalPageUrl', () => {
   });
 
   it('preserves a safe fragment for internal-page section deep links', () => {
-    expect(internalPageUrl('tepegoz://settings#privacy', URLS)).toBe(
-      'tepegoz://settings#privacy',
-    );
+    expect(internalPageUrl('tepegoz://settings#privacy', URLS)).toBe('tepegoz://settings#privacy');
     expect(internalPageUrl('TEPEGOZ://Settings/#Appearance', URLS)).toBe(
       'tepegoz://settings#appearance',
     );

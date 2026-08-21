@@ -7,6 +7,7 @@ HTML, no `eval`. GitHub-flavored markdown via `remark-gfm`; fenced code blocks a
 localizable bit (the copy button's label) is passed in as a prop, not hardcoded.
 
 ## Exports
+
 - **`Markdown`** (+ `MarkdownProps`) — the renderer component. Props: `source`, `onOpenLink` (called
   when an `http(s)` link is clicked — links never navigate the renderer itself), `onOpenFile` (called
   when a linkified file path is clicked, gated by the host to allowed folders), `copyLabel` (defaults
@@ -25,7 +26,9 @@ localizable bit (the copy button's label) is passed in as a prop, not hardcoded.
   default (so `javascript:`/`data:` and other unsafe schemes still get stripped).
 
 ## Notes
+
 - React is a peer dependency (`^18 || ^19`); this package has no other framework binding.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

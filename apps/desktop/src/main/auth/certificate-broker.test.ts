@@ -12,9 +12,8 @@ vi.mock('@tepegoz/libs', () => ({
   Logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
-const { clearCertificateExceptions, decideCertificateError, resolveCertificateError } = await import(
-  './certificate-broker'
-);
+const { clearCertificateExceptions, decideCertificateError, resolveCertificateError } =
+  await import('./certificate-broker');
 
 /** A live chrome window that records what main pushes to the renderer. */
 function windowThatPrompts() {

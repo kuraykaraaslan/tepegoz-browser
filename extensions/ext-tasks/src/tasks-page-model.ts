@@ -177,7 +177,12 @@ export function inferSchedule(triggers: readonly TaskTrigger[]): {
       changeMode: 'textHash',
     };
   }
-  return { preset: 'interval', everyMinutes: DEFAULT_INTERVAL_MINUTES, selector: '', changeMode: 'textHash' };
+  return {
+    preset: 'interval',
+    everyMinutes: DEFAULT_INTERVAL_MINUTES,
+    selector: '',
+    changeMode: 'textHash',
+  };
 }
 
 export function formStateFromTask(task: TaskDefinition): TaskFormState {
@@ -214,7 +219,8 @@ export function formStateFromConversation(input: {
   };
 }
 
-export type FormValidation = { ok: true; input: TaskSaveInput } | { ok: false; error: 'name' | 'prompt' | 'url' };
+export type FormValidation =
+  { ok: true; input: TaskSaveInput } | { ok: false; error: 'name' | 'prompt' | 'url' };
 
 /** Validate the form and assemble a {@link TaskSaveInput}. Policy is left to the host (via `autonomy`). */
 export function buildSaveInput(form: TaskFormState): FormValidation {

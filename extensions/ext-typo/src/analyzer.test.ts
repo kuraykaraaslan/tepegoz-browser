@@ -39,11 +39,9 @@ describe('typo analyzer', () => {
   });
 
   it('returns no issues when a dictionary is not installed', () => {
-    const result = analyzeTypoText(
-      { text: 'wrld', language: 'en' },
-      DEFAULT_TYPO_SETTINGS,
-      { dictionaryFor: () => null },
-    );
+    const result = analyzeTypoText({ text: 'wrld', language: 'en' }, DEFAULT_TYPO_SETTINGS, {
+      dictionaryFor: () => null,
+    });
     expect(result.issues).toEqual([]);
     expect(result.sourcesUsed).toEqual([]);
   });

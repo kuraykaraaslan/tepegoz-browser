@@ -6,11 +6,11 @@ type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline';
 type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary:   'bg-primary text-primary-fg hover:bg-primary-hover',
+  primary: 'bg-primary text-primary-fg hover:bg-primary-hover',
   secondary: 'bg-secondary text-secondary-fg hover:bg-secondary-hover',
-  ghost:     'bg-transparent text-text-primary hover:bg-surface-overlay',
-  danger:    'bg-error text-text-inverse hover:opacity-90',
-  outline:   'border border-border text-text-primary hover:bg-surface-overlay',
+  ghost: 'bg-transparent text-text-primary hover:bg-surface-overlay',
+  danger: 'bg-error text-text-inverse hover:opacity-90',
+  outline: 'border border-border text-text-primary hover:bg-surface-overlay',
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
@@ -77,14 +77,27 @@ export function Button<C extends React.ElementType = 'button'>({
         iconOnly ? iconOnlySizeClasses[size] : sizeClasses[size],
         fullWidth && 'w-full',
         selected && 'ring-2 ring-border-focus',
-        className
+        className,
       )}
       {...rest}
     >
-      {loading && <span className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full shrink-0" aria-hidden="true" />}
-      {!loading && iconLeft && <span aria-hidden="true" className="shrink-0">{iconLeft}</span>}
+      {loading && (
+        <span
+          className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full shrink-0"
+          aria-hidden="true"
+        />
+      )}
+      {!loading && iconLeft && (
+        <span aria-hidden="true" className="shrink-0">
+          {iconLeft}
+        </span>
+      )}
       {children}
-      {!loading && iconRight && <span aria-hidden="true" className="shrink-0">{iconRight}</span>}
+      {!loading && iconRight && (
+        <span aria-hidden="true" className="shrink-0">
+          {iconRight}
+        </span>
+      )}
     </Tag>
   );
 }

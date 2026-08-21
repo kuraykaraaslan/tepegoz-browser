@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import { ToolNameSchema, type AiTask, type RiskLevel, type ToolDescriptor } from '@tepegoz/shared-types';
+import {
+  ToolNameSchema,
+  type AiTask,
+  type RiskLevel,
+  type ToolDescriptor,
+} from '@tepegoz/shared-types';
 import { EXTENSION_ID_RE } from './manifest';
 
 /**

@@ -32,9 +32,24 @@ const MATRIX: readonly {
   },
 
   // --- declared floor ---
-  { name: 'ordinary state change', id: 'browser_update_page', dangerClass: 'state_changing', expected: 'ui-write' },
-  { name: 'declared destructive', id: 'macro_delete_macro', dangerClass: 'destructive', expected: 'destructive' },
-  { name: 'declared financial', id: 'shop_create_order', dangerClass: 'financial', expected: 'financial' },
+  {
+    name: 'ordinary state change',
+    id: 'browser_update_page',
+    dangerClass: 'state_changing',
+    expected: 'ui-write',
+  },
+  {
+    name: 'declared destructive',
+    id: 'macro_delete_macro',
+    dangerClass: 'destructive',
+    expected: 'destructive',
+  },
+  {
+    name: 'declared financial',
+    id: 'shop_create_order',
+    dangerClass: 'financial',
+    expected: 'financial',
+  },
 
   // --- arguments raise the floor ---
   {
@@ -81,8 +96,18 @@ const MATRIX: readonly {
   },
 
   // --- egress ---
-  { name: 'web search leaves the device', id: 'web_search_items', dangerClass: 'read', expected: 'data-egress' },
-  { name: 'upload leaves the device', id: 'file_upload_document', dangerClass: 'state_changing', expected: 'data-egress' },
+  {
+    name: 'web search leaves the device',
+    id: 'web_search_items',
+    dangerClass: 'read',
+    expected: 'data-egress',
+  },
+  {
+    name: 'upload leaves the device',
+    id: 'file_upload_document',
+    dangerClass: 'state_changing',
+    expected: 'data-egress',
+  },
   {
     name: 'a state change aimed at another registrable domain is egress',
     id: 'browser_update_page',
@@ -200,14 +225,20 @@ describe('classifyRisk — invariants', () => {
       node.next = next;
       node = next;
     }
-    expect(() => classifyRisk({ descriptor: { id: 'x_get_y', dangerClass: 'read' }, args: deep })).not.toThrow();
+    expect(() =>
+      classifyRisk({ descriptor: { id: 'x_get_y', dangerClass: 'read' }, args: deep }),
+    ).not.toThrow();
 
     const wide = Object.fromEntries(Array.from({ length: 5000 }, (_, i) => [`k${String(i)}`, 'v']));
-    expect(() => classifyRisk({ descriptor: { id: 'x_get_y', dangerClass: 'read' }, args: wide })).not.toThrow();
+    expect(() =>
+      classifyRisk({ descriptor: { id: 'x_get_y', dangerClass: 'read' }, args: wide }),
+    ).not.toThrow();
 
     const cyclic: Record<string, unknown> = {};
     cyclic.self = cyclic;
-    expect(() => classifyRisk({ descriptor: { id: 'x_get_y', dangerClass: 'read' }, args: cyclic })).not.toThrow();
+    expect(() =>
+      classifyRisk({ descriptor: { id: 'x_get_y', dangerClass: 'read' }, args: cyclic }),
+    ).not.toThrow();
 
     expect(at('x_get_y', 'read', { targetUrl: 'not a url' })).toBe('read');
   });

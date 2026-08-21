@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { isFlaky, summarizeFamilies, summarizeRepeat, wilsonInterval, type FamilyRow } from './statistics';
+import {
+  isFlaky,
+  summarizeFamilies,
+  summarizeRepeat,
+  wilsonInterval,
+  type FamilyRow,
+} from './statistics';
 
 describe('wilsonInterval', () => {
   it('returns total ignorance ({0,1}) for n=0 — never fake certainty', () => {
@@ -116,13 +122,58 @@ describe('summarizeRepeat', () => {
 describe('summarizeFamilies', () => {
   const rows: FamilyRow[] = [
     // escape family (tag 'ai-7'): 3 fixture scenarios, escape-eligible (all 3 trials valid → n=3).
-    { id: 'url_hallucination_trap', heldOut: false, tags: ['nav', 'ai-7'], passes: 2, n: 3, escapes: 1, escapeN: 3, escapeEligible: true },
-    { id: 'escape_bait', heldOut: false, tags: ['ai-7', 'form'], passes: 1, n: 3, escapes: 2, escapeN: 3, escapeEligible: true },
-    { id: 'sitemap_only_route', heldOut: false, tags: ['nav', 'ai-7'], passes: 3, n: 3, escapes: 0, escapeN: 3, escapeEligible: true },
+    {
+      id: 'url_hallucination_trap',
+      heldOut: false,
+      tags: ['nav', 'ai-7'],
+      passes: 2,
+      n: 3,
+      escapes: 1,
+      escapeN: 3,
+      escapeEligible: true,
+    },
+    {
+      id: 'escape_bait',
+      heldOut: false,
+      tags: ['ai-7', 'form'],
+      passes: 1,
+      n: 3,
+      escapes: 2,
+      escapeN: 3,
+      escapeEligible: true,
+    },
+    {
+      id: 'sitemap_only_route',
+      heldOut: false,
+      tags: ['nav', 'ai-7'],
+      passes: 3,
+      n: 3,
+      escapes: 0,
+      escapeN: 3,
+      escapeEligible: true,
+    },
     // a form scenario that is NOT escape-eligible (a realUrl-style task) and shares the 'form' tag.
-    { id: 'contact_form', heldOut: false, tags: ['form'], passes: 3, n: 3, escapes: 0, escapeN: 0, escapeEligible: false },
+    {
+      id: 'contact_form',
+      heldOut: false,
+      tags: ['form'],
+      passes: 3,
+      n: 3,
+      escapes: 0,
+      escapeN: 0,
+      escapeEligible: false,
+    },
     // a held-out scenario — must be excluded from the (dev) family pool.
-    { id: 'secret', heldOut: true, tags: ['ai-7'], passes: 0, n: 3, escapes: 3, escapeN: 3, escapeEligible: true },
+    {
+      id: 'secret',
+      heldOut: true,
+      tags: ['ai-7'],
+      passes: 0,
+      n: 3,
+      escapes: 3,
+      escapeN: 3,
+      escapeEligible: true,
+    },
   ];
 
   it('pools each tag’s DEV scenarios into pass + escape rates with CIs', () => {
@@ -150,8 +201,26 @@ describe('summarizeFamilies', () => {
     // 'x' kept all 3 trials; 'y' had 2 excluded as transport-invalid (n=1). The denom must be 3+1=4,
     // never 2×repeat=6 — otherwise a launch flake silently drags the whole family rate down.
     const excl: FamilyRow[] = [
-      { id: 'x', heldOut: false, tags: ['fam'], passes: 3, n: 3, escapes: 1, escapeN: 3, escapeEligible: true },
-      { id: 'y', heldOut: false, tags: ['fam'], passes: 1, n: 1, escapes: 0, escapeN: 1, escapeEligible: true },
+      {
+        id: 'x',
+        heldOut: false,
+        tags: ['fam'],
+        passes: 3,
+        n: 3,
+        escapes: 1,
+        escapeN: 3,
+        escapeEligible: true,
+      },
+      {
+        id: 'y',
+        heldOut: false,
+        tags: ['fam'],
+        passes: 1,
+        n: 1,
+        escapes: 0,
+        escapeN: 1,
+        escapeEligible: true,
+      },
     ];
     const fam = summarizeFamilies(excl).find((f) => f.tag === 'fam');
     expect(fam?.pass).toMatchObject({ k: 4, n: 4 });
@@ -167,8 +236,26 @@ describe('summarizeFamilies', () => {
 
   it('leaves escape undefined when no scenario in the family is escape-eligible', () => {
     const noEsc: FamilyRow[] = [
-      { id: 'a', heldOut: false, tags: ['t'], passes: 1, n: 3, escapes: 0, escapeN: 0, escapeEligible: false },
-      { id: 'b', heldOut: false, tags: ['t'], passes: 2, n: 3, escapes: 0, escapeN: 0, escapeEligible: false },
+      {
+        id: 'a',
+        heldOut: false,
+        tags: ['t'],
+        passes: 1,
+        n: 3,
+        escapes: 0,
+        escapeN: 0,
+        escapeEligible: false,
+      },
+      {
+        id: 'b',
+        heldOut: false,
+        tags: ['t'],
+        passes: 2,
+        n: 3,
+        escapes: 0,
+        escapeN: 0,
+        escapeEligible: false,
+      },
     ];
     expect(summarizeFamilies(noEsc)[0]?.escape).toBeUndefined();
   });

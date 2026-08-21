@@ -59,7 +59,9 @@ interface Bridge {
     note: string;
     socksPort: number;
   }): Promise<void>;
-  setGeneralNetworkBinding(binding: { kind: 'direct' } | { kind: 'connection'; connectionId: string }): Promise<void>;
+  setGeneralNetworkBinding(
+    binding: { kind: 'direct' } | { kind: 'connection'; connectionId: string },
+  ): Promise<void>;
   getNetworkState(): Promise<{
     connections: { id: string; label: string; status: string }[];
     general: { kind: string; connectionId?: string };
@@ -94,7 +96,12 @@ test('a connection added through the bridge actually routes a tab, and its drop 
     // ── 1. Add the connection and make it the profile-wide default, through the real bridge ──
     await page.evaluate(async (port: number) => {
       const t = (window as unknown as { tepegoz: Bridge }).tepegoz;
-      await t.addNetworkConnection({ kind: 'byo-socks', label: 'Spike', note: 'e2e', socksPort: port });
+      await t.addNetworkConnection({
+        kind: 'byo-socks',
+        label: 'Spike',
+        note: 'e2e',
+        socksPort: port,
+      });
     }, socks.port);
 
     const connectionId = await page.evaluate(async () => {
@@ -117,7 +124,9 @@ test('a connection added through the bridge actually routes a tab, and its drop 
 
     // The page is only reachable through the proxy's forward target, so a hit there is proof of routing.
     await expect
-      .poll(() => tunnelOrigin.hits.filter((h) => h.startsWith('/routed')).length, { timeout: 30_000 })
+      .poll(() => tunnelOrigin.hits.filter((h) => h.startsWith('/routed')).length, {
+        timeout: 30_000,
+      })
       .toBeGreaterThan(0);
 
     // And nothing went out the clear path, which the resolver rule made genuinely reachable.

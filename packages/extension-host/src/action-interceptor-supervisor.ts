@@ -1,4 +1,9 @@
-import type { ActionContext, ActionInterceptor, ActionInterceptorSet, ActionType } from '@tepegoz/extension-sdk';
+import type {
+  ActionContext,
+  ActionInterceptor,
+  ActionInterceptorSet,
+  ActionType,
+} from '@tepegoz/extension-sdk';
 
 export interface ActionInterceptorSupervisorDeps {
   /** Whether an extension is currently enabled (from prefs). */

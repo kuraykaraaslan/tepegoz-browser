@@ -105,7 +105,12 @@ export function isInteractableRole(role: string): boolean {
 }
 
 /** Roles that accept typed text (drive `fill`). */
-const EDITABLE_ROLES: ReadonlySet<string> = new Set(['textbox', 'searchbox', 'combobox', 'spinbutton']);
+const EDITABLE_ROLES: ReadonlySet<string> = new Set([
+  'textbox',
+  'searchbox',
+  'combobox',
+  'spinbutton',
+]);
 
 /** True when the element accepts typed text (so the agent can `fill` it). */
 export function isEditableRole(role: string): boolean {
@@ -185,7 +190,11 @@ function cleanInto(raw: string | undefined, flags: Set<string>): string {
 
 /** Build one sanitized model-facing element from a raw node at 1-based `ref`. */
 function finalizeNode(node: RawInteractable, ref: number, flags: Set<string>): InteractableElement {
-  const el: InteractableElement = { ref: node.ref ?? ref, role: node.role, name: cleanInto(node.name, flags) };
+  const el: InteractableElement = {
+    ref: node.ref ?? ref,
+    role: node.role,
+    name: cleanInto(node.name, flags),
+  };
   if (node.tag !== undefined && node.tag.length > 0) el.tag = node.tag.toLowerCase();
   const href = cleanInto(node.href, flags);
   if (href.length > 0) el.href = href;

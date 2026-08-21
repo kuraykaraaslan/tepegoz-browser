@@ -41,9 +41,9 @@ describe('ModelGateway', () => {
     const spy = vi.spyOn(provider, 'complete');
     ModelGateway.register(provider);
     const bad = [{ type: 'image', mediaType: 'image/tiff', data: 'AAAA' }] as unknown as string;
-    await expect(ModelGateway.complete(req({ messages: [{ role: 'user', content: bad }] }))).rejects.toThrow(
-      /Malformed message content on the "user" turn/,
-    );
+    await expect(
+      ModelGateway.complete(req({ messages: [{ role: 'user', content: bad }] })),
+    ).rejects.toThrow(/Malformed message content on the "user" turn/);
     expect(spy).not.toHaveBeenCalled();
   });
 
@@ -61,7 +61,10 @@ describe('ModelGateway', () => {
     ModelGateway.register(provider);
     ModelGateway.setEgressInspector((payload) =>
       payload.includes('sk-ant-SECRET')
-        ? { decision: 'block', findings: [{ kind: 'api-key', severity: 'block', sample: 'sk-…(15)' }] }
+        ? {
+            decision: 'block',
+            findings: [{ kind: 'api-key', severity: 'block', sample: 'sk-…(15)' }],
+          }
         : { decision: 'allow', findings: [] },
     );
     await expect(
@@ -70,7 +73,14 @@ describe('ModelGateway', () => {
           messages: [
             {
               role: 'assistant',
-              content: [{ type: 'tool_use', id: 'tu_1', name: 'http_post', input: { key: 'sk-ant-SECRET' } }],
+              content: [
+                {
+                  type: 'tool_use',
+                  id: 'tu_1',
+                  name: 'http_post',
+                  input: { key: 'sk-ant-SECRET' },
+                },
+              ],
             },
           ],
         }),
@@ -102,7 +112,10 @@ describe('ModelGateway', () => {
     ModelGateway.register(provider);
     ModelGateway.setEgressInspector((payload) =>
       payload.includes('sk-ant-SECRET')
-        ? { decision: 'block', findings: [{ kind: 'secret_token', severity: 'block', sample: 'sk-a…(20 chars)' }] }
+        ? {
+            decision: 'block',
+            findings: [{ kind: 'secret_token', severity: 'block', sample: 'sk-a…(20 chars)' }],
+          }
         : { decision: 'allow', findings: [] },
     );
     const call = ModelGateway.complete(
@@ -120,7 +133,10 @@ describe('ModelGateway', () => {
     ModelGateway.register(new MockProvider('ok'));
     const warned: GatewayEgressFinding[][] = [];
     ModelGateway.setEgressInspector(
-      () => ({ decision: 'warn', findings: [{ kind: 'pii_email', severity: 'warn', sample: 'a…(10 chars)' }] }),
+      () => ({
+        decision: 'warn',
+        findings: [{ kind: 'pii_email', severity: 'warn', sample: 'a…(10 chars)' }],
+      }),
       { onWarn: (findings) => warned.push(findings) },
     );
     const res = await ModelGateway.complete(req());
@@ -135,7 +151,10 @@ describe('ModelGateway', () => {
     ModelGateway.register(provider);
     const asked: GatewayEgressFinding[][] = [];
     ModelGateway.setEgressInspector(
-      () => ({ decision: 'block', findings: [{ kind: 'secret_token', severity: 'block', sample: 'sk-…(24 chars)' }] }),
+      () => ({
+        decision: 'block',
+        findings: [{ kind: 'secret_token', severity: 'block', sample: 'sk-…(24 chars)' }],
+      }),
       {
         confirmBlock: (findings) => {
           asked.push(findings);
@@ -154,7 +173,10 @@ describe('ModelGateway', () => {
     const spy = vi.spyOn(provider, 'complete');
     ModelGateway.register(provider);
     ModelGateway.setEgressInspector(
-      () => ({ decision: 'block', findings: [{ kind: 'secret_token', severity: 'block', sample: 'sk-…(24 chars)' }] }),
+      () => ({
+        decision: 'block',
+        findings: [{ kind: 'secret_token', severity: 'block', sample: 'sk-…(24 chars)' }],
+      }),
       { confirmBlock: () => Promise.resolve(false) }, // user declines
     );
     await expect(ModelGateway.complete(req())).rejects.toThrow(/Cancelled|declined/i);
@@ -171,7 +193,13 @@ describe('ModelGateway', () => {
     });
     await ModelGateway.complete(
       req({
-        tools: [{ name: 'do_thing', description: 'uses key sk-ant-SECRETXYZ', inputSchema: { type: 'object' } }],
+        tools: [
+          {
+            name: 'do_thing',
+            description: 'uses key sk-ant-SECRETXYZ',
+            inputSchema: { type: 'object' },
+          },
+        ],
       }),
     );
     expect(seen[0]).toContain('sk-ant-SECRETXYZ'); // the tool description was inspected, not just messages
@@ -184,7 +212,9 @@ describe('ModelGateway', () => {
     }));
     ModelGateway.reset(); // clears providers AND the inspector
     ModelGateway.register(new MockProvider('ok'));
-    const res = await ModelGateway.complete(req({ messages: [{ role: 'user', content: 'sk-ant-SECRET' }] }));
+    const res = await ModelGateway.complete(
+      req({ messages: [{ role: 'user', content: 'sk-ant-SECRET' }] }),
+    );
     expect(res.text).toBe('ok');
   });
 });

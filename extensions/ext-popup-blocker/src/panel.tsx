@@ -113,7 +113,9 @@ export function PopupBlockerControls({
                   className="flex items-start justify-between gap-2 rounded-md border border-border px-3 py-2"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-mono text-xs text-text-primary">{req.sourceOrigin}</p>
+                    <p className="truncate font-mono text-xs text-text-primary">
+                      {req.sourceOrigin}
+                    </p>
                     <p className="truncate text-xs text-text-secondary">{req.popupUrl}</p>
                     <p className="text-xs text-text-tertiary">{relTime(req.blockedAt)}</p>
                   </div>
@@ -146,11 +148,15 @@ export function PopupBlockerControls({
                   key={origin}
                   className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-1.5"
                 >
-                  <span className="min-w-0 truncate font-mono text-xs text-text-primary">{origin}</span>
+                  <span className="min-w-0 truncate font-mono text-xs text-text-primary">
+                    {origin}
+                  </span>
                   <button
                     type="button"
                     onClick={() => {
-                      void patch({ trustedOrigins: settings.trustedOrigins.filter((o) => o !== origin) });
+                      void patch({
+                        trustedOrigins: settings.trustedOrigins.filter((o) => o !== origin),
+                      });
                     }}
                     className={BTN_GHOST}
                   >

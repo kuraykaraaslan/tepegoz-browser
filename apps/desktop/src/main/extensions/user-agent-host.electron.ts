@@ -1,8 +1,5 @@
 import { Logger } from '@tepegoz/libs';
-import {
-  createUserAgentHost,
-  USER_AGENT_EXTENSION_ID,
-} from '@tepegoz/ext-user-agent/host';
+import { createUserAgentHost, USER_AGENT_EXTENSION_ID } from '@tepegoz/ext-user-agent/host';
 import { isExtensionEnabled } from '@tepegoz/desktop-ipc';
 import PreferenceStore from '@tepegoz/preferences';
 import TabManager from '../tabs';

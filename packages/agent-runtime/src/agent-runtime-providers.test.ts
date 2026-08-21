@@ -62,7 +62,9 @@ describe('hotSwapRunProvider (live mid-run provider switch)', () => {
   it('pins the explicitly requested model when one is provided', () => {
     CredentialVault.addKey('anthropic', 'a', 'sk-ant-hot');
     const setOverride = vi.spyOn(ModelGateway, 'setModelOverride');
-    expect(hotSwapRunProvider('anthropic', { effort: 'high', model: 'claude-sonnet-4-6' })).toBe(true);
+    expect(hotSwapRunProvider('anthropic', { effort: 'high', model: 'claude-sonnet-4-6' })).toBe(
+      true,
+    );
     expect(setOverride).toHaveBeenCalledWith({ provider: 'anthropic', model: 'claude-sonnet-4-6' });
     setOverride.mockRestore();
   });

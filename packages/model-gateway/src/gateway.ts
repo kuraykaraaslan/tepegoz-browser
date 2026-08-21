@@ -1,6 +1,12 @@
 import { AppError } from '@tepegoz/libs';
 import { CanonMessageContentSchema, type AIProvider } from '@tepegoz/shared-types';
-import type { CanonRequest, CanonResponse, CanonUsage, ModelDeltaSink, ModelProvider } from './types';
+import type {
+  CanonRequest,
+  CanonResponse,
+  CanonUsage,
+  ModelDeltaSink,
+  ModelProvider,
+} from './types';
 import { egressTextOf } from './content';
 import { cacheEffect } from './cache-plan';
 import { GatewayMessages } from './messages';
@@ -88,7 +94,8 @@ export class ModelGateway {
    */
   static supportsNativeTools(provider: AIProvider): boolean {
     const pin = ModelGateway.modelOverride;
-    const effective = pin !== null && ModelGateway.providers.has(pin.provider) ? pin.provider : provider;
+    const effective =
+      pin !== null && ModelGateway.providers.has(pin.provider) ? pin.provider : provider;
     return ModelGateway.providers.get(effective)?.supportsNativeTools === true;
   }
 
@@ -121,7 +128,10 @@ export class ModelGateway {
     ModelGateway.cacheWasteHandler = handler;
   }
 
-  static setEgressInspector(inspector: EgressInspector | null, handlers: EgressHandlers = {}): void {
+  static setEgressInspector(
+    inspector: EgressInspector | null,
+    handlers: EgressHandlers = {},
+  ): void {
     ModelGateway.egressInspector = inspector;
     ModelGateway.egressHandlers = handlers;
   }
@@ -160,7 +170,10 @@ export class ModelGateway {
       if (typeof m.content === 'string') continue;
       const parsed = CanonMessageContentSchema.safeParse(m.content);
       if (!parsed.success) {
-        throw new AppError(GatewayMessages.invalidContent(m.role, parsed.error.issues[0]?.message ?? ''), 400);
+        throw new AppError(
+          GatewayMessages.invalidContent(m.role, parsed.error.issues[0]?.message ?? ''),
+          400,
+        );
       }
     }
   }
@@ -245,7 +258,10 @@ export class ModelGateway {
     return ModelGateway.dispatch(req);
   }
 
-  private static async dispatch(req: CanonRequest, onDelta?: ModelDeltaSink): Promise<CanonResponse> {
+  private static async dispatch(
+    req: CanonRequest,
+    onDelta?: ModelDeltaSink,
+  ): Promise<CanonResponse> {
     if (!Number.isInteger(req.maxTokens) || req.maxTokens <= 0) {
       throw new AppError(GatewayMessages.MaxTokensRequired, 400);
     }
@@ -284,7 +300,12 @@ export class ModelGateway {
       controller.abort();
     }, req.timeoutMs);
     try {
-      const res = await ModelGateway.callProvider(provider, effectiveReq, controller.signal, onDelta);
+      const res = await ModelGateway.callProvider(
+        provider,
+        effectiveReq,
+        controller.signal,
+        onDelta,
+      );
       TokenLedger.record(provider.id, effectiveReq.model, effectiveReq.capability, res.usage);
       ModelGateway.warnOnWastedCache(effectiveReq, res.usage);
       return res;

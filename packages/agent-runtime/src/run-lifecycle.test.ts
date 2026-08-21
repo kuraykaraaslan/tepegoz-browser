@@ -14,7 +14,13 @@ const PLAN: Plan = {
   goal: 'demo',
   steps: [
     { id: 's1', tool: 'browser_get_page', args: {}, rationale: 'read', dependsOn: [] },
-    { id: 's2', tool: 'browser_update_page', args: { action: 'click', ref: 1 }, rationale: 'act', dependsOn: [] },
+    {
+      id: 's2',
+      tool: 'browser_update_page',
+      args: { action: 'click', ref: 1 },
+      rationale: 'act',
+      dependsOn: [],
+    },
   ],
 };
 

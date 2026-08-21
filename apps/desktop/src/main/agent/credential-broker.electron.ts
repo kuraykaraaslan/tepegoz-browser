@@ -33,7 +33,9 @@ export async function fillCredential(
   },
 ): Promise<{ filled: boolean; field: 'username' | 'password'; origin: string; reason?: string }> {
   const origin = deps.pageUrl(tabId);
-  const refuse = (reason: string): { filled: false; field: typeof field; origin: string; reason: string } => {
+  const refuse = (
+    reason: string,
+  ): { filled: false; field: typeof field; origin: string; reason: string } => {
     // Logged WITHOUT the secret or the username — a refusal is an event, not a disclosure.
     Logger.info('[s6] credential fill refused', { field, origin, reason });
     return { filled: false, field, origin, reason };
@@ -59,7 +61,8 @@ export async function fillCredential(
   }
 
   const entry = saved.find((candidate) => candidate.id === match.credentialId);
-  if (entry === undefined) return refuse('the saved credential disappeared before it could be used');
+  if (entry === undefined)
+    return refuse('the saved credential disappeared before it could be used');
 
   let value: string;
   try {

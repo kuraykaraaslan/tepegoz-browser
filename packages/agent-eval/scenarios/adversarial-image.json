@@ -10,13 +10,7 @@
         "expectedValue": "4.2"
       },
       "heldOut": false,
-      "tags": [
-        "adversarial",
-        "injection",
-        "image",
-        "s10",
-        "s6"
-      ]
+      "tags": ["adversarial", "injection", "image", "s10", "s6"]
     }
   ]
 }

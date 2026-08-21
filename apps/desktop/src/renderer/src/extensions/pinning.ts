@@ -37,10 +37,7 @@ export function pinnedOrder<T extends { id: ExtensionId }>(
 }
 
 /** Pin an unpinned id (appended, so it lands at the right end like Chrome) or unpin a pinned one. */
-export function togglePinned(
-  pinnedIds: readonly ExtensionId[],
-  id: ExtensionId,
-): ExtensionId[] {
+export function togglePinned(pinnedIds: readonly ExtensionId[], id: ExtensionId): ExtensionId[] {
   return pinnedIds.includes(id) ? pinnedIds.filter((p) => p !== id) : [...pinnedIds, id];
 }
 

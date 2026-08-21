@@ -9,6 +9,7 @@ lives in `@tepegoz/persistence` migrations), so this package is a thin CRUD/busi
 the schema owner.
 
 ## Exports
+
 - **`PasswordVault`** (+ **`passwordVault`** singleton instance) — implements `PasswordProvider` as
   `id: 'local'`, `displayName: 'Local Vault'`, with full write/import/export capabilities:
   - `init({ crypto, db })` — must be called once at app startup; `reset()` is a test seam.
@@ -25,4 +26,5 @@ the schema owner.
   persistence package's `HistoryStore`.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

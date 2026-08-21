@@ -12,7 +12,7 @@ export const tr: PopupBlockerStrings = {
   trustedEmpty: 'Henüz güvenilen site yok.',
   trustedHint: 'Bu sitelerden gelen pop-up’lara her zaman izin verilir.',
   remove: 'Kaldır',
-  recentRequests: 'Son engellenen pop-up\'lar',
+  recentRequests: "Son engellenen pop-up'lar",
   recentRequestsEmpty: 'Bu oturumda hiç pop-up engellenmedi.',
   open: 'Aç',
   blockedTitle: 'Pop-up engellendi',

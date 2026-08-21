@@ -9,15 +9,15 @@ test.
 
 ## What's here
 
-| Module | Role |
-|---|---|
-| `src/scenario-registry.ts` | Loads + `safeParse`s the data-driven scenario registry (`scenarios/*.json`). A new scenario is one JSON entry. |
-| `src/fixture-server.ts` | Tiny `http.createServer` over repo-root `test-fixtures/sites/` — deterministic "real pages", no cloud dependency. |
-| `src/scorer.ts` | **Ground-truth-first** scoring (DOM/value assertion). |
-| `src/judge.ts` | Optional **LLM-judge** for open-ended scenarios (`judgeRubric`) — secondary to ground truth; model call injected, so prompt/verdict parsing is pure + tested. |
-| `src/calibration.ts` | Judge↔human **agreement rate** over `calibration/human-labels.json`, recorded in the report so a drifting judge is visible. |
-| `src/report.ts` | Aggregates `AcceptanceMetrics`, splits **held-out** separately, emits the full pass/fail table + JSON artifact. |
-| `src/harness.eval.ts` | The `_electron` driver: launches the **real app**, drives each scenario (scripted or live), scores, judges, writes the report. |
+| Module                     | Role                                                                                                                                                          |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/scenario-registry.ts` | Loads + `safeParse`s the data-driven scenario registry (`scenarios/*.json`). A new scenario is one JSON entry.                                                |
+| `src/fixture-server.ts`    | Tiny `http.createServer` over repo-root `test-fixtures/sites/` — deterministic "real pages", no cloud dependency.                                             |
+| `src/scorer.ts`            | **Ground-truth-first** scoring (DOM/value assertion).                                                                                                         |
+| `src/judge.ts`             | Optional **LLM-judge** for open-ended scenarios (`judgeRubric`) — secondary to ground truth; model call injected, so prompt/verdict parsing is pure + tested. |
+| `src/calibration.ts`       | Judge↔human **agreement rate** over `calibration/human-labels.json`, recorded in the report so a drifting judge is visible.                                   |
+| `src/report.ts`            | Aggregates `AcceptanceMetrics`, splits **held-out** separately, emits the full pass/fail table + JSON artifact.                                               |
+| `src/harness.eval.ts`      | The `_electron` driver: launches the **real app**, drives each scenario (scripted or live), scores, judges, writes the report.                                |
 
 The schema (`EvalScenario`) lives in `@tepegoz/shared-types`; the metrics contract
 (`AcceptanceMetrics` / `recordFromOutcomes` / `summarizeAcceptanceRuns`) is reused from

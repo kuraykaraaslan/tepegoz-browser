@@ -94,7 +94,9 @@ function providerFor(config: NetworkConnection): NetworkPrivacyProvider {
           : async () => {
               const up = await ConnectionPool.ensureUp(config.upstreamConnectionId as string);
               if (up.socksPort === null) {
-                throw new Error(`Upstream connection ${String(config.upstreamConnectionId)} exposed no port`);
+                throw new Error(
+                  `Upstream connection ${String(config.upstreamConnectionId)} exposed no port`,
+                );
               }
               return up.socksPort;
             },
@@ -148,11 +150,20 @@ const ConnectionPool = {
     entries.clear();
     for (const config of PreferenceStore.getAll().networkConnections) {
       try {
-        entries.set(config.id, { config, provider: providerFor(config), status: 'down', socksPort: null, lastError: null });
+        entries.set(config.id, {
+          config,
+          provider: providerFor(config),
+          status: 'down',
+          socksPort: null,
+          lastError: null,
+        });
       } catch (err) {
         // A persisted config we cannot build a provider for is reported, not silently dropped from view:
         // a connection the user configured and cannot see is worse than one shown as broken.
-        Logger.error('Skipping an unusable network connection', { id: config.id, err: String(err) });
+        Logger.error('Skipping an unusable network connection', {
+          id: config.id,
+          err: String(err),
+        });
       }
     }
     Logger.info('Connection pool loaded', { count: entries.size });
@@ -244,7 +255,13 @@ const ConnectionPool = {
 
   /** Add (or replace) a configured connection and persist it. */
   add(config: NetworkConnection): void {
-    entries.set(config.id, { config, provider: providerFor(config), status: 'down', socksPort: null, lastError: null });
+    entries.set(config.id, {
+      config,
+      provider: providerFor(config),
+      status: 'down',
+      socksPort: null,
+      lastError: null,
+    });
     const rest = PreferenceStore.getAll().networkConnections.filter((c) => c.id !== config.id);
     PreferenceStore.update({ networkConnections: [...rest, config] });
   },
@@ -266,7 +283,10 @@ const ConnectionPool = {
     try {
       await BrowsingSessions.release(partitionKeyFor({ connectionId: id }));
     } catch (err) {
-      Logger.error('Removed a connection but could not wipe its partition', { id, err: String(err) });
+      Logger.error('Removed a connection but could not wipe its partition', {
+        id,
+        err: String(err),
+      });
     }
   },
 

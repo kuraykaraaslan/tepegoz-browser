@@ -94,7 +94,9 @@ describe('HumanInputAdapter — off-screen pacing', () => {
   it('completes with NO timer advance when nothing is on screen', async () => {
     const { adapter } = makeGated(false);
     let done = false;
-    void adapter.insertText('hello world').then(() => { done = true; });
+    void adapter.insertText('hello world').then(() => {
+      done = true;
+    });
     await flush();
     expect(done).toBe(true);
   });
@@ -102,7 +104,9 @@ describe('HumanInputAdapter — off-screen pacing', () => {
   it('still waits when the tab IS on screen — the visible path is untouched', async () => {
     const { adapter } = makeGated(true);
     let done = false;
-    void adapter.insertText('hello world').then(() => { done = true; });
+    void adapter.insertText('hello world').then(() => {
+      done = true;
+    });
     await flush();
     expect(done).toBe(false);
     await vi.runAllTimersAsync();
@@ -127,7 +131,9 @@ describe('HumanInputAdapter — off-screen pacing', () => {
     // An un-wired caller must not silently lose its pacing; the gate has to be asked for.
     const { adapter } = makeAdapter();
     let done = false;
-    void adapter.idle().then(() => { done = true; });
+    void adapter.idle().then(() => {
+      done = true;
+    });
     await flush();
     expect(done).toBe(false);
     await vi.runAllTimersAsync();

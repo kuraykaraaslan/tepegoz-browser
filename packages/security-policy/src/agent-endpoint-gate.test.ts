@@ -14,7 +14,11 @@ const token = (over: Partial<AgentEndpointToken> = {}): AgentEndpointToken => ({
 
 describe('tokenCovers — deny by default', () => {
   it('allows a call inside every bound', () => {
-    const v = tokenCovers(token(), { toolId: 'browser_get_page', dangerClass: 'read' }, { now: NOW });
+    const v = tokenCovers(
+      token(),
+      { toolId: 'browser_get_page', dangerClass: 'read' },
+      { now: NOW },
+    );
     expect(v).toEqual({ allowed: true });
   });
 
@@ -57,10 +61,17 @@ describe('tokenCovers — deny by default', () => {
   });
 
   it('LOCKS OUT a sensitive site regardless of what the token would otherwise permit', () => {
-    const wideOpen = token({ allowedToolIds: ['browser_get_page'], allowedDangerClasses: ['read'] });
+    const wideOpen = token({
+      allowedToolIds: ['browser_get_page'],
+      allowedDangerClasses: ['read'],
+    });
     const v = tokenCovers(
       wideOpen,
-      { toolId: 'browser_get_page', dangerClass: 'read', targetUrl: 'https://www.chase.com/accounts' },
+      {
+        toolId: 'browser_get_page',
+        dangerClass: 'read',
+        targetUrl: 'https://www.chase.com/accounts',
+      },
       { now: NOW },
     );
     expect(v).toEqual({ allowed: false, reason: 'sensitive_site_lockout' });
@@ -77,7 +88,11 @@ describe('tokenCovers — deny by default', () => {
   });
 
   it('does not apply the sensitive-site check to a call with no target at all', () => {
-    const v = tokenCovers(token(), { toolId: 'browser_get_page', dangerClass: 'read' }, { now: NOW });
+    const v = tokenCovers(
+      token(),
+      { toolId: 'browser_get_page', dangerClass: 'read' },
+      { now: NOW },
+    );
     expect(v.allowed).toBe(true);
   });
 

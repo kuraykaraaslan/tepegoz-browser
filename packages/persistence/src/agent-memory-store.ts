@@ -71,7 +71,9 @@ export class AgentMemoryStore {
   /** Live (non-tombstoned) hints for one host, newest first. Invalid rows are dropped, never thrown on. */
   static hintsForHost(db: Db, host: string): DomainMemoryRecord[] {
     const rows = db
-      .prepare('SELECT * FROM agent_domain_memory WHERE host = ? AND tombstone = 0 ORDER BY updated_at DESC')
+      .prepare(
+        'SELECT * FROM agent_domain_memory WHERE host = ? AND tombstone = 0 ORDER BY updated_at DESC',
+      )
       .all(host) as MemoryRow[];
     return rows.flatMap((row) => {
       const parsed = DomainMemoryRecordSchema.safeParse({
@@ -93,7 +95,13 @@ export class AgentMemoryStore {
   /** Insert or replace one hint. The caller has already passed it through the write-side poison filter. */
   static putHint(
     db: Db,
-    hint: { id: string; host: string; note: string; descriptor?: unknown; provenance: 'page' | 'run' },
+    hint: {
+      id: string;
+      host: string;
+      note: string;
+      descriptor?: unknown;
+      provenance: 'page' | 'run';
+    },
   ): void {
     db.prepare(
       `INSERT INTO agent_domain_memory

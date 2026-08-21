@@ -5,12 +5,15 @@ import { ActionInterceptorSupervisor } from './action-interceptor-supervisor';
 describe('ActionInterceptorSupervisor', () => {
   it('allows (false) when no interceptor is registered for the action type', () => {
     const sup = new ActionInterceptorSupervisor({ isEnabled: () => true });
-    expect(sup.evaluate('popup:open', { sourceOrigin: 'https://example.com', url: 'https://ads.example' })).toBe(
-      false,
-    );
+    expect(
+      sup.evaluate('popup:open', {
+        sourceOrigin: 'https://example.com',
+        url: 'https://ads.example',
+      }),
+    ).toBe(false);
   });
 
-  it('only consults an ENABLED extension\'s interceptor', () => {
+  it("only consults an ENABLED extension's interceptor", () => {
     let enabled = false;
     const sup = new ActionInterceptorSupervisor({ isEnabled: () => enabled });
     sup.provide(
@@ -60,7 +63,9 @@ describe('ActionInterceptorSupervisor', () => {
       ]),
     );
 
-    expect(sup.evaluate('tab:create', { url: 'https://x', openerId: null, background: false })).toBe(true);
+    expect(
+      sup.evaluate('tab:create', { url: 'https://x', openerId: null, background: false }),
+    ).toBe(true);
     expect(secondShouldBlock).not.toHaveBeenCalled();
   });
 });

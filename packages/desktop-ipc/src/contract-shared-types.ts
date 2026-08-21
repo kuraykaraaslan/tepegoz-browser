@@ -19,7 +19,12 @@ import type {
   NetworkConnectionKind,
   NetworkGeneralBinding,
 } from '@tepegoz/shared-types';
-export type { LiveConnectionStatus, NetworkConnection, NetworkConnectionKind, NetworkGeneralBinding };
+export type {
+  LiveConnectionStatus,
+  NetworkConnection,
+  NetworkConnectionKind,
+  NetworkGeneralBinding,
+};
 
 // File-access grant model is owned by @tepegoz/shared-types (zod-free `file-access` entry, preload-safe).
 // The zod validator (preferences.model.ts) builds from the same FILE_ACCESS_MODES list (single source).

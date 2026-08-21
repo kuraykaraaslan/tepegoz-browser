@@ -1,7 +1,7 @@
 # @tepegoz/extension-host (L5)
 
 In-process **agent-controllable extensions** (ADR-0021). `ExtensionCapabilitySupervisor` is the
-in-process analogue of `@tepegoz/mcp-client`'s `McpSupervisor`: it registers an *enabled* extension's
+in-process analogue of `@tepegoz/mcp-client`'s `McpSupervisor`: it registers an _enabled_ extension's
 `defineCapabilities` tools into the single `CapabilityRegistry` (behind the ToolGateway PEP), and
 unregisters them when the extension is disabled — `reconcile()` is idempotent, called at startup and
 on every prefs/enable change, and needs no `agent-runtime` change since the planner already enumerates
@@ -11,6 +11,7 @@ tools so the agent can manage extensions itself. Electron-free: the registry ada
 `main/extensions/capability-supervisor.electron.ts`.
 
 ## Exports
+
 - **`ExtensionCapabilitySupervisor`** / **`SupervisorDeps`** — `provide(set, host)` binds an extension's
   `ExtensionCapabilitySet` (from `@tepegoz/extension-sdk`) to its concrete host; `reconcile()` syncs the
   registry to the currently-enabled set.
@@ -32,4 +33,5 @@ tools so the agent can manage extensions itself. Electron-free: the registry ada
   `main/extensions/action-interceptors.electron.ts`.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test` · `pnpm build`

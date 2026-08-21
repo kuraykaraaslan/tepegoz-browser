@@ -54,7 +54,10 @@ describe('fitToBudget', () => {
 });
 
 describe('set-of-marks', () => {
-  const source = (ref: number, over: Partial<{ x: number; y: number; width: number; height: number }> = {}) => ({
+  const source = (
+    ref: number,
+    over: Partial<{ x: number; y: number; width: number; height: number }> = {},
+  ) => ({
     ref,
     x: 10,
     y: 20,

@@ -70,7 +70,10 @@ describe('bundleNarrows', () => {
 
   it('collects MULTIPLE violations in one pass — an author sees everything wrong at once', () => {
     const parent = bundle({ allowedToolIds: ['a'], allowedDomains: ['shop.test'] });
-    const child = bundle({ allowedToolIds: ['a', 'evil_tool'], allowedDomains: ['shop.test', 'evil.test'] });
+    const child = bundle({
+      allowedToolIds: ['a', 'evil_tool'],
+      allowedDomains: ['shop.test', 'evil.test'],
+    });
     const v = bundleNarrows(parent, child);
     expect(v.narrows).toBe(false);
     if (!v.narrows) expect(v.violations).toHaveLength(2);

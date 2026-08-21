@@ -42,7 +42,11 @@ export function updateStepContainer(
   if (head === undefined) return [...steps];
   return steps.map((step, index) => {
     if (index !== head.index) return step;
-    return replaceChildSteps(step, head.slot, updateStepContainer(childSteps(step, head.slot), tail, update));
+    return replaceChildSteps(
+      step,
+      head.slot,
+      updateStepContainer(childSteps(step, head.slot), tail, update),
+    );
   });
 }
 
@@ -91,7 +95,10 @@ export function moveStepAtLocation(
   return updateStepContainer(steps, location.containerPath, (container) => {
     const nextIndex = location.index + direction;
     if (nextIndex < 0 || nextIndex >= container.length) return container;
-    [container[location.index], container[nextIndex]] = [container[nextIndex]!, container[location.index]!];
+    [container[location.index], container[nextIndex]] = [
+      container[nextIndex]!,
+      container[location.index]!,
+    ];
     return container;
   });
 }

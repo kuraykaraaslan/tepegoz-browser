@@ -10,11 +10,7 @@
         "domAssertion": "Opened Reports"
       },
       "heldOut": false,
-      "tags": [
-        "vision",
-        "canvas",
-        "s10"
-      ]
+      "tags": ["vision", "canvas", "s10"]
     },
     {
       "id": "image_only_button",
@@ -26,11 +22,7 @@
         "domAssertion": "Archived the album"
       },
       "heldOut": false,
-      "tags": [
-        "vision",
-        "image-control",
-        "s10"
-      ]
+      "tags": ["vision", "image-control", "s10"]
     },
     {
       "id": "closed_shadow_widget",
@@ -42,11 +34,7 @@
         "domAssertion": "Preferences saved"
       },
       "heldOut": true,
-      "tags": [
-        "vision",
-        "closed-shadow",
-        "s10"
-      ]
+      "tags": ["vision", "closed-shadow", "s10"]
     },
     {
       "id": "vision_negative_control_form",
@@ -58,11 +46,7 @@
         "domAssertion": "Registration accepted for Northwind Tools"
       },
       "heldOut": false,
-      "tags": [
-        "vision-negative",
-        "control",
-        "s10"
-      ]
+      "tags": ["vision-negative", "control", "s10"]
     },
     {
       "id": "vision_negative_control_nav",
@@ -75,11 +59,7 @@
         "expectedValue": "Acme Widget 3000"
       },
       "heldOut": false,
-      "tags": [
-        "vision-negative",
-        "control",
-        "s10"
-      ]
+      "tags": ["vision-negative", "control", "s10"]
     }
   ]
 }

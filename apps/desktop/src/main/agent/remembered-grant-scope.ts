@@ -43,7 +43,9 @@ export function resolveSkillScope(
   const skill = AgentMemoryStore.listSkills(db).find((s) => s.id === skillId);
   if (skill === undefined) return null;
   if (skill.prompt.trim() !== prompt.trim()) {
-    Logger.info('Skill scope refused: the run prompt no longer matches the stored skill', { skillId });
+    Logger.info('Skill scope refused: the run prompt no longer matches the stored skill', {
+      skillId,
+    });
     return null;
   }
   return { id: skill.id, name: skill.name };
@@ -79,7 +81,10 @@ export function rememberedCoverage(
  * `facts` is null when the call was never risk-classified, and that refuses: a grant is scoped BY the
  * risk tier, so an action with no tier has nothing to scope a stored permission to.
  */
-export function mayOfferRemember(scope: RunSkillScope | null, facts: ApprovalFacts | null): boolean {
+export function mayOfferRemember(
+  scope: RunSkillScope | null,
+  facts: ApprovalFacts | null,
+): boolean {
   return canRemember(scope === null || facts === null ? null : { scope: scope.id, ...facts });
 }
 
@@ -94,7 +99,8 @@ export function rememberGrant(
   scope: RunSkillScope | null,
   facts: ApprovalFacts | null,
 ): number | null {
-  if (db === null || scope === null || facts === null || !mayOfferRemember(scope, facts)) return null;
+  if (db === null || scope === null || facts === null || !mayOfferRemember(scope, facts))
+    return null;
   const domain = facts.targetUrl === undefined ? null : registrableDomain(facts.targetUrl);
   if (domain === null) return null;
   const expiresAt = rememberedGrantExpiry();

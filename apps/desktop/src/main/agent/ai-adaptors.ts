@@ -90,7 +90,12 @@ export function buildAiAdaptors(locale: string): AIAdaptor[] {
     const meta = adaptorMetaOf(d);
     let adaptor = byId.get(meta.id);
     if (adaptor === undefined) {
-      adaptor = { id: meta.id, title: titleOf(meta, locale, mcpLabels), kind: meta.kind, actions: [] };
+      adaptor = {
+        id: meta.id,
+        title: titleOf(meta, locale, mcpLabels),
+        kind: meta.kind,
+        actions: [],
+      };
       if (meta.provenance !== undefined) adaptor.provenance = meta.provenance;
       byId.set(meta.id, adaptor);
     }
@@ -165,5 +170,7 @@ export function buildAdaptorConnections(locale: string): AdaptorConnection[] {
     });
   }
 
-  return [...connections.values()].sort((a, b) => a.kind.localeCompare(b.kind) || a.label.localeCompare(b.label));
+  return [...connections.values()].sort(
+    (a, b) => a.kind.localeCompare(b.kind) || a.label.localeCompare(b.label),
+  );
 }

@@ -15,7 +15,11 @@ import {
   type DownloadState,
 } from './download-service-store.electron';
 
-export function handleWillDownload(state: DownloadState, item: DownloadItem, wc: WebContents): void {
+export function handleWillDownload(
+  state: DownloadState,
+  item: DownloadItem,
+  wc: WebContents,
+): void {
   const url = item.getURL();
   const pageUrl = wc.getURL();
   const pending = takePending(state, url);

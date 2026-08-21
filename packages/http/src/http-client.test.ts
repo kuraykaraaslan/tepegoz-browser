@@ -46,7 +46,9 @@ describe('normalizeHttpError', () => {
   });
 
   it('treats 5xx as upstream-down (503)', () => {
-    const e = normalizeHttpError(axiosError({ status: 500, data: { error: { message: 'server error' } } }));
+    const e = normalizeHttpError(
+      axiosError({ status: 500, data: { error: { message: 'server error' } } }),
+    );
     expect(e.statusCode).toBe(503);
     expect(e.message).toBe('server error');
   });
@@ -118,7 +120,10 @@ describe('backoffMs', () => {
 });
 
 /** A stub axios adapter that fails the first `fails` calls with a 429 (with `data`), then returns 200. */
-function stub429Then200(fails: number, data: unknown): { adapter: AxiosAdapter; calls: () => number } {
+function stub429Then200(
+  fails: number,
+  data: unknown,
+): { adapter: AxiosAdapter; calls: () => number } {
   let calls = 0;
   const adapter: AxiosAdapter = (config) => {
     calls += 1;
@@ -132,7 +137,13 @@ function stub429Then200(fails: number, data: unknown): { adapter: AxiosAdapter; 
       } as AxiosResponse;
       return Promise.reject(new AxiosError('rate limited', undefined, config, undefined, response));
     }
-    return Promise.resolve({ status: 200, statusText: 'OK', headers: {}, data: { ok: true }, config } as AxiosResponse);
+    return Promise.resolve({
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      data: { ok: true },
+      config,
+    } as AxiosResponse);
   };
   return { adapter, calls: () => calls };
 }
@@ -161,9 +172,17 @@ describe('createHttpClient — 429 retry', () => {
     client.defaults.adapter = (config) => {
       calls += 1;
       if (calls <= 1) {
-        return Promise.reject(new AxiosError('getaddrinfo ENOTFOUND api.x', 'ENOTFOUND', config, {}));
+        return Promise.reject(
+          new AxiosError('getaddrinfo ENOTFOUND api.x', 'ENOTFOUND', config, {}),
+        );
       }
-      return Promise.resolve({ status: 200, statusText: 'OK', headers: {}, data: { ok: true }, config } as AxiosResponse);
+      return Promise.resolve({
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        data: { ok: true },
+        config,
+      } as AxiosResponse);
     };
     const res = await client.get('http://example.test/x');
     expect(res.status).toBe(200);
@@ -189,7 +208,9 @@ describe('createHttpClient — 429 retry', () => {
     controller.abort();
     // axios raises its own CanceledError for a pre-aborted signal; the invariant we guard is that the
     // 429 backoff loop never engages (no retry storm) once the caller has cancelled.
-    await expect(client.get('http://example.test/x', { signal: controller.signal })).rejects.toBeDefined();
+    await expect(
+      client.get('http://example.test/x', { signal: controller.signal }),
+    ).rejects.toBeDefined();
     expect(calls()).toBeLessThanOrEqual(1);
   });
 });

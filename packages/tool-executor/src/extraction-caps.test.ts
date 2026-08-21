@@ -49,7 +49,11 @@ describe('the journalled script identity', () => {
 
 describe('capping a result', () => {
   it('returns a small result untouched and unflagged', () => {
-    expect(capResult(['alpha', 'beta'])).toEqual({ value: 'alpha\nbeta', truncated: false, items: 2 });
+    expect(capResult(['alpha', 'beta'])).toEqual({
+      value: 'alpha\nbeta',
+      truncated: false,
+      items: 2,
+    });
   });
 
   it('REPORTS truncation rather than silently shortening', () => {

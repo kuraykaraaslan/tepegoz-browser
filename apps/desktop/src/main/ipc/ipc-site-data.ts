@@ -65,7 +65,10 @@ async function hasActiveSession(origins: readonly string[]): Promise<boolean> {
         if (cookies.length > 0) return true;
       }
     } catch (err) {
-      Logger.warn('Cookie probe failed while planning a site clear', { partition, err: String(err) });
+      Logger.warn('Cookie probe failed while planning a site clear', {
+        partition,
+        err: String(err),
+      });
     }
   }
   return false;
@@ -105,7 +108,11 @@ export function registerSiteDataIpc(): void {
         } catch (err) {
           // One failing origin (or partition) must not abandon the others — a partial clear is bad, a
           // silently abandoned one is worse.
-          Logger.warn('Site data clear failed for an origin', { partition, origin, err: String(err) });
+          Logger.warn('Site data clear failed for an origin', {
+            partition,
+            origin,
+            err: String(err),
+          });
         }
       }
     }

@@ -24,7 +24,9 @@ const devtoolsish = (id: string): RegisteredTool<unknown> => ({
   handler: () => null,
 });
 
-beforeEach(() => { CapabilityRegistry.reset(); });
+beforeEach(() => {
+  CapabilityRegistry.reset();
+});
 
 describe('the tool plane', () => {
   it('registers no devtools tool by default', () => {

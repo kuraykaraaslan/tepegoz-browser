@@ -23,8 +23,7 @@ export type MandateDenialReason =
   | 'unresolvable_domain';
 
 export type MandateCoverage =
-  | { covered: true; requiresHitl: boolean }
-  | { covered: false; reason: MandateDenialReason };
+  { covered: true; requiresHitl: boolean } | { covered: false; reason: MandateDenialReason };
 
 /**
  * Does this mandate, on its own terms, cover this request right now?
@@ -49,7 +48,8 @@ export function mandateCovers(
   if (!mandate.allowedDomains.some((d) => d.toLowerCase() === domain.toLowerCase())) {
     return { covered: false, reason: 'domain_not_allowed' };
   }
-  if (request.amount > mandate.maxAmount) return { covered: false, reason: 'amount_exceeds_mandate' };
+  if (request.amount > mandate.maxAmount)
+    return { covered: false, reason: 'amount_exceeds_mandate' };
 
   return {
     covered: true,

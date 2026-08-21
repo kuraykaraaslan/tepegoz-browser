@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBan, faCircleExclamation, faFileArrowUp, faTrash } from '@fortawesome/free-solid-svg-icons';
+import {
+  faBan,
+  faCircleExclamation,
+  faFileArrowUp,
+  faTrash,
+} from '@fortawesome/free-solid-svg-icons';
 import { useT } from '@tepegoz/i18n/react';
 import type { UploadCommandInput, UploadRecord, UploadsState } from '@tepegoz/uploads';
 import { isTerminalUploadStatus } from '@tepegoz/uploads';
@@ -12,7 +17,10 @@ export interface UploadsPageProps {
   subscribe: (callback: (state: UploadsState) => void) => () => void;
 }
 
-function formatBytes(value: number, units: { b: string; kb: string; mb: string; gb: string }): string {
+function formatBytes(
+  value: number,
+  units: { b: string; kb: string; mb: string; gb: string },
+): string {
   if (value < 1024) return `${value} ${units.b}`;
   if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} ${units.kb}`;
   if (value < 1024 * 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(1)} ${units.mb}`;
@@ -59,12 +67,18 @@ export function UploadsPage({ list, command, subscribe }: Readonly<UploadsPagePr
     <div className="flex h-full flex-col bg-surface-system text-text-primary">
       <div className="shrink-0 border-b border-border px-8 py-4">
         <div className="mx-auto flex max-w-4xl items-center gap-3">
-          <FontAwesomeIcon icon={faFileArrowUp} className="h-4 w-4 text-text-secondary" aria-hidden />
+          <FontAwesomeIcon
+            icon={faFileArrowUp}
+            className="h-4 w-4 text-text-secondary"
+            aria-hidden
+          />
           <h1 className="text-base font-semibold">{t.title}</h1>
         </div>
       </div>
       <div className="flex-1 overflow-auto px-8 py-4">
-        {loading && <p className="mx-auto max-w-4xl py-4 text-sm text-text-secondary">{t.loading}</p>}
+        {loading && (
+          <p className="mx-auto max-w-4xl py-4 text-sm text-text-secondary">{t.loading}</p>
+        )}
         {!loading && items.length === 0 && (
           <p className="mx-auto max-w-4xl py-8 text-sm text-text-secondary">{t.empty}</p>
         )}
@@ -92,12 +106,18 @@ function UploadRow({
   return (
     <li className="flex gap-3 py-4">
       <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-surface-raised text-text-secondary">
-        <FontAwesomeIcon icon={risky ? faCircleExclamation : faFileArrowUp} className="h-4 w-4" aria-hidden />
+        <FontAwesomeIcon
+          icon={risky ? faCircleExclamation : faFileArrowUp}
+          className="h-4 w-4"
+          aria-hidden
+        />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2">
           <p className="truncate text-sm font-medium text-text-primary">
-            {item.files.length === 1 ? item.files[0]?.filename : `${String(item.files.length)} ${t.files}`}
+            {item.files.length === 1
+              ? item.files[0]?.filename
+              : `${String(item.files.length)} ${t.files}`}
           </p>
           <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-xs text-text-secondary">
             {t.status[item.status]}
@@ -109,12 +129,19 @@ function UploadRow({
             {t.actor[item.provenance.actor]}
           </span>
         </div>
-        <p className="mt-1 truncate text-xs text-text-secondary">{item.targetOrigin ?? item.targetUrl ?? '-'}</p>
-        <p className="mt-1 text-xs text-text-secondary">{formatBytes(totalBytes, t.bytes)} · {t.redacted}</p>
+        <p className="mt-1 truncate text-xs text-text-secondary">
+          {item.targetOrigin ?? item.targetUrl ?? '-'}
+        </p>
+        <p className="mt-1 text-xs text-text-secondary">
+          {formatBytes(totalBytes, t.bytes)} · {t.redacted}
+        </p>
         {item.files.length > 1 && (
           <ul className="mt-2 flex flex-wrap gap-2">
             {item.files.map((file) => (
-              <li key={`${item.id}-${file.filename}`} className="rounded-md bg-surface-raised px-2 py-1 text-xs text-text-secondary">
+              <li
+                key={`${item.id}-${file.filename}`}
+                className="rounded-md bg-surface-raised px-2 py-1 text-xs text-text-secondary"
+              >
                 {file.filename} · {formatBytes(file.sizeBytes, t.bytes)}
               </li>
             ))}
@@ -123,10 +150,18 @@ function UploadRow({
         {item.error !== undefined && <p className="mt-2 text-xs text-danger">{item.error}</p>}
         <div className="mt-3 flex flex-wrap gap-2">
           {(item.status === 'staged' || item.status === 'bound') && (
-            <ActionButton label={t.action.cancel} icon={faBan} onClick={() => onCommand({ id: item.id, action: 'cancel' })} />
+            <ActionButton
+              label={t.action.cancel}
+              icon={faBan}
+              onClick={() => onCommand({ id: item.id, action: 'cancel' })}
+            />
           )}
           {isTerminalUploadStatus(item.status) && (
-            <ActionButton label={t.action.clear} icon={faTrash} onClick={() => onCommand({ id: item.id, action: 'clear' })} />
+            <ActionButton
+              label={t.action.clear}
+              icon={faTrash}
+              onClick={() => onCommand({ id: item.id, action: 'clear' })}
+            />
           )}
         </div>
       </div>

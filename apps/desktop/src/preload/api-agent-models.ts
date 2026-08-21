@@ -113,8 +113,7 @@ export const agentModelsApi: Pick<
     invoke<AgentConversationDetail | null>(IpcChannels.agentConversationsCurrent, groupId),
   openAgentConversation: (input: AgentConversationOpenInput) =>
     invoke<AgentConversationDetail | null>(IpcChannels.agentConversationsOpen, input),
-  deleteAgentConversation: (id: string) =>
-    invoke<void>(IpcChannels.agentConversationsDelete, id),
+  deleteAgentConversation: (id: string) => invoke<void>(IpcChannels.agentConversationsDelete, id),
   clearAgentConversations: () => invoke<void>(IpcChannels.agentConversationsClear),
   continueAgentInBackground: () => invoke<void>(IpcChannels.agentContinueInBackground),
   listAgentSkills: () => invoke<SkillRecord[]>(IpcChannels.agentSkillsList),
@@ -168,7 +167,12 @@ export const agentModelsApi: Pick<
     remember?: boolean,
     grantScope?: boolean,
   ) => {
-    ipcRenderer.send(IpcChannels.agentApprovalResponse, { approvalId, approved, remember, grantScope });
+    ipcRenderer.send(IpcChannels.agentApprovalResponse, {
+      approvalId,
+      approved,
+      remember,
+      grantScope,
+    });
   },
   onAgentPlanPreview: (callback: (preview: AgentPlanPreview) => void) => {
     const listener = (_event: unknown, payload: AgentPlanPreview): void => {

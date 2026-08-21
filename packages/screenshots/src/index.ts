@@ -37,7 +37,9 @@ export interface ScreenshotSnapshot extends ScreenshotCaptureResult {
   content: string;
 }
 
-export function normalizeScreenshotInput(input: ScreenshotCaptureInput): Required<ScreenshotCaptureInput> {
+export function normalizeScreenshotInput(
+  input: ScreenshotCaptureInput,
+): Required<ScreenshotCaptureInput> {
   return {
     tabId: input.tabId ?? '',
     mode: input.mode ?? 'viewport',

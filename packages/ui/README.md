@@ -9,6 +9,7 @@ presentational and owns no app state; components are added on demand as screens 
 across the other chrome packages.
 
 ## Exports
+
 - **`Button`**, **`Toggle`**, **`Card`**, **`Modal`**, **`Input`**, **`Badge`**, **`AlertBanner`**
   (+ `AlertAction` type) — forked KUIreact atoms; see `_FORK.md` for the fork policy.
 - **`BrandMark`** — the app's brand/logo mark, used by `@tepegoz/browser-chrome`.
@@ -18,6 +19,7 @@ across the other chrome packages.
 - **`PolymorphicProps`** — a shared type for `as`-prop-style polymorphic components.
 
 ## Usage
+
 ```tsx
 import { Button, Card, Icon, cn } from '@tepegoz/ui';
 
@@ -26,8 +28,9 @@ import { Button, Card, Icon, cn } from '@tepegoz/ui';
     <Icon name="check" className="h-4 w-4" />
     Save
   </Button>
-</Card>
+</Card>;
 ```
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint`

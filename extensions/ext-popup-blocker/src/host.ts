@@ -42,7 +42,11 @@ export interface PopupBlockerHost {
 }
 
 export function createPopupBlockerHost(ports: PopupBlockerPorts): PopupBlockerHost {
-  let settings: PopupBlockerSettings = { enabled: true, showNotifications: true, trustedOrigins: [] };
+  let settings: PopupBlockerSettings = {
+    enabled: true,
+    showNotifications: true,
+    trustedOrigins: [],
+  };
   const recentRequests: PopupBlockerRequest[] = [];
 
   const get = (): PopupBlockerSettings => ({

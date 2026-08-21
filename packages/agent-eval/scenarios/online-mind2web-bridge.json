@@ -25,7 +25,9 @@
     {
       "id": "bridge_mdn_method_signature",
       "task": "Look up what the second argument of JavaScript's Array.prototype.reduce does, and tell me in one sentence.",
-      "target": { "realUrl": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reduce" },
+      "target": {
+        "realUrl": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reduce"
+      },
       "success": {
         "judgeRubric": "PASS only if the answer identifies it as the INITIAL VALUE of the accumulator, and ideally notes the behaviour when it is omitted. Naming it 'the callback' or 'thisArg' is a FAIL."
       },
@@ -36,7 +38,9 @@
     {
       "id": "bridge_mdn_compare_two_pages",
       "task": "Find out whether Array.prototype.flat is available in Node.js, and tell me from which version.",
-      "target": { "realUrl": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat" },
+      "target": {
+        "realUrl": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat"
+      },
       "success": {
         "judgeRubric": "PASS only if the answer names Node 11 (or 11.0.0) from the browser-compatibility data on the page. A vague 'modern versions' is a FAIL."
       },
@@ -146,7 +150,9 @@
     {
       "id": "bridge_stackoverflow_accepted_answer",
       "task": "Find the accepted answer on this page and tell me its core recommendation in one sentence.",
-      "target": { "realUrl": "https://stackoverflow.com/questions/11227809/why-is-processing-a-sorted-array-faster-than-processing-an-unsorted-array" },
+      "target": {
+        "realUrl": "https://stackoverflow.com/questions/11227809/why-is-processing-a-sorted-array-faster-than-processing-an-unsorted-array"
+      },
       "success": {
         "judgeRubric": "PASS only if the answer identifies branch prediction as the cause. Summarising a non-accepted answer, or the question itself, is a FAIL."
       },

@@ -42,7 +42,13 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
-export function ScheduleTaskModal({ api, open, groupId, fallbackFirstPrompt, onClose }: ScheduleTaskModalProps) {
+export function ScheduleTaskModal({
+  api,
+  open,
+  groupId,
+  fallbackFirstPrompt,
+  onClose,
+}: ScheduleTaskModalProps) {
   const t = useT(agentDict).scheduleTask;
   const [conversationId, setConversationId] = useState<string | undefined>(undefined);
   const [name, setName] = useState('');
@@ -145,7 +151,13 @@ export function ScheduleTaskModal({ api, open, groupId, fallbackFirstPrompt, onC
         <>
           <div className="mt-4 max-h-[60vh] space-y-4 overflow-auto pr-1">
             <Field label={t.name}>
-              <input type="text" value={name} disabled={busy} onChange={(e) => setName(e.target.value)} className={INPUT} />
+              <input
+                type="text"
+                value={name}
+                disabled={busy}
+                onChange={(e) => setName(e.target.value)}
+                className={INPUT}
+              />
             </Field>
 
             <Field label={t.instruction} hint={t.instructionHint}>

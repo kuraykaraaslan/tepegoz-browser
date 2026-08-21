@@ -305,7 +305,10 @@ describe('runMacro', () => {
         checkPolicy: () => Promise.reject(new PolicyDeniedError('sensitive_site_lockout')),
       });
       const r = await runMacro(
-        macro([{ kind: 'click', target: css('.a') }, { kind: 'click', target: css('.b') }]),
+        macro([
+          { kind: 'click', target: css('.a') },
+          { kind: 'click', target: css('.b') },
+        ]),
         host,
       );
       expect(r.ok).toBe(false);
@@ -316,7 +319,10 @@ describe('runMacro', () => {
 
     it('a policy denial is NEVER swallowed by onError:skip', async () => {
       const host = fakeHost({ checkPolicy: () => Promise.reject(new PolicyDeniedError('nope')) });
-      const r = await runMacro(macro([{ kind: 'click', target: css('.a'), onError: 'skip' }]), host);
+      const r = await runMacro(
+        macro([{ kind: 'click', target: css('.a'), onError: 'skip' }]),
+        host,
+      );
       expect(r.ok).toBe(false);
       expect(r.error?.message).toContain('nope');
     });

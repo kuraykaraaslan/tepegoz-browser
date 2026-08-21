@@ -65,7 +65,11 @@ async function tick(): Promise<void> {
 
 async function evaluateTask(task: TaskDefinition, at: number): Promise<void> {
   for (const [index, trigger] of task.triggers.entries()) {
-    if (trigger.type === 'interval' && trigger.enabled && (task.nextRunAt ?? Number.MAX_SAFE_INTEGER) <= at) {
+    if (
+      trigger.type === 'interval' &&
+      trigger.enabled &&
+      (task.nextRunAt ?? Number.MAX_SAFE_INTEGER) <= at
+    ) {
       enqueue(task, trigger);
     } else if (trigger.type === 'pageChange' && trigger.enabled) {
       await evaluatePageChange(task, trigger, triggerKey(trigger, index), at);
@@ -74,7 +78,11 @@ async function evaluateTask(task: TaskDefinition, at: number): Promise<void> {
   const db = getDb();
   if (db !== null) {
     const nextRunAt = computeNextRunAt(task, at);
-    TaskStore.upsert(db, { ...task, updatedAt: at, ...(nextRunAt !== undefined ? { nextRunAt } : {}) });
+    TaskStore.upsert(db, {
+      ...task,
+      updatedAt: at,
+      ...(nextRunAt !== undefined ? { nextRunAt } : {}),
+    });
   }
 }
 
@@ -134,11 +142,15 @@ export function enqueue(task: TaskDefinition, trigger: TaskTrigger): void {
   if (db !== null) TaskStore.upsertRun(db, run);
   runtime.queue.set(task.id, { task, trigger, run });
   broadcast();
-  appendAudit('TaskQueued', {
-    taskId: task.id,
-    triggerType: run.triggerType,
-    triggerSource: run.triggerSource ?? null,
-  }, run.correlationId);
+  appendAudit(
+    'TaskQueued',
+    {
+      taskId: task.id,
+      triggerType: run.triggerType,
+      triggerSource: run.triggerSource ?? null,
+    },
+    run.correlationId,
+  );
 }
 
 async function drainQueue(): Promise<void> {
@@ -161,7 +173,11 @@ async function runQueued(input: QueuedTaskRun): Promise<void> {
   const started: TaskRunRecord = { ...input.run, status: 'running', startedAt: now() };
   if (db !== null) TaskStore.upsertRun(db, started);
   broadcast();
-  appendAudit('TaskStarted', { taskId: input.task.id, triggerType: started.triggerType }, started.correlationId);
+  appendAudit(
+    'TaskStarted',
+    { taskId: input.task.id, triggerType: started.triggerType },
+    started.correlationId,
+  );
   if (input.task.policy.notifyOnStart) {
     NotificationHost.push({
       source: 'agent',
@@ -190,12 +206,16 @@ async function runQueued(input: QueuedTaskRun): Promise<void> {
     TaskStore.upsert(db, { ...input.task, lastRunAt: completedAt, updatedAt: completedAt });
   }
   broadcast();
-  appendAudit(result.ok ? 'TaskSucceeded' : 'TaskFailed', {
-    taskId: input.task.id,
-    triggerType: done.triggerType,
-    summary: result.summary ?? null,
-    error: result.error ?? null,
-  }, done.correlationId);
+  appendAudit(
+    result.ok ? 'TaskSucceeded' : 'TaskFailed',
+    {
+      taskId: input.task.id,
+      triggerType: done.triggerType,
+      summary: result.summary ?? null,
+      error: result.error ?? null,
+    },
+    done.correlationId,
+  );
   const shouldNotify = result.ok ? input.task.policy.notifyOnDone : input.task.policy.notifyOnError;
   if (shouldNotify) {
     NotificationHost.push({

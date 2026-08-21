@@ -20,9 +20,11 @@ hard-blocks them without offering a choice, because a "continue anyway" button t
 the habit the lockout exists to prevent.
 
 ## Exports
+
 - **`CertWarning`** — the warning surface.
 - **`CertWarningProps`** — the injected-props contract.
 - **`certWarningDict`** — this package's `en`/`tr` dictionary.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

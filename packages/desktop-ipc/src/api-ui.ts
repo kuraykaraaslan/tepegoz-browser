@@ -10,11 +10,7 @@ import type {
   CertificateErrorRequest,
   CertificateErrorResponse,
 } from './contract';
-import type {
-  PageMenuAction,
-  PageMenuContext,
-  PageMenuContributionActionInput,
-} from './contract';
+import type { PageMenuAction, PageMenuContext, PageMenuContributionActionInput } from './contract';
 import type { HistoryEntry } from './contract';
 import type { SiteClearPlan } from './contract';
 import type { BookmarkEntry, BookmarkNodeType, BookmarkTreeNode } from './contract';
@@ -22,10 +18,7 @@ import type { BookmarkImportInput, BookmarkImportResult } from './contract';
 import type { BookmarkMenuAction } from './contract';
 import type { AppNotification, NotificationState } from './contract';
 import type { NotificationPermissionRequest, NotificationPermissionResponse } from './contract';
-import type {
-  FileAccessFolderPickResult,
-  NewTabBackgroundImagePick,
-} from './preferences-types';
+import type { FileAccessFolderPickResult, NewTabBackgroundImagePick } from './preferences-types';
 
 export interface UiApi {
   /** Open a named app surface as a native floating popup window anchored at `anchor` (the trigger's

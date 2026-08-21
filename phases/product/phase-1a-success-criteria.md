@@ -2,16 +2,17 @@
 
 Companion to [`phase-1a-walking-skeleton-mvp.md`](phase-1a-walking-skeleton-mvp.md). Records the MVP
 success criteria (min / strong / failure-signal + metrics) and a handover note for the L7 Model Gateway
-+ DoD slice.
+
+- DoD slice.
 
 ## MVP 4 conditions
 
-| Condition | Status | Evidence |
-|---|---|---|
-| **Valuable** | met | One end-to-end agentic task runs BYO-key, local-first: prompt → router → planner (DAG) → HITL plan preview → reactive tool loop through the Policy Kernel PEP → live Agent Console + Event Journal. |
-| **Usable** | met | Chrome-style shell (omnibox, tabs/groups, new-tab, bookmarks, settings), Do-mode composer, plan-preview + approval modals, token/quota indicator, localized en/tr. |
-| **Testable** | met | Deterministic agent-eval (golden-LLM replay) + acceptance scenarios with metrics; red-team injection corpus; unit suites across the gateway/router/ledger/policy; Playwright `_electron` smoke gated in CI. |
-| **Deliverable** | partial | Runs from source; unsigned packaging exists (`release.yml`). Signing/auto-update hardening is deferred (Phase 0 follow-up), so "shippable installer" is not yet closed. |
+| Condition       | Status  | Evidence                                                                                                                                                                                                    |
+| --------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Valuable**    | met     | One end-to-end agentic task runs BYO-key, local-first: prompt → router → planner (DAG) → HITL plan preview → reactive tool loop through the Policy Kernel PEP → live Agent Console + Event Journal.         |
+| **Usable**      | met     | Chrome-style shell (omnibox, tabs/groups, new-tab, bookmarks, settings), Do-mode composer, plan-preview + approval modals, token/quota indicator, localized en/tr.                                          |
+| **Testable**    | met     | Deterministic agent-eval (golden-LLM replay) + acceptance scenarios with metrics; red-team injection corpus; unit suites across the gateway/router/ledger/policy; Playwright `_electron` smoke gated in CI. |
+| **Deliverable** | partial | Runs from source; unsigned packaging exists (`release.yml`). Signing/auto-update hardening is deferred (Phase 0 follow-up), so "shippable installer" is not yet closed.                                     |
 
 ## Success criteria
 
@@ -65,5 +66,5 @@ success criteria (min / strong / failure-signal + metrics) and a handover note f
   execution backend (Phase 1b); provider model-id verification against live catalogs.
 - Pre-existing branch debt surfaced during verification (NOT from this slice): `@tepegoz/human-input` has
   no `tsconfig.build.json` / node_modules (breaks `turbo run build`), and `packages/bookmarks-bar/src/
-  bookmarks-bar.test.tsx:47` fails lint (`no-unsafe-assignment`). Both block a fully-green repo run and
+bookmarks-bar.test.tsx:47` fails lint (`no-unsafe-assignment`). Both block a fully-green repo run and
   should be fixed before the Phase 1a DoD can close.

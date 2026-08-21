@@ -25,8 +25,14 @@ describe('TokenLedger', () => {
   });
 
   it('snapshots per-(provider,model,capability) rows for persistence', () => {
-    TokenLedger.record('anthropic', 'claude-opus-4-8', 'plan', { inputTokens: 10, outputTokens: 40 });
-    TokenLedger.record('anthropic', 'claude-opus-4-8', 'plan', { inputTokens: 5, outputTokens: 20 });
+    TokenLedger.record('anthropic', 'claude-opus-4-8', 'plan', {
+      inputTokens: 10,
+      outputTokens: 40,
+    });
+    TokenLedger.record('anthropic', 'claude-opus-4-8', 'plan', {
+      inputTokens: 5,
+      outputTokens: 20,
+    });
     TokenLedger.record('openai', 'gpt-4o', 'exec', { inputTokens: 1, outputTokens: 2 });
     const rows = TokenLedger.snapshotEntries();
     expect(rows).toContainEqual({

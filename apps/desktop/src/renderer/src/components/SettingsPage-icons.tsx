@@ -40,7 +40,9 @@ export const IconSearch = () => (
   <FontAwesomeIcon icon={faMagnifyingGlass} className={ICON} aria-hidden />
 );
 export const IconFiles = () => <FontAwesomeIcon icon={faFolderTree} className={ICON} aria-hidden />;
-export const IconDownload = () => <FontAwesomeIcon icon={faDownload} className={ICON} aria-hidden />;
+export const IconDownload = () => (
+  <FontAwesomeIcon icon={faDownload} className={ICON} aria-hidden />
+);
 export const IconA11y = () => (
   <FontAwesomeIcon icon={faUniversalAccess} className={ICON} aria-hidden />
 );

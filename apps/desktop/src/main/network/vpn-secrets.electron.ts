@@ -24,7 +24,9 @@ function secretsDir(): string {
 function pathFor(connectionId: string): string {
   if (!isValidConnectionId(connectionId)) {
     // The id is a filename component here as well as a partition component; the same rule guards both.
-    throw new Error(`Refusing a secret path for an invalid connection id: ${JSON.stringify(connectionId)}`);
+    throw new Error(
+      `Refusing a secret path for an invalid connection id: ${JSON.stringify(connectionId)}`,
+    );
   }
   return join(secretsDir(), `${connectionId}.enc`);
 }

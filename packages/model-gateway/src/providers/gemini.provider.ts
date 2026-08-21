@@ -8,7 +8,12 @@ import type {
   ModelProvider,
 } from '../types';
 import { contentToText } from '../content';
-import { toGeminiParts, toolNamesById, type GeminiContent, type GeminiPart } from './gemini-content';
+import {
+  toGeminiParts,
+  toolNamesById,
+  type GeminiContent,
+  type GeminiPart,
+} from './gemini-content';
 
 /**
  * Google Gemini adapter (L7) — talks to the Generative Language REST API directly over the central

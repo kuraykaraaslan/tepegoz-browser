@@ -24,7 +24,10 @@ const req = (over: Partial<MandateConsumptionRequest> = {}): MandateConsumptionR
 
 describe('mandateCovers — pre-model, deny by default', () => {
   it('covers a request inside every bound', () => {
-    expect(mandateCovers(mandate(), req(), { now: NOW })).toEqual({ covered: true, requiresHitl: false });
+    expect(mandateCovers(mandate(), req(), { now: NOW })).toEqual({
+      covered: true,
+      requiresHitl: false,
+    });
   });
 
   it('denies an EXPIRED mandate', () => {
@@ -48,7 +51,9 @@ describe('mandateCovers — pre-model, deny by default', () => {
   });
 
   it('covers a SUBDOMAIN of an allowed domain — checkout.shop.test under shop.test', () => {
-    const v = mandateCovers(mandate(), req({ targetUrl: 'https://checkout.shop.test/pay' }), { now: NOW });
+    const v = mandateCovers(mandate(), req({ targetUrl: 'https://checkout.shop.test/pay' }), {
+      now: NOW,
+    });
     expect(v.covered).toBe(true);
   });
 
@@ -115,39 +120,61 @@ describe('consumeMandate — replay-safe, never double-charges', () => {
     // Recurring, specifically to isolate this property from single-use exhaustion (covered on its own
     // below) — this test is only about key matching, not about how many times the mandate may be used.
     const prior = history({ idempotencyKey: 'tx-1', mandateId: 'm1' });
-    const v = consumeMandate(mandate({ usage: 'recurring' }), prior, req({ idempotencyKey: 'tx-2' }), {
-      now: NOW,
-    });
+    const v = consumeMandate(
+      mandate({ usage: 'recurring' }),
+      prior,
+      req({ idempotencyKey: 'tx-2' }),
+      {
+        now: NOW,
+      },
+    );
     expect(v).toEqual({ consumed: true, replay: false });
   });
 
   it('a SECOND distinct consumption of a single_use mandate is refused', () => {
     const prior = history({ idempotencyKey: 'tx-1', mandateId: 'm1' });
-    const v = consumeMandate(mandate({ usage: 'single_use' }), prior, req({ idempotencyKey: 'tx-2' }), {
-      now: NOW,
-    });
+    const v = consumeMandate(
+      mandate({ usage: 'single_use' }),
+      prior,
+      req({ idempotencyKey: 'tx-2' }),
+      {
+        now: NOW,
+      },
+    );
     expect(v).toEqual({ consumed: false, reason: 'single_use_exhausted' });
   });
 
   it('a RECURRING mandate allows a second distinct consumption', () => {
     const prior = history({ idempotencyKey: 'tx-1', mandateId: 'm1' });
-    const v = consumeMandate(mandate({ usage: 'recurring' }), prior, req({ idempotencyKey: 'tx-2' }), {
-      now: NOW,
-    });
+    const v = consumeMandate(
+      mandate({ usage: 'recurring' }),
+      prior,
+      req({ idempotencyKey: 'tx-2' }),
+      {
+        now: NOW,
+      },
+    );
     expect(v).toEqual({ consumed: true, replay: false });
   });
 
   it('does not confuse a consumption on a DIFFERENT mandate for a prior consumption of this one', () => {
     const prior = history({ idempotencyKey: 'tx-1', mandateId: 'some-other-mandate' });
-    const v = consumeMandate(mandate({ usage: 'single_use' }), prior, req({ idempotencyKey: 'tx-1' }), {
-      now: NOW,
-    });
+    const v = consumeMandate(
+      mandate({ usage: 'single_use' }),
+      prior,
+      req({ idempotencyKey: 'tx-1' }),
+      {
+        now: NOW,
+      },
+    );
     // Same idempotencyKey, but a DIFFERENT mandate — this must be treated as fresh, not as a replay.
     expect(v).toEqual({ consumed: true, replay: false });
   });
 
   it('refuses an out-of-mandate request exactly like mandateCovers would', () => {
-    const v = consumeMandate(mandate({ maxAmount: 10 }), history(), req({ amount: 100 }), { now: NOW });
+    const v = consumeMandate(mandate({ maxAmount: 10 }), history(), req({ amount: 100 }), {
+      now: NOW,
+    });
     expect(v).toEqual({ consumed: false, reason: 'amount_exceeds_mandate' });
   });
 });

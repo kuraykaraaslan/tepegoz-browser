@@ -39,7 +39,9 @@ export function DictionaryList({
                 {dictionaryStatus(dict, x)} · {x.size}: {formatBytes(dict.sizeBytes)} · {x.license}:{' '}
                 {dict.license}
               </p>
-              {dict.error !== null ? <p className="mt-1 text-xs text-red-500">{dict.error}</p> : null}
+              {dict.error !== null ? (
+                <p className="mt-1 text-xs text-red-500">{dict.error}</p>
+              ) : null}
             </div>
             <div className="flex shrink-0 items-center gap-1">
               {dict.downloading ? (
@@ -79,7 +81,10 @@ export function DictionaryList({
           </div>
           {dict.downloading ? (
             <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-overlay">
-              <div className="h-full bg-primary" style={{ width: `${Math.round(dict.progress * 100)}%` }} />
+              <div
+                className="h-full bg-primary"
+                style={{ width: `${Math.round(dict.progress * 100)}%` }}
+              />
             </div>
           ) : null}
         </li>

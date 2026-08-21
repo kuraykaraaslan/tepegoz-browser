@@ -1,5 +1,9 @@
 import { z } from 'zod';
-import { capability, defineCapabilities, type ExtensionCapabilitySet } from '@tepegoz/extension-sdk';
+import {
+  capability,
+  defineCapabilities,
+  type ExtensionCapabilitySet,
+} from '@tepegoz/extension-sdk';
 import { translateManifest } from './manifest';
 import type { TranslateCapabilityHost } from './types';
 

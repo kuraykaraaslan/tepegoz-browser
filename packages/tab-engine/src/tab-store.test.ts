@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { TabStore } from './tab-store';
 
-const web = (over: Partial<{ title: string; url: string; isLoading: boolean; faviconUrl: string | null }> = {}) =>
-  ({ kind: 'web' as const, title: '', url: '', isLoading: true, faviconUrl: null, ...over });
+const web = (
+  over: Partial<{ title: string; url: string; isLoading: boolean; faviconUrl: string | null }> = {},
+) => ({ kind: 'web' as const, title: '', url: '', isLoading: true, faviconUrl: null, ...over });
 
 /** Assert the ADR-0020 invariants hold: pinned run first, each group contiguous. */
 function assertInvariants(s: TabStore): void {
@@ -58,13 +59,24 @@ describe('TabStore — records & ordering (existing)', () => {
   it('patches only mutable fields and ignores unknown ids', () => {
     const a = store.add(web());
     store.update(a, { title: 'Hello', isLoading: false, faviconUrl: 'x' });
-    expect(store.get(a)).toMatchObject({ kind: 'web', title: 'Hello', isLoading: false, faviconUrl: 'x' });
+    expect(store.get(a)).toMatchObject({
+      kind: 'web',
+      title: 'Hello',
+      isLoading: false,
+      faviconUrl: 'x',
+    });
     expect(() => store.update('999', { title: 'nope' })).not.toThrow();
   });
 
   it('finds an existing internal-page tab by url only', () => {
     store.add(web({ url: 'tepegoz://settings' }));
-    const settings = store.add({ kind: 'internal', title: 'Settings', url: 'tepegoz://settings', isLoading: false, faviconUrl: null });
+    const settings = store.add({
+      kind: 'internal',
+      title: 'Settings',
+      url: 'tepegoz://settings',
+      isLoading: false,
+      faviconUrl: null,
+    });
     expect(store.findInternal('tepegoz://settings')).toBe(settings);
     expect(store.findInternal('tepegoz://history')).toBeUndefined();
   });
@@ -88,7 +100,17 @@ describe('TabStore — records & ordering (existing)', () => {
     store.setActive(a);
     const state = store.toState({ canGoBack: true, canGoForward: false });
     expect(state).toEqual({
-      tabs: [{ id: a, title: 'A', url: 'https://a.example', isLoading: false, faviconUrl: null, pinned: false, groupId: null }],
+      tabs: [
+        {
+          id: a,
+          title: 'A',
+          url: 'https://a.example',
+          isLoading: false,
+          faviconUrl: null,
+          pinned: false,
+          groupId: null,
+        },
+      ],
       groups: [],
       activeId: a,
       canGoBack: true,
@@ -129,9 +151,9 @@ describe('TabStore — groups', () => {
 
   it('updateGroupSettings merge-patches only the provided keys', () => {
     const a = store.add(web());
-    const g = store.createGroup({ memberIds: [a], settings: { 'agent.panelOpen': true, 'x': 1 } });
+    const g = store.createGroup({ memberIds: [a], settings: { 'agent.panelOpen': true, x: 1 } });
     store.updateGroupSettings(g, { 'agent.panelOpen': false });
-    expect(store.getGroup(g)?.settings).toEqual({ 'agent.panelOpen': false, 'x': 1 });
+    expect(store.getGroup(g)?.settings).toEqual({ 'agent.panelOpen': false, x: 1 });
   });
 
   it('createGroup pulls members contiguous and returns a group id', () => {

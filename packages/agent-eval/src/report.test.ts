@@ -18,7 +18,11 @@ const scenario = (id: string, heldOut = false): EvalScenario => ({
 });
 
 function result(id: string, ok: boolean, heldOut = false): ScenarioResult {
-  const score: ScoreResult = { ok, method: 'ground-truth', reason: ok ? 'page contains "x"' : 'final page missing "x"' };
+  const score: ScoreResult = {
+    ok,
+    method: 'ground-truth',
+    reason: ok ? 'page contains "x"' : 'final page missing "x"',
+  };
   return {
     scenario: scenario(id, heldOut),
     score,
@@ -66,7 +70,12 @@ describe('buildReport', () => {
 describe('formatReportTable / writeReport', () => {
   it('renders a PASS/FAIL line per scenario and flags held-out', () => {
     const table = formatReportTable(
-      buildReport({ model: 'm', threshold: 0.8, generatedAt: 't', results: [result('a', true), result('h', false, true)] }),
+      buildReport({
+        model: 'm',
+        threshold: 0.8,
+        generatedAt: 't',
+        results: [result('a', true), result('h', false, true)],
+      }),
     );
     expect(table).toContain('PASS');
     expect(table).toContain('FAIL');
@@ -76,9 +85,17 @@ describe('formatReportTable / writeReport', () => {
   it('writes the JSON artifact to disk and returns its path', () => {
     const dir = mkdtempSync(join(tmpdir(), 'agent-eval-rep-'));
     try {
-      const report = buildReport({ model: 'm', threshold: 0.8, generatedAt: 't', results: [result('a', true)] });
+      const report = buildReport({
+        model: 'm',
+        threshold: 0.8,
+        generatedAt: 't',
+        results: [result('a', true)],
+      });
       const path = writeReport(dir, report);
-      const parsed = JSON.parse(readFileSync(path, 'utf8')) as { model: string; scenarios: unknown[] };
+      const parsed = JSON.parse(readFileSync(path, 'utf8')) as {
+        model: string;
+        scenarios: unknown[];
+      };
       expect(parsed.model).toBe('m');
       expect(parsed.scenarios).toHaveLength(1);
     } finally {
@@ -109,8 +126,26 @@ describe('formatReportTable / writeReport', () => {
 
   it('M1: carries per-tag pooled family aggregates and renders pass + escape CIs', () => {
     const families = summarizeFamilies([
-      { id: 'a', heldOut: false, tags: ['escape'], passes: 2, n: 3, escapes: 1, escapeN: 3, escapeEligible: true },
-      { id: 'b', heldOut: false, tags: ['escape'], passes: 1, n: 3, escapes: 0, escapeN: 3, escapeEligible: true },
+      {
+        id: 'a',
+        heldOut: false,
+        tags: ['escape'],
+        passes: 2,
+        n: 3,
+        escapes: 1,
+        escapeN: 3,
+        escapeEligible: true,
+      },
+      {
+        id: 'b',
+        heldOut: false,
+        tags: ['escape'],
+        passes: 1,
+        n: 3,
+        escapes: 0,
+        escapeN: 3,
+        escapeEligible: true,
+      },
     ]);
     const report = buildReport({
       model: 'm',

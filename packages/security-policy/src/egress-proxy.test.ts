@@ -74,7 +74,9 @@ describe('assertFailClosed — the contract every config must pass, however it w
   });
 
   it('rejects SOCKS4 — it has no hostname form, so DNS would resolve locally and leak every site name', () => {
-    expect(reasonOf(() => assertFailClosed(withRules('socks4://127.0.0.1:1080')))).toBe('not_socks5');
+    expect(reasonOf(() => assertFailClosed(withRules('socks4://127.0.0.1:1080')))).toBe(
+      'not_socks5',
+    );
   });
 
   it('rejects an HTTP proxy — the tunnel endpoint is a SOCKS port by construction', () => {
@@ -82,7 +84,9 @@ describe('assertFailClosed — the contract every config must pass, however it w
   });
 
   it('rejects a REMOTE proxy address — the SOCKS endpoint is always a process on this machine', () => {
-    expect(reasonOf(() => assertFailClosed(withRules('socks5://10.0.0.5:1080')))).toBe('not_loopback');
+    expect(reasonOf(() => assertFailClosed(withRules('socks5://10.0.0.5:1080')))).toBe(
+      'not_loopback',
+    );
     expect(reasonOf(() => assertFailClosed(withRules('socks5://vpn.example.com:1080')))).toBe(
       'not_loopback',
     );
@@ -99,7 +103,12 @@ describe('assertFailClosed — the contract every config must pass, however it w
   });
 
   it('rejects a bypass list wider than loopback', () => {
-    for (const bypass of ['<local>', 'localhost;*.internal', '<-loopback>', 'localhost;example.com']) {
+    for (const bypass of [
+      '<local>',
+      'localhost;*.internal',
+      '<-loopback>',
+      'localhost;example.com',
+    ]) {
       expect(reasonOf(() => assertFailClosed({ ...base, proxyBypassRules: bypass }))).toBe(
         'bypass_too_broad',
       );

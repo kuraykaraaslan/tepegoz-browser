@@ -15,6 +15,7 @@ ADR-0008) is pure and lives alongside the tool registrations. Extracted from `ap
 > (`journal_search_events`) lives in `@tepegoz/journal-tools`.
 
 ## Exports
+
 - **`registerBrowserTools({ host })`** — registers every `browser_*` tool into the `CapabilityRegistry`,
   bound to the given `BrowserHost`. Always-on; the app calls it once at startup.
 - **`BrowserHost`** — the injected host contract: `navigate(url, tabId?)`, `readPage(tabId?)`,
@@ -28,4 +29,5 @@ ADR-0008) is pure and lives alongside the tool registrations. Extracted from `ap
   list (built on `@tepegoz/tool-executor`'s `finalizeElements`) for click/fill targeting.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

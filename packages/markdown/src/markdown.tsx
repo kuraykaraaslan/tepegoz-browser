@@ -59,7 +59,13 @@ function CodeBlock({
   );
 }
 
-export function Markdown({ source, onOpenLink, onOpenFile, copyLabel = 'Copy', className }: MarkdownProps) {
+export function Markdown({
+  source,
+  onOpenLink,
+  onOpenFile,
+  copyLabel = 'Copy',
+  className,
+}: MarkdownProps) {
   const components: Components = {
     a({ href, children }) {
       const url = href ?? '';
@@ -121,7 +127,9 @@ export function Markdown({ source, onOpenLink, onOpenFile, copyLabel = 'Copy', c
         <table className="w-full border-collapse text-left">{children}</table>
       </div>
     ),
-    th: ({ children }) => <th className="border border-border px-2 py-1 font-semibold">{children}</th>,
+    th: ({ children }) => (
+      <th className="border border-border px-2 py-1 font-semibold">{children}</th>
+    ),
     td: ({ children }) => <td className="border border-border px-2 py-1">{children}</td>,
   };
 

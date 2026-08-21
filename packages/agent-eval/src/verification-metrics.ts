@@ -114,8 +114,12 @@ export function verificationMetrics(runs: readonly VerificationInput[]): Verific
 }
 
 /** Report lines for the verification block. Prints "not measured" rather than a misleading 0%. */
-export function verificationLines(dev: VerificationMetrics, heldOut: VerificationMetrics): string[] {
-  const pct = (n: number | null): string => (n === null ? 'not measured' : `${(n * 100).toFixed(1)}%`);
+export function verificationLines(
+  dev: VerificationMetrics,
+  heldOut: VerificationMetrics,
+): string[] {
+  const pct = (n: number | null): string =>
+    n === null ? 'not measured' : `${(n * 100).toFixed(1)}%`;
   const fabricated = (m: VerificationMetrics): string =>
     m.claimedSuccessCount === 0
       ? 'not measured (no run claimed success)'

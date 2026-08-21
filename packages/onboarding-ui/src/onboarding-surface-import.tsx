@@ -1,5 +1,9 @@
 import { useT } from '@tepegoz/i18n/react';
-import type { BookmarkImportResult, BrowserImportSource, LoginImportResult } from '@tepegoz/desktop-ipc';
+import type {
+  BookmarkImportResult,
+  BrowserImportSource,
+  LoginImportResult,
+} from '@tepegoz/desktop-ipc';
 import { onboardingDict, type OnboardingStrings } from './i18n';
 import { SOURCES, type ImportKind, type ImportState } from './onboarding-surface-types';
 

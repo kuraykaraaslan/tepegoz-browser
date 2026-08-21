@@ -13,7 +13,12 @@ export const ADAPTOR_CAPABILITIES = [
 ] as const;
 export type AdaptorCapability = (typeof ADAPTOR_CAPABILITIES)[number];
 
-export const ADAPTOR_PERMISSION_STATES = ['not_configured', 'connected', 'revoked', 'error'] as const;
+export const ADAPTOR_PERMISSION_STATES = [
+  'not_configured',
+  'connected',
+  'revoked',
+  'error',
+] as const;
 export type AdaptorPermissionState = (typeof ADAPTOR_PERMISSION_STATES)[number];
 
 export interface AdaptorPermission {

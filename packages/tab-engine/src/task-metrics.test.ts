@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { taskManagerRows, totalMemoryMb, type ProcessMetric, type TabProcess } from './task-metrics';
+import {
+  taskManagerRows,
+  totalMemoryMb,
+  type ProcessMetric,
+  type TabProcess,
+} from './task-metrics';
 
 const metric = (pid: number, cpu: number, kb: number): ProcessMetric => ({
   pid,
@@ -80,7 +85,10 @@ describe('what cannot be measured', () => {
   });
 
   it('excludes unmeasurable rows from the total rather than treating them as zero', () => {
-    const rows = taskManagerRows([tab({ tabId: 'a' }), tab({ tabId: 'b', pid: 200 })], [metric(100, 5, 102_400)]);
+    const rows = taskManagerRows(
+      [tab({ tabId: 'a' }), tab({ tabId: 'b', pid: 200 })],
+      [metric(100, 5, 102_400)],
+    );
     expect(totalMemoryMb(rows)).toBe(100);
   });
 });

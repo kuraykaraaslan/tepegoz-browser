@@ -89,7 +89,9 @@ export class TorProvider implements NetworkPrivacyProvider {
       await waitForSocksPort(port, READY_TIMEOUT_MS, () => child.exitCode !== null || child.killed);
     } catch (err) {
       await this.disconnect();
-      throw new Error(`tor did not come up: ${output.trim().split('\n').slice(-3).join(' ') || String(err)}`);
+      throw new Error(
+        `tor did not come up: ${output.trim().split('\n').slice(-3).join(' ') || String(err)}`,
+      );
     }
 
     Logger.info('Tor connection up', {

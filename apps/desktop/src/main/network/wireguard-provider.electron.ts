@@ -47,7 +47,9 @@ export class WireGuardProvider implements NetworkPrivacyProvider {
   async connect(): Promise<{ socksPort: number }> {
     const stored = VpnSecrets.read(this.connectionId);
     if (stored === null) {
-      throw new Error('This connection has no stored WireGuard profile (or it could not be decrypted)');
+      throw new Error(
+        'This connection has no stored WireGuard profile (or it could not be decrypted)',
+      );
     }
     // Re-parsed on every connect rather than trusting a cached summary: the config is the source of
     // truth, and the DNS refusal must apply to what is actually about to run.
@@ -62,7 +64,10 @@ export class WireGuardProvider implements NetworkPrivacyProvider {
     // this is the narrowest window available rather than a comfortable one.
     writeFileSync(configPath, toWireproxyConfig(config, port), { mode: 0o600 });
 
-    const child = spawn(binary, ['-c', configPath], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+    const child = spawn(binary, ['-c', configPath], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true,
+    });
     this.child = child;
     this.port = port;
 

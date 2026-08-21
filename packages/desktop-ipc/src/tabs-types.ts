@@ -5,15 +5,7 @@
 
 /** One of the fixed Chrome-style tab-group colors (ADR-0020). */
 export type TabGroupColor =
-  | 'grey'
-  | 'blue'
-  | 'red'
-  | 'yellow'
-  | 'green'
-  | 'pink'
-  | 'purple'
-  | 'cyan'
-  | 'orange';
+  'grey' | 'blue' | 'red' | 'yellow' | 'green' | 'pink' | 'purple' | 'cyan' | 'orange';
 
 /**
  * A per-tab-group setting key. Namespaced `"<feature>.<name>"` — known first-party keys today:

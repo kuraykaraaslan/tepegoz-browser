@@ -36,7 +36,8 @@ export function buildExtensionRegistry(
 ): ExtensionDef[] {
   return manifests.map((manifest) => {
     const loaders = SURFACE_LOADERS[manifest.id] ?? {};
-    const surfaces: Partial<Record<ExtensionSurfaceKind, ComponentType<ExtensionSurfaceProps>>> = {};
+    const surfaces: Partial<Record<ExtensionSurfaceKind, ComponentType<ExtensionSurfaceProps>>> =
+      {};
     for (const kind of manifest.surfaces) {
       const loader = loaders[kind];
       if (loader !== undefined) surfaces[kind] = lazySurface(loader);

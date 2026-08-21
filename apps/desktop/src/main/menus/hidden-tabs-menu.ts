@@ -18,7 +18,8 @@ export function showHiddenTabsMenu(win: BrowserWindow): void {
   const t = mainStrings();
   const items: MenuItemConstructorOptions[] = hidden.map((tab) => {
     const raw = tab.title.trim().length > 0 ? tab.title.trim() : tab.url;
-    const label = raw.length > MAX_LABEL ? `${raw.slice(0, MAX_LABEL - 1)}…` : raw || t.browser.hiddenTabs;
+    const label =
+      raw.length > MAX_LABEL ? `${raw.slice(0, MAX_LABEL - 1)}…` : raw || t.browser.hiddenTabs;
     return {
       label,
       click: () => {

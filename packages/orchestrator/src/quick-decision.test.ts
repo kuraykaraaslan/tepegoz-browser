@@ -35,7 +35,10 @@ describe('the per-provider gate', () => {
 
 describe('decoding a compact line', () => {
   it('decodes an act line into the ordinary decision shape', () => {
-    const d = parseDecision(A('browser_update_page\t{"ref":3,"action":"click"}\tclick pay\t2 of 5'), true);
+    const d = parseDecision(
+      A('browser_update_page\t{"ref":3,"action":"click"}\tclick pay\t2 of 5'),
+      true,
+    );
     expect(d).toMatchObject({
       action: 'act',
       tool: 'browser_update_page',

@@ -29,7 +29,9 @@ export function HiddenTabsButton({ count, label }: HiddenTabsButtonProps) {
       )}
     >
       <Icon name="eyeSlash" />
-      <span className="text-xs font-semibold tabular-nums leading-none">{count > 99 ? '99+' : count}</span>
+      <span className="text-xs font-semibold tabular-nums leading-none">
+        {count > 99 ? '99+' : count}
+      </span>
     </button>
   );
 }

@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { mayRunUnattended, narrowToUnattended, type InteractiveProfile } from './unattended-profile';
+import {
+  mayRunUnattended,
+  narrowToUnattended,
+  type InteractiveProfile,
+} from './unattended-profile';
 
-const profile = (...toolIds: string[]): InteractiveProfile => ({ approvedToolIds: new Set(toolIds) });
+const profile = (...toolIds: string[]): InteractiveProfile => ({
+  approvedToolIds: new Set(toolIds),
+});
 
 describe('may a step run unattended', () => {
   it('allows a READ step that was part of interactive authoring', () => {

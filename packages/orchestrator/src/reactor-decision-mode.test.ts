@@ -145,7 +145,10 @@ describe('parseNativeDecision', () => {
     const decision = parseNativeDecision(
       response({
         toolCalls: [
-          { name: DECISION_TOOL_NAME, input: { action: 'act', tool: 'browser_get_page', args: {} } },
+          {
+            name: DECISION_TOOL_NAME,
+            input: { action: 'act', tool: 'browser_get_page', args: {} },
+          },
         ],
       }),
     );
@@ -154,7 +157,9 @@ describe('parseNativeDecision', () => {
 
   it('accepts a single call under a different name (a renamed tool still states the intent)', () => {
     const decision = parseNativeDecision(
-      response({ toolCalls: [{ name: 'decide', input: { action: 'finish', summary: 'all done' } }] }),
+      response({
+        toolCalls: [{ name: 'decide', input: { action: 'finish', summary: 'all done' } }],
+      }),
     );
     expect(decision).toMatchObject({ action: 'finish', summary: 'all done' });
   });
@@ -172,12 +177,19 @@ describe('parseNativeDecision', () => {
 
   it('rejects a structurally wrong decision through the same zod settle step as the JSON arm', () => {
     const bad: CanonToolCall = { name: DECISION_TOOL_NAME, input: { action: 'act' } };
-    expect(() => parseNativeDecision(response({ toolCalls: [bad] }))).toThrow(/malformed decision/i);
+    expect(() => parseNativeDecision(response({ toolCalls: [bad] }))).toThrow(
+      /malformed decision/i,
+    );
   });
 });
 
 describe('Reactor decision transport', () => {
-  const req = () => ({ goal: 'do it', tools: tools(), provider: 'anthropic' as const, model: 'mock' });
+  const req = () => ({
+    goal: 'do it',
+    tools: tools(),
+    provider: 'anthropic' as const,
+    model: 'mock',
+  });
 
   it('native arm: sends exactly one required tool and completes the run off tool calls', async () => {
     const provider = new NativeProvider([
@@ -228,7 +240,9 @@ describe('Reactor decision transport', () => {
     ]);
     ModelGateway.register(provider);
     await Reactor.run(req());
-    const assistantTurns = (provider.requests[1]?.messages ?? []).filter((m) => m.role === 'assistant');
+    const assistantTurns = (provider.requests[1]?.messages ?? []).filter(
+      (m) => m.role === 'assistant',
+    );
     expect(assistantTurns).toHaveLength(1);
     expect(contentToText(assistantTurns[0]?.content ?? '')).toContain('browser_get_elements');
   });

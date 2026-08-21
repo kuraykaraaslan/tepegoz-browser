@@ -34,13 +34,11 @@ export class ExtensionCapabilitySupervisor {
    * {@link reconcile} afterwards (and whenever the enabled set changes).
    */
   provide<H>(set: ExtensionCapabilitySet<H>, host: H): void {
-    const tools = set.capabilities.map(
-      (cap): RegisteredTool => ({
-        descriptor: cap.descriptor,
-        inputSchema: cap.inputSchema,
-        handler: (args) => cap.handler(args, host),
-      }),
-    );
+    const tools = set.capabilities.map((cap): RegisteredTool => ({
+      descriptor: cap.descriptor,
+      inputSchema: cap.inputSchema,
+      handler: (args) => cap.handler(args, host),
+    }));
     this.providers.push({ extensionId: set.extensionId, tools });
   }
 

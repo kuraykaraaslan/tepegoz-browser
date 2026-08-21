@@ -96,8 +96,14 @@ describe('AI-8B CDP network recorder', () => {
   it('joins the method from the request even though responseReceived does not carry it', () => {
     const { wc, emit } = fakeWebContents();
     attachNetworkRecorder(wc);
-    emit('Network.requestWillBeSent', requestWillBeSent({ request: { url: 'http://x/a', method: 'DELETE' } }));
-    emit('Network.responseReceived', responseReceived({ response: { url: 'http://x/a', status: 403 } }));
+    emit(
+      'Network.requestWillBeSent',
+      requestWillBeSent({ request: { url: 'http://x/a', method: 'DELETE' } }),
+    );
+    emit(
+      'Network.responseReceived',
+      responseReceived({ response: { url: 'http://x/a', status: 403 } }),
+    );
     expect(networkSince(wc, 0)[0]?.method).toBe('DELETE');
   });
 
@@ -107,7 +113,9 @@ describe('AI-8B CDP network recorder', () => {
     emit('Network.requestWillBeSent', requestWillBeSent());
     emit(
       'Network.requestWillBeSent',
-      requestWillBeSent({ redirectResponse: { url: 'http://127.0.0.1:5000/__status/507', status: 302 } }),
+      requestWillBeSent({
+        redirectResponse: { url: 'http://127.0.0.1:5000/__status/507', status: 302 },
+      }),
     );
     emit('Network.responseReceived', responseReceived());
     expect(networkSince(wc, 0)[0]?.redirects).toBe(1);
@@ -169,7 +177,10 @@ describe('AI-8B CDP network recorder', () => {
     emit('Network.responseReceived', responseReceived({ requestId: 'save' }));
     // ...followed by far more noise than the ring could hold, had it been allowed in.
     for (let i = 0; i < 300; i++) {
-      emit('Network.requestWillBeSent', requestWillBeSent({ requestId: `img${String(i)}`, type: 'Image' }));
+      emit(
+        'Network.requestWillBeSent',
+        requestWillBeSent({ requestId: `img${String(i)}`, type: 'Image' }),
+      );
       emit(
         'Network.responseReceived',
         responseReceived({
@@ -198,11 +209,15 @@ describe('AI-8B CDP network recorder', () => {
     attachNetworkRecorder(wc);
     emit(
       'Network.requestWillBeSent',
-      requestWillBeSent({ request: { url: 'http://user:pw@127.0.0.1:5000/api?token=SECRET#f', method: 'POST' } }),
+      requestWillBeSent({
+        request: { url: 'http://user:pw@127.0.0.1:5000/api?token=SECRET#f', method: 'POST' },
+      }),
     );
     emit(
       'Network.responseReceived',
-      responseReceived({ response: { url: 'http://user:pw@127.0.0.1:5000/api?token=SECRET#f', status: 500 } }),
+      responseReceived({
+        response: { url: 'http://user:pw@127.0.0.1:5000/api?token=SECRET#f', status: 500 },
+      }),
     );
     const url = networkSince(wc, 0)[0]?.url ?? '';
     expect(url).not.toContain('SECRET');

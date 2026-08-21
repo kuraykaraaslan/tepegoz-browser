@@ -4,7 +4,10 @@ import { Badge, Card } from '@tepegoz/ui';
 import { useT } from '@tepegoz/i18n/react';
 import type { AdaptorConnection } from '@tepegoz/desktop-ipc';
 
-const STATE_VARIANT: Record<AdaptorConnection['state'], 'success' | 'warning' | 'error' | 'neutral'> = {
+const STATE_VARIANT: Record<
+  AdaptorConnection['state'],
+  'success' | 'warning' | 'error' | 'neutral'
+> = {
   connected: 'success',
   not_configured: 'neutral',
   revoked: 'warning',

@@ -49,12 +49,19 @@ export function RunConfigMenu({
     : t.modelLabel;
   const models = currentChoice?.models ?? [];
   const modelValue =
-    config.model === '' ? t.modelAuto : (models.find((m) => m.id === config.model)?.label ?? config.model);
+    config.model === ''
+      ? t.modelAuto
+      : (models.find((m) => m.id === config.model)?.label ?? config.model);
 
   return (
     <div className="max-h-[60vh] w-full overflow-y-auto">
       {/* Provider — every provider is listed; unusable ones (no key / no local model) are disabled. */}
-      <Section label={t.provider} value={providerValue} open={open === 'provider'} onToggle={() => toggle('provider')}>
+      <Section
+        label={t.provider}
+        value={providerValue}
+        open={open === 'provider'}
+        onToggle={() => toggle('provider')}
+      >
         {config.choices.map((ch) => (
           <Option
             key={ch.provider}
@@ -68,7 +75,12 @@ export function RunConfigMenu({
       </Section>
 
       {/* Model — provider-based. "Auto" clears the pin (per-task tier routing); the rest override all tiers. */}
-      <Section label={t.modelLabel} value={modelValue} open={open === 'model'} onToggle={() => toggle('model')}>
+      <Section
+        label={t.modelLabel}
+        value={modelValue}
+        open={open === 'model'}
+        onToggle={() => toggle('model')}
+      >
         <Option selected={config.model === ''} onClick={() => onModel('')}>
           {t.modelAuto}
         </Option>
@@ -97,7 +109,9 @@ export function RunConfigMenu({
               onClick={() => onAutonomy(level)}
               desc={t.autonomy[level].desc}
               icon={
-                <Glyph className={cn('h-4 w-4', disabled ? 'text-red-500/50' : 'text-text-secondary')} />
+                <Glyph
+                  className={cn('h-4 w-4', disabled ? 'text-red-500/50' : 'text-text-secondary')}
+                />
               }
             >
               {t.autonomy[level].title}
@@ -132,10 +146,18 @@ export function RunConfigMenu({
         open={open === 'strictGuard'}
         onToggle={() => toggle('strictGuard')}
       >
-        <Option selected={!config.strictGuard} onClick={() => onStrictGuard(false)} desc={t.strictGuard.desc}>
+        <Option
+          selected={!config.strictGuard}
+          onClick={() => onStrictGuard(false)}
+          desc={t.strictGuard.desc}
+        >
           {t.strictGuard.off}
         </Option>
-        <Option selected={config.strictGuard} onClick={() => onStrictGuard(true)} desc={t.strictGuard.desc}>
+        <Option
+          selected={config.strictGuard}
+          onClick={() => onStrictGuard(true)}
+          desc={t.strictGuard.desc}
+        >
           {t.strictGuard.on}
         </Option>
       </Section>
@@ -169,7 +191,12 @@ function Section({
         </span>
         <span className="flex min-w-0 items-center gap-1">
           <span className="truncate text-sm text-text-primary">{value}</span>
-          <ChevronDown className={cn('h-3 w-3 shrink-0 text-text-secondary transition-transform', open && 'rotate-180')} />
+          <ChevronDown
+            className={cn(
+              'h-3 w-3 shrink-0 text-text-secondary transition-transform',
+              open && 'rotate-180',
+            )}
+          />
         </span>
       </button>
       {open && <div className="pb-1">{children}</div>}

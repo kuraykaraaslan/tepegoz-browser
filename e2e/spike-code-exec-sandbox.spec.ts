@@ -84,8 +84,14 @@ async function startCanary(): Promise<Canary> {
     res.writeHead(200, { 'content-type': 'text/plain' });
     res.end('ok');
   });
-  server.on('upgrade', (req) => { hits.push(`upgrade:${req.url ?? ''}`); });
-  await new Promise<void>((r) => { server.listen(0, '127.0.0.1', () => { r(); }); });
+  server.on('upgrade', (req) => {
+    hits.push(`upgrade:${req.url ?? ''}`);
+  });
+  await new Promise<void>((r) => {
+    server.listen(0, '127.0.0.1', () => {
+      r();
+    });
+  });
   const port = (server.address() as AddressInfo).port;
   return { server, origin: `http://127.0.0.1:${String(port)}`, hits };
 }
@@ -167,7 +173,10 @@ test('ARM A: a script in the live page’s isolated world REACHES the network (t
           pollEvaluate(
             () =>
               app.evaluate(({ webContents }) =>
-                webContents.getAllWebContents().map((w) => w.getURL()).join(' '),
+                webContents
+                  .getAllWebContents()
+                  .map((w) => w.getURL())
+                  .join(' '),
               ),
             '',
           ),

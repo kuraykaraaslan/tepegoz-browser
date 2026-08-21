@@ -35,7 +35,11 @@ describe('toStep', () => {
 
   it('inlines a typed value for a normal fill', () => {
     const step = toStep({ type: 'input', id: 'email', value: 'a@b.com' });
-    expect(step).toEqual({ kind: 'fill', target: [{ kind: 'css', value: '#email' }], value: 'a@b.com' });
+    expect(step).toEqual({
+      kind: 'fill',
+      target: [{ kind: 'css', value: '#email' }],
+      value: 'a@b.com',
+    });
   });
 
   it('redacts a secret field value to a {{secret}} placeholder (never inlined)', () => {

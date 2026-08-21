@@ -71,7 +71,12 @@ const EGRESS_ID_PATTERNS: readonly RegExp[] = [
 ];
 
 /** Tool-id fragments that mean irreversible loss. */
-const DESTRUCTIVE_ID_PATTERNS: readonly RegExp[] = [/_delete_/i, /_remove_/i, /_purge_/i, /_wipe_/i];
+const DESTRUCTIVE_ID_PATTERNS: readonly RegExp[] = [
+  /_delete_/i,
+  /_remove_/i,
+  /_purge_/i,
+  /_wipe_/i,
+];
 
 /** `dangerClass` → the tier it guarantees at minimum. */
 const FLOOR_BY_DANGER_CLASS: Readonly<Record<RiskLevel, RiskTier>> = {
@@ -98,7 +103,12 @@ export interface RiskClassification {
 }
 
 /** Flatten args into `key path → string value` pairs, bounded so a hostile payload cannot blow up. */
-function flatten(value: unknown, path: string, out: { k: string; v: string }[], depth: number): void {
+function flatten(
+  value: unknown,
+  path: string,
+  out: { k: string; v: string }[],
+  depth: number,
+): void {
   if (out.length >= 200 || depth > 6) return;
   if (value === null || value === undefined) return;
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
@@ -106,7 +116,9 @@ function flatten(value: unknown, path: string, out: { k: string; v: string }[], 
     return;
   }
   if (Array.isArray(value)) {
-    value.forEach((v, i) => { flatten(v, `${path}[${String(i)}]`, out, depth + 1); });
+    value.forEach((v, i) => {
+      flatten(v, `${path}[${String(i)}]`, out, depth + 1);
+    });
     return;
   }
   if (typeof value === 'object') {
@@ -115,7 +127,6 @@ function flatten(value: unknown, path: string, out: { k: string; v: string }[], 
     }
   }
 }
-
 
 export function classifyRisk(ctx: RiskClassificationContext): RiskClassification {
   const tiers: RiskTier[] = [FLOOR_BY_DANGER_CLASS[ctx.descriptor.dangerClass]];

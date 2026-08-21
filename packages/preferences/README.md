@@ -7,6 +7,7 @@ the zod schema and defaults, and pins them to that type via `satisfies` so the t
 drift. The store's file path is injected, so it stays unit-testable without Electron.
 
 ## Exports
+
 - **`PreferenceStore`** (default export) — static store: `init({ filePath })` loads and validates the
   file (falling back to defaults on a missing/corrupt file — treated as untrusted, `readJsonFile` +
   `safeParse`), `getAll()` returns a defensive copy, `update(patch)` validates the patch, merges it,
@@ -24,4 +25,5 @@ drift. The store's file path is injected, so it stays unit-testable without Elec
   building blocks of `PreferencesSchema`.
 
 ## Scripts
+
 `pnpm typecheck` · `pnpm lint` · `pnpm test`

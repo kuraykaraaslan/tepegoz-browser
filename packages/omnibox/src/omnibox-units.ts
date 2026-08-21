@@ -22,7 +22,12 @@ interface UnitDef {
 const unitAliases = new Map<string, UnitDef>();
 const SEPARATORS = new Set(['to', 'in', 'as', '=', '->', 'into', 'kac', 'kaç']);
 
-function linear(dimension: Dimension, symbol: string, factor: number, aliases: readonly string[]): void {
+function linear(
+  dimension: Dimension,
+  symbol: string,
+  factor: number,
+  aliases: readonly string[],
+): void {
   const def: UnitDef = {
     dimension,
     symbol,
@@ -47,10 +52,31 @@ function temperature(
   for (const alias of aliases) unitAliases.set(normalizeUnit(alias), def);
 }
 
-linear('length', 'mm', 0.001, ['mm', 'millimeter', 'millimeters', 'millimetre', 'millimetres', 'milimetre']);
-linear('length', 'cm', 0.01, ['cm', 'centimeter', 'centimeters', 'centimetre', 'centimetres', 'santimetre']);
+linear('length', 'mm', 0.001, [
+  'mm',
+  'millimeter',
+  'millimeters',
+  'millimetre',
+  'millimetres',
+  'milimetre',
+]);
+linear('length', 'cm', 0.01, [
+  'cm',
+  'centimeter',
+  'centimeters',
+  'centimetre',
+  'centimetres',
+  'santimetre',
+]);
 linear('length', 'm', 1, ['m', 'meter', 'meters', 'metre', 'metres', 'metre']);
-linear('length', 'km', 1000, ['km', 'kilometer', 'kilometers', 'kilometre', 'kilometres', 'kilometre']);
+linear('length', 'km', 1000, [
+  'km',
+  'kilometer',
+  'kilometers',
+  'kilometre',
+  'kilometres',
+  'kilometre',
+]);
 linear('length', 'in', 0.0254, ['in', 'inch', 'inches', 'inc', 'inç']);
 linear('length', 'ft', 0.3048, ['ft', 'foot', 'feet', 'ayak']);
 linear('length', 'yd', 0.9144, ['yd', 'yard', 'yards']);
@@ -63,7 +89,14 @@ linear('mass', 't', 1000, ['t', 'ton', 'tons', 'tonne', 'tonnes', 'ton']);
 linear('mass', 'oz', 0.028349523125, ['oz', 'ounce', 'ounces', 'ons']);
 linear('mass', 'lb', 0.45359237, ['lb', 'lbs', 'pound', 'pounds']);
 
-linear('volume', 'ml', 0.001, ['ml', 'milliliter', 'milliliters', 'millilitre', 'millilitres', 'mililitre']);
+linear('volume', 'ml', 0.001, [
+  'ml',
+  'milliliter',
+  'milliliters',
+  'millilitre',
+  'millilitres',
+  'mililitre',
+]);
 linear('volume', 'l', 1, ['l', 'lt', 'liter', 'liters', 'litre', 'litres', 'litre']);
 linear('volume', 'tsp', 0.00492892159375, ['tsp', 'teaspoon', 'teaspoons']);
 linear('volume', 'tbsp', 0.01478676478125, ['tbsp', 'tablespoon', 'tablespoons']);
@@ -83,13 +116,24 @@ linear('data', 'KiB', 1024, ['kib', 'kibibyte', 'kibibytes']);
 linear('data', 'MiB', 1024 ** 2, ['mib', 'mebibyte', 'mebibytes']);
 linear('data', 'GiB', 1024 ** 3, ['gib', 'gibibyte', 'gibibytes']);
 
-temperature('C', (value) => value, (value) => value, ['c', '°c', 'celsius', 'celcius', 'santigrat']);
-temperature('F', (value) => (value - 32) * (5 / 9), (value) => value * (9 / 5) + 32, [
-  'f',
-  '°f',
-  'fahrenheit',
-]);
-temperature('K', (value) => value - 273.15, (value) => value + 273.15, ['k', 'kelvin']);
+temperature(
+  'C',
+  (value) => value,
+  (value) => value,
+  ['c', '°c', 'celsius', 'celcius', 'santigrat'],
+);
+temperature(
+  'F',
+  (value) => (value - 32) * (5 / 9),
+  (value) => value * (9 / 5) + 32,
+  ['f', '°f', 'fahrenheit'],
+);
+temperature(
+  'K',
+  (value) => value - 273.15,
+  (value) => value + 273.15,
+  ['k', 'kelvin'],
+);
 
 function normalizeUnit(raw: string): string {
   return raw
@@ -109,9 +153,9 @@ function parseAmount(raw: string): number | null {
   return Number.isFinite(value) ? value : null;
 }
 
-function parseConversion(input: string):
-  | { amount: number; from: UnitDef; to: UnitDef; fromRaw: string; toRaw: string }
-  | null {
+function parseConversion(
+  input: string,
+): { amount: number; from: UnitDef; to: UnitDef; fromRaw: string; toRaw: string } | null {
   const trimmed = input.trim();
   const match = /^([+-]?(?:\d+(?:[.,]\d*)?|[.,]\d+))\s*(.+)$/.exec(trimmed);
   if (match === null) return null;

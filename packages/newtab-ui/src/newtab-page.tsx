@@ -103,7 +103,11 @@ export function NewTabPage({
           title={t.aiHint}
           className="inline-flex items-center gap-2 rounded-full border border-border bg-surface-base px-3.5 py-1.5 text-sm font-medium text-text-secondary hover:bg-surface-raised hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
         >
-          <FontAwesomeIcon icon={faWandMagicSparkles} className="h-3.5 w-3.5 text-primary" aria-hidden />
+          <FontAwesomeIcon
+            icon={faWandMagicSparkles}
+            className="h-3.5 w-3.5 text-primary"
+            aria-hidden
+          />
           {t.aiButton}
         </button>
       </div>
@@ -229,7 +233,12 @@ export function NewTabPage({
           title={dialog.mode === 'add' ? t.favorites.addTitle : t.favorites.editTitle}
           initialName={dialog.mode === 'edit' ? dialog.shortcut.title : ''}
           initialUrl={dialog.mode === 'edit' ? dialog.shortcut.url : ''}
-          labels={{ name: t.favorites.nameLabel, url: t.favorites.urlLabel, save: t.favorites.save, cancel: t.favorites.cancel }}
+          labels={{
+            name: t.favorites.nameLabel,
+            url: t.favorites.urlLabel,
+            save: t.favorites.save,
+            cancel: t.favorites.cancel,
+          }}
           onCancel={() => setDialog(null)}
           onSave={saveDialog}
         />

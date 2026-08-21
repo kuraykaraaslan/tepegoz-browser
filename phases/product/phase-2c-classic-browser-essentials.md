@@ -1,6 +1,6 @@
 # Phase 2c — Classic Browser Essentials & Downloads
 
-**Status:** 🟡 In progress (download/clipboard/upload manager slices)  ·  **Estimate:** ~2–3 months  ·  **Depends on:** Phase 1a (UI shell, omnibox,
+**Status:** 🟡 In progress (download/clipboard/upload manager slices) · **Estimate:** ~2–3 months · **Depends on:** Phase 1a (UI shell, omnibox,
 `BookmarkStore`, partition machinery) + Phase 2 (`SafeBrowsingService` — reused for download hash checks) +
 Phase 2b (tab shell)
 **Goal:** Close the "boring but mandatory" gaps that separate a credible everyday browser from an agentic
@@ -8,12 +8,13 @@ demo: a real **download manager + safe-download policy**, and the classic table-
 exist (find-in-page, print, PDF viewer, reader mode, page translation, screenshot), plus hierarchical
 bookmarks, a private/disposable mode, a consolidated Permissions Center, and omnibox command mode. **Can run
 in parallel with Phase 2 and Phase 2b** (all three are post-core daily-driver tracks). No net-new agent
-capabilities — this is user-facing browser completeness; download *security* reuses Phase 2's engine, and
+capabilities — this is user-facing browser completeness; download _security_ reuses Phase 2's engine, and
 permissions reuse the single Policy/PermissionGuard (no parallel permission flow).
 **Branch examples:** `feat/download-manager`, `feat/classic-essentials`, `feat/bookmarks-2`,
 `feat/private-mode`, `feat/permissions-center`, `feat/omnibox-commands`
 
 ## Exit criteria (DoD)
+
 - [ ] A file downloads via a real **Download Manager** (pause/resume/cancel/open/reveal); every download is
       quarantined + hash-checked against Safe Browsing; executables/scripts force HITL; an agent-initiated
       download is tagged and journaled with source domain + task
@@ -34,6 +35,7 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
 ## Tasks
 
 ### L10 — Safe Downloads + Download Manager
+
 - [x] Slice 1 foundation: `@tepegoz/downloads` headless types/reducer/schemas/tests, IPC/preload
       contracts, download preferences, Event Journal event names, and layer rules.
 - [x] Slice 2 service: desktop `DownloadService` wires `will-download`, saves first to quarantine, hashes the
@@ -50,21 +52,21 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       blocklist reuse where present
 - [ ] **Executable/script** downloads (`.exe/.msi/.bat/.ps1/.sh/.dmg/...`) force an extra HITL confirm; zip/rar
       surface a content warning; nothing is "trusted" until the check passes
-- [x] **"Agent-downloaded"** provenance: an agent-initiated download is tagged + journaled with source domain
-      + timestamp + agent task/`correlationId` (append-only "shown=recorded", ADR-0004)
+- [x] **"Agent-downloaded"** provenance: an agent-initiated download is tagged + journaled with source domain + timestamp + agent task/`correlationId` (append-only "shown=recorded", ADR-0004)
 - [x] Expose a `download_*` tool in the **Capability Plane** (Policy Kernel gated; **agent access
       deny-by-default**, HITL for any state-changing save) — never a direct renderer/agent filesystem write
 - [x] **`@tepegoz/downloads` (headless store)** + **`@tepegoz/downloads-ui`** (presentational): list, progress,
       pause/resume/cancel, open, reveal-in-folder; actions injected via callbacks (Electron-free leaf)
-- [ ] *Risk (ADR required):* download trust model — agent-initiated download security class, quarantine
+- [ ] _Risk (ADR required):_ download trust model — agent-initiated download security class, quarantine
       lifecycle, and the "release from quarantine" HITL gate
 
 ### L9 — Classic essentials (Chromium/Electron surfaces)
+
 - [x] **Find-in-page** (Ctrl+F): Chromium `webContents.findInPage` + match count + next/prev + highlight
-  — `@tepegoz/find-bar` (chrome leaf, own en/tr dict) + `main/find-in-page.ts` + `ipc/ipc-find.ts`;
-  Ctrl+F is handled in MAIN because the key arrives while the page has focus. Results are echoed with
-  the query they were requested for so a slow `found-in-page` cannot flicker stale counts, and
-  navigating away zeroes the counters. Match-case toggle included. 10 unit tests.
+      — `@tepegoz/find-bar` (chrome leaf, own en/tr dict) + `main/find-in-page.ts` + `ipc/ipc-find.ts`;
+      Ctrl+F is handled in MAIN because the key arrives while the page has focus. Results are echoed with
+      the query they were requested for so a slow `found-in-page` cannot flicker stale counts, and
+      navigating away zeroes the counters. Match-case toggle included. 10 unit tests.
   - [x] The bar, the shortcut and the plumbing landed: `@tepegoz/find-bar` + `main/find-in-page.ts` +
         `ipc/ipc-find.ts`, 10 unit tests, plus a stale-query guard and a navigation reset.
   - [x] **Verified end to end.** `e2e/find-in-page.spec.ts` passes against the real app: the bar
@@ -108,6 +110,7 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         live setting, so today neither path underlines anything in a plain text input.
 
 ### L9 — Bookmarks 2.0
+
 - [ ] Extend the flat `BookmarkStore` (Phase 1a) with **folders/tags hierarchy** + full-text search
       (migration-safe, additive schema; existing bookmarks preserved)
   - [x] Folder hierarchy + search: `BookmarkTreeStore` (two fixed roots, create/move/remove, explicit
@@ -133,12 +136,14 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
   - [ ] Profile auto-detect (marked optional in this line) does not exist.
 
 ### L8/L9 — Private / disposable / guest mode
+
 - [ ] Ephemeral **non-persisted session** (in-memory partition, no `persist:` prefix) on top of the existing
       partition machinery; a "private / agent-only" window chrome badge
 - [ ] Leaves **nothing on close** (cookies/storage/cache/history discarded); **sensitive-site lockout still
       applies**; clearly distinct from Phase 3 multi-profile (this is throwaway, not a named identity)
 
 ### L5/L8 — Permissions Center
+
 - [ ] **Web permissions UI** (camera/mic/location/notification/clipboard): per-site grant/deny/ask, all routed
       through the **single Policy/PermissionGuard** (same engine as Phase 2 `PopupAndPermissionGuard` + the
       Phase 1a notification permission-broker) — **no parallel permission flow**
@@ -153,6 +158,7 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       over the Policy Kernel + Capability Plane audit — a UI surface, **not** a new decision engine
 
 ### L5/L8 — Upload Broker + Upload Activity
+
 - [x] Upload Slice 1 foundation: `@tepegoz/uploads` redacted records/reducer/risk helpers, zod schemas,
       `upload_*` Capability Plane registration, IPC contract channels, and layer rules.
 - [x] Upload Slice 2 service: desktop `UploadService` validates file sandbox access, binds files to
@@ -163,9 +169,9 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
 - [ ] Native file picker interception remains deferred; v1 focuses on agent-controlled file input uploads.
 
 ### L8/L9 — Browser-completeness dialogs (auth / cert / navigation)
+
 - [x] **Basic-auth dialog** (`app.on('login')`) — HTTP 401/407 credential prompt; credentials never
-      logged, persisted or journaled (the log lines carry the origin only). `main/auth/basic-auth-broker.ts`
-      + `@tepegoz/auth-prompt-ui`, zod-validated response, 9 unit tests. **This closed a real hole:** with no
+      logged, persisted or journaled (the log lines carry the origin only). `main/auth/basic-auth-broker.ts` + `@tepegoz/auth-prompt-ui`, zod-validated response, 9 unit tests. **This closed a real hole:** with no
       handler Chromium cancels the challenge, so 401-protected sites did not load at all. The dialog gives
       the origin its own line (phishing defence) and labels a PROXY challenge as one — relevant because
       Phase 5 routes tabs through SOCKS tunnels.
@@ -188,12 +194,14 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       agent-driven navigations record the prompt but never auto-dismiss a real data-loss warning
 
 ### L9 — Omnibox command mode
+
 - [ ] Extend the existing deterministic prefix engine (`tab:`/`history:`/`bookmark:` from Phase 1a) with
       **`@`-scoped commands**: `@agent <task>` (start an agent thread — the one place the omnibox crosses into
       AI), `@workspace <name>`, `@download <query>`, `@skill <name>`; bridge to the command palette
 - [ ] `@`-command hints + results localized; non-`@` input keeps the deterministic navigate/search behavior
 
 ### Cross-cutting (as in every phase)
+
 - [ ] i18n en+tr for all new surfaces (download manager, find-bar, print/PDF/reader/translate, bookmark
       manager + Chrome/Firefox import, private-mode chrome, Permissions Center, auth/cert/beforeunload
       dialogs, spellcheck toggle, omnibox command hints); zod `safeParse` at every

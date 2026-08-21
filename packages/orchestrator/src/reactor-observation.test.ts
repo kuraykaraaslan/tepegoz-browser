@@ -54,7 +54,11 @@ function fakeTool(id: string, dangerClass: RiskLevel, result: unknown): Register
   };
 }
 
-function fakeToolSequence(id: string, dangerClass: RiskLevel, results: unknown[]): RegisteredTool<unknown> {
+function fakeToolSequence(
+  id: string,
+  dangerClass: RiskLevel,
+  results: unknown[],
+): RegisteredTool<unknown> {
   let index = 0;
   const descriptor: ToolDescriptor = {
     id,
@@ -108,11 +112,18 @@ beforeEach(() => {
 });
 
 describe('Reactor.run (observation feedback + recovery)', () => {
-  const req = (goal = 'do it') => ({ goal, tools: tools(), provider: 'anthropic' as const, model: 'mock' });
+  const req = (goal = 'do it') => ({
+    goal,
+    tools: tools(),
+    provider: 'anthropic' as const,
+    model: 'mock',
+  });
 
   it('feeds stale element failures back with a recovery hint, then continues from a fresh snapshot', async () => {
     CapabilityRegistry.reset();
-    CapabilityRegistry.register(fakeTool('browser_get_elements', 'read', { content: 'fresh elements' }));
+    CapabilityRegistry.register(
+      fakeTool('browser_get_elements', 'read', { content: 'fresh elements' }),
+    );
     CapabilityRegistry.register(
       fakeTool(
         'browser_update_page',
@@ -233,7 +244,9 @@ describe('Reactor.run (observation feedback + recovery)', () => {
   // (AI-8A), which is why the prompts no longer suggest it as a visual fallback.
   it('fixture: feeds a read tool’s content back into the loop (screenshot capture path)', async () => {
     CapabilityRegistry.reset();
-    CapabilityRegistry.register(fakeTool('browser_get_elements', 'read', { content: 'No actionable elements', elements: [] }));
+    CapabilityRegistry.register(
+      fakeTool('browser_get_elements', 'read', { content: 'No actionable elements', elements: [] }),
+    );
     CapabilityRegistry.register(
       fakeTool('browser_get_screenshot', 'read', {
         content: 'Viewport screenshot captured from https://fixture.local',
@@ -263,7 +276,8 @@ describe('Reactor.run (observation feedback + recovery)', () => {
         {
           ok: true,
           changed: false,
-          recoveryHint: 'No visible change was detected. Re-read browser_get_elements and try a different ref.',
+          recoveryHint:
+            'No visible change was detected. Re-read browser_get_elements and try a different ref.',
         },
         { ok: true, changed: true, url: 'https://fixture.local/done', title: 'Done' },
       ]),
@@ -299,7 +313,10 @@ describe('Reactor.run (observation feedback + recovery)', () => {
         title: 'Fixture table',
       }),
     );
-    script([act('browser_get_page'), JSON.stringify({ action: 'finish', summary: 'A costs $10; B costs $12.' })]);
+    script([
+      act('browser_get_page'),
+      JSON.stringify({ action: 'finish', summary: 'A costs $10; B costs $12.' }),
+    ]);
 
     const res = await Reactor.run(req('summarize the table'));
 

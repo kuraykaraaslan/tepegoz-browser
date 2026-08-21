@@ -97,8 +97,16 @@ export function PanelComposer({
       {notices.length > 0 && (
         <div className="space-y-1.5 px-3 pt-2 pb-1">
           {notices.map((n) => (
-            <div key={n.id} className={cn('flex items-start gap-2 rounded-md border px-3 py-2 text-xs', NOTICE_STYLE[n.severity])}>
-              <span className="flex-1"><span className="font-semibold">{n.title}</span> {n.body}</span>
+            <div
+              key={n.id}
+              className={cn(
+                'flex items-start gap-2 rounded-md border px-3 py-2 text-xs',
+                NOTICE_STYLE[n.severity],
+              )}
+            >
+              <span className="flex-1">
+                <span className="font-semibold">{n.title}</span> {n.body}
+              </span>
               <button
                 type="button"
                 aria-label={c.window.close}
@@ -115,7 +123,10 @@ export function PanelComposer({
       {/* Composer */}
       <form
         className="px-3 pt-1.5 pb-4"
-        onSubmit={(e) => { e.preventDefault(); onSubmit(); }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSubmit();
+        }}
       >
         <div className="rounded-lg border border-border bg-surface-raised focus-within:ring-2 focus-within:ring-border-focus">
           {/* Attachment chips */}
@@ -133,11 +144,14 @@ export function PanelComposer({
                       {isFile ? (
                         <button
                           type="button"
-                          onClick={() => mutateActive((s) => {
-                            const next = new Set(s.expandedFiles);
-                            if (next.has(att.id)) next.delete(att.id); else next.add(att.id);
-                            return { ...s, expandedFiles: next };
-                          })}
+                          onClick={() =>
+                            mutateActive((s) => {
+                              const next = new Set(s.expandedFiles);
+                              if (next.has(att.id)) next.delete(att.id);
+                              else next.add(att.id);
+                              return { ...s, expandedFiles: next };
+                            })
+                          }
                           className="max-w-[14rem] truncate text-left underline-offset-2 hover:underline focus-visible:outline-none"
                         >
                           {att.label}
@@ -170,9 +184,15 @@ export function PanelComposer({
             value={prompt}
             placeholder={running ? a.steerPlaceholder : a.runPlaceholder}
             aria-label={running ? a.steerPlaceholder : a.runPlaceholder}
-            onChange={(e) => { const value = e.target.value; mutateActive((s) => ({ ...s, prompt: value })); }}
+            onChange={(e) => {
+              const value = e.target.value;
+              mutateActive((s) => ({ ...s, prompt: value }));
+            }}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSubmit(); }
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                onSubmit();
+              }
             }}
             className="block w-full resize-none bg-transparent px-3 py-2 text-sm text-text-primary placeholder:text-text-disabled focus:outline-none disabled:opacity-60"
           />
@@ -183,7 +203,9 @@ export function PanelComposer({
                 type="button"
                 title={a.attach.addSelection}
                 aria-label={a.attach.addSelection}
-                onClick={() => { onAttachSelection(); }}
+                onClick={() => {
+                  onAttachSelection();
+                }}
                 className={cn(ICON_BTN, 'p-1')}
               >
                 <CursorIcon className="h-3.5 w-3.5" />
@@ -192,7 +214,9 @@ export function PanelComposer({
                 type="button"
                 title={a.attach.addFile}
                 aria-label={a.attach.addFile}
-                onClick={() => { onAttachFiles(); }}
+                onClick={() => {
+                  onAttachFiles();
+                }}
                 className={cn(ICON_BTN, 'p-1')}
               >
                 <PaperclipIcon className="h-3.5 w-3.5" />
@@ -201,7 +225,9 @@ export function PanelComposer({
                 type="button"
                 title={a.attach.addScreenshot}
                 aria-label={a.attach.addScreenshot}
-                onClick={() => { onAttachScreenshot(); }}
+                onClick={() => {
+                  onAttachScreenshot();
+                }}
                 className={cn(ICON_BTN, 'p-1')}
               >
                 <CameraIcon className="h-3.5 w-3.5" />

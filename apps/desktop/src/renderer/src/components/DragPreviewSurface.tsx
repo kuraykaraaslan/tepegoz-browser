@@ -24,7 +24,13 @@ const GROUP_ACCENT: Record<string, string> = {
 /** Neutral globe fallback (matches the tab's faGlobe) when a page declares no favicon. */
 function GlobeIcon(): JSX.Element {
   return (
-    <svg width={16} height={16} viewBox="0 0 16 16" aria-hidden style={{ flexShrink: 0, opacity: 0.55 }}>
+    <svg
+      width={16}
+      height={16}
+      viewBox="0 0 16 16"
+      aria-hidden
+      style={{ flexShrink: 0, opacity: 0.55 }}
+    >
       <g fill="none" stroke="currentColor" strokeWidth={1.2}>
         <circle cx={8} cy={8} r={6.2} />
         <ellipse cx={8} cy={8} rx={2.6} ry={6.2} />

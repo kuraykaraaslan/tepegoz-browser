@@ -52,7 +52,11 @@ function cacheFor(ses: Session): Map<string, string | null> {
   return cache;
 }
 
-function remember(cache: Map<string, string | null>, url: string, value: string | null): string | null {
+function remember(
+  cache: Map<string, string | null>,
+  url: string,
+  value: string | null,
+): string | null {
   if (cache.size >= CACHE_MAX) {
     const oldest = cache.keys().next();
     if (!oldest.done) cache.delete(oldest.value);

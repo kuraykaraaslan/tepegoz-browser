@@ -47,12 +47,21 @@ describe('badge variants', () => {
 
 describe('triggerSummary', () => {
   it('summarizes interval, pageChange, and manual-only', () => {
-    expect(triggerSummary([{ type: 'interval', enabled: true, everyMinutes: 15 }], LABELS.schedule)).toBe(
-      'Every 15 min',
-    );
+    expect(
+      triggerSummary([{ type: 'interval', enabled: true, everyMinutes: 15 }], LABELS.schedule),
+    ).toBe('Every 15 min');
     expect(
       triggerSummary(
-        [{ type: 'pageChange', enabled: true, url: 'https://shop.example.com/x', everyMinutes: 10, changeMode: 'textHash', fireOnFirstCheck: false }],
+        [
+          {
+            type: 'pageChange',
+            enabled: true,
+            url: 'https://shop.example.com/x',
+            everyMinutes: 10,
+            changeMode: 'textHash',
+            fireOnFirstCheck: false,
+          },
+        ],
         LABELS.schedule,
       ),
     ).toBe('On change · shop.example.com');
@@ -77,14 +86,24 @@ describe('toTaskRows', () => {
 
 describe('inferSchedule + inferAutonomy', () => {
   it('recovers continuous vs interval vs pageChange', () => {
-    expect(inferSchedule([{ type: 'interval', enabled: true, everyMinutes: 5 }]).preset).toBe('continuous');
+    expect(inferSchedule([{ type: 'interval', enabled: true, everyMinutes: 5 }]).preset).toBe(
+      'continuous',
+    );
     expect(inferSchedule([{ type: 'interval', enabled: true, everyMinutes: 30 }])).toMatchObject({
       preset: 'interval',
       everyMinutes: 30,
     });
     expect(
       inferSchedule([
-        { type: 'pageChange', enabled: true, url: 'https://x.com', everyMinutes: 10, changeMode: 'elementText', fireOnFirstCheck: false, selector: '.p' },
+        {
+          type: 'pageChange',
+          enabled: true,
+          url: 'https://x.com',
+          everyMinutes: 10,
+          changeMode: 'elementText',
+          fireOnFirstCheck: false,
+          selector: '.p',
+        },
       ]),
     ).toMatchObject({ preset: 'pageChange', selector: '.p', changeMode: 'elementText' });
   });
@@ -92,7 +111,11 @@ describe('inferSchedule + inferAutonomy', () => {
   it('infers autonomy from the stored policy', () => {
     expect(inferAutonomy(defaultTaskPolicy())).toBe('notify');
     expect(
-      inferAutonomy({ ...defaultTaskPolicy(), allowedOrigins: ['https://x.com'], preapprovedWriteTools: ['browser_click'] }),
+      inferAutonomy({
+        ...defaultTaskPolicy(),
+        allowedOrigins: ['https://x.com'],
+        preapprovedWriteTools: ['browser_click'],
+      }),
     ).toBe('sameOriginWrites');
   });
 });
@@ -102,10 +125,19 @@ describe('form state round-trips', () => {
     const original = task({
       id: 't9',
       targetUrl: 'https://example.com/watch',
-      policy: { ...defaultTaskPolicy(), allowedOrigins: ['https://example.com'], preapprovedWriteTools: ['browser_click'] },
+      policy: {
+        ...defaultTaskPolicy(),
+        allowedOrigins: ['https://example.com'],
+        preapprovedWriteTools: ['browser_click'],
+      },
     });
     const form = formStateFromTask(original);
-    expect(form).toMatchObject({ id: 't9', preset: 'interval', everyMinutes: 15, autonomy: 'sameOriginWrites' });
+    expect(form).toMatchObject({
+      id: 't9',
+      preset: 'interval',
+      everyMinutes: 15,
+      autonomy: 'sameOriginWrites',
+    });
     const result = buildSaveInput(form);
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -120,15 +152,27 @@ describe('form state round-trips', () => {
 
   it('seeds from a conversation with sameOriginWrites default', () => {
     const form = formStateFromConversation({ conversationId: 'c1', firstPrompt: 'Do the thing' });
-    expect(form).toMatchObject({ sourceConversationId: 'c1', autonomy: 'sameOriginWrites', prompt: 'Do the thing' });
+    expect(form).toMatchObject({
+      sourceConversationId: 'c1',
+      autonomy: 'sameOriginWrites',
+      prompt: 'Do the thing',
+    });
     expect(form.name.length).toBeGreaterThan(0);
   });
 
   it('validates required fields and URLs', () => {
     expect(buildSaveInput({ ...blankFormState(), name: '' }).ok).toBe(false);
     expect(buildSaveInput({ ...blankFormState(), name: 'x', prompt: '' }).ok).toBe(false);
-    const bad = buildSaveInput({ ...blankFormState(), name: 'x', prompt: 'y', targetUrl: 'ftp://nope' });
+    const bad = buildSaveInput({
+      ...blankFormState(),
+      name: 'x',
+      prompt: 'y',
+      targetUrl: 'ftp://nope',
+    });
     expect(bad).toEqual({ ok: false, error: 'url' });
-    expect(buildSaveInput({ ...blankFormState(), name: 'x', prompt: 'y', targetUrl: 'https://ok.com' }).ok).toBe(true);
+    expect(
+      buildSaveInput({ ...blankFormState(), name: 'x', prompt: 'y', targetUrl: 'https://ok.com' })
+        .ok,
+    ).toBe(true);
   });
 });

@@ -13,7 +13,14 @@ const DEFAULT_MAX_STEPS = 100_000;
 const DEFAULT_MIN_STEP_INTERVAL_MS = 50;
 
 /** Step kinds that perform a real browser operation — the ones the pacing floor applies to. */
-const PACED_KINDS = new Set<Step['kind']>(['navigate', 'click', 'fill', 'press', 'scroll', 'extract']);
+const PACED_KINDS = new Set<Step['kind']>([
+  'navigate',
+  'click',
+  'fill',
+  'press',
+  'scroll',
+  'extract',
+]);
 
 /** State-changing step kinds — the ones `host.checkPolicy` re-gates once per attempt, before dispatch. */
 const POLICY_GATED_KINDS = new Set<Step['kind']>(['navigate', 'click', 'fill', 'press', 'scroll']);
@@ -229,7 +236,12 @@ export async function runMacro(
       return { ok: false, aborted: true, stepsRun, variables: vars.snapshot() };
     }
     if (err instanceof MacroError) {
-      opts.onProgress?.({ phase: 'failed', path: [...err.stepPath], kind: err.stepKind, detail: err.message });
+      opts.onProgress?.({
+        phase: 'failed',
+        path: [...err.stepPath],
+        kind: err.stepKind,
+        detail: err.message,
+      });
       return {
         ok: false,
         aborted: false,

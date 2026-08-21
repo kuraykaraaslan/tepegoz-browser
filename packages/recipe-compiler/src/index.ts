@@ -1,8 +1,4 @@
-export {
-  evaluateAssertion,
-  type AssertionVerdict,
-  type RunSnapshot,
-} from './assertion-evaluator';
+export { evaluateAssertion, type AssertionVerdict, type RunSnapshot } from './assertion-evaluator';
 export { shouldHaltOnFailure } from './assertion-gate';
 export {
   narrowToUnattended,

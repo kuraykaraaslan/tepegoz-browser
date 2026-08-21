@@ -76,7 +76,8 @@ describe('sensitiveCategory — matching discipline', () => {
     // decides, and it decides the same way every time.
     const first = sensitiveCategory('https://cryptobank.example/');
     expect(first).toBe('banking');
-    for (let i = 0; i < 10; i++) expect(sensitiveCategory('https://cryptobank.example/')).toBe(first);
+    for (let i = 0; i < 10; i++)
+      expect(sensitiveCategory('https://cryptobank.example/')).toBe(first);
   });
 
   it('over-matches rather than under-matches — absence is not a safety claim', () => {

@@ -57,7 +57,9 @@ describe('parsing', () => {
   });
 
   it('reads several peers', () => {
-    const c = parseWireGuardConfig(`${FULL}\n[Peer]\nPublicKey = ${PUB}\nEndpoint = uk-lon.example.com:51820\n`);
+    const c = parseWireGuardConfig(
+      `${FULL}\n[Peer]\nPublicKey = ${PUB}\nEndpoint = uk-lon.example.com:51820\n`,
+    );
     expect(c.peers).toHaveLength(2);
   });
 });
@@ -82,9 +84,9 @@ describe('what it refuses, and why', () => {
 
   it('rejects a file that is not a WireGuard config at all', () => {
     expect(fails('hello world')).toMatch(/No \[Interface\]/);
-    expect(fails(`[Interface]\nPrivateKey = ${PRIV}\nAddress = 10.0.0.1/32\nDNS = 1.1.1.1\n`)).toMatch(
-      /No \[Peer\]/,
-    );
+    expect(
+      fails(`[Interface]\nPrivateKey = ${PRIV}\nAddress = 10.0.0.1/32\nDNS = 1.1.1.1\n`),
+    ).toMatch(/No \[Peer\]/);
   });
 
   it('rejects malformed keys rather than passing them to the tunnel', () => {
@@ -94,7 +96,9 @@ describe('what it refuses, and why', () => {
 
   it('rejects a peer with no endpoint or a malformed one', () => {
     expect(fails(FULL.replace(/^Endpoint = .*$/m, ''))).toMatch(/no Endpoint/);
-    expect(fails(FULL.replace('de-fra.example.com:51820', 'de-fra.example.com'))).toMatch(/host:port/);
+    expect(fails(FULL.replace('de-fra.example.com:51820', 'de-fra.example.com'))).toMatch(
+      /host:port/,
+    );
   });
 
   it('rejects an interface with no address', () => {
@@ -114,7 +118,9 @@ describe('rendering for wireproxy', () => {
   });
 
   it('carries the DNS through — the whole point of demanding one', () => {
-    expect(toWireproxyConfig(parseWireGuardConfig(FULL), 1080)).toContain('DNS = 10.2.0.1, 10.2.0.3');
+    expect(toWireproxyConfig(parseWireGuardConfig(FULL), 1080)).toContain(
+      'DNS = 10.2.0.1, 10.2.0.3',
+    );
   });
 
   it('forces AllowedIPs to everything, because here it is not a routing decision', () => {
