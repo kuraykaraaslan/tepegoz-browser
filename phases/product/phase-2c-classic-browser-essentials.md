@@ -60,13 +60,25 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       lifecycle, and the "release from quarantine" HITL gate
 
 ### L9 — Classic essentials (Chromium/Electron surfaces)
-- [x] **Find-in-page** (Ctrl+F): Chromium `webContents.findInPage` + match count + next/prev + highlight
+- [ ] **Find-in-page** (Ctrl+F): Chromium `webContents.findInPage` + match count + next/prev + highlight
   — `@tepegoz/find-bar` (chrome leaf, own en/tr dict) + `main/find-in-page.ts` + `ipc/ipc-find.ts`;
   Ctrl+F is handled in MAIN because the key arrives while the page has focus. Results are echoed with
   the query they were requested for so a slow `found-in-page` cannot flicker stale counts, and
   navigating away zeroes the counters. Match-case toggle included. 10 unit tests.
+  - [x] The bar, the shortcut and the plumbing landed: `@tepegoz/find-bar` + `main/find-in-page.ts` +
+        `ipc/ipc-find.ts`, 10 unit tests, plus a stale-query guard and a navigation reset.
+  - [ ] **NOT verified end to end, and there is contrary evidence.** In `e2e/find-in-page.spec.ts`
+        (kept as `fixme`) the bar opens and the query reaches main, but `webContents.findInPage()`
+        emits **no `found-in-page` event**, so the counters stay at zero. This is not our plumbing:
+        calling `findInPage` straight from main, with no app code involved, is equally silent — on the
+        tab's `WebContentsView` *and* on the chrome `BrowserWindow`'s own webContents, with
+        `show()`/`focus()` forced (Electron 33.4.11). The likely cause is Playwright's CDP attachment
+        rather than the app, but **that is a hypothesis, not a measurement**, so this line stays open
+        until a non-CDP run confirms it.
   - [ ] Switching tabs does not re-sync the counters to the newly-active tab (the bar keeps the
         previous tab's numbers until the next keystroke).
+  - [ ] Separate harness constraint found here: `keyboard.press('Control+f')` never reaches Electron's
+        main-process `before-input-event`, so the Ctrl+F shortcut is not drivable from Playwright.
 - [ ] **Print + print-preview** (Ctrl+P): `webContents.print` / `printToPDF`; respects sensitive-site rules
 - [ ] Built-in **PDF viewer** (Chromium PDF plugin surface; open-in-tab + save routes through Download Manager)
 - [ ] **Reader mode** (Readability extraction → clean, localized reading view; opt-in per page)
