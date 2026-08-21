@@ -24,10 +24,12 @@ import {
   HistoryUrlSchema,
   CasRefSchema,
   NotificationIdSchema,
+  BasicAuthResponseSchema,
   NotificationPermissionResponseSchema,
 } from '@tepegoz/desktop-ipc/schemas';
 import NotificationStore from '@tepegoz/notifications';
 import WebPermissionBroker from '../web-permissions/permission-broker';
+import { resolveBasicAuth } from '../auth/basic-auth-broker';
 import { BlobStore, HistoryStore } from '@tepegoz/persistence';
 import { BookmarkTreeStore, importBookmarksHtmlToStore, isBookmarkable } from '@tepegoz/bookmarks';
 import FileOperationsHost from '../file-operations/file-operations-host';
@@ -142,6 +144,12 @@ export function registerBrowsingIpc(): void {
       WebPermissionBroker.respond(res);
     },
   );
+
+  // Basic-auth answer (renderer → main); resolves the pending 401/407 challenge. The payload carries
+  // credentials, so it is validated and forwarded — never logged, never persisted.
+  onAction(IpcChannels.authBasicRespond, BasicAuthResponseSchema, (res) => {
+    resolveBasicAuth(res);
+  });
 
   // Browsing history (tepegoz://history).
   handle(IpcChannels.historyList, (_event, payload): HistoryEntry[] => {

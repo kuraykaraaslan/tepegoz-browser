@@ -111,6 +111,16 @@ module.exports = {
       to: { path: ['^apps/', 'node_modules/electron'] },
     },
     {
+      name: 'auth-prompt-ui-is-a-leaf',
+      severity: 'error',
+      comment:
+        '@tepegoz/auth-prompt-ui is a presentational chrome leaf (the 401/407 credential prompt): it ' +
+        'must never import back into the desktop app. The challenge details are injected and the ' +
+        'credentials leave through a callback — the package stores nothing. See docs/package-map.md.',
+      from: { path: '^packages/auth-prompt-ui/' },
+      to: { path: '^apps/' },
+    },
+    {
       name: 'find-bar-is-a-leaf',
       severity: 'error',
       comment:

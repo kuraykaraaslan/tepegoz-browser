@@ -4,6 +4,7 @@ import { app, BrowserWindow, powerMonitor } from 'electron';
 import { KEEP_RENDERING_SWITCHES, Logger } from '@tepegoz/libs';
 import { installSecurity } from './security';
 import { abortActiveAgentRuns, registerIpc } from './ipc';
+import { registerBasicAuthHandler } from './auth/basic-auth-broker';
 import { initStores } from './stores.electron';
 import { initHosts, openWindow } from './browser-windows';
 import { initTray, revealAllWindows } from './tray';
@@ -200,6 +201,8 @@ if (!app.requestSingleInstanceLock()) {
       ConnectionPool.onStatusChange(() => {
         broadcastNetworkState();
       });
+      // 401/407 challenges need a handler or Chromium cancels the request outright.
+      registerBasicAuthHandler(app);
       registerIpc();
       initHosts();
       openWindow();

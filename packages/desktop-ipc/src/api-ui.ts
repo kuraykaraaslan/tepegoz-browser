@@ -3,7 +3,11 @@
  * bookmarks, the notification center, and the file-access/new-tab-background pickers. Type-only imports
  * keep this dependency-free for the sandboxed preload; composed into the full surface by `api.ts`.
  */
-import type { ContentBounds } from './contract';
+import type {
+  ContentBounds,
+  BasicAuthRequest,
+  BasicAuthResponse,
+} from './contract';
 import type {
   PageMenuAction,
   PageMenuContext,
@@ -116,6 +120,10 @@ export interface UiApi {
   ): () => void;
   /** Answer a pending consent prompt (allow/deny, optionally remembered for the origin). */
   respondNotificationPermission(response: NotificationPermissionResponse): void;
+  /** Main→renderer: an HTTP 401/407 challenge needs credentials. */
+  onBasicAuthRequest(callback: (request: BasicAuthRequest) => void): () => void;
+  /** Renderer→main: the credentials, or a cancellation. Never stored on either side. */
+  respondBasicAuth(response: BasicAuthResponse): void;
   // File operations (Settings → File operations). The grant list is read/written through preferences
   // (`getPreferences().fileAccessGrants` / `updatePreferences({ fileAccessGrants })`); the AI-driven
   // consent reuses the agent HITL modal. Only the native folder picker needs its own bridge method.

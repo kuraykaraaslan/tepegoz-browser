@@ -286,6 +286,10 @@ export const IpcChannels = {
   notificationsMarkAllRead: 'notifications:mark-all-read',
   notificationsState: 'notifications:state',
   notificationsToast: 'notifications:toast',
+  /** main→renderer: an HTTP 401/407 challenge is waiting on the user. */
+  authBasicRequest: 'auth:basic-request',
+  /** renderer→main: the credentials, or a cancellation. */
+  authBasicRespond: 'auth:basic-respond',
   notificationPermissionRequest: 'notifications:permission-request',
   notificationPermissionRespond: 'notifications:permission-respond',
   // Login credential manager (channels use "logins:" prefix to avoid SAST false positives on the

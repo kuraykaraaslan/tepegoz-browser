@@ -29,6 +29,25 @@ export interface NotificationPermissionResponse {
   remember: boolean;
 }
 
+/** Main → renderer: an HTTP 401/407 challenge needs credentials. `realm` is server-supplied and
+ *  untrusted — display-only, already length-capped by main. */
+export interface BasicAuthRequest {
+  requestId: string;
+  origin: string;
+  realm: string;
+  /** True when a network PROXY issued the challenge rather than the page being visited. */
+  isProxy: boolean;
+}
+
+/** Renderer → main: the user's answer to a basic-auth challenge. Credentials are passed straight to
+ *  Chromium's callback and are never persisted, journaled or logged. */
+export interface BasicAuthResponse {
+  requestId: string;
+  username: string;
+  password: string;
+  cancelled: boolean;
+}
+
 /** Content-area rectangle (DIP) where the active tab's web view is laid out, below the chrome. */
 export interface ContentBounds {
   x: number;

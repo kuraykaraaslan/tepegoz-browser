@@ -10,6 +10,8 @@ import {
   type BookmarkNodeType,
   type BookmarkTreeNode,
   type HistoryEntry,
+  type BasicAuthRequest,
+  type BasicAuthResponse,
   type NotificationPermissionRequest,
   type NotificationPermissionResponse,
   type NotificationState,
@@ -47,6 +49,8 @@ export const bookmarksHistoryApi: Pick<
   | 'markNotificationRead'
   | 'markAllNotificationsRead'
   | 'onNotificationPermissionRequest'
+  | 'onBasicAuthRequest'
+  | 'respondBasicAuth'
   | 'respondNotificationPermission'
 > = {
   getHistory: (params?: { limit?: number; offset?: number }) =>
@@ -134,5 +138,17 @@ export const bookmarksHistoryApi: Pick<
   },
   respondNotificationPermission: (response: NotificationPermissionResponse) => {
     ipcRenderer.send(IpcChannels.notificationPermissionRespond, response);
+  },
+  onBasicAuthRequest: (callback: (request: BasicAuthRequest) => void) => {
+    const listener = (_event: unknown, request: BasicAuthRequest): void => {
+      callback(request);
+    };
+    ipcRenderer.on(IpcChannels.authBasicRequest, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.authBasicRequest, listener);
+    };
+  },
+  respondBasicAuth: (response: BasicAuthResponse) => {
+    ipcRenderer.send(IpcChannels.authBasicRespond, response);
   },
 };

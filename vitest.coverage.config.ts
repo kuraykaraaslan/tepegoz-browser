@@ -27,6 +27,7 @@ export default defineConfig({
       reporter: ['text-summary', 'text'],
       thresholds: { statements: 80, branches: 70, functions: 80, lines: 80 },
       include: [
+        'packages/auth-prompt-ui/src/**',
         'packages/browser-chrome/src/**',
         'packages/browser-tools/src/**',
         'packages/capability-plane/src/**',
