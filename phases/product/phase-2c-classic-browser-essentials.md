@@ -76,10 +76,23 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       blob store; WebP), never inline base64
   - [x] Agent visual fallback down-payment: `@tepegoz/screenshots` + `browser_get_screenshot` can capture
         viewport/fullPage PNG for model context. The user-facing CAS/WebP screenshot surface remains open.
-- [ ] **Per-site zoom persistence** (`webContents.setZoomLevel` + per-origin store in preferences; restored
-      on navigate) — the current shell has no zoom memory
+- [x] **Per-site zoom persistence** (`webContents.setZoomFactor` + per-origin store in preferences;
+      restored on navigate) — `main/site-zoom.ts` + the private `siteZoomFactors` pref. Ctrl +/-/0 step a
+      Chrome-style ladder (25%–500%); the stored factor is re-applied on every committed navigation, so
+      crossing origins cannot inherit the previous site's zoom. Only non-100% origins are stored and
+      Ctrl+0 deletes the key, so the pref cannot accumulate into a record of every site visited.
+      13 unit tests. _(Uses `setZoomFactor`, not `setZoomLevel` as this line originally said: a factor is
+      what the ladder and the stored value are expressed in.)_
+  - [ ] No zoom indicator in the omnibox yet (Chrome shows one when a site is off 100%).
 - [ ] **Spellcheck** (`session.setSpellCheckerLanguages` + built-in Chromium spellchecker; currently
       `spellcheck:false` in `window.ts`) — en/tr dictionaries, settings toggle
+  - [ ] **Scope conflict — decide before building.** `ext-typo` already ships "local-first writing and
+        typo assistance for editable web text" with its own downloaded en/tr dictionaries and settings.
+        Implementing Chromium's spellchecker in core would duplicate a shipped extension's feature, which
+        the working agreement forbids. The two are not identical (Chromium gives free red squiggles and
+        native context-menu suggestions in every input; ext-typo is a richer opt-in assistant, and Chrome
+        itself ships both), so this is a product call — not a coding task. `spellcheck:false` is still the
+        live setting, so today neither path underlines anything in a plain text input.
 
 ### L9 — Bookmarks 2.0
 - [ ] Extend the flat `BookmarkStore` (Phase 1a) with **folders/tags hierarchy** + full-text search
@@ -137,9 +150,16 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
 - [ ] Native file picker interception remains deferred; v1 focuses on agent-controlled file input uploads.
 
 ### L8/L9 — Browser-completeness dialogs (auth / cert / navigation)
-- [ ] **Basic-auth dialog** (`app.on('login')`) — HTTP 401 credential prompt routed through the single
-      **PermissionGuard** seam (no parallel flow); optional autofill from the password vault (Phase 2 work);
-      credentials never logged (reuse `Logger.redact`)
+- [x] **Basic-auth dialog** (`app.on('login')`) — HTTP 401/407 credential prompt; credentials never
+      logged, persisted or journaled (the log lines carry the origin only). `main/auth/basic-auth-broker.ts`
+      + `@tepegoz/auth-prompt-ui`, zod-validated response, 9 unit tests. **This closed a real hole:** with no
+      handler Chromium cancels the challenge, so 401-protected sites did not load at all. The dialog gives
+      the origin its own line (phishing defence) and labels a PROXY challenge as one — relevant because
+      Phase 5 routes tabs through SOCKS tunnels.
+  - [ ] Autofill from the password vault (Phase 2 work) is not wired.
+  - [ ] It prompts directly rather than through a `PermissionGuard` seam. Credential entry is not a
+        capability grant, and forcing it through the permission engine would have meant modelling
+        "username+password" as a permission — recorded as a deliberate deviation, not an oversight.
 - [ ] **Certificate-error interstitial** (`certificate-error` event) — full-page block/proceed warning; a
       "proceed anyway" is a per-site **HITL** decision journaled as an observation; **sensitive-site lockout
       forbids proceed**
