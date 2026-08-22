@@ -292,6 +292,33 @@ export const en = {
   clearHistoryButton: 'Clear history',
   historyCleared: 'Browsing history cleared.',
 
+  // --- Scoped trust profiles ---
+  siteTrust: {
+    title: 'Site trust',
+    subtitle:
+      'The standing posture the AI agent uses on a site. A profile can only ever make things stricter — it never unlocks anything.',
+    empty: 'No sites have a trust setting. Every site uses the default.',
+    addPlaceholder: 'example.com',
+    addLabel: 'Site',
+    addHint: 'The domain only — no https:// and no path. Subdomains inherit.',
+    add: 'Add',
+    remove: 'Remove',
+    levelLabel: 'Level',
+    levels: {
+      trusted: 'Trusted',
+      default: 'Default',
+      restricted: 'Restricted',
+    },
+    levelHelp: {
+      trusted: 'Ordinary changes proceed without asking.',
+      default: 'The standard rules apply.',
+      restricted: 'Ask me about everything here, including reads.',
+    },
+    ceiling:
+      'Even on a trusted site: deleting, spending money, anything driven by the page’s own content, and every banking, crypto, password or health site still ask — or stay blocked.',
+    invalidDomain: 'Enter a domain like example.com — no scheme, no path.',
+  },
+
   // --- Site permissions ---
   sitePermissionsTitle: 'Site permissions',
   sitePermissionsSubtitle: 'Per-site capability grants (e.g. notifications).',

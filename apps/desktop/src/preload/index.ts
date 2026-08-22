@@ -9,6 +9,7 @@ import { downloadsApi } from './api-downloads';
 import { networkApi } from './api-network';
 import { uploadsApi } from './api-uploads';
 import { tasksApi } from './api-tasks';
+import { trustApi } from './api-trust';
 
 /**
  * The ONLY bridge between renderer and main. A small, named, typed API — never raw ipcRenderer
@@ -25,6 +26,7 @@ const api: TepegozApi = {
   ...networkApi,
   ...uploadsApi,
   ...tasksApi,
+  ...trustApi,
   platform: process.platform,
 };
 

@@ -132,3 +132,4 @@ export {
 export * from './safe-browsing';
 export * from './safe-browsing-canonical';
 export * from './policy-reasons';
+export * from './trust-profile';

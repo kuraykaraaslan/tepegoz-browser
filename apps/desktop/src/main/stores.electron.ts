@@ -6,6 +6,7 @@ import CredentialVault, { type SecretCrypto } from '@tepegoz/credential-vault';
 import PreferenceStore from '@tepegoz/preferences';
 import { loadCatalog } from '@tepegoz/extension-catalog';
 import { initDatabase, getDb } from './db/database.electron';
+import { initTrustProfiles } from './security/trust-profile-host.electron';
 import { initBuiltinManifests } from '../shared/extensions';
 import { passwordVault } from '@tepegoz/password-vault';
 import { PasswordProviderRegistry } from '@tepegoz/password-core';
@@ -62,6 +63,9 @@ export function initStores(): void {
   // Built-in extension identity: read + validate the catalog before anything reads the registry.
   loadExtensionCatalog();
   initDatabase(); // the SQLite connector (journal + history + kv) under the same user-data dir
+  // The Policy Kernel's trust profiles come from that same DB, and must be in place before any tab
+  // exists — a decision made in the gap would silently use the default posture for a restricted site.
+  initTrustProfiles();
   const db = getDb();
   if (db !== null) {
     passwordVault.init({ crypto: safeStorageCrypto, db });

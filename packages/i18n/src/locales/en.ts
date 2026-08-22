@@ -30,6 +30,18 @@ export const en = {
    * answers those three, in that order.
    */
   permissions: {
+    trust_profile_trusted: {
+      title: 'Allowed by your trust setting',
+      why: "You marked this site as trusted, so ordinary changes here proceed without asking. Deleting, spending money, and anything driven by the page's own content still ask.",
+      whatYouCanDo:
+        "Change or remove this site's trust setting in Settings if you no longer want that.",
+    },
+    trust_profile_restricted: {
+      title: 'Asking because you restricted this site',
+      why: 'You marked this site as restricted, so you are asked about everything here — including reads that would normally go through silently.',
+      whatYouCanDo:
+        "Approve if you expected this. Change the site's setting in Settings to stop being asked.",
+    },
     egress_possible_secret: {
       title: 'Confirm — this may contain a credential',
       why: 'Something in the request the agent is about to send off this device looks like an API key, token or private key. It may be a real secret, or page text the agent was asked to read that merely looks like one.',

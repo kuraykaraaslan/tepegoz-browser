@@ -20,6 +20,18 @@ export const tr: Resources = {
     close: 'Kapat',
   },
   permissions: {
+    trust_profile_trusted: {
+      title: 'Güven ayarınız izin verdi',
+      why: 'Bu siteyi güvenilir olarak işaretlediniz, bu yüzden sıradan değişiklikler sorulmadan yapılıyor. Silme, para harcama ve sayfanın kendi içeriğinden gelen her şey yine de soruluyor.',
+      whatYouCanDo:
+        "Bunu artık istemiyorsanız sitenin güven ayarını Ayarlar'dan değiştirin veya kaldırın.",
+    },
+    trust_profile_restricted: {
+      title: 'Bu siteyi kısıtladığınız için soruluyor',
+      why: 'Bu siteyi kısıtlı olarak işaretlediniz, bu yüzden burada her şey size soruluyor — normalde sessizce geçecek okumalar dahil.',
+      whatYouCanDo:
+        "Beklediğiniz bir şeyse onaylayın. Sorulmasını istemiyorsanız sitenin ayarını Ayarlar'dan değiştirin.",
+    },
     egress_possible_secret: {
       title: 'Onay — bu bir kimlik bilgisi içeriyor olabilir',
       why: 'Ajanın bu cihazdan göndermek üzere olduğu istekte bir API anahtarı, token veya özel anahtar gibi görünen bir şey var. Gerçek bir sır olabilir ya da ajanın okuması istenen ve yalnızca ona benzeyen sayfa metni olabilir.',
