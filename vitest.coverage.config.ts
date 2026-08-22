@@ -72,10 +72,11 @@ export default defineConfig({
         // It entered at S12.97 / B68.62 / F39.43 / L12.97 over 24,326 statements, a scope as large as
         // all 62 packages combined, with 47 test files already running green here unmeasured.
         //
-        // Ratcheted the same day to floor(S13.36 / B69.75 / F41.58 / L13.36) after the IPC boundary,
-        // the preload invoke wrapper and the trust-profile host got runtime tests. This number can only
-        // go up; `packages/**` is untouched by it either way.
-        'apps/desktop/**': { statements: 13, branches: 69, functions: 41, lines: 13 },
+        // Ratcheted twice the same day — floor(S13.36 / B69.75) after the IPC boundary, the preload
+        // invoke wrapper and the trust-profile host got runtime tests, then floor(S14.28 / B70.32)
+        // after `ipc-tabs-windows.ts` (397 lines, 0%) got its decision paths executed. This number can
+        // only go up; `packages/**` is untouched by it either way.
+        'apps/desktop/**': { statements: 14, branches: 70, functions: 41, lines: 14 },
       },
       include: [
         'apps/desktop/src/**',

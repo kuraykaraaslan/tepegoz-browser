@@ -111,14 +111,20 @@ everywhere — not re-litigated per phase.
 > declares no global threshold and two scoped ones — `packages/**` at 80 and `apps/desktop/**` at its
 > own floor — and the blended figure `text-summary` prints (~S46) is arithmetic, not a gate.
 >
-> First ratchet, same day: the IPC boundary (`ipc-helpers.ts` 45.71% → **100%** statements/functions),
-> the preload invoke wrapper (0% → **100%**) and the trust-profile host (22% → **100%**) got runtime
-> tests, taking the app to **S13.36 / B69.75 / F41.58 / L13.36** and the floor with it. Those three were
-> chosen over larger files because each is a security boundary whose promise was written down but never
-> executed: that an untrusted frame never reaches a handler, that an internal error's text never crosses
-> to the renderer, and that a failed database open publishes an EMPTY trust set instead of a stale one.
-> `packages/desktop-ipc` still ships no unit tests at all, so it remains absent from both lists — its
-> `boundary.ts` is now covered transitively by the two boundary suites, but not directly.
+> First ratchets, same day. Files chosen for what they PROMISE rather than for their size — each one a
+> boundary whose guarantee was written in a docblock and had never executed:
+>
+> | File                               | Before | After    | What had never run                                                                                 |
+> | ---------------------------------- | ------ | -------- | -------------------------------------------------------------------------------------------------- |
+> | `main/ipc/ipc-helpers.ts`          | 45.71% | **100%** | an untrusted frame never reaches a handler; an internal error's text never crosses to the renderer |
+> | `preload/ipc-invoke.ts`            | 0%     | **100%** | a 403 stays a 403 — the permission explainer branches on it                                        |
+> | `main/security/trust-profile-host` | 22%    | **100%** | a failed database open publishes an EMPTY trust set, not a stale one                               |
+> | `main/ipc/ipc-tabs-windows.ts`     | 0%     | **~48%** | the extension-popup capability guard; per-sender-window routing; quit ordering                     |
+>
+> That took the app from S12.97 to **S14.28 / B70.32 / F41.74 / L14.28**, and the floor with it (two
+> ratchets, S12→S13→S14). `main/ipc` as a directory went 2.27% → **13.78%**. `packages/desktop-ipc`
+> still ships no unit tests at all, so it remains absent from both lists — its `boundary.ts` is now
+> covered transitively by the two boundary suites, but not directly.
 >
 > Ratchet these up as coverage lands. Never widen the exclusion list to protect a number.
 
