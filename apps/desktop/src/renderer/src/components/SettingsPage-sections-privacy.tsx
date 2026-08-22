@@ -10,6 +10,7 @@ import {
 } from './settings-privacy-files';
 import { DeveloperSection } from './settings-developer';
 import { SiteTrustSection } from './settings-site-trust';
+import { ShortcutsSection } from './settings-shortcuts';
 import { NetworkPrivacySection } from './settings-network-privacy';
 import {
   IconCard,
@@ -162,6 +163,14 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
       icon: <IconLock />,
       searchText: `${s.siteTrust.title} ${s.siteTrust.subtitle} ${s.siteTrust.levels.trusted} ${s.siteTrust.levels.restricted}`,
       content: <SiteTrustSection />,
+    },
+    {
+      id: 'shortcuts',
+      group: s.groupPrivacy,
+      label: s.shortcuts.title,
+      icon: <IconDesktop />,
+      searchText: `${s.shortcuts.title} ${s.shortcuts.subtitle} ${s.shortcuts.commandPalette} ${s.shortcuts.find}`,
+      content: <ShortcutsSection />,
     },
     {
       id: 'passwords',

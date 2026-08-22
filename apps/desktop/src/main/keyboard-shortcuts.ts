@@ -1,5 +1,6 @@
 import type { BrowserWindow, Input } from 'electron';
 import { IpcChannels } from '@tepegoz/desktop-ipc';
+import { pressFromInput, shortcutFor } from '@tepegoz/shortcuts';
 import { exitKioskWindow, toggleFullScreen } from './window';
 import { loadBrowser } from './onboarding.electron';
 
@@ -15,24 +16,24 @@ import { loadBrowser } from './onboarding.electron';
  */
 export function handleWindowShortcut(win: BrowserWindow, input: Input): boolean {
   if (input.type !== 'keyDown') return false;
-  const key = input.key.toLowerCase();
 
-  if (key === 'f11' && !input.control && !input.alt && !input.shift && !input.meta) {
-    toggleFullScreen(win);
-    return true;
+  // The combinations themselves live in `@tepegoz/shortcuts`, shared with the renderer, so the two
+  // halves cannot drift and a collision between them is a failing test rather than two handlers firing
+  // for one press. This file keeps only what is genuinely main's: what each one DOES to a window.
+  switch (shortcutFor(pressFromInput(input), 'main')) {
+    case 'fullScreen':
+      toggleFullScreen(win);
+      return true;
+    case 'find':
+      // The bar lives in the chrome; the chrome decides whether this opens it or just refocuses it.
+      win.webContents.send(IpcChannels.findOpen);
+      return true;
+    case 'exitKiosk':
+      if (!win.isKiosk()) return false;
+      exitKioskWindow(win); // setKiosk(false)
+      loadBrowser(win); // reload chrome WITHOUT ?kiosk → tab strip/toolbar return; the kiosk tab stays
+      return true;
+    default:
+      return false;
   }
-
-  if (key === 'f' && (input.control || input.meta) && !input.alt && !input.shift) {
-    // The bar lives in the chrome; the chrome decides whether this opens it or just refocuses it.
-    win.webContents.send(IpcChannels.findOpen);
-    return true;
-  }
-
-  if (win.isKiosk() && input.shift && (input.control || input.meta) && key === 'q') {
-    exitKioskWindow(win); // setKiosk(false)
-    loadBrowser(win); // reload chrome WITHOUT ?kiosk → the tab strip/toolbar return; the kiosk tab stays
-    return true;
-  }
-
-  return false;
 }

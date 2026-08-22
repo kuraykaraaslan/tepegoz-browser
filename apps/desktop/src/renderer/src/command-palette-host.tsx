@@ -5,6 +5,7 @@ import { coreDict } from '@tepegoz/i18n';
 import { useT } from '@tepegoz/i18n/react';
 import { browserDict } from '../../i18n';
 import { INTERNAL_SETTINGS_URL } from '@tepegoz/desktop-ipc';
+import { pressFromEvent, shortcutFor } from '@tepegoz/shortcuts';
 
 /**
  * Wires the Command Palette (Ctrl+K) to the app.
@@ -68,8 +69,10 @@ export function useCommandPalette(): { open: boolean; setOpen: (open: boolean) =
   const [open, setOpen] = useState(false);
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key.toLowerCase() !== 'k' || !(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey)
-        return;
+      // The combination lives in `@tepegoz/shortcuts` with every other one, so a second binding on
+      // Ctrl+K anywhere in the app becomes a failing test rather than two handlers firing in mount
+      // order. The palette still owns the toggle — only the key comes from the registry.
+      if (shortcutFor(pressFromEvent(e), 'renderer') !== 'commandPalette') return;
       e.preventDefault();
       setOpen((cur) => !cur);
     };
