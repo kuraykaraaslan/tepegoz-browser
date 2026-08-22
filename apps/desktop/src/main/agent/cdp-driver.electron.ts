@@ -106,10 +106,20 @@ export default class CdpDriver {
   /** Attach + enable the domains we need on `wc`. Idempotent per tab; never touches another tab. */
   private static async ensureAttached(wc: WebContents): Promise<void> {
     if (CdpDriver.attached.has(wc) && wc.debugger.isAttached()) return;
-    try {
-      wc.debugger.attach('1.3');
-    } catch (err) {
-      throw new AppError(`Cannot drive the page (is DevTools open on it?): ${String(err)}`, 409);
+    // ADOPT an existing session rather than attaching over it. `webContents.debugger` allows ONE client
+    // per tab, and the agent is not the only one in this app that attaches: the typo, translate and
+    // video-player page injectors, and the macro recorder, each call `debugger.attach('1.3')` on the
+    // pages they enhance. Gating on our own bookkeeping alone meant that whenever an injector got to the
+    // tab first, every CDP call the agent made threw `Debugger is already attached to the target` —
+    // permanently for that tab, since the failed attach also never recorded us, so each retry re-threw.
+    // Enabling a domain twice is idempotent and CDP events fan out to the whole session, so sharing one
+    // attachment is the correct shape; `isAttached()`-first is what every other attach site here does.
+    if (!wc.debugger.isAttached()) {
+      try {
+        wc.debugger.attach('1.3');
+      } catch (err) {
+        throw new AppError(`Cannot drive the page: ${String(err)}`, 409);
+      }
     }
     CdpDriver.attached.add(wc);
     // Subscribe BEFORE Network.enable so the first navigation's responses are not missed (AI-8B).
