@@ -13,7 +13,9 @@
     "./types": "./src/types.ts",
     "./tab-group-core": "./src/tab-group-core.ts",
     "./i18n": "./src/i18n/index.ts",
-    "./skills-core": "./src/skills-core.ts"
+    "./skills-core": "./src/skills-core.ts",
+    "./command-palette": "./src/command-palette.tsx",
+    "./command-palette-core": "./src/command-palette-core.ts"
   },
   "main": "./src/index.ts",
   "types": "./src/index.ts",
