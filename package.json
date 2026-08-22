@@ -26,8 +26,9 @@
   "devDependencies": {
     "@eslint/js": "^9.17.0",
     "@playwright/test": "^1.49.1",
-    "@vitest/coverage-v8": "^3.2.6",
+    "@tepegoz/i18n": "workspace:*",
     "@types/node": "^22.10.2",
+    "@vitest/coverage-v8": "^3.2.6",
     "dependency-cruiser": "^16.8.0",
     "eslint": "^9.17.0",
     "eslint-plugin-i18next": "6.1.5",
@@ -53,5 +54,6 @@
       "vite": "^7.3.6",
       "esbuild": ">=0.25.0"
     }
-  }
+  },
+  "//devDependencies": "`@tepegoz/i18n` is a devDependency of the ROOT so the Playwright suite can import the real `IME_MATRIX` instead of keeping a second copy of it. A runner that carries its own cases stops testing the matrix the moment the matrix changes."
 }
