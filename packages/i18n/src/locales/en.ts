@@ -22,6 +22,74 @@ export const en = {
     restore: 'Restore',
     close: 'Close',
   },
+  /**
+   * Permission Debug: what each Policy Kernel reason code MEANS, for the person it stopped.
+   *
+   * The codes are stable identifiers meant for the journal. Showing one to a user — `tainted_side_effect`
+   * — tells them a rule fired and nothing about which rule, why, or what to do instead. Each entry
+   * answers those three, in that order.
+   */
+  permissions: {
+    egress_possible_secret: {
+      title: 'Confirm — this may contain a credential',
+      why: 'Something in the request the agent is about to send off this device looks like an API key, token or private key. It may be a real secret, or page text the agent was asked to read that merely looks like one.',
+      whatYouCanDo:
+        'Check the flagged values below. If any of them is a real credential, decline — once sent, it is out of your control.',
+    },
+    read_allowed: {
+      title: 'Allowed',
+      why: 'This only reads the page — it changes nothing.',
+      whatYouCanDo: 'No action needed.',
+    },
+    sensitive_site_read: {
+      title: 'Confirm before reading',
+      why: 'This site is treated as sensitive (banking, crypto, passwords or health), so even reading it is confirmed with you first.',
+      whatYouCanDo:
+        'Approve if you asked for this. If you did not, decline — the agent should not be on this site.',
+    },
+    sensitive_site_lockout: {
+      title: 'Blocked on a sensitive site',
+      why: 'The action would CHANGE something on a banking, crypto, password or health site. Those are locked to reading only, and no approval can unlock them here.',
+      whatYouCanDo:
+        'Do it yourself in the page. The lockout is deliberate and cannot be approved away.',
+    },
+    tainted_side_effect: {
+      title: 'Confirm — instructions came from the page',
+      why: 'The values for this action were taken from page content the agent read, so a page could have planted them. That is how prompt injection turns a read into an action.',
+      whatYouCanDo:
+        'Check the arguments below against what YOU asked for. If anything looks like it came from the page rather than from you, decline.',
+    },
+    state_change_confirm: {
+      title: 'Confirm a change',
+      why: 'This action changes something rather than just reading.',
+      whatYouCanDo: 'Approve if it matches what you asked for.',
+    },
+    destructive_confirm: {
+      title: 'Confirm — this deletes or overwrites',
+      why: 'The action removes or replaces data, and cannot be undone by the agent.',
+      whatYouCanDo: 'Read the target carefully before approving. There is no undo on this path.',
+    },
+    financial_confirm: {
+      title: 'Confirm — this spends money',
+      why: 'The action moves money or commits to a purchase.',
+      whatYouCanDo: 'Check the amount and the recipient before approving.',
+    },
+    unknown_risk_confirm: {
+      title: 'Confirm — risk not declared',
+      why: 'This tool does not state how dangerous it is, so it is treated as if it were.',
+      whatYouCanDo: 'Approve only if you recognise the tool and the arguments.',
+    },
+    code_exec_read_journaled: {
+      title: 'Allowed and recorded',
+      why: 'The agent ran code that only reads. It is written to the journal so you can review it afterwards.',
+      whatYouCanDo: 'No action needed. The run appears in the journal.',
+    },
+    code_exec_write_disabled: {
+      title: 'Blocked — writing code execution is off',
+      why: 'Model-authored code that could write is disabled in this version, regardless of approval.',
+      whatYouCanDo: 'Not available yet. Nothing you approve here will enable it.',
+    },
+  },
   errors: {
     badRequest: 'Invalid request',
     notFound: 'Not found',

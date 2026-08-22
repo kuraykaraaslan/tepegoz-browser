@@ -7,6 +7,22 @@ import { BTN_GHOST, BTN_PRIMARY } from './panel-styles';
 
 /** Escalating visual weight, so the six classes are distinguishable at a glance and not just by text.
  *  Token-styled (surface/border/text) rather than raw colours, so both themes stay consistent. */
+/**
+ * Look up a reason code's explanation. Returns null for a code this build has no text for — an older
+ * journal entry replayed, or a code from a newer policy — so an unknown reason degrades to the bare
+ * identifier rather than to an empty box.
+ */
+function explain(
+  c: Resources,
+  reason: string,
+): { title: string; why: string; whatYouCanDo: string } | null {
+  const table = c.permissions as Record<
+    string,
+    { title: string; why: string; whatYouCanDo: string }
+  >;
+  return table[reason] ?? null;
+}
+
 const RISK_TONE: Readonly<Record<RiskTier, string>> = {
   read: 'border-border-subtle bg-surface-base text-text-secondary',
   'ui-write': 'border-border-subtle bg-surface-base text-text-primary',
@@ -138,7 +154,28 @@ export function PanelModals({
             </div>
           )}
           <p className="mt-3 font-mono text-sm text-text-primary">{approval.toolName}</p>
-          <p className="text-xs text-text-secondary">{approval.reason}</p>
+          {/* Permission Debug. The reason code is a stable identifier for the journal, not an answer:
+              showing a person `tainted_side_effect` tells them a rule fired and nothing about which
+              rule, why, or what to do. The code stays visible in small print so a support conversation
+              can still name it exactly. */}
+          {explain(c, approval.reason) === null ? (
+            <p className="text-xs text-text-secondary">{approval.reason}</p>
+          ) : (
+            <div className="mt-2 rounded border border-border-subtle bg-surface-base px-2 py-1.5">
+              <p className="text-sm font-medium text-text-primary">
+                {explain(c, approval.reason)?.title}
+              </p>
+              <p className="mt-0.5 text-xs text-text-secondary">
+                {explain(c, approval.reason)?.why}
+              </p>
+              <p className="mt-1 text-xs text-text-primary">
+                {explain(c, approval.reason)?.whatYouCanDo}
+              </p>
+              <p className="mt-1 font-mono text-[10px] text-text-secondary opacity-60">
+                {approval.reason}
+              </p>
+            </div>
+          )}
           <pre className="mt-2 max-h-24 overflow-auto rounded bg-surface-base p-2 text-xs text-text-secondary">
             {approval.argsPreview}
           </pre>

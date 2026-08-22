@@ -1,5 +1,6 @@
 import type { PolicyDecision, RiskLevel, ToolDescriptor } from '@tepegoz/shared-types';
 import { isSensitiveSite } from './sensitive-site';
+import type { PolicyReason } from './policy-reasons';
 
 /**
  * Deterministic Policy Kernel (L8). Runs in plain code BEFORE the LLM — security is enforced here,
@@ -28,8 +29,14 @@ export interface PolicyContext {
 
 export interface PolicyResult {
   decision: PolicyDecision;
-  /** Stable reason code (Permission Debug: "why am I being asked / blocked?"). */
-  reason: string;
+  /**
+   * Stable reason code (Permission Debug: "why am I being asked / blocked?").
+   *
+   * A closed union, not a string: every code must be listed in `policy-reasons.ts`, and a completeness
+   * test requires en+tr text for each. Adding a rule without explaining it to the person it stops is
+   * now a build failure rather than a thing to notice later.
+   */
+  reason: PolicyReason;
   /** HIGH-RISK actions require biometric (Windows Hello) confirmation at the HITL step. */
   biometric: boolean;
 }

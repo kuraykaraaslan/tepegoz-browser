@@ -19,6 +19,66 @@ export const tr: Resources = {
     restore: 'Önceki boyut',
     close: 'Kapat',
   },
+  permissions: {
+    egress_possible_secret: {
+      title: 'Onay — bu bir kimlik bilgisi içeriyor olabilir',
+      why: 'Ajanın bu cihazdan göndermek üzere olduğu istekte bir API anahtarı, token veya özel anahtar gibi görünen bir şey var. Gerçek bir sır olabilir ya da ajanın okuması istenen ve yalnızca ona benzeyen sayfa metni olabilir.',
+      whatYouCanDo:
+        'Aşağıda işaretlenen değerleri kontrol edin. Herhangi biri gerçek bir kimlik bilgisiyse reddedin — gönderildikten sonra kontrolünüzden çıkar.',
+    },
+    read_allowed: {
+      title: 'İzin verildi',
+      why: 'Bu yalnızca sayfayı okuyor, hiçbir şeyi değiştirmiyor.',
+      whatYouCanDo: 'Bir şey yapmanız gerekmiyor.',
+    },
+    sensitive_site_read: {
+      title: 'Okumadan önce onay',
+      why: 'Bu site hassas sayılıyor (bankacılık, kripto, parola veya sağlık), bu yüzden okumak bile önce size sorulur.',
+      whatYouCanDo:
+        'Bunu siz istediyseniz onaylayın. İstemediyseniz reddedin — ajanın bu sitede olmaması gerekir.',
+    },
+    sensitive_site_lockout: {
+      title: 'Hassas sitede engellendi',
+      why: 'İşlem, bankacılık/kripto/parola/sağlık sitesinde bir şeyi DEĞİŞTİRECEKTİ. Bu siteler yalnızca okumaya kilitlidir ve buradan hiçbir onay bu kilidi açamaz.',
+      whatYouCanDo: 'İşlemi sayfada kendiniz yapın. Kilit bilinçlidir, onayla aşılamaz.',
+    },
+    tainted_side_effect: {
+      title: 'Onay — talimatlar sayfadan geldi',
+      why: 'Bu işlemin değerleri, ajanın okuduğu sayfa içeriğinden alındı; yani bir sayfa bunları yerleştirmiş olabilir. Prompt injection bir okumayı tam da böyle eyleme çevirir.',
+      whatYouCanDo:
+        'Aşağıdaki argümanları SİZİN istediğinizle karşılaştırın. Sizden değil sayfadan gelmiş görünen bir şey varsa reddedin.',
+    },
+    state_change_confirm: {
+      title: 'Değişikliği onaylayın',
+      why: 'Bu işlem yalnızca okumuyor, bir şeyi değiştiriyor.',
+      whatYouCanDo: 'İstediğinizle örtüşüyorsa onaylayın.',
+    },
+    destructive_confirm: {
+      title: 'Onay — bu siler veya üzerine yazar',
+      why: 'İşlem veriyi kaldırıyor ya da değiştiriyor ve ajan tarafından geri alınamıyor.',
+      whatYouCanDo: 'Onaylamadan önce hedefi dikkatle okuyun. Bu yolda geri alma yok.',
+    },
+    financial_confirm: {
+      title: 'Onay — bu para harcıyor',
+      why: 'İşlem para transfer ediyor veya bir satın almayı taahhüt ediyor.',
+      whatYouCanDo: 'Onaylamadan önce tutarı ve alıcıyı kontrol edin.',
+    },
+    unknown_risk_confirm: {
+      title: 'Onay — risk beyan edilmemiş',
+      why: 'Bu araç ne kadar tehlikeli olduğunu belirtmiyor, bu yüzden tehlikeliymiş gibi davranılıyor.',
+      whatYouCanDo: 'Aracı ve argümanları tanıyorsanız onaylayın.',
+    },
+    code_exec_read_journaled: {
+      title: 'İzin verildi ve kaydedildi',
+      why: 'Ajan yalnızca okuyan bir kod çalıştırdı. Sonradan inceleyebilmeniz için günlüğe yazıldı.',
+      whatYouCanDo: 'Bir şey yapmanız gerekmiyor. Çalışma günlükte görünür.',
+    },
+    code_exec_write_disabled: {
+      title: 'Engellendi — yazan kod çalıştırma kapalı',
+      why: 'Model tarafından yazılan ve yazma yapabilen kod bu sürümde kapalıdır; onaydan bağımsızdır.',
+      whatYouCanDo: 'Henüz kullanılabilir değil. Burada vereceğiniz hiçbir onay bunu açmaz.',
+    },
+  },
   errors: {
     badRequest: 'Geçersiz istek',
     notFound: 'Bulunamadı',

@@ -1355,6 +1355,9 @@ importers:
         specifier: ^18 || ^19
         version: 18.3.1
     devDependencies:
+      '@tepegoz/security-policy':
+        specifier: workspace:*
+        version: link:../security-policy
       '@types/react':
         specifier: ^18.3.18
         version: 18.3.31

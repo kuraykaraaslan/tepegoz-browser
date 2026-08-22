@@ -97,11 +97,14 @@ export async function runAgent(
     // detection can't tell a real secret from token-shaped page content it was asked to read, so a hard
     // abort would kill legitimate runs). Cancel → the gateway throws → the run stops 'egress_blocked'.
     confirmBlock: (findings) => {
+      // The matched kinds go in `args`, not into the reason code. A code is an identifier the journal
+      // and the Permission Debug catalogue both key on; `egress_possible_secret:secret_token, pii_email`
+      // is neither stable nor lookupable, and the user still sees the detail right below it.
       const kinds = [...new Set(findings.map((f) => f.kind))].join(', ');
       return hooks.requestApproval({
         toolName: 'model_send',
-        policy: { decision: 'ask', reason: `egress_possible_secret:${kinds}`, biometric: false },
-        args: { flagged: findings.map((f) => `${f.kind}: ${f.sample}`) },
+        policy: { decision: 'ask', reason: 'egress_possible_secret', biometric: false },
+        args: { kinds, flagged: findings.map((f) => `${f.kind}: ${f.sample}`) },
       });
     },
   });
