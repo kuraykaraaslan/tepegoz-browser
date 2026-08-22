@@ -94,7 +94,7 @@ function TabRouteBadge({
       title={title}
       aria-label={title}
       role="img"
-      className={cn('h-3 w-3 shrink-0', network.blocked ? 'text-error' : 'text-primary')}
+      className={cn('h-3 w-3 shrink-0', network.blocked ? 'text-error' : 'text-primary-on-surface')}
     />
   );
 }

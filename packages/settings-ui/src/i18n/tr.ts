@@ -317,6 +317,20 @@ export const tr: SettingsStrings = {
     invalidDomain: 'ornek.com gibi bir alan adı girin — şema ve yol olmadan.',
   },
 
+  // --- Klavye kısayolları ---
+  shortcuts: {
+    title: 'Klavye kısayolları',
+    subtitle: 'Uygulamanın kısayolları bağladığı tek kayıttan gelen tüm genel kısayollar.',
+    newTab: 'Yeni sekme',
+    reopenClosedTab: 'Son kapatılan sekmeyi geri aç',
+    reload: 'Sayfayı yenile',
+    settings: 'Ayarları aç',
+    commandPalette: 'Komut paletini aç',
+    find: 'Sayfada bul',
+    fullScreen: 'Tam ekranı aç/kapat',
+    exitKiosk: 'Kiosk modundan çık',
+  },
+
   // --- Site izinleri ---
   sitePermissionsTitle: 'Site izinleri',
   sitePermissionsSubtitle: 'Site bazında yetki verileri (örn. bildirimler).',

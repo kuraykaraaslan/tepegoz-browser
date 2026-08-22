@@ -13,7 +13,7 @@ const variantMap: Record<BadgeVariant, string> = {
   warning: 'bg-warning-subtle text-warning-fg',
   info: 'bg-info-subtle text-info-fg',
   neutral: 'bg-surface-sunken text-text-secondary',
-  primary: 'bg-primary-subtle text-primary',
+  primary: 'bg-primary-subtle text-primary-on-surface',
 };
 
 const sizeMap: Record<BadgeSize, string> = {

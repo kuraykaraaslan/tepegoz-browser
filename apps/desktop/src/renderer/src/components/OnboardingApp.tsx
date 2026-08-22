@@ -31,6 +31,7 @@ export function OnboardingApp() {
         onMinimize={() => window.tepegoz.minimizeWindow()}
         onToggleMaximize={() => window.tepegoz.toggleMaximizeWindow()}
         onClose={() => window.tepegoz.closeWindow()}
+        platform={window.tepegoz.platform}
         importBookmarks={(input) => window.tepegoz.importBookmarks(input)}
         importLogins={(data, format) => window.tepegoz.importLogins(data, format)}
         completeOnboarding={() => window.tepegoz.completeOnboarding()}

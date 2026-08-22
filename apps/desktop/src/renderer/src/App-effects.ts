@@ -1,6 +1,7 @@
 import { useEffect, type Dispatch, type RefObject, type SetStateAction } from 'react';
 import { localeDir, type Locale } from '@tepegoz/i18n';
 import { INTERNAL_SETTINGS_URL } from '@tepegoz/desktop-ipc';
+import { pressFromEvent, shortcutFor } from '@tepegoz/shortcuts';
 import type {
   AppNotification,
   AutofillAvailablePayload,
@@ -115,10 +116,18 @@ export function useAppEffects(params: AppEffectsParams): void {
     );
   }, [setGlassAvailable]);
 
-  // RTL-ready: mirror the active locale's writing direction onto <html dir> (both shipping locales are
-  // LTR, so this is a no-op today, but the whole surface is wired for a future RTL locale — ADR-0016).
+  // Mirror the active locale onto the document root.
+  //
+  // `dir` is RTL-readiness: both shipping locales are LTR, so it is a no-op today, but the surface is
+  // wired for a future RTL locale (ADR-0016).
+  //
+  // `lang` is not a no-op and was missing. `index.html` hardcodes `lang="en"`, so a Turkish UI was
+  // announced to a screen reader with English pronunciation rules — WCAG 3.1.1 (Language of Page),
+  // and the kind of failure nobody sees on screen. It also decides which hyphenation and font
+  // fallbacks the engine picks, so the visible text is subtly wrong too.
   useEffect(() => {
     document.documentElement.dir = localeDir(locale);
+    document.documentElement.lang = locale;
   }, [locale]);
 
   const theme = prefs?.theme ?? 'system';
@@ -223,21 +232,22 @@ export function useAppEffects(params: AppEffectsParams): void {
   // preventDefault so Ctrl+R reloads the active TAB, not the app chrome.
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (!e.ctrlKey && !e.metaKey) return;
-      const key = e.key.toLowerCase();
-      if (key === 't' && e.shiftKey) {
-        e.preventDefault();
+      // Every global key goes through the one registry (`@tepegoz/shortcuts`), which matches modifiers
+      // EXACTLY. The hand-rolled test this replaces checked `ctrlKey || metaKey` and never looked at
+      // Alt, so Ctrl+Alt+T (a terminal on Linux, and AltGr territory on a Turkish-Q keyboard) opened a
+      // tab, and Ctrl+Shift+R did a plain reload instead of leaving the hard-reload combination alone.
+      const id = shortcutFor(pressFromEvent(e), 'renderer');
+      if (id === null || id === 'commandPalette') return;
+      e.preventDefault();
+      if (id === 'reopenClosedTab') {
         extSurfaces.closeSurface();
-        window.tepegoz.reopenClosedTab(); // Ctrl+Shift+T — reopen the last-closed tab
-      } else if (key === 't') {
-        e.preventDefault();
+        window.tepegoz.reopenClosedTab();
+      } else if (id === 'newTab') {
         extSurfaces.closeSurface();
         window.tepegoz.createTab();
-      } else if (key === 'r') {
-        e.preventDefault();
+      } else if (id === 'reload') {
         window.tepegoz.tabReload();
-      } else if (key === ',') {
-        e.preventDefault();
+      } else if (id === 'settings') {
         extSurfaces.closeSurface();
         window.tepegoz.navigateTab(INTERNAL_SETTINGS_URL); // opens/focuses the Settings tab
       }

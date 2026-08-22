@@ -319,6 +319,20 @@ export const en = {
     invalidDomain: 'Enter a domain like example.com — no scheme, no path.',
   },
 
+  // --- Keyboard shortcuts ---
+  shortcuts: {
+    title: 'Keyboard shortcuts',
+    subtitle: 'Every global shortcut, from the one registry the app binds them from.',
+    newTab: 'New tab',
+    reopenClosedTab: 'Reopen the last closed tab',
+    reload: 'Reload the page',
+    settings: 'Open settings',
+    commandPalette: 'Open the command palette',
+    find: 'Find on the page',
+    fullScreen: 'Toggle full screen',
+    exitKiosk: 'Leave kiosk mode',
+  },
+
   // --- Site permissions ---
   sitePermissionsTitle: 'Site permissions',
   sitePermissionsSubtitle: 'Per-site capability grants (e.g. notifications).',

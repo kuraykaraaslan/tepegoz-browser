@@ -31,7 +31,7 @@ const STRINGS: BrowserChromeStrings = {
   },
 };
 
-function renderChrome() {
+function renderChrome(over: { platform?: string } = {}) {
   const handlers = {
     onSelectTab: vi.fn(),
     onCloseTab: vi.fn(),
@@ -48,6 +48,7 @@ function renderChrome() {
   };
   render(
     <BrowserChrome
+      platform={over.platform ?? 'win32'}
       t={STRINGS}
       tabs={[{ id: '1', title: 'First page', faviconUrl: null, isLoading: false }]}
       activeTabId="1"
@@ -81,5 +82,19 @@ describe('BrowserChrome', () => {
     expect(h.onNewTab).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole('button', { name: STRINGS.window.close }));
     expect(h.onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('the window caption follows the platform', () => {
+  it('draws our own controls on Windows', () => {
+    renderChrome({ platform: 'win32' });
+    expect(screen.getByRole('button', { name: STRINGS.window.close })).toBeDefined();
+  });
+
+  it('draws NONE on macOS, where the OS keeps its traffic lights', () => {
+    // `frame: false` used to strip the traffic lights AND draw Windows-style buttons on the right, so
+    // a Mac window had its close button on the wrong side and no native one at all.
+    renderChrome({ platform: 'darwin' });
+    expect(screen.queryByRole('button', { name: STRINGS.window.close })).toBeNull();
   });
 });

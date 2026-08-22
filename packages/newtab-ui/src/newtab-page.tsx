@@ -105,7 +105,7 @@ export function NewTabPage({
         >
           <FontAwesomeIcon
             icon={faWandMagicSparkles}
-            className="h-3.5 w-3.5 text-primary"
+            className="h-3.5 w-3.5 text-primary-on-surface"
             aria-hidden
           />
           {t.aiButton}

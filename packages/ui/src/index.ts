@@ -16,3 +16,4 @@ export { Icon, type IconName, type IconProps } from './icon/Icon';
 export { ErrorBoundary } from './error-boundary/ErrorBoundary';
 export { cn } from './libs/utils/cn';
 export type { PolymorphicProps } from './libs/utils/polymorphic';
+export * from './a11y/contrast';
