@@ -9,6 +9,13 @@ import { MAX_INTERACTABLE_ELEMENTS } from '@tepegoz/tool-executor';
  * (`elementFromPoint` hit-test, so a modal suppresses what it covers) ∧ in the viewport, in document
  * order. The driver validates the payload (zod) and hands it to `parseDomTree`.
  *
+ * Interactivity has two tiers, because `cursor` is an INHERITED CSS property and the naive heuristic
+ * indexed a control's every glyph as a separate target. STRONG = the element declares itself a control
+ * (tag/role/tabindex/handler/contenteditable). WEAK = only the pointer cursor says so, and it is kept
+ * ONLY when no strong control sits above it (its cursor would be inherited) or below it (the wrapper is
+ * not the target). A LinkedIn result row costs a handful of elements this way instead of the ~46 it cost
+ * on the snapshot that motivated this (200 indexed elements bought four-and-a-half of the ten rows).
+ *
  * Traversal pierces OPEN shadow roots and SAME-ORIGIN iframes into one index space (PR2b); closed
  * shadow roots and cross-origin frames are unreachable (they read as null) and are left for a future
  * per-frame CDP-injection pass. Each element is addressed by a child-index `path` (segments crossing
@@ -81,25 +88,46 @@ export function buildDomTreeExpression(viewportExpansionPx = 0): string {
 
   const hasHandler = (el) => el.onclick !== null || el.getAttribute('onclick') !== null || el.getAttribute('onmousedown') !== null;
 
-  const isInteractive = (el) => {
+  // STRONG evidence: the element declares itself a control. Independent of \`cursor\`, so it is also what
+  // tells a descendant that its own pointer cursor is merely INHERITED from a real control above it.
+  const isStrong = (el) => {
     const doc = el.ownerDocument;
     if (el === doc.body || el === doc.documentElement) return false;
-    if (el.hasAttribute('disabled')) return true; // still index it — surfaced as disabled downstream
     if (INTERACTIVE_TAGS.has(el.tagName)) return true;
     const role = el.getAttribute('role');
     if (role !== null && INTERACTIVE_ROLES.has(role.toLowerCase())) return true;
     if (el.isContentEditable) return true;
     const ti = el.getAttribute('tabindex');
     if (ti !== null && ti !== '-1') return true;
-    if (hasHandler(el)) return true;
-    // The div/span-button heuristic: a pointer cursor the site set for a clickable region — but skip
-    // wrapper/overlay-sized regions, whose real target is a descendant (trims over-selection).
+    return hasHandler(el);
+  };
+
+  /*
+   * 'strong' | 'weak' | null. \`cursor\` is an INHERITED CSS property, so every span, svg and path inside a
+   * \`cursor:pointer\` button reports \`pointer\` too — on a LinkedIn people-search result that turned one
+   * Connect button into eight indexed elements and burned the whole 200-element budget on four result
+   * rows. So the div/span-button heuristic is now the WEAK tier, kept only when the element is the sole
+   * representative of its clickable region:
+   *   - \`strongAncestor\` — a real control already sits above it, so the cursor is inherited and the
+   *     control, not its glyphs, is the click target;
+   *   - \`weakAncestor\` — an outer pointer region was already indexed, so this is the same region's inner
+   *     markup (the \`div > p > span\` that all read "İzmir, Türkiye"), not a second target.
+   * The mirror case (a wrapper ABOVE a real control) is handled during the walk: emitting a strong node
+   * retracts the weak ancestors it was nested in.
+   */
+  const interactivityOf = (el, strongAncestor, weakAncestor) => {
+    const doc = el.ownerDocument;
+    if (el === doc.body || el === doc.documentElement) return null;
+    if (el.hasAttribute('disabled')) return 'strong'; // still index it — surfaced as disabled downstream
+    if (isStrong(el)) return 'strong';
     if (styleOf(el).cursor === 'pointer') {
+      if (strongAncestor || weakAncestor) return null;
+      // Skip wrapper/overlay-sized regions, whose real target is a descendant (trims over-selection).
       const r = rectOf(el);
       const vp = vpOf(el);
-      return (r.width * r.height) / (vp.vw * vp.vh || 1) <= MAX_POINTER_AREA_FRAC;
+      return (r.width * r.height) / (vp.vw * vp.vh || 1) <= MAX_POINTER_AREA_FRAC ? 'weak' : null;
     }
-    return false;
+    return null;
   };
 
   const implicitRole = (el) => {
@@ -185,10 +213,17 @@ export function buildDomTreeExpression(viewportExpansionPx = 0): string {
   // Emit one indexable element. \`path\` is a child-index address (segments crossing shadow/iframe
   // boundaries) the driver re-resolves via resolveNodePath — see @tepegoz/tool-executor/dom-path.
   const nodes = [];
+  // Parallel keep-flags: a weak wrapper is emitted optimistically and retracted when a real control turns
+  // up inside it. Kept out of the node objects so nothing internal can leak into the CDP payload.
+  const keep = [];
+  let dropped = 0;
+  const VALUE_TAGS = new Set(['INPUT','SELECT','TEXTAREA','OPTION','OUTPUT']);
   const emit = (el, path) => {
     const node = { tag: el.tagName.toLowerCase(), path: path, role: el.getAttribute('role') || implicitRole(el), name: textOf(el) };
     if (el.tagName === 'A') { const href = el.getAttribute('href'); if (href) node.href = el.href || href; }
-    if ('value' in el && el.value != null && String(el.value) !== '') node.value = String(el.value).slice(0, MAX_TEXT);
+    // Form controls only: HTMLLIElement/HTMLProgressElement also have a \`value\`, and an ordinary <li>
+    // was being reported to the model as \`= "0"\`.
+    if (VALUE_TAGS.has(el.tagName) && el.value != null && String(el.value) !== '') node.value = String(el.value).slice(0, MAX_TEXT);
     if (el.hasAttribute('disabled') || el.getAttribute('aria-disabled') === 'true') node.disabled = true;
     const attributes = attrsOf(el);
     // AI-4 s16: a native \`required\` is a boolean property (getAttribute returns '' → dropped above), so
@@ -203,35 +238,55 @@ export function buildDomTreeExpression(viewportExpansionPx = 0): string {
       if (el.hasAttribute('multiple')) node.multiple = true;
     }
     nodes.push(node);
+    keep.push(true);
+    return nodes.length - 1;
+  };
+  // Retract the weak wrappers this element was nested in: a real control inside them IS the target.
+  const retract = (weakChain) => {
+    for (let i = 0; i < weakChain.length; i++) {
+      const idx = weakChain[i];
+      if (keep[idx]) { keep[idx] = false; dropped++; }
+    }
   };
 
   let scanned = 0;
-  const capped = () => nodes.length >= EMIT_CAP || scanned >= NODE_CAP;
+  // Retracted nodes do not count against the budget, so suppressing noise actually buys page coverage.
+  const capped = () => (nodes.length - dropped) >= EMIT_CAP || scanned >= NODE_CAP;
 
   // Recursive walk piercing OPEN shadow roots + SAME-ORIGIN iframes into one index space. \`chain\` is
   // the boundary-crossing segments to reach the current root; \`pathInRoot\` the child-index steps
   // within it. Closed shadow roots / cross-origin frames read as null and are simply not descended.
-  const visit = (el, pathInRoot, chain) => {
+  const visit = (el, pathInRoot, chain, strongAncestor, weakChain) => {
     if (capped()) return;
     scanned++;
     const fullPath = chain.concat([pathInRoot]);
-    if (isVisible(el) && isInViewport(el) && isInteractive(el) && isTopElement(el)) emit(el, fullPath);
+    let childWeak = weakChain;
+    const kind = (isVisible(el) && isInViewport(el)) ? interactivityOf(el, strongAncestor, weakChain.length > 0) : null;
+    if (kind !== null && isTopElement(el)) {
+      const idx = emit(el, fullPath);
+      if (kind === 'strong') retract(weakChain); else childWeak = weakChain.concat([idx]);
+    }
+    // Propagated whether or not the control itself was emitted: an off-screen or occluded <button> still
+    // means its children's pointer cursor is inherited rather than their own.
+    const childStrong = strongAncestor || isStrong(el);
     if (el.shadowRoot) {
-      visitRoot(el.shadowRoot, fullPath);
+      visitRoot(el.shadowRoot, fullPath, childStrong, childWeak);
     } else if (el.tagName === 'IFRAME') {
       let doc = null;
       try { doc = el.contentDocument; } catch (e) { doc = null; }
-      if (doc) visitRoot(doc, fullPath);
+      if (doc) visitRoot(doc, fullPath, childStrong, childWeak);
     }
     const kids = el.children;
-    for (let j = 0; j < kids.length && !capped(); j++) visit(kids[j], pathInRoot.concat(j), chain);
+    for (let j = 0; j < kids.length && !capped(); j++) visit(kids[j], pathInRoot.concat(j), chain, childStrong, childWeak);
   };
-  const visitRoot = (root, chain) => {
+  const visitRoot = (root, chain, strongAncestor, weakChain) => {
     const kids = root.children;
-    for (let j = 0; j < kids.length && !capped(); j++) visit(kids[j], [j], chain);
+    for (let j = 0; j < kids.length && !capped(); j++) visit(kids[j], [j], chain, strongAncestor, weakChain);
   };
 
-  visitRoot(document, []);
+  visitRoot(document, [], false, []);
+  const kept = [];
+  for (let i = 0; i < nodes.length; i++) { if (keep[i]) kept.push(nodes[i]); }
 
   // S10: how much of the viewport is painted surface the DOM cannot describe. A canvas/webgl region has
   // no child nodes to scan, so a page whose content lives there reads as empty however carefully we walk
@@ -256,6 +311,6 @@ export function buildDomTreeExpression(viewportExpansionPx = 0): string {
     canvasFraction = 0;
   }
 
-  return { url: document.location.href, title: document.title, nodes, canvasFraction };
+  return { url: document.location.href, title: document.title, nodes: kept, canvasFraction };
 })()`;
 }
