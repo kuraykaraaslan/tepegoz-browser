@@ -481,6 +481,30 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 14,
+    up: (db) => {
+      db.exec(`
+        -- Scoped Trust Profiles: the standing posture a user sets for a site, in advance.
+        --
+        -- \`domain\` is UNIQUE rather than the primary key: the key is a UUID so the row can be synced,
+        -- but two live profiles for one site would make "which one is in force" an ordering accident,
+        -- and for a permission record that is the difference between restricted and trusted. The
+        -- CHECK keeps the level a closed set at the storage layer too, so a hand-edited database
+        -- cannot introduce a level the code has no branch for.
+        CREATE TABLE trust_profiles (
+          id         TEXT PRIMARY KEY,
+          domain     TEXT NOT NULL UNIQUE,
+          level      TEXT NOT NULL CHECK (level IN ('trusted', 'default', 'restricted')),
+          device_id  TEXT NOT NULL,
+          updated_at INTEGER NOT NULL,
+          version    INTEGER NOT NULL DEFAULT 1,
+          tombstone  INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE INDEX idx_trust_profiles_live ON trust_profiles (tombstone, domain);
+      `);
+    },
+  },
 ];
 
 /**
