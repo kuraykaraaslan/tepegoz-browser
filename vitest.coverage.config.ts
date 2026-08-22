@@ -72,13 +72,14 @@ export default defineConfig({
         // It entered at S12.97 / B68.62 / F39.43 / L12.97 over 24,326 statements, a scope as large as
         // all 62 packages combined, with 47 test files already running green here unmeasured.
         //
-        // Ratcheted four times the same day — S13.36 after the IPC boundary, the preload invoke
-        // wrapper and the trust-profile host got runtime tests; S14.28 after `ipc-tabs-windows.ts`
-        // (397 lines, 0%); S15.32 once the RENDERER stopped being untestable (`App-helpers.ts` + the
-        // `FlagSelect` custom listbox, the first jsdom/testing-library suites in this app); S16.81 /
-        // B72.97 / F43.75 with the Appearance and Language/Region settings sections. `src/components`
-        // as a directory is at 10.82%. This can only go up; `packages/**` is untouched by it.
-        'apps/desktop/**': { statements: 16, branches: 72, functions: 43, lines: 16 },
+        // Ratcheted five times across 2026-08-22/23 — S13.36 after the IPC boundary, the preload
+        // invoke wrapper and the trust-profile host got runtime tests; S14.28 after
+        // `ipc-tabs-windows.ts` (397 lines, 0%); S15.32 once the RENDERER stopped being untestable
+        // (`App-helpers.ts` + the `FlagSelect` custom listbox, the first jsdom/testing-library suites
+        // in this app); S16.81 with the Appearance and Language/Region settings sections; S18.10 /
+        // B73.49 / F45.24 with the main-menu model and the transfer-activity popup. `src/components`
+        // as a directory went 0% → 17.05%. This can only go up; `packages/**` is untouched by it.
+        'apps/desktop/**': { statements: 18, branches: 73, functions: 45, lines: 18 },
       },
       include: [
         'apps/desktop/src/**',

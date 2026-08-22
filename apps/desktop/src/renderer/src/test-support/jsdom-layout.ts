@@ -9,10 +9,26 @@
  * import side effect — so `grep stubJsdomLayout` finds every file that depends on it.
  *
  * `scrollIntoView` is a no-op: nothing here asserts on scroll position, and jsdom has no viewport to
- * scroll within. Add to this only what a component genuinely calls.
+ * scroll within. `ResizeObserver` never fires: a popup that measures itself to tell the main process
+ * how tall to make its window would otherwise throw on construction, and in jsdom nothing ever changes
+ * size anyway. Add to this only what a component genuinely calls.
  */
 export function stubJsdomLayout(): void {
   Element.prototype.scrollIntoView = function scrollIntoView(): void {
     /* jsdom has no layout; nothing to scroll */
   };
+
+  if (!('ResizeObserver' in globalThis)) {
+    (globalThis as { ResizeObserver?: unknown }).ResizeObserver = class {
+      observe(): void {
+        /* nothing in jsdom ever resizes */
+      }
+      unobserve(): void {
+        /* no-op */
+      }
+      disconnect(): void {
+        /* no-op */
+      }
+    };
+  }
 }

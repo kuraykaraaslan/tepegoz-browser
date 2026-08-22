@@ -114,16 +114,21 @@ everywhere — not re-litigated per phase.
 > First ratchets, same day. Files chosen for what they PROMISE rather than for their size — each one a
 > boundary whose guarantee was written in a docblock and had never executed:
 >
-> | File                               | Before | After    | What had never run                                                                                 |
-> | ---------------------------------- | ------ | -------- | -------------------------------------------------------------------------------------------------- |
-> | `main/ipc/ipc-helpers.ts`          | 45.71% | **100%** | an untrusted frame never reaches a handler; an internal error's text never crosses to the renderer |
-> | `preload/ipc-invoke.ts`            | 0%     | **100%** | a 403 stays a 403 — the permission explainer branches on it                                        |
-> | `main/security/trust-profile-host` | 22%    | **100%** | a failed database open publishes an EMPTY trust set, not a stale one                               |
-> | `main/ipc/ipc-tabs-windows.ts`     | 0%     | **~48%** | the extension-popup capability guard; per-sender-window routing; quit ordering                     |
+> | File                                                   | Before | After      | What had never run                                                                                 |
+> | ------------------------------------------------------ | ------ | ---------- | -------------------------------------------------------------------------------------------------- |
+> | `main/ipc/ipc-helpers.ts`                              | 45.71% | **100%**   | an untrusted frame never reaches a handler; an internal error's text never crosses to the renderer |
+> | `preload/ipc-invoke.ts`                                | 0%     | **100%**   | a 403 stays a 403 — the permission explainer branches on it                                        |
+> | `main/security/trust-profile-host`                     | 22%    | **100%**   | a failed database open publishes an EMPTY trust set, not a stale one                               |
+> | `main/ipc/ipc-tabs-windows.ts`                         | 0%     | **~48%**   | the extension-popup capability guard; per-sender-window routing; quit ordering                     |
+> | `renderer/App-helpers.ts`                              | 0%     | **100%**   | the OS-language fallback that decides whether a Turkish user's first launch is Turkish             |
+> | `renderer/components/FlagSelect.tsx`                   | 0%     | **92.79%** | a hand-written listbox's entire keyboard model and ARIA — two live bugs found                      |
+> | `renderer/components/settings-appearance-language.tsx` | 0%     | **~90%**   | Turkish collation of the region list; theme/colour exclusivity; the glass toggle failing closed    |
+> | `renderer/components/main-menu-model.tsx`              | 0%     | **100%**   | a row is disabled exactly when unwired; every string comes from the injected dictionary            |
+> | `renderer/components/TransferActivityPopup.tsx`        | 0%     | **~95%**   | downloads+uploads as ONE recency-ordered list; both live channels unsubscribed on unmount          |
 >
-> That took the app from S12.97 to **S16.81 / B72.97 / F43.75 / L16.81**, and the floor with it (four
-> ratchets, S12→S13→S14→S15→S16). `main/ipc` as a directory went 2.27% → **13.78%**, and
-> `renderer/src/components` 0% → **10.82%**.
+> That took the app from S12.97 to **S18.10 / B73.49 / F45.24 / L18.10**, and the floor with it (five
+> ratchets, S12→S13→S14→S15→S16→S18). `main/ipc` as a directory went 2.27% → **13.78%**, and
+> `renderer/src/components` 0% → **17.05%**.
 >
 > The settings sections are where "Turkish first-class" stops being a slogan and becomes code, and it
 > had never been executed: the ~270-entry region list is localized through `Intl.DisplayNames` and then
