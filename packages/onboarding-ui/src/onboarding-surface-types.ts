@@ -22,6 +22,8 @@ export interface OnboardingSurfaceProps {
   importBookmarks: (input: BookmarkImportInput) => Promise<BookmarkImportResult>;
   importLogins: (data: string, format: string) => Promise<LoginImportResult>;
   completeOnboarding: () => Promise<void>;
+  /** `process.platform`, injected — decides where the window caption comes from (`captionLayout`). */
+  platform: string;
 }
 
 export const SOURCES: BrowserImportSource[] = ['chrome', 'edge', 'firefox', 'brave', 'other'];

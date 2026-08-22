@@ -8,7 +8,7 @@ import {
   type TabTearBegin,
   type TabTearPoint,
 } from '@tepegoz/tab-strip';
-import { WindowControls } from '@tepegoz/window-controls';
+import { captionLayout, WindowControls } from '@tepegoz/window-controls';
 import { NavToolbar } from '@tepegoz/nav-toolbar';
 import type { OmniboxQuickSettingTarget, OmniboxSuggestion } from '@tepegoz/omnibox';
 
@@ -115,6 +115,11 @@ export interface BrowserChromeProps {
   /** Host-provided controls in the title row, immediately LEFT of the window caption controls (e.g. the
    *  notification-center bell). Interactive, so it opts out of the window drag region. */
   captionLeading?: ReactNode;
+  /**
+   * `process.platform`, injected — the package must not read it, and a user-agent sniff would be a
+   * guess. It decides only where the window caption comes from (see `captionLayout`).
+   */
+  platform: string;
 }
 
 /**
@@ -168,13 +173,20 @@ export function BrowserChrome({
   onToggleBookmark,
   toolbarActions,
   captionLeading,
+  platform,
 }: BrowserChromeProps) {
+  const caption = captionLayout(platform);
   return (
     <>
       {/* Custom window title row for the frameless window: brand, tab strip, a draggable spacer, and
           the caption controls. `-webkit-app-region: drag` on the bar restores OS caption behaviors;
           interactive children opt out with `.app-no-drag`. */}
       <header className="chrome-surface app-drag flex h-9 shrink-0 select-none items-stretch gap-2 border-b border-border bg-surface-raised pl-3">
+        {/* macOS draws its traffic lights over this row; reserve their width so the brand and the first
+            tab do not render underneath them. Zero everywhere else. */}
+        {caption.leadingInset > 0 && (
+          <div style={{ width: caption.leadingInset }} aria-hidden className="shrink-0" />
+        )}
         <div className="flex items-center" role="img" aria-label={t.common.appName}>
           <BrandMark className="h-5 w-5" />
         </div>
@@ -221,18 +233,20 @@ export function BrowserChrome({
         {captionLeading !== undefined && (
           <div className="app-no-drag flex items-center">{captionLeading}</div>
         )}
-        <WindowControls
-          isMaximized={isMaximized}
-          labels={{
-            minimize: t.window.minimize,
-            maximize: t.window.maximize,
-            restore: t.window.restore,
-            close: t.window.close,
-          }}
-          onMinimize={onMinimize}
-          onToggleMaximize={onToggleMaximize}
-          onClose={onClose}
-        />
+        {caption.showControls && (
+          <WindowControls
+            isMaximized={isMaximized}
+            labels={{
+              minimize: t.window.minimize,
+              maximize: t.window.maximize,
+              restore: t.window.restore,
+              close: t.window.close,
+            }}
+            onMinimize={onMinimize}
+            onToggleMaximize={onToggleMaximize}
+            onClose={onClose}
+          />
+        )}
       </header>
       <NavToolbar
         canGoBack={canGoBack}

@@ -1,4 +1,11 @@
-import { app, BrowserWindow, screen, shell, type Rectangle } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  screen,
+  shell,
+  type BrowserWindowConstructorOptions,
+  type Rectangle,
+} from 'electron';
 import { join } from 'node:path';
 import { IpcChannels, type StartupMode, type WindowBounds } from '@tepegoz/desktop-ipc';
 import PreferenceStore from '@tepegoz/preferences';
@@ -152,6 +159,27 @@ export function toggleFullScreen(win: BrowserWindow): void {
  * renderer (browser-style custom title bar). The draggable region uses CSS `-webkit-app-region: drag`,
  * which also restores OS caption behaviors (snap, double-click-to-maximize, system menu).
  */
+/**
+ * Frame options for a frameless window, per platform.
+ *
+ * `frame: false` is right on Windows and Linux, where the renderer draws the caption. On macOS it also
+ * removes the traffic lights, leaving a window with no native way to close it and our Windows-style
+ * buttons on the wrong side. `titleBarStyle: 'hidden'` is the macOS equivalent: chromeless title bar,
+ * traffic lights kept. The renderer reserves space for them (`captionLayout`) and draws none of its own.
+ *
+ * NOTE: written from the platform contract, not verified on a Mac — this project has never run its
+ * suite on macOS (tracked in the Phase 0 report). The DECISION is unit-tested (`caption-layout.test.ts`);
+ * the appearance is not.
+ */
+function frameOptions(): Pick<
+  BrowserWindowConstructorOptions,
+  'frame' | 'titleBarStyle' | 'trafficLightPosition'
+> {
+  if (process.platform !== 'darwin') return { frame: false };
+  // Centred vertically in the 36px (h-9) title row: (36 - 16) / 2 = 10.
+  return { titleBarStyle: 'hidden', trafficLightPosition: { x: 12, y: 10 } };
+}
+
 export function createWindow(opts?: { forceForeground?: boolean }): BrowserWindow {
   // Windows 11 "glass": create the window with the Mica backdrop when supported + enabled. The renderer's
   // `.glass` styles make the shell/bars translucent so the material shows through (see lib/glass.ts).
@@ -181,7 +209,7 @@ export function createWindow(opts?: { forceForeground?: boolean }): BrowserWindo
     minWidth: MIN_WINDOW_WIDTH,
     minHeight: MIN_WINDOW_HEIGHT,
     show: false,
-    frame: false,
+    ...frameOptions(),
     icon: ICON_PATH,
     // Brand navy (logo background) so the frame matches before the renderer paints; transparent under glass.
     backgroundColor: glass ? GLASS_BG : OPAQUE_BG,

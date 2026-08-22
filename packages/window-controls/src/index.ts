@@ -8,3 +8,4 @@ export {
   type WindowControlsProps,
   type WindowControlsLabels,
 } from './window-controls';
+export * from './caption-layout';

@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { useT } from '@tepegoz/i18n/react';
 import { coreDict } from '@tepegoz/i18n';
 import { Badge, BrandMark, Button, cn } from '@tepegoz/ui';
-import { WindowControls } from '@tepegoz/window-controls';
+import { captionLayout, WindowControls } from '@tepegoz/window-controls';
 import type {
   BookmarkImportResult,
   BrowserImportSource,
@@ -30,6 +30,7 @@ export function OnboardingSurface({
   importBookmarks,
   importLogins,
   completeOnboarding,
+  platform,
 }: OnboardingSurfaceProps) {
   const t = useT(onboardingDict);
   const core = useT(coreDict);
@@ -90,20 +91,28 @@ export function OnboardingSurface({
 
   const sourceLabel = t.sources[source];
 
+  const caption = captionLayout(platform);
+
   return (
     <div className="flex h-screen flex-col bg-surface-base text-text-primary">
       <header className="app-drag flex h-9 shrink-0 select-none items-stretch border-b border-border bg-surface-raised pl-3">
+        {/* Reserve the macOS traffic lights' width; zero on every other platform. */}
+        {caption.leadingInset > 0 && (
+          <div style={{ width: caption.leadingInset }} aria-hidden className="shrink-0" />
+        )}
         <div className="flex flex-1 items-center gap-2 text-sm font-semibold">
           <BrandMark className="h-5 w-5" />
           <span>{core.common.appName}</span>
         </div>
-        <WindowControls
-          isMaximized={isMaximized}
-          labels={core.window}
-          onMinimize={onMinimize}
-          onToggleMaximize={onToggleMaximize}
-          onClose={onClose}
-        />
+        {caption.showControls && (
+          <WindowControls
+            isMaximized={isMaximized}
+            labels={core.window}
+            onMinimize={onMinimize}
+            onToggleMaximize={onToggleMaximize}
+            onClose={onClose}
+          />
+        )}
       </header>
 
       <main className="grid min-h-0 flex-1 grid-cols-[minmax(19rem,0.82fr)_minmax(28rem,1.18fr)] overflow-hidden bg-surface-system max-lg:grid-cols-1">
@@ -150,13 +159,22 @@ export function OnboardingSurface({
                   type="button"
                   disabled={i > index + 1 || finishing}
                   onClick={() => setStep(id)}
+                  // The bar stays 8px; the BUTTON is 24px tall so the target meets WCAG 2.2's 2.5.8
+                  // minimum. An 8px-high control is a coin toss for anyone without fine pointer
+                  // control, and it costs nothing to make the hit area bigger than the paint.
                   className={cn(
-                    'h-2 rounded-full transition-colors',
-                    i <= index ? 'bg-primary' : 'bg-surface-sunken',
+                    'flex h-6 items-center',
                     i > index + 1 && 'cursor-not-allowed opacity-60',
                   )}
                   aria-label={t.steps[id].title}
-                />
+                >
+                  <span
+                    className={cn(
+                      'h-2 w-full rounded-full transition-colors',
+                      i <= index ? 'bg-primary' : 'bg-surface-sunken',
+                    )}
+                  />
+                </button>
               ))}
             </div>
           </div>

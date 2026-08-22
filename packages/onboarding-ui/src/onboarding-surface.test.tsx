@@ -15,6 +15,7 @@ function props(overrides: Partial<OnboardingSurfaceProps> = {}): OnboardingSurfa
     importBookmarks: vi.fn(),
     importLogins: vi.fn(),
     completeOnboarding: vi.fn().mockResolvedValue(undefined),
+    platform: 'win32',
     ...overrides,
   };
 }
@@ -54,5 +55,26 @@ describe('OnboardingSurface', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Start browsing' }));
 
     await waitFor(() => expect(completeOnboarding).toHaveBeenCalledTimes(1));
+  });
+});
+
+describe('accessibility of the onboarding chrome', () => {
+  it('gives each step dot a 24px target, not the 8px bar it paints', () => {
+    // WCAG 2.2 §2.5.8. An 8px-high control is a coin toss for anyone without fine pointer control;
+    // the bar stays 8px and the button around it is 24px.
+    render(<I18nProvider locale="en">{<OnboardingSurface {...props()} />}</I18nProvider>);
+    const dot = screen
+      .getAllByRole('button', { name: /./ })
+      .find((b) => b.className.includes('h-6'));
+    expect(dot).toBeDefined();
+  });
+
+  it('draws no caption controls on macOS', () => {
+    render(
+      <I18nProvider locale="en">
+        {<OnboardingSurface {...props({ platform: 'darwin' })} />}
+      </I18nProvider>,
+    );
+    expect(screen.queryByRole('button', { name: 'Close' })).toBeNull();
   });
 });

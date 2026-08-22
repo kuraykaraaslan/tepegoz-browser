@@ -86,6 +86,7 @@ export function AppChrome({
   return (
     <>
       <BrowserChrome
+        platform={window.tepegoz.platform}
         t={{ common: coreT.common, window: coreT.window, browser: browserT }}
         tabs={visibleTabs}
         tabGroups={visibleGroups}
