@@ -3,7 +3,7 @@ import type { ToolError, ToolErrorCode } from '@tepegoz/shared-types';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import CapabilityRegistry from './registry';
 import { critiqueIntent, summarizeArgs } from './intent-critic';
-import type { AuditEntry, ConfirmRequest, InvokeContext } from './types';
+import type { AuditEntry, ConfirmRequest, InvokeContext, BiometricVerifier } from './types';
 
 /**
  * The single Policy Enforcement Point (L5). EVERY tool call — built-in, MCP, skill, adapter — goes
@@ -26,12 +26,27 @@ function toolError(
 export default class ToolGateway {
   private static confirmHandler: ((req: ConfirmRequest) => Promise<boolean>) | null = null;
   private static auditHandler: ((entry: AuditEntry) => void) | null = null;
+  private static biometricVerifier: BiometricVerifier | null = null;
   private static readonly handlerScope = new AsyncLocalStorage<{
     confirmHandler: ((req: ConfirmRequest) => Promise<boolean>) | null;
     auditHandler: ((entry: AuditEntry) => void) | null;
     /** S6 PR4: the run's original request, so the advisory critic can judge alignment against it. */
     goal: string;
   }>();
+
+  /**
+   * Wire the platform authenticator used when policy demands a biometric confirmation (destructive,
+   * financial, kamu write). Absent ⇒ every such call is recorded as `biometricVerified: false`, which is
+   * the honest reading: the policy asked for a fingerprint and the machine had none.
+   *
+   * Deliberately NOT fail-closed. Windows Hello is unimplemented today — the approval modal says so —
+   * and refusing every destructive action on the primary platform would be a worse answer than a
+   * truthful record. But an INSTALLED verifier that says no IS binding: an authenticator whose refusal
+   * can be ignored is decoration.
+   */
+  static setBiometricVerifier(verifier: BiometricVerifier | null): void {
+    ToolGateway.biometricVerifier = verifier;
+  }
 
   /** Wire the HITL prompt (renderer/UI). Without it, every "ask" decision fails safe to denied. */
   static setConfirmHandler(handler: ((req: ConfirmRequest) => Promise<boolean>) | null): void {
@@ -142,6 +157,7 @@ export default class ToolGateway {
       reason: policy.reason,
       riskTier: risk.tier,
       ...(critic !== null ? { critic } : {}),
+      ...(policy.biometric ? { biometricRequired: true } : {}),
     });
 
     if (policy.decision === 'deny') {
@@ -159,7 +175,29 @@ export default class ToolGateway {
           risk,
           ...(ctx.targetUrl !== undefined ? { targetUrl: ctx.targetUrl } : {}),
         }));
-      if (!approved) {
+      // A biometric verifier, when installed, is binding — its refusal overrides a clicked "yes",
+      // because the point of the second factor is that the first one is not enough.
+      let biometricVerified = false;
+      if (approved && policy.biometric) {
+        const verifier = ToolGateway.biometricVerifier;
+        biometricVerified = verifier !== null && (await verifier(toolName, policy.reason));
+      }
+      const allowed =
+        approved &&
+        (!policy.biometric || ToolGateway.biometricVerifier === null || biometricVerified);
+
+      // The SECOND entry: what the human actually answered. Without it the trail records that a
+      // destructive action was proposed and never whether it happened.
+      auditHandler?.({
+        toolName,
+        decision: policy.decision,
+        reason: policy.reason,
+        riskTier: risk.tier,
+        outcome: allowed ? 'approved' : 'refused',
+        ...(policy.biometric ? { biometricRequired: true, biometricVerified } : {}),
+      });
+
+      if (!allowed) {
         return toolError('FORBIDDEN', `Denied at confirmation: ${policy.reason}`, false);
       }
     }

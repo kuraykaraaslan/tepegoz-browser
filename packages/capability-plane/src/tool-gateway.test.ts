@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import type { RiskLevel, ToolError } from '@tepegoz/shared-types';
 import CapabilityRegistry from './registry';
 import ToolGateway from './tool-gateway';
+import type { AuditEntry } from './types';
 import type { InputValidator } from './types';
 import { setIntentCritic } from './intent-critic';
 
@@ -240,5 +241,80 @@ describe('the advisory critic cannot change what happens (S6 PR4)', () => {
       () => ToolGateway.invoke('browser_update_page', { action: 'click', ref: 1 }),
     );
     expect(entries[0]?.critic).toBeUndefined();
+  });
+});
+
+describe('the audit trail records the ANSWER, not just the question', () => {
+  const entries: AuditEntry[] = [];
+
+  function wire(approve: boolean): void {
+    CapabilityRegistry.register({
+      descriptor: {
+        id: 'files_delete_item',
+        description: 'destructive',
+        dangerClass: 'destructive',
+        source: 'builtin',
+        inputSchema: {},
+        requiresIdempotencyKey: false,
+      },
+      inputSchema: passAny,
+      handler: () => 'deleted',
+    });
+    ToolGateway.setConfirmHandler(() => Promise.resolve(approve));
+    ToolGateway.setAuditHandler((e) => entries.push(e));
+  }
+
+  beforeEach(() => {
+    entries.length = 0;
+    CapabilityRegistry.reset();
+    ToolGateway.setBiometricVerifier(null);
+  });
+
+  it('records that a destructive call REQUIRED biometric confirmation', async () => {
+    wire(true);
+    await ToolGateway.invoke('files_delete_item', {}, {});
+    expect(entries[0]?.biometricRequired).toBe(true);
+  });
+
+  it('records the approval, not only the request', async () => {
+    // The gateway used to emit exactly one entry, BEFORE the prompt. The trail said "we asked" and
+    // never "the answer" — for a destructive action, that is the line you would want to read later.
+    wire(true);
+    await ToolGateway.invoke('files_delete_item', {}, {});
+    expect(entries).toHaveLength(2);
+    expect(entries[1]?.outcome).toBe('approved');
+  });
+
+  it('records a refusal just as explicitly', async () => {
+    wire(false);
+    expect(asError(await ToolGateway.invoke('files_delete_item', {}, {})).code).toBe('FORBIDDEN');
+    expect(entries[1]?.outcome).toBe('refused');
+  });
+
+  it('says plainly that no biometric happened when the platform has no authenticator', async () => {
+    // Windows Hello is unimplemented and the approval modal says so. What must not happen is the
+    // journal recording this as if a fingerprint were taken.
+    wire(true);
+    await ToolGateway.invoke('files_delete_item', {}, {});
+    expect(entries[1]?.biometricRequired).toBe(true);
+    expect(entries[1]?.biometricVerified).toBe(false);
+  });
+
+  it('records a real verification when an authenticator IS installed', async () => {
+    wire(true);
+    ToolGateway.setBiometricVerifier(() => Promise.resolve(true));
+    await ToolGateway.invoke('files_delete_item', {}, {});
+    expect(entries[1]?.biometricVerified).toBe(true);
+    expect(entries[1]?.outcome).toBe('approved');
+  });
+
+  it('lets an installed verifier OVERRIDE a clicked yes', async () => {
+    // The whole point of a second factor is that the first one is not enough. An authenticator whose
+    // refusal can be ignored is decoration.
+    wire(true);
+    ToolGateway.setBiometricVerifier(() => Promise.resolve(false));
+    expect(asError(await ToolGateway.invoke('files_delete_item', {}, {})).code).toBe('FORBIDDEN');
+    expect(entries[1]?.outcome).toBe('refused');
+    expect(entries[1]?.biometricVerified).toBe(false);
   });
 });
