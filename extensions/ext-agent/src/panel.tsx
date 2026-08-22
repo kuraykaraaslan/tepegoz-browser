@@ -12,6 +12,7 @@ import { PanelHeader } from './panel-header';
 import { PanelThread } from './panel-thread';
 import { PanelComposer } from './panel-composer';
 import { PanelModals } from './panel-modals';
+import { PANEL_BOUNDS_ATTR } from './panel-dropdown-place';
 
 /**
  * Agent extension panel (the "Do" surface). Each tab group gets its own agent session; the panel
@@ -107,6 +108,9 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
 
   return (
     <div
+      // Bounds every menu portalled out of this panel: the page beside it is a native view painted over
+      // all chrome DOM, so a menu that overflows this rect would vanish behind it (see placeMenu).
+      {...{ [PANEL_BOUNDS_ATTR]: '' }}
       className={cn(
         'absolute inset-0 flex flex-col bg-surface-base',
         autonomy !== 'ask' &&

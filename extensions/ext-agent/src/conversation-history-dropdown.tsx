@@ -110,6 +110,7 @@ export function ConversationHistoryDropdown({
       align="right"
       showChevron={false}
       menuClassName="w-80"
+      testId="agent-history-menu"
       ariaLabel={labels.label}
       title={labels.label}
       triggerClassName={iconButtonClassName}
