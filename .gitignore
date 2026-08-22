@@ -15,6 +15,10 @@ build/
 # Throwaway Electron profiles from local debugging (`--user-data-dir=.something-profile`). These hold a
 # live leveldb whose LOCK file cannot even be read while the app runs, which breaks `prettier --check`.
 .*-profile/
+# `spike-parked-render.spec.ts` names its throwaway profile by port, so the directory is different every
+# run and cannot be cleaned by name after the fact. Left behind, they make `git status` dirty on a tree
+# that only ran the tests.
+.spike-bg-*/
 
 # Test / coverage
 coverage/
