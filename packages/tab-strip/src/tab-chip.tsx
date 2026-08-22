@@ -99,7 +99,15 @@ function TabRouteBadge({
   );
 }
 
-/** The favicon + (unless pinned) the title of a tab — shared by the live chip and the drag overlay. */
+/**
+ * The favicon + (unless pinned) the title of a tab — shared by the live chip and the drag overlay.
+ *
+ * The title appears from a 4.5rem chip up — well below the 7rem the close button needs.
+ * Chrome sizes tabs the same way: a tab keeps a truncated title all the way down and only falls back to
+ * favicon-only once it is genuinely narrow — so a favicon-only tab is always a *thin* tab, never a wide
+ * empty one. Dropping the title at 7rem instead left every tab between 4.5rem and 7rem showing a lone
+ * centered favicon in ~100px of empty chip.
+ */
 export function TabInner({
   tab,
   labels,
@@ -110,7 +118,7 @@ export function TabInner({
       <TabFavicon src={tab.faviconUrl} loading={tab.isLoading} />
       {tab.network !== undefined && <TabRouteBadge network={tab.network} labels={labels} />}
       {!pinned && (
-        <span className="hidden min-w-0 flex-1 truncate @min-[7rem]:block">
+        <span className="hidden min-w-0 flex-1 truncate @min-[4.5rem]:block">
           {tab.isLoading && !tab.title ? '…' : tab.title || labels.untitled}
         </span>
       )}
