@@ -30,3 +30,4 @@ export * from './mandate';
 export * from './policy-bundle';
 export * from './agent-endpoint';
 export * from './supply-chain';
+export * from './trust-profile';

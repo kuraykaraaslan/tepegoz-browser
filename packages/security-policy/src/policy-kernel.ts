@@ -1,6 +1,7 @@
 import type { PolicyDecision, RiskLevel, ToolDescriptor } from '@tepegoz/shared-types';
 import { isSensitiveSite } from './sensitive-site';
 import type { PolicyReason } from './policy-reasons';
+import { applyTrust, profileFor, type TrustRule } from './trust-profile';
 
 /**
  * Deterministic Policy Kernel (L8). Runs in plain code BEFORE the LLM — security is enforced here,
@@ -49,7 +50,49 @@ const SIDE_EFFECT: ReadonlySet<RiskLevel> = new Set<RiskLevel>([
 ]);
 
 export default class PolicyKernel {
+  /**
+   * The user's standing per-site postures. Injected rather than read from a store so the kernel stays
+   * pure and Electron-free; the desktop app loads them from preferences and re-registers on change.
+   *
+   * Wired here, at the one PEP every tool call already passes through, rather than left as a decision
+   * layer with no caller — a trust setting nothing consults is worse than no setting, because the user
+   * believes it took effect.
+   */
+  private static trustProfiles: readonly TrustRule[] = [];
+
+  static setTrustProfiles(profiles: readonly TrustRule[]): void {
+    PolicyKernel.trustProfiles = profiles;
+  }
+
   static evaluate(ctx: PolicyContext): PolicyResult {
+    return PolicyKernel.withTrust(PolicyKernel.baseEvaluate(ctx), ctx);
+  }
+
+  /**
+   * Apply the site's trust profile to the kernel's verdict.
+   *
+   * Runs LAST, on a decision that already exists, which is what makes "can only tighten" checkable:
+   * there is always a baseline to compare against, and `applyTrust` refuses to move a `deny` or to
+   * auto-approve destructive/financial/tainted calls. The reason code is left untouched when nothing
+   * changed, so Permission Debug keeps naming the rule that actually decided.
+   */
+  private static withTrust(policy: PolicyResult, ctx: PolicyContext): PolicyResult {
+    const level = profileFor(ctx.targetUrl, PolicyKernel.trustProfiles);
+    if (level === 'default') return policy;
+    const adjusted = applyTrust(policy, level, {
+      risk: ctx.descriptor.dangerClass,
+      taintedArgs: ctx.taintedArgs,
+    });
+    if (adjusted.decision === policy.decision) return policy;
+    return {
+      ...policy,
+      decision: adjusted.decision,
+      reason:
+        adjusted.changedBy === 'restricted' ? 'trust_profile_restricted' : 'trust_profile_trusted',
+    };
+  }
+
+  private static baseEvaluate(ctx: PolicyContext): PolicyResult {
     const risk = ctx.descriptor.dangerClass;
     const highRisk = HIGH_RISK.has(risk);
 

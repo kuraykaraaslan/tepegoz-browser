@@ -39,6 +39,10 @@ export const POLICY_REASONS = [
    * lookupable. (The union caught exactly that: this path was building its code by template.)
    */
   'egress_possible_secret',
+  /** The user's trust profile for this site skipped a prompt the kernel would otherwise have shown. */
+  'trust_profile_trusted',
+  /** The user's trust profile for this site added a prompt the kernel would not otherwise have shown. */
+  'trust_profile_restricted',
 ] as const;
 
 export type PolicyReason = (typeof POLICY_REASONS)[number];

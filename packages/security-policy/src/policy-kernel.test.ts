@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect } from 'vitest';
 import type { RiskLevel } from '@tepegoz/shared-types';
 import PolicyKernel, { type PolicyContext } from './policy-kernel';
 
@@ -137,5 +137,84 @@ describe('PolicyKernel — model-authored code execution', () => {
     expect(PolicyKernel.evaluate({ descriptor: readTool, taintedArgs: false }).reason).toBe(
       'read_allowed',
     );
+  });
+});
+
+describe('trust profiles, applied through the kernel', () => {
+  const trusted = [
+    { domain: 'github.com', level: 'trusted' as const },
+    { domain: 'bank.test', level: 'trusted' as const },
+  ];
+  const tool = (dangerClass: RiskLevel) => ({ id: 'x_update_y', dangerClass });
+
+  afterEach(() => {
+    PolicyKernel.setTrustProfiles([]);
+  });
+
+  it('skips the prompt for an ordinary change on a trusted site', () => {
+    PolicyKernel.setTrustProfiles(trusted);
+    const r = PolicyKernel.evaluate({
+      descriptor: tool('state_changing'),
+      taintedArgs: false,
+      targetUrl: 'https://github.com/x',
+    });
+    expect(r.decision).toBe('allow');
+    expect(r.reason).toBe('trust_profile_trusted');
+  });
+
+  it('CANNOT unlock a sensitive site, however the user configured it', () => {
+    // The whole point of the invariant. A user who marks their bank "trusted" — by mistake, or because
+    // someone talked them into it — must not thereby hand the agent write access to it.
+    PolicyKernel.setTrustProfiles(trusted);
+    const r = PolicyKernel.evaluate({
+      descriptor: tool('state_changing'),
+      taintedArgs: false,
+      targetUrl: 'https://bank.test/transfer',
+    });
+    expect(r.decision).toBe('deny');
+    expect(r.reason).toBe('sensitive_site_lockout');
+  });
+
+  it('still asks for a destructive action on a trusted site', () => {
+    PolicyKernel.setTrustProfiles(trusted);
+    const r = PolicyKernel.evaluate({
+      descriptor: tool('destructive'),
+      taintedArgs: false,
+      targetUrl: 'https://github.com/x',
+    });
+    expect(r.decision).toBe('ask');
+    expect(r.reason).toBe('destructive_confirm');
+  });
+
+  it('still asks when the arguments came from the page', () => {
+    PolicyKernel.setTrustProfiles(trusted);
+    const r = PolicyKernel.evaluate({
+      descriptor: tool('state_changing'),
+      taintedArgs: true,
+      targetUrl: 'https://github.com/x',
+    });
+    expect(r.decision).toBe('ask');
+    expect(r.reason).toBe('tainted_side_effect');
+  });
+
+  it('forces a prompt for a read on a restricted site', () => {
+    PolicyKernel.setTrustProfiles([{ domain: 'news.test', level: 'restricted' }]);
+    const r = PolicyKernel.evaluate({
+      descriptor: tool('read'),
+      taintedArgs: false,
+      targetUrl: 'https://news.test/a',
+    });
+    expect(r.decision).toBe('ask');
+    expect(r.reason).toBe('trust_profile_restricted');
+  });
+
+  it('behaves exactly as before when no profile is set', () => {
+    const r = PolicyKernel.evaluate({
+      descriptor: tool('state_changing'),
+      taintedArgs: false,
+      targetUrl: 'https://github.com/x',
+    });
+    expect(r.decision).toBe('ask');
+    expect(r.reason).toBe('state_change_confirm');
   });
 });
