@@ -12,6 +12,14 @@ import type { StepOutcome } from './executor';
  * candidate — the resolver only ever surfaces URLs it can point at real evidence for, so the model has a
  * grounded route to prefer over a blind `/blog` guess. No model call and no network here (the sitemap is
  * fetched by the host and passed in) — deterministic and unit-testable, so every model benefits.
+ *
+ * The second rule, learnt from a real failure: **not every goal is a navigation.** "Connect gönder" is
+ * performed by a control on the page the agent already stands on, and a resolver that only knows how to
+ * name URLs will happily ground one — LinkedIn's result cards carry the word "Connect" inside the wrapper
+ * link's accessible name, so the top "route" was the profile of someone the user was already connected
+ * to. So a card blob can no longer be grounded by an action verb alone ({@link rankNavigationCandidates}),
+ * and the controls that do perform the goal are ranked separately ({@link rankActionCandidates}) into a
+ * click steer that OUTRANKS the navigation one.
  */
 
 /** Where a candidate's URL came from. There is deliberately no "guessed" source — see the module note. */
@@ -29,8 +37,20 @@ export interface NavCandidate {
   score: number;
 }
 
-/** A link the resolver can reason about: only `href`, `role`/`tag`, and `name` matter. */
-export type NavLink = Pick<InteractableElement, 'role' | 'name' | 'href' | 'tag'>;
+/** A link the resolver can reason about: only `href`, `role`/`tag`, `name` — and `ref`, so an on-page
+ *  action control can be named by the handle the model actually clicks with. */
+export type NavLink = Pick<InteractableElement, 'role' | 'name' | 'href' | 'tag'> &
+  Partial<Pick<InteractableElement, 'ref'>>;
+
+/** One on-page control that PERFORMS the goal where the agent already stands (click, never navigate). */
+export interface ActionCandidate {
+  /** Snapshot ref — the handle `browser_update_page` clicks with. */
+  ref: number;
+  /** The control's accessible name (page-controlled; capped before it reaches the hint). */
+  label: string;
+  /** How many of the goal's action keywords the label carries (higher = better match). */
+  score: number;
+}
 
 export interface NavGroundingInput {
   /** The user goal (drives relevance scoring). */
@@ -99,6 +119,95 @@ function tokenize(text: string): string[] {
 /** Meaningful goal keywords: tokens that are not stopwords and are long enough to disambiguate. */
 function goalKeywords(goal: string): string[] {
   return [...new Set(tokenize(goal).filter((t) => t.length >= 2 && !STOPWORDS.has(t)))];
+}
+
+/**
+ * Verb stems for things done **on the page the agent is already on** — the Connect/Follow/Apply class —
+ * as opposed to the "take me somewhere" intent this resolver exists to ground. English + Turkish stems;
+ * Turkish is agglutinative, so a stem of 5+ characters also matches by prefix (`gönder` ⊂ `gönderiyor`)
+ * while short stems match whole-token only (`add` must not fire on `address`).
+ */
+const ACTION_STEMS: readonly string[] = [
+  'connect',
+  'invite',
+  'send',
+  'follow',
+  'unfollow',
+  'like',
+  'share',
+  'comment',
+  'apply',
+  'subscribe',
+  'submit',
+  'save',
+  'add',
+  'buy',
+  'purchase',
+  'order',
+  'checkout',
+  'book',
+  'reserve',
+  'register',
+  'message',
+  'accept',
+  'decline',
+  'approve',
+  'confirm',
+  'join',
+  'upload',
+  'download',
+  'rsvp',
+  'gönder',
+  'bağlan',
+  'ekle',
+  'takip',
+  'beğen',
+  'paylaş',
+  'yorum',
+  'başvur',
+  'abone',
+  'satın',
+  'sipariş',
+  'sepet',
+  'kaydet',
+  'rezerv',
+  'mesaj',
+  'davet',
+  'onayla',
+  'kabul',
+  'katıl',
+  'indir',
+  'yükle',
+  'kayıt',
+  'iste',
+];
+
+/** True when a token is an on-page ACTION verb rather than a destination word. Prefix-matches long stems. */
+function isActionToken(token: string): boolean {
+  return ACTION_STEMS.some(
+    (stem) => token === stem || (stem.length >= 5 && token.startsWith(stem)),
+  );
+}
+
+/**
+ * A control's accessible name is a LABEL; a search-result card's wrapper link carries the whole card as
+ * its name (person + headline + location + the word "Connect" + mutual connections). Only the former can
+ * be an action control — this token budget is what tells them apart, and it is why the LinkedIn card link
+ * whose blob happens to contain "Connect" is never offered as the thing to click.
+ */
+const MAX_ACTION_LABEL_TOKENS = 12;
+
+/** Real controls the model can press, ranked ahead of the `div`/`span` wrappers that merely carry the
+ *  same word — a page renders one `<button aria-label="Invite X to connect">` and half a dozen nested
+ *  `<div>Connect</div>` around it, and only the first one says WHO it acts on. */
+const CONTROL_ROLES: ReadonlySet<string> = new Set(['button', 'link', 'menuitem', 'tab', 'option']);
+const CONTROL_TAGS: ReadonlySet<string> = new Set(['button', 'a', 'input', 'summary']);
+
+/** 0 for an element that is a real control, 1 for a wrapper that only looks like one (sorts first). */
+function controlRank(el: NavLink): 0 | 1 {
+  const role = el.role.toLowerCase();
+  const tag = (el.tag ?? '').toLowerCase();
+  return CONTROL_ROLES.has(role) || CONTROL_TAGS.has(tag) ? 0 : 1;
 }
 
 /**
@@ -195,11 +304,22 @@ function isNavigableLink(el: NavLink): el is NavLink & { href: string } {
   );
 }
 
-/** Score the visible on-page links against the goal, deduping by destination (excludes `seen`). */
+/**
+ * Score the visible on-page links against the goal, deduping by destination (excludes `seen`).
+ *
+ * `destinationKeywords` is the goal minus its action verbs, and it exists to reject ONE specific shape:
+ * a link whose accessible name is a whole card blob that scores only because the card happens to contain
+ * the word the user's action verb also uses. That is a LinkedIn search result — the wrapper link around
+ * "Berkay Akar • 2nd … **Connect** … are mutual connections" — and grounding "connect gönder" on it is
+ * exactly how the agent left the list it could act on. A short label like "Checkout" is left alone: it is
+ * genuinely ambiguous between a route and a control, and {@link buildNavigationGuidance} settles that by
+ * preferring the click steer when the control is addressable.
+ */
 function visibleLinkCandidates(
   elements: readonly NavLink[],
   currentUrl: string,
   keywords: readonly string[],
+  destinationKeywords: readonly string[],
   seen: Set<string>,
 ): NavCandidate[] {
   const out: NavCandidate[] = [];
@@ -211,8 +331,13 @@ function visibleLinkCandidates(
     if (seen.has(key)) continue;
     seen.add(key);
     const label = el.name.trim().length > 0 ? el.name.trim() : lastPathSegment(url);
-    const score = relevance(keywords, [...tokenize(label), ...urlTokens(url, currentUrl)]);
-    if (score > 0) out.push({ url, label, evidence: 'visible-link', score });
+    const labelTokens = tokenize(label);
+    const candidateTokens = [...labelTokens, ...urlTokens(url, currentUrl)];
+    const score = relevance(keywords, candidateTokens);
+    if (score <= 0) continue;
+    const isBlob = labelTokens.length > MAX_ACTION_LABEL_TOKENS;
+    if (isBlob && relevance(destinationKeywords, candidateTokens) <= 0) continue;
+    out.push({ url, label, evidence: 'visible-link', score });
   }
   return out.sort((a, b) => b.score - a.score);
 }
@@ -258,11 +383,43 @@ function sitemapCandidates(
  */
 export function rankNavigationCandidates(input: NavGroundingInput): NavCandidate[] {
   const keywords = goalKeywords(input.goal);
+  const destinationKeywords = keywords.filter((k) => !isActionToken(k));
   const seen = new Set<string>([normalizeForCompare(input.currentUrl)]);
   return [
-    ...visibleLinkCandidates(input.elements, input.currentUrl, keywords, seen),
+    ...visibleLinkCandidates(input.elements, input.currentUrl, keywords, destinationKeywords, seen),
     ...sitemapCandidates(input.sitemapUrls ?? [], input.currentUrl, keywords, seen),
   ];
+}
+
+/**
+ * Rank the on-page controls that PERFORM the goal here — the counterpart to the navigation ranking. A
+ * control qualifies when its accessible name carries one of the goal's action verbs AND reads as a label
+ * rather than a card blob ({@link MAX_ACTION_LABEL_TOKENS}). Only elements with a `ref` are returned:
+ * a "click this" steer the model cannot address is worse than silence. Ordered by match strength, then
+ * real controls ahead of look-alike wrappers, then the shorter label. Pure.
+ */
+export function rankActionCandidates(input: NavGroundingInput): ActionCandidate[] {
+  const actionKeywords = goalKeywords(input.goal).filter(isActionToken);
+  if (actionKeywords.length === 0) return [];
+  const out: (ActionCandidate & { tokenCount: number; control: 0 | 1 })[] = [];
+  const seenRefs = new Set<number>();
+  for (const el of input.elements) {
+    if (el.ref === undefined || seenRefs.has(el.ref)) continue;
+    const label = el.name.trim();
+    if (label.length === 0) continue;
+    const tokens = tokenize(label);
+    if (tokens.length === 0 || tokens.length > MAX_ACTION_LABEL_TOKENS) continue;
+    const tokenSet = new Set(tokens);
+    const score = actionKeywords.filter((kw) => tokenSet.has(kw)).length;
+    if (score === 0) continue;
+    seenRefs.add(el.ref);
+    out.push({ ref: el.ref, label, score, tokenCount: tokens.length, control: controlRank(el) });
+  }
+  out.sort(
+    (a, b) =>
+      b.score - a.score || a.control - b.control || a.tokenCount - b.tokenCount || a.ref - b.ref,
+  );
+  return out.map(({ ref, label, score }) => ({ ref, label, score }));
 }
 
 /**
@@ -277,11 +434,42 @@ export function rankNavigationCandidates(input: NavGroundingInput): NavCandidate
  *  "page-state" blob that evicts the real element snapshot. */
 const MAX_HINT_LABEL = 120;
 
+/** How many action controls the click steer names. Enough to show the goal repeats over a list, few
+ *  enough that a page full of "Connect" buttons cannot crowd out the element snapshot. */
+const MAX_ACTION_HINT_CONTROLS = 3;
+
+/** Cap one page-controlled label for interpolation into a hint. */
+function hintLabel(label: string): string {
+  return label.length > MAX_HINT_LABEL ? `${label.slice(0, MAX_HINT_LABEL)}…` : label;
+}
+
+/**
+ * The click steer that OUTRANKS the navigation one: when the control that performs the goal is on this
+ * very page, naming a URL to open is the wrong move — it is how the agent ends up on the profile of
+ * someone it is already connected to instead of pressing Connect in the list it can see.
+ */
+function buildActionGuidance(candidates: readonly ActionCandidate[]): string | null {
+  if (candidates.length === 0) return null;
+  const shown = candidates.slice(0, MAX_ACTION_HINT_CONTROLS);
+  const list = shown.map((c) => `[${String(c.ref)}] ${hintLabel(c.label)}`).join('; ');
+  const more =
+    candidates.length > shown.length
+      ? ` (+${String(candidates.length - shown.length)} more like it in this snapshot)`
+      : '';
+  return (
+    `Action hint: your goal is performed ON THIS PAGE by ${list}${more}. Click by ref with ` +
+    "browser_update_page — do NOT navigate to a control's href, and do NOT open a profile/detail page " +
+    'to look for the same control there. Re-read browser_get_elements after each click (refs change), ' +
+    'and scroll to reach further rows before deciding the page is done.'
+  );
+}
+
 export function buildNavigationGuidance(input: NavGroundingInput): string | null {
+  const action = buildActionGuidance(rankActionCandidates(input));
+  if (action !== null) return action;
   const [top] = rankNavigationCandidates(input);
   if (top === undefined) return null;
-  const label =
-    top.label.length > MAX_HINT_LABEL ? `${top.label.slice(0, MAX_HINT_LABEL)}…` : top.label;
+  const label = hintLabel(top.label);
   const evidence =
     top.evidence === 'visible-link' ? 'a link visible on this page' : "the site's sitemap";
   return (
@@ -297,6 +485,7 @@ const ElementsResultSchema = z.object({
   url: z.string(),
   elements: z.array(
     z.object({
+      ref: z.number().optional(),
       role: z.string(),
       name: z.string(),
       href: z.string().optional(),
@@ -333,6 +522,7 @@ export function buildNavigationGroundingHook(
     const elements: NavLink[] = parsed.data.elements.map((e) => ({
       role: e.role,
       name: e.name,
+      ...(e.ref !== undefined ? { ref: e.ref } : {}),
       ...(e.href !== undefined ? { href: e.href } : {}),
       ...(e.tag !== undefined ? { tag: e.tag } : {}),
     }));

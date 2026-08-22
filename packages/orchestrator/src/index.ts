@@ -28,7 +28,9 @@ export { type RunControl } from './run-control';
 export {
   buildNavigationGuidance,
   buildNavigationGroundingHook,
+  rankActionCandidates,
   rankNavigationCandidates,
+  type ActionCandidate,
   type NavCandidate,
   type NavEvidence,
   type NavGroundingInput,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildNavigationGuidance,
+  rankActionCandidates,
   rankNavigationCandidates,
   type NavLink,
 } from './navigation-grounding';
@@ -183,5 +184,145 @@ describe('buildNavigationGuidance', () => {
     expect(guidance).not.toBeNull();
     expect(guidance!.length).toBeLessThan(500); // fixed prose + capped label + url, never the 2000-char name
     expect(guidance).toContain('…');
+  });
+});
+
+/**
+ * Regression: the LinkedIn "connect gönder" failure. On a people-search page the agent was handed a
+ * navigation hint pointing at a RESULT CARD's profile URL — because the card link's accessible name is
+ * the whole card blob and contains the word "Connect" — and so it left the list page it could act on and
+ * opened the profile of someone the user was already connected to. Reproduced here with the shapes taken
+ * from the real snapshot (`ai_agent_export_2026-08-21_13-24-16`).
+ */
+describe('on-page action goals (the LinkedIn connect regression)', () => {
+  const cardBlob = link(
+    'Berkay Akar • 2nd Software Engineer İzmir, Türkiye Connect Embediting Embediting & Çağla Çağlar are mutual connections',
+    'https://www.linkedin.com/in/berkay-akar-b1026a227/',
+  );
+  const connectControl: NavLink = {
+    ref: 74,
+    role: 'link',
+    tag: 'a',
+    name: 'Invite Berkay Akar to connect',
+    href: 'https://www.linkedin.com/preload/search-custom-invite/?vanityName=berkay-akar-b1026a227',
+  };
+  const searchUrl = 'https://www.linkedin.com/search/results/people/?page=2';
+
+  it('never grounds a ROUTE on a card blob that merely contains the action verb', () => {
+    const out = rankNavigationCandidates({
+      goal: 'bunlara connect gönder',
+      currentUrl: searchUrl,
+      elements: [cardBlob, connectControl],
+    });
+    expect(out.map((c) => c.url)).not.toContain(
+      'https://www.linkedin.com/in/berkay-akar-b1026a227/',
+    );
+  });
+
+  it('ranks the connect control, and NOT the card blob that merely contains the word', () => {
+    const out = rankActionCandidates({
+      goal: 'bunlara connect gönder',
+      currentUrl: searchUrl,
+      elements: [{ ...cardBlob, ref: 51 }, connectControl],
+    });
+    expect(out).toEqual([{ ref: 74, label: 'Invite Berkay Akar to connect', score: 1 }]);
+  });
+
+  it('steers to a CLICK by ref instead of a navigation', () => {
+    const guidance = buildNavigationGuidance({
+      goal: 'bunlara connect gönder',
+      currentUrl: searchUrl,
+      elements: [{ ...cardBlob, ref: 51 }, connectControl],
+    });
+    expect(guidance).toContain('[74] Invite Berkay Akar to connect');
+    expect(guidance).toContain('browser_update_page');
+    expect(guidance).not.toContain('browser_update_location');
+    expect(guidance).not.toContain('linkedin.com/in/berkay-akar');
+  });
+
+  it('names several controls and counts the rest, so a list task is not read as a single action', () => {
+    const controls: NavLink[] = [74, 168, 210, 240].map((ref) => ({
+      ref,
+      role: 'link',
+      tag: 'a',
+      name: `Invite Person ${String(ref)} to connect`,
+      href: `https://www.linkedin.com/preload/search-custom-invite/?vanityName=p${String(ref)}`,
+    }));
+    const guidance = buildNavigationGuidance({
+      goal: 'connect gönder',
+      currentUrl: searchUrl,
+      elements: controls,
+    });
+    expect(guidance).toContain('[74]');
+    expect(guidance).toContain('[210]');
+    expect(guidance).toContain('+1 more');
+    expect(guidance).toContain('scroll');
+  });
+
+  it('ignores a control the model cannot address (no ref) rather than steering at nothing', () => {
+    const out = rankActionCandidates({
+      goal: 'connect gönder',
+      currentUrl: searchUrl,
+      elements: [{ role: 'link', tag: 'a', name: 'Invite Berkay Akar to connect' }],
+    });
+    expect(out).toEqual([]);
+  });
+
+  it('matches Turkish action verbs through their suffixes, and short stems whole-token only', () => {
+    const el = (ref: number, name: string): NavLink => ({
+      ref,
+      role: 'button',
+      tag: 'button',
+      name,
+    });
+    expect(
+      rankActionCandidates({
+        goal: 'ürünü sepete ekle',
+        currentUrl: 'https://shop.example/p/1',
+        elements: [el(3, 'Sepete ekle')],
+      }),
+    ).toHaveLength(1);
+    // "add" is a 3-char stem: whole-token only, so an "Address" label must NOT read as an action control.
+    expect(
+      rankActionCandidates({
+        goal: 'add the item',
+        currentUrl: 'https://shop.example/p/1',
+        elements: [el(4, 'Address')],
+      }),
+    ).toEqual([]);
+  });
+
+  it('still grounds a real navigation when the goal carries a destination word too', () => {
+    const guidance = buildNavigationGuidance({
+      goal: 'open the pricing page',
+      currentUrl: 'https://example.com/',
+      elements: [link('Pricing', 'pricing.html')],
+    });
+    expect(guidance).toContain('browser_update_location');
+    expect(guidance).toContain('https://example.com/pricing.html');
+  });
+});
+
+describe('action-control ranking prefers the real control', () => {
+  it('names the aria-labelled control, not the <div>Connect</div> wrappers around it', () => {
+    const wrapper = (ref: number): NavLink => ({ ref, role: '', tag: 'div', name: 'Connect' });
+    const guidance = buildNavigationGuidance({
+      goal: 'bunlara connect gönder',
+      currentUrl: 'https://www.linkedin.com/search/results/people/',
+      elements: [
+        wrapper(71),
+        wrapper(72),
+        wrapper(73),
+        {
+          ref: 74,
+          role: 'link',
+          tag: 'a',
+          name: 'Invite Berkay Akar to connect',
+          href: 'https://www.linkedin.com/preload/search-custom-invite/?vanityName=berkay-akar',
+        },
+      ],
+    });
+    expect(guidance).toContain('[74] Invite Berkay Akar to connect');
+    expect(guidance?.indexOf('[74]')).toBeLessThan(guidance?.indexOf('[71]') ?? Infinity);
   });
 });
