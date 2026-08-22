@@ -114,7 +114,7 @@ export function TaskModal({ api, initial, onClose, onSaved }: TaskModalProps) {
             type="url"
             value={form.targetUrl}
             disabled={busy}
-            placeholder="https://"
+            placeholder={t.urlPlaceholder}
             onChange={(e) => patch({ targetUrl: e.target.value })}
             className={INPUT}
           />
@@ -157,7 +157,7 @@ export function TaskModal({ api, initial, onClose, onSaved }: TaskModalProps) {
                   type="text"
                   value={form.selector}
                   disabled={busy}
-                  placeholder=".price, #status"
+                  placeholder={t.selectorPlaceholder}
                   onChange={(e) => patch({ selector: e.target.value })}
                   className={INPUT}
                 />

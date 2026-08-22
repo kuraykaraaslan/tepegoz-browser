@@ -236,6 +236,7 @@ export function NewTabPage({
           labels={{
             name: t.favorites.nameLabel,
             url: t.favorites.urlLabel,
+            urlPlaceholder: t.favorites.urlPlaceholder,
             save: t.favorites.save,
             cancel: t.favorites.cancel,
           }}

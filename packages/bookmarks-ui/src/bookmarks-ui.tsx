@@ -205,6 +205,7 @@ export function BookmarksManager({
                   onToggle={toggle}
                   onSelect={setSelectedId}
                   onContextMenu={onContextMenu}
+                  toggleLabel={t.toggleFolder}
                 />
               ))}
             </ul>

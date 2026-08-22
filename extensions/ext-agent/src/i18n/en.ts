@@ -259,6 +259,7 @@ export const en = {
   },
   // "Save as scheduled task" — convert this chat into a recurring task (see the Scheduled Tasks extension).
   scheduleTask: {
+    urlPlaceholder: 'https://',
     action: 'Save as task',
     title: 'Save as scheduled task',
     desc: 'Run this chat automatically on a schedule or when the page changes.',

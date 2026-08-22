@@ -1,6 +1,8 @@
 import type { TasksStrings } from './en';
 
 export const tr: TasksStrings = {
+  selectorPlaceholder: '.price, #status',
+  urlPlaceholder: 'https://',
   title: 'Zamanlanmış görevler',
   subtitle: 'Zamanlanmış ya da sayfa değiştiğinde çalışan ajan sohbetleri.',
   newTask: 'Yeni görev',

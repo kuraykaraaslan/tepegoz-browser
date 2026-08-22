@@ -175,7 +175,7 @@ export function ScheduleTaskModal({
                 type="url"
                 value={targetUrl}
                 disabled={busy}
-                placeholder="https://"
+                placeholder={t.urlPlaceholder}
                 onChange={(e) => setTargetUrl(e.target.value)}
                 className={INPUT}
               />

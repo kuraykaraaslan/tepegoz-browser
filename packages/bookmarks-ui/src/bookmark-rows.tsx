@@ -47,6 +47,7 @@ export function FolderRow({
   onToggle,
   onSelect,
   onContextMenu,
+  toggleLabel,
 }: {
   node: BookmarkManagerNode;
   depth: number;
@@ -56,6 +57,8 @@ export function FolderRow({
   onToggle: (id: string) => void;
   onSelect: (id: string) => void;
   onContextMenu: (id: string, type: BookmarkNodeType) => void;
+  /** Screen-reader label for the expand/collapse control (the leaf holds no dictionary). */
+  toggleLabel: string;
 }) {
   const dndId = `${TREE_PREFIX}${node.id}`;
   const { setNodeRef: setDropRef, isOver } = useDroppable({ id: dndId });
@@ -99,7 +102,7 @@ export function FolderRow({
         {subfolders.length > 0 ? (
           <button
             type="button"
-            aria-label="toggle"
+            aria-label={toggleLabel}
             className="shrink-0"
             onClick={(e) => {
               e.stopPropagation();
@@ -131,6 +134,7 @@ export function FolderRow({
               onToggle={onToggle}
               onSelect={onSelect}
               onContextMenu={onContextMenu}
+              toggleLabel={toggleLabel}
             />
           ))}
         </ul>
