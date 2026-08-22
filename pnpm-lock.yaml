@@ -1743,6 +1743,9 @@ importers:
       '@fortawesome/react-fontawesome':
         specifier: ^3.3.1
         version: 3.3.1(@fortawesome/fontawesome-svg-core@7.3.0)(react@18.3.1)
+      '@tepegoz/i18n':
+        specifier: workspace:*
+        version: link:../i18n
       '@tepegoz/ui':
         specifier: workspace:*
         version: link:../ui

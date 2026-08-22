@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { foldForSearch } from '@tepegoz/i18n';
 import { useT } from '@tepegoz/i18n/react';
 import type { LoginCredentialMeta } from '@tepegoz/desktop-ipc';
 import { passwordUiDict } from './i18n';
@@ -51,8 +52,8 @@ export function CredentialsSettings({ credentials, onAdd, onRemove }: Credential
   const filtered = credentials.filter(
     (c) =>
       c.url.includes(query) ||
-      c.username.toLowerCase().includes(query.toLowerCase()) ||
-      c.title.toLowerCase().includes(query.toLowerCase()),
+      foldForSearch(c.username).includes(foldForSearch(query)) ||
+      foldForSearch(c.title).includes(foldForSearch(query)),
   );
   const canSave = form.url !== '' && form.username !== '' && form.password !== '';
 

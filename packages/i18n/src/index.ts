@@ -55,6 +55,7 @@ export const ALL_SUPPORTED_LTR: boolean = SUPPORTED_LOCALES.every((l) => dir(l) 
 export {
   turkishUpper,
   turkishLower,
+  foldForSearch,
   turkishCompare,
   TURKISH_SPECIAL_LETTERS,
   TURKISH_LAYOUTS,

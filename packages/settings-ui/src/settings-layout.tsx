@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons';
 import { cn } from '@tepegoz/ui';
-import { coreDict } from '@tepegoz/i18n';
+import { coreDict, foldForSearch } from '@tepegoz/i18n';
 import { useT } from '@tepegoz/i18n/react';
 import { settingsDict } from './i18n';
 
@@ -59,10 +59,10 @@ export function SettingsLayout({
     setSearch('');
   }, [initialActive]);
 
-  const q = search.trim().toLowerCase();
+  const q = foldForSearch(search.trim());
   const searching = q.length > 0;
   const isVisible = (section: SettingsSection): boolean =>
-    searching ? section.searchText.toLowerCase().includes(q) : active === section.id;
+    searching ? foldForSearch(section.searchText).includes(q) : active === section.id;
   const anyVisible = sections.some(isVisible);
 
   return (
