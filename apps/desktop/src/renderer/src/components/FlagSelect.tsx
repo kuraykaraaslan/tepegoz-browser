@@ -74,6 +74,8 @@ export function FlagSelect({
   const uid = useId();
   const id = idProp ?? uid;
   const portalId = `flag-select-portal-${id.replaceAll(':', '')}`;
+  const labelId = `${portalId}-label`;
+  const valueId = `${portalId}-value`;
 
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -110,11 +112,6 @@ export function FlagSelect({
     setOpen(false);
     triggerRef.current?.querySelector('button')?.focus();
   }
-
-  // Reset the highlight to the top whenever the filtered set changes via search.
-  useEffect(() => {
-    if (open) setActive(0);
-  }, [q, open]);
 
   useEffect(() => {
     if (!open) {
@@ -197,7 +194,15 @@ export function FlagSelect({
             value={search}
             aria-label={searchPlaceholder}
             placeholder={searchPlaceholder}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              // Reset the highlight WITH the keystroke that changes the filtered set, not from an
+              // effect watching `[q, open]`. That effect also fired on OPEN, one render after
+              // `toggle()` had positioned the highlight on the current value — so the picker always
+              // opened on the first option and `toggle()`'s `findIndex` was dead code. Arrowing from a
+              // language picker then started from the top of the list instead of from your language.
+              setActive(0);
+            }}
             className="w-full rounded-md border border-border bg-surface-base px-2.5 py-1.5 text-sm text-text-primary placeholder:text-text-disabled focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
           />
         </div>
@@ -251,7 +256,11 @@ export function FlagSelect({
   return (
     <div>
       {label !== undefined && (
-        <label htmlFor={id} className="mb-1 block text-sm font-medium text-text-primary">
+        <label
+          id={labelId}
+          htmlFor={id}
+          className="mb-1 block text-sm font-medium text-text-primary"
+        >
           {label}
         </label>
       )}
@@ -265,9 +274,16 @@ export function FlagSelect({
           onKeyDown={onKeyDown}
           aria-haspopup="listbox"
           aria-expanded={open}
+          // A `<label for>` on a labelable element WINS over the element's own contents, so without
+          // this the accessible name was just "Language" and the current selection was never
+          // announced — a native <select> reads out "Language, Türkçe". Naming from the label AND the
+          // value span restores that. This is the Value half of WCAG 4.1.2, and on the language screen
+          // of a Turkish-first product it is the difference between a screen-reader user knowing which
+          // language is selected and having to guess.
+          aria-labelledby={label !== undefined ? `${labelId} ${valueId}` : valueId}
           className="h-9 justify-between gap-2"
         >
-          <span className="flex min-w-0 items-center gap-2">
+          <span id={valueId} className="flex min-w-0 items-center gap-2">
             {selected ? (
               <>
                 <OptionFlag iso2={selected.iso2} flagSrc={selected.flagSrc} />

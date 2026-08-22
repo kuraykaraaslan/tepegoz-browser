@@ -121,8 +121,8 @@ everywhere — not re-litigated per phase.
 > | `main/security/trust-profile-host` | 22%    | **100%** | a failed database open publishes an EMPTY trust set, not a stale one                               |
 > | `main/ipc/ipc-tabs-windows.ts`     | 0%     | **~48%** | the extension-popup capability guard; per-sender-window routing; quit ordering                     |
 >
-> That took the app from S12.97 to **S14.28 / B70.32 / F41.74 / L14.28**, and the floor with it (two
-> ratchets, S12→S13→S14). `main/ipc` as a directory went 2.27% → **13.78%**. `packages/desktop-ipc`
+> That took the app from S12.97 to **S15.32 / B71.96 / F42.88 / L15.32**, and the floor with it (three
+> ratchets, S12→S13→S14→S15). `main/ipc` as a directory went 2.27% → **13.78%**. `packages/desktop-ipc`
 > still ships no unit tests at all, so it remains absent from both lists — its `boundary.ts` is now
 > covered transitively by the two boundary suites, but not directly.
 >
