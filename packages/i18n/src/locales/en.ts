@@ -103,6 +103,19 @@ export const en = {
     },
   },
   errors: {
+    translateNoLocalModel:
+      'No on-device translation model is installed. Install one in Settings, or switch to a cloud provider.',
+    translateNoCloudProvider:
+      'No cloud AI provider key is configured. Add one in Settings → Providers.',
+    localModelNotLoaded: 'That local model is not loaded. Load it and try again.',
+    networkNoSuchConnection: 'That connection no longer exists.',
+    networkChainLoop:
+      'Those connections chain back into each other. Change one of their upstreams and try again.',
+    networkSecretsUnavailable:
+      'The OS keychain is unavailable, so a WireGuard profile cannot be stored safely.',
+    networkBinaryNotFound:
+      'That helper program was not found in the folder you picked. Pick the folder that directly contains the file.',
+    networkTunnelFailed: 'The tunnel did not come up. Check the profile and try again.',
     badRequest: 'Invalid request',
     notFound: 'Not found',
     downloadNotFound: 'That download is no longer in the list.',

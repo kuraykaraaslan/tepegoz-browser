@@ -14,6 +14,7 @@ import {
 import { LocalProvider } from '@tepegoz/local-inference';
 import { isExtensionEnabled } from '@tepegoz/desktop-ipc';
 import { isRunnableProvider, type AIProvider } from '@tepegoz/shared-types';
+import { AppError } from '@tepegoz/libs';
 import CredentialVault from '@tepegoz/credential-vault';
 import PreferenceStore from '@tepegoz/preferences';
 import {
@@ -154,13 +155,17 @@ async function runModelBatch(
 }
 
 async function runLocalBatch(input: TranslateRunBatchInput): Promise<TranslateBatchResult> {
-  if (!registerLocalProvider()) throw new Error('No local translation model is available');
+  if (!registerLocalProvider()) {
+    throw new AppError('No local translation model is available', 503, 'translateNoLocalModel');
+  }
   return runModelBatch('local', input, 'local-llm');
 }
 
 async function runCloudBatch(input: TranslateRunBatchInput): Promise<TranslateBatchResult> {
   const provider = registerExternalProvider();
-  if (provider === null) throw new Error('No cloud AI provider key is available');
+  if (provider === null) {
+    throw new AppError('No cloud AI provider key is available', 503, 'translateNoCloudProvider');
+  }
   return runModelBatch(provider, input, 'external-ai');
 }
 

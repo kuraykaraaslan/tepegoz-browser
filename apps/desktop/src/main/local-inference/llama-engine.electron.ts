@@ -6,7 +6,7 @@ import type {
   LlamaGrammar,
   LlamaModel,
 } from 'node-llama-cpp';
-import { Logger } from '@tepegoz/libs';
+import { AppError, Logger } from '@tepegoz/libs';
 import { contentToText, type CanonMessage } from '@tepegoz/model-gateway';
 import type {
   GenerateOptions,
@@ -66,7 +66,11 @@ class LlamaEngineElectron implements LlamaEngine {
   async load(modelId: string, modelPath: string, ctxSize: number): Promise<LocalModelHandle> {
     const llama = await this.ensureLlama();
     if (llama === null || this.nlc === null) {
-      throw new Error('On-device inference is unavailable on this machine.');
+      throw new AppError(
+        'On-device inference is unavailable on this machine.',
+        503,
+        'inferenceUnavailable',
+      );
     }
     let entry = this.loaded.get(modelId);
     if (entry === undefined) {
@@ -96,7 +100,8 @@ class LlamaEngineElectron implements LlamaEngine {
     opts: GenerateOptions,
   ): Promise<GenerateResult> {
     const entry = this.loaded.get(handle.modelId);
-    if (entry === undefined) throw new Error('Local model not loaded.');
+    if (entry === undefined)
+      throw new AppError('Local model not loaded.', 409, 'localModelNotLoaded');
 
     // Lift system turns; map the rest into chat history, prompting with the last user turn. Local GGUF
     // is a text-only transport (S1 keeps it on the JSON-in-text path via the JSON grammar), so block
@@ -142,7 +147,9 @@ class LlamaEngineElectron implements LlamaEngine {
     let g = this.grammars.get(gbnf);
     if (g === undefined) {
       const llama = await this.ensureLlama();
-      if (llama === null) throw new Error('On-device inference is unavailable.');
+      if (llama === null) {
+        throw new AppError('On-device inference is unavailable.', 503, 'inferenceUnavailable');
+      }
       g = await llama.createGrammar({ grammar: gbnf });
       this.grammars.set(gbnf, g);
     }

@@ -12,7 +12,7 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faFolder, faFolderPlus } from '@fortawesome/free-solid-svg-icons';
+import { faFolder, faFileExport, faFolderPlus } from '@fortawesome/free-solid-svg-icons';
 import { useT } from '@tepegoz/i18n/react';
 import { bookmarksUiDict } from './i18n';
 import { Favicon, FolderRow, ItemRow, TREE_PREFIX } from './bookmark-rows';
@@ -42,6 +42,13 @@ export interface BookmarksManagerProps {
   onOpen: (url: string) => void;
   /** Pop the native right-click menu for a node. */
   onContextMenu: (id: string, type: BookmarkNodeType) => void;
+  /**
+   * Produce the whole collection as Netscape bookmarks HTML — the format every other browser reads.
+   *
+   * Optional so a host that has no export path (a popup, a test) renders the manager unchanged rather
+   * than showing a button that cannot work.
+   */
+  onExport?: () => Promise<string>;
 }
 
 /** Move-into always drops at the folder's end; the store clamps this to the child count. */
@@ -74,6 +81,7 @@ export function BookmarksManager({
   onNewFolder,
   onOpen,
   onContextMenu,
+  onExport,
 }: Readonly<BookmarksManagerProps>) {
   const t = useT(bookmarksUiDict);
   const [roots, setRoots] = useState<BookmarkManagerNode[]>([]);
@@ -162,6 +170,24 @@ export function BookmarksManager({
 
   const activeNode = activeId === null ? null : findNode(roots, stripTree(activeId));
 
+  /**
+   * Hand the file to the user through a normal download rather than a save dialog in main.
+   *
+   * The renderer never touches the filesystem — it receives a string over the bridge and lets the
+   * browser save it, which is the same path the password export already uses and keeps the "renderer
+   * is untrusted" boundary exactly where it is.
+   */
+  async function handleExport(): Promise<void> {
+    if (onExport === undefined) return;
+    const html = await onExport();
+    const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'tepegoz-bookmarks.html';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="flex h-full flex-col bg-surface-system text-text-primary">
       <div className="flex shrink-0 items-center gap-4 border-b border-border px-6 py-3">
@@ -183,6 +209,16 @@ export function BookmarksManager({
           <FontAwesomeIcon icon={faFolderPlus} className="h-3.5 w-3.5" aria-hidden />
           {t.newFolder}
         </button>
+        {onExport !== undefined && (
+          <button
+            type="button"
+            onClick={() => void handleExport()}
+            className="flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-overlay hover:text-text-primary"
+          >
+            <FontAwesomeIcon icon={faFileExport} className="h-3.5 w-3.5" aria-hidden />
+            {t.exportAll}
+          </button>
+        )}
       </div>
 
       <DndContext

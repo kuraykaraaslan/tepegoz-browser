@@ -33,7 +33,12 @@ import WebPermissionBroker from '../web-permissions/permission-broker';
 import { resolveBasicAuth } from '../auth/basic-auth-broker';
 import { resolveCertificateError } from '../auth/certificate-broker';
 import { BlobStore, HistoryStore } from '@tepegoz/persistence';
-import { BookmarkTreeStore, importBookmarksHtmlToStore, isBookmarkable } from '@tepegoz/bookmarks';
+import {
+  BookmarkTreeStore,
+  importBookmarksHtmlToStore,
+  isBookmarkable,
+  serializeBookmarksHtml,
+} from '@tepegoz/bookmarks';
 import FileOperationsHost from '../file-operations/file-operations-host';
 import { getDb } from '../db/database.electron';
 import { handle, handleAsync, onAction, onSignal } from './ipc-helpers';
@@ -233,6 +238,14 @@ export function registerBrowsingIpc(): void {
     const result = importBookmarksHtmlToStore(db, input);
     if (result.imported > 0 || result.folders > 0) broadcastBookmarksChanged();
     return result;
+  });
+  handle(IpcChannels.bookmarksExport, (): string => {
+    // A local-first browser whose data cannot leave it is not local-first. The import side has existed
+    // since Phase 1a; this is the exit path, in the same format, so the export is also a real backup.
+    const db = getDb();
+    return db === null
+      ? serializeBookmarksHtml([])
+      : serializeBookmarksHtml(BookmarkTreeStore.getTree(db));
   });
   handle(IpcChannels.bookmarksCreateFolder, (_event, payload): void => {
     const { parentId, title, index } = BookmarkCreateFolderSchema.parse(payload);

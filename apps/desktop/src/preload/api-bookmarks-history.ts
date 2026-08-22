@@ -36,6 +36,7 @@ export const bookmarksHistoryApi: Pick<
   | 'isBookmarked'
   | 'getBookmarkTree'
   | 'importBookmarks'
+  | 'exportBookmarks'
   | 'createBookmarkFolder'
   | 'renameBookmark'
   | 'removeBookmark'
@@ -70,6 +71,7 @@ export const bookmarksHistoryApi: Pick<
     invoke<boolean>(IpcChannels.bookmarksToggle, { url, title, favicon }),
   isBookmarked: (url: string) => invoke<boolean>(IpcChannels.bookmarksIsBookmarked, url),
   getBookmarkTree: () => invoke<BookmarkTreeNode[]>(IpcChannels.bookmarksTree),
+  exportBookmarks: () => invoke<string>(IpcChannels.bookmarksExport),
   importBookmarks: (input: BookmarkImportInput) =>
     invoke<BookmarkImportResult>(IpcChannels.bookmarksImport, input),
   createBookmarkFolder: (parentId: string, title: string, index?: number) =>

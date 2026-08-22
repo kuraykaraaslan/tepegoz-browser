@@ -79,6 +79,8 @@ export interface UiApi {
   getBookmarkTree(): Promise<BookmarkTreeNode[]>;
   /** Import a browser-exported bookmarks file into the local bookmark tree. */
   importBookmarks(input: BookmarkImportInput): Promise<BookmarkImportResult>;
+  /** The whole collection as Netscape bookmarks HTML. The renderer saves it; main never writes a file. */
+  exportBookmarks(): Promise<string>;
   /** Create a folder under `parentId` (defaults to end); resolves when persisted. */
   createBookmarkFolder(parentId: string, title: string, index?: number): Promise<void>;
   /** Rename a node (bookmark or folder). */
