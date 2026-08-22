@@ -93,7 +93,7 @@ the "everything at once" immaturity trap.
 
 ### Minimal safe-browsing core
 
-- [ ] Safe Browsing v5 **hash-prefix lookup** (URL never sent) + Egress Firewall core (not full adblock/extensions)
+- [~] Safe Browsing v5 **hash-prefix lookup** (URL never sent) — _local core landed and the privacy property is STRUCTURAL, not promised: `checkUrl(url, db)` takes no transport, so it could not send the URL if it wanted to, and `resolveVerdict`'s fetcher is typed to receive four-byte prefixes — a test asserts the hostname and filename appear nowhere in what crosses that boundary. Canonicalization is implemented against the published algorithm and tested with **Google's own spec vectors** (32), because our hash only matches if we canonicalize to the exact string Google hashed — get it wrong and nothing errors, the lookup silently never matches. Fails to `unknown` on a failed lookup, never to `safe`. Two real bugs found by the vectors: a dropped empty query, and directory expansion treating a file name as a directory._ — _**owed: the network half.** Downloading the prefix list and resolving full hashes both need a Google Safe Browsing API key. That is an API-key cost, distinct from the AI program's model-token cost — no model spend clears it._ · Egress Firewall core — _exists (`egress-firewall.ts`, 14 tests) but is **not wired into the app**: nothing in `apps/desktop/src/main` calls it._
 
 ### Test
 
