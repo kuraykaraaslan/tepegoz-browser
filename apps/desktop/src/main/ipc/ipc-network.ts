@@ -1,7 +1,7 @@
 import { basename } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { BrowserWindow, dialog } from 'electron';
-import { Logger } from '@tepegoz/libs';
+import { AppError, Logger } from '@tepegoz/libs';
 import {
   IpcChannels,
   type BinaryStatus,
@@ -221,7 +221,11 @@ export function registerNetworkIpc(): void {
       });
     } else if (input.kind === 'tor') {
       if (input.upstreamConnectionId !== null && !ConnectionPool.has(input.upstreamConnectionId)) {
-        throw new Error(`No such upstream connection: ${input.upstreamConnectionId}`);
+        throw new AppError(
+          `No such upstream connection: ${input.upstreamConnectionId}`,
+          404,
+          'networkNoSuchConnection',
+        );
       }
       ConnectionPool.add({
         ...meta,
@@ -251,8 +255,10 @@ export function registerNetworkIpc(): void {
       if (!VpnSecrets.isAvailable()) {
         // Refused before the picker opens: a WireGuard profile is a private key, and the only place to
         // put it would be plain text on disk.
-        throw new Error(
+        throw new AppError(
           'The OS keychain is unavailable, so a WireGuard profile cannot be stored safely',
+          503,
+          'networkSecretsUnavailable',
         );
       }
       const win = BrowserWindow.fromWebContents(event.sender);
@@ -313,7 +319,11 @@ export function registerNetworkIpc(): void {
       const found = findBinaryInFolder(binary, folder);
       if (found === null) {
         // Naming the folder matters: the usual mistake is picking the parent of the one that has it.
-        throw new Error(`${binary} was not found anywhere under ${folder}`);
+        throw new AppError(
+          `${binary} was not found anywhere under ${folder}`,
+          404,
+          'networkBinaryNotFound',
+        );
       }
       const current = PreferenceStore.getAll().networkBinaries;
       PreferenceStore.update({ networkBinaries: { ...current, [binary]: found } });

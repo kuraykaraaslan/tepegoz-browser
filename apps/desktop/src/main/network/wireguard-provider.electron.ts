@@ -2,7 +2,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { app } from 'electron';
-import { Logger } from '@tepegoz/libs';
+import { AppError, Logger } from '@tepegoz/libs';
 import { probeSocksPort, type NetworkPrivacyProvider } from './connection-provider.electron';
 import { locateBinary } from './vpn-binaries.electron';
 import VpnSecrets from './vpn-secrets.electron';
@@ -81,7 +81,11 @@ export class WireGuardProvider implements NetworkPrivacyProvider {
     } catch (err) {
       await this.disconnect();
       // wireproxy's own message (bad key, unreachable endpoint) is far more useful than "timed out".
-      throw new Error(`wireproxy did not come up: ${stderr.trim() || String(err)}`);
+      throw new AppError(
+        `wireproxy did not come up: ${stderr.trim() || String(err)}`,
+        502,
+        'networkTunnelFailed',
+      );
     } finally {
       rmSync(configPath, { force: true });
     }

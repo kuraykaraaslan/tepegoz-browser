@@ -1,4 +1,4 @@
-import { Logger } from '@tepegoz/libs';
+import { AppError, Logger } from '@tepegoz/libs';
 import PreferenceStore from '@tepegoz/preferences';
 import { partitionKeyFor } from '@tepegoz/tab-engine';
 import type { ConnectionStatus } from '@tepegoz/security-policy';
@@ -208,7 +208,9 @@ const ConnectionPool = {
    */
   async ensureUp(id: string): Promise<{ partition: string; socksPort: number | null }> {
     const entry = entries.get(id);
-    if (entry === undefined) throw new Error(`No such connection: ${id}`);
+    if (entry === undefined) {
+      throw new AppError(`No such connection: ${id}`, 404, 'networkNoSuchConnection');
+    }
     const partition = partitionKeyFor({ connectionId: id });
     if (entry.status === 'up') return { partition, socksPort: entry.socksPort };
 
@@ -216,7 +218,7 @@ const ConnectionPool = {
     // config where A chains to B and B chains back to A would recurse until the stack gave out — so the
     // cycle is refused with a message naming it, rather than crashing the main process.
     if (connecting.has(id)) {
-      throw new Error(`Connection chain loops back to ${id}`);
+      throw new AppError(`Connection chain loops back to ${id}`, 409, 'networkChainLoop');
     }
     connecting.add(id);
     setStatus(id, 'connecting');

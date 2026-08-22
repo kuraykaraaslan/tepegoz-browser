@@ -92,6 +92,19 @@ export const tr: Resources = {
     },
   },
   errors: {
+    translateNoLocalModel:
+      "Cihaz üzerinde çeviri modeli kurulu değil. Ayarlar'dan bir tane kurun ya da bulut sağlayıcıya geçin.",
+    translateNoCloudProvider:
+      "Yapılandırılmış bir bulut yapay zekâ anahtarı yok. Ayarlar → Sağlayıcılar'dan bir tane ekleyin.",
+    localModelNotLoaded: 'Bu yerel model yüklü değil. Yükleyip yeniden deneyin.',
+    networkNoSuchConnection: 'Bu bağlantı artık mevcut değil.',
+    networkChainLoop:
+      'Bu bağlantılar birbirine geri zincirleniyor. Birinin üst bağlantısını değiştirip yeniden deneyin.',
+    networkSecretsUnavailable:
+      'İşletim sistemi anahtarlığı kullanılamıyor, bu yüzden WireGuard profili güvenle saklanamaz.',
+    networkBinaryNotFound:
+      'Bu yardımcı program seçtiğiniz klasörde bulunamadı. Dosyayı doğrudan içeren klasörü seçin.',
+    networkTunnelFailed: 'Tünel açılamadı. Profili kontrol edip yeniden deneyin.',
     badRequest: 'Geçersiz istek',
     notFound: 'Bulunamadı',
     downloadNotFound: 'Bu indirme artık listede yok.',
