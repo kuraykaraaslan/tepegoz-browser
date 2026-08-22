@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { foldForSearch } from '@tepegoz/i18n';
 import {
   DndContext,
   DragOverlay,
@@ -107,12 +108,12 @@ export function BookmarksManager({
   const children = selectedFolder?.children ?? [];
 
   const searchResults = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = foldForSearch(query.trim());
     if (q.length === 0) return null;
     const all: BookmarkManagerNode[] = [];
     roots.forEach((r) => collectBookmarks(r, all));
     return all.filter(
-      (b) => b.title.toLowerCase().includes(q) || (b.url ?? '').toLowerCase().includes(q),
+      (b) => foldForSearch(b.title).includes(q) || foldForSearch(b.url ?? '').includes(q),
     );
   }, [roots, query]);
 

@@ -33,6 +33,36 @@ export function turkishLower(input: string): string {
   return input.toLocaleLowerCase('tr-TR');
 }
 
+/**
+ * Case-fold a string for SUBSTRING SEARCH over user text — correctly for Turkish AND English.
+ *
+ * Plain `toLowerCase()` breaks Turkish search, and it breaks it silently:
+ *
+ *     'İSTANBUL'.toLowerCase()  ->  'i̇stanbul'   (i + U+0307 COMBINING DOT ABOVE)
+ *
+ * so a bookmark titled "İSTANBUL Gezisi" is NOT found by typing `istanbul`. The mirror case is worse
+ * because it looks like it works: `'ISPARTA'.toLowerCase()` gives `'isparta'` with a DOTTED i, which a
+ * Turkish user searching `ısparta` will never match.
+ *
+ * `turkishLower` is not the fix either — it is locale-correct and therefore wrong here:
+ * `'ITEM'.toLocaleLowerCase('tr')` is `'ıtem'`, so switching search to it would break English while
+ * fixing Turkish. Search must satisfy both at once, because the UI language and the language of the
+ * user's own bookmarks are independent.
+ *
+ * The behaviour here is not newly invented: it is the omnibox's, lifted out of
+ * `omnibox-suggest.ts` where it had been correct and private while four other search surfaces
+ * (bookmarks, extensions, credentials, settings) used the naive `toLowerCase()` and were broken. One
+ * definition matters more than which definition — a query that behaves differently in the address bar
+ * and in the bookmarks manager is worse than either rule applied consistently.
+ *
+ * Fold the dotless `ı` into `i`, lowercase, then decompose and drop combining marks. That collapses all
+ * four members of the i family AND makes search accent-insensitive (`sisli` finds `Şişli`), which is
+ * what someone hunting for a page wants: nobody reliably types `ı` vs `i`, or reaches for `ş`, mid-search.
+ */
+export function foldForSearch(input: string): string {
+  return input.replaceAll('ı', 'i').toLocaleLowerCase('en-US').normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
 /** Turkish-collation comparison (ç, ğ, ı, ö, ş, ü sort in their correct places). */
 export function turkishCompare(a: string, b: string): number {
   return a.localeCompare(b, 'tr-TR');

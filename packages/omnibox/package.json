@@ -14,10 +14,11 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@tepegoz/ui": "workspace:*",
     "@fortawesome/fontawesome-svg-core": "^7.2.0",
     "@fortawesome/free-solid-svg-icons": "^7.2.0",
-    "@fortawesome/react-fontawesome": "^3.3.1"
+    "@fortawesome/react-fontawesome": "^3.3.1",
+    "@tepegoz/i18n": "workspace:*",
+    "@tepegoz/ui": "workspace:*"
   },
   "peerDependencies": {
     "react": "^18 || ^19"

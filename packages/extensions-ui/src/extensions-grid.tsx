@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { foldForSearch } from '@tepegoz/i18n';
 import { Card, Toggle } from '@tepegoz/ui';
 import { useT } from '@tepegoz/i18n/react';
 import { extensionsDict } from './i18n';
@@ -28,9 +29,9 @@ export interface ExtensionsGridProps {
 export function ExtensionsGrid({ items, onToggle }: ExtensionsGridProps) {
   const t = useT(extensionsDict);
   const [search, setSearch] = useState('');
-  const q = search.trim().toLowerCase();
+  const q = foldForSearch(search.trim());
   const shown = items.filter((it) =>
-    q.length === 0 ? true : `${it.name} ${it.description}`.toLowerCase().includes(q),
+    q.length === 0 ? true : foldForSearch(`${it.name} ${it.description}`).includes(q),
   );
 
   return (

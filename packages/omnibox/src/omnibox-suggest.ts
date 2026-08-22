@@ -8,6 +8,8 @@
  * unit-testable and reusable. Ranking is intentionally simple and stable (no time-of-day, no `Math.random`).
  */
 
+import { foldForSearch } from '@tepegoz/i18n';
+
 export type OmniboxSuggestionKind =
   'navigate' | 'search' | 'history' | 'bookmark' | 'tab' | 'calc' | 'quick-setting';
 
@@ -150,15 +152,7 @@ export function looksNavigable(input: string): boolean {
 
 function matches(needle: string, ...haystacks: string[]): boolean {
   if (needle.length === 0) return true;
-  return haystacks.some((h) => normalizeSearch(h).includes(needle));
-}
-
-function normalizeSearch(input: string): string {
-  return input
-    .toLocaleLowerCase('en-US')
-    .replaceAll('ı', 'i')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
+  return haystacks.some((h) => foldForSearch(h).includes(needle));
 }
 
 /** The typed text itself: navigate a URL, else search the web. Only shown in the unscoped view. */
@@ -279,7 +273,7 @@ export function buildOmniboxSuggestions(
   labels: OmniboxSuggestLabels,
 ): OmniboxSuggestion[] {
   const { scope, term } = parseOmniboxQuery(query);
-  const needle = normalizeSearch(term);
+  const needle = foldForSearch(term);
 
   // Nothing typed and no scope prefix → no suggestions. A bare `tab:` / `history:` / `bookmark:`
   // (empty term) still lists everything in that source, which is the point of the prefix.
