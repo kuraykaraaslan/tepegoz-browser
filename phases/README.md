@@ -121,8 +121,15 @@ everywhere — not re-litigated per phase.
 > | `main/security/trust-profile-host` | 22%    | **100%** | a failed database open publishes an EMPTY trust set, not a stale one                               |
 > | `main/ipc/ipc-tabs-windows.ts`     | 0%     | **~48%** | the extension-popup capability guard; per-sender-window routing; quit ordering                     |
 >
-> That took the app from S12.97 to **S15.32 / B71.96 / F42.88 / L15.32**, and the floor with it (three
-> ratchets, S12→S13→S14→S15). `main/ipc` as a directory went 2.27% → **13.78%**. `packages/desktop-ipc`
+> That took the app from S12.97 to **S16.81 / B72.97 / F43.75 / L16.81**, and the floor with it (four
+> ratchets, S12→S13→S14→S15→S16). `main/ipc` as a directory went 2.27% → **13.78%**, and
+> `renderer/src/components` 0% → **10.82%**.
+>
+> The settings sections are where "Turkish first-class" stops being a slogan and becomes code, and it
+> had never been executed: the ~270-entry region list is localized through `Intl.DisplayNames` and then
+> sorted with `localeCompare` in the UI locale, which is the only reason ç/ğ/ı/ö/ş/ü land where a
+> Turkish reader looks for them instead of after z. That is now asserted against real ICU, not a stub —
+> both end-to-end and on the specific letters that make it matter. `packages/desktop-ipc`
 > still ships no unit tests at all, so it remains absent from both lists — its `boundary.ts` is now
 > covered transitively by the two boundary suites, but not directly.
 >

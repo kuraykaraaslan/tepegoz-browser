@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { stubJsdomLayout } from '../test-support/jsdom-layout';
 import { FlagSelect, type FlagOption } from './FlagSelect';
 
 /**
@@ -20,11 +21,7 @@ import { FlagSelect, type FlagOption } from './FlagSelect';
  * rect but its existence does not depend on the numbers, and position is not what is under test.
  */
 
-// jsdom implements no layout, so `scrollIntoView` is absent — the component calls it to keep the
-// highlighted option visible. Stubbed rather than guarded in the component: scrolling is a real
-// behaviour on a real screen, and a `typeof === 'function'` guard in production code to satisfy a test
-// environment is the tail wagging the dog.
-Element.prototype.scrollIntoView = vi.fn();
+stubJsdomLayout();
 
 const OPTIONS: FlagOption[] = [
   { value: '', label: 'System default' },
