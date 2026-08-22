@@ -129,3 +129,5 @@ export {
   type InstallTier,
   type SupplyChainVerdict,
 } from './supply-chain-gate';
+export * from './safe-browsing';
+export * from './safe-browsing-canonical';
