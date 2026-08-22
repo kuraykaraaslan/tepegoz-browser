@@ -57,6 +57,7 @@ export const tr: AppStrings = {
     unhideTab: 'Göster',
     unhideAll: 'Tümünü göster',
     hiddenTabs: 'Gizli sekmeler',
+    showFullHistory: 'Tüm geçmişi göster',
     // Sistem tepsisi (kapatınca tepsiye) — uygulama çalışır durumda kalır; arka plan sekmeleri + ajan canlı.
     trayShow: "Tepegöz'ü göster",
     trayQuit: 'Çıkış',

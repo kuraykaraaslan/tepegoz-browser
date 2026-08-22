@@ -4,6 +4,7 @@
  * surface by `api.ts`.
  */
 import type { ContentBounds } from './contract';
+import type { NavHistoryDirection } from '@tepegoz/navigation';
 import type {
   FindInPageQuery,
   FindInPageResult,
@@ -45,6 +46,9 @@ export interface TabsApi {
   setTabHidden(id: string, hidden: boolean): void;
   /** Pop the native "Hidden tabs" menu (list of hidden tabs to unhide), anchored to the sender window. */
   showHiddenTabsMenu(): void;
+  /** Pop the ACTIVE tab's back/forward history dropdown (right-click a nav button), Chrome-style.
+   *  Main owns the list and the jump — the renderer only says which button was clicked. */
+  showNavHistoryMenu(direction: NavHistoryDirection): void;
   /** Create a group from `memberIds` (empty/omitted → the active tab). */
   createTabGroup(memberIds?: string[]): void;
   /** Reorder a whole group's run to `toIndex` among the non-member tabs. */

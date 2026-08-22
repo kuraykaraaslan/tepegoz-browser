@@ -37,6 +37,12 @@ export interface NavToolbarProps {
   onForward: () => void;
   onReload: () => void;
   onHome: () => void;
+  /** Right-click on the back button — Chrome pops that tab's back-history dropdown here. The list
+   *  itself is the host's business (it lives where the history does); this package only reports the
+   *  gesture. Omit to leave the button with no context menu. */
+  onBackContextMenu?: (() => void) | undefined;
+  /** Right-click on the forward button (same contract as `onBackContextMenu`). */
+  onForwardContextMenu?: (() => void) | undefined;
   /** The main (hamburger) menu control — rendered at the toolbar's trailing edge. The host supplies the
    *  whole element (button + its dropdown) so this package stays presentational and bridge-agnostic. */
   menu: ReactNode;
@@ -77,6 +83,8 @@ export function NavToolbar({
   onForward,
   onReload,
   onHome,
+  onBackContextMenu,
+  onForwardContextMenu,
   menu,
   currentUrl,
   omniboxPlaceholder,
@@ -97,6 +105,10 @@ export function NavToolbar({
         aria-label={labels.back}
         disabled={!canGoBack}
         onClick={onBack}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          onBackContextMenu?.();
+        }}
         className={NAV_BTN}
       >
         <FontAwesomeIcon icon={faArrowLeft} className="h-4 w-4" aria-hidden />
@@ -106,6 +118,10 @@ export function NavToolbar({
         aria-label={labels.forward}
         disabled={!canGoForward}
         onClick={onForward}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          onForwardContextMenu?.();
+        }}
         className={NAV_BTN}
       >
         <FontAwesomeIcon icon={faArrowRight} className="h-4 w-4" aria-hidden />

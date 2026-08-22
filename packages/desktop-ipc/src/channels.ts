@@ -57,6 +57,8 @@ export const IpcChannels = {
   tabsSetHidden: 'tabs:set-hidden',
   /** Renderer→main: pop the native "Hidden tabs" menu (anchored to the caption button) to unhide. */
   tabsHiddenMenu: 'tabs:hidden-menu',
+  /** Renderer→main: pop the active tab's back/forward history dropdown (right-click a nav button). */
+  tabsHistoryMenu: 'tabs:history-menu',
   tabsGroupCreate: 'tabs:group-create',
   tabsGroupMove: 'tabs:group-move',
   tabsGroupUpdate: 'tabs:group-update',

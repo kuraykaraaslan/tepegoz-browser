@@ -16,6 +16,7 @@ import {
   type TabStripGeometry,
   type TepegozApi,
 } from '@tepegoz/desktop-ipc';
+import type { NavHistoryDirection } from '@tepegoz/navigation';
 import { invoke } from './ipc-invoke';
 
 /** Window chrome + tabs/tab-groups + popup/submenu/page-menu bridge methods. Split out of
@@ -42,6 +43,7 @@ export const windowTabsApi: Pick<
   | 'setTabPinned'
   | 'setTabHidden'
   | 'showHiddenTabsMenu'
+  | 'showNavHistoryMenu'
   | 'createTabGroup'
   | 'moveTabGroup'
   | 'updateTabGroup'
@@ -141,6 +143,9 @@ export const windowTabsApi: Pick<
   },
   showHiddenTabsMenu: () => {
     ipcRenderer.send(IpcChannels.tabsHiddenMenu);
+  },
+  showNavHistoryMenu: (direction: NavHistoryDirection) => {
+    ipcRenderer.send(IpcChannels.tabsHistoryMenu, direction);
   },
   createTabGroup: (memberIds?: string[]) => {
     ipcRenderer.send(IpcChannels.tabsGroupCreate, { memberIds });

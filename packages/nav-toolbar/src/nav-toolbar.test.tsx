@@ -53,6 +53,31 @@ describe('NavToolbar', () => {
     expect(h.onHome).toHaveBeenCalledTimes(1);
   });
 
+  it('reports a right-click on back/forward so the host can pop the history dropdown', () => {
+    const onBackContextMenu = vi.fn();
+    const onForwardContextMenu = vi.fn();
+    const h = renderToolbar({
+      canGoBack: true,
+      canGoForward: true,
+      onBackContextMenu,
+      onForwardContextMenu,
+    });
+    fireEvent.contextMenu(screen.getByRole('button', { name: LABELS.back }));
+    expect(onBackContextMenu).toHaveBeenCalledTimes(1);
+    fireEvent.contextMenu(screen.getByRole('button', { name: LABELS.forward }));
+    expect(onForwardContextMenu).toHaveBeenCalledTimes(1);
+    // Right-click opens the dropdown; it must not ALSO navigate a step.
+    expect(h.onBack).not.toHaveBeenCalled();
+    expect(h.onForward).not.toHaveBeenCalled();
+  });
+
+  it('suppresses the browser default menu so only the host menu shows', () => {
+    renderToolbar({ canGoBack: true, onBackContextMenu: vi.fn() });
+    const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    screen.getByRole('button', { name: LABELS.back }).dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
   it('hides the bookmark star entirely when no toggle handler is injected', () => {
     renderToolbar();
     expect(screen.queryByRole('button', { name: LABELS.bookmarkAdd })).toBeNull();

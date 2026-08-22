@@ -92,6 +92,10 @@ export interface BrowserChromeProps {
   onForward: () => void;
   onReload: () => void;
   onHome: () => void;
+  /** Right-click on the back button — the host pops that tab's back-history dropdown. */
+  onBackContextMenu?: (() => void) | undefined;
+  /** Right-click on the forward button — the host pops that tab's forward-history dropdown. */
+  onForwardContextMenu?: (() => void) | undefined;
   /** The main (hamburger) menu control (button + its dropdown), supplied by the host. */
   menu: ReactNode;
   onNavigate: (input: string) => void;
@@ -162,6 +166,8 @@ export function BrowserChrome({
   onForward,
   onReload,
   onHome,
+  onBackContextMenu,
+  onForwardContextMenu,
   menu,
   onNavigate,
   onSuggest,
@@ -263,6 +269,8 @@ export function BrowserChrome({
         onForward={onForward}
         onReload={onReload}
         onHome={onHome}
+        onBackContextMenu={onBackContextMenu}
+        onForwardContextMenu={onForwardContextMenu}
         menu={menu}
         currentUrl={currentUrl}
         omniboxPlaceholder={t.browser.omniboxPlaceholder}

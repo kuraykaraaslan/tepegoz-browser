@@ -147,6 +147,8 @@ export function AppChrome({
         canGoForward={tabs.canGoForward}
         onBack={() => window.tepegoz.tabGoBack()}
         onForward={() => window.tepegoz.tabGoForward()}
+        onBackContextMenu={() => window.tepegoz.showNavHistoryMenu('back')}
+        onForwardContextMenu={() => window.tepegoz.showNavHistoryMenu('forward')}
         onReload={() => window.tepegoz.tabReload()}
         onHome={() => window.tepegoz.tabHome()}
         captionLeading={

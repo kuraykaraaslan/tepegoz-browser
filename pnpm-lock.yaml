@@ -1073,6 +1073,9 @@ importers:
       '@tepegoz/extension-sdk':
         specifier: workspace:*
         version: link:../extension-sdk
+      '@tepegoz/navigation':
+        specifier: workspace:*
+        version: link:../navigation
       '@tepegoz/persistence':
         specifier: workspace:*
         version: link:../persistence

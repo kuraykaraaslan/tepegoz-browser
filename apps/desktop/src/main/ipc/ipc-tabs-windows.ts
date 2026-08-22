@@ -8,6 +8,7 @@ import {
   CreateBackgroundTabSchema,
   CreateTabInputSchema,
   ExtensionIdSchema,
+  NavHistoryDirectionSchema,
   NavigateInputSchema,
   PageMenuActionSchema,
   PageMenuContributionActionSchema,
@@ -30,6 +31,7 @@ import PopupWindowManager from '../popup-window';
 import { manifestById } from '../../shared/extensions';
 import { showTabContextMenu } from '../menus/tab-context-menu';
 import { showHiddenTabsMenu } from '../menus/hidden-tabs-menu';
+import { showNavHistoryMenu } from '../menus/nav-history-menu';
 import { markQuitting } from '../quit-state';
 import { showBookmarkContextMenu } from '../menus/bookmark-context-menu';
 import { showExtensionContextMenu } from '../menus/extension-context-menu';
@@ -156,6 +158,17 @@ export function registerTabsWindowsIpc(): void {
     if (!isTrustedAppUrl(event.senderFrame?.url ?? '')) return;
     const win = BrowserWindow.fromWebContents(event.sender);
     if (win) showHiddenTabsMenu(win);
+  });
+  // Native back/forward history dropdown — anchored to the sender's window, like every other menu.
+  ipcMain.on(IpcChannels.tabsHistoryMenu, (event: IpcMainEvent, payload: unknown) => {
+    if (!isTrustedAppUrl(event.senderFrame?.url ?? '')) return;
+    const parsed = NavHistoryDirectionSchema.safeParse(payload);
+    if (!parsed.success) {
+      Logger.warn('Ignored tabs:history-menu: invalid payload');
+      return;
+    }
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) showNavHistoryMenu(win, parsed.data);
   });
   // Native bookmark context menu — also needs the sender's window to anchor the popup.
   ipcMain.on(IpcChannels.bookmarksContextMenu, (event: IpcMainEvent, payload: unknown) => {
