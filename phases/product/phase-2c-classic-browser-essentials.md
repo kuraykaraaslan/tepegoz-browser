@@ -30,7 +30,7 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       bookmark manager, private-mode chrome, Permissions Center, omnibox command hints)
 - [ ] ADRs accepted: **Download Trust Model** (agent-initiated download class + quarantine policy);
       **Page-Translation** provider boundary (local model vs API; sensitive-site lockout) — no code before acceptance
-- [ ] Coverage gate (S78/B85/F85/L78) + self-review/code-review + UAT signoff + migration-safe DB
+- [ ] Coverage gate (S80/B85/F86/L80) + self-review/code-review + UAT signoff + migration-safe DB
 
 ## Tasks
 

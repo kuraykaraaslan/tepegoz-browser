@@ -22,7 +22,7 @@ deterministic-automation supply.
 - [ ] **First-run Magic Moment**: import bookmarks/history → an on-device digest renders with a visible
       "computed locally, 0 tokens, 0 bytes sent" badge; nothing leaves the device
 - [ ] **i18n:** en+tr keys added for new surfaces (timeline/snapshots, Tidy preview, highlight/research canvas + export, onboarding import digest, trust-lens badges + Güven Turu)
-- [ ] Coverage gate (S78/B85/F85/L78) + self-review/code-review + UAT signoff + migration-safe DB
+- [ ] Coverage gate (S80/B85/F86/L80) + self-review/code-review + UAT signoff + migration-safe DB
 
 ## Tasks
 

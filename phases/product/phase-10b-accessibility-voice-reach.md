@@ -24,7 +24,7 @@ position competitors won't copy quickly, built almost entirely on existing seams
       prompts, family-profile management); en+tr voices wired
 - [ ] ADR accepted: **ADR-0023** (Assistive Mode / voice-confirmed HITL trust model)
 - [ ] WCAG 2.2 AA verified on all new surfaces + IME regression matrix unaffected
-- [ ] Coverage gate (S78/B85/F85/L78) + self-review/code-review + UAT signoff + migration-safe DB
+- [ ] Coverage gate (S80/B85/F86/L80) + self-review/code-review + UAT signoff + migration-safe DB
 
 ## Tasks
 

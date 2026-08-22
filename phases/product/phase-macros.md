@@ -184,5 +184,5 @@ without the Manifest-V3 death, the opaque error codes, or the `EVAL` security ho
 
 i18n en+tr for all new surfaces · zod `safeParse` at every new IPC/IR/recorder boundary · every
 agent-callable capability behind the ToolGateway PEP · `AppError` contract · determinism-first (model
-only for self-healing/ambiguity) · secrets redacted, never inlined · coverage gate (S78/B85/F85/L78) ·
+only for self-healing/ambiguity) · secrets redacted, never inlined · coverage gate (S80/B85/F86/L80) ·
 migration-safe DB · **NO AI attribution trailer**.

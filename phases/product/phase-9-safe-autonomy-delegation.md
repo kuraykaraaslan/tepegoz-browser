@@ -31,7 +31,7 @@ Windows Hello, Effect Ledger fencing, tepegöz-as-MCP-server) + Phase 2 (Integra
       **ADR-0018** (Governed Agent Endpoints)
       _(land as [ADR-0033](../../docs/adr/0033-transaction-mandate-kernel.md), [ADR-0034](../../docs/adr/0034-verifiable-policy-bundles.md), [ADR-0035](../../docs/adr/0035-governed-agent-endpoints.md) — all three numbers were already claimed before this phase document was written; see each ADR's numbering note.)_
 - [ ] Red-team: injection cannot exceed an active mandate, widen a bundle, or escalate a scoped token
-- [ ] Coverage gate (S78/B85/F85/L78) + self-review/code-review + UAT signoff + migration-safe DB
+- [ ] Coverage gate (S80/B85/F86/L80) + self-review/code-review + UAT signoff + migration-safe DB
 
 > **What actually runs today (2026-08-20).** The Mandate coverage/consumption logic, the Policy Bundle
 > narrowing check, and the Agent Endpoint token gate are all real and tested (38 tests across

@@ -38,7 +38,7 @@ Effect Ledger + perception-observation events. Narrative: **"Demonstrate once, r
       (restricted unattended trust profile)
       _(land as [ADR-0031](../../docs/adr/0031-recipe-compiler-trust-model.md) and [ADR-0032](../../docs/adr/0032-restricted-unattended-trust-profile.md) — both numbers were already claimed before this phase document was written; see each ADR's numbering note.)_
 - [ ] Red-team: a stale/poisoned recipe cannot perform a side-effect without re-passing Policy Kernel + HITL
-- [ ] Coverage gate (S78/B85/F85/L78) + self-review/code-review + UAT signoff + migration-safe DB
+- [ ] Coverage gate (S80/B85/F86/L80) + self-review/code-review + UAT signoff + migration-safe DB
 
 > **What actually runs today (2026-08-20).** The Recipe IR schema, the referential-integrity checks over
 > it, the model-free assertion evaluator, the hard/soft gate, and the unattended-profile narrowing

@@ -27,7 +27,7 @@ append-only Journal.
       Cost/Risk contract, Data Rights panel, Compliance Pack export)
 - [x] ADR accepted: **ADR-0014** (NotaryService: hash-chained Journal + signed Replay Receipts + anchoring)
       _(lands as [ADR-0030](../../docs/adr/0030-notary-service.md) — ADR-0014 was already claimed by an earlier, unrelated, accepted ADR before this phase document was written; see the numbering note at the top of ADR-0030.)_
-- [ ] Coverage gate (S78/B85/F85/L78) + self-review/code-review + UAT signoff + migration-safe DB (chain fields
+- [ ] Coverage gate (S80/B85/F86/L80) + self-review/code-review + UAT signoff + migration-safe DB (chain fields
       are **additive**, append-only preserved)
 
 > **What actually runs today (2026-08-19).** The hash-chain math, the Ed25519 checkpoint signing, the

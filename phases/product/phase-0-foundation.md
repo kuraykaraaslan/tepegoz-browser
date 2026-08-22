@@ -82,7 +82,7 @@ No product features; the decisions made here would force a full rewrite if wrong
 ### CI/CD
 
 - [x] `.github/workflows/ci.yml` — push/PR: frozen-lockfile install → turbo typecheck/lint/test/build + `pnpm audit` (report) + **AI-trailer commit-policy job**
-- [x] coverage gate (S78/B85/F85/L78) _(enforced in CI over 61 packages. On the original 27-package scope today's code measures S91.29/B88.85/F91.84/L91.29.)_ — _still open: reject focused/skipped tests_
+- [x] coverage gate (S80/B85/F86/L80) _(enforced in CI over 62 packages. On the original 27-package scope today's code measures S91.29/B88.85/F91.84/L91.29.)_ — _still open: reject focused/skipped tests_
 - [x] `.github/workflows/release.yml` — tag-driven **per-OS matrix** (fail-fast:false), native rebuild per-OS; packaging/signing step = TODO (see below)
 - [ ] Start Windows code-signing identity (Azure Trusted Signing / EV) — _**deferred to the production gate**, permanently, per the ship line. Distribution concern, not a build concern; revisit only when a real release is cut. Everything below that depends on a certificate (update **signature verification**) is deferred with it and may not be claimed until then._
 

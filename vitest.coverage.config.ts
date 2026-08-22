@@ -9,37 +9,50 @@ import { defineConfig } from 'vitest/config';
  * root config would hijack every package-local `vitest run` (their cwd-relative include would match
  * nothing → "No test files found"). Only `pnpm coverage` loads this file, via --config.
  *
- * SCOPE: every package that ships unit tests. It used to list 28 of them, which is the failure mode a
- * coverage gate is most prone to — the boundary drawn around the code that already passes. Left out
- * were `credential-vault` (the key crypto), `human-input`, `notary`, `macro-engine`, `http` and
- * `agent-runtime`, so the number said "80%" about a scope chosen to say 80%.
+ * SCOPE: every `packages/*` that ships unit tests — 62 of them. It used to list 28, which is the
+ * failure mode a coverage gate is most prone to: the boundary drawn around the code that already
+ * passes. Left out were `credential-vault` (the key crypto), `human-input`, `notary`, `macro-engine`,
+ * `http` and `agent-runtime`, so the number said "80%" about a scope chosen to say 80%.
  *
- * Two exclusions remain, and both are mechanical rather than discretionary:
- *  - `packages/persistence` — better-sqlite3 is rebuilt per-runtime (Electron ABI locally), so its
- *    tests cannot run in this single Node pass. They run under `pnpm test:electron`.
+ * `packages/persistence` rejoined on 2026-08-22. Its exclusion had outlived its reason by one
+ * migration: the comment here still said "better-sqlite3 is rebuilt per-runtime, so its tests cannot
+ * run in this single Node pass — they run under `pnpm test:electron`", but the database moved to
+ * Node's built-in `node:sqlite` and `test:electron` no longer exists. Its 10 test files had been
+ * running green under `turbo run test` the whole time and simply were not being measured. Adding them
+ * RAISED statements (79.75 → 80.14), which is the tell that the exclusion was never protecting a
+ * number — it was just stale.
+ *
+ * One exclusion remains, and it is not discretionary:
  *  - `packages/ui` — vendored kui-react fork (see packages/ui/_FORK.md), explicitly not repo code.
  *
- * THRESHOLDS are the measured floor of the widened scope, not an aspiration. Widening the scope
- * necessarily lowered the number: the same gate now covers ~2x the code. Ratchet them UP as coverage
+ * NOT IN SCOPE, said plainly: `apps/desktop`. It ships 47 test files that run under `turbo run test`
+ * and are not measured here. This is a real gap, not a definition — measured on 2026-08-22, adding it
+ * takes the gate to **S46.63 / B83.17 / F72.08 / L46.63** over 48,618 statements, because the renderer
+ * (`App.tsx` and every component) sits near 0% and `src/main` at ~10%. It is recorded in
+ * `phases/README.md` as owed work rather than papered over: the README used to claim this gate covered
+ * "all of `apps/desktop`", and it never has.
+ *
+ * THRESHOLDS are the measured floor of the scope, not an aspiration. Ratchet them UP as coverage
  * lands; never widen the exclusion list to protect a number.
  */
 export default defineConfig({
   test: {
     include: ['packages/*/src/**/*.test.{ts,tsx}'],
-    exclude: ['**/node_modules/**', 'packages/persistence/**'],
+    exclude: ['**/node_modules/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text-summary', 'text'],
-      // Measured floor on 2026-08-21 after the Electron 43 upgrade: S78.95 / B85.87 / F85.76 / L78.95.
+      // Measured floor on 2026-08-22 with `packages/persistence` back in scope:
+      // S80.14 / B85.83 / F86.53 / L80.14 over 238 test files, 0 skipped.
       // Measured on a CLEAN tree, which is the only number CI can reproduce — measuring with
       // work-in-progress present reads ~0.15 high and puts the gate permanently just out of reach.
-      // Up from S77.90 / F83.84 because the SQLite-backed suites stopped skipping: the on-disk addon had
-      // been built for the Electron ABI, so 63 persistence tests and the bookmarks store tests had been
-      // silently sitting out every run. 1845 tests, 0 skipped.
-      // Worth reading against the gate it replaces (S80 / B70 / F80 / L80 over 28 packages): doubling
-      // the scope cost 2 points of statements and RAISED the branch bar by 15, because B70 was slack
-      // enough that no package was ever held to it. Ratchet up; never widen `exclude` to protect these.
-      thresholds: { statements: 78, branches: 85, functions: 85, lines: 78 },
+      // Thresholds are floor(measured), the same rule the previous line used (78.95 → 78). That leaves
+      // statements/lines only 0.14 of margin: one uncovered file trips this gate, which is what a
+      // ratchet is FOR. If it trips, add the test — do not lower the number back.
+      // Worth reading against the gate it replaces (S80 / B70 / F80 / L80 over 28 packages): more than
+      // doubling the scope held statements at 80 and RAISED the branch bar by 15, because B70 was slack
+      // enough that no package was ever held to it.
+      thresholds: { statements: 80, branches: 85, functions: 86, lines: 80 },
       include: [
         'packages/agent-eval/src/**',
         'packages/agent-runtime/src/**',
@@ -89,6 +102,7 @@ export default defineConfig({
         'packages/password-provider-google-csv/src/**',
         'packages/password-ui/src/**',
         'packages/password-vault/src/**',
+        'packages/persistence/src/**',
         'packages/preferences/src/**',
         'packages/recipe-compiler/src/**',
         'packages/screenshots/src/**',

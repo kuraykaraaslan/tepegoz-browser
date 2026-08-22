@@ -68,7 +68,7 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 - [x] **Threat Model updated** ([`docs/THREAT-MODEL.md`](../../docs/THREAT-MODEL.md)): a `VPN/Tor tunnel` trust boundary, thirteen tunnel-specific threat rows (drop-without-saying-so, unbound partition, DNS, WebRTC, chrome-side fetches, popup escape, group-inheritance misbinding, rebind transition, cross-tab bleed, partition teardown, unfiltered partition, app-issued HTTP, encrypted-tunnel blind spot) and two residual-risk entries
 - [x] **i18n:** en+tr full parity for all new surfaces (tab + group context-menu entries, route picker, per-tab status indicator, reload-on-switch notice, connection management + disclosure copy)
       _(parity enforced by the existing `keyPaths` tests in both `apps/desktop/src/i18n` and `@tepegoz/settings-ui`.)_
-- [ ] Coverage (S78/B85/F85/L78) + self-review/code-review + UAT signoff + migration-safe DB
+- [ ] Coverage (S80/B85/F86/L80) + self-review/code-review + UAT signoff + migration-safe DB
 
 > **What actually runs today (2026-08-20).** 5a works, with real tunnels, and one honest boundary:
 > **the browser bundles no VPN.** It runs WireGuard in user space through `wireproxy`, runs `tor` the same
