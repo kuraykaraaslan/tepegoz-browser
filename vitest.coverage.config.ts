@@ -37,7 +37,7 @@ import { defineConfig } from 'vitest/config';
  */
 export default defineConfig({
   test: {
-    include: ['packages/*/src/**/*.test.{ts,tsx}'],
+    include: ['packages/*/src/**/*.test.{ts,tsx}', 'apps/desktop/src/**/*.test.{ts,tsx}'],
     exclude: ['**/node_modules/**'],
     coverage: {
       provider: 'v8',
@@ -52,8 +52,33 @@ export default defineConfig({
       // Worth reading against the gate it replaces (S80 / B70 / F80 / L80 over 28 packages): more than
       // doubling the scope held statements at 80 and RAISED the branch bar by 15, because B70 was slack
       // enough that no package was ever held to it.
-      thresholds: { statements: 80, branches: 85, functions: 86, lines: 80 },
+      // TWO scopes, each held to its OWN measured floor, and deliberately NO global threshold.
+      //
+      // Vitest applies glob thresholds IN ADDITION to the global one, never instead of it — its source
+      // says so outright: "Global threshold is for all files, even if they are included by glob
+      // patterns" (`resolveThresholds`). So a single global bar plus a per-app override does not work:
+      // the global bar would be checked against the blend of both scopes, and admitting `apps/desktop`
+      // at S12.97 would force it down to ~46 for everyone. Omitting the global keys leaves that group
+      // with no thresholds, and Vitest skips a group whose thresholds are all undefined.
+      //
+      // The blended "Coverage summary" that `text-summary` prints (~S46) is therefore NOT a gate — it is
+      // the honest arithmetic of a 24k-statement app sitting next to 24k statements of packages. The two
+      // numbers below are the gate.
+      thresholds: {
+        // The mature scope. Floor(measured 2026-08-22): S80.14 / B85.85 / F86.53 / L80.14.
+        'packages/**': { statements: 80, branches: 85, functions: 86, lines: 80 },
+        // `apps/desktop` joined the gate on 2026-08-22 at its own floor, which is the only honest way to
+        // add it — the alternative was to keep claiming it was covered while it was not measured at all.
+        // It entered at S12.97 / B68.62 / F39.43 / L12.97 over 24,326 statements, a scope as large as
+        // all 62 packages combined, with 47 test files already running green here unmeasured.
+        //
+        // Ratcheted the same day to floor(S13.36 / B69.75 / F41.58 / L13.36) after the IPC boundary,
+        // the preload invoke wrapper and the trust-profile host got runtime tests. This number can only
+        // go up; `packages/**` is untouched by it either way.
+        'apps/desktop/**': { statements: 13, branches: 69, functions: 41, lines: 13 },
+      },
       include: [
+        'apps/desktop/src/**',
         'packages/agent-eval/src/**',
         'packages/agent-runtime/src/**',
         'packages/auth-prompt-ui/src/**',

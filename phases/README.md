@@ -78,7 +78,7 @@ auto-update **signature verification**, which cannot be honestly tested without 
 that gate. Until then **no phase may assert a signed-artifact guarantee**, and Phase 0's DoD closes
 explicitly without it.
 
-**Horizontal gates.** Coverage (**S80/B85/F86/L80 over 62 packages**), i18n en+tr parity and UAT signoff
+**Horizontal gates.** Coverage (**S80/B85/F86/L80 over 62 packages, plus `apps/desktop` at its own ratcheting floor**), i18n en+tr parity and UAT signoff
 appear as a separate box in _every_ phase's DoD but are one body of work. They are done once and ticked
 everywhere — not re-litigated per phase.
 
@@ -99,12 +99,26 @@ everywhere — not re-litigated per phase.
 > `test:electron` no longer exists. Its 10 test files had been passing under `turbo run test` and simply
 > were not measured; adding them **raised** statements 79.75 → 80.14, which is how you can tell the
 > exclusion was stale rather than protective. (2) This paragraph used to claim the widened scope covered
-> "all of `apps/desktop`". **It never has, and it still does not.** `apps/desktop` ships 47 test files
-> that run green under `turbo run test` and are not measured here. Measured 2026-08-22, putting it in
-> scope takes the gate to **S46.63 / B83.17 / F72.08 / L46.63** over 48,618 statements — the renderer
-> (`App.tsx` and every component) is at ~0% and `src/main` at ~10%. That is owed work, recorded here as a
-> number instead of a wrong sentence. `packages/desktop-ipc` ships no unit tests at all, so it is absent
-> from both lists.
+> "all of `apps/desktop`". It never had — 47 test files ran green there and none of them were measured.
+> Rather than delete the sentence, the app was put IN the gate, at its own measured floor.
+>
+> **`apps/desktop` is now gated separately, and the number is small on purpose.** It entered at
+> **S12.97 / B68.62 / F39.43 / L12.97** over 24,326 statements — a scope as large as all 62 packages
+> combined, with the renderer (`App.tsx` and every component) near 0% and `src/main` at ~10%. Two bars,
+> not one blended bar: Vitest applies a glob threshold IN ADDITION to the global one ("Global threshold
+> is for all files, even if they are included by glob patterns" — `resolveThresholds`), so a single
+> global bar would have had to fall to ~46 to admit the app. `vitest.coverage.config.ts` therefore
+> declares no global threshold and two scoped ones — `packages/**` at 80 and `apps/desktop/**` at its
+> own floor — and the blended figure `text-summary` prints (~S46) is arithmetic, not a gate.
+>
+> First ratchet, same day: the IPC boundary (`ipc-helpers.ts` 45.71% → **100%** statements/functions),
+> the preload invoke wrapper (0% → **100%**) and the trust-profile host (22% → **100%**) got runtime
+> tests, taking the app to **S13.36 / B69.75 / F41.58 / L13.36** and the floor with it. Those three were
+> chosen over larger files because each is a security boundary whose promise was written down but never
+> executed: that an untrusted frame never reaches a handler, that an internal error's text never crosses
+> to the renderer, and that a failed database open publishes an EMPTY trust set instead of a stale one.
+> `packages/desktop-ipc` still ships no unit tests at all, so it remains absent from both lists — its
+> `boundary.ts` is now covered transitively by the two boundary suites, but not directly.
 >
 > Ratchet these up as coverage lands. Never widen the exclusion list to protect a number.
 
@@ -196,7 +210,7 @@ These apply in every phase; a phase DoD does not close without them:
 - [ ] **Zod boundary `safeParse`:** IPC, LLM tool-call args (untrusted!), MCP, Skills, adapters, Journal, Policy inputs
 - [ ] **AppError contract:** service throws → boundary catches → `{message, statusCode}`
 - [ ] **Security:** renderer = untrusted; secure `createWindow()` + fuses; secrets only in main + `safeStorage`; redaction in Journal/logs
-- [ ] **DoD gates:** self-review/code-review + coverage (S80/B85/F86/L80 over 62 packages) + migration-safe DB + UAT signoff
+- [ ] **DoD gates:** self-review/code-review + coverage (S80/B85/F86/L80 over 62 packages, plus `apps/desktop` at its own ratcheting floor) + migration-safe DB + UAT signoff
 - [ ] **i18n day-0 (mandatory) — per-package ([ADR-0016](../docs/adr/0016-per-package-i18n.md)):** the owning package/extension declares its feature strings in its **own** `src/i18n/{en,tr,index}.ts` via `defineDict({ en, tr })` (typing `tr` as `typeof en` → a missing/mismatched Turkish key is a **build error**, per dict) + a co-located parity test (`keyPaths` from `@tepegoz/i18n/testing`). Only the shared core (`common` · `window` · `errors`) lives in `@tepegoz/i18n`. React surfaces **self-localize** via `@tepegoz/i18n/react` `useT(dict)` — no `t` prop-drilling; presentational **leaf** packages stay string-free and take `labels` via props; the **main process stays React-free** and resolves strings with `pick(dict, mainLocale())` (`mainStrings()`) — native menu/dialog/notification/tray included. **NO hardcoded UI strings.** **en (source) + tr (full parity), first-class** — each phase ships its surfaces' strings in the **owner's** dict, in the same PR — never deferred.
 - [ ] **Determinism-first:** rule-based CDP wherever possible; the model is used only for understanding/ambiguity
 - [ ] **At phase start** re-read the relevant ruleset `_manifest.json` `blocking_rules` (especially `database-change-delivery.md` + `deployment-readiness.md` before any release/migration)
