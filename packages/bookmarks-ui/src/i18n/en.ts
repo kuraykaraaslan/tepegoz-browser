@@ -7,6 +7,8 @@ export const en = {
   noResults: 'No matching bookmarks',
   bar: 'Bookmarks bar',
   other: 'Other bookmarks',
+  /** Screen-reader label for the folder expand/collapse control. */
+  toggleFolder: 'Expand or collapse folder',
 };
 
 export type BookmarksUiStrings = typeof en;

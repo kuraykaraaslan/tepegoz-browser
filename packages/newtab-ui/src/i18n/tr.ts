@@ -8,6 +8,7 @@ export const tr: NewTabStrings = {
   aiButton: 'Yapay zekâ',
   aiHint: 'Ajana sor',
   favorites: {
+    urlPlaceholder: 'https://',
     empty: 'Henüz kısayol yok. Eklediklerin burada görünür.',
     add: 'Kısayol ekle',
     edit: 'Düzenle',

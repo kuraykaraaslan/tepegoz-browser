@@ -9,4 +9,5 @@ export const tr: BookmarksUiStrings = {
   noResults: 'Eşleşen yer imi yok',
   bar: 'Yer imi çubuğu',
   other: 'Diğer yer imleri',
+  toggleFolder: 'Klasörü aç veya kapat',
 };

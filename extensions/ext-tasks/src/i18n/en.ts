@@ -1,4 +1,8 @@
 export const en = {
+  /** CSS-selector example in the page-change watch field. */
+  selectorPlaceholder: '.price, #status',
+  /** Format hint in the task URL field. */
+  urlPlaceholder: 'https://',
   title: 'Scheduled tasks',
   subtitle: 'Agent chats that run on a schedule or when a page changes.',
   newTask: 'New task',

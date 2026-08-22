@@ -244,6 +244,7 @@ export const tr: AgentStrings = {
   },
   // "Göreve çevir" — bu sohbeti tekrarlı bir göreve dönüştür (bkz. Zamanlanmış Görevler eklentisi).
   scheduleTask: {
+    urlPlaceholder: 'https://',
     action: 'Göreve çevir',
     title: 'Zamanlanmış göreve çevir',
     desc: 'Bu sohbeti zamanlanmış olarak ya da sayfa değişince otomatik çalıştır.',

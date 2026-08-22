@@ -14,7 +14,7 @@ export function ShortcutDialog({
   title: string;
   initialName: string;
   initialUrl: string;
-  labels: { name: string; url: string; save: string; cancel: string };
+  labels: { name: string; url: string; urlPlaceholder: string; save: string; cancel: string };
   onCancel: () => void;
   onSave: (name: string, url: string) => void;
 }>) {
@@ -74,7 +74,7 @@ export function ShortcutDialog({
             type="text"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://"
+            placeholder={labels.urlPlaceholder}
             inputMode="url"
             className={`mt-1.5 ${inputClass}`}
           />

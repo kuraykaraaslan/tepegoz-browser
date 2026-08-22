@@ -11,6 +11,7 @@ export const en = {
   aiHint: 'Ask the agent',
   /** The shortcuts grid below the search box (the user's own list, independent of bookmarks). */
   favorites: {
+    urlPlaceholder: 'https://',
     empty: 'No shortcuts yet. Add one to see it here.',
     /** The "+" tile that opens the add-shortcut dialog. */
     add: 'Add shortcut',
