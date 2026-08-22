@@ -185,7 +185,7 @@ function ExtensionRow({
         title={pinLabel}
         onClick={() => onTogglePin(manifest.id)}
         className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md hover:bg-surface-raised ${
-          pinned ? 'text-primary' : 'text-text-secondary'
+          pinned ? 'text-primary-on-surface' : 'text-text-secondary'
         }`}
       >
         <Icon name={pinned ? 'unpin' : 'pin'} />

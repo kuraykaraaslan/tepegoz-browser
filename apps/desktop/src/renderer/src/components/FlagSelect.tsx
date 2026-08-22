@@ -220,7 +220,9 @@ export function FlagSelect({
                 onClick={() => commit(opt.value)}
                 className={cn(
                   'flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors',
-                  isSelected ? 'bg-primary-subtle font-medium text-primary' : 'text-text-primary',
+                  isSelected
+                    ? 'bg-primary-subtle font-medium text-primary-on-surface'
+                    : 'text-text-primary',
                   isActive && !isSelected && 'bg-surface-overlay',
                 )}
               >
