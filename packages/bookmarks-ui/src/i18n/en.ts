@@ -2,6 +2,7 @@ export const en = {
   title: 'Bookmarks',
   search: 'Search bookmarks',
   newFolder: 'New folder',
+  exportAll: 'Export',
   empty: 'No bookmarks yet',
   emptyFolder: 'This folder is empty',
   noResults: 'No matching bookmarks',
