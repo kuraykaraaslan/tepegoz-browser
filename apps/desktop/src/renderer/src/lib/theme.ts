@@ -1,3 +1,5 @@
+import { AA_NON_TEXT, AA_TEXT, contrastRatio, relativeLuminance } from '@tepegoz/ui';
+
 /**
  * Theme application shared by every renderer window (main App + native menu/notification popups +
  * extension popups). Two modes:
@@ -25,6 +27,7 @@ const CUSTOM_VARS = [
   '--primary-hover',
   '--primary-active',
   '--primary-fg',
+  '--primary-on-surface',
 ] as const;
 
 /** A valid 6-digit hex color, e.g. `#7c3aed`. */
@@ -37,10 +40,62 @@ function toRgb(hex: string): [number, number, number] {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
-/** Relative luminance (0 = black, 1 = white) — used to decide light-vs-dark text. */
+/**
+ * Relative luminance, WCAG's definition — re-exported from `@tepegoz/ui` rather than reimplemented.
+ *
+ * This used to average the raw sRGB channels with no gamma linearization, which reads high for every
+ * mid-tone: `#808080` scored 0.50 instead of 0.22, `#06aec4` 0.55 instead of 0.34. The value decided
+ * light-vs-dark text on a custom theme colour, so for six of the colours tested it was decided from
+ * the wrong number.
+ */
 export function luminance(hex: string): number {
-  const [r, g, b] = toRgb(hex);
-  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  return relativeLuminance(hex);
+}
+
+/** The candidate text colours a custom theme picks between. */
+const LIGHT_TEXT = '#f8fafc';
+const DARK_TEXT = '#0f172a';
+
+/**
+ * Mix `base` toward white or black in 5% steps until the result clears `minRatio` against `base`.
+ *
+ * Replaces the fixed shade amounts the derived tokens used. A constant amount cannot hold a contrast
+ * promise, because how far 38% travels depends entirely on where it starts: at `shade(base, 0.38)` the
+ * focus ring measured 3.39:1 on one preset and 2.09:1 on another, so seven of the eight shipped presets
+ * had a focus indicator below the 3:1 that WCAG 1.4.11 asks for. Solving for the ratio instead of
+ * guessing an amount is what makes the promise hold for a colour nobody has tried yet — and the picker
+ * accepts any colour at all.
+ */
+function shadeUntil(base: string, towardLight: boolean, minRatio: number): string {
+  for (let step = 1; step <= 20; step++) {
+    const candidate = shade(base, (towardLight ? 1 : -1) * (step / 20));
+    if (contrastRatio(candidate, base) >= minRatio) return candidate;
+  }
+  return towardLight ? '#ffffff' : '#000000';
+}
+
+/**
+ * The accent has to satisfy TWO constraints at once, which is why it is not just another `shadeUntil`.
+ *
+ * It sits on the page as a focus ring and a fill, so it needs 3:1 against the surface — and it carries
+ * a label, so one of the two text colours needs 4.5:1 against IT. Solving only the first leaves a
+ * mid-tone accent whose own label is unreadable: on `#e0e0e0` the 3:1 accent gave its label 4.22:1.
+ * Both constraints, one search.
+ */
+function accentFor(base: string, towardLight: boolean): string {
+  for (let step = 1; step <= 20; step++) {
+    const candidate = shade(base, (towardLight ? 1 : -1) * (step / 20));
+    const onSurface = contrastRatio(candidate, base) >= AA_NON_TEXT;
+    const labelFits = contrastRatio(bestTextOn(candidate), candidate) >= AA_TEXT;
+    if (onSurface && labelFits) return candidate;
+  }
+  return towardLight ? '#ffffff' : '#000000';
+}
+
+/** Whichever of the two text colours actually contrasts better — not a luminance threshold.
+ *  Thresholding picks a side; this picks the winner, which is the thing that was wanted all along. */
+function bestTextOn(base: string): string {
+  return contrastRatio(LIGHT_TEXT, base) >= contrastRatio(DARK_TEXT, base) ? LIGHT_TEXT : DARK_TEXT;
 }
 
 /** Mix `hex` toward white (amount > 0) or black (amount < 0); amount is a 0..1 fraction. */
@@ -69,28 +124,35 @@ export function applyTheme(theme: string, themeColor: string): void {
   for (const v of CUSTOM_VARS) root.style.removeProperty(v);
 
   if (themeColor !== '' && isHexColor(themeColor)) {
-    const dark = luminance(themeColor) < 0.5;
+    const text = bestTextOn(themeColor);
+    const towardLight = text === LIGHT_TEXT;
     // Keep the .dark class in sync so non-overridden tokens (success/error/…) stay sensible.
-    root.classList.toggle('dark', dark);
-    const text = dark ? '#f8fafc' : '#0f172a';
+    root.classList.toggle('dark', towardLight);
     const set = (name: string, value: string): void => {
       root.style.setProperty(name, value);
     };
     set('--surface-base', themeColor);
-    set('--surface-raised', shade(themeColor, dark ? 0.08 : -0.04));
-    set('--surface-overlay', shade(themeColor, dark ? 0.14 : -0.08));
-    set('--surface-sunken', shade(themeColor, dark ? 0.18 : -0.12));
+    set('--surface-raised', shade(themeColor, towardLight ? 0.08 : -0.04));
+    set('--surface-overlay', shade(themeColor, towardLight ? 0.14 : -0.08));
+    set('--surface-sunken', shade(themeColor, towardLight ? 0.18 : -0.12));
     set('--text-primary', text);
-    set('--text-secondary', dark ? '#cbd5e1' : '#475569');
-    set('--text-disabled', dark ? '#7c93ac' : '#94a3b8');
-    set('--border', shade(themeColor, dark ? 0.2 : -0.14));
-    set('--border-strong', shade(themeColor, dark ? 0.28 : -0.2));
-    const accent = shade(themeColor, dark ? 0.38 : -0.3);
+    // Secondary text is the MINIMUM shade that still clears AA, which is what makes it read as muted
+    // without the two fixed values the old code used — those measured 1.92:1 on a light custom colour.
+    set('--text-secondary', shadeUntil(themeColor, towardLight, AA_TEXT));
+    // Disabled text is exempt from 1.4.3 (inactive controls), but it still has to be perceivable.
+    set('--text-disabled', shadeUntil(themeColor, towardLight, AA_NON_TEXT));
+    set('--border', shade(themeColor, towardLight ? 0.2 : -0.14));
+    set('--border-strong', shade(themeColor, towardLight ? 0.28 : -0.2));
+    // Focus ring and the accent fill are non-text UI: 3:1 against the surface they sit on (1.4.11).
+    const accent = accentFor(themeColor, towardLight);
     set('--border-focus', accent);
     set('--primary', accent);
-    set('--primary-hover', shade(themeColor, dark ? 0.46 : -0.36));
-    set('--primary-active', shade(themeColor, dark ? 0.54 : -0.42));
-    set('--primary-fg', text);
+    set('--primary-hover', shade(accent, towardLight ? 0.12 : -0.12));
+    set('--primary-active', shade(accent, towardLight ? 0.2 : -0.2));
+    // The label ON the accent fill contrasts with the ACCENT, not with the page surface.
+    set('--primary-fg', bestTextOn(accent));
+    // The brand cyan used as foreground has no meaning on a custom surface; solve for AA there too.
+    set('--primary-on-surface', shadeUntil(themeColor, towardLight, AA_TEXT));
     return;
   }
 
