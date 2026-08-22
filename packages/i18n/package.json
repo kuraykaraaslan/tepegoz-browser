@@ -27,8 +27,8 @@
   "devDependencies": {
     "@tepegoz/security-policy": "workspace:*",
     "@types/react": "^18.3.18",
-    "typescript": "^5.7.2",
-    "vitest": "^3.2.6"
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
   },
   "//devDependencies": "`@tepegoz/security-policy` is a DEV dependency only: the permission-explanation parity test imports POLICY_REASONS so the catalogue and its text cannot drift. Nothing at runtime in this package depends on it, which keeps the dependency arrow from inverting."
 }
