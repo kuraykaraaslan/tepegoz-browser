@@ -90,6 +90,8 @@ export const tr: AgentStrings = {
   },
   // Agentic komut paleti (Sohbet/Yap/Üret/Görevler) — bu yüzeyin sahibi bu eklenti.
   commandPalette: {
+    modes: 'Modlar',
+    noResults: 'Eşleşen komut yok',
     placeholder: "Bir komut yazın ya da Tepegöz'e sorun…",
     modeChat: 'Sohbet',
     modeDo: 'Yap',

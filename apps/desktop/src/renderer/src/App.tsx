@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { CommandPaletteHost, useCommandPalette } from './command-palette-host';
 import { coreDict, pick } from '@tepegoz/i18n';
 import { I18nProvider } from '@tepegoz/i18n/react';
 import { isExtensionEnabled } from '@tepegoz/desktop-ipc';
@@ -224,6 +225,9 @@ export function App() {
   const contentSnapshot =
     extSurfaces.resizeSnapshot ?? (omniboxViewHidden ? omniboxSnapshot : null);
 
+  // Ctrl/Cmd+K. Declared before the kiosk early-return so the hook order never changes between renders.
+  const palette = useCommandPalette();
+
   // Chromeless kiosk surface (startupMode: 'kiosk' → loaded with ?kiosk=1): no tab strip / toolbar /
   // overlays — the kiosk URL's web view (laid out by main over `contentRef`) fills the whole screen. The
   // hooks above still run, so content bounds + tab state stay wired.
@@ -279,6 +283,12 @@ export function App() {
           onSetKeyModel={onSetKeyModel}
           onReorderKeys={onReorderKeys}
           onToggleExtension={onToggleExtension}
+        />
+        <CommandPaletteHost
+          open={palette.open}
+          onClose={() => {
+            palette.setOpen(false);
+          }}
         />
         <AppOverlays
           locale={locale}

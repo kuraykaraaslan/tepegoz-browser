@@ -89,6 +89,8 @@ export const en = {
   },
   // The agentic command palette (Chat/Do/Make/Tasks) — this extension owns the surface.
   commandPalette: {
+    modes: 'Modes',
+    noResults: 'No matching command',
     placeholder: 'Type a command or ask Tepegöz…',
     modeChat: 'Chat',
     modeDo: 'Do',
