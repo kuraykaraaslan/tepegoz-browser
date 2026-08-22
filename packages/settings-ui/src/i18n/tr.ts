@@ -290,6 +290,33 @@ export const tr: SettingsStrings = {
   clearHistoryButton: 'Geçmişi temizle',
   historyCleared: 'Tarama geçmişi temizlendi.',
 
+  // --- Site güven profilleri ---
+  siteTrust: {
+    title: 'Site güveni',
+    subtitle:
+      'Yapay zekâ ajanının bir sitede kullandığı kalıcı tutum. Bir profil yalnızca daha katı hâle getirebilir — hiçbir şeyin kilidini açmaz.',
+    empty: 'Hiçbir sitenin güven ayarı yok. Her site varsayılanı kullanıyor.',
+    addPlaceholder: 'ornek.com',
+    addLabel: 'Site',
+    addHint: 'Yalnızca alan adı — https:// ve yol yazmayın. Alt alan adları devralır.',
+    add: 'Ekle',
+    remove: 'Kaldır',
+    levelLabel: 'Düzey',
+    levels: {
+      trusted: 'Güvenilir',
+      default: 'Varsayılan',
+      restricted: 'Kısıtlı',
+    },
+    levelHelp: {
+      trusted: 'Sıradan değişiklikler sorulmadan yapılır.',
+      default: 'Standart kurallar geçerlidir.',
+      restricted: 'Burada okumalar dahil her şeyi bana sor.',
+    },
+    ceiling:
+      'Güvenilir bir sitede bile: silme, para harcama, sayfanın kendi içeriğinden gelen her şey ve tüm bankacılık, kripto, parola veya sağlık siteleri yine sorulur — ya da engelli kalır.',
+    invalidDomain: 'ornek.com gibi bir alan adı girin — şema ve yol olmadan.',
+  },
+
   // --- Site izinleri ---
   sitePermissionsTitle: 'Site izinleri',
   sitePermissionsSubtitle: 'Site bazında yetki verileri (örn. bildirimler).',

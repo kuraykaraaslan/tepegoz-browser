@@ -33,3 +33,4 @@ export {
   ClipboardReadTextInputSchema,
   ClipboardWriteTextInputSchema,
 } from '@tepegoz/clipboard/schemas';
+export * from './schemas-trust';

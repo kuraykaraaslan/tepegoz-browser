@@ -14,6 +14,11 @@ export const IpcChannels = {
   // Curated public settings exposed to extensions (read-only). `changed` is a main→renderer push.
   publicSettingsGet: 'public-settings:get',
   publicSettingsChanged: 'public-settings:changed',
+  // Scoped Trust Profiles — the standing per-site posture the Policy Kernel applies. Read/write only:
+  // the renderer names a domain and a level, main decides what that level is allowed to mean.
+  trustProfilesList: 'trust-profiles:list',
+  trustProfilesSet: 'trust-profiles:set',
+  trustProfilesRemove: 'trust-profiles:remove',
   credentialsStatus: 'credentials:status',
   credentialsList: 'credentials:list',
   credentialsAdd: 'credentials:add',

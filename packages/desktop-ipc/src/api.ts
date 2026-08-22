@@ -14,9 +14,10 @@ import type { ExtensionsApi } from './api-extensions';
 import type { UiApi } from './api-ui';
 import type { LoginsApi } from './api-logins';
 import type { NetworkApi } from './api-network';
+import type { TrustApi } from './api-trust';
 
 /** The exact surface bridged to `window.tepegoz` in the renderer. */
 export interface TepegozApi
-  extends AppApi, TabsApi, AgentApi, ExtensionsApi, UiApi, LoginsApi, NetworkApi {
+  extends AppApi, TabsApi, AgentApi, ExtensionsApi, UiApi, LoginsApi, NetworkApi, TrustApi {
   readonly platform: string;
 }

@@ -9,6 +9,7 @@ import {
   SitePermissionsSection,
 } from './settings-privacy-files';
 import { DeveloperSection } from './settings-developer';
+import { SiteTrustSection } from './settings-site-trust';
 import { NetworkPrivacySection } from './settings-network-privacy';
 import {
   IconCard,
@@ -153,6 +154,14 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
           onReset={ctx.resetSitePermission}
         />
       ),
+    },
+    {
+      id: 'site-trust',
+      group: s.groupPrivacy,
+      label: s.siteTrust.title,
+      icon: <IconLock />,
+      searchText: `${s.siteTrust.title} ${s.siteTrust.subtitle} ${s.siteTrust.levels.trusted} ${s.siteTrust.levels.restricted}`,
+      content: <SiteTrustSection />,
     },
     {
       id: 'passwords',
