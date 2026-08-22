@@ -18,6 +18,8 @@ const WORKSPACE_PACKAGES = [
   '@tepegoz/tab-engine',
   '@tepegoz/journal-tools',
   '@tepegoz/navigation',
+  // The one keyboard-shortcut registry — main matches `before-input-event` against it.
+  '@tepegoz/shortcuts',
   '@tepegoz/json-store',
   '@tepegoz/credential-vault',
   '@tepegoz/preferences',
