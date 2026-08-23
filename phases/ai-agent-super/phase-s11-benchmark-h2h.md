@@ -105,6 +105,41 @@
   URL, because verifying it means running it.
 - **No run of any kind.** PR3 and PR5 are ⏸ funded, and PR5 additionally needs rival subscriptions.
 
+### PR6 — Failure-mode stratum from documented rival complaints (fixture work; freeze with PR0)
+
+> **Where this came from.** Six rival user-feedback studies —
+> [Atlas](../../research/competitors/atlas.md),
+> [Fellou](../../research/competitors/fellou.md),
+> [Comet](../../research/competitors/perplexity-comet.md),
+> [Opera Neon](../../research/competitors/opera-neon.md), and the two Claude-extension
+> studies ([A](../../research/competitors/claude-extension-chatgpt.md),
+> [B](../../research/competitors/claude-extension-gemini.md)).
+>
+> **Why this belongs in the benchmark and not in a marketing page.** The H2H currently samples general web
+> tasks, which measures the average case. What every one of these reports supplies is the **specific case each
+> rival is documented to fail** — and a comparison built out of those is both more informative and more
+> defensible than a generic task list, because the failure was reported by that product's own users, not
+> chosen by us. It also cuts the other way, which is the point: if Tepegöz fails the same task, the artifact
+> says so.
+>
+> **Scope discipline.** These become a **named, pre-registered stratum reported separately** — never folded
+> into the headline verified-completion number, because a set selected for rival weakness is not a fair
+> estimate of general competence. Pre-register the stratum in [h2h-protocol.md](h2h-protocol.md) **before**
+> any run, under the same withdrawal clause as the main claim.
+
+- [ ] **Author the `rival-failure-mode` stratum** (~10 tasks, frozen with PR0), each task tracing to the report
+      and the complaint that motivated it: - **Dynamic-SPA execution loop** — a page whose DOM rewrites under the agent (Fellou's execution loops,
+      Atlas's white screens, iMacros' rigid positioning). Verifies stale-reference recovery. - **CAPTCHA / human-verification wall** — the run must hand off cleanly and resume, not stall silently
+      (Fellou's CAPTCHA deadlock; never auto-solve). - **Long multi-step task with a mid-run interruption** — sleep/restart, then resume (Neon's top complaint;
+      Atlas's "Thinking" hang). - **Repeated-action loop bait** — a page that invites the same click forever (Comet's looping). - **Wrong-account / wrong-profile trap** — two logged-in identities present, only one correct (the
+      Claude extension's most-reported operational failure). - **Focus-and-tab hygiene** — background work must not steal focus and must clean up the tabs it opened. - **Time-paradox task** — one a human finishes in under a minute, timed against the manual baseline from
+      [S7](phase-s7-speed.md) (Comet's agentic sluggishness). - **Turkish-web task inside this stratum** — non-English keyboard/IME plus a Turkish-language flow
+      (Atlas rates non-English input a P0 blocker; this project ships a Turkish IME matrix).
+- [ ] **Score it separately and publish it whole** — per-task pass/fail per agent, in the dated artifact,
+      **including the tasks Tepegöz fails**. A stratum published only when it flatters us is worth nothing.
+- [ ] **Cite the complaint, not the conclusion.** Each row links the underlying report so a reader can check
+      that the task encodes a documented user complaint rather than a strawman built to lose.
+
 ## Fixtures
 
 New, all frozen in **PR0**, added to [packages/agent-eval](../../packages/agent-eval) as the `bridge` family / `realUrl` stratum:

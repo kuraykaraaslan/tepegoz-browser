@@ -103,6 +103,44 @@ Targets are **derived from S0's baseline** and **pre-registered in PR1 before an
 - [ ] Confirm ≥40% wall-clock, ≥30% `$`, ±5pp completion equivalence; record per-change attribution in [eval-results.md](eval-results.md).
 - [ ] Update the [README](README.md) budget table with the measured `$`/trial actuals; flip S7 🟠 → ✅ only when the ledger entry lands.
 
+### PR6 — Rival-evidence cost + resource work (Comet · Claude for Chrome · Fellou · Atlas)
+
+> **Where this came from.** [Comet](../../research/competitors/perplexity-comet.md)
+> (high CPU, battery drain, crash/freeze loops, "agentic sluggishness" — a task the user could have done
+> faster by hand), the Claude-extension studies
+> ([A](../../research/competitors/claude-extension-chatgpt.md),
+> [B](../../research/competitors/claude-extension-gemini.md)) — where **Base64 screenshots
+> accumulating in context** are named as the mechanism behind token blow-up and slowdown —
+> [Fellou](../../research/competitors/fellou.md) (linear step-by-step execution;
+> dependency-aware parallelism as the fix), and [Atlas](../../research/competitors/atlas.md)
+> (white screens and high RAM on dynamic sites).
+>
+> Two of these this phase's existing PRs already target (decision encoding, validation cadence). The rest is
+> below, and one of them is a **decision this project has not made**: which work is allowed to leave the device
+> at all.
+
+- [ ] **Context eviction policy, written down and enforced.** Keep the last one or two observations at full
+      fidelity and replace older ones with a short placeholder, so a long run's prompt does not grow
+      monotonically. Screenshots are the acute case, but the rule is general and belongs in the runtime, not in
+      [S10](phase-s10-vision-escalation.md) — vision only makes the existing defect expensive.
+- [ ] **Hybrid routing decision (needs an ADR).** Which classes of work run on the **local** model by default —
+      summarize, classify, redact, extract — with the cloud reserved for planning and hard inference. The
+      local-inference package already exists; what does not exist is a routing policy, and Comet's report is a
+      full account of what happens when every keystroke of work goes to a server: latency, battery, and a
+      privacy surface nobody asked for. **Local-first is this project's claim; routing is where it is either
+      true or marketing.**
+- [ ] **Idle cost is zero.** No polling, no held sockets, no CDP attachment, no wake-ups while no run is
+      active — measured as CPU% and wake-ups per minute on an idle window, not asserted.
+- [ ] **Resource accounting per run** — peak RSS and CPU-seconds attributed to an agent run and visible next to
+      its token cost, so "the agent made my browser slow" becomes a number instead of an argument.
+- [ ] **Dependency-aware parallelism** stays owned by [Phase 1b](../product/phase-1b-agentic-deepening.md)
+      (parallel DAG) — recorded here only so the speed phase does not claim a win that another phase must
+      deliver.
+- [ ] **The honest comparison metric.** Comet's sharpest complaint is not latency but the **time paradox**:
+      the agent finishing slower than a human doing it manually. Add a manual-baseline column to the acceptance
+      family — wall-clock for a human on the same scenario — and report agent time against it. A speed number
+      with no human baseline cannot answer the only question a user is actually asking.
+
 ## Fixtures
 
 **None new.** S7 is measured on the **existing** families with the cost + wall-clock columns already emitted by the harness — chiefly the **acceptance** family (the headline metric's home), plus the pooled families used by the equivalence guardrail. No fixture freeze PR of its own beyond PR1's target pre-registration (which plays the fixture-freeze role: the exam numbers are frozen before capability code). If S0's baseline re-cuts family membership, S7 inherits that cut — it does not define its own scenarios.

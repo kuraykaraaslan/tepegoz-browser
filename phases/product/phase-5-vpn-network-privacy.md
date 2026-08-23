@@ -65,7 +65,7 @@ endpoint** (one loopback port per active connection), never an OS-level system p
       _(the invariant that makes every ordering of session-creation / binding / navigation safe: the worst case is a request that errors and a reload that works, never a clear-path request.)_
 - [x] **ADR-0011** written + Accepted (VPN & network-privacy architecture: three-scope binding — General/Group/Tab — with `tab→group→General→Direct` resolution over per-connection SOCKS partitions, connection-pool lifecycle, reload-on-rebind trade-off, BYO vs managed, reconciliation with "no system-proxy MITM")
       _([ADR-0011](../../docs/adr/0011-vpn-network-privacy.md) Accepted and twice amended. Still undecided there, honestly: the bundled WireGuard/Tor providers and the Tor trust model, both gated on shipping a signed native binary.)_
-- [x] **Threat Model updated** ([`docs/THREAT-MODEL.md`](../../docs/THREAT-MODEL.md)): a `VPN/Tor tunnel` trust boundary, thirteen tunnel-specific threat rows (drop-without-saying-so, unbound partition, DNS, WebRTC, chrome-side fetches, popup escape, group-inheritance misbinding, rebind transition, cross-tab bleed, partition teardown, unfiltered partition, app-issued HTTP, encrypted-tunnel blind spot) and two residual-risk entries
+- [x] **Threat Model updated** ([`docs/threat-model.md`](../../docs/threat-model.md)): a `VPN/Tor tunnel` trust boundary, thirteen tunnel-specific threat rows (drop-without-saying-so, unbound partition, DNS, WebRTC, chrome-side fetches, popup escape, group-inheritance misbinding, rebind transition, cross-tab bleed, partition teardown, unfiltered partition, app-issued HTTP, encrypted-tunnel blind spot) and two residual-risk entries
 - [x] **i18n:** en+tr full parity for all new surfaces (tab + group context-menu entries, route picker, per-tab status indicator, reload-on-switch notice, connection management + disclosure copy)
       _(parity enforced by the existing `keyPaths` tests in both `apps/desktop/src/i18n` and `@tepegoz/settings-ui`.)_
 - [ ] Coverage (S80/B85/F86/L80) + self-review/code-review + UAT signoff + migration-safe DB
@@ -172,6 +172,62 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 - [x] Keep per-partition DNR (`@ghostery/adblocker-electron`) working **inside** every tunnel-bound partition; **no regression** to "NO system-proxy MITM"
       _(the multiplexer attaches per session instead of once per process — its one-shot `initialized` flag meant the first session got the whole filtering plane and every later one got nothing, silently. Registered as a **critical** attacher, so a session it cannot attach to is refused rather than served unfiltered.)_
 - [x] Document filter-vs-tunnel ordering: the per-session webRequest pipeline (DNR/adblock/Shield) runs **before** anything reaches the connection's SOCKS endpoint, on every partition alike — the multiplexer is attached per session, so a tunnel-bound request is filtered by exactly the same handlers, in the same order, as a Direct one
+
+### L10 — Where the tunnel's promise meets fingerprinting (rival evidence: Brave, Tor Browser)
+
+> **Where this came from.** [`research/privacy/fingerprinting.md`](../../research/privacy/fingerprinting.md)
+> and the Shields/farbling comparison in
+> [`research/competitors/brave.md`](../../research/competitors/brave.md).
+>
+> **The engine is not this phase's.** Fingerprinting protection is already owned by
+> [Phase 2 → L10 Safe-Browsing Suite](phase-2-adapters-safe-browsing.md), where the research detail and the
+> required ADR now live. What belongs **here** is the part that is load-bearing for Phase 5's own promise:
+> this phase hides the **IP**, and a user who routes a tab through Tor and is then re-identified by canvas
+> hash — or whose real address leaks out of WebRTC — got the ceremony of privacy without the substance.
+
+- [ ] **WebRTC local-IP leak is a kill-switch concern, not a privacy preference.** Block host-candidate
+      exposure (mDNS obfuscation) for any tunnel-bound partition. A leak here reveals the real address of a tab
+      the user was told is tunneled, so it fails this phase's promise regardless of what Phase 2 ships
+- [ ] **One claim, one surface.** Fingerprint posture binds at the same three scopes as a route
+      (General / group / tab) and is shown in the same place as the route badge — "this tab is anonymous" must
+      not be assembled by the user out of two independent settings that can disagree
+- [ ] **Say what the tunnel does not do.** The connections overview states plainly that a tunnel hides the
+      network address and **not** the browser profile, and links to the Phase 2 protection. Today the UI's
+      disclosure copy is silent on this, which is the most likely way a user over-trusts it
+- [ ] **The transport carries its own identity.** Changing the exit IP does not change the **TLS
+      fingerprint** (JA3/JA4-class), the HTTP header order, or the request rhythm — all three are
+      standard inputs to anti-bot and reputation systems, and all three survive every tunnel this phase
+      builds. Decide and record whether Tepegöz normalizes any of them; if it does not, the disclosure
+      copy says so rather than letting "routed through Tor" imply more than it delivers.
+      Source: [`research/privacy/cross-profile-tracking.md`](../../research/privacy/cross-profile-tracking.md)
+- [ ] **An agent-driven tab has a rhythm.** Automated request timing is a signal on its own, and it is
+      the one this project generates by existing. Cross-reference the countermeasures already in
+      [`packages/human-input`](../../packages/human-input) (randomized inter-action idle, real gestures)
+      and state whether they extend to request pacing or only to input events —
+      [`research/privacy/automation-detection.md`](../../research/privacy/automation-detection.md) is the
+      analysis of how that detection works
+- [ ] **Agent-driven tabs, stated honestly.** Automation timing is itself a signal. Decide and document whether
+      a driven tab may claim the same posture as a human-driven one, or whether the badge must say it is more
+      identifiable — this project does not get to leave that ambiguous
+
+### Network-privacy onboarding & health (rival evidence: Freenet)
+
+> **Where this came from.** [`research/privacy/freenet.md`](../../research/privacy/freenet.md).
+> Freenet is the cautionary case, not a competitor: strong anonymity engineering that users abandoned over
+> **setup, packaging, unreadable errors and silent connection death** — roughly 35% of its complaints are
+> install/usability, versus 10% about anonymity itself. Phase 5a currently expects the user to bring a
+> WireGuard config and read status words. That is the same cliff.
+
+- [ ] **First-run flow for a tunnel** — import a config, name it, test it, and see a plain-language result;
+      a failed test says which step failed (config parse / handshake / DNS / exit reachability), not "not
+      connected"
+- [ ] **Connection health over time** — keep-alive, reconnect, and per-connection metrics (handshake success
+      rate, latency, uptime) surfaced in the connections overview, so a tunnel that dies quietly is visible
+      instead of being discovered through a leak
+- [ ] **Errors in the user's language, with a next step** — every failure state maps to one localized sentence
+      and one action; no raw provider stderr in the UI
+- [ ] **Docs that assume nothing** — a short Turkish + English guide covering what the tunnel does and does
+      **not** hide (explicitly: it does not stop fingerprinting — cross-link the section above)
 
 ### 5b — Managed own-infra (optional; rides the Phase 3 backend)
 

@@ -69,6 +69,29 @@ position competitors won't copy quickly, built almost entirely on existing seams
 - [ ] _Risk:_ a guardian could be socially engineered into over-permissioning → the Guarded profile can never
       widen its own policy (sealed narrowing); changing limits requires guardian biometric
 
+### L9 — Display scaling & input reach (rival evidence: Brave, Atlas)
+
+> **Where this came from.** [`research/competitors/brave.md`](../../research/competitors/brave.md)
+> (UI elements too small on large/4K displays; no in-browser DPI/scale control) and
+> [`research/competitors/atlas.md`](../../research/competitors/atlas.md),
+> whose priority table rates **non-English keyboard and IME quality a P0 blocker** — Turkish named first among
+> the languages to fix, with side-panel input specifically broken.
+>
+> The IME half is the one place in this comparison where Tepegöz is already ahead rather than behind: a
+> dedicated Turkish-Q/F pipeline with a regression matrix ships today, and the rival's own users rate its
+> absence as blocking. That is worth defending with a test, not just claiming.
+
+- [ ] **In-app UI scale control**, independent of page zoom and of the OS DPI setting, persisted per profile —
+      chrome that is unreadable on a 4K panel is an accessibility defect, not a preference
+- [ ] **Chrome surfaces survive 200% scaling** without clipping or overlap, asserted in the e2e suite at two
+      scale factors rather than eyeballed once
+- [ ] **The IME matrix covers agent surfaces too** — the command palette and the agent panel are exactly the
+      "side panel" where the rival's input handling breaks; extend the existing Turkish matrix to those
+      surfaces so the advantage is tested where it is most likely to regress
+- [ ] **Keyboard reach** — every agent and chrome action reachable and discoverable without a mouse, listed in
+      one searchable place (shared with the discoverability task in
+      [S8](../ai-agent-super/phase-s8-assistant-ux.md))
+
 ### Cross-cutting (as in every phase)
 
 - [ ] i18n en+tr for all new surfaces; zod `safeParse` at every IPC/voice-intent/profile trust boundary;

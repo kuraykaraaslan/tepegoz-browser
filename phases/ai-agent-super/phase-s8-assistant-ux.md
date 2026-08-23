@@ -122,6 +122,54 @@ Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. N
   equivalent is [S9](phase-s9-memory-skills.md)’s skill-scoped remembered grant. A second, divergent
   persistence path for grants is exactly what this phase’s own risk section warns against.
 
+### PR7 — Rival-evidence UX gaps (Atlas · Fellou · Comet · Neon · Claude for Chrome)
+
+> **Where this came from.** Four rival user-feedback studies —
+> [Atlas](../../research/competitors/atlas.md),
+> [Fellou](../../research/competitors/fellou.md),
+> [Comet](../../research/competitors/perplexity-comet.md),
+> [Opera Neon](../../research/competitors/opera-neon.md) — plus two independent studies of
+> the Claude Chrome extension ([A](../../research/competitors/claude-extension-chatgpt.md),
+> [B](../../research/competitors/claude-extension-gemini.md)). Read together they say the same
+> thing in five different products: **the agent's competence is not what users complain about — its
+> illegibility is.** "Something seems to have gone wrong", hidden intermediate states, credits burned on a
+> failure that was the tool's fault, and a permission prompt that never remembers.
+>
+> **What this project already answers** (so a comparison can cite code, not intent): the four-mode command
+> palette that Neon's report asks for exists ([`command-palette-core.ts`](../../extensions/ext-agent/src/command-palette-core.ts));
+> the live step feed is PR2 above; policy verdicts already carry a machine-readable reason
+> ([`policy-reasons.ts`](../../packages/security-policy/src/policy-reasons.ts)); scoped trust profiles exist
+> ([`trust-profile-host.electron.ts`](../../apps/desktop/src/main/security/trust-profile-host.electron.ts))
+> where the Claude extension's users are asking for them; run history is searchable
+> ([`history-page.tsx`](../../extensions/ext-agent/src/history-page.tsx)); background work parks tabs
+> off-screen instead of stealing focus. The tasks below are the residue — what those reports ask for and this
+> project does **not** have.
+
+- [ ] **Failure gets a reason, not a shrug.** When a run stops, the console states which step failed, what was
+      observed, and the single next action (retry step / resume from step / hand to me). Atlas's most-repeated
+      complaint is a generic error string; ours must never be one.
+- [ ] **Resume from a step**, not only re-run from zero — the durable half is Phase 1b's checkpoint work; this
+      is the surface that exposes it.
+- [ ] **Cost forecast before the run, refund after a tool-side failure.** Show an estimated token/cost range
+      alongside the plan (the cost surface already exists:
+      [`settings-ai-panels-cost.tsx`](../../apps/desktop/src/renderer/src/components/settings-ai-panels-cost.tsx)),
+      and do not charge the ledger for a run that died of a loop, a CAPTCHA wall, or an internal error. Fellou's
+      Sparks complaints and Neon's price backlash are both this: **paying for the tool's own failure.**
+- [ ] **A health panel for the agent's dependency chain** — provider key present/valid, model reachable, MCP
+      servers up, local model loaded — each with a plain-language failure cause. The single largest complaint
+      cluster against the Claude extension is "it is installed, the panel is open, and nothing happens."
+- [ ] **Permission debug view** — for a given site and tool: what was asked, what was decided, which rule
+      decided it, and why it was or was not remembered. The reasons already exist in the kernel; they are not
+      yet a surface a user can open.
+- [ ] **New tab is the user's, not the assistant's** — an explicit choice between assistant, bookmarks/speed
+      dial, and blank. Comet's forced-AI new tab and Neon's "small AI button, confusing surface" are opposite
+      failures of the same decision: the product deciding how much AI the user wants.
+- [ ] **Discoverability pass** — keyboard shortcuts listed and searchable from the palette itself; every agent
+      surface reachable without a mouse. Repeated in the Atlas and Neon reports as the thing that stops strong
+      features from being adopted.
+- [ ] **Localized to the same bar as the rest of the app** (en + tr). Both Claude-extension studies list
+      missing Turkish as a support-cost and adoption problem; this project treats it as a gate.
+
 ## Fixtures
 
 None. This is a UI phase — no new [packages/agent-eval](../../packages/agent-eval) scenarios. The DoD metrics ride existing families (acceptance for feedback latency; acceptance + web-patterns for approvals/task, shared with [S6](phase-s6-safety-control-plane.md)). The dogfooding checklist is a manual, explicitly non-claim-bearing pass recorded in [eval-results.md](eval-results.md).

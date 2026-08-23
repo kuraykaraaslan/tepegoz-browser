@@ -107,6 +107,34 @@ Prior art gives us the shape of the win without the claim: browser-use's TSV ser
 - [ ] Move [PROSE-LEDGER](PROSE-LEDGER.md) **row 7** to DELETED (if the sweep shows the collapsed-menu note no longer earns its tokens) or RETAINED, paired.
 - [ ] Promote the flag to default only if all three sweep gates pass; otherwise the phase rests at 🟠 measurement-owed.
 
+### PR6 — Structured site-declared tools (WebMCP) — investigation, then a decision
+
+> **Where this came from.** [`research/competitors/claude-extension-gemini.md`](../../research/competitors/claude-extension-gemini.md),
+> which argues that screenshot-driven visual scraping is a dead end on both cost and speed, and points at
+> **WebMCP (`navigator.modelContext`)** — a site declaring its own operations (`searchProducts`, `addToCart`,
+> `checkout`) as structured tools an agent calls directly — as the way out. Same report: build-time stable
+> element ids (Domscribe-style `data-ds`) as the intermediate step for sites that will never adopt a standard.
+>
+> **Why it lands in S2 and not in a feature phase.** This is a perception question — how the agent learns what
+> a page can do. Today that answer is one thing (`buildDomTree` over the rendered DOM). A site-declared tool
+> surface would be a **second, higher-trust channel**, and adding a channel changes the trust model: a page
+> declaring its own tools is still **untrusted input**, so its declarations must pass the same zod boundary and
+> the same policy classification as any other tool call, and must never be able to name a capability the agent
+> does not already hold.
+
+- [ ] **Spike, do not adopt.** Establish whether `navigator.modelContext` has real adoption or is still a
+      proposal with no sites behind it. A perception channel with no pages to perceive is cost, not capability.
+      Record the finding either way — a refutation is a result, as [S5](phase-s5-code-execution.md) already
+      demonstrated for its own sandbox.
+- [ ] **If it is real:** an ADR covering the trust boundary (site-declared tools are untrusted, validated,
+      policy-classified, and cannot widen a grant), the fallback path when a site declares tools that lie or
+      break, and how a declared tool's result is verified against observed page state rather than believed.
+- [ ] **Measure the claim, not the idea.** Paired sweep on the perception family: tokens and wall-clock for a
+      DOM-driven run versus a declared-tool run on the same task. The report's promise is "milliseconds instead
+      of seconds and a large token saving" — that is a hypothesis with a number attached, so measure it.
+- [ ] **Stable-id ingestion** as the cheaper half: when a page already exposes stable test/build ids, prefer
+      them over positional refs in the content-hash scheme from PR1. No standard needed, works today.
+
 ## Fixtures
 
 Frozen in **PR0**, added to [packages/agent-eval](../../packages/agent-eval) (perception family):

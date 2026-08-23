@@ -138,6 +138,53 @@ Sequencing: the claim-grade ASR sweep runs **after [S3](phase-s3-reliability-act
 - [ ] Run the credential-never-leaks sweep (N≥10) and the critic-divergence sweep.
 - [ ] Record every delta in [eval-results.md](eval-results.md); update [history.md](history.md).
 
+### PR8 — Rival-incident hardening (Comet · Fellou · Claude for Chrome)
+
+> **Where this came from.** Three rival studies that document **real, named incidents** rather than opinions:
+> [Comet](../../research/competitors/perplexity-comet.md) (CometJacking indirect prompt
+> injection; a 1Password vault takeover plus local-file leakage; a zero-click Google Drive wiper; "agentic
+> blabbering" that trained users to accept phishing), [Fellou](../../research/competitors/fellou.md)
+> (IDOR on `tabId`/`chatId`, missing server-side ownership checks, no transport pinning), and the Claude
+> Chrome extension ([A](../../research/competitors/claude-extension-chatgpt.md),
+> [B](../../research/competitors/claude-extension-gemini.md)) (screenshots that capture logged-in
+> sessions; an "ask before acting" model so coarse that users turn it off).
+>
+> **These are the strongest competitive evidence this project has**, because each one is a published failure of
+> a shipped product that this architecture was built to prevent — the data/instruction split already exists at
+> the perception boundary (`content-guard`), risk tiers and HITL already gate state-changing calls, autonomy is
+> already enforced in main, and the egress firewall already detects secrets. PR8 is the part **not** covered:
+> turning each incident into a scenario that must fail, and closing the specific holes those incidents used.
+
+- [ ] **Every incident becomes an `atk_*` fixture.** One scenario per published attack class — hidden-CSS
+      instruction injection, a page that asks the agent to read a password-manager surface, an encoded
+      exfiltration attempt, a bulk-destructive request against a connected account. A defense with no scenario
+      that fails without it is an assumption, not a control.
+- [ ] **Encoded-exfiltration detection.** The egress firewall matches secret _shapes_; Base64/hex/percent-encoded
+      page content sent to an attacker-chosen destination is the channel CometJacking actually used. Decode and
+      re-scan a bounded prefix at the egress boundary, and treat "high-entropy blob to a domain the run never
+      visited" as a class of its own.
+- [ ] **Password-manager surfaces are a locked class**, on the same footing as banking: the agent may not read,
+      fill from, or drive any password-manager UI (extension, web vault, or this project's own), and cannot be
+      granted that by any combination of clicks. The 1Password incident is what "the agent has the user's
+      session" costs when this is not enumerated.
+- [ ] **Bulk-destructive ceiling.** A destructive action affecting more than a small N enumerates the items in
+      the confirmation ("delete these 15, listed") and cannot be approved as a single opaque step, in any
+      autonomy mode. The zero-click Drive wiper is a state-changing call that passed as one cheap approval.
+- [ ] **No self-disclosure to the page.** The agent must not write its own system prompt, tool list, grant
+      scope, or run metadata into page content — "agentic blabbering" is how Comet's users were taught to trust
+      an injected instruction.
+- [ ] **Vision before it exists is still a leak.** Before [S10](phase-s10-vision-escalation.md) makes any image
+      reachable: a **never-screenshot** trust profile, mandatory redaction of logged-in session chrome, and a
+      hard rule that no raw image leaves the device without an explicit per-run consent. Both Claude-extension
+      studies rate screenshots as the sharpest privacy edge of the whole category.
+- [ ] **Idle means idle.** No provider sockets, MCP connections, or CDP attachments held open while no run is
+      active. Comet's battery/CPU complaints and its always-listening surface are the same defect seen from two
+      sides.
+- [ ] **Carry the server-side lesson forward.** Fellou's IDOR was a backend that trusted a client-supplied id.
+      This project has no backend yet, so the obligation is recorded where it will land —
+      [Phase 3](../product/phase-3-backend-cloud-extensions.md): every request re-derives ownership server-side,
+      never from a parameter, plus transport pinning and rate limits.
+
 ## Fixtures
 
 Frozen in PR0 before any capability code:

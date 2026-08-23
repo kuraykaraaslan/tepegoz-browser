@@ -60,6 +60,39 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
 - [ ] _Risk (ADR required):_ download trust model — agent-initiated download security class, quarantine
       lifecycle, and the "release from quarantine" HITL gate
 
+### L10 — Download acceleration (rival evidence: IDM)
+
+> **Where this came from.** [`research/competitors/idm-downloader.md`](../../research/competitors/idm-downloader.md).
+> IDM is the reference product for download management, and the report separates its **complaints** (licensing,
+> support, dated UI — not our problems) from **the reason people still install it**: segmented acceleration and
+> a network monitor that catches every transfer. Tepegöz's manager currently has the safety half
+> (quarantine, hashing, risk classification, redacted audit) and **not** the speed half, so a user comparing
+> the two today loses throughput to gain safety. These tasks close that trade-off.
+
+- [ ] **Segmented download engine** — split a transfer into N ranged `Range:`/206 requests and reassemble; keep
+      the assembled file in quarantine until the hash of the whole is computed, so segmentation never weakens
+      the existing trust path. Fall back to a single stream when the server refuses ranges
+- [ ] **Dynamic connection count** — the segment count adapts to measured throughput and server behavior rather
+      than a fixed setting; a host that penalizes parallel connections is detected and backed off. Per-host
+      ceiling is user-visible and overridable (default conservative: we are a browser, not a scraper)
+- [ ] **Resilient resume** — resume across an app restart and across a dropped connection, with exponential
+      backoff and a bounded retry budget; a resumed transfer verifies the already-written bytes before
+      continuing, never blindly appending
+- [ ] **Speed + ETA metadata** — surface bytes/sec and estimated time remaining in the download record and the
+      manager (already tracked as an open item in `packages/downloads/CHECKLIST.md`; this is the same task)
+- [ ] **Retry command descriptor** for a failed download (also open in the package checklist)
+- [ ] **Transfer capture beyond the page** — catch downloads the page did not initiate through a normal
+      navigation (media elements, `blob:`/redirect chains) so the manager is not blind to a class of transfers;
+      strictly in-browser, **no system-wide traffic interception** — that is IDM's model and it is out of scope
+      on purpose (it needs a proxy/driver that contradicts this project's threat model)
+- [ ] **Measurement, not assertion** — a benchmark that downloads a fixed set of files against a local server
+      and records single-stream vs. segmented throughput. A speed claim without this number is vanity; the
+      number is what a comparison against IDM or Chrome is allowed to cite
+
+> **Deliberately out of scope from that report:** licence automation, distributor/support processes, UI theming
+> and "modernization", and macOS-via-Wine. They are IDM-the-business's problems; only the transfer engine and
+> the capture surface transfer to us.
+
 ### L9 — Classic essentials (Chromium/Electron surfaces)
 
 - [x] **Find-in-page** (Ctrl+F): Chromium `webContents.findInPage` + match count + next/prev + highlight
@@ -141,6 +174,13 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       partition machinery; a "private / agent-only" window chrome badge
 - [ ] Leaves **nothing on close** (cookies/storage/cache/history discarded); **sensitive-site lockout still
       applies**; clearly distinct from Phase 3 multi-profile (this is throwaway, not a named identity)
+- [ ] **The private-mode surface must say what it does not do.** A separate partition discards local
+      state; it does **not** separate identity — the device, GPU, screen, fonts, installed-extension
+      signature and network address are unchanged, so a site that fingerprints can link the private
+      window to the ordinary one. Every mainstream browser has been criticized for letting its private
+      mode imply otherwise; the badge and the new-window copy state the real scope in one sentence.
+      Source: [`research/privacy/cross-profile-tracking.md`](../../research/privacy/cross-profile-tracking.md)
+      — the same limit applies to named profiles in [Phase 3](phase-3-backend-cloud-extensions.md)
 
 ### L5/L8 — Permissions Center
 

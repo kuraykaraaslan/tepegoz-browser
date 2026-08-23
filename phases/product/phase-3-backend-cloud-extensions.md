@@ -37,6 +37,32 @@ sync-meta + ModelTransport), there is NO rewrite.
       credentials still vault-scoped) — an **offline** path independent of E2EE cloud sync; reuses the Phase 7
       Data Rights export seam
 
+#### Sync correctness bar (rival evidence: Brave)
+
+> **Where this came from.** [`research/competitors/brave.md`](../../research/competitors/brave.md).
+> Sync is Brave's **most-repeated complaint** despite privacy being its whole pitch — chains that break and
+> force a full re-pair on every device, links saved on the phone never arriving on the desktop, and the one
+> that names a specific bug: _"sildiklerim sonra tekrar geliyor"_ — **deletions resurrect**. That is a
+> tombstone-handling failure, and it is the reason this project put `updated_at` / `version` / `tombstone` /
+> UUID PK / `device_id` into the schema on day zero rather than retrofitting them here. These tasks make that
+> head start into a checkable claim instead of a design intention.
+
+- [ ] **Deletion is durable.** A delete on device A never reappears from device B's stale copy. Tombstones
+      carry their own `updated_at` and win against an older write; tombstone retention is longer than the
+      longest plausible offline period, and the retention window is written down
+- [ ] **Conflict resolution is specified, not emergent** — per-entity rule (last-writer-wins on `version` +
+      `updated_at`, with the tie broken by `device_id`), documented per table, and covered by a test that
+      replays two divergent devices
+- [ ] **No full re-pair as the recovery path.** A chain that desynchronizes repairs itself incrementally; if a
+      reset is ever unavoidable it is scoped to one device and never silently drops local-only data
+- [ ] **Sync status is legible** — per-device last-sync time, pending item count, and the last error in words;
+      a sync that has been failing for a week must be visible without opening a log
+- [ ] **Adversarial test suite** replaying the exact Brave complaint set: offline edits on both sides, delete
+      vs. edit races, clock skew between devices, a device restored from an old backup, and a partially
+      applied batch
+- [ ] **Measurement:** convergence verified on a scripted three-device scenario, recorded in the results
+      ledger — not "sync works" in prose
+
 ### ExtensionHost (extra requirement #9)
 
 - [ ] limited MV3 (content-script/DNR/storage allowlist: Dark Reader, adblock-complement, reading tools) via `electron-chrome-extensions`

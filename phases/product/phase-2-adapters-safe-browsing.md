@@ -35,6 +35,93 @@
 - [ ] **Third-party cookie isolation (Total-Cookie-Protection style)**: per-site state partitioning on top of Chromium's partition mechanism (consistent with **per-partition** adblock above); Firefox TCP as reference — **ADR required** (partition scope per-context vs. per-site; must NOT break logged-in adapter/`BrowserBackend` sessions)
 - [ ] **Fingerprinting protection**: noise on canvas/WebGL/font/audio entropy + `navigator` surface reduction; **per-site toggle** (strict/standard) for breakage — **ADR required** (scope + determinism/replay impact; agent's own automation runs `standard`, observations recorded per ADR-0004)
 
+#### Fingerprinting protection — component detail and the measurement gate
+
+> **Where this came from.** [`research/privacy/fingerprinting.md`](../../research/privacy/fingerprinting.md)
+> (component-by-component analysis with a prioritized mitigation table: effort × user impact × effectiveness)
+> and [`research/competitors/brave.md`](../../research/competitors/brave.md), where
+> per-session fingerprint randomization is named as Brave's differentiator against Chrome and Firefox. This
+> expands the one-line task above; the ADR it already demands is where the posture gets decided.
+>
+> **The ADR's first question is a fork, and half of each answer is worse than either:**
+> **homogenization** (Tor Browser — everyone looks identical, one large anonymity set, sites break) versus
+> **farbling** (Brave — per-(site, session) randomization that stays stable _within_ a site, so pages keep
+> working while cross-site linking fails). The `strict`/`standard` toggle in the task above implies the second;
+> the ADR must say so explicitly, name the breakage it accepts, and define the escape hatch.
+>
+> **Why this project has an unusual stake in it:** an agentic browser is the worst case for fingerprinting.
+> Automation makes a profile _more_ distinctive, not less — which is why the existing task pins the agent's own
+> runs to `standard`, and why the determinism/replay impact is called out: noise that changes per run collides
+> with the Event Journal's promise that a run can be replayed.
+
+Component priorities, taken from the report's own table (high effectiveness first, breakage noted):
+
+- [ ] **Canvas + WebGL readback noise** on `getImageData` / `toDataURL`, deterministic per (site, session);
+      masked `UNMASKED_VENDOR_WEBGL` / `UNMASKED_RENDERER_WEBGL` — high effectiveness, moderate breakage risk
+- [ ] **Font enumeration whitelist** instead of the installed set — the single highest-entropy signal on a
+      typical Windows install, and low user impact
+- [ ] **Hardware signal quantization** — `deviceMemory` and `hardwareConcurrency` to coarse buckets
+- [ ] **`performance.now()` precision reduction** — cheapest item on the table, removes a whole class of
+      timing probes, negligible breakage
+- [ ] **Header surface** — `Accept-Language` / UA / client-hints reduced consistently with the User-Agent
+      switcher extension, so the two cannot contradict each other (a mismatch is itself a signal)
+- [ ] **Sensor and media-device surface** — permission-gated rather than freely enumerable
+- [ ] **Storage partitioning** is the same work as the third-party cookie isolation task above — one
+      implementation, not two
+- [ ] **Measurement gate — blocking for any claim.** Cover Your Tracks / AmIUnique entropy **in bits, measured
+      before and after** on a fixed profile, recorded in the results ledger. The report's own bar is a **≥30%
+      reduction**; anything shipped without that number is a claim, not a feature. Add a Playwright assertion
+      that canvas hashes **differ across sites and stay stable within one** — the property that separates
+      farbling from plain randomness, and the one most likely to regress silently
+
+#### Fingerprinting — the signals this project adds to the user (cross-profile evidence)
+
+> **Where this came from.** [`research/privacy/cross-profile-tracking.md`](../../research/privacy/cross-profile-tracking.md)
+> — a study of why a separate browser profile and a private window do **not** separate identity. Its
+> transferable finding is not the list of surfaces above; it is that **a browser can make its own users
+> more identifiable**, and that several of Tepegöz's design choices do exactly that. This block is the
+> self-inflicted half of the problem, and it is the half no competitor's research covers for us.
+
+- [ ] **Measure the fingerprint our own extensions add.** Extension detection via observable in-page
+      side effects and execution traces is established in the literature, and Tepegöz **injects nine
+      first-party extensions** — a bundle nobody else on the web has. That combination is close to a
+      unique identifier, and it is one we shipped. Measure the delta with all extensions off, one on,
+      and all on. If the delta is large, injection has to become conditional (inject where the extension
+      is actually needed, not on every page) rather than ambient
+- [ ] **The User-Agent switcher must not increase entropy.** An extension that reports Safari on macOS
+      while canvas, WebGL, fonts and timing all say Chromium-on-Windows produces an **inconsistent**
+      surface, and inconsistency is itself a strong signal — a fingerprint that does not add up is rarer
+      than an honest one. Either the switcher changes the whole coherent set or it warns, in the
+      extension's own UI, that it is making the user more identifiable, not less
+- [ ] **Electron is already a narrow anonymity set.** State it in the ADR: this browser is not Chrome and
+      cannot pretend to be one at the level these techniques operate. Any homogenization target is
+      "indistinguishable among Tepegöz users", never "indistinguishable among Chrome users", and the
+      user-facing copy must not imply otherwise
+- [ ] **Document the ceiling instead of promising past it.** GPU-stack timing methods distinguish
+      near-identical devices from ordinary JavaScript, so masking the WebGL vendor string does not close
+      that surface. The ADR names what the chosen posture **cannot** reach, so that the measured entropy
+      drop is read as an improvement rather than as anonymity
+- [ ] **Attribute, don't just total.** The measurement gate above reports one number; this report's
+      method is better — change **one variable at a time** (network, browser surface, device, stored
+      identity) and record which one moves the result. Build the harness that way, so a regression can be
+      traced to the surface that caused it instead of to "entropy went up"
+
+#### Filter-engine cost (rival evidence: Brave)
+
+> **Where this came from.** [`research/competitors/brave.md`](../../research/competitors/brave.md).
+> Brave's second-most-repeated complaint is **memory and slowdown**, and the report names the filter lists as a
+> prime suspect — with a concrete suggestion: scope the default filter set by language group instead of loading
+> every list for every user. Tepegöz runs the same engine family (`@ghostery/adblocker-electron`) **per
+> partition**, which multiplies the cost the complaint is about, so the finding transfers directly.
+
+- [ ] **Locale-scoped default filter set** — load the regional lists that match the user's languages, not the
+      union of all of them; extra lists remain opt-in and are named in the UI
+- [ ] **Engine instances are shared where partitions allow it** — measure whether per-partition attachment
+      duplicates rule storage, and share the compiled ruleset if it does
+- [ ] **Filter cost is measured, not assumed** — RSS attributable to the engine and added page-load latency,
+      recorded before and after the two items above. The complaint being popular is not evidence that the lists
+      are the cause; the measurement is
+
 ### Cookie & Storage editor (extra requirement #8)
 
 - [ ] `CookieAndStorageInspector`: CDP/`session.cookies` **DevTools-only** inspect-edit; fully isolated from OAuth vault; **agent access off by default**
