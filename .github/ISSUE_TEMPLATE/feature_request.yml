@@ -1,0 +1,59 @@
+name: Feature request or idea
+description: Propose a capability, or discuss an approach before building it
+labels: ['enhancement']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Tepegöz has a long, already-sequenced roadmap under
+        [`phases/`](https://github.com/kuraykaraaslan/tepegoz-browser/tree/main/phases). Please skim the
+        index first — a lot is planned but not yet built, and an idea that is already scheduled is
+        better raised as "can this move up" than as a new request.
+
+        Architecture-shaping decisions are recorded as ADRs in
+        [`docs/adr/`](https://github.com/kuraykaraaslan/tepegoz-browser/tree/main/docs/adr). If your
+        proposal contradicts an accepted one, say which — that is a conversation worth having, not a
+        problem.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you unable to do today? Describe the need, not the solution.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: What should happen instead. Concrete beats abstract.
+    validations:
+      required: true
+
+  - type: textarea
+    id: security
+    attributes:
+      label: Security and autonomy implications
+      description: |
+        Tepegöz lets a model act on pages the user is logged into. If your proposal widens what the
+        agent can do, reach, or send, say so here — including what should require a human confirmation.
+        "None that I can see" is a fine answer.
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Including doing nothing, or solving it in an extension rather than the core.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Would you like to build it?
+      options:
+        - label: I would be willing to open a pull request for this.
+          required: false

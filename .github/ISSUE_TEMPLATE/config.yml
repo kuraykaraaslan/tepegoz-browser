@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability (private)
+    url: https://github.com/kuraykaraaslan/tepegoz-browser/security/advisories/new
+    about: Never file a security issue publicly. Use private reporting — see SECURITY.md for scope and what to expect.
+  - name: Contributing guide
+    url: https://github.com/kuraykaraaslan/tepegoz-browser/blob/main/CONTRIBUTING.md
+    about: Setup, the gates CI enforces, and which contributions are most useful right now.
+  - name: Roadmap and current status
+    url: https://github.com/kuraykaraaslan/tepegoz-browser/blob/main/phases/README.md
+    about: What is built, what is landed but unmeasured, and what is only planned.

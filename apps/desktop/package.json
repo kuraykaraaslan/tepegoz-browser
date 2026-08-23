@@ -1,6 +1,7 @@
 {
   "name": "@tepegoz/desktop",
   "version": "0.0.0",
+  "license": "AGPL-3.0-only",
   "private": true,
   "description": "Tepegöz — agentic, security-by-design, local-first browser.",
   "author": "Kuray Karaaslan <kuraykaraaslan@gmail.com>",

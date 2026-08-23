@@ -1,0 +1,94 @@
+name: Bug report
+description: Something in Tepegöz behaves incorrectly
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Security vulnerability?** Do not file it here — follow
+        [SECURITY.md](https://github.com/kuraykaraaslan/tepegoz-browser/blob/main/SECURITY.md)
+        and use private reporting instead. A public issue tells attackers first.
+
+        Tepegöz is pre-release: check [known-issues.md](https://github.com/kuraykaraaslan/tepegoz-browser/blob/main/docs/known-issues.md)
+        before filing — several rough edges are already documented there.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you expected, and what happened instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: |
+        The smallest sequence that triggers it. If a specific page is involved, name it — or attach a
+        minimal HTML fixture, which is far more useful than a description.
+      placeholder: |
+        1. Open …
+        2. Type … in the command palette
+        3. …
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Best guess is fine.
+      options:
+        - Agent / automation (planning, execution, tools)
+        - Browser shell (tabs, omnibox, navigation, bookmarks)
+        - Security kernel / policy / permissions
+        - Network privacy (VPN, Tor, per-tab routing)
+        - Extensions (adblock, macros, translate, typo, video player, …)
+        - Settings / preferences / profiles
+        - Localization (English/Turkish) or accessibility
+        - Build, tests, or CI
+        - Something else / not sure
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      description: The commit SHA you built from (`git rev-parse --short HEAD`).
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS
+        - Linux
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs, errors, or screenshots
+      description: |
+        Anything from the console or the agent console. **Redact your API keys and any personal data
+        before pasting** — logs are redacted by design, but please check.
+      render: text
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: This is not a security vulnerability (those go through SECURITY.md, privately).
+          required: true
+        - label: I searched existing issues and `docs/known-issues.md`.
+          required: true

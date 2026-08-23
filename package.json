@@ -1,8 +1,18 @@
 {
   "name": "tepegoz-browser",
   "version": "0.0.0",
+  "license": "AGPL-3.0-only",
   "private": true,
   "description": "Agentic automation browser — observable, security-by-design, local-first (cloud-optional). Windows 11 primary.",
+  "author": "Kuray Karaaslan <kuraykaraaslan@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kuraykaraaslan/tepegoz-browser.git"
+  },
+  "homepage": "https://github.com/kuraykaraaslan/tepegoz-browser#readme",
+  "bugs": {
+    "url": "https://github.com/kuraykaraaslan/tepegoz-browser/issues"
+  },
   "packageManager": "pnpm@10.30.3",
   "engines": {
     "node": ">=24.0.0",
