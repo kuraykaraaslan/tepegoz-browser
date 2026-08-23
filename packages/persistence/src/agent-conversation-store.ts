@@ -115,13 +115,16 @@ export class AgentConversationStore {
 
   static ensure(db: Db, input: { id: string; groupId: string; prompt: string; ts: number }): void {
     const { title, preview } = summarizeConversationPrompt(input.prompt);
+    // Bound field by field, NOT `{ ...input }`: `prompt` is summarized into title/preview and is not a
+    // column here, and SQLite rejects a named parameter the statement never declares — spreading the
+    // caller's shape makes every field it ever gains a runtime failure on this INSERT.
     db.prepare(
       `INSERT OR IGNORE INTO agent_conversations (
         id, group_id, title, preview, status, turn_count, started_at, updated_at, last_run_id
       ) VALUES (
         @id, @groupId, @title, @preview, 'active', 0, @ts, @ts, NULL
       )`,
-    ).run({ ...input, title, preview });
+    ).run({ id: input.id, groupId: input.groupId, title, preview, ts: input.ts });
   }
 
   static addTurn(
@@ -135,6 +138,8 @@ export class AgentConversationStore {
       ts: number;
     },
   ): void {
+    // Same rule as `ensure`: bind exactly the declared parameters. `attachments` is serialized into
+    // `attachmentsJson` and is not itself bindable (SQLite takes no arrays).
     db.prepare(
       `INSERT INTO agent_conversation_turns (
         id, conversation_id, run_id, prompt, response_summary, status, events_json,
@@ -142,7 +147,14 @@ export class AgentConversationStore {
       ) VALUES (
         @id, @conversationId, @runId, @prompt, NULL, 'active', '[]', @attachmentsJson, @ts, @ts
       )`,
-    ).run({ ...input, attachmentsJson: JSON.stringify(input.attachments) });
+    ).run({
+      id: input.id,
+      conversationId: input.conversationId,
+      runId: input.runId,
+      prompt: input.prompt,
+      attachmentsJson: JSON.stringify(input.attachments),
+      ts: input.ts,
+    });
     this.refreshSummary(db, input.conversationId, input.runId, input.ts);
   }
 
