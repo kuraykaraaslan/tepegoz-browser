@@ -1,16 +1,16 @@
 import {
   app,
   BrowserWindow,
-  screen,
   shell,
   type BrowserWindowConstructorOptions,
   type Rectangle,
 } from 'electron';
 import { join } from 'node:path';
-import { IpcChannels, type StartupMode, type WindowBounds } from '@tepegoz/desktop-ipc';
+import { IpcChannels, type StartupMode } from '@tepegoz/desktop-ipc';
 import PreferenceStore from '@tepegoz/preferences';
 import { isTrustedAppUrl } from './lib/trusted-origin';
 import { PARK_X, PARK_Y, isParkedToTray, trayParked } from './window-parked';
+import { ensureOnScreen, isBoundsOnScreen } from './window-placement';
 import { GLASS_BG, OPAQUE_BG, isMicaSupported } from './lib/glass';
 
 /** App-chrome partition — shared by the main window and extension popups (both are trusted chrome).
@@ -32,21 +32,6 @@ const DEFAULT_WINDOW_WIDTH = 1280;
 const DEFAULT_WINDOW_HEIGHT = 854;
 const MIN_WINDOW_WIDTH = 640;
 const MIN_WINDOW_HEIGHT = 427;
-
-/**
- * True when the saved rectangle still lands on a currently-connected display. Guards against restoring a
- * window onto a monitor that was unplugged/rearranged since last launch (it would open off-screen and be
- * unreachable). We require a real chunk of the title bar to fall inside some display's work area (not just
- * a 1px touch), so a barely-overlapping ghost still counts as off-screen → falls back to the primary screen.
- */
-function isBoundsOnScreen(b: WindowBounds): boolean {
-  return screen.getAllDisplays().some((display) => {
-    const wa = display.workArea;
-    const overlapW = Math.min(b.x + b.width, wa.x + wa.width) - Math.max(b.x, wa.x);
-    const overlapH = Math.min(b.y + b.height, wa.y + wa.height) - Math.max(b.y, wa.y);
-    return overlapW >= 100 && overlapH >= 50;
-  });
-}
 
 // Brand app icon (generated from resources/icon.svg via `pnpm --filter @tepegoz/desktop icons`).
 // Windows favors the multi-resolution .ico; other platforms use the 512px PNG. Exported so the tray
@@ -104,7 +89,9 @@ export function showFromTray(win: BrowserWindow): void {
   if (win.isDestroyed()) return;
   const saved = trayParked.get(win);
   if (saved !== undefined) {
-    win.setBounds(saved); // move back on-screen from the off-screen park
+    // Re-validate: a window can be parked for hours, and the display it belonged to may have been
+    // unplugged in the meantime — restoring it blindly would "un-hide" it onto nothing.
+    win.setBounds({ ...saved, ...ensureOnScreen(saved) }); // move back on-screen from the off-screen park
     trayParked.delete(win);
   }
   win.setSkipTaskbar(false);

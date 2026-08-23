@@ -2,6 +2,7 @@ import type { BrowserWindow } from 'electron';
 import PreferenceStore from '@tepegoz/preferences';
 import { SessionStore } from '@tepegoz/persistence';
 import { createWindow, effectiveStartupMode, hideToTray } from './window';
+import { ensureOnScreen } from './window-placement';
 import TabManager from './tabs';
 import { isQuitting } from './quit-state';
 import { notifyHiddenToTrayOnce } from './tray';
@@ -54,8 +55,18 @@ export function openWindow(opts?: {
   const win = createWindow(opts?.foreground === true ? { forceForeground: true } : undefined);
   // Position/size BEFORE the window reveals (createWindow shows on ready-to-show) so a torn-off / restored
   // window appears where it belongs with no visible jump.
-  if (opts?.size !== undefined) win.setSize(opts.size.width, opts.size.height);
-  if (opts?.position !== undefined) win.setPosition(opts.position.x, opts.position.y);
+  if (opts?.size !== undefined || opts?.position !== undefined) {
+    const current = win.getBounds();
+    // Validated against the CURRENT displays: a restored/torn-off placement that names a monitor which is
+    // no longer connected would open the window off-screen — shown, but with no caption to drag back.
+    const placed = ensureOnScreen({
+      x: opts.position?.x ?? current.x,
+      y: opts.position?.y ?? current.y,
+      width: opts.size?.width ?? current.width,
+      height: opts.size?.height ?? current.height,
+    });
+    win.setBounds(placed);
+  }
   TabManager.register(win);
   // Start-in-background parks the window off-screen on its first reveal (see window.ts); once it's shown
   // (on- or off-screen), reconcile keep-awake so a start-parked window honors `keepAwakeInTray` too.
@@ -145,7 +156,7 @@ function restoreSessionWindows(firstWin: BrowserWindow): boolean {
   const [first, ...rest] = snap.windows;
   const firstWt = TabManager.forWindow(firstWin);
   if (firstWt === undefined || first === undefined) return false;
-  if (first.bounds !== undefined) firstWin.setBounds(first.bounds);
+  if (first.bounds !== undefined) firstWin.setBounds(ensureOnScreen(first.bounds));
   const restoredFirst = firstWt.restoreWindow(first);
 
   for (const w of rest) {
