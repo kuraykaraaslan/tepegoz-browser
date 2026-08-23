@@ -22,6 +22,7 @@ export * from './vision-trigger';
 export * from './intent-critic';
 export * from './credential-broker';
 export * from './agent-delta';
+export * from './agent-prompt';
 export * from './site-data';
 export * from './network-privacy';
 export * from './agent-memory';

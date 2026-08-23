@@ -1,4 +1,4 @@
-import { AGENT_AUTONOMY_LEVELS } from '@tepegoz/shared-types';
+import { AGENT_AUTONOMY_LEVELS, MAX_ATTACHMENT_CHARS } from '@tepegoz/shared-types';
 import type { CompletionOutcome } from '@tepegoz/shared-types';
 import type {
   AgentApprovalRequest,
@@ -192,9 +192,9 @@ export function serializeAttachments(attachments: Attachment[], prompt: string):
   const parts: string[] = [];
   for (const a of attachments) {
     if (a.kind === 'selection') {
-      parts.push(`[Selected text from page]\n> ${a.content.slice(0, 8000)}`);
+      parts.push(`[Selected text from page]\n> ${a.content.slice(0, MAX_ATTACHMENT_CHARS)}`);
     } else if (a.kind === 'file') {
-      parts.push(`[File: ${a.label}]\n\`\`\`\n${a.content.slice(0, 8000)}\n\`\`\``);
+      parts.push(`[File: ${a.label}]\n\`\`\`\n${a.content.slice(0, MAX_ATTACHMENT_CHARS)}\n\`\`\``);
     } else if (a.kind === 'screenshot') {
       parts.push(`[Screenshot attached — ${a.label}]`);
     }

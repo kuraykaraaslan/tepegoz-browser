@@ -1,10 +1,23 @@
 import { z } from 'zod';
+import {
+  MAX_AGENT_PROMPT_CHARS,
+  MAX_ATTACHMENT_LABEL_CHARS,
+  MAX_ATTACHMENTS,
+  MAX_USER_PROMPT_CHARS,
+} from '@tepegoz/shared-types';
 
 /** `agent:run` payload — prompt + the tab-group id that owns this agent session. */
 export const AgentRunInputSchema = z.object({
-  prompt: z.string().min(1).max(4000),
+  /**
+   * The ASSEMBLED prompt: the user's text with every attachment the panel inlined ahead of it. Bounded
+   * by the derived MAX_AGENT_PROMPT_CHARS rather than by the user-text bound, which is what it used to
+   * be — an attachment sliced to 8000 characters could not fit a 4000-character cap, so attaching any
+   * substantial selection made the run unsendable and the boundary rejected it as a fault.
+   */
+  prompt: z.string().min(1).max(MAX_AGENT_PROMPT_CHARS),
   groupId: z.string().min(1).max(64),
-  displayPrompt: z.string().min(1).max(4000).optional(),
+  /** What the user typed, shown in the transcript — attachments are not inlined into this one. */
+  displayPrompt: z.string().min(1).max(MAX_USER_PROMPT_CHARS).optional(),
   /** The skill this run came from (S9). Main binds a remembered grant to it ONLY when the prompt
    *  still matches the stored one — an edited task is a new task, and a new task gets asked. */
   skillId: z.string().uuid().optional(),
@@ -12,12 +25,12 @@ export const AgentRunInputSchema = z.object({
     .array(
       z.object({
         kind: z.enum(['selection', 'file', 'screenshot']),
-        label: z.string().min(1).max(512),
+        label: z.string().min(1).max(MAX_ATTACHMENT_LABEL_CHARS),
         mimeType: z.string().max(256).optional(),
         sizeBytes: z.number().int().nonnegative().optional(),
       }),
     )
-    .max(10)
+    .max(MAX_ATTACHMENTS)
     .optional(),
 });
 /** `agent:new-conversation` payload — the group whose history to clear. */
