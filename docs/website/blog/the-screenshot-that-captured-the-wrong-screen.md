@@ -1,22 +1,23 @@
 ---
 route: /blog/the-screenshot-that-captured-the-wrong-screen
 title: The screenshot that captured the wrong screen
-description: Our browser cannot screenshot itself. The obvious workaround captured the operator's desktop twice, so we deleted it and did it properly.
+description: My browser cannot screenshot itself. The obvious workaround captured my own desktop twice, so I deleted it and did it properly.
 nav: none
 status: ready
 ---
 
 # The screenshot that captured the wrong screen
 
-**[BUILD NOTE]** First published post. The artifact it references is
-[`scripts/record-agent.mjs`](../../../scripts/record-agent.mjs), committed before this went out —
-editorial policy says no announcement without one.
+**[BUILD NOTE]** First published post, and the first written in first person — this is a
+single-maintainer project and the build log is one person's notes, so "we" was borrowed authority. The
+artifact it references is [`scripts/record-agent.mjs`](../../../scripts/record-agent.mjs), committed
+before this went out; editorial policy says no announcement without one.
 
 ---
 
 ## The task looked like an afternoon
 
-The marketing site needed pictures of the browser. We have the browser. We have a test harness that
+The marketing site needed pictures of the browser. I have the browser. I have a test harness that
 launches it — the end-to-end suite drives the built application on every push, on three platforms. Take
 some screenshots.
 
@@ -40,7 +41,7 @@ Both return a picture of a browser with nothing in it. The isolation that makes 
 isolation that makes them invisible to the two obvious capture APIs.
 
 Internal `tepegoz://` pages — settings, extensions, downloads — render in the renderer window and
-capture correctly. That is why the first usable screenshots we shipped were all of internal pages.
+capture correctly. That is why the first usable screenshots I shipped were all of internal pages.
 It was not an editorial choice. It was the only thing that worked.
 
 ## The workaround, and why it is now deleted
@@ -50,20 +51,20 @@ those pixels off the screen. Thirty lines of PowerShell.
 
 It matched the window by title.
 
-The operator had a browser open with a tab named after this project. The capture grabbed **their**
-window: their open tabs, their bookmarks bar, their profile avatar. Straight into a folder of files
+I had another browser open with a tab named after this project. The capture grabbed **that** window:
+my open tabs, my bookmarks bar, my profile avatar. Straight into a folder of files
 destined for a public marketing page.
 
-The fix looked obvious — match by process id instead of title, since we launch the app ourselves and
-know its pid. That is a genuinely better identifier, and it was still wrong. `CopyFromScreen` does not
+The fix looked obvious — match by process id instead of title, since the script launches the app itself
+and knows its pid. That is a genuinely better identifier, and it was still wrong. `CopyFromScreen` does not
 copy a window. It copies a rectangle of the screen, and whatever is in front of that rectangle is what
 lands in the file. The code calls `SetForegroundWindow` first, and Windows is entitled to refuse
 foreground activation — it frequently does, for exactly the anti-hijacking reasons that make it a good
-rule. The second capture came back with a video that was playing on the operator's desktop.
+rule. The second capture came back with a video that was playing on my own desktop.
 
 Two captures, two different pieces of somebody's screen that had no business being in a marketing
 asset. Neither was published. Both were deleted within a minute of being looked at, which is the only
-part of this story that went right, and it only went right because somebody looked.
+part of this story that went right, and it only went right because I looked.
 
 **The lesson is not "match windows more carefully."** It is that *screen* capture and *window* capture
 are different operations, and an API that reads the framebuffer cannot be made into the second one by
@@ -106,17 +107,17 @@ The capture is solved. The recording is not. Handing the agent a goal through th
 **Do** mode leaves the text sitting in the command filter — *"No matching command"* — and Enter
 dispatches no run. Ninety seconds of video of an application not doing anything.
 
-So there is still no recording of the agent working, and the home page still says so. What we have is a
+So there is still no recording of the agent working, and the home page still says so. What I have is a
 harness that will make one the moment the dispatch path is settled, an on-device model that means
 making one costs nobody an API key, and a note in the script's own header telling anyone who runs it
 that its current output is a recording of the application, not of the agent.
 
-That is a smaller result than the afternoon was supposed to produce. It is the one we got.
+That is a smaller result than the afternoon was supposed to produce. It is the one I got.
 
 ---
 
 ## Meta
 
 - **Title tag:** The screenshot that captured the wrong screen — Tepegöz
-- **Meta description:** Our browser cannot screenshot itself. The obvious workaround captured the
-  operator's desktop twice, so we deleted it and did it properly.
+- **Meta description:** My browser cannot screenshot itself. The obvious workaround captured my own
+  desktop twice, so I deleted it and did it properly.

@@ -17,12 +17,12 @@ artifact is `scripts/record-agent.mjs`, already public.
 
 ## Post title…
 
-> Tab isolation made our own browser impossible to screenshot
+> Tab isolation made my own browser impossible to screenshot
 
 **Alternates**, in descending order of how well they survive a skeptical scroll:
 
 - The screenshot came back empty. That meant the sandbox was working.
-- Our screenshot script captured the wrong desktop. Twice.
+- My screenshot script captured the wrong desktop. Twice.
 - Screen capture and window capture are not the same operation
 
 **Rejected**, with reasons, so nobody re-proposes them:
@@ -50,13 +50,13 @@ reads as filler.
 
 ## Share your thoughts
 
-We build a browser. We needed screenshots of it. There is already an end-to-end suite that launches the
+I build a browser. I needed screenshots of it. There is already an end-to-end suite that launches the
 real app on three platforms, so this looked like an afternoon.
 
 The first capture came back with the chrome drawn perfectly — tab strip, address bar, bookmarks — and a
 grey rectangle where the page should have been.
 
-Every tab in our browser is an isolated `WebContentsView`. That is deliberate: a compromised page
+Every tab in my browser is an isolated `WebContentsView`. That is deliberate: a compromised page
 cannot reach into another tab because it is not in the same place, and one page crashing does not take
 the window with it. The part nobody mentions is that those views are composited **outside the host
 window's own `webContents`**.
@@ -95,9 +95,9 @@ Two things cost real time:
 - `callback({ video: theWindow })` is not enough. The handler wants a `desktopCapturer` source, not a
   `BrowserWindow`. The error is `Invalid capture constraints` — accurate and useless.
 
-And the honest ending: the capture works, but the thing we wanted to record — the agent completing a
-task — still doesn't dispatch from our harness. Ninety seconds of video of an application sitting
-there. So we have a working recorder and nothing yet worth recording with it.
+And the honest ending: the capture works, but the thing I wanted to record — the agent completing a
+task — still doesn't dispatch from my harness. Ninety seconds of video of an application sitting
+there. So I have a working recorder and nothing yet worth recording with it.
 
 #electron #javascript #security #devtools #testing
 
@@ -105,7 +105,7 @@ there. So we have a working recorder and nothing yet worth recording with it.
 
 ## First comment (post it yourself, right after)
 
-> Worth saying plainly, since the post is about our own mistake: the two bad captures never left the
-> machine and were deleted within a minute. They were caught because somebody opened the PNG and looked
-> at it. If your capture step is fully automated and nobody views the output, this failure mode is
-> completely silent — which is the actual reason it was worth writing up.
+> Worth saying plainly, since the post is about my own mistake: the two bad captures never left the
+> machine and were deleted within a minute. They were caught because I opened the PNG and looked at it.
+> If your capture step is fully automated and nobody views the output, this failure mode is completely
+> silent — which is the actual reason it was worth writing up.
