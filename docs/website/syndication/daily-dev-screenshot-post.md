@@ -1,27 +1,23 @@
 ---
-channel: daily.dev
-links_to: /blog/the-screenshot-that-captured-the-wrong-screen
+channel: daily.dev (Squad — native post, not a link submission)
 status: ready-to-post
 ---
 
-# daily.dev — syndication copy
+# daily.dev Squad post
 
-**[BUILD NOTE]** This links to the blog post, and `/blog` is a **second-wave** page that is not on the
-live site yet. Do not submit this until that route exists and returns 200 — a feed post whose link
-404s is worse than no post. Everything below is ready the day it does.
+**[BUILD NOTE]** This is a **native Squad post**, so it stands alone — it is not a teaser for an
+article and does not depend on `/blog` existing. The longer write-up lives at
+[the build-log post](../blog/the-screenshot-that-captured-the-wrong-screen.md); link that from a
+comment only once `/blog` is a live route, since that page is second wave.
 
-**[BUILD NOTE]** Editorial policy applies here too: no competitor dunking, and no claim without the
-artifact. The artifact is `scripts/record-agent.mjs`, already public.
+**[BUILD NOTE]** Editorial policy applies: no competitor dunking, no claim without the artifact. The
+artifact is `scripts/record-agent.mjs`, already public.
 
 ---
 
-## Title
+## Post title…
 
-The interesting thing here is not that we made a mistake — every feed is full of those. It is that a
-**security decision** made a routine task impossible, and the obvious workaround was a data leak. Lead
-with the counterintuitive half; the incident is the payoff inside.
-
-> **Tab isolation made our own browser impossible to screenshot**
+> Tab isolation made our own browser impossible to screenshot
 
 **Alternates**, in descending order of how well they survive a skeptical scroll:
 
@@ -29,63 +25,87 @@ with the counterintuitive half; the incident is the payoff inside.
 - Our screenshot script captured the wrong desktop. Twice.
 - Screen capture and window capture are not the same operation
 
-**Rejected**, and why — worth keeping so nobody re-proposes them:
+**Rejected**, with reasons, so nobody re-proposes them:
 
-- *"You cannot screenshot your own Electron browser"* — true of our architecture, not of Electron.
-  Overclaims, and the first reply would correctly be "yes you can, I do it every day".
-- *"A horrifying screenshot bug"* — the bug is mundane. The consequence was not. Selling it as horror
-  invites a letdown two paragraphs in.
+- *"You cannot screenshot your own Electron browser"* — true of this architecture, not of Electron.
+  Overclaims, and the first reply would rightly be "yes you can, I do it every day".
+- *"A horrifying screenshot bug"* — the bug is mundane; the consequence was not. Selling horror sets up
+  a letdown two paragraphs in.
 
 ---
 
-## Body
+## Add cover
 
-We needed product screenshots of the browser we build. It has an end-to-end suite that launches the
+Optional. Two that work, for opposite reasons:
+
+- **The empty capture** — chrome drawn perfectly, grey void where the page belongs. Best hook, because
+  it *is* the post. Needs regenerating; the originals were replaced.
+- **A frame from the working recording** — chrome and live page in one image. Shows the payoff rather
+  than the problem.
+
+Skip it rather than reach for stock. A generic laptop photo on a post about a specific capture bug
+reads as filler.
+
+---
+
+## Share your thoughts
+
+We build a browser. We needed screenshots of it. There is already an end-to-end suite that launches the
 real app on three platforms, so this looked like an afternoon.
 
-The first capture came back with the chrome drawn perfectly and a grey rectangle where the page should
-have been.
+The first capture came back with the chrome drawn perfectly — tab strip, address bar, bookmarks — and a
+grey rectangle where the page should have been.
 
-Every tab in our browser is an isolated `WebContentsView`. That is deliberate — a compromised page
-cannot reach into another tab because it is not in the same place. The part nobody mentions: those
-views are composited **outside the host window's own `webContents`**. So Playwright's
-`page.screenshot()` and Electron's `BrowserWindow.capturePage()` both photograph a browser with
-nothing in it. The isolation that makes tabs safe makes them invisible to the two obvious capture APIs.
+Every tab in our browser is an isolated `WebContentsView`. That is deliberate: a compromised page
+cannot reach into another tab because it is not in the same place, and one page crashing does not take
+the window with it. The part nobody mentions is that those views are composited **outside the host
+window's own `webContents`**.
 
-So we went one level down: find the window, read its rect, copy those pixels off the screen. Thirty
+So Playwright's `page.screenshot()` and Electron's `BrowserWindow.capturePage()` both photograph a
+browser with nothing in it. The isolation that makes tabs safe is the isolation that makes them
+invisible to the two obvious capture APIs.
+
+Fine — go one level down. Find the window, read its rect, copy those pixels off the screen. Thirty
 lines of PowerShell. It matched the window by title.
 
-The machine had another browser open, with a tab named after the project. The script grabbed **that**
-window — open tabs, bookmarks, profile avatar — into a folder headed for a public marketing page.
+The machine had another browser open with a tab named after the project. The script grabbed **that**
+window: open tabs, bookmarks bar, profile avatar, into a folder headed for a public marketing page.
 
-Matching by process id instead looked like the fix. It wasn't. `CopyFromScreen` does not copy a window;
-it copies a rectangle of the screen, and whatever is in front of that rectangle is what you get. The
-code calls `SetForegroundWindow` first, and Windows is entitled to refuse — it often does, for the
-anti-hijacking reasons that make it a good rule. Second capture: a video playing on the same desktop.
+Matching by process id instead looked like the fix. It wasn't. `CopyFromScreen` does not copy a window
+— it copies a rectangle of the screen, and whatever is in front of that rectangle is what you get. The
+code calls `SetForegroundWindow` first, and Windows is entitled to refuse; it often does, for the
+anti-hijacking reasons that make it a good rule. Second capture: a video that was playing on the same
+desktop.
 
-Neither shipped. Both were deleted. But the lesson is not "match windows more carefully" — it is that
-reading the framebuffer and capturing a window are different operations, and no amount of care turns
-one into the other. A tool whose failure mode is *silently captures whatever the human was doing* does
-not belong in an automated pipeline.
+Neither shipped. Both were deleted. But the lesson is not *match windows more carefully*:
 
-The version that works uses Electron's own `desktopCapturer`, matching the window's
-`getMediaSourceId()` and handing that source to `setDisplayMediaRequestHandler`. No rectangle, no
-foreground, nothing to lose track of. Two hours of the afternoon went to discovering that the
-permission grant has to sit on the chrome window's **partition** session, not `defaultSession`.
+**Reading the framebuffer and capturing a window are different operations, and no amount of care turns
+one into the other.** A tool whose failure mode is "silently captures whatever the human was doing"
+does not belong in an automated pipeline.
 
-Full write-up, including the part that still does not work:
+What works is Electron's own `desktopCapturer`: enumerate sources, match the one whose id equals the
+window's `getMediaSourceId()`, hand that source to `setDisplayMediaRequestHandler`. No rectangle, no
+foreground, nothing to lose track of — it resolves through an identifier Electron issued about itself.
+
+Two things cost real time:
+
+- The app hardens its sessions, so the permission grant has to sit on the chrome window's **partition**
+  session. `defaultSession` is not the one in play, and getting it wrong just returns "permission
+  denied" with no hint as to which session refused.
+- `callback({ video: theWindow })` is not enough. The handler wants a `desktopCapturer` source, not a
+  `BrowserWindow`. The error is `Invalid capture constraints` — accurate and useless.
+
+And the honest ending: the capture works, but the thing we wanted to record — the agent completing a
+task — still doesn't dispatch from our harness. Ninety seconds of video of an application sitting
+there. So we have a working recorder and nothing yet worth recording with it.
+
+#electron #javascript #security #devtools #testing
 
 ---
 
-## Tags
+## First comment (post it yourself, right after)
 
-`electron` · `security` · `devtools` · `javascript` · `testing`
-
----
-
-## First comment (post it yourself, right after submitting)
-
-> Worth saying plainly since the post is about our own mistake: the two bad captures never left the
+> Worth saying plainly, since the post is about our own mistake: the two bad captures never left the
 > machine and were deleted within a minute. They were caught because somebody opened the PNG and looked
-> at it. If your capture step is fully automated and nobody ever views the output, this failure mode is
-> silent — that is the actual reason it is worth a post.
+> at it. If your capture step is fully automated and nobody views the output, this failure mode is
+> completely silent — which is the actual reason it was worth writing up.
