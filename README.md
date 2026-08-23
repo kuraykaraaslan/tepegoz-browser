@@ -2,201 +2,245 @@
 
 **An agentic, security-first, local-first AI browser.**
 
-Tepegöz watches the web with a single, focused eye — it understands a page, plans the steps,
-and carries out real tasks on your behalf, while every action stays observable, reversible, and
-under your control.
+[![CI](https://github.com/kuraykaraaslan/tepegoz-browser/actions/workflows/ci.yml/badge.svg)](https://github.com/kuraykaraaslan/tepegoz-browser/actions/workflows/ci.yml)
+[![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%3E%3D24-informational.svg)](package.json)
 
-> **The name.** _Tepegöz_ is the one-eyed giant of Turkish mythology — most famously the monster
-> of the _Book of Dede Korkut_ (Dede Korkut Kitabı). The single eye is the product metaphor: **one
-> agent, one focused gaze on the page**, acting deliberately rather than blindly.
+Tepegöz watches the web with a single, focused eye — it understands a page, plans the steps, and
+carries out real tasks on your behalf, while every action stays observable, reversible, and under your
+control.
+
+> **The name.** _Tepegöz_ is the one-eyed giant of Turkish mythology — most famously the monster of the
+> _Book of Dede Korkut_. The single eye is the product metaphor: **one agent, one focused gaze on the
+> page**, acting deliberately rather than blindly.
 
 ---
 
-> ⚠️ **Project status: pre-implementation.** This repository currently holds the **plan and the
-> competitor research** that drive the build. The product described below is the **target final
-> state**; development is organized into phases (see [Roadmap](#roadmap)) and tracked task-by-task
-> under [`phases/`](phases/). Nothing here ships yet — this README documents where Tepegöz is going.
+## Project status — read this first
+
+**Pre-release. Buildable and usable from source; not shipped, not stable, not audited.**
+
+There is no installer, no release binary, no update channel, and no tagged version. Builds you produce
+are **unsigned** — code signing is not configured. **No development phase is closed yet**; the roadmap
+tracks status by what has been _measured_, not by what has been written, and by that bar every phase
+still reads amber. See [`phases/README.md`](phases/README.md) for the per-phase truth.
+
+One claim this project deliberately does **not** make: that its agent is good at browsing. All thirteen
+phases of the AI competence program have landed their code, and **every one of them is still
+"measurement-owed"** — the benchmark spend to prove or refute them has not been paid
+([`phases/ai-agent-super/README.md`](phases/ai-agent-super/README.md)). Treat the automation as
+promising and unproven, and read [`docs/known-issues.md`](docs/known-issues.md) before trusting it with
+anything that matters.
+
+### What works today
+
+Built, tested in CI on Windows/macOS/Linux, and exercised in the running app:
+
+- **A real browser shell.** Tabs and tab strip, a deterministic omnibox (with inline calculation) that
+  _never_ silently starts an AI thread, back/forward history dropdowns, bookmarks with a bar and a
+  two-pane manager, history, a downloads manager with quarantine, an upload activity surface,
+  find-in-page, profiles, native context menus, tray and hide-tabs modes, and a settings surface —
+  frameless chrome assembled from `@tepegoz/*` leaf packages.
+- **An agent that drives the browser.** Agent panel and live console, the agent runtime, the tool
+  plane, and browser tools are wired end to end. Bring your own key: **Anthropic, OpenAI, Gemini, or
+  Kimi**, plus **on-device inference** via `node-llama-cpp` for local models. Keys are encrypted in the
+  OS keychain through `safeStorage` and never leave the main process.
+- **A deterministic security kernel.** Policy kernel, capability plane, egress firewall with secret
+  detection, credential broker and vault, content-guard against prompt injection at the perception
+  boundary, an append-only event journal, and human-in-the-loop confirmation for destructive or
+  financial steps — with autonomy enforced in the main process, never in the renderer.
+- **Network privacy that actually tunnels.** Userspace WireGuard (via `wireproxy`) and Tor providers,
+  chained Tor-over-VPN, a connection pool, three-scope binding, and per-tab and per-group route badges
+  — measured end to end in the shipping app. Nothing is bundled and nothing needs elevation.
+- **Nine first-party extensions** on an in-house extension SDK: Adblock Shield, Agent, Macros
+  (a deterministic iMacros successor — record, edit, replay), Popup Blocker, Tasks, Translate, Typo,
+  User-Agent switcher, and a Unified video Player.
+- **MCP client.** Tepegöz consumes external MCP tool servers, behind the same policy gate as its
+  internal tools.
+- **English and Turkish at full parity**, runtime language switching, a dedicated Turkish IME pipeline
+  with a regression matrix, and WCAG 2.2 AA as a standing requirement.
+- **`tepegoz-verify`** — a standalone CLI that verifies a proof-of-run bundle, tested by running the
+  built binary.
+
+### Landed but not proven
+
+Code exists and is tested in isolation; it is **not** wired to a live path, or its effectiveness has
+never been measured:
+
+- The entire **AI competence program** (S0–S12) — capabilities are in, measurement is owed. Three
+  capabilities ship **deliberately inert** (credential fill, hint recall, vision), and one phase records
+  a **measured refutation** of its own original design rather than quietly dropping it.
+- **Notary / proof-of-run**, **transaction mandates**, **verifiable policy bundles**, **governed agent
+  endpoints**, the **recipe compiler** IR, the **Kamu** (Turkish public-service) step classifier, and
+  the **supply-chain gate** — decision layers landed with ADRs accepted, none wired to a live call.
+
+### Not built
+
+Parallel multi-tab DAG execution · durable checkpoint/resume and cross-agent handoff · GB-scale tiered
+task memory · integration adapters (Google, Canva) · Safe Browsing v5 · an **MCP server** surface ·
+Chrome MV3 extension support · the optional managed cloud tier and E2EE sync · macOS/Linux as
+first-class targets (they build and pass CI; Windows 11 gets the real testing).
 
 ---
 
 ## What Tepegöz is
 
 Most "AI browsers" bolt a chat sidebar onto Chromium. Tepegöz is built the other way around: an
-**agentic core** that can drive the browser end-to-end, wrapped in a **deterministic security
-kernel** so that autonomy never means losing control.
+**agentic core** that can drive the browser end-to-end, wrapped in a **deterministic security kernel**
+so that autonomy never means losing control.
 
-You give it a goal in plain language. Tepegöz turns that goal into a **plan you can review and
-edit**, executes it step by step across real tabs, and shows you exactly what it's doing in a **live
-agent console** — every URL visited, every action taken, every token spent, with a replayable
-timeline. Risky or irreversible steps stop and ask you first.
+You give it a goal in plain language. Tepegöz turns that goal into steps, executes them across real
+tabs, and shows you what it is doing in a live agent console — every URL visited, every action taken,
+every token spent. Risky or irreversible steps stop and ask you first.
 
 Three principles shape every decision:
 
-- **Local-first.** The full agentic experience runs on _your_ machine with _your_ own AI key
-  (Bring-Your-Own-Key). There is **zero dependency on a managed backend** to get value. A managed
-  cloud tier is optional and added later — never required.
-- **Security by design.** The renderer and any web content are treated as **untrusted**. A
-  rule-based **Policy Kernel** classifies every tool call _before_ the model runs, an **Egress
-  Firewall** blocks data exfiltration, and **sensitive sites** (banking, crypto, health, password
-  managers) are locked out of automation by default.
-- **Observable & reversible.** Everything the agent does is recorded in an append-only **Event
-  Journal**. Irreversible actions require a human-in-the-loop confirmation. You can always see what
-  happened and why.
+- **Local-first.** The full agentic experience runs on _your_ machine with _your_ own AI key. There is
+  **zero dependency on a managed backend**. A managed cloud tier is optional and later — never required.
+- **Security by design.** The renderer and any web content are treated as **untrusted**. A rule-based
+  policy kernel classifies every tool call _before_ the model runs, an egress firewall blocks
+  exfiltration, and sensitive sites (banking, crypto, health, password managers) are locked out of
+  automation by default.
+- **Observable & reversible.** Everything the agent does is recorded in an append-only event journal.
+  Irreversible actions require human confirmation. You can always see what happened and why.
 
-## Key features (target final state)
+## Getting started
 
-### Agentic automation
+**Requirements:** Node **>= 24** (what Electron 43 embeds — app and tests run the same runtime) and
+pnpm **>= 10**. No compiler and no native database build: the database is Node's built-in `node:sqlite`.
 
-- **Command Palette** (`Ctrl+K`) with four modes — **Chat / Do / Make / Tasks** — as the primary way
-  to drive the browser, alongside a deterministic address bar that _never_ silently starts an AI thread.
-- **Editable plan preview** — the agent shows its planned steps (each tagged read / state-changing /
-  destructive / financial, with a cost estimate) and lets you edit before anything runs.
-- **Live Agent Console** — per-step URL, action, progress, checkpoint, token cost, and errors, with a
-  virtualized timeline you can replay.
-- **Parallel multi-tab execution** — independent steps fan out to isolated browser contexts and run
-  concurrently (a DAG scheduler with adaptive throttling), not one slow step at a time.
-- **Durable tasks** — checkpoint/resume with a ≥95% resume target, an **Effect Ledger** with
-  idempotency + fencing tokens so a resumed task never double-acts, and **cross-agent handoff**: a
-  half-finished task can be picked up by another agent — even a different model — from where it stopped.
-- **Per-task memory at GB scale** — tiered hot/warm/cold storage with hybrid retrieval (full-text
-  BM25 + vector cosine), plus a **Memory Audit Panel** you can view and wipe (off by default, opt-in).
-- **Loop detector + step cap** — repeated action signatures stop the agent and hand back to you, with
-  your credits preserved.
+```sh
+pnpm install --frozen-lockfile
 
-### Real-world task completion
+# The full gate: typecheck · lint · test · build
+pnpm exec turbo run typecheck lint test build
 
-- **Integration adapters** with an **official-API-first** router — Google **Gmail / Drive / Calendar**
-  (sending email is always human-confirmed), with a logged-in browser fallback only when no API exists.
-- **Canva** via its existing remote **MCP** connector — no bespoke adapter.
-- **MCP client _and_ server.** Tepegöz consumes external MCP tools, and **exposes its own** browser /
-  tab / DOM / journal tools to external clients (Claude, ChatGPT, Cursor…) over stdio + Streamable HTTP,
-  behind Bearer auth, rate limiting, and the same policy gate as its internal surface.
+# Launch the app
+pnpm dev
+```
 
-### Trustworthy daily driver
+To use the agent, add your own AI provider key in Settings. It is encrypted with the OS keychain via
+`safeStorage` and stays in the main process — it is never written to `.env`, the bundle, or a log.
 
-- **Safe-Browsing Suite** — ad/tracker blocking (EasyList/EasyPrivacy, per-partition, no system-proxy
-  MITM), Google Safe Browsing v5 (hash-prefix lookups; your URLs are never sent), and an
-  **AgentThreatShield** that scores phishing/scam and egress anomalies on-device.
-- **Human handoff for CAPTCHA / 2FA** — detected and handed to you gracefully; **never auto-solved.**
-- **Cookie & storage inspector** — DevTools-style, fully isolated from the OAuth vault, agent access
-  off by default.
-
-### Privacy & provider choice
-
-- **Provider-agnostic Model Gateway.** Claude is the default (Opus for planning, Sonnet for execution,
-  Haiku for classification), with OpenAI and Gemini adapters. Keys live only in the main process,
-  encrypted via OS `safeStorage`.
-- **Token Ledger** — live quota indicator, 80% warning, and auto-refund on system errors, CAPTCHAs, or
-  detected loops.
-- **Optional cloud tier (later).** A managed proxy (no key needed), **opt-in end-to-end-encrypted**
-  cross-device memory sync (raw screenshots are _never_ synced), and browser bookmark/password/tab sync
-  — all pluggable, so turning them on requires **no rewrite**.
-
-### Built for everyone, including Turkey
-
-- **English-first, Turkish first-class.** Every user-facing string comes from a type-safe i18n catalog
-  with full English ⇄ Turkish parity — no hardcoded UI text, enforced by lint.
-- **Turkish IME done right.** A dedicated input pipeline for Turkish-Q/F layouts, dead keys, and
-  `ç ğ ı ö ş ü`, with a regression matrix — independent of the chosen UI language.
-- Runtime language switching (no restart), OS-language default, WCAG 2.2 AA, RTL-ready.
+Contributor setup, the gates CI enforces, and where to read first:
+[`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Architecture at a glance
 
-Tepegöz is a layered, modular monorepo. Layers communicate only through typed, validated contracts;
-direct cross-layer imports are forbidden and enforced in CI.
+A layered, modular monolith: one desktop app over ~70 `@tepegoz/*` packages. Layers communicate only
+through typed, validated contracts; cross-layer imports are forbidden and enforced in CI by
+`dependency-cruiser`.
 
 |                         Layer | Responsibility                                                               |
 | ----------------------------: | ---------------------------------------------------------------------------- |
 |           **L0 — Core Shell** | Secure Electron windowing, fuses, sandboxing, typed IPC                      |
-|          **L1 — Persistence** | SQLite (WAL) + append-only Event Journal + content-addressed blob store      |
+|          **L1 — Persistence** | SQLite (WAL) + append-only event journal + content-addressed blob store      |
 |  **L2 — Durability & Memory** | Checkpoint/resume, handoff, per-task tiered memory                           |
-|         **L3 — Orchestrator** | Intent → DAG planner, parallel scheduler, loop detection                     |
+|         **L3 — Orchestrator** | Intent → plan, scheduling, loop detection                                    |
 |   **L4 — Perception & Tools** | Out-of-process CDP driver, DOM + accessibility perception, content sanitizer |
-|     **L5 — Capability Plane** | Tool gateway (single PEP), skills runtime, MCP client + server               |
+|     **L5 — Capability Plane** | Tool gateway (single policy enforcement point), skills runtime, MCP          |
 | **L6 — Integration Adapters** | Official-API-first connectors with browser fallback                          |
-|        **L7 — Model Gateway** | Provider-agnostic AI routing, transports, Token Ledger                       |
-|      **L8 — Security Kernel** | Policy Kernel, Capability Broker, Egress Firewall, HITL, prompt/rules engine |
-|           **L9 — Browser UI** | Command Palette, Live Agent Console, browser shell, settings                 |
-|       **L10 — Safe Browsing** | Adblock, Safe Browsing, AgentThreatShield, popup/permission guard            |
+|        **L7 — Model Gateway** | Provider-agnostic AI routing, transports, token ledger                       |
+|      **L8 — Security Kernel** | Policy kernel, capability broker, egress firewall, HITL                      |
+|           **L9 — Browser UI** | Command palette, live agent console, browser shell, settings                 |
+|       **L10 — Safe Browsing** | Adblock, popup/permission guard, threat shield                               |
 
-**Cross-cutting foundations:** event-sourced state, a strict Zod boundary on every untrusted input
-(IPC, LLM tool-call args, MCP, adapters), a uniform `AppError` contract, redacted logging, and an
-**i18n-from-day-0** mandate.
+L2's durability, L6's adapters, and parts of L10 are on the "not built" list above — the model is the
+target shape, not a claim that every layer is full.
+
+**Cross-cutting:** event-sourced state, a strict zod boundary on every untrusted input, a uniform
+`AppError` contract, redacted logging, and i18n from day zero. The binding rules are
+[`docs/engineering-rules.md`](docs/engineering-rules.md).
 
 ## Tech stack
 
-- **Runtime:** Electron (secure `createWindow()` factory + fuses; renderer treated as untrusted)
-- **UI:** React + TypeScript (strict) + a type-safe i18n catalog (i18next-style)
-- **Build:** pnpm workspaces + Turborepo + `electron-vite` (main / preload / renderer targets)
-- **Persistence:** `better-sqlite3` (WAL), FTS5 + `sqlite-vec` for hybrid retrieval
-- **Automation:** Chrome DevTools Protocol (out-of-process driver)
-- **AI:** provider-agnostic gateway — Anthropic Claude (default), OpenAI, Gemini; MCP client + server
-- **On-device ML (later):** ONNX Runtime + DirectML for summarize/classify/redact/embed
-- **Native (later):** Rust via `napi-rs` for the egress firewall and hot paths
-- **Quality:** Vitest (unit/integration) + Playwright `_electron` (E2E); coverage gates in CI
+- **Runtime:** Electron 43 (secure `createWindow()` factory + fuses; renderer treated as untrusted)
+- **UI:** React + strict TypeScript + a type-safe per-package i18n catalog
+- **Build:** pnpm workspaces + Turborepo + `electron-vite`
+- **Persistence:** Node's built-in **`node:sqlite`** (WAL) — no native module, no ABI to match
+- **Automation:** Chrome DevTools Protocol
+- **AI:** provider-agnostic gateway — Anthropic, OpenAI, Gemini, Kimi; local models via
+  `node-llama-cpp`; MCP client
+- **Native:** Rust via `napi-rs` — placeholder package, not yet in a hot path
+- **Quality:** Vitest + Playwright `_electron`, with coverage, module-boundary, doc-link, audit, and
+  formatting gates in CI on all three platforms
 
-## Getting started
-
-> Setup instructions become live as **Phase 0** lands the monorepo scaffold. The intended developer
-> workflow is:
-
-```bash
-# Install (frozen lockfile, all workspaces)
-pnpm install --frozen-lockfile
-
-# Lint, typecheck, test, and build across the monorepo
-pnpm turbo run lint typecheck test build
-
-# Run the app in development
-pnpm dev
-```
-
-You'll bring your own AI provider key; it's stored encrypted in the OS keychain via `safeStorage` and
-never leaves the main process.
-
-## Project structure
+## Repository layout
 
 ```
 tepegoz-browser/
-├─ docs/        # Competitor & user-feedback research that informs the product
-│              # (Atlas, Opera Neon, Perplexity Comet, Fellou, Claude extensions for ChatGPT/Gemini…)
-├─ phases/      # Executable, checkable development plan — ticked as we go. One index plus four
-│              # folders by truth status: product/ (Phases 0–12, M, E) · ai-agent-super/ (AI
-│              # competence program) · tracks/ (one-off plans, not roadmap) · ai/ (tombstone)
-└─ README.md    # You are here
+├─ apps/desktop/    # L0 Electron shell — thin, over the packages below
+├─ packages/        # ~70 @tepegoz/* packages (private, bundled — never published to npm)
+├─ extensions/      # 9 first-party extensions on the in-house extension SDK
+├─ e2e/             # Playwright `_electron` suites against the BUILT app
+├─ test-fixtures/   # Frozen page fixtures, including hostile ones (excluded from formatting)
+├─ docs/            # ADRs, threat model, architecture index, engineering rules
+├─ research/        # Imported competitor/market research (not repo documentation)
+└─ phases/          # The executable roadmap, ticked as work lands
 ```
-
-As implementation begins, this fills out into a pnpm monorepo (`apps/*`, `packages/*`, `libs/*`) with
-the layers described above.
 
 ## Roadmap
 
-Development is sequenced so that the highest-risk, hardest-to-reverse decisions come first, and so that
-**real user value ships before any cloud dependency exists.**
+Sequenced so the highest-risk, hardest-to-reverse decisions come first, and so real user value exists
+before any cloud dependency does. Status below is copied from the roadmap's own ledger — **nothing reads
+✅**, because a phase closes only when its definition of done passes and the result is recorded.
 
-|  Phase | Goal                                                                           | Status         |
-| -----: | ------------------------------------------------------------------------------ | -------------- |
-|  **0** | Monorepo scaffold, core contracts, security backbone, CI                       | ⬜ Not started |
-| **1a** | Walking-skeleton MVP — BYO-key, local-first agentic core, one end-to-end task  | ⬜ Not started |
-| **1b** | Agentic deepening — parallel DAG, durable handoff, per-task memory, MCP server | ⬜ Not started |
-|  **2** | Integration adapters (Google, Canva) + Safe-Browsing Suite                     | ⬜ Not started |
-|  **3** | Optional managed subscription + E2EE cloud memory sync + extensions            | ⬜ Not started |
-|  **4** | Maturation — full extensions, cross-platform (macOS/Linux), enterprise         | ⬜ Not started |
+| Phase                     | Goal                                                         | Status                                                                 |
+| ------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| **0** Foundation          | Monorepo, core contracts, security backbone, CI              | 🟡 6/7 exit criteria evidenced                                         |
+| **1a** Walking skeleton   | BYO-key local-first agentic core, one end-to-end task        | 🟡 In progress — console/runtime/tool plane/browser tools live         |
+| **2b/2c** Daily driver    | Tabs, DevTools boundary, downloads, clipboard, uploads       | 🟡 In progress                                                         |
+| **5** Network privacy     | Per-tab and per-group VPN tunnels + Tor                      | 🟡 **5a working with real tunnels**; OpenVPN deferred                  |
+| **M** Macros              | Deterministic record/replay automation                       | 🟡 Core shipped                                                        |
+| **AI** Agent competence   | The 13-phase agent competence program (S0–S12)               | 🟡 All code landed · **every phase measurement-owed**                  |
+| **6, 7, 9, 11, 12**       | Recipes · notary · mandates · Kamu pack · developer platform | ⏸ Frozen out of v1 — decision layers landed, none wired to a live call |
+| **1b, 2, 3, 4, 8, 10, E** | Durability · adapters · cloud tier · maturation · delight    | ⏸ Frozen out of v1 — not started                                       |
 
-Full, task-level detail lives in [`phases/`](phases/) and its [index](phases/README.md).
+Task-level detail: [`phases/`](phases/) and its [index](phases/README.md).
 
 ## Design commitments
 
-These are non-negotiable and apply to every phase:
+Non-negotiable, and they apply to every phase:
 
 - **Local-first, no forced backend.** The cloud is always optional.
-- **Deterministic security first.** Rules decide; the model is used only for understanding and
-  ambiguity — never to grant itself permissions.
-- **Privacy by default.** Telemetry off, sensitive sites locked, screenshots never synced raw,
-  secrets only in the main process.
+- **Deterministic security first.** Rules decide; the model is used for understanding and ambiguity —
+  never to grant itself permissions.
+- **Privacy by default.** Telemetry off, sensitive sites locked, secrets only in the main process.
 - **English-first, Turkish first-class** — and accessible (WCAG 2.2 AA).
-- **Honesty over hype.** Where extension or platform compatibility is partial, it's documented with an
-  honest matrix, not a "everything works" promise.
+- **Honesty over hype.** Where compatibility or competence is partial, it is documented with an honest
+  matrix and an explicit "not measured", not an "everything works" promise. This README's status
+  section is that commitment applied to itself.
+
+## Security
+
+Tepegöz renders untrusted content and lets a model act on pages you are logged into. Security reports
+are the most valuable contribution this project can receive.
+
+**Do not file a vulnerability as a public issue.** Follow [`SECURITY.md`](SECURITY.md) — it covers
+private reporting, scope, response targets, and safe harbor. The trust model is
+[`docs/threat-model.md`](docs/threat-model.md).
+
+## Contributing
+
+Bug reports with reproductions, security findings, localization corrections, and macOS/Linux platform
+reports are the most useful things right now. Read [`CONTRIBUTING.md`](CONTRIBUTING.md) first — the CI
+gates are strict and mechanical, and the guide tells you what they are before they turn a PR red.
+Participation is governed by the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## License
+
+Copyright (C) 2026 Kuray Karaaslan.
+
+Tepegöz is free software: you may redistribute it and/or modify it under the terms of the **GNU Affero
+General Public License, version 3** as published by the Free Software Foundation. It is distributed in
+the hope that it will be useful, but **WITHOUT ANY WARRANTY**; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See [`LICENSE`](LICENSE) for the full terms.
+
+The AGPL's network clause (§13) matters here: if you modify Tepegöz and make it available to users over
+a network, those users must be offered the corresponding source of your modified version.
+
+Third-party code and assets redistributed in this repository — and the licenses they arrive under — are
+recorded in [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
 
 ---
 
