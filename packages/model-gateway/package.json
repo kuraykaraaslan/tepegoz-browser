@@ -16,13 +16,13 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.107.0",
+    "@anthropic-ai/sdk": "^0.120.0",
     "@tepegoz/http": "workspace:*",
     "@tepegoz/libs": "workspace:*",
     "@tepegoz/shared-types": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2",
+    "@types/node": "^26.2.0",
     "typescript": "^5.7.2",
     "vitest": "^3.2.6"
   }

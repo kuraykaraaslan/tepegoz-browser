@@ -25,13 +25,13 @@
     "@tepegoz/extension-sdk": "workspace:*",
     "@tepegoz/i18n": "workspace:*",
     "@tepegoz/ui": "workspace:*",
-    "zod": "3.25.76"
+    "zod": "4.4.3"
   },
   "peerDependencies": {
     "react": "^18 || ^19"
   },
   "devDependencies": {
-    "@types/react": "^18.3.18",
+    "@types/react": "^19.2.18",
     "typescript": "^5.7.2",
     "vitest": "^3.2.6"
   }
