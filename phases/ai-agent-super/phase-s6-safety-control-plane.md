@@ -185,6 +185,42 @@ Sequencing: the claim-grade ASR sweep runs **after [S3](phase-s3-reliability-act
       [Phase 3](../product/phase-3-backend-cloud-extensions.md): every request re-derives ownership server-side,
       never from a parameter, plus transport pinning and rate limits.
 
+### PR9 — user-granted sensitive capabilities (ADR-0039)
+
+Nothing here is landed. [ADR-0039](../../docs/adr/0039-user-granted-sensitive-capabilities.md) changed
+the decision; the code still enforces the old absolute deny, which is the honest current state.
+
+- [ ] **Grant store in main.** A per-category grant (`banking` / `government` / `crypto` /
+      `password-manager` / `health`) created only by explicit user action, independently revocable, resolved
+      **before** `resolveAutonomy` is consulted. The existing [`PlanGrantStore`](../../packages/security-policy/src/plan-grants.ts)
+      is run-scoped and in-memory; these persist, so unlike PR3 this **does** incur the sync-meta obligation
+      S9 anticipated.
+- [ ] **Proof the invariant survives.** Unit + integration tests that no autonomy level — including `auto` —
+      synthesizes a grant, and that `resolveAutonomy` still cannot overturn a `deny`. The PR2/PR3 tests stay
+      green unchanged; if any of them needs editing, the design is wrong.
+- [ ] **Proof the agent has no path.** A capability-plane test asserting there is no tool that creates,
+      widens, extends, or re-enables a grant. This is the load-bearing claim of ADR-0039 and the one an
+      injected page would attack first.
+- [ ] **Revocation is immediate.** A grant revoked mid-run stops authorizing on the **next** classification,
+      not at the run's end. Integration test with a revoke between two tool calls.
+- [ ] **Mandate authorizes within bounds.** [`mandateCovers`](../../docs/adr/0033-transaction-mandate-kernel.md)
+      satisfies the `financial` HITL requirement inside an active mandate; outside one, HITL + biometric is
+      unchanged. Every replay-safety test from ADR-0033 stays green — `consumeMandate` still checks
+      idempotency before expiry.
+- [ ] **Deletion gets no mandate.** Assert there is no destructive equivalent: an unattended destructive call
+      still forces a specific confirmation regardless of any grant or mandate held.
+- [ ] **CAPTCHA/2FA auto-clear.** 2FA completion routed through the PR6 credential broker so the code never
+      enters model context — the credential-never-leaks fixtures must cover the 2FA path, or the broker's
+      guarantee has a hole in exactly the place this PR opens. Automatic CAPTCHA clearing depends on a
+      page-signal detector that [Phase 11](../product/phase-11-regional-trust-kamu.md) also owes and neither
+      phase has built; handoff remains the fallback.
+- [ ] **Review surface.** Every active grant and mandate listed with scope and expiry, revocable from one
+      place. ADR-0039 records this as a prerequisite for the decision being honest, not a follow-up.
+- [ ] **The battery must assume a granted category.** The 24 `atk_*` scenarios all run against locked
+      categories today, so they cannot measure the blast radius this PR creates. New `atk_*` scenarios where a
+      grant **is** active and the attack tries to act inside it — frozen before the code, per the constitution.
+      Until they exist, **no ASR number from PR7 covers the granted case** and must not be quoted as if it did.
+
 ## Fixtures
 
 Frozen in PR0 before any capability code:
@@ -192,12 +228,20 @@ Frozen in PR0 before any capability code:
 - The existing **24 `atk_*`** scenarios in [packages/agent-eval](../../packages/agent-eval) — first claim-grade run (S0 gives the baseline numbers).
 - **Critic-divergence** fixtures — a benign task turns malicious mid-run (injected mutating instruction); assert the advisory critic logs divergence.
 - **Credential-never-leaks** fixtures — assert the secret never enters model context (prompt or history) across the run.
+- **Granted-category attack** fixtures (PR9, ADR-0039) — not yet frozen. The existing 24 `atk_*` scenarios all
+  assume a locked category and therefore cannot measure the blast radius a user grant creates.
 
 ## Prose steers
 
 None. `SECURITY_PREAMBLE` is a live defensive control, not prose debt; this phase owns no [PROSE-LEDGER](PROSE-LEDGER.md) row. If PR2's category map lets any hardcoded sensitivity prose be deleted, that deletion is paired with/without sweep per the constitution and recorded then.
 
 ## ADR
+
+[ADR-0039](../../docs/adr/0039-user-granted-sensitive-capabilities.md) (2026-08-23) partially supersedes
+ADR-0006 for this phase: the sensitive-site lockout becomes a per-category user grant that ships off,
+CAPTCHA/2FA are cleared automatically, and a wallet mandate authorizes inside its bounds. The kernel stays
+deterministic and pre-model, and autonomy still cannot lift a deny — only an out-of-band user grant can.
+PR9 tracks the implementation, none of which has landed.
 
 Amends [ADR-0006](../../docs/adr/0006-policy-kernel-hitl.md): records the six risk tiers, plan-scoped grants (eTLD+1, run-expiring), and the **position** of the advisory critic plane (post-kernel, pre-dispatch — the kernel stays deterministic and pre-model). Documents the renderer-autonomy enforcement bug as a **fixed defect**, not a design decision. Continues the ADR series from 0025 if the credential-broker trust model warrants its own record (agent-emits-intent / main-fills-via-CDP / model-never-sees-secret).
 
@@ -207,4 +251,8 @@ Amends [ADR-0006](../../docs/adr/0006-policy-kernel-hitl.md): records the six ri
 - **Grant-scope leakage across redirects.** Mitigation: eTLD+1 matching with an explicit sub-domain policy documented in the ADR; PR3 integration test asserts an off-scope redirect does not inherit the grant.
 - **Commerce legal exposure.** The Amazon v. Perplexity injunction is a live constraint; flagged here, but the actual purchase flow lives in [Phase S8](phase-s8-assistant-ux.md) — the broker in this phase only fills credentials, it does not transact.
 - **Spike-first:** PR6's biometric/OS-auth gate is platform-dependent (Windows Hello via Electron `safeStorage`/OS APIs) — a small spike PR validates the CDP-fill-after-biometric path before the full broker lands.
+- **A grant widens the blast radius of a successful injection (ADR-0039).** The injection still cannot create
+  a grant, but it can act inside one the user made. Mitigation: taint tracking and the Egress Firewall become
+  load-bearing rather than defence-in-depth, and PR9's new `atk_*` scenarios must assume a granted category —
+  an ASR measured only against locked categories would be measuring the wrong product.
 - **Inflated safety number if run early.** Mitigation: PR7 is hard-gated to run after [S3](phase-s3-reliability-actions.md); ASR at 1/3 benign competence is not claim-grade.

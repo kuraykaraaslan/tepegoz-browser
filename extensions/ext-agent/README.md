@@ -15,7 +15,8 @@ routine steps but still pauses for destructive/financial actions, `auto` is full
 is a gated, currently-disabled unrestricted mode), reasoning-effort presets (`low`…`max`, mirroring the
 model gateway's `EffortLevel`), a collapsible per-step reasoning/rationale section, a scrubbable replay
 timeline over a run's event stream, token-usage reporting, composer attachments (selected text, files,
-screenshots), and a Human Handoff Controller that detects CAPTCHA/2FA and hands control back to the
+screenshots), and a Human Handoff Controller that detects CAPTCHA/2FA and (per ADR-0039, pending
+implementation) clears them automatically, handing control back to the
 user rather than attempting to solve it. Approvals distinguish routine state-changing tools from
 biometric-gated (high-risk) ones.
 

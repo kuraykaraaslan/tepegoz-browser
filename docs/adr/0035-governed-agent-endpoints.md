@@ -1,7 +1,11 @@
 # ADR-0035: Governed Agent Endpoints — the sensitive-site lockout applies regardless of the token
 
-- **Status:** Accepted (the inbound gate decision layer only — see Consequences)
+- **Status:** Accepted (the inbound gate decision layer only — see Consequences) — refined by [ADR-0039](0039-user-granted-sensitive-capabilities.md)
 - **Date:** 2026-08-20
+
+> **Amended by [ADR-0039](0039-user-granted-sensitive-capabilities.md) (2026-08-23):** a token may reach
+> a sensitive category only if a user grant for it is active at call time. A token still cannot carry,
+> imply, or substitute for a grant, so the rule below holds with the grant as an added precondition.
 - **Refines:** [ADR-0006](0006-policy-kernel-hitl.md) (sensitive-site lockout, reused verbatim here)
 - **Phase:** [Phase 9 — Safe Autonomy & Governed Delegation](../../phases/product/phase-9-safe-autonomy-delegation.md), L5/L8/L9 (Governed Agent Endpoints)
 

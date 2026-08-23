@@ -36,7 +36,7 @@ its operator, Phase 5)`
 | Threat                                   | Mitigation (where)                                                                                                |
 | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | Prompt injection from page/email content | Taint tracking + tainted→state-changing forces HITL; Content Sanitizer; data/instruction separation (ADR-0006)    |
-| Excessive agency (delete/send/pay)       | Deterministic Policy Kernel danger-class + HITL + Windows Hello; sensitive-site lockout                           |
+| Excessive agency (delete/send/pay)       | Policy Kernel danger-class + HITL + Windows Hello; sensitive categories off until user-granted; spend bounded by mandate (ADR-0039) |
 | Credential/key theft                     | Keys only in main via `safeStorage`; OAuth tokens never exposed to the agent; never bundled/logged (redaction)    |
 | Data exfiltration                        | Egress Firewall (Base64/high-entropy/cross-origin PII); CSP; deny-by-default navigation                           |
 | Malicious 3rd-party MCP/skill            | CapabilitySandbox (separate process, least-privilege, `file://` off); signature + scope-review before marketplace |

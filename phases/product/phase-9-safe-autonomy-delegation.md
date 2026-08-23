@@ -22,7 +22,8 @@ Windows Hello, Effect Ledger fencing, tepegöz-as-MCP-server) + Phase 2 (Integra
   bundle hash in force
   _(landed: [policy-bundle-narrowing.ts](../../packages/security-policy/src/policy-bundle-narrowing.ts) — `bundleNarrows` + `bundleChainNarrows`, 11 tests. **Owed:** signing, the marketplace install/scope-review flow, the curated bundles themselves, and embedding the bundle hash in a receipt.)_
 - [~] **Governed Agent Endpoint**: an external client calls a scoped Bearer token; every inbound call re-flows
-  the full Policy Kernel + HITL + Egress + Effect Ledger; sensitive-site lockout holds regardless of token;
+  the full Policy Kernel + HITL + Egress + Effect Ledger; a sensitive category needs an active user grant and
+  is never opened by the token itself (ADR-0039);
   revocation + per-caller audit + kill-switch work
   _(landed: [agent-endpoint-gate.ts](../../packages/security-policy/src/agent-endpoint-gate.ts) — `tokenCovers` + `withinRateLimit`, 10 tests directly asserting the sensitive-site lockout is checked BEFORE the token's own scope. **Owed:** an actual listening surface, token minting, and the full Policy Kernel/HITL/Egress/Effect-Ledger re-flow this line asks for — only the token's own scope check exists today.)_
 - [ ] **i18n:** en+tr keys added for new surfaces (Mandate authoring/consumption UI, Policy Bundle install/scope
@@ -72,8 +73,9 @@ Windows Hello, Effect Ledger fencing, tepegöz-as-MCP-server) + Phase 2 (Integra
 ### L5/L8/L9 — Governed Agent Endpoints (productized inbound MCP + A2A)
 
 - [ ] Wrap the planned tepegöz-as-MCP-server as **Agent Endpoints**: a Settings surface minting scoped,
-      revocable Bearer tokens (per-token capability allowlist, danger-class ceiling, **sensitive-site lockout
-      enforced regardless of token**, per-token rate-limit/quota); every inbound call still flows through the
+      revocable Bearer tokens (per-token capability allowlist, danger-class ceiling, **sensitive categories
+      reachable only under an active user grant, never on the token's say-so** (ADR-0035 + ADR-0039),
+      per-token rate-limit/quota); every inbound call still flows through the
       full Policy Kernel + HITL + Egress Firewall + Effect Ledger
 - [ ] **"External Agents" live console**: which Bearer identity called what tool when, allow/deny/HITL outcomes,
       cost, rate-limit status, per-session Replay Receipts — sourced from the Journal, SIEM-exportable, with a

@@ -1,7 +1,11 @@
 # ADR-0033: Transaction Mandate Kernel — bounded pre-model authority, replay-safe by construction
 
-- **Status:** Accepted (decision layer only — see Consequences)
+- **Status:** Accepted (decision layer only — see Consequences) — refined by [ADR-0039](0039-user-granted-sensitive-capabilities.md)
 - **Date:** 2026-08-20
+
+> **Amended by [ADR-0039](0039-user-granted-sensitive-capabilities.md) (2026-08-23):** inside an active
+> mandate, the mandate now *satisfies* the `financial` HITL requirement instead of only narrowing it.
+> Outside a mandate nothing changes, and every replay-safety property below is untouched.
 - **Refines:** [ADR-0006](0006-policy-kernel-hitl.md) (deterministic policy kernel — the `financial`
   danger class this mandate can only ever narrow further, never replace)
 - **Phase:** [Phase 9 — Safe Autonomy & Governed Delegation](../../phases/product/phase-9-safe-autonomy-delegation.md), L8/L2/L6

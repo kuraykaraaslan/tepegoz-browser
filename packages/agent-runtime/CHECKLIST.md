@@ -9,6 +9,7 @@ Status verified against the implementation (2026-07-23); checked items have conc
 - [x] Support skipping individual plan steps during human plan review.
 - [x] Support per-tool human approval prompts with clear action summaries.
 - [x] Support localized human handoff copy for CAPTCHA, 2FA, and sensitive flows.
+- [ ] Support automatic CAPTCHA/2FA clearing with handoff as the fallback (ADR-0039).
 - [x] Support injection of browser host capabilities without Electron-specific dependencies.
 - [x] Support injection of journal readers for audit-aware agent context.
 - [x] Support active-tab URL context for site-aware policy decisions.

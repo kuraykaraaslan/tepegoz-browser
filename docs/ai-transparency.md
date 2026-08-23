@@ -64,9 +64,12 @@ model per provider — adding a provider is a data change plus one adapter, not 
   decisions.
 - **Transparency obligation (Art. 50).** Users are told they are interacting with an AI and that output may
   be inaccurate — see §6. AI-generated output is labeled in the UI.
-- **High-risk actions are gated, never automated.** State-changing / destructive / financial tool calls and
-  sensitive-site interactions require explicit human approval (HITL) and can be hard-blocked (sensitive-site
-  lockout). CAPTCHA/2FA is **never** auto-solved — control is handed back to the user.
+- **High-risk actions are gated by the user, never by the agent.** State-changing / destructive tool calls
+  require explicit human approval (HITL). Sensitive categories (bank / crypto / health / password-manager /
+  government) are hard-blocked until the user creates a per-category grant, which ships absent and which no
+  autonomy level and no agent tool can create (ADR-0039). Financial calls are authorized either by HITL or by
+  a user-written wallet mandate with a ceiling, payee set and expiry. CAPTCHA/2FA are cleared automatically —
+  two-factor codes are completed by the Credential Broker and never reach the model.
 - **Prohibited-practice check.** No subliminal manipulation, no exploitation of vulnerabilities, no
   real-time remote biometric identification. Not applicable by design.
 
@@ -79,9 +82,11 @@ model per provider — adding a provider is a data change plus one adapter, not 
   modal. Fail-safe: no response within the timeout = deny.
 - **Autonomy levels.** `ask` (default) reviews the plan + every state-changing step; `act` auto-approves
   routine steps but still pauses for destructive/financial; `auto` is hands-off. At **every** level the
-  deny-class (sensitive-site lockout) hard-blocks in the main process.
+  deny-class hard-blocks in the main process, and **no level can lift it** — only an out-of-band user grant
+  can, which is a separate object from an autonomy level and is never created by the agent (ADR-0039).
 - **Hard stops.** `MAX_AGENT_STEPS` cap; Loop Detector (repeated action-signature → stop → credit
-  preserved); cooperative cancellation between steps; Human Handoff Controller for CAPTCHA/2FA.
+  preserved); cooperative cancellation between steps; Human Handoff Controller as the fallback for a
+  CAPTCHA the browser cannot clear.
 - **Auditability.** Every run projects redacted events + checkpoints into the append-only Event Journal
   (`CheckpointWritten`, `AgentStepExecuted`, `HitlRequested`, `HandoffRequested`, …) for after-the-fact
   review and replay.
@@ -119,8 +124,10 @@ model per provider — adding a provider is a data change plus one adapter, not 
 - **Raw model output is never rendered as HTML** — chat renders safe markdown/plain text only.
 - **Side-effecting actions are surfaced and gated** — the HITL modal shows the tool + a truncated,
   redacted argument preview before the user approves.
-- **Handoff is surfaced across channels** — a CAPTCHA/2FA handoff raises a localized notification
-  (center + toast + native) and stops the run; the agent states it will not solve it automatically.
+- **Granted capabilities are visible and revocable** — every active sensitive-category grant and wallet
+  mandate is listed with its scope and expiry, and can be revoked at any time; revocation takes effect on the
+  next classification. A CAPTCHA the browser cannot clear still raises a localized handoff notification
+  (center + toast + native) and stops the run.
 - **Cost transparency** — the live token/quota indicator and the 80% warning are shown in the Console;
   the quota is user-configurable in Settings.
 - All disclosures are localized (English source + Turkish parity), per the day-0 i18n rule.

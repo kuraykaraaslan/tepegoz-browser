@@ -27,6 +27,7 @@ Status verified against the implementation and cross-referenced packages (2026-0
 - [x] Support resetting an agent session.
 - [x] Support retrying after recoverable run failures.
 - [x] Support human handoff for CAPTCHA pages.
+- [ ] Support automatic CAPTCHA clearing, falling back to handoff (ADR-0039).
 - [x] Support human handoff for two-factor authentication pages.
 - [x] Support resuming after a human handoff is completed.
 - [x] Support live event streaming from planning and execution.

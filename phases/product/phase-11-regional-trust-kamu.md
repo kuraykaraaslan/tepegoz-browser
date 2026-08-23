@@ -15,10 +15,11 @@ in. A thin, focused adapter pack on the Phase-2 adapter + Phase-1a Policy Kernel
 - [~] **Kamu read-only mode** works zero-approval on e-Devlet / MHRS / GİB / SGK (check randevu availability,
   view tax debt, list documents); **every state-changing step** forces HITL + Windows Hello
   _(landed: [kamu-policy.ts](../../packages/security-policy/src/kamu-policy.ts) — `classifyKamuStep`, 9 tests. **Owed:** the recipes themselves (nothing checks randevu availability or tax debt yet) and the provenance check that would confirm a step actually came from a reviewed recipe before this classification is trusted.)_
-- [ ] 2FA/SMS and CAPTCHA route to the **Human Handoff Controller** (NO auto-solve); a full replayable,
-      notarized trace is journaled as dispute evidence
-- [ ] TC Kimlik No / credentials never leave `safeStorage`; a dedicated sensitive-site lockout class covers the
-      Kamu pack
+- [ ] 2FA/SMS and CAPTCHA are **cleared automatically** (2FA via the Credential Broker, so the code never
+      reaches the model), with the Human Handoff Controller as the fallback for a challenge the browser
+      cannot clear (ADR-0039); a full replayable, notarized trace is journaled as dispute evidence
+- [ ] TC Kimlik No / credentials never leave `safeStorage`; the Kamu pack sits in the `government` sensitive
+      category, which ships **off** and is reachable only under an explicit user grant (ADR-0039)
 - [~] **Locale-as-a-Plugin**: a signed locale pack installs, passes the `Resources` type-parity check, and (if
   it bundles recipes) those recipes run sandboxed + scope-reviewed
   _(landed: [locale-pack-parity.ts](../../packages/security-policy/src/locale-pack-parity.ts) — `checkLocalePackParity`, 8 tests distinguishing a missing key from a shape mismatch (a string turned into an object at the same path breaks a caller differently than an absent key). **Owed:** signing/verification, the install flow, and everything about recipe sandboxing.)_
@@ -42,11 +43,12 @@ in. A thin, focused adapter pack on the Phase-2 adapter + Phase-1a Policy Kernel
   hard-classified `financial`/`destructive` in the Policy Kernel so they **ALWAYS** force HITL + Windows
   Hello
   _(landed: the classification RULE — `classifyKamuStep` force-asks with biometric on any state-changing step, deliberately scoped to four individually-named domains rather than the whole `gov.tr` suffix, so a Kamu pack can never claim coverage of a government site nobody reviewed it against. **Not started:** the recipes themselves.)_
-- [ ] 2FA/SMS and the inevitable CAPTCHA route to the existing **Human Handoff Controller** (NO auto-solve) — not started; this module has no page-signal detector, and none is added here, because a hand-wavy heuristic would be exactly the kind of unverified guess this project rejects
+- [ ] 2FA/SMS and the inevitable CAPTCHA are **cleared automatically**, falling back to the existing **Human Handoff Controller** (ADR-0039) — not started; this module still has no page-signal detector, and none is added here, because a hand-wavy heuristic would be exactly the kind of unverified guess this project rejects. Automatic clearing depends on that detector existing first.
 - [ ] Recipes are **signed, version-pinned**, and ship a zero-approval **read-only mode** (check randevu
       availability, view tax debt, list documents)
-- [ ] Credentials live in the Credential Vault under a **dedicated sensitive-site lockout class**; **TC Kimlik
-      No never outside `safeStorage`**; full replayable trace journaled (+ notarized) for dispute evidence
+- [ ] Credentials live in the Credential Vault under a **dedicated sensitive category**, off unless granted
+      (ADR-0039); **TC Kimlik No never outside `safeStorage`**; full replayable trace journaled (+ notarized)
+      for dispute evidence
 - [ ] _Risk (ADR-0022):_ regulatory/liability if a recipe mis-acts on a government portal; recipes break when
       portals change → read-only-first, every write hard-coded forced-HITL + biometric, full replayable trace
       for dispute evidence, version pinning + an honest "recipe stale, falling back to manual" failure state

@@ -1,7 +1,13 @@
 # ADR-0006: Deterministic Policy Kernel + HITL (security-by-design)
 
-- **Status:** Accepted
+- **Status:** Accepted — partially superseded by [ADR-0039](0039-user-granted-sensitive-capabilities.md)
 - **Date:** 2026-06-30
+
+> **Amended by [ADR-0039](0039-user-granted-sensitive-capabilities.md) (2026-08-23):** the sensitive-site
+> lockout is now a per-category user grant that ships off rather than an absolute deny, and CAPTCHA/2FA
+> are cleared automatically rather than handed to the user. The invariant that *autonomy* can never
+> overturn a `deny` is unchanged — only an out-of-band user grant can, and the agent cannot create one.
+> Everything else in this record stands.
 
 ## Context
 
