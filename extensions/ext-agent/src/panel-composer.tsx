@@ -1,6 +1,5 @@
 import { cn } from '@tepegoz/ui';
 import type { Resources } from '@tepegoz/i18n';
-import type { AIProvider } from '@tepegoz/shared-types/providers';
 import type { AgentStrings } from './i18n';
 import type { AgentAutonomy, AgentConfig, AgentEffort, AgentSkill } from './types';
 import { Dropdown } from './panel-dropdown';
@@ -48,7 +47,8 @@ interface PanelComposerProps {
   onAttachSelection: () => void;
   onAttachFiles: () => void;
   onAttachScreenshot: () => void;
-  chooseProvider: (provider: AIProvider) => void;
+  /** Pick the stored key (or the on-device entry) the run uses, by its choice id. */
+  chooseChoice: (id: string) => void;
   chooseModel: (model: string) => void;
   chooseAutonomy: (level: AgentAutonomy) => void;
   chooseEffort: (level: AgentEffort) => void;
@@ -83,7 +83,7 @@ export function PanelComposer({
   onAttachSelection,
   onAttachFiles,
   onAttachScreenshot,
-  chooseProvider,
+  chooseChoice,
   chooseModel,
   chooseAutonomy,
   chooseEffort,
@@ -258,7 +258,7 @@ export function PanelComposer({
                     <RunConfigMenu
                       t={a}
                       config={config}
-                      onProvider={chooseProvider}
+                      onChoice={chooseChoice}
                       onModel={chooseModel}
                       onAutonomy={chooseAutonomy}
                       onEffort={chooseEffort}

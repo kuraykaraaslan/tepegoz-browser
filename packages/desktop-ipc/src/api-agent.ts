@@ -104,10 +104,10 @@ export interface AgentApi {
   onTokenUsage(callback: (usage: TokenUsageSnapshot) => void): () => void;
   /** Fetch the current token-usage snapshot. */
   getTokenUsage(): Promise<TokenUsageSnapshot>;
-  /** Agent panel: current provider + selectable choices + autonomy level. */
+  /** Agent panel: current run target + the stored keys it can switch to + autonomy level. */
   getAgentConfig(): Promise<AgentConfig>;
-  /** Agent panel: set the per-run provider override (provider selector). */
-  setAgentProvider(provider: ProviderId): Promise<void>;
+  /** Agent panel: select the run target by stored-key id (or 'local') — the picker lists KEYS. */
+  selectAgentChoice(id: string): Promise<void>;
   /** Agent panel: pin a specific model for `provider` (Model dropdown); `''` clears it (auto/tiered). */
   setAgentModel(provider: ProviderId, model: string): Promise<void>;
   /** Agent panel: set the autonomy level (mode dropdown). */

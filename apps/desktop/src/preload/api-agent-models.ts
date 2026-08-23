@@ -61,7 +61,7 @@ export const agentModelsApi: Pick<
   | 'onTokenUsage'
   | 'getTokenUsage'
   | 'getAgentConfig'
-  | 'setAgentProvider'
+  | 'selectAgentChoice'
   | 'setAgentModel'
   | 'setAgentAutonomy'
   | 'setAgentEffort'
@@ -197,7 +197,7 @@ export const agentModelsApi: Pick<
   },
   getTokenUsage: () => invoke<TokenUsageSnapshot>(IpcChannels.tokenUsageGet),
   getAgentConfig: () => invoke<AgentConfig>(IpcChannels.agentGetConfig),
-  setAgentProvider: (provider: ProviderId) => invoke<void>(IpcChannels.agentSetProvider, provider),
+  selectAgentChoice: (id: string) => invoke<void>(IpcChannels.agentSelectChoice, id),
   setAgentModel: (provider: ProviderId, model: string) =>
     invoke<void>(IpcChannels.agentSetModel, { provider, model }),
   setAgentAutonomy: (level: AgentAutonomy) => invoke<void>(IpcChannels.agentSetAutonomy, level),

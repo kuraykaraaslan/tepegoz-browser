@@ -14,6 +14,7 @@ import type {
   AgentEventKind,
   AgentFileAttachment,
   AgentModelChoice,
+  AgentModelInfo,
   AgentPlanPreview,
   AgentPlanStep,
   AgentRunResult,
@@ -22,8 +23,10 @@ import type {
 } from '@tepegoz/ext-agent/types';
 // Canonical effort-level list is owned by the agent package (zod-free); re-exported so the preferences
 // schema builds its z.enum from the same source (no drift), like the other canonical arrays below.
-import { AGENT_EFFORT_LEVELS } from '@tepegoz/ext-agent/types';
-export { AGENT_EFFORT_LEVELS };
+// LOCAL_CHOICE_ID is the picker's one non-key entry (the on-device provider); re-exported at runtime so
+// main and the panel compare against the SAME literal instead of two hand-typed 'local' strings.
+import { AGENT_EFFORT_LEVELS, LOCAL_CHOICE_ID } from '@tepegoz/ext-agent/types';
+export { AGENT_EFFORT_LEVELS, LOCAL_CHOICE_ID };
 
 export type {
   AgentApprovalRequest,
@@ -36,6 +39,7 @@ export type {
   AgentEventKind,
   AgentFileAttachment,
   AgentModelChoice,
+  AgentModelInfo,
   AgentPlanPreview,
   AgentPlanStep,
   AgentRunResult,

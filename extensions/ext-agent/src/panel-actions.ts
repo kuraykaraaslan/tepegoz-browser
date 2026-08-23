@@ -1,5 +1,4 @@
 import type { Dispatch, SetStateAction } from 'react';
-import type { AIProvider } from '@tepegoz/shared-types/providers';
 import type { AgentStrings } from './i18n';
 import type {
   AgentAutonomy,
@@ -231,10 +230,13 @@ export function useAgentActions(deps: AgentActionsDeps) {
     });
   }
 
-  function chooseProvider(provider: AIProvider): void {
-    setConfig((prev) => (prev !== null ? { ...prev, provider } : prev));
+  /** Pick the stored KEY (or the on-device entry) this conversation runs on. Optimistic on the id only:
+   *  the provider, the model pinned on that key and the priority order are all main's answer, so the
+   *  refetch — not this component — decides what the panel finally shows. */
+  function chooseChoice(id: string): void {
+    setConfig((prev) => (prev !== null ? { ...prev, selectedId: id } : prev));
     void api
-      .setAgentProvider(provider)
+      .selectAgentChoice(id)
       .then(() => api.getAgentConfig())
       .then(setConfig, () => {});
   }
@@ -326,7 +328,7 @@ export function useAgentActions(deps: AgentActionsDeps) {
     onExportLog,
     toggleReasoning,
     toggleSteps,
-    chooseProvider,
+    chooseChoice,
     chooseModel,
     chooseAutonomy,
     chooseEffort,

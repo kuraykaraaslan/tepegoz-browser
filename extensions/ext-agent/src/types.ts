@@ -177,25 +177,47 @@ export interface AgentModelInfo {
   label: string;
 }
 
-/** One selectable provider for the panel's Provider picker (plus its selectable models). */
+/** The id of the on-device entry in the picker — the one run target that is NOT a stored API key
+ *  (it runs a downloaded model, selected under Settings → On-device models). */
+export const LOCAL_CHOICE_ID = 'local';
+
+/**
+ * One selectable RUN TARGET in the panel's picker. This is a **stored API key**, not a provider: the
+ * picker mirrors Settings → Providers & API keys one-to-one, so a user with three OpenAI keys sees
+ * three entries and picks the one this conversation runs on. The single exception is the on-device
+ * entry ({@link LOCAL_CHOICE_ID}), which has no key.
+ *
+ * Listing providers instead would offer a choice the user never made (a provider with no key cannot
+ * run) while hiding the one they did (which of their keys is spending).
+ */
 export interface AgentModelChoice {
+  /** Vault key id, or {@link LOCAL_CHOICE_ID}. Identifies the entry across IPC — provider does not,
+   *  since several entries can share one. */
+  id: string;
   provider: AIProvider;
-  /** Provider display name, e.g. "Claude", "OpenAI", "Gemini", "Local: <model>". */
+  /** The KEY's user-given label from Settings, e.g. "Work". For local, the selected model's id. */
   label: string;
-  /** The provider's default (highest-priority) key label, e.g. "Personal". Absent for local / no key. */
-  keyLabel?: string;
-  /** Whether it's usable right now (a cloud provider has a key; local has a selected model). */
+  /** Provider display name, e.g. "Claude", "OpenAI", "On-device" — the entry's secondary line. */
+  providerLabel: string;
+  /** Last 4 characters of the key (non-secret fingerprint) so two keys of one provider are tellable
+   *  apart. Absent for local and for legacy records that never recorded one. */
+  last4?: string;
+  /** Whether it's usable right now (a key whose provider the runtime can drive; local has a model). */
   available: boolean;
-  /** Models the user can pin for this provider (the Model dropdown). Empty ⇒ only auto/tiered routing
-   *  (e.g. `local`, which selects its model in Settings). Pinning one overrides all tiers for the run. */
-  models: AgentModelInfo[];
 }
 
-/** The panel's current agent config: which provider + model the next run uses + the autonomy + effort. */
+/** The panel's current agent config: which key + model the next run uses + the autonomy + effort. */
 export interface AgentConfig {
   provider: AIProvider;
+  /** The {@link AgentModelChoice.id} the next run resolves to — the vault key it will spend, or
+   *  {@link LOCAL_CHOICE_ID}. `''` when nothing is usable yet (no key stored, no local model). */
+  selectedId: string;
   choices: AgentModelChoice[];
-  /** The pinned model id for the current {@link provider} (`''` = auto/tiered routing). */
+  /** Selectable models per provider (the Model dropdown). Keyed by provider rather than carried on each
+   *  choice: the catalog is a property of the PROVIDER, and two keys of one provider would duplicate it.
+   *  A provider with an empty list only auto-routes (e.g. `local`, which picks its model in Settings). */
+  models: Record<AIProvider, AgentModelInfo[]>;
+  /** The pinned model id on the selected KEY (`''` = auto/tiered routing). */
   model: string;
   autonomy: AgentAutonomy;
   effort: AgentEffort;
@@ -303,8 +325,9 @@ export interface AgentHostApi {
   getTokenUsage(): Promise<TokenUsageSnapshot>;
   /** Current provider + selectable choices + autonomy level (for the header selector + mode dropdown). */
   getAgentConfig(): Promise<AgentConfig>;
-  /** Set the per-run provider override (Agent panel provider selector). */
-  setAgentProvider(provider: AIProvider): Promise<void>;
+  /** Select the run target by {@link AgentModelChoice.id} — a stored key, or {@link LOCAL_CHOICE_ID}.
+   *  Main promotes that key to its provider's active one and switches a live run to it. */
+  selectAgentChoice(id: string): Promise<void>;
   /** Pin a specific model for `provider` (Agent panel Model dropdown); `''` clears the pin (auto/tiered).
    *  Applied to ALL tiers and, if a run is active on this provider, takes effect on the next request. */
   setAgentModel(provider: AIProvider, model: string): Promise<void>;

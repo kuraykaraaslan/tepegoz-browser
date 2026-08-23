@@ -1,9 +1,8 @@
 import { useState, type ReactNode } from 'react';
 import { cn } from '@tepegoz/ui';
-import type { AIProvider } from '@tepegoz/shared-types/providers';
 import type { AgentStrings } from './i18n';
 import { AGENT_EFFORT_LEVELS } from './types';
-import type { AgentAutonomy, AgentConfig, AgentEffort } from './types';
+import type { AgentAutonomy, AgentConfig, AgentEffort, AgentModelChoice } from './types';
 import { AUTONOMY_ICON, CheckIcon, ChevronDown } from './panel-icons';
 import { AUTONOMY_DISABLED, AUTONOMY_LEVELS_ALL } from './panel-state';
 
@@ -16,10 +15,28 @@ import { AUTONOMY_DISABLED, AUTONOMY_LEVELS_ALL } from './panel-state';
  */
 type ConfigSection = 'provider' | 'model' | 'autonomy' | 'effort' | 'strictGuard';
 
+/**
+ * One picker entry's two lines: the KEY's own label on top, the provider (plus the key's last-4
+ * fingerprint) underneath — so two keys of one provider are tellable apart. When the user named the key
+ * after its provider, the secondary line drops the duplicate rather than printing "OpenAI · OpenAI".
+ */
+export function choiceLines(ch: AgentModelChoice): { title: string; sub: string } {
+  const parts = ch.label === ch.providerLabel ? [] : [ch.providerLabel];
+  if (ch.last4 !== undefined) parts.push(`…${ch.last4}`);
+  return { title: ch.label, sub: parts.join(' · ') };
+}
+
+/** The single-line form used where there is only one line to spend (the collapsed row, the tooltip). */
+export function choiceSummary(ch: AgentModelChoice): string {
+  const { title, sub } = choiceLines(ch);
+  return sub === '' ? title : `${title} · ${sub}`;
+}
+
 interface RunConfigMenuProps {
   t: AgentStrings;
   config: AgentConfig;
-  onProvider: (provider: AIProvider) => void;
+  /** Select a run target by {@link AgentModelChoice.id} (a stored key, or the on-device entry). */
+  onChoice: (id: string) => void;
   onModel: (model: string) => void;
   onAutonomy: (level: AgentAutonomy) => void;
   onEffort: (level: AgentEffort) => void;
@@ -31,7 +48,7 @@ export function RunConfigMenu({
   t,
   config,
   onStrictGuard,
-  onProvider,
+  onChoice,
   onModel,
   onAutonomy,
   onEffort,
@@ -41,13 +58,9 @@ export function RunConfigMenu({
     setOpen((cur) => (cur === s ? null : s));
   };
 
-  const currentChoice = config.choices.find((c) => c.provider === config.provider);
-  const providerValue = currentChoice
-    ? currentChoice.keyLabel !== undefined
-      ? `${currentChoice.label} · ${currentChoice.keyLabel}`
-      : currentChoice.label
-    : t.modelLabel;
-  const models = currentChoice?.models ?? [];
+  const currentChoice = config.choices.find((c) => c.id === config.selectedId);
+  const providerValue = currentChoice === undefined ? t.noKeys : choiceSummary(currentChoice);
+  const models = currentChoice === undefined ? [] : config.models[currentChoice.provider];
   const modelValue =
     config.model === ''
       ? t.modelAuto
@@ -55,23 +68,34 @@ export function RunConfigMenu({
 
   return (
     <div className="max-h-[60vh] w-full overflow-y-auto">
-      {/* Provider — every provider is listed; unusable ones (no key / no local model) are disabled. */}
+      {/* Run target — the API keys added under Settings → Providers & API keys, one row per KEY (in the
+          vault's priority order), plus the on-device entry. Entries the runtime cannot drive yet (an
+          unsupported provider, or local with no model) are shown but disabled: the user stored them, so
+          hiding them would read as data loss. */}
       <Section
         label={t.provider}
         value={providerValue}
         open={open === 'provider'}
         onToggle={() => toggle('provider')}
       >
-        {config.choices.map((ch) => (
-          <Option
-            key={ch.provider}
-            selected={config.provider === ch.provider}
-            disabled={!ch.available}
-            onClick={() => onProvider(ch.provider)}
-          >
-            {ch.keyLabel !== undefined ? `${ch.label} · ${ch.keyLabel}` : ch.label}
-          </Option>
-        ))}
+        {config.choices.map((ch) => {
+          const { title, sub } = choiceLines(ch);
+          return (
+            <Option
+              key={ch.id}
+              selected={config.selectedId === ch.id}
+              disabled={!ch.available}
+              onClick={() => onChoice(ch.id)}
+              {...(sub === '' ? {} : { desc: sub })}
+            >
+              {title}
+            </Option>
+          );
+        })}
+        {/* No key stored and no on-device model: say where keys come from instead of an empty menu. */}
+        {config.choices.every((ch) => !ch.available) && (
+          <p className="px-2 py-1.5 text-xs text-text-secondary">{t.noKeysHint}</p>
+        )}
       </Section>
 
       {/* Model — provider-based. "Auto" clears the pin (per-task tier routing); the rest override all tiers. */}

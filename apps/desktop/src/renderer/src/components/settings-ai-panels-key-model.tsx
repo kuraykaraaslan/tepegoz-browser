@@ -5,25 +5,28 @@ import { faCheck, faChevronDown, faGear } from '@fortawesome/free-solid-svg-icon
 import { settingsDict } from '@tepegoz/settings-ui';
 import { useT } from '@tepegoz/i18n/react';
 import { cn } from '@tepegoz/ui';
-import type { AgentModelChoice, ProviderId } from '@tepegoz/desktop-ipc';
+import type { AgentModelInfo, ProviderId } from '@tepegoz/desktop-ipc';
 
 /**
  * The per-key model picker used by Providers & API keys — the model is pinned on the KEY (two Claude
  * keys can sit on different models), not on the provider. It appears only AFTER a key exists: a gear on
  * the key's row opens this menu. Split out of `settings-ai-panels-providers.tsx` (ADR-0010 250-line cap).
  *
- * The selectable models come from the agent config over IPC (`AgentModelChoice`), so the picker stays in
+ * The selectable models come from the agent config's provider catalog over IPC, so the picker stays in
  * lockstep with the runtime's catalog without importing the model-gateway into the renderer.
  */
 
 /** Selectable models per provider, from the runtime's catalog. Empty until the IPC call resolves. */
-export function useProviderModels(): Map<ProviderId, AgentModelChoice['models']> {
-  const [models, setModels] = useState<Map<ProviderId, AgentModelChoice['models']>>(new Map());
+export function useProviderModels(): Map<ProviderId, AgentModelInfo[]> {
+  const [models, setModels] = useState<Map<ProviderId, AgentModelInfo[]>>(new Map());
 
   useEffect(() => {
     void window.tepegoz.getAgentConfig().then(
       (cfg) => {
-        setModels(new Map(cfg.choices.map((c) => [c.provider, c.models])));
+        // Read from the config's provider-keyed CATALOG, not from the picker's entries: those are the
+        // stored keys now, so a provider with no key yet would have no models here — and this menu is
+        // what the user opens right after adding that provider's first key.
+        setModels(new Map(Object.entries(cfg.models) as [ProviderId, AgentModelInfo[]][]));
       },
       () => {
         setModels(new Map());
@@ -57,7 +60,7 @@ export function KeyModelMenu({
   onChange,
 }: {
   keyId: string;
-  models: AgentModelChoice['models'] | undefined;
+  models: AgentModelInfo[] | undefined;
   value: string;
   onChange: (model: string) => void;
 }) {

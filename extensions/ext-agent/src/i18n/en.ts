@@ -192,7 +192,12 @@ export const en = {
   noModels: 'No model available',
   // The composer's run-config popover (gear icon): provider · model · autonomy · effort, each its own row.
   config: 'Config',
+  // The run-target row. It lists the API keys added in Settings (one row per key), so the label names
+  // the thing being chosen — which key/provider this conversation runs on — not the key itself.
   provider: 'Provider',
+  /** Collapsed value when nothing is selectable yet (no key stored, no on-device model). */
+  noKeys: 'No key',
+  noKeysHint: 'Add an API key under Settings → Providers & API keys.',
   // The Model dropdown's "no pin" option — the run auto-routes per task (planning/exec/classify tiers).
   modelAuto: 'Auto',
   autonomyLabel: 'Autonomy',

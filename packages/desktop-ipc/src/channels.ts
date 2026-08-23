@@ -122,7 +122,8 @@ export const IpcChannels = {
   tokenUsageGet: 'token:usage-get',
   // Agent panel config: current provider + choices + autonomy level, and setters for each.
   agentGetConfig: 'agent:get-config',
-  agentSetProvider: 'agent:set-provider',
+  /** Renderer→main: select the run target by stored-key id (Agent panel picker), or 'local'. */
+  agentSelectChoice: 'agent:select-choice',
   /** Renderer→main: pin a specific model for a provider (Agent panel Model dropdown); '' clears it. */
   agentSetModel: 'agent:set-model',
   agentSetAutonomy: 'agent:set-autonomy',

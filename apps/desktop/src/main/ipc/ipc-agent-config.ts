@@ -4,6 +4,7 @@ import { AppError, Logger } from '@tepegoz/libs';
 import {
   AGENT_EFFORT_LEVELS,
   IpcChannels,
+  LOCAL_CHOICE_ID,
   PROVIDER_IDS,
   type AgentAutonomy,
   type AgentConfig,
@@ -21,8 +22,8 @@ import { hotSwapRunProvider } from '@tepegoz/agent-runtime';
 import { hasActiveAgentRun } from '../agent/agent-run-lock.electron';
 import { collectAgentExportBundleFiles } from '../agent/export-bundle.electron';
 import {
+  AI_PROVIDERS,
   isRunnableProvider,
-  RUNNABLE_AI_PROVIDERS,
   SelectableAgentAutonomySchema,
   type AIProvider,
 } from '@tepegoz/shared-types';
@@ -48,50 +49,71 @@ function effectiveAgentProvider(
   return top !== null && isRunnableProvider(top) ? top : 'anthropic';
 }
 
-/** Display name per runnable cloud provider. Keyed off the runnable-provider union so wiring up a new
- *  provider forces a name here (and thus into the Agent panel's picker). */
-const CLOUD_PROVIDER_NAMES = {
+/** Display name per provider. Keyed off the whole provider union so wiring up a new provider forces a
+ *  name here (and thus into the Agent panel's picker, where every stored key shows its provider). */
+const PROVIDER_NAMES = {
   anthropic: 'Claude',
   openai: 'OpenAI',
   gemini: 'Gemini',
   kimi: 'Kimi',
-} satisfies Record<(typeof RUNNABLE_AI_PROVIDERS)[number], string>;
+  local: 'On-device',
+} satisfies Record<AIProvider, string>;
 
-/** Build the Agent panel's config: selectable providers (with a usable-now flag + default-key label) +
- *  the current choice + the autonomy level. Data-driven from the runnable-provider set + vault + prefs. */
+/** Shown for the on-device entry when no model has been downloaded/selected yet (it is then disabled). */
+const NO_LOCAL_MODEL_LABEL = 'No model selected';
+
+/**
+ * Build the Agent panel's config. The picker lists the KEYS stored under Settings → Providers & API
+ * keys — one entry per key, in the vault's priority order — plus the on-device entry. It does NOT list
+ * providers: a provider with no key is not a run target the user can choose, and a provider with two
+ * keys is two different bills. Data-driven from the vault + prefs; nothing about the picker is hardcoded
+ * beyond the display names above.
+ */
 function buildAgentConfig(): AgentConfig {
   const prefs = PreferenceStore.getAll();
   const status = CredentialVault.status();
   const hasKey = (p: AIProvider): boolean => status[p];
   const localModel = prefs.localProvider.selectedModelId;
-  const modelsFor = (p: AIProvider): AgentModelChoice['models'] =>
-    PROVIDER_MODEL_CATALOG[p].map((m) => ({ id: m.id, label: m.label }));
-  const cloudChoices: AgentModelChoice[] = RUNNABLE_AI_PROVIDERS.map((p) => {
-    const keyLabel = CredentialVault.listMetaByProvider(p)[0]?.label;
-    return {
-      provider: p,
-      label: CLOUD_PROVIDER_NAMES[p],
-      available: hasKey(p),
-      models: modelsFor(p),
-      ...(keyLabel !== undefined ? { keyLabel } : {}),
-    };
-  });
+  const keyChoices: AgentModelChoice[] = CredentialVault.listMeta().map((k) => ({
+    id: k.id,
+    provider: k.provider,
+    label: k.label,
+    providerLabel: PROVIDER_NAMES[k.provider],
+    // A stored key for a provider the runtime cannot drive yet is shown but not selectable — hiding it
+    // would make the user's own Settings row look lost.
+    available: isRunnableProvider(k.provider),
+    ...(k.last4 !== '' ? { last4: k.last4 } : {}),
+  }));
   const choices: AgentModelChoice[] = [
-    ...cloudChoices,
+    ...keyChoices,
     {
+      id: LOCAL_CHOICE_ID,
       provider: 'local',
-      label: localModel !== '' ? `Local: ${localModel}` : 'Local',
+      label: localModel !== '' ? localModel : NO_LOCAL_MODEL_LABEL,
+      providerLabel: PROVIDER_NAMES.local,
       available: localModel !== '',
-      // Local picks its model in Settings → Local models, not here.
-      models: [],
     },
   ];
+  const models = Object.fromEntries(
+    AI_PROVIDERS.map((p) => [
+      p,
+      PROVIDER_MODEL_CATALOG[p].map((m) => ({ id: m.id, label: m.label })),
+    ]),
+  ) as AgentConfig['models'];
   const provider = effectiveAgentProvider(prefs, hasKey);
+  // Which ENTRY the next run resolves to: for a cloud provider that is its highest-priority key — the
+  // same record `getFirstKeyForProvider` decrypts at run start, so the panel shows the key that pays.
+  const selectedId =
+    provider === 'local'
+      ? LOCAL_CHOICE_ID
+      : (CredentialVault.listMetaByProvider(provider)[0]?.id ?? '');
   return {
     provider,
+    selectedId,
     choices,
-    // The model shown/used is the one pinned on the KEY this provider resolves to (Settings →
-    // Providers pins it per key), not a per-provider preference.
+    models,
+    // The model shown/used is the one pinned on that KEY (Settings → Providers pins it per key), not a
+    // per-provider preference.
     model: CredentialVault.modelForProvider(provider),
     autonomy: prefs.agentAutonomy,
     effort: prefs.agentEffort,
@@ -108,18 +130,33 @@ export function registerAgentConfigIpc(): void {
 
   // Agent panel config: current provider + selectable choices + autonomy level, and setters.
   handle(IpcChannels.agentGetConfig, (): AgentConfig => buildAgentConfig());
-  handle(IpcChannels.agentSetProvider, (_event, payload): void => {
-    const provider = z.enum(PROVIDER_IDS).parse(payload);
-    PreferenceStore.update({ agentProviderOverride: provider });
-    // Instant mid-conversation switch: if a run is active, hot-swap its provider so the NEXT request
-    // hits the new API. Uses the provider's pinned model if set, else its primary model. Safe no-op if
-    // the provider isn't usable (no key) — the run simply stays on its current provider until next task.
+  // Select the run target BY KEY (the panel lists stored keys, not providers). Two writes, one
+  // invariant: the vault's ORDER already decides which key a provider runs on, so selecting a key
+  // promotes it to the front — it becomes both its provider's active key and the overall default, the
+  // same record Settings → Providers marks "Default". No second, competing key-selection preference.
+  handle(IpcChannels.agentSelectChoice, (_event, payload): void => {
+    const id = z.string().min(1).max(128).parse(payload);
+    const prefs = PreferenceStore.getAll();
+    if (id === LOCAL_CHOICE_ID) {
+      // On-device has no key to promote, and no hot-swap either (it needs engine + model wiring), so it
+      // applies from the next run — the same rule `hotSwapRunProvider` documents.
+      PreferenceStore.update({ agentProviderOverride: 'local' });
+      return;
+    }
+    const metas = CredentialVault.listMeta();
+    const meta = metas.find((k) => k.id === id);
+    if (meta === undefined) {
+      throw new AppError(`No stored key with id '${id}'.`, 404);
+    }
+    CredentialVault.reorderKeys([id, ...metas.map((k) => k.id).filter((x) => x !== id)]);
+    PreferenceStore.update({ agentProviderOverride: meta.provider });
+    // Instant mid-conversation switch: if a run is active, hot-swap so the NEXT request hits the newly
+    // selected key's API — including a switch BETWEEN two keys of one provider, because the promotion
+    // above happens first and the swap re-reads the provider's top key. Uses that key's pinned model if
+    // set, else the provider's primary. Safe no-op for a provider the runtime cannot drive: the run
+    // stays where it is until the next task.
     if (hasActiveAgentRun()) {
-      const prefs = PreferenceStore.getAll();
-      hotSwapRunProvider(provider, {
-        effort: prefs.agentEffort,
-        model: CredentialVault.modelForProvider(provider),
-      });
+      hotSwapRunProvider(meta.provider, { effort: prefs.agentEffort, model: meta.model });
     }
   });
   handle(IpcChannels.agentSetModel, (_event, payload): void => {

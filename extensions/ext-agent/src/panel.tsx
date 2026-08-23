@@ -11,6 +11,7 @@ import { useAgentAttachments } from './panel-attachments';
 import { PanelHeader } from './panel-header';
 import { PanelThread } from './panel-thread';
 import { PanelComposer } from './panel-composer';
+import { choiceSummary } from './panel-run-config';
 import { PanelModals } from './panel-modals';
 import { PANEL_BOUNDS_ATTR } from './panel-dropdown-place';
 
@@ -86,16 +87,12 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
 
   // Gear tooltip: a one-glance summary of the current run config (provider · model · autonomy · effort),
   // shown on hover so the values are visible without opening the popover.
-  const configChoice = config?.choices.find((ch) => ch.provider === config.provider);
-  const providerTip = configChoice
-    ? configChoice.keyLabel !== undefined
-      ? `${configChoice.label} · ${configChoice.keyLabel}`
-      : configChoice.label
-    : (config?.provider ?? '');
+  const configChoice = config?.choices.find((ch) => ch.id === config.selectedId);
+  const providerTip = configChoice === undefined ? a.noKeys : choiceSummary(configChoice);
   const modelTip =
     config === null || config.model === ''
       ? a.modelAuto
-      : (configChoice?.models.find((m) => m.id === config.model)?.label ?? config.model);
+      : (config.models[config.provider].find((m) => m.id === config.model)?.label ?? config.model);
   const configTooltip =
     config === null
       ? a.config
@@ -170,7 +167,7 @@ export function AgentPanel({ api, onClose }: AgentPanelProps) {
         onAttachSelection={() => void attach.onAttachSelection()}
         onAttachFiles={() => void attach.onAttachFiles()}
         onAttachScreenshot={() => void attach.onAttachScreenshot()}
-        chooseProvider={actions.chooseProvider}
+        chooseChoice={actions.chooseChoice}
         chooseModel={actions.chooseModel}
         chooseAutonomy={actions.chooseAutonomy}
         chooseEffort={actions.chooseEffort}

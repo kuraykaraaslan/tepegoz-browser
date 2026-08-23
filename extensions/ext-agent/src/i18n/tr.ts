@@ -179,6 +179,8 @@ export const tr: AgentStrings = {
   // Bestecinin çalışma yapılandırması (dişli simgesi): sağlayıcı · model · otonomi · çaba, her biri kendi satırı.
   config: 'Yapılandırma',
   provider: 'Sağlayıcı',
+  noKeys: 'Anahtar yok',
+  noKeysHint: 'Ayarlar → Sağlayıcılar ve API anahtarları altından bir API anahtarı ekle.',
   // Model açılır menüsündeki "sabitleme yok" seçeneği — çalışma göreve göre otomatik yönlendirilir.
   modelAuto: 'Otomatik',
   autonomyLabel: 'Otonomi',
