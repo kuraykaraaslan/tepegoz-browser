@@ -16,7 +16,7 @@ export function initialOf(shortcut: NewTabShortcut): string {
   return (base[0] ?? '?').toUpperCase();
 }
 
-/** Prepend a scheme if the user typed a bare host (`avantleap.com` → `https://avantleap.com`). Returns
+/** Prepend a scheme if the user typed a bare host (`example.com` → `https://example.com`). Returns
  *  the trimmed input unchanged when it already has one, or is empty. Final validity is the host's call. */
 export function normalizeUrl(raw: string): string {
   const trimmed = raw.trim();
