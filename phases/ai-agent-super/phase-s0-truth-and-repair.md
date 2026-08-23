@@ -44,9 +44,9 @@ The evidence is a documented, reproducible drift across three surfaces:
    miswrote its own evidence must say so.
 
 4. **A referenced architecture doc does not exist.** [`../../CLAUDE.md`](../../CLAUDE.md) and
-   [`../README.md`](../README.md) both point at `docs/ARCHITECTURE.md`, which is **absent**. The real
+   [`../README.md`](../README.md) both point at `docs/architecture.md`, which is **absent**. The real
    layer model (L0–L10) lives in [`../../README.md`](../../README.md); the L7 model detail lives in
-   [`../../docs/technical-ai-doc.md`](../../docs/technical-ai-doc.md). A dangling pointer in the binding
+   [`../../docs/ai-transparency.md`](../../docs/ai-transparency.md). A dangling pointer in the binding
    working-agreement is exactly the drift this phase exists to close.
 
 5. **Only 5 of 52 scenarios have ever been measured live** ([`eval-results.md`](eval-results.md)). The
@@ -83,9 +83,9 @@ fixtures** — that is the point: freeze the exam before writing the answers.
       satisfied (never tracked, already ignored — see the [Why §3 correction](#why)); the local file is
       deleted and the [regenerate command](eval-loop-runbook.md#regenerating-the-report-never-commit-it)
       is documented, with the `.gitignore` entry now carrying the reason it must stay ignored._
-- [x] **The `docs/ARCHITECTURE.md` reference resolves** — the **file is created** (mirroring the L0–L10
+- [x] **The `docs/architecture.md` reference resolves** — the **file is created** (mirroring the L0–L10
       model from [`../../README.md`](../../README.md) + L7 from
-      [`../../docs/technical-ai-doc.md`](../../docs/technical-ai-doc.md)); the PR records the choice and
+      [`../../docs/ai-transparency.md`](../../docs/ai-transparency.md)); the PR records the choice and
       its reason. _`CLAUDE.md`'s stale "mirrors the approved plan" gloss and `phases/README.md`'s
       "to be moved into the repo" note are corrected to match what now exists._
 - [ ] **First-ever full-registry baseline** in [`eval-results.md`](eval-results.md): **all 52 scenarios**
@@ -157,10 +157,10 @@ fixtures** — that is the point: freeze the exam before writing the answers.
       documented in [`eval-loop-runbook.md`](eval-loop-runbook.md#regenerating-the-report-never-commit-it)
       against the [`../../packages/agent-eval`](../../packages/agent-eval) `_electron` driver, so the
       number is reproducible on demand and never committed.
-- [x] Resolve the `docs/ARCHITECTURE.md` reference. **Chosen: the preferred option — the file is
-      created.** [`../../docs/ARCHITECTURE.md`](../../docs/ARCHITECTURE.md) is a thin index mirroring the
+- [x] Resolve the `docs/architecture.md` reference. **Chosen: the preferred option — the file is
+      created.** [`../../docs/architecture.md`](../../docs/architecture.md) is a thin index mirroring the
       L0–L10 model from [`../../README.md`](../../README.md) and linking the L7 detail in
-      [`../../docs/technical-ai-doc.md`](../../docs/technical-ai-doc.md) — **no new content**, every row
+      [`../../docs/ai-transparency.md`](../../docs/ai-transparency.md) — **no new content**, every row
       points at the document that owns the material, single source of truth preserved. _Why preferred over
       the repoint fallback:_ the pointer appears in the **binding** working agreement
       ([`../../CLAUDE.md`](../../CLAUDE.md)) as _the_ architecture entry point, and repointing it at the

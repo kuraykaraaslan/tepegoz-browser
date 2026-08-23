@@ -116,7 +116,7 @@ No product features; the decisions made here would force a full rewrite if wrong
 - [x] `docs/adr/` **10 ADRs (0001–0010)** at Phase 0 _(now **0001–0016**; 0012–0016 added as later phases/refactors landed — browser-tab-model, agent-orchestration, user-data layout, package-extraction roadmap, per-package i18n — see `docs/adr/README.md`)_ + index: Electron+React+TS · monorepo · SQLite · event-sourced Journal · provider-agnostic AI · Policy Kernel+HITL · capability-plane/MCP(client+server) · perception/CDP · boundary-mapping · TS/tooling conventions
 - [x] `CHANGELOG.md` (Keep-a-Changelog) + `docs/known-issues.md` + `handover/` skeleton
 - [x] `.env.example` (key names only, no values; explicit "BYO keys live in OS keychain, not here")
-- [x] **Threat Model Lite + Risk Register** (`docs/THREAT-MODEL.md`; High/Critical; assets/actors/entry-points/trust-boundaries/top-threats→mitigations/residual-risk)
+- [x] **Threat Model Lite + Risk Register** (`docs/threat-model.md`; High/Critical; assets/actors/entry-points/trust-boundaries/top-threats→mitigations/residual-risk)
 
 ### i18n infrastructure (DAY-0 — set up early to avoid pain later)
 

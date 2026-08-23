@@ -1,5 +1,10 @@
 # Instagram engeli neden gizli sekmede ve farklı profilde bile devam edebilir
 
+> **Editorial note (not part of the imported report).** Filed under the Instagram case it uses as its
+> worked example, but the subject is general: **why a separate browser profile and a private window do
+> not separate identity.** Renamed from `instagram-block.md` for that reason. The prose below is
+> unchanged.
+
 ## Yönetici özeti
 
 Kamuya açık belgeler, Instagram’ın tam eşleştirme algoritmasını açıklamıyor; ancak Meta’nın resmi yardım ve politika metinleri iki kritik şeyi açıkça söylüyor: Birincisi, Instagram bir hesabı engellerken o kişinin **mevcut diğer hesaplarını** ve **gelecekte açabileceği yeni hesapları** da engelleyebiliyor. İkincisi, Meta; cihaz, tarayıcı, uygulama, ağ ve davranışla ilgili çok geniş bir sinyal kümesi topladığını belgeliyor. Bunlara cihaz kimlikleri, mobil reklam kimliği, “Family Device IDs”, tarayıcı türü, eklentiler, IP adresi, mobil operatör/ISP, saat dilimi, ağdaki diğer cihazlar ve tarayıcı/cihazda saklanan tanımlayıcılar dâhil. Meta ayrıca bazı etkileşim ve cihaz sinyallerini “insanı bottan ayırmaya” yardımcı olduğu için kullandığını da yazıyor.

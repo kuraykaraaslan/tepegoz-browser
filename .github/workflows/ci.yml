@@ -43,9 +43,9 @@ jobs:
       - name: Coverage gate (scope + thresholds in vitest.coverage.config.ts)
         if: matrix.os == 'ubuntu-latest'
         run: pnpm run coverage
-      - name: Doc link gate (0 broken relative links under phases/ and docs/)
+      - name: Doc link gate (0 broken relative links under phases/, docs/ and research/)
         if: matrix.os == 'ubuntu-latest'
-        run: pnpm run docs:links phases docs
+        run: pnpm run docs:links phases docs research
       - name: Dependency audit (high/critical fails the build)
         if: matrix.os == 'ubuntu-latest'
         # No `|| true`. This step carried one for its whole life, which made a named security gate

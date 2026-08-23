@@ -1,6 +1,7 @@
 # Threat Model Lite — Tepegöz
 
-> Required by internal-ai-rules `security-baseline-and-risk-model` (BLOCKING for Medium+ risk).
+> Required by the security baseline in [`engineering-rules.md`](engineering-rules.md) (BLOCKING for
+> Medium+ risk). Reporting a vulnerability: [`../SECURITY.md`](../SECURITY.md).
 > **Overall risk: HIGH/CRITICAL** — Tepegöz handles user credentials, browsing/personal data, and
 > acts autonomously on the user's behalf across third-party AI / MCP / integrations.
 

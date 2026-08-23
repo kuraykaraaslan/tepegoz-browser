@@ -315,7 +315,7 @@ export class AnthropicProvider implements ModelProvider {
   /**
    * Count input tokens for a single prompt (`count_tokens`). Note: this only sizes ONE request —
    * multi-step DAG totals are estimated from telemetry, not summed here
-   * (docs/technical-ai-doc.md §5 — "Budgets, quotas & limits").
+   * (docs/ai-transparency.md §5 — "Budgets, quotas & limits").
    */
   async countInputTokens(req: CanonRequest): Promise<number> {
     const params = toAnthropicParams(req);

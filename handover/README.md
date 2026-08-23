@@ -5,11 +5,11 @@ release / milestone.
 
 ## Contents (to complete)
 
-- [ ] **Architecture overview** → see `docs/ARCHITECTURE.md` (from the plan) + `docs/adr/`
+- [ ] **Architecture overview** → see `docs/architecture.md` (from the plan) + `docs/adr/`
 - [ ] **Runbook** — how to build, run (`pnpm dev`), test, and package; environment requirements
 - [ ] **Access & credentials** — signing identity, any service accounts (stored in a vault, never here)
 - [ ] **Known issues & troubleshooting** → `docs/known-issues.md`
-- [ ] **Security** → `docs/THREAT-MODEL.md`; data classification; incident contact
+- [ ] **Security** → `docs/threat-model.md`; data classification; incident contact
 - [ ] **Acceptance & signoff** — per-milestone UAT (in-scope flows, test profile, known limits)
 
 ## Quick start

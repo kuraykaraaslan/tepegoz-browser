@@ -55,7 +55,7 @@ success criteria (min / strong / failure-signal + metrics) and a handover note f
   seeds it; the IPC layer runs the pre-flight block, persists each run, auto-refunds system-error/CAPTCHA/
   loop runs, and raises the one-time 80% warning. New private pref `agentTokenQuota` (Settings → Cost).
 - **Quota indicator** — the Agent Console token chip now shows lifetime/quota with an amber ≥80% state.
-- **Docs/CI** — `docs/technical-ai-doc.md` (AI transparency record); Playwright `_electron` smoke is now a
+- **Docs/CI** — `docs/ai-transparency.md` (AI transparency record); Playwright `_electron` smoke is now a
   gated CI job (`e2e` in `ci.yml`, Electron-ABI rebuild + xvfb).
 
 **Still open on Phase 1a (not in this slice)**

@@ -24,8 +24,8 @@ direct cross-layer imports are forbidden and **enforced in CI** by
 |   **L4 — Perception & Tools** | Out-of-process CDP driver, DOM + accessibility perception, content sanitizer | [`packages/tool-executor`](../packages/tool-executor) · [ADR-0008](adr/0008-perception-cdp.md)                                        |
 |     **L5 — Capability Plane** | Tool gateway (single PEP), skills runtime, MCP client + server               | [ADR-0007](adr/0007-capability-plane-mcp.md)                                                                                          |
 | **L6 — Integration Adapters** | Official-API-first connectors with browser fallback                          | [Phase 2](../phases/product/phase-2-adapters-safe-browsing.md)                                                                        |
-|        **L7 — Model Gateway** | Provider-agnostic AI routing, transports, Token Ledger                       | **[`technical-ai-doc.md`](technical-ai-doc.md)** · [ADR-0005](adr/0005-provider-agnostic-ai.md)                                       |
-|      **L8 — Security Kernel** | Policy Kernel, Capability Broker, Egress Firewall, HITL, prompt/rules engine | [`THREAT-MODEL.md`](THREAT-MODEL.md) · [ADR-0006](adr/0006-policy-kernel-hitl.md) · [ADR-0024](adr/0024-action-interception-plane.md) |
+|        **L7 — Model Gateway** | Provider-agnostic AI routing, transports, Token Ledger                       | **[`ai-transparency.md`](ai-transparency.md)** · [ADR-0005](adr/0005-provider-agnostic-ai.md)                                         |
+|      **L8 — Security Kernel** | Policy Kernel, Capability Broker, Egress Firewall, HITL, prompt/rules engine | [`threat-model.md`](threat-model.md) · [ADR-0006](adr/0006-policy-kernel-hitl.md) · [ADR-0024](adr/0024-action-interception-plane.md) |
 |           **L9 — Browser UI** | Command Palette, Live Agent Console, browser shell, settings                 | [`package-map.md`](package-map.md)                                                                                                    |
 |       **L10 — Safe Browsing** | Adblock, Safe Browsing, AgentThreatShield, popup/permission guard            | [Phase 2](../phases/product/phase-2-adapters-safe-browsing.md)                                                                        |
 
@@ -37,8 +37,8 @@ direct cross-layer imports are forbidden and **enforced in CI** by
 | Question                                                                             | Document                                                                                                                                                                                       |
 | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | What is the **realized** module map — which `@tepegoz/*` package holds what?         | [`package-map.md`](package-map.md) (+ [ADR-0015](adr/0015-package-extraction-roadmap.md)) — `apps/desktop` is a thin Electron shell; **new work targets a package, not `apps/desktop` growth** |
-| How does the **L7 model plane** work (routing, transports, token ledger, providers)? | [`technical-ai-doc.md`](technical-ai-doc.md)                                                                                                                                                   |
-| What is the **threat model** and the security posture?                               | [`THREAT-MODEL.md`](THREAT-MODEL.md) + [`sec/`](research/privacy/)                                                                                                                             |
+| How does the **L7 model plane** work (routing, transports, token ledger, providers)? | [`ai-transparency.md`](ai-transparency.md)                                                                                                                                                     |
+| What is the **threat model** and the security posture?                               | [`threat-model.md`](threat-model.md) + [`sec/`](../research/privacy/)                                                                                                                          |
 | **Why** was a given design decision made?                                            | [`adr/`](adr/) — decisions are recorded, never re-litigated in prose                                                                                                                           |
 | What is being **built next**, in what order, with what exit criteria?                | [`../phases/README.md`](../phases/README.md)                                                                                                                                                   |
 | What is the state of the **AI agent's competence** and how is it measured?           | [`../phases/ai-agent-super/README.md`](../phases/ai-agent-super/README.md) — the sole authoritative AI roadmap, with its results ledger and statistical constitution                           |
@@ -57,7 +57,7 @@ only through a typed `contextBridge`.
 ## A note on the "approved plan"
 
 [`../phases/README.md`](../phases/README.md) refers to an out-of-repo source plan that was to be moved
-in as `docs/ARCHITECTURE.md` + `docs/ROADMAP.md`. That never happened, and it no longer should: the
+in as `docs/architecture.md` + `docs/ROADMAP.md`. That never happened, and it no longer should: the
 architecture is now **realized in code and ADRs**, and the roadmap is **realized in
 [`../phases/`](../phases/)**. Those are the sources of truth. This index replaces the missing pointer;
 `docs/ROADMAP.md` is deliberately _not_ created, because [`../phases/`](../phases/) already is it.

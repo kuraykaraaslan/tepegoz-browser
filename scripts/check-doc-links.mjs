@@ -17,7 +17,8 @@ const roots = process.argv.slice(2);
 const ROOTS = roots.length > 0 ? roots : ['phases'];
 
 // Skip external, in-page, absolute-POSIX and Windows/UNC targets — only repo-relative paths are ours
-// to verify. `\\wsl.localhost\...` and `\home\kuray\...` appear as deliberate out-of-repo pointers.
+// to verify. An absolute or UNC path in a document is a deliberate out-of-repo pointer, not a link we
+// can resolve — so it is not a broken link either.
 const RELATIVE_LINK = /\]\(\s*(?!https?:|mailto:|tepegoz:|#|\/|\\)([^)\s]+?)(?:\s+"[^"]*")?\s*\)/g;
 
 /** Markdown files under `dir`, recursively. */

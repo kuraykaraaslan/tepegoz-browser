@@ -18,7 +18,7 @@ test-fixtures/
 
 # Imported research prose (LLM deep-research exports, market-feedback write-ups). Reflowing them
 # produces diff noise on documents nobody edits by hand.
-docs/research/
+research/
 
 # Generated at build time by electron-vite (see apps/desktop/electron.vite.config.ts). Formatting a
 # generated file means the gate goes red every time someone runs `turbo run build`.
