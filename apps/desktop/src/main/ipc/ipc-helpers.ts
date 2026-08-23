@@ -46,6 +46,39 @@ export function assertTrustedSender(event: IpcMainInvokeEvent): void {
 }
 
 /**
+ * Map a thrown value for the renderer AND leave the real cause in the main-process log.
+ *
+ * `toBoundary` collapses anything that is not an `AppError` to a flat 500 "Internal error" so the
+ * untrusted renderer learns nothing — that part is the point. But the LOG was collapsing with it:
+ * both handlers below used to record only the mapped pair, so every genuine main-process fault
+ * reached the operator as the same nine characters, with no message, no stack, and nothing to tell
+ * one 500 apart from another. `handle`'s own docstring already promised "logging the full error in
+ * main (redacted)"; this is that promise, kept.
+ *
+ * The mapped pair still crosses to the renderer untouched. The original error is logged HERE, on the
+ * main side, through `Logger` — which scrubs secret-shaped values and secret-named fields, so an
+ * `Error` whose message quotes a bearer token does not become a log leak in exchange for a stack.
+ */
+function mapAndLog(channel: IpcChannel, err: unknown): Error {
+  const boundary = toBoundary(err, localizeError);
+  Logger.error(`IPC ${channel} failed`, {
+    statusCode: boundary.statusCode,
+    message: boundary.message,
+    // Only when the mapping DISCARDED something. An AppError's message is already the line above, and
+    // repeating it would add noise to the one path that was never hard to read.
+    ...(err instanceof AppError
+      ? {}
+      : {
+          cause: err,
+          ...(err instanceof Error && err.stack !== undefined
+            ? { causeStack: Logger.redact(err.stack) }
+            : {}),
+        }),
+  });
+  return new Error(encodeBoundaryMessage(boundary.message, boundary.statusCode));
+}
+
+/**
  * Single boundary for every handler (ADR-0009): validate sender, run the handler, and map ANY thrown
  * value to { message, statusCode } via toBoundary — logging the full error in main (redacted) and
  * letting ONLY the mapped, clean pair cross to the untrusted renderer (raw zod/internal text never
@@ -61,12 +94,7 @@ export function handle<T>(
       assertTrustedSender(event);
       return fn(event, payload);
     } catch (err) {
-      const boundary = toBoundary(err, localizeError);
-      Logger.error(`IPC ${channel} failed`, {
-        statusCode: boundary.statusCode,
-        message: boundary.message,
-      });
-      throw new Error(encodeBoundaryMessage(boundary.message, boundary.statusCode));
+      throw mapAndLog(channel, err);
     }
   });
 }
@@ -82,12 +110,7 @@ export function handleAsync<T>(
       assertTrustedSender(event);
       return await fn(event, payload);
     } catch (err) {
-      const boundary = toBoundary(err, localizeError);
-      Logger.error(`IPC ${channel} failed`, {
-        statusCode: boundary.statusCode,
-        message: boundary.message,
-      });
-      throw new Error(encodeBoundaryMessage(boundary.message, boundary.statusCode));
+      throw mapAndLog(channel, err);
     }
   });
 }

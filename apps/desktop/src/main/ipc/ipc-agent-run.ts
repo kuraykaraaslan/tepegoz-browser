@@ -47,7 +47,7 @@ import { mainStrings } from '../lib/i18n-main';
 import { setTrayAgentRunning } from '../tray';
 import NotificationHost from '../notifications/notification-host';
 import PreferenceStore from '@tepegoz/preferences';
-import { handleAsync } from './ipc-helpers';
+import { handleAsync, parsePayload } from './ipc-helpers';
 import {
   agentRunByGroup,
   broadcastConversationsState,
@@ -129,8 +129,14 @@ export function registerAgentRunIpc(): void {
   // the raw API key and tool args never cross to the renderer (only a truncated preview does).
   handleAsync(IpcChannels.agentRun, async (event, payload): Promise<AgentRunResult> => {
     requireAgentEnabled();
-    const { prompt, groupId, displayPrompt, attachmentMeta, skillId } =
-      AgentRunInputSchema.parse(payload);
+    // safeParse, via parsePayload — never a bare `.parse()`. A ZodError is not an AppError, so the
+    // boundary mapped a malformed RENDERER payload to a 500 "Internal error" and logged it as a
+    // main-process fault: the user saw an internal failure, and the log named neither the field nor
+    // the reason. A bad payload is the renderer's 400.
+    const { prompt, groupId, displayPrompt, attachmentMeta, skillId } = parsePayload(
+      AgentRunInputSchema,
+      payload,
+    );
     // ONE run per tab group, not one per process. The process-wide gate is gone because the state that
     // made it necessary is: each run now holds its own working tab (so two runs cannot fight over one
     // page), its own CDP attachment, its own input adapter, its own token ledger, and its own event

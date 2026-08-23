@@ -209,6 +209,39 @@ describe('handle — the mapped boundary', () => {
     expect(rejection).not.toContain('kuray');
   });
 
+  it('leaves the real cause in the MAIN log, which the renderer never sees', async () => {
+    // The other half of the contract above. "Nothing crosses" is worth nothing to an operator who
+    // then cannot tell one 500 from another — and for a while nobody could: the log line read
+    // `{"statusCode":500,"message":"Internal error"}` for every fault on every channel, with no
+    // message and no stack. The mapped pair is for the renderer; the cause is for the log.
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    handle('tabs:list' as never, () => {
+      throw new Error('ENOENT: C:/Users/kuray/AppData/Roaming/tepegoz/vault.db');
+    });
+
+    await expect(invoke('tabs:list', TRUSTED)).rejects.toThrow('[500] Internal error');
+
+    const log = logged.mock.calls.map((c) => String(c[0])).join('\n');
+    expect(log).toContain('IPC tabs:list failed');
+    expect(log).toContain('ENOENT');
+    expect(log).toContain('vault.db');
+    logged.mockRestore();
+  });
+
+  it('does not repeat an AppError as a cause — its message is already the log line', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    handle('tabs:list' as never, () => {
+      throw new AppError('Tab is detached', 409);
+    });
+
+    await expect(invoke('tabs:list', TRUSTED)).rejects.toThrow('[409]');
+
+    const log = logged.mock.calls.map((c) => String(c[0])).join('\n');
+    expect(log).toContain('Tab is detached');
+    expect(log).not.toContain('causeStack');
+    logged.mockRestore();
+  });
+
   it('maps a thrown non-Error the same way', async () => {
     // Typed `unknown` rather than thrown as a bare literal: a library that rejects with a string is
     // exactly the case `toBoundary`'s unknown-value branch exists for, and the lint rule that forbids
