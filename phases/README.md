@@ -4,11 +4,11 @@ This folder is the **executable, checkable** counterpart of the development plan
 under `docs/` + the approved architecture plan). Each phase is its own file; we **tick tasks as we do
 them** with `- [ ]` / `- [x]`. This keeps the process resumable across sessions.
 
-> **Architecture:** [`../docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md) — the in-repo index of the
+> **Architecture:** [`../docs/architecture.md`](../docs/architecture.md) — the in-repo index of the
 > L0–L10 layer model and every owning document. **This folder is the roadmap** (no `docs/ROADMAP.md`;
-> the out-of-repo source plan `\home\kuray\.claude-personal\plans\docs-u-inceleyerek-otomasyon-moonlit-petal.md`
-> is superseded by what is realized here, in code, and in `../docs/adr/`).
-> **Compliance:** `//wsl.localhost/Ubuntu/home/kuray/internal-ai-rules` (BINDING — see plan §13).
+> the original out-of-repo planning document that seeded it is superseded by what is realized here, in
+> code, and in `../docs/adr/` — nothing outside this repository is normative).
+> **Compliance:** [`../docs/engineering-rules.md`](../docs/engineering-rules.md) (BINDING).
 > **Language:** Project artifacts are **English-first**; Turkish is a first-class supported locale.
 > **Architecture / package map:** `../docs/package-map.md` (+ [ADR-0015](../docs/adr/0015-package-extraction-roadmap.md),
 > [ADR-0016](../docs/adr/0016-per-package-i18n.md)) — the **realized** module map. `apps/desktop` is now a thin
@@ -143,7 +143,7 @@ everywhere — not re-litigated per phase.
 ## Completed hardening track (folded into Phases 1a / 1b / 2c)
 
 See [`tracks/code-claude-by-codex.md`](tracks/code-claude-by-codex.md) for the resumable plan and
-[`../docs/research/competitors/claude-versus.md`](../docs/research/competitors/claude-versus.md) for the research/status table. The completed
+[`../research/competitors/claude-versus.md`](../research/competitors/claude-versus.md) for the research/status table. The completed
 work has been folded into Phase 1a/1b as follows:
 
 - [x] Phase 1a: run-scoped `ToolGateway` HITL/audit context, cancellation wiring, startup-error visibility.

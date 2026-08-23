@@ -13,7 +13,16 @@ import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-const distRoot = process.env.KUI_PLAYER_DIST ?? '//wsl.localhost/Ubuntu/home/kuray/kui-player';
+// No default path: the checkout lives wherever the person running this put it, and a maintainer's own
+// machine layout is not a sensible fallback for anyone else. Fail with the instruction instead.
+const distRoot = process.env.KUI_PLAYER_DIST;
+if (distRoot === undefined || distRoot === '') {
+  throw new Error(
+    'KUI_PLAYER_DIST is required: point it at a kui-player checkout (https://github.com/kuraykaraaslan/kui-player) ' +
+      'whose dist/embed.js has been built. Example: ' +
+      'KUI_PLAYER_DIST=/path/to/kui-player pnpm --filter @tepegoz/desktop exec vite-node scripts/generate-video-player-bundle.ts',
+  );
+}
 const bundlePath = resolve(distRoot, 'dist/embed.js');
 const pkgPath = resolve(distRoot, 'package.json');
 

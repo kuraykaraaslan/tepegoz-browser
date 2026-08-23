@@ -1,12 +1,13 @@
 # `@tepegoz/ui` — KUIreact fork (drift tracking)
 
-Per the binding UI mandate (internal-ai-rules: KUI_Package_Rules / UI_Interface_Rules), Tepegöz's
+Per the binding UI mandate ([`docs/engineering-rules.md`](../../docs/engineering-rules.md)), Tepegöz's
 renderer is built on **KUIreact** components. They are **forked/copied** into this package — NOT
 `npm install`ed — so we control the source and track drift here.
 
 ## Upstream source
 
-- Repo: `@kuraykaraaslan/kui-react` at `/home/kuray/kui-react` (WSL), version **1.0.1**.
+- Repo: [`@kuraykaraaslan/kui-react`](https://github.com/kuraykaraaslan/kui-react), version **1.0.1**.
+- License: **0BSD** — recorded in [`THIRD-PARTY-NOTICES.md`](../../THIRD-PARTY-NOTICES.md).
 - Forked on: 2026-06-30.
 
 ## What is forked (subset — fork-on-demand)

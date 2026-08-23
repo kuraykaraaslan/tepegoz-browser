@@ -6,13 +6,17 @@ Guidance for Claude Code (and humans) working on **tepegoz-browser**.
 
 An agentic, security-by-design, local-first browser (Electron + TypeScript). Architecture and the
 task-by-task roadmap live in **[`phases/`](phases/)** and **[`docs/adr/`](docs/adr/)**. The full plan
-is `docs/ARCHITECTURE.md` — a thin index of the L0–L10 layer model pointing at the document that owns
+is `docs/architecture.md` — a thin index of the L0–L10 layer model pointing at the document that owns
 each piece. Read `phases/README.md` first.
 
 ## Binding design rules
 
-This project **must** comply with `//wsl.localhost/Ubuntu/home/kuray/internal-ai-rules`. Cross-cutting
-gates are summarized in `phases/README.md`; ADR-0010 records deviations.
+The binding rules for this repository are **[`docs/engineering-rules.md`](docs/engineering-rules.md)** —
+the public, in-repo statement of what CI, the linters, and the ADRs actually enforce. Code comments that
+cite `internal-ai-rules` (the author's cross-project ruleset, maintained outside this repository at
+`//wsl.localhost/Ubuntu/home/kuray/internal-ai-rules`) point there; the in-repo document is what binds a
+contributor, because a rule nobody outside can read cannot be a rule anyone outside can follow.
+Cross-cutting phase gates are summarized in `phases/README.md`; ADR-0010 records deviations.
 
 ## Session close-out (standing rule)
 
