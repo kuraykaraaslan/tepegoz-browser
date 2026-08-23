@@ -39,6 +39,15 @@ announcement blogs.
 
 ---
 
+## Published
+
+1. [**The screenshot that captured the wrong screen**](blog/the-screenshot-that-captured-the-wrong-screen.md)
+   Why a browser whose tabs are isolated `WebContentsView`s cannot screenshot itself, the OS-level
+   workaround that captured the operator's own desktop twice and was deleted, and the `desktopCapturer`
+   path that works. Ends where it actually ended: the capture is solved, the agent recording is not.
+
+---
+
 ## Launch posts
 
 **[BUILD NOTE]** Six posts that exist as material already, drawn from work in the repository. Each has a
