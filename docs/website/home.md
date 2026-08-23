@@ -12,6 +12,11 @@ status: needs-assets
 A static screenshot cannot show the difference between a chat sidebar and an agent that drives tabs. If
 the recording does not exist yet, the page does not ship — do not substitute a mockup.
 
+**[BUILD NOTE]** The hero carries a real screenshot of the running application (the command palette
+over a page). That is a picture of what the product **is**, not evidence of a task completing, and it
+**does not** discharge the requirement above. The demo section still renders its own "recording
+pending" slot, and this page stays `status: needs-assets` until the recording exists.
+
 ---
 
 ## Hero

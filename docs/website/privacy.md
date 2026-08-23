@@ -1,7 +1,7 @@
 ---
 route: /privacy
 title: Privacy
-description: No telemetry, no account, no backend. Where your data lives, what leaves your machine, and what a local-first browser cannot promise.
+description: No telemetry, no account today, no backend. Where your data lives, what leaves your machine, and what a local-first browser cannot promise.
 nav: primary
 status: ready
 ---
@@ -19,8 +19,9 @@ privacy policy is a separate document at `/legal/privacy`. Link between them, do
 
 ### Subhead
 
-There is no Tepegöz account, no Tepegöz server, and no telemetry. The browser works because it runs on
-your machine, not because something of ours is running somewhere else.
+There is no Tepegöz account, no Tepegöz server, and no telemetry today. The browser works because it
+runs on your machine, not because something of ours is running somewhere else. An optional cloud tier is
+planned — never required, and covered below.
 
 ---
 
