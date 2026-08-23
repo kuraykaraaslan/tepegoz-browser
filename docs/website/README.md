@@ -32,9 +32,10 @@ site says in the same review.
    landed their code and every one is still measurement-owed, so the site describes _mechanism_ — what
    the agent may and may not do, and who decides — never benchmark superiority. When the
    head-to-head artifact exists, `compare.md` gets numbers and this rule relaxes for that page only.
-2. **State the pre-release condition wherever it changes a reader's decision.** No published release, no
-   code signing, no security audit. A visitor who downloads should already know this from the page that
-   sent them.
+2. **State the pre-release condition wherever it changes a reader's decision.** Builds are now signed
+   and published, so those two caveats are retired — but there is still **no independent security
+   audit** and **no independently measured automation**, and a visitor who downloads should already
+   know both from the page that sent them.
 3. **Feature lists are split into what works and what is planned.** A single undifferentiated list is
    the most common way product sites lie without lying.
 

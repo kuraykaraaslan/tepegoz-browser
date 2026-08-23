@@ -58,8 +58,8 @@ release page that never mentions defects is not being read carefully by anyone t
 >
 > **Known issues.** What is still wrong in this build, and the workaround if there is one.
 >
-> **Downloads.** Windows `.exe` · macOS `.dmg` · Linux `.deb` `.rpm` `.tar.gz`, with checksums.
-> **Unsigned** — see the note on `/download`.
+> **Downloads.** Windows `.exe` · macOS `.dmg` · Linux `.deb` `.rpm` `.tar.gz`, signed and notarized,
+> with checksums.
 
 ---
 
@@ -69,8 +69,8 @@ release page that never mentions defects is not being read carefully by anyone t
 
 Semantic versioning. Pre-1.0 means the interfaces can change between minor versions, and they will.
 
-**Only the latest release is supported.** There are no backported fixes, no long-term-support branch,
-and no update channel yet — you will need to download a new build yourself.
+**Only the latest release is supported.** There are no backported fixes and no long-term-support
+branch.
 
 ---
 

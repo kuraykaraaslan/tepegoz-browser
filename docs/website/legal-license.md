@@ -46,8 +46,8 @@ summary never does.
 - It does not make the software cost money, and it does not stop you charging for something you build
   with it.
 - It does not give you trade mark rights — see [`/legal/terms`](/legal/terms).
-- **It provides no warranty.** The software is offered as-is, and given that it is pre-release,
-  unsigned and unaudited, take that literally.
+- **It provides no warranty.** The software is offered as-is, and given that it is pre-release and
+  unaudited, take that literally.
 
 ---
 

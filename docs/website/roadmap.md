@@ -87,7 +87,7 @@ decision layer that is landed, reviewed, documented, and **not yet wired to a li
 Parallel multi-tab execution · durable checkpoint, resume and hand-off between agents · long-term task
 memory · official-API integration adapters · Google Safe Browsing · an MCP **server** surface ·
 fingerprinting resistance · Chrome MV3 extension support · the optional managed cloud tier and encrypted
-sync · macOS and Linux as first-class targets · code signing.
+sync · macOS and Linux as first-class targets.
 
 ---
 
@@ -101,7 +101,7 @@ this section exists to avoid.
 | The agent benchmark baseline | **API spend** — roughly $550–780 for the full sweep              |
 | The head-to-head comparison  | **Rival subscriptions**, about $60/month — not API credit        |
 | The local-model phase        | **Downloaded model weights**, not tokens                         |
-| A real release               | **Code-signing identity** for Windows and macOS                  |
+| The independent security audit | **An outside reviewer**, and the budget for one                |
 | Phase 0 closing              | A watched CI run, and the suite executing on macOS at least once |
 
 ---

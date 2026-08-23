@@ -54,7 +54,7 @@ incident you can look up.
 | Where is the autonomy setting enforced?      | Main process; the window you see has no vote                                      | Frequently in the UI layer                                           |
 | Is page content ever treated as instruction? | No — screened and marked as data at the boundary where it enters                  | The class of failure behind the category's published incidents       |
 | Can the agent widen its own permissions?     | No. Grants come from a plan you approved and expire with the run                  | Varies; often a global "skip confirmations" mode                     |
-| Sensitive sites                              | Banking, crypto, health and password managers locked out by category              | Usually the same permission as anything else                         |
+| Sensitive sites                              | Banking, crypto, health and password managers ship off; only you can enable one   | Usually the same permission as anything else                         |
 | Where do your API keys live?                 | Your OS keychain, privileged process only. No account, no proxy                   | Often a vendor account with a hosted proxy                           |
 | Does it work with no backend at all?         | Yes — including a fully local model                                               | Rarely; a vendor subscription is usually the product                 |
 | Per-tab VPN or Tor                           | Yes, with a fail-closed kill switch                                               | Not offered                                                          |

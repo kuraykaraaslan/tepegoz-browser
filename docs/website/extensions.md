@@ -71,7 +71,8 @@ notification: allow, open in the background, follow the redirect, or trust this 
 ### Scheduled Tasks
 
 Work that runs on a schedule instead of when you are watching — with the same approval rules, so an
-unattended run still cannot spend money or delete things on its own.
+unattended run can spend only inside a wallet mandate you wrote, and still cannot delete things on its
+own.
 
 ### Translate
 

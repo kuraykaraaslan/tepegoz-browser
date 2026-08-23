@@ -78,27 +78,35 @@ because there is no server.
 
 ### Can the agent spend my money?
 
-Only with an explicit confirmation that names the action. Financial steps are a separate risk tier that
-cannot be auto-approved by any autonomy setting, and the decision is enforced in the privileged process
-rather than in the window you are looking at.
+Only from a wallet mandate you wrote — a ceiling, a payee list and an expiry, recorded before the run.
+Outside an active mandate, a financial step needs an explicit confirmation that names the action.
+Either way the decision is enforced in the privileged process rather than in the window you are looking
+at, and the agent cannot widen a mandate it holds.
 
 ### Can it log into my bank?
 
-No. Banking, crypto, health and password-manager sites are locked out of automation by category —
-including Turkish banking and the whole `gov.tr` tree — and no setting unlocks them.
+Only if you enable it. Banking, crypto, health and password-manager sites — including Turkish banking
+and the whole `gov.tr` tree — ship switched off behind a per-category grant. Nothing the agent does
+turns one on; you do, deliberately, and you can revoke it at any time.
 
 ### Will it solve CAPTCHAs?
 
-No, deliberately. It detects them and hands the page to you.
+Yes. CAPTCHA and two-factor prompts are cleared automatically — two-factor codes are completed by the
+credential broker, so the model never sees them. A challenge the browser cannot clear is handed back to
+you rather than retried blindly.
 
-### Why does my system say the app is unsigned?
+Whether automating a given site is permitted is between you and that site; see [`/legal/terms`](/legal/terms).
 
-Because it is. Code signing is not configured yet, so Windows SmartScreen and macOS Gatekeeper will both
-warn you. `/download` explains what the warnings mean and how to build from source instead.
+### Are the builds signed?
+
+Yes — code-signed on Windows and notarized on macOS, so neither SmartScreen nor Gatekeeper will warn
+you. Every release also publishes a checksum. If you would rather not run a binary at all, `/download`
+has the three commands that build the same application from source.
 
 ### Is it stable?
 
-No. It is pre-release: no tagged version, no update channel, no security audit. Known problems are
+No. It is pre-release: early software with no independent security audit and no independently measured
+automation. Known problems are
 published rather than discovered by you.
 
 ### Does it work on macOS and Linux?

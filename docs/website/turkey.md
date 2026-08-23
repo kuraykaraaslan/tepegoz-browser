@@ -66,7 +66,8 @@ sensitive by category.
 
 The design position is already fixed and recorded: **reading is free, writing is force-asked** with
 biometric confirmation, regardless of the autonomy level in use — and the whole `gov.tr` and `bel.tr`
-tree, along with Turkish banking, is locked out of automation by category.
+tree, along with Turkish banking, ships switched off behind a per-category grant that only you can
+enable.
 
 **Status, stated plainly:** the classification layer is built and reviewed. The actual recipes and
 locale packs do not exist yet. This is planned work with the trust model settled first, not a shipping
@@ -83,19 +84,6 @@ the alternative is a browser that ships your logged-in sessions to a server in a
 
 Tepegöz has no backend, no account and no telemetry, and it can run its agent entirely on a model on
 your own hardware, with no network dependency at all.
-
----
-
-## Section 5 — Where it is made
-
-### Body
-
-Written in Turkey by one developer, in the open, under AGPL-3.0. Windows is the primary target because
-that is what most of the people this was built for actually use.
-
-Turkish web tasks are also part of how the agent will be measured: the benchmark set reserves a named
-Turkish-web stratum, so competence in Turkish is reported separately rather than averaged into an
-English-heavy number.
 
 ---
 

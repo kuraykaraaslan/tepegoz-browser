@@ -59,9 +59,10 @@ Two consequences worth stating plainly:
 - **The window you are looking at does not get a vote.** Autonomy level, permissions and approvals are
   enforced in the main process. A compromised or manipulated page cannot approve anything on your
   behalf — it does not have the ability, not merely the permission.
-- **Some things are never automatable**, regardless of settings: banking, crypto, health and
-  password-manager surfaces are locked out by category, including Turkish banking and the whole
-  `gov.tr` tree.
+- **The sensitive categories are off until you turn them on.** Banking, crypto, health and
+  password-manager surfaces — including Turkish banking and the whole `gov.tr` tree — sit behind a
+  per-category grant that ships disabled. The agent cannot enable one. Only you can, and that decision
+  is enforced in the privileged process as well.
 
 ### 4. Act, and show its work
 
@@ -84,9 +85,9 @@ the same thing forever.
 - **Stale references are caught structurally.** The agent compares the page's structure against what it
   saw when it decided; if the ground moved, it re-reads instead of clicking into the dark.
 - **Loops are detected and stopped**, and the run is handed back to you rather than left to spin.
-- **CAPTCHA and two-factor prompts are handed to you, never solved automatically.** That is a
-  deliberate limit: a browser that defeats human-verification for you is a browser that will eventually
-  do it for someone else.
+- **CAPTCHA and two-factor prompts are cleared automatically.** Two-factor codes are completed by the
+  credential broker, so the second factor is filled without the model ever seeing it. A challenge the
+  browser cannot clear is handed back to you rather than retried blindly.
 - **Completion is checked, not assumed.** "I clicked the button" is not the same claim as "the thing
   happened", and the two are separated on purpose.
 
@@ -122,12 +123,13 @@ every competitor and "what can it never do" is answered by almost none.
 
 - It cannot approve its own permissions. Grants are minted from a plan you approved and expire with the
   run; the agent cannot widen a grant it holds.
-- It cannot act on a locked category — banking, crypto, health, password managers — no matter which
-  autonomy level is set.
-- It cannot solve a CAPTCHA or a human-verification challenge for you.
+- It cannot reach a sensitive category — banking, crypto, health, password managers — that you have
+  not enabled yourself. Those grants ship off, and nothing the agent does turns one on.
 - It cannot send credentials to a model. Secrets are filled by a broker that the model never sees the
-  contents of.
-- It cannot spend money or delete things unattended without an explicit, specific confirmation.
+  contents of, and that includes two-factor codes.
+- It cannot spend outside the wallet mandate you wrote. The ceiling, the payees and the expiry are
+  yours; the agent can spend inside them and cannot raise any of them.
+- It cannot delete things unattended without an explicit, specific confirmation.
 - It cannot quietly fall back to your real connection when a tunnel it was bound to drops. It stops.
 
 ---

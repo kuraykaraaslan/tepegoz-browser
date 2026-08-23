@@ -24,7 +24,7 @@ Why a browser built in Turkey carries the name of a monster from the Book of Ded
 
 ### Body
 
-_Tepegöz_ — literally "crown-of-the-head eye" — is the one-eyed giant of Turkish myth, best known as the
+_Tepegöz_ — literally "crown-of-the-head eye" — is the one-eyed giant of Turkic myth, best known as the
 monster of the **Book of Dede Korkut**, the foundational epic cycle of the Oghuz Turks. He is not a
 minor creature. He is the antagonist an entire people had to answer for, and the story of how he was
 finally faced is one of the oldest surviving narratives in Turkish.
@@ -67,8 +67,9 @@ That is not a feature list. It is the reason the project exists.
 
 ### Body
 
-**It will not solve a CAPTCHA for you.** A browser that defeats human-verification is a browser that
-will eventually do it for someone who is not you.
+**It will not unlock anything on your behalf.** Every capability that can cost you something — banking,
+crypto, health, password managers, spending from a wallet — ships switched off. The agent cannot enable
+one, cannot widen one, and cannot argue its way into one. Only you open those doors.
 
 **It will not claim a benchmark it has not run.** Every capability of the agent competence program is
 built and none of it is independently measured. That is written on the roadmap, in the README, and on
@@ -81,19 +82,7 @@ non-English input as a blocking defect.
 
 ---
 
-## Section 4 — Where it is made
-
-### Body
-
-Written in Turkey, in the open, by one person, as a commercial product that happens to be free
-software. Windows is the primary target because that is what the people this was built for actually
-use.
-
-**Türkiye specifics** → `/turkey`
-
----
-
-## Section 5 — Where it is going
+## Section 4 — Where it is going
 
 ### Body
 

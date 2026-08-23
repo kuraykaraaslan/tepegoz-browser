@@ -35,8 +35,8 @@ stays visible, reversible, and yours to stop. Your own AI key. Your own machine.
 
 ### Status line, directly under the buttons
 
-> **Pre-release.** There is no installer yet — Tepegöz is built from source today. Nothing here is
-> stable, nothing is signed, and the automation has not been independently benchmarked.
+> **Pre-release.** Builds are signed and downloadable, but this is early software: there has been no
+> independent security audit, and the automation has not been independently benchmarked.
 > [What that means →](/roadmap)
 
 **[BUILD NOTE]** This line is not a disclaimer to be styled into invisibility. It is the reason a
@@ -76,7 +76,7 @@ account to create. A hosted tier may exist later; it will never be required.
 
 Web pages and the renderer are treated as untrusted. A rule-based **policy kernel classifies every tool
 call before the model runs**, an egress firewall blocks data from leaving to places it should not, and
-banking, crypto, health and password-manager sites are locked out of automation by default.
+banking, crypto, health and password-manager sites ship switched off, and only you can enable them.
 
 ### Observable and reversible
 
@@ -158,7 +158,7 @@ close it, and run it as a service without giving the same freedom back.
 
 Every capability of the agent competence program is built and none of it is independently measured — the
 benchmark spend has not been paid, and until it is, "our agent is better" is a sentence this project
-will not write. Builds are unsigned. No security audit has been performed. Several capabilities ship
+will not write. No independent security audit has been performed. Several capabilities ship
 deliberately switched off.
 
 All of it is written down, per phase, with what is missing and why.
@@ -171,7 +171,7 @@ All of it is written down, per phase, with what is missing and why.
 
 ### Body
 
-_Tepegöz_ is the one-eyed giant of Turkish mythology, the monster of the Book of Dede Korkut. The single
+_Tepegöz_ is the one-eyed giant of Turkic mythology, the monster of the Book of Dede Korkut. The single
 eye is the point: **one agent, one focused gaze on the page**, acting deliberately instead of blindly.
 
 **Read the story** → `/story`

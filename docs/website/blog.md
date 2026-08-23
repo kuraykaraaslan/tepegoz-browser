@@ -60,9 +60,9 @@ real conclusion, not a teaser.
    Replacing `better-sqlite3` with Node's built-in SQLite removed a rebuild script, three CI steps, and
    a skip-guard that had been letting 63 tests sit out entire runs.
 
-5. **What a browser agent must never do**
-   CAPTCHAs, credential fills, bulk deletion, and permission widening — the list, and why each one is
-   structural rather than a setting.
+5. **What a browser agent must never do on its own**
+   Enabling a sensitive category, widening a wallet mandate, and permission widening in general — the
+   list, and why every one of them belongs to the user rather than the agent.
 
 6. **Reading everyone else's complaints**
    What the published user studies of five rival agentic browsers say, what we changed because of them,

@@ -98,8 +98,8 @@ the failure mode that makes most kill switches decorative.
 An agent that can act on your behalf can also overshare on your behalf. The relevant controls:
 
 - **An egress firewall** inspects outbound content for secrets and blocks what should not leave.
-- **Sensitive categories are locked out of automation entirely** — banking, crypto, health, password
-  managers.
+- **Sensitive categories ship disabled** — banking, crypto, health, password managers. Enabling one is
+  a deliberate, per-category decision you make; the agent has no path to making it for you.
 - **Screenshots are not part of the default loop.** Visual capture is deliberately switched off, and
   before it is ever enabled, redaction of logged-in session chrome and an explicit per-run consent are
   prerequisites, not follow-ups.
