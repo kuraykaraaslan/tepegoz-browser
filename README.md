@@ -18,12 +18,13 @@ control.
 
 ## Project status — read this first
 
-**Pre-release. Buildable and usable from source; not shipped, not stable, not audited.**
+**Pre-release. Shipped and signed; not stable, not audited.**
 
-There is no installer, no release binary, no update channel, and no tagged version. Builds you produce
-are **unsigned** — code signing is not configured. **No development phase is closed yet**; the roadmap
-tracks status by what has been _measured_, not by what has been written, and by that bar every phase
-still reads amber. See [`phases/README.md`](phases/README.md) for the per-phase truth.
+Signed installers are published for Windows, macOS and Linux, and the source builds in three commands.
+What is still missing is measurement: **no independent security audit** has been performed and the
+automation has **not** been independently benchmarked. **No development phase is closed yet**; the
+roadmap tracks status by what has been _measured_, not by what has been written, and by that bar every
+phase still reads amber. See [`phases/README.md`](phases/README.md) for the per-phase truth.
 
 One claim this project deliberately does **not** make: that its agent is good at browsing. All thirteen
 phases of the AI competence program have landed their code, and **every one of them is still

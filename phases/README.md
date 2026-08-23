@@ -71,12 +71,13 @@ Freezing is a **scope decision, not a status claim**: where a phase already land
 the network filter are pulled into Phase 1a (1a's own DoD already requires them); the OAuth broker,
 Google adapter package, password manager, WebAuthn and fingerprinting work are frozen.
 
-**Windows code-signing is permanently deferred to the production gate.** It is a distribution concern,
-not a build concern: v1 development, CI, e2e and UAT all run unsigned. This takes an external-lead-time
-dependency off the critical path, and moves the "shippable signed installer" claim — together with
-auto-update **signature verification**, which cannot be honestly tested without a certificate — behind
-that gate. Until then **no phase may assert a signed-artifact guarantee**, and Phase 0's DoD closes
-explicitly without it.
+**Windows code-signing was deferred to the production gate, and that gate has now been passed.** It was
+always a distribution concern rather than a build concern: v1 development, CI, e2e and UAT all ran
+unsigned, which kept an external-lead-time dependency off the critical path. A signing identity is now
+configured and releases ship signed on Windows and notarized on macOS, so the "shippable signed
+installer" claim and auto-update **signature verification** are both testable. Phase 0's DoD still
+closes without asserting them, because it was written and evidenced before the certificate existed —
+that is a record of how it closed, not a live gap.
 
 **Horizontal gates.** Coverage (**S80/B85/F86/L80 over 62 packages, plus `apps/desktop` at its own ratcheting floor**), i18n en+tr parity and UAT signoff
 appear as a separate box in _every_ phase's DoD but are one body of work. They are done once and ticked
