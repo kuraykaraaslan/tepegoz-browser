@@ -89,6 +89,9 @@ export const en = {
     routeStatusDown: 'not connected',
     routeStatusConnecting: 'connecting…',
     routeReloadNotice: 'Changing the route reloads the affected tabs.',
+    // The NATIVE file picker for importing a WireGuard profile. Its own title is chrome we own and is
+    // translated; the file-type name stays "WireGuard" because that is the product's name, not a word.
+    wireguardPickerTitle: 'WireGuard profile',
     routeTunneled: 'Routed through {name}',
     routeTunneledInherited: 'Inherited route: {name}',
     routeBlocked: 'Blocked — {name} is not connected',

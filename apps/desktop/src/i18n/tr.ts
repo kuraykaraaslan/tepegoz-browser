@@ -77,6 +77,9 @@ export const tr: AppStrings = {
     routeStatusDown: 'bağlı değil',
     routeStatusConnecting: 'bağlanıyor…',
     routeReloadNotice: 'Rotayı değiştirmek etkilenen sekmeleri yeniden yükler.',
+    // WireGuard profili içe aktarmak için açılan YEREL dosya seçici. Başlığı bizim chrome'umuz olduğu
+    // için çevrilir; dosya türü adı "WireGuard" olarak kalır — o bir kelime değil, ürün adıdır.
+    wireguardPickerTitle: 'WireGuard profili',
     routeTunneled: '{name} üzerinden yönlendiriliyor',
     routeTunneledInherited: 'Devralınan rota: {name}',
     routeBlocked: 'Engellendi — {name} bağlı değil',

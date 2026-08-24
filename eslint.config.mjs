@@ -2,6 +2,7 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import i18next from 'eslint-plugin-i18next';
+import { nativeI18nSelectors } from './eslint.native-i18n.config.mjs';
 
 export default tseslint.config(
   {
@@ -71,6 +72,22 @@ export default tseslint.config(
             'reader reads these out, so an English literal here is an untranslated control.',
         },
       ],
+    },
+  },
+  // …and the NATIVE surfaces, which are `.ts` and therefore were covered by nothing at all. Both rules
+  // above are `.tsx`-only, so every string Electron itself renders — OS notifications, message boxes,
+  // native context menus, file pickers — sat outside the i18n gate. That is not a hypothetical hole:
+  // it is how the scheduled-task notifications, the WireGuard picker, and the cloud-translation CONSENT
+  // dialog all shipped English-only while `pnpm lint` stayed green, and how the Translate submenu came
+  // to key its labels on `app.getLocale()` (the OS language) instead of the app's own preference.
+  //
+  // The selectors live in `eslint.native-i18n.config.mjs` so a test can assert the gate actually FIRES
+  // on each of those shapes — a lint rule nobody has seen fail is indistinguishable from one that
+  // matches nothing. See `apps/desktop/src/main/lib/native-i18n-gate.test.ts`.
+  {
+    files: ['**/*.ts'],
+    rules: {
+      'no-restricted-syntax': ['error', ...nativeI18nSelectors],
     },
   },
   // Allow-list: dictionaries (the SOURCE of strings), tests, and constant message files legitimately

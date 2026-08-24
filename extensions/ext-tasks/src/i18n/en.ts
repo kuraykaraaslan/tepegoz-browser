@@ -116,6 +116,17 @@ export const en = {
   },
 
   deleteConfirm: 'Delete this task? This cannot be undone.',
+
+  /**
+   * OS/centre notifications raised by the SCHEDULER (not the panel), gated on the task's own
+   * notifyOnStart / notifyOnDone / notifyOnError policy. `{name}` is the task's own name, which is
+   * user-entered and therefore never translated — only the frame around it is.
+   */
+  notifications: {
+    startedTitle: 'Task started: {name}',
+    doneTitle: 'Task done: {name}',
+    failedTitle: 'Task failed: {name}',
+  },
 };
 
 export type TasksStrings = typeof en;

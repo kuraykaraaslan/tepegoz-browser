@@ -81,6 +81,11 @@ export const en = {
   // request would sit unseen until it timed out.
   notifications: {
     approvalNeededTitle: 'Another task needs your approval',
+    // The SAME two events raised from a SCHEDULED task run (task-agent-runner), where there is no
+    // panel on screen to draw them into — the OS notification is the only thing the user ever sees,
+    // so it is the one that most needs to be in their language.
+    taskHandoffTitle: 'Task needs handoff',
+    taskApprovalTitle: 'Task needs approval',
   },
   // Token Ledger quota — the 80% warning (raised once when cumulative usage crosses the threshold).
   quota: {

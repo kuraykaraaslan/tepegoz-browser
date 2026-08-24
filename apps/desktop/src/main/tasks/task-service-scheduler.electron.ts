@@ -9,6 +9,7 @@ import type {
 import { TaskStore, type TaskTriggerStateRecord } from '@tepegoz/persistence';
 import { getDb } from '../db/database.electron';
 import NotificationHost from '../notifications/notification-host';
+import { mainStrings } from '../lib/i18n-main';
 import {
   MAX_BASELINE_PREVIEW,
   TICK_MS,
@@ -182,7 +183,7 @@ async function runQueued(input: QueuedTaskRun): Promise<void> {
     NotificationHost.push({
       source: 'agent',
       kind: 'info',
-      title: `Task started: ${input.task.name}`,
+      title: mainStrings().tasks.notifications.startedTitle.replace('{name}', input.task.name),
       body: input.task.prompt.slice(0, 140),
       channels: ['center', 'toast'],
     });
@@ -221,7 +222,10 @@ async function runQueued(input: QueuedTaskRun): Promise<void> {
     NotificationHost.push({
       source: 'agent',
       kind: result.ok ? 'info' : 'error',
-      title: result.ok ? `Task done: ${input.task.name}` : `Task failed: ${input.task.name}`,
+      title: (result.ok
+        ? mainStrings().tasks.notifications.doneTitle
+        : mainStrings().tasks.notifications.failedTitle
+      ).replace('{name}', input.task.name),
       body: result.summary ?? result.error ?? input.task.prompt.slice(0, 140),
       channels: ['center', 'toast', 'native'],
     });

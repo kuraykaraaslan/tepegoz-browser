@@ -39,6 +39,32 @@ export const en = {
   rememberChoice: 'Remember choice',
   items: 'items',
   characters: 'characters',
+
+  /**
+   * NATIVE surfaces the desktop main process draws for this extension: the page context-menu submenu
+   * and the cloud-fallback CONSENT dialog. They are separate keys from the panel's `cloudPrompt*`
+   * above because the native dialog offers a third choice ("not now") that the in-page prompt does
+   * not, and its buttons are OS buttons rather than panel controls.
+   *
+   * A consent dialog is the one string that may never fall back to English: it is where the user
+   * grants a page's text to a cloud endpoint, and consent given in a language you do not read is
+   * not consent.
+   */
+  native: {
+    menuTitle: 'Translate',
+    translatePage: 'Translate page',
+    translateSelection: 'Translate selection',
+    restoreOriginal: 'Restore original',
+    resultTitle: 'Translation result',
+    cloudTitle: 'Cloud translation requested',
+    cloudMessage: 'A page translation needs cloud fallback.',
+    /** `{target}` is a language name, `{count}` an already-locale-formatted number. */
+    cloudDetailTarget: 'Target: {target}',
+    cloudDetailText: 'Text: {count} characters',
+    cloudAllowRemember: 'Allow and remember',
+    cloudDenyRemember: 'Deny and remember',
+    cloudNotNow: 'Not now',
+  },
 };
 
 export type TranslateStrings = typeof en;

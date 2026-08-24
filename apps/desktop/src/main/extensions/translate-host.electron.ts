@@ -35,7 +35,8 @@ import { z } from 'zod';
 import { join } from 'node:path';
 import { llamaEngine } from '../local-inference/llama-engine.electron';
 import ModelManager from '../model-catalog/model-manager.electron';
-import { mainLocale } from '../lib/i18n-main';
+import { mainLocale, mainStrings } from '../lib/i18n-main';
+import { formatNumber } from '@tepegoz/i18n';
 import { IpcChannels } from '@tepegoz/desktop-ipc';
 
 const MAX_MEMORY_ENTRIES = 2000;
@@ -189,17 +190,24 @@ async function requestCloudFallback(
     pendingFallback.set(request.requestId, resolve);
   });
   const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? null;
+  // Localized, and localized HERE rather than at module load: the locale can change while the app
+  // runs, and a consent dialog that renders in the language the app started in is the one surface
+  // where a stale locale is not cosmetic. `toLocaleString()` on the count is likewise wrong — it
+  // reads the OS locale, so a Turkish UI could show "12,480" where the rest of the app shows
+  // "12.480". Both follow `mainLocale()`, which is the app's OWN preference first.
+  const locale = mainLocale();
+  const t = mainStrings().translate.native;
   const dialogOptions: MessageBoxOptions = {
     type: 'question',
-    buttons: ['Allow and remember', 'Deny and remember', 'Not now'],
+    buttons: [t.cloudAllowRemember, t.cloudDenyRemember, t.cloudNotNow],
     defaultId: 0,
     cancelId: 2,
-    title: 'Cloud translation requested',
-    message: 'A page translation needs cloud fallback.',
+    title: t.cloudTitle,
+    message: t.cloudMessage,
     detail:
       `${request.origin}\n` +
-      `Target: ${request.targetLanguage}\n` +
-      `Text: ${request.textCharCount.toLocaleString()} characters`,
+      `${t.cloudDetailTarget.replace('{target}', request.targetLanguage)}\n` +
+      `${t.cloudDetailText.replace('{count}', formatNumber(request.textCharCount, locale))}`,
   };
   const nativeResponse = (
     win === null ? dialog.showMessageBox(dialogOptions) : dialog.showMessageBox(win, dialogOptions)

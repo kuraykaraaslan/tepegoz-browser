@@ -82,6 +82,10 @@ export const tr: AgentStrings = {
   // Token Defteri kotası — %80 uyarısı (kümülatif kullanım eşiği aştığında bir kez gösterilir).
   notifications: {
     approvalNeededTitle: 'Başka bir görev onayınızı bekliyor',
+    // Zamanlanmış bir görev çalışmasından (task-agent-runner) yükselen AYNI iki olay — orada ekranda
+    // çizilecek bir panel yok, kullanıcının gördüğü tek şey işletim sistemi bildirimi.
+    taskHandoffTitle: 'Görev devir bekliyor',
+    taskApprovalTitle: 'Görev onay bekliyor',
   },
   quota: {
     warnTitle: 'Token kotanıza yaklaşıyorsunuz',

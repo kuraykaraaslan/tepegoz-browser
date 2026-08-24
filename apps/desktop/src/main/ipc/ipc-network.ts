@@ -2,6 +2,7 @@ import { basename } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { BrowserWindow, dialog } from 'electron';
 import { AppError, Logger } from '@tepegoz/libs';
+import { mainStrings } from '../lib/i18n-main';
 import {
   IpcChannels,
   type BinaryStatus,
@@ -263,7 +264,9 @@ export function registerNetworkIpc(): void {
       }
       const win = BrowserWindow.fromWebContents(event.sender);
       const opts: Electron.OpenDialogOptions = {
-        title: 'WireGuard profile',
+        title: mainStrings().browser.wireguardPickerTitle,
+        // The FILTER name stays untranslated on purpose: it names the file format, which is spelled
+        // "WireGuard" in every language. Translating a product name is not localization.
         filters: [{ name: 'WireGuard', extensions: ['conf'] }],
         properties: ['openFile'],
       };

@@ -116,4 +116,15 @@ export const tr: TasksStrings = {
   },
 
   deleteConfirm: 'Bu görev silinsin mi? Bu işlem geri alınamaz.',
+
+  /**
+   * ZAMANLAYICININ (panelin değil) yükselttiği işletim sistemi / merkez bildirimleri; görevin kendi
+   * notifyOnStart / notifyOnDone / notifyOnError politikasına bağlı. `{name}` kullanıcının yazdığı
+   * görev adıdır, çevrilmez — yalnızca çevresindeki çerçeve çevrilir.
+   */
+  notifications: {
+    startedTitle: 'Görev başladı: {name}',
+    doneTitle: 'Görev tamamlandı: {name}',
+    failedTitle: 'Görev başarısız: {name}',
+  },
 };

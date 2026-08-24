@@ -41,4 +41,29 @@ export const tr: TranslateStrings = {
   rememberChoice: 'Seçimi hatırla',
   items: 'öğe',
   characters: 'karakter',
+
+  /**
+   * Masaüstü ana sürecinin bu eklenti için çizdiği YEREL yüzeyler: sayfa bağlam menüsü alt menüsü ve
+   * bulut yedeği İZİN penceresi. Yukarıdaki panel `cloudPrompt*` anahtarlarından ayrıdır: yerel
+   * pencere, sayfa içi istemin sunmadığı üçüncü bir seçenek ("şimdi değil") sunar ve düğmeleri panel
+   * denetimleri değil işletim sistemi düğmeleridir.
+   *
+   * İzin penceresi, İngilizceye asla düşmemesi gereken metindir: kullanıcının sayfa metnini bir bulut
+   * uç noktasına verdiği yer burasıdır ve okumadığınız bir dilde verilen izin, izin değildir.
+   */
+  native: {
+    menuTitle: 'Çeviri',
+    translatePage: 'Sayfayı çevir',
+    translateSelection: 'Seçimi çevir',
+    restoreOriginal: 'Orijinali geri yükle',
+    resultTitle: 'Çeviri sonucu',
+    cloudTitle: 'Bulut çevirisi isteniyor',
+    cloudMessage: 'Sayfa çevirisi için bulut yedeği gerekiyor.',
+    /** `{target}` bir dil adı, `{count}` yerel biçime çevrilmiş bir sayıdır. */
+    cloudDetailTarget: 'Hedef: {target}',
+    cloudDetailText: 'Metin: {count} karakter',
+    cloudAllowRemember: 'İzin ver ve hatırla',
+    cloudDenyRemember: 'Reddet ve hatırla',
+    cloudNotNow: 'Şimdi değil',
+  },
 };

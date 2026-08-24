@@ -15,6 +15,7 @@ import PreferenceStore from '@tepegoz/preferences';
 import { TokenLedger } from '@tepegoz/model-gateway';
 import AgentService from './agent-service.electron';
 import NotificationHost from '../notifications/notification-host';
+import { mainStrings } from '../lib/i18n-main';
 import { getDb } from '../db/database.electron';
 import {
   registerAgentRunController,
@@ -119,10 +120,11 @@ export async function runTaskAgent(
                 });
               }
               if (kind === 'handoff' || kind === 'awaiting_approval') {
+                const notify = mainStrings().agent.notifications;
                 NotificationHost.push({
                   source: 'agent',
                   kind: 'warning',
-                  title: kind === 'handoff' ? 'Task needs handoff' : 'Task needs approval',
+                  title: kind === 'handoff' ? notify.taskHandoffTitle : notify.taskApprovalTitle,
                   body: message,
                   channels: ['center', 'toast', 'native'],
                 });
@@ -150,7 +152,7 @@ export async function runTaskAgent(
               NotificationHost.push({
                 source: 'agent',
                 kind: 'warning',
-                title: 'Task paused for approval',
+                title: mainStrings().agent.notifications.taskApprovalTitle,
                 body: `${req.toolName}: ${req.policy.reason}`,
                 channels: ['center', 'toast', 'native'],
               });

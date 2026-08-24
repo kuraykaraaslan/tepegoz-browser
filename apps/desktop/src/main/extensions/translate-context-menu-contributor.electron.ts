@@ -1,4 +1,4 @@
-import { app, dialog } from 'electron';
+import { dialog } from 'electron';
 import type { PageMenuContributionActionInput } from '@tepegoz/desktop-ipc';
 import { TRANSLATE_EXTENSION_ID } from '@tepegoz/ext-translate/host';
 import type {
@@ -7,31 +7,24 @@ import type {
 } from '../menus/page-context-menu-contributions';
 import translateHost from './translate-host.electron';
 import TranslatePageInjector from './translate-page-injector-controller.electron';
+import { mainStrings } from '../lib/i18n-main';
 
-function labels(): {
-  title: string;
-  translatePage: string;
-  translateSelection: string;
-  restoreOriginal: string;
-  resultTitle: string;
-} {
-  const locale = app.getLocale().toLowerCase().startsWith('tr') ? 'tr' : 'en';
-  if (locale === 'tr') {
-    return {
-      title: 'Çeviri',
-      translatePage: 'Sayfayı çevir',
-      translateSelection: 'Seçimi çevir',
-      restoreOriginal: 'Orijinali geri yükle',
-      resultTitle: 'Çeviri sonucu',
-    };
-  }
-  return {
-    title: 'Translate',
-    translatePage: 'Translate page',
-    translateSelection: 'Translate selection',
-    restoreOriginal: 'Restore original',
-    resultTitle: 'Translation result',
-  };
+/**
+ * This submenu's labels used to be a hand-rolled two-branch table keyed on `app.getLocale()`. Two
+ * things were wrong with that, and only the second is visible in a screenshot:
+ *
+ *  1. `app.getLocale()` is the OPERATING SYSTEM's language. The app's own locale preference wins over
+ *     it everywhere else (see `mainLocale`), so a user running Tepegöz in Turkish on an English
+ *     Windows got a Turkish browser with an English Translate submenu inside it — and the reverse.
+ *  2. The strings lived in a `.ts` file instead of the extension's dictionary, so they were invisible
+ *     to the i18n parity test and to every translator. ADR-0016 puts them in `ext-translate`'s own
+ *     `src/i18n`, which is where they now are.
+ *
+ * `mainStrings()` resolves per call, so a locale change while the app runs is picked up on the next
+ * right-click without a restart.
+ */
+function labels(): ReturnType<typeof mainStrings>['translate']['native'] {
+  return mainStrings().translate.native;
 }
 
 async function fullSelection(ctx: PageContextMenuContributionContext): Promise<string> {
@@ -77,7 +70,7 @@ const translateContextMenuContributor: PageContextMenuContributor = {
         contributorId: TRANSLATE_EXTENSION_ID,
         placement: 'top',
         priority: 10,
-        title: t.title,
+        title: t.menuTitle,
         items,
       },
     ];
