@@ -46,7 +46,7 @@ function shape(node: ImportedBookmarkNode): unknown {
 }
 
 function roundTrip(roots: BookmarkTreeNode[]): unknown {
-  return parseBookmarksHtml(serializeBookmarksHtml(roots)).children.map(shape);
+  return parseBookmarksHtml(serializeBookmarksHtml(roots)).root.children.map(shape);
 }
 
 describe('bookmarks survive an export → import round trip', () => {

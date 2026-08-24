@@ -40,5 +40,8 @@ export interface BookmarkImportResult {
   imported: number;
   skipped: number;
   folders: number;
+  /** The file held more than the importer reads in one go, and the rest was not taken. Surfaced so a
+   *  partial import cannot report itself as a complete one. */
+  truncated: boolean;
   errors: string[];
 }

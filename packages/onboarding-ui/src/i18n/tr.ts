@@ -69,6 +69,9 @@ export const tr: OnboardingStrings = {
   bookmarksAccept: '.html veya .htm',
   chooseBookmarks: 'Yer imi dosyası seç',
   bookmarksImported: '{imported} yer imi içe aktarıldı. {skipped} atlandı.',
+  // Dosya bir seferde okunabilecekten büyükse eklenir. Açıkça söyleniyor: tamamlanmış gibi görünen
+  // kısmi bir aktarım, başarısız olandan kötüdür — kullanıcı aramayı bırakır.
+  bookmarksTruncated: 'Dosya bir içe aktarımda okunabilecekten büyüktü, tamamı alınmadı.',
   importBookmarksFailed:
     'Yer imleri içe aktarılamadı. Dosyanın tarayıcı yer imi HTML dışa aktarımı olduğundan emin ol.',
   passwordsTitle: 'Şifreler',

@@ -1,54 +1,77 @@
 import type { Db } from '@tepegoz/persistence';
 import { BOOKMARK_ROOT_OTHER, BookmarkTreeStore } from './bookmark-tree-store';
 import { isBookmarkable } from './bookmarkable';
+import {
+  ImportedBookmarkFolderSchema,
+  MAX_DEPTH,
+  MAX_FAVICON_CHARS,
+  MAX_NODES,
+  MAX_TITLE_CHARS,
+  MAX_URL_CHARS,
+  type ImportedBookmarkFolder,
+  type ImportedBookmarkNode,
+} from './bookmark-import-limits';
+
+export type {
+  ImportedBookmark,
+  ImportedBookmarkFolder,
+  ImportedBookmarkNode,
+} from './bookmark-import-limits';
 
 export type BrowserImportSource = 'chrome' | 'edge' | 'firefox' | 'brave' | 'other';
-
-export interface ImportedBookmark {
-  type: 'bookmark';
-  title: string;
-  url: string;
-  favicon: string | null;
-}
-
-export interface ImportedBookmarkFolder {
-  type: 'folder';
-  title: string;
-  children: ImportedBookmarkNode[];
-}
-
-export type ImportedBookmarkNode = ImportedBookmark | ImportedBookmarkFolder;
 
 export interface BookmarkImportResult {
   imported: number;
   skipped: number;
   folders: number;
+  /** True when the file held more than `MAX_NODES` entries and the rest were not read. A partial
+   *  import that reports itself as complete is the failure mode this repo keeps finding. */
+  truncated: boolean;
   errors: string[];
 }
 
-const TOKEN_RE = /<DT>\s*<H3\b[^>]*>([\s\S]*?)<\/H3>|<DT>\s*<A\b([^>]*)>([\s\S]*?)<\/A>|<\/DL>/gi;
-const MAX_DEPTH = 64;
+/** What `parseBookmarksHtml` found, and whether it stopped early. */
+export interface ParsedBookmarks {
+  root: ImportedBookmarkFolder;
+  truncated: boolean;
+}
 
-/** Parse the Netscape bookmarks HTML format exported by Chromium, Firefox, Edge, and Brave. */
-export function parseBookmarksHtml(html: string): ImportedBookmarkFolder {
+const TOKEN_RE = /<DT>\s*<H3\b[^>]*>([\s\S]*?)<\/H3>|<DT>\s*<A\b([^>]*)>([\s\S]*?)<\/A>|<\/DL>/gi;
+/**
+ * Parse the Netscape bookmarks HTML format exported by Chromium, Firefox, Edge, and Brave.
+ *
+ * The caps are applied HERE rather than to the finished tree, because a bound checked after the tree
+ * exists is a bound on nothing — the memory has already been spent. Reaching `MAX_NODES` stops the scan
+ * and says so; it never silently returns part of a file as if it were the whole one.
+ */
+export function parseBookmarksHtml(html: string): ParsedBookmarks {
   const root: ImportedBookmarkFolder = { type: 'folder', title: 'root', children: [] };
   const stack: ImportedBookmarkFolder[] = [root];
   let match: RegExpExecArray | null;
+  let nodes = 0;
+  let truncated = false;
 
   while ((match = TOKEN_RE.exec(html)) !== null) {
+    if (match[1] !== undefined || match[2] !== undefined) {
+      if (nodes >= MAX_NODES) {
+        truncated = true;
+        break;
+      }
+      nodes++;
+    }
     if (match[1] !== undefined) {
-      const title = cleanText(match[1]) || 'Folder';
+      const title = cap(cleanText(match[1]), MAX_TITLE_CHARS) || 'Folder';
       const folder: ImportedBookmarkFolder = { type: 'folder', title, children: [] };
       stack[stack.length - 1]!.children.push(folder);
       if (stack.length < MAX_DEPTH) stack.push(folder);
     } else if (match[2] !== undefined) {
-      const url = attr(match[2], 'href');
+      const url = cap(decodeEntities(attr(match[2], 'href')), MAX_URL_CHARS);
       if (url.length === 0) continue;
-      const title = cleanText(match[3] ?? '') || url;
+      const title = cap(cleanText(match[3] ?? ''), MAX_TITLE_CHARS) || url;
       stack[stack.length - 1]!.children.push({
         type: 'bookmark',
         title,
-        url: decodeEntities(url),
+        url,
         favicon: normalizeIcon(attr(match[2], 'icon') || attr(match[2], 'icon_uri')),
       });
     } else if (stack.length > 1) {
@@ -56,7 +79,13 @@ export function parseBookmarksHtml(html: string): ImportedBookmarkFolder {
     }
   }
 
-  return root;
+  return { root, truncated };
+}
+
+/** Truncate rather than reject: an absurdly long title is a malformed file, not a reason to lose the
+ *  bookmark it belongs to. */
+function cap(value: string, max: number): string {
+  return value.length <= max ? value : value.slice(0, max);
 }
 
 export function sourceDisplayName(source: BrowserImportSource): string {
@@ -72,8 +101,25 @@ export function importBookmarksHtmlToStore(
   input: { source: BrowserImportSource; data: string },
 ): BookmarkImportResult {
   const parsed = parseBookmarksHtml(input.data);
+  const result: BookmarkImportResult = {
+    imported: 0,
+    skipped: 0,
+    folders: 0,
+    truncated: parsed.truncated,
+    errors: [],
+  };
+
+  // The boundary contract. The parser's own caps are what keep the memory bounded; this is what makes
+  // the SHAPE checked rather than assumed, and it is the gate that survives a future edit to the
+  // parser. `safeParse`, never `parse`: a malformed file must produce a result the user can read, not
+  // an exception thrown out of an IPC handler.
+  const checked = ImportedBookmarkFolderSchema.safeParse(parsed.root);
+  if (!checked.success) {
+    result.errors.push('The bookmarks file could not be read.');
+    return result;
+  }
+
   const seen = new Set(BookmarkTreeStore.listFlat(db, 100_000).map((b) => b.url));
-  const result: BookmarkImportResult = { imported: 0, skipped: 0, folders: 0, errors: [] };
   let rootId: string | null = null;
   const rootTitle = `Imported from ${sourceDisplayName(input.source)}`;
   const ensureRoot = (): string => {
@@ -87,7 +133,7 @@ export function importBookmarksHtmlToStore(
     return rootId;
   };
 
-  for (const node of parsed.children) {
+  for (const node of checked.data.children) {
     writeImportedNode(db, node, ensureRoot, seen, result);
   }
   return result;
@@ -162,14 +208,21 @@ function decodeEntities(value: string): string {
       const code = lower.startsWith('#x')
         ? Number.parseInt(lower.slice(2), 16)
         : Number.parseInt(lower.slice(1), 10);
-      return Number.isFinite(code) ? String.fromCodePoint(code) : '';
+      // `String.fromCodePoint` THROWS a RangeError above U+10FFFF, so `&#99999999;` anywhere in an
+      // untrusted file — a title, a URL, an attribute — took the whole import down. `Number.isFinite`
+      // does not catch it: 99999999 is perfectly finite. Lone surrogates are refused for a different
+      // reason — `fromCodePoint` accepts them, and they produce ill-formed UTF-16 that then goes into
+      // SQLite and back out into the UI.
+      if (!Number.isFinite(code) || code < 0 || code > 0x10ffff) return '';
+      if (code >= 0xd800 && code <= 0xdfff) return '';
+      return String.fromCodePoint(code);
     },
   );
 }
 
 function normalizeIcon(icon: string): string | null {
   const trimmed = icon.trim();
-  if (trimmed.length === 0 || trimmed.length > 100_000) return null;
+  if (trimmed.length === 0 || trimmed.length > MAX_FAVICON_CHARS) return null;
   if (/^https?:\/\//i.test(trimmed) || /^data:image\//i.test(trimmed)) return trimmed;
   return null;
 }

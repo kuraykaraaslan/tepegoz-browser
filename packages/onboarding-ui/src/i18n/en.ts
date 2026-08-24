@@ -67,6 +67,9 @@ export const en = {
   bookmarksAccept: '.html or .htm',
   chooseBookmarks: 'Choose bookmarks file',
   bookmarksImported: '{imported} bookmarks imported. {skipped} skipped.',
+  // Appended when the file held more entries than one import reads. Said out loud because a partial
+  // import that looks complete is worse than one that failed: the user stops looking.
+  bookmarksTruncated: 'The file was larger than one import can read, so not all of it was taken.',
   importBookmarksFailed:
     'Bookmarks could not be imported. Check that this is a browser bookmarks HTML export.',
   passwordsTitle: 'Passwords',

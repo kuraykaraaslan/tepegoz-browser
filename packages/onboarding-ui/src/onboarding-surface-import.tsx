@@ -125,9 +125,10 @@ function formatBookmarkResult(
 ): string | null {
   if (state.error !== null) return state.error;
   if (state.result === null) return null;
-  return t.bookmarksImported
+  const summary = t.bookmarksImported
     .replace('{imported}', String(state.result.imported))
     .replace('{skipped}', String(state.result.skipped));
+  return state.result.truncated ? `${summary} ${t.bookmarksTruncated}` : summary;
 }
 
 function formatPasswordResult(

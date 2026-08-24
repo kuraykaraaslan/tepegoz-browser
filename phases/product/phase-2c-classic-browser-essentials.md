@@ -154,18 +154,37 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       HTML bookmarks file)
   - [x] `@tepegoz/bookmarks-ui` + `tepegoz://bookmarks`: searchable tree, new-folder, drag reorder/reparent
         (dnd-kit), rename/delete through the host's native context menu.
-  - [ ] **Export to HTML is missing** — only import exists. `parseBookmarksHtml` has no serializing
-        counterpart, so a user cannot get their bookmarks back out.
+  - [x] **Export to HTML.** ~~Missing — only import exists.~~ _Stale line, corrected on inspection:
+        `serializeBookmarksHtml` exists in `@tepegoz/bookmarks` and is wired end to end
+        (`bookmarks:export` → preload → the manager's Export action). Netscape HTML rather than JSON on
+        purpose: a JSON dump would be a backup only this application can restore, which is the shape of
+        lock-in that looks like a feature. The parser reads what the serializer writes, so the round
+        trip is checked rather than asserted._
 - [ ] **Import from Chrome/Firefox** — parse their exported Netscape-format HTML bookmarks (+ optional
       profile auto-detect); folder structure preserved; zod `safeParse` on each parsed entry (reuses the
       same import seam as the password Google-CSV provider already shipped)
   - [x] Netscape HTML parsing (Chrome/Edge/Firefox/Brave), folder structure preserved, per-source
         "Imported from X" root, url-scheme gate (`isBookmarkable`), duplicate skip, favicon restricted to
         http(s)/`data:image` and length-capped, recursion depth capped at 64.
-  - [ ] **No zod `safeParse` on parsed entries** — validation is imperative, and two inputs stay
-        unbounded: an entry's **title length** and the **total node count** of an imported file. An
-        exported bookmarks file is untrusted input, so this is the cross-cutting gate below going
-        unmet on a path that has already shipped.
+  - [x] **zod `safeParse` + bounds on parsed entries.** _The gate was unmet on a path that had already
+        shipped: the IPC envelope was validated (source, format, a 10 MB payload cap) and nothing
+        checked what the PARSER produced from it. `bookmark-import-limits.ts` now owns the boundary —
+        title 300, URL 4096, favicon 100 000, 50 000 nodes, depth 64 — with
+        `ImportedBookmarkFolderSchema` `safeParse`d before a single row is written. **Both halves exist
+        and neither replaces the other:** the caps are enforced INSIDE the scan, because a bound checked
+        after the tree exists is a bound on nothing — the memory has already been spent — while the
+        schema is what makes the shape checked rather than assumed and survives a future edit to the
+        parser. Over-long values are truncated rather than rejected: a malformed title is not a reason
+        to lose the URL it belongs to. Hitting the node cap sets `truncated`, which the import surface
+        now says out loud in en+tr — a partial import that reports itself as complete is worse than one
+        that failed, because the user stops looking._
+        — _**Reading it for the bounds found a crash.** `String.fromCodePoint` throws a `RangeError`
+        above U+10FFFF, so `&#99999999;` anywhere in an untrusted file — a title, a URL, an attribute —
+        took the entire import down. `Number.isFinite` does not catch it; 99999999 is perfectly finite.
+        Lone surrogates were the quieter half of the same guard: `fromCodePoint` ACCEPTS them, and they
+        produce ill-formed UTF-16 that reached SQLite and the UI unnoticed. 15 tests, mutation-verified
+        (removing the guard turns 3 red, the node cap 2, the title cap 1) — the importer had exactly one
+        test before this._
   - [ ] Profile auto-detect (marked optional in this line) does not exist.
 
 ### L8/L9 — Private / disposable / guest mode

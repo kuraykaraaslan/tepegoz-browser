@@ -3,7 +3,7 @@ import { parseBookmarksHtml } from './bookmark-import';
 
 describe('parseBookmarksHtml', () => {
   it('parses nested Netscape bookmark folders', () => {
-    const tree = parseBookmarksHtml(`
+    const { root: tree } = parseBookmarksHtml(`
       <!DOCTYPE NETSCAPE-Bookmark-file-1>
       <DL><p>
         <DT><H3>Work &amp; Docs</H3>
