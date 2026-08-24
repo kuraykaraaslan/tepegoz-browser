@@ -5,11 +5,22 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * decides whether a browsed page can reach the camera, the microphone, the screen, the user's location
  * or their files.
  *
- * The property under test is the DEFAULT, not the exceptions. Three capabilities are brokered per-site
- * (notifications and the two clipboard permissions); every other permission Electron can hand us must
- * be refused without asking anyone. Writing it this way — enumerate Electron's whole union, assert the
- * complement is denied — means a permission ADDED by a future Electron is denied by this test's own
- * construction, and a capability someone quietly adds to `permissionCapability` fails it.
+ * The property under test is the DEFAULT, not the exceptions. A fixed set of capabilities is brokered
+ * per-site — notifications, the two clipboard permissions, and (since the Permissions Center) camera,
+ * microphone and geolocation; every other permission Electron can hand us must be refused without
+ * asking anyone. Writing it this way — enumerate Electron's whole union, assert the complement is
+ * denied — means a permission ADDED by a future Electron is denied by this test's own construction,
+ * and a capability someone quietly adds to `permissionCapabilities` fails it.
+ *
+ * **Brokering camera/mic/location is not a weakening of the floor, and this file is where that claim
+ * is checked rather than asserted.** A brokered capability still reaches no site without an explicit
+ * per-origin answer from the user; what changed is that "ask" became reachable where it used to be a
+ * flat refusal. The tests below pin both halves: nothing outside the union can even be asked for, and
+ * a brokered one is refused until it is granted, for the exact origin that holds the grant.
+ *
+ * `display-capture` stays OUTSIDE the union deliberately and is asserted so. It is the one request
+ * where a single mistaken "allow" hands over everything else on the screen, including windows this
+ * browser does not own.
  *
  * `fileSystem` is in that list on purpose. It is the File System Access API
  * (`showOpenFilePicker`/`showDirectoryPicker`), and it is the one whose end-to-end behaviour could not
@@ -33,9 +44,20 @@ vi.mock('electron', () => ({
 vi.mock('./window', () => ({ APP_PARTITION: 'persist:app' }));
 
 const allowed = new Set<string>();
+const asked: string[] = [];
 vi.mock('./web-permissions/permission-broker', () => ({
   default: {
-    request: (capability: string) => Promise.resolve(allowed.has(capability)),
+    request: (capability: string) => {
+      asked.push(capability);
+      return Promise.resolve(allowed.has(capability));
+    },
+    requestAll: (capabilities: string[]) => {
+      for (const c of capabilities) {
+        asked.push(c);
+        if (!allowed.has(c)) return Promise.resolve(false);
+      }
+      return Promise.resolve(capabilities.length > 0);
+    },
     isAllowed: (capability: string) => allowed.has(capability),
   },
 }));
@@ -70,12 +92,14 @@ const ALL_PERMISSIONS = [
   'unknown',
 ] as const;
 
-/** The only three that may reach the broker instead of being refused outright. */
+/** The only Chromium permissions that may reach the broker instead of being refused outright. */
 const BROKERED = new Set([
   'notifications',
   'clipboard-read',
   'clipboard-sanitized-write',
   'deprecated-sync-clipboard-read',
+  'geolocation',
+  'media',
 ]);
 
 interface Handlers {
@@ -83,9 +107,14 @@ interface Handlers {
     wc: unknown,
     permission: string,
     callback: (granted: boolean) => void,
-    details: { requestingUrl: string },
+    details: { requestingUrl: string; mediaTypes?: readonly string[] },
   ) => void;
-  check: (wc: unknown, permission: string, origin: string) => boolean;
+  check: (
+    wc: unknown,
+    permission: string,
+    origin: string,
+    details: { mediaType?: string },
+  ) => boolean;
 }
 
 function install(): Handlers {
@@ -108,14 +137,23 @@ function install(): Handlers {
   return { request, check };
 }
 
-function ask(h: Handlers, permission: string, url = 'https://evil.example.com/'): Promise<boolean> {
+function ask(
+  h: Handlers,
+  permission: string,
+  url = 'https://evil.example.com/',
+  mediaTypes?: readonly string[],
+): Promise<boolean> {
   return new Promise((resolve) => {
-    h.request(null, permission, resolve, { requestingUrl: url });
+    h.request(null, permission, resolve, {
+      requestingUrl: url,
+      ...(mediaTypes === undefined ? {} : { mediaTypes }),
+    });
   });
 }
 
 beforeEach(() => {
   allowed.clear();
+  asked.length = 0;
   onHeadersReceived.mockClear(); // `install()` runs per test, so the CSP spy would otherwise accumulate
 });
 
@@ -125,8 +163,48 @@ describe('permission request handler', () => {
   for (const permission of denied) {
     it(`denies ${permission} without asking anyone`, async () => {
       await expect(ask(install(), permission)).resolves.toBe(false);
+      expect(asked).toEqual([]); // refused outright — the broker was never consulted
     });
   }
+
+  it('refuses screen capture even though camera and microphone are brokered', async () => {
+    // The distinction is the point: `display-capture` gives up every other window on the screen,
+    // including ones this browser does not own, on a single mistaken click.
+    await expect(ask(install(), 'display-capture')).resolves.toBe(false);
+    expect(asked).toEqual([]);
+  });
+
+  it('refuses a media request that names NO media type', async () => {
+    // A request for we-don't-know-what has no grant that could honestly cover it.
+    await expect(ask(install(), 'media')).resolves.toBe(false);
+    expect(asked).toEqual([]);
+  });
+
+  it('splits a media request into the capabilities it actually needs', async () => {
+    allowed.add('camera');
+    allowed.add('microphone');
+    await expect(ask(install(), 'media', 'https://a.example/', ['video'])).resolves.toBe(true);
+    expect(asked).toEqual(['camera']); // audio was never requested, so it is never asked about
+  });
+
+  it('requires BOTH grants when a page asks for camera AND microphone', async () => {
+    // Mapping `media` to one capability would have meant a site granted the microphone silently
+    // receiving the camera as well.
+    allowed.add('microphone');
+    await expect(ask(install(), 'media', 'https://a.example/', ['video', 'audio'])).resolves.toBe(
+      false,
+    );
+    expect(asked).toEqual(['camera']); // and it stops at the refusal rather than asking twice
+  });
+
+  it('grants camera+microphone only when both are allowed', async () => {
+    allowed.add('camera');
+    allowed.add('microphone');
+    await expect(ask(install(), 'media', 'https://a.example/', ['video', 'audio'])).resolves.toBe(
+      true,
+    );
+    expect(asked).toEqual(['camera', 'microphone']);
+  });
 
   it('routes the brokered capabilities to the broker instead of refusing them outright', async () => {
     allowed.add('notifications');
@@ -148,15 +226,39 @@ describe('permission check handler (the synchronous permission-state query)', ()
   it('reports every non-brokered permission as denied', () => {
     const h = install();
     for (const permission of ALL_PERMISSIONS.filter((p) => !BROKERED.has(p))) {
-      expect(h.check(null, permission, 'https://evil.example.com')).toBe(false);
+      expect(h.check(null, permission, 'https://evil.example.com', {})).toBe(false);
     }
   });
 
-  it('reflects a stored grant for a brokered one, and only for the origin that holds it', () => {
+  it('reflects a stored grant for a brokered one, and not for one without a grant', () => {
     allowed.add('notifications');
     const h = install();
-    expect(h.check(null, 'notifications', 'https://granted.example.com')).toBe(true);
-    expect(h.check(null, 'geolocation', 'https://granted.example.com')).toBe(false);
+    expect(h.check(null, 'notifications', 'https://granted.example.com', {})).toBe(true);
+    expect(h.check(null, 'geolocation', 'https://granted.example.com', {})).toBe(false);
+  });
+
+  it('answers a media check for the media type it names', () => {
+    allowed.add('camera');
+    const h = install();
+    expect(h.check(null, 'media', 'https://a.example', { mediaType: 'video' })).toBe(true);
+    expect(h.check(null, 'media', 'https://a.example', { mediaType: 'audio' })).toBe(false);
+  });
+
+  it("refuses a media check of type 'unknown' rather than guessing", () => {
+    // The honest answer to "is this granted?" when we cannot tell what "this" is.
+    allowed.add('camera');
+    allowed.add('microphone');
+    const h = install();
+    expect(h.check(null, 'media', 'https://a.example', { mediaType: 'unknown' })).toBe(false);
+  });
+
+  it('does not crash when Electron supplies no details at all', () => {
+    // Defensive: the typings say `details` is always present, and a check handler that threw would
+    // take down a permission query rather than answering it.
+    const h = install();
+    expect(() =>
+      h.check(null, 'media', 'https://a.example', undefined as unknown as { mediaType?: string }),
+    ).not.toThrow();
   });
 });
 

@@ -13,6 +13,7 @@ import type {
 import { IconGear } from './SettingsPage-icons';
 import { buildSettingsSections } from './SettingsPage-sections';
 import { isDeveloperSettingsVisible, nodeEnv } from '../lib/developer-env';
+import type { SitePermissionState, WebPermissionCapability } from '@tepegoz/shared-types';
 
 interface SettingsPageProps {
   initialSectionId?: string;
@@ -98,6 +99,24 @@ export function SettingsPage({
     }
   }
 
+  /**
+   * Set one capability for one origin. Goes through the ordinary preferences write — the same
+   * validated boundary every other setting uses — rather than a second IPC path to the same store,
+   * which would be a second thing to keep in agreement with it.
+   */
+  function setSitePermission(
+    origin: string,
+    capability: WebPermissionCapability,
+    state: SitePermissionState,
+  ): void {
+    setPref({
+      sitePermissions: {
+        ...prefs.sitePermissions,
+        [origin]: { ...prefs.sitePermissions[origin], [capability]: state },
+      },
+    });
+  }
+
   function resetSitePermission(origin: string): void {
     const next = { ...prefs.sitePermissions };
     delete next[origin];
@@ -137,6 +156,7 @@ export function SettingsPage({
     setDeveloperPref,
     clearBrowsingHistory,
     resetSitePermission,
+    setSitePermission,
     resetToDefaults,
     onAddKey,
     onRemoveKeyById,

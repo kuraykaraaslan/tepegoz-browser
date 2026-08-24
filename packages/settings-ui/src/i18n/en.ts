@@ -288,6 +288,37 @@ export const en = {
       has_offline_data: 'Offline features on this site will stop working until you reload it.',
     },
   },
+  // ── Permissions Center ─────────────────────────────────────────────────────────────────────────
+  // Two halves that must not be confused: site permissions are the user's decisions and are editable;
+  // the agent matrix is a VIEW over the Policy Kernel and is not. `agentReadOnly` says why, because a
+  // read-only table with no explanation reads like a table that is broken.
+  permissionsCenter: {
+    sitesTitle: 'Site permissions',
+    sitesSubtitle: 'What each site may use. Nothing is granted until you say so.',
+    sitesEmpty: 'No site has asked for anything yet. This list fills itself as you browse.',
+    forgetSite: 'Forget this site',
+    // The deliberate absence, stated. A permission the product refuses on purpose should say so
+    // rather than simply be missing from a list of everything else.
+    screenNote:
+      'Screen sharing is not offered. Unlike a camera, one mistaken “allow” would hand over every other window on your screen — including ones this browser does not own.',
+    state: { prompt: 'Ask every time', allowed: 'Allow', denied: 'Block' },
+    capability: {
+      camera: 'Camera',
+      microphone: 'Microphone',
+      geolocation: 'Location',
+      notifications: 'Notifications',
+      clipboardRead: 'Read the clipboard',
+      clipboardWrite: 'Write to the clipboard',
+    },
+    agentTitle: 'What the agent may do',
+    agentSubtitle:
+      'The best case for each tool — a tainted argument or a sensitive site can only tighten it.',
+    agentReadOnly:
+      'Read-only. These verdicts come from the Policy Kernel, which is the one thing that decides them; changing them here would be a second opinion nobody could tell apart from the real one.',
+    agentLoading: 'Reading the policy…',
+    agentEmpty: 'No agent tools are registered.',
+    decision: { allow: 'Runs', ask: 'Asks first', deny: 'Refused' },
+  },
   clientCerts: {
     title: 'Sites you identified yourself to',
     // Written to be understood by someone who has never heard the phrase "client certificate": what

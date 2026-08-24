@@ -5,6 +5,7 @@ import {
   type BookmarkEntry,
   type BookmarkImportResult,
   type BookmarkTreeNode,
+  type AgentCapabilityRow,
   type ClientCertificateChoice,
   type FileAccessFolderPickResult,
   type HistoryEntry,
@@ -33,6 +34,7 @@ import {
 } from '@tepegoz/desktop-ipc/schemas';
 import NotificationStore from '@tepegoz/notifications';
 import WebPermissionBroker from '../web-permissions/permission-broker';
+import { agentCapabilityMatrix } from '../web-permissions/agent-matrix';
 import { openPrivateWindow } from '../private-window-opener';
 import { resolveBasicAuth } from '../auth/basic-auth-broker';
 import { resolveCertificateError } from '../auth/certificate-broker';
@@ -268,6 +270,9 @@ export function registerBrowsingIpc(): void {
     if (result.imported > 0 || result.folders > 0) broadcastBookmarksChanged();
     return result;
   });
+  // The agent permission matrix. Computed here rather than in the renderer because it is the Policy
+  // Kernel's own verdict — asking the kernel is what keeps this a VIEW instead of a second opinion.
+  handle(IpcChannels.agentCapabilitiesList, (): AgentCapabilityRow[] => agentCapabilityMatrix());
   handle(IpcChannels.windowsOpenPrivate, (): void => {
     openPrivateWindow();
   });

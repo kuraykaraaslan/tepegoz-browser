@@ -3,12 +3,7 @@ import { ComingSoonCard, type SettingsSection, type SettingsStrings } from '@tep
 import type { SiteClearPlan } from '@tepegoz/shared-types';
 import type { ClientCertificateChoice } from '@tepegoz/desktop-ipc';
 import { Button, Card, Toggle } from '@tepegoz/ui';
-import {
-  AboutSection,
-  FileOperationsSection,
-  PasswordsSection,
-  SitePermissionsSection,
-} from './settings-privacy-files';
+import { AboutSection, FileOperationsSection, PasswordsSection } from './settings-privacy-files';
 import { DeveloperSection } from './settings-developer';
 import { SiteTrustSection } from './settings-site-trust';
 import { ShortcutsSection } from './settings-shortcuts';
@@ -24,6 +19,7 @@ import {
   IconShield,
 } from './SettingsPage-icons';
 import type { SettingsSectionsCtx } from './SettingsPage-sections';
+import { AgentPermissionMatrix, PermissionsCenter } from './PermissionsCenter';
 
 /**
  * "Forget this site" (Phase 2). Two-step by construction: the first click PLANS, which is what
@@ -222,14 +218,19 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
     {
       id: 'site-permissions',
       group: s.groupPrivacy,
-      label: s.sitePermissionsTitle,
+      label: s.permissionsCenter.sitesTitle,
       icon: <IconLock />,
-      searchText: `${s.sitePermissionsTitle} ${s.sitePermissionsSubtitle} ${s.sitePermissionNotifications}`,
+      searchText: `${s.permissionsCenter.sitesTitle} ${s.permissionsCenter.sitesSubtitle} ${s.permissionsCenter.agentTitle} ${s.permissionsCenter.capability.camera} ${s.permissionsCenter.capability.microphone} ${s.permissionsCenter.capability.geolocation}`,
       content: (
-        <SitePermissionsSection
-          sitePermissions={prefs.sitePermissions}
-          onReset={ctx.resetSitePermission}
-        />
+        <div className="space-y-4">
+          <PermissionsCenter
+            sitePermissions={prefs.sitePermissions}
+            s={s}
+            onSet={ctx.setSitePermission}
+            onReset={ctx.resetSitePermission}
+          />
+          <AgentPermissionMatrix s={s} />
+        </div>
       ),
     },
     {

@@ -10,7 +10,23 @@ export interface AppInfo {
   glassAvailable: boolean;
 }
 
-export type WebPermissionCapability = 'notifications' | 'clipboardRead' | 'clipboardWrite';
+import type { WebPermissionCapability } from '@tepegoz/shared-types';
+
+export type { WebPermissionCapability };
+
+/**
+ * One row of the per-agent permission matrix: a registered capability and the verdict the Policy
+ * Kernel gives it. A VIEW, never a control — the kernel is the single decision engine, and a second
+ * one behind a settings toggle would leave the user unable to tell which was in force.
+ */
+export interface AgentCapabilityRow {
+  /** Tool id, e.g. `browser_update_location`. */
+  id: string;
+  /** The tool's declared danger class, shown so the verdict is explainable. */
+  dangerClass: string;
+  /** The Policy Kernel's own decision union: `allow` runs, `ask` asks first, `deny` refuses. */
+  decision: 'allow' | 'ask' | 'deny';
+}
 
 /** Main → renderer: a site asked for a web capability; the renderer shows the consent prompt. */
 export interface WebPermissionRequest {

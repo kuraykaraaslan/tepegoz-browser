@@ -8,6 +8,7 @@ import type {
 } from '@tepegoz/desktop-ipc';
 import { generalAndAiSections } from './SettingsPage-sections-general';
 import { privacyAndAdvancedSections } from './SettingsPage-sections-privacy';
+import type { SitePermissionState, WebPermissionCapability } from '@tepegoz/shared-types';
 
 /**
  * The section table for `SettingsPage.tsx`, split out (ADR-0010 250-line cap). The page owns all state
@@ -23,6 +24,11 @@ export interface SettingsSectionsCtx {
   setDeveloperPref: (patch: Partial<Preferences>) => Promise<void>;
   clearBrowsingHistory: () => void;
   resetSitePermission: (origin: string) => void;
+  setSitePermission: (
+    origin: string,
+    capability: WebPermissionCapability,
+    state: SitePermissionState,
+  ) => void;
   resetToDefaults: () => void;
   onAddKey: (provider: ProviderId, label: string, apiKey: string) => Promise<void>;
   onRemoveKeyById: (id: string) => Promise<void>;

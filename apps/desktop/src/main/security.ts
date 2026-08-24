@@ -47,9 +47,15 @@ function chromeCsp(dev: boolean): string {
 
 /**
  * Cross-surface hardening that must apply to EVERY web contents (app chrome AND browsed pages):
- * deny permission requests by default (geolocation, media, …). The one exception is the Web
- * Notification and clipboard APIs, which are brokered per-site through {@link WebPermissionBroker}
- * (stored grant/denial, else a HITL consent prompt; notifications also honor the master preference).
+ * deny permission requests by default. The exceptions are the capabilities listed in
+ * `WebPermissionCapability` — notifications, clipboard read/write, camera, microphone and geolocation —
+ * which are brokered PER SITE through {@link WebPermissionBroker}: a stored grant or denial, else a
+ * HITL consent prompt, with notifications additionally honouring the master preference.
+ *
+ * Brokering is not a weakening of deny-by-default; it IS deny-by-default. No site receives any of these
+ * without an explicit per-origin answer from the user, and everything outside the union is refused with
+ * no way to ask. `display-capture` stays outside it deliberately — one mistaken "allow" there hands over
+ * every other window on the screen, including ones this browser does not own.
  *
  * Surface-specific navigation policy is deliberately NOT global:
  *  - the app chrome window is locked to app content (deny-by-default) in `createWindow`;
@@ -61,23 +67,37 @@ export function installSecurity(): void {
     // Async request path (getUserMedia, geolocation, notifications, …): notifications are brokered
     // per-site; everything else is denied by default.
     contents.session.setPermissionRequestHandler((_wc, permission, callback, details) => {
-      const capability = permissionCapability(permission);
-      if (capability !== null) {
-        const origin = originOf(details.requestingUrl);
-        if (origin === null) {
-          callback(false);
-          return;
-        }
-        void WebPermissionBroker.request(capability, origin).then(callback);
+      // Only the media request carries `mediaTypes`; the union's other members do not declare it.
+      const mediaTypes = 'mediaTypes' in details ? details.mediaTypes : undefined;
+      const capabilities = permissionCapabilities(permission, mediaTypes);
+      if (capabilities.length === 0) {
+        callback(false);
         return;
       }
-      callback(false);
+      const origin = originOf(details.requestingUrl);
+      if (origin === null) {
+        callback(false);
+        return;
+      }
+      // Every capability the request needs must be granted. `requestAll` asks in sequence and stops at
+      // the first refusal, so a user who declines the camera is not then asked for the microphone for
+      // a call that is already not happening.
+      void WebPermissionBroker.requestAll(capabilities, origin).then(callback);
     });
     // Synchronous check path (permission-state queries): reflect stored grants; deny the rest.
-    contents.session.setPermissionCheckHandler((_wc, permission, requestingOrigin) => {
-      const capability = permissionCapability(permission);
-      if (capability !== null) return WebPermissionBroker.isAllowed(capability, requestingOrigin);
-      return false;
+    contents.session.setPermissionCheckHandler((_wc, permission, requestingOrigin, details) => {
+      // The CHECK path carries a single `mediaType`, not the request path's list, and it can be
+      // `'unknown'` — which maps to no capability and is therefore refused, the honest answer to
+      // "is this granted?" when we cannot tell what "this" is.
+      const mediaTypes = details?.mediaType === undefined ? undefined : [details.mediaType];
+      const capabilities = permissionCapabilities(permission, mediaTypes);
+      if (capabilities.length === 0) return false;
+      // `every`, and DEFENSIVELY so: the check path carries a single `mediaType`, so this list is
+      // never longer than one today and `some` would behave identically. A mutation test confirmed
+      // that — swapping them turns nothing red. It stays `every` because it is the answer that remains
+      // correct if Chromium ever starts asking about a pair, and it is recorded here rather than
+      // dressed up as a property this suite actually covers.
+      return capabilities.every((c) => WebPermissionBroker.isAllowed(c, requestingOrigin));
     });
   });
 
@@ -90,11 +110,33 @@ export function installSecurity(): void {
   });
 }
 
-function permissionCapability(permission: string): WebPermissionCapability | null {
-  if (permission === 'notifications') return 'notifications';
+/**
+ * Which brokered capabilities one Chromium permission request needs — ALL of them, or the request is
+ * refused.
+ *
+ * `media` is the reason this returns a list rather than one capability. `getUserMedia({ video, audio })`
+ * arrives as a single `media` permission carrying `mediaTypes`, so a page asking for camera AND
+ * microphone must satisfy BOTH per-site grants. Mapping `media` to one capability would have meant a
+ * site granted the microphone silently receiving the camera as well.
+ *
+ * A `media` request with no `mediaTypes` at all is refused: it is a request for we-don't-know-what, and
+ * there is no grant that can honestly cover it.
+ */
+function permissionCapabilities(
+  permission: string,
+  mediaTypes?: readonly string[],
+): WebPermissionCapability[] {
+  if (permission === 'notifications') return ['notifications'];
   if (permission === 'clipboard-read' || permission === 'deprecated-sync-clipboard-read') {
-    return 'clipboardRead';
+    return ['clipboardRead'];
   }
-  if (permission === 'clipboard-sanitized-write') return 'clipboardWrite';
-  return null;
+  if (permission === 'clipboard-sanitized-write') return ['clipboardWrite'];
+  if (permission === 'geolocation') return ['geolocation'];
+  if (permission === 'media') {
+    const out: WebPermissionCapability[] = [];
+    if (mediaTypes?.includes('video') === true) out.push('camera');
+    if (mediaTypes?.includes('audio') === true) out.push('microphone');
+    return out;
+  }
+  return [];
 }

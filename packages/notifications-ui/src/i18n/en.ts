@@ -24,6 +24,15 @@ export const en = {
   permissionAllow: 'Allow',
   permissionBlock: 'Block',
   permissionRemember: 'Remember this decision',
+  // Camera / microphone / location joined the brokered set with the Permissions Center. The wording
+  // says what the site GETS, not what the API is called: "use your camera" is what a person is
+  // deciding about; "requests the mediaDevices permission" is not.
+  permissionCameraTitle: 'Use your camera?',
+  permissionCameraBody: 'wants to use your camera. You can change this later in Settings.',
+  permissionMicrophoneTitle: 'Use your microphone?',
+  permissionMicrophoneBody: 'wants to use your microphone. You can change this later in Settings.',
+  permissionGeolocationTitle: 'Know your location?',
+  permissionGeolocationBody: 'wants to know where you are. You can change this later in Settings.',
 };
 
 export type NotificationsUiStrings = typeof en;

@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Button, Toggle } from '@tepegoz/ui';
 import { useT } from '@tepegoz/i18n/react';
+import type { WebPermissionCapability } from '@tepegoz/shared-types';
 import { notificationsUiDict } from './i18n';
 
 export interface NotificationPermissionPromptProps {
   /** Origin (e.g. "https://example.com") requesting the Web Notification permission. */
   origin: string;
-  capability?: 'notifications' | 'clipboardRead' | 'clipboardWrite' | undefined;
+  capability?: WebPermissionCapability | undefined;
   /** The user's answer; `remember` persists it for the origin. */
   onDecision: (allow: boolean, remember: boolean) => void;
 }
@@ -22,12 +23,21 @@ export function NotificationPermissionPrompt({
 }: NotificationPermissionPromptProps) {
   const t = useT(notificationsUiDict);
   const [remember, setRemember] = useState(true);
-  const copy =
-    capability === 'clipboardRead'
-      ? { title: t.permissionClipboardReadTitle, body: t.permissionClipboardReadBody }
-      : capability === 'clipboardWrite'
-        ? { title: t.permissionClipboardWriteTitle, body: t.permissionClipboardWriteBody }
-        : { title: t.permissionTitle, body: t.permissionBody };
+  // One entry per brokered capability. A `Record` rather than a ternary chain so that adding a
+  // capability to the union without giving it words is a type error rather than a prompt that quietly
+  // says "wants to show notifications" while asking for the camera.
+  const COPY: Record<WebPermissionCapability, { title: string; body: string }> = {
+    notifications: { title: t.permissionTitle, body: t.permissionBody },
+    clipboardRead: { title: t.permissionClipboardReadTitle, body: t.permissionClipboardReadBody },
+    clipboardWrite: {
+      title: t.permissionClipboardWriteTitle,
+      body: t.permissionClipboardWriteBody,
+    },
+    camera: { title: t.permissionCameraTitle, body: t.permissionCameraBody },
+    microphone: { title: t.permissionMicrophoneTitle, body: t.permissionMicrophoneBody },
+    geolocation: { title: t.permissionGeolocationTitle, body: t.permissionGeolocationBody },
+  };
+  const copy = COPY[capability];
   return (
     <div className="space-y-4">
       <h2 className="text-base font-semibold text-text-primary">{copy.title}</h2>

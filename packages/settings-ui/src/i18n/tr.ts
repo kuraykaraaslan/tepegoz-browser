@@ -286,6 +286,37 @@ export const tr: SettingsStrings = {
         'Bu sitenin çevrimdışı özellikleri, sayfayı yeniden yükleyene kadar çalışmayacak.',
     },
   },
+  // ── İzin Merkezi ───────────────────────────────────────────────────────────────────────────────
+  // Karıştırılmaması gereken iki yarı: site izinleri kullanıcının kararlarıdır ve düzenlenebilir;
+  // ajan matrisi Policy Kernel üzerine bir GÖRÜNÜMdür ve değildir. `agentReadOnly` nedenini söylüyor,
+  // çünkü açıklamasız salt-okunur bir tablo, bozuk bir tablo gibi okunur.
+  permissionsCenter: {
+    sitesTitle: 'Site izinleri',
+    sitesSubtitle: 'Her sitenin neyi kullanabileceği. Sen izin vermeden hiçbir şey verilmez.',
+    sitesEmpty: 'Henüz hiçbir site bir şey istemedi. Bu liste sen gezdikçe kendi kendine dolar.',
+    forgetSite: 'Bu siteyi unut',
+    // Bilerek yapılmayan şey, açıkça yazılıyor. Ürünün bilerek reddettiği bir izin, listeden sessizce
+    // eksik olmak yerine bunu söylemeli.
+    screenNote:
+      'Ekran paylaşımı sunulmuyor. Kameradan farklı olarak, yanlışlıkla verilecek tek bir “izin ver” ekranındaki diğer tüm pencereleri devreder — bu tarayıcıya ait olmayanlar dahil.',
+    state: { prompt: 'Her seferinde sor', allowed: 'İzin ver', denied: 'Engelle' },
+    capability: {
+      camera: 'Kamera',
+      microphone: 'Mikrofon',
+      geolocation: 'Konum',
+      notifications: 'Bildirimler',
+      clipboardRead: 'Panoyu okuma',
+      clipboardWrite: 'Panoya yazma',
+    },
+    agentTitle: 'Ajanın yapabilecekleri',
+    agentSubtitle:
+      'Her araç için en iyi durum — kirli bir argüman veya hassas bir site bunu yalnızca daraltabilir.',
+    agentReadOnly:
+      'Salt okunur. Bu kararlar, onları veren tek şey olan Policy Kernel’den geliyor; buradan değiştirmek, gerçeğinden ayırt edilemeyecek ikinci bir görüş olurdu.',
+    agentLoading: 'Politika okunuyor…',
+    agentEmpty: 'Kayıtlı ajan aracı yok.',
+    decision: { allow: 'Çalışır', ask: 'Önce sorar', deny: 'Reddedilir' },
+  },
   clientCerts: {
     title: 'Kimliğini doğruladığın siteler',
     // "İstemci sertifikası" terimini hiç duymamış birinin anlayacağı şekilde yazıldı: onun için önemli

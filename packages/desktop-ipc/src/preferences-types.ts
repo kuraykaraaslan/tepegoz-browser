@@ -293,6 +293,9 @@ export interface SitePermissions {
   notifications?: SitePermissionState | undefined;
   clipboardRead?: SitePermissionState | undefined;
   clipboardWrite?: SitePermissionState | undefined;
+  camera?: SitePermissionState | undefined;
+  microphone?: SitePermissionState | undefined;
+  geolocation?: SitePermissionState | undefined;
 }
 
 /** Result of the native directory picker (Settings → File operations → Add folder). */

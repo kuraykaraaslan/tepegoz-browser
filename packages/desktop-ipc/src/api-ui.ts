@@ -9,6 +9,7 @@ import type {
   BasicAuthResponse,
   CertificateErrorRequest,
   CertificateErrorResponse,
+  AgentCapabilityRow,
   ClientCertificateChoice,
   ClientCertificateRequest,
   ClientCertificateResponse,
@@ -83,6 +84,8 @@ export interface UiApi {
   /** Import a browser-exported bookmarks file into the local bookmark tree. */
   importBookmarks(input: BookmarkImportInput): Promise<BookmarkImportResult>;
   /** The whole collection as Netscape bookmarks HTML. The renderer saves it; main never writes a file. */
+  /** The agent permission matrix — a read-only view over the Policy Kernel. */
+  listAgentCapabilities(): Promise<AgentCapabilityRow[]>;
   /** Open a new private (disposable) window. */
   openPrivateWindow(): Promise<void>;
   exportBookmarks(): Promise<string>;

@@ -73,6 +73,21 @@ export default class WebPermissionBroker {
     });
   }
 
+  /**
+   * Ask for several capabilities, all of which must be granted. Sequential and short-circuiting: a
+   * user who declines the camera is not then asked for the microphone for a call that is already not
+   * happening.
+   */
+  static async requestAll(
+    capabilities: readonly WebPermissionCapability[],
+    origin: string,
+  ): Promise<boolean> {
+    for (const capability of capabilities) {
+      if (!(await WebPermissionBroker.request(capability, origin))) return false;
+    }
+    return capabilities.length > 0;
+  }
+
   static isAllowed(capability: WebPermissionCapability, origin: string): boolean {
     return capabilityEnabled(capability) && storedState(origin, capability) === 'allowed';
   }

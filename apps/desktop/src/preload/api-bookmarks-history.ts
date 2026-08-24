@@ -14,6 +14,7 @@ import {
   type BasicAuthResponse,
   type CertificateErrorRequest,
   type CertificateErrorResponse,
+  type AgentCapabilityRow,
   type ClientCertificateChoice,
   type ClientCertificateRequest,
   type ClientCertificateResponse,
@@ -41,6 +42,7 @@ export const bookmarksHistoryApi: Pick<
   | 'importBookmarks'
   | 'exportBookmarks'
   | 'openPrivateWindow'
+  | 'listAgentCapabilities'
   | 'setBookmarkTags'
   | 'listBookmarkTags'
   | 'listClientCertificateChoices'
@@ -81,6 +83,7 @@ export const bookmarksHistoryApi: Pick<
     invoke<boolean>(IpcChannels.bookmarksToggle, { url, title, favicon }),
   isBookmarked: (url: string) => invoke<boolean>(IpcChannels.bookmarksIsBookmarked, url),
   getBookmarkTree: () => invoke<BookmarkTreeNode[]>(IpcChannels.bookmarksTree),
+  listAgentCapabilities: () => invoke<AgentCapabilityRow[]>(IpcChannels.agentCapabilitiesList),
   openPrivateWindow: () => invoke<void>(IpcChannels.windowsOpenPrivate),
   exportBookmarks: () => invoke<string>(IpcChannels.bookmarksExport),
   setBookmarkTags: (id: string, tags: string[]) =>

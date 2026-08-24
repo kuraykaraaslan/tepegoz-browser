@@ -34,8 +34,12 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       (`isPersistent: false`, `storagePath: null`), sets a real cookie and finds it in the private jar
       and **not** in the ordinary one, then opens the SQLite file after the app has closed and asserts
       the page is in neither history nor the session snapshot._
-- [ ] **Permissions Center** shows + edits web permissions (camera/mic/location/notification) through the
+- [x] **Permissions Center** shows + edits web permissions (camera/mic/location/notification) through the
       single PermissionGuard + a per-agent allow/approve/deny matrix (read-only view over the Policy Kernel)
+      — _**the third DoD line of this phase to close.** Camera, microphone and geolocation joined the
+      brokered set alongside notifications and the two clipboard permissions; every capability is
+      independently settable per origin (ask / allow / block) from one surface, and the agent matrix
+      renders beside it as a read-only view._
 - [~] **Omnibox command mode** (`@agent` / ~~`@workspace`~~ / `@download` / `@skill`) routes to the right surface
   — _**three of the four are built and routed; `@workspace` is not, and cannot be from this phase.**
   A "workspace" is a **Phase 2b** noun — `phase-10` names 2b as the phase that delivers "workspaces,
@@ -293,9 +297,35 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
 
 ### L5/L8 — Permissions Center
 
-- [ ] **Web permissions UI** (camera/mic/location/notification/clipboard): per-site grant/deny/ask, all routed
+- [x] **Web permissions UI** (camera/mic/location/notification/clipboard): per-site grant/deny/ask, all routed
       through the **single Policy/PermissionGuard** (same engine as Phase 2 `PopupAndPermissionGuard` + the
       Phase 1a notification permission-broker) — **no parallel permission flow**
+  - [x] _**Brokering camera/mic/location is not a weakening of deny-by-default; it IS deny-by-default.**
+        No site receives any of them without an explicit per-origin answer, and everything outside the
+        capability union is still refused with no way to ask. What changed is that "ask" became
+        reachable where it used to be a flat refusal. `security.test.ts` checks both halves rather than
+        asserting them — it enumerates Electron's entire permission union and proves the complement is
+        denied without the broker ever being consulted._
+  - [x] _**`getUserMedia` arrives as ONE `media` request carrying `mediaTypes`**, which is why the
+        mapping returns a LIST. Mapping it to a single capability would have meant a site granted the
+        microphone silently receiving the camera too. Both grants are required, asked in sequence, and
+        the sequence stops at the first refusal — a user who declines the camera is not then asked for
+        the microphone for a call that is already not happening. A `media` request naming no media type
+        at all is refused: there is no grant that could honestly cover it._
+  - [x] _**`display-capture` stays outside the union deliberately**, and the UI says so rather than
+        leaving it silently absent from a list of everything else. Unlike a camera, one mistaken
+        "allow" there hands over every other window on the screen, including ones this browser does not
+        own. Asserted by a test of its own._
+  - [x] _**One write path.** Site permissions are ordinary preferences and go through the already
+        validated preferences boundary — a second IPC channel to the same store would be a second thing
+        to keep in agreement with it. A first draft added one; it was removed rather than left in._
+  - [x] _`prompt` is used as the real stored "ask every time" state it has always been in
+        `SITE_PERMISSION_STATES`, which distinguishes "never been asked about this site" (no entry)
+        from "I decided I want to be asked". An earlier comment here claimed ask was merely the absence
+        of a decision; that was wrong about this codebase and is corrected._
+  - [x] _Consent-prompt copy per capability, en+tr, as an exhaustive `Record` — adding a capability to
+        the union without giving it words is now a type error rather than a prompt that says "wants to
+        show notifications" while asking for the camera._
   - [x] Slice 1 foundation: `@tepegoz/clipboard` headless operation/policy/audit types, schemas/tests, and
         `sitePermissions` shape extended for `clipboardRead`/`clipboardWrite`.
   - [x] Slice 4 service/broker: desktop `ClipboardService` centralizes native clipboard/WebContents
@@ -318,15 +348,30 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         found **no further hole**; it is committed because "no hole" is worth something only as a
         measurement, not as a belief. See [`docs/threat-model.md`](../../docs/threat-model.md) §Platform
         defaults for the full table and the class it belongs to.
-  - [ ] **Open, and not resolved either way:** the File System Access API
+  - [ ] **Still open, and still not resolved either way** (this UI now exists, and this did not become
+        part of it — `fileSystem` remains refused by the handler, which is the half that is ours): the
+        File System Access API
         (`showOpenFilePicker`/`showDirectoryPicker`) is present in browsed pages and does not reject —
         Chromium opens the native picker BEFORE requesting the `fileSystem` permission. Our half is
         covered (`fileSystem` is refused by the handler, asserted). What a page holds after a user picks
         a file could not be measured here: it needs a file chosen out of an OS dialog, which no
         automated run can drive. Belongs in this UI's scope when it is built — file access is a
         permission of at least the weight of the four this line already names, and it is not among them.
-- [ ] **Per-agent permission matrix** (allowed / requires-approval / denied) rendered as a **read-only view**
+- [x] **Per-agent permission matrix** (allowed / requires-approval / denied) rendered as a **read-only view**
       over the Policy Kernel + Capability Plane audit — a UI surface, **not** a new decision engine
+  - [x] _Every row is a real `PolicyKernel.evaluate` call on a registered `CapabilityRegistry`
+        descriptor. Assembling it from a second copy of the rules would have been a second opinion, and
+        the first time the two disagreed the user would be reading a UI that confidently contradicted
+        what was actually in force. A test asserts the view reports whatever the kernel says —
+        **including a verdict this module knows nothing about** — which is the property that keeps it a
+        view rather than an engine._
+  - [x] _Evaluated at the **baseline**: untainted arguments, no target URL. Taint and the sensitive-site
+        lockout can only tighten a verdict, so this is the most permissive answer the kernel gives and
+        therefore the honest ceiling to display. The subtitle says so on screen — showing a best case as
+        if it were the only case is the kind of reassurance this repo keeps refusing to write._
+  - [x] _Read-only with no control at all, and the panel says **why**: an editable copy here would be
+        the parallel permission flow the line above forbids. A read-only table with no explanation
+        reads like a broken one._
 
 ### L5/L8 — Upload Broker + Upload Activity
 

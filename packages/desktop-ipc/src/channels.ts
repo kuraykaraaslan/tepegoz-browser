@@ -237,6 +237,10 @@ export const IpcChannels = {
   /** The whole collection as Netscape bookmarks HTML — the format every other browser reads. */
   /** Open a new PRIVATE (disposable) window. Takes no payload — there is nothing for an untrusted
    *  renderer to steer, which is the whole reason it can be a plain renderer-callable channel. */
+  /** Permissions Center: the agent matrix, computed in main by asking the Policy Kernel. Site
+   *  permissions need no channel of their own — they are ordinary preferences and go through the
+   *  already-validated preferences write path. */
+  agentCapabilitiesList: 'permissions:agent-list',
   windowsOpenPrivate: 'windows:open-private',
   bookmarksExport: 'bookmarks:export',
   /** Bookmark tags: replace one bookmark's set, and read the whole tag list with counts. */

@@ -12,8 +12,8 @@ tracker for web-derived data, and the outbound Egress Firewall.
 > **user grant** can lift that deny for one category. Autonomy still cannot, and no agent tool can create
 > a grant. The grant input is not yet implemented here — `isSensitiveSite` remains an unconditional deny
 > until it is (see CHECKLIST). Pure TypeScript — no Electron, no
-I/O — so it is fully unit-testable and consumed by `@tepegoz/capability-plane` as the single
-decision point behind the ToolGateway PEP.
+> I/O — so it is fully unit-testable and consumed by `@tepegoz/capability-plane` as the single
+> decision point behind the ToolGateway PEP.
 
 ## Exports
 
@@ -21,7 +21,7 @@ decision point behind the ToolGateway PEP.
   (`decision`/`reason`/`biometric`) out. Locks out sensitive sites, forces HITL on tainted
   state-changing calls, and gates by danger class (`read`/`state_changing`/`destructive`/`financial`).
 - **`isSensitiveSite`** — URL allow/deny check for the bank/crypto/health/password-manager category list.
-  Per ADR-0039 this becomes the *pre-grant* check: a match denies unless an active user grant covers the
+  Per ADR-0039 this becomes the _pre-grant_ check: a match denies unless an active user grant covers the
   category.
 - **`detectHandoff`** / **`HANDOFF_KINDS`** — detects when a page requires captcha/2FA handling. Per
   ADR-0039 these are cleared automatically (2FA through the Credential Broker); handoff is the fallback
