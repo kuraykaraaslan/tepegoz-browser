@@ -26,12 +26,14 @@ import {
   NotificationIdSchema,
   BasicAuthResponseSchema,
   CertificateErrorResponseSchema,
+  ClientCertificateResponseSchema,
   NotificationPermissionResponseSchema,
 } from '@tepegoz/desktop-ipc/schemas';
 import NotificationStore from '@tepegoz/notifications';
 import WebPermissionBroker from '../web-permissions/permission-broker';
 import { resolveBasicAuth } from '../auth/basic-auth-broker';
 import { resolveCertificateError } from '../auth/certificate-broker';
+import { resolveClientCertificate } from '../auth/client-certificate-broker';
 import { BlobStore, HistoryStore } from '@tepegoz/persistence';
 import {
   BookmarkTreeStore,
@@ -175,6 +177,9 @@ export function registerBrowsingIpc(): void {
 
   // TLS certificate warning answer (renderer → main). Anything other than an explicit proceed leaves
   // the broker's default in place, which is to refuse the connection.
+  onAction(IpcChannels.clientCertificateRespond, ClientCertificateResponseSchema, (res) => {
+    resolveClientCertificate(res);
+  });
   onAction(IpcChannels.certificateErrorRespond, CertificateErrorResponseSchema, (res) => {
     resolveCertificateError(res);
   });

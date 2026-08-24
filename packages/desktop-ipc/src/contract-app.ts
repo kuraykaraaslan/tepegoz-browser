@@ -66,6 +66,36 @@ export interface CertificateErrorResponse {
   proceed: boolean;
 }
 
+/** One certificate the OS store offered for a site's client-authentication request. Display-only, and
+ *  every field is capped by main before it crosses — `subject` and `issuer` come from a certificate the
+ *  REQUESTING SITE's CA chain vouches for, not from us. */
+export interface ClientCertificateOption {
+  /** Index into the list main is holding. The certificate itself never crosses to the renderer. */
+  index: number;
+  subject: string;
+  issuer: string;
+  /** ISO-8601. Shown so a user can tell two otherwise identical certificates apart. */
+  expiry: string;
+}
+
+/**
+ * Main → renderer: a site is asking the user to identify themselves with a client certificate.
+ *
+ * This prompt exists because Electron's default is to send the FIRST certificate in the store without
+ * asking anyone — see `auth/client-certificate-broker.ts`.
+ */
+export interface ClientCertificateRequest {
+  requestId: string;
+  origin: string;
+  options: ClientCertificateOption[];
+}
+
+/** Renderer → main: which certificate to send, or none. `index: null` means "send nothing". */
+export interface ClientCertificateResponse {
+  requestId: string;
+  index: number | null;
+}
+
 /** Content-area rectangle (DIP) where the active tab's web view is laid out, below the chrome. */
 export interface ContentBounds {
   x: number;

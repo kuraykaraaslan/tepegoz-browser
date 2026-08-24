@@ -9,6 +9,8 @@ import type {
   BasicAuthResponse,
   CertificateErrorRequest,
   CertificateErrorResponse,
+  ClientCertificateRequest,
+  ClientCertificateResponse,
 } from './contract';
 import type { PageMenuAction, PageMenuContext, PageMenuContributionActionInput } from './contract';
 import type { HistoryEntry } from './contract';
@@ -125,6 +127,10 @@ export interface UiApi {
   onCertificateErrorRequest(callback: (request: CertificateErrorRequest) => void): () => void;
   /** Renderer→main: proceed past it, or refuse. */
   respondCertificateError(response: CertificateErrorResponse): void;
+  /** Main→renderer: a site is asking the user to identify themselves with a client certificate. */
+  onClientCertificateRequest(callback: (request: ClientCertificateRequest) => void): () => void;
+  /** Renderer→main: which offered certificate to send, or none. */
+  respondClientCertificate(response: ClientCertificateResponse): void;
   // File operations (Settings → File operations). The grant list is read/written through preferences
   // (`getPreferences().fileAccessGrants` / `updatePreferences({ fileAccessGrants })`); the AI-driven
   // consent reuses the agent HITL modal. Only the native folder picker needs its own bridge method.

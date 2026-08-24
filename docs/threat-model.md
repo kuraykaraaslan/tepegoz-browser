@@ -44,6 +44,29 @@ its operator, Phase 5)`
 | Tampered update                          | Code-signed + signature-verified updates over HTTPS; anti-rollback (Phase 0 packaging)                            |
 | Inbound MCP abuse                        | Bearer auth + rate-limit + schema validation + same policy gate                                                   |
 | Local DB exposure                        | userData ACLs; field encryption for sensitive data; synthetic test fixtures only                                  |
+| Silent identity disclosure to a site | Client-certificate chooser: `select-client-certificate` is answered with `preventDefault()` and nothing is sent without an explicit user choice (`main/auth/client-certificate-broker.ts`) |
+| Platform default the app never claimed | Ownership asserted against the RUNNING app, not the source: `e2e/application-menu.spec.ts` (see below) |
+
+### Platform defaults — a threat class, not an oversight
+
+The last two rows are the same threat wearing different clothes, and it is worth naming because this
+repository has now been bitten by it twice. **Electron supplies a behaviour when the app installs no
+handler, and the absence of a call is invisible to every gate we have** — a linter, a type checker and
+a unit test all read the code that IS there.
+
+- **`Menu.setApplicationMenu` was never called**, so Electron's default menu was live and bound
+  `Ctrl+Shift+I` to its own `toggleDevTools` role — around the sensitive-site DevTools gate, whose own
+  documentation promised "nothing that reaches the chrome can open it on a bank". Its zoom roles
+  likewise bypassed the per-origin zoom ladder, and `close` closed the window where a browser closes a
+  tab.
+- **`select-client-certificate` was never handled**, so Electron sent the first client certificate in
+  the OS store to any site that asked — a private-key-backed assertion of the user's identity, on first
+  contact, unprompted.
+
+Both were found by asking the launched application what it was doing, and both are now locked that
+way, because that is the only place the question has an answer. When adding a surface Electron has an
+opinion about — permissions, device access, certificates, menus, window opening, protocol handling —
+the check is not "did we write a handler" but "what happens if we did not".
 
 ## Network-privacy tunnels (Phase 5)
 

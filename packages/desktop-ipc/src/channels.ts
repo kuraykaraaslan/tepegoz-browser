@@ -300,6 +300,10 @@ export const IpcChannels = {
   certificateErrorRequest: 'cert:request',
   /** renderer→main: proceed past the certificate error, or refuse. */
   certificateErrorRespond: 'cert:respond',
+  /** main→renderer: a site asked the user to identify themselves with a client certificate. */
+  clientCertificateRequest: 'cert:client-request',
+  /** renderer→main: which offered certificate to send, or none. */
+  clientCertificateRespond: 'cert:client-respond',
   /** main→renderer: an HTTP 401/407 challenge is waiting on the user. */
   authBasicRequest: 'auth:basic-request',
   /** renderer→main: the credentials, or a cancellation. */

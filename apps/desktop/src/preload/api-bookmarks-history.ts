@@ -14,6 +14,8 @@ import {
   type BasicAuthResponse,
   type CertificateErrorRequest,
   type CertificateErrorResponse,
+  type ClientCertificateRequest,
+  type ClientCertificateResponse,
   type NotificationPermissionRequest,
   type NotificationPermissionResponse,
   type NotificationState,
@@ -56,6 +58,8 @@ export const bookmarksHistoryApi: Pick<
   | 'respondBasicAuth'
   | 'onCertificateErrorRequest'
   | 'respondCertificateError'
+  | 'onClientCertificateRequest'
+  | 'respondClientCertificate'
   | 'respondNotificationPermission'
 > = {
   getHistory: (params?: { limit?: number; offset?: number }) =>
@@ -168,5 +172,17 @@ export const bookmarksHistoryApi: Pick<
   },
   respondCertificateError: (response: CertificateErrorResponse) => {
     ipcRenderer.send(IpcChannels.certificateErrorRespond, response);
+  },
+  onClientCertificateRequest: (callback: (request: ClientCertificateRequest) => void) => {
+    const listener = (_event: unknown, request: ClientCertificateRequest): void => {
+      callback(request);
+    };
+    ipcRenderer.on(IpcChannels.clientCertificateRequest, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.clientCertificateRequest, listener);
+    };
+  },
+  respondClientCertificate: (response: ClientCertificateResponse) => {
+    ipcRenderer.send(IpcChannels.clientCertificateRespond, response);
   },
 };

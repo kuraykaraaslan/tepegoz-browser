@@ -2,13 +2,14 @@ import { pick, type Locale } from '@tepegoz/i18n';
 import { Modal } from '@tepegoz/ui';
 import { NotificationPermissionPrompt, ToastStack } from '@tepegoz/notifications-ui';
 import { AuthPrompt } from '@tepegoz/auth-prompt-ui';
-import { CertWarning } from '@tepegoz/cert-warning-ui';
+import { CertWarning, ClientCertPicker } from '@tepegoz/cert-warning-ui';
 import type { AppNotification, NotificationPermissionRequest } from '@tepegoz/desktop-ipc';
 import { browserDict } from '../../i18n';
 import { runNotificationAction } from './lib/notification-actions';
 import type { BookmarksBarResult } from './app-bookmarks';
 import { useBasicAuth } from './app-basic-auth';
 import { useCertWarning } from './app-cert-warning';
+import { useClientCert } from './app-client-cert';
 
 export interface AppOverlaysProps {
   locale: Locale;
@@ -34,6 +35,7 @@ export function AppOverlays({
 }: AppOverlaysProps) {
   const basicAuth = useBasicAuth();
   const certWarning = useCertWarning();
+  const clientCert = useClientCert();
   const browserT = pick(browserDict, locale);
 
   return (
@@ -96,6 +98,22 @@ export function AppOverlays({
             expiry={certWarning.request.expiry}
             onBack={certWarning.refuse}
             onProceed={certWarning.proceed}
+          />
+        )}
+      </Modal>
+      {/* Client-certificate chooser. Blocking, and dismissal sends NOTHING — the default this replaces
+          was Electron silently sending the first certificate in the OS store. */}
+      <Modal
+        open={clientCert.request !== null}
+        onClose={clientCert.dismiss}
+        ariaLabel={clientCert.request?.origin ?? ''}
+        closeOnBackdrop={false}
+      >
+        {clientCert.request !== null && (
+          <ClientCertPicker
+            origin={clientCert.request.origin}
+            options={clientCert.request.options}
+            onChoose={clientCert.choose}
           />
         )}
       </Modal>

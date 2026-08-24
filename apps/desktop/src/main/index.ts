@@ -6,6 +6,7 @@ import { installSecurity } from './security';
 import { abortActiveAgentRuns, registerIpc } from './ipc';
 import { registerBasicAuthHandler } from './auth/basic-auth-broker';
 import { registerCertificateHandler } from './auth/certificate-broker';
+import { registerClientCertificateHandler } from './auth/client-certificate-broker';
 import { initStores } from './stores.electron';
 import { initHosts, openWindow } from './browser-windows';
 import { initTray, revealAllWindows } from './tray';
@@ -217,6 +218,9 @@ if (!app.requestSingleInstanceLock()) {
       registerBasicAuthHandler(app);
       // Without a handler Chromium rejects a bad certificate silently; explain it instead.
       registerCertificateHandler(app);
+      // Without this, Electron sends the FIRST client certificate in the OS store to any site that
+      // asks — no prompt. See auth/client-certificate-broker.ts.
+      registerClientCertificateHandler(app);
       registerIpc();
       // Composition root wires the page context menu to the tab layer's right-click signal. The tab
       // layer deliberately does not import the menu (that made it depend on its own consumer — see

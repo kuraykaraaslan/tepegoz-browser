@@ -230,6 +230,37 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         carrying the failed URL + error code. Same security properties, different presentation.
   - [ ] The proceed decision is logged but **not journaled as an Event Journal observation** as this line
         asks.
+- [x] **Client-certificate chooser** (`select-client-certificate`) — _**not on the original list, because
+      nobody had noticed the default.** This is the mirror of the row above and the two defaults are
+      opposite: for a bad SERVER certificate Electron rejects, which is safe; for a CLIENT certificate
+      Electron's own typings say "Using `event.preventDefault()` prevents the application from using the
+      first certificate from the store" — i.e. with no handler it **silently sends the first client
+      certificate in the OS store to any site that asks**. This app had no handler. A client certificate
+      is a private-key-backed assertion of WHO THE USER IS, and in this product's primary market they are
+      ordinary — e-Devlet and corporate enrolment both put one in the Windows store — so a page that
+      merely requested client authentication received a signed proof of the user's identity on first
+      contact, with the user never told. Chrome prompts. We were sending. Nothing in `docs/` or `phases/`
+      had ever mentioned client certificates, which is why it survived: the roadmap tracked our code, and
+      the platform had supplied a behaviour underneath it. `main/auth/client-certificate-broker.ts` +
+      `ClientCertPicker` in `@tepegoz/cert-warning-ui`, zod-validated response, 10 broker tests + 5 dialog
+      tests. **The fix is `event.preventDefault()` on the handler's first line**; everything after it is
+      what keeps the browser usable. Cancel, timeout, no-window and an empty offer list all send NOTHING.
+      The choice is remembered **per origin, for this run only** — TLS client auth re-negotiates per
+      connection, so asking every time would make the browser unusable on exactly the sites that need it,
+      and persisting it would be a standing instruction to identify yourself, written once and forgotten.
+      **The certificate never crosses to the renderer:** the prompt carries display strings and answers
+      with an INDEX, so the worst an untrusted renderer can do is name a different entry from the list the
+      user was shown. The picker puts "do not send" first and focused, and pre-selects nothing — a chooser
+      that defaulted to one certificate would be the same defect with a dialog in front of it. Locked by
+      [e2e/application-menu.spec.ts](../../e2e/application-menu.spec.ts), which asks the LAUNCHED app
+      whether it answers the event, because the defect was the ABSENCE of a call. The listener count is
+      asserted as **2**, and that second one is the interesting half: measured by deleting the
+      registration and re-launching, Electron installs an internal listener of its own — that internal one
+      is what sends the first certificate._
+  - [ ] Not done: no way to review or clear the remembered per-origin choices before a restart, and the
+        choice is not journaled. Sending a client certificate is an identity disclosure and arguably
+        belongs in the Event Journal alongside the certificate-error decision (which has the same gap,
+        recorded above).
 - [ ] **`beforeunload` confirmation** — honor the page's unload prompt (leave/stay) via a localized dialog;
       agent-driven navigations record the prompt but never auto-dismiss a real data-loss warning
 

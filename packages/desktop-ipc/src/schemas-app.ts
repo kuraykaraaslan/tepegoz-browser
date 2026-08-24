@@ -67,3 +67,16 @@ export const CertificateErrorResponseSchema = z.object({
   requestId: z.string().max(64),
   proceed: z.boolean(),
 });
+
+/**
+ * `cert:client-respond` payload — which offered client certificate to send, or none.
+ *
+ * An INDEX, never a certificate: the certificates stay in main and the untrusted renderer only ever
+ * names one. A renderer that lies can pick a different certificate from the list the user was shown,
+ * which is a far smaller blast radius than one that can hand main an arbitrary certificate object.
+ * `nonnegative` matters — a negative index would read backwards off the array.
+ */
+export const ClientCertificateResponseSchema = z.object({
+  requestId: z.string().max(64),
+  index: z.number().int().nonnegative().max(255).nullable(),
+});
