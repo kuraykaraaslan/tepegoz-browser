@@ -95,6 +95,7 @@ describe('the loading-state constants', () => {
       activeId: null,
       canGoBack: false,
       canGoForward: false,
+      isPrivate: false,
     });
   });
 

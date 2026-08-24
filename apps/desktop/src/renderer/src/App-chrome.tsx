@@ -6,6 +6,7 @@ import { useFindInPage } from './app-find';
 import { BookmarksBar } from '@tepegoz/bookmarks-bar';
 import { BOOKMARK_ROOT_BAR } from '@tepegoz/bookmarks';
 import type { ExtensionId, Preferences, TabsState } from '@tepegoz/desktop-ipc';
+import { PrivateBadge } from './components/PrivateBadge';
 import type { OmniboxQuickSettingTarget } from '@tepegoz/omnibox';
 import { browserDict, userMenuDict } from '../../i18n';
 import { ExtensionTray } from './components/ExtensionTray';
@@ -85,6 +86,11 @@ export function AppChrome({
 
   return (
     <>
+      {tabs.isPrivate && (
+        <div className="pointer-events-auto absolute right-2 top-1 z-40">
+          <PrivateBadge t={browserT} />
+        </div>
+      )}
       <BrowserChrome
         platform={window.tepegoz.platform}
         t={{ common: coreT.common, window: coreT.window, browser: browserT }}

@@ -93,6 +93,25 @@ export const tr: AppStrings = {
     // Sayfanın kendi `beforeunload` uyarısı (`main/navigation/unload-broker.ts`). Sayfanın kendi mesajı
     // bilerek gösterilmiyor — Chromium 2016'da özel metni kaldırdı, çünkü sayfalar bunu korkutma amaçlı
     // kullanıyordu — yani diyaloğun tamamı bu sözler.
+    // ── Gizli (tek kullanımlık) pencere ────────────────────────────────────────────────────────────
+    // Bu açıklama faz-2c'nin aynen istediği şey: yüzey NE YAPMADIĞINI söylemek zorunda. Ayrı bir bölme
+    // yerel durumu atar; kimliği ayırmaz. Sınır, güvence cümlesinden ÖNCE yazılıyor — yaygın tarayıcılar
+    // tam tersini yaptıkları için eleştirildi.
+    privateBadge: 'Gizli',
+    privateTitle: 'Gizli pencere',
+    privateNotHidden:
+      'Bu seni anonim yapmaz. Cihazın, ekranın, yazı tiplerin ve ağ adresin değişmedi; parmak izi çıkaran bir site seni yine tanıyabilir, ağın veya işvereren nereye gittiğini yine görebilir.',
+    privateDiscardsTitle: 'Son gizli pencere kapanınca atılır',
+    privateDiscardsState:
+      'Çerezler, oturumlar, önbellekler ve site depolaması — bellekte tutulur, diske hiç yazılmaz',
+    privateDiscardsHistory: 'Gezinme geçmişi — gizli sayfalar hiç kaydedilmez',
+    privateDiscardsSession: 'Bu sekmeler kaydedilmez, sonraki açılışta geri gelmez',
+    privateKeepsTitle: 'Bunun gizlemediği şeyler',
+    privateKeepsFingerprint:
+      'Cihaz parmak izin — bir site bu pencereyi normal pencerenle ilişkilendirebilir',
+    privateKeepsNetwork: 'Trafiğin; ağın, internet sağlayıcın veya bir VPN işletmecisi tarafından',
+    privateKeepsDownloads: 'İndirdiğin dosyalar ve eklediğin yer imleri — onlar senin, saklanır',
+    privateLockout: 'Hassas site koruması burada da, normal penceredeki gibi aynen geçerlidir.',
     unloadTitle: 'Bu siteden ayrılınsın mı?',
     unloadDetail: 'Yaptığınız değişiklikler kaydedilmemiş olabilir.',
     unloadLeave: 'Ayrıl',

@@ -350,6 +350,7 @@ export const en = {
     print: 'Print the page',
     savePage: 'Save the page',
     viewSource: 'View the page source',
+    newPrivateWindow: 'Open a new private window',
     devTools: 'Open developer tools',
     hardReload: 'Reload, ignoring the cache',
     closeTab: 'Close the tab',

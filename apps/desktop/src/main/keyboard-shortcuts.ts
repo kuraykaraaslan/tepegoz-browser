@@ -37,6 +37,8 @@ export interface ShortcutTargets {
   page: WebContents | null;
   /** Close the active tab of the window the key arrived on. Absent where there is no tab model. */
   closeActiveTab?: () => void;
+  /** Open a new private (disposable) window. Injected for the same cycle reason as `page`. */
+  openPrivateWindow?: () => void;
 }
 
 export function handleWindowShortcut(
@@ -57,6 +59,11 @@ export function handleWindowShortcut(
     case 'find':
       // The bar lives in the chrome; the chrome decides whether this opens it or just refocuses it.
       win.webContents.send(IpcChannels.findOpen);
+      return true;
+    case 'newPrivateWindow':
+      // Opened through the injected target rather than by importing `browser-windows` here: that
+      // module reaches the tab model, and this one is imported BY it (measured cycle — see `print`).
+      targets.openPrivateWindow?.();
       return true;
     case 'print':
       if (pageWc === null) return false;

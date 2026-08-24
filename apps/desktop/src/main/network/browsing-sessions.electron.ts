@@ -1,6 +1,6 @@
 import { session, type Session } from 'electron';
 import { Logger } from '@tepegoz/libs';
-import { DIRECT_PARTITION } from '@tepegoz/tab-engine';
+import { DIRECT_PARTITION, isPrivatePartition, PRIVATE_PARTITION } from '@tepegoz/tab-engine';
 import { BLACKHOLE_PROXY_CONFIG } from '@tepegoz/security-policy';
 
 /**
@@ -50,6 +50,8 @@ const live = new Map<string, Session>();
 const poisoned = new Map<string, Error>();
 /** Supplies the session a new tab is born on; installed by the binding layer (see `defaultForNewTab`). */
 let newTabSessionProvider: (() => Session) | null = null;
+/** Supplies the private partition key for the profile's current route; installed by the binding layer. */
+let privatePartitionProvider: (() => string) | null = null;
 /** `${partition}\u0000${attacherId}` pairs already applied — the exactly-once guarantee. */
 const appliedPairs = new Set<string>();
 
@@ -184,7 +186,77 @@ const BrowsingSessions = {
 
   /** Is this one of OUR browsing partitions? Guards call sites that must never touch app chrome. */
   isBrowsingPartition(partition: string): boolean {
-    return partition === DIRECT_PARTITION || partition.startsWith(TUNNEL_PREFIX);
+    return (
+      partition === DIRECT_PARTITION ||
+      partition.startsWith(TUNNEL_PREFIX) ||
+      isPrivatePartition(partition)
+    );
+  },
+
+  /**
+   * The session a PRIVATE window's tabs are born on.
+   *
+   * Goes through `ensure()` like every other browsing session, and that is the point rather than a
+   * detail: a private session that skipped the attacher plane would have no ad/tracker filtering, no
+   * download quarantine and no User-Agent override — a privacy regression inside the privacy feature,
+   * which is the exact failure this whole registry was built to make impossible.
+   *
+   * `provider` supplies the private partition key for the profile's current route, so a private tab on
+   * a Tor/VPN default lands on `tepegoz-private--conn-{id}` rather than the clear path.
+   */
+  private(): Session {
+    const key = privatePartitionProvider?.() ?? PRIVATE_PARTITION;
+    if (!isPrivatePartition(key)) {
+      // Fail loudly rather than quietly falling back to the base private partition: a provider that
+      // returned a persisted name would mean private browsing writing to disk, which must never be
+      // something the app recovers from silently.
+      throw new Error(`Not a private partition: ${JSON.stringify(key)}`);
+    }
+    return BrowsingSessions.ensure(key);
+  },
+
+  /** Install the private-route provider. Called once by the binding layer at startup, like its
+   *  `setNewTabSessionProvider` sibling. */
+  setPrivatePartitionProvider(provider: (() => string) | null): void {
+    privatePartitionProvider = provider;
+  },
+
+  /** Every live private session, for the discard-on-close sweep. */
+  privateSessions(): readonly { partition: string; session: Session }[] {
+    return [...live]
+      .filter(([partition]) => isPrivatePartition(partition))
+      .map(([partition, ses]) => ({ partition, session: ses }));
+  },
+
+  /**
+   * Discard everything private browsing accumulated, and forget the sessions themselves.
+   *
+   * The partition names carry no `persist:` prefix, so Electron already keeps this data in memory only
+   * and drops it at exit. This exists because "at exit" is the wrong moment: a user who closes their
+   * private window has finished with it, and leaving an afternoon's browsing live inside a process that
+   * keeps running is not what closing the window means.
+   *
+   * Forgetting the registry entry matters as much as the wipe. A retained `Session` object keeps its
+   * in-memory jar alive, so the next private window would resume the previous identity — the one thing
+   * a disposable mode may never do.
+   */
+  async discardPrivate(): Promise<void> {
+    for (const { partition, session: ses } of BrowsingSessions.privateSessions()) {
+      try {
+        await ses.clearStorageData();
+        await ses.clearCache();
+        await ses.clearAuthCache();
+      } catch (err: unknown) {
+        // Best-effort by necessity: the data is in memory and dies with the process regardless. A throw
+        // here would take down the window-close path over a cleanup that was already guaranteed.
+        Logger.warn('Private session cleanup failed; it dies with the process regardless', {
+          partition,
+          err: String(err),
+        });
+      }
+      live.delete(partition);
+      for (const id of registrations.keys()) appliedPairs.delete(pairKey(partition, id));
+    }
   },
 
   /** Is this a tunnel-bound partition, as opposed to the Direct one? Wiring that must differ between the

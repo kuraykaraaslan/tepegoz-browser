@@ -65,6 +65,9 @@ export const SHORTCUTS = [
   //
   // `main` scope, for the same reason `find` is: the key almost always arrives while the PAGE has
   // focus, and the chrome renderer never sees it there.
+  // Ctrl+Shift+N — a new PRIVATE window. `main` scope like the page commands: it must work while a
+  // page has focus, which is where a user decides they want the next thing to be private.
+  { id: 'newPrivateWindow', key: 'n', ctrlOrCmd: true, shift: true, scope: 'main' },
   { id: 'print', key: 'p', ctrlOrCmd: true, scope: 'main' },
   { id: 'savePage', key: 's', ctrlOrCmd: true, scope: 'main' },
   { id: 'viewSource', key: 'u', ctrlOrCmd: true, scope: 'main' },

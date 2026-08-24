@@ -27,17 +27,30 @@ export class TabManagerBase {
 
   // ── Registry ─────────────────────────────────────────────────────────────────────────────────
 
-  /** Create + register a `WindowTabs` for a freshly-created chrome window. Idempotent per window. */
-  static register(win: BrowserWindow): WindowTabs {
+  /**
+   * Create + register a `WindowTabs` for a freshly-created chrome window. Idempotent per window.
+   *
+   * `isPrivate` is fixed at registration and never changes. A window cannot be converted between
+   * private and ordinary later, because a `WebContents` is bound to its session at creation — a
+   * "convert this window" action could only ever mean destroying and rebuilding every tab in it, and a
+   * mode the user believes they toggled but did not is worse than no toggle at all.
+   */
+  static register(win: BrowserWindow, opts?: { isPrivate?: boolean }): WindowTabs {
     const existing = TabManagerBase.registry.get(win);
     if (existing !== undefined) return existing;
-    const wt = new WindowTabs(win);
+    const wt = new WindowTabs(win, opts?.isPrivate === true);
     TabManagerBase.registry.set(win, wt);
     TabManagerBase.lastFocusedWin = win;
     win.on('focus', () => {
       TabManagerBase.lastFocusedWin = win;
     });
     return wt;
+  }
+
+  /** Is any private window still open? Decides when private browsing data may be discarded. */
+  static hasPrivateWindow(): boolean {
+    for (const wt of TabManagerBase.registry.values()) if (wt.isPrivate) return true;
+    return false;
   }
 
   /** Persist + tear down a window's tabs when it closes. */
@@ -142,7 +155,12 @@ export class TabManagerBase {
   static persistNow(): void {
     const db = getDb();
     if (db === null) return;
+    // Private windows are EXCLUDED from the snapshot, and this is the load-bearing half of "leaves
+    // nothing on close": the in-memory partition already keeps cookies and cache off disk, but the
+    // session snapshot is a separate write, and it would have put every private URL the user visited
+    // into SQLite — then reopened those tabs on the next launch, in an ordinary window.
     const windows = TabManagerBase.all()
+      .filter((wt) => !wt.isPrivate)
       .map((wt) => wt.snapshot())
       .filter((w) => w.tabs.length > 0);
     const snapshot = { version: 3 as const, windows };

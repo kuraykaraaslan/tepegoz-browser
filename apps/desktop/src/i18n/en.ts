@@ -105,6 +105,27 @@ export const en = {
     // The page's own `beforeunload` prompt (`main/navigation/unload-broker.ts`). The page's own message
     // is deliberately NOT shown — Chromium stopped rendering custom text there in 2016 because pages
     // used it for scareware — so these words are the whole dialog.
+    // ── Private (disposable) window ────────────────────────────────────────────────────────────────
+    // The disclosure is required by phase-2c in as many words: the surface must say what it does NOT do.
+    // A separate partition discards local state; it does not separate identity. The limit is stated
+    // before the reassurance on purpose — every mainstream browser has been criticised for the reverse.
+    privateBadge: 'Private',
+    privateTitle: 'Private window',
+    privateNotHidden:
+      'This does not make you anonymous. Your device, screen, fonts and network address are unchanged, so a site that fingerprints can still recognise you, and your network or employer can still see where you go.',
+    privateDiscardsTitle: 'Discarded when the last private window closes',
+    privateDiscardsState:
+      'Cookies, logins, caches and site storage — kept in memory, never written to disk',
+    privateDiscardsHistory: 'Browsing history — private pages are never recorded',
+    privateDiscardsSession: 'These tabs are not saved, so they do not reopen on the next launch',
+    privateKeepsTitle: 'Not hidden by this',
+    privateKeepsFingerprint:
+      'Your device fingerprint — a site can link this window to your ordinary one',
+    privateKeepsNetwork: 'Your traffic, from your network, your ISP, or a VPN operator',
+    privateKeepsDownloads:
+      'Files you download and bookmarks you add — those are yours and are kept',
+    privateLockout:
+      'Sensitive-site protection still applies here, exactly as it does in an ordinary window.',
     unloadTitle: 'Leave this site?',
     unloadDetail: 'Changes you have made may not be saved.',
     unloadLeave: 'Leave',

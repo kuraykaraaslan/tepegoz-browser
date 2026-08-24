@@ -15,6 +15,7 @@ export const EMPTY_TABS: TabsState = {
   activeId: null,
   canGoBack: false,
   canGoForward: false,
+  isPrivate: false,
 };
 
 /** Fallback new-tab background while preferences are still loading (mirrors DEFAULT_PREFERENCES). */

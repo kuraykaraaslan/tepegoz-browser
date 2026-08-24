@@ -436,6 +436,7 @@ describe('tabs:get-state', () => {
       activeId: null,
       canGoBack: false,
       canGoForward: false,
+      isPrivate: false,
     });
   });
 

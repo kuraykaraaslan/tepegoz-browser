@@ -4,6 +4,8 @@ import { SessionStore } from '@tepegoz/persistence';
 import { createWindow, effectiveStartupMode, hideToTray } from './window';
 import { ensureOnScreen } from './window-placement';
 import TabManager from './tabs';
+import BrowsingSessions from './network/browsing-sessions.electron';
+import { openPrivateWindow, setPrivateWindowOpener } from './private-window-opener';
 import { isQuitting } from './quit-state';
 import { notifyHiddenToTrayOnce } from './tray';
 import { reconcileTrayPowerBlocker } from './power-lifecycle';
@@ -35,6 +37,11 @@ type TabBootstrap =
  *  target window — focused, or the navigating tab's owner — dynamically, so they must not be attached
  *  per-window). Call from `whenReady` after the stores are initialized. */
 export function initHosts(): void {
+  // The one module allowed to create windows installs the opener the page views and the chrome both
+  // reach for when Ctrl+Shift+N arrives.
+  setPrivateWindowOpener(() => {
+    openWindow({ isPrivate: true, tabs: 'default', foreground: true });
+  });
   // Notification center: store→renderer broadcast + toast into the focused window.
   NotificationHost.attach();
   // Password manager: fill IPC handler + autofill push (hooks into TabManager navigation events).
@@ -51,6 +58,15 @@ export function openWindow(opts?: {
   /** Force a normal foreground window, ignoring the background/kiosk startup mode (a tray click that
    *  opens a fresh window after the last tab was closed). */
   foreground?: boolean;
+  /**
+   * Open a PRIVATE (disposable) window: its tabs live on an in-memory partition, it writes no history,
+   * and everything it accumulated is discarded when the last private window closes.
+   *
+   * Fixed for the window's life. A `WebContents` is bound to its session at creation, so "make this
+   * window private" could only mean rebuilding every tab in it — and a mode a user believes they
+   * toggled but did not is worse than having no toggle.
+   */
+  isPrivate?: boolean;
 }): BrowserWindow {
   const win = createWindow(opts?.foreground === true ? { forceForeground: true } : undefined);
   // Position/size BEFORE the window reveals (createWindow shows on ready-to-show) so a torn-off / restored
@@ -67,7 +83,7 @@ export function openWindow(opts?: {
     });
     win.setBounds(placed);
   }
-  TabManager.register(win);
+  TabManager.register(win, { isPrivate: opts?.isPrivate === true });
   // Start-in-background parks the window off-screen on its first reveal (see window.ts); once it's shown
   // (on- or off-screen), reconcile keep-awake so a start-parked window honors `keepAwakeInTray` too.
   win.once('show', () => {
@@ -90,6 +106,7 @@ export function openWindow(opts?: {
         const activeId = tabs?.getState().activeId ?? null;
         if (activeId !== null) tabs?.closeTab(activeId);
       },
+      openPrivateWindow,
     };
     if (handleWindowShortcut(win, input, targets)) event.preventDefault();
   });
@@ -110,6 +127,15 @@ export function openWindow(opts?: {
   win.on('closed', () => {
     TabManager.persistNow(); // capture the final tab set BEFORE unregister clears the store
     TabManager.unregister(win);
+    // The LAST private window closing is what discards private browsing — not this one closing. Two
+    // private windows share one throwaway identity (Chrome's model, and the one users expect: a link
+    // opened from one into another is the same session), so wiping on the first close would sign the
+    // user out of the window still in front of them.
+    //
+    // Checked after `unregister`, so the window that just closed is already out of the registry.
+    if (opts?.isPrivate === true && !TabManager.hasPrivateWindow()) {
+      void BrowsingSessions.discardPrivate();
+    }
   });
   const bootstrap: TabBootstrap = opts?.tabs ?? 'restore';
   const startup = opts?.foreground === true ? 'window' : effectiveStartupMode();

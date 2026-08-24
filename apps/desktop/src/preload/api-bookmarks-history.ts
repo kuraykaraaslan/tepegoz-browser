@@ -40,6 +40,7 @@ export const bookmarksHistoryApi: Pick<
   | 'getBookmarkTree'
   | 'importBookmarks'
   | 'exportBookmarks'
+  | 'openPrivateWindow'
   | 'setBookmarkTags'
   | 'listBookmarkTags'
   | 'listClientCertificateChoices'
@@ -80,6 +81,7 @@ export const bookmarksHistoryApi: Pick<
     invoke<boolean>(IpcChannels.bookmarksToggle, { url, title, favicon }),
   isBookmarked: (url: string) => invoke<boolean>(IpcChannels.bookmarksIsBookmarked, url),
   getBookmarkTree: () => invoke<BookmarkTreeNode[]>(IpcChannels.bookmarksTree),
+  openPrivateWindow: () => invoke<void>(IpcChannels.windowsOpenPrivate),
   exportBookmarks: () => invoke<string>(IpcChannels.bookmarksExport),
   setBookmarkTags: (id: string, tags: string[]) =>
     invoke<string[]>(IpcChannels.bookmarksSetTags, { id, tags }),

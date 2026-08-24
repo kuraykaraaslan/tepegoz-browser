@@ -26,8 +26,14 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       rename/delete, Netscape-HTML import from Chrome/Edge/Firefox/Brave and export back out; and now
       tags. Migration v15 is additive — a junction table beside `bookmark_nodes`, nothing rewritten, and
       a database from before it keeps working with every bookmark simply untagged (asserted)._
-- [ ] **Private / disposable mode** opens an ephemeral (non-persisted) session that leaves nothing on close;
+- [x] **Private / disposable mode** opens an ephemeral (non-persisted) session that leaves nothing on close;
       sensitive-site lockout still holds
+      — _**the second DoD line of this phase to close.** Ctrl+Shift+N or `windows:open-private`; the
+      badge, the disclosure panel, en+tr. Measured end to end in
+      [`e2e/private-window.spec.ts`](../../e2e/private-window.spec.ts), which reads the LIVE session
+      (`isPersistent: false`, `storagePath: null`), sets a real cookie and finds it in the private jar
+      and **not** in the ordinary one, then opens the SQLite file after the app has closed and asserts
+      the page is in neither history nor the session snapshot._
 - [ ] **Permissions Center** shows + edits web permissions (camera/mic/location/notification) through the
       single PermissionGuard + a per-agent allow/approve/deny matrix (read-only view over the Policy Kernel)
 - [ ] **Omnibox command mode** (`@agent` / `@workspace` / `@download` / `@skill`) routes to the right surface
@@ -230,17 +236,54 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
 
 ### L8/L9 — Private / disposable / guest mode
 
-- [ ] Ephemeral **non-persisted session** (in-memory partition, no `persist:` prefix) on top of the existing
+- [x] Ephemeral **non-persisted session** (in-memory partition, no `persist:` prefix) on top of the existing
       partition machinery; a "private / agent-only" window chrome badge
-- [ ] Leaves **nothing on close** (cookies/storage/cache/history discarded); **sensitive-site lockout still
+  - [x] _**The missing `persist:` prefix is the whole feature**: Electron persists a partition to disk if
+        and only if the name starts with it, so "leaves nothing" is enforced by Electron rather than by
+        this app remembering to clean up. Asserted as a property of every name `privatePartitionKey` can
+        produce, not as a spot check on one string._
+  - [x] _**One partition for the whole run, shared by every private window** (Chrome's model): a link
+        opened from one private window into another belongs to the same throwaway identity, and
+        per-window partitions would sign the user out every time they opened a second window. So the
+        discard waits for the LAST private window to close, not the first._
+  - [x] _**Tunnels still apply.** A private tab on a profile whose General binding is Tor or a VPN lands
+        on `tepegoz-private--conn-{id}`, through a provider installed by the binding layer exactly like
+        `setNewTabSessionProvider`. Ignoring the route would have sent private traffic out over the clear
+        path — the precise failure that provider exists to prevent, at its worst in the mode whose entire
+        promise is privacy._
+  - [x] _**Private sessions go through the same attacher plane** as every other browsing session. One
+        that skipped it would have no ad/tracker filtering, no download quarantine and no User-Agent
+        override: a privacy regression inside the privacy feature._
+- [x] Leaves **nothing on close** (cookies/storage/cache/history discarded); **sensitive-site lockout still
       applies**; clearly distinct from Phase 3 multi-profile (this is throwaway, not a named identity)
-- [ ] **The private-mode surface must say what it does not do.** A separate partition discards local
+  - [x] _**Three stores, and the partition only covers one of them.** Cookies/cache/site storage are
+        handled by the in-memory partition. **Browsing history** is a separate SQLite store the tab model
+        writes on every navigation — guarded at the WRITE, because record-then-delete leaves the row on
+        disk in between and a crash in between leaves it there for good. **The session snapshot** is a
+        third store, and the worst of the three: it would have put every private URL into SQLite and then
+        REOPENED those tabs at the next launch, in an ordinary window. Each is asserted separately, from
+        the real database file, after the app has closed._
+  - [x] _**Discarding forgets the session object, not just its contents.** A retained `Session` keeps its
+        in-memory jar alive, so the next private window would resume the previous identity — the one
+        thing a disposable mode may never do._
+  - [x] _**Sensitive-site lockout holds by construction**: `isSensitiveSite` takes a URL and nothing else
+        — no session, no partition, no window — so there is no private-mode input for it to be routed
+        around. Asserted as that property (including its arity), not assumed._
+- [x] **The private-mode surface must say what it does not do.** A separate partition discards local
       state; it does **not** separate identity — the device, GPU, screen, fonts, installed-extension
       signature and network address are unchanged, so a site that fingerprints can link the private
       window to the ordinary one. Every mainstream browser has been criticized for letting its private
       mode imply otherwise; the badge and the new-window copy state the real scope in one sentence.
       Source: [`research/privacy/cross-profile-tracking.md`](../../research/privacy/cross-profile-tracking.md)
       — the same limit applies to named profiles in [Phase 3](phase-3-backend-cloud-extensions.md)
+  - [x] _Built as `PrivateBadge`: a badge in the chrome, and a panel that states the LIMIT before the
+        reassurance — "this does not make you anonymous; your device, screen, fonts and network address
+        are unchanged" — then lists both halves side by side, what is discarded and what is not hidden.
+        The ordering is the point: every mainstream browser earned this criticism by opening with what it
+        discards and leaving the reader to infer the rest. It is a disclosure, not a warning — the mode
+        is useful and the copy does not scold anyone for using it; it just refuses to be read as more
+        than it is. en+tr. The e2e finds the private window BY this badge, so the disclosure rendering is
+        load-bearing for the spec rather than merely present._
 
 ### L5/L8 — Permissions Center
 

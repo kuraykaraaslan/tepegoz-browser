@@ -9,6 +9,7 @@ import { HistoryStore } from '@tepegoz/persistence';
 import { type TabStore } from '@tepegoz/tab-engine';
 import { isWebUrl } from './lib/navigation-url';
 import { handleWindowShortcut } from './keyboard-shortcuts';
+import { openPrivateWindow } from './private-window-opener';
 import { installUnloadPrompt } from './navigation/unload-broker';
 import { applyStoredZoom, handleZoomShortcut } from './site-zoom';
 import { getDb } from './db/database.electron';
@@ -57,6 +58,8 @@ export interface ViewWiringHost {
   emitState(): void;
   /** Close the wired tab (Ctrl+W arrives while the PAGE has focus, so the view answers it). */
   closeTab(id: string): void;
+  /** True in a private window. Read at event time, not captured, so it can never go stale. */
+  readonly isPrivate: boolean;
 }
 
 /** Every event `wireView` subscribes to — kept in sync so `unwireView` can drop exactly these. */
@@ -114,6 +117,7 @@ export function wireView(host: ViewWiringHost, id: string, view: WebContentsView
       closeActiveTab: () => {
         host.closeTab(id);
       },
+      openPrivateWindow,
     };
     if (handleWindowShortcut(host.win, input, targets)) event.preventDefault();
   });
@@ -218,7 +222,7 @@ export function wireView(host: ViewWiringHost, id: string, view: WebContentsView
     const url = wc.getURL();
     // Page-controlled string — cap before persisting so a hostile title can't bloat the DB.
     if (db !== null && isWebUrl(url))
-      HistoryStore.setTitle(db, url, title.slice(0, MAX_TITLE_LENGTH));
+      if (!host.isPrivate) HistoryStore.setTitle(db, url, title.slice(0, MAX_TITLE_LENGTH));
     host.emitState();
   });
   // Electron sends every favicon a page declares; the last is typically the largest/most specific.
@@ -264,6 +268,11 @@ export function wireView(host: ViewWiringHost, id: string, view: WebContentsView
   // Record the visit in browsing history (once per committed top-level navigation). Only http(s);
   // no-op when the DB connector is unavailable. The title is refined later via page-title-updated.
   wc.on('did-navigate', (_e, url) => {
+    // A private window writes NO history. This is the one place a visit becomes a row, so it is the one
+    // place that has to know — and it is a guard on the write rather than a delete on close, because
+    // "record it then remove it later" leaves the row on disk in between, and a crash in between leaves
+    // it there for good.
+    if (host.isPrivate) return;
     const db = getDb();
     if (db !== null && isWebUrl(url)) {
       const title = (wc.getTitle() || url).slice(0, MAX_TITLE_LENGTH);

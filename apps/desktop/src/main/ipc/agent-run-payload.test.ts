@@ -50,7 +50,8 @@ describe('AgentRunInputSchema — the panel/boundary size contract', () => {
 
   it('still bounds the prompt — the cap is derived, not removed', () => {
     const prompt = 'x'.repeat(
-      MAX_USER_PROMPT_CHARS + MAX_ATTACHMENTS * (MAX_ATTACHMENT_CHARS + MAX_ATTACHMENT_LABEL_CHARS) * 2,
+      MAX_USER_PROMPT_CHARS +
+        MAX_ATTACHMENTS * (MAX_ATTACHMENT_CHARS + MAX_ATTACHMENT_LABEL_CHARS) * 2,
     );
 
     expect(AgentRunInputSchema.safeParse({ prompt, groupId: 'g-1' }).success).toBe(false);

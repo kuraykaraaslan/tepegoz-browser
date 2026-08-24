@@ -36,7 +36,30 @@ export class WindowTabsBase {
   /** Debounce handle for persisting the session snapshot (coalesces bursts of state changes). */
   protected persistTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(protected readonly win: BrowserWindow) {}
+  constructor(
+    protected readonly win: BrowserWindow,
+    /**
+     * A private (disposable) window: its tabs live on an in-memory partition and it writes no history.
+     * Fixed at construction — a `WebContents` is bound to its session at creation, so a window cannot
+     * become private, or stop being private, without destroying every tab in it.
+     */
+    readonly isPrivate: boolean = false,
+  ) {}
+
+  /**
+   * The session a new tab in THIS window is born on.
+   *
+   * A private window still honours the profile's network route: the registry asks the binding layer's
+   * installed provider for the matching `tepegoz-private[--conn-{id}]` partition. Ignoring the route
+   * here would send private traffic out over the clear path — the failure `defaultForNewTab` was
+   * written to prevent, and it would be at its worst in the mode whose entire promise is privacy.
+   *
+   * Asked through a provider rather than by importing the binding layer, exactly as `defaultForNewTab`
+   * is: the tab model may not depend on the binding service, which already depends on it.
+   */
+  protected newTabSession(): Session {
+    return this.isPrivate ? BrowsingSessions.private() : BrowsingSessions.defaultForNewTab();
+  }
 
   /** The owning chrome window (for the registry / focused-window resolution). */
   get window(): BrowserWindow {
@@ -171,7 +194,7 @@ export class WindowTabsBase {
         // With no explicit session, the tab is born on the PROFILE-WIDE DEFAULT route rather than
         // always on Direct: a user who set "everything through Tor" and then pressed Ctrl+T would
         // otherwise get a clear-path tab, which is the failure the whole feature exists to prevent.
-        session: opts?.session ?? BrowsingSessions.defaultForNewTab(),
+        session: opts?.session ?? this.newTabSession(),
         // Never throttle timers/rAF on a non-foreground tab. Complements the startup keep-rendering
         // switches (see index.ts): a hidden tab (attached-occluded) the AI drives, and every background
         // tab, must keep running at full rate — not just keep painting. Trade-off accepted (agentic browser).
@@ -282,6 +305,7 @@ export class WindowTabsBase {
     return this.store.toState({
       canGoBack: wc?.navigationHistory.canGoBack() ?? false,
       canGoForward: wc?.navigationHistory.canGoForward() ?? false,
+      isPrivate: this.isPrivate,
     });
   }
 
@@ -320,6 +344,7 @@ export class WindowTabsBase {
         this.emitState();
       },
       closeTab: () => undefined,
+      isPrivate: this.isPrivate,
     };
   }
 

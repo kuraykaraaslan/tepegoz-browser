@@ -348,6 +348,7 @@ export const tr: SettingsStrings = {
     print: 'Sayfayı yazdır',
     savePage: 'Sayfayı kaydet',
     viewSource: 'Sayfa kaynağını görüntüle',
+    newPrivateWindow: 'Yeni bir gizli pencere aç',
     devTools: 'Geliştirici araçlarını aç',
     hardReload: 'Önbelleği yok sayarak yenile',
     closeTab: 'Sekmeyi kapat',

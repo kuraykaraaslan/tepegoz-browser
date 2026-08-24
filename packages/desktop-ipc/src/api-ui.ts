@@ -83,6 +83,8 @@ export interface UiApi {
   /** Import a browser-exported bookmarks file into the local bookmark tree. */
   importBookmarks(input: BookmarkImportInput): Promise<BookmarkImportResult>;
   /** The whole collection as Netscape bookmarks HTML. The renderer saves it; main never writes a file. */
+  /** Open a new private (disposable) window. */
+  openPrivateWindow(): Promise<void>;
   exportBookmarks(): Promise<string>;
   /** Replace one bookmark's tags. Returns the stored (normalized) display forms. */
   setBookmarkTags(id: string, tags: string[]): Promise<string[]>;

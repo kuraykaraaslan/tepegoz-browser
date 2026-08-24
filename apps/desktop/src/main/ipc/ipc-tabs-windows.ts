@@ -392,6 +392,7 @@ export function registerTabsWindowsIpc(): void {
         activeId: null,
         canGoBack: false,
         canGoForward: false,
+        isPrivate: false,
       },
   );
 }

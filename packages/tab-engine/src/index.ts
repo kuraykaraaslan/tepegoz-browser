@@ -20,3 +20,4 @@ export {
 } from './types';
 export * from './task-metrics';
 export * from './connection-binding';
+export * from './private-partition';

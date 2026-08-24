@@ -5,6 +5,8 @@ import {
   affectedByGroupChange,
   bindingOnInvoluntaryGroupExit,
   partitionKeyFor,
+  privatePartitionKey,
+  PRIVATE_PARTITION,
   resolveBinding,
   type GeneralBinding,
   type ResolvedBinding,
@@ -286,6 +288,21 @@ const BindingService = {
         });
       });
       return BrowsingSessions.ensure(partitionKeyFor({ connectionId: general.connectionId }));
+    });
+
+    // The same route, on the private side. A private window on a profile whose General binding is a
+    // VPN or Tor must not fall to the clear path — that is the failure this provider pair exists to
+    // prevent, and private browsing is where it would matter most.
+    BrowsingSessions.setPrivatePartitionProvider(() => {
+      const general = generalBinding();
+      if (general.kind === 'direct') return PRIVATE_PARTITION;
+      void ConnectionPool.ensureUp(general.connectionId).catch((err: unknown) => {
+        Logger.warn('Default-route connection is not available for a private tab', {
+          connectionId: general.connectionId,
+          err: String(err),
+        });
+      });
+      return privatePartitionKey({ connectionId: general.connectionId });
     });
   },
 

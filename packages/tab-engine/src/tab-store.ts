@@ -344,7 +344,7 @@ export class TabStore {
    * Build the renderer-facing state. The nav flags are read from the active tab's view by the caller
    * (Electron) and injected here, keeping the store pure.
    */
-  toState(nav: { canGoBack: boolean; canGoForward: boolean }): TabsState {
+  toState(nav: { canGoBack: boolean; canGoForward: boolean; isPrivate?: boolean }): TabsState {
     const tabs: TabInfo[] = this.records().map((t) => {
       const info: TabInfo = {
         id: t.id,
@@ -376,6 +376,10 @@ export class TabStore {
       activeId: this.activeIdValue,
       canGoBack: nav.canGoBack,
       canGoForward: nav.canGoForward,
+      // Defaults to false and is overridden by the window model, which is the only thing that knows.
+      // The store is Electron-free and per-window privacy is not its concern; carrying the field keeps
+      // `TabsState` one shape rather than two that drift.
+      isPrivate: nav.isPrivate ?? false,
     };
   }
 }

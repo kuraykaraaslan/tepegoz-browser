@@ -66,6 +66,8 @@ export interface TabsState {
   activeId: string | null;
   canGoBack: boolean;
   canGoForward: boolean;
+  /** This window is private (disposable). Drives the chrome badge; fixed for the window's life. */
+  isPrivate: boolean;
 }
 
 // ── Tab tear-off (drag a tab/group out of the strip into a new/another window) ──────────────────────

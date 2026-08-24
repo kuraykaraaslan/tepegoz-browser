@@ -33,6 +33,7 @@ import {
 } from '@tepegoz/desktop-ipc/schemas';
 import NotificationStore from '@tepegoz/notifications';
 import WebPermissionBroker from '../web-permissions/permission-broker';
+import { openPrivateWindow } from '../private-window-opener';
 import { resolveBasicAuth } from '../auth/basic-auth-broker';
 import { resolveCertificateError } from '../auth/certificate-broker';
 import {
@@ -266,6 +267,9 @@ export function registerBrowsingIpc(): void {
     const result = importBookmarksHtmlToStore(db, input);
     if (result.imported > 0 || result.folders > 0) broadcastBookmarksChanged();
     return result;
+  });
+  handle(IpcChannels.windowsOpenPrivate, (): void => {
+    openPrivateWindow();
   });
   handle(IpcChannels.bookmarksExport, (): string => {
     // A local-first browser whose data cannot leave it is not local-first. The import side has existed

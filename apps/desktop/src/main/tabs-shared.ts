@@ -163,6 +163,7 @@ export const EMPTY_TABS_STATE: TabsState = {
   activeId: null,
   canGoBack: false,
   canGoForward: false,
+  isPrivate: false,
 };
 
 export function internalBaseUrl(url: string): string {

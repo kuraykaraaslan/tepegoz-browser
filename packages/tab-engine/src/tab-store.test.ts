@@ -115,6 +115,8 @@ describe('TabStore — records & ordering (existing)', () => {
       activeId: a,
       canGoBack: true,
       canGoForward: false,
+      // Defaults false; only the window model (which knows) sets it.
+      isPrivate: false,
     });
   });
 
