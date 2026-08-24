@@ -332,6 +332,9 @@ export const tr: SettingsStrings = {
     print: 'Sayfayı yazdır',
     savePage: 'Sayfayı kaydet',
     viewSource: 'Sayfa kaynağını görüntüle',
+    devTools: 'Geliştirici araçlarını aç',
+    hardReload: 'Önbelleği yok sayarak yenile',
+    closeTab: 'Sekmeyi kapat',
   },
 
   // --- Site izinleri ---

@@ -2,7 +2,7 @@ import { isWebUrl } from './lib/navigation-url';
 import ActionInterceptorService from './extensions/action-interceptors.electron';
 import { WindowTabsBase } from './tabs-window-base';
 import { closedUrls, internalBaseUrl, internalTitleFor } from './tabs-shared';
-import { unwireView } from './tabs-view-wiring';
+import { unwireView, type ViewWiringHost } from './tabs-view-wiring';
 
 /**
  * Tab-removal and single-tab lifecycle layer of the per-window model, split out of `tabs.ts` (ADR-0010
@@ -10,6 +10,16 @@ import { unwireView } from './tabs-view-wiring';
  * close-to-right variants, opening/duplicating internal-page tabs and the small id/reload queries.
  */
 export class WindowTabsClosing extends WindowTabsBase {
+  /** Hand the real `closeTab` to a wired view, so Ctrl+W closes a tab while the PAGE has focus. */
+  protected override viewWiringHost(): ViewWiringHost {
+    return {
+      ...super.viewWiringHost(),
+      closeTab: (id) => {
+        this.closeTab(id);
+      },
+    };
+  }
+
   closeTab(id: string): void {
     if (!this.store.has(id)) return;
     const url = this.store.get(id)?.url ?? '';

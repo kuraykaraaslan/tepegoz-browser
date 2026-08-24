@@ -9,6 +9,7 @@ import { registerCertificateHandler } from './auth/certificate-broker';
 import { initStores } from './stores.electron';
 import { initHosts, openWindow } from './browser-windows';
 import { initTray, revealAllWindows } from './tray';
+import { installApplicationMenu } from './menus/application-menu';
 import { isQuitting, markQuitting } from './quit-state';
 import { emitSystemPause, emitSystemResume } from './power-lifecycle';
 import PreferenceStore from '@tepegoz/preferences';
@@ -227,6 +228,9 @@ if (!app.requestSingleInstanceLock()) {
       openWindow();
       // The system-tray icon (close-to-tray target) — created once, after the first window exists.
       initTray();
+      // Replaces Electron's DEFAULT menu, which bound Ctrl+Shift+I straight to its own
+      // `toggleDevTools` role and so walked around the sensitive-site gate. See application-menu.ts.
+      installApplicationMenu();
       TaskService.setRunner(runTaskAgent);
       // Let saved-task policy synthesis pre-approve routine write tools (click/type/navigate) on the
       // task's own origin. `destructive`/`financial` tools are deliberately excluded — they still pause

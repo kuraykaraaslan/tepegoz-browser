@@ -39,6 +39,8 @@ import { builtinManifests } from '../../shared/extensions';
 import { handle } from './ipc-helpers';
 import { applyChromeGlass, isMicaSupported } from '../lib/glass';
 import { setLaunchAtLogin } from '../launch-at-login';
+import { refreshTray } from '../tray';
+import { refreshApplicationMenu } from '../menus/application-menu';
 
 /**
  * App info/preferences + public settings + onboarding + MCP/AI-adaptors/extensions + credentials
@@ -129,6 +131,14 @@ export function registerAppIpc(): void {
         if (!w.isDestroyed() && w.getParentWindow() === null) applyChromeGlass(w, next.glassChrome);
       }
     }
+    // Locale changed — the NATIVE surfaces do not re-render themselves. `refreshTray` was written for
+    // exactly this and had never been called by anything (its own comment said "called from the prefs
+    // reconcile"; nothing did), so switching to Turkish left the tray menu in English until restart.
+    // The macOS application menu has the same problem, hence both here.
+    if (validated.locale !== undefined) {
+      refreshTray();
+      refreshApplicationMenu();
+    }
     // Any change may touch a PUBLIC setting (theme/locale/etc.) — push the fresh snapshot to
     // subscribed extensions. The projection ignores private keys, so this never leaks them.
     broadcastPublicSettings();
@@ -146,6 +156,9 @@ export function registerAppIpc(): void {
     adblockHost.init();
     typoHost.init();
     translateHost.init();
+    // A reset can change the locale back to the default, so the native surfaces need it too.
+    refreshTray();
+    refreshApplicationMenu();
     broadcastPublicSettings();
     return next;
   });

@@ -80,6 +80,9 @@ export const tr: AppStrings = {
     // WireGuard profili içe aktarmak için açılan YEREL dosya seçici. Başlığı bizim chrome'umuz olduğu
     // için çevrilir; dosya türü adı "WireGuard" olarak kalır — o bir kelime değil, ürün adıdır.
     wireguardPickerTitle: 'WireGuard profili',
+    // Yalnızca macOS'taki uygulama menüsü (`menus/application-menu.ts`). Windows ve Linux'ta menü
+    // çubuğu hiç yok — pencereler çerçevesiz — bu yüzden gereken tek etiket bu.
+    menuEdit: 'Düzen',
     routeTunneled: '{name} üzerinden yönlendiriliyor',
     routeTunneledInherited: 'Devralınan rota: {name}',
     routeBlocked: 'Engellendi — {name} bağlı değil',

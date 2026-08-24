@@ -1,6 +1,6 @@
 # Phase 2b — Daily-Driver Browser UX (Tabs / PWA / DevTools)
 
-**Status:** 🟡 In progress (DevTools boundary + ADR-0029 + Task-Manager accounting landed 2026-08-19) · **Estimate:** ~3–4 months · **Depends on:** Phase 1a (UI shell)
+**Status:** 🟡 In progress (DevTools boundary + ADR-0029 + Task-Manager accounting landed 2026-08-19; the app-owned application menu closed the Ctrl+Shift+I bypass 2026-08-24) · **Estimate:** ~3–4 months · **Depends on:** Phase 1a (UI shell)
 **Goal:** Make tepegoz a credible everyday browser, not just an agentic shell: advanced tab UX,
 PWA support, and a full developer-tools surface. **Can run in parallel with Phase 2** (both are
 post-core daily-driver tracks). Classic browser-UX features only — agent-adjacent privacy/credential
@@ -24,8 +24,32 @@ work lives in Phase 2; agent orchestration (multi-tab parallelism) stays in Phas
   place DevTools opens. It reuses the **same** sensitive-site list the kernel locks automation out of.
   This also closed something already shipping: "Inspect element" had been opening DevTools on any page,
   including a bank. A committed test asserts no `devtools_*` tool exists in the Capability Plane.
-  **Not done:** the menu entry, the F12 / Ctrl+Shift+I accelerator, device emulation, and the
-  `disableDebugger` reconciliation.
+  **Not done:** device emulation and the `disableDebugger` reconciliation.
+  - **Correction (2026-08-24) — two claims above were false, and the second was a live hole.** This
+    entry used to end "**Not done:** the menu entry, the F12 / **Ctrl+Shift+I accelerator**, …", and
+    `openDevToolsActive` described itself as "the single place DevTools is opened, so the sensitive-site
+    gate cannot be routed around by a new caller". Neither held. **Ctrl+Shift+I was not "not done" — it
+    was live, and it was not ours.** Electron installs a DEFAULT application menu when an app never
+    calls `Menu.setApplicationMenu`, and this app never did; measured in the running app,
+    `Menu.getApplicationMenu()` returned a menu binding `Toggle Developer Tools=Ctrl+Shift+I` to
+    Electron's own role, which acts on the focused webContents and consults nothing. So the one keyboard
+    shortcut every developer types by reflex opened a live console on a banking page, while
+    `TabManager.toggleDevTools` — the gated path this bullet is about — had **zero callers**. The gate
+    was real, unreachable, and stepped around. Writing "not done" for a key that was already bound is
+    the failure mode worth naming: the roadmap was tracking OUR code and the platform had supplied a
+    binding underneath it. **Fixed:** [menus/application-menu.ts](../../apps/desktop/src/main/menus/application-menu.ts)
+    now sets the menu explicitly — none at all on Windows/Linux, where the frameless windows never drew
+    a menu bar and it existed purely as an invisible second binder, and a minimal editing-roles-only
+    menu on macOS, which genuinely loses ⌘C/⌘V without one. Ctrl+Shift+I is registered in
+    `@tepegoz/shortcuts` and dispatched through `toggleDevToolsGated`, giving the gate its first caller.
+    **Two more of the default menu's roles were wrong for this app** and went with it: the zoom roles
+    bypassed `site-zoom.ts`'s per-origin ladder (two implementations of one key, and which won was
+    chosen by nobody), and `close` closed the WINDOW where a browser closes a tab — Ctrl+W now closes
+    the tab. Locked by [e2e/application-menu.spec.ts](../../e2e/application-menu.spec.ts), which asks the
+    LAUNCHED app what its menu is, because the defect was the absence of a call and Electron supplies
+    the default silently — no unit test can see that. It earned its keep immediately: run against the
+    pre-fix build it failed on exactly this assertion. 13 unit tests cover the gate's own verdicts
+    (every sensitive category refuses and does not open anyway; an ordinary page toggles).
 - **Task-Manager accounting** — [task-metrics.ts](../../packages/tab-engine/src/task-metrics.ts) maps
   Electron's per-PROCESS metrics onto TABS honestly: Chromium groups same-site tabs into one renderer, so
   shared rows are flagged and report the process total as such rather than an invented per-tab share, and

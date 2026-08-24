@@ -48,7 +48,11 @@ export interface ShortcutSpec {
 export const SHORTCUTS = [
   { id: 'newTab', key: 't', ctrlOrCmd: true, scope: 'renderer' },
   { id: 'reopenClosedTab', key: 't', ctrlOrCmd: true, shift: true, scope: 'renderer' },
-  { id: 'reload', key: 'r', ctrlOrCmd: true, scope: 'renderer' },
+  // `main`, not `renderer`. It was renderer-scope and therefore only fired while the CHROME had
+  // focus; while a page had focus — which is most of a browser's life — the key was answered by
+  // ELECTRON'S DEFAULT MENU, not by this app. That menu is gone (see `menus/application-menu.ts`),
+  // so reload has to be ours or it is nobody's.
+  { id: 'reload', key: 'r', ctrlOrCmd: true, scope: 'main' },
   { id: 'settings', key: ',', ctrlOrCmd: true, scope: 'renderer' },
   { id: 'commandPalette', key: 'k', ctrlOrCmd: true, scope: 'renderer' },
   { id: 'find', key: 'f', ctrlOrCmd: true, scope: 'main' },
@@ -64,6 +68,18 @@ export const SHORTCUTS = [
   { id: 'print', key: 'p', ctrlOrCmd: true, scope: 'main' },
   { id: 'savePage', key: 's', ctrlOrCmd: true, scope: 'main' },
   { id: 'viewSource', key: 'u', ctrlOrCmd: true, scope: 'main' },
+  // The four Electron's default menu used to answer, now owned here. Each replaces a binding that
+  // either bypassed one of this app's gates or did the wrong thing for a browser:
+  //  • devTools   — was Electron's `toggleDevTools` role, which never consulted the sensitive-site
+  //                 gate. This is the security fix; see `page-commands.toggleDevToolsGated`.
+  //  • hardReload — Phase 1a deliberately left Ctrl+Shift+R alone so it would not be a plain reload;
+  //                 the default menu had been answering it as Force Reload the whole time.
+  //  • closeTab   — the default menu's `close` role closes the WINDOW. In a browser Ctrl+W closes a
+  //                 TAB, and closing a window full of tabs instead is the kind of mistake a user
+  //                 cannot undo from muscle memory.
+  { id: 'devTools', key: 'i', ctrlOrCmd: true, shift: true, scope: 'main' },
+  { id: 'hardReload', key: 'r', ctrlOrCmd: true, shift: true, scope: 'main' },
+  { id: 'closeTab', key: 'w', ctrlOrCmd: true, scope: 'main' },
 ] as const satisfies readonly ShortcutSpec[];
 
 export type ShortcutId = (typeof SHORTCUTS)[number]['id'];

@@ -303,8 +303,12 @@ export class WindowTabsBase {
   }
 
   /** The collaborators a wired view's handlers reach back into — `bounds` is read lazily so the page
-   *  context menu anchors against the live content-area bounds. */
-  private viewWiringHost(): ViewWiringHost {
+   *  context menu anchors against the live content-area bounds.
+   *
+   *  `closeTab` is a no-op HERE and overridden in `WindowTabsClosing`, which owns closing: this base
+   *  sits below that class in the chain and cannot reference a subclass method. Overriding the factory
+   *  is the type-safe way to say so — a cast of `this` would compile and lie. */
+  protected viewWiringHost(): ViewWiringHost {
     return {
       win: this.win,
       store: this.store,
@@ -315,6 +319,7 @@ export class WindowTabsBase {
       emitState: () => {
         this.emitState();
       },
+      closeTab: () => undefined,
     };
   }
 

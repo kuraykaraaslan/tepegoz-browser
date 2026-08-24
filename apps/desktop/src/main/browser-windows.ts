@@ -78,12 +78,20 @@ export function openWindow(opts?: {
   win.webContents.on('before-input-event', (event, input) => {
     // Zoom (and print/save/view-source) target the active PAGE even when the chrome (omnibox) holds
     // focus, which is why the webContents is resolved here rather than inside the handlers.
-    const pageWc = TabManager.forSenderWindow(win)?.activeWebContents() ?? null;
+    const tabs = TabManager.forSenderWindow(win);
+    const pageWc = tabs?.activeWebContents() ?? null;
     if (handleZoomShortcut(input, pageWc)) {
       event.preventDefault();
       return;
     }
-    if (handleWindowShortcut(win, input, pageWc)) event.preventDefault();
+    const targets = {
+      page: pageWc,
+      closeActiveTab: () => {
+        const activeId = tabs?.getState().activeId ?? null;
+        if (activeId !== null) tabs?.closeTab(activeId);
+      },
+    };
+    if (handleWindowShortcut(win, input, targets)) event.preventDefault();
   });
   // Close-to-tray: the X button hides the window (keeping every tab rendering for the agent) instead of
   // closing/quitting. The pref is read LIVE so toggling needs no reconcile. Skipped when a real quit is

@@ -22,6 +22,8 @@ const commands = vi.hoisted(() => ({
   printPage: vi.fn(),
   savePage: vi.fn(),
   viewSourcePage: vi.fn(),
+  reloadPage: vi.fn(),
+  toggleDevToolsGated: vi.fn(),
 }));
 vi.mock('./page-commands', () => commands);
 
@@ -56,36 +58,63 @@ describe('page-command shortcuts', () => {
 
   for (const [key, command] of cases) {
     it(`Ctrl+${key.toUpperCase()} runs ${command} on the page the key was pressed on`, () => {
-      expect(handleWindowShortcut(win, press(key, { control: true }), page)).toBe(true);
+      expect(handleWindowShortcut(win, press(key, { control: true }), { page })).toBe(true);
       expect(commands[command]).toHaveBeenCalledWith(page);
     });
 
     it(`Cmd+${key.toUpperCase()} does the same, so macOS is not left out`, () => {
-      expect(handleWindowShortcut(win, press(key, { meta: true }), page)).toBe(true);
+      expect(handleWindowShortcut(win, press(key, { meta: true }), { page })).toBe(true);
       expect(commands[command]).toHaveBeenCalledWith(page);
     });
 
     it(`Ctrl+Shift+${key.toUpperCase()} does NOT run ${command} — matching is exact`, () => {
-      expect(handleWindowShortcut(win, press(key, { control: true, shift: true }), page)).toBe(
+      expect(handleWindowShortcut(win, press(key, { control: true, shift: true }), { page })).toBe(
         false,
       );
       expect(commands[command]).not.toHaveBeenCalled();
     });
 
     it(`a bare ${key.toUpperCase()} typed into the page is not a shortcut`, () => {
-      expect(handleWindowShortcut(win, press(key), page)).toBe(false);
+      expect(handleWindowShortcut(win, press(key), { page })).toBe(false);
       expect(commands[command]).not.toHaveBeenCalled();
     });
   }
 
   it('reports NOT handled when there is no page, so the key is left alone rather than swallowed', () => {
-    expect(handleWindowShortcut(win, press('p', { control: true }), null)).toBe(false);
+    expect(handleWindowShortcut(win, press('p', { control: true }), { page: null })).toBe(false);
     expect(commands.printPage).not.toHaveBeenCalled();
   });
 
   it('ignores keyUp — a shortcut fires once, on the way down', () => {
     const up: Input = { ...press('p', { control: true }), type: 'keyUp' };
-    expect(handleWindowShortcut(win, up, page)).toBe(false);
+    expect(handleWindowShortcut(win, up, { page })).toBe(false);
     expect(commands.printPage).not.toHaveBeenCalled();
+  });
+
+  it('Ctrl+W closes the TAB, not the window — the default menu closed the window', () => {
+    const closeActiveTab = vi.fn();
+    expect(handleWindowShortcut(win, press('w', { control: true }), { page, closeActiveTab })).toBe(
+      true,
+    );
+    expect(closeActiveTab).toHaveBeenCalledTimes(1);
+  });
+
+  it('Ctrl+R reloads, and Ctrl+Shift+R reloads hard — two different keys, not one', () => {
+    handleWindowShortcut(win, press('r', { control: true }), { page });
+    expect(commands.reloadPage).toHaveBeenLastCalledWith(page);
+    handleWindowShortcut(win, press('r', { control: true, shift: true }), { page });
+    expect(commands.reloadPage).toHaveBeenLastCalledWith(page, true);
+  });
+
+  /**
+   * The security property. Ctrl+Shift+I must reach the GATED toggle, never Electron's ungated
+   * `toggleDevTools` role — which is what answered this key for as long as the app never set its own
+   * application menu. `page-commands.test.ts` covers the gate's own verdict; this covers the routing.
+   */
+  it('Ctrl+Shift+I routes to the gated DevTools toggle', () => {
+    expect(handleWindowShortcut(win, press('i', { control: true, shift: true }), { page })).toBe(
+      true,
+    );
+    expect(commands.toggleDevToolsGated).toHaveBeenCalledWith(page);
   });
 });

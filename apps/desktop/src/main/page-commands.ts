@@ -1,5 +1,6 @@
 import type { WebContents } from 'electron';
 import { Logger } from '@tepegoz/libs';
+import { mayOpenDevTools, type DevToolsVerdict } from '@tepegoz/security-policy';
 import { isWebUrl } from './lib/navigation-url';
 import DownloadService from './downloads/download-service.electron';
 
@@ -50,4 +51,37 @@ export function viewSourcePage(wc: WebContents | null): void {
   void wc.loadURL(`view-source:${url}`).catch((err: unknown) => {
     Logger.warn('View-source navigation failed', { err: String(err) });
   });
+}
+
+/** Reload this page. `hard` skips the cache (Ctrl+Shift+R). */
+export function reloadPage(wc: WebContents | null, hard = false): void {
+  if (wc === null || wc.isDestroyed()) return;
+  if (hard) wc.reloadIgnoringCache();
+  else wc.reload();
+}
+
+/**
+ * Toggle DevTools on this page, THROUGH the sensitive-site gate.
+ *
+ * `devtools-policy.ts` states the guarantee plainly: "nothing that reaches the chrome can open it on a
+ * bank". That was not true. Electron installs a default application menu when an app never calls
+ * `Menu.setApplicationMenu`, and this app never did — so `Ctrl+Shift+I` was bound to Electron's own
+ * `toggleDevTools` role, which acts on the focused webContents directly and consults nothing. The
+ * app's own gated entry point (`TabManager.toggleDevTools`) meanwhile had **zero callers**: its comment
+ * claimed "Phase 2b menu + F12" and neither existed. The one keyboard shortcut every developer knows
+ * was the one path around the gate.
+ *
+ * The verdict is returned rather than swallowed, for the reason the original gate gives: a shortcut
+ * that silently does nothing reads as a broken browser.
+ */
+export function toggleDevToolsGated(wc: WebContents | null): DevToolsVerdict {
+  if (wc === null || wc.isDestroyed()) return { allowed: false, reason: 'no_page' };
+  const verdict = mayOpenDevTools(wc.getURL());
+  if (!verdict.allowed) {
+    Logger.info('Refused to open DevTools', { reason: verdict.reason });
+    return verdict;
+  }
+  if (wc.isDevToolsOpened()) wc.closeDevTools();
+  else wc.openDevTools();
+  return verdict;
 }

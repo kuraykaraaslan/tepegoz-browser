@@ -3,7 +3,13 @@ import { IpcChannels } from '@tepegoz/desktop-ipc';
 import { pressFromInput, shortcutFor } from '@tepegoz/shortcuts';
 import { exitKioskWindow, toggleFullScreen } from './window';
 import { loadBrowser } from './onboarding.electron';
-import { printPage, savePage, viewSourcePage } from './page-commands';
+import {
+  printPage,
+  reloadPage,
+  savePage,
+  toggleDevToolsGated,
+  viewSourcePage,
+} from './page-commands';
 
 /**
  * App-level keyboard shortcuts handled in the MAIN process, so they work regardless of which webContents
@@ -18,15 +24,27 @@ import { printPage, savePage, viewSourcePage } from './page-commands';
  *     focus when they are pressed. The commands already existed; only the keys were missing, while the
  *     right-click menu listed them as if they worked.
  *
- * The page the three page-commands act on is passed IN, exactly as `handleZoomShortcut` takes its
- * webContents. Resolving it here would mean importing the tab model, and `tabs-view-wiring.ts` imports
- * THIS module — dependency-cruiser reports that as a real cycle, not a style opinion.
+ *   • Ctrl/Cmd+R, Ctrl/Cmd+Shift+R, Ctrl/Cmd+Shift+I, Ctrl/Cmd+W — the four keys ELECTRON'S DEFAULT
+ *     application menu used to answer. That menu is gone (`menus/application-menu.ts`), because one of
+ *     its roles — `toggleDevTools` — was a way around this app's sensitive-site DevTools gate.
+ *
+ * What a shortcut acts ON is passed IN, exactly as `handleZoomShortcut` takes its webContents.
+ * Resolving it here would mean importing the tab model, and `tabs-view-wiring.ts` imports THIS module
+ * — dependency-cruiser reports that as a real cycle, not a style opinion.
  */
+export interface ShortcutTargets {
+  /** The page the key was pressed on. */
+  page: WebContents | null;
+  /** Close the active tab of the window the key arrived on. Absent where there is no tab model. */
+  closeActiveTab?: () => void;
+}
+
 export function handleWindowShortcut(
   win: BrowserWindow,
   input: Input,
-  pageWc: WebContents | null = null,
+  targets: ShortcutTargets = { page: null },
 ): boolean {
+  const pageWc = targets.page;
   if (input.type !== 'keyDown') return false;
 
   // The combinations themselves live in `@tepegoz/shortcuts`, shared with the renderer, so the two
@@ -56,6 +74,24 @@ export function handleWindowShortcut(
     case 'viewSource':
       if (pageWc === null) return false;
       viewSourcePage(pageWc);
+      return true;
+    case 'reload':
+      if (pageWc === null) return false;
+      reloadPage(pageWc);
+      return true;
+    case 'hardReload':
+      if (pageWc === null) return false;
+      reloadPage(pageWc, true);
+      return true;
+    case 'devTools':
+      // Gated. The verdict is dropped here on purpose: the refusal is already logged, and a keypress
+      // has nowhere to render one. Surfacing it in the chrome is owed work, noted in the phase file.
+      if (pageWc === null) return false;
+      toggleDevToolsGated(pageWc);
+      return true;
+    case 'closeTab':
+      if (targets.closeActiveTab === undefined) return false;
+      targets.closeActiveTab();
       return true;
     case 'exitKiosk':
       if (!win.isKiosk()) return false;

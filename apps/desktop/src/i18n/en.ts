@@ -92,6 +92,9 @@ export const en = {
     // The NATIVE file picker for importing a WireGuard profile. Its own title is chrome we own and is
     // translated; the file-type name stays "WireGuard" because that is the product's name, not a word.
     wireguardPickerTitle: 'WireGuard profile',
+    // The macOS-only application menu (`menus/application-menu.ts`). Windows and Linux have no menu
+    // bar at all here — the windows are frameless — so this is the only label it needs.
+    menuEdit: 'Edit',
     routeTunneled: 'Routed through {name}',
     routeTunneledInherited: 'Inherited route: {name}',
     routeBlocked: 'Blocked — {name} is not connected',

@@ -54,6 +54,8 @@ export interface ViewWiringHost {
   ): void;
   /** Re-emit the window's TabsState after a handler mutates the store. */
   emitState(): void;
+  /** Close the wired tab (Ctrl+W arrives while the PAGE has focus, so the view answers it). */
+  closeTab(id: string): void;
 }
 
 /** Every event `wireView` subscribes to — kept in sync so `unwireView` can drop exactly these. */
@@ -100,8 +102,14 @@ export function wireView(host: ViewWiringHost, id: string, view: WebContentsView
       return;
     }
     // `wc` is the page the key was actually pressed on — a more exact answer than "the window's
-    // active tab", and the one the user means.
-    if (handleWindowShortcut(host.win, input, wc)) event.preventDefault();
+    // active tab", and the one the user means. Ctrl+W closes THAT tab for the same reason.
+    const targets = {
+      page: wc,
+      closeActiveTab: () => {
+        host.closeTab(id);
+      },
+    };
+    if (handleWindowShortcut(host.win, input, targets)) event.preventDefault();
   });
 
   // Browsed pages are untrusted. Every path that creates a new browsing context (window.open,

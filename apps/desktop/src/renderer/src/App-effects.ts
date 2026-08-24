@@ -245,8 +245,9 @@ export function useAppEffects(params: AppEffectsParams): void {
       } else if (id === 'newTab') {
         extSurfaces.closeSurface();
         window.tepegoz.createTab();
-      } else if (id === 'reload') {
-        window.tepegoz.tabReload();
+        // `reload` used to be handled here. It moved to `main` scope: renderer-scope meant it only
+        // fired while the CHROME had focus, and while a page had focus the key was being answered by
+        // Electron's default application menu rather than by this app at all.
       } else if (id === 'settings') {
         extSurfaces.closeSurface();
         window.tepegoz.navigateTab(INTERNAL_SETTINGS_URL); // opens/focuses the Settings tab
