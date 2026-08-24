@@ -33,19 +33,19 @@ its operator, Phase 5)`
 
 ## Top threats → mitigations
 
-| Threat                                   | Mitigation (where)                                                                                                |
-| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Prompt injection from page/email content | Taint tracking + tainted→state-changing forces HITL; Content Sanitizer; data/instruction separation (ADR-0006)    |
-| Excessive agency (delete/send/pay)       | Policy Kernel danger-class + HITL + Windows Hello; sensitive categories off until user-granted; spend bounded by mandate (ADR-0039) |
-| Credential/key theft                     | Keys only in main via `safeStorage`; OAuth tokens never exposed to the agent; never bundled/logged (redaction)    |
-| Data exfiltration                        | Egress Firewall (Base64/high-entropy/cross-origin PII); CSP; deny-by-default navigation                           |
-| Malicious 3rd-party MCP/skill            | CapabilitySandbox (separate process, least-privilege, `file://` off); signature + scope-review before marketplace |
-| Renderer compromise                      | contextIsolation+sandbox+nodeIntegration:false+webSecurity:true; Electron fuses; typed IPC + sender allow-list    |
-| Tampered update                          | Code-signed + signature-verified updates over HTTPS; anti-rollback (Phase 0 packaging)                            |
-| Inbound MCP abuse                        | Bearer auth + rate-limit + schema validation + same policy gate                                                   |
-| Local DB exposure                        | userData ACLs; field encryption for sensitive data; synthetic test fixtures only                                  |
-| Silent identity disclosure to a site | Client-certificate chooser: `select-client-certificate` is answered with `preventDefault()` and nothing is sent without an explicit user choice (`main/auth/client-certificate-broker.ts`) |
-| Platform default the app never claimed | Ownership asserted against the RUNNING app, not the source: `e2e/application-menu.spec.ts` (see below) |
+| Threat                                   | Mitigation (where)                                                                                                                                                                         |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Prompt injection from page/email content | Taint tracking + tainted→state-changing forces HITL; Content Sanitizer; data/instruction separation (ADR-0006)                                                                             |
+| Excessive agency (delete/send/pay)       | Policy Kernel danger-class + HITL + Windows Hello; sensitive categories off until user-granted; spend bounded by mandate (ADR-0039)                                                        |
+| Credential/key theft                     | Keys only in main via `safeStorage`; OAuth tokens never exposed to the agent; never bundled/logged (redaction)                                                                             |
+| Data exfiltration                        | Egress Firewall (Base64/high-entropy/cross-origin PII); CSP; deny-by-default navigation                                                                                                    |
+| Malicious 3rd-party MCP/skill            | CapabilitySandbox (separate process, least-privilege, `file://` off); signature + scope-review before marketplace                                                                          |
+| Renderer compromise                      | contextIsolation+sandbox+nodeIntegration:false+webSecurity:true; Electron fuses; typed IPC + sender allow-list                                                                             |
+| Tampered update                          | Code-signed + signature-verified updates over HTTPS; anti-rollback (Phase 0 packaging)                                                                                                     |
+| Inbound MCP abuse                        | Bearer auth + rate-limit + schema validation + same policy gate                                                                                                                            |
+| Local DB exposure                        | userData ACLs; field encryption for sensitive data; synthetic test fixtures only                                                                                                           |
+| Silent identity disclosure to a site     | Client-certificate chooser: `select-client-certificate` is answered with `preventDefault()` and nothing is sent without an explicit user choice (`main/auth/client-certificate-broker.ts`) |
+| Platform default the app never claimed   | Ownership asserted against the RUNNING app, not the source: `e2e/application-menu.spec.ts` (see below)                                                                                     |
 
 ### Platform defaults — a threat class, not an oversight
 
@@ -76,16 +76,16 @@ was observed in the launched app, from a real page on a `http://127.0.0.1` origi
 every API was genuinely eligible to be asked for), and each is now locked by
 [`e2e/platform-defaults.spec.ts`](../e2e/platform-defaults.spec.ts).
 
-| Surface | Observed | Why it holds |
-| --- | --- | --- |
-| `getUserMedia` (camera + mic) | `NotAllowedError` | Deny-by-default permission handler |
-| `getDisplayMedia` (screen) | `NotAllowedError` | Deny-by-default permission handler |
-| `geolocation` | `PERMISSION_DENIED` | Deny-by-default permission handler |
-| `idle-detection` | `denied` | Deny-by-default permission handler |
-| `Notification.permission` | `denied` | Brokered per-site; the default state is denied |
-| WebUSB / Bluetooth / Serial | `NotFoundError` | No device-selection handler is installed, so no device is ever chosen |
-| WebHID | resolves with an **empty array** | Same, but note the shape: `requestDevice` RESOLVES rather than rejecting when nothing is selected. "Resolved" is not a grant, and a test that only checked for resolution would have read it as one |
-| `require` / `process` / `module` in a page | `undefined` | contextIsolation + `nodeIntegration:false` — the renderer-is-untrusted claim, checked rather than asserted |
+| Surface                                    | Observed                         | Why it holds                                                                                                                                                                                        |
+| ------------------------------------------ | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `getUserMedia` (camera + mic)              | `NotAllowedError`                | Deny-by-default permission handler                                                                                                                                                                  |
+| `getDisplayMedia` (screen)                 | `NotAllowedError`                | Deny-by-default permission handler                                                                                                                                                                  |
+| `geolocation`                              | `PERMISSION_DENIED`              | Deny-by-default permission handler                                                                                                                                                                  |
+| `idle-detection`                           | `denied`                         | Deny-by-default permission handler                                                                                                                                                                  |
+| `Notification.permission`                  | `denied`                         | Brokered per-site; the default state is denied                                                                                                                                                      |
+| WebUSB / Bluetooth / Serial                | `NotFoundError`                  | No device-selection handler is installed, so no device is ever chosen                                                                                                                               |
+| WebHID                                     | resolves with an **empty array** | Same, but note the shape: `requestDevice` RESOLVES rather than rejecting when nothing is selected. "Resolved" is not a grant, and a test that only checked for resolution would have read it as one |
+| `require` / `process` / `module` in a page | `undefined`                      | contextIsolation + `nodeIntegration:false` — the renderer-is-untrusted claim, checked rather than asserted                                                                                          |
 
 The app's own half is locked separately by `apps/desktop/src/main/security.test.ts`, which enumerates
 Electron's entire permission union and asserts everything outside the three brokered capabilities
@@ -93,16 +93,36 @@ Electron's entire permission union and asserts everything outside the three brok
 ADDED by a future Electron is denied by the test's own construction, and a capability quietly added to
 `permissionCapability` fails it. That handler had **no test at all** before this sweep.
 
+**A third instance of the class, found after that sweep (2026-08-24): `beforeunload`.** The sweep asked
+what a page can _reach_; this one is what a page can _withhold_. With no `will-prevent-unload` listener
+Electron does **not** fall back to Chromium's "Leave site?" dialog the way a browser does — it cancels
+the navigation outright, with no dialog, no error and no way for the user to override it. Measured at
+`listenersBefore: 0`, event `fired: 1`, `ERR_ABORTED`, URL unchanged. So any page could pin a user to
+itself indefinitely by registering a `beforeunload` handler, and the user's only visible symptom was a
+browser that appeared to have frozen. The mirror half was worse in the other direction:
+`webContents.close()` does not fire `beforeunload` **at all** unless passed `waitForBeforeUnload`, so
+Ctrl+W discarded unsaved work with the page's own warning unrun. Both are closed by
+[`main/navigation/unload-broker.ts`](../apps/desktop/src/main/navigation/unload-broker.ts) and locked by
+[`e2e/beforeunload.spec.ts`](../e2e/beforeunload.spec.ts). Two properties are load-bearing rather than
+cosmetic: **"stay" is both the default and the cancel**, so no stray Enter or Escape discards the user's
+typing; and **a page cannot re-prompt its way to a captive tab** — once the user answers "leave", the
+same page is not asked again for a short grace window, so a redirect chain or a re-entrant handler
+cannot keep asking until the user gives up.
+
+The pattern across all three finds is the same and is worth naming once more: **a claim in our own docs
+about a platform default is not evidence.** `phase-s3` stated that a tab the agent never touched "keeps
+Chromium's normal 'leave site?' prompt untouched"; the scoping half was right, the default it assumed
+did not exist, and nothing in the repo could have contradicted it short of launching the app.
+
 **One open question, stated rather than resolved.** The File System Access API
 (`showOpenFilePicker` / `showDirectoryPicker`) is present in browsed pages, and calling it does not
-reject — Chromium opens the native file picker *before* requesting the `fileSystem` permission. The
+reject — Chromium opens the native file picker _before_ requesting the `fileSystem` permission. The
 half that is ours is covered: `fileSystem` is in Electron's permission union and our handler refuses it,
 which `security.test.ts` asserts. The half that is not could **not be measured in this harness** — it
 needs a file chosen out of an OS dialog, which no automated run can do. So what a page ends up holding
 after a user picks a file is untested here, and should not be assumed either way. Note also that
 `FileOperationsHost` and the Settings "file operations" switch are scoped to the **agent's** file tools
 and were never claimed to cover this path.
-
 
 ## Network-privacy tunnels (Phase 5)
 

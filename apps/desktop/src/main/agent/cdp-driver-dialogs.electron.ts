@@ -1,6 +1,7 @@
 import type { WebContents } from 'electron';
 import { Logger } from '@tepegoz/libs';
 import type { InterceptedDialog } from '@tepegoz/browser-tools';
+import { suppressUnloadPrompt } from '../navigation/unload-broker';
 
 /**
  * S3 PR4 — JS-dialog + `beforeunload` interception, so a `window.confirm`/`alert`/`prompt` or an
@@ -76,6 +77,10 @@ export function attachDialogInterceptor(wc: WebContents): void {
     push(tab, { kind: 'dialog', message, ts: Date.now() });
   });
 
+  // Tell the browser's own unload broker to stand down on this tab. Since the user-facing prompt landed
+  // (`main/navigation/unload-broker.ts`), the two would otherwise both answer the same event: this one
+  // silently, and that one with a modal a running agent has nobody to show it to.
+  suppressUnloadPrompt(wc);
   wc.on('will-prevent-unload', (event) => {
     event.preventDefault();
     push(tab, { kind: 'beforeunload', message: '', ts: Date.now() });

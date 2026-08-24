@@ -3,6 +3,7 @@ import ActionInterceptorService from './extensions/action-interceptors.electron'
 import { WindowTabsBase } from './tabs-window-base';
 import { closedUrls, internalBaseUrl, internalTitleFor } from './tabs-shared';
 import { unwireView, type ViewWiringHost } from './tabs-view-wiring';
+import { askBeforeClose } from './navigation/unload-broker';
 
 /**
  * Tab-removal and single-tab lifecycle layer of the per-window model, split out of `tabs.ts` (ADR-0010
@@ -26,15 +27,30 @@ export class WindowTabsClosing extends WindowTabsBase {
     if (ActionInterceptorService.shouldBlock('tab:close', { tabId: id, url })) return;
     const view = this.views.get(id);
     if (view !== undefined) {
-      // Remember the URL so Ctrl+Shift+T can reopen it (most-recent first, capped).
-      const closedUrl = view.webContents.getURL() || this.store.get(id)?.url || '';
+      // Ask the PAGE first, before anything is torn down: a plain `webContents.close()` never fires
+      // `beforeunload`, so Ctrl+W used to discard unsaved work with the page's own warning unrun. When
+      // this takes the close over, the tab deliberately stays visible until the user answers — the same
+      // thing Chrome does, and the reason the store is not touched above this line.
+      if (
+        askBeforeClose(view.webContents, () => {
+          this.closeTab(id);
+        })
+      )
+        return;
+      // Remember the URL so Ctrl+Shift+T can reopen it (most-recent first, capped). Read from the store
+      // rather than the contents when the retry path got here: by then the contents are already gone.
+      const closedUrl = view.webContents.isDestroyed()
+        ? (this.store.get(id)?.url ?? '')
+        : view.webContents.getURL() || this.store.get(id)?.url || '';
       if (isWebUrl(closedUrl)) {
         closedUrls.push(closedUrl);
         if (closedUrls.length > 25) closedUrls.shift();
       }
       this.win.contentView.removeChildView(view);
-      unwireView(view);
-      view.webContents.close();
+      if (!view.webContents.isDestroyed()) {
+        unwireView(view);
+        view.webContents.close();
+      }
       this.views.delete(id);
     }
     const wasActive = this.store.activeId === id;

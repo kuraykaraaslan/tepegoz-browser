@@ -102,6 +102,13 @@ export const en = {
     pdfSavedTitle: 'Saved as PDF',
     pdfFailedTitle: 'Could not save the PDF',
     pdfFailedBody: 'The page could not be written to that file. Try another folder or file name.',
+    // The page's own `beforeunload` prompt (`main/navigation/unload-broker.ts`). The page's own message
+    // is deliberately NOT shown — Chromium stopped rendering custom text there in 2016 because pages
+    // used it for scareware — so these words are the whole dialog.
+    unloadTitle: 'Leave this site?',
+    unloadDetail: 'Changes you have made may not be saved.',
+    unloadLeave: 'Leave',
+    unloadStay: 'Stay',
     routeTunneled: 'Routed through {name}',
     routeTunneledInherited: 'Inherited route: {name}',
     routeBlocked: 'Blocked — {name} is not connected',

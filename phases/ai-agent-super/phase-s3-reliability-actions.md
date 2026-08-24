@@ -230,8 +230,16 @@ re-snapshotting).
 >   `window.confirm`/`window.alert` override exists anywhere in the codebase (confirmed by search).
 > - **`will-prevent-unload` → `event.preventDefault()`, always**, so the tab is never left on a native OS
 >   prompt no DOM action can dismiss. Scoped to tabs the agent has actually acted on (installed from
->   `ensureAttached`, same gate as the CDP listener) — an ordinary human browsing tab the agent never
->   touched keeps Chromium's normal "leave site?" prompt untouched. The listener persists for the tab's
+>   `ensureAttached`, same gate as the CDP listener) — ~~an ordinary human browsing tab the agent never
+>   touched keeps Chromium's normal "leave site?" prompt untouched~~. **That half is retracted: there was
+>   no prompt to keep.** Measured in the launched app on 2026-08-24
+>   ([`e2e/beforeunload.spec.ts`](../../e2e/beforeunload.spec.ts)) — an untouched tab carried **zero**
+>   `will-prevent-unload` listeners, and Electron does not fall back to Chromium's dialog when an app
+>   installs none; it cancels the navigation outright and tells nobody. This paragraph read the scoping
+>   correctly (the agent's listener does not touch other tabs) and then assumed a browser default that
+>   Electron does not have. The user-facing prompt now exists as
+>   [`main/navigation/unload-broker.ts`](../../apps/desktop/src/main/navigation/unload-broker.ts), and
+>   the agent calls its `suppressUnloadPrompt` to keep exactly the scoping this line intended. The listener persists for the tab's
 >   whole life once first wired (same lifetime as the debugger attach and the network recorder), so a human
 >   who later takes over an agent-touched tab in the SAME window session would also have `beforeunload`
 >   suppressed on it — an accepted, consistent-with-existing-precedent tradeoff, not a new risk class.

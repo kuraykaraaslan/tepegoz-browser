@@ -42,6 +42,13 @@ const HOSTS = [
   'VariableDeclarator[id.typeAnnotation.typeAnnotation.typeName.name=/Options$/]',
   'VariableDeclarator[id.typeAnnotation.typeAnnotation.typeName.right.name=/Options$/]',
   'VariableDeclarator[id.typeAnnotation.typeAnnotation.elementType.typeName.name=/Options$/]',
+  // …and the same local with NO type annotation, which the three selectors above cannot see. Found by
+  // writing exactly that shape in `main/navigation/unload-broker.ts` and watching the gate stay silent:
+  // hoisting a message box's options into a plain `const options = { … }` walked straight out of every
+  // anchor. Anchored on `buttons:` because a button LIST is the message-box shape and nothing else in
+  // this repo has one — the two `buttons: 0 | 1` in `@tepegoz/human-input` are CDP mouse-state numbers,
+  // which the `type(string)` leaf filter excludes anyway.
+  "ObjectExpression:has(> Property[key.name='buttons'])",
 ];
 
 export const NATIVE_I18N_MESSAGE =

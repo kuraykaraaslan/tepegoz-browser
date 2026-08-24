@@ -9,6 +9,7 @@ import { HistoryStore } from '@tepegoz/persistence';
 import { type TabStore } from '@tepegoz/tab-engine';
 import { isWebUrl } from './lib/navigation-url';
 import { handleWindowShortcut } from './keyboard-shortcuts';
+import { installUnloadPrompt } from './navigation/unload-broker';
 import { applyStoredZoom, handleZoomShortcut } from './site-zoom';
 import { getDb } from './db/database.electron';
 import ActionInterceptorService from './extensions/action-interceptors.electron';
@@ -86,6 +87,11 @@ export function unwireView(view: WebContentsView): void {
 
 export function wireView(host: ViewWiringHost, id: string, view: WebContentsView): void {
   const wc = view.webContents;
+
+  // The page's own "unsaved changes" prompt. Installed here but NOT listed in `WIRED_EVENTS`: it is
+  // idempotent and outlives `unwireView`, because whether a page has unsaved work does not change when
+  // the tab is dragged into another window.
+  installUnloadPrompt(wc);
 
   // Track discrete user input so the popup blocker can tell a user-clicked new-tab link (which must
   // open) from an unsolicited auto-popup (which is blocked). See the window-open handler below.

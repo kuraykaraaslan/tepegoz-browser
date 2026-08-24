@@ -78,6 +78,15 @@ describe('native-surface i18n gate', () => {
       'an OS notification constructed directly',
       `new Notification({ title: 'Task done', body: 'Finished' });`,
     ],
+    [
+      // Found by writing this shape in `main/navigation/unload-broker.ts` and watching the gate stay
+      // silent: an options local with NO type annotation is invisible to the three typed-local
+      // selectors, and its literals are not descendants of the `dialog.` call either. A `buttons:`
+      // list is the message-box shape, so the object itself is now an anchor.
+      'a message box whose options are hoisted into an UNTYPED local',
+      `const options = { buttons: ['Leave', 'Stay'], title: 'Leave this site?' };
+       dialog.showMessageBoxSync(win, options);`,
+    ],
   ];
 
   for (const [name, code] of caught) {
@@ -111,6 +120,13 @@ describe('native-surface i18n gate', () => {
       'NotificationHost.push({ body: prompt.slice(0, 140) });',
     ],
     ['a non-text numeric option', `const opts: MessageBoxOptions = { defaultId: 0, cancelId: 2 };`],
+    [
+      // The new `buttons:` anchor must not reach CDP mouse state, which is what `buttons` means in
+      // `@tepegoz/human-input`. It does not, for two independent reasons — the value is numeric and
+      // there is no text key — and both are asserted so a later loosening of either shows up here.
+      'a CDP mouse-state `buttons` field, which is not a button LIST',
+      `await this.send('Input.dispatchMouseEvent', { type: 'mousePressed', buttons: 1 });`,
+    ],
     [
       'a title that is not on a native surface at all (a zod schema, an LLM tool definition)',
       `const schema = { title: 'The page URL', description: 'Where to navigate' };`,

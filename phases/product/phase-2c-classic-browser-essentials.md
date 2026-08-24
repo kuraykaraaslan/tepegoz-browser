@@ -283,8 +283,53 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         choice is not journaled. Sending a client certificate is an identity disclosure and arguably
         belongs in the Event Journal alongside the certificate-error decision (which has the same gap,
         recorded above).
-- [ ] **`beforeunload` confirmation** — honor the page's unload prompt (leave/stay) via a localized dialog;
+- [x] **`beforeunload` confirmation** — honor the page's unload prompt (leave/stay) via a localized dialog;
       agent-driven navigations record the prompt but never auto-dismiss a real data-loss warning
+      — _**this was not a missing feature, it was an inverted one.** Measured before anything was written
+      ([`e2e/beforeunload.spec.ts`](../../e2e/beforeunload.spec.ts)): with no `will-prevent-unload`
+      listener Electron does **not** fall back to Chromium's "Leave site?" dialog the way a browser does.
+      It cancels the navigation outright — `listenersBefore: 0`, event `fired: 1`, `ERR_ABORTED`, URL
+      unchanged. A page with a dirty form did not warn the user; it silently refused to go anywhere,
+      forever, and the only symptom was a browser that looked frozen. Any page could pin a user to
+      itself by registering a handler. **`phase-s3` had asserted the opposite** — that a tab the agent
+      never touched "keeps Chromium's normal 'leave site?' prompt untouched" — and that half is now
+      retracted in place: the scoping was right, the platform default it assumed did not exist, and no
+      linter, type checker or unit test could ever have said so, because all three read the code that IS
+      there. Same class as the DevTools accelerator and the client certificate; third entry in
+      [`docs/threat-model.md`](../../docs/threat-model.md) §Platform defaults._
+      — _**The close path had the mirror defect and it is the more expensive one.**
+      `webContents.close()` does not fire `beforeunload` **at all** unless passed `waitForBeforeUnload`
+      (Electron's own typings), so Ctrl+W discarded unsaved work with the page's warning unrun. A
+      navigation that silently refuses is recoverable; a tab that silently closes is not. `closeTab` now
+      asks the page **before** any teardown and the tab stays visible until the user answers — what
+      Chrome does, and the reason the store is not touched above that line. One mechanism covers both
+      outcomes: a page with nothing to say is destroyed immediately, a page whose user chose "leave" is
+      destroyed after the prompt, and `destroyed` retries the close in both cases; "stay" produces
+      neither and the tab simply remains._
+      — _Two properties are load-bearing, not cosmetic. **"Stay" is both the `defaultId` and the
+      `cancelId`**, so Enter, Escape and the window close button all keep the page — leaving is the
+      answer that discards the user's typing, and a destructive answer must never be what a stray
+      keypress picks. **A page cannot re-prompt its way to a captive tab**: after a "leave" answer the
+      same page is not asked again for a 5s grace window, so a redirect chain or a re-entrant handler
+      cannot keep asking until the user gives up. The window is refreshed rather than one-shot, so a page
+      that keeps firing only extends its own silence. The page's own message is never shown — Chromium
+      stopped rendering custom `beforeunload` text in 2016 because pages used it for scareware, and
+      Electron hands us none anyway._
+      — _Native and synchronous, unlike the auth/cert brokers' renderer modals, and it has to be:
+      `preventDefault()` must be called before the listener returns, so there is no room for an async IPC
+      round trip. That puts it under the Phase-1 native-i18n gate, which is why en+tr exist. **The agent
+      half of the DoD line holds by construction:** `attachDialogInterceptor` calls the broker's
+      `suppressUnloadPrompt`, so a driven tab is allowed through silently and recorded for the model via
+      `interceptionNote` — the run is never shown a modal nobody is watching, and the human prompt is
+      never auto-dismissed. The dependency points agent → browser, never the reverse._
+      — _21 unit tests + 1 e2e, all mutation-verified: dropping `preventDefault()` from the allow branch
+      turns 2 red, making "leave" the default turns 1 red, dropping `waitForBeforeUnload` turns 1 red,
+      and removing the install call from `wireView` makes the e2e read `listeners: 0` — the exact
+      pre-fix number. **Two of the tests found real defects in the code they were written for:** the
+      grace window read a backwards clock (`Date.now()` steps back over an NTP correction) as "inside the
+      window" and would have silenced a warning the user should have seen; and the allow branch was
+      written as a bare `return`, which in Electron's inverted semantics is a **veto**, not an allow — so
+      the anti-trap window was trapping the user rather than releasing them._
 
 ### L9 — Omnibox command mode
 

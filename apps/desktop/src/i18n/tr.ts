@@ -90,6 +90,13 @@ export const tr: AppStrings = {
     pdfSavedTitle: 'PDF olarak kaydedildi',
     pdfFailedTitle: 'PDF kaydedilemedi',
     pdfFailedBody: 'Sayfa bu dosyaya yazılamadı. Başka bir klasör veya dosya adı deneyin.',
+    // Sayfanın kendi `beforeunload` uyarısı (`main/navigation/unload-broker.ts`). Sayfanın kendi mesajı
+    // bilerek gösterilmiyor — Chromium 2016'da özel metni kaldırdı, çünkü sayfalar bunu korkutma amaçlı
+    // kullanıyordu — yani diyaloğun tamamı bu sözler.
+    unloadTitle: 'Bu siteden ayrılınsın mı?',
+    unloadDetail: 'Yaptığınız değişiklikler kaydedilmemiş olabilir.',
+    unloadLeave: 'Ayrıl',
+    unloadStay: 'Kal',
     routeTunneled: '{name} üzerinden yönlendiriliyor',
     routeTunneledInherited: 'Devralınan rota: {name}',
     routeBlocked: 'Engellendi — {name} bağlı değil',
