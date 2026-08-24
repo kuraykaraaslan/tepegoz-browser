@@ -68,6 +68,42 @@ way, because that is the only place the question has an answer. When adding a su
 opinion about — permissions, device access, certificates, menus, window opening, protocol handling —
 the check is not "did we write a handler" but "what happens if we did not".
 
+#### The sweep, and what it measured
+
+Asking that question of the remaining web-platform surfaces found **no further hole** — recorded here
+because "no hole" is worth something only if it is a measurement rather than a belief. Each row below
+was observed in the launched app, from a real page on a `http://127.0.0.1` origin (a secure context, so
+every API was genuinely eligible to be asked for), and each is now locked by
+[`e2e/platform-defaults.spec.ts`](../e2e/platform-defaults.spec.ts).
+
+| Surface | Observed | Why it holds |
+| --- | --- | --- |
+| `getUserMedia` (camera + mic) | `NotAllowedError` | Deny-by-default permission handler |
+| `getDisplayMedia` (screen) | `NotAllowedError` | Deny-by-default permission handler |
+| `geolocation` | `PERMISSION_DENIED` | Deny-by-default permission handler |
+| `idle-detection` | `denied` | Deny-by-default permission handler |
+| `Notification.permission` | `denied` | Brokered per-site; the default state is denied |
+| WebUSB / Bluetooth / Serial | `NotFoundError` | No device-selection handler is installed, so no device is ever chosen |
+| WebHID | resolves with an **empty array** | Same, but note the shape: `requestDevice` RESOLVES rather than rejecting when nothing is selected. "Resolved" is not a grant, and a test that only checked for resolution would have read it as one |
+| `require` / `process` / `module` in a page | `undefined` | contextIsolation + `nodeIntegration:false` — the renderer-is-untrusted claim, checked rather than asserted |
+
+The app's own half is locked separately by `apps/desktop/src/main/security.test.ts`, which enumerates
+Electron's entire permission union and asserts everything outside the three brokered capabilities
+(notifications and the two clipboard permissions) is refused. Written that way on purpose: a permission
+ADDED by a future Electron is denied by the test's own construction, and a capability quietly added to
+`permissionCapability` fails it. That handler had **no test at all** before this sweep.
+
+**One open question, stated rather than resolved.** The File System Access API
+(`showOpenFilePicker` / `showDirectoryPicker`) is present in browsed pages, and calling it does not
+reject — Chromium opens the native file picker *before* requesting the `fileSystem` permission. The
+half that is ours is covered: `fileSystem` is in Electron's permission union and our handler refuses it,
+which `security.test.ts` asserts. The half that is not could **not be measured in this harness** — it
+needs a file chosen out of an OS dialog, which no automated run can do. So what a page ends up holding
+after a user picks a file is untested here, and should not be assumed either way. Note also that
+`FileOperationsHost` and the Settings "file operations" switch are scoped to the **agent's** file tools
+and were never claimed to cover this path.
+
+
 ## Network-privacy tunnels (Phase 5)
 
 A tunnel-bound tab adds a trust boundary the rest of this document does not cover: `browsed page` ⇄

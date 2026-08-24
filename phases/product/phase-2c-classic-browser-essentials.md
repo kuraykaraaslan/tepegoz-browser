@@ -194,6 +194,28 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         read/write through one per-origin prompt/reset path.
   - [x] Slice 5 capability tools: `clipboard_get_text` and `clipboard_create_text` registered as HITL-gated
         Capability Plane tools; write requires an idempotency key and audit remains content-free.
+  - [x] **The deny-by-default floor this UI sits on is now tested, and was not.** `main/security.ts` —
+        the handler deciding whether a browsed page reaches the camera, the microphone, the screen, the
+        user's location or their files — had **no test at all**. `security.test.ts` now enumerates
+        Electron's ENTIRE permission union and asserts everything outside the three brokered
+        capabilities is refused, so a permission added by a future Electron is denied by the test's own
+        construction and a capability quietly added to `permissionCapability` fails it (25 tests;
+        mutation-verified — flipping the default to grant turns 20 red). Paired with
+        [`e2e/platform-defaults.spec.ts`](../../e2e/platform-defaults.spec.ts), which measures what a
+        REAL page actually gets in the launched app: camera/mic/screen/geolocation refused, USB /
+        Bluetooth / Serial refused for want of a device-selection handler, WebHID resolving with an
+        empty array (it RESOLVES rather than rejecting — "resolved" is not a grant, and a looser test
+        would have read it as one), and no `require`/`process`/`module` in a browsed page. The sweep
+        found **no further hole**; it is committed because "no hole" is worth something only as a
+        measurement, not as a belief. See [`docs/threat-model.md`](../../docs/threat-model.md) §Platform
+        defaults for the full table and the class it belongs to.
+  - [ ] **Open, and not resolved either way:** the File System Access API
+        (`showOpenFilePicker`/`showDirectoryPicker`) is present in browsed pages and does not reject —
+        Chromium opens the native picker BEFORE requesting the `fileSystem` permission. Our half is
+        covered (`fileSystem` is refused by the handler, asserted). What a page holds after a user picks
+        a file could not be measured here: it needs a file chosen out of an OS dialog, which no
+        automated run can drive. Belongs in this UI's scope when it is built — file access is a
+        permission of at least the weight of the four this line already names, and it is not among them.
 - [ ] **Per-agent permission matrix** (allowed / requires-approval / denied) rendered as a **read-only view**
       over the Policy Kernel + Capability Plane audit — a UI surface, **not** a new decision engine
 
