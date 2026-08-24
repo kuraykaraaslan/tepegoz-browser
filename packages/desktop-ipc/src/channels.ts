@@ -236,6 +236,9 @@ export const IpcChannels = {
   bookmarksImport: 'bookmarks:import',
   /** The whole collection as Netscape bookmarks HTML — the format every other browser reads. */
   bookmarksExport: 'bookmarks:export',
+  /** Bookmark tags: replace one bookmark's set, and read the whole tag list with counts. */
+  bookmarksSetTags: 'bookmarks:set-tags',
+  bookmarksListTags: 'bookmarks:list-tags',
   bookmarksContextMenu: 'bookmarks:context-menu',
   bookmarksMenuAction: 'bookmarks:menu-action',
   /** Main→renderer: the bookmark tree changed (incl. from a popup window) → refetch. */

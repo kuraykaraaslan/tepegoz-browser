@@ -24,6 +24,7 @@ function renderManager(over: Partial<Parameters<typeof BookmarksManager>[0]> = {
     onNewFolder: vi.fn(),
     onOpen: vi.fn(),
     onContextMenu: vi.fn(),
+    onSetTags: vi.fn().mockResolvedValue([]),
     ...over,
   };
   render(

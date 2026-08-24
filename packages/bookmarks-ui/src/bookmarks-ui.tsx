@@ -26,6 +26,8 @@ export interface BookmarkManagerNode {
   title: string;
   url: string | null;
   favicon?: string | null;
+  /** Free-form labels on a bookmark. Empty for folders and untagged bookmarks. */
+  tags?: readonly string[];
   children: BookmarkManagerNode[];
 }
 
@@ -42,6 +44,9 @@ export interface BookmarksManagerProps {
   onOpen: (url: string) => void;
   /** Pop the native right-click menu for a node. */
   onContextMenu: (id: string, type: BookmarkNodeType) => void;
+  /** Replace one bookmark's tags. Resolves with the STORED forms — the store normalizes, and echoing
+   *  the raw input back would show the user a state that does not exist. */
+  onSetTags: (id: string, tags: string[]) => Promise<string[]>;
   /**
    * Produce the whole collection as Netscape bookmarks HTML — the format every other browser reads.
    *
@@ -81,6 +86,7 @@ export function BookmarksManager({
   onNewFolder,
   onOpen,
   onContextMenu,
+  onSetTags,
   onExport,
 }: Readonly<BookmarksManagerProps>) {
   const t = useT(bookmarksUiDict);
@@ -261,6 +267,7 @@ export function BookmarksManager({
                       onOpen={onOpen}
                       onSelectFolder={setSelectedId}
                       onContextMenu={onContextMenu}
+                      onSetTags={onSetTags}
                     />
                   ))}
                 </ul>
@@ -280,6 +287,7 @@ export function BookmarksManager({
                       onOpen={onOpen}
                       onSelectFolder={setSelectedId}
                       onContextMenu={onContextMenu}
+                      onSetTags={onSetTags}
                     />
                   ))}
                 </ul>

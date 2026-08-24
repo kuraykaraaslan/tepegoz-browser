@@ -257,6 +257,7 @@ export function AppContent({
               }
               onOpen={(url) => window.tepegoz.navigateTab(url)}
               onContextMenu={(id, type) => window.tepegoz.showBookmarkContextMenu(id, type)}
+              onSetTags={(id, tags) => window.tepegoz.setBookmarkTags(id, tags)}
               onExport={() => window.tepegoz.exportBookmarks()}
             />
           </div>

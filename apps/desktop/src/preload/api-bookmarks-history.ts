@@ -40,6 +40,8 @@ export const bookmarksHistoryApi: Pick<
   | 'getBookmarkTree'
   | 'importBookmarks'
   | 'exportBookmarks'
+  | 'setBookmarkTags'
+  | 'listBookmarkTags'
   | 'listClientCertificateChoices'
   | 'forgetClientCertificateChoices'
   | 'createBookmarkFolder'
@@ -79,6 +81,9 @@ export const bookmarksHistoryApi: Pick<
   isBookmarked: (url: string) => invoke<boolean>(IpcChannels.bookmarksIsBookmarked, url),
   getBookmarkTree: () => invoke<BookmarkTreeNode[]>(IpcChannels.bookmarksTree),
   exportBookmarks: () => invoke<string>(IpcChannels.bookmarksExport),
+  setBookmarkTags: (id: string, tags: string[]) =>
+    invoke<string[]>(IpcChannels.bookmarksSetTags, { id, tags }),
+  listBookmarkTags: () => invoke<{ tag: string; count: number }[]>(IpcChannels.bookmarksListTags),
   importBookmarks: (input: BookmarkImportInput) =>
     invoke<BookmarkImportResult>(IpcChannels.bookmarksImport, input),
   createBookmarkFolder: (parentId: string, title: string, index?: number) =>

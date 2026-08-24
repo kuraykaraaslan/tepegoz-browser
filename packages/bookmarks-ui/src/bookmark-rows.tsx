@@ -1,6 +1,7 @@
 import { useCallback, useState, type CSSProperties } from 'react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
+import { TagsRow } from './bookmark-tags-row';
 import { CSS } from '@dnd-kit/utilities';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -149,11 +150,13 @@ export function ItemRow({
   onOpen,
   onSelectFolder,
   onContextMenu,
+  onSetTags,
 }: {
   node: BookmarkManagerNode;
   onOpen: (url: string) => void;
   onSelectFolder: (id: string) => void;
   onContextMenu: (id: string, type: BookmarkNodeType) => void;
+  onSetTags: (id: string, tags: string[]) => Promise<string[]>;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } =
     useSortable({
@@ -203,6 +206,11 @@ export function ItemRow({
           <p className="truncate text-xs text-text-secondary">{node.url}</p>
         )}
       </button>
+      {node.type === 'bookmark' && (
+        <div className="w-48 shrink-0">
+          <TagsRow tags={node.tags ?? []} onSave={(tags) => onSetTags(node.id, tags)} />
+        </div>
+      )}
     </li>
   );
 }

@@ -18,6 +18,7 @@ import {
   BookmarkMoveSchema,
   BookmarkRemoveSchema,
   BookmarkRenameSchema,
+  BookmarkSetTagsSchema,
   BookmarkToggleSchema,
   BookmarkUrlSchema,
   HistoryPageParamsSchema,
@@ -273,6 +274,18 @@ export function registerBrowsingIpc(): void {
     return db === null
       ? serializeBookmarksHtml([])
       : serializeBookmarksHtml(BookmarkTreeStore.getTree(db));
+  });
+  handle(IpcChannels.bookmarksSetTags, (_event, payload): string[] => {
+    const { id, tags } = BookmarkSetTagsSchema.parse(payload);
+    const db = getDb();
+    if (db === null) return [];
+    const stored = BookmarkTreeStore.setTags(db, id, tags);
+    broadcastBookmarksChanged();
+    return stored;
+  });
+  handle(IpcChannels.bookmarksListTags, (): { tag: string; count: number }[] => {
+    const db = getDb();
+    return db === null ? [] : BookmarkTreeStore.listTags(db);
   });
   handle(IpcChannels.bookmarksCreateFolder, (_event, payload): void => {
     const { parentId, title, index } = BookmarkCreateFolderSchema.parse(payload);

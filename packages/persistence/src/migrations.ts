@@ -505,6 +505,32 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 15,
+    up: (db) => {
+      db.exec(`
+        -- Bookmark tags. A junction table, not a comma-joined column on \`bookmark_nodes\`: a joined
+        -- string cannot be indexed, cannot be searched without LIKE matching across tag boundaries
+        -- ("work" finding "homework"), and turns renaming a tag into a string rewrite of every row.
+        --
+        -- Two columns for one tag, on purpose. \`tag\` is what the user typed and what is displayed;
+        -- \`tag_key\` is the case-folded form and is what uniqueness and lookup use, so "Work" and
+        -- "work" are one tag on a bookmark rather than two. Folding in the WRITER rather than with
+        -- SQLite's LOWER() is deliberate — LOWER() is ASCII-only, so it would leave every Turkish
+        -- tag unfolded in a product whose second language is Turkish.
+        --
+        -- ON DELETE CASCADE mirrors what \`bookmark_nodes\` already does for its own children: deleting
+        -- a bookmark must not leave its tags behind to be counted by the tag list forever.
+        CREATE TABLE bookmark_tags (
+          node_id TEXT NOT NULL REFERENCES bookmark_nodes(id) ON DELETE CASCADE,
+          tag     TEXT NOT NULL,
+          tag_key TEXT NOT NULL,
+          PRIMARY KEY (node_id, tag_key)
+        );
+        CREATE INDEX idx_bookmark_tags_key ON bookmark_tags (tag_key);
+      `);
+    },
+  },
 ];
 
 /**

@@ -84,6 +84,10 @@ export interface UiApi {
   importBookmarks(input: BookmarkImportInput): Promise<BookmarkImportResult>;
   /** The whole collection as Netscape bookmarks HTML. The renderer saves it; main never writes a file. */
   exportBookmarks(): Promise<string>;
+  /** Replace one bookmark's tags. Returns the stored (normalized) display forms. */
+  setBookmarkTags(id: string, tags: string[]): Promise<string[]>;
+  /** Every tag in use, with how many bookmarks carry it. */
+  listBookmarkTags(): Promise<{ tag: string; count: number }[]>;
   /** Per-origin client-certificate decisions this run remembers (origins only — never the subject). */
   listClientCertificateChoices(): Promise<ClientCertificateChoice[]>;
   /** Forget them all, so the next request asks again. Nothing already sent is recalled by this. */

@@ -42,6 +42,16 @@ export const BookmarkContextMenuSchema = z.object({
   variant: z.enum(['default', 'folder-item']).optional(),
 });
 
+/**
+ * Tag edits arrive from the untrusted renderer, so both the id and the list are bounded here as well
+ * as normalized in the store. The caps are generous versions of the store's own — this rejects the
+ * absurd, `normalizeTags` decides the exact set.
+ */
+export const BookmarkSetTagsSchema = z.object({
+  id: BookmarkNodeId,
+  tags: z.array(z.string().max(256)).max(64),
+});
+
 export const BookmarkImportSchema = z.object({
   source: z.enum(['chrome', 'edge', 'firefox', 'brave', 'other']),
   format: z.literal('html'),

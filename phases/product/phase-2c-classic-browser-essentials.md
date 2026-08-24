@@ -20,7 +20,12 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       download is tagged and journaled with source domain + task
 - [ ] **Find-in-page**, **print + preview**, built-in **PDF viewer**, **reader mode**, **page translation**,
       and a user-facing **screenshot** (viewport + full-page → CAS blob) all work end-to-end
-- [ ] **Hierarchical bookmarks** (folders/tags) + a searchable **Bookmark Manager** work; migration is additive
+- [x] **Hierarchical bookmarks** (folders/tags) + a searchable **Bookmark Manager** work; migration is additive
+      — _**the first DoD line of this phase to close.** Folders, ordering, cycle guard, cascade delete and
+      root protection (`BookmarkTreeStore`); a searchable manager with drag reorder/reparent, native
+      rename/delete, Netscape-HTML import from Chrome/Edge/Firefox/Brave and export back out; and now
+      tags. Migration v15 is additive — a junction table beside `bookmark_nodes`, nothing rewritten, and
+      a database from before it keeps working with every bookmark simply untagged (asserted)._
 - [ ] **Private / disposable mode** opens an ephemeral (non-persisted) session that leaves nothing on close;
       sensitive-site lockout still holds
 - [ ] **Permissions Center** shows + edits web permissions (camera/mic/location/notification) through the
@@ -149,7 +154,41 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
   - [x] Folder hierarchy + search: `BookmarkTreeStore` (two fixed roots, create/move/remove, explicit
         ordering, cycle guard on reparent, cascade delete, root-protection, `listFlat` projection,
         `search` over url+title). Migration-safe and additive.
-  - [ ] **Tags do not exist** — the store models folders only. The word "tags" in this line is unearned.
+  - [x] **Tags.** ~~Do not exist — the store models folders only.~~ _They exist now, so the word in the
+        line above is earned. Tags sit BESIDE the hierarchy rather than inside it, which is the point of
+        having both: a bookmark lives in exactly one folder and carries any number of tags, so the two
+        answer different questions — "where did I file this" and "what is this about" — instead of
+        competing._
+        — _**A junction table, not a comma-joined column.** A joined string cannot be indexed, cannot be
+        searched without LIKE matching across tag boundaries ("work" finding "homework"), and turns
+        renaming a tag into a string rewrite of every row. `ON DELETE CASCADE` mirrors what
+        `bookmark_nodes` already does for its children, so a deleted bookmark cannot leave tags behind to
+        be counted by the tag list forever (asserted)._
+        — _**Two columns for one tag.** `tag` is what the user typed and is what is displayed; `tag_key`
+        is the case-folded form and is what uniqueness and lookup use. So "Work" and "work" are one tag
+        rather than two, while the label still reads the way its author wrote it — picking only one of
+        those is the single most common complaint about tag systems. First spelling wins, so re-adding a
+        tag you already have cannot silently re-case every existing use of it. Folding happens in the
+        WRITER, not in SQL: SQLite's `LOWER()` is ASCII-only and would leave every Turkish tag unfolded
+        in a product whose second language is Turkish._
+        — _**A measured limit, stated rather than papered over.** Folding uses `toLowerCase()`, which is
+        locale-independent, and the Turkish dotted/dotless I is where that differs from what a Turkish
+        reader expects: `'IŞIK'.toLowerCase()` is `'işik'`, not `'ışık'`, so those two do **not** unify.
+        Measured in node before the code was written. The alternative — `toLocaleLowerCase('tr')` — is
+        worse, because the same tag would then fold differently depending on the UI language and a user
+        switching to English would fork their own tags. A locale-independent rule that is occasionally
+        surprising beats a locale-dependent one that is silently inconsistent. Pinned by a test so it
+        stays a decision rather than an accident; every other Turkish letter (ş ğ ü ö ç) does fold._
+        — _**Search includes tags**, because a user who took the trouble to tag a page expects the tag to
+        find it — a search that ignored them would make tagging a filing habit with no payoff. `DISTINCT`,
+        so a bookmark matching on its title and two of its tags is still one result. The tag input splits
+        on commas and **not** on whitespace: "machine learning" is one tag, and a browser that quietly
+        made it two would be wrong about exactly the thing its user most wanted to write. Editing is the
+        whole comma-separated set as text, which is what makes REMOVING a tag the same gesture as adding
+        one. Folders refuse tags — two grouping mechanisms on one node is how a bookmark manager becomes
+        unexplainable._
+        — _24 tests (17 store/normalization + 7 UI), mutation-verified: dropping the fold turns 7 red,
+        removing tags from search 2, removing `DISTINCT` 1, letting folders be tagged 1._
 - [ ] **Bookmark Manager UI** (searchable tree; create/rename/move/delete folders; import/export standard
       HTML bookmarks file)
   - [x] `@tepegoz/bookmarks-ui` + `tepegoz://bookmarks`: searchable tree, new-folder, drag reorder/reparent
@@ -185,7 +224,9 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         produce ill-formed UTF-16 that reached SQLite and the UI unnoticed. 15 tests, mutation-verified
         (removing the guard turns 3 red, the node cap 2, the title cap 1) — the importer had exactly one
         test before this._
-  - [ ] Profile auto-detect (marked optional in this line) does not exist.
+  - [ ] Profile auto-detect does not exist. Explicitly **marked optional** in the task line above and
+        **not part of the DoD line**, which asks for folders/tags + a searchable manager + additive
+        migration — all three of which are now done. Left open honestly rather than ticked.
 
 ### L8/L9 — Private / disposable / guest mode
 

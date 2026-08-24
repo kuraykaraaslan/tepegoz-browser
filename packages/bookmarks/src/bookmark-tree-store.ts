@@ -1,4 +1,5 @@
 import type { Db } from '@tepegoz/persistence';
+import { normalizeTags } from './bookmark-tags';
 
 // This module is reachable from the sandboxed RENDERER (it re-exports `isBookmarkable`), so it must not
 // statically import any `node:*` builtin — that would pull Node-only code into the renderer bundle and
@@ -28,6 +29,15 @@ export interface BookmarkNode {
   position: number;
   createdAt: number;
   updatedAt: number;
+  /**
+   * Free-form labels on a bookmark, beside the folder it lives in. Always present, empty for folders
+   * and for untagged bookmarks, so a caller never has to distinguish "no tags" from "not loaded".
+   *
+   * Only populated by the tree reads (`getTree`/`getSubtree`), which fetch every tag in one query
+   * rather than one per node — a manager rendering a few thousand bookmarks must not issue a few
+   * thousand statements.
+   */
+  tags: string[];
 }
 
 /** A node with its (ordered) children materialized — the shape the bar and manager render. */
@@ -68,6 +78,7 @@ function toNode(row: NodeRow): BookmarkNode {
     position: row.position,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    tags: [],
   };
 }
 
@@ -234,8 +245,12 @@ export class BookmarkTreeStore {
   static getSubtree(db: Db, rootId: string): BookmarkTreeNode | null {
     const node = BookmarkTreeStore.getNode(db, rootId);
     if (node === null) return null;
+    // One query for every tag in the store, then a lookup per node. The alternative — a query per
+    // node — is the shape that makes a bookmark manager slow on exactly the libraries worth managing.
+    const tags = BookmarkTreeStore.tagsByNode(db);
     const build = (n: BookmarkNode): BookmarkTreeNode => ({
       ...n,
+      tags: tags.get(n.id) ?? [],
       children: BookmarkTreeStore.childRows(db, n.id).map((r) => build(toNode(r))),
     });
     return build(node);
@@ -297,14 +312,114 @@ export class BookmarkTreeStore {
       .all(limit) as BookmarkEntry[];
   }
 
+  /**
+   * Search url, title AND tags. Tags are included because a user who took the trouble to tag a page
+   * expects the tag to find it — a search that ignored them would make tagging a filing habit with no
+   * payoff.
+   *
+   * Tag matching is on the folded key against the folded query, so searching "work" finds a bookmark
+   * tagged "Work". DISTINCT because a bookmark matching on both its title and two of its tags is still
+   * one result.
+   */
   static search(db: Db, query: string, limit = 500): BookmarkEntry[] {
     const like = `%${query}%`;
+    const tagLike = `%${query.normalize('NFC').replace(/\s+/g, ' ').trim().toLowerCase()}%`;
     return db
       .prepare(
-        `SELECT url, title, favicon, updated_at AS ts FROM bookmark_nodes
-         WHERE node_type = 'bookmark' AND url IS NOT NULL AND (url LIKE ? OR title LIKE ?)
-         ORDER BY updated_at DESC, rowid DESC LIMIT ?`,
+        `SELECT DISTINCT n.url AS url, n.title AS title, n.favicon AS favicon, n.updated_at AS ts
+         FROM bookmark_nodes n LEFT JOIN bookmark_tags t ON t.node_id = n.id
+         WHERE n.node_type = 'bookmark' AND n.url IS NOT NULL
+           AND (n.url LIKE ? OR n.title LIKE ? OR t.tag_key LIKE ?)
+         ORDER BY n.updated_at DESC, n.rowid DESC LIMIT ?`,
       )
-      .all(like, like, limit) as BookmarkEntry[];
+      .all(like, like, tagLike, limit) as BookmarkEntry[];
+  }
+
+  // ── Tags ──────────────────────────────────────────────────────────────────────────────────────
+  //
+  // Tags sit beside the folder hierarchy rather than inside it, which is the point of having both: a
+  // bookmark lives in exactly one folder and carries any number of tags, so the two answer different
+  // questions ("where did I file this" vs "what is this about") instead of competing.
+
+  /**
+   * Replace a bookmark's tags with `tags`. Returns the stored display forms, in order.
+   *
+   * Replace rather than merge: the UI edits a whole tag line, and a merge-only API gives no way to
+   * REMOVE a tag, which is the operation people reach for the moment they mistype one.
+   *
+   * Folders are refused. A tag on a folder would be a second, weaker way to group things next to the
+   * folder itself, and two grouping mechanisms on one node is how a bookmark manager becomes
+   * unexplainable.
+   */
+  static setTags(db: Db, nodeId: string, tags: readonly string[]): string[] {
+    const row = db.prepare(`SELECT node_type FROM bookmark_nodes WHERE id = ?`).get(nodeId) as
+      { node_type: string } | undefined;
+    if (row === undefined || row.node_type !== 'bookmark') return [];
+
+    const normalized = normalizeTags(tags);
+    const write = db.transaction(() => {
+      db.prepare('DELETE FROM bookmark_tags WHERE node_id = ?').run(nodeId);
+      const stmt = db.prepare('INSERT INTO bookmark_tags (node_id, tag, tag_key) VALUES (?, ?, ?)');
+      for (const t of normalized) stmt.run(nodeId, t.tag, t.key);
+      db.prepare('UPDATE bookmark_nodes SET updated_at = ? WHERE id = ?').run(Date.now(), nodeId);
+    });
+    write();
+    return normalized.map((t) => t.tag);
+  }
+
+  /** One bookmark's tags, alphabetically by fold so the order does not depend on insertion. */
+  static tagsOf(db: Db, nodeId: string): string[] {
+    return (
+      db
+        .prepare('SELECT tag FROM bookmark_tags WHERE node_id = ? ORDER BY tag_key')
+        .all(nodeId) as { tag: string }[]
+    ).map((r) => r.tag);
+  }
+
+  /**
+   * Every tag in use, with how many bookmarks carry it — the tag sidebar's data.
+   *
+   * `MIN(tag)` picks one display spelling for a tag written more than one way across bookmarks. An
+   * arbitrary-but-stable choice beats showing the same tag twice in a list whose whole job is to be
+   * the canonical set.
+   */
+  static listTags(db: Db, limit = 500): { tag: string; count: number }[] {
+    const n = Math.max(0, Math.min(Math.trunc(limit), 5000));
+    return db
+      .prepare(
+        `SELECT MIN(tag) AS tag, COUNT(*) AS count FROM bookmark_tags
+         GROUP BY tag_key ORDER BY count DESC, tag_key ASC LIMIT ?`,
+      )
+      .all(n) as { tag: string; count: number }[];
+  }
+
+  /** Bookmarks carrying `tag` (matched on the folded key, so case does not matter to the caller). */
+  static searchByTag(db: Db, tag: string, limit = 500): BookmarkEntry[] {
+    const [normalized] = normalizeTags([tag]);
+    if (normalized === undefined) return [];
+    const n = Math.max(0, Math.min(Math.trunc(limit), 5000));
+    return db
+      .prepare(
+        `SELECT n.url AS url, n.title AS title, n.favicon AS favicon, n.updated_at AS ts
+         FROM bookmark_nodes n JOIN bookmark_tags t ON t.node_id = n.id
+         WHERE t.tag_key = ? AND n.node_type = 'bookmark' AND n.url IS NOT NULL
+         ORDER BY n.updated_at DESC, n.rowid DESC LIMIT ?`,
+      )
+      .all(normalized.key, n) as BookmarkEntry[];
+  }
+
+  /** Tags for many bookmarks at once, so rendering a tree is one query rather than one per node. */
+  static tagsByNode(db: Db): Map<string, string[]> {
+    const rows = db.prepare('SELECT node_id, tag FROM bookmark_tags ORDER BY tag_key').all() as {
+      node_id: string;
+      tag: string;
+    }[];
+    const out = new Map<string, string[]>();
+    for (const r of rows) {
+      const list = out.get(r.node_id);
+      if (list === undefined) out.set(r.node_id, [r.tag]);
+      else list.push(r.tag);
+    }
+    return out;
   }
 }

@@ -22,6 +22,7 @@ const bookmark = (title: string, url: string, favicon: string | null = null): Bo
   position: 0,
   createdAt: 1_700_000_000_000,
   updatedAt: 1_700_000_000_000,
+  tags: [],
   children: [],
 });
 
@@ -35,6 +36,7 @@ const folder = (title: string, children: BookmarkTreeNode[]): BookmarkTreeNode =
   position: 0,
   createdAt: 1_700_000_000_000,
   updatedAt: 1_700_000_000_000,
+  tags: [],
   children,
 });
 

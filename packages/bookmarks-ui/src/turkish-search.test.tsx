@@ -53,6 +53,7 @@ async function searchFor(term: string): Promise<void> {
         refreshKey={0}
         onMove={vi.fn()}
         onNewFolder={vi.fn()}
+        onSetTags={vi.fn().mockResolvedValue([])}
         onOpen={vi.fn()}
         onContextMenu={vi.fn()}
       />
