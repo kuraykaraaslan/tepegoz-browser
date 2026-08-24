@@ -33,6 +33,16 @@ export interface OmniboxProps {
   onActivateTab?: ((tabId: string) => void) | undefined;
   /** Open a high-frequency settings panel (theme/language/privacy) from a deterministic suggestion. */
   onOpenQuickSetting?: ((target: OmniboxQuickSettingTarget) => void) | undefined;
+  /**
+   * Hand a task to the agent — reached ONLY from an explicitly typed `@agent`. This is the single
+   * point where the omnibox crosses into AI, and it exists as its own callback (rather than folded
+   * into `onNavigate`) so that the crossing is visible in the type, not buried in a string.
+   */
+  onAgentTask?: ((task: string) => void) | undefined;
+  /** Open a download from `@download`. */
+  onOpenDownload?: ((id: string) => void) | undefined;
+  /** Run a saved skill from `@skill`. */
+  onRunSkill?: ((id: string) => void) | undefined;
   /** Reports the rendered dropdown height so native hosts can manage WebContentsView layering. */
   onDropdownHeightChange?: ((height: number) => void) | undefined;
   /** Extra classes for the wrapping form (e.g. `flex-1` for layout). */
@@ -68,6 +78,9 @@ export function Omnibox({
   onSuggest,
   onActivateTab,
   onOpenQuickSetting,
+  onAgentTask,
+  onOpenDownload,
+  onRunSkill,
   onDropdownHeightChange,
   className,
 }: OmniboxProps) {
@@ -146,7 +159,8 @@ export function Omnibox({
   }
 
   function dispatchSuggestion(s: OmniboxSuggestion): void {
-    closeSuggestions();
+    // `fillCommand` keeps the dropdown alive — it is a step toward a command, not the end of one.
+    if (s.action.type !== 'fillCommand') closeSuggestions();
     switch (s.action.type) {
       case 'navigate':
         onNavigate(s.action.input);
@@ -160,6 +174,20 @@ export function Omnibox({
         break;
       case 'openQuickSetting':
         onOpenQuickSetting?.(s.action.target);
+        break;
+      case 'fillCommand':
+        // Discovery, not execution: the box is filled and left open so the user types the argument.
+        // An empty prefix means "there was nothing to pick" — leave what they typed alone.
+        if (s.action.prefix.length > 0) setValue(s.action.prefix);
+        break;
+      case 'agentTask':
+        onAgentTask?.(s.action.task);
+        break;
+      case 'openDownload':
+        onOpenDownload?.(s.action.id);
+        break;
+      case 'runSkill':
+        onRunSkill?.(s.action.id);
         break;
     }
   }

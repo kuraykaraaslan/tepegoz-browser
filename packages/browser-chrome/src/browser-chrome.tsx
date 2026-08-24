@@ -105,6 +105,10 @@ export interface BrowserChromeProps {
   onActivateTab?: ((tabId: string) => void) | undefined;
   /** Open a high-frequency settings panel from an omnibox suggestion. */
   onOpenQuickSetting?: ((target: OmniboxQuickSettingTarget) => void) | undefined;
+  /** Forwarded to the omnibox — `@agent` is the one address-bar path that crosses into AI. */
+  onAgentTask?: ((task: string) => void) | undefined;
+  onRunSkill?: ((id: string) => void) | undefined;
+  onOpenDownload?: ((id: string) => void) | undefined;
   /** Reports the omnibox dropdown height to hosts that need to manage native web-view layering. */
   onOmniboxDropdownHeightChange?: ((height: number) => void) | undefined;
   // Bookmark star (right of the omnibox).
@@ -173,6 +177,9 @@ export function BrowserChrome({
   onSuggest,
   onActivateTab,
   onOpenQuickSetting,
+  onAgentTask,
+  onRunSkill,
+  onOpenDownload,
   onOmniboxDropdownHeightChange,
   isBookmarked,
   canBookmark,
@@ -278,6 +285,9 @@ export function BrowserChrome({
         onSuggest={onSuggest}
         onActivateTab={onActivateTab}
         onOpenQuickSetting={onOpenQuickSetting}
+        onAgentTask={onAgentTask}
+        onRunSkill={onRunSkill}
+        onOpenDownload={onOpenDownload}
         onOmniboxDropdownHeightChange={onOmniboxDropdownHeightChange}
         isBookmarked={isBookmarked}
         canBookmark={canBookmark}

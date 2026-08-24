@@ -36,7 +36,13 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       the page is in neither history nor the session snapshot._
 - [ ] **Permissions Center** shows + edits web permissions (camera/mic/location/notification) through the
       single PermissionGuard + a per-agent allow/approve/deny matrix (read-only view over the Policy Kernel)
-- [ ] **Omnibox command mode** (`@agent` / `@workspace` / `@download` / `@skill`) routes to the right surface
+- [~] **Omnibox command mode** (`@agent` / ~~`@workspace`~~ / `@download` / `@skill`) routes to the right surface
+  — _**three of the four are built and routed; `@workspace` is not, and cannot be from this phase.**
+  A "workspace" is a **Phase 2b** noun — `phase-10` names 2b as the phase that delivers "workspaces,
+  split-view, reading mode" — and no such surface exists anywhere in this product yet (checked: no
+  IPC channel, no store, no UI). A `@workspace` command could therefore only route somewhere it
+  invented, which is worse than an absent one. **This line depends on a phase it does not own**, and
+  that is a roadmap defect worth recording rather than working around: it is why the box is `[~]`._
 - [ ] **i18n:** en+tr keys added for all new surfaces (download manager, find-bar, print/PDF/reader/translate,
       bookmark manager, private-mode chrome, Permissions Center, omnibox command hints)
 - [ ] ADRs accepted: **Download Trust Model** (agent-initiated download class + quarantine policy);
@@ -460,10 +466,40 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
 
 ### L9 — Omnibox command mode
 
-- [ ] Extend the existing deterministic prefix engine (`tab:`/`history:`/`bookmark:` from Phase 1a) with
-      **`@`-scoped commands**: `@agent <task>` (start an agent thread — the one place the omnibox crosses into
-      AI), `@workspace <name>`, `@download <query>`, `@skill <name>`; bridge to the command palette
-- [ ] `@`-command hints + results localized; non-`@` input keeps the deterministic navigate/search behavior
+- [~] Extend the existing deterministic prefix engine (`tab:`/`history:`/`bookmark:` from Phase 1a) with
+  **`@`-scoped commands**: `@agent <task>` (start an agent thread — the one place the omnibox crosses into
+  AI), ~~`@workspace <name>`~~, `@download <query>`, `@skill <name>`; bridge to the command palette
+  - [x] _**The deterministic-address-bar rule, restated precisely rather than broken.**
+        `omnibox-suggest.ts` has always said the address bar "must NEVER start an AI thread (Comet
+        lesson)", and that rule stands. What Comet got wrong was **implicit** routing: ordinary typed
+        text silently becoming a model prompt, so a user could not tell which of the two they were
+        doing. `@agent` is the opposite — a prefix typed on purpose, never inferred, and non-`@` input
+        keeps the exact deterministic navigate/search behaviour it had. One explicit door is not the
+        same thing as a missing wall. Five tests assert that text which LOOKS like a request ("book me
+        a flight to Rome", "summarise this page", "what is the capital of France?") produces no agent
+        action at all._
+  - [x] _**No fuzzy matching, and no navigate action anywhere in command mode.** `@agnt` is not
+        `@agent` — a command mode that guessed would be the implicit routing the rule forbids. And a
+        stray Enter inside `@…` cannot open a page or run a web search, asserted across every command
+        state. A command that finds nothing SAYS so rather than falling back to the ordinary list,
+        which would have turned "@download tax return" into a web search for it._
+  - [x] _**A prefix only fires when followed by a space or end-of-input**, so typing toward a longer
+        command cannot trigger a shorter one mid-keystroke (`@agents` is not `@agent` + "s")._
+  - [x] _**`@agent` and `@skill` route somewhere the user can SEE**: ensure a group, **open its Agent
+        Console**, then start the run. Firing a run without opening the console would hand a task to
+        something invisible — the user types a sentence and watches nothing happen, which is a worse
+        failure than not having the command. `@skill` runs the skill's own stored PROMPT, never the
+        name the dropdown displayed, which would quietly turn "run my saved skill" into "ask the agent
+        about a word"._
+  - [x] _**A bare `@` shows the command menu.** Without it the mode is invisible; picking an entry
+        FILLS the box rather than running anything, so discovery can never itself be an action._
+  - [ ] _`@workspace` — no surface to route to (see the DoD line above)._
+  - [ ] _Bridge to the command palette not built. The palette exists (`Ctrl+K`) and command mode does
+        not hand off to it; the four commands are self-contained today._
+- [x] `@`-command hints + results localized; non-`@` input keeps the deterministic navigate/search behavior
+  - [x] _en+tr for every hint, description and empty state. `omniboxAgentHint` says out loud what Enter
+        will do — "hands this text to the agent, leaves the deterministic address bar" — because being
+        told is the difference between an explicit door and a hidden one._
 
 ### Cross-cutting (as in every phase)
 

@@ -9,9 +9,21 @@
  */
 
 import { foldForSearch } from '@tepegoz/i18n';
+import { parseOmniboxCommand } from './omnibox-commands';
+import { commandSuggestions } from './omnibox-suggest-commands';
 
 export type OmniboxSuggestionKind =
-  'navigate' | 'search' | 'history' | 'bookmark' | 'tab' | 'calc' | 'quick-setting';
+  | 'navigate'
+  | 'search'
+  | 'history'
+  | 'bookmark'
+  | 'tab'
+  | 'calc'
+  | 'quick-setting'
+  | 'command'
+  | 'agent'
+  | 'download'
+  | 'skill';
 
 export type OmniboxQuickSettingTarget = 'appearance' | 'language' | 'privacy';
 
@@ -20,7 +32,16 @@ export type OmniboxAction =
   | { type: 'navigate'; input: string }
   | { type: 'activateTab'; tabId: string }
   | { type: 'calc'; formatted: string }
-  | { type: 'openQuickSetting'; target: OmniboxQuickSettingTarget };
+  | { type: 'openQuickSetting'; target: OmniboxQuickSettingTarget }
+  /** Fill the omnibox with a command prefix — the discovery step, not an execution. */
+  | { type: 'fillCommand'; prefix: string }
+  /**
+   * Hand a task to the agent. The ONE place the omnibox crosses into AI, and only ever from an
+   * explicitly typed `@agent` — never inferred from text that happens to look like a question.
+   */
+  | { type: 'agentTask'; task: string }
+  | { type: 'openDownload'; id: string }
+  | { type: 'runSkill'; id: string };
 
 export interface OmniboxSuggestion {
   /** Stable key for React lists + keyboard selection. */
@@ -57,6 +78,25 @@ export interface OmniboxSuggestSources {
   history: readonly OmniboxHistoryCandidate[];
   /** Bookmarks (host passes the full list; filtered + capped here). */
   bookmarks?: readonly OmniboxBookmarkCandidate[];
+  /** Downloads, for `@download`. Absent until the host wires them — the command then finds nothing
+   *  rather than pretending, which is the same contract `bookmarks` already has. */
+  downloads?: readonly OmniboxDownloadCandidate[];
+  /** Saved agent skills, for `@skill`. */
+  skills?: readonly OmniboxSkillCandidate[];
+}
+
+export interface OmniboxDownloadCandidate {
+  id: string;
+  /** File name shown as the primary line. */
+  name: string;
+  /** Where it came from, shown as the subtitle. */
+  source: string;
+}
+
+export interface OmniboxSkillCandidate {
+  id: string;
+  name: string;
+  description?: string;
 }
 
 /** Localized hints the builder needs, so the package stays i18n-agnostic. */
@@ -72,6 +112,23 @@ export interface OmniboxSuggestLabels {
   quickAppearance: string;
   quickLanguage: string;
   quickPrivacy: string;
+  /** Subtitle on a `@…` command in the discovery list, e.g. "Command". */
+  command: string;
+  /** Primary line for the `@agent` action, with `{task}` replaced by what was typed. */
+  agentAsk: string;
+  /** Subtitle under it — states plainly that this hands the text to the agent. */
+  agentHint: string;
+  /** Shown when `@agent` has no task typed yet. */
+  agentEmpty: string;
+  /** One-line descriptions of each command, for the discovery list. */
+  commandAgent: string;
+  commandDownload: string;
+  commandSkill: string;
+  /** Subtitles for `@download` / `@skill` results. */
+  download: string;
+  skill: string;
+  /** Shown when a command matched nothing. */
+  commandNoResults: string;
 }
 
 export type OmniboxScope = 'all' | 'tab' | 'history' | 'bookmark' | 'settings';
@@ -272,6 +329,12 @@ export function buildOmniboxSuggestions(
   sources: OmniboxSuggestSources,
   labels: OmniboxSuggestLabels,
 ): OmniboxSuggestion[] {
+  // Command mode is checked FIRST and returns on its own. `@` is not a scope prefix — it is a
+  // different mode with a different rule (it never emits a navigate action), so letting it fall
+  // through to the ordinary path is exactly the leak this mode exists to prevent.
+  const command = parseOmniboxCommand(query);
+  if (command.kind !== 'none') return commandSuggestions(command, sources, labels);
+
   const { scope, term } = parseOmniboxQuery(query);
   const needle = foldForSearch(term);
 

@@ -168,6 +168,9 @@ export function AppChrome({
         onSuggest={omniboxHistory.onOmniboxSuggest}
         onActivateTab={omniboxHistory.onActivateTabFromOmnibox}
         onOpenQuickSetting={onOpenQuickSetting}
+        onAgentTask={omniboxHistory.onAgentTaskFromOmnibox}
+        onRunSkill={omniboxHistory.onRunSkillFromOmnibox}
+        onOpenDownload={omniboxHistory.onOpenDownloadFromOmnibox}
         onOmniboxDropdownHeightChange={onOmniboxDropdownHeightChange}
         isBookmarked={bookmarks.activeBookmarked}
         canBookmark={bookmarks.canBookmark}

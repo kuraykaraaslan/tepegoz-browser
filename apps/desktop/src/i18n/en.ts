@@ -26,6 +26,20 @@ export const en = {
     omniboxQuickAppearance: 'Open Appearance settings',
     omniboxQuickLanguage: 'Open Language & region settings',
     omniboxQuickPrivacy: 'Open Privacy settings',
+    // ── Omnibox command mode (`@agent` / `@download` / `@skill`) ───────────────────────────────────
+    // `@agent` is the ONE place the address bar crosses into AI, and only ever from a prefix the user
+    // typed on purpose. `omniboxAgentHint` therefore says out loud what pressing Enter will do —
+    // Comet's mistake was ordinary text becoming a model prompt with nothing telling the user.
+    omniboxCommand: 'Command',
+    omniboxAgentAsk: 'Ask the agent: {task}',
+    omniboxAgentHint: 'Hands this text to the agent — leaves the deterministic address bar',
+    omniboxAgentEmpty: 'Type what the agent should do',
+    omniboxCommandAgent: 'Give the agent a task',
+    omniboxCommandDownload: 'Find something you downloaded',
+    omniboxCommandSkill: 'Run a saved skill',
+    omniboxDownload: 'Download',
+    omniboxSkill: 'Skill',
+    omniboxCommandNoResults: 'Nothing matched',
     // Bookmark star (right of the omnibox).
     bookmarkAdd: 'Bookmark this page',
     bookmarkRemove: 'Remove bookmark',

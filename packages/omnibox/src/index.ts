@@ -21,3 +21,5 @@ export {
   type OmniboxSuggestSources,
   type OmniboxSuggestLabels,
 } from './omnibox-suggest';
+export * from './omnibox-commands';
+export * from './omnibox-suggest-commands';

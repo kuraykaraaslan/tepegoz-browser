@@ -21,6 +21,20 @@ export const tr: AppStrings = {
     omniboxQuickAppearance: 'Görünüm ayarlarını aç',
     omniboxQuickLanguage: 'Dil ve bölge ayarlarını aç',
     omniboxQuickPrivacy: 'Gizlilik ayarlarını aç',
+    // ── Omnibox komut modu (`@agent` / `@download` / `@skill`) ────────────────────────────────────
+    // `@agent`, adres çubuğunun AI'a geçtiği TEK yer ve yalnızca kullanıcının bilerek yazdığı bir
+    // önekten. Bu yüzden `omniboxAgentHint` Enter'a basınca ne olacağını açıkça söylüyor — Comet'in
+    // hatası, sıradan metnin kullanıcıya hiçbir şey söylenmeden model istemine dönüşmesiydi.
+    omniboxCommand: 'Komut',
+    omniboxAgentAsk: 'Ajana sor: {task}',
+    omniboxAgentHint: 'Bu metni ajana verir — deterministik adres çubuğundan çıkar',
+    omniboxAgentEmpty: 'Ajanın ne yapmasını istediğini yaz',
+    omniboxCommandAgent: 'Ajana bir görev ver',
+    omniboxCommandDownload: 'İndirdiğin bir şeyi bul',
+    omniboxCommandSkill: 'Kayıtlı bir beceriyi çalıştır',
+    omniboxDownload: 'İndirme',
+    omniboxSkill: 'Beceri',
+    omniboxCommandNoResults: 'Eşleşen bir şey yok',
     // Yer imi yıldızı (omniçubuğun sağında).
     bookmarkAdd: 'Bu sayfayı yer imlerine ekle',
     bookmarkRemove: 'Yer imini kaldır',

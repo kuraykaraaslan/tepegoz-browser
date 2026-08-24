@@ -15,6 +15,16 @@ const LABELS = {
   quickAppearance: 'Open Appearance settings',
   quickLanguage: 'Open Language & region settings',
   quickPrivacy: 'Open Privacy settings',
+  command: 'Command',
+  agentAsk: 'Ask the agent: {task}',
+  agentHint: 'Hands this text to the agent',
+  agentEmpty: 'Type what the agent should do',
+  commandAgent: 'Give the agent a task',
+  commandDownload: 'Find a download',
+  commandSkill: 'Run a saved skill',
+  download: 'Download',
+  skill: 'Skill',
+  commandNoResults: 'Nothing matched',
 };
 
 const SOURCES: OmniboxSuggestSources = {
