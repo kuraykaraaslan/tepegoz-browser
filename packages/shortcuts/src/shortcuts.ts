@@ -54,6 +54,16 @@ export const SHORTCUTS = [
   { id: 'find', key: 'f', ctrlOrCmd: true, scope: 'main' },
   { id: 'fullScreen', key: 'f11', scope: 'main' },
   { id: 'exitKiosk', key: 'q', ctrlOrCmd: true, shift: true, scope: 'main' },
+  // The three page commands the right-click menu has always LISTED a shortcut for. The commands
+  // themselves (`printActive` / `saveActive` / `viewSourceActive`) already existed and worked — only
+  // by right-click. Nothing bound the keys, so the menu printed "Ctrl+P" next to a row and pressing
+  // Ctrl+P did nothing at all.
+  //
+  // `main` scope, for the same reason `find` is: the key almost always arrives while the PAGE has
+  // focus, and the chrome renderer never sees it there.
+  { id: 'print', key: 'p', ctrlOrCmd: true, scope: 'main' },
+  { id: 'savePage', key: 's', ctrlOrCmd: true, scope: 'main' },
+  { id: 'viewSource', key: 'u', ctrlOrCmd: true, scope: 'main' },
 ] as const satisfies readonly ShortcutSpec[];
 
 export type ShortcutId = (typeof SHORTCUTS)[number]['id'];

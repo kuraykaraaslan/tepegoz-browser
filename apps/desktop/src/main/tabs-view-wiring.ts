@@ -99,7 +99,9 @@ export function wireView(host: ViewWiringHost, id: string, view: WebContentsView
       event.preventDefault();
       return;
     }
-    if (handleWindowShortcut(host.win, input)) event.preventDefault();
+    // `wc` is the page the key was actually pressed on — a more exact answer than "the window's
+    // active tab", and the one the user means.
+    if (handleWindowShortcut(host.win, input, wc)) event.preventDefault();
   });
 
   // Browsed pages are untrusted. Every path that creates a new browsing context (window.open,

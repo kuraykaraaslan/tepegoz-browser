@@ -18,6 +18,7 @@
   "dependencies": {
     "@tepegoz/browser-menu": "workspace:*",
     "@tepegoz/i18n": "workspace:*",
+    "@tepegoz/shortcuts": "workspace:*",
     "@tepegoz/ui": "workspace:*"
   },
   "peerDependencies": {

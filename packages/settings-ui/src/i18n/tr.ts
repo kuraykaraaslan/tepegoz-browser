@@ -329,6 +329,9 @@ export const tr: SettingsStrings = {
     find: 'Sayfada bul',
     fullScreen: 'Tam ekranı aç/kapat',
     exitKiosk: 'Kiosk modundan çık',
+    print: 'Sayfayı yazdır',
+    savePage: 'Sayfayı kaydet',
+    viewSource: 'Sayfa kaynağını görüntüle',
   },
 
   // --- Site izinleri ---

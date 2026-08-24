@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Icon } from '@tepegoz/ui';
 import type { MenuItem } from '@tepegoz/browser-menu';
+import { formatShortcut, SHORTCUTS, type ShortcutId } from '@tepegoz/shortcuts';
 import type { PageContextMenuStrings } from './i18n/en';
 
 /** The media kind under the cursor (mirrors Electron's `context-menu` params.mediaType). */
@@ -84,6 +85,55 @@ const SEP: MenuItem = { kind: 'separator' };
 /** Longest selection shown inside the "Search the web for …" label before eliding. */
 const SEARCH_LABEL_MAX = 40;
 const EDIT_ITEM_IDS = new Set(['cut', 'copy', 'paste', 'select-all']);
+
+/**
+ * Which keys a row may advertise.
+ *
+ * These used to be free strings — `row('print', t.print, accel('print', platform), a.print)` — and the menu therefore
+ * told the user about keys that were bound to NOTHING. `Ctrl+P`, `Ctrl+S` and `Ctrl+U` all printed
+ * next to a row and did nothing when pressed; the commands existed, but only by right-click. A string
+ * cannot be wrong here any more: a row names either a registry id or a platform built-in, and both are
+ * closed unions, so an unbound key is a type error rather than a lie in the UI.
+ */
+type Accel = ShortcutId | PlatformBuiltin;
+
+/**
+ * Keys the PLATFORM binds, which is why they are NOT in `@tepegoz/shortcuts`: that registry is what the
+ * app itself handles, and listing a key there we never dispatch would be the same lie in the other
+ * direction. Chromium binds the editing commands inside a focused input, and the history keys at the
+ * content layer.
+ *
+ * Spelled out per platform rather than run through `formatShortcut`, because these genuinely differ in
+ * SHAPE and not just in notation: macOS navigates history with Cmd+arrow where Windows and Linux use
+ * Alt+arrow. The old hardcoded strings said `Alt+←` on every platform, so a Mac was told the wrong key.
+ */
+type PlatformBuiltin = 'cut' | 'copy' | 'paste' | 'selectAll' | 'historyBack' | 'historyForward';
+
+const PLATFORM_BUILTIN_LABELS: Record<PlatformBuiltin, { mac: string; other: string }> = {
+  cut: { mac: '⌘X', other: 'Ctrl+X' },
+  copy: { mac: '⌘C', other: 'Ctrl+C' },
+  paste: { mac: '⌘V', other: 'Ctrl+V' },
+  selectAll: { mac: '⌘A', other: 'Ctrl+A' },
+  historyBack: { mac: '⌘←', other: 'Alt+←' },
+  historyForward: { mac: '⌘→', other: 'Alt+→' },
+};
+
+function isPlatformBuiltin(id: Accel): id is PlatformBuiltin {
+  return id in PLATFORM_BUILTIN_LABELS;
+}
+
+/** The label for a row's key, written the way `platform` writes it. */
+export function accel(id: Accel, platform: string): string {
+  if (isPlatformBuiltin(id)) {
+    const label = PLATFORM_BUILTIN_LABELS[id];
+    return platform === 'darwin' ? label.mac : label.other;
+  }
+  const spec = SHORTCUTS.find((s) => s.id === id);
+  // Unreachable while `Accel` holds: `id` is a ShortcutId here, so the registry has it. Returning the
+  // id rather than throwing keeps a menu from failing to open if that ever stops being true, and
+  // `model.test.tsx` asserts every id this file uses resolves.
+  return spec === undefined ? id : formatShortcut(spec, platform);
+}
 
 /** A wired row (has an action) or a disabled placeholder (no action → greyed, skipped by keyboard nav). */
 function row(id: string, label: string, shortcut?: string, onSelect?: () => void): MenuItem {
@@ -218,18 +268,19 @@ export function buildPageContextMenuModel(
   t: PageContextMenuStrings,
   ctx: PageContextMenuContext,
   actions: PageContextMenuActions,
+  platform: string,
 ): MenuItem[] {
   const core = ctx.isEditable
-    ? editableMenu(t, ctx, actions)
+    ? editableMenu(t, ctx, actions, platform)
     : ctx.linkUrl.length > 0
-      ? linkMenu(t, ctx, actions)
+      ? linkMenu(t, ctx, actions, platform)
       : ctx.mediaType === 'image'
         ? imageMenu(t, actions)
         : ctx.mediaType === 'video' || ctx.mediaType === 'audio'
           ? mediaMenu(t, actions)
           : ctx.selectionText.length > 0
-            ? selectionMenu(t, ctx, actions)
-            : defaultMenu(t, ctx, actions);
+            ? selectionMenu(t, ctx, actions, platform)
+            : defaultMenu(t, ctx, actions, platform);
   return mergeContributions(ctx, actions, core);
 }
 
@@ -238,12 +289,18 @@ function editableMenu(
   t: PageContextMenuStrings,
   ctx: PageContextMenuContext,
   a: PageContextMenuActions,
+  platform: string,
 ): MenuItem[] {
   return [
-    row('cut', t.cut, 'Ctrl+X', ctx.canCut ? a.cut : undefined),
-    row('copy', t.copy, 'Ctrl+C', ctx.canCopy ? a.copy : undefined),
-    row('paste', t.paste, 'Ctrl+V', ctx.canPaste ? a.paste : undefined),
-    row('select-all', t.selectAll, 'Ctrl+A', ctx.canSelectAll ? a.selectAll : undefined),
+    row('cut', t.cut, accel('cut', platform), ctx.canCut ? a.cut : undefined),
+    row('copy', t.copy, accel('copy', platform), ctx.canCopy ? a.copy : undefined),
+    row('paste', t.paste, accel('paste', platform), ctx.canPaste ? a.paste : undefined),
+    row(
+      'select-all',
+      t.selectAll,
+      accel('selectAll', platform),
+      ctx.canSelectAll ? a.selectAll : undefined,
+    ),
     SEP,
     row('inspect', t.inspect, undefined, a.inspect),
   ];
@@ -254,6 +311,7 @@ function linkMenu(
   t: PageContextMenuStrings,
   ctx: PageContextMenuContext,
   a: PageContextMenuActions,
+  platform: string,
 ): MenuItem[] {
   const items: MenuItem[] = [
     row('open-link-new-tab', t.openLinkNewTab, undefined, a.openLinkNewTab),
@@ -268,7 +326,7 @@ function linkMenu(
     );
   }
   if (ctx.selectionText.length > 0) {
-    items.push(SEP, row('copy', t.copy, 'Ctrl+C', a.copy));
+    items.push(SEP, row('copy', t.copy, accel('copy', platform), a.copy));
   }
   items.push(SEP, row('inspect', t.inspect, undefined, a.inspect));
   return items;
@@ -302,14 +360,15 @@ function selectionMenu(
   t: PageContextMenuStrings,
   ctx: PageContextMenuContext,
   a: PageContextMenuActions,
+  platform: string,
 ): MenuItem[] {
   const searchLabel = t.searchWebFor.replace('%s', ellipsize(ctx.selectionText, SEARCH_LABEL_MAX));
   return [
-    row('copy', t.copy, 'Ctrl+C', a.copy),
+    row('copy', t.copy, accel('copy', platform), a.copy),
     placeholder('copy-link-highlight', t.copyLinkToHighlight, <Icon name="share" />),
     row('search-selection', searchLabel, undefined, a.searchSelection),
     SEP,
-    row('print', t.print, 'Ctrl+P', a.print),
+    row('print', t.print, accel('print', platform), a.print),
     placeholder('reading-mode', t.readingMode, <Icon name="book" />),
     placeholder('translate-selection', t.translateSelection, <Icon name="translate" />),
     SEP,
@@ -324,14 +383,20 @@ function defaultMenu(
   t: PageContextMenuStrings,
   ctx: PageContextMenuContext,
   a: PageContextMenuActions,
+  platform: string,
 ): MenuItem[] {
   return [
-    row('back', t.back, 'Alt+←', ctx.canGoBack ? a.back : undefined),
-    row('forward', t.forward, 'Alt+→', ctx.canGoForward ? a.forward : undefined),
-    row('reload', t.reload, 'Ctrl+R', a.reload),
+    row('back', t.back, accel('historyBack', platform), ctx.canGoBack ? a.back : undefined),
+    row(
+      'forward',
+      t.forward,
+      accel('historyForward', platform),
+      ctx.canGoForward ? a.forward : undefined,
+    ),
+    row('reload', t.reload, accel('reload', platform), a.reload),
     SEP,
-    row('save', t.saveAs, 'Ctrl+S', a.save),
-    row('print', t.print, 'Ctrl+P', a.print),
+    row('save', t.saveAs, accel('savePage', platform), a.save),
+    row('print', t.print, accel('print', platform), a.print),
     row('cast', t.cast),
     SEP,
     placeholder('search-lens', t.searchLens, <Icon name="search" />),
@@ -344,7 +409,7 @@ function defaultMenu(
     SEP,
     placeholder('extensions', t.extensions, <Icon name="puzzle" />),
     SEP,
-    row('view-source', t.viewSource, 'Ctrl+U', a.viewSource),
+    row('view-source', t.viewSource, accel('viewSource', platform), a.viewSource),
     row('inspect', t.inspect, undefined, a.inspect),
   ];
 }

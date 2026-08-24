@@ -73,7 +73,7 @@ function findItem(items: MenuItem[], id: string): MenuRowItem {
 
 describe('buildPageContextMenuModel contributions', () => {
   it('keeps the core menu unchanged when contributions are empty', () => {
-    const core = buildPageContextMenuModel(en, editableCtx(), actions());
+    const core = buildPageContextMenuModel(en, editableCtx(), actions(), 'win32');
     const withEmptyContribution = buildPageContextMenuModel(
       en,
       editableCtx({
@@ -88,6 +88,7 @@ describe('buildPageContextMenuModel contributions', () => {
         ],
       }),
       actions(),
+      'win32',
     );
 
     expect(itemIds(withEmptyContribution)).toEqual(itemIds(core));
@@ -129,6 +130,7 @@ describe('buildPageContextMenuModel contributions', () => {
         ],
       }),
       actions(),
+      'win32',
     );
     const ids = itemIds(items);
 
@@ -168,6 +170,7 @@ describe('buildPageContextMenuModel contributions', () => {
         ],
       }),
       a,
+      'win32',
     );
 
     findItem(items, 'contribution:com.tepegoz.typo:typo:suggestion-0').onSelect?.();
@@ -204,6 +207,7 @@ describe('buildPageContextMenuModel contributions', () => {
         ],
       }),
       actions(),
+      'win32',
     );
 
     const item = findItem(items, 'contribution:test:disabled:item');

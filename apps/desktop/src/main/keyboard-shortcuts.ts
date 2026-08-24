@@ -1,8 +1,9 @@
-import type { BrowserWindow, Input } from 'electron';
+import type { BrowserWindow, Input, WebContents } from 'electron';
 import { IpcChannels } from '@tepegoz/desktop-ipc';
 import { pressFromInput, shortcutFor } from '@tepegoz/shortcuts';
 import { exitKioskWindow, toggleFullScreen } from './window';
 import { loadBrowser } from './onboarding.electron';
+import { printPage, savePage, viewSourcePage } from './page-commands';
 
 /**
  * App-level keyboard shortcuts handled in the MAIN process, so they work regardless of which webContents
@@ -13,8 +14,19 @@ import { loadBrowser } from './onboarding.electron';
  *   • F11 — toggle fullscreen (ignored while in kiosk).
  *   • Ctrl/Cmd+Shift+Q — leave kiosk: the ONLY escape from a chromeless kiosk. Un-kiosk + reload the
  *     normal chrome (the kiosk tab persists as a normal tab).
+ *   • Ctrl/Cmd+P / +S / +U — print, save, view-source. Here for the same reason as find: the page has
+ *     focus when they are pressed. The commands already existed; only the keys were missing, while the
+ *     right-click menu listed them as if they worked.
+ *
+ * The page the three page-commands act on is passed IN, exactly as `handleZoomShortcut` takes its
+ * webContents. Resolving it here would mean importing the tab model, and `tabs-view-wiring.ts` imports
+ * THIS module — dependency-cruiser reports that as a real cycle, not a style opinion.
  */
-export function handleWindowShortcut(win: BrowserWindow, input: Input): boolean {
+export function handleWindowShortcut(
+  win: BrowserWindow,
+  input: Input,
+  pageWc: WebContents | null = null,
+): boolean {
   if (input.type !== 'keyDown') return false;
 
   // The combinations themselves live in `@tepegoz/shortcuts`, shared with the renderer, so the two
@@ -27,6 +39,23 @@ export function handleWindowShortcut(win: BrowserWindow, input: Input): boolean 
     case 'find':
       // The bar lives in the chrome; the chrome decides whether this opens it or just refocuses it.
       win.webContents.send(IpcChannels.findOpen);
+      return true;
+    case 'print':
+      if (pageWc === null) return false;
+      printPage(pageWc);
+      return true;
+    case 'savePage':
+      // Save Page As is browser-owned in every major browser, so intercepting it before the page is
+      // the conventional behaviour. Deviation worth stating: `before-input-event` fires BEFORE the
+      // page, so a web editor that binds Ctrl+S (and would `preventDefault` it in Chrome) no longer
+      // receives it. Doing nothing at all — which is what this key did until now — is the worse of
+      // the two, and the menu was already promising the shortcut.
+      if (pageWc === null) return false;
+      savePage(pageWc);
+      return true;
+    case 'viewSource':
+      if (pageWc === null) return false;
+      viewSourcePage(pageWc);
       return true;
     case 'exitKiosk':
       if (!win.isKiosk()) return false;

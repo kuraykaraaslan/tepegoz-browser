@@ -1,7 +1,10 @@
 import { type Rectangle, type WebContents } from 'electron';
 import { Logger } from '@tepegoz/libs';
 import { mayOpenDevTools, type DevToolsVerdict } from '@tepegoz/security-policy';
-import { internalPageUrl, isWebUrl, toNavigationUrl } from './lib/navigation-url';
+import { internalPageUrl, toNavigationUrl } from './lib/navigation-url';
+// The bodies live in `page-commands.ts` because the KEYBOARD route cannot reach into this graph
+// without closing a dependency cycle; these three stay as the menu's entry points.
+import { printPage, savePage, viewSourcePage } from './page-commands';
 import ClipboardService from './clipboard/clipboard-service.electron';
 import DownloadService from './downloads/download-service.electron';
 import { WindowTabsMoves } from './tabs-window-moves';
@@ -62,21 +65,17 @@ export class WindowTabsNav extends WindowTabsMoves {
 
   /** Print the active web page (opens the system print dialog). Page context menu → Print. */
   printActive(): void {
-    this.activeView()?.webContents.print();
+    printPage(this.activeView()?.webContents ?? null);
   }
 
   /** Open the active page's HTML source in place (Chrome's `view-source:`). Web pages only. */
   viewSourceActive(): void {
-    const wc = this.activeView()?.webContents;
-    if (wc === undefined) return;
-    const url = wc.getURL();
-    if (isWebUrl(url)) void wc.loadURL(`view-source:${url}`).catch(() => undefined);
+    viewSourcePage(this.activeView()?.webContents ?? null);
   }
 
   /** Save the active page through the central DownloadService (quarantine + audit). */
   saveActive(): void {
-    const wc = this.activeView()?.webContents;
-    if (wc !== undefined) DownloadService.downloadURL(wc, wc.getURL(), { actor: 'user' });
+    savePage(this.activeView()?.webContents ?? null);
   }
 
   /** Download a specific URL through the active view (Save image/video/audio as → OS save dialog). */

@@ -331,6 +331,9 @@ export const en = {
     find: 'Find on the page',
     fullScreen: 'Toggle full screen',
     exitKiosk: 'Leave kiosk mode',
+    print: 'Print the page',
+    savePage: 'Save the page',
+    viewSource: 'View the page source',
   },
 
   // --- Site permissions ---

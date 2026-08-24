@@ -108,27 +108,34 @@ function PageContextMenuBody({ ctx }: { ctx: PageContextMenuContext }) {
     window.tepegoz.closePopup();
   };
 
-  const items = buildPageContextMenuModel(t, ctx, {
-    back: act('back'),
-    forward: act('forward'),
-    reload: act('reload'),
-    save: act('save'),
-    print: act('print'),
-    viewSource: act('view-source'),
-    inspect: act('inspect'),
-    copy: act('copy'),
-    cut: act('cut'),
-    paste: act('paste'),
-    selectAll: act('select-all'),
-    searchSelection: act('search-selection'),
-    copyLink: act('copy-link'),
-    openLinkNewTab: act('open-link-new-tab'),
-    copyImage: act('copy-image'),
-    copyMediaLink: act('copy-media-link'),
-    saveMedia: act('save-media'),
-    openMediaNewTab: act('open-media-new-tab'),
-    contribution: actContribution,
-  });
+  const items = buildPageContextMenuModel(
+    t,
+    ctx,
+    {
+      back: act('back'),
+      forward: act('forward'),
+      reload: act('reload'),
+      save: act('save'),
+      print: act('print'),
+      viewSource: act('view-source'),
+      inspect: act('inspect'),
+      copy: act('copy'),
+      cut: act('cut'),
+      paste: act('paste'),
+      selectAll: act('select-all'),
+      searchSelection: act('search-selection'),
+      copyLink: act('copy-link'),
+      openLinkNewTab: act('open-link-new-tab'),
+      copyImage: act('copy-image'),
+      copyMediaLink: act('copy-media-link'),
+      saveMedia: act('save-media'),
+      openMediaNewTab: act('open-media-new-tab'),
+      contribution: actContribution,
+    },
+    // The real platform, so the rows write ⌘P on a Mac rather than the Ctrl+P the old hardcoded
+    // strings printed everywhere.
+    window.tepegoz.platform,
+  );
 
   return <Menu items={items} ariaLabel={t.menuLabel} autoFocus />;
 }
