@@ -13,6 +13,7 @@ export const en = {
   reload: 'Reload',
   saveAs: 'Save as…',
   print: 'Print…',
+  saveAsPdf: 'Save as PDF…',
   cast: 'Cast…',
   searchLens: 'Search this tab with Google Lens',
   readingMode: 'Open in reading mode',

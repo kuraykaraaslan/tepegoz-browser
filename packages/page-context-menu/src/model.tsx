@@ -65,6 +65,7 @@ export interface PageContextMenuActions {
   reload: () => void;
   save: () => void;
   print: () => void;
+  savePdf: () => void;
   viewSource: () => void;
   inspect: () => void;
   copy: () => void;
@@ -397,6 +398,9 @@ function defaultMenu(
     SEP,
     row('save', t.saveAs, accel('savePage', platform), a.save),
     row('print', t.print, accel('print', platform), a.print),
+    // No accelerator: Chrome has none for this either — its Ctrl+P dialog carries the PDF destination.
+    // A row may show no key at all; what it may not do is show one nothing binds.
+    row('save-as-pdf', t.saveAsPdf, undefined, a.savePdf),
     row('cast', t.cast),
     SEP,
     placeholder('search-lens', t.searchLens, <Icon name="search" />),

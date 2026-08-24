@@ -1,6 +1,12 @@
 import { CapabilityRegistry } from '@tepegoz/capability-plane';
 import { toolSuccess, type ToolDescriptor } from '@tepegoz/shared-types';
-import type { WebToolsHost } from './index';
+import {
+  DEFAULT_WEB_FETCH_BYTES,
+  DEFAULT_WEB_SEARCH_RESULTS,
+  MAX_WEB_FETCH_BYTES,
+  MAX_WEB_SEARCH_RESULTS,
+  type WebToolsHost,
+} from './index';
 import { WebFetchInputSchema, WebSearchInputSchema } from './schemas';
 import { buildWebFetchContent, buildWebSearchContent, withGuardFlags } from './web-perception';
 
@@ -29,7 +35,9 @@ export function registerWebTools(deps: { host: WebToolsHost }): void {
       'Search the public web when the destination is genuinely off THE CURRENT site or its URL is ' +
         'unknown. Returns normalized link results with snippets. This is NOT a shortcut around on-page ' +
         'work: if the answer is reachable on the current page (via a link, menu, modal, or form), do that ' +
-        'instead — search only after the on-page route is exhausted.',
+        'instead — search only after the on-page route is exhausted. ' +
+        'args: { query: string, maxResults?: number } — maxResults defaults to ' +
+        `${String(DEFAULT_WEB_SEARCH_RESULTS)}, max ${String(MAX_WEB_SEARCH_RESULTS)}.`,
     ),
     inputSchema: WebSearchInputSchema,
     handler: async (input) => {
@@ -60,7 +68,9 @@ export function registerWebTools(deps: { host: WebToolsHost }): void {
   CapabilityRegistry.register({
     descriptor: descriptor(
       'web_get_page',
-      'Fetch and extract text from one public http(s) URL. Returns bounded, untrusted text.',
+      'Fetch and extract text from one public http(s) URL. Returns bounded, untrusted text. ' +
+        'args: { url: string, maxBytes?: number } — maxBytes defaults to ' +
+        `${String(DEFAULT_WEB_FETCH_BYTES)}, max ${String(MAX_WEB_FETCH_BYTES)}.`,
     ),
     inputSchema: WebFetchInputSchema,
     handler: async (input) => {

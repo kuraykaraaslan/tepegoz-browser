@@ -14,6 +14,7 @@ import PopupWindowManager from '../popup-window';
 import TabManager from '../tabs';
 import ClipboardService from '../clipboard/clipboard-service.electron';
 import PageContextMenuContributionService from './page-context-menu-contributions';
+import { savePageAsPdf } from '../print/print-to-pdf.electron';
 
 /**
  * Web-page (WebContentsView) right-click menu — the Chrome-style page context menu. Unlike the native
@@ -181,6 +182,9 @@ export function runPageMenuAction(action: PageMenuAction): void {
       break;
     case 'save':
       TabManager.saveActive();
+      break;
+    case 'save-as-pdf':
+      void savePageAsPdf();
       break;
     case 'copy':
       TabManager.copyActive();

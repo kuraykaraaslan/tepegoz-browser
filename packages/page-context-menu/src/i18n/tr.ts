@@ -9,6 +9,7 @@ export const tr: PageContextMenuStrings = {
   reload: 'Yeniden yükle',
   saveAs: 'Farklı kaydet…',
   print: 'Yazdır…',
+  saveAsPdf: 'PDF olarak kaydet…',
   cast: 'Yayınla…',
   searchLens: 'Bu sekmeyi Google Lens ile ara',
   readingMode: 'Okuma modunda aç',

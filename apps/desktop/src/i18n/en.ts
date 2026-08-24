@@ -95,6 +95,13 @@ export const en = {
     // The macOS-only application menu (`menus/application-menu.ts`). Windows and Linux have no menu
     // bar at all here — the windows are frameless — so this is the only label it needs.
     menuEdit: 'Edit',
+    // "Save as PDF" (page right-click → Save as PDF). `pdfDefaultName` is the file-name stem used when
+    // the page has no usable title of its own.
+    savePdf: 'Save as PDF…',
+    pdfDefaultName: 'page',
+    pdfSavedTitle: 'Saved as PDF',
+    pdfFailedTitle: 'Could not save the PDF',
+    pdfFailedBody: 'The page could not be written to that file. Try another folder or file name.',
     routeTunneled: 'Routed through {name}',
     routeTunneledInherited: 'Inherited route: {name}',
     routeBlocked: 'Blocked — {name} is not connected',

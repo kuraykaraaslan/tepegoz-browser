@@ -83,6 +83,13 @@ export const tr: AppStrings = {
     // Yalnızca macOS'taki uygulama menüsü (`menus/application-menu.ts`). Windows ve Linux'ta menü
     // çubuğu hiç yok — pencereler çerçevesiz — bu yüzden gereken tek etiket bu.
     menuEdit: 'Düzen',
+    // "PDF olarak kaydet" (sayfada sağ tık → PDF olarak kaydet). `pdfDefaultName`, sayfanın kullanılabilir
+    // bir başlığı yoksa kullanılan dosya adı gövdesidir.
+    savePdf: 'PDF olarak kaydet…',
+    pdfDefaultName: 'sayfa',
+    pdfSavedTitle: 'PDF olarak kaydedildi',
+    pdfFailedTitle: 'PDF kaydedilemedi',
+    pdfFailedBody: 'Sayfa bu dosyaya yazılamadı. Başka bir klasör veya dosya adı deneyin.',
     routeTunneled: '{name} üzerinden yönlendiriliyor',
     routeTunneledInherited: 'Devralınan rota: {name}',
     routeBlocked: 'Engellendi — {name} bağlı değil',

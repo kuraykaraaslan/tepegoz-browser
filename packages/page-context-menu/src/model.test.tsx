@@ -17,6 +17,7 @@ function actions(): PageContextMenuActions {
     reload: noop,
     save: noop,
     print: noop,
+    savePdf: noop,
     viewSource: noop,
     inspect: noop,
     copy: noop,
