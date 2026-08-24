@@ -304,6 +304,9 @@ export const IpcChannels = {
   clientCertificateRequest: 'cert:client-request',
   /** renderer→main: which offered certificate to send, or none. */
   clientCertificateRespond: 'cert:client-respond',
+  /** Review + withdraw the per-origin client-certificate choices this run remembers. */
+  clientCertificateList: 'cert:client-list',
+  clientCertificateForget: 'cert:client-forget',
   /** main→renderer: an HTTP 401/407 challenge is waiting on the user. */
   authBasicRequest: 'auth:basic-request',
   /** renderer→main: the credentials, or a cancellation. */

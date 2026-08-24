@@ -5,6 +5,7 @@ import {
   type BookmarkEntry,
   type BookmarkImportResult,
   type BookmarkTreeNode,
+  type ClientCertificateChoice,
   type FileAccessFolderPickResult,
   type HistoryEntry,
   type NewTabBackgroundImagePick,
@@ -33,7 +34,11 @@ import NotificationStore from '@tepegoz/notifications';
 import WebPermissionBroker from '../web-permissions/permission-broker';
 import { resolveBasicAuth } from '../auth/basic-auth-broker';
 import { resolveCertificateError } from '../auth/certificate-broker';
-import { resolveClientCertificate } from '../auth/client-certificate-broker';
+import {
+  clearClientCertificateChoices,
+  listClientCertificateChoices,
+  resolveClientCertificate,
+} from '../auth/client-certificate-broker';
 import { BlobStore, HistoryStore } from '@tepegoz/persistence';
 import {
   BookmarkTreeStore,
@@ -184,6 +189,17 @@ export function registerBrowsingIpc(): void {
     resolveCertificateError(res);
   });
 
+  // Review + withdraw the remembered client-certificate choices. The list is origins only; no payload
+  // to validate on either channel, because neither takes one — forgetting is all-or-nothing on purpose,
+  // since a per-origin forget would need the renderer to name an origin and there is nothing to gain
+  // from letting an untrusted process steer which decision gets dropped.
+  handle(IpcChannels.clientCertificateList, (): ClientCertificateChoice[] =>
+    listClientCertificateChoices(),
+  );
+  handle(IpcChannels.clientCertificateForget, (): void => {
+    clearClientCertificateChoices();
+  });
+
   // Browsing history (tepegoz://history).
   handle(IpcChannels.historyList, (_event, payload): HistoryEntry[] => {
     const { limit, offset } = HistoryPageParamsSchema.parse(payload ?? {});
@@ -238,7 +254,13 @@ export function registerBrowsingIpc(): void {
     const input = BookmarkImportSchema.parse(payload);
     const db = getDb();
     if (db === null)
-      return { imported: 0, skipped: 0, folders: 0, errors: ['Database is unavailable'] };
+      return {
+        imported: 0,
+        skipped: 0,
+        folders: 0,
+        truncated: false,
+        errors: ['Database is unavailable'],
+      };
 
     const result = importBookmarksHtmlToStore(db, input);
     if (result.imported > 0 || result.folders > 0) broadcastBookmarksChanged();

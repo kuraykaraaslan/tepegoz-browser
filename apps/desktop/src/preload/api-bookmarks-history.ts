@@ -14,6 +14,7 @@ import {
   type BasicAuthResponse,
   type CertificateErrorRequest,
   type CertificateErrorResponse,
+  type ClientCertificateChoice,
   type ClientCertificateRequest,
   type ClientCertificateResponse,
   type NotificationPermissionRequest,
@@ -39,6 +40,8 @@ export const bookmarksHistoryApi: Pick<
   | 'getBookmarkTree'
   | 'importBookmarks'
   | 'exportBookmarks'
+  | 'listClientCertificateChoices'
+  | 'forgetClientCertificateChoices'
   | 'createBookmarkFolder'
   | 'renameBookmark'
   | 'removeBookmark'
@@ -185,4 +188,7 @@ export const bookmarksHistoryApi: Pick<
   respondClientCertificate: (response: ClientCertificateResponse) => {
     ipcRenderer.send(IpcChannels.clientCertificateRespond, response);
   },
+  listClientCertificateChoices: () =>
+    invoke<ClientCertificateChoice[]>(IpcChannels.clientCertificateList),
+  forgetClientCertificateChoices: () => invoke<void>(IpcChannels.clientCertificateForget),
 };

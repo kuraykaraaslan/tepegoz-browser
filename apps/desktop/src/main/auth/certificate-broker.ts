@@ -2,6 +2,7 @@ import { Logger } from '@tepegoz/libs';
 import { isSensitiveSite } from '@tepegoz/security-policy';
 import { IpcChannels, type CertificateErrorResponse } from '@tepegoz/desktop-ipc';
 import TabManager from '../tabs';
+import { journalCertificateProceed } from './certificate-journal';
 
 /**
  * TLS certificate errors (Phase 2c). Electron's default is to reject the connection outright, which
@@ -106,6 +107,10 @@ export async function decideCertificateError(input: {
   if (proceed) {
     sessionExceptions.add(origin);
     Logger.warn('User proceeded past a certificate error', { origin, errorCode: input.errorCode });
+    // The exception itself is in-memory and dies with the process, deliberately — a persisted one
+    // would be a standing transport-security downgrade. That is exactly why the DECISION needs a
+    // permanent row: otherwise the fact that it ever happened leaves no trace anywhere.
+    journalCertificateProceed(origin, input.errorCode);
   } else {
     Logger.info('Certificate error; connection refused', { origin, errorCode: input.errorCode });
   }

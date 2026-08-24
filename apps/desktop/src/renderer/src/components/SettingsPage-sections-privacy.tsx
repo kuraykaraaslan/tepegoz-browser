@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ComingSoonCard, type SettingsSection, type SettingsStrings } from '@tepegoz/settings-ui';
 import type { SiteClearPlan } from '@tepegoz/shared-types';
+import type { ClientCertificateChoice } from '@tepegoz/desktop-ipc';
 import { Button, Card, Toggle } from '@tepegoz/ui';
 import {
   AboutSection,
@@ -99,6 +100,80 @@ function ForgetSiteRow({ s }: { s: SettingsStrings }) {
 }
 
 /** The "Privacy & security", "Advanced", and "About" section groups. Pure builders — deps via `ctx`. */
+/**
+ * "Sites you identified yourself to" — the review surface for the client-certificate broker's
+ * per-origin memory.
+ *
+ * The broker remembers a decision for the rest of the run so that a site needing client auth stays
+ * usable (TLS renegotiates per connection; asking every time would make those sites unusable). But a
+ * remembered "yes" is a standing instruction to identify yourself, and an instruction the user cannot
+ * see is one they cannot withdraw. This is where they see it.
+ *
+ * A remembered "no" is listed too. It is as much a decision as a yes, and someone who refused by
+ * reflex and now needs the site has no other way back.
+ *
+ * Origins only, never subjects: the certificate never leaves the main process, and neither does the
+ * name it carries.
+ */
+function ClientCertificatesRow({ s }: { s: SettingsStrings }) {
+  const [choices, setChoices] = useState<ClientCertificateChoice[] | null>(null);
+  const [forgotten, setForgotten] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    void window.tepegoz.listClientCertificateChoices().then(
+      (list) => {
+        if (live) setChoices(list);
+      },
+      () => {
+        if (live) setChoices([]);
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [forgotten]);
+
+  const forget = (): void => {
+    void window.tepegoz.forgetClientCertificateChoices().then(
+      () => {
+        setForgotten(true);
+        setChoices([]);
+      },
+      () => undefined,
+    );
+  };
+
+  return (
+    <div>
+      <p className="text-sm font-medium text-text-primary">{s.clientCerts.title}</p>
+      <p className="mb-2 text-xs text-text-secondary">{s.clientCerts.desc}</p>
+      {choices !== null && choices.length === 0 ? (
+        <p className="text-xs text-text-secondary">
+          {forgotten ? s.clientCerts.forgotten : s.clientCerts.empty}
+        </p>
+      ) : (
+        <>
+          <ul className="mb-2 space-y-1">
+            {(choices ?? []).map((c) => (
+              <li key={c.origin} className="text-xs text-text-secondary">
+                <span className="text-text-primary">{c.origin}</span>
+                {' — '}
+                {c.sent ? s.clientCerts.sent : s.clientCerts.refused}
+              </li>
+            ))}
+          </ul>
+          <Button size="sm" variant="outline" onClick={forget}>
+            {s.clientCerts.forget}
+          </Button>
+          <p className="mt-1 text-xs text-text-secondary">{s.clientCerts.forgetNote}</p>
+        </>
+      )}
+      <p className="mt-1 text-xs text-text-secondary">{s.clientCerts.sessionNote}</p>
+    </div>
+  );
+}
+
 export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSection[] {
   const { s, prefs, setPref, developerVisible } = ctx;
   return [
@@ -108,7 +183,7 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
       group: s.groupPrivacy,
       label: s.privacyTitle,
       icon: <IconShield />,
-      searchText: `${s.privacyTitle} ${s.telemetry} ${s.telemetryDesc} ${s.clearHistoryLabel} ${s.forgetSite.title}`,
+      searchText: `${s.privacyTitle} ${s.telemetry} ${s.telemetryDesc} ${s.clearHistoryLabel} ${s.forgetSite.title} ${s.clientCerts.title}`,
       content: (
         <Card title={s.privacyTitle}>
           <div className="space-y-4">
@@ -129,6 +204,7 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
               </Button>
             </div>
             <ForgetSiteRow s={s} />
+            <ClientCertificatesRow s={s} />
           </div>
         </Card>
       ),

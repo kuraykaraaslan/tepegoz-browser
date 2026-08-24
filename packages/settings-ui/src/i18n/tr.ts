@@ -286,6 +286,22 @@ export const tr: SettingsStrings = {
         'Bu sitenin çevrimdışı özellikleri, sayfayı yeniden yükleyene kadar çalışmayacak.',
     },
   },
+  clientCerts: {
+    title: 'Kimliğini doğruladığın siteler',
+    // "İstemci sertifikası" terimini hiç duymamış birinin anlayacağı şekilde yazıldı: onun için önemli
+    // olan, kim olduğunun imzalı kanıtının verilmiş olması ve kime verildiği.
+    desc: 'İstemci sertifikası bir siteye kim olduğunu kanıtlar. Bu oturum, her bağlantıda sorulmaman için siteye verdiğin yanıtı hatırlıyor.',
+    empty: 'Bu oturumda hiçbir site senden sertifika istemedi.',
+    sent: 'Sertifika gönderildi',
+    refused: 'Reddedildi — hatırlanıyor, tekrar sorulmayacak',
+    forget: 'Bu yanıtları unut',
+    // Dürüst sınır, yalnızca yorumda değil yüzeyin kendisinde: unutmak BUNDAN SONRASINI değiştirir,
+    // gönderilmiş bir şeyi geri alamaz.
+    forgetNote:
+      'Unutmak yalnızca tekrar sorulacağın anlamına gelir. Gönderilmiş bir sertifika geri alınamaz.',
+    forgotten: 'Unutuldu. Sonraki istekte sana tekrar sorulacak.',
+    sessionNote: 'Bu yanıtlar hiçbir zaman diske yazılmaz — uygulamadan çıkınca unutulur.',
+  },
   clearHistoryDesc: 'Bu cihazda ziyaret ettiğiniz sayfaların listesini kaldırır.',
   clearHistoryButton: 'Geçmişi temizle',
   historyCleared: 'Tarama geçmişi temizlendi.',

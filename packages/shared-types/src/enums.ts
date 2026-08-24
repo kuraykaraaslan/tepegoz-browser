@@ -83,6 +83,11 @@ export const EventTypeEnum = z.enum([
   'DownloadFailed',
   'ClipboardAccessed',
   'SiteDataCleared',
+  // Transport-security and identity decisions the USER made against the browser's own safe default.
+  // Only the weakening choice is recorded: proceeding past a bad server certificate, and actually
+  // sending a client certificate. A refusal restores the default and leaves nothing to audit.
+  'CertificateErrorProceeded',
+  'ClientCertificateSent',
   'UploadStaged',
   'UploadBound',
   'UploadSubmitting',

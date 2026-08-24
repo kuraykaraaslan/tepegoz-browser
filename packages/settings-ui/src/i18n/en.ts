@@ -288,6 +288,22 @@ export const en = {
       has_offline_data: 'Offline features on this site will stop working until you reload it.',
     },
   },
+  clientCerts: {
+    title: 'Sites you identified yourself to',
+    // Written to be understood by someone who has never heard the phrase "client certificate": what
+    // matters to them is that a signed proof of who they are was handed over, and to whom.
+    desc: 'A client certificate proves who you are to a site. This run remembers your answer for each site, so you are not asked on every connection.',
+    empty: 'No site has asked you for one this run.',
+    sent: 'Certificate sent',
+    refused: 'Refused — remembered, so you are not asked again',
+    forget: 'Forget these answers',
+    // The honest limit, stated on the surface itself rather than only in a comment: forgetting changes
+    // what happens NEXT. It cannot un-send anything.
+    forgetNote:
+      'Forgetting only means you will be asked again. A certificate already sent cannot be taken back.',
+    forgotten: 'Forgotten. The next request will ask you again.',
+    sessionNote: 'These answers are never saved to disk — they are forgotten when you quit.',
+  },
   clearHistoryDesc: 'Remove the list of pages you have visited on this device.',
   clearHistoryButton: 'Clear history',
   historyCleared: 'Browsing history cleared.',

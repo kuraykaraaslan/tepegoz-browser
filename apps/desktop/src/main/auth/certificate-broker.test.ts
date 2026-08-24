@@ -12,6 +12,13 @@ vi.mock('@tepegoz/libs', () => ({
   Logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
+const journalProceed = vi.fn();
+vi.mock('./certificate-journal', () => ({
+  journalCertificateProceed: (...a: unknown[]): void => {
+    journalProceed(...a);
+  },
+}));
+
 const { clearCertificateExceptions, decideCertificateError, resolveCertificateError } =
   await import('./certificate-broker');
 
@@ -117,5 +124,57 @@ describe('decideCertificateError', () => {
     });
     answerLastPrompt(false);
     await decision;
+  });
+});
+
+/**
+ * The exception itself is in-memory and dies with the process, deliberately — a persisted one would be
+ * a standing transport-security downgrade. That is exactly why the DECISION needs a permanent row:
+ * otherwise the fact that it ever happened leaves no trace anywhere.
+ */
+describe('the journal record', () => {
+  // The file-level beforeEach resets the window mock, so each test supplies its own.
+  beforeEach(() => {
+    journalProceed.mockClear();
+    focusedWindow.mockReturnValue(windowThatPrompts());
+  });
+
+  it('records a proceed, with the origin and the error code', async () => {
+    const decision = decideCertificateError({
+      url: 'https://intranet.example.com/x',
+      errorCode: 'ERR_CERT_AUTHORITY_INVALID',
+      issuer: 'Test CA',
+      expiry: '2030-01-01T00:00:00.000Z',
+    });
+    answerLastPrompt(true);
+    await decision;
+    expect(journalProceed).toHaveBeenCalledWith(
+      'https://intranet.example.com',
+      'ERR_CERT_AUTHORITY_INVALID',
+    );
+  });
+
+  it('records NOTHING when the connection is refused', async () => {
+    // Refusals are not remembered either, so recording them would let one broken site write unbounded
+    // rows and bury the one line that matters.
+    const decision = decideCertificateError({
+      url: 'https://intranet.example.com/x',
+      errorCode: 'ERR_CERT_DATE_INVALID',
+      issuer: 'Test CA',
+      expiry: '2020-01-01T00:00:00.000Z',
+    });
+    answerLastPrompt(false);
+    await decision;
+    expect(journalProceed).not.toHaveBeenCalled();
+  });
+
+  it('records nothing on a sensitive site, which is hard-blocked with no prompt at all', async () => {
+    await decideCertificateError({
+      url: 'https://www.garanti.com.tr/',
+      errorCode: 'ERR_CERT_AUTHORITY_INVALID',
+      issuer: 'Test CA',
+      expiry: '2030-01-01T00:00:00.000Z',
+    });
+    expect(journalProceed).not.toHaveBeenCalled();
   });
 });

@@ -2,6 +2,7 @@ import { Logger } from '@tepegoz/libs';
 import { IpcChannels, type ClientCertificateResponse } from '@tepegoz/desktop-ipc';
 import type { Certificate } from 'electron';
 import TabManager from '../tabs';
+import { journalClientCertificateSent } from './certificate-journal';
 
 /**
  * CLIENT certificates — the certificate the USER sends to identify themselves to a site.
@@ -136,6 +137,10 @@ export async function decideClientCertificate(
   } else {
     // The origin and the fact of a choice — never the subject, which names the user.
     Logger.info('User chose a client certificate', { origin });
+    // …and the same fact, permanently. Sending a client certificate is an identity disclosure, and the
+    // process log is not where this product keeps auditable facts. The fingerprint says WHICH
+    // certificate without saying who the user is.
+    journalClientCertificateSent(origin, chosen.fingerprint);
   }
   return chosen;
 }
@@ -159,7 +164,30 @@ export function registerClientCertificateHandler(app: Electron.App): void {
   });
 }
 
-/** Test seam: drop this run's remembered per-origin choices. */
+/**
+ * What this run currently remembers, for the user to review.
+ *
+ * The choice is per-origin and per-run precisely so that a browser on a site needing client auth stays
+ * usable — but "remembered until you quit" is still a standing instruction to identify yourself, and an
+ * instruction the user cannot see is one they cannot withdraw. `sent` distinguishes the two answers:
+ * a remembered NO is as much a decision as a remembered yes, and a user who wants to reconsider needs
+ * to see both.
+ *
+ * Origins only. The certificate never leaves this module, so neither does the subject that names the
+ * user — the same rule the log lines and the journal already follow.
+ */
+export function listClientCertificateChoices(): { origin: string; sent: boolean }[] {
+  return [...sessionChoices.entries()]
+    .map(([origin, certificate]) => ({ origin, sent: certificate !== null }))
+    .sort((a, b) => a.origin.localeCompare(b.origin));
+}
+
+/**
+ * Forget this run's remembered per-origin choices, so the next request asks again.
+ *
+ * Also the test seam. Nothing is un-sent by this — a certificate already presented cannot be recalled,
+ * and the surface offering it must not imply otherwise.
+ */
 export function clearClientCertificateChoices(): void {
   sessionChoices.clear();
 }

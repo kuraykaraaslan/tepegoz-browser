@@ -91,6 +91,16 @@ export interface ClientCertificateRequest {
 }
 
 /** Renderer → main: which certificate to send, or none. `index: null` means "send nothing". */
+/**
+ * One remembered client-certificate decision, for the review surface. ORIGIN ONLY — the certificate
+ * never leaves the main process, so neither does the subject that names the user.
+ */
+export interface ClientCertificateChoice {
+  origin: string;
+  /** true = a certificate was sent to this origin; false = the user refused, and that is remembered too. */
+  sent: boolean;
+}
+
 export interface ClientCertificateResponse {
   requestId: string;
   index: number | null;

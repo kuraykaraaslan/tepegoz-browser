@@ -12,9 +12,19 @@ vi.mock('../tabs', () => ({
 vi.mock('@tepegoz/libs', () => ({
   Logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
+const journalSent = vi.fn();
+vi.mock('./certificate-journal', () => ({
+  journalClientCertificateSent: (...a: unknown[]): void => {
+    journalSent(...a);
+  },
+}));
 
-const { clearClientCertificateChoices, decideClientCertificate, resolveClientCertificate } =
-  await import('./client-certificate-broker');
+const {
+  clearClientCertificateChoices,
+  decideClientCertificate,
+  listClientCertificateChoices,
+  resolveClientCertificate,
+} = await import('./client-certificate-broker');
 
 /**
  * The defect this broker exists for, stated once: Electron's own typings say
@@ -41,6 +51,7 @@ function cert(subject: string): Certificate {
     subjectName: subject,
     issuerName: 'Test CA',
     validExpiry: 4_102_444_800,
+    fingerprint: `sha256/${subject}`,
   } as unknown as Certificate;
 }
 
@@ -151,5 +162,84 @@ describe('decideClientCertificate', () => {
       answerLastPrompt(null);
       await second;
     });
+  });
+});
+
+/**
+ * Sending a client certificate is an identity disclosure, so it earns a permanent row. Refusing
+ * restores the default and leaves nothing to audit — recording refusals too would bury the one line
+ * that matters under the ones that do not.
+ */
+describe('the journal record', () => {
+  it('records a send, by fingerprint and origin', async () => {
+    const decision = decideClientCertificate('https://intranet.example.com/', CERTS);
+    answerLastPrompt(1);
+    await decision;
+    expect(journalSent).toHaveBeenCalledWith(
+      'https://intranet.example.com',
+      'sha256/Ada Lovelace (work)',
+    );
+  });
+
+  it('records NOTHING when the user refuses', async () => {
+    const decision = decideClientCertificate('https://intranet.example.com/', CERTS);
+    answerLastPrompt(null);
+    await decision;
+    expect(journalSent).not.toHaveBeenCalled();
+  });
+
+  it('records once per origin, not once per handshake', async () => {
+    // TLS client auth renegotiates per connection. The per-origin memory is what keeps the browser
+    // usable; it is also what keeps the journal readable.
+    const first = decideClientCertificate('https://intranet.example.com/', CERTS);
+    answerLastPrompt(0);
+    await first;
+    await decideClientCertificate('https://intranet.example.com/page', CERTS);
+    expect(journalSent).toHaveBeenCalledOnce();
+  });
+});
+
+/**
+ * A remembered answer is a standing instruction to identify yourself. An instruction the user cannot
+ * see is one they cannot withdraw, which is what this surface exists for.
+ */
+describe('listClientCertificateChoices', () => {
+  it('starts empty', () => {
+    expect(listClientCertificateChoices()).toEqual([]);
+  });
+
+  it('lists a send and a refusal alike — a remembered NO is also a decision', async () => {
+    const yes = decideClientCertificate('https://b.example.com/', CERTS);
+    answerLastPrompt(0);
+    await yes;
+    const no = decideClientCertificate('https://a.example.com/', CERTS);
+    answerLastPrompt(null);
+    await no;
+
+    expect(listClientCertificateChoices()).toEqual([
+      { origin: 'https://a.example.com', sent: false },
+      { origin: 'https://b.example.com', sent: true },
+    ]);
+  });
+
+  it('never carries the certificate subject, which names the user', async () => {
+    const decision = decideClientCertificate('https://a.example.com/', CERTS);
+    answerLastPrompt(0);
+    await decision;
+    expect(JSON.stringify(listClientCertificateChoices())).not.toContain('Ada Lovelace');
+  });
+
+  it('forgetting means the next request ASKS again', async () => {
+    const first = decideClientCertificate('https://a.example.com/', CERTS);
+    answerLastPrompt(0);
+    await first;
+    clearClientCertificateChoices();
+    expect(listClientCertificateChoices()).toEqual([]);
+
+    const again = decideClientCertificate('https://a.example.com/', CERTS);
+    answerLastPrompt(null);
+    // Asked again rather than replaying the remembered yes — otherwise "forget" would be a label on
+    // a button that did nothing.
+    await expect(again).resolves.toBeNull();
   });
 });

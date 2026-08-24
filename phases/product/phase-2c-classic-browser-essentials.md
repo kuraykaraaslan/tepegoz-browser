@@ -269,8 +269,15 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
   - [ ] **Deviation:** a blocking modal, not a **full-page interstitial**. The internal-page mechanism
         addresses canonical parameterless `tepegoz://` URLs and does not fit a per-navigation state
         carrying the failed URL + error code. Same security properties, different presentation.
-  - [ ] The proceed decision is logged but **not journaled as an Event Journal observation** as this line
-        asks.
+  - [x] The proceed decision is now journaled as an Event Journal observation
+        (`CertificateErrorProceeded`). _`Logger` is a process log — it rotates, it is not queryable, and
+        it is not where this product says its auditable facts live (ADR-0004). The exception itself is
+        in-memory and dies with the process, deliberately, which is exactly WHY the decision needs a
+        permanent row: otherwise the fact that it ever happened leaves no trace anywhere. **Only the
+        weakening choice is recorded** — a refusal restores the default and leaves nothing to audit, and
+        refusals are deliberately not remembered, so recording them would let one broken site write
+        unbounded rows and bury the one line that matters. A sensitive site writes nothing either: it is
+        hard-blocked with no prompt, so there was never a user decision to record._
 - [x] **Client-certificate chooser** (`select-client-certificate`) — _**not on the original list, because
       nobody had noticed the default.** This is the mirror of the row above and the two defaults are
       opposite: for a bad SERVER certificate Electron rejects, which is safe; for a CLIENT certificate
@@ -298,10 +305,27 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       asserted as **2**, and that second one is the interesting half: measured by deleting the
       registration and re-launching, Electron installs an internal listener of its own — that internal one
       is what sends the first certificate._
-  - [ ] Not done: no way to review or clear the remembered per-origin choices before a restart, and the
-        choice is not journaled. Sending a client certificate is an identity disclosure and arguably
-        belongs in the Event Journal alongside the certificate-error decision (which has the same gap,
-        recorded above).
+  - [x] **Both halves closed.** _**Journaled** as `ClientCertificateSent` — sending a client certificate
+        is an identity disclosure and belongs in the journal for the same reason the certificate-error
+        decision does. The record carries the **origin and the certificate's `fingerprint`, never its
+        `subjectName`**: in this product's primary market that subject is the user's own name and
+        national ID, and the journal is permanent and local. The fingerprint answers "which certificate"
+        without answering "who", which is the rule the broker's log lines already followed — this
+        carries it into the store that keeps things forever. Written once per origin per run rather than
+        once per handshake, because client auth renegotiates per connection and a row for each would be
+        noise._
+        — _**Reviewable and withdrawable.** Settings → Privacy → "Sites you identified yourself to"
+        lists what this run remembers, `listClientCertificateChoices()` → `cert:client-list`. A
+        remembered "yes" is a standing instruction to identify yourself, and an instruction the user
+        cannot see is one they cannot withdraw. **Refusals are listed too** — a remembered NO is as much
+        a decision as a yes, and someone who refused by reflex and now needs the site has no other way
+        back. Origins only; the certificate never leaves the main process and neither does the name it
+        carries. The surface states its own limit rather than hiding it: forgetting means you will be
+        asked again — **a certificate already sent cannot be taken back**._
+        — _Forgetting is all-or-nothing on purpose. A per-origin forget would need the untrusted
+        renderer to name which decision to drop, and there is nothing to gain from letting it steer
+        that. 15 broker/journal tests, mutation-verified: removing either journal call turns tests red,
+        journaling a refusal turns one red, and adding `subjectName` to the listing turns two red._
 - [x] **`beforeunload` confirmation** — honor the page's unload prompt (leave/stay) via a localized dialog;
       agent-driven navigations record the prompt but never auto-dismiss a real data-loss warning
       — _**this was not a missing feature, it was an inverted one.** Measured before anything was written
