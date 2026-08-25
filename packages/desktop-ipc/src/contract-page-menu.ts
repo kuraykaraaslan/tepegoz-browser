@@ -15,6 +15,7 @@ export type PageMenuAction =
   | 'print'
   | 'save'
   | 'save-as-pdf'
+  | 'reader-mode'
   | 'copy'
   | 'cut'
   | 'paste'

@@ -28,6 +28,7 @@
     "@tepegoz/auth-prompt-ui": "workspace:*",
     "@tepegoz/cert-warning-ui": "workspace:*",
     "@tepegoz/find-bar": "workspace:*",
+    "@tepegoz/reader": "workspace:*",
     "@tepegoz/shortcuts": "workspace:*",
     "node-llama-cpp": "^3.19.0",
     "nspell": "2.1.5",

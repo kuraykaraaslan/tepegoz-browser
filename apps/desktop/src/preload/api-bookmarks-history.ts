@@ -1,4 +1,5 @@
 import { ipcRenderer } from 'electron';
+import type { ReaderArticle } from '@tepegoz/reader';
 import {
   IpcChannels,
   type AppNotification,
@@ -42,6 +43,8 @@ export const bookmarksHistoryApi: Pick<
   | 'importBookmarks'
   | 'exportBookmarks'
   | 'openPrivateWindow'
+  | 'extractArticle'
+  | 'onReaderToggle'
   | 'listAgentCapabilities'
   | 'setBookmarkTags'
   | 'listBookmarkTags'
@@ -84,6 +87,16 @@ export const bookmarksHistoryApi: Pick<
   isBookmarked: (url: string) => invoke<boolean>(IpcChannels.bookmarksIsBookmarked, url),
   getBookmarkTree: () => invoke<BookmarkTreeNode[]>(IpcChannels.bookmarksTree),
   listAgentCapabilities: () => invoke<AgentCapabilityRow[]>(IpcChannels.agentCapabilitiesList),
+  extractArticle: () => invoke<ReaderArticle | null>(IpcChannels.readerExtract),
+  onReaderToggle: (callback: () => void) => {
+    const listener = (): void => {
+      callback();
+    };
+    ipcRenderer.on(IpcChannels.readerToggle, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.readerToggle, listener);
+    };
+  },
   openPrivateWindow: () => invoke<void>(IpcChannels.windowsOpenPrivate),
   exportBookmarks: () => invoke<string>(IpcChannels.bookmarksExport),
   setBookmarkTags: (id: string, tags: string[]) =>

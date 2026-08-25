@@ -39,6 +39,8 @@ import { AGENT_EXTENSION_ID, type ExtensionSurfacesResult } from './app-extensio
 import type { OmniboxHistoryResult } from './app-omnibox-history';
 import { internalPageBase, internalPageHash } from './App-helpers';
 import { useAppContentModel } from './App-content-model';
+import { ReaderSurface } from './components/ReaderSurface';
+import type { ReaderResult } from './app-reader';
 
 export interface AppContentProps {
   contentRef: MutableRefObject<HTMLDivElement | null>;
@@ -58,6 +60,7 @@ export interface AppContentProps {
   loginCredentials: LoginCredentialMeta[];
   refreshLogins: () => Promise<void>;
   onUpdatePrefs: (patch: Partial<Preferences>) => Promise<void>;
+  reader: ReaderResult;
   onResetPrefs: () => Promise<void>;
   onAddKey: (provider: ProviderId, label: string, apiKey: string) => Promise<void>;
   onRemoveKeyById: (id: string) => Promise<void>;
@@ -90,6 +93,7 @@ export function AppContent({
   loginCredentials,
   refreshLogins,
   onUpdatePrefs,
+  reader,
   onResetPrefs,
   onAddKey,
   onRemoveKeyById,
@@ -262,6 +266,9 @@ export function AppContent({
             />
           </div>
         )}
+        {/* The reading view sits ABOVE every other surface: the user asked for it about the page they
+            are looking at, so it must not be occluded by an internal page that happens to be open. */}
+        <ReaderSurface reader={reader.reader} onClose={reader.closeReader} />
         {PageSurface !== undefined && (
           <div className="absolute inset-0 bg-surface-base">
             <Suspense fallback={surfaceFallback}>

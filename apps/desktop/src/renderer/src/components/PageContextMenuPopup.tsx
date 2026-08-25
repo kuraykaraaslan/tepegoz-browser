@@ -118,6 +118,7 @@ function PageContextMenuBody({ ctx }: { ctx: PageContextMenuContext }) {
       save: act('save'),
       print: act('print'),
       savePdf: act('save-as-pdf'),
+      readerMode: act('reader-mode'),
       viewSource: act('view-source'),
       inspect: act('inspect'),
       copy: act('copy'),

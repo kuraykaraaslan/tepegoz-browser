@@ -18,6 +18,7 @@ import type { PageMenuAction, PageMenuContext, PageMenuContributionActionInput }
 import type { HistoryEntry } from './contract';
 import type { SiteClearPlan } from './contract';
 import type { BookmarkEntry, BookmarkNodeType, BookmarkTreeNode } from './contract';
+import type { ReaderArticle } from '@tepegoz/reader';
 import type { BookmarkImportInput, BookmarkImportResult } from './contract';
 import type { BookmarkMenuAction } from './contract';
 import type { AppNotification, NotificationState } from './contract';
@@ -86,6 +87,13 @@ export interface UiApi {
   /** The whole collection as Netscape bookmarks HTML. The renderer saves it; main never writes a file. */
   /** The agent permission matrix — a read-only view over the Policy Kernel. */
   listAgentCapabilities(): Promise<AgentCapabilityRow[]>;
+  /**
+   * Extract the active tab's article for the reading view. Resolves `null` when the page has no
+   * article — a real answer with its own copy, not an error.
+   */
+  extractArticle(): Promise<ReaderArticle | null>;
+  /** main → renderer: the user asked for the reading view. Returns an unsubscribe. */
+  onReaderToggle(callback: () => void): () => void;
   /** Open a new private (disposable) window. */
   openPrivateWindow(): Promise<void>;
   exportBookmarks(): Promise<string>;

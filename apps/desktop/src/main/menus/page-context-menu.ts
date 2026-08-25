@@ -10,6 +10,7 @@ import type {
   PageMenuContext,
   PageMenuContributionActionInput,
 } from '@tepegoz/desktop-ipc';
+import { IpcChannels } from '@tepegoz/desktop-ipc';
 import PopupWindowManager from '../popup-window';
 import TabManager from '../tabs';
 import ClipboardService from '../clipboard/clipboard-service.electron';
@@ -183,6 +184,15 @@ export function runPageMenuAction(action: PageMenuAction): void {
     case 'save':
       TabManager.saveActive();
       break;
+    case 'reader-mode': {
+      // Forwarded rather than handled here: the reading view is drawn by the CHROME, and main's job
+      // ends at telling the right window that it was asked for.
+      const window = TabManager.focusedWindow();
+      if (window !== null && !window.isDestroyed()) {
+        window.webContents.send(IpcChannels.readerToggle);
+      }
+      break;
+    }
     case 'save-as-pdf':
       void savePageAsPdf();
       break;

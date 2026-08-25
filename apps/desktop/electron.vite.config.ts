@@ -18,6 +18,9 @@ const WORKSPACE_PACKAGES = [
   '@tepegoz/tab-engine',
   '@tepegoz/journal-tools',
   '@tepegoz/navigation',
+  // Reader: main imports the article MODEL (types + limits) to re-validate what the injected
+  // extractor sends back. The extractor itself is a committed bundled string, not an import.
+  '@tepegoz/reader',
   // The one keyboard-shortcut registry — main matches `before-input-event` against it.
   '@tepegoz/shortcuts',
   '@tepegoz/json-store',

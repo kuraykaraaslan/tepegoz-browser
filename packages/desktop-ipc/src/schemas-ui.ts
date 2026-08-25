@@ -38,6 +38,7 @@ export const PageMenuActionSchema = z.enum([
   'print',
   'save',
   'save-as-pdf',
+  'reader-mode',
   'copy',
   'cut',
   'paste',

@@ -138,7 +138,41 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         main-process `before-input-event`, so the Ctrl+F shortcut is not drivable from Playwright.
 - [~] **Print + print-preview** (Ctrl+P): `webContents.print` / `printToPDF`; respects sensitive-site rules — _**Ctrl+P works now; it never did.** The command was not missing — `printActive()` has existed all along and the right-click menu called it. What was missing was the KEY: `@tepegoz/shortcuts`, the registry that is the only place a global key may be bound, had no `print` entry, while `page-context-menu` printed the string `'Ctrl+P'` next to the row. The menu taught the user a key that was bound to nothing. **The same defect held for two siblings** — `Ctrl+S` (save) and `Ctrl+U` (view source) were advertised the same way and equally dead — so all three are now registered (`main` scope, for the reason `find` is: the key arrives while the PAGE has focus, where the chrome renderer never sees it). Wiring them exposed a real cycle: `keyboard-shortcuts.ts` cannot import the tab model, because `tabs-view-wiring.ts` imports IT (dependency-cruiser's `no-circular`, measured, not guessed). The bodies moved to `page-commands.ts` as free functions over one `WebContents`, following the `handleZoomShortcut` precedent — which also removed the duplication, since the keyboard and the menu now run the same code instead of the menu owning the only copy. `printActive()` was a bare `webContents.print()`: called with no callback it reports **nothing at all**, so a print that never happened looked exactly like one that did. It now distinguishes a user cancelling the dialog (the ordinary outcome) from a real failure (a warning carrying Chromium's reason). **Two gates, both mutation-verified:** `accelerators.test.tsx` walks every branch of the menu on win32/darwin/linux and fails if any row advertises a key that is neither in the registry nor in the declared platform-built-in set (removing `print` from the registry turns 5 tests red); `keyboard-shortcuts.test.ts` locks the dispatch, including that matching stays EXACT so Ctrl+Shift+P does not print (removing the dispatch case turns 2 red). The accelerator strings are now derived rather than typed, which fixed a defect nobody had reported: they were hardcoded Windows notation on every platform, so a Mac was told `Alt+←` for history when macOS uses `⌘←`, and `Ctrl+P` where it should read `⌘P`._ — _**`printToPDF` now landed too, so this box is code-complete.** "Save as PDF…" is a page right-click row (`main/print/print-to-pdf.electron.ts`), separate from `page-commands.ts` because that module is imported BY the tab model and therefore cannot reach `NotificationHost` — a measured cycle, not a preference. It asks for the path BEFORE rendering: generating a long page and then discarding it on Cancel is work for nothing, and on a slow page the dialog would arrive long after the click. It reports failure, which is the point of having it at all when the system dialog already offers a PDF printer — `printToPDF` rejects on a page it cannot render, and an unwritable path or a full disk are ordinary; a save that silently did nothing is the exact failure mode this file keeps recording. **The suggested file name is a security surface, not cosmetics:** it comes from `<title>`, which the PAGE sets, and lands in a native dialog's `defaultPath`. `pdf-filename.ts` strips both platforms' separators and any `..`, drops Windows-reserved and control characters, prefixes the reserved device names (`CON.pdf` is refused by the OS with any extension), and removes leading dots — a leading dot is a hidden file on unix, and the residue of a traversal attempt should not get to decide that. 12 sanitizer tests + 8 service tests. Two of those tests earned their keep during the writing: the traversal cases were passing a literal carriage return, because `\r` inside `C:\Users\kuray\report` written as an ordinary TS string is one character, not two — and while fixing the input they exposed that the sanitizer's own `[\/]` had been collapsed to `[\/]`, so backslashes were never being stripped at all._ — _**"Respects sensitive-site rules" is vacuous today and is NOT being ticked as if it were satisfied:** that lockout gates AUTOMATION, and no agent tool can print or save a PDF (checked — `browser-tools` and `capability-plane` have neither capability). Printing is a user action on their own screen; blocking a user from printing their own bank statement would be the wrong reading. The line becomes real only when an agent-initiated print exists. That is why this box stays `[~]` rather than `[x]` — the DoD line names a property this code does not yet have anything to apply._
 - [ ] Built-in **PDF viewer** (Chromium PDF plugin surface; open-in-tab + save routes through Download Manager)
-- [ ] **Reader mode** (Readability extraction → clean, localized reading view; opt-in per page)
+- [x] **Reader mode** (Readability extraction → clean, localized reading view; opt-in per page)
+      — _`@tepegoz/reader`: Readability-style scoring (paragraph density, discounted by link density,
+      penalised on the class/id names that mark boilerplate), the reading view, en+tr. Page right-click
+      → "Reading view". 21 tests._
+      — _**The extractor produces BLOCKS, never HTML, and that is the security decision the whole
+      feature rests on.** A reading view draws the body of an arbitrary page inside the TRUSTED app
+      chrome — the one place in this browser where injected markup would run with the chrome's
+      privileges. Filtering HTML to make that safe is a game you have to keep winning; handing the
+      renderer typed blocks with plain-text fields is a game there is nothing to play. There is no
+      `html` field in the model and no `dangerouslySetInnerHTML` in the view. Image `src` is the single
+      attribute that survives, allow-listed to `http(s)`/`data:image` **twice** — in the page, and again
+      in main on the value that becomes the attribute. The cost is accepted and stated: inline markup is
+      flattened to text._
+      — _**No `@mozilla/readability`, no jsdom.** Extraction runs INSIDE the page, where the document is
+      already parsed, so no DOM implementation is shipped into main to re-parse it. The extractor is
+      still a plain function of a `Document`, which is what keeps it testable — vitest's jsdom
+      environment supplies one. The injected copy is generated from that same source by
+      `scripts/generate-reader-bundle.ts` (the established `video-player-embed-bundle` pattern), so the
+      thing that runs and the thing the tests exercise cannot drift: they ARE one source, compiled
+      twice._
+      — _**`null` is a real answer with its own copy.** Extraction declines on search results,
+      dashboards and apps by design, and the UI says "this page does not look like an article" rather
+      than "reader mode failed" — one is a fact the user can act on, the other sends them looking for a
+      bug. Main treats the returned value as untrusted regardless of having written the source, and
+      re-validates the whole shape: a hostile page can patch globals, and "we wrote it" is not a reason
+      to trust what comes back across a boundary._
+      — _The view is an **overlay**, not a navigation: the tab keeps its URL, history and scroll, so
+      leaving it returns the user exactly where they were. Any navigation or tab switch closes it —
+      an article left on screen over a different page would misattribute itself to that page._
+      — _Mutation-verified: removing the image allow-list, the link-density guard, the STRIP skip in
+      `text()`, or the "a block owns its subtree" return each turns a test red. **The subtree one did
+      not, at first** — the plain-text list fixture had no element children to descend into, so it
+      proved nothing; a `<li><p>…</p></li>` case was added and the property is now actually covered.
+      Separately, the block-count test passed locally and timed out under coverage instrumentation; its
+      fixture was the heaviest in the repo for no reason and is now cheap with a stated budget._
 - [ ] **Page translation** — **ADR required** (provider boundary): local model vs API, sensitive-site lockout,
       determinism/observation-recording impact (agent's own runs read untranslated source)
 - [ ] User-facing **screenshot** (visible viewport + full-page) → stored as a **CAS blob** (reuse Phase 0/1b

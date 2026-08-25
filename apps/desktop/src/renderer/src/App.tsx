@@ -28,6 +28,7 @@ import { AppChrome } from './App-chrome';
 import { AppContent } from './App-content';
 import { AppOverlays } from './App-overlays';
 import type { OmniboxQuickSettingTarget } from '@tepegoz/omnibox';
+import { useReader } from './app-reader';
 
 export function App() {
   const [prefs, setPrefs] = useState<Preferences | null>(null);
@@ -74,6 +75,11 @@ export function App() {
   }, []);
 
   const bookmarks = useBookmarksBar(tabsRef, currentUrl);
+  const readerState = useReader(tabs.activeId, currentUrl);
+  useEffect(
+    () => window.tepegoz.onReaderToggle(readerState.toggleReader),
+    [readerState.toggleReader],
+  );
 
   // The active tab's group (null when ungrouped) + that group's remembered Agent Console open state.
   const activeGroupId = tabs.tabs.find((t) => t.id === tabs.activeId)?.groupId ?? null;
@@ -286,6 +292,7 @@ export function App() {
           loginCredentials={loginCredentials}
           refreshLogins={refreshLogins}
           onUpdatePrefs={onUpdatePrefs}
+          reader={readerState}
           onResetPrefs={onResetPrefs}
           onAddKey={onAddKey}
           onRemoveKeyById={onRemoveKeyById}

@@ -40,4 +40,5 @@ export const tr: PageContextMenuStrings = {
   openMediaNewTab: 'Yeni sekmede aç',
   saveMediaAs: 'Farklı kaydet…',
   copyMediaAddress: 'Adresi kopyala',
+  readerMode: 'Okuma görünümü',
 };

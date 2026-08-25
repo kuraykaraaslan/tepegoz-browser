@@ -241,6 +241,10 @@ export const IpcChannels = {
    *  permissions need no channel of their own — they are ordinary preferences and go through the
    *  already-validated preferences write path. */
   agentCapabilitiesList: 'permissions:agent-list',
+  /** Reading view: extract the active tab's article as structured blocks (never HTML). */
+  readerExtract: 'reader:extract',
+  /** main → renderer: the user asked for the reading view (menu row or Ctrl+Shift+R). */
+  readerToggle: 'reader:toggle',
   windowsOpenPrivate: 'windows:open-private',
   bookmarksExport: 'bookmarks:export',
   /** Bookmark tags: replace one bookmark's set, and read the whole tag list with counts. */

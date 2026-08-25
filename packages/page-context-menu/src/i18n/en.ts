@@ -44,6 +44,7 @@ export const en = {
   openMediaNewTab: 'Open in new tab',
   saveMediaAs: 'Save as…',
   copyMediaAddress: 'Copy address',
+  readerMode: 'Reading view',
 };
 
 export type PageContextMenuStrings = typeof en;
