@@ -5,28 +5,13 @@ import {
   type ReactNode,
   type SetStateAction,
 } from 'react';
-import type { Locale } from '@tepegoz/i18n';
-import {
-  INTERNAL_BOOKMARKS_URL,
-  INTERNAL_DOWNLOADS_URL,
-  INTERNAL_EXTENSIONS_URL,
-  INTERNAL_HISTORY_URL,
-  INTERNAL_NEWTAB_URL,
-  INTERNAL_UPLOADS_URL,
-} from '@tepegoz/desktop-ipc';
-import type { AutofillAvailablePayload, ExtensionId, Preferences, TabsState } from '@tepegoz/desktop-ipc';
+import { INTERNAL_NEWTAB_URL } from '@tepegoz/desktop-ipc';
+import type { AutofillAvailablePayload, Preferences, TabsState } from '@tepegoz/desktop-ipc';
 import { AutofillSuggestion } from '@tepegoz/password-ui';
-import { HistoryPage } from '@tepegoz/history-ui';
-import { DownloadsPage } from '@tepegoz/downloads-ui';
-import { UploadsPage } from '@tepegoz/uploads-ui';
 import { NewTabPage } from '@tepegoz/newtab-ui';
-import { BookmarksManager } from '@tepegoz/bookmarks-ui';
 import { extensionIdFromPageUrl } from '../../shared/extension-urls';
 import { extensionDefById, type ExtensionDef } from './extensions/registry';
-import { ExtensionsPage } from './components/ExtensionsPage';
-import { bookmarkDialogAnchor, type BookmarksBarResult } from './app-bookmarks';
 import { AGENT_EXTENSION_ID, type ExtensionSurfacesResult } from './app-extension-surfaces';
-import type { OmniboxHistoryResult } from './app-omnibox-history';
 import { internalPageBase } from './App-helpers';
 import { useAppContentModel } from './App-content-model';
 import { ReaderSurface } from './components/ReaderSurface';
@@ -39,22 +24,24 @@ export interface AppContentProps {
   currentUrl: string;
   registry: ExtensionDef[];
   prefs: Preferences | null;
-  locale: Locale;
   surfaceFallback: ReactNode;
   extSurfaces: ExtensionSurfacesResult;
-  omniboxHistory: OmniboxHistoryResult;
-  bookmarks: BookmarksBarResult;
   autofill: AutofillAvailablePayload | null;
   setAutofill: Dispatch<SetStateAction<AutofillAvailablePayload | null>>;
   onUpdatePrefs: (patch: Partial<Preferences>) => Promise<void>;
   reader: ReaderResult;
-  onToggleExtension: (id: ExtensionId, enabled: boolean) => void;
 }
 
 /**
- * The content region below the chrome: the web-view host plus the internal app pages (new tab, settings,
- * extensions, history, downloads, uploads, bookmarks), extension `page`/overlay surfaces, the autofill
- * suggestion, and the resizable sidebar dock. Split out of `App.tsx` (ADR-0010 250-line cap).
+ * The content region below the chrome: the web-view host plus the new-tab page, extension `page`/overlay
+ * surfaces, the autofill suggestion, and the resizable sidebar dock. Split out of `App.tsx` (ADR-0010
+ * 250-line cap).
+ *
+ * Settings/extensions/history/downloads/uploads/bookmarks (`tepegoz://…`) are no longer rendered here —
+ * Faz 2/3 of `phases/tracks/protocol-tepegoz-pages.md` gave each a REAL `WebContentsView`
+ * (`tabs-internal-page-view.ts`), laid over this same content area by main exactly like a web tab's
+ * view. Their content is each page's own `*PageSurface.tsx`, loaded standalone. `tepegoz://tasks` has no
+ * current UI (dead route) and was never rendered here either way.
  */
 export function AppContent({
   contentRef,
@@ -63,27 +50,18 @@ export function AppContent({
   currentUrl,
   registry,
   prefs,
-  locale,
   surfaceFallback,
   extSurfaces,
-  omniboxHistory,
-  bookmarks,
   autofill,
   setAutofill,
   onUpdatePrefs,
   reader,
-  onToggleExtension,
 }: AppContentProps) {
   const activeTab = tabs.tabs.find((tb) => tb.id === tabs.activeId);
 
   // Internal pages are tabs addressed tepegoz://… ; render them when active.
   const currentBaseUrl = internalPageBase(currentUrl);
   const newTabActive = currentBaseUrl === INTERNAL_NEWTAB_URL;
-  const extensionsActive = currentBaseUrl === INTERNAL_EXTENSIONS_URL;
-  const historyActive = currentBaseUrl === INTERNAL_HISTORY_URL;
-  const downloadsActive = currentBaseUrl === INTERNAL_DOWNLOADS_URL;
-  const uploadsActive = currentBaseUrl === INTERNAL_UPLOADS_URL;
-  const bookmarksActive = currentBaseUrl === INTERNAL_BOOKMARKS_URL;
   // An extension `page` surface: tepegoz://<extension-id> → render that extension's page component.
   const pageExtIds = registry.filter((d) => d.manifest.surfaces.includes('page')).map((d) => d.id);
   const pageExtId =
@@ -91,15 +69,7 @@ export function AppContent({
   const PageSurface =
     pageExtId !== null ? extensionDefById(registry, pageExtId)?.surfaces.page : undefined;
 
-  const extensionStates = prefs?.extensions ?? [];
-
   const {
-    downloadList,
-    downloadCommand,
-    downloadSubscribe,
-    uploadList,
-    uploadCommand,
-    uploadSubscribe,
     newTabShortcuts,
     onAddShortcut,
     onEditShortcut,
@@ -117,9 +87,8 @@ export function AppContent({
       {/* Left region = the web-view area (its bounds are measured from contentRef, so they exclude
           the sidebar); the resizable sidebar dock sits to its right. */}
       <div ref={contentRef} className="relative flex-1 overflow-hidden">
-        {/* The active tab's web page is a separate WebContentsView laid over this area by main. The
-          internal app tabs (Settings/Extensions/History), extension `page` tabs, and open overlay
-          surfaces have no web view, so the chrome renders them here instead. */}
+        {/* The active tab's web page is a separate WebContentsView laid over this area by main. Extension
+          `page` tabs and open overlay surfaces have no web view, so the chrome renders them here instead. */}
         {contentSnapshot !== null && (
           // A still of the page shown while the live web view is hidden for chrome overlays.
           <img
@@ -143,61 +112,6 @@ export function AppContent({
               background={resolvedNewTabBackground}
               onChangeBackground={onChangeNewTabBackground}
               onPickBackgroundImage={onPickNewTabBackgroundImage}
-            />
-          </div>
-        )}
-        {/* Settings (tepegoz://settings) is no longer rendered here — Faz 2 of
-            phases/tracks/protocol-tepegoz-pages.md gave it a REAL WebContentsView
-            (tabs-internal-page-view.ts), laid over this same content area by main exactly like a web
-            tab's view. Its content is `SettingsPageSurface.tsx`, loaded standalone. */}
-        {extensionsActive && (
-          <div className="absolute inset-0 bg-surface-system">
-            <ExtensionsPage
-              locale={locale}
-              extensions={registry}
-              states={extensionStates}
-              onToggle={onToggleExtension}
-            />
-          </div>
-        )}
-        {historyActive && (
-          <div className="absolute inset-0 bg-surface-system">
-            <HistoryPage
-              list={omniboxHistory.historyList}
-              remove={omniboxHistory.historyRemove}
-              clear={omniboxHistory.historyClear}
-            />
-          </div>
-        )}
-        {downloadsActive && (
-          <div className="absolute inset-0 bg-surface-system">
-            <DownloadsPage
-              list={downloadList}
-              command={downloadCommand}
-              subscribe={downloadSubscribe}
-            />
-          </div>
-        )}
-        {uploadsActive && (
-          <div className="absolute inset-0 bg-surface-system">
-            <UploadsPage list={uploadList} command={uploadCommand} subscribe={uploadSubscribe} />
-          </div>
-        )}
-        {bookmarksActive && (
-          <div className="absolute inset-0 bg-surface-system">
-            <BookmarksManager
-              getTree={bookmarks.getBookmarkTree}
-              refreshKey={bookmarks.bookmarksVersion}
-              onMove={bookmarks.onBookmarkMove}
-              onNewFolder={(parentId) =>
-                window.tepegoz.openPopup('bookmark-add-folder', bookmarkDialogAnchor(), {
-                  id: parentId,
-                })
-              }
-              onOpen={(url) => window.tepegoz.navigateTab(url)}
-              onContextMenu={(id, type) => window.tepegoz.showBookmarkContextMenu(id, type)}
-              onSetTags={(id, tags) => window.tepegoz.setBookmarkTags(id, tags)}
-              onExport={() => window.tepegoz.exportBookmarks()}
             />
           </div>
         )}

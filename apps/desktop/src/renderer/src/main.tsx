@@ -15,6 +15,11 @@ import { BookmarkFolderPopup } from './components/BookmarkFolderPopup';
 import { BookmarkDialogPopup } from './components/BookmarkDialogPopup';
 import { OnboardingApp } from './components/OnboardingApp';
 import { SettingsPageSurface } from './components/SettingsPageSurface';
+import { ExtensionsPageSurface } from './components/ExtensionsPageSurface';
+import { HistoryPageSurface } from './components/HistoryPageSurface';
+import { DownloadsPageSurface } from './components/DownloadsPageSurface';
+import { UploadsPageSurface } from './components/UploadsPageSurface';
+import { BookmarksPageSurface } from './components/BookmarksPageSurface';
 import { DragPreviewSurface } from './components/DragPreviewSurface';
 import { applyTheme } from './lib/theme';
 import './styles.css';
@@ -51,6 +56,11 @@ const internalPageHost = window.location.protocol === 'tepegoz:' ? window.locati
 
 let node: ReactNode = <App />;
 if (internalPageHost === 'settings') node = <SettingsPageSurface />;
+else if (internalPageHost === 'extensions') node = <ExtensionsPageSurface />;
+else if (internalPageHost === 'history') node = <HistoryPageSurface />;
+else if (internalPageHost === 'downloads') node = <DownloadsPageSurface />;
+else if (internalPageHost === 'uploads') node = <UploadsPageSurface />;
+else if (internalPageHost === 'bookmarks') node = <BookmarksPageSurface />;
 else if (surface === 'main-menu') node = <MainMenuPopup />;
 else if (surface === 'page-context-menu') node = <PageContextMenuPopup />;
 else if (surface === 'user-menu') node = <UserMenuPopup />;

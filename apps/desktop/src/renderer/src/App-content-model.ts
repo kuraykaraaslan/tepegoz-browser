@@ -4,20 +4,6 @@ import type { ResolvedNewTabBackground } from '@tepegoz/newtab-ui';
 import { DEFAULT_NEWTAB_BACKGROUND } from './App-helpers';
 
 export interface AppContentModel {
-  downloadList: () => ReturnType<typeof window.tepegoz.listDownloads>;
-  downloadCommand: (
-    input: Parameters<typeof window.tepegoz.commandDownload>[0],
-  ) => ReturnType<typeof window.tepegoz.commandDownload>;
-  downloadSubscribe: (
-    callback: Parameters<typeof window.tepegoz.onDownloadsState>[0],
-  ) => ReturnType<typeof window.tepegoz.onDownloadsState>;
-  uploadList: () => ReturnType<typeof window.tepegoz.listUploads>;
-  uploadCommand: (
-    input: Parameters<typeof window.tepegoz.commandUpload>[0],
-  ) => ReturnType<typeof window.tepegoz.commandUpload>;
-  uploadSubscribe: (
-    callback: Parameters<typeof window.tepegoz.onUploadsState>[0],
-  ) => ReturnType<typeof window.tepegoz.onUploadsState>;
   newTabShortcuts: Preferences['newTabShortcuts'];
   onAddShortcut: (title: string, url: string) => void;
   onEditShortcut: (id: string, title: string, url: string) => void;
@@ -29,9 +15,8 @@ export interface AppContentModel {
 }
 
 /**
- * The new-tab / downloads / uploads data bindings behind the internal content pages: stable IPC command
- * wrappers, the persisted new-tab shortcut list transforms, and the new-tab background (descriptor +
- * uploaded-image cache). Split out of `App-content.tsx` (ADR-0010 250-line cap).
+ * The new-tab page's data bindings: the persisted new-tab shortcut list transforms and the new-tab
+ * background (descriptor + uploaded-image cache). Split out of `App-content.tsx` (ADR-0010 250-line cap).
  */
 export function useAppContentModel(
   prefs: Preferences | null,
@@ -40,29 +25,6 @@ export function useAppContentModel(
 ): AppContentModel {
   // Fetched-once data URLs for uploaded new-tab background images, keyed by their cas:// ref.
   const [bgImageCache, setBgImageCache] = useState<Record<string, string>>({});
-
-  const downloadList = useCallback(() => window.tepegoz.listDownloads(), []);
-  const downloadCommand = useCallback(
-    (input: Parameters<typeof window.tepegoz.commandDownload>[0]) =>
-      window.tepegoz.commandDownload(input),
-    [],
-  );
-  const downloadSubscribe = useCallback(
-    (callback: Parameters<typeof window.tepegoz.onDownloadsState>[0]) =>
-      window.tepegoz.onDownloadsState(callback),
-    [],
-  );
-  const uploadList = useCallback(() => window.tepegoz.listUploads(), []);
-  const uploadCommand = useCallback(
-    (input: Parameters<typeof window.tepegoz.commandUpload>[0]) =>
-      window.tepegoz.commandUpload(input),
-    [],
-  );
-  const uploadSubscribe = useCallback(
-    (callback: Parameters<typeof window.tepegoz.onUploadsState>[0]) =>
-      window.tepegoz.onUploadsState(callback),
-    [],
-  );
 
   // New-tab shortcuts are the user's own list (independent of bookmarks), persisted in preferences.
   // Add/edit/remove are plain array transforms over `prefs.newTabShortcuts` (capped at MAX_SHORTCUTS).
@@ -126,12 +88,6 @@ export function useAppContentModel(
   );
 
   return {
-    downloadList,
-    downloadCommand,
-    downloadSubscribe,
-    uploadList,
-    uploadCommand,
-    uploadSubscribe,
     newTabShortcuts,
     onAddShortcut,
     onEditShortcut,

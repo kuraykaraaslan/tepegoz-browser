@@ -21,9 +21,6 @@ export interface OmniboxHistoryResult {
   onRunSkillFromOmnibox: (id: string) => void;
   /** `@download <query>` — opens the downloads page. */
   onOpenDownloadFromOmnibox: (id: string) => void;
-  historyList: (q: string, offset: number) => ReturnType<typeof window.tepegoz.getHistory>;
-  historyRemove: (url: string) => ReturnType<typeof window.tepegoz.deleteHistory>;
-  historyClear: () => ReturnType<typeof window.tepegoz.clearHistory>;
 }
 
 /** The host of a download's source URL, or the raw string when it will not parse. */
@@ -182,25 +179,11 @@ export function useOmniboxAndHistory(
     [onCloseSurface],
   );
 
-  // Stable data-source bindings for HistoryPage — it refetches when `list` changes identity.
-  const historyList = useCallback(
-    (q: string, offset: number) =>
-      q.length === 0
-        ? window.tepegoz.getHistory({ offset })
-        : window.tepegoz.searchHistory({ query: q, offset }),
-    [],
-  );
-  const historyRemove = useCallback((url: string) => window.tepegoz.deleteHistory(url), []);
-  const historyClear = useCallback(() => window.tepegoz.clearHistory(), []);
-
   return {
     onOmniboxSuggest,
     onActivateTabFromOmnibox,
     onAgentTaskFromOmnibox,
     onRunSkillFromOmnibox,
     onOpenDownloadFromOmnibox,
-    historyList,
-    historyRemove,
-    historyClear,
   };
 }

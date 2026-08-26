@@ -57,10 +57,12 @@ export function registerInternalPagesScheme(): void {
 }
 
 /**
- * Hosts allowed to load the renderer bundle as a real page. Growing this set is Faz 3 of the plan doc —
- * each addition (extensions/history/downloads/…) is its own reviewed step, not a blanket switch.
+ * Hosts allowed to load the renderer bundle as a real page. Every host serves the IDENTICAL inlined
+ * document — it's the same single-page bundle for all of them; `main.tsx` picks which surface to mount
+ * at runtime from `location.hostname`. Adding a page here only requires that dispatch case in `main.tsx`
+ * and the corresponding `tepegoz://` URL in `tabs-internal-page-view.ts`'s `REAL_PAGE_BASE_URLS`.
  */
-const REAL_PAGE_HOSTS = new Set(['settings']);
+const REAL_PAGE_HOSTS = new Set(['settings', 'extensions', 'history', 'downloads', 'uploads', 'bookmarks']);
 
 /** The renderer bundle directory. `__dirname` is `out/main` in both packaged and unpackaged builds —
  *  the same relative path `chrome-url.ts#chromeFilePath` uses to find `index.html`. */
@@ -122,14 +124,15 @@ interface InlinedPage {
 }
 
 /**
- * Build the fully self-contained `tepegoz://settings` document: every `<script src>` and
+ * Build the fully self-contained `tepegoz://` document: every `<script src>` and
  * `<link rel="stylesheet">` the built `index.html` references is read and inlined; the favicon (if any)
  * becomes a `data:` URI. Computed once and cached — the bundle is build output, immutable for the life of
- * the running app.
+ * the running app — and shared by every host in {@link REAL_PAGE_HOSTS}, since it's the same bundle for
+ * all of them.
  */
-let cachedSettingsPage: Promise<InlinedPage> | null = null;
+let cachedInlinedPage: Promise<InlinedPage> | null = null;
 
-async function buildInlinedSettingsPage(): Promise<InlinedPage> {
+async function buildInlinedAppPage(): Promise<InlinedPage> {
   const dir = rendererDir();
   const htmlPath = join(dir, 'index.html');
   let html = (await readFile(htmlPath)).toString('utf8');
@@ -163,9 +166,9 @@ async function buildInlinedSettingsPage(): Promise<InlinedPage> {
   return { html, csp: internalPageCsp(scriptHashes, styleHashes) };
 }
 
-function getInlinedSettingsPage(): Promise<InlinedPage> {
-  cachedSettingsPage ??= buildInlinedSettingsPage();
-  return cachedSettingsPage;
+function getInlinedAppPage(): Promise<InlinedPage> {
+  cachedInlinedPage ??= buildInlinedAppPage();
+  return cachedInlinedPage;
 }
 
 /**
@@ -190,7 +193,7 @@ export function registerInternalPagesProtocol(): void {
     if (!REAL_PAGE_HOSTS.has(url.host)) return notFound();
     if (url.pathname !== '' && url.pathname !== '/') return notFound();
     try {
-      const page = await getInlinedSettingsPage();
+      const page = await getInlinedAppPage();
       return new Response(page.html, {
         status: 200,
         headers: {

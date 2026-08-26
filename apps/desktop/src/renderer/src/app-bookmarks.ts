@@ -18,14 +18,12 @@ export function bookmarkDialogAnchor(): ContentBounds {
 export interface BookmarksBarResult {
   activeBookmarked: boolean;
   barNodes: BookmarkTreeNode[];
-  bookmarksVersion: number;
   canBookmark: boolean;
   /** Flat `{ url, title }` list feeding omnibox bookmark suggestions (see `./app-omnibox-history`). */
   bookmarksRef: MutableRefObject<{ url: string; title: string }[]>;
   /** Large-folder "open all" confirmation, shown by `App.tsx`'s own Modal. */
   openAllUrls: string[] | null;
   setOpenAllUrls: (urls: string[] | null) => void;
-  getBookmarkTree: () => Promise<BookmarkTreeNode[]>;
   onToggleBookmark: () => Promise<void>;
   onBookmarkMove: (id: string, newParentId: string, index: number) => void;
   findBarNode: (id: string) => BookmarkTreeNode | null;
@@ -43,7 +41,6 @@ export function useBookmarksBar(
   const bookmarksRef = useRef<{ url: string; title: string }[]>([]);
   const [activeBookmarked, setActiveBookmarked] = useState(false);
   const [barNodes, setBarNodes] = useState<BookmarkTreeNode[]>([]);
-  const [bookmarksVersion, setBookmarksVersion] = useState(0);
   const [openAllUrls, setOpenAllUrls] = useState<string[] | null>(null);
   const canBookmark = isBookmarkable(currentUrl);
 
@@ -61,11 +58,7 @@ export function useBookmarksBar(
     }
     bookmarksRef.current = flat.map((b) => ({ url: b.url, title: b.title }));
     setBarNodes(tree.find((r) => r.id === BOOKMARK_ROOT_BAR)?.children ?? []);
-    setBookmarksVersion((v) => v + 1);
   }, []);
-
-  // Stable manager binding (it refetches when this or `refreshKey` change identity).
-  const getBookmarkTree = useCallback(() => window.tepegoz.getBookmarkTree(), []);
 
   useEffect(() => {
     void refreshBookmarks();
@@ -196,12 +189,10 @@ export function useBookmarksBar(
   return {
     activeBookmarked,
     barNodes,
-    bookmarksVersion,
     canBookmark,
     bookmarksRef,
     openAllUrls,
     setOpenAllUrls,
-    getBookmarkTree,
     onToggleBookmark,
     onBookmarkMove,
     findBarNode,

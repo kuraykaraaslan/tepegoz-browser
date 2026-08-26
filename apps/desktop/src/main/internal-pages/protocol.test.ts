@@ -8,8 +8,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * built `index.html` references into ONE self-contained response instead of serving them per-path. The
  * properties under test: the inlined document actually contains the script/style/icon content (not just
  * references to them), the CSP allows exactly that inlined content by hash (never a blanket
- * `'unsafe-inline'`), the build is cached (not re-read/re-hashed per request), and only the settings host
- * at its root path is ever served — everything else is a 404, not a guess.
+ * `'unsafe-inline'`), the build is cached and SHARED across every allowed host (one bundle, dispatched
+ * client-side by hostname in `main.tsx`), and only an allowed host at its root path is ever served —
+ * everything else is a 404, not a guess.
  */
 
 type Handler = (request: { url: string }) => Response | Promise<Response>;
@@ -118,6 +119,14 @@ describe('tepegoz:// handler — inlined settings document', () => {
     expect(res.headers.get('Referrer-Policy')).toBe('no-referrer');
   });
 
+  it.each(['settings', 'extensions', 'history', 'downloads', 'uploads', 'bookmarks'])(
+    'serves the same inlined document for host %s — main.tsx dispatches by hostname at runtime',
+    async (host) => {
+      const res = await run(`tepegoz://${host}`);
+      expect(res.status).toBe(200);
+    },
+  );
+
   it('404s an unknown host instead of guessing', async () => {
     const res = await run('tepegoz://not-a-real-page');
     expect(res.status).toBe(404);
@@ -149,6 +158,22 @@ describe('tepegoz:// handler — caching', () => {
     expect(callsAfterFirst).toBeGreaterThan(0);
     await handler!({ url: 'tepegoz://settings' });
     expect(readFile).toHaveBeenCalledTimes(callsAfterFirst); // no new reads on the second request
+  });
+
+  it('shares the SAME cached build across different hosts — one bundle, dispatched client-side', async () => {
+    vi.resetModules();
+    readFile.mockClear();
+    const fresh = await import('./protocol');
+    let handler: Handler | null = null;
+    sessionProtocolHandle.mockImplementationOnce((_s: string, h: Handler) => {
+      handler = h;
+    });
+    fresh.registerInternalPagesProtocol();
+    await handler!({ url: 'tepegoz://settings' });
+    const callsAfterFirst = readFile.mock.calls.length;
+    expect(callsAfterFirst).toBeGreaterThan(0);
+    await handler!({ url: 'tepegoz://history' }); // a DIFFERENT host, same cached build
+    expect(readFile).toHaveBeenCalledTimes(callsAfterFirst);
   });
 });
 

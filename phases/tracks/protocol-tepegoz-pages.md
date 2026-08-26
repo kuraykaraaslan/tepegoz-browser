@@ -1,10 +1,12 @@
 # Plan — `tepegoz://` sistem sayfalarının `protocol.handle` ile gerçek sayfa olarak sunulması
 
-**Durum:** Kabul edildi ve **Faz 0/1/2 tamamlandı** — [express-settings.md](express-settings.md) Ek A'nın
-büyütülmüş hâli; Express soket yolu **reddedildi**. `tepegoz://settings` artık gerçek bir
-`WebContentsView`'de çalışıyor; sağ tık context-menu'sü fire ediyor (e2e ile doğrulandı). Diğer iç
-sayfalar (`extensions`/`history`/…) henüz taşınmadı — Faz 3, bkz. §4.
-**Tarih:** 2026-08-26 (plan, Faz 0, Faz 1 blocker keşfi ve çözümü, Faz 2 — hepsi aynı gün)
+**Durum:** Kabul edildi ve **Faz 0/1/2/3 tamamlandı** — [express-settings.md](express-settings.md) Ek A'nın
+büyütülmüş hâli; Express soket yolu **reddedildi**. `tepegoz://settings`, `extensions`, `history`,
+`downloads`, `uploads`, `bookmarks` artık hepsi gerçek `WebContentsView`'lerde çalışıyor; settings için
+sağ tık context-menu'sü fire ediyor (e2e ile doğrulandı), diğer beşi gerçek içerik render ettiği
+doğrulandı. `tepegoz://tasks` taşınmadı — hiçbir UI onu render etmiyor (ölü route, Tasks ürün
+yeniden tasarımına kadar).
+**Tarih:** 2026-08-26 (plan, Faz 0, Faz 1 blocker keşfi ve çözümü, Faz 2, Faz 3 — hepsi aynı gün)
 
 ## Çözülen blocker: subresource istekleri bu scheme'e hiç ulaşmıyor (2026-08-26)
 
@@ -41,18 +43,24 @@ inline ediliyor (o da bir subresource isteği olurdu). Sonuç build-time'da bir 
 process ömrü boyunca cache'leniyor. Detaylar `protocol.ts`'teki `registerInternalPagesProtocol` ve
 `buildInlinedSettingsPage` doc comment'lerinde.
 
-**Bilinen kalıntı risk:** Bu çözüm yalnızca settings sayfasının KENDİ ana bundle'ını + CSS'ini + favicon'unu
-kapsıyor. Eğer settings UI'ı ileride (React.lazy ile) dinamik `import()` yapan bir alt-özellik kazanırsa,
-ya da harici bir font/görsel dosyasına `url(...)` ile referans verirse, O istek de AYNI subresource-dispatch
-hatasına çarpar. Bugünkü settings UI'ı hiçbir lazy-import/harici-font kullanmıyor (131571 karakterlik
-render edilmiş içerik e2e ile doğrulandı), bu yüzden şu an için sorun değil — ama Faz 3'te başka bir
-sayfa taşınırken bu kısıtlama (**"tüm doküman kendi kendine yetmeli, hiçbir subresource'a güvenilemez"**)
-göz önünde bulundurulmalı.
+**Bilinen kalıntı risk (hâlâ geçerli, izlenmeli):** Bu çözüm yalnızca TEK BİR paylaşılan bundle + CSS +
+favicon'u kapsıyor — her host (`settings`/`extensions`/`history`/`downloads`/`uploads`/`bookmarks`)
+AYNI inline edilmiş dokümanı alıyor, `main.tsx` hangi Surface'ın mount edileceğine
+`location.hostname`'den çalışma zamanında karar veriyor (bkz. `protocol.ts`'teki `REAL_PAGE_HOSTS`).
+Eğer bu paylaşılan bundle ileride (React.lazy ile) dinamik `import()` yapan bir alt-özellik kazanırsa, ya
+da harici bir font/görsel dosyasına `url(...)` ile referans verirse, O istek de AYNI
+subresource-dispatch hatasına çarpar. Doğrulama: build çıktısında GÖRÜNEN `history-page-*.js` gibi ayrı
+chunk'lar (bkz. build log) hep VARDI — bunlar `extensions/registry.ts`'nin lazy extension-page
+surface'ları için, benim `HistoryPageSurface.tsx` gibi STATIC import kullanan Surface'larımla ilgisi yok
+(hepsi ana `index-*.js` chunk'ına gömülü, doğrulandı). Ama Faz 3+'ta (extensions dahil) her yeni
+sayfa/özellik eklenirken bu kısıtlama (**"tüm doküman kendi kendine yetmeli, hiçbir subresource'a
+güvenilemez"**) göz önünde bulundurulmalı — özellikle Extensions sayfası ileride lazy-load'lu üçüncü
+taraf uzantı ikonları/paneli kazanırsa.
 
-**Kapsam:** `tepegoz://settings` (tamamlandı) ve zamanla diğer iç sayfalar (`extensions`, `history`, `downloads`,
-`uploads`, `bookmarks`, `tasks`) içeriğinin, chrome penceresine gömülü React overlay yerine,
+**Kapsam:** `tepegoz://settings`/`extensions`/`history`/`downloads`/`uploads`/`bookmarks` (hepsi
+tamamlandı) içeriğinin, chrome penceresine gömülü React overlay yerine,
 `protocol.registerSchemesAsPrivileged` + `protocol.handle('tepegoz', …)` ile **gerçek bir sayfa**
-olarak, **dinleyen bir TCP soketi açmadan** sunulması.
+olarak, **dinleyen bir TCP soketi açmadan** sunulması. `tasks` kapsam dışı (ölü route).
 
 ## 1. Motivasyon ve karar gerekçesi
 
@@ -93,35 +101,38 @@ Soket olmadığı için Express taslağının T1-T8 tehdit tablosunun büyük k�
 | R3 | **Playwright `_electron` window-discovery precedent.** `chrome-url.ts:9-19`'da kayıtlı: `app://chrome/index.html` gibi özel bir scheme ana chrome penceresi için denenmiş ve **geri alınmış**, çünkü Playwright `firstWindow()` non-standart scheme'deki pencereleri göremiyor. | **DOĞRULANDI, sorun değil** — `tepegoz://` sadece bir `WebContentsView`'in içeriği; üstteki `BrowserWindow` `file://`/dev-server'dan yüklenmeye devam ediyor. Faz 0'da e2e ile kanıtlandı (`smoke.spec.ts` dahil tüm suite yeşil), Faz 2 sonrası tekrar doğrulandı. |
 | R4 | `tepegoz://` sayfası içinde de agent'ın "internal tab'ların `webContents`'i yok" varsayımı kırılır ([tabs-window-nav.ts:185-190](../../apps/desktop/src/main/tabs-window-nav.ts#L185-L190) `activeWebContents()`, [tabs-window-closing.ts:144-151](../../apps/desktop/src/main/tabs-window-closing.ts#L144-L151) `viewlessActiveTabId()`) — screenshot/perception/devtools-gate/agent-newtab-replace mantığının hepsi bu invaryanta bağlı. | **ÇÖZÜLDÜ, bedelsiz.** `tabs-internal-page-view.ts`'in view'ları `WindowTabsBase.views`'tan AYRI bir map'te tutuluyor — yukarıdaki invaryantların hiçbiri değiştirilmedi. Tear-off/adopt (`tabs-window-moves.ts`) de bu ayrı map'i taşıyacak şekilde genişletildi (`DetachedTab.internalPageView`), aksi hâlde bir settings tab'ı başka pencereye sürüklemek onu kalıcı olarak boşaltırdı — bu gerçek gap test edilirken bulundu ve kapatıldı. |
 
-## 3. Mimari
+## 3. Mimari (gerçekleşen hâli)
 
 ```
 main process (module scope, whenReady'den ÖNCE)
 └─ protocol.registerSchemesAsPrivileged([
      { scheme: 'tepegoz', privileges: { standard: true, secure: true, supportFetchAPI: true,
-                                          corsEnabled: false, stream: true } },
+                                          corsEnabled: true } },
    ])
 
 main process (whenReady içinde, installSecurity() yanına)
 └─ internal-pages/protocol.ts
-     ├─ registerInternalPagesProtocol()   → protocol.handle('tepegoz', handler)
-     ├─ handler: host → allowlist'li kaynak haritası (path traversal yok, sabit route seti)
-     ├─ her yanıta CSP + X-Content-Type-Options + Referrer-Policy header'ları (chromeCsp'nin
-     │  bir varyantı — security.ts'teki chromeCsp mantığı yeniden kullanılır, kopyalanmaz)
-     └─ bilinmeyen host / route → 404, path traversal denemesi → 400
+     ├─ registerInternalPagesProtocol() → session.fromPartition(APP_PARTITION).protocol.handle(...)
+     │  (ÜSTTEKİ protocol.handle DEĞİL — o session.defaultSession'a bağlanır, bkz. doc comment)
+     ├─ handler: host ∈ REAL_PAGE_HOSTS ve path === '/' ise → TEK inline edilmiş doküman (cache'li)
+     ├─ her yanıta CSP (script/style-src 'sha256-…') + X-Content-Type-Options + Referrer-Policy
+     └─ bilinmeyen host / path → 404
 
-renderer / WebContentsView (Faz 2 — bu plan henüz TabManager'a dokunmuyor)
-└─ tepegoz://settings  → gerçek WebContentsView → context-menu event fire eder
+renderer / WebContentsView (Faz 2/3 — tabs-internal-page-view.ts)
+└─ tepegoz://{settings,extensions,history,downloads,uploads,bookmarks}
+     → gerçek WebContentsView → main.tsx hostname'e göre doğru *PageSurface'ı mount eder
+     → context-menu event fire eder (settings için e2e ile doğrulandı)
 ```
 
 - **Yeni dosya:** `apps/desktop/src/main/internal-pages/protocol.ts` — scheme kaydı + handler.
   `apps/desktop`'ta kalıyor (Electron-native glue), bir `@tepegoz/*` paketine çıkarılmaya değecek kadar
   büyürse sonraki iş kalemi.
-- **CSP kaynağı:** `security.ts`'teki `chromeCsp` fonksiyonu yeniden kullanılacak/parametreleştirilecek
-  — iki yerde aynı politikanın kopyasını tutmak (ADR-0010 ruhuna aykırı, tek kaynak ilkesi).
-- **Şema kaynağı:** Bu iş kaleminde henüz yeni bir DTO/route yok (sadece statik HTML/asset servisi);
-  Faz 2'de `/api/*` benzeri bir şey **eklenmeyecek** — mevcut typed IPC/contextBridge yolu kullanılmaya
-  devam edecek (Express taslağının M10'u burada bedava: secret hiçbir zaman bu handler'dan geçmiyor).
+- **CSP kaynağı:** `security.ts`'teki `chromeCsp`'den AYRI, kendi `internalPageCsp()` fonksiyonu —
+  hash-bazlı script/style-src üretmesi gerektiği için chromeCsp'nin parametrik hâle getirilmesi yerine
+  ayrı tutuldu (ikisi de aynı "no unsafe-inline/eval, sıkı default-src" felsefesini paylaşıyor).
+- **Şema kaynağı:** Yeni bir DTO/route yok (statik, inline edilmiş HTML servisi); mevcut typed
+  IPC/contextBridge yolu kullanılmaya devam ediyor (Express taslağının M10'u burada bedava: secret
+  hiçbir zaman bu handler'dan geçmiyor).
 
 ## 4. İş kalemleri (sırayla)
 
@@ -148,35 +159,62 @@ renderer / WebContentsView (Faz 2 — bu plan henüz TabManager'a dokunmuyor)
 9. [x] i18n: `SettingsPageSurface.tsx` mevcut `useT`/`I18nProvider`'ı aynen kullanıyor, hiçbir yeniden
    yazım gerekmedi (Express taslağının §7'sinde öngörüldüğü gibi).
 
-**Faz 3+ — Diğer iç sayfalar (henüz başlanmadı):** `extensions`/`history`/`downloads`/`uploads`/
-`bookmarks`/`tasks` aynı kalıpla (inline-document deseni dahil), talep/öncelik sırasına göre, her biri
-kendi PR'ı. **Uyarı:** Faz 1'in "bilinen kalıntı risk" notuna bakın — herhangi bir dinamik import/harici
-font kullanan bir sayfa taşınmadan önce o kısıtlama yeniden değerlendirilmeli.
+**Faz 3 — Diğer iç sayfalar (TAMAMLANDI, aynı gün):**
+10. [x] `internal-pages/protocol.ts`: `REAL_PAGE_HOSTS`'a `extensions`/`history`/`downloads`/`uploads`/
+    `bookmarks` eklendi — hepsi AYNI inline edilmiş bundle'ı paylaşıyor (yeni build karmaşıklığı yok).
+11. [x] Her sayfa için kendi `*PageSurface.tsx`'i (`ExtensionsPageSurface`/`HistoryPageSurface`/
+    `DownloadsPageSurface`/`UploadsPageSurface`/`BookmarksPageSurface`) — `SettingsPageSurface.tsx`'in
+    deseni tekrarlandı: preload bridge'e doğrudan bağlı, prop-threading yok. Ortak locale+theme
+    bootstrap'i `app-surface-locale.ts`'e çıkarıldı (5 kopya yerine 1 hook).
+12. [x] `tabs-internal-page-view.ts`: `REAL_PAGE_BASE_URLS`'e beş URL eklendi.
+13. [x] `App-content.tsx`: 5 React overlay branch'i kaldırıldı; artık sadece new-tab + extension `page`
+    surface'ları render ediyor. Bu overlay'lere ÖZEL veri bağlamaları
+    (`downloadList`/`uploadList`/`historyList`/`getBookmarkTree`/`bookmarksVersion` vb.)
+    `App-content-model.ts`/`app-omnibox-history.ts`/`app-bookmarks.ts`'ten de temizlendi — hâlâ BAŞKA
+    bir yerde kullanılanlar (`onBookmarkMove`, bar/omnibox'un kendi bağlamaları) korundu.
+14. [x] `e2e/tepegoz-internal-pages.spec.ts`: beş sayfanın hepsi gerçek içerik render ediyor
+    (`innerText.length > 0`) — tek testte tümü.
+
+**Faz 3'te bilinçli olarak bırakılan tek küçük davranış farkı:** Extensions sayfasından bir uzantıyı
+kapatmak artık O uzantının chrome'daki AÇIK sidebar panelini/popup'ını OTOMATİK kapatmıyor (eskiden
+`App.tsx#onToggleExtension` aynı dokümanda olduğu için yapabiliyordu; artık ayrı bir doküman, chrome'un
+panel state'ine erişemiyor). Uzantı yine de devre dışı kalıyor — sadece zaten açık bir panel, kullanıcı
+onunla bir sonraki etkileşimine kadar açık kalabilir. `ExtensionsPageSurface.tsx`'in doc comment'inde
+kayıtlı.
+
+**`tepegoz://tasks` taşınmadı:** Hiçbir renderer kodu şu an bu URL'i render etmiyor (`@tepegoz/tasks-ui`
+sadece main-process URL sabitlerinde referans veriliyor) — taşınacak bir UI yok, Tasks ürün
+yeniden tasarımı beklemede.
 
 ## 5. Test / doğrulama
 
-- **Birim:** `protocol.test.ts` (11 test) — handler host/path allowlist, inline edilen script/style/icon
-  içeriğinin gerçekten gömülü olduğu, CSP hash'lerinin doğruluğu, cache davranışı, favicon-okuma
-  başarısızlığının zarifçe düşmesi.
-- **E2E:** `e2e/tepegoz-settings-page.spec.ts` — `tepegoz://settings` gerçek içerik render ediyor
-  (`innerText.length > 0`) VE sağ tık → `page-context-menu` popup'ı açılıyor. Tam suite (31 test)
-  regresyonsuz geçti (1 önceden var olan, alakasız flake hariç).
+- **Birim:** `protocol.test.ts` (18 test) — handler host/path allowlist (artık 6 host için), inline
+  edilen script/style/icon içeriğinin gerçekten gömülü olduğu, CSP hash'lerinin doğruluğu, cache'in
+  farklı host'lar arasında PAYLAŞILDIĞI, favicon-okuma başarısızlığının zarifçe düşmesi.
+- **E2E:** `e2e/tepegoz-settings-page.spec.ts` — settings gerçek içerik render ediyor VE sağ tık →
+  `page-context-menu` popup'ı açılıyor. `e2e/tepegoz-internal-pages.spec.ts` — diğer beş sayfanın hepsi
+  gerçek içerik render ediyor. Tam suite regresyonsuz geçti (önceden var olan, alakasız flake'ler hariç
+  — `platform-defaults.spec.ts` kamera izni testi, `ime-turkish-text.spec.ts` bir kez gözlendi ve
+  izolasyonda geçtiği doğrulandı → makine kaynak baskısı flake'i, kod ile ilgisi yok).
 - `pnpm exec turbo run typecheck lint test build` + `pnpm e2e` — hepsi yeşil.
 
 ## 6. Rollback
 
-Tek nokta: `tabs-internal-page-view.ts`'teki `REAL_PAGE_BASE_URLS`'i boşaltmak, `App-content.tsx`'e
-`SettingsPage` React overlay branch'ini geri koymak (git history'de mevcut). `internal-pages/protocol.ts`
-ve `tabs-internal-page-view.ts`'in geri kalanı kullanılmadan zararsız kalır.
+Sayfa bazında: `tabs-internal-page-view.ts`'teki `REAL_PAGE_BASE_URLS`'ten ilgili URL'i çıkarmak,
+`App-content.tsx`'e o sayfanın React overlay branch'ini geri koymak (git history'de mevcut,
+`fe0aec4`'ten önceki hâl settings için, sonraki commit diğer beşi için). `internal-pages/protocol.ts`'in
+`REAL_PAGE_HOSTS`'undan host'u çıkarmak tamamlayıcı adım — geri kalan altyapı kullanılmadan zararsız
+kalır.
 
 ## 7. Açık sorular
 
-- Faz 3'te `settings` dışındaki sayfalar aynı PR'da mı, yoksa her biri ayrı mı taşınacak? (Öneri: ayrı —
-  her biri kendi review yüzeyi.)
-- `packages/settings-ui` (şu an `apps/desktop`'ta `SettingsLayout`/`settingsDict` kaynağı olarak zaten
-  kullanılıyor — "unused" değil) ile `SettingsPage.tsx`/`SettingsPageSurface.tsx` arasındaki mevcut
-  bölünme korunuyor; Faz 3'te başka bir sayfa taşınırken benzer bir "Surface" host bileşeni deseni
-  tekrarlanabilir.
+- `tepegoz://tasks` için bir UI yazılıp bu deseni kullanacak mı, yoksa Tasks ürün yeniden tasarımı
+  tamamen farklı bir yön mü alacak? Karar o iş başladığında verilecek.
+- Faz 3'ün "bilinen kalıntı risk" notu (yukarıda) — Extensions sayfası ileride üçüncü taraf uzantı
+  desteği kazanırsa (lazy-load'lu ikon/panel), bu kısıtlama o zaman yeniden değerlendirilmeli.
+- `packages/settings-ui` (`SettingsLayout`/`settingsDict` kaynağı olarak kullanılıyor) ile
+  `SettingsPage.tsx`/`SettingsPageSurface.tsx` arasındaki bölünme deseni, Faz 3'te
+  `ExtensionsPage.tsx`/`ExtensionsPageSurface.tsx` gibi diğer sayfalarda da tekrarlandı — tutarlı.
 
 ---
 

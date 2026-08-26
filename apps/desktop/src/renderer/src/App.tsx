@@ -248,16 +248,12 @@ export function App() {
           currentUrl={currentUrl}
           registry={registry}
           prefs={prefs}
-          locale={locale}
           surfaceFallback={surfaceFallback}
           extSurfaces={extSurfaces}
-          omniboxHistory={omniboxHistory}
-          bookmarks={bookmarks}
           autofill={autofill}
           setAutofill={setAutofill}
           onUpdatePrefs={onUpdatePrefs}
           reader={readerState}
-          onToggleExtension={onToggleExtension}
         />
         <CommandPaletteHost
           open={palette.open}

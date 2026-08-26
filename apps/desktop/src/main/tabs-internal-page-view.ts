@@ -4,7 +4,14 @@ import {
   type ContextMenuParams,
   type Rectangle,
 } from 'electron';
-import { INTERNAL_SETTINGS_URL } from '@tepegoz/desktop-ipc';
+import {
+  INTERNAL_BOOKMARKS_URL,
+  INTERNAL_DOWNLOADS_URL,
+  INTERNAL_EXTENSIONS_URL,
+  INTERNAL_HISTORY_URL,
+  INTERNAL_SETTINGS_URL,
+  INTERNAL_UPLOADS_URL,
+} from '@tepegoz/desktop-ipc';
 import { CHROME_WEB_PREFERENCES } from './window';
 import { contextMenuObservers, internalBaseUrl } from './tabs-shared';
 
@@ -30,14 +37,24 @@ import { contextMenuObservers, internalBaseUrl } from './tabs-shared';
 /**
  * Internal-page base URLs that get a REAL WebContentsView instead of a chrome-rendered React overlay.
  *
- * Settings is the first entry (2026-08-26). Getting here required root-causing a real Electron bug:
+ * Settings was the first entry (2026-08-26), which required root-causing a real Electron bug:
  * subresource requests (the bundle's `<script src>`/`<link href>`) never reach
- * `internal-pages/protocol.ts`'s handler for this scheme, so `internal-pages/protocol.ts` now serves a
- * single self-contained document with everything inlined — see that file's doc comment for the full
- * story. Growing this set further (extensions/history/downloads/…) is Faz 3 — each addition needs its
- * own inlined-document entry in `internal-pages/protocol.ts` first.
+ * `internal-pages/protocol.ts`'s handler for this scheme, so that file now serves a single
+ * self-contained document with everything inlined — see its doc comment for the full story. Every host
+ * here serves the SAME inlined bundle (`internal-pages/protocol.ts`'s `REAL_PAGE_HOSTS` must list the
+ * matching hostname, and `main.tsx` must dispatch it to a `*Surface` component) — Faz 3
+ * (2026-08-26) added the rest of the pages that had a chrome-rendered React branch in
+ * `App-content.tsx`. `tepegoz://tasks` is deliberately NOT here: no UI currently renders it (dead route,
+ * left for whenever the Tasks product rework lands).
  */
-const REAL_PAGE_BASE_URLS = new Set<string>([INTERNAL_SETTINGS_URL]);
+const REAL_PAGE_BASE_URLS = new Set<string>([
+  INTERNAL_SETTINGS_URL,
+  INTERNAL_EXTENSIONS_URL,
+  INTERNAL_HISTORY_URL,
+  INTERNAL_DOWNLOADS_URL,
+  INTERNAL_UPLOADS_URL,
+  INTERNAL_BOOKMARKS_URL,
+]);
 
 /** Whether `url` (an internal-page tab's full URL, hash included) should be backed by a real view. */
 export function hasRealPage(url: string): boolean {
