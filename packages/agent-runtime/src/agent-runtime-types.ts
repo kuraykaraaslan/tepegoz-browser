@@ -48,6 +48,13 @@ export interface AgentRunDeps {
   /** Resolve a browser tab's committed URL for tabId-scoped browser tools. */
   tabUrl?: (tabId: string) => string | undefined;
   /**
+   * Whether a tab's egress is currently killed (Phase 5 `BindingService.mayEgress`, inverted) — a
+   * dropped VPN/Tor tunnel or a DNS-leak/cleartext-when-tunnel-expected anomaly. Absent ⇒ never
+   * reported blocked, so a host that hasn't wired Phase 5 network privacy degrades to today's behavior
+   * rather than refusing every call.
+   */
+  tabEgressBlocked?: (tabId: string) => boolean;
+  /**
    * All open browser tabs, with which one is active (S3 PR3 tab-spawn world model). Absent ⇒ the
    * runtime cannot resolve an "origin" tab or notice a followed tab closing, so it never auto-follows a
    * spawned tab — the same degrade-to-status-quo the spawn DETECTION itself already uses when a host

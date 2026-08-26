@@ -117,6 +117,7 @@ export default class ToolGateway {
       descriptor: tool.descriptor,
       taintedArgs: ctx.taintedArgs ?? false,
       ...(ctx.targetUrl !== undefined ? { targetUrl: ctx.targetUrl } : {}),
+      ...(ctx.egressBlocked === true ? { egressBlocked: true } : {}),
       // Read off the DESCRIPTOR, never off the call. A caller that could name its own capability
       // class could name the harmless one.
       ...(tool.descriptor.capability !== undefined

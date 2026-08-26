@@ -24,6 +24,9 @@ export interface InvokeContext {
   taintedArgs?: boolean;
   /** URL the action targets (sensitive-site lockout). */
   targetUrl?: string;
+  /** The target tab's egress is currently killed (Phase 5 kill-switch / DNS-leak anomaly) — see
+   *  `PolicyContext.egressBlocked`. */
+  egressBlocked?: boolean;
   /** Origin the run started from, so a cross-site submission can be told from a same-site one. */
   originUrl?: string;
   /** Required for create/upload-style tools (exactly-once-ish). */

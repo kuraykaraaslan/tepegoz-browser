@@ -96,6 +96,24 @@ describe('ToolGateway.invoke', () => {
     expect(res.message).toContain('sensitive_site_lockout');
   });
 
+  it('denies a state-changing action on a tab whose egress is killed (Phase 5 lockout, no prompt)', async () => {
+    register({ id: 'form_update_field', dangerClass: 'state_changing' });
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true)); // even with approval...
+    const res = asError(await ToolGateway.invoke('form_update_field', {}, { egressBlocked: true }));
+    expect(res.code).toBe('FORBIDDEN');
+    expect(res.message).toContain('tab_egress_blocked');
+  });
+
+  it('asks (does not silently allow) a read on an egress-blocked tab', async () => {
+    register({ id: 'browser_get_page', dangerClass: 'read' });
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    expect(await ToolGateway.invoke('browser_get_page', {}, { egressBlocked: true })).toBe('ok');
+    ToolGateway.setConfirmHandler(() => Promise.resolve(false));
+    expect(
+      asError(await ToolGateway.invoke('browser_get_page', {}, { egressBlocked: true })).code,
+    ).toBe('FORBIDDEN');
+  });
+
   it('requires an idempotencyKey for create/upload tools', async () => {
     register({
       id: 'mail_create_message',

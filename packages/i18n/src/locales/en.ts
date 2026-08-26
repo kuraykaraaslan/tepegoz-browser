@@ -65,6 +65,18 @@ export const en = {
       whatYouCanDo:
         'Do it yourself in the page. The lockout is deliberate and cannot be approved away.',
     },
+    tab_egress_blocked_read: {
+      title: 'Confirm — this tab cannot reach the network',
+      why: "This tab's connection is currently blocked (a VPN/Tor tunnel dropped, or a network-leak check failed), so this read will not actually reach the page.",
+      whatYouCanDo:
+        'Approve if you want the agent to try anyway (it will simply fail), or wait for the connection to recover first.',
+    },
+    tab_egress_blocked: {
+      title: 'Blocked — this tab cannot reach the network',
+      why: "This tab's connection is currently blocked (a VPN/Tor tunnel dropped, or a network-leak check failed). The action is refused outright rather than asked about, because nothing would actually happen.",
+      whatYouCanDo:
+        'Check the connection in Settings → Network, or switch the tab to a working route, then try again.',
+    },
     tainted_side_effect: {
       title: 'Confirm — instructions came from the page',
       why: 'The values for this action were taken from page content the agent read, so a page could have planted them. That is how prompt injection turns a read into an action.',

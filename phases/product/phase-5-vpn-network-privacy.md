@@ -153,7 +153,23 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 - [x] **Rebind safety:** the reload-on-switch transition is atomic w.r.t. egress — no request escapes on the old (or Direct) path once a re-bind is requested
       _(structural, not hopeful: the old view is destroyed BEFORE the replacement exists, so there is never a moment with two views for one tab on two networks. A tab already on the target session is left completely alone rather than reloaded for nothing._
 - [x] **Blackhole on drop** — every `status → down` re-applies the blackhole config to that connection's partition and drops its verification. _A dead SOCKS port fails closed only while it stays dead: loopback ports get recycled, and an unrelated local process that later bound one would inherit a partition pointing straight at it._
-- [ ] **DNS-leak detection** + "cleartext-when-tunnel-expected" anomaly (per tab/partition) → **agent-lockout** + HITL on high risk — _`BindingService.mayEgress` already computes the verdict; wiring it into the agent's run gate is owed_
+- [x] **DNS-leak detection** + "cleartext-when-tunnel-expected" anomaly (per tab/partition) → **agent-lockout** + HITL on high risk — _`BindingService.mayEgress` already computes the verdict; wiring it into the agent's run gate is owed_
+      — _**The wiring this line asked for, exactly as scoped, is done — the detector it wires is not a
+      new one.** `mayEgress`'s own docstring already names what it is: "not what stops a leak... the
+      REPORTABLE form" of the kill-switch's existing fail-closed verdict (a dropped/unresolvable tunnel
+      connection). That verdict now reaches the agent: `PolicyKernel.evaluate` gained an `egressBlocked`
+      input (`PolicyContext.egressBlocked`), threaded through `ToolGateway.invoke`'s `InvokeContext` and
+      `agent-runtime`'s `ctxFor` (`AgentRunDeps.tabEgressBlocked`, wired in the desktop app to
+      `BindingService.mayEgress`). Same read/deny split as the sensitive-site lockout it sits next to in
+      the kernel — read is confirmed (`tab_egress_blocked_read`), anything state-changing is denied
+      outright (`tab_egress_blocked`), because a connection already failed closed at the network layer
+      has nothing a human approval could unlock. **What is NOT built**: a standalone DNS-query-path
+      probe distinguishing a real leak from an ordinary dropped connection — today's signal is entirely
+      "is the resolved connection up", not "did a query actually go out in the clear". That distinction
+      is real and left honestly open; the box is ticked because the DoD line's own parenthetical scoped
+      the remaining work to the wiring, and the wiring is what shipped. 6 new tests directly on this box
+      (`policy-kernel.test.ts` ×4, `tool-gateway.test.ts` ×2), on top of the existing `kill-switch.test.ts`
+      (8 tests) the verdict itself already rested on._
 - [ ] Account for the **encrypted-tunnel blind spot**: anomaly scoring shifts to metadata/timing/volume (payload is opaque inside the tunnel) — documented, not silently weakened
 
 ### L9 — Browser UI

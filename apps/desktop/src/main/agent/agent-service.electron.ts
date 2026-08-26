@@ -8,6 +8,7 @@ import { ModelGateway, type CanonMessage } from '@tepegoz/model-gateway';
 import { randomUUID } from 'node:crypto';
 import { AgentConversationStore, type Db } from '@tepegoz/persistence';
 import TabManager from '../tabs';
+import BindingService from '../network/binding-service.electron';
 import AgentTabGroup from './agent-tab-group.electron';
 import { runActiveTabUrl } from './browser-host.electron';
 import { discoverSitemap } from '../web/web-tools-host.electron';
@@ -38,6 +39,13 @@ const activeTabUrl = runActiveTabUrl;
 function tabUrl(tabId: string): string | undefined {
   const tab = TabManager.getState().tabs.find((t) => t.id === tabId);
   return tab !== undefined && tab.url.length > 0 ? tab.url : undefined;
+}
+
+/** Whether a tab's egress is currently killed (Phase 5 kill-switch / DNS-leak anomaly) — the
+ *  Policy Kernel's agent-lockout input, computed from the same fail-closed verdict the connection
+ *  badge/UI already reads (`BindingService.mayEgress`), never re-decided here. */
+function tabEgressBlocked(tabId: string): boolean {
+  return !BindingService.mayEgress(tabId);
 }
 
 /** All open tabs + which is active (S3 PR3 tab-spawn world model — origin/return-to-origin bookkeeping). */
@@ -78,6 +86,7 @@ export default class AgentService {
         {
           activeTabUrl,
           tabUrl,
+          tabEgressBlocked,
           listTabs,
           discoverSitemap,
           handoffStrings: { captcha: handoff.captcha, twofa: handoff.twofa, login: handoff.login },

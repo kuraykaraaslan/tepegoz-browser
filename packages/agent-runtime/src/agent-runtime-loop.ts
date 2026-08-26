@@ -330,13 +330,19 @@ export function runReactiveLoop(args: {
           // The Policy Kernel gets the concrete site + taint of EACH tool call here (this is what
           // makes the sensitive-site lockout and taint→HITL actually fire at runtime).
           ctxFor: (tool, args): InvokeContext => {
-            const tabId = tabIdFromArgs(args);
+            // Falls back to the ACTIVE tab when the call names none (most tab-scoped tools act on
+            // "whatever tab the agent is on" implicitly) — without this fallback the egress check below
+            // would only ever fire for the minority of calls that pass an explicit tabId.
+            const tabId = tabIdFromArgs(args) ?? deps.listTabs?.().find((t) => t.active)?.id;
             const targetUrl =
               urlFromArgs(args) ??
               (tabId !== undefined ? deps.tabUrl?.(tabId) : undefined) ??
               deps.activeTabUrl();
             const ctx: InvokeContext = { taintedArgs: taint.isTainted(args) };
             if (targetUrl !== undefined) ctx.targetUrl = targetUrl;
+            if (tabId !== undefined && deps.tabEgressBlocked?.(tabId) === true) {
+              ctx.egressBlocked = true;
+            }
             // create/upload-style tools require an idempotency key at the PEP. The agent supplies a fresh
             // one per invocation — the reactor's loop detection and each tool's own guards (e.g.
             // file_create_file's exists→409 check) handle accidental repeats.

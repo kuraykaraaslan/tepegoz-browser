@@ -4,13 +4,14 @@ import PolicyKernel, { type PolicyContext } from './policy-kernel';
 
 function evaluate(
   dangerClass: RiskLevel,
-  opts: { taintedArgs?: boolean; targetUrl?: string } = {},
+  opts: { taintedArgs?: boolean; targetUrl?: string; egressBlocked?: boolean } = {},
 ) {
   const ctx: PolicyContext = {
     descriptor: { id: 'tab_get_item', dangerClass },
     taintedArgs: opts.taintedArgs ?? false,
   };
   if (opts.targetUrl !== undefined) ctx.targetUrl = opts.targetUrl;
+  if (opts.egressBlocked !== undefined) ctx.egressBlocked = opts.egressBlocked;
   return PolicyKernel.evaluate(ctx);
 }
 
@@ -81,6 +82,36 @@ describe('PolicyKernel.evaluate — sensitive-site lockout', () => {
     expect(evaluate('state_changing', { targetUrl: 'https://example.com' }).reason).toBe(
       'state_change_confirm',
     );
+  });
+});
+
+describe('PolicyKernel.evaluate — egress-blocked tab (Phase 5 kill-switch / DNS-leak anomaly)', () => {
+  it('denies side-effecting actions on a tab whose egress is killed', () => {
+    expect(evaluate('state_changing', { egressBlocked: true })).toEqual({
+      decision: 'deny',
+      reason: 'tab_egress_blocked',
+      biometric: false,
+    });
+    expect(evaluate('destructive', { egressBlocked: true }).decision).toBe('deny');
+  });
+  it('asks (not allow) for reads on an egress-blocked tab', () => {
+    expect(evaluate('read', { egressBlocked: true })).toEqual({
+      decision: 'ask',
+      reason: 'tab_egress_blocked_read',
+      biometric: false,
+    });
+  });
+  it('takes priority over the sensitive-site lockout — the reason names the network fact, not the site', () => {
+    expect(
+      evaluate('state_changing', {
+        egressBlocked: true,
+        targetUrl: 'https://mybank.com/transfer',
+      }).reason,
+    ).toBe('tab_egress_blocked');
+  });
+  it('leaves an ordinary (non-blocked) tab completely unaffected', () => {
+    expect(evaluate('state_changing', { egressBlocked: false }).reason).toBe('state_change_confirm');
+    expect(evaluate('state_changing').reason).toBe('state_change_confirm');
   });
 });
 

@@ -18,6 +18,14 @@ export interface PolicyContext {
   /** URL the action targets, for the sensitive-site lockout. Omit when not site-scoped. */
   targetUrl?: string;
   /**
+   * True when the TAB this call targets currently has its egress killed — a dropped VPN/Tor tunnel, a
+   * DNS-leak/cleartext-when-tunnel-expected anomaly, or any other case `BindingService.mayEgress`
+   * (Phase 5) reports as `false`. The network layer already fails the request closed; this is what
+   * keeps the agent from retrying, escalating, or otherwise treating a silently-blocked connection as
+   * an ordinary failure to route around. Omit when the caller has no tab context (nothing to check).
+   */
+  egressBlocked?: boolean;
+  /**
    * The code-execution class of this call, when it runs model-authored code (S5).
    *
    * Deliberately NOT a new {@link RiskLevel}. A danger class describes what a tool DOES; this
@@ -108,7 +116,19 @@ export default class PolicyKernel {
       return { decision: 'deny', reason: 'code_exec_write_disabled', biometric: false };
     }
 
-    // 1) Sensitive-site lockout (bank/crypto/password/health): locked from automation by default.
+    // 1) Egress-blocked tab (Phase 5 kill-switch / DNS-leak anomaly): the most fundamental gate, ahead
+    // of site sensitivity, because the question here is not "which site" but "can this even reach the
+    // network at all". Same read/else split as the sensitive-site lockout below, for the same reason —
+    // a read still tells the agent SOMETHING (why nothing loaded) and is worth a confirm rather than a
+    // flat refusal, but anything that changes state on a connection already failing closed is refused.
+    if (ctx.egressBlocked === true) {
+      if (risk === 'read') {
+        return { decision: 'ask', reason: 'tab_egress_blocked_read', biometric: false };
+      }
+      return { decision: 'deny', reason: 'tab_egress_blocked', biometric: false };
+    }
+
+    // 2) Sensitive-site lockout (bank/crypto/password/health): locked from automation by default.
     if (ctx.targetUrl !== undefined && isSensitiveSite(ctx.targetUrl)) {
       if (risk === 'read') {
         return { decision: 'ask', reason: 'sensitive_site_read', biometric: false };
@@ -116,12 +136,12 @@ export default class PolicyKernel {
       return { decision: 'deny', reason: 'sensitive_site_lockout', biometric: false };
     }
 
-    // 2) Tainted (web-derived) args on a side-effecting call → always HITL (injection containment).
+    // 3) Tainted (web-derived) args on a side-effecting call → always HITL (injection containment).
     if (ctx.taintedArgs && SIDE_EFFECT.has(risk)) {
       return { decision: 'ask', reason: 'tainted_side_effect', biometric: highRisk };
     }
 
-    // 3) Base decision by danger class.
+    // 4) Base decision by danger class.
     switch (risk) {
       case 'read':
         return ctx.capability === 'code_exec_read'

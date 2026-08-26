@@ -18,6 +18,13 @@ export const POLICY_REASONS = [
   'sensitive_site_read',
   /** Anything that CHANGES something on a sensitive origin. Denied outright, not asked. */
   'sensitive_site_lockout',
+  /** A read on a tab whose egress is currently killed (dropped tunnel / DNS-leak anomaly): confirmed
+   *  first, since the read will simply fail rather than reach anything. */
+  'tab_egress_blocked_read',
+  /** Anything that CHANGES state on a tab whose egress is currently killed. Denied outright — the
+   *  network layer has already failed the connection closed, so there is nothing a human approval
+   *  would unlock. */
+  'tab_egress_blocked',
   /** A side-effecting call whose arguments came from page content the agent read (injection risk). */
   'tainted_side_effect',
   /** An ordinary state-changing action: confirm before it happens. */

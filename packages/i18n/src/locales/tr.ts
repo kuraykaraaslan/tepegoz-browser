@@ -54,6 +54,18 @@ export const tr: Resources = {
       why: 'İşlem, bankacılık/kripto/parola/sağlık sitesinde bir şeyi DEĞİŞTİRECEKTİ. Bu siteler yalnızca okumaya kilitlidir ve buradan hiçbir onay bu kilidi açamaz.',
       whatYouCanDo: 'İşlemi sayfada kendiniz yapın. Kilit bilinçlidir, onayla aşılamaz.',
     },
+    tab_egress_blocked_read: {
+      title: 'Onay — bu sekme ağa erişemiyor',
+      why: 'Bu sekmenin bağlantısı şu anda engelli (bir VPN/Tor tüneli düştü veya bir ağ sızıntısı denetimi başarısız oldu), bu yüzden bu okuma sayfaya gerçekten ulaşmayacak.',
+      whatYouCanDo:
+        'Ajanın yine de denemesini istiyorsanız onaylayın (yalnızca başarısız olur) veya önce bağlantının düzelmesini bekleyin.',
+    },
+    tab_egress_blocked: {
+      title: 'Engellendi — bu sekme ağa erişemiyor',
+      why: 'Bu sekmenin bağlantısı şu anda engelli (bir VPN/Tor tüneli düştü veya bir ağ sızıntısı denetimi başarısız oldu). İşlem sorulmadan doğrudan reddedilir, çünkü zaten hiçbir şey gerçekleşmeyecekti.',
+      whatYouCanDo:
+        'Ayarlar → Ağ üzerinden bağlantıyı kontrol edin veya sekmeyi çalışan bir rotaya geçirip tekrar deneyin.',
+    },
     tainted_side_effect: {
       title: 'Onay — talimatlar sayfadan geldi',
       why: 'Bu işlemin değerleri, ajanın okuduğu sayfa içeriğinden alındı; yani bir sayfa bunları yerleştirmiş olabilir. Prompt injection bir okumayı tam da böyle eyleme çevirir.',
