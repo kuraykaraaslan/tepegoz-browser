@@ -28,6 +28,7 @@
     "@tepegoz/navigation": "workspace:*",
     "@tepegoz/persistence": "workspace:*",
     "@tepegoz/reader": "workspace:*",
+    "@tepegoz/screenshots": "workspace:*",
     "@tepegoz/shared-types": "workspace:*",
     "@tepegoz/tasks": "workspace:*",
     "@tepegoz/uploads": "workspace:*",

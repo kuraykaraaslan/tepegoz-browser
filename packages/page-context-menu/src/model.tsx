@@ -68,6 +68,10 @@ export interface PageContextMenuActions {
   savePdf: () => void;
   /** Toggle the reading view for this page. */
   readerMode: () => void;
+  /** Capture what is on screen. */
+  screenshotViewport: () => void;
+  /** Capture the whole page, clipped if it is enormous. */
+  screenshotFullPage: () => void;
   viewSource: () => void;
   inspect: () => void;
   copy: () => void;
@@ -404,6 +408,8 @@ function defaultMenu(
     // A row may show no key at all; what it may not do is show one nothing binds.
     row('save-as-pdf', t.saveAsPdf, undefined, a.savePdf),
     row('reader-mode', t.readerMode, undefined, a.readerMode),
+    row('screenshot-viewport', t.screenshotViewport, undefined, a.screenshotViewport),
+    row('screenshot-full-page', t.screenshotFullPage, undefined, a.screenshotFullPage),
     row('cast', t.cast),
     SEP,
     placeholder('search-lens', t.searchLens, <Icon name="search" />),

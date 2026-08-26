@@ -16,6 +16,7 @@ import TabManager from '../tabs';
 import ClipboardService from '../clipboard/clipboard-service.electron';
 import PageContextMenuContributionService from './page-context-menu-contributions';
 import { savePageAsPdf } from '../print/print-to-pdf.electron';
+import { captureAndNotify } from '../screenshots/screenshot-notify.electron';
 
 /**
  * Web-page (WebContentsView) right-click menu — the Chrome-style page context menu. Unlike the native
@@ -193,6 +194,12 @@ export function runPageMenuAction(action: PageMenuAction): void {
       }
       break;
     }
+    case 'screenshot-viewport':
+      void captureAndNotify('viewport');
+      break;
+    case 'screenshot-full-page':
+      void captureAndNotify('fullPage');
+      break;
     case 'save-as-pdf':
       void savePageAsPdf();
       break;

@@ -80,3 +80,9 @@ export const ClientCertificateResponseSchema = z.object({
   requestId: z.string().max(64),
   index: z.number().int().nonnegative().max(255).nullable(),
 });
+
+/**
+ * Which screenshot the renderer asked for. A closed enum rather than a free string: the value picks a
+ * capture path in main, and an untrusted renderer has no business naming one that does not exist.
+ */
+export const ScreenshotModeSchema = z.enum(['viewport', 'fullPage']);

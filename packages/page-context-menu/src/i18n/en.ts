@@ -45,6 +45,8 @@ export const en = {
   saveMediaAs: 'Save as…',
   copyMediaAddress: 'Copy address',
   readerMode: 'Reading view',
+  screenshotViewport: 'Screenshot this view',
+  screenshotFullPage: 'Screenshot the whole page',
 };
 
 export type PageContextMenuStrings = typeof en;

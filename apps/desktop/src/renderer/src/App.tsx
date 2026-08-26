@@ -29,6 +29,7 @@ import { AppContent } from './App-content';
 import { AppOverlays } from './App-overlays';
 import type { OmniboxQuickSettingTarget } from '@tepegoz/omnibox';
 import { useReader } from './app-reader';
+import { useScreenshotEncoder } from './app-screenshot-encoder';
 
 export function App() {
   const [prefs, setPrefs] = useState<Preferences | null>(null);
@@ -76,6 +77,7 @@ export function App() {
 
   const bookmarks = useBookmarksBar(tabsRef, currentUrl);
   const readerState = useReader(tabs.activeId, currentUrl);
+  useScreenshotEncoder();
   useEffect(
     () => window.tepegoz.onReaderToggle(readerState.toggleReader),
     [readerState.toggleReader],

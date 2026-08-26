@@ -71,3 +71,4 @@ export function buildScreenshotSnapshot(input: ScreenshotCaptureResult): Screens
     'off-screen targets).';
   return { ...input, content: wrapUntrustedContent(text, input.url) };
 }
+export * from './user-capture';

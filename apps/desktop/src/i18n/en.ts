@@ -140,6 +140,14 @@ export const en = {
       'Files you download and bookmarks you add — those are yours and are kept',
     privateLockout:
       'Sensitive-site protection still applies here, exactly as it does in an ordinary window.',
+    // ── User screenshots ──────────────────────────────────────────────────────────────────────────
+    // The size and the format are BOTH stated. The whole reason the WebP path exists is that these
+    // files live on the user's disk, and a number they can see is what makes that claim checkable —
+    // and `{format}` reading `png` means the WebP encode did not happen, which the copy must not hide.
+    screenshotSavedTitle: 'Screenshot saved',
+    screenshotSavedBody: '{size} KB, {format}',
+    screenshotFailedTitle: 'Could not take the screenshot',
+    screenshotFailedBody: 'Nothing was captured. Try again once the page has finished loading.',
     unloadTitle: 'Leave this site?',
     unloadDetail: 'Changes you have made may not be saved.',
     unloadLeave: 'Leave',

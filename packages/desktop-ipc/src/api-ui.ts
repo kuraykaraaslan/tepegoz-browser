@@ -19,6 +19,7 @@ import type { HistoryEntry } from './contract';
 import type { SiteClearPlan } from './contract';
 import type { BookmarkEntry, BookmarkNodeType, BookmarkTreeNode } from './contract';
 import type { ReaderArticle } from '@tepegoz/reader';
+import type { StoredScreenshot } from '@tepegoz/screenshots';
 import type { BookmarkImportInput, BookmarkImportResult } from './contract';
 import type { BookmarkMenuAction } from './contract';
 import type { AppNotification, NotificationState } from './contract';
@@ -87,6 +88,17 @@ export interface UiApi {
   /** The whole collection as Netscape bookmarks HTML. The renderer saves it; main never writes a file. */
   /** The agent permission matrix — a read-only view over the Policy Kernel. */
   listAgentCapabilities(): Promise<AgentCapabilityRow[]>;
+  /**
+   * Capture the active tab and store it in the blob store. Resolves null when there is nothing to
+   * capture — the caller says so; it is never an exception thrown at a menu click.
+   */
+  captureScreenshot(mode: 'viewport' | 'fullPage'): Promise<StoredScreenshot | null>;
+  /** main → chrome: re-encode a captured PNG as WebP. Returns an unsubscribe. */
+  onScreenshotEncode(
+    callback: (request: { requestId: string; png: Uint8Array; quality: number }) => void,
+  ): () => void;
+  /** chrome → main: the encoded bytes, or null when the renderer could not produce them. */
+  sendScreenshotEncoded(requestId: string, bytes: Uint8Array | null): void;
   /**
    * Extract the active tab's article for the reading view. Resolves `null` when the page has no
    * article — a real answer with its own copy, not an error.

@@ -21,6 +21,8 @@ const WORKSPACE_PACKAGES = [
   // Reader: main imports the article MODEL (types + limits) to re-validate what the injected
   // extractor sends back. The extractor itself is a committed bundled string, not an import.
   '@tepegoz/reader',
+  // Screenshots: main imports the encoding decision and the stored-record shape.
+  '@tepegoz/screenshots',
   // The one keyboard-shortcut registry — main matches `before-input-event` against it.
   '@tepegoz/shortcuts',
   '@tepegoz/json-store',

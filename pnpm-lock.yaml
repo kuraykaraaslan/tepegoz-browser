@@ -75,6 +75,9 @@ importers:
       '@tepegoz/reader':
         specifier: workspace:*
         version: link:../../packages/reader
+      '@tepegoz/screenshots':
+        specifier: workspace:*
+        version: link:../../packages/screenshots
       '@tepegoz/shortcuts':
         specifier: workspace:*
         version: link:../../packages/shortcuts
@@ -274,9 +277,6 @@ importers:
       '@tepegoz/preferences':
         specifier: workspace:*
         version: link:../../packages/preferences
-      '@tepegoz/screenshots':
-        specifier: workspace:*
-        version: link:../../packages/screenshots
       '@tepegoz/security-policy':
         specifier: workspace:*
         version: link:../../packages/security-policy
@@ -1094,6 +1094,9 @@ importers:
       '@tepegoz/reader':
         specifier: workspace:*
         version: link:../reader
+      '@tepegoz/screenshots':
+        specifier: workspace:*
+        version: link:../screenshots
       '@tepegoz/shared-types':
         specifier: workspace:*
         version: link:../shared-types

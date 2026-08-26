@@ -41,4 +41,6 @@ export const tr: PageContextMenuStrings = {
   saveMediaAs: 'Farklı kaydet…',
   copyMediaAddress: 'Adresi kopyala',
   readerMode: 'Okuma görünümü',
+  screenshotViewport: 'Bu görünümün ekran görüntüsü',
+  screenshotFullPage: 'Tüm sayfanın ekran görüntüsü',
 };

@@ -1,5 +1,6 @@
 import { ipcRenderer } from 'electron';
 import type { ReaderArticle } from '@tepegoz/reader';
+import type { StoredScreenshot } from '@tepegoz/screenshots';
 import {
   IpcChannels,
   type AppNotification,
@@ -44,6 +45,9 @@ export const bookmarksHistoryApi: Pick<
   | 'exportBookmarks'
   | 'openPrivateWindow'
   | 'extractArticle'
+  | 'captureScreenshot'
+  | 'onScreenshotEncode'
+  | 'sendScreenshotEncoded'
   | 'onReaderToggle'
   | 'listAgentCapabilities'
   | 'setBookmarkTags'
@@ -87,6 +91,27 @@ export const bookmarksHistoryApi: Pick<
   isBookmarked: (url: string) => invoke<boolean>(IpcChannels.bookmarksIsBookmarked, url),
   getBookmarkTree: () => invoke<BookmarkTreeNode[]>(IpcChannels.bookmarksTree),
   listAgentCapabilities: () => invoke<AgentCapabilityRow[]>(IpcChannels.agentCapabilitiesList),
+  captureScreenshot: (mode: 'viewport' | 'fullPage') =>
+    invoke<StoredScreenshot | null>(IpcChannels.screenshotCapture, mode),
+  /**
+   * The WebP re-encode the main process asks the trusted chrome for. Registered here rather than
+   * exposed as a general capability: the only thing that may ask is main, and the only thing the
+   * renderer sends back is bytes.
+   */
+  onScreenshotEncode: (
+    callback: (request: { requestId: string; png: Uint8Array; quality: number }) => void,
+  ) => {
+    const listener = (_e: unknown, payload: unknown): void => {
+      callback(payload as { requestId: string; png: Uint8Array; quality: number });
+    };
+    ipcRenderer.on(IpcChannels.screenshotEncode, listener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.screenshotEncode, listener);
+    };
+  },
+  sendScreenshotEncoded: (requestId: string, bytes: Uint8Array | null) => {
+    ipcRenderer.send(IpcChannels.screenshotEncoded, { requestId, bytes });
+  },
   extractArticle: () => invoke<ReaderArticle | null>(IpcChannels.readerExtract),
   onReaderToggle: (callback: () => void) => {
     const listener = (): void => {

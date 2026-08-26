@@ -126,6 +126,14 @@ export const tr: AppStrings = {
     privateKeepsNetwork: 'Trafiğin; ağın, internet sağlayıcın veya bir VPN işletmecisi tarafından',
     privateKeepsDownloads: 'İndirdiğin dosyalar ve eklediğin yer imleri — onlar senin, saklanır',
     privateLockout: 'Hassas site koruması burada da, normal penceredeki gibi aynen geçerlidir.',
+    // ── Kullanıcı ekran görüntüleri ────────────────────────────────────────────────────────────────
+    // Hem boyut hem biçim yazılıyor. WebP yolunun var olma sebebi bu dosyaların kullanıcının diskinde
+    // yaşaması; görebildiği bir sayı, bu iddiayı denetlenebilir kılan şey — ve `{format}` `png`
+    // okuyorsa WebP kodlaması yapılmamış demektir, metin bunu gizlememeli.
+    screenshotSavedTitle: 'Ekran görüntüsü kaydedildi',
+    screenshotSavedBody: '{size} KB, {format}',
+    screenshotFailedTitle: 'Ekran görüntüsü alınamadı',
+    screenshotFailedBody: 'Hiçbir şey yakalanmadı. Sayfa yüklenmesi bitince tekrar dene.',
     unloadTitle: 'Bu siteden ayrılınsın mı?',
     unloadDetail: 'Yaptığınız değişiklikler kaydedilmemiş olabilir.',
     unloadLeave: 'Ayrıl',

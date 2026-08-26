@@ -19,6 +19,8 @@ function actions(): PageContextMenuActions {
     print: noop,
     savePdf: noop,
     readerMode: noop,
+    screenshotViewport: noop,
+    screenshotFullPage: noop,
     viewSource: noop,
     inspect: noop,
     copy: noop,

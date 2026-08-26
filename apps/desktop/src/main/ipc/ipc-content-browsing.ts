@@ -20,6 +20,7 @@ import {
   BookmarkRemoveSchema,
   BookmarkRenameSchema,
   BookmarkSetTagsSchema,
+  ScreenshotModeSchema,
   BookmarkToggleSchema,
   BookmarkUrlSchema,
   HistoryPageParamsSchema,
@@ -35,6 +36,8 @@ import {
 import NotificationStore from '@tepegoz/notifications';
 import WebPermissionBroker from '../web-permissions/permission-broker';
 import type { ReaderArticle } from '@tepegoz/reader';
+import type { StoredScreenshot } from '@tepegoz/screenshots';
+import { captureAndStore } from '../screenshots/user-screenshot.electron';
 import { readActiveTabArticle } from '../reader/reader.electron';
 import { agentCapabilityMatrix } from '../web-permissions/agent-matrix';
 import { openPrivateWindow } from '../private-window-opener';
@@ -275,6 +278,9 @@ export function registerBrowsingIpc(): void {
   // The agent permission matrix. Computed here rather than in the renderer because it is the Policy
   // Kernel's own verdict — asking the kernel is what keeps this a VIEW instead of a second opinion.
   handle(IpcChannels.agentCapabilitiesList, (): AgentCapabilityRow[] => agentCapabilityMatrix());
+  handle(IpcChannels.screenshotCapture, (_event, payload): Promise<StoredScreenshot | null> =>
+    captureAndStore(ScreenshotModeSchema.parse(payload)),
+  );
   handle(IpcChannels.readerExtract, (): Promise<ReaderArticle | null> => readActiveTabArticle());
   handle(IpcChannels.windowsOpenPrivate, (): void => {
     openPrivateWindow();
