@@ -60,7 +60,7 @@ export function AppChrome({
   onOpenQuickSetting,
   onOmniboxDropdownHeightChange,
 }: AppChromeProps) {
-  const find = useFindInPage();
+  const find = useFindInPage(tabs.activeId);
   const coreT = pick(coreDict, locale);
   const browserT = pick(browserDict, locale);
   const userMenuT = pick(userMenuDict, locale);

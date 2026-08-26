@@ -24,8 +24,13 @@ export interface FindInPageController {
  * Chromium's `found-in-page` is asynchronous and a fast typist outruns it, so every result is echoed
  * with the query it was requested for and anything that does not match the query on screen is
  * dropped — otherwise the counter flickers through counts for text the user has already typed past.
+ *
+ * `activeTabId` re-syncs the counters on a TAB SWITCH: main's find session lives per-`WebContents`, so
+ * switching to a different tab while the bar is open used to leave the counter reading the PREVIOUS
+ * tab's numbers until the next keystroke — a stale count with nothing to invalidate it, since no
+ * `found-in-page` event fires just from bringing a different view to the foreground.
  */
-export function useFindInPage(): FindInPageController {
+export function useFindInPage(activeTabId: string | null): FindInPageController {
   const [open, setOpen] = useState(false);
   const [focusKey, setFocusKey] = useState(0);
   const [query, setQueryState] = useState('');
@@ -84,6 +89,24 @@ export function useFindInPage(): FindInPageController {
     },
     [restart],
   );
+
+  const openRef = useRef(open);
+  openRef.current = open;
+  // Skips the mount-time firing (nothing to resync before the bar has ever opened) and any render
+  // where the id is unchanged; only a REAL switch away from the tab the current search targets re-syncs.
+  const isFirstTabRef = useRef(true);
+  useEffect(() => {
+    if (isFirstTabRef.current) {
+      isFirstTabRef.current = false;
+      return;
+    }
+    if (openRef.current && queryRef.current !== '') {
+      restart(queryRef.current, matchCaseRef.current);
+    }
+    // Re-runs the OPEN query against the newly active tab, not a mere state read — intentionally
+    // depends on `activeTabId` alone (`restart`/refs are stable across renders, so omitting them
+    // changes nothing about when this fires).
+  }, [activeTabId]);
 
   /** Step within the OPEN session — `findNext: false` is the follow-up request, not the opener. */
   const step = useCallback((forward: boolean) => {
