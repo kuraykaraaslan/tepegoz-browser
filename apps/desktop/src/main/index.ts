@@ -68,6 +68,7 @@ import { runTaskAgent } from './agent/task-agent-runner.electron';
 import { maybeRunEval } from './agent/agent-eval-runner.electron';
 import { webToolsHost } from './web/web-tools-host.electron';
 import TabDiscardService from './tab-discard-service';
+import { registerInternalPagesProtocol, registerInternalPagesScheme } from './internal-pages/protocol';
 
 // Last-resort process-level hooks: an async error that escapes every boundary must be LOGGED, not a
 // silent crash. Both are logged and survived — a stray error in a single main-process event handler
@@ -85,6 +86,10 @@ app.setName('Tepegöz');
 // Windows: bind an explicit AppUserModelID so the taskbar groups windows under our brand icon
 // (and notifications are attributed to Tepegöz) rather than the default Electron identity.
 if (process.platform === 'win32') app.setAppUserModelId('com.tepegoz.browser');
+
+// `tepegoz://` internal-page scheme (Faz 0, phases/tracks/protocol-tepegoz-pages.md) — MUST run before
+// app.whenReady() resolves; Electron only reads privileged-scheme registration once, at startup.
+registerInternalPagesScheme();
 
 // Keep the renderer compositing even when a chrome window is occluded, backgrounded, or hidden to the
 // tray — so a hidden tab (kept attached-but-occluded) and a tray-hidden window stay perceivable and
@@ -180,6 +185,9 @@ if (!app.requestSingleInstanceLock()) {
       }
 
       installSecurity();
+      // Faz 0 smoke-test handler only (no TabManager wiring yet — see
+      // phases/tracks/protocol-tepegoz-pages.md). `protocol.handle` must be called after whenReady.
+      registerInternalPagesProtocol();
       initStores();
       // Apply the persisted User-Agent override to the browsing session BEFORE the first tab opens
       // (a no-op default when the extension is disabled).
