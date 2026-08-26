@@ -2,6 +2,7 @@ import { type Rectangle, type WebContents } from 'electron';
 import { Logger } from '@tepegoz/libs';
 import { mayOpenDevTools, type DevToolsVerdict } from '@tepegoz/security-policy';
 import { internalPageUrl, toNavigationUrl } from './lib/navigation-url';
+import { hideInternalPageView, showInternalPageView } from './tabs-internal-page-view';
 // The bodies live in `page-commands.ts` because the KEYBOARD route cannot reach into this graph
 // without closing a dependency cycle; these three stay as the menu's entry points.
 import { printPage, savePage, viewSourcePage } from './page-commands';
@@ -168,17 +169,25 @@ export class WindowTabsNav extends WindowTabsMoves {
     }
   }
 
-  /** Hide the active web view so a chrome-rendered overlay (Agent Console) shows through. Internal
-   *  tabs have no view, so this is a no-op for them. */
+  /** Hide the active web view so a chrome-rendered overlay (Agent Console) shows through. Also hides an
+   *  active internal tab's REAL page view (settings) when it has one — a `WebContentsView` always
+   *  composites above the chrome's own DOM, so an overlay opened while Settings is active would
+   *  otherwise be occluded by it. A plain viewless internal tab (no real page) stays a no-op. */
   setContentVisible(visible: boolean): void {
     this.contentVisible = visible;
     const view = this.activeView();
-    if (view === undefined) return;
+    const activeId = this.store.activeId;
+    const internalView = activeId !== null ? this.internalPageViews.get(activeId) : undefined;
+    if (view === undefined && internalView === undefined) return;
     if (visible) {
-      this.win.contentView.addChildView(view);
-      view.setBounds(this.effectiveBounds());
+      if (view !== undefined) {
+        this.win.contentView.addChildView(view);
+        view.setBounds(this.effectiveBounds());
+      }
+      if (internalView !== undefined) showInternalPageView(this.win, internalView, this.effectiveBounds());
     } else {
-      this.win.contentView.removeChildView(view);
+      if (view !== undefined) this.win.contentView.removeChildView(view);
+      if (internalView !== undefined) hideInternalPageView(this.win, internalView);
     }
   }
 

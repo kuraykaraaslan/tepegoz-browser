@@ -1,8 +1,42 @@
 # Plan — `tepegoz://` sistem sayfalarının `protocol.handle` ile gerçek sayfa olarak sunulması
 
-**Durum:** Kabul edildi, uygulanıyor (2026-08-26) — [express-settings.md](express-settings.md) Ek A'nın
-büyütülmüş hâli; Express soket yolu **reddedildi**.
-**Tarih:** 2026-08-26
+**Durum:** Kabul edildi — [express-settings.md](express-settings.md) Ek A'nın büyütülmüş hâli; Express
+soket yolu **reddedildi**. **Faz 0 tamamlandı ve commit edildi. Faz 1 bloke** — aşağıdaki "Bilinen açık
+blocker" bölümüne bakın. Settings kullanıcıya hâlâ eski (çalışan) React overlay ile sunuluyor; gerçek
+sayfaya geçiş bu blocker çözülmeden yapılmadı (regresyon riski).
+**Tarih:** 2026-08-26 (plan) · 2026-08-26 (Faz 0 kapandı, Faz 1'de blocker bulundu)
+
+## Bilinen açık blocker (2026-08-26, çözülmedi)
+
+Faz 1'de settings sayfasını gerçek `WebContentsView`'e bağlarken: `tepegoz://settings`'e top-level
+NAVIGATION (`loadURL`) başarılı oluyor — handler çalışıyor, `index.html` dönüyor — ama sayfa yüklendikten
+SONRA, aynı dokümanın kendi `<script type="module">` tag'i (bir subresource **fetch**, navigation değil)
+`TypeError: Failed to fetch` ile başarısız oluyor, `internal-pages/protocol.ts`'teki handler'a hiç
+ulaşmadan. Sonuç: sayfa kalıcı olarak boş kalıyor.
+
+Ekarte edilenler (hepsi denendi, hiçbiri değiştirmedi):
+- `corsEnabled: false` → `true` (script tag'i `crossorigin` taşıyor, CORS-mode fetch zorluyor — mantıklı
+  şüpheliydi, değişiklik yapmadı).
+- Tüm response header'larını (CSP dahil) tamamen kaldırmak.
+- Aynı handler'ı `session.defaultSession`'a da (üstteki `protocol.handle`) ek olarak kaydetmek.
+- Chrome penceresinin kendisinden (aynı `persist:tepegoz-app` session'ı, `file://` origin'i) DIŞARIDAN
+  `fetch('tepegoz://settings/')` denemek de aynı hatayı veriyor — cross-origin olduğu için ayrı bir konu
+  olabilir, ama AYNI origin'den (`tepegoz://settings` dokümanının KENDİSİ, `fetch(location.href)`) deneme
+  de aynı şekilde başarısız.
+
+Electron 43.4.1. Sıradaki adımlar: Electron issue tracker'da "protocol.handle session fetch" araması;
+`net.fetch`/minimal repro (bu uygulamanın dışında, çıplak bir Electron scaffold'unda) ile izole etmek;
+scheme registration sırası (`registerSchemesAsPrivileged` çağrısının `app.whenReady()`'den önce, ama
+`session.fromPartition` her zaman whenReady SONRASI çağrıldığı için aradaki sıralamanın rolü) — henüz
+denenmedi. `apps/desktop/src/main/internal-pages/protocol.ts`'teki `registerInternalPagesProtocol`'un doc
+comment'i bu listeyi kod içinde de taşıyor.
+
+**Etkilenmeyenler:** `tabs-internal-page-view.ts` (view oluşturma/gösterme/gizleme/tear-off-adopt mantığı)
+tamamen yazıldı ve test edildi, ama `tabs-internal-page-view.ts`'teki `REAL_PAGE_BASE_URLS` seti bilinçli
+olarak **boş** bırakıldı — hiçbir internal tab gerçek view almıyor, `App-content.tsx` Settings'i hâlâ
+React overlay olarak render ediyor (regresyon yok). `SettingsPageSurface.tsx` + `main.tsx`'teki
+`tepegoz:` host dispatch'i de yazıldı ama hiçbir şey onları tetiklemiyor (inert). Blocker çözülüp
+`REAL_PAGE_BASE_URLS`'e `INTERNAL_SETTINGS_URL` eklendiğinde hepsi devreye girecek şekilde tasarlandı.
 **Kapsam:** `tepegoz://settings` (ve zamanla diğer iç sayfalar: `extensions`, `history`, `downloads`,
 `uploads`, `bookmarks`, `tasks`) içeriğinin, chrome penceresine gömülü React overlay yerine,
 `protocol.registerSchemesAsPrivileged` + `protocol.handle('tepegoz', …)` ile **gerçek bir sayfa**

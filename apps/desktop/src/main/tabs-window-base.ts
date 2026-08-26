@@ -18,6 +18,11 @@ import {
   wireView as installViewHandlers,
   type ViewWiringHost,
 } from './tabs-view-wiring';
+import {
+  destroyInternalPageView,
+  hideInternalPageView,
+  showInternalPageView,
+} from './tabs-internal-page-view';
 
 /**
  * The state-owning base layer of the per-window tab model, split out of `tabs.ts` (ADR-0010 250-line
@@ -31,6 +36,10 @@ export class WindowTabsBase {
   protected readonly store = new TabStore();
   /** WebContentsViews for `web` tabs (internal tabs have none), keyed by tab id. */
   protected readonly views = new Map<string, WebContentsView>();
+  /** Real WebContentsViews for internal tabs that opted into one (`tabs-internal-page-view.ts`) — a
+   *  SEPARATE map from `views` on purpose: `viewlessActiveTabId()`/`activeWebContents()`/discard/rehost
+   *  must keep seeing these tabs as viewless. Keyed by tab id. */
+  protected readonly internalPageViews = new Map<string, WebContentsView>();
   protected bounds: Rectangle = { x: 0, y: 0, width: 0, height: 0 };
   protected contentVisible = true;
   /** Debounce handle for persisting the session snapshot (coalesces bursts of state changes). */
@@ -140,6 +149,10 @@ export class WindowTabsBase {
       }
     }
     this.views.clear();
+    for (const view of this.internalPageViews.values()) {
+      destroyInternalPageView(this.win, view);
+    }
+    this.internalPageViews.clear();
     this.store.clear();
   }
 
@@ -257,12 +270,18 @@ export class WindowTabsBase {
       if (prevView != null && this.store.get(prevId)?.hidden !== true) {
         this.win.contentView.removeChildView(prevView);
       }
+      const prevInternalView = this.internalPageViews.get(prevId);
+      if (prevInternalView !== undefined) hideInternalPageView(this.win, prevInternalView);
     }
     this.store.setActive(id);
     const view = this.views.get(id);
     if (this.contentVisible && view !== undefined) {
       this.win.contentView.addChildView(view);
       view.setBounds(this.effectiveBounds());
+    }
+    const internalView = this.internalPageViews.get(id);
+    if (this.contentVisible && internalView !== undefined) {
+      showInternalPageView(this.win, internalView, this.effectiveBounds());
     }
     this.emitState();
   }

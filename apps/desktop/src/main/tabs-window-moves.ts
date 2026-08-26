@@ -1,6 +1,7 @@
 import { WindowTabsGroups } from './tabs-window-groups';
 import { type DetachedTab } from './tabs-shared';
 import { unwireView } from './tabs-view-wiring';
+import { hideInternalPageView, rewireInternalPageView, unwireInternalPageView } from './tabs-internal-page-view';
 
 /**
  * Cross-window tear-off / merge layer of the per-window model, split out of `tabs.ts` (ADR-0010
@@ -25,9 +26,16 @@ export class WindowTabsMoves extends WindowTabsGroups {
       unwireView(view); // drop OUR handlers; the destination re-wires bound to itself
       this.views.delete(id);
     }
+    const internalPageView = this.internalPageViews.get(id) ?? null;
+    if (internalPageView !== null) {
+      hideInternalPageView(this.win, internalPageView);
+      unwireInternalPageView(internalPageView); // drop OUR handler; the destination re-wires
+      this.internalPageViews.delete(id);
+    }
     const detached: DetachedTab = {
       record: { ...rec },
       view,
+      internalPageView,
       group: group !== null ? { ...group } : null,
     };
     const wasActive = this.store.activeId === id;
@@ -42,7 +50,7 @@ export class WindowTabsMoves extends WindowTabsGroups {
    * view bound to this instance (no reload), and focuses it at `atIndex` (appended when omitted).
    */
   adoptTab(detached: DetachedTab, atIndex?: number): string {
-    const { record, view, group } = detached;
+    const { record, view, internalPageView, group } = detached;
     const newId = this.store.add({
       kind: record.kind,
       title: record.title,
@@ -54,6 +62,10 @@ export class WindowTabsMoves extends WindowTabsGroups {
     if (view !== null) {
       this.views.set(newId, view);
       this.wireView(newId, view);
+    }
+    if (internalPageView !== null) {
+      this.internalPageViews.set(newId, internalPageView);
+      rewireInternalPageView(this.win, internalPageView, () => this.bounds);
     }
     if (group !== null) {
       if (this.store.getGroup(group.id) === undefined) {

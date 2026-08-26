@@ -16,8 +16,13 @@ import { GLASS_BG, OPAQUE_BG, isMicaSupported } from './lib/glass';
 /** App-chrome partition — shared by the main window and extension popups (both are trusted chrome).
  *  Exported for the CSP hook in security.ts (the policy applies to this session ONLY). */
 export const APP_PARTITION = 'persist:tepegoz-app';
-/** Secure webPreferences shared by every chrome window (internal-ai-rules BLOCKING: one config). */
-const CHROME_WEB_PREFERENCES = {
+/**
+ * Secure webPreferences shared by every chrome window (internal-ai-rules BLOCKING: one config).
+ * Exported so a `tepegoz://` internal-page view (`tabs-internal-page-view.ts`) can give a real page the
+ * SAME trust level as the chrome it replaces — reusing this constant rather than a second copy is what
+ * the BLOCKING rule is about: "a second window factory is how a hardening flag silently stops applying".
+ */
+export const CHROME_WEB_PREFERENCES = {
   preload: join(__dirname, '../preload/index.js'),
   contextIsolation: true,
   sandbox: true,

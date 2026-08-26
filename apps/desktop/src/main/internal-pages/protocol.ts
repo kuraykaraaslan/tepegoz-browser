@@ -1,19 +1,23 @@
-import { protocol } from 'electron';
+import { readFile } from 'node:fs/promises';
+import { extname, join, resolve, sep } from 'node:path';
+import { protocol, session } from 'electron';
+import { APP_PARTITION } from '../window';
 
 /**
- * `tepegoz://` internal-page protocol — Faz 0 of
- * `phases/tracks/protocol-tepegoz-pages.md`.
+ * `tepegoz://` internal-page protocol — Faz 0/1 of `phases/tracks/protocol-tepegoz-pages.md`.
  *
- * Serves system pages (`tepegoz://settings`, …) as REAL pages without opening a listening socket —
- * the same shape as Chrome's own `chrome://` (a privileged scheme resolved from an in-process resource
- * map, never the network stack). This is the accepted alternative to the Express/loopback-HTTP proposal
+ * Serves system pages (`tepegoz://settings`, …) as REAL pages without opening a listening socket — the
+ * same shape as Chrome's own `chrome://` (a privileged scheme resolved from an in-process resource map,
+ * never the network stack). This is the accepted alternative to the Express/loopback-HTTP proposal
  * recorded in `phases/tracks/express-settings.md` (see that file's Ek A).
  *
- * Faz 0 deliberately does NOT wire this into `TabManager` yet: internal tabs today have no
- * `WebContentsView` at all (`tabs-window-closing.ts`'s "no view entry ⟺ internal" invariant), and a
- * chunk of the agent-perception/screenshot/DevTools-gate code depends on that. Giving internal pages a
- * real view is Faz 2 — its own reviewed change. This module only proves the protocol layer itself:
- * scheme registration, an allowlisted resource lookup, and the response headers.
+ * Faz 1 serves the SAME renderer bundle the trusted chrome window already loads via `file://`
+ * (`chrome-url.ts#chromeFilePath` — `out/renderer/index.html` and its `assets/*`). That bundle already
+ * has a `?surface=<kind>` dispatch in `main.tsx` for popup windows; a `tepegoz://<host>` document picks
+ * its surface by HOSTNAME instead (see `main.tsx`'s `tepegoz:` branch), so no second build entry exists
+ * or needs to. Exposing that directory again under a new origin adds no new content surface — it is
+ * public build output with no user data or secrets in it, already unauthenticated-loadable via
+ * `file://`.
  */
 
 export const INTERNAL_PAGES_SCHEME = 'tepegoz';
@@ -31,38 +35,40 @@ export function registerInternalPagesScheme(): void {
         standard: true,
         secure: true,
         supportFetchAPI: true,
-        corsEnabled: false,
+        // The bundle's built `<script type="module" crossorigin>` tag forces a CORS-mode fetch even for
+        // a SAME-origin request; Electron rejects that fetch outright ("Failed to fetch", no console log)
+        // when the scheme is not CORS-enabled. This is not a same-origin-vs-cross-origin distinction
+        // being relaxed — no other origin can address `tepegoz://`, so there is nothing for it to leak
+        // to (found via the Faz 2 e2e test after `corsEnabled: false` left the page permanently blank).
+        corsEnabled: true,
       },
     },
   ]);
 }
 
-interface InternalPageResource {
-  contentType: string;
-  body: string;
+/**
+ * Hosts allowed to load the renderer bundle as a real page. Growing this set is Faz 3 of the plan doc —
+ * each addition (extensions/history/downloads/…) is its own reviewed step, not a blanket switch.
+ */
+const REAL_PAGE_HOSTS = new Set(['settings']);
+
+/** The renderer bundle directory. `__dirname` is `out/main` in both packaged and unpackaged builds —
+ *  the same relative path `chrome-url.ts#chromeFilePath` uses to find `index.html`. */
+function rendererDir(): string {
+  return resolve(join(__dirname, '../renderer'));
 }
 
-/**
- * Faz 0 smoke-test placeholder for `tepegoz://settings`. Not the real Settings UI — that migration
- * (moving `SettingsPage.tsx` to its own loadable bundle) is Faz 1. This exists only to prove the
- * protocol/CSP/response plumbing end to end, including inside a real `WebContentsView` (the Playwright
- * `_electron` window-discovery check the plan's Faz 0 calls for).
- */
-const SETTINGS_SMOKE_TEST_HTML = `<!doctype html>
-<html>
-  <head><meta charset="utf-8" /><title>tepegoz://settings</title></head>
-  <body>tepegoz-protocol-smoke-test</body>
-</html>
-`;
-
-/**
- * Fixed host → resource allowlist. Deliberately keyed by HOST ONLY: the handler never reads the
- * request's path to decide what to serve, so there is no file-system lookup for a `../` segment to
- * escape — the traversal risk a dynamic static-file server would have is structurally absent here.
- */
-const PAGES: ReadonlyMap<string, InternalPageResource> = new Map([
-  ['settings', { contentType: 'text/html; charset=utf-8', body: SETTINGS_SMOKE_TEST_HTML }],
-]);
+const MIME_TYPES: Readonly<Record<string, string>> = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.ico': 'image/x-icon',
+  '.json': 'application/json; charset=utf-8',
+  '.woff2': 'font/woff2',
+};
 
 /**
  * CSP for `tepegoz://` responses. Same shape as `security.ts`'s `chromeCsp` (no inline script, no eval,
@@ -76,7 +82,7 @@ function internalPageCsp(): string {
     "script-src 'self'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
-    "font-src 'self'",
+    "font-src 'self' data:",
     "connect-src 'self'",
     "object-src 'none'",
     "base-uri 'none'",
@@ -90,29 +96,67 @@ function notFound(): Response {
 }
 
 /**
- * The `tepegoz://` request handler. Only the exact root path (`/` or empty) of a known host is served —
- * anything else (an unknown host, or a sub-path under a known one) is a 404, not a guess. Call AFTER
- * `app.whenReady()`.
+ * Resolve a request path to an absolute file INSIDE `base`, or `null` if it would escape. URL parsing
+ * upstream may already collapse `../` segments, but that is never trusted here — `resolve` runs and the
+ * result is checked against `base` regardless of what the input looked like, which is what actually makes
+ * this traversal-safe rather than merely traversal-unlikely.
  */
-export function registerInternalPagesProtocol(): void {
-  protocol.handle(INTERNAL_PAGES_SCHEME, (request) => {
-    let url: URL;
-    try {
-      url = new URL(request.url);
-    } catch {
-      return notFound();
-    }
-    if (url.pathname !== '' && url.pathname !== '/') return notFound();
-    const resource = PAGES.get(url.host);
-    if (resource === undefined) return notFound();
-    return new Response(resource.body, {
+export function resolveInBase(base: string, requestPath: string): string | null {
+  const rel = requestPath === '' || requestPath === '/' ? '/index.html' : requestPath;
+  const abs = resolve(join(base, rel));
+  if (abs !== base && !abs.startsWith(base + sep)) return null;
+  return abs;
+}
+
+async function handleRequest(request: { url: string }): Promise<Response> {
+  let url: URL;
+  try {
+    url = new URL(request.url);
+  } catch {
+    return notFound();
+  }
+  if (!REAL_PAGE_HOSTS.has(url.host)) return notFound();
+  const filePath = resolveInBase(rendererDir(), decodeURIComponent(url.pathname));
+  if (filePath === null) return notFound();
+  try {
+    const data = await readFile(filePath);
+    const contentType = MIME_TYPES[extname(filePath)] ?? 'application/octet-stream';
+    return new Response(new Uint8Array(data), {
       status: 200,
       headers: {
-        'Content-Type': resource.contentType,
+        'Content-Type': contentType,
         'Content-Security-Policy': internalPageCsp(),
         'X-Content-Type-Options': 'nosniff',
         'Referrer-Policy': 'no-referrer',
       },
     });
-  });
+  } catch {
+    return notFound();
+  }
+}
+
+/**
+ * The `tepegoz://` request handler. Only a host in {@link REAL_PAGE_HOSTS} is served; everything else is
+ * a 404, not a guess. Call AFTER `app.whenReady()`.
+ *
+ * Registered on the APP_PARTITION session specifically — NOT the top-level `protocol` module. Electron's
+ * module-level `protocol.handle` binds to `session.defaultSession`; the chrome (and every internal-page
+ * `WebContentsView`, `tabs-internal-page-view.ts`) lives on the NAMED `persist:tepegoz-app` partition, a
+ * different session object with its own `protocol`. Registering on the wrong one means the scheme is
+ * "privileged" but has no handler wherever it's actually loaded.
+ *
+ * **Known open blocker (2026-08-26, unresolved):** with this registered correctly, a top-level
+ * NAVIGATION to `tepegoz://settings` succeeds (this handler runs, `index.html` comes back) — but a
+ * `fetch()` issued from a document already loaded on `tepegoz://settings` to that SAME URL fails with a
+ * bare `TypeError: Failed to fetch`, before ever reaching this function (confirmed by testing with every
+ * response header stripped, and by reproducing the same failure from the chrome window's own devtools
+ * console on the same session/scheme). Since the built renderer bundle loads its JS via
+ * `<script type="module">` — a subresource fetch, not a navigation — the script never runs and the page
+ * stays blank. Electron 43.4.1. Root cause not yet found; `corsEnabled: true` and registering the SAME
+ * handler on `session.defaultSession` as well were both tried and neither changed the result. See
+ * `phases/tracks/protocol-tepegoz-pages.md` for the next things to try (Electron issue tracker search;
+ * `net.fetch`-based repro outside this app; per-session vs global scheme registration order).
+ */
+export function registerInternalPagesProtocol(): void {
+  session.fromPartition(APP_PARTITION).protocol.handle(INTERNAL_PAGES_SCHEME, handleRequest);
 }

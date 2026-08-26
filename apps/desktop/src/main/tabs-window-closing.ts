@@ -4,6 +4,12 @@ import { WindowTabsBase } from './tabs-window-base';
 import { closedUrls, internalBaseUrl, internalTitleFor } from './tabs-shared';
 import { unwireView, type ViewWiringHost } from './tabs-view-wiring';
 import { askBeforeClose } from './navigation/unload-broker';
+import {
+  createInternalPageView,
+  destroyInternalPageView,
+  hasRealPage,
+  navigateInternalPageView,
+} from './tabs-internal-page-view';
 
 /**
  * Tab-removal and single-tab lifecycle layer of the per-window model, split out of `tabs.ts` (ADR-0010
@@ -52,6 +58,11 @@ export class WindowTabsClosing extends WindowTabsBase {
         view.webContents.close();
       }
       this.views.delete(id);
+    }
+    const internalView = this.internalPageViews.get(id);
+    if (internalView !== undefined) {
+      destroyInternalPageView(this.win, internalView);
+      this.internalPageViews.delete(id);
     }
     const wasActive = this.store.activeId === id;
     this.store.delete(id);
@@ -159,6 +170,8 @@ export class WindowTabsClosing extends WindowTabsBase {
       .find((rec) => rec.kind === 'internal' && internalBaseUrl(rec.url) === baseUrl)?.id;
     if (existing !== undefined) {
       this.store.update(existing, { url, title: internalTitleFor(url) });
+      const existingView = this.internalPageViews.get(existing);
+      if (existingView !== undefined) navigateInternalPageView(existingView, url);
       this.activate(existing);
       return;
     }
@@ -169,6 +182,9 @@ export class WindowTabsClosing extends WindowTabsBase {
       isLoading: false,
       faviconUrl: null,
     });
+    if (hasRealPage(url)) {
+      this.internalPageViews.set(id, createInternalPageView(this.win, url, () => this.bounds));
+    }
     this.activate(id);
   }
 

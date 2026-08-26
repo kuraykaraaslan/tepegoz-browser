@@ -14,6 +14,7 @@ import { TransferActivityPopup } from './components/TransferActivityPopup';
 import { BookmarkFolderPopup } from './components/BookmarkFolderPopup';
 import { BookmarkDialogPopup } from './components/BookmarkDialogPopup';
 import { OnboardingApp } from './components/OnboardingApp';
+import { SettingsPageSurface } from './components/SettingsPageSurface';
 import { DragPreviewSurface } from './components/DragPreviewSurface';
 import { applyTheme } from './lib/theme';
 import './styles.css';
@@ -42,8 +43,15 @@ if (surface === 'drag-preview') {
   style.overflow = 'hidden';
 }
 
+// A `tepegoz://<host>` document (a real page loaded into a tab's WebContentsView, not a popup window —
+// see internal-pages/protocol.ts and tabs-internal-page-view.ts) picks its surface by HOSTNAME instead
+// of `?surface=`: it is not a popup, so there is no window-creation call site to attach a query string
+// to. Growing REAL_PAGE_HOSTS in protocol.ts is what adds a case here (Faz 3 of the plan doc).
+const internalPageHost = window.location.protocol === 'tepegoz:' ? window.location.hostname : null;
+
 let node: ReactNode = <App />;
-if (surface === 'main-menu') node = <MainMenuPopup />;
+if (internalPageHost === 'settings') node = <SettingsPageSurface />;
+else if (surface === 'main-menu') node = <MainMenuPopup />;
 else if (surface === 'page-context-menu') node = <PageContextMenuPopup />;
 else if (surface === 'user-menu') node = <UserMenuPopup />;
 else if (surface === 'menu-sub') node = <MenuSubPopup kind={params.get('kind') ?? ''} />;

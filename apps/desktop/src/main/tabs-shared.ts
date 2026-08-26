@@ -97,6 +97,9 @@ export interface DetachedTab {
   record: TabRecord;
   /** The live view for a `web` tab; `null` for a view-less internal tab. */
   view: WebContentsView | null;
+  /** The live REAL page view for an internal tab that has one (e.g. settings, `tabs-internal-page-
+   *  view.ts`); `null` for every other internal tab. Never set together with `view`. */
+  internalPageView: WebContentsView | null;
   /** The source group's metadata when the tab was grouped (recreated in the destination). */
   group: TabGroup | null;
 }
