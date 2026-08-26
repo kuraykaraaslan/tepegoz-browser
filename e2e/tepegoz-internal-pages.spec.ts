@@ -79,6 +79,33 @@ test('every migrated tepegoz:// internal page loads as a real page with real con
           { timeout: 20_000, message: `tepegoz://${page} never rendered real content` },
         )
         .toBeGreaterThan(0);
+
+      // Reload with a console-message collector attached BEFORE the reload, so a CSP violation fired
+      // during React's render is caught rather than missed by attaching only after the fact. This is
+      // what actually caught the two real bugs that shipped once (2026-08-26, see protocol.ts's doc
+      // comment): a naive embed of the built bundle silently split one inline <script> into three via
+      // "$&"-pattern substitution, and separately let an accidental "<script>" inside the bundle end the
+      // tag early — both produced a page that STILL rendered SOME content (so `innerText.length > 0`
+      // above didn't catch them) but was actively failing to load its own code correctly underneath.
+      const violations = await app.evaluate(({ webContents }, host) => {
+        const wc = webContents.getAllWebContents().find((w) => w.getURL().startsWith(`tepegoz://${host}`));
+        if (wc === undefined) return Promise.resolve([] as string[]);
+        return new Promise<string[]>((resolve) => {
+          const seen: string[] = [];
+          const onMessage = (_e: unknown, _level: number, message: string): void => {
+            if (message.toLowerCase().includes('content security policy')) seen.push(message);
+          };
+          wc.on('console-message', onMessage);
+          wc.reload();
+          wc.once('dom-ready', () => {
+            setTimeout(() => {
+              wc.removeListener('console-message', onMessage);
+              resolve(seen);
+            }, 500);
+          });
+        });
+      }, page);
+      expect(violations, `CSP violation(s) on tepegoz://${page}`).toEqual([]);
     }
   } finally {
     await app.close();

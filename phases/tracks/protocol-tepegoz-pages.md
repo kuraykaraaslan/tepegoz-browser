@@ -37,11 +37,40 @@ kombinasyonunda gerçek bir hata gibi görünüyor.
 **Çözüm — subresource isteğini tamamen ortadan kaldırmak:** `internal-pages/protocol.ts` artık
 `index.html`'in referans verdiği `<script>`/`<link>`/favicon'u OKUYUP doğrudan TEK HTML yanıtının içine
 inline ediyor — böylece tarayıcı bu scheme'e ASLA ikinci bir (subresource) istek atmıyor. CSP, inline
-script/style'ı `'unsafe-inline'` yerine **içerik hash'i** (`'sha256-…'`) ile allowlist'liyor — bu,
-uygulamanın kendi derlediği/gönderdiği içerik, keyfi bir inline script değil. Favicon `data:` URI olarak
-inline ediliyor (o da bir subresource isteği olurdu). Sonuç build-time'da bir kere hesaplanıp
-process ömrü boyunca cache'leniyor. Detaylar `protocol.ts`'teki `registerInternalPagesProtocol` ve
-`buildInlinedSettingsPage` doc comment'lerinde.
+script'i `'unsafe-inline'` yerine **içerik hash'i** (`'sha256-…'`) ile allowlist'liyor — bu, uygulamanın
+kendi derlediği/gönderdiği içerik, keyfi bir inline script değil (style için `'unsafe-inline'` — aşağıya
+bkz.). Favicon `data:` URI olarak inline ediliyor (o da bir subresource isteği olurdu). Sonuç build-time'da
+bir kere hesaplanıp process ömrü boyunca cache'leniyor. Detaylar `protocol.ts`'teki
+`registerInternalPagesProtocol` ve `buildInlinedAppPage` doc comment'lerinde.
+
+### İkinci blocker: naif inline etme sayfayı sessizce bozuyordu (aynı gün, ayrı bulundu)
+
+İlk "inline et" çözümü GEÇTİ gibi göründü (`innerText.length > 0` e2e testi yeşildi) ama gerçekte İKİ AYRI
+hatayla sessizce bozuktu — ikisi de sadece 1.9MB'lık GERÇEK bundle'ı sunma sistemi bir kere test edildiğinde
+ortaya çıktı (`document.scripts.length` kontrolü ve CSP-ihlali console-message kontrolü ile):
+
+1. **`String.prototype.replace(search, stringReplacement)`'in `$&` özel pattern'i.** Minifiye React kodu
+   kendi key-escaping regex'inde tam olarak `"$&/"` string'ini içeriyor. `html.replace(tag, \`<script>${js}</script>\`)`
+   çağrısında replacement STRING'i `js`'i İÇERİYORDU, ve `js` içindeki `$&` JS motoru tarafından "orijinal
+   eşleşen metni buraya koy" olarak yorumlanıyor — yani ORİJİNAL `<script src=…></script>` tag'i sessizce
+   inline edilmiş içeriğin ORTASINA geri enjekte ediliyordu. Sonuç: `document.scripts.length === 3`
+   (beklenen: 1) — tek script tag'i üçe bölünmüştü. Bunu, üretilen HTML'i doğrudan bir pencereye yükleyip
+   `document.scripts`'i inceleyerek DOĞRUDAN kanıtladım (izole repro). **Düzeltme:** `replace()` yerine
+   index-bazlı splice (`spliceReplace` — `$`-pattern dilini tamamen atlıyor).
+2. **HTML tokenizer'ının `<!--`/`<script`/`</script` tanıması, JS/CSS anlamından bağımsız, SAF METİN
+   seviyesinde çalışıyor.** Bundle'da React'in kendi kaynağından gelen, kazara TEK bir escape'siz
+   `"<script><\/script>"` probe string'i var (kapanış kısmı zaten backslash ile escape'liydi ama açılış
+   `<script>` DEĞİLDİ). **Düzeltme:** `escapeForInlineTag` — inline edilecek her içerikte `<!--`/`<script`/
+   `</script`'i (case-insensitive) `<` sonrasına backslash ekleyerek escape ediyor; JS/CSS SEMANTİĞİNİ
+   DEĞİŞTİRMİYOR (string/comment içinde `\s`/`\/`/`\!` zaten kendisine eşit) ama HTML parser'ın erken
+   kapatmasını engelliyor.
+
+**Bu ikisi BİRBİRİNDEN BAĞIMSIZ** — biri düzelmeden diğeri sayfayı çalışır hale getirmiyordu. Yakalanma
+şekli önemli: `e2e/tepegoz-internal-pages.spec.ts`'e eklenen CSP-violation kontrolü (her sayfayı
+`console-message` collector ile reload edip CSP ihlali mesajı olup olmadığını kontrol ediyor) — SADECE
+`innerText.length > 0` kontrolü bu iki hatayı YAKALAYAMADI, çünkü sayfa YİNE DE bir miktar render
+edebiliyordu (React'in kendisi kısmen çalışıyordu). Birim testlerine de bu iki senaryonun küçültülmüş
+(minimal) tekrarı eklendi (`protocol.test.ts` — "safe embedding of real-world bundle content").
 
 **Bilinen kalıntı risk (hâlâ geçerli, izlenmeli):** Bu çözüm yalnızca TEK BİR paylaşılan bundle + CSS +
 favicon'u kapsıyor — her host (`settings`/`extensions`/`history`/`downloads`/`uploads`/`bookmarks`)
@@ -188,13 +217,18 @@ yeniden tasarımı beklemede.
 
 ## 5. Test / doğrulama
 
-- **Birim:** `protocol.test.ts` (18 test) — handler host/path allowlist (artık 6 host için), inline
-  edilen script/style/icon içeriğinin gerçekten gömülü olduğu, CSP hash'lerinin doğruluğu, cache'in
-  farklı host'lar arasında PAYLAŞILDIĞI, favicon-okuma başarısızlığının zarifçe düşmesi.
+- **Birim:** `protocol.test.ts` (21 test) — handler host/path allowlist (6 host için), inline edilen
+  script/style/icon içeriğinin gerçekten gömülü olduğu, CSP hash'lerinin doğruluğu, cache'in farklı
+  host'lar arasında PAYLAŞILDIĞI, favicon-okuma başarısızlığının zarifçe düşmesi — VE "safe embedding of
+  real-world bundle content" başlığı altında yukarıdaki iki gerçek hatanın minimal tekrarları (`"$&"`
+  içeren içerik orijinal tag'i geri enjekte etmiyor; escape'siz `<script>` içeren içerik doğru şekilde
+  escape'leniyor ve tek script tag'i üçe bölünmüyor).
 - **E2E:** `e2e/tepegoz-settings-page.spec.ts` — settings gerçek içerik render ediyor VE sağ tık →
   `page-context-menu` popup'ı açılıyor. `e2e/tepegoz-internal-pages.spec.ts` — diğer beş sayfanın hepsi
-  gerçek içerik render ediyor. Tam suite regresyonsuz geçti (önceden var olan, alakasız flake'ler hariç
-  — `platform-defaults.spec.ts` kamera izni testi, `ime-turkish-text.spec.ts` bir kez gözlendi ve
+  gerçek içerik render ediyor VE reload sonrası sıfır CSP-ihlali console-message'ı var (bu kontrol,
+  GERÇEK bundle'a karşı yukarıdaki iki hatayı asıl yakalayan kontroldür — `innerText.length > 0` tek
+  başına yeterli değildi). Tam suite regresyonsuz geçti (önceden var olan, alakasız flake'ler hariç —
+  `platform-defaults.spec.ts` kamera izni testi, `ime-turkish-text.spec.ts` bir kez gözlendi ve
   izolasyonda geçtiği doğrulandı → makine kaynak baskısı flake'i, kod ile ilgisi yok).
 - `pnpm exec turbo run typecheck lint test build` + `pnpm e2e` — hepsi yeşil.
 
