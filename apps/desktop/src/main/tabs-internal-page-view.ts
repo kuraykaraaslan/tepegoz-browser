@@ -4,6 +4,7 @@ import {
   type ContextMenuParams,
   type Rectangle,
 } from 'electron';
+import { INTERNAL_SETTINGS_URL } from '@tepegoz/desktop-ipc';
 import { CHROME_WEB_PREFERENCES } from './window';
 import { contextMenuObservers, internalBaseUrl } from './tabs-shared';
 
@@ -29,18 +30,14 @@ import { contextMenuObservers, internalBaseUrl } from './tabs-shared';
 /**
  * Internal-page base URLs that get a REAL WebContentsView instead of a chrome-rendered React overlay.
  *
- * **Empty on purpose (2026-08-26).** Settings was meant to be the first entry, but wiring it in exposed
- * an unresolved blocker: the bundle's `<script type="module">` — a subresource FETCH against
- * `tepegoz://settings`, not a navigation — fails with `TypeError: Failed to fetch` before it reaches
- * `internal-pages/protocol.ts`'s handler at all, so the page loads and then stays permanently blank. See
- * that file's `registerInternalPagesProtocol` doc comment for what was ruled out, and
- * `phases/tracks/protocol-tepegoz-pages.md` for the open item. Everything downstream of this set (the
- * separate `internalPageViews` map, activate/dispose/setContentVisible wiring, detach/adopt handling) is
- * already built and tested — it just never fires while this set stays empty. Add an entry here only once
- * the fetch failure is root-caused; until then `App-content.tsx` keeps rendering Settings as the React
- * overlay it already worked as.
+ * Settings is the first entry (2026-08-26). Getting here required root-causing a real Electron bug:
+ * subresource requests (the bundle's `<script src>`/`<link href>`) never reach
+ * `internal-pages/protocol.ts`'s handler for this scheme, so `internal-pages/protocol.ts` now serves a
+ * single self-contained document with everything inlined — see that file's doc comment for the full
+ * story. Growing this set further (extensions/history/downloads/…) is Faz 3 — each addition needs its
+ * own inlined-document entry in `internal-pages/protocol.ts` first.
  */
-const REAL_PAGE_BASE_URLS = new Set<string>([]);
+const REAL_PAGE_BASE_URLS = new Set<string>([INTERNAL_SETTINGS_URL]);
 
 /** Whether `url` (an internal-page tab's full URL, hash included) should be backed by a real view. */
 export function hasRealPage(url: string): boolean {

@@ -1,23 +1,38 @@
+import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { extname, join, resolve, sep } from 'node:path';
+import { extname, join, resolve } from 'node:path';
 import { protocol, session } from 'electron';
 import { APP_PARTITION } from '../window';
 
 /**
- * `tepegoz://` internal-page protocol — Faz 0/1 of `phases/tracks/protocol-tepegoz-pages.md`.
+ * `tepegoz://` internal-page protocol — Faz 0/1/2 of `phases/tracks/protocol-tepegoz-pages.md`.
  *
  * Serves system pages (`tepegoz://settings`, …) as REAL pages without opening a listening socket — the
  * same shape as Chrome's own `chrome://` (a privileged scheme resolved from an in-process resource map,
  * never the network stack). This is the accepted alternative to the Express/loopback-HTTP proposal
  * recorded in `phases/tracks/express-settings.md` (see that file's Ek A).
  *
- * Faz 1 serves the SAME renderer bundle the trusted chrome window already loads via `file://`
- * (`chrome-url.ts#chromeFilePath` — `out/renderer/index.html` and its `assets/*`). That bundle already
- * has a `?surface=<kind>` dispatch in `main.tsx` for popup windows; a `tepegoz://<host>` document picks
- * its surface by HOSTNAME instead (see `main.tsx`'s `tepegoz:` branch), so no second build entry exists
- * or needs to. Exposing that directory again under a new origin adds no new content surface — it is
- * public build output with no user data or secrets in it, already unauthenticated-loadable via
- * `file://`.
+ * **Subresource requests do not work for this scheme (root-caused 2026-08-26).** A top-level navigation
+ * to `tepegoz://settings` reaches `handleRequest` and returns fine, but a SEPARATE subsequent request for
+ * an asset the document references (`<script src>`, `<link href>`) never reaches `handleRequest` at all —
+ * Electron's own internal bridge throws `TypeError: Cannot convert argument to a ByteString because the
+ * character at index 86 has a value of 65533 …` inside `new Headers(...)` (undici, called from
+ * `node:electron/js2c/browser_init`) before dispatching to the registered handler. Confirmed NOT caused
+ * by: CSP content, `corsEnabled`, response header count, response size (tested to 2MB of pure-ASCII AND
+ * of multi-byte-UTF-8 filler), concurrent requests, load-vs-attach ordering, or the real preload script —
+ * an isolated minimal repro reproducing every one of those exactly still works. It reproduces ONLY when
+ * `session.fromPartition(APP_PARTITION).webRequest.onHeadersReceived` (installed by `security.ts` for the
+ * CSP header) is registered on the SAME session as a `protocol.handle`-served SUBRESOURCE request — the
+ * navigation request is unaffected either way. This looks like an Electron bug in that specific
+ * combination (Electron 43.4.1), not something fixable from this module's response shape.
+ *
+ * **The workaround, and why it's fine:** inline the referenced script/style/icon directly into the single
+ * HTML response, so the browser never issues a second (subresource) request to this scheme at all. CSP
+ * allows the inlined script/style via a `'sha256-…'` hash of their EXACT bundled content (computed once,
+ * cached) rather than a blanket `'unsafe-inline'` — content this app built and shipped itself, not
+ * arbitrary inline script. The favicon is inlined as a `data:` URI for the same reason. This is scoped to
+ * `tepegoz://` responses only; the chrome's own `file://` document is untouched and keeps loading its
+ * assets as separate requests exactly as before.
  */
 
 export const INTERNAL_PAGES_SCHEME = 'tepegoz';
@@ -35,11 +50,6 @@ export function registerInternalPagesScheme(): void {
         standard: true,
         secure: true,
         supportFetchAPI: true,
-        // The bundle's built `<script type="module" crossorigin>` tag forces a CORS-mode fetch even for
-        // a SAME-origin request; Electron rejects that fetch outright ("Failed to fetch", no console log)
-        // when the scheme is not CORS-enabled. This is not a same-origin-vs-cross-origin distinction
-        // being relaxed — no other origin can address `tepegoz://`, so there is nothing for it to leak
-        // to (found via the Faz 2 e2e test after `corsEnabled: false` left the page permanently blank).
         corsEnabled: true,
       },
     },
@@ -70,17 +80,22 @@ const MIME_TYPES: Readonly<Record<string, string>> = {
   '.woff2': 'font/woff2',
 };
 
+function sha256Base64(content: string): string {
+  return createHash('sha256').update(content, 'utf8').digest('base64');
+}
+
 /**
- * CSP for `tepegoz://` responses. Same shape as `security.ts`'s `chromeCsp` (no inline script, no eval,
- * no external network) but self-contained here: these responses do not flow through
- * `session.webRequest.onHeadersReceived` (that hook is for network-stack requests on a partition, not
- * bytes returned directly from `protocol.handle`), so the header is set on the `Response` itself.
+ * CSP for a `tepegoz://` document. `scriptHashes`/`styleHashes` allowlist the EXACT inlined
+ * script/style content by content hash — this app's own bundled code, not arbitrary inline script — so
+ * no blanket `'unsafe-inline'` is needed even though the content is now embedded rather than fetched.
  */
-function internalPageCsp(): string {
+function internalPageCsp(scriptHashes: readonly string[], styleHashes: readonly string[]): string {
+  const scriptSrc = ["script-src 'self'", ...scriptHashes.map((h) => `'sha256-${h}'`)].join(' ');
+  const styleSrc = ["style-src 'self'", ...styleHashes.map((h) => `'sha256-${h}'`)].join(' ');
   return [
     "default-src 'self'",
-    "script-src 'self'",
-    "style-src 'self' 'unsafe-inline'",
+    scriptSrc,
+    styleSrc,
     "img-src 'self' data:",
     "font-src 'self' data:",
     "connect-src 'self'",
@@ -95,68 +110,98 @@ function notFound(): Response {
   return new Response(null, { status: 404 });
 }
 
+/** A relative asset href/src from the built HTML, resolved against the renderer directory. Strips the
+ *  leading `./` or `/` Vite emits — both mean "relative to this document" for our purposes. */
+function assetPath(dir: string, href: string): string {
+  return join(dir, href.replace(/^\.?\//, ''));
+}
+
+interface InlinedPage {
+  html: string;
+  csp: string;
+}
+
 /**
- * Resolve a request path to an absolute file INSIDE `base`, or `null` if it would escape. URL parsing
- * upstream may already collapse `../` segments, but that is never trusted here — `resolve` runs and the
- * result is checked against `base` regardless of what the input looked like, which is what actually makes
- * this traversal-safe rather than merely traversal-unlikely.
+ * Build the fully self-contained `tepegoz://settings` document: every `<script src>` and
+ * `<link rel="stylesheet">` the built `index.html` references is read and inlined; the favicon (if any)
+ * becomes a `data:` URI. Computed once and cached — the bundle is build output, immutable for the life of
+ * the running app.
  */
-export function resolveInBase(base: string, requestPath: string): string | null {
-  const rel = requestPath === '' || requestPath === '/' ? '/index.html' : requestPath;
-  const abs = resolve(join(base, rel));
-  if (abs !== base && !abs.startsWith(base + sep)) return null;
-  return abs;
+let cachedSettingsPage: Promise<InlinedPage> | null = null;
+
+async function buildInlinedSettingsPage(): Promise<InlinedPage> {
+  const dir = rendererDir();
+  const htmlPath = join(dir, 'index.html');
+  let html = (await readFile(htmlPath)).toString('utf8');
+
+  const scriptHashes: string[] = [];
+  for (const m of [...html.matchAll(/<script[^>]*\ssrc="([^"]+)"[^>]*><\/script>/g)]) {
+    const js = (await readFile(assetPath(dir, m[1]!))).toString('utf8');
+    scriptHashes.push(sha256Base64(js));
+    html = html.replace(m[0], `<script type="module">${js}</script>`);
+  }
+
+  const styleHashes: string[] = [];
+  for (const m of [...html.matchAll(/<link[^>]*\shref="([^"]+\.css)"[^>]*>/g)]) {
+    const css = (await readFile(assetPath(dir, m[1]!))).toString('utf8');
+    styleHashes.push(sha256Base64(css));
+    html = html.replace(m[0], `<style>${css}</style>`);
+  }
+
+  const iconMatch = /<link rel="icon"[^>]*\shref="([^"]+)"[^>]*>/.exec(html);
+  if (iconMatch) {
+    try {
+      const href = iconMatch[1]!;
+      const icon = await readFile(assetPath(dir, href));
+      const mime = MIME_TYPES[extname(href)] ?? 'application/octet-stream';
+      html = html.replace(href, `data:${mime};base64,${icon.toString('base64')}`);
+    } catch {
+      html = html.replace(iconMatch[0], ''); // no icon rather than a broken subresource request
+    }
+  }
+
+  return { html, csp: internalPageCsp(scriptHashes, styleHashes) };
 }
 
-async function handleRequest(request: { url: string }): Promise<Response> {
-  let url: URL;
-  try {
-    url = new URL(request.url);
-  } catch {
-    return notFound();
-  }
-  if (!REAL_PAGE_HOSTS.has(url.host)) return notFound();
-  const filePath = resolveInBase(rendererDir(), decodeURIComponent(url.pathname));
-  if (filePath === null) return notFound();
-  try {
-    const data = await readFile(filePath);
-    const contentType = MIME_TYPES[extname(filePath)] ?? 'application/octet-stream';
-    return new Response(new Uint8Array(data), {
-      status: 200,
-      headers: {
-        'Content-Type': contentType,
-        'Content-Security-Policy': internalPageCsp(),
-        'X-Content-Type-Options': 'nosniff',
-        'Referrer-Policy': 'no-referrer',
-      },
-    });
-  } catch {
-    return notFound();
-  }
+function getInlinedSettingsPage(): Promise<InlinedPage> {
+  cachedSettingsPage ??= buildInlinedSettingsPage();
+  return cachedSettingsPage;
 }
 
 /**
- * The `tepegoz://` request handler. Only a host in {@link REAL_PAGE_HOSTS} is served; everything else is
- * a 404, not a guess. Call AFTER `app.whenReady()`.
+ * The `tepegoz://` request handler. Only a host in {@link REAL_PAGE_HOSTS} is served, and only its root
+ * path — everything else is a 404, not a guess (there is nothing to serve per-path any more: the whole
+ * document is self-contained). Call AFTER `app.whenReady()`.
  *
  * Registered on the APP_PARTITION session specifically — NOT the top-level `protocol` module. Electron's
  * module-level `protocol.handle` binds to `session.defaultSession`; the chrome (and every internal-page
  * `WebContentsView`, `tabs-internal-page-view.ts`) lives on the NAMED `persist:tepegoz-app` partition, a
  * different session object with its own `protocol`. Registering on the wrong one means the scheme is
  * "privileged" but has no handler wherever it's actually loaded.
- *
- * **Known open blocker (2026-08-26, unresolved):** with this registered correctly, a top-level
- * NAVIGATION to `tepegoz://settings` succeeds (this handler runs, `index.html` comes back) — but a
- * `fetch()` issued from a document already loaded on `tepegoz://settings` to that SAME URL fails with a
- * bare `TypeError: Failed to fetch`, before ever reaching this function (confirmed by testing with every
- * response header stripped, and by reproducing the same failure from the chrome window's own devtools
- * console on the same session/scheme). Since the built renderer bundle loads its JS via
- * `<script type="module">` — a subresource fetch, not a navigation — the script never runs and the page
- * stays blank. Electron 43.4.1. Root cause not yet found; `corsEnabled: true` and registering the SAME
- * handler on `session.defaultSession` as well were both tried and neither changed the result. See
- * `phases/tracks/protocol-tepegoz-pages.md` for the next things to try (Electron issue tracker search;
- * `net.fetch`-based repro outside this app; per-session vs global scheme registration order).
  */
 export function registerInternalPagesProtocol(): void {
-  session.fromPartition(APP_PARTITION).protocol.handle(INTERNAL_PAGES_SCHEME, handleRequest);
+  session.fromPartition(APP_PARTITION).protocol.handle(INTERNAL_PAGES_SCHEME, async (request) => {
+    let url: URL;
+    try {
+      url = new URL(request.url);
+    } catch {
+      return notFound();
+    }
+    if (!REAL_PAGE_HOSTS.has(url.host)) return notFound();
+    if (url.pathname !== '' && url.pathname !== '/') return notFound();
+    try {
+      const page = await getInlinedSettingsPage();
+      return new Response(page.html, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Content-Security-Policy': page.csp,
+          'X-Content-Type-Options': 'nosniff',
+          'Referrer-Policy': 'no-referrer',
+        },
+      });
+    } catch {
+      return notFound();
+    }
+  });
 }

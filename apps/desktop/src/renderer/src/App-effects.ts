@@ -5,7 +5,6 @@ import { pressFromEvent, shortcutFor } from '@tepegoz/shortcuts';
 import type {
   AppNotification,
   AutofillAvailablePayload,
-  CredentialsStatus,
   ExtensionId,
   NotificationPermissionRequest,
   Preferences,
@@ -25,7 +24,6 @@ export interface AppEffectsParams {
   onToggleExtension: (id: ExtensionId, enabled: boolean) => void;
   onUnpinExtension: (id: ExtensionId) => void;
   setPrefs: Dispatch<SetStateAction<Preferences | null>>;
-  setStatus: Dispatch<SetStateAction<CredentialsStatus | null>>;
   setTabs: Dispatch<SetStateAction<TabsState>>;
   setRenamingGroupId: Dispatch<SetStateAction<string | null>>;
   setToasts: Dispatch<SetStateAction<AppNotification[]>>;
@@ -52,7 +50,6 @@ export function useAppEffects(params: AppEffectsParams): void {
     onToggleExtension,
     onUnpinExtension,
     setPrefs,
-    setStatus,
     setTabs,
     setRenamingGroupId,
     setToasts,
@@ -66,13 +63,11 @@ export function useAppEffects(params: AppEffectsParams): void {
   useEffect(() => {
     void (async () => {
       try {
-        const [p, s, ts] = await Promise.all([
+        const [p, ts] = await Promise.all([
           window.tepegoz.getPreferences(),
-          window.tepegoz.getCredentialsStatus(),
           window.tepegoz.getTabsState(),
         ]);
         setPrefs(p);
-        setStatus(s);
         setTabs(ts);
       } catch (err) {
         // Preload bridge unavailable (dev mishap) — leave defaults; the chrome still renders.
@@ -85,7 +80,7 @@ export function useAppEffects(params: AppEffectsParams): void {
       unsubTabs();
       unsubRename();
     };
-  }, [setPrefs, setStatus, setTabs, setRenamingGroupId]);
+  }, [setPrefs, setTabs, setRenamingGroupId]);
 
   // Transient toasts: append each pushed toast (capped to the newest 3; individual auto-dismiss timers
   // live in the ToastStack).

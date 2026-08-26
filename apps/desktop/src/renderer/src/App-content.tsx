@@ -12,18 +12,9 @@ import {
   INTERNAL_EXTENSIONS_URL,
   INTERNAL_HISTORY_URL,
   INTERNAL_NEWTAB_URL,
-  INTERNAL_SETTINGS_URL,
   INTERNAL_UPLOADS_URL,
 } from '@tepegoz/desktop-ipc';
-import type {
-  AutofillAvailablePayload,
-  CredentialsStatus,
-  ExtensionId,
-  LoginCredentialMeta,
-  Preferences,
-  ProviderId,
-  TabsState,
-} from '@tepegoz/desktop-ipc';
+import type { AutofillAvailablePayload, ExtensionId, Preferences, TabsState } from '@tepegoz/desktop-ipc';
 import { AutofillSuggestion } from '@tepegoz/password-ui';
 import { HistoryPage } from '@tepegoz/history-ui';
 import { DownloadsPage } from '@tepegoz/downloads-ui';
@@ -33,11 +24,10 @@ import { BookmarksManager } from '@tepegoz/bookmarks-ui';
 import { extensionIdFromPageUrl } from '../../shared/extension-urls';
 import { extensionDefById, type ExtensionDef } from './extensions/registry';
 import { ExtensionsPage } from './components/ExtensionsPage';
-import { SettingsPage } from './components/SettingsPage';
 import { bookmarkDialogAnchor, type BookmarksBarResult } from './app-bookmarks';
 import { AGENT_EXTENSION_ID, type ExtensionSurfacesResult } from './app-extension-surfaces';
 import type { OmniboxHistoryResult } from './app-omnibox-history';
-import { internalPageBase, internalPageHash } from './App-helpers';
+import { internalPageBase } from './App-helpers';
 import { useAppContentModel } from './App-content-model';
 import { ReaderSurface } from './components/ReaderSurface';
 import type { ReaderResult } from './app-reader';
@@ -49,7 +39,6 @@ export interface AppContentProps {
   currentUrl: string;
   registry: ExtensionDef[];
   prefs: Preferences | null;
-  status: CredentialsStatus | null;
   locale: Locale;
   surfaceFallback: ReactNode;
   extSurfaces: ExtensionSurfacesResult;
@@ -57,16 +46,8 @@ export interface AppContentProps {
   bookmarks: BookmarksBarResult;
   autofill: AutofillAvailablePayload | null;
   setAutofill: Dispatch<SetStateAction<AutofillAvailablePayload | null>>;
-  loginCredentials: LoginCredentialMeta[];
-  refreshLogins: () => Promise<void>;
   onUpdatePrefs: (patch: Partial<Preferences>) => Promise<void>;
   reader: ReaderResult;
-  onResetPrefs: () => Promise<void>;
-  onAddKey: (provider: ProviderId, label: string, apiKey: string) => Promise<void>;
-  onRemoveKeyById: (id: string) => Promise<void>;
-  onRenameKey: (id: string, label: string) => Promise<void>;
-  onSetKeyModel: (id: string, model: string) => Promise<void>;
-  onReorderKeys: (orderedIds: string[]) => Promise<void>;
   onToggleExtension: (id: ExtensionId, enabled: boolean) => void;
 }
 
@@ -82,7 +63,6 @@ export function AppContent({
   currentUrl,
   registry,
   prefs,
-  status,
   locale,
   surfaceFallback,
   extSurfaces,
@@ -90,16 +70,8 @@ export function AppContent({
   bookmarks,
   autofill,
   setAutofill,
-  loginCredentials,
-  refreshLogins,
   onUpdatePrefs,
   reader,
-  onResetPrefs,
-  onAddKey,
-  onRemoveKeyById,
-  onRenameKey,
-  onSetKeyModel,
-  onReorderKeys,
   onToggleExtension,
 }: AppContentProps) {
   const activeTab = tabs.tabs.find((tb) => tb.id === tabs.activeId);
@@ -107,13 +79,11 @@ export function AppContent({
   // Internal pages are tabs addressed tepegoz://… ; render them when active.
   const currentBaseUrl = internalPageBase(currentUrl);
   const newTabActive = currentBaseUrl === INTERNAL_NEWTAB_URL;
-  const settingsActive = currentBaseUrl === INTERNAL_SETTINGS_URL;
   const extensionsActive = currentBaseUrl === INTERNAL_EXTENSIONS_URL;
   const historyActive = currentBaseUrl === INTERNAL_HISTORY_URL;
   const downloadsActive = currentBaseUrl === INTERNAL_DOWNLOADS_URL;
   const uploadsActive = currentBaseUrl === INTERNAL_UPLOADS_URL;
   const bookmarksActive = currentBaseUrl === INTERNAL_BOOKMARKS_URL;
-  const settingsSectionId = settingsActive ? internalPageHash(currentUrl) : '';
   // An extension `page` surface: tepegoz://<extension-id> → render that extension's page component.
   const pageExtIds = registry.filter((d) => d.manifest.surfaces.includes('page')).map((d) => d.id);
   const pageExtId =
@@ -176,45 +146,10 @@ export function AppContent({
             />
           </div>
         )}
-        {settingsActive && (
-          <div className="absolute inset-0 bg-surface-system">
-            {prefs && status ? (
-              <SettingsPage
-                initialSectionId={settingsSectionId}
-                prefs={prefs}
-                status={status}
-                onUpdatePrefs={onUpdatePrefs}
-                onResetPrefs={onResetPrefs}
-                onAddKey={onAddKey}
-                onRemoveKeyById={onRemoveKeyById}
-                onRenameKey={onRenameKey}
-                onSetKeyModel={onSetKeyModel}
-                onReorderKeys={onReorderKeys}
-                loginCredentials={loginCredentials}
-                onLoginSectionMount={refreshLogins}
-                onAddLogin={(c) =>
-                  window.tepegoz.setLogin(c).then(async () => {
-                    await refreshLogins();
-                  })
-                }
-                onRemoveLogin={(id) =>
-                  window.tepegoz.removeLogin(id).then(async () => {
-                    await refreshLogins();
-                  })
-                }
-                onImportLogins={(data, fmt) =>
-                  window.tepegoz.importLogins(data, fmt).then(async (r) => {
-                    await refreshLogins();
-                    return r;
-                  })
-                }
-                onExportLogins={(fmt) => window.tepegoz.exportLogins(fmt)}
-              />
-            ) : (
-              <p className="px-6 py-8 text-sm text-text-secondary">…</p>
-            )}
-          </div>
-        )}
+        {/* Settings (tepegoz://settings) is no longer rendered here — Faz 2 of
+            phases/tracks/protocol-tepegoz-pages.md gave it a REAL WebContentsView
+            (tabs-internal-page-view.ts), laid over this same content area by main exactly like a web
+            tab's view. Its content is `SettingsPageSurface.tsx`, loaded standalone. */}
         {extensionsActive && (
           <div className="absolute inset-0 bg-surface-system">
             <ExtensionsPage

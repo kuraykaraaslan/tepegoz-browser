@@ -6,12 +6,9 @@ import { isExtensionEnabled } from '@tepegoz/desktop-ipc';
 import type {
   AppNotification,
   AutofillAvailablePayload,
-  CredentialsStatus,
   ExtensionId,
-  LoginCredentialMeta,
   NotificationPermissionRequest,
   Preferences,
-  ProviderId,
   TabsState,
 } from '@tepegoz/desktop-ipc';
 import { INTERNAL_SETTINGS_URL } from '@tepegoz/desktop-ipc';
@@ -33,7 +30,6 @@ import { useScreenshotEncoder } from './app-screenshot-encoder';
 
 export function App() {
   const [prefs, setPrefs] = useState<Preferences | null>(null);
-  const [status, setStatus] = useState<CredentialsStatus | null>(null);
   const [tabs, setTabs] = useState<TabsState>(EMPTY_TABS);
   // A group whose inline rename editor should open (set by the native group menu's "Rename" push).
   const [renamingGroupId, setRenamingGroupId] = useState<string | null>(null);
@@ -49,8 +45,6 @@ export function App() {
   // Whether the OS can render the glass (Win11 Mica) chrome — gates both the `.glass` class and the
   // Settings toggle. Fetched once from app info.
   const [glassAvailable, setGlassAvailable] = useState(false);
-  // Cached credential list for the Passwords settings section.
-  const [loginCredentials, setLoginCredentials] = useState<LoginCredentialMeta[]>([]);
   // Built-in extensions, fetched once over IPC (identity) + paired with lazy surfaces. Empty until it
   // resolves — the tray/menus tolerate an empty list the same way the UI tolerates `prefs === null`.
   const { registry } = useExtensionCatalog();
@@ -142,14 +136,6 @@ export function App() {
     extSurfaces.closeSurface,
   );
 
-  // Refresh the credentials list whenever the Passwords settings section is open.
-  const refreshLogins = useCallback(async (): Promise<void> => {
-    try {
-      setLoginCredentials(await window.tepegoz.listLogins());
-    } catch {
-      setLoginCredentials([]);
-    }
-  }, []);
   const answerPermission = useCallback(
     (allow: boolean, remember: boolean) => {
       if (permReq === null) return;
@@ -173,26 +159,6 @@ export function App() {
 
   async function onUpdatePrefs(patch: Partial<Preferences>): Promise<void> {
     setPrefs(await window.tepegoz.updatePreferences(patch));
-  }
-  async function onAddKey(provider: ProviderId, label: string, apiKey: string): Promise<void> {
-    setStatus(await window.tepegoz.addProviderKey(provider, label, apiKey));
-  }
-  async function onRemoveKeyById(id: string): Promise<void> {
-    setStatus(await window.tepegoz.removeProviderKeyById(id));
-  }
-  async function onRenameKey(id: string, label: string): Promise<void> {
-    setStatus(await window.tepegoz.renameProviderKey(id, label));
-  }
-  async function onSetKeyModel(id: string, model: string): Promise<void> {
-    setStatus(await window.tepegoz.setProviderKeyModel(id, model));
-  }
-  async function onReorderKeys(orderedIds: string[]): Promise<void> {
-    setStatus(await window.tepegoz.reorderProviderKeys(orderedIds));
-    // The top key defines the default provider; main synced it, so refresh prefs too.
-    setPrefs(await window.tepegoz.getPreferences());
-  }
-  async function onResetPrefs(): Promise<void> {
-    setPrefs(await window.tepegoz.resetPreferences());
   }
   function onOpenQuickSetting(target: OmniboxQuickSettingTarget): void {
     extSurfaces.closeSurface();
@@ -229,7 +195,6 @@ export function App() {
     onToggleExtension,
     onUnpinExtension,
     setPrefs,
-    setStatus,
     setTabs,
     setRenamingGroupId,
     setToasts,
@@ -283,7 +248,6 @@ export function App() {
           currentUrl={currentUrl}
           registry={registry}
           prefs={prefs}
-          status={status}
           locale={locale}
           surfaceFallback={surfaceFallback}
           extSurfaces={extSurfaces}
@@ -291,16 +255,8 @@ export function App() {
           bookmarks={bookmarks}
           autofill={autofill}
           setAutofill={setAutofill}
-          loginCredentials={loginCredentials}
-          refreshLogins={refreshLogins}
           onUpdatePrefs={onUpdatePrefs}
           reader={readerState}
-          onResetPrefs={onResetPrefs}
-          onAddKey={onAddKey}
-          onRemoveKeyById={onRemoveKeyById}
-          onRenameKey={onRenameKey}
-          onSetKeyModel={onSetKeyModel}
-          onReorderKeys={onReorderKeys}
           onToggleExtension={onToggleExtension}
         />
         <CommandPaletteHost

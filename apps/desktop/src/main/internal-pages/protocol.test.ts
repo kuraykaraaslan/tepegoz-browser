@@ -1,11 +1,15 @@
-import { join, resolve, sep } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
- * `tepegoz://` protocol handler (Faz 0/1 of phases/tracks/protocol-tepegoz-pages.md). Two properties
- * under test: (1) `resolveInBase` — the pure path-confinement function — never resolves outside its
- * base directory no matter what the input path looks like; (2) the handler only ever serves a host in
- * its fixed allowlist, and a missing file (or file-system error) is a 404, never a throw.
+ * `tepegoz://` protocol handler (Faz 0/1/2 of phases/tracks/protocol-tepegoz-pages.md).
+ *
+ * Subresource requests to this scheme don't reach the handler at all — an Electron bug reproduced and
+ * documented on `registerInternalPagesProtocol`'s doc comment — so the handler inlines every asset the
+ * built `index.html` references into ONE self-contained response instead of serving them per-path. The
+ * properties under test: the inlined document actually contains the script/style/icon content (not just
+ * references to them), the CSP allows exactly that inlined content by hash (never a blanket
+ * `'unsafe-inline'`), the build is cached (not re-read/re-hashed per request), and only the settings host
+ * at its root path is ever served — everything else is a 404, not a guess.
  */
 
 type Handler = (request: { url: string }) => Response | Promise<Response>;
@@ -21,20 +25,29 @@ vi.mock('electron', () => ({
   protocol: { registerSchemesAsPrivileged },
   session: { fromPartition },
 }));
-// The handler MUST register on the app-chrome partition's own session, not the top-level `protocol`
-// module (which binds to `session.defaultSession`) — that mismatch is exactly the bug the Faz 2 e2e test
-// caught (see the doc comment on `registerInternalPagesProtocol`). Assert the correct partition is used.
 vi.mock('../window', () => ({ APP_PARTITION: 'persist:tepegoz-app-test' }));
 
-const readFile = vi.fn<(path: string) => Promise<Buffer>>();
+const INDEX_HTML = `<!doctype html><html><head>
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
+<link rel="stylesheet" crossorigin href="/assets/index-ABC.css">
+</head><body>
+<script type="module" crossorigin src="/assets/index-XYZ.js"></script>
+</body></html>`;
+const JS_CONTENT = "console.log('settings bundle');";
+const CSS_CONTENT = 'body{color:red}';
+const ICON_CONTENT = '<svg></svg>';
+
+const readFile = vi.fn<(path: string) => Promise<Buffer>>((path: string) => {
+  if (path.endsWith('index.html')) return Promise.resolve(Buffer.from(INDEX_HTML));
+  if (path.endsWith('index-XYZ.js')) return Promise.resolve(Buffer.from(JS_CONTENT));
+  if (path.endsWith('index-ABC.css')) return Promise.resolve(Buffer.from(CSS_CONTENT));
+  if (path.endsWith('favicon.svg')) return Promise.resolve(Buffer.from(ICON_CONTENT));
+  return Promise.reject(new Error('ENOENT'));
+});
 vi.mock('node:fs/promises', () => ({ readFile: (path: string) => readFile(path) }));
 
-const {
-  registerInternalPagesScheme,
-  registerInternalPagesProtocol,
-  resolveInBase,
-  INTERNAL_PAGES_SCHEME,
-} = await import('./protocol');
+const { registerInternalPagesScheme, registerInternalPagesProtocol, INTERNAL_PAGES_SCHEME } =
+  await import('./protocol');
 
 async function run(url: string): Promise<Response> {
   registerInternalPagesProtocol();
@@ -43,7 +56,7 @@ async function run(url: string): Promise<Response> {
 }
 
 beforeEach(() => {
-  readFile.mockReset();
+  readFile.mockClear();
 });
 
 describe('registerInternalPagesScheme', () => {
@@ -52,14 +65,7 @@ describe('registerInternalPagesScheme', () => {
     expect(registerSchemesAsPrivileged).toHaveBeenCalledWith([
       {
         scheme: INTERNAL_PAGES_SCHEME,
-        privileges: {
-          standard: true,
-          secure: true,
-          supportFetchAPI: true,
-          // Required for the bundle's `<script type="module" crossorigin>` tag to load at all — see the
-          // comment on this privilege in protocol.ts for why `false` here silently blanks the page.
-          corsEnabled: true,
-        },
+        privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true },
       },
     ]);
   });
@@ -73,82 +79,99 @@ describe('registerInternalPagesProtocol', () => {
   });
 });
 
-describe('resolveInBase (path confinement)', () => {
-  // A genuine absolute path (resolved against CWD, so it carries a real drive root on Windows) —
-  // `join('C', 'app', ...)` alone is NOT absolute and would make every containment check below
-  // meaningless (`resolve()` would silently prepend the CWD to it).
-  const base = resolve('tepegoz-test-fixture-base');
-
-  it('maps the root path to index.html', () => {
-    expect(resolveInBase(base, '/')).toBe(join(base, 'index.html'));
-    expect(resolveInBase(base, '')).toBe(join(base, 'index.html'));
-  });
-
-  it('resolves a normal nested asset path inside the base', () => {
-    expect(resolveInBase(base, '/assets/index-abc123.js')).toBe(
-      join(base, 'assets', 'index-abc123.js'),
-    );
-  });
-
-  it('rejects a traversal attempt that would escape the base, regardless of how it is spelled', () => {
-    expect(resolveInBase(base, '/../../secrets')).toBeNull();
-    expect(resolveInBase(base, '/assets/../../../secrets')).toBeNull();
-    expect(resolveInBase(base, `..${sep}..${sep}secrets`)).toBeNull();
-  });
-});
-
-describe('tepegoz:// handler', () => {
-  it('serves a known host at its root path with 200, the security headers, and the resolved bytes', async () => {
-    readFile.mockResolvedValueOnce(Buffer.from('<html>hi</html>'));
+describe('tepegoz:// handler — inlined settings document', () => {
+  it('serves 200 text/html with the script and style content INLINED, not referenced', async () => {
     const res = await run('tepegoz://settings');
     expect(res.status).toBe(200);
     expect(res.headers.get('Content-Type')).toContain('text/html');
-    expect(res.headers.get('X-Content-Type-Options')).toBe('nosniff');
-    expect(res.headers.get('Referrer-Policy')).toBe('no-referrer');
-    expect(await res.text()).toBe('<html>hi</html>');
+    const body = await res.text();
+    expect(body).toContain(`<script type="module">${JS_CONTENT}</script>`);
+    expect(body).toContain(`<style>${CSS_CONTENT}</style>`);
+    // The original external references must be gone — a leftover <script src> would mean the browser
+    // re-issues exactly the subresource request that never reaches this handler.
+    expect(body).not.toContain('src="/assets/index-XYZ.js"');
+    expect(body).not.toContain('href="/assets/index-ABC.css"');
   });
 
-  it('maps a .js asset to a JS content type', async () => {
-    readFile.mockResolvedValueOnce(Buffer.from('console.log(1)'));
-    const res = await run('tepegoz://settings/assets/index-abc123.js');
-    expect(res.status).toBe(200);
-    expect(res.headers.get('Content-Type')).toContain('text/javascript');
+  it('inlines the favicon as a data: URI (no subresource request for it either)', async () => {
+    const res = await run('tepegoz://settings');
+    const body = await res.text();
+    const expectedDataUri = `data:image/svg+xml;base64,${Buffer.from(ICON_CONTENT).toString('base64')}`;
+    expect(body).toContain(expectedDataUri);
+    expect(body).not.toContain('href="./favicon.svg"');
   });
 
-  it('applies a strict CSP: no inline/eval script, no external network, no framing', async () => {
-    readFile.mockResolvedValueOnce(Buffer.from('<html></html>'));
+  it('allows the inlined script and style by content HASH, never a blanket unsafe-inline', async () => {
     const res = await run('tepegoz://settings');
     const csp = res.headers.get('Content-Security-Policy') ?? '';
-    expect(csp).toContain("script-src 'self'");
+    expect(csp).toMatch(/script-src 'self' 'sha256-[A-Za-z0-9+/=]+'/);
+    expect(csp).toMatch(/style-src 'self' 'sha256-[A-Za-z0-9+/=]+'/);
+    expect(csp).not.toContain('unsafe-inline');
+    expect(csp).not.toContain('unsafe-eval');
     expect(csp).toContain("object-src 'none'");
     expect(csp).toContain("frame-ancestors 'none'");
-    expect(csp).not.toContain('unsafe-eval');
-    expect(csp).not.toContain('http:');
-    expect(csp).not.toContain('https:');
+  });
+
+  it('applies the security headers', async () => {
+    const res = await run('tepegoz://settings');
+    expect(res.headers.get('X-Content-Type-Options')).toBe('nosniff');
+    expect(res.headers.get('Referrer-Policy')).toBe('no-referrer');
   });
 
   it('404s an unknown host instead of guessing', async () => {
-    expect((await run('tepegoz://not-a-real-page')).status).toBe(404);
-    expect(readFile).not.toHaveBeenCalled();
-  });
-
-  it('404s when the resolved file does not exist, instead of throwing', async () => {
-    readFile.mockRejectedValueOnce(new Error('ENOENT'));
-    const res = await run('tepegoz://settings/does-not-exist.js');
+    const res = await run('tepegoz://not-a-real-page');
     expect(res.status).toBe(404);
   });
 
-  it('a dot-segment traversal attempt still resolves safely (the URL layer already clamps it to root, proven above) and 404s like any other missing file', async () => {
-    // `new URL('tepegoz://settings/../../secrets').pathname` is `/secrets`, not an escape — browsers
-    // collapse dot-segments before a scheme handler ever sees them. The actual confinement property
-    // (arbitrary path input can never resolve outside `base`) is what `resolveInBase` is tested for
-    // directly, above, independent of that upstream normalization.
-    readFile.mockRejectedValueOnce(new Error('ENOENT'));
-    const res = await run('tepegoz://settings/../../secrets');
+  it('404s a sub-path under the settings host — there is nothing to serve per-path any more', async () => {
+    const res = await run('tepegoz://settings/anything');
     expect(res.status).toBe(404);
   });
 
   it('404s an unparsable URL instead of throwing', async () => {
     await expect(run('not a url')).resolves.toMatchObject({ status: 404 });
+  });
+});
+
+describe('tepegoz:// handler — caching', () => {
+  it('builds the page ONCE and caches it — a second request does not re-read the files', async () => {
+    // Isolated fresh module so an earlier test's cache can't hide this scenario.
+    vi.resetModules();
+    readFile.mockClear();
+    const fresh = await import('./protocol');
+    let handler: Handler | null = null;
+    sessionProtocolHandle.mockImplementationOnce((_s: string, h: Handler) => {
+      handler = h;
+    });
+    fresh.registerInternalPagesProtocol();
+    await handler!({ url: 'tepegoz://settings' });
+    const callsAfterFirst = readFile.mock.calls.length;
+    expect(callsAfterFirst).toBeGreaterThan(0);
+    await handler!({ url: 'tepegoz://settings' });
+    expect(readFile).toHaveBeenCalledTimes(callsAfterFirst); // no new reads on the second request
+  });
+});
+
+describe('tepegoz:// handler — favicon read failure', () => {
+  it('drops the icon link rather than leaving a broken subresource reference, and still serves 200', async () => {
+    readFile.mockImplementation((path: string) => {
+      if (path.endsWith('index.html')) return Promise.resolve(Buffer.from(INDEX_HTML));
+      if (path.endsWith('index-XYZ.js')) return Promise.resolve(Buffer.from(JS_CONTENT));
+      if (path.endsWith('index-ABC.css')) return Promise.resolve(Buffer.from(CSS_CONTENT));
+      return Promise.reject(new Error('ENOENT')); // favicon.svg missing
+    });
+    // Force a fresh build: re-import the module in isolation so the cache from earlier tests doesn't
+    // hide this scenario.
+    vi.resetModules();
+    const fresh = await import('./protocol');
+    let handler: Handler | null = null;
+    sessionProtocolHandle.mockImplementationOnce((_s: string, h: Handler) => {
+      handler = h;
+    });
+    fresh.registerInternalPagesProtocol();
+    const res = await handler!({ url: 'tepegoz://settings' });
+    expect(res.status).toBe(200);
+    const body = await res.text();
+    expect(body).not.toContain('rel="icon"');
   });
 });

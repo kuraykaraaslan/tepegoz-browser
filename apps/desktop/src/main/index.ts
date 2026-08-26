@@ -185,8 +185,7 @@ if (!app.requestSingleInstanceLock()) {
       }
 
       installSecurity();
-      // Faz 0 smoke-test handler only (no TabManager wiring yet — see
-      // phases/tracks/protocol-tepegoz-pages.md). `protocol.handle` must be called after whenReady.
+      // `protocol.handle` must be called after whenReady — see phases/tracks/protocol-tepegoz-pages.md.
       registerInternalPagesProtocol();
       initStores();
       // Apply the persisted User-Agent override to the browsing session BEFORE the first tab opens
