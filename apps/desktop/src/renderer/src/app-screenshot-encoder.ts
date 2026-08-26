@@ -1,5 +1,9 @@
 import { useEffect } from 'react';
-import { SCREENSHOT_FORMATS } from '@tepegoz/screenshots';
+// The `user-capture` SUBPATH, not the package root: the root barrel re-exports the whole package,
+// including the S5 extraction-caps module, which pulls in `node:crypto` (`scriptHash`) — fine in main,
+// fatal in the renderer bundle, which has no Node built-ins. This subpath reaches only the pure,
+// dependency-free module the renderer actually needs.
+import { SCREENSHOT_FORMATS } from '@tepegoz/screenshots/user-capture';
 
 /**
  * The WebP encoder the main process borrows from the trusted chrome.
