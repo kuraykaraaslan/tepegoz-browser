@@ -120,7 +120,7 @@ export function generalAndAiSections(ctx: SettingsSectionsCtx): SettingsSection[
       group: s.groupGeneral,
       label: s.tray.title,
       icon: <IconSliders />,
-      searchText: `${s.tray.title} ${s.tray.closeToTray} ${s.tray.keepAwake} ${s.tray.pauseOnSleep} ${s.tray.startupMode} ${s.tray.modeKiosk} ${s.tray.kioskUrl} ${s.tray.launchAtLogin}`,
+      searchText: `${s.tray.title} ${s.tray.closeToTray} ${s.tray.keepAwake} ${s.tray.pauseOnSleep} ${s.tray.startupMode} ${s.tray.modeKiosk} ${s.tray.kioskUrl} ${s.tray.launchAtLogin} ${s.tray.tabDiscard} ${s.tray.tabDiscardIdleMinutes}`,
       content: (
         <Card title={s.tray.title}>
           <div className="space-y-5">
@@ -195,6 +195,39 @@ export function generalAndAiSections(ctx: SettingsSectionsCtx): SettingsSection[
                 setPref({ launchAtLogin: v });
               }}
             />
+            <Toggle
+              id="tab-discard-enabled"
+              label={s.tray.tabDiscard}
+              description={s.tray.tabDiscardDesc}
+              checked={prefs.tabDiscardEnabled}
+              onChange={(v) => {
+                setPref({ tabDiscardEnabled: v });
+              }}
+            />
+            {prefs.tabDiscardEnabled && (
+              <div>
+                <label
+                  htmlFor="tab-discard-idle-minutes"
+                  className="mb-1 block text-sm font-medium text-text-primary"
+                >
+                  {s.tray.tabDiscardIdleMinutes}
+                </label>
+                <input
+                  id="tab-discard-idle-minutes"
+                  type="number"
+                  min={1}
+                  max={1440}
+                  value={prefs.tabDiscardIdleMinutes}
+                  onChange={(e) => {
+                    const n = Number(e.target.value);
+                    if (Number.isFinite(n) && n >= 1 && n <= 1440) {
+                      setPref({ tabDiscardIdleMinutes: Math.round(n) });
+                    }
+                  }}
+                  className="w-32 rounded-md border border-border bg-surface-base px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+                />
+              </div>
+            )}
           </div>
         </Card>
       ),

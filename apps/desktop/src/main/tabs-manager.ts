@@ -227,4 +227,10 @@ export default class TabManager extends TabManagerBase {
   static reopenClosedTab(): void {
     TabManager.focused()?.reopenClosedTab();
   }
+  static discardTab(id: string): void {
+    TabManager.focused()?.discardTab(id);
+  }
+  static canDiscardTab(id: string): boolean {
+    return TabManager.focused()?.canDiscard(id) ?? false;
+  }
 }

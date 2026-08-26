@@ -116,6 +116,10 @@ export const en = {
     launchAtLogin: 'Launch at system startup',
     launchAtLoginDesc:
       'Start Tepegöz automatically when you sign in to your computer (Windows / macOS / Linux). The auto-launch starts in the background so the agent is ready from boot.',
+    tabDiscard: 'Discard inactive tabs',
+    tabDiscardDesc:
+      "Free memory from background tabs you haven't looked at in a while — the tab stays in the bar and reloads the moment you click back to it. Never applies to the tab you're on, a tab playing sound, or one an agent is keeping alive in the background.",
+    tabDiscardIdleMinutes: 'Discard after (minutes)',
   },
 
   // --- Default browser ---

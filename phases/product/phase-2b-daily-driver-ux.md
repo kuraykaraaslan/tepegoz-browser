@@ -1,6 +1,6 @@
 # Phase 2b — Daily-Driver Browser UX (Tabs / PWA / DevTools)
 
-**Status:** 🟡 In progress (DevTools boundary + ADR-0029 + Task-Manager accounting landed 2026-08-19; the app-owned application menu closed the Ctrl+Shift+I bypass 2026-08-24; default-browser registration + inbound-link routing landed 2026-08-26) · **Estimate:** ~3–4 months · **Depends on:** Phase 1a (UI shell)
+**Status:** 🟡 In progress (DevTools boundary + ADR-0029 + Task-Manager accounting landed 2026-08-19; the app-owned application menu closed the Ctrl+Shift+I bypass 2026-08-24; default-browser registration + inbound-link routing + tab discard/sleep landed 2026-08-26 — **the v1 ship line's narrow 2b scope (default-browser + tab discard + tab groups) is now code-complete**) · **Estimate:** ~3–4 months · **Depends on:** Phase 1a (UI shell)
 **Goal:** Make tepegoz a credible everyday browser, not just an agentic shell: advanced tab UX,
 PWA support, and a full developer-tools surface. **Can run in parallel with Phase 2** (both are
 post-core daily-driver tracks). Classic browser-UX features only — agent-adjacent privacy/credential
@@ -103,8 +103,24 @@ work lives in Phase 2; agent orchestration (multi-tab parallelism) stays in Phas
       restore/new-tab seed when it finds it; macOS's `open-url` is wired too, registered before
       `whenReady` and queued if it fires during a cold launch. 14 unit tests (`launch-url.test.ts` +
       `default-browser.test.ts`)._
-- [ ] **Tab discard / sleep** (background-tab suspension + reload-on-focus) to cap memory — distinct from the
+- [x] **Tab discard / sleep** (background-tab suspension + reload-on-focus) to cap memory — distinct from the
       Phase 1b agent-context eviction (that is per-task _agent_ memory; this is _browser-tab_ lifecycle).
+      — _`WindowTabsDiscard` (`tabs-window-discard.ts`) destroys a background tab's `WebContentsView`
+      (`discardTab`) and rebuilds it on the next `activate()`, reloading its last known URL — the tab
+      entry (title/favicon/url) stays in the strip the whole time, so nothing looks closed. Two paths
+      trigger it: the tab context menu's new "Discard tab" row, and a once-a-minute auto-sweep
+      (`tab-discard-service.ts`) gated on a default-ON preference (`tabDiscardEnabled`,
+      `tabDiscardIdleMinutes`, default 30 — Chrome's own memory-saver default) exposed in Settings →
+      General. **A discarded tab revives on the SAME browsing session it was discarded from**
+      (`WindowTabsRehost.sessionOfTab`, captured before teardown) — reviving onto the window's plain
+      default would silently drop a Phase 5 VPN/Tor-bound tab back onto the clear path, the exact leak
+      class `rehostTab`'s own docs warn against, just triggered by sleep instead of a re-bind. Never
+      applies to the active tab, a `hidden` (agent-kept-alive) tab, or one playing audio — `canDiscard`
+      is the single guard both the menu row's `enabled` state and the sweep consult, so neither can drift
+      from the other. Polling over an activation-event hook: the tab model already exposes full live
+      state every tick, and a new observer just for this one caller would be more plumbing than the
+      feature is worth. 5 unit tests on the sweep's timing/reset/leak-forgetting behavior — the
+      Electron-view half is exercised the same way `rehostTab` is (no direct unit test; e2e territory)._
 - [~] **Task Manager** (`app.getAppMetrics` → per-`WebContentsView` CPU / memory / PID; end-process; shows
   which tabs are discarded) surfaced as an internal `tepegoz://` page.
 

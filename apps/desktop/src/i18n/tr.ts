@@ -71,6 +71,8 @@ export const tr: AppStrings = {
     unhideTab: 'Göster',
     unhideAll: 'Tümünü göster',
     hiddenTabs: 'Gizli sekmeler',
+    // Uyku/dondurma — arka plandaki bir sekmenin belleğini boşaltır; yeniden etkinleştirilince yeniden yüklenir.
+    discardTab: 'Sekmeyi uyut',
     showFullHistory: 'Tüm geçmişi göster',
     // Sistem tepsisi (kapatınca tepsiye) — uygulama çalışır durumda kalır; arka plan sekmeleri + ajan canlı.
     trayShow: "Tepegöz'ü göster",

@@ -59,6 +59,16 @@ export function showTabContextMenu(win: BrowserWindow, tabId: string): void {
         TabManager.hideTab(tabId);
       },
     },
+    {
+      // Discard/sleep: the OPPOSITE of hide — free the tab's memory now rather than keep it alive.
+      // `canDiscardTab` refuses the active/hidden/audible/already-discarded cases, so a disabled row
+      // here is the same guard `discardTab` itself would apply, just visible before the click.
+      label: t.browser.discardTab,
+      enabled: TabManager.canDiscardTab(tabId),
+      click: () => {
+        TabManager.discardTab(tabId);
+      },
+    },
     { type: 'separator' },
     // Per-tab network route (Phase 5). Sits next to the group entry because it is the same kind of
     // decision — "which context does this tab belong to" — at a different scope.

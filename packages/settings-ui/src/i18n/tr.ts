@@ -116,6 +116,10 @@ export const tr: SettingsStrings = {
     launchAtLogin: 'Sistem açılışında başlat',
     launchAtLoginDesc:
       'Bilgisayarınıza giriş yaptığınızda Tepegöz’ü otomatik başlatır (Windows / macOS / Linux). Otomatik başlatma arka planda çalışır; ajan açılıştan itibaren hazır olur.',
+    tabDiscard: 'Etkin olmayan sekmeleri uyut',
+    tabDiscardDesc:
+      'Bir süredir bakmadığınız arka plan sekmelerinin belleğini boşaltır — sekme çubukta kalır ve ona tıkladığınız anda yeniden yüklenir. Üzerinde olduğunuz sekmeye, ses çalan bir sekmeye veya bir ajanın arka planda canlı tuttuğu bir sekmeye asla uygulanmaz.',
+    tabDiscardIdleMinutes: 'Şu kadar dakika sonra uyut',
   },
 
   // --- Varsayılan tarayıcı ---

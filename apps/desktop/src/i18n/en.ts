@@ -80,6 +80,8 @@ export const en = {
     unhideTab: 'Unhide',
     unhideAll: 'Unhide all',
     hiddenTabs: 'Hidden tabs',
+    // Discard/sleep — free a background tab's memory; it reloads the next time it is activated.
+    discardTab: 'Discard tab',
     // Back/forward button dropdown (right-click a nav button) — the last row, under the entries.
     showFullHistory: 'Show full history',
     // System tray (close-to-tray) — the app keeps running so background tabs + the agent stay live.

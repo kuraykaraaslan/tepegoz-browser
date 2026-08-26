@@ -281,6 +281,10 @@ export const PreferencesSchema = z.object({
   kioskUrl: z.string().max(4096),
   launchAtLogin: z.boolean(),
   trayHintShown: z.boolean(),
+  tabDiscardEnabled: z.boolean(),
+  // Bounded: a value of 0 would discard a tab the instant it loses focus, and an absurdly large one is
+  // indistinguishable from "off" but without the honest label.
+  tabDiscardIdleMinutes: z.number().int().min(1).max(1440),
 }) satisfies z.ZodType<Preferences>;
 
 /** Patch shape for partial updates — only provided keys are applied. */
@@ -413,4 +417,8 @@ export const DEFAULT_PREFERENCES: Preferences = {
   launchAtLogin: false,
   // The one-time tray hint hasn't been shown yet.
   trayHintShown: false,
+  // Cap memory from forgotten background tabs by default; 30 minutes matches Chrome's own memory-saver
+  // default, which is the behavior a daily-driver user already expects.
+  tabDiscardEnabled: true,
+  tabDiscardIdleMinutes: 30,
 };

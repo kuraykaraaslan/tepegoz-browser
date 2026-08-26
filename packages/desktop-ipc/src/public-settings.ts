@@ -107,6 +107,9 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   kioskUrl: 'private',
   launchAtLogin: 'private',
   trayHintShown: 'private',
+  // Private — browser-tab memory management; extensions have no need for it.
+  tabDiscardEnabled: 'private',
+  tabDiscardIdleMinutes: 'private',
 };
 
 // --- Compile-time guards: pin the shared PublicSettings shape to the real Preferences projection. ---

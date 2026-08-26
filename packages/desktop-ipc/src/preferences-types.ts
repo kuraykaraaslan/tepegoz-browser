@@ -247,6 +247,13 @@ export interface Preferences {
   launchAtLogin: boolean;
   /** Whether the one-time "still running in the tray" hint has been shown (so it never nags again). */
   trayHintShown: boolean;
+  /** Automatically discard (sleep) background tabs to cap memory — distinct from Phase 1b's per-task
+   *  AGENT memory eviction, this is browser-tab lifecycle. A discarded tab keeps its title/favicon in
+   *  the strip and reloads its URL the moment it is next activated. Never applies to the active tab, a
+   *  hidden (agent-kept-alive) tab, or one currently playing audio. Device-local. */
+  tabDiscardEnabled: boolean;
+  /** How long a background tab must sit unfocused before it is eligible for auto-discard. Device-local. */
+  tabDiscardIdleMinutes: number;
 }
 
 /** Persisted main-window placement — the restored (non-maximized) rectangle plus whether it was maximized. */

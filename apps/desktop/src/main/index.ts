@@ -67,6 +67,7 @@ import { taskToolsHost } from './tasks/task-tools-host.electron';
 import { runTaskAgent } from './agent/task-agent-runner.electron';
 import { maybeRunEval } from './agent/agent-eval-runner.electron';
 import { webToolsHost } from './web/web-tools-host.electron';
+import TabDiscardService from './tab-discard-service';
 
 // Last-resort process-level hooks: an async error that escapes every boundary must be LOGGED, not a
 // silent crash. Both are logged and survived — a stray error in a single main-process event handler
@@ -280,6 +281,8 @@ if (!app.requestSingleInstanceLock()) {
           .map((tool) => tool.id),
       );
       TaskService.init();
+      // Background-tab discard (sleep): a once-a-minute sweep, gated on the (default-on) preference.
+      TabDiscardService.init();
       // Connect configured MCP servers in the background (non-blocking; a bad server must not delay
       // startup). Their tools register into the CapabilityRegistry as they become ready (ADR-0018).
       McpService.start();
@@ -365,6 +368,7 @@ if (!app.requestSingleInstanceLock()) {
     markQuitting();
     abortActiveAgentRuns();
     TaskService.stop();
+    TabDiscardService.stop();
     void McpService.stop();
     PopupWindowManager.close();
     TabManager.persistNow();
