@@ -118,6 +118,18 @@ export const en = {
       'Start Tepegöz automatically when you sign in to your computer (Windows / macOS / Linux). The auto-launch starts in the background so the agent is ready from boot.',
   },
 
+  // --- Default browser ---
+  defaultBrowser: {
+    title: 'Default browser',
+    isDefault: 'Tepegöz is your default browser.',
+    isDefaultDesc: 'Links from other apps and emails open here.',
+    notDefault: 'Tepegöz is not your default browser.',
+    notDefaultDesc: 'Links from other apps and emails currently open somewhere else.',
+    makeDefault: 'Make Tepegöz my default browser',
+    checking: 'Checking…',
+    failed: 'Could not register Tepegöz — try setting it from your system settings instead.',
+  },
+
   // --- File operations ---
   fileOps: {
     title: 'File operations',

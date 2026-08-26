@@ -5,6 +5,7 @@ import {
   type AdaptorConnection,
   type AppInfo,
   type CredentialsStatus,
+  type DefaultBrowserStatus,
   type ExtensionManifestWire,
   type McpServerStatusInfo,
   type Preferences,
@@ -39,6 +40,7 @@ import { builtinManifests } from '../../shared/extensions';
 import { handle } from './ipc-helpers';
 import { applyChromeGlass, isMicaSupported } from '../lib/glass';
 import { setLaunchAtLogin } from '../launch-at-login';
+import { getDefaultBrowserStatus, setAsDefaultBrowser } from '../default-browser';
 import { refreshTray } from '../tray';
 import { refreshApplicationMenu } from '../menus/application-menu';
 
@@ -92,6 +94,10 @@ export function registerAppIpc(): void {
       glassAvailable: isMicaSupported(),
     }),
   );
+
+  handle(IpcChannels.defaultBrowserGet, (): DefaultBrowserStatus => getDefaultBrowserStatus());
+
+  handle(IpcChannels.defaultBrowserSet, (): DefaultBrowserStatus => setAsDefaultBrowser());
 
   handle(IpcChannels.prefsGet, (): Preferences => PreferenceStore.getAll());
 

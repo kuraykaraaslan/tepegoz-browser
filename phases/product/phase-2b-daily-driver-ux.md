@@ -1,6 +1,6 @@
 # Phase 2b — Daily-Driver Browser UX (Tabs / PWA / DevTools)
 
-**Status:** 🟡 In progress (DevTools boundary + ADR-0029 + Task-Manager accounting landed 2026-08-19; the app-owned application menu closed the Ctrl+Shift+I bypass 2026-08-24) · **Estimate:** ~3–4 months · **Depends on:** Phase 1a (UI shell)
+**Status:** 🟡 In progress (DevTools boundary + ADR-0029 + Task-Manager accounting landed 2026-08-19; the app-owned application menu closed the Ctrl+Shift+I bypass 2026-08-24; default-browser registration + inbound-link routing landed 2026-08-26) · **Estimate:** ~3–4 months · **Depends on:** Phase 1a (UI shell)
 **Goal:** Make tepegoz a credible everyday browser, not just an agentic shell: advanced tab UX,
 PWA support, and a full developer-tools surface. **Can run in parallel with Phase 2** (both are
 post-core daily-driver tracks). Classic browser-UX features only — agent-adjacent privacy/credential
@@ -85,9 +85,24 @@ work lives in Phase 2; agent orchestration (multi-tab parallelism) stays in Phas
 
 ### L8 — OS integration & diagnostics
 
-- [ ] **Default-browser registration** (`app.setAsDefaultProtocolClient` for http/https + OS default-apps
+- [x] **Default-browser registration** (`app.setAsDefaultProtocolClient` for http/https + OS default-apps
       prompt); inbound links from other apps open in the **existing** window via the `second-instance` handler
       already wired in Phase 1a — a new window only when none is open.
+      — _User-initiated only, from a Settings → General row (`getDefaultBrowserStatus`/`setAsDefaultBrowser`,
+      `apps/desktop/src/main/default-browser.ts`): registering unprompted would rewrite the OS default the
+      moment the page renders, which is the surprise this DoD line's own "OS default-apps prompt" phrasing
+      is there to avoid. Both `http` and `https` are registered together — a browser that only claimed one
+      would silently lose the other's links to whatever handled them before — and the reported status is
+      always a fresh `app.isDefaultProtocolClient` read, never an assumption that the request succeeded
+      (Windows 10+'s own picker decides)._
+      — _**Inbound routing covers all three arrival paths**, not just the one the DoD line names:
+      `second-instance`'s `commandLine` (Windows/Linux, app already running — `extractLaunchUrl`, tested)
+      opens the link in the existing window exactly as specified; a **cold launch already carrying the
+      link** (`process.argv`) was the gap the DoD text didn't mention but a real default-browser click
+      hits every time, so `whenReady`'s bootstrap now checks for one and skips the ordinary
+      restore/new-tab seed when it finds it; macOS's `open-url` is wired too, registered before
+      `whenReady` and queued if it fires during a cold launch. 14 unit tests (`launch-url.test.ts` +
+      `default-browser.test.ts`)._
 - [ ] **Tab discard / sleep** (background-tab suspension + reload-on-focus) to cap memory — distinct from the
       Phase 1b agent-context eviction (that is per-task _agent_ memory; this is _browser-tab_ lifecycle).
 - [~] **Task Manager** (`app.getAppMetrics` → per-`WebContentsView` CPU / memory / PID; end-process; shows

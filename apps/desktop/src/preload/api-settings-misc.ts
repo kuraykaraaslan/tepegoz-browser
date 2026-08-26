@@ -5,6 +5,7 @@ import {
   type AdblockState,
   type AppInfo,
   type CredentialsStatus,
+  type DefaultBrowserStatus,
   type FileAccessFolderPickResult,
   type NewTabBackgroundImagePick,
   type PopupBlockerRequest,
@@ -38,6 +39,8 @@ import { invoke } from './ipc-invoke';
 export const settingsMiscApi: Pick<
   TepegozApi,
   | 'getAppInfo'
+  | 'getDefaultBrowserStatus'
+  | 'setAsDefaultBrowser'
   | 'getPreferences'
   | 'updatePreferences'
   | 'resetPreferences'
@@ -96,6 +99,8 @@ export const settingsMiscApi: Pick<
   | 'getNewTabBackgroundImage'
 > = {
   getAppInfo: () => invoke<AppInfo>(IpcChannels.appGetInfo),
+  getDefaultBrowserStatus: () => invoke<DefaultBrowserStatus>(IpcChannels.defaultBrowserGet),
+  setAsDefaultBrowser: () => invoke<DefaultBrowserStatus>(IpcChannels.defaultBrowserSet),
   getPreferences: () => invoke<Preferences>(IpcChannels.prefsGet),
   updatePreferences: (patch: Partial<Preferences>) =>
     invoke<Preferences>(IpcChannels.prefsSet, patch),

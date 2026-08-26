@@ -118,6 +118,18 @@ export const tr: SettingsStrings = {
       'Bilgisayarınıza giriş yaptığınızda Tepegöz’ü otomatik başlatır (Windows / macOS / Linux). Otomatik başlatma arka planda çalışır; ajan açılıştan itibaren hazır olur.',
   },
 
+  // --- Varsayılan tarayıcı ---
+  defaultBrowser: {
+    title: 'Varsayılan tarayıcı',
+    isDefault: 'Tepegöz varsayılan tarayıcınız.',
+    isDefaultDesc: 'Diğer uygulamalardan ve e-postalardan gelen bağlantılar burada açılır.',
+    notDefault: 'Tepegöz varsayılan tarayıcınız değil.',
+    notDefaultDesc: 'Diğer uygulamalardan ve e-postalardan gelen bağlantılar şu anda başka bir yerde açılıyor.',
+    makeDefault: "Tepegöz'ü varsayılan tarayıcım yap",
+    checking: 'Kontrol ediliyor…',
+    failed: 'Tepegöz kaydedilemedi — bunun yerine sistem ayarlarınızdan deneyin.',
+  },
+
   // --- Dosya işlemleri ---
   fileOps: {
     title: 'Dosya işlemleri',

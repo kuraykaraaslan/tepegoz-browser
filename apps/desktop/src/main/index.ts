@@ -16,6 +16,7 @@ import { emitSystemPause, emitSystemResume } from './power-lifecycle';
 import PreferenceStore from '@tepegoz/preferences';
 import { closeDatabase } from './db/database.electron';
 import TabManager from './tabs';
+import { extractLaunchUrl } from './launch-url';
 import { openPageContextMenu } from './menus/page-context-menu';
 import BrowsingSessions from './network/browsing-sessions.electron';
 import ConnectionPool from './network/connection-pool.electron';
@@ -126,15 +127,37 @@ if (app.commandLine.getSwitchValue('user-data-dir').length === 0) {
   app.setPath('userData', userDataDir);
 }
 
+// Default-browser inbound routing (macOS): a link opened while Tepegöz is already running arrives here,
+// not through argv. Registered at module scope (before `whenReady`) because Electron can fire `open-url`
+// during a cold launch before the app is ready — in that case the URL is queued and picked up by the
+// `whenReady` bootstrap below, the same way a Windows/Linux cold launch reads it from `process.argv`.
+let pendingOpenUrl: string | null = null;
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  if (!/^https?:\/\//i.test(url)) return;
+  if (!app.isReady() || TabManager.all().length === 0) {
+    pendingOpenUrl = url;
+    return;
+  }
+  TabManager.createTab(url);
+  revealAllWindows();
+});
+
 // Single instance: a second launch focuses the existing window rather than fighting over the cache.
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on('second-instance', () => {
+  app.on('second-instance', (_event, commandLine) => {
     // A second launch reveals the app — restoring every window from the tray / minimize (close-to-tray
     // means the "missing" window is hidden, not gone), or opening a fresh one if somehow none exist.
     if (TabManager.all().length === 0) openWindow({ foreground: true });
     else revealAllWindows();
+    // Default-browser inbound routing (Windows/Linux): the OS launches a SECOND process carrying the
+    // clicked link as an argument; `requestSingleInstanceLock` hands it to the FIRST process as
+    // `commandLine` instead of letting the second one open its own window. Without this, "open link in
+    // Tepegöz" while Tepegöz is already running would just flash the existing window and go nowhere.
+    const url = extractLaunchUrl(commandLine);
+    if (url !== null) TabManager.createTab(url);
   });
 
   void app
@@ -229,7 +252,18 @@ if (!app.requestSingleInstanceLock()) {
         void openPageContextMenu(win, wc, params, viewBounds, nav);
       });
       initHosts();
-      openWindow();
+      // Default-browser inbound routing, cold-launch case: the OS started Tepegöz FOR this link (Windows
+      // passes it on `process.argv`; a macOS `open-url` that raced `whenReady` is queued above). Opening
+      // with `tabs: 'none'` skips the ordinary session-restore/new-tab bootstrap so the window shows
+      // exactly the page that was clicked, matching what every other default browser does.
+      const launchUrl = pendingOpenUrl ?? extractLaunchUrl(process.argv);
+      pendingOpenUrl = null;
+      if (launchUrl !== null) {
+        const win = openWindow({ tabs: 'none' });
+        TabManager.forWindow(win)?.createTab(launchUrl);
+      } else {
+        openWindow();
+      }
       // The system-tray icon (close-to-tray target) — created once, after the first window exists.
       initTray();
       // Replaces Electron's DEFAULT menu, which bound Ctrl+Shift+I straight to its own

@@ -3,7 +3,13 @@
  * (including the type-only circular import with `contract.ts`) keep this dependency-free for the
  * sandboxed preload. Composed into the full surface by `api.ts`.
  */
-import type { AppInfo, CredentialsStatus, ProviderId, ProviderKeyMeta } from './contract';
+import type {
+  AppInfo,
+  CredentialsStatus,
+  DefaultBrowserStatus,
+  ProviderId,
+  ProviderKeyMeta,
+} from './contract';
 import type { PublicSettings } from './public-settings';
 import type { Preferences } from './preferences-types';
 
@@ -41,4 +47,9 @@ export interface AppApi {
   isWindowMaximized(): Promise<boolean>;
   /** Subscribe to maximize/restore state changes; returns an unsubscribe function. */
   onWindowMaximizedChange(callback: (maximized: boolean) => void): () => void;
+  /** Whether Tepegöz is currently the OS's registered http/https handler. Re-read from the OS each call. */
+  getDefaultBrowserStatus(): Promise<DefaultBrowserStatus>;
+  /** Ask the OS to make Tepegöz the default browser. The user may decline in the OS's own picker, so the
+   *  result is a fresh read of reality afterward, never an assumption that the request succeeded. */
+  setAsDefaultBrowser(): Promise<DefaultBrowserStatus>;
 }

@@ -10,6 +10,12 @@ export interface AppInfo {
   glassAvailable: boolean;
 }
 
+/** Whether Tepegöz is currently the OS's registered handler for http/https. Re-read from the OS, never
+ *  cached — the user can change it from outside this app (the OS's own default-apps Settings). */
+export interface DefaultBrowserStatus {
+  isDefault: boolean;
+}
+
 import type { WebPermissionCapability } from '@tepegoz/shared-types';
 
 export type { WebPermissionCapability };

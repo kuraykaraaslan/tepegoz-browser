@@ -33,6 +33,10 @@ export const IpcChannels = {
   windowClose: 'window:close',
   windowIsMaximized: 'window:is-maximized',
   windowMaximizedChanged: 'window:maximized-changed',
+  /** Default-browser registration (Phase 2b): read the OS's current http/https handler, or ask to
+   *  become it. Both go through main because `app.setAsDefaultProtocolClient` is a main-process API. */
+  defaultBrowserGet: 'default-browser:get',
+  defaultBrowserSet: 'default-browser:set',
   tabsCreate: 'tabs:create',
   tabsCreateBackground: 'tabs:create-background',
   tabsClose: 'tabs:close',

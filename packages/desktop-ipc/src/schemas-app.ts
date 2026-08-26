@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PROVIDER_IDS, type AppInfo } from './contract';
+import { PROVIDER_IDS, type AppInfo, type DefaultBrowserStatus } from './contract';
 
 /**
  * Runtime (zod) validation for IPC payloads — MAIN PROCESS ONLY. Kept separate from `ipc-contract.ts`
@@ -11,6 +11,10 @@ export const AppInfoSchema: z.ZodType<AppInfo> = z.object({
   version: z.string(),
   platform: z.string(),
   glassAvailable: z.boolean(),
+});
+
+export const DefaultBrowserStatusSchema: z.ZodType<DefaultBrowserStatus> = z.object({
+  isDefault: z.boolean(),
 });
 
 const ProviderIdSchema = z.enum(PROVIDER_IDS);

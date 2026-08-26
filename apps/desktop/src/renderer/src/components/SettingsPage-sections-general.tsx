@@ -11,10 +11,12 @@ import {
   TokenBudgetSection,
 } from './settings-ai-panels';
 import { AdaptorsSection } from './settings-adaptors-section';
+import { DefaultBrowserSection } from './settings-default-browser';
 import { DownloadSettingsSection, SearchStartupSection } from './settings-privacy-files';
 import {
   IconA11y,
   IconBell,
+  IconDesktop,
   IconDownload,
   IconGauge,
   IconGlobe,
@@ -63,6 +65,14 @@ export function generalAndAiSections(ctx: SettingsSectionsCtx): SettingsSection[
           <SearchStartupSection prefs={prefs} setPref={setPref} />
         </div>
       ),
+    },
+    {
+      id: 'default-browser',
+      group: s.groupGeneral,
+      label: s.defaultBrowser.title,
+      icon: <IconDesktop />,
+      searchText: `${s.defaultBrowser.title} ${s.defaultBrowser.isDefault} ${s.defaultBrowser.notDefault} ${s.defaultBrowser.makeDefault}`,
+      content: <DefaultBrowserSection />,
     },
     {
       id: 'downloads',
