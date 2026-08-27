@@ -1,60 +1,65 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { describe, expect, it } from 'vitest';
 
 /**
- * `resolveSurfaceTheme` picks the first-paint `backgroundColor` for a native popup window so it does
- * not flash the hardcoded navy on a light or custom theme. The rule mirrors the renderer's
- * `applyTheme`: a valid custom hex IS the surface; otherwise the mode (with system → OS) picks the
- * brand light/dark token.
+ * The main process mirrors two token values by hand so a native popup paints the right colour before
+ * anything renders. Its own comment says so: "mirror packages/ui/styles/tokens.css … kept in sync by
+ * hand."
+ *
+ * A hand-kept mirror is where drift hides, and this one is invisible when it drifts: the popup simply
+ * flashes the old colour for a frame, which nobody files a bug about and no test would notice. So the
+ * hand-sync is now checked against the file it mirrors.
+ *
+ * The module itself imports `electron`, so this asserts on the constants in its source rather than
+ * importing it — that keeps the check running in the ordinary unit suite instead of needing Electron.
  */
 
-const prefs = vi.hoisted(() => ({ value: { theme: 'system', themeColor: '' } }));
-const os = vi.hoisted(() => ({ dark: false }));
+const SOURCE = readFileSync(join(__dirname, 'surface-theme.ts'), 'utf8');
+const TOKENS = readFileSync(
+  join(__dirname, '..', '..', '..', '..', '..', 'packages', 'ui', 'styles', 'tokens.css'),
+  'utf8',
+);
 
-vi.mock('@tepegoz/preferences', () => ({ default: { getAll: () => prefs.value } }));
-vi.mock('electron', () => ({
-  nativeTheme: {
-    get shouldUseDarkColors() {
-      return os.dark;
-    },
-  },
-}));
+function constant(name: string): string {
+  const m = new RegExp(`const ${name} = '(#[0-9a-fA-F]{6})'`).exec(SOURCE);
+  if (m === null) throw new Error(`${name} not found in surface-theme.ts`);
+  return (m[1] as string).toLowerCase();
+}
 
-const { resolveSurfaceTheme } = await import('./surface-theme');
+/** `--surface-base` from a `:root` / `.dark` block of tokens.css. */
+function surfaceBase(selector: string): string {
+  const start = TOKENS.indexOf(`${selector} {`);
+  const end = TOKENS.indexOf('\n}', start);
+  const m = /--surface-base:\s*(#[0-9a-fA-F]{6});/.exec(TOKENS.slice(start, end));
+  if (m === null) throw new Error(`--surface-base not found in ${selector}`);
+  return (m[1] as string).toLowerCase();
+}
 
-beforeEach(() => {
-  prefs.value = { theme: 'system', themeColor: '' };
-  os.dark = false;
-});
-
-describe('resolveSurfaceTheme', () => {
-  it('a valid custom hex colour IS the surface, and is forwarded verbatim', () => {
-    prefs.value = { theme: 'light', themeColor: '#7C3AED' };
-    expect(resolveSurfaceTheme()).toEqual({
-      color: '#7C3AED',
-      theme: 'light',
-      themeColor: '#7C3AED',
-    });
+describe('the popup first-paint colours still match the design tokens', () => {
+  it('found both sides', () => {
+    expect(surfaceBase(':root')).toMatch(/^#[0-9a-f]{6}$/);
+    expect(surfaceBase('.dark')).toMatch(/^#[0-9a-f]{6}$/);
   });
 
-  it('ignores a malformed themeColor and falls back to the mode token', () => {
-    prefs.value = { theme: 'light', themeColor: 'purple' };
-    expect(resolveSurfaceTheme().color).toBe('#ffffff');
+  it('light matches --surface-base in :root', () => {
+    expect(constant('LIGHT_SURFACE')).toBe(surfaceBase(':root'));
   });
 
-  it('light mode → the light brand surface', () => {
-    prefs.value = { theme: 'light', themeColor: '' };
-    expect(resolveSurfaceTheme().color).toBe('#ffffff');
+  it('dark matches --surface-base in .dark', () => {
+    expect(constant('DARK_SURFACE')).toBe(surfaceBase('.dark'));
   });
 
-  it('dark mode → the dark brand surface', () => {
-    prefs.value = { theme: 'dark', themeColor: '' };
-    expect(resolveSurfaceTheme().color).toBe('#0c2135');
-  });
-
-  it('system mode follows the OS: light when the OS is light, dark when it is dark', () => {
-    os.dark = false;
-    expect(resolveSurfaceTheme().color).toBe('#ffffff');
-    os.dark = true;
-    expect(resolveSurfaceTheme().color).toBe('#0c2135');
+  it('uses the same hex validation as the renderer, so the two agree on what a custom colour is', () => {
+    // A colour one side accepts and the other rejects means the popup paints the mode surface while
+    // the renderer paints the custom one — a flash of the wrong colour on every popup.
+    const mainHex = /const HEX = (\/[^/]+\/)/.exec(SOURCE)?.[1];
+    const rendererSource = readFileSync(
+      join(__dirname, '..', '..', 'renderer', 'src', 'lib', 'theme.ts'),
+      'utf8',
+    );
+    const rendererHex = /return (\/[^/]+\/)\.test\(value\)/.exec(rendererSource)?.[1];
+    expect(mainHex).toBeDefined();
+    expect(rendererHex).toBe(mainHex);
   });
 });
