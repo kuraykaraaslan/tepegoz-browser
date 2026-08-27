@@ -15,8 +15,16 @@ import type { BrowserWindow, Input, WebContents } from 'electron';
  */
 
 vi.mock('electron', () => ({}));
-vi.mock('./window', () => ({ exitKioskWindow: vi.fn(), toggleFullScreen: vi.fn() }));
-vi.mock('./onboarding.electron', () => ({ loadBrowser: vi.fn() }));
+const win2 = vi.hoisted(() => ({
+  exitKioskWindow: vi.fn(),
+  toggleFullScreen: vi.fn(),
+  loadBrowser: vi.fn(),
+}));
+vi.mock('./window', () => ({
+  exitKioskWindow: win2.exitKioskWindow,
+  toggleFullScreen: win2.toggleFullScreen,
+}));
+vi.mock('./onboarding.electron', () => ({ loadBrowser: win2.loadBrowser }));
 
 const commands = vi.hoisted(() => ({
   printPage: vi.fn(),
@@ -42,11 +50,18 @@ function press(key: string, mods: Partial<Omit<Input, 'type' | 'key'>> = {}): In
   } as Input;
 }
 
-const win = {} as BrowserWindow;
+const sent: string[] = [];
+let kiosk = false;
+const win = {
+  webContents: { send: (channel: string) => sent.push(channel) },
+  isKiosk: () => kiosk,
+} as unknown as BrowserWindow;
 const page = {} as WebContents;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  sent.length = 0;
+  kiosk = false;
 });
 
 describe('page-command shortcuts', () => {
@@ -116,5 +131,61 @@ describe('page-command shortcuts', () => {
       true,
     );
     expect(commands.toggleDevToolsGated).toHaveBeenCalledWith(page);
+  });
+});
+
+describe('the window-level shortcuts', () => {
+  it('F11 toggles fullscreen', () => {
+    expect(handleWindowShortcut(win, press('F11'), { page })).toBe(true);
+    expect(win2.toggleFullScreen).toHaveBeenCalledWith(win);
+  });
+
+  it('Ctrl+F asks the chrome to open its find bar (page has focus, chrome never sees the key)', () => {
+    expect(handleWindowShortcut(win, press('f', { control: true }), { page })).toBe(true);
+    expect(sent).toEqual(['find:open']);
+  });
+
+  it('Ctrl+Shift+N opens a private window through the injected target', () => {
+    const openPrivateWindow = vi.fn();
+    expect(
+      handleWindowShortcut(win, press('n', { control: true, shift: true }), {
+        page,
+        openPrivateWindow,
+      }),
+    ).toBe(true);
+    expect(openPrivateWindow).toHaveBeenCalledTimes(1);
+  });
+
+  it('Ctrl+Shift+Q leaves kiosk (un-kiosk + reload the normal chrome), but only when in kiosk', () => {
+    expect(handleWindowShortcut(win, press('q', { control: true, shift: true }), { page })).toBe(
+      false,
+    );
+    expect(win2.exitKioskWindow).not.toHaveBeenCalled();
+
+    kiosk = true;
+    expect(handleWindowShortcut(win, press('q', { control: true, shift: true }), { page })).toBe(
+      true,
+    );
+    expect(win2.exitKioskWindow).toHaveBeenCalledWith(win);
+    expect(win2.loadBrowser).toHaveBeenCalledWith(win);
+  });
+
+  it('Ctrl+W is NOT handled when the caller wired no closeActiveTab', () => {
+    expect(handleWindowShortcut(win, press('w', { control: true }), { page })).toBe(false);
+  });
+
+  it('an unrecognised combination is left for the page', () => {
+    expect(handleWindowShortcut(win, press('k', { control: true }), { page })).toBe(false);
+  });
+
+  it('reload / hard-reload / view-source / devtools report NOT handled with no page', () => {
+    for (const p of [
+      press('r', { control: true }),
+      press('r', { control: true, shift: true }),
+      press('u', { control: true }),
+      press('i', { control: true, shift: true }),
+    ]) {
+      expect(handleWindowShortcut(win, p, { page: null })).toBe(false);
+    }
   });
 });
