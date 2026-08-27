@@ -108,6 +108,9 @@ export function wireView(host: ViewWiringHost, id: string, view: WebContentsView
     // Zoom first: it is the only one of these that acts on THIS page rather than the window.
     if (handleZoomShortcut(input, wc)) {
       event.preventDefault();
+      // The shortcut mutates Chromium's zoom directly, outside the tab model — re-emit so the omnibox
+      // zoom indicator (which reads `activeZoomFactor` off `TabsState`) repaints.
+      host.emitState();
       return;
     }
     // `wc` is the page the key was actually pressed on — a more exact answer than "the window's

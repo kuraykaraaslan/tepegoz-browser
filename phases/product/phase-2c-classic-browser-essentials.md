@@ -194,7 +194,18 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       Ctrl+0 deletes the key, so the pref cannot accumulate into a record of every site visited.
       13 unit tests. _(Uses `setZoomFactor`, not `setZoomLevel` as this line originally said: a factor is
       what the ladder and the stored value are expressed in.)_
-  - [ ] No zoom indicator in the omnibox yet (Chrome shows one when a site is off 100%).
+  - [x] **Zoom indicator in the omnibox** (Chrome-style: a pill at the trailing edge of the address
+        bar, shown only when the active tab is off 100%, with a −/level/+/Reset bubble).
+        — _`@tepegoz/nav-toolbar`'s `ZoomIndicator` (leaf, i18n-agnostic — the host injects labels via
+        `@tepegoz/browser-chrome`, en+tr). The active tab's factor rides `TabsState.activeZoomFactor`
+        (read off the live `WebContents` when the state is built, so a `did-navigate` re-apply of the
+        origin's stored level is already reflected); there is no dedicated push. The bubble's buttons
+        go renderer→main on `zoom:command` → `WindowTabs.zoomActive` → the SAME `site-zoom` ladder +
+        per-origin store the Ctrl +/-/0 shortcuts use (`applyZoomCommand`), then a state re-emit. A
+        Ctrl shortcut handled outside the tab model (page- or chrome-focused) now also re-emits so the
+        indicator repaints. Nothing optimistic in the renderer — main stays the source of truth.
+        Tests: `applyZoomCommand` (5, `site-zoom.test.ts`), `toState` zoom pass-through
+        (`tab-store.test.ts`), indicator show/hide + button routing (3, `nav-toolbar.test.tsx`)._
 - [ ] **Spellcheck** (`session.setSpellCheckerLanguages` + built-in Chromium spellchecker; currently
       `spellcheck:false` in `window.ts`) — en/tr dictionaries, settings toggle
   - [ ] **Scope conflict — decide before building.** `ext-typo` already ships "local-first writing and

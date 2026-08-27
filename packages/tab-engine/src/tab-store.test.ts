@@ -117,7 +117,18 @@ describe('TabStore — records & ordering (existing)', () => {
       canGoForward: false,
       // Defaults false; only the window model (which knows) sets it.
       isPrivate: false,
+      // Same: the Electron-free store cannot read a WebContents, so zoom defaults to 100%.
+      activeZoomFactor: 1,
     });
+  });
+
+  it('passes the injected active-tab zoom factor straight through to TabsState', () => {
+    const a = store.add(web({ title: 'A', url: 'https://a.example', isLoading: false }));
+    store.setActive(a);
+    expect(
+      store.toState({ canGoBack: false, canGoForward: false, activeZoomFactor: 1.25 })
+        .activeZoomFactor,
+    ).toBe(1.25);
   });
 
   it('clear() drops tabs + groups + active but keeps id allocation moving forward', () => {

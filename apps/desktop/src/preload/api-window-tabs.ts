@@ -15,6 +15,7 @@ import {
   type TabsState,
   type TabStripGeometry,
   type TepegozApi,
+  type ZoomDirection,
 } from '@tepegoz/desktop-ipc';
 import type { NavHistoryDirection } from '@tepegoz/navigation';
 import { invoke } from './ipc-invoke';
@@ -66,6 +67,7 @@ export const windowTabsApi: Pick<
   | 'stopFindInPage'
   | 'onFindResult'
   | 'onFindOpen'
+  | 'setPageZoom'
   | 'newWindow'
   | 'ensureActiveGroup'
   | 'onActiveGroupChange'
@@ -225,6 +227,9 @@ export const windowTabsApi: Pick<
     return () => {
       ipcRenderer.removeListener(IpcChannels.findOpen, listener);
     };
+  },
+  setPageZoom: (direction: ZoomDirection) => {
+    ipcRenderer.send(IpcChannels.zoomCommand, { direction });
   },
   beginTabDrag: (payload: TabDragBegin) => {
     ipcRenderer.send(IpcChannels.tabsDragBegin, payload);

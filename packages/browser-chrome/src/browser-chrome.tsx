@@ -32,6 +32,11 @@ export interface BrowserChromeStrings {
     omniboxPlaceholder: string;
     bookmarkAdd: string;
     bookmarkRemove: string;
+    /** Omnibox zoom indicator (Chrome-style; shown only off 100%). */
+    zoom: string;
+    zoomIn: string;
+    zoomOut: string;
+    zoomReset: string;
     unnamedGroup: string;
     toggleGroup: string;
     /** Phase 5 route badge names; `{name}` is replaced with the connection label. */
@@ -111,6 +116,10 @@ export interface BrowserChromeProps {
   onOpenDownload?: ((id: string) => void) | undefined;
   /** Reports the omnibox dropdown height to hosts that need to manage native web-view layering. */
   onOmniboxDropdownHeightChange?: ((height: number) => void) | undefined;
+  /** The active tab's zoom as a whole-number percent (e.g. `125`). Omit/`100` hides the indicator. */
+  zoomPercent?: number | undefined;
+  /** Step (`in`/`out`) or `reset` the active tab's zoom (the omnibox indicator's −, +, Reset). */
+  onZoom?: ((direction: 'in' | 'out' | 'reset') => void) | undefined;
   // Bookmark star (right of the omnibox).
   /** Whether the active page is bookmarked (filled vs. outline star). */
   isBookmarked?: boolean | undefined;
@@ -181,6 +190,8 @@ export function BrowserChrome({
   onRunSkill,
   onOpenDownload,
   onOmniboxDropdownHeightChange,
+  zoomPercent,
+  onZoom,
   isBookmarked,
   canBookmark,
   onToggleBookmark,
@@ -289,6 +300,14 @@ export function BrowserChrome({
         onRunSkill={onRunSkill}
         onOpenDownload={onOpenDownload}
         onOmniboxDropdownHeightChange={onOmniboxDropdownHeightChange}
+        zoomPercent={zoomPercent}
+        zoomLabels={{
+          indicator: t.browser.zoom,
+          zoomIn: t.browser.zoomIn,
+          zoomOut: t.browser.zoomOut,
+          reset: t.browser.zoomReset,
+        }}
+        onZoom={onZoom}
         isBookmarked={isBookmarked}
         canBookmark={canBookmark}
         onToggleBookmark={onToggleBookmark}

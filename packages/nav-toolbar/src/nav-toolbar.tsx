@@ -9,6 +9,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarOutline } from '@fortawesome/free-regular-svg-icons';
 import { Omnibox, type OmniboxQuickSettingTarget, type OmniboxSuggestion } from '@tepegoz/omnibox';
+import { ZoomIndicator, type ZoomIndicatorLabels } from './zoom-indicator';
 
 /** Shared base class for a 32px toolbar icon button. Exported so hosts can style matching controls
  *  (e.g. pinned extension icons) the same way. */
@@ -62,6 +63,13 @@ export interface NavToolbarProps {
   onOpenDownload?: ((id: string) => void) | undefined;
   /** Reports the omnibox dropdown height to hosts that need to manage native web-view layering. */
   onOmniboxDropdownHeightChange?: ((height: number) => void) | undefined;
+  // Zoom indicator (Chrome-style, right of the omnibox). Shown only when `zoomPercent` is off 100.
+  /** The active tab's zoom as a whole-number percent (e.g. `125`). Omit or pass `100` to hide it. */
+  zoomPercent?: number | undefined;
+  /** Localized strings for the zoom indicator + its bubble. Required when `zoomPercent` is off 100. */
+  zoomLabels?: ZoomIndicatorLabels | undefined;
+  /** Step (`in`/`out`) or `reset` the active tab's zoom. */
+  onZoom?: ((direction: 'in' | 'out' | 'reset') => void) | undefined;
   // Bookmark star (Chrome-style, right of the omnibox). Omit onToggleBookmark to hide it entirely.
   /** Whether the active page is bookmarked (filled vs. outline star). */
   isBookmarked?: boolean | undefined;
@@ -100,6 +108,9 @@ export function NavToolbar({
   onRunSkill,
   onOpenDownload,
   onOmniboxDropdownHeightChange,
+  zoomPercent,
+  zoomLabels,
+  onZoom,
   isBookmarked = false,
   canBookmark = false,
   onToggleBookmark,
@@ -153,6 +164,10 @@ export function NavToolbar({
         onOpenDownload={onOpenDownload}
         onDropdownHeightChange={onOmniboxDropdownHeightChange}
       />
+
+      {zoomPercent !== undefined && zoomLabels !== undefined && onZoom !== undefined && (
+        <ZoomIndicator percent={zoomPercent} labels={zoomLabels} onZoom={onZoom} />
+      )}
 
       {onToggleBookmark !== undefined && (
         <button

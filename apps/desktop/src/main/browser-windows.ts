@@ -98,6 +98,8 @@ export function openWindow(opts?: {
     const pageWc = tabs?.activeWebContents() ?? null;
     if (handleZoomShortcut(input, pageWc)) {
       event.preventDefault();
+      // Zoom changed outside the tab model — re-emit so the omnibox zoom indicator repaints.
+      tabs?.refreshState();
       return;
     }
     const targets = {

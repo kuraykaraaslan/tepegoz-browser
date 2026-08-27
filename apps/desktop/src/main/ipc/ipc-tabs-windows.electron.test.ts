@@ -437,6 +437,7 @@ describe('tabs:get-state', () => {
       canGoBack: false,
       canGoForward: false,
       isPrivate: false,
+      activeZoomFactor: 1,
     });
   });
 

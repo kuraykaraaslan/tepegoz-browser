@@ -15,6 +15,7 @@ import type {
   TabGroupSettingValue,
   TabsState,
   TabStripGeometry,
+  ZoomDirection,
 } from './tabs-types';
 
 export interface TabsApi {
@@ -104,6 +105,9 @@ export interface TabsApi {
   onFindResult(callback: (result: FindInPageResult) => void): () => void;
   /** Main→renderer: Ctrl+F was pressed while the page had focus — open the bar. */
   onFindOpen(callback: () => void): () => void;
+  /** Step / reset the active tab's zoom (the omnibox zoom indicator's −, +, Reset). Fire-and-forget;
+   *  the new level arrives on the next `onTabsState` as `activeZoomFactor`. */
+  setPageZoom(direction: ZoomDirection): void;
   /** Open a fresh empty browser window (main-menu "New window"). */
   newWindow(): void;
 }

@@ -325,6 +325,7 @@ export class WindowTabsBase {
       canGoBack: wc?.navigationHistory.canGoBack() ?? false,
       canGoForward: wc?.navigationHistory.canGoForward() ?? false,
       isPrivate: this.isPrivate,
+      activeZoomFactor: wc !== undefined && !wc.isDestroyed() ? wc.getZoomFactor() : 1,
     });
   }
 

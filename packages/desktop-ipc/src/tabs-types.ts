@@ -68,6 +68,22 @@ export interface TabsState {
   canGoForward: boolean;
   /** This window is private (disposable). Drives the chrome badge; fixed for the window's life. */
   isPrivate: boolean;
+  /**
+   * The active tab's current zoom factor (`1` = 100%). Read from the tab's WebContents when the state
+   * is built, so it already reflects a `did-navigate` re-apply of the origin's stored level. `1` for a
+   * view-less internal tab or no active tab. Drives the Chrome-style omnibox zoom indicator, which is
+   * shown only when this rounds to something other than 100%.
+   */
+  activeZoomFactor: number;
+}
+
+/** Which way the omnibox zoom indicator (or a Ctrl +/-/0 shortcut) moves the active tab's zoom. */
+export type ZoomDirection = 'in' | 'out' | 'reset';
+
+/** Payload for `zoom:command` — step the sender window's ACTIVE tab one stop along the zoom ladder,
+ *  or reset it to 100%. A view-less internal tab is a no-op. */
+export interface ZoomCommand {
+  direction: ZoomDirection;
 }
 
 // ── Tab tear-off (drag a tab/group out of the strip into a new/another window) ──────────────────────

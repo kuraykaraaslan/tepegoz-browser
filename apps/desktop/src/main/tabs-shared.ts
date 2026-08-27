@@ -167,6 +167,7 @@ export const EMPTY_TABS_STATE: TabsState = {
   canGoBack: false,
   canGoForward: false,
   isPrivate: false,
+  activeZoomFactor: 1,
 };
 
 export function internalBaseUrl(url: string): string {

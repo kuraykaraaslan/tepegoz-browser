@@ -10,7 +10,7 @@ vi.mock('@tepegoz/preferences', () => ({
   },
 }));
 
-const { applyStoredZoom, handleZoomShortcut } = await import('./site-zoom');
+const { applyStoredZoom, applyZoomCommand, handleZoomShortcut } = await import('./site-zoom');
 
 function makeWebContents(url: string, factor = 1) {
   return {
@@ -126,6 +126,39 @@ describe('handleZoomShortcut', () => {
   it('does not zoom internal pages', () => {
     const wc = makeWebContents('tepegoz://settings', 1);
     handleZoomShortcut(ctrl('='), asWc(wc));
+    expect(wc.setZoomFactor).not.toHaveBeenCalled();
+  });
+});
+
+describe('applyZoomCommand (omnibox zoom indicator buttons)', () => {
+  it('steps up the same ladder as Ctrl+= and persists', () => {
+    const wc = makeWebContents('https://example.com/', 1);
+    applyZoomCommand(asWc(wc), 'in');
+    expect(wc.setZoomFactor).toHaveBeenCalledWith(1.1);
+    expect(prefs.siteZoomFactors['https://example.com']).toBe(1.1);
+  });
+
+  it('steps down on "out"', () => {
+    const wc = makeWebContents('https://example.com/', 1);
+    applyZoomCommand(asWc(wc), 'out');
+    expect(wc.setZoomFactor).toHaveBeenCalledWith(0.9);
+  });
+
+  it('"reset" returns to 100% and forgets the origin', () => {
+    prefs.siteZoomFactors = { 'https://example.com': 1.5 };
+    const wc = makeWebContents('https://example.com/', 1.5);
+    applyZoomCommand(asWc(wc), 'reset');
+    expect(wc.setZoomFactor).toHaveBeenCalledWith(1);
+    expect('https://example.com' in prefs.siteZoomFactors).toBe(false);
+  });
+
+  it('is a no-op for a view-less internal tab (null webContents)', () => {
+    expect(() => applyZoomCommand(null, 'in')).not.toThrow();
+  });
+
+  it('does not zoom internal pages', () => {
+    const wc = makeWebContents('tepegoz://settings', 1);
+    applyZoomCommand(asWc(wc), 'in');
     expect(wc.setZoomFactor).not.toHaveBeenCalled();
   });
 });

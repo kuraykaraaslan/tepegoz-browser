@@ -1,5 +1,7 @@
 import { type Rectangle, type WebContents } from 'electron';
 import { Logger } from '@tepegoz/libs';
+import type { ZoomDirection } from '@tepegoz/desktop-ipc';
+import { applyZoomCommand } from './site-zoom';
 import { mayOpenDevTools, type DevToolsVerdict } from '@tepegoz/security-policy';
 import { internalPageUrl, toNavigationUrl } from './lib/navigation-url';
 import { hideInternalPageView, showInternalPageView } from './tabs-internal-page-view';
@@ -149,6 +151,26 @@ export class WindowTabsNav extends WindowTabsMoves {
   /** Navigate the active tab to the home / start page. */
   goHome(): void {
     this.navigateActive(homeUrl());
+  }
+
+  /**
+   * Step / reset the active tab's zoom from the omnibox zoom indicator (renderer → `zoom:command`).
+   * Applies through the same `site-zoom` ladder + per-origin store the Ctrl shortcuts use, then
+   * re-emits so the indicator repaints — `activeZoomFactor` rides `TabsState`, there is no separate
+   * push. A view-less internal tab has no webContents and this is a no-op.
+   */
+  zoomActive(direction: ZoomDirection): void {
+    applyZoomCommand(this.activeWebContents(), direction);
+    this.emitState();
+  }
+
+  /**
+   * Re-push `TabsState` without a store mutation. Used when a property the state only mirrors — the
+   * active tab's zoom, changed by a Ctrl shortcut handled outside this model — moved and the renderer
+   * needs to catch up.
+   */
+  refreshState(): void {
+    this.emitState();
   }
 
   /** The current content-area bounds (DIP, shell-window-relative). Used to offset CDP coordinates

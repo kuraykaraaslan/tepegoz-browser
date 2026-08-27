@@ -96,6 +96,7 @@ describe('the loading-state constants', () => {
       canGoBack: false,
       canGoForward: false,
       isPrivate: false,
+      activeZoomFactor: 1,
     });
   });
 

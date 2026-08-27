@@ -172,6 +172,8 @@ export function AppChrome({
         onRunSkill={omniboxHistory.onRunSkillFromOmnibox}
         onOpenDownload={omniboxHistory.onOpenDownloadFromOmnibox}
         onOmniboxDropdownHeightChange={onOmniboxDropdownHeightChange}
+        zoomPercent={Math.round(tabs.activeZoomFactor * 100)}
+        onZoom={(direction) => window.tepegoz.setPageZoom(direction)}
         isBookmarked={bookmarks.activeBookmarked}
         canBookmark={bookmarks.canBookmark}
         onToggleBookmark={() => void bookmarks.onToggleBookmark()}

@@ -35,6 +35,11 @@ export const tr: AppStrings = {
     omniboxDownload: 'İndirme',
     omniboxSkill: 'Beceri',
     omniboxCommandNoResults: 'Eşleşen bir şey yok',
+    // Omniçubuk yakınlaştırma göstergesi (Chrome tarzı; yalnızca sayfa %100 dışındayken görünür).
+    zoom: 'Yakınlaştırma',
+    zoomIn: 'Yakınlaştır',
+    zoomOut: 'Uzaklaştır',
+    zoomReset: 'Sıfırla',
     // Yer imi yıldızı (omniçubuğun sağında).
     bookmarkAdd: 'Bu sayfayı yer imlerine ekle',
     bookmarkRemove: 'Yer imini kaldır',

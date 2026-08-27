@@ -40,6 +40,11 @@ export const en = {
     omniboxDownload: 'Download',
     omniboxSkill: 'Skill',
     omniboxCommandNoResults: 'Nothing matched',
+    // Omnibox zoom indicator (Chrome-style; appears only when the page is off 100%).
+    zoom: 'Zoom',
+    zoomIn: 'Zoom in',
+    zoomOut: 'Zoom out',
+    zoomReset: 'Reset',
     // Bookmark star (right of the omnibox).
     bookmarkAdd: 'Bookmark this page',
     bookmarkRemove: 'Remove bookmark',

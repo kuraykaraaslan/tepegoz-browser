@@ -393,6 +393,7 @@ export function registerTabsWindowsIpc(): void {
         canGoBack: false,
         canGoForward: false,
         isPrivate: false,
+        activeZoomFactor: 1,
       },
   );
 }

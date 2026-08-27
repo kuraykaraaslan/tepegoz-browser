@@ -344,7 +344,14 @@ export class TabStore {
    * Build the renderer-facing state. The nav flags are read from the active tab's view by the caller
    * (Electron) and injected here, keeping the store pure.
    */
-  toState(nav: { canGoBack: boolean; canGoForward: boolean; isPrivate?: boolean }): TabsState {
+  toState(nav: {
+    canGoBack: boolean;
+    canGoForward: boolean;
+    isPrivate?: boolean;
+    /** The active tab's live zoom factor, read from its view by the caller (Electron). `1` when there
+     *  is no active view (internal / no active tab). */
+    activeZoomFactor?: number;
+  }): TabsState {
     const tabs: TabInfo[] = this.records().map((t) => {
       const info: TabInfo = {
         id: t.id,
@@ -380,6 +387,9 @@ export class TabStore {
       // The store is Electron-free and per-window privacy is not its concern; carrying the field keeps
       // `TabsState` one shape rather than two that drift.
       isPrivate: nav.isPrivate ?? false,
+      // Same story as the nav flags: the store cannot read a WebContents, so the caller injects the
+      // active tab's zoom. Defaults to 100% so a state built before any view exists is still valid.
+      activeZoomFactor: nav.activeZoomFactor ?? 1,
     };
   }
 }

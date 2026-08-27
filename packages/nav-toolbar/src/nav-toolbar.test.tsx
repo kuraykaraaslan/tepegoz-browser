@@ -101,6 +101,31 @@ describe('NavToolbar', () => {
     expect(screen.getByTestId('menu-slot')).toBeDefined();
   });
 
+  const ZOOM_LABELS = { indicator: 'Zoom', zoomIn: 'Zoom in', zoomOut: 'Zoom out', reset: 'Reset' };
+
+  it('hides the zoom indicator at 100% and shows it (with the percent) off 100%', () => {
+    renderToolbar({ zoomPercent: 100, zoomLabels: ZOOM_LABELS, onZoom: vi.fn() });
+    expect(screen.queryByRole('button', { name: /Zoom: / })).toBeNull();
+    cleanup();
+    renderToolbar({ zoomPercent: 125, zoomLabels: ZOOM_LABELS, onZoom: vi.fn() });
+    expect(screen.getByRole('button', { name: 'Zoom: 125%' })).toBeDefined();
+  });
+
+  it('opens the bubble and routes −, +, Reset to onZoom', () => {
+    const onZoom = vi.fn<(d: 'in' | 'out' | 'reset') => void>();
+    renderToolbar({ zoomPercent: 80, zoomLabels: ZOOM_LABELS, onZoom });
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom: 80%' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom out' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(onZoom.mock.calls.map(([d]) => d)).toEqual(['out', 'in', 'reset']);
+  });
+
+  it('does not render the indicator when onZoom is not injected', () => {
+    renderToolbar({ zoomPercent: 150, zoomLabels: ZOOM_LABELS });
+    expect(screen.queryByRole('button', { name: /Zoom/ })).toBeNull();
+  });
+
   it('reports the omnibox suggestion dropdown height for native view layout', async () => {
     vi.useFakeTimers();
     try {

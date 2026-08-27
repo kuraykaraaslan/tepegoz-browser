@@ -149,3 +149,8 @@ export const FindInPageQuerySchema = z.object({
   findNext: z.boolean(),
   matchCase: z.boolean(),
 });
+
+/** `zoom:command` payload — one omnibox zoom-indicator button press against the active tab. */
+export const ZoomCommandSchema = z.object({
+  direction: z.enum(['in', 'out', 'reset']),
+});

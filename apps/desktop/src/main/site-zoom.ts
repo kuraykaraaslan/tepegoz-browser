@@ -1,4 +1,5 @@
 import type { Input, WebContents } from 'electron';
+import type { ZoomDirection } from '@tepegoz/desktop-ipc';
 import PreferenceStore from '@tepegoz/preferences';
 import { originOf } from './tabs-popup-policy';
 import { isWebUrl } from './lib/navigation-url';
@@ -100,6 +101,18 @@ export function handleZoomShortcut(input: Input, wc: WebContents | null): boolea
     return true;
   }
   return false;
+}
+
+/**
+ * The omnibox zoom indicator's −, +, and Reset buttons. Same effect as the Ctrl `-`/`=`/`0`
+ * shortcuts (`changeZoom`/`resetZoom`), reached from the renderer instead of a key — so the ladder
+ * stepping and the per-origin persistence are shared, not re-derived. A view-less internal tab has no
+ * `wc` and is a no-op.
+ */
+export function applyZoomCommand(wc: WebContents | null, direction: ZoomDirection): void {
+  if (wc === null || wc.isDestroyed()) return;
+  if (direction === 'reset') resetZoom(wc);
+  else changeZoom(wc, direction === 'in' ? 1 : -1);
 }
 
 /** Exposed for tests + any future zoom UI (a Chrome-style zoom indicator in the omnibox). */

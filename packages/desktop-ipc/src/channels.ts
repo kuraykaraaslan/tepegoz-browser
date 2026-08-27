@@ -94,6 +94,9 @@ export const IpcChannels = {
   findResult: 'find:result',
   /** main→renderer: Ctrl+F arrived while the PAGE had focus, so the chrome must open the bar itself. */
   findOpen: 'find:open',
+  /** Renderer→main: step/reset the sender window's ACTIVE tab zoom (omnibox zoom indicator buttons).
+   *  The updated factor rides back on the next `tabs:state`, not a dedicated push. */
+  zoomCommand: 'zoom:command',
   /** Renderer→main: open a fresh empty browser window (main-menu "New window"). */
   windowNew: 'window:new',
   agentRun: 'agent:run',
