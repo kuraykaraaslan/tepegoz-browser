@@ -81,7 +81,13 @@ export default defineConfig({
         // in this app); S16.81 with the Appearance and Language/Region settings sections; S18.10 /
         // B73.49 / F45.24 with the main-menu model and the transfer-activity popup. `src/components`
         // as a directory went 0% → 17.05%. This can only go up; `packages/**` is untouched by it.
-        'apps/desktop/**': { statements: 18, branches: 73, functions: 45, lines: 18 },
+        //
+        // Ratcheted again 2026-08-28 to floor(measured) S20.41 / B75.83 / F46.92 / L20.41 — the zoom
+        // indicator, the PDF-viewer webPreferences factory, download speed/ETA + retry, and the
+        // tepegoz://process Task Manager landed with unit tests, and three IPC files went 0% → covered
+        // (`ipc-find.ts`, `ipc-downloads.ts`, `ipc-process.ts` — same runtime-harness pattern as
+        // `ipc-tabs-windows.electron.test.ts`).
+        'apps/desktop/**': { statements: 20, branches: 75, functions: 46, lines: 20 },
       },
       include: [
         'apps/desktop/src/**',
