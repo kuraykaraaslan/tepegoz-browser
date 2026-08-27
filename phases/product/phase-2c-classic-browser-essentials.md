@@ -49,8 +49,12 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
   that is a roadmap defect worth recording rather than working around: it is why the box is `[~]`._
 - [ ] **i18n:** en+tr keys added for all new surfaces (download manager, find-bar, print/PDF/reader/translate,
       bookmark manager, private-mode chrome, Permissions Center, omnibox command hints)
-- [ ] ADRs accepted: **Download Trust Model** (agent-initiated download class + quarantine policy);
-      **Page-Translation** provider boundary (local model vs API; sensitive-site lockout) — no code before acceptance
+- [~] ADRs accepted: **Download Trust Model** (agent-initiated download class + quarantine policy) —
+      _**[ADR-0040](../../docs/adr/0040-download-trust-model.md) accepted.** Documents the shipped
+      quarantine lifecycle + risk classification + the release/HITL gate + the agent security class,
+      and speces the Safe-Browsing provider seam (owed)._ · **Page-Translation** provider boundary
+      (local model vs API; sensitive-site lockout) — _still owed; needs an owner call on local-only
+      vs. cloud-API. No translation code before acceptance._
 - [ ] Coverage gate (S80/B85/F86/L80) + self-review/code-review + UAT signoff + migration-safe DB
 
 ## Tasks
@@ -78,8 +82,8 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       deny-by-default**, HITL for any state-changing save) — never a direct renderer/agent filesystem write
 - [x] **`@tepegoz/downloads` (headless store)** + **`@tepegoz/downloads-ui`** (presentational): list, progress,
       pause/resume/cancel, open, reveal-in-folder; actions injected via callbacks (Electron-free leaf)
-- [ ] _Risk (ADR required):_ download trust model — agent-initiated download security class, quarantine
-      lifecycle, and the "release from quarantine" HITL gate
+- [x] _Risk (ADR required):_ download trust model — agent-initiated download security class, quarantine
+      lifecycle, and the "release from quarantine" HITL gate — _[ADR-0040](../../docs/adr/0040-download-trust-model.md)._
 
 ### L10 — Download acceleration (rival evidence: IDM)
 
