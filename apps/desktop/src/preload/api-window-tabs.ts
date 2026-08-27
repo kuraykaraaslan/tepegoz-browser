@@ -68,6 +68,7 @@ export const windowTabsApi: Pick<
   | 'onFindResult'
   | 'onFindOpen'
   | 'setPageZoom'
+  | 'getPageZoom'
   | 'newWindow'
   | 'ensureActiveGroup'
   | 'onActiveGroupChange'
@@ -231,6 +232,7 @@ export const windowTabsApi: Pick<
   setPageZoom: (direction: ZoomDirection) => {
     ipcRenderer.send(IpcChannels.zoomCommand, { direction });
   },
+  getPageZoom: () => invoke<number>(IpcChannels.zoomGet),
   beginTabDrag: (payload: TabDragBegin) => {
     ipcRenderer.send(IpcChannels.tabsDragBegin, payload);
   },

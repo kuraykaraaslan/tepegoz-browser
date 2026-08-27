@@ -108,6 +108,9 @@ export interface TabsApi {
   /** Step / reset the active tab's zoom (the omnibox zoom indicator's −, +, Reset). Fire-and-forget;
    *  the new level arrives on the next `onTabsState` as `activeZoomFactor`. */
   setPageZoom(direction: ZoomDirection): void;
+  /** The active tab's zoom as a whole-number percent. For surfaces with no `onTabsState` of their own
+   *  (the main-menu popup); ordinary chrome reads `activeZoomFactor` off the tab state instead. */
+  getPageZoom(): Promise<number>;
   /** Open a fresh empty browser window (main-menu "New window"). */
   newWindow(): void;
 }

@@ -118,10 +118,24 @@ function MainMenuBody({
   const x = useT(extensionsDict);
   const m = useT(menuDict);
 
+  // The active tab's zoom, read once on open and re-read after each +/−/reset (there is no live push
+  // to this child window). `null` until the first read → the row stays a disabled 100% placeholder.
+  const [zoomPct, setZoomPct] = useState<number | null>(null);
+  const refreshZoom = (): void => {
+    void window.tepegoz.getPageZoom().then(setZoomPct, () => undefined);
+  };
+  useEffect(refreshZoom, []);
+
   // Every action runs the bridge call, then self-dismisses the popup (Chrome-style).
   const act = (fn: () => void): void => {
     fn();
     window.tepegoz.closePopup();
+  };
+
+  // Zoom is the one row that does NOT close the menu — Chrome lets you step it several times.
+  const stepZoom = (direction: 'in' | 'out' | 'reset'): void => {
+    window.tepegoz.setPageZoom(direction);
+    refreshZoom();
   };
 
   const items = buildMainMenuModel(
@@ -145,6 +159,14 @@ function MainMenuBody({
       openSettings: () => act(() => window.tepegoz.navigateTab(INTERNAL_SETTINGS_URL)),
       exit: () => act(() => window.tepegoz.quitApp()),
     },
+    zoomPct === null
+      ? undefined
+      : {
+          value: zoomPct,
+          onZoomIn: () => stepZoom('in'),
+          onZoomOut: () => stepZoom('out'),
+          onReset: () => stepZoom('reset'),
+        },
   );
 
   // History/Extensions submenu parents → open a separate native window to the left, aligned to the row.

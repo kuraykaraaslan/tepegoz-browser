@@ -1,8 +1,9 @@
+import { BrowserWindow } from 'electron';
 import { IpcChannels } from '@tepegoz/desktop-ipc';
 import { FindInPageQuerySchema, ZoomCommandSchema } from '@tepegoz/desktop-ipc/schemas';
 import TabManager from '../tabs';
 import { runFindInPage, stopFindInPage } from '../find-in-page';
-import { onWindowAction, onWindowSignal } from './ipc-helpers';
+import { handle, onWindowAction, onWindowSignal } from './ipc-helpers';
 
 /**
  * Active-tab page-command IPC — find-in-page (Ctrl+F, Phase 2c) and the omnibox zoom indicator
@@ -27,5 +28,14 @@ export function registerFindIpc(): void {
   // re-emits `tabs:state`, which already carries `activeZoomFactor`.
   onWindowAction(IpcChannels.zoomCommand, ZoomCommandSchema, (win, { direction }) => {
     TabManager.forSenderWindow(win)?.zoomActive(direction);
+  });
+
+  // Read the active tab's zoom as a percent. `forSenderWindow` walks a menu-popup child window up to
+  // its owning browser window (same routing every tab IPC handler uses), so the main-menu popup — which
+  // has no `tabs:state` of its own — can still show the live value.
+  handle(IpcChannels.zoomGet, (event): number => {
+    const wt = TabManager.forSenderWindow(BrowserWindow.fromWebContents(event.sender));
+    const wc = wt?.activeWebContents() ?? null;
+    return wc !== null && !wc.isDestroyed() ? Math.round(wc.getZoomFactor() * 100) : 100;
   });
 }

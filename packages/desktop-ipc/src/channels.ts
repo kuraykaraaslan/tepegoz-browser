@@ -97,6 +97,9 @@ export const IpcChannels = {
   /** Renderer→main: step/reset the sender window's ACTIVE tab zoom (omnibox zoom indicator buttons).
    *  The updated factor rides back on the next `tabs:state`, not a dedicated push. */
   zoomCommand: 'zoom:command',
+  /** Renderer→main (invoke): the sender window's ACTIVE tab zoom as a whole-number percent. For the
+   *  main-menu popup, which is a child window with no `tabs:state` subscription of its own. */
+  zoomGet: 'zoom:get',
   /** Renderer→main: open a fresh empty browser window (main-menu "New window"). */
   windowNew: 'window:new',
   agentRun: 'agent:run',

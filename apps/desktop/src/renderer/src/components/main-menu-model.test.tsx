@@ -149,6 +149,30 @@ describe('a row is disabled exactly when it is not wired', () => {
     expect(zoom).toBeDefined();
     expect(zoom).toMatchObject({ disabled: true });
   });
+
+  it('wires the zoom row (live value + handlers, not disabled) when a zoom control is supplied', () => {
+    const onZoomIn = vi.fn();
+    const onZoomOut = vi.fn();
+    const onReset = vi.fn();
+    const wired = buildMainMenuModel(copyFixture(), actionsFixture(), {
+      value: 125,
+      onZoomIn,
+      onZoomOut,
+      onReset,
+    });
+    const zoom = wired.find(
+      (i): i is Extract<MenuItem, { kind: 'zoom' }> => 'kind' in i && i.kind === 'zoom',
+    );
+    expect(zoom).toBeDefined();
+    expect(zoom?.disabled).toBeUndefined();
+    expect(zoom?.value).toBe(125);
+    zoom?.onZoomIn?.();
+    zoom?.onZoomOut?.();
+    zoom?.onReset?.();
+    expect(onZoomIn).toHaveBeenCalledTimes(1);
+    expect(onZoomOut).toHaveBeenCalledTimes(1);
+    expect(onReset).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('every string comes from the caller dictionary', () => {

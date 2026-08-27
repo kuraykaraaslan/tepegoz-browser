@@ -244,9 +244,14 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         go renderer→main on `zoom:command` → `WindowTabs.zoomActive` → the SAME `site-zoom` ladder +
         per-origin store the Ctrl +/-/0 shortcuts use (`applyZoomCommand`), then a state re-emit. A
         Ctrl shortcut handled outside the tab model (page- or chrome-focused) now also re-emits so the
-        indicator repaints. Nothing optimistic in the renderer — main stays the source of truth.
-        Tests: `applyZoomCommand` (5, `site-zoom.test.ts`), `toState` zoom pass-through
-        (`tab-store.test.ts`), indicator show/hide + button routing (3, `nav-toolbar.test.tsx`)._
+        indicator repaints. Nothing optimistic in the renderer — main stays the source of truth._
+        — _The **hamburger-menu zoom row** (`@tepegoz/browser-menu`'s `ZoomRow`, previously a disabled
+        100% placeholder) is now live too: the menu popup is a child window with no `tabs:state`, so
+        it reads the value over a new `zoom:get` invoke (`forSenderWindow` walks the popup up to its
+        owning browser window) and re-reads after each −/+/reset; that row alone does not close the
+        menu, Chrome-style. Tests: `applyZoomCommand` (5, `site-zoom.test.ts`), `toState` zoom
+        pass-through (`tab-store.test.ts`), indicator show/hide + button routing (3,
+        `nav-toolbar.test.tsx`), wired menu-zoom row (`main-menu-model.test.tsx`)._
 - [ ] **Spellcheck** (`session.setSpellCheckerLanguages` + built-in Chromium spellchecker; currently
       `spellcheck:false` in `window.ts`) — en/tr dictionaries, settings toggle
   - [ ] **Scope conflict — decide before building.** `ext-typo` already ships "local-first writing and

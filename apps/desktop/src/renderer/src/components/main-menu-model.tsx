@@ -63,6 +63,17 @@ export interface MainMenuActions {
   exit: () => void;
 }
 
+/** The live zoom control. Omitted → the row renders as a disabled 100% placeholder (no active tab, or
+ *  a host that doesn't wire it). The +/−/reset handlers do NOT close the menu (Chrome keeps it open so
+ *  you can step a few times), so they are separate from {@link MainMenuActions}. */
+export interface MainMenuZoom {
+  /** Current zoom as a whole-number percent. */
+  value: number;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onReset: () => void;
+}
+
 /** One icon button for an `actions` row (full `label` = tooltip, `caption` = short label under the icon).
  *  Placeholder (no `onSelect`) → disabled + greyed. */
 function action(
@@ -89,7 +100,23 @@ function action(
  * entries are NOT inline: both are `flyout` parents — the host opens them as separate windows to the
  * left (see MainMenuPopup / MenuSubPopup).
  */
-export function buildMainMenuModel(copy: MainMenuCopy, actions: MainMenuActions): MenuItem[] {
+export function buildMainMenuModel(
+  copy: MainMenuCopy,
+  actions: MainMenuActions,
+  zoom?: MainMenuZoom,
+): MenuItem[] {
+  const zoomRow: MenuItem =
+    zoom === undefined
+      ? { kind: 'zoom', id: 'zoom', label: copy.menu.zoom, value: 100, disabled: true }
+      : {
+          kind: 'zoom',
+          id: 'zoom',
+          label: copy.menu.zoom,
+          value: zoom.value,
+          onZoomIn: zoom.onZoomIn,
+          onZoomOut: zoom.onZoomOut,
+          onReset: zoom.onReset,
+        };
   return [
     { id: 'new-tab', label: copy.newTab, shortcut: 'Ctrl+T', onSelect: actions.newTab },
     {
@@ -143,7 +170,7 @@ export function buildMainMenuModel(copy: MainMenuCopy, actions: MainMenuActions)
     { kind: 'separator' },
     { id: 'extensions', label: copy.extensions, icon: <Icon name="puzzle" />, flyout: true },
     { kind: 'separator' },
-    { kind: 'zoom', id: 'zoom', label: copy.menu.zoom, value: 100, disabled: true },
+    zoomRow,
     {
       kind: 'actions',
       id: 'page-actions',
