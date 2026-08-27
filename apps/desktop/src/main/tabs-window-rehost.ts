@@ -1,6 +1,7 @@
 import { WebContentsView, type Session } from 'electron';
 import { Logger } from '@tepegoz/libs';
 import { WindowTabsNav } from './tabs-window-nav';
+import { browsedViewWebPreferences } from './tabs-shared';
 import { unwireView } from './tabs-view-wiring';
 
 /**
@@ -52,15 +53,7 @@ export class WindowTabsRehost extends WindowTabsNav {
     }
 
     const view = new WebContentsView({
-      webPreferences: {
-        contextIsolation: true,
-        sandbox: true,
-        nodeIntegration: false,
-        webSecurity: true,
-        session: targetSession,
-        // Same as tab creation: a tab the AI drives must keep running at full rate off-screen.
-        backgroundThrottling: false,
-      },
+      webPreferences: browsedViewWebPreferences(targetSession),
     });
     this.views.set(id, view);
     this.wireView(id, view);

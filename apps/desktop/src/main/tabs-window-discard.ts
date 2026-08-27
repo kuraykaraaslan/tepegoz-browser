@@ -1,6 +1,7 @@
 import { WebContentsView, type Session } from 'electron';
 import { Logger } from '@tepegoz/libs';
 import { WindowTabsRehost } from './tabs-window-rehost';
+import { browsedViewWebPreferences } from './tabs-shared';
 import { unwireView } from './tabs-view-wiring';
 
 /**
@@ -74,14 +75,7 @@ export class WindowTabsDiscard extends WindowTabsRehost {
     const session = this.discardedSessions.get(id) ?? this.newTabSession();
     this.discardedSessions.delete(id);
     const view = new WebContentsView({
-      webPreferences: {
-        contextIsolation: true,
-        sandbox: true,
-        nodeIntegration: false,
-        webSecurity: true,
-        session,
-        backgroundThrottling: false,
-      },
+      webPreferences: browsedViewWebPreferences(session),
     });
     this.views.set(id, view);
     this.wireView(id, view);

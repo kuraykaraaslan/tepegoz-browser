@@ -5,6 +5,7 @@ import {
   type Session,
   type WebContents,
   type WebContentsView,
+  type WebPreferences,
 } from 'electron';
 import {
   INTERNAL_BOOKMARKS_URL,
@@ -49,6 +50,33 @@ export const MAX_TITLE_LENGTH = 2048;
  * into two different cookie jars.
  */
 export const BROWSING_PARTITION = DIRECT_PARTITION;
+
+/**
+ * The hardened `webPreferences` every BROWSED tab view is born with: contextIsolation + sandbox,
+ * nodeIntegration off, webSecurity on, no preload (the page never reaches the bridge). One factory so
+ * the three view-creation sites (fresh tab, revive-from-discard, cross-window rehost) cannot drift.
+ *
+ * `plugins: true` turns on Chromium's built-in PDF viewer, so a `application/pdf` response renders
+ * in-tab (with the viewer's own toolbar, whose download button still funnels through `will-download`
+ * → DownloadService) instead of always downloading. In current Chromium `plugins` gates the internal
+ * PDF/print viewers only — NPAPI and Pepper are long gone — so this does not re-open a plugin surface.
+ *
+ * Takes a concrete `Session`, never a partition NAME: going through `BrowsingSessions` is what
+ * guarantees the filtering/quarantine/User-Agent plane is attached before the view can load anything.
+ */
+export function browsedViewWebPreferences(session: Session): WebPreferences {
+  return {
+    contextIsolation: true,
+    sandbox: true,
+    nodeIntegration: false,
+    webSecurity: true,
+    session,
+    plugins: true,
+    // Never throttle timers/rAF on a non-foreground tab: a hidden tab the AI drives, and every
+    // background tab, must keep running at full rate — not just keep painting.
+    backgroundThrottling: false,
+  };
+}
 
 /**
  * Secure window options for page-opened popups (child windows): the same hardened, chrome-less profile

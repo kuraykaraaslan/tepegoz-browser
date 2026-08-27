@@ -11,7 +11,13 @@ import { TabStore } from '@tepegoz/tab-engine';
 import { internalPageUrl, toNavigationUrl } from './lib/navigation-url';
 import { resolveViewBounds } from './tabs-content-bounds';
 import ActionInterceptorService from './extensions/action-interceptors.electron';
-import { homeUrl, internalTitleFor, searchUrlForQuery, persistSession } from './tabs-shared';
+import {
+  browsedViewWebPreferences,
+  homeUrl,
+  internalTitleFor,
+  searchUrlForQuery,
+  persistSession,
+} from './tabs-shared';
 import BrowsingSessions from './network/browsing-sessions.electron';
 import {
   unwireView,
@@ -195,24 +201,12 @@ export class WindowTabsBase {
     ) {
       return null;
     }
+    // A concrete Session, never a partition NAME (see `browsedViewWebPreferences`). With no explicit
+    // session, the tab is born on the PROFILE-WIDE DEFAULT route rather than always on Direct: a user
+    // who set "everything through Tor" and then pressed Ctrl+T would otherwise get a clear-path tab,
+    // which is the failure the whole feature exists to prevent.
     const view = new WebContentsView({
-      webPreferences: {
-        contextIsolation: true,
-        sandbox: true,
-        nodeIntegration: false,
-        webSecurity: true,
-        // A concrete Session, never a partition NAME: going through `BrowsingSessions` is what
-        // guarantees the filtering/quarantine/User-Agent plane is attached before the view can load
-        // anything. A partition string here would let a tab exist on a session nothing ever wired.
-        // With no explicit session, the tab is born on the PROFILE-WIDE DEFAULT route rather than
-        // always on Direct: a user who set "everything through Tor" and then pressed Ctrl+T would
-        // otherwise get a clear-path tab, which is the failure the whole feature exists to prevent.
-        session: opts?.session ?? this.newTabSession(),
-        // Never throttle timers/rAF on a non-foreground tab. Complements the startup keep-rendering
-        // switches (see index.ts): a hidden tab (attached-occluded) the AI drives, and every background
-        // tab, must keep running at full rate — not just keep painting. Trade-off accepted (agentic browser).
-        backgroundThrottling: false,
-      },
+      webPreferences: browsedViewWebPreferences(opts?.session ?? this.newTabSession()),
     });
     const id = this.store.add({
       kind: 'web',
