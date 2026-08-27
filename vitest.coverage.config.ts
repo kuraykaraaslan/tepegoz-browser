@@ -9,7 +9,9 @@ import { defineConfig } from 'vitest/config';
  * root config would hijack every package-local `vitest run` (their cwd-relative include would match
  * nothing → "No test files found"). Only `pnpm coverage` loads this file, via --config.
  *
- * SCOPE: every `packages/*` that ships unit tests — 62 of them. It used to list 28, which is the
+ * SCOPE: every `packages/*` that ships unit tests — 63 of them (62 + `process-ui`, the
+ * tepegoz://process Task Manager surface, added 2026-08-28 at S95.6 / B95.45 / F90 / L95.6). It used
+ * to list 28, which is the
  * failure mode a coverage gate is most prone to: the boundary drawn around the code that already
  * passes. Left out were `credential-vault` (the key crypto), `human-input`, `notary`, `macro-engine`,
  * `http` and `agent-runtime`, so the number said "80%" about a scope chosen to say 80%.
@@ -133,6 +135,7 @@ export default defineConfig({
         'packages/password-vault/src/**',
         'packages/persistence/src/**',
         'packages/preferences/src/**',
+        'packages/process-ui/src/**',
         'packages/recipe-compiler/src/**',
         'packages/screenshots/src/**',
         'packages/security-policy/src/**',
