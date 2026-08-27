@@ -2,9 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 import type { WebContents } from 'electron';
 
 vi.mock('electron', () => ({}));
-vi.mock('./downloads/download-service.electron', () => ({ default: { downloadURL: vi.fn() } }));
+const downloadURL = vi.fn();
+vi.mock('./downloads/download-service.electron', () => ({ default: { downloadURL } }));
 
-const { toggleDevToolsGated, printPage, viewSourcePage } = await import('./page-commands');
+const { toggleDevToolsGated, printPage, savePage, viewSourcePage, reloadPage } = await import(
+  './page-commands'
+);
 
 /**
  * The sensitive-site DevTools gate, at the place a keypress reaches it.
@@ -17,22 +20,28 @@ const { toggleDevToolsGated, printPage, viewSourcePage } = await import('./page-
  * running app, not inferred: `Menu.getApplicationMenu()` returned a menu listing
  * `Toggle Developer Tools=Ctrl+Shift+I`. The app's own gated toggle had zero callers.
  */
-function fakePage(url: string, devToolsOpen = false) {
+function fakePage(
+  url: string,
+  opts: { devToolsOpen?: boolean; printOutcome?: [boolean, string]; loadRejects?: boolean } = {},
+) {
   const calls: string[] = [];
   const wc = {
     calls,
     isDestroyed: () => false,
     getURL: () => url,
-    isDevToolsOpened: () => devToolsOpen,
+    isDevToolsOpened: () => opts.devToolsOpen === true,
     openDevTools: () => calls.push('open'),
     closeDevTools: () => calls.push('close'),
+    reload: () => calls.push('reload'),
+    reloadIgnoringCache: () => calls.push('reload-hard'),
     print: (_o: unknown, cb: (ok: boolean, reason: string) => void) => {
       calls.push('print');
-      cb(true, '');
+      const [ok, reason] = opts.printOutcome ?? [true, ''];
+      cb(ok, reason);
     },
     loadURL: (u: string) => {
       calls.push(`load:${u}`);
-      return Promise.resolve();
+      return opts.loadRejects === true ? Promise.reject(new Error('nav blew up')) : Promise.resolve();
     },
   };
   return wc as unknown as WebContents & { calls: string[] };
@@ -64,7 +73,7 @@ describe('toggleDevToolsGated', () => {
   });
 
   it('closes DevTools when they are already open, so the key is a toggle', () => {
-    const wc = fakePage('https://example.com/docs', true);
+    const wc = fakePage('https://example.com/docs', { devToolsOpen: true });
     expect(toggleDevToolsGated(wc)).toEqual({ allowed: true });
     expect(wc.calls).toEqual(['close']);
   });
@@ -87,6 +96,24 @@ describe('the other page commands', () => {
     expect(wc.calls).toEqual(['print']);
   });
 
+  it('print swallows a user-cancelled dialog and a real failure alike (neither throws)', () => {
+    expect(() => printPage(fakePage('https://a/', { printOutcome: [false, 'cancelled'] }))).not.toThrow();
+    expect(() => printPage(fakePage('https://a/', { printOutcome: [false, 'printerError'] }))).not.toThrow();
+  });
+
+  it('print / save / view-source / reload are no-ops on a null or destroyed page', () => {
+    for (const fn of [printPage, savePage, viewSourcePage, (w: WebContents | null) => reloadPage(w)]) {
+      expect(() => fn(null)).not.toThrow();
+    }
+    expect(downloadURL).not.toHaveBeenCalled();
+  });
+
+  it('save routes the current URL through DownloadService as a user-actor download', () => {
+    const wc = fakePage('https://example.com/report.html');
+    savePage(wc);
+    expect(downloadURL).toHaveBeenCalledWith(wc, 'https://example.com/report.html', { actor: 'user' });
+  });
+
   it('view-source refuses an internal page, which has no source to show', () => {
     const wc = fakePage('tepegoz://settings');
     viewSourcePage(wc);
@@ -97,5 +124,20 @@ describe('the other page commands', () => {
     const wc = fakePage('https://example.com/a');
     viewSourcePage(wc);
     expect(wc.calls).toEqual(['load:view-source:https://example.com/a']);
+  });
+
+  it('view-source swallows a rejected navigation rather than crashing', async () => {
+    const wc = fakePage('https://example.com/a', { loadRejects: true });
+    expect(() => viewSourcePage(wc)).not.toThrow();
+    await Promise.resolve();
+  });
+
+  it('reload uses the cache by default and skips it when hard', () => {
+    const soft = fakePage('https://a/');
+    reloadPage(soft);
+    expect(soft.calls).toEqual(['reload']);
+    const hard = fakePage('https://a/');
+    reloadPage(hard, true);
+    expect(hard.calls).toEqual(['reload-hard']);
   });
 });
