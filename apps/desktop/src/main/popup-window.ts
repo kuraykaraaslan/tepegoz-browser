@@ -308,8 +308,8 @@ function loadSurface(win: BrowserWindow, query: Record<string, string>, key: str
 
 /** Place the popup under the anchor, clamped to the work area. `align` picks the horizontal edge:
  *  `'end'` right-aligns to the anchor (toolbar controls open leftward); `'start'` left-aligns to it
- *  (a context menu opens rightward from the cursor). */
-function anchorToBounds(
+ *  (a context menu opens rightward from the cursor). Exported for the geometry unit test. */
+export function anchorToBounds(
   parent: BrowserWindow,
   anchor: Rectangle,
   width: number,
@@ -328,8 +328,9 @@ function anchorToBounds(
 }
 
 /** Place the submenu just LEFT of the primary popup, top-aligned to the hovered row (`anchor.y`).
- *  Falls back to the right side if there's no room on the left. Clamped to the display work area. */
-function subAnchorToBounds(
+ *  Falls back to the right side if there's no room on the left. Clamped to the display work area.
+ *  Exported for the geometry unit test. */
+export function subAnchorToBounds(
   parent: BrowserWindow,
   anchor: Rectangle,
   desiredHeight?: number,
