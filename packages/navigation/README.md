@@ -20,10 +20,11 @@ every load entry point.
   schemes like `file:`/`javascript:`/`data:` typed or pasted in — falls through to search rather than
   loading as-is; this is the real guard for the programmatic `loadURL` path, which Electron's
   `will-navigate` event does not cover.
-- **`isTrustedAppUrl(rawUrl, opts)`** — true only for the app's own content: `file://` always, plus the
-  localhost dev server when `opts.isPackaged` is `false`. Uses exact `URL` host matching (not a string
-  prefix), so a spoofed host like `http://localhost.evil.com` is rejected. Used by the IPC sender
-  allow-list and the navigation guard.
+- **`isTrustedAppUrl(rawUrl, opts)`** — true only for the app's own content: `file://` always, an
+  allow-listed `tepegoz://` internal-page host (`opts.internalPageHosts`, any build), plus the localhost
+  dev server when `opts.isPackaged` is `false`. Uses exact `URL` host matching (not a string prefix), so
+  a spoofed host like `http://localhost.evil.com` is rejected. Used by the IPC sender allow-list and the
+  navigation guard.
 
 ## Scripts
 

@@ -89,6 +89,39 @@ describe('isTrustedAppUrl', () => {
     ).toBe(false);
   });
 
+  it('trusts an allow-listed tepegoz:// internal-page host, in every build', () => {
+    expect(
+      isTrustedAppUrl('tepegoz://settings/', {
+        isPackaged: true,
+        chromeUrl: CHROME,
+        internalPageHosts: ['settings', 'history'],
+      }),
+    ).toBe(true);
+    expect(
+      isTrustedAppUrl('tepegoz://settings/', {
+        isPackaged: false,
+        chromeUrl: CHROME,
+        internalPageHosts: ['settings', 'history'],
+      }),
+    ).toBe(true);
+  });
+
+  it('does not trust a tepegoz:// host outside the allow-list', () => {
+    expect(
+      isTrustedAppUrl('tepegoz://tasks/', {
+        isPackaged: true,
+        chromeUrl: CHROME,
+        internalPageHosts: ['settings', 'history'],
+      }),
+    ).toBe(false);
+  });
+
+  it('does not trust ANY tepegoz:// host when the caller supplies no allow-list', () => {
+    expect(isTrustedAppUrl('tepegoz://settings/', { isPackaged: true, chromeUrl: CHROME })).toBe(
+      false,
+    );
+  });
+
   it('rejects malformed input', () => {
     expect(isTrustedAppUrl('not a url', { isPackaged: false, chromeUrl: CHROME })).toBe(false);
     expect(isTrustedAppUrl('', { isPackaged: false, chromeUrl: CHROME })).toBe(false);

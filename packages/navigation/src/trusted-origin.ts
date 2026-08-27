@@ -34,6 +34,15 @@ export interface TrustedOriginOptions {
    * which is the strict reading; the desktop adapter passes `process.platform === 'win32'`.
    */
   caseInsensitivePaths?: boolean;
+  /**
+   * Hostnames of `tepegoz://` internal pages that are ALSO real, first-party trusted content (e.g.
+   * `'settings'`, `'history'`) — the same renderer bundle + preload as the chrome, served as an actual
+   * page instead of a chrome-embedded overlay (see `internal-pages/protocol.ts`). Unlike the localhost
+   * dev-server escape hatch, this is not gated on `isPackaged`: `tepegoz:` is a scheme only this app can
+   * register, so an allow-listed host is trusted in every build. Defaults to none (no caller currently
+   * omits it, but a caller that cannot enumerate its internal pages should not be silently trusted).
+   */
+  internalPageHosts?: readonly string[];
 }
 
 /** Strip query + hash so `index.html?surface=onboarding` matches `index.html`. */
@@ -62,6 +71,10 @@ export function isTrustedAppUrl(rawUrl: string, opts: TrustedOriginOptions): boo
     // `pathToFileURL` percent-encodes identically on both sides, so this compares the same normalised
     // form the loader produced.
     return fold(documentOf(u)) === fold(documentOf(chrome));
+  }
+
+  if (u.protocol === 'tepegoz:') {
+    return (opts.internalPageHosts ?? []).includes(u.hostname);
   }
 
   if (opts.isPackaged) return false;

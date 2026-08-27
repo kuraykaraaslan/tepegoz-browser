@@ -6,6 +6,7 @@
 import { app } from 'electron';
 import { isTrustedAppUrl as isTrusted } from '@tepegoz/navigation';
 import { chromeDocumentUrl } from '../chrome-url';
+import { REAL_PAGE_HOSTS } from '../internal-pages/real-page-hosts';
 
 /**
  * True ONLY for our own app content (see `@tepegoz/navigation`).
@@ -21,5 +22,10 @@ export function isTrustedAppUrl(rawUrl: string): boolean {
     // Windows paths fold case; Linux paths do not, and folding there would make a differently-cased
     // path — a genuinely different file — compare equal to the chrome.
     caseInsensitivePaths: process.platform === 'win32',
+    // The migrated `tepegoz://` real pages (Faz 2/3 of protocol-tepegoz-pages.md) share the chrome's
+    // preload + partition and are meant to carry the same IPC trust — the SAME allow-list that decides
+    // which hosts protocol.ts will actually serve, so there is one place that answers "which internal
+    // pages are real" for both concerns.
+    internalPageHosts: [...REAL_PAGE_HOSTS],
   });
 }

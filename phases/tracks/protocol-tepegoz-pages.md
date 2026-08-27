@@ -6,7 +6,70 @@ büyütülmüş hâli; Express soket yolu **reddedildi**. `tepegoz://settings`, 
 sağ tık context-menu'sü fire ediyor (e2e ile doğrulandı), diğer beşi gerçek içerik render ettiği
 doğrulandı. `tepegoz://tasks` taşınmadı — hiçbir UI onu render etmiyor (ölü route, Tasks ürün
 yeniden tasarımına kadar).
-**Tarih:** 2026-08-26 (plan, Faz 0, Faz 1 blocker keşfi ve çözümü, Faz 2, Faz 3 — hepsi aynı gün)
+**Tarih:** 2026-08-26 (plan, Faz 0, Faz 1 blocker keşfi ve çözümü, Faz 2, Faz 3 — hepsi aynı gün);
+2026-08-27/28'de main'e merge sonrası keşfedilen iki gerçek regresyon düzeltildi (aşağıya bkz.).
+
+## Merge sonrası keşfedilen iki regresyon (2026-08-27/28, main'e merge edildikten hemen sonra)
+
+Manuel dumandan (`pnpm dev`) gelen bir ekran görüntüsü: `tepegoz://settings` içine TAM `<App/>` chrome'u
+(kendi sekme çubuğu, omnibox'ı, boş yeni sekmesiyle) mount oluyordu — "webview içinde tarayıcı açılıyor".
+Kök neden ZİNCİRLEME iki farklı şeydi, ilki benim (agent'ın) kendi doğrulama sürecimin hatası, ikincisi
+gerçek bir kod regresyonuydu:
+
+1. **Stale build (kod hatası değil, doğrulama süreci hatası).** Merge öncesi main'deki flake'i izole
+   etmek için `git checkout main` yapıp ORADA bir production build çalıştırdım — bu, `out/renderer`'ı
+   feature'dan ÖNCEKİ (hostname-dispatch'siz) bundle ile ezdi. Sonra `feat/tepegoz-protocol-pages`'i
+   fast-forward merge edip push ettim ama YENİDEN build ETMEDİM — kaynak kod güncel, disk'teki derlenmiş
+   çıktı değildi. `internal-pages/protocol.ts`'in `cachedInlinedPage`'i bu eski `index.html`'i okuyup
+   process ömrü boyunca cache'ledi → `main.tsx`'in hostname dispatch'i hiç YOKTU o bundle'da → varsayılan
+   `<App/>` mount oldu. **Düzeltme:** `pnpm exec turbo run build --filter=@tepegoz/desktop --force`.
+   **Ders:** bir "regresyon kontrolü" için başka bir branch'e geçip build almak, geri dönüldüğünde mutlaka
+   yeniden build gerektirir — kaynak ile disk çıktısı sessizce ayrışabilir.
+
+2. **Gerçek regresyon: `isTrustedAppUrl` `tepegoz://` şemasını hiç tanımıyordu.** Stale build düzeltilince
+   sayfa artık doğru yüzeyi (`SettingsPageSurface`) mount ediyordu ama sonsuza kadar kendi
+   "…" yükleme fallback'inde takılı kalıyordu. Kök neden:
+   `packages/navigation/src/trusted-origin.ts`'teki `isTrustedAppUrl` — IPC sender allow-list'inin
+   (`ipc-helpers.ts#assertTrustedSender`) tek geçit noktası — sadece `file://` (chrome doc) ve
+   dev'de `http://localhost` biliyordu; Faz 2/3 hiçbir noktada bu fonksiyona `tepegoz://` desteği
+   EKLEMEMİşTİ. Sonuç: `tepegoz://settings`'ten yapılan HER `getPreferences()` /
+   `getCredentialsStatus()` çağrısı 403 "untrusted sender" ile reddediliyordu, surface'in
+   `.then(..., () => {/* bridge unavailable */})` yutucu catch'i bunu sessizce yutuyordu, `prefs`/`status`
+   hiçbir zaman null'dan çıkmıyordu. **Aynı sınıf regresyon, TAŞINAN
+   ALTI SAYFANIN HEPSİNDE** (extensions/history/downloads/uploads/bookmarks) — sadece settings'e
+   özgü değildi.
+   **Düzeltme:** `TrustedOriginOptions`'a `internalPageHosts?: readonly string[]` eklendi (paket
+   Electron-free kaldı — desktop adapter'ı enjekte ediyor); yeni bir `tepegoz:` dalı,
+   hostname allow-list'te ise `isPackaged`'dan BAĞIMSIZ olarak güveniyor (bu bir dev-server kaçış
+   kapısı değil — `tepegoz:` sadece bu uygulamanın kayıt edebildiği bir şema).
+   Aynı altı-sayfa host listesi (`internal-pages/protocol.ts`'in servis ettiği liste ile
+   AYNI kaynak) artık `internal-pages/real-page-hosts.ts` adlı BAĞIMSIZ bir leaf modüle
+   çıkarıldı — `protocol.ts` doğrudan içermiyordu çünkü
+   `window.ts` → `lib/trusted-origin.ts` → `internal-pages/protocol.ts` → `window.ts`
+   çevrimini kapatırdı (protocol.ts zaten `window.ts`'ten `APP_PARTITION` alıyor,
+   `window.ts` zaten `lib/trusted-origin.ts`'ten `isTrustedAppUrl` alıyor).
+
+   **İkinci, daha düşük öncelikli ama gerçek bir bulgu, aynı taramada:**
+   `security.ts#installSecurity`'nin `session.fromPartition(APP_PARTITION).webRequest.onHeadersReceived`
+   hook'u — chrome için yazılmış, `tepegoz://` sayfalarından ÖNCE var olan bir
+   hook — AYNI partition'daki HER yanıtın `Content-Security-Policy` başlığını,
+   `protocol.ts`'in kendi hash-bazlı CSP'siyle DEğİŞTİRMEDEN, koşulsuz
+   üzerine yazıyordu. Dev'de zararsız görünüyordu ("dev" chromeCsp zaten
+   `'unsafe-inline'` ekliyor, inline script yine çalışıyor) ama PAKETLENMİŞ
+   (packaged) bir build'de `chromeCsp(false)`'ın ne hash'i ne `unsafe-inline`'ı var — inline
+   script'i tamamen ENGELLERDİ (boş sayfa, hiçbir React mount olmadan). **Düzeltme:**
+   hook artık `details.url`'in `tepegoz://` ile başladığı durumda hiçbir
+   şey yapmadan (`callback({})`) protocol.ts'in kendi başlığını dokunulmadan
+   bırakıyor.
+
+   **Test boşluğu, aynı taramada kapatıldı:** hem `e2e/tepegoz-settings-page.spec.ts`
+   hem `e2e/tepegoz-internal-pages.spec.ts`, `document.body.innerText.length > 0` kontrolü
+   kullanıyordu — bu, gerçek içerik ile SONSUZA KADAR takılı kalan "…" yükleme
+   fallback'ini AYIRT EDEMEZ (ikisi de boş olmayan innerText üretir), bu yüzden bu regresyon
+   Faz 3'ün kendi e2e suite'i YEŞİLKEN merge oldu. Her iki spec'e artık sayfanın
+   kendi bağlamı içinden `window.tepegoz.getPreferences()`'in GERÇEKTEN resolve
+   ettiğini doğrulayan açık bir kontrol eklendi — bu, tam olarak bu hata sınıfını
+   yakalayan doğrudan bir regresyon testi.
 
 ## Çözülen blocker: subresource istekleri bu scheme'e hiç ulaşmıyor (2026-08-26)
 

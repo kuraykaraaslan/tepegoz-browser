@@ -87,6 +87,18 @@ test('tepegoz://settings loads as a real page and its right-click opens the nati
       )
       .toBeGreaterThan(0);
 
+    // A privileged IPC call actually resolves from this page — not just "some text rendered". A
+    // getPreferences() call rejected by the IPC sender allow-list (an untrusted-sender 403) leaves
+    // SettingsPageSurface stuck on its own "…" loading fallback forever, which the innerText check above
+    // cannot tell apart from real content (found 2026-08-27: `isTrustedAppUrl` never learned the
+    // `tepegoz://` scheme, so every real page's data fetch silently failed this exact way).
+    const bridgeOk = await app.evaluate(({ webContents }, id) => {
+      const wc = webContents.fromId(id);
+      if (wc === undefined || wc.isDestroyed()) return false;
+      return wc.executeJavaScript('window.tepegoz.getPreferences().then(() => true, () => false)');
+    }, settingsId);
+    expect(bridgeOk).toBe(true);
+
     // Right-click the page (main-process input injection — no live cursor needed) and wait for the
     // Chrome-style page context menu popup (`?surface=page-context-menu`) that only opens in response to
     // a real `context-menu` event on a `WebContentsView`.

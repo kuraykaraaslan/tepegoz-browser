@@ -1,5 +1,6 @@
 import { app, session } from 'electron';
 import { APP_PARTITION } from './window';
+import { INTERNAL_PAGES_SCHEME } from './internal-pages/protocol';
 import WebPermissionBroker from './web-permissions/permission-broker';
 import type { WebPermissionCapability } from '@tepegoz/desktop-ipc';
 
@@ -101,9 +102,19 @@ export function installSecurity(): void {
     });
   });
 
-  // CSP response header for every document the app chrome loads (dev server or packaged file).
+  // CSP response header for every document the app chrome loads (dev server or packaged file). A
+  // `tepegoz://` real page (internal-pages/protocol.ts) is served from the SAME partition/session but
+  // already carries its OWN response CSP — a script-src hash of its exact inlined content, computed
+  // because that page has no build-time knowledge of this generic policy. This hook must not clobber it:
+  // overwriting it with `chromeCsp` would silently drop the hash, and a PACKAGED build's `chromeCsp`
+  // (no `'unsafe-inline'`) would then block the page's inline script outright — dev only "works" by
+  // accident, because dev's `chromeCsp` happens to add `'unsafe-inline'` for the Vite preamble.
   const csp = chromeCsp(!app.isPackaged);
   session.fromPartition(APP_PARTITION).webRequest.onHeadersReceived((details, callback) => {
+    if (details.url.startsWith(`${INTERNAL_PAGES_SCHEME}://`)) {
+      callback({});
+      return;
+    }
     callback({
       responseHeaders: { ...details.responseHeaders, 'Content-Security-Policy': [csp] },
     });

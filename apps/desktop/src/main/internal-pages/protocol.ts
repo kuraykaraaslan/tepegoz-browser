@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { extname, join, resolve } from 'node:path';
 import { protocol, session } from 'electron';
 import { APP_PARTITION } from '../window';
+import { REAL_PAGE_HOSTS } from './real-page-hosts';
 
 /**
  * `tepegoz://` internal-page protocol — Faz 0/1/2 of `phases/tracks/protocol-tepegoz-pages.md`.
@@ -77,13 +78,11 @@ export function registerInternalPagesScheme(): void {
   ]);
 }
 
-/**
- * Hosts allowed to load the renderer bundle as a real page. Every host serves the IDENTICAL inlined
- * document — it's the same single-page bundle for all of them; `main.tsx` picks which surface to mount
- * at runtime from `location.hostname`. Adding a page here only requires that dispatch case in `main.tsx`
- * and the corresponding `tepegoz://` URL in `tabs-internal-page-view.ts`'s `REAL_PAGE_BASE_URLS`.
- */
-const REAL_PAGE_HOSTS = new Set(['settings', 'extensions', 'history', 'downloads', 'uploads', 'bookmarks']);
+// Hosts allowed to load the renderer bundle as a real page — `./real-page-hosts` (see its doc comment
+// for why this is a separate leaf module). Every host serves the IDENTICAL inlined document — it's the
+// same single-page bundle for all of them; `main.tsx` picks which surface to mount at runtime from
+// `location.hostname`. Adding a page here only requires that dispatch case in `main.tsx` and the
+// corresponding `tepegoz://` URL in `tabs-internal-page-view.ts`'s `REAL_PAGE_BASE_URLS`.
 
 /** The renderer bundle directory. `__dirname` is `out/main` in both packaged and unpackaged builds —
  *  the same relative path `chrome-url.ts#chromeFilePath` uses to find `index.html`. */

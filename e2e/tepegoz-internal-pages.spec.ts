@@ -80,6 +80,19 @@ test('every migrated tepegoz:// internal page loads as a real page with real con
         )
         .toBeGreaterThan(0);
 
+      // A privileged IPC call actually resolves from this page — not just "some text rendered". Every
+      // migrated surface fetches its own data via `window.tepegoz.*` on mount; a call rejected by the IPC
+      // sender allow-list (an untrusted-sender 403) leaves the surface stuck on its own loading fallback
+      // forever, which the innerText check above cannot tell apart from real content (found 2026-08-27:
+      // `isTrustedAppUrl` never learned the `tepegoz://` scheme, so every real page's data fetch silently
+      // failed this exact way).
+      const bridgeOk = await app.evaluate(({ webContents }, host) => {
+        const wc = webContents.getAllWebContents().find((w) => w.getURL().startsWith(`tepegoz://${host}`));
+        if (wc === undefined || wc.isDestroyed()) return false;
+        return wc.executeJavaScript('window.tepegoz.getPreferences().then(() => true, () => false)');
+      }, page);
+      expect(bridgeOk, `tepegoz://${page}'s IPC bridge call was rejected`).toBe(true);
+
       // Reload with a console-message collector attached BEFORE the reload, so a CSP violation fired
       // during React's render is caught rather than missed by attaching only after the fact. This is
       // what actually caught the two real bugs that shipped once (2026-08-26, see protocol.ts's doc

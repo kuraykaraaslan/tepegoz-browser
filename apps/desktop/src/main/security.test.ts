@@ -42,6 +42,7 @@ vi.mock('electron', () => ({
   session: { fromPartition: () => ({ webRequest: { onHeadersReceived } }) },
 }));
 vi.mock('./window', () => ({ APP_PARTITION: 'persist:app' }));
+vi.mock('./internal-pages/protocol', () => ({ INTERNAL_PAGES_SCHEME: 'tepegoz' }));
 
 const allowed = new Set<string>();
 const asked: string[] = [];
@@ -263,16 +264,22 @@ describe('permission check handler (the synchronous permission-state query)', ()
 });
 
 describe('chrome CSP', () => {
-  it('is applied to the app partition, not to browsed pages', () => {
+  type HeadersHandler = (
+    d: { url: string; responseHeaders: Record<string, string[]> },
+    cb: (r: { responseHeaders?: Record<string, string[]> }) => void,
+  ) => void;
+
+  function headersHandler(): HeadersHandler {
     install();
     expect(onHeadersReceived).toHaveBeenCalledTimes(1);
-    const handler = onHeadersReceived.mock.calls[0]?.[0] as (
-      d: { responseHeaders: Record<string, string[]> },
-      cb: (r: { responseHeaders: Record<string, string[]> }) => void,
-    ) => void;
+    return onHeadersReceived.mock.calls[0]?.[0] as HeadersHandler;
+  }
+
+  it('is applied to the app partition, not to browsed pages', () => {
+    const handler = headersHandler();
     let headers: Record<string, string[]> = {};
-    handler({ responseHeaders: {} }, (r) => {
-      headers = r.responseHeaders;
+    handler({ url: 'file:///out/renderer/index.html', responseHeaders: {} }, (r) => {
+      headers = r.responseHeaders ?? {};
     });
     const csp = headers['Content-Security-Policy']?.[0] ?? '';
     expect(csp).toContain("script-src 'self'");
@@ -281,5 +288,18 @@ describe('chrome CSP', () => {
     // Packaged build: no dev-server escape hatch may survive into it.
     expect(csp).not.toContain('unsafe-inline; ');
     expect(csp).not.toContain('ws:');
+  });
+
+  it('leaves a tepegoz:// response untouched — it carries its own hash-based CSP already', () => {
+    // Overwriting it here with the generic chrome CSP would drop the hash `internal-pages/protocol.ts`
+    // computed for its inlined script; in a packaged build (no `unsafe-inline`) that silently blocks the
+    // page's own script instead of merely weakening it.
+    const handler = headersHandler();
+    const original = { 'content-security-policy': ["script-src 'self' 'sha256-realHash'"] };
+    let result: { responseHeaders?: Record<string, string[]> } | undefined;
+    handler({ url: 'tepegoz://settings/', responseHeaders: original }, (r) => {
+      result = r;
+    });
+    expect(result?.responseHeaders).toBeUndefined();
   });
 });
