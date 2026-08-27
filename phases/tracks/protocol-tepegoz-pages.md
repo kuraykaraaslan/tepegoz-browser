@@ -278,6 +278,12 @@ kayıtlı.
 sadece main-process URL sabitlerinde referans veriliyor) — taşınacak bir UI yok, Tasks ürün
 yeniden tasarımı beklemede.
 
+**Sonradan eklenen: `tepegoz://process` (Faz 2b Görev Yöneticisi, 2026-08-28).** Aynı gerçek-sayfa
+deseniyle eklenen yedinci host: `real-page-hosts.ts` `REAL_PAGE_HOSTS` + `tabs-internal-page-view.ts`
+`REAL_PAGE_BASE_URLS` + `main.tsx` hostname dispatch + `ProcessPageSurface.tsx` + yeni
+`@tepegoz/process-ui` leaf paketi. Paylaşılan tek inline bundle'ı kullanıyor (statik import'lar,
+subresource yok — "bilinen kalıntı risk" notundaki kısıtlamaya uygun).
+
 ## 5. Test / doğrulama
 
 - **Birim:** `protocol.test.ts` (21 test) — handler host/path allowlist (6 host için), inline edilen

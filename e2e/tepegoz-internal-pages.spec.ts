@@ -6,8 +6,9 @@ import { pollEvaluate } from './poll-evaluate';
 /**
  * Faz 3 of phases/tracks/protocol-tepegoz-pages.md: extensions/history/downloads/uploads/bookmarks
  * migrated to real pages the same way settings was (`e2e/tepegoz-settings-page.spec.ts` covers the
- * settings-specific context-menu acceptance criterion). This file's job is narrower and applies to all
- * five at once: each host renders real content through the SAME inlined-document mechanism
+ * settings-specific context-menu acceptance criterion); `tepegoz://process` (the Phase 2b Task
+ * Manager) is a later real page added the same way. This file's job is narrower and applies to all of
+ * them at once: each host renders real content through the SAME inlined-document mechanism
  * (`internal-pages/protocol.ts`), dispatched to its own `*PageSurface.tsx` by `main.tsx`'s hostname
  * check — a blank page here would mean that dispatch or that surface's own data fetch is broken.
  */
@@ -22,7 +23,7 @@ function guiEnv(): Record<string, string> {
   return env;
 }
 
-const PAGES = ['extensions', 'history', 'downloads', 'uploads', 'bookmarks'];
+const PAGES = ['extensions', 'history', 'downloads', 'uploads', 'bookmarks', 'process'];
 
 test('every migrated tepegoz:// internal page loads as a real page with real content', async () => {
   const profileDir = join(process.cwd(), '.tepegoz-internal-pages-profile');

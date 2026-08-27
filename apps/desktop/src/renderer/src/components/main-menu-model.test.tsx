@@ -42,6 +42,7 @@ function copyFixture(): MainMenuCopy {
       tasks: s(),
       bookmarks: s(),
       tabGroups: s(),
+      taskManager: s(),
       deleteBrowsingData: s(),
       zoom: s(),
       print: s(),
@@ -81,6 +82,7 @@ function actionsFixture(): MainMenuActions {
     openDownloads: vi.fn(),
     openUploads: vi.fn(),
     openTasks: vi.fn(),
+    openTaskManager: vi.fn(),
     openSettings: vi.fn(),
     exit: vi.fn(),
   };

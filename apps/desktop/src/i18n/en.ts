@@ -214,6 +214,7 @@ export const en = {
     tasks: 'Tasks',
     bookmarks: 'Bookmarks and lists',
     tabGroups: 'Tab groups',
+    taskManager: 'Task manager',
     deleteBrowsingData: 'Delete browsing data…',
     zoom: 'Zoom',
     print: 'Print…',

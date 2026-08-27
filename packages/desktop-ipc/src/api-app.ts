@@ -7,6 +7,7 @@ import type {
   AppInfo,
   CredentialsStatus,
   DefaultBrowserStatus,
+  ProcessSnapshot,
   ProviderId,
   ProviderKeyMeta,
 } from './contract';
@@ -52,4 +53,8 @@ export interface AppApi {
   /** Ask the OS to make Tepegöz the default browser. The user may decline in the OS's own picker, so the
    *  result is a fresh read of reality afterward, never an assumption that the request succeeded. */
   setAsDefaultBrowser(): Promise<DefaultBrowserStatus>;
+  // Task manager (`tepegoz://process`). The page polls `getProcessMetrics` on its own interval — there
+  // is no push — and `endTabProcess` force-crashes one tab's renderer.
+  getProcessMetrics(): Promise<ProcessSnapshot>;
+  endTabProcess(tabId: string): void;
 }

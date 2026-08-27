@@ -33,6 +33,7 @@ export * from './public-settings';
 // surface `@tepegoz/desktop-ipc` consumers already rely on.
 export * from './preferences-types';
 export * from './tabs-types';
+export * from './process-types';
 export * from './ai-adaptor-types';
 export * from './api';
 export * from './api-network';

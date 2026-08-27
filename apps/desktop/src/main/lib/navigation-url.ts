@@ -10,6 +10,7 @@ import {
   INTERNAL_DOWNLOADS_URL,
   INTERNAL_HISTORY_URL,
   INTERNAL_NEWTAB_URL,
+  INTERNAL_PROCESS_URL,
   INTERNAL_SETTINGS_URL,
   INTERNAL_TASKS_URL,
   INTERNAL_UPLOADS_URL,
@@ -32,6 +33,7 @@ export function internalPageUrl(input: string): string | null {
     INTERNAL_UPLOADS_URL,
     INTERNAL_TASKS_URL,
     INTERNAL_BOOKMARKS_URL,
+    INTERNAL_PROCESS_URL,
     ...extensionPageUrls(),
   ];
   return resolveInternalPage(input, internalUrls);

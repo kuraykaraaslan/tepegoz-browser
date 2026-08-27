@@ -13,6 +13,7 @@ import {
   INTERNAL_EXTENSIONS_URL,
   INTERNAL_HISTORY_URL,
   INTERNAL_NEWTAB_URL,
+  INTERNAL_PROCESS_URL,
   INTERNAL_TASKS_URL,
   INTERNAL_UPLOADS_URL,
   type TabsState,
@@ -212,6 +213,7 @@ export function internalTitleFor(url: string): string {
   if (baseUrl === INTERNAL_UPLOADS_URL) return r.uploads.title;
   if (baseUrl === INTERNAL_TASKS_URL) return r.tasks.title;
   if (baseUrl === INTERNAL_BOOKMARKS_URL) return r.bookmarks.title;
+  if (baseUrl === INTERNAL_PROCESS_URL) return r.process.title;
   // An extension `page` surface (tepegoz://<extension-id>) is titled from the extension's manifest.
   const extId = extensionIdFromPageUrl(baseUrl);
   if (extId !== null) {

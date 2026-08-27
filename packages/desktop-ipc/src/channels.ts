@@ -100,6 +100,11 @@ export const IpcChannels = {
   /** Renderer→main (invoke): the sender window's ACTIVE tab zoom as a whole-number percent. For the
    *  main-menu popup, which is a child window with no `tabs:state` subscription of its own. */
   zoomGet: 'zoom:get',
+  /** Task manager (`tepegoz://process`). `get` returns a fresh `ProcessSnapshot` from
+   *  `app.getAppMetrics()`; `end` force-crashes one tab's renderer process. The page polls `get`
+   *  itself — there is no push. */
+  processMetricsGet: 'process-metrics:get',
+  processMetricsEnd: 'process-metrics:end',
   /** Renderer→main: open a fresh empty browser window (main-menu "New window"). */
   windowNew: 'window:new',
   agentRun: 'agent:run',
@@ -398,3 +403,4 @@ export const INTERNAL_DOWNLOADS_URL = 'tepegoz://downloads';
 export const INTERNAL_UPLOADS_URL = 'tepegoz://uploads';
 export const INTERNAL_TASKS_URL = 'tepegoz://tasks';
 export const INTERNAL_BOOKMARKS_URL = 'tepegoz://bookmarks';
+export const INTERNAL_PROCESS_URL = 'tepegoz://process';

@@ -193,6 +193,7 @@ export const tr: AppStrings = {
     tasks: 'Görevler',
     bookmarks: 'Yer imleri ve listeler',
     tabGroups: 'Sekme grupları',
+    taskManager: 'Görev yöneticisi',
     deleteBrowsingData: 'Tarama verilerini sil…',
     zoom: 'Yakınlaştırma',
     print: 'Yazdır…',

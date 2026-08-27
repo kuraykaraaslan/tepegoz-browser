@@ -11,6 +11,7 @@ import {
   type PopupBlockerRequest,
   type PopupBlockerSettings,
   type Preferences,
+  type ProcessSnapshot,
   type ProviderId,
   type ProviderKeyMeta,
   type PublicSettings,
@@ -41,6 +42,8 @@ export const settingsMiscApi: Pick<
   | 'getAppInfo'
   | 'getDefaultBrowserStatus'
   | 'setAsDefaultBrowser'
+  | 'getProcessMetrics'
+  | 'endTabProcess'
   | 'getPreferences'
   | 'updatePreferences'
   | 'resetPreferences'
@@ -101,6 +104,10 @@ export const settingsMiscApi: Pick<
   getAppInfo: () => invoke<AppInfo>(IpcChannels.appGetInfo),
   getDefaultBrowserStatus: () => invoke<DefaultBrowserStatus>(IpcChannels.defaultBrowserGet),
   setAsDefaultBrowser: () => invoke<DefaultBrowserStatus>(IpcChannels.defaultBrowserSet),
+  getProcessMetrics: () => invoke<ProcessSnapshot>(IpcChannels.processMetricsGet),
+  endTabProcess: (tabId: string) => {
+    ipcRenderer.send(IpcChannels.processMetricsEnd, { tabId });
+  },
   getPreferences: () => invoke<Preferences>(IpcChannels.prefsGet),
   updatePreferences: (patch: Partial<Preferences>) =>
     invoke<Preferences>(IpcChannels.prefsSet, patch),

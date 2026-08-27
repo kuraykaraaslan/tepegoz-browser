@@ -154,3 +154,8 @@ export const FindInPageQuerySchema = z.object({
 export const ZoomCommandSchema = z.object({
   direction: z.enum(['in', 'out', 'reset']),
 });
+
+/** `process-metrics:end` payload — end the renderer process of one tab (task manager). */
+export const ProcessEndInputSchema = z.object({
+  tabId: TabIdSchema,
+});

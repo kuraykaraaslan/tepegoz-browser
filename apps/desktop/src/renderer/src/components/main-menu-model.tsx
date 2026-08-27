@@ -20,6 +20,7 @@ export interface MainMenuCopy {
     tasks: string;
     bookmarks: string;
     tabGroups: string;
+    taskManager: string;
     deleteBrowsingData: string;
     zoom: string;
     print: string;
@@ -59,6 +60,7 @@ export interface MainMenuActions {
   openDownloads: () => void;
   openUploads: () => void;
   openTasks: () => void;
+  openTaskManager: () => void;
   openSettings: () => void;
   exit: () => void;
 }
@@ -191,6 +193,12 @@ export function buildMainMenuModel(
       ],
     },
     { kind: 'separator' },
+    {
+      id: 'task-manager',
+      label: copy.menu.taskManager,
+      icon: <Icon name="gauge" />,
+      onSelect: actions.openTaskManager,
+    },
     { id: 'settings', label: copy.settings, shortcut: 'Ctrl+,', onSelect: actions.openSettings },
     { kind: 'separator' },
     { id: 'exit', label: copy.exit, onSelect: actions.exit },

@@ -5,6 +5,7 @@ import { bookmarksUiDict } from '@tepegoz/bookmarks-ui/i18n';
 import { extensionsDict } from '@tepegoz/extensions-ui/i18n';
 import { historyDict } from '@tepegoz/history-ui/i18n';
 import { downloadsDict } from '@tepegoz/downloads-ui/i18n';
+import { processDict } from '@tepegoz/process-ui/i18n';
 import { uploadsDict } from '@tepegoz/uploads-ui/i18n';
 import { tasksDict } from '@tepegoz/ext-tasks/i18n';
 import { translateDict } from '@tepegoz/ext-translate/i18n';
@@ -31,6 +32,7 @@ export function mainStrings(): {
   errors: typeof coreDict.en.errors;
   extensions: typeof extensionsDict.en;
   history: typeof historyDict.en;
+  process: typeof processDict.en;
   tasks: typeof tasksDict.en;
   translate: typeof translateDict.en;
   uploads: typeof uploadsDict.en;
@@ -48,6 +50,7 @@ export function mainStrings(): {
     errors: pick(coreDict, l).errors,
     extensions: pick(extensionsDict, l),
     history: pick(historyDict, l),
+    process: pick(processDict, l),
     tasks: pick(tasksDict, l),
     // The page context-menu submenu and the cloud-fallback consent dialog are drawn natively here,
     // not in the extension's panel, so the main process needs this extension's dictionary too.

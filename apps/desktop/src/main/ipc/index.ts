@@ -1,6 +1,7 @@
 import { registerAgentIpc } from './ipc-agent';
 import { registerTabsWindowsIpc } from './ipc-tabs-windows';
 import { registerFindIpc } from './ipc-find';
+import { registerProcessIpc } from './ipc-process';
 import { registerContentIpc } from './ipc-content';
 import { registerDownloadsIpc } from './ipc-downloads';
 import { registerUploadsIpc } from './ipc-uploads';
@@ -21,6 +22,7 @@ export function registerIpc(): void {
   registerAgentIpc();
   registerTabsWindowsIpc();
   registerFindIpc();
+  registerProcessIpc();
   registerTabDragIpc();
   registerContentIpc();
   registerDownloadsIpc();

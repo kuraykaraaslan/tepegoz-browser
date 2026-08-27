@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMagnifyingGlassPlus, faMinus, faPlus } from '@fortawesome/free-solid-svg-icons';
-import { NAV_BTN } from './nav-toolbar';
+import { NAV_BTN } from './styles';
 
 /** The pill in the address bar. Its own class rather than `NAV_BTN` — that one pins `w-8`, and the
  *  pill has to be wide enough for "125%". Shares the hover / focus-ring treatment. */

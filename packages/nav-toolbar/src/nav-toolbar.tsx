@@ -9,15 +9,10 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarOutline } from '@fortawesome/free-regular-svg-icons';
 import { Omnibox, type OmniboxQuickSettingTarget, type OmniboxSuggestion } from '@tepegoz/omnibox';
+import { NAV_BTN } from './styles';
 import { ZoomIndicator, type ZoomIndicatorLabels } from './zoom-indicator';
 
-/** Shared base class for a 32px toolbar icon button. Exported so hosts can style matching controls
- *  (e.g. pinned extension icons) the same way. */
-export const NAV_BTN =
-  'flex h-8 w-8 items-center justify-center rounded-md text-text-secondary ' +
-  'hover:bg-surface-overlay hover:text-text-primary transition-colors ' +
-  'disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-default ' +
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus';
+export { NAV_BTN } from './styles';
 
 /** Localized aria-labels, supplied by the host so the package stays i18n-agnostic. */
 export interface NavToolbarLabels {

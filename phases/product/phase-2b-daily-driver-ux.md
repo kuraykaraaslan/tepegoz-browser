@@ -121,8 +121,22 @@ work lives in Phase 2; agent orchestration (multi-tab parallelism) stays in Phas
       state every tick, and a new observer just for this one caller would be more plumbing than the
       feature is worth. 5 unit tests on the sweep's timing/reset/leak-forgetting behavior — the
       Electron-view half is exercised the same way `rehostTab` is (no direct unit test; e2e territory)._
-- [~] **Task Manager** (`app.getAppMetrics` → per-`WebContentsView` CPU / memory / PID; end-process; shows
+- [x] **Task Manager** (`app.getAppMetrics` → per-`WebContentsView` CPU / memory / PID; end-process; shows
   which tabs are discarded) surfaced as an internal `tepegoz://` page.
+  — _`tepegoz://process`, a real page (`internal-pages/protocol.ts` `REAL_PAGE_HOSTS` + a
+  `*PageSurface` in `main.tsx`'s hostname dispatch — the seventh, joining settings/extensions/
+  history/downloads/uploads/bookmarks). `main/process-metrics.electron.ts` projects
+  `app.getAppMetrics()` and joins it against the live tab set so a renderer row is named by the tab it
+  hosts and carries that tab's id; browser / GPU / utility infra rows are shown but not killable in
+  v1. Discarded tabs have no renderer process, so they are added as zero rows (`pid 0` → "—") — that
+  is how "which tabs are asleep" stays visible. `end-process` force-crashes exactly one tab's
+  renderer (the tab reloads on next activation, same as a discard). No push: the page polls
+  `getProcessMetrics` on its own interval and pauses the poll while the tab is hidden. New
+  `@tepegoz/process-ui` presentational leaf (own en/tr dict, dependency-cruiser leaf rule, Tailwind
+  `@source`), reachable from the hamburger menu's new "Task manager" row. Tests: `mapAppMetrics`
+  projection (6, `process-metrics.electron.test.ts`), row shaping/sort/totals + component
+  (`@tepegoz/process-ui`), and `tepegoz://process` added to `e2e/tepegoz-internal-pages.spec.ts`
+  (real content + bridge call resolves + zero CSP violations)._
 
 ### Cross-cutting (as in every phase)
 

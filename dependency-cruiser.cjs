@@ -185,6 +185,16 @@ module.exports = {
       to: { path: '^apps/' },
     },
     {
+      name: 'process-ui-is-a-leaf',
+      severity: 'error',
+      comment:
+        '@tepegoz/process-ui is the presentational tepegoz://process (Task Manager) surface: it must ' +
+        'never import back into the desktop app. The metrics poll and end-process action are injected. ' +
+        'See docs/package-map.md.',
+      from: { path: '^packages/process-ui/' },
+      to: { path: '^apps/' },
+    },
+    {
       name: 'downloads-no-app-no-electron',
       severity: 'error',
       comment:

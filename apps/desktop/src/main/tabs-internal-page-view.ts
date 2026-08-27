@@ -9,6 +9,7 @@ import {
   INTERNAL_DOWNLOADS_URL,
   INTERNAL_EXTENSIONS_URL,
   INTERNAL_HISTORY_URL,
+  INTERNAL_PROCESS_URL,
   INTERNAL_SETTINGS_URL,
   INTERNAL_UPLOADS_URL,
 } from '@tepegoz/desktop-ipc';
@@ -54,6 +55,7 @@ const REAL_PAGE_BASE_URLS = new Set<string>([
   INTERNAL_DOWNLOADS_URL,
   INTERNAL_UPLOADS_URL,
   INTERNAL_BOOKMARKS_URL,
+  INTERNAL_PROCESS_URL,
 ]);
 
 /** Whether `url` (an internal-page tab's full URL, hash included) should be backed by a real view. */
