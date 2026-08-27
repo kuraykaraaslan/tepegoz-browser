@@ -2,7 +2,11 @@ import { randomUUID } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { app, type DownloadItem, type WebContents } from 'electron';
-import { classifyDownloadRisk, type DownloadProvenance } from '@tepegoz/downloads';
+import {
+  classifyDownloadRisk,
+  computeDownloadRate,
+  type DownloadProvenance,
+} from '@tepegoz/downloads';
 import { Logger } from '@tepegoz/libs';
 import { cleanFilename, originOf, sha256File, uniquePath } from './download-service-fs.electron';
 import type { ActiveDownload } from './download-service-model.electron';
@@ -14,6 +18,28 @@ import {
   upsert,
   type DownloadState,
 } from './download-service-store.electron';
+
+/** How far back the transfer-rate window reaches. A few seconds smooths out TCP burstiness without
+ *  making the ETA lag a real slowdown. */
+const RATE_WINDOW_MS = 4000;
+
+/** Fold one progress sample into a download's rate window and recompute the estimate. */
+function trackRate(
+  state: DownloadState,
+  id: string,
+  receivedBytes: number,
+  totalBytes: number | null,
+): void {
+  const tracking = state.rates.get(id) ?? { samples: [], current: null };
+  const now = Date.now();
+  tracking.samples.push({ at: now, receivedBytes });
+  const cutoff = now - RATE_WINDOW_MS;
+  // Keep at least two points so a stalled transfer still has a (near-zero) rate rather than none.
+  while (tracking.samples.length > 2 && (tracking.samples[0]?.at ?? Infinity) < cutoff)
+    tracking.samples.shift();
+  tracking.current = computeDownloadRate(tracking.samples, totalBytes);
+  state.rates.set(id, tracking);
+}
 
 export function handleWillDownload(
   state: DownloadState,
@@ -62,10 +88,17 @@ export function handleWillDownload(
   appendAudit('DownloadStarted', record);
 
   item.on('updated', (_event, updateState) => {
+    const received = item.getReceivedBytes();
+    const totalNow = item.getTotalBytes() > 0 ? item.getTotalBytes() : null;
+    const paused = updateState === 'interrupted' || item.isPaused();
+    // A paused transfer has no meaningful speed — drop the window so the row stops showing one, and
+    // so a resume starts a fresh estimate rather than averaging across the gap.
+    if (paused) state.rates.delete(id);
+    else trackRate(state, id, received, totalNow);
     patch(state, id, {
-      status: updateState === 'interrupted' || item.isPaused() ? 'paused' : 'in_progress',
-      receivedBytes: item.getReceivedBytes(),
-      totalBytes: item.getTotalBytes() > 0 ? item.getTotalBytes() : null,
+      status: paused ? 'paused' : 'in_progress',
+      receivedBytes: received,
+      totalBytes: totalNow,
       canResume: item.canResume(),
       updatedAt: Date.now(),
     });
@@ -73,6 +106,7 @@ export function handleWillDownload(
   });
 
   item.on('done', (_event, doneState) => {
+    state.rates.delete(id);
     const current = state.records.get(id);
     if (current !== undefined) current.item = undefined;
     if (doneState === 'completed') {

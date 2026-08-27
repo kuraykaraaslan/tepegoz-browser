@@ -93,8 +93,12 @@ class DownloadService {
     return input.idempotencyKey !== undefined ? { idempotencyKey: input.idempotencyKey } : {};
   }
 
-  static async command(id: string, action: DownloadCommandAction): Promise<void> {
-    await runCommand(DownloadService.ctx, id, action);
+  static async command(
+    id: string,
+    action: DownloadCommandAction,
+    wc?: WebContents | null,
+  ): Promise<void> {
+    await runCommand(DownloadService.ctx, id, action, wc);
   }
 
   static clearTerminal(): void {

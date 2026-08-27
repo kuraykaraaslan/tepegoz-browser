@@ -8,6 +8,7 @@ import {
   faFolderOpen,
   faPause,
   faPlay,
+  faRotateRight,
   faTrash,
   faUpRightFromSquare,
 } from '@fortawesome/free-solid-svg-icons';
@@ -39,6 +40,36 @@ function formatBytes(
 function percentOf(item: DownloadRecord): number | null {
   if (item.totalBytes === null || item.totalBytes === 0) return null;
   return Math.max(0, Math.min(100, Math.round((item.receivedBytes / item.totalBytes) * 100)));
+}
+
+/** `h:mm:ss` once past an hour, `m:ss` otherwise — locale-neutral, so it needs no translated units. */
+function formatDuration(totalSeconds: number): string {
+  const s = Math.max(0, Math.round(totalSeconds));
+  const hours = Math.floor(s / 3600);
+  const minutes = Math.floor((s % 3600) / 60);
+  const seconds = s % 60;
+  const pad = (n: number): string => String(n).padStart(2, '0');
+  return hours > 0
+    ? `${String(hours)}:${pad(minutes)}:${pad(seconds)}`
+    : `${String(minutes)}:${pad(seconds)}`;
+}
+
+/** The "· 1.2 MB/s · 0:42 left" tail shown while a transfer is actively moving. */
+function liveRateSuffix(
+  item: DownloadRecord,
+  t: {
+    bytes: { b: string; kb: string; mb: string; gb: string };
+    perSecond: string;
+    etaLeft: string;
+  },
+): string {
+  if (item.status !== 'in_progress' || item.bytesPerSecond === undefined) return '';
+  const speed = ` · ${formatBytes(Math.round(item.bytesPerSecond), t.bytes)}${t.perSecond}`;
+  const eta =
+    item.etaSeconds !== undefined && item.etaSeconds !== null
+      ? ` · ${formatDuration(item.etaSeconds)} ${t.etaLeft}`
+      : '';
+  return speed + eta;
 }
 
 export function DownloadsPage({ list, command, subscribe }: Readonly<DownloadsPageProps>) {
@@ -113,9 +144,10 @@ function DownloadRow({
   const t = useT(downloadsDict);
   const percent = percentOf(item);
   const details =
-    item.totalBytes === null
+    (item.totalBytes === null
       ? `${formatBytes(item.receivedBytes, t.bytes)} · ${t.progressUnknown}`
-      : `${formatBytes(item.receivedBytes, t.bytes)} / ${formatBytes(item.totalBytes, t.bytes)}`;
+      : `${formatBytes(item.receivedBytes, t.bytes)} / ${formatBytes(item.totalBytes, t.bytes)}`) +
+    liveRateSuffix(item, t);
   const riskyRelease = commandNeedsApproval(item, 'release');
 
   return (
@@ -149,7 +181,9 @@ function DownloadRow({
           <div className="h-1.5 min-w-0 flex-1 rounded-full bg-surface-raised">
             <div className="h-1.5 rounded-full bg-primary" style={{ width: `${percent ?? 0}%` }} />
           </div>
-          <span className="w-40 shrink-0 text-right text-xs text-text-secondary">{details}</span>
+          <span className="w-56 shrink-0 text-right text-xs tabular-nums text-text-secondary">
+            {details}
+          </span>
         </div>
         {riskyRelease && item.status === 'quarantined' && (
           <p className="mt-2 flex items-center gap-1 text-xs text-text-secondary">
@@ -200,6 +234,13 @@ function DownloadRow({
               label={t.action.reveal}
               icon={faFolderOpen}
               onClick={() => onCommand({ id: item.id, action: 'reveal' })}
+            />
+          )}
+          {(item.status === 'failed' || item.status === 'canceled') && (
+            <ActionButton
+              label={t.action.retry}
+              icon={faRotateRight}
+              onClick={() => onCommand({ id: item.id, action: 'retry' })}
             />
           )}
           {['completed', 'blocked', 'canceled', 'failed'].includes(item.status) && (

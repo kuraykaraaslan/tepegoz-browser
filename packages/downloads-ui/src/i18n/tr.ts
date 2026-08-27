@@ -5,6 +5,8 @@ export const tr: DownloadsStrings = {
   empty: 'Henüz indirme yok',
   loading: 'Yükleniyor...',
   progressUnknown: 'İlerleme bilinmiyor',
+  perSecond: '/sn',
+  etaLeft: 'kaldı',
   bytes: {
     b: 'B',
     kb: 'KB',
@@ -40,6 +42,7 @@ export const tr: DownloadsStrings = {
     open: 'Aç',
     reveal: 'Klasörde göster',
     clear: 'Temizle',
+    retry: 'Yeniden dene',
   },
   riskyRelease: 'Bu dosya karantinadan çıkmadan önce onayınızı gerektirir.',
 };

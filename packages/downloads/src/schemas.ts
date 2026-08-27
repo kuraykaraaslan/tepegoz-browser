@@ -35,6 +35,8 @@ export const DownloadRecordSchema = z.object({
   receivedBytes: z.number().int().nonnegative(),
   totalBytes: z.number().int().nonnegative().nullable(),
   canResume: z.boolean(),
+  bytesPerSecond: z.number().nonnegative().optional(),
+  etaSeconds: z.number().nonnegative().nullable().optional(),
   createdAt: z.number().int().nonnegative(),
   updatedAt: z.number().int().nonnegative(),
   completedAt: z.number().int().nonnegative().optional(),

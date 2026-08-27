@@ -27,6 +27,7 @@ export const DOWNLOAD_COMMAND_ACTIONS = [
   'reveal',
   'release',
   'clear',
+  'retry',
 ] as const;
 export type DownloadCommandAction = (typeof DOWNLOAD_COMMAND_ACTIONS)[number];
 
@@ -49,6 +50,19 @@ export interface DownloadRecord {
   receivedBytes: number;
   totalBytes: number | null;
   canResume: boolean;
+  /**
+   * Live transfer rate in bytes/second, present only while the download is actively moving. Derived
+   * from a short sliding window of progress samples — it is NEVER persisted or journaled (it is
+   * meaningless once the transfer stops), so a record read back from disk or the audit log has it
+   * absent.
+   */
+  bytesPerSecond?: number | undefined;
+  /**
+   * Estimated seconds remaining, present only while actively transferring. `null` when it cannot be
+   * estimated (total size unknown, or the rate is momentarily zero). Same lifetime as
+   * {@link bytesPerSecond}.
+   */
+  etaSeconds?: number | null | undefined;
   createdAt: number;
   updatedAt: number;
   completedAt?: number | undefined;
@@ -149,6 +163,49 @@ export function classifyDownloadRisk(filename: string, mimeType?: string): Downl
   if (mimeType?.includes('application/x-msdownload') === true) return 'executable';
   if (mimeType?.includes('application/x-sh') === true) return 'script';
   return 'normal';
+}
+
+/** One progress observation for the sliding-window rate estimate. */
+export interface DownloadRateSample {
+  /** `Date.now()` when the byte count was read. */
+  at: number;
+  receivedBytes: number;
+}
+
+/** The derived transfer rate + ETA for a set of samples. */
+export interface DownloadRate {
+  bytesPerSecond: number;
+  /** `null` when there is no total to estimate against, or the rate is zero. */
+  etaSeconds: number | null;
+}
+
+/**
+ * Transfer rate + ETA from a sliding window of progress samples. Pure so it is unit-tested directly
+ * (the desktop service just keeps the window trimmed and feeds it in). Returns `null` until there are
+ * two usable samples — a single point has no rate, and a browser that guessed one would only ever be
+ * wrong.
+ */
+export function computeDownloadRate(
+  samples: readonly DownloadRateSample[],
+  totalBytes: number | null,
+): DownloadRate | null {
+  const first = samples[0];
+  const last = samples[samples.length - 1];
+  if (first === undefined || last === undefined || first === last) return null;
+  const spanMs = last.at - first.at;
+  const spanBytes = last.receivedBytes - first.receivedBytes;
+  // A non-positive span (clock skew, a paused/rewound transfer) is not a rate we can trust.
+  if (spanMs <= 0 || spanBytes < 0) return null;
+  const bytesPerSecond = (spanBytes * 1000) / spanMs;
+  const remaining = totalBytes !== null ? Math.max(0, totalBytes - last.receivedBytes) : null;
+  const etaSeconds =
+    remaining !== null && bytesPerSecond > 0 ? remaining / bytesPerSecond : null;
+  return { bytesPerSecond, etaSeconds };
+}
+
+/** Whether a command action is a "start it over" that only a stopped download accepts. */
+export function isRetryableStatus(status: DownloadStatus): boolean {
+  return status === 'failed' || status === 'canceled';
 }
 
 export function releaseNeedsApproval(record: DownloadRecord): boolean {

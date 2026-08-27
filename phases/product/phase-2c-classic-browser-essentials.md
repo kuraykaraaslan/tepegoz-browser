@@ -99,9 +99,26 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
 - [ ] **Resilient resume** — resume across an app restart and across a dropped connection, with exponential
       backoff and a bounded retry budget; a resumed transfer verifies the already-written bytes before
       continuing, never blindly appending
-- [ ] **Speed + ETA metadata** — surface bytes/sec and estimated time remaining in the download record and the
+- [x] **Speed + ETA metadata** — surface bytes/sec and estimated time remaining in the download record and the
       manager (already tracked as an open item in `packages/downloads/CHECKLIST.md`; this is the same task)
-- [ ] **Retry command descriptor** for a failed download (also open in the package checklist)
+      — _`computeDownloadRate(samples, totalBytes)` is a pure helper in `@tepegoz/downloads` (unit-tested
+      directly): two-or-more samples over a sliding ~4s window → `bytesPerSecond` + `etaSeconds`
+      (`null` when the total is unknown or the rate is zero). The desktop `DownloadService` keeps that
+      window trimmed per download in an **in-memory** `state.rates` map — the estimate is NEVER
+      persisted or journaled (meaningless once the transfer stops) and rides only the live
+      `downloads:state` push; `publicRecord` attaches it only while `status === 'in_progress'`. Pause
+      drops the window so a resume starts a fresh estimate rather than averaging across the gap. The
+      manager row shows "… · 1.2 MB/s · 0:42 left" (duration formatted locale-neutrally; only the "/s"
+      and "left" strings are translated, en+tr)._
+- [x] **Retry command descriptor** for a failed download (also open in the package checklist)
+      — _`'retry'` joined `DOWNLOAD_COMMAND_ACTIONS` (+ schema, + `isRetryableStatus` guard = failed
+      | canceled). It re-enters the SAME `will-download` path — quarantine, hash, trust check, HITL
+      release gate — so it can never be a shortcut around any of that; the old record is dropped and
+      the fresh attempt takes its place, Chrome-style. It needs a live web page and uses THAT page's
+      session on purpose: the original browsing session (Direct / a Phase 5 tunnel) is not recorded,
+      and silently retrying a tunnel-bound download on the clear path would be the exact leak the tab
+      model guards against — retrying from the page you are on keeps it on the route you can see.
+      `ipc-downloads.ts` resolves the sender window's active tab for the `wc`._
 - [ ] **Transfer capture beyond the page** — catch downloads the page did not initiate through a normal
       navigation (media elements, `blob:`/redirect chains) so the manager is not blind to a class of transfers;
       strictly in-browser, **no system-wide traffic interception** — that is IDM's model and it is out of scope
@@ -194,10 +211,19 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       fixture was the heaviest in the repo for no reason and is now cheap with a stated budget._
 - [ ] **Page translation** — **ADR required** (provider boundary): local model vs API, sensitive-site lockout,
       determinism/observation-recording impact (agent's own runs read untranslated source)
-- [ ] User-facing **screenshot** (visible viewport + full-page) → stored as a **CAS blob** (reuse Phase 0/1b
+- [x] User-facing **screenshot** (visible viewport + full-page) → stored as a **CAS blob** (reuse Phase 0/1b
       blob store; WebP), never inline base64
+      — _Delivered in commit `18eee15` (this row was left unticked). Page right-click → viewport /
+      full-page → `captureAndStore` (`main/screenshots/user-screenshot.electron.ts`): `capturePage`
+      → PNG → WebP re-encode round trip through the trusted chrome renderer (`NativeImage` cannot
+      encode WebP; Chromium can, only from a renderer) → `BlobStore.put` (a `cas://` ref, never
+      inline base64). If the WebP encode fails or times out the PNG is stored and the record's
+      `format` field SAYS `png` — a field that always claimed WebP would be one nobody could trust.
+      Full-page capture is pixel-clipped at the agent path's own ceiling. `captureAndNotify` then
+      toasts + files a notification-center entry naming the SIZE and format (the whole reason the
+      WebP path exists is checkable file size)._
   - [x] Agent visual fallback down-payment: `@tepegoz/screenshots` + `browser_get_screenshot` can capture
-        viewport/fullPage PNG for model context. The user-facing CAS/WebP screenshot surface remains open.
+        viewport/fullPage PNG for model context.
 - [x] **Per-site zoom persistence** (`webContents.setZoomFactor` + per-origin store in preferences;
       restored on navigate) — `main/site-zoom.ts` + the private `siteZoomFactors` pref. Ctrl +/-/0 step a
       Chrome-style ladder (25%–500%); the stored factor is re-applied on every committed navigation, so

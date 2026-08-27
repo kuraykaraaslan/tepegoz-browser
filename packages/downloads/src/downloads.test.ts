@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   classifyDownloadRisk,
   commandNeedsApproval,
+  computeDownloadRate,
   emptyDownloadsState,
+  isRetryableStatus,
   patchDownload,
   releaseNeedsApproval,
   upsertDownload,
@@ -52,8 +54,71 @@ describe('@tepegoz/downloads', () => {
 
   it('validates command input at IPC/tool boundaries', () => {
     expect(DownloadCommandInputSchema.safeParse({ id: 'd1', action: 'pause' }).success).toBe(true);
+    expect(DownloadCommandInputSchema.safeParse({ id: 'd1', action: 'retry' }).success).toBe(true);
     expect(DownloadCommandInputSchema.safeParse({ id: 'd1', action: 'delete' }).success).toBe(
       false,
     );
+  });
+
+  it('marks only stopped downloads retryable, and retry needs no extra approval', () => {
+    expect(isRetryableStatus('failed')).toBe(true);
+    expect(isRetryableStatus('canceled')).toBe(true);
+    expect(isRetryableStatus('in_progress')).toBe(false);
+    expect(isRetryableStatus('quarantined')).toBe(false);
+    // The retry re-enters the quarantine/trust path itself, so the command is not separately gated.
+    expect(commandNeedsApproval(record({ status: 'failed', risk: 'executable' }), 'retry')).toBe(
+      false,
+    );
+  });
+
+  describe('computeDownloadRate', () => {
+    it('needs at least two samples', () => {
+      expect(computeDownloadRate([{ at: 0, receivedBytes: 0 }], 1000)).toBeNull();
+    });
+
+    it('derives bytes/sec and ETA from the window span', () => {
+      const rate = computeDownloadRate(
+        [
+          { at: 1_000, receivedBytes: 1_000 },
+          { at: 3_000, receivedBytes: 5_000 },
+        ],
+        13_000,
+      );
+      // 4000 bytes over 2s = 2000 B/s; 8000 bytes left ⇒ 4s.
+      expect(rate).toEqual({ bytesPerSecond: 2_000, etaSeconds: 4 });
+    });
+
+    it('reports a null ETA when the total is unknown', () => {
+      const rate = computeDownloadRate(
+        [
+          { at: 0, receivedBytes: 0 },
+          { at: 1_000, receivedBytes: 500 },
+        ],
+        null,
+      );
+      expect(rate?.bytesPerSecond).toBe(500);
+      expect(rate?.etaSeconds).toBeNull();
+    });
+
+    it('rejects a non-positive span or a rewound byte count', () => {
+      expect(
+        computeDownloadRate(
+          [
+            { at: 2_000, receivedBytes: 100 },
+            { at: 2_000, receivedBytes: 200 },
+          ],
+          null,
+        ),
+      ).toBeNull();
+      expect(
+        computeDownloadRate(
+          [
+            { at: 0, receivedBytes: 500 },
+            { at: 1_000, receivedBytes: 200 },
+          ],
+          null,
+        ),
+      ).toBeNull();
+    });
   });
 });

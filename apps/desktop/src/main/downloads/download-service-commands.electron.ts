@@ -1,6 +1,6 @@
 import { basename, dirname } from 'node:path';
-import { BrowserWindow, dialog, shell } from 'electron';
-import type { DownloadCommandAction } from '@tepegoz/downloads';
+import { BrowserWindow, dialog, shell, type WebContents } from 'electron';
+import { isRetryableStatus, type DownloadCommandAction } from '@tepegoz/downloads';
 import { AppError } from '@tepegoz/libs';
 import PreferenceStore from '@tepegoz/preferences';
 import { moveFile, uniquePath } from './download-service-fs.electron';
@@ -8,6 +8,7 @@ import {
   appendAudit,
   downloadDirectory,
   patch,
+  pushPending,
   removeRecord,
   type DownloadState,
 } from './download-service-store.electron';
@@ -16,9 +17,14 @@ export async function runCommand(
   state: DownloadState,
   id: string,
   action: DownloadCommandAction,
+  wc?: WebContents | null,
 ): Promise<void> {
   const record = state.records.get(id);
   if (record === undefined) throw new AppError('Download not found', 404, 'downloadNotFound');
+  if (action === 'retry') {
+    retry(state, id, wc ?? null);
+    return;
+  }
   if (action === 'pause') {
     record.item?.pause();
     patch(state, id, {
@@ -46,6 +52,32 @@ export async function runCommand(
   } else {
     throw new AppError('Unsupported download command', 400, 'unsupportedCommand');
   }
+}
+
+/**
+ * Start a failed/canceled download over. It re-enters the SAME `will-download` path — quarantine, hash,
+ * trust check, HITL release gate — so a retry can never be a shortcut around any of that; the old
+ * record is dropped and the fresh attempt takes its place (Chrome-style).
+ *
+ * It needs a live web page to attach the transfer to, and uses THAT page's session on purpose: we do
+ * not record which browsing session (Direct / a Phase 5 tunnel) the original ran on, and silently
+ * retrying a tunnel-bound download on the clear path would be the exact leak the tab model guards
+ * against elsewhere. Retrying from the page you are on keeps it on the route you can see.
+ */
+function retry(state: DownloadState, id: string, wc: WebContents | null): void {
+  const record = state.records.get(id);
+  if (record === undefined) throw new AppError('Download not found', 404, 'downloadNotFound');
+  if (!isRetryableStatus(record.status))
+    throw new AppError(
+      'Only a failed or canceled download can be retried',
+      409,
+      'downloadNotRetryable',
+    );
+  if (wc === null || wc.isDestroyed())
+    throw new AppError('No active web page can start this download', 404, 'downloadNoActivePage');
+  removeRecord(state, id);
+  pushPending(state, record.url, { ...record.provenance });
+  wc.downloadURL(record.url);
 }
 
 async function release(state: DownloadState, id: string): Promise<void> {

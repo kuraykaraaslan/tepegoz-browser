@@ -1,5 +1,5 @@
 import type { DownloadItem } from 'electron';
-import type { DownloadRecord, DownloadTrustVerdict } from '@tepegoz/downloads';
+import type { DownloadRate, DownloadRecord, DownloadTrustVerdict } from '@tepegoz/downloads';
 import type { PersistedDownload } from '@tepegoz/persistence';
 
 export interface ActiveDownload extends PersistedDownload {
@@ -19,7 +19,13 @@ export const unknownTrustProvider: DownloadTrustProvider = {
   check: () => Promise.resolve('unknown'),
 };
 
-export function publicRecord(record: ActiveDownload): DownloadRecord {
+/**
+ * Project the persisted/in-memory record to the renderer-facing shape. `rate` is the LIVE transfer
+ * estimate held only in memory — it is passed in rather than read off the record because it is never
+ * persisted or journaled (see `DownloadRecord.bytesPerSecond`). Only attached while the download is
+ * actually in progress; a paused/terminal row shows no speed.
+ */
+export function publicRecord(record: ActiveDownload, rate?: DownloadRate | null): DownloadRecord {
   return {
     id: record.id,
     url: record.url,
@@ -31,6 +37,9 @@ export function publicRecord(record: ActiveDownload): DownloadRecord {
     receivedBytes: record.receivedBytes,
     totalBytes: record.totalBytes,
     canResume: record.canResume,
+    ...(record.status === 'in_progress' && rate != null
+      ? { bytesPerSecond: rate.bytesPerSecond, etaSeconds: rate.etaSeconds }
+      : {}),
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
     ...(record.completedAt !== undefined ? { completedAt: record.completedAt } : {}),

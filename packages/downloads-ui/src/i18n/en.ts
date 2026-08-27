@@ -3,6 +3,10 @@ export const en = {
   empty: 'No downloads yet',
   loading: 'Loading...',
   progressUnknown: 'Progress unknown',
+  /** Appended after a transfer speed, e.g. "1.2 MB" + "/s". */
+  perSecond: '/s',
+  /** Follows the ETA duration, e.g. "0:42 left". */
+  etaLeft: 'left',
   bytes: {
     b: 'B',
     kb: 'KB',
@@ -38,6 +42,7 @@ export const en = {
     open: 'Open',
     reveal: 'Show in folder',
     clear: 'Clear',
+    retry: 'Retry',
   },
   riskyRelease: 'This file needs your approval before it leaves quarantine.',
 };

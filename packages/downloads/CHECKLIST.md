@@ -10,9 +10,11 @@ Status verified against the implementation (2026-07-23); checked items have conc
 - [x] Support redacted download records that avoid unsafe local path exposure.
 - [x] Support paused and resumable download states.
 - [x] Support progress metadata with bytes received and total bytes.
-- [ ] Support download speed and estimated time remaining metadata.
+- [x] Support download speed and estimated time remaining metadata. _(`computeDownloadRate` + record
+      `bytesPerSecond`/`etaSeconds`; transient, never persisted or journaled.)_
 - [x] Support cancellation command descriptors.
-- [ ] Support retry command descriptors for failed downloads.
+- [x] Support retry command descriptors for failed downloads. _(`'retry'` action + `isRetryableStatus`;
+      re-enters the full quarantine/trust path.)_
 - [x] Support reveal-in-folder command descriptors without owning filesystem access.
 - [x] Support open-file command descriptors gated by host policy.
 - [x] Support quarantine or safe-browsing status metadata.

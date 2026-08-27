@@ -1,7 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { app, BrowserWindow } from 'electron';
-import type { DownloadProvenance, DownloadRecord, DownloadsState } from '@tepegoz/downloads';
+import type {
+  DownloadProvenance,
+  DownloadRate,
+  DownloadRateSample,
+  DownloadRecord,
+  DownloadsState,
+} from '@tepegoz/downloads';
 import { Logger } from '@tepegoz/libs';
 import PreferenceStore from '@tepegoz/preferences';
 import { DownloadStore, EventJournal } from '@tepegoz/persistence';
@@ -16,10 +22,18 @@ import {
 
 type AuditType = Parameters<typeof EventJournal.append>[1]['type'];
 
+/** The live rate window for one in-progress download. In-memory only — never persisted or journaled. */
+export interface DownloadRateTracking {
+  samples: DownloadRateSample[];
+  current: DownloadRate | null;
+}
+
 /** Mutable shared state passed between the download service collaborators. */
 export interface DownloadState {
   readonly records: Map<string, ActiveDownload>;
   readonly pendingByUrl: Map<string, DownloadProvenance[]>;
+  /** Sliding-window transfer-rate estimates, keyed by download id. Dropped when a download stops. */
+  readonly rates: Map<string, DownloadRateTracking>;
   trustProvider: DownloadTrustProvider;
 }
 
@@ -27,12 +41,15 @@ export function createState(): DownloadState {
   return {
     records: new Map<string, ActiveDownload>(),
     pendingByUrl: new Map<string, DownloadProvenance[]>(),
+    rates: new Map<string, DownloadRateTracking>(),
     trustProvider: unknownTrustProvider,
   };
 }
 
 export function list(state: DownloadState): DownloadRecord[] {
-  return [...state.records.values()].sort((a, b) => b.updatedAt - a.updatedAt).map(publicRecord);
+  return [...state.records.values()]
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .map((record) => publicRecord(record, state.rates.get(record.id)?.current ?? null));
 }
 
 export function snapshot(state: DownloadState): DownloadsState {
@@ -100,6 +117,7 @@ export function patch(state: DownloadState, id: string, patchValue: Partial<Acti
 
 export function removeRecord(state: DownloadState, id: string): void {
   state.records.delete(id);
+  state.rates.delete(id);
   const db = getDb();
   if (db !== null) DownloadStore.remove(db, id);
   broadcast(state);
@@ -108,7 +126,10 @@ export function removeRecord(state: DownloadState, id: string): void {
 export function clearTerminal(state: DownloadState): void {
   const terminal = ['completed', 'blocked', 'canceled', 'failed'];
   for (const record of [...state.records.values()]) {
-    if (terminal.includes(record.status)) state.records.delete(record.id);
+    if (terminal.includes(record.status)) {
+      state.records.delete(record.id);
+      state.rates.delete(record.id);
+    }
   }
   const db = getDb();
   if (db !== null) DownloadStore.clearTerminal(db);
