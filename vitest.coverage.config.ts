@@ -82,7 +82,7 @@ export default defineConfig({
         // B73.49 / F45.24 with the main-menu model and the transfer-activity popup. `src/components`
         // as a directory went 0% → 17.05%. This can only go up; `packages/**` is untouched by it.
         //
-        // Ratcheted again 2026-08-28 to floor(measured) S21.91 / B77.91 / F49.x / L21.91. That
+        // Ratcheted again 2026-08-28 to floor(measured) S22.x / B78.x / F49.87 / L22.x. That
         // session: the zoom indicator, the PDF-viewer `webPreferences` factory, download speed/ETA +
         // retry, and the tepegoz://process Task Manager landed with unit tests; `ipc-find.ts` /
         // `ipc-downloads.ts` / `ipc-process.ts` went 0% → covered (same runtime-harness pattern as
@@ -90,7 +90,7 @@ export default defineConfig({
         // full branch coverage (save/reload/kiosk/fullscreen paths that had never run); and
         // `chrome-url.ts`, `launch-at-login.ts`, `popup-window.ts` (placement geometry) and the
         // desktop `download-service-store` shared-state helpers got their first tests.
-        'apps/desktop/**': { statements: 21, branches: 77, functions: 49, lines: 21 },
+        'apps/desktop/**': { statements: 22, branches: 78, functions: 49, lines: 22 },
       },
       include: [
         'apps/desktop/src/**',
