@@ -82,13 +82,15 @@ export default defineConfig({
         // B73.49 / F45.24 with the main-menu model and the transfer-activity popup. `src/components`
         // as a directory went 0% → 17.05%. This can only go up; `packages/**` is untouched by it.
         //
-        // Ratcheted again 2026-08-28 to floor(measured) S20.71 / B76.x / F47.x / L20.71 — the zoom
-        // indicator, the PDF-viewer webPreferences factory, download speed/ETA + retry, and the
-        // tepegoz://process Task Manager landed with unit tests; three IPC files went 0% → covered
-        // (`ipc-find.ts`, `ipc-downloads.ts`, `ipc-process.ts` — same runtime-harness pattern as
-        // `ipc-tabs-windows.electron.test.ts`); and `page-commands.ts` + `keyboard-shortcuts.ts`
-        // reached full branch coverage (save/reload/kiosk/fullscreen paths that had never executed).
-        'apps/desktop/**': { statements: 20, branches: 76, functions: 47, lines: 20 },
+        // Ratcheted again 2026-08-28 to floor(measured) S21.40 / B77.06 / F48.20 / L21.40. That
+        // session: the zoom indicator, the PDF-viewer `webPreferences` factory, download speed/ETA +
+        // retry, and the tepegoz://process Task Manager landed with unit tests; `ipc-find.ts` /
+        // `ipc-downloads.ts` / `ipc-process.ts` went 0% → covered (same runtime-harness pattern as
+        // `ipc-tabs-windows.electron.test.ts`); `page-commands.ts` + `keyboard-shortcuts.ts` reached
+        // full branch coverage (save/reload/kiosk/fullscreen paths that had never run); and
+        // `chrome-url.ts`, `launch-at-login.ts`, `popup-window.ts` (placement geometry) and the
+        // desktop `download-service-store` shared-state helpers got their first tests.
+        'apps/desktop/**': { statements: 21, branches: 77, functions: 48, lines: 21 },
       },
       include: [
         'apps/desktop/src/**',
