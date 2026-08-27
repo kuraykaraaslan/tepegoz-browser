@@ -82,7 +82,7 @@ export default defineConfig({
         // B73.49 / F45.24 with the main-menu model and the transfer-activity popup. `src/components`
         // as a directory went 0% → 17.05%. This can only go up; `packages/**` is untouched by it.
         //
-        // Ratcheted again 2026-08-28 to floor(measured) S20.50 / B76.x / F47.x / L20.50 — the zoom
+        // Ratcheted again 2026-08-28 to floor(measured) S20.71 / B76.x / F47.x / L20.71 — the zoom
         // indicator, the PDF-viewer webPreferences factory, download speed/ETA + retry, and the
         // tepegoz://process Task Manager landed with unit tests; three IPC files went 0% → covered
         // (`ipc-find.ts`, `ipc-downloads.ts`, `ipc-process.ts` — same runtime-harness pattern as
