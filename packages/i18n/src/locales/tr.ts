@@ -125,6 +125,7 @@ export const tr: Resources = {
     downloadBlocked: 'Bu indirme güven politikası tarafından engellendi.',
     downloadFileMissing: 'İndirilen dosya diskte bulunamadı.',
     downloadNoActivePage: 'İndirmeye başlamadan önce bir web sayfası açın.',
+    downloadNotRetryable: 'Yalnızca başarısız veya iptal edilmiş bir indirme yeniden denenebilir.',
     uploadNotFound: 'Bu yükleme artık listede yok.',
     uploadNoActivePage: 'Yüklemeye başlamadan önce bir web sayfası açın.',
     unsupportedCommand: 'Bu işlem burada desteklenmiyor.',

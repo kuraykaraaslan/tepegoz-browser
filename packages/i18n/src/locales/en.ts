@@ -136,6 +136,7 @@ export const en = {
     downloadBlocked: 'That download was blocked by the trust policy.',
     downloadFileMissing: 'The downloaded file could not be found on disk.',
     downloadNoActivePage: 'Open a web page before starting a download.',
+    downloadNotRetryable: 'Only a failed or canceled download can be retried.',
     uploadNotFound: 'That upload is no longer in the list.',
     uploadNoActivePage: 'Open a web page before starting an upload.',
     unsupportedCommand: 'That action is not supported here.',
