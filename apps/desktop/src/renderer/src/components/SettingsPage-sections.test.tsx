@@ -25,7 +25,7 @@ import { buildSettingsSections, type SettingsSectionsCtx } from './SettingsPage-
  */
 
 const NOOP = (): void => undefined;
-const ASYNC_NOOP = async (): Promise<void> => undefined;
+const ASYNC_NOOP = (): Promise<void> => Promise.resolve();
 
 function ctxFor(s: SettingsStrings): SettingsSectionsCtx {
   return {
@@ -51,8 +51,8 @@ function ctxFor(s: SettingsStrings): SettingsSectionsCtx {
     onLoginSectionMount: ASYNC_NOOP,
     onAddLogin: ASYNC_NOOP,
     onRemoveLogin: ASYNC_NOOP,
-    onImportLogins: async () => ({ imported: 0, skipped: 0, failed: 0 }) as never,
-    onExportLogins: async () => '',
+    onImportLogins: () => Promise.resolve({ imported: 0, skipped: 0, failed: 0 } as never),
+    onExportLogins: () => Promise.resolve(''),
   };
 }
 

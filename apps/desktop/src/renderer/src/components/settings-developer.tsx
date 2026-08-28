@@ -158,8 +158,7 @@ function PreferenceEditModal({
     await apply(result.patch);
   }
 
-  const defaultValue =
-    row === null ? undefined : DEFAULT_PREFERENCES[row.key as keyof Preferences];
+  const defaultValue = row === null ? undefined : DEFAULT_PREFERENCES[row.key];
   // Compared as JSON: these values are objects and arrays as often as scalars, and `===` on a fresh
   // array would call every list "changed" and offer a reset that does nothing.
   const isAtDefault = row !== null && JSON.stringify(row.value) === JSON.stringify(defaultValue);
@@ -226,7 +225,7 @@ function PreferenceEditModal({
               variant="outline"
               disabled={busy || isAtDefault}
               onClick={() => {
-                void apply({ [row.key]: defaultValue } as Partial<Preferences>);
+                void apply({ [row.key]: defaultValue });
               }}
             >
               {s.developerResetRow}
