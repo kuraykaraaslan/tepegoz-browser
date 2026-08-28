@@ -1,34 +1,45 @@
-# @tepegoz/capability-plane CHECKLIST
+# capability-plane — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> Agent'ın alabileceği her eylemi tek bir normalize `ToolDescriptor` olarak kaydeden registry ile tüm çağrıları sabit sırayla (lookup → idempotency → zod → policy → HITL → execute → audit) geçiren tek gateway PEP'i (ADR-0007).
 
-- [x] Support registering built-in, MCP, extension, and adapter tools in one registry.
-- [x] Support unregistering capabilities when providers disconnect or extensions disable.
-- [x] Support listing normalized tool descriptors for planning.
-- [x] Support lookup by canonical tool name.
-- [x] Support enforcing a stable tool naming convention.
-- [ ] Support idempotency checks before executing mutating tools.
-- [x] Support zod input validation for untrusted tool arguments.
-- [x] Support policy evaluation before any tool handler runs.
-- [x] Support human confirmation for policy decisions that ask.
-- [x] Support fail-closed behavior when confirmation handlers are absent.
-- [ ] Support audit entries for every tool invocation attempt.
-- [x] Support standard tool error envelopes that do not throw across boundaries.
-- [x] Support danger-class metadata for read, state-changing, destructive, and financial actions.
-- [x] Support provenance metadata for built-in, MCP, and extension tools.
-- [x] Support taint-aware invocation context.
-- [x] Support site-aware invocation context for browser actions.
-- [x] Support clear denial reasons suitable for permission debugging.
-- [x] Support per-tool validators supplied by capability authors.
-- [ ] Support async handlers with bounded execution semantics.
-- [ ] Support cancellation propagation into tool handlers.
-- [ ] Support result redaction hooks for sensitive tool output.
-- [x] Support duplicate registration detection.
-- [ ] Support capability source attribution in audit logs.
-- [x] Support testing with injected confirm and audit handlers.
-- [x] Support stable descriptor shapes for model prompt rendering.
-- [x] Support capability discovery without exposing raw handler functions.
-- [ ] Support structured metrics for invocation latency and decisions.
-- [ ] Support versioned capability descriptors for future compatibility.
-- [x] Support least-privilege tool access through a single gateway.
-- [ ] Support extensible policy context without breaking existing tools.
+## Kesinlikle olmalı
+- [ ] `CapabilityRegistry` tüm kayıtlı araçların tek haritası olmalı (`register`/`unregister`/`get`/`list`)
+- [ ] Registry kayıt anında `{domain}_{verb}_{noun}` isimlendirme kuralını (`ToolNameSchema`) zorlamalı
+- [ ] `ToolGateway.invoke(toolName, rawArgs, ctx)` tam pipeline'ı çalıştırmalı
+- [ ] Invocation sırası sabit olmalı: lookup → idempotency check → zod input validation → `PolicyKernel` → HITL confirm → execute → audit
+- [ ] Agent hangi araç kaynağını çağırırsa çağırsın policy'yi bypass edememeli
+- [ ] Untrusted args execute'tan önce zod ile doğrulanmalı
+- [ ] `@tepegoz/security-policy`'nin `PolicyKernel`'ine her invocation'da danışılmalı
+- [ ] Policy kararı "ask" ise HITL confirm handler çağrılmalı
+- [ ] `setConfirmHandler` ile UI confirm sink'i çalışma zamanında bağlanabilmeli
+- [ ] `setAuditHandler` ile audit sink'i çalışma zamanında bağlanabilmeli
+- [ ] Atanmamış confirm handler "ask" kararlarını fail-safe olarak denied'a düşürmeli
+- [ ] `ToolGateway` boundary boyunca asla throw etmemeli; sonuç veya standart `ToolError` envelope dönmeli
+- [ ] Idempotency check tekrarlı çağrıları yakalamalı
+- [ ] Her invocation (başarılı/başarısız) audit edilmeli (`AuditEntry`)
+- [ ] Built-in, MCP, extension ve adapter araçları aynı normalize `ToolDescriptor` şeklinde temsil edilmeli
+- [ ] Paket Electron'dan bağımsız olmalı
+- [ ] HITL confirm handler ve audit sink runtime'da app tarafından bağlanmalı
+- [ ] `register` bilinen bir isimle ikinci kaydı reddetmeli / çakışmayı tanımlı biçimde ele almalı
+- [ ] Bilinmeyen araç `get`/lookup aşamasında `ToolError` ile sonuçlanmalı
+- [ ] `InvokeContext` bir invocation'ı sürmek için gereken bağlamı taşımalı
+- [ ] `InputValidator` sözleşmesi araç başına zod şeması bağlamalı
+
+## Olsa iyi olur
+- [ ] `list` kayıtlı araçları keşif/UI için döndürebilmeli
+- [ ] `unregister` ile bir araç çalışma zamanında kaldırılabilmeli (extension unload)
+- [ ] `ToolError` envelope'u makine-okunur kod + insan-okunur mesaj içermeli
+- [ ] `ConfirmRequest` kullanıcıya yeterli bağlam sunmalı (araç adı, args özeti)
+- [ ] `AuditEntry` zaman damgası, policy kararı ve sonuç durumu içermeli
+- [ ] `RegisteredTool` tipi kaynak bilgisini (builtin/mcp/extension) taşımalı
+- [ ] Gateway policy'nin "allow" / "deny" / "ask" üç kararını da ele almalı
+- [ ] Aynı registry farklı araç kaynaklarınca paylaşılabilmeli
+
+## Çok niş
+- [ ] Idempotency anahtarı çakışması eşzamanlı çağrılarda güvenli çözülmeli
+- [ ] Audit handler hata fırlatırsa invocation sonucu yine de dönmeli
+- [ ] Confirm handler timeout / iptal durumunda karar denied olmalı
+- [ ] Çok sayıda kayıtlı araçla `list` performansı makul kalmalı
+- [ ] `ToolNameSchema` Unicode / edge-case isimleri reddetmeli
+- [ ] İleride eklenecek adapter kaynağı pipeline değişmeden çalışmalı

@@ -1,34 +1,34 @@
-# @tepegoz/journal-tools CHECKLIST
+# journal-tools — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> Ajanın `journal_search_events` builtin yeteneğinin Electron'suz evi: append-only Event Journal'dan güncel audit olaylarını okur; `CapabilityRegistry`'ye kayıtlı, yalnızca ToolGateway PEP üzerinden erişilir.
 
-- [x] Support registering journal search as an always-on built-in capability.
-- [x] Support injected journal readers without persistence dependencies.
-- [x] Support searching recent audit events.
-- [ ] Support filtering events by time range.
-- [ ] Support filtering events by event type.
-- [ ] Support filtering events by tool name.
-- [ ] Support filtering events by provider or capability source.
-- [ ] Support filtering events by tab, URL, or origin metadata when available.
-- [ ] Support pagination for long audit histories.
-- [x] Support model-safe event projections.
-- [x] Support redacted event summaries.
-- [ ] Support stable event identifiers in search results.
-- [ ] Support chronological and reverse-chronological ordering.
-- [x] Support capped result counts for model context budgets.
-- [x] Support policy-aware access through the ToolGateway.
-- [ ] Support clear errors when the journal reader is unavailable.
-- [x] Support search queries that avoid raw SQL exposure.
-- [x] Support audit of journal-search tool calls themselves.
-- [ ] Support host-provided retention boundaries.
-- [ ] Support extension and agent attribution in returned events.
-- [x] Support browsing events related to a given agent run.
-- [x] Support surfacing denial and approval history for user debugging.
-- [ ] Support safe handling of malformed event projections.
-- [ ] Support text search over redacted event messages.
-- [ ] Support event-kind facets for UI or agent summarization.
-- [x] Support deterministic test fixtures for journal-reader behavior.
-- [ ] Support future sync metadata in journal entry projections.
-- [x] Support minimal APIs that never expose unredacted blobs.
-- [ ] Support structured result envelopes for planner consumption.
-- [ ] Support documentation for adding new journal query dimensions.
+## Kesinlikle olmalı
+- [ ] `registerJournalTools({ host })` ile `journal_search_events` yeteneğini kaydetmeli
+- [ ] Yeteneği `@tepegoz/capability-plane` `CapabilityRegistry`'sine eklemeli
+- [ ] Aracı enjekte edilen bir `JournalReader`'a bağlamalı
+- [ ] Araç her zaman açık (always-on) ve `source: 'builtin'` olmalı
+- [ ] Yalnızca ToolGateway PEP üzerinden erişilebilir olmalı
+- [ ] Append-only Event Journal'dan güncel audit olaylarını okuyabilmeli
+- [ ] Electron'dan bağımsız olmalı
+- [ ] Persistence'tan bağımsız olmalı; somut okuma `JournalReader` seam'i ile enjekte edilmeli
+- [ ] `JournalReader` ve `JournalEntry` tiplerini dışa vermeli
+- [ ] `JournalEntry` kompakt ve önceden redakte edilmiş bir projeksiyon olmalı
+- [ ] Uygulama `registerJournalTools`'u başlangıçta bir kez çağırmalı
+- [ ] `@tepegoz/file-operations` builtin desenini izlemeli
+
+## Olsa iyi olur
+- [ ] `journal_search_events` olayları filtreleyip/arayabilmeli (sorgu parametreleri)
+- [ ] Yalnızca okuma sunmalı; journal'a yazma yolu olmamalı
+- [ ] Host `main/agent/journal-host.electron.ts` içinde `EventJournal` + SQLite üzerinden uygulanmalı
+- [ ] `browser_*` ve `tab_*` builtin'leriyle yan yana çalışabilmeli
+- [ ] Sonuç kümesi makul bir üst sınırla döndürülmeli (recent)
+- [ ] Araç şeması `CapabilityRegistry` sözleşmesine uygun olmalı
+- [ ] `JournalReader` dönüşü zaten redakte olduğundan tüketicide ek redaksiyon gerektirmemeli
+
+## Çok niş
+- [ ] ADR-0021/0024 alan bölünmesine uymalı (artık `com.tepegoz.agent` uzantısında değil)
+- [ ] `com.tepegoz.agent` uzantısından taşınan eski davranışla geriye dönük tutarlı olmalı
+- [ ] Enjekte edilen `JournalReader` yoksa kayıt anlamlı bir hata vermeli
+- [ ] Zaman aralığı / olay türü gibi ölçütlerle daraltmaya izin verebilmeli
+- [ ] Boş journal'da hata değil boş sonuç döndürmeli

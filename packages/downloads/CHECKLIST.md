@@ -1,36 +1,32 @@
-# @tepegoz/downloads CHECKLIST
+# downloads — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> Preload-safe public tipleri, reducer/selector'ları ve trust/risk yardımcılarını barındıran headless browser-download domain paketi; Electron, dosya yolları, quarantine taşımaları ve IPC desktop host'ta kalır.
 
-- [x] Support preload-safe public types for browser downloads.
-- [x] Support reducer state for active, completed, failed, and canceled downloads.
-- [x] Support selectors for newest downloads and in-progress counts.
-- [x] Support risk classification for downloaded files.
-- [x] Support trust metadata for source URL, final URL, MIME type, and filename.
-- [x] Support redacted download records that avoid unsafe local path exposure.
-- [x] Support paused and resumable download states.
-- [x] Support progress metadata with bytes received and total bytes.
-- [x] Support download speed and estimated time remaining metadata. _(`computeDownloadRate` + record
-      `bytesPerSecond`/`etaSeconds`; transient, never persisted or journaled.)_
-- [x] Support cancellation command descriptors.
-- [x] Support retry command descriptors for failed downloads. _(`'retry'` action + `isRetryableStatus`;
-      re-enters the full quarantine/trust path.)_
-- [x] Support reveal-in-folder command descriptors without owning filesystem access.
-- [x] Support open-file command descriptors gated by host policy.
-- [x] Support quarantine or safe-browsing status metadata.
-- [x] Support dangerous-file confirmation metadata.
-- [x] Support duplicate filename resolution metadata.
-- [ ] Support download grouping by date.
-- [ ] Support filtering by status, risk, file type, and source host.
-- [ ] Support search over filename and source URL.
-- [x] Support cleanup metadata for clearing completed downloads.
-- [x] Support event records suitable for audit without sensitive file contents.
-- [ ] Support private-session rules for download persistence.
-- [ ] Support extension and agent initiated download attribution.
-- [ ] Support interruption reasons such as network, disk, permission, and policy errors.
-- [x] Support host-owned filesystem paths while exposing safe display names.
-- [x] Support trust-boundary schemas for incoming download events.
-- [x] Support model-safe summaries of download activity.
-- [x] Support future download scanning integrations.
-- [x] Support platform-neutral command and record shapes.
-- [x] Support tests for reducer transitions and risk helpers.
+## Kesinlikle olmalı
+- [ ] Paket headless olmalı — Electron, filesystem ve IPC içermemeli
+- [ ] Preload-safe public download tiplerinin sahibi olmalı
+- [ ] Download state için bir reducer sağlamalı
+- [ ] Download state üzerinde selector'lar sağlamalı
+- [ ] Trust/risk yardımcıları sağlamalı — bir indirmenin riskli olup olmadığını belirlemeli
+- [ ] Public tipler preload'da güvenle import edilebilmeli (bağımlılıksız)
+- [ ] Reducer indirme yaşam döngüsü olaylarını işlemeli (başladı, ilerliyor, tamamlandı, hata, iptal)
+- [ ] Filesystem path'leri, quarantine taşımaları ve IPC bu pakette değil host'ta olmalı
+- [ ] Trust/risk sınıflandırması host'un quarantine kararına girdi olabilmeli
+- [ ] Public tipler tek şema kaynağından türemeli / dışa aktarılmalı
+
+## Olsa iyi olur
+- [ ] Selector'lar aktif / tamamlanmış / başarısız indirmeleri ayırabilmeli
+- [ ] Risk helper'ı dosya uzantısı / MIME'e göre tehlikeli türleri işaretlemeli
+- [ ] Reducer saf olmalı (yan etkisiz); aynı girdi → aynı çıktı
+- [ ] İlerleme yüzdesi / kalan süre selector ile türetilebilmeli
+- [ ] Public tipler host'un quarantine durumunu bir alan olarak temsil edebilmeli
+- [ ] Selector sonuçları memoize edilebilir / referans-kararlı olmalı
+
+## Çok niş
+- [ ] Aynı dosya adının tekrar indirilmesi state'te çakışmadan temsil edilmeli
+- [ ] Bilinmeyen veya eksik alanlı indirme olayı reducer'ı çökertmemeli
+- [ ] Çok sayıda eşzamanlı indirme ile selector performansı makul kalmalı
+- [ ] Risk helper'ı çift uzantı (ör. `.pdf.exe`) gibi aldatma kalıplarını yakalamalı
+- [ ] Reducer bilinmeyen action türünde state'i değiştirmeden döndürmeli
+- [ ] İptal edilip yeniden başlatılan indirme aynı kimlik altında izlenebilmeli

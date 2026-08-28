@@ -1,34 +1,40 @@
-# @tepegoz/browser-menu CHECKLIST
+# browser-menu — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> Sunum amaçlı yaprak: tümüyle generic bir `MenuItem[]` modelinden sürülen, KUIreact stilinde yeniden kullanılabilir menü yüzeyi; aynı bileşen hem ana (hamburger) menüyü hem web sayfası sağ tık menüsünü besler.
 
-- [x] Support rendering generic action menu items from a data model.
-- [x] Support separators between menu groups.
-- [x] Support section labels for grouped browser commands.
-- [x] Support header rows for account, profile, or contextual metadata.
-- [x] Support inline zoom controls with decrement, reset, and increment actions.
-- [x] Support grouped icon-button rows for compact command clusters.
-- [x] Support submenu parent rows with host-managed flyout behavior.
-- [x] Support keyboard navigation with Up, Down, Home, and End keys.
-- [x] Support Enter and Space activation for selectable rows.
-- [x] Support Escape dismissal through host-managed popup behavior.
-- [x] Support disabled rows that are skipped by keyboard navigation.
-- [x] Support visible shortcut hints for common browser commands.
-- [x] Support destructive action styling when requested by the model.
-- [x] Support icons supplied by the caller for individual actions.
-- [ ] Support checkable menu items for toggled browser preferences.
-- [ ] Support radio-style groups for mutually exclusive choices.
-- [x] Support nested flyout open and close events with row geometry.
-- [x] Support auto-focus on first enabled item.
-- [ ] Support typeahead search within long menus.
-- [x] Support screen-reader friendly roles and aria labels.
-- [x] Support pointer hover without stealing keyboard focus unexpectedly.
-- [ ] Support touch-friendly row sizing for hybrid devices.
-- [ ] Support long labels and localized strings without clipping.
-- [ ] Support RTL layout for localized menu content.
-- [x] Support host-provided top-level dismissal and positioning.
-- [x] Support reusable menu models for main menu and page context menu.
-- [x] Support safe no-op behavior for rows with no action.
-- [x] Support visual density consistent with desktop browser menus.
-- [x] Support theme tokens from the shared UI layer.
-- [x] Support deterministic item IDs for analytics and testing.
+## Kesinlikle olmalı
+- [ ] Menüyü tümüyle generic bir `MenuItem[]` modelinden render etmeli
+- [ ] Aynı bileşen hem ana (hamburger) menüyü hem web sayfası sağ tık menüsünü besleyebilmeli
+- [ ] `item` (normal satır) varyantını render etmeli
+- [ ] `separator` varyantını render etmeli
+- [ ] `label` (bölüm etiketi) varyantını render etmeli
+- [ ] `header` blok varyantını render etmeli
+- [ ] Satır içi `zoom` kontrol satırını render etmeli
+- [ ] Gruplanmış ikon-buton satırlarını (`actions-group`) render etmeli
+- [ ] Flyout (submenu) parent satırlarını render etmeli
+- [ ] Up / Down / Home / End ile klavye navigasyonu sağlamalı
+- [ ] Tüm satır eylemlerini ve içerik kopyasını `items` modelinden almalı (kendi içermemeli)
+- [ ] Yalnızca kendi yapısal string'lerini (ör. zoom satırı aria-label'ları) sahiplenmeli
+- [ ] `ariaLabel` prop'unu menü yüzeyine uygulamalı
+- [ ] Flyout satırlarının açma/kapama davranışını host'a (`flyout` prop) bırakmalı
+- [ ] Host penceresini ve top-level Escape / dismissal'ı kendi yönetmemeli
+- [ ] `Menu`, `MenuProps`, `MenuFlyout`, `MenuItem`, `MenuAction`'ı dışa aktarmalı
+- [ ] `MenuFlyout` `onOpen` / `onClose` host hook'larını sağlamalı
+
+## Olsa iyi olur
+- [ ] `autoFocus` verildiğinde menü açılışında ilk öğeye odaklanmalı
+- [ ] Opsiyonel `className` ile host'un stil geçişine izin vermeli
+- [ ] `flyout.onOpen`'a parent satırın `id`'si ve `rect`'i verilmeli (host popup'ı konumlasın)
+- [ ] Devre dışı (disabled) menü öğelerini klavye navigasyonunda atlamalı
+- [ ] `MenuAction` içindeki `shortcut` metnini satırda göstermeli
+- [ ] KUIreact stiliyle tutarlı görünmeli
+- [ ] `pnpm typecheck` · `pnpm lint` · `pnpm test` betiklerini sağlamalı
+
+## Çok niş
+- [ ] Bu uygulamada flyout in-window değil, sola açılan ayrı native popup pencere olarak ele alınmalı
+- [ ] Boş bir `items` modelinde bile geçerli (boş) bir menü yüzeyi render etmeli
+- [ ] Ardışık `separator`'ları görsel olarak tekilleştirebilmeli
+- [ ] Zoom satırının aria-label'ları kendi i18n sözlüğünden gelmeli, `items`'tan değil
+- [ ] Home / End tuşları görünür ilk / son etkin öğeye gitmeli (header / separator'a değil)
+- [ ] Çok uzun menüde odak takip eden kaydırma (scroll-into-view) yapmalı

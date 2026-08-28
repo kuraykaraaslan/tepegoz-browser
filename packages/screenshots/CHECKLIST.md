@@ -1,34 +1,33 @@
-# @tepegoz/screenshots CHECKLIST
+# screenshots — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> Tarayıcı görsel geri-dönüşü için Electron'suz screenshot alan paketi: herkese açık screenshot tiplerini, yalnızca ana süreçte kullanılan zod şemalarını, model-güvenli metadata sarmalamasını ve `browser_get_screenshot` Capability Plane tool kaydını sahiplenir; somut `webContents.capturePage` adapter'ı masaüstü uygulamasına aittir.
 
-- [x] Support public screenshot types for browser visual fallback.
-- [x] Support main-process-only schemas for screenshot capture requests.
-- [x] Support model-safe screenshot metadata wrapping.
-- [x] Support registering browser screenshot tools in the Capability Plane.
-- [x] Support injected desktop capture adapters.
-- [x] Support screenshot capture by active tab.
-- [x] Support screenshot capture by specific tab identifier.
-- [x] Support viewport-only capture metadata.
-- [x] Support full-page capture metadata when the host offers it.
-- [x] Support image size and format metadata.
-- [ ] Support redacted screenshot references rather than raw image payloads.
-- [ ] Support content-addressed screenshot blob references.
-- [x] Support policy-aware screenshot tool invocation.
-- [x] Support sensitive-site screenshot restrictions.
-- [ ] Support human approval metadata for high-risk screenshot capture.
-- [x] Support visual fallback descriptions for agent perception.
-- [ ] Support screenshot eviction hints for storage management.
-- [ ] Support thumbnail metadata for UI surfaces.
-- [x] Support timestamp and origin metadata.
-- [ ] Support capture failure reasons such as tab unavailable, timeout, or policy denial.
-- [ ] Support timeout controls for capture operations.
-- [x] Support maximum screenshot size limits.
-- [ ] Support image format negotiation such as PNG, JPEG, and WebP.
-- [ ] Support accessibility-friendly screenshot summaries when supplied by the host.
-- [x] Support audit summaries without embedding image bytes.
-- [ ] Support private-session screenshot persistence rules.
-- [x] Support deterministic schemas for tests.
-- [ ] Support future vision-model integrations through stable metadata.
-- [x] Support bridge-free domain logic without Electron imports.
-- [ ] Support documentation for host capture adapter responsibilities.
+## Kesinlikle olmalı
+- [ ] Herkese açık screenshot tiplerini (public types) sahiplenip dışa aktarmalı
+- [ ] Yalnızca ana süreçte kullanılacak zod şemalarını (main-only) barındırmalı
+- [ ] Model-güvenli (model-safe) metadata sarmalaması sağlamalı — modele ham görüntü yerine metadata dönmeli
+- [ ] `browser_get_screenshot` Capability Plane tool kaydını (registration) yapmalı
+- [ ] `browser_get_screenshot` tool'unu Capability Plane sözleşmesine ve `{domain}_{verb}_{noun}` adlandırmasına uygun tanımlamalı
+- [ ] Electron'a bağımlı olmamalı (Electron-free kalmalı)
+- [ ] Somut `webContents.capturePage` adapter'ını içermemeli — o masaüstü uygulamasına ait
+- [ ] Public tipler ile main-only şemaları ayrı yüzeyler olarak sunmalı (preload-güvenli ayrım)
+- [ ] Tarayıcı görsel geri-dönüşü (visual fallback) senaryosu için bir alan (domain) paketi olarak durmalı
+
+## Olsa iyi olur
+- [ ] Screenshot metadata'sını (boyut, format, zaman, kaynak URL vb.) tipli biçimde tanımlamalı
+- [ ] `browser_get_screenshot` argümanlarını zod ile trust-boundary'de doğrulamalı
+- [ ] Capture adapter'ını enjeksiyonla alıp domain mantığından ayıran bir arayüz sunmalı
+- [ ] Modele dönen çıktının görüntü byte'ları değil, güvenli özet/metadata olduğunu garanti etmeli
+- [ ] Şemaları `@tepegoz/shared-types` sözleşmelerinden türetmeli, kopyalamamalı
+- [ ] Screenshot alımının hangi sekme/WebContents üzerinde yapılacağını parametreyle belirtebilmeli
+- [ ] Metadata görüntünün nasıl saklandığına (ör. `cas://` blob referansı) dair alan taşıyabilmeli
+
+## Çok niş
+- [ ] Capture adapter'ı yoksa/başarısızsa tool kaydı net bir hata döndürmeli
+- [ ] Çok büyük ekran görüntülerinde metadata sarmalaması boyut sınırı uygulamalı
+- [ ] Aynı tool'un iki kez kaydına karşı korunmalı (idempotent registration)
+- [ ] Farklı görüntü formatları (PNG/JPEG) için metadata tutarlı olmalı
+- [ ] Hassas içerik içeren sayfalarda screenshot alınmasının politika ile engellenebilmesine izin vermeli
+- [ ] Görünür alan (viewport) ile tam sayfa yakalama ayrımını modelleyebilmeli
+- [ ] Adapter zaman aşımına uğradığında tool çağrısı asılı kalmamalı

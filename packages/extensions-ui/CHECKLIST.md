@@ -1,34 +1,32 @@
-# @tepegoz/extensions-ui CHECKLIST
+# extensions-ui — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> Presentational leaf: `tepegoz://extensions` yöneticisi — enable/disable toggle'lı, aranabilir bir eklenti kartı ızgarası.
 
-- [x] Support a searchable extensions manager page.
-- [x] Support extension cards with icon, name, description, metadata, and enabled state.
-- [x] Support enable and disable toggles through injected callbacks.
-- [x] Support filtering by extension name and description.
-- [ ] Support empty state when no extensions are available.
-- [x] Support no-results state for search.
-- [ ] Support loading and retry states supplied by the host.
-- [ ] Support card badges for built-in, first-party, beta, and experimental extensions.
-- [ ] Support permission summaries on extension cards.
-- [x] Support version display on extension cards.
-- [ ] Support extension detail entry points.
-- [ ] Support keyboard navigation across extension cards.
-- [x] Support accessible toggle labels for each extension.
-- [x] Support localized labels through the package dictionary.
-- [x] Support responsive grid layout for narrow internal pages.
-- [ ] Support high-contrast enabled and disabled states.
-- [ ] Support reduced-motion friendly card transitions.
-- [x] Support host-provided icons without registry dependencies.
-- [ ] Support sorted display by recommended status, name, or enabled state.
-- [ ] Support category filters when the host supplies category metadata.
-- [ ] Support update availability indicators.
-- [ ] Support warning indicators for risky permissions.
-- [ ] Support disabled toggle states when policy prevents changes.
-- [ ] Support confirmation hooks for disabling critical extensions.
-- [ ] Support extension error states and recovery actions.
-- [ ] Support deep links to a specific extension card.
-- [ ] Support stable card IDs for automated tests.
-- [ ] Support safe truncation for long extension names.
-- [ ] Support RTL layouts for localized text.
-- [x] Support bridge-agnostic operation through injected items and callbacks.
+## Kesinlikle olmalı
+- [ ] `ExtensionsGrid` eklenti kartlarından oluşan aranabilir bir ızgara render etmeli
+- [ ] Her kartta bir enable/disable toggle bulunmalı
+- [ ] `onToggle(id, enabled)` ile toggle değişimini host'a iletmeli
+- [ ] Kendi arama (search) state'ini yönetmeli
+- [ ] Arama sorgusuna göre kartları filtrelemeli
+- [ ] Eklenti listesi, manifest label'ları, ikonlar ve enabled durumu `items` prop'undan gelmeli
+- [ ] App'e özgü hiçbir eklenti/registry mantığı taşımamalı
+- [ ] `ExtensionCardItem` şeklini (`id`, `icon`, `name`, `description`, `meta`, `enabled`) dışa aktarmalı ki host'lar kendi objelerini eşlesin
+- [ ] Kendi i18n sözlüğünü (`extensionsDict`) `useT` ile kullanmalı
+- [ ] `extensionsDict`/`ExtensionsStrings`'i dışa aktarmalı
+- [ ] Chrome tarzı bir eklenti yöneticisi kabuğu görünümü sunmalı
+
+## Olsa iyi olur
+- [ ] Arama sonucu boşken anlamlı bir "sonuç yok" durumu göstermeli
+- [ ] `icon` alanını rastgele bir React node olarak kabul edebilmeli
+- [ ] `meta` satırında sürüm/kaynak gibi serbest metni gösterebilmeli
+- [ ] Kart ızgarası dar/geniş pencerelerde responsive akmalı
+- [ ] Toggle durumu `items`'tan controlled olarak yansımalı (kendi kopyasını tutmamalı)
+- [ ] en/tr sözlüklerinin anahtar kümesi birebir eşleşmeli
+- [ ] Arama alanı klavyeyle erişilebilir/odaklanabilir olmalı
+
+## Çok niş
+- [ ] Çok sayıda eklenti kartında ızgara akıcı kalmalı
+- [ ] `description` çok uzun olduğunda kart düzenini bozmadan kırpmalı/sarmalı
+- [ ] Aynı `id`'ye sahip iki item verilirse öngörülebilir davranmalı
+- [ ] Sözlükte olmayan bir dil için çekirdek dile düşmeli

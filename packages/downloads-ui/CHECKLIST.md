@@ -1,34 +1,30 @@
-# @tepegoz/downloads-ui CHECKLIST
+# downloads-ui — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> `tepegoz://downloads` yüzeyinin presentational paketi: host list/command/subscribe callback'lerini enjekte eder, paket yalnızca UI state'i ve en/tr string'lerini sahiplenir.
 
-- [x] Support a tepegoz downloads activity page.
-- [x] Support injected callbacks for listing downloads.
-- [x] Support injected callbacks for download commands.
-- [x] Support injected subscription callbacks for live updates.
-- [ ] Support sections for active, completed, failed, and canceled downloads.
-- [x] Support progress bars for active downloads.
-- [ ] Support pause, resume, cancel, retry, open, and reveal actions when supplied.
-- [x] Support dangerous-download warning rows.
-- [x] Support quarantine or scan-pending status indicators.
-- [ ] Support search by filename and source host.
-- [ ] Support filtering by download status.
-- [ ] Support sorting by newest, oldest, filename, size, and risk.
-- [x] Support clearing completed downloads through host action.
-- [x] Support empty state for no downloads.
-- [ ] Support loading and retry states for initial list retrieval.
-- [ ] Support keyboard navigation across download rows.
-- [ ] Support accessible labels for progress and action buttons.
-- [x] Support localized English and Turkish strings from the package.
-- [x] Support redacted display of local paths.
-- [x] Support source URL display with safe truncation.
-- [ ] Support file-size and time formatting through host or utility props.
-- [ ] Support responsive layout for narrow internal pages.
-- [ ] Support toast or inline feedback after commands.
-- [ ] Support row context-menu entry points.
-- [ ] Support multi-select cleanup actions.
-- [ ] Support badges for source type, risk, and completion status.
-- [ ] Support reduced-motion friendly progress updates.
-- [ ] Support high-contrast visual states.
-- [x] Support subscription cleanup on unmount.
-- [x] Support stable row identity for live updates.
+## Kesinlikle olmalı
+- [ ] `tepegoz://downloads` yüzeyini presentational olarak render etmeli
+- [ ] İndirme listesi host'un enjekte ettiği list callback'inden gelmeli
+- [ ] Kullanıcı eylemleri host'un enjekte ettiği command callback'i üzerinden gitmeli
+- [ ] Canlı güncellemeler host'un enjekte ettiği subscribe callback'i ile alınmalı
+- [ ] Paket yalnızca UI state sahibi olmalı (iş mantığı host'ta)
+- [ ] `en`/`tr` string'lerinin sahibi olmalı
+- [ ] Tüm kullanıcıya görünen metinler yerelleştirilmiş olmalı
+- [ ] Electron / filesystem / IPC içermemeli
+- [ ] UI state (seçili öğe, filtre, açık menü) yalnızca bu pakette tutulmalı
+
+## Olsa iyi olur
+- [ ] Hiç indirme yokken ayrı bir boş durum görünümü gösterilmeli
+- [ ] İndirme başına eylemler (aç, klasörde göster, iptal, tekrar dene, kaldır) command callback'ine map edilmeli
+- [ ] İlerleme çubuğu / yüzde subscribe güncellemeleriyle canlı yenilenmeli
+- [ ] Riskli / quarantine edilmiş indirme görsel olarak işaretlenmeli
+- [ ] Liste en yeni indirme üstte olacak şekilde sıralanmalı
+- [ ] subscribe aboneliği unmount'ta temizlenmeli
+
+## Çok niş
+- [ ] Çok uzun dosya adları taşmadan gösterilmeli (kısaltma / tooltip)
+- [ ] Host callback'i hata dönerse UI çökmeden hata durumu göstermeli
+- [ ] Binlerce indirme kaydında liste akıcı kalmalı (virtualize veya sınır)
+- [ ] `tr` ve `en` metinleri aynı layout'a sığmalı
+- [ ] Aynı anda gelen çok sayıda subscribe olayı UI'da batch'lenebilmeli

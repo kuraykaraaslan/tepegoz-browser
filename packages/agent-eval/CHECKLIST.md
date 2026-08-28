@@ -1,49 +1,50 @@
-# @tepegoz/agent-eval CHECKLIST
+# agent-eval — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> Dev-only, `private`, uygulamaya asla girmeyen "gerçek sonuç" eval harness'i: gerçek bir agent'ın gerçek sayfaları sürüp ground-truth ile puanlandığı, AI yetkinlik track'inin ölçüm omurgası.
 
-- [x] Support a data-driven scenario registry loaded from JSON without code changes.
-- [x] Support zod `safeParse` validation of the untrusted scenario registry on disk.
-- [x] Support recording malformed registry files as errors instead of crashing the run.
-- [x] Support duplicate scenario-id detection across registry files.
-- [x] Support a held-out scenario split reported separately from the development set.
-- [x] Support a deterministic local fixture server for real pages without cloud dependencies.
-- [x] Support loopback-only binding on an ephemeral port for the fixture server.
-- [x] Support path-traversal refusal when serving fixture files.
-- [x] Support ground-truth-first scoring over DOM assertions and expected values.
-- [x] Support failing closed when a scenario has no ground-truth assertion to check.
-- [x] Support an optional LLM judge for open-ended scenarios with a rubric.
-- [x] Support an injected model call so judge prompt building and parsing stay pure.
-- [x] Support `safeParse` of the untrusted judge verdict with a fail-closed fallback.
-- [x] Support extracting a judge verdict from fenced or prose-wrapped JSON output.
-- [x] Support judge-to-human agreement measurement over a calibration sample.
-- [x] Support surfacing judge disagreements by scenario id in the report.
-- [x] Support driving the real desktop app through an `_electron` Playwright driver.
-- [x] Support an env-gated eval hook that stays inert in production builds.
-- [x] Support a deterministic scripted tier that runs without a cloud API key.
-- [x] Support a live tier running the real product model over the registry.
-- [x] Support provider selection across the runnable model providers.
-- [x] Support repeating each scenario over multiple trials to reduce sampling noise.
-- [x] Support folding repeated trials into a majority verdict with pass frequency.
-- [x] Support a scenario-id allowlist for iterating on a single target.
-- [x] Support `safeParse` of the untrusted per-run output JSON written by the app.
-- [x] Support capturing per-scenario app logs for step-level failure diagnosis.
-- [x] Support token-usage accounting summed honestly across trials.
-- [x] Support an escape-rate metric for navigation grounding.
-- [x] Support excluding open-web scenarios from the on-page escape metric.
-- [x] Support a machine-readable JSON report artifact.
-- [x] Support a human-readable pass/fail table that shows every scenario.
-- [x] Support reporting the model id, scenario count, and threshold for honest headlines.
-- [x] Support a nightly out-of-band CI workflow that never blocks the build.
-- [x] Support warning on a pass-rate regression without failing CI.
-- [x] Support unit-testable pure modules with no browser dependency.
-- [x] Support dev-only packaging that is never shipped in the app.
-- [ ] Support scripted coverage for the full scenario registry.
-- [ ] Support a calibration sample large enough to make the agreement rate meaningful.
-- [ ] Support open-web scenarios against real live URLs.
-- [ ] Support per-scenario wall-clock duration metrics.
-- [ ] Support monetary cost estimation alongside token counts.
-- [ ] Support first-attempt-success and average-actions competence metrics.
-- [ ] Support recovery and human-intervention metrics in the live tier.
-- [ ] Support per-scenario timeout configuration.
-- [ ] Support trend comparison against a stored historical baseline.
+## Kesinlikle olmalı
+- [ ] Senaryo registry'sini `scenarios/*.json` dosyalarından yüklemeli
+- [ ] Yüklenen her senaryo girişini `safeParse` ile doğrulamalı
+- [ ] Yeni bir senaryo eklemek tek bir JSON girişi kadar olmalı (kod değişikliği gerektirmemeli)
+- [ ] `EvalScenario` şemasını `@tepegoz/shared-types`'tan almalı, kendi kopyasını tutmamalı
+- [ ] Geçersiz/bozuk senaryo JSON'ını sessizce yutmadan reddetmeli
+- [ ] `test-fixtures/sites/` altını servis eden yerel bir HTTP fixture sunucusu sağlamalı (bulut bağımlılığı yok)
+- [ ] Fixture sayfaları deterministik olmalı — aynı senaryo her koşuda aynı DOM'u vermeli
+- [ ] Ground-truth (DOM/değer assertion) skorlamayı birincil skorlama yolu yapmalı
+- [ ] LLM-judge'ı yalnızca `judgeRubric` içeren açık uçlu senaryolar için, ground-truth'a ikincil olarak kullanmalı
+- [ ] Judge'ın model çağrısını enjekte edilebilir tutmalı; prompt üretimi ve verdict ayrıştırması saf ve test edilebilir olmalı
+- [ ] Judge↔insan uyum oranını `calibration/human-labels.json`'a göre hesaplamalı
+- [ ] Uyum oranını rapora yazmalı ki kayan (drift eden) bir judge görünür olsun
+- [ ] `AcceptanceMetrics`'i toplayıp raporu üretmeli
+- [ ] Held-out senaryoları raporda ayrı bölmeli
+- [ ] Tam pass/fail tablosu + makine-okunur JSON artifact üretmeli
+- [ ] Metrik sözleşmesini (`recordFromOutcomes` / `summarizeAcceptanceRuns`) `@tepegoz/orchestrator`'dan yeniden kullanmalı, çoğaltmamalı
+- [ ] `_electron` harness gerçek uygulamayı başlatıp her senaryoyu (scripted veya live) sürmeli
+- [ ] Scripted tier bulut anahtarı olmadan, gerçek uygulamayı yerel fixture'lar üzerinde sürebilmeli
+- [ ] Scripted tier yalnızca scripted sequence'i olan senaryoları koşmalı; diğerlerini atlayıp loglamalı
+- [ ] Live tier tüm registry'yi gerçek ürün modeliyle koşmalı
+- [ ] Uygulamayı `TEPEGOZ_EVAL=1` ile Electron batch modda çalıştıran hook production'da inert olmalı
+- [ ] `private` ve dev-only kalmalı — uygulama paketine asla girmemeli
+- [ ] `pnpm test` saf modülleri (registry/scorer/report/judge/calibration) tarayıcısız koşabilmeli
+- [ ] `pnpm eval` bloklayan bir CI gate'i olmamalı (out-of-band çalışmalı)
+
+## Olsa iyi olur
+- [ ] Live tier'i provider seçimiyle (`TEPEGOZ_EVAL_PROVIDER`) çalıştırabilmeli
+- [ ] API anahtarını `TEPEGOZ_EVAL_API_KEY` env değişkeninden almalı, repoya gömmemeli
+- [ ] Nightly non-blocking workflow JSON artifact'ini yüklemeli
+- [ ] Pass-rate regresyonunda uyarı vermeli (hard-fail değil)
+- [ ] Atlanan senaryolar için sebebi (scripted sequence yok) loglara yazmalı
+- [ ] Scripted ve live tier'ları tek harness'tan çalıştırabilmeli
+- [ ] Rapor artifact'i koşular arası karşılaştırılabilir (stabil şema) olmalı
+- [ ] `TEPEGOZ_EVAL_MODE` ayarlanmadığında güvenli varsayılan (scripted) davranmalı
+- [ ] Live tier'in Electron `better-sqlite3` ABI gereksinimini belgelemeli/kontrol etmeli
+
+## Çok niş
+- [ ] Judge verdict formatı beklenmeyen model çıktısında bile ayrıştırılabilir olmalı
+- [ ] `calibration/human-labels.json` eksik/boşsa uyum oranını raporda "hesaplanamadı" olarak göstermeli
+- [ ] Fixture sunucusu port çakışmasında deterministik biçimde başka porta düşebilmeli
+- [ ] Bir senaryo hem scripted sequence hem `judgeRubric` içeriyorsa öncelik ground-truth'ta kalmalı
+- [ ] Nightly çalıştırma Electron ABI ortamında koşarken `pnpm test`'in Node ABI'sini bozmamalı
+- [ ] Registry'de yinelenen senaryo id'lerini tespit etmeli
+- [ ] Held-out set boşsa rapor yine de geçerli bir tablo üretmeli

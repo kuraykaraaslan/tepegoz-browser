@@ -1,34 +1,49 @@
-# @tepegoz/notifications-ui CHECKLIST
+# notifications-ui — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> Tarayıcının bildirim yüzeyleri: bildirim merkezi paneli, sağ-alt toast yığını ve Web Notification izin-onay istemi — köprüden bağımsız, kendi i18n sözlüğünü taşıyan sunum katmanı.
 
-- [x] Support a notification center panel.
-- [x] Support a bottom-right toast stack.
-- [x] Support a web notification permission prompt.
-- [x] Support per-notification dismiss actions.
-- [x] Support dismiss-all bulk action.
-- [x] Support mark-read actions.
-- [x] Support mark-all-read bulk action.
-- [x] Support unread visual emphasis.
-- [x] Support kind-specific icons and styling.
-- [x] Support action buttons on notifications.
-- [x] Support auto-dismiss behavior for transient toasts.
-- [ ] Support pause-on-hover for toast dismissal timers.
-- [x] Support keyboard navigation with Up, Down, Home, and End.
-- [x] Support accessible labels for notification rows and actions.
-- [x] Support localized labels through the package dictionary.
-- [x] Support origin display in permission prompts.
-- [x] Support allow, deny, and remember-choice decisions in permission prompts.
-- [x] Support empty state for no notifications.
-- [ ] Support grouped display by recency or source.
-- [x] Support relative time formatting supplied by the host.
-- [ ] Support high-contrast notification states.
-- [ ] Support reduced-motion friendly toast animations.
-- [x] Support responsive panel sizing.
-- [ ] Support safe truncation for long notification titles and bodies.
-- [x] Support screen-reader announcements for new toasts.
-- [x] Support bridge-agnostic operation through injected callbacks.
-- [x] Support host-rendered modal integration for permission prompts.
-- [x] Support stable row identity during live updates.
-- [ ] Support severity filters when the host supplies them.
-- [x] Support future notification surfaces with shared visuals.
+## Kesinlikle olmalı
+- [ ] `NotificationCenter` bir `AppNotification` listesini panel olarak render edebilmeli
+- [ ] Her satırda tekil "kapat" (dismiss) eylemi sunabilmeli
+- [ ] Her satırda tekil "okundu işaretle" eylemi sunabilmeli
+- [ ] Panel başlığında toplu "hepsini okundu işaretle" eylemi olmalı
+- [ ] Panel başlığında toplu "hepsini temizle" eylemi olmalı
+- [ ] Okunmamış bildirimleri görsel olarak vurgulayabilmeli
+- [ ] Liste içinde Up/Down/Home/End klavye gezinmesini desteklemeli
+- [ ] `ToastStack` sağ-altta geçici toast'ları yığın halinde gösterebilmeli
+- [ ] Toast'lar kendiliğinden (auto-dismiss) kaybolabilmeli
+- [ ] Toast'lar `AlertBanner` stiliyle görünmeli
+- [ ] Toast yığını `onDismiss(id)` ile tekil kapatmayı desteklemeli
+- [ ] `NotificationPermissionPrompt` bir sitenin Web Notification izin isteği için onay gövdesi sunmalı
+- [ ] İzin istemi, isteği yapan `origin`'i göstermeli
+- [ ] İzin istemi `onDecision(allow, remember)` geri çağırması ile karar döndürmeli
+- [ ] İzin istemi kendi modal'ını açmamalı; host'un `Modal`'ı içinde render edilmeye uygun olmalı
+- [ ] `KIND_VISUALS` her bildirim `kind`'ı için ikon/kapsayıcı stilini tanımlamalı
+- [ ] `KIND_VISUALS` üç yüzeyin üçünde de ortak kullanılmalı
+- [ ] Kendi i18n sözlüğünü `useT(notificationsUiDict)` ile taşımalı
+- [ ] Hiçbir kullanıcıya görünür metni sabit kodlamamalı
+- [ ] Elektron köprüsüne bağımlı olmamalı; tüm eylemler callback olarak enjekte edilmeli
+- [ ] Veri modelini (`AppNotification`, `NotificationAction`) `@tepegoz/shared-types`'tan almalı, kendi içinde yeniden tanımlamamalı
+- [ ] Göreli zaman gösterimi için `formatTime` enjekte edilebilmeli
+- [ ] `NotificationAction` girişlerini tıklanabilir eylem düğmeleri olarak render edebilmeli
+
+## Olsa iyi olur
+- [ ] Bildirim yokken boş durum (empty state) göstermeli
+- [ ] Panel başlığında okunmamış sayacı gösterebilmeli
+- [ ] Toast yığını görünür toast sayısını sınırlayıp taşmayı yönetebilmeli
+- [ ] Toast üzerine gelince (hover) auto-dismiss sayacını duraklatabilmeli
+- [ ] Odaklı satırda Enter/Space ile eylemi tetikleyebilmeli
+- [ ] Bir satır kaldırıldığında odağı komşu satıra taşıyabilmeli
+- [ ] İzin isteminde "hatırla" (remember) onay kutusu sunmalı
+- [ ] Toast giriş/çıkışında animasyon uygulayabilmeli
+- [ ] Bildirimleri türe veya tarihe göre gruplayabilmeli
+- [ ] Merkez satırlarında `KIND_VISUALS`'tan gelen türe özgü vurgu rengini kullanabilmeli
+
+## Çok niş
+- [ ] `prefers-reduced-motion` altında toast animasyonlarını sadeleştirebilmeli
+- [ ] Panel ve toast yığını için RTL yerleşimini desteklemeli
+- [ ] Çok uzun bildirim gövdesini kırpıp "genişlet" ile açabilmeli
+- [ ] Yeni toast geldiğinde ekran okuyucu için canlı bölge (live region) duyurusu yapabilmeli
+- [ ] Çok sayıda bildirimde listeyi performans-güvenli (sanallaştırılmış) tutabilmeli
+- [ ] Hızlı ardışık aynı toast'ları tekilleştirebilmeli

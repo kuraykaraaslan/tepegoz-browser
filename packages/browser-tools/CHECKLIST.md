@@ -1,34 +1,47 @@
-# @tepegoz/browser-tools CHECKLIST
+# browser-tools — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> Agent'ın kullandığı built-in `browser_*` yetenek tanımlarını (sayfa oku, gez, snapshot, tıkla/doldur/tuşla/kaydır) capability-plane'e kaydeden, Electron'suz perception katmanını da barındıran paket.
 
-- [x] Support agent-readable page snapshots with URL, title, and sanitized text.
-- [x] Support element snapshots for actionable controls on a page.
-- [x] Support browser navigation by URL in the active tab.
-- [x] Support browser navigation scoped to a specific tab identifier.
-- [x] Support waiting for page load after navigation or actions.
-- [x] Support post-action page validation for lightweight verification.
-- [x] Support clicking elements by stable snapshot reference.
-- [x] Support filling editable elements by stable snapshot reference.
-- [x] Support pressing keyboard keys through the browser host.
-- [x] Support scrolling pages by direction and amount.
-- [x] Support ref invalidation after each new element snapshot.
-- [x] Support sanitized element labels before model exposure.
-- [x] Support capped element lists to fit model context budgets.
-- [x] Support DOM-first perception with room for visual fallback.
-- [x] Support injected browser operations without Electron dependencies.
-- [x] Support registering browser-domain tools as always-on capabilities.
-- [x] Support tool descriptors that identify browser danger classes.
-- [x] Support browser tool calls only through the ToolGateway policy path.
-- [x] Support clear error envelopes for unavailable tabs or stale element refs.
-- [x] Support safe handling of untrusted page text.
-- [x] Support accessible-role awareness for interactable elements.
-- [x] Support hidden or offscreen element filtering for action targeting.
-- [ ] Support multi-frame page snapshot metadata when hosts provide it.
-- [x] Support file upload and download handoff signals through host extensions.
-- [x] Support timeout controls for load waits and interaction waits.
-- [x] Support audit-friendly action summaries for each browser operation.
-- [x] Support test fixtures for page and element snapshot builders.
-- [x] Support host-provided screenshots as a perception supplement.
-- [x] Support tab-scoped browser validation after agent actions.
-- [ ] Support future browser actions without changing agent runtime flow.
+## Kesinlikle olmalı
+- [ ] `registerBrowserTools({ host })` her `browser_*` aracını `CapabilityRegistry`'ye kaydedebilmeli
+- [ ] Araçlar yalnızca ToolGateway PEP üzerinden çağrılabilmeli; doğrudan erişim olmamalı
+- [ ] `browser_*` araçları `source: 'builtin'` always-on yetenek olarak kaydedilmeli (Agent uzantısına scoped olmamalı)
+- [ ] Paket Electron'dan bağımsız olmalı; her somut tarayıcı işlemi `BrowserHost` arayüzü üzerinden enjekte edilmeli
+- [ ] `BrowserHost` sözleşmesi `navigate(url, tabId?)` sağlamalı
+- [ ] `BrowserHost` `readPage(tabId?)` sağlamalı
+- [ ] `BrowserHost` `waitForLoad(tabId?, timeoutMs?)` sağlamalı
+- [ ] `BrowserHost` `snapshotElements(tabId?)` sağlamalı
+- [ ] `BrowserHost` `clickElement(ref, tabId?)` sağlamalı
+- [ ] `BrowserHost` `fillElement(ref, text, tabId?)` sağlamalı
+- [ ] `BrowserHost` `pressKey(key, tabId?)` sağlamalı
+- [ ] `BrowserHost` `scrollPage(direction, amount?, tabId?)` sağlamalı
+- [ ] `tabId` atlanınca aktif sekme davranışı korunmalı; verilince işlem o tarayıcı sekmesine scoped olmalı
+- [ ] `ref`'ler aynı sekmede bir sonraki `snapshotElements()` çağrısına kadar geçerli kalmalı
+- [ ] `buildPageSnapshot` url/title/sanitize-edilmiş-metin anlık görüntüsü üretmeli
+- [ ] `buildElementsSnapshot` sanitize edilmiş, etkileşilebilir eleman listesi üretmeli (`finalizeElements` üzerine)
+- [ ] Perception saf olmalı, Electron içermemeli ve tool kayıtlarının yanında yaşamalı
+- [ ] Snapshot tiered DOM-first olmalı, vision yalnızca fallback (ADR-0008)
+- [ ] Model'e verilen sayfa metni sanitize edilmiş olmalı
+- [ ] Araç adları `{domain}_{verb}_{noun}` kuralına uymalı (`browser_` ön ekli)
+- [ ] Uygulama `registerBrowserTools`'u başlangıçta bir kez çağırabilmeli
+- [ ] `browser_validate_page` `waitForLoad` + `readPage` ile hafif post-action doğrulama yapmalı
+
+## Olsa iyi olur
+- [ ] Tab tools (`tab_*`) bu pakette bulunmamalı — `@tepegoz/tab-engine`'e ait
+- [ ] Journal tool (`journal_search_events`) bu pakette bulunmamalı — `@tepegoz/journal-tools`'a ait
+- [ ] `BrowserHost` mock'lanarak araçlar Electron runtime'ı olmadan test edilebilmeli
+- [ ] `scrollPage` hem yön hem miktar parametresini desteklemeli
+- [ ] Snapshot'lar büyük sayfalarda model context'ine sığacak makul boyutta kalmalı
+- [ ] `readPage` başlık ve URL'i her zaman döndürmeli
+- [ ] Aynı `BrowserHost` birden çok sekme için kullanılabilmeli
+- [ ] Paket `apps/desktop`'tan çıkarılmış olmalı (`docs/package-map.md`)
+- [ ] `PageSnapshot` / `ElementsSnapshot` tipleri dışa aktarılmalı
+
+## Çok niş
+- [ ] Legacy Agent-extension-scoped kayıt yolundan builtin'e geçiş sorunsuz olmalı
+- [ ] Vision fallback yalnızca DOM snapshot yetersiz kaldığında devreye girmeli
+- [ ] Eski bir `ref` yeni snapshot'tan sonra kullanılırsa net hata dönmeli
+- [ ] `waitForLoad` timeout aşımında kontrollü şekilde dönmeli
+- [ ] `pressKey` özel tuşları (Enter, Tab, ok tuşları) desteklemeli
+- [ ] Geçersiz `tabId` verilince güvenli, açıklayıcı hata dönmeli

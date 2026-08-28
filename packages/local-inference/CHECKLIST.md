@@ -1,34 +1,37 @@
-# @tepegoz/local-inference CHECKLIST
+# local-inference — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> `model-gateway` için on-device inference sağlayıcısı: `LocalProvider`, enjekte edilen bir `LlamaEngine` üzerine gateway'in `ModelProvider` sözleşmesini uygular; Electron'suz kalır, JSON modunda çıktıyı GBNF grameriyle tek JSON nesnesine kısıtlar.
 
-- [x] Support a local model provider compatible with the model gateway contract.
-- [x] Support injecting the concrete inference engine from the host.
-- [x] Support model loading by selected local model identifier.
-- [x] Support idempotent warm model loading.
-- [x] Support model unloading through the injected engine.
-- [x] Support checking local inference availability.
-- [x] Support mapping canonical model requests to local engine turns.
-- [x] Support mapping local engine responses back to canonical responses.
-- [x] Support JSON response constraints through grammar selection.
-- [x] Support standalone JSON object grammar generation.
-- [x] Support downstream schema validation after grammar-constrained output.
-- [x] Support configurable sampling options.
-- [x] Support context-window metadata from selected models.
-- [x] Support cooperative cancellation during generation.
-- [x] Support timeouts supplied by the model gateway.
-- [ ] Support streaming tokens when the engine exposes them.
-- [ ] Support usage metadata for local tokens and latency.
-- [x] Support fallback-friendly errors when the engine is unavailable.
-- [x] Support model-resolution callbacks from catalog or settings state.
-- [x] Support multiple local model sizes and quantizations.
-- [ ] Support CPU, GPU, and platform-specific engine metadata.
-- [x] Support safe handling of malformed local model outputs.
-- [x] Support deterministic test engines.
-- [x] Support grammar selection by requested response format.
-- [ ] Support tool-call shaping when local models can emit structured calls.
-- [x] Support privacy-friendly operation without network access.
-- [ ] Support memory-pressure signals from the host.
-- [ ] Support warm-cache status for settings or diagnostics UI.
-- [x] Support future engines behind the same LlamaEngine interface.
-- [x] Support documentation for host engine integration.
+## Kesinlikle olmalı
+- [ ] `LocalProvider` gateway'in `ModelProvider` sözleşmesini uygulamalı
+- [ ] Enjekte edilen bir `LlamaEngine` üzerine kurulmalı; native binary'ye kendisi dokunmamalı
+- [ ] Electron'dan bağımsız olmalı
+- [ ] Seçili modeli `config.resolveModel()` ile çözmeli
+- [ ] Modeli sıcak tutmalı (`engine.load` model id başına idempotent)
+- [ ] `responseFormat:'json'` istendiğinde GBNF gramerini uygulamalı
+- [ ] `engine.generate` çağrısından önce sampling ayarlarını uygulamalı
+- [ ] `LlamaEngine` arayüzünü (`load` / `generate` / `unload` / `isAvailable`) dışa vermeli
+- [ ] `LocalProviderConfig` (`engine`, `resolveModel`, opsiyonel `sampling`) tipini dışa vermeli
+- [ ] `SelectedLocalModel` / `GenerateOptions` / `GenerateResult` / `LocalModelHandle` şekillerini dışa vermeli
+- [ ] `jsonObjectGrammar` tek bir JSON nesnesine kısıtlayan bağımsız GBNF metnini döndürmeli
+- [ ] Gramer llama.cpp gramer formatında olmalı
+- [ ] `grammarFor` bir `CanonRequest` için doğru grameri seçmeli
+- [ ] `toLocalTurns` mesajları engine turn'lerine düzleştirmeli (saf)
+- [ ] `fromLocalResult` engine `GenerateResult`'ı canonical `CanonResponse`'a çevirmeli (saf)
+
+## Olsa iyi olur
+- [ ] JSON modunda zayıf model fiziksel olarak prose veya markdown fence üretememeli
+- [ ] Çıkış şeması yine de downstream'de zod ile doğrulanmalı (gramer tek garanti değil)
+- [ ] Somut engine (node-llama-cpp) masaüstü uygulaması tarafından enjekte edilmeli
+- [ ] `CredentialVault`'un `SecretCrypto` enjekte etmesiyle aynı deseni izlemeli
+- [ ] `map-request` ve `map-response` saf modüller olarak ayrık kalmalı
+- [ ] `engine.load` aynı model id için tekrar çağrıldığında yeniden yüklememeli
+- [ ] `isAvailable` ile motorun kullanılabilirliği generate'ten önce sorgulanabilmeli
+
+## Çok niş
+- [ ] Model değişince eski modeli `unload` edip yenisini yükleyebilmeli
+- [ ] `sampling` verilmezse makul varsayılan sampling knob'larına düşmeli
+- [ ] GBNF grameri iç içe/keyfi değerlere izin verirken tek kök JSON nesnesini zorlamalı
+- [ ] `resolveModel` seçili model yoksa anlamlı bir hata vermeli
+- [ ] Paket, injected engine olmadan da tip-kontrol ve test edilebilmeli

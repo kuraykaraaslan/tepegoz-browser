@@ -1,34 +1,35 @@
-# @tepegoz/json-store CHECKLIST
+# json-store — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> Ana süreç store'ları için küçük, crash-safe JSON dosya yardımcıları (Node-only, Electron yok); `credential-vault` ve `preferences` durumlarını `userData` altında düz JSON olarak saklamak için kullanır.
 
-- [x] Support reading JSON files from host-provided paths.
-- [x] Support returning undefined when a JSON file does not exist.
-- [x] Support returning undefined when a JSON file fails to parse.
-- [x] Support treating parsed JSON as unknown until callers validate it.
-- [x] Support crash-safe writes through temporary sibling files.
-- [x] Support fsync before replacing the target file.
-- [x] Support atomic rename over the target file.
-- [x] Support parent directory creation during writes.
-- [x] Support pretty or deterministic JSON serialization when requested.
-- [x] Support preserving valid stored data during interrupted writes.
-- [ ] Support clear errors for write permission failures.
-- [x] Support safe behavior on power loss during persistence.
-- [x] Support platform-neutral file path handling.
-- [x] Support Node-only operation without Electron imports.
-- [x] Support tests with temporary filesystem directories.
-- [x] Support callers such as preferences and credential vaults.
-- [x] Support schema migration callers by returning raw parsed data.
-- [ ] Support large JSON file safeguards through caller-provided limits.
-- [ ] Support optional backup file creation for critical stores.
-- [ ] Support optional recovery from backup files.
-- [ ] Support file locking or serialized writes for concurrent callers.
-- [ ] Support redaction-friendly error messages.
-- [x] Support UTF-8 encoding consistency.
-- [ ] Support detecting and ignoring partial temp files.
-- [x] Support writing arrays, objects, and primitive JSON values.
-- [ ] Support stable newline behavior for repo and platform consistency.
-- [x] Support future encrypted store wrappers above the same primitives.
-- [ ] Support diagnostics hooks for read and write outcomes.
-- [x] Support documentation that reminds callers to validate with schemas.
-- [x] Support minimal dependency footprint for main-process stores.
+## Kesinlikle olmalı
+- [ ] `readJsonFile(filePath)` dosyayı okuyup `JSON.parse` etmeli
+- [ ] Dosya yoksa `undefined` döndürmeli (fırlatmamalı)
+- [ ] Parse başarısızsa `undefined` döndürmeli (fırlatmamalı)
+- [ ] `readJsonFile` hiçbir durumda exception fırlatmamalı
+- [ ] Dönen değeri `unknown` olarak tiplemeli; çağıran doğrulamadan kullanmamalı
+- [ ] `writeJsonFile(filePath, data)` veriyi serialize etmeli
+- [ ] Yazmayı önce kardeş `.tmp` dosyasına yapmalı
+- [ ] `.tmp` dosyasını `fsync`'lemeli
+- [ ] `.tmp`'yi hedefin üzerine atomik `rename` ile taşımalı
+- [ ] Gerekirse üst dizini oluşturmalı
+- [ ] Yalnızca Node kullanmalı; Electron importu içermemeli
+- [ ] Yazma sırasında çökme/güç kaybı hedef dosyayı bozuk/yarım bırakmamalı
+- [ ] `credential-vault` ve `preferences` için JSON kalıcılığını karşılamalı
+
+## Olsa iyi olur
+- [ ] Çağıranların dönen şekli zod ile doğrulamasını sözleşme olarak varsaymalı (dosya güvenilmez)
+- [ ] Bozuk vault dosyasının bir sonraki mutasyonda sessizce boş map ile ezilmesini önlemeli
+- [ ] `.tmp` dosyası benzersiz/çakışmasız adlandırılmalı
+- [ ] Başarısız yazmada eski hedef dosya sağlam kalmalı
+- [ ] Yazılan JSON insan tarafından okunabilir biçimde olmalı
+- [ ] `userData` altındaki düz JSON dosyaları için tasarlanmalı
+- [ ] Rename öncesi hata durumunda yarım `.tmp` dosyası geride bırakılmamalı
+
+## Çok niş
+- [ ] Eski şema sürümünden gelen dosyalar da parse edilip çağırana ham verilebilmeli
+- [ ] Kurcalanmış (tampered) dosya parse hatası gibi ele alınmalı, çökme olmamalı
+- [ ] Dizin `fsync`'i ile rename'in kalıcılığı da garanti edilebilmeli
+- [ ] Çok büyük JSON dosyalarında da bellek-güvenli davranmalı
+- [ ] Aynı dosyaya eşzamanlı yazmalarda son yazan tutarlı bir dosya bırakmalı

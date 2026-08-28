@@ -1,34 +1,49 @@
-# @tepegoz/page-context-menu CHECKLIST
+# page-context-menu — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> Chrome tarzı web sayfası sağ-tık bağlam menüsünün *modeli*: kendisi hiçbir şey render etmez; `buildPageContextMenuModel`, sağ-tık bağlamına (düzenlenebilir alan, bağlantı, görsel, video/ses, metin seçimi veya genel sayfa) dallanarak jenerik bir `MenuItem[]` üretir.
 
-- [x] Support building a page context menu model from right-click context.
-- [x] Support generic page actions such as back, forward, reload, save, print, and view source.
-- [x] Support inspect action placeholders for developer workflows.
-- [x] Support editable-field actions such as cut, copy, paste, and select all.
-- [x] Support text-selection actions such as copy and search selected text.
-- [ ] Support link actions such as open, copy link, and save link.
-- [x] Support image actions such as open image, copy image, and save image.
-- [x] Support video and audio actions when media context is present.
-- [x] Support disabled placeholder rows when host actions are absent.
-- [x] Support keyboard-skipped disabled rows.
-- [x] Support localized strings owned by the package.
-- [x] Support pure menu-model generation without rendering.
-- [x] Support compatibility with the generic browser-menu MenuItem model.
-- [x] Support context data for navigation availability.
-- [x] Support context data for selected text.
-- [x] Support context data for link URL and source URL.
-- [x] Support context data for media type.
-- [x] Support context data for editability and edit command availability.
-- [x] Support host-provided popup rendering and positioning.
-- [x] Support host-provided clipboard and navigation callbacks.
-- [ ] Support safe URL display and truncation in menu labels.
-- [ ] Support search-provider hooks for selected text.
-- [ ] Support copy-clean-link actions for tracking-parameter removal.
-- [x] Support translate-page and reading-mode placeholders.
-- [x] Support cast or media-route placeholders.
-- [ ] Support open-in-new-tab, new-window, and private-window command slots.
-- [ ] Support accessibility labels for context menu sections.
-- [x] Support deterministic snapshots for menu-model tests.
-- [x] Support future context kinds without changing the renderer menu component.
-- [x] Support bridge-agnostic use across native and in-window popup hosts.
+## Kesinlikle olmalı
+- [ ] `buildPageContextMenuModel` saf `(t, ctx, actions) => MenuItem[]` imzasıyla çalışmalı
+- [ ] Döndürdüğü model, `@tepegoz/browser-menu`'nün `<Menu>`'sünün tükettiği `MenuItem[]` tipiyle aynı olmalı
+- [ ] Kendisi hiçbir şey render etmemeli (yalnızca model)
+- [ ] Menüyü düzenlenebilir-alan bağlamına göre dallandırabilmeli
+- [ ] `linkUrl` varken bağlantı bağlamına göre dallandırabilmeli
+- [ ] Görsel (image) bağlamına göre dallandırabilmeli
+- [ ] `mediaType` ile video/ses bağlamına göre dallandırabilmeli
+- [ ] `selectionText` varken metin-seçimi bağlamına göre dallandırabilmeli
+- [ ] Özel bir bağlam yokken genel sayfa menüsünü üretebilmeli
+- [ ] "Geri" öğesini `ctx.canGoBack`'e göre etkin/pasif yapabilmeli
+- [ ] "İleri" öğesini `ctx.canGoForward`'a göre etkin/pasif yapabilmeli
+- [ ] "Yenile" öğesini sunabilmeli
+- [ ] Kaydet / yazdır / kaynağı görüntüle / incele öğelerini sunabilmeli
+- [ ] Kopyala / kes / yapıştır / tümünü seç öğelerini `canCopy`/`canCut`/`canPaste`/`canSelectAll` bayraklarına göre kapılamalı
+- [ ] `linkUrl` varken bağlantı eylemlerini (aç, bağlantıyı kopyala) sunabilmeli
+- [ ] Medya eylemlerini `srcUrl` / `mediaType`'a göre üretebilmeli
+- [ ] Eşleşen eylemi olmayan satırları pasif (disabled) yer tutucu olarak render etmeli
+- [ ] Pasif yer tutucu satırlar klavye ile atlanmalı (keyboard-skipped)
+- [ ] `PageContextMenuContext` tipi sağ-tık anında yakalanan her şeyi (`canGoBack`, `canGoForward`, `selectionText`, `linkUrl`, `srcUrl`, `mediaType`, `isEditable`, edit bayrakları) taşımalı
+- [ ] `PageContextMenuActions` bağlı callback'leri tanımlamalı; verilmeyen eylemler pasif satıra dönüşmeli
+- [ ] `PageContextMenuMediaType` Electron `context-menu` olayının `params.mediaType`'ını yansıtmalı
+- [ ] İçerik dizelerini kendi `./i18n`'inde sahiplenmeli
+- [ ] Hiçbir menü etiketini sabit kodlamamalı
+
+## Olsa iyi olur
+- [ ] Henüz yapılmamış özellikler için yer tutucu satırlar sunmalı (Cast, Lens, okuma modu)
+- [ ] Mantıksal gruplar arasında ayraç (separator) koyabilmeli
+- [ ] "Görseli kopyala" ile "Görsel adresini kopyala"yı ayırt edebilmeli
+- [ ] "Bağlantıyı farklı kaydet" ile "Görseli farklı kaydet"i ayırt edebilmeli
+- [ ] "Bağlantıyı yeni sekmede / yeni pencerede aç" öğelerini sunabilmeli
+- [ ] `selectionText` varken "web'de ara" öğesini sunabilmeli
+- [ ] "Görseli yeni sekmede aç" öğesini sunabilmeli
+- [ ] Düzenlenebilir bağlam için yazım denetimi / emoji alt-menü bölgesi sunabilmeli
+- [ ] Öğe sıralamasını Chrome'un menüsüyle tutarlı tutmalı
+
+## Çok niş
+- [ ] Düzenlenebilir bağlamda "Geri Al / Yinele" sunabilmeli
+- [ ] Düzenlenebilir alanlar için yazım yönü (writing-direction) alt menüsü sunabilmeli
+- [ ] `data:` / `blob:` URL bağlantılarını zarifçe ele almalı
+- [ ] `mailto:` / `tel:` bağlantılarını özel durum olarak ele almalı
+- [ ] Video için döngü / kontrolleri göster / picture-in-picture öğeleri sunabilmeli
+- [ ] Çok uzun `selectionText`'i "… için ara" etiketinde kırpabilmeli
+- [ ] Çerçeveye özgü öğeler (çerçeveyi yenile, çerçeve kaynağını görüntüle) sunabilmeli

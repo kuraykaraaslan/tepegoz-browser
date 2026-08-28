@@ -1,34 +1,32 @@
-# @tepegoz/bookmarks-bar CHECKLIST
+# bookmarks-bar — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> Sunum amaçlı yaprak: nav toolbar'ın altında oturan Chrome tarzı bookmarks bar şeridi; yatay, kaydırılabilir bir bookmark chip satırı render eder ve chip'e tıklanınca enjekte edilen `onOpen(url)`'ü çağırır.
 
-- [x] Support a horizontal bookmarks strip below the navigation toolbar.
-- [x] Support opening a bookmark through an injected callback.
-- [x] Support rendering bookmark titles with sensible truncation.
-- [x] Support displaying favicons with a readable fallback.
-- [x] Support an empty state for users with no visible bookmarks.
-- [x] Support overflow scrolling when bookmarks exceed available width.
-- [ ] Support keyboard navigation across visible bookmark chips.
-- [x] Support screen-reader labels for the bar and each bookmark.
-- [x] Support tooltips for truncated bookmark titles and URLs.
-- [x] Support context-menu entry points on individual bookmarks.
-- [x] Support context-menu entry points on empty bar space.
-- [x] Support drag-reordering visible bookmarks.
-- [x] Support dragging bookmarks into folders exposed on the bar.
-- [x] Support folder buttons that reveal nested bookmark menus.
-- [x] Support opening a bookmark in the current tab.
-- [x] Support opening a bookmark in a new tab through host actions.
-- [x] Support opening a bookmark in a background tab through host actions.
-- [x] Support hiding or showing the bar based on host preference.
-- [ ] Support compact density for small window widths.
-- [ ] Support high-contrast and reduced-motion friendly rendering.
-- [x] Support host-provided localized labels only.
-- [ ] Support bookmark chips with stable focus after list updates.
-- [ ] Support responsive collapse into an overflow menu.
-- [ ] Support visual distinction for internal pages, files, and web URLs.
-- [ ] Support disabled or unavailable bookmark states from the host.
-- [ ] Support hover, active, focus, and pressed interaction states.
-- [ ] Support safe rendering of long, unusual, or RTL bookmark titles.
-- [ ] Support touch-friendly hit targets.
-- [x] Support deterministic item keys for smooth reordering.
-- [x] Support theming through the surrounding browser chrome tokens.
+## Kesinlikle olmalı
+- [ ] Nav toolbar'ın altında yatay bir bookmark şerit çubuğu render etmeli
+- [ ] Bookmark'ları chip olarak yatay, kaydırılabilir bir satırda göstermeli
+- [ ] Bir chip'e tıklandığında enjekte edilen `onOpen(url)`'ü çağırmalı
+- [ ] Bookmark listesini prop olarak host'tan almalı (kendi veri kaynağı olmamalı)
+- [ ] Hiç string sahiplenmemeli — `labels` prop'undan almalı
+- [ ] Electron bridge bağımlılığı olmamalı
+- [ ] Liste boşken `labels.empty` metnini göstermeli
+- [ ] `bookmarks` öğelerinden `url` ve `title`'ı kullanmalı
+- [ ] Çubuğun gösterilip gösterilmeyeceği kararını host'a bırakmalı, istendiğinde render etmeli
+- [ ] Chip tıklaması dışında navigasyon kararı vermemeli (yalnızca `onOpen`'ı çağırmalı)
+
+## Olsa iyi olur
+- [ ] Çubuk taşarsa yatay kaydırma ile tüm chip'lere erişilebilmeli
+- [ ] `labels.bar` metnini erişilebilirlik (aria-label) için kullanmalı
+- [ ] Diğer chrome yaprakları (tab-strip, nav-toolbar) ile tutarlı stilde olmalı
+- [ ] Uzun başlıklı chip'leri kırpmalı, satırı tek sıra tutmalı
+- [ ] Aynı URL'e sahip birden çok bookmark'ı ayrı chip olarak gösterebilmeli
+- [ ] `pnpm typecheck` · `pnpm lint` · `pnpm test` betiklerini sağlamalı
+
+## Çok niş
+- [ ] `title`'ı olmayan bir bookmark için `url`'e düşerek chip etiketi göstermeli
+- [ ] Çok sayıda (yüzlerce) bookmark'ta bile kaydırma performansını korumalı
+- [ ] Favicon verisi verilmese bile chip düzgün render olmalı
+- [ ] Boş `bookmarks` dizisi ile `undefined` arasında aynı boş-durumu göstermeli
+- [ ] Klavye ile chip'ler arasında gezinilebilmeli
+- [ ] Pencere çok darken şerit yine tek satır kalmalı, nav toolbar'ı itmemeli

@@ -1,34 +1,44 @@
-# @tepegoz/password-core CHECKLIST
+# password-core — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> Parola yöneticisi için sağlayıcıdan bağımsız tipler ve kayıt defteri: her kimlik-bilgisi kaynağının uyguladığı `PasswordProvider` arayüzünü ve tüm sağlayıcılar arası toplama yapan merkezi registry'yi tanımlar; tek bağımlılığı `@tepegoz/credential-vault`'tur.
 
-- [x] Support a provider-agnostic password manager interface.
-- [x] Support registering multiple password providers.
-- [x] Support retrieving a provider by identifier.
-- [x] Support listing registered providers.
-- [x] Support aggregating credentials across providers.
-- [x] Support finding credentials by URL origin.
-- [x] Support listing all credential metadata.
-- [x] Support provider capability flags for write, import, export, and sync.
-- [x] Support metadata-only credential shapes for IPC-safe surfaces.
-- [x] Support full credential shapes for main-process-only use.
-- [x] Support new credential input shapes with plaintext only at write time.
-- [x] Support import format metadata shared across providers.
-- [x] Support export format metadata shared across providers.
-- [x] Support import result summaries with imported, skipped, and error counts.
-- [x] Support autofill availability payloads for renderer notification.
-- [x] Support shared crypto interface re-export for providers.
-- [x] Support provider reset seams for tests.
-- [x] Support origin normalization before provider searches.
-- [x] Support duplicate provider ID handling.
-- [ ] Support provider display names for settings UI.
-- [ ] Support future providers such as Bitwarden or browser importers.
-- [ ] Support sync-capable providers without changing UI contracts.
-- [x] Support read-only providers that delegate writes elsewhere.
-- [x] Support policy-friendly distinction between metadata and secrets.
-- [x] Support secure error envelopes that avoid password leakage.
-- [ ] Support credential tags, notes, and grouping metadata.
-- [ ] Support passkey or credential-type extension fields.
-- [x] Support audit attribution to the provider that served a credential.
-- [x] Support tests over aggregation and origin matching.
-- [x] Support documentation for implementing a new password provider.
+## Kesinlikle olmalı
+- [ ] Her kimlik-bilgisi kaynağının uyguladığı `PasswordProvider` arayüzünü tanımlamalı
+- [ ] `PasswordProviderRegistry.register(provider)` sunmalı
+- [ ] `PasswordProviderRegistry.get(id)` sunmalı
+- [ ] `PasswordProviderRegistry.list()` sunmalı
+- [ ] `findByUrl(url)` URL'yi origin'ine normalize edip tüm kayıtlı sağlayıcılardan sonuçları toplamalı
+- [ ] Çağıranlar (autofill/UI) bir kimlik-bilgisinin hangi sağlayıcıya ait olduğunu bilmek zorunda kalmamalı
+- [ ] `list_all()` tüm sağlayıcılar arası metadata toplaması yapmalı
+- [ ] `reset()` test seam'i sunmalı
+- [ ] `PasswordProvider`: `id` / `displayName` / `capabilities` üyelerini içermeli
+- [ ] `PasswordProvider` okumaları: `list()` / `findById()` / `findByUrl()`
+- [ ] `PasswordProvider` mutasyonları: `set()` / `remove()`
+- [ ] `PasswordProvider` opsiyonel `import()` / `export()` desteklemeli
+- [ ] `ProviderCapabilities`: `canWrite` / `canImport` / `canExport` / `canSync` bayraklarını tanımlamalı
+- [ ] `LoginCredentialMeta`: IPC-güvenli, parola içermeyen metadata olmalı
+- [ ] `LoginCredential`: `encryptedPassword` içeren tam kayıt; yalnızca ana süreçte, IPC'yi asla geçmemeli
+- [ ] `NewCredential`: düz-metin parolalı giriş şekli; sağlayıcı yazarken şifreler
+- [ ] Sağlayıcı düz-metin parolayı asla saklamamalı veya geri döndürmemeli (sözleşme)
+- [ ] `ImportFormat` / `ExportFormat` / `ImportResult` ortak import/export sözleşmesini tanımlamalı
+- [ ] `AutofillAvailablePayload`: `{ url, matches }` şeklinde renderer'a bildirim yükü tanımlamalı
+- [ ] `SecretCrypto`'yu `@tepegoz/credential-vault`'tan yeniden dışa vermeli (tek crypto sözleşmesi, döngüsel import yok)
+- [ ] Yalnızca `@tepegoz/credential-vault`'a bağımlı olmalı
+
+## Olsa iyi olur
+- [ ] `findByUrl` origin normalizasyonu path/query/fragment'i yok saymalı
+- [ ] Registry aynı `id` ile ikinci `register`'ı öngörülebilir şekilde ele almalı (değiştir veya reddet)
+- [ ] Bilinmeyen bir `id` için `get(id)` fırlatmadan `undefined` döndürmeli
+- [ ] Toplanmış `findByUrl` sağlayıcılar arası aynı eşleşmeleri tekilleştirmeli
+- [ ] Yetenekler UI'nın desteklenmeyen eylemleri gizlemesine izin vermeli (ör. `!canExport` ise dışa aktar düğmesi yok)
+- [ ] Toplanmış `list_all` sonuçları kararlı bir sırayla dönmeli
+- [ ] Autofill ve ayarlar UI'sı için tek import noktası registry olmalı
+
+## Çok niş
+- [ ] `findByUrl`'de alt-alan adı ile kayıt edilebilir alan adı eşleştirme politikası tanımlı olmalı
+- [ ] Aynı kimlik-bilgisi `id`'sini iddia eden iki sağlayıcı deterministik ele alınmalı
+- [ ] `list()` içinde hata fırlatan bir sağlayıcı tüm toplamayı bozmamalı
+- [ ] Gelecekteki bir sağlayıcı (Bitwarden) çekirdek değişmeden takılabilmeli
+- [ ] `http` ile `https` aynı/farklı origin sayılması belgelenmiş olmalı
+- [ ] `findByUrl` için origin'deki port ele alınmalı

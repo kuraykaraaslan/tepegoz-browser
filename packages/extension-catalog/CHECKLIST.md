@@ -1,34 +1,32 @@
-# @tepegoz/extension-catalog CHECKLIST
+# extension-catalog — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> Tarayıcının yerleşik/birinci-parti eklenti listesi için veri-güdümlü katalog modeli ve yükleyicisi.
 
-- [x] Support a versioned catalog file envelope.
-- [x] Support validating catalog entries at the trust boundary.
-- [x] Support retaining valid entries when some catalog entries are malformed.
-- [x] Support human-readable validation errors for catalog authors.
-- [x] Support first-party and built-in extension metadata.
-- [ ] Support catalog-driven extension additions without code changes.
-- [ ] Support catalog-driven extension retirement.
-- [ ] Support catalog-driven extension ordering and grouping.
-- [x] Support per-extension manifest validation through the extension SDK schema.
-- [x] Support icon metadata for extension discovery surfaces.
-- [x] Support localized catalog labels and descriptions.
-- [ ] Support compatibility metadata for app versions.
-- [ ] Support feature flags or rollout metadata for catalog entries.
-- [ ] Support recommended or featured extension markers.
-- [ ] Support category metadata such as productivity, privacy, and developer tools.
-- [ ] Support permission summaries for catalog cards.
-- [ ] Support source metadata for bundled, local, and remote extensions.
-- [ ] Support integrity metadata for packaged extension assets.
-- [ ] Support update-channel metadata such as stable, beta, and experimental.
-- [ ] Support dependency metadata between extensions when needed.
-- [ ] Support conflict metadata for mutually exclusive extensions.
-- [ ] Support catalog schema migrations across versions.
-- [x] Support deterministic sorting for stable UI output.
-- [x] Support duplicate extension-id detection.
-- [ ] Support unknown-field tolerance for forward compatibility where safe.
-- [x] Support strict required fields for identity and version metadata.
-- [x] Support offline catalog loading from bundled data.
-- [ ] Support external catalog loading through host-owned I/O.
-- [x] Support tests for malformed, duplicate, and partially valid catalogs.
-- [ ] Support documentation for adding a new catalog entry.
+## Kesinlikle olmalı
+- [ ] `CatalogFileSchema` ile on-disk katalog dosyası envelope'unu zod şeması olarak tanımlamalı
+- [ ] `CATALOG_VERSION` sabitini dışa aktarıp katalog dosyasının şema sürümünü işaretlemeli
+- [ ] `loadCatalog(raw)` parse edilmiş katalog dosyasını güven sınırında doğrulamalı
+- [ ] Malformed girişleri tek tek düşürmeli, tüm dosyayı çöpe atmamalı
+- [ ] `LoadCatalogResult` içinde geçerli girişleri döndürmeli
+- [ ] `LoadCatalogResult` içinde bozuk her şey için insan-okunur hata metni döndürmeli
+- [ ] Eklenti manifest şeklini `@tepegoz/extension-sdk`'den türetmeli, kendi kopyasını tutmamalı
+- [ ] Yalnızca `@tepegoz/extension-sdk` ve zod'a bağımlı olmalı
+- [ ] Electron'a hiçbir bağımlılık içermemeli
+- [ ] `CatalogFile` tipini dışa aktarmalı
+- [ ] Eklenti ekleme/emekliye ayırma/yeniden ayarlamayı yalnızca katalog veri dosyası değişikliğiyle mümkün kılmalı
+- [ ] Her katalog girişini extension-sdk manifest şemasına göre doğrulamalı
+
+## Olsa iyi olur
+- [ ] Her hata mesajı reddedilen girişi tanımlayacak kadar bağlam taşımalı (id/indeks)
+- [ ] Aynı katalog dosyasında yinelenen eklenti id'lerini yakalamalı
+- [ ] Beklenenden farklı `CATALOG_VERSION` değerini net bir hatayla bildirmeli
+- [ ] Boş giriş listesine sahip katalog dosyasını geçerli saymalı
+- [ ] Girişlerin dosyadaki sırasını korumalı
+- [ ] `@tepegoz/model-catalog` ile tutarlı veri-güdümlü yükleyici deseni sunmalı
+
+## Çok niş
+- [ ] Bir girişin yalnızca bazı alanları bozuksa hata mesajında hangi alan olduğunu göstermeli
+- [ ] İleride şema sürüm atlamaları için geriye dönük uyumluluk/dönüştürme noktası bırakmalı
+- [ ] Çok sayıda girişli büyük katalog dosyasını tek geçişte doğrulayabilmeli
+- [ ] Tümüyle geçersiz (JSON değil / obje değil) girdiyi çökmeden `LoadCatalogResult` hatasına çevirmeli

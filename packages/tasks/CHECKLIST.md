@@ -1,34 +1,38 @@
-# @tepegoz/tasks CHECKLIST
+# tasks — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> Electron-free görev productization domain'i: kaydedilmiş agent görevleri, tetikleyici tanımları, redakte run/artifact kayıtları, reducer/selector'lar, main-only zod şemaları ve `task_*` Capability Plane araç kaydı.
 
-- [x] Support saved agent task definitions.
-- [x] Support task names and descriptions.
-- [x] Support trigger definitions for scheduled or event-based runs.
-- [x] Support manual task execution metadata.
-- [ ] Support redacted task run records.
-- [ ] Support redacted task artifact records.
-- [x] Support reducer state for task lists.
-- [ ] Support selectors for active, recent, failed, and scheduled tasks.
-- [x] Support main-process-only zod schemas for task payloads.
-- [x] Support task capability registration in the Capability Plane.
-- [x] Support creating tasks through policy-aware capabilities.
-- [x] Support listing tasks through policy-aware capabilities.
-- [x] Support updating tasks through policy-aware capabilities.
-- [ ] Support deleting tasks through policy-aware capabilities.
-- [x] Support enabling and disabling tasks.
-- [ ] Support task run status values such as queued, running, succeeded, failed, and canceled.
-- [ ] Support run retry metadata.
-- [x] Support next-run timestamp metadata.
-- [x] Support last-run summary metadata.
-- [ ] Support artifact references without raw sensitive payloads.
-- [ ] Support redaction of prompts, outputs, and web-derived data.
-- [x] Support per-task permission or capability requirements.
-- [x] Support human approval requirements for risky task runs.
-- [x] Support audit-friendly task history.
-- [ ] Support cancellation of running tasks.
-- [ ] Support import and export of task definitions.
-- [x] Support deterministic reducer tests.
-- [x] Support host-owned scheduling adapters.
-- [ ] Support future recurring trigger types.
-- [ ] Support model-safe task summaries for the agent.
+## Kesinlikle olmalı
+- [ ] Kaydedilmiş agent görevlerini (saved agent tasks) bir domain modeli olarak tutabilmeli
+- [ ] Her görev için tetikleyici tanımlarını (trigger definitions) saklayabilmeli
+- [ ] Görev çalıştırma kayıtlarını (run records) redakte edilmiş biçimde tutabilmeli
+- [ ] Görev çıktısı/artifact kayıtlarını redakte edilmiş biçimde tutabilmeli
+- [ ] Hassas/serbest metin alanlarının run ve artifact kayıtlarına redaksiyonsuz girmesini engellemeli
+- [ ] Durum geçişlerini saf bir reducer ile yönetebilmeli
+- [ ] Görev / çalıştırma / artifact sorguları için selector'lar sunmalı
+- [ ] Zod şemalarını yalnızca main süreçte (main-only) tanımlamalı
+- [ ] Görev, tetikleyici, run ve artifact kayıtlarını trust boundary'de zod ile doğrulayabilmeli
+- [ ] `task_*` araçlarını Capability Plane'e kaydedebilmeli
+- [ ] Electron API'lerine bağımlılık içermemeli (Electron-free kalmalı)
+- [ ] Reducer'ı yan etkisiz (saf) tutmalı — I/O yapmamalı
+- [ ] Görev yaşam döngüsünü (oluştur / güncelle / sil) reducer aksiyonlarıyla kapsamalı
+
+## Olsa iyi olur
+- [ ] Bir görevin birden çok tetikleyici tanımını destekleyebilmeli
+- [ ] Run kayıtlarını görevine göre gruplayan/filtreleyen selector sunmalı
+- [ ] Son çalıştırma durumunu (başarılı / başarısız / çalışıyor) selector ile verebilmeli
+- [ ] Artifact kayıtlarını ait olduğu run'a bağlayabilmeli
+- [ ] Zod şemalarını `@tepegoz/shared-types` tek şema kaynağı ilkesine uygun türetmeli
+- [ ] Görev etkin/pasif (enabled) durumunu modelde tutabilmeli
+- [ ] Redaksiyon kurallarını run ve artifact için tek yerde tanımlamalı
+- [ ] `task_*` araç kaydını uygulama başlangıcında bir kez yapılacak şekilde sunmalı
+- [ ] Bilinmeyen aksiyon veya geçersiz state'te reducer'ın mevcut state'i bozmadan dönmesini sağlamalı
+
+## Çok niş
+- [ ] Şema doğrulaması başarısız olan run/artifact kaydını sessizce kabul etmek yerine reddedebilmeli
+- [ ] Tetikleyici tanımına ileride yeni tür eklendiğinde şemayı geriye dönük uyumlu tutabilmeli
+- [ ] Çok sayıda geçmiş run kaydında selector'ların gereksiz yeniden hesap yapmamasını sağlayabilmeli
+- [ ] Redakte edilmiş kayıtların bile kullanıcı kimliği / gizli anahtar sızdırmadığını garanti etmeli
+- [ ] Görev silindiğinde ona bağlı run/artifact kayıtlarının selector'larda tutarlı görünmesini sağlamalı
+- [ ] Main-only şemaların renderer bundle'ına sızmasını engelleyecek şekilde ayrılmış olmalı

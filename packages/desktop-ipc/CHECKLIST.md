@@ -1,34 +1,42 @@
-# @tepegoz/desktop-ipc CHECKLIST
+# desktop-ipc — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> Main/preload/renderer arasında paylaşılan typed IPC sözleşmesi: `.` entry'si zod'suz ve preload-safe, `./schemas` entry'si main-process-only zod validator'lar; `Preferences`, `TabInfo`/`TabGroupInfo` ve `TepegozApi` tiplerinin sahibi (ADR-0009).
 
-- [x] Support a preload-safe default entry with no runtime schema dependencies.
-- [x] Support a main-process schema entry for runtime validation.
-- [x] Support typed channel names grouped by domain and action.
-- [x] Support a single shared API shape for the context bridge.
-- [x] Support typed preferences shared across main, preload, renderer, and settings.
-- [x] Support tab and tab-group wire types.
-- [x] Support typed internal-page addresses.
-- [x] Support encoded boundary errors with message and status code.
-- [x] Support decoding boundary errors in renderer-safe code.
-- [x] Support fail-closed public/private classification for settings.
-- [x] Support curated read-only settings exposed to extensions.
-- [x] Support type-only DTO re-exports from feature packages.
-- [x] Support bookmark, history, password, macro, agent, and tab payload contracts.
-- [x] Support one validator per untrusted IPC payload.
-- [ ] Support safeParse validation at every renderer-to-main boundary.
-- [x] Support compile-time drift detection for new preference keys.
-- [ ] Support preload bundle safety checks that prevent zod imports in the default entry.
-- [x] Support stable IPC contracts for extension and internal page consumers.
-- [x] Support structured channel naming for audit and debugging.
-- [x] Support graceful propagation of policy-denied actions.
-- [x] Support typed event subscriptions from main to renderer.
-- [x] Support typed unsubscribe functions for renderer listeners.
-- [x] Support explicit schemas for destructive or sensitive actions.
-- [x] Support version-friendly DTO evolution with optional fields.
-- [ ] Support backwards-compatible internal-page DTOs during migrations.
-- [x] Support renderer-safe metadata types that exclude secrets.
-- [x] Support strongly typed agent approval and event flows.
-- [x] Support shared enums for provider, locale, theme, and tool concepts.
-- [ ] Support docs and examples for adding a new IPC channel.
-- [ ] Support tests that guard the two-entry package split.
+## Kesinlikle olmalı
+- [ ] Paket main / preload / renderer arasında paylaşılan typed IPC sözleşmesini sağlamalı
+- [ ] Kanal adları `domain:action` biçiminde olmalı
+- [ ] Default `.` entry dependency-free olmalı (sıfır zod import — doğrulanmış)
+- [ ] Sandboxed preload `.` entry'yi güvenle import edebilmeli (external npm modülü require edemez)
+- [ ] Runtime zod validator'lar ayrı `./schemas` entry'sinde, yalnızca main-process'te olmalı
+- [ ] `package.json` `exports`'u `.` ve `./schemas` olarak ayrılmalı
+- [ ] Paket `Preferences` tipinin sahibi olmalı (tek kaynak)
+- [ ] `Preferences` tam persist-edilen şekli içermeli (theme, locale, telemetry, default AI provider, extensions, MCP servers, agent/local-model config, file-access grants, …)
+- [ ] `TabInfo` / `TabGroupInfo` / `TabsState` / `TabGroupColor` wire tiplerinin sahibi olmalı
+- [ ] `TepegozApi` preload'un renderer'a açtığı `contextBridge` API şeklini tanımlamalı
+- [ ] `IpcChannels` her kanal adı + internal-page adreslerinin haritasını içermeli
+- [ ] `IpcBoundaryError` / `encodeBoundaryMessage` / `decodeBoundaryError` ADR-0009 hata transportunu sağlamalı
+- [ ] Main tarafı boundary `{ message, statusCode }`'u tek string'e encode etmeli (`"[403] Action blocked by policy"`)
+- [ ] Preload o string'i typed `IpcBoundaryError`'a decode etmeli; renderer bare string parse etmemeli
+- [ ] `./schemas` renderer'dan gelen her untrusted IPC payload'u için zod validator içermeli
+- [ ] Her kanal için bir şema, handler payload'u görmeden önce boundary'de safeParse edilmeli
+- [ ] `PUBLIC_SETTING_KEYS` / `SETTINGS_VISIBILITY` / `PublicSettings` / `SettingsHostApi` her preference için fail-closed public/private sınıflandırması sağlamalı
+- [ ] Sınıflandırma `Record<keyof Preferences, …>` tipli olmalı — yeni preference sınıflandırılana kadar compile error
+- [ ] Cross-cutting DTO re-export'ları (`AgentEvent`, `AgentPlanStep`, `AgentConfig`, `BookmarkEntry`, `HistoryEntry`, `PopupBlockerSettings`, …) type-only olmalı
+- [ ] Type-only re-export'lar erase olmalı, preload bundle'a hiçbir şey eklememeli
+- [ ] `@tepegoz/preferences` kendi zod şemasını bu tipe `satisfies` ile pinlemeli
+
+## Olsa iyi olur
+- [ ] credential / tab / history / bookmark / popup / login / macro / agent kanalları için şemalar bulunmalı
+- [ ] `TabMoveSchema` / `TabPinSchema` / `TabGroupCreateSchema` gibi drag-reorder / grouping / pinning şemaları (ADR-0020)
+- [ ] `AddProviderKeyInputSchema` / `RemoveKeyByIdSchema` / `ReorderKeysSchema` credential şemaları
+- [ ] Kanal adı haritası tek noktada tutulmalı, elle string yazılmamalı
+- [ ] `SettingsHostApi` extension'lara yalnızca read-only, curated bir yüzey sunmalı
+- [ ] `statusCode` değerleri HTTP-benzeri semantik taşımalı (403 = policy)
+
+## Çok niş
+- [ ] `.` entry'ye zod sızması CI'da yakalanmalı (zero-zod doğrulaması)
+- [ ] Yeni bir preference `SETTINGS_VISIBILITY`'e eklenmezse build kırılmalı
+- [ ] Decode edilemeyen malformed boundary string'i için güvenli fallback olmalı
+- [ ] internal-page adresleri kanal haritasında normal kanallardan ayırt edilebilmeli
+- [ ] Agent run/approval flow şemaları çok adımlı payload'ları kapsamalı

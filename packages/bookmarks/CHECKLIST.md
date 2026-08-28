@@ -1,34 +1,33 @@
-# @tepegoz/bookmarks CHECKLIST
+# bookmarks — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> Bookmarks özellik modülü (L1): enjekte edilen `Db` üzerinde çalışan `BookmarkStore` (URL'de idempotent CRUD/arama), `isBookmarkable(url)` scheme allow-list'i ve IPC ile paylaşılan `BookmarkEntry` şekli; saf ve app-free.
 
-- [x] Support creating bookmarks from valid web, file, and internal page URLs.
-- [x] Support rejecting unsafe bookmark schemes such as javascript, data, and blob.
-- [ ] Support idempotent bookmark creation for the same URL.
-- [x] Support editing bookmark titles.
-- [ ] Support editing bookmark URLs with bookmarkability validation.
-- [x] Support deleting bookmarks by stable identifier.
-- [ ] Support searching bookmarks by title, URL, and normalized host.
-- [x] Support folder hierarchy for organizing bookmarks.
-- [x] Support creating, renaming, moving, and deleting bookmark folders.
-- [x] Support ordering bookmarks within a folder.
-- [x] Support moving bookmarks between folders.
-- [x] Support stable bookmark identifiers across app restarts.
-- [x] Support storing favicon metadata separately from user-entered titles.
-- [x] Support bookmark creation timestamps and update timestamps.
-- [x] Support recently added bookmark queries.
-- [x] Support bookmark existence checks for the current page star state.
-- [x] Support bulk import from common browser bookmark formats.
-- [ ] Support bulk export to common browser bookmark formats.
-- [ ] Support duplicate detection by normalized URL.
-- [ ] Support preserving duplicates intentionally when users choose to keep both.
-- [ ] Support bookmark descriptions or notes for richer saved items.
-- [ ] Support keyword shortcuts for quick bookmark navigation.
-- [ ] Support bookmark tags for cross-folder organization.
-- [ ] Support pinned or favorite bookmark metadata.
-- [ ] Support soft-delete or undo-friendly deletion metadata.
-- [x] Support migration-safe schema evolution for stored bookmark records.
-- [x] Support preload-safe DTOs for renderer and IPC use.
-- [x] Support app-free pure URL bookmarkability checks.
-- [ ] Support defensive handling of malformed stored bookmark rows.
-- [ ] Support future sync metadata without changing renderer-facing shapes.
+## Kesinlikle olmalı
+- [ ] `BookmarkStore` `bookmarks` tablosu üzerinde CRUD sağlamalı
+- [ ] Bookmark arama (search) yeteneği sunmalı
+- [ ] Ekleme işlemi URL üzerinde idempotent olmalı (aynı URL iki kez eklenince tekrar oluşturmamalı)
+- [ ] Store enjekte edilen bir `Db` üzerinde çalışmalı, kendi bağlantısını açmamalı
+- [ ] Tablo şemasını kendi içinde tanımlamamalı (şema `@tepegoz/persistence` migration'larında)
+- [ ] `isBookmarkable(url)` saf bir fonksiyon olarak scheme allow-list kararını vermeli
+- [ ] `http(s)`, `file://` ve `tepegoz://` iç sayfalarını bookmarklanabilir saymalı
+- [ ] `javascript:` / `data:` / `blob:` / `chrome:` / `about:` şemalarını reddetmeli
+- [ ] `isBookmarkable` `@tepegoz/navigation`'ın `isWebUrl`'ünden daha geniş olmalı
+- [ ] `BookmarkEntry` satır/DTO şeklini IPC sözleşmesiyle paylaşılabilir biçimde dışa aktarmalı
+- [ ] Paket saf ve app-free olmalı (native modül çekmemeli)
+- [ ] Sandbox'lı renderer'dan güvenle import edilebilmeli
+- [ ] `isBookmarkable` hem renderer'da (yıldız gösterimi) hem ana süreç IPC guard'ında aynı kararı vermeli
+
+## Olsa iyi olur
+- [ ] CRUD dışında toplu okuma/listeleme sağlamalı
+- [ ] `BookmarkEntry` alanları (url, title vb.) IPC ile birebir eşleşmeli
+- [ ] Store metodları `Db` dışında hiçbir global duruma dokunmamalı
+- [ ] Geçersiz URL ile ekleme denendiğinde `isBookmarkable` ile önden elenebilmeli
+- [ ] `pnpm typecheck` · `pnpm lint` · `pnpm test` · `pnpm build` betiklerini sağlamalı
+
+## Çok niş
+- [ ] URL normalizasyonu idempotency'yi bozmadan (ör. fragment / trailing slash) tutarlı olmalı
+- [ ] `file://` yolu Windows ve POSIX ayrımında da bookmarklanabilir sayılmalı
+- [ ] `tepegoz://` bilinmeyen bir alt sayfa olsa bile şema bazında kabul edilmeli
+- [ ] Aynı URL farklı başlıkla tekrar eklenince yeni satır açmadan mevcut kaydı ele almalı
+- [ ] Boş / whitespace URL girişinde net biçimde reddetmeli

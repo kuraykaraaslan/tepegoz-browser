@@ -1,34 +1,38 @@
-# @tepegoz/i18n CHECKLIST
+# i18n — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> i18n çekirdeği + runtime: İngilizce birincil/kaynak locale, Türkçe first-class; paylaşılan cross-cutting core (`common`/`window`/`errors`) ve her sahibin kullandığı makine.
 
-- [x] Support English as the source locale.
-- [x] Support Turkish as a first-class locale.
-- [x] Support resolving browser or OS locale tags to supported locales.
-- [x] Support a default locale fallback.
-- [x] Support shared core dictionaries for common, window, and error strings.
-- [x] Support per-package dictionaries owned by feature packages.
-- [x] Support compile-time parity between English and Turkish dictionaries.
-- [x] Support runtime dictionary selection for non-React code.
-- [x] Support React provider for renderer locale context.
-- [x] Support React hooks for reading the active locale.
-- [x] Support React hooks for selecting a package-owned dictionary.
-- [x] Support fallback to English when localized entries are unavailable.
-- [x] Support test helpers for key-path parity checks.
-- [x] Support lintable rules against hardcoded UI strings.
-- [x] Support dictionary typing that rejects absent keys.
-- [x] Support dictionary typing that rejects mismatched nested shapes.
-- [x] Support owner-level string boundaries to avoid global string sprawl.
-- [x] Support main-process localized titles and prompts.
-- [x] Support renderer localized UI copy.
-- [x] Support extension-owned dictionaries.
-- [x] Support pluralization patterns for count-sensitive strings.
-- [ ] Support interpolation patterns for user-facing values.
-- [x] Support date, time, and number formatting hooks.
-- [x] Support RTL-ready metadata for future locales.
-- [ ] Support pseudo-locale testing for layout stress.
-- [x] Support documentation for adding strings to the correct owner.
-- [x] Support CI checks for dictionary parity.
-- [x] Support typed locale lists for settings and preferences.
-- [ ] Support future locale packs without changing core APIs.
-- [ ] Support safe formatting that does not inject raw HTML.
+## Kesinlikle olmalı
+- [ ] `resources` (`Record<Locale, Resources>`) nesnesini dışa vermeli
+- [ ] Paylaşılan çekirdek `coreDict`'i (`common` / `window` / `errors`) dışa vermeli
+- [ ] `Resources = typeof en` ile eksik/uyumsuz çekirdek anahtarını build hatası yapmalı
+- [ ] Parite testi tüm locale'lerde anahtar kümelerinin eşitliğini doğrulamalı
+- [ ] `SUPPORTED_LOCALES` listesini dışa vermeli
+- [ ] `Locale` tipini dışa vermeli
+- [ ] `DEFAULT_LOCALE` `'en'` olmalı
+- [ ] `resolveLocale(tag)` bir dil etiketini desteklenen locale'e çözmeli
+- [ ] `defineDict({ en, tr })` ile paket sahibinin kendi sözlüğünü tanımlamasını sağlamalı
+- [ ] `tr`'yi `typeof en` tipleyerek eksik Türkçe anahtarı sözlük başına build hatası yapmalı
+- [ ] `pick(dict, locale)` React'siz erişimciyi (ana süreç için) sağlamalı
+- [ ] `Dict<T>` tipini dışa vermeli
+- [ ] `@tepegoz/i18n` girişi framework-agnostik olmalı (main/backend için güvenli, React importu yok)
+- [ ] `@tepegoz/i18n/react` girişinde `I18nProvider({ locale, children })` sağlamalı
+- [ ] `useLocale()` ve `useT(dict)` ile bir bileşen kendi sözlüğünden self-localize olabilmeli
+- [ ] `@tepegoz/i18n/testing` girişinde `keyPaths(obj)` yardımcı fonksiyonunu sağlamalı
+
+## Olsa iyi olur
+- [ ] `useT(dict)` çeviri eksikse `en` fallback'e düşmeli
+- [ ] Yalnızca cross-cutting `common`/`window`/`errors` string'lerini barındırmalı; feature string'leri paketlere bırakmalı
+- [ ] `I18nProvider` kök yakınında bir kez mount edilebilmeli (`App` ve `PopupApp`)
+- [ ] `keyPaths` her sahip paketin parite testinde yeniden kullanılabilmeli
+- [ ] İngilizce kaynak/birincil, Türkçe first-class olarak ele alınmalı
+- [ ] `resolveLocale` bölge alt-etiketli (`tr-TR`, `en-US`) girişleri temel locale'e indirmeli
+- [ ] Hardcoded UI string'lerini yasaklayan lint kuralına zemin sağlamalı (Phase 1a)
+
+## Çok niş
+- [ ] Bilinmeyen/boş dil etiketinde `resolveLocale` `DEFAULT_LOCALE`'e düşmeli
+- [ ] `defineDict` yalnızca `en` ve `tr` anahtarlarını kabul edecek şekilde tiplenebilmeli
+- [ ] `pick` ana süreçte React runtime'ı yüklemeden çalışmalı
+- [ ] Parite testi anahtar sırası farkını değil yalnızca küme farkını raporlamalı
+- [ ] `Resources` tipi yeni bir locale eklendiğinde tüm anahtarları zorunlu kılmalı

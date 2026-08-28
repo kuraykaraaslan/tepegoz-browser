@@ -26,7 +26,7 @@ actually has; do not start a fifth pile.
 | --------------------------------------------- | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------- |
 | [`product/`](product/)                        | The numbered product roadmap — Phases 0–12 plus M (Macros) and E (Extras)                        | Committed · sequenced · DoD-gated                        |
 | [`ai-agent-super/`](ai-agent-super/README.md) | The sole authoritative AI agent competence program (v3, S0–S12)                                  | Committed · sequenced · measurement-gated                |
-| [`tracks/`](tracks/README.md)                 | One-off plans outside the numbered roadmap — one complete, one deferred, one unapproved proposal | **Mixed — read that folder's index first. Not roadmap.** |
+| [`tracks/`](tracks/README.md)                 | One-off plans outside the numbered roadmap — two complete, one in progress, one deferred, one superseded, one proposed | **Mixed — read that folder's index first. Not roadmap.** |
 | [`ai/`](ai/README.md)                         | The retired v2 AI track                                                                          | Tombstone stub — redirects only, add nothing             |
 
 ## Phase index & status

@@ -1,34 +1,47 @@
-# @tepegoz/credential-vault CHECKLIST
+# credential-vault — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> AI sağlayıcı API anahtarları için BYO-key vault: anahtarları enjekte edilen `SecretCrypto` ile şifreleyip base64 ciphertext olarak diske yazan, renderer'a yalnızca metadata/boolean status veren Electron'suz çekirdek.
 
-- [x] Support storing multiple API keys per provider.
-- [x] Support labeling provider keys for user recognition.
-- [x] Support ordering provider keys by priority.
-- [x] Support selecting the top provider from stored key metadata.
-- [x] Support adding keys with immediate encrypted persistence.
-- [x] Support removing keys idempotently.
-- [x] Support renaming keys without changing encrypted secret material.
-- [x] Support reordering keys with validation of known identifiers.
-- [x] Support listing renderer-safe key metadata only.
-- [x] Support provider-level key status without exposing ciphertext.
-- [x] Support decrypting a key only through main-process APIs.
-- [x] Support injected OS-backed crypto implementations.
-- [x] Support encryption availability checks before accepting secrets.
-- [x] Support base64 ciphertext persistence in a JSON store.
-- [x] Support versioned on-disk vault format.
-- [x] Support migration from legacy flat provider-key maps.
-- [x] Support dropping malformed records without discarding valid keys.
-- [x] Support unknown-provider filtering at load time.
-- [x] Support stable key identifiers across app restarts.
-- [x] Support last-four metadata for key recognition.
-- [x] Support created-at metadata for audit and ordering.
-- [x] Support reset seams for tests.
-- [x] Support secure error messages that never include raw keys.
-- [ ] Support provider-specific metadata extension without exposing secrets.
-- [ ] Support backup and restore flows that preserve encrypted values.
-- [ ] Support account or profile separation when hosts provide separate file paths.
-- [x] Support safe concurrent mutations through serialized persistence.
-- [ ] Support import/export of metadata without secret material.
-- [ ] Support secret rotation workflows across multiple providers.
-- [x] Support future keychain providers through the same crypto interface.
+## Kesinlikle olmalı
+- [ ] API anahtarları enjekte edilen `SecretCrypto` ile şifrelenmeli
+- [ ] Anahtarlar diske base64 ciphertext olarak yazılmalı
+- [ ] Persist yolu enjekte edilen `filePath` olmalı (`@tepegoz/json-store` üzerinden)
+- [ ] Ham anahtarlar çağıranın dışına asla çıkmamalı
+- [ ] Renderer yalnızca metadata veya provider başına boolean status görmeli
+- [ ] Çekirdek Electron'dan bağımsız olmalı (runtime olmadan unit-test edilebilir)
+- [ ] `init({ crypto, filePath })` on-disk dosyayı yüklemeli
+- [ ] Legacy flat `{ provider: base64 }` map ilk yüklemede versiyonlu şekle in-place upconvert edilmeli
+- [ ] Bir provider birden çok etiketli anahtar tutabilmeli, priority ile sıralı (ilk = default)
+- [ ] `addKey(provider, label, apiKey)` koleksiyona anahtar eklemeli
+- [ ] `removeKey(id)` idempotent olmalı
+- [ ] `renameKey(id, label)` etiketi değiştirmeli
+- [ ] `reorderKeys(orderedIds)` anahtar sırasını değiştirmeli
+- [ ] Her mutation hemen persist edilmeli
+- [ ] `listMeta()` / `listMetaByProvider(provider)` yalnızca metadata döndürmeli (ciphertext yok)
+- [ ] `status()` provider başına "anahtar var mı" haritası döndürmeli
+- [ ] `topProvider()` öncelikli provider'ı döndürmeli
+- [ ] `getKeyById(id)` / `getFirstKeyForProvider(provider)` yalnızca main-process olmalı ve IPC üzerinden expose edilmemeli
+- [ ] `getKeyById` / `getFirstKeyForProvider` ham anahtarı decrypt edip döndürmeli
+- [ ] `isEncryptionAvailable()` şifreleme kullanılabilirliğini bildirmeli
+- [ ] Malformed veya bilinmeyen-provider kayıtları yüklemede tek tek atılmalı; bir bozuk kayıt tüm vault'u düşürmemeli
+- [ ] `ProviderKeyMeta` / `ProviderKeyStatus` `@tepegoz/shared-types`'tan re-export edilmeli (tek şema kaynağı)
+- [ ] Metadata id / provider / label / createdAt / last4 içermeli
+- [ ] `SecretCrypto` arayüzü `isAvailable` / `encrypt` / `decrypt` sağlamalı
+
+## Olsa iyi olur
+- [ ] `reset()` test seam'i sağlanmalı
+- [ ] Priority sırası liste okumalarına yansımalı
+- [ ] `last4` anahtarın yalnızca son 4 karakterini açığa çıkarmalı, gerisini değil
+- [ ] Şifreleme kullanılamıyorsa `addKey` net biçimde başarısız olmalı veya uyarmalı
+- [ ] Aynı provider + label ikinci kez eklenince tanımlı bir davranış olmalı
+- [ ] Electron wiring desktop app'in `stores.electron.ts`'inde kalmalı
+- [ ] `json-store` yazımı yarıda kalmış dosya bırakmamalı
+
+## Çok niş
+- [ ] Upconvert yalnızca bir kez çalışmalı, sonraki yüklemelerde tekrar tetiklenmemeli
+- [ ] Disk dosyası tamamen bozuksa vault boş ama kullanılabilir başlamalı
+- [ ] `removeKey` bilinmeyen id ile çağrılınca hata değil no-op olmalı
+- [ ] `reorderKeys` eksik veya fazla id verilince güvenli davranmalı
+- [ ] Çok sayıda provider/anahtar ile `listMeta` performansı makul kalmalı
+- [ ] Tek bir kaydın decrypt'i başarısız olursa hata o kayıtla sınırlı kalmalı

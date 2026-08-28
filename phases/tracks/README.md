@@ -5,9 +5,10 @@ These are working plans that sit outside the numbered product roadmap
 ([`../ai-agent-super/README.md`](../ai-agent-super/README.md)). They live here so they are not lost,
 **not** because they are scheduled.
 
-> **Read the Status column before the document.** Two of these are finished; one is unscheduled; one is
-> a superseded proposal that its own text flags as a security regression unless every hardening measure
-> lands together. Nothing in this folder is committed roadmap. A track earns a phase row by being
+> **Read the Status column before the document.** Two of these are finished; one is in progress; one is
+> unscheduled; one is a superseded proposal that its own text flags as a security regression unless
+> every hardening measure lands together; one is an unapproved proposal whose first section is a list of
+> measured bugs in shipped code. Nothing in this folder is committed roadmap. A track earns a phase row by being
 > promoted into a `phase-*.md` file or an ADR — until then it is a written idea with an owner's name on
 > it, not a plan of record.
 
@@ -17,6 +18,7 @@ These are working plans that sit outside the numbered product roadmap
 | [code-cleanup-api.md](code-cleanup-api.md)         | ⏸ **Deferred** — planned, unscheduled | Collapse the "çift başlılık": one tool-calling protocol, `AIAdaptor` → `CapabilityGroup`, and removal of a dormant second tool-call path. Intended as 3 PRs. No phase row, no DoD, no owner.                                                                                                                    |
 | [protocol-tepegoz-pages.md](protocol-tepegoz-pages.md) | ✅ **Faz 0–3 done** (2026-08-26) | Serving `tepegoz://` internal pages as real pages via `protocol.registerSchemesAsPrivileged` + `protocol.handle` — socketless. `settings`/`extensions`/`history`/`downloads`/`uploads`/`bookmarks` are all real `WebContentsView`s now (settings' native context menu e2e-verified), root-causing and working around a real Electron bug along the way (subresource requests never reach a `protocol.handle`-on-named-session handler; the fix inlines the whole shared bundle into one self-contained document). `tepegoz://tasks` out of scope — no UI renders it. |
 | [express-settings.md](express-settings.md)         | 🗄️ **Superseded** — not implemented   | Serving `tepegoz://settings` from a loopback, token-protected internal Express server. ⚠️ Its own text flags this as a security regression unless every hardening measure lands together. Superseded by [protocol-tepegoz-pages.md](protocol-tepegoz-pages.md) (its Ek A); kept for the threat-model record. **Not approved. Do not implement from this file.** |
+| [omnibox-competitive-parity.md](omnibox-competitive-parity.md) | 📋 **Proposed** — not approved, not scheduled (2026-08-28) | Closing the gap between the address bar and Chrome / Firefox / Safari / Arc / Edge: a unified relevance score (there is none today — a hardcoded source order plus raw `visitCount`), favicons and matched-substring emphasis, canonical URL dedup, inline autocomplete, and keyword search engines. **Read § A first — it is not proposal, it is 11 verified defects in shipped code**, including a synchronous render loop that hangs the renderer when arithmetic is typed into the box, and Turkish history search failing at the SQL `LIKE` before `foldForSearch` ever runs. Also carries a prose correction to the Phase 1a omnibox row. Four owner decisions owed; no ADR yet. |
 | [developer-settings-surface.md](developer-settings-surface.md) | 🚧 **In progress** — Tier B + `tepegoz://developer` page shipped 2026-08-28 | One place for every knob: allowlist-only Chromium flags (`chrome://flags` analog — **shipped**), an enriched `Preferences` table (nested drill-down + schema-driven metadata — owed), and a safe subset of per-tab `webPreferences` / `session` defaults (owed). Surfaced two ways: the dev-only `tepegoz://settings#developer` section, and **`tepegoz://developer`** — an unlisted real page any user can open (not dev-gated), the way Chrome ships `chrome://flags`. Renderer-boundary keys (`contextIsolation`/`sandbox`/`nodeIntegration`/`webSecurity`) stay permanently locked. Companion: [ADR-0041](../../docs/adr/0041-developer-settings-surface.md). |
 
 Language note: the Turkish-language documents are kept in their original language — they are the record

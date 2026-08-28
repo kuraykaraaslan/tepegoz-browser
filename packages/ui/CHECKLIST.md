@@ -1,34 +1,37 @@
-# @tepegoz/ui CHECKLIST
+# ui — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> Paylaşılan tasarım-sistemi paketi: forklanmış KUIreact atom'larının ince bir barrel'ı + first-party parçalar (brand mark, FontAwesome ikon yüzeyi, error boundary), tasarım token'ları stylesheet'i ve `cn` / `PolymorphicProps` yardımcıları. Salt sunum, state barındırmaz, fork-on-demand.
 
-- [x] Support shared Button atoms.
-- [x] Support shared Toggle atoms.
-- [x] Support shared Card atoms.
-- [x] Support shared Modal atoms.
-- [x] Support shared Input atoms.
-- [x] Support shared Badge atoms.
-- [x] Support shared AlertBanner atoms.
-- [x] Support alert actions for banners.
-- [x] Support a reusable brand mark.
-- [x] Support a shared icon component.
-- [x] Support typed icon names and icon props.
-- [x] Support a React error boundary.
-- [x] Support class-name merging utilities.
-- [x] Support polymorphic component prop types.
-- [x] Support design token stylesheet exports.
-- [x] Support fork-on-demand component growth.
-- [x] Support accessible default roles and labels for atoms.
-- [x] Support keyboard interaction patterns for controls.
-- [x] Support focus-visible styling.
-- [x] Support disabled and loading states.
-- [x] Support destructive and primary action variants.
-- [x] Support light and dark theme tokens.
-- [ ] Support high-contrast-friendly color combinations.
-- [ ] Support reduced-motion friendly component behavior.
-- [ ] Support responsive component sizing.
-- [ ] Support RTL-compatible layout primitives.
-- [x] Support safe composition without owning app state.
-- [x] Support documentation for forked KUIreact policies.
-- [ ] Support visual regression examples for shared atoms.
-- [x] Support future first-party components without creating app dependencies.
+## Kesinlikle olmalı
+- [ ] Forklanmış KUIreact atom'larını (`Button`, `Toggle`, `Card`, `Modal`, `Input`, `Badge`, `AlertBanner`) tek bir ince barrel'dan dışa vermeli
+- [ ] `AlertBanner` ile birlikte `AlertAction` tipini sunmalı
+- [ ] `BrandMark` marka/logo işaretini sunmalı (`@tepegoz/browser-chrome` kullanır)
+- [ ] `Icon` paylaşılan FontAwesome ikon bileşenini sunmalı
+- [ ] `Icon` ile birlikte `IconName` ve `IconProps` tiplerini sunmalı
+- [ ] `ErrorBoundary` first-party React error boundary'sini sunmalı
+- [ ] `cn` (clsx + tailwind-merge) sınıf-adı birleştirme yardımcısını sunmalı
+- [ ] `PolymorphicProps` `as`-prop tarzı bileşenler için paylaşılan tipi sunmalı
+- [ ] Tasarım token'ları stylesheet'ini `@tepegoz/ui/styles/tokens.css` yolundan dışa vermeli
+- [ ] Tüm bileşenleri salt sunum (presentational) tutmalı — uygulama state'i barındırmamalı
+- [ ] Bileşenleri talep üzerine eklemeli (fork-on-demand) — tam kit olarak önceden kurmamalı
+- [ ] Fork edilen atom'lar için fork politikasını `_FORK.md`'de belgeli tutmalı
+- [ ] Forklanmış (KUIreact) parçalar ile first-party parçaları ayırt edilebilir tutmalı
+
+## Olsa iyi olur
+- [ ] `cn`'in Tailwind sınıf çakışmalarını (tailwind-merge) doğru çözmesini sağlamalı
+- [ ] Diğer chrome leaf paketlerinin tek tutarlı token kaynağı olarak `tokens.css`'i kullanabilmesini sağlamalı
+- [ ] `Icon` yüzeyini FontAwesome ikon setine tek geçiş noktası yapmalı
+- [ ] `Button` / `Toggle` / `Input` bileşenlerini erişilebilir (aria, focus) varsayılanlarla sunmalı
+- [ ] `Modal`'ı odak tuzağı ve escape ile kapatma gibi temel davranışlarla sunmalı
+- [ ] Bileşenlerin görünümünü tema token'larından türetmeli (sabit renk gömülü olmamalı)
+- [ ] `as`-prop ile polimorfik kullanımını tip güvenli biçimde desteklemeli
+- [ ] Barrel'ı tree-shake edilebilir tutmalı (kullanılmayan atom bundle'a girmemeli)
+
+## Çok niş
+- [ ] Light/dark tema geçişinde token'ların tüm atom'larda tutarlı uygulanmasını sağlamalı
+- [ ] Aynı bileşenin hem forklanmış hem first-party sürümünün yanlışlıkla birlikte export edilmesini önlemeli
+- [ ] `IconName` tipini mevcut FontAwesome ikon kümesiyle senkron tutmalı
+- [ ] `ErrorBoundary`'nin yakaladığı hatayı yutmadan host'a raporlayabilmesini sağlamalı
+- [ ] RTL yerleşimde ikon/hizalama yönünü token veya utility üzerinden çevirebilmeli
+- [ ] `_FORK.md` politikasıyla upstream KUIreact değişikliklerini yeniden fork ederken sapmayı sınırlı tutmalı

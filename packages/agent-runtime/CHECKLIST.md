@@ -1,35 +1,43 @@
-# @tepegoz/agent-runtime CHECKLIST
+# agent-runtime — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> Electron'suz agentic çalışma motoru (L3): user prompt → `ModelRouter` → `Planner` (DAG) → `Executor` (tek `ToolGateway` PEP + HITL) → canlı olaylar + Human Handoff Controller; tüm app/OS bağımlılıkları `AgentRunDeps` ile enjekte edilir.
 
-- [x] Support multi-step agent runs with explicit planning, execution, and reaction phases.
-- [x] Support live progress events for each meaningful planning and execution transition.
-- [ ] Support cooperative cancellation before, during, and after tool execution.
-- [x] Support human review of generated plans before any gated work begins.
-- [x] Support skipping individual plan steps during human plan review.
-- [x] Support per-tool human approval prompts with clear action summaries.
-- [x] Support localized human handoff copy for CAPTCHA, 2FA, and sensitive flows.
-- [ ] Support automatic CAPTCHA/2FA clearing with handoff as the fallback (ADR-0039).
-- [x] Support injection of browser host capabilities without Electron-specific dependencies.
-- [x] Support injection of journal readers for audit-aware agent context.
-- [x] Support active-tab URL context for site-aware policy decisions.
-- [x] Support provider selection through a model router instead of direct provider calls.
-- [x] Support safe provider-key access where raw keys stay inside the host process.
-- [x] Support local-model routing as an optional transport path.
-- [x] Support cloud fallback when local inference is unavailable.
-- [x] Support deterministic run summaries for conversation memory.
-- [x] Support structured stop reasons for success, denial, cancellation, and failure.
-- [x] Support surfacing tool errors without leaking host internals.
-- [x] Support run hooks for observability, UI updates, and audit correlation.
-- [ ] Support dependency injection for every OS, browser, and persistence concern.
-- [ ] Support reentrant runs without shared mutable state between turns.
-- [x] Support bounded run loops to avoid runaway agent execution.
-- [x] Support policy-aware execution through a single tool gateway.
-- [ ] Support planner DAG metadata that can be rendered in an agent console.
-- [x] Support resumable user handoff after the user completes a blocked browser step.
-- [x] Support safe handling of untrusted page content in prompts and summaries.
-- [ ] Support structured telemetry for model usage, tool calls, and approval latency.
-- [ ] Support host-provided localization for all user-visible runtime decisions.
-- [ ] Support test doubles for model router, planner, executor, and browser host.
-- [x] Support graceful degradation when optional host dependencies are absent.
-- [ ] Support clear extension points for new run phases, routing modes, and event types.
+## Kesinlikle olmalı
+- [ ] Bir agent turn'ünü `runAgent` tek giriş noktası üzerinden yürütmeli
+- [ ] Electron'a bağımlı olmamalı (Electron-free çalışmalı)
+- [ ] Akışı user prompt → `ModelRouter` → `Planner` (DAG) → `Executor` → Reactor sırasıyla sürmeli
+- [ ] Planner planı bir DAG olarak üretmeli
+- [ ] Tüm araç çağrılarını tek bir `ToolGateway` PEP'inden geçirmeli
+- [ ] Döngü öncesi plan önizlemesi için HITL onayı (`requestPlanApproval`) istemeli
+- [ ] Gate'lenmiş her araç çağrısı için ayrı HITL onayı (`requestApproval`) istemeli
+- [ ] Canlı ilerleme olaylarını `onEvent` üzerinden yayınlamalı
+- [ ] Tüm app/OS bağımlılıklarını `AgentRunDeps` ile enjekte almalı (`browserHost`, `journal`, `activeTabUrl`, `handoffStrings`)
+- [ ] `activeTabUrl()` sonucunu Policy Kernel site bağlamı için kullanmalı
+- [ ] Sağlayıcıyı çalışma anında safeStorage vault anahtarından kaydetmeli
+- [ ] Ham API anahtarının ana süreçten dışarı çıkmasına izin vermemeli
+- [ ] `localInference` config yoksa `'local'` yönlendirmeyi devre dışı bırakıp bulut sağlayıcıya düşmeli
+- [ ] Kooperatif iptal için `signal` ile turn'ü yarıda durdurabilmeli
+- [ ] `AgentRunSummary` içinde `stoppedReason` ve `ok` döndürmeli
+- [ ] Human Handoff Controller ile insana devri yönetmeli
+- [ ] Handoff metinlerini enjekte edilen `handoffStrings`'ten almalı (kendi dize sözlüğü tutmamalı)
+- [ ] `PlanApprovalDecision` ile `skipStepIds` verilen adımları plandan atlamalı
+- [ ] `AgentRunDeps` / `AgentRunHooks` / `AgentRunSummary` / `PlanApprovalDecision` sözleşmelerini dışa aktarmalı
+- [ ] `journal` okumasını enjekte edilen `JournalReader` üzerinden yapmalı
+
+## Olsa iyi olur
+- [ ] `apps/desktop`'un agent-service'inin `runAgent` üzerinde ince bir adaptör kalmasını sağlamalı
+- [ ] Opsiyonel `summary` alanını konuşma hafızasına eklenmek üzere host'a döndürmeli
+- [ ] `ModelRouter` ile turn içinde sağlayıcı/rota seçimini soyutlamalı
+- [ ] Plan onayında kısmi onay (bazı adımları atla) desteklemeli
+- [ ] Olay yayınını senkron akıştan ayırıp tüketiciyi bloklamamalı
+- [ ] `browserHost` seam'ini `BrowserHost` arayüzüne göre tipli tutmalı
+- [ ] `pnpm typecheck` · `pnpm lint` · `pnpm test` betiklerini sağlamalı
+
+## Çok niş
+- [ ] `requestApproval` reddedildiğinde turn'ü temiz bir `stoppedReason` ile kapatmalı
+- [ ] İptal `signal`'i araç çağrısı ortasında geldiğinde yarım kalan işi tutarlı biçimde sonlandırmalı
+- [ ] `localInference` verili ama yüklenemiyorsa yine buluta düşebilmeli
+- [ ] DAG'da döngüsel bağımlılık tespit edildiğinde planı reddetmeli
+- [ ] Journal okunamıyorsa turn'ü tümden düşürmeden ilerleyebilmeli
+- [ ] Aynı anda birden çok turn çağrısında deps izolasyonunu korumalı

@@ -1,34 +1,31 @@
-# @tepegoz/window-controls CHECKLIST
+# window-controls — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> Salt sunum leaf'i: frameless pencere için native tarzı caption düğmeleri (minimize / maximize·restore / close), chrome başlık satırının sonunda render edilir. Kendi state'i yoktur; maximized bayrağı ve tüm eylemler enjekte edilir; React ve FontAwesome dışında bağımlılığı yoktur.
 
-- [x] Support minimize caption button rendering.
-- [x] Support maximize caption button rendering.
-- [x] Support restore caption button rendering.
-- [x] Support close caption button rendering.
-- [x] Support swapping maximize and restore icon based on window state.
-- [x] Support injected minimize action.
-- [x] Support injected maximize or restore toggle action.
-- [x] Support injected close action.
-- [x] Support localized aria labels supplied by the host.
-- [x] Support native-style hover states.
-- [ ] Support native-style pressed states.
-- [x] Support destructive close-button hover styling.
-- [x] Support keyboard focus for each caption button.
-- [x] Support high-contrast focus indicators.
-- [ ] Support reduced-motion friendly transitions.
-- [x] Support hit targets consistent with desktop window controls.
-- [x] Support safe placement at the end of a frameless title row.
-- [x] Support avoiding draggable regions over caption buttons.
-- [x] Support light and dark theme rendering.
-- [ ] Support RTL-compatible ordering when the host chooses it.
-- [ ] Support disabled states for host-controlled modal situations.
-- [ ] Support tooltips for icon-only controls.
-- [x] Support screen-reader-friendly button names.
-- [x] Support bridge-agnostic operation without Electron imports.
-- [x] Support testing with mock callbacks.
-- [ ] Support custom class names for host chrome integration.
-- [ ] Support compact mode for small title bars.
-- [ ] Support platform-specific visual variants when the host requests them.
-- [x] Support stable button ordering for muscle memory.
-- [ ] Support future caption actions without owning window state.
+## Kesinlikle olmalı
+- [ ] Üç caption düğmesini (minimize / maximize·restore / close) render edebilmeli
+- [ ] `WindowControls`'u frameless pencere için chrome başlık satırının sonunda render etmeli
+- [ ] `isMaximized` değerine göre maximize/restore ikonunu değiştirmeli
+- [ ] `isMaximized` değerine göre maximize/restore aria-label'ını değiştirmeli
+- [ ] Minimize, toggle-maximize ve close eylemlerini enjekte edilen callback'lerle bağlamalı
+- [ ] Kendi state'ini tutmamalı — maximized bayrağı ve tüm eylemler dışarıdan enjekte edilmeli
+- [ ] `WindowControlsLabels` ile `minimize`, `maximize`, `restore`, `close` aria-label'larını almalı
+- [ ] `WindowControlsProps` ile tam enjekte-prop kontratını dışa vermeli
+- [ ] Electron bridge'e bağımlılığı olmamalı
+- [ ] React ve FontAwesome dışında bağımlılık taşımamalı
+
+## Olsa iyi olur
+- [ ] Caption düğmelerini native pencere kontrollerine benzer görünümde sunmalı
+- [ ] Her düğme için erişilebilir bir aria-label sağlamalı (etiketler `WindowControlsLabels`'tan)
+- [ ] Klavye ile odaklanılabilir ve tetiklenebilir düğmeler sunmalı
+- [ ] Close düğmesini hover/focus'ta görsel olarak vurgulayabilmeli
+- [ ] Pencerenin maksimize durumundaki aboneliği host'un kendi `useWindowMaximized` hook'una bırakmalı
+- [ ] Düğme boyutlarını başlık satırı yüksekliğine uyumlu tutmalı
+
+## Çok niş
+- [ ] Platforma göre düğme sırası/hizası farkını (ör. sol/sağ) prop üzerinden karşılayabilmeli
+- [ ] RTL yerleşimde düğme grubunun başlık satırındaki konumunu doğru yerleştirmeli
+- [ ] `isMaximized` prop'u güncellenmeden gelen hızlı toggle'larda ikon/label tutarsızlığına düşmemeli
+- [ ] Yüksek kontrast / tema modunda ikonların görünür kalmasını sağlamalı
+- [ ] FontAwesome ikonu yüklenemezse düğme yine de tıklanabilir ve etiketli kalmalı

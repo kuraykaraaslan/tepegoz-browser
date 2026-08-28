@@ -1,34 +1,31 @@
-# native-rs CHECKLIST
+# native-rs — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> Tepegöz için Rust hot-path crate'i (napi-rs) — henüz kurulmadı; Phase 1b için belgelenmiş bir placeholder (plan §7, ADR-0001).
 
-- [ ] Support Rust-backed hot paths through napi-rs bindings.
-- [x] Support egress anomaly scanning for outbound data.
-- [x] Support Base64 exfiltration detection.
-- [x] Support high-entropy secret detection.
-- [ ] Support screenshot eviction decisions in native code.
-- [ ] Support WebP screenshot encoding.
-- [ ] Support checkpoint serialization hot paths.
-- [ ] Support checkpoint deserialization hot paths.
-- [x] Support a local small-language-model bridge.
-- [ ] Support Node and Electron ABI compatible builds.
-- [ ] Support Windows build artifacts.
-- [ ] Support macOS build artifacts.
-- [ ] Support Linux build artifacts.
-- [ ] Support CI toolchain setup for Rust.
-- [ ] Support deterministic native test fixtures.
-- [ ] Support TypeScript declarations for exported native functions.
-- [ ] Support safe error conversion from Rust to JavaScript.
-- [ ] Support memory-safe buffer handling across the native boundary.
-- [ ] Support streaming interfaces for large blobs.
-- [ ] Support cancellation for long-running native operations.
-- [ ] Support benchmark suites for TypeScript versus Rust paths.
-- [ ] Support fallback JavaScript paths when native loading fails.
-- [ ] Support feature flags for enabling native acceleration.
-- [ ] Support crash containment and clear diagnostics for native panics.
-- [ ] Support versioned native API contracts.
-- [ ] Support package metadata for workspace and release tooling.
-- [ ] Support local development builds through documented commands.
-- [ ] Support reproducible release builds.
-- [ ] Support security review documentation for native code paths.
-- [ ] Support future native modules without coupling to app UI.
+## Kesinlikle olmalı
+- [ ] Şu an için kasıtlı olarak `package.json` içermemeli — pnpm workspace paketi olmamalı
+- [ ] Mevcut aşamada CI'ın Rust toolchain gerektirmemesini sağlamalı
+- [ ] Phase 1b için belgelenmiş bir placeholder olarak durmalı (plan §7, ADR-0001'e atıfla)
+- [ ] Aktive edildiğinde napi-rs (@napi-rs/cli) ile derlenen bir crate olmalı
+- [ ] Aktive edildiğinde Turborepo'ya bağlanmalı
+- [ ] Aktive edildiğinde CI'a bir Rust toolchain adımı eklenmeli
+- [ ] Egress anomali / Base64-exfiltration tarayıcısını barındırmalı (MVP TypeScript sürümünden port)
+- [ ] Screenshot eviction (ekran görüntüsü tahliyesi) mantığını sağlamalı
+- [ ] WebP kodlamasını (encoding) hot-path olarak sağlamalı
+- [ ] Checkpoint (de)serialization hot-path'ini sağlamalı
+- [ ] Local-SLM bridge'i sağlamalı
+
+## Olsa iyi olur
+- [ ] Base64-exfiltration tarayıcısının davranışı port edildiği TypeScript MVP sürümüyle eşdeğer kalmalı
+- [ ] Hot-path işleri (WebP, checkpoint) TypeScript eşdeğerlerinden ölçülebilir hızlanma sağlamalı
+- [ ] napi-rs kullandığı için prebuild'leri ABI'den bağımsız olmalı (Electron ABI'ye bağlanmamalı)
+- [ ] Aktive olana dek repoda hiçbir derleme/test yükü getirmemeli
+- [ ] Planlanan dört sorumluluğu (scanner, screenshot/WebP, checkpoint, SLM bridge) ayrı modüllere bölebilmeli
+
+## Çok niş
+- [ ] Rust toolchain'i olmayan bir makinede repo klonlandığında hiçbir kurulum adımını bozmamalı
+- [ ] Aktivasyon sırasında var olan TypeScript egress tarayıcısıyla yan yana çalışıp kademeli geçişe izin vermeli
+- [ ] Screenshot eviction bellek baskısı altında en eski görüntüleri önce atmalı
+- [ ] Checkpoint (de)serialization büyük oturum durumlarında bile ana thread'i bloklamamalı
+- [ ] Local-SLM bridge model-gateway'in local transport'una bağlanabilecek bir yüzey sunmalı

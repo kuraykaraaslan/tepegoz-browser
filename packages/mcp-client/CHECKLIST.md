@@ -1,34 +1,46 @@
-# @tepegoz/mcp-client CHECKLIST
+# mcp-client — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> Dış MCP sunucularına bağlanıp onların araçlarını tek CapabilityRegistry/ToolGateway PEP'ine sıradan ToolDescriptor olarak sunan, her SDK yanıtını zod ile yeniden doğrulayan Electron-free L5 MCP istemcisi.
 
-- [x] Support connecting to configured MCP servers.
-- [x] Support injected MCP SDK clients and transports.
-- [x] Support stdio server transport configuration.
-- [x] Support future network transport metadata.
-- [x] Support lifecycle supervision for multiple servers.
-- [x] Support reconnect with exponential backoff after drops or failures.
-- [x] Support unregistering server tools on disconnect.
-- [x] Support reconciling connections after configuration changes.
-- [x] Support discovering tools through tools/list.
-- [x] Support registering discovered tools in the capability registry.
-- [x] Support routing tool calls back to the original MCP server.
-- [x] Support synthetic tool IDs that follow the shared naming convention.
-- [x] Support reverse mapping from synthetic IDs to server tool names.
-- [x] Support bounded tool count per server.
-- [x] Support bounded schema size per tool.
-- [x] Support zod re-validation of SDK responses.
-- [x] Support JSON Schema based input validators.
-- [x] Support danger-class inference from MCP annotations.
-- [x] Support restrictive defaults for absent or unknown annotations.
-- [x] Support idempotency requirements inferred from tool metadata.
-- [x] Support server status reporting for settings surfaces.
-- [x] Support human-readable connection errors.
-- [ ] Support per-server state such as connected, connecting, failed, and disabled.
-- [x] Support audit provenance for MCP-sourced tools.
-- [ ] Support cancellation of in-flight MCP calls when possible.
-- [ ] Support timeout protection for server calls.
-- [x] Support duplicate synthetic ID handling across servers.
-- [x] Support hostile-server safeguards for planner prompt size.
-- [ ] Support test doubles for clients, transports, and registries.
-- [ ] Support documentation for adding a new MCP server configuration.
+## Kesinlikle olmalı
+- [ ] Yapılandırılmış her MCP sunucusuna başlangıçta bağlanabilmeli (McpSupervisor)
+- [ ] Bağlantı hatası/kopması durumunda üstel geri çekilme (exponential backoff) ile yeniden bağlanmayı denemeli
+- [ ] Bir sunucu koptuğunda o sunucunun tüm araçlarını CapabilityRegistry'den geri çekmeli (unregister)
+- [ ] Yapılandırma değiştiğinde reconcile() ile sunucu kümesini yeniden uzlaştırmalı
+- [ ] MCP araçlarını sıradan ToolDescriptor olarak tek CapabilityRegistry/ToolGateway PEP'ine sunmalı — planner, Policy Kernel, HITL, taint, audit yerel araçlarla ayırt edememeli
+- [ ] Canlı bir sunucu bağlantısında tools/list ile araçları keşfetmeli (McpConnection)
+- [ ] tools/call çağrılarını ters isim haritası üzerinden doğru sunucuya yönlendirmeli
+- [ ] Her MCP aracı için `{domain}_{verb}_{noun}` biçiminde sentetik araç kimliği üretmeli (buildSyntheticId)
+- [ ] Sentetik araç kimliklerini tüm sunucular arasında benzersiz tutmalı (tek paylaşılan NameMapper)
+- [ ] Sentetik kimlikten kaynak sunucu + orijinal araç adına ters haritalama yapabilmeli
+- [ ] MCP SDK'nın her yanıtını zod ile yeniden doğrulamalı — SDK asla güven sınırı olmamalı
+- [ ] Sunucu başına araç sayısını MAX_TOOLS_PER_SERVER ile sınırlamalı
+- [ ] Araç şeması boyutunu MAX_SCHEMA_BYTES ile sınırlamalı — düşman sunucu planner istemini dolduramamalı
+- [ ] McpServerConfigSchema ile per-sunucu yapılandırmayı güven sınırında doğrulamalı
+- [ ] MCP araç açıklamalarını (annotations) bir dangerClass'a eşlemeli (dangerClassFor)
+- [ ] Bilinmeyen/eksik annotation'da en kısıtlayıcı dangerClass'a düşmeli (fail-safe)
+- [ ] Bir MCP aracının idempotency gerektirip gerektirmediğini annotation'lardan türetmeli (requiresIdempotencyFor)
+- [ ] MCP aracının JSON Schema'sından ajv tabanlı girdi doğrulayıcı kurabilmeli (jsonSchemaValidator)
+- [ ] SDK Client ve StdioClientTransport'u desktop katmanından enjekte alabilmeli — kendi içinde Electron'a bağlı olmamalı
+- [ ] Per-sunucu bağlantı durumunu (McpServerState / McpServerStatus) Settings'e sunabilmeli
+- [ ] McpToolSchema / McpToolListSchema / McpToolResultSchema / McpToolAnnotationsSchema zod şemalarını sağlamalı
+
+## Olsa iyi olur
+- [ ] serverSlug ile sunucu adından kararlı, kısa bir slug üretmeli
+- [ ] tokenize ile araç adlarını anlamlı parçalara ayırabilmeli
+- [ ] verbFor ile bir araç adından uygun fiil bileşeni seçmeli
+- [ ] Aynı araç adını farklı sunuculardan sunanlarda çakışmayı benzersizleştirerek çözmeli
+- [ ] Yeniden bağlanma denemeleri arasında araçları çift kaydetmemeli
+- [ ] Sunucu yeniden bağlandığında araçlarını yeniden keşfedip yeniden kaydetmeli
+- [ ] McpSupervisorDeps / McpConnectionDeps üzerinden tüm bağımlılıkları enjekte alabilmeli (test edilebilirlik)
+- [ ] McpClientLike arayüzü ile gerçek SDK Client yerine sahte bir istemci enjekte edilebilmeli
+
+## Çok niş
+- [ ] Düşman bir sunucu aşırı büyük şema göndererek planner prompt'unu şişirmeye çalıştığında MAX_SCHEMA_BYTES ile kesmeli
+- [ ] Aynı anda çok sayıda sunucu koptuğunda geri çekilme zamanlayıcılarının birbirini boğmasını önlemeli
+- [ ] Bir sunucu tools/list'te yinelenen araç adları döndürdüğünde NameMapper bunları benzersizleştirmeli
+- [ ] Annotation'ı hiç olmayan bir MCP aracının yine de dangerClass + idempotency kararı alabilmesi
+- [ ] Config'ten bir sunucu tamamen kaldırıldığında reconcile() o sunucuyu kapatıp araçlarını temizlemeli
+- [ ] Yeni bir sunucu config'e eklendiğinde reconcile() yalnızca onu bağlamalı, diğerlerini yeniden başlatmamalı
+- [ ] tools/call sonucu McpToolResultSchema'ya uymuyorsa hata olarak ele alınmalı, ham sonuç geçirilmemeli

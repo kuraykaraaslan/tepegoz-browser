@@ -1,34 +1,32 @@
-# @tepegoz/clipboard CHECKLIST
+# clipboard — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> Clipboard işlem metadata'sını ve onay varsayılanlarını merkezileştiren, clipboard içeriğini kalıcı state / log / Event Journal payload'larından uzak tutan headless policy/tip paketi.
 
-- [x] Support classifying clipboard read operations by risk level.
-- [x] Support classifying clipboard write operations by risk level.
-- [x] Support approval defaults for copy, cut, paste, and clipboard inspection.
-- [x] Support metadata that describes clipboard operations without storing contents.
-- [x] Support keeping clipboard contents out of persistent state.
-- [x] Support keeping clipboard contents out of logs.
-- [x] Support keeping clipboard contents out of event journal payloads.
-- [x] Support redacted audit summaries for clipboard access.
-- [x] Support separate policy for reading user clipboard data and writing generated data.
-- [ ] Support taint metadata for clipboard content derived from web pages.
-- [x] Support host-provided clipboard adapters for platform-specific access.
-- [ ] Support MIME-type metadata for text, HTML, images, and files.
-- [x] Support safe handling of large clipboard payload descriptions.
-- [ ] Support paste-target metadata such as origin, field type, and editability.
-- [x] Support human confirmation for high-risk clipboard writes.
-- [ ] Support human confirmation for clipboard reads on sensitive sites.
-- [x] Support deny-by-default behavior for unknown clipboard operation types.
-- [ ] Support user-facing reason strings for blocked clipboard actions.
-- [ ] Support incognito or private-session clipboard restrictions.
-- [ ] Support permission persistence choices such as once, session, and always.
-- [ ] Support clearing transient clipboard metadata after an operation.
-- [x] Support automated tests over policy metadata without OS clipboard access.
-- [x] Support platform-neutral operation descriptors.
-- [ ] Support extension and agent clipboard calls through shared policy semantics.
-- [ ] Support detecting password-like or secret-like clipboard categories by metadata.
-- [x] Support safe serialization of clipboard event summaries.
-- [ ] Support future binary clipboard formats without changing core policy shape.
-- [x] Support accessibility-friendly descriptions of clipboard prompts.
-- [x] Support localized operation labels supplied by callers.
-- [ ] Support minimal APIs that never expose raw clipboard contents by default.
+## Kesinlikle olmalı
+- [ ] Paket headless olmalı — yalnızca clipboard policy ve tipleri sağlamalı
+- [ ] Clipboard işlem metadata'sını tek yerde merkezileştirmeli
+- [ ] İşlem başına onay (approval) varsayılanlarını tanımlamalı
+- [ ] Clipboard içeriği kalıcı state'e asla yazılmamalı
+- [ ] Clipboard içeriği loglara asla girmemeli
+- [ ] Clipboard içeriği Event Journal payload'larına asla girmemeli
+- [ ] Her clipboard işlem türü için tanımlı metadata bulunmalı
+- [ ] Onay varsayılanları policy katmanınca okunabilir biçimde açığa çıkmalı
+- [ ] Tipler diğer paketlerce içe aktarılabilir olmalı (tek şema kaynağı)
+- [ ] Agent kaynaklı clipboard işlemleri onay akışından geçmeli
+- [ ] Gerçek clipboard okuma/yazma bu pakette değil host'ta kalmalı
+
+## Olsa iyi olur
+- [ ] Bilinmeyen / yeni bir clipboard işlemi için güvenli (kısıtlayıcı) varsayılan onay uygulanmalı
+- [ ] İşlem metadata'sı kullanıcıya gösterilecek açıklama/etiket içermeli
+- [ ] Policy kararı "izin ver / sor / reddet" ayrımını desteklemeli
+- [ ] Okuma ve yazma işlemleri farklı risk seviyelerinde ele alınmalı
+- [ ] İşlem metadata'sı yerelleştirilebilir string anahtarlarıyla eşleşmeli
+- [ ] Metadata seti genişletilebilir olmalı (yeni işlem türü eklemek tek nokta)
+
+## Çok niş
+- [ ] Payload'a yanlışlıkla içerik koyan bir çağrı tip düzeyinde engellenebilmeli (içerik alanı hiç bulunmamalı)
+- [ ] Büyük clipboard verisi metadata'da yalnızca boyut olarak temsil edilse bile ham içerik tutulmamalı
+- [ ] Host bir işlem için varsayılan onayı override edebilmeli
+- [ ] İkili (resim) clipboard içeriği de aynı gizlilik garantisine tabi olmalı
+- [ ] Test ortamında policy varsayılanları deterministik olmalı

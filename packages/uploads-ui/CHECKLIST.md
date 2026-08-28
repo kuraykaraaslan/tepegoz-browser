@@ -1,34 +1,33 @@
-# @tepegoz/uploads-ui CHECKLIST
+# uploads-ui — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> Salt sunum `tepegoz://uploads` aktivite yüzeyi: host list/command/subscribe callback'lerini enjekte eder; paket yalnızca UI state'i ile en/tr string'lerini sahiplenir. Upload kayıtları redaktedir — yerel yollar ve içerik bu renderer paketine hiç girmez.
 
-- [x] Support a tepegoz uploads activity page.
-- [x] Support injected callbacks for listing upload records.
-- [x] Support injected callbacks for upload commands.
-- [x] Support injected subscription callbacks for live updates.
-- [x] Support upload records without local path exposure.
-- [ ] Support status sections for pending, completed, failed, and canceled uploads.
-- [x] Support risk indicators for sensitive upload activity.
-- [x] Support source origin display with safe truncation.
-- [x] Support file display names and sizes.
-- [x] Support multi-file upload summaries.
-- [x] Support cancel actions for pending uploads when supplied.
-- [ ] Support retry actions for failed uploads when supplied.
-- [ ] Support clear-all or clear-completed actions through host callbacks.
-- [ ] Support search by filename and source origin.
-- [ ] Support filtering by status and risk.
-- [ ] Support sorting by newest, filename, size, and risk.
-- [x] Support empty state for no uploads.
-- [ ] Support loading and retry states for initial data retrieval.
-- [x] Support localized English and Turkish strings from the package.
-- [ ] Support keyboard navigation across upload rows.
-- [ ] Support accessible labels for status and command buttons.
-- [ ] Support row context-menu entry points.
-- [x] Support subscription cleanup on unmount.
-- [ ] Support responsive layout for narrow internal pages.
-- [ ] Support high-contrast status badges.
-- [ ] Support reduced-motion friendly live updates.
-- [ ] Support inline policy-denied explanations.
-- [x] Support stable row identity during updates.
-- [x] Support bridge-agnostic operation through injected callbacks.
-- [ ] Support future upload command types without owning desktop logic.
+## Kesinlikle olmalı
+- [ ] `tepegoz://uploads` aktivite yüzeyini salt sunum bileşeni olarak render edebilmeli
+- [ ] Upload listesini host'un enjekte ettiği list callback'i üzerinden almalı
+- [ ] Upload üzerinde eylemleri host'un enjekte ettiği command callback'i üzerinden çalıştırmalı
+- [ ] Canlı güncellemeleri host'un enjekte ettiği subscribe callback'i üzerinden almalı
+- [ ] Yalnızca UI state'i sahiplenmeli — upload verisini kendisi tutmamalı/çekmemeli
+- [ ] en ve tr string'lerini paket içinde sahiplenmeli
+- [ ] Yerel dosya yolları ve dosya içeriğinin bu renderer paketine girmesine izin vermemeli
+- [ ] Redakte edilmiş upload kayıtlarını olduğu gibi göstermeli (redaksiyonu kaldırmaya çalışmamalı)
+- [ ] Electron bridge'e doğrudan bağımlılığı olmamalı (her şey callback ile enjekte)
+
+## Olsa iyi olur
+- [ ] Upload'ları duruma (aktif / tamamlanmış / hatalı) göre gruplayarak veya filtreleyerek gösterebilmeli
+- [ ] Risk seviyesini görsel bir rozet/uyarı ile gösterebilmeli
+- [ ] subscribe callback'i güncelleme yayınladığında listeyi yeniden çekmeden tazeleyebilmeli
+- [ ] Boş durum (hiç upload yok) için anlamlı bir mesaj göstermeli
+- [ ] Bir upload için mevcut command'leri (iptal, kaldır vb.) duruma göre etkin/pasif gösterebilmeli
+- [ ] Dil değişiminde en/tr string'leri arasında geçişi desteklemeli
+- [ ] Uzun listelerde kaydırılabilir, performanslı bir liste sunabilmeli
+- [ ] Zaman damgalarını yerelleştirilmiş biçimde gösterebilmeli
+
+## Çok niş
+- [ ] subscribe callback'inden unmount'ta düzgün şekilde abonelikten çıkabilmeli (sızıntı olmadan)
+- [ ] command callback bir hata döndürdüğünde UI state'ini tutarlı bırakıp kullanıcıya bildirmeli
+- [ ] Aynı upload için hızlı ardışık güncellemelerde son durumu yanlış sıralamadan göstermeli
+- [ ] Redakte kayıtta beklenmeyen bir alan (ör. ham yol) gelirse onu göstermeden ele almalı
+- [ ] Çok uzun dosya adlarını yolu ima etmeden kısaltarak gösterebilmeli
+- [ ] tr çevirisi eksik bir anahtar olduğunda en fallback'ine düşebilmeli

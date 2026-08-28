@@ -1,34 +1,31 @@
-# @tepegoz/shared-types CHECKLIST
+# shared-types — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> Katmanlar arası sözleşmelerin (zod şemaları + türetilen tipler) tek doğruluk kaynağı: her paket `z.infer` tiplerini buradan tüketir, şemalar asla kopyalanmaz, tüm trust boundary'ler (`safeParse`) bunlara karşı doğrular.
 
-- [x] Support canonical zod schemas for cross-layer contracts.
-- [x] Support inferred TypeScript types from the canonical schemas.
-- [x] Support avoiding duplicated schema definitions across packages.
-- [x] Support AI provider enums.
-- [x] Support policy decision enums.
-- [x] Support human-in-the-loop status enums.
-- [x] Support risk level enums.
-- [x] Support MCP transport enums.
-- [x] Support event type enums.
-- [x] Support tool source enums.
-- [x] Support tool error code enums.
-- [x] Support event journal record schemas.
-- [x] Support event journal input schemas.
-- [x] Support log sequence number fields.
-- [x] Support device ID fields.
-- [x] Support content-addressed blob reference fields.
-- [x] Support tool name validation with the shared naming convention.
-- [x] Support tool descriptor schemas.
-- [x] Support tool error schemas.
-- [x] Support safeParse validation at trust boundaries.
-- [x] Support zod-free inferred types where downstream packages need type-only imports.
-- [ ] Support schema versioning for shared contracts.
-- [ ] Support compatibility tests for enum values used by other packages.
-- [ ] Support documentation for adding new shared enums.
-- [ ] Support deprecation metadata for evolving fields.
-- [ ] Support strict unknown-field policies where security matters.
-- [ ] Support pass-through unknown-field policies where forward compatibility matters.
-- [x] Support stable serialized wire shapes for IPC and persistence.
-- [ ] Support future notification, password, task, and tab shared contracts.
-- [x] Support dependency-light use by low-level packages.
+## Kesinlikle olmalı
+- [ ] Katmanlar arası sözleşmeler için tek doğruluk kaynağı (single source of truth) olmalı
+- [ ] Her sözleşmeyi zod şeması + ondan türetilen (`z.infer`) tip olarak sunmalı
+- [ ] Şemalar asla kopyalanmamalı — diğer paketler tipi buradan tüketmeli
+- [ ] Tüm trust boundary'ler (`safeParse`) bu şemalara karşı doğrulamalı
+- [ ] Enum'ları `z.enum` olarak sağlamalı: `AIProviderEnum`, `PolicyDecisionEnum`, `HITLStatusEnum`, `RiskLevelEnum`, `McpTransportEnum`, `EventTypeEnum`, `ToolSourceEnum`, `ToolErrorCodeEnum`
+- [ ] Event Journal için `EventSchema` / `EventRecord` — append-only fact (`lsn`, `deviceId`, `cas://` blobRef) tanımlamalı
+- [ ] `EventInputSchema` / `EventInput` — append girdisi; `lsn` / `deviceId` journal tarafından atanır
+- [ ] `ToolNameSchema` — `{domain}_{verb}_{noun}` biçimini zorlamalı
+- [ ] `ToolDescriptorSchema` ve `ToolErrorSchema` dışa aktarılmalı
+- [ ] Her tip yalnızca `z.infer` ile şemadan türetilmeli, elle yazılmamalı
+
+## Olsa iyi olur
+- [ ] `EventInput` şeması `lsn` / `deviceId` alanlarını girdi olarak kabul etmemeli (journal atar)
+- [ ] `cas://` blobRef formatı şema düzeyinde doğrulanmalı
+- [ ] Enum değerleri tek yazımla tutulmalı, tüketen paketlerde yeniden yazılmamalı
+- [ ] Şema değişiklikleri kırıcı olduğunda tüm tüketen paketlerde tip hatası olarak görünmeli (sessiz drift yok)
+- [ ] `ToolErrorSchema` hata kodlarını `ToolErrorCodeEnum` ile hizalı taşımalı
+- [ ] Paket Electron/Node runtime'ına bağımsız, saf şema/tip olmalı
+
+## Çok niş
+- [ ] Geçersiz `{domain}_{verb}_{noun}` tool adları `safeParse` ile net biçimde reddedilmeli
+- [ ] Bilinmeyen enum değeri taşıyan bir olay boundary'de sessizce kabul edilmemeli
+- [ ] `EventRecord` alanları geriye dönük uyumlu biçimde genişletilebilmeli (opsiyonel alan ekleme)
+- [ ] Aynı şemanın hem tam hem partial (input) türevi tutarlı alan adları kullanmalı
+- [ ] `build` çıktısı tip tanımlarını (`.d.ts`) diğer paketlere yayabilmeli

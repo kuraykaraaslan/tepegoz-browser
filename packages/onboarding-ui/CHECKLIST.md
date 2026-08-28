@@ -1,34 +1,34 @@
-# @tepegoz/onboarding-ui CHECKLIST
+# onboarding-ui — CHECKLIST
 
-Status verified against the implementation (2026-07-23); checked items have concrete code backing them.
+> Bu liste yalnızca README okunarak üretildi; kod incelenmedi.
+> Masaüstü kabuğu için ilk-çalıştırma karşılama/onboarding arayüzü: akışın sunumunu ve i18n'ini sahiplenir, Electron/preload eylemleri masaüstü uygulaması tarafından prop olarak enjekte edilir.
 
-- [x] Support a first-run welcome screen.
-- [x] Support step-based onboarding flow navigation.
-- [x] Support localized onboarding copy owned by the package.
-- [x] Support injected actions for desktop-specific side effects.
-- [ ] Support selecting initial language or locale.
-- [ ] Support selecting light, dark, or system theme.
-- [ ] Support choosing a default search experience.
-- [x] Support explaining local-first privacy defaults.
-- [ ] Support connecting AI provider keys through host actions.
-- [ ] Support choosing local versus cloud model preferences.
-- [x] Support importing bookmarks from other browsers.
-- [x] Support importing passwords from supported sources.
-- [ ] Support configuring notification permissions.
-- [ ] Support configuring default download location through host actions.
-- [ ] Support explaining extension and tool permissions.
-- [ ] Support optional sign-in or sync preparation steps.
-- [x] Support skip actions for non-required steps.
-- [x] Support back and continue navigation.
-- [x] Support progress indicators.
-- [x] Support completion callbacks to mark onboarding done.
-- [ ] Support validation states for required choices.
-- [x] Support loading states for host-driven setup tasks.
-- [x] Support error states with retry actions.
-- [x] Support keyboard-only completion.
-- [x] Support screen-reader friendly headings and landmarks.
-- [x] Support responsive layout for small windows.
-- [ ] Support reduced-motion friendly transitions.
-- [ ] Support high-contrast visual treatment.
-- [x] Support testable presentation without Electron bridge imports.
-- [ ] Support future onboarding steps through a host-supplied model.
+## Kesinlikle olmalı
+- [ ] Masaüstü kabuğu için ilk-çalıştırma karşılama ekranını render edebilmeli
+- [ ] Onboarding'i çok adımlı bir akış olarak sunabilmeli
+- [ ] Tüm onboarding metinlerini kendi i18n sözlüğünde sahiplenmeli
+- [ ] Hiçbir kullanıcıya görünür metni sabit kodlamamalı
+- [ ] Electron/preload eylemlerini prop olarak enjekte alabilmeli (doğrudan köprü bağımlılığı olmamalı)
+- [ ] Yalnızca sunum yapmalı; onboarding durumunu kendisi kalıcılaştırmamalı
+- [ ] Akış tamamlandığında host'a bunu bildirmeli (ör. `onComplete`/`onFinish` prop'u)
+- [ ] Kullanıcının adımlar arasında ileri gitmesine izin vermeli
+- [ ] Kullanıcının önceki adıma geri dönmesine izin vermeli
+- [ ] Akışı atlama / kapatma seçeneği sunmalı
+- [ ] İngilizce öncelikli, Türkçe birinci sınıf olacak şekilde yerelleştirilmiş olmalı
+
+## Olsa iyi olur
+- [ ] Adım ilerleme göstergesi sunabilmeli
+- [ ] Adımlar arasında klavye gezinmesini desteklemeli
+- [ ] "Varsayılan tarayıcı yap" adımını enjekte edilen bir eylemle bağlayabilmeli
+- [ ] "Başka tarayıcıdan içe aktar" adımını enjekte edilen bir eylemle sunabilmeli
+- [ ] Tema/görünüm seçimi adımı sunabilmeli
+- [ ] Akış aktifken odağı akış içinde tutabilmeli (focus trap)
+- [ ] Kullanıcının kaldığı adımı (enjekte edilen durum üzerinden) hatırlayabilmeli
+- [ ] Son adımda "taramaya başla" çağrısı (CTA) sunabilmeli
+
+## Çok niş
+- [ ] `prefers-reduced-motion` altında adım geçişlerini sadeleştirebilmeli
+- [ ] Akış için RTL yerleşimini desteklemeli
+- [ ] Akışı yalnızca ilk çalıştırmada değil, sonradan ayarlardan da açılabilir kılmalı
+- [ ] Enjekte edilen bir eylem prop'u eksikse akışı yine de düzgün render edebilmeli
+- [ ] Telemetri/opt-in onay adımı sunabilmeli
