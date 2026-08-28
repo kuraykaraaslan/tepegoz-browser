@@ -20,7 +20,11 @@ class RO {
 vi.stubGlobal('ResizeObserver', RO);
 
 const applyTheme = vi.fn();
-vi.mock('./lib/theme', () => ({ applyTheme: (...a: unknown[]) => void applyTheme(...a) }));
+const applyMotionPreference = vi.fn();
+vi.mock('./lib/theme', () => ({
+  applyTheme: (...a: unknown[]) => void applyTheme(...a),
+  applyMotionPreference: (...a: unknown[]) => void applyMotionPreference(...a),
+}));
 
 type Sub = (cb: (x: never) => void) => () => void;
 const subs: Record<string, ((x: never) => void) | null> = {};

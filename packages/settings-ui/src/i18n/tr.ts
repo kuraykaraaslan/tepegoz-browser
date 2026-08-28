@@ -623,6 +623,26 @@ export const tr: SettingsStrings = {
   keyRemoveBody:
     '{name} kaldırılır. Anahtarın kendisi bir daha gösterilmez; geri almak için sağlayıcınızdan yeniden yapıştırmanız gerekir.',
 
+  // --- Erişilebilirlik (ürün WCAG 2.2 AA iddia ederken yer tutucuydu) ---
+  accessibility: {
+    title: 'Erişilebilirlik',
+    subtitle: 'Sayfaların ne kadar büyük olduğu ve arayüzün ne kadar hareket ettiği.',
+    pageZoom: 'Varsayılan sayfa yakınlaştırması',
+    pageZoomHint:
+      'Kendisi için ayar yapmadığın sitelerin alacağı düzey. Tek bir siteyi yakınlaştırmak yine bunu geçersiz kılar ve o site için hatırlanır.',
+    perSiteCount: '{count} sitenin kendi yakınlaştırma düzeyi var.',
+    clearPerSite: 'Tüm siteleri sıfırla',
+    clearPerSiteBody:
+      '{count} sitenin tamamındaki yakınlaştırma düzeyi unutulur. Yukarıdaki varsayılana dönerler; başka hiçbir şey değişmez.',
+    reduceMotion: 'Hareketi azalt',
+    reduceMotionDesc:
+      'Animasyonları ve geçişleri sıfıra indirir. Sistem ayarın zaten uygulanıyor — sisteminin istediğinden daha az hareket istiyorsan bunu aç.',
+    elsewhereTitle: 'İlgili ayarlar',
+    elsewhereHint: 'Bunlar da okunabilirliği değiştirir ama başka sayfalara aittir.',
+    linkTheme: 'Tema ve kontrast — Görünüm',
+    linkShortcuts: 'Klavye kısayolları',
+  },
+
   // --- Açılışta (Sistem tepsisi ve güç sayfasından taşındı; eskiden orada saklıydılar) ---
   startup: {
     title: 'Açılışta',
@@ -665,10 +685,6 @@ export const tr: SettingsStrings = {
   },
 
   coming: {
-    accessibility: {
-      title: 'Erişilebilirlik',
-      description: 'Tarayıcıyı kullanımı kolaylaştıran seçenekler yakında geliyor.',
-    },
     autofill: {
       title: 'Otomatik doldurma',
       description: 'Kayıtlı ödeme yöntemleri ve adresler.',

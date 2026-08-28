@@ -1,4 +1,4 @@
-import { BrowserWindow, clipboard, shell } from 'electron';
+import { BrowserWindow, clipboard, shell, webContents } from 'electron';
 import {
   IpcChannels,
   type AIAdaptor,
@@ -29,6 +29,7 @@ import FileOperationsHost from '../file-operations/file-operations-host';
 import { DEFAULT_PREFERENCES, PreferencesPatchSchema } from '@tepegoz/preferences';
 import { mainLocale } from '../lib/i18n-main';
 import { buildAppInfo, diagnosticsText, thirdPartyNoticesPath } from '../lib/app-info';
+import { reapplyZoomEverywhere } from '../site-zoom';
 import { buildAdaptorConnections, buildAiAdaptors } from '../agent/ai-adaptors';
 import { getPublicSettings, broadcastPublicSettings } from '../settings/public-settings-host';
 import CredentialVault from '@tepegoz/credential-vault';
@@ -129,6 +130,10 @@ export function registerAppIpc(): void {
     // File-access whitelist or master switch changed — re-sync the live FileAccessPolicy.
     if (validated.fileAccessGrants !== undefined || validated.fileOperationsEnabled !== undefined) {
       FileOperationsHost.reconcile();
+    }
+    // A new default zoom that only took effect on the next navigation would read as a broken setting.
+    if (validated.defaultPageZoom !== undefined) {
+      reapplyZoomEverywhere(webContents.getAllWebContents());
     }
     if (validated.adblock !== undefined) {
       adblockHost.init();

@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Input, WebContents } from 'electron';
 
-const prefs: { siteZoomFactors: Record<string, number> } = { siteZoomFactors: {} };
+const prefs: { siteZoomFactors: Record<string, number>; defaultPageZoom: number } = {
+  siteZoomFactors: {},
+  defaultPageZoom: 1,
+};
 
 vi.mock('@tepegoz/preferences', () => ({
   default: {
@@ -10,7 +13,8 @@ vi.mock('@tepegoz/preferences', () => ({
   },
 }));
 
-const { applyStoredZoom, applyZoomCommand, handleZoomShortcut } = await import('./site-zoom');
+const { applyStoredZoom, applyZoomCommand, handleZoomShortcut, reapplyZoomEverywhere } =
+  await import('./site-zoom');
 
 function makeWebContents(url: string, factor = 1) {
   return {
@@ -38,6 +42,7 @@ function ctrl(key: string, over: Partial<Input> = {}): Input {
 
 beforeEach(() => {
   prefs.siteZoomFactors = {};
+  prefs.defaultPageZoom = 1;
 });
 
 describe('applyStoredZoom', () => {
@@ -160,5 +165,56 @@ describe('applyZoomCommand (omnibox zoom indicator buttons)', () => {
     const wc = makeWebContents('tepegoz://settings', 1);
     applyZoomCommand(asWc(wc), 'in');
     expect(wc.setZoomFactor).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The DEFAULT level is a preference (Accessibility → default page zoom), not the constant 1.
+ *
+ * Which makes the per-site store's rule subtler than it looks: "store nothing at the default" has to
+ * mean the USER's default, or a page left exactly where they asked every page to be would be written
+ * down as an exception — and the record this store exists not to become is a list of every site
+ * visited.
+ */
+describe('the default zoom is a preference', () => {
+  it('applies the preferred default to an origin with nothing stored', () => {
+    prefs.defaultPageZoom = 1.25;
+    const wc = makeWebContents('https://example.com/');
+    applyStoredZoom(asWc(wc));
+    expect(wc.setZoomFactor).toHaveBeenCalledWith(1.25);
+  });
+
+  it('lets a per-site level still override the default', () => {
+    prefs.defaultPageZoom = 1.25;
+    prefs.siteZoomFactors = { 'https://example.com': 0.9 };
+    const wc = makeWebContents('https://example.com/');
+    applyStoredZoom(asWc(wc));
+    expect(wc.setZoomFactor).toHaveBeenCalledWith(0.9);
+  });
+
+  it('stores nothing when a site lands on the user\u2019s own default', () => {
+    prefs.defaultPageZoom = 1.25;
+    prefs.siteZoomFactors = { 'https://example.com': 1.1 };
+    // 1.1 -> the next step up is 1.25, which IS the default: that is not an exception worth keeping.
+    handleZoomShortcut(ctrl('='), asWc(makeWebContents('https://example.com/', 1.1)));
+    expect('https://example.com' in prefs.siteZoomFactors).toBe(false);
+  });
+
+  it('reset returns to the preferred default, not to 100%', () => {
+    prefs.defaultPageZoom = 1.5;
+    prefs.siteZoomFactors = { 'https://example.com': 0.75 };
+    const wc = makeWebContents('https://example.com/', 0.75);
+    applyZoomCommand(asWc(wc), 'reset');
+    expect(wc.setZoomFactor).toHaveBeenCalledWith(1.5);
+    expect('https://example.com' in prefs.siteZoomFactors).toBe(false);
+  });
+
+  it('re-applies to every open page, skipping the ones that are not web pages', () => {
+    prefs.defaultPageZoom = 2;
+    const page = makeWebContents('https://example.com/');
+    const internal = makeWebContents('tepegoz://settings');
+    reapplyZoomEverywhere([asWc(page), asWc(internal)]);
+    expect(page.setZoomFactor).toHaveBeenCalledWith(2);
+    expect(internal.setZoomFactor).not.toHaveBeenCalled();
   });
 });

@@ -1,7 +1,8 @@
-import { ComingSoonCard, type SettingsSection } from '@tepegoz/settings-ui';
+import type { SettingsSection } from '@tepegoz/settings-ui';
 import { Card, Toggle } from '@tepegoz/ui';
 import { SEARCH_ENGINES } from '@tepegoz/shared-types/search-engines';
 import { PROVIDERS } from './settings-shared';
+import { AccessibilitySection } from './settings-accessibility';
 import { AgentControlsSection } from './settings-agent-controls';
 import { StartupSection } from './settings-startup';
 import { TraySection } from './settings-tray';
@@ -85,15 +86,10 @@ export function generalAndAiSections(ctx: SettingsSectionsCtx): SettingsSection[
     {
       id: 'accessibility',
       group: s.groupGeneral,
-      label: s.coming.accessibility.title,
+      label: s.accessibility.title,
       icon: <IconA11y />,
-      searchText: `${s.coming.accessibility.title} ${s.coming.accessibility.description}`,
-      content: (
-        <ComingSoonCard
-          title={s.coming.accessibility.title}
-          description={s.coming.accessibility.description}
-        />
-      ),
+      searchText: `${s.accessibility.title} ${s.accessibility.subtitle} ${s.accessibility.pageZoom} ${s.accessibility.reduceMotion} zoom motion`,
+      content: <AccessibilitySection prefs={prefs} setPref={setPref} />,
     },
     {
       id: 'notifications',

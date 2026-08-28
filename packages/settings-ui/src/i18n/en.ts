@@ -624,6 +624,26 @@ export const en = {
   keyRemoveBody:
     'Removes {name}. The key itself is never shown again, so you would have to paste it in from your provider to restore it.',
 
+  // --- Accessibility (was a placeholder while the product claimed WCAG 2.2 AA) ---
+  accessibility: {
+    title: 'Accessibility',
+    subtitle: 'How pages are sized and how much the interface moves.',
+    pageZoom: 'Default page zoom',
+    pageZoomHint:
+      'The level a site gets when you have not set one for it. Zooming a single site still overrides this, and is remembered for that site.',
+    perSiteCount: '{count} site(s) have a zoom level of their own.',
+    clearPerSite: 'Reset every site',
+    clearPerSiteBody:
+      'Forgets the zoom level on all {count} of them. They go back to the default above; nothing else changes.',
+    reduceMotion: 'Reduce motion',
+    reduceMotionDesc:
+      'Cut animations and transitions down to nothing. Your system setting is already followed — turn this on if you want less motion than your system asks for.',
+    elsewhereTitle: 'Related settings',
+    elsewhereHint: 'These change how much you can read too, but they belong to other pages.',
+    linkTheme: 'Theme and contrast — Appearance',
+    linkShortcuts: 'Keyboard shortcuts',
+  },
+
   // --- On startup (moved out of System tray & power, which is where these used to hide) ---
   startup: {
     title: 'On startup',
@@ -666,10 +686,6 @@ export const en = {
   },
 
   coming: {
-    accessibility: {
-      title: 'Accessibility',
-      description: 'Options to make the browser easier to use are coming soon.',
-    },
     autofill: {
       title: 'Autofill',
       description: 'Saved payment methods and addresses.',

@@ -19,18 +19,28 @@ const ZOOM_STEPS = [
   0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5,
 ] as const;
 
-const DEFAULT_FACTOR = 1;
 /** Factors are floats off a ladder; compare with a tolerance rather than for equality. */
 const EPSILON = 0.001;
 
+/**
+ * The level a site gets when it has none of its own — a PREFERENCE now, not the constant 1.
+ *
+ * Making it settable is what turns "zoom every page a little" from a per-site chore into one control,
+ * which is the whole point of the Accessibility page. It also keeps per-site storage honest: a site
+ * left at the user's own default stores nothing, exactly as a site left at 100% stored nothing before.
+ */
+function defaultFactor(): number {
+  return PreferenceStore.getAll().defaultPageZoom;
+}
+
 function storedFactor(origin: string): number {
-  return PreferenceStore.getAll().siteZoomFactors[origin] ?? DEFAULT_FACTOR;
+  return PreferenceStore.getAll().siteZoomFactors[origin] ?? defaultFactor();
 }
 
 function persist(origin: string, factor: number): void {
   const current = PreferenceStore.getAll().siteZoomFactors;
   const next = { ...current };
-  if (Math.abs(factor - DEFAULT_FACTOR) < EPSILON) delete next[origin];
+  if (Math.abs(factor - defaultFactor()) < EPSILON) delete next[origin];
   else next[origin] = factor;
   PreferenceStore.update({ siteZoomFactors: next });
 }
@@ -66,13 +76,13 @@ function changeZoom(wc: WebContents, direction: 1 | -1): void {
   persist(origin, next);
 }
 
-/** Back to 100% and forget the origin's stored level. */
+/** Back to the user's default level and forget the origin's stored one. */
 function resetZoom(wc: WebContents): void {
   const url = wc.getURL();
   const origin = originOf(url);
   if (!isWebUrl(url) || origin === '') return;
-  wc.setZoomFactor(DEFAULT_FACTOR);
-  persist(origin, DEFAULT_FACTOR);
+  wc.setZoomFactor(defaultFactor());
+  persist(origin, defaultFactor());
 }
 
 /**
@@ -113,6 +123,17 @@ export function applyZoomCommand(wc: WebContents | null, direction: ZoomDirectio
   if (wc === null || wc.isDestroyed()) return;
   if (direction === 'reset') resetZoom(wc);
   else changeZoom(wc, direction === 'in' ? 1 : -1);
+}
+
+/**
+ * Re-apply zoom to every open page. Called when the DEFAULT changes, because a new default that only
+ * took effect on the next navigation would look like a setting that did not work.
+ *
+ * `applyStoredZoom` already refuses anything that is not a web page, so the chrome and the internal
+ * `tepegoz://` views are skipped without this having to know about them.
+ */
+export function reapplyZoomEverywhere(all: readonly WebContents[]): void {
+  for (const wc of all) applyStoredZoom(wc);
 }
 
 /** Exposed for tests + any future zoom UI (a Chrome-style zoom indicator in the omnibox). */

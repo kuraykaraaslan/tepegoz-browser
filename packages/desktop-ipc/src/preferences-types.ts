@@ -264,6 +264,10 @@ export interface Preferences {
   tabDiscardIdleMinutes: number;
   /** GPU compositing. Applied at startup only (Chromium reads it once), so changing it needs a restart. */
   hardwareAccelerationEnabled: boolean;
+  /** Zoom factor for a site with no per-site level of its own (1 = 100%). */
+  defaultPageZoom: number;
+  /** Force reduced motion on, whatever the OS says. The OS setting is honoured regardless. */
+  reduceMotion: boolean;
   /** User overrides for the allowlisted Chromium flags — Tepegöz's `chrome://flags` analog, surfaced
    *  only in the dev-only Developer settings (ADR-0041). Applied to `app.commandLine` at startup; a
    *  change needs a relaunch. Keyed by `CHROMIUM_FLAG_ALLOWLIST` id; unknown keys cannot be persisted. */

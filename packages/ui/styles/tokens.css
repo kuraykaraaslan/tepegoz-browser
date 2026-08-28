@@ -163,3 +163,35 @@
   --color-info-subtle: var(--info-subtle);
   --color-info-fg: var(--info-fg);
 }
+
+/**
+ * Reduced motion.
+ *
+ * Two triggers, deliberately. The media query honours the operating system, which is where most people
+ * express this and where an app that ignores it is simply wrong. The `data-reduce-motion` attribute is
+ * the Accessibility page's own switch, for the machine whose OS says one thing and whose user wants
+ * another — a shared computer, a borrowed account, an OS that has no such setting at all.
+ *
+ * The near-zero durations rather than `none`: an animation that is removed outright can leave an
+ * element stuck at its start frame, because the code that undoes it often runs on `animationend`.
+ * 0.01ms fires that event immediately and lands everything on its final state.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+:root[data-reduce-motion='1'] *,
+:root[data-reduce-motion='1'] *::before,
+:root[data-reduce-motion='1'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}

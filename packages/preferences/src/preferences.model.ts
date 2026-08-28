@@ -306,6 +306,12 @@ export const PreferencesSchema = z.object({
   // because Chromium decides this once, at startup — which is also why the settings toggle says a
   // restart is needed instead of pretending the change is live.
   hardwareAccelerationEnabled: z.boolean(),
+  // Accessibility. `defaultPageZoom` is the factor a site gets when it has no per-site level of its
+  // own; the bounds match `siteZoomFactors` so the two cannot disagree about what is representable.
+  defaultPageZoom: z.number().min(0.25).max(5),
+  // Forces reduced motion ON regardless of the OS setting. The OS setting is honoured either way —
+  // this is the escape hatch for a machine whose OS says one thing and whose user wants another.
+  reduceMotion: z.boolean(),
   // Chromium flag overrides (Developer settings, dev-only — ADR-0041). `z.record` over the allowlist
   // enum: an unknown key fails here, so a hand-edited preferences.json cannot slip a flag past the
   // allowlist. Absent key ⇒ flag off.
@@ -446,6 +452,8 @@ export const DEFAULT_PREFERENCES: Preferences = {
   // default, which is the behavior a daily-driver user already expects.
   tabDiscardEnabled: true,
   hardwareAccelerationEnabled: true,
+  defaultPageZoom: 1,
+  reduceMotion: false,
   tabDiscardIdleMinutes: 30,
   // No Chromium flags overridden on a fresh profile — every allowlisted flag sits at its Chromium default.
   chromiumFlags: {},

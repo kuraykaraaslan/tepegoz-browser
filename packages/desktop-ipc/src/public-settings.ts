@@ -112,6 +112,11 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   tabDiscardIdleMinutes: 'private',
   // Device-local hardware detail; an extension has no business branching on it.
   hardwareAccelerationEnabled: 'private',
+  // Private for now. They are presentation settings an extension's UI could reasonably follow, but
+  // widening the public contract for a consumer that does not exist yet is surface added on
+  // speculation — `PUBLIC_SETTING_KEYS` is where that decision gets made, deliberately.
+  defaultPageZoom: 'private',
+  reduceMotion: 'private',
   // Private — a dev-only troubleshooting surface (ADR-0041); an extension has no business reading which
   // Chromium flags the user flipped.
   chromiumFlags: 'private',

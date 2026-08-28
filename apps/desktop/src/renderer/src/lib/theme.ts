@@ -115,6 +115,20 @@ function systemPrefersDark(): boolean {
 }
 
 /**
+ * Force reduced motion on this document, or hand the decision back to the OS.
+ *
+ * The attribute only ever ADDS a reason to reduce motion: `tokens.css` honours
+ * `prefers-reduced-motion` independently, so turning this off restores the OS's answer rather than
+ * overriding it with "full motion" — which would be the browser deciding it knows better than an
+ * accessibility setting the user already made.
+ */
+export function applyMotionPreference(reduceMotion: boolean): void {
+  const root = document.documentElement;
+  if (reduceMotion) root.setAttribute('data-reduce-motion', '1');
+  else root.removeAttribute('data-reduce-motion');
+}
+
+/**
  * Apply the theme to the document root. `theme` is the mode (system/light/dark); `themeColor` is a hex
  * custom color or '' to follow the mode.
  */

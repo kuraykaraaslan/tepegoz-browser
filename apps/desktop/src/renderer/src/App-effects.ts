@@ -11,7 +11,7 @@ import type {
   TabsState,
 } from '@tepegoz/desktop-ipc';
 import { extensionPageUrl } from '../../shared/extension-urls';
-import { applyTheme } from './lib/theme';
+import { applyMotionPreference, applyTheme } from './lib/theme';
 import type { ExtensionSurfacesResult } from './app-extension-surfaces';
 
 export interface AppEffectsParams {
@@ -127,6 +127,12 @@ export function useAppEffects(params: AppEffectsParams): void {
 
   const theme = prefs?.theme ?? 'system';
   const themeColor = prefs?.themeColor ?? '';
+  // The chrome window applies the motion preference to its own document, the same way each
+  // `tepegoz://` surface does (`useAppliedTheme`).
+  const reduceMotion = prefs?.reduceMotion ?? false;
+  useEffect(() => {
+    applyMotionPreference(reduceMotion);
+  }, [reduceMotion]);
   useEffect(() => {
     applyTheme(theme, themeColor);
     // Only follow OS changes for the plain system mode (a custom color overrides it).
