@@ -99,6 +99,47 @@ test('tepegoz://settings loads as a real page and its right-click opens the nati
     }, settingsId);
     expect(bridgeOk).toBe(true);
 
+    // A window resize must re-size the settings WebContentsView too. It lives in a SEPARATE map from
+    // browsed tabs, so `setContentBounds` (the main-side handler for the chrome's ResizeObserver
+    // report) used to only touch `activeView()` and left the system page frozen at its old width on
+    // every resize. Drive it the way the renderer does — report a new content rect — since a
+    // programmatic native resize does not fire the renderer's ResizeObserver in headless Electron.
+    // Dismiss the omnibox dropdown first: while it is open the content view is hidden
+    // (`setContentVisible(false)`), which is a legitimate no-op for this path.
+    await window.keyboard.press('Escape');
+    await window.getByRole('banner').click({ position: { x: 5, y: 5 } });
+
+    const settingsInnerWidth = (): Promise<number> =>
+      pollEvaluate(
+        () =>
+          app.evaluate(({ webContents }, id) => {
+            const wc = webContents.fromId(id);
+            if (wc === undefined || wc.isDestroyed()) return -1;
+            return wc.executeJavaScript('window.innerWidth') as Promise<number>;
+          }, settingsId),
+        -1,
+      );
+
+    await app.evaluate(({ webContents }) => {
+      const chrome = webContents
+        .getAllWebContents()
+        .find((w) => w.getURL().startsWith('file:'));
+      return chrome?.executeJavaScript(
+        'window.tepegoz.setContentBounds({ x: 0, y: 96, width: 1600, height: 700 })',
+      );
+    });
+    await expect.poll(settingsInnerWidth, { timeout: 10_000 }).toBe(1600);
+
+    await app.evaluate(({ webContents }) => {
+      const chrome = webContents
+        .getAllWebContents()
+        .find((w) => w.getURL().startsWith('file:'));
+      return chrome?.executeJavaScript(
+        'window.tepegoz.setContentBounds({ x: 0, y: 96, width: 900, height: 700 })',
+      );
+    });
+    await expect.poll(settingsInnerWidth, { timeout: 10_000 }).toBe(900);
+
     // Right-click the page (main-process input injection — no live cursor needed) and wait for the
     // Chrome-style page context menu popup (`?surface=page-context-menu`) that only opens in response to
     // a real `context-menu` event on a `WebContentsView`.

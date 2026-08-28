@@ -188,6 +188,12 @@ export class WindowTabsNav extends WindowTabsMoves {
     this.bounds = bounds;
     if (this.contentVisible) {
       this.activeView()?.setBounds(bounds);
+      // A `WebContentsView`-backed internal page (settings et al.) lives in a SEPARATE map, so
+      // `activeView()` never returns it — resize it here too, or a window resize leaves the system
+      // page frozen at its old width until the tab is re-activated.
+      const activeId = this.store.activeId;
+      const internalView = activeId !== null ? this.internalPageViews.get(activeId) : undefined;
+      if (internalView !== undefined) showInternalPageView(this.win, internalView, bounds);
     }
   }
 
