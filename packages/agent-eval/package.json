@@ -18,10 +18,10 @@
     "@tepegoz/model-gateway": "workspace:*",
     "@tepegoz/orchestrator": "workspace:*",
     "@tepegoz/shared-types": "workspace:*",
-    "zod": "3.25.76"
+    "zod": "4.4.3"
   },
   "devDependencies": {
-    "@playwright/test": "^1.49.1",
+    "@playwright/test": "^1.62.1",
     "@types/node": "^22.10.2",
     "typescript": "^5.7.2",
     "vitest": "^3.2.6"

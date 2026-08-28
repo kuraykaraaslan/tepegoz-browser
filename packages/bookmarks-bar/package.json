@@ -19,9 +19,9 @@
     "@dnd-kit/modifiers": "^9.0.0",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
-    "@fortawesome/fontawesome-svg-core": "^7.2.0",
-    "@fortawesome/free-solid-svg-icons": "^7.2.0",
-    "@fortawesome/react-fontawesome": "^3.3.1"
+    "@fortawesome/fontawesome-svg-core": "^7.3.1",
+    "@fortawesome/free-solid-svg-icons": "^7.3.1",
+    "@fortawesome/react-fontawesome": "^3.5.0"
   },
   "peerDependencies": {
     "react": "^18 || ^19",
@@ -30,11 +30,11 @@
   "devDependencies": {
     "@testing-library/dom": "^10.4.0",
     "@testing-library/react": "^16.1.0",
-    "@types/react": "^18.3.18",
-    "@types/react-dom": "^18.3.5",
-    "jsdom": "^25.0.1",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "jsdom": "^30.0.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "typescript": "^5.7.2",
     "vitest": "^3.2.6"
   }
