@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import { EXTENSION_ID_RE } from '@tepegoz/extension-sdk';
-import { NetworkConnectionSchema, NetworkGeneralBindingSchema } from '@tepegoz/shared-types';
+import {
+  ChromiumFlagOverridesSchema,
+  NetworkConnectionSchema,
+  NetworkGeneralBindingSchema,
+} from '@tepegoz/shared-types';
 import {
   AGENT_EFFORT_LEVELS,
   FILE_ACCESS_MODES,
@@ -285,6 +289,10 @@ export const PreferencesSchema = z.object({
   // Bounded: a value of 0 would discard a tab the instant it loses focus, and an absurdly large one is
   // indistinguishable from "off" but without the honest label.
   tabDiscardIdleMinutes: z.number().int().min(1).max(1440),
+  // Chromium flag overrides (Developer settings, dev-only — ADR-0041). `z.record` over the allowlist
+  // enum: an unknown key fails here, so a hand-edited preferences.json cannot slip a flag past the
+  // allowlist. Absent key ⇒ flag off.
+  chromiumFlags: ChromiumFlagOverridesSchema,
 }) satisfies z.ZodType<Preferences>;
 
 /** Patch shape for partial updates — only provided keys are applied. */
@@ -421,4 +429,6 @@ export const DEFAULT_PREFERENCES: Preferences = {
   // default, which is the behavior a daily-driver user already expects.
   tabDiscardEnabled: true,
   tabDiscardIdleMinutes: 30,
+  // No Chromium flags overridden on a fresh profile — every allowlisted flag sits at its Chromium default.
+  chromiumFlags: {},
 };

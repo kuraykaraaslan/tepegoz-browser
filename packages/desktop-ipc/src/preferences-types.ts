@@ -14,7 +14,15 @@ import type { NetworkConnection, NetworkGeneralBinding } from '@tepegoz/shared-t
 import type { FileAccessGrant } from '@tepegoz/shared-types/file-access';
 import type { AIProvider as ProviderId } from '@tepegoz/shared-types/providers';
 import type { SitePermissionState } from '@tepegoz/shared-types/notifications';
+import type { ChromiumFlagId } from '@tepegoz/shared-types/chromium-flags';
 import type { ExtensionId, ExtensionState } from './contract';
+
+/**
+ * User overrides for the allowlisted Chromium flags (Developer settings, dev-only — ADR-0041). Keyed by
+ * a `CHROMIUM_FLAG_ALLOWLIST` id; an absent id means off. `Partial<Record<…>>` mirrors the zod
+ * `z.record(enum, …)` output shape, and an unknown key cannot pass that schema.
+ */
+export type ChromiumFlagOverrides = Partial<Record<ChromiumFlagId, boolean>>;
 
 // Canonical value lists — the ONE place these unions are spelled out. The zod validators (schemas.ts,
 // preferences.model.ts) build their z.enum from these same arrays, so schema/type drift is impossible.
@@ -254,6 +262,10 @@ export interface Preferences {
   tabDiscardEnabled: boolean;
   /** How long a background tab must sit unfocused before it is eligible for auto-discard. Device-local. */
   tabDiscardIdleMinutes: number;
+  /** User overrides for the allowlisted Chromium flags — Tepegöz's `chrome://flags` analog, surfaced
+   *  only in the dev-only Developer settings (ADR-0041). Applied to `app.commandLine` at startup; a
+   *  change needs a relaunch. Keyed by `CHROMIUM_FLAG_ALLOWLIST` id; unknown keys cannot be persisted. */
+  chromiumFlags: ChromiumFlagOverrides;
 }
 
 /** Persisted main-window placement — the restored (non-maximized) rectangle plus whether it was maximized. */

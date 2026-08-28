@@ -12,7 +12,8 @@
     "./public-settings": "./src/public-settings.ts",
     "./search-engines": "./src/search-engines.ts",
     "./file-access": "./src/file-access.ts",
-    "./adaptors": "./src/adaptors.ts"
+    "./adaptors": "./src/adaptors.ts",
+    "./chromium-flags": "./src/chromium-flags.ts"
   },
   "main": "./src/index.ts",
   "types": "./src/index.ts",

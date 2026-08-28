@@ -1,7 +1,8 @@
 import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { app, BrowserWindow, powerMonitor } from 'electron';
-import { KEEP_RENDERING_SWITCHES, Logger } from '@tepegoz/libs';
+import { Logger } from '@tepegoz/libs';
+import { applyChromiumSwitches } from './chromium-flags-boot';
 import { installSecurity } from './security';
 import { abortActiveAgentRuns, registerIpc } from './ipc';
 import { registerBasicAuthHandler } from './auth/basic-auth-broker';
@@ -91,18 +92,6 @@ if (process.platform === 'win32') app.setAppUserModelId('com.tepegoz.browser');
 // app.whenReady() resolves; Electron only reads privileged-scheme registration once, at startup.
 registerInternalPagesScheme();
 
-// Keep the renderer compositing even when a chrome window is occluded, backgrounded, or hidden to the
-// tray — so a hidden tab (kept attached-but-occluded) and a tray-hidden window stay perceivable and
-// drivable by the agent. Once Chromium pauses the compositor for a non-visible surface, render-DOM
-// perception (`document.elementFromPoint` → null) and screenshots go blank. MUST run before whenReady
-// (Chromium reads switches at startup). Previously applied ONLY by the eval harness; now shipped in
-// production because background/hidden tabs the AI drives are a core capability. Trade-off: no
-// timer/occlusion throttling → higher idle CPU/battery on laptops (accepted for an agentic browser).
-for (const chromiumSwitch of KEEP_RENDERING_SWITCHES) {
-  if (chromiumSwitch.value === undefined) app.commandLine.appendSwitch(chromiumSwitch.name);
-  else app.commandLine.appendSwitch(chromiumSwitch.name, chromiumSwitch.value);
-}
-
 // Single Chrome-like user-data directory named `tepegoz` (app.setName above is only the display /
 // taskbar name). Pin it explicitly BEFORE whenReady so EVERY app.getPath('userData') — stores, the
 // SQLite DB, and the browsing partitions — resolves here. One-time: carry the small settings files
@@ -132,6 +121,14 @@ if (app.commandLine.getSwitchValue('user-data-dir').length === 0) {
   }
   app.setPath('userData', userDataDir);
 }
+
+// Chromium command-line switches — the app's baseline (keep hidden/occluded surfaces compositing so a
+// backgrounded tab the agent drives stays perceivable) plus the user's allowlisted flag overrides
+// (Developer settings, dev-only — ADR-0041). MUST run before whenReady (Chromium reads switches once,
+// at startup) and AFTER the userData pin above (the overrides are read from that dir's preferences.json).
+// Trade-off of the baseline: no timer/occlusion throttling → higher idle CPU/battery (accepted for an
+// agentic browser). See `chromium-flags-boot.ts` for the merge that keeps `enable-features` single.
+applyChromiumSwitches(app);
 
 // Default-browser inbound routing (macOS): a link opened while Tepegöz is already running arrives here,
 // not through argv. Registered at module scope (before `whenReady`) because Electron can fire `open-url`
