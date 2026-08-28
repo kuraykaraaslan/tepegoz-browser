@@ -23,7 +23,7 @@ function guiEnv(): Record<string, string> {
   return env;
 }
 
-const PAGES = ['extensions', 'history', 'downloads', 'uploads', 'bookmarks', 'process'];
+const PAGES = ['extensions', 'history', 'downloads', 'uploads', 'bookmarks', 'process', 'developer'];
 
 test('every migrated tepegoz:// internal page loads as a real page with real content', async () => {
   const profileDir = join(process.cwd(), '.tepegoz-internal-pages-profile');

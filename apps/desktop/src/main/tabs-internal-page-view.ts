@@ -6,6 +6,7 @@ import {
 } from 'electron';
 import {
   INTERNAL_BOOKMARKS_URL,
+  INTERNAL_DEVELOPER_URL,
   INTERNAL_DOWNLOADS_URL,
   INTERNAL_EXTENSIONS_URL,
   INTERNAL_HISTORY_URL,
@@ -56,6 +57,7 @@ const REAL_PAGE_BASE_URLS = new Set<string>([
   INTERNAL_UPLOADS_URL,
   INTERNAL_BOOKMARKS_URL,
   INTERNAL_PROCESS_URL,
+  INTERNAL_DEVELOPER_URL,
 ]);
 
 /** Whether `url` (an internal-page tab's full URL, hash included) should be backed by a real view. */

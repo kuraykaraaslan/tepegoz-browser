@@ -404,3 +404,6 @@ export const INTERNAL_UPLOADS_URL = 'tepegoz://uploads';
 export const INTERNAL_TASKS_URL = 'tepegoz://tasks';
 export const INTERNAL_BOOKMARKS_URL = 'tepegoz://bookmarks';
 export const INTERNAL_PROCESS_URL = 'tepegoz://process';
+/** Developer surface (Chromium flags + raw preferences editor). Not linked from any menu, but any user
+ *  can open it by typing the URL — deliberately, like Chrome's `chrome://flags` (ADR-0041). */
+export const INTERNAL_DEVELOPER_URL = 'tepegoz://developer';

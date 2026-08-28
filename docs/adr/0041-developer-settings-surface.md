@@ -34,13 +34,34 @@ line **before any code** so the line is not drawn later by whoever needed the to
 
 ## Decision
 
-**The Developer section of `tepegoz://settings` is the single surface. No `tepegoz://flags` page.** A
-new internal-page host would duplicate the protocol route, the `*PageSurface.tsx`, the `isTrustedAppUrl`
-allowlist, the CSP, and the e2e for no functional gain.
+> **Revised 2026-08-28 (same session, pre-merge).** The first cut of this ADR said "no separate page"
+> and "development-only". The owner then asked for exactly the `chrome://flags` shape: an **unlisted**
+> page any user can reach by typing its URL. The two paragraphs below reflect that; the reasoning in the
+> Consequences section is updated to match.
 
-**It stays development-only.** The `env === 'development'` gate
-([`isDeveloperSettingsVisible`](../../apps/desktop/src/renderer/src/lib/developer-env.ts)) is kept. A
-production power-user surface is a separate decision with its own ADR, not a flag on this one.
+**Two surfaces, one implementation.**
+
+- **`tepegoz://developer`** — a real internal page (`DeveloperPageSurface.tsx`), **not linked from any
+  menu**, **not gated to development builds**. Any user who types the URL gets it — deliberately, the
+  way Chrome ships `chrome://flags`. The "advanced user opted in by typing an obscure URL" *is* the
+  gate; there is no in-product path that leads a casual user here. It hosts the whole Developer surface:
+  the Chromium Flags card and the raw preferences editor.
+- **`tepegoz://settings` → Developer section** — unchanged, still behind the `env === 'development'`
+  gate ([`isDeveloperSettingsVisible`](../../apps/desktop/src/renderer/src/lib/developer-env.ts)). Kept
+  purely as a convenience for developers who already live in settings; it renders the same components.
+
+The new host costs a `REAL_PAGE_HOSTS` entry, a `main.tsx` dispatch case, a `navigation-url` entry, an
+`INTERNAL_DEVELOPER_URL` constant, a tab title, and an e2e row — the well-trodden path the other seven
+`tepegoz://` pages already took. `REAL_PAGE_HOSTS` also feeds `lib/trusted-origin.ts`, so the page is
+IPC-trusted by the same mechanism as the rest.
+
+**Exposing the raw preferences editor to every user is an accepted footgun.** It can break a profile
+with bad JSON and it is a social-engineering surface ("paste this into `tepegoz://developer`"). Accepted
+because: the URL is undiscoverable without being told, every write still goes through
+`PreferencesPatchSchema.safeParse` (so a *malformed* preference cannot land, only a valid-but-unwise
+one), and `tepegoz://settings` → Reset restores defaults. If this proves to be a real abuse vector, the
+mitigation is to split the page — flags stay public, the raw editor goes back behind the dev gate — not
+to remove the page.
 
 **Tier A — `Preferences` — fully exposed, schema-driven.** Every key is editable. A metadata registry
 adds label, description, a `stable | experimental | internal` badge, a `restartRequired` marker, and
@@ -84,10 +105,11 @@ allowlist and the `webPreferences` subset are enforced there via `superRefine`, 
 
 ## Consequences
 
-**Positive.** One discoverable surface for the whole knob space. The `chrome://flags` gap is closed for
-the flags that matter, without inheriting Chromium's blast radius. The renderer trust boundary is
-stated, locked, and test-guarded rather than resting on nobody having wired the toggle yet. Tier D
-settings keep single ownership.
+**Positive.** One surface for the whole knob space, reachable by anyone who knows the URL but absent
+from every menu — the same "power users only, by construction" posture as `chrome://flags`. The
+`chrome://flags` gap is closed for the flags that matter, without inheriting Chromium's blast radius.
+The renderer trust boundary is stated, locked, and test-guarded rather than resting on nobody having
+wired the toggle yet. Tier D settings keep single ownership.
 
 **Negative / accepted.**
 
@@ -101,18 +123,23 @@ settings keep single ownership.
 
 **Owed, and stated rather than implied.** The per-key descriptions for ~60 existing preferences are a
 writing task, not a design one, and can land incrementally as long as the badge and `restartRequired`
-fields are populated from day one. Production exposure is not decided here. Per-site `webPreferences`
-overrides are out of scope.
+fields are populated from day one. Per-site `webPreferences` overrides are out of scope.
 
 ## Implementation status (2026-08-28)
 
-**Tier B shipped.** `Preferences.chromiumFlags` (allowlist in `@tepegoz/shared-types/chromium-flags`,
-enforced by `ChromiumFlagOverridesSchema`), applied before `whenReady` in `chromium-flags-boot.ts`
-(merged with the keep-rendering baseline so `enable-features`/`disable-features` stay single), and a
-**Chromium Flags** card in the Developer section (`settings-developer-flags.tsx`, en + tr). Initial
-allowlist: `force-dark-mode`, `parallel-downloading`, `overlay-scrollbars`, `force-reduced-motion`,
-`disable-gpu`, `show-fps-counter` — chosen here as the reviewed set; none weakens page isolation, a
-test guards that.
+**Tier B shipped, plus the `tepegoz://developer` page.**
+
+- `Preferences.chromiumFlags` — allowlist in `@tepegoz/shared-types/chromium-flags`, enforced by
+  `ChromiumFlagOverridesSchema`; applied before `whenReady` in `chromium-flags-boot.ts` (merged with the
+  keep-rendering baseline so `enable-features`/`disable-features` stay single). Initial allowlist:
+  `force-dark-mode`, `parallel-downloading`, `overlay-scrollbars`, `force-reduced-motion`, `disable-gpu`,
+  `show-fps-counter` — chosen here as the reviewed set; none weakens page isolation, a test guards that.
+- **Chromium Flags** card (`settings-developer-flags.tsx`, en + tr) inside `DeveloperSection`.
+- **`tepegoz://developer`** — new real page (`DeveloperPageSurface.tsx`), unlisted, **not** dev-gated;
+  renders the full `DeveloperSection` (flags card + raw preferences editor). Wired through
+  `REAL_PAGE_HOSTS`, `main.tsx`, `navigation-url`, `INTERNAL_DEVELOPER_URL`, `internalTitleFor`, and
+  `e2e/tepegoz-internal-pages.spec.ts`.
+- The `tepegoz://settings` → Developer section is unchanged (still `env === 'development'`).
 
 **Tiers A / C / D owed.** The `Preferences` table is still the flat pre-existing editor (no
 nested-object drill-down, no metadata registry). No `webContentDefaults`. No Tier-D mirroring. Tracked

@@ -6,6 +6,7 @@
 import { internalPageUrl as resolveInternalPage } from '@tepegoz/navigation';
 import {
   INTERNAL_BOOKMARKS_URL,
+  INTERNAL_DEVELOPER_URL,
   INTERNAL_EXTENSIONS_URL,
   INTERNAL_DOWNLOADS_URL,
   INTERNAL_HISTORY_URL,
@@ -34,6 +35,7 @@ export function internalPageUrl(input: string): string | null {
     INTERNAL_TASKS_URL,
     INTERNAL_BOOKMARKS_URL,
     INTERNAL_PROCESS_URL,
+    INTERNAL_DEVELOPER_URL,
     ...extensionPageUrls(),
   ];
   return resolveInternalPage(input, internalUrls);

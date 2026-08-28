@@ -9,6 +9,7 @@ import {
 } from 'electron';
 import {
   INTERNAL_BOOKMARKS_URL,
+  INTERNAL_DEVELOPER_URL,
   INTERNAL_DOWNLOADS_URL,
   INTERNAL_EXTENSIONS_URL,
   INTERNAL_HISTORY_URL,
@@ -214,6 +215,7 @@ export function internalTitleFor(url: string): string {
   if (baseUrl === INTERNAL_TASKS_URL) return r.tasks.title;
   if (baseUrl === INTERNAL_BOOKMARKS_URL) return r.bookmarks.title;
   if (baseUrl === INTERNAL_PROCESS_URL) return r.process.title;
+  if (baseUrl === INTERNAL_DEVELOPER_URL) return r.browser.developerPageTitle;
   // An extension `page` surface (tepegoz://<extension-id>) is titled from the extension's manifest.
   const extId = extensionIdFromPageUrl(baseUrl);
   if (extId !== null) {

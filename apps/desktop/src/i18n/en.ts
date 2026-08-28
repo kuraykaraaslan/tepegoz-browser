@@ -13,6 +13,8 @@ export const en = {
     reopenTab: 'Reopen closed tab',
     closeTab: 'Close tab',
     untitled: 'New Tab',
+    // Tab title for the unlisted `tepegoz://developer` page (Chromium flags + raw preferences editor).
+    developerPageTitle: 'Developer',
     back: 'Back',
     forward: 'Forward',
     reload: 'Reload',

@@ -8,6 +8,8 @@ export const tr: AppStrings = {
     reopenTab: 'Kapatılan sekmeyi yeniden aç',
     closeTab: 'Sekmeyi kapat',
     untitled: 'Yeni Sekme',
+    // Listelenmemiş `tepegoz://developer` sayfasının sekme başlığı (Chromium flagleri + ham preferences editörü).
+    developerPageTitle: 'Geliştirici',
     back: 'Geri',
     forward: 'İleri',
     reload: 'Yenile',

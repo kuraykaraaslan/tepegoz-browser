@@ -1,11 +1,14 @@
 # Track — Developer settings surface: every browser + web-content knob in one place
 
-- **Status:** In progress — **Tier B (Chromium flags) shipped 2026-08-28**; Tiers A / C / D still owed.
-- **Owner decisions taken (2026-08-28):** dev-only visibility · Chromium flags are **allowlist-only** ·
-  this document + an ADR land **before any code**.
+- **Status:** In progress — **Tier B + the `tepegoz://developer` page shipped 2026-08-28**; Tiers A / C / D still owed.
+- **Owner decisions taken (2026-08-28):** Chromium flags are **allowlist-only** · this document + an ADR
+  land **before any code** · **revised same day:** a dedicated **`tepegoz://developer`** page, unlisted
+  (no menu entry) but openable by any user and **not** dev-gated — the `chrome://flags` shape. The
+  dev-only `tepegoz://settings#developer` section stays as a developer convenience.
 - **Landed:** `Preferences.chromiumFlags` + allowlist in `@tepegoz/shared-types/chromium-flags` +
-  `chromium-flags-boot.ts` (startup apply) + `settings-developer-flags.tsx` (Developer-section card,
-  en + tr). See [ADR-0041 § Implementation status](../../docs/adr/0041-developer-settings-surface.md).
+  `chromium-flags-boot.ts` (startup apply) + `settings-developer-flags.tsx` (flags card) +
+  `DeveloperPageSurface.tsx` at `tepegoz://developer` (full Developer surface, not dev-gated). See
+  [ADR-0041 § Implementation status](../../docs/adr/0041-developer-settings-surface.md).
 - **Companion ADR:** [ADR-0041](../../docs/adr/0041-developer-settings-surface.md) — the security
   carve-out (what is exposable, what is permanently locked) is decided there, not here.
 
@@ -81,12 +84,9 @@ Safe-to-expose `webPreferences` / `session` subset: `backgroundThrottling`, `plu
 
 ## Explicitly out of scope
 
-- Prod exposure. Dev-only, keeping the current `env === 'development'` gate. Revisit only with its own
-  decision.
 - Free-form / arbitrary Chromium switch entry. Allowlist-only.
 - Any path to flipping `contextIsolation` / `sandbox` / `nodeIntegration` / `webSecurity`.
 - Per-site `webPreferences` overrides. Profile-wide defaults only (a per-site override is a setting that
   exists to be turned on by whoever is asking — including a page).
-- `tepegoz://flags` as a separate internal page. The Developer section is the surface; a new `tepegoz://`
-  host would duplicate the protocol route, `*PageSurface.tsx`, `isTrustedAppUrl` allowlist, CSP, and
-  e2e for no gain.
+- A menu entry / omnibox suggestion for `tepegoz://developer`. It is reachable only by typing the URL,
+  on purpose — that undiscoverability is the gate.

@@ -18,4 +18,5 @@ export const REAL_PAGE_HOSTS = new Set([
   'uploads',
   'bookmarks',
   'process',
+  'developer',
 ]);
