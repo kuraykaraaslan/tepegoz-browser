@@ -12,9 +12,18 @@ import { invoke } from './ipc-invoke';
  *  id-addressed commands executed in main. */
 export const downloadsApi: Pick<
   TepegozApi,
-  'listDownloads' | 'commandDownload' | 'onDownloadsState'
+  | 'listDownloads'
+  | 'commandDownload'
+  | 'clearFinishedDownloads'
+  | 'pickDownloadDirectory'
+  | 'openDownloadFolder'
+  | 'onDownloadsState'
 > = {
   listDownloads: () => invoke<DownloadRecord[]>(IpcChannels.downloadsList),
+  clearFinishedDownloads: () => invoke<number>(IpcChannels.downloadsClearFinished),
+  pickDownloadDirectory: () =>
+    invoke<{ path: string; cancelled: boolean }>(IpcChannels.downloadsPickDirectory),
+  openDownloadFolder: () => invoke<boolean>(IpcChannels.downloadsOpenFolder),
   commandDownload: (input: DownloadCommandInput) =>
     invoke<void>(IpcChannels.downloadsCommand, input),
   onDownloadsState: (callback: (state: DownloadsState) => void) => {

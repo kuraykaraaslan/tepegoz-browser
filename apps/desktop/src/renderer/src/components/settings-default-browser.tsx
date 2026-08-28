@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { settingsDict } from '@tepegoz/settings-ui';
 import { Badge, Button, Card } from '@tepegoz/ui';
 import { useT } from '@tepegoz/i18n/react';
@@ -12,6 +12,11 @@ import { useT } from '@tepegoz/i18n/react';
  * The status is re-fetched after every attempt rather than assumed from the click — on Windows 10+ this
  * call only OFFERS the change, the OS's own picker decides, so "the button was pressed" and "Tepegöz IS
  * the default" are different facts and only the second one is what the row reports.
+ *
+ * It is also re-read whenever this window regains focus, and on demand. The status is explicitly NOT
+ * cached in main precisely because the user can change it from the OS's own settings — but the page
+ * read it once, at mount, so the moment someone did exactly that (walk over to Windows' Default apps
+ * and come back) the row was stating something it had no reason to still believe.
  */
 export function DefaultBrowserSection() {
   const s = useT(settingsDict).defaultBrowser;
@@ -19,7 +24,7 @@ export function DefaultBrowserSection() {
   const [working, setWorking] = useState(false);
   const [failed, setFailed] = useState(false);
 
-  useEffect(() => {
+  const refresh = useCallback((): void => {
     void window.tepegoz.getDefaultBrowserStatus().then(
       (status) => {
         setIsDefault(status.isDefault);
@@ -29,6 +34,14 @@ export function DefaultBrowserSection() {
       },
     );
   }, []);
+
+  useEffect(() => {
+    refresh();
+    window.addEventListener('focus', refresh);
+    return () => {
+      window.removeEventListener('focus', refresh);
+    };
+  }, [refresh]);
 
   const handleMakeDefault = (): void => {
     setWorking(true);
@@ -61,11 +74,18 @@ export function DefaultBrowserSection() {
         {isDefault !== null && (
           <p className="text-sm text-text-secondary">{isDefault ? s.isDefaultDesc : s.notDefaultDesc}</p>
         )}
-        {isDefault === false && (
-          <Button variant="secondary" size="sm" loading={working} onClick={handleMakeDefault}>
-            {s.makeDefault}
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {isDefault === false && (
+            <Button variant="secondary" size="sm" loading={working} onClick={handleMakeDefault}>
+              {s.makeDefault}
+            </Button>
+          )}
+          {isDefault !== null && (
+            <Button variant="outline" size="sm" onClick={refresh}>
+              {s.recheck}
+            </Button>
+          )}
+        </div>
         {failed && <p className="text-xs text-error">{s.failed}</p>}
       </div>
     </Card>

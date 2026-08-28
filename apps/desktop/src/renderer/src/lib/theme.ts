@@ -159,3 +159,45 @@ export function applyTheme(theme: string, themeColor: string): void {
   const isDark = theme === 'dark' || (theme === 'system' && systemPrefersDark());
   root.classList.toggle('dark', isDark);
 }
+
+/** What a custom theme colour actually resolves to, and how well it measures. */
+export interface ThemeColorReport {
+  surface: string;
+  raised: string;
+  text: string;
+  secondaryText: string;
+  accent: string;
+  /** Contrast of the chosen body text against the surface. */
+  textRatio: number;
+  /** Contrast of the accent (focus ring, fills) against the surface. */
+  accentRatio: number;
+  /** Contrast of the label drawn ON the accent, against the accent. */
+  accentLabelRatio: number;
+}
+
+/**
+ * Resolve a custom theme colour the same way `applyTheme` does, and report the ratios it achieved.
+ *
+ * The picker's hint has always promised that "text contrast is chosen automatically", and the search
+ * above does deliver it — but the screen never showed the result, so the promise was one the user had
+ * to take on faith. This is the same derivation, read out instead of applied: a claim about contrast
+ * that a person can check is worth more than one they cannot.
+ *
+ * Returns `null` for anything that is not a hex colour, which is the same input `applyTheme` ignores.
+ */
+export function describeThemeColor(themeColor: string): ThemeColorReport | null {
+  if (!isHexColor(themeColor)) return null;
+  const text = bestTextOn(themeColor);
+  const towardLight = text === LIGHT_TEXT;
+  const accent = accentFor(themeColor, towardLight);
+  return {
+    surface: themeColor,
+    raised: shade(themeColor, towardLight ? 0.08 : -0.04),
+    text,
+    secondaryText: shadeUntil(themeColor, towardLight, AA_TEXT),
+    accent,
+    textRatio: contrastRatio(text, themeColor),
+    accentRatio: contrastRatio(accent, themeColor),
+    accentLabelRatio: contrastRatio(bestTextOn(accent), accent),
+  };
+}

@@ -123,17 +123,22 @@ export function removeRecord(state: DownloadState, id: string): void {
   broadcast(state);
 }
 
-export function clearTerminal(state: DownloadState): void {
+/** Drops every finished transfer and reports HOW MANY — the caller is a user action that should be
+ *  able to say "42 removed" rather than leaving the person to diff a list they were already done with. */
+export function clearTerminal(state: DownloadState): number {
   const terminal = ['completed', 'blocked', 'canceled', 'failed'];
+  let removed = 0;
   for (const record of [...state.records.values()]) {
     if (terminal.includes(record.status)) {
       state.records.delete(record.id);
       state.rates.delete(record.id);
+      removed += 1;
     }
   }
   const db = getDb();
   if (db !== null) DownloadStore.clearTerminal(db);
   broadcast(state);
+  return removed;
 }
 
 export function appendAudit(type: AuditType, record?: ActiveDownload): void {

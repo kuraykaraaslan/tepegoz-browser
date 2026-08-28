@@ -101,8 +101,8 @@ class DownloadService {
     await runCommand(DownloadService.ctx, id, action, wc);
   }
 
-  static clearTerminal(): void {
-    clearTerminal(DownloadService.ctx);
+  static clearTerminal(): number {
+    return clearTerminal(DownloadService.ctx);
   }
 }
 

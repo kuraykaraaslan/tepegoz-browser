@@ -201,6 +201,14 @@ export const IpcChannels = {
   downloadsList: 'downloads:list',
   downloadsCommand: 'downloads:command',
   downloadsState: 'downloads:state',
+  /** Drop every finished transfer in ONE call, resolving with the count. The settings page used to do
+   *  this by issuing one `downloads:command` per record — N round trips for a bulk operation main
+   *  already had (`clearTerminal`) and simply never exposed. */
+  downloadsClearFinished: 'downloads:clear-finished',
+  /** Native directory picker for the download location, seeded with the current one. */
+  downloadsPickDirectory: 'downloads:pick-directory',
+  /** Open the download folder in the OS file manager. `false` ⇒ the path could not be opened. */
+  downloadsOpenFolder: 'downloads:open-folder',
   // Browser uploads (`tepegoz://uploads`). State is pushed live from the main-process UploadService.
   uploadsList: 'uploads:list',
   uploadsCommand: 'uploads:command',

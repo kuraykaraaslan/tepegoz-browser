@@ -7,6 +7,9 @@ import type { LocalePref, Preferences, ThemePref } from '@tepegoz/desktop-ipc';
 import { getCountryDataList } from 'countries-list';
 import { FlagSelect, type FlagOption } from './FlagSelect';
 import { TURKIC_REGIONS, TURKIC_REGION_BASE_ISO, turkicFlagFor } from '../data/turkic-regions';
+import { AA_NON_TEXT, AA_TEXT } from '@tepegoz/ui';
+import { describeThemeColor } from '../lib/theme';
+import { useCommitOnPause } from '../lib/use-commit-on-pause';
 import { LOCALES, Select, THEMES } from './settings-shared';
 
 /**
@@ -121,6 +124,18 @@ export function AppearanceSection({
     prefs.themeColor !== '' &&
     !THEME_PRESETS.some((p) => p.color === prefs.themeColor.toLowerCase());
 
+  // `<input type="color">` fires `change` continuously while the swatch is dragged. Bound straight to
+  // `setPref`, one drag was an IPC round trip and a disk write per animation frame.
+  const custom = useCommitOnPause(
+    prefs.themeColor !== '' ? prefs.themeColor : DEFAULT_CUSTOM_COLOR,
+    (value) => {
+      setPref({ themeColor: value });
+    },
+    250,
+  );
+  const report = describeThemeColor(prefs.themeColor);
+  const ratio = (n: number): string => `${n.toFixed(1)}:1`;
+
   return (
     <Card title={s.appearanceTitle}>
       <p className="mb-3 text-sm text-text-secondary">{s.themePreviewHint}</p>
@@ -190,13 +205,46 @@ export function AppearanceSection({
           <input
             type="color"
             className="sr-only"
-            value={prefs.themeColor !== '' ? prefs.themeColor : DEFAULT_CUSTOM_COLOR}
+            value={custom.draft}
             onChange={(e) => {
-              setPref({ themeColor: e.target.value });
+              custom.set(e.target.value);
             }}
+            onBlur={custom.flush}
           />
         </label>
       </div>
+
+      {report !== null && (
+        // The derivation, read out. `applyTheme` solves each token for a WCAG threshold rather than
+        // guessing a shade amount, and this is that result — so "contrast is chosen automatically"
+        // becomes something the user can check rather than something they have to believe.
+        <div className="mt-3 flex flex-wrap items-center gap-3 rounded-md border border-border px-3 py-2">
+          <span
+            className="flex h-9 items-center gap-2 rounded px-2 text-xs"
+            style={{ backgroundColor: report.surface, color: report.text }}
+          >
+            {s.contrastSample}
+            <span
+              className="inline-block h-3 w-3 rounded-full"
+              style={{ backgroundColor: report.accent }}
+              aria-hidden
+            />
+          </span>
+          <span className="text-xs text-text-secondary">
+            {s.contrastText}: <span className="font-mono">{ratio(report.textRatio)}</span>
+            {' · '}
+            {s.contrastAccent}: <span className="font-mono">{ratio(report.accentRatio)}</span>
+            {' · '}
+            {s.contrastAccentLabel}:{' '}
+            <span className="font-mono">{ratio(report.accentLabelRatio)}</span>
+          </span>
+          <span className="text-xs text-text-disabled">
+            {s.contrastTargets
+              .replace('{text}', ratio(AA_TEXT))
+              .replace('{nonText}', ratio(AA_NON_TEXT))}
+          </span>
+        </div>
+      )}
 
       {glassAvailable && (
         <div className="mt-5 border-t border-border pt-4">

@@ -125,6 +125,12 @@ export interface ExtensionsApi {
   // main and the UI asks main to open/reveal by id.
   listDownloads(): Promise<DownloadRecord[]>;
   commandDownload(input: DownloadCommandInput): Promise<void>;
+  /** Drop every finished transfer at once; resolves with how many were removed. */
+  clearFinishedDownloads(): Promise<number>;
+  /** Native directory picker for the download location. `path` is '' when cancelled. */
+  pickDownloadDirectory(): Promise<{ path: string; cancelled: boolean }>;
+  /** Open the download folder in the OS file manager. `false` ⇒ it could not be opened. */
+  openDownloadFolder(): Promise<boolean>;
   onDownloadsState(callback: (state: DownloadsState) => void): () => void;
   // Browser uploads (tepegoz://uploads). Mutations go through id-addressed commands; paths stay in main.
   listUploads(): Promise<UploadRecord[]>;

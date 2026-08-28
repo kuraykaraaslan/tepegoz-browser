@@ -1,128 +1,21 @@
 import { useEffect } from 'react';
 import { settingsDict } from '@tepegoz/settings-ui';
-import { Button, Card, Input, Toggle } from '@tepegoz/ui';
+import { Card } from '@tepegoz/ui';
 import { useT } from '@tepegoz/i18n/react';
-import type {
-  LoginCredentialMeta,
-  LoginImportResult,
-  Preferences,
-} from '@tepegoz/desktop-ipc';
+import type { LoginCredentialMeta, LoginImportResult } from '@tepegoz/desktop-ipc';
 import { CredentialsSettings, ImportExportPanel } from '@tepegoz/password-ui';
 
 /**
- * Privacy/security + advanced settings panels: per-site permissions, file operations, passwords and
- * search/startup. Split out of `SettingsPage.tsx` (ADR-0010 250-line cap). About moved on to
- * `settings-about.tsx` — it is the page that describes the BUILD, not a privacy panel, and this file's
- * name never said otherwise.
+ * Passwords, plus the re-exports that keep this module's public surface stable while the sections it
+ * used to hold move to files named after them: About → `settings-about.tsx`, downloads →
+ * `settings-downloads.tsx`, search/startup and file operations to their own siblings.
  *
- * The two largest panels live in siblings and are re-exported here so this module keeps its full
- * public surface: `SearchStartupSection` (search/startup) and `FileOperationsSection` (file ops).
+ * `SitePermissionsSection` also lived here. It was deleted rather than moved: `PermissionsCenter` had
+ * replaced it, and it had been exported-but-never-rendered ever since — dead code that still had to be
+ * read, typechecked and kept compiling.
  */
 export { SearchStartupSection } from './settings-privacy-files-search';
 export { FileOperationsSection } from './settings-privacy-files-file-ops';
-
-export function DownloadSettingsSection({
-  prefs,
-  setPref,
-}: {
-  prefs: Preferences;
-  setPref: (patch: Partial<Preferences>) => void;
-}) {
-  const s = useT(settingsDict);
-
-  function clearDownloads(): void {
-    void window.tepegoz.listDownloads().then((downloads) => {
-      for (const item of downloads) {
-        if (['completed', 'blocked', 'canceled', 'failed'].includes(item.status)) {
-          void window.tepegoz.commandDownload({ id: item.id, action: 'clear' });
-        }
-      }
-    });
-  }
-
-  return (
-    <Card title={s.downloadsTitle} subtitle={s.downloadsSubtitle}>
-      <div className="space-y-5">
-        <Input
-          id="download-directory"
-          label={s.downloadLocationLabel}
-          hint={s.downloadLocationDesc}
-          placeholder={s.downloadLocationPlaceholder}
-          value={prefs.downloadDirectory}
-          onChange={(e) => {
-            setPref({ downloadDirectory: e.target.value });
-          }}
-        />
-        <Toggle
-          id="download-ask-each-time"
-          label={s.downloadAskEachTime}
-          description={s.downloadAskEachTimeDesc}
-          checked={prefs.downloadAskEachTime}
-          onChange={(v) => {
-            setPref({ downloadAskEachTime: v });
-          }}
-        />
-        <div>
-          <p className="text-sm font-medium text-text-primary">{s.clearDownloadsLabel}</p>
-          <p className="mb-2 text-xs text-text-secondary">{s.clearDownloadsDesc}</p>
-          <Button size="sm" variant="outline" onClick={clearDownloads}>
-            {s.clearDownloadsButton}
-          </Button>
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-/** Per-origin web-capability permissions (currently notifications consent), with a per-origin reset. */
-export function SitePermissionsSection({
-  sitePermissions,
-  onReset,
-}: {
-  sitePermissions: Preferences['sitePermissions'];
-  onReset: (origin: string) => void;
-}) {
-  const s = useT(settingsDict);
-  const entries = Object.entries(sitePermissions);
-  return (
-    <Card title={s.sitePermissionsTitle} subtitle={s.sitePermissionsSubtitle}>
-      {entries.length === 0 ? (
-        <p className="text-sm text-text-secondary">{s.sitePermissionsEmpty}</p>
-      ) : (
-        <ul className="space-y-1.5">
-          {entries.map(([origin, perms]) => (
-            <li
-              key={origin}
-              className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2"
-            >
-              <div className="min-w-0">
-                <span className="truncate font-mono text-xs text-text-primary">{origin}</span>
-                {perms.notifications !== undefined && (
-                  <span className="ml-2 text-xs text-text-secondary">
-                    {s.sitePermissionNotifications}: {perms.notifications}
-                  </span>
-                )}
-                {perms.clipboardRead !== undefined && (
-                  <span className="ml-2 text-xs text-text-secondary">
-                    {s.sitePermissionClipboardRead}: {perms.clipboardRead}
-                  </span>
-                )}
-                {perms.clipboardWrite !== undefined && (
-                  <span className="ml-2 text-xs text-text-secondary">
-                    {s.sitePermissionClipboardWrite}: {perms.clipboardWrite}
-                  </span>
-                )}
-              </div>
-              <Button size="sm" variant="outline" onClick={() => onReset(origin)}>
-                {s.permissionReset}
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Card>
-  );
-}
 
 export function PasswordsSection({
   credentials,

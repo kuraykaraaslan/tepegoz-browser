@@ -132,6 +132,7 @@ export const tr: SettingsStrings = {
 
   // --- Varsayılan tarayıcı ---
   defaultBrowser: {
+    recheck: 'Yeniden denetle',
     title: 'Varsayılan tarayıcı',
     isDefault: 'Tepegöz varsayılan tarayıcınız.',
     isDefaultDesc: 'Diğer uygulamalardan ve e-postalardan gelen bağlantılar burada açılır.',
@@ -529,6 +530,21 @@ export const tr: SettingsStrings = {
   aboutOpensInNewTab: 'Yeni sekmede açılır',
 
   // --- Yer tutucu ("yakında") bölümleri — salt arayüz, hiçbir şey kaydetmez ---
+  // İndirilenler / arama motoru düzenleme / varsayılan tarayıcı yeniden denetleme / kontrast okuması.
+  downloadLocationBrowse: 'Gözat…',
+  downloadLocationOpen: 'Klasörü aç',
+  downloadLocationOpenFailed: 'Bu klasör açılamadı. Taşınmış veya silinmiş olabilir.',
+  clearDownloadsConfirm: 'Biten, iptal edilen ve başarısız tüm aktarımları listeden kaldırır. Dosyaların kendisi silinmez.',
+  clearDownloadsResult: '{count} kayıt listeden kaldırıldı.',
+  searchEngineEdit: 'Düzenle',
+  searchEngineSave: 'Kaydet',
+  searchEngineDuplicate: 'Bu adda bir motor zaten var.',
+  contrastSample: 'Örnek',
+  contrastText: 'Metin',
+  contrastAccent: 'Vurgu',
+  contrastAccentLabel: 'Vurgu üstündeki etiket',
+  contrastTargets: 'WCAG AA metin için {text}, denetimler için {nonText} ister.',
+
   // --- Açılışta (Sistem tepsisi ve güç sayfasından taşındı; eskiden orada saklıydılar) ---
   startup: {
     title: 'Açılışta',

@@ -14,7 +14,8 @@ import {
 } from './settings-ai-panels';
 import { AdaptorsSection } from './settings-adaptors-section';
 import { DefaultBrowserSection } from './settings-default-browser';
-import { DownloadSettingsSection, SearchStartupSection } from './settings-privacy-files';
+import { SearchStartupSection } from './settings-privacy-files';
+import { DownloadSettingsSection } from './settings-downloads';
 import {
   IconA11y,
   IconBell,

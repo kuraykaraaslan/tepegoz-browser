@@ -132,6 +132,7 @@ export const en = {
 
   // --- Default browser ---
   defaultBrowser: {
+    recheck: 'Check again',
     title: 'Default browser',
     isDefault: 'Tepegöz is your default browser.',
     isDefaultDesc: 'Links from other apps and emails open here.',
@@ -530,6 +531,21 @@ export const en = {
   aboutOpensInNewTab: 'Opens in a new tab',
 
   // --- Placeholder ("coming soon") sections — pure UI, persist nothing (see ComingSoonCard) ---
+  // Downloads / search-engine editing / default-browser recheck / custom-colour contrast readout.
+  downloadLocationBrowse: 'Browse…',
+  downloadLocationOpen: 'Open folder',
+  downloadLocationOpenFailed: 'That folder could not be opened. It may have been moved or deleted.',
+  clearDownloadsConfirm: 'Removes every finished, cancelled and failed transfer from the list. The files themselves are not deleted.',
+  clearDownloadsResult: '{count} removed from the list.',
+  searchEngineEdit: 'Edit',
+  searchEngineSave: 'Save',
+  searchEngineDuplicate: 'An engine with this name already exists.',
+  contrastSample: 'Sample',
+  contrastText: 'Text',
+  contrastAccent: 'Accent',
+  contrastAccentLabel: 'Label on accent',
+  contrastTargets: 'WCAG AA needs {text} for text and {nonText} for controls.',
+
   // --- On startup (moved out of System tray & power, which is where these used to hide) ---
   startup: {
     title: 'On startup',
