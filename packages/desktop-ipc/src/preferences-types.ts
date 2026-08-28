@@ -262,6 +262,8 @@ export interface Preferences {
   tabDiscardEnabled: boolean;
   /** How long a background tab must sit unfocused before it is eligible for auto-discard. Device-local. */
   tabDiscardIdleMinutes: number;
+  /** GPU compositing. Applied at startup only (Chromium reads it once), so changing it needs a restart. */
+  hardwareAccelerationEnabled: boolean;
   /** User overrides for the allowlisted Chromium flags — Tepegöz's `chrome://flags` analog, surfaced
    *  only in the dev-only Developer settings (ADR-0041). Applied to `app.commandLine` at startup; a
    *  change needs a relaunch. Keyed by `CHROMIUM_FLAG_ALLOWLIST` id; unknown keys cannot be persisted. */

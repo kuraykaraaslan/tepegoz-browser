@@ -110,6 +110,8 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   // Private — browser-tab memory management; extensions have no need for it.
   tabDiscardEnabled: 'private',
   tabDiscardIdleMinutes: 'private',
+  // Device-local hardware detail; an extension has no business branching on it.
+  hardwareAccelerationEnabled: 'private',
   // Private — a dev-only troubleshooting surface (ADR-0041); an extension has no business reading which
   // Chromium flags the user flipped.
   chromiumFlags: 'private',

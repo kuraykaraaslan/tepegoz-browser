@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { app, BrowserWindow, powerMonitor } from 'electron';
 import { Logger } from '@tepegoz/libs';
 import { applyChromiumSwitches } from './chromium-flags-boot';
+import { applyHardwareAccelerationPreference } from './hardware-acceleration-boot';
 import { installSecurity } from './security';
 import { abortActiveAgentRuns, registerIpc } from './ipc';
 import { registerBasicAuthHandler } from './auth/basic-auth-broker';
@@ -129,6 +130,12 @@ if (app.commandLine.getSwitchValue('user-data-dir').length === 0) {
 // Trade-off of the baseline: no timer/occlusion throttling → higher idle CPU/battery (accepted for an
 // agentic browser). See `chromium-flags-boot.ts` for the merge that keeps `enable-features` single.
 applyChromiumSwitches(app);
+
+// GPU compositing, same before-whenReady constraint and the same read-the-file-directly approach.
+// Kept as its own call rather than folded into the switches above: this is not a command-line switch,
+// it is an Electron API that must be invoked, and burying it in a function named for flags would hide
+// the one setting on this screen that cannot take effect without a restart.
+applyHardwareAccelerationPreference(app);
 
 // Default-browser inbound routing (macOS): a link opened while Tepegöz is already running arrives here,
 // not through argv. Registered at module scope (before `whenReady`) because Electron can fire `open-url`

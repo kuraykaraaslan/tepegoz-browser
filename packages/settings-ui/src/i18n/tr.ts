@@ -5,6 +5,14 @@ export const tr: SettingsStrings = {
   search: 'Ayarlarda ara',
   noResults: 'Eşleşen ayar yok',
 
+  // Sayfa kabuğunun yükleme / yazma durumları.
+  loading: 'Ayarlar yükleniyor…',
+  loadFailedTitle: 'Ayarlar yüklenemedi',
+  loadFailedBody:
+    'Tarayıcı süreci yanıt vermedi. Hiçbir şey değişmedi, geri alınacak bir şey yok — yeniden deneyin.',
+  retry: 'Yeniden dene',
+  savedIndicator: 'Kaydedildi',
+
   // --- Kenar çubuğu grup başlıkları ---
   groupGeneral: 'Genel',
   groupAiAgent: 'Yapay Zekâ ve Ajan',
@@ -521,44 +529,56 @@ export const tr: SettingsStrings = {
   aboutOpensInNewTab: 'Yeni sekmede açılır',
 
   // --- Yer tutucu ("yakında") bölümleri — salt arayüz, hiçbir şey kaydetmez ---
+  // --- Açılışta (Sistem tepsisi ve güç sayfasından taşındı; eskiden orada saklıydılar) ---
+  startup: {
+    title: 'Açılışta',
+    modeWindowDesc: 'Normal bir tarayıcı penceresi açar.',
+    modeBackgroundDesc:
+      'Pencere açmadan sistem tepsisinde başlar. Sekmeler çizilmeye devam eder ve siz hiçbir şey açmadan ajan çalışabilir.',
+    modeKioskDesc: 'Tek bir adresi, hiç tarayıcı arayüzü olmadan tam ekran açar.',
+    kioskUrlHint: 'Kiosk modunda adres çubuğu yoktur; yüklenecek tek sayfa budur.',
+    urlInvalid: 'Tam bir http:// veya https:// adresi girin.',
+    rangeInvalid: '{min} ile {max} arasında tam bir sayı girin.',
+    movedHere: 'Başlangıç modu ve oturum açılışında başlatma, Tercihler → Açılışta sayfasına taşındı.',
+  },
+
+  // --- Ajan denetimleri (eskiden, üçü zaten sevk edilmiş dört maddeyi sayan bir yer tutucuydu) ---
+  agentControls: {
+    title: 'Ajan denetimleri',
+    autonomyHint:
+      'Ajanın sormadan önce nereye kadar gidebileceği. Reddedilen işlemler her seviyede reddedilmiş kalır.',
+    effortHint: 'Her adıma ne kadar akıl yürütme düşeceği. Yüksek seviyeler daha çok token harcar.',
+    elsewhereTitle: 'İlgili ayarlar',
+    elsewhereHint: 'Bunlar da ajanı denetler ama başka sayfalara aittir.',
+    linkBudget: 'Token bütçesi — Maliyet ve performans',
+    linkRouting: 'Model yönlendirme — Sağlayıcılar ve API anahtarları',
+    linkPermissions: 'Araç bazlı izinler — Site izinleri',
+  },
+
+  // --- Sistem (eskiden, ikisi zaten sevk edilmiş üç maddeyi sayan bir yer tutucuydu) ---
+  system: {
+    title: 'Sistem',
+    subtitle: 'Tarayıcının tamamını ilgilendiren makine düzeyi davranışlar.',
+    hardwareAcceleration: 'Donanım hızlandırma kullan',
+    hardwareAccelerationDesc:
+      'Sayfaları GPU ile çiz. Yalnızca çizim bozuklukları ya da sürücü çökmeleri görüyorsanız kapatın — yazılımla çizim daha yavaştır ve daha çok pil harcar.',
+    restartRequired: 'Tepegöz bunu açılışta karar verir; değişiklik yeniden başlattıktan sonra geçerli olur.',
+    restartNow: 'Şimdi yeniden başlat',
+    elsewhereTitle: 'İlgili ayarlar',
+    elsewhereHint: 'Bunlar da sistem düzeyindedir ama başka sayfalara aittir.',
+    linkLaunchAtLogin: 'Oturum açılışında başlat — Sistem tepsisi ve güç',
+    linkProxy: 'Proxy ve tüneller — Ağ gizliliği',
+  },
+
   coming: {
-    onStartup: {
-      title: 'Başlangıçta',
-      description: 'Tarayıcı açıldığında ne açılır.',
-      items: ['Yeni sekme aç', 'Kaldığın yerden devam et', 'Belirli sayfaları aç'],
-    },
-    downloads: {
-      title: 'İndirilenler',
-      description: 'Dosyaların nereye kaydedileceği.',
-      items: [
-        'İndirme konumu',
-        'Her dosya için nereye kaydedileceğini sor',
-        'İndirme geçmişini temizle',
-      ],
-    },
     accessibility: {
       title: 'Erişilebilirlik',
       description: 'Tarayıcıyı kullanımı kolaylaştıran seçenekler yakında geliyor.',
-    },
-    agentControls: {
-      title: 'Ajan denetimleri',
-      description: 'Yapay zekâ ajanı üzerinde ince ayar denetimi.',
-      items: [
-        'Özerklik / onay düzeyi',
-        'Token bütçe sınırı',
-        'Model yönlendirme',
-        'Araç bazında izinler',
-      ],
     },
     autofill: {
       title: 'Otomatik doldurma',
       description: 'Kayıtlı ödeme yöntemleri ve adresler.',
       items: ['Ödeme yöntemleri', 'Adresler', 'Parola sızıntısı denetimi'],
-    },
-    system: {
-      title: 'Sistem',
-      description: 'Sistem düzeyi davranış.',
-      items: ['Başlangıçta çalıştır', 'Donanım hızlandırma', 'Proxy ayarları'],
     },
   },
   // --- Ağ gizliliği (Faz 5): yerel bir SOCKS uç noktası üzerinden sekme/grup bazında yönlendirme ---

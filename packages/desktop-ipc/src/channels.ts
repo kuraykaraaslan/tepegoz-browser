@@ -239,6 +239,8 @@ export const IpcChannels = {
   pageMenuAction: 'page-menu:action',
   pageMenuContributionAction: 'page-menu:contribution-action',
   appQuit: 'app:quit',
+  /** Restart the app. The only way a startup-only setting (GPU compositing) can be made to take. */
+  appRelaunch: 'app:relaunch',
   historyList: 'history:list',
   historySearch: 'history:search',
   historyDelete: 'history:delete',

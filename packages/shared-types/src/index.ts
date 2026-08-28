@@ -2,6 +2,7 @@ export * from './providers';
 export * from './notifications';
 export * from './public-settings';
 export * from './search-engines';
+export * from './web-url';
 export * from './file-access';
 export * from './adaptors';
 export * from './enums';

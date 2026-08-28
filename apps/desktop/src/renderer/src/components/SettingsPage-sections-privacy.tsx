@@ -6,6 +6,7 @@ import { Button, Card, Toggle } from '@tepegoz/ui';
 import { FileOperationsSection, PasswordsSection } from './settings-privacy-files';
 import { AboutSection } from './settings-about';
 import { DeveloperSection } from './settings-developer';
+import { SystemSection } from './settings-system';
 import { SiteTrustSection } from './settings-site-trust';
 import { ShortcutsSection } from './settings-shortcuts';
 import { NetworkPrivacySection } from './settings-network-privacy';
@@ -293,16 +294,10 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
     {
       id: 'system',
       group: s.groupAdvanced,
-      label: s.coming.system.title,
+      label: s.system.title,
       icon: <IconDesktop />,
-      searchText: `${s.coming.system.title} ${s.coming.system.description}`,
-      content: (
-        <ComingSoonCard
-          title={s.coming.system.title}
-          description={s.coming.system.description}
-          items={s.coming.system.items}
-        />
-      ),
+      searchText: `${s.system.title} ${s.system.hardwareAcceleration} ${s.system.hardwareAccelerationDesc} ${s.system.elsewhereTitle} GPU`,
+      content: <SystemSection prefs={prefs} setPref={setPref} />,
     },
     ...(developerVisible
       ? [

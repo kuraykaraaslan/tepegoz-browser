@@ -6,6 +6,14 @@ export const en = {
   search: 'Search settings',
   noResults: 'No matching settings',
 
+  // Load / write states for the page shell.
+  loading: 'Loading settings…',
+  loadFailedTitle: 'Settings could not be loaded',
+  loadFailedBody:
+    'The browser process did not answer. Nothing was changed, so nothing needs undoing — try again.',
+  retry: 'Try again',
+  savedIndicator: 'Saved',
+
   // --- Sidebar group headings (Chrome/Edge-style) ---
   groupGeneral: 'General',
   groupAiAgent: 'AI & Agent',
@@ -522,40 +530,56 @@ export const en = {
   aboutOpensInNewTab: 'Opens in a new tab',
 
   // --- Placeholder ("coming soon") sections — pure UI, persist nothing (see ComingSoonCard) ---
+  // --- On startup (moved out of System tray & power, which is where these used to hide) ---
+  startup: {
+    title: 'On startup',
+    modeWindowDesc: 'Opens a normal browser window.',
+    modeBackgroundDesc:
+      'Starts in the system tray with no window. Tabs keep rendering and the agent can work before you open anything.',
+    modeKioskDesc: 'Opens one address fullscreen with no browser chrome at all.',
+    kioskUrlHint: 'There is no address bar in kiosk mode, so this is the only page that will load.',
+    urlInvalid: 'Enter a full http:// or https:// address.',
+    rangeInvalid: 'Enter a whole number between {min} and {max}.',
+    movedHere: 'Startup mode and launch-at-login moved to Preferences → On startup.',
+  },
+
+  // --- Agent controls (was a placeholder listing three controls that had already shipped) ---
+  agentControls: {
+    title: 'Agent controls',
+    autonomyHint:
+      'How far the agent may go before it stops to ask. Denied actions stay denied at every level.',
+    effortHint: 'How much reasoning each step gets. Higher levels cost more tokens.',
+    elsewhereTitle: 'Related settings',
+    elsewhereHint: 'These control the agent too, but they belong to other pages.',
+    linkBudget: 'Token budget — Cost & performance',
+    linkRouting: 'Model routing — Providers & API keys',
+    linkPermissions: 'Per-tool permissions — Site permissions',
+  },
+
+  // --- System (was a placeholder listing two settings that had already shipped) ---
+  system: {
+    title: 'System',
+    subtitle: 'Machine-level behaviour that applies to the whole browser.',
+    hardwareAcceleration: 'Use hardware acceleration',
+    hardwareAccelerationDesc:
+      'Draw pages with the GPU. Turn it off only if you see rendering glitches or driver crashes — software rendering is slower and uses more battery.',
+    restartRequired: 'Tepegöz decides this at startup, so the change applies after a restart.',
+    restartNow: 'Restart now',
+    elsewhereTitle: 'Related settings',
+    elsewhereHint: 'These are system-level too, but they belong to other pages.',
+    linkLaunchAtLogin: 'Launch at system startup — System tray & power',
+    linkProxy: 'Proxy and tunnels — Network privacy',
+  },
+
   coming: {
-    onStartup: {
-      title: 'On startup',
-      description: 'What opens when the browser launches.',
-      items: ['Open a new tab', 'Continue where you left off', 'Open specific pages'],
-    },
-    downloads: {
-      title: 'Downloads',
-      description: 'Where files are saved.',
-      items: ['Download location', 'Ask where to save each file', 'Clear download history'],
-    },
     accessibility: {
       title: 'Accessibility',
       description: 'Options to make the browser easier to use are coming soon.',
-    },
-    agentControls: {
-      title: 'Agent controls',
-      description: 'Fine-grained control over the AI agent.',
-      items: [
-        'Autonomy / approval level',
-        'Token-budget cap',
-        'Model routing',
-        'Per-tool permissions',
-      ],
     },
     autofill: {
       title: 'Autofill',
       description: 'Saved payment methods and addresses.',
       items: ['Payment methods', 'Addresses', 'Password breach check'],
-    },
-    system: {
-      title: 'System',
-      description: 'System-level behavior.',
-      items: ['Launch at startup', 'Hardware acceleration', 'Proxy settings'],
     },
   },
   // --- Network privacy (Phase 5): per-tab / per-group routing through a local SOCKS endpoint ---

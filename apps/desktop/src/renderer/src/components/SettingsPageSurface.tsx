@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { I18nProvider } from '@tepegoz/i18n/react';
 import type { CredentialsStatus, LoginCredentialMeta, Preferences, ProviderId } from '@tepegoz/desktop-ipc';
 import { effectiveLocale, internalPageHash } from '../App-helpers';
-import { applyTheme } from '../lib/theme';
+import { useAppliedTheme } from '../lib/use-applied-theme';
+import { InternalPageLoadFailed, InternalPageLoading } from './InternalPageState';
 import { SettingsPage } from './SettingsPage';
 
 /**
@@ -17,20 +18,32 @@ import { SettingsPage } from './SettingsPage';
 export function SettingsPageSurface() {
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [status, setStatus] = useState<CredentialsStatus | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [loginCredentials, setLoginCredentials] = useState<LoginCredentialMeta[]>([]);
 
   useEffect(() => {
+    let live = true;
+    setFailed(false);
     void Promise.all([window.tepegoz.getPreferences(), window.tepegoz.getCredentialsStatus()]).then(
       ([p, s]) => {
+        if (!live) return;
         setPrefs(p);
         setStatus(s);
-        applyTheme(p.theme, p.themeColor);
       },
       () => {
-        /* bridge unavailable (should not happen inside a real WebContentsView) — render with defaults */
+        // A rejected first fetch is REPORTED, not swallowed: it used to leave the page blank forever
+        // with no way to tell "loading" from "broken" (see InternalPageState).
+        if (live) setFailed(true);
       },
     );
-  }, []);
+    return () => {
+      live = false;
+    };
+  }, [attempt]);
+
+  // The theme follows the preference for the life of the document — see `useAppliedTheme`.
+  useAppliedTheme(prefs);
 
   // Keep prefs fresh when ANOTHER window/tab changes them — main broadcasts on every prefs write, the
   // same signal `App-effects.ts` listens for.
@@ -111,8 +124,14 @@ export function SettingsPageSurface() {
             }
             onExportLogins={(fmt) => window.tepegoz.exportLogins(fmt)}
           />
+        ) : failed ? (
+          <InternalPageLoadFailed
+            onRetry={() => {
+              setAttempt((n) => n + 1);
+            }}
+          />
         ) : (
-          <p className="px-6 py-8 text-sm text-text-secondary">…</p>
+          <InternalPageLoading />
         )}
       </div>
     </I18nProvider>

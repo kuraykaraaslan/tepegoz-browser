@@ -1,8 +1,10 @@
 import { ComingSoonCard, type SettingsSection } from '@tepegoz/settings-ui';
 import { Card, Toggle } from '@tepegoz/ui';
 import { SEARCH_ENGINES } from '@tepegoz/shared-types/search-engines';
-import type { StartupMode } from '@tepegoz/desktop-ipc';
-import { PROVIDERS, Select } from './settings-shared';
+import { PROVIDERS } from './settings-shared';
+import { AgentControlsSection } from './settings-agent-controls';
+import { StartupSection } from './settings-startup';
+import { TraySection } from './settings-tray';
 import { AppearanceSection, LanguageRegionSection } from './settings-appearance-language';
 import {
   LocalActionsSection,
@@ -54,14 +56,10 @@ export function generalAndAiSections(ctx: SettingsSectionsCtx): SettingsSection[
       group: s.groupGeneral,
       label: s.preferencesTitle,
       icon: <IconSearch />,
-      searchText: `${s.preferencesTitle} ${s.searchEngineLabel} ${s.coming.onStartup.title} ${SEARCH_ENGINES.map((e) => e.name).join(' ')}`,
+      searchText: `${s.preferencesTitle} ${s.searchEngineLabel} ${s.startup.title} ${s.tray.startupMode} ${s.tray.launchAtLogin} ${s.tray.kioskUrl} ${SEARCH_ENGINES.map((e) => e.name).join(' ')}`,
       content: (
         <div className="space-y-6">
-          <ComingSoonCard
-            title={s.coming.onStartup.title}
-            description={s.coming.onStartup.description}
-            items={s.coming.onStartup.items}
-          />
+          <StartupSection prefs={prefs} setPref={setPref} />
           <SearchStartupSection prefs={prefs} setPref={setPref} />
         </div>
       ),
@@ -120,117 +118,8 @@ export function generalAndAiSections(ctx: SettingsSectionsCtx): SettingsSection[
       group: s.groupGeneral,
       label: s.tray.title,
       icon: <IconSliders />,
-      searchText: `${s.tray.title} ${s.tray.closeToTray} ${s.tray.keepAwake} ${s.tray.pauseOnSleep} ${s.tray.startupMode} ${s.tray.modeKiosk} ${s.tray.kioskUrl} ${s.tray.launchAtLogin} ${s.tray.tabDiscard} ${s.tray.tabDiscardIdleMinutes}`,
-      content: (
-        <Card title={s.tray.title}>
-          <div className="space-y-5">
-            <Toggle
-              id="close-to-tray"
-              label={s.tray.closeToTray}
-              description={s.tray.closeToTrayDesc}
-              checked={prefs.closeToTray}
-              onChange={(v) => {
-                setPref({ closeToTray: v });
-              }}
-            />
-            <Toggle
-              id="keep-awake-in-tray"
-              label={s.tray.keepAwake}
-              description={s.tray.keepAwakeDesc}
-              checked={prefs.keepAwakeInTray}
-              onChange={(v) => {
-                setPref({ keepAwakeInTray: v });
-              }}
-            />
-            <Toggle
-              id="pause-tasks-on-sleep"
-              label={s.tray.pauseOnSleep}
-              description={s.tray.pauseOnSleepDesc}
-              checked={prefs.pauseTasksOnSleep}
-              onChange={(v) => {
-                setPref({ pauseTasksOnSleep: v });
-              }}
-            />
-            <div>
-              <Select
-                id="startup-mode"
-                label={s.tray.startupMode}
-                value={prefs.startupMode}
-                onChange={(v) => {
-                  setPref({ startupMode: v as StartupMode });
-                }}
-              >
-                <option value="window">{s.tray.modeWindow}</option>
-                <option value="background">{s.tray.modeBackground}</option>
-                <option value="kiosk">{s.tray.modeKiosk}</option>
-              </Select>
-              <p className="mt-1 text-xs text-text-secondary">{s.tray.startupModeDesc}</p>
-            </div>
-            {prefs.startupMode === 'kiosk' && (
-              <div>
-                <label
-                  htmlFor="kiosk-url"
-                  className="mb-1 block text-sm font-medium text-text-primary"
-                >
-                  {s.tray.kioskUrl}
-                </label>
-                <input
-                  id="kiosk-url"
-                  type="url"
-                  value={prefs.kioskUrl}
-                  placeholder={s.tray.kioskUrlPlaceholder}
-                  onChange={(e) => {
-                    setPref({ kioskUrl: e.target.value });
-                  }}
-                  className="w-full rounded-md border border-border bg-surface-base px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-                />
-              </div>
-            )}
-            <Toggle
-              id="launch-at-login"
-              label={s.tray.launchAtLogin}
-              description={s.tray.launchAtLoginDesc}
-              checked={prefs.launchAtLogin}
-              onChange={(v) => {
-                setPref({ launchAtLogin: v });
-              }}
-            />
-            <Toggle
-              id="tab-discard-enabled"
-              label={s.tray.tabDiscard}
-              description={s.tray.tabDiscardDesc}
-              checked={prefs.tabDiscardEnabled}
-              onChange={(v) => {
-                setPref({ tabDiscardEnabled: v });
-              }}
-            />
-            {prefs.tabDiscardEnabled && (
-              <div>
-                <label
-                  htmlFor="tab-discard-idle-minutes"
-                  className="mb-1 block text-sm font-medium text-text-primary"
-                >
-                  {s.tray.tabDiscardIdleMinutes}
-                </label>
-                <input
-                  id="tab-discard-idle-minutes"
-                  type="number"
-                  min={1}
-                  max={1440}
-                  value={prefs.tabDiscardIdleMinutes}
-                  onChange={(e) => {
-                    const n = Number(e.target.value);
-                    if (Number.isFinite(n) && n >= 1 && n <= 1440) {
-                      setPref({ tabDiscardIdleMinutes: Math.round(n) });
-                    }
-                  }}
-                  className="w-32 rounded-md border border-border bg-surface-base px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-                />
-              </div>
-            )}
-          </div>
-        </Card>
-      ),
+      searchText: `${s.tray.title} ${s.tray.closeToTray} ${s.tray.keepAwake} ${s.tray.pauseOnSleep} ${s.tray.tabDiscard} ${s.tray.tabDiscardIdleMinutes}`,
+      content: <TraySection prefs={prefs} setPref={setPref} />,
     },
     // ---------- AI & Agent ----------
     {
@@ -279,16 +168,10 @@ export function generalAndAiSections(ctx: SettingsSectionsCtx): SettingsSection[
     {
       id: 'agent-controls',
       group: s.groupAiAgent,
-      label: s.coming.agentControls.title,
+      label: s.agentControls.title,
       icon: <IconSliders />,
-      searchText: `${s.coming.agentControls.title} ${s.coming.agentControls.description}`,
-      content: (
-        <ComingSoonCard
-          title={s.coming.agentControls.title}
-          description={s.coming.agentControls.description}
-          items={s.coming.agentControls.items}
-        />
-      ),
+      searchText: `${s.agentControls.title} ${s.agentControls.autonomyHint} ${s.agentControls.effortHint} ${s.agentControls.elsewhereTitle} autonomy effort guard`,
+      content: <AgentControlsSection prefs={prefs} setPref={setPref} />,
     },
   ];
 }

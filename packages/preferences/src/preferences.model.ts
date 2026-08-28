@@ -4,6 +4,8 @@ import {
   ChromiumFlagOverridesSchema,
   NetworkConnectionSchema,
   NetworkGeneralBindingSchema,
+  isNavigableWebUrl,
+  isSafeSearchTemplate,
 } from '@tepegoz/shared-types';
 import {
   AGENT_EFFORT_LEVELS,
@@ -103,7 +105,8 @@ export const PreferencesSchema = z.object({
   searchEngineId: z.string().max(64),
   // First-run welcome sentinel. Private: not exposed to extensions.
   onboardingCompleted: z.boolean(),
-  // User-added search engines. `searchUrlTemplate` must contain the `{q}` query placeholder.
+  // User-added search engines. The template must carry `{q}` AND resolve to an http/https URL once it
+  // is filled in — `{q}` alone was the whole check, and `javascript:alert(1)?q={q}` passes that.
   customSearchEngines: z
     .array(
       z.object({
@@ -113,7 +116,7 @@ export const PreferencesSchema = z.object({
           .string()
           .min(1)
           .max(2048)
-          .refine((t) => t.includes('{q}'), 'searchUrlTemplate must contain the {q} placeholder'),
+          .refine(isSafeSearchTemplate, 'searchUrlTemplate must be an http(s) URL containing {q}'),
       }),
     )
     .max(50),
@@ -129,7 +132,12 @@ export const PreferencesSchema = z.object({
   }),
   // Home / new-tab page URL. Lenient string (validated/normalized at the UI); a blank value falls back
   // to the built-in default at the navigation site.
-  homepageUrl: z.string().max(2048),
+  // '' = no homepage (a new tab opens blank); anything else must be a real http/https address, since
+  // this string is navigated to on every new tab, the Home button and a blank omnibox submit.
+  homepageUrl: z
+    .string()
+    .max(2048)
+    .refine((v) => v === '' || isNavigableWebUrl(v), 'homepageUrl must be an http(s) URL'),
   // Show the bookmarks bar strip under the nav toolbar (toggled from the Bookmarks menu).
   showBookmarksBar: z.boolean(),
   // New-tab shortcut tiles — the user's own list, independent of bookmarks. Capped at one Chrome-style
@@ -282,13 +290,22 @@ export const PreferencesSchema = z.object({
   keepAwakeInTray: z.boolean(),
   pauseTasksOnSleep: z.boolean(),
   startupMode: z.enum(['window', 'background', 'kiosk']),
-  kioskUrl: z.string().max(4096),
+  // '' until kiosk mode is chosen. Loaded fullscreen with no chrome, so it gets the same scheme check
+  // as the homepage — there is no address bar in kiosk mode to notice a wrong one with.
+  kioskUrl: z
+    .string()
+    .max(4096)
+    .refine((v) => v === '' || isNavigableWebUrl(v), 'kioskUrl must be an http(s) URL'),
   launchAtLogin: z.boolean(),
   trayHintShown: z.boolean(),
   tabDiscardEnabled: z.boolean(),
   // Bounded: a value of 0 would discard a tab the instant it loses focus, and an absurdly large one is
   // indistinguishable from "off" but without the honest label.
   tabDiscardIdleMinutes: z.number().int().min(1).max(1440),
+  // GPU compositing. Read straight from `preferences.json` before `whenReady` (hardware-acceleration-boot.ts)
+  // because Chromium decides this once, at startup — which is also why the settings toggle says a
+  // restart is needed instead of pretending the change is live.
+  hardwareAccelerationEnabled: z.boolean(),
   // Chromium flag overrides (Developer settings, dev-only — ADR-0041). `z.record` over the allowlist
   // enum: an unknown key fails here, so a hand-edited preferences.json cannot slip a flag past the
   // allowlist. Absent key ⇒ flag off.
@@ -428,6 +445,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   // Cap memory from forgotten background tabs by default; 30 minutes matches Chrome's own memory-saver
   // default, which is the behavior a daily-driver user already expects.
   tabDiscardEnabled: true,
+  hardwareAccelerationEnabled: true,
   tabDiscardIdleMinutes: 30,
   // No Chromium flags overridden on a fresh profile — every allowlisted flag sits at its Chromium default.
   chromiumFlags: {},

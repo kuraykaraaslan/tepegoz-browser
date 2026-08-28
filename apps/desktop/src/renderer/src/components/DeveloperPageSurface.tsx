@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { I18nProvider } from '@tepegoz/i18n/react';
 import type { Preferences } from '@tepegoz/desktop-ipc';
 import { effectiveLocale } from '../App-helpers';
-import { applyTheme } from '../lib/theme';
+import { useAppliedTheme } from '../lib/use-applied-theme';
+import { InternalPageLoadFailed, InternalPageLoading } from './InternalPageState';
 import { DeveloperSection } from './settings-developer';
 
 /**
@@ -16,18 +17,26 @@ import { DeveloperSection } from './settings-developer';
  */
 export function DeveloperPageSurface() {
   const [prefs, setPrefs] = useState<Preferences | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    let live = true;
+    setFailed(false);
     void window.tepegoz.getPreferences().then(
       (p) => {
-        setPrefs(p);
-        applyTheme(p.theme, p.themeColor);
+        if (live) setPrefs(p);
       },
       () => {
-        /* bridge unavailable (should not happen inside a real WebContentsView) */
+        if (live) setFailed(true);
       },
     );
-  }, []);
+    return () => {
+      live = false;
+    };
+  }, [attempt]);
+
+  useAppliedTheme(prefs);
 
   // Keep prefs fresh when another window/tab changes them — main broadcasts on every prefs write.
   useEffect(() => {
@@ -50,8 +59,14 @@ export function DeveloperPageSurface() {
         <div className="mx-auto max-w-3xl px-6 py-8">
           {prefs ? (
             <DeveloperSection prefs={prefs} onUpdatePrefs={onUpdatePrefs} />
+          ) : failed ? (
+            <InternalPageLoadFailed
+              onRetry={() => {
+                setAttempt((n) => n + 1);
+              }}
+            />
           ) : (
-            <p className="text-sm text-text-secondary">…</p>
+            <InternalPageLoading />
           )}
         </div>
       </div>

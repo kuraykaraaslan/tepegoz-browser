@@ -77,6 +77,7 @@ export const windowTabsApi: Pick<
   | 'closePopup'
   | 'onPopupClosed'
   | 'quitApp'
+  | 'relaunchApp'
   | 'openSubmenu'
   | 'closeSubmenu'
   | 'getPageMenuContext'
@@ -294,6 +295,9 @@ export const windowTabsApi: Pick<
   },
   quitApp: () => {
     ipcRenderer.send(IpcChannels.appQuit);
+  },
+  relaunchApp: () => {
+    ipcRenderer.send(IpcChannels.appRelaunch);
   },
   openSubmenu: (kind: string, anchor: ContentBounds, opts?: { height?: number }) => {
     ipcRenderer.send(IpcChannels.submenuOpen, { kind, anchor, height: opts?.height });

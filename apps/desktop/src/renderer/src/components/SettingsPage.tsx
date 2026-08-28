@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { SettingsLayout, settingsDict } from '@tepegoz/settings-ui';
-import { AlertBanner } from '@tepegoz/ui';
+import { AlertBanner, Badge, Button, Modal } from '@tepegoz/ui';
 import { coreDict } from '@tepegoz/i18n';
 import { useT } from '@tepegoz/i18n/react';
 import type {
@@ -66,11 +66,33 @@ export function SettingsPage({
     message: string;
   } | null>(null);
   const [feedbackKey, setFeedbackKey] = useState(0);
+  const [savedTick, setSavedTick] = useState(0);
+  const [resetOpen, setResetOpen] = useState(false);
 
   function notify(variant: 'success' | 'error', message: string): void {
     setFeedback({ variant, message });
     setFeedbackKey((k) => k + 1);
   }
+
+  /**
+   * Confirm an ordinary write. Settings here apply instantly and there is no Save button, so without
+   * this the ONLY thing the page ever said about a write was when it failed — a toggle that took and a
+   * toggle that silently did nothing looked identical. It is a header pill rather than the banner
+   * because a banner on every toggle would push the whole page down under the user's cursor.
+   */
+  function notifySaved(): void {
+    setSavedTick((n) => n + 1);
+  }
+
+  useEffect(() => {
+    if (savedTick === 0) return undefined;
+    const id = setTimeout(() => {
+      setSavedTick(0);
+    }, 1600);
+    return () => {
+      clearTimeout(id);
+    };
+  }, [savedTick]);
 
   // Transient feedback auto-dismisses — no manual close button (avoids a non-localized control).
   useEffect(() => {
@@ -84,7 +106,7 @@ export function SettingsPage({
   }, [feedbackKey]);
 
   function setPref(patch: Partial<Preferences>): void {
-    void onUpdatePrefs(patch).catch(() => {
+    void onUpdatePrefs(patch).then(notifySaved, () => {
       notify('error', c.errors.upstreamDown);
     });
   }
@@ -134,8 +156,18 @@ export function SettingsPage({
     );
   }
 
+  /**
+   * Opens the app's own confirm dialog. It used to call `window.confirm`, which on a real
+   * `tepegoz://` page is a NATIVE dialog: unstyled, localized by Chromium rather than by this app's
+   * locale, and suppressible by the same dialog interception the browser applies to web pages — so the
+   * one irreversible control on this screen could lose its confirmation without anything failing.
+   */
   function resetToDefaults(): void {
-    if (!window.confirm(s.resetConfirm)) return;
+    setResetOpen(true);
+  }
+
+  function confirmReset(): void {
+    setResetOpen(false);
     void onResetPrefs().then(
       () => {
         notify('success', s.resetDone);
@@ -172,15 +204,48 @@ export function SettingsPage({
   });
 
   return (
-    <SettingsLayout
-      titleIcon={<IconGear />}
-      sections={sections}
-      initialSectionId={initialSectionId}
-      banner={
-        feedback ? (
-          <AlertBanner key={feedbackKey} variant={feedback.variant} message={feedback.message} />
-        ) : null
-      }
-    />
+    <>
+      <SettingsLayout
+        titleIcon={<IconGear />}
+        sections={sections}
+        initialSectionId={initialSectionId}
+        banner={
+          feedback ? (
+            <AlertBanner key={feedbackKey} variant={feedback.variant} message={feedback.message} />
+          ) : null
+        }
+        status={
+          savedTick > 0 ? (
+            <Badge variant="success" size="sm" dot>
+              {s.savedIndicator}
+            </Badge>
+          ) : null
+        }
+      />
+      <Modal
+        open={resetOpen}
+        onClose={() => {
+          setResetOpen(false);
+        }}
+        title={s.resetTitle}
+        size="sm"
+      >
+        <p className="mt-3 text-sm text-text-secondary">{s.resetConfirm}</p>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setResetOpen(false);
+            }}
+          >
+            {s.cancel}
+          </Button>
+          <Button size="sm" variant="danger" onClick={confirmReset}>
+            {s.resetButton}
+          </Button>
+        </div>
+      </Modal>
+    </>
   );
 }

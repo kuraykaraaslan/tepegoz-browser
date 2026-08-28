@@ -349,6 +349,13 @@ export function registerTabsWindowsIpc(): void {
     markQuitting(); // real quit → windows may close (the close-to-tray interceptor stands down)
     app.quit();
   });
+  // Restart. `relaunch` only queues the new instance; the quit is what actually ends this one, and it
+  // needs the same `markQuitting` stand-down as Exit or close-to-tray would swallow it.
+  onSignal(IpcChannels.appRelaunch, () => {
+    markQuitting();
+    app.relaunch();
+    app.quit();
+  });
   onWindowAction(IpcChannels.tabsNavigate, NavigateInputSchema, (win, url) => {
     TabManager.forSenderWindow(win)?.navigateActive(url);
   });

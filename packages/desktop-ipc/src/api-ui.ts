@@ -43,6 +43,8 @@ export interface UiApi {
   /** Quit the whole app (Exit). Distinct from `closeWindow` so it works when invoked from a popup
    *  window (where the sender-window path would close the popup, not the main window). */
   quitApp(): void;
+  /** Quit and start again, so a startup-only preference takes effect. */
+  relaunchApp(): void;
   /** Open a submenu flyout as its own native window to the LEFT of the main-menu popup, vertically
    *  aligned to `anchor` (the hovered row's rect). `kind` selects the content (e.g. 'history'|'extensions').
    *  Replaces any open flyout. */
