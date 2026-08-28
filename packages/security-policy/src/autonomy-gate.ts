@@ -21,10 +21,12 @@ import type { PolicyResult } from './policy-kernel';
  *    gateway fails closed before confirmation — and `allow` never needed a prompt in the first place.
  * 2. **Biometric survives every level except explicit `auto`.** Whatever the kernel marked as needing
  *    Windows-Hello-grade confirmation stays in front of a human under `act`.
- * 3. **`financial` survives EVERY level, `auto` included.** No grant may cover that tier anywhere else
- *    in the system, so a single autonomy setting must not be the one door around it. `auto` still means
- *    "do the routine work without asking" — it never meant "spend my money without asking", and reading
- *    one as the other grants a permission nobody made.
+ * 3. **The never-auto-grantable tiers survive EVERY level, `auto` included.** `financial`, `credential`
+ *    and `destructive` (`NEVER_AUTO_GRANTABLE_TIERS`) can be covered by nothing else in the system — not
+ *    a plan grant, not a remembered grant, not `act` — so a single autonomy setting must not be the one
+ *    door around them. `auto` still means "do the routine work without asking"; it never meant "spend my
+ *    money", "type my passwords" or "delete my data" without asking, and reading one as the other grants
+ *    a permission nobody made.
  *
  * Unknown values fail safe to `prompt`: this is called with a value read from a preference store, so
  * a stale or tampered level must degrade to *more* friction, never less.
@@ -51,19 +53,20 @@ export function resolveAutonomy(
 
   switch (autonomy) {
     case 'auto':
-      // Money stops for a human at EVERY level, including this one (S8 owner decision, commerce).
-      // `auto` used to approve a payment unconditionally, which made it the single path in the
-      // codebase around a tier nothing else may cover: plan grants cannot, remembered grants cannot,
-      // `act` holds it, and the kernel marks it biometric. "Do the routine work without asking" is
-      // what a user chooses `auto` for; "spend my money without asking" is a different choice, and
-      // reading one as the other grants a permission nobody made.
+      // The never-auto-grantable tiers stop for a human at EVERY level, this one included. `auto` used
+      // to approve `credential` and `destructive` calls (and, before S8, `financial` too), which made a
+      // single preference the one path in the codebase around tiers nothing else may cover: plan grants
+      // cannot, remembered grants cannot, `act` holds all three, and the kernel marks them biometric.
+      // `risk-tier.ts` states the invariant directly — "A human decides each one, every time." "Do the
+      // routine work without asking" is what a user chooses `auto` for; "type my passwords", "delete my
+      // data" or "spend my money" without asking are different choices, and reading one as another grants
+      // a permission nobody made.
       //
-      // Deliberately narrowed to `financial`. S6-PR2 decided `auto` should mean what the user chose
-      // and encoded that in a test; S8 overrides it for commerce specifically, which is the case the
-      // owner ruled on. `credential` and `destructive` are still auto-approved under `auto` — see the
-      // note in phase-s8-assistant-ux.md, which asks for that decision rather than assuming it.
-      if (tier === 'financial') {
-        return { decision: 'prompt', reason: 'autonomy_auto_financial_held' };
+      // History: S6-PR2 held nothing extra under `auto`; S8 added `financial`; the settings-parity audit
+      // (§B3) found `credential`/`destructive` still open and the owner delegated the call, so this is
+      // widened to the full `NEVER_AUTO_GRANTABLE_TIERS` invariant — `auto` now matches `act` on tiers.
+      if (tier !== undefined && NEVER_AUTO_GRANTABLE_TIERS.includes(tier)) {
+        return { decision: 'prompt', reason: `autonomy_auto_${tier}_held` };
       }
       return { decision: 'auto_approve', reason: 'autonomy_auto' };
     case 'act':

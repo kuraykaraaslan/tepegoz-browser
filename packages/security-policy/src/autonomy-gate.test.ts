@@ -80,19 +80,20 @@ describe('resolveAutonomy with a derived risk tier (S6-PR2)', () => {
     expect(resolveAutonomy(ask(true), 'act').decision).toBe('prompt');
   });
 
-  it('holds MONEY even under `auto` — the one tier `auto` was a door around (S8)', () => {
-    // Supersedes the S6-PR2 rule that `auto` changes nothing: nothing else in the system may cover
-    // the financial tier — not a plan grant, not a remembered grant, not `act` — so a single setting
-    // must not be the exception. Narrowed to commerce, which is the case the owner ruled on.
-    const r = resolveAutonomy(ask(true), 'auto', 'financial');
-    expect(r.decision).toBe('prompt');
-    expect(r.reason).toBe('autonomy_auto_financial_held');
+  it('holds every never-auto-grantable tier under `auto` — the doors `auto` used to be around', () => {
+    // S6-PR2 held nothing extra under `auto`; S8 added `financial`; the settings-parity audit (§B3)
+    // found `credential`/`destructive` still open and the owner delegated the call. `auto` now holds
+    // the full `NEVER_AUTO_GRANTABLE_TIERS` invariant, matching `act`. Nothing else in the system may
+    // cover these tiers — not a plan grant, not a remembered grant — so a single setting must not.
+    for (const tier of ['financial', 'credential', 'destructive'] as const) {
+      const r = resolveAutonomy(ask(true), 'auto', tier);
+      expect(r.decision, `tier=${tier}`).toBe('prompt');
+      expect(r.reason, `tier=${tier}`).toBe(`autonomy_auto_${tier}_held`);
+    }
   });
 
-  it('leaves the REST of `auto` exactly as the user chose it', () => {
-    // Deliberately unchanged, including credential and destructive. Widening beyond the owner
-    // decision would be taking a call that is theirs — phase-s8-assistant-ux.md asks for it.
-    for (const tier of ['credential', 'destructive', 'ui-write', 'data-egress', 'read'] as const) {
+  it('leaves the grantable tiers of `auto` exactly as the user chose them', () => {
+    for (const tier of ['ui-write', 'data-egress', 'read'] as const) {
       expect(resolveAutonomy(ask(false), 'auto', tier).decision, `tier=${tier}`).toBe(
         'auto_approve',
       );
