@@ -232,9 +232,22 @@ export class WindowTabsNav extends WindowTabsMoves {
     return wc !== undefined && !wc.isDestroyed() ? wc : null;
   }
 
-  /** Snapshot the active web view as a PNG data URL (null for internal/no-view tabs or on failure). */
+  /**
+   * Snapshot the active web view as a PNG data URL (null for no-view tabs or on failure).
+   *
+   * Falls back to the active internal-page (`tepegoz://…`) view's own `WebContentsView`, which lives in
+   * a SEPARATE map from `views` so `activeWebContents()` never returns it. Without this, focusing the
+   * omnibox on a system page (settings et al.) detaches the live view (`setContentVisible(false)`) with
+   * no still to paint in its place — the content area blanks to the chrome background behind the
+   * suggestions list.
+   */
   async captureActive(): Promise<string | null> {
-    const wc = this.activeWebContents();
+    const activeId = this.store.activeId;
+    const internalWc =
+      activeId !== null ? this.internalPageViews.get(activeId)?.webContents : undefined;
+    const wc =
+      this.activeWebContents() ??
+      (internalWc !== undefined && !internalWc.isDestroyed() ? internalWc : null);
     if (wc === null) return null;
     try {
       const image = await wc.capturePage();

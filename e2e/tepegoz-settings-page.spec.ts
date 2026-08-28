@@ -99,6 +99,19 @@ test('tepegoz://settings loads as a real page and its right-click opens the nati
     }, settingsId);
     expect(bridgeOk).toBe(true);
 
+    // Focusing the omnibox on a system page must still leave a picture behind the suggestions list.
+    // The chrome hides the live view while the dropdown is open (`setContentVisible(false)`) and paints
+    // the PNG from `captureActiveTab()` in its place — for a `tepegoz://…` tab that view lives in a
+    // separate map from browsed tabs, so `captureActive()` used to return null here and the content area
+    // blanked to the chrome background. Assert the capture path produces a real image for this page.
+    const settingsSnapshot = await app.evaluate(({ webContents }) => {
+      const chrome = webContents.getAllWebContents().find((w) => w.getURL().startsWith('file:'));
+      return chrome?.executeJavaScript(
+        'window.tepegoz.captureActiveTab()',
+      ) as Promise<string | null>;
+    });
+    expect(settingsSnapshot).toMatch(/^data:image\/png/);
+
     // A window resize must re-size the settings WebContentsView too. It lives in a SEPARATE map from
     // browsed tabs, so `setContentBounds` (the main-side handler for the chrome's ResizeObserver
     // report) used to only touch `activeView()` and left the system page frozen at its old width on
