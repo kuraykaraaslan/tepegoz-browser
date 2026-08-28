@@ -40,6 +40,8 @@ import { invoke } from './ipc-invoke';
 export const settingsMiscApi: Pick<
   TepegozApi,
   | 'getAppInfo'
+  | 'copyDiagnostics'
+  | 'openThirdPartyNotices'
   | 'getDefaultBrowserStatus'
   | 'setAsDefaultBrowser'
   | 'getProcessMetrics'
@@ -102,6 +104,8 @@ export const settingsMiscApi: Pick<
   | 'getNewTabBackgroundImage'
 > = {
   getAppInfo: () => invoke<AppInfo>(IpcChannels.appGetInfo),
+  copyDiagnostics: () => invoke<string>(IpcChannels.appCopyDiagnostics),
+  openThirdPartyNotices: () => invoke<boolean>(IpcChannels.appOpenThirdPartyNotices),
   getDefaultBrowserStatus: () => invoke<DefaultBrowserStatus>(IpcChannels.defaultBrowserGet),
   setAsDefaultBrowser: () => invoke<DefaultBrowserStatus>(IpcChannels.defaultBrowserSet),
   getProcessMetrics: () => invoke<ProcessSnapshot>(IpcChannels.processMetricsGet),

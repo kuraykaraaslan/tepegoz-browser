@@ -2,12 +2,54 @@
  * Core app + web-permission + layout wire types for the desktop IPC contract. Zod-free, preload-safe.
  */
 
+/**
+ * The engine versions a site-compatibility complaint or a crash report is worthless without. A browser
+ * that cannot tell its user which Chromium it renders with cannot ask that user for a useful bug report.
+ */
+export interface AppEngineVersions {
+  chromium: string;
+  electron: string;
+  node: string;
+  v8: string;
+}
+
+/**
+ * Where this binary came from. `commit`/`builtAt` are stamped at build time and are `''` in a run that
+ * carried no stamp (a plain `vitest` process) — an empty string is the honest answer there, not a
+ * fabricated one. `packaged` distinguishes a release from a developer's `pnpm dev`.
+ */
+export interface AppBuildInfo {
+  /** Release channel: `dev` for an unpackaged run, otherwise whatever the build stamped. */
+  channel: string;
+  /** Short commit sha the build came from, or `''` when unstamped. */
+  commit: string;
+  /** ISO-8601 build timestamp, or `''` when unstamped. */
+  builtAt: string;
+  packaged: boolean;
+}
+
+/** The host OS, resolved to names a person recognises. Proper nouns — never translated. */
+export interface AppOsInfo {
+  /** e.g. `Windows 11`, `macOS`, `Linux`. */
+  name: string;
+  /** OS/kernel release, e.g. `10.0.26200`. */
+  version: string;
+  /** CPU architecture, e.g. `x64`, `arm64`. */
+  arch: string;
+}
+
 export interface AppInfo {
   name: string;
   version: string;
+  /** Raw `process.platform` (`win32`/`darwin`/`linux`). Machine-facing — show {@link AppOsInfo} to people. */
   platform: string;
   /** True when the OS supports the translucent "glass" chrome (Windows 11 Mica). Gates the Settings toggle. */
   glassAvailable: boolean;
+  os: AppOsInfo;
+  engines: AppEngineVersions;
+  build: AppBuildInfo;
+  /** SPDX id of Tepegöz's own license. AGPL-3.0-only obliges the UI to point at the source. */
+  license: string;
 }
 
 /** Whether Tepegöz is currently the OS's registered handler for http/https. Re-read from the OS, never

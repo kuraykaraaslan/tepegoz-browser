@@ -3,7 +3,8 @@ import { ComingSoonCard, type SettingsSection, type SettingsStrings } from '@tep
 import type { SiteClearPlan } from '@tepegoz/shared-types';
 import type { ClientCertificateChoice } from '@tepegoz/desktop-ipc';
 import { Button, Card, Toggle } from '@tepegoz/ui';
-import { AboutSection, FileOperationsSection, PasswordsSection } from './settings-privacy-files';
+import { FileOperationsSection, PasswordsSection } from './settings-privacy-files';
+import { AboutSection } from './settings-about';
 import { DeveloperSection } from './settings-developer';
 import { SiteTrustSection } from './settings-site-trust';
 import { ShortcutsSection } from './settings-shortcuts';
@@ -336,7 +337,7 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
       group: s.groupAbout,
       label: s.aboutTitle,
       icon: <IconInfo />,
-      searchText: `${s.aboutTitle} ${s.aboutProjectTitle} ${s.aboutVersion} ${s.aboutPlatform}`,
+      searchText: `${s.aboutTitle} ${s.aboutProjectTitle} ${s.aboutVersion} ${s.aboutPlatform} ${s.aboutBuildTitle} ${s.aboutChromium} ${s.aboutElectron} ${s.aboutNode} ${s.aboutLegalTitle} ${s.aboutLicense} ${s.aboutThirdPartyTitle} ${s.aboutUpdatesTitle} ${s.aboutSource} ${s.aboutReportIssue} ${s.aboutCopyDiagnostics}`,
       content: <AboutSection />,
     },
   ];

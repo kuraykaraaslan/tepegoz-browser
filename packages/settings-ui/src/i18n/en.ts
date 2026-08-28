@@ -468,9 +468,8 @@ export const en = {
 
   // --- About ---
   aboutTitle: 'About',
-  aboutName: 'Name',
   aboutVersion: 'Version',
-  aboutPlatform: 'Platform',
+  aboutPlatform: 'Operating system',
   aboutProjectTitle: 'About Tepegöz',
   aboutProjectDesc:
     'Tepegöz is an agentic, security-by-design, local-first web browser built with Electron and TypeScript.',
@@ -480,6 +479,47 @@ export const en = {
   aboutGithub: 'GitHub',
   aboutLinkedin: 'LinkedIn',
   aboutInstagram: 'Instagram',
+
+  // Version & build. Engine names are proper nouns and stay identical in every locale.
+  aboutBuildTitle: 'Version and build',
+  aboutChannel: 'Channel',
+  aboutChannelDev: 'Development build',
+  aboutBuildLabel: 'Build',
+  aboutBuildUnstamped: 'Not stamped',
+  aboutChromium: 'Chromium',
+  aboutElectron: 'Electron',
+  aboutNode: 'Node.js',
+  aboutV8: 'V8',
+  aboutCopyDiagnostics: 'Copy diagnostics',
+  aboutCopyDiagnosticsHint:
+    'Copies the version, engine and build lines above — paste them into a bug report.',
+  aboutCopied: 'Copied',
+  aboutCopyFailed: 'Could not reach the clipboard.',
+
+  // Updates. This build ships no updater; saying so is the only honest thing this card can do.
+  aboutUpdatesTitle: 'Updates',
+  aboutUpdatesUnavailable:
+    'This build has no automatic updates. New versions are published on the releases page.',
+
+  // License and third-party notices. AGPL-3.0 obliges the app to point its users at the source.
+  aboutLegalTitle: 'License and notices',
+  aboutLicense: 'License',
+  aboutLicenseDesc:
+    'Tepegöz is free software licensed under the {license}. You may use, study, share and modify it; if you run a modified version, the same license requires you to offer its source to the people who use it.',
+  aboutLicenseText: 'License text',
+  aboutThirdPartyTitle: 'Third-party notices',
+  aboutThirdPartyDesc:
+    'Tepegöz renders with Chromium and Electron. Their license notices ship with the app.',
+  aboutThirdPartyOpen: 'Open notices',
+  aboutThirdPartyMissing: 'This build ships no notices file — opening the online copy instead.',
+
+  // Project links.
+  aboutProjectLinksTitle: 'Project',
+  aboutSource: 'Source code',
+  aboutReleases: 'Releases',
+  aboutDocs: 'Documentation',
+  aboutReportIssue: 'Report an issue',
+  aboutOpensInNewTab: 'Opens in a new tab',
 
   // --- Placeholder ("coming soon") sections — pure UI, persist nothing (see ComingSoonCard) ---
   coming: {

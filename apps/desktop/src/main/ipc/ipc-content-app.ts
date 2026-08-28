@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron';
+import { BrowserWindow, clipboard, shell } from 'electron';
 import {
   IpcChannels,
   type AIAdaptor,
@@ -28,6 +28,7 @@ import ExtensionCapabilityService from '../extensions/capability-supervisor.elec
 import FileOperationsHost from '../file-operations/file-operations-host';
 import { DEFAULT_PREFERENCES, PreferencesPatchSchema } from '@tepegoz/preferences';
 import { mainLocale } from '../lib/i18n-main';
+import { buildAppInfo, diagnosticsText, thirdPartyNoticesPath } from '../lib/app-info';
 import { buildAdaptorConnections, buildAiAdaptors } from '../agent/ai-adaptors';
 import { getPublicSettings, broadcastPublicSettings } from '../settings/public-settings-host';
 import CredentialVault from '@tepegoz/credential-vault';
@@ -87,13 +88,26 @@ function syncDefaultProviderFromKeys(): void {
  *  IPC handlers. */
 export function registerAppIpc(): void {
   handle(IpcChannels.appGetInfo, (): AppInfo =>
-    AppInfoSchema.parse({
-      name: 'Tepegöz',
-      version: app.getVersion(),
-      platform: process.platform,
-      glassAvailable: isMicaSupported(),
-    }),
+    AppInfoSchema.parse(buildAppInfo(isMicaSupported())),
   );
+
+  // Diagnostics: main composes AND copies. The renderer supplies no text, so this channel cannot be
+  // used to write arbitrary content to the user's clipboard — the only thing it can put there is this
+  // build's own version block.
+  handle(IpcChannels.appCopyDiagnostics, (): string => {
+    const text = diagnosticsText(buildAppInfo(isMicaSupported()), mainLocale());
+    clipboard.writeText(text);
+    return text;
+  });
+
+  handle(IpcChannels.appOpenThirdPartyNotices, async (): Promise<boolean> => {
+    const path = thirdPartyNoticesPath();
+    if (path === null) return false;
+    // `openPath` resolves to a non-empty error string on failure — a file that exists but cannot be
+    // opened is still a click that did nothing, so it reports the same `false` as a missing file.
+    const err = await shell.openPath(path);
+    return err === '';
+  });
 
   handle(IpcChannels.defaultBrowserGet, (): DefaultBrowserStatus => getDefaultBrowserStatus());
 

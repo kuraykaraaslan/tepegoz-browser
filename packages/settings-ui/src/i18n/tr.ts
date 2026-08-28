@@ -467,9 +467,8 @@ export const tr: SettingsStrings = {
 
   // --- Hakkında ---
   aboutTitle: 'Hakkında',
-  aboutName: 'Ad',
   aboutVersion: 'Sürüm',
-  aboutPlatform: 'Platform',
+  aboutPlatform: 'İşletim sistemi',
   aboutProjectTitle: 'Tepegöz hakkında',
   aboutProjectDesc:
     'Tepegöz; Electron ve TypeScript ile geliştirilen, ajan tabanlı, tasarımı gereği güvenli ve yerel öncelikli bir web tarayıcısıdır.',
@@ -479,6 +478,47 @@ export const tr: SettingsStrings = {
   aboutGithub: 'GitHub',
   aboutLinkedin: 'LinkedIn',
   aboutInstagram: 'Instagram',
+
+  // Sürüm ve derleme. Motor adları özel isimdir; her dilde aynı kalır.
+  aboutBuildTitle: 'Sürüm ve derleme',
+  aboutChannel: 'Kanal',
+  aboutChannelDev: 'Geliştirme derlemesi',
+  aboutBuildLabel: 'Derleme',
+  aboutBuildUnstamped: 'Damgalanmamış',
+  aboutChromium: 'Chromium',
+  aboutElectron: 'Electron',
+  aboutNode: 'Node.js',
+  aboutV8: 'V8',
+  aboutCopyDiagnostics: 'Tanılama bilgisini kopyala',
+  aboutCopyDiagnosticsHint:
+    'Yukarıdaki sürüm, motor ve derleme satırlarını kopyalar — hata bildirimine yapıştırın.',
+  aboutCopied: 'Kopyalandı',
+  aboutCopyFailed: 'Panoya erişilemedi.',
+
+  // Güncellemeler. Bu derlemede güncelleyici yok; kartın yapabileceği tek dürüst şey bunu söylemek.
+  aboutUpdatesTitle: 'Güncellemeler',
+  aboutUpdatesUnavailable:
+    'Bu derlemede otomatik güncelleme yok. Yeni sürümler yayınlar sayfasında duyurulur.',
+
+  // Lisans ve üçüncü taraf bildirimleri. AGPL-3.0, uygulamanın kullanıcısını kaynağa yöneltmesini zorunlu kılar.
+  aboutLegalTitle: 'Lisans ve bildirimler',
+  aboutLicense: 'Lisans',
+  aboutLicenseDesc:
+    'Tepegöz, {license} ile lisanslanmış özgür yazılımdır. Kullanabilir, inceleyebilir, paylaşabilir ve değiştirebilirsiniz; değiştirilmiş bir sürümü çalıştırırsanız aynı lisans, kaynağını kullananlara sunmanızı gerektirir.',
+  aboutLicenseText: 'Lisans metni',
+  aboutThirdPartyTitle: 'Üçüncü taraf bildirimleri',
+  aboutThirdPartyDesc:
+    'Tepegöz, Chromium ve Electron ile çalışır. Bunların lisans bildirimleri uygulamayla birlikte gelir.',
+  aboutThirdPartyOpen: 'Bildirimleri aç',
+  aboutThirdPartyMissing: 'Bu derlemede bildirim dosyası yok — çevrimiçi kopya açılıyor.',
+
+  // Proje bağlantıları.
+  aboutProjectLinksTitle: 'Proje',
+  aboutSource: 'Kaynak kodu',
+  aboutReleases: 'Yayınlar',
+  aboutDocs: 'Belgeler',
+  aboutReportIssue: 'Hata bildir',
+  aboutOpensInNewTab: 'Yeni sekmede açılır',
 
   // --- Yer tutucu ("yakında") bölümleri — salt arayüz, hiçbir şey kaydetmez ---
   coming: {

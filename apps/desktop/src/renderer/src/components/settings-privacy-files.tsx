@@ -1,9 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { settingsDict } from '@tepegoz/settings-ui';
 import { Button, Card, Input, Toggle } from '@tepegoz/ui';
 import { useT } from '@tepegoz/i18n/react';
 import type {
-  AppInfo,
   LoginCredentialMeta,
   LoginImportResult,
   Preferences,
@@ -11,8 +10,10 @@ import type {
 import { CredentialsSettings, ImportExportPanel } from '@tepegoz/password-ui';
 
 /**
- * Privacy/security + advanced settings panels: per-site permissions, file operations, passwords,
- * search/startup, and about. Split out of `SettingsPage.tsx` (ADR-0010 250-line cap).
+ * Privacy/security + advanced settings panels: per-site permissions, file operations, passwords and
+ * search/startup. Split out of `SettingsPage.tsx` (ADR-0010 250-line cap). About moved on to
+ * `settings-about.tsx` — it is the page that describes the BUILD, not a privacy panel, and this file's
+ * name never said otherwise.
  *
  * The two largest panels live in siblings and are re-exported here so this module keeps its full
  * public surface: `SearchStartupSection` (search/startup) and `FileOperationsSection` (file ops).
@@ -120,66 +121,6 @@ export function SitePermissionsSection({
         </ul>
       )}
     </Card>
-  );
-}
-
-/** About: project blurb + app info + the author's links (open in a new tab). */
-export function AboutSection() {
-  const s = useT(settingsDict);
-  const [info, setInfo] = useState<AppInfo | null>(null);
-  useEffect(() => {
-    void window.tepegoz.getAppInfo().then(setInfo, () => {
-      /* leave null */
-    });
-  }, []);
-  const open = (url: string): void => {
-    window.tepegoz.createTab(url);
-  };
-  return (
-    <div className="space-y-6">
-      <Card title={s.aboutProjectTitle}>
-        <p className="text-sm text-text-secondary">{s.aboutProjectDesc}</p>
-        {info !== null && (
-          <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-            <dt className="text-text-secondary">{s.aboutName}</dt>
-            <dd className="text-text-primary">{info.name}</dd>
-            <dt className="text-text-secondary">{s.aboutVersion}</dt>
-            <dd className="font-mono text-text-primary">{info.version}</dd>
-            <dt className="text-text-secondary">{s.aboutPlatform}</dt>
-            <dd className="font-mono text-text-primary">{info.platform}</dd>
-          </dl>
-        )}
-      </Card>
-      <Card title={s.aboutAuthorTitle}>
-        <p className="mb-3 text-sm font-medium text-text-primary">{s.authorName}</p>
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" onClick={() => open('https://kuray.dev')}>
-            {s.aboutWebsite}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => open('https://github.com/kuraykaraaslan')}
-          >
-            {s.aboutGithub}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => open('https://www.linkedin.com/in/kuraykaraaslan')}
-          >
-            {s.aboutLinkedin}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => open('https://www.instagram.com/kuraykaraaslan')}
-          >
-            {s.aboutInstagram}
-          </Button>
-        </div>
-      </Card>
-    </div>
   );
 }
 

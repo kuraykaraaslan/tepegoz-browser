@@ -1,6 +1,26 @@
+import { execFileSync } from 'node:child_process';
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+
+/**
+ * Build provenance for the About page. CI hands us the sha (`GITHUB_SHA`); a local build asks git. Both
+ * can legitimately fail — a source tarball has no `.git` — and the answer then is `''`, not a guess:
+ * `AppInfo.build.commit` is specified to be empty when the build carried no stamp, so the UI can say
+ * "unstamped" instead of showing provenance nobody can check.
+ */
+function buildCommit(): string {
+  const fromCi = process.env['GITHUB_SHA'];
+  if (fromCi !== undefined && fromCi !== '') return fromCi.slice(0, 8);
+  try {
+    return execFileSync('git', ['rev-parse', '--short=8', 'HEAD'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+  } catch {
+    return '';
+  }
+}
 
 // Workspace packages expose TS source via their `exports`; they must be BUNDLED into main/preload
 // (not externalized) — otherwise Node would try to load their `./src/index.ts` at runtime and fail
@@ -57,6 +77,13 @@ export default defineConfig(({ command }) => {
   return {
     main: {
       plugins: [externalizeDepsPlugin({ exclude: WORKSPACE_PACKAGES })],
+      // Build provenance surfaced by `tepegoz://settings#about`. `TEPEGOZ_CHANNEL` names the release
+      // train a packaged build belongs to; an unpackaged run reports `dev` regardless (app-info.ts).
+      define: {
+        __TEPEGOZ_BUILD_COMMIT__: JSON.stringify(buildCommit()),
+        __TEPEGOZ_BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+        __TEPEGOZ_BUILD_CHANNEL__: JSON.stringify(process.env['TEPEGOZ_CHANNEL'] ?? 'stable'),
+      },
     },
     preload: {
       plugins: [externalizeDepsPlugin({ exclude: WORKSPACE_PACKAGES })],

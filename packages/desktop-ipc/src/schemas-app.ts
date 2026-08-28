@@ -11,6 +11,22 @@ export const AppInfoSchema: z.ZodType<AppInfo> = z.object({
   version: z.string(),
   platform: z.string(),
   glassAvailable: z.boolean(),
+  os: z.object({ name: z.string(), version: z.string(), arch: z.string() }),
+  engines: z.object({
+    chromium: z.string(),
+    electron: z.string(),
+    node: z.string(),
+    v8: z.string(),
+  }),
+  // `commit`/`builtAt` are permitted to be empty: an unstamped build must be able to SAY it is
+  // unstamped. A `.min(1)` here would force the builder to invent provenance to pass validation.
+  build: z.object({
+    channel: z.string(),
+    commit: z.string(),
+    builtAt: z.string(),
+    packaged: z.boolean(),
+  }),
+  license: z.string(),
 });
 
 export const DefaultBrowserStatusSchema: z.ZodType<DefaultBrowserStatus> = z.object({

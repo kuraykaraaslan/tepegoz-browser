@@ -5,6 +5,14 @@
  */
 export const IpcChannels = {
   appGetInfo: 'app:get-info',
+  /**
+   * Put the version/engine/build block on the clipboard for a bug report. MAIN composes the text and
+   * the renderer sends nothing: the narrowest possible channel, and the only one that guarantees the
+   * pasted report describes the build that actually ran rather than whatever a renderer typed.
+   */
+  appCopyDiagnostics: 'app:copy-diagnostics',
+  /** Open the shipped Chromium/third-party notices file. Resolves `false` when the build has none. */
+  appOpenThirdPartyNotices: 'app:open-third-party-notices',
   prefsGet: 'prefs:get',
   prefsSet: 'prefs:set',
   /** Restore all preferences to their defaults (does NOT touch the encrypted credential vault). */
