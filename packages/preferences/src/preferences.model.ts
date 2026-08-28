@@ -7,6 +7,7 @@ import {
   NetworkGeneralBindingSchema,
   isNavigableWebUrl,
   isSafeSearchTemplate,
+  type WebPermissionCapability,
 } from '@tepegoz/shared-types';
 import {
   AGENT_EFFORT_LEVELS,
@@ -202,14 +203,21 @@ export const PreferencesSchema = z.object({
   mcpServers: z.array(McpServerPrefSchema),
   // Master switch for native OS + in-app notifications.
   notificationsEnabled: z.boolean(),
-  // Per-origin web-capability grants (Web Notification API consent). Keyed by origin.
+  // Per-origin grants for the six brokered web capabilities (camera, microphone, geolocation,
+  // notifications, clipboard read/write). Keyed by origin. Every member of `WEB_PERMISSION_CAPABILITIES`
+  // MUST have a key here: `z.object` strips unknown keys, so a capability missing from this shape is one
+  // whose stored decision is discarded on every write — by Settings AND by the consent prompt's
+  // "Remember" checkbox. The `satisfies` below makes that omission a compile error, not a silent revert.
   sitePermissions: z.record(
     z.string().max(2048),
     z.object({
       notifications: z.enum(SITE_PERMISSION_STATES).optional(),
       clipboardRead: z.enum(SITE_PERMISSION_STATES).optional(),
       clipboardWrite: z.enum(SITE_PERMISSION_STATES).optional(),
-    }),
+      camera: z.enum(SITE_PERMISSION_STATES).optional(),
+      microphone: z.enum(SITE_PERMISSION_STATES).optional(),
+      geolocation: z.enum(SITE_PERMISSION_STATES).optional(),
+    } satisfies Record<WebPermissionCapability, unknown>),
   ),
   // Per-origin page zoom, keyed by origin → zoom FACTOR (1 = 100%). Only non-default origins are
   // stored; resetting to 100% deletes the key, so this cannot grow into a record of every site visited.

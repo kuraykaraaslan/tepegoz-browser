@@ -208,7 +208,8 @@ export interface Preferences {
   mcpServers: McpServerPref[];
   /** Master switch for native OS + in-app notifications (Settings → Notifications). */
   notificationsEnabled: boolean;
-  /** Per-origin web-capability permissions (currently the Web Notification API consent state). */
+  /** Per-origin grants for the six brokered web capabilities (camera, microphone, geolocation,
+   *  notifications, clipboard read/write) — see {@link SitePermissions}. Keyed by origin. */
   sitePermissions: Record<string, SitePermissions>;
   /** Per-origin page zoom, keyed by origin → zoom factor (1 = 100%). Origins left at 100% are absent,
    *  so this never becomes an implicit history of every site visited. */

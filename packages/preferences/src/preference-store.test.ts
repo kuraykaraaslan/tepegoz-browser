@@ -66,6 +66,34 @@ describe('PreferenceStore', () => {
     expect(next.mcpServers[0]?.command).toBe('srv');
   });
 
+  it('round-trips all six brokered site-permission capabilities, not just notifications', () => {
+    // Regression: the `sitePermissions` value schema once declared only notifications + clipboard
+    // read/write, so `z.object` silently stripped camera/microphone/geolocation on every write —
+    // Settings and the consent prompt's "Remember" checkbox both discarded those decisions.
+    PreferenceStore.init({ filePath });
+    const origin = 'https://example.com';
+    const next = PreferenceStore.update({
+      sitePermissions: {
+        [origin]: {
+          notifications: 'allowed',
+          clipboardRead: 'denied',
+          clipboardWrite: 'prompt',
+          camera: 'allowed',
+          microphone: 'denied',
+          geolocation: 'allowed',
+        },
+      },
+    });
+    expect(next.sitePermissions[origin]).toEqual({
+      notifications: 'allowed',
+      clipboardRead: 'denied',
+      clipboardWrite: 'prompt',
+      camera: 'allowed',
+      microphone: 'denied',
+      geolocation: 'allowed',
+    });
+  });
+
   it('rejects an stdio MCP server with no command and an invalid transport', () => {
     PreferenceStore.init({ filePath });
     expect(() =>

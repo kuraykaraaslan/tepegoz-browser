@@ -137,11 +137,13 @@ export function PermissionsCenter({
           className="h-[38px]"
           disabled={!canAdd}
           onClick={() => {
-            const first = WEB_PERMISSION_CAPABILITIES[0];
-            if (pendingOrigin === null || first === undefined) return;
-            // Seeded with an explicit `prompt`, which is a real stored decision rather than the
-            // absence of one — that is what makes the row exist at all.
-            onSet(pendingOrigin, first, 'prompt');
+            if (pendingOrigin === null) return;
+            // Seeded with an explicit `prompt` on `notifications`, which is a real stored decision
+            // rather than the absence of one — that is what makes the row exist at all. Seeding
+            // `notifications` specifically (not `WEB_PERMISSION_CAPABILITIES[0]`, which is `camera`)
+            // keeps the placeholder on the capability whose default already IS "ask", so the seeded
+            // row reads identically to an unseeded one for every capability.
+            onSet(pendingOrigin, 'notifications', 'prompt');
             setNewSite('');
           }}
         >
