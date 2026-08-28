@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { settingsDict } from '@tepegoz/settings-ui';
 import { Button, Card, cn, Toggle } from '@tepegoz/ui';
 import { useT } from '@tepegoz/i18n/react';
+import { ConfirmAction } from './settings-confirm';
+import { Select } from './settings-shared';
 import { FILE_ACCESS_MODES } from '@tepegoz/desktop-ipc';
 import type { FileAccessGrant, FileAccessMode, Preferences } from '@tepegoz/desktop-ipc';
 
@@ -10,6 +12,12 @@ import type { FileAccessGrant, FileAccessMode, Preferences } from '@tepegoz/desk
  * carries a permission mode (read / read-write / full) and a recursive flag; the grant's mode is the
  * authorization (an op within it runs without asking, beyond it the assistant must request approval).
  * The list is persisted in `prefs.fileAccessGrants`; the main process reconciles the live access policy.
+ *
+ * When the master switch is off the grant list used to be `pointer-events-none opacity-50`, which
+ * blocks the MOUSE and nothing else: every control stayed in the tab order and still worked from the
+ * keyboard. On a screen that hands an AI assistant access to folders, "looks disabled" is not a state
+ * this may be left in — the controls are really disabled now, and `aria-disabled` on the group says so
+ * to anything not looking at the pixels.
  */
 export function FileOperationsSection({
   prefs,
@@ -22,6 +30,7 @@ export function FileOperationsSection({
   const f = s.fileOps;
   const [warn, setWarn] = useState('');
   const grants = prefs.fileAccessGrants;
+  const enabled = prefs.fileOperationsEnabled;
 
   async function addFolder(): Promise<void> {
     setWarn('');
@@ -57,14 +66,17 @@ export function FileOperationsSection({
       />
 
       <div
-        className={cn(
-          'mt-5 space-y-3',
-          !prefs.fileOperationsEnabled && 'pointer-events-none opacity-50',
-        )}
+        className={cn('mt-5 space-y-3', !enabled && 'opacity-50')}
+        aria-disabled={!enabled}
       >
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs text-text-secondary">{f.modeHint}</p>
-          <Button size="sm" variant="outline" onClick={() => void addFolder()}>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!enabled}
+            onClick={() => void addFolder()}
+          >
             {f.addFolder}
           </Button>
         </div>
@@ -91,41 +103,46 @@ export function FileOperationsSection({
                     <input
                       type="checkbox"
                       checked={g.recursive}
+                      disabled={!enabled}
                       onChange={(e) => {
                         updateGrant(g.path, { recursive: e.target.checked });
                       }}
                     />
                     {f.recursive}
                   </label>
-                  <select
-                    aria-label={f.modeLabel}
-                    value={g.mode}
-                    onChange={(e) => {
-                      updateGrant(g.path, { mode: e.target.value as FileAccessMode });
-                    }}
-                    className="h-8 rounded-md border border-border bg-surface-raised px-2 text-xs text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-                  >
-                    {FILE_ACCESS_MODES.map((m) => (
-                      <option key={m} value={m}>
-                        {f.modes[m]}
-                      </option>
-                    ))}
-                  </select>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
+                  <div className="w-32">
+                    <Select
+                      id={`file-access-mode-${g.path}`}
+                      ariaLabel={`${g.path} — ${f.modeLabel}`}
+                      disabled={!enabled}
+                      value={g.mode}
+                      onChange={(mode) => {
+                        updateGrant(g.path, { mode: mode as FileAccessMode });
+                      }}
+                    >
+                      {FILE_ACCESS_MODES.map((m) => (
+                        <option key={m} value={m}>
+                          {f.modes[m]}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                  <ConfirmAction
+                    label={f.remove}
+                    title={f.removeTitle}
+                    body={f.removeBody.replace('{path}', g.path)}
+                    confirmLabel={f.remove}
+                    disabled={!enabled}
+                    onConfirm={() => {
                       removeGrant(g.path);
                     }}
-                  >
-                    {f.remove}
-                  </Button>
+                  />
                 </div>
               </li>
             ))}
           </ul>
         )}
-        {warn.length > 0 && <p className="text-xs text-amber-500">{warn}</p>}
+        {warn.length > 0 && <p className="text-xs text-warning-fg">{warn}</p>}
       </div>
     </Card>
   );

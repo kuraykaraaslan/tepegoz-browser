@@ -18,6 +18,7 @@ export function Select({
   label,
   ariaLabel,
   value,
+  disabled = false,
   onChange,
   children,
 }: {
@@ -26,6 +27,9 @@ export function Select({
   /** Accessible name for a select with no VISIBLE label (e.g. one sitting inside a dense list row). */
   ariaLabel?: string;
   value: string;
+  /** Really disabled, not merely greyed: a `pointer-events-none` wrapper still leaves the control in
+   *  the tab order and fully operable from the keyboard. */
+  disabled?: boolean;
   onChange: (value: string) => void;
   children: ReactNode;
 }) {
@@ -38,10 +42,11 @@ export function Select({
         id={id}
         {...(ariaLabel !== undefined ? { 'aria-label': ariaLabel } : {})}
         value={value}
+        disabled={disabled}
         onChange={(e) => {
           onChange(e.target.value);
         }}
-        className="h-9 w-full rounded-md border border-border bg-surface-raised px-3 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+        className="h-9 w-full rounded-md border border-border bg-surface-raised px-3 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus disabled:cursor-not-allowed disabled:opacity-60"
       >
         {children}
       </select>

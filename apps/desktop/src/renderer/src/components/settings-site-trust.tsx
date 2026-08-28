@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react';
-import { Button, Card, Input } from '@tepegoz/ui';
+import { useCallback, useEffect, useState } from 'react';
 import { settingsDict } from '@tepegoz/settings-ui';
+import { Button, Card, Input } from '@tepegoz/ui';
+import { coreDict } from '@tepegoz/i18n';
 import { useT } from '@tepegoz/i18n/react';
+import { normalizeHostInput } from '@tepegoz/shared-types';
 import { TRUST_LEVELS, type TrustLevel, type TrustProfile } from '@tepegoz/shared-types';
+import { ConfirmAction } from './settings-confirm';
 import { Select } from './settings-shared';
 
 /**
@@ -15,35 +18,65 @@ import { Select } from './settings-shared';
  *
  * Nothing here interprets a level. The renderer posts a domain and one of three words; `applyTrust` in
  * the main process decides what that word may change, and its invariant is that it can only tighten.
+ *
+ * Three things were wrong with the form around that sound design:
+ *  - the validation error was painted with `text-danger`, and this project has no `danger` colour
+ *    token — the class did nothing, so "invalid domain" rendered in body text and read as a caption;
+ *  - every IPC call here dropped its rejection, so a failure left an empty list that looked exactly
+ *    like "no sites trusted" — the most reassuring possible way to fail at showing standing grants;
+ *  - the level could only be chosen while ADDING. Changing an existing site's level meant re-adding
+ *    it, and the form's own regex was ASCII-only, so a Turkish user could not retype `köşe.com.tr`.
  */
-
-/** Domain-only, matching the schema the main process validates against — no scheme, no path. */
-const DOMAIN_RE = /^[a-z0-9-]+(\.[a-z0-9-]+)+$/;
 
 export function SiteTrustSection() {
   const s = useT(settingsDict);
+  const c = useT(coreDict);
   const t = s.siteTrust;
   const [profiles, setProfiles] = useState<TrustProfile[]>([]);
   const [domain, setDomain] = useState('');
   const [level, setLevel] = useState<TrustLevel>('trusted');
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    void window.tepegoz.listTrustProfiles().then(setProfiles);
-  }, []);
+  /** One place for "the call failed": a standing security grant must never fail into a clean list. */
+  const fail = useCallback(
+    (err: unknown): void => {
+      setError(err instanceof Error && err.message !== '' ? err.message : c.errors.upstreamDown);
+    },
+    [c.errors.upstreamDown],
+  );
 
-  async function add(): Promise<void> {
-    // Trim and lowercase before validating: someone typing a domain into a form types it the way they
-    // read it, and rejecting `GitHub.com ` teaches nothing.
-    const candidate = domain.trim().toLowerCase();
-    if (!DOMAIN_RE.test(candidate)) {
+  useEffect(() => {
+    void window.tepegoz.listTrustProfiles().then(setProfiles, fail);
+  }, [fail]);
+
+  function add(): void {
+    const host = normalizeHostInput(domain);
+    if (host === null) {
       setError(t.invalidDomain);
       return;
     }
     setError('');
-    setProfiles(await window.tepegoz.setTrustProfile(candidate, level));
-    setDomain('');
+    void window.tepegoz.setTrustProfile(host, level).then((next) => {
+      setProfiles(next);
+      setDomain('');
+    }, fail);
   }
+
+  function changeLevel(profile: TrustProfile, next: TrustLevel): void {
+    setError('');
+    void window.tepegoz.setTrustProfile(profile.domain, next).then(setProfiles, fail);
+  }
+
+  function remove(profile: TrustProfile): void {
+    setError('');
+    void window.tepegoz.removeTrustProfile(profile.domain).then(setProfiles, fail);
+  }
+
+  // The exact host that would be stored, shown while typing — so `köşe.com.tr` visibly becomes the
+  // punycode the store keeps, rather than the user finding a row they do not recognise afterwards.
+  const preview = normalizeHostInput(domain);
+  const alreadyListed =
+    preview !== null && profiles.some((profile) => profile.domain === preview);
 
   return (
     <Card title={t.title} subtitle={t.subtitle}>
@@ -53,11 +86,16 @@ export function SiteTrustSection() {
             <Input
               id="site-trust-domain"
               label={t.addLabel}
-              hint={t.addHint}
+              hint={
+                preview !== null && preview !== domain.trim().toLowerCase()
+                  ? t.storedAs.replace('{domain}', preview)
+                  : t.addHint
+              }
               placeholder={t.addPlaceholder}
               value={domain}
               onChange={(e) => {
                 setDomain(e.target.value);
+                setError('');
               }}
             />
           </div>
@@ -77,11 +115,11 @@ export function SiteTrustSection() {
               ))}
             </Select>
           </div>
-          <Button size="sm" onClick={() => void add()}>
-            {t.add}
+          <Button size="sm" onClick={add}>
+            {alreadyListed ? t.update : t.add}
           </Button>
         </div>
-        {error !== '' && <p className="text-xs text-danger">{error}</p>}
+        {error !== '' && <p className="text-xs text-error">{error}</p>}
 
         {profiles.length === 0 ? (
           <p className="text-sm text-text-secondary">{t.empty}</p>
@@ -90,25 +128,45 @@ export function SiteTrustSection() {
             {profiles.map((profile) => (
               <li
                 key={profile.id}
-                className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2"
               >
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <span className="truncate font-mono text-xs text-text-primary">
                     {profile.domain}
                   </span>
                   <span className="ml-2 text-xs text-text-secondary">
-                    {t.levels[profile.level]} — {t.levelHelp[profile.level]}
+                    {t.levelHelp[profile.level]}
                   </span>
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    void window.tepegoz.removeTrustProfile(profile.domain).then(setProfiles);
-                  }}
-                >
-                  {t.remove}
-                </Button>
+                <div className="flex shrink-0 items-center gap-2">
+                  {/* The level is editable IN PLACE. It used to be settable only while adding, so
+                      loosening or tightening one site meant re-adding it from memory. */}
+                  <div className="w-36">
+                    <Select
+                      id={`site-trust-level-${profile.id}`}
+                      ariaLabel={`${profile.domain} — ${t.levelLabel}`}
+                      value={profile.level}
+                      onChange={(v) => {
+                        changeLevel(profile, v as TrustLevel);
+                      }}
+                    >
+                      {TRUST_LEVELS.map((l) => (
+                        <option key={l} value={l}>
+                          {t.levels[l]}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                  <ConfirmAction
+                    label={t.remove}
+                    title={t.removeTitle}
+                    body={t.removeBody.replace('{domain}', profile.domain)}
+                    confirmLabel={t.remove}
+                    onConfirm={() => {
+                      remove(profile);
+                    }}
+                  />
+                </div>
               </li>
             ))}
           </ul>

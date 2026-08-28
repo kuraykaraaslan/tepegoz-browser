@@ -57,3 +57,31 @@ export function normalizeWebUrlInput(value: string): string {
   if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed)) return trimmed;
   return `https://${trimmed}`;
 }
+
+/**
+ * Reduce whatever someone typed into a host field to the ASCII host a schema can store.
+ *
+ * Two things this fixes at once. A Turkish-first browser was refusing `köşe.com.tr` typed the way a
+ * Turkish reader writes it, because the form's own regex was ASCII-only — `URL` does the IDN → punycode
+ * conversion that makes it storable. And a pasted `https://example.com/path` now becomes
+ * `example.com` instead of being rejected for containing a scheme the user cannot be expected to know
+ * to remove.
+ *
+ * Returns `null` when there is no host to be had. Deliberately NOT stricter than
+ * `TrustProfileSchema`, which accepts single labels: `localhost` is a host people really do want to
+ * name, and a form that refuses what the store accepts is a form inventing a rule of its own.
+ */
+export function normalizeHostInput(value: string): string | null {
+  const trimmed = value.trim();
+  if (trimmed === '') return null;
+  const withScheme = trimmed.includes('://') ? trimmed : `https://${trimmed}`;
+  let host: string;
+  try {
+    host = new URL(withScheme).hostname;
+  } catch {
+    return null;
+  }
+  // `new URL('https://x')` succeeds for a great many odd strings; the store's own shape is the gate.
+  const lowered = host.toLowerCase();
+  return /^[a-z0-9.-]+$/.test(lowered) && lowered !== '' ? lowered : null;
+}

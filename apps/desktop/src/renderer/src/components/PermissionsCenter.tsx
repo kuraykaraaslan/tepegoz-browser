@@ -1,12 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { type SettingsStrings } from '@tepegoz/settings-ui';
-import { Button, Card } from '@tepegoz/ui';
+import { Badge, Button, Card, Input } from '@tepegoz/ui';
+import { normalizeHostInput } from '@tepegoz/shared-types';
 import {
   WEB_PERMISSION_CAPABILITIES,
   type SitePermissionState,
   type WebPermissionCapability,
 } from '@tepegoz/shared-types';
 import type { AgentCapabilityRow, Preferences } from '@tepegoz/desktop-ipc';
+import { ConfirmAction } from './settings-confirm';
+import { Select } from './settings-shared';
 
 /**
  * The Permissions Center: what each site may do, and what the agent may do.
@@ -37,38 +40,55 @@ function SiteRow({
   perms,
   s,
   onSet,
+  onReset,
 }: {
   origin: string;
   perms: Preferences['sitePermissions'][string] | undefined;
   s: SettingsStrings;
   onSet: (origin: string, capability: WebPermissionCapability, state: SitePermissionState) => void;
+  onReset: (origin: string) => void;
 }) {
   return (
     <li className="rounded-md border border-border px-3 py-2">
-      <p className="mb-2 truncate font-mono text-xs text-text-primary">{origin}</p>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <p className="truncate font-mono text-xs text-text-primary">{origin}</p>
+        <ConfirmAction
+          label={s.permissionsCenter.forgetSite}
+          title={s.permissionsCenter.forgetSite}
+          body={s.permissionsCenter.forgetSiteBody.replace('{origin}', origin)}
+          confirmLabel={s.permissionsCenter.forgetSite}
+          onConfirm={() => {
+            onReset(origin);
+          }}
+        />
+      </div>
       <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
         {WEB_PERMISSION_CAPABILITIES.map((c) => {
           // No entry means the site has never been asked about this capability, which behaves the
           // same as `prompt` and is displayed as it.
           const value: SitePermissionState = perms?.[c] ?? 'prompt';
           return (
-            <label key={c} className="flex items-center justify-between gap-2 text-xs">
-              <span className="text-text-secondary">{capabilityLabel(c, s)}</span>
-              <select
-                value={value}
-                aria-label={`${origin} — ${capabilityLabel(c, s)}`}
-                onChange={(e) => {
-                  onSet(origin, c, e.target.value as SitePermissionState);
-                }}
-                className="rounded border border-border bg-surface-base px-1.5 py-0.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-              >
-                {STATES.map((st) => (
-                  <option key={st} value={st}>
-                    {s.permissionsCenter.state[st]}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div key={c} className="flex items-center justify-between gap-2 text-xs">
+              <span className="min-w-0 truncate text-text-secondary">
+                {capabilityLabel(c, s)}
+              </span>
+              <div className="w-28 shrink-0">
+                <Select
+                  id={`perm-${origin}-${c}`}
+                  ariaLabel={`${origin} — ${capabilityLabel(c, s)}`}
+                  value={value}
+                  onChange={(next) => {
+                    onSet(origin, c, next as SitePermissionState);
+                  }}
+                >
+                  {STATES.map((st) => (
+                    <option key={st} value={st}>
+                      {s.permissionsCenter.state[st]}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            </div>
           );
         })}
       </div>
@@ -87,31 +107,82 @@ export function PermissionsCenter({
   onSet: (origin: string, capability: WebPermissionCapability, state: SitePermissionState) => void;
   onReset: (origin: string) => void;
 }) {
+  const [filter, setFilter] = useState('');
+  const [newSite, setNewSite] = useState('');
+
   const origins = Object.keys(sitePermissions).sort((a, b) => a.localeCompare(b));
+  const shown = origins.filter((o) => o.includes(filter.trim().toLowerCase()));
+
+  // Adding a site up front was impossible: the list only ever grew from sites that had already asked,
+  // so deciding about a site BEFORE visiting it — the one case where a standing "denied" is most
+  // useful — had no path at all.
+  const host = normalizeHostInput(newSite);
+  const pendingOrigin = host === null ? null : `https://${host}`;
+  const canAdd = pendingOrigin !== null && !origins.includes(pendingOrigin);
+
   return (
     <Card title={s.permissionsCenter.sitesTitle} subtitle={s.permissionsCenter.sitesSubtitle}>
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="min-w-48 flex-1">
+          <Input
+            id="permissions-add-site"
+            label={s.permissionsCenter.addSite}
+            hint={s.permissionsCenter.addSiteHint}
+            placeholder={s.permissionsCenter.addSitePlaceholder}
+            value={newSite}
+            onChange={(e) => {
+              setNewSite(e.target.value);
+            }}
+          />
+        </div>
+        <Button
+          size="sm"
+          className="mb-1 h-[38px]"
+          disabled={!canAdd}
+          onClick={() => {
+            const first = WEB_PERMISSION_CAPABILITIES[0];
+            if (pendingOrigin === null || first === undefined) return;
+            // Seeded with an explicit `prompt`, which is a real stored decision rather than the
+            // absence of one — that is what makes the row exist at all.
+            onSet(pendingOrigin, first, 'prompt');
+            setNewSite('');
+          }}
+        >
+          {s.permissionsCenter.addSiteButton}
+        </Button>
+      </div>
+
+      {origins.length > 4 && (
+        <div className="mt-4">
+          <Input
+            id="permissions-filter"
+            label={s.permissionsCenter.filter}
+            placeholder={s.permissionsCenter.filterPlaceholder}
+            value={filter}
+            onChange={(e) => {
+              setFilter(e.target.value);
+            }}
+          />
+        </div>
+      )}
+
       {origins.length === 0 ? (
         // Says WHY it is empty. "No sites" reads like a broken list; "nothing has asked yet" is the
         // actual state, and it also tells the user this fills itself rather than needing setup.
-        <p className="text-sm text-text-secondary">{s.permissionsCenter.sitesEmpty}</p>
+        <p className="mt-4 text-sm text-text-secondary">{s.permissionsCenter.sitesEmpty}</p>
+      ) : shown.length === 0 ? (
+        <p className="mt-4 text-sm text-text-secondary">{s.noResults}</p>
       ) : (
-        <ul className="space-y-2">
-          {origins.map((origin) => (
-            <li key={origin} className="flex flex-col gap-1">
-              <ul>
-                <SiteRow origin={origin} perms={sitePermissions[origin]} s={s} onSet={onSet} />
-              </ul>
-              <Button
-                size="sm"
-                variant="outline"
-                className="self-end"
-                onClick={() => {
-                  onReset(origin);
-                }}
-              >
-                {s.permissionsCenter.forgetSite}
-              </Button>
-            </li>
+        <ul className="mt-4 space-y-2">
+          {shown.map((origin) => (
+            <SiteRow
+              key={origin}
+              origin={origin}
+              perms={sitePermissions[origin]}
+              s={s}
+              onSet={onSet}
+              onReset={onReset}
+            />
           ))}
         </ul>
       )}
@@ -128,9 +199,14 @@ export function PermissionsCenter({
  * first time the two disagreed the user would have no way to know which one was in force. So this
  * renders what the kernel says and offers no control at all — the way to change a verdict is to change
  * the policy the kernel reads.
+ *
+ * The rows carry a `dangerClass` that the screen used to fetch and throw away. Grouping by it is the
+ * difference between a flat list of tool ids and an answer to the question people actually bring here:
+ * what can this thing do that I would not want done without being asked.
  */
 export function AgentPermissionMatrix({ s }: { s: SettingsStrings }) {
   const [rows, setRows] = useState<AgentCapabilityRow[] | null>(null);
+  const [filter, setFilter] = useState('');
 
   useEffect(() => {
     let live = true;
@@ -147,11 +223,25 @@ export function AgentPermissionMatrix({ s }: { s: SettingsStrings }) {
     };
   }, []);
 
-  const badge: Record<AgentCapabilityRow['decision'], string> = {
-    allow: 'text-emerald-500',
-    ask: 'text-amber-500',
-    deny: 'text-rose-500',
+  /** Design tokens, not raw palette classes — these carry the same meaning as every other status on
+   *  the page and must change with the theme the way the rest of it does. */
+  const decisionVariant: Record<AgentCapabilityRow['decision'], 'success' | 'warning' | 'error'> = {
+    allow: 'success',
+    ask: 'warning',
+    deny: 'error',
   };
+
+  const groups = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    const matched = (rows ?? []).filter((r) => r.id.toLowerCase().includes(q));
+    const byClass = new Map<string, AgentCapabilityRow[]>();
+    for (const row of matched) {
+      const list = byClass.get(row.dangerClass) ?? [];
+      list.push(row);
+      byClass.set(row.dangerClass, list);
+    }
+    return [...byClass.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [rows, filter]);
 
   return (
     <Card title={s.permissionsCenter.agentTitle} subtitle={s.permissionsCenter.agentSubtitle}>
@@ -161,19 +251,48 @@ export function AgentPermissionMatrix({ s }: { s: SettingsStrings }) {
       ) : rows.length === 0 ? (
         <p className="text-sm text-text-secondary">{s.permissionsCenter.agentEmpty}</p>
       ) : (
-        <ul className="space-y-1">
-          {rows.map((r) => (
-            <li
-              key={r.id}
-              className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-1.5"
-            >
-              <span className="min-w-0 truncate font-mono text-xs text-text-primary">{r.id}</span>
-              <span className={`shrink-0 text-xs ${badge[r.decision]}`}>
-                {s.permissionsCenter.decision[r.decision]}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <>
+          <Input
+            id="agent-capability-filter"
+            label={s.permissionsCenter.filter}
+            placeholder={s.permissionsCenter.agentFilterPlaceholder}
+            value={filter}
+            onChange={(e) => {
+              setFilter(e.target.value);
+            }}
+          />
+          {groups.length === 0 ? (
+            <p className="mt-3 text-sm text-text-secondary">{s.noResults}</p>
+          ) : (
+            <div className="mt-3 space-y-4">
+              {groups.map(([dangerClass, items]) => (
+                <div key={dangerClass}>
+                  <p className="mb-1.5 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                    {s.dangerLabels[dangerClass as keyof typeof s.dangerLabels] ?? dangerClass}
+                    <span className="font-normal normal-case tracking-normal text-text-disabled">
+                      {String(items.length)}
+                    </span>
+                  </p>
+                  <ul className="space-y-1">
+                    {items.map((r) => (
+                      <li
+                        key={r.id}
+                        className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-1.5"
+                      >
+                        <span className="min-w-0 truncate font-mono text-xs text-text-primary">
+                          {r.id}
+                        </span>
+                        <Badge variant={decisionVariant[r.decision]} size="sm" dot>
+                          {s.permissionsCenter.decision[r.decision]}
+                        </Badge>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </Card>
   );

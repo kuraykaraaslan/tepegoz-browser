@@ -147,7 +147,7 @@ function UploadRow({
             ))}
           </ul>
         )}
-        {item.error !== undefined && <p className="mt-2 text-xs text-danger">{item.error}</p>}
+        {item.error !== undefined && <p className="mt-2 text-xs text-error">{item.error}</p>}
         <div className="mt-3 flex flex-wrap gap-2">
           {(item.status === 'staged' || item.status === 'bound') && (
             <ActionButton

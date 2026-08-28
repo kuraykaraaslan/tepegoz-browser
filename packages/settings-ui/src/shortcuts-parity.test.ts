@@ -12,8 +12,8 @@ import { tr } from './i18n/tr';
  * words get written by whoever adds the thing.
  */
 describe('the keyboard-shortcut help list is complete', () => {
-  const enText: Record<string, string> = en.shortcuts;
-  const trText: Record<string, string> = tr.shortcuts;
+  const enText: Record<string, string> = en.shortcuts.descriptions;
+  const trText: Record<string, string> = tr.shortcuts.descriptions;
 
   it('describes every registered shortcut in English', () => {
     expect(SHORTCUTS.filter((s) => !(s.id in enText)).map((s) => s.id)).toEqual([]);
@@ -29,11 +29,10 @@ describe('the keyboard-shortcut help list is complete', () => {
   });
 
   it('carries no description for a shortcut that no longer exists', () => {
-    // A stale row is text nobody will ever see, which reads as coverage.
+    // A stale row is text nobody will ever see, which reads as coverage. The exclusion list this
+    // check used to need is gone: descriptions now live in their own group, so every key in it is
+    // supposed to be a shortcut id and any that is not is exactly the defect being looked for.
     const ids = new Set<string>(SHORTCUTS.map((s) => s.id));
-    const stale = Object.keys(enText).filter(
-      (k) => !ids.has(k) && k !== 'title' && k !== 'subtitle',
-    );
-    expect(stale).toEqual([]);
+    expect(Object.keys(enText).filter((k) => !ids.has(k))).toEqual([]);
   });
 });

@@ -145,6 +145,8 @@ export const en = {
 
   // --- File operations ---
   fileOps: {
+    removeTitle: 'Remove folder access',
+    removeBody: 'The assistant loses access to {path}. Nothing on disk is touched, and you can grant it again.',
     title: 'File operations',
     subtitle:
       'Folders the AI assistant may read and modify. Everything else on your disk stays off-limits. The default folder is home/tepegoz.',
@@ -324,6 +326,14 @@ export const en = {
   // the agent matrix is a VIEW over the Policy Kernel and is not. `agentReadOnly` says why, because a
   // read-only table with no explanation reads like a table that is broken.
   permissionsCenter: {
+    forgetSiteBody: 'Forgets every decision stored for {origin}. The site will ask again the next time it needs something.',
+    addSite: 'Decide about a site in advance',
+    addSiteHint: 'Adds the site so you can set its answers before it ever asks.',
+    addSitePlaceholder: 'example.com',
+    addSiteButton: 'Add site',
+    filter: 'Filter',
+    filterPlaceholder: 'Filter by site',
+    agentFilterPlaceholder: 'Filter by tool name',
     sitesTitle: 'Site permissions',
     sitesSubtitle: 'What each site may use. Nothing is granted until you say so.',
     sitesEmpty: 'No site has asked for anything yet. This list fills itself as you browse.',
@@ -351,6 +361,7 @@ export const en = {
     decision: { allow: 'Runs', ask: 'Asks first', deny: 'Refused' },
   },
   clientCerts: {
+    unavailable: 'The stored decisions could not be read, so this list may be incomplete.',
     title: 'Sites you identified yourself to',
     // Written to be understood by someone who has never heard the phrase "client certificate": what
     // matters to them is that a signed proof of who they are was handed over, and to whom.
@@ -367,11 +378,17 @@ export const en = {
     sessionNote: 'These answers are never saved to disk — they are forgotten when you quit.',
   },
   clearHistoryDesc: 'Remove the list of pages you have visited on this device.',
+  telemetryNothingSent: 'Nothing is collected or sent in this build — no code reads this setting yet. It is here so the choice is already yours when something does.',
+  clearHistoryConfirm: 'Deletes your whole browsing history on this device. Bookmarks, passwords and site permissions are not affected.',
   clearHistoryButton: 'Clear history',
   historyCleared: 'Browsing history cleared.',
 
   // --- Scoped trust profiles ---
   siteTrust: {
+    storedAs: 'Stored as {domain}.',
+    update: 'Update',
+    removeTitle: 'Remove trust profile',
+    removeBody: '{domain} goes back to the default posture: the agent asks before every gated action there.',
     title: 'Site trust',
     subtitle:
       'The standing posture the AI agent uses on a site. A profile can only ever make things stricter — it never unlocks anything.',
@@ -399,23 +416,34 @@ export const en = {
 
   // --- Keyboard shortcuts ---
   shortcuts: {
+    filterLabel: 'Filter',
+    filterPlaceholder: 'Search a command or a key',
+    notRebindable: 'These are fixed in this build — there is no rebinding yet, so nothing here is hidden behind a setting.',
     title: 'Keyboard shortcuts',
     subtitle: 'Every global shortcut, from the one registry the app binds them from.',
-    newTab: 'New tab',
-    reopenClosedTab: 'Reopen the last closed tab',
-    reload: 'Reload the page',
-    settings: 'Open settings',
-    commandPalette: 'Open the command palette',
-    find: 'Find on the page',
-    fullScreen: 'Toggle full screen',
-    exitKiosk: 'Leave kiosk mode',
-    print: 'Print the page',
-    savePage: 'Save the page',
-    viewSource: 'View the page source',
-    newPrivateWindow: 'Open a new private window',
-    devTools: 'Open developer tools',
-    hardReload: 'Reload, ignoring the cache',
-    closeTab: 'Close the tab',
+    /**
+     * Keyed by shortcut id. A nested group, not siblings of the strings above: the two used
+     * to share one object, so a shortcut whose id happened to be `title` would have rendered
+     * this section's own heading as its description, and the parity test that guards against
+     * stale rows had to carry a hand-kept list of which keys to ignore.
+     */
+    descriptions: {
+      newTab: 'New tab',
+      reopenClosedTab: 'Reopen the last closed tab',
+      reload: 'Reload the page',
+      settings: 'Open settings',
+      commandPalette: 'Open the command palette',
+      find: 'Find on the page',
+      fullScreen: 'Toggle full screen',
+      exitKiosk: 'Leave kiosk mode',
+      print: 'Print the page',
+      savePage: 'Save the page',
+      viewSource: 'View the page source',
+      newPrivateWindow: 'Open a new private window',
+      devTools: 'Open developer tools',
+      hardReload: 'Reload, ignoring the cache',
+      closeTab: 'Close the tab',
+    },
   },
 
   // --- Site permissions ---
@@ -650,6 +678,20 @@ export const en = {
   },
   // --- Network privacy (Phase 5): per-tab / per-group routing through a local SOCKS endpoint ---
   network: {
+    routesTitle: 'Where traffic is going',
+    routesHint: 'Per-tab and per-group routes are set from the tab and group menus; this is where you can review them.',
+    routesGroups: 'Groups',
+    routesTabs: 'Tabs',
+    routesNoOverrides: 'No tab is on a route of its own — everything follows the default above.',
+    routeSource: {
+      tab: 'Set on this tab',
+      group: 'From its group',
+      general: 'From the default',
+    },
+    routeHeld: 'Held — tunnel down',
+    removeTitle: 'Remove connection',
+    removeBody: 'Removes {name}. Any tab or group bound to it falls back to the profile default.',
+    removeBodyDefault: '{name} is the profile default. Removing it puts ALL unbound traffic back on the direct connection.',
     title: 'Network privacy',
     intro:
       'Route a tab or a whole tab group through WireGuard, Tor, or a SOCKS5 endpoint you already run. Tepegöz does not provide the tunnel itself, and nothing is routed through one unless you choose it.',

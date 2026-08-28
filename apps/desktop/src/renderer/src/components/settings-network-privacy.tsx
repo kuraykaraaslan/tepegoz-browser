@@ -10,6 +10,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCircleCheck, faCircleExclamation } from '@fortawesome/free-solid-svg-icons';
 import { AlertBanner, Badge, Button, Card, cn } from '@tepegoz/ui';
 import { AddConnectionRow } from './settings-network-forms';
+import { ConfirmAction } from './settings-confirm';
+import { NetworkRoutesCard } from './settings-network-routes';
 import { Select } from './settings-shared';
 
 /**
@@ -75,11 +77,15 @@ function ConnectionRow({
   c,
   s,
   connections,
+  isDefaultRoute,
   onChanged,
 }: {
   c: NetworkConnectionView;
   s: SettingsStrings;
   connections: readonly NetworkConnectionView[];
+  /** Removing THIS one drops the profile back to Direct — a privacy change the user must be told
+   *  about before it happens, not discover afterwards. */
+  isDefaultRoute: boolean;
   onChanged: () => void;
 }) {
   const [busy, setBusy] = useState(false);
@@ -117,15 +123,19 @@ function ConnectionRow({
         <Button size="sm" variant="outline" disabled={busy} onClick={toggle}>
           {c.status === 'up' ? s.network.disconnect : s.network.connect}
         </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => {
+        <ConfirmAction
+          label={s.network.remove}
+          title={s.network.removeTitle}
+          body={
+            isDefaultRoute
+              ? s.network.removeBodyDefault.replace('{name}', c.label)
+              : s.network.removeBody.replace('{name}', c.label)
+          }
+          confirmLabel={s.network.remove}
+          onConfirm={() => {
             void window.tepegoz.removeNetworkConnection(c.id).then(onChanged, () => undefined);
           }}
-        >
-          {s.network.remove}
-        </Button>
+        />
       </div>
       {c.lastError !== null && c.status !== 'up' && (
         <p className="mt-1 text-xs text-error-fg">{c.lastError}</p>
@@ -259,6 +269,7 @@ export function NetworkPrivacySection({ s }: { s: SettingsStrings }) {
                   c={c}
                   s={s}
                   connections={state.connections}
+                  isDefaultRoute={generalValue === c.id}
                   onChanged={refresh}
                 />
               ))}
@@ -304,6 +315,8 @@ export function NetworkPrivacySection({ s }: { s: SettingsStrings }) {
           </Select>
         </div>
       </Card>
+
+      <NetworkRoutesCard s={s} state={state} />
     </div>
   );
 }

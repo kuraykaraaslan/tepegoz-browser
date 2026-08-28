@@ -3,6 +3,7 @@ import { ComingSoonCard, type SettingsSection, type SettingsStrings } from '@tep
 import type { SiteClearPlan } from '@tepegoz/shared-types';
 import type { ClientCertificateChoice } from '@tepegoz/desktop-ipc';
 import { Button, Card, Toggle } from '@tepegoz/ui';
+import { ConfirmAction } from './settings-confirm';
 import { FileOperationsSection, PasswordsSection } from './settings-privacy-files';
 import { AboutSection } from './settings-about';
 import { DeveloperSection } from './settings-developer';
@@ -73,7 +74,7 @@ function ForgetSiteRow({ s }: { s: SettingsStrings }) {
         </Button>
       </div>
       {plan !== null && (
-        <div className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2">
+        <div className="mt-2 rounded-md border border-warning bg-warning-subtle px-3 py-2">
           <p className="text-sm text-text-primary">
             {s.forgetSite.confirmFor.replace('{site}', plan.site)}
           </p>
@@ -116,6 +117,7 @@ function ForgetSiteRow({ s }: { s: SettingsStrings }) {
 function ClientCertificatesRow({ s }: { s: SettingsStrings }) {
   const [choices, setChoices] = useState<ClientCertificateChoice[] | null>(null);
   const [forgotten, setForgotten] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -124,7 +126,12 @@ function ClientCertificatesRow({ s }: { s: SettingsStrings }) {
         if (live) setChoices(list);
       },
       () => {
-        if (live) setChoices([]);
+        // An empty list here reads as "you have identified yourself to nobody", which is the most
+        // reassuring possible way to fail at showing standing grants. Say it could not be read.
+        if (live) {
+          setChoices([]);
+          setFailed(true);
+        }
       },
     );
     return () => {
@@ -146,7 +153,9 @@ function ClientCertificatesRow({ s }: { s: SettingsStrings }) {
     <div>
       <p className="text-sm font-medium text-text-primary">{s.clientCerts.title}</p>
       <p className="mb-2 text-xs text-text-secondary">{s.clientCerts.desc}</p>
-      {choices !== null && choices.length === 0 ? (
+      {failed ? (
+        <p className="text-xs text-error">{s.clientCerts.unavailable}</p>
+      ) : choices !== null && choices.length === 0 ? (
         <p className="text-xs text-text-secondary">
           {forgotten ? s.clientCerts.forgotten : s.clientCerts.empty}
         </p>
@@ -181,25 +190,35 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
       group: s.groupPrivacy,
       label: s.privacyTitle,
       icon: <IconShield />,
-      searchText: `${s.privacyTitle} ${s.telemetry} ${s.telemetryDesc} ${s.clearHistoryLabel} ${s.forgetSite.title} ${s.clientCerts.title}`,
+      searchText: `${s.privacyTitle} ${s.telemetry} ${s.telemetryDesc} ${s.telemetryNothingSent} ${s.clearHistoryLabel} ${s.forgetSite.title} ${s.clientCerts.title}`,
       content: (
         <Card title={s.privacyTitle}>
           <div className="space-y-4">
-            <Toggle
-              id="telemetry"
-              label={s.telemetry}
-              description={s.telemetryDesc}
-              checked={prefs.telemetryEnabled}
-              onChange={(v) => {
-                setPref({ telemetryEnabled: v });
-              }}
-            />
+            <div>
+              <Toggle
+                id="telemetry"
+                label={s.telemetry}
+                description={s.telemetryDesc}
+                checked={prefs.telemetryEnabled}
+                onChange={(v) => {
+                  setPref({ telemetryEnabled: v });
+                }}
+              />
+              {/* Said plainly, because the switch alone implies a pipeline that does not exist: no
+                  code in this build reads `telemetryEnabled` to collect or send anything. A privacy
+                  control whose scope the user has to infer is one they cannot actually rely on. */}
+              <p className="mt-1.5 text-xs text-text-secondary">{s.telemetryNothingSent}</p>
+            </div>
             <div>
               <p className="text-sm font-medium text-text-primary">{s.clearHistoryLabel}</p>
               <p className="mb-2 text-xs text-text-secondary">{s.clearHistoryDesc}</p>
-              <Button size="sm" variant="outline" onClick={ctx.clearBrowsingHistory}>
-                {s.clearHistoryButton}
-              </Button>
+              <ConfirmAction
+                label={s.clearHistoryButton}
+                title={s.clearHistoryLabel}
+                body={s.clearHistoryConfirm}
+                confirmLabel={s.clearHistoryButton}
+                onConfirm={ctx.clearBrowsingHistory}
+              />
             </div>
             <ForgetSiteRow s={s} />
             <ClientCertificatesRow s={s} />
@@ -248,7 +267,7 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
       group: s.groupPrivacy,
       label: s.shortcuts.title,
       icon: <IconDesktop />,
-      searchText: `${s.shortcuts.title} ${s.shortcuts.subtitle} ${s.shortcuts.commandPalette} ${s.shortcuts.find}`,
+      searchText: `${s.shortcuts.title} ${s.shortcuts.subtitle} ${s.shortcuts.descriptions.commandPalette} ${s.shortcuts.descriptions.find} ${s.shortcuts.notRebindable}`,
       content: <ShortcutsSection />,
     },
     {

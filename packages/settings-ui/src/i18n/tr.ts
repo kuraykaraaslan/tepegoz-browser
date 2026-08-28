@@ -145,6 +145,8 @@ export const tr: SettingsStrings = {
 
   // --- Dosya işlemleri ---
   fileOps: {
+    removeTitle: 'Klasör erişimini kaldır',
+    removeBody: 'Asistanın {path} erişimi kalkar. Diskteki hiçbir şeye dokunulmaz, dilediğinde yeniden verebilirsin.',
     title: 'Dosya işlemleri',
     subtitle:
       'Yapay zekâ asistanının okuyup değiştirebileceği klasörler. Diskinizdeki diğer her şey erişime kapalı kalır. Varsayılan klasör home/tepegoz.',
@@ -322,6 +324,14 @@ export const tr: SettingsStrings = {
   // ajan matrisi Policy Kernel üzerine bir GÖRÜNÜMdür ve değildir. `agentReadOnly` nedenini söylüyor,
   // çünkü açıklamasız salt-okunur bir tablo, bozuk bir tablo gibi okunur.
   permissionsCenter: {
+    forgetSiteBody: '{origin} için saklanan tüm kararlar unutulur. Site bir sonraki ihtiyacında yeniden sorar.',
+    addSite: 'Bir site için önceden karar ver',
+    addSiteHint: 'Siteyi ekler; o daha sormadan yanıtlarını belirleyebilirsin.',
+    addSitePlaceholder: 'example.com',
+    addSiteButton: 'Site ekle',
+    filter: 'Süz',
+    filterPlaceholder: 'Siteye göre süz',
+    agentFilterPlaceholder: 'Araç adına göre süz',
     sitesTitle: 'Site izinleri',
     sitesSubtitle: 'Her sitenin neyi kullanabileceği. Sen izin vermeden hiçbir şey verilmez.',
     sitesEmpty: 'Henüz hiçbir site bir şey istemedi. Bu liste sen gezdikçe kendi kendine dolar.',
@@ -349,6 +359,7 @@ export const tr: SettingsStrings = {
     decision: { allow: 'Çalışır', ask: 'Önce sorar', deny: 'Reddedilir' },
   },
   clientCerts: {
+    unavailable: 'Saklanan kararlar okunamadı; bu liste eksik olabilir.',
     title: 'Kimliğini doğruladığın siteler',
     // "İstemci sertifikası" terimini hiç duymamış birinin anlayacağı şekilde yazıldı: onun için önemli
     // olan, kim olduğunun imzalı kanıtının verilmiş olması ve kime verildiği.
@@ -365,11 +376,17 @@ export const tr: SettingsStrings = {
     sessionNote: 'Bu yanıtlar hiçbir zaman diske yazılmaz — uygulamadan çıkınca unutulur.',
   },
   clearHistoryDesc: 'Bu cihazda ziyaret ettiğiniz sayfaların listesini kaldırır.',
+  telemetryNothingSent: 'Bu derlemede hiçbir şey toplanmıyor ve gönderilmiyor — bu ayarı okuyan bir kod henüz yok. Bir gün olduğunda seçim baştan senin olsun diye burada duruyor.',
+  clearHistoryConfirm: 'Bu cihazdaki tüm gezinme geçmişini siler. Yer imleri, parolalar ve site izinleri etkilenmez.',
   clearHistoryButton: 'Geçmişi temizle',
   historyCleared: 'Tarama geçmişi temizlendi.',
 
   // --- Site güven profilleri ---
   siteTrust: {
+    storedAs: '{domain} olarak kaydedilir.',
+    update: 'Güncelle',
+    removeTitle: 'Güven profilini kaldır',
+    removeBody: '{domain} varsayılan duruşa döner: ajan orada kapılı her işlemden önce sorar.',
     title: 'Site güveni',
     subtitle:
       'Yapay zekâ ajanının bir sitede kullandığı kalıcı tutum. Bir profil yalnızca daha katı hâle getirebilir — hiçbir şeyin kilidini açmaz.',
@@ -397,23 +414,34 @@ export const tr: SettingsStrings = {
 
   // --- Klavye kısayolları ---
   shortcuts: {
+    filterLabel: 'Süz',
+    filterPlaceholder: 'Komut ya da tuş ara',
+    notRebindable: 'Bu derlemede sabittirler — yeniden atama henüz yok, yani burada bir ayarın arkasına saklanmış bir şey de yok.',
     title: 'Klavye kısayolları',
     subtitle: 'Uygulamanın kısayolları bağladığı tek kayıttan gelen tüm genel kısayollar.',
-    newTab: 'Yeni sekme',
-    reopenClosedTab: 'Son kapatılan sekmeyi geri aç',
-    reload: 'Sayfayı yenile',
-    settings: 'Ayarları aç',
-    commandPalette: 'Komut paletini aç',
-    find: 'Sayfada bul',
-    fullScreen: 'Tam ekranı aç/kapat',
-    exitKiosk: 'Kiosk modundan çık',
-    print: 'Sayfayı yazdır',
-    savePage: 'Sayfayı kaydet',
-    viewSource: 'Sayfa kaynağını görüntüle',
-    newPrivateWindow: 'Yeni bir gizli pencere aç',
-    devTools: 'Geliştirici araçlarını aç',
-    hardReload: 'Önbelleği yok sayarak yenile',
-    closeTab: 'Sekmeyi kapat',
+    /**
+     * Keyed by shortcut id. A nested group, not siblings of the strings above: the two used
+     * to share one object, so a shortcut whose id happened to be `title` would have rendered
+     * this section's own heading as its description, and the parity test that guards against
+     * stale rows had to carry a hand-kept list of which keys to ignore.
+     */
+    descriptions: {
+      newTab: 'Yeni sekme',
+      reopenClosedTab: 'Son kapatılan sekmeyi geri aç',
+      reload: 'Sayfayı yenile',
+      settings: 'Ayarları aç',
+      commandPalette: 'Komut paletini aç',
+      find: 'Sayfada bul',
+      fullScreen: 'Tam ekranı aç/kapat',
+      exitKiosk: 'Kiosk modundan çık',
+      print: 'Sayfayı yazdır',
+      savePage: 'Sayfayı kaydet',
+      viewSource: 'Sayfa kaynağını görüntüle',
+      newPrivateWindow: 'Yeni bir gizli pencere aç',
+      devTools: 'Geliştirici araçlarını aç',
+      hardReload: 'Önbelleği yok sayarak yenile',
+      closeTab: 'Sekmeyi kapat',
+    },
   },
 
   // --- Site izinleri ---
@@ -649,6 +677,20 @@ export const tr: SettingsStrings = {
   },
   // --- Ağ gizliliği (Faz 5): yerel bir SOCKS uç noktası üzerinden sekme/grup bazında yönlendirme ---
   network: {
+    routesTitle: 'Trafik nereye gidiyor',
+    routesHint: 'Sekme ve grup başına yönlendirmeler sekme ve grup menülerinden ayarlanır; burası onları gözden geçirdiğin yer.',
+    routesGroups: 'Gruplar',
+    routesTabs: 'Sekmeler',
+    routesNoOverrides: 'Kendi rotasında olan sekme yok — her şey yukarıdaki varsayılanı izliyor.',
+    routeSource: {
+      tab: 'Bu sekmede ayarlı',
+      group: 'Grubundan',
+      general: 'Varsayılandan',
+    },
+    routeHeld: 'Tutuluyor — tünel kapalı',
+    removeTitle: 'Bağlantıyı kaldır',
+    removeBody: '{name} kaldırılır. Ona bağlı sekme veya gruplar profil varsayılanına döner.',
+    removeBodyDefault: '{name} profil varsayılanı. Kaldırırsan bağlanmamış TÜM trafik doğrudan bağlantıya döner.',
     title: 'Ağ gizliliği',
     intro:
       'Bir sekmeyi ya da bütün bir sekme grubunu WireGuard, Tor veya zaten çalıştırdığınız bir SOCKS5 uç noktası üzerinden yönlendirin. Tepegöz tüneli kendisi sağlamaz; siz seçmedikçe hiçbir şey tünelden geçmez.',
