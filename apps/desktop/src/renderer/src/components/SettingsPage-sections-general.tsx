@@ -13,6 +13,7 @@ import {
   TokenBudgetSection,
 } from './settings-ai-panels';
 import { AdaptorsSection } from './settings-adaptors-section';
+import { McpServersSection } from './settings-mcp-servers';
 import { DefaultBrowserSection } from './settings-default-browser';
 import { SearchStartupSection } from './settings-privacy-files';
 import { DownloadSettingsSection } from './settings-downloads';
@@ -163,8 +164,13 @@ export function generalAndAiSections(ctx: SettingsSectionsCtx): SettingsSection[
       group: s.groupAiAgent,
       label: s.adaptorInventoryTitle,
       icon: <IconPlug />,
-      searchText: `${s.adaptorInventoryTitle} ${s.adaptorInventorySubtitle} MCP REST GraphQL OAuth`,
-      content: <AdaptorsSection />,
+      searchText: `${s.adaptorInventoryTitle} ${s.adaptorInventorySubtitle} ${s.mcp.title} ${s.mcp.subtitle} MCP REST GraphQL OAuth stdio`,
+      content: (
+        <div className="space-y-6">
+          <McpServersSection prefs={prefs} setPref={setPref} />
+          <AdaptorsSection />
+        </div>
+      ),
     },
     {
       id: 'agent-controls',

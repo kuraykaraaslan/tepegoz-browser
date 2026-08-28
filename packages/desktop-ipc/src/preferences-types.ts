@@ -301,11 +301,23 @@ export interface LocalModelInfo {
   /** Parameter count in billions (a size/RAM hint). */
   paramsB: number;
   ctx: number;
+  /** SPDX-ish licence id from the catalog ('' when the entry does not state one). */
+  license: string;
   recommended: boolean;
   installed: boolean;
   downloading: boolean;
   /** 0..1 download progress while `downloading`. */
   progress: number;
+  /** Bytes fetched so far, 0 when not downloading. */
+  downloadedBytes: number;
+  /** Total bytes the SERVER reported for the transfer in flight; 0 before it answers. Not a catalog
+   *  figure — it is only known once a download starts. */
+  totalBytes: number;
+  /** Catalog download size, when it has been measured. Absent ⇒ genuinely unknown; the UI says so
+   *  rather than inventing an estimate. */
+  sizeBytes?: number;
+  /** Size of the installed file on disk. Absent unless installed. */
+  installedBytes?: number;
   selected: boolean;
 }
 

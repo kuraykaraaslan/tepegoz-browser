@@ -218,12 +218,16 @@ export const tr: SettingsStrings = {
   toolIdempotencyLabel: 'idempotency',
   noActionsYet: 'Henüz aksiyon yok.',
   tokenBudget: {
+    unlimitedHint: '0 = sınırsız.',
     title: 'Token bütçesi',
     desc: "Tüm ajan çalışmalarındaki toplam token harcamasını sınırlayın. Ajan Konsolu canlı bir gösterge sunar ve %80'de uyarır; sınıra ulaşılınca yeni çalışma engellenir. Sizin kontrolünüz dışındaki nedenlerle (sistem hataları, CAPTCHA/2FA, döngüler) başarısız olan çalışmalar otomatik iade edilir.",
     label: 'Toplam token kotası (0 = sınırsız)',
     used: 'Şu ana dek kullanılan',
   },
   localModels: {
+    sizeUnknown: 'boyut bilinmiyor',
+    deleteTitle: 'Modeli sil',
+    deleteBody: '{name} ({size}) bu bilgisayardan silinir. Yeniden kullanmak istersen baştan indirmen gerekir.',
     title: 'Cihaz-içi modeller',
     hint: 'Ajanı yerelde çalıştırmak için bir model indir. Profilinde saklanır — uygulamayla paketlenmez.',
     recommended: 'Önerilen',
@@ -264,6 +268,8 @@ export const tr: SettingsStrings = {
   adaptorInventoryEmpty: 'Henüz adaptör yok.',
   adaptorAuditRequired: 'Denetim',
   adaptorToolsLabel: 'araç',
+  adaptorScopesMore: 'Tüm izinleri göster',
+  adaptorScopesLess: 'Daha az göster',
   adaptorKindLabels: {
     mcp: 'MCP',
     rest: 'REST',
@@ -544,6 +550,50 @@ export const tr: SettingsStrings = {
   contrastAccent: 'Vurgu',
   contrastAccentLabel: 'Vurgu üstündeki etiket',
   contrastTargets: 'WCAG AA metin için {text}, denetimler için {nonText} ister.',
+
+  // --- MCP sunucuları (daha önce yalnızca Geliştirici sayfasındaki ham JSON alanından ayarlanabiliyordu) ---
+  mcp: {
+    title: 'MCP sunucuları',
+    subtitle:
+      'Model Context Protocol sunucuları ajanı araçlarla genişletir. Yerel olan alt süreç olarak çalışır; uzak olana HTTP üzerinden erişilir.',
+    labelField: 'Ad',
+    labelPlaceholder: 'Dosya sistemi',
+    transport: 'Taşıma',
+    transports: {
+      stdio: 'Yerel süreç',
+      http_sse: 'HTTP (SSE)',
+    },
+    command: 'Komut',
+    commandPlaceholder: 'npx',
+    args: 'Argümanlar',
+    argsPlaceholder: '-y @modelcontextprotocol/server-filesystem /home',
+    url: 'Sunucu adresi',
+    urlPlaceholder: 'https://example.com/mcp',
+    add: 'Sunucu ekle',
+    enabled: 'Etkin',
+    empty: 'Henüz MCP sunucusu yok.',
+    errorLabel: 'Sunucuya bir ad verin.',
+    errorCommand: 'Yerel sunucunun çalıştıracak bir komuta ihtiyacı var.',
+    errorUrl: 'Tam bir http:// veya https:// adresi girin.',
+    removeTitle: 'Sunucuyu kaldır',
+    removeBody:
+      '{name} ve sağladığı araçlar kaldırılır. Programın kendisi silinmez, istediğinizde yeniden ekleyebilirsiniz.',
+    envNote: 'Bu sunucu ortam değişkenleri taşıyor; buradan düzenlediğinizde onlara dokunulmaz.',
+    envLink: 'Geliştirici sayfasından düzenleyin',
+  },
+
+  mcpStateLabels: {
+    idle: 'Boşta',
+    connecting: 'Bağlanıyor…',
+    ready: 'Hazır',
+    error: 'Hata',
+  },
+  mcpToolsLabel: 'araç',
+  moveUp: '{name} anahtarını yukarı taşı',
+  moveDown: '{name} anahtarını aşağı taşı',
+  keyRemoveTitle: 'Anahtarı kaldır',
+  keyRemoveBody:
+    '{name} kaldırılır. Anahtarın kendisi bir daha gösterilmez; geri almak için sağlayıcınızdan yeniden yapıştırmanız gerekir.',
 
   // --- Açılışta (Sistem tepsisi ve güç sayfasından taşındı; eskiden orada saklıydılar) ---
   startup: {

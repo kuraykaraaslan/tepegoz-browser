@@ -20,11 +20,8 @@ const h = vi.hoisted(() => ({
 const shellMock = vi.hoisted(() => ({
   openPath: vi.fn<(path: string) => Promise<string>>(() => Promise.resolve('')),
 }));
-const dialogMock = vi.hoisted(() => ({
-  result: { canceled: false, filePaths: ['C:/picked'] } as {
-    canceled: boolean;
-    filePaths: string[];
-  },
+const dialogMock = vi.hoisted((): { result: { canceled: boolean; filePaths: string[] } } => ({
+  result: { canceled: false, filePaths: ['C:/picked'] },
 }));
 vi.mock('electron', () => ({
   ipcMain: {

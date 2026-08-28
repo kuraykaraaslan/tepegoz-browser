@@ -34,16 +34,11 @@ function Field({
   );
 }
 
+/** `fireEvent.change` goes through React's own value tracker, which a direct `.value` assignment
+ *  does not — assigning it would leave `onChange` silent and every assertion below vacuous. */
 function type(value: string): void {
-  const input = screen.getByLabelText('field');
   act(() => {
-    // React's controlled-input setter, the way userEvent does it.
-    const setter = Object.getOwnPropertyDescriptor(
-      window.HTMLInputElement.prototype,
-      'value',
-    )?.set;
-    setter?.call(input, value);
-    input.dispatchEvent(new Event('input', { bubbles: true }));
+    fireEvent.change(screen.getByLabelText('field'), { target: { value } });
   });
 }
 
@@ -112,10 +107,10 @@ describe('useCommitOnPause', () => {
   it('adopts an external change while idle', () => {
     const commit = vi.fn();
     const view = render(<Field external="first" commit={commit} />);
-    expect((screen.getByLabelText('field') as HTMLInputElement).value).toBe('first');
+    expect(screen.getByLabelText<HTMLInputElement>('field').value).toBe('first');
 
     view.rerender(<Field external="second" commit={commit} />);
-    expect((screen.getByLabelText('field') as HTMLInputElement).value).toBe('second');
+    expect(screen.getByLabelText<HTMLInputElement>('field').value).toBe('second');
   });
 
   it('does NOT let an external change overwrite what is being typed', () => {
@@ -127,6 +122,6 @@ describe('useCommitOnPause', () => {
     // discard the user's in-progress value.
     view.rerender(<Field external="theirs" commit={commit} delayMs={5000} />);
 
-    expect((screen.getByLabelText('field') as HTMLInputElement).value).toBe('mine');
+    expect(screen.getByLabelText<HTMLInputElement>('field').value).toBe('mine');
   });
 });

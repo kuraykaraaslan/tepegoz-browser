@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { settingsDict } from '@tepegoz/settings-ui';
-import { Badge, Card, Input, Toggle } from '@tepegoz/ui';
-import { useT } from '@tepegoz/i18n/react';
+import { Badge, Card, cn, Input, Toggle } from '@tepegoz/ui';
+import { useLocale, useT } from '@tepegoz/i18n/react';
+import { useCommitOnPause } from '../lib/use-commit-on-pause';
 import type { AIAdaptor, AIAdaptorAction, Preferences } from '@tepegoz/desktop-ipc';
 import { ToolMetadataBadges } from './settings-tool-metadata';
 
@@ -135,6 +136,9 @@ export function TokenBudgetSection({
   setPref: (patch: Partial<Preferences>) => void;
 }) {
   const s = useT(settingsDict);
+  // The APP's locale, not the OS's. `toLocaleString()` with no argument reads the system locale, so a
+  // Turkish UI on an English Windows printed 1,234,567 where the rest of the page said 1.234.567.
+  const locale = useLocale();
   const [used, setUsed] = useState<number | null>(null);
 
   useEffect(() => {
@@ -148,6 +152,18 @@ export function TokenBudgetSection({
     );
   }, []);
 
+  const quota = useCommitOnPause(String(prefs.agentTokenQuota), (value) => {
+    const n = Math.max(0, Math.trunc(Number(value) || 0));
+    setPref({ agentTokenQuota: n });
+  });
+
+  // A cap and a total, side by side, are two numbers the reader has to divide themselves. The bar is
+  // the same two numbers doing the division. Only drawn when there IS a cap: against `0` (unlimited)
+  // a progress bar would be measuring against nothing.
+  const capped = prefs.agentTokenQuota > 0;
+  const pct =
+    capped && used !== null ? Math.min(100, Math.round((used / prefs.agentTokenQuota) * 100)) : 0;
+
   return (
     <Card title={s.tokenBudget.title}>
       <p className="mb-3 text-sm text-text-secondary">{s.tokenBudget.desc}</p>
@@ -157,17 +173,48 @@ export function TokenBudgetSection({
           label={s.tokenBudget.label}
           type="number"
           min={0}
-          value={String(prefs.agentTokenQuota)}
+          hint={s.tokenBudget.unlimitedHint}
+          value={quota.draft}
           onChange={(e) => {
-            const n = Math.max(0, Math.trunc(Number(e.target.value) || 0));
-            setPref({ agentTokenQuota: n });
+            quota.set(e.target.value);
           }}
+          onBlur={quota.flush}
         />
       </div>
       {used !== null && (
-        <p className="mt-2 text-xs text-text-secondary">
-          {s.tokenBudget.used}: {used.toLocaleString()}
-        </p>
+        <div className="mt-3">
+          <p className="text-xs text-text-secondary">
+            {s.tokenBudget.used}: <span className="font-mono">{used.toLocaleString(locale)}</span>
+            {capped && (
+              <>
+                {' / '}
+                <span className="font-mono">
+                  {prefs.agentTokenQuota.toLocaleString(locale)}
+                </span>
+                {` (${String(pct)}%)`}
+              </>
+            )}
+          </p>
+          {capped && (
+            <div
+              className="mt-1.5 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-surface-sunken"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={pct}
+              aria-label={s.tokenBudget.title}
+            >
+              <div
+                className={cn(
+                  'h-full transition-[width] duration-300',
+                  // 80% is the threshold the Agent Console already warns at; the bar reads the same.
+                  pct >= 100 ? 'bg-error' : pct >= 80 ? 'bg-warning' : 'bg-primary',
+                )}
+                style={{ width: `${String(pct)}%` }}
+              />
+            </div>
+          )}
+        </div>
       )}
     </Card>
   );

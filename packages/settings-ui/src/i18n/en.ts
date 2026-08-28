@@ -219,12 +219,16 @@ export const en = {
   toolIdempotencyLabel: 'idempotency',
   noActionsYet: 'No actions available yet.',
   tokenBudget: {
+    unlimitedHint: '0 means no cap.',
     title: 'Token budget',
     desc: 'Cap total token spend across agent runs. The Agent Console shows a live indicator and warns at 80%; a new run is blocked once the cap is reached. Runs that fail for reasons outside your control (system errors, CAPTCHA/2FA, loops) are auto-refunded.',
     label: 'Total token quota (0 = unlimited)',
     used: 'Used so far',
   },
   localModels: {
+    sizeUnknown: 'size unknown',
+    deleteTitle: 'Delete model',
+    deleteBody: 'Deletes {name} ({size}) from this computer. Using it again means downloading it again.',
     title: 'On-device models',
     hint: 'Download a model to run the agent locally. Stored in your profile — not bundled with the app.',
     recommended: 'Recommended',
@@ -265,6 +269,8 @@ export const en = {
   adaptorInventoryEmpty: 'No adaptors available yet.',
   adaptorAuditRequired: 'Audit',
   adaptorToolsLabel: 'tools',
+  adaptorScopesMore: 'Show all permissions',
+  adaptorScopesLess: 'Show fewer',
   adaptorKindLabels: {
     mcp: 'MCP',
     rest: 'REST',
@@ -545,6 +551,50 @@ export const en = {
   contrastAccent: 'Accent',
   contrastAccentLabel: 'Label on accent',
   contrastTargets: 'WCAG AA needs {text} for text and {nonText} for controls.',
+
+  // --- MCP servers (previously configurable only through the Developer page's raw JSON field) ---
+  mcp: {
+    title: 'MCP servers',
+    subtitle:
+      'Model Context Protocol servers extend the agent with tools. A local one runs as a child process; a remote one is reached over HTTP.',
+    labelField: 'Name',
+    labelPlaceholder: 'Filesystem',
+    transport: 'Transport',
+    transports: {
+      stdio: 'Local process',
+      http_sse: 'HTTP (SSE)',
+    },
+    command: 'Command',
+    commandPlaceholder: 'npx',
+    args: 'Arguments',
+    argsPlaceholder: '-y @modelcontextprotocol/server-filesystem /home',
+    url: 'Server URL',
+    urlPlaceholder: 'https://example.com/mcp',
+    add: 'Add server',
+    enabled: 'Enabled',
+    empty: 'No MCP servers yet.',
+    errorLabel: 'Give the server a name.',
+    errorCommand: 'A local server needs a command to run.',
+    errorUrl: 'Enter a full http:// or https:// address.',
+    removeTitle: 'Remove server',
+    removeBody:
+      'Removes {name} and the tools it provides. The program itself is not uninstalled, and you can add it again.',
+    envNote: 'This server carries environment variables, which stay untouched when you edit it here.',
+    envLink: 'Edit them in Developer',
+  },
+
+  mcpStateLabels: {
+    idle: 'Idle',
+    connecting: 'Connecting…',
+    ready: 'Ready',
+    error: 'Error',
+  },
+  mcpToolsLabel: 'tools',
+  moveUp: 'Move {name} up',
+  moveDown: 'Move {name} down',
+  keyRemoveTitle: 'Remove key',
+  keyRemoveBody:
+    'Removes {name}. The key itself is never shown again, so you would have to paste it in from your provider to restore it.',
 
   // --- On startup (moved out of System tray & power, which is where these used to hide) ---
   startup: {

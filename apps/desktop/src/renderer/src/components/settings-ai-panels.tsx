@@ -5,7 +5,6 @@
  * so existing imports of `./settings-ai-panels` keep working unchanged.
  */
 
-export { McpConnectionsSection } from './settings-ai-panels-mcp';
 export { ProvidersSection } from './settings-ai-panels-providers';
 export { LocalModelsSection } from './settings-ai-panels-models';
 export { LocalActionsSection, TokenBudgetSection } from './settings-ai-panels-cost';

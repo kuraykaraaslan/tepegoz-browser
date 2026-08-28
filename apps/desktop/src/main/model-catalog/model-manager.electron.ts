@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { app } from 'electron';
 import { z } from 'zod';
@@ -24,6 +24,10 @@ const ModelCatalogEntrySchema = z.object({
   recommended: z.boolean().default(false),
   firstParty: z.boolean().default(false),
   license: z.string().max(64).default(''),
+  /** Download size in bytes, when it has been measured. OPTIONAL on purpose: a wrong number here is
+   *  worse than none — the UI shows "size unknown" rather than a guess, and reports the real total the
+   *  moment the transfer starts. */
+  sizeBytes: z.number().int().positive().optional(),
 });
 type ModelCatalogEntry = z.infer<typeof ModelCatalogEntrySchema>;
 const CatalogFileSchema = z.object({
@@ -72,16 +76,35 @@ function catalog(): ModelCatalogEntry[] {
 function toInfo(entry: ModelCatalogEntry): LocalModelInfo {
   const dl = active.get(entry.id);
   const selectedId = PreferenceStore.getAll().localProvider.selectedModelId;
+  const path = modelFilePath(entry.id);
+  const installed = existsSync(path);
+  // The size on disk is the only figure that is certainly true for an installed model, and it is what
+  // "how much space would deleting this free" needs. `statSync` can still race a delete, so it is
+  // guarded rather than assumed.
+  let installedBytes: number | undefined;
+  if (installed) {
+    try {
+      installedBytes = statSync(path).size;
+    } catch {
+      installedBytes = undefined;
+    }
+  }
   return {
     id: entry.id,
     name: entry.name,
     paramsB: entry.paramsB,
     ctx: entry.ctx,
+    license: entry.license,
     recommended: entry.recommended,
-    installed: existsSync(modelFilePath(entry.id)),
+    installed,
     downloading: dl !== undefined,
     progress: dl !== undefined && dl.totalSize > 0 ? dl.downloadedSize / dl.totalSize : 0,
+    downloadedBytes: dl?.downloadedSize ?? 0,
+    // 0 until the server answers; the UI must not present it as a known total before then.
+    totalBytes: dl?.totalSize ?? 0,
     selected: selectedId === entry.id,
+    ...(entry.sizeBytes === undefined ? {} : { sizeBytes: entry.sizeBytes }),
+    ...(installedBytes === undefined ? {} : { installedBytes }),
   };
 }
 

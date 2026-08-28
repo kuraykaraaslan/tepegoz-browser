@@ -2,23 +2,49 @@ import { useEffect, useState } from 'react';
 import { settingsDict } from '@tepegoz/settings-ui';
 import { Badge, Button, Card } from '@tepegoz/ui';
 import { coreDict } from '@tepegoz/i18n';
-import { useT } from '@tepegoz/i18n/react';
+import { useLocale, useT } from '@tepegoz/i18n/react';
 import type { LocalModelInfo } from '@tepegoz/desktop-ipc';
+import { ConfirmAction } from './settings-confirm';
 
 /**
  * AI & Agent settings panels: on-device models. Split out of `settings-ai-panels.tsx` (ADR-0010
  * 250-line cap). The cloud model pin is NOT here — it lives on each key, in Providers & API keys.
+ *
+ * Three things this panel used to get wrong, all of them about telling the user what a click costs:
+ *  - it showed parameter count and context length but never a download SIZE, so "Download" was a
+ *    button you pressed without knowing whether it would pull 600 MB or 8 GB;
+ *  - `.catch(() => undefined)` swallowed every failure, including the localized `modelDownloadFailed`
+ *    main already raises, so a dead link looked exactly like a click that did nothing;
+ *  - Delete fired on the first press, discarding gigabytes that then have to come down again.
+ *
+ * Where the size is genuinely unknown it SAYS unknown. The catalog carries a measured size only when
+ * someone has measured it, and the live total arrives from the server once a transfer starts —
+ * inventing a figure in between would be the one failure worse than the gap.
  */
 
-/**
- * On-device models — download/select/delete GGUF models the agent can run locally. The catalog +
- * live install/download state come from the main process over IPC (`listLocalModels` +
- * `onLocalModelsState`); models download into the profile via node-llama-cpp, not bundled.
- */
+/** Bytes → a short human figure in the UI locale. `undefined` ⇒ the caller renders "unknown". */
+function formatBytes(bytes: number | undefined, locale: string): string | undefined {
+  if (bytes === undefined || bytes <= 0) return undefined;
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  const digits = value >= 100 || unit === 0 ? 0 : 1;
+  return `${value.toLocaleString(locale, {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  })} ${units[unit] ?? 'B'}`;
+}
+
 export function LocalModelsSection() {
   const s = useT(settingsDict);
   const c = useT(coreDict);
+  const locale = useLocale();
   const [models, setModels] = useState<LocalModelInfo[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     void window.tepegoz.listLocalModels().then(setModels, () => {
@@ -26,6 +52,33 @@ export function LocalModelsSection() {
     });
     return window.tepegoz.onLocalModelsState(setModels);
   }, []);
+
+  /** Report what main said. The boundary already localizes its own error codes, so the message is the
+   *  user's language and does not leak internals — dropping it was pure loss. */
+  function run(action: Promise<unknown>): void {
+    setError(null);
+    void action.then(
+      () => undefined,
+      (err: unknown) => {
+        setError(err instanceof Error && err.message !== '' ? err.message : c.errors.upstreamDown);
+      },
+    );
+  }
+
+  /** What a row can honestly say about size, in order of certainty. */
+  function sizeLine(m: LocalModelInfo): string {
+    if (m.downloading) {
+      const done = formatBytes(m.downloadedBytes, locale);
+      const total = formatBytes(m.totalBytes, locale);
+      if (done !== undefined && total !== undefined) return `${done} / ${total}`;
+      if (done !== undefined) return done;
+      return s.localModels.sizeUnknown;
+    }
+    const onDisk = formatBytes(m.installedBytes, locale);
+    if (onDisk !== undefined) return onDisk;
+    const catalogued = formatBytes(m.sizeBytes, locale);
+    return catalogued ?? s.localModels.sizeUnknown;
+  }
 
   return (
     <Card title={s.localModels.title} subtitle={s.localModels.hint}>
@@ -53,8 +106,12 @@ export function LocalModelsSection() {
                   )}
                 </div>
                 <span className="text-xs text-text-secondary">
-                  {m.paramsB}
-                  {s.localModels.paramsUnit} · {m.ctx.toLocaleString()} {s.localModels.ctxUnit}
+                  {[
+                    `${String(m.paramsB)}${s.localModels.paramsUnit}`,
+                    `${m.ctx.toLocaleString(locale)} ${s.localModels.ctxUnit}`,
+                    sizeLine(m),
+                    ...(m.license === '' ? [] : [m.license]),
+                  ].join(' · ')}
                 </span>
                 {m.downloading && (
                   <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-surface-sunken">
@@ -82,30 +139,34 @@ export function LocalModelsSection() {
                       <Button
                         size="sm"
                         onClick={() => {
-                          void window.tepegoz
-                            .selectLocalModel(m.id)
-                            .then(() => window.tepegoz.listLocalModels())
-                            .then(setModels, () => undefined);
+                          run(
+                            window.tepegoz
+                              .selectLocalModel(m.id)
+                              .then(() => window.tepegoz.listLocalModels())
+                              .then(setModels),
+                          );
                         }}
                       >
                         {s.localModels.use}
                       </Button>
                     )}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        void window.tepegoz.deleteLocalModel(m.id).catch(() => undefined);
+                    <ConfirmAction
+                      label={s.localModels.delete}
+                      title={s.localModels.deleteTitle}
+                      body={s.localModels.deleteBody
+                        .replace('{name}', m.name)
+                        .replace('{size}', sizeLine(m))}
+                      confirmLabel={s.localModels.delete}
+                      onConfirm={() => {
+                        run(window.tepegoz.deleteLocalModel(m.id));
                       }}
-                    >
-                      {s.localModels.delete}
-                    </Button>
+                    />
                   </>
                 ) : (
                   <Button
                     size="sm"
                     onClick={() => {
-                      void window.tepegoz.downloadLocalModel(m.id).catch(() => undefined);
+                      run(window.tepegoz.downloadLocalModel(m.id));
                     }}
                   >
                     {s.localModels.download}
@@ -116,6 +177,7 @@ export function LocalModelsSection() {
           ))}
         </ul>
       )}
+      {error !== null && <p className="mt-3 text-xs text-error">{error}</p>}
     </Card>
   );
 }

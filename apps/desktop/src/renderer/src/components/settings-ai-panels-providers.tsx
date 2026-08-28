@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faGripVertical } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown, faChevronUp, faGripVertical } from '@fortawesome/free-solid-svg-icons';
 import { settingsDict } from '@tepegoz/settings-ui';
 import { AlertBanner, Badge, Button, Card, cn, Input } from '@tepegoz/ui';
 import { coreDict } from '@tepegoz/i18n';
@@ -8,6 +8,7 @@ import { useT } from '@tepegoz/i18n/react';
 import { isRunnableProvider } from '@tepegoz/desktop-ipc';
 import type { ProviderId, ProviderKeyMeta } from '@tepegoz/desktop-ipc';
 import { PROVIDERS, Select } from './settings-shared';
+import { ConfirmAction } from './settings-confirm';
 import { KeyModelMenu, useProviderModels } from './settings-ai-panels-key-model';
 
 /**
@@ -25,6 +26,14 @@ export type Notify = (variant: 'success' | 'error', message: string) => void;
  * The model is pinned PER KEY, from the gear on the key's own row — so it is offered only once the key
  * exists, and two keys for the same provider can run different models. A key's pin applies whenever a
  * run resolves to it (the top key of its provider).
+ *
+ * Order is also changeable from the KEYBOARD, not only by dragging. Priority decides which key a run
+ * actually uses, so a drag-only control did not merely fail an accessibility guideline — it put a real
+ * setting out of reach of anyone not using a mouse.
+ *
+ * Failures report what main said. Every path used to collapse to `errors.upstreamDown`, which turned
+ * "this key was rejected" and "the vault could not be written" into the same sentence; the boundary
+ * already localizes its own codes, so that text was being discarded for no gain.
  */
 export function ProvidersSection({
   keys,
@@ -55,6 +64,11 @@ export function ProvidersSection({
   const [dragId, setDragId] = useState<string | null>(null);
   const modelsByProvider = useProviderModels();
 
+  /** The reason main gave, falling back only when there genuinely is not one. */
+  function reason(err: unknown): string {
+    return err instanceof Error && err.message !== '' ? err.message : c.errors.upstreamDown;
+  }
+
   async function add(): Promise<void> {
     const key = keyValue.trim();
     if (key.length === 0) return;
@@ -64,8 +78,8 @@ export function ProvidersSection({
       setLabel('');
       setKeyValue('');
       notify('success', s.keyAdded);
-    } catch {
-      notify('error', c.errors.upstreamDown);
+    } catch (err) {
+      notify('error', reason(err));
     }
   }
 
@@ -73,8 +87,8 @@ export function ProvidersSection({
     try {
       await onRemoveById(id);
       notify('success', s.keyRemoved);
-    } catch {
-      notify('error', c.errors.upstreamDown);
+    } catch (err) {
+      notify('error', reason(err));
     }
   }
 
@@ -82,8 +96,8 @@ export function ProvidersSection({
     try {
       await onSetModel(id, next);
       notify('success', s.keyModel.saved);
-    } catch {
-      notify('error', c.errors.upstreamDown);
+    } catch (err) {
+      notify('error', reason(err));
     }
   }
 
@@ -94,16 +108,14 @@ export function ProvidersSection({
       await onRename(id, lbl);
       setRenamingId(null);
       notify('success', s.keyRenamed);
-    } catch {
-      notify('error', c.errors.upstreamDown);
+    } catch (err) {
+      notify('error', reason(err));
     }
   }
 
-  function drop(targetId: string): void {
-    const from = keys.findIndex((k) => k.id === dragId);
-    const to = keys.findIndex((k) => k.id === targetId);
-    setDragId(null);
-    if (from < 0 || to < 0 || from === to) return;
+  /** The one reorder path. Drag and the arrow buttons both land here, so they cannot diverge. */
+  function move(from: number, to: number): void {
+    if (from < 0 || to < 0 || from === to || to >= keys.length) return;
     const ids = keys.map((k) => k.id);
     const [moved] = ids.splice(from, 1);
     if (moved === undefined) return;
@@ -112,10 +124,17 @@ export function ProvidersSection({
       () => {
         notify('success', s.keysReordered);
       },
-      () => {
-        notify('error', c.errors.upstreamDown);
+      (err: unknown) => {
+        notify('error', reason(err));
       },
     );
+  }
+
+  function drop(targetId: string): void {
+    const from = keys.findIndex((k) => k.id === dragId);
+    const to = keys.findIndex((k) => k.id === targetId);
+    setDragId(null);
+    move(from, to);
   }
 
   return (
@@ -217,6 +236,32 @@ export function ProvidersSection({
                   <span className="cursor-grab text-text-secondary" aria-hidden>
                     <FontAwesomeIcon icon={faGripVertical} className="h-3.5 w-3.5" />
                   </span>
+                  {/* The keyboard route to the same reorder. Labelled per key, because "Move up" on
+                      its own tells a screen-reader user nothing about WHICH key is moving. */}
+                  <span className="flex shrink-0 flex-col">
+                    <button
+                      type="button"
+                      disabled={index === 0}
+                      aria-label={s.moveUp.replace('{name}', k.label)}
+                      onClick={() => {
+                        move(index, index - 1);
+                      }}
+                      className="rounded px-1 text-text-secondary hover:text-text-primary disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+                    >
+                      <FontAwesomeIcon icon={faChevronUp} className="h-2.5 w-2.5" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={index === keys.length - 1}
+                      aria-label={s.moveDown.replace('{name}', k.label)}
+                      onClick={() => {
+                        move(index, index + 1);
+                      }}
+                      className="rounded px-1 text-text-secondary hover:text-text-primary disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+                    >
+                      <FontAwesomeIcon icon={faChevronDown} className="h-2.5 w-2.5" />
+                    </button>
+                  </span>
                   {isRenaming ? (
                     <form
                       className="flex flex-1 items-center gap-2"
@@ -288,9 +333,13 @@ export function ProvidersSection({
                         >
                           {s.rename}
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => void remove(k.id)}>
-                          {s.remove}
-                        </Button>
+                        <ConfirmAction
+                          label={s.remove}
+                          title={s.keyRemoveTitle}
+                          body={s.keyRemoveBody.replace('{name}', k.label)}
+                          confirmLabel={s.remove}
+                          onConfirm={() => void remove(k.id)}
+                        />
                       </div>
                     </>
                   )}
