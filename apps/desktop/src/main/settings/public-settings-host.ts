@@ -1,6 +1,6 @@
-import { BrowserWindow } from 'electron';
 import { IpcChannels, PUBLIC_SETTING_KEYS, type PublicSettings } from '@tepegoz/desktop-ipc';
 import PreferenceStore, { PublicSettingsSchema } from '@tepegoz/preferences';
+import { broadcastToAppSurfaces } from '../lib/app-surfaces';
 import { mainLocale } from '../lib/i18n-main';
 
 /**
@@ -25,11 +25,17 @@ export function getPublicSettings(): PublicSettings {
   return project();
 }
 
-/** Push the current snapshot to every app chrome window (main + open popups). Browsed pages are
- *  WebContentsViews, not BrowserWindows, so they are never reached. Call after any preference change. */
+/**
+ * Push the current snapshot to every app surface — the chrome windows AND the `tepegoz://` pages. Call
+ * after any preference change.
+ *
+ * This used to iterate `BrowserWindow.getAllWindows()` only, which reads as "everything" and is not: a
+ * `tepegoz://` page is a `WebContentsView` inside a tab, so every internal page subscribed to this
+ * signal and never received it. The visible symptom was the theme — pick a colour anywhere but on the
+ * settings page itself and the open settings page stayed in the OLD colour until it was reloaded, while
+ * the chrome around it changed immediately. Locale had the same silent gap. `appSurfaceContents()` is
+ * where "our own surfaces" is now answered once, for both kinds. Browsed pages are still never reached.
+ */
 export function broadcastPublicSettings(): void {
-  const settings = project();
-  for (const win of BrowserWindow.getAllWindows()) {
-    if (!win.isDestroyed()) win.webContents.send(IpcChannels.publicSettingsChanged, settings);
-  }
+  broadcastToAppSurfaces(IpcChannels.publicSettingsChanged, project());
 }

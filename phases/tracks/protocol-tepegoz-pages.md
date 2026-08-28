@@ -301,6 +301,28 @@ subresource yok — "bilinen kalıntı risk" notundaki kısıtlamaya uygun).
   izolasyonda geçtiği doğrulandı → makine kaynak baskısı flake'i, kod ile ilgisi yok).
 - `pnpm exec turbo run typecheck lint test build` + `pnpm e2e` — hepsi yeşil.
 
+## 5b. Faz 2/3'ün geride bıraktığı yayın (broadcast) kör noktası — 2026-08-28'de bulundu ve kapatıldı
+
+Bir iç sayfa artık `BrowserWindow` değil, bir sekmenin içindeki `WebContentsView`. `main`'deki
+"tüm uygulamaya duyur" döngülerinin çoğu `BrowserWindow.getAllWindows()` üzerinden yazılmıştı — Faz
+2/3'ten sonra bu ifade artık "her yüzey" demek değil, sadece "chrome pencereleri" demek.
+
+**Görünen belirti:** temayı ayarlar sayfasının DIŞINDA bir yerden değiştirince (chrome, bir popup,
+ikinci pencere) açık `tepegoz://settings` sayfası ESKİ renkte kalıyordu; etrafındaki chrome anında
+değişiyordu. Sayfa `onPublicSettingsChanged`'e abone oluyor ama sinyal hiçbir zaman ulaşmıyordu.
+Ölçüldü: prefs `#b91c1c` iken sayfanın kendi `--surface-base` değişkeni hâlâ `#0d7377`. Sayfanın
+KENDİ üzerindeki tıklama zaten çalışıyordu (5–10 ms) — bu yüzden hata yalnızca "başka yerden"
+değişimde görünüyordu. Locale'de de aynı sessiz boşluk vardı.
+
+**Çözüm:** `main/lib/app-surfaces.ts` — "bizim yüzeylerimiz" sorusunun tek yanıtı (chrome pencereleri
++ `isTrustedAppUrl` doğrulayan `tepegoz://` sayfaları, tekilleştirilmiş). `broadcastPublicSettings`
+artık bunu kullanıyor. Regresyon testi: `e2e/tepegoz-page-live-prefs.spec.ts`.
+
+**Kapatılmadı (aynı şekil, ölçülmedi):** `download-service-store`, `upload-service`, `translate-host`,
+`notification-host`, `task-service-state`, `ipc-network`, `ipc-agent-shared` ve `ipc-content-*`
+yayınları hâlâ yalnızca `BrowserWindow.getAllWindows()` geziyor. `tepegoz://downloads` gibi sayfaların
+canlı güncellenip güncellenmediği ölçülmedi.
+
 ## 6. Rollback
 
 Sayfa bazında: `tabs-internal-page-view.ts`'teki `REAL_PAGE_BASE_URLS`'ten ilgili URL'i çıkarmak,
