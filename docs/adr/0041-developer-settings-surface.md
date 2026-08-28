@@ -1,6 +1,6 @@
 # ADR-0041: Developer settings surface — one place for every knob, with a locked core
 
-- **Status:** Proposed
+- **Status:** Accepted (Tier B shipped; Tiers A/C/D owed)
 - **Date:** 2026-08-28
 - **Refines:** [ADR-0012](0012-browser-tab-model.md) (isolated `WebContentsView` per tab) ·
   **complements** [ADR-0010](0010-ts-tooling-conventions.md) (conventions) ·
@@ -99,8 +99,21 @@ settings keep single ownership.
 - The metadata registry is now a thing that must be kept in sync with the schema. The completeness test
   turns "out of sync" into a red build instead of a gap nobody notices.
 
-**Owed, and stated rather than implied.** The allowlist's initial contents are not chosen in this ADR —
-that is the first implementation PR, reviewed on its own. The per-key descriptions for ~60 existing
-preferences are a writing task, not a design one, and can land incrementally as long as the badge and
-`restartRequired` fields are populated from day one. Production exposure is not decided here. Per-site
-`webPreferences` overrides are out of scope.
+**Owed, and stated rather than implied.** The per-key descriptions for ~60 existing preferences are a
+writing task, not a design one, and can land incrementally as long as the badge and `restartRequired`
+fields are populated from day one. Production exposure is not decided here. Per-site `webPreferences`
+overrides are out of scope.
+
+## Implementation status (2026-08-28)
+
+**Tier B shipped.** `Preferences.chromiumFlags` (allowlist in `@tepegoz/shared-types/chromium-flags`,
+enforced by `ChromiumFlagOverridesSchema`), applied before `whenReady` in `chromium-flags-boot.ts`
+(merged with the keep-rendering baseline so `enable-features`/`disable-features` stay single), and a
+**Chromium Flags** card in the Developer section (`settings-developer-flags.tsx`, en + tr). Initial
+allowlist: `force-dark-mode`, `parallel-downloading`, `overlay-scrollbars`, `force-reduced-motion`,
+`disable-gpu`, `show-fps-counter` — chosen here as the reviewed set; none weakens page isolation, a
+test guards that.
+
+**Tiers A / C / D owed.** The `Preferences` table is still the flat pre-existing editor (no
+nested-object drill-down, no metadata registry). No `webContentDefaults`. No Tier-D mirroring. Tracked
+in [tracks/developer-settings-surface.md](../../phases/tracks/developer-settings-surface.md).

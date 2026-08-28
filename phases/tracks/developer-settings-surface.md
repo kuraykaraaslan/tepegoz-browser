@@ -1,8 +1,11 @@
 # Track — Developer settings surface: every browser + web-content knob in one place
 
-- **Status:** Planned, unscheduled. No phase row, no DoD, no owner yet.
+- **Status:** In progress — **Tier B (Chromium flags) shipped 2026-08-28**; Tiers A / C / D still owed.
 - **Owner decisions taken (2026-08-28):** dev-only visibility · Chromium flags are **allowlist-only** ·
   this document + an ADR land **before any code**.
+- **Landed:** `Preferences.chromiumFlags` + allowlist in `@tepegoz/shared-types/chromium-flags` +
+  `chromium-flags-boot.ts` (startup apply) + `settings-developer-flags.tsx` (Developer-section card,
+  en + tr). See [ADR-0041 § Implementation status](../../docs/adr/0041-developer-settings-surface.md).
 - **Companion ADR:** [ADR-0041](../../docs/adr/0041-developer-settings-surface.md) — the security
   carve-out (what is exposable, what is permanently locked) is decided there, not here.
 
