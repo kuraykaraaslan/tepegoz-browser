@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { settingsDict, type SettingsStrings } from '@tepegoz/settings-ui';
 import { foldForSearch } from '@tepegoz/i18n';
-import { DEFAULT_PREFERENCES } from '@tepegoz/preferences';
+import { DEFAULT_PREFERENCES } from '@tepegoz/preferences/model';
 import type { CredentialsStatus } from '@tepegoz/desktop-ipc';
 import { buildSettingsSections, type SettingsSectionsCtx } from './SettingsPage-sections';
 

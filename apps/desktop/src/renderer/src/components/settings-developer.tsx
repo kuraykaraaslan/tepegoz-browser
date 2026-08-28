@@ -3,7 +3,7 @@ import { settingsDict } from '@tepegoz/settings-ui';
 import { Badge, Button, Card, DataTable, Modal, Toggle, type TableColumn } from '@tepegoz/ui';
 import { useT } from '@tepegoz/i18n/react';
 import type { Preferences } from '@tepegoz/desktop-ipc';
-import { DEFAULT_PREFERENCES } from '@tepegoz/preferences';
+import { DEFAULT_PREFERENCES } from '@tepegoz/preferences/model';
 import {
   buildBooleanPreferencePatch,
   buildJsonPreferencePatch,
