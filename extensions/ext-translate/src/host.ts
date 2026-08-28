@@ -19,6 +19,7 @@ import {
   type TranslateCloudFallbackResponse,
   type TranslateGlossaryTerm,
   type TranslatePageState,
+  type TranslateReason,
   type TranslateSettings,
   type TranslateState,
   type TranslateTextInput,
@@ -181,10 +182,62 @@ export function createTranslateHost(ports: TranslateHostPorts): TranslateHost {
   let settings = cloneSettings(DEFAULT_TRANSLATE_SETTINGS);
   let activePage: TranslatePageState | null = null;
 
+  // Cloud-fallback consent, when the mode is 'ask', is resolved once per origin for the life of
+  // this host (the app session) and concurrent batches/pages share the single in-flight prompt.
+  // Without this a page translation fans a dialog out per sub-batch, and every re-run (DOM
+  // mutation, back-navigation, a second frame) asks again — the dialog spam. A "Not now" choice
+  // is not persisted but still holds for the session; a restart asks again.
+  const sessionCloudConsent = new Map<string, boolean>();
+  const inFlightCloudConsent = new Map<string, Promise<boolean>>();
+
   const persist = (): TranslateSettings => {
     ports.setPersisted(settings);
     return cloneSettings(settings);
   };
+
+  async function resolveCloudConsent(
+    origin: string,
+    targetLanguage: string,
+    reason: TranslateReason,
+    textCharCount: number,
+  ): Promise<boolean> {
+    if (settings.cloudFallbackMode === 'allow') return true;
+    if (settings.cloudFallbackMode === 'deny') return false;
+
+    const remembered = sessionCloudConsent.get(origin);
+    if (remembered !== undefined) return remembered;
+
+    const existing = inFlightCloudConsent.get(origin);
+    if (existing !== undefined) return existing;
+
+    const ask = (async (): Promise<boolean> => {
+      const requestId = `translate-${Date.now()}-${++nextId}`;
+      const response = await ports.requestCloudFallback({
+        requestId,
+        origin,
+        provider: 'default',
+        targetLanguage,
+        textCharCount,
+        reason,
+      });
+      if (response.remember) {
+        settings = sanitizeSettings({
+          ...settings,
+          cloudFallbackMode: response.allow ? 'allow' : 'deny',
+        });
+        persist();
+      }
+      sessionCloudConsent.set(origin, response.allow);
+      return response.allow;
+    })();
+
+    inFlightCloudConsent.set(origin, ask);
+    try {
+      return await ask;
+    } finally {
+      inFlightCloudConsent.delete(origin);
+    }
+  }
 
   async function runEngine(
     input: TranslateBatchInput,
@@ -207,26 +260,13 @@ export function createTranslateHost(ports: TranslateHostPorts): TranslateHost {
         // Fall through to the configured cloud fallback policy when a present local model fails.
       }
     }
-    if (settings.cloudFallbackMode === 'deny') return null;
-    if (settings.cloudFallbackMode === 'ask') {
-      const requestId = `translate-${Date.now()}-${++nextId}`;
-      const response = await ports.requestCloudFallback({
-        requestId,
-        origin: input.origin ?? '',
-        provider: 'default',
-        targetLanguage,
-        textCharCount: pending.reduce((sum, item) => sum + item.text.length, 0),
-        reason: input.reason ?? 'manual',
-      });
-      if (response.remember) {
-        settings = sanitizeSettings({
-          ...settings,
-          cloudFallbackMode: response.allow ? 'allow' : 'deny',
-        });
-        persist();
-      }
-      if (!response.allow) return null;
-    }
+    const allowed = await resolveCloudConsent(
+      input.origin ?? '',
+      targetLanguage,
+      input.reason ?? 'manual',
+      pending.reduce((sum, item) => sum + item.text.length, 0),
+    );
+    if (!allowed) return null;
     return ports.runCloudBatch(runInput);
   }
 
@@ -240,6 +280,9 @@ export function createTranslateHost(ports: TranslateHostPorts): TranslateHost {
     },
 
     update(patch: Partial<TranslateSettings>): TranslateSettings {
+      // An explicit change to the fallback mode (e.g. the user setting it back to 'ask' in
+      // settings after a session "Not now") must override the per-session consent cache.
+      if (patch.cloudFallbackMode !== undefined) sessionCloudConsent.clear();
       settings = sanitizeSettings({ ...settings, ...patch });
       return persist();
     },

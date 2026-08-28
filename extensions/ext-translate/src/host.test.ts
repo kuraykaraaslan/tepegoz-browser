@@ -66,6 +66,90 @@ describe('translate host', () => {
     expect(host.get().cloudFallbackMode).toBe('allow');
   });
 
+  it('asks once per origin for a page split across many sub-batches', async () => {
+    let asks = 0;
+    const host = createTranslateHost(
+      ports({
+        localAvailable: () => false,
+        requestCloudFallback: (request) => {
+          asks += 1;
+          return Promise.resolve({ requestId: request.requestId, allow: true, remember: false });
+        },
+      }),
+    );
+    host.init();
+    const items = Array.from({ length: 200 }, (_, i) => ({
+      id: `n${i}`,
+      text: `Sentence number ${i} with enough length to force many batches.`,
+    }));
+    const result = await host.translateBatch({
+      items,
+      sourceLanguage: 'en',
+      origin: 'https://example.com',
+      reason: 'page',
+    });
+    expect(asks).toBe(1);
+    expect(result.items.every((item) => item.engine === 'external-ai')).toBe(true);
+  });
+
+  it('shares one prompt across concurrent batches for the same origin', async () => {
+    let asks = 0;
+    let release = (): void => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const host = createTranslateHost(
+      ports({
+        localAvailable: () => false,
+        requestCloudFallback: async (request) => {
+          asks += 1;
+          await gate;
+          return { requestId: request.requestId, allow: true, remember: false };
+        },
+      }),
+    );
+    host.init();
+    const call = (id: string): Promise<unknown> =>
+      host.translateBatch({
+        items: [{ id, text: `Hello ${id}` }],
+        sourceLanguage: 'en',
+        origin: 'https://example.com',
+        reason: 'page',
+      });
+    const pending = Promise.all([call('a'), call('b'), call('c')]);
+    release();
+    await pending;
+    expect(asks).toBe(1);
+  });
+
+  it('stops asking after a not-now choice for the rest of the session', async () => {
+    let asks = 0;
+    const host = createTranslateHost(
+      ports({
+        localAvailable: () => false,
+        requestCloudFallback: (request) => {
+          asks += 1;
+          return Promise.resolve({ requestId: request.requestId, allow: false, remember: false });
+        },
+      }),
+    );
+    host.init();
+    const first = await host.translateText({
+      text: 'Hello',
+      sourceLanguage: 'en',
+      origin: 'https://example.com',
+    });
+    const second = await host.translateText({
+      text: 'World',
+      sourceLanguage: 'en',
+      origin: 'https://example.com',
+    });
+    expect(asks).toBe(1);
+    expect(first.engine).toBe('none');
+    expect(second.engine).toBe('none');
+    expect(host.get().cloudFallbackMode).toBe('ask');
+  });
+
   it('denies cloud fallback when the user rejects it', async () => {
     const host = createTranslateHost(
       ports({
