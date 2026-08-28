@@ -25,6 +25,19 @@ export interface SurfaceTheme {
   themeColor: string;
 }
 
+/**
+ * Push the persisted `theme` mode into Chromium itself.
+ *
+ * Until this runs, `nativeTheme.themeSource` stays at its `'system'` default, so every browsed page's
+ * `prefers-color-scheme`, every Chromium form control, the scrollbars and the PDF viewer follow the OS
+ * scheme no matter what the user picked in Appearance — the dark-chrome / light-page window users
+ * screenshot as "half themed". `ThemePref` (`system` | `light` | `dark`) is exactly Electron's
+ * `Themesource`, so this is a direct assignment. Call once at startup and from the prefs reconcile.
+ */
+export function applyNativeThemeSource(): void {
+  nativeTheme.themeSource = PreferenceStore.getAll().theme;
+}
+
 export function resolveSurfaceTheme(): SurfaceTheme {
   const { theme, themeColor } = PreferenceStore.getAll();
   if (themeColor !== '' && HEX.test(themeColor)) {

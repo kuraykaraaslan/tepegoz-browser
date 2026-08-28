@@ -54,6 +54,55 @@ describe('RunControlHandle', () => {
     expect(resolved).toBe(true);
   });
 
+  it('parks while system-paused (sleep) and wakes on setSystemResumed', async () => {
+    const h = new RunControlHandle(noop);
+    h.setSystemPaused();
+    expect(h.isHeld()).toBe(true);
+    let resolved = false;
+    const p = h.waitWhileHeld().then(() => {
+      resolved = true;
+    });
+    await Promise.resolve();
+    expect(resolved).toBe(false);
+    h.setSystemResumed();
+    await p;
+    expect(resolved).toBe(true);
+  });
+
+  it('a wake (setSystemResumed) does not release a pause the user set by hand', async () => {
+    const h = new RunControlHandle(noop);
+    h.pause();
+    h.setSystemPaused();
+    h.setSystemResumed(); // machine woke, but the user pause must still hold
+    expect(h.isHeld()).toBe(true);
+    let resolved = false;
+    const p = h.waitWhileHeld().then(() => {
+      resolved = true;
+    });
+    await Promise.resolve();
+    expect(resolved).toBe(false);
+    h.resume();
+    await p;
+    expect(resolved).toBe(true);
+  });
+
+  it('setSystemPaused does NOT abort the in-flight model call (hold at the next gate)', () => {
+    const h = new RunControlHandle(noop);
+    const s = h.modelSignal();
+    h.setSystemPaused();
+    expect(s.aborted).toBe(false);
+  });
+
+  it('setSystemPaused / setSystemResumed are idempotent', async () => {
+    const h = new RunControlHandle(noop);
+    h.setSystemPaused();
+    h.setSystemPaused();
+    h.setSystemResumed();
+    h.setSystemResumed();
+    expect(h.isHeld()).toBe(false);
+    await h.waitWhileHeld(); // must not hang
+  });
+
   it('abort wins over an active hold', async () => {
     const h = new RunControlHandle(noop);
     h.pause();

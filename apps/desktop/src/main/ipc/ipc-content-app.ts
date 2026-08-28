@@ -41,7 +41,8 @@ import translateHost from '../extensions/translate-host.electron';
 import { builtinManifests } from '../../shared/extensions';
 import { handle } from './ipc-helpers';
 import { applyChromeGlass, isMicaSupported } from '../lib/glass';
-import { resolveSurfaceTheme } from '../lib/surface-theme';
+import { applyNativeThemeSource, resolveSurfaceTheme } from '../lib/surface-theme';
+import { applyStrictGuard } from './strict-guard';
 import { setLaunchAtLogin } from '../launch-at-login';
 import { getDefaultBrowserStatus, setAsDefaultBrowser } from '../default-browser';
 import { refreshTray } from '../tray';
@@ -149,6 +150,18 @@ export function registerAppIpc(): void {
     if (validated.defaultPageZoom !== undefined) {
       reapplyZoomEverywhere(webContents.getAllWebContents());
     }
+    // Theme mode changed — push it into Chromium so browsed pages, native form controls, scrollbars
+    // and the PDF viewer follow the choice instead of the OS scheme. Without this branch the picker
+    // themes the chrome only. `resolveSurfaceTheme` (native popup first paint) reads the same pref.
+    if (validated.theme !== undefined) {
+      applyNativeThemeSource();
+    }
+    // "Hardened reading" toggled from Settings — reconcile the process-global inbound guard now.
+    // The agent panel's own setter already does this; going through `prefs:set` did not, so the
+    // Settings toggle stayed inert until the next app start.
+    if (validated.agentStrictGuard !== undefined) {
+      applyStrictGuard();
+    }
     if (validated.adblock !== undefined) {
       adblockHost.init();
     }
@@ -207,6 +220,11 @@ export function registerAppIpc(): void {
     adblockHost.init();
     typoHost.init();
     translateHost.init();
+    // A reset can change the theme mode and the strict-guard posture back to defaults; the live
+    // process state does not follow the preference on its own (same reason the prefs reconcile has
+    // these branches).
+    applyNativeThemeSource();
+    applyStrictGuard();
     // A reset can change the locale back to the default, so the native surfaces need it too.
     refreshTray();
     refreshApplicationMenu();

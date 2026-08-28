@@ -162,9 +162,13 @@ vi.mock('../../shared/extensions', () => ({
 }));
 const glass = vi.hoisted(() => ({ applyChromeGlass: vi.fn(), isMicaSupported: () => false }));
 vi.mock('../lib/glass', () => glass);
-vi.mock('../lib/surface-theme', () => ({
+const surfaceTheme = vi.hoisted(() => ({
   resolveSurfaceTheme: () => ({ theme: 'dark', color: '#101010' }),
+  applyNativeThemeSource: vi.fn(),
 }));
+vi.mock('../lib/surface-theme', () => surfaceTheme);
+const strictGuard = vi.hoisted(() => ({ applyStrictGuard: vi.fn() }));
+vi.mock('./strict-guard', () => strictGuard);
 const launchAtLogin = vi.hoisted(() => ({ setLaunchAtLogin: vi.fn() }));
 vi.mock('../launch-at-login', () => launchAtLogin);
 const defaultBrowser = vi.hoisted(() => ({

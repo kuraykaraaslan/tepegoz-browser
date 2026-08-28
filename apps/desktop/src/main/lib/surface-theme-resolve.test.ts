@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  */
 
 const prefs = vi.hoisted(() => ({ value: { theme: 'system', themeColor: '' } }));
-const os = vi.hoisted(() => ({ dark: false }));
+const os = vi.hoisted(() => ({ dark: false, themeSource: 'system' }));
 
 vi.mock('@tepegoz/preferences', () => ({ default: { getAll: () => prefs.value } }));
 vi.mock('electron', () => ({
@@ -16,14 +16,21 @@ vi.mock('electron', () => ({
     get shouldUseDarkColors() {
       return os.dark;
     },
+    get themeSource() {
+      return os.themeSource;
+    },
+    set themeSource(v: string) {
+      os.themeSource = v;
+    },
   },
 }));
 
-const { resolveSurfaceTheme } = await import('./surface-theme');
+const { resolveSurfaceTheme, applyNativeThemeSource } = await import('./surface-theme');
 
 beforeEach(() => {
   prefs.value = { theme: 'system', themeColor: '' };
   os.dark = false;
+  os.themeSource = 'system';
 });
 
 describe('resolveSurfaceTheme', () => {
@@ -56,5 +63,17 @@ describe('resolveSurfaceTheme', () => {
     expect(resolveSurfaceTheme().color).toBe('#ffffff');
     os.dark = true;
     expect(resolveSurfaceTheme().color).toBe('#0c2135');
+  });
+});
+
+describe('applyNativeThemeSource', () => {
+  it('pushes the persisted theme mode straight onto nativeTheme.themeSource', () => {
+    prefs.value = { theme: 'dark', themeColor: '' };
+    applyNativeThemeSource();
+    expect(os.themeSource).toBe('dark');
+
+    prefs.value = { theme: 'light', themeColor: '' };
+    applyNativeThemeSource();
+    expect(os.themeSource).toBe('light');
   });
 });

@@ -24,11 +24,21 @@ import { registerBasicAuthHandler } from './auth/basic-auth-broker';
 import { registerCertificateHandler } from './auth/certificate-broker';
 import { registerClientCertificateHandler } from './auth/client-certificate-broker';
 import { initStores } from './stores.electron';
+import { applyNativeThemeSource } from './lib/surface-theme';
 import { initHosts, openWindow } from './browser-windows';
 import { initTray, revealAllWindows } from './tray';
 import { installApplicationMenu } from './menus/application-menu';
 import { isQuitting, markQuitting } from './quit-state';
-import { emitSystemPause, emitSystemResume } from './power-lifecycle';
+import {
+  emitSystemPause,
+  emitSystemResume,
+  onSystemPause,
+  onSystemResume,
+} from './power-lifecycle';
+import {
+  pauseAllRunsForSleep,
+  resumeAllRunsAfterSleep,
+} from './agent/agent-run-lock.electron';
 import PreferenceStore from '@tepegoz/preferences';
 import { closeDatabase, getDb } from './db/database.electron';
 import { clearOnExitNow, settleClearOnExit } from './privacy/clear-on-exit.electron';
@@ -232,6 +242,10 @@ if (!app.requestSingleInstanceLock()) {
       // armed for this session. Awaited — a window opening onto data the user asked to be rid of,
       // even for a frame, is the failure this setting exists to prevent.
       await settleClearOnExit(getDb());
+      // Push the persisted theme mode into Chromium before the first window/tab, so browsed pages,
+      // native form controls, scrollbars and the PDF viewer follow the Appearance choice — not just
+      // the chrome. The prefs reconcile keeps it live after a change.
+      applyNativeThemeSource();
       // Safe mode (ADR-0038 rung 3): `--safe-mode`, or two consecutive launches that died before proving
       // themselves healthy. It switches off the four subsystems most likely to be WHY they died —
       // extensions, the agent runtime, MCP, and session restore — and keeps everything the user needs to
@@ -439,9 +453,12 @@ if (!app.requestSingleInstanceLock()) {
 
       // Sleep/resume hooks. Phase 1b: the Recovery Coordinator resumes durable tasks from their last
       // checkpoint on 'resume' (Opera Neon's "task drops on sleep" lesson).
-      // System power lifecycle. The pause/resume seam fires (gated on `pauseTasksOnSleep`) so the future
-      // task-runtime "resume interrupted work" feature can pause on sleep / power-save and continue on
-      // wake. Today the transitions are captured + logged; nothing subscribes to actually pause yet.
+      // System power lifecycle. The pause/resume seam fires (gated on `pauseTasksOnSleep`) on sleep /
+      // power-save transitions; the interactive Agent run-control fan-out subscribes here so an active
+      // run is held at its next gate while the machine sleeps and released on wake — without disturbing
+      // a pause the user set by hand (that is a separate hold flag).
+      onSystemPause(pauseAllRunsForSleep);
+      onSystemResume(resumeAllRunsAfterSleep);
       powerMonitor.on('suspend', () => {
         Logger.info('System suspending');
         if (PreferenceStore.getAll().pauseTasksOnSleep) emitSystemPause();

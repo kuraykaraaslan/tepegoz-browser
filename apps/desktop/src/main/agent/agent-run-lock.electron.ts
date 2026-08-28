@@ -32,6 +32,9 @@ export class RunControlHandle implements RunControl {
   private readonly abortController = new AbortController();
   private pausedByUser = false;
   private offline = false;
+  /** Held because the machine is asleep / in power-save and `pauseTasksOnSleep` is on. Distinct from a
+   *  user pause: a wake releases it without touching a pause the user set by hand. */
+  private systemPaused = false;
   /** Held for a human handoff the run itself detected (login wall). Cleared by the same user `resume()`. */
   private handoffHeld = false;
   private steerQueue: string[] = [];
@@ -49,7 +52,7 @@ export class RunControlHandle implements RunControl {
     return this.abortController.signal.aborted;
   }
   isHeld(): boolean {
-    return this.pausedByUser || this.offline || this.handoffHeld;
+    return this.pausedByUser || this.offline || this.handoffHeld || this.systemPaused;
   }
 
   private notify(): void {
@@ -110,6 +113,16 @@ export class RunControlHandle implements RunControl {
   setOnline(): void {
     if (!this.offline) return;
     this.offline = false;
+    this.notify();
+  }
+  setSystemPaused(): void {
+    if (this.systemPaused) return;
+    this.systemPaused = true;
+    this.notify(); // like a user pause: don't abort the in-flight step, hold at the next gate
+  }
+  setSystemResumed(): void {
+    if (!this.systemPaused) return;
+    this.systemPaused = false;
     this.notify();
   }
   steer(text: string): void {
@@ -174,4 +187,12 @@ export function setAllRunsOffline(): void {
 }
 export function setAllRunsOnline(): void {
   for (const h of controls.values()) h.setOnline();
+}
+/** Fan-out from the system power lifecycle (`pauseTasksOnSleep`): hold every active interactive run
+ *  when the machine sleeps / enters power-save, and release them on wake. */
+export function pauseAllRunsForSleep(): void {
+  for (const h of controls.values()) h.setSystemPaused();
+}
+export function resumeAllRunsAfterSleep(): void {
+  for (const h of controls.values()) h.setSystemResumed();
 }
