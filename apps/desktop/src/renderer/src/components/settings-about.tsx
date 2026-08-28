@@ -83,6 +83,7 @@ export function AboutSection() {
   const [info, setInfo] = useState<AppInfo | null>(null);
   const [copy, setCopy] = useState<'idle' | 'copied' | 'failed'>('idle');
   const [noticesFellBack, setNoticesFellBack] = useState(false);
+  const [dataFolderFailed, setDataFolderFailed] = useState(false);
 
   useEffect(() => {
     void window.tepegoz.getAppInfo().then(setInfo, () => {
@@ -122,6 +123,18 @@ export function AboutSection() {
       () => {
         setNoticesFellBack(true);
         window.tepegoz.createTab(THIRD_PARTY_NOTICES_FALLBACK_URL);
+      },
+    );
+  }
+
+  function openDataFolder(): void {
+    setDataFolderFailed(false);
+    window.tepegoz.openDataFolder().then(
+      (opened) => {
+        setDataFolderFailed(!opened);
+      },
+      () => {
+        setDataFolderFailed(true);
       },
     );
   }
@@ -191,7 +204,17 @@ export function AboutSection() {
           <InfoRow label={s.aboutV8} value={info?.engines.v8 ?? unknown} mono />
           <InfoRow label={s.aboutPlatform} value={osLine} />
         </dl>
-        <div className="mt-4">{copyStatus[copy]}</div>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          {copyStatus[copy]}
+          {/* Where everything this app keeps about you actually lives: preferences, the database,
+              downloaded models, logs. Nothing in the UI pointed at it before. */}
+          <Button size="sm" variant="outline" onClick={openDataFolder}>
+            {s.aboutOpenDataFolder}
+          </Button>
+        </div>
+        {dataFolderFailed && (
+          <p className="mt-1 text-xs text-error">{s.aboutOpenDataFolderFailed}</p>
+        )}
       </Card>
 
       <Card title={s.aboutLegalTitle}>

@@ -3,6 +3,7 @@ import { settingsDict } from '@tepegoz/settings-ui';
 import { Badge, Button, Card, DataTable, Modal, Toggle, type TableColumn } from '@tepegoz/ui';
 import { useT } from '@tepegoz/i18n/react';
 import type { Preferences } from '@tepegoz/desktop-ipc';
+import { DEFAULT_PREFERENCES } from '@tepegoz/preferences';
 import {
   buildBooleanPreferencePatch,
   buildJsonPreferencePatch,
@@ -157,6 +158,12 @@ function PreferenceEditModal({
     await apply(result.patch);
   }
 
+  const defaultValue =
+    row === null ? undefined : DEFAULT_PREFERENCES[row.key as keyof Preferences];
+  // Compared as JSON: these values are objects and arrays as often as scalars, and `===` on a fresh
+  // array would call every list "changed" and offer a reset that does nothing.
+  const isAtDefault = row !== null && JSON.stringify(row.value) === JSON.stringify(defaultValue);
+
   const modalTitle = row?.key;
 
   return (
@@ -212,6 +219,18 @@ function PreferenceEditModal({
           {error !== null && <p className="text-xs text-error">{error}</p>}
 
           <div className="flex justify-end gap-2">
+            {/* Per-row reset. The only way back to a default used to be the global reset, which
+                throws away every other preference to undo one experiment. */}
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy || isAtDefault}
+              onClick={() => {
+                void apply({ [row.key]: defaultValue } as Partial<Preferences>);
+              }}
+            >
+              {s.developerResetRow}
+            </Button>
             <Button size="sm" variant="ghost" disabled={busy} onClick={onClose}>
               {s.cancel}
             </Button>

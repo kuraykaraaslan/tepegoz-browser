@@ -562,6 +562,8 @@ export const tr: SettingsStrings = {
   aboutDocs: 'Belgeler',
   aboutReportIssue: 'Hata bildir',
   aboutOpensInNewTab: 'Yeni sekmede açılır',
+  aboutOpenDataFolder: 'Veri klasörünü aç',
+  aboutOpenDataFolderFailed: 'Veri klasörü açılamadı.',
 
   // --- Yer tutucu ("yakında") bölümleri — salt arayüz, hiçbir şey kaydetmez ---
   // İndirilenler / arama motoru düzenleme / varsayılan tarayıcı yeniden denetleme / kontrast okuması.
@@ -622,6 +624,10 @@ export const tr: SettingsStrings = {
   keyRemoveTitle: 'Anahtarı kaldır',
   keyRemoveBody:
     '{name} kaldırılır. Anahtarın kendisi bir daha gösterilmez; geri almak için sağlayıcınızdan yeniden yapıştırmanız gerekir.',
+
+  notificationsSiteNote: 'Bu ana anahtardır. Siteler ayrıca kendi izinlerini de almalıdır; bunu kapatmak hepsini izinlerinden bağımsız susturur.',
+  notificationsSiteLink: 'Site bazlı bildirim izinleri',
+  developerResetRow: 'Varsayılana döndür',
 
   // --- Erişilebilirlik (ürün WCAG 2.2 AA iddia ederken yer tutucuydu) ---
   accessibility: {

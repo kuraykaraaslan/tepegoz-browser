@@ -1,4 +1,4 @@
-import { BrowserWindow, clipboard, shell, webContents } from 'electron';
+import { app, BrowserWindow, clipboard, shell, webContents } from 'electron';
 import {
   IpcChannels,
   type AIAdaptor,
@@ -108,6 +108,12 @@ export function registerAppIpc(): void {
     // opened is still a click that did nothing, so it reports the same `false` as a missing file.
     const err = await shell.openPath(path);
     return err === '';
+  });
+
+  // The profile directory: preferences, the database, downloaded models, logs. Everything the app
+  // keeps about this user lives there, and until now nothing in the UI would show them where.
+  handle(IpcChannels.appOpenDataFolder, async (): Promise<boolean> => {
+    return (await shell.openPath(app.getPath('userData'))) === '';
   });
 
   handle(IpcChannels.defaultBrowserGet, (): DefaultBrowserStatus => getDefaultBrowserStatus());

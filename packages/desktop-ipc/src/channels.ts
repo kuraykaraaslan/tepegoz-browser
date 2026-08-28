@@ -13,6 +13,8 @@ export const IpcChannels = {
   appCopyDiagnostics: 'app:copy-diagnostics',
   /** Open the shipped Chromium/third-party notices file. Resolves `false` when the build has none. */
   appOpenThirdPartyNotices: 'app:open-third-party-notices',
+  /** Open the profile directory — preferences, the database, downloaded models, logs. */
+  appOpenDataFolder: 'app:open-data-folder',
   prefsGet: 'prefs:get',
   prefsSet: 'prefs:set',
   /** Restore all preferences to their defaults (does NOT touch the encrypted credential vault). */
@@ -54,7 +56,13 @@ export const IpcChannels = {
   tabsGoForward: 'tabs:go-forward',
   tabsReload: 'tabs:reload',
   tabsHome: 'tabs:home',
+  /** Renderer→main: reopen a closed tab — the most recent one, or a specific entry by its id. */
   tabsReopenClosed: 'tabs:reopen-closed',
+  /** Renderer→main (invoke): the recently-closed list backing the History menu's section. */
+  tabsRecentlyClosed: 'tabs:recently-closed',
+  /** Renderer→main: close the tabs this launch's session restore reopened (the restore toast's Undo,
+   *  ADR-0038). Session-scoped and expiring — see `recovery/session-restore-undo.ts`. */
+  sessionUndoRestore: 'session:undo-restore',
   tabsContextMenu: 'tabs:context-menu',
   tabsSetBounds: 'tabs:set-bounds',
   tabsSetContentVisible: 'tabs:set-content-visible',

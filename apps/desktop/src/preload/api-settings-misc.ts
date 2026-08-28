@@ -42,6 +42,7 @@ export const settingsMiscApi: Pick<
   | 'getAppInfo'
   | 'copyDiagnostics'
   | 'openThirdPartyNotices'
+  | 'openDataFolder'
   | 'getDefaultBrowserStatus'
   | 'setAsDefaultBrowser'
   | 'getProcessMetrics'
@@ -106,6 +107,7 @@ export const settingsMiscApi: Pick<
   getAppInfo: () => invoke<AppInfo>(IpcChannels.appGetInfo),
   copyDiagnostics: () => invoke<string>(IpcChannels.appCopyDiagnostics),
   openThirdPartyNotices: () => invoke<boolean>(IpcChannels.appOpenThirdPartyNotices),
+  openDataFolder: () => invoke<boolean>(IpcChannels.appOpenDataFolder),
   getDefaultBrowserStatus: () => invoke<DefaultBrowserStatus>(IpcChannels.defaultBrowserGet),
   setAsDefaultBrowser: () => invoke<DefaultBrowserStatus>(IpcChannels.defaultBrowserSet),
   getProcessMetrics: () => invoke<ProcessSnapshot>(IpcChannels.processMetricsGet),

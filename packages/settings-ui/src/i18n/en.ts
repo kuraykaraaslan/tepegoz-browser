@@ -563,6 +563,8 @@ export const en = {
   aboutDocs: 'Documentation',
   aboutReportIssue: 'Report an issue',
   aboutOpensInNewTab: 'Opens in a new tab',
+  aboutOpenDataFolder: 'Open data folder',
+  aboutOpenDataFolderFailed: 'The data folder could not be opened.',
 
   // --- Placeholder ("coming soon") sections — pure UI, persist nothing (see ComingSoonCard) ---
   // Downloads / search-engine editing / default-browser recheck / custom-colour contrast readout.
@@ -623,6 +625,10 @@ export const en = {
   keyRemoveTitle: 'Remove key',
   keyRemoveBody:
     'Removes {name}. The key itself is never shown again, so you would have to paste it in from your provider to restore it.',
+
+  notificationsSiteNote: 'This is the master switch. Individual sites also need their own permission, and turning this off silences them all regardless.',
+  notificationsSiteLink: 'Per-site notification permissions',
+  developerResetRow: 'Reset to default',
 
   // --- Accessibility (was a placeholder while the product claimed WCAG 2.2 AA) ---
   accessibility: {

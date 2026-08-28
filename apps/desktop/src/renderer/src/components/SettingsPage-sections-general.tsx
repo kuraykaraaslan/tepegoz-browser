@@ -2,6 +2,7 @@ import type { SettingsSection } from '@tepegoz/settings-ui';
 import { Card, Toggle } from '@tepegoz/ui';
 import { SEARCH_ENGINES } from '@tepegoz/shared-types/search-engines';
 import { PROVIDERS } from './settings-shared';
+import { CrossLink } from './settings-shared';
 import { AccessibilitySection } from './settings-accessibility';
 import { AgentControlsSection } from './settings-agent-controls';
 import { StartupSection } from './settings-startup';
@@ -96,7 +97,7 @@ export function generalAndAiSections(ctx: SettingsSectionsCtx): SettingsSection[
       group: s.groupGeneral,
       label: s.notificationsTitle,
       icon: <IconBell />,
-      searchText: `${s.notificationsTitle} ${s.notifications} ${s.notificationsDesc}`,
+      searchText: `${s.notificationsTitle} ${s.notifications} ${s.notificationsDesc} ${s.notificationsSiteNote}`,
       content: (
         <Card title={s.notificationsTitle}>
           <Toggle
@@ -108,6 +109,12 @@ export function generalAndAiSections(ctx: SettingsSectionsCtx): SettingsSection[
               setPref({ notificationsEnabled: v });
             }}
           />
+          {/* The master switch and the per-site grants are two different things, and which one wins
+              is not guessable from either screen. Said here, where the switch is. */}
+          <p className="mt-4 text-xs text-text-secondary">
+            {s.notificationsSiteNote}{' '}
+            <CrossLink sectionId="site-permissions">{s.notificationsSiteLink}</CrossLink>
+          </p>
         </Card>
       ),
     },

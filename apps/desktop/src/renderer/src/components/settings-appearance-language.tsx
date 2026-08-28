@@ -308,6 +308,18 @@ export function LanguageRegionSection({
     }
   }
   const preview = dateExample(dateFormat);
+  /**
+   * Numbers follow the same language+region tag as dates, and get grouped and pointed differently
+   * because of it — `1.234.567,89` in Turkish, `1,234,567.89` in English. The page was previewing only
+   * the date, so the half of the choice that changes every figure in the app went unshown.
+   */
+  const numberPreview = ((): string => {
+    try {
+      return new Intl.NumberFormat(tag).format(1234567.89);
+    } catch {
+      return '';
+    }
+  })();
 
   const languageOptions: FlagOption[] = LOCALES.map((lc) => ({
     value: lc,
@@ -391,6 +403,12 @@ export function LanguageRegionSection({
         {preview.length > 0 && (
           <p className="text-sm text-text-secondary">
             {s.previewLabel}: <span className="text-text-primary">{preview}</span>
+            {numberPreview !== '' && (
+              <>
+                {' · '}
+                <span className="text-text-primary">{numberPreview}</span>
+              </>
+            )}
           </p>
         )}
       </div>

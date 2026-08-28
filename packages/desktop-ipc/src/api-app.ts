@@ -21,6 +21,8 @@ export interface AppApi {
   /** Open the shipped third-party (Chromium) notices. `false` ⇒ this build ships no notices file, and
    *  the caller should fall back to the online copy rather than pretend the click did something. */
   openThirdPartyNotices(): Promise<boolean>;
+  /** Open the profile directory in the OS file manager. `false` ⇒ it could not be opened. */
+  openDataFolder(): Promise<boolean>;
   getPreferences(): Promise<Preferences>;
   updatePreferences(patch: Partial<Preferences>): Promise<Preferences>;
   /** Reset all preferences to defaults. Encrypted credentials (the vault) are NOT affected. */
