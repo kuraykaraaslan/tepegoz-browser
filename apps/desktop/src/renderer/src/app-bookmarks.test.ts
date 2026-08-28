@@ -119,7 +119,10 @@ describe('useBookmarksBar', () => {
 describe('the native context-menu dispatch', () => {
   async function ready() {
     const h = render();
+    // Wait for BOTH the menu subscription AND the tree load — `open` / `open-all` resolve the node
+    // from `barNodes`, so a race with the initial fetch makes the assertion flaky under load.
     await waitFor(() => expect(menuCb).not.toBeNull());
+    await waitFor(() => expect(h.result.current.barNodes.length).toBeGreaterThan(0));
     return h;
   }
 
