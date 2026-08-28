@@ -37,6 +37,8 @@ export function MainMenuPopup() {
   const [extensionIds, setExtensionIds] = useState<string[]>([]);
   // Bookmark count (over IPC) — sizes the Bookmarks flyout submenu window.
   const [bookmarkCount, setBookmarkCount] = useState(0);
+  // Recently-closed count (over IPC) — sizes the History flyout, which now carries that section too.
+  const [closedCount, setClosedCount] = useState(0);
   const contentRef = useRef<HTMLDivElement>(null);
 
   // Shrink the native popup window to the menu's natural content height, removing the empty strip left
@@ -75,6 +77,12 @@ export function MainMenuPopup() {
         /* bridge unavailable — the submenu still shows the "manage" row */
       },
     );
+    void window.tepegoz.listRecentlyClosedTabs().then(
+      (list) => setClosedCount(list.length),
+      () => {
+        /* bridge unavailable — the History flyout just opens at its history-only height */
+      },
+    );
     void window.tepegoz.listBookmarks().then(
       (list) => setBookmarkCount(list.length),
       () => {
@@ -97,7 +105,11 @@ export function MainMenuPopup() {
       <div className="flex h-screen flex-col overflow-hidden bg-surface-base text-text-primary">
         <div className="min-h-0 flex-1 overflow-auto">
           <div ref={contentRef} className="flow-root">
-            <MainMenuBody extensionCount={enabledCount} bookmarkCount={bookmarkCount} />
+            <MainMenuBody
+              extensionCount={enabledCount}
+              bookmarkCount={bookmarkCount}
+              closedCount={closedCount}
+            />
           </div>
         </div>
       </div>
@@ -109,9 +121,11 @@ export function MainMenuPopup() {
 function MainMenuBody({
   extensionCount,
   bookmarkCount,
+  closedCount,
 }: {
   extensionCount: number;
   bookmarkCount: number;
+  closedCount: number;
 }) {
   const b = useT(browserDict);
   const core = useT(coreDict);
@@ -177,9 +191,12 @@ function MainMenuBody({
       const kind = id === 'history' ? 'history' : id === 'bookmarks' ? 'bookmarks' : 'extensions';
       // history: last-5 + "show all"; bookmarks: toggle + separator + list (capped, main scrolls);
       // extensions: enabled + "manage".
+      // History = 5 recent pages + "show all", plus (when non-empty) the recently-closed section: its
+      // rows, a title, and a separator. Only an opening estimate — each flyout re-measures itself and
+      // reports its real height back (`resizePopup`), so being a row out costs nothing visible.
       const rows =
         kind === 'history'
-          ? 6
+          ? 6 + (closedCount > 0 ? Math.min(closedCount, 5) + 2 : 0)
           : kind === 'bookmarks'
             ? Math.min(bookmarkCount, 10) + 3
             : extensionCount + 1;

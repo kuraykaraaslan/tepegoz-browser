@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain, type IpcMainEvent } from 'electron';
 import { Logger } from '@tepegoz/libs';
-import { IpcChannels, type TabsState } from '@tepegoz/desktop-ipc';
+import { IpcChannels, type ClosedTab, type TabsState } from '@tepegoz/desktop-ipc';
 import {
   BookmarkContextMenuSchema,
   ContentBoundsSchema,
@@ -14,6 +14,7 @@ import {
   PageMenuContributionActionSchema,
   PopupOpenSchema,
   PopupResizeSchema,
+  ReopenClosedSchema,
   SubmenuOpenSchema,
   TabGroupAssignSchema,
   TabGroupCreateSchema,
@@ -27,6 +28,8 @@ import {
 } from '@tepegoz/desktop-ipc/schemas';
 import { isTrustedAppUrl } from '../lib/trusted-origin';
 import TabManager from '../tabs';
+import { recentlyClosedTabs } from '../tabs-shared';
+import { undoSessionRestore } from '../recovery/session-restore-undo';
 import PopupWindowManager from '../popup-window';
 import { manifestById } from '../../shared/extensions';
 import { showTabContextMenu } from '../menus/tab-context-menu';
@@ -371,8 +374,16 @@ export function registerTabsWindowsIpc(): void {
   onWindowSignal(IpcChannels.tabsHome, (win) => {
     TabManager.forSenderWindow(win)?.goHome();
   });
-  onWindowSignal(IpcChannels.tabsReopenClosed, (win) => {
-    TabManager.forSenderWindow(win)?.reopenClosedTab();
+  onWindowAction(IpcChannels.tabsReopenClosed, ReopenClosedSchema, (win, { id }) => {
+    TabManager.forSenderWindow(win)?.reopenClosedTab(id);
+  });
+  // The recently-closed list (History menu section). Read-only and session-scoped — nothing here
+  // survives a restart, so it is not a second history.
+  handle(IpcChannels.tabsRecentlyClosed, (): ClosedTab[] => recentlyClosedTabs());
+  // The restore notice's Undo (ADR-0038). Not window-scoped: the restore may have opened several
+  // windows, and undoing it has to close all of them, not just the one the toast happened to land in.
+  onSignal(IpcChannels.sessionUndoRestore, () => {
+    undoSessionRestore();
   });
   // Content bounds/visibility are strictly per-window (each window reports its own content area), so
   // these MUST route by sender window — the focused-window fallback would misplace a background

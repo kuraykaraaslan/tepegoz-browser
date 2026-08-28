@@ -1,6 +1,7 @@
 import { ipcRenderer } from 'electron';
 import {
   IpcChannels,
+  type ClosedTab,
   type ContentBounds,
   type FindInPageQuery,
   type FindInPageResult,
@@ -40,6 +41,8 @@ export const windowTabsApi: Pick<
   | 'tabReload'
   | 'tabHome'
   | 'reopenClosedTab'
+  | 'listRecentlyClosedTabs'
+  | 'undoSessionRestore'
   | 'moveTab'
   | 'setTabPinned'
   | 'setTabHidden'
@@ -133,8 +136,12 @@ export const windowTabsApi: Pick<
   tabHome: () => {
     ipcRenderer.send(IpcChannels.tabsHome);
   },
-  reopenClosedTab: () => {
-    ipcRenderer.send(IpcChannels.tabsReopenClosed);
+  reopenClosedTab: (id?: string) => {
+    ipcRenderer.send(IpcChannels.tabsReopenClosed, id === undefined ? {} : { id });
+  },
+  listRecentlyClosedTabs: () => invoke<ClosedTab[]>(IpcChannels.tabsRecentlyClosed),
+  undoSessionRestore: () => {
+    ipcRenderer.send(IpcChannels.sessionUndoRestore);
   },
   moveTab: (id: string, toIndex: number, intoGroupId?: string | null) => {
     ipcRenderer.send(IpcChannels.tabsMove, { id, toIndex, intoGroupId });

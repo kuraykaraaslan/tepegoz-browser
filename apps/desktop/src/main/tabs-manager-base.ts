@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { BrowserWindow, type WebContents } from 'electron';
 import { Logger } from '@tepegoz/libs';
 import { EventJournal, SessionStore } from '@tepegoz/persistence';
+import { isSafeMode } from './recovery/safe-mode';
 import { getDb } from './db/database.electron';
 import { WindowTabs } from './tabs-window';
 import {
@@ -155,6 +156,11 @@ export class TabManagerBase {
   static persistNow(): void {
     const db = getDb();
     if (db === null) return;
+    // Safe mode never writes the session (ADR-0038). It deliberately did NOT restore, so the tab set it
+    // would persist is one blank tab — and writing that over the saved snapshot would turn a recovery
+    // into data loss, because the snapshot is the only copy the user has. Not restoring is only safe
+    // while not persisting; the two halves are one decision.
+    if (isSafeMode()) return;
     // Private windows are EXCLUDED from the snapshot, and this is the load-bearing half of "leaves
     // nothing on close": the in-memory partition already keeps cookies and cache off disk, but the
     // session snapshot is a separate write, and it would have put every private URL the user visited

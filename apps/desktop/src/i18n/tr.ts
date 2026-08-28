@@ -87,6 +87,22 @@ export const tr: AppStrings = {
     trayTooltip: 'Tepegöz',
     trayRunning: 'Tepegöz sistem tepsisinde çalışmaya devam ediyor.',
     trayAgentRunning: 'Tepegöz — ajan çalışıyor',
+    // Kurtarma (ADR-0038). Güvenli mod duyurulur: eklentileri ve ajanı kapalı açılan bir oturum, aksi
+    // hâlde "sessizce bozuldu"dan ayırt edilemez.
+    safeModeTitle: 'Güvenli modda başlatıldı',
+    safeModeBodyCrash:
+      'Tepegöz üst üste iki kez beklenmedik şekilde kapandı; bu açılışta eklentiler, ajan, MCP ve oturum geri yükleme kapalı. Sekmeleriniz duruyor — geri almak için yeniden başlatın.',
+    safeModeBodyFlag:
+      '--safe-mode ile başlatıldı: bu açılışta eklentiler, ajan, MCP ve oturum geri yükleme kapalı.',
+    // Yalnızca düzgün kapanmayan bir oturumdan sonra gösterilir; normal açılış sessizce geri yükler.
+    // Chrome'un "Sayfalar geri yüklensin mi?" diyaloğunun modalsız karşılığı: önce geri yükle, geri
+    // dönüş yolunu sun.
+    sessionRestoredTitle: 'Son oturumunuz geri yüklendi',
+    sessionRestoredBodyOne: 'Tepegöz düzgün kapanmadı; 1 sekme yeniden açıldı.',
+    sessionRestoredBodyOther: 'Tepegöz düzgün kapanmadı; {count} sekme yeniden açıldı.',
+    sessionRestoredUndo: 'Geri al',
+    // Yakında kapatılanlar (Geçmiş alt menüsü): son geçmiş satırlarının üstündeki bölüm.
+    recentlyClosed: 'Yakında kapatılanlar',
     // Ağ gizliliği (Faz 5) — yerel sağ tık menülerindeki sekme/grup rota seçici.
     routeTabThrough: 'Bu sekmeyi şu bağlantıdan geçir…',
     routeGroupThrough: 'Bu grubu şu bağlantıdan geçir…',

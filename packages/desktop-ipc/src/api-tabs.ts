@@ -6,6 +6,7 @@
 import type { ContentBounds } from './contract';
 import type { NavHistoryDirection } from '@tepegoz/navigation';
 import type {
+  ClosedTab,
   FindInPageQuery,
   FindInPageResult,
   TabDragBegin,
@@ -34,8 +35,15 @@ export interface TabsApi {
   tabReload(): void;
   /** Navigate the ACTIVE tab to the home / start page. */
   tabHome(): void;
-  /** Reopen the most-recently-closed tab (Ctrl+Shift+T). */
-  reopenClosedTab(): void;
+  /** Reopen a closed tab: the most recent one (Ctrl+Shift+T), or the named entry from
+   *  {@link TabsApi.listRecentlyClosedTabs}. */
+  reopenClosedTab(id?: string): void;
+  /** The recently-closed tabs, newest first (session-scoped, capped). Backs the History menu's
+   *  "Recently closed" section — Ctrl+Shift+T only ever reaches the newest one. */
+  listRecentlyClosedTabs(): Promise<ClosedTab[]>;
+  /** Close the tabs this launch's session restore reopened — the restore notice's Undo (ADR-0038).
+   *  A no-op once it has been taken, or once the offer has expired. */
+  undoSessionRestore(): void;
   // Advanced tab UX (ADR-0020): drag-reorder, groups, pinning. All fire-and-forget; state arrives via
   // `onTabsState`.
   /** Drag-reorder a tab to `toIndex`. `intoGroupId`: a group id joins it, null ungroups, omitted infers. */

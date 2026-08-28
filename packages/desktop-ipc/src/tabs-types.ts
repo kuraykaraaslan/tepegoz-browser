@@ -34,6 +34,22 @@ export interface TabGroupInfo {
   settings: Record<TabGroupSettingKey, TabGroupSettingValue>;
 }
 
+/**
+ * A tab the user closed, kept in a session-scoped LIFO list so it can be reopened by name rather than
+ * only by repeated Ctrl+Shift+T. `id` is a synthetic list id (not the closed tab's old id, which is
+ * gone with the tab) — it stays stable while the entry is in the list, so a menu row can name one
+ * entry without depending on its position.
+ */
+export interface ClosedTab {
+  id: string;
+  /** The tab's last URL. Always a real web URL — internal `tepegoz://` pages are not recorded. */
+  url: string;
+  /** The page title when it was closed; empty when the page never reported one (show the URL). */
+  title: string;
+  /** Epoch millis it was closed, newest first in the list. */
+  closedAt: number;
+}
+
 export interface TabInfo {
   id: string;
   title: string;

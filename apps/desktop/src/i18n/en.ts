@@ -99,6 +99,21 @@ export const en = {
     // Agent-active indicator (S8 PR5). A run that continues out of sight has to be visible SOMEWHERE,
     // or "still working" is indistinguishable from "quietly stopped".
     trayAgentRunning: 'Tepegöz — the agent is working',
+    // Recovery (ADR-0038). Safe mode is announced because a launch with extensions and the agent
+    // switched off is otherwise indistinguishable from a launch where they silently broke.
+    safeModeTitle: 'Started in safe mode',
+    safeModeBodyCrash:
+      'Tepegöz closed unexpectedly twice in a row, so extensions, the agent, MCP and session restore are off for this launch. Your tabs are still saved — restart to get them back.',
+    safeModeBodyFlag:
+      'Launched with --safe-mode: extensions, the agent, MCP and session restore are off for this launch.',
+    // Shown only after an unclean shutdown — an ordinary launch restores silently. This is the
+    // non-modal answer to Chrome's "Restore pages?" dialog: restore first, offer the way back.
+    sessionRestoredTitle: 'Restored your last session',
+    sessionRestoredBodyOne: "Tepegöz didn't shut down properly, so 1 tab was reopened.",
+    sessionRestoredBodyOther: "Tepegöz didn't shut down properly, so {count} tabs were reopened.",
+    sessionRestoredUndo: 'Undo',
+    // Recently closed (History submenu): the section over the recent-history rows.
+    recentlyClosed: 'Recently closed',
     // Network privacy (Phase 5) — the per-tab / per-group route picker in the native context menus.
     routeTabThrough: 'Route this tab through…',
     routeGroupThrough: 'Route this group through…',

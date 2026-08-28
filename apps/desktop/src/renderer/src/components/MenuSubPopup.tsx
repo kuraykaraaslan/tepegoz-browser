@@ -11,7 +11,7 @@ import {
 } from '@tepegoz/desktop-ipc';
 import { historyDict } from '@tepegoz/history-ui/i18n';
 import { extensionsDict } from '@tepegoz/extensions-ui/i18n';
-import { menuDict } from '../../../i18n';
+import { browserDict, menuDict } from '../../../i18n';
 import { extensionLabel, extensionPageUrl } from '../../../shared/extension-urls';
 import { iconNodeFor } from '../extensions/icon-registry';
 import { applyTheme } from '../lib/theme';
@@ -24,6 +24,9 @@ import { applyTheme } from '../lib/theme';
  * main window (TabManager singleton) then closes the whole menu via `closePopup` (which cascades here).
  */
 const RECENT_HISTORY_COUNT = 5;
+/** How many recently-closed tabs the History flyout lists. The full list (25) is deeper than a flyout
+ *  should be, and Ctrl+Shift+T still walks the whole thing one tab at a time. */
+const RECENT_CLOSED_COUNT = 5;
 
 export function MenuSubPopup({ kind }: { kind: string }) {
   const [locale, setLocale] = useState<Locale>('en');
@@ -73,9 +76,33 @@ export function MenuSubPopup({ kind }: { kind: string }) {
         } catch {
           /* ignore — just show "Show full history" */
         }
+        // Recently closed sits above history for the same reason Chrome puts it there: "the tab I just
+        // lost" is a different question from "a page I visited", and it is asked far more often. The two
+        // lists are not the same data either — a closed tab may never have been committed to history.
+        let closed: Awaited<ReturnType<typeof window.tepegoz.listRecentlyClosedTabs>> = [];
+        try {
+          closed = await window.tepegoz.listRecentlyClosedTabs();
+        } catch {
+          /* ignore — the section is simply omitted */
+        }
         if (cancelled) return;
         const m = pick(menuDict, loc);
+        const b = pick(browserDict, loc);
+        const closedRows: MenuItem[] =
+          closed.length === 0
+            ? []
+            : [
+                { kind: 'label', id: 'rc-title', text: b.recentlyClosed },
+                ...closed.slice(0, RECENT_CLOSED_COUNT).map((t): MenuItem => ({
+                  id: `rc:${t.id}`,
+                  label: t.title.length > 0 ? t.title : t.url,
+                  icon: <Icon name="history" />,
+                  onSelect: () => act(() => window.tepegoz.reopenClosedTab(t.id)),
+                })),
+                { kind: 'separator' },
+              ];
         setItems([
+          ...closedRows,
           ...list.slice(0, RECENT_HISTORY_COUNT).map((e): MenuItem => ({
             id: `h:${e.url}`,
             label: e.title.length > 0 ? e.title : e.url,

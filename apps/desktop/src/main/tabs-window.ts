@@ -2,7 +2,7 @@ import { type PersistedGroup, type PersistedTab, type WindowSnapshot } from '@te
 import { isWebUrl } from './lib/navigation-url';
 import { asGroupColor } from './tabs-popup-policy';
 import { WindowTabsDiscard } from './tabs-window-discard';
-import { closedUrls } from './tabs-shared';
+import { takeClosedTab } from './tabs-shared';
 
 /**
  * L0 tab model. Each tab is an isolated `WebContentsView` in a SEPARATE browsing partition
@@ -27,10 +27,11 @@ import { closedUrls } from './tabs-shared';
 export class WindowTabs extends WindowTabsDiscard {
   // ── Session restore ────────────────────────────────────────────────────────────────────────────
 
-  /** Reopen the most-recently-closed tab (Ctrl+Shift+T). No-op when the stack is empty. */
-  reopenClosedTab(): void {
-    const url = closedUrls.pop();
-    if (url !== undefined) this.createTab(url);
+  /** Reopen a closed tab: the most recent one (Ctrl+Shift+T), or the entry `id` names (the History
+   *  menu's "Recently closed" section). No-op when the list is empty or the id is already gone. */
+  reopenClosedTab(id?: string): void {
+    const closed = takeClosedTab(id);
+    if (closed !== undefined) this.createTab(closed.url);
   }
 
   /** This window's restorable snapshot: ordered web tabs (URL + pin + group membership), group metadata,
@@ -70,10 +71,16 @@ export class WindowTabs extends WindowTabsDiscard {
     return snap;
   }
 
-  /** Restore one window's persisted tabs into THIS window. Returns true if any tab was restored (so the
-   *  caller can skip opening a default blank tab). */
-  restoreWindow(snap: WindowSnapshot): boolean {
-    if (snap.tabs.length === 0) return false;
+  /**
+   * Restore one window's persisted tabs into THIS window. Returns the ids of the tabs it actually
+   * created — empty when nothing was restored (the caller then opens a default blank tab).
+   *
+   * Ids rather than a bare boolean because the restore has to be undoable: the toast raised after an
+   * unclean shutdown closes exactly these tabs and nothing the user opened afterwards, which is only
+   * expressible if the restore says which tabs were its own.
+   */
+  restoreWindow(snap: WindowSnapshot): string[] {
+    if (snap.tabs.length === 0) return [];
 
     // 1. Recreate tabs in order, remembering the persisted-index → new-tab-id mapping.
     const createdIds = snap.tabs.map((t, i) =>
@@ -129,6 +136,8 @@ export class WindowTabs extends WindowTabsDiscard {
     }
     if (activeId !== undefined && activeId !== null) this.activate(activeId);
     else this.emitState();
-    return true;
+    // A `null` entry is a tab whose `tab:create` an extension interceptor blocked — it was never
+    // created, so it is not ours to undo.
+    return createdIds.filter((id): id is string => id !== null && id !== undefined);
   }
 }

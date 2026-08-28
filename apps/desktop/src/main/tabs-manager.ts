@@ -224,8 +224,8 @@ export default class TabManager extends TabManagerBase {
   static captureActive(): Promise<string | null> {
     return TabManager.focused()?.captureActive() ?? Promise.resolve(null);
   }
-  static reopenClosedTab(): void {
-    TabManager.focused()?.reopenClosedTab();
+  static reopenClosedTab(id?: string): void {
+    TabManager.focused()?.reopenClosedTab(id);
   }
   static discardTab(id: string): void {
     TabManager.focused()?.discardTab(id);

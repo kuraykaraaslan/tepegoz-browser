@@ -10,37 +10,38 @@ import {
  * (center popup / toast) can dismiss itself afterwards.
  */
 export function runNotificationAction(item: AppNotification, action: NotificationAction): boolean {
+  // Hoisted so each case tests one thing. `url` is optional on the type but required by four of the
+  // cases, and repeating the `!== undefined && .length > 0` pair in each of them is what pushed this
+  // switch past the complexity budget.
+  const url = action.url ?? '';
   switch (action.type) {
     case 'open_url':
-      if (action.url !== undefined && action.url.length > 0) {
-        window.tepegoz.createTab(action.url);
-        return true;
-      }
-      return false;
+      if (url.length === 0) return false;
+      window.tepegoz.createTab(url);
+      return true;
     case 'open_url_background':
-      if (action.url !== undefined && action.url.length > 0) {
-        window.tepegoz.createTabInBackground(action.url);
-        return true;
-      }
-      return false;
+      if (url.length === 0) return false;
+      window.tepegoz.createTabInBackground(url);
+      return true;
     case 'navigate_current':
-      if (action.url !== undefined && action.url.length > 0) {
-        window.tepegoz.navigateTab(action.url);
-        return true;
-      }
-      return false;
-    case 'trust_origin':
+      if (url.length === 0) return false;
+      window.tepegoz.navigateTab(url);
+      return true;
+    case 'trust_origin': {
       // Trust the source site (its future popups pass), then open the pending popup.
-      if (item.origin !== undefined && item.origin.length > 0) {
-        window.tepegoz.trustPopupOrigin(item.origin);
-      }
-      if (action.url !== undefined && action.url.length > 0) {
-        window.tepegoz.createTab(action.url);
-        return true;
-      }
-      return false;
+      const origin = item.origin ?? '';
+      if (origin.length > 0) window.tepegoz.trustPopupOrigin(origin);
+      if (url.length === 0) return false;
+      window.tepegoz.createTab(url);
+      return true;
+    }
     case 'open_settings':
       window.tepegoz.navigateTab(INTERNAL_SETTINGS_URL);
+      return true;
+    case 'undo_session_restore':
+      // Main owns which tabs the restore opened and whether the offer still stands — the renderer only
+      // relays the click. Returns true so the toast dismisses itself: the offer is one-shot.
+      window.tepegoz.undoSessionRestore();
       return true;
     case 'mark_read':
       window.tepegoz.markNotificationRead(item.id);

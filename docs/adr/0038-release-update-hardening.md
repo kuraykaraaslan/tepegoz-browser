@@ -1,6 +1,7 @@
 # ADR-0038: Release & update hardening — the recovery contract
 
-- **Status:** Accepted (design; runtime gated to the first public release)
+- **Status:** Accepted — design 2026-08-21; safe-mode + crash-counter runtime landed 2026-08-28. The
+  updater, `crashReporter` and fresh-profile rungs stay gated on the first public release.
 - **Date:** 2026-08-21
 - **Closes:** Phase 0 DoD — _"Release & update hardening designed (auto-update + signed rollback +
   crashReporter + safe-mode + corrupt-profile recovery)"_
@@ -55,6 +56,34 @@ it failed to read is indistinguishable from the bug.
 - Keeps: chrome, tabs, preferences, and the settings surface — the user must be able to _fix_ the thing
   that broke, which means reaching settings without the subsystem that broke.
 
+**Shipped 2026-08-28** — `apps/desktop/src/main/recovery/` (`crash-counter.ts` + `safe-mode.ts`), gated
+into `index.ts` at the six call sites the list above names. Two details that the design above leaves
+implicit and the implementation had to settle:
+
+- **A launch is presumed crashed until it proves otherwise.** The counter is not written by a crash
+  handler — a main process killed by the GPU, the OOM killer or a wedged renderer runs no handler. Each
+  launch stamps `pending: true`; surviving 60 s or reaching `before-quit` clears it, and the next launch
+  reading `pending: true` back is reading a launch that neither survived nor said goodbye.
+- **Not restoring is only safe while not persisting.** Safe mode opens one blank tab, so the session it
+  would write back is one blank tab — over the only copy the user has. `TabManagerBase.persistNow` is
+  therefore suppressed in safe mode; the two halves are one decision, not two features.
+
+The ladder is exercised against the real app in `e2e/crash-recovery.spec.ts`, which kills the process
+tree rather than closing it: crash → restore + notice, crash again → safe mode with no restore, clean
+quit → the session comes back whole.
+
+### 2b. What the user is told (added 2026-08-28)
+
+Safe mode announces itself (notification center + toast), because a launch with extensions and the agent
+switched off is otherwise indistinguishable from a launch where they silently broke.
+
+A restore that followed an **unclean** shutdown also raises a toast, carrying an undo that closes exactly
+the tabs the restore opened. This is the deliberate answer to Chrome's blocking "Restore pages?" dialog:
+that dialog charges every unclean shutdown — including a power cut — a modal, and asks a question the
+user cannot yet answer, since they do not know whether the tabs are what killed the browser. Restoring
+first and offering the way back costs a user who does not care nothing at all, and the crash-loop case
+the dialog really exists for is covered one rung up, by safe mode. An ordinary launch says nothing.
+
 ### 3. Crash reporting — opt-in, redacted, off by default
 
 - `crashReporter` stays **off** unless the user turns it on. No first-run prompt that defaults to yes.
@@ -90,5 +119,7 @@ When the runtime lands, the ordering is: **verify, then stage, then swap.**
 - The crash counter is shared by safe mode and update rollback — one mechanism, two consumers, so a bad
   update and a bad extension recover through the same tested path.
 - The fresh-profile rung means a corrupt profile costs the user their session, not their data.
-- **Owed before the first public release:** the updater runtime, the crash-counter implementation, the
-  safe-mode switch, and the profile-rename recovery. None of them is claimed as present today.
+- **Landed (2026-08-28):** the crash counter and the safe-mode switch, with the session-restore notice +
+  undo built on the same signal. See section 2 above.
+- **Still owed before the first public release:** the updater runtime, opt-in `crashReporter`, and the
+  profile-rename (fresh-profile) recovery. None of those three is claimed as present today.

@@ -35,6 +35,7 @@ export type SitePermissionState = (typeof SITE_PERMISSION_STATES)[number];
  *  - `navigate_current` — navigate the ACTIVE tab to `NotificationAction.url`;
  *  - `trust_origin` — trust the notification's `origin` (allow its popups) + open `url` if present;
  *  - `open_settings` — open the app settings page;
+ *  - `undo_session_restore` — close the tabs this launch's session restore reopened (ADR-0038);
  *  - `mark_read` — mark this notification read;
  *  - `dismiss` — dismiss this notification.
  */
@@ -44,6 +45,7 @@ export const NOTIFICATION_ACTION_TYPES = [
   'navigate_current',
   'trust_origin',
   'open_settings',
+  'undo_session_restore',
   'mark_read',
   'dismiss',
 ] as const;

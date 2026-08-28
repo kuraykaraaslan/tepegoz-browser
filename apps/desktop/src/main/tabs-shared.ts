@@ -8,6 +8,7 @@ import {
   type WebPreferences,
 } from 'electron';
 import {
+  type ClosedTab,
   INTERNAL_BOOKMARKS_URL,
   INTERNAL_DEVELOPER_URL,
   INTERNAL_DOWNLOADS_URL,
@@ -136,9 +137,41 @@ export interface DetachedTab {
 
 // ── Session-wide shared state (window-agnostic; shared by every WindowTabs instance) ───────────────
 
-/** Recently-closed web-tab URLs (LIFO) for reopen-closed-tab (Ctrl+Shift+T). In-memory, session-scoped
- *  and shared across all windows (matches Chrome's session-wide reopen stack). */
-export const closedUrls: string[] = [];
+/**
+ * Recently-closed web tabs (LIFO, newest last) backing both reopen-closed-tab (Ctrl+Shift+T) and the
+ * History menu's "Recently closed" section. In-memory, session-scoped and shared across all windows —
+ * Chrome's session-wide reopen stack.
+ *
+ * It carries the title as well as the URL because a list the user PICKS from has to be readable, and a
+ * closed tab's title cannot be recovered afterwards: the webContents that knew it is gone.
+ */
+export const closedTabs: ClosedTab[] = [];
+
+/** How many closed tabs are remembered. Beyond this the oldest is dropped. */
+const CLOSED_TAB_LIMIT = 25;
+
+let closedSeq = 0;
+
+/** Record a closed tab at the top of the list, evicting the oldest past the cap. The synthetic id is
+ *  monotonic per run, so a menu row can name an entry that stays the same as newer ones arrive. */
+export function rememberClosedTab(url: string, title: string, closedAt: number): void {
+  closedSeq += 1;
+  closedTabs.push({ id: `rc-${String(closedSeq)}`, url, title, closedAt });
+  if (closedTabs.length > CLOSED_TAB_LIMIT) closedTabs.shift();
+}
+
+/** Take a closed tab out of the list: the named entry, or the most recent one when `id` is omitted.
+ *  Removing it on take is what stops one entry from being reopened twice from a stale menu. */
+export function takeClosedTab(id?: string): ClosedTab | undefined {
+  if (id === undefined) return closedTabs.pop();
+  const at = closedTabs.findIndex((t) => t.id === id);
+  return at === -1 ? undefined : closedTabs.splice(at, 1)[0];
+}
+
+/** The list newest-first, as the renderer reads it. */
+export function recentlyClosedTabs(): ClosedTab[] {
+  return [...closedTabs].reverse();
+}
 /** Observers notified after every committed top-level navigation (did-stop-loading), across all windows. */
 export const navigationObservers = new Set<NavigationObserver>();
 /**

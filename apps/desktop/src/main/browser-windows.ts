@@ -17,6 +17,8 @@ import AutofillHost from './password/autofill-host';
 import { passwordVault } from './stores.electron';
 import { getDb } from './db/database.electron';
 import { loadBrowser, loadOnboarding, shouldShowOnboarding } from './onboarding.electron';
+import { isSafeMode } from './recovery/safe-mode';
+import { recordRestoredTabs } from './recovery/session-restore-undo';
 
 /**
  * Chrome-window lifecycle, shared by the startup path (`index.ts`) and the tab tear-off coordinator
@@ -179,7 +181,12 @@ function bootstrapTabs(win: BrowserWindow, mode: TabBootstrap): void {
     return;
   }
   sessionBootstrapped = true;
-  if (!restoreSessionWindows(win)) wt.createTab();
+  // Safe mode does not restore (ADR-0038): the tabs it would reopen are the prime suspects for the
+  // crashes that got us here, and restoring them is how a crash becomes a crash LOOP — the one thing a
+  // user cannot escape from inside the browser. Nothing is discarded: the snapshot is left untouched
+  // (`TabManagerBase.persistNow` does not write in safe mode), so the next normal launch brings the
+  // whole session back, and Ctrl+Shift+T / the recently-closed list cover the meantime.
+  if (isSafeMode() || !restoreSessionWindows(win)) wt.createTab();
 }
 
 /** Restore the saved multi-window session: the first window's tabs into `firstWin`, and one extra
@@ -194,7 +201,10 @@ function restoreSessionWindows(firstWin: BrowserWindow): boolean {
   const firstWt = TabManager.forWindow(firstWin);
   if (firstWt === undefined || first === undefined) return false;
   if (first.bounds !== undefined) firstWin.setBounds(ensureOnScreen(first.bounds));
-  const restoredFirst = firstWt.restoreWindow(first);
+  const firstIds = firstWt.restoreWindow(first);
+  // Record what the restore created, per window, so the notice's Undo can close exactly those tabs and
+  // leave everything the user opens in the meantime alone.
+  recordRestoredTabs(firstWin, firstIds);
 
   for (const w of rest) {
     const extra = openWindow({
@@ -206,9 +216,9 @@ function restoreSessionWindows(firstWin: BrowserWindow): boolean {
           }
         : {}),
     });
-    TabManager.forWindow(extra)?.restoreWindow(w);
+    recordRestoredTabs(extra, TabManager.forWindow(extra)?.restoreWindow(w) ?? []);
   }
-  return restoredFirst;
+  return firstIds.length > 0;
 }
 
 /** Finish first-run onboarding: persist the flag, swap to the browser chrome, and seed its tabs. */

@@ -28,6 +28,10 @@ export const TabPinSchema = z.object({ id: TabIdSchema, pinned: z.boolean() });
 /** `tabs:set-hidden` — hide/unhide a tab (hidden tabs leave the strip but keep rendering). */
 export const TabHiddenSchema = z.object({ id: TabIdSchema, hidden: z.boolean() });
 
+/** `tabs:reopen-closed` — reopen a closed tab. An omitted `id` means "the most recent one"
+ *  (Ctrl+Shift+T); a present one names an entry in the recently-closed list. */
+export const ReopenClosedSchema = z.object({ id: z.string().min(1).max(64).optional() });
+
 /** `tabs:history-menu` — which nav button was right-clicked, so main knows which side to list. */
 export const NavHistoryDirectionSchema = z.enum(['back', 'forward']);
 

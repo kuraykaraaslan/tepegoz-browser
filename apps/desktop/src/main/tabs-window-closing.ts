@@ -1,7 +1,8 @@
+import { type WebContents, type WebContentsView } from 'electron';
 import { isWebUrl } from './lib/navigation-url';
 import ActionInterceptorService from './extensions/action-interceptors.electron';
 import { WindowTabsBase } from './tabs-window-base';
-import { closedUrls, internalBaseUrl, internalTitleFor } from './tabs-shared';
+import { internalBaseUrl, internalTitleFor, rememberClosedTab } from './tabs-shared';
 import { unwireView, type ViewWiringHost } from './tabs-view-wiring';
 import { askBeforeClose } from './navigation/unload-broker';
 import {
@@ -32,33 +33,9 @@ export class WindowTabsClosing extends WindowTabsBase {
     const url = this.store.get(id)?.url ?? '';
     if (ActionInterceptorService.shouldBlock('tab:close', { tabId: id, url })) return;
     const view = this.views.get(id);
-    if (view !== undefined) {
-      // Ask the PAGE first, before anything is torn down: a plain `webContents.close()` never fires
-      // `beforeunload`, so Ctrl+W used to discard unsaved work with the page's own warning unrun. When
-      // this takes the close over, the tab deliberately stays visible until the user answers — the same
-      // thing Chrome does, and the reason the store is not touched above this line.
-      if (
-        askBeforeClose(view.webContents, () => {
-          this.closeTab(id);
-        })
-      )
-        return;
-      // Remember the URL so Ctrl+Shift+T can reopen it (most-recent first, capped). Read from the store
-      // rather than the contents when the retry path got here: by then the contents are already gone.
-      const closedUrl = view.webContents.isDestroyed()
-        ? (this.store.get(id)?.url ?? '')
-        : view.webContents.getURL() || this.store.get(id)?.url || '';
-      if (isWebUrl(closedUrl)) {
-        closedUrls.push(closedUrl);
-        if (closedUrls.length > 25) closedUrls.shift();
-      }
-      this.win.contentView.removeChildView(view);
-      if (!view.webContents.isDestroyed()) {
-        unwireView(view);
-        view.webContents.close();
-      }
-      this.views.delete(id);
-    }
+    // A view whose teardown was handed to the page's own prompt keeps the tab: the store must not be
+    // touched until the user has answered, and the answer arrives as a fresh `closeTab` call.
+    if (view !== undefined && !this.tearDownView(id, view)) return;
     const internalView = this.internalPageViews.get(id);
     if (internalView !== undefined) {
       destroyInternalPageView(this.win, internalView);
@@ -67,6 +44,50 @@ export class WindowTabsClosing extends WindowTabsBase {
     const wasActive = this.store.activeId === id;
     this.store.delete(id);
     this.afterRemove(wasActive);
+  }
+
+  /**
+   * Detach and close a browsed tab's view. `true` = done, the caller may drop the tab from the store;
+   * `false` = the close was handed to the page's `beforeunload` prompt and will come back through
+   * `closeTab` once the user answers (or not at all, if they chose to stay).
+   *
+   * **`view.webContents` is typed `WebContents` and that type is a lie once the contents are gone.**
+   * Electron nulls the property on destruction — measured on 43.4.1, where reading it back from inside
+   * the `destroyed` event already yields `undefined`. The retry path runs from exactly that event, so
+   * the unguarded read this replaces threw a `TypeError` out of the emit, one line in, after Electron
+   * had already detached the dead view on its own. That was the "clicking a tab's × makes the page
+   * vanish but leaves the tab in the strip forever" defect: the throw jumped over `store.delete`.
+   */
+  private tearDownView(id: string, view: WebContentsView): boolean {
+    const wc: WebContents | undefined = view.webContents;
+    const live = wc !== undefined && !wc.isDestroyed();
+    // Ask the PAGE first, before anything is torn down: a plain `webContents.close()` never fires
+    // `beforeunload`, so Ctrl+W used to discard unsaved work with the page's own warning unrun. When
+    // this takes the close over, the tab deliberately stays visible until the user answers.
+    if (
+      live &&
+      askBeforeClose(wc, () => {
+        this.closeTab(id);
+      })
+    )
+      return false;
+    // Remember the URL so Ctrl+Shift+T can reopen it (most-recent first, capped). Read from the store
+    // rather than the contents when the retry path got here: by then the contents are already gone.
+    const closedUrl = live
+      ? wc.getURL() || this.store.get(id)?.url || ''
+      : (this.store.get(id)?.url ?? '');
+    if (isWebUrl(closedUrl)) {
+      // The title comes from the STORE, never from the contents: by the time a two-pass close gets
+      // here the page that knew its own title is already gone.
+      rememberClosedTab(closedUrl, this.store.get(id)?.title ?? '', Date.now());
+    }
+    if (!this.win.isDestroyed()) this.win.contentView.removeChildView(view);
+    if (live) {
+      unwireView(view);
+      wc.close();
+    }
+    this.views.delete(id);
+    return true;
   }
 
   /** Post-removal bookkeeping shared by `closeTab` and `detachTab`: reselect the active tab, or close
@@ -183,7 +204,10 @@ export class WindowTabsClosing extends WindowTabsBase {
       faviconUrl: null,
     });
     if (hasRealPage(url)) {
-      this.internalPageViews.set(id, createInternalPageView(this.win, url, () => this.bounds));
+      this.internalPageViews.set(
+        id,
+        createInternalPageView(this.win, url, () => this.bounds),
+      );
     }
     this.activate(id);
   }

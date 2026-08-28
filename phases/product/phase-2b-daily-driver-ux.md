@@ -61,6 +61,15 @@ work lives in Phase 2; agent orchestration (multi-tab parallelism) stays in Phas
 ### L9 — Advanced tab system
 
 - [ ] Tab groups (color/name/collapse), **split view** (2+ tabs side-by-side in one window), **workspaces** (named tab sets; distinct from Phase 3 multi-profile — profile ≠ workspace), **full session restore** (named sessions, recently-closed list, multi-window restore). _(Vertical tabs out of scope.)_
+  - [x] _**Recently-closed list** landed 2026-08-28. The session-wide LIFO that Ctrl+Shift+T already
+        walked now carries `{id, url, title, closedAt}` instead of bare URLs (`tabs-shared.ts`), is read
+        over `tabs:recently-closed`, and appears as a named section above the recent-history rows in the
+        History flyout — so a closed tab can be picked by name instead of only reached by repeated
+        Ctrl+Shift+T. Title is captured from the store, not the contents, because a two-pass close reaches
+        the teardown after the page that knew its title is gone. Still in-memory and session-scoped: this
+        is a reopen list, not a second history. Covered by `e2e/recently-closed-menu.spec.ts` + 5 unit
+        tests. **Named sessions and multi-window restore-on-demand remain open**, so the parent item stays
+        unchecked._
 - [ ] Builds on Phase 1a basic tab shell + basic restore; does NOT clash with Phase 1b agent multi-tab parallelism (that is internal orchestration; this is user-facing UI). **ADR required — "Tab Boundary Model"**: the `BrowserContext` boundary of workspace/split-view; user-facing grouping must NOT leak agent-branch policy isolation. _(ADR written + Accepted: [ADR-0020](../../docs/adr/0020-tab-boundary-model.md), incl. the 2026-07-06 addendum introducing `TabGroupInfo.settings` as the standard **binding/UI** seam — `agent.panelOpen` today, `vpn.connectionId`/`tor.enabled` reserved for Phase 5.)_
 
 > **What a tab group may and may not carry (ADR-0020, restated because it keeps being asked).** Two

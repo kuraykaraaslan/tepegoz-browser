@@ -4,6 +4,14 @@ import { app, BrowserWindow, powerMonitor } from 'electron';
 import { Logger } from '@tepegoz/libs';
 import { applyChromiumSwitches } from './chromium-flags-boot';
 import { applyHardwareAccelerationPreference } from './hardware-acceleration-boot';
+import {
+  armHealthTimer,
+  beginLaunch,
+  isSafeMode,
+  markCleanExit,
+  previousLaunchCrashed,
+} from './recovery/safe-mode';
+import { notifySafeMode, notifySessionRestored } from './recovery/recovery-notices';
 import { installSecurity } from './security';
 import { abortActiveAgentRuns, registerIpc } from './ipc';
 import { registerBasicAuthHandler } from './auth/basic-auth-broker';
@@ -123,6 +131,13 @@ if (app.commandLine.getSwitchValue('user-data-dir').length === 0) {
   app.setPath('userData', userDataDir);
 }
 
+// Crash counter + safe-mode decision (ADR-0038). MUST run here: after the userData pin (the record lives
+// in that directory) and before anything else can fail, because every gate below asks `isSafeMode()` and
+// a launch that crashes before this line would never be counted. The record is stamped "in flight" now
+// and cleared either 60 s from now or on `before-quit` — see recovery/crash-counter.ts for why the
+// presumption is inverted.
+beginLaunch();
+
 // Chromium command-line switches — the app's baseline (keep hidden/occluded surfaces compositing so a
 // backgrounded tab the agent drives stays perceivable) plus the user's allowlisted flag overrides
 // (Developer settings, dev-only — ADR-0041). MUST run before whenReady (Chromium reads switches once,
@@ -192,9 +207,16 @@ if (!app.requestSingleInstanceLock()) {
       // `protocol.handle` must be called after whenReady — see phases/tracks/protocol-tepegoz-pages.md.
       registerInternalPagesProtocol();
       initStores();
+      // Safe mode (ADR-0038 rung 3): `--safe-mode`, or two consecutive launches that died before proving
+      // themselves healthy. It switches off the four subsystems most likely to be WHY they died —
+      // extensions, the agent runtime, MCP, and session restore — and keeps everything the user needs to
+      // fix the cause: the chrome, tabs, preferences, and the settings surface. Read once here so every
+      // gate below reflects the same decision, and so the set of things it disables is readable in one
+      // place rather than inferred from scattered calls.
+      const safeMode = isSafeMode();
       // Apply the persisted User-Agent override to the browsing session BEFORE the first tab opens
       // (a no-op default when the extension is disabled).
-      userAgentHost.init();
+      if (!safeMode) userAgentHost.init();
       // Own the Electron webRequest listener set for EVERY browsing session — the base partition and
       // every Phase 5 `--conn-` tunnel partition created later. Feature services register with this
       // multiplexer so Electron's "last listener wins" behavior cannot make them silently replace each
@@ -224,22 +246,29 @@ if (!app.requestSingleInstanceLock()) {
       // a download, load the SQLite projection, and route every file through quarantine first.
       DownloadService.init();
       UploadService.init();
-      // Adblock Shield: load persisted settings, register network hooks, then restore/download lists
-      // in the background. Until an engine is ready, the multiplexer fails open.
-      adblockHost.init();
-      AdblockEngineService.init();
-      typoHost.init();
-      TypoPageInjector.start();
-      PageContextMenuContributionService.provide(typoContextMenuContributor);
-      translateHost.init();
-      TranslatePageInjector.start();
-      PageContextMenuContributionService.provide(translateContextMenuContributor);
-      videoPlayerHost.init();
-      VideoPlayerPageInjector.start();
-      // Load the popup-blocker settings before any page can call window.open, and register its
-      // `popup:open` interceptor with the generic action-interception plane (ADR-0022).
-      popupBlockerHost.init();
-      ActionInterceptorService.provide(popupBlockerHost.interceptors);
+      // Built-in extensions — the whole layer, skipped wholesale in safe mode. A page injector or a
+      // network hook is exactly the kind of code that can take the main process down on every launch,
+      // and it is the kind the user can then disable from Settings once they are back in.
+      if (!safeMode) {
+        // Adblock Shield: load persisted settings, register network hooks, then restore/download lists
+        // in the background. Until an engine is ready, the multiplexer fails open.
+        adblockHost.init();
+        AdblockEngineService.init();
+        typoHost.init();
+        TypoPageInjector.start();
+        PageContextMenuContributionService.provide(typoContextMenuContributor);
+        translateHost.init();
+        TranslatePageInjector.start();
+        PageContextMenuContributionService.provide(translateContextMenuContributor);
+        videoPlayerHost.init();
+        VideoPlayerPageInjector.start();
+        // Load the popup-blocker settings before any page can call window.open, and register its
+        // `popup:open` interceptor with the generic action-interception plane (ADR-0022). Note the
+        // trade-off this makes in safe mode: unblocked popups. Accepted deliberately — a browser that
+        // starts and lets popups through is recoverable; one that will not start is not.
+        popupBlockerHost.init();
+        ActionInterceptorService.provide(popupBlockerHost.interceptors);
+      }
       // Network privacy (Phase 5): load the configured connections (nothing is dialled here — a
       // connection comes up only when something binds to it) and push the routing picture to the chrome
       // whenever a tunnel's health changes, so an indicator can never sit on a stale "protected".
@@ -270,12 +299,22 @@ if (!app.requestSingleInstanceLock()) {
       // exactly the page that was clicked, matching what every other default browser does.
       const launchUrl = pendingOpenUrl ?? extractLaunchUrl(process.argv);
       pendingOpenUrl = null;
+      let chromeWindow: BrowserWindow;
       if (launchUrl !== null) {
-        const win = openWindow({ tabs: 'none' });
-        TabManager.forWindow(win)?.createTab(launchUrl);
+        chromeWindow = openWindow({ tabs: 'none' });
+        TabManager.forWindow(chromeWindow)?.createTab(launchUrl);
       } else {
-        openWindow();
+        chromeWindow = openWindow();
       }
+      // What just happened, if anything worth saying happened. Both are silent on an ordinary launch:
+      // safe mode announces itself because half the browser is missing, and the restore notice appears
+      // only after an UNCLEAN shutdown — carrying the Undo that makes always-restoring safe to do
+      // without Chrome's blocking "Restore pages?" dialog (ADR-0038).
+      notifySafeMode(chromeWindow);
+      if (previousLaunchCrashed()) notifySessionRestored(chromeWindow);
+      // A launch still alive a minute from now clears the crash counter, so today's rough start does not
+      // count against tomorrow's.
+      armHealthTimer();
       // The system-tray icon (close-to-tray target) — created once, after the first window exists.
       initTray();
       // Replaces Electron's DEFAULT menu, which bound Ctrl+Shift+I straight to its own
@@ -291,12 +330,15 @@ if (!app.requestSingleInstanceLock()) {
           .filter((tool) => tool.dangerClass === 'state_changing')
           .map((tool) => tool.id),
       );
-      TaskService.init();
+      // The agent runtime's scheduler. Off in safe mode: a saved task that fires on launch and drives a
+      // page is a crash the user cannot get in front of, because it starts before they can click.
+      if (!safeMode) TaskService.init();
       // Background-tab discard (sleep): a once-a-minute sweep, gated on the (default-on) preference.
       TabDiscardService.init();
       // Connect configured MCP servers in the background (non-blocking; a bad server must not delay
       // startup). Their tools register into the CapabilityRegistry as they become ready (ADR-0018).
-      McpService.start();
+      // Off in safe mode — an MCP server is third-party code this process spawns.
+      if (!safeMode) McpService.start();
       // The agent's built-in browser/tab/journal tools are always-on, package-owned builtins
       // (ADR-0021/0024 update), registered directly into the CapabilityRegistry behind the same
       // ToolGateway PEP — like the file_* tools — bound to their injected hosts. They belong to their
@@ -316,10 +358,15 @@ if (!app.requestSingleInstanceLock()) {
       // CapabilityRegistry, behind the same ToolGateway PEP (ADR-0021). Meta extension-management tools
       // are always on. Each `provide` is gated on its extension being enabled by `start()`'s reconcile —
       // so disabling `com.tepegoz.macros` unregisters the macro tools (ADR-0024 kill-switch).
-      ExtensionCapabilityService.provide(macrosCapabilities(), MacroService.capabilityHost());
-      ExtensionCapabilityService.provide(typoCapabilities(), typoCapabilityHost);
-      ExtensionCapabilityService.provide(translateCapabilities(), translateCapabilityHost);
-      ExtensionCapabilityService.start();
+      // Skipped in safe mode: `start()` is the reconcile that ENABLES extensions (the agent extension
+      // among them), so not calling it is what keeps the extension layer — and the agent runtime that
+      // only runs while `com.tepegoz.agent` is enabled — switched off for this launch.
+      if (!safeMode) {
+        ExtensionCapabilityService.provide(macrosCapabilities(), MacroService.capabilityHost());
+        ExtensionCapabilityService.provide(typoCapabilities(), typoCapabilityHost);
+        ExtensionCapabilityService.provide(translateCapabilities(), translateCapabilityHost);
+        ExtensionCapabilityService.start();
+      }
       // Sandboxed file operations: seed the default ~/tepegoz grant (first run), sync the access policy
       // from prefs, and register the file_* / fileaccess_* tools into the same CapabilityRegistry.
       FileOperationsHost.init();
@@ -377,6 +424,10 @@ if (!app.requestSingleInstanceLock()) {
   app.on('before-quit', () => {
     // A real quit is underway — let the window close-interceptor (close-to-tray) allow windows to close.
     markQuitting();
+    // Say goodbye to the crash counter FIRST. Everything below this line can throw, and a quit that
+    // trips over its own teardown is still a quit the user asked for — not a crash to hold against the
+    // next launch.
+    markCleanExit();
     abortActiveAgentRuns();
     TaskService.stop();
     TabDiscardService.stop();
