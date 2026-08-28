@@ -434,6 +434,29 @@ export const en = {
   developerColumnType: 'Type',
   developerColumnValue: 'Value',
   developerColumnActions: 'Actions',
+  developerFlagsTitle: 'Chromium flags',
+  developerFlagsDesc:
+    'Development-only. Toggle an allowlisted Chromium/Electron flag, then relaunch. Only vetted flags appear here — there is no free-form entry, and nothing that weakens page isolation can be listed.',
+  developerFlagsRelaunchHint: 'Relaunch Tepegöz to apply flag changes.',
+  developerFlagsExperimental: 'Experimental',
+  developerFlagName: {
+    forceDarkMode: 'Force dark mode',
+    forceDarkModeDesc:
+      "Render every page with Chromium's auto-dark algorithm, ignoring the site's own theme.",
+    parallelDownloading: 'Parallel downloading',
+    parallelDownloadingDesc: 'Split large downloads into several concurrent connections.',
+    overlayScrollbars: 'Overlay scrollbars',
+    overlayScrollbarsDesc:
+      'Thin, auto-hiding scrollbars that float over content instead of taking layout width.',
+    forceReducedMotion: 'Force reduced motion',
+    forceReducedMotionDesc:
+      'Report a reduced-motion preference to every page, suppressing non-essential animation.',
+    disableGpu: 'Disable GPU acceleration',
+    disableGpuDesc:
+      'Render entirely on the CPU — useful to rule out a GPU driver as the cause of visual glitches.',
+    showFpsCounter: 'Show FPS counter',
+    showFpsCounterDesc: "Overlay Chromium's frame-rate / GPU HUD on every page.",
+  },
 
   // --- Reset ---
   resetTitle: 'Reset settings',

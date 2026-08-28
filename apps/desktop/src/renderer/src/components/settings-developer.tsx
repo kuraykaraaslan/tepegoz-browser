@@ -10,6 +10,7 @@ import {
   listDeveloperPreferenceRows,
   type DeveloperPreferenceRow,
 } from '../lib/developer-settings-model';
+import { ChromiumFlagsCard } from './settings-developer-flags';
 
 export interface DeveloperSectionProps {
   prefs: Preferences;
@@ -90,6 +91,7 @@ export function DeveloperSection({ prefs, onUpdatePrefs }: DeveloperSectionProps
   return (
     <div className="space-y-4">
       <Card title={s.developerTitle} subtitle={s.developerDesc} />
+      <ChromiumFlagsCard prefs={prefs} onUpdatePrefs={onUpdatePrefs} />
       <DataTable
         caption={s.developerTitle}
         rows={rows}

@@ -432,6 +432,29 @@ export const tr: SettingsStrings = {
   developerColumnType: 'Tip',
   developerColumnValue: 'Değer',
   developerColumnActions: 'İşlemler',
+  developerFlagsTitle: 'Chromium flagleri',
+  developerFlagsDesc:
+    'Sadece geliştirme ortamı. İzin listesindeki bir Chromium/Electron flagini aç, sonra yeniden başlat. Burada yalnızca incelenmiş flagler görünür — serbest giriş yoktur ve sayfa izolasyonunu zayıflatan hiçbir şey listelenemez.',
+  developerFlagsRelaunchHint: 'Flag değişikliklerinin geçerli olması için Tepegöz’ü yeniden başlat.',
+  developerFlagsExperimental: 'Deneysel',
+  developerFlagName: {
+    forceDarkMode: 'Koyu modu zorla',
+    forceDarkModeDesc:
+      'Her sayfayı, sitenin kendi temasını yok sayarak Chromium’un otomatik koyu algoritmasıyla çiz.',
+    parallelDownloading: 'Paralel indirme',
+    parallelDownloadingDesc: 'Büyük indirmeleri birden çok eşzamanlı bağlantıya böl.',
+    overlayScrollbars: 'Üstte kayan kaydırma çubukları',
+    overlayScrollbarsDesc:
+      'İçeriğin üzerinde yüzen, yerleşimde yer kaplamayan ince, otomatik gizlenen kaydırma çubukları.',
+    forceReducedMotion: 'Azaltılmış hareketi zorla',
+    forceReducedMotionDesc:
+      'Her sayfaya azaltılmış hareket tercihi bildirerek gereksiz animasyonları bastır.',
+    disableGpu: 'GPU hızlandırmayı kapat',
+    disableGpuDesc:
+      'Tümüyle CPU’da çiz — görsel bozulmaların nedeninin bir GPU sürücüsü olup olmadığını elemek için işe yarar.',
+    showFpsCounter: 'FPS sayacını göster',
+    showFpsCounterDesc: 'Her sayfada Chromium’un kare hızı / GPU HUD’unu göster.',
+  },
 
   // --- Sıfırla ---
   resetTitle: 'Ayarları sıfırla',
