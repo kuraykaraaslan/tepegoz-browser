@@ -1,6 +1,6 @@
 # ADR-0043: Safe Browsing service & egress — direct to Google Safe Browsing v5, on by default, one settings switch to turn it off
 
-- **Status:** Accepted (egress decision ratified; the local hash-prefix core is shipped in `@tepegoz/security-policy`; the service, the prefix-DB lifecycle, the navigation check, the download-trust provider and the settings switch are owed — see Consequences)
+- **Status:** Accepted (egress decision ratified; the local hash-prefix core, the `SafeBrowsingProvider` gate, the on-disk prefix store, the SB v5 full-hash + prefix-list clients, the refresh scheduler, the `SafeBrowsingService`, the `will-navigate` check + interstitial, the `DownloadTrustProvider` and the Settings switch are all shipped and unit-tested — the feature is **inert** pending a Google Safe Browsing API key as a release input, plus Rice/delta decoding for prefix-list updates; see Consequences)
 - **Date:** 2026-09-01
 - **Completes:** [ADR-0040](0040-download-trust-model.md) § 5 (the `DownloadTrustProvider` seam) · **refines** [ADR-0006](0006-policy-kernel-hitl.md) (deterministic Policy Kernel + HITL) · **accounts to** [ADR-0011](0011-vpn-network-privacy.md) (fail-closed kill switch — Safe Browsing is a named app-level egress)
 - **Phase:** [Phase 1a — Walking-Skeleton MVP](../../phases/product/phase-1a-walking-skeleton-mvp.md) (minimal safe-browsing core) · [Phase 2c — Classic Browser Essentials & Downloads](../../phases/product/phase-2c-classic-browser-essentials.md), L10
@@ -111,10 +111,25 @@ the switch off loses navigation protection **and** download blocking together �
 mode — and the honest framing in the help text may lead some users to do exactly that. The API key
 is a release-process dependency that must be provisioned before either phase line can be ticked.
 
-**Owed, and stated rather than implied.** Everything in § 1 is design, not code: the
-`SafeBrowsingService`, the on-disk prefix store + refresh scheduler, the Safe Browsing v5 HTTPS
-client, the `will-navigate` check + interstitial, the `DownloadTrustProvider` implementation, the
-Settings switch + its en/tr strings, the threat-model row, and tests that assert (a) no URL and no
-identifier crosses the fetch boundary, (b) the switch-off state produces zero attributable network
-activity, and (c) `unknown` never blocks a navigation. Until the API key is provisioned this stays
-un-shippable regardless of code completeness.
+**Shipped (2026-09-01, all unit-tested, feature inert):** `SafeBrowsingProvider` (the fail-open
+navigation gate / fail-closed download gate, `enabled()` read every call); the on-disk `PrefixStore`
+(I/O-injected, corrupt-file-as-absent, `null`-DB-as-`unknown`); the SB v5 `hashes:search` full-hash
+client and `hashList` prefix-list client (bare injected `fetch`, prefixes + key only, no cookies,
+`null` with no key); `SafeBrowsingRefreshScheduler` (immediate on first launch, 6 h cadence, capped
+exponential backoff, idles while the switch is off); `SafeBrowsingService` composing all of it;
+`SafeBrowsingNavGuard` + the `will-navigate` wiring + the self-contained `data:` interstitial with a
+sentinel-fragment "proceed anyway"; the `DownloadTrustProvider` into `DownloadService.init()`; the
+`safeBrowsingEnabled` preference (default on, `private`) and its Privacy & security toggle (en + tr).
+Tests assert no URL / no cookie crosses the fetch boundary, `unknown` never blocks a navigation, and
+the switch-off / no-key states start no scheduler and make no request.
+
+**Owed, and stated rather than implied.** (1) **The Google Safe Browsing API key** — a release
+input; until it is provisioned the full-hash and prefix-list fetchers are `null`, the scheduler never
+starts, `database()` stays `null`, and every check resolves `unknown` (nothing blocked). (2) **Rice
+decoding + delta application** for prefix-list updates — `parseHashListResponse` handles the
+uncompressed `additionsFourBytes` case only; a Rice-coded response yields `[]` (the scheduler keeps
+the previous set). (3) The exact v5 list names, endpoints and wire shapes are marked in-code for
+verification against current Google documentation. (4) The **threat-model row** for this egress feed.
+(5) Wiring `SafeBrowsingService` under the Phase 5 kill switch's app-scope `mayEgress` gate — today it
+fails to `unknown` when Google is simply unreachable, which is the same outcome, but the explicit gate
+is not yet coded.

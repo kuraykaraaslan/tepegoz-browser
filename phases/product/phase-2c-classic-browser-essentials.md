@@ -55,13 +55,17 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       and speces the Safe-Browsing provider seam._ · **Page-Translation** provider boundary —
       _**[ADR-0042](../../docs/adr/0042-page-translation-provider-boundary.md) accepted** (owner call
       2026-09-01: hybrid — local model default, cloud per-origin opt-in, sensitive sites never reach
-      cloud). Ratifies the shipped `@tepegoz/ext-translate` hybrid engine; the sensitive-site cloud lockout is
-      now wired (`isSensitiveOrigin` port). **Owed for the box:** the agent-run untranslated-source
-      guarantee._ ·
+      cloud). Ratifies the shipped `@tepegoz/ext-translate` hybrid engine; the sensitive-site cloud lockout
+      **and** the agent-run untranslated-source guarantee (`ensureUntranslatedForAgent` on `readPage` +
+      `snapshotElements`) are wired. **Owed for the box:** the remaining agent DOM readers +
+      auto-translate suppression for a run's duration._ ·
       **Safe-Browsing provider** — _**[ADR-0043](../../docs/adr/0043-safe-browsing-service-and-egress.md)
       accepted** (owner call 2026-09-01: direct to Google Safe Browsing v5, on by default, one
-      Settings switch to disable). Service + nav check + `DownloadTrustProvider` + switch owed; needs
-      a free-tier Google API key provisioned._
+      Settings switch to disable). **Shipped 2026-09-01, all unit-tested:** `SafeBrowsingProvider` +
+      `PrefixStore` + SB v5 full-hash/list clients + `SafeBrowsingRefreshScheduler` +
+      `SafeBrowsingService` + `will-navigate` check & interstitial + `DownloadTrustProvider` into
+      `DownloadService.init()` + the `safeBrowsingEnabled` toggle. **Inert** pending a free-tier Google
+      Safe Browsing API key (release input) + Rice/delta decoding for prefix-list updates._
 - [ ] Coverage gate (S80/B85/F86/L80) + self-review/code-review + UAT signoff + migration-safe DB
 
 ## Tasks
@@ -225,8 +229,10 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       cloud). The hybrid engine, per-origin session consent, translation memory and glossary are
       **shipped** in `@tepegoz/ext-translate` + `translate-host.electron.ts`, and the **sensitive-site
       cloud lockout is now wired** (`isSensitiveOrigin` port → `runEngine` refuses cloud before any
-      consent prompt; desktop host binds it to `isSensitiveSite`). **Owed:** bind agent-run perception
-      to the pre-translation source store (a run on a translated tab must read untranslated DOM)._
+      consent prompt; desktop host binds it to `isSensitiveSite`). The **agent-run untranslated-source
+      guarantee** is wired too — `ensureUntranslatedForAgent` restores an in-place translation before
+      `readPage` / `snapshotElements`. **Owed:** the remaining agent DOM readers + suppressing
+      auto-translate for the run's duration._
 - [x] User-facing **screenshot** (visible viewport + full-page) → stored as a **CAS blob** (reuse Phase 0/1b
       blob store; WebP), never inline base64
       — _Delivered in commit `18eee15` (this row was left unticked). Page right-click → viewport /
