@@ -160,6 +160,11 @@ screenshot both survive, and why typing `example.com` never collapses against a 
 `navigate`, `bookmark`, `command`, `agent`, `download`, `skill` and `calc` all fall through to the
 magnifying glass. This is exactly why row 1 of the screenshot — a typed URL — wears a search icon.
 
+> **Fixed 2026-09-01.** `SUGGESTION_ICONS` is now a total `Record<kind, IconDefinition>` — globe /
+> bookmark / calculator / terminal / robot / download / wand for the seven that used to fall through,
+> matching how each concept is drawn elsewhere in the app. Test: "gives a navigation suggestion a
+> globe, not the search glyph (§ A6)".
+
 ### A7 — No keyboard path to the address bar
 
 `SHORTCUTS` has 15 entries and none focuses the omnibox. No Ctrl+L, no Alt+D, no F6. The address bar is
@@ -190,12 +195,23 @@ Row `onMouseEnter` writes the same `selected` state the arrow keys write, and th
 `aria-activedescendant`. Moving the mouse one pixel changes what Enter opens and re-announces a row to a
 screen reader. Hover state and keyboard state must be separate.
 
+> **Fixed 2026-09-01.** Split into two pieces of state: `selected` (keyboard only — arrow keys write
+> it, and it alone backs `aria-activedescendant` / `aria-selected` and what Enter opens) and `hovered`
+> (pointer only — `onMouseEnter` / `onMouseLeave`, tints a row, touches no ARIA and no Enter target; a
+> live keyboard selection takes visual precedence). Tests: "hovering a row never moves
+> aria-activedescendant or re-targets Enter (§ A10)" and "arrow keys drive aria-activedescendant and
+> what Enter opens (§ A10)".
+
 ### A11 — `omnibox.tsx` has no test file
 
 The package tests `omnibox-suggest` / `calc` / `commands` / `units` — all four pure modules. The
 component itself, which owns the debounce, the request-id guard, focus/blur, selection and the render
 loop in A1, has **zero** coverage. Every item in this track lands without a regression net until this
 changes. The two tests written to prove A1 are the natural first commit.
+
+> **Resolved 2026-09-01.** `omnibox.test.tsx` exists (jsdom + `@testing-library/react`, added with the
+> A1 fix) and now carries nine cases across A1, A2-adjacent clearing, A6, A8, A9 and A10. Further
+> track items extend it rather than create it.
 
 ## B. Tier 0 — what a side-by-side comparison notices first
 

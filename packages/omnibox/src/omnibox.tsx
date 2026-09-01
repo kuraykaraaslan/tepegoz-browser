@@ -1,9 +1,17 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import {
+  faBookmark,
+  faCalculator,
   faClockRotateLeft,
+  faDownload,
   faGear,
+  faGlobe,
   faMagnifyingGlass,
+  faRobot,
+  faTerminal,
+  faWandMagicSparkles,
   faWindowMaximize,
 } from '@fortawesome/free-solid-svg-icons';
 import { cn } from '@tepegoz/ui';
@@ -87,8 +95,13 @@ export function Omnibox({
   const [value, setValue] = useState(currentUrl);
   const [focused, setFocused] = useState(false);
   const [suggestions, setSuggestions] = useState<OmniboxSuggestion[]>([]);
-  // -1 = nothing highlighted → Enter runs the default (calc copy / navigate the typed text).
+  // KEYBOARD selection: -1 = nothing highlighted → Enter runs the default (calc copy / navigate the
+  // typed text). Only the arrow keys write this, and only it backs `aria-activedescendant` + what
+  // Enter opens — so moving the mouse can never re-target Enter or re-announce a row (omnibox § A10).
   const [selected, setSelected] = useState(-1);
+  // POINTER hover: -1 = none. Written only by `onMouseEnter` / `onMouseLeave`; it tints a row but
+  // never touches ARIA or Enter, and a live keyboard selection takes visual precedence over it.
+  const [hovered, setHovered] = useState(-1);
   // Monotonic request id so a slow suggestion fetch can't overwrite a newer query's results, and a
   // just-closed dropdown can't be re-opened by a fetch that was already in flight (see below).
   const reqIdRef = useRef(0);
@@ -119,6 +132,7 @@ export function Omnibox({
       // branch can never be the thing that triggers another render.
       setSuggestions((prev) => (prev.length === 0 ? prev : []));
       setSelected((prev) => (prev === -1 ? prev : -1));
+      setHovered((prev) => (prev === -1 ? prev : -1));
       return undefined;
     }
     const query = value;
@@ -132,6 +146,7 @@ export function Omnibox({
           if (reqIdRef.current === reqId) {
             setSuggestions(next);
             setSelected(-1);
+            setHovered(-1);
           }
         },
         () => {
@@ -175,6 +190,7 @@ export function Omnibox({
     }
     setSuggestions([]);
     setSelected(-1);
+    setHovered(-1);
   }
 
   function dispatchSuggestion(s: OmniboxSuggestion): void {
@@ -231,9 +247,11 @@ export function Omnibox({
     if (!open) return;
     if (e.key === 'ArrowDown') {
       e.preventDefault();
+      setHovered(-1); // keyboard takes over the highlight unambiguously
       setSelected((i) => (i + 1 >= suggestions.length ? -1 : i + 1));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
+      setHovered(-1);
       setSelected((i) => (i <= -1 ? suggestions.length - 1 : i - 1));
     } else if (e.key === 'Escape') {
       e.preventDefault();
@@ -292,6 +310,7 @@ export function Omnibox({
           ref={listRef}
           id={listboxId}
           role="listbox"
+          onMouseLeave={() => setHovered(-1)}
           className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-xl border border-border bg-surface-raised py-1 shadow-lg"
         >
           {suggestions.map((s, i) => (
@@ -305,10 +324,14 @@ export function Omnibox({
                 e.preventDefault();
                 dispatchSuggestion(s);
               }}
-              onMouseEnter={() => setSelected(i)}
+              // Hover tints the row but does NOT move the keyboard selection — see `hovered` vs
+              // `selected` above (omnibox § A10).
+              onMouseEnter={() => setHovered(i)}
               className={cn(
                 'flex cursor-default items-center gap-3 px-4 py-1.5 text-sm',
-                i === selected ? 'bg-surface-overlay' : 'bg-transparent',
+                i === selected || (selected < 0 && i === hovered)
+                  ? 'bg-surface-overlay'
+                  : 'bg-transparent',
               )}
             >
               <SuggestionIcon kind={s.kind} />
@@ -326,17 +349,32 @@ export function Omnibox({
   );
 }
 
-/** A FontAwesome glyph per suggestion kind. */
+/**
+ * A distinct FontAwesome glyph for every {@link OmniboxSuggestion} kind — all eleven, so a typed URL
+ * no longer wears a search icon (omnibox § A6). Glyphs match how each concept is drawn elsewhere in
+ * the app (bookmark star/book, `faRobot` for the agent, `faWandMagicSparkles` for a skill, `faGlobe`
+ * for a bare navigation, …).
+ */
+const SUGGESTION_ICONS: Record<OmniboxSuggestion['kind'], IconDefinition> = {
+  navigate: faGlobe,
+  search: faMagnifyingGlass,
+  history: faClockRotateLeft,
+  bookmark: faBookmark,
+  tab: faWindowMaximize,
+  calc: faCalculator,
+  'quick-setting': faGear,
+  command: faTerminal,
+  agent: faRobot,
+  download: faDownload,
+  skill: faWandMagicSparkles,
+};
+
 function SuggestionIcon({ kind }: { kind: OmniboxSuggestion['kind'] }) {
-  const icon =
-    kind === 'tab'
-      ? faWindowMaximize
-      : kind === 'history'
-        ? faClockRotateLeft
-        : kind === 'quick-setting'
-          ? faGear
-          : faMagnifyingGlass;
   return (
-    <FontAwesomeIcon icon={icon} className="h-3.5 w-3.5 shrink-0 text-text-secondary" aria-hidden />
+    <FontAwesomeIcon
+      icon={SUGGESTION_ICONS[kind]}
+      className="h-3.5 w-3.5 shrink-0 text-text-secondary"
+      aria-hidden
+    />
   );
 }

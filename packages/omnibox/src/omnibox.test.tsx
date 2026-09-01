@@ -8,6 +8,15 @@ import type { OmniboxSuggestion } from './omnibox-suggest';
 const noSuggestions = (): Promise<OmniboxSuggestion[]> => Promise.resolve([]);
 const oneSuggestion =
   (s: OmniboxSuggestion) => (): Promise<OmniboxSuggestion[]> => Promise.resolve([s]);
+const theseSuggestions =
+  (list: OmniboxSuggestion[]) => (): Promise<OmniboxSuggestion[]> => Promise.resolve(list);
+
+const navRow = (i: number): OmniboxSuggestion => ({
+  key: `r${i}`,
+  kind: 'history',
+  title: `Row ${i}`,
+  action: { type: 'navigate', input: `https://row-${i}.test/` },
+});
 
 function baseProps(over: Partial<OmniboxProps> = {}): OmniboxProps {
   return {
@@ -148,5 +157,69 @@ describe('Omnibox', () => {
     // closeSuggestions cleared the pending timer, so the fetch never ran and nothing re-opened.
     expect(onSuggest).not.toHaveBeenCalled();
     expect(screen.queryByText('Duck facts')).toBeNull();
+  });
+
+  it('hovering a row never moves aria-activedescendant or re-targets Enter (§ A10)', async () => {
+    const onNavigate = vi.fn();
+    const onSuggest = vi.fn(theseSuggestions([navRow(0), navRow(1)]));
+    render(<Omnibox {...baseProps({ onSuggest, onNavigate })} />);
+
+    const input = screen.getByRole('combobox');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'row' } });
+    expect(await screen.findByText('Row 1')).toBeTruthy();
+    expect(input.getAttribute('aria-activedescendant')).toBeNull();
+
+    fireEvent.mouseEnter(screen.getByRole('option', { name: 'Row 1' }));
+    expect(input.getAttribute('aria-activedescendant')).toBeNull();
+    expect(screen.getByRole('option', { name: 'Row 1' }).getAttribute('aria-selected')).toBe('false');
+
+    fireEvent.submit(omniboxForm());
+    // Enter ran the default (navigate the typed text), NOT the hovered row.
+    expect(onNavigate).toHaveBeenCalledWith('row');
+    expect(onNavigate).not.toHaveBeenCalledWith('https://row-1.test/');
+  });
+
+  it('arrow keys drive aria-activedescendant and what Enter opens (§ A10)', async () => {
+    const onNavigate = vi.fn();
+    const onSuggest = vi.fn(theseSuggestions([navRow(0), navRow(1)]));
+    render(<Omnibox {...baseProps({ onSuggest, onNavigate })} />);
+
+    const input = screen.getByRole('combobox');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'row' } });
+    await screen.findByText('Row 1');
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    expect(input.getAttribute('aria-activedescendant')).toMatch(/-opt-1$/);
+
+    fireEvent.submit(omniboxForm());
+    expect(onNavigate).toHaveBeenCalledWith('https://row-1.test/');
+  });
+
+  it('gives a navigation suggestion a globe, not the search glyph (§ A6)', async () => {
+    const { container } = render(
+      <Omnibox
+        {...baseProps({
+          onSuggest: vi.fn(
+            oneSuggestion({
+              key: 'n',
+              kind: 'navigate',
+              title: 'example.com',
+              action: { type: 'navigate', input: 'example.com' },
+            }),
+          ),
+        })}
+      />,
+    );
+
+    const input = screen.getByRole('combobox');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'example' } });
+    await screen.findByText('example.com');
+
+    expect(container.querySelector('li svg[data-icon="globe"]')).not.toBeNull();
+    expect(container.querySelector('li svg[data-icon="magnifying-glass"]')).toBeNull();
   });
 });
