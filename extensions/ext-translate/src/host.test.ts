@@ -13,6 +13,7 @@ function ports(overrides: Partial<TranslateHostPorts> = {}): TranslateHostPorts 
     isExtensionEnabled: () => true,
     getResolvedLocale: () => 'tr',
     localAvailable: () => true,
+    isSensitiveOrigin: () => false,
     runLocalBatch: (input) =>
       Promise.resolve({
         sourceLanguage: input.sourceLanguage ?? 'en',
@@ -148,6 +149,52 @@ describe('translate host', () => {
     expect(first.engine).toBe('none');
     expect(second.engine).toBe('none');
     expect(host.get().cloudFallbackMode).toBe('ask');
+  });
+
+  it('never reaches the cloud path on a sensitive origin, and shows no prompt', async () => {
+    let asks = 0;
+    const host = createTranslateHost(
+      ports({
+        localAvailable: () => false,
+        isSensitiveOrigin: () => true,
+        requestCloudFallback: (request) => {
+          asks += 1;
+          return Promise.resolve({ requestId: request.requestId, allow: true, remember: false });
+        },
+      }),
+    );
+    host.init();
+    const result = await host.translateText({
+      text: 'Bakiye',
+      sourceLanguage: 'tr',
+      origin: 'https://www.garanti.com.tr',
+    });
+    expect(asks).toBe(0);
+    expect(result.translatedText).toBe('Bakiye');
+    expect(result.engine).toBe('none');
+    expect(host.get().cloudFallbackMode).toBe('ask');
+  });
+
+  it('still translates a sensitive origin with the on-device model', async () => {
+    let asks = 0;
+    const host = createTranslateHost(
+      ports({
+        isSensitiveOrigin: () => true,
+        requestCloudFallback: (request) => {
+          asks += 1;
+          return Promise.resolve({ requestId: request.requestId, allow: true, remember: false });
+        },
+      }),
+    );
+    host.init();
+    const result = await host.translateText({
+      text: 'Bakiye',
+      sourceLanguage: 'tr',
+      origin: 'https://www.garanti.com.tr',
+    });
+    expect(asks).toBe(0);
+    expect(result.translatedText).toBe('L:Bakiye');
+    expect(result.engine).toBe('local-llm');
   });
 
   it('denies cloud fallback when the user rejects it', async () => {

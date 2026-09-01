@@ -13,6 +13,7 @@ import {
 } from '@tepegoz/model-gateway';
 import { LocalProvider } from '@tepegoz/local-inference';
 import { isExtensionEnabled } from '@tepegoz/desktop-ipc';
+import { isSensitiveSite } from '@tepegoz/security-policy';
 import { isRunnableProvider, type AIProvider } from '@tepegoz/shared-types';
 import { AppError } from '@tepegoz/libs';
 import CredentialVault from '@tepegoz/credential-vault';
@@ -236,6 +237,7 @@ const translateHost = createTranslateHost({
     isExtensionEnabled(PreferenceStore.getAll().extensions, TRANSLATE_EXTENSION_ID),
   getResolvedLocale: () => mainLocale(),
   localAvailable,
+  isSensitiveOrigin: (origin) => (origin.length > 0 ? isSensitiveSite(origin) : false),
   runLocalBatch,
   runCloudBatch,
   requestCloudFallback,

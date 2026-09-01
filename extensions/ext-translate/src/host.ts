@@ -43,6 +43,13 @@ export interface TranslateHostPorts {
   isExtensionEnabled(): boolean;
   getResolvedLocale(): string;
   localAvailable(): boolean;
+  /**
+   * True when the origin is a sensitive site (banking / government / crypto / password-manager /
+   * health). On a match the **cloud** translation path is refused outright — with no consent prompt,
+   * because a dialog whose safe answer is always "no" is a trap, not a choice. The on-device model
+   * stays available (it produces no egress). See ADR-0042 §2.
+   */
+  isSensitiveOrigin(origin: string): boolean;
   runLocalBatch(input: TranslateRunBatchInput): Promise<TranslateBatchResult>;
   runCloudBatch(input: TranslateRunBatchInput): Promise<TranslateBatchResult>;
   requestCloudFallback(
@@ -260,6 +267,9 @@ export function createTranslateHost(ports: TranslateHostPorts): TranslateHost {
         // Fall through to the configured cloud fallback policy when a present local model fails.
       }
     }
+    // Sensitive site: the cloud path is off, unconditionally and silently. Local was already tried
+    // above; if it was unavailable or failed, this page is simply not translated off-device. ADR-0042 §2.
+    if (ports.isSensitiveOrigin(input.origin ?? '')) return null;
     const allowed = await resolveCloudConsent(
       input.origin ?? '',
       targetLanguage,
