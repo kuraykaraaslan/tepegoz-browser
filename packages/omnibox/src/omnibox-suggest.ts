@@ -212,6 +212,36 @@ function matches(needle: string, ...haystacks: string[]): boolean {
   return haystacks.some((h) => foldForSearch(h).includes(needle));
 }
 
+/**
+ * A canonical form of a navigate target for **dedup only** — the emitted `action.input` is never
+ * touched, so navigation still uses exactly what was typed or stored.
+ *
+ * Keyed on the raw string, dedup missed the cases it exists for: `example.com` typed into the box did
+ * not collapse against a history row for `https://example.com/`, and two history rows for the same
+ * search that differ only in query encoding (`?q=a+b` vs `?q=a%20b`) both survived. This lowercases
+ * the scheme + host, drops a lone trailing slash, and re-serialises the query so `+` and `%20` agree.
+ * Non-URL text (a web-search term) is compared case-folded and literal.
+ */
+function canonicalNavKey(input: string): string {
+  const raw = input.trim();
+  if (raw.length === 0) return '';
+  if (!looksNavigable(raw)) return raw.toLocaleLowerCase('en-US');
+  const withScheme = /^[a-z][\w+.-]*:\/\//i.test(raw) ? raw : `https://${raw}`;
+  let u: URL;
+  try {
+    u = new URL(withScheme);
+  } catch {
+    return raw.toLocaleLowerCase('en-US');
+  }
+  u.protocol = u.protocol.toLowerCase();
+  u.hostname = u.hostname.toLowerCase();
+  u.search = u.searchParams.toString().length > 0 ? `?${u.searchParams.toString()}` : '';
+  const serialized = u.toString();
+  return u.pathname === '/' && u.search === '' && u.hash === '' && serialized.endsWith('/')
+    ? serialized.slice(0, -1)
+    : serialized;
+}
+
 /** The typed text itself: navigate a URL, else search the web. Only shown in the unscoped view. */
 function primarySuggestion(term: string, labels: OmniboxSuggestLabels): OmniboxSuggestion {
   if (looksNavigable(term)) {
@@ -299,17 +329,20 @@ function historySuggestions(
 }
 
 /**
- * Drop later suggestions whose navigate target (URL / typed text) already appeared. Runs in priority
- * order, so the first (higher-ranked) copy wins — the typed URL beats a bookmark beats a history row.
- * `activateTab` suggestions live in a separate id space and are never collapsed.
+ * Drop later suggestions whose navigate target already appeared, compared on {@link canonicalNavKey}
+ * (not the raw string) so `example.com` collapses against `https://example.com/` and two encodings of
+ * one search URL collapse together. Runs in priority order, so the first (higher-ranked) copy wins —
+ * the typed URL beats a bookmark beats a history row. `activateTab` suggestions live in a separate id
+ * space and are never collapsed.
  */
 function dedupeByNavTarget(suggestions: readonly OmniboxSuggestion[]): OmniboxSuggestion[] {
   const seen = new Set<string>();
   const out: OmniboxSuggestion[] = [];
   for (const s of suggestions) {
     if (s.action.type === 'navigate') {
-      if (seen.has(s.action.input)) continue;
-      seen.add(s.action.input);
+      const key = canonicalNavKey(s.action.input);
+      if (seen.has(key)) continue;
+      seen.add(key);
     }
     out.push(s);
   }

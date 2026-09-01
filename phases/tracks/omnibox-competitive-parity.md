@@ -155,6 +155,13 @@ heavily-visited page that is not among the 50 most _recent_ matches can never be
 screenshot both survive, and why typing `example.com` never collapses against a history row for
 `https://example.com/`. The existing test passes only because it types a fully-qualified URL.
 
+> **Fixed 2026-09-01.** `dedupeByNavTarget` now compares `canonicalNavKey(input)` — scheme + host
+> lowercased, a lone trailing slash dropped, the query re-serialised so `+` and `%20` agree; non-URL
+> text stays literal + case-folded. The emitted `action.input` is untouched, so navigation still uses
+> exactly what was typed/stored. Two `omnibox-suggest.test.ts` cases: bare host vs its `https://` URL,
+> and two query encodings of one search URL. Full canonical **ranking** (a relevance score, § below)
+> is still unbuilt — this is dedup only.
+
 ### A6 — `SuggestionIcon` covers 3 of 11 kinds
 
 `navigate`, `bookmark`, `command`, `agent`, `download`, `skill` and `calc` all fall through to the

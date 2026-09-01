@@ -170,6 +170,41 @@ describe('buildOmniboxSuggestions', () => {
     expect(out[0]?.kind).toBe('navigate');
   });
 
+  it('collapses the typed bare host against a history row for its https:// URL (§ A5)', () => {
+    const sources: OmniboxSuggestSources = {
+      tabs: [],
+      history: [{ url: 'https://example.com/', title: 'Example', visitCount: 5 }],
+    };
+    const out = buildOmniboxSuggestions('example.com', sources, LABELS);
+    const toExample = out.filter(
+      (s) =>
+        s.action.type === 'navigate' &&
+        (s.action.input === 'example.com' || s.action.input === 'https://example.com/'),
+    );
+    expect(toExample).toHaveLength(1);
+    expect(toExample[0]?.kind).toBe('navigate'); // the typed URL (primary) wins over the history row
+  });
+
+  it('collapses two history rows for one search that differ only in query encoding (§ A5)', () => {
+    const sources: OmniboxSuggestSources = {
+      tabs: [],
+      history: [
+        {
+          url: 'https://duckduckgo.com/?q=Sinem+Yayla',
+          title: 'Sinem Yayla at DuckDuckGo',
+          visitCount: 3,
+        },
+        {
+          url: 'https://duckduckgo.com/?q=Sinem%20Yayla',
+          title: 'Sinem Yayla at DuckDuckGo',
+          visitCount: 2,
+        },
+      ],
+    };
+    const out = buildOmniboxSuggestions('history:sinem', sources, LABELS);
+    expect(out.filter((s) => s.kind === 'history')).toHaveLength(1);
+  });
+
   it('caps the list length', () => {
     const history = Array.from({ length: 30 }, (_, i) => ({
       url: `https://site${i}.com`,
