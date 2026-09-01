@@ -1,6 +1,6 @@
 # ADR-0043: Safe Browsing service & egress — direct to Google Safe Browsing v5, on by default, one settings switch to turn it off
 
-- **Status:** Accepted (egress decision ratified; the local hash-prefix core, the `SafeBrowsingProvider` gate, the on-disk prefix store, the SB v5 full-hash + prefix-list clients, the refresh scheduler, the `SafeBrowsingService`, the `will-navigate` check + interstitial, the `DownloadTrustProvider` and the Settings switch are all shipped and unit-tested — the feature is **inert** pending a Google Safe Browsing API key as a release input, plus Rice/delta decoding for prefix-list updates; see Consequences)
+- **Status:** Accepted (egress decision ratified; the local hash-prefix core, the `SafeBrowsingProvider` gate, the on-disk prefix store, the SB v5 full-hash + prefix-list clients incl. Rice-Golomb decoding, the refresh scheduler, the `SafeBrowsingService`, the `will-navigate` check + interstitial, the `DownloadTrustProvider` and the Settings switch are all shipped and unit-tested — the feature is **inert** pending a Google Safe Browsing API key as a release input; see Consequences)
 - **Date:** 2026-09-01
 - **Completes:** [ADR-0040](0040-download-trust-model.md) § 5 (the `DownloadTrustProvider` seam) · **refines** [ADR-0006](0006-policy-kernel-hitl.md) (deterministic Policy Kernel + HITL) · **accounts to** [ADR-0011](0011-vpn-network-privacy.md) (fail-closed kill switch — Safe Browsing is a named app-level egress)
 - **Phase:** [Phase 1a — Walking-Skeleton MVP](../../phases/product/phase-1a-walking-skeleton-mvp.md) (minimal safe-browsing core) · [Phase 2c — Classic Browser Essentials & Downloads](../../phases/product/phase-2c-classic-browser-essentials.md), L10
@@ -125,11 +125,12 @@ the switch-off / no-key states start no scheduler and make no request.
 
 **Owed, and stated rather than implied.** (1) **The Google Safe Browsing API key** — a release
 input; until it is provisioned the full-hash and prefix-list fetchers are `null`, the scheduler never
-starts, `database()` stays `null`, and every check resolves `unknown` (nothing blocked). (2) **Rice
-decoding + delta application** for prefix-list updates — `parseHashListResponse` handles the
-uncompressed `additionsFourBytes` case only; a Rice-coded response yields `[]` (the scheduler keeps
-the previous set). (3) The exact v5 list names, endpoints and wire shapes are marked in-code for
-verification against current Google documentation. (4) The **threat-model row** for this egress feed.
-(5) Wiring `SafeBrowsingService` under the Phase 5 kill switch's app-scope `mayEgress` gate — today it
-fails to `unknown` when Google is simply unreachable, which is the same outcome, but the explicit gate
-is not yet coded.
+starts, `database()` stays `null`, and every check resolves `unknown` (nothing blocked). (2) ~~Rice
+decoding~~ — **done** (`decodeRiceDeltas` + the compressed `additionsFourBytes` branch in
+`parseHashListResponse`). **Delta application against a stored list version** — still owed;
+`parseHashListResponse` returns the additions only, so the scheduler does a full replace each refresh.
+(3) The exact v5 list names, endpoints and wire shapes are marked in-code for verification against
+current Google documentation. (4) The **threat-model row** for this egress feed. (5) An explicit
+app-scope kill-switch gate — today an SB fetch on a tunnelled general binding whose pool is down
+already fails closed at the network layer (no `DIRECT` fallback) → the fetcher throws → `unknown`,
+which is the intended outcome; a dedicated `mayEgress`-style check is not separately coded.
