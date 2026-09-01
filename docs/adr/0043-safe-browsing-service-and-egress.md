@@ -130,7 +130,8 @@ decoding~~ — **done** (`decodeRiceDeltas` + the compressed `additionsFourBytes
 `parseHashListResponse`). **Delta application against a stored list version** — still owed;
 `parseHashListResponse` returns the additions only, so the scheduler does a full replace each refresh.
 (3) The exact v5 list names, endpoints and wire shapes are marked in-code for verification against
-current Google documentation. (4) The **threat-model row** for this egress feed. (5) An explicit
+current Google documentation. (4) ~~The threat-model row~~ — **done** (`docs/threat-model.md`, the
+top-threats table + a residual-risk bullet). (5) An explicit
 app-scope kill-switch gate — today an SB fetch on a tunnelled general binding whose pool is down
 already fails closed at the network layer (no `DIRECT` fallback) → the fetcher throws → `unknown`,
 which is the intended outcome; a dedicated `mayEgress`-style check is not separately coded.

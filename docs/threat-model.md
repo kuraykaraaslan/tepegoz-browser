@@ -46,6 +46,7 @@ its operator, Phase 5)`
 | Local DB exposure                        | userData ACLs; field encryption for sensitive data; synthetic test fixtures only                                                                                                           |
 | Silent identity disclosure to a site     | Client-certificate chooser: `select-client-certificate` is answered with `preventDefault()` and nothing is sent without an explicit user choice (`main/auth/client-certificate-broker.ts`) |
 | Platform default the app never claimed   | Ownership asserted against the RUNNING app, not the source: `e2e/application-menu.spec.ts` (see below)                                                                                     |
+| Safe Browsing leaks the URL you visit    | The URL never leaves: `checkUrl` is transport-free by construction; only 4-byte hash prefixes (k-anonymous — thousands of URLs per bucket) reach Google, over a bare client with no cookies/session/identifying headers. On by default with one Settings switch that makes the whole feature inert. Fail-open for navigation. (ADR-0043)                                                                                             |
 
 ### Platform defaults — a threat class, not an oversight
 
@@ -178,5 +179,12 @@ typed. The browser cannot verify where a loopback SOCKS port comes out and never
   claimed as closed.
 - No VPN/Tor transport is bundled. The browser routes through a SOCKS5 endpoint the user already runs;
   shipping one is gated on Phase 0 code-signing. Anything that endpoint does is outside this model.
+- Safe Browsing (ADR-0043) is a default-on outbound feed to Google: 4-byte hash prefixes on cache-miss
+  navigations plus a periodic prefix-list refresh, carrying a shared release API key and no user
+  identifier. k-anonymity bounds what a prefix reveals; it is not zero. The switch-off state and the
+  no-key state both produce zero attributable traffic. Not yet wired: the API key itself (release
+  input), delta-application against a stored list version (full replace each refresh today), and an
+  explicit app-scope kill-switch check (a tunnelled-and-down general binding already fails the fetch
+  closed at the network layer → `unknown`).
 
 _Revisit before each release and whenever a new trust boundary (e.g., managed proxy, extensions) lands._
