@@ -224,15 +224,16 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       proved nothing; a `<li><p>…</p></li>` case was added and the property is now actually covered.
       Separately, the block-count test passed locally and timed out under coverage instrumentation; its
       fixture was the heaviest in the repo for no reason and is now cheap with a stated budget._
-- [~] **Page translation** — _**[ADR-0042](../../docs/adr/0042-page-translation-provider-boundary.md)
-      accepted** (hybrid: local model default, cloud per-origin opt-in, sensitive sites never reach
-      cloud). The hybrid engine, per-origin session consent, translation memory and glossary are
-      **shipped** in `@tepegoz/ext-translate` + `translate-host.electron.ts`, and the **sensitive-site
-      cloud lockout is now wired** (`isSensitiveOrigin` port → `runEngine` refuses cloud before any
-      consent prompt; desktop host binds it to `isSensitiveSite`). The **agent-run untranslated-source
-      guarantee** is wired too — `ensureUntranslatedForAgent` restores an in-place translation before
-      `readPage` / `snapshotElements`. **Owed:** the remaining agent DOM readers + suppressing
-      auto-translate for the run's duration._
+- [x] **Page translation** — _**[ADR-0042](../../docs/adr/0042-page-translation-provider-boundary.md)
+      accepted + shipped** (hybrid: local model default, cloud per-origin opt-in, sensitive sites never
+      reach cloud). The hybrid engine, per-origin session consent, translation memory and glossary in
+      `@tepegoz/ext-translate` + `translate-host.electron.ts`; the **sensitive-site cloud lockout**
+      (`isSensitiveOrigin` port → `runEngine` refuses cloud before any consent prompt); and the
+      **agent-run untranslated-source guarantee** (`requireWcUntranslated` on every DOM read path +
+      `maybeAutoTranslate` bailing while `hasActiveAgentRun()`). All three ADR-0042 conditions met;
+      full turbo + unit tests green. (The DoD line above bundles translation with find/print/PDF/reader/
+      screenshot — those are individually done too, but that line stays open pending one explicit
+      end-to-end pass over the set.)_
 - [x] User-facing **screenshot** (visible viewport + full-page) → stored as a **CAS blob** (reuse Phase 0/1b
       blob store; WebP), never inline base64
       — _Delivered in commit `18eee15` (this row was left unticked). Page right-click → viewport /
