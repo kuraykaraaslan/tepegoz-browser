@@ -145,9 +145,98 @@ export function isTerminalDownloadStatus(status: DownloadStatus): boolean {
   return ['completed', 'blocked', 'canceled', 'failed'].includes(status);
 }
 
-const EXECUTABLE_EXTS = new Set(['.app', '.bat', '.cmd', '.com', '.exe', '.msi', '.ps1', '.scr']);
-const SCRIPT_EXTS = new Set(['.js', '.jse', '.sh', '.vbs', '.wsf']);
-const ARCHIVE_EXTS = new Set(['.7z', '.bz2', '.gz', '.rar', '.tar', '.xz', '.zip']);
+// A runnable binary or an OS-level installer — releasing one runs code. Covers the Windows set
+// (`.exe/.com/.scr/.pif`, the Script-Host-adjacent `.hta/.scf`, `.cpl/.msc` control-panel/console
+// snap-ins, `.reg` registry merge, `.msi/.msp` installers, `.msix/.appx` packages) plus the
+// per-OS installer formats named in the phase's download line (`.dmg/.pkg` macOS, `.deb/.rpm`
+// Linux, `.appimage`) and `.jar` (Chromium treats it as dangerous — it launches under the JRE).
+const EXECUTABLE_EXTS = new Set([
+  '.app',
+  '.appimage',
+  '.appx',
+  '.bat',
+  '.cmd',
+  '.com',
+  '.cpl',
+  '.deb',
+  '.dmg',
+  '.exe',
+  '.hta',
+  '.jar',
+  '.msc',
+  '.msi',
+  '.msix',
+  '.msp',
+  '.pif',
+  '.pkg',
+  '.ps1',
+  '.reg',
+  '.rpm',
+  '.scf',
+  '.scr',
+]);
+// Interpreted source — harmless as bytes, dangerous the moment a shell/interpreter is pointed at it.
+const SCRIPT_EXTS = new Set([
+  '.bash',
+  '.command',
+  '.js',
+  '.jse',
+  '.php',
+  '.pl',
+  '.psm1',
+  '.py',
+  '.rb',
+  '.sh',
+  '.vbe',
+  '.vbs',
+  '.ws',
+  '.wsc',
+  '.wsf',
+  '.wsh',
+]);
+const ARCHIVE_EXTS = new Set([
+  '.7z',
+  '.bz2',
+  '.gz',
+  '.iso',
+  '.img',
+  '.rar',
+  '.tar',
+  '.tgz',
+  '.xz',
+  '.zip',
+]);
+
+// MIME the server may send instead of (or alongside) a telltale extension. Matched on the essence
+// only — parameters and casing stripped — so `application/x-sh; charset=utf-8` still lands.
+const EXECUTABLE_MIMES = new Set([
+  'application/x-msdownload',
+  'application/x-ms-installer',
+  'application/x-msi',
+  'application/vnd.microsoft.portable-executable',
+  'application/x-msdos-program',
+  'application/x-dosexec',
+  'application/x-executable',
+  'application/x-elf',
+  'application/x-mach-binary',
+  'application/x-apple-diskimage',
+  'application/vnd.debian.binary-package',
+  'application/x-rpm',
+  'application/x-redhat-package-manager',
+]);
+const SCRIPT_MIMES = new Set([
+  'application/x-sh',
+  'application/x-shellscript',
+  'text/x-shellscript',
+  'application/x-csh',
+  'application/x-perl',
+  'text/x-perl',
+  'application/x-python',
+  'text/x-python',
+  'application/x-python-code',
+  'application/x-ruby',
+  'text/x-ruby',
+]);
 
 function extensionOf(filename: string): string {
   // Windows silently strips trailing dots and spaces from a path component, so `evil.exe.` and
@@ -159,13 +248,19 @@ function extensionOf(filename: string): string {
   return dot === -1 ? '' : lower.slice(dot);
 }
 
+/** The MIME essence — lowercased, parameters (`; charset=…`) and surrounding space removed. */
+function mimeEssence(mimeType: string | undefined): string {
+  return (mimeType ?? '').split(';')[0]?.trim().toLowerCase() ?? '';
+}
+
 export function classifyDownloadRisk(filename: string, mimeType?: string): DownloadRisk {
   const ext = extensionOf(filename);
   if (EXECUTABLE_EXTS.has(ext)) return 'executable';
   if (SCRIPT_EXTS.has(ext)) return 'script';
   if (ARCHIVE_EXTS.has(ext)) return 'archive';
-  if (mimeType?.includes('application/x-msdownload') === true) return 'executable';
-  if (mimeType?.includes('application/x-sh') === true) return 'script';
+  const mime = mimeEssence(mimeType);
+  if (EXECUTABLE_MIMES.has(mime)) return 'executable';
+  if (SCRIPT_MIMES.has(mime)) return 'script';
   return 'normal';
 }
 
@@ -202,8 +297,7 @@ export function computeDownloadRate(
   if (spanMs <= 0 || spanBytes < 0) return null;
   const bytesPerSecond = (spanBytes * 1000) / spanMs;
   const remaining = totalBytes !== null ? Math.max(0, totalBytes - last.receivedBytes) : null;
-  const etaSeconds =
-    remaining !== null && bytesPerSecond > 0 ? remaining / bytesPerSecond : null;
+  const etaSeconds = remaining !== null && bytesPerSecond > 0 ? remaining / bytesPerSecond : null;
   return { bytesPerSecond, etaSeconds };
 }
 

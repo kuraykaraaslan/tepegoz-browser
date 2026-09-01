@@ -46,6 +46,41 @@ describe('@tepegoz/downloads', () => {
     expect(classifyDownloadRisk('notes.txt')).toBe('normal');
   });
 
+  it('flags per-OS installers and Script-Host vectors, not just .exe', () => {
+    for (const name of [
+      'Installer.dmg',
+      'app.pkg',
+      'pkg_1.2.3_amd64.deb',
+      'pkg-1.2.3.x86_64.rpm',
+      'Tool.AppImage',
+      'update.msix',
+      'legacy.hta',
+      'sneaky.scf',
+      'timezone.cpl',
+      'merge.reg',
+      'app.jar',
+    ]) {
+      expect(classifyDownloadRisk(name)).toBe('executable');
+    }
+    for (const name of ['setup.py', 'deploy.rb', 'hook.pl', 'run.command', 'lib.psm1', 'enc.vbe']) {
+      expect(classifyDownloadRisk(name)).toBe('script');
+    }
+    expect(classifyDownloadRisk('cd.iso')).toBe('archive');
+  });
+
+  it('classifies by MIME essence when the extension is missing or a decoy', () => {
+    expect(classifyDownloadRisk('download', 'application/x-msdownload')).toBe('executable');
+    expect(classifyDownloadRisk('download', 'application/x-apple-diskimage')).toBe('executable');
+    expect(classifyDownloadRisk('report', 'application/vnd.microsoft.portable-executable')).toBe(
+      'executable',
+    );
+    // Parameters and casing on the header must not defeat the match.
+    expect(classifyDownloadRisk('get', 'Application/X-SH; charset=utf-8')).toBe('script');
+    expect(classifyDownloadRisk('get', 'text/x-python')).toBe('script');
+    // A benign type stays normal.
+    expect(classifyDownloadRisk('photo', 'image/png')).toBe('normal');
+  });
+
   it('sees through a trailing dot or space that Windows would strip on write', () => {
     // `report.exe.` and `report.exe ` are created — and run — as `report.exe` on Windows; the
     // classifier must not read them as `normal`.
@@ -62,7 +97,9 @@ describe('@tepegoz/downloads', () => {
 
   it('warns that an archive is unexamined inside — but only while it is openable', () => {
     // The hash/Safe-Browsing check covered the .zip, not its contents.
-    expect(archiveContentsUnverified(record({ risk: 'archive', status: 'quarantined' }))).toBe(true);
+    expect(archiveContentsUnverified(record({ risk: 'archive', status: 'quarantined' }))).toBe(
+      true,
+    );
     expect(archiveContentsUnverified(record({ risk: 'archive', status: 'completed' }))).toBe(true);
     // Nothing to open — no warning.
     expect(archiveContentsUnverified(record({ risk: 'archive', status: 'blocked' }))).toBe(false);
