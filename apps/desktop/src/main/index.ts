@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { app, BrowserWindow, powerMonitor } from 'electron';
 import { Logger } from '@tepegoz/libs';
 import { applyChromiumSwitches } from './chromium-flags-boot';
+import { whenAnyChromeReady } from './chrome-ready';
 import { applyHardwareAccelerationPreference } from './hardware-acceleration-boot';
 import {
   armHealthTimer,
@@ -252,29 +253,6 @@ if (!app.requestSingleInstanceLock()) {
       // download's source origin is checked against Safe Browsing (`unsafe` → auto-`blocked`).
       DownloadService.init(SafeBrowsingService.downloadTrustProvider());
       UploadService.init();
-      // Built-in extensions — the whole layer, skipped wholesale in safe mode. A page injector or a
-      // network hook is exactly the kind of code that can take the main process down on every launch,
-      // and it is the kind the user can then disable from Settings once they are back in.
-      if (!safeMode) {
-        // Adblock Shield: load persisted settings, register network hooks, then restore/download lists
-        // in the background. Until an engine is ready, the multiplexer fails open.
-        adblockHost.init();
-        AdblockEngineService.init();
-        typoHost.init();
-        TypoPageInjector.start();
-        PageContextMenuContributionService.provide(typoContextMenuContributor);
-        translateHost.init();
-        TranslatePageInjector.start();
-        PageContextMenuContributionService.provide(translateContextMenuContributor);
-        videoPlayerHost.init();
-        VideoPlayerPageInjector.start();
-        // Load the popup-blocker settings before any page can call window.open, and register its
-        // `popup:open` interceptor with the generic action-interception plane (ADR-0022). Note the
-        // trade-off this makes in safe mode: unblocked popups. Accepted deliberately — a browser that
-        // starts and lets popups through is recoverable; one that will not start is not.
-        popupBlockerHost.init();
-        ActionInterceptorService.provide(popupBlockerHost.interceptors);
-      }
       // Network privacy (Phase 5): load the configured connections (nothing is dialled here — a
       // connection comes up only when something binds to it) and push the routing picture to the chrome
       // whenever a tunnel's health changes, so an indicator can never sit on a stale "protected".
@@ -299,6 +277,10 @@ if (!app.requestSingleInstanceLock()) {
         void openPageContextMenu(win, wc, params, viewBounds, nav);
       });
       initHosts();
+      // Replaces Electron's DEFAULT menu, which bound Ctrl+Shift+I straight to its own
+      // `toggleDevTools` role and so walked around the sensitive-site gate (see application-menu.ts).
+      // Installed BEFORE the first window so that gate is never briefly bypassable during launch.
+      installApplicationMenu();
       // Default-browser inbound routing, cold-launch case: the OS started Tepegöz FOR this link (Windows
       // passes it on `process.argv`; a macOS `open-url` that raced `whenReady` is queued above). Opening
       // with `tabs: 'none'` skips the ordinary session-restore/new-tab bootstrap so the window shows
@@ -323,63 +305,105 @@ if (!app.requestSingleInstanceLock()) {
       armHealthTimer();
       // The system-tray icon (close-to-tray target) — created once, after the first window exists.
       initTray();
-      // Replaces Electron's DEFAULT menu, which bound Ctrl+Shift+I straight to its own
-      // `toggleDevTools` role and so walked around the sensitive-site gate. See application-menu.ts.
-      installApplicationMenu();
-      TaskService.setRunner(runTaskAgent);
-      // Let saved-task policy synthesis pre-approve routine write tools (click/type/navigate) on the
-      // task's own origin. `destructive`/`financial` tools are deliberately excluded — they still pause
-      // for approval even on the target site (mirrors the interactive agent's "act" autonomy). Evaluated
-      // lazily at save time, so it sees the fully-registered registry (browser/extension tools below).
-      TaskService.setWriteToolIdsProvider(() =>
-        CapabilityRegistry.list()
-          .filter((tool) => tool.dangerClass === 'state_changing')
-          .map((tool) => tool.id),
-      );
-      // The agent runtime's scheduler. Off in safe mode: a saved task that fires on launch and drives a
-      // page is a crash the user cannot get in front of, because it starts before they can click.
-      if (!safeMode) TaskService.init();
-      // Background-tab discard (sleep): a once-a-minute sweep, gated on the (default-on) preference.
-      TabDiscardService.init();
-      // Connect configured MCP servers in the background (non-blocking; a bad server must not delay
-      // startup). Their tools register into the CapabilityRegistry as they become ready (ADR-0018).
-      // Off in safe mode — an MCP server is third-party code this process spawns.
-      if (!safeMode) McpService.start();
-      // The agent's built-in browser/tab/journal tools are always-on, package-owned builtins
-      // (ADR-0021/0024 update), registered directly into the CapabilityRegistry behind the same
-      // ToolGateway PEP — like the file_* tools — bound to their injected hosts. They belong to their
-      // domains (@tepegoz/browser-tools · tab-engine · journal-tools), not the Agent extension, so they
-      // no longer vanish when `com.tepegoz.agent` is disabled (the runtime that invokes them only runs
-      // when the extension is enabled). `browserHost` also implements the tab host (TabHost).
-      registerBrowserTools({ host: browserHost });
-      registerScreenshotTools({ host: browserHost });
-      registerTabTools({ host: browserHost });
-      registerJournalTools({ host: journalHost });
-      registerDownloadTools({ host: downloadToolsHost });
-      registerClipboardTools({ host: clipboardToolsHost });
-      registerUploadTools({ host: uploadToolsHost });
-      registerTaskTools({ host: taskToolsHost });
-      registerWebTools({ host: webToolsHost });
-      // Register enabled built-in extensions' in-process agent capabilities into the same
-      // CapabilityRegistry, behind the same ToolGateway PEP (ADR-0021). Meta extension-management tools
-      // are always on. Each `provide` is gated on its extension being enabled by `start()`'s reconcile —
-      // so disabling `com.tepegoz.macros` unregisters the macro tools (ADR-0024 kill-switch).
-      // Skipped in safe mode: `start()` is the reconcile that ENABLES extensions (the agent extension
-      // among them), so not calling it is what keeps the extension layer — and the agent runtime that
-      // only runs while `com.tepegoz.agent` is enabled — switched off for this launch.
-      if (!safeMode) {
-        ExtensionCapabilityService.provide(macrosCapabilities(), MacroService.capabilityHost());
-        ExtensionCapabilityService.provide(typoCapabilities(), typoCapabilityHost);
-        ExtensionCapabilityService.provide(translateCapabilities(), translateCapabilityHost);
-        ExtensionCapabilityService.start();
-      }
-      // Sandboxed file operations: seed the default ~/tepegoz grant (first run), sync the access policy
-      // from prefs, and register the file_* / fileaccess_* tools into the same CapabilityRegistry.
-      FileOperationsHost.init();
 
-      // AI-1 eval harness batch mode — INERT unless TEPEGOZ_EVAL=1. Runs after every tool is registered
-      // so the driven scenario sees the full CapabilityRegistry, then quits.
-      void maybeRunEval();
+      // ── Deferred init ─────────────────────────────────────────────────────────────────────────────
+      // Everything the FIRST PAINT does not need. It runs the moment the chrome reports its first real
+      // layout (`chrome-ready.ts`) — i.e. in PARALLEL with the renderer parsing its bundle and mounting
+      // — with a wall-clock fallback so a renderer that never signals still ends up with a fully-armed
+      // browser. Ordering within it is preserved from when this was one straight-line block.
+      let deferredInitDone = false;
+      const runDeferredInit = (): void => {
+        if (deferredInitDone) return;
+        deferredInitDone = true;
+
+        // Built-in extensions — the whole layer, skipped wholesale in safe mode. A page injector or a
+        // network hook is exactly the kind of code that can take the main process down on every launch,
+        // and it is the kind the user can then disable from Settings once they are back in. Deferred:
+        // the adblock engine deserialize is a heavy CPU chunk, and the multiplexer / injectors fail
+        // open until they are ready, so a page that loads in the gap is unfiltered for a beat, not broken.
+        if (!safeMode) {
+          // Adblock Shield: load persisted settings, register network hooks, then restore/download lists
+          // in the background. Until an engine is ready, the multiplexer fails open.
+          adblockHost.init();
+          AdblockEngineService.init();
+          typoHost.init();
+          TypoPageInjector.start();
+          PageContextMenuContributionService.provide(typoContextMenuContributor);
+          translateHost.init();
+          TranslatePageInjector.start();
+          PageContextMenuContributionService.provide(translateContextMenuContributor);
+          videoPlayerHost.init();
+          VideoPlayerPageInjector.start();
+          // Register the popup-blocker's `popup:open` interceptor with the generic action-interception
+          // plane (ADR-0022). Trade-off in safe mode: unblocked popups. Accepted deliberately — a
+          // browser that starts and lets popups through is recoverable; one that will not start is not.
+          popupBlockerHost.init();
+          ActionInterceptorService.provide(popupBlockerHost.interceptors);
+        }
+        TaskService.setRunner(runTaskAgent);
+        // Let saved-task policy synthesis pre-approve routine write tools (click/type/navigate) on the
+        // task's own origin. `destructive`/`financial` tools are deliberately excluded — they still pause
+        // for approval even on the target site (mirrors the interactive agent's "act" autonomy). Evaluated
+        // lazily at save time, so it sees the fully-registered registry (browser/extension tools below).
+        TaskService.setWriteToolIdsProvider(() =>
+          CapabilityRegistry.list()
+            .filter((tool) => tool.dangerClass === 'state_changing')
+            .map((tool) => tool.id),
+        );
+        // The agent runtime's scheduler. Off in safe mode: a saved task that fires on launch and drives a
+        // page is a crash the user cannot get in front of, because it starts before they can click.
+        if (!safeMode) TaskService.init();
+        // Background-tab discard (sleep): a once-a-minute sweep, gated on the (default-on) preference.
+        TabDiscardService.init();
+        // Connect configured MCP servers in the background (non-blocking; a bad server must not delay
+        // startup). Their tools register into the CapabilityRegistry as they become ready (ADR-0018).
+        // Off in safe mode — an MCP server is third-party code this process spawns.
+        if (!safeMode) McpService.start();
+        // The agent's built-in browser/tab/journal tools are always-on, package-owned builtins
+        // (ADR-0021/0024 update), registered directly into the CapabilityRegistry behind the same
+        // ToolGateway PEP — like the file_* tools — bound to their injected hosts. They belong to their
+        // domains (@tepegoz/browser-tools · tab-engine · journal-tools), not the Agent extension, so they
+        // no longer vanish when `com.tepegoz.agent` is disabled (the runtime that invokes them only runs
+        // when the extension is enabled). `browserHost` also implements the tab host (TabHost).
+        registerBrowserTools({ host: browserHost });
+        registerScreenshotTools({ host: browserHost });
+        registerTabTools({ host: browserHost });
+        registerJournalTools({ host: journalHost });
+        registerDownloadTools({ host: downloadToolsHost });
+        registerClipboardTools({ host: clipboardToolsHost });
+        registerUploadTools({ host: uploadToolsHost });
+        registerTaskTools({ host: taskToolsHost });
+        registerWebTools({ host: webToolsHost });
+        // Register enabled built-in extensions' in-process agent capabilities into the same
+        // CapabilityRegistry, behind the same ToolGateway PEP (ADR-0021). Meta extension-management tools
+        // are always on. Each `provide` is gated on its extension being enabled by `start()`'s reconcile —
+        // so disabling `com.tepegoz.macros` unregisters the macro tools (ADR-0024 kill-switch).
+        // Skipped in safe mode: `start()` is the reconcile that ENABLES extensions (the agent extension
+        // among them), so not calling it is what keeps the extension layer — and the agent runtime that
+        // only runs while `com.tepegoz.agent` is enabled — switched off for this launch.
+        if (!safeMode) {
+          ExtensionCapabilityService.provide(macrosCapabilities(), MacroService.capabilityHost());
+          ExtensionCapabilityService.provide(typoCapabilities(), typoCapabilityHost);
+          ExtensionCapabilityService.provide(translateCapabilities(), translateCapabilityHost);
+          ExtensionCapabilityService.start();
+        }
+        // Sandboxed file operations: seed the default ~/tepegoz grant (first run), sync the access policy
+        // from prefs, and register the file_* / fileaccess_* tools into the same CapabilityRegistry.
+        FileOperationsHost.init();
+
+        // AI-1 eval harness batch mode — INERT unless TEPEGOZ_EVAL=1. Runs after every tool is registered
+        // so the driven scenario sees the full CapabilityRegistry, then quits.
+        void maybeRunEval();
+      };
+      if (process.env.TEPEGOZ_EVAL === '1') {
+        // Eval batches must be deterministic and must not hinge on a renderer paint race — arm fully now.
+        runDeferredInit();
+      } else {
+        whenAnyChromeReady(runDeferredInit);
+        // Fallback: a renderer that never completes the handshake still gets a fully-armed browser.
+        const armFallback = setTimeout(runDeferredInit, 3000);
+        armFallback.unref?.();
+      }
 
       // Sleep/resume hooks. Phase 1b: the Recovery Coordinator resumes durable tasks from their last
       // checkpoint on 'resume' (Opera Neon's "task drops on sleep" lesson).

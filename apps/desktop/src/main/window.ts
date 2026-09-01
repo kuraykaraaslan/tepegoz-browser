@@ -9,6 +9,7 @@ import { join } from 'node:path';
 import { IpcChannels, type StartupMode } from '@tepegoz/desktop-ipc';
 import PreferenceStore from '@tepegoz/preferences';
 import { isTrustedAppUrl } from './lib/trusted-origin';
+import { whenChromeReady } from './chrome-ready';
 import { PARK_X, PARK_Y, isParkedToTray, trayParked } from './window-parked';
 import { ensureOnScreen, isBoundsOnScreen } from './window-placement';
 import { GLASS_BG, OPAQUE_BG, isMicaSupported } from './lib/glass';
@@ -215,9 +216,13 @@ export function createWindow(opts?: { forceForeground?: boolean }): BrowserWindo
   // target). Skipped in eval mode, which never restores a placement.
   if (saved?.maximized) win.maximize();
 
-  // Reveal the window robustly: prefer 'ready-to-show' (no white flash), but NEVER leave it stuck
-  // hidden if that event is delayed or missed (e.g. a renderer load hiccup in dev). did-finish-load
-  // and a timed fallback guarantee the window always appears. show() is idempotent.
+  // Reveal the window on a COMPLETE first frame — chrome + page together. The primary cue is the
+  // chrome-ready handshake (`chrome-ready.ts`): the renderer's first real `setContentBounds`, which
+  // only fires once React has painted the toolbar + tab strip. Electron's 'ready-to-show' is
+  // deliberately NOT a reveal trigger here — it can fire on an empty shell, which is how the page used
+  // to appear alone in a frameless window before the UI caught up. 'did-finish-load' (nudged past a
+  // near-simultaneous handshake) and a timed fallback still guarantee the window always appears, even
+  // if the renderer never signals. show() is idempotent.
   let shown = false;
   const reveal = (): void => {
     if (shown || win.isDestroyed()) return;
@@ -247,8 +252,11 @@ export function createWindow(opts?: { forceForeground?: boolean }): BrowserWindo
     win.show();
     win.focus();
   };
-  win.once('ready-to-show', reveal);
-  win.webContents.once('did-finish-load', reveal);
+  whenChromeReady(win, reveal);
+  // Fallbacks only — a renderer that never completes the handshake (broken build, dev hiccup) must
+  // still get its window. The short delay lets a handshake that is about to land win the race, so the
+  // normal path still reveals on a fully-painted UI rather than on 'did-finish-load'.
+  win.webContents.once('did-finish-load', () => setTimeout(reveal, 300));
   setTimeout(reveal, 4000);
 
   // Keep the renderer's maximize/restore button in sync with the actual window state (covers

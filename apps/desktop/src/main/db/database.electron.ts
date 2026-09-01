@@ -32,16 +32,27 @@ export function initDatabase(): void {
   const dbPath = join(userData, 'tepegoz.db');
   try {
     const opened = openDatabase(dbPath);
+    // Schema migration stays synchronous: the stores read against this schema the instant `initStores`
+    // returns, so it must be in place before the first window opens.
     migrate(opened);
-    // Backfill the case-folded history search columns for rows written before migration 16, and
-    // re-fold everything after a HISTORY_FOLD_VERSION bump. No-op once the version marker matches.
-    const refolded = HistoryStore.reindexFoldsIfStale(opened);
-    if (refolded > 0) Logger.info('Re-folded history search index', { rows: refolded });
-    // Startup retention pass — history is otherwise unbounded (one row per unique URL, forever).
-    const pruned = HistoryStore.prune(opened, Date.now());
-    if (pruned > 0) Logger.info('Pruned expired history entries', { pruned });
     db = opened;
     Logger.info('Database ready', { path: dbPath });
+    // History maintenance is NOT on the launch critical path — it is bounded catch-up work (a fold
+    // backfill only after a version bump; a retention sweep) whose worst case is stale-until-next-tick
+    // search results, never a wrong write. Run it a tick later so it does not delay the first paint.
+    setImmediate(() => {
+      try {
+        // Backfill the case-folded history search columns for rows written before migration 16, and
+        // re-fold everything after a HISTORY_FOLD_VERSION bump. No-op once the version marker matches.
+        const refolded = HistoryStore.reindexFoldsIfStale(opened);
+        if (refolded > 0) Logger.info('Re-folded history search index', { rows: refolded });
+        // Startup retention pass — history is otherwise unbounded (one row per unique URL, forever).
+        const pruned = HistoryStore.prune(opened, Date.now());
+        if (pruned > 0) Logger.info('Pruned expired history entries', { pruned });
+      } catch (err) {
+        Logger.warn('Deferred history maintenance failed', { err: String(err) });
+      }
+    });
   } catch (err) {
     db = null;
     Logger.error('Database unavailable (native module not loaded?) — history/journal disabled', {

@@ -27,6 +27,7 @@ import {
   TabPinSchema,
 } from '@tepegoz/desktop-ipc/schemas';
 import { isTrustedAppUrl } from '../lib/trusted-origin';
+import { markChromeReady } from '../chrome-ready';
 import TabManager from '../tabs';
 import { recentlyClosedTabs } from '../tabs-shared';
 import { undoSessionRestore } from '../recovery/session-restore-undo';
@@ -390,6 +391,10 @@ export function registerTabsWindowsIpc(): void {
   // window's view.
   onWindowAction(IpcChannels.tabsSetBounds, ContentBoundsSchema, (win, bounds) => {
     TabManager.forWindow(win)?.setContentBounds(bounds);
+    // First real content rectangle from this window ⇒ its App chrome has painted the toolbar + tab
+    // strip. That is the cue to reveal the window on a complete frame and to start the deferred
+    // main-process init (see `chrome-ready.ts`). A 0×0 report is the pre-mount placeholder — ignore it.
+    if (bounds.width > 0 && bounds.height > 0) markChromeReady(win);
   });
   onWindowAction(IpcChannels.tabsSetContentVisible, ContentVisibleSchema, (win, visible) => {
     TabManager.forWindow(win)?.setContentVisible(visible);
