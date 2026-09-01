@@ -45,6 +45,20 @@ describe('@tepegoz/downloads', () => {
     expect(classifyDownloadRisk('notes.txt')).toBe('normal');
   });
 
+  it('sees through a trailing dot or space that Windows would strip on write', () => {
+    // `report.exe.` and `report.exe ` are created — and run — as `report.exe` on Windows; the
+    // classifier must not read them as `normal`.
+    expect(classifyDownloadRisk('report.exe.')).toBe('executable');
+    expect(classifyDownloadRisk('report.exe ')).toBe('executable');
+    expect(classifyDownloadRisk('setup.msi...')).toBe('executable');
+    expect(classifyDownloadRisk('run.ps1. ')).toBe('executable');
+    expect(classifyDownloadRisk('payload.sh.')).toBe('script');
+    expect(classifyDownloadRisk('archive.zip. ')).toBe('archive');
+    // A genuine double extension is still caught, and a plain file is still normal.
+    expect(classifyDownloadRisk('invoice.pdf.exe')).toBe('executable');
+    expect(classifyDownloadRisk('notes.txt.')).toBe('normal');
+  });
+
   it('requires approval for risky or agent releases', () => {
     expect(releaseNeedsApproval(record())).toBe(false);
     expect(releaseNeedsApproval(record({ risk: 'script', filename: 'run.sh' }))).toBe(true);

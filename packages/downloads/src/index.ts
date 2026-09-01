@@ -150,7 +150,11 @@ const SCRIPT_EXTS = new Set(['.js', '.jse', '.sh', '.vbs', '.wsf']);
 const ARCHIVE_EXTS = new Set(['.7z', '.bz2', '.gz', '.rar', '.tar', '.xz', '.zip']);
 
 function extensionOf(filename: string): string {
-  const lower = filename.toLowerCase();
+  // Windows silently strips trailing dots and spaces from a path component, so `evil.exe.` and
+  // `evil.exe ` both land on disk — and run under ShellExecute — as `evil.exe`. Normalize the same
+  // way before reading the extension: without this, one trailing character walks a payload straight
+  // past the risk classifier as `normal` (measured: `report.exe.` → ext `.` → normal).
+  const lower = filename.toLowerCase().replace(/[.\s]+$/u, '');
   const dot = lower.lastIndexOf('.');
   return dot === -1 ? '' : lower.slice(dot);
 }

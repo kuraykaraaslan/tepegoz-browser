@@ -9,7 +9,11 @@ export function cleanFilename(filename: string): string {
   const cleaned = [...basename(filename)]
     .map((ch) => (RESERVED_FILENAME_CHARS.has(ch) || ch.charCodeAt(0) < 32 ? '_' : ch))
     .join('')
-    .trim();
+    .trim()
+    // Windows drops trailing dots and spaces from a path component on creation, so `evil.exe.` is
+    // written (and executed) as `evil.exe`. Strip them here too, or the record's filename/finalPath
+    // disagree with what is actually on disk and reveal-in-folder points at nothing.
+    .replace(/[.\s]+$/u, '');
   return cleaned.length > 0 ? cleaned : 'download';
 }
 
