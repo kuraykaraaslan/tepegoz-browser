@@ -1,6 +1,6 @@
 # ADR-0042: Page-translation provider boundary — local model is the default path, cloud is per-origin opt-in, sensitive sites never reach cloud
 
-- **Status:** Accepted (hybrid boundary ratified; local + cloud engine and the per-origin consent flow are shipped in `@tepegoz/ext-translate`; sensitive-site cloud lockout and the agent-run untranslated-source guarantee are owed — see Consequences)
+- **Status:** Accepted (hybrid boundary ratified; local + cloud engine, per-origin consent flow, and the sensitive-site cloud lockout are shipped in `@tepegoz/ext-translate`; the agent-run untranslated-source guarantee is owed — see Consequences)
 - **Date:** 2026-09-01
 - **Refines:** [ADR-0005](0005-provider-agnostic-ai.md) (provider-agnostic AI, BYO-key local-first) · [ADR-0008](0008-perception-cdp.md) (DOM/a11y-first perception) · **complements** [ADR-0021](0021-agent-controllable-extensions.md) (agent-controllable extensions via in-process capability providers) · [ADR-0004](0004-event-sourced-journal.md) ("shown = recorded")
 - **Phase:** [Phase 2c — Classic Browser Essentials & Downloads](../../phases/product/phase-2c-classic-browser-essentials.md), L10 (page translation)
@@ -104,11 +104,11 @@ have; with no model and cloud denied or unavailable, translation silently degrad
 surfaced reason, not an error). The hybrid path is two code paths and two threat-model rows rather
 than one.
 
-**Owed, and stated rather than implied.** (1) The **sensitive-site cloud lockout** (§ 2) is not yet
-wired — `host.ts` calls `resolveCloudConsent` without first consulting `isSensitiveSite`, so today a
-user *could* accept a cloud-translation prompt on a banking page. This is the one behavioural gap that
-must close before Phase 2c's translation line can be ticked. (2) The **agent-run untranslated-source
-guarantee** (§ 3) is specified here and not yet enforced — perception is not currently bound to the
-pre-translation store while a run holds a translated tab. (3) `autoTranslateForeignPages` defaulting
+**Owed, and stated rather than implied.** (1) ~~The sensitive-site cloud lockout is not yet wired~~ —
+**done** (`isSensitiveOrigin` port; `runEngine` refuses the cloud fallback before `resolveCloudConsent`
+so no dialog is shown; the desktop host binds it to `isSensitiveSite`). (2) The **agent-run
+untranslated-source guarantee** (§ 3) is specified here and not yet enforced — perception is not
+currently bound to the pre-translation store while a run holds a translated tab. (3)
+`autoTranslateForeignPages` defaulting
 to `true` means language detection runs on every page; that detection is local and must stay local
 (no "what language is this" cloud call) — asserted here as a constraint on any future detector.

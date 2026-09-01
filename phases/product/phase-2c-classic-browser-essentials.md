@@ -55,8 +55,9 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       and speces the Safe-Browsing provider seam._ · **Page-Translation** provider boundary —
       _**[ADR-0042](../../docs/adr/0042-page-translation-provider-boundary.md) accepted** (owner call
       2026-09-01: hybrid — local model default, cloud per-origin opt-in, sensitive sites never reach
-      cloud). Ratifies the shipped `@tepegoz/ext-translate` hybrid engine; **owed for the box:** the
-      sensitive-site cloud lockout wiring + the agent-run untranslated-source guarantee._ ·
+      cloud). Ratifies the shipped `@tepegoz/ext-translate` hybrid engine; the sensitive-site cloud lockout is
+      now wired (`isSensitiveOrigin` port). **Owed for the box:** the agent-run untranslated-source
+      guarantee._ ·
       **Safe-Browsing provider** — _**[ADR-0043](../../docs/adr/0043-safe-browsing-service-and-egress.md)
       accepted** (owner call 2026-09-01: direct to Google Safe Browsing v5, on by default, one
       Settings switch to disable). Service + nav check + `DownloadTrustProvider` + switch owed; needs
@@ -222,9 +223,10 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
 - [~] **Page translation** — _**[ADR-0042](../../docs/adr/0042-page-translation-provider-boundary.md)
       accepted** (hybrid: local model default, cloud per-origin opt-in, sensitive sites never reach
       cloud). The hybrid engine, per-origin session consent, translation memory and glossary are
-      **shipped** in `@tepegoz/ext-translate` + `translate-host.electron.ts`. **Owed:** wire
-      `isSensitiveSite` ahead of `resolveCloudConsent` (today a user could accept a cloud prompt on a
-      banking page), and bind agent-run perception to the pre-translation source store._
+      **shipped** in `@tepegoz/ext-translate` + `translate-host.electron.ts`, and the **sensitive-site
+      cloud lockout is now wired** (`isSensitiveOrigin` port → `runEngine` refuses cloud before any
+      consent prompt; desktop host binds it to `isSensitiveSite`). **Owed:** bind agent-run perception
+      to the pre-translation source store (a run on a translated tab must read untranslated DOM)._
 - [x] User-facing **screenshot** (visible viewport + full-page) → stored as a **CAS blob** (reuse Phase 0/1b
       blob store; WebP), never inline base64
       — _Delivered in commit `18eee15` (this row was left unticked). Page right-click → viewport /
