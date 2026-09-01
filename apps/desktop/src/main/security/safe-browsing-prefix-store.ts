@@ -1,4 +1,5 @@
 import { prefixDatabase, type HashPrefix, type PrefixDatabase } from '@tepegoz/security-policy';
+import { applyHashListDelta, type HashListDelta } from './safe-browsing-v5-client';
 
 /**
  * The on-disk half of the `SafeBrowsingService` ([ADR-0043](../../../../../docs/adr/0043-safe-browsing-service-and-egress.md)):
@@ -11,12 +12,24 @@ import { prefixDatabase, type HashPrefix, type PrefixDatabase } from '@tepegoz/s
  * which the provider reads as `unknown` — never a false "clear"), and when a refresh is due.
  */
 
-/** The persisted shape. `version` gates a future format change; a mismatch is treated as "no database". */
+/**
+ * The persisted shape. `version` gates a format change; an unknown value is treated as "no database".
+ * `1` (no `versionToken`) is still read — a pre-delta file just forces one full refresh — and always
+ * rewritten as `2`.
+ */
 export interface PrefixStoreFile {
-  version: 1;
+  version: 2;
   /** Epoch ms of the last successful refresh. Drives {@link PrefixStore.isStale}. */
   updatedAt: number;
-  /** Lowercase 8-hex-character prefixes. Anything else in the file is dropped on read. */
+  /**
+   * Opaque Safe Browsing list version token from the last successful refresh. Sent back as
+   * `?version=` to request an incremental update; absent until the first delta-aware refresh lands.
+   */
+  versionToken?: string;
+  /**
+   * Lowercase 8-hex-character prefixes, kept **lexically sorted** — delta removal indices are
+   * positions in this order. Anything else in the file is dropped on read.
+   */
   prefixes: HashPrefix[];
 }
 
@@ -36,13 +49,13 @@ function cleanPrefixes(input: readonly unknown[]): HashPrefix[] {
     const lower = value.toLowerCase();
     if (HEX8.test(lower)) seen.add(lower);
   }
-  return [...seen];
+  return [...seen].sort();
 }
 
 /**
  * Parse persisted contents into a {@link PrefixStoreFile}, or `null` for anything unusable — absent,
- * non-JSON, wrong version, missing/!finite `updatedAt`, or a non-array `prefixes`. A partially valid
- * file keeps its good prefixes and drops the rest rather than failing whole.
+ * non-JSON, unknown version, missing/!finite `updatedAt`, or a non-array `prefixes`. A partially
+ * valid file keeps its good prefixes and drops the rest rather than failing whole.
  */
 export function parsePrefixFile(raw: string | null): PrefixStoreFile | null {
   if (raw === null) return null;
@@ -54,10 +67,19 @@ export function parsePrefixFile(raw: string | null): PrefixStoreFile | null {
   }
   if (typeof data !== 'object' || data === null) return null;
   const rec = data as Record<string, unknown>;
-  if (rec.version !== 1) return null;
+  if (rec.version !== 1 && rec.version !== 2) return null;
   if (typeof rec.updatedAt !== 'number' || !Number.isFinite(rec.updatedAt)) return null;
   if (!Array.isArray(rec.prefixes)) return null;
-  return { version: 1, updatedAt: rec.updatedAt, prefixes: cleanPrefixes(rec.prefixes) };
+  const versionToken =
+    typeof rec.versionToken === 'string' && rec.versionToken.length > 0
+      ? rec.versionToken
+      : undefined;
+  return {
+    version: 2,
+    updatedAt: rec.updatedAt,
+    ...(versionToken !== undefined ? { versionToken } : {}),
+    prefixes: cleanPrefixes(rec.prefixes),
+  };
 }
 
 export class PrefixStore {
@@ -87,6 +109,20 @@ export class PrefixStore {
     return this.file?.updatedAt ?? null;
   }
 
+  /**
+   * The opaque list version token to send on the next refresh for an incremental update, or `null`
+   * when none is stored (first launch, or a pre-delta `version: 1` file) — in which case the next
+   * refresh is a full one.
+   */
+  versionToken(): string | null {
+    return this.file?.versionToken ?? null;
+  }
+
+  /** The held prefixes in their stored lexical order — the ordering delta removal indices refer to. */
+  sortedPrefixes(): HashPrefix[] {
+    return this.file ? [...this.file.prefixes] : [];
+  }
+
   /** How many prefixes are currently held. */
   count(): number {
     return this.file?.prefixes.length ?? 0;
@@ -101,11 +137,45 @@ export class PrefixStore {
     return at === null || now - at >= maxAgeMs;
   }
 
-  /** Replace the whole set (a full refresh) and persist it, stamping `updatedAt` with `now`. */
-  async replaceAll(prefixes: Iterable<HashPrefix>, now: number): Promise<void> {
+  /**
+   * Replace the whole set (a full refresh) and persist it, stamping `updatedAt` with `now`. A
+   * `versionToken` is stored when the refresh carried one (so the *next* refresh can go incremental);
+   * omitting it clears any stored token.
+   */
+  async replaceAll(
+    prefixes: Iterable<HashPrefix>,
+    now: number,
+    versionToken?: string | null,
+  ): Promise<void> {
     const clean = cleanPrefixes([...prefixes]);
-    this.file = { version: 1, updatedAt: now, prefixes: clean };
+    const token = versionToken !== undefined && versionToken !== null ? versionToken : undefined;
+    this.file = {
+      version: 2,
+      updatedAt: now,
+      ...(token !== undefined ? { versionToken: token } : {}),
+      prefixes: clean,
+    };
     this.loaded = true;
     await this.io.write(JSON.stringify(this.file));
+  }
+
+  /**
+   * Apply an incremental `hashList` update against the stored set. Returns `'applied'` — the new set
+   * is persisted and `updatedAt` / the version token stamped — or `'need-full'` when the delta cannot
+   * be trusted (an out-of-range removal index, or a checksum mismatch). On `'need-full'` the stored
+   * set is left untouched and the caller should fall back to a full refresh.
+   */
+  async applyDelta(delta: HashListDelta, now: number): Promise<'applied' | 'need-full'> {
+    const result = applyHashListDelta(this.sortedPrefixes(), delta);
+    if (!result.ok) return 'need-full';
+    this.file = {
+      version: 2,
+      updatedAt: now,
+      ...(delta.versionToken !== null ? { versionToken: delta.versionToken } : {}),
+      prefixes: result.prefixes,
+    };
+    this.loaded = true;
+    await this.io.write(JSON.stringify(this.file));
+    return 'applied';
   }
 }

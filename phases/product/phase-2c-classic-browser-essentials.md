@@ -64,8 +64,10 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       Settings switch to disable). **Shipped 2026-09-01, all unit-tested:** `SafeBrowsingProvider` +
       `PrefixStore` + SB v5 full-hash/list clients + `SafeBrowsingRefreshScheduler` +
       `SafeBrowsingService` + `will-navigate` check & interstitial + `DownloadTrustProvider` into
-      `DownloadService.init()` + the `safeBrowsingEnabled` toggle. **Inert** pending a free-tier Google
-      Safe Browsing API key (release input) + Rice/delta decoding for prefix-list updates._
+      `DownloadService.init()` + the `safeBrowsingEnabled` toggle. Rice-Golomb decoding **and**
+      incremental (delta) list updates are now done — `parseHashListDelta` / `applyHashListDelta` /
+      `fourBytePrefixChecksum`, a stored `versionToken`, checksum-verified apply with a full-refresh
+      fallback. **Inert** pending only a free-tier Google Safe Browsing API key (release input)._
 - [ ] Coverage gate (S80/B85/F86/L80) + self-review/code-review + UAT signoff + migration-safe DB
 
 ## Tasks

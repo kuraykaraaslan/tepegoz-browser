@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { FullHash, FullHashFetcher, HashPrefix } from '@tepegoz/security-policy';
 
 /**
@@ -195,66 +196,86 @@ function u32ToPrefixHex(value: number): HashPrefix {
   return b.toString('hex');
 }
 
+function numish(value: unknown): number {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') return Number(value);
+  return NaN;
+}
+
 /**
- * Pull four-byte hash prefixes out of a v5 `hashList.get` body. `additionsFourBytes` carries the
- * additions either as a plain base64 blob of concatenated 4-byte prefixes (`rawHashes`) or
- * Rice-Golomb-coded deltas (`riceParameter` + `firstValue` + `entriesCount` + `encodedData`). Both
- * are handled; a malformed or truncated payload yields `[]`, which the caller treats as "keep the
- * previous set". Delta application against a stored version number is still owed — this returns the
- * additions only.
+ * Decode a `{ riceParameter, firstValue, entriesCount, encodedData }` block — the shape Safe Browsing
+ * uses for both compressed additions (values are prefixes) and compressed removals (values are
+ * indices) — into ascending uint32s. `null` for a malformed header or a truncated payload.
  */
-export function parseHashListResponse(json: unknown): HashPrefix[] {
-  if (typeof json !== 'object' || json === null) return [];
-  const additions = (json as Record<string, unknown>).additionsFourBytes;
-  if (typeof additions !== 'object' || additions === null) return [];
+export function decodeRiceValues(rec: Record<string, unknown>): number[] | null {
+  const k = typeof rec.riceParameter === 'number' ? rec.riceParameter : NaN;
+  const first = numish(rec.firstValue);
+  const count = numish(rec.entriesCount);
+  if (
+    !Number.isInteger(k) ||
+    k < 0 ||
+    k > 32 ||
+    !Number.isFinite(first) ||
+    !Number.isInteger(count) ||
+    count < 0
+  ) {
+    return null;
+  }
+  if (typeof rec.encodedData !== 'string') return null;
+  let data: Buffer;
+  try {
+    data = Buffer.from(rec.encodedData, 'base64');
+  } catch {
+    return null;
+  }
+  return decodeRiceDeltas(first, k, count, data);
+}
+
+/**
+ * Pull four-byte hash prefixes out of an `additionsFourBytes` block: either a plain base64 blob of
+ * concatenated 4-byte prefixes (`rawHashes`) or Rice-Golomb-coded deltas. `null` for a malformed or
+ * truncated payload, which the caller treats as "keep the previous set".
+ */
+export function decodeFourByteAdditions(additions: unknown): HashPrefix[] | null {
+  if (typeof additions !== 'object' || additions === null) return null;
   const rec = additions as Record<string, unknown>;
 
   if (rec.riceParameter !== undefined) {
-    const k = typeof rec.riceParameter === 'number' ? rec.riceParameter : NaN;
-    const first =
-      typeof rec.firstValue === 'number'
-        ? rec.firstValue
-        : typeof rec.firstValue === 'string'
-          ? Number(rec.firstValue)
-          : NaN;
-    const count =
-      typeof rec.entriesCount === 'number'
-        ? rec.entriesCount
-        : typeof rec.entriesCount === 'string'
-          ? Number(rec.entriesCount)
-          : NaN;
-    if (!Number.isInteger(k) || k < 0 || k > 32 || !Number.isFinite(first) || !Number.isInteger(count) || count < 0) {
-      return [];
-    }
-    if (typeof rec.encodedData !== 'string') return [];
-    let data: Buffer;
-    try {
-      data = Buffer.from(rec.encodedData, 'base64');
-    } catch {
-      return [];
-    }
-    const values = decodeRiceDeltas(first, k, count, data);
-    if (values === null) return [];
+    const values = decodeRiceValues(rec);
+    if (values === null) return null;
     const seen = new Set<HashPrefix>();
     for (const v of values) seen.add(u32ToPrefixHex(v));
     return [...seen];
   }
 
-  if (typeof rec.rawHashes !== 'string') return [];
+  if (typeof rec.rawHashes !== 'string') return null;
   let buf: Buffer;
   try {
     buf = Buffer.from(rec.rawHashes, 'base64');
   } catch {
-    return [];
+    return null;
   }
-  if (buf.length % 4 !== 0) return [];
+  if (buf.length % 4 !== 0) return null;
   const out: HashPrefix[] = [];
   for (let i = 0; i < buf.length; i += 4) out.push(buf.toString('hex', i, i + 4));
   return out;
 }
 
-export function hashListUrl(listName: string, apiKey: string): string {
+/**
+ * Pull four-byte hash prefixes out of a v5 `hashList.get` body (the additions only — for a full,
+ * non-incremental refresh). A malformed or truncated payload yields `[]`. Incremental updates go
+ * through {@link parseHashListDelta} + {@link applyHashListDelta}.
+ */
+export function parseHashListResponse(json: unknown): HashPrefix[] {
+  if (typeof json !== 'object' || json === null) return [];
+  return decodeFourByteAdditions((json as Record<string, unknown>).additionsFourBytes) ?? [];
+}
+
+export function hashListUrl(listName: string, apiKey: string, versionToken?: string | null): string {
   const params = new URLSearchParams({ key: apiKey, name: listName });
+  if (versionToken !== undefined && versionToken !== null && versionToken.length > 0) {
+    params.set('version', versionToken);
+  }
   return `${SB_V5_LIST_ENDPOINT}?${params.toString()}`;
 }
 
@@ -284,5 +305,163 @@ export function createPrefixListFetcher(
       }
     }
     return [...all];
+  };
+}
+
+// --- Incremental (delta) list updates -----------------------------------------------------------
+
+/**
+ * One parsed `hashList.get` response, incremental or full ([ADR-0043](../../../../../docs/adr/0043-safe-browsing-service-and-egress.md) §1,
+ * "delta updates where the API offers them; a full refresh floor otherwise").
+ */
+export interface HashListDelta {
+  /** Ascending, deduped, lowercase 8-hex prefixes this response adds. */
+  additions: HashPrefix[];
+  /**
+   * Positions in the client's current **lexically sorted** prefix list to drop before merging
+   * {@link additions}. Ascending, deduped. Ignored when {@link partial} is `false`.
+   */
+  removalIndices: number[];
+  /**
+   * `true`  → apply {@link additions} / {@link removalIndices} against the stored list.
+   * `false` → {@link additions} *is* the whole list; replace outright.
+   */
+  partial: boolean;
+  /** Opaque token to echo back as `?version=` on the next refresh, or `null` when the body omits it. */
+  versionToken: string | null;
+  /**
+   * The server's SHA-256 over the sorted, concatenated 4-byte prefixes **after** this update, base64.
+   * `null` when absent; when present, a mismatch forces a full refresh rather than trusting the delta.
+   */
+  checksum: string | null;
+}
+
+function readChecksum(value: unknown): string | null {
+  if (typeof value === 'string' && value.length > 0) return value;
+  if (typeof value === 'object' && value !== null) {
+    const inner = (value as Record<string, unknown>).sha256;
+    if (typeof inner === 'string' && inner.length > 0) return inner;
+  }
+  return null;
+}
+
+/**
+ * Parse a v5 `hashList.get` body into a {@link HashListDelta}. Tolerant of shape drift: any field it
+ * cannot make sense of is treated as absent, never thrown on — an unparseable body becomes an empty
+ * non-partial delta (additions `[]`), which {@link applyHashListDelta} turns into an empty list, and
+ * the caller keeps its previous set.
+ *
+ * Wire shape targets Safe Browsing API v5 `hashList.get`; verify field names (`partialUpdate`,
+ * `compressedRemovals`, `sha256Checksum`, `version`) against current Google documentation before a
+ * key is provisioned.
+ */
+export function parseHashListDelta(json: unknown): HashListDelta {
+  const empty: HashListDelta = {
+    additions: [],
+    removalIndices: [],
+    partial: false,
+    versionToken: null,
+    checksum: null,
+  };
+  if (typeof json !== 'object' || json === null) return empty;
+  const rec = json as Record<string, unknown>;
+
+  const additions = [
+    ...new Set((decodeFourByteAdditions(rec.additionsFourBytes) ?? []).map((p) => p.toLowerCase())),
+  ].sort();
+
+  let removalIndices: number[] = [];
+  const cr = rec.compressedRemovals;
+  if (typeof cr === 'object' && cr !== null) {
+    removalIndices = decodeRiceValues(cr as Record<string, unknown>) ?? [];
+  } else if (Array.isArray(rec.removalIndices)) {
+    removalIndices = rec.removalIndices.filter(
+      (n): n is number => Number.isInteger(n) && n >= 0,
+    );
+  }
+  removalIndices = [...new Set(removalIndices)].sort((a, b) => a - b);
+
+  return {
+    additions,
+    removalIndices,
+    partial: rec.partialUpdate === true,
+    versionToken:
+      typeof rec.version === 'string' && rec.version.length > 0 ? rec.version : null,
+    checksum: readChecksum(rec.sha256Checksum) ?? readChecksum(rec.checksum),
+  };
+}
+
+/** SHA-256 (base64) over the concatenated raw bytes of `sortedPrefixes`, in the given order. */
+export function fourBytePrefixChecksum(sortedPrefixes: readonly HashPrefix[]): string {
+  const h = createHash('sha256');
+  for (const p of sortedPrefixes) h.update(Buffer.from(p, 'hex'));
+  return h.digest('base64');
+}
+
+export type ApplyDeltaResult =
+  | { ok: true; prefixes: HashPrefix[] }
+  | { ok: false; reason: 'index-out-of-range' | 'checksum-mismatch' };
+
+/**
+ * Apply a {@link HashListDelta} to the current sorted prefix set, returning the new sorted set.
+ *
+ * A non-partial delta replaces the set with its additions. A partial delta first drops
+ * {@link HashListDelta.removalIndices} from the lexically sorted current set (each index must be in
+ * range — an out-of-range index means the client and server disagree on the base, so the whole
+ * delta is rejected), then merges the additions. When the delta carries a checksum, the result must
+ * match it or the delta is rejected. A rejection tells the caller to do a full refresh instead.
+ */
+export function applyHashListDelta(
+  current: readonly HashPrefix[],
+  delta: HashListDelta,
+): ApplyDeltaResult {
+  const adds = delta.additions.map((p) => p.toLowerCase());
+  let next: HashPrefix[];
+  if (!delta.partial) {
+    next = [...new Set(adds)].sort();
+  } else {
+    const base = [...new Set(current.map((p) => p.toLowerCase()))].sort();
+    for (const i of delta.removalIndices) {
+      if (i < 0 || i >= base.length) return { ok: false, reason: 'index-out-of-range' };
+    }
+    const drop = new Set(delta.removalIndices);
+    const kept = base.filter((_, i) => !drop.has(i));
+    next = [...new Set([...kept, ...adds])].sort();
+  }
+  if (delta.checksum !== null && fourBytePrefixChecksum(next) !== delta.checksum) {
+    return { ok: false, reason: 'checksum-mismatch' };
+  }
+  return { ok: true, prefixes: next };
+}
+
+/**
+ * A delta-capable fetcher for the single mirrored list, or `null` with no API key — or when more
+ * than one list is mirrored, since removal indices are per-list and a merged multi-list set has no
+ * stable order to index into (fall back to {@link createPrefixListFetcher} there). Pass the stored
+ * version token for an incremental update, or `null` for a full one.
+ */
+export function createHashListDeltaFetcher(
+  config: FullHashFetcherConfig,
+): ((versionToken: string | null) => Promise<HashListDelta>) | null {
+  const apiKey = config.apiKey?.trim();
+  if (apiKey === undefined || apiKey.length === 0) return null;
+  if (MIRRORED_LISTS.length !== 1) return null;
+  const [listName] = MIRRORED_LISTS;
+  const timeoutMs = config.timeoutMs ?? 30_000;
+
+  return async (versionToken: string | null): Promise<HashListDelta> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await config.fetchImpl(hashListUrl(listName, apiKey, versionToken), {
+        method: 'GET',
+        headers: { Accept: 'application/json', 'User-Agent': PRODUCT_UA },
+        signal: controller.signal,
+      });
+      if (!res.ok) throw new Error(`Safe Browsing v5 hashList "${listName}" returned ${res.status}`);
+      return parseHashListDelta(await res.json());
+    } finally {
+      clearTimeout(timer);
+    }
   };
 }

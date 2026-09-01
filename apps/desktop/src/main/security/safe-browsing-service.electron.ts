@@ -9,6 +9,7 @@ import type { DownloadTrustProvider } from '../downloads/download-service-model.
 import { PrefixStore, type PrefixStoreIo } from './safe-browsing-prefix-store';
 import {
   createFullHashFetcher,
+  createHashListDeltaFetcher,
   createPrefixListFetcher,
   type FetchLike,
 } from './safe-browsing-v5-client';
@@ -69,8 +70,27 @@ class SafeBrowsingServiceImpl {
     apiKey: safeBrowsingApiKey(),
     fetchImpl: doFetch,
   });
+  private readonly deltaFetcher = createHashListDeltaFetcher({
+    apiKey: safeBrowsingApiKey(),
+    fetchImpl: doFetch,
+  });
   private readonly scheduler = new SafeBrowsingRefreshScheduler({
     refresh: async () => {
+      // Preferred path: an incremental update keyed by the stored version token. Only when the
+      // single mirrored list is in play (see createHashListDeltaFetcher) and we already hold a set.
+      if (this.deltaFetcher !== null) {
+        const token = this.store.database() !== null ? this.store.versionToken() : null;
+        const delta = await this.deltaFetcher(token);
+        if (delta.partial && token !== null) {
+          if ((await this.store.applyDelta(delta, Date.now())) === 'applied') return;
+          // The delta failed its own checksum / index sanity — take a clean full copy instead.
+          const full = await this.deltaFetcher(null);
+          await this.store.replaceAll(full.additions, Date.now(), full.versionToken);
+          return;
+        }
+        await this.store.replaceAll(delta.additions, Date.now(), delta.versionToken);
+        return;
+      }
       if (this.listFetcher === null) return;
       await this.store.replaceAll(await this.listFetcher(), Date.now());
     },
