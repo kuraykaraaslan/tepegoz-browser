@@ -133,19 +133,114 @@ const SB_V5_LIST_ENDPOINT = 'https://safebrowsing.googleapis.com/v5alpha1/hashLi
 export const MIRRORED_LISTS = ['gc-4-byte-prefixes'] as const;
 
 /**
- * Pull four-byte hash prefixes out of a v5 `hashList.get` body. A v5 list response carries its
- * additions as a base64 blob of concatenated fixed-width hashes (`additionsFourBytes`), optionally
- * Rice-compressed. **This parser handles the uncompressed case only** — a Rice-encoded response
- * yields `[]` here, which the caller treats as "refresh failed, keep the previous set". Rice decoding
- * + delta application against a stored version is owed.
+ * Little-endian bit reader over a byte buffer — bit 0 is the LSB of byte 0, which is the order Safe
+ * Browsing's Rice-Golomb payloads are packed in.
+ */
+class BitReader {
+  private bit = 0;
+  constructor(private readonly buf: Buffer) {}
+  /** Read `n` (0..32) bits as an unsigned integer, or `null` past the end. */
+  read(n: number): number | null {
+    let value = 0;
+    for (let i = 0; i < n; i++) {
+      const byte = this.bit >>> 3;
+      if (byte >= this.buf.length) return null;
+      const b = (this.buf[byte]! >>> (this.bit & 7)) & 1;
+      value |= b << i;
+      this.bit++;
+    }
+    return value >>> 0;
+  }
+  /** Unary prefix: count the 1-bits up to the terminating 0. `null` past the end. */
+  readUnary(): number | null {
+    let q = 0;
+    for (;;) {
+      const b = this.read(1);
+      if (b === null) return null;
+      if (b === 0) return q;
+      q++;
+    }
+  }
+}
+
+/**
+ * Decode a Safe Browsing Rice-Golomb-coded delta list into ascending uint32 values.
+ * `first` is the initial value; each subsequent value is the previous plus a delta whose quotient is
+ * unary-coded and whose low `k` bits follow. `count` deltas are expected. Returns `null` on truncation.
+ */
+export function decodeRiceDeltas(
+  first: number,
+  k: number,
+  count: number,
+  data: Buffer,
+): number[] | null {
+  const out = [first >>> 0];
+  const reader = new BitReader(data);
+  let prev = first >>> 0;
+  for (let i = 0; i < count; i++) {
+    const q = reader.readUnary();
+    if (q === null) return null;
+    const r = k === 0 ? 0 : reader.read(k);
+    if (r === null) return null;
+    const delta = (q * 2 ** k + r) >>> 0;
+    prev = (prev + delta) >>> 0;
+    out.push(prev);
+  }
+  return out;
+}
+
+function u32ToPrefixHex(value: number): HashPrefix {
+  const b = Buffer.alloc(4);
+  b.writeUInt32BE(value >>> 0);
+  return b.toString('hex');
+}
+
+/**
+ * Pull four-byte hash prefixes out of a v5 `hashList.get` body. `additionsFourBytes` carries the
+ * additions either as a plain base64 blob of concatenated 4-byte prefixes (`rawHashes`) or
+ * Rice-Golomb-coded deltas (`riceParameter` + `firstValue` + `entriesCount` + `encodedData`). Both
+ * are handled; a malformed or truncated payload yields `[]`, which the caller treats as "keep the
+ * previous set". Delta application against a stored version number is still owed — this returns the
+ * additions only.
  */
 export function parseHashListResponse(json: unknown): HashPrefix[] {
   if (typeof json !== 'object' || json === null) return [];
   const additions = (json as Record<string, unknown>).additionsFourBytes;
   if (typeof additions !== 'object' || additions === null) return [];
   const rec = additions as Record<string, unknown>;
-  // A Rice-coded payload names its parameter; bail rather than mis-decode it.
-  if (rec.riceParameter !== undefined || typeof rec.rawHashes !== 'string') return [];
+
+  if (rec.riceParameter !== undefined) {
+    const k = typeof rec.riceParameter === 'number' ? rec.riceParameter : NaN;
+    const first =
+      typeof rec.firstValue === 'number'
+        ? rec.firstValue
+        : typeof rec.firstValue === 'string'
+          ? Number(rec.firstValue)
+          : NaN;
+    const count =
+      typeof rec.entriesCount === 'number'
+        ? rec.entriesCount
+        : typeof rec.entriesCount === 'string'
+          ? Number(rec.entriesCount)
+          : NaN;
+    if (!Number.isInteger(k) || k < 0 || k > 32 || !Number.isFinite(first) || !Number.isInteger(count) || count < 0) {
+      return [];
+    }
+    if (typeof rec.encodedData !== 'string') return [];
+    let data: Buffer;
+    try {
+      data = Buffer.from(rec.encodedData, 'base64');
+    } catch {
+      return [];
+    }
+    const values = decodeRiceDeltas(first, k, count, data);
+    if (values === null) return [];
+    const seen = new Set<HashPrefix>();
+    for (const v of values) seen.add(u32ToPrefixHex(v));
+    return [...seen];
+  }
+
+  if (typeof rec.rawHashes !== 'string') return [];
   let buf: Buffer;
   try {
     buf = Buffer.from(rec.rawHashes, 'base64');
