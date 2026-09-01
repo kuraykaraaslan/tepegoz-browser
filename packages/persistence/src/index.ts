@@ -1,6 +1,7 @@
 export * from './db';
 export * from './migrations';
 export * from './meta';
+export * from './sql-like';
 export * from './event-journal';
 export * from './blob-store';
 export * from './macro-store';

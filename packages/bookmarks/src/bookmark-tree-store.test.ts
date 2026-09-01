@@ -161,4 +161,22 @@ describe('BookmarkTreeStore — star helpers + flat projection', () => {
       'https://example.com/',
     ]);
   });
+
+  it('treats LIKE wildcards in the query as literals (omnibox track § A3)', () => {
+    BookmarkTreeStore.createBookmark(db, {
+      parentId: BOOKMARK_ROOT_BAR,
+      title: 'Plain',
+      url: 'https://plain.example/',
+    });
+    BookmarkTreeStore.createBookmark(db, {
+      parentId: BOOKMARK_ROOT_BAR,
+      title: 'Half price 50% off',
+      url: 'https://deal.example/',
+    });
+
+    // A bare "%" used to return every bookmark; now it matches only the row that literally contains it.
+    expect(BookmarkTreeStore.search(db, '%').map((e) => e.title)).toEqual(['Half price 50% off']);
+    expect(BookmarkTreeStore.search(db, '50%').map((e) => e.title)).toEqual(['Half price 50% off']);
+    expect(BookmarkTreeStore.search(db, '_')).toHaveLength(0);
+  });
 });

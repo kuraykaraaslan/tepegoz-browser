@@ -56,6 +56,21 @@ describe('HistoryStore', () => {
     expect(HistoryStore.search(db, 'istanbul').map((e) => e.title)).toEqual(['İSTANBUL Rehberi']);
   });
 
+  it('treats LIKE wildcards in the query as literals, not "match everything" (omnibox track § A3)', () => {
+    HistoryStore.record(db, { url: 'https://a.example/', title: 'Alpha', ts: 1 });
+    HistoryStore.record(db, { url: 'https://b.example/', title: 'Beta', ts: 2 });
+    HistoryStore.record(db, { url: 'https://c.example/50pct/', title: 'Off 50% today', ts: 3 });
+    HistoryStore.record(db, { url: 'https://d.example/a_b/', title: 'a_b path', ts: 4 });
+
+    // Bare wildcards used to return the whole table.
+    expect(HistoryStore.search(db, '%')).toHaveLength(1);
+    expect(HistoryStore.search(db, '%')[0]?.title).toBe('Off 50% today');
+    expect(HistoryStore.search(db, '_')).toHaveLength(1);
+    expect(HistoryStore.search(db, '_')[0]?.title).toBe('a_b path');
+    // A literal run with a wildcard in the middle still matches that one row.
+    expect(HistoryStore.search(db, '50%').map((e) => e.title)).toEqual(['Off 50% today']);
+  });
+
   it('keeps the folded shadow in sync when a title is refined', () => {
     HistoryStore.record(db, { url: 'https://a.example/', title: 'a.example', ts: 1 });
     HistoryStore.setTitle(db, 'https://a.example/', 'Çalışma Notları');

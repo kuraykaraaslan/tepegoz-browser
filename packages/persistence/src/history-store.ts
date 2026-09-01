@@ -1,6 +1,7 @@
 import { foldForSearch } from '@tepegoz/i18n';
 import type { Db } from './db';
 import { MetaStore } from './meta';
+import { likeContains } from './sql-like';
 
 /** A browsing-history entry (one per URL; visits coalesced). Shared with the app/IPC layer. */
 export interface HistoryEntry {
@@ -62,11 +63,14 @@ export class HistoryStore {
   }
 
   static search(db: Db, query: string, limit = 50, offset = 0): HistoryEntry[] {
-    const like = `%${foldForSearch(query)}%`;
+    // `likeContains` escapes `%` / `_` so a query of "_" or "%" matches literally, not every row
+    // (omnibox track § A3); the `ESCAPE '\'` clause names the escape character it uses.
+    const like = likeContains(foldForSearch(query));
     const rows = db
       .prepare(
         `SELECT url, title, ts, visit_count FROM history
-         WHERE url_fold LIKE ? OR title_fold LIKE ? ORDER BY ts DESC LIMIT ? OFFSET ?`,
+         WHERE url_fold LIKE ? ESCAPE '\\' OR title_fold LIKE ? ESCAPE '\\'
+         ORDER BY ts DESC LIMIT ? OFFSET ?`,
       )
       .all(like, like, limit, offset) as HistoryRow[];
     return rows.map(toEntry);

@@ -5,7 +5,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./sql-like": "./src/sql-like.ts"
   },
   "main": "./src/index.ts",
   "types": "./src/index.ts",

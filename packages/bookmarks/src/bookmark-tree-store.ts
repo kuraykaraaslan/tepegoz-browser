@@ -1,4 +1,6 @@
 import type { Db } from '@tepegoz/persistence';
+// Node-free subpath — never the package barrel, which pulls `node:sqlite` into the renderer bundle.
+import { likeContains } from '@tepegoz/persistence/sql-like';
 import { normalizeTags } from './bookmark-tags';
 
 // This module is reachable from the sandboxed RENDERER (it re-exports `isBookmarkable`), so it must not
@@ -322,14 +324,16 @@ export class BookmarkTreeStore {
    * one result.
    */
   static search(db: Db, query: string, limit = 500): BookmarkEntry[] {
-    const like = `%${query}%`;
-    const tagLike = `%${query.normalize('NFC').replace(/\s+/g, ' ').trim().toLowerCase()}%`;
+    // `likeContains` escapes `%` / `_` so a query of "_" or "%" matches literally, not every
+    // bookmark (omnibox track § A3); each `LIKE ?` is paired with `ESCAPE '\'`.
+    const like = likeContains(query);
+    const tagLike = likeContains(query.normalize('NFC').replace(/\s+/g, ' ').trim().toLowerCase());
     return db
       .prepare(
         `SELECT DISTINCT n.url AS url, n.title AS title, n.favicon AS favicon, n.updated_at AS ts
          FROM bookmark_nodes n LEFT JOIN bookmark_tags t ON t.node_id = n.id
          WHERE n.node_type = 'bookmark' AND n.url IS NOT NULL
-           AND (n.url LIKE ? OR n.title LIKE ? OR t.tag_key LIKE ?)
+           AND (n.url LIKE ? ESCAPE '\\' OR n.title LIKE ? ESCAPE '\\' OR t.tag_key LIKE ? ESCAPE '\\')
          ORDER BY n.updated_at DESC, n.rowid DESC LIMIT ?`,
       )
       .all(like, like, tagLike, limit) as BookmarkEntry[];

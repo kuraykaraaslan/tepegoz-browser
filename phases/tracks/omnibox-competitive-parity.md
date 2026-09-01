@@ -137,6 +137,12 @@ column plans as `SEARCH … USING INDEX`, while `LIKE 'abc%'` plans as `SCAN`). 
 `like = '%' + query + '%'` with no `ESCAPE` clause. Typing `_` or `%` returns the entire history
 (measured: 3/3 rows). Parameterised, so not injection — but the results are wrong.
 
+> **Fixed 2026-09-01.** New node-free `@tepegoz/persistence/sql-like` (`escapeLikeLiteral` /
+> `likeContains` / `LIKE_ESCAPE`) escapes `%`, `_` and `\`; `HistoryStore.search` and
+> `BookmarkTreeStore.search` (the identical leak — the bookmark manager returned every row on `%`)
+> both use it now and pair every `LIKE ?` with `ESCAPE '\'`. Covered by `sql-like.test.ts` (5 cases
+> against a real `LIKE ? ESCAPE` statement) plus a `§ A3` case in each store's suite.
+
 ### A4 — Candidate window is recency-shaped, ranking is frequency-shaped
 
 SQL takes `ORDER BY ts DESC LIMIT 50`; the TS layer then re-sorts those 50 by `visitCount`. A
