@@ -113,7 +113,9 @@ threat list", not "we trust the file".
 **Owed, and stated rather than implied.** (1) The Safe-Browsing provider implementation + its prefix
 database lifecycle (fetch cadence, update, full-hash resolution, and the privacy question of *where*
 those requests egress — they must not become a plaintext feed of the user's downloads to a third
-party) is a separate piece of work, tracked in Phase 1a/2's Safe-Browsing line, not this ADR.
+party) is a separate piece of work — **[ADR-0043](0043-safe-browsing-service-and-egress.md) now owns
+that decision** (direct to Google Safe Browsing v5, on by default, one Settings switch); the provider
+implementation itself is still owed there.
 (2) "Community blocklist reuse where present" from the DoD is not implemented. (3) Segmented /
 accelerated downloads (IDM-parity) keep the assembled file in quarantine until the whole-file hash is
 computed — that invariant is asserted here as a requirement for that future work, so acceleration can

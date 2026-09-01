@@ -52,9 +52,15 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
 - [~] ADRs accepted: **Download Trust Model** (agent-initiated download class + quarantine policy) —
       _**[ADR-0040](../../docs/adr/0040-download-trust-model.md) accepted.** Documents the shipped
       quarantine lifecycle + risk classification + the release/HITL gate + the agent security class,
-      and speces the Safe-Browsing provider seam (owed)._ · **Page-Translation** provider boundary
-      (local model vs API; sensitive-site lockout) — _still owed; needs an owner call on local-only
-      vs. cloud-API. No translation code before acceptance._
+      and speces the Safe-Browsing provider seam._ · **Page-Translation** provider boundary —
+      _**[ADR-0042](../../docs/adr/0042-page-translation-provider-boundary.md) accepted** (owner call
+      2026-09-01: hybrid — local model default, cloud per-origin opt-in, sensitive sites never reach
+      cloud). Ratifies the shipped `@tepegoz/ext-translate` hybrid engine; **owed for the box:** the
+      sensitive-site cloud lockout wiring + the agent-run untranslated-source guarantee._ ·
+      **Safe-Browsing provider** — _**[ADR-0043](../../docs/adr/0043-safe-browsing-service-and-egress.md)
+      accepted** (owner call 2026-09-01: direct to Google Safe Browsing v5, on by default, one
+      Settings switch to disable). Service + nav check + `DownloadTrustProvider` + switch owed; needs
+      a free-tier Google API key provisioned._
 - [ ] Coverage gate (S80/B85/F86/L80) + self-review/code-review + UAT signoff + migration-safe DB
 
 ## Tasks
@@ -213,8 +219,12 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       proved nothing; a `<li><p>…</p></li>` case was added and the property is now actually covered.
       Separately, the block-count test passed locally and timed out under coverage instrumentation; its
       fixture was the heaviest in the repo for no reason and is now cheap with a stated budget._
-- [ ] **Page translation** — **ADR required** (provider boundary): local model vs API, sensitive-site lockout,
-      determinism/observation-recording impact (agent's own runs read untranslated source)
+- [~] **Page translation** — _**[ADR-0042](../../docs/adr/0042-page-translation-provider-boundary.md)
+      accepted** (hybrid: local model default, cloud per-origin opt-in, sensitive sites never reach
+      cloud). The hybrid engine, per-origin session consent, translation memory and glossary are
+      **shipped** in `@tepegoz/ext-translate` + `translate-host.electron.ts`. **Owed:** wire
+      `isSensitiveSite` ahead of `resolveCloudConsent` (today a user could accept a cloud prompt on a
+      banking page), and bind agent-run perception to the pre-translation source store._
 - [x] User-facing **screenshot** (visible viewport + full-page) → stored as a **CAS blob** (reuse Phase 0/1b
       blob store; WebP), never inline base64
       — _Delivered in commit `18eee15` (this row was left unticked). Page right-click → viewport /
