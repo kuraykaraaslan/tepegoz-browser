@@ -88,8 +88,23 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
 - [ ] `will-download` intercept in the browsing session → **quarantine** the file (temp, not-yet-trusted) +
       compute file hash + check via Phase 2 **`SafeBrowsingService`** (reuse, do NOT re-implement); community
       blocklist reuse where present
-- [ ] **Executable/script** downloads (`.exe/.msi/.bat/.ps1/.sh/.dmg/...`) force an extra HITL confirm; zip/rar
+- [~] **Executable/script** downloads (`.exe/.msi/.bat/.ps1/.sh/.dmg/...`) force an extra HITL confirm; zip/rar
       surface a content warning; nothing is "trusted" until the check passes
+  - [x] _**zip/rar content warning shipped.** `archiveContentsUnverified(record)` in `@tepegoz/downloads`
+        (true for `risk: 'archive'` while `quarantined`/`completed`) drives a distinct line in the
+        Downloads manager, en+tr: the quarantine hash and the Safe Browsing check both look at the
+        archive FILE, never inside it, so a `.zip` that passed can still expand to an executable. It is
+        a **content warning, not a release gate** — `releaseNeedsApproval` stays `false` for an archive,
+        asserted — so it does not teach a click-through habit on a file that is not itself dangerous to
+        have on disk. 7 helper cases, mutation-verified._
+  - [x] _**risk classification hardened** against a trailing dot/space (`report.exe.` → Windows writes
+        and runs `report.exe`); `extensionOf` + `cleanFilename` now normalize `/[.\s]+$/` the way the OS
+        does. See the download-trust commit._
+  - [ ] _Executable/script "extra HITL confirm" beyond the existing quarantine + explicit Release click:
+        the user releasing a quarantined `.exe` themselves is the current in-the-loop step (with the
+        `riskyRelease` warning text), and the agent path is gated by ToolGateway HITL. Whether a
+        dedicated per-release modal for executables is wanted on top of that is an owner call — box kept
+        `[~]`._
 - [x] **"Agent-downloaded"** provenance: an agent-initiated download is tagged + journaled with source domain + timestamp + agent task/`correlationId` (append-only "shown=recorded", ADR-0004)
 - [x] Expose a `download_*` tool in the **Capability Plane** (Policy Kernel gated; **agent access
       deny-by-default**, HITL for any state-changing save) — never a direct renderer/agent filesystem write

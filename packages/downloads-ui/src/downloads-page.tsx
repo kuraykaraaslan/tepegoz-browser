@@ -14,6 +14,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { useT } from '@tepegoz/i18n/react';
 import {
+  archiveContentsUnverified,
   commandNeedsApproval,
   type DownloadCommandInput,
   type DownloadRecord,
@@ -149,6 +150,7 @@ function DownloadRow({
       : `${formatBytes(item.receivedBytes, t.bytes)} / ${formatBytes(item.totalBytes, t.bytes)}`) +
     liveRateSuffix(item, t);
   const riskyRelease = commandNeedsApproval(item, 'release');
+  const archiveWarning = archiveContentsUnverified(item);
 
   return (
     <li className="flex gap-3 py-4">
@@ -189,6 +191,12 @@ function DownloadRow({
           <p className="mt-2 flex items-center gap-1 text-xs text-text-secondary">
             <FontAwesomeIcon icon={faCircleExclamation} className="h-3 w-3" aria-hidden />
             {t.riskyRelease}
+          </p>
+        )}
+        {archiveWarning && (
+          <p className="mt-2 flex items-center gap-1 text-xs text-text-secondary">
+            <FontAwesomeIcon icon={faCircleExclamation} className="h-3 w-3" aria-hidden />
+            {t.archiveWarning}
           </p>
         )}
         <div className="mt-3 flex flex-wrap gap-2">

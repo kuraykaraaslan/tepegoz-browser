@@ -45,4 +45,5 @@ export const tr: DownloadsStrings = {
     retry: 'Yeniden dene',
   },
   riskyRelease: 'Bu dosya karantinadan çıkmadan önce onayınızı gerektirir.',
+  archiveWarning: 'Bu arşivin içi taranmadı — açmadan önce içindekileri kontrol edin.',
 };

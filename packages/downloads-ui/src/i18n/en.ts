@@ -45,6 +45,7 @@ export const en = {
     retry: 'Retry',
   },
   riskyRelease: 'This file needs your approval before it leaves quarantine.',
+  archiveWarning: "This archive wasn't scanned inside — check its contents before you open them.",
 };
 
 export type DownloadsStrings = typeof en;

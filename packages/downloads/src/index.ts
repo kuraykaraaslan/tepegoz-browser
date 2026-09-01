@@ -227,3 +227,15 @@ export function commandNeedsApproval(
   if (action === 'open') return record.risk !== 'normal' || record.trustVerdict !== 'safe';
   return false;
 }
+
+/**
+ * Whether to surface a "contents unexamined" warning for an archive. The quarantine hash and the
+ * Safe Browsing check both look at the archive FILE; nothing looks inside it, so a zip/rar that
+ * passed can still expand to an executable. This is a content warning, not a release gate — an
+ * archive is not itself dangerous to have on disk (`releaseNeedsApproval` stays false for it) — so
+ * it shows only while the file exists and can actually be opened.
+ */
+export function archiveContentsUnverified(record: DownloadRecord): boolean {
+  if (record.risk !== 'archive') return false;
+  return record.status === 'quarantined' || record.status === 'completed';
+}

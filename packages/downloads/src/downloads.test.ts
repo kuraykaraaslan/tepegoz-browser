@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  archiveContentsUnverified,
   classifyDownloadRisk,
   commandNeedsApproval,
   computeDownloadRate,
@@ -57,6 +58,24 @@ describe('@tepegoz/downloads', () => {
     // A genuine double extension is still caught, and a plain file is still normal.
     expect(classifyDownloadRisk('invoice.pdf.exe')).toBe('executable');
     expect(classifyDownloadRisk('notes.txt.')).toBe('normal');
+  });
+
+  it('warns that an archive is unexamined inside — but only while it is openable', () => {
+    // The hash/Safe-Browsing check covered the .zip, not its contents.
+    expect(archiveContentsUnverified(record({ risk: 'archive', status: 'quarantined' }))).toBe(true);
+    expect(archiveContentsUnverified(record({ risk: 'archive', status: 'completed' }))).toBe(true);
+    // Nothing to open — no warning.
+    expect(archiveContentsUnverified(record({ risk: 'archive', status: 'blocked' }))).toBe(false);
+    expect(archiveContentsUnverified(record({ risk: 'archive', status: 'in_progress' }))).toBe(
+      false,
+    );
+    // Not an archive — this warning is not the one to show.
+    expect(archiveContentsUnverified(record({ risk: 'executable', status: 'quarantined' }))).toBe(
+      false,
+    );
+    expect(archiveContentsUnverified(record({ risk: 'normal', status: 'completed' }))).toBe(false);
+    // And it is not a release gate — an archive still releases without approval.
+    expect(releaseNeedsApproval(record({ risk: 'archive', status: 'quarantined' }))).toBe(false);
   });
 
   it('requires approval for risky or agent releases', () => {
