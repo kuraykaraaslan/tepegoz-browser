@@ -1,6 +1,6 @@
 # ADR-0042: Page-translation provider boundary — local model is the default path, cloud is per-origin opt-in, sensitive sites never reach cloud
 
-- **Status:** Accepted (hybrid boundary ratified; local + cloud engine, per-origin consent flow, the sensitive-site cloud lockout, and the agent-run untranslated-source guarantee for the two main perception reads are shipped; broader read-path coverage + auto-translate suppression for the run duration are owed — see Consequences)
+- **Status:** Accepted and shipped — hybrid boundary, local + cloud engine, per-origin consent flow, the sensitive-site cloud lockout, and the agent-run untranslated-source guarantee (every DOM read path + auto-translate suppressed while a run is active) are all in place and unit-tested (see Consequences for the one residual constraint)
 - **Date:** 2026-09-01
 - **Refines:** [ADR-0005](0005-provider-agnostic-ai.md) (provider-agnostic AI, BYO-key local-first) · [ADR-0008](0008-perception-cdp.md) (DOM/a11y-first perception) · **complements** [ADR-0021](0021-agent-controllable-extensions.md) (agent-controllable extensions via in-process capability providers) · [ADR-0004](0004-event-sourced-journal.md) ("shown = recorded")
 - **Phase:** [Phase 2c — Classic Browser Essentials & Downloads](../../phases/product/phase-2c-classic-browser-essentials.md), L10 (page translation)
@@ -107,11 +107,11 @@ than one.
 **Owed, and stated rather than implied.** (1) ~~The sensitive-site cloud lockout is not yet wired~~ —
 **done** (`isSensitiveOrigin` port; `runEngine` refuses the cloud fallback before `resolveCloudConsent`
 so no dialog is shown; the desktop host binds it to `isSensitiveSite`). (2) ~~The agent-run
-untranslated-source guarantee is not yet enforced~~ — **partly done**:
+untranslated-source guarantee is not yet enforced~~ — **done**:
 `TranslatePageInjector.ensureUntranslatedForAgent(wc)` restores an in-place translation of the tab's
-own origin before the agent perceives it, wired into `browser-host` `readPage` and `snapshotElements`
-(the two model-facing perception reads). Still owed: the other DOM readers (`readArticleText`,
-`runExtractionScript`, `scrollToText`) and **suppressing auto-translate for the duration of a run** so
-an agent-driven navigation cannot re-translate mid-run. (3) `autoTranslateForeignPages` defaulting
-to `true` means language detection runs on every page; that detection is local and must stay local
-(no "what language is this" cloud call) — asserted here as a constraint on any future detector.
+own origin, and `browser-host`'s `requireWcUntranslated` routes every DOM read path through it
+(`readPage`, `snapshotElements`, `readArticleText`, `scrollToText`, `runExtractionScript`);
+`maybeAutoTranslate` bails while `hasActiveAgentRun()`. One-directional — a person re-triggers
+translation after the run. (3) **Residual constraint, not a task:** `autoTranslateForeignPages`
+defaults to `true`, so language detection runs on every page; that detection is local and must stay
+local (no "what language is this" cloud call) — binding on any future detector.
