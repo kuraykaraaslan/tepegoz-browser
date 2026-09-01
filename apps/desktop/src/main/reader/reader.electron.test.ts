@@ -78,7 +78,6 @@ describe('readActiveTabArticle', () => {
       ' https://evil.example/a.png', // leading space defeats a naive prefix check
     ]) {
       withPayload(article({ blocks: [{ kind: 'image', src, alt: '' }] }));
-      // eslint-disable-next-line no-await-in-loop
       expect(await readActiveTabArticle()).toBeNull();
     }
   });
