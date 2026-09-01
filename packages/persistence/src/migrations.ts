@@ -531,6 +531,27 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 16,
+    up: (db) => {
+      // Turkish history search was broken end to end: `HistoryStore.search` was
+      // 'WHERE url LIKE ? OR title LIKE ?', and SQLite's built-in LIKE case-folds ASCII only — so a
+      // page the user titled "Şişli Gezisi" could not be found by typing "şişli", nor "sisli". Store
+      // a case-folded shadow of each searchable field, folded in the WRITER with foldForSearch (the
+      // omnibox's rule: collapses the dotted/dotless i family and strips accents), exactly the choice
+      // `bookmark_tags.tag_key` makes for the same reason (v15). Never SQLite LOWER().
+      //
+      // DDL only. Existing rows are backfilled by HistoryStore.reindexFoldsIfStale at the next
+      // startup (the meta key it checks is unset here); that function also owns re-folding after a
+      // HISTORY_FOLD_VERSION bump, so there is one code path for both.
+      db.exec(`
+        ALTER TABLE history ADD COLUMN url_fold   TEXT NOT NULL DEFAULT '';
+        ALTER TABLE history ADD COLUMN title_fold TEXT NOT NULL DEFAULT '';
+        CREATE INDEX idx_history_title_fold ON history (title_fold);
+        CREATE INDEX idx_history_url_fold ON history (url_fold);
+      `);
+    },
+  },
 ];
 
 /**

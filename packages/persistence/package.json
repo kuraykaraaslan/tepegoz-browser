@@ -18,6 +18,7 @@
   "dependencies": {
     "@tepegoz/downloads": "workspace:*",
     "@tepegoz/ext-agent": "workspace:*",
+    "@tepegoz/i18n": "workspace:*",
     "@tepegoz/tasks": "workspace:*",
     "@tepegoz/shared-types": "workspace:*"
   },

@@ -43,6 +43,41 @@ describe('HistoryStore', () => {
     expect(HistoryStore.search(db, 'World').map((e) => e.title)).toEqual(['World']);
   });
 
+  it('finds Turkish titles across the dotted/dotless i family and accents (omnibox track § A2)', () => {
+    HistoryStore.record(db, { url: 'https://sisli.example/', title: 'Şişli Gezisi', ts: 1 });
+    HistoryStore.record(db, { url: 'https://urunler.example/', title: 'Ürünler', ts: 2 });
+    HistoryStore.record(db, { url: 'https://istanbul.example/', title: 'İSTANBUL Rehberi', ts: 3 });
+
+    // SQLite's built-in LIKE returned 0 for every one of these before the folded shadow columns.
+    expect(HistoryStore.search(db, 'şişli').map((e) => e.title)).toEqual(['Şişli Gezisi']);
+    expect(HistoryStore.search(db, 'sisli').map((e) => e.title)).toEqual(['Şişli Gezisi']);
+    expect(HistoryStore.search(db, 'ürünler').map((e) => e.title)).toEqual(['Ürünler']);
+    expect(HistoryStore.search(db, 'urunler').map((e) => e.title)).toEqual(['Ürünler']);
+    expect(HistoryStore.search(db, 'istanbul').map((e) => e.title)).toEqual(['İSTANBUL Rehberi']);
+  });
+
+  it('keeps the folded shadow in sync when a title is refined', () => {
+    HistoryStore.record(db, { url: 'https://a.example/', title: 'a.example', ts: 1 });
+    HistoryStore.setTitle(db, 'https://a.example/', 'Çalışma Notları');
+    expect(HistoryStore.search(db, 'calisma').map((e) => e.title)).toEqual(['Çalışma Notları']);
+  });
+
+  it('reindexFoldsIfStale backfills rows written before the fold columns existed, then no-ops', () => {
+    // A pre-v16 row: fold columns left at their DEFAULT '' and no version marker in `meta`.
+    db.prepare('INSERT INTO history (url, title, ts, visit_count) VALUES (?, ?, ?, 1)').run(
+      'https://legacy.example/',
+      'Eski Şehir',
+      5,
+    );
+    expect(HistoryStore.search(db, 'sehir')).toHaveLength(0);
+
+    expect(HistoryStore.reindexFoldsIfStale(db)).toBeGreaterThanOrEqual(1);
+    expect(HistoryStore.search(db, 'sehir').map((e) => e.title)).toEqual(['Eski Şehir']);
+
+    // Version marker now matches → a second call refolds nothing.
+    expect(HistoryStore.reindexFoldsIfStale(db)).toBe(0);
+  });
+
   it('setTitle refines the title without bumping the visit count', () => {
     HistoryStore.record(db, { url: 'https://a.com/', title: 'a.com', ts: 1 });
     HistoryStore.setTitle(db, 'https://a.com/', 'Real Title');

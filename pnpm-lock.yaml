@@ -1997,6 +1997,9 @@ importers:
       '@tepegoz/ext-agent':
         specifier: workspace:*
         version: link:../../extensions/ext-agent
+      '@tepegoz/i18n':
+        specifier: workspace:*
+        version: link:../i18n
       '@tepegoz/shared-types':
         specifier: workspace:*
         version: link:../shared-types

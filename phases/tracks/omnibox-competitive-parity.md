@@ -119,6 +119,15 @@ backfill on bump. This also makes the index range-seekable (verified: a range pr
 column plans as `SEARCH … USING INDEX`, while `LIKE 'abc%'` plans as `SCAN`). Couple
 `@tepegoz/persistence` to `@tepegoz/i18n` so there is exactly one `foldForSearch` definition.
 
+> **Fixed 2026-09-01.** Migration 16 adds `history.url_fold` / `title_fold`; `HistoryStore.record` /
+> `setTitle` write them via `foldForSearch` from `@tepegoz/i18n` (now a `@tepegoz/persistence`
+> dependency — one definition), and `search` matches `%fold(query)%` against them. `HISTORY_FOLD_VERSION`
+> + `HistoryStore.reindexFoldsIfStale` (called after `migrate` in `database.electron.ts`) owns both the
+> one-time backfill of pre-v16 rows and re-folding after the rule changes. Five `history-store.test.ts`
+> cases cover the Şişli / Ürünler / İSTANBUL matches, title-refine sync, and the backfill/no-op. The
+> `LIKE`-still-uses-`LIKE` plan-shape optimisation and the `LIKE`-wildcard-leak (§ A3) are **not** in
+> this change — the columns are indexed but `search` still does `LIKE '%…%'`.
+
 > Note on scope discipline: this is a **correctness** fix, not a performance one. FTS5 is available in
 > `node:sqlite` (verified) and is _not_ needed here — a 90-day-pruned single-user history is thousands
 > of rows. Do not let this grow into a search-engine rewrite.

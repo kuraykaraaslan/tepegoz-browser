@@ -33,6 +33,10 @@ export function initDatabase(): void {
   try {
     const opened = openDatabase(dbPath);
     migrate(opened);
+    // Backfill the case-folded history search columns for rows written before migration 16, and
+    // re-fold everything after a HISTORY_FOLD_VERSION bump. No-op once the version marker matches.
+    const refolded = HistoryStore.reindexFoldsIfStale(opened);
+    if (refolded > 0) Logger.info('Re-folded history search index', { rows: refolded });
     // Startup retention pass — history is otherwise unbounded (one row per unique URL, forever).
     const pruned = HistoryStore.prune(opened, Date.now());
     if (pruned > 0) Logger.info('Pruned expired history entries', { pruned });
