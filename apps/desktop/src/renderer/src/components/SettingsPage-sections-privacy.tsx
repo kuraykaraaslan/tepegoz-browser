@@ -190,7 +190,7 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
       group: s.groupPrivacy,
       label: s.privacyTitle,
       icon: <IconShield />,
-      searchText: `${s.privacyTitle} ${s.telemetry} ${s.telemetryDesc} ${s.telemetryNothingSent} ${s.clearHistoryLabel} ${s.forgetSite.title} ${s.clientCerts.title}`,
+      searchText: `${s.privacyTitle} ${s.telemetry} ${s.telemetryDesc} ${s.telemetryNothingSent} ${s.safeBrowsing.title} ${s.safeBrowsing.desc} ${s.clearHistoryLabel} ${s.forgetSite.title} ${s.clientCerts.title}`,
       content: (
         <Card title={s.privacyTitle}>
           <div className="space-y-4">
@@ -208,6 +208,20 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
                   code in this build reads `telemetryEnabled` to collect or send anything. A privacy
                   control whose scope the user has to infer is one they cannot actually rely on. */}
               <p className="mt-1.5 text-xs text-text-secondary">{s.telemetryNothingSent}</p>
+            </div>
+            <div>
+              <Toggle
+                id="safe-browsing"
+                label={s.safeBrowsing.title}
+                description={s.safeBrowsing.desc}
+                checked={prefs.safeBrowsingEnabled}
+                onChange={(v) => {
+                  setPref({ safeBrowsingEnabled: v });
+                }}
+              />
+              {/* The threat list + API key are not wired yet (ADR-0043); the switch persists and the
+                  provider reads it, but resolves `unknown` until then. Said plainly. */}
+              <p className="mt-1.5 text-xs text-text-secondary">{s.safeBrowsing.inactiveNote}</p>
             </div>
             <div>
               <p className="text-sm font-medium text-text-primary">{s.clearHistoryLabel}</p>

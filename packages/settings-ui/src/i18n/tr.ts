@@ -377,6 +377,12 @@ export const tr: SettingsStrings = {
   },
   clearHistoryDesc: 'Bu cihazda ziyaret ettiğiniz sayfaların listesini kaldırır.',
   telemetryNothingSent: 'Bu derlemede hiçbir şey toplanmıyor ve gönderilmiyor — bu ayarı okuyan bir kod henüz yok. Bir gün olduğunda seçim baştan senin olsun diye burada duruyor.',
+  safeBrowsing: {
+    title: 'Güvenli Tarama koruması',
+    desc: 'Tehlikeli siteleri ziyaret etmeden önce uyar ve tehlikeli indirmeleri engelle. Sayfa ve indirme adreslerini Google Güvenli Tarama ile karşılaştırır; sayfa adresinin kendisi asla gönderilmez.',
+    inactiveNote:
+      'Bu derlemede henüz etkin değil — tehdit listesi ve anahtarı bağlanmadı. Anahtar geldiğinde seçim baştan senin olsun diye bu düğme burada.',
+  },
   clearHistoryConfirm: 'Bu cihazdaki tüm gezinme geçmişini siler. Yer imleri, parolalar ve site izinleri etkilenmez.',
   clearHistoryButton: 'Geçmişi temizle',
   historyCleared: 'Tarama geçmişi temizlendi.',

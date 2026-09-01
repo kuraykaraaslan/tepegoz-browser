@@ -379,6 +379,14 @@ export const en = {
   },
   clearHistoryDesc: 'Remove the list of pages you have visited on this device.',
   telemetryNothingSent: 'Nothing is collected or sent in this build — no code reads this setting yet. It is here so the choice is already yours when something does.',
+  // Safe Browsing (ADR-0043). The help text is the disclosure: turning this on means the browser
+  // contacts Google. The "not active yet" line is removed once an API key ships.
+  safeBrowsing: {
+    title: 'Safe Browsing protection',
+    desc: 'Warn before you visit dangerous sites and block dangerous downloads. Checks page and download addresses against Google Safe Browsing; the page address itself is never sent.',
+    inactiveNote:
+      'Not active in this build yet — the threat list and its key are not wired. The switch is here so the choice is already yours when it is.',
+  },
   clearHistoryConfirm: 'Deletes your whole browsing history on this device. Bookmarks, passwords and site permissions are not affected.',
   clearHistoryButton: 'Clear history',
   historyCleared: 'Browsing history cleared.',
