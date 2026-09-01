@@ -14,6 +14,7 @@ import { installUnloadPrompt } from './navigation/unload-broker';
 import { applyStoredZoom, handleZoomShortcut } from './site-zoom';
 import { getDb } from './db/database.electron';
 import ActionInterceptorService from './extensions/action-interceptors.electron';
+import { handleSafeBrowsingNavigation } from './security/safe-browsing-interstitial.electron';
 import { faviconDataUrl } from './tabs-favicon.electron';
 import {
   blockNonWeb,
@@ -172,6 +173,12 @@ export function wireView(host: ViewWiringHost, id: string, view: WebContentsView
   // native popup windows (`wirePopupWindow`) skip this second check, they have no tracked tab id.
   wc.on('will-navigate', (event, url) => {
     blockNonWeb(event, url);
+    // Safe Browsing: a "proceed anyway" sentinel is consumed here (re-load the clean URL); any other
+    // http(s) navigation kicks off a background check that shows the interstitial on a confirmed hit.
+    if (handleSafeBrowsingNavigation(wc, url) === 'proceed') {
+      event.preventDefault();
+      return;
+    }
     if (
       ActionInterceptorService.shouldBlock('navigation:navigate', {
         tabId: id,
@@ -184,6 +191,7 @@ export function wireView(host: ViewWiringHost, id: string, view: WebContentsView
   });
   wc.on('will-redirect', (event, url) => {
     blockNonWeb(event, url);
+    handleSafeBrowsingNavigation(wc, url);
     if (
       ActionInterceptorService.shouldBlock('navigation:navigate', {
         tabId: id,
