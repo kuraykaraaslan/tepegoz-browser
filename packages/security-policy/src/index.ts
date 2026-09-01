@@ -131,5 +131,10 @@ export {
 } from './supply-chain-gate';
 export * from './safe-browsing';
 export * from './safe-browsing-canonical';
+export {
+  SafeBrowsingProvider,
+  type NavigationVerdict,
+  type SafeBrowsingProviderPorts,
+} from './safe-browsing-provider';
 export * from './policy-reasons';
 export * from './trust-profile';
