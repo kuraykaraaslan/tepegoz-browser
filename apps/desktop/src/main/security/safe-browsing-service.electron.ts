@@ -7,7 +7,12 @@ import PreferenceStore from '@tepegoz/preferences';
 import type { DownloadTrustVerdict } from '@tepegoz/downloads';
 import type { DownloadTrustProvider } from '../downloads/download-service-model.electron';
 import { PrefixStore, type PrefixStoreIo } from './safe-browsing-prefix-store';
-import { createFullHashFetcher, type FetchLike } from './safe-browsing-v5-client';
+import {
+  createFullHashFetcher,
+  createPrefixListFetcher,
+  type FetchLike,
+} from './safe-browsing-v5-client';
+import { SafeBrowsingRefreshScheduler } from './safe-browsing-refresh-scheduler';
 import { safeBrowsingApiKey } from './safe-browsing-config';
 
 /**
@@ -18,8 +23,9 @@ import { safeBrowsingApiKey } from './safe-browsing-config';
  *
  * It holds no policy of its own. Every "should we look this up" decision lives in
  * `SafeBrowsingProvider`; this file is the wiring: a `userData` path, `PreferenceStore`, the API key,
- * and `globalThis.fetch`. The prefix-list *refresh* (the SB v5 threat-list update) is not wired yet —
- * `database()` stays `null` until it is, which the provider reads as `unknown` (nothing blocked).
+ * `globalThis.fetch`, and the refresh scheduler. With no API key the full-hash client and the
+ * prefix-list fetcher are both `null`, the scheduler never starts, `database()` stays `null`, and the
+ * provider resolves every check to `unknown` (nothing blocked) — the feature is inert.
  */
 
 function dir(): string {
@@ -59,6 +65,27 @@ class SafeBrowsingServiceImpl {
     apiKey: safeBrowsingApiKey(),
     fetchImpl: doFetch,
   });
+  private readonly listFetcher = createPrefixListFetcher({
+    apiKey: safeBrowsingApiKey(),
+    fetchImpl: doFetch,
+  });
+  private readonly scheduler = new SafeBrowsingRefreshScheduler({
+    refresh: async () => {
+      if (this.listFetcher === null) return;
+      await this.store.replaceAll(await this.listFetcher(), Date.now());
+    },
+    lastRefreshAt: () => this.store.updatedAt(),
+    now: () => Date.now(),
+    setTimer: (fn, ms) => {
+      const t = setTimeout(fn, ms);
+      t.unref?.();
+      return t;
+    },
+    clearTimer: (h) => {
+      clearTimeout(h as ReturnType<typeof setTimeout>);
+    },
+    enabled: () => PreferenceStore.getAll().safeBrowsingEnabled,
+  });
 
   async init(): Promise<void> {
     if (this.initialized) return;
@@ -72,9 +99,16 @@ class SafeBrowsingServiceImpl {
       fullHashResolution: haveKey,
       prefixDatabase: haveDb ? this.store.count() : 0,
     });
-    if (on && !haveKey) {
+    if (this.listFetcher !== null) {
+      this.scheduler.start();
+    } else if (on) {
       Logger.info('Safe Browsing has no API key — navigation and download checks resolve to unknown');
     }
+  }
+
+  /** Stop the refresh scheduler (app quit). */
+  stop(): void {
+    this.scheduler.stop();
   }
 
   /** Navigation gate. Only a confirmed unsafe returns `block`; every other outcome is `unknown`. */

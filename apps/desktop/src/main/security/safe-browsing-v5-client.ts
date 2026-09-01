@@ -122,3 +122,72 @@ export function createFullHashFetcher(config: FullHashFetcherConfig): FullHashFe
     }
   };
 }
+
+// --- Prefix-list fetch (the local database's contents) -------------------------------------------
+
+const SB_V5_LIST_ENDPOINT = 'https://safebrowsing.googleapis.com/v5alpha1/hashList';
+/**
+ * The lists we mirror locally. These are the standard client-side lists; the exact names must be
+ * confirmed against current Safe Browsing v5 documentation before a key is provisioned.
+ */
+export const MIRRORED_LISTS = ['gc-4-byte-prefixes'] as const;
+
+/**
+ * Pull four-byte hash prefixes out of a v5 `hashList.get` body. A v5 list response carries its
+ * additions as a base64 blob of concatenated fixed-width hashes (`additionsFourBytes`), optionally
+ * Rice-compressed. **This parser handles the uncompressed case only** — a Rice-encoded response
+ * yields `[]` here, which the caller treats as "refresh failed, keep the previous set". Rice decoding
+ * + delta application against a stored version is owed.
+ */
+export function parseHashListResponse(json: unknown): HashPrefix[] {
+  if (typeof json !== 'object' || json === null) return [];
+  const additions = (json as Record<string, unknown>).additionsFourBytes;
+  if (typeof additions !== 'object' || additions === null) return [];
+  const rec = additions as Record<string, unknown>;
+  // A Rice-coded payload names its parameter; bail rather than mis-decode it.
+  if (rec.riceParameter !== undefined || typeof rec.rawHashes !== 'string') return [];
+  let buf: Buffer;
+  try {
+    buf = Buffer.from(rec.rawHashes, 'base64');
+  } catch {
+    return [];
+  }
+  if (buf.length % 4 !== 0) return [];
+  const out: HashPrefix[] = [];
+  for (let i = 0; i < buf.length; i += 4) out.push(buf.toString('hex', i, i + 4));
+  return out;
+}
+
+export function hashListUrl(listName: string, apiKey: string): string {
+  const params = new URLSearchParams({ key: apiKey, name: listName });
+  return `${SB_V5_LIST_ENDPOINT}?${params.toString()}`;
+}
+
+/** Fetches the full four-byte prefix set for {@link MIRRORED_LISTS}, or `null` with no API key. */
+export function createPrefixListFetcher(
+  config: FullHashFetcherConfig,
+): (() => Promise<HashPrefix[]>) | null {
+  const apiKey = config.apiKey?.trim();
+  if (apiKey === undefined || apiKey.length === 0) return null;
+  const timeoutMs = config.timeoutMs ?? 30_000;
+
+  return async (): Promise<HashPrefix[]> => {
+    const all = new Set<HashPrefix>();
+    for (const name of MIRRORED_LISTS) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const res = await config.fetchImpl(hashListUrl(name, apiKey), {
+          method: 'GET',
+          headers: { Accept: 'application/json', 'User-Agent': PRODUCT_UA },
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error(`Safe Browsing v5 hashList "${name}" returned ${res.status}`);
+        for (const prefix of parseHashListResponse(await res.json())) all.add(prefix);
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+    return [...all];
+  };
+}
