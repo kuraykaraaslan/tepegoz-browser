@@ -437,6 +437,7 @@ if (!app.requestSingleInstanceLock()) {
     abortActiveAgentRuns();
     TaskService.stop();
     TabDiscardService.stop();
+    SafeBrowsingService.stop();
     void McpService.stop();
     PopupWindowManager.close();
     TabManager.persistNow();
