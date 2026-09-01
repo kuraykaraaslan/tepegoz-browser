@@ -11,7 +11,10 @@ export const downloadToolsHost: DownloadToolsHost = {
   createDownload: (input: DownloadCreateInput) =>
     DownloadService.create({ ...input, actor: 'agent' }, TabManager.activeWebContents()),
   commandDownload: async (input: DownloadCommandInput) => {
-    await DownloadService.command(input.id, input.action);
+    // `retry` re-enters `will-download` and needs a live page to attach the transfer to — the same
+    // active tab `createDownload` uses, so an agent retry runs the quarantine/trust path on the
+    // session the agent can see. Every other action ignores the web contents.
+    await DownloadService.command(input.id, input.action, TabManager.activeWebContents());
     return { ok: true };
   },
 };
