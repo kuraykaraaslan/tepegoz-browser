@@ -86,8 +86,12 @@ yields to the event loop. The user-visible failure is that the address bar's own
 the inline calculator — freezes the UI the moment it activates.
 
 **Fix:** depend on a stable primitive (`calc?.formatted ?? null`) instead of the object, **and** guard
-the clear with `suggestions.length > 0`. Either removes the loop; both is correct. _(The defect is
-verified; the patch is not yet.)_
+the clear with `suggestions.length > 0`. Either removes the loop; both is correct. _(**Fixed
+2026-09-01.** `omnibox.tsx` now derives `isCalc = calc !== null` and depends on that boolean; the
+clear is an identity-preserving functional update (`prev.length === 0 ? prev : []`). Regression test
+`omnibox.test.tsx` — "does not spin the suggestion effect when arithmetic is typed" — asserts the
+render count stays bounded; the omnibox package gained the jsdom + `@testing-library/react` dev
+harness it lacked. A2–A11 are still open.)_
 
 ### A2 — Turkish history search is broken end to end
 

@@ -1,0 +1,94 @@
+// @vitest-environment jsdom
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { useRef } from 'react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { Omnibox, type OmniboxProps } from './omnibox';
+import type { OmniboxSuggestion } from './omnibox-suggest';
+
+const noSuggestions = (): Promise<OmniboxSuggestion[]> => Promise.resolve([]);
+const oneSuggestion =
+  (s: OmniboxSuggestion) => (): Promise<OmniboxSuggestion[]> => Promise.resolve([s]);
+
+function baseProps(over: Partial<OmniboxProps> = {}): OmniboxProps {
+  return {
+    currentUrl: 'https://example.test/',
+    placeholder: 'Search or enter address',
+    onNavigate: vi.fn(),
+    onCalcResult: vi.fn(),
+    onSuggest: vi.fn(noSuggestions),
+    ...over,
+  };
+}
+
+/** Wraps Omnibox and counts every render so a runaway effect loop is observable, not just a timeout. */
+function CountingOmnibox({ renders, ...props }: OmniboxProps & { renders: { current: number } }) {
+  const count = useRef(0);
+  count.current += 1;
+  renders.current = count.current;
+  return <Omnibox {...props} />;
+}
+
+afterEach(cleanup);
+
+describe('Omnibox', () => {
+  it('renders the input with the current URL', () => {
+    render(<Omnibox {...baseProps()} />);
+    expect(screen.getByRole('combobox')).toHaveProperty('value', 'https://example.test/');
+  });
+
+  it('does not spin the suggestion effect when arithmetic is typed (renderer-hang regression)', () => {
+    const renders = { current: 0 };
+    const onSuggest = vi.fn(noSuggestions);
+    render(<CountingOmnibox {...baseProps({ onSuggest })} renders={renders} />);
+
+    const input = screen.getByRole('combobox');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '2+2' } });
+
+    // Before the fix this branch re-queued itself forever: each render built a fresh `calc` object,
+    // the effect cleared the (already empty) suggestions into a brand-new array, and that re-render
+    // produced another fresh `calc`. The test worker died at the suite timeout, never the per-test one.
+    expect(renders.current).toBeLessThan(15);
+    // Arithmetic shows the inline result and never asks the host for suggestions.
+    expect(screen.getByText('= 4')).toBeTruthy();
+    expect(onSuggest).not.toHaveBeenCalled();
+  });
+
+  it('still asks the host for suggestions on a normal query', async () => {
+    const suggestion: OmniboxSuggestion = {
+      key: 'h1',
+      kind: 'history',
+      title: 'Duck facts',
+      action: { type: 'navigate', input: 'https://duck.test/' },
+    };
+    const onSuggest = vi.fn(oneSuggestion(suggestion));
+    render(<Omnibox {...baseProps({ onSuggest })} />);
+
+    const input = screen.getByRole('combobox');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'duck' } });
+
+    expect(await screen.findByText('Duck facts')).toBeTruthy();
+    expect(onSuggest).toHaveBeenCalledWith('duck');
+  });
+
+  it('clears any open dropdown the moment the query becomes arithmetic', async () => {
+    const suggestion: OmniboxSuggestion = {
+      key: 'h1',
+      kind: 'history',
+      title: 'Two plus two clubhouse',
+      action: { type: 'navigate', input: 'https://two.test/' },
+    };
+    const onSuggest = vi.fn(oneSuggestion(suggestion));
+    render(<Omnibox {...baseProps({ onSuggest })} />);
+
+    const input = screen.getByRole('combobox');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'two' } });
+    expect(await screen.findByText('Two plus two clubhouse')).toBeTruthy();
+
+    fireEvent.change(input, { target: { value: '2+2' } });
+    await waitFor(() => expect(screen.queryByText('Two plus two clubhouse')).toBeNull());
+    expect(screen.getByText('= 4')).toBeTruthy();
+  });
+});

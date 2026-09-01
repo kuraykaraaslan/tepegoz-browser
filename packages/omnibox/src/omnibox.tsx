@@ -100,14 +100,21 @@ export function Omnibox({
   }, [currentUrl, focused]);
 
   const calc = value.trim().length > 0 ? evaluateOmniboxCalc(value) : null;
-  const open = focused && calc === null && suggestions.length > 0;
+  // A primitive mirror of `calc` for the effect below: `evaluateOmniboxCalc` returns a fresh object on
+  // every render, so depending on `calc` directly spun the suggestion effect forever when the input
+  // was arithmetic (new object → effect runs → `setSuggestions([])` → new array → re-render → new
+  // object …). Typing "2+2" froze the renderer. Depend on the boolean instead.
+  const isCalc = calc !== null;
+  const open = focused && !isCalc && suggestions.length > 0;
 
   // Fetch suggestions (debounced) as the user types. Arithmetic input shows the calc chip instead, so
   // we clear the dropdown then. The reqId guard drops out-of-order responses.
   useEffect(() => {
-    if (!focused || onSuggest === undefined || calc !== null || value.trim().length === 0) {
-      setSuggestions([]);
-      setSelected(-1);
+    if (!focused || onSuggest === undefined || isCalc || value.trim().length === 0) {
+      // Bail out by identity — return the previous value untouched when it is already cleared, so this
+      // branch can never be the thing that triggers another render.
+      setSuggestions((prev) => (prev.length === 0 ? prev : []));
+      setSelected((prev) => (prev === -1 ? prev : -1));
       return undefined;
     }
     const query = value;
@@ -126,7 +133,7 @@ export function Omnibox({
       );
     }, SUGGEST_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [value, focused, calc, onSuggest]);
+  }, [value, focused, isCalc, onSuggest]);
 
   useLayoutEffect(() => {
     if (onDropdownHeightChange === undefined) return undefined;
