@@ -68,10 +68,9 @@ async function navigate(url: string, tabId?: string): Promise<{ url: string; tit
 async function readPage(
   tabId?: string,
 ): Promise<{ url: string; title: string; text: string; sig: string }> {
-  const wc = requireWc(tabId);
   // ADR-0042 §3: the agent reads untranslated source. If the tab is showing a page translation,
   // restore it before perceiving, so a run never depends on model output that was never in the page.
-  await TranslatePageInjector.ensureUntranslatedForAgent(wc).catch(() => undefined);
+  const wc = await requireWcUntranslated(tabId);
   const url = wc.getURL();
   const title = wc.getTitle();
   // Read the visible text AND a structural signature of the on-screen actionable elements in one eval.
@@ -226,7 +225,7 @@ async function waitForCondition(
 async function readArticleText(
   tabId?: string,
 ): Promise<{ url: string; title: string; text: string; source: string }> {
-  const wc = requireWc(tabId);
+  const wc = await requireWcUntranslated(tabId); // ADR-0042 §3 — untranslated source
   const result: unknown = await wc.executeJavaScript(buildArticleTextExpression(), true);
   const shaped = (result ?? {}) as { text?: unknown; source?: unknown };
   return {
@@ -249,7 +248,7 @@ async function scrollToText(
   nth?: number,
   tabId?: string,
 ): Promise<{ found: boolean; count: number }> {
-  const wc = requireWc(tabId);
+  const wc = await requireWcUntranslated(tabId); // ADR-0042 §3 — match against untranslated text
   const n =
     nth !== undefined && Number.isFinite(nth) && nth > 0 ? Math.min(Math.floor(nth), 50) : 1;
   const raw: unknown = await wc.executeJavaScript(
@@ -389,6 +388,17 @@ function requireWc(tabId?: string): WebContents {
   const wc = tabId === undefined ? resolveRunTab() : TabManager.webContentsForTab(tabId);
   if (wc === null)
     throw new AppError(tabId === undefined ? 'No active page' : `No web tab: ${tabId}`, 409);
+  return wc;
+}
+
+/**
+ * As {@link requireWc}, but first restores any in-place page translation so the agent reads
+ * untranslated source (ADR-0042 §3). Use for every path that reads DOM text/structure into the model
+ * or the Notary; plain {@link requireWc} is fine for pure actions (click, scroll-by-pixels).
+ */
+async function requireWcUntranslated(tabId?: string): Promise<WebContents> {
+  const wc = requireWc(tabId);
+  await TranslatePageInjector.ensureUntranslatedForAgent(wc).catch(() => undefined);
   return wc;
 }
 
@@ -610,7 +620,7 @@ function adapterFor(wc: WebContents): HumanInputAdapter {
  * see `e2e/spike-code-exec-sandbox.spec.ts`.
  */
 async function runExtractionScript(script: string, tabId?: string): Promise<unknown> {
-  const wc = requireWc(tabId);
+  const wc = await requireWcUntranslated(tabId); // ADR-0042 §3 — extract from untranslated DOM
   const html: unknown = await wc.executeJavaScript('document.documentElement.outerHTML', true);
   return runExtraction({ html: typeof html === 'string' ? html : '', script });
 }
@@ -665,12 +675,9 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
     if (closed) AgentTabGroup.releaseTab(agentGroupId, id);
     return closed;
   },
-  snapshotElements: async (tabId, opts) => {
-    const wc = requireWc(tabId);
-    // ADR-0042 §3 — the actionable-element perception must also read untranslated source.
-    await TranslatePageInjector.ensureUntranslatedForAgent(wc).catch(() => undefined);
-    return CdpDriver.snapshotElements(wc, opts ?? {});
-  },
+  // ADR-0042 §3 — the actionable-element perception must also read untranslated source.
+  snapshotElements: async (tabId, opts) =>
+    CdpDriver.snapshotElements(await requireWcUntranslated(tabId), opts ?? {}),
   // A stale ref / non-field element must read as "unverified", never as an error that fails the fill.
   readElementValue: (ref, tabId) =>
     CdpDriver.readElementValue(requireWc(tabId), ref).catch(() => null),

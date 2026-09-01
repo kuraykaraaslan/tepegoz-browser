@@ -5,6 +5,7 @@ import PreferenceStore from '@tepegoz/preferences';
 import { normalizeTranslateLanguage, shouldAutoTranslatePage } from '@tepegoz/ext-translate/engine';
 import type { TranslatePageState } from '@tepegoz/ext-translate/types';
 import TabManager from '../tabs';
+import { hasActiveAgentRun } from '../agent/agent-run-lock.electron';
 import translateHost, { setTranslatePageState } from './translate-host.electron';
 import { originOf } from './translate-page-injector-binding.electron';
 import { inject } from './translate-page-injector.electron';
@@ -50,6 +51,9 @@ async function startTranslation(
 
 async function maybeAutoTranslate(url: string, wc: WebContents): Promise<void> {
   if (wc.isDestroyed()) return;
+  // ADR-0042 §3: never auto-translate while an agent run is in progress — a run-driven navigation
+  // must not put a translation between the agent and the source it perceives/records.
+  if (hasActiveAgentRun()) return;
   const origin = originOf(url);
   if (origin === undefined) return;
   const settings = PreferenceStore.getAll().translate;
