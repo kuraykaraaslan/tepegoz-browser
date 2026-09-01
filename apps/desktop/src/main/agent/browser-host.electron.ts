@@ -17,6 +17,7 @@ import {
   isUserControlActive,
   resetForAgentAction,
 } from './page-cursor.electron';
+import TranslatePageInjector from '../extensions/translate-page-injector-controller.electron';
 import { buildArticleTextExpression } from './article-text-script.js';
 import { runExtraction } from './extraction-sandbox.electron.js';
 import { fillCredential as brokerFill } from './credential-broker.electron.js';
@@ -68,6 +69,9 @@ async function readPage(
   tabId?: string,
 ): Promise<{ url: string; title: string; text: string; sig: string }> {
   const wc = requireWc(tabId);
+  // ADR-0042 §3: the agent reads untranslated source. If the tab is showing a page translation,
+  // restore it before perceiving, so a run never depends on model output that was never in the page.
+  await TranslatePageInjector.ensureUntranslatedForAgent(wc).catch(() => undefined);
   const url = wc.getURL();
   const title = wc.getTitle();
   // Read the visible text AND a structural signature of the on-screen actionable elements in one eval.
@@ -661,7 +665,12 @@ export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
     if (closed) AgentTabGroup.releaseTab(agentGroupId, id);
     return closed;
   },
-  snapshotElements: (tabId, opts) => CdpDriver.snapshotElements(requireWc(tabId), opts ?? {}),
+  snapshotElements: async (tabId, opts) => {
+    const wc = requireWc(tabId);
+    // ADR-0042 §3 — the actionable-element perception must also read untranslated source.
+    await TranslatePageInjector.ensureUntranslatedForAgent(wc).catch(() => undefined);
+    return CdpDriver.snapshotElements(wc, opts ?? {});
+  },
   // A stale ref / non-field element must read as "unverified", never as an error that fails the fill.
   readElementValue: (ref, tabId) =>
     CdpDriver.readElementValue(requireWc(tabId), ref).catch(() => null),

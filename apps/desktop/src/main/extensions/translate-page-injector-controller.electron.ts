@@ -111,6 +111,20 @@ const TranslatePageInjector = {
     return restored;
   },
 
+  /**
+   * ADR-0042 §3: an agent run must read the untranslated source. If this tab is currently showing a
+   * translation of its own origin, restore it in place before the agent perceives it. One-directional
+   * — the translation is not re-applied when the run ends; a person who wants it back re-triggers it.
+   * A no-op when nothing is translated or the visible translation belongs to another origin.
+   */
+  async ensureUntranslatedForAgent(wc: WebContents): Promise<void> {
+    if (wc.isDestroyed()) return;
+    const state = translateHost.pageState();
+    if (state === null || state.status !== 'translated') return;
+    if (state.origin !== '' && state.origin !== (originOf(wc.getURL()) ?? '')) return;
+    await this.restoreWebContents(wc);
+  },
+
   async restoreWebContents(wc: WebContents): Promise<TranslatePageState | null> {
     if (wc.isDestroyed()) return null;
     await inject(wc);
