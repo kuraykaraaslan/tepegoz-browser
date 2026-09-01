@@ -169,11 +169,20 @@ mouse-only, which fails WCAG 2.1.1 on its own (engineering-rules §7).
 
 `submitDefault()` never calls `closeSuggestions()`.
 
+> **Fixed 2026-09-01.** `submitDefault()` now calls `closeSuggestions()` first, on both the navigate
+> and the calc path. Test: "closes the dropdown when Enter submits the typed value (§ A8)".
+
 ### A9 — Stale re-open after choosing a row
 
 `closeSuggestions()` bumps `reqIdRef`, but a still-pending debounce timer mints a **new** id when it
 fires, so it always matches its own guard and re-opens the list. **Fix:** `clearTimeout` inside
 `closeSuggestions`, and capture the generation at schedule time.
+
+> **Fixed 2026-09-01.** The generation (`reqId = ++reqIdRef.current`) is now captured at *schedule*
+> time, not inside the timer callback, so a `closeSuggestions()` before the fetch resolves makes its
+> result fail the `reqIdRef.current === reqId` guard. And the pending timer handle lives in
+> `debounceRef` so `closeSuggestions()` can `clearTimeout` it outright. Test: "a debounced fetch in
+> flight cannot reopen a dropdown that was already dismissed (§ A9)".
 
 ### A10 — Mouse movement silently re-targets Enter
 

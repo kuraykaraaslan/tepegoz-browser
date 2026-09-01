@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useRef } from 'react';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Omnibox, type OmniboxProps } from './omnibox';
 import type { OmniboxSuggestion } from './omnibox-suggest';
 
@@ -28,7 +28,17 @@ function CountingOmnibox({ renders, ...props }: OmniboxProps & { renders: { curr
   return <Omnibox {...props} />;
 }
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
+
+/** The omnibox renders a single wrapping `<form>`; grab it for an explicit submit. */
+function omniboxForm(): HTMLFormElement {
+  const form = screen.getByRole('combobox').closest('form');
+  if (form === null) throw new Error('omnibox form not found');
+  return form;
+}
 
 describe('Omnibox', () => {
   it('renders the input with the current URL', () => {
@@ -90,5 +100,53 @@ describe('Omnibox', () => {
     fireEvent.change(input, { target: { value: '2+2' } });
     await waitFor(() => expect(screen.queryByText('Two plus two clubhouse')).toBeNull());
     expect(screen.getByText('= 4')).toBeTruthy();
+  });
+
+  it('closes the dropdown when Enter submits the typed value (§ A8)', async () => {
+    const suggestion: OmniboxSuggestion = {
+      key: 'h1',
+      kind: 'history',
+      title: 'Duck facts',
+      action: { type: 'navigate', input: 'https://duck.test/' },
+    };
+    const onNavigate = vi.fn();
+    const onSuggest = vi.fn(oneSuggestion(suggestion));
+    render(<Omnibox {...baseProps({ onSuggest, onNavigate })} />);
+
+    const input = screen.getByRole('combobox');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'duck' } });
+    expect(await screen.findByText('Duck facts')).toBeTruthy();
+
+    fireEvent.submit(omniboxForm());
+
+    expect(onNavigate).toHaveBeenCalledWith('duck');
+    await waitFor(() => expect(screen.queryByText('Duck facts')).toBeNull());
+  });
+
+  it('a debounced fetch in flight cannot reopen a dropdown that was already dismissed (§ A9)', async () => {
+    vi.useFakeTimers();
+    const suggestion: OmniboxSuggestion = {
+      key: 'h1',
+      kind: 'history',
+      title: 'Duck facts',
+      action: { type: 'navigate', input: 'https://duck.test/' },
+    };
+    const onSuggest = vi.fn(oneSuggestion(suggestion));
+    render(<Omnibox {...baseProps({ onSuggest })} />);
+
+    const input = screen.getByRole('combobox');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'duck' } });
+    // The debounce timer is scheduled but has NOT fired yet — dismiss the box before it does.
+    fireEvent.submit(omniboxForm());
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+
+    // closeSuggestions cleared the pending timer, so the fetch never ran and nothing re-opened.
+    expect(onSuggest).not.toHaveBeenCalled();
+    expect(screen.queryByText('Duck facts')).toBeNull();
   });
 });

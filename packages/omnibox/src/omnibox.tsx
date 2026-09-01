@@ -89,8 +89,12 @@ export function Omnibox({
   const [suggestions, setSuggestions] = useState<OmniboxSuggestion[]>([]);
   // -1 = nothing highlighted → Enter runs the default (calc copy / navigate the typed text).
   const [selected, setSelected] = useState(-1);
-  // Monotonic request id so a slow suggestion fetch can't overwrite a newer query's results.
+  // Monotonic request id so a slow suggestion fetch can't overwrite a newer query's results, and a
+  // just-closed dropdown can't be re-opened by a fetch that was already in flight (see below).
   const reqIdRef = useRef(0);
+  // Handle for the pending debounce timer, so `closeSuggestions` can cancel a fetch that has not
+  // fired yet — bumping `reqIdRef` alone does not, because the timer callback mints its own id.
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listRef = useRef<HTMLUListElement | null>(null);
   const listboxId = useId();
 
@@ -118,8 +122,11 @@ export function Omnibox({
       return undefined;
     }
     const query = value;
+    // Capture the generation now, at SCHEDULE time — not inside the timer. A `closeSuggestions()`
+    // (row chosen, Enter, blur) between now and the fetch resolving bumps `reqIdRef`, so its result
+    // fails this guard and cannot re-open a dropdown the user already dismissed.
+    const reqId = ++reqIdRef.current;
     const timer = setTimeout(() => {
-      const reqId = ++reqIdRef.current;
       void onSuggest(query).then(
         (next) => {
           if (reqIdRef.current === reqId) {
@@ -132,6 +139,7 @@ export function Omnibox({
         },
       );
     }, SUGGEST_DEBOUNCE_MS);
+    debounceRef.current = timer;
     return () => clearTimeout(timer);
   }, [value, focused, isCalc, onSuggest]);
 
@@ -160,7 +168,11 @@ export function Omnibox({
   }, [open, suggestions.length, onDropdownHeightChange]);
 
   function closeSuggestions(): void {
-    reqIdRef.current++; // invalidate any in-flight fetch
+    reqIdRef.current++; // invalidate any in-flight fetch (its captured reqId no longer matches)
+    if (debounceRef.current !== null) {
+      clearTimeout(debounceRef.current); // …and a debounce that has not fired yet
+      debounceRef.current = null;
+    }
     setSuggestions([]);
     setSelected(-1);
   }
@@ -200,6 +212,9 @@ export function Omnibox({
   }
 
   function submitDefault(): void {
+    // Submitting ends the suggestion session either way — tear the dropdown (and any pending fetch)
+    // down so it cannot flash back open a moment later.
+    closeSuggestions();
     // Inline calculation: if the whole input is arithmetic, surface the result instead of navigating.
     if (calc !== null) {
       if (onCalcResult) onCalcResult(calc.formatted);
