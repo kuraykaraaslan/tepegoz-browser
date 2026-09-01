@@ -7,3 +7,5 @@
 declare const __TEPEGOZ_BUILD_COMMIT__: string;
 declare const __TEPEGOZ_BUILD_TIME__: string;
 declare const __TEPEGOZ_BUILD_CHANNEL__: string;
+/** Google Safe Browsing API key (ADR-0043). Empty string when unprovisioned — the service stays inert. */
+declare const __TEPEGOZ_SAFE_BROWSING_KEY__: string;

@@ -67,6 +67,7 @@ import FileOperationsHost from './file-operations/file-operations-host';
 import { browserHost } from './agent/browser-host.electron';
 import { journalHost } from './agent/journal-host.electron';
 import DownloadService from './downloads/download-service.electron';
+import SafeBrowsingService from './security/safe-browsing-service.electron';
 import { downloadToolsHost } from './downloads/download-tools-host.electron';
 import { clipboardToolsHost } from './clipboard/clipboard-tools-host.electron';
 import UploadService from './uploads/upload-service.electron';
@@ -242,9 +243,14 @@ if (!app.requestSingleInstanceLock()) {
       // Create the base browsing session now, so every attacher registered above has run before the
       // first tab can load anything.
       BrowsingSessions.direct();
+      // Safe Browsing: compose the prefix store + full-hash client + Settings switch. Inert until an
+      // API key is provisioned (ADR-0043). Fire-and-forget — the download-trust provider works before
+      // the prefix store finishes loading (an unloaded store resolves to `unknown`, nothing blocked).
+      void SafeBrowsingService.init();
       // Browser downloads: attach the browsing-session will-download handler before any page can start
-      // a download, load the SQLite projection, and route every file through quarantine first.
-      DownloadService.init();
+      // a download, load the SQLite projection, and route every file through quarantine first. The
+      // download's source origin is checked against Safe Browsing (`unsafe` → auto-`blocked`).
+      DownloadService.init(SafeBrowsingService.downloadTrustProvider());
       UploadService.init();
       // Built-in extensions — the whole layer, skipped wholesale in safe mode. A page injector or a
       // network hook is exactly the kind of code that can take the main process down on every launch,

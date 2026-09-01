@@ -83,6 +83,9 @@ export default defineConfig(({ command }) => {
         __TEPEGOZ_BUILD_COMMIT__: JSON.stringify(buildCommit()),
         __TEPEGOZ_BUILD_TIME__: JSON.stringify(new Date().toISOString()),
         __TEPEGOZ_BUILD_CHANNEL__: JSON.stringify(process.env['TEPEGOZ_CHANNEL'] ?? 'stable'),
+        // Google Safe Browsing API key (ADR-0043) — a release input, not a user secret. Empty until
+        // provisioned; the SafeBrowsingService then runs with no full-hash transport (inert).
+        __TEPEGOZ_SAFE_BROWSING_KEY__: JSON.stringify(process.env['TEPEGOZ_SAFE_BROWSING_KEY'] ?? ''),
       },
     },
     preload: {
