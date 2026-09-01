@@ -208,6 +208,10 @@ export interface Preferences {
   popupBlocker: PopupBlockerSettings;
   /** Adblock Shield extension settings. Recent blocked URLs stay session-only and are not persisted. */
   adblock: AdblockSettings;
+  /** Safe Browsing protection (Settings → Privacy & security). On by default. When off, no prefix
+   *  database is refreshed, no full-hash request is made to Google Safe Browsing, the navigation
+   *  check is skipped and every download settles `unknown` — see ADR-0043. Device-local; private. */
+  safeBrowsingEnabled: boolean;
   /** Typo extension settings. Dictionaries live in userData/dictionaries and are not persisted here. */
   typo: TypoSettings;
   /** Translate extension settings. Translation memory lives outside preferences. */

@@ -205,6 +205,9 @@ export const PreferencesSchema = z.object({
     cosmeticFiltering: z.boolean(),
     disabledOrigins: z.array(z.string().max(2048)).max(500),
   }),
+  // Safe Browsing protection (ADR-0043). On by default; off makes the whole feature inert (no prefix
+  // DB refresh, no Google full-hash request, no navigation check, downloads settle `unknown`).
+  safeBrowsingEnabled: z.boolean(),
   // Typo extension settings. Dictionaries are profile files, not preference payloads.
   typo: z.object({
     enabled: z.boolean(),
@@ -396,6 +399,9 @@ export const DEFAULT_PREFERENCES: Preferences = {
     cosmeticFiltering: true,
     disabledOrigins: [],
   },
+  // Safe Browsing protection on by default (ADR-0043). Inert until the desktop service + a Google
+  // Safe Browsing API key are wired; the honest default is still "on".
+  safeBrowsingEnabled: true,
   typo: {
     enabled: true,
     autoDetectLanguage: true,
