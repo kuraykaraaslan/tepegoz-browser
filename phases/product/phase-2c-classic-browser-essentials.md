@@ -230,7 +230,10 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         or (b) a HEAD/range probe that stays a normal `will-download` single stream unless it can
         prove segmentation is worthwhile. (b) is less code and keeps one write path; (a) is faster on
         the files where speed is the point. An owner call, not a coding gap. The local range server
-        both need is also the harness the "Measurement, not assertion" row wants.
+        both need **now exists** — `segmented-transfer.http.test.ts` (see the "Measurement" row below)
+        stands up an honest `Range:`/`206`/`Accept-Ranges: none` server and a reference
+        `net.request`-shaped `SegmentTransport` + `FileHandle` `SegmentSink`, so whichever fork is
+        taken starts from a transcription rather than a design.
 - [ ] **Dynamic connection count** — the segment count adapts to measured throughput and server behavior rather
       than a fixed setting; a host that penalizes parallel connections is detected and backed off. Per-host
       ceiling is user-visible and overridable (default conservative: we are a browser, not a scraper)
@@ -325,9 +328,23 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         media pipeline rather than a capture hook, and it is the same thing this row's own
         "no system-wide traffic interception" clause rules out. Not scheduled; recorded so the gap is
         a known shape rather than a surprise.
-- [ ] **Measurement, not assertion** — a benchmark that downloads a fixed set of files against a local server
+- [x] **Measurement, not assertion** — a benchmark that downloads a fixed set of files against a local server
       and records single-stream vs. segmented throughput. A speed claim without this number is vanity; the
       number is what a comparison against IDM or Chrome is allowed to cite
+  - [x] _Built 2026-09-02 as `packages/downloads/src/segmented-transfer.http.test.ts` — the engine
+        (`runSegmentedTransfer`) driven over a real `node:http` loopback range server and a real file
+        on disk, not hand-built stubs. A fixed set of sizes (256 KiB / 3 MiB / 8 MiB + 137) is pulled
+        single-stream AND segmented; every case is asserted **byte-for-byte** against the origin
+        (sha256, not length — wrong assembly order is the one failure segmentation adds), and the
+        small file is asserted to fall back to one stream (`not-ranged`, 0 ranged requests)._
+        — _**The recorded number, against a server capped at 4 MB/s per connection** (loopback timing
+        is too noisy to gate on, so the row asserts correctness only and prints the table): 3 MiB / 3
+        segments → **~3.0× **; 6 MiB / 6 segments → **~5.7×**. The honest framing the table carries:
+        segmentation is pure overhead on a fast link and wins on a throughput-capped or high-latency
+        one — which is why a per-host ceiling and a conservative default are the "Dynamic connection
+        count" row's job, still open._
+        — _It also lands the local range server + reference `net.request`-shaped `SegmentTransport` /
+        `FileHandle` `SegmentSink` that the `DownloadService` wiring fork needs (noted on that row)._
 
 > **Deliberately out of scope from that report:** licence automation, distributor/support processes, UI theming
 > and "modernization", and macOS-via-Wine. They are IDM-the-business's problems; only the transfer engine and
