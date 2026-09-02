@@ -4,6 +4,16 @@ import type { Db } from './db';
 export interface PersistedDownload extends DownloadRecord {
   quarantinePath?: string | undefined;
   finalPath?: string | undefined;
+  /**
+   * What a resume across an app restart needs (migration 19). Main-process only — `publicRecord`
+   * does not project them, because a URL chain can carry a signed query and the renderer has no use
+   * for any of it.
+   */
+  urlChain?: string[] | undefined;
+  etag?: string | undefined;
+  lastModified?: string | undefined;
+  /** The browsing partition the transfer was on — a resume must not move it to another route. */
+  partition?: string | undefined;
 }
 
 interface DownloadRow {
@@ -28,6 +38,10 @@ interface DownloadRow {
   correlation_id: string | null;
   task_id: string | null;
   quarantine_path: string | null;
+  url_chain: string | null;
+  etag: string | null;
+  last_modified: string | null;
+  partition: string | null;
   final_path: string | null;
 }
 
@@ -57,8 +71,23 @@ function rowToDownload(row: DownloadRow): PersistedDownload {
     },
     ...(row.quarantine_path !== null ? { quarantinePath: row.quarantine_path } : {}),
     ...(row.final_path !== null ? { finalPath: row.final_path } : {}),
+    // A chain that cannot be parsed is dropped rather than guessed at: a resume without the real
+    // redirect chain would ask the wrong server for a byte range.
+    ...(row.url_chain !== null ? { urlChain: parseUrlChain(row.url_chain) } : {}),
+    ...(row.etag !== null ? { etag: row.etag } : {}),
+    ...(row.last_modified !== null ? { lastModified: row.last_modified } : {}),
+    ...(row.partition !== null ? { partition: row.partition } : {}),
   };
   return record;
+}
+
+function parseUrlChain(raw: string): string[] {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : [];
+  } catch {
+    return [];
+  }
 }
 
 function toParams(record: PersistedDownload): Record<string, unknown> {
@@ -81,6 +110,10 @@ function toParams(record: PersistedDownload): Record<string, unknown> {
     actor: record.provenance.actor,
     sourceUrl: record.provenance.sourceUrl ?? null,
     sourceOrigin: record.provenance.sourceOrigin ?? null,
+    urlChain: record.urlChain === undefined ? null : JSON.stringify(record.urlChain),
+    etag: record.etag ?? null,
+    lastModified: record.lastModified ?? null,
+    partition: record.partition ?? null,
     correlationId: record.provenance.correlationId ?? null,
     taskId: record.provenance.taskId ?? null,
     quarantinePath: record.quarantinePath ?? null,
@@ -102,11 +135,13 @@ export class DownloadStore {
       `INSERT INTO downloads (
         id, url, filename, mime_type, status, risk, trust_verdict, received_bytes, total_bytes,
         can_resume, created_at, updated_at, completed_at, error, sha256, actor, source_url,
-        source_origin, correlation_id, task_id, quarantine_path, final_path
+        source_origin, correlation_id, task_id, quarantine_path, final_path,
+        url_chain, etag, last_modified, partition
       ) VALUES (
         @id, @url, @filename, @mimeType, @status, @risk, @trustVerdict, @receivedBytes, @totalBytes,
         @canResume, @createdAt, @updatedAt, @completedAt, @error, @sha256, @actor, @sourceUrl,
-        @sourceOrigin, @correlationId, @taskId, @quarantinePath, @finalPath
+        @sourceOrigin, @correlationId, @taskId, @quarantinePath, @finalPath,
+        @urlChain, @etag, @lastModified, @partition
       )
       ON CONFLICT(id) DO UPDATE SET
         url = excluded.url,
@@ -128,6 +163,10 @@ export class DownloadStore {
         correlation_id = excluded.correlation_id,
         task_id = excluded.task_id,
         quarantine_path = excluded.quarantine_path,
+        url_chain = excluded.url_chain,
+        etag = excluded.etag,
+        last_modified = excluded.last_modified,
+        partition = excluded.partition,
         final_path = excluded.final_path`,
     ).run(toParams(record));
   }

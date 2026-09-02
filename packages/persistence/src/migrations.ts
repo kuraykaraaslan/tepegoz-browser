@@ -602,6 +602,31 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 19,
+    up: (db) => {
+      // Resuming a transfer across an app RESTART needs three things Electron asks for and this app
+      // was not keeping: the URL chain (redirects included — resuming the first URL can land
+      // somewhere else), and the server's validators.
+      //
+      // `partition` is the fourth, and it is a privacy requirement rather than a protocol one. Since
+      // Phase 5 a tab can be bound to a VPN/Tor connection with its own partition; resuming such a
+      // transfer on the Direct session after a restart would put the request on the clear route the
+      // user had deliberately left. `retry` sidesteps this by re-running from the page you are on —
+      // a restart-resume has no page, so it has to know.
+      //
+      // `etag` / `last_modified` are the load-bearing pair. Without one of them a range request still
+      // succeeds and still splices bytes from a resource that may have changed underneath — producing
+      // a file that is corrupt in a way nothing downstream can detect, because the hash is computed
+      // over the splice and merely disagrees with every other copy in the world.
+      db.exec(`
+        ALTER TABLE downloads ADD COLUMN url_chain     TEXT;
+        ALTER TABLE downloads ADD COLUMN etag          TEXT;
+        ALTER TABLE downloads ADD COLUMN last_modified TEXT;
+        ALTER TABLE downloads ADD COLUMN partition     TEXT;
+      `);
+    },
+  },
 ];
 
 /**

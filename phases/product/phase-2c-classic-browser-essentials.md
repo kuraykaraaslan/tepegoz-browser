@@ -195,9 +195,37 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
 - [ ] **Dynamic connection count** — the segment count adapts to measured throughput and server behavior rather
       than a fixed setting; a host that penalizes parallel connections is detected and backed off. Per-host
       ceiling is user-visible and overridable (default conservative: we are a browser, not a scraper)
-- [ ] **Resilient resume** — resume across an app restart and across a dropped connection, with exponential
+- [~] **Resilient resume** — resume across an app restart and across a dropped connection, with exponential
       backoff and a bounded retry budget; a resumed transfer verifies the already-written bytes before
       continuing, never blindly appending
+  - [x] **Resume across an app restart, with the byte check that makes it safe** (2026-09-02).
+        _Before this, `resume` on a record whose `DownloadItem` was gone set the row to `in_progress`
+        and moved nothing: a button that reports success and does nothing, which is worse than a
+        disabled one — the user goes away and comes back to a transfer that never started._
+        — _**"Verifies the already-written bytes" is the whole feature, and it is a pure function.**
+        `planDownloadResume(record, bytesOnDisk)` compares what the FILE holds (measured) against what
+        the record remembers and refuses to continue on any disagreement, on a missing validator
+        (`ETag`/`Last-Modified`), on a non-resumable record, or when every byte is already there. The
+        failure it prevents has no symptom: Electron continues writing at whatever offset it is handed,
+        so a partial file plus a range from a changed resource produces a splice whose hash is computed
+        over the splice — nothing downstream reports anything, the file simply disagrees with every
+        other copy in the world. 10 tests, including that a `restart` can never carry a non-zero offset
+        (the caller passes it straight to `createInterruptedDownload`)._
+        — _**Migration 19 keeps what a restart-resume needs**: `url_chain` (redirects included —
+        resuming the first URL can land somewhere else), `etag`, `last_modified`, and `partition`. The
+        last one is a privacy requirement rather than a protocol one: a tunnel-bound transfer resumed
+        on Direct after a restart would put the request on the clear route the user deliberately left.
+        `retry` sidesteps that by re-running from the page you are on; a restart-resume has no page, so
+        it has to know. None of the four reach the renderer — a URL chain can carry a signed query._
+        — _**A row still reading `in_progress` at startup is corrected to `paused` on the way in.** No
+        `DownloadItem` survives a restart, so that row was describing a transfer that is not happening,
+        under a progress bar that would never move._
+        — _The resumed item re-enters through `will-download` on its own session, so it picks up the
+        same quarantine path, hash and trust gate as any other transfer. Nothing here bypasses them._
+  - [ ] **Still owed: the dropped-connection half** — exponential backoff and a bounded retry budget
+        for a transfer that fails mid-flight while the app is running. Today an interruption becomes a
+        `failed` row the user retries by hand. The safety rule above is the same one an automatic retry
+        must obey, so it is written and tested; what is missing is the scheduler around it.
 - [x] **Speed + ETA metadata** — surface bytes/sec and estimated time remaining in the download record and the
       manager (already tracked as an open item in `packages/downloads/CHECKLIST.md`; this is the same task)
       — _`computeDownloadRate(samples, totalBytes)` is a pure helper in `@tepegoz/downloads` (unit-tested

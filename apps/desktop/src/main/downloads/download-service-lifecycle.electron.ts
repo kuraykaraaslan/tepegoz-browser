@@ -9,6 +9,7 @@ import {
   type DownloadProvenance,
 } from '@tepegoz/downloads';
 import { Logger } from '@tepegoz/libs';
+import BrowsingSessions from '../network/browsing-sessions.electron';
 import { cleanFilename, originOf, sha256File, uniquePath } from './download-service-fs.electron';
 import type { ActiveDownload } from './download-service-model.electron';
 import {
@@ -41,6 +42,11 @@ function trackRate(
     tracking.samples.shift();
   tracking.current = computeDownloadRate(tracking.samples, totalBytes);
   state.rates.set(id, tracking);
+}
+
+/** Which browsing partition this WebContents is on, or null when it is not one of ours. */
+function partitionOf(wc: WebContents): string | null {
+  return BrowsingSessions.all().find((s) => s.session === wc.session)?.partition ?? null;
 }
 
 export function handleWillDownload(
@@ -84,6 +90,16 @@ export function handleWillDownload(
     provenance,
     quarantinePath,
     finalPath,
+    // What a resume across an app RESTART needs. Captured here because this is the only moment the
+    // live `DownloadItem` exists; after a restart there is nothing left to ask.
+    urlChain: item.getURLChain(),
+    ...(item.getETag().length > 0 ? { etag: item.getETag() } : {}),
+    ...(item.getLastModifiedTime().length > 0
+      ? { lastModified: item.getLastModifiedTime() }
+      : {}),
+    // The route it was on. Matched by session identity rather than assumed to be Direct: a
+    // tunnel-bound transfer resumed on the clear path is the leak the tab model exists to prevent.
+    ...(partitionOf(wc) !== null ? { partition: partitionOf(wc)! } : {}),
     item,
   };
   upsert(state, record);

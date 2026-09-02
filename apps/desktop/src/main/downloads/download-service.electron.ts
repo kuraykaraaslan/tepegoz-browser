@@ -40,7 +40,14 @@ class DownloadService {
     const db = getDb();
     if (db !== null) {
       for (const record of DownloadStore.list(db)) {
-        DownloadService.ctx.records.set(record.id, record);
+        // No `DownloadItem` survives a restart, so a row still reading `in_progress` describes a
+        // transfer that is not happening. Correct it on the way in rather than showing a progress bar
+        // that will never move: `paused` is what it actually is, and the resume path knows how to
+        // pick it up from the bytes on disk.
+        DownloadService.ctx.records.set(
+          record.id,
+          record.status === 'in_progress' ? { ...record, status: 'paused' } : record,
+        );
       }
       // Rows age out while the app is closed, so "after one day" has to be applied on the way in —
       // otherwise a browser that is opened once a week never removes anything. No-op on the default

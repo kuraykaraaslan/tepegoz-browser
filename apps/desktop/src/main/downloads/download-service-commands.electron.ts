@@ -2,6 +2,7 @@ import { basename, dirname } from 'node:path';
 import { BrowserWindow, dialog, shell, type WebContents } from 'electron';
 import { isRetryableStatus, type DownloadCommandAction } from '@tepegoz/downloads';
 import { AppError } from '@tepegoz/libs';
+import { resumeInterrupted, resumeRefusal } from './download-service-resume.electron';
 import PreferenceStore from '@tepegoz/preferences';
 import { moveFile, uniquePath } from './download-service-fs.electron';
 import {
@@ -33,11 +34,19 @@ export async function runCommand(
       canResume: record.item?.canResume() ?? record.canResume,
     });
   } else if (action === 'resume') {
-    if (record.item?.canResume() === true) record.item.resume();
-    patch(state, id, {
-      status: 'in_progress',
-      canResume: record.item?.canResume() ?? record.canResume,
-    });
+    if (record.item?.canResume() === true) {
+      record.item.resume();
+      patch(state, id, { status: 'in_progress', canResume: record.item.canResume() });
+    } else if (record.item === undefined) {
+      // No live item: the app was restarted (or the session that owned it went away). Before this,
+      // the row was simply set to `in_progress` and nothing moved — a button that reports success and
+      // does nothing, which is worse than one that is disabled.
+      const plan = resumeInterrupted(state, record);
+      if (plan.action !== 'resume') throw resumeRefusal(plan);
+    } else {
+      // A live item that says it cannot resume is a fact, not a state to overwrite.
+      patch(state, id, { canResume: false });
+    }
   } else if (action === 'cancel') {
     record.item?.cancel();
     patch(state, id, { status: 'canceled', updatedAt: Date.now() });
