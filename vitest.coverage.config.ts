@@ -114,7 +114,13 @@ export default defineConfig({
         // run-control + HITL relay (cancel unblocks pending prompts for that run only). RENDERER
         // added ai-panels cost, the network-privacy connection manager, the site-trust profile
         // list, and the per-key model picker.
-        'apps/desktop/**': { statements: 44, branches: 85, functions: 60, lines: 44 },
+        //
+        // Round 4 (same day, main-process solo after the renderer branch wound down) →
+        // floor(measured) S45.03 / B85.61 / F60.62 / L45.03: the "forget this site" +
+        // clear-browsing-data IPC (vault never in scope, every browsing partition, partial-failure
+        // resilient, journalled), agent conversation-history + active-tab helper IPC (agentPickFiles
+        // 5-file/5-MB cap, text vs base64), and the trusted-origin desktop adapter binding.
+        'apps/desktop/**': { statements: 45, branches: 85, functions: 60, lines: 45 },
       },
       include: [
         'apps/desktop/src/**',
