@@ -71,6 +71,74 @@ describe('HistoryStore', () => {
     expect(HistoryStore.search(db, '50%').map((e) => e.title)).toEqual(['Off 50% today']);
   });
 
+  describe('searchForOmnibox — frequency-shaped candidate window (omnibox track § A4)', () => {
+    const DAY = 24 * 60 * 60 * 1000;
+
+    /** Give a url a specific visit count without 100 `record` calls. */
+    function seed(url: string, title: string, ts: number, visits: number): void {
+      HistoryStore.record(db, { url, title, ts });
+      db.prepare('UPDATE history SET visit_count = ? WHERE url = ?').run(visits, url);
+    }
+
+    it('returns a heavily-visited old match that a recency-only window would drop', () => {
+      const now = 1000 * DAY;
+      // 55 pages all matching "site", each seen once, all more recent than the favourite.
+      for (let i = 0; i < 55; i++) {
+        seed(`https://recent-${String(i)}.ex/`, `Recent site ${String(i)}`, now - (i + 10) * DAY, 1);
+      }
+      // The page the user actually lives on: old last-visit, but 200 visits.
+      seed('https://fav.ex/', 'Favourite site', now - 400 * DAY, 200);
+
+      // The recency-ordered window (limit 50) never even sees it.
+      expect(HistoryStore.search(db, 'site', 50).map((e) => e.url)).not.toContain('https://fav.ex/');
+
+      // The omnibox window puts it first — the frequency ranker downstream can finally score it.
+      const omni = HistoryStore.searchForOmnibox(db, 'site', now, 50);
+      expect(omni[0]?.url).toBe('https://fav.ex/');
+      expect(omni.map((e) => e.url)).toContain('https://fav.ex/');
+    });
+
+    it('ranks the fresher of two equally-visited matches first — recency still contributes', () => {
+      const now = 1000 * DAY;
+      seed('https://fresh-tie.ex/', 'Fresh tie site', now - 1 * DAY, 5);
+      seed('https://old-tie.ex/', 'Old tie site', now - 60 * DAY, 5);
+      expect(HistoryStore.searchForOmnibox(db, 'site', now, 10).map((e) => e.url)).toEqual([
+        'https://fresh-tie.ex/',
+        'https://old-tie.ex/',
+      ]);
+    });
+
+    it('is a pure function of nowTs — the same rows reorder as time moves on', () => {
+      const t0 = 1000 * DAY;
+      // A recent page with a modest count, and an older page visited nearly twice as often.
+      seed('https://fresh.ex/', 'Fresh site', t0 - 1 * DAY, 10);
+      seed('https://steady.ex/', 'Steady site', t0 - 30 * DAY, 18);
+
+      // Near t0 the freshness bonus carries the recent page past the steadier one.
+      expect(HistoryStore.searchForOmnibox(db, 'site', t0, 10)[0]?.url).toBe('https://fresh.ex/');
+      // Two months on the bonus has decayed to nothing and raw frequency wins.
+      expect(HistoryStore.searchForOmnibox(db, 'site', t0 + 60 * DAY, 10)[0]?.url).toBe(
+        'https://steady.ex/',
+      );
+    });
+
+    it('clamps a future last-visit rather than dividing the score by ~zero', () => {
+      const now = 1000 * DAY;
+      seed('https://future.ex/', 'Future site', now + 5 * DAY, 2);
+      seed('https://normal.ex/', 'Normal site', now - DAY, 2);
+      // Both come back, ordered, with finite scores — no NaN row, no crash.
+      const rows = HistoryStore.searchForOmnibox(db, 'site', now, 10);
+      expect(rows.map((e) => e.url).sort()).toEqual(['https://future.ex/', 'https://normal.ex/']);
+    });
+
+    it('shares the Turkish-folded match path with search', () => {
+      seed('https://sisli.ex/', 'Şişli Gezisi', 1000 * DAY, 4);
+      expect(HistoryStore.searchForOmnibox(db, 'sisli', 1000 * DAY, 10).map((e) => e.title)).toEqual([
+        'Şişli Gezisi',
+      ]);
+    });
+  });
+
   it('keeps the folded shadow in sync when a title is refined', () => {
     HistoryStore.record(db, { url: 'https://a.example/', title: 'a.example', ts: 1 });
     HistoryStore.setTitle(db, 'https://a.example/', 'Çalışma Notları');

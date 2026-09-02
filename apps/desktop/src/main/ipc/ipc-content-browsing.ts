@@ -221,12 +221,14 @@ export function registerBrowsingIpc(): void {
     return db !== null ? HistoryStore.list(db, limit, offset) : [];
   });
   handle(IpcChannels.historySearch, (_event, payload): HistoryEntry[] => {
-    const { query, limit, offset } = HistorySearchParamsSchema.parse(payload ?? {});
+    const { query, limit, offset, forOmnibox } = HistorySearchParamsSchema.parse(payload ?? {});
     const db = getDb();
     if (db === null) return [];
-    return query.trim().length === 0
-      ? HistoryStore.list(db, limit, offset)
-      : HistoryStore.search(db, query.trim(), limit, offset);
+    const trimmed = query.trim();
+    if (trimmed.length === 0) return HistoryStore.list(db, limit, offset);
+    return forOmnibox
+      ? HistoryStore.searchForOmnibox(db, trimmed, Date.now(), limit)
+      : HistoryStore.search(db, trimmed, limit, offset);
   });
   handle(IpcChannels.historyDelete, (_event, payload): void => {
     const url = HistoryUrlSchema.parse(payload);

@@ -91,8 +91,10 @@ the clear with `suggestions.length > 0`. Either removes the loop; both is correc
 clear is an identity-preserving functional update (`prev.length === 0 ? prev : []`). Regression test
 `omnibox.test.tsx` — "does not spin the suggestion effect when arithmetic is typed" — asserts the
 render count stays bounded; the omnibox package gained the jsdom + `@testing-library/react` dev
-harness it lacked.)_ _As of 2026-09-02 ten of the eleven are fixed — **A4 is the only one left**;
-each carries its own note below._
+harness it lacked.)_ _As of 2026-09-02 **all eleven §A defects are fixed** (A4 closed the same day
+with `HistoryStore.searchForOmnibox`); each carries its own note below. What remains of this track is
+the **proposal half** — a real unified relevance score, favicons, matched-substring emphasis, inline
+autocomplete, keyword search engines — none of it a defect, all of it owner-gated._
 
 ### A2 — Turkish history search is broken end to end
 
@@ -150,6 +152,20 @@ column plans as `SEARCH … USING INDEX`, while `LIKE 'abc%'` plans as `SCAN`). 
 SQL takes `ORDER BY ts DESC LIMIT 50`; the TS layer then re-sorts those 50 by `visitCount`. A
 heavily-visited page that is not among the 50 most _recent_ matches can never be scored at all. The
 "most-visited first" comment is true only inside a recency window nobody declared.
+
+**Fixed 2026-09-02** — `HistoryStore.searchForOmnibox(db, query, nowTs, limit)`, a single new query
+alongside `search` (which keeps its recency + `offset` shape for the History page). It orders the
+candidate window by `visit_count + 30.0 / (1.0 + MAX(nowTs - ts, 0)/86400000.0)` — the visit count
+plus a bounded freshness bonus, ~30 for a page seen today decaying to ~1 after a month — so a
+frequently visited old page and a just-seen new one are **both** always in the 50. `nowTs` is
+injected (a pure function of its inputs; clock skew is clamped so the score cannot divide by ~0).
+Wired through one channel: `HistorySearchParamsSchema` gained `forOmnibox` (the omnibox sets it, the
+History page does not), routed in `ipc-content-browsing`. 5 tests in `history-store.test.ts`,
+including that `search`'s recency-only window drops the heavy old match this one puts first.
+
+This is the minimal fix that aligns the window to the ranker; it is **not** the unified relevance
+score (still owed, four owner decisions, no ADR) — `visit_count` remains the dominant signal and the
+freshness curve is a fixed internal constant, not a tunable.
 
 ### A5 — Dedup compares raw strings
 

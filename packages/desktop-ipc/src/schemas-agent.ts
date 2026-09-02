@@ -103,6 +103,10 @@ export const HistorySearchParamsSchema = z.object({
   query: z.string().max(200).default(''),
   limit: z.number().int().min(1).max(200).default(50),
   offset: z.number().int().min(0).default(0),
+  // The omnibox asks for a frequency-shaped candidate window (its ranker re-sorts by visit count);
+  // the History page leaves this false and gets the recency-ordered, paginated list. One channel,
+  // one query shape per caller — see `HistoryStore.searchForOmnibox` and omnibox track § A4.
+  forOmnibox: z.boolean().default(false),
 });
 
 /** `agent-skills:save` payload. Bounds mirror SkillRecordSchema in @tepegoz/shared-types, which stays

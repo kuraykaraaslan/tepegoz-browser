@@ -87,8 +87,12 @@ export const bookmarksHistoryApi: Pick<
 > = {
   getHistory: (params?: { limit?: number; offset?: number }) =>
     invoke<HistoryEntry[]>(IpcChannels.historyList, params),
-  searchHistory: (params: { query: string; limit?: number; offset?: number }) =>
-    invoke<HistoryEntry[]>(IpcChannels.historySearch, params),
+  searchHistory: (params: {
+    query: string;
+    limit?: number;
+    offset?: number;
+    forOmnibox?: boolean;
+  }) => invoke<HistoryEntry[]>(IpcChannels.historySearch, params),
   deleteHistory: (url: string) => invoke<void>(IpcChannels.historyDelete, url),
   clearHistory: () => invoke<void>(IpcChannels.historyClear),
   planSiteDataClear: (url: string) => invoke<SiteClearPlan | null>(IpcChannels.siteDataPlan, url),

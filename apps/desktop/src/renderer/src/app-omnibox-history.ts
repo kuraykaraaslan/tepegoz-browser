@@ -63,7 +63,10 @@ export function useOmniboxAndHistory(
       let history: Awaited<ReturnType<typeof window.tepegoz.searchHistory>> = [];
       if (!inCommandMode) {
         try {
-          history = term.length > 0 ? await window.tepegoz.searchHistory({ query: term }) : [];
+          history =
+            term.length > 0
+              ? await window.tepegoz.searchHistory({ query: term, forOmnibox: true })
+              : [];
         } catch {
           history = []; // history unavailable → still surface tabs/bookmarks + navigate/search
         }

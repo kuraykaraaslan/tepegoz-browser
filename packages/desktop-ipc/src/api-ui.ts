@@ -73,6 +73,8 @@ export interface UiApi {
     query: string;
     limit?: number;
     offset?: number;
+    /** Omnibox callers set this for a frequency-shaped candidate window (§ A4). */
+    forOmnibox?: boolean;
   }): Promise<HistoryEntry[]>;
   deleteHistory(url: string): Promise<void>;
   clearHistory(): Promise<void>;

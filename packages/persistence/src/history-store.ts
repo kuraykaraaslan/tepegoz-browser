@@ -76,6 +76,36 @@ export class HistoryStore {
     return rows.map(toEntry);
   }
 
+  /**
+   * Candidate window for the omnibox, shaped for the ranker that consumes it.
+   *
+   * {@link search} orders purely by recency (`ts DESC`) with an `offset`, which is right for the
+   * History page. The omnibox is different: its ranker (`historySuggestions` in `@tepegoz/omnibox`)
+   * re-sorts the rows it is handed by `visitCount`, so a recency-only window means a heavily-visited
+   * page that is not among the 50 most _recent_ matches never reaches the ranker at all — it cannot
+   * be scored however often it was visited (omnibox track § A4: "candidate window is recency-shaped,
+   * ranking is frequency-shaped").
+   *
+   * So this window scores each match as `visit_count` plus a bounded freshness bonus — about `30` for
+   * a page seen today, decaying to `~1` after a month — and takes the top `limit`. A frequently
+   * visited old page and a just-seen new one are therefore both always in the window. The bonus is
+   * clamped at `ts` in the future (`MAX(nowTs - ts, 0)`) so clock skew cannot divide the score by a
+   * value near zero. `nowTs` is injected, not read from a clock here, so the ordering is a pure
+   * function of its inputs and a test can pin it.
+   */
+  static searchForOmnibox(db: Db, query: string, nowTs: number, limit = 50): HistoryEntry[] {
+    const like = likeContains(foldForSearch(query));
+    const rows = db
+      .prepare(
+        `SELECT url, title, ts, visit_count FROM history
+         WHERE url_fold LIKE ? ESCAPE '\\' OR title_fold LIKE ? ESCAPE '\\'
+         ORDER BY visit_count + 30.0 / (1.0 + MAX(? - ts, 0) / 86400000.0) DESC, ts DESC
+         LIMIT ?`,
+      )
+      .all(like, like, nowTs, limit) as HistoryRow[];
+    return rows.map(toEntry);
+  }
+
   /** Refine a recorded page's title (arrives after navigation) without bumping the visit count. */
   static setTitle(db: Db, url: string, title: string): void {
     db.prepare('UPDATE history SET title = ?, title_fold = ? WHERE url = ?').run(
