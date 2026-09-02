@@ -69,18 +69,19 @@ Comet, "agentic tarayıcı" kategorisinin canlı tehdit vakası:
 
 ## Tepegöz açısından alaka
 
-| Eksen | Comet | Tepegöz | Not |
-|---|---|---|---|
-| Form faktörü | Chromium tarayıcı | Electron tarayıcı | Aynı kategori — en doğrudan rakip |
-| Bağlam | Tüm açık sekmeler | Aktif sekme + açık `tab_*` çağrıları | Tepegöz'ün sınırı daha dar/denetlenebilir |
-| Güvenlik modeli | Ürün-seviyesi onaylar + olay sonrası sert sınırlar | Model-öncesi deterministik kernel + egress firewall | Tepegöz mimaride önde, ölçümde borçlu |
-| Ödeme | Sepete kadar, ödeme kullanıcıda | `financial` sınıfı + biyometrik + çift-onay | Aynı çizgi, farklı zorlama |
-| Yerel dosya | Mac'te "Personal Computer" ile yerel dosya/uygulama | `file_*` sandbox | Comet'in en riskli genişlemesi; Tepegöz sandbox'lı |
-| Yaygınlık | Ücretsiz, cross-platform, büyük kullanıcı tabanı | 1.0 öncesi | Comet açık ara önde |
+| Eksen           | Comet                                               | Tepegöz                                             | Not                                                |
+| --------------- | --------------------------------------------------- | --------------------------------------------------- | -------------------------------------------------- |
+| Form faktörü    | Chromium tarayıcı                                   | Electron tarayıcı                                   | Aynı kategori — en doğrudan rakip                  |
+| Bağlam          | Tüm açık sekmeler                                   | Aktif sekme + açık `tab_*` çağrıları                | Tepegöz'ün sınırı daha dar/denetlenebilir          |
+| Güvenlik modeli | Ürün-seviyesi onaylar + olay sonrası sert sınırlar  | Model-öncesi deterministik kernel + egress firewall | Tepegöz mimaride önde, ölçümde borçlu              |
+| Ödeme           | Sepete kadar, ödeme kullanıcıda                     | `financial` sınıfı + biyometrik + çift-onay         | Aynı çizgi, farklı zorlama                         |
+| Yerel dosya     | Mac'te "Personal Computer" ile yerel dosya/uygulama | `file_*` sandbox                                    | Comet'in en riskli genişlemesi; Tepegöz sandbox'lı |
+| Yaygınlık       | Ücretsiz, cross-platform, büyük kullanıcı tabanı    | 1.0 öncesi                                          | Comet açık ara önde                                |
 
 ## Alınacaklar / Alınmayacaklar
 
 **Alınacak (fikir olarak):**
+
 - **Çok-sekme bağlamı bir özellik.** Tepegöz'de ajan tek sekmede başlıyor; "açık
   sekmelerin tamamına sor" (Chat modu için, salt-okunur) somut bir kullanıcı değeri ve
   `tab_list_items` + `browser_get_page` ile **yeni yetki gerektirmeden** yapılabilir.
@@ -89,6 +90,7 @@ Comet, "agentic tarayıcı" kategorisinin canlı tehdit vakası:
   "buraya kadar getirdim, ödemeyi sen yap" bir tasarım deseni olarak netleştirilebilir.
 
 **Alınmayacak:**
+
 - **Yerel dosya/uygulama erişimini genişletmek** (Perplexity Computer'ın Mac özelliği).
   Tepegöz'ün `file_*` sandbox'ı bilinçli olarak dar; Comet'in bu genişlemeyle yaşadığı
   sıfır-tıklama sızıntısı tam olarak neden dar tutulduğunun kanıtı.

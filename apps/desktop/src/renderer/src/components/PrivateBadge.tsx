@@ -18,7 +18,7 @@ type BrowserStrings = (typeof browserDict)['en'];
  * saying only what it DOES discard and leaving the reader to infer the rest. So the summary line states
  * the limit before the reassurance, and the expanded panel lists both halves side by side — what is
  * discarded, and what is not hidden. Research:
- * [`cross-profile-tracking.md`](../../../../../research/privacy/cross-profile-tracking.md).
+ * [`cross-profile-tracking.md`](../../../../../../docs/research/imported/privacy/cross-profile-tracking.md).
  *
  * It is a disclosure, not a warning: the mode is useful and the copy does not scold the user for using
  * it. It just refuses to be read as more than it is.

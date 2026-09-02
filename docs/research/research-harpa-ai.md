@@ -12,29 +12,29 @@
 
 ## Ne yapıyor
 
-| Yetenek | Detay |
-|---|---|
-| **Sayfa-farkında sohbet** | Web sayfası, PDF veya YouTube içeriğini okur; özet, soru-cevap, veri çıkarımı |
-| **Tarayıcı otomasyonu** | Buton tıklama, form doldurma, sayfalar arası gezinme, yapılandırılmış veri kazıma |
-| **Dış iş akışı tetikleme** | Zapier, Make.com, n8n, webhook entegrasyonları |
-| **Web izleme** | Zamanlanmış sayfa kontrolleri; sayfa/fiyat/veri değişince bildirim veya otomasyon zinciri tetikleme; arka planda periyodik yenileme |
-| **Çok-model** | GPT-4o/GPT-5.2, Claude Sonnet 4.6, Gemini 3.1 Pro, DeepSeek, Perplexity, Llama, Grok |
-| **Hazır komut kütüphanesi** | 100+ önceden yazılmış komut: YouTube/PDF özetleyici, e-posta yanıt otomatı, fiyat izleyici, rakip takipçisi |
-| **Arka plan otomasyon motoru** | Sayfaları arka planda çalıştırıp inceleyip aksiyon alabilen motor |
+| Yetenek                        | Detay                                                                                                                               |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **Sayfa-farkında sohbet**      | Web sayfası, PDF veya YouTube içeriğini okur; özet, soru-cevap, veri çıkarımı                                                       |
+| **Tarayıcı otomasyonu**        | Buton tıklama, form doldurma, sayfalar arası gezinme, yapılandırılmış veri kazıma                                                   |
+| **Dış iş akışı tetikleme**     | Zapier, Make.com, n8n, webhook entegrasyonları                                                                                      |
+| **Web izleme**                 | Zamanlanmış sayfa kontrolleri; sayfa/fiyat/veri değişince bildirim veya otomasyon zinciri tetikleme; arka planda periyodik yenileme |
+| **Çok-model**                  | GPT-4o/GPT-5.2, Claude Sonnet 4.6, Gemini 3.1 Pro, DeepSeek, Perplexity, Llama, Grok                                                |
+| **Hazır komut kütüphanesi**    | 100+ önceden yazılmış komut: YouTube/PDF özetleyici, e-posta yanıt otomatı, fiyat izleyici, rakip takipçisi                         |
+| **Arka plan otomasyon motoru** | Sayfaları arka planda çalıştırıp inceleyip aksiyon alabilen motor                                                                   |
 
 ## Tepegöz'de bunların karşılığı — ve dağınıklık problemi
 
 HARPA'nın tek üründe topladığı şey Tepegöz'de **üç ayrı yerde**:
 
-| HARPA | Tepegöz | Durum |
-|---|---|---|
-| Sayfa-farkında sohbet | `ext-agent` Chat modu + `@tepegoz/reader` | Var |
-| Tarayıcı otomasyonu (ajan) | `ext-agent` Do modu + `@tepegoz/orchestrator` | Var |
-| Deterministik otomasyon | `ext-macros` + `@tepegoz/macro-engine` (iMacros halefi) | Var, **ayrı uzantı** |
-| Web izleme / zamanlama | `ext-tasks` + `@tepegoz/tasks` (interval / page-change / external tetikleyici) + `tepegoz://tasks` | Var, **ayrı uzantı**; ajan panelindeki "Save as task" affordance'ı **kaldırılmış** (bir sonraki Tasks ürün revizyonuna bırakılmış) |
-| Hazır komut kütüphanesi | S9 skill kütüphanesi (saklı prompt şablonları) | Var ama **boş** — paketlenmiş hazır komut yok |
-| Dış iş akışı (Zapier/n8n/webhook) | `@tepegoz/mcp-client` (MCP sunucuları) | Farklı yol, aynı amaç |
-| Çok-model | 8 sağlayıcı + `local` | Var, dar |
+| HARPA                             | Tepegöz                                                                                            | Durum                                                                                                                              |
+| --------------------------------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Sayfa-farkında sohbet             | `ext-agent` Chat modu + `@tepegoz/reader`                                                          | Var                                                                                                                                |
+| Tarayıcı otomasyonu (ajan)        | `ext-agent` Do modu + `@tepegoz/orchestrator`                                                      | Var                                                                                                                                |
+| Deterministik otomasyon           | `ext-macros` + `@tepegoz/macro-engine` (iMacros halefi)                                            | Var, **ayrı uzantı**                                                                                                               |
+| Web izleme / zamanlama            | `ext-tasks` + `@tepegoz/tasks` (interval / page-change / external tetikleyici) + `tepegoz://tasks` | Var, **ayrı uzantı**; ajan panelindeki "Save as task" affordance'ı **kaldırılmış** (bir sonraki Tasks ürün revizyonuna bırakılmış) |
+| Hazır komut kütüphanesi           | S9 skill kütüphanesi (saklı prompt şablonları)                                                     | Var ama **boş** — paketlenmiş hazır komut yok                                                                                      |
+| Dış iş akışı (Zapier/n8n/webhook) | `@tepegoz/mcp-client` (MCP sunucuları)                                                             | Farklı yol, aynı amaç                                                                                                              |
+| Çok-model                         | 8 sağlayıcı + `local`                                                                              | Var, dar                                                                                                                           |
 
 **Asıl ders bir özellik değil, bir ürün-mimarisi gözlemi:** kullanıcı için "bu sayfayı
 özetle", "bu formu doldur", "bu fiyat düşünce haber ver" **aynı işin** üç hâli. HARPA

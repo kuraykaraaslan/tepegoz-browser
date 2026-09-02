@@ -109,7 +109,7 @@ Prior art gives us the shape of the win without the claim: browser-use's TSV ser
 
 ### PR6 — Structured site-declared tools (WebMCP) — investigation, then a decision
 
-> **Where this came from.** [`research/competitors/claude-extension-gemini.md`](../../research/competitors/claude-extension-gemini.md),
+> **Where this came from.** [`docs/research/imported/competitors/claude-extension-gemini.md`](../../docs/research/imported/competitors/claude-extension-gemini.md),
 > which argues that screenshot-driven visual scraping is a dead end on both cost and speed, and points at
 > **WebMCP (`navigator.modelContext`)** — a site declaring its own operations (`searchProducts`, `addToCart`,
 > `checkout`) as structured tools an agent calls directly — as the way out. Same report: build-time stable

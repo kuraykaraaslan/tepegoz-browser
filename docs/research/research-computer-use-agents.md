@@ -16,12 +16,12 @@
 
 ## Özet tablo — ne açık, ne kapalı
 
-| Proje | Açık olan | Kapalı olan | Lisans (açık kısım) | Tepegöz'e alaka |
-|---|---|---|---|---|
-| **AgentQL** | Python/JS SDK, sorgu dili grameri, Playwright entegrasyonu, örnekler, MCP sunucusu | Doğal-dil sorguyu element/veri'ye çeviren **AI servisi** (REST API, API key zorunlu) | (SDK açık; servis SaaS) | Orta — "element-by-prompt" + kendini-iyileştiren seçici deseni; ama çekirdek servise bağımlı |
-| **Amazon Nova Act** | Python SDK (constructor, `act()`, `act_get()`, HITL arayüzleri, hata taksonomisi, oturum kalıcılığı, paralel çalışma, `@tool`, Strands MCP client) | **Nova Act modeli + AWS servisi** (`nova.amazon.com/act` API key ya da IAM); RAI guardrails sunucuda | Apache-2.0 (SDK) | Yüksek — HITL desen tasarımı, hata taksonomisi, "actuator lock" fikri, oturum sağlayıcı soyutlaması |
-| **OpenAI CUA sample** | TS örnek uygulama: Next.js operatör konsolu + Fastify runner, replay şeması, senaryo manifesti, `native` vs `code` mod, doğrulama pipeline'ı | **`computer` tool + CUA modeli** (Responses API, `gpt-5.x`) | (sample app; MIT-benzeri) | Yüksek — replay/artifact pipeline'ı, `native` vs `code` mod ayrımı, senaryo-doğrulama deseni |
-| **Anthropic Computer Use / Browser Use** | Docker referans loop'ları (`computer-use-demo`, `browser-use-demo`, `computer-use-best-practices`), araç şemaları, streamlit UI | **Claude modeli** (API/Bedrock/Vertex) — `computer` toolset ve düşünme sunucuda | (quickstart; MIT-benzeri) | **En yüksek** — "best practices" repo'su Tepegöz'ün S1/S2/S7 için birebir referans |
+| Proje                                    | Açık olan                                                                                                                                          | Kapalı olan                                                                                          | Lisans (açık kısım)       | Tepegöz'e alaka                                                                                     |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------- |
+| **AgentQL**                              | Python/JS SDK, sorgu dili grameri, Playwright entegrasyonu, örnekler, MCP sunucusu                                                                 | Doğal-dil sorguyu element/veri'ye çeviren **AI servisi** (REST API, API key zorunlu)                 | (SDK açık; servis SaaS)   | Orta — "element-by-prompt" + kendini-iyileştiren seçici deseni; ama çekirdek servise bağımlı        |
+| **Amazon Nova Act**                      | Python SDK (constructor, `act()`, `act_get()`, HITL arayüzleri, hata taksonomisi, oturum kalıcılığı, paralel çalışma, `@tool`, Strands MCP client) | **Nova Act modeli + AWS servisi** (`nova.amazon.com/act` API key ya da IAM); RAI guardrails sunucuda | Apache-2.0 (SDK)          | Yüksek — HITL desen tasarımı, hata taksonomisi, "actuator lock" fikri, oturum sağlayıcı soyutlaması |
+| **OpenAI CUA sample**                    | TS örnek uygulama: Next.js operatör konsolu + Fastify runner, replay şeması, senaryo manifesti, `native` vs `code` mod, doğrulama pipeline'ı       | **`computer` tool + CUA modeli** (Responses API, `gpt-5.x`)                                          | (sample app; MIT-benzeri) | Yüksek — replay/artifact pipeline'ı, `native` vs `code` mod ayrımı, senaryo-doğrulama deseni        |
+| **Anthropic Computer Use / Browser Use** | Docker referans loop'ları (`computer-use-demo`, `browser-use-demo`, `computer-use-best-practices`), araç şemaları, streamlit UI                    | **Claude modeli** (API/Bedrock/Vertex) — `computer` toolset ve düşünme sunucuda                      | (quickstart; MIT-benzeri) | **En yüksek** — "best practices" repo'su Tepegöz'ün S1/S2/S7 için birebir referans                  |
 
 **Genel sonuç:** Bunların hiçbiri Tepegöz'e "rakip ürün" değil; hepsi **ajan iskeleti +
 model API'si** kalıbı. Model API'si kapalı, iskelet açık. Tepegöz için değeri: iskelet
@@ -43,6 +43,7 @@ kapatma, oturum kaydet/yükle örnekleri, resmi bir **MCP sunucusu**.
 AgentQL API'sine gider.
 
 **Tepegöz'e ne öğretir.**
+
 - **`browser_get_elements` / locator seam için bir "prompt ile element bul" katmanı fikri.**
   Tepegöz'ün `@tepegoz/browser-tools` algısı bugün DOM/a11y ağacı + `ref` veriyor; model
   ağacı okuyup `ref` seçiyor. AgentQL'in yaptığı, o seçimi ayrı bir küçük model çağrısına

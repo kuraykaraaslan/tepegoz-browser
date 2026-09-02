@@ -123,7 +123,7 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
 
 ### L10 — Download acceleration (rival evidence: IDM)
 
-> **Where this came from.** [`research/competitors/idm-downloader.md`](../../research/competitors/idm-downloader.md).
+> **Where this came from.** [`docs/research/imported/competitors/idm-downloader.md`](../../docs/research/imported/competitors/idm-downloader.md).
 > IDM is the reference product for download management, and the report separates its **complaints** (licensing,
 > support, dated UI — not our problems) from **the reason people still install it**: segmented acceleration and
 > a network monitor that catches every transfer. Tepegöz's manager currently has the safety half
@@ -463,7 +463,7 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       signature and network address are unchanged, so a site that fingerprints can link the private
       window to the ordinary one. Every mainstream browser has been criticized for letting its private
       mode imply otherwise; the badge and the new-window copy state the real scope in one sentence.
-      Source: [`research/privacy/cross-profile-tracking.md`](../../research/privacy/cross-profile-tracking.md)
+      Source: [`docs/research/imported/privacy/cross-profile-tracking.md`](../../docs/research/imported/privacy/cross-profile-tracking.md)
       — the same limit applies to named profiles in [Phase 3](phase-3-backend-cloud-extensions.md)
   - [x] _Built as `PrivateBadge`: a badge in the chrome, and a panel that states the LIMIT before the
         reassurance — "this does not make you anonymous; your device, screen, fonts and network address

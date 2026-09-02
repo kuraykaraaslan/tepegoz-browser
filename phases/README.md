@@ -179,7 +179,7 @@ everywhere — not re-litigated per phase.
 ## Completed hardening track (folded into Phases 1a / 1b / 2c)
 
 See [`tracks/code-claude-by-codex.md`](../docs/tracks/code-claude-by-codex.md) for the resumable plan and
-[`../research/competitors/claude-versus.md`](../research/competitors/claude-versus.md) for the research/status table. The completed
+[`../research/competitors/claude-versus.md`](../docs/research/imported/competitors/claude-versus.md) for the research/status table. The completed
 work has been folded into Phase 1a/1b as follows:
 
 - [x] Phase 1a: run-scoped `ToolGateway` HITL/audit context, cancellation wiring, startup-error visibility.

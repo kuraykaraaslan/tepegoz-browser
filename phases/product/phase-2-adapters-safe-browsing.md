@@ -74,9 +74,9 @@
 
 #### Fingerprinting protection — component detail and the measurement gate
 
-> **Where this came from.** [`research/privacy/fingerprinting.md`](../../research/privacy/fingerprinting.md)
+> **Where this came from.** [`docs/research/imported/privacy/fingerprinting.md`](../../docs/research/imported/privacy/fingerprinting.md)
 > (component-by-component analysis with a prioritized mitigation table: effort × user impact × effectiveness)
-> and [`research/competitors/brave.md`](../../research/competitors/brave.md), where
+> and [`docs/research/imported/competitors/brave.md`](../../docs/research/imported/competitors/brave.md), where
 > per-session fingerprint randomization is named as Brave's differentiator against Chrome and Firefox. This
 > expands the one-line task above; the ADR it already demands is where the posture gets decided.
 >
@@ -102,8 +102,8 @@
 > side and are not yet listed anywhere in this phase: **window/screen-size bucketing** (Tor Browser's
 > letterboxing — screen dimensions are high-entropy and cheap to bucket) and **language/`Accept-Language`
 > list narrowing**. Source:
-> [`research/privacy/vpn-security.md`](../../research/privacy/vpn-security.md) §WebRTC/ECH/QUIC and
-> [`research/privacy/tor-browser-security.md`](../../research/privacy/tor-browser-security.md);
+> [`docs/research/imported/privacy/vpn-security.md`](../../docs/research/imported/privacy/vpn-security.md) §WebRTC/ECH/QUIC and
+> [`docs/research/imported/privacy/tor-browser-security.md`](../../docs/research/imported/privacy/tor-browser-security.md);
 > Brave's farbling is re-read as a **counter-example** in
 > [`../../docs/research/research-brave.md`](../../docs/research/research-brave.md).
 
@@ -129,7 +129,7 @@ Component priorities, taken from the report's own table (high effectiveness firs
 
 #### Fingerprinting — the signals this project adds to the user (cross-profile evidence)
 
-> **Where this came from.** [`research/privacy/cross-profile-tracking.md`](../../research/privacy/cross-profile-tracking.md)
+> **Where this came from.** [`docs/research/imported/privacy/cross-profile-tracking.md`](../../docs/research/imported/privacy/cross-profile-tracking.md)
 > — a study of why a separate browser profile and a private window do **not** separate identity. Its
 > transferable finding is not the list of surfaces above; it is that **a browser can make its own users
 > more identifiable**, and that several of Tepegöz's design choices do exactly that. This block is the
@@ -161,7 +161,7 @@ Component priorities, taken from the report's own table (high effectiveness firs
 
 #### Filter-engine cost (rival evidence: Brave)
 
-> **Where this came from.** [`research/competitors/brave.md`](../../research/competitors/brave.md).
+> **Where this came from.** [`docs/research/imported/competitors/brave.md`](../../docs/research/imported/competitors/brave.md).
 > Brave's second-most-repeated complaint is **memory and slowdown**, and the report names the filter lists as a
 > prime suspect — with a concrete suggestion: scope the default filter set by language group instead of loading
 > every list for every user. Tepegöz runs the same engine family (`@ghostery/adblocker-electron`) **per

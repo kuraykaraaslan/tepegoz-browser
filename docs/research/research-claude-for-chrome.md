@@ -34,16 +34,16 @@ Yani bu, Tepegöz'ün kendi roadmap'inde adı geçen iki referans üründen biri
 
 2026 boyunca ardışık, ciddi zafiyetler kamuya açıklandı:
 
-**ShadowPrompt (Mart 2026)** — *sıfır-tıklama* prompt injection zinciri. Kurban
+**ShadowPrompt (Mart 2026)** — _sıfır-tıklama_ prompt injection zinciri. Kurban
 saldırganın sayfasına girer, hiçbir şeye tıklamaz, Claude saldırganın prompt'unu alıp
 uygular. Zincirin temeli: uzantıda **fazla geniş bir origin allowlist** — `*.claude.ai`
 kalıbına uyan **herhangi bir alt alan adı** uzantıya prompt gönderip çalıştırabiliyordu.
-Basın özeti aynen: *"No clicks, no permission prompts. Just visit a page, and an attacker
-completely controls your browser."*
+Basın özeti aynen: _"No clicks, no permission prompts. Just visit a page, and an attacker
+completely controls your browser."_
 
 **ClaudeBleed (Mayıs 2026)** — iki kusurun birleşimi: (a) **herhangi bir Chrome uzantısı**
-Claude in Chrome'a komut çalıştırabiliyordu, (b) güven, komutun *çalıştırma bağlamına*
-değil *origin'ine* dayanıyordu. Saldırganın script'i, onay mesajını **tekrar tekrar
+Claude in Chrome'a komut çalıştırabiliyordu, (b) güven, komutun _çalıştırma bağlamına_
+değil _origin'ine_ dayanıyordu. Saldırganın script'i, onay mesajını **tekrar tekrar
 göndererek kullanıcı onayını taklit ediyor** ve **DOM manipülasyonu ile UI öğelerini
 değiştirip** Claude'un aksiyon algısını çarpıtıyordu — yani "kullanıcı onayı zorunlu"
 korumasını aşıyordu.
@@ -84,6 +84,7 @@ bulgu.
 ## Alınacaklar / Alınmayacaklar
 
 **Alınacak:**
+
 - **Domain-geçişi uyarısı.** Claude'da bir çalışma başka bir domain'e geçtiğinde kullanıcıya
   söyleniyor. Tepegöz'de `plan-grant-scope` + `remembered-grant-scope` eTLD+1 bazlı;
   **kullanıcıya görünür bir "site değişti" olayı** `ext-agent` transkriptinde yok. Ucuz
@@ -93,6 +94,7 @@ bulgu.
   periyodik hatırlatmak; Tepegöz'ün `runtime-context` envelope'una benzer, karşılaştırılabilir.
 
 **Alınmayacak:**
+
 - Quick Mode / şemasız DSL (yukarıda).
 - Koordinat-öncelikli sürüş — ADR-0008 (DOM/a11y-önce) zaten tersini söylüyor ve
   Anthropic'in kendi `browser-use-demo`'su bile `ref`-tabanlı hedeflemenin koordinata

@@ -78,7 +78,7 @@ test the browser has to fail — because a defence with no scenario that fails w
 assumption, not a control. The work is tracked publicly, per item.
 
 **[CLAIM]** Source studies and where each finding landed in the plan:
-[research index](../../research/README.md).
+[research index](../research/imported/README.md).
 
 ---
 

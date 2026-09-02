@@ -19,14 +19,14 @@ güvenlik kontrolleri olan, AI-native, ekip odaklı bir tarayıcı.
 
 ## Özellikler (Tepegöz'e alakalı olanlar)
 
-| Dia özelliği | Ne yapıyor | Tepegöz karşılığı |
-|---|---|---|
-| **Yan panelde AI asistanı** | Açık sekmelerin içeriğiyle sohbet, taslak/özet/karşılaştırma | `ext-agent` Agent Console (Chat modu) — var |
-| **Skills** | Yeniden kullanılabilir, özel AI kısayolları (prompt shortcut'ları) | S9 skill kütüphanesi = saklı prompt şablonları — **kavram birebir aynı** |
-| **Memory** | Açık sekmelerden kişisel bağlam çeken bellek sistemi | S9 alan-başı advisory bellek (ATIL sevk) |
-| **Tab Groups** (otomatik düzenlenen toplantı sekme grupları) | Bağlama göre otomatik sekme gruplama | Tepegöz'de sekme grupları var; **otomatik gruplama yok** |
-| **Omnibox'ta LLM** | Adres çubuğu doğrudan AI girişi | Tepegöz'de `@agent` prefix'i — **bilinçli olarak dar**: adres çubuğu deterministik kalır, AI'ya yalnızca kullanıcının kasten yazdığı prefix'ten geçilir |
-| **Kurumsal güvenlik/admin kontrolleri** | Uyumluluk, yönetim | Tepegöz Phase 3/4 (frozen) |
+| Dia özelliği                                                 | Ne yapıyor                                                         | Tepegöz karşılığı                                                                                                                                       |
+| ------------------------------------------------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Yan panelde AI asistanı**                                  | Açık sekmelerin içeriğiyle sohbet, taslak/özet/karşılaştırma       | `ext-agent` Agent Console (Chat modu) — var                                                                                                             |
+| **Skills**                                                   | Yeniden kullanılabilir, özel AI kısayolları (prompt shortcut'ları) | S9 skill kütüphanesi = saklı prompt şablonları — **kavram birebir aynı**                                                                                |
+| **Memory**                                                   | Açık sekmelerden kişisel bağlam çeken bellek sistemi               | S9 alan-başı advisory bellek (ATIL sevk)                                                                                                                |
+| **Tab Groups** (otomatik düzenlenen toplantı sekme grupları) | Bağlama göre otomatik sekme gruplama                               | Tepegöz'de sekme grupları var; **otomatik gruplama yok**                                                                                                |
+| **Omnibox'ta LLM**                                           | Adres çubuğu doğrudan AI girişi                                    | Tepegöz'de `@agent` prefix'i — **bilinçli olarak dar**: adres çubuğu deterministik kalır, AI'ya yalnızca kullanıcının kasten yazdığı prefix'ten geçilir |
+| **Kurumsal güvenlik/admin kontrolleri**                      | Uyumluluk, yönetim                                                 | Tepegöz Phase 3/4 (frozen)                                                                                                                              |
 
 ## Tepegöz açısından en ilginç iki nokta
 
@@ -40,15 +40,16 @@ güvenlik kontrolleri olan, AI-native, ekip odaklı bir tarayıcı.
 
 2. **Omnibox kararı zıt, ve Tepegöz'ünki savunulabilir.** Dia LLM'i omnibox'a koyuyor;
    Tepegöz `apps/desktop/src/i18n/en.ts`'deki yorumla açıkça tersini yapıyor:
-   *"`@agent` is the ONE place the address bar crosses into AI, and only ever from a prefix
-   the user typed on purpose"* + *"Hands this text to the agent — leaves the deterministic
-   address bar"*. Google Disco'nun "URL çubuğu yok, prompt composer var" uçuna karşı
+   _"`@agent` is the ONE place the address bar crosses into AI, and only ever from a prefix
+   the user typed on purpose"_ + _"Hands this text to the agent — leaves the deterministic
+   address bar"_. Google Disco'nun "URL çubuğu yok, prompt composer var" uçuna karşı
    Tepegöz'ün duruşu net; Dia ikisinin arasında. Bu, ürün tezinin bilinçli bir farkı —
    `phases/tracks/omnibox-competitive-parity.md` bu ayrımı korumalı.
 
 ## Alınacaklar / Alınmayacaklar
 
 **Alınacak:**
+
 - **Otomatik sekme gruplama** (bağlama göre) — Tepegöz'ün sekme grupları zaten ajan
   oturumlarının anahtarı (`groupId`); "bu görev için bir grup aç ve ilgili sekmeleri
   içine topla" ajanla doğal eşleşiyor. Phase 2b/10 tarafında bir fikir, AI fazlarında değil.
@@ -58,6 +59,7 @@ güvenlik kontrolleri olan, AI-native, ekip odaklı bir tarayıcı.
   bakıyor — pazar sinyali onu doğruluyor.
 
 **Alınmayacak:**
+
 - **Omnibox'u AI girişine çevirmek.** Tepegöz'ün deterministik adres çubuğu tezi bilerek
   farklı; Dia (ve Disco) bunun karşı örneği olarak kayda geçsin.
 - macOS-öncelikli dağıtım (Tepegöz Windows-öncelikli).

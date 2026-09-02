@@ -25,14 +25,14 @@ Fellou'nun ayrıştığı yer, ürün incelemelerinin ortak vurgusu:
 > incelemene ve değiştirmene izin verir. Herhangi bir adımda müdahale edebilirsin.
 
 **Bu tam olarak Tepegöz'ün zaten yaptığı şey** — ve bunu bilmek önemli, çünkü Fellou bunu
-*farklılaştırıcı* olarak pazarlıyor:
+_farklılaştırıcı_ olarak pazarlıyor:
 
-| | Fellou | Tepegöz (`ext-agent`, ADR-0013) |
-|---|---|---|
-| Plan önizleme | Var, çalıştırmadan önce | Var — `planTitle: 'Review the plan'`, `planBody: 'Uncheck any step you do not want, then run. Nothing executes until you approve.'` |
-| Plan düzenleme | "review, approve and **edit**" | **Adım seçimi** (`skipStepIds`) — adım çıkarabilirsin, ama adım metnini serbestçe düzenleyemezsin |
-| Çalışma-içi müdahale | "intervene at any step" | `steer` (çalışırken talimat), pause/resume, stop |
-| Onayın ne satın aldığı | Belirtilmemiş | Açıkça yazılı: `planGrant` — *"Approving covers the routine steps of this plan on the sites it names, for this task only. Money, passwords and deletions still ask every time."* |
+|                        | Fellou                         | Tepegöz (`ext-agent`, ADR-0013)                                                                                                                                                  |
+| ---------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Plan önizleme          | Var, çalıştırmadan önce        | Var — `planTitle: 'Review the plan'`, `planBody: 'Uncheck any step you do not want, then run. Nothing executes until you approve.'`                                              |
+| Plan düzenleme         | "review, approve and **edit**" | **Adım seçimi** (`skipStepIds`) — adım çıkarabilirsin, ama adım metnini serbestçe düzenleyemezsin                                                                                |
+| Çalışma-içi müdahale   | "intervene at any step"        | `steer` (çalışırken talimat), pause/resume, stop                                                                                                                                 |
+| Onayın ne satın aldığı | Belirtilmemiş                  | Açıkça yazılı: `planGrant` — _"Approving covers the routine steps of this plan on the sites it names, for this task only. Money, passwords and deletions still ask every time."_ |
 
 **Tepegöz'ün üstün olduğu yer:** onayın **kapsamı yazılı ve kernel-zorlamalı**. Fellou'da
 plan onayı bir kullanıcı-arayüzü jesti; Tepegöz'de plan onayı bir **grant** (plan-scoped,
@@ -40,7 +40,7 @@ eTLD+1 bazlı, `plan-grant-scope.ts`) ve `financial`/`credential`/`destructive` 
 onaydan **bağımsız olarak** yine sorar. Yani "planı onayladım" ≠ "her şeye izin verdim".
 
 **Fellou'nun üstün olabileceği yer:** plan metninin **serbest düzenlenmesi**. Tepegöz
-bugün adım *çıkarmaya* izin veriyor, adım *değiştirmeye* değil. Bu bilinçli olabilir
+bugün adım _çıkarmaya_ izin veriyor, adım _değiştirmeye_ değil. Bu bilinçli olabilir
 (düzenlenmiş plan metni modele geri beslenirse, kullanıcı-yazımı bir talimat kanalı açar —
 ki bu güvenilir bir kanal, sorun değil) ama **eksik**: kullanıcı "3. adımı şu siteye değil
 bu siteye yap" diyemiyor, ya adımı atıyor ya da baştan yazıyor.

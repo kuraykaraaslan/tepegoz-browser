@@ -71,9 +71,9 @@ position competitors won't copy quickly, built almost entirely on existing seams
 
 ### L9 — Display scaling & input reach (rival evidence: Brave, Atlas)
 
-> **Where this came from.** [`research/competitors/brave.md`](../../research/competitors/brave.md)
+> **Where this came from.** [`docs/research/imported/competitors/brave.md`](../../docs/research/imported/competitors/brave.md)
 > (UI elements too small on large/4K displays; no in-browser DPI/scale control) and
-> [`research/competitors/atlas.md`](../../research/competitors/atlas.md),
+> [`docs/research/imported/competitors/atlas.md`](../../docs/research/imported/competitors/atlas.md),
 > whose priority table rates **non-English keyboard and IME quality a P0 blocker** — Turkish named first among
 > the languages to fix, with side-panel input specifically broken.
 >

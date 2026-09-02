@@ -10,15 +10,17 @@ pnpm-lock.yaml
 # Agent/editor local state — not source, not reviewed, and 500+ files of it.
 .claude/
 
-# Eval fixtures are FROZEN artifacts, not source. `phases/ai-agent-super/fixture-freeze.md` hashes the
+# Eval fixtures are FROZEN artifacts, not source. `phases/ai-agent/fixture-freeze.md` hashes the
 # registries and treats a changed hash as "a disclosure event"; reformatting the pages would also reflow
 # whitespace, and `innerText` is exactly what the scenarios assert on. Formatting them would silently
 # rewrite the exam.
 test-fixtures/
 
 # Imported research prose (LLM deep-research exports, market-feedback write-ups). Reflowing them
-# produces diff noise on documents nobody edits by hand.
-research/
+# produces diff noise on documents nobody edits by hand. Moved under docs/ 2026-09-02 (was `research/`)
+# so the whole knowledge tree lives in one place; the ignore follows it. Only the IMPORTED subtree is
+# exempt — the authored notes in `docs/research/*.md` are formatted like any other document.
+docs/research/imported/
 
 # Generated at build time by electron-vite (see apps/desktop/electron.vite.config.ts). Formatting a
 # generated file means the gate goes red every time someone runs `turbo run build`.

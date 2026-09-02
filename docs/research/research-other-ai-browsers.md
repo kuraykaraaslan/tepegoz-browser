@@ -23,6 +23,7 @@ masaüstü uygulamasının yükseltilmiş tarayıcı moduna.
 > için bir tarayıcı sevk etmenin** çıkmaz olduğu sonucuna vardı.
 
 Bu, Tepegöz'ün tez seçimine doğrudan bir meydan okuma ve dürüstçe kaydedilmeli:
+
 - **Karşı-argüman:** dünyanın en büyük AI şirketi, "AI için ayrı bir tarayıcı" bahsinden
   bir yıl dolmadan çekildi ve uzantı + masaüstü moduna döndü. Dağıtım maliyeti (kullanıcıyı
   tarayıcı değiştirmeye ikna etmek) yeteneğin önüne geçti.
@@ -44,8 +45,9 @@ Konumlanma: **gölge AI ajanlarına, prompt injection saldırılarına ve ajan e
 karşı koruma**; web'i "güvenli, AI-güdümlü bir çalışma alanına" çeviriyor; SASE ürün
 ailesine bağlı.
 
-**Tepegöz için anlamı.** Bu, Tepegöz'ün en yakın *tez* rakibi — "güvenlik-önce AI tarayıcı".
+**Tepegöz için anlamı.** Bu, Tepegöz'ün en yakın _tez_ rakibi — "güvenlik-önce AI tarayıcı".
 Farklar:
+
 - Prisma **kurumsal/SASE** ürünü (BT yöneticisi alır, çalışana dayatılır); Tepegöz **local-first
   kişisel** ürün (kullanıcının kendi kararı).
 - Prisma'nın koruması **ağ/politika kenarında** (SASE); Tepegöz'ünki **süreç içinde,
@@ -67,10 +69,11 @@ Store**. $160M yatırım, ~$530M değerleme.
 mağaza. Tepegöz'de MCP istemcisi var ama **keşif/kurulum yüzeyi yok** (Settings'te sunucu
 eklenir). LibreChat'in "Tools marketplace"i ve Kilo'nun "MCP Marketplace"i ile aynı desen —
 üç ürün aynı yöne gitmiş. Tepegöz'de bunun evi **Phase 12** (developer platform/marketplace)
-+ ADR-0037 (SupplyChainGate) ve şu an frozen; ama "MCP sunucu keşfi" en azından bir
-`tepegoz://` sayfası olarak Phase 12'den önce düşünülebilir. Güvenlik notu: bir mağazadan
-kurulan MCP sunucusu **yeni araçlar** demek — Tepegöz'de bunlar zaten `dangerClassFor`
-fail-safe'i ve tek PEP'ten geçiyor, yani mağaza eklemek kernel'i zayıflatmaz.
+
+- ADR-0037 (SupplyChainGate) ve şu an frozen; ama "MCP sunucu keşfi" en azından bir
+  `tepegoz://` sayfası olarak Phase 12'den önce düşünülebilir. Güvenlik notu: bir mağazadan
+  kurulan MCP sunucusu **yeni araçlar** demek — Tepegöz'de bunlar zaten `dangerClassFor`
+  fail-safe'i ve tek PEP'ten geçiyor, yani mağaza eklemek kernel'i zayıflatmaz.
 
 ## 4. Sigma AI Browser — gizlilik-önce, yerel asistan
 
@@ -78,7 +81,7 @@ SigmaGPT asistanı **varsayılan olarak yerelde** çalışıyor, izleme yok, bul
 yok; buna rağmen tam agentic yetenekler (siteye giriş yapma, form doldurma, veri çıkarma,
 çok-adımlı görev).
 
-**Tepegöz için:** en yakın *konumlandırma* rakibi (local-first + gizlilik + agentic).
+**Tepegöz için:** en yakın _konumlandırma_ rakibi (local-first + gizlilik + agentic).
 Tepegöz'ün ayrıştığı yer yine aynı: Sigma "yerelde çalışıyor" diyor, Tepegöz "**kernel
 kararı deterministik ve model-öncesi**, egress denetleniyor, run kriptografik olarak
 doğrulanabiliyor" diyor. Yerellik gizlilik verir; hesap-verebilirlik vermez. Bu ayrım
@@ -107,7 +110,7 @@ ama çok-GB'lık bir Chromium fork'u.
 
 ## 7. Manus Browser Operator, MultiOn (→ Please), Google Project Mariner
 
-- **Manus Browser Operator:** eklentiyle *yerel* tarayıcıyı sürme — oturum/IP avantajı.
+- **Manus Browser Operator:** eklentiyle _yerel_ tarayıcıyı sürme — oturum/IP avantajı.
   AIPex ve Tencent BrowserSkill ile aynı fikir (bkz. `docs/others/tepegoz-vs-aipex.md`),
   farkı kapalı kaynak olması.
 - **MultiOn:** "Please" olarak pivot etti; browser-agent kategorisinden çıktı sayılabilir.
@@ -138,7 +141,7 @@ bir UX (bkz. `docs/others/librechat-agent-ui-learnings.md` A4).
 4. **Yerel/gizlilik tek başına farklılaştırıcı değil** (Sigma da öyle diyor). Tepegöz'ün
    ayrımı Notary + kernel + kanıt-atıflı tamamlama olmalı — **ama Notary bugün yalnızca
    yazılmış/testli bir paket; `apps/desktop` onu import etmiyor, hiçbir çalışma makbuz
-   üretmiyor.** Bu ayrım bir *iddia* değil, Phase 7'nin kapatması gereken bir *borç*.
+   üretmiyor.** Bu ayrım bir _iddia_ değil, Phase 7'nin kapatması gereken bir _borç_.
 
 ## Kaynaklar
 

@@ -141,12 +141,12 @@ Sequencing: the claim-grade ASR sweep runs **after [S3](phase-s3-reliability-act
 ### PR8 — Rival-incident hardening (Comet · Fellou · Claude for Chrome)
 
 > **Where this came from.** Three rival studies that document **real, named incidents** rather than opinions:
-> [Comet](../../research/competitors/perplexity-comet.md) (CometJacking indirect prompt
+> [Comet](../../docs/research/imported/competitors/perplexity-comet.md) (CometJacking indirect prompt
 > injection; a 1Password vault takeover plus local-file leakage; a zero-click Google Drive wiper; "agentic
-> blabbering" that trained users to accept phishing), [Fellou](../../research/competitors/fellou.md)
+> blabbering" that trained users to accept phishing), [Fellou](../../docs/research/imported/competitors/fellou.md)
 > (IDOR on `tabId`/`chatId`, missing server-side ownership checks, no transport pinning), and the Claude
-> Chrome extension ([A](../../research/competitors/claude-extension-chatgpt.md),
-> [B](../../research/competitors/claude-extension-gemini.md)) (screenshots that capture logged-in
+> Chrome extension ([A](../../docs/research/imported/competitors/claude-extension-chatgpt.md),
+> [B](../../docs/research/imported/competitors/claude-extension-gemini.md)) (screenshots that capture logged-in
 > sessions; an "ask before acting" model so coarse that users turn it off).
 >
 > **These are the strongest competitive evidence this project has**, because each one is a published failure of

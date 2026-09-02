@@ -7,7 +7,7 @@
 >
 > **Durum:** açık kaynak (Chromium fork) · cross-platform · ücretsiz.
 > **Tarih.** 2026-09-02. **Dil notu.** Türkçe.
-> **Kaynak belge:** [`research/competitors/brave.md`](../../research/competitors/brave.md) —
+> **Kaynak belge:** [`docs/research/imported/competitors/brave.md`](imported/competitors/brave.md) —
 > 2026-08-21'de içe aktarılan LLM derin-araştırma çıktısı. Bu belge onun yeni formata
 > dönüştürülmüş hâli; özgün metin kayıt olarak yerinde bırakıldı.
 
@@ -23,16 +23,16 @@ Brave'in en çok şikâyet aldığı üç alan Tepegöz'ün de aynı riski taş�
 
 ## Şikâyet yoğunluğu (rapordan)
 
-| Kategori | En yoğun olduğu yer | Tepegöz'de karşılığı |
-|---|---|---|
-| **Senkronizasyon** — "sildiklerim geri geliyor", zincir bozuluyor | Windows yüksek | Faz 3 (E2EE sync) — henüz yok |
-| **Performans / RAM** — filtre motorunun bellek maliyeti | Windows/Linux yüksek | Faz 2 adblock motoru |
-| Arayüz ölçekleme (4K'da küçük öğeler) | tüm masaüstü | Faz 10b |
-| Brave Rewards / BAT bölge kısıtı | Android/Windows yüksek | **kapsam dışı** |
-| Çökme / güncelleme | Windows | Faz 0 dağıtım |
+| Kategori                                                          | En yoğun olduğu yer    | Tepegöz'de karşılığı          |
+| ----------------------------------------------------------------- | ---------------------- | ----------------------------- |
+| **Senkronizasyon** — "sildiklerim geri geliyor", zincir bozuluyor | Windows yüksek         | Faz 3 (E2EE sync) — henüz yok |
+| **Performans / RAM** — filtre motorunun bellek maliyeti           | Windows/Linux yüksek   | Faz 2 adblock motoru          |
+| Arayüz ölçekleme (4K'da küçük öğeler)                             | tüm masaüstü           | Faz 10b                       |
+| Brave Rewards / BAT bölge kısıtı                                  | Android/Windows yüksek | **kapsam dışı**               |
+| Çökme / güncelleme                                                | Windows                | Faz 0 dağıtım                 |
 
 Gizlilik/veri koruma şikâyeti **her platformda "düşük"** — yani Brave'in tezi tutuyor,
-zayıfladığı yer *mühendislik kalitesi*, gizlilik iddiası değil. Tepegöz için ders bu:
+zayıfladığı yer _mühendislik kalitesi_, gizlilik iddiası değil. Tepegöz için ders bu:
 gizlilik tarayıcısı olmak sizi senkronizasyon hatasından ya da 1.8 GB RAM'den korumuyor.
 
 ## Alınacaklar / Alınmayacaklar
@@ -50,14 +50,14 @@ gizlilik tarayıcısı olmak sizi senkronizasyon hatasından ya da 1.8 GB RAM'de
   odaklı bir üründe doğrudan uygulanabilir.
 - **4K/yüksek-DPI arayüz ölçekleme.** [phase-10b](../../phases/product/phase-10b-accessibility-voice-reach.md)
   L9'da mevcut.
-- **⚠️ Parmak izi stratejisi — Brave'i *karşı örnek* olarak al.** Brave her yeniden başlatmada
+- **⚠️ Parmak izi stratejisi — Brave'i _karşı örnek_ olarak al.** Brave her yeniden başlatmada
   parmak izini **rastgeleleştiriyor** (farbling). W3C'nin kendi rehberi ve Firefox'un pratiği
   bunun tersini söylüyor: **normalize / null / partition, rastgeleleştirmeden daha güvenlidir**;
   doğru sıra önce **entropi bütçesini küçültmek**, sonra gerçekten gereken yerde kontrollü
   gürültü eklemek. Rastgeleleştirme, tutarsızlığın kendisi bir sinyal olduğu için ters
   tepebilir. Faz 2'nin fingerprinting ADR'si (zaten "ADR required" işaretli) bu kararı
   vermeden yazılmamalı. Kaynak:
-  [`research/privacy/vpn-security.md`](../../research/privacy/vpn-security.md) §WebRTC/ECH/QUIC.
+  [`docs/research/imported/privacy/vpn-security.md`](imported/privacy/vpn-security.md) §WebRTC/ECH/QUIC.
 
 **Alınmayacak:**
 
@@ -74,6 +74,6 @@ gizlilik tarayıcısı olmak sizi senkronizasyon hatasından ya da 1.8 GB RAM'de
 ## Kaynaklar
 
 Özgün derleme ve alıntı bağlantıları için
-[`research/competitors/brave.md`](../../research/competitors/brave.md) — Brave resmî
+[`docs/research/imported/competitors/brave.md`](imported/competitors/brave.md) — Brave resmî
 dokümantasyonu, topluluk forumları (Reddit, Ekşi Sözlük), uygulama mağazası değerlendirmeleri
 ve GitHub konuları.
