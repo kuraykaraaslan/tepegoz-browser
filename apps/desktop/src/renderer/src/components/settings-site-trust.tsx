@@ -81,45 +81,49 @@ export function SiteTrustSection() {
   return (
     <Card title={t.title} subtitle={t.subtitle}>
       <div className="space-y-5">
-        <div className="flex items-end gap-2">
-          <div className="min-w-0 flex-1">
-            <Input
-              id="site-trust-domain"
-              label={t.addLabel}
-              hint={
-                preview !== null && preview !== domain.trim().toLowerCase()
-                  ? t.storedAs.replace('{domain}', preview)
-                  : t.addHint
-              }
-              placeholder={t.addPlaceholder}
-              value={domain}
-              onChange={(e) => {
-                setDomain(e.target.value);
-                setError('');
-              }}
-            />
+        <div>
+          <div className="flex items-end gap-2">
+            <div className="min-w-0 flex-1">
+              <Input
+                id="site-trust-domain"
+                label={t.addLabel}
+                placeholder={t.addPlaceholder}
+                value={domain}
+                onChange={(e) => {
+                  setDomain(e.target.value);
+                  setError('');
+                }}
+              />
+            </div>
+            <div className="w-40">
+              <Select
+                id="site-trust-level"
+                label={t.levelLabel}
+                value={level}
+                onChange={(v) => {
+                  setLevel(v as TrustLevel);
+                }}
+              >
+                {TRUST_LEVELS.map((l) => (
+                  <option key={l} value={l}>
+                    {t.levels[l]}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <Button size="sm" className="h-[38px]" onClick={add}>
+              {alreadyListed ? t.update : t.add}
+            </Button>
           </div>
-          <div className="w-40">
-            <Select
-              id="site-trust-level"
-              label={t.levelLabel}
-              value={level}
-              onChange={(v) => {
-                setLevel(v as TrustLevel);
-              }}
-            >
-              {TRUST_LEVELS.map((l) => (
-                <option key={l} value={l}>
-                  {t.levels[l]}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <Button size="sm" onClick={add}>
-            {alreadyListed ? t.update : t.add}
-          </Button>
+          {/* The hint sits BELOW the row so it can't stretch one field and knock the row out of
+              alignment — it also carries the live "stored as <punycode>" preview while typing. */}
+          <p className="mt-1 text-xs text-text-secondary">
+            {preview !== null && preview !== domain.trim().toLowerCase()
+              ? t.storedAs.replace('{domain}', preview)
+              : t.addHint}
+          </p>
+          {error !== '' && <p className="mt-1 text-xs text-error">{error}</p>}
         </div>
-        {error !== '' && <p className="text-xs text-error">{error}</p>}
 
         {profiles.length === 0 ? (
           <p className="text-sm text-text-secondary">{t.empty}</p>

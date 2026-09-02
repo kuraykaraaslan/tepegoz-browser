@@ -31,15 +31,24 @@ export function isMicaSupported(): boolean {
 
 /**
  * Apply (or remove) the Mica glass backdrop on a chrome window, live. Safe to call on any platform:
- * when unsupported or disabled it restores the opaque navy fill. No-op on a destroyed window.
+ * when unsupported or disabled it restores an opaque fill. No-op on a destroyed window.
+ *
+ * `opaqueColor` is the non-glass ground — pass the ACTIVE theme's surface (`resolveSurfaceTheme`), which
+ * is what the window shows until the renderer paints. It stays a parameter rather than a lookup so this
+ * module keeps no dependency on the preference store (and stays unit-testable without an Electron
+ * environment); the brand navy is only the fallback for a caller that has no resolved colour.
  */
-export function applyChromeGlass(win: BrowserWindow, enabled: boolean): void {
+export function applyChromeGlass(
+  win: BrowserWindow,
+  enabled: boolean,
+  opaqueColor: string = OPAQUE_BG,
+): void {
   if (win.isDestroyed()) return;
   if (isMicaSupported() && enabled) {
     win.setBackgroundColor(GLASS_BG);
     win.setBackgroundMaterial('mica');
   } else {
     win.setBackgroundMaterial('none');
-    win.setBackgroundColor(OPAQUE_BG);
+    win.setBackgroundColor(opaqueColor);
   }
 }

@@ -119,6 +119,8 @@ describe('TabStore — records & ordering (existing)', () => {
       isPrivate: false,
       // Same: the Electron-free store cannot read a WebContents, so zoom defaults to 100%.
       activeZoomFactor: 1,
+      // Same: the store has no URL parser, so the security verdict defaults to hidden.
+      activeSecurityLevel: 'unknown',
     });
   });
 
@@ -129,6 +131,15 @@ describe('TabStore — records & ordering (existing)', () => {
       store.toState({ canGoBack: false, canGoForward: false, activeZoomFactor: 1.25 })
         .activeZoomFactor,
     ).toBe(1.25);
+  });
+
+  it('passes the injected active-tab security level straight through to TabsState', () => {
+    const a = store.add(web({ title: 'A', url: 'http://a.example', isLoading: false }));
+    store.setActive(a);
+    expect(
+      store.toState({ canGoBack: false, canGoForward: false, activeSecurityLevel: 'not-secure' })
+        .activeSecurityLevel,
+    ).toBe('not-secure');
   });
 
   it('clear() drops tabs + groups + active but keeps id allocation moving forward', () => {

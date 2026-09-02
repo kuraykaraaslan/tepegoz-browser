@@ -14,7 +14,7 @@ import { decideUnload, type UnloadState } from './unload-policy';
  * silently refused to go anywhere, forever, with no dialog and no error. A tab that will not navigate
  * and will not say why is indistinguishable from a frozen browser.
  *
- * `phases/ai-agent-super/phase-s3-reliability-actions.md` asserted the opposite — that a human tab the
+ * `phases/ai-agent/phase-s3-reliability-actions.md` asserted the opposite — that a human tab the
  * agent never touched "keeps Chromium's normal 'leave site?' prompt untouched". That claim is retracted
  * by the measurement above; there was no prompt to keep.
  *

@@ -34,4 +34,5 @@ export * from './agent-endpoint';
 export * from './supply-chain';
 export * from './trust-profile';
 export * from './web-permissions';
+export * from './page-info';
 export * from './chromium-flags';

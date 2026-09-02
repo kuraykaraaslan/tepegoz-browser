@@ -231,6 +231,7 @@ export const EMPTY_TABS_STATE: TabsState = {
   canGoForward: false,
   isPrivate: false,
   activeZoomFactor: 1,
+  activeSecurityLevel: 'unknown',
 };
 
 export function internalBaseUrl(url: string): string {

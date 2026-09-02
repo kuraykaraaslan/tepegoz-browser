@@ -2,13 +2,22 @@ import { z } from 'zod';
 import {
   AnthropicProvider,
   ANTHROPIC_MODEL,
+  DEEPSEEK_MODEL,
+  DeepSeekProvider,
   GeminiProvider,
   GEMINI_MODEL,
+  GROQ_MODEL,
+  GroqProvider,
   KimiProvider,
   KIMI_MODEL,
   ModelGateway,
+  NOVA_MODEL,
+  NovaProvider,
   OpenAIProvider,
   OPENAI_MODEL,
+  resolveProviderBaseURL,
+  XAI_MODEL,
+  XaiProvider,
 } from '@tepegoz/model-gateway';
 import {
   isRunnableProvider,
@@ -109,6 +118,10 @@ function modelFor(provider: AIProvider): string {
   if (provider === 'openai') return OPENAI_MODEL.classify;
   if (provider === 'gemini') return GEMINI_MODEL.classify;
   if (provider === 'kimi') return KIMI_MODEL.classify;
+  if (provider === 'nova') return NOVA_MODEL.classify;
+  if (provider === 'deepseek') return DEEPSEEK_MODEL.classify;
+  if (provider === 'xai') return XAI_MODEL.classify;
+  if (provider === 'groq') return GROQ_MODEL.classify;
   return ANTHROPIC_MODEL.classify;
 }
 
@@ -117,12 +130,21 @@ function registerExternalProvider(): AIProvider | null {
   if (meta === undefined) return null;
   const apiKey = CredentialVault.getFirstKeyForProvider(meta.provider);
   if (apiKey === null) return null;
+  const baseURL = resolveProviderBaseURL(meta.provider, meta.region);
   if (meta.provider === 'openai') {
     ModelGateway.register(new OpenAIProvider({ apiKey }));
   } else if (meta.provider === 'gemini') {
     ModelGateway.register(new GeminiProvider({ apiKey }));
   } else if (meta.provider === 'kimi') {
-    ModelGateway.register(new KimiProvider({ apiKey }));
+    ModelGateway.register(new KimiProvider({ apiKey, baseURL }));
+  } else if (meta.provider === 'nova') {
+    ModelGateway.register(new NovaProvider({ apiKey, baseURL }));
+  } else if (meta.provider === 'deepseek') {
+    ModelGateway.register(new DeepSeekProvider({ apiKey, baseURL }));
+  } else if (meta.provider === 'xai') {
+    ModelGateway.register(new XaiProvider({ apiKey, baseURL }));
+  } else if (meta.provider === 'groq') {
+    ModelGateway.register(new GroqProvider({ apiKey, baseURL }));
   } else {
     ModelGateway.register(new AnthropicProvider({ apiKey, effort: 'low' }));
   }

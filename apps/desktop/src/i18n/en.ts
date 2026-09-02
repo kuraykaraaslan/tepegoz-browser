@@ -50,6 +50,17 @@ export const en = {
     // Bookmark star (right of the omnibox).
     bookmarkAdd: 'Bookmark this page',
     bookmarkRemove: 'Remove bookmark',
+    // Leading site-info control (Chrome's lock / "Not secure" affordance). `notSecure`/`dangerous`
+    // are also shown as red TEXT next to the glyph — the whole point is that `http://` reads as a
+    // warning, not a neutral icon.
+    siteInfo: {
+      button: 'View site information',
+      secure: 'Connection is secure',
+      notSecure: 'Not secure',
+      dangerous: 'Dangerous',
+      internal: 'Tepegöz page',
+      file: 'Local file',
+    },
     // Bookmarks bar (the strip under the nav toolbar).
     bookmarksBar: 'Bookmarks bar',
     noBookmarksBar: 'No bookmarks yet. Star a page to add it here.',
@@ -210,6 +221,60 @@ export const en = {
   },
   sidebar: {
     resize: 'Resize sidebar',
+  },
+  // The "Site information" bubble (Chrome's Page Info panel), opened from the leading omnibox control.
+  // App chrome, like the main menu — so the strings live here, not in a leaf package. Permission
+  // labels + state names are reused from `settings-ui`'s permissionsCenter dict.
+  siteInfo: {
+    close: 'Close',
+    connectionSecureTitle: 'Connection is secure',
+    connectionSecureBody:
+      'Your information (for example passwords or card numbers) is private as it travels to this site.',
+    connectionNotSecureTitle: 'Your connection to this site is not secure',
+    connectionNotSecureBody:
+      'You should not enter any sensitive information on this site (for example passwords or card numbers), because it could be seen or changed by others.',
+    connectionDangerousTitle: 'This site is dangerous',
+    connectionDangerousBody:
+      'The certificate for this site is not trusted. Someone may be trying to impersonate it — do not enter anything sensitive.',
+    connectionInternalNote: 'This is a secure Tepegöz page.',
+    connectionFileNote: 'This file is on your computer.',
+    learnMore: 'Learn more',
+    // Security sub-page (Chrome's "Connection is secure" drill-down) and its certificate viewer.
+    securityTitle: 'Security',
+    back: 'Back',
+    certificateValid: 'Certificate is valid',
+    certificateInvalid: 'Certificate is not valid',
+    certCommonName: 'Common name',
+    certSerial: 'Serial number',
+    certValidityPeriod: 'Validity period',
+    // Certificate viewer.
+    certificate: 'Certificate',
+    certValid: 'valid',
+    certInvalid: 'not valid',
+    certSubjectName: 'Issued to',
+    certIssuerName: 'Issued by',
+    certValidFrom: 'Valid from',
+    certValidTo: 'Valid until',
+    certSan: 'Also covers',
+    certFingerprint: 'SHA-256 fingerprint',
+    certChain: 'Certification path',
+    // Permissions section.
+    permissionsTitle: 'Permissions',
+    noSpecialPermissions: 'You have not given this site any special permissions.',
+    resetPermissions: 'Reset permissions',
+    // Cookies / site data.
+    cookiesTitle: 'Cookies and site data',
+    cookiesInUse: '{count} cookies in use',
+    cookiesInUseOne: '1 cookie in use',
+    cookiesNone: 'No cookies stored',
+    clearSiteData: 'Clear site data',
+    clearSiteDataTitle: 'Clear site data',
+    clearSiteDataBody: 'This clears everything {site} has stored on this device.',
+    clearSiteDataConfirm: 'Clear',
+    // Footer link into the full Settings surface.
+    siteSettings: 'Site settings',
+    trustLevel: 'You have set this site to “{level}”.',
+    loadError: 'Could not load site information.',
   },
   transfer: {
     title: 'Transfers',

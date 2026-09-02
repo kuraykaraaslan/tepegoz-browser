@@ -21,8 +21,10 @@ productName: Tepegöz
 electronVersion: 43.4.1
 
 directories:
-  # Installer + unpacked output → apps/desktop/dist/ (turbo `build` already lists dist/** as output;
-  # dist/ is git-ignored). buildResources is where electron-builder looks for installer assets.
+  # Installer + unpacked output → apps/desktop/dist/ (git-ignored). This is ~1 GB (win-unpacked +
+  # installer) and is DELIBERATELY NOT a turbo cache output — `@tepegoz/desktop#build` in turbo.json
+  # caches only `out/**`. Do not add `dist/**` back to that task's `outputs`.
+  # buildResources is where electron-builder looks for installer assets.
   output: dist
   buildResources: resources
 

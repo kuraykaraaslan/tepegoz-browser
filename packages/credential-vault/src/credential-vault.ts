@@ -13,7 +13,7 @@ import { VaultMessages } from './messages';
  * BYO-key vault (L7 / electron-desktop-security). API keys are encrypted with the OS keychain
  * (Electron `safeStorage` → Windows DPAPI) and persisted as base64 ciphertext in userData. Raw keys
  * NEVER leave the main process — the renderer only ever learns metadata ({@link ProviderKeyMeta}:
- * id/provider/label/createdAt/last4/model) or per-provider boolean status.
+ * id/provider/label/createdAt/last4/model/region) or per-provider boolean status.
  *
  * Storage is an id-keyed COLLECTION so a provider can hold any number of keys, each with a user label.
  * The on-disk shape is versioned (`{ version: 2, keys: KeyRecord[] }`); a legacy flat map
@@ -124,6 +124,9 @@ export default class CredentialVault {
       // Added after v2 shipped: records written before per-key model pinning carry no `model`, and ''
       // is exactly the "auto/tiered routing" value — so an absent field needs no file-version bump.
       model: typeof r.model === 'string' ? r.model : '',
+      // Likewise added later: absent `region` ⇒ the provider's default endpoint. Only present for the
+      // few multi-endpoint providers; kept off the record entirely otherwise.
+      ...(typeof r.region === 'string' && r.region !== '' ? { region: r.region } : {}),
       ciphertext: r.ciphertext,
     };
   }
@@ -162,9 +165,16 @@ export default class CredentialVault {
 
   /**
    * Add a new key for `provider` under `label`. A new key starts on auto (`model: ''`); the model is
-   * pinned afterwards, per key, via {@link setKeyModel}. Returns the renderer-safe metadata (no secret).
+   * pinned afterwards, per key, via {@link setKeyModel}. `region` (a `PROVIDER_REGIONS` id) is fixed at
+   * add time for multi-endpoint providers — omit for single-endpoint ones. Returns the renderer-safe
+   * metadata (no secret).
    */
-  static addKey(provider: AIProvider, label: string, apiKey: string): ProviderKeyMeta {
+  static addKey(
+    provider: AIProvider,
+    label: string,
+    apiKey: string,
+    region?: string,
+  ): ProviderKeyMeta {
     const p = AIProviderEnum.parse(provider);
     const key = apiKey.trim();
     if (key.length === 0) {
@@ -178,6 +188,7 @@ export default class CredentialVault {
     if (!crypto.isAvailable()) {
       throw new AppError(VaultMessages.EncryptionUnavailable, 503);
     }
+    const reg = region?.trim() ?? '';
     const record: KeyRecord = {
       id: randomUUID(),
       provider: p,
@@ -185,6 +196,7 @@ export default class CredentialVault {
       createdAt: Date.now(),
       last4: key.slice(-4),
       model: '',
+      ...(reg !== '' ? { region: reg } : {}),
       ciphertext: crypto.encrypt(key).toString('base64'),
     };
     CredentialVault.store.push(record);
@@ -237,6 +249,17 @@ export default class CredentialVault {
   static modelForProvider(provider: AIProvider): string {
     const p = AIProviderEnum.parse(provider);
     return CredentialVault.store.find((k) => k.provider === p)?.model ?? '';
+  }
+
+  /**
+   * The service region set on the key a run for `provider` would use — that provider's highest-priority
+   * key (the SAME record {@link getFirstKeyForProvider} decrypts). `undefined` when the provider has no
+   * key, is single-endpoint, or its top key is on the default region. Resolved to a `baseURL` by
+   * `resolveProviderBaseURL` at adapter-build time.
+   */
+  static regionForProvider(provider: AIProvider): string | undefined {
+    const p = AIProviderEnum.parse(provider);
+    return CredentialVault.store.find((k) => k.provider === p)?.region;
   }
 
   /**
@@ -317,6 +340,7 @@ export default class CredentialVault {
       createdAt: rec.createdAt,
       last4: rec.last4,
       model: rec.model,
+      ...(rec.region !== undefined && rec.region !== '' ? { region: rec.region } : {}),
     };
   }
 

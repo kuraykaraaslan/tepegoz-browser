@@ -6,11 +6,14 @@ import {
   faCalculator,
   faClockRotateLeft,
   faDownload,
+  faFile,
   faGear,
   faGlobe,
+  faLock,
   faMagnifyingGlass,
   faRobot,
   faTerminal,
+  faTriangleExclamation,
   faWandMagicSparkles,
   faWindowMaximize,
 } from '@fortawesome/free-solid-svg-icons';
@@ -18,9 +21,39 @@ import { cn } from '@tepegoz/ui';
 import { evaluateOmniboxCalc } from './omnibox-calc';
 import type { OmniboxQuickSettingTarget, OmniboxSuggestion } from './omnibox-suggest';
 
+/**
+ * The active page's transport-security verdict — structurally the `PageSecurityLevel` union owned by
+ * `@tepegoz/shared-types`, spelled inline so this leaf package pulls in nothing from the IPC layer.
+ */
+export type OmniboxSecurityLevel =
+  'secure' | 'not-secure' | 'dangerous' | 'internal' | 'file' | 'unknown';
+
+/** Localized strings for the leading site-info control. Supplied by the host (i18n-agnostic package). */
+export interface OmniboxSecurityLabels {
+  /** aria-label for the button itself, e.g. "View site information". */
+  button: string;
+  secure: string;
+  /** Shown as red text beside the icon on `http://`. */
+  notSecure: string;
+  dangerous: string;
+  internal: string;
+  file: string;
+}
+
 export interface OmniboxProps {
   /** The active tab's committed URL. The box re-syncs to this whenever the user is not editing it. */
   currentUrl: string;
+  /**
+   * The active page's security level — drives the leading glyph (lock / red "Not secure" / gear).
+   * Omit or pass `'unknown'` to hide the control entirely.
+   */
+  securityLevel?: OmniboxSecurityLevel | undefined;
+  /** Strings for the leading control. Required when `securityLevel` is a shown level. */
+  securityLabels?: OmniboxSecurityLabels | undefined;
+  /** Open the Site Info bubble. Receives the button's viewport rect so the host can anchor a popup.
+   *  Omit to render the glyph as a non-interactive indicator. */
+  onOpenSiteInfo?:
+    ((anchor: { x: number; y: number; width: number; height: number }) => void) | undefined;
   /** Placeholder + aria-label text. Supplied by the host so the package stays i18n-agnostic. */
   placeholder: string;
   /** Called when the user submits a real navigation (Enter on a non-arithmetic value). */
@@ -80,6 +113,9 @@ function dropdownHeight(list: HTMLUListElement | null, count: number): number {
  */
 export function Omnibox({
   currentUrl,
+  securityLevel,
+  securityLabels,
+  onOpenSiteInfo,
   placeholder,
   onNavigate,
   onCalcResult,
@@ -123,6 +159,34 @@ export function Omnibox({
   // object …). Typing "2+2" froze the renderer. Depend on the boolean instead.
   const isCalc = calc !== null;
   const open = focused && !isCalc && suggestions.length > 0;
+
+  // The leading site-info control: shown for every classified level (a lock, a red "Not secure", a
+  // gear for an app page) but not for `unknown` / no labels. `http://` and a bypassed certificate
+  // also get the level word spelled in red next to the glyph, exactly as Chrome does.
+  const siteLevel =
+    securityLevel !== undefined && securityLevel !== 'unknown' && securityLabels !== undefined
+      ? securityLevel
+      : null;
+  // The input's left padding is MEASURED from the control, never guessed. A fixed `pl-9` left the lock
+  // ~2px from the text and its hover pill sat on the "h" of `https://`; a fixed `pl-[6.5rem]` for the
+  // alarm state was sized for the English "Not secure" and is overrun by the Turkish "Guvenli degil".
+  // Measuring covers every locale, font and zoom, and the ResizeObserver keeps it true when the word
+  // changes or a webfont swaps in late.
+  const leadRef = useRef<HTMLDivElement>(null);
+  const [leadWidth, setLeadWidth] = useState(0);
+  useLayoutEffect(() => {
+    const el = leadRef.current;
+    if (el === null) {
+      setLeadWidth(0);
+      return undefined;
+    }
+    const measure = (): void => setLeadWidth(Math.ceil(el.getBoundingClientRect().width));
+    measure();
+    if (typeof ResizeObserver === 'undefined') return undefined; // jsdom without the polyfill
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [siteLevel]);
 
   // Fetch suggestions (debounced) as the user types. Arithmetic input shows the calc chip instead, so
   // we clear the dropdown then. The reqId guard drops out-of-order responses.
@@ -271,6 +335,15 @@ export function Omnibox({
         submitDefault();
       }}
     >
+      {siteLevel !== null && (
+        <div
+          ref={leadRef}
+          className="absolute left-1.5 top-1/2 z-10 -translate-y-1/2"
+          style={{ maxWidth: 'calc(100% - 5rem)' }}
+        >
+          <SiteInfoControl level={siteLevel} labels={securityLabels!} onOpen={onOpenSiteInfo} />
+        </div>
+      )}
       <input
         type="text"
         value={value}
@@ -295,7 +368,17 @@ export function Omnibox({
         className={cn(
           'h-8 w-full rounded-full border border-border bg-surface-base px-4 text-sm text-text-primary placeholder:text-text-disabled focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus',
           calc !== null && 'pr-24',
+          // A floor under the measurement below: enough for the glyph alone, so the URL never starts
+          // underneath the lock if the element has not been measured yet (first paint, no ResizeObserver).
+          siteLevel !== null && 'pl-10',
         )}
+        // Clear the leading control by its measured width (inset + width + gap), so the text starts
+        // after the pill instead of underneath it.
+        style={
+          siteLevel !== null && leadWidth > 0
+            ? { paddingLeft: LEAD_INSET_PX + leadWidth + LEAD_GAP_PX }
+            : undefined
+        }
       />
       {calc !== null && (
         <span
@@ -346,6 +429,76 @@ export function Omnibox({
         </ul>
       )}
     </form>
+  );
+}
+
+/** The leading control's offset from the input's left edge (Tailwind `left-1.5`) and the gap kept
+ *  between it and the URL text — the two halves of the input's measured left padding. */
+const LEAD_INSET_PX = 6;
+const LEAD_GAP_PX = 8;
+
+/** Per-level glyph for the leading site-info control (Chrome's lock / "Not secure" affordance). */
+const SITE_INFO_ICONS: Record<Exclude<OmniboxSecurityLevel, 'unknown'>, IconDefinition> = {
+  secure: faLock,
+  'not-secure': faTriangleExclamation,
+  dangerous: faTriangleExclamation,
+  internal: faGear,
+  file: faFile,
+};
+
+/**
+ * The leading control at the start of the address bar — Chrome's site-info button. A lock on
+ * `https://`, a red triangle + "Not secure" on `http://` or a bypassed certificate, a gear on an
+ * internal page. The caller positions it absolutely over the input's left padding so the input keeps
+ * its own border + focus ring (the only keyboard-focus indicator — it must not move to a wrapper), and
+ * measures this element to size that padding. Renders as a plain indicator when `onOpen` is omitted.
+ */
+function SiteInfoControl({
+  level,
+  labels,
+  onOpen,
+}: {
+  level: Exclude<OmniboxSecurityLevel, 'unknown'>;
+  labels: OmniboxSecurityLabels;
+  onOpen: ((anchor: { x: number; y: number; width: number; height: number }) => void) | undefined;
+}) {
+  const alarm = level === 'not-secure' || level === 'dangerous';
+  const word =
+    level === 'not-secure' ? labels.notSecure : level === 'dangerous' ? labels.dangerous : null;
+  const inner = (
+    <>
+      <FontAwesomeIcon
+        icon={SITE_INFO_ICONS[level]}
+        className={cn('h-3.5 w-3.5 shrink-0', alarm ? 'text-error' : 'text-text-secondary')}
+        aria-hidden
+      />
+      {word !== null && <span className="truncate text-xs font-medium text-error">{word}</span>}
+    </>
+  );
+  const boxClass = 'flex max-w-full items-center gap-1 rounded-full px-1.5 py-1';
+  if (onOpen === undefined) {
+    return (
+      <span className={boxClass} aria-hidden>
+        {inner}
+      </span>
+    );
+  }
+  return (
+    <button
+      type="button"
+      aria-label={labels.button}
+      aria-haspopup="dialog"
+      onClick={(e) => {
+        const r = e.currentTarget.getBoundingClientRect();
+        onOpen({ x: r.x, y: r.y, width: r.width, height: r.height });
+      }}
+      className={cn(
+        boxClass,
+        'hover:bg-surface-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus',
+      )}
+    >
+      {inner}
+    </button>
   );
 }
 

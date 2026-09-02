@@ -73,6 +73,8 @@ const BOOKMARK_FOLDER_WIDTH = 280;
 const BOOKMARK_DIALOG_WIDTH = 320;
 /** Native Extensions panel popup width (px) — the puzzle button's Chrome-style pin/run list. */
 const EXTENSIONS_PANEL_WIDTH = 320;
+/** Native Site Info bubble width (px) — Chrome's Page Info panel. */
+const SITE_INFO_WIDTH = 360;
 
 /** Register the window/tabs/tab-groups + native context menus + popup/submenu/page-menu handlers. */
 export function registerTabsWindowsIpc(): void {
@@ -230,7 +232,7 @@ export function registerTabsWindowsIpc(): void {
     }
     const win = BrowserWindow.fromWebContents(event.sender);
     if (!win) return;
-    const { surface, id, anchor, height } = parsed.data;
+    const { surface, id, anchor, height, align } = parsed.data;
     if (surface === 'main-menu') {
       PopupWindowManager.open({
         parent: win,
@@ -267,6 +269,25 @@ export function registerTabsWindowsIpc(): void {
         query: { surface: 'extensions-panel' },
         anchor,
         width: EXTENSIONS_PANEL_WIDTH,
+        ...(height !== undefined ? { height } : {}),
+      });
+    } else if (surface === 'site-info') {
+      // Chrome's Page Info bubble. The URL is resolved from the SENDER window's active tab — main is
+      // authoritative about which origin's data the bubble may show, never the renderer. `align:
+      // 'start'` opens it rightward from the leading-edge button.
+      const active = TabManager.forSenderWindow(win)?.getState();
+      const url = active?.tabs.find((t) => t.id === active.activeId)?.url ?? '';
+      if (url === '') {
+        Logger.warn('Ignored popup:open site-info: no active tab URL');
+        return;
+      }
+      PopupWindowManager.open({
+        parent: win,
+        key: 'site-info',
+        query: { surface: 'site-info', url },
+        anchor,
+        width: SITE_INFO_WIDTH,
+        align: align ?? 'start',
         ...(height !== undefined ? { height } : {}),
       });
     } else if (surface === 'ext' && id !== undefined) {
@@ -417,6 +438,7 @@ export function registerTabsWindowsIpc(): void {
         canGoForward: false,
         isPrivate: false,
         activeZoomFactor: 1,
+        activeSecurityLevel: 'unknown',
       },
   );
 }

@@ -438,6 +438,7 @@ describe('tabs:get-state', () => {
       canGoForward: false,
       isPrivate: false,
       activeZoomFactor: 1,
+      activeSecurityLevel: 'unknown',
     });
   });
 

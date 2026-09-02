@@ -91,6 +91,20 @@ export interface TabsState {
    * shown only when this rounds to something other than 100%.
    */
   activeZoomFactor: number;
+  /**
+   * The active tab's transport-security verdict — drives the leading omnibox glyph (a red "Not
+   * secure" on `http://`, a lock on `https://`, a gear on an internal page) and opens the Site Info
+   * bubble. Structurally the `PageSecurityLevel` union owned by `@tepegoz/shared-types`
+   * (`classifyPageSecurity`); spelled inline here so this file keeps its "no external type deps"
+   * property. `'unknown'` for no active tab.
+   */
+  activeSecurityLevel:
+    | 'secure'
+    | 'not-secure'
+    | 'dangerous'
+    | 'internal'
+    | 'file'
+    | 'unknown';
 }
 
 /** Which way the omnibox zoom indicator (or a Ctrl +/-/0 shortcut) moves the active tab's zoom. */

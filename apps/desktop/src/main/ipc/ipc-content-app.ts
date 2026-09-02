@@ -20,9 +20,9 @@ import {
   ReorderKeysSchema,
   SetProviderKeyModelSchema,
 } from '@tepegoz/desktop-ipc/schemas';
-import { PROVIDER_MODEL_CATALOG } from '@tepegoz/model-gateway';
+import { PROVIDER_MODEL_CATALOG, providerRegions } from '@tepegoz/model-gateway';
 import { AppError } from '@tepegoz/libs';
-import type { AIProvider } from '@tepegoz/shared-types';
+import { AI_PROVIDERS, type AIProvider } from '@tepegoz/shared-types';
 import McpService from '../mcp/supervisor.electron';
 import ExtensionCapabilityService from '../extensions/capability-supervisor.electron';
 import FileOperationsHost from '../file-operations/file-operations-host';
@@ -41,6 +41,7 @@ import translateHost from '../extensions/translate-host.electron';
 import { builtinManifests } from '../../shared/extensions';
 import { handle } from './ipc-helpers';
 import { applyChromeGlass, isMicaSupported } from '../lib/glass';
+import { resolveSurfaceTheme } from '../lib/surface-theme';
 import { setLaunchAtLogin } from '../launch-at-login';
 import { getDefaultBrowserStatus, setAsDefaultBrowser } from '../default-browser';
 import { refreshTray } from '../tray';
@@ -56,6 +57,13 @@ function credentialsStatus(): CredentialsStatus {
     encryptionAvailable: CredentialVault.isEncryptionAvailable(),
     providers: CredentialVault.status(),
     keys: CredentialVault.listMeta(),
+    // Region options for the add-key picker — only the multi-endpoint providers appear; `baseURL`
+    // stays main-side (resolved by the runtime), the renderer sees just `{ id, label }`.
+    regions: Object.fromEntries(
+      AI_PROVIDERS.map(
+        (p) => [p, providerRegions(p).map((r) => ({ id: r.id, label: r.label }))] as const,
+      ).filter(([, opts]) => opts.length > 0),
+    ),
   };
 }
 
@@ -155,11 +163,23 @@ export function registerAppIpc(): void {
     if (validated.launchAtLogin !== undefined) {
       setLaunchAtLogin(next.launchAtLogin);
     }
-    // Glass toggled — apply the Mica backdrop live to every top-level chrome window (popups are children
-    // and stay opaque). setBackgroundMaterial/setBackgroundColor take effect without recreating windows.
-    if (validated.glassChrome !== undefined) {
+    // Glass OR the theme changed — re-apply the backdrop live to every top-level chrome window (popups
+    // are children, and each is created fresh with the resolved colour). setBackgroundMaterial/
+    // setBackgroundColor take effect without recreating windows.
+    //
+    // The theme belongs in this condition because the non-glass fill is the window's PRE-PAINT ground:
+    // leave it on the colour that was current at launch and the next reload/resize flashes the old
+    // theme through before the renderer repaints.
+    if (
+      validated.glassChrome !== undefined ||
+      validated.theme !== undefined ||
+      validated.themeColor !== undefined
+    ) {
+      const ground = resolveSurfaceTheme().color;
       for (const w of BrowserWindow.getAllWindows()) {
-        if (!w.isDestroyed() && w.getParentWindow() === null) applyChromeGlass(w, next.glassChrome);
+        if (!w.isDestroyed() && w.getParentWindow() === null) {
+          applyChromeGlass(w, next.glassChrome, ground);
+        }
       }
     }
     // Locale changed — the NATIVE surfaces do not re-render themselves. `refreshTray` was written for
@@ -230,8 +250,14 @@ export function registerAppIpc(): void {
   handle(IpcChannels.credentialsList, (): ProviderKeyMeta[] => CredentialVault.listMeta());
 
   handle(IpcChannels.credentialsAdd, (_event, payload): CredentialsStatus => {
-    const { provider, label, apiKey } = AddProviderKeyInputSchema.parse(payload);
-    CredentialVault.addKey(provider, label, apiKey);
+    const { provider, label, apiKey, region } = AddProviderKeyInputSchema.parse(payload);
+    // Only an id this provider actually offers reaches the vault — a stale/foreign id is dropped to ''
+    // (the default endpoint) rather than persisted as an unroutable region.
+    const validRegion =
+      region !== undefined && providerRegions(provider).some((r) => r.id === region)
+        ? region
+        : undefined;
+    CredentialVault.addKey(provider, label, apiKey, validRegion);
     // The first key ever added becomes the top key → sync the default provider to it.
     syncDefaultProviderFromKeys();
     return credentialsStatus();

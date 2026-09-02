@@ -69,8 +69,13 @@ export function SettingsPageSurface() {
   async function onResetPrefs(): Promise<void> {
     setPrefs(await window.tepegoz.resetPreferences());
   }
-  async function onAddKey(provider: ProviderId, label: string, apiKey: string): Promise<void> {
-    setStatus(await window.tepegoz.addProviderKey(provider, label, apiKey));
+  async function onAddKey(
+    provider: ProviderId,
+    label: string,
+    apiKey: string,
+    region?: string,
+  ): Promise<void> {
+    setStatus(await window.tepegoz.addProviderKey(provider, label, apiKey, region));
   }
   async function onRemoveKeyById(id: string): Promise<void> {
     setStatus(await window.tepegoz.removeProviderKeyById(id));

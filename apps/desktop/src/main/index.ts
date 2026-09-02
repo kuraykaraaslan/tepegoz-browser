@@ -30,6 +30,7 @@ import TabManager from './tabs';
 import { extractLaunchUrl } from './launch-url';
 import { openPageContextMenu } from './menus/page-context-menu';
 import BrowsingSessions from './network/browsing-sessions.electron';
+import { registerCertificateRecorder } from './network/certificate-recorder.electron';
 import ConnectionPool from './network/connection-pool.electron';
 import BindingService from './network/binding-service.electron';
 import { broadcastNetworkState } from './ipc/ipc-network';
@@ -241,6 +242,10 @@ if (!app.requestSingleInstanceLock()) {
         },
         { critical: true },
       );
+      // Observe every TLS verification so the Site Info bubble can show a certificate viewer for a
+      // page that loaded fine (Electron exposes no cert for a live page otherwise). The proc only
+      // records — it defers the trust decision to Chromium — so it is a non-critical attacher.
+      registerCertificateRecorder();
       // Create the base browsing session now, so every attacher registered above has run before the
       // first tab can load anything.
       BrowsingSessions.direct();

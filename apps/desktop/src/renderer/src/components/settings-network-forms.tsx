@@ -152,7 +152,7 @@ export function AddConnectionRow({
             <Button
               size="sm"
               variant="outline"
-              className="h-9 w-full justify-start"
+              className="h-[38px] w-full justify-start"
               disabled={!secretsAvailable}
               onClick={pickFile}
             >
@@ -194,9 +194,9 @@ export function AddConnectionRow({
           </div>
         )}
 
-        {/* h-[38px] + mb-1 aligns the button box with the Input/Select boxes, which add a label above
-            and a small hint gap below — same trick as Providers & API keys. */}
-        <Button type="submit" size="sm" className="mb-1 h-[38px]" disabled={!canAdd}>
+        {/* h-[38px] is the shared control-box height — matches the Input/Select boxes so the row
+            bottom-aligns cleanly. Same as Providers & API keys. */}
+        <Button type="submit" size="sm" className="h-[38px]" disabled={!canAdd}>
           {s.network.add}
         </Button>
       </form>

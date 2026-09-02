@@ -5,6 +5,7 @@ import { toGeminiParts, toolNamesById } from './gemini-content';
 import { fromOpenAIResult, toOpenAIParams, OpenAIProvider } from './openai.provider';
 import { toGeminiParams, fromGeminiResult, GeminiProvider } from './gemini.provider';
 import { KimiProvider } from './kimi.provider';
+import { NovaProvider } from './nova.provider';
 import type { CanonRequest } from '../types';
 
 /** One round trip: the model asks for a tool, the observation comes back keyed to that call. */
@@ -155,9 +156,10 @@ describe('Gemini native mapping', () => {
 });
 
 describe('native-tool capability flags', () => {
-  it('declares openai and gemini native, kimi not', () => {
+  it('declares openai and gemini native, kimi and nova not', () => {
     expect(new OpenAIProvider({ client: {} as never }).supportsNativeTools).toBe(true);
     expect(new GeminiProvider({ client: {} as never }).supportsNativeTools).toBe(true);
     expect(new KimiProvider({ client: {} as never }).supportsNativeTools).toBe(false);
+    expect(new NovaProvider({ client: {} as never }).supportsNativeTools).toBe(false);
   });
 });

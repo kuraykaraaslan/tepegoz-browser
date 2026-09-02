@@ -22,7 +22,7 @@ interface SettingsPageProps {
   onUpdatePrefs: (patch: Partial<Preferences>) => Promise<void>;
   /** Reset every preference to its default (leaves stored credentials untouched). */
   onResetPrefs: () => Promise<void>;
-  onAddKey: (provider: ProviderId, label: string, apiKey: string) => Promise<void>;
+  onAddKey: (provider: ProviderId, label: string, apiKey: string, region?: string) => Promise<void>;
   onRemoveKeyById: (id: string) => Promise<void>;
   onRenameKey: (id: string, label: string) => Promise<void>;
   onSetKeyModel: (id: string, model: string) => Promise<void>;

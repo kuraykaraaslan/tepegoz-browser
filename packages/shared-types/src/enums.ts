@@ -8,6 +8,7 @@ import {
   SITE_PERMISSION_STATES,
 } from './notifications';
 import { COMPARE_OPS, SELECTOR_KINDS, STEP_ERROR_POLICIES, STEP_KINDS } from './macro-ir';
+import { WEB_PERMISSION_CAPABILITIES } from './web-permissions';
 
 /**
  * Runtime-validated enums (internal-ai-rules: z.enum, not TS enum, for anything validated at runtime).
@@ -61,6 +62,9 @@ export const NotificationSourceEnum = z.enum(NOTIFICATION_SOURCES);
 export const NotificationChannelEnum = z.enum(NOTIFICATION_CHANNELS);
 export const NotificationActionTypeEnum = z.enum(NOTIFICATION_ACTION_TYPES);
 export const SitePermissionStateEnum = z.enum(SITE_PERMISSION_STATES);
+
+/** Per-site brokered web capability — built FROM the canonical list in `web-permissions.ts`. */
+export const WebPermissionCapabilityEnum = z.enum(WEB_PERMISSION_CAPABILITIES);
 
 /** Event Journal record types — phrased as "things that happened" (event-sourcing). */
 export const EventTypeEnum = z.enum([

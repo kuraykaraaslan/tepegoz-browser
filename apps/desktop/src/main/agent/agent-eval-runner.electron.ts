@@ -6,10 +6,14 @@ import { setStrictMode } from '@tepegoz/tool-executor';
 import { runAgent, type AgentRunHooks } from '@tepegoz/agent-runtime';
 import {
   AnthropicProvider,
+  DeepSeekProvider,
   GeminiProvider,
+  GroqProvider,
   KimiProvider,
+  NovaProvider,
   OpenAIProvider,
   ScriptedProvider,
+  XaiProvider,
   type ModelProvider,
 } from '@tepegoz/model-gateway';
 import { isRunnableProvider, type AIProvider } from '@tepegoz/shared-types';
@@ -86,6 +90,14 @@ function liveProviderFromEnv(): { id: AIProvider; instance: ModelProvider } {
     instance = new GeminiProvider({ apiKey });
   } else if (id === 'kimi') {
     instance = new KimiProvider({ apiKey });
+  } else if (id === 'nova') {
+    instance = new NovaProvider({ apiKey });
+  } else if (id === 'deepseek') {
+    instance = new DeepSeekProvider({ apiKey });
+  } else if (id === 'xai') {
+    instance = new XaiProvider({ apiKey });
+  } else if (id === 'groq') {
+    instance = new GroqProvider({ apiKey });
   } else {
     instance = new AnthropicProvider({ apiKey });
   }

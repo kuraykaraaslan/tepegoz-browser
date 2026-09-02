@@ -4,7 +4,17 @@
  * by the SANDBOXED preload, which must stay dependency-free) can consume it at runtime; `enums.ts`
  * builds the zod validator (`AIProviderEnum`) from this same array.
  */
-export const AI_PROVIDERS = ['anthropic', 'openai', 'gemini', 'kimi', 'local'] as const;
+export const AI_PROVIDERS = [
+  'anthropic',
+  'openai',
+  'gemini',
+  'kimi',
+  'nova',
+  'deepseek',
+  'xai',
+  'groq',
+  'local',
+] as const;
 export type AIProvider = (typeof AI_PROVIDERS)[number];
 
 /**
@@ -29,6 +39,10 @@ export const RUNNABLE_AI_PROVIDERS = [
   'openai',
   'gemini',
   'kimi',
+  'nova',
+  'deepseek',
+  'xai',
+  'groq',
 ] as const satisfies readonly AIProvider[];
 
 /** True when the agent runtime can drive `provider` today (see {@link RUNNABLE_AI_PROVIDERS}). */
@@ -62,4 +76,12 @@ export interface ProviderKeyMeta {
    * that applies. Always a model id from the provider's catalog — validated at the IPC boundary.
    */
   model: string;
+  /**
+   * The service region this key runs against, for providers whose API is offered on more than one
+   * endpoint (e.g. xAI `<region>.api.x.ai`, Kimi global vs. `moonshot.cn`) — a `PROVIDER_REGIONS` id.
+   * Chosen when the key is added and fixed for its life (a different region ⇒ a different key, the
+   * same as a different bill). Absent / `''` ⇒ the provider's default endpoint. Providers with a
+   * single endpoint never carry this.
+   */
+  region?: string;
 }

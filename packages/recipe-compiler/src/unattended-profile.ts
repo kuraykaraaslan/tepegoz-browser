@@ -14,7 +14,7 @@ import type { RiskLevel } from '@tepegoz/shared-types';
  *    one-way narrowing".
  * 2. **`destructive` and `financial` are never auto-run, full stop.** No pre-approval flag, no prior
  *    interactive use, nothing overrides this. Real money and irreversible actions face a human every
- *    time, unattended or not — the same invariant the AI-agent-super autonomy gate holds for `financial`
+ *    time, unattended or not — the same invariant the ai-agent autonomy gate holds for `financial`
  *    under the interactive `auto` setting, applied here to the harder case of no human present at all.
  *
  * `destructive`/`financial` steps in a scheduled recipe do not fail the run outright: per the phase's

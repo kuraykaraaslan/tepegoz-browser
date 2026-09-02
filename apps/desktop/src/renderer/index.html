@@ -12,10 +12,18 @@
       body {
         margin: 0;
         height: 100%;
-        /* Track the active theme's surface once tokens load / main.tsx applies the theme (popups pass it
-           in the URL). Falls back to brand navy for the very first paint before the bundle runs — the
-           native window backgroundColor is already the resolved surface color, so there's no flash. */
-        background: var(--surface-base, #0c2135);
+        /* Deliberately paints NOTHING. Every surface in this bundle draws its own ground (`.app-shell`,
+           each popup root, each tepegoz:// page), and until React mounts, the ground that should show is
+           the one the MAIN process already resolved from the active theme and set as the native
+           backgroundColor of the window / WebContentsView (see lib/surface-theme.ts).
+
+           This used to be `var(--surface-base, #0c2135)`, and that fallback is exactly the menu flash:
+           the document paints before tokens.css and main.tsx have run, so the var is still unset and the
+           popup came up brand navy over a purple theme before snapping to the real colour. Painting
+           nothing here lets the correct colour — already under the document — show the whole time.
+           It is also what lets Mica through on the glass chrome: an opaque root canvas would cover the
+           backdrop no matter how transparent `.app-shell` is. */
+        background: transparent;
       }
     </style>
   </head>

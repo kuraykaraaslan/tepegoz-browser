@@ -8,7 +8,15 @@ import {
   faStar,
 } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarOutline } from '@fortawesome/free-regular-svg-icons';
-import { Omnibox, type OmniboxQuickSettingTarget, type OmniboxSuggestion } from '@tepegoz/omnibox';
+import {
+  Omnibox,
+  type OmniboxQuickSettingTarget,
+  type OmniboxSecurityLabels,
+  type OmniboxSecurityLevel,
+  type OmniboxSuggestion,
+} from '@tepegoz/omnibox';
+
+export type { OmniboxSecurityLabels, OmniboxSecurityLevel };
 import { NAV_BTN } from './styles';
 import { ZoomIndicator, type ZoomIndicatorLabels } from './zoom-indicator';
 
@@ -46,6 +54,13 @@ export interface NavToolbarProps {
   currentUrl: string;
   omniboxPlaceholder: string;
   onNavigate: (input: string) => void;
+  /** Active page security level — drives the leading site-info glyph. Omit/`'unknown'` to hide it. */
+  securityLevel?: OmniboxSecurityLevel | undefined;
+  /** Localized strings for the site-info control. Required when `securityLevel` is a shown level. */
+  securityLabels?: OmniboxSecurityLabels | undefined;
+  /** Open the Site Info bubble; receives the button's viewport rect for popup anchoring. */
+  onOpenSiteInfo?: ((anchor: { x: number; y: number; width: number; height: number }) => void)
+    | undefined;
   /** Async omnibox suggestion source (history/tab/search); omit to disable the dropdown. */
   onSuggest?: ((query: string) => Promise<OmniboxSuggestion[]>) | undefined;
   /** Switch to an already-open tab (for `activateTab` omnibox suggestions). */
@@ -96,6 +111,9 @@ export function NavToolbar({
   currentUrl,
   omniboxPlaceholder,
   onNavigate,
+  securityLevel,
+  securityLabels,
+  onOpenSiteInfo,
   onSuggest,
   onActivateTab,
   onOpenQuickSetting,
@@ -149,6 +167,9 @@ export function NavToolbar({
       <Omnibox
         className="flex-1"
         currentUrl={currentUrl}
+        securityLevel={securityLevel}
+        securityLabels={securityLabels}
+        onOpenSiteInfo={onOpenSiteInfo}
         placeholder={omniboxPlaceholder}
         onNavigate={onNavigate}
         onSuggest={onSuggest}

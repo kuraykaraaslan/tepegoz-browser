@@ -131,8 +131,8 @@ export const settingsMiscApi: Pick<
   },
   getCredentialsStatus: () => invoke<CredentialsStatus>(IpcChannels.credentialsStatus),
   listCredentials: () => invoke<ProviderKeyMeta[]>(IpcChannels.credentialsList),
-  addProviderKey: (provider: ProviderId, label: string, apiKey: string) =>
-    invoke<CredentialsStatus>(IpcChannels.credentialsAdd, { provider, label, apiKey }),
+  addProviderKey: (provider: ProviderId, label: string, apiKey: string, region?: string) =>
+    invoke<CredentialsStatus>(IpcChannels.credentialsAdd, { provider, label, apiKey, region }),
   removeProviderKeyById: (id: string) =>
     invoke<CredentialsStatus>(IpcChannels.credentialsRemoveById, { keyId: id }),
   renameProviderKey: (id: string, label: string) =>

@@ -7,6 +7,7 @@ import { registerDownloadsIpc } from './ipc-downloads';
 import { registerUploadsIpc } from './ipc-uploads';
 import { registerTasksIpc } from './ipc-tasks';
 import { registerSiteDataIpc } from './ipc-site-data';
+import { registerPageInfoIpc } from './ipc-page-info';
 import { registerNetworkIpc } from './ipc-network';
 import { registerTrustIpc } from './ipc-trust';
 import { registerTabDragIpc } from '../tab-drag-coordinator';
@@ -29,6 +30,7 @@ export function registerIpc(): void {
   registerUploadsIpc();
   registerTasksIpc();
   registerSiteDataIpc();
+  registerPageInfoIpc();
   registerNetworkIpc();
   registerTrustIpc();
 }

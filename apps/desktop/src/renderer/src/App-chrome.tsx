@@ -149,6 +149,11 @@ export function AppChrome({
         onToggleMaximize={() => window.tepegoz.toggleMaximizeWindow()}
         onClose={() => window.tepegoz.closeWindow()}
         currentUrl={currentUrl}
+        securityLevel={tabs.activeSecurityLevel}
+        onOpenSiteInfo={(anchor) => {
+          extSurfaces.closeSurface();
+          window.tepegoz.openPopup('site-info', anchor, { align: 'start' });
+        }}
         canGoBack={tabs.canGoBack}
         canGoForward={tabs.canGoForward}
         onBack={() => window.tepegoz.tabGoBack()}

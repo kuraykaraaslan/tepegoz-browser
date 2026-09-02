@@ -7,7 +7,9 @@ import {
 } from 'electron';
 import { Logger } from '@tepegoz/libs';
 import { INTERNAL_NEWTAB_URL, IpcChannels, type TabsState } from '@tepegoz/desktop-ipc';
+import { classifyPageSecurity } from '@tepegoz/shared-types';
 import { TabStore } from '@tepegoz/tab-engine';
+import { getRecordedCert } from './network/certificate-recorder.electron';
 import { internalPageUrl, toNavigationUrl } from './lib/navigation-url';
 import { resolveViewBounds } from './tabs-content-bounds';
 import ActionInterceptorService from './extensions/action-interceptors.electron';
@@ -320,7 +322,25 @@ export class WindowTabsBase {
       canGoForward: wc?.navigationHistory.canGoForward() ?? false,
       isPrivate: this.isPrivate,
       activeZoomFactor: wc !== undefined && !wc.isDestroyed() ? wc.getZoomFactor() : 1,
+      activeSecurityLevel: this.activeSecurityLevel(),
     });
+  }
+
+  /** Classify the active tab's committed URL for the omnibox glyph. A recorded TLS *failure* for the
+   *  host downgrades an `https://` page to `dangerous`; everything else falls out of the scheme. */
+  private activeSecurityLevel(): TabsState['activeSecurityLevel'] {
+    const url = this.store.active()?.url ?? '';
+    if (url === '') return 'unknown';
+    let host = '';
+    try {
+      host = new URL(url).hostname;
+    } catch {
+      /* leave host empty — classifyPageSecurity handles an unparseable URL */
+    }
+    const recorded = getRecordedCert(host);
+    const certErrorCode =
+      recorded !== undefined && recorded.errorCode !== 0 ? recorded.verificationResult : null;
+    return classifyPageSecurity(url, { certErrorCode });
   }
 
   /** How many tabs this window holds (visible + hidden). Lets close-to-tray keep a window with tabs alive

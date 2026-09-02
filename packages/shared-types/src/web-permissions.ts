@@ -16,12 +16,14 @@
 export type WebPermissionCapability =
   'notifications' | 'clipboardRead' | 'clipboardWrite' | 'camera' | 'microphone' | 'geolocation';
 
-/** Every brokered capability, for exhaustive UI rendering and for the security tests. */
-export const WEB_PERMISSION_CAPABILITIES: readonly WebPermissionCapability[] = [
+/** Every brokered capability, for exhaustive UI rendering and for the security tests. `as const` so
+ *  `z.enum` can be built straight from it (see `WebPermissionCapabilityEnum` in `enums.ts`); the
+ *  `satisfies` keeps this list and the `WebPermissionCapability` union from drifting apart. */
+export const WEB_PERMISSION_CAPABILITIES = [
   'camera',
   'microphone',
   'geolocation',
   'notifications',
   'clipboardRead',
   'clipboardWrite',
-];
+] as const satisfies readonly WebPermissionCapability[];

@@ -1,10 +1,14 @@
 import type { AIProvider } from '@tepegoz/shared-types';
 import {
   ANTHROPIC_MODEL,
+  DEEPSEEK_MODEL,
   GEMINI_MODEL,
+  GROQ_MODEL,
   KIMI_MODEL,
   LOCAL_MODEL,
+  NOVA_MODEL,
   OPENAI_MODEL,
+  XAI_MODEL,
   type EffortLevel,
 } from './models';
 
@@ -35,6 +39,10 @@ const PROVIDER_MODELS: Record<AIProvider, Record<ModelTier, string>> = {
   openai: OPENAI_MODEL,
   gemini: GEMINI_MODEL,
   kimi: KIMI_MODEL,
+  nova: NOVA_MODEL,
+  deepseek: DEEPSEEK_MODEL,
+  xai: XAI_MODEL,
+  groq: GROQ_MODEL,
   local: LOCAL_MODEL,
 };
 

@@ -20,7 +20,8 @@ import { toAnthropicContent } from './anthropic-content';
  * Anthropic (Claude) adapter (L7) — normalizes the canonical request/response shapes to the
  * Anthropic Messages API and back. Verified against the `claude-api` reference:
  *  - `max_tokens` is always required (enforced by the gateway before we are called).
- *  - reasoning depth is set via `output_config.effort`; `budget_tokens` is NEVER sent (400 on Opus 4.8).
+ *  - reasoning depth is set via `output_config.effort`; `budget_tokens` is NEVER sent (400 on the
+ *    Claude 5 / 4.8 line the tier map targets).
  *  - adaptive thinking only (`thinking: { type: 'adaptive' }`), opt-in via constructor options.
  *  - the abort signal + timeout (ms) are passed straight through to the SDK request options.
  *

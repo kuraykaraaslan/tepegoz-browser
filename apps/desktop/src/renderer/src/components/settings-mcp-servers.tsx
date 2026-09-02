@@ -215,14 +215,14 @@ export function McpServersSection({
             />
           </div>
         )}
-        <Button size="sm" className="mb-1 h-[38px]" disabled={error !== null} onClick={submit}>
+        <Button size="sm" className="h-[38px]" disabled={error !== null} onClick={submit}>
           {editingId === null ? s.mcp.add : s.searchEngineSave}
         </Button>
         {editingId !== null && (
           <Button
             size="sm"
             variant="outline"
-            className="mb-1 h-[38px]"
+            className="h-[38px]"
             onClick={() => {
               setEditingId(null);
               setDraft(EMPTY_DRAFT);

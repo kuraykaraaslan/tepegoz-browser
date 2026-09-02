@@ -9,7 +9,7 @@ import {
   type TabTearPoint,
 } from '@tepegoz/tab-strip';
 import { captionLayout, WindowControls } from '@tepegoz/window-controls';
-import { NavToolbar } from '@tepegoz/nav-toolbar';
+import { NavToolbar, type OmniboxSecurityLevel } from '@tepegoz/nav-toolbar';
 import type { OmniboxQuickSettingTarget, OmniboxSuggestion } from '@tepegoz/omnibox';
 
 /**
@@ -32,6 +32,15 @@ export interface BrowserChromeStrings {
     omniboxPlaceholder: string;
     bookmarkAdd: string;
     bookmarkRemove: string;
+    /** Leading site-info control (Chrome's lock / "Not secure" affordance). */
+    siteInfo: {
+      button: string;
+      secure: string;
+      notSecure: string;
+      dangerous: string;
+      internal: string;
+      file: string;
+    };
     /** Omnibox zoom indicator (Chrome-style; shown only off 100%). */
     zoom: string;
     zoomIn: string;
@@ -104,6 +113,11 @@ export interface BrowserChromeProps {
   /** The main (hamburger) menu control (button + its dropdown), supplied by the host. */
   menu: ReactNode;
   onNavigate: (input: string) => void;
+  /** The active page's security level — drives the leading site-info glyph. Omit/`'unknown'` hides it. */
+  securityLevel?: OmniboxSecurityLevel | undefined;
+  /** Open the Site Info bubble; receives the button's viewport rect for popup anchoring. */
+  onOpenSiteInfo?: ((anchor: { x: number; y: number; width: number; height: number }) => void)
+    | undefined;
   /** Async omnibox suggestion source (history/tab/search); omit to disable the dropdown. */
   onSuggest?: ((query: string) => Promise<OmniboxSuggestion[]>) | undefined;
   /** Switch to an already-open tab (for `activateTab` omnibox suggestions). */
@@ -183,6 +197,8 @@ export function BrowserChrome({
   onForwardContextMenu,
   menu,
   onNavigate,
+  securityLevel,
+  onOpenSiteInfo,
   onSuggest,
   onActivateTab,
   onOpenQuickSetting,
@@ -293,6 +309,9 @@ export function BrowserChrome({
         currentUrl={currentUrl}
         omniboxPlaceholder={t.browser.omniboxPlaceholder}
         onNavigate={onNavigate}
+        securityLevel={securityLevel}
+        securityLabels={t.browser.siteInfo}
+        onOpenSiteInfo={onOpenSiteInfo}
         onSuggest={onSuggest}
         onActivateTab={onActivateTab}
         onOpenQuickSetting={onOpenQuickSetting}

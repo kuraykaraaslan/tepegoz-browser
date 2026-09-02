@@ -142,3 +142,9 @@ export function registerCertificateHandler(app: Electron.App): void {
 export function clearCertificateExceptions(): void {
   sessionExceptions.clear();
 }
+
+/** Did the user click through a certificate warning for this origin THIS run? Read by the Site Info
+ *  bubble so a page the user forced past a bad cert still reads as "dangerous". */
+export function hasCertificateException(origin: string): boolean {
+  return sessionExceptions.has(origin);
+}

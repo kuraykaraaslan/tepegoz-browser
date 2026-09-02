@@ -6,7 +6,7 @@ import { AlertBanner, Badge, Button, Card, cn, Input } from '@tepegoz/ui';
 import { coreDict } from '@tepegoz/i18n';
 import { useT } from '@tepegoz/i18n/react';
 import { isRunnableProvider } from '@tepegoz/desktop-ipc';
-import type { ProviderId, ProviderKeyMeta } from '@tepegoz/desktop-ipc';
+import type { CredentialsStatus, ProviderId, ProviderKeyMeta } from '@tepegoz/desktop-ipc';
 import { PROVIDERS, Select } from './settings-shared';
 import { ConfirmAction } from './settings-confirm';
 import { KeyModelMenu, useProviderModels } from './settings-ai-panels-key-model';
@@ -38,6 +38,7 @@ export type Notify = (variant: 'success' | 'error', message: string) => void;
 export function ProvidersSection({
   keys,
   encryptionAvailable,
+  regions,
   onAdd,
   onRemoveById,
   onRename,
@@ -47,7 +48,9 @@ export function ProvidersSection({
 }: {
   keys: ProviderKeyMeta[];
   encryptionAvailable: boolean;
-  onAdd: (provider: ProviderId, label: string, apiKey: string) => Promise<void>;
+  /** provider id → selectable service regions (only multi-endpoint providers appear). */
+  regions: CredentialsStatus['regions'];
+  onAdd: (provider: ProviderId, label: string, apiKey: string, region?: string) => Promise<void>;
   onRemoveById: (id: string) => Promise<void>;
   onRename: (id: string, label: string) => Promise<void>;
   onSetModel: (id: string, model: string) => Promise<void>;
@@ -59,6 +62,11 @@ export function ProvidersSection({
   const [provider, setProvider] = useState<ProviderId>('anthropic');
   const [label, setLabel] = useState('');
   const [keyValue, setKeyValue] = useState('');
+  // The region chosen for the NEXT key. Reset to the provider's default whenever the provider changes;
+  // '' both when the provider has no regions and when its first (default) region is selected — either
+  // way nothing region-specific is sent.
+  const [region, setRegion] = useState('');
+  const providerRegionOpts = regions?.[provider] ?? [];
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState('');
   const [dragId, setDragId] = useState<string | null>(null);
@@ -74,7 +82,7 @@ export function ProvidersSection({
     if (key.length === 0) return;
     const lbl = label.trim().length > 0 ? label.trim() : s.providerNames[provider];
     try {
-      await onAdd(provider, lbl, key);
+      await onAdd(provider, lbl, key, region !== '' ? region : undefined);
       setLabel('');
       setKeyValue('');
       notify('success', s.keyAdded);
@@ -157,6 +165,7 @@ export function ProvidersSection({
             value={provider}
             onChange={(v) => {
               setProvider(v as ProviderId);
+              setRegion(''); // '' = the new provider's default endpoint
             }}
           >
             {PROVIDERS.map((p) => (
@@ -166,6 +175,25 @@ export function ProvidersSection({
             ))}
           </Select>
         </div>
+        {providerRegionOpts.length > 0 && (
+          <div className="w-44">
+            <Select
+              id="region-select"
+              label={s.regionSelectLabel}
+              value={region === '' ? (providerRegionOpts[0]?.id ?? '') : region}
+              onChange={(v) => {
+                // Store '' when the default (first) region is picked, so nothing region-specific is sent.
+                setRegion(v === providerRegionOpts[0]?.id ? '' : v);
+              }}
+            >
+              {providerRegionOpts.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.label}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
         <div className="w-36">
           <Input
             id="key-label"
@@ -193,12 +221,12 @@ export function ProvidersSection({
             }}
           />
         </div>
-        {/* h-[38px] + mb-1 aligns the button box with the Input/Select boxes, whose wrappers
-            add a label above and a ~4px hint gap below (space-y-1). */}
+        {/* h-[38px] is the shared control-box height — matches the Input/Select boxes so the row
+            bottom-aligns cleanly (their wrappers only add a label above). */}
         <Button
           type="submit"
           size="sm"
-          className="mb-1 h-[38px]"
+          className="h-[38px]"
           disabled={!encryptionAvailable || keyValue.trim().length === 0}
         >
           {s.addKey}
@@ -303,6 +331,11 @@ export function ProvidersSection({
                         <span className="ml-2 text-xs text-text-secondary">
                           {s.providerNames[k.provider]}
                         </span>
+                        {k.region !== undefined && k.region !== '' && (
+                          <span className="ml-2 text-xs text-text-secondary">
+                            {regions?.[k.provider]?.find((r) => r.id === k.region)?.label ?? k.region}
+                          </span>
+                        )}
                         {k.provider !== undefined && !isRunnableProvider(k.provider) && (
                           <span className="ml-2 text-xs text-text-disabled">
                             {s.providerNotUsableYet}

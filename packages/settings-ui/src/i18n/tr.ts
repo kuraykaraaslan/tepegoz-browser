@@ -173,6 +173,7 @@ export const tr: SettingsStrings = {
   providersSubtitle:
     'Anahtarlar bu cihazda şifrelenir (işletim sistemi anahtarlığı) ve sizin işleminiz olmadan cihazdan çıkmaz.',
   providerSelectLabel: 'Sağlayıcı',
+  regionSelectLabel: 'Bölge',
   apiKey: 'API anahtarı',
   apiKeyPlaceholder: 'Anahtarınızı yapıştırın…',
   keyLabel: 'Etiket',
@@ -196,6 +197,10 @@ export const tr: SettingsStrings = {
     openai: 'OpenAI',
     gemini: 'Gemini (Google)',
     kimi: 'Kimi (Moonshot)',
+    nova: 'Amazon Nova',
+    deepseek: 'DeepSeek',
+    xai: 'xAI (Grok)',
+    groq: 'Groq',
     local: 'Yerel (cihazda)',
   },
   keyModel: {

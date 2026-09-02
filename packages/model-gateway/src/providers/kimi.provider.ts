@@ -89,8 +89,9 @@ interface ProviderConfig {
   apiKey?: string;
   /** Inject a pre-configured axios instance (tests); otherwise one is built for the Moonshot API. */
   client?: AxiosInstance;
-  /** Override the API root (e.g. the China endpoint api.moonshot.cn). Defaults to the global API. */
-  baseURL?: string;
+  /** Override the API root (e.g. the China endpoint api.moonshot.cn). Defaults to the global API.
+   *  `undefined` ⇒ the default. */
+  baseURL?: string | undefined;
 }
 
 export class KimiProvider implements ModelProvider {

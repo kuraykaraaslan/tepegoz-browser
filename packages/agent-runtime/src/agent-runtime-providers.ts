@@ -1,11 +1,16 @@
 import { AppError } from '@tepegoz/libs';
 import {
   AnthropicProvider,
+  DeepSeekProvider,
   GeminiProvider,
+  GroqProvider,
   KimiProvider,
   ModelGateway,
+  NovaProvider,
   OpenAIProvider,
   PROVIDER_MODEL_CATALOG,
+  resolveProviderBaseURL,
+  XaiProvider,
   type EffortLevel,
   type ModelProvider,
 } from '@tepegoz/model-gateway';
@@ -64,13 +69,16 @@ function resolveProvider(
 /**
  * Build the model-provider adapter for a resolved provider id. `effort` is applied only by the
  * Anthropic adapter (its `output_config.effort`); the OpenAI tier models are plain chat models that
- * take no effort field, so it is ignored there (see {@link OpenAIProvider}).
+ * take no effort field, so it is ignored there (see {@link OpenAIProvider}). `baseURL` (from the key's
+ * chosen region — `PROVIDER_REGIONS`) overrides the adapter's default endpoint when set; `undefined`
+ * keeps the built-in default, so single-endpoint providers are unaffected.
  */
 function providerFor(
   provider: AIProvider,
   apiKey: string,
   effort: EffortLevel,
   localConfig: LocalProviderConfig | undefined,
+  baseURL: string | undefined,
 ): ModelProvider {
   if (provider === 'local') {
     if (localConfig === undefined) {
@@ -89,7 +97,19 @@ function providerFor(
     return new GeminiProvider({ apiKey });
   }
   if (provider === 'kimi') {
-    return new KimiProvider({ apiKey });
+    return new KimiProvider({ apiKey, baseURL });
+  }
+  if (provider === 'nova') {
+    return new NovaProvider({ apiKey, baseURL });
+  }
+  if (provider === 'deepseek') {
+    return new DeepSeekProvider({ apiKey, baseURL });
+  }
+  if (provider === 'xai') {
+    return new XaiProvider({ apiKey, baseURL });
+  }
+  if (provider === 'groq') {
+    return new GroqProvider({ apiKey, baseURL });
   }
   return new AnthropicProvider({ apiKey, effort });
 }
@@ -120,7 +140,13 @@ export function registerRunProvider(
     localAvailable,
   );
   ModelGateway.register(
-    providerFor(resolved.provider, resolved.apiKey, effort, deps.localInference),
+    providerFor(
+      resolved.provider,
+      resolved.apiKey,
+      effort,
+      deps.localInference,
+      resolveProviderBaseURL(resolved.provider, CredentialVault.regionForProvider(resolved.provider)),
+    ),
   );
   if (resolved.provider !== 'local' && localAvailable && deps.localInference !== undefined) {
     ModelGateway.register(new LocalProvider(deps.localInference));
@@ -144,7 +170,8 @@ export function hotSwapRunProvider(
   if (provider === 'local' || !isRunnableProvider(provider)) return false;
   const apiKey = CredentialVault.getFirstKeyForProvider(provider);
   if (apiKey === null) return false;
-  ModelGateway.register(providerFor(provider, apiKey, opts.effort, undefined));
+  const baseURL = resolveProviderBaseURL(provider, CredentialVault.regionForProvider(provider));
+  ModelGateway.register(providerFor(provider, apiKey, opts.effort, undefined, baseURL));
   const model =
     opts.model.length > 0 ? opts.model : (PROVIDER_MODEL_CATALOG[provider][0]?.id ?? '');
   if (model.length === 0) return false;

@@ -45,6 +45,16 @@ export const tr: AppStrings = {
     // Yer imi yıldızı (omniçubuğun sağında).
     bookmarkAdd: 'Bu sayfayı yer imlerine ekle',
     bookmarkRemove: 'Yer imini kaldır',
+    // Omniçubuğun başındaki site bilgisi denetimi (Chrome'un kilit / "Güvenli değil" göstergesi).
+    // `notSecure`/`dangerous` glifin yanında kırmızı METİN olarak da gösterilir.
+    siteInfo: {
+      button: 'Site bilgisini görüntüle',
+      secure: 'Bağlantı güvenli',
+      notSecure: 'Güvenli değil',
+      dangerous: 'Tehlikeli',
+      internal: 'Tepegöz sayfası',
+      file: 'Yerel dosya',
+    },
     bookmarksBar: 'Yer imi çubuğu',
     noBookmarksBar: 'Henüz yer imi yok. Buraya eklemek için bir sayfayı yıldızlayın.',
     bookmarkMenu: {
@@ -193,6 +203,54 @@ export const tr: AppStrings = {
   },
   sidebar: {
     resize: 'Kenar çubuğunu yeniden boyutlandır',
+  },
+  // "Site bilgisi" balonu (Chrome'un Sayfa Bilgisi paneli), omniçubuğun başındaki denetimden açılır.
+  // İzin etiketleri + durum adları `settings-ui` permissionsCenter sözlüğünden yeniden kullanılır.
+  siteInfo: {
+    close: 'Kapat',
+    connectionSecureTitle: 'Bağlantı güvenli',
+    connectionSecureBody:
+      'Bilgileriniz (örneğin parolalar veya kart numaraları) bu siteye giderken gizli kalır.',
+    connectionNotSecureTitle: 'Bu siteyle bağlantınız güvenli değil',
+    connectionNotSecureBody:
+      'Bu siteye hassas bilgiler (örneğin parolalar veya kart numaraları) girmemelisiniz; başkaları tarafından görülebilir veya değiştirilebilir.',
+    connectionDangerousTitle: 'Bu site tehlikeli',
+    connectionDangerousBody:
+      'Bu sitenin sertifikasına güvenilmiyor. Birileri siteyi taklit ediyor olabilir — hassas hiçbir şey girmeyin.',
+    connectionInternalNote: 'Bu güvenli bir Tepegöz sayfasıdır.',
+    connectionFileNote: 'Bu dosya bilgisayarınızda.',
+    learnMore: 'Daha fazla bilgi',
+    certificate: 'Sertifika',
+    securityTitle: 'Güvenlik',
+    back: 'Geri',
+    certificateValid: 'Sertifika geçerli',
+    certificateInvalid: 'Sertifika geçerli değil',
+    certCommonName: 'Ortak ad',
+    certSerial: 'Seri numarası',
+    certValidityPeriod: 'Geçerlilik süresi',
+    certValid: 'geçerli',
+    certInvalid: 'geçersiz',
+    certSubjectName: 'Verilen',
+    certIssuerName: 'Veren',
+    certValidFrom: 'Geçerlilik başlangıcı',
+    certValidTo: 'Geçerlilik sonu',
+    certSan: 'Kapsadığı adlar',
+    certFingerprint: 'SHA-256 parmak izi',
+    certChain: 'Sertifika yolu',
+    permissionsTitle: 'İzinler',
+    noSpecialPermissions: 'Bu siteye özel bir izin vermediniz.',
+    resetPermissions: 'İzinleri sıfırla',
+    cookiesTitle: 'Çerezler ve site verileri',
+    cookiesInUse: 'Kullanımda {count} çerez',
+    cookiesInUseOne: 'Kullanımda 1 çerez',
+    cookiesNone: 'Depolanan çerez yok',
+    clearSiteData: 'Site verilerini temizle',
+    clearSiteDataTitle: 'Site verilerini temizle',
+    clearSiteDataBody: 'Bu, {site} tarafından bu cihazda depolanan her şeyi temizler.',
+    clearSiteDataConfirm: 'Temizle',
+    siteSettings: 'Site ayarları',
+    trustLevel: 'Bu siteyi “{level}” olarak ayarladınız.',
+    loadError: 'Site bilgisi yüklenemedi.',
   },
   transfer: {
     title: 'Aktarımlar',

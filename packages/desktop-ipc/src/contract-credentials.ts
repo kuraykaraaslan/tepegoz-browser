@@ -12,6 +12,13 @@ export interface CredentialsStatus {
   providers: ProviderKeyStatus;
   /** Every stored key's metadata (NO secret; `last4` is a non-secret fingerprint). Any number per provider. */
   keys: ProviderKeyMeta[];
+  /**
+   * Selectable service regions for the few providers whose API has more than one endpoint (e.g. `xai`
+   * regional clusters, `kimi` global vs. China) — provider id → `{ id, label }` options, first is the
+   * default. Single-endpoint providers are absent (the picker renders nothing for them). The endpoint
+   * URL each id resolves to stays main-side; the renderer only persists the chosen `id` per key.
+   */
+  regions: Record<string, ReadonlyArray<{ id: string; label: string }>>;
 }
 
 // Login credential manager — preload-safe inline types (no @tepegoz/password-core import so the

@@ -173,6 +173,7 @@ export const en = {
   providersSubtitle:
     'Keys are encrypted on this device (OS keychain) and never leave it without your action.',
   providerSelectLabel: 'Provider',
+  regionSelectLabel: 'Region',
   apiKey: 'API key',
   apiKeyPlaceholder: 'Paste your key…',
   keyLabel: 'Label',
@@ -196,6 +197,10 @@ export const en = {
     openai: 'OpenAI',
     gemini: 'Gemini (Google)',
     kimi: 'Kimi (Moonshot)',
+    nova: 'Amazon Nova',
+    deepseek: 'DeepSeek',
+    xai: 'xAI (Grok)',
+    groq: 'Groq',
     local: 'Local (on-device)',
   },
   keyModel: {

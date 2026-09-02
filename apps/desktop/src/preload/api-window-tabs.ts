@@ -277,12 +277,17 @@ export const windowTabsApi: Pick<
       ipcRenderer.removeListener(IpcChannels.tabsState, listener);
     };
   },
-  openPopup: (surface: string, anchor: ContentBounds, opts?: { id?: string; height?: number }) => {
+  openPopup: (
+    surface: string,
+    anchor: ContentBounds,
+    opts?: { id?: string; height?: number; align?: 'start' | 'end' },
+  ) => {
     ipcRenderer.send(IpcChannels.popupOpen, {
       surface,
       id: opts?.id,
       anchor,
       height: opts?.height,
+      align: opts?.align,
     });
   },
   resizePopup: (height: number) => {

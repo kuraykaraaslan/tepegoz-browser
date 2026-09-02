@@ -11,3 +11,5 @@ export * from './providers/anthropic.provider';
 export * from './providers/openai.provider';
 export * from './providers/gemini.provider';
 export * from './providers/kimi.provider';
+export * from './providers/nova.provider';
+export * from './providers/openai-compat.provider';

@@ -13,6 +13,11 @@ import { REAL_PAGE_HOSTS } from './real-page-hosts';
  * never the network stack). This is the accepted alternative to the Express/loopback-HTTP proposal
  * recorded in `phases/tracks/express-settings.md` (see that file's Ek A).
  *
+ * **Dev only:** this handler serves the on-disk `out/renderer` build, which `electron-vite dev` does NOT
+ * rebuild — so in dev these pages instead load straight from the Vite dev server and this handler is
+ * never hit for them. See `tabs-internal-page-view.ts#internalPageLoadUrl`. The prod path below is
+ * unchanged.
+ *
  * **Subresource requests do not work for this scheme (root-caused 2026-08-26).** A top-level navigation
  * to `tepegoz://settings` reaches `handleRequest` and returns fine, but a SEPARATE subsequent request for
  * an asset the document references (`<script src>`, `<link href>`) never reaches `handleRequest` at all —

@@ -10,6 +10,7 @@ import { ExtensionsPanelPopup } from './components/ExtensionsPanelPopup';
 import { PageContextMenuPopup } from './components/PageContextMenuPopup';
 import { UserMenuPopup } from './components/UserMenuPopup';
 import { NotificationCenterPopup } from './components/NotificationCenterPopup';
+import { SiteInfoPopup } from './components/SiteInfoPopup';
 import { TransferActivityPopup } from './components/TransferActivityPopup';
 import { BookmarkFolderPopup } from './components/BookmarkFolderPopup';
 import { BookmarkDialogPopup } from './components/BookmarkDialogPopup';
@@ -54,7 +55,10 @@ if (surface === 'drag-preview') {
 // see internal-pages/protocol.ts and tabs-internal-page-view.ts) picks its surface by HOSTNAME instead
 // of `?surface=`: it is not a popup, so there is no window-creation call site to attach a query string
 // to. Growing REAL_PAGE_HOSTS in protocol.ts is what adds a case here (Faz 3 of the plan doc).
-const internalPageHost = window.location.protocol === 'tepegoz:' ? window.location.hostname : null;
+// In dev, those same pages load straight from the Vite dev server (so HMR works) as `?page=<host>` —
+// `tabs-internal-page-view.ts#internalPageLoadUrl` — so fall back to that param off the `tepegoz:` origin.
+const internalPageHost =
+  window.location.protocol === 'tepegoz:' ? window.location.hostname : params.get('page');
 
 let node: ReactNode = <App />;
 if (internalPageHost === 'settings') node = <SettingsPageSurface />;
@@ -71,6 +75,7 @@ else if (surface === 'user-menu') node = <UserMenuPopup />;
 else if (surface === 'menu-sub') node = <MenuSubPopup kind={params.get('kind') ?? ''} />;
 else if (surface === 'extensions-panel') node = <ExtensionsPanelPopup />;
 else if (surface === 'notifications') node = <NotificationCenterPopup />;
+else if (surface === 'site-info') node = <SiteInfoPopup url={params.get('url') ?? ''} />;
 else if (surface === 'transfers') node = <TransferActivityPopup />;
 else if (surface === 'bookmark-folder' && extId !== null)
   node = <BookmarkFolderPopup folderId={extId} />;

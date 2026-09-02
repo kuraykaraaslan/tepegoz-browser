@@ -16,7 +16,7 @@ import type {
 } from './contract';
 import type { PageMenuAction, PageMenuContext, PageMenuContributionActionInput } from './contract';
 import type { HistoryEntry } from './contract';
-import type { SiteClearPlan } from './contract';
+import type { PageInfo, SiteClearPlan } from './contract';
 import type { BookmarkEntry, BookmarkNodeType, BookmarkTreeNode } from './contract';
 import type { ReaderArticle } from '@tepegoz/reader';
 import type { StoredScreenshot } from '@tepegoz/screenshots';
@@ -31,7 +31,11 @@ export interface UiApi {
    *  rect, in window-content DIP). Floats above the page, which stays live behind it. Reusable across
    *  surfaces: `surface` is the kind ('main-menu' | 'ext'); extensions pass their id via `opts.id`;
    *  `opts.height` requests a content height (clamped to the work area). */
-  openPopup(surface: string, anchor: ContentBounds, opts?: { id?: string; height?: number }): void;
+  openPopup(
+    surface: string,
+    anchor: ContentBounds,
+    opts?: { id?: string; height?: number; align?: 'start' | 'end' },
+  ): void;
   /** Report the open popup's measured content height (px) so main shrinks the window to fit — removing
    *  the empty strip left by the open-time height estimate. Clamped to the work area in main. */
   resizePopup(height: number): void;
@@ -75,6 +79,13 @@ export interface UiApi {
   planSiteDataClear(url: string): Promise<SiteClearPlan | null>;
   /** Perform the clear the user just confirmed; resolves with what was actually cleared. */
   clearSiteData(url: string): Promise<SiteClearPlan | null>;
+  /**
+   * The full "Site information" bubble payload for one page URL — connection-security level, the leaf
+   * certificate + chain, cookie count, and the per-origin brokered-permission map. Assembled on
+   * demand (it is far too heavy to ride every `tabs:state`). Never throws for an odd URL: an
+   * unparseable or internal page comes back with the null-heavy shape.
+   */
+  getPageInfo(url: string): Promise<PageInfo | null>;
   // Bookmarks. Only http(s) pages are bookmarkable (internal tepegoz:// pages are rejected in main).
   /** All bookmarks, newest-first. */
   listBookmarks(): Promise<BookmarkEntry[]>;

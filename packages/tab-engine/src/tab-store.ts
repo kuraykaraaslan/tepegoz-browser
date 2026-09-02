@@ -351,6 +351,9 @@ export class TabStore {
     /** The active tab's live zoom factor, read from its view by the caller (Electron). `1` when there
      *  is no active view (internal / no active tab). */
     activeZoomFactor?: number;
+    /** The active tab's transport-security verdict, classified by the caller (Electron) from the
+     *  committed URL + any recorded certificate trouble. `'unknown'` when there is no active tab. */
+    activeSecurityLevel?: TabsState['activeSecurityLevel'];
   }): TabsState {
     const tabs: TabInfo[] = this.records().map((t) => {
       const info: TabInfo = {
@@ -390,6 +393,9 @@ export class TabStore {
       // Same story as the nav flags: the store cannot read a WebContents, so the caller injects the
       // active tab's zoom. Defaults to 100% so a state built before any view exists is still valid.
       activeZoomFactor: nav.activeZoomFactor ?? 1,
+      // Classified by the caller from the active tab's URL — the store has no URL parser and no
+      // knowledge of certificate trouble. `'unknown'` hides the omnibox glyph entirely.
+      activeSecurityLevel: nav.activeSecurityLevel ?? 'unknown',
     };
   }
 }

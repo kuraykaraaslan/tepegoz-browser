@@ -30,7 +30,7 @@ export interface SettingsSectionsCtx {
     state: SitePermissionState,
   ) => void;
   resetToDefaults: () => void;
-  onAddKey: (provider: ProviderId, label: string, apiKey: string) => Promise<void>;
+  onAddKey: (provider: ProviderId, label: string, apiKey: string, region?: string) => Promise<void>;
   onRemoveKeyById: (id: string) => Promise<void>;
   onRenameKey: (id: string, label: string) => Promise<void>;
   onSetKeyModel: (id: string, model: string) => Promise<void>;

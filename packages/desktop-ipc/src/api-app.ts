@@ -37,8 +37,14 @@ export interface AppApi {
   /** Every stored key's metadata (no secret). Any number of keys per provider. */
   listCredentials(): Promise<ProviderKeyMeta[]>;
   /** Renderer → main only (user-entered key). The raw key never flows back to the renderer. A new key
-   *  starts on auto; its model is pinned afterwards with {@link AppApi.setProviderKeyModel}. */
-  addProviderKey(provider: ProviderId, label: string, apiKey: string): Promise<CredentialsStatus>;
+   *  starts on auto; its model is pinned afterwards with {@link AppApi.setProviderKeyModel}. `region`
+   *  (a `CredentialsStatus.regions` id) is fixed at add time for multi-endpoint providers. */
+  addProviderKey(
+    provider: ProviderId,
+    label: string,
+    apiKey: string,
+    region?: string,
+  ): Promise<CredentialsStatus>;
   /** Remove one stored key by its id. */
   removeProviderKeyById(id: string): Promise<CredentialsStatus>;
   /** Rename one stored key by its id (label only — the secret is untouched). */

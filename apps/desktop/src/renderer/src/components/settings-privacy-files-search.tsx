@@ -150,12 +150,18 @@ export function SearchStartupSection({
                       }}
                     />
                     <div className="flex gap-2">
-                      <Button size="sm" disabled={!canSaveEdit} onClick={commitEdit}>
+                      <Button
+                        size="sm"
+                        className="h-[38px]"
+                        disabled={!canSaveEdit}
+                        onClick={commitEdit}
+                      >
                         {s.searchEngineSave}
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
+                        className="h-[38px]"
                         onClick={() => {
                           setEditingId(null);
                         }}
@@ -229,7 +235,13 @@ export function SearchStartupSection({
                 setUrl(e.target.value);
               }}
             />
-            <Button size="sm" variant="outline" disabled={!canAdd} onClick={addEngine}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-[38px]"
+              disabled={!canAdd}
+              onClick={addEngine}
+            >
               {s.searchEngineCustomAdd}
             </Button>
           </div>

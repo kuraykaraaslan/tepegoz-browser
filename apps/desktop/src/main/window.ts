@@ -12,7 +12,8 @@ import { isTrustedAppUrl } from './lib/trusted-origin';
 import { whenChromeReady } from './chrome-ready';
 import { PARK_X, PARK_Y, isParkedToTray, trayParked } from './window-parked';
 import { ensureOnScreen, isBoundsOnScreen } from './window-placement';
-import { GLASS_BG, OPAQUE_BG, isMicaSupported } from './lib/glass';
+import { GLASS_BG, isMicaSupported } from './lib/glass';
+import { resolveSurfaceTheme } from './lib/surface-theme';
 
 /** App-chrome partition — shared by the main window and extension popups (both are trusted chrome).
  *  Exported for the CSP hook in security.ts (the policy applies to this session ONLY). */
@@ -204,8 +205,11 @@ export function createWindow(opts?: { forceForeground?: boolean }): BrowserWindo
     show: false,
     ...frameOptions(),
     icon: ICON_PATH,
-    // Brand navy (logo background) so the frame matches before the renderer paints; transparent under glass.
-    backgroundColor: glass ? GLASS_BG : OPAQUE_BG,
+    // Pre-paint ground: the ACTIVE theme's surface, not a brand constant — the renderer's <html> paints
+    // nothing (renderer/index.html), so this is what fills the frame until `.app-shell` draws. Hardcoding
+    // navy here flashed the wrong colour on every light or custom-`themeColor` profile. Transparent
+    // under glass, where the Mica backdrop is the ground.
+    backgroundColor: glass ? GLASS_BG : resolveSurfaceTheme().color,
     ...(glass ? { backgroundMaterial: 'mica' as const } : {}),
     // App-chrome gets its own persistent partition. Browsed (untrusted) pages run in SEPARATE isolated
     // partitions/WebContentsView, never sharing this session.

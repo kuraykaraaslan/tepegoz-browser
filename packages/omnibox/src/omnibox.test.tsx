@@ -2,8 +2,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useRef } from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { Omnibox, type OmniboxProps } from './omnibox';
+import { Omnibox, type OmniboxProps, type OmniboxSecurityLabels } from './omnibox';
 import type { OmniboxSuggestion } from './omnibox-suggest';
+
+const securityLabels: OmniboxSecurityLabels = {
+  button: 'View site information',
+  secure: 'Connection is secure',
+  notSecure: 'Not secure',
+  dangerous: 'Dangerous',
+  internal: 'Tepegöz page',
+  file: 'Local file',
+};
 
 const noSuggestions = (): Promise<OmniboxSuggestion[]> => Promise.resolve([]);
 const oneSuggestion =
@@ -196,6 +205,53 @@ describe('Omnibox', () => {
 
     fireEvent.submit(omniboxForm());
     expect(onNavigate).toHaveBeenCalledWith('https://row-1.test/');
+  });
+
+  it('shows a lock for a secure page and no "Not secure" text', () => {
+    const { container } = render(
+      <Omnibox {...baseProps({ securityLevel: 'secure', securityLabels, onOpenSiteInfo: vi.fn() })} />,
+    );
+    expect(container.querySelector('svg[data-icon="lock"]')).not.toBeNull();
+    expect(screen.queryByText('Not secure')).toBeNull();
+    expect(screen.getByRole('button', { name: 'View site information' })).toBeTruthy();
+  });
+
+  it('shows a red "Not secure" label + triangle for an http page and opens the bubble with a rect', () => {
+    const onOpenSiteInfo = vi.fn<(a: { x: number; y: number; width: number; height: number }) => void>();
+    const { container } = render(
+      <Omnibox
+        {...baseProps({
+          currentUrl: 'http://localhost:3000/',
+          securityLevel: 'not-secure',
+          securityLabels,
+          onOpenSiteInfo,
+        })}
+      />,
+    );
+    expect(container.querySelector('svg[data-icon="triangle-exclamation"]')).not.toBeNull();
+    expect(screen.getByText('Not secure')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'View site information' }));
+    expect(onOpenSiteInfo).toHaveBeenCalledTimes(1);
+    const anchor = onOpenSiteInfo.mock.calls[0]![0];
+    expect(typeof anchor.x).toBe('number');
+    expect(typeof anchor.y).toBe('number');
+    expect(typeof anchor.width).toBe('number');
+    expect(typeof anchor.height).toBe('number');
+  });
+
+  it('renders no site-info control for an unknown level or without labels', () => {
+    const { container, rerender } = render(
+      <Omnibox {...baseProps({ securityLevel: 'unknown', securityLabels, onOpenSiteInfo: vi.fn() })} />,
+    );
+    expect(screen.queryByRole('button', { name: 'View site information' })).toBeNull();
+    rerender(<Omnibox {...baseProps({ securityLevel: 'secure', onOpenSiteInfo: vi.fn() })} />);
+    expect(container.querySelector('svg[data-icon="lock"]')).toBeNull();
+  });
+
+  it('renders the glyph as a plain indicator (no button) when onOpenSiteInfo is omitted', () => {
+    render(<Omnibox {...baseProps({ securityLevel: 'internal', securityLabels })} />);
+    expect(screen.queryByRole('button', { name: 'View site information' })).toBeNull();
   });
 
   it('gives a navigation suggestion a globe, not the search glyph (§ A6)', async () => {

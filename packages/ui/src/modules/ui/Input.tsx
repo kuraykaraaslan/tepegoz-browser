@@ -218,35 +218,39 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         )}
       </div>
 
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex-1">
-          {hint && !error && !success && (
-            <p id={`${id}-hint`} className="text-xs text-text-secondary">
-              {hint}
-            </p>
-          )}
-          {error && (
-            <p id={`${id}-error`} className="text-xs text-error" role="alert">
-              {error}
-            </p>
-          )}
-          {success && !error && (
-            <p id={`${id}-success`} className="text-xs text-success-fg">
-              {success}
+      {/* Only rendered when it has something to say — an always-present empty row adds a stray gap
+          below the control that throws off any flex row aligning inputs by their bottom edge. */}
+      {Boolean(hint || error || success || (showCount && maxLength)) && (
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex-1">
+            {hint && !error && !success && (
+              <p id={`${id}-hint`} className="text-xs text-text-secondary">
+                {hint}
+              </p>
+            )}
+            {error && (
+              <p id={`${id}-error`} className="text-xs text-error" role="alert">
+                {error}
+              </p>
+            )}
+            {success && !error && (
+              <p id={`${id}-success`} className="text-xs text-success-fg">
+                {success}
+              </p>
+            )}
+          </div>
+          {showCount && maxLength && (
+            <p
+              className={cn(
+                'text-xs shrink-0',
+                charCount >= maxLength ? 'text-error' : 'text-text-disabled',
+              )}
+            >
+              {charCount}/{maxLength}
             </p>
           )}
         </div>
-        {showCount && maxLength && (
-          <p
-            className={cn(
-              'text-xs shrink-0',
-              charCount >= maxLength ? 'text-error' : 'text-text-disabled',
-            )}
-          >
-            {charCount}/{maxLength}
-          </p>
-        )}
-      </div>
+      )}
     </div>
   );
 });

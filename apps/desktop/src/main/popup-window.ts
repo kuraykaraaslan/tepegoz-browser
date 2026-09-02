@@ -35,9 +35,16 @@ const BLUR_CLOSE_MS = 90;
  *  to settle (empty→data re-measure, locale swap) before showing — so the window appears ONCE at its
  *  final size instead of flashing an oversized empty box that then shrinks. */
 const SETTLE_MS = 80;
-/** Hard fallback so surfaces that never report a height (notifications, extension popups) and load
- *  hiccups still reveal. Tight — a toolbar menu must feel instant (cf. the main window's 4s last resort). */
+/** Hard fallback so surfaces that never report a height (notifications, extension popups) still reveal.
+ *  Timed from `did-finish-load`, NOT from open(): before the document has loaded there is nothing in the
+ *  window to show, and revealing then is exactly the "empty box, then the menu" flash — 250ms is a
+ *  plausible budget for a renderer that is already up, and nowhere near enough for a cold bundle (a dev
+ *  Vite load is seconds). Tight, because a toolbar menu must feel instant. */
 const FALLBACK_MS = 250;
+/** Absolute last resort, timed from open(): a load that never finishes (dead dev server, a hung fetch)
+ *  must not leave the menu permanently invisible with no way to tell the user why. Long enough that a
+ *  normal cold load reaches `did-finish-load` first and this timer is discarded unused. */
+const LOAD_CEILING_MS = 4000;
 /** Fade-in ramp at reveal: opacity 0→1 over ~FADE_STEPS frames. Killing the residual white-flash that
  *  Electron can paint on show() even with a backgroundColor set — we fade from transparent (the live
  *  page shows through) so no white frame is ever visible, synchronized with the reveal. */
@@ -78,7 +85,8 @@ interface RevealState {
   mode: 'active' | 'inactive';
   /** Settle debounce: rescheduled on each measure; fires the reveal once measures quiet down. */
   settle: ReturnType<typeof setTimeout> | null;
-  /** Hard cap so a never-measuring surface (or a load hiccup) still reveals. */
+  /** Hard cap so a never-measuring surface still reveals. Starts as the LOAD_CEILING_MS timer from
+   *  open() and is replaced by the tighter FALLBACK_MS one once the document has actually loaded. */
   fallback: ReturnType<typeof setTimeout> | null;
   /** Opacity ramp interval running while the window fades in (0→1) at reveal. */
   fade: ReturnType<typeof setInterval> | null;
@@ -213,17 +221,29 @@ export default class PopupWindowManager {
     sender.setBounds({ x: b.x, y: b.y, width: b.width, height: next });
   }
 
-  /** Arm the reveal-on-measure gate for `win`: schedule a hard-fallback reveal now (covers surfaces that
-   *  never report a height + load hiccups); the first measure then debounces to the settled size. */
+  /** Arm the reveal-on-measure gate for `win`. Two timers, because they answer different questions:
+   *  the ceiling (from now) is "this load is broken, show something anyway"; the fallback (from
+   *  `did-finish-load`) is "this surface never reports a height, so measures will never come".
+   *
+   *  Arming the tight fallback at open() instead — which is what this did — is what made a menu appear
+   *  as an empty themed rectangle that filled in a beat later: on any load slower than 250ms (every dev
+   *  launch, and a cold first open in production) the timer won the race against the renderer, so the
+   *  window was shown before it had content. The first measure still debounces to the settled size. */
   private static armReveal(win: BrowserWindow, mode: 'active' | 'inactive'): void {
     const state: RevealState = {
       mode,
       settle: null,
-      fallback: setTimeout(() => PopupWindowManager.doReveal(win), FALLBACK_MS),
+      fallback: setTimeout(() => PopupWindowManager.doReveal(win), LOAD_CEILING_MS),
       fade: null,
       done: false,
     };
     PopupWindowManager.reveals.set(win, state);
+    win.webContents.once('did-finish-load', () => {
+      const current = PopupWindowManager.reveals.get(win);
+      if (current === undefined || current.done) return;
+      if (current.fallback !== null) clearTimeout(current.fallback);
+      current.fallback = setTimeout(() => PopupWindowManager.doReveal(win), FALLBACK_MS);
+    });
   }
 
   /** A measure arrived for `win` — (re)start the settle debounce so consecutive measures (empty→data,

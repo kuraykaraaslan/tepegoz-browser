@@ -56,6 +56,10 @@ const PROVIDER_NAMES = {
   openai: 'OpenAI',
   gemini: 'Gemini',
   kimi: 'Kimi',
+  nova: 'Amazon Nova',
+  deepseek: 'DeepSeek',
+  xai: 'xAI Grok',
+  groq: 'Groq',
   local: 'On-device',
 } satisfies Record<AIProvider, string>;
 

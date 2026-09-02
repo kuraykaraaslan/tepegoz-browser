@@ -127,7 +127,6 @@ export function PermissionsCenter({
           <Input
             id="permissions-add-site"
             label={s.permissionsCenter.addSite}
-            hint={s.permissionsCenter.addSiteHint}
             placeholder={s.permissionsCenter.addSitePlaceholder}
             value={newSite}
             onChange={(e) => {
@@ -137,7 +136,7 @@ export function PermissionsCenter({
         </div>
         <Button
           size="sm"
-          className="mb-1 h-[38px]"
+          className="h-[38px]"
           disabled={!canAdd}
           onClick={() => {
             const first = WEB_PERMISSION_CAPABILITIES[0];
@@ -151,6 +150,7 @@ export function PermissionsCenter({
           {s.permissionsCenter.addSiteButton}
         </Button>
       </div>
+      <p className="mt-1 text-xs text-text-secondary">{s.permissionsCenter.addSiteHint}</p>
 
       {origins.length > 4 && (
         <div className="mt-4">

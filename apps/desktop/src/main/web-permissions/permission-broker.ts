@@ -19,6 +19,21 @@ const pending = new Map<
   }
 >();
 
+/**
+ * Which capabilities each origin has actually ASKED for this run.
+ *
+ * The Site Info bubble lists a permission row only for a capability the site requested or the user
+ * already decided — enumerating all six on every site is noise, and Chrome does not do it either.
+ * Deliberately in memory: "has this site ever asked" is not a user decision and is not worth
+ * persisting; a fresh run starts from the stored decisions alone.
+ */
+const requestedByOrigin = new Map<string, Set<WebPermissionCapability>>();
+
+/** The capabilities `origin` has requested since launch (see {@link requestedByOrigin}). */
+export function requestedCapabilities(origin: string): readonly WebPermissionCapability[] {
+  return [...(requestedByOrigin.get(origin) ?? [])];
+}
+
 function storedState(
   origin: string,
   capability: WebPermissionCapability,
@@ -46,6 +61,12 @@ function persist(
 
 export default class WebPermissionBroker {
   static request(capability: WebPermissionCapability, origin: string): Promise<boolean> {
+    // Recorded before every short-circuit below: the site asked, whatever the answer turns out to be,
+    // and the bubble's row is about the asking — a capability answered from a stored grant, or refused
+    // because notifications are off globally, is exactly the one the user may want to revisit.
+    const asked = requestedByOrigin.get(origin) ?? new Set<WebPermissionCapability>();
+    asked.add(capability);
+    requestedByOrigin.set(origin, asked);
     if (!capabilityEnabled(capability)) return Promise.resolve(false);
     const decided = storedState(origin, capability);
     if (decided === 'allowed') return Promise.resolve(true);

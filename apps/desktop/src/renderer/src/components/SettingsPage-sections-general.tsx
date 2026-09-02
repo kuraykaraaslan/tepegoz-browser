@@ -138,6 +138,7 @@ export function generalAndAiSections(ctx: SettingsSectionsCtx): SettingsSection[
           <ProvidersSection
             keys={status.keys}
             encryptionAvailable={status.encryptionAvailable}
+            regions={status.regions}
             onAdd={ctx.onAddKey}
             onRemoveById={ctx.onRemoveKeyById}
             onRename={ctx.onRenameKey}

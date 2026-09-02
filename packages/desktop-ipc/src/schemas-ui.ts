@@ -20,6 +20,15 @@ export const PopupOpenSchema = z.object({
   id: z.string().min(1).max(128).optional(),
   anchor: ContentBoundsSchema,
   height: z.number().int().positive().max(2000).optional(),
+  // Which edge of `anchor` the popup lines up with. `'end'` (default) right-aligns it — toolbar
+  // controls open leftward; `'start'` left-aligns it, for a control at the leading edge (the
+  // site-info button) whose popup should open rightward.
+  align: z.enum(['start', 'end']).optional(),
+});
+
+/** `page-info:get` payload — the URL whose Site Info bubble the renderer wants. */
+export const PageInfoGetSchema = z.object({
+  url: z.string().min(1).max(4096),
 });
 
 /** `popup:resize` payload — the open popup reports its measured content height so main shrinks the

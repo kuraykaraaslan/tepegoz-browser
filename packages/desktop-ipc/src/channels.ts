@@ -265,6 +265,9 @@ export const IpcChannels = {
   siteDataPlan: 'site-data:plan',
   /** Renderer→main: perform the clear the user just confirmed. */
   siteDataClear: 'site-data:clear',
+  /** Renderer→main: the full Site Info bubble payload for one page URL (connection, certificate,
+   *  cookie count, per-origin permissions). */
+  pageInfoGet: 'page-info:get',
   bookmarksList: 'bookmarks:list',
   bookmarksToggle: 'bookmarks:toggle',
   bookmarksIsBookmarked: 'bookmarks:is-bookmarked',

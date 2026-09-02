@@ -97,6 +97,7 @@ describe('the loading-state constants', () => {
       canGoForward: false,
       isPrivate: false,
       activeZoomFactor: 1,
+      activeSecurityLevel: 'unknown',
     });
   });
 

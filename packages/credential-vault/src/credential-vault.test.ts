@@ -2,11 +2,17 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { AIProviderEnum } from '@tepegoz/shared-types';
 import CredentialVault, { type SecretCrypto } from './credential-vault';
 
 /** base64 of the fake-encrypted form of `plain`, as it would sit on disk. */
 function enc(plain: string): string {
   return Buffer.from(`enc:${plain}`, 'utf8').toString('base64');
+}
+
+/** `{ provider: false }` for EVERY provider — so `status()` assertions don't rot as providers are added. */
+function noKeys(): Record<string, boolean> {
+  return Object.fromEntries(AIProviderEnum.options.map((p) => [p, false]));
 }
 
 /** Reversible fake crypto (no OS keychain) — proves the encrypt → base64 → file → decrypt round-trip. */
@@ -32,13 +38,7 @@ afterEach(() => {
 describe('CredentialVault (multi-key)', () => {
   it('starts empty', () => {
     CredentialVault.init({ crypto: fakeCrypto, filePath });
-    expect(CredentialVault.status()).toEqual({
-      anthropic: false,
-      openai: false,
-      gemini: false,
-      kimi: false,
-      local: false,
-    });
+    expect(CredentialVault.status()).toEqual(noKeys());
     expect(CredentialVault.listMeta()).toEqual([]);
     expect(CredentialVault.getFirstKeyForProvider('anthropic')).toBeNull();
   });
@@ -254,13 +254,7 @@ describe('CredentialVault (multi-key)', () => {
     };
     writeFileSync(filePath, JSON.stringify({ version: 2, keys: [grok, ok] }), 'utf8');
     CredentialVault.init({ crypto: fakeCrypto, filePath });
-    expect(CredentialVault.status()).toEqual({
-      anthropic: true,
-      openai: false,
-      gemini: false,
-      kimi: false,
-      local: false,
-    });
+    expect(CredentialVault.status()).toEqual({ ...noKeys(), anthropic: true });
     expect(CredentialVault.listMeta()).toHaveLength(1);
   });
 

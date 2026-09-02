@@ -12,6 +12,7 @@ import {
   type BookmarkNodeType,
   type BookmarkTreeNode,
   type HistoryEntry,
+  type PageInfo,
   type BasicAuthRequest,
   type BasicAuthResponse,
   type CertificateErrorRequest,
@@ -37,6 +38,7 @@ export const bookmarksHistoryApi: Pick<
   | 'clearHistory'
   | 'planSiteDataClear'
   | 'clearSiteData'
+  | 'getPageInfo'
   | 'listBookmarks'
   | 'toggleBookmark'
   | 'isBookmarked'
@@ -85,6 +87,7 @@ export const bookmarksHistoryApi: Pick<
   clearHistory: () => invoke<void>(IpcChannels.historyClear),
   planSiteDataClear: (url: string) => invoke<SiteClearPlan | null>(IpcChannels.siteDataPlan, url),
   clearSiteData: (url: string) => invoke<SiteClearPlan | null>(IpcChannels.siteDataClear, url),
+  getPageInfo: (url: string) => invoke<PageInfo | null>(IpcChannels.pageInfoGet, { url }),
   listBookmarks: () => invoke<BookmarkEntry[]>(IpcChannels.bookmarksList),
   toggleBookmark: (url: string, title: string, favicon?: string | null) =>
     invoke<boolean>(IpcChannels.bookmarksToggle, { url, title, favicon }),

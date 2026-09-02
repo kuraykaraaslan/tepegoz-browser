@@ -46,6 +46,8 @@ export const AddProviderKeyInputSchema = z.object({
   provider: ProviderIdSchema,
   label: z.string().min(1).max(64),
   apiKey: z.string().min(1).max(500),
+  /** A `PROVIDER_REGIONS` id for a multi-endpoint provider; omitted/'' ⇒ that provider's default. */
+  region: z.string().max(32).optional(),
 });
 
 /** `credentials:remove-by-id` payload. */

@@ -15,6 +15,7 @@ import {
   INTERNAL_UPLOADS_URL,
 } from '@tepegoz/desktop-ipc';
 import { CHROME_WEB_PREFERENCES } from './window';
+import { resolveSurfaceTheme } from './lib/surface-theme';
 import { contextMenuObservers, internalBaseUrl } from './tabs-shared';
 
 /**
@@ -63,6 +64,34 @@ const REAL_PAGE_BASE_URLS = new Set<string>([
 /** Whether `url` (an internal-page tab's full URL, hash included) should be backed by a real view. */
 export function hasRealPage(url: string): boolean {
   return REAL_PAGE_BASE_URLS.has(internalBaseUrl(url));
+}
+
+/**
+ * The URL to actually hand `loadURL()` for an internal-page tab.
+ *
+ * PROD: unchanged — `tepegoz://<host>`, served by `internal-pages/protocol.ts` from the built
+ * `out/renderer` bundle (inlined into one self-contained document).
+ *
+ * DEV (`ELECTRON_RENDERER_URL` set): `tepegoz://` internal pages are the one renderer surface that never
+ * hot-reloaded — the protocol handler reads the on-disk build, so a source edit needs a full
+ * `electron-vite build` + app restart to show. Here we do what the chrome window, popups and the
+ * tab-drag window already do (`onboarding.electron.ts#loadChrome`, `popup-window.ts#loadSurface`): load
+ * straight from the Vite dev server, as `?page=<host>` (which `main.tsx` dispatches exactly like the
+ * `tepegoz:` hostname). The dev server resolves the whole module graph natively, so HMR/React-Refresh
+ * work like everywhere else. `isTrustedAppUrl` already trusts `http://localhost:*` when unpackaged, so
+ * these views keep their IPC trust; the tab's displayed URL stays `tepegoz://<host>` (the tab layer
+ * owns it — see `internalTitleFor`), only the document source differs.
+ */
+function internalPageLoadUrl(url: string): string {
+  const devUrl = process.env['ELECTRON_RENDERER_URL'];
+  if (devUrl === undefined || devUrl.length === 0) return url;
+  if (!url.startsWith('tepegoz://')) return url;
+  const hashAt = url.indexOf('#');
+  const host = (hashAt === -1 ? url : url.slice(0, hashAt))
+    .slice('tepegoz://'.length)
+    .replace(/\/$/, '');
+  const hash = hashAt === -1 ? '' : url.slice(hashAt);
+  return `${devUrl}?page=${encodeURIComponent(host)}${hash}`;
 }
 
 /** The context-menu listener currently wired to a view, so tear-off/merge (`detachTab`/`adoptTab`) can
@@ -122,16 +151,21 @@ export function createInternalPageView(
   getBounds: () => Rectangle,
 ): WebContentsView {
   const view = new WebContentsView({ webPreferences: { ...CHROME_WEB_PREFERENCES } });
+  // Pre-paint ground. The renderer's <html> paints nothing (see renderer/index.html), so what shows
+  // between attach and the page's first React frame is THIS colour — resolved from the active theme,
+  // not Chromium's default white, and not the brand navy the HTML used to fall back to.
+  view.setBackgroundColor(resolveSurfaceTheme().color);
   wireContextMenu(win, view, getBounds);
-  void view.webContents.loadURL(url);
+  void view.webContents.loadURL(internalPageLoadUrl(url));
   return view;
 }
 
 /** Navigate an existing internal-page view to a new URL (e.g. the same settings tab re-opened on a
  *  different section hash) — a no-op if it is already there. */
 export function navigateInternalPageView(view: WebContentsView, url: string): void {
-  if (view.webContents.getURL() === url) return;
-  void view.webContents.loadURL(url).catch(() => undefined);
+  const target = internalPageLoadUrl(url);
+  if (view.webContents.getURL() === target) return;
+  void view.webContents.loadURL(target).catch(() => undefined);
 }
 
 /** Attach (if detached) and size the view to the current content bounds. */

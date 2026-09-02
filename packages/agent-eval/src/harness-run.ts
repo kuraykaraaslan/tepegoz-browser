@@ -5,10 +5,14 @@ import { z } from 'zod';
 import { recordFromOutcomes, type StepOutcome } from '@tepegoz/orchestrator';
 import {
   AnthropicProvider,
+  DeepSeekProvider,
   GeminiProvider,
+  GroqProvider,
   KimiProvider,
   ModelRouter,
+  NovaProvider,
   OpenAIProvider,
+  XaiProvider,
   type ModelProvider,
 } from '@tepegoz/model-gateway';
 import { isRunnableProvider, type AIProvider, type EvalScenario } from '@tepegoz/shared-types';
@@ -271,6 +275,10 @@ export function judgeComplete(): (m: JudgeMessages) => Promise<string> {
   if (id === 'openai') provider = new OpenAIProvider({ apiKey: API_KEY });
   else if (id === 'gemini') provider = new GeminiProvider({ apiKey: API_KEY });
   else if (id === 'kimi') provider = new KimiProvider({ apiKey: API_KEY });
+  else if (id === 'nova') provider = new NovaProvider({ apiKey: API_KEY });
+  else if (id === 'deepseek') provider = new DeepSeekProvider({ apiKey: API_KEY });
+  else if (id === 'xai') provider = new XaiProvider({ apiKey: API_KEY });
+  else if (id === 'groq') provider = new GroqProvider({ apiKey: API_KEY });
   else provider = new AnthropicProvider({ apiKey: API_KEY });
   const route = ModelRouter.route({
     capability: 'exec',
