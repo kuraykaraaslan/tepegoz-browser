@@ -82,6 +82,29 @@ describe('Omnibox', () => {
     expect(onSuggest).not.toHaveBeenCalled();
   });
 
+  it('focuses and selects the box when the host bumps focusToken (Ctrl+L, § A7)', () => {
+    const { rerender } = render(<Omnibox {...baseProps({ focusToken: 0 })} />);
+    const input = screen.getByRole<HTMLInputElement>('combobox');
+    // 0 is ignored: a browser that grabbed the address bar on every mount would fight the page.
+    expect(document.activeElement).not.toBe(input);
+
+    rerender(<Omnibox {...baseProps({ focusToken: 1 })} />);
+    expect(document.activeElement).toBe(input);
+    // Selected, not just focused — Ctrl+L is how you REPLACE the URL, so typing must overwrite it.
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe(input.value.length);
+  });
+
+  it('focuses again on a second press, which a boolean flag could not do', () => {
+    const { rerender } = render(<Omnibox {...baseProps({ focusToken: 1 })} />);
+    const input = screen.getByRole('combobox');
+    input.blur();
+    expect(document.activeElement).not.toBe(input);
+
+    rerender(<Omnibox {...baseProps({ focusToken: 2 })} />);
+    expect(document.activeElement).toBe(input);
+  });
+
   it('still asks the host for suggestions on a normal query', async () => {
     const suggestion: OmniboxSuggestion = {
       key: 'h1',

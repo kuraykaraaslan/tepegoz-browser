@@ -456,6 +456,8 @@ export const en = {
       devTools: 'Open developer tools',
       hardReload: 'Reload, ignoring the cache',
       closeTab: 'Close the tab',
+      focusAddressBar: 'Focus the address bar',
+      focusAddressBarAlt: 'Focus the address bar (alternate)',
     },
   },
 

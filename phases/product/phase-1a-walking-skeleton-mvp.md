@@ -68,24 +68,39 @@ the "everything at once" immaturity trap.
   - [ ] ⚠️ **This row is marked `[x]`, but a competitive sweep found 11 verified defects in the shipped
         code** — recorded here so the tick is not read as "finished". Full write-up, with the reproducing
         detail for each, in
-        [`../tracks/omnibox-competitive-parity.md`](../../docs/parities/omnibox-competitive-parity.md) §A. The three
-        that are user-visible breakage rather than polish:
-    - [ ] **A1 — typing arithmetic hangs the renderer.** The inline-calculation path runs an unbounded
-          synchronous render loop; the safe evaluator is not the problem, the loop around it is.
-    - [ ] **A2 — Turkish history search is broken end to end.** The query dies at the SQL `LIKE` before
-          `foldForSearch` is ever reached, so the fix recorded in the i18n row above (which is real, and
-          did fix bookmarks/extensions/credentials/settings) does **not** cover history: the folding
-          happens in TypeScript, above a comparison that already happened in SQLite.
-    - [ ] **A3 — `LIKE` wildcard leak** — user input reaches the pattern unescaped, so `%` and `_` typed
-          into the address bar are interpreted as wildcards.
-  - [ ] The remaining eight are ranking and interaction defects (A4 a recency-shaped candidate window
-        feeding a frequency-shaped ranker · A5 dedup comparing raw strings instead of canonical URLs ·
-        A6 `SuggestionIcon` covering 3 of 11 kinds · A7 no keyboard path to the address bar · A8 Enter
-        leaves the dropdown open · A9 stale re-open after choosing a row · A10 mouse movement silently
-        re-targets Enter · **A11 `omnibox.tsx` has no test file at all**), plus the proposal half of that
-        track: a real unified relevance score (there is none today — a hardcoded source order plus raw
-        `visitCount`), favicons, matched-substring emphasis, inline autocomplete and keyword search
-        engines. Four owner decisions owed; no ADR yet.
+        [`../tracks/omnibox-competitive-parity.md`](../../docs/parities/omnibox-competitive-parity.md) §A.
+        **Ten of the eleven are now fixed (2026-09-02); A4 is the only defect left**, and this row stays
+        open for it plus the proposal half of the track. The three that were user-visible breakage rather
+        than polish are all closed:
+    - [x] **A1 — typing arithmetic hangs the renderer.** ~~The inline-calculation path runs an unbounded
+          synchronous render loop.~~ _Fixed 2026-09-01: the effect depends on a boolean (`isCalc`) rather
+          than on an object minted fresh each render, and the clear is identity-preserving. The per-test
+          timeout never firing was the diagnostic — the loop was synchronous and never yielded._
+    - [x] **A2 — Turkish history search is broken end to end.** ~~The query dies at the SQL `LIKE`
+          before `foldForSearch` is ever reached.~~ _Fixed 2026-09-01 by migration 16 (`url_fold` /
+          `title_fold`, folded in the writer, backfilled by `reindexFoldsIfStale`). The same defect was
+          then found and fixed in two more stores — bookmarks (migration 17) and agent conversations
+          (migration 18, 2026-09-02) — which is what closes the CLASS rather than the instance._
+    - [x] **A3 — `LIKE` wildcard leak.** ~~`%` and `_` typed into the address bar are wildcards.~~
+          _Fixed 2026-09-01: `@tepegoz/persistence/sql-like` escapes them and every `LIKE ?` names its
+          `ESCAPE`. The agent-conversation search, which had no escaping at all, joined them 2026-09-02._
+  - [x] **A7 — no keyboard path to the address bar.** _Fixed 2026-09-02. Fifteen shortcuts and not one
+        focused the omnibox, which is a WCAG 2.1.1 failure on the control a browser is used through.
+        `focusAddressBar` (Ctrl+L) + `focusAddressBarAlt` (Alt+D), both `main`-scoped because the key
+        arrives while the PAGE has focus; main sends `omnibox:focus` and the omnibox watches a
+        `focusToken` counter — a counter and not a flag, because a second press has to focus a second
+        time. F6 deliberately unbound: in Chrome it cycles panes, and a key that does
+        something-similar-but-different is worse than one that does nothing. Five tests, one of which
+        pins Ctrl+Alt+D **not** being this shortcut — AltGr types with it on a Turkish keyboard._
+  - [ ] **A4 is what is left**: the candidate window is recency-shaped (`ORDER BY ts DESC LIMIT 50`)
+        while the ranker that consumes it is frequency-shaped, so a heavily-visited page outside the 50
+        most recent matches can never be scored at all. A5/A6/A8/A9/A10/A11 were fixed 2026-09-01 (dedup
+        on a canonical nav key · a total icon map · Enter closes the dropdown · the generation is
+        captured at schedule time · hover no longer re-targets Enter · `omnibox.test.tsx` now exists and
+        carries 15 cases). Still unbuilt beyond A4: the proposal half of that track — a real unified
+        relevance score (there is none today; a hardcoded source order plus raw `visitCount`), favicons,
+        matched-substring emphasis, inline autocomplete and keyword search engines. Four owner decisions
+        owed; no ADR yet.
 - [x] **Live Agent Console** (per step: URL/action/%progress/checkpoint/token-cost/error + timeline replay; **virtualized**) _(live per-step event stream (plan/step_start/step_ok/step_error/awaiting_approval/done/error) + Do-mode prompt + blocking HITL approval modal + AI-disclaimer + cancel, en/tr. Startup failures before event-stream creation now render as local `error` events in the same turn instead of disappearing. Local-profile conversation history now persists to SQLite, appears in the header dropdown left of New Task, restores selected conversations into the panel, and has an ext-agent-owned full page at `tepegoz://com.tepegoz.agent` rather than a core system page. Remaining: token-cost column, timeline replay, list virtualization)_
 - [~] Browser shell: tab (optional group toggle), new-tab 3 options (AI/Favorites/Blank), reading mode, bookmark, OS-native password/passkey **POC** _(full WebAuthn + password manager → Phase 2)_ _(**bookmark** live: `BookmarkStore` (persistence, migration v3, 6 tests) + zod-gated IPC (toggle/list/is-bookmarked, http(s)-only) + Chrome-style star toggle right of the omnibox (filled/outline, disabled on non-web pages, en/tr) feeding the omnibox bookmark suggestions. **tab groups** live ([ADR-0020](../../docs/adr/0020-tab-boundary-model.md) — groups are organizational metadata only, never a session/partition/policy boundary): pure `TabStore` group model (`@tepegoz/tab-engine`, 31 tests) with centrally-enforced invariants (pinned run precedes unpinned; group members contiguous; pinned ⊥ grouped; empty groups pruned), 9-color palette + name/collapse/`settings` bag, `@dnd-kit` drag reorder/assign (`@tepegoz/tab-strip` colored `GroupHeader` pill + per-chip tint), zod-gated group IPC (`tabs:group-*` in `@tepegoz/desktop-ipc`), native tab/group context menus, session-restore v2 round-trip (`SessionSnapshot` persists groups by stable UUID), and agent auto-grouping of tabs it opens per task. **new-tab page** live: blank new tabs (Ctrl+T / "+" / new-tab-to-the-right / startup) land on the internal `tepegoz://newtab` start page — a Chrome-style NTP in the new `@tepegoz/newtab-ui` leaf (own en/tr dict + parity test, injected data/actions, dependency-cruiser leaf rule): the Tepegöz cyclops-eye logo + wordmark, a big centred search box (submits a URL/query → resolves + navigates in main, then replaces the newtab tab), a favorites shortcuts grid (the user's bookmarks, opens in the current tab), and a corner **AI** button that opens the Agent Console. Wired via `INTERNAL_NEWTAB_URL` (view-less internal tab, created fresh per new tab). Remaining: reading mode, password/passkey POC)_
 - [x] **Basic session restore**: persist open tabs on quit/crash → restore on launch + reopen-closed-tab (Ctrl+Shift+T); event-journal projection (ADR-0004). _(Full workspace/named-session UI → Phase 2b.)_ _(**live**: `SessionStore` (persistence, JSON snapshot in the local `meta` table, defensive shape-validating `load`, 6 tests) persists ordered web-tab URLs, pin/group/window bounds, and active index (debounced on state change + synchronously on window close/quit, before teardown); multi-window restore reopens them on launch or a single default tab if none. Reopen-closed-tab via an in-memory LIFO stack (cap 25) → `tabs:reopen-closed` IPC + **Ctrl+Shift+T**. Each changed snapshot writes a redacted `SessionSnapshotWritten` Event Journal projection.)_

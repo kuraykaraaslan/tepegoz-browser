@@ -280,6 +280,8 @@ export const IpcChannels = {
   bookmarksImport: 'bookmarks:import',
   /** Browser profiles found on this computer, and importing one of them by id. Read-only detection,
    *  run when the user opens the import step — never on a timer, and never with a renderer-named path. */
+  /** main → chrome: focus + select the address bar (Ctrl+L / Alt+D, pressed while a page had focus). */
+  omniboxFocus: 'omnibox:focus',
   bookmarksDetectProfiles: 'bookmarks:detect-profiles',
   bookmarksImportProfile: 'bookmarks:import-profile',
   /** The whole collection as Netscape bookmarks HTML — the format every other browser reads. */

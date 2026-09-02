@@ -56,6 +56,18 @@ export const SHORTCUTS = [
   { id: 'settings', key: ',', ctrlOrCmd: true, scope: 'renderer' },
   { id: 'commandPalette', key: 'k', ctrlOrCmd: true, scope: 'renderer' },
   { id: 'find', key: 'f', ctrlOrCmd: true, scope: 'main' },
+  // Focus the address bar. `main` scope for the reason `find` is: the key arrives while the PAGE has
+  // focus — that is the entire situation the shortcut exists for — and the chrome renderer never sees
+  // it there.
+  //
+  // TWO bindings for one command, which is deliberate rather than untidy: Ctrl+L and Alt+D are both
+  // muscle memory (Alt+D is the older Windows one, still in Chrome, Edge and Firefox), and a user who
+  // has one of them in their fingers experiences the missing one as a broken browser. macOS folds
+  // Ctrl+L into Cmd+L through `ctrlOrCmd`. F6 is NOT bound: in Chrome it cycles between panes rather
+  // than focusing the bar, and a key that does something similar-but-different is worse than one that
+  // does nothing.
+  { id: 'focusAddressBar', key: 'l', ctrlOrCmd: true, scope: 'main' },
+  { id: 'focusAddressBarAlt', key: 'd', alt: true, scope: 'main' },
   { id: 'fullScreen', key: 'f11', scope: 'main' },
   { id: 'exitKiosk', key: 'q', ctrlOrCmd: true, shift: true, scope: 'main' },
   // The three page commands the right-click menu has always LISTED a shortcut for. The commands

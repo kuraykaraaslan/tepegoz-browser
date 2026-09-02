@@ -3,6 +3,7 @@ import { coreDict, pick, type Locale } from '@tepegoz/i18n';
 import { BrowserChrome } from '@tepegoz/browser-chrome';
 import { FindBar } from '@tepegoz/find-bar';
 import { useFindInPage } from './app-find';
+import { useOmniboxFocusShortcut } from './app-omnibox-focus';
 import { BookmarksBar } from '@tepegoz/bookmarks-bar';
 import { BOOKMARK_ROOT_BAR } from '@tepegoz/bookmarks';
 import type { ExtensionId, Preferences, TabsState } from '@tepegoz/desktop-ipc';
@@ -61,6 +62,7 @@ export function AppChrome({
   onOmniboxDropdownHeightChange,
 }: AppChromeProps) {
   const find = useFindInPage(tabs.activeId);
+  const omniboxFocusToken = useOmniboxFocusShortcut();
   const coreT = pick(coreDict, locale);
   const browserT = pick(browserDict, locale);
   const userMenuT = pick(userMenuDict, locale);
@@ -170,6 +172,7 @@ export function AppChrome({
         }
         menu={<MainMenuButton label={browserT.menu} />}
         onNavigate={(input) => window.tepegoz.navigateTab(input)}
+        omniboxFocusToken={omniboxFocusToken}
         onSuggest={omniboxHistory.onOmniboxSuggest}
         onActivateTab={omniboxHistory.onActivateTabFromOmnibox}
         onOpenQuickSetting={onOpenQuickSetting}

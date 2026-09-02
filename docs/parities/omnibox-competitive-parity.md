@@ -91,7 +91,8 @@ the clear with `suggestions.length > 0`. Either removes the loop; both is correc
 clear is an identity-preserving functional update (`prev.length === 0 ? prev : []`). Regression test
 `omnibox.test.tsx` — "does not spin the suggestion effect when arithmetic is typed" — asserts the
 render count stays bounded; the omnibox package gained the jsdom + `@testing-library/react` dev
-harness it lacked. A2–A11 are still open.)_
+harness it lacked.)_ _As of 2026-09-02 ten of the eleven are fixed — **A4 is the only one left**;
+each carries its own note below._
 
 ### A2 — Turkish history search is broken end to end
 
@@ -177,6 +178,22 @@ magnifying glass. This is exactly why row 1 of the screenshot — a typed URL �
 
 `SHORTCUTS` has 15 entries and none focuses the omnibox. No Ctrl+L, no Alt+D, no F6. The address bar is
 mouse-only, which fails WCAG 2.1.1 on its own (engineering-rules §7).
+
+> **Fixed 2026-09-02.** `focusAddressBar` (Ctrl+L) and `focusAddressBarAlt` (Alt+D) join the registry,
+> both `main`-scoped for the reason `find` is: the key arrives while the PAGE has focus and the chrome
+> never sees it there. Main sends `omnibox:focus`; `useOmniboxFocusShortcut` turns that into the
+> counter the omnibox watches (`focusToken`), and the existing `onFocus` handler does the selecting —
+> so Ctrl+L behaves exactly like clicking into the box, which is what makes it a REPLACE gesture.
+>
+> Two bindings for one command on purpose: Alt+D is the older Windows one and still live in Chrome,
+> Edge and Firefox, and a user with either in their fingers reads the missing one as a broken browser.
+> macOS folds Ctrl+L into Cmd+L through `ctrlOrCmd`. **F6 is deliberately NOT bound** — in Chrome it
+> cycles panes rather than focusing the bar, and a key that does something similar-but-different is
+> worse than one that does nothing.
+>
+> Five tests: two in `omnibox.test.tsx` (a token of 0 does not steal focus on mount; a second press
+> focuses again, which a boolean flag could not do) and three in `keyboard-shortcuts.test.ts` —
+> including Ctrl+Alt+D **not** being the address bar, because AltGr types with it on a Turkish keyboard.
 
 ### A8 — Enter leaves the dropdown open
 

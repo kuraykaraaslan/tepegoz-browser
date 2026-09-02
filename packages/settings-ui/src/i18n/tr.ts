@@ -452,6 +452,8 @@ export const tr: SettingsStrings = {
       devTools: 'Geliştirici araçlarını aç',
       hardReload: 'Önbelleği yok sayarak yenile',
       closeTab: 'Sekmeyi kapat',
+      focusAddressBar: 'Adres çubuğuna odaklan',
+      focusAddressBarAlt: 'Adres çubuğuna odaklan (alternatif)',
     },
   },
 

@@ -119,6 +119,8 @@ export interface BrowserChromeProps {
   onOpenSiteInfo?: ((anchor: { x: number; y: number; width: number; height: number }) => void)
     | undefined;
   /** Async omnibox suggestion source (history/tab/search); omit to disable the dropdown. */
+  /** Bumped by the host to focus the address bar (Ctrl+L / Alt+D). */
+  omniboxFocusToken?: number | undefined;
   onSuggest?: ((query: string) => Promise<OmniboxSuggestion[]>) | undefined;
   /** Switch to an already-open tab (for `activateTab` omnibox suggestions). */
   onActivateTab?: ((tabId: string) => void) | undefined;
@@ -199,6 +201,7 @@ export function BrowserChrome({
   onNavigate,
   securityLevel,
   onOpenSiteInfo,
+  omniboxFocusToken,
   onSuggest,
   onActivateTab,
   onOpenQuickSetting,
@@ -312,6 +315,7 @@ export function BrowserChrome({
         securityLevel={securityLevel}
         securityLabels={t.browser.siteInfo}
         onOpenSiteInfo={onOpenSiteInfo}
+        omniboxFocusToken={omniboxFocusToken}
         onSuggest={onSuggest}
         onActivateTab={onActivateTab}
         onOpenQuickSetting={onOpenQuickSetting}

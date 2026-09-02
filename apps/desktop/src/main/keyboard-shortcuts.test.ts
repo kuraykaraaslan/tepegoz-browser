@@ -145,6 +145,23 @@ describe('the window-level shortcuts', () => {
     expect(sent).toEqual(['find:open']);
   });
 
+  it('Ctrl+L asks the chrome to focus the address bar (omnibox track A7)', () => {
+    // There was no keyboard path to the address bar at all — 15 shortcuts, none of them this one,
+    // which is a WCAG 2.1.1 failure on the control a browser is used through.
+    expect(handleWindowShortcut(win, press('l', { control: true }), { page })).toBe(true);
+    expect(sent).toEqual(['omnibox:focus']);
+  });
+
+  it('Alt+D does the same, because both are muscle memory', () => {
+    expect(handleWindowShortcut(win, press('d', { alt: true }), { page })).toBe(true);
+    expect(sent).toEqual(['omnibox:focus']);
+  });
+
+  it('Ctrl+Alt+D is NOT the address bar — AltGr on a Turkish keyboard types with it', () => {
+    expect(handleWindowShortcut(win, press('d', { control: true, alt: true }), { page })).toBe(false);
+    expect(sent).toEqual([]);
+  });
+
   it('Ctrl+Shift+N opens a private window through the injected target', () => {
     const openPrivateWindow = vi.fn();
     expect(

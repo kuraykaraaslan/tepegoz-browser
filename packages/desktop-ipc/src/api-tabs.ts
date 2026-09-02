@@ -113,6 +113,8 @@ export interface TabsApi {
   onFindResult(callback: (result: FindInPageResult) => void): () => void;
   /** Main→renderer: Ctrl+F was pressed while the page had focus — open the bar. */
   onFindOpen(callback: () => void): () => void;
+  /** main → chrome: Ctrl+L / Alt+D was pressed while a page had focus; focus + select the address bar. */
+  onOmniboxFocus(callback: () => void): () => void;
   /** Step / reset the active tab's zoom (the omnibox zoom indicator's −, +, Reset). Fire-and-forget;
    *  the new level arrives on the next `onTabsState` as `activeZoomFactor`. */
   setPageZoom(direction: ZoomDirection): void;

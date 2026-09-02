@@ -65,6 +65,15 @@ export interface OmniboxProps {
    */
   onCalcResult?: (formatted: string) => void;
   /**
+   * Bump this to focus the box and select what is in it — the host's answer to Ctrl+L / Alt+D.
+   *
+   * A counter rather than a boolean or a ref: pressing the shortcut twice in a row has to focus
+   * twice, and a boolean that is already `true` produces nothing the second time. It is the same
+   * idiom the find bar's `focusKey` already uses, so the two surfaces behave alike. Ignored when
+   * undefined or 0, so the box never steals focus on mount.
+   */
+  focusToken?: number | undefined;
+  /**
    * Async suggestion source (host fetches history/tabs and composes them with
    * `buildOmniboxSuggestions`). Called as the user types; return an ordered list. Omit to disable the
    * suggestions dropdown. The omnibox stays deterministic — suggestions never start an AI thread.
@@ -119,6 +128,7 @@ export function Omnibox({
   placeholder,
   onNavigate,
   onCalcResult,
+  focusToken,
   onSuggest,
   onActivateTab,
   onOpenQuickSetting,
@@ -152,6 +162,13 @@ export function Omnibox({
     if (!focused) setValue(currentUrl);
   }, [currentUrl, focused]);
 
+  // Ctrl+L / Alt+D. The host bumps `focusToken`; selecting the text is the `onFocus` handler's job
+  // already, which is why this is one line and why the shortcut behaves exactly like clicking in.
+  useEffect(() => {
+    if (focusToken === undefined || focusToken === 0) return;
+    inputRef.current?.focus();
+  }, [focusToken]);
+
   const calc = value.trim().length > 0 ? evaluateOmniboxCalc(value) : null;
   // A primitive mirror of `calc` for the effect below: `evaluateOmniboxCalc` returns a fresh object on
   // every render, so depending on `calc` directly spun the suggestion effect forever when the input
@@ -173,6 +190,7 @@ export function Omnibox({
   // Measuring covers every locale, font and zoom, and the ResizeObserver keeps it true when the word
   // changes or a webfont swaps in late.
   const leadRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [leadWidth, setLeadWidth] = useState(0);
   useLayoutEffect(() => {
     const el = leadRef.current;
@@ -345,6 +363,7 @@ export function Omnibox({
         </div>
       )}
       <input
+        ref={inputRef}
         type="text"
         value={value}
         placeholder={placeholder}

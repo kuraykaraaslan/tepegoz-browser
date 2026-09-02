@@ -60,6 +60,12 @@ export function handleWindowShortcut(
       // The bar lives in the chrome; the chrome decides whether this opens it or just refocuses it.
       win.webContents.send(IpcChannels.findOpen);
       return true;
+    case 'focusAddressBar':
+    case 'focusAddressBarAlt':
+      // Same shape as `find`: main owns the KEY (the page has focus, so the chrome never sees it) and
+      // the chrome owns what focusing means. Both ids land here — one command, two bindings.
+      win.webContents.send(IpcChannels.omniboxFocus);
+      return true;
     case 'newPrivateWindow':
       // Opened through the injected target rather than by importing `browser-windows` here: that
       // module reaches the tab model, and this one is imported BY it (measured cycle — see `print`).
