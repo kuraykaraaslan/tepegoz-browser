@@ -325,6 +325,17 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         (proc returns -3 for clean AND failed handshakes; LRU eviction), `ipc-page-info.electron.test.ts`
         (internal → nulls, http → not-secure + cookie/permission map), `omnibox.test.tsx` (+5: lock vs
         red "Not secure", opens with a rect, hidden for `unknown`)._
+    - _Reworked 2026-09-02 ([ADR-0044 amendment](../../docs/adr/0044-page-info-and-connection-security.md#amendment-2026-09-02--the-bubble-is-a-stack-of-panes-and-it-lists-only-relevant-permissions)):
+      the bubble is now three panes walked with a back arrow (rows → **Security** → **Certificate**,
+      the viewer laid out like Chrome's General tab), and it lists a permission row ONLY for a
+      capability this origin asked for this run or the user already decided — the six always-present
+      dropdowns were crowding out the two lines the panel exists to show. `WebPermissionBroker` records
+      "asked" in memory before every short-circuit; `permissionsFor` filters on it. The omnibox's left
+      padding is now MEASURED from the leading control instead of `pl-9` / `pl-[6.5rem]`: the lock's
+      hover pill was sitting on the `h` of `https://`, and the hardcoded alarm width was sized for the
+      English "Not secure", not the Turkish "Güvenli değil". Tests: `permission-broker.test.ts` (5, new
+      — the record survives a stored grant, the global notifications switch, and stops at `requestAll`'s
+      first refusal), `ipc-page-info.electron.test.ts` (+2, and the "full map" case inverted)._
 - [ ] **Spellcheck** (`session.setSpellCheckerLanguages` + built-in Chromium spellchecker; currently
       `spellcheck:false` in `window.ts`) — en/tr dictionaries, settings toggle
   - [ ] **Scope conflict — decide before building.** `ext-typo` already ships "local-first writing and
