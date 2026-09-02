@@ -102,7 +102,13 @@ export default defineConfig({
         // useExtensionCatalog, the six tepegoz:// page surfaces, ClearBrowsingDataRow,
         // command-palette-host, NetworkRoutesCard, and the settings sections —
         // startup/accessibility/tray/shortcuts/default-browser/agent-controls/adaptors/system).
-        'apps/desktop/**': { statements: 38, branches: 84, functions: 57, lines: 38 },
+        //
+        // Round 2 of that push (same day) → floor(measured) S42.09 / B85.24 / F59.01 / L42.09:
+        // MAIN added tray.ts (idempotent init, show-or-open, quit-intent ordering), window-parked,
+        // the ipc-content facade composition, and ipc-tasks (schema-gated delegation + command
+        // lowering). RENDERER added the notification/user-menu popups, network add-connection +
+        // mcp-servers forms, the file-ops whitelist, downloads, and search-engine validation.
+        'apps/desktop/**': { statements: 42, branches: 85, functions: 59, lines: 42 },
       },
       include: [
         'apps/desktop/src/**',
