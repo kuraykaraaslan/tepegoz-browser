@@ -20,6 +20,33 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       download is tagged and journaled with source domain + task
 - [ ] **Find-in-page**, **print + preview**, built-in **PDF viewer**, **reader mode**, **page translation**,
       and a user-facing **screenshot** (viewport + full-page → CAS blob) all work end-to-end
+  - [x] **Five of the six carry end-to-end evidence** (audited 2026-09-02, by listing `e2e/` against
+        this line rather than by recalling what was built):
+
+        | Feature        | Evidence                                                                   |
+        | -------------- | -------------------------------------------------------------------------- |
+        | Find-in-page   | `e2e/find-in-page.spec.ts`                                                 |
+        | PDF viewer     | `e2e/pdf-viewer.spec.ts` — a real `application/pdf` mounts in-tab          |
+        | Reader mode    | `e2e/reader-mode.spec.ts`                                                  |
+        | Screenshot     | `e2e/user-screenshot.spec.ts`                                              |
+        | Print → PDF    | `e2e/print-to-pdf.spec.ts` (new) — real `%PDF-` bytes from a loaded page   |
+        | **Translation**| **none**                                                                   |
+
+  - [x] **Print is covered at the layer a test can reach, and the note says which.** _Both the user's
+        Save-as-PDF and the agent's `browser_export_pdf` come down to one `printToPDF` call; everything
+        above it is a native save dialog or a capability handler, neither of which Playwright can
+        drive. So the e2e pins the part that would silently break — that this Electron build renders a
+        real page to real PDF bytes. `printToPDF` REJECTS on contents it cannot render, which is the
+        whole reason `savePageAsPdf` reports a failure instead of writing nothing, and a page-to-PDF
+        path that quietly stopped working would look identical from outside to one nobody had used._
+  - [ ] **Translation is the one thing holding this line open, and it is not a coding gap.** _The
+        feature is complete — local-model-first with a cloud fallback, the sensitive-site lockout,
+        per-origin consent, glossary terms, en+tr — and it is unit-tested (`engine.test.ts`,
+        `host.test.ts`). What it has never had is a run anyone watched: it needs either a downloaded
+        local model or a configured provider key, so no automated test in this repo can translate a
+        page, and none has. Saying "works end-to-end" on that basis would be exactly the unearned tick
+        this file exists to prevent. **This belongs in the UAT pass** (with the same key that closes the
+        Safe Browsing row), not in another commit._
 - [x] **Hierarchical bookmarks** (folders/tags) + a searchable **Bookmark Manager** work; migration is additive
       — _**the first DoD line of this phase to close.** Folders, ordering, cycle guard, cascade delete and
       root protection (`BookmarkTreeStore`); a searchable manager with drag reorder/reparent, native
