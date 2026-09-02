@@ -168,6 +168,14 @@ export const PreferencesSchema = z.object({
   // persisting any user-picked directory.
   downloadDirectory: z.string().max(1024),
   downloadAskEachTime: z.boolean(),
+  /**
+   * How long a finished download stays in the list. `manual` is the default and the only one that
+   * never deletes anything on its own — a download list that quietly empties itself is a list the
+   * user cannot rely on to answer "did I download that?".
+   */
+  downloadHistoryRetention: z.enum(['manual', 'after-day', 'on-completion']),
+  /** Open the transfers panel when a download finishes. Chrome's shelf behaviour, as a preference. */
+  showDownloadsWhenDone: z.boolean(),
   // Required (not .default) so the schema input matches Preferences; init always merges the default
   // (extensions: []) first, and PreferencesPatchSchema (.partial) makes it optional on read/patch.
   extensions: z.array(ExtensionStateSchema),
@@ -385,6 +393,8 @@ export const DEFAULT_PREFERENCES: Preferences = {
   },
   downloadDirectory: '',
   downloadAskEachTime: false,
+  downloadHistoryRetention: 'manual',
+  showDownloadsWhenDone: true,
   extensions: [],
   pinnedExtensions: [],
   userAgent: null,

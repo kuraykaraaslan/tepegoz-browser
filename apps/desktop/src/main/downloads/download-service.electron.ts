@@ -15,6 +15,7 @@ import {
   type DownloadTrustProvider,
 } from './download-service-model.electron';
 import {
+  applyRetentionPolicy,
   clearTerminal,
   createState,
   list,
@@ -41,6 +42,10 @@ class DownloadService {
       for (const record of DownloadStore.list(db)) {
         DownloadService.ctx.records.set(record.id, record);
       }
+      // Rows age out while the app is closed, so "after one day" has to be applied on the way in —
+      // otherwise a browser that is opened once a week never removes anything. No-op on the default
+      // `manual` policy.
+      applyRetentionPolicy(DownloadService.ctx);
     }
     // Every browsing session, present and future — a download started from a VPN/Tor-bound tab must go
     // through the same quarantine path as one from a Direct tab. Registered as CRITICAL: a session we

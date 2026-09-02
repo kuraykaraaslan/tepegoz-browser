@@ -111,6 +111,40 @@ export function DownloadSettingsSection({
         />
 
         <div>
+          <label htmlFor="download-retention" className="text-sm font-medium text-text-primary">
+            {s.downloadRetention}
+          </label>
+          <p className="mb-2 text-xs text-text-secondary">{s.downloadRetentionDesc}</p>
+          <select
+            id="download-retention"
+            value={prefs.downloadHistoryRetention}
+            onChange={(e) => {
+              setPref({
+                downloadHistoryRetention: e.target
+                  .value as typeof prefs.downloadHistoryRetention,
+              });
+            }}
+            className="h-9 w-full max-w-sm rounded-md border border-border bg-surface-base px-3 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+          >
+            {(['manual', 'after-day', 'on-completion'] as const).map((id) => (
+              <option key={id} value={id}>
+                {s.downloadRetentionOptions[id]}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <Toggle
+          id="show-downloads-when-done"
+          label={s.showDownloadsWhenDone}
+          description={s.showDownloadsWhenDoneDesc}
+          checked={prefs.showDownloadsWhenDone}
+          onChange={(v) => {
+            setPref({ showDownloadsWhenDone: v });
+          }}
+        />
+
+        <div>
           <p className="text-sm font-medium text-text-primary">{s.clearDownloadsLabel}</p>
           <p className="mb-2 text-xs text-text-secondary">{s.clearDownloadsDesc}</p>
           <ConfirmAction

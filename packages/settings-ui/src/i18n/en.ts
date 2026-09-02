@@ -89,6 +89,16 @@ export const en = {
   downloadLocationLabel: 'Download location',
   downloadLocationDesc: 'Leave empty to use the operating system Downloads folder.',
   downloadLocationPlaceholder: 'System Downloads folder',
+  downloadRetention: 'Remove finished downloads from the list',
+  downloadRetentionDesc:
+    'The files themselves are never touched — only the entries in the download list.',
+  downloadRetentionOptions: {
+    manual: 'Only when I clear them',
+    'after-day': 'After one day',
+    'on-completion': 'As soon as they finish',
+  },
+  showDownloadsWhenDone: 'Show the downloads panel when a download finishes',
+  showDownloadsWhenDoneDesc: 'Opens the transfers panel once, when a transfer reaches the end.',
   downloadAskEachTime: 'Ask where to save each file',
   downloadAskEachTimeDesc: 'When releasing a quarantined file, choose the final save path.',
   clearDownloadsLabel: 'Download history',

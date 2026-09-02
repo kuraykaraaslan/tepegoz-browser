@@ -88,6 +88,16 @@ export const tr: SettingsStrings = {
   downloadLocationLabel: 'İndirme konumu',
   downloadLocationDesc: 'İşletim sisteminin İndirilenler klasörünü kullanmak için boş bırakın.',
   downloadLocationPlaceholder: 'Sistem İndirilenler klasörü',
+  downloadRetention: 'Biten indirmeleri listeden kaldır',
+  downloadRetentionDesc:
+    'Dosyaların kendisine asla dokunulmaz — yalnızca indirme listesindeki kayıtlar silinir.',
+  downloadRetentionOptions: {
+    manual: 'Yalnızca ben temizleyince',
+    'after-day': 'Bir gün sonra',
+    'on-completion': 'Biter bitmez',
+  },
+  showDownloadsWhenDone: 'Bir indirme bittiğinde indirmeler panelini göster',
+  showDownloadsWhenDoneDesc: 'Bir aktarım sona erdiğinde aktarımlar panelini bir kez açar.',
   downloadAskEachTime: 'Her dosya için nereye kaydedileceğini sor',
   downloadAskEachTimeDesc: 'Karantinadaki dosya serbest bırakılırken son kayıt yolunu seç.',
   clearDownloadsLabel: 'İndirme geçmişi',

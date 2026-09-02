@@ -67,6 +67,10 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   newTabBackground: 'private',
   downloadDirectory: 'private',
   downloadAskEachTime: 'private',
+  // Private like every other download setting: a page has no business reading how the user keeps
+  // their download list, and a browsing-habit signal is exactly what a fingerprinting script wants.
+  downloadHistoryRetention: 'private',
+  showDownloadsWhenDone: 'private',
   // Private — secret-adjacent or a browsing/footprint signal that must never reach an extension.
   extensions: 'private',
   pinnedExtensions: 'private',

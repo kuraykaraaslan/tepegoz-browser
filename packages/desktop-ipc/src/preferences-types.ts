@@ -188,6 +188,10 @@ export interface Preferences {
   downloadDirectory: string;
   /** Ask for a target path before each user-initiated browser download. */
   downloadAskEachTime: boolean;
+  /** How long a finished download stays in the LIST. Files on disk are never involved. */
+  downloadHistoryRetention: 'manual' | 'after-day' | 'on-completion';
+  /** Open the transfers panel when a transfer reaches its end. */
+  showDownloadsWhenDone: boolean;
   /** Per-extension status (managed at tepegoz://extensions). Unlisted extensions default to enabled. */
   extensions: ExtensionState[];
   /** Extension ids pinned as toolbar icons, in toolbar order (Chrome-style). Empty = only the puzzle

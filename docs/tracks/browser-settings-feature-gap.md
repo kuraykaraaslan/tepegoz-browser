@@ -208,10 +208,17 @@ unbuilt tail). The File System Access row is already tracked open in phase-2c.
 
 | Gap                                                                                        | Ships in                                  | Today    | Home |
 | ------------------------------------------------------------------------------------------ | ----------------------------------------- | -------- | ---- |
-| **File-type / MIME handler actions**: "Open in app / Always ask / Save / Open in browser"  | F ("Applications"); C ("auto-open types") | **none** | 2c   |
-| "**Automatically open safe files after downloading**"                                      | S                                         | —        | 2c   |
-| Download-history auto-removal policy ("after one day / manually / on successful download") | S                                         | —        | 2c   |
-| "**Show downloads when they're done**"                                                     | C                                         | —        | 2c   |
+| **File-type / MIME handler actions**: "Open in app / Always ask / Save / Open in browser"  | F ("Applications"); C ("auto-open types") | **none** — blocked on an owner call, see below | 2c   |
+| "**Automatically open safe files after downloading**"                                      | S                                         | **none** — blocked on the same call            | 2c   |
+
+> **Why those two are blocked (2026-09-02).** [ADR-0040](../adr/0040-download-trust-model.md) §3 forces
+> a human confirm before opening anything that is not both `normal` risk and `safe` verdict, and with
+> `unknownTrustProvider` live every completed transfer settles at `unknown`. So an auto-open rule could
+> not fire even once — it would be a capability shipped inert, waiting on the same missing Safe Browsing
+> key. Making it fire means letting a standing per-type consent substitute for the per-download HITL,
+> which weakens an accepted security ADR and is an owner decision rather than a coding task.
+| ~~Download-history auto-removal policy~~ **Built 2026-09-02** (`downloadHistoryRetention`: manually / after one day / on successful download; rows only, never files) | S                                         | Settings → Downloads | 2c ✅ |
+| ~~"**Show downloads when they're done**"~~ **Built 2026-09-02** (`showDownloadsWhenDone`, on by default; opens once on a transition into an ended state)              | C                                         | Settings → Downloads | 2c ✅ |
 
 ## 16. Performance
 

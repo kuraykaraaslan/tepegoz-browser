@@ -13,12 +13,18 @@ const fs = vi.hoisted(() => ({
 }));
 const store = vi.hoisted(() => ({
   appendAudit: vi.fn(),
+  // Release is one of the two moments the retention policy can act, so the command reaches for it.
+  applyRetentionPolicy: vi.fn(() => 0),
   downloadDirectory: vi.fn(() => '/dl'),
   patch: vi.fn(),
   pushPending: vi.fn(),
   removeRecord: vi.fn(),
 }));
-const prefs = vi.hoisted(() => ({ downloadAskEachTime: false, downloadDirectory: '' }));
+const prefs = vi.hoisted(() => ({
+  downloadAskEachTime: false,
+  downloadDirectory: '',
+  downloadHistoryRetention: 'manual' as const,
+}));
 const dialog = vi.hoisted(() => ({ showSaveDialog: vi.fn() }));
 
 vi.mock('./download-service-fs.electron', () => fs);

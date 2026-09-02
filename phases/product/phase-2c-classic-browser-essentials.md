@@ -393,6 +393,39 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
 - [ ] **File-type / MIME handler actions** ("Open in app / Always ask / Save / Open in browser" per type;
       "automatically open safe files after downloading"). No home in the Download Manager work above.
       Scoped, not scheduled: [`../tracks/browser-settings-feature-gap.md`](../../docs/tracks/browser-settings-feature-gap.md) §15.
+  - [ ] **Blocked on an owner call, not on effort — found 2026-09-02 while starting it.**
+        [ADR-0040](../../docs/adr/0040-download-trust-model.md) §3 makes
+        `commandNeedsApproval(record, 'open')` true unless a download is **both** `normal` risk **and**
+        `safe` verdict. With `unknownTrustProvider` live every completed transfer settles at verdict
+        `unknown`, so an "automatically open safe files" rule could never fire — it would be a fourth
+        deliberately-inert capability waiting on the same missing Google Safe Browsing key. Making it
+        fire would mean letting a standing per-type consent stand in for the per-download HITL, which
+        is a **weakening of an accepted security ADR** and therefore an owner decision, not a coding
+        one. Left open with the reason written down rather than half-built.
+  - [x] **The two rows of §15 that were NOT blocked were built instead (2026-09-02).**
+        _"Download-history auto-removal policy" and "Show downloads when they're done" — both real
+        gaps against Safari and Chrome, neither touching the trust model._
+        — _**Retention (`downloadHistoryRetention`: manual / after-day / on-completion).** `manual` is
+        the default and the only policy that never deletes on its own: a download list that quietly
+        empties itself cannot answer "did I actually download that?", which is most of what the list is
+        for. The rule is a pure function (`downloadsToForget`) so the two callers — the startup sweep
+        and the post-transfer one — cannot disagree about it, and it is applied at startup because rows
+        age out while the app is closed. **The files are never touched**; this removes rows, which is
+        what the Settings copy says. Three invariants pinned by tests: a transfer still moving is never
+        swept (its row is what tracks it), a **quarantined** row is never swept however old (the file
+        is waiting on a release decision and dropping the row strands it), and `on-completion` keeps
+        failures and blocks — "as soon as they finish" means finished SUCCESSFULLY, and a failed
+        download is exactly the row someone comes back for. 6 tests._
+        — _**"Show downloads when they're done" (`showDownloadsWhenDone`, default on).** Opens the
+        transfers panel once, on a transition INTO an ended state — never for a download that was
+        already finished when the chrome mounted, because restoring yesterday's list is not an event.
+        Cancelled transfers are excluded (the user did that themselves and popping a panel at them for
+        their own action is how a setting gets turned off); `blocked` and `failed` are included,
+        because an outcome nobody asked for is the one worth showing. The preference is read AT the
+        moment it would act rather than cached on mount — it is a private setting, so it is not
+        broadcast, and a cached copy would ignore the toggle until the chrome reloaded._
+        — _Both are `private` in `SETTINGS_VISIBILITY`: how someone keeps their download list is a
+        browsing-habit signal, and a page has no business reading it._
 
 ### L9 — Bookmarks 2.0
 

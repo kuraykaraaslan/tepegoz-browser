@@ -8,6 +8,7 @@ import type {
   DownloadRecord,
   DownloadsState,
 } from '@tepegoz/downloads';
+import { downloadsToForget } from '@tepegoz/downloads';
 import { Logger } from '@tepegoz/libs';
 import PreferenceStore from '@tepegoz/preferences';
 import { DownloadStore, EventJournal } from '@tepegoz/persistence';
@@ -113,6 +114,23 @@ export function patch(state: DownloadState, id: string, patchValue: Partial<Acti
     updatedAt: patchValue.updatedAt ?? Date.now(),
   };
   upsert(state, next);
+}
+
+/**
+ * Apply the user's retention policy to the list. Returns how many rows it dropped.
+ *
+ * Called at startup (rows can age out while the app is closed) and after a transfer reaches its end,
+ * which are the only two moments the answer can change. `manual` — the default — makes it a no-op, so
+ * the common path costs one array filter over a list that is already in memory.
+ *
+ * The FILES are never touched. This removes rows from the list, which is what every browser's
+ * equivalent setting does and what the Settings copy says.
+ */
+export function applyRetentionPolicy(state: DownloadState, now = Date.now()): number {
+  const policy = PreferenceStore.getAll().downloadHistoryRetention;
+  const ids = downloadsToForget([...state.records.values()], policy, now);
+  for (const id of ids) removeRecord(state, id);
+  return ids.length;
 }
 
 export function removeRecord(state: DownloadState, id: string): void {

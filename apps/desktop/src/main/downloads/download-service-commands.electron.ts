@@ -5,6 +5,7 @@ import { AppError } from '@tepegoz/libs';
 import PreferenceStore from '@tepegoz/preferences';
 import { moveFile, uniquePath } from './download-service-fs.electron';
 import {
+  applyRetentionPolicy,
   appendAudit,
   downloadDirectory,
   patch,
@@ -111,6 +112,9 @@ async function release(state: DownloadState, id: string): Promise<void> {
     completedAt: Date.now(),
   });
   appendAudit('DownloadReleased', state.records.get(id));
+  // `on-completion` means this moment: the file has left quarantine and is on disk where the user
+  // asked for it, so the list row has done its job.
+  applyRetentionPolicy(state);
 }
 
 async function openDownload(state: DownloadState, id: string): Promise<void> {

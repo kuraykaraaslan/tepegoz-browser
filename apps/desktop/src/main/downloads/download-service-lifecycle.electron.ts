@@ -11,6 +11,7 @@ import { Logger } from '@tepegoz/libs';
 import { cleanFilename, originOf, sha256File, uniquePath } from './download-service-fs.electron';
 import type { ActiveDownload } from './download-service-model.electron';
 import {
+  applyRetentionPolicy,
   appendAudit,
   downloadDirectory,
   patch,
@@ -150,6 +151,9 @@ export async function finishToQuarantine(state: DownloadState, id: string): Prom
       trustVerdict === 'blocked' ? 'DownloadBlocked' : 'DownloadQuarantined',
       state.records.get(id),
     );
+    // The other moment the retention answer can change. A quarantined row is never swept (the file is
+    // still waiting for a release decision), so this only bites for `blocked` under `after-day`.
+    applyRetentionPolicy(state);
   } catch (err) {
     Logger.warn('Failed to quarantine download', { id, err: String(err) });
     patch(state, id, {
