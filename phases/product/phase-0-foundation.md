@@ -97,9 +97,9 @@ No product features; the decisions made here would force a full rewrite if wrong
       last-known-good)
 - [ ] **`crashReporter`** wiring + minidump collection — **opt-in**, redacted (reuse `Logger.redact`); no PII
       in reports
-- [~] **Safe-mode boot** (launch with extensions + agent disabled for recovery) + **corrupt-profile recovery**
+- [x] **Safe-mode boot** (launch with extensions + agent disabled for recovery) + **corrupt-profile recovery**
       (migration-repair / fail-safe fresh-start — generalizes the existing `SessionStore` fail-safe: malformed
-      snapshot → start fresh, never crash-loop)
+      snapshot → start fresh, never crash-loop) — _**both halves built, wired and tested (2026-09-02).**_
   - [x] _**Safe-mode boot: built and wired** (ADR-0038 recovery-ladder rung three). `recovery/safe-mode.ts`
         (`beginLaunch` reads the crash counter and stamps the launch in-flight; `--safe-mode` flag OR two
         consecutive unhealthy launches trip it) + `recovery/crash-counter.ts` (pure, its own 82-line test).
@@ -123,8 +123,11 @@ No product features; the decisions made here would force a full rewrite if wrong
         `app.commandLine.hasSwitch`) enters with reason `flag`; a tripped counter enters with
         `crash-loop`; `previousLaunchCrashed` reflects the stored `pending`; `beginLaunch` reads once;
         and the health timer + `markCleanExit` each clear the counter, the timer not double-arming._
-  - [ ] _Residual for ✅: a user-facing notice on the DB fresh-start (today it is `Logger.warn` only —
-        the `recovery-notices.ts` surface is the natural home)._
+  - [x] _User-facing notice landed 2026-09-02: `notifyProfileReset` (`recovery-notices.ts`) fires a
+        center + toast warning when `openWithRepair` had to start fresh, naming the kept `.corrupt-*`
+        file so nothing looks destroyed — en+tr (`profileResetTitle` / `profileResetBody`), wired in
+        `index.ts` beside `notifySafeMode`, `dedupeKey: 'recovery:profile-reset'`. Follows the existing
+        safe-mode-notice pattern exactly (non-modal, `afterChromeReady`)._
 - [x] **Chromium security-update cadence** (upstream-intake side of the update story): pinned+watched
       `electron`, ≤2-week adoption SLA for security bumps, embedded engine version logged per release — see
       [ADR-0019](../../docs/adr/0019-chromium-update-cadence.md). This governs _which engine_ we ship; the

@@ -104,6 +104,11 @@ export const tr: AppStrings = {
       'Tepegöz üst üste iki kez beklenmedik şekilde kapandı; bu açılışta eklentiler, ajan, MCP ve oturum geri yükleme kapalı. Sekmeleriniz duruyor — geri almak için yeniden başlatın.',
     safeModeBodyFlag:
       '--safe-mode ile başlatıldı: bu açılışta eklentiler, ajan, MCP ve oturum geri yükleme kapalı.',
+    // Profil veritabanı okunamadığında ve yerine temiz bir tane açıldığında gösterilir. Hiçbir şeyin
+    // yok edilmediğini göstermek için saklanan dosyanın adını verir.
+    profileResetTitle: 'Yeni profille başlatıldı',
+    profileResetBody:
+      'Tepegöz profil verilerinizi okuyamadı; yeni bir profil başlatıldı. Geçmişiniz, yer imleriniz ve indirme listeniz şimdilik boş — eski veriler {file} adıyla saklandı.',
     // Yalnızca düzgün kapanmayan bir oturumdan sonra gösterilir; normal açılış sessizce geri yükler.
     // Chrome'un "Sayfalar geri yüklensin mi?" diyaloğunun modalsız karşılığı: önce geri yükle, geri
     // dönüş yolunu sun.

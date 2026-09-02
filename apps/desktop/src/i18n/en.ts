@@ -117,6 +117,11 @@ export const en = {
       'Tepegöz closed unexpectedly twice in a row, so extensions, the agent, MCP and session restore are off for this launch. Your tabs are still saved — restart to get them back.',
     safeModeBodyFlag:
       'Launched with --safe-mode: extensions, the agent, MCP and session restore are off for this launch.',
+    // Shown when the profile database was unreadable and a clean one was opened in its place. Names
+    // the kept file so nothing looks destroyed.
+    profileResetTitle: 'Started with a fresh profile',
+    profileResetBody:
+      "Tepegöz couldn't read your profile data, so a new one was started. Your history, bookmarks and downloads list are empty for now — the old data was kept as {file}.",
     // Shown only after an unclean shutdown — an ordinary launch restores silently. This is the
     // non-modal answer to Chrome's "Restore pages?" dialog: restore first, offer the way back.
     sessionRestoredTitle: 'Restored your last session',

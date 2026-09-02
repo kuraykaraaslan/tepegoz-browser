@@ -12,7 +12,11 @@ import {
   markCleanExit,
   previousLaunchCrashed,
 } from './recovery/safe-mode';
-import { notifySafeMode, notifySessionRestored } from './recovery/recovery-notices';
+import {
+  notifyProfileReset,
+  notifySafeMode,
+  notifySessionRestored,
+} from './recovery/recovery-notices';
 import { installSecurity } from './security';
 import { abortActiveAgentRuns, registerIpc } from './ipc';
 import { registerBasicAuthHandler } from './auth/basic-auth-broker';
@@ -313,6 +317,7 @@ if (!app.requestSingleInstanceLock()) {
       // only after an UNCLEAN shutdown — carrying the Undo that makes always-restoring safe to do
       // without Chrome's blocking "Restore pages?" dialog (ADR-0038).
       notifySafeMode(chromeWindow);
+      notifyProfileReset(chromeWindow);
       if (previousLaunchCrashed()) notifySessionRestored(chromeWindow);
       // A launch still alive a minute from now clears the crash counter, so today's rough start does not
       // count against tomorrow's.

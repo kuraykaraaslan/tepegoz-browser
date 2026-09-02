@@ -23,6 +23,14 @@ import { BookmarkTreeStore } from '@tepegoz/bookmarks';
  */
 let db: Db | null = null;
 let initialized = false;
+/** Set to the kept `.corrupt-*` filename when {@link openWithRepair} had to start a fresh database. */
+let profileResetKeptFile: string | null = null;
+
+/** The name the unreadable profile database was kept under, or null when no reset happened this
+ *  launch. Read once by the recovery notice; nothing else should branch on it. */
+export function profileWasReset(): string | null {
+  return profileResetKeptFile;
+}
 
 /**
  * Open + migrate the database, and if that fails, quarantine the unreadable file and start a fresh
@@ -70,8 +78,9 @@ export function openWithRepair(dbPath: string): Db | null {
   try {
     const fresh = openDatabase(dbPath);
     migrate(fresh);
+    profileResetKeptFile = `tepegoz.db.corrupt-${stamp}`;
     Logger.warn('Started a fresh profile database; the previous file was kept', {
-      kept: `tepegoz.db.corrupt-${stamp}`,
+      kept: profileResetKeptFile,
     });
     return fresh;
   } catch (err) {

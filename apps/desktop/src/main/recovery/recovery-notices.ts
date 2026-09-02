@@ -4,6 +4,7 @@ import NotificationHost from '../notifications/notification-host';
 import { mainLocale, mainStrings } from '../lib/i18n-main';
 import { isSafeMode, safeModeReason } from './safe-mode';
 import { restoredTabCount } from './session-restore-undo';
+import { profileWasReset } from '../db/database.electron';
 
 /**
  * What the user is TOLD about a recovery, as opposed to what the recovery does.
@@ -47,6 +48,28 @@ export function notifySafeMode(win: BrowserWindow): void {
       body: reason === 'flag' ? s.safeModeBodyFlag : s.safeModeBodyCrash,
       channels: ['center', 'toast'],
       dedupeKey: 'recovery:safe-mode',
+    });
+  });
+}
+
+/**
+ * Announce that the profile database could not be read and a fresh one was started in its place. Goes
+ * to the notification center as well as a toast: like safe mode, this is a notice a user may need to
+ * re-read, because it explains why their history, bookmarks and downloads list are suddenly empty. It
+ * names the file the old data was kept under, so nothing looks silently destroyed.
+ */
+export function notifyProfileReset(win: BrowserWindow): void {
+  const kept = profileWasReset();
+  if (kept === null) return;
+  afterChromeReady(win, () => {
+    const s = mainStrings().browser;
+    NotificationHost.push({
+      kind: 'warning',
+      source: 'system',
+      title: s.profileResetTitle,
+      body: s.profileResetBody.replace('{file}', kept),
+      channels: ['center', 'toast'],
+      dedupeKey: 'recovery:profile-reset',
     });
   });
 }
