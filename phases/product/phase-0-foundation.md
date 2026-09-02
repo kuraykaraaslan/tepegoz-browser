@@ -118,9 +118,13 @@ No product features; the decisions made here would force a full rewrite if wrong
         both quarantine + reopen fresh; a missing WAL sidecar is not a failure; an unmovable main file or
         a failing fresh open fall through to null. The `SessionStore` malformed-snapshot → start-fresh
         fail-safe it generalizes was already in place (`session-store.ts`)._
+  - [x] _`safe-mode.ts`'s launch state machine now has a direct test (`safe-mode.electron.test.ts`, 8
+        tests): a clean launch stays out of safe mode and stamps the record; `--safe-mode` (argv OR
+        `app.commandLine.hasSwitch`) enters with reason `flag`; a tripped counter enters with
+        `crash-loop`; `previousLaunchCrashed` reflects the stored `pending`; `beginLaunch` reads once;
+        and the health timer + `markCleanExit` each clear the counter, the timer not double-arming._
   - [ ] _Residual for ✅: a user-facing notice on the DB fresh-start (today it is `Logger.warn` only —
-        the `recovery-notices.ts` surface is the natural home), and a direct test of `safe-mode.ts`'s
-        launch state machine (only the pure `crash-counter` half is covered)._
+        the `recovery-notices.ts` surface is the natural home)._
 - [x] **Chromium security-update cadence** (upstream-intake side of the update story): pinned+watched
       `electron`, ≤2-week adoption SLA for security bumps, embedded engine version logged per release — see
       [ADR-0019](../../docs/adr/0019-chromium-update-cadence.md). This governs _which engine_ we ship; the
