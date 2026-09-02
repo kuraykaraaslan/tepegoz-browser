@@ -1,7 +1,6 @@
 import type { Db } from '@tepegoz/persistence';
 // Node-free subpath — never the package barrel, which pulls `node:sqlite` into the renderer bundle.
 import { likeContains } from '@tepegoz/persistence/sql-like';
-import { MetaStore } from '@tepegoz/persistence';
 import { foldForSearch } from '@tepegoz/i18n';
 import { normalizeTags } from './bookmark-tags';
 
@@ -92,6 +91,28 @@ function toNode(row: NodeRow): BookmarkNode {
     updatedAt: row.updated_at,
     tags: [],
   };
+}
+
+/**
+ * The fold-version marker, read and written with plain SQL against the `meta` table.
+ *
+ * `MetaStore` does exactly this and is NOT imported: it lives behind the `@tepegoz/persistence` barrel,
+ * which pulls `node:sqlite` (and `node:crypto`) into whatever bundles it — and this module is reachable
+ * from the sandboxed RENDERER, which is the same reason `randomUUID` above is the global rather than
+ * the Node one. Measured, not assumed: importing it broke the desktop renderer build with
+ * `"DatabaseSync" is not exported by "__vite-browser-external"`.
+ */
+function readFoldVersion(db: Db): string | undefined {
+  const row = db.prepare('SELECT value FROM meta WHERE key = ?').get(FOLD_VERSION_META_KEY) as
+    | { value: string }
+    | undefined;
+  return row?.value;
+}
+
+function writeFoldVersion(db: Db, value: string): void {
+  db.prepare(
+    'INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+  ).run(FOLD_VERSION_META_KEY, value);
 }
 
 function isRoot(id: string): boolean {
@@ -364,7 +385,7 @@ export class BookmarkTreeStore {
    * right after `migrate`.
    */
   static reindexFoldsIfStale(db: Db): number {
-    if (MetaStore.get(db, FOLD_VERSION_META_KEY) === String(BOOKMARK_FOLD_VERSION)) return 0;
+    if (readFoldVersion(db) === String(BOOKMARK_FOLD_VERSION)) return 0;
     const nodes = db.prepare('SELECT id, title, url FROM bookmark_nodes').all() as {
       id: string;
       title: string;
@@ -383,7 +404,7 @@ export class BookmarkTreeStore {
         updateNode.run(foldForSearch(n.title), n.url === null ? '' : foldForSearch(n.url), n.id);
       }
       for (const t of tags) updateTag.run(foldForSearch(t.tag), t.rid);
-      MetaStore.set(db, FOLD_VERSION_META_KEY, String(BOOKMARK_FOLD_VERSION));
+      writeFoldVersion(db, String(BOOKMARK_FOLD_VERSION));
     })();
     return nodes.length + tags.length;
   }

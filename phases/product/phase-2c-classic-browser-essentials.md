@@ -244,13 +244,35 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         PDF (checked)". That sentence is now false, so the justification was rewritten to the one that
         survives: the user's own command on their own screen is not automation, and the agent's path is
         separately gated. This is exactly the line the phase note predicted would stop being vacuous._
-  - [ ] **`browser_read_pdf` remains open**, and the reason is worth writing down before someone
-        assumes it is a small follow-up: the note below asserts the viewer's text layer can be reused,
-        and that is UNVERIFIED. Chromium renders PDF text through PDFium into a plugin frame; a
-        `executeJavaScript` in the tab's main world does not reach it, and the text is exposed to the
-        accessibility tree only under conditions this app has not measured. Until someone runs that
-        check against `e2e/pdf-viewer.spec.ts`'s real PDF, "reuse its text layer" is a plan, not a
-        design. The original note follows as written:
+  - [ ] **`browser_read_pdf` remains open, and its stated design is now REFUTED — measured, not
+        argued.** _`e2e/spike-pdf-text.spec.ts` serves a real PDF that draws a known probe string,
+        opens it in the built-in viewer, and tries every route that would not need a new PDF stack.
+        All three return nothing:_
+
+        | Route                                                             | Result             |
+        | ----------------------------------------------------------------- | ------------------ |
+        | `executeJavaScript('document.body.innerText')` in the tab         | **0 characters**   |
+        | The same, in every frame of the subtree (incl. the viewer's own)  | **0 characters**   |
+        | CDP `Accessibility.getFullAXTree`                                 | 6 nodes, **no names at all** |
+
+        _So "reuse its text layer — no new PDF library, no new parsing attack surface" cannot be built
+        as written. PDFium draws the text; it never becomes DOM, and in the default configuration it
+        does not reach the accessibility tree either._
+        — _**One thing the spike also found**, worth knowing before the next attempt: the app's own
+        `CdpDriver` already holds the debugger on a browsed tab, so anything reaching for
+        `debugger.attach` has to go through that driver rather than opening its own session._
+        — _**The three honest options, none of them free.** (1) Turn on renderer accessibility (a
+        Chromium flag, so it goes through the allowlist in the developer-settings track) and re-measure
+        — the AX tree returning six unnamed nodes is consistent with PDF a11y simply being off, not
+        with it being impossible. (2) Parse the bytes with a real PDF library, which is exactly the
+        parsing attack surface the original note wanted to avoid — containable in the extraction
+        sandbox or a utility process, but it is a new dependency and a new threat-model paragraph.
+        (3) Hand the bytes to a multimodal model, which is S10 vision territory and costs a call per
+        page. Picking among these is a design decision with a security cost attached, so it is written
+        down here rather than guessed at._
+        — _The spike stays in `e2e/` as the evidence. It asserts nothing and prints its findings, which
+        is what makes it re-runnable the day someone tries option (1)._
+        The original note follows as written:
   - [ ] **The agent still cannot read or save a PDF** — the note on the print row above verifies this
         (`browser-tools` and `capability-plane` have neither capability). Two small tools close it, both
         sitting on surfaces this phase already shipped rather than adding a PDF stack: a

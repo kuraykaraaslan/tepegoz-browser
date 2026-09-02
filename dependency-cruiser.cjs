@@ -157,6 +157,25 @@ module.exports = {
       to: { path: '^apps/' },
     },
     {
+      name: 'bookmarks-must-not-pull-node-into-the-renderer',
+      severity: 'error',
+      comment:
+        '@tepegoz/bookmarks is imported BY THE RENDERER at runtime (isBookmarkable, BOOKMARK_ROOT_BAR), ' +
+        'so nothing reachable from its package index may value-import the @tepegoz/persistence barrel: ' +
+        'that barrel pulls node:sqlite and node:crypto, and Vite resolves them to ' +
+        '__vite-browser-external, which fails the desktop renderer build outright ("DatabaseSync is not ' +
+        'exported"). Measured — it happened on 2026-09-02 when the bookmark store imported MetaStore. ' +
+        'Use `import type` (erased), the node-free `@tepegoz/persistence/sql-like` subpath, or plain SQL. ' +
+        'The `profiles` entry is exempt: it is main-process-only by construction and is never reached ' +
+        'from the index. Tests are exempt for the same reason they may open a real database: nothing ' +
+        'bundles them.',
+      from: {
+        path: '^packages/bookmarks/src/',
+        pathNot: '^packages/bookmarks/src/(profiles|browser-profile-read)\.ts$|\.test\.ts$',
+      },
+      to: { path: '^packages/persistence/src/index\.ts$' },
+    },
+    {
       name: 'bookmarks-ui-is-a-leaf',
       severity: 'error',
       comment:
