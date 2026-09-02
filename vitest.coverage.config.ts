@@ -115,6 +115,10 @@ export default defineConfig({
         // added ai-panels cost, the network-privacy connection manager, the site-trust profile
         // list, and the per-key model picker.
         //
+        // Round 10 (solo): the built-in extension registry lifecycle (init-once, read-before-init throw)
+        // + the downloads/trust preload bridge slices (channel + payload shape, onDownloadsState
+        // subscribe/forward/unsubscribe). floor(measured) F61→62.
+        //
         // Rounds 8-9 (solo): WindowTabsGroups + WindowTabsMoves over a real TabStore (createGroup
         // ghost-id filtering, setPinned observer-before-mutation, detach/adopt tear-off with a fresh id).
         // floor(measured) B85→86.
@@ -135,7 +139,7 @@ export default defineConfig({
         // clear-browsing-data IPC (vault never in scope, every browsing partition, partial-failure
         // resilient, journalled), agent conversation-history + active-tab helper IPC (agentPickFiles
         // 5-file/5-MB cap, text vs base64), and the trusted-origin desktop adapter binding.
-        'apps/desktop/**': { statements: 47, branches: 86, functions: 61, lines: 47 },
+        'apps/desktop/**': { statements: 47, branches: 86, functions: 62, lines: 47 },
       },
       include: [
         'apps/desktop/src/**',
