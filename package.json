@@ -25,6 +25,7 @@
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "test": "turbo run test",
+    "clean:turbo": "node -e \"require('fs').rmSync('.turbo/cache',{recursive:true,force:true})\"",
     "coverage": "vitest run --coverage --config vitest.coverage.config.ts",
     "docs:links": "node scripts/check-doc-links.mjs",
     "format": "prettier --write .",

@@ -9,6 +9,15 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**", "out/**"]
     },
+    "@tepegoz/desktop#build": {
+      "dependsOn": ["^build"],
+      // ONLY `out/**` (what `electron-vite build` produces, ~5 MB). NOT `dist/**`: that is
+      // electron-builder's territory (run via the `package:*` scripts, not this task), and its
+      // `win-unpacked`/installer output is ~1 GB — the generic `dist/**` glob was vacuuming that
+      // stale packaging output into the local cache on every `turbo run build`, which is how
+      // `.turbo/` reached 41 GB.
+      "outputs": ["out/**"]
+    },
     "typecheck": {},
     "lint": {},
     "test": {
