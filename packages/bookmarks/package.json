@@ -5,7 +5,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./profiles": "./src/profiles.ts"
   },
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -16,7 +17,8 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@tepegoz/persistence": "workspace:*"
+    "@tepegoz/persistence": "workspace:*",
+    "zod": "3.25.76"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

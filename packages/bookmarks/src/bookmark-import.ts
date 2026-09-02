@@ -10,12 +10,14 @@ import {
   MAX_URL_CHARS,
   type ImportedBookmarkFolder,
   type ImportedBookmarkNode,
+  type ParsedBookmarks,
 } from './bookmark-import-limits';
 
 export type {
   ImportedBookmark,
   ImportedBookmarkFolder,
   ImportedBookmarkNode,
+  ParsedBookmarks,
 } from './bookmark-import-limits';
 
 export type BrowserImportSource = 'chrome' | 'edge' | 'firefox' | 'brave' | 'other';
@@ -30,11 +32,6 @@ export interface BookmarkImportResult {
   errors: string[];
 }
 
-/** What `parseBookmarksHtml` found, and whether it stopped early. */
-export interface ParsedBookmarks {
-  root: ImportedBookmarkFolder;
-  truncated: boolean;
-}
 
 const TOKEN_RE = /<DT>\s*<H3\b[^>]*>([\s\S]*?)<\/H3>|<DT>\s*<A\b([^>]*)>([\s\S]*?)<\/A>|<\/DL>/gi;
 /**
@@ -100,14 +97,41 @@ export function importBookmarksHtmlToStore(
   db: Db,
   input: { source: BrowserImportSource; data: string },
 ): BookmarkImportResult {
-  const parsed = parseBookmarksHtml(input.data);
+  return writeParsedBookmarksToStore(
+    db,
+    parseBookmarksHtml(input.data),
+    `Imported from ${sourceDisplayName(input.source)}`,
+  );
+}
+
+/**
+ * Write what a parser produced into the bookmark tree, under one new folder named `rootTitle`.
+ *
+ * Every import source shares this: the HTML export path, and the on-disk profile paths (Chromium JSON,
+ * Firefox `places.sqlite`). One writer means the boundary `safeParse`, the scheme gate, the duplicate
+ * skip and the "create the root folder only if something is actually written" rule cannot drift apart
+ * per source — which is exactly how a second import path usually ends up with weaker checks than the
+ * first.
+ *
+ * `parsed === null` is a parser saying "this is not a bookmarks file". It is reported as an error, not
+ * as an import that found nothing.
+ */
+export function writeParsedBookmarksToStore(
+  db: Db,
+  parsed: ParsedBookmarks | null,
+  rootTitle: string,
+): BookmarkImportResult {
   const result: BookmarkImportResult = {
     imported: 0,
     skipped: 0,
     folders: 0,
-    truncated: parsed.truncated,
+    truncated: parsed?.truncated ?? false,
     errors: [],
   };
+  if (parsed === null) {
+    result.errors.push('The bookmarks file could not be read.');
+    return result;
+  }
 
   // The boundary contract. The parser's own caps are what keep the memory bounded; this is what makes
   // the SHAPE checked rather than assumed, and it is the gate that survives a future edit to the
@@ -121,7 +145,6 @@ export function importBookmarksHtmlToStore(
 
   const seen = new Set(BookmarkTreeStore.listFlat(db, 100_000).map((b) => b.url));
   let rootId: string | null = null;
-  const rootTitle = `Imported from ${sourceDisplayName(input.source)}`;
   const ensureRoot = (): string => {
     if (rootId === null) {
       rootId = BookmarkTreeStore.createFolder(db, {

@@ -50,6 +50,15 @@ export interface ImportedBookmarkFolder {
 
 export type ImportedBookmarkNode = ImportedBookmark | ImportedBookmarkFolder;
 
+/**
+ * What a parser found, and whether it stopped early. Shared by every import source (Netscape HTML,
+ * Chromium JSON, Firefox `places.sqlite`) so the caps and the store writer are the same for all three.
+ */
+export interface ParsedBookmarks {
+  root: ImportedBookmarkFolder;
+  truncated: boolean;
+}
+
 const ImportedBookmarkSchema = z.object({
   type: z.literal('bookmark'),
   title: z.string().max(MAX_TITLE_CHARS),
