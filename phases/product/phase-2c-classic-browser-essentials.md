@@ -208,14 +208,29 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         — _`serverAcceptsRanges` treats `Accept-Ranges: none` as a refusal that outranks everything
         else: a server saying no is the one case where guessing costs a corrupt file rather than a slow
         one. 11 tests._
-  - [ ] **The engine itself is NOT built** — this is a planner with no caller yet, said plainly so the
-        row is not misread. What remains: ranged `net.request`s on the transfer's own browsing session
-        (never a bare HTTP client — the session is what carries the cookies, the proxy and the Phase 5
-        tunnel), offset writes into one quarantine file, aggregated progress, cancellation, and the
-        fall back to a single stream when the probe says no. It must reach `finishToQuarantine` for the
-        whole-file hash exactly like every other path, which is the clause that keeps segmentation from
-        weakening the trust model. Its natural test is a local range server, which is also the harness
-        the "Measurement, not assertion" row below needs.
+  - [x] **The transport-agnostic engine** (`runSegmentedTransfer`, 2026-09-02). _Drives the segments
+        in parallel, writes each response at its absolute offset, reassembles one file. The transport
+        and the sink are injected — the real transport must be Electron's `net.request` on the
+        transfer's OWN browsing session (that session carries the cookies, the proxy and the Phase 5
+        tunnel; a bare HTTP client would silently move the download onto the clear route), and the real
+        sink writes into quarantine — and every failure worth testing is in the orchestration, not in
+        either of those._
+        — _**A partial result is never a result.** A segment that ends early, overruns its range,
+        throws, or gets a `200` (the server sending the whole file down every connection) fails the
+        WHOLE transfer and the file is not offered. Two completion checks, not one: every segment
+        reports complete AND the byte totals agree — either alone has shipped a truncated file in
+        somebody's downloader. The reassembly test asserts the actual bytes, not the length, because a
+        length check passes for a file assembled in the wrong order, which is exactly the failure
+        segmentation introduces. 8 tests._
+  - [ ] **Not yet wired into `DownloadService`, and the reason is a real fork.** The engine writes to a
+        `SegmentSink`; `will-download` + `finishToQuarantine` are built around Electron owning the
+        `DownloadItem` and the file handle. Wiring segmentation means either (a) `DownloadService`
+        opens the quarantine file itself for segmented transfers and still routes the assembled result
+        through `finishToQuarantine` for the whole-file hash — a second write path, carefully fenced —
+        or (b) a HEAD/range probe that stays a normal `will-download` single stream unless it can
+        prove segmentation is worthwhile. (b) is less code and keeps one write path; (a) is faster on
+        the files where speed is the point. An owner call, not a coding gap. The local range server
+        both need is also the harness the "Measurement, not assertion" row wants.
 - [ ] **Dynamic connection count** — the segment count adapts to measured throughput and server behavior rather
       than a fixed setting; a host that penalizes parallel connections is detected and backed off. Per-host
       ceiling is user-visible and overridable (default conservative: we are a browser, not a scraper)
