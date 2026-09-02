@@ -115,6 +115,10 @@ export default defineConfig({
         // added ai-panels cost, the network-privacy connection manager, the site-trust profile
         // list, and the per-key model picker.
         //
+        // Rounds 8-9 (solo): WindowTabsGroups + WindowTabsMoves over a real TabStore (createGroup
+        // ghost-id filtering, setPinned observer-before-mutation, detach/adopt tear-off with a fresh id).
+        // floor(measured) B85→86.
+        //
         // Round 7 (solo): the agent-IPC facade + before-quit abort (fail-safe HITL deny), the
         // extension-IPC schema boundary (adblock/typo/user-agent). floor(measured) S46→47 / L46→47.
         //
@@ -131,7 +135,7 @@ export default defineConfig({
         // clear-browsing-data IPC (vault never in scope, every browsing partition, partial-failure
         // resilient, journalled), agent conversation-history + active-tab helper IPC (agentPickFiles
         // 5-file/5-MB cap, text vs base64), and the trusted-origin desktop adapter binding.
-        'apps/desktop/**': { statements: 47, branches: 85, functions: 61, lines: 47 },
+        'apps/desktop/**': { statements: 47, branches: 86, functions: 61, lines: 47 },
       },
       include: [
         'apps/desktop/src/**',
