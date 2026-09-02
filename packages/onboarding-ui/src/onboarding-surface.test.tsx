@@ -13,6 +13,8 @@ function props(overrides: Partial<OnboardingSurfaceProps> = {}): OnboardingSurfa
     onToggleMaximize: vi.fn(),
     onClose: vi.fn(),
     importBookmarks: vi.fn(),
+    detectBrowserProfiles: vi.fn().mockResolvedValue([]),
+    importBookmarkProfile: vi.fn(),
     importLogins: vi.fn(),
     completeOnboarding: vi.fn().mockResolvedValue(undefined),
     platform: 'win32',
@@ -55,6 +57,87 @@ describe('OnboardingSurface', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Start browsing' }));
 
     await waitFor(() => expect(completeOnboarding).toHaveBeenCalledTimes(1));
+  });
+});
+
+const CHROME_PROFILE = {
+  id: 'chrome:abc123',
+  source: 'chrome' as const,
+  browserLabel: 'Chrome',
+  profileName: 'Kuray',
+  modifiedAt: 2,
+};
+
+function goToImport(): void {
+  fireEvent.click(screen.getByRole('button', { name: 'Begin' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+}
+
+describe('importing from a profile on this computer', () => {
+  it('does not scan the disk until the import step is opened', () => {
+    // A first-run window that read the disk before the user had said they wanted to import anything
+    // would be doing it behind their back, which is the opposite of what this browser claims.
+    const detectBrowserProfiles = vi.fn().mockResolvedValue([CHROME_PROFILE]);
+    renderSurface(props({ detectBrowserProfiles }));
+    expect(detectBrowserProfiles).not.toHaveBeenCalled();
+
+    goToImport();
+    expect(detectBrowserProfiles).toHaveBeenCalledTimes(1);
+  });
+
+  it('lists what was found and imports the one that is picked', async () => {
+    const importBookmarkProfile = vi
+      .fn()
+      .mockResolvedValue({ imported: 12, skipped: 3, folders: 2, truncated: false, errors: [] });
+    renderSurface(
+      props({
+        detectBrowserProfiles: vi.fn().mockResolvedValue([CHROME_PROFILE]),
+        importBookmarkProfile,
+      }),
+    );
+    goToImport();
+
+    await screen.findByText('Chrome');
+    expect(screen.getByText('Kuray')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Import from Chrome — Kuray' }));
+
+    await waitFor(() => expect(importBookmarkProfile).toHaveBeenCalledWith('chrome:abc123'));
+    await screen.findByText('12 bookmarks imported. 3 skipped.');
+  });
+
+  it('says a profile is gone rather than reporting an import of nothing', async () => {
+    // The browser can be uninstalled between the list being drawn and the button being pressed. "0
+    // imported" and "that profile is no longer there" are different answers; only one is true.
+    renderSurface(
+      props({
+        detectBrowserProfiles: vi.fn().mockResolvedValue([CHROME_PROFILE]),
+        importBookmarkProfile: vi.fn().mockResolvedValue({
+          imported: 0,
+          skipped: 0,
+          folders: 0,
+          truncated: false,
+          errors: ['That profile is no longer available.'],
+        }),
+      }),
+    );
+    goToImport();
+    fireEvent.click(await screen.findByRole('button', { name: 'Import from Chrome — Kuray' }));
+    await screen.findByText('That profile is no longer available.');
+  });
+
+  it('shows no list at all when nothing is installed', async () => {
+    renderSurface(props());
+    goToImport();
+    await waitFor(() => expect(screen.queryByText('Found on this computer')).toBeNull());
+    // The file cards are still the whole feature on a machine with no other browser.
+    expect(screen.getByRole('button', { name: /Choose bookmarks file/ })).toBeTruthy();
+  });
+
+  it('survives a detection that fails', async () => {
+    renderSurface(props({ detectBrowserProfiles: vi.fn().mockRejectedValue(new Error('nope')) }));
+    goToImport();
+    await waitFor(() => expect(screen.queryByText('Found on this computer')).toBeNull());
+    expect(screen.getByRole('heading', { name: 'Import' })).toBeTruthy();
   });
 });
 

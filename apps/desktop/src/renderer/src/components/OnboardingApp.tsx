@@ -33,6 +33,8 @@ export function OnboardingApp() {
         onClose={() => window.tepegoz.closeWindow()}
         platform={window.tepegoz.platform}
         importBookmarks={(input) => window.tepegoz.importBookmarks(input)}
+        detectBrowserProfiles={() => window.tepegoz.detectBrowserProfiles()}
+        importBookmarkProfile={(id) => window.tepegoz.importBookmarkProfile(id)}
         importLogins={(data, format) => window.tepegoz.importLogins(data, format)}
         completeOnboarding={() => window.tepegoz.completeOnboarding()}
       />

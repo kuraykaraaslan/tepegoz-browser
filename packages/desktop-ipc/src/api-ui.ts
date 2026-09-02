@@ -20,7 +20,11 @@ import type { PageInfo, SiteClearPlan } from './contract';
 import type { BookmarkEntry, BookmarkNodeType, BookmarkTreeNode } from './contract';
 import type { ReaderArticle } from '@tepegoz/reader';
 import type { StoredScreenshot } from '@tepegoz/screenshots';
-import type { BookmarkImportInput, BookmarkImportResult } from './contract';
+import type {
+  BookmarkImportInput,
+  BookmarkImportResult,
+  DetectedBrowserProfile,
+} from './contract';
 import type { BookmarkMenuAction } from './contract';
 import type { AppNotification, NotificationState } from './contract';
 import type { NotificationPermissionRequest, NotificationPermissionResponse } from './contract';
@@ -98,6 +102,10 @@ export interface UiApi {
   getBookmarkTree(): Promise<BookmarkTreeNode[]>;
   /** Import a browser-exported bookmarks file into the local bookmark tree. */
   importBookmarks(input: BookmarkImportInput): Promise<BookmarkImportResult>;
+  /** Browser profiles found on this computer, newest-first. Empty when none is installed. */
+  detectBrowserProfiles(): Promise<DetectedBrowserProfile[]>;
+  /** Import one detected profile, named by the opaque id `detectBrowserProfiles` handed out. */
+  importBookmarkProfile(id: string): Promise<BookmarkImportResult>;
   /** The whole collection as Netscape bookmarks HTML. The renderer saves it; main never writes a file. */
   /** The agent permission matrix — a read-only view over the Policy Kernel. */
   listAgentCapabilities(): Promise<AgentCapabilityRow[]>;

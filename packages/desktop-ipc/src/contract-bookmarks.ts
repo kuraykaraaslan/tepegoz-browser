@@ -36,6 +36,24 @@ export interface BookmarkImportInput {
   data: string;
 }
 
+/**
+ * A browser profile found on this computer, as the renderer is allowed to see it.
+ *
+ * Deliberately NOT the main-process record: there is no path here. The renderer picks a profile by
+ * `id` and main resolves that id by re-running detection, so the untrusted side can never name a file
+ * for the trusted side to open — and it never holds a string with the user's account name in it.
+ */
+export interface DetectedBrowserProfile {
+  id: string;
+  source: BrowserImportSource;
+  /** The browser: "Chrome", "Firefox". */
+  browserLabel: string;
+  /** The profile as its own browser names it: "Default", "Work". */
+  profileName: string;
+  /** Last write time (ms) of the file that would be read — the list is offered newest-first. */
+  modifiedAt: number;
+}
+
 export interface BookmarkImportResult {
   imported: number;
   skipped: number;

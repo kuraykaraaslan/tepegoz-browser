@@ -55,7 +55,7 @@ export const tr: OnboardingStrings = {
     'Yer imleri, şifreler, tercihler ve tarayıcı verileri bu yerel profilde kalır. Bu sürümde varsayılan budur.',
   importSource: 'İçe aktarılacak tarayıcı',
   importSourceHint:
-    '{browser} tarafından dışa aktarılmış dosyaları kullan. Bu sürüm doğrudan profil taraması yapmaz.',
+    'Dosyanın hangi tarayıcıdan geldiğini seç. {browser} dışa aktarımları, hangi profilden gelirse gelsin aynı şekilde okunur.',
   sources: {
     chrome: 'Google Chrome',
     edge: 'Microsoft Edge',
@@ -63,6 +63,16 @@ export const tr: OnboardingStrings = {
     brave: 'Brave',
     other: 'Diğer tarayıcı',
   },
+  // Bu bilgisayarda bulunan profiller. Yalnızca en az bir tane varsa gösterilir; başka tarayıcı
+  // kurulu olmayan bir makine, cevaplayamayacağı bir soruyla karşılaşmaz.
+  detectedTitle: 'Bu bilgisayarda bulundu',
+  detectedBody:
+    'Doğrudan bu cihazdaki bir tarayıcı profilinden içe aktar — dışa aktarma dosyası gerekmez. Sen birini seçene kadar hiçbir şey okunmaz.',
+  detectedImport: 'İçe aktar',
+  // Her satırdaki görünen etiket aynı kelime; erişilebilir ad profili taşır. Aynı adlı düğmelerden
+  // oluşan bir liste, ekran okuyucuyu işe yaramaz hale getirmenin en eski yollarından biridir.
+  detectedImportAria: '{browser} — {profile} profilinden içe aktar',
+  detectedGone: 'Bu profil artık kullanılabilir değil.',
   bookmarksTitle: 'Yer imleri',
   bookmarksBody:
     'Tarayıcıdan dışa aktarılmış yer imi HTML dosyasını bırak. Aktarılanlar Diğer yer imleri altına eklenir.',

@@ -11,6 +11,7 @@ import {
   type BookmarkMenuAction,
   type BookmarkNodeType,
   type BookmarkTreeNode,
+  type DetectedBrowserProfile,
   type HistoryEntry,
   type PageInfo,
   type BasicAuthRequest,
@@ -44,6 +45,8 @@ export const bookmarksHistoryApi: Pick<
   | 'isBookmarked'
   | 'getBookmarkTree'
   | 'importBookmarks'
+  | 'detectBrowserProfiles'
+  | 'importBookmarkProfile'
   | 'exportBookmarks'
   | 'openPrivateWindow'
   | 'extractArticle'
@@ -132,6 +135,10 @@ export const bookmarksHistoryApi: Pick<
   listBookmarkTags: () => invoke<{ tag: string; count: number }[]>(IpcChannels.bookmarksListTags),
   importBookmarks: (input: BookmarkImportInput) =>
     invoke<BookmarkImportResult>(IpcChannels.bookmarksImport, input),
+  detectBrowserProfiles: () =>
+    invoke<DetectedBrowserProfile[]>(IpcChannels.bookmarksDetectProfiles),
+  importBookmarkProfile: (id: string) =>
+    invoke<BookmarkImportResult>(IpcChannels.bookmarksImportProfile, id),
   createBookmarkFolder: (parentId: string, title: string, index?: number) =>
     invoke<void>(IpcChannels.bookmarksCreateFolder, { parentId, title, index }),
   renameBookmark: (id: string, title: string) =>

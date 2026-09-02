@@ -278,6 +278,10 @@ export const IpcChannels = {
   bookmarksRemove: 'bookmarks:remove',
   bookmarksMove: 'bookmarks:move',
   bookmarksImport: 'bookmarks:import',
+  /** Browser profiles found on this computer, and importing one of them by id. Read-only detection,
+   *  run when the user opens the import step — never on a timer, and never with a renderer-named path. */
+  bookmarksDetectProfiles: 'bookmarks:detect-profiles',
+  bookmarksImportProfile: 'bookmarks:import-profile',
   /** The whole collection as Netscape bookmarks HTML — the format every other browser reads. */
   /** Open a new PRIVATE (disposable) window. Takes no payload — there is nothing for an untrusted
    *  renderer to steer, which is the whole reason it can be a plain renderer-callable channel. */

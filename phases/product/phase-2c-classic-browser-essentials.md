@@ -405,7 +405,7 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         purpose: a JSON dump would be a backup only this application can restore, which is the shape of
         lock-in that looks like a feature. The parser reads what the serializer writes, so the round
         trip is checked rather than asserted._
-- [ ] **Import from Chrome/Firefox** — parse their exported Netscape-format HTML bookmarks (+ optional
+- [x] **Import from Chrome/Firefox** — parse their exported Netscape-format HTML bookmarks (+ optional
       profile auto-detect); folder structure preserved; zod `safeParse` on each parsed entry (reuses the
       same import seam as the password Google-CSV provider already shipped)
   - [x] Netscape HTML parsing (Chrome/Edge/Firefox/Brave), folder structure preserved, per-source
@@ -430,9 +430,51 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         produce ill-formed UTF-16 that reached SQLite and the UI unnoticed. 15 tests, mutation-verified
         (removing the guard turns 3 red, the node cap 2, the title cap 1) — the importer had exactly one
         test before this._
-  - [ ] Profile auto-detect does not exist. Explicitly **marked optional** in the task line above and
-        **not part of the DoD line**, which asks for folders/tags + a searchable manager + additive
-        migration — all three of which are now done. Left open honestly rather than ticked.
+  - [x] **Profile auto-detect.** ~~Does not exist; marked optional, left open honestly rather than
+        ticked.~~ _Built 2026-09-02, so the parenthesis in the line above is now earned rather than
+        excused. The friction it removes is the whole point: importing used to begin with "first, go
+        and export a file from the browser you are trying to leave", which is a chore placed exactly
+        where a person is most likely to abandon the switch._
+        — _**Two new readers, because an exported file and a live profile are not the same artifact.**
+        `bookmark-import-chromium.ts` reads Chromium's own `Bookmarks` JSON (Chrome/Edge/Brave) and
+        `bookmark-import-firefox.ts` turns `places.sqlite` rows into the same tree. Both feed
+        `writeParsedBookmarksToStore`, extracted from the HTML path so the boundary `safeParse`, the
+        scheme gate, the duplicate skip and the create-the-root-only-if-something-is-written rule
+        cannot drift apart per source — which is how a second import path normally ends up with weaker
+        checks than the first._
+        — _**What each reader had to know.** Chromium: all three roots including `synced` (mobile),
+        because dropping it would be a silent partial import; no favicons, because they live in a
+        separate database and null is the honest answer. Firefox: skip the tags root (its children are
+        pointers to bookmarks that already appear under the real roots, so importing it hands the user
+        one copy per tag), skip separators and `place:` saved queries, order by `position`, and carry a
+        visited set — `parent` is just an integer and a damaged profile can point a folder at its own
+        descendant._
+        — _**Firefox is read through a copy, never in place.** The live file is locked while Firefox
+        runs — exactly when someone is most likely to be importing — and opening a SQLite file WRITES
+        to it. A browser that quietly wrote into another browser's profile while "reading" it would
+        deserve the complaint. The `-wal`/`-shm` sidecars are copied too, because in WAL mode the
+        newest commits live there and a copy without them is a silently stale profile._
+        — _**The renderer never sees a path.** Detection returns records carrying an opaque id (a
+        truncated SHA-256 of the path); the renderer picks one by id and main resolves it by running
+        detection again. So the untrusted side cannot name a file for the trusted side to open — the
+        readable set is fixed by the detector, not by the payload — and the chrome never holds a string
+        with the user's account name in it. The node-touching modules sit behind a
+        `@tepegoz/bookmarks/profiles` entry because the renderer imports the package index at runtime
+        and must not pull `node:fs` into its bundle._
+        — _**Found by its own test:** a file that is not a database left `openDatabase` throwing
+        part-way through construction, the handle unreachable and unclosed, the Windows scratch copy
+        undeletable — and the cleanup then threw out of a function whose entire contract is to return
+        null. Fixed at the cause (check the SQLite header before copying anything), with a silent
+        best-effort cleanup behind it._
+        — _**The UI is honest about when it reads.** Detection runs when the import step is opened, not
+        at mount: a first-run window that scanned the disk before the user had said they wanted to
+        import anything would be doing it behind their back. No profiles found renders no box at all,
+        and every row's accessible name carries the profile it imports — a list of identically-named
+        "Import" buttons is one of the oldest ways to make a screen reader useless. The onboarding
+        hint that read "direct profile scanning is not used in this version" was rewritten in en+tr,
+        because it had become false._
+        — _39 tests (29 in `@tepegoz/bookmarks`, 5 new onboarding UI, plus the existing suites), repo
+        typecheck + lint + 93 test tasks green._
 
 ### L8/L9 — Private / disposable / guest mode
 

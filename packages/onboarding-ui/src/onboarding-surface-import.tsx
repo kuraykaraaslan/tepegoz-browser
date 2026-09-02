@@ -2,6 +2,7 @@ import { useT } from '@tepegoz/i18n/react';
 import type {
   BookmarkImportResult,
   BrowserImportSource,
+  DetectedBrowserProfile,
   LoginImportResult,
 } from '@tepegoz/desktop-ipc';
 import { onboardingDict, type OnboardingStrings } from './i18n';
@@ -13,6 +14,9 @@ export function ImportStep({
   setSource,
   bookmarks,
   passwords,
+  profiles,
+  importingProfileId,
+  onImportProfile,
   onPickBookmarks,
   onPickPasswords,
   onImport,
@@ -22,6 +26,9 @@ export function ImportStep({
   setSource: (source: BrowserImportSource) => void;
   bookmarks: ImportState<BookmarkImportResult>;
   passwords: ImportState<LoginImportResult>;
+  profiles: DetectedBrowserProfile[];
+  importingProfileId: string | null;
+  onImportProfile: (id: string) => Promise<void>;
   onPickBookmarks: () => void;
   onPickPasswords: () => void;
   onImport: (kind: ImportKind, file: File) => Promise<void>;
@@ -29,6 +36,14 @@ export function ImportStep({
   const t = useT(onboardingDict);
   return (
     <div className="space-y-5">
+      {profiles.length > 0 && (
+        <DetectedProfiles
+          profiles={profiles}
+          importingProfileId={importingProfileId}
+          busy={bookmarks.busy}
+          onImportProfile={onImportProfile}
+        />
+      )}
       <div className="rounded-lg border border-border bg-surface-raised p-5">
         <label htmlFor="browser-source" className="text-sm font-medium">
           {t.importSource}
@@ -71,6 +86,57 @@ export function ImportStep({
           onDrop={(file) => onImport('passwords', file)}
         />
       </div>
+    </div>
+  );
+}
+
+/**
+ * The browsers already on this computer. Rendered only when there is at least one — an empty box
+ * asking a question the machine cannot answer is worse than no box, and the file cards below remain
+ * the complete path either way.
+ */
+function DetectedProfiles({
+  profiles,
+  importingProfileId,
+  busy,
+  onImportProfile,
+}: {
+  profiles: DetectedBrowserProfile[];
+  importingProfileId: string | null;
+  busy: boolean;
+  onImportProfile: (id: string) => Promise<void>;
+}) {
+  const t = useT(onboardingDict);
+  return (
+    <div className="rounded-lg border border-border bg-surface-raised p-5">
+      <h3 className="text-base font-semibold">{t.detectedTitle}</h3>
+      <p className="mt-2 text-sm leading-6 text-text-secondary">{t.detectedBody}</p>
+      <ul className="mt-4 grid gap-2">
+        {profiles.map((profile) => (
+          <li
+            key={profile.id}
+            className="flex items-center justify-between gap-3 rounded-md border border-border bg-surface-base px-4 py-3"
+          >
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-medium">{profile.browserLabel}</span>
+              <span className="block truncate text-xs text-text-secondary">
+                {profile.profileName}
+              </span>
+            </span>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void onImportProfile(profile.id)}
+              aria-label={t.detectedImportAria
+                .replace('{browser}', profile.browserLabel)
+                .replace('{profile}', profile.profileName)}
+              className="h-9 shrink-0 rounded-md border border-border px-4 text-sm font-medium transition-colors hover:border-border-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus disabled:opacity-60"
+            >
+              {importingProfileId === profile.id ? t.importing : t.detectedImport}
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

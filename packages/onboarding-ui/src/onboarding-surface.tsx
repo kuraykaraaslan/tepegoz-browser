@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useT } from '@tepegoz/i18n/react';
 import { coreDict } from '@tepegoz/i18n';
 import { Badge, BrandMark, Button, cn } from '@tepegoz/ui';
@@ -6,6 +6,7 @@ import { captionLayout, WindowControls } from '@tepegoz/window-controls';
 import type {
   BookmarkImportResult,
   BrowserImportSource,
+  DetectedBrowserProfile,
   LoginImportResult,
 } from '@tepegoz/desktop-ipc';
 import { onboardingDict } from './i18n';
@@ -28,6 +29,8 @@ export function OnboardingSurface({
   onToggleMaximize,
   onClose,
   importBookmarks,
+  detectBrowserProfiles,
+  importBookmarkProfile,
   importLogins,
   completeOnboarding,
   platform,
@@ -41,8 +44,29 @@ export function OnboardingSurface({
   const [passwords, setPasswords] = useState<ImportState<LoginImportResult>>(emptyPasswordState);
   const [finishing, setFinishing] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
+  const [profiles, setProfiles] = useState<DetectedBrowserProfile[]>([]);
+  const [importingProfileId, setImportingProfileId] = useState<string | null>(null);
   const bookmarkInputRef = useRef<HTMLInputElement>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
+
+  // Detection runs when the import step is opened, not at mount: a first-run window that scanned the
+  // disk before the user had said they wanted to import anything would be doing it behind their back.
+  useEffect(() => {
+    if (step !== 'import') return;
+    let cancelled = false;
+    void detectBrowserProfiles().then(
+      (found) => {
+        if (!cancelled) setProfiles(found);
+      },
+      () => {
+        // No profiles is the honest fallback: the file cards below are still the whole feature.
+        if (!cancelled) setProfiles([]);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [step, detectBrowserProfiles]);
 
   const index = steps.indexOf(step);
   const canGoBack = index > 0 && !finishing;
@@ -75,6 +99,25 @@ export function OnboardingSurface({
       const error = kind === 'bookmarks' ? t.importBookmarksFailed : t.importPasswordsFailed;
       if (kind === 'bookmarks') setBookmarks({ busy: false, result: null, error });
       else setPasswords({ busy: false, result: null, error });
+    }
+  }
+
+  async function handleProfileImport(id: string): Promise<void> {
+    setImportingProfileId(id);
+    setBookmarks({ busy: true, result: null, error: null });
+    try {
+      const result = await importBookmarkProfile(id);
+      setBookmarks({
+        busy: false,
+        result,
+        // A profile that vanished between the list and the click is reported as an error rather than
+        // as an import of zero bookmarks — those are different things and only one of them is true.
+        error: result.imported === 0 && result.errors.length > 0 ? t.detectedGone : null,
+      });
+    } catch {
+      setBookmarks({ busy: false, result: null, error: t.importBookmarksFailed });
+    } finally {
+      setImportingProfileId(null);
     }
   }
 
@@ -190,6 +233,9 @@ export function OnboardingSurface({
                   setSource={setSource}
                   bookmarks={bookmarks}
                   passwords={passwords}
+                  profiles={profiles}
+                  importingProfileId={importingProfileId}
+                  onImportProfile={handleProfileImport}
                   onPickBookmarks={() => bookmarkInputRef.current?.click()}
                   onPickPasswords={() => passwordInputRef.current?.click()}
                   onImport={handleImport}

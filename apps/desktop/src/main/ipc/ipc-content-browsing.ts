@@ -55,6 +55,7 @@ import {
   isBookmarkable,
   serializeBookmarksHtml,
 } from '@tepegoz/bookmarks';
+import { registerBookmarkProfileIpc } from './ipc-bookmark-profiles';
 import FileOperationsHost from '../file-operations/file-operations-host';
 import { getDb } from '../db/database.electron';
 import { handle, handleAsync, onAction, onSignal } from './ipc-helpers';
@@ -103,6 +104,10 @@ function sniffImageMime(bytes: Buffer): string | null {
 
 /** Register file-access picker + new-tab background + notifications + history + bookmarks handlers. */
 export function registerBrowsingIpc(): void {
+  // Import from a browser profile already on this computer. Its own module, and it is handed the
+  // broadcast rather than reaching for it, so the bar and the manager refresh the same way they do
+  // after any other bookmark mutation.
+  registerBookmarkProfileIpc(broadcastBookmarksChanged);
   // File operations: native directory picker for the Settings "Add folder" button. Chosen paths are
   // canonicalized (symlinks resolved) so they match the sandbox's realpath comparisons when persisted.
   handleAsync(

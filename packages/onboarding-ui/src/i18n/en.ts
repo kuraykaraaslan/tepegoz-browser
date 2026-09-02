@@ -53,7 +53,7 @@ export const en = {
     'Bookmarks, passwords, preferences, and browser data stay in this local profile. This is the default for this version.',
   importSource: 'Import source',
   importSourceHint:
-    'Use files exported from {browser}. Direct profile scanning is not used in this version.',
+    'Pick the browser a file came from. Files exported from {browser} are read the same way whichever profile they came from.',
   sources: {
     chrome: 'Google Chrome',
     edge: 'Microsoft Edge',
@@ -61,6 +61,16 @@ export const en = {
     brave: 'Brave',
     other: 'Other browser',
   },
+  // Profiles found on this computer. Shown only when at least one is there, so a machine with no
+  // other browser never sees an empty box asking it a question it cannot answer.
+  detectedTitle: 'Found on this computer',
+  detectedBody:
+    'Import straight from a browser profile on this device — no export file needed. Nothing is read until you choose one.',
+  detectedImport: 'Import',
+  // The visible label on every row is the same word, so the accessible name carries the profile. A
+  // list of identically-named buttons is one of the oldest ways to make a screen reader useless.
+  detectedImportAria: 'Import from {browser} — {profile}',
+  detectedGone: 'That profile is no longer available.',
   bookmarksTitle: 'Bookmarks',
   bookmarksBody:
     'Drop a browser-exported bookmarks HTML file. Imported items are placed under Other bookmarks.',

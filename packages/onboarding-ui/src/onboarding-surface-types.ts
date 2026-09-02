@@ -2,6 +2,7 @@ import type {
   BookmarkImportInput,
   BookmarkImportResult,
   BrowserImportSource,
+  DetectedBrowserProfile,
   LoginImportResult,
 } from '@tepegoz/desktop-ipc';
 
@@ -20,6 +21,11 @@ export interface OnboardingSurfaceProps {
   onToggleMaximize: () => void;
   onClose: () => void;
   importBookmarks: (input: BookmarkImportInput) => Promise<BookmarkImportResult>;
+  /** Browser profiles already on this computer. Resolving to an empty list is the normal answer on a
+   *  machine with no other browser, and is not an error. */
+  detectBrowserProfiles: () => Promise<DetectedBrowserProfile[]>;
+  /** Import one of them, by the opaque id detection handed out. */
+  importBookmarkProfile: (id: string) => Promise<BookmarkImportResult>;
   importLogins: (data: string, format: string) => Promise<LoginImportResult>;
   completeOnboarding: () => Promise<void>;
   /** `process.platform`, injected — decides where the window caption comes from (`captionLayout`). */

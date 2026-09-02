@@ -57,3 +57,14 @@ export const BookmarkImportSchema = z.object({
   format: z.literal('html'),
   data: z.string().max(10_485_760),
 }) satisfies z.ZodType<BookmarkImportInput>;
+
+/**
+ * `bookmarks:import-profile` — which detected profile to import, by the opaque id detection handed
+ * out. Bounded and pattern-checked so that even a handler bug cannot be steered into treating this as
+ * anything path-shaped: it is `<source>:<hex>` and nothing else.
+ */
+export const BookmarkImportProfileSchema = z
+  .string()
+  .min(3)
+  .max(64)
+  .regex(/^[a-z]+:[0-9a-f]+$/);
