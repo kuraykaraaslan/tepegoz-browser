@@ -194,6 +194,9 @@ export interface Preferences {
   downloadHistoryRetention: 'manual' | 'after-day' | 'on-completion';
   /** Open the transfers panel when a transfer reaches its end. */
   showDownloadsWhenDone: boolean;
+  /** Opt-in native crash reporting. OFF by default; minidumps stay local (`<userData>/Crashes`) and
+   *  are never uploaded. Read once at startup — a change needs a restart. */
+  crashReportingEnabled: boolean;
   /** Per-extension status (managed at tepegoz://extensions). Unlisted extensions default to enabled. */
   extensions: ExtensionState[];
   /** Extension ids pinned as toolbar icons, in toolbar order (Chrome-style). Empty = only the puzzle

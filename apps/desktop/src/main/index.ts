@@ -5,6 +5,7 @@ import { Logger } from '@tepegoz/libs';
 import { applyChromiumSwitches } from './chromium-flags-boot';
 import { whenAnyChromeReady } from './chrome-ready';
 import { applyHardwareAccelerationPreference } from './hardware-acceleration-boot';
+import { applyCrashReporterPreference } from './crash-reporter-boot';
 import {
   armHealthTimer,
   beginLaunch,
@@ -159,6 +160,11 @@ applyChromiumSwitches(app);
 // it is an Electron API that must be invoked, and burying it in a function named for flags would hide
 // the one setting on this screen that cannot take effect without a restart.
 applyHardwareAccelerationPreference(app);
+
+// Native crash reporter (ADR-0038 distribution infra). Same before-`whenReady` / read-the-file-
+// directly constraint: the dump directory must be set before `crashReporter.start`, and
+// `PreferenceStore.init` runs later. Opt-in, fails closed, local minidumps only — never uploaded.
+applyCrashReporterPreference(app);
 
 // Default-browser inbound routing (macOS): a link opened while Tepegöz is already running arrives here,
 // not through argv. Registered at module scope (before `whenReady`) because Electron can fire `open-url`

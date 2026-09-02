@@ -184,6 +184,12 @@ export const PreferencesSchema = z.object({
   downloadHistoryRetention: z.enum(['manual', 'after-day', 'on-completion']),
   /** Open the transfers panel when a download finishes. Chrome's shelf behaviour, as a preference. */
   showDownloadsWhenDone: z.boolean(),
+  /**
+   * Opt-in native crash reporting. OFF by default and fails closed — minidumps are written to
+   * `<userData>/Crashes` and NEVER uploaded (there is no crash server). Read once at startup, before
+   * `whenReady`; a change needs a restart. See `apps/desktop/src/main/crash-reporter-boot.ts`.
+   */
+  crashReportingEnabled: z.boolean(),
   // Required (not .default) so the schema input matches Preferences; init always merges the default
   // (extensions: []) first, and PreferencesPatchSchema (.partial) makes it optional on read/patch.
   extensions: z.array(ExtensionStateSchema),
@@ -404,6 +410,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   clearOnExit: [],
   downloadHistoryRetention: 'manual',
   showDownloadsWhenDone: true,
+  crashReportingEnabled: false,
   extensions: [],
   pinnedExtensions: [],
   userAgent: null,

@@ -95,8 +95,21 @@ No product features; the decisions made here would force a full rewrite if wrong
 - [ ] **Auto-update runtime** (`electron-updater`) with **update-signature verification** (only signed builds
       from the trusted channel install) + **staged rollout / rollback** (a bad version auto-reverts to the
       last-known-good)
-- [ ] **`crashReporter`** wiring + minidump collection — **opt-in**, redacted (reuse `Logger.redact`); no PII
+- [~] **`crashReporter`** wiring + minidump collection — **opt-in**, redacted (reuse `Logger.redact`); no PII
       in reports
+  - [x] _**Runtime wired 2026-09-02.** `crash-reporter-boot.ts` — `applyCrashReporterPreference(app)`
+        runs before `whenReady` (the dump dir must be set before `crashReporter.start`), reading
+        `crashReportingEnabled` straight from `preferences.json` the same way `chromium-flags-boot` /
+        `hardware-acceleration-boot` do. **Opt-in and fails closed**: OFF by default, and a missing or
+        corrupt file stays OFF — it turns on only for the literal `=== true`. **Nothing leaves the
+        machine**: `uploadToServer: false` + empty `submitURL`, minidumps written to
+        `<userData>/Crashes`. **No metadata attached** — a minidump is a binary snapshot; the
+        no-PII obligation is on `extra`/`globalExtra` key/values and we set none. New pref
+        `crashReportingEnabled` (`preferences.model` + `Preferences` interface + `SETTINGS_VISIBILITY`
+        `private`, like `hardwareAccelerationEnabled`). 7 tests (`crash-reporter-boot.electron.test.ts`)._
+  - [ ] _Follow-up: the Settings → Privacy toggle + its dedicated getter/setter IPC (mirror the
+        `hardwareAccelerationEnabled` restart-required pattern) + en/tr strings. Until then the pref is
+        set by editing `preferences.json`._
 - [x] **Safe-mode boot** (launch with extensions + agent disabled for recovery) + **corrupt-profile recovery**
       (migration-repair / fail-safe fresh-start — generalizes the existing `SessionStore` fail-safe: malformed
       snapshot → start fresh, never crash-loop) — _**both halves built, wired and tested (2026-09-02).**_

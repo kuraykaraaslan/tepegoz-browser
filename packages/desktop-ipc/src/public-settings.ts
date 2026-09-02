@@ -72,6 +72,9 @@ export const SETTINGS_VISIBILITY: Record<keyof Preferences, 'public' | 'private'
   // their download list, and a browsing-habit signal is exactly what a fingerprinting script wants.
   downloadHistoryRetention: 'private',
   showDownloadsWhenDone: 'private',
+  // Private and read only in main at startup (like `hardwareAccelerationEnabled`): a page must not be
+  // able to learn whether crash collection is on, and it cannot change without a restart anyway.
+  crashReportingEnabled: 'private',
   // Private — secret-adjacent or a browsing/footprint signal that must never reach an extension.
   extensions: 'private',
   pinnedExtensions: 'private',
