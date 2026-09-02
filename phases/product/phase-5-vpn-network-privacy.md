@@ -145,6 +145,16 @@ endpoint** (one loopback port per active connection), never an OS-level system p
       unlisted in the directory, which is exactly what survives a country-level block of Tor's public relay
       IPs. Without it, "Tor works" is true only where Tor is not blocked. Cost to state honestly in the UI:
       bridges are slower.
+  - [ ] **Sanitize the pasted bridge line.** A bridge is copied out of a web page or a mail, so it arrives
+        with Unicode spaces, soft hyphens, smart quotes and stray line breaks — and a malformed line breaks
+        the censorship-circumvention chain at the exact moment the user needs it, with an error that reads
+        like "Tor is broken." Normalize whitespace and strip invisible characters on paste, then validate
+        the line's shape before accepting it. Tiny, and it is a documented real-world failure, not a
+        hypothetical.
+  - [ ] **Turkish-language connection help is the highest-leverage localization in this phase.** The Tor
+        complaint corpus shows Turkish users' questions cluster on _finding_ the bridge/settings panel and
+        knowing which option to pick — navigation, not cryptography. This is the one place where being
+        Turkish-first is a functional advantage rather than a courtesy.
 - [ ] **A "new identity" affordance.** Per-connection circuit isolation is landed, but nothing lets a user
       say "burn this circuit and start clean" — Tor Browser's New Identity resets both the circuit and the
       site state. Here the two halves already exist separately (a connection can be rebuilt; per-site data
@@ -296,6 +306,22 @@ endpoint** (one loopback port per active connection), never an OS-level system p
       and one action; no raw provider stderr in the UI
 - [ ] **Docs that assume nothing** — a short Turkish + English guide covering what the tunnel does and does
       **not** hide (explicitly: it does not stop fingerprinting — cross-link the section above)
+- [ ] **"Slow" needs a cause, not a spinner.** When a tunnelled tab is slow the user cannot tell whether it
+      is relay latency, a bridge, the site blocking the exit, or the tunnel itself half-down — and the Tor
+      corpus shows that ambiguity is what turns a slow session into an abandoned product. Attribute it: the
+      connection panel names the likely cause from what is already measured (handshake time, health poll,
+      HTTP status class from the exit).
+- [ ] **A compatibility disclosure layer, because the exit IP is the problem the user will actually hit.**
+      CAPTCHA loops, account lockouts and Cloudflare walls are the single most visible complaint cluster
+      against Tor — and they arrive here too, since a shared exit address is what triggers them. Say it at
+      the moment it happens ("this site is challenging the exit address, not you"), and connect it to the
+      existing [ADR-0039](../../docs/adr/0039-user-granted-sensitive-capabilities.md) Human Handoff path
+      rather than letting an agent run grind against a wall it cannot pass. Also worth stating: an
+      **agent** run on a Tor-routed tab will hit these far more often than a human will.
+- [ ] _Independent confirmation:_ the Tor complaint corpus reaches the **same** conclusion Freenet's does —
+      the heaviest user pain is not anonymity theory, it is installing, connecting and staying connected.
+      Two unrelated anonymity products failing the same way is the strongest evidence this section has.
+      Source: [`research/privacy/tor-browser.md`](../../research/privacy/tor-browser.md).
 
 ### 5b — Managed own-infra (optional; rides the Phase 3 backend)
 
