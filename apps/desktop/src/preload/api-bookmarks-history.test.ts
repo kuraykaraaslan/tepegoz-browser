@@ -2,10 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { IpcChannels } from '@tepegoz/desktop-ipc';
 
 /**
- * The history + bookmarks + notification-center + HITL-prompt slice of the preload bridge (~50
- * methods, one shape). What's pinned is the payload SHAPE each method wraps its args in, the
- * fire-and-forget `ipcRenderer.send` calls (vs `invoke`), and that every `on*` subscription wires a
- * listener and removes exactly that listener on its returned fn.
+ * The history + bookmarks + notification-center + HITL-prompt slice of the preload bridge — one
+ * shape, exhaustively pinned: every method to its exact channel + payload, `ipcRenderer.send`
+ * fire-and-forget vs `invoke`, and every `on*` subscription wires a listener and removes exactly that
+ * listener on its returned fn. What's worth calling out beyond the sweep: the payload RESHAPES —
+ * getPageInfo → {url}, toggleBookmark → {url, title, favicon}, setBookmarkTags → {id, tags},
+ * create/move-folder → their named triples, sendScreenshotEncoded → {requestId, bytes}.
  */
 
 const invoke = vi.hoisted(() =>
@@ -24,137 +26,229 @@ beforeEach(() => {
   ipc.send.mockClear();
 });
 
-describe('request/response payload shapes', () => {
-  it('searchHistory forwards the whole params object (incl. forOmnibox)', () => {
-    void api.searchHistory({ query: 'weather', limit: 8, forOmnibox: true });
-    expect(invoke).toHaveBeenCalledWith(IpcChannels.historySearch, {
-      query: 'weather',
-      limit: 8,
-      forOmnibox: true,
-    });
-  });
+type Row = [name: string, run: () => unknown, channel: string, payload?: unknown];
 
-  it('getPageInfo wraps the url in an object', () => {
-    void api.getPageInfo('https://ex.test/');
-    expect(invoke).toHaveBeenCalledWith(IpcChannels.pageInfoGet, { url: 'https://ex.test/' });
-  });
+const INVOKES: Row[] = [
+  ['getHistory', () => api.getHistory({ limit: 5 }), IpcChannels.historyList, { limit: 5 }],
+  [
+    'searchHistory',
+    () => api.searchHistory({ query: 'w', forOmnibox: true }),
+    IpcChannels.historySearch,
+    { query: 'w', forOmnibox: true },
+  ],
+  ['deleteHistory', () => api.deleteHistory('u'), IpcChannels.historyDelete, 'u'],
+  ['clearHistory', () => api.clearHistory(), IpcChannels.historyClear],
+  ['planSiteDataClear', () => api.planSiteDataClear('u'), IpcChannels.siteDataPlan, 'u'],
+  ['clearSiteData', () => api.clearSiteData('u'), IpcChannels.siteDataClear, 'u'],
+  [
+    'clearBrowsingData',
+    () => api.clearBrowsingData({ range: 'last-hour', categories: ['history'] }),
+    IpcChannels.browsingDataClear,
+    { range: 'last-hour', categories: ['history'] },
+  ],
+  ['getPageInfo', () => api.getPageInfo('u'), IpcChannels.pageInfoGet, { url: 'u' }],
+  ['listBookmarks', () => api.listBookmarks(), IpcChannels.bookmarksList],
+  [
+    'toggleBookmark',
+    () => api.toggleBookmark('u', 'T', null),
+    IpcChannels.bookmarksToggle,
+    { url: 'u', title: 'T', favicon: null },
+  ],
+  ['isBookmarked', () => api.isBookmarked('u'), IpcChannels.bookmarksIsBookmarked, 'u'],
+  ['getBookmarkTree', () => api.getBookmarkTree(), IpcChannels.bookmarksTree],
+  ['listAgentCapabilities', () => api.listAgentCapabilities(), IpcChannels.agentCapabilitiesList],
+  ['extractArticle', () => api.extractArticle(), IpcChannels.readerExtract],
+  [
+    'captureScreenshot',
+    () => api.captureScreenshot('viewport'),
+    IpcChannels.screenshotCapture,
+    'viewport',
+  ],
+  ['openPrivateWindow', () => api.openPrivateWindow(), IpcChannels.windowsOpenPrivate],
+  ['exportBookmarks', () => api.exportBookmarks(), IpcChannels.bookmarksExport],
+  [
+    'setBookmarkTags',
+    () => api.setBookmarkTags('b', ['x']),
+    IpcChannels.bookmarksSetTags,
+    { id: 'b', tags: ['x'] },
+  ],
+  ['listBookmarkTags', () => api.listBookmarkTags(), IpcChannels.bookmarksListTags],
+  [
+    'importBookmarks',
+    () => api.importBookmarks({ html: '<a>' } as never),
+    IpcChannels.bookmarksImport,
+    { html: '<a>' },
+  ],
+  ['detectBrowserProfiles', () => api.detectBrowserProfiles(), IpcChannels.bookmarksDetectProfiles],
+  [
+    'importBookmarkProfile',
+    () => api.importBookmarkProfile('chrome:a'),
+    IpcChannels.bookmarksImportProfile,
+    'chrome:a',
+  ],
+  [
+    'createBookmarkFolder',
+    () => api.createBookmarkFolder('root', 'N', 1),
+    IpcChannels.bookmarksCreateFolder,
+    { parentId: 'root', title: 'N', index: 1 },
+  ],
+  [
+    'renameBookmark',
+    () => api.renameBookmark('b', 'N'),
+    IpcChannels.bookmarksRename,
+    { id: 'b', title: 'N' },
+  ],
+  ['removeBookmark', () => api.removeBookmark('b'), IpcChannels.bookmarksRemove, 'b'],
+  [
+    'moveBookmark',
+    () => api.moveBookmark('b', 'f', 0),
+    IpcChannels.bookmarksMove,
+    { id: 'b', newParentId: 'f', index: 0 },
+  ],
+  ['listNotifications', () => api.listNotifications(), IpcChannels.notificationsList],
+  [
+    'listClientCertificateChoices',
+    () => api.listClientCertificateChoices(),
+    IpcChannels.clientCertificateList,
+  ],
+  [
+    'forgetClientCertificateChoices',
+    () => api.forgetClientCertificateChoices(),
+    IpcChannels.clientCertificateForget,
+  ],
+];
 
-  it('toggleBookmark → { url, title, favicon }', () => {
-    void api.toggleBookmark('https://ex.test/', 'Ex', null);
-    expect(invoke).toHaveBeenCalledWith(IpcChannels.bookmarksToggle, {
-      url: 'https://ex.test/',
-      title: 'Ex',
-      favicon: null,
-    });
-  });
+const SENDS: Row[] = [
+  [
+    'sendScreenshotEncoded',
+    () => api.sendScreenshotEncoded('r', new Uint8Array()),
+    IpcChannels.screenshotEncoded,
+    { requestId: 'r', bytes: new Uint8Array() },
+  ],
+  [
+    'showBookmarkContextMenu',
+    () => api.showBookmarkContextMenu('b', 'bookmark'),
+    IpcChannels.bookmarksContextMenu,
+    { id: 'b', type: 'bookmark', variant: undefined },
+  ],
+  [
+    'dismissNotification',
+    () => api.dismissNotification('n'),
+    IpcChannels.notificationsDismiss,
+    'n',
+  ],
+  [
+    'dismissAllNotifications',
+    () => api.dismissAllNotifications(),
+    IpcChannels.notificationsDismissAll,
+    undefined,
+  ],
+  [
+    'markNotificationRead',
+    () => api.markNotificationRead('n'),
+    IpcChannels.notificationsMarkRead,
+    'n',
+  ],
+  [
+    'markAllNotificationsRead',
+    () => api.markAllNotificationsRead(),
+    IpcChannels.notificationsMarkAllRead,
+    undefined,
+  ],
+  [
+    'respondNotificationPermission',
+    () => api.respondNotificationPermission({ ok: true } as never),
+    IpcChannels.notificationPermissionRespond,
+    { ok: true },
+  ],
+  [
+    'respondBasicAuth',
+    () => api.respondBasicAuth({ requestId: 'a', cancelled: true } as never),
+    IpcChannels.authBasicRespond,
+    { requestId: 'a', cancelled: true },
+  ],
+  [
+    'respondCertificateError',
+    () => api.respondCertificateError({ requestId: 'a', proceed: false }),
+    IpcChannels.certificateErrorRespond,
+    { requestId: 'a', proceed: false },
+  ],
+  [
+    'respondClientCertificate',
+    () => api.respondClientCertificate({ requestId: 'a' } as never),
+    IpcChannels.clientCertificateRespond,
+    { requestId: 'a' },
+  ],
+];
 
-  it('setBookmarkTags → { id, tags }', () => {
-    void api.setBookmarkTags('b1', ['work', 'read']);
-    expect(invoke).toHaveBeenCalledWith(IpcChannels.bookmarksSetTags, {
-      id: 'b1',
-      tags: ['work', 'read'],
-    });
-  });
+const SUBS: [
+  name: string,
+  subscribe: (cb: (...a: unknown[]) => void) => () => void,
+  channel: string,
+][] = [
+  ['onScreenshotEncode', (cb) => api.onScreenshotEncode(cb), IpcChannels.screenshotEncode],
+  ['onReaderToggle', (cb) => api.onReaderToggle(cb), IpcChannels.readerToggle],
+  ['onBookmarkMenuAction', (cb) => api.onBookmarkMenuAction(cb), IpcChannels.bookmarksMenuAction],
+  ['onBookmarksChanged', (cb) => api.onBookmarksChanged(cb), IpcChannels.bookmarksChanged],
+  ['onNotificationsState', (cb) => api.onNotificationsState(cb), IpcChannels.notificationsState],
+  ['onNotificationToast', (cb) => api.onNotificationToast(cb), IpcChannels.notificationsToast],
+  [
+    'onNotificationPermissionRequest',
+    (cb) => api.onNotificationPermissionRequest(cb),
+    IpcChannels.notificationPermissionRequest,
+  ],
+  ['onBasicAuthRequest', (cb) => api.onBasicAuthRequest(cb), IpcChannels.authBasicRequest],
+  [
+    'onCertificateErrorRequest',
+    (cb) => api.onCertificateErrorRequest(cb),
+    IpcChannels.certificateErrorRequest,
+  ],
+  [
+    'onClientCertificateRequest',
+    (cb) => api.onClientCertificateRequest(cb),
+    IpcChannels.clientCertificateRequest,
+  ],
+];
 
-  it('createBookmarkFolder → { parentId, title, index }', () => {
-    void api.createBookmarkFolder('root', 'New', 2);
-    expect(invoke).toHaveBeenCalledWith(IpcChannels.bookmarksCreateFolder, {
-      parentId: 'root',
-      title: 'New',
-      index: 2,
-    });
-  });
-
-  it('moveBookmark → { id, newParentId, index }', () => {
-    void api.moveBookmark('b1', 'folder-2', 0);
-    expect(invoke).toHaveBeenCalledWith(IpcChannels.bookmarksMove, {
-      id: 'b1',
-      newParentId: 'folder-2',
-      index: 0,
-    });
-  });
-
-  it('bare-arg methods pass the arg straight through', () => {
-    void api.deleteHistory('https://ex.test/');
-    void api.isBookmarked('https://ex.test/');
-    void api.importBookmarkProfile('chrome:abc');
-    expect(invoke).toHaveBeenNthCalledWith(1, IpcChannels.historyDelete, 'https://ex.test/');
-    expect(invoke).toHaveBeenNthCalledWith(
-      2,
-      IpcChannels.bookmarksIsBookmarked,
-      'https://ex.test/',
-    );
-    expect(invoke).toHaveBeenNthCalledWith(3, IpcChannels.bookmarksImportProfile, 'chrome:abc');
+describe.each(INVOKES)('invoke: %s', (_n, run, channel, payload) => {
+  it('hits its channel with the right payload', () => {
+    run();
+    if (payload === undefined) expect(invoke).toHaveBeenCalledWith(channel);
+    else expect(invoke).toHaveBeenCalledWith(channel, payload);
   });
 });
 
-describe('fire-and-forget (ipcRenderer.send, not invoke)', () => {
-  it('sendScreenshotEncoded → { requestId, bytes }', () => {
-    const bytes = new Uint8Array([1, 2, 3]);
-    api.sendScreenshotEncoded('req-1', bytes);
-    expect(ipc.send).toHaveBeenCalledWith(IpcChannels.screenshotEncoded, {
-      requestId: 'req-1',
-      bytes,
-    });
+describe.each(SENDS)('send: %s', (_n, run, channel, payload) => {
+  it('is a fire-and-forget send, not an invoke', () => {
+    run();
+    if (payload === undefined) expect(ipc.send).toHaveBeenCalledWith(channel);
+    else expect(ipc.send).toHaveBeenCalledWith(channel, payload);
     expect(invoke).not.toHaveBeenCalled();
   });
+});
 
-  it('showBookmarkContextMenu → { id, type, variant }', () => {
-    api.showBookmarkContextMenu('b1', 'bookmark', 'folder-item');
-    expect(ipc.send).toHaveBeenCalledWith(IpcChannels.bookmarksContextMenu, {
-      id: 'b1',
-      type: 'bookmark',
-      variant: 'folder-item',
-    });
-  });
-
-  it('the notification-center mutations are bare sends', () => {
-    api.dismissNotification('n1');
-    api.dismissAllNotifications();
-    api.markNotificationRead('n1');
-    api.markAllNotificationsRead();
-    expect(ipc.send.mock.calls).toEqual([
-      [IpcChannels.notificationsDismiss, 'n1'],
-      [IpcChannels.notificationsDismissAll],
-      [IpcChannels.notificationsMarkRead, 'n1'],
-      [IpcChannels.notificationsMarkAllRead],
-    ]);
-  });
-
-  it('respondBasicAuth forwards the response verbatim', () => {
-    const response = { requestId: 'a1', cancelled: true, username: '', password: '' };
-    api.respondBasicAuth(response);
-    expect(ipc.send).toHaveBeenCalledWith(IpcChannels.authBasicRespond, response);
+describe.each(SUBS)('subscription: %s', (_n, subscribe, channel) => {
+  it('wires a listener and removes exactly that listener on the returned fn', () => {
+    const cb = vi.fn();
+    const off = subscribe(cb);
+    expect(ipc.on).toHaveBeenCalledWith(channel, expect.any(Function));
+    const listener = ipc.on.mock.calls[0]![1] as (...a: unknown[]) => void;
+    off();
+    expect(ipc.removeListener).toHaveBeenCalledWith(channel, listener);
   });
 });
 
-describe('subscriptions', () => {
-  it('onBookmarksChanged fires a zero-arg callback and unsubscribes cleanly', () => {
-    const cb = vi.fn();
-    const off = api.onBookmarksChanged(cb);
-    const listener = ipc.on.mock.calls[0]![1] as () => void;
-    listener();
-    expect(cb).toHaveBeenCalledTimes(1);
-    off();
-    expect(ipc.removeListener).toHaveBeenCalledWith(IpcChannels.bookmarksChanged, listener);
-  });
+describe('reopenClosedTab-style payload reshapes carry through the callback', () => {
+  it('onScreenshotEncode forwards the whole payload; onReaderToggle forwards nothing', () => {
+    const enc = vi.fn();
+    api.onScreenshotEncode(enc);
+    (ipc.on.mock.calls[0]![1] as (e: unknown, p: unknown) => void)({}, { requestId: 'r' });
+    expect(enc).toHaveBeenCalledWith({ requestId: 'r' });
 
-  it('onScreenshotEncode forwards the whole payload', () => {
-    const cb = vi.fn();
-    api.onScreenshotEncode(cb);
-    const listener = ipc.on.mock.calls[0]![1] as (e: unknown, p: unknown) => void;
-    const payload = { requestId: 'r', png: new Uint8Array(), quality: 80 };
-    listener({}, payload);
-    expect(cb).toHaveBeenCalledWith(payload);
-  });
-
-  it('onReaderToggle forwards nothing (a bare signal)', () => {
-    const cb = vi.fn();
-    const off = api.onReaderToggle(cb);
-    const listener = ipc.on.mock.calls[0]![1] as () => void;
-    listener();
-    expect(cb).toHaveBeenCalledWith();
-    off();
-    expect(ipc.removeListener).toHaveBeenCalledWith(IpcChannels.readerToggle, listener);
+    ipc.on.mockClear();
+    const toggle = vi.fn();
+    api.onReaderToggle(toggle);
+    (ipc.on.mock.calls[0]![1] as () => void)();
+    expect(toggle).toHaveBeenCalledWith();
   });
 });
