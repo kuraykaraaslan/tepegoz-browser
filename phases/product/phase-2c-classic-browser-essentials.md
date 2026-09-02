@@ -310,7 +310,13 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         permanently un-retryable today. The timer is `unref`'d — a quit is a quit._
         — _Bounded on both sides by tests: a browser that gives up on the first dropped packet is one
         people stop downloading with, and one that retries forever hammers a server that is already
-        telling it to stop. 6 tests._
+        telling it to stop. 6 tests on the pure policy._
+        — _**Host wiring covered 2026-09-02** — `download-service-autoretry.electron.test.ts` (9 tests,
+        fake timers): a user cancel and a completed transfer are never retried; an `interrupted` one is
+        parked at `paused` (never a `failed` that flickers) and scheduled; the backoff elapsing routes
+        through the SAME `resumeInterrupted` a manual resume takes; an untrusted-bytes verdict or a
+        thrown resume marks the row `failed` and forgets it; a timer firing into a record the user
+        cleared does nothing; and the budget stops the fifth attempt and forgets the id._
 - [x] **Speed + ETA metadata** — surface bytes/sec and estimated time remaining in the download record and the
       manager (already tracked as an open item in `packages/downloads/CHECKLIST.md`; this is the same task)
       — _`computeDownloadRate(samples, totalBytes)` is a pure helper in `@tepegoz/downloads` (unit-tested
