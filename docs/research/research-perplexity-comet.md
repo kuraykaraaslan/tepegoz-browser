@@ -103,3 +103,39 @@ Comet, "agentic tarayıcı" kategorisinin canlı tehdit vakası:
 - [Perplexity Comet: What It Does, Costs, and Risks (2026) — GEO Toolbox](https://geotoolbox.ai/blog/perplexity-comet)
 - [The Agentic Browser Landscape in 2026: A Complete Guide — No Hacks](https://nohacks.co/blog/agentic-browser-landscape-2026)
 - [Perplexity Comet 2026 Review — Medium/FlowFi](https://medium.com/@FlowFi/perplexity-comet-2026-review-is-it-safe-enough-for-daily-use-agentic-browser-7c5aed839bd3)
+
+---
+
+## Kullanıcı geri bildirimi korpusu (2026-08 içe aktarımı)
+
+> `competitors/perplexity-comet.md` içe aktarımının bu belgeye katlanmış hâli. Üst bölümler güvenlik
+> olaylarını (CometJacking, PerplexedBrowser) anlatıyor; bu bölüm **günlük kullanım şikâyetlerini** taşıyor
+> — ve onlar da en az olaylar kadar öğretici, çünkü kategorinin ürünleşme sorununu gösteriyorlar.
+
+**Performans ve kaynak.** Yüksek CPU tüketimi ve **batarya drenajı**; çökme/donma döngüleri. İşletim
+sistemlerine göre belirgin fark.
+
+**Ajanın operasyonel sınırları.** İki başlık öne çıkıyor:
+
+- **Otomasyon yavaşlığı ve "zaman paradoksu"** — ajanın işi, kullanıcının elle yapmasından **yavaş**
+  bitirmesi. Raporun en keskin şikâyeti bu; gecikme değil, _anlamsızlaşma_.
+- **Bilişsel hatalar ve döngüye girme.**
+
+**UX paradoksları.** Mobilde dayatılan tasarım kararları, arama akışının kirlenmesi (thread cluttering),
+Android'de fonksiyonel kısıtlar, ve **premium abonelere reklam gösterilmesi**.
+
+**Güvenlik zafiyet matrisi** (üst bölümdeki olaylara ek): şifre yöneticisi kasa devralma, yerel dosya
+sızıntısı, sıfır-tıklama Drive silici, ve **"ajanik gevezelik"** — ajanın kendi durumunu/sistem
+bilgisini sayfaya yazarak kullanıcıyı enjekte edilmiş talimata güvenmeye alıştırması.
+
+### Tepegöz'e taşınanlar
+
+- **Zaman paradoksu → dürüst karşılaştırma metriği.** [S7](../../phases/ai-agent/phase-s7-speed.md) PR6'ya
+  **manuel taban çizgisi sütunu** olarak girdi: aynı senaryoda insanın duvar-saati. Taban çizgisi olmayan
+  bir hız sayısı, kullanıcının sorduğu tek soruyu yanıtlayamaz.
+- **Boşta maliyet sıfır** (batarya/CPU) → S7 PR6, ölçülür: boştaki pencerede CPU% ve uyanma/dakika.
+- **Koşu başına kaynak muhasebesi** → S7 PR6; "ajan tarayıcımı yavaşlattı" bir tartışma değil, bir sayı olur.
+- **Kendini sayfaya açıklama yasağı** → S6 PR8'in "no self-disclosure to the page" satırı doğrudan
+  gevezelik bulgusundan.
+- **Yeni sekme kullanıcınındır** → S8 PR7; Comet'in dayatılmış AI yeni-sekmesi ile Neon'un "küçük AI
+  düğmesi" aynı kararın iki zıt hatası.

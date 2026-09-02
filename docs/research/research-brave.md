@@ -7,9 +7,8 @@
 >
 > **Durum:** açık kaynak (Chromium fork) · cross-platform · ücretsiz.
 > **Tarih.** 2026-09-02. **Dil notu.** Türkçe.
-> **Kaynak belge:** [`docs/research/imported/competitors/brave.md`](imported/competitors/brave.md) —
-> 2026-08-21'de içe aktarılan LLM derin-araştırma çıktısı. Bu belge onun yeni formata
-> dönüştürülmüş hâli; özgün metin kayıt olarak yerinde bırakıldı.
+> **Köken:** 2026-08-21'de içe aktarılan bir LLM derin-araştırma çıktısının damıtılmış hâli
+> (özgün dosya 2026-09-02'de bu belgeye katlandı — ayrı bir kopya tutulmuyor).
 
 ---
 
@@ -57,7 +56,7 @@ gizlilik tarayıcısı olmak sizi senkronizasyon hatasından ya da 1.8 GB RAM'de
   gürültü eklemek. Rastgeleleştirme, tutarsızlığın kendisi bir sinyal olduğu için ters
   tepebilir. Faz 2'nin fingerprinting ADR'si (zaten "ADR required" işaretli) bu kararı
   vermeden yazılmamalı. Kaynak:
-  [`docs/research/imported/privacy/vpn-security.md`](imported/privacy/vpn-security.md) §WebRTC/ECH/QUIC.
+  [`research-vpn-security.md`](research-vpn-security.md) §WebRTC/ECH/QUIC.
 
 **Alınmayacak:**
 
@@ -73,7 +72,6 @@ gizlilik tarayıcısı olmak sizi senkronizasyon hatasından ya da 1.8 GB RAM'de
 
 ## Kaynaklar
 
-Özgün derleme ve alıntı bağlantıları için
-[`docs/research/imported/competitors/brave.md`](imported/competitors/brave.md) — Brave resmî
-dokümantasyonu, topluluk forumları (Reddit, Ekşi Sözlük), uygulama mağazası değerlendirmeleri
-ve GitHub konuları.
+Brave resmî dokümantasyonu (web sitesi, blog, destek), topluluk forumları (Reddit, Ekşi Sözlük),
+uygulama mağazası değerlendirmeleri ve GitHub konuları. Mağaza puanları derleme tarihinde
+Google Play 4.7★ (3.4M oy), App Store 4.8★ (622K oy).

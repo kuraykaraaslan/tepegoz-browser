@@ -71,3 +71,42 @@ adaptörleri; ikisi de daha dar ve daha dürüst bir söz.
 - [Fellou AI Review 2026: Agentic Browser & Workflows — BuildFastWithAI](https://www.buildfastwithai.com/ai-tools/fellou)
 - [Meet Fellou AI: An Agentic AI Browser That Can Think, Plan, and Execute Tasks on Your Behalf — AI Tools Club](https://aitoolsclub.com/meet-fellou-ai-an-agentic-ai-browser-that-can-think-plan-and-execute-tasks-on-your-behalf/)
 - [The Agentic Browser Landscape in 2026 — No Hacks](https://nohacks.co/blog/agentic-browser-landscape-2026)
+
+---
+
+## Kullanıcı geri bildirimi ve zafiyet korpusu (2026-08 içe aktarımı)
+
+> `competitors/fellou.md` içe aktarımının bu belgeye katlanmış hâli. Üst bölümler plan-onay UX'ini
+> anlatıyor; bu bölüm **neyin şikâyet edildiğini ve neyin kırıldığını** taşıyor.
+
+**Yürütme ve performans.** Dinamik web ortamlarında **yürütme döngüleri**, CAPTCHA çıkmazı (ajan
+insan-doğrulama duvarında kilitleniyor), çok adımlı görevlerde gecikme ve işlem maliyeti.
+
+**Kara kutu sendromu.** Ara durumlar (intermediate states) gizli — kullanıcı ajanın nerede olduğunu
+göremiyor. Prompt mühendisliği öğrenme eğrisi dik.
+
+**Maliyet — "Sparks" kredi sistemi.** Asıl şikâyet fiyatın yüksekliği değil, **öngörülemezlik ve şeffaflık
+eksikliği**:
+
+| Plan  | Ücret     | Kredi            | ~Görev | Temel şikâyet                                               |
+| ----- | --------- | ---------------- | -----: | ----------------------------------------------------------- |
+| Free  | $0        | 1000 (tek sefer) |     ~4 | Denemeye yetmiyor                                           |
+| Plus  | $19.9/ay  | 2000             |     ~8 | **Başarısız/döngüye giren görevlerde kredi iade edilmiyor** |
+| Pro   | $39.9/ay  | 5000             |    ~20 | Görev başına token tüketimi kestirilemiyor                  |
+| Ultra | $199.9/ay | Limitsiz         |      — | Bireysel için çok yüksek                                    |
+
+**Güvenlik.** Prompt injection'a karşı anlamsal boşluk; **IDOR zafiyetleri**, kimlik doğrulama
+eksiklikleri, taşıma katmanı sertleştirmesi yok.
+
+### Tepegöz'e taşınanlar
+
+- **Girdi izolasyonu + katı HITL + zero-trust API** → [S6](../../phases/ai-agent/phase-s6-safety-control-plane.md)
+  PR8; IDOR dersi Faz 3'e iletildi (her istek sahipliği **sunucu tarafında yeniden türetir**, parametreden
+  değil).
+- **"Aracın kendi hatası için ödeme"** → [S8](../../phases/ai-agent/phase-s8-assistant-ux.md) PR7'nin
+  maliyet-öngörüsü + tool-kaynaklı başarısızlıkta ledger'a yazmama satırı. Fellou'nun Sparks şikâyeti ve
+  Neon'un fiyat tepkisi **aynı şey**.
+- **Canlı ajan konsolu / ara durum görünürlüğü** → S8 PR2 (canlı adım akışı) burada zaten var.
+- **CAPTCHA'da nazik devir** → ADR-0039 Human Handoff; çözme **asla** ajanın işi değil.
+- **Bağımlılık-farkındalıklı paralel yürütme** → Faz 1b L3 paralel DAG'ın sahibi olduğu iş.
+- Plan **metnini düzenleme** ve düzenleme sonrası grant'ın yeniden türetilmesi için üst bölüme bakın.

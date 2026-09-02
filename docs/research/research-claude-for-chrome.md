@@ -109,3 +109,43 @@ bulgu.
 - [Vulnerability in Claude Extension for Chrome Exposes AI Agent to Takeover — SecurityWeek](https://www.securityweek.com/vulnerability-in-claude-extension-for-chrome-exposes-ai-agent-to-takeover/)
 - [Researchers Say Claude for Chrome Flaw Lets Rogue Extensions Trigger Gmail Reads — The Hacker News](https://thehackernews.com/2026/07/claude-for-chrome-flaw-lets-other.html)
 - [Use Claude in Chrome safely — Anthropic Help Center](https://support.claude.com/en/articles/12902428-use-claude-in-chrome-safely)
+
+---
+
+## Kullanıcı geri bildirimi korpusu (2026-08 içe aktarımı, iki bağımsız çalışma)
+
+> `competitors/claude-extension-chatgpt.md` ve `competitors/claude-extension-gemini.md` içe
+> aktarımlarının bu belgeye katlanmış hâli. İkisi bağımsız derlemeler; **örtüştükleri yerler** en güçlü
+> sinyal. Üst bölümler olay geçmişini (ShadowPrompt, ClaudeBleed) taşıyor; bu bölüm günlük kullanımı.
+
+**Bağlantı ve kimlik doğrulama** — her iki çalışmanın da en büyük şikâyet kümesi. Antivirüs/TLS
+çatışmaları, sunucu taraflı OAuth hataları ve **sonsuz döngüler**, hesap eşleme sorunları, Edge'de
+çapraz-tarayıcı kısıtları. Tek cümlelik özeti: _"kurulu, panel açık, hiçbir şey olmuyor."_
+
+**Token tüketimi ve performans.** Gemini çalışmasının en somut teknik bulgusu: **Base64 ekran
+görüntülerinin bağlamda birikmesi** — token patlamasının ve yavaşlamanın mekanizması olarak adıyla
+gösteriliyor. Yanında DOM ağacı yönetimi kaynaklı yavaşlama ve **kota izleme ihtiyacı** (topluluk kendi
+çözümlerini yazmış).
+
+**Tarayıcı kontrolünün kullanıcıdan alınması.** Zorunlu sekme gruplama, **odak çalma ve yetim sekmeler**,
+çoklu profil hedeflemenin imkânsızlığı.
+
+**İzin modeli.** _"Eylemden önce sor"_ o kadar kaba ki **kullanıcılar kapatıyor** — güvenlik özelliğinin
+kullanılabilirlik yüzünden devre dışı bırakılması, bu belgedeki en öğretici tek bulgu. Yanında ekran
+görüntülerinin yarattığı gizlilik riski: oturum-açık ekranın kaydı.
+
+### Tepegöz'e taşınanlar
+
+- **Sağlık paneli** (sağlayıcı anahtarı, model erişilebilirliği, MCP sunucuları, yerel model) →
+  [S8](../../phases/ai-agent/phase-s8-assistant-ux.md) PR7. Doğrudan "kurulu ama çalışmıyor" kümesinden.
+- **İzin hata-ayıklama görünümü** → S8 PR7. Kaba onay modelinin cevabı onayı _kaldırmak_ değil,
+  **gerekçesini göstermek** ve kapsamlı/hatırlanan grant vermek — burada `plan-grant-scope` ve
+  remembered grants zaten bu.
+- **Bağlam tahliyesi (screenshot eviction)** → [S7](../../phases/ai-agent/phase-s7-speed.md) PR6; kural
+  genel, ekran görüntüsü akut vakası. **S10 görü sevk edilmeden önce** yazılması gereken şey.
+- **Görsel kazımadan yapılandırılmış otomasyona (WebMCP)** → [S2](../../phases/ai-agent/phase-s2-perception-v2.md)
+  PR6'nın spike'ı doğrudan bu öneriden; cevabı bilinçli olarak "araştır, benimseme".
+- **Odak çalmama / arka planda park** → burada zaten sevk edildi (parked-off-screen).
+- **Çoklu profil hedefleme** → [multi-profile-isolation](../tracks/multi-profile-isolation.md) track'i.
+- **Türkçe eksikliği** her iki çalışmada da destek-maliyeti ve benimseme sorunu olarak listeleniyor;
+  burada bir kapı (ADR-0016 en+tr parity).

@@ -73,3 +73,37 @@ mod geçişi** (yetki sınırı).
 - [Opera Neon goes into deep research mode (ODRA) — Opera Blog](https://blogs.opera.com/news/2025/10/opera-neon-deep-research-agent-odra/)
 - [Opera Neon Browser Drops Waitlist, Adds Deep Research Agent — MacRumors](https://www.macrumors.com/2025/12/11/opera-neon-ai-browser-ends-waitlist/)
 - [Opera opens public access to Opera Neon — Opera Limited IR](https://investor.opera.com/news-releases/news-release-details/opera-opens-public-access-opera-neon-its-experimental-agentic-ai)
+
+---
+
+## Kullanıcı geri bildirimi korpusu (2026-08 içe aktarımı)
+
+> Bu bölüm, ayrı duran `competitors/opera-neon.md` içe aktarımının bu belgeye katlanmış hâli. İki
+> şikâyet dalgasını kapsıyor: **2017 Neon** (terk edilen konsept tarayıcı) ve **2025–26 Neon** (bugünkü
+> ajanik ürün). Ayrımı korumak önemli, çünkü eski dalganın şikâyetleri artık geçerli değil.
+
+| Kategori               | Kodlanan şikâyet | Ciddiyet       | Öz                                                                                           |
+| ---------------------- | ---------------: | -------------- | -------------------------------------------------------------------------------------------- |
+| Özellikler             |               11 | Yüksek         | Eski: adblock/VPN/bookmark import eksik. Yeni: AI özelleştirme ve daha derin özetleme talebi |
+| UI/UX                  |               10 | Orta-Yüksek    | Yeni dalgada AI yüzeyleri **küçük, dağınık, keşfedilemez**                                   |
+| Uyumluluk / kararlılık |                9 | **Çok Yüksek** | Yeni: **görev sırasında kopma**                                                              |
+| Güncelleme / destek    |                8 | **Çok Yüksek** | Eski Neon'un terk edilmesi en kalıcı şikâyet                                                 |
+| Eklentiler             |                5 | Yüksek         | Neredeyse tamamı eski Neon'a ait                                                             |
+| Performans             |                5 | Yüksek         | "Rakiplerden yavaş", "**uykudan sonra görev kopuyor**"                                       |
+| Güvenlik / gizlilik    |                4 | **Çok Yüksek** | Yeni Neon'da veri akışı ve AI'ye kontrol verme tedirginliği                                  |
+| Fiyat algısı           |                3 | Orta-Yüksek    | $19.90/ay, rakiplerde AI ücretsizleşirken                                                    |
+
+**Raporun kendi en yüksek getirili kombinasyonu:** _görev dayanıklılığı + hız + açıklanabilir/izlenebilir
+ajans._ Kritik iki öneri "görev dayanıklılığı ve devamlılık mekanizması" ile "uçtan uca tamamlama oranı".
+
+### Tepegöz'e taşınanlar
+
+- **Uyku/kesinti sonrası koşunun kopmaması** → Faz 1b'nin dayanıklı checkpoint/resume hattı; yüzeyi
+  [S8](../../phases/ai-agent/phase-s8-assistant-ux.md) PR7'nin "resume from a step" satırı.
+- **Şeffaf izinler + eylem günlüğü + hassas adım onayı** → burada zaten kernel kuralı; S8 PR7'nin
+  permission-debug view satırı bunun görünür yarısı.
+- **Keşfedilebilirlik** (küçük AI düğmesi, kısayol yokluğu) → S8 PR7 discoverability pass.
+- **Fiyat/değer algısı** → Faz 3'ün yönetilen abonelik tasarımına girdi; ücretsiz katmanın varlığı bir
+  ürün kararı olarak kaydedildi.
+- Mod isimlerinin bağımsız yakınsaması (Chat/Do/Make) ve Intelligent Mode / ODRA için bu belgenin üst
+  bölümlerine bakın — onlar 2026-09 nesli.

@@ -105,14 +105,14 @@ Targets are **derived from S0's baseline** and **pre-registered in PR1 before an
 
 ### PR6 — Rival-evidence cost + resource work (Comet · Claude for Chrome · Fellou · Atlas)
 
-> **Where this came from.** [Comet](../../docs/research/imported/competitors/perplexity-comet.md)
+> **Where this came from.** [Comet](../../docs/research/research-perplexity-comet.md)
 > (high CPU, battery drain, crash/freeze loops, "agentic sluggishness" — a task the user could have done
 > faster by hand), the Claude-extension studies
-> ([A](../../docs/research/imported/competitors/claude-extension-chatgpt.md),
-> [B](../../docs/research/imported/competitors/claude-extension-gemini.md)) — where **Base64 screenshots
+> ([A](../../docs/research/research-claude-for-chrome.md),
+> [B](../../docs/research/research-claude-for-chrome.md)) — where **Base64 screenshots
 > accumulating in context** are named as the mechanism behind token blow-up and slowdown —
-> [Fellou](../../docs/research/imported/competitors/fellou.md) (linear step-by-step execution;
-> dependency-aware parallelism as the fix), and [Atlas](../../docs/research/imported/competitors/atlas.md)
+> [Fellou](../../docs/research/research-fellou.md) (linear step-by-step execution;
+> dependency-aware parallelism as the fix), and [Atlas](../../docs/research/research-atlas.md)
 > (white screens and high RAM on dynamic sites).
 >
 > Two of these this phase's existing PRs already target (decision encoding, validation cadence). The rest is

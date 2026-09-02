@@ -90,7 +90,7 @@ sync-meta + ModelTransport), there is NO rewrite.
 
 #### Sync correctness bar (rival evidence: Brave)
 
-> **Where this came from.** [`docs/research/imported/competitors/brave.md`](../../docs/research/imported/competitors/brave.md).
+> **Where this came from.** [`../../docs/research/research-brave.md`](../../docs/research/research-brave.md).
 > Sync is Brave's **most-repeated complaint** despite privacy being its whole pitch — chains that break and
 > force a full re-pair on every device, links saved on the phone never arriving on the desktop, and the one
 > that names a specific bug: _"sildiklerim sonra tekrar geliyor"_ — **deletions resurrect**. That is a

@@ -133,12 +133,12 @@ Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. N
 ### PR7 — Rival-evidence UX gaps (Atlas · Fellou · Comet · Neon · Claude for Chrome)
 
 > **Where this came from.** Four rival user-feedback studies —
-> [Atlas](../../docs/research/imported/competitors/atlas.md),
-> [Fellou](../../docs/research/imported/competitors/fellou.md),
-> [Comet](../../docs/research/imported/competitors/perplexity-comet.md),
-> [Opera Neon](../../docs/research/imported/competitors/opera-neon.md) — plus two independent studies of
-> the Claude Chrome extension ([A](../../docs/research/imported/competitors/claude-extension-chatgpt.md),
-> [B](../../docs/research/imported/competitors/claude-extension-gemini.md)). Read together they say the same
+> [Atlas](../../docs/research/research-atlas.md),
+> [Fellou](../../docs/research/research-fellou.md),
+> [Comet](../../docs/research/research-perplexity-comet.md),
+> [Opera Neon](../../docs/research/research-opera-neon.md) — plus two independent studies of
+> the Claude Chrome extension ([A](../../docs/research/research-claude-for-chrome.md),
+> [B](../../docs/research/research-claude-for-chrome.md)). Read together they say the same
 > thing in five different products: **the agent's competence is not what users complain about — its
 > illegibility is.** "Something seems to have gone wrong", hidden intermediate states, credits burned on a
 > failure that was the tool's fault, and a permission prompt that never remembers.

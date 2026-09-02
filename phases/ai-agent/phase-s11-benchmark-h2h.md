@@ -108,12 +108,12 @@
 ### PR6 — Failure-mode stratum from documented rival complaints (fixture work; freeze with PR0)
 
 > **Where this came from.** Six rival user-feedback studies —
-> [Atlas](../../docs/research/imported/competitors/atlas.md),
-> [Fellou](../../docs/research/imported/competitors/fellou.md),
-> [Comet](../../docs/research/imported/competitors/perplexity-comet.md),
-> [Opera Neon](../../docs/research/imported/competitors/opera-neon.md), and the two Claude-extension
-> studies ([A](../../docs/research/imported/competitors/claude-extension-chatgpt.md),
-> [B](../../docs/research/imported/competitors/claude-extension-gemini.md)).
+> [Atlas](../../docs/research/research-atlas.md),
+> [Fellou](../../docs/research/research-fellou.md),
+> [Comet](../../docs/research/research-perplexity-comet.md),
+> [Opera Neon](../../docs/research/research-opera-neon.md), and the two Claude-extension
+> studies ([A](../../docs/research/research-claude-for-chrome.md),
+> [B](../../docs/research/research-claude-for-chrome.md)).
 >
 > **Why this belongs in the benchmark and not in a marketing page.** The H2H currently samples general web
 > tasks, which measures the average case. What every one of these reports supplies is the **specific case each

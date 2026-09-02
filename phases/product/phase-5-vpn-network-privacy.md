@@ -175,8 +175,8 @@ endpoint** (one loopback port per active connection), never an OS-level system p
         precisely the pattern Tor Browser tells users to avoid, because correlated activity across the two
         can re-link the anonymous session. This is a **thesis-level** consequence of the per-tab model, not
         a bug, and the disclosure copy has to say it plainly: a Tor-routed tab is not a Tor Browser session.
-  - Source: [`docs/research/imported/privacy/tor-browser-security.md`](../../docs/research/imported/privacy/tor-browser-security.md)
-    and [`docs/research/imported/privacy/tor-network-security.md`](../../docs/research/imported/privacy/tor-network-security.md).
+  - Source: [`../../docs/research/research-tor-browser.md`](../../docs/research/research-tor-browser.md)
+    and [`../../docs/research/research-secure-browser-design.md`](../../docs/research/research-secure-browser-design.md).
 
 ### L8 — Security Kernel (egress + kill-switch)
 
@@ -234,9 +234,9 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 
 ### L10 — Where the tunnel's promise meets fingerprinting (rival evidence: Brave, Tor Browser)
 
-> **Where this came from.** [`docs/research/imported/privacy/fingerprinting.md`](../../docs/research/imported/privacy/fingerprinting.md)
+> **Where this came from.** [`../../docs/research/research-fingerprinting.md`](../../docs/research/research-fingerprinting.md)
 > and the Shields/farbling comparison in
-> [`docs/research/imported/competitors/brave.md`](../../docs/research/imported/competitors/brave.md).
+> [`../../docs/research/research-brave.md`](../../docs/research/research-brave.md).
 >
 > **The engine is not this phase's.** Fingerprinting protection is already owned by
 > [Phase 2 → L10 Safe-Browsing Suite](phase-2-adapters-safe-browsing.md), where the research detail and the
@@ -258,7 +258,7 @@ endpoint** (one loopback port per active connection), never an OS-level system p
       standard inputs to anti-bot and reputation systems, and all three survive every tunnel this phase
       builds. Decide and record whether Tepegöz normalizes any of them; if it does not, the disclosure
       copy says so rather than letting "routed through Tor" imply more than it delivers.
-      Source: [`docs/research/imported/privacy/cross-profile-tracking.md`](../../docs/research/imported/privacy/cross-profile-tracking.md)
+      Source: [`../../docs/research/research-cross-profile-tracking.md`](../../docs/research/research-cross-profile-tracking.md)
 - [ ] **ECH (Encrypted Client Hello) — the biggest remaining plaintext leak this phase does not close.**
       A tunnel hides the address; TLS still announces **which host** is being visited in the ClientHello's
       SNI, in cleartext, to anything on the path. ECH encrypts it. Two honest constraints go with it: ECH's
@@ -276,13 +276,13 @@ endpoint** (one loopback port per active connection), never an OS-level system p
       id and its migration behaviour exist to _reduce_ linkability across network changes, but an
       implementation that rotates in a distinctive way turns the same mechanism into a fingerprint. Decide
       the posture deliberately alongside the TLS-fingerprint row above; they are one question, not two.
-      Source: [`docs/research/imported/privacy/isp-tracking.md`](../../docs/research/imported/privacy/isp-tracking.md) and
-      [`docs/research/imported/privacy/vpn-security.md`](../../docs/research/imported/privacy/vpn-security.md).
+      Source: [`../../docs/research/research-isp-tracking.md`](../../docs/research/research-isp-tracking.md) and
+      [`../../docs/research/research-vpn-security.md`](../../docs/research/research-vpn-security.md).
 - [ ] **An agent-driven tab has a rhythm.** Automated request timing is a signal on its own, and it is
       the one this project generates by existing. Cross-reference the countermeasures already in
       [`packages/human-input`](../../packages/human-input) (randomized inter-action idle, real gestures)
       and state whether they extend to request pacing or only to input events —
-      [`docs/research/imported/privacy/automation-detection.md`](../../docs/research/imported/privacy/automation-detection.md) is the
+      [`../../docs/research/research-automation-detection.md`](../../docs/research/research-automation-detection.md) is the
       analysis of how that detection works
 - [ ] **Agent-driven tabs, stated honestly.** Automation timing is itself a signal. Decide and document whether
       a driven tab may claim the same posture as a human-driven one, or whether the badge must say it is more
@@ -290,7 +290,7 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 
 ### Network-privacy onboarding & health (rival evidence: Freenet)
 
-> **Where this came from.** [`docs/research/imported/privacy/freenet.md`](../../docs/research/imported/privacy/freenet.md).
+> **Where this came from.** [`../../docs/research/research-freenet.md`](../../docs/research/research-freenet.md).
 > Freenet is the cautionary case, not a competitor: strong anonymity engineering that users abandoned over
 > **setup, packaging, unreadable errors and silent connection death** — roughly 35% of its complaints are
 > install/usability, versus 10% about anonymity itself. Phase 5a currently expects the user to bring a
@@ -321,7 +321,7 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 - [ ] _Independent confirmation:_ the Tor complaint corpus reaches the **same** conclusion Freenet's does —
       the heaviest user pain is not anonymity theory, it is installing, connecting and staying connected.
       Two unrelated anonymity products failing the same way is the strongest evidence this section has.
-      Source: [`docs/research/imported/privacy/tor-browser.md`](../../docs/research/imported/privacy/tor-browser.md).
+      Source: [`../../docs/research/research-tor-browser.md`](../../docs/research/research-tor-browser.md).
 
 ### 5b — Managed own-infra (optional; rides the Phase 3 backend)
 
