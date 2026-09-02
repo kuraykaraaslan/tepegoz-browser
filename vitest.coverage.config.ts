@@ -115,6 +115,9 @@ export default defineConfig({
         // added ai-panels cost, the network-privacy connection manager, the site-trust profile
         // list, and the per-key model picker.
         //
+        // Round 7 (solo): the agent-IPC facade + before-quit abort (fail-safe HITL deny), the
+        // extension-IPC schema boundary (adblock/typo/user-agent). floor(measured) S46→47 / L46→47.
+        //
         // Round 6 (solo): the page context menu (selection cap, wire-context x/y stripping, every wired
         // action route), REAL_PAGE_HOSTS exact set, and the Phase 5 network-state group-route logic
         // (Tor-chained-through-VPN split, dead route, binary status). floor(measured) S45→46 / L45→46.
@@ -128,7 +131,7 @@ export default defineConfig({
         // clear-browsing-data IPC (vault never in scope, every browsing partition, partial-failure
         // resilient, journalled), agent conversation-history + active-tab helper IPC (agentPickFiles
         // 5-file/5-MB cap, text vs base64), and the trusted-origin desktop adapter binding.
-        'apps/desktop/**': { statements: 46, branches: 85, functions: 61, lines: 46 },
+        'apps/desktop/**': { statements: 47, branches: 85, functions: 61, lines: 47 },
       },
       include: [
         'apps/desktop/src/**',
