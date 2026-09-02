@@ -126,6 +126,8 @@ export const tr: Resources = {
     downloadFileMissing: 'İndirilen dosya diskte bulunamadı.',
     downloadNoActivePage: 'İndirmeye başlamadan önce bir web sayfası açın.',
     downloadNotRetryable: 'Yalnızca başarısız veya iptal edilmiş bir indirme yeniden denenebilir.',
+    downloadAlreadyComplete: 'Bu indirme zaten tamamlandı — sürdürülecek bir şey yok.',
+    downloadMustRestart: 'Bu indirme sürdürülemez ve baştan başlaması gerekiyor.',
     uploadNotFound: 'Bu yükleme artık listede yok.',
     uploadNoActivePage: 'Yüklemeye başlamadan önce bir web sayfası açın.',
     unsupportedCommand: 'Bu işlem burada desteklenmiyor.',

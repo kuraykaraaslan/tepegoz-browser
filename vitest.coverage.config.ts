@@ -90,7 +90,19 @@ export default defineConfig({
         // full branch coverage (save/reload/kiosk/fullscreen paths that had never run); and
         // `chrome-url.ts`, `launch-at-login.ts`, `popup-window.ts` (placement geometry) and the
         // desktop `download-service-store` shared-state helpers got their first tests.
-        'apps/desktop/**': { statements: 25, branches: 79, functions: 52, lines: 25 },
+        //
+        // Ratcheted again 2026-09-02 to floor(measured) S38.94 / B84.93 / F57.15 / L38.94, after a
+        // parallel two-branch coverage push: MAIN got behavioural suites for the boundary modules
+        // whose docblock guarantee had never executed — crash-reporter-boot, database-repair,
+        // safe-mode, the five download-service facets, remembered-grant-scope (S9), basic-auth-broker,
+        // recovery-notices, chrome-ready, app-surfaces, public-settings-host, power-lifecycle,
+        // tabs-popup-policy (the will-navigate scheme guard), hardware-acceleration-boot (fail-safe),
+        // application-menu (no devtools/zoom/close role), notification-host, and the ipc-trust +
+        // ipc-bookmark-profiles IPC boundaries. RENDERER got ~34 component/hook suites (registry,
+        // useExtensionCatalog, the six tepegoz:// page surfaces, ClearBrowsingDataRow,
+        // command-palette-host, NetworkRoutesCard, and the settings sections —
+        // startup/accessibility/tray/shortcuts/default-browser/agent-controls/adaptors/system).
+        'apps/desktop/**': { statements: 38, branches: 84, functions: 57, lines: 38 },
       },
       include: [
         'apps/desktop/src/**',

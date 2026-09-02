@@ -137,6 +137,8 @@ export const en = {
     downloadFileMissing: 'The downloaded file could not be found on disk.',
     downloadNoActivePage: 'Open a web page before starting a download.',
     downloadNotRetryable: 'Only a failed or canceled download can be retried.',
+    downloadAlreadyComplete: 'That download already finished — there is nothing left to resume.',
+    downloadMustRestart: 'That download cannot be resumed and has to start again.',
     uploadNotFound: 'That upload is no longer in the list.',
     uploadNoActivePage: 'Open a web page before starting an upload.',
     unsupportedCommand: 'That action is not supported here.',
