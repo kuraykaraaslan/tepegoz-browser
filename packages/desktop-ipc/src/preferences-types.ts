@@ -188,6 +188,8 @@ export interface Preferences {
   downloadDirectory: string;
   /** Ask for a target path before each user-initiated browser download. */
   downloadAskEachTime: boolean;
+  /** Categories cleared when the browser closes; empty is off. Same vocabulary as the clear dialog. */
+  clearOnExit: ('history' | 'downloads' | 'cookies' | 'cache' | 'agentHistory')[];
   /** How long a finished download stays in the LIST. Files on disk are never involved. */
   downloadHistoryRetention: 'manual' | 'after-day' | 'on-completion';
   /** Open the transfers panel when a transfer reaches its end. */

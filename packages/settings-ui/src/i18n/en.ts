@@ -342,6 +342,13 @@ export const en = {
     // time-scoped clear for cookies or the cache, and a range that appeared to cover them would
     // mislead in the direction that costs data.
     allTimeOnly: 'Cleared entirely — the time range does not apply to this.',
+    onExitTitle: 'Clear when Tepegöz closes',
+    onExitDesc:
+      'Chosen categories are cleared every time the browser closes. Nothing is selected by default.',
+    // Worth saying, because it is the difference from how other browsers ship this: a quit handler
+    // cannot run if the process was killed, so this one also finishes on the next launch.
+    onExitNote:
+      'If the browser is closed unexpectedly, the clear is finished the next time it starts.',
     confirm: 'Clear data',
     clearing: 'Clearing…',
     // Counts rather than "Done": a clear that reports success with nothing behind it is the one

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { EXTENSION_ID_RE } from '@tepegoz/extension-sdk';
 import {
+  BrowsingDataCategorySchema,
   ChromiumFlagOverridesSchema,
   NetworkConnectionSchema,
   NetworkGeneralBindingSchema,
@@ -168,6 +169,13 @@ export const PreferencesSchema = z.object({
   // persisting any user-picked directory.
   downloadDirectory: z.string().max(1024),
   downloadAskEachTime: z.boolean(),
+  /**
+   * Categories cleared when the browser closes. Empty (the default) is off.
+   *
+   * Reuses the "Clear browsing data" categories rather than inventing a second list: two vocabularies
+   * for the same act is how one of them ends up quietly narrower than the other.
+   */
+  clearOnExit: z.array(BrowsingDataCategorySchema).max(8),
   /**
    * How long a finished download stays in the list. `manual` is the default and the only one that
    * never deletes anything on its own — a download list that quietly empties itself is a list the
@@ -393,6 +401,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   },
   downloadDirectory: '',
   downloadAskEachTime: false,
+  clearOnExit: [],
   downloadHistoryRetention: 'manual',
   showDownloadsWhenDone: true,
   extensions: [],

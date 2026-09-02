@@ -25,7 +25,8 @@ import { installApplicationMenu } from './menus/application-menu';
 import { isQuitting, markQuitting } from './quit-state';
 import { emitSystemPause, emitSystemResume } from './power-lifecycle';
 import PreferenceStore from '@tepegoz/preferences';
-import { closeDatabase } from './db/database.electron';
+import { closeDatabase, getDb } from './db/database.electron';
+import { clearOnExitNow, settleClearOnExit } from './privacy/clear-on-exit.electron';
 import TabManager from './tabs';
 import { extractLaunchUrl } from './launch-url';
 import { openPageContextMenu } from './menus/page-context-menu';
@@ -189,8 +190,11 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   void app
+    // `async` for one reason, and it is load-bearing: the clear-on-exit settle below must finish
+    // before the first window exists. A window opening onto data the user asked to be rid of, even
+    // for a frame, is the failure that setting is bought to prevent.
     .whenReady()
-    .then(() => {
+    .then(async () => {
       // macOS: the BrowserWindow `icon` is ignored (the dock uses the app bundle), so set it here
       // for dev/unpackaged runs. Windows/Linux get the brand icon via the window itself.
       // The embedded engine, logged once per run. ADR-0019 governs how quickly a Chromium security
@@ -210,6 +214,11 @@ if (!app.requestSingleInstanceLock()) {
       // `protocol.handle` must be called after whenReady — see phases/tracks/protocol-tepegoz-pages.md.
       registerInternalPagesProtocol();
       initStores();
+      // "Clear when the browser closes", settled before anything reads the profile: if the previous
+      // session was killed rather than quit, its clear is owed and is done now. Then the marker is
+      // armed for this session. Awaited — a window opening onto data the user asked to be rid of,
+      // even for a frame, is the failure this setting exists to prevent.
+      await settleClearOnExit(getDb());
       // Safe mode (ADR-0038 rung 3): `--safe-mode`, or two consecutive launches that died before proving
       // themselves healthy. It switches off the four subsystems most likely to be WHY they died —
       // extensions, the agent runtime, MCP, and session restore — and keeps everything the user needs to
@@ -470,6 +479,9 @@ if (!app.requestSingleInstanceLock()) {
     void McpService.stop();
     PopupWindowManager.close();
     TabManager.persistNow();
+    // Fire-and-forget on purpose: Electron may take the process down mid-clear, and the startup
+    // marker is what makes that survivable. A quit the user asked for is never blocked on this.
+    clearOnExitNow(getDb());
   });
   app.on('will-quit', () => {
     closeDatabase();

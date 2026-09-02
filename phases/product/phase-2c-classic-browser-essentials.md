@@ -446,9 +446,26 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         write and would sweep a long transfer begun yesterday into an hour-long range. Terminal
         downloads only — a running one's row is what tracks it. 13 tests across the three stores and the
         pure range/boundary layer._
-  - [ ] **On-exit category-based clearing** is still unbuilt (the third row of §6 in the gap track). It
-        needs a preference, a quit-time hook that runs before teardown, and a decision about what
-        happens when the app is killed rather than quit — none of which this dialog implies.
+  - [x] **On-exit category-based clearing** (§6's third row) — _built 2026-09-02, the day after the
+        dialog, reusing its categories rather than inventing a second vocabulary: two lists for the
+        same act is how one of them ends up quietly narrower._
+        — _**The "what if it is killed" question had an answer worth taking.** Firefox and Brave both
+        run this in a quit handler, so a crash, a `kill`, or a flat battery leaves everything behind:
+        the setting does nothing on the one exit the user did not choose, and says nothing about it.
+        Here a marker in `meta` is armed at startup and retired only by a clear that actually
+        FINISHED. So the normal case still clears at exit (which is what the setting says, and it
+        means the data is gone while the app is closed), and every abnormal case is caught at the next
+        launch — settled before the first window exists, because a window opening onto data the user
+        asked to be rid of, even for a frame, is the failure this setting is bought to prevent._
+        — _**The quit hook is deliberately not awaited.** Electron may take the process down mid-clear;
+        that is precisely what the marker makes survivable, and a quit the user asked for is never
+        blocked on housekeeping. Doing the clear twice is the worst outcome, and for a delete that is
+        not a cost._
+        — _**A marker that cannot be read is not a licence to delete something we cannot name**: an
+        unparseable marker clears nothing, and a category a future build stopped knowing about is
+        dropped rather than guessed at. Both pinned by tests._
+        — _The UI says the kill-safety out loud in en+tr, because it is the difference from how every
+        other browser ships this and an unstated guarantee is not one. 9 tests._
 - [ ] **File-type / MIME handler actions** ("Open in app / Always ask / Save / Open in browser" per type;
       "automatically open safe files after downloading"). No home in the Download Manager work above.
       Scoped, not scheduled: [`../tracks/browser-settings-feature-gap.md`](../../docs/tracks/browser-settings-feature-gap.md) §15.

@@ -28,6 +28,51 @@ import {
  */
 const DEFAULT_SELECTION: BrowsingDataCategory[] = ['history', 'cookies', 'cache'];
 
+/**
+ * "Clear when Tepegöz closes" — the same category vocabulary, applied on the way out.
+ *
+ * The note under it is not filler. Every other browser runs this in a quit handler, so a crash or a
+ * `kill` leaves everything behind: the setting silently does nothing on the one exit the user did not
+ * choose. This one is finished at the next launch when that happens, and saying so is what makes the
+ * difference worth having.
+ */
+export function ClearOnExitRow({
+  s,
+  selected,
+  onChange,
+}: {
+  s: SettingsStrings;
+  selected: readonly BrowsingDataCategory[];
+  onChange: (next: BrowsingDataCategory[]) => void;
+}) {
+  const t = s.clearData;
+  return (
+    <div>
+      <p className="text-sm font-medium text-text-primary">{t.onExitTitle}</p>
+      <p className="mb-2 text-xs text-text-secondary">{t.onExitDesc}</p>
+      <div className="grid gap-1.5">
+        {BROWSING_DATA_CATEGORIES.map((category) => (
+          <label key={category} className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={selected.includes(category)}
+              onChange={() => {
+                onChange(
+                  selected.includes(category)
+                    ? selected.filter((c) => c !== category)
+                    : [...selected, category],
+                );
+              }}
+            />
+            <span className="text-text-primary">{t.categories[category]}</span>
+          </label>
+        ))}
+      </div>
+      <p className="mt-2 text-xs text-text-secondary">{t.onExitNote}</p>
+    </div>
+  );
+}
+
 export function ClearBrowsingDataRow({ s }: { s: SettingsStrings }) {
   const t = s.clearData;
   const [open, setOpen] = useState(false);

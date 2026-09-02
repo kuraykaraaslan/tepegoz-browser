@@ -99,7 +99,7 @@ Legend: **C** Chrome · **B** Brave · **S** Safari · **F** Firefox · _all_ = 
 | ----------------------------------------------------------------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------- | ---- |
 | ~~**Unified "Clear browsing data" dialog with a time range** (last hour / 24 h / 7 days / 4 weeks / all time)~~ **Built 2026-09-02**                                    | all      | Settings → Privacy, one dialog                                                     | 2c ✅ |
 | ~~One place with the full category list~~ **Built 2026-09-02** — history, downloads, cookies/site data, cache, agent conversations. Passwords deliberately excluded (see the phase note); form data / site settings / hosted-app data are not stored separately yet | C/B/F    | one place                                                                          | 2c ✅ |
-| **On-exit category-based clearing**                                                                                                       | B/F      | —                                                                 | 2c   |
+| ~~**On-exit category-based clearing**~~ **Built 2026-09-02** — and it survives a kill, which the Firefox/Brave versions do not: a marker armed at startup is retired only by a clear that finished | B/F      | Settings → Privacy | 2c ✅ |
 
 ## 7. Security
 

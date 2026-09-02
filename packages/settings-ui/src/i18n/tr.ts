@@ -338,6 +338,12 @@ export const tr: SettingsStrings = {
       agentHistory: 'Ajan konuşmaları',
     },
     allTimeOnly: 'Tamamen temizlenir — zaman aralığı buna uygulanmaz.',
+    onExitTitle: 'Tepegöz kapanınca temizle',
+    onExitDesc:
+      'Seçilen kategoriler tarayıcı her kapandığında temizlenir. Varsayılan olarak hiçbiri seçili değildir.',
+    // Diğer tarayıcılardan farkı burada: süreç öldürülmüşse çıkış kancası çalışamaz; bu yüzden bu
+    // temizlik bir sonraki açılışta da tamamlanır.
+    onExitNote: 'Tarayıcı beklenmedik şekilde kapanırsa temizlik bir sonraki açılışta tamamlanır.',
     confirm: 'Verileri temizle',
     clearing: 'Temizleniyor…',
     cleared: '{history} geçmiş kaydı, {downloads} indirme, {agent} ajan konuşması temizlendi.',
