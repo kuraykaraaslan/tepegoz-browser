@@ -355,7 +355,7 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
 
 ### L9 — Bookmarks 2.0
 
-- [ ] Extend the flat `BookmarkStore` (Phase 1a) with **folders/tags hierarchy** + full-text search
+- [x] Extend the flat `BookmarkStore` (Phase 1a) with **folders/tags hierarchy** + full-text search
       (migration-safe, additive schema; existing bookmarks preserved)
   - [x] Folder hierarchy + search: `BookmarkTreeStore` (two fixed roots, create/move/remove, explicit
         ordering, cycle guard on reparent, cascade delete, root-protection, `listFlat` projection,
@@ -395,7 +395,7 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         unexplainable._
         — _24 tests (17 store/normalization + 7 UI), mutation-verified: dropping the fold turns 7 red,
         removing tags from search 2, removing `DISTINCT` 1, letting folders be tagged 1._
-- [ ] **Bookmark Manager UI** (searchable tree; create/rename/move/delete folders; import/export standard
+- [x] **Bookmark Manager UI** (searchable tree; create/rename/move/delete folders; import/export standard
       HTML bookmarks file)
   - [x] `@tepegoz/bookmarks-ui` + `tepegoz://bookmarks`: searchable tree, new-folder, drag reorder/reparent
         (dnd-kit), rename/delete through the host's native context menu.
@@ -405,6 +405,34 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         purpose: a JSON dump would be a backup only this application can restore, which is the shape of
         lock-in that looks like a feature. The parser reads what the serializer writes, so the round
         trip is checked rather than asserted._
+  - [x] **What "full-text search" means here, said plainly.** _Substring matching over case-folded
+        shadow columns (title, URL, tags), not an FTS5 index — and that is the choice, not a shortcut.
+        A tokenized index cannot find `moz` inside `mozilla.org` without the user writing `moz*`, and
+        typing a fragment of a domain is the single most common way people search their own bookmarks.
+        The corpus is hundreds to low thousands of rows, where an inverted index buys nothing an index
+        scan does not already give. Ticked with the mechanism named rather than left to be read as a
+        promise of ranking and stemming that is not there._
+  - [x] **Turkish search in the STORE, which was still broken after the manager was fixed.**
+        _`BookmarkTreeStore.search` was `url LIKE ? OR title LIKE ? OR tag_key LIKE ?`, and SQLite's
+        LIKE folds ASCII only: "İSTANBUL Gezisi" was unreachable by typing `istanbul`, "ISPARTA" by
+        typing `ısparta`, "Şişli" by typing `sisli`. Not an error — an empty result list, which a user
+        reads as "you have no such bookmark"._
+        — _**Why it survived a fix that was already made.** The manager filters the loaded tree in the
+        RENDERER with `foldForSearch`, and that surface has had a Turkish test since it was fixed. The
+        visible search worked, so nobody suspected the store under it. The same defect had already been
+        found and fixed for history in migration 16 — fixing one instance of a class and leaving the
+        other is exactly how a bug comes back, and this is the other one._
+        — _**Migration 17**, mirroring 16 exactly: `title_fold`/`url_fold` on `bookmark_nodes`,
+        `tag_fold` on `bookmark_tags`, folded in the WRITER with the product's one search rule
+        (`foldForSearch`), never SQLite `LOWER()`. `BookmarkTreeStore.reindexFoldsIfStale` backfills
+        rows written before it and re-folds after a `BOOKMARK_FOLD_VERSION` bump — one code path for
+        both, called at startup beside the history one, off the launch critical path._
+        — _**`tag_fold` sits BESIDE `tag_key`, and replacing it would have been a bug.** `tag_key` is
+        IDENTITY — it decides whether "Work" and "work" are one tag — and it must not strip accents, or
+        "is" and "iş" would silently become the same tag. `tag_fold` is SEARCH, where collapsing them is
+        precisely what the searcher wants. Pinned by a test that tags one bookmark both `İŞ` and `is`,
+        asserts it still has two tags, and asserts either query finds it._
+        — _9 tests; the fold runs before the `LIKE` escaping, so `%` and `_` are still literal text._
 - [x] **Import from Chrome/Firefox** — parse their exported Netscape-format HTML bookmarks (+ optional
       profile auto-detect); folder structure preserved; zod `safeParse` on each parsed entry (reuses the
       same import seam as the password Google-CSV provider already shipped)

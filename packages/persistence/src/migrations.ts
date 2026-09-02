@@ -552,6 +552,34 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 17,
+    up: (db) => {
+      // The same bug as v16, in the store v16 did not reach. `BookmarkTreeStore.search` was
+      // 'WHERE url LIKE ? OR title LIKE ? OR tag_key LIKE ?', and SQLite's LIKE folds ASCII only —
+      // so a bookmark titled "İSTANBUL Gezisi" was unreachable by typing "istanbul", and "ISPARTA"
+      // by typing "ısparta". The bookmarks MANAGER had already been fixed at the surface (it filters
+      // the loaded tree in the renderer with foldForSearch), which is exactly what hid this: the
+      // visible search worked, so the store underneath it was never suspected.
+      //
+      // `tag_fold` sits BESIDE `tag_key` rather than replacing it, because the two answer different
+      // questions and folding them together would be wrong. `tag_key` is IDENTITY — it decides
+      // whether "Work" and "work" are one tag — and it must not strip accents, or "is" and "iş"
+      // would become the same tag. `tag_fold` is SEARCH, where collapsing them is what the user
+      // wants: nobody reliably types `ı` vs `i` mid-search.
+      //
+      // DDL only, like v16. Existing rows are backfilled by BookmarkTreeStore.reindexFoldsIfStale at
+      // the next startup, which also owns re-folding after a BOOKMARK_FOLD_VERSION bump.
+      db.exec(`
+        ALTER TABLE bookmark_nodes ADD COLUMN title_fold TEXT NOT NULL DEFAULT '';
+        ALTER TABLE bookmark_nodes ADD COLUMN url_fold   TEXT NOT NULL DEFAULT '';
+        ALTER TABLE bookmark_tags  ADD COLUMN tag_fold   TEXT NOT NULL DEFAULT '';
+        CREATE INDEX idx_bmnodes_title_fold ON bookmark_nodes (title_fold);
+        CREATE INDEX idx_bmnodes_url_fold ON bookmark_nodes (url_fold);
+        CREATE INDEX idx_bookmark_tags_fold ON bookmark_tags (tag_fold);
+      `);
+    },
+  },
 ];
 
 /**

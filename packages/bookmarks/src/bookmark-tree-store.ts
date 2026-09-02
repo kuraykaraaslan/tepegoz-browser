@@ -1,6 +1,8 @@
 import type { Db } from '@tepegoz/persistence';
 // Node-free subpath — never the package barrel, which pulls `node:sqlite` into the renderer bundle.
 import { likeContains } from '@tepegoz/persistence/sql-like';
+import { MetaStore } from '@tepegoz/persistence';
+import { foldForSearch } from '@tepegoz/i18n';
 import { normalizeTags } from './bookmark-tags';
 
 // This module is reachable from the sandboxed RENDERER (it re-exports `isBookmarkable`), so it must not
@@ -10,6 +12,14 @@ import { normalizeTags } from './bookmark-tags';
 const randomUUID = (): string => crypto.randomUUID();
 
 /** Fixed root-folder ids (Chrome parity: two roots). Seeded by persistence migration v6. */
+/**
+ * Bump when {@link foldForSearch}'s output changes, so {@link BookmarkTreeStore.reindexFoldsIfStale}
+ * re-folds stored rows instead of leaving a search index built by a previous rule. v1 = the initial
+ * `title_fold` / `url_fold` / `tag_fold` shadow columns (migration 17).
+ */
+export const BOOKMARK_FOLD_VERSION = 1;
+const FOLD_VERSION_META_KEY = 'bookmark_fold_version';
+
 export const BOOKMARK_ROOT_BAR = 'root-bar';
 export const BOOKMARK_ROOT_OTHER = 'root-other';
 /** The two roots, in display order (bar first). Neither may be moved, renamed away, or deleted. */
@@ -135,8 +145,8 @@ export class BookmarkTreeStore {
     const order = [...siblings.slice(0, at), id, ...siblings.slice(at)];
     const run = db.transaction(() => {
       db.prepare(
-        `INSERT INTO bookmark_nodes (id, parent_id, node_type, title, url, favicon, position, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO bookmark_nodes (id, parent_id, node_type, title, url, favicon, position, created_at, updated_at, title_fold, url_fold)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).run(
         id,
         node.parentId,
@@ -147,6 +157,8 @@ export class BookmarkTreeStore {
         at * POSITION_GAP,
         now,
         now,
+        foldForSearch(node.title),
+        node.url === null ? '' : foldForSearch(node.url),
       );
       BookmarkTreeStore.renumber(db, order);
     });
@@ -172,17 +184,15 @@ export class BookmarkTreeStore {
   }
 
   static rename(db: Db, id: string, title: string): void {
-    db.prepare('UPDATE bookmark_nodes SET title = ?, updated_at = ? WHERE id = ?').run(
-      title,
-      Date.now(),
-      id,
-    );
+    db.prepare(
+      'UPDATE bookmark_nodes SET title = ?, title_fold = ?, updated_at = ? WHERE id = ?',
+    ).run(title, foldForSearch(title), Date.now(), id);
   }
 
   static setUrl(db: Db, id: string, url: string): void {
     db.prepare(
-      `UPDATE bookmark_nodes SET url = ?, updated_at = ? WHERE id = ? AND node_type = 'bookmark'`,
-    ).run(url, Date.now(), id);
+      `UPDATE bookmark_nodes SET url = ?, url_fold = ?, updated_at = ? WHERE id = ? AND node_type = 'bookmark'`,
+    ).run(url, foldForSearch(url), Date.now(), id);
   }
 
   /** Recursive delete (children cascade via FK). Refuses the two fixed roots. */
@@ -324,19 +334,58 @@ export class BookmarkTreeStore {
    * one result.
    */
   static search(db: Db, query: string, limit = 500): BookmarkEntry[] {
-    // `likeContains` escapes `%` / `_` so a query of "_" or "%" matches literally, not every
-    // bookmark (omnibox track § A3); each `LIKE ?` is paired with `ESCAPE '\'`.
-    const like = likeContains(query);
-    const tagLike = likeContains(query.normalize('NFC').replace(/\s+/g, ' ').trim().toLowerCase());
+    // Matched against the case-FOLDED shadow columns, never the raw text: SQLite's LIKE folds ASCII
+    // only, so "İSTANBUL Gezisi" was unreachable by typing `istanbul` and "ISPARTA" by typing
+    // `ısparta` — both ordinary words in this product's primary market, and both failing as an empty
+    // result list rather than an error, which reads as "you have no such bookmark".
+    //
+    // `likeContains` escapes `%` / `_` so a query of "_" or "%" matches literally, not every bookmark
+    // (omnibox track § A3); each `LIKE ?` is paired with `ESCAPE '\'`. Folding happens BEFORE the
+    // escaping, because the fold can only remove combining marks, never introduce a wildcard.
+    const like = likeContains(foldForSearch(query));
     return db
       .prepare(
         `SELECT DISTINCT n.url AS url, n.title AS title, n.favicon AS favicon, n.updated_at AS ts
          FROM bookmark_nodes n LEFT JOIN bookmark_tags t ON t.node_id = n.id
          WHERE n.node_type = 'bookmark' AND n.url IS NOT NULL
-           AND (n.url LIKE ? ESCAPE '\\' OR n.title LIKE ? ESCAPE '\\' OR t.tag_key LIKE ? ESCAPE '\\')
+           AND (n.url_fold LIKE ? ESCAPE '\\' OR n.title_fold LIKE ? ESCAPE '\\'
+                OR t.tag_fold LIKE ? ESCAPE '\\')
          ORDER BY n.updated_at DESC, n.rowid DESC LIMIT ?`,
       )
-      .all(like, like, tagLike, limit) as BookmarkEntry[];
+      .all(like, like, like, limit) as BookmarkEntry[];
+  }
+
+  /**
+   * Re-fold every searchable column when the stored fold version does not match
+   * {@link BOOKMARK_FOLD_VERSION}. One code path for two cases, mirroring
+   * `HistoryStore.reindexFoldsIfStale`: the initial backfill of rows written before migration 17 (the
+   * meta key is then unset), and a re-fold after {@link foldForSearch}'s rule changes. Idempotent —
+   * a matching marker makes it a no-op. Returns the number of rows refolded. Call once at startup,
+   * right after `migrate`.
+   */
+  static reindexFoldsIfStale(db: Db): number {
+    if (MetaStore.get(db, FOLD_VERSION_META_KEY) === String(BOOKMARK_FOLD_VERSION)) return 0;
+    const nodes = db.prepare('SELECT id, title, url FROM bookmark_nodes').all() as {
+      id: string;
+      title: string;
+      url: string | null;
+    }[];
+    const tags = db.prepare('SELECT rowid AS rid, tag FROM bookmark_tags').all() as {
+      rid: number;
+      tag: string;
+    }[];
+    const updateNode = db.prepare(
+      'UPDATE bookmark_nodes SET title_fold = ?, url_fold = ? WHERE id = ?',
+    );
+    const updateTag = db.prepare('UPDATE bookmark_tags SET tag_fold = ? WHERE rowid = ?');
+    db.transaction(() => {
+      for (const n of nodes) {
+        updateNode.run(foldForSearch(n.title), n.url === null ? '' : foldForSearch(n.url), n.id);
+      }
+      for (const t of tags) updateTag.run(foldForSearch(t.tag), t.rid);
+      MetaStore.set(db, FOLD_VERSION_META_KEY, String(BOOKMARK_FOLD_VERSION));
+    })();
+    return nodes.length + tags.length;
   }
 
   // ── Tags ──────────────────────────────────────────────────────────────────────────────────────
@@ -363,8 +412,10 @@ export class BookmarkTreeStore {
     const normalized = normalizeTags(tags);
     const write = db.transaction(() => {
       db.prepare('DELETE FROM bookmark_tags WHERE node_id = ?').run(nodeId);
-      const stmt = db.prepare('INSERT INTO bookmark_tags (node_id, tag, tag_key) VALUES (?, ?, ?)');
-      for (const t of normalized) stmt.run(nodeId, t.tag, t.key);
+      const stmt = db.prepare(
+        'INSERT INTO bookmark_tags (node_id, tag, tag_key, tag_fold) VALUES (?, ?, ?, ?)',
+      );
+      for (const t of normalized) stmt.run(nodeId, t.tag, t.key, foldForSearch(t.tag));
       db.prepare('UPDATE bookmark_nodes SET updated_at = ? WHERE id = ?').run(Date.now(), nodeId);
     });
     write();

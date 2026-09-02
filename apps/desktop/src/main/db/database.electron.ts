@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { app } from 'electron';
 import { Logger } from '@tepegoz/libs';
 import { HistoryStore, migrate, openDatabase, type Db } from '@tepegoz/persistence';
+import { BookmarkTreeStore } from '@tepegoz/bookmarks';
 
 /**
  * The single SQLite "DB connector" for the user-data directory (`%APPDATA%/tepegoz/tepegoz.db`): the
@@ -46,6 +47,12 @@ export function initDatabase(): void {
         // re-fold everything after a HISTORY_FOLD_VERSION bump. No-op once the version marker matches.
         const refolded = HistoryStore.reindexFoldsIfStale(opened);
         if (refolded > 0) Logger.info('Re-folded history search index', { rows: refolded });
+        // The same backfill for bookmarks (migration 17). Separate marker, same shape: bookmark rows
+        // written before it have empty fold columns and would be unsearchable until rewritten.
+        const bookmarksRefolded = BookmarkTreeStore.reindexFoldsIfStale(opened);
+        if (bookmarksRefolded > 0) {
+          Logger.info('Re-folded bookmark search index', { rows: bookmarksRefolded });
+        }
         // Startup retention pass — history is otherwise unbounded (one row per unique URL, forever).
         const pruned = HistoryStore.prune(opened, Date.now());
         if (pruned > 0) Logger.info('Pruned expired history entries', { pruned });
