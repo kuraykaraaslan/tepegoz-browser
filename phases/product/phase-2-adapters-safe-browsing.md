@@ -90,6 +90,22 @@
 > Automation makes a profile _more_ distinctive, not less — which is why the existing task pins the agent's own
 > runs to `standard`, and why the determinism/replay impact is called out: noise that changes per run collides
 > with the Event Journal's promise that a run can be replayed.
+>
+> **It is not actually a binary fork — there is a stated preference order, and it argues against leading with
+> noise.** W3C's own anti-fingerprinting guidance, and Firefox's practice, put **normalize / null / partition
+> ahead of randomization**: first shrink the entropy budget (standardize or simply refuse to answer a
+> high-entropy query, and partition what must be answered), and only then add controlled noise where a value
+> genuinely cannot be normalized. Randomization is the weaker default because **inconsistency is itself a
+> signal** — a profile whose canvas hash disagrees with its own GPU string is not anonymous, it is unusual.
+> The task above currently opens with "noise on canvas/WebGL/font/audio entropy"; the ADR should either
+> re-order that deliberately or record why farbling wins here. Two techniques that belong on the normalize
+> side and are not yet listed anywhere in this phase: **window/screen-size bucketing** (Tor Browser's
+> letterboxing — screen dimensions are high-entropy and cheap to bucket) and **language/`Accept-Language`
+> list narrowing**. Source:
+> [`research/privacy/vpn-security.md`](../../research/privacy/vpn-security.md) §WebRTC/ECH/QUIC and
+> [`research/privacy/tor-browser-security.md`](../../research/privacy/tor-browser-security.md);
+> Brave's farbling is re-read as a **counter-example** in
+> [`../../docs/research/research-brave.md`](../../docs/research/research-brave.md).
 
 Component priorities, taken from the report's own table (high effectiveness first, breakage noted):
 

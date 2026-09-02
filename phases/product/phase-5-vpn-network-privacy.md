@@ -139,6 +139,34 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 - [x] **Isolated circuits per connection** — one `tor` process per connection, each with its own `DataDirectory`, so two Tor connections take different paths by construction rather than by configuration. _New-circuit / rotation controls are not surfaced; `.onion` works because it is just a hostname the Tor SOCKS endpoint resolves._
 - [x] **Chained routes — "this group is on the VPN AND on Tor".** A group resolves to exactly one route, so the combination is Tor with the VPN's loopback SOCKS as its `Socks5Proxy`, exposing its own port for the group. The kill-switch composes for free: the upstream dropping kills Tor's outbound and cuts the group, with nothing coordinating the two. The upstream is resolved **lazily at connect time** (a restarted tunnel lands on a new port), and a cycle guard refuses a chain that loops back on itself.
 - [ ] **Exit-node = untrusted** assumption documented (ADR-0011 + threat model); force HTTPS-only / warn on cleartext over a Tor exit
+- [ ] **Bridges + pluggable transports (obfs4 / meek / Snowflake) — absent today, and this is the one Tor
+      gap that matters most for the primary market.** `TorProvider` already manages a `tor` process, so
+      bridge support is a config surface on something that ships, not new machinery: a bridge line is
+      unlisted in the directory, which is exactly what survives a country-level block of Tor's public relay
+      IPs. Without it, "Tor works" is true only where Tor is not blocked. Cost to state honestly in the UI:
+      bridges are slower.
+- [ ] **A "new identity" affordance.** Per-connection circuit isolation is landed, but nothing lets a user
+      say "burn this circuit and start clean" — Tor Browser's New Identity resets both the circuit and the
+      site state. Here the two halves already exist separately (a connection can be rebuilt; per-site data
+      clearing shipped in Phase 2), so the work is one honest action that does **both** and says which tabs
+      it will disturb.
+- [ ] **Write down what per-connection `DataDirectory` costs in entry guards.** Tor deliberately pins ~3
+      long-lived **guard** nodes per client, because rotating the entry point raises the chance of eventually
+      picking a hostile one. One `tor` process per connection, each with its own `DataDirectory`, means each
+      connection keeps its **own** guard set — and every connection a user deletes and recreates is a guard
+      rotation. That is a real anonymity consequence of a design chosen for isolation; ADR-0011 should state
+      the trade rather than leave it implicit.
+- [ ] **⚠️ Two shipped/planned behaviours contradict the Tor research and must be disclosed, not quietly
+      kept.** Both are defensible product choices; neither is defensible if the UI implies otherwise:
+  - [ ] **Chained VPN → Tor is landed above as `[x]`**, while the Tor guidance is that combining them is
+        generally _not_ recommended — the hop before Tor sees that you are a Tor user and the arrangement
+        shifts trust onto the VPN operator. Keep the feature, state the trade in the connections overview.
+  - [ ] **Per-tab routing means Tor traffic and direct traffic run in the same browser at the same time** —
+        precisely the pattern Tor Browser tells users to avoid, because correlated activity across the two
+        can re-link the anonymous session. This is a **thesis-level** consequence of the per-tab model, not
+        a bug, and the disclosure copy has to say it plainly: a Tor-routed tab is not a Tor Browser session.
+  - Source: [`research/privacy/tor-browser-security.md`](../../research/privacy/tor-browser-security.md)
+    and [`research/privacy/tor-network-security.md`](../../research/privacy/tor-network-security.md).
 
 ### L8 — Security Kernel (egress + kill-switch)
 
@@ -221,6 +249,25 @@ endpoint** (one loopback port per active connection), never an OS-level system p
       builds. Decide and record whether Tepegöz normalizes any of them; if it does not, the disclosure
       copy says so rather than letting "routed through Tor" imply more than it delivers.
       Source: [`research/privacy/cross-profile-tracking.md`](../../research/privacy/cross-profile-tracking.md)
+- [ ] **ECH (Encrypted Client Hello) — the biggest remaining plaintext leak this phase does not close.**
+      A tunnel hides the address; TLS still announces **which host** is being visited in the ClientHello's
+      SNI, in cleartext, to anything on the path. ECH encrypts it. Two honest constraints go with it: ECH's
+      config is fetched over DNS, so it only pays off **together with encrypted DNS** — and even then it
+      does not hide the destination IP or traffic shape, so "SNI is closed, the ISP sees nothing" is the
+      overclaim to avoid in the disclosure copy.
+- [ ] **Encrypted DNS is a trust-shift decision, not just a toggle.** DoH/DoT/DoQ encrypt the query and
+      hand it to whichever resolver is configured — so silently centralizing every user onto one provider
+      trades ISP visibility for resolver visibility. Requirements: a stated provider policy, a visible
+      choice, a working opt-out, and a defined interaction with the tunnel (a tunnel-bound tab's DNS must
+      resolve **through** the tunnel, never beside it — that is a leak this phase already owns). Pairs with
+      the user-facing DoH row captured in
+      [`../tracks/browser-settings-feature-gap.md`](../../docs/tracks/browser-settings-feature-gap.md) §7.
+- [ ] **Treat QUIC connection-ID rotation as a privacy setting, not a performance one.** QUIC's connection
+      id and its migration behaviour exist to _reduce_ linkability across network changes, but an
+      implementation that rotates in a distinctive way turns the same mechanism into a fingerprint. Decide
+      the posture deliberately alongside the TLS-fingerprint row above; they are one question, not two.
+      Source: [`research/privacy/isp-tracking.md`](../../research/privacy/isp-tracking.md) and
+      [`research/privacy/vpn-security.md`](../../research/privacy/vpn-security.md).
 - [ ] **An agent-driven tab has a rhythm.** Automated request timing is a signal on its own, and it is
       the one this project generates by existing. Cross-reference the countermeasures already in
       [`packages/human-input`](../../packages/human-input) (randomized inter-action idle, real gestures)
