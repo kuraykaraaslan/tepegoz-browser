@@ -101,6 +101,18 @@ export class HistoryStore {
     db.prepare('DELETE FROM history').run();
   }
 
+  /**
+   * Delete entries visited at or after `cutoff` — the time-ranged half of "Clear browsing data".
+   *
+   * `ts` is the LAST visit, which is the honest column to range on: a page first seen last year but
+   * opened ten minutes ago is part of the last hour of browsing, and leaving it behind would defeat
+   * the reason someone reaches for "last hour". The row is one per URL, so there is no partial
+   * deletion to offer instead.
+   */
+  static deleteSince(db: Db, cutoff: number): number {
+    return db.prepare('DELETE FROM history WHERE ts >= ?').run(cutoff).changes;
+  }
+
   static count(db: Db): number {
     const row = db.prepare('SELECT COUNT(*) AS n FROM history').get() as { n: number };
     return row.n;

@@ -345,10 +345,51 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         native context-menu suggestions in every input; ext-typo is a richer opt-in assistant, and Chrome
         itself ships both), so this is a product call — not a coding task. `spellcheck:false` is still the
         live setting, so today neither path underlines anything in a plain text input.
-- [ ] **Unified "Clear browsing data" dialog with a time range** (last hour / 24 h / 7 days / 4 weeks /
-      all time) + the full category list in one place — today only "clear history" and "clear download
-      history" exist, plus the Site Info bubble's per-site "clear site data". Scoped, not scheduled:
-      [`../tracks/browser-settings-feature-gap.md`](../../docs/tracks/browser-settings-feature-gap.md) §6.
+- [x] **Unified "Clear browsing data" dialog with a time range** (last hour / 24 h / 7 days / 4 weeks /
+      all time) + the full category list in one place — ~~today only "clear history" and "clear download
+      history" exist, plus the Site Info bubble's per-site "clear site data".~~ _Built 2026-09-02.
+      Settings → Privacy now opens one dialog: a range plus five categories (history, download list,
+      cookies & site data, cache, agent conversations)._
+  - [x] **Why one dialog and not three tidy ones.** _Clearing was three controls in three places, and
+        the cost is not aesthetic: someone who wants the last hour gone clears one of the three and
+        believes they cleared all of it. That is a privacy control that produces false confidence,
+        which is worse than no control._
+  - [x] **The time range does not reach cookies or the cache, and the dialog says so on those rows.**
+        _Rows this app owns carry a timestamp, so a range is a `WHERE` clause. Cookies, site storage and
+        the HTTP cache live in Chromium, and Electron's session API (`clearStorageData` / `clearData` /
+        `clearCache`) exposes no "since" parameter at any version — Chromium has one internally and does
+        not surface it. So those two are all-or-nothing, said next to the checkbox rather than in a
+        footnote: a control whose real scope is wider than its label is worse than one that is honest
+        about being blunt. Pinned by `TIME_RANGEABLE_CATEGORIES` and a test that asserts the split._
+  - [x] **Saved passwords are deliberately NOT a category.** _Chrome offers them here; this does not.
+        Deleting a credential is a different act from clearing a trace — it destroys user-authored data
+        that outlives the browsing it happened during — and it has to be asked for where it can be
+        confirmed on its own terms. The per-site clear already refuses to touch the vault for exactly
+        this reason, so the wide clear inheriting the rule is consistency, not caution. A test pins it
+        so it stays a decision rather than becoming an oversight someone later "fixes"._
+  - [x] **Agent conversations are a category, because in this browser they are browsing data.** _No
+        other browser has the row because no other browser has the data. Leaving what the user typed at
+        the agent out of the one dialog people go to would make that dialog a half-truth._
+  - [x] **The partition rules are the per-site clear's, inherited rather than re-derived.** _Browsing
+        partitions only (the app's own chrome partition holds UI state, not browsing), and EVERY
+        browsing partition — since Phase 5 a tab bound to a VPN/Tor connection keeps its cookies in that
+        connection's own partition, and a clear that stopped at the base one would report success while
+        leaving the sessions behind the tunnel intact._
+  - [x] **Counts, not "Done", and a failed category is named.** _The whole point of one clear button is
+        that the user stops checking, so it is the one place that must not quietly do less than it says.
+        Each category is attempted independently; the result carries per-category counts and a `failed`
+        list, and a missing database reports failure rather than "nothing to clear". Journalled as
+        `BrowsingDataCleared` with counts only — the record of a clearing must not become a copy of what
+        was cleared._
+  - [x] **Which timestamp each range applies to was a decision per store.** _History ranges on the LAST
+        visit (a page first seen last year but opened ten minutes ago IS part of the last hour).
+        Downloads range on when the transfer STARTED, not `updated_at`, which moves with every progress
+        write and would sweep a long transfer begun yesterday into an hour-long range. Terminal
+        downloads only — a running one's row is what tracks it. 13 tests across the three stores and the
+        pure range/boundary layer._
+  - [ ] **On-exit category-based clearing** is still unbuilt (the third row of §6 in the gap track). It
+        needs a preference, a quit-time hook that runs before teardown, and a decision about what
+        happens when the app is killed rather than quit — none of which this dialog implies.
 - [ ] **File-type / MIME handler actions** ("Open in app / Always ask / Save / Open in browser" per type;
       "automatically open safe files after downloading"). No home in the Download Manager work above.
       Scoped, not scheduled: [`../tracks/browser-settings-feature-gap.md`](../../docs/tracks/browser-settings-feature-gap.md) §15.

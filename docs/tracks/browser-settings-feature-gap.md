@@ -97,8 +97,8 @@ Legend: **C** Chrome · **B** Brave · **S** Safari · **F** Firefox · _all_ = 
 
 | Gap                                                                                                                                       | Ships in | Today                                                             | Home |
 | ----------------------------------------------------------------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------- | ---- |
-| **Unified "Clear browsing data" dialog with a time range** (last hour / 24 h / 7 days / 4 weeks / all time)                               | all      | only "clear history" + "clear download history" + per-site forget | 2c   |
-| One place with the full category list: history, downloads, cookies/site data, cache, passwords, form data, site settings, hosted-app data | C/B/F    | scattered                                                         | 2c   |
+| ~~**Unified "Clear browsing data" dialog with a time range** (last hour / 24 h / 7 days / 4 weeks / all time)~~ **Built 2026-09-02**                                    | all      | Settings → Privacy, one dialog                                                     | 2c ✅ |
+| ~~One place with the full category list~~ **Built 2026-09-02** — history, downloads, cookies/site data, cache, agent conversations. Passwords deliberately excluded (see the phase note); form data / site settings / hosted-app data are not stored separately yet | C/B/F    | one place                                                                          | 2c ✅ |
 | **On-exit category-based clearing**                                                                                                       | B/F      | —                                                                 | 2c   |
 
 ## 7. Security

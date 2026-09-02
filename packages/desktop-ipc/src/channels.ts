@@ -281,6 +281,8 @@ export const IpcChannels = {
   /** Browser profiles found on this computer, and importing one of them by id. Read-only detection,
    *  run when the user opens the import step — never on a timer, and never with a renderer-named path. */
   /** main → chrome: focus + select the address bar (Ctrl+L / Alt+D, pressed while a page had focus). */
+  /** The unified "Clear browsing data" action (range + categories). Per-site forget is separate. */
+  browsingDataClear: 'privacy:clear-browsing-data',
   omniboxFocus: 'omnibox:focus',
   bookmarksDetectProfiles: 'bookmarks:detect-profiles',
   bookmarksImportProfile: 'bookmarks:import-profile',

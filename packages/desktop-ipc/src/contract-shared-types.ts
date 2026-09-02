@@ -121,6 +121,12 @@ export type {
 // Per-site data clearing (Phase 2). Type-only, so the sandboxed preload stays free of the policy
 // package's runtime. The PLAN is what the confirmation dialog is built from.
 export type { SiteClearPlan, SiteClearWarning, SiteDataKind } from '@tepegoz/shared-types';
+export type {
+  BrowsingDataCategory,
+  BrowsingDataClearRequest,
+  BrowsingDataClearResult,
+  BrowsingDataRange,
+} from '@tepegoz/shared-types';
 
 // The address-bar "Site information" bubble (Chrome's Page Info). Type-only — the classifier +
 // schemas live in `@tepegoz/shared-types`; the sandboxed preload only needs the shapes.

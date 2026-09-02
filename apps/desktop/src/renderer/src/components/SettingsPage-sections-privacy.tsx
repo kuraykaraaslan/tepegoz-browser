@@ -4,6 +4,7 @@ import type { SiteClearPlan } from '@tepegoz/shared-types';
 import type { ClientCertificateChoice } from '@tepegoz/desktop-ipc';
 import { Button, Card, Toggle } from '@tepegoz/ui';
 import { ConfirmAction } from './settings-confirm';
+import { ClearBrowsingDataRow } from './ClearBrowsingDataRow';
 import { FileOperationsSection, PasswordsSection } from './settings-privacy-files';
 import { AboutSection } from './settings-about';
 import { DeveloperSection } from './settings-developer';
@@ -190,7 +191,7 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
       group: s.groupPrivacy,
       label: s.privacyTitle,
       icon: <IconShield />,
-      searchText: `${s.privacyTitle} ${s.telemetry} ${s.telemetryDesc} ${s.telemetryNothingSent} ${s.safeBrowsing.title} ${s.safeBrowsing.desc} ${s.clearHistoryLabel} ${s.forgetSite.title} ${s.clientCerts.title}`,
+      searchText: `${s.privacyTitle} ${s.telemetry} ${s.telemetryDesc} ${s.telemetryNothingSent} ${s.safeBrowsing.title} ${s.safeBrowsing.desc} ${s.clearData.title} ${s.clearData.desc} ${s.clearHistoryLabel} ${s.forgetSite.title} ${s.clientCerts.title}`,
       content: (
         <Card title={s.privacyTitle}>
           <div className="space-y-4">
@@ -223,6 +224,7 @@ export function privacyAndAdvancedSections(ctx: SettingsSectionsCtx): SettingsSe
                   provider reads it, but resolves `unknown` until then. Said plainly. */}
               <p className="mt-1.5 text-xs text-text-secondary">{s.safeBrowsing.inactiveNote}</p>
             </div>
+            <ClearBrowsingDataRow s={s} />
             <div>
               <p className="text-sm font-medium text-text-primary">{s.clearHistoryLabel}</p>
               <p className="mb-2 text-xs text-text-secondary">{s.clearHistoryDesc}</p>

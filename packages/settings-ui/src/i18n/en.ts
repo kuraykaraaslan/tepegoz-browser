@@ -308,6 +308,38 @@ export const en = {
   privacyTitle: 'Privacy & telemetry',
   telemetry: 'Share anonymous usage telemetry',
   telemetryDesc: 'Off by default. No page content or keys are ever sent.',
+  clearData: {
+    title: 'Clear browsing data',
+    desc: 'History, downloads, cookies and cache — in one action, over a time range.',
+    open: 'Clear browsing data…',
+    rangeLabel: 'Time range',
+    ranges: {
+      'last-hour': 'Last hour',
+      'last-day': 'Last 24 hours',
+      'last-week': 'Last 7 days',
+      'last-4-weeks': 'Last 4 weeks',
+      'all-time': 'All time',
+    },
+    categoriesLabel: 'What to clear',
+    categories: {
+      history: 'Browsing history',
+      downloads: 'Download history (the list, not the files)',
+      cookies: 'Cookies and site data (signs you out of sites)',
+      cache: 'Cached files and images',
+      agentHistory: 'Agent conversations',
+    },
+    // Said next to the rows it applies to, never as a footnote: the browser engine offers no
+    // time-scoped clear for cookies or the cache, and a range that appeared to cover them would
+    // mislead in the direction that costs data.
+    allTimeOnly: 'Cleared entirely — the time range does not apply to this.',
+    confirm: 'Clear data',
+    clearing: 'Clearing…',
+    // Counts rather than "Done": a clear that reports success with nothing behind it is the one
+    // reassurance this dialog must not give.
+    cleared: 'Cleared {history} history entries, {downloads} downloads, {agent} agent conversations.',
+    failed: 'Could not clear: {categories}.',
+    error: 'Clearing failed. Nothing was reported as removed.',
+  },
   clearHistoryLabel: 'Browsing history',
   // "Forget this site" (Phase 2). The warnings are the point of the feature: a clear that silently
   // signs someone out of a site they were using is the kind of help that costs trust everywhere else.

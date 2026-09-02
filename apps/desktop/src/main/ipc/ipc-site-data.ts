@@ -5,6 +5,11 @@ import { Logger } from '@tepegoz/libs';
 import { IpcChannels } from '@tepegoz/desktop-ipc';
 import { isSameSite, planSiteClear } from '@tepegoz/security-policy';
 import type { SiteClearPlan } from '@tepegoz/shared-types';
+import {
+  BrowsingDataClearRequestSchema,
+  type BrowsingDataClearResult,
+} from '@tepegoz/shared-types';
+import { clearBrowsingData } from '../privacy/clear-browsing-data.electron';
 import { EventJournal } from '@tepegoz/persistence';
 import { passwordVault } from '@tepegoz/password-vault';
 import { APP_PARTITION } from '../window';
@@ -86,6 +91,15 @@ async function buildPlan(url: string): Promise<SiteClearPlan | null> {
 }
 
 export function registerSiteDataIpc(): void {
+  // The unified "Clear browsing data" dialog. It lives beside the per-site clear because the two are
+  // the same act at two scopes, and keeping them in one file is what stops the wide one from quietly
+  // growing a weaker version of the narrow one's partition rules.
+  handleAsync(
+    IpcChannels.browsingDataClear,
+    async (_event, payload): Promise<BrowsingDataClearResult> =>
+      clearBrowsingData(getDb(), BrowsingDataClearRequestSchema.parse(payload)),
+  );
+
   handleAsync(IpcChannels.siteDataPlan, async (_event, payload): Promise<SiteClearPlan | null> =>
     buildPlan(SiteUrlSchema.parse(payload)),
   );

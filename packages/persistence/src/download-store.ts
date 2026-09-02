@@ -141,4 +141,21 @@ export class DownloadStore {
       "DELETE FROM downloads WHERE status IN ('completed', 'blocked', 'canceled', 'failed')",
     ).run();
   }
+
+  /**
+   * The time-ranged clear. Terminal rows only, for the same reason `clearTerminal` is: a download still
+   * running is not history yet, and removing its row would leave a transfer nothing is tracking.
+   *
+   * Ranged on `created_at` rather than `updated_at`: a download BELONGS to the moment it was started,
+   * which is what a user picking "last hour" is thinking of. `updated_at` moves with every progress
+   * write, so a long transfer started yesterday would be swept up by an hour-long range.
+   */
+  static clearTerminalSince(db: Db, cutoff: number): number {
+    return db
+      .prepare(
+        `DELETE FROM downloads
+         WHERE status IN ('completed', 'blocked', 'canceled', 'failed') AND created_at >= ?`,
+      )
+      .run(cutoff).changes;
+  }
 }

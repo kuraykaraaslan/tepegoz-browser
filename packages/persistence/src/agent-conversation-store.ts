@@ -216,6 +216,11 @@ export class AgentConversationStore {
     db.prepare('DELETE FROM agent_conversations').run();
   }
 
+  /** Conversations last touched at or after `cutoff`. Turns cascade on the FK. */
+  static clearSince(db: Db, cutoff: number): number {
+    return db.prepare('DELETE FROM agent_conversations WHERE updated_at >= ?').run(cutoff).changes;
+  }
+
   /**
    * Re-fold every searchable column when the stored fold version does not match
    * {@link AGENT_CONVERSATION_FOLD_VERSION}. The third copy of the same contract as `HistoryStore`
