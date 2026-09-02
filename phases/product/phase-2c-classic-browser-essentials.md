@@ -47,10 +47,32 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
   IPC channel, no store, no UI). A `@workspace` command could therefore only route somewhere it
   invented, which is worse than an absent one. **This line depends on a phase it does not own**, and
   that is a roadmap defect worth recording rather than working around: it is why the box is `[~]`._
-- [ ] **i18n:** en+tr keys added for all new surfaces (download manager, find-bar, print/PDF/reader/translate,
+- [x] **i18n:** en+tr keys added for all new surfaces (download manager, find-bar, print/PDF/reader/translate,
       bookmark manager, private-mode chrome, Permissions Center, omnibox command hints, Site Info bubble)
+      — _**the fourth DoD line of this phase to close**, and it closed by being made checkable rather
+      than by being attested to._
   - _Site Info bubble done: `browser.siteInfo` (omnibox labels) + the top-level `siteInfo` namespace,
     en+tr, in `apps/desktop/src/i18n`; permission labels/state names reused from `@tepegoz/settings-ui`._
+  - [x] **Every dictionary in the repo is now swept by one test**
+        (`packages/i18n/src/dictionary-coverage.test.ts`, 2026-09-02): 27 dictionaries, en+tr present
+        and key-for-key aligned. Each surface this line names maps to one of them — download manager →
+        `downloads-ui`, find-bar → `find-bar`, reader → `reader`, translate → `ext-translate`, bookmark
+        manager → `bookmarks-ui`, Permissions Center → `settings-ui`, print/PDF + private-mode chrome +
+        omnibox command hints + Site Info → `apps/desktop`._
+        — _**Writing it found two things, which is why it exists.** First: seventeen of the eighteen
+        packages had their own parity test and `@tepegoz/reader` had none — silently, for as long as it
+        has existed, because a per-package test is one somebody has to remember to write. Second, and
+        worse: the sweep's own first version hardcoded `['packages', 'apps']` and therefore reported
+        full coverage while missing the nine dictionaries under `extensions/` — including
+        `ext-translate`, which this very line names. It now reads the groups from
+        `pnpm-workspace.yaml`, so a new top-level group is covered the day it is added rather than the
+        day someone notices._
+        — _Mutation-verified: dropping one Turkish key from `@tepegoz/reader` fails exactly that
+        package's row and names it._
+        — _**What it does NOT prove**, said plainly so the tick is not read as more than it is: it
+        proves the two locales agree, not that no component anywhere hardcodes an English string. That
+        is a different rule (engineering-rules: no hardcoded UI strings) and it has no automated check
+        yet._
 - [~] ADRs accepted: **Download Trust Model** (agent-initiated download class + quarantine policy) —
   _**[ADR-0040](../../docs/adr/0040-download-trust-model.md) accepted.** Documents the shipped
   quarantine lifecycle + risk classification + the release/HITL gate + the agent security class,
