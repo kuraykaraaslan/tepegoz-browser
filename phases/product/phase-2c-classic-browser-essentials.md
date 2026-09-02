@@ -149,6 +149,15 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         none. The one caveat is already tracked as this phase's blocker rather than as this box's:
         without a Safe Browsing API key the provider answers `unknown`, so the check runs and settles
         every file at `quarantined` awaiting the human._
+  - [x] _**Behavioural coverage added 2026-09-02** — `download-service-lifecycle.electron.test.ts` (8
+        tests) now pins `finishToQuarantine` and `ingestGeneratedFile`: an `unknown` verdict settles
+        at `quarantined` with the sha256 recorded, a `blocked` verdict settles at `blocked` and
+        journals `DownloadBlocked` not `DownloadQuarantined`, a `safe` verdict does **not**
+        auto-complete (release stays a separate human step), a thrown hash marks the record `failed`
+        and journals `DownloadFailed`, the trust provider is called with the hash + name + mime +
+        origin, and an agent-printed PDF goes through the **same** path (risk classified from the
+        page-controlled filename, id returned rather than a path). This is the path the whole download
+        trust model rests on and it had no test._
 - [ ] **Media resolver tool.** The `download_*` tools manage downloads that have already started; nothing
       resolves a _public media URL_ (a YouTube transcript, a public video/image link) into a direct,
       verified resource. Add one resolver tool — and route the actual save through the **existing**
