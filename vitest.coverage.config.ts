@@ -108,7 +108,13 @@ export default defineConfig({
         // the ipc-content facade composition, and ipc-tasks (schema-gated delegation + command
         // lowering). RENDERER added the notification/user-menu popups, network add-connection +
         // mcp-servers forms, the file-ops whitelist, downloads, and search-engine validation.
-        'apps/desktop/**': { statements: 42, branches: 85, functions: 59, lines: 42 },
+        //
+        // Round 3 (same day) → floor(measured) S44.34 / B85.53 / F60.30 / L44.34: MAIN added the
+        // S9 skills-library IPC surface (mints the UUID, delete revokes scoped grants) and agent
+        // run-control + HITL relay (cancel unblocks pending prompts for that run only). RENDERER
+        // added ai-panels cost, the network-privacy connection manager, the site-trust profile
+        // list, and the per-key model picker.
+        'apps/desktop/**': { statements: 44, branches: 85, functions: 60, lines: 44 },
       },
       include: [
         'apps/desktop/src/**',
