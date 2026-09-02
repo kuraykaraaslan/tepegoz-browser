@@ -293,6 +293,13 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         under a progress bar that would never move._
         — _The resumed item re-enters through `will-download` on its own session, so it picks up the
         same quarantine path, hash and trust gate as any other transfer. Nothing here bypasses them._
+        — _**Host wiring covered 2026-09-02** — `download-service-resume.electron.test.ts` (9 tests):
+        a file whose size matches the record resumes and drives `createInterruptedDownload` with the
+        measured offset + eTag; a size that disagrees restarts and moves nothing; an unreadable
+        partial is "no partial file", not zero-length; a missing validator restarts; a
+        `partition`-carrying record resumes on THAT partition and a bare one on Direct; an empty URL
+        chain falls back to the bare URL; and `resumeRefusal` maps `already-complete` to its own 409
+        code, everything else to "must restart"._
   - [x] **The dropped-connection half** (2026-09-02, the same day) — _exponential backoff (1s, 2s, 4s,
         8s, capped at 30s) and a budget of four attempts, in `planDownloadRetry`, which is a pure
         function so the policy can be read in one place rather than inferred from a timer._
