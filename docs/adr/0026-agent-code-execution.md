@@ -4,7 +4,7 @@
 - **Date:** 2026-08-19
 - **Refines:** [ADR-0006](0006-policy-kernel-hitl.md) (deterministic policy kernel) ·
   **complements** [ADR-0008](0008-perception-cdp.md) (DOM/a11y-first perception)
-- **Phase:** [S5 — Code Execution](../../phases/ai-agent-super/phase-s5-code-execution.md) PR0–PR1
+- **Phase:** [S5 — Code Execution](../../phases/ai-agent/phase-s5-code-execution.md) PR0–PR1
 
 ## Context
 

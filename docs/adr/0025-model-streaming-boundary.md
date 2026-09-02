@@ -4,7 +4,7 @@
 - **Date:** 2026-08-18
 - **Refines:** [ADR-0005](0005-provider-agnostic-ai.md) (provider-agnostic gateway) ·
   **complements** [ADR-0013](0013-agent-orchestration-hitl.md) (agent orchestration + two-stage HITL)
-- **Phase:** [S1 — Foundation: Native Loop](../../phases/ai-agent-super/phase-s1-foundation-native-loop.md) PR5
+- **Phase:** [S1 — Foundation: Native Loop](../../phases/ai-agent/phase-s1-foundation-native-loop.md) PR5
 
 ## Context
 
@@ -18,7 +18,7 @@ that no adapter can stream **at all**, which conflates two different questions:
    model may revise it. Nothing durable or decision-bearing may read it.
 2. **May a partial response be _shown to a human_?** That is a UI question, and the answer "no" costs the
    user the entire duration of a model call with no feedback. It is the mechanical cause of pain 3 and 4
-   in [`history.md`](../../phases/ai-agent-super/history.md) ("too slow", "weak control feel").
+   in [`history.md`](../../phases/ai-agent/history.md) ("too slow", "weak control feel").
 
 Because the guard could only express the first answer by forbidding the second, tepegoz waits for a
 whole step to settle before a single character appears. Every rival streams.
@@ -65,8 +65,8 @@ validated result.
 
 - **Keep everything non-streaming.** Simplest, and what the old guard enforced. Rejected: it makes
   time-to-first-feedback structurally equal to a whole step, which is a headline metric for
-  [S7](../../phases/ai-agent-super/phase-s7-speed.md) and
-  [S8](../../phases/ai-agent-super/phase-s8-assistant-ux.md), and no amount of UI work can recover it.
+  [S7](../../phases/ai-agent/phase-s7-speed.md) and
+  [S8](../../phases/ai-agent/phase-s8-assistant-ux.md), and no amount of UI work can recover it.
 - **Stream into the Journal and mark rows provisional.** Rejected: it puts unvalidated model output into
   the durable audit record, and every reader would then have to know which rows to distrust.
 - **Simulate streaming in the renderer by animating the settled text.** Rejected: it is vanity — it shows

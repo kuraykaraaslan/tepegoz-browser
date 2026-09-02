@@ -64,7 +64,7 @@ prompt. The agent's own runs read untranslated source.**
   a `browser_*` perception read and the Notary recorder read the **original** DOM, not a translated
   rewrite — the extension keeps the pre-translation text (it already does, for `restorePageOriginal`)
   and perception is bound to that store while a run holds the tab.
-- The `translate_translate_text` capability tool stays available to the agent for *explicit*
+- The `translate_translate_text` capability tool stays available to the agent for _explicit_
   translate-this-text asks; it returns translated text as a tool result (recorded as a tool result,
   ADR-0004), and does not mutate the page the agent is perceiving.
 - Consequence for the user: if a person has a page visually translated and then starts an agent run
@@ -81,9 +81,9 @@ model the agent uses. Both are configured from the existing Settings surfaces, n
 ## Alternatives considered
 
 - **Local model only.** Rejected. The on-device model is a large optional download and its quality
-  on long-tail language pairs is well below a frontier cloud model. Making it the *only* path means a
+  on long-tail language pairs is well below a frontier cloud model. Making it the _only_ path means a
   user with no model gets no translation at all, and a user with a model gets visibly worse output
-  than Chrome for the languages that need help most. Kept as the *default* path, not the only one.
+  than Chrome for the languages that need help most. Kept as the _default_ path, not the only one.
 - **Cloud API only.** Rejected outright. It forces the page's text off-device for the common case
   (translate this article), which is the exact move the local-first DNA exists to avoid, and it has
   no answer for a sensitive site beyond "don't translate it".

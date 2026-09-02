@@ -4,7 +4,7 @@
 - **Date:** 2026-08-19
 - **Refines:** [ADR-0005](0005-provider-agnostic-ai.md) (provider-agnostic gateway) ·
   **complements** [ADR-0006](0006-policy-kernel-hitl.md) (policy kernel)
-- **Phase:** [S12 — Local Model](../../phases/ai-agent-super/phase-s12-local-model.md) PR0–PR1
+- **Phase:** [S12 — Local Model](../../phases/ai-agent/phase-s12-local-model.md) PR0–PR1
 
 ## Context
 
@@ -27,7 +27,7 @@ table; it is **empty**, `ownsLocally(undefined)` returns `unmeasured`, and there
 for cheap tiers" path to take. `plan` is not even a candidate — that tier stays frontier until something
 says otherwise.
 
-The equivalence check is **one-sided**, unlike [S7](../../phases/ai-agent-super/phase-s7-speed.md)'s speed
+The equivalence check is **one-sided**, unlike [S7](../../phases/ai-agent/phase-s7-speed.md)'s speed
 guardrail: local scoring _higher_ than cloud is a reason to look at the exam, not a quality loss to guard
 against.
 

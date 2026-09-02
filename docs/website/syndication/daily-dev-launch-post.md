@@ -17,7 +17,7 @@ launch post is where they are most tempting to break:
    to blur that line.
 
 **[BUILD NOTE]** No competitor dunking. The category's published incidents are the reason the
-architecture looks like this, and the post says so technically, by failure *shape*, without naming
+architecture looks like this, and the post says so technically, by failure _shape_, without naming
 anyone.
 
 ---
@@ -33,33 +33,33 @@ they work by being concrete about things the category mostly does not do.
 > I named my browser after a cyclops so I'd remember to keep it on a leash
 
 Tepegöz is the one-eyed giant of the Book of Dede Korkut. The joke lands, and it sets up the actual
-argument — an agent with your logged-in session *is* a monster, so the cage was built first.
+argument — an agent with your logged-in session _is_ a monster, so the cage was built first.
 
 **Alternates by flavour:**
 
-*Concrete and enticing — three attractive facts, no adjectives:*
+_Concrete and enticing — three attractive facts, no adjectives:_
 
 > An AI browser with no account, no backend, and a Tor tunnel per tab
 
-*Playful, aimed at signup fatigue:*
+_Playful, aimed at signup fatigue:_
 
 > An AI browser that has never once asked me to sign in
 
-*For a security-leaning crowd:*
+_For a security-leaning crowd:_
 
 > The agent asks. The kernel decides. The model never gets a vote.
 
-*The sober one, if the room is cynical about launches:*
+_The sober one, if the room is cynical about launches:_
 
 > I built an agentic browser and have no benchmarks to show you
 
 **Rejected**, with reasons:
 
-- Anything with *"the smartest"*, *"finally"*, or *"the future of browsing"* — this audience reads that
+- Anything with _"the smartest"_, _"finally"_, or _"the future of browsing"_ — this audience reads that
   as a tell, and here it would also be a claim that cannot be supported.
-- *"The most secure AI browser"* — superlative, unmeasured, and the adversarial battery has not been
+- _"The most secure AI browser"_ — superlative, unmeasured, and the adversarial battery has not been
   run at claim grade. Saying it would contradict the post's own argument.
-- *"The AI browser that actually works"* — implies a completion rate. There is no measurement behind it,
+- _"The AI browser that actually works"_ — implies a completion rate. There is no measurement behind it,
   which is the one thing this project does not do.
 
 ---

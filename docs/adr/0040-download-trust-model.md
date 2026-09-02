@@ -25,7 +25,7 @@ boundary. The download path must not become a hole in that boundary.
 **A download is untrusted until proven otherwise. It lands in a private quarantine directory, is
 hash-checked and risk-classified there, and only a `release` — gated by HITL for anything risky or
 agent-initiated — moves it into the user's Downloads folder. The agent has no filesystem write; it
-can only *ask* for a download through a Policy-Kernel-gated tool.**
+can only _ask_ for a download through a Policy-Kernel-gated tool.**
 
 ### 1. The quarantine lifecycle (`@tepegoz/downloads` + desktop `DownloadService`)
 
@@ -36,7 +36,7 @@ can only *ask* for a download through a Policy-Kernel-gated tool.**
 - The file is written to `userData/Downloads/quarantine/<id>-<name>` — **not** the user's Downloads
   directory, and not a path the page or the agent can name. Status begins `in_progress`.
 - On transfer completion the file is SHA-256'd in place and handed to a `DownloadTrustProvider.check({
-  sha256, filename, mimeType, sourceOrigin })`, which returns `safe` / `unknown` / `blocked`. The
+sha256, filename, mimeType, sourceOrigin })`, which returns `safe` / `unknown` / `blocked`. The
   record moves to `blocked` (verdict `blocked`) or `quarantined` (anything else). **Nothing reaches
   the user's Downloads folder at this point.**
 - `release` is the only transition out of quarantine. It refuses a non-quarantined record, refuses a
@@ -111,7 +111,7 @@ strict subset of the intended behaviour (never a wider one): the gap is "we do n
 threat list", not "we trust the file".
 
 **Owed, and stated rather than implied.** (1) The Safe-Browsing provider implementation + its prefix
-database lifecycle (fetch cadence, update, full-hash resolution, and the privacy question of *where*
+database lifecycle (fetch cadence, update, full-hash resolution, and the privacy question of _where_
 those requests egress — they must not become a plaintext feed of the user's downloads to a third
 party) is a separate piece of work — **[ADR-0043](0043-safe-browsing-service-and-egress.md) now owns
 that decision** (direct to Google Safe Browsing v5, on by default, one Settings switch); the provider

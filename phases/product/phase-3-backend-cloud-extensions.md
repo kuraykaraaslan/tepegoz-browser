@@ -17,6 +17,45 @@ sync-meta + ModelTransport), there is NO rewrite.
 
 ### L7 — BackendTransport + Managed Proxy (extra requirement #7)
 
+- [ ] **Provider reach: turn "adding a provider" from a code change into a data change.** Eight
+      hand-written adapters (`AIProvider` union) against rivals' 100+ cards. The fix is one generic
+      `OpenAICompatibleProvider` class plus a **provider catalog data file** — id / label / `baseUrl` /
+      auth mode / vision-model regex per entry — following the philosophy `@tepegoz/model-catalog` and
+      `@tepegoz/extension-catalog` already use. That turns "8 providers" into "8 classes, N catalog
+      entries". Both `@tepegoz/model-gateway` invariants are untouched: every call stays capped
+      (`maxTokens`) and timed (`timeoutMs`), and every adapter still normalizes to
+      `CanonRequest`/`CanonResponse` before anything downstream sees it; `@tepegoz/credential-vault` is
+      already provider-agnostic and needs no change. Addendum to ADR-0005, not a supersession.
+  - [ ] **Two enterprise auth shapes the generic card structurally cannot cover** — Azure OpenAI
+        (resource-name + deployment-scoped auth) and AWS Bedrock (SigV4 signing, region + key triplet).
+        A company holding an Azure or Bedrock contract cannot "just point at an OpenAI-compatible
+        endpoint". Two more first-class adapter classes, an `authShape` discriminant on their catalog
+        entries so Settings renders the right credential form without a per-card UI branch, and the same
+        `CanonRequest` normalization as everything else. Feeds [phase-4](phase-4-maturation.md)'s
+        enterprise story more than an individual BYO-key user.
+  - [ ] **A dynamic model catalog** — fetch the live model list from a configured endpoint instead of
+        pinning ids in source, so a new model does not need a release.
+  - [ ] **Per-model system-prompt variants**, keyed off the catalog entry: models differ enough in
+        tool-calling discipline that one prompt for all of them costs reliability.
+  - [ ] **Local endpoints as alternate transports for the SAME `local` slot**, never new provider ids —
+        `isLocalProvider()`/`RUNNABLE_AI_PROVIDERS` already single `'local'` out as key-free. An
+        HTTP-server variant of `@tepegoz/local-inference`'s `LlamaEngine` (Ollama `/api/`, llama.cpp and
+        LM Studio `/v1/`) lets a user who **already runs Ollama** point Tepegöz at it instead of
+        downloading a second copy of the same weights through `@tepegoz/model-catalog`. BYO — not bundled,
+        not downloaded by us. Copy the context-window auto-detection verbatim (llama.cpp `GET /props`,
+        Ollama `GET /api/show`): it is what lets compaction self-tune instead of hardcoding 16k.
+  - [ ] Settings surfaces the catalog **with search** (exact id/label → prefix → substring ordering is a
+        small already-solved problem, worth copying). i18n: catalog labels are data, but the chrome around
+        them — search placeholder, the "not usable yet" hint per `RUNNABLE_AI_PROVIDERS` — needs EN+TR.
+  - [ ] _Second schema reference when this is written:_ LibreChat's `librechat.yaml` "Custom Endpoints"
+        model reaches Ollama / groq / Cohere / Mistral / MLX / koboldcpp / together / OpenRouter / Perplexity /
+        Deepseek / Qwen from **one configuration file and no proxy** — the same "a provider is data, not code"
+        idea as WebBrain's 108 cards, in a different wrapper, and a useful cross-check on the catalog's shape.
+        [`../../docs/others/librechat-agent-ui-learnings.md`](../../docs/versus/librechat-agent-ui-learnings.md).
+  - Sources: [`../tracks/webbrain-agent-parity.md`](../../docs/parities/webbrain-agent-parity.md) P1,
+    [`../tracks/aipex-agent-parity.md`](../../docs/parities/aipex-agent-parity.md) P3,
+    [`../tracks/browseros-agent-agent-parity.md`](../../docs/parities/browseros-agent-agent-parity.md) P1,
+    [`../tracks/kilocode-agent-parity.md`](../../docs/parities/kilocode-agent-parity.md) P1.
 - [ ] `BackendTransport` (CanonRequest serialization, shared with handoff format); re-resolved at the proxy
 - [ ] Managed proxy: tepegoz-managed key + **billing/quota/rate-limit** + abuse protection
 - [ ] **Zero-Trust gateway:** server-side JWT ownership verification, SSL/cert pinning, strict rate-limit
@@ -32,6 +71,18 @@ sync-meta + ModelTransport), there is NO rewrite.
 ### Browser sync (separate from agent memory)
 
 - [ ] bookmark/password/tab E2EE sync — a layer independent of agent-memory sync
+  - [ ] **The account + "choose what to sync" surface this implies, not yet decomposed anywhere**:
+        sign-in with an account, the per-category sync checklist (bookmarks / history / open tabs /
+        passwords / addresses / payments / settings / themes / extensions), a sync encryption passphrase,
+        "tabs from other devices" + send-tab-to-device, and device-list management. Needs its own ADR —
+        see [`../tracks/browser-settings-feature-gap.md`](../../docs/tracks/browser-settings-feature-gap.md) §10.
+- [ ] **Autofill — addresses / contact info and payment methods** (save-and-fill, CVC, mandatory re-auth).
+      The Settings UI already says "coming soon"; nothing sits behind it. Captured in
+      [`../tracks/browser-settings-feature-gap.md`](../../docs/tracks/browser-settings-feature-gap.md) §9.
+- [ ] **Import from another browser beyond bookmarks** — settings and history (Chrome / Edge / Firefox /
+      Safari); today only Netscape-HTML **bookmark** import ships (Phase 2c). Pairs with the first-run
+      import in [phase-10](phase-10-daily-driver-delight.md); listed in
+      [`../tracks/browser-settings-feature-gap.md`](../../docs/tracks/browser-settings-feature-gap.md) §11.
 - [ ] **Local encrypted profile/workspace export-import** (device migration / offline backup): a
       `safeStorage`/passphrase-encrypted archive of profile data (bookmarks/history/preferences/workspaces,
       credentials still vault-scoped) — an **offline** path independent of E2EE cloud sync; reuses the Phase 7

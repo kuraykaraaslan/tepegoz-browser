@@ -96,13 +96,13 @@ sync · macOS and Linux as first-class targets.
 **[BUILD NOTE]** Keep the kinds separate. Lumping them into "we need funding" is exactly the vagueness
 this section exists to avoid.
 
-| Blocker                      | What it actually needs                                           |
-| ---------------------------- | ---------------------------------------------------------------- |
-| The agent benchmark baseline | **API spend** — roughly $550–780 for the full sweep              |
-| The head-to-head comparison  | **Rival subscriptions**, about $60/month — not API credit        |
-| The local-model phase        | **Downloaded model weights**, not tokens                         |
-| The independent security audit | **An outside reviewer**, and the budget for one                |
-| Phase 0 closing              | A watched CI run, and the suite executing on macOS at least once |
+| Blocker                        | What it actually needs                                           |
+| ------------------------------ | ---------------------------------------------------------------- |
+| The agent benchmark baseline   | **API spend** — roughly $550–780 for the full sweep              |
+| The head-to-head comparison    | **Rival subscriptions**, about $60/month — not API credit        |
+| The local-model phase          | **Downloaded model weights**, not tokens                         |
+| The independent security audit | **An outside reviewer**, and the budget for one                  |
+| Phase 0 closing                | A watched CI run, and the suite executing on macOS at least once |
 
 ---
 
@@ -118,7 +118,7 @@ only responsible way to make that promise is to be explicit about which parts ar
 are merely built, and which are still a sentence in a plan.
 
 **[CLAIM]** All of it is maintained in the repository, per phase, with the evidence or the absence of
-it: [phase index](../../phases/README.md) · [AI competence programme](../../phases/ai-agent-super/README.md)
+it: [phase index](../../phases/README.md) · [AI competence programme](../../phases/ai-agent/README.md)
 · [known issues](../known-issues.md)
 
 ---

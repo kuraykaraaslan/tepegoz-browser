@@ -70,6 +70,19 @@ work lives in Phase 2; agent orchestration (multi-tab parallelism) stays in Phas
         is a reopen list, not a second history. Covered by `e2e/recently-closed-menu.spec.ts` + 5 unit
         tests. **Named sessions and multi-window restore-on-demand remain open**, so the parent item stays
         unchecked._
+  - [ ] **Make close/restore group-aware.** The recently-closed list is flat and per-tab, so closing a
+        named group of eight research tabs leaves eight anonymous rows and Ctrl+Shift+T walks them back one
+        at a time. Min's mature "Tasks" UX gets the one outcome right that tab groups here don't yet: close
+        a group as a unit, see it in the list as a unit ("Research — 8 tabs"), restore it as a unit with its
+        name and colour intact. Fits ADR-0020 cleanly — group identity is a **binding/UI** property, which
+        is exactly what a restore entry needs to carry, and no policy scope travels with it. Captured, not
+        scheduled: [`../tracks/min-browser-agent-parity.md`](../../docs/parities/min-browser-agent-parity.md) P1.
+  - [ ] **Context-driven automatic grouping** — "open a group for this task and collect the related tabs into
+        it." Dia ships this; here it is a smaller step than it looks, because groups are **already** the key
+        for agent conversations (`groupId`) and the agent already auto-groups tabs it opens per task. The
+        remaining piece is the same behaviour for tabs the _user_ opens. Stays inside ADR-0020: grouping is
+        organizational metadata, never a session/partition/policy boundary. Captured, not scheduled:
+        [`../../docs/research-dia-browser.md`](../../docs/research/research-dia-browser.md).
 - [ ] Builds on Phase 1a basic tab shell + basic restore; does NOT clash with Phase 1b agent multi-tab parallelism (that is internal orchestration; this is user-facing UI). **ADR required — "Tab Boundary Model"**: the `BrowserContext` boundary of workspace/split-view; user-facing grouping must NOT leak agent-branch policy isolation. _(ADR written + Accepted: [ADR-0020](../../docs/adr/0020-tab-boundary-model.md), incl. the 2026-07-06 addendum introducing `TabGroupInfo.settings` as the standard **binding/UI** seam — `agent.panelOpen` today, `vpn.connectionId`/`tor.enabled` reserved for Phase 5.)_
 
 > **What a tab group may and may not carry (ADR-0020, restated because it keeps being asked).** Two
@@ -131,21 +144,31 @@ work lives in Phase 2; agent orchestration (multi-tab parallelism) stays in Phas
       feature is worth. 5 unit tests on the sweep's timing/reset/leak-forgetting behavior — the
       Electron-view half is exercised the same way `rehostTab` is (no direct unit test; e2e territory)._
 - [x] **Task Manager** (`app.getAppMetrics` → per-`WebContentsView` CPU / memory / PID; end-process; shows
-  which tabs are discarded) surfaced as an internal `tepegoz://` page.
-  — _`tepegoz://process`, a real page (`internal-pages/protocol.ts` `REAL_PAGE_HOSTS` + a
-  `*PageSurface` in `main.tsx`'s hostname dispatch — the seventh, joining settings/extensions/
-  history/downloads/uploads/bookmarks). `main/process-metrics.electron.ts` projects
-  `app.getAppMetrics()` and joins it against the live tab set so a renderer row is named by the tab it
-  hosts and carries that tab's id; browser / GPU / utility infra rows are shown but not killable in
-  v1. Discarded tabs have no renderer process, so they are added as zero rows (`pid 0` → "—") — that
-  is how "which tabs are asleep" stays visible. `end-process` force-crashes exactly one tab's
-  renderer (the tab reloads on next activation, same as a discard). No push: the page polls
-  `getProcessMetrics` on its own interval and pauses the poll while the tab is hidden. New
-  `@tepegoz/process-ui` presentational leaf (own en/tr dict, dependency-cruiser leaf rule, Tailwind
-  `@source`), reachable from the hamburger menu's new "Task manager" row. Tests: `mapAppMetrics`
-  projection (6, `process-metrics.electron.test.ts`), row shaping/sort/totals + component
-  (`@tepegoz/process-ui`), and `tepegoz://process` added to `e2e/tepegoz-internal-pages.spec.ts`
-  (real content + bridge call resolves + zero CSP violations)._
+      which tabs are discarded) surfaced as an internal `tepegoz://` page.
+      — _`tepegoz://process`, a real page (`internal-pages/protocol.ts` `REAL_PAGE_HOSTS` + a
+      `*PageSurface` in `main.tsx`'s hostname dispatch — the seventh, joining settings/extensions/
+      history/downloads/uploads/bookmarks). `main/process-metrics.electron.ts` projects
+      `app.getAppMetrics()` and joins it against the live tab set so a renderer row is named by the tab it
+      hosts and carries that tab's id; browser / GPU / utility infra rows are shown but not killable in
+      v1. Discarded tabs have no renderer process, so they are added as zero rows (`pid 0` → "—") — that
+      is how "which tabs are asleep" stays visible. `end-process` force-crashes exactly one tab's
+      renderer (the tab reloads on next activation, same as a discard). No push: the page polls
+      `getProcessMetrics` on its own interval and pauses the poll while the tab is hidden. New
+      `@tepegoz/process-ui` presentational leaf (own en/tr dict, dependency-cruiser leaf rule, Tailwind
+      `@source`), reachable from the hamburger menu's new "Task manager" row. Tests: `mapAppMetrics`
+      projection (6, `process-metrics.electron.test.ts`), row shaping/sort/totals + component
+      (`@tepegoz/process-ui`), and `tepegoz://process` added to `e2e/tepegoz-internal-pages.spec.ts`
+      (real content + bridge call resolves + zero CSP violations)._
+
+### L9 — Everyday-UX toggles with no current home
+
+- [ ] The small expected settings a rival ships that Tepegöz has no plan for: **"on startup: New Tab
+      page / continue where you left off / open a specific set of pages"** (Tepegöz always restores
+      tabs, no choice), **"Show Home button"**, warn-before-closing-a-multi-tab-window, "open links in a
+      new tab not a new window" + "switch to it immediately", Ctrl+Tab in most-recently-used order, tab
+      hover-preview cards, and **page preload / network prediction** (interacts with the Phase 5 tunnel
+      DNS-prefetch stamping). Captured, not scheduled:
+      [`../tracks/browser-settings-feature-gap.md`](../../docs/tracks/browser-settings-feature-gap.md) §§1–2, 16.
 
 ### Cross-cutting (as in every phase)
 

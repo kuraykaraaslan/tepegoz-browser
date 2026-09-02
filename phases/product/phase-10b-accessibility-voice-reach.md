@@ -90,7 +90,12 @@ position competitors won't copy quickly, built almost entirely on existing seams
       surfaces so the advantage is tested where it is most likely to regress
 - [ ] **Keyboard reach** — every agent and chrome action reachable and discoverable without a mouse, listed in
       one searchable place (shared with the discoverability task in
-      [S8](../ai-agent-super/phase-s8-assistant-ux.md))
+      [S8](../ai-agent/phase-s8-assistant-ux.md))
+- [ ] **The Chrome/Firefox accessibility checkbox set** that Assistive Mode does not subsume: caret
+      browsing (F7), find-as-you-type, live caption, minimum font size as a user setting, "highlight each
+      item as I Tab through a page", "always show scrollbars", focus-ring highlight, automatic image
+      descriptions. Individually small, no current home — captured in
+      [`../tracks/browser-settings-feature-gap.md`](../../docs/tracks/browser-settings-feature-gap.md) §13.
 
 ### Cross-cutting (as in every phase)
 

@@ -119,6 +119,13 @@ without the Manifest-V3 death, the opaque error codes, or the `EVAL` security ho
 - [ ] **Export extracted data** — dump `extract` results to CSV/JSON (the scraping output).
 - [ ] **Expression language growth** — date/time functions, `random`, JSON parsing (still sandboxed).
 - [ ] **Global / persistent variables** shared across macros.
+- [ ] **HTTP-request step type** — call an API mid-macro instead of driving a UI that just wraps one.
+      Passes the Policy Kernel like any state-changing step and the outbound-fetch destination guard in
+      [phase-2](phase-2-adapters-safe-browsing.md) L10. Shared with [phase-6](phase-6-deterministic-automation.md).
+- [ ] **PDF read/fill step type** — extract a value from, or fill, a PDF form encountered mid-flow; sits on
+      the agent-facing PDF tools in [phase-2c](phase-2c-classic-browser-essentials.md). Shared with
+      [phase-6](phase-6-deterministic-automation.md).
+      Both from [`../tracks/skyvern-agent-parity.md`](../../docs/parities/skyvern-agent-parity.md) P5.
 
 ### M5 — Reliability & execution
 
@@ -129,6 +136,11 @@ without the Manifest-V3 death, the opaque error codes, or the `EVAL` security ho
 - [ ] **Run history & replay-diff** — journal every run (Event Journal wiring exists); show the failing
       step vs the recorded golden trace.
 - [ ] **Default timeout / retry settings** per macro.
+- [ ] **Bulk grid/table paste primitive.** `fill` writes one field at a time, which for a
+      spreadsheet-style grid is both slow and easy to mis-target. One step that writes a block of values
+      into a detected grid/table input in a single call — narrow, additive, no new trust surface (the
+      values still come from declared variables and still re-pass the PEP).
+      [`../tracks/skyvern-agent-parity.md`](../../docs/parities/skyvern-agent-parity.md) P6-b.
 
 ### M6 — Security / policy
 
@@ -156,6 +168,16 @@ without the Manifest-V3 death, the opaque error codes, or the `EVAL` security ho
 - [ ] **Scheduler** — cron-like background runs under the restricted unattended profile.
 - [ ] **Watchers** — "run when this element/value changes" (price-watch etc.).
 - [ ] **Triggers** — run on page open / URL match.
+- [ ] **Failure guardrails on the scheduler.** `@tepegoz/tasks` has `cooldownMs`, but nothing stops a
+      task that fails every single run: needed are consecutive-failure counting, auto-disable with a
+      user-visible reason after a threshold, and a notification when a scheduled task is disabled — so a
+      broken automation announces itself once instead of failing silently forever.
+      [`../tracks/librechat-agent-parity.md`](../../docs/parities/librechat-agent-parity.md) P6.
+- [ ] **External (event) triggers** — the `TaskExternalSource` half of `@tepegoz/tasks` that is written but
+      disabled; inbound, so it inherits [phase-9](phase-9-safe-autonomy-delegation.md)'s Governed Agent
+      Endpoint gate. Owned by [phase-6](phase-6-deterministic-automation.md); listed here because this is
+      where a user would look for it.
+      [`../tracks/openhands-agent-parity.md`](../../docs/parities/openhands-agent-parity.md) P2.
 
 ### M9 — Import / export & sharing
 

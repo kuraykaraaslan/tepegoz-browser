@@ -182,6 +182,11 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 - [x] **Connections overview + disclosure copy** in Settings → Network privacy: the list with live status, add/remove, the default-route picker, and plain statements that the browser does not provide the tunnel and that the exit note is the user's own unverified claim
 - [x] **Per-group indicator** on the group header ([route-badge.tsx](../../packages/tab-strip/src/route-badge.tsx), 8 tests): a shield beside the group name — green / amber / red for a VPN leg, purple when Tor is carrying traffic and grey when it is not. A **chained** route splits one shield down the middle, one half per leg, because either leg dying cuts the group. Colour is never the only signal: every state is also named in the accessible name. A Direct group draws nothing.
 - [ ] A legal/perf disclosure pass once a bundled provider exists
+- [ ] **Secure DNS (DoH) and HTTPS-Only as first-class user settings** — today DoH is only recorded as a
+      process-wide leak _residual_ (L8 above) and HTTPS-Only is tunnel-scoped. Chrome/Brave/Firefox all
+      ship a Settings toggle: DoH on/off + provider (or custom resolver), and a global "always use secure
+      connections" with an HTTP interstitial. Scoped and not scheduled — see
+      [`../tracks/browser-settings-feature-gap.md`](../../docs/tracks/browser-settings-feature-gap.md) §7.
 
 ### L10 — Safe-Browsing interplay
 

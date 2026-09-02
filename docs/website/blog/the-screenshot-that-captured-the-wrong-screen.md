@@ -66,7 +66,7 @@ Two captures, two different pieces of somebody's screen that had no business bei
 asset. Neither was published. Both were deleted within a minute of being looked at, which is the only
 part of this story that went right, and it only went right because I looked.
 
-**The lesson is not "match windows more carefully."** It is that *screen* capture and *window* capture
+**The lesson is not "match windows more carefully."** It is that _screen_ capture and _window_ capture
 are different operations, and an API that reads the framebuffer cannot be made into the second one by
 being more careful about which rectangle you ask for. A tool whose failure mode is "silently captures
 whatever the human was doing" does not belong in an automated pipeline, at any level of care.
@@ -92,7 +92,7 @@ Two details cost time and are worth writing down:
   that matters: the permission prompt simply says no.
 - `callback({ video: theWindow })` is not enough. The handler wants a source object from
   `desktopCapturer`, not a `BrowserWindow`. The error message for getting this wrong is `Invalid
-  capture constraints`, which is accurate and tells you nothing.
+capture constraints`, which is accurate and tells you nothing.
 
 The output is a WebM containing the browser chrome and the live page in the same frame — the thing that
 neither earlier method could produce.
@@ -104,7 +104,7 @@ since it was written that a still cannot show the difference between a chat pane
 and an agent that drives tabs, and that a mockup will not be substituted.
 
 The capture is solved. The recording is not. Handing the agent a goal through the command palette's
-**Do** mode leaves the text sitting in the command filter — *"No matching command"* — and Enter
+**Do** mode leaves the text sitting in the command filter — _"No matching command"_ — and Enter
 dispatches no run. Ninety seconds of video of an application not doing anything.
 
 So there is still no recording of the agent working, and the home page still says so. What I have is a

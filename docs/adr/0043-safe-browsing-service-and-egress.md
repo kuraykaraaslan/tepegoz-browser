@@ -18,7 +18,7 @@ performs step 4 (full-hash resolution), a navigation-time check, and — from
 
 Both phase DoDs above are held open by this. The open question is not the algorithm — it is **where
 step 4's request egresses**. A four-byte prefix leaks far less than a URL (thousands of unrelated
-URLs share each bucket), but it still goes to *someone*, and this product does not add a silent
+URLs share each bucket), but it still goes to _someone_, and this product does not add a silent
 third-party feed.
 
 ## Decision
@@ -47,7 +47,7 @@ A `SafeBrowsingService` (new, in `apps/desktop/src/main` — Electron-bound; the
   lookup failure would make the browser unusable offline.
 - **Download-trust provider** — the `DownloadTrustProvider` from ADR-0040 § 5, checking the
   download's **source URL / origin**. `unsafe` → `blocked`; anything else → `unknown` (unchanged).
-  This is the only place a Safe Browsing verdict is allowed to be *fail-closed*, because a blocked
+  This is the only place a Safe Browsing verdict is allowed to be _fail-closed_, because a blocked
   download is recoverable (the release gate) and a hostile file is not.
 
 ### 2. The Settings switch is the disclosure
@@ -88,7 +88,7 @@ vault.
   and keep available, and inserts a party (us) that sees prefix traffic tied to an app instance —
   a worse privacy story than Google's k-anonymity, not a better one, unless the proxy is itself
   blinded, which is a research project. Revisit when the managed backend ships.
-- **Bundled prefix list, no step 4 at all.** Rejected as the default, kept as the *degraded* mode.
+- **Bundled prefix list, no step 4 at all.** Rejected as the default, kept as the _degraded_ mode.
   A prefix hit with no full-hash resolution must escalate straight to a warning, so every four-byte
   collision (common by design) becomes a false-positive interstitial. Staleness is bounded only by
   how often we ship an app update. This is effectively what "switch off" leaves you with minus the
@@ -97,7 +97,7 @@ vault.
   Out of scope, consistent with [ADR-0040](0040-download-trust-model.md): the public Safe Browsing
   API does not offer it and standing up our own is not a v1 bet.
 - **Fail-closed navigation on `unknown`.** Rejected — it makes the browser unusable offline or when
-  Google is unreachable. `unknown` blocks nothing on navigation; only a *confirmed* `unsafe` does.
+  Google is unreachable. `unknown` blocks nothing on navigation; only a _confirmed_ `unsafe` does.
 
 ## Consequences
 

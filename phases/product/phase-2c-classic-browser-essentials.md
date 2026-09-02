@@ -48,26 +48,28 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
   invented, which is worse than an absent one. **This line depends on a phase it does not own**, and
   that is a roadmap defect worth recording rather than working around: it is why the box is `[~]`._
 - [ ] **i18n:** en+tr keys added for all new surfaces (download manager, find-bar, print/PDF/reader/translate,
-      bookmark manager, private-mode chrome, Permissions Center, omnibox command hints)
+      bookmark manager, private-mode chrome, Permissions Center, omnibox command hints, Site Info bubble)
+  - _Site Info bubble done: `browser.siteInfo` (omnibox labels) + the top-level `siteInfo` namespace,
+    en+tr, in `apps/desktop/src/i18n`; permission labels/state names reused from `@tepegoz/settings-ui`._
 - [~] ADRs accepted: **Download Trust Model** (agent-initiated download class + quarantine policy) —
-      _**[ADR-0040](../../docs/adr/0040-download-trust-model.md) accepted.** Documents the shipped
-      quarantine lifecycle + risk classification + the release/HITL gate + the agent security class,
-      and speces the Safe-Browsing provider seam._ · **Page-Translation** provider boundary —
-      _**[ADR-0042](../../docs/adr/0042-page-translation-provider-boundary.md) accepted** (owner call
-      2026-09-01: hybrid — local model default, cloud per-origin opt-in, sensitive sites never reach
-      cloud). Ratifies the shipped `@tepegoz/ext-translate` hybrid engine; the sensitive-site cloud lockout
-      **and** the agent-run untranslated-source guarantee (`ensureUntranslatedForAgent` on `readPage` +
-      `snapshotElements`) are wired. **Owed for the box:** the remaining agent DOM readers +
-      auto-translate suppression for a run's duration._ ·
-      **Safe-Browsing provider** — _**[ADR-0043](../../docs/adr/0043-safe-browsing-service-and-egress.md)
-      accepted** (owner call 2026-09-01: direct to Google Safe Browsing v5, on by default, one
-      Settings switch to disable). **Shipped 2026-09-01, all unit-tested:** `SafeBrowsingProvider` +
-      `PrefixStore` + SB v5 full-hash/list clients + `SafeBrowsingRefreshScheduler` +
-      `SafeBrowsingService` + `will-navigate` check & interstitial + `DownloadTrustProvider` into
-      `DownloadService.init()` + the `safeBrowsingEnabled` toggle. Rice-Golomb decoding **and**
-      incremental (delta) list updates are now done — `parseHashListDelta` / `applyHashListDelta` /
-      `fourBytePrefixChecksum`, a stored `versionToken`, checksum-verified apply with a full-refresh
-      fallback. **Inert** pending only a free-tier Google Safe Browsing API key (release input)._
+  _**[ADR-0040](../../docs/adr/0040-download-trust-model.md) accepted.** Documents the shipped
+  quarantine lifecycle + risk classification + the release/HITL gate + the agent security class,
+  and speces the Safe-Browsing provider seam._ · **Page-Translation** provider boundary —
+  _**[ADR-0042](../../docs/adr/0042-page-translation-provider-boundary.md) accepted** (owner call
+  2026-09-01: hybrid — local model default, cloud per-origin opt-in, sensitive sites never reach
+  cloud). Ratifies the shipped `@tepegoz/ext-translate` hybrid engine; the sensitive-site cloud lockout
+  **and** the agent-run untranslated-source guarantee (`ensureUntranslatedForAgent` on `readPage` +
+  `snapshotElements`) are wired. **Owed for the box:** the remaining agent DOM readers +
+  auto-translate suppression for a run's duration._ ·
+  **Safe-Browsing provider** — _**[ADR-0043](../../docs/adr/0043-safe-browsing-service-and-egress.md)
+  accepted** (owner call 2026-09-01: direct to Google Safe Browsing v5, on by default, one
+  Settings switch to disable). **Shipped 2026-09-01, all unit-tested:** `SafeBrowsingProvider` +
+  `PrefixStore` + SB v5 full-hash/list clients + `SafeBrowsingRefreshScheduler` +
+  `SafeBrowsingService` + `will-navigate` check & interstitial + `DownloadTrustProvider` into
+  `DownloadService.init()` + the `safeBrowsingEnabled` toggle. Rice-Golomb decoding **and**
+  incremental (delta) list updates are now done — `parseHashListDelta` / `applyHashListDelta` /
+  `fourBytePrefixChecksum`, a stored `versionToken`, checksum-verified apply with a full-refresh
+  fallback. **Inert** pending only a free-tier Google Safe Browsing API key (release input)._
 - [ ] Coverage gate (S80/B85/F86/L80) + self-review/code-review + UAT signoff + migration-safe DB
 
 ## Tasks
@@ -88,8 +90,14 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
 - [ ] `will-download` intercept in the browsing session → **quarantine** the file (temp, not-yet-trusted) +
       compute file hash + check via Phase 2 **`SafeBrowsingService`** (reuse, do NOT re-implement); community
       blocklist reuse where present
+- [ ] **Media resolver tool.** The `download_*` tools manage downloads that have already started; nothing
+      resolves a _public media URL_ (a YouTube transcript, a public video/image link) into a direct,
+      verified resource. Add one resolver tool — and route the actual save through the **existing**
+      quarantine → hash → SafeBrowsing → trust-gate path above, so it gains no new write path and no new
+      trust exemption. Captured, not scheduled:
+      [`../tracks/webbrain-agent-parity.md`](../../docs/parities/webbrain-agent-parity.md) P3-c.
 - [~] **Executable/script** downloads (`.exe/.msi/.bat/.ps1/.sh/.dmg/...`) force an extra HITL confirm; zip/rar
-      surface a content warning; nothing is "trusted" until the check passes
+  surface a content warning; nothing is "trusted" until the check passes
   - [x] _**zip/rar content warning shipped.** `archiveContentsUnverified(record)` in `@tepegoz/downloads`
         (true for `risk: 'archive'` while `quarantined`/`completed`) drives a distinct line in the
         Downloads manager, en+tr: the quarantine hash and the Safe Browsing check both look at the
@@ -206,6 +214,17 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       webSecurity) and `plugins` live. Tests: `tabs-shared.test.ts` pins the factory's invariants;
       `e2e/pdf-viewer.spec.ts` serves a real `application/pdf` and asserts the viewer mounts in the
       tab document rather than a download firing._
+  - [ ] **The agent still cannot read or save a PDF** — the note on the print row above verifies this
+        (`browser-tools` and `capability-plane` have neither capability). Two small tools close it, both
+        sitting on surfaces this phase already shipped rather than adding a PDF stack: a
+        `browser_read_pdf` that extracts text from the **already-rendered** viewer (reuse its text layer —
+        no new PDF library, no new parsing attack surface), `dangerClass: 'read'`, wrapped as untrusted
+        content exactly like `browser_get_page`; and an agent-callable page→PDF save routed through the
+        landed `printToPDF` path, which means it inherits `pdf-filename.ts`'s sanitizer and the Download
+        Manager's trust gate rather than getting its own write path. Note that an agent-initiated print is
+        also precisely what makes the print row's "respects sensitive-site rules" line non-vacuous. Sources:
+        [`../tracks/webbrain-agent-parity.md`](../../docs/parities/webbrain-agent-parity.md) P3-a and
+        [`../tracks/playwright-mcp-agent-parity.md`](../../docs/parities/playwright-mcp-agent-parity.md) P4.
 - [x] **Reader mode** (Readability extraction → clean, localized reading view; opt-in per page)
       — _`@tepegoz/reader`: Readability-style scoring (paragraph density, discounted by link density,
       penalised on the class/id names that mark boilerplate), the reading view, en+tr. Page right-click
@@ -288,6 +307,24 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         menu, Chrome-style. Tests: `applyZoomCommand` (5, `site-zoom.test.ts`), `toState` zoom
         pass-through (`tab-store.test.ts`), indicator show/hide + button routing (3,
         `nav-toolbar.test.tsx`), wired menu-zoom row (`main-menu-model.test.tsx`)._
+  - [x] **Site Info bubble** (Chrome's Page Info panel: a leading omnibox control that shows a lock on
+        `https://`, a red "Not secure" on `http://` — `http://localhost` included — and a gear on an
+        internal page; clicking it opens a native popup with connection status, a certificate viewer,
+        "N cookies in use" + Clear site data, and the per-origin permissions as inline Ask/Allow/Block
+        controls + Reset, plus a "Site settings" deep-link). — _[ADR-0044](../../docs/adr/0044-page-info-and-connection-security.md).
+        `PageSecurityLevel` + pure `classifyPageSecurity` in `@tepegoz/shared-types`; the cheap verdict
+        rides `TabsState.activeSecurityLevel`, the full payload is pulled on demand over `page-info:get`
+        (never throws — an internal/`file://` URL yields a null-heavy `PageInfo`). A
+        `setCertificateVerifyProc` recorder on every browsing session captures the leaf cert + chain
+        for the viewer and **always** returns `callback(-3)` (observe-only, never trusts). The bubble's
+        permission edits write the SAME `sitePermissions` pref the Permissions Center uses — no
+        parallel flow. Leading control lives in `@tepegoz/omnibox`, threaded through
+        `@tepegoz/nav-toolbar` + `@tepegoz/browser-chrome`; popup surface `site-info` reuses
+        `PopupWindowManager` (`align: 'start'`). Tests: `page-info.test.ts` (classifier matrix incl.
+        `http://localhost` → not-secure, https+certError → dangerous), `certificate-recorder.electron.test.ts`
+        (proc returns -3 for clean AND failed handshakes; LRU eviction), `ipc-page-info.electron.test.ts`
+        (internal → nulls, http → not-secure + cookie/permission map), `omnibox.test.tsx` (+5: lock vs
+        red "Not secure", opens with a rect, hidden for `unknown`)._
 - [ ] **Spellcheck** (`session.setSpellCheckerLanguages` + built-in Chromium spellchecker; currently
       `spellcheck:false` in `window.ts`) — en/tr dictionaries, settings toggle
   - [ ] **Scope conflict — decide before building.** `ext-typo` already ships "local-first writing and
@@ -297,6 +334,13 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         native context-menu suggestions in every input; ext-typo is a richer opt-in assistant, and Chrome
         itself ships both), so this is a product call — not a coding task. `spellcheck:false` is still the
         live setting, so today neither path underlines anything in a plain text input.
+- [ ] **Unified "Clear browsing data" dialog with a time range** (last hour / 24 h / 7 days / 4 weeks /
+      all time) + the full category list in one place — today only "clear history" and "clear download
+      history" exist, plus the Site Info bubble's per-site "clear site data". Scoped, not scheduled:
+      [`../tracks/browser-settings-feature-gap.md`](../../docs/tracks/browser-settings-feature-gap.md) §6.
+- [ ] **File-type / MIME handler actions** ("Open in app / Always ask / Save / Open in browser" per type;
+      "automatically open safe files after downloading"). No home in the Download Manager work above.
+      Scoped, not scheduled: [`../tracks/browser-settings-feature-gap.md`](../../docs/tracks/browser-settings-feature-gap.md) §15.
 
 ### L9 — Bookmarks 2.0
 
@@ -507,6 +551,14 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
   - [x] _Read-only with no control at all, and the panel says **why**: an editable copy here would be
         the parallel permission flow the line above forbids. A read-only table with no explanation
         reads like a broken one._
+- [ ] **The content-permission grid beyond the five brokered capabilities.** `main/security.ts`
+      default-denies USB / Serial / HID / Bluetooth / MIDI, autoplay, per-site JavaScript+images,
+      protocol handlers, sensors, idle detection, window management, local fonts, background sync, FedCM,
+      automatic downloads, and per-site PDF "open vs download" — all asserted denied by `security.test.ts`,
+      none grantable from a UI. Chrome's `chrome://settings/content` exposes every one with a per-site
+      exception list + a global default, plus a single "reset all permissions for this site". This is the
+      Permissions Center's unbuilt tail — scoped, not scheduled, in
+      [`../tracks/browser-settings-feature-gap.md`](../../docs/tracks/browser-settings-feature-gap.md) §14.
 
 ### L5/L8 — Upload Broker + Upload Activity
 

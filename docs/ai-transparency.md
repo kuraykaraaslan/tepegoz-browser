@@ -17,17 +17,28 @@ through a single `ModelGateway.complete()` entry point that selects a registered
 Routing is deterministic (`ModelRouter`): each capability maps to a tier, and each tier maps to a concrete
 model per provider — adding a provider is a data change plus one adapter, not a routing branch.
 
-| Provider                         | Transport                              | Adapter                           | Plan tier         | Exec tier           | Classify tier           |
-| -------------------------------- | -------------------------------------- | --------------------------------- | ----------------- | ------------------- | ----------------------- |
-| **Anthropic (Claude)** — default | `@anthropic-ai/sdk` (vendor SDK)       | `providers/anthropic.provider.ts` | `claude-opus-4-8` | `claude-sonnet-4-6` | `claude-haiku-4-5`      |
-| **OpenAI (GPT)**                 | REST via `@tepegoz/http` (no SDK)      | `providers/openai.provider.ts`    | `gpt-4o`          | `gpt-4o`            | `gpt-4o-mini`           |
-| **Google (Gemini)**              | REST via `@tepegoz/http` (no SDK)      | `providers/gemini.provider.ts`    | `gemini-2.5-pro`  | `gemini-2.5-flash`  | `gemini-2.5-flash-lite` |
-| **On-device (Local SLM)**        | `@tepegoz/local-inference` (llama.cpp) | `local-provider.ts`               | selected GGUF     | selected GGUF       | selected GGUF           |
+| Provider                         | Transport                              | Adapter                               | Plan tier                 | Exec tier                 | Classify tier          |
+| -------------------------------- | -------------------------------------- | ------------------------------------- | ------------------------- | ------------------------- | ---------------------- |
+| **Anthropic (Claude)** — default | `@anthropic-ai/sdk` (vendor SDK)       | `providers/anthropic.provider.ts`     | `claude-opus-5`           | `claude-sonnet-5`         | `claude-haiku-4-5`     |
+| **OpenAI (GPT)**                 | REST via `@tepegoz/http` (no SDK)      | `providers/openai.provider.ts`        | `gpt-5`                   | `gpt-5`                   | `gpt-5-mini`           |
+| **Google (Gemini)**              | REST via `@tepegoz/http` (no SDK)      | `providers/gemini.provider.ts`        | `gemini-3-pro`            | `gemini-3-flash`          | `gemini-3-flash-lite`  |
+| **Kimi (Moonshot AI)**           | REST via `@tepegoz/http` (no SDK)      | `providers/kimi.provider.ts`          | `kimi-k2.6`               | `kimi-k2.6`               | `moonshot-v1-8k`       |
+| **Amazon Nova**                  | REST via `@tepegoz/http` (no SDK)      | `providers/nova.provider.ts`          | `nova-2-lite-v1`          | `nova-2-lite-v1`          | `nova-micro-v1`        |
+| **DeepSeek**                     | REST via `@tepegoz/http` (no SDK)      | `providers/openai-compat.provider.ts` | `deepseek-reasoner`       | `deepseek-chat`           | `deepseek-chat`        |
+| **xAI (Grok)**                   | REST via `@tepegoz/http` (no SDK)      | `providers/openai-compat.provider.ts` | `grok-4`                  | `grok-4`                  | `grok-3-mini`          |
+| **Groq**                         | REST via `@tepegoz/http` (no SDK)      | `providers/openai-compat.provider.ts` | `llama-3.3-70b-versatile` | `llama-3.3-70b-versatile` | `llama-3.1-8b-instant` |
+| **On-device (Local SLM)**        | `@tepegoz/local-inference` (llama.cpp) | `local-provider.ts`                   | selected GGUF             | selected GGUF             | selected GGUF          |
 
 - **Tier roles.** `plan` = highest-capability planning; `exec` = the reactive perceive→decide→act loop;
   `classify` = cheap read/understand/summarize/classify. Reasoning depth for Anthropic is set via
-  `output_config.effort` (never `budget_tokens` — rejected on Opus 4.8); OpenAI/Gemini tier models take no
-  effort field, so effort stays a routing/telemetry concern there.
+  `output_config.effort` (never `budget_tokens` — rejected on the Claude 5 / 4.x line); the other cloud
+  tier models take no effort field, so effort stays a routing/telemetry concern there.
+- **Region.** Kimi (`api.moonshot.ai` vs. `api.moonshot.cn`) and xAI (`<region>.api.x.ai` clusters, e.g.
+  `eu-west-1` for data residency) are offered on more than one endpoint. The region is chosen **per key**
+  at add time (`ProviderKeyMeta.region` → `PROVIDER_REGIONS` → the adapter's `baseURL`); single-endpoint
+  providers show no picker. See `packages/model-gateway/src/models.ts` (`PROVIDER_REGIONS`).
+- **Tunable ids.** The Claude ids are pinned to a verified generation; the Kimi/Nova/DeepSeek/xAI/Groq
+  and OpenAI/Gemini ids are tunable defaults (edit `models.ts`), not verified against a spec.
 - **Cost-saver / local offload.** When the cost-saver toggle is on and a local model is installed, simple
   capabilities route on-device (`transport:'local'`), transparently falling back to the cheap cloud tier
   when the local engine is unavailable.
@@ -48,6 +59,11 @@ model per provider — adding a provider is a data change plus one adapter, not 
   - Anthropic (Claude): Anthropic Commercial Terms + DPA; Claude model cards.
   - OpenAI (GPT): OpenAI API Terms + DPA (API data not used for training by default).
   - Google (Gemini): Google AI / Gemini API terms + DPA.
+  - Kimi (Moonshot AI): Moonshot API terms + DPA (global `api.moonshot.ai` or China `api.moonshot.cn`).
+  - Amazon Nova: Amazon Nova developer API terms (`api.nova.amazon.com` — the consumer API, not AWS Bedrock).
+  - DeepSeek: DeepSeek open-platform API terms.
+  - xAI (Grok): xAI API terms + DPA; regional cluster chosen per key for data residency.
+  - Groq: GroqCloud API terms (open-weight models on Groq's LPU inference).
   - On-device: no third party — inference runs locally; nothing leaves the device.
 - **Untrusted-content handling.** Web/page text handed to a model is treated as untrusted: it is sanitized
   (zero-width/bidi/homoglyph/hidden stripping) and wrapped with an XML delimiter + anti-injection footer
@@ -114,8 +130,9 @@ model per provider — adding a provider is a data change plus one adapter, not 
 - Vision, true parallel-DAG execution, durable resume across restarts, and on-device model _execution_
   (the engine backend) are Phase 1b — the routing/adapters ship now.
 - `count_tokens` pre-flight sizing is Anthropic-only and not yet wired into routing.
-- Gemini/OpenAI tier model ids are tunable defaults (edit `models.ts`); they are not verified against a
-  live provider catalog in this document.
+- All non-Anthropic tier model ids (OpenAI, Gemini, Kimi, Nova, DeepSeek, xAI, Groq) are tunable
+  defaults (edit `models.ts`); they are not verified against a live provider catalog in this document.
+  The Anthropic ids track a verified generation and change with a migration, not a retune.
 - The token quota is a total-token cap, not a currency budget; per-provider pricing is out of scope here.
 
 ## 6. In-product AI disclosure (UI)

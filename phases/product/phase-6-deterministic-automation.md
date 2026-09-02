@@ -68,6 +68,25 @@ Effect Ledger + perception-observation events. Narrative: **"Demonstrate once, r
 - [ ] _Risk mitigation (ADR-0012):_ recipes carry NO escalated trust; every step re-passes Policy Kernel at run
       time; a11y-signature structural-drift check halts before any side-effect; captured tainted values forced
       to variables (never inlined as constants)
+- [ ] **Typed hand-off from a deterministic run to the agent, and back.** The re-run executor above already
+      invokes the model on a selector miss; the missing piece is the general case — a recipe declaring "if
+      this step cannot be completed deterministically, escalate _this bounded sub-goal_ to the agent, then
+      resume the script at the next step with the result bound to a variable." The escalation carries a
+      step budget and the same Policy Kernel pass as any agent action; it is a scoped sub-run, not a
+      free-for-all. Captured, not scheduled:
+      [`../tracks/notte-agent-parity.md`](../../docs/parities/notte-agent-parity.md) P2.
+- [ ] **Two block types the IR is missing** for otherwise-complete workflows: an **HTTP request step**
+      (call an API mid-recipe instead of driving a UI that just wraps one — subject to the outbound-fetch
+      destination guard in [phase-2](phase-2-adapters-safe-browsing.md) L10 and to the Policy Kernel like
+      any other state-changing step) and a **PDF read/fill step** (extract a value from, or fill, a PDF
+      form encountered mid-flow). Shared with [phase-macros](phase-macros.md) M4/M5.
+      [`../tracks/skyvern-agent-parity.md`](../../docs/parities/skyvern-agent-parity.md) P5.
+- [ ] **One-way export of a replayed recipe to a portable script** (Playwright-shaped). Anti-lock-in: a user
+      can take their automation elsewhere. Strictly **one-way — an exported script is never re-ingested**,
+      because a round-trip would let an external, unreviewed artifact re-enter as a trusted recipe and
+      quietly bypass [ADR-0031](../../docs/adr/0031-recipe-compiler-trust-model.md)'s "recipes carry NO
+      escalated trust". Captured, not scheduled:
+      [`../tracks/lavague-agent-parity.md`](../../docs/parities/lavague-agent-parity.md) P1.
 
 ### L3/L4 — Self-correcting golden assertions (verified-done, not vibe-done)
 
@@ -86,6 +105,17 @@ Effect Ledger + perception-observation events. Narrative: **"Demonstrate once, r
   re-stabilizing, re-binding, or attempting the one scoped replan first.)_
 - [ ] Adds a **success oracle** on top of the existing Loop Detector (directly fixes competitors' universal
       "did it actually work?" / penultimate-step-abandonment failure)
+- [ ] **Expose the assertion kinds as named, model-callable tools too**, not only as distill-time recipe
+      metadata. `evaluateAssertion`'s four kinds already exist and are model-free; giving the agent small
+      named primitives ("assert this text is visible", "assert this URL matches") lets it verify its own
+      work mid-run instead of asking for a page dump and judging by vibes — cheaper and more reliable than
+      a perception round-trip. Same evaluator, second caller. Shares S4's verified-outcomes seam.
+      [`../tracks/playwright-mcp-agent-parity.md`](../../docs/parities/playwright-mcp-agent-parity.md) P6.
+- [ ] **Cap self-healing per recipe per day.** The bounded ladder above bounds a _single_ failure; nothing
+      bounds a recipe that heals successfully every run because the site changed underneath it. A daily
+      heal counter that trips to HITL ("this recipe has re-bound its selectors 14 days running — re-teach
+      it") turns silent, permanent degradation into one visible prompt. Small addition to the ladder.
+      [`../tracks/skyvern-agent-parity.md`](../../docs/parities/skyvern-agent-parity.md) P6-a.
 - [x] Assertions **tiered**: hard for side-effect steps, soft for cosmetic; failures journaled with the
       predicate so users can relax them
       _(landed: `AssertionTierSchema` (`hard`/`soft`) + `shouldHaltOnFailure`, 4 tests, defaulting an unmarked assertion to `hard`. **Not done:** journaling the predicate — no journal call exists here yet.)_
@@ -113,6 +143,13 @@ Effect Ledger + perception-observation events. Narrative: **"Demonstrate once, r
       skip, never silent degrade — not started; `mayRunUnattended` supplies the yes/no this depends on, nothing acts on a `false` verdict yet
 - [ ] _Risk (ADR-0013):_ the unattended profile is always a strict subset of the interactive profile;
       per-run journaled audit the user reviews; this is the highest-agency surface — deny-by-default
+- [ ] **Turn on `@tepegoz/tasks`' disabled `external` trigger.** The schema already anticipated this —
+      `TaskExternalSource` is written and sits unused — so a task can only be fired by a timer today, not
+      by an event. This is the difference between "a scheduler" and "real automations". It is also an
+      **inbound** surface, so it inherits the whole Governed Agent Endpoint gate from
+      [phase-9](phase-9-safe-autonomy-delegation.md) rather than opening a second door: authenticated,
+      rate-limited, scoped, journaled, and narrowed by `narrowToUnattended` exactly like a scheduled run.
+      [`../tracks/openhands-agent-parity.md`](../../docs/parities/openhands-agent-parity.md) P2.
 
 ### L5/L9 — Command-Palette Macros / Personal Web API
 

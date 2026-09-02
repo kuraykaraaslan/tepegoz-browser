@@ -5,7 +5,7 @@
 
 > **Amended by [ADR-0039](0039-user-granted-sensitive-capabilities.md) (2026-08-23):** the sensitive-site
 > lockout is now a per-category user grant that ships off rather than an absolute deny, and CAPTCHA/2FA
-> are cleared automatically rather than handed to the user. The invariant that *autonomy* can never
+> are cleared automatically rather than handed to the user. The invariant that _autonomy_ can never
 > overturn a `deny` is unchanged — only an out-of-band user grant can, and the agent cannot create one.
 > Everything else in this record stands.
 
@@ -34,7 +34,7 @@ tool-call arguments are treated as untrusted input and zod-validated.
 
 ## Amendment 2026-08-16 — the autonomy level is main-enforced (a fixed defect)
 
-Recorded by [S6-PR1](../../phases/ai-agent-super/phase-s6-safety-control-plane.md). **This documents a
+Recorded by [S6-PR1](../../phases/ai-agent/phase-s6-safety-control-plane.md). **This documents a
 defect that was fixed, not a decision that was taken** — the behaviour below was never intended by this
 ADR, and the record exists so it cannot be mistaken for a design choice or reintroduced.
 
@@ -70,7 +70,7 @@ pre-model" property is preserved intact.
 
 ## Amendment 2026-08-16 — six derived risk tiers + a sensitive-site category map
 
-Recorded by [S6-PR2](../../phases/ai-agent-super/phase-s6-safety-control-plane.md). This ADR's original
+Recorded by [S6-PR2](../../phases/ai-agent/phase-s6-safety-control-plane.md). This ADR's original
 classification (`read` / `state_changing` / `destructive` / `financial`) is a **declared** class: the
 tool author supplies it at registration, and it cannot see arguments. That is too coarse for consent.
 Typing into a search box and typing into a password field are the same declared class, so a flat

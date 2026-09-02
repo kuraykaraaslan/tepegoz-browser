@@ -69,6 +69,25 @@ Phase 1b already builds**. Competitors' intelligence lives in the cloud; they li
       behind Memory-Audit opt-in, encrypted per-profile partition, never synced unless E2EE CloudSync is on,
       sensitive-site lockout excludes bank/health pages from indexing, honors "Forget this site" tombstones
 
+### L1/L2 — Installable offline knowledge corpus (a new _content source_ for the engine above)
+
+- [ ] **Answer questions with no network connection at all.** The retrieval engine above is being built for
+      the user's own history; this adds a second **content source** to that same engine — an installable
+      reference corpus (an offline Wikipedia archive being the obvious first one) — rather than a second
+      engine. A genuine differentiator, and a natural companion to Sovereign / Air-Gapped Mode above.
+- [ ] **The licence design is the whole workstream, and it is already solved.** Reading an openZIM archive
+      and full-text-**searching** one are separable: the format is documented and an MIT-licensed Zstandard
+      decoder is enough to read articles, whereas the usual search path (a vendored Xapian/libzim WASM
+      build) is GPL — it is the single reason WebBrain had to relicense its own extension to GPL-3.0. So:
+      **read** ZIM archives with a from-scratch or MIT-licensed reader, and **search** the extracted article
+      text with the `FTS5 + sqlite-vec` / RRF BM25+cosine ranker this phase already commits to. The GPL
+      dependency never enters the tree, and no retrieval code is written twice.
+- [ ] Corpus install/removal is user-driven and disk-budgeted (these archives are tens of GB), surfaced with
+      the same per-source provenance and **forget** affordances as the KG above; corpus content is untrusted
+      input like any other retrieved text.
+- [ ] Captured, not scheduled:
+      [`../tracks/webbrain-agent-parity.md`](../../docs/parities/webbrain-agent-parity.md) P2.
+
 ### L7/L1/L2 — Quality/cost-aware learned ModelRouter + speculative two-tier
 
 - [ ] Replace the static cost-saver toggle with a **deterministic-by-record learned router**: a feature vector
@@ -91,6 +110,10 @@ Phase 1b already builds**. Competitors' intelligence lives in the cloud; they li
       Turkish verb forms before the SLM classifier, improving the cost-saver local path
 - [ ] Turkish honorific/formality-aware output style (siz/sen, resmî/samimi) for agent-composed drafts/form-fills
 - [ ] _Risk:_ keep deterministic (rule/lexicon based); SLM is fallback not primary, so it stays replayable
+- [ ] **A preferred-languages list** (Accept-Language ordering, "add a language", "offer to translate pages
+      in this language") — Tepegöz has a single display language today. Natural companion to the
+      Turkish-first layer and the translation extension; captured in
+      [`../tracks/browser-settings-feature-gap.md`](../../docs/tracks/browser-settings-feature-gap.md) §12.
 
 ### L7/L4/L2 — Low-Data / Offline-Resilient "Düşük Veri" mode
 

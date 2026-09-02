@@ -24,6 +24,17 @@
 - [ ] Reference adapters: **Google package** (Gmail read/draft/**send=HITL**, Drive→blob, Calendar) single OAuth client
 - [ ] **Canva = existing remote MCP** (`mcp__claude_ai_Canva__*`) — do NOT write a custom adapter (MCP-vs-adapter criterion → ADR)
 - [ ] Adapter **health-check + version-pinning + regression suite**; large output (Drive/Gmail thread) → CAS + reference+summary
+- [ ] **Lightweight site-guidance adapters for the long tail this layer will never write a full adapter
+      for.** A different concept from the OAuth-backed adapters above and deliberately so: no OAuth, no
+      official API, no credential — just a matched-domain block of **user- or contributor-authored** prompt
+      guidance ("on this site the search box is X; confirm before Y") injected into the existing
+      system-prompt assembly. WebBrain ships 58+ of these against this layer's ~4 services. Two hard rules,
+      both load-bearing: the text is **never model-generated and never derived from page content** (it is a
+      trusted-text surface, so page content can never become one), and **guidance informs, it does not
+      grant** — an adapter can say "ask before X", it can never waive a Policy Kernel `ask`/`deny`, which
+      holds by construction because the Kernel never reads prompt content. Same trust tier as the standing
+      rules in [phase-1b](phase-1b-agentic-deepening.md) L8. Captured, not scheduled:
+      [`../tracks/webbrain-agent-parity.md`](../../docs/parities/webbrain-agent-parity.md) P4.
 - [~] each adapter registered to L5 Capability Plane as a ToolProvider (same gateway/permission/audit) _(down-payment shipped: MCP and local/native tool providers are projected into the same Adaptors inventory; `@tepegoz/web-tools` registers web search/get-page through ToolGateway/PolicyKernel. Future REST/GraphQL/OAuth adapters consume the same model.)_
 
 ### L10 — Safe-Browsing Suite (extra requirement #8)
@@ -32,6 +43,32 @@
 - [ ] `SafeBrowsingService` full: Google Safe Browsing v5 Update API (local hash-prefix) + community blocklist
 - [ ] `AgentThreatShield`: **local SLM** (landed in Phase 1b) scam/phishing scoring + egress anomaly → on high risk agent-lockout + HITL; anti-blabbering
 - [ ] `PopupAndPermissionGuard`: `setWindowOpenHandler` + background open; single policy-engine (no parallel permission flow)
+- [ ] 🔴 **DEFECT IN SHIPPED CODE — no destination validation on agent-driven outbound fetch.**
+      `web_get_page`/`web_search` dispatch whatever URL the model supplies (or a page supplies, through
+      indirect prompt injection — "visit this URL for more detail") through `@tepegoz/http`'s
+      `createHttpClient` with **no check that the resolved host isn't loopback, RFC1918, link-local, or
+      `169.254.169.254` cloud-metadata**, and `fetchPage` sets no redirect limit, so a redirect into a LAN
+      host is followed unchecked. An agent told to fetch `http://169.254.169.254/latest/meta-data` succeeds
+      today. **Found independently by two tracks reading two different rivals**, which is why it is written
+      here as a defect rather than a proposal. The fix:
+  - [ ] One pure, obfuscation-resistant classifier next to `egress-route.ts` — canonicalize
+        decimal/octal/hex/short-form IPv4 and `::ffff:`-mapped IPv6 **before** matching, since all of those
+        are equivalent to the caller but not to a naive string-prefix check. Reject loopback / RFC1918 /
+        link-local (`169.254.0.0/16`, `fe80:`) / cloud-metadata / `::1` / `fc00::/7`.
+  - [ ] Check the **resolved IP at connection time, then connect to that literal IP** — not the hostname at
+        URL-parse time. This specific ordering is what defeats DNS rebinding; a TTL-0 answer can otherwise
+        swap the target between the check and the connect.
+  - [ ] Enforce at `createHttpClient` itself — its own docblock already calls it "the ONE outbound-HTTP seam
+        for the whole app" — so `web-tools`, MCP HTTP transports and any future skill-declared endpoint are
+        covered **by construction**, not one patched call site at a time.
+  - [ ] Re-validate every redirect hop, cap the chain, and drop rather than follow into a private target.
+        `sitemap-reader.ts` already has the right instinct locally (`maxRedirects: 0` with a comment saying
+        why) — generalize it instead of leaving it a one-file workaround.
+  - [ ] Pairs with the Egress Firewall Rust port in [phase-1b](phase-1b-agentic-deepening.md) L7 (same seam,
+        different concern: that one governs _what data leaves_, this one governs _what destination is
+        reachable at all_). Sources:
+        [`../tracks/browserless-agent-parity.md`](../../docs/parities/browserless-agent-parity.md) P1 and
+        [`../tracks/librechat-agent-parity.md`](../../docs/parities/librechat-agent-parity.md) P2.
 - [ ] **Third-party cookie isolation (Total-Cookie-Protection style)**: per-site state partitioning on top of Chromium's partition mechanism (consistent with **per-partition** adblock above); Firefox TCP as reference — **ADR required** (partition scope per-context vs. per-site; must NOT break logged-in adapter/`BrowserBackend` sessions)
 - [ ] **Fingerprinting protection**: noise on canvas/WebGL/font/audio entropy + `navigator` surface reduction; **per-site toggle** (strict/standard) for breakage — **ADR required** (scope + determinism/replay impact; agent's own automation runs `standard`, observations recorded per ADR-0004)
 
@@ -125,6 +162,12 @@ Component priorities, taken from the report's own table (high effectiveness firs
 ### Cookie & Storage editor (extra requirement #8)
 
 - [ ] `CookieAndStorageInspector`: CDP/`session.cookies` **DevTools-only** inspect-edit; fully isolated from OAuth vault; **agent access off by default**
+  - [ ] If an **agent-callable** read/clear of a site's client-side state is ever wanted ("what's in this
+        site's localStorage", "clear this site's state and retry"), it is classified **credential-adjacent**,
+        not `read` — session tokens live in exactly these stores. That means: its own danger class, off at
+        every autonomy level by default, hard-denied on `isSensitiveSite`, and the value bodies redacted
+        from the model's context rather than returned verbatim. Written up, deliberately not enabled:
+        [`../tracks/playwright-mcp-agent-parity.md`](../../docs/parities/playwright-mcp-agent-parity.md) P3.
 - [x] **Per-site data clearing** ("Forget this site" / `Clear-Site-Data`): cookies + storage + cache + service-worker + permissions in one action; isolated from OAuth vault — clearing recorded as a `SiteDataCleared` event (append-only "shown=recorded", ADR-0004) + user warning on silent credential loss
       _(landed: [site-data.ts](../../packages/security-policy/src/site-data.ts) + [ipc-site-data.ts](../../apps/desktop/src/main/ipc/ipc-site-data.ts) + a Settings row, EN+TR. **Two-step by construction** — the first click PLANS, which is what produces the warnings; a one-click version would sign people out of sites they were using without telling them. The credential vault is never in scope and has its own predicate, because that is the invariant most likely to be broken by someone adding "and also clear saved passwords" to this button. **Owed:** the per-site ADR the line asks for (the behaviour is implemented and documented in code; the ADR is not written), permissions are not part of the clear, and the offline-data warning is deliberately not probed — a warning we are unsure of trains people to ignore warnings.)_
 
@@ -132,6 +175,14 @@ Component priorities, taken from the report's own table (high effectiveness firs
 
 - [ ] **Full WebAuthn / passkey**: enable `navigator.credentials` in renderer + `setDevicePermissionHandler` (platform authenticator / Windows Hello bridge — shares the Windows Hello HITL path from Phase 1a)
 - [ ] **Built-in password manager**: autofill + strong-password generation + `safeStorage`-encrypted vault + vault UI; breach/leak warning optional. **Constraint:** vault lives in main process (`safeStorage`, ADR-0005); renderer gets autofill only via narrow/zod-validated IPC; **agent access OFF by default** (ADR-0006 sensitive-site lockout already covers "password managers"). Cross-reference Phase 3 **password E2EE sync** + **Bitwarden native adapter** (sync/external layer; this is the local engine)
+  - [ ] The rival-standard **toggles** around it, none currently planned: "offer to save passwords" on/off,
+        "auto sign-in", per-site "never save" exceptions, master password, and a biometric / screen-lock
+        gate on autofill. Listed in [`../tracks/browser-settings-feature-gap.md`](../../docs/tracks/browser-settings-feature-gap.md) §§7–8.
+- [ ] **Privacy headers and presets with no current home**: "Send a Do Not Track request", **Global Privacy
+      Control**, "delete cookies and site data when all windows are closed" (+ exception list), and
+      Standard / Strict / Custom tracking-protection presets over the adblock + fingerprinting + cookie
+      machinery this phase already builds. Captured in
+      [`../tracks/browser-settings-feature-gap.md`](../../docs/tracks/browser-settings-feature-gap.md) §5.
 
 ### Extensibility
 

@@ -68,6 +68,21 @@ signing pipeline without new security scatter. **The heavy economics are adoptio
       steps, Policy Kernel + taint at execution, danger-class/sensitive-site rules apply regardless of recipe,
       drift handled by Loop Detector + health signals + opt-in telemetry
 
+- [ ] **One catalog, not two: the MCP capability marketplace belongs here.** Today a user must
+      hand-configure every MCP server ([ADR-0018](../../docs/adr/0018-mcp-client.md)); a browsable,
+      signed, install-with-scoped-consent catalog is the same problem this section already solves for
+      recipes, and must reuse the same SBOM/SLSA gate below and the same scope-review-at-install step
+      rather than growing a parallel trust path. The client-side wiring is tracked in
+      [phase-1b](phase-1b-agentic-deepening.md) L5.
+      [`../tracks/kilocode-agent-parity.md`](../../docs/parities/kilocode-agent-parity.md) P2.
+  - _Three independent products converged on this surface — Kilo Code's MCP Marketplace, LibreChat's tools
+    marketplace, and Genspark's MCP Store (700+ integrations) — which is the strongest signal in the survey
+    that it is a real user need rather than one vendor's idea. Security note worth stating up front, because
+    it is the objection this will draw: a server installed from a catalogue means **new tools**, and new tools
+    here already pass `dangerClassFor`'s fail-safe classification and the single PEP. **A marketplace does not
+    weaken the kernel** — it changes discovery, not enforcement._
+    _[`../../docs/research-other-ai-browsers.md`](../../docs/research/research-other-ai-browsers.md) §3._
+
 ### L5/L8 — SBOM + SLSA provenance attestation gate
 
 - [ ] Require every installable skill/adapter/extension/MCP package to ship a **CycloneDX SBOM** + an

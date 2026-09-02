@@ -3,7 +3,7 @@
 **This file is a thin index, not a source of truth.** It exists because
 [`CLAUDE.md`](../CLAUDE.md) and [`phases/README.md`](../phases/README.md) both point here, and a dangling
 pointer in the binding working agreement is exactly the drift
-[S0](../phases/ai-agent-super/phase-s0-truth-and-repair.md) exists to close. Every section below links to
+[S0](../phases/ai-agent/phase-s0-truth-and-repair.md) exists to close. Every section below links to
 the document that actually owns the material — **read the owner, never duplicate it here**. A change to
 the architecture is made in the owning document; this page only gains a link.
 
@@ -41,8 +41,8 @@ direct cross-layer imports are forbidden and **enforced in CI** by
 | What is the **threat model** and the security posture?                               | [`threat-model.md`](threat-model.md) + [`sec/`](../research/privacy/)                                                                                                                          |
 | **Why** was a given design decision made?                                            | [`adr/`](adr/) — decisions are recorded, never re-litigated in prose                                                                                                                           |
 | What is being **built next**, in what order, with what exit criteria?                | [`../phases/README.md`](../phases/README.md)                                                                                                                                                   |
-| What is the state of the **AI agent's competence** and how is it measured?           | [`../phases/ai-agent-super/README.md`](../phases/ai-agent-super/README.md) — the sole authoritative AI roadmap, with its results ledger and statistical constitution                           |
-| How do I **run the eval harness**?                                                   | [`../phases/ai-agent-super/eval-loop-runbook.md`](../phases/ai-agent-super/eval-loop-runbook.md)                                                                                               |
+| What is the state of the **AI agent's competence** and how is it measured?           | [`../phases/ai-agent/README.md`](../phases/ai-agent/README.md) — the sole authoritative AI roadmap, with its results ledger and statistical constitution                                       |
+| How do I **run the eval harness**?                                                   | [`../phases/ai-agent/eval-loop-runbook.md`](../phases/ai-agent/eval-loop-runbook.md)                                                                                                           |
 | What are the **working agreement** rules (git, TS, zod, i18n, secrets)?              | [`../CLAUDE.md`](../CLAUDE.md)                                                                                                                                                                 |
 
 ## Cross-cutting foundations

@@ -56,6 +56,29 @@ append-only Journal.
       sent) for non-repudiation of WHEN (keeps local-first default) — not started
 - [ ] _Risk:_ chaining over redacted payloads proves the redacted record is intact, not the original PII →
       hash the pre-redaction content into a sealed **local-only** digest so redaction is itself provable — not started; recorded as an open risk in [ADR-0030](../../docs/adr/0030-notary-service.md)
+- [ ] **An unsigned, human-readable run report — shippable BEFORE the wiring above, and that is the point.**
+      Because nothing in `apps/desktop` calls the Notary yet, **no run produces any artifact at all today**.
+      A single self-contained file per run (goal, each step with its tool call, arguments, result, latency
+      and policy decision, screenshots inline, terminal reason, token cost) gives a user something to read,
+      keep, diff and share now, and gives the signed Replay Receipt a concrete shape to grow into later.
+      Three constraints keep it honest: it is **explicitly labelled "not a proof"** so it is never confused
+      with a Replay Receipt; it runs the same Logger-grade redaction as the journal; and it is a _view over_
+      journal events, never a second source of truth — the day the Notary is wired, the same events sign
+      without the report changing shape. **Four separate tracks converged on this**, which is the strongest
+      single signal in the parity set:
+      [`../tracks/openai-cua-sample-agent-parity.md`](../../docs/parities/openai-cua-sample-agent-parity.md) P1,
+      [`../tracks/nova-act-agent-parity.md`](../../docs/parities/nova-act-agent-parity.md) P1,
+      [`../tracks/ui-tars-desktop-agent-parity.md`](../../docs/parities/ui-tars-desktop-agent-parity.md) P3,
+      [`../tracks/playwright-mcp-agent-parity.md`](../../docs/parities/playwright-mcp-agent-parity.md) P5 (whose
+      deterministic-replay variant stays gated behind the Notary wiring).
+- [ ] **Outbound operational observability: signed webhooks + an optional trace hook.** The Notary answers
+      "prove to a third party what happened"; this answers the different question "tell my systems, now,
+      that it happened" — a run-finished / run-failed / HITL-requested webhook with an **HMAC signature over
+      the body** so the receiver can verify origin, delivery retries with backoff, and an optional
+      OpenTelemetry span export. Strictly **opt-in and off by default**: this is an egress path, so it
+      re-enters the outbound-fetch destination guard ([phase-2](phase-2-adapters-safe-browsing.md) L10) and
+      carries journal redaction — a webhook must never become the hole redaction was built to close.
+      [`../tracks/skyvern-agent-parity.md`](../../docs/parities/skyvern-agent-parity.md) P1.
 
 ### L9 — Accountability Dashboard + deterministic causal explainer
 

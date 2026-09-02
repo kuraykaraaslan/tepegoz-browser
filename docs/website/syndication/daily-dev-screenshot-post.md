@@ -27,9 +27,9 @@ artifact is `scripts/record-agent.mjs`, already public.
 
 **Rejected**, with reasons, so nobody re-proposes them:
 
-- *"You cannot screenshot your own Electron browser"* — true of this architecture, not of Electron.
+- _"You cannot screenshot your own Electron browser"_ — true of this architecture, not of Electron.
   Overclaims, and the first reply would rightly be "yes you can, I do it every day".
-- *"A horrifying screenshot bug"* — the bug is mundane; the consequence was not. Selling horror sets up
+- _"A horrifying screenshot bug"_ — the bug is mundane; the consequence was not. Selling horror sets up
   a letdown two paragraphs in.
 
 ---
@@ -39,7 +39,7 @@ artifact is `scripts/record-agent.mjs`, already public.
 Optional. Two that work, for opposite reasons:
 
 - **The empty capture** — chrome drawn perfectly, grey void where the page belongs. Best hook, because
-  it *is* the post. Needs regenerating; the originals were replaced.
+  it _is_ the post. Needs regenerating; the originals were replaced.
 - **A frame from the working recording** — chrome and live page in one image. Shows the payoff rather
   than the problem.
 
@@ -77,7 +77,7 @@ code calls `SetForegroundWindow` first, and Windows is entitled to refuse; it of
 anti-hijacking reasons that make it a good rule. Second capture: a video that was playing on the same
 desktop.
 
-Neither shipped. Both were deleted. But the lesson is not *match windows more carefully*:
+Neither shipped. Both were deleted. But the lesson is not _match windows more carefully_:
 
 **Reading the framebuffer and capturing a window are different operations, and no amount of care turns
 one into the other.** A tool whose failure mode is "silently captures whatever the human was doing"

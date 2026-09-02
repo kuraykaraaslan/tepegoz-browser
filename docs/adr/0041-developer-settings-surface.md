@@ -4,9 +4,9 @@
 - **Date:** 2026-08-28
 - **Refines:** [ADR-0012](0012-browser-tab-model.md) (isolated `WebContentsView` per tab) ·
   **complements** [ADR-0010](0010-ts-tooling-conventions.md) (conventions) ·
-  **contrasts** [tracks/express-settings.md](../../phases/tracks/express-settings.md) (rejected: a
+  **contrasts** [tracks/express-settings.md](../tracks/express-settings.md) (rejected: a
   settings surface that weakened the renderer boundary)
-- **Track:** [developer-settings-surface.md](../../phases/tracks/developer-settings-surface.md)
+- **Track:** [developer-settings-surface.md](../tracks/developer-settings-surface.md)
 
 ## Context
 
@@ -29,7 +29,7 @@ flag-level detail included.
 The product also contains an agent that drives the UI and a policy kernel that locks automation out of
 sensitive sites. A settings surface that can weaken the renderer sandbox is not a convenience — it is a
 new attack surface reachable by a mis-wired context menu or a compromised renderer. That is precisely
-why [`express-settings.md`](../../phases/tracks/express-settings.md) was rejected. This ADR draws the
+why [`express-settings.md`](../tracks/express-settings.md) was rejected. This ADR draws the
 line **before any code** so the line is not drawn later by whoever needed the toggle.
 
 ## Decision
@@ -43,7 +43,7 @@ line **before any code** so the line is not drawn later by whoever needed the to
 
 - **`tepegoz://developer`** — a real internal page (`DeveloperPageSurface.tsx`), **not linked from any
   menu**, **not gated to development builds**. Any user who types the URL gets it — deliberately, the
-  way Chrome ships `chrome://flags`. The "advanced user opted in by typing an obscure URL" *is* the
+  way Chrome ships `chrome://flags`. The "advanced user opted in by typing an obscure URL" _is_ the
   gate; there is no in-product path that leads a casual user here. It hosts the whole Developer surface:
   the Chromium Flags card and the raw preferences editor.
 - **`tepegoz://settings` → Developer section** — unchanged, still behind the `env === 'development'`
@@ -58,7 +58,7 @@ IPC-trusted by the same mechanism as the rest.
 **Exposing the raw preferences editor to every user is an accepted footgun.** It can break a profile
 with bad JSON and it is a social-engineering surface ("paste this into `tepegoz://developer`"). Accepted
 because: the URL is undiscoverable without being told, every write still goes through
-`PreferencesPatchSchema.safeParse` (so a *malformed* preference cannot land, only a valid-but-unwise
+`PreferencesPatchSchema.safeParse` (so a _malformed_ preference cannot land, only a valid-but-unwise
 one), and `tepegoz://settings` → Reset restores defaults. If this proves to be a real abuse vector, the
 mitigation is to split the page — flags stay public, the raw editor goes back behind the dev gate — not
 to remove the page.
@@ -116,7 +116,7 @@ wired the toggle yet. Tier D settings keep single ownership.
 - A developer who needs a Chromium flag not on the allowlist has to add it to the allowlist in a commit
   (with the reasoning in the diff) rather than typing it into a box. Deliberate: that commit is the
   review.
-- A developer who genuinely needs `webSecurity: false` to debug something in *this* browser cannot, and
+- A developer who genuinely needs `webSecurity: false` to debug something in _this_ browser cannot, and
   uses another one for that task. Same trade-off ADR-0029 accepted for DevTools on banks.
 - The metadata registry is now a thing that must be kept in sync with the schema. The completeness test
   turns "out of sync" into a red build instead of a gap nobody notices.
@@ -143,4 +143,4 @@ fields are populated from day one. Per-site `webPreferences` overrides are out o
 
 **Tiers A / C / D owed.** The `Preferences` table is still the flat pre-existing editor (no
 nested-object drill-down, no metadata registry). No `webContentDefaults`. No Tier-D mirroring. Tracked
-in [tracks/developer-settings-surface.md](../../phases/tracks/developer-settings-surface.md).
+in [tracks/developer-settings-surface.md](../tracks/developer-settings-surface.md).

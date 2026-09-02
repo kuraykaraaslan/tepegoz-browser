@@ -130,7 +130,7 @@ a star the reader cannot check is the same unearned-superlative move the rest of
   and the whole `gov.tr` tree
 - ★ **Append-only event journal** of everything the agent did
 - **Human-in-the-loop confirmation** for destructive and financial steps, enforced at the decision path
-- ★ **Folder-sandboxed file access** — your folder-grant list *is* the authorization; there is no
+- ★ **Folder-sandboxed file access** — your folder-grant list _is_ the authorization; there is no
   broader filesystem reach
 - **Scoped trust profiles** — narrow what is allowed where, without turning protection off globally
 - ★ **Hardened Electron shell** — one secure window factory, context isolation, sandboxing, fuses

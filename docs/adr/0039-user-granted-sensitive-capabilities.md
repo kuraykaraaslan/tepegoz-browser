@@ -4,7 +4,7 @@
 - **Date:** 2026-08-23
 - **Supersedes (in part):** [ADR-0006](0006-policy-kernel-hitl.md) (sensitive-site lockout as an
   absolute deny; CAPTCHA/2FA as a mandatory human handoff)
-- **Refines:** [ADR-0033](0033-transaction-mandate-kernel.md) (a mandate now *authorizes* within the
+- **Refines:** [ADR-0033](0033-transaction-mandate-kernel.md) (a mandate now _authorizes_ within the
   financial class rather than only narrowing it), [ADR-0035](0035-governed-agent-endpoints.md) (the
   inbound-token rule gains the grant as an additional precondition)
 - **Unaffected:** [ADR-0029](0029-devtools-expose-boundary.md) — DevTools exposure is a separate
@@ -27,7 +27,7 @@ is still no. It is: **can the user authorize a specific, bounded capability ahea
 agent cannot influence, widen, or talk its way into?**
 
 The distinction that makes this tractable is one ADR-0006 already half-drew. It established that
-*autonomy* can skip a prompt the kernel raised but can never overturn a `deny`. A **grant** is a
+_autonomy_ can skip a prompt the kernel raised but can never overturn a `deny`. A **grant** is a
 different kind of object from an autonomy level: an autonomy level is a global posture the agent
 operates under, while a grant is a specific, revocable, user-authored authorization for one category or
 one wallet. Conflating the two is what would be dangerous. Keeping them separate is what makes this
@@ -74,7 +74,7 @@ The Human Handoff Controller stops being the default path and becomes the fallba
 
 ### 3. A wallet mandate authorizes, instead of only narrowing
 
-ADR-0033 built `mandateCovers` / `consumeMandate` as a *narrowing* layer: a mandate could add a
+ADR-0033 built `mandateCovers` / `consumeMandate` as a _narrowing_ layer: a mandate could add a
 confirmation but never remove the unconditional HITL that the `financial` class requires. That
 constraint is what made mandates unable to do the thing they were designed for.
 

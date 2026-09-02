@@ -77,6 +77,18 @@ Windows Hello, Effect Ledger fencing, tepegöz-as-MCP-server) + Phase 2 (Integra
       reachable only under an active user grant, never on the token's say-so** (ADR-0035 + ADR-0039),
       per-token rate-limit/quota); every inbound call still flows through the
       full Policy Kernel + HITL + Egress Firewall + Effect Ledger
+- [ ] **`AgentEndpointTokenSchema` is landed with zero wiring — build the minting UI against it, not a
+      parallel shape.** The schema (`@tepegoz/shared-types`, ADR-0035) already carries `allowedToolIds`,
+      `allowedDangerClasses`, `expiresAt` and `rateLimitPerMinute` — exactly the token above. What is
+      missing is everything around it: no Capability Broker, no signing, no listening surface, no minting
+      UI, no journaling. Whichever session opens the MCP server in
+      [phase-1b](phase-1b-agentic-deepening.md) L5 must mint against this schema.
+  - [ ] **Grant by capability family, not one tool at a time.** Grouping the CapabilityRegistry's
+        descriptors into named families makes the minting UI usable at 70 tools, and lets `tools/list`
+        for a given token disclose only what that token could actually call — rather than listing
+        everything and 403-ing most of it. A registry-query convenience over `allowedToolIds`, **not** a
+        second enforcement mechanism.
+  - Source: [`../tracks/playwright-mcp-agent-parity.md`](../../docs/parities/playwright-mcp-agent-parity.md) P1.
 - [ ] **"External Agents" live console**: which Bearer identity called what tool when, allow/deny/HITL outcomes,
       cost, rate-limit status, per-session Replay Receipts — sourced from the Journal, SIEM-exportable, with a
       live **kill-switch**

@@ -21,7 +21,7 @@ allowed to do interactively — not a policy an author writes once and hopes sta
 the system itself refuses to let widen.
 
 This is the same shape of problem this repo has already solved once, in a different corner: the
-AI-agent-super program's remembered grants ([ADR-0027](0027-agent-memory.md)) and its `auto`-autonomy fix
+ai-agent program's remembered grants ([ADR-0027](0027-agent-memory.md)) and its `auto`-autonomy fix
 both exist because a persistent permission is exactly the kind of thing that quietly grows scope if
 nothing structurally prevents it. The Scheduler is the same risk with the human's _absence_ as the
 constant, rather than time.
