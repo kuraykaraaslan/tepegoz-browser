@@ -29,7 +29,7 @@ phase still reads amber. See [`phases/README.md`](phases/README.md) for the per-
 One claim this project deliberately does **not** make: that its agent is good at browsing. All thirteen
 phases of the AI competence program have landed their code, and **every one of them is still
 "measurement-owed"** — the benchmark spend to prove or refute them has not been paid
-([`phases/ai-agent-super/README.md`](phases/ai-agent-super/README.md)). Treat the automation as
+([`phases/ai-agent/README.md`](phases/ai-agent/README.md)). Treat the automation as
 promising and unproven, and read [`docs/known-issues.md`](docs/known-issues.md) before trusting it with
 anything that matters.
 

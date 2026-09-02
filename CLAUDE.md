@@ -80,5 +80,5 @@ pnpm e2e                           # Playwright _electron smoke
 ## Layout
 
 `apps/desktop` (L0 Electron) · `packages/{shared-types,libs,i18n,persistence}` · `packages/native-rs`
-(Rust placeholder) · `docs/` (ADRs, threat model) · `phases/` (roadmap — `product/` · `ai-agent-super/`
+(Rust placeholder) · `docs/` (ADRs, threat model) · `phases/` (roadmap — `product/` · `ai-agent/`
 · `tracks/`) · `e2e/` (Playwright).

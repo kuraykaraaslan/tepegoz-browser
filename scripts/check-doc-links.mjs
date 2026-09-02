@@ -1,6 +1,6 @@
 // Fails the build if any relative markdown link under `phases/**` points at a file that does not
 // exist. This is the executable form of the S0 exit criterion "zero broken links across phases/"
-// (phases/ai-agent-super/phase-s0-truth-and-repair.md).
+// (phases/ai-agent/phase-s0-truth-and-repair.md).
 //
 // Why this exists as a script rather than a one-off grep: S0 closed its link gate with a
 // hand-counted "all 839 relative links resolve". That number is not reproducible — the tree measures
