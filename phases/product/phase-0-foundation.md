@@ -97,9 +97,30 @@ No product features; the decisions made here would force a full rewrite if wrong
       last-known-good)
 - [ ] **`crashReporter`** wiring + minidump collection — **opt-in**, redacted (reuse `Logger.redact`); no PII
       in reports
-- [ ] **Safe-mode boot** (launch with extensions + agent disabled for recovery) + **corrupt-profile recovery**
+- [~] **Safe-mode boot** (launch with extensions + agent disabled for recovery) + **corrupt-profile recovery**
       (migration-repair / fail-safe fresh-start — generalizes the existing `SessionStore` fail-safe: malformed
       snapshot → start fresh, never crash-loop)
+  - [x] _**Safe-mode boot: built and wired** (ADR-0038 recovery-ladder rung three). `recovery/safe-mode.ts`
+        (`beginLaunch` reads the crash counter and stamps the launch in-flight; `--safe-mode` flag OR two
+        consecutive unhealthy launches trip it) + `recovery/crash-counter.ts` (pure, its own 82-line test).
+        `index.ts` calls `beginLaunch()` before anything can fail and gates extensions / agent runtime /
+        MCP on `isSafeMode()`; `browser-windows.ts` skips session restore; `tabs-manager-base.ts`
+        suppresses the session write (snapshot preserved untouched); `recovery-notices.ts` tells the user.
+        `armHealthTimer` clears the counter after a launch proves healthy; `markCleanExit` clears it on
+        an orderly quit._
+  - [x] _**Corrupt-profile recovery: the DB half landed 2026-09-02.** `openWithRepair` in
+        `db/database.electron.ts` — an open or migration failure used to set `db = null` **permanently**
+        (browser runs, but no history/bookmarks/journal until the user deletes the file by hand). Now the
+        unreadable file and its `-wal`/`-shm` sidecars are renamed aside with a timestamp (nothing
+        destroyed — a support request can still recover it) and a clean database is opened in its place;
+        only if THAT also fails does persistence stay off for the session. 6 tests
+        (`database-repair.electron.test.ts`): happy path moves nothing; a thrown open OR a thrown migrate
+        both quarantine + reopen fresh; a missing WAL sidecar is not a failure; an unmovable main file or
+        a failing fresh open fall through to null. The `SessionStore` malformed-snapshot → start-fresh
+        fail-safe it generalizes was already in place (`session-store.ts`)._
+  - [ ] _Residual for ✅: a user-facing notice on the DB fresh-start (today it is `Logger.warn` only —
+        the `recovery-notices.ts` surface is the natural home), and a direct test of `safe-mode.ts`'s
+        launch state machine (only the pure `crash-counter` half is covered)._
 - [x] **Chromium security-update cadence** (upstream-intake side of the update story): pinned+watched
       `electron`, ≤2-week adoption SLA for security bumps, embedded engine version logged per release — see
       [ADR-0019](../../docs/adr/0019-chromium-update-cadence.md). This governs _which engine_ we ship; the

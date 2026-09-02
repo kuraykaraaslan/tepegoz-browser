@@ -1,4 +1,4 @@
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import { app } from 'electron';
 import { Logger } from '@tepegoz/libs';
@@ -24,6 +24,64 @@ import { BookmarkTreeStore } from '@tepegoz/bookmarks';
 let db: Db | null = null;
 let initialized = false;
 
+/**
+ * Open + migrate the database, and if that fails, quarantine the unreadable file and start a fresh
+ * one — rung of ADR-0038's recovery ladder that keeps a corrupt profile from permanently disabling
+ * persistence.
+ *
+ * Before this, an open or migration failure set `db = null` and every subsequent launch retried the
+ * same broken file: "never crash-loop" held, but the browser stayed permanently without history,
+ * bookmarks or the journal until the user found and deleted the file themselves. Now the file (and
+ * its `-wal`/`-shm` sidecars) is renamed aside with a timestamp — nothing is destroyed, so a support
+ * request can still recover it — and a clean database is opened in its place. Only if THAT also fails
+ * does it fall through to the "persistence off" no-op path.
+ *
+ * Exported for its test; `initDatabase` is the only production caller.
+ */
+export function openWithRepair(dbPath: string): Db | null {
+  try {
+    const opened = openDatabase(dbPath);
+    // Schema migration stays synchronous: the stores read against this schema the instant `initStores`
+    // returns, so it must be in place before the first window opens.
+    migrate(opened);
+    return opened;
+  } catch (err) {
+    Logger.error('Database open/migrate failed — quarantining the file and starting fresh', {
+      err: String(err),
+    });
+  }
+
+  const stamp = new Date().toISOString().replace(/[:.]/gu, '-');
+  let movedMain = false;
+  for (const suffix of ['', '-wal', '-shm']) {
+    try {
+      renameSync(`${dbPath}${suffix}`, `${dbPath}.corrupt-${stamp}${suffix}`);
+      if (suffix === '') movedMain = true;
+    } catch {
+      // A `-wal`/`-shm` sidecar may simply not exist; that is not a failure. The main file failing to
+      // move IS — handled below.
+    }
+  }
+  if (!movedMain) {
+    Logger.error('Could not quarantine the unreadable database — persistence disabled this session');
+    return null;
+  }
+
+  try {
+    const fresh = openDatabase(dbPath);
+    migrate(fresh);
+    Logger.warn('Started a fresh profile database; the previous file was kept', {
+      kept: `tepegoz.db.corrupt-${stamp}`,
+    });
+    return fresh;
+  } catch (err) {
+    Logger.error('The fresh database also failed to open — persistence disabled this session', {
+      err: String(err),
+    });
+    return null;
+  }
+}
+
 export function initDatabase(): void {
   if (initialized) return;
   initialized = true;
@@ -37,11 +95,8 @@ export function initDatabase(): void {
   }
 
   const dbPath = join(userData, 'tepegoz.db');
-  try {
-    const opened = openDatabase(dbPath);
-    // Schema migration stays synchronous: the stores read against this schema the instant `initStores`
-    // returns, so it must be in place before the first window opens.
-    migrate(opened);
+  const opened = openWithRepair(dbPath);
+  if (opened !== null) {
     db = opened;
     Logger.info('Database ready', { path: dbPath });
     // History maintenance is NOT on the launch critical path — it is bounded catch-up work (a fold
@@ -71,11 +126,10 @@ export function initDatabase(): void {
         Logger.warn('Deferred history maintenance failed', { err: String(err) });
       }
     });
-  } catch (err) {
+  } else {
+    // `openWithRepair` already logged the cause. Callers all treat `getDb() === null` as
+    // "persistence off" and no-op, so the browser still runs — just without history/journal/bookmarks.
     db = null;
-    Logger.error('Database unavailable (native module not loaded?) — history/journal disabled', {
-      err: String(err),
-    });
   }
 }
 
