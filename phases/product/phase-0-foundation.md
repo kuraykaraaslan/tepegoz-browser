@@ -95,7 +95,7 @@ No product features; the decisions made here would force a full rewrite if wrong
 - [ ] **Auto-update runtime** (`electron-updater`) with **update-signature verification** (only signed builds
       from the trusted channel install) + **staged rollout / rollback** (a bad version auto-reverts to the
       last-known-good)
-- [~] **`crashReporter`** wiring + minidump collection — **opt-in**, redacted (reuse `Logger.redact`); no PII
+- [x] **`crashReporter`** wiring + minidump collection — **opt-in**, redacted (reuse `Logger.redact`); no PII
       in reports
   - [x] _**Runtime wired 2026-09-02.** `crash-reporter-boot.ts` — `applyCrashReporterPreference(app)`
         runs before `whenReady` (the dump dir must be set before `crashReporter.start`), reading
@@ -107,9 +107,14 @@ No product features; the decisions made here would force a full rewrite if wrong
         no-PII obligation is on `extra`/`globalExtra` key/values and we set none. New pref
         `crashReportingEnabled` (`preferences.model` + `Preferences` interface + `SETTINGS_VISIBILITY`
         `private`, like `hardwareAccelerationEnabled`). 7 tests (`crash-reporter-boot.electron.test.ts`)._
-  - [ ] _Follow-up: the Settings → Privacy toggle + its dedicated getter/setter IPC (mirror the
-        `hardwareAccelerationEnabled` restart-required pattern) + en/tr strings. Until then the pref is
-        set by editing `preferences.json`._
+  - [x] _**Settings toggle landed 2026-09-02.** A second `Toggle` in `SystemSection`
+        (`settings-system.tsx`) beside hardware acceleration — same `prefs` / `setPref` path, same
+        "restart needed" banner + Restart-now button, because `crash-reporter-boot.ts` reads the pref
+        once at startup. en/tr strings (`system.crashReporting` / `crashReportingDesc`) — the copy says
+        plainly that nothing is uploaded and the files stay on the machine. 4 component tests
+        (`settings-system.test.tsx`, the first for this section): the toggle reflects the stored value,
+        is off by default, writes `{ crashReportingEnabled }` + raises the banner on change, and does
+        not break the hardware-acceleration toggle next to it._
 - [x] **Safe-mode boot** (launch with extensions + agent disabled for recovery) + **corrupt-profile recovery**
       (migration-repair / fail-safe fresh-start — generalizes the existing `SessionStore` fail-safe: malformed
       snapshot → start fresh, never crash-loop) — _**both halves built, wired and tested (2026-09-02).**_

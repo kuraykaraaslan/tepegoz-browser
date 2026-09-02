@@ -43,6 +43,18 @@ export function SystemSection({
             setRestartNeeded(true);
           }}
         />
+        <div className="mt-4">
+          <Toggle
+            id="crash-reporting"
+            label={t.crashReporting}
+            description={t.crashReportingDesc}
+            checked={prefs.crashReportingEnabled}
+            onChange={(value) => {
+              setPref({ crashReportingEnabled: value });
+              setRestartNeeded(true);
+            }}
+          />
+        </div>
         {restartNeeded && (
           <div className="mt-4 flex flex-wrap items-center gap-3 rounded-md border border-warning bg-warning-subtle px-3 py-2">
             <p className="min-w-0 flex-1 text-xs text-warning-fg">{t.restartRequired}</p>

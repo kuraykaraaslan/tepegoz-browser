@@ -740,6 +740,9 @@ export const tr: SettingsStrings = {
       'Sayfaları GPU ile çiz. Yalnızca çizim bozuklukları ya da sürücü çökmeleri görüyorsanız kapatın — yazılımla çizim daha yavaştır ve daha çok pil harcar.',
     restartRequired: 'Tepegöz bunu açılışta karar verir; değişiklik yeniden başlattıktan sonra geçerli olur.',
     restartNow: 'Şimdi yeniden başlat',
+    crashReporting: 'Çökme raporları topla',
+    crashReportingDesc:
+      'Tepegöz çöktüğünde, profilinizdeki Crashes klasörüne tanılama amaçlı bir minidump kaydeder. Hiçbir şey yüklenmez — dosyalar makinenizde kalır, dilerseniz siz gönderirsiniz. Varsayılan olarak kapalı.',
     elsewhereTitle: 'İlgili ayarlar',
     elsewhereHint: 'Bunlar da sistem düzeyindedir ama başka sayfalara aittir.',
     linkLaunchAtLogin: 'Oturum açılışında başlat — Sistem tepsisi ve güç',

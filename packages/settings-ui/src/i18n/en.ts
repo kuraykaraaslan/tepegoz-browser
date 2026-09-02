@@ -749,6 +749,9 @@ export const en = {
       'Draw pages with the GPU. Turn it off only if you see rendering glitches or driver crashes — software rendering is slower and uses more battery.',
     restartRequired: 'Tepegöz decides this at startup, so the change applies after a restart.',
     restartNow: 'Restart now',
+    crashReporting: 'Collect crash reports',
+    crashReportingDesc:
+      'When Tepegöz crashes, save a diagnostic minidump to a Crashes folder in your profile. Nothing is uploaded — the files stay on your machine for you to send if you choose. Off by default.',
     elsewhereTitle: 'Related settings',
     elsewhereHint: 'These are system-level too, but they belong to other pages.',
     linkLaunchAtLogin: 'Launch at system startup — System tray & power',
