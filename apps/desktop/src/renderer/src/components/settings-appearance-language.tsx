@@ -192,7 +192,10 @@ export function AppearanceSection({
         })}
         <label
           className={cn(
-            'flex h-8 cursor-pointer items-center gap-2 rounded-full border border-border px-3 text-sm text-text-primary',
+            // `relative` contains the `sr-only` (position:absolute) colour input below — without it the
+            // input's containing block is the page surface, so it escapes the settings scroll area and
+            // extends the document's scroll height (see DataTable.tsx for the same trap).
+            'relative flex h-8 cursor-pointer items-center gap-2 rounded-full border border-border px-3 text-sm text-text-primary',
             customColorActive && 'ring-2 ring-border-focus',
           )}
         >

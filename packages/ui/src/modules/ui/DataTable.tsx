@@ -113,7 +113,13 @@ export function DataTable<T extends Record<string, unknown>>({
         </div>
       )}
 
-      <div className="w-full overflow-x-auto rounded-lg border border-border">
+      {/* `relative` is load-bearing, not decoration: the `sr-only` caption below is POSITIONED
+          (Tailwind's sr-only is `position:absolute`), so without a positioned ancestor here its
+          containing block becomes whatever the host page's outermost positioned box is — escaping this
+          scroll container entirely and adding its offset to the DOCUMENT's scroll height. On a short
+          window that made every `tepegoz://` page carrying a table document-scrollable, so a wheel
+          scroll slid the whole shell — sidebar title and search box included — up out of view. */}
+      <div className="relative w-full overflow-x-auto rounded-lg border border-border">
         <table className="w-full table-fixed text-sm">
           {caption && <caption className="sr-only">{caption}</caption>}
           <thead className="border-b border-border bg-surface-sunken">

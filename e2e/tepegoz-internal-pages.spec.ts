@@ -126,3 +126,79 @@ test('every migrated tepegoz:// internal page loads as a real page with real con
     rmSync(profileDir, { recursive: true, force: true });
   }
 });
+
+/**
+ * A `tepegoz://` page is an app shell, not a document: it fills the view exactly and scrolls INSIDE its
+ * own panes. So its document must never itself be scrollable — if it is, a wheel over the page slides
+ * the entire shell (sidebar title, search box, table header) up out of view, which is precisely what a
+ * short window did on 2026-09-02.
+ *
+ * The cause was subtle enough to be worth a permanent test: Tailwind's `sr-only` is `position:absolute`,
+ * and an absolutely positioned element resolves its containing block to the nearest POSITIONED ancestor
+ * — not to the scroll container it happens to sit in. `DataTable`'s `sr-only` caption (and the
+ * appearance section's `sr-only` colour input) therefore escaped their `overflow-auto` pane, landed on
+ * the page-level surface box, and added their offset to the document's scroll height. Fixed by
+ * containing them locally (`relative` on the wrapper) and by making each `*PageSurface` shell `fixed`,
+ * which is excluded from document scroll height by construction.
+ */
+test('no tepegoz:// page makes its own document scrollable at a short window', async () => {
+  const profileDir = join(process.cwd(), '.tepegoz-page-scroll-profile');
+  mkdirSync(profileDir, { recursive: true });
+  writeFileSync(join(profileDir, 'preferences.json'), '{"locale":"en"}');
+
+  const app: ElectronApplication = await electron.launch({
+    args: [`--user-data-dir=${profileDir}`, appDir],
+    env: guiEnv(),
+  });
+  try {
+    const window = await app.firstWindow();
+    await expect(window.getByRole('banner')).toBeVisible();
+
+    // A window short enough that every page's content exceeds its viewport — the regression only shows
+    // when there IS something to scroll past.
+    await app.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0]?.setContentSize(1280, 480);
+    });
+
+    const omnibox = window.getByRole('combobox').first();
+    for (const page of [...PAGES, 'settings']) {
+      await omnibox.fill(`tepegoz://${page}`);
+      await omnibox.press('Enter');
+
+      await expect
+        .poll(
+          () =>
+            pollEvaluate(
+              () =>
+                app.evaluate(({ webContents }, host) => {
+                  const wc = webContents
+                    .getAllWebContents()
+                    .find((w) => w.getURL().startsWith(`tepegoz://${host}`));
+                  if (wc === undefined || wc.isDestroyed()) return -1;
+                  return wc.executeJavaScript(
+                    'document.body.innerText.length > 0 ? document.scrollingElement.scrollHeight - document.scrollingElement.clientHeight : -1',
+                  );
+                }, page),
+              -1,
+            ),
+          { timeout: 20_000, message: `tepegoz://${page} never rendered` },
+        )
+        .toBeGreaterThan(-1);
+
+      const overflow = await app.evaluate(({ webContents }, host) => {
+        const wc = webContents
+          .getAllWebContents()
+          .find((w) => w.getURL().startsWith(`tepegoz://${host}`));
+        if (wc === undefined || wc.isDestroyed()) return -1;
+        return wc.executeJavaScript(
+          'document.scrollingElement.scrollHeight - document.scrollingElement.clientHeight',
+        );
+      }, page);
+      const why = `tepegoz://${page}'s own document scrolls by ${overflow}px`;
+      expect(overflow, why).toBeLessThanOrEqual(0);
+    }
+  } finally {
+    await app.close();
+    rmSync(profileDir, { recursive: true, force: true });
+  }
+});
