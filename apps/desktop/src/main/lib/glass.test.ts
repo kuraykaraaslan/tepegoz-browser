@@ -90,6 +90,19 @@ describe('applyChromeGlass', () => {
     ]);
   });
 
+  it('falls back to the resolved theme surface, not the brand navy, when one is passed', () => {
+    // The non-glass fill is the window's PRE-PAINT ground — what fills the frame until the renderer
+    // draws. Pinned to the brand navy it flashed the wrong colour on every light or custom-themeColor
+    // profile, which is the menu-flash bug this parameter exists to fix.
+    setPlatform('win32');
+    const win = fakeWin();
+    applyChromeGlass(win, false, '#4c1d95');
+    expect(win.calls).toEqual([
+      ['material', 'none'],
+      ['color', '#4c1d95'],
+    ]);
+  });
+
   it('no-op on a destroyed window', () => {
     setPlatform('win32');
     const win = fakeWin(true);
