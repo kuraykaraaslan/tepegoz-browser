@@ -189,9 +189,33 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
 > (quarantine, hashing, risk classification, redacted audit) and **not** the speed half, so a user comparing
 > the two today loses throughput to gain safety. These tasks close that trade-off.
 
-- [ ] **Segmented download engine** — split a transfer into N ranged `Range:`/206 requests and reassemble; keep
+- [~] **Segmented download engine** — split a transfer into N ranged `Range:`/206 requests and reassemble; keep
       the assembled file in quarantine until the hash of the whole is computed, so segmentation never weakens
       the existing trust path. Fall back to a single stream when the server refuses ranges
+  - [x] **The decision layer, with the browser-not-scraper defaults enforced rather than written down**
+        (2026-09-02). _`planDownloadSegments(totalBytes, max)` returns the ranges to request, or an
+        EMPTY plan meaning "use one stream" — which is the ordinary answer, not a failure. It refuses
+        to segment a file under 2 MB (the handshakes cost more than the bytes save), refuses when the
+        server gave no `Content-Length` (a server that will not say how big a thing is cannot be asked
+        for the second half of it), and caps at 8 connections however large the file. Eight connections
+        against a small file is a way to be slower AND ruder than one._
+        — _**The property the whole engine will rest on is asserted directly**: every byte from 0 to
+        total-1 claimed exactly once, in order, no gap and no overlap, across a spread of awkward
+        sizes. A gap is a corrupt file and an overlap is a corrupt file written twice, and both survive
+        a length check that uses the same arithmetic that produced them. The remainder goes to the LAST
+        segment rather than being spread, which is the difference between a complete file and one that
+        is five bytes short._
+        — _`serverAcceptsRanges` treats `Accept-Ranges: none` as a refusal that outranks everything
+        else: a server saying no is the one case where guessing costs a corrupt file rather than a slow
+        one. 11 tests._
+  - [ ] **The engine itself is NOT built** — this is a planner with no caller yet, said plainly so the
+        row is not misread. What remains: ranged `net.request`s on the transfer's own browsing session
+        (never a bare HTTP client — the session is what carries the cookies, the proxy and the Phase 5
+        tunnel), offset writes into one quarantine file, aggregated progress, cancellation, and the
+        fall back to a single stream when the probe says no. It must reach `finishToQuarantine` for the
+        whole-file hash exactly like every other path, which is the clause that keeps segmentation from
+        weakening the trust model. Its natural test is a local range server, which is also the harness
+        the "Measurement, not assertion" row below needs.
 - [ ] **Dynamic connection count** — the segment count adapts to measured throughput and server behavior rather
       than a fixed setting; a host that penalizes parallel connections is detected and backed off. Per-host
       ceiling is user-visible and overridable (default conservative: we are a browser, not a scraper)
