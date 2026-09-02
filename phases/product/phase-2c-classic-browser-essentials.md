@@ -234,9 +234,29 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         stands up an honest `Range:`/`206`/`Accept-Ranges: none` server and a reference
         `net.request`-shaped `SegmentTransport` + `FileHandle` `SegmentSink`, so whichever fork is
         taken starts from a transcription rather than a design.
-- [ ] **Dynamic connection count** — the segment count adapts to measured throughput and server behavior rather
-      than a fixed setting; a host that penalizes parallel connections is detected and backed off. Per-host
-      ceiling is user-visible and overridable (default conservative: we are a browser, not a scraper)
+- [~] **Dynamic connection count** — the segment count adapts to measured throughput and server behavior rather
+  than a fixed setting; a host that penalizes parallel connections is detected and backed off. Per-host
+  ceiling is user-visible and overridable (default conservative: we are a browser, not a scraper)
+  - [x] **The adaptive decision layer, pure like its siblings** (`connection-count.ts`, 2026-09-02).
+        _`planConnectionCount({ previous, observed, hostCeiling })` returns the count for the next
+        transfer to a host: a fresh host starts at `DEFAULT_START_CONNECTIONS` (4, deliberately below
+        the hard cap of 8 — a browser earns more connections by measuring that they helped, it does
+        not open the maximum and hope); a `scaled` verdict steps up by one, `flat` drifts DOWN by one
+        (unhelpful connections still cost the host something), `penalized` halves, and nothing ever
+        goes below a single stream. A stored per-host ceiling from an older build is re-clamped to
+        `[1, MAX_DOWNLOAD_SEGMENTS]` on every call, and a ceiling the user LOWERS applies immediately,
+        mid-climb._
+        — _`classifyParallelism(...)` turns two whole-transfer throughput measurements into that
+        verdict: an explicit 429/503 or mid-transfer reset is `penalized` outright; more connections
+        yielding LESS aggregate throughput is `penalized`; otherwise the fraction of the ideal linear
+        speed-up captured decides `scaled` (≥ 0.6) vs `flat`. The moves are one step at a time on
+        purpose so a single noisy sample cannot swing the count 2→8→2. 17 tests._
+  - [ ] **Not yet wired, and gated on the same fork as the engine.** `DownloadService` has no
+        segmented path yet (see the "Segmented download engine" row), so nothing calls
+        `planConnectionCount` or feeds `classifyParallelism` a real measurement, and the per-host
+        ceiling is not yet a preference or a Settings surface (that half needs a pref key + UI + en/tr,
+        deferred with the wiring). The decision layer is landed and tested so that when the fork is
+        taken this is a transcription, not a design.
 - [x] **Resilient resume** — resume across an app restart and across a dropped connection, with exponential
       backoff and a bounded retry budget; a resumed transfer verifies the already-written bytes before
       continuing, never blindly appending

@@ -497,4 +497,5 @@ export function planDownloadRetry(
 }
 
 export * from './download-segments';
+export * from './connection-count';
 export * from './segmented-transfer';
