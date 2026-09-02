@@ -66,7 +66,7 @@ describe('onOmniboxSuggest', () => {
   it('searches history for an ordinary query', async () => {
     const { result } = render();
     await result.current.onOmniboxSuggest('weather today');
-    expect(bridge.searchHistory).toHaveBeenCalledWith({ query: 'weather today' });
+    expect(bridge.searchHistory).toHaveBeenCalledWith({ query: 'weather today', forOmnibox: true });
   });
 
   it('does NOT touch history in @-command mode', async () => {
