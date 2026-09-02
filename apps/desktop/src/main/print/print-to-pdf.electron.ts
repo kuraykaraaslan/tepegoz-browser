@@ -26,9 +26,13 @@ import { pdfFileName } from './pdf-filename';
  * would appear long after the click.
  *
  * NOT gated on the sensitive-site list, deliberately. That lockout exists to stop AUTOMATION acting on
- * a bank; no agent tool can print or save a PDF (checked — `browser-tools` and `capability-plane` have
- * no such capability). Printing your own statement is a user action on your own screen, and blocking it
- * would teach nothing except that the browser is broken.
+ * a bank, and this is the USER's own command on their own screen — printing your own statement is not
+ * automation, and blocking it would teach nothing except that the browser is broken.
+ *
+ * The agent has its own path as of 2026-09-02 (`browser_export_pdf` → `ingestGeneratedFile`), and it is
+ * gated: `state_changing`, so the ToolGateway asks a human, and the file lands in quarantine under
+ * `actor: 'agent'`, which `releaseNeedsApproval` refuses to release without one. That is what makes
+ * this function's "user action" distinction load-bearing rather than an assumption about who calls it.
  */
 export async function savePageAsPdf(): Promise<void> {
   const tabs = TabManager.focused();

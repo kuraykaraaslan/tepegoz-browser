@@ -87,9 +87,19 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
 - [x] Slice 5 capability tools: `download_list_items`, `download_get_item`, `download_create_item`, and
       `download_update_item` registered in the Capability Plane with redacted records, idempotency for create,
       and ToolGateway HITL for state-changing actions.
-- [ ] `will-download` intercept in the browsing session → **quarantine** the file (temp, not-yet-trusted) +
+- [x] `will-download` intercept in the browsing session → **quarantine** the file (temp, not-yet-trusted) +
       compute file hash + check via Phase 2 **`SafeBrowsingService`** (reuse, do NOT re-implement); community
       blocklist reuse where present
+  - [x] _Stale box, corrected on inspection 2026-09-02 — every clause of this line has been code for a
+        while. `handleWillDownload` is registered on EVERY browsing session (`BrowsingSessions.register`,
+        `critical: true`, so a session the handler cannot attach to hosts no tab), the file is written
+        to `userData/Downloads/quarantine`, `finishToQuarantine` hashes it with `sha256File` and asks
+        the injected `DownloadTrustProvider`, and `main/index.ts` passes
+        `SafeBrowsingService.downloadTrustProvider()` — the Phase 2 service, reused, not
+        re-implemented. "Community blocklist reuse **where present**" is satisfied vacuously: there is
+        none. The one caveat is already tracked as this phase's blocker rather than as this box's:
+        without a Safe Browsing API key the provider answers `unknown`, so the check runs and settles
+        every file at `quarantined` awaiting the human._
 - [ ] **Media resolver tool.** The `download_*` tools manage downloads that have already started; nothing
       resolves a _public media URL_ (a YouTube transcript, a public video/image link) into a direct,
       verified resource. Add one resolver tool — and route the actual save through the **existing**
@@ -214,6 +224,33 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       webSecurity) and `plugins` live. Tests: `tabs-shared.test.ts` pins the factory's invariants;
       `e2e/pdf-viewer.spec.ts` serves a real `application/pdf` and asserts the viewer mounts in the
       tab document rather than a download firing._
+  - [~] **The agent can now SAVE a PDF; reading one is still open.** _Half built 2026-09-02:
+        `browser_export_pdf` exists (`browser_save_pdf` was the intended name — the registry's
+        `{domain}_{verb}_{noun}` rule rejected `save`, and `export` is both approved and the more
+        honest verb). `browser_read_pdf` is not built._
+        — _**It adds no write path, which was the whole condition.** `printToPDF` produces bytes;
+        `DownloadService.ingestGeneratedFile` puts them through the SAME quarantine → hash →
+        trust-check → human-release path every download takes. The agent can cause a file to exist in
+        quarantine and nothing more; only a person can move it anywhere the user would look. The
+        filename comes from the page title, so it goes through `pdfFileName` — the title is
+        attacker-controlled and would otherwise reach a path._
+        — _**`state_changing`, and `actor: 'agent'` is stamped by the HOST.** So the ToolGateway asks a
+        human before the call, and `releaseNeedsApproval` refuses the record afterwards regardless of
+        what the file turns out to be. Two gates, neither of which the model can set a field to avoid._
+        — _**What comes back is an id and a filename, never a path.** The agent has no filesystem, and
+        one real path string is how that stops being true. Pinned by a test._
+        — _**A stale comment fell out of this.** `print-to-pdf.electron.ts` justified not gating the
+        USER's Save-as-PDF on the sensitive-site list partly with "no agent tool can print or save a
+        PDF (checked)". That sentence is now false, so the justification was rewritten to the one that
+        survives: the user's own command on their own screen is not automation, and the agent's path is
+        separately gated. This is exactly the line the phase note predicted would stop being vacuous._
+  - [ ] **`browser_read_pdf` remains open**, and the reason is worth writing down before someone
+        assumes it is a small follow-up: the note below asserts the viewer's text layer can be reused,
+        and that is UNVERIFIED. Chromium renders PDF text through PDFium into a plugin frame; a
+        `executeJavaScript` in the tab's main world does not reach it, and the text is exposed to the
+        accessibility tree only under conditions this app has not measured. Until someone runs that
+        check against `e2e/pdf-viewer.spec.ts`'s real PDF, "reuse its text layer" is a plan, not a
+        design. The original note follows as written:
   - [ ] **The agent still cannot read or save a PDF** — the note on the print row above verifies this
         (`browser-tools` and `capability-plane` have neither capability). Two small tools close it, both
         sitting on surfaces this phase already shipped rather than adding a PDF stack: a

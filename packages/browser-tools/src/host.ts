@@ -56,6 +56,17 @@ export interface BrowserHost {
     tabId?: string,
   ): Promise<{ url: string; title: string; text: string; source: string }>;
   /**
+   * Save a page as a PDF, into the browser's own download lifecycle.
+   *
+   * OPTIONAL, and its absence is a refusal rather than a degradation: a host that cannot route the
+   * bytes through quarantine + hash + the release gate must not write a file somewhere easier.
+   * `browser_save_pdf` is simply not registered when this is missing.
+   *
+   * The host returns a download ID and the filename it chose — never a path. The agent has no
+   * filesystem, and handing it one would be the beginning of giving it one.
+   */
+  savePageAsPdf?(tabId?: string): Promise<{ downloadId: string; filename: string; bytes: number }>;
+  /**
    * Every tab currently open, for tab-spawn detection (S3 PR3).
    *
    * A click that calls `window.open`, or a form with `target=_blank`, changes NOTHING on the acting

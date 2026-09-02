@@ -8,6 +8,9 @@ import type { TabHost } from '@tepegoz/tab-engine';
 import { HumanInputAdapter, type CdpSend } from '@tepegoz/human-input';
 import { IpcChannels, type AgentEvent, type AgentEventKind } from '@tepegoz/desktop-ipc';
 import TabManager from '../tabs';
+import DownloadService from '../downloads/download-service.electron';
+import { originOf as originOfUrl } from '../downloads/download-service-fs.electron';
+import { pdfFileName } from '../print/pdf-filename';
 import { isParkedToTray } from '../window-parked';
 import CdpDriver from './cdp-driver.electron';
 import AgentTabGroup from './agent-tab-group.electron';
@@ -625,10 +628,45 @@ async function runExtractionScript(script: string, tabId?: string): Promise<unkn
   return runExtraction({ html: typeof html === 'string' ? html : '', script });
 }
 
+/**
+ * `browser_save_pdf` — the agent's only way to put a file on disk, and it is not really one.
+ *
+ * `printToPDF` produces bytes; those bytes go into `DownloadService.ingestGeneratedFile`, which is the
+ * SAME quarantine → hash → trust-check → human-release path every download takes. So this adds no
+ * write path and no trust exemption: the agent can cause a file to exist in quarantine, and only a
+ * person can move it anywhere the user would look.
+ *
+ * The filename comes from the page title, so it goes through `pdfFileName` first — the title is
+ * attacker-controlled and would otherwise reach a path.
+ *
+ * What comes back is an id and a name, never a path. The agent has no filesystem, and handing it one
+ * string of a real one is how that stops being true.
+ */
+async function savePageAsPdf(
+  tabId?: string,
+): Promise<{ downloadId: string; filename: string; bytes: number }> {
+  const wc = requireWc(tabId);
+  const pdf = await wc.printToPDF({});
+  const filename = pdfFileName(wc.getTitle());
+  const sourceUrl = wc.getURL();
+  const downloadId = await DownloadService.ingestGeneratedFile({
+    filename,
+    mimeType: 'application/pdf',
+    bytes: pdf,
+    sourceUrl,
+    // `actor: 'agent'` is stamped HERE, by the host, exactly as it is for an agent download — the
+    // model cannot set its own actor, and `releaseNeedsApproval` refuses an agent record without a
+    // human whatever the file turns out to be.
+    provenance: { actor: 'agent', sourceUrl, sourceOrigin: originOfUrl(sourceUrl) },
+  });
+  return { downloadId, filename, bytes: pdf.byteLength };
+}
+
 export const browserHost: BrowserHost & TabHost & ScreenshotToolsHost = {
   navigate,
   readPage,
   readArticleText,
+  savePageAsPdf,
   runExtractionScript,
   historyGo,
   waitForCondition,

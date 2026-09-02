@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
+import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { app, type DownloadItem, type WebContents } from 'electron';
 import {
@@ -125,6 +126,61 @@ export function handleWillDownload(
       appendAudit('DownloadFailed', state.records.get(id));
     }
   });
+}
+
+/**
+ * Take bytes this browser produced itself — a page printed to PDF — into the download lifecycle.
+ *
+ * The point is what it does NOT do: it opens no second write path. The file lands in the same
+ * quarantine directory, is hashed and trust-checked by the same `finishToQuarantine`, and leaves
+ * quarantine only through the same `release` gate with the same HITL rules. An agent-generated PDF is
+ * therefore exactly as trusted as an agent-initiated download, which is to say not at all until a
+ * human says so.
+ *
+ * Returns the record id so the caller can name it back to the agent without handing over a path.
+ */
+export async function ingestGeneratedFile(
+  state: DownloadState,
+  input: {
+    filename: string;
+    mimeType: string;
+    bytes: Uint8Array;
+    provenance: DownloadProvenance;
+    /** The page it was generated from — recorded as the URL, since there was no transfer. */
+    sourceUrl: string;
+  },
+): Promise<string> {
+  const now = Date.now();
+  const id = randomUUID();
+  const filename = cleanFilename(input.filename);
+  const quarantineDir = join(app.getPath('userData'), 'Downloads', 'quarantine');
+  mkdirSync(quarantineDir, { recursive: true });
+  const quarantinePath = uniquePath(quarantineDir, `${id}-${filename}`);
+  await writeFile(quarantinePath, input.bytes);
+
+  const record: ActiveDownload = {
+    id,
+    url: input.sourceUrl,
+    filename,
+    mimeType: input.mimeType,
+    status: 'in_progress',
+    // Classified like everything else. A generated PDF is `normal`, but the classification is not
+    // skipped on that assumption — the filename comes from a page title.
+    risk: classifyDownloadRisk(filename, input.mimeType),
+    trustVerdict: 'unknown',
+    receivedBytes: input.bytes.byteLength,
+    totalBytes: input.bytes.byteLength,
+    canResume: false,
+    createdAt: now,
+    updatedAt: now,
+    provenance: input.provenance,
+    quarantinePath,
+    finalPath: uniquePath(downloadDirectory(), filename),
+  };
+  upsert(state, record);
+  appendAudit('DownloadStarted', record);
+  await finishToQuarantine(state, id);
+  return id;
 }
 
 export async function finishToQuarantine(state: DownloadState, id: string): Promise<void> {

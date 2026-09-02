@@ -23,7 +23,7 @@ import {
   snapshot,
   type DownloadState,
 } from './download-service-store.electron';
-import { handleWillDownload } from './download-service-lifecycle.electron';
+import { handleWillDownload, ingestGeneratedFile } from './download-service-lifecycle.electron';
 import BrowsingSessions from '../network/browsing-sessions.electron';
 import { runCommand } from './download-service-commands.electron';
 
@@ -60,6 +60,20 @@ class DownloadService {
       },
       { critical: true },
     );
+  }
+
+  /**
+   * Take bytes the browser generated (a page printed to PDF) into the download lifecycle: quarantine,
+   * hash, trust check, and the same release gate as everything else. Returns the record id.
+   */
+  static ingestGeneratedFile(input: {
+    filename: string;
+    mimeType: string;
+    bytes: Uint8Array;
+    provenance: DownloadProvenance;
+    sourceUrl: string;
+  }): Promise<string> {
+    return ingestGeneratedFile(DownloadService.ctx, input);
   }
 
   static list(): DownloadRecord[] {

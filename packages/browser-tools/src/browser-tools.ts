@@ -632,6 +632,28 @@ export function registerBrowserTools(deps: { host: BrowserHost }): void {
     });
   }
 
+  // Save the current page as a PDF. Registered ONLY when the host can put the bytes through the
+  // download lifecycle — quarantine, hash, trust check, human release. A host without that seam gets
+  // no tool rather than a direct write.
+  if (host.savePageAsPdf !== undefined) {
+    const savePdf = host.savePageAsPdf.bind(host);
+    CapabilityRegistry.register({
+      descriptor: descriptor(
+        'browser_export_pdf',
+        // `state_changing`, so it goes through the ToolGateway's HITL like every other act that leaves
+        // something behind. Reading a page is free; putting a file on the user's disk is not.
+        'state_changing',
+        'Save a page as a PDF file. args: { tabId?: string } — omit tabId for the active tab. The ' +
+          'file lands in the browser download list in quarantine and needs the human to release it, ' +
+          'exactly like any other download. Returns { downloadId, filename, bytes }. There is no path ' +
+          'and no way to open the file from here.',
+        { aiTask: 'read_understand' },
+      ),
+      inputSchema: TargetTabArgs,
+      handler: async (args) => savePdf(args.tabId),
+    });
+  }
+
   CapabilityRegistry.register({
     descriptor: descriptor(
       'browser_update_location',

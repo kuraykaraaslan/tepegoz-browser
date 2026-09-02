@@ -52,6 +52,32 @@ function response(over: Partial<NetworkObservation> = {}): NetworkObservation {
 describe('registerBrowserTools', () => {
   beforeEach(() => CapabilityRegistry.reset());
 
+  it('does NOT register browser_export_pdf when the host cannot route bytes through quarantine', () => {
+    // Absence is a refusal, not a degradation: a host without the download lifecycle must not write a
+    // file somewhere easier. The tool simply does not exist for it.
+    registerBrowserTools({ host: fakeHost() });
+    expect(CapabilityRegistry.get('browser_export_pdf')).toBeUndefined();
+  });
+
+  it('registers browser_export_pdf as state_changing, and returns no path', async () => {
+    const savePageAsPdf = vi.fn(() =>
+      Promise.resolve({ downloadId: 'dl-1', filename: 'Invoice.pdf', bytes: 4096 }),
+    );
+    registerBrowserTools({ host: fakeHost({ savePageAsPdf }) });
+
+    const descriptor = CapabilityRegistry.list().find((d) => d.id === 'browser_export_pdf');
+    // `state_changing`, so the ToolGateway asks a human. Reading a page is free; putting a file on
+    // someone's disk is not.
+    expect(descriptor?.dangerClass).toBe('state_changing');
+
+    const result = await CapabilityRegistry.get('browser_export_pdf')!.handler({ tabId: 't1' });
+    expect(savePageAsPdf).toHaveBeenCalledWith('t1');
+    // An id and a name — never a path. The agent has no filesystem, and one real path string is how
+    // that stops being true.
+    expect(result).toEqual({ downloadId: 'dl-1', filename: 'Invoice.pdf', bytes: 4096 });
+    expect(JSON.stringify(result)).not.toContain('/');
+  });
+
   it('registers the browser_* tools as always-on builtins', () => {
     registerBrowserTools({ host: fakeHost() });
     const ids = CapabilityRegistry.list()
