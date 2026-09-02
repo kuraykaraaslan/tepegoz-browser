@@ -218,10 +218,32 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
       and silently retrying a tunnel-bound download on the clear path would be the exact leak the tab
       model guards against — retrying from the page you are on keeps it on the route you can see.
       `ipc-downloads.ts` resolves the sender window's active tab for the `wc`._
-- [ ] **Transfer capture beyond the page** — catch downloads the page did not initiate through a normal
+- [x] **Transfer capture beyond the page** — catch downloads the page did not initiate through a normal
       navigation (media elements, `blob:`/redirect chains) so the manager is not blind to a class of transfers;
       strictly in-browser, **no system-wide traffic interception** — that is IDM's model and it is out of scope
       on purpose (it needs a proxy/driver that contradicts this project's threat model)
+  - [x] **Measured before building anything, and the measurement closed the row**
+        (`e2e/spike-transfer-capture.spec.ts`, 2026-09-02). The row assumed a blind spot; there is
+        none for the classes it names. A real page in the launched app, three real transfers, counting
+        `will-download` on the live browsing session:
+
+        | Transfer                                                              | Reaches `will-download`? |
+        | --------------------------------------------------------------------- | ------------------------ |
+        | `<a download href="blob:…">` clicked by the page (client-side export) | **yes**, as the blob URL |
+        | 302 → `Content-Disposition: attachment`                               | **yes**, as the FINAL url |
+        | `downloadURL(blobUrl)` from MAIN — the "Save video as" menu path      | **yes**                  |
+
+        _So all three land on the handler registered for every browsing session, and therefore in
+        quarantine → hash → trust gate like anything else. Nothing needed building; what needed doing
+        was checking, because "the manager is blind to a class of transfers" was an assumption nobody
+        had tested and it was wrong._
+  - [ ] **The one real residual, named rather than left implied:** a `<video>` whose source is a
+        MediaSource (`blob:` from MSE — how YouTube and most streaming sites deliver) has no single URL
+        to fetch; the bytes arrive as segments the page appends. `downloadURL` on such a blob has
+        nothing to download. Capturing THAT means recording and remuxing media segments, which is a
+        media pipeline rather than a capture hook, and it is the same thing this row's own
+        "no system-wide traffic interception" clause rules out. Not scheduled; recorded so the gap is
+        a known shape rather than a surprise.
 - [ ] **Measurement, not assertion** — a benchmark that downloads a fixed set of files against a local server
       and records single-stream vs. segmented throughput. A speed claim without this number is vanity; the
       number is what a comparison against IDM or Chrome is allowed to cite
