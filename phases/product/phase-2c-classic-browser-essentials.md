@@ -195,7 +195,7 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
 - [ ] **Dynamic connection count** — the segment count adapts to measured throughput and server behavior rather
       than a fixed setting; a host that penalizes parallel connections is detected and backed off. Per-host
       ceiling is user-visible and overridable (default conservative: we are a browser, not a scraper)
-- [~] **Resilient resume** — resume across an app restart and across a dropped connection, with exponential
+- [x] **Resilient resume** — resume across an app restart and across a dropped connection, with exponential
       backoff and a bounded retry budget; a resumed transfer verifies the already-written bytes before
       continuing, never blindly appending
   - [x] **Resume across an app restart, with the byte check that makes it safe** (2026-09-02).
@@ -222,10 +222,24 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         under a progress bar that would never move._
         — _The resumed item re-enters through `will-download` on its own session, so it picks up the
         same quarantine path, hash and trust gate as any other transfer. Nothing here bypasses them._
-  - [ ] **Still owed: the dropped-connection half** — exponential backoff and a bounded retry budget
-        for a transfer that fails mid-flight while the app is running. Today an interruption becomes a
-        `failed` row the user retries by hand. The safety rule above is the same one an automatic retry
-        must obey, so it is written and tested; what is missing is the scheduler around it.
+  - [x] **The dropped-connection half** (2026-09-02, the same day) — _exponential backoff (1s, 2s, 4s,
+        8s, capped at 30s) and a budget of four attempts, in `planDownloadRetry`, which is a pure
+        function so the policy can be read in one place rather than inferred from a timer._
+        — _**It goes through the same `resumeInterrupted` path a manual resume takes**, so the
+        byte-verification rule applies unchanged. An automatic retry that appended blindly would be
+        worse than a manual one, because nobody watched it happen: if the bytes on disk cannot be
+        trusted the row goes to `failed` and re-downloading from zero is left to the person._
+        — _**A cancel is never retried.** It is the one interruption that carries an instruction, and
+        it retires any pending retry rather than starting one._
+        — _**While a retry is pending the row reads `paused`, and no `DownloadFailed` is journaled.**
+        A row that says "failed" about a transfer that is about to continue tells the user something
+        that is about to stop being true, and the audit log would hold an event that did not happen._
+        — _**The attempt counter is in memory on purpose.** A restart is a new session and deserves a
+        fresh budget; persisting it would leave a download that failed four times last week
+        permanently un-retryable today. The timer is `unref`'d — a quit is a quit._
+        — _Bounded on both sides by tests: a browser that gives up on the first dropped packet is one
+        people stop downloading with, and one that retries forever hammers a server that is already
+        telling it to stop. 6 tests._
 - [x] **Speed + ETA metadata** — surface bytes/sec and estimated time remaining in the download record and the
       manager (already tracked as an open item in `packages/downloads/CHECKLIST.md`; this is the same task)
       — _`computeDownloadRate(samples, totalBytes)` is a pure helper in `@tepegoz/downloads` (unit-tested

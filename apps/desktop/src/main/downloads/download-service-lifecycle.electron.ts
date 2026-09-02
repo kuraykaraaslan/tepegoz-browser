@@ -9,6 +9,7 @@ import {
   type DownloadProvenance,
 } from '@tepegoz/downloads';
 import { Logger } from '@tepegoz/libs';
+import { forget as forgetRetries, scheduleAutoRetry } from './download-service-autoretry.electron';
 import BrowsingSessions from '../network/browsing-sessions.electron';
 import { cleanFilename, originOf, sha256File, uniquePath } from './download-service-fs.electron';
 import type { ActiveDownload } from './download-service-model.electron';
@@ -130,16 +131,19 @@ export function handleWillDownload(
     if (doneState === 'completed') {
       void finishToQuarantine(state, id);
     } else if (doneState === 'cancelled') {
+      // A cancel carries an instruction, so it retires any pending retry rather than starting one.
+      forgetRetries(id);
       patch(state, id, { status: 'canceled', updatedAt: Date.now(), item: undefined });
       appendAudit('DownloadCanceled', state.records.get(id));
     } else {
-      patch(state, id, {
-        status: 'failed',
-        error: doneState,
-        updatedAt: Date.now(),
-        item: undefined,
-      });
-      appendAudit('DownloadFailed', state.records.get(id));
+      patch(state, id, { updatedAt: Date.now(), item: undefined });
+      // The network dropped it. If a retry is scheduled the row stays `paused` and no failure is
+      // written or journaled — a `DownloadFailed` for a transfer that is about to continue would put
+      // an event in the audit log that did not happen.
+      if (!scheduleAutoRetry(state, id, doneState)) {
+        patch(state, id, { status: 'failed', error: doneState, updatedAt: Date.now() });
+        appendAudit('DownloadFailed', state.records.get(id));
+      }
     }
   });
 }
@@ -219,6 +223,7 @@ export async function finishToQuarantine(state: DownloadState, id: string): Prom
       completedAt: Date.now(),
       updatedAt: Date.now(),
     });
+    forgetRetries(id);
     appendAudit(
       trustVerdict === 'blocked' ? 'DownloadBlocked' : 'DownloadQuarantined',
       state.records.get(id),

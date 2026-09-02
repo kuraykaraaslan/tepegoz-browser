@@ -3,6 +3,7 @@ import { BrowserWindow, dialog, shell, type WebContents } from 'electron';
 import { isRetryableStatus, type DownloadCommandAction } from '@tepegoz/downloads';
 import { AppError } from '@tepegoz/libs';
 import { resumeInterrupted, resumeRefusal } from './download-service-resume.electron';
+import { forget as forgetRetries } from './download-service-autoretry.electron';
 import PreferenceStore from '@tepegoz/preferences';
 import { moveFile, uniquePath } from './download-service-fs.electron';
 import {
@@ -48,6 +49,7 @@ export async function runCommand(
       patch(state, id, { canResume: false });
     }
   } else if (action === 'cancel') {
+    forgetRetries(id);
     record.item?.cancel();
     patch(state, id, { status: 'canceled', updatedAt: Date.now() });
     appendAudit('DownloadCanceled', state.records.get(id));
@@ -58,6 +60,7 @@ export async function runCommand(
   } else if (action === 'reveal') {
     reveal(state, id);
   } else if (action === 'clear') {
+    forgetRetries(id);
     removeRecord(state, id);
   } else {
     throw new AppError('Unsupported download command', 400, 'unsupportedCommand');
