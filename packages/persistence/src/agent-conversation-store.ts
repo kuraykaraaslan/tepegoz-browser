@@ -7,7 +7,18 @@ import type {
   AgentHistoryEvent,
 } from '@tepegoz/ext-agent/history';
 import { summarizeConversationPrompt, terminalStatusFromEvents } from '@tepegoz/ext-agent/history';
+import { foldForSearch } from '@tepegoz/i18n';
 import type { Db } from './db';
+import { MetaStore } from './meta';
+import { likeContains, LIKE_ESCAPE_CLAUSE } from './sql-like';
+
+/**
+ * Bump when {@link foldForSearch}'s output changes, so
+ * {@link AgentConversationStore.reindexFoldsIfStale} re-folds instead of leaving an index built by a
+ * previous rule. v1 = the initial shadow columns (migration 18).
+ */
+export const AGENT_CONVERSATION_FOLD_VERSION = 1;
+const FOLD_VERSION_META_KEY = 'agent_conversation_fold_version';
 
 interface ConversationRow {
   id: string;
@@ -89,12 +100,17 @@ export class AgentConversationStore {
         .all(limit, offset) as ConversationRow[];
       return rows.map(rowToSummary);
     }
-    const like = `%${query}%`;
+    // Folded shadow columns, and an ESCAPE clause. Both were missing: SQLite's LIKE folds ASCII only,
+    // so a conversation that began "İSTANBUL için plan yap" could not be found by typing `istanbul` —
+    // over text the user typed AT AN AGENT, which in this product is Turkish more often than anywhere
+    // else in the app. And with no escaping, a query containing `%` matched every conversation.
+    const like = likeContains(foldForSearch(query));
     const rows = db
       .prepare(
         `SELECT DISTINCT c.* FROM agent_conversations c
          LEFT JOIN agent_conversation_turns t ON t.conversation_id = c.id
-         WHERE c.title LIKE ? OR c.preview LIKE ? OR t.prompt LIKE ? OR t.response_summary LIKE ?
+         WHERE c.title_fold LIKE ? ${LIKE_ESCAPE_CLAUSE} OR c.preview_fold LIKE ? ${LIKE_ESCAPE_CLAUSE}
+            OR t.prompt_fold LIKE ? ${LIKE_ESCAPE_CLAUSE} OR t.response_fold LIKE ? ${LIKE_ESCAPE_CLAUSE}
          ORDER BY c.updated_at DESC LIMIT ? OFFSET ?`,
       )
       .all(like, like, like, like, limit, offset) as ConversationRow[];
@@ -120,11 +136,21 @@ export class AgentConversationStore {
     // caller's shape makes every field it ever gains a runtime failure on this INSERT.
     db.prepare(
       `INSERT OR IGNORE INTO agent_conversations (
-        id, group_id, title, preview, status, turn_count, started_at, updated_at, last_run_id
+        id, group_id, title, preview, status, turn_count, started_at, updated_at, last_run_id,
+        title_fold, preview_fold
       ) VALUES (
-        @id, @groupId, @title, @preview, 'active', 0, @ts, @ts, NULL
+        @id, @groupId, @title, @preview, 'active', 0, @ts, @ts, NULL,
+        @titleFold, @previewFold
       )`,
-    ).run({ id: input.id, groupId: input.groupId, title, preview, ts: input.ts });
+    ).run({
+      id: input.id,
+      groupId: input.groupId,
+      title,
+      preview,
+      ts: input.ts,
+      titleFold: foldForSearch(title),
+      previewFold: foldForSearch(preview),
+    });
   }
 
   static addTurn(
@@ -143,9 +169,10 @@ export class AgentConversationStore {
     db.prepare(
       `INSERT INTO agent_conversation_turns (
         id, conversation_id, run_id, prompt, response_summary, status, events_json,
-        attachments_json, created_at, updated_at
+        attachments_json, created_at, updated_at, prompt_fold, response_fold
       ) VALUES (
-        @id, @conversationId, @runId, @prompt, NULL, 'active', '[]', @attachmentsJson, @ts, @ts
+        @id, @conversationId, @runId, @prompt, NULL, 'active', '[]', @attachmentsJson, @ts, @ts,
+        @promptFold, ''
       )`,
     ).run({
       id: input.id,
@@ -154,6 +181,7 @@ export class AgentConversationStore {
       prompt: input.prompt,
       attachmentsJson: JSON.stringify(input.attachments),
       ts: input.ts,
+      promptFold: foldForSearch(input.prompt),
     });
     this.refreshSummary(db, input.conversationId, input.runId, input.ts);
   }
@@ -167,9 +195,16 @@ export class AgentConversationStore {
     const response = latestResponse(events, row.response_summary ?? undefined);
     db.prepare(
       `UPDATE agent_conversation_turns
-       SET events_json = ?, status = ?, response_summary = ?, updated_at = ?
+       SET events_json = ?, status = ?, response_summary = ?, response_fold = ?, updated_at = ?
        WHERE id = ?`,
-    ).run(JSON.stringify(events), status, response, event.ts, turnId);
+    ).run(
+      JSON.stringify(events),
+      status,
+      response,
+      response === null ? '' : foldForSearch(response),
+      event.ts,
+      turnId,
+    );
     this.refreshSummary(db, row.conversation_id, event.runId, event.ts);
   }
 
@@ -179,6 +214,47 @@ export class AgentConversationStore {
 
   static clear(db: Db): void {
     db.prepare('DELETE FROM agent_conversations').run();
+  }
+
+  /**
+   * Re-fold every searchable column when the stored fold version does not match
+   * {@link AGENT_CONVERSATION_FOLD_VERSION}. The third copy of the same contract as `HistoryStore`
+   * and `BookmarkTreeStore`: one code path for the initial backfill (rows written before migration
+   * 18, meta key unset) and for a re-fold after the rule changes; idempotent; returns the number of
+   * rows rewritten. Call once at startup, right after `migrate`.
+   */
+  static reindexFoldsIfStale(db: Db): number {
+    if (MetaStore.get(db, FOLD_VERSION_META_KEY) === String(AGENT_CONVERSATION_FOLD_VERSION)) {
+      return 0;
+    }
+    const conversations = db.prepare('SELECT id, title, preview FROM agent_conversations').all() as {
+      id: string;
+      title: string;
+      preview: string;
+    }[];
+    const turns = db
+      .prepare('SELECT id, prompt, response_summary FROM agent_conversation_turns')
+      .all() as { id: string; prompt: string; response_summary: string | null }[];
+    const updateConversation = db.prepare(
+      'UPDATE agent_conversations SET title_fold = ?, preview_fold = ? WHERE id = ?',
+    );
+    const updateTurn = db.prepare(
+      'UPDATE agent_conversation_turns SET prompt_fold = ?, response_fold = ? WHERE id = ?',
+    );
+    db.transaction(() => {
+      for (const c of conversations) {
+        updateConversation.run(foldForSearch(c.title), foldForSearch(c.preview), c.id);
+      }
+      for (const t of turns) {
+        updateTurn.run(
+          foldForSearch(t.prompt),
+          t.response_summary === null ? '' : foldForSearch(t.response_summary),
+          t.id,
+        );
+      }
+      MetaStore.set(db, FOLD_VERSION_META_KEY, String(AGENT_CONVERSATION_FOLD_VERSION));
+    })();
+    return conversations.length + turns.length;
   }
 
   private static refreshSummary(db: Db, conversationId: string, runId: string, ts: number): void {
@@ -194,9 +270,20 @@ export class AgentConversationStore {
     const status = latest?.status ?? 'active';
     db.prepare(
       `UPDATE agent_conversations
-       SET title = ?, preview = ?, status = ?, turn_count = ?, updated_at = ?, last_run_id = ?
+       SET title = ?, preview = ?, title_fold = ?, preview_fold = ?, status = ?, turn_count = ?,
+           updated_at = ?, last_run_id = ?
        WHERE id = ?`,
-    ).run(title, preview.slice(0, 180), status, turns.length, ts, runId, conversationId);
+    ).run(
+      title,
+      preview.slice(0, 180),
+      foldForSearch(title),
+      foldForSearch(preview.slice(0, 180)),
+      status,
+      turns.length,
+      ts,
+      runId,
+      conversationId,
+    );
   }
 }
 

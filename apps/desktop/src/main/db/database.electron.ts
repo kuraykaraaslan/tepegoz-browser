@@ -2,7 +2,13 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { app } from 'electron';
 import { Logger } from '@tepegoz/libs';
-import { HistoryStore, migrate, openDatabase, type Db } from '@tepegoz/persistence';
+import {
+  AgentConversationStore,
+  HistoryStore,
+  migrate,
+  openDatabase,
+  type Db,
+} from '@tepegoz/persistence';
 import { BookmarkTreeStore } from '@tepegoz/bookmarks';
 
 /**
@@ -52,6 +58,11 @@ export function initDatabase(): void {
         const bookmarksRefolded = BookmarkTreeStore.reindexFoldsIfStale(opened);
         if (bookmarksRefolded > 0) {
           Logger.info('Re-folded bookmark search index', { rows: bookmarksRefolded });
+        }
+        // And the agent console's own history (migration 18) — the third store with the same columns.
+        const conversationsRefolded = AgentConversationStore.reindexFoldsIfStale(opened);
+        if (conversationsRefolded > 0) {
+          Logger.info('Re-folded agent conversation search index', { rows: conversationsRefolded });
         }
         // Startup retention pass — history is otherwise unbounded (one row per unique URL, forever).
         const pruned = HistoryStore.prune(opened, Date.now());

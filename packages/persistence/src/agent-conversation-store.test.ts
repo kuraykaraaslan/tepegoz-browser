@@ -101,6 +101,50 @@ describe('agent conversation history', () => {
     expect(AgentConversationStore.list(db, { query: 'nothing-like-this' })).toEqual([]);
   });
 
+  it('finds a Turkish conversation the way a Turkish user would type it', () => {
+    // The third instance of the same defect (history was migration 16, bookmarks 17). It matters most
+    // here: this column holds what the user typed AT AN AGENT, which in this product is Turkish more
+    // often than anywhere else in the app — and the failure was an empty list, not an error.
+    beginTurn(uuid(12), 'İSTANBUL için üç günlük plan yap', 1_000);
+    expect(AgentConversationStore.list(db, { query: 'istanbul' })).toHaveLength(1);
+    expect(AgentConversationStore.list(db, { query: 'ucgunluk' })).toEqual([]);
+    expect(AgentConversationStore.list(db, { query: 'gunluk' })).toHaveLength(1);
+  });
+
+  it('finds a turn by what the agent answered, folded the same way', () => {
+    const turnId = uuid(13);
+    beginTurn(turnId, 'Bir şey sor', 1_000);
+    AgentConversationStore.appendEvent(db, turnId, {
+      runId: `run-${turnId}`,
+      groupId: GROUP,
+      kind: 'done',
+      message: 'ŞİŞLİ için özet hazır',
+      ts: 2_000,
+    });
+    expect(AgentConversationStore.list(db, { query: 'sisli' })).toHaveLength(1);
+  });
+
+  it('treats a bare % as text, not as "every conversation"', () => {
+    // There was no ESCAPE clause at all here, so `%` matched everything — the same wildcard hole the
+    // omnibox track measured against history and bookmarks.
+    beginTurn(uuid(14), 'Plain prompt', 1_000);
+    expect(AgentConversationStore.list(db, { query: '%' })).toEqual([]);
+    expect(AgentConversationStore.list(db, { query: '_' })).toEqual([]);
+  });
+
+  it('backfills rows written before the fold columns existed, once', () => {
+    const turnId = uuid(15);
+    beginTurn(turnId, 'İSTANBUL için plan', 1_000);
+    db.exec("UPDATE agent_conversations SET title_fold = '', preview_fold = ''");
+    db.exec("UPDATE agent_conversation_turns SET prompt_fold = '', response_fold = ''");
+    db.prepare("DELETE FROM meta WHERE key = 'agent_conversation_fold_version'").run();
+    expect(AgentConversationStore.list(db, { query: 'istanbul' })).toEqual([]);
+
+    expect(AgentConversationStore.reindexFoldsIfStale(db)).toBe(2);
+    expect(AgentConversationStore.list(db, { query: 'istanbul' })).toHaveLength(1);
+    expect(AgentConversationStore.reindexFoldsIfStale(db)).toBe(0);
+  });
+
   it('deletes a conversation together with its turns (no orphan rows left behind)', () => {
     const turnId = uuid(11);
     beginTurn(turnId, 'First', 1_000);

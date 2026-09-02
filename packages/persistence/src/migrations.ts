@@ -580,6 +580,28 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 18,
+    up: (db) => {
+      // The third and last instance of the v16/v17 defect, found by grepping the repo for `LIKE ?`
+      // rather than by waiting for it to be reported. `AgentConversationStore.list` searched
+      // 'c.title LIKE ? OR c.preview LIKE ? OR t.prompt LIKE ? OR t.response_summary LIKE ?' — over
+      // text the user typed AT AN AGENT, which in this product is Turkish more often than anywhere
+      // else in the app. It also had no ESCAPE clause at all, so a query containing `%` matched every
+      // conversation (omnibox track A3, unfixed here).
+      //
+      // Same shape as 16 and 17: folded shadow columns written by the WRITER, backfilled by
+      // AgentConversationStore.reindexFoldsIfStale at the next startup.
+      db.exec(`
+        ALTER TABLE agent_conversations ADD COLUMN title_fold   TEXT NOT NULL DEFAULT '';
+        ALTER TABLE agent_conversations ADD COLUMN preview_fold TEXT NOT NULL DEFAULT '';
+        ALTER TABLE agent_conversation_turns ADD COLUMN prompt_fold   TEXT NOT NULL DEFAULT '';
+        ALTER TABLE agent_conversation_turns ADD COLUMN response_fold TEXT NOT NULL DEFAULT '';
+        CREATE INDEX idx_agent_conversations_title_fold ON agent_conversations (title_fold);
+        CREATE INDEX idx_agent_turns_prompt_fold ON agent_conversation_turns (prompt_fold);
+      `);
+    },
+  },
 ];
 
 /**
