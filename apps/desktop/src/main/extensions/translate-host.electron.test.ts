@@ -5,9 +5,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * / cloud-fallback bridge. Pinned: each adapter closure routes correctly (prefs get/set, the
  * extension gate with the translate id, resolved locale, local-model availability, the empty-origin
  * short-circuit on the sensitivity check, and the JSON-backed translation memory); `runLocalBatch` /
- * `runCloudBatch` throw a 503 when no local model / no cloud key is available; `translateText`
- * delegates to the host; `setTranslatePageState` forwards + broadcasts; and a native cloud-fallback
- * request is settled by `respondTranslateCloudFallback`.
+ * `runCloudBatch` throw a 503 when unavailable and otherwise register the local / vault-resolved
+ * external provider and complete through the model gateway; `translateText` delegates to the host;
+ * `setTranslatePageState` forwards + broadcasts; and a native cloud-fallback request broadcasts +
+ * resolves the OS dialog answer (settled by `respondTranslateCloudFallback` otherwise).
  */
 
 type Opts = {
@@ -44,9 +45,10 @@ vi.mock('@tepegoz/ext-translate/host', () => ({
     return cap.host;
   },
 }));
-vi.mock('@tepegoz/ext-translate/engine', () => ({
-  parseTranslateModelResponse: vi.fn(() => ({ items: [] })),
-}));
+const parseModel = vi.hoisted(() =>
+  vi.fn(() => ({ items: [{ id: '1', translatedText: 'merhaba' }] })),
+);
+vi.mock('@tepegoz/ext-translate/engine', () => ({ parseTranslateModelResponse: parseModel }));
 
 const store = vi.hoisted(() => ({
   readJsonFile: vi.fn((): unknown => undefined),
@@ -54,8 +56,12 @@ const store = vi.hoisted(() => ({
 }));
 vi.mock('@tepegoz/json-store', () => store);
 
+const gateway = vi.hoisted(() => ({
+  register: vi.fn(),
+  complete: vi.fn(() => Promise.resolve({ text: '{}' })),
+}));
 vi.mock('@tepegoz/model-gateway', () => ({
-  ModelGateway: { register: vi.fn(), complete: vi.fn(() => Promise.resolve({ text: '{}' })) },
+  ModelGateway: gateway,
   resolveProviderBaseURL: () => '',
   AnthropicProvider: class {},
   DeepSeekProvider: class {},
@@ -88,7 +94,8 @@ vi.mock('@tepegoz/desktop-ipc', () => ({
 
 const isSensitiveSite = vi.hoisted(() => vi.fn(() => true));
 vi.mock('@tepegoz/security-policy', () => ({ isSensitiveSite }));
-vi.mock('@tepegoz/shared-types', () => ({ isRunnableProvider: () => false }));
+const isRunnableProvider = vi.hoisted(() => vi.fn(() => false));
+vi.mock('@tepegoz/shared-types', () => ({ isRunnableProvider }));
 
 class AppError extends Error {
   statusCode: number;
@@ -172,6 +179,9 @@ beforeEach(() => {
   modelManager.resolveModel.mockReturnValue(null);
   bw.getAllWindows.mockReturnValue([]);
   bw.getFocusedWindow.mockReturnValue(null);
+  isRunnableProvider.mockReturnValue(false);
+  gateway.complete.mockResolvedValue({ text: '{}' });
+  parseModel.mockReturnValue({ items: [{ id: '1', translatedText: 'merhaba' }] });
 });
 
 describe('the adapter closures', () => {
@@ -238,6 +248,63 @@ describe('the batch runners', () => {
       statusCode: 503,
       code: 'translateNoCloudProvider',
     });
+  });
+
+  it('runLocalBatch registers the local provider and completes through the model gateway', async () => {
+    llama.mockReturnValue({ isAvailable: () => true });
+    modelManager.resolveModel.mockReturnValue({ id: 'm' });
+    await load();
+    const res = await o().runLocalBatch({ items: [{ id: '1', text: 'hello' }], glossaryTerms: [] });
+    expect(gateway.register).toHaveBeenCalled();
+    expect(gateway.complete).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: 'local', capability: 'extract', responseFormat: 'json' }),
+    );
+    expect(res).toMatchObject({ items: [{ id: '1', translatedText: 'merhaba' }], durationMs: 0 });
+  });
+
+  it('runCloudBatch resolves an external provider from the vault and completes', async () => {
+    isRunnableProvider.mockReturnValue(true);
+    vault.listMeta.mockReturnValue([{ provider: 'openai', region: 'us' }]);
+    vault.getFirstKeyForProvider.mockReturnValue('sk-test');
+    await load();
+    const res = await o().runCloudBatch({ items: [{ id: '1', text: 'hi' }], glossaryTerms: [] });
+    expect(gateway.register).toHaveBeenCalled();
+    expect(gateway.complete).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: 'openai', capability: 'extract' }),
+    );
+    expect(res).toMatchObject({ durationMs: 0 });
+  });
+});
+
+describe('requestCloudFallback', () => {
+  it('broadcasts the request and resolves the native dialog answer', async () => {
+    const w = { isDestroyed: () => false, webContents: { send: vi.fn() } };
+    bw.getAllWindows.mockReturnValue([w]);
+    dialog.showMessageBox.mockResolvedValue({ response: 0 } as never);
+    await load();
+    const res = await o().requestCloudFallback({
+      requestId: 'r1',
+      origin: 'https://x.example',
+      targetLanguage: 'tr',
+      textCharCount: 42,
+    });
+    expect(w.webContents.send).toHaveBeenCalledWith(
+      'translate:cloud-req',
+      expect.objectContaining({ requestId: 'r1' }),
+    );
+    expect(res).toEqual({ requestId: 'r1', allow: true, remember: true });
+  });
+
+  it('a "deny but remember" native answer maps to allow:false remember:true', async () => {
+    dialog.showMessageBox.mockResolvedValue({ response: 1 } as never);
+    await load();
+    const res = await o().requestCloudFallback({
+      requestId: 'r2',
+      origin: 'https://x.example',
+      targetLanguage: 'tr',
+      textCharCount: 10,
+    });
+    expect(res).toEqual({ requestId: 'r2', allow: false, remember: true });
   });
 });
 
