@@ -31,10 +31,16 @@ vi.mock('@tepegoz/persistence', () => ({ AgentConversationStore: store }));
 const tabGroup = vi.hoisted(() => ({ setTopic: vi.fn(), reset: vi.fn() }));
 vi.mock('./agent-tab-group.electron', () => ({ default: tabGroup }));
 
-vi.mock('../tabs', () => ({
-  default: { getState: () => ({ tabs: [], activeId: null }), activeWebContents: () => null },
+const tm = vi.hoisted(() => ({
+  getState: vi.fn(() => ({
+    tabs: [] as { id: string; url: string; title: string }[],
+    activeId: null as string | null,
+  })),
+  activeWebContents: () => null,
 }));
-vi.mock('../network/binding-service.electron', () => ({ default: { mayEgress: () => true } }));
+vi.mock('../tabs', () => ({ default: tm }));
+const binding = vi.hoisted(() => ({ mayEgress: vi.fn(() => true) }));
+vi.mock('../network/binding-service.electron', () => ({ default: binding }));
 vi.mock('./browser-host.electron', () => ({ runActiveTabUrl: () => 'https://active.test/' }));
 vi.mock('../web/web-tools-host.electron', () => ({ discoverSitemap: vi.fn() }));
 vi.mock('../local-inference/llama-engine.electron', () => ({
@@ -65,6 +71,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   runAgent.mockResolvedValue({ summary: 'did the thing', stoppedReason: 'done' });
   store.get.mockReturnValue(null);
+  tm.getState.mockReturnValue({ tabs: [], activeId: null });
+  binding.mayEgress.mockReturnValue(true);
 });
 
 describe('run', () => {
@@ -90,6 +98,41 @@ describe('run', () => {
     });
     expect(deps.tokenBudget).toBeUndefined();
     expect(gateway.setModelOverride).toHaveBeenCalledWith(null);
+  });
+
+  it('the injected tab helpers resolve URLs, egress state, and the tab list', async () => {
+    const svc = await load();
+    await svc.run('x', hooks, 'g1');
+    const deps = runAgent.mock.calls[0]![2] as {
+      activeTabUrl: () => string | undefined;
+      tabUrl: (id: string) => string | undefined;
+      tabEgressBlocked: (id: string) => boolean;
+      listTabs: () => { id: string; url: string; title: string; active: boolean }[];
+    };
+
+    expect(deps.activeTabUrl()).toBe('https://active.test/');
+    expect(deps.tabUrl('t1')).toBeUndefined(); // empty state
+    expect(deps.listTabs()).toEqual([]);
+
+    tm.getState.mockReturnValue({
+      tabs: [
+        { id: 't1', url: 'https://one.test/', title: 'One' },
+        { id: 't2', url: '', title: 'Blank' },
+      ],
+      activeId: 't1',
+    });
+    expect(deps.tabUrl('t1')).toBe('https://one.test/');
+    expect(deps.tabUrl('t2')).toBeUndefined(); // present but no committed URL
+    expect(deps.tabUrl('ghost')).toBeUndefined();
+    expect(deps.listTabs()).toEqual([
+      { id: 't1', url: 'https://one.test/', title: 'One', active: true },
+      { id: 't2', url: '', title: 'Blank', active: false },
+    ]);
+
+    binding.mayEgress.mockReturnValue(false);
+    expect(deps.tabEgressBlocked('t1')).toBe(true);
+    binding.mayEgress.mockReturnValue(true);
+    expect(deps.tabEgressBlocked('t1')).toBe(false);
   });
 
   it('forwards a token budget when given', async () => {
