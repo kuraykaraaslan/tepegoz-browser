@@ -111,6 +111,14 @@ describe('mapAppMetrics', () => {
     expect(row?.label).toBe('not::a::url');
   });
 
+  it('labels a titleless tab with the raw string when the URL parser THROWS', () => {
+    const [row] = mapAppMetrics(
+      [{ pid: 6, type: 'Tab', cpu: cpu(0), memory: mem(0) }],
+      [{ tabId: 't', title: '', url: 'http://[', discarded: false, pid: 6 }],
+    );
+    expect(row?.label).toBe('http://[');
+  });
+
   it('clamps a negative working-set to zero and falls back to serviceName then type for a label', () => {
     const rows = mapAppMetrics(
       [
