@@ -215,4 +215,23 @@ describe('the injected hooks', () => {
     hooks().onEvent('step_ok', 'x');
     expect(journal.append).not.toHaveBeenCalled();
   });
+
+  it('swallows a failing journal append during a step event, with a warning', async () => {
+    await runTaskAgent(task(), run, trigger);
+    journal.append.mockImplementationOnce(() => {
+      throw new Error('journal disk full');
+    });
+    expect(() => hooks().onEvent('step_ok', 'clicked')).not.toThrow();
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Background task journal append failed',
+      expect.objectContaining({ err: expect.stringContaining('journal disk full') as string }),
+    );
+  });
+
+  it('requestApproval declines when the pre-approval target URL will not parse', async () => {
+    await runTaskAgent(task(), run, trigger);
+    taskCanUseTool.mockReturnValue(true);
+    const req = { toolName: 'file_write', targetUrl: '::: not a url', policy: { reason: 'r' } };
+    expect(await hooks().requestApproval(req)).toBe(false);
+  });
 });
