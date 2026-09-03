@@ -123,12 +123,24 @@ class Harness extends WindowTabsMoves {
   titleOf(id: string): string | undefined {
     return this.store.get(id)?.title;
   }
+  seedInternal(id: string): void {
+    this.internalPageViews.set(id, {
+      setBounds: vi.fn(),
+      webContents: { isDestroyed: () => false },
+    } as never);
+  }
+  indexOf(id: string): number {
+    return this.store.records().findIndex((r) => r.id === id);
+  }
 }
 
 let tabs: Harness;
 beforeEach(() => {
   wiring.wireView.mockClear();
   wiring.unwireView.mockClear();
+  internalView.hideInternalPageView.mockClear();
+  internalView.unwireInternalPageView.mockClear();
+  internalView.rewireInternalPageView.mockClear();
   tabs = new Harness(fakeWindow() as never, false);
 });
 
@@ -181,5 +193,33 @@ describe('adoptTab', () => {
     const detached = tabs.detachTab(a)!;
     const newId = tabs.adoptTab(detached);
     expect(tabs.groupIdOf(newId)).toBeNull();
+  });
+
+  it('drops the adopted tab at an explicit index when one is given', () => {
+    tabs.seed('a');
+    const b = tabs.seed('b');
+    const detachedB = tabs.detachTab(b)!;
+    const newId = tabs.adoptTab(detachedB, 0); // ask for the leading slot
+    expect(tabs.indexOf(newId)).toBe(0);
+  });
+});
+
+describe('detached internal-page views', () => {
+  it('detachTab carries an internal-page view and drops our handler for it', () => {
+    const a = tabs.seed('a');
+    tabs.seedInternal(a);
+    const detached = tabs.detachTab(a)!;
+    expect(detached.internalPageView).not.toBeNull();
+    expect(internalView.hideInternalPageView).toHaveBeenCalledTimes(1);
+    expect(internalView.unwireInternalPageView).toHaveBeenCalledTimes(1);
+  });
+
+  it('adoptTab re-homes and re-wires a detached internal-page view', () => {
+    const a = tabs.seed('a');
+    tabs.seedInternal(a);
+    const detached = tabs.detachTab(a)!;
+    const newId = tabs.adoptTab(detached);
+    expect(internalView.rewireInternalPageView).toHaveBeenCalledTimes(1);
+    expect(tabs.has(newId)).toBe(true);
   });
 });
