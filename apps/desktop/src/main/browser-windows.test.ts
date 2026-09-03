@@ -76,13 +76,15 @@ const onboarding = vi.hoisted(() => ({
 vi.mock('./onboarding.electron', () => onboarding);
 const safeMode = vi.hoisted(() => ({ isSafeMode: vi.fn(() => false) }));
 vi.mock('./recovery/safe-mode', () => safeMode);
-vi.mock('./recovery/session-restore-undo', () => ({ recordRestoredTabs: vi.fn() }));
+const restoreUndo = vi.hoisted(() => ({ recordRestoredTabs: vi.fn() }));
+vi.mock('./recovery/session-restore-undo', () => restoreUndo);
 const prefs = vi.hoisted(() => ({
   getAll: vi.fn(() => ({ closeToTray: false, kioskUrl: '', onboardingCompleted: false })),
   update: vi.fn(),
 }));
 vi.mock('@tepegoz/preferences', () => ({ default: prefs }));
-vi.mock('@tepegoz/persistence', () => ({ SessionStore: { load: vi.fn(() => null) } }));
+const sessionStore = vi.hoisted(() => ({ load: vi.fn((): unknown => null) }));
+vi.mock('@tepegoz/persistence', () => ({ SessionStore: sessionStore }));
 
 function fakeWin() {
   return {
@@ -104,6 +106,9 @@ async function load(): Promise<Mod> {
 const handlerFor = (o: { on: ReturnType<typeof vi.fn> }, ev: string) =>
   o.on.mock.calls.find((c) => c[0] === ev)?.[1] as ((...a: unknown[]) => unknown) | undefined;
 
+const onceHandlerFor = (o: { once: ReturnType<typeof vi.fn> }, ev: string) =>
+  o.once.mock.calls.find((c) => c[0] === ev)?.[1] as (() => void) | undefined;
+
 beforeEach(() => {
   vi.clearAllMocks();
   winInstance = fakeWin();
@@ -115,6 +120,7 @@ beforeEach(() => {
   wt.tabCount.mockReturnValue(1);
   wt.getState.mockReturnValue({ activeId: 'a1' });
   db.value = null;
+  sessionStore.load.mockReturnValue(null);
   onboarding.shouldShowOnboarding.mockReturnValue(false);
   safeMode.isSafeMode.mockReturnValue(false);
   quitState.isQuitting.mockReturnValue(false);
@@ -131,6 +137,16 @@ describe('initHosts', () => {
     expect(notif.attach).toHaveBeenCalledTimes(1);
     expect(passwordHost.attach).toHaveBeenCalledTimes(1);
     expect(autofillHost.attach).toHaveBeenCalledWith({ __vault: true });
+  });
+
+  it('the wired opener opens a foreground private window with a default tab', async () => {
+    const { initHosts } = await load();
+    initHosts();
+    const opener = privateOpener.setPrivateWindowOpener.mock.calls[0]![0] as () => void;
+    opener();
+    expect(win.createWindow).toHaveBeenCalledWith({ forceForeground: true });
+    expect(tm.register).toHaveBeenCalledWith(winInstance, { isPrivate: true });
+    expect(wt.createTab).toHaveBeenCalledTimes(1); // tabs: 'default'
   });
 });
 
@@ -190,6 +206,24 @@ describe('openWindow', () => {
     b.openWindow({ tabs: 'none' });
     expect(wt.createTab).not.toHaveBeenCalled();
   });
+
+  it('reconciles the tray power blocker on the window’s first show', async () => {
+    const { openWindow } = await load();
+    openWindow();
+    const onShow = onceHandlerFor(winInstance, 'show')!;
+    onShow();
+    expect(power.reconcileTrayPowerBlocker).toHaveBeenCalledTimes(1);
+  });
+
+  it('a second restore-mode open this launch just gets a default tab (session already bootstrapped)', async () => {
+    const { openWindow } = await load();
+    openWindow(); // first restore-mode open consumes the one-time session bootstrap
+    wt.createTab.mockClear();
+    wt.restoreWindow.mockClear();
+    openWindow(); // second one: sessionBootstrapped === true -> default tab, no restore attempt
+    expect(wt.createTab).toHaveBeenCalledTimes(1);
+    expect(wt.restoreWindow).not.toHaveBeenCalled();
+  });
 });
 
 describe('the window lifecycle handlers', () => {
@@ -241,6 +275,63 @@ describe('the window lifecycle handlers', () => {
     onKey(ev2, { type: 'keyDown' });
     expect(ev2.preventDefault).toHaveBeenCalled();
     expect(wt.closeTab).toHaveBeenCalledWith('a1');
+  });
+});
+
+describe('session restore on the first launch', () => {
+  const snap = (
+    windows: { bounds?: { x: number; y: number; width: number; height: number } }[],
+  ): void => {
+    db.value = { __db: true };
+    sessionStore.load.mockReturnValue({ windows });
+  };
+
+  it('restores the first window in place and opens one extra window per additional saved window', async () => {
+    snap([
+      { bounds: { x: 1, y: 2, width: 300, height: 200 } },
+      { bounds: { x: 400, y: 50, width: 500, height: 400 } }, // extra WITH bounds
+      {}, // extra WITHOUT bounds -> opened at the default placement
+    ]);
+    wt.restoreWindow.mockReturnValue(['t-1', 't-2']);
+
+    const { openWindow } = await load();
+    openWindow();
+
+    // first window: bounds placed on-screen + its tabs restored (no fallback createTab)
+    expect(winInstance.setBounds).toHaveBeenCalledWith(
+      expect.objectContaining({ x: 1, y: 2, width: 300, height: 200, placed: true }),
+    );
+    expect(wt.restoreWindow).toHaveBeenCalledTimes(3); // first + two extra windows
+    expect(win.createWindow).toHaveBeenCalledTimes(3);
+    expect(restoreUndo.recordRestoredTabs).toHaveBeenCalledTimes(3);
+    expect(wt.createTab).not.toHaveBeenCalled();
+  });
+
+  it('falls back to a fresh tab when the first saved window restored nothing', async () => {
+    snap([{}]); // one window, no bounds
+    wt.restoreWindow.mockReturnValue([]); // nothing came back
+
+    const { openWindow } = await load();
+    openWindow();
+
+    expect(winInstance.setBounds).not.toHaveBeenCalled(); // no bounds -> no placement
+    expect(wt.createTab).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls back to a fresh tab when the saved session has no windows', async () => {
+    snap([]);
+    const { openWindow } = await load();
+    openWindow();
+    expect(wt.createTab).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not restore in safe mode', async () => {
+    snap([{ bounds: { x: 1, y: 2, width: 3, height: 4 } }]);
+    safeMode.isSafeMode.mockReturnValue(true);
+    const { openWindow } = await load();
+    openWindow();
+    expect(wt.restoreWindow).not.toHaveBeenCalled();
+    expect(wt.createTab).toHaveBeenCalledTimes(1);
   });
 });
 
