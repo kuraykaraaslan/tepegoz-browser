@@ -48,6 +48,8 @@ beforeEach(async () => {
   fs.renameSync.mockImplementation(() => undefined);
   HistoryStore.reindexFoldsIfStale.mockReturnValue(0);
   HistoryStore.prune.mockReturnValue(0);
+  BookmarkTreeStore.reindexFoldsIfStale.mockReturnValue(0);
+  AgentConversationStore.reindexFoldsIfStale.mockReturnValue(0);
   mod = await load();
 });
 
@@ -130,6 +132,37 @@ describe('initDatabase', () => {
     });
     mod.initDatabase();
     expect(mod.getDb()).toBeNull();
+  });
+
+  it('logs each deferred maintenance step that actually did work', async () => {
+    HistoryStore.reindexFoldsIfStale.mockReturnValue(3);
+    BookmarkTreeStore.reindexFoldsIfStale.mockReturnValue(5);
+    AgentConversationStore.reindexFoldsIfStale.mockReturnValue(7);
+    HistoryStore.prune.mockReturnValue(9);
+
+    mod.initDatabase();
+    await tick();
+
+    expect(logger.info).toHaveBeenCalledWith('Re-folded history search index', { rows: 3 });
+    expect(logger.info).toHaveBeenCalledWith('Re-folded bookmark search index', { rows: 5 });
+    expect(logger.info).toHaveBeenCalledWith('Re-folded agent conversation search index', {
+      rows: 7,
+    });
+    expect(logger.info).toHaveBeenCalledWith('Pruned expired history entries', { pruned: 9 });
+  });
+
+  it('swallows and logs a failure in the deferred maintenance pass', async () => {
+    HistoryStore.reindexFoldsIfStale.mockImplementation(() => {
+      throw new Error('index locked');
+    });
+
+    mod.initDatabase();
+    await tick();
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Deferred history maintenance failed',
+      expect.objectContaining({ err: expect.stringContaining('index locked') as string }),
+    );
   });
 
   it('proceeds when the Extensions dir cannot be created', () => {
