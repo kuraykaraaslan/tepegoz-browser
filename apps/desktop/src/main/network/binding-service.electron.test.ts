@@ -143,6 +143,23 @@ describe('applying a binding', () => {
     expect(h.direct).toHaveBeenCalled();
     expect(h.ensureUp).not.toHaveBeenCalled();
   });
+
+  it('bindTab with inherit clears the tab override', async () => {
+    await BindingService.bindTab('a', { kind: 'connection', connectionId: 'tor' });
+    await BindingService.bindTab('a', { kind: 'inherit' });
+    expect(BindingService.tabBinding('a')).toEqual({ kind: 'inherit' });
+  });
+
+  it('bindGroup with inherit writes an empty group binding key', async () => {
+    await BindingService.bindGroup('g1', { kind: 'inherit' });
+    expect(h.updateGroupSettings).toHaveBeenCalledWith('g1', { 'vpn.connectionId': '' });
+  });
+
+  it('setGeneral to Direct stores a bare direct binding', async () => {
+    h.prefs.networkGeneralBinding = { kind: 'connection', connectionId: 'tor' };
+    await BindingService.setGeneral({ kind: 'direct' });
+    expect(h.update).toHaveBeenCalledWith({ networkGeneralBinding: { kind: 'direct' } });
+  });
 });
 
 describe('who moves', () => {
@@ -258,6 +275,20 @@ describe('preserving a route when pinning strips a tab out of its group', () => 
       source: 'general',
     });
   });
+
+  it("materializes an explicit group Direct as the tab's own Direct override", async () => {
+    // General is a tunnel, so without preservation the tab would jump onto it on unpin.
+    h.prefs.networkGeneralBinding = { kind: 'connection', connectionId: 'tor' };
+    await BindingService.bindGroup('g1', { kind: 'direct' });
+    h.rehostTab.mockClear();
+
+    BindingService.preserveRouteOnGroupExit('a', 'g1');
+    h.tabs = h.tabs.map((t) => (t.tabId === 'a' ? { ...t, groupId: null } : t));
+
+    const after = BindingService.resolveFor('a');
+    expect(after.resolved).toEqual({ connectionId: null }); // still Direct — no jump to the tunnel
+    expect(after.source).toBe('tab');
+  });
 });
 
 describe('the raw scope accessors', () => {
@@ -340,6 +371,28 @@ describe('startup wiring', () => {
 
     h.prefs.networkGeneralBinding = { kind: 'connection', connectionId: 'tor' };
     providePrivate();
+    expect(h.ensureUp).toHaveBeenCalledWith('tor');
+  });
+
+  it('the new-tab provider still hands back a partition session when the tunnel will not come up', async () => {
+    BindingService.installNewTabRoute();
+    const provide = h.setNewTabProvider.mock.calls[0]![0] as () => unknown;
+    h.ensureUp.mockRejectedValue(new Error('tunnel down'));
+    h.prefs.networkGeneralBinding = { kind: 'connection', connectionId: 'tor' };
+
+    expect(() => provide()).not.toThrow();
+    await new Promise((r) => setTimeout(r, 0)); // let the ensureUp().catch arm run
+    expect(h.ensure).toHaveBeenCalled();
+  });
+
+  it('the private-side provider tolerates a tunnel that will not come up', async () => {
+    BindingService.installNewTabRoute();
+    const providePrivate = h.setPrivateProvider.mock.calls[0]![0] as () => unknown;
+    h.ensureUp.mockRejectedValue(new Error('tunnel down'));
+    h.prefs.networkGeneralBinding = { kind: 'connection', connectionId: 'tor' };
+
+    expect(() => providePrivate()).not.toThrow();
+    await new Promise((r) => setTimeout(r, 0));
     expect(h.ensureUp).toHaveBeenCalledWith('tor');
   });
 });
