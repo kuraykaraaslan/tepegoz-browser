@@ -20,14 +20,15 @@ const shell = vi.hoisted(() => ({ openPath: vi.fn(() => Promise.resolve('')) }))
 const clipboard = vi.hoisted(() => ({ writeText: vi.fn() }));
 const browserWindow = vi.hoisted(() => ({
   fromWebContents: vi.fn((): unknown => ({ __win: true })),
-  getAllWindows: () => [],
+  getAllWindows: vi.fn((): unknown[] => []),
 }));
+const webContentsApi = vi.hoisted(() => ({ getAllWebContents: vi.fn((): unknown[] => []) }));
 vi.mock('electron', () => ({
   app: { getPath: () => '/userData' },
   BrowserWindow: browserWindow,
   clipboard,
   shell,
-  webContents: {},
+  webContents: webContentsApi,
 }));
 
 class AppError extends Error {
@@ -88,11 +89,15 @@ const mcp = vi.hoisted(() => ({
 vi.mock('../mcp/supervisor.electron', () => ({ default: mcp }));
 const extCaps = vi.hoisted(() => ({ reconcile: vi.fn() }));
 vi.mock('../extensions/capability-supervisor.electron', () => ({ default: extCaps }));
-vi.mock('../file-operations/file-operations-host', () => ({ default: {} }));
+const fileOps = vi.hoisted(() => ({ reconcile: vi.fn() }));
+vi.mock('../file-operations/file-operations-host', () => ({ default: fileOps }));
 
 const prefs = vi.hoisted(() => ({
   getAll: vi.fn(() => ({ defaultProvider: 'anthropic' })),
-  update: vi.fn((p: unknown) => ({ merged: true, ...(p as object) })),
+  update: vi.fn<(p: unknown) => Record<string, unknown>>((p) => ({
+    merged: true,
+    ...(p as object),
+  })),
 }));
 vi.mock('@tepegoz/preferences', () => ({
   default: prefs,
@@ -106,7 +111,8 @@ vi.mock('../lib/app-info', () => ({
   diagnosticsText: () => 'DIAG BLOCK',
   thirdPartyNoticesPath: vi.fn(() => '/notices.html'),
 }));
-vi.mock('../site-zoom', () => ({ reapplyZoomEverywhere: vi.fn() }));
+const siteZoom = vi.hoisted(() => ({ reapplyZoomEverywhere: vi.fn() }));
+vi.mock('../site-zoom', () => siteZoom);
 vi.mock('../agent/ai-adaptors', () => ({
   buildAdaptorConnections: () => [{ id: 'a1' }],
   buildAiAdaptors: () => [{ id: 'ai1' }],
@@ -154,16 +160,22 @@ vi.mock('../../shared/extensions', () => ({
     },
   ],
 }));
-vi.mock('../lib/glass', () => ({ applyChromeGlass: vi.fn(), isMicaSupported: () => false }));
-vi.mock('../lib/surface-theme', () => ({ resolveSurfaceTheme: () => ({ theme: 'dark' }) }));
-vi.mock('../launch-at-login', () => ({ setLaunchAtLogin: vi.fn() }));
+const glass = vi.hoisted(() => ({ applyChromeGlass: vi.fn(), isMicaSupported: () => false }));
+vi.mock('../lib/glass', () => glass);
+vi.mock('../lib/surface-theme', () => ({
+  resolveSurfaceTheme: () => ({ theme: 'dark', color: '#101010' }),
+}));
+const launchAtLogin = vi.hoisted(() => ({ setLaunchAtLogin: vi.fn() }));
+vi.mock('../launch-at-login', () => launchAtLogin);
 const defaultBrowser = vi.hoisted(() => ({
   getDefaultBrowserStatus: vi.fn(() => ({ isDefault: false })),
   setAsDefaultBrowser: vi.fn(() => ({ isDefault: true })),
 }));
 vi.mock('../default-browser', () => defaultBrowser);
-vi.mock('../tray', () => ({ refreshTray: vi.fn() }));
-vi.mock('../menus/application-menu', () => ({ refreshApplicationMenu: vi.fn() }));
+const tray = vi.hoisted(() => ({ refreshTray: vi.fn() }));
+vi.mock('../tray', () => tray);
+const appMenu = vi.hoisted(() => ({ refreshApplicationMenu: vi.fn() }));
+vi.mock('../menus/application-menu', () => appMenu);
 
 const { registerAppIpc } = await import('./ipc-content-app');
 const call = (c: string, p?: unknown) => helpers.h.get(c)!({ sender: {} }, p);
@@ -226,6 +238,66 @@ describe('prefsSet / prefsReset', () => {
     expect(translateHost.init).toHaveBeenCalled();
     expect(publicSettings.broadcastPublicSettings).toHaveBeenCalled();
   });
+
+  it('prefsSet only reconciles a service whose key is in the patch', () => {
+    call(CH.prefsSet, { theme: 'light' });
+    expect(mcp.reconcile).not.toHaveBeenCalled();
+    expect(extCaps.reconcile).not.toHaveBeenCalled();
+    expect(fileOps.reconcile).not.toHaveBeenCalled();
+    expect(siteZoom.reapplyZoomEverywhere).not.toHaveBeenCalled();
+    expect(adblockHost.init).not.toHaveBeenCalled();
+    expect(launchAtLogin.setLaunchAtLogin).not.toHaveBeenCalled();
+  });
+
+  it('prefsSet fans each changed key out to exactly its downstream service', () => {
+    prefs.update.mockReturnValue({ merged: true, launchAtLogin: true });
+    call(CH.prefsSet, {
+      mcpServers: [{ id: 'm' }],
+      extensions: { e1: true },
+      fileAccessGrants: ['/tmp'],
+      defaultPageZoom: 1.25,
+      adblock: { enabled: true },
+      typo: { enabled: true },
+      translate: { enabled: true },
+      launchAtLogin: true,
+    });
+    expect(mcp.reconcile).toHaveBeenCalledTimes(1);
+    expect(extCaps.reconcile).toHaveBeenCalledTimes(1);
+    expect(fileOps.reconcile).toHaveBeenCalledTimes(1);
+    expect(siteZoom.reapplyZoomEverywhere).toHaveBeenCalledWith([]);
+    expect(adblockHost.init).toHaveBeenCalledTimes(1);
+    expect(typoHost.init).toHaveBeenCalledTimes(1);
+    expect(translateHost.init).toHaveBeenCalledTimes(1);
+    expect(launchAtLogin.setLaunchAtLogin).toHaveBeenCalledWith(true);
+  });
+
+  it('prefsSet re-syncs FileOperationsHost when only the master switch flips', () => {
+    call(CH.prefsSet, { fileOperationsEnabled: false });
+    expect(fileOps.reconcile).toHaveBeenCalledTimes(1);
+  });
+
+  it('prefsSet re-applies the backdrop to every top-level window when the theme colour changes', () => {
+    const topLevel = { isDestroyed: () => false, getParentWindow: () => null };
+    const child = { isDestroyed: () => false, getParentWindow: () => ({}) };
+    const gone = { isDestroyed: () => true, getParentWindow: () => null };
+    browserWindow.getAllWindows.mockReturnValueOnce([topLevel, child, gone]);
+
+    call(CH.prefsSet, { themeColor: 'blue' }); // exercises the third `||` operand
+
+    expect(glass.applyChromeGlass).toHaveBeenCalledTimes(1);
+    expect(glass.applyChromeGlass).toHaveBeenCalledWith(topLevel, undefined, '#101010');
+  });
+
+  it('prefsSet refreshes the native tray + application menu on a locale change', () => {
+    call(CH.prefsSet, { locale: 'tr' });
+    expect(tray.refreshTray).toHaveBeenCalledTimes(1);
+    expect(appMenu.refreshApplicationMenu).toHaveBeenCalledTimes(1);
+  });
+});
+
+it('adaptorsList / aiAdaptorsList project the built inventories', () => {
+  expect(call(CH.adaptorsList)).toEqual([{ id: 'a1' }]);
+  expect(call(CH.aiAdaptorsList)).toEqual([{ id: 'ai1' }]);
 });
 
 it('onboardingComplete resolves the sender window then finishes onboarding', () => {
