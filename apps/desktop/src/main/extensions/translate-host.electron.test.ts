@@ -58,7 +58,7 @@ vi.mock('@tepegoz/json-store', () => store);
 
 const gateway = vi.hoisted(() => ({
   register: vi.fn(),
-  complete: vi.fn(() => Promise.resolve({ text: '{}' })),
+  complete: vi.fn<(req: unknown) => Promise<{ text: string }>>(() => Promise.resolve({ text: '{}' })),
 }));
 vi.mock('@tepegoz/model-gateway', () => ({
   ModelGateway: gateway,
@@ -231,6 +231,20 @@ describe('the adapter closures', () => {
       expect.objectContaining({ entries: expect.objectContaining({ bye: 'gule gule' }) as object }),
     );
   });
+
+  it('evicts the oldest entry once the memory passes its 2000-entry cap', async () => {
+    const entries: Record<string, string> = {};
+    for (let i = 0; i < 2000; i += 1) entries[`k${String(i)}`] = `v${String(i)}`;
+    store.readJsonFile.mockReturnValue({ version: 1, entries });
+    await load();
+
+    o().memoryStore('extra', 'val');
+
+    const written = store.writeJsonFile.mock.calls[0]![1] as { entries: Record<string, string> };
+    expect(Object.keys(written.entries)).toHaveLength(2000);
+    expect(written.entries).not.toHaveProperty('k0'); // oldest dropped
+    expect(written.entries.extra).toBe('val');
+  });
 });
 
 describe('the batch runners', () => {
@@ -274,6 +288,37 @@ describe('the batch runners', () => {
     );
     expect(res).toMatchObject({ durationMs: 0 });
   });
+
+  it.each([
+    ['gemini', 'g'],
+    ['kimi', 'k'],
+    ['nova', 'n'],
+    ['deepseek', 'd'],
+    ['xai', 'x'],
+    ['groq', 'q'],
+    ['anthropic', 'a'], // else branch of registerExternalProvider + modelFor default
+  ])('runCloudBatch registers the %s provider and completes with its model', async (provider, model) => {
+    isRunnableProvider.mockReturnValue(true);
+    vault.listMeta.mockReturnValue([{ provider, region: 'r' }]);
+    vault.getFirstKeyForProvider.mockReturnValue('sk');
+    await load();
+    await o().runCloudBatch({ items: [{ id: '1', text: 'hi' }], glossaryTerms: [] });
+    expect(gateway.register).toHaveBeenCalledTimes(1);
+    expect(gateway.complete).toHaveBeenCalledWith(expect.objectContaining({ provider, model }));
+  });
+
+  it('renders glossary terms into the system prompt when there are any', async () => {
+    isRunnableProvider.mockReturnValue(true);
+    vault.listMeta.mockReturnValue([{ provider: 'openai', region: 'us' }]);
+    vault.getFirstKeyForProvider.mockReturnValue('sk');
+    await load();
+    await o().runCloudBatch({
+      items: [{ id: '1', text: 'a cat' }],
+      glossaryTerms: [{ source: 'cat', target: 'kedi' }],
+    });
+    const call = gateway.complete.mock.calls[0]![0] as { messages: { content: string }[] };
+    expect(call.messages[0]?.content).toContain('cat => kedi');
+  });
 });
 
 describe('requestCloudFallback', () => {
@@ -305,6 +350,29 @@ describe('requestCloudFallback', () => {
       textCharCount: 10,
     });
     expect(res).toEqual({ requestId: 'r2', allow: false, remember: true });
+  });
+
+  it('times out to allow:false remember:false after 120s with no answer', async () => {
+    bw.getAllWindows.mockReturnValue([]);
+    dialog.showMessageBox.mockReturnValue(new Promise<never>(() => undefined));
+    await load();
+    vi.useFakeTimers();
+    try {
+      const pending = o().requestCloudFallback({
+        requestId: 'to-1',
+        origin: 'https://x.example',
+        targetLanguage: 'tr',
+        textCharCount: 5,
+      });
+      await vi.advanceTimersByTimeAsync(120_000);
+      await expect(pending).resolves.toEqual({
+        requestId: 'to-1',
+        allow: false,
+        remember: false,
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
