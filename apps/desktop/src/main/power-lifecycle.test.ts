@@ -139,4 +139,13 @@ describe('pause / resume seam', () => {
     emitSystemPause();
     expect(fn).not.toHaveBeenCalled();
   });
+
+  it('the resume unsubscribe detaches the listener too', async () => {
+    const { onSystemResume, emitSystemResume } = await load();
+    const fn = vi.fn();
+    const off = onSystemResume(fn);
+    off();
+    emitSystemResume();
+    expect(fn).not.toHaveBeenCalled();
+  });
 });
