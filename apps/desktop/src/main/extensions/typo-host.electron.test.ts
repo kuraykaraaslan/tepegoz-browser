@@ -192,6 +192,53 @@ describe('aiReview', () => {
     expect(gateway.register).toHaveBeenCalled();
     expect((res.issues as { source: string }[])[0]).toMatchObject({ source: 'external-ai' });
   });
+
+  it.each([
+    ['gemini', 'g'],
+    ['kimi', 'a'], // kimi has no modelFor branch -> Anthropic classify model
+    ['nova', 'n'],
+    ['deepseek', 'd'],
+    ['xai', 'x'],
+    ['groq', 'q'],
+    ['anthropic', 'a'], // the else branch of registerExternalProvider
+  ])('registers the %s provider and completes with its classify model', async (provider, model) => {
+    vault.listMeta.mockReturnValue([{ provider, region: 'r' }]);
+    vault.getFirstKeyForProvider.mockReturnValue('sk');
+    gateway.complete.mockResolvedValue({ text: '{"issues":[]}' });
+    await cfg().aiReview({ text: 'a sentence here', aiMode: 'manual' }, base(), {
+      externalAiMode: 'manual',
+    });
+    expect(gateway.register).toHaveBeenCalledTimes(1);
+    expect(gateway.complete).toHaveBeenCalledWith(expect.objectContaining({ provider, model }));
+  });
+
+  it('honours an AI issue’s explicit start/end offsets when they are in range', async () => {
+    vault.listMeta.mockReturnValue([{ provider: 'openai', region: 'us' }]);
+    vault.getFirstKeyForProvider.mockReturnValue('sk');
+    gateway.complete.mockResolvedValue({
+      text: '{"issues":[{"kind":"grammar","text":"cat","start":4,"end":7,"message":"m","suggestions":[]}]}',
+    });
+    const res = await cfg().aiReview({ text: 'the cat sat', aiMode: 'manual' }, base(), {
+      externalAiMode: 'manual',
+    });
+    expect((res.issues as { start: number; end: number }[])[0]).toMatchObject({ start: 4, end: 7 });
+  });
+
+  it('swallows an external review failure with a warning', async () => {
+    vault.listMeta.mockReturnValue([{ provider: 'openai', region: 'us' }]);
+    vault.getFirstKeyForProvider.mockReturnValue('sk');
+    gateway.complete.mockRejectedValue(new Error('ext boom'));
+    const b = base();
+    expect(
+      await cfg().aiReview({ text: 'the cat sat', aiMode: 'manual' }, b, {
+        externalAiMode: 'manual',
+      }),
+    ).toBe(b);
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Typo external AI review failed',
+      expect.objectContaining({ err: expect.stringContaining('ext boom') as string }),
+    );
+  });
 });
 
 describe('typoCapabilityHost', () => {
