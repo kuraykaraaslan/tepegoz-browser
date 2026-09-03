@@ -14,9 +14,10 @@ const screen = vi.hoisted(() => ({
 }));
 const BrowserWindow = vi.hoisted(() => ({ getFocusedWindow: vi.fn((): unknown => null) }));
 const createPopupWindow = vi.hoisted(() => vi.fn());
+const logger = vi.hoisted(() => ({ warn: vi.fn() }));
 vi.mock('electron', () => ({ BrowserWindow, screen }));
 vi.mock('./chrome-url', () => ({ chromeFilePath: () => '/chrome.html' }));
-vi.mock('@tepegoz/libs', () => ({ Logger: { warn: vi.fn() } }));
+vi.mock('@tepegoz/libs', () => ({ Logger: logger }));
 vi.mock('@tepegoz/desktop-ipc', () => ({ IpcChannels: { popupClosed: 'popup:closed' } }));
 vi.mock('./window', () => ({ createPopupWindow }));
 vi.mock('./lib/surface-theme', () => ({
@@ -132,14 +133,17 @@ describe('PopupWindowManager', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    delete process.env['ELECTRON_RENDERER_URL'];
     screen.getDisplayMatching.mockReturnValue({
       workArea: { x: 0, y: 0, width: 2000, height: 1200 },
     });
+    BrowserWindow.getFocusedWindow.mockReturnValue(null);
     createPopupWindow.mockImplementation(() => mkWin());
     PopupWindowManager = (await load()).default;
   });
   afterEach(() => {
     vi.useRealTimers();
+    delete process.env['ELECTRON_RENDERER_URL'];
   });
 
   const openOpts = (key: string) => ({
@@ -148,6 +152,27 @@ describe('PopupWindowManager', () => {
     query: { surface: 'menu' },
     anchor: { x: 100, y: 40, width: 50, height: 20 },
   });
+  type Vf = ReturnType<typeof vi.fn>;
+  type W = {
+    on: Vf;
+    isDestroyed: Vf;
+    isVisible: Vf;
+    close: Vf;
+    show: Vf;
+    showInactive: Vf;
+    setOpacity: Vf;
+    setBounds: Vf;
+    loadURL: Vf;
+    loadFile: Vf;
+    webContents: { once: Vf; send: Vf };
+  };
+  const win0 = () => createPopupWindow.mock.results[0]!.value as W;
+  const win1 = () => createPopupWindow.mock.results[1]!.value as W;
+  const handlerOf = (w: W, ev: string) =>
+    w.on.mock.calls.find((c) => c[0] === ev)?.[1] as ((...a: unknown[]) => void) | undefined;
+  const wcOnceOf = (w: W, ev: string) =>
+    w.webContents.once.mock.calls.find((c) => c[0] === ev)?.[1] as
+      ((...a: unknown[]) => void) | undefined;
 
   it('creates one popup window and swallows a re-open for the same key', () => {
     PopupWindowManager.open(openOpts('main-menu'));
@@ -208,5 +233,119 @@ describe('PopupWindowManager', () => {
       anchor: { x: 0, y: 20, width: 0, height: 0 },
     });
     expect(createPopupWindow).toHaveBeenCalledTimes(2);
+  });
+
+  it('swallows a re-open that lands within the toggle-off guard window', () => {
+    PopupWindowManager.open(openOpts('main-menu'));
+    handlerOf(win0(), 'closed')!(); // the window closed → records lastClosedKey / lastCloseAt
+    PopupWindowManager.open(openOpts('main-menu')); // immediate re-trigger
+    expect(createPopupWindow).toHaveBeenCalledTimes(1); // swallowed as a toggle-off
+  });
+
+  it("the blur handler closes the popup when focus left the menu, but not when it's on the menu itself", () => {
+    PopupWindowManager.open(openOpts('main-menu'));
+    const win = win0();
+    const onBlur = handlerOf(win, 'blur')!;
+
+    BrowserWindow.getFocusedWindow.mockReturnValue(win);
+    onBlur();
+    vi.advanceTimersByTime(100);
+    expect(win.close).not.toHaveBeenCalled();
+
+    BrowserWindow.getFocusedWindow.mockReturnValue(null);
+    onBlur();
+    vi.advanceTimersByTime(100);
+    expect(win.close).toHaveBeenCalled();
+  });
+
+  it('the closed handler refocuses the parent and notifies the renderer', () => {
+    const p = parent();
+    PopupWindowManager.open({ ...openOpts('main-menu'), parent: cast(p) });
+    handlerOf(win0(), 'closed')!();
+    expect(p.focus as ReturnType<typeof vi.fn>).toHaveBeenCalled();
+    expect((p.webContents as { send: ReturnType<typeof vi.fn> }).send).toHaveBeenCalledWith(
+      'popup:closed',
+      'main-menu',
+    );
+  });
+
+  it('loadSurface uses the dev renderer URL when ELECTRON_RENDERER_URL is set', () => {
+    process.env['ELECTRON_RENDERER_URL'] = 'http://localhost:5173';
+    PopupWindowManager.open(openOpts('main-menu'));
+    expect(win0().loadURL).toHaveBeenCalledWith(expect.stringContaining('http://localhost:5173?'));
+    expect(win0().loadFile).not.toHaveBeenCalled();
+  });
+
+  it('loadSurface logs a warning when the bundle fails to load', async () => {
+    createPopupWindow.mockImplementation(() =>
+      mkWin({ loadFile: vi.fn(() => Promise.reject(new Error('boom'))) }),
+    );
+    PopupWindowManager.open(openOpts('main-menu'));
+    await vi.runAllTimersAsync().catch(() => undefined);
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Popup failed to load',
+      expect.objectContaining({ key: 'main-menu' }),
+    );
+  });
+
+  it('a content measure debounces to a single settled reveal, then fades to full opacity', () => {
+    PopupWindowManager.open(openOpts('main-menu'));
+    const win = win0();
+    win.isVisible.mockReturnValue(false);
+
+    PopupWindowManager.resize(cast(win), 300); // one measure → arms the settle timer
+    PopupWindowManager.resize(cast(win), 320); // a second measure reschedules it
+    vi.advanceTimersByTime(200); // settle + full fade ramp
+    expect(win.show).toHaveBeenCalledTimes(1);
+    expect(win.setOpacity).toHaveBeenLastCalledWith(1);
+  });
+
+  it('did-finish-load swaps in the tighter fallback timer', () => {
+    PopupWindowManager.open(openOpts('main-menu'));
+    const win = win0();
+    wcOnceOf(win, 'did-finish-load')!();
+    vi.advanceTimersByTime(260); // > FALLBACK_MS (250), < LOAD_CEILING_MS
+    expect(win.show).toHaveBeenCalled();
+  });
+
+  it('resize floors a bookmark- popup at the smaller submenu height', () => {
+    PopupWindowManager.open(openOpts('bookmark-folders'));
+    const win = win0();
+    PopupWindowManager.resize(cast(win), 10); // below both floors
+    expect(win.setBounds).toHaveBeenCalledWith(
+      expect.objectContaining({ height: 44 }), // SUBMENU_MIN_HEIGHT, not MIN_HEIGHT
+    );
+  });
+
+  it('close / closeSub tear down live windows and no-op destroyed ones', () => {
+    PopupWindowManager.open(openOpts('main-menu'));
+    PopupWindowManager.openSubmenu({
+      query: { surface: 'menu-sub' },
+      anchor: { x: 0, y: 20, width: 0, height: 0 },
+    });
+    const primary = win0();
+    const sub = win1();
+
+    PopupWindowManager.close();
+    expect(sub.close).toHaveBeenCalled(); // cascades to the sub first
+    expect(primary.close).toHaveBeenCalled();
+
+    primary.isDestroyed.mockReturnValue(true);
+    primary.close.mockClear();
+    PopupWindowManager.close();
+    expect(primary.close).not.toHaveBeenCalled();
+  });
+
+  it('the submenu blur handler tears down the whole pair when focus leaves it', () => {
+    PopupWindowManager.open(openOpts('main-menu'));
+    PopupWindowManager.openSubmenu({
+      query: { surface: 'menu-sub' },
+      anchor: { x: 0, y: 20, width: 0, height: 0 },
+    });
+    const primary = win0();
+    const sub = win1();
+    handlerOf(sub, 'blur')!();
+    vi.advanceTimersByTime(100);
+    expect(primary.close).toHaveBeenCalled();
   });
 });
