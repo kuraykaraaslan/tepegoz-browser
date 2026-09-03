@@ -6,6 +6,7 @@ interface Bag {
   /** Capabilities the broker recorded as requested this run, per origin. */
   requested: Record<string, string[]>;
   cookiesByOrigin: Record<string, number>;
+  cookieProbeThrows: boolean;
   recordedCert: { verificationResult: string; errorCode: number } | undefined;
   certException: boolean;
   trustProfiles: { domain: string; level: string; tombstone: boolean }[];
@@ -14,10 +15,22 @@ const h = vi.hoisted<Bag>(() => ({
   sitePermissions: {},
   requested: {},
   cookiesByOrigin: {},
+  cookieProbeThrows: false,
   recordedCert: undefined,
   certException: false,
   trustProfiles: [],
 }));
+
+const handlers = vi.hoisted(() => new Map<string, (e: unknown, p: unknown) => unknown>());
+vi.mock('./ipc-helpers', () => ({
+  handleAsync: (ch: string, fn: (e: unknown, p: unknown) => unknown) => {
+    handlers.set(ch, fn);
+  },
+  parsePayload: (_schema: unknown, payload: unknown) => payload,
+}));
+vi.mock('electron', () => ({ BrowserWindow: { fromWebContents: () => ({ __win: true }) } }));
+vi.mock('@tepegoz/desktop-ipc', () => ({ IpcChannels: { pageInfoGet: 'page-info:get' } }));
+vi.mock('@tepegoz/desktop-ipc/schemas', () => ({ PageInfoGetSchema: {} }));
 
 vi.mock('@tepegoz/preferences', () => ({
   default: { getAll: () => ({ sitePermissions: h.sitePermissions }) },
@@ -31,7 +44,9 @@ vi.mock('../network/browsing-sessions.electron', () => ({
         session: {
           cookies: {
             get: ({ url }: { url: string }) =>
-              Promise.resolve(Array.from({ length: h.cookiesByOrigin[url] ?? 0 }, () => ({}))),
+              h.cookieProbeThrows
+                ? Promise.reject(new Error('cookie store locked'))
+                : Promise.resolve(Array.from({ length: h.cookiesByOrigin[url] ?? 0 }, () => ({}))),
           },
         },
       },
@@ -59,15 +74,17 @@ vi.mock('../web-permissions/permission-broker', () => ({
   requestedCapabilities: (origin: string) => h.requested[origin] ?? [],
 }));
 
-const { buildPageInfo } = await import('./ipc-page-info');
+const { buildPageInfo, registerPageInfoIpc } = await import('./ipc-page-info');
 
 beforeEach(() => {
   h.sitePermissions = {};
   h.requested = {};
   h.cookiesByOrigin = {};
+  h.cookieProbeThrows = false;
   h.recordedCert = undefined;
   h.certException = false;
   h.trustProfiles = [];
+  handlers.clear();
 });
 
 describe('buildPageInfo', () => {
@@ -126,5 +143,44 @@ describe('buildPageInfo', () => {
     h.trustProfiles = [{ domain: 'example.com', level: 'trusted', tombstone: false }];
     const info = await buildPageInfo('https://app.example.com/', false);
     expect(info.trustLevel).toBe('trusted');
+  });
+
+  it('returns the empty shape for an unparseable URL without throwing', async () => {
+    const info = await buildPageInfo('not a url', false);
+    expect(info).toMatchObject({
+      origin: '',
+      host: '',
+      scheme: '',
+      certErrorCode: null,
+      cookieCount: 0,
+      permissions: [],
+      trustLevel: null,
+    });
+  });
+
+  it('counts zero cookies (not a throw) when a partition probe fails', async () => {
+    h.cookieProbeThrows = true;
+    const info = await buildPageInfo('https://x.example/', false);
+    expect(info.cookieCount).toBe(0);
+  });
+
+  it('reports ERR_CERT_INVALID when the user proceeded past a cert error with none recorded', async () => {
+    h.certException = true; // clicked through, but nothing in the recorder
+    const info = await buildPageInfo('https://clicked-through.example/', false);
+    expect(info.certErrorCode).toBe('net::ERR_CERT_INVALID');
+    expect(info.level).toBe('dangerous');
+  });
+});
+
+describe('registerPageInfoIpc', () => {
+  it('wires a page-info:get handler that builds info for the sender window', async () => {
+    registerPageInfoIpc();
+    const handler = handlers.get('page-info:get')!;
+    const info = (await handler({ sender: {} }, { url: 'https://example.com/deep/path' })) as {
+      origin: string;
+      isPrivateWindow: boolean;
+    };
+    expect(info.origin).toBe('https://example.com');
+    expect(info.isPrivateWindow).toBe(false);
   });
 });
