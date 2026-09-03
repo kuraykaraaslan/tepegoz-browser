@@ -51,12 +51,17 @@ const h = vi.hoisted((): Harness => ({
   clock: 0,
 }));
 
+const relaunches = vi.hoisted(() => ({ count: 0 }));
+
 vi.mock('electron', () => ({
   app: {
     quit: () => {
       h.clock += 1;
       h.quitAt.push(h.clock);
       h.quits += 1;
+    },
+    relaunch: () => {
+      relaunches.count += 1;
     },
     isPackaged: false,
     getLocale: () => 'en',
@@ -102,7 +107,8 @@ const tabs = vi.hoisted(() => ({
     navigateActive: vi.fn(),
     setContentBounds: vi.fn(),
     setContentVisible: vi.fn(),
-    getState: vi.fn(() => ({
+    captureActive: vi.fn(() => Promise.resolve('data:image/png;base64,AAA')),
+    getState: vi.fn<() => Record<string, unknown>>(() => ({
       tabs: [{ id: 't-1' }],
       groups: [],
       activeId: 't-1',
@@ -165,6 +171,7 @@ const popups = vi.hoisted(() => ({
   submenus: [] as Record<string, unknown>[],
   resized: [] as number[],
   closed: 0,
+  closedSub: 0,
 }));
 
 vi.mock('../popup-window', () => ({
@@ -175,9 +182,14 @@ vi.mock('../popup-window', () => ({
     close: () => {
       popups.closed += 1;
     },
-    closeSub: () => undefined,
+    closeSub: () => {
+      popups.closedSub += 1;
+    },
   },
 }));
+
+const recovery = vi.hoisted(() => ({ undo: vi.fn() }));
+vi.mock('../recovery/session-restore-undo', () => ({ undoSessionRestore: recovery.undo }));
 
 const extensions = vi.hoisted(() => ({
   manifests: new Map<string, { id: string; surfaces: string[] }>(),
@@ -204,6 +216,8 @@ const menus = vi.hoisted(() => ({
   bookmark: vi.fn(),
   extension: vi.fn(),
   group: vi.fn(),
+  pageAction: vi.fn(),
+  pageContribAction: vi.fn(),
 }));
 
 vi.mock('../menus/tab-context-menu', () => ({ showTabContextMenu: menus.tab }));
@@ -214,8 +228,8 @@ vi.mock('../menus/extension-context-menu', () => ({ showExtensionContextMenu: me
 vi.mock('../menus/tab-group-context-menu', () => ({ showGroupContextMenu: menus.group }));
 vi.mock('../menus/page-context-menu', () => ({
   getPageMenuContext: () => ({ hasSelection: false }),
-  runPageMenuAction: vi.fn(),
-  runPageMenuContributionAction: vi.fn(),
+  runPageMenuAction: menus.pageAction,
+  runPageMenuContributionAction: menus.pageContribAction,
 }));
 vi.mock('../lib/chrome-window', () => ({
   chromeWindowFor: () => ({ isDestroyed: () => false, webContents: { send: vi.fn() } }),
@@ -224,7 +238,14 @@ vi.mock('../lib/chrome-window', () => ({
 const { registerTabsWindowsIpc } = await import('./ipc-tabs-windows');
 
 const ANCHOR: Anchor = { x: 10, y: 20, width: 30, height: 40 };
-const senderWindow = { id: 1, minimize: vi.fn(), isMaximized: () => false };
+const senderWindow = {
+  id: 1,
+  minimize: vi.fn(),
+  maximize: vi.fn(),
+  unmaximize: vi.fn(),
+  close: vi.fn(),
+  isMaximized: vi.fn(() => false),
+};
 
 function event(url: string) {
   return { senderFrame: { url }, sender: { id: 99 } };
@@ -258,6 +279,8 @@ beforeEach(() => {
   popups.submenus.length = 0;
   popups.resized.length = 0;
   popups.closed = 0;
+  popups.closedSub = 0;
+  relaunches.count = 0;
   extensions.manifests.clear();
   tabs.resolve = tabs.api;
   vi.clearAllMocks();
@@ -671,5 +694,222 @@ describe('submenu + quit signals', () => {
     expect(quit.marks).toBe(1);
     expect(h.quits).toBe(1);
     expect(Math.min(...h.markQuittingAt)).toBeLessThan(Math.min(...h.quitAt));
+  });
+});
+
+describe('native window chrome controls', () => {
+  it('minimises / closes the sender window', () => {
+    fire(IpcChannels.windowMinimize, TRUSTED);
+    expect(senderWindow.minimize).toHaveBeenCalledTimes(1);
+
+    fire(IpcChannels.windowClose, TRUSTED);
+    expect(senderWindow.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('toggles maximize both ways off the window state', () => {
+    senderWindow.isMaximized.mockReturnValue(false);
+    fire(IpcChannels.windowMaximizeToggle, TRUSTED);
+    expect(senderWindow.maximize).toHaveBeenCalledTimes(1);
+    expect(senderWindow.unmaximize).not.toHaveBeenCalled();
+
+    senderWindow.isMaximized.mockReturnValue(true);
+    fire(IpcChannels.windowMaximizeToggle, TRUSTED);
+    expect(senderWindow.unmaximize).toHaveBeenCalledTimes(1);
+    senderWindow.isMaximized.mockReturnValue(false);
+  });
+
+  it('ignores a window control from an untrusted frame', () => {
+    fire(IpcChannels.windowMinimize, UNTRUSTED);
+    expect(senderWindow.minimize).not.toHaveBeenCalled();
+  });
+
+  it('window:is-maximized reports the window state, and false when there is no window', async () => {
+    senderWindow.isMaximized.mockReturnValue(true);
+    await expect(call(IpcChannels.windowIsMaximized, TRUSTED)).resolves.toBe(true);
+    senderWindow.isMaximized.mockReturnValue(false);
+
+    h.window = null;
+    await expect(call(IpcChannels.windowIsMaximized, TRUSTED)).resolves.toBe(false);
+  });
+});
+
+describe('popup:open — the site-info bubble resolves its own URL', () => {
+  it('opens the bubble with the SENDER window active tab URL and start alignment', () => {
+    tabs.api.getState.mockReturnValueOnce({
+      tabs: [{ id: 't-1', url: 'https://site.example/page' }],
+      groups: [],
+      activeId: 't-1',
+      canGoBack: false,
+      canGoForward: false,
+    });
+
+    fire(IpcChannels.popupOpen, TRUSTED, { surface: 'site-info', anchor: ANCHOR });
+
+    expect(lastPopup()).toMatchObject({
+      key: 'site-info',
+      width: 360,
+      align: 'start',
+      query: { surface: 'site-info', url: 'https://site.example/page' },
+    });
+  });
+
+  it('honours an explicit align over the start default', () => {
+    tabs.api.getState.mockReturnValueOnce({
+      tabs: [{ id: 't-1', url: 'https://site.example/' }],
+      groups: [],
+      activeId: 't-1',
+      canGoBack: false,
+      canGoForward: false,
+    });
+
+    fire(IpcChannels.popupOpen, TRUSTED, { surface: 'site-info', anchor: ANCHOR, align: 'end' });
+
+    expect(lastPopup()?.align).toBe('end');
+  });
+
+  it('refuses when the active tab has no URL', () => {
+    // The default getState mock returns a tab with no `url`.
+    fire(IpcChannels.popupOpen, TRUSTED, { surface: 'site-info', anchor: ANCHOR });
+
+    expect(popups.opened).toEqual([]);
+    expect(libsLogger.warn).toHaveBeenCalledWith('Ignored popup:open site-info: no active tab URL');
+  });
+});
+
+describe('popup:open — a measured height passes through every keyed surface', () => {
+  const keyed: [string, string | undefined, number][] = [
+    ['user-menu', undefined, 500],
+    ['notifications', undefined, 500],
+    ['extensions-panel', undefined, 500],
+    ['bookmark-folder', 'node-3', 500],
+    ['bookmark-rename', 'node-4', 500],
+  ];
+
+  it.each(keyed)('passes height through for %s', (surface, id, height) => {
+    fire(IpcChannels.popupOpen, TRUSTED, {
+      surface,
+      anchor: ANCHOR,
+      height,
+      ...(id !== undefined ? { id } : {}),
+    });
+
+    expect(lastPopup()?.height).toBe(height);
+  });
+});
+
+describe('tab-group update — colour and settings patches', () => {
+  it('recolours and merges settings when only those keys are sent', () => {
+    fire(IpcChannels.tabsGroupUpdate, TRUSTED, {
+      groupId: 'g-1',
+      color: 'blue',
+      settings: { agent: true },
+    });
+
+    expect(tabs.api.recolorGroup).toHaveBeenCalledWith('g-1', 'blue');
+    expect(tabs.api.updateGroupSettings).toHaveBeenCalledWith('g-1', { agent: true });
+    expect(tabs.api.renameGroup).not.toHaveBeenCalled();
+    expect(tabs.api.setGroupCollapsed).not.toHaveBeenCalled();
+  });
+});
+
+describe('the remaining signals + delegators', () => {
+  it('popup:close and submenu:close reach the popup manager', () => {
+    fire(IpcChannels.popupClose, TRUSTED);
+    expect(popups.closed).toBe(1);
+
+    fire(IpcChannels.submenuClose, TRUSTED);
+    expect(popups.closedSub).toBe(1);
+  });
+
+  it('app:relaunch marks quitting, queues the relaunch, then quits', () => {
+    fire(IpcChannels.appRelaunch, TRUSTED);
+
+    expect(quit.marks).toBe(1);
+    expect(relaunches.count).toBe(1);
+    expect(h.quits).toBe(1);
+    expect(Math.min(...h.markQuittingAt)).toBeLessThan(Math.min(...h.quitAt));
+  });
+
+  it('does not relaunch for an untrusted frame', () => {
+    fire(IpcChannels.appRelaunch, UNTRUSTED);
+    expect(relaunches.count).toBe(0);
+    expect(h.quits).toBe(0);
+  });
+
+  it('session:undo-restore delegates to undoSessionRestore', () => {
+    fire(IpcChannels.sessionUndoRestore, TRUSTED);
+    expect(recovery.undo).toHaveBeenCalledTimes(1);
+  });
+
+  it('page-menu action + contribution-action dispatch the parsed payload', () => {
+    fire(IpcChannels.pageMenuAction, TRUSTED, 'reload');
+    expect(menus.pageAction).toHaveBeenCalledWith('reload');
+
+    fire(IpcChannels.pageMenuContributionAction, TRUSTED, {
+      menuId: 'm-1',
+      contributorId: 'c-1',
+      sectionId: 's-1',
+      itemId: 'i-1',
+      actionId: 'a-1',
+    });
+    expect(menus.pageContribAction).toHaveBeenCalledWith(
+      expect.objectContaining({ menuId: 'm-1', actionId: 'a-1' }),
+    );
+  });
+
+  it('tabs:set-content-visible routes the boolean to the sender window', () => {
+    fire(IpcChannels.tabsSetContentVisible, TRUSTED, true);
+    expect(tabs.api.setContentVisible).toHaveBeenCalledWith(true);
+  });
+
+  it('tabs:capture returns the active view capture, or null with no tab manager', async () => {
+    await expect(call(IpcChannels.tabsCapture, TRUSTED)).resolves.toBe('data:image/png;base64,AAA');
+
+    tabs.resolve = undefined;
+    await expect(call(IpcChannels.tabsCapture, TRUSTED)).resolves.toBeNull();
+  });
+});
+
+describe('every inline menu listener repeats the trust + payload checks', () => {
+  it('drops a malformed history / bookmark / extension / group-context payload with its own warning', () => {
+    fire(IpcChannels.tabsHistoryMenu, TRUSTED, 'sideways');
+    expect(menus.navHistory).not.toHaveBeenCalled();
+    expect(libsLogger.warn).toHaveBeenCalledWith('Ignored tabs:history-menu: invalid payload');
+
+    fire(IpcChannels.bookmarksContextMenu, TRUSTED, 123);
+    expect(menus.bookmark).not.toHaveBeenCalled();
+    expect(libsLogger.warn).toHaveBeenCalledWith('Ignored bookmarks:context-menu: invalid payload');
+
+    fire(IpcChannels.extensionContextMenu, TRUSTED, {});
+    expect(menus.extension).not.toHaveBeenCalled();
+    expect(libsLogger.warn).toHaveBeenCalledWith('Ignored extension:context-menu: invalid payload');
+
+    fire(IpcChannels.tabsGroupContextMenu, TRUSTED, {});
+    expect(menus.group).not.toHaveBeenCalled();
+    expect(libsLogger.warn).toHaveBeenCalledWith('Ignored tabs:group-context-menu: invalid payload');
+
+    fire(IpcChannels.submenuOpen, TRUSTED, { kind: 'history' });
+    expect(popups.submenus).toEqual([]);
+    expect(libsLogger.warn).toHaveBeenCalledWith('Ignored submenu:open: invalid payload');
+  });
+
+  it('drops the hidden-tabs / history / bookmark / extension / group menus from an untrusted frame', () => {
+    fire(IpcChannels.tabsHiddenMenu, UNTRUSTED);
+    fire(IpcChannels.tabsHistoryMenu, UNTRUSTED, 'back');
+    fire(IpcChannels.bookmarksContextMenu, UNTRUSTED, { id: 'b', type: 'bookmark' });
+    fire(IpcChannels.extensionContextMenu, UNTRUSTED, 'com.tepegoz.macros');
+    fire(IpcChannels.tabsGroupContextMenu, UNTRUSTED, 'g-1');
+
+    expect(menus.hidden).not.toHaveBeenCalled();
+    expect(menus.navHistory).not.toHaveBeenCalled();
+    expect(menus.bookmark).not.toHaveBeenCalled();
+    expect(menus.extension).not.toHaveBeenCalled();
+    expect(menus.group).not.toHaveBeenCalled();
+  });
+
+  it('drops popup:resize when the sender resolves to no window', () => {
+    h.window = null;
+    fire(IpcChannels.popupResize, TRUSTED, { height: 300 });
+    expect(popups.resized).toEqual([]);
   });
 });
