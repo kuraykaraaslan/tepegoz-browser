@@ -2,8 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { fullHash } from '@tepegoz/security-policy';
 import {
   createFullHashFetcher,
+  decodeFourByteAdditions,
+  decodeRiceDeltas,
+  decodeRiceValues,
   hashesSearchUrl,
   parseHashesSearchResponse,
+  parseHashListDelta,
   type FetchLike,
 } from './safe-browsing-v5-client';
 
@@ -42,6 +46,61 @@ describe('parseHashesSearchResponse', () => {
         fullHashes: [{ fullHash: 'c2hvcnQ=', fullHashDetails: [{ threatType: 'MALWARE' }] }],
       }),
     ).toEqual([]);
+  });
+
+  it('skips non-object entries, entries with no string fullHash, and non-array details', () => {
+    expect(parseHashesSearchResponse({ fullHashes: ['x', null, 42] })).toEqual([]);
+    expect(
+      parseHashesSearchResponse({
+        fullHashes: [{ fullHashDetails: [{ threatType: 'MALWARE' }] }],
+      }),
+    ).toEqual([]);
+    expect(
+      parseHashesSearchResponse({
+        fullHashes: [{ fullHash: REAL_HASH_B64, fullHashDetails: 'not-an-array' }],
+      }),
+    ).toEqual([]);
+  });
+});
+
+describe('Rice-Golomb decoding', () => {
+  it('returns null when the unary prefix runs past the end of the stream', () => {
+    expect(decodeRiceDeltas(0, 2, 3, Buffer.alloc(0))).toBeNull();
+  });
+
+  it('numish reads a string, and a non-numeric header field rejects the block', () => {
+    expect(
+      decodeRiceValues({ riceParameter: 2, firstValue: '5', entriesCount: '0', encodedData: '' }),
+    ).toEqual([5]);
+    expect(
+      decodeRiceValues({ riceParameter: 2, firstValue: {}, entriesCount: 0, encodedData: '' }),
+    ).toBeNull();
+    expect(
+      decodeRiceValues({ riceParameter: 'nope', firstValue: 0, entriesCount: 0, encodedData: '' }),
+    ).toBeNull();
+    expect(decodeRiceValues({ riceParameter: 2, firstValue: 0, entriesCount: 0 })).toBeNull();
+  });
+});
+
+describe('decodeFourByteAdditions / parseHashListDelta', () => {
+  it('rejects an additions block with neither rice params nor a rawHashes string', () => {
+    expect(decodeFourByteAdditions({})).toBeNull();
+    expect(decodeFourByteAdditions({ rawHashes: 123 })).toBeNull();
+  });
+
+  it('reads a nested { sha256 } checksum and tolerates a broken compressedRemovals block', () => {
+    const delta = parseHashListDelta({
+      sha256Checksum: { sha256: 'Y2hlY2tzdW0=' },
+      compressedRemovals: { riceParameter: 'bad' },
+      partialUpdate: true,
+    });
+    expect(delta.checksum).toBe('Y2hlY2tzdW0=');
+    expect(delta.removalIndices).toEqual([]);
+    expect(delta.partial).toBe(true);
+  });
+
+  it('treats a checksum object with no usable sha256 as absent', () => {
+    expect(parseHashListDelta({ sha256Checksum: { sha256: 42 } }).checksum).toBeNull();
   });
 });
 
