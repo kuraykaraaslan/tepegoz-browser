@@ -17,7 +17,9 @@ type NavCb = (url: string, wc: Wc) => void;
 
 const fsp = vi.hoisted(() => ({
   mkdir: vi.fn(() => Promise.resolve()),
-  readFile: vi.fn((): Promise<Buffer | string> => Promise.reject(new Error('ENOENT'))),
+  readFile: vi.fn<(p?: unknown, enc?: unknown) => Promise<Buffer | string>>(() =>
+    Promise.reject(new Error('ENOENT')),
+  ),
   rename: vi.fn(() => Promise.resolve()),
   writeFile: vi.fn(() => Promise.resolve()),
 }));
@@ -43,7 +45,8 @@ const ElectronBlocker = vi.hoisted(() => ({
 }));
 vi.mock('@ghostery/adblocker-electron', () => ({ ElectronBlocker }));
 
-vi.mock('@tepegoz/libs', () => ({ Logger: { info: vi.fn(), warn: vi.fn() } }));
+const logger = vi.hoisted(() => ({ info: vi.fn(), warn: vi.fn() }));
+vi.mock('@tepegoz/libs', () => ({ Logger: logger }));
 
 const host = vi.hoisted(() => ({
   recordBlocked: vi.fn(),
@@ -176,5 +179,185 @@ describe('refresh', () => {
       'error',
       expect.stringContaining('network down') as string,
     );
+  });
+
+  it('a second refresh while one is in flight awaits the first instead of starting another', async () => {
+    let release!: (v: unknown) => void;
+    ElectronBlocker.fromPrebuiltAdsAndTracking.mockReturnValueOnce(
+      new Promise((r) => {
+        release = r;
+      }),
+    );
+    const p1 = Svc.refresh({ manual: false });
+    const p2 = Svc.refresh({ manual: false }); // refreshPromise !== null -> await + return
+    release(engine);
+    await Promise.all([p1, p2]);
+    expect(ElectronBlocker.fromPrebuiltAdsAndTracking).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('cache + initial load', () => {
+  const cachedInit = async (lastUpdatedAt: number | null): Promise<void> => {
+    fsp.readFile.mockImplementation((p: unknown) =>
+      String(p).includes('metadata')
+        ? Promise.resolve(JSON.stringify({ lastUpdatedAt }))
+        : Promise.resolve(Buffer.from([9, 9, 9])),
+    );
+    ElectronBlocker.deserialize.mockReturnValue(engine);
+    Svc.init();
+    await flush();
+  };
+
+  it('restores the engine from cache and skips the rebuild when the cache is fresh', async () => {
+    await cachedInit(Date.now());
+    expect(ElectronBlocker.deserialize).toHaveBeenCalled();
+    expect(host.setEngineStatus).toHaveBeenCalledWith('ready', null);
+    expect(logger.info).toHaveBeenCalledWith('Adblock engine restored from cache');
+    expect(ElectronBlocker.fromPrebuiltAdsAndTracking).not.toHaveBeenCalled();
+  });
+
+  it('restores from cache but kicks a background rebuild when the cache is stale', async () => {
+    await cachedInit(1); // epoch + 1 ms -> far outside the daily window
+    expect(ElectronBlocker.deserialize).toHaveBeenCalled();
+    expect(ElectronBlocker.fromPrebuiltAdsAndTracking).toHaveBeenCalledTimes(1);
+  });
+
+  it('treats a corrupt metadata file as "never updated" and rebuilds', async () => {
+    fsp.readFile.mockImplementation((p: unknown) =>
+      String(p).includes('metadata')
+        ? Promise.resolve('{ not json')
+        : Promise.resolve(Buffer.from([9])),
+    );
+    ElectronBlocker.deserialize.mockReturnValue(engine);
+    Svc.init();
+    await flush();
+    expect(host.setLastUpdatedAt).toHaveBeenCalledWith(null);
+    expect(ElectronBlocker.fromPrebuiltAdsAndTracking).toHaveBeenCalled();
+  });
+});
+
+describe('page-URL + source resolution in the request hooks', () => {
+  const armed = async (): Promise<BeforeCb> => {
+    Svc.init();
+    await flush();
+    return wrs.onBeforeRequest.mock.calls[0]![1];
+  };
+
+  it('uses the frame URL, and reports it as the source, when there is no referrer', async () => {
+    const cb = await armed();
+    await cb(details({ id: 200, referrer: '', frame: { url: 'https://frame.test/p' } }));
+    expect(host.recordBlocked).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceUrl: 'https://frame.test/p',
+        pageOrigin: 'https://frame.test',
+      }),
+    );
+  });
+
+  it('falls back to the live web-contents URL when there is neither referrer nor frame', async () => {
+    const cb = await armed();
+    await cb(
+      details({
+        id: 201,
+        referrer: '',
+        frame: undefined,
+        webContents: { isDestroyed: () => false, getURL: () => 'https://wc.test/home' },
+      }),
+    );
+    const arg = host.recordBlocked.mock.calls[0]![0] as Record<string, unknown>;
+    expect(arg.pageOrigin).toBe('https://wc.test');
+    expect(arg).not.toHaveProperty('sourceUrl');
+  });
+
+  it('leaves pageOrigin off when the resolved page URL will not parse', async () => {
+    const cb = await armed();
+    await cb(
+      details({ id: 202, referrer: '', frame: undefined, webContents: undefined, url: 'not a url' }),
+    );
+    const arg = host.recordBlocked.mock.calls[0]![0] as Record<string, unknown>;
+    expect(arg).not.toHaveProperty('pageOrigin');
+  });
+
+  it('evicts the oldest counted request id once the dedupe cap is exceeded', async () => {
+    const cb = await armed();
+    for (let i = 0; i < 5002; i += 1) await cb(details({ id: 10_000 + i }));
+    host.recordBlocked.mockClear();
+    await cb(details({ id: 10_000 })); // id 10000 was evicted -> counted afresh
+    expect(host.recordBlocked).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('cosmetic injection guards', () => {
+  const navFn = async (): Promise<NavCb> => {
+    Svc.init();
+    await flush();
+    return tabs.onNavigation.mock.calls[0]![0];
+  };
+  const liveWc = (): Wc => ({ isDestroyed: () => false, insertCSS: vi.fn(() => Promise.resolve()) });
+
+  it('does nothing for a navigation URL that will not parse as a web URL', async () => {
+    const nav = await navFn();
+    const wc = liveWc();
+    nav('not a url', wc); // isWebUrl throws -> caught -> false -> guarded out
+    await flush();
+    expect(wc.insertCSS).not.toHaveBeenCalled();
+    expect(engine.getCosmeticsFilters).not.toHaveBeenCalled();
+  });
+
+  it('fails open (warns, no throw) when the cosmetics lookup throws', async () => {
+    const nav = await navFn();
+    engine.getCosmeticsFilters.mockImplementationOnce(() => {
+      throw new Error('cosmetics boom');
+    });
+    const wc = liveWc();
+    expect(() => {
+      nav('https://site.test/', wc);
+    }).not.toThrow();
+    await flush();
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Adblock cosmetic injection failed open',
+      expect.objectContaining({ err: expect.stringContaining('cosmetics boom') as string }),
+    );
+  });
+});
+
+describe('engine dispatch errors surface as a rejected hook', () => {
+  it('before-request: an engine that throws synchronously rejects the hook', async () => {
+    Svc.init();
+    await flush();
+    const cb = wrs.onBeforeRequest.mock.calls[0]![1];
+    engine.onBeforeRequest.mockImplementationOnce(() => {
+      throw new Error('engine sync fail');
+    });
+    await expect(cb(details({ id: 300 }))).rejects.toThrow('engine sync fail');
+  });
+
+  it('headers-received: an engine that throws synchronously rejects the hook', async () => {
+    Svc.init();
+    await flush();
+    const cb = wrs.onHeadersReceived.mock.calls[0]![1];
+    engine.onHeadersReceived.mockImplementationOnce(() => {
+      throw new Error('engine hdr fail');
+    });
+    await expect(cb(details({ id: 301, resourceType: 'mainFrame' }))).rejects.toThrow(
+      'engine hdr fail',
+    );
+  });
+});
+
+describe('the daily refresh interval', () => {
+  it('runs a background refresh when the interval fires', async () => {
+    const spy = vi.spyOn(globalThis, 'setInterval');
+    try {
+      Svc.init();
+      await flush();
+      ElectronBlocker.fromPrebuiltAdsAndTracking.mockClear();
+      const tick = spy.mock.calls[0]![0];
+      tick();
+      await flush();
+      expect(ElectronBlocker.fromPrebuiltAdsAndTracking).toHaveBeenCalledTimes(1);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
