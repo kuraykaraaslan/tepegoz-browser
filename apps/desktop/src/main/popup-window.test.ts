@@ -348,4 +348,48 @@ describe('PopupWindowManager', () => {
     vi.advanceTimersByTime(100);
     expect(primary.close).toHaveBeenCalled();
   });
+
+  it("the submenu's closed handler disarms its reveal and clears the sub reference", () => {
+    PopupWindowManager.open(openOpts('main-menu'));
+    PopupWindowManager.openSubmenu({
+      query: { surface: 'menu-sub' },
+      anchor: { x: 0, y: 20, width: 0, height: 0 },
+    });
+    const sub = win1();
+
+    handlerOf(sub, 'closed')!();
+
+    // subWin is now null → closeSub has nothing to close
+    sub.close.mockClear();
+    PopupWindowManager.closeSub();
+    expect(sub.close).not.toHaveBeenCalled();
+  });
+
+  it('the submenu reveal shows the flyout without taking focus (showInactive)', () => {
+    PopupWindowManager.open(openOpts('main-menu'));
+    PopupWindowManager.openSubmenu({
+      query: { surface: 'menu-sub' },
+      anchor: { x: 0, y: 20, width: 0, height: 0 },
+    });
+    const sub = win1();
+    sub.isVisible.mockReturnValue(false);
+
+    vi.runOnlyPendingTimers();
+
+    expect(sub.showInactive).toHaveBeenCalled();
+    expect(sub.show).not.toHaveBeenCalled();
+  });
+
+  it('the reveal fade stops itself when the window is destroyed mid-ramp', () => {
+    PopupWindowManager.open(openOpts('main-menu'));
+    const win = win0();
+    win.isVisible.mockReturnValue(false);
+    vi.runOnlyPendingTimers(); // doReveal → show() + arms the fade interval
+
+    win.isDestroyed.mockReturnValue(true);
+    win.setOpacity.mockClear();
+    vi.advanceTimersByTime(200); // the next fade tick meets the destroyed window
+
+    expect(win.setOpacity).not.toHaveBeenCalled(); // bailed before stepping opacity
+  });
 });
