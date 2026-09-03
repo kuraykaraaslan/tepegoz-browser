@@ -178,6 +178,21 @@ describe('success path', () => {
     expect(req.model).toBe('gpt-classify');
   });
 
+  it.each([
+    ['gemini', 'gemini-classify'],
+    ['kimi', 'kimi-classify'],
+    ['nova', 'nova-classify'],
+    ['deepseek', 'deepseek-classify'],
+    ['xai', 'xai-classify'],
+    ['groq', 'groq-classify'],
+  ])('registers and routes the %s provider', async (provider, model) => {
+    vault.listMeta.mockReturnValue([{ provider, region: 'us' }]);
+    await healSelector(CHAIN);
+    expect(gateway.register).toHaveBeenCalledTimes(1);
+    const req = gateway.complete.mock.calls[0]![0] as { provider: string; model: string };
+    expect(req).toMatchObject({ provider, model });
+  });
+
   it('drops the pick when SelectorSchema rejects the shape', async () => {
     selectorSchema.safeParse.mockReturnValueOnce({ success: false } as never);
     expect(await healSelector(CHAIN)).toBeNull();
