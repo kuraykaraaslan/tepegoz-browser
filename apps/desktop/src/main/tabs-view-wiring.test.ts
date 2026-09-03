@@ -32,7 +32,11 @@ vi.mock('./private-window-opener', () => ({ openPrivateWindow }));
 const installUnloadPrompt = vi.hoisted(() => vi.fn());
 vi.mock('./navigation/unload-broker', () => ({ installUnloadPrompt }));
 
-const historyStore = vi.hoisted(() => ({ record: vi.fn(), setTitle: vi.fn() }));
+const historyStore = vi.hoisted(() => ({
+  record: vi.fn(),
+  setTitle: vi.fn(),
+  setFavicon: vi.fn(),
+}));
 vi.mock('@tepegoz/persistence', () => ({ HistoryStore: historyStore }));
 const getDb = vi.hoisted(() => vi.fn<() => unknown>(() => null));
 vi.mock('./db/database.electron', () => ({ getDb }));
@@ -356,9 +360,10 @@ describe('wireView', () => {
       expect(h.store.update).toHaveBeenCalledWith('t1', { faviconUrl: null });
     });
 
-    it('page-favicon-updated fetches the last icon on the page session and stores the data URL', async () => {
+    it('page-favicon-updated fetches the last icon on the page session, stores the data URL, and persists it to history', async () => {
       const h = host();
       const wc = fakeWc();
+      getDb.mockReturnValue({ __db: true });
       faviconDataUrl.mockResolvedValue('data:image/png;base64,ZZ');
       wireView(h as never, 't1', { webContents: wc } as never);
 
@@ -367,6 +372,25 @@ describe('wireView', () => {
       await Promise.resolve();
       expect(faviconDataUrl).toHaveBeenCalledWith(wc.session, 'http://a/2.ico');
       expect(h.store.update).toHaveBeenCalledWith('t1', { faviconUrl: 'data:image/png;base64,ZZ' });
+      expect(historyStore.setFavicon).toHaveBeenCalledWith(
+        { __db: true },
+        'https://page.test/',
+        'data:image/png;base64,ZZ',
+      );
+    });
+
+    it('page-favicon-updated writes no favicon to history in a private window', async () => {
+      const h = { ...host(), isPrivate: true };
+      const wc = fakeWc();
+      getDb.mockReturnValue({ __db: true });
+      faviconDataUrl.mockResolvedValue('data:image/png;base64,ZZ');
+      wireView(h as never, 't1', { webContents: wc } as never);
+
+      handlerFor(wc, 'page-favicon-updated')!({}, ['http://a/1.ico']);
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(h.store.update).toHaveBeenCalledWith('t1', { faviconUrl: 'data:image/png;base64,ZZ' });
+      expect(historyStore.setFavicon).not.toHaveBeenCalled();
     });
 
     it('did-start-loading and did-stop-loading flip isLoading and fan out to observers', () => {

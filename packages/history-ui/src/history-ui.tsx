@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark } from '@fortawesome/free-solid-svg-icons';
+import { faGlobe, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { useT } from '@tepegoz/i18n/react';
 import { historyDict } from './i18n';
 
@@ -12,6 +12,27 @@ export interface HistoryItem {
   title: string;
   /** Visit timestamp (epoch ms). */
   ts: number;
+  /** The page's favicon as an inline `data:` URL, if one was captured. A remote URL is ignored:
+   *  the history page renders in the trusted chrome, which must not fetch a site's icon for it. */
+  favicon?: string | null;
+}
+
+/** Row favicon with a globe fallback — shown only for an inline `data:` icon (see {@link HistoryItem}). */
+function HistoryFavicon({ src }: Readonly<{ src: string | null | undefined }>) {
+  const [failed, setFailed] = useState(false);
+  const inline = typeof src === 'string' && /^data:image\//i.test(src);
+  if (inline && !failed) {
+    return (
+      <img
+        src={src ?? undefined}
+        alt=""
+        aria-hidden="true"
+        className="h-4 w-4 shrink-0 rounded-sm object-contain"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return <FontAwesomeIcon icon={faGlobe} className="h-4 w-4 shrink-0 text-text-disabled" aria-hidden />;
 }
 
 export interface HistoryPageProps {
@@ -150,6 +171,7 @@ export function HistoryPage({ list, remove, clear }: Readonly<HistoryPageProps>)
               <span className="w-36 shrink-0 text-xs text-text-secondary">
                 {new Date(entry.ts).toLocaleString()}
               </span>
+              <HistoryFavicon src={entry.favicon} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm text-text-primary">{entry.title}</p>
                 <p className="truncate text-xs text-text-secondary">{entry.url}</p>

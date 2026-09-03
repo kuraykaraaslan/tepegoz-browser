@@ -167,6 +167,41 @@ describe('HistoryStore', () => {
     expect(HistoryStore.list(db)[0]).toMatchObject({ title: 'Real Title', visitCount: 1 });
   });
 
+  describe('favicon', () => {
+    const ICON = 'data:image/png;base64,iVBORw0KGgo=';
+
+    it('is null until captured, then round-trips through list / search / omnibox reads', () => {
+      HistoryStore.record(db, { url: 'https://a.com/', title: 'A', ts: 1 });
+      expect(HistoryStore.list(db)[0]?.favicon).toBeNull();
+
+      HistoryStore.setFavicon(db, 'https://a.com/', ICON);
+      expect(HistoryStore.list(db)[0]?.favicon).toBe(ICON);
+      expect(HistoryStore.search(db, 'a.com')[0]?.favicon).toBe(ICON);
+      expect(HistoryStore.searchForOmnibox(db, 'a.com', 1000)[0]?.favicon).toBe(ICON);
+      expect(HistoryStore.faviconFor(db, 'https://a.com/')).toBe(ICON);
+    });
+
+    it('setFavicon is a no-op for a URL with no recorded visit (no row is created)', () => {
+      HistoryStore.setFavicon(db, 'https://never-visited.com/', ICON);
+      expect(HistoryStore.count(db)).toBe(0);
+      expect(HistoryStore.faviconFor(db, 'https://never-visited.com/')).toBeNull();
+    });
+
+    it('setFavicon does not bump the visit count or change the title', () => {
+      HistoryStore.record(db, { url: 'https://a.com/', title: 'A', ts: 1 });
+      HistoryStore.record(db, { url: 'https://a.com/', title: 'A', ts: 2 });
+      HistoryStore.setFavicon(db, 'https://a.com/', ICON);
+      expect(HistoryStore.list(db)[0]).toMatchObject({ title: 'A', visitCount: 2, favicon: ICON });
+    });
+
+    it('a repeat visit keeps the captured favicon (the upsert leaves the column alone)', () => {
+      HistoryStore.record(db, { url: 'https://a.com/', title: 'A', ts: 1 });
+      HistoryStore.setFavicon(db, 'https://a.com/', ICON);
+      HistoryStore.record(db, { url: 'https://a.com/', title: 'A v2', ts: 2 });
+      expect(HistoryStore.list(db)[0]).toMatchObject({ title: 'A v2', favicon: ICON });
+    });
+  });
+
   it('deletes one url and clears all', () => {
     HistoryStore.record(db, { url: 'https://a.com/', title: 'A', ts: 1 });
     HistoryStore.record(db, { url: 'https://b.com/', title: 'B', ts: 2 });

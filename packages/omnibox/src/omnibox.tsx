@@ -436,7 +436,7 @@ export function Omnibox({
                   : 'bg-transparent',
               )}
             >
-              <SuggestionIcon kind={s.kind} />
+              <SuggestionIcon kind={s.kind} faviconUrl={s.faviconUrl} />
               <span className="min-w-0 flex-1 truncate text-text-primary">{s.title}</span>
               {s.subtitle !== undefined && (
                 <span className="max-w-[45%] shrink-0 truncate text-xs text-text-secondary">
@@ -541,7 +541,34 @@ const SUGGESTION_ICONS: Record<OmniboxSuggestion['kind'], IconDefinition> = {
   skill: faWandMagicSparkles,
 };
 
-function SuggestionIcon({ kind }: { kind: OmniboxSuggestion['kind'] }) {
+/**
+ * The leading glyph for a suggestion row — or, for a tab/bookmark/history row that carries one, the
+ * site's own favicon. `faviconUrl` is already constrained to an inline `data:` URL upstream
+ * (`inlineFaviconOnly`), so this never makes a network request from the chrome; a decode failure
+ * falls back to the kind glyph.
+ */
+function SuggestionIcon({
+  kind,
+  faviconUrl,
+}: {
+  kind: OmniboxSuggestion['kind'];
+  faviconUrl?: string | undefined;
+}) {
+  const [failed, setFailed] = useState(false);
+  // Rows are reconciled by position as the user types, so this same instance can be handed a
+  // different row's favicon — clear a stale failure when the URL changes.
+  useEffect(() => setFailed(false), [faviconUrl]);
+  if (faviconUrl !== undefined && faviconUrl.length > 0 && !failed) {
+    return (
+      <img
+        src={faviconUrl}
+        alt=""
+        aria-hidden="true"
+        className="h-3.5 w-3.5 shrink-0 rounded-[3px] object-contain"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
   return (
     <FontAwesomeIcon
       icon={SUGGESTION_ICONS[kind]}

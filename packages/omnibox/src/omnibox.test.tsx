@@ -301,4 +301,57 @@ describe('Omnibox', () => {
     expect(container.querySelector('li svg[data-icon="globe"]')).not.toBeNull();
     expect(container.querySelector('li svg[data-icon="magnifying-glass"]')).toBeNull();
   });
+
+  it('shows a row favicon as an <img> in place of the kind glyph', async () => {
+    const favicon = 'data:image/png;base64,iVBORw0KGgo=';
+    const { container } = render(
+      <Omnibox
+        {...baseProps({
+          onSuggest: vi.fn(
+            oneSuggestion({
+              key: 'h',
+              kind: 'history',
+              title: 'Example Blog',
+              faviconUrl: favicon,
+              action: { type: 'navigate', input: 'https://example.com/blog' },
+            }),
+          ),
+        })}
+      />,
+    );
+    const input = screen.getByRole('combobox');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'example' } });
+    await screen.findByText('Example Blog');
+
+    const img = container.querySelector('li img');
+    expect(img?.getAttribute('src')).toBe(favicon);
+    expect(container.querySelector('li svg[data-icon="clock-rotate-left"]')).toBeNull();
+  });
+
+  it('falls back to the kind glyph when the favicon image fails to decode', async () => {
+    const { container } = render(
+      <Omnibox
+        {...baseProps({
+          onSuggest: vi.fn(
+            oneSuggestion({
+              key: 'h',
+              kind: 'history',
+              title: 'Broken Icon',
+              faviconUrl: 'data:image/png;base64,zzzz',
+              action: { type: 'navigate', input: 'https://broken.test/' },
+            }),
+          ),
+        })}
+      />,
+    );
+    const input = screen.getByRole('combobox');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'broken' } });
+    await screen.findByText('Broken Icon');
+
+    fireEvent.error(container.querySelector('li img')!);
+    expect(container.querySelector('li img')).toBeNull();
+    expect(container.querySelector('li svg[data-icon="clock-rotate-left"]')).not.toBeNull();
+  });
 });

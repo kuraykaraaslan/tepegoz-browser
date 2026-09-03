@@ -13,7 +13,7 @@ import { useOmniboxAndHistory } from './app-omnibox-history';
  * an agent run from the omnibox opens the console (panel-open group setting) before it starts.
  */
 
-type HistRow = { url: string; title: string; visitCount: number };
+type HistRow = { url: string; title: string; visitCount: number; favicon?: string | null };
 type DlRow = { id: string; filename: string; url: string };
 type SkillRow = { id: string; name: string; prompt: string; startUrl?: string; tombstone: boolean };
 
@@ -30,7 +30,13 @@ const bridge = {
 const onCloseSurface = vi.fn();
 
 const tabsRef = {
-  current: { tabs: [{ id: 't1', title: 'A', url: 'https://a/' }], activeId: 't1' },
+  current: {
+    tabs: [
+      { id: 't1', title: 'A', url: 'https://a/' },
+      { id: 't2', title: 'Bee', url: 'https://bee.test/', faviconUrl: 'data:image/png;base64,BB' },
+    ],
+    activeId: 't1',
+  },
 } as unknown as MutableRefObject<TabsState>;
 const bookmarksRef: MutableRefObject<{ url: string; title: string }[]> = { current: [] };
 const labels: OmniboxSuggestLabels = {
@@ -85,6 +91,16 @@ describe('onOmniboxSuggest', () => {
     bridge.searchHistory.mockRejectedValueOnce(new Error('db gone'));
     const { result } = render();
     await expect(result.current.onOmniboxSuggest('x')).resolves.toBeInstanceOf(Array);
+  });
+
+  it('threads the stored favicon from an open tab and a history row into the suggestions', async () => {
+    bridge.searchHistory.mockResolvedValueOnce([
+      { url: 'https://bee.test/blog', title: 'Bee blog', visitCount: 4, favicon: 'data:image/png;base64,HH' },
+    ]);
+    const { result } = render();
+    const out = await result.current.onOmniboxSuggest('bee');
+    expect(out.find((s) => s.kind === 'tab')?.faviconUrl).toBe('data:image/png;base64,BB');
+    expect(out.find((s) => s.kind === 'history')?.faviconUrl).toBe('data:image/png;base64,HH');
   });
 });
 

@@ -29,6 +29,8 @@ interface Harness {
   activeId: string | null;
   webContentsForTab: Mock<(id: string) => unknown>;
   openInternalPage: Mock<(url: string) => void>;
+  /** favicon `HistoryStore.faviconFor` should return, keyed by URL. */
+  favicons: Record<string, string | null>;
 }
 
 const h = vi.hoisted((): Harness => ({
@@ -36,6 +38,7 @@ const h = vi.hoisted((): Harness => ({
   activeId: 'tab-1',
   webContentsForTab: vi.fn(() => null),
   openInternalPage: vi.fn(),
+  favicons: {},
 }));
 
 vi.mock('electron', () => ({
@@ -46,6 +49,17 @@ vi.mock('electron', () => ({
       },
     }),
   },
+  nativeImage: {
+    // A tiny stand-in: a non-empty "image" that records the resize it was asked for.
+    createFromDataURL: (dataUrl: string) => ({
+      isEmpty: () => dataUrl.includes('EMPTY'),
+      resize: (opts: unknown) => ({ __img: dataUrl, resizedTo: opts }),
+    }),
+  },
+}));
+vi.mock('../db/database.electron', () => ({ getDb: () => ({ __db: true }) }));
+vi.mock('@tepegoz/persistence', () => ({
+  HistoryStore: { faviconFor: (_db: unknown, url: string) => h.favicons[url] ?? null },
 }));
 vi.mock('../lib/i18n-main', () => ({
   mainStrings: () => ({ browser: { showFullHistory: 'Show full history' } }),
@@ -64,8 +78,13 @@ const { showNavHistoryMenu } = await import('./nav-history-menu');
 
 const WIN = {} as BrowserWindow;
 /** The rows of the most recently popped menu, as `{ label, click }` pairs. */
-function lastMenu(): { label?: string; type?: string; click?: () => void }[] {
-  return (h.popped.at(-1) ?? []) as { label?: string; type?: string; click?: () => void }[];
+function lastMenu(): { label?: string; type?: string; icon?: unknown; click?: () => void }[] {
+  return (h.popped.at(-1) ?? []) as {
+    label?: string;
+    type?: string;
+    icon?: unknown;
+    click?: () => void;
+  }[];
 }
 
 const HISTORY: FakeEntry[] = [
@@ -77,6 +96,7 @@ const HISTORY: FakeEntry[] = [
 beforeEach(() => {
   h.popped.length = 0;
   h.activeId = 'tab-1';
+  h.favicons = {};
   h.openInternalPage.mockClear();
   h.webContentsForTab.mockReset();
 });
@@ -141,6 +161,28 @@ describe('showNavHistoryMenu', () => {
     h.webContentsForTab.mockReturnValue(null);
     expect(() => lastMenu()[0]?.click?.()).not.toThrow();
     expect(tab.jumps).toEqual([]);
+  });
+
+  it('gives a row the stored favicon as an icon, and omits it when there is none or it will not decode', () => {
+    h.favicons = {
+      'https://a.test/': 'data:image/png;base64,AAAA',
+      'https://b.test/': 'https://b.test/favicon.ico', // remote → never used from the chrome
+    };
+    const tab = fakeTab(HISTORY, 2);
+    h.webContentsForTab.mockReturnValue(tab.wc);
+    showNavHistoryMenu(WIN, 'back');
+    // rows are nearest-first: [B, A, separator, full-history]
+    const [rowB, rowA] = lastMenu();
+    expect(rowA?.icon).toMatchObject({ __img: 'data:image/png;base64,AAAA' });
+    expect(rowB?.icon).toBeUndefined(); // remote favicon is not rendered
+  });
+
+  it('omits the icon when the decoded image is empty', () => {
+    h.favicons = { 'https://a.test/': 'data:image/png;base64,EMPTY' };
+    const tab = fakeTab(HISTORY, 2);
+    h.webContentsForTab.mockReturnValue(tab.wc);
+    showNavHistoryMenu(WIN, 'back');
+    expect(lastMenu()[1]?.icon).toBeUndefined();
   });
 
   it('opens the history page from the last row', () => {

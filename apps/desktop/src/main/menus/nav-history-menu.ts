@@ -1,15 +1,38 @@
-import { Menu, type BrowserWindow, type MenuItemConstructorOptions } from 'electron';
+import {
+  Menu,
+  nativeImage,
+  type BrowserWindow,
+  type MenuItemConstructorOptions,
+  type NativeImage,
+} from 'electron';
 import { INTERNAL_HISTORY_URL } from '@tepegoz/desktop-ipc';
 import {
   navHistoryMenuEntries,
   navHistoryMenuLabel,
   type NavHistoryDirection,
 } from '@tepegoz/navigation';
+import { HistoryStore } from '@tepegoz/persistence';
 import { mainStrings } from '../lib/i18n-main';
+import { getDb } from '../db/database.electron';
 import TabManager from '../tabs';
 
 /** Longest entry title shown before it is elided (native menus don't wrap). */
 const MAX_LABEL = 60;
+
+/**
+ * The stored favicon for `url` as a 16×16 menu icon, or `undefined` when there is none or it will not
+ * decode. Only an inline `data:` icon is used — the same bytes the tab strip already showed — so the
+ * menu never reaches the network. A decode failure (an `.ico` payload Electron cannot read) falls
+ * back to no icon rather than a broken one.
+ */
+function menuFaviconFor(url: string): NativeImage | undefined {
+  const db = getDb();
+  if (db === null) return undefined;
+  const data = HistoryStore.faviconFor(db, url);
+  if (data === null || !/^data:image\//i.test(data)) return undefined;
+  const img = nativeImage.createFromDataURL(data);
+  return img.isEmpty() ? undefined : img.resize({ width: 16, height: 16 });
+}
 
 /**
  * Chrome's back/forward button dropdown: right-click (or long-press) a nav button and the ACTIVE
@@ -38,16 +61,20 @@ export function showNavHistoryMenu(win: BrowserWindow, direction: NavHistoryDire
   if (rows.length === 0) return; // nothing on that side: pop no menu at all, as Chrome does
 
   const t = mainStrings();
-  const template: MenuItemConstructorOptions[] = rows.map((row) => ({
-    label: navHistoryMenuLabel(row, MAX_LABEL),
-    toolTip: row.url,
-    click: () => {
-      const live = TabManager.forSenderWindow(win)?.webContentsForTab(tabId) ?? null;
-      if (live !== null && live.navigationHistory.canGoToOffset(row.offset)) {
-        live.navigationHistory.goToOffset(row.offset);
-      }
-    },
-  }));
+  const template: MenuItemConstructorOptions[] = rows.map((row) => {
+    const icon = menuFaviconFor(row.url);
+    return {
+      label: navHistoryMenuLabel(row, MAX_LABEL),
+      toolTip: row.url,
+      ...(icon !== undefined ? { icon } : {}),
+      click: () => {
+        const live = TabManager.forSenderWindow(win)?.webContentsForTab(tabId) ?? null;
+        if (live !== null && live.navigationHistory.canGoToOffset(row.offset)) {
+          live.navigationHistory.goToOffset(row.offset);
+        }
+      },
+    };
+  });
   template.push(
     { type: 'separator' },
     {

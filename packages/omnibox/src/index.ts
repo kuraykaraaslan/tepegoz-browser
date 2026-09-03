@@ -13,6 +13,7 @@ export {
   buildOmniboxSuggestions,
   parseOmniboxQuery,
   looksNavigable,
+  inlineFaviconOnly,
   MAX_OMNIBOX_SUGGESTIONS,
   type OmniboxSuggestion,
   type OmniboxSuggestionKind,
