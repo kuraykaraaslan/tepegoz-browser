@@ -27,14 +27,34 @@ const TabManager = vi.hoisted(() => ({
   getState: vi.fn(() => ({ activeId: 'tab-1', tabs: [] as unknown[] })),
   focusedWindow: vi.fn((): unknown => null),
   getContentBounds: vi.fn(() => ({ x: 0, y: 0 })),
+  activate: vi.fn(),
+  closeTab: vi.fn(),
+}));
+const CdpDriver = vi.hoisted(() => ({
+  snapshotElements: vi.fn(() => Promise.resolve({ elements: [] })),
+  readElementValue: vi.fn((): Promise<string | null> => Promise.resolve('the-value')),
+  clickElement: vi.fn(() => Promise.resolve({ occludedBy: null })),
+  hoverElement: vi.fn(() => Promise.resolve()),
+  fillElement: vi.fn(() => Promise.resolve({ widget: null })),
+  pressKey: vi.fn(() => Promise.resolve({ sent: 1, unsupported: [] })),
+  sendKeys: vi.fn(() => Promise.resolve({ sent: 2, unsupported: [] })),
+  scrollPage: vi.fn(() => Promise.resolve()),
+  selectOption: vi.fn(() => Promise.resolve({ selected: 'A', options: ['A'] })),
+  networkSince: vi.fn(() => ['obs']),
+  interceptionsSince: vi.fn(() => ['dlg']),
+}));
+const AgentTabGroup = vi.hoisted(() => ({
+  openTab: vi.fn(() => 'new-tab'),
+  ownsTab: vi.fn(() => true),
+  releaseTab: vi.fn(),
 }));
 vi.mock('../tabs', () => ({ default: TabManager }));
 vi.mock('../downloads/download-service.electron', () => ({ default: {} }));
 vi.mock('../downloads/download-service-fs.electron', () => ({ originOf: () => '' }));
 vi.mock('../print/pdf-filename', () => ({ pdfFileName: () => 'page.pdf' }));
 vi.mock('../window-parked', () => ({ isParkedToTray: () => false }));
-vi.mock('./cdp-driver.electron', () => ({ default: {} }));
-vi.mock('./agent-tab-group.electron', () => ({ default: {} }));
+vi.mock('./cdp-driver.electron', () => ({ default: CdpDriver }));
+vi.mock('./agent-tab-group.electron', () => ({ default: AgentTabGroup }));
 vi.mock('./page-cursor.electron', () => ({
   showPageCursor: vi.fn(),
   hidePageCursor: vi.fn(),
@@ -63,6 +83,9 @@ beforeEach(() => {
   TabManager.activeWebContents.mockReturnValue(null);
   TabManager.webContentsForTab.mockReturnValue(null);
   TabManager.getState.mockReturnValue({ activeId: 'tab-1', tabs: [] });
+  AgentTabGroup.ownsTab.mockReturnValue(true);
+  AgentTabGroup.openTab.mockReturnValue('new-tab');
+  CdpDriver.readElementValue.mockResolvedValue('the-value');
 });
 
 describe('emitRunEvent', () => {
@@ -171,5 +194,104 @@ describe('runActiveTabUrl', () => {
       getURL: () => '',
     });
     expect(mod.runActiveTabUrl()).toBeUndefined();
+  });
+});
+
+describe('the browserHost object', () => {
+  const wc = () => ({
+    isDestroyed: () => false,
+    getURL: () => 'https://p.test/',
+    getTitle: () => 'P',
+  });
+
+  it('listTabs / listOpenTabs project TabManager state', async () => {
+    const { browserHost } = await load();
+    TabManager.getState.mockReturnValue({
+      activeId: 't1',
+      tabs: [
+        { id: 't1', url: 'https://a/', title: 'A' },
+        { id: 't2', url: 'https://b/', title: 'B' },
+      ],
+    });
+    expect(browserHost.listTabs().find((t) => t.id === 't1')).toMatchObject({ active: true });
+    expect(browserHost.listOpenTabs!()).toEqual([
+      { id: 't1', url: 'https://a/', title: 'A' },
+      { id: 't2', url: 'https://b/', title: 'B' },
+    ]);
+  });
+
+  it('createTab opens a grouped tab and returns its id', async () => {
+    const { browserHost } = await load();
+    expect(browserHost.createTab('https://x/', 'Work', false)).toBe('new-tab');
+    expect(AgentTabGroup.openTab).toHaveBeenCalledWith('', 'https://x/', 'Work', false);
+  });
+
+  it('activateTab reports true only when the tab is active AND drivable', async () => {
+    const { browserHost } = await load();
+    expect(browserHost.activateTab('ghost')).toBe(false);
+
+    TabManager.getState.mockReturnValue({ activeId: 'x', tabs: [{ id: 'x' }] });
+    TabManager.activeWebContents.mockReturnValue(wc());
+    expect(browserHost.activateTab('x')).toBe(true);
+    expect(TabManager.activate).toHaveBeenCalledWith('x');
+  });
+
+  it('closeTab refuses a tab the run does not own, else closes + releases it', async () => {
+    const mod = await load();
+    mod.setCurrentAgentRun('r1', 'g1', vi.fn());
+    await mod.withAgentRunScope('r1', async () => {
+      TabManager.getState.mockReturnValue({ activeId: 'x', tabs: [{ id: 'x' }] });
+      AgentTabGroup.ownsTab.mockReturnValue(false);
+      expect(mod.browserHost.closeTab('x')).toBe(false);
+
+      AgentTabGroup.ownsTab.mockReturnValue(true);
+      TabManager.getState
+        .mockReturnValueOnce({ activeId: 'x', tabs: [{ id: 'x' }] })
+        .mockReturnValue({ activeId: 'x', tabs: [] });
+      expect(mod.browserHost.closeTab('x')).toBe(true);
+      expect(AgentTabGroup.releaseTab).toHaveBeenCalledWith('g1', 'x');
+      return Promise.resolve();
+    });
+  });
+
+  it('networkSince / interceptionsSince are tolerant of a missing tab', async () => {
+    const { browserHost } = await load();
+    expect(await browserHost.networkSince(0, 't1')).toEqual([]);
+
+    TabManager.webContentsForTab.mockReturnValue(wc());
+    expect(await browserHost.networkSince(0, 't1')).toEqual(['obs']);
+    expect(await browserHost.interceptionsSince!(0, 't1')).toEqual(['dlg']);
+  });
+
+  it('readElementValue swallows a driver failure to null', async () => {
+    const { browserHost } = await load();
+    TabManager.webContentsForTab.mockReturnValue(wc());
+    expect(await browserHost.readElementValue(3, 't1')).toBe('the-value');
+
+    CdpDriver.readElementValue.mockRejectedValue(new Error('stale'));
+    expect(await browserHost.readElementValue(3, 't1')).toBeNull();
+  });
+
+  it('the action delegators route through the CDP driver', async () => {
+    const { browserHost } = await load();
+    const w = wc();
+    TabManager.webContentsForTab.mockReturnValue(w);
+
+    expect(await browserHost.clickElement(1, 't1')).toEqual({ occludedBy: null });
+    await browserHost.hoverElement(2, 't1');
+    expect(await browserHost.fillElement(3, 'hi', 't1')).toEqual({ widget: null });
+    expect(await browserHost.pressKey('Enter', 't1')).toEqual({ sent: 1, unsupported: [] });
+    await browserHost.scrollPage('down', 100, 't1');
+    expect(await browserHost.selectOption(4, 'A', 't1')).toEqual({ selected: 'A', options: ['A'] });
+
+    expect(CdpDriver.clickElement).toHaveBeenCalledWith(w, 1, expect.anything());
+    expect(CdpDriver.fillElement).toHaveBeenCalledWith(w, 3, 'hi', expect.anything());
+    expect(CdpDriver.selectOption).toHaveBeenCalledWith(w, 4, 'A');
+  });
+
+  it('an action on a missing tab 409s', async () => {
+    const { browserHost } = await load();
+    TabManager.webContentsForTab.mockReturnValue(null);
+    await expect(browserHost.clickElement(1, 'gone')).rejects.toMatchObject({ statusCode: 409 });
   });
 });
