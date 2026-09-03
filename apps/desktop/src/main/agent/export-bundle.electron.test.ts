@@ -153,4 +153,35 @@ describe('collectAgentExportBundleFiles', () => {
     expect(manifest.memoryMessages).toBe(1);
     expect(manifest.journalEvents).toBe(1);
   });
+
+  it('marks a tab screenshot skipped (no PNG) when the capture throws', async () => {
+    h.captureScreenshot.mockRejectedValue(new Error('cdp gone'));
+    const files = await collectAgentExportBundleFiles(INPUT, 0);
+    expect(paths(files).filter((p) => p.endsWith('.png'))).toEqual([]);
+    const tabs = manifestOf(files).tabs as { screenshot: { status: string; reason?: string } }[];
+    expect(tabs[0]?.screenshot.status).toBe('skipped');
+    expect(tabs[0]?.screenshot.reason).toContain('cdp gone');
+  });
+
+  it('memory.json falls back to a null conversation when the store read throws', async () => {
+    h.currentConversation.mockImplementation(() => {
+      throw new Error('db locked');
+    });
+    const files = await collectAgentExportBundleFiles(INPUT, 0);
+    const mem = JSON.parse(
+      files.find((f) => f.relPath === 'memory.json')?.content ?? '{}',
+    ) as { conversation: unknown };
+    expect(mem.conversation).toBeNull();
+  });
+
+  it('journal.json falls back to [] when the Event Journal read throws', async () => {
+    h.readRecent.mockImplementation(() => {
+      throw new Error('journal corrupt');
+    });
+    const files = await collectAgentExportBundleFiles(INPUT, 0);
+    const journal = JSON.parse(
+      files.find((f) => f.relPath === 'journal.json')?.content ?? 'null',
+    ) as unknown[];
+    expect(journal).toEqual([]);
+  });
 });
