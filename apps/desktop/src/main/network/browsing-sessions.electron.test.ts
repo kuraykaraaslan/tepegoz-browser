@@ -20,9 +20,8 @@ vi.mock('@tepegoz/tab-engine', () => ({
 vi.mock('@tepegoz/security-policy', () => ({
   BLACKHOLE_PROXY_CONFIG: { proxyRules: 'blackhole' },
 }));
-vi.mock('@tepegoz/libs', () => ({
-  Logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
-}));
+const logger = vi.hoisted(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() }));
+vi.mock('@tepegoz/libs', () => ({ Logger: logger }));
 
 const fromPartition = vi.hoisted(() =>
   vi.fn((p: string) => ({
@@ -38,6 +37,18 @@ vi.mock('electron', () => ({ session: { fromPartition } }));
 
 const BrowsingSessions = (await import('./browsing-sessions.electron')).default;
 const cast = <T>(v: unknown): T => v as T;
+
+/** A `session.fromPartition` result with every method resolving, minus the ones `over` overrides. */
+const fakeSes = (partition: string, over: Record<string, unknown> = {}): unknown => ({
+  __partition: partition,
+  setProxy: vi.fn(() => Promise.resolve()),
+  clearStorageData: vi.fn(() => Promise.resolve()),
+  clearCache: vi.fn(() => Promise.resolve()),
+  clearAuthCache: vi.fn(() => Promise.resolve()),
+  clearHostResolverCache: vi.fn(() => Promise.resolve()),
+  ...over,
+});
+const flush = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -173,5 +184,50 @@ describe('release + discardPrivate', () => {
     expect(ses.clearStorageData).toHaveBeenCalled();
     expect(ses.clearCache).toHaveBeenCalled();
     expect(BrowsingSessions.privateSessions()).toEqual([]);
+  });
+
+  it('logs but does not throw when blackholing a fresh tunnel partition fails', async () => {
+    const part = `${DIRECT_PARTITION}--conn-noproxy`;
+    fromPartition.mockReturnValueOnce(
+      fakeSes(part, { setProxy: vi.fn(() => Promise.reject(new Error('proxy down'))) }) as never,
+    );
+    expect(() => BrowsingSessions.ensure(part)).not.toThrow();
+    await flush();
+    expect(logger.error).toHaveBeenCalledWith(
+      'Could not blackhole a new tunnel partition',
+      expect.objectContaining({ partition: part, err: expect.stringContaining('proxy down') as string }),
+    );
+  });
+
+  it('discardPrivate swallows a per-session cleanup failure and still drops the session', async () => {
+    const part = 'tepegoz-private--conn-bad';
+    fromPartition.mockReturnValueOnce(
+      fakeSes(part, {
+        clearStorageData: vi.fn(() => Promise.reject(new Error('mem cleanup failed'))),
+      }) as never,
+    );
+    BrowsingSessions.setPrivatePartitionProvider(() => part);
+    BrowsingSessions.private();
+    await BrowsingSessions.discardPrivate();
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Private session cleanup failed; it dies with the process regardless',
+      expect.objectContaining({ partition: part }),
+    );
+    expect(BrowsingSessions.privateSessions()).toEqual([]);
+  });
+
+  it('release rethrows and reports a failed tunnel-partition wipe', async () => {
+    const part = `${DIRECT_PARTITION}--conn-diskfull`;
+    fromPartition.mockReturnValueOnce(
+      fakeSes(part, {
+        clearStorageData: vi.fn(() => Promise.reject(new Error('disk full'))),
+      }) as never,
+    );
+    BrowsingSessions.ensure(part);
+    await expect(BrowsingSessions.release(part)).rejects.toThrow('disk full');
+    expect(logger.error).toHaveBeenCalledWith(
+      'Failed to clear a released tunnel partition',
+      expect.objectContaining({ partition: part }),
+    );
   });
 });
