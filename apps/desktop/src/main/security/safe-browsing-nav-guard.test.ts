@@ -67,4 +67,18 @@ describe('SafeBrowsingNavGuard', () => {
     await expect(g.onWillNavigate(BAD)).resolves.toBeUndefined();
     expect(onBlock).not.toHaveBeenCalled();
   });
+
+  it('evicts the oldest proceed-anyway grant once the cap is reached', async () => {
+    const { g, onBlock, checkNavigation } = guard({ 'http://u0/': 'block' });
+    for (let i = 0; i < 200; i++) g.allowOnce(`http://u${String(i)}/`); // fills to MAX_ALLOWED
+    g.allowOnce('http://u200/'); // one more → the oldest (u0) is dropped
+
+    await g.onWillNavigate('http://u0/'); // no longer granted → checked → blocked
+    expect(checkNavigation).toHaveBeenCalledWith('http://u0/');
+    expect(onBlock).toHaveBeenCalledWith('http://u0/');
+
+    checkNavigation.mockClear();
+    await g.onWillNavigate('http://u200/'); // newest grant still holds → no lookup
+    expect(checkNavigation).not.toHaveBeenCalled();
+  });
 });
