@@ -9,6 +9,13 @@ export interface HistoryEntry {
   title: string;
   ts: number;
   visitCount: number;
+  /**
+   * The page's favicon as an inline `data:` URL, or `null` until one is captured. Written by
+   * {@link HistoryStore.setFavicon} from the same bytes the tab strip shows; consumed by the omnibox,
+   * the history page, and the back/forward menu, none of which may fetch a remote icon from the
+   * trusted chrome.
+   */
+  favicon: string | null;
 }
 
 interface HistoryRow {
@@ -16,10 +23,17 @@ interface HistoryRow {
   title: string;
   ts: number;
   visit_count: number;
+  favicon: string | null;
 }
 
 function toEntry(row: HistoryRow): HistoryEntry {
-  return { url: row.url, title: row.title, ts: row.ts, visitCount: row.visit_count };
+  return {
+    url: row.url,
+    title: row.title,
+    ts: row.ts,
+    visitCount: row.visit_count,
+    favicon: row.favicon ?? null,
+  };
 }
 
 /**
@@ -57,7 +71,9 @@ export class HistoryStore {
 
   static list(db: Db, limit = 50, offset = 0): HistoryEntry[] {
     const rows = db
-      .prepare('SELECT url, title, ts, visit_count FROM history ORDER BY ts DESC LIMIT ? OFFSET ?')
+      .prepare(
+        'SELECT url, title, ts, visit_count, favicon FROM history ORDER BY ts DESC LIMIT ? OFFSET ?',
+      )
       .all(limit, offset) as HistoryRow[];
     return rows.map(toEntry);
   }
@@ -68,7 +84,7 @@ export class HistoryStore {
     const like = likeContains(foldForSearch(query));
     const rows = db
       .prepare(
-        `SELECT url, title, ts, visit_count FROM history
+        `SELECT url, title, ts, visit_count, favicon FROM history
          WHERE url_fold LIKE ? ESCAPE '\\' OR title_fold LIKE ? ESCAPE '\\'
          ORDER BY ts DESC LIMIT ? OFFSET ?`,
       )
@@ -97,7 +113,7 @@ export class HistoryStore {
     const like = likeContains(foldForSearch(query));
     const rows = db
       .prepare(
-        `SELECT url, title, ts, visit_count FROM history
+        `SELECT url, title, ts, visit_count, favicon FROM history
          WHERE url_fold LIKE ? ESCAPE '\\' OR title_fold LIKE ? ESCAPE '\\'
          ORDER BY visit_count + 30.0 / (1.0 + MAX(? - ts, 0) / 86400000.0) DESC, ts DESC
          LIMIT ?`,
@@ -113,6 +129,28 @@ export class HistoryStore {
       foldForSearch(title),
       url,
     );
+  }
+
+  /**
+   * Attach the page's favicon (an inline `data:` URL) to an existing history row. Like {@link setTitle}
+   * this only UPDATEs — a favicon with no recorded visit is meaningless, so a URL that was never
+   * `record`ed (private window, non-web scheme) is silently a no-op. Idempotent; the caller passes the
+   * same bytes it handed the tab strip.
+   */
+  static setFavicon(db: Db, url: string, favicon: string): void {
+    db.prepare('UPDATE history SET favicon = ? WHERE url = ?').run(favicon, url);
+  }
+
+  /**
+   * The stored favicon for one exact URL, or `null` when the URL is unknown or has none yet. Used by
+   * the back/forward menu, which has a list of navigation-entry URLs and wants each one's icon
+   * without pulling the whole row.
+   */
+  static faviconFor(db: Db, url: string): string | null {
+    const row = db.prepare('SELECT favicon FROM history WHERE url = ?').get(url) as
+      | { favicon: string | null }
+      | undefined;
+    return row?.favicon ?? null;
   }
 
   static deleteUrl(db: Db, url: string): void {

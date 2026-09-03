@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildOmniboxSuggestions,
+  inlineFaviconOnly,
   looksNavigable,
   MAX_OMNIBOX_SUGGESTIONS,
   parseOmniboxQuery,
   type OmniboxSuggestSources,
 } from './omnibox-suggest';
+
+const PNG_DATA_URL = 'data:image/png;base64,iVBORw0KGgo=';
 
 const LABELS = {
   search: 'Search the web',
@@ -213,5 +216,72 @@ describe('buildOmniboxSuggestions', () => {
     }));
     const out = buildOmniboxSuggestions('match', { tabs: [], history }, LABELS);
     expect(out.length).toBeLessThanOrEqual(MAX_OMNIBOX_SUGGESTIONS);
+  });
+});
+
+describe('inlineFaviconOnly', () => {
+  it('passes an inline data:image URL through unchanged', () => {
+    expect(inlineFaviconOnly(PNG_DATA_URL)).toBe(PNG_DATA_URL);
+    expect(inlineFaviconOnly('data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=')).toMatch(/^data:image\//);
+  });
+
+  it('rejects a remote icon — the omnibox renders in the chrome and must not fetch one', () => {
+    expect(inlineFaviconOnly('https://site.example/favicon.ico')).toBeUndefined();
+    expect(inlineFaviconOnly('http://site.example/favicon.ico')).toBeUndefined();
+  });
+
+  it('rejects a non-image data URL, an empty string, null and undefined', () => {
+    expect(inlineFaviconOnly('data:text/html,<b>x</b>')).toBeUndefined();
+    expect(inlineFaviconOnly('')).toBeUndefined();
+    expect(inlineFaviconOnly(null)).toBeUndefined();
+    expect(inlineFaviconOnly(undefined)).toBeUndefined();
+  });
+});
+
+describe('buildOmniboxSuggestions — favicons', () => {
+  it('carries an inline favicon onto tab, bookmark and history rows', () => {
+    const sources: OmniboxSuggestSources = {
+      tabs: [{ id: 't1', title: 'Example', url: 'https://example.com', faviconUrl: PNG_DATA_URL }],
+      history: [
+        {
+          url: 'https://example.com/blog',
+          title: 'Example Blog',
+          visitCount: 5,
+          faviconUrl: PNG_DATA_URL,
+        },
+      ],
+      bookmarks: [
+        { url: 'https://example.net/docs', title: 'Example Docs', faviconUrl: PNG_DATA_URL },
+      ],
+    };
+    const byKind = (k: string) =>
+      buildOmniboxSuggestions('example', sources, LABELS).find((s) => s.kind === k);
+    expect(byKind('tab')?.faviconUrl).toBe(PNG_DATA_URL);
+    expect(byKind('bookmark')?.faviconUrl).toBe(PNG_DATA_URL);
+    expect(byKind('history')?.faviconUrl).toBe(PNG_DATA_URL);
+  });
+
+  it('drops a remote favicon rather than handing the chrome a URL to fetch', () => {
+    const sources: OmniboxSuggestSources = {
+      tabs: [],
+      history: [],
+      bookmarks: [
+        {
+          url: 'https://imported.example/',
+          title: 'Imported bookmark',
+          faviconUrl: 'https://imported.example/favicon.ico',
+        },
+      ],
+    };
+    const row = buildOmniboxSuggestions('imported', sources, LABELS).find(
+      (s) => s.kind === 'bookmark',
+    );
+    expect(row).toBeDefined();
+    expect(row?.faviconUrl).toBeUndefined();
+  });
+
+  it('leaves faviconUrl undefined when the source has none', () => {
+    const row = buildOmniboxSuggestions('github', SOURCES, LABELS).find((s) => s.kind === 'tab');
+    expect(row?.faviconUrl).toBeUndefined();
   });
 });

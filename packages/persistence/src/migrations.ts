@@ -627,6 +627,18 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 20,
+    up: (db) => {
+      // Persist the page favicon captured on a visit, as an inline `data:` URL (the same bytes the
+      // tab strip shows — fetched by main on the page's own session, `tabs-favicon.electron.ts`).
+      // The omnibox's history rows can then show the site's icon instead of a generic clock glyph,
+      // and because it is already a `data:` URL the trusted chrome renders it with no network
+      // request. Nullable, no backfill: a row written before this migration gets its icon the next
+      // time the page is visited. `bookmark_nodes.favicon` is the bookmark-side equivalent.
+      db.exec('ALTER TABLE history ADD COLUMN favicon TEXT;');
+    },
+  },
 ];
 
 /**

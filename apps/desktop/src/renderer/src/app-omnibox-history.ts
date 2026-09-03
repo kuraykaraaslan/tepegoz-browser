@@ -3,6 +3,7 @@ import {
   buildOmniboxSuggestions,
   parseOmniboxCommand,
   parseOmniboxQuery,
+  type OmniboxBookmarkCandidate,
   type OmniboxSuggestion,
   type OmniboxSuggestLabels,
 } from '@tepegoz/omnibox';
@@ -39,7 +40,7 @@ function hostOf(url: string): string {
 export function useOmniboxAndHistory(
   tabsRef: MutableRefObject<TabsState>,
   labels: OmniboxSuggestLabels,
-  bookmarksRef: MutableRefObject<{ url: string; title: string }[]>,
+  bookmarksRef: MutableRefObject<OmniboxBookmarkCandidate[]>,
   onCloseSurface: () => void,
 ): OmniboxHistoryResult {
   // Ref keeps the injected callback stable so the Omnibox effect doesn't refetch every render; mirrors
@@ -111,8 +112,18 @@ export function useOmniboxAndHistory(
           // Don't offer switching to the tab that's already active.
           tabs: state.tabs
             .filter((tb) => tb.id !== state.activeId)
-            .map((tb) => ({ id: tb.id, title: tb.title, url: tb.url })),
-          history: history.map((h) => ({ url: h.url, title: h.title, visitCount: h.visitCount })),
+            .map((tb) => ({
+              id: tb.id,
+              title: tb.title,
+              url: tb.url,
+              faviconUrl: tb.faviconUrl,
+            })),
+          history: history.map((h) => ({
+            url: h.url,
+            title: h.title,
+            visitCount: h.visitCount,
+            faviconUrl: h.favicon,
+          })),
           bookmarks: bookmarksRef.current,
           downloads,
           skills,

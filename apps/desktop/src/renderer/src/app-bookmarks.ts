@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react';
 import { BOOKMARK_ROOT_BAR, isBookmarkable } from '@tepegoz/bookmarks';
+import type { OmniboxBookmarkCandidate } from '@tepegoz/omnibox';
 import {
   INTERNAL_BOOKMARKS_URL,
   type BookmarkMenuAction,
@@ -19,8 +20,9 @@ export interface BookmarksBarResult {
   activeBookmarked: boolean;
   barNodes: BookmarkTreeNode[];
   canBookmark: boolean;
-  /** Flat `{ url, title }` list feeding omnibox bookmark suggestions (see `./app-omnibox-history`). */
-  bookmarksRef: MutableRefObject<{ url: string; title: string }[]>;
+  /** Flat list feeding omnibox bookmark suggestions (see `./app-omnibox-history`) — carries the
+   *  stored favicon so those rows can show the site's icon. */
+  bookmarksRef: MutableRefObject<OmniboxBookmarkCandidate[]>;
   /** Large-folder "open all" confirmation, shown by `App.tsx`'s own Modal. */
   openAllUrls: string[] | null;
   setOpenAllUrls: (urls: string[] | null) => void;
@@ -38,7 +40,7 @@ export function useBookmarksBar(
   tabsRef: MutableRefObject<TabsState>,
   currentUrl: string,
 ): BookmarksBarResult {
-  const bookmarksRef = useRef<{ url: string; title: string }[]>([]);
+  const bookmarksRef = useRef<OmniboxBookmarkCandidate[]>([]);
   const [activeBookmarked, setActiveBookmarked] = useState(false);
   const [barNodes, setBarNodes] = useState<BookmarkTreeNode[]>([]);
   const [openAllUrls, setOpenAllUrls] = useState<string[] | null>(null);
@@ -56,7 +58,11 @@ export function useBookmarksBar(
       tree = [];
       flat = [];
     }
-    bookmarksRef.current = flat.map((b) => ({ url: b.url, title: b.title }));
+    bookmarksRef.current = flat.map((b) => ({
+      url: b.url,
+      title: b.title,
+      faviconUrl: b.favicon,
+    }));
     setBarNodes(tree.find((r) => r.id === BOOKMARK_ROOT_BAR)?.children ?? []);
   }, []);
 

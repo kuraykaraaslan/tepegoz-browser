@@ -255,6 +255,15 @@ export function wireView(host: ViewWiringHost, id: string, view: WebContentsView
         if (dataUrl === null) return;
         host.store.update(id, { faviconUrl: dataUrl });
         host.emitState();
+        // Persist the SAME bytes onto the history row so the omnibox, the history page and the
+        // back/forward menu can show the site's icon without re-fetching it from the chrome (which
+        // has no proxy). `setFavicon` only UPDATEs, so a URL with no recorded visit — a private
+        // window, a non-web scheme — is a silent no-op, mirroring the history-write guard below.
+        if (!host.isPrivate) {
+          const db = getDb();
+          const url = wc.getURL();
+          if (db !== null && isWebUrl(url)) HistoryStore.setFavicon(db, url, dataUrl);
+        }
       },
       () => undefined,
     );

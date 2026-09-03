@@ -51,6 +51,14 @@ export interface OmniboxSuggestion {
   title: string;
   /** Secondary line (URL or a localized hint), optional. */
   subtitle?: string;
+  /**
+   * The row's site favicon, as an **inline `data:` URL only** — never a remote one. The omnibox
+   * renders in the trusted app chrome, which has no proxy, so an `<img src="https://site/…">` here
+   * would be the browser making a clear-path request to that site (the exact leak the tab strip's
+   * favicon path closes). {@link inlineFaviconOnly} enforces it; a candidate whose favicon is remote
+   * (some imported bookmarks) simply falls back to the kind glyph.
+   */
+  faviconUrl?: string | undefined;
   action: OmniboxAction;
 }
 
@@ -58,17 +66,32 @@ export interface OmniboxTabCandidate {
   id: string;
   title: string;
   url: string;
+  /** Inline `data:` favicon from tab state, if the page has one. */
+  faviconUrl?: string | null;
 }
 
 export interface OmniboxHistoryCandidate {
   url: string;
   title: string;
   visitCount: number;
+  /** Inline `data:` favicon persisted for this URL, if one was captured on a past visit. */
+  faviconUrl?: string | null;
 }
 
 export interface OmniboxBookmarkCandidate {
   url: string;
   title: string;
+  /** Bookmark favicon — may be a remote URL (imported); only an inline `data:` one is shown. */
+  faviconUrl?: string | null;
+}
+
+/**
+ * Pass a favicon through **only** when it is an inline `data:image/…` URL. Everything else — a remote
+ * `http(s):` icon, an empty string, `null`/`undefined` — returns `undefined`, and the row renders its
+ * kind glyph instead. Same rule the tab strip enforces at its IPC boundary (`TabFaviconSchema`).
+ */
+export function inlineFaviconOnly(url: string | null | undefined): string | undefined {
+  return typeof url === 'string' && /^data:image\//i.test(url) ? url : undefined;
 }
 
 export interface OmniboxSuggestSources {
@@ -274,6 +297,7 @@ function tabSuggestions(
       kind: 'tab',
       title: tab.title.length > 0 ? tab.title : tab.url,
       subtitle: labels.switchToTab,
+      faviconUrl: inlineFaviconOnly(tab.faviconUrl),
       action: { type: 'activateTab', tabId: tab.id },
     }));
 }
@@ -307,6 +331,7 @@ function bookmarkSuggestions(
       kind: 'bookmark',
       title: b.title.length > 0 ? b.title : b.url,
       subtitle: labels.bookmark,
+      faviconUrl: inlineFaviconOnly(b.faviconUrl),
       action: { type: 'navigate', input: b.url },
     }));
 }
@@ -324,6 +349,7 @@ function historySuggestions(
       kind: 'history',
       title: entry.title.length > 0 ? entry.title : entry.url,
       subtitle: entry.url,
+      faviconUrl: inlineFaviconOnly(entry.faviconUrl),
       action: { type: 'navigate', input: entry.url },
     }));
 }
