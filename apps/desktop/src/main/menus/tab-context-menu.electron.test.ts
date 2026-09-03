@@ -167,4 +167,31 @@ describe('showTabContextMenu', () => {
     expect(TM.createTabRight).toHaveBeenCalledWith('t1');
     expect(TM.closeTab).toHaveBeenCalledWith('t1');
   });
+
+  it('routes the guarded + group-membership actions to TabManager', () => {
+    setState(
+      [tab({ groupId: 'g1' }), tab({ id: 't2' })],
+      [
+        { id: 'g1', name: 'Mine' },
+        { id: 'g2', name: 'Other' },
+      ],
+    );
+    showTabContextMenu(win, 't1');
+
+    click('Hide');
+    click('Discard');
+    click('Remove from group');
+    click('Close others');
+    click('Close to the right');
+    expect(TM.hideTab).toHaveBeenCalledWith('t1');
+    expect(TM.discardTab).toHaveBeenCalledWith('t1');
+    expect(TM.removeFromGroup).toHaveBeenCalledWith('t1');
+    expect(TM.closeOtherTabs).toHaveBeenCalledWith('t1');
+    expect(TM.closeTabsToRight).toHaveBeenCalledWith('t1');
+
+    // The last "Add to group" submenu entry is the one OTHER group.
+    const sub = (find('Add to group')?.submenu ?? []) as MenuItemConstructorOptions[];
+    (sub.at(-1)?.click as (() => void) | undefined)?.();
+    expect(TM.assignToGroup).toHaveBeenCalledWith('t1', 'g2');
+  });
 });
