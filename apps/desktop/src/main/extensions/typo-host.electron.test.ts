@@ -3,9 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 /**
  * `typo-host.electron` — the main-process wiring that hands `createTypoHost` its adapters, plus the
  * `typoCapabilityHost` shim. Pinned: each adapter closure routes correctly (prefs get/set, the
- * extension-enablement gate with the typo id, the installed-dictionary list); `dictionaryFor` returns
- * null and drops its cache entry when no dictionary is installed for a language; and
- * `typoCapabilityHost.checkTypoText` delegates to the host's `check`.
+ * extension gate with the typo id, the dictionary list); `dictionaryFor` builds + caches an nspell
+ * instance per installed dictionary (null + cache-drop when none is installed); and the `aiReview`
+ * closure short-circuits on empty text / `aiMode: 'none'`, runs a local-LLM pass when the flag + engine
+ * allow it, an external-AI pass under manual mode, and swallows a review failure with a log.
  */
 
 type Cfg = {
@@ -13,8 +14,12 @@ type Cfg = {
   setPersisted: (v: unknown) => void;
   isExtensionEnabled: () => boolean;
   dictionaries: () => unknown;
-  dictionaryFor: (lang: string) => unknown;
-  aiReview: unknown;
+  dictionaryFor: (lang: string) => { correct: (w: string) => boolean } | null;
+  aiReview: (
+    input: { text: string; aiMode: string },
+    base: Record<string, unknown>,
+    settings: { localLlmMode?: string; externalAiMode?: string },
+  ) => Promise<Record<string, unknown>>;
 };
 const cap = vi.hoisted((): { cfg?: Cfg; check: ReturnType<typeof vi.fn> } => ({
   check: vi.fn(() => Promise.resolve({ issues: [] })),
@@ -42,9 +47,9 @@ const dictMgr = vi.hoisted(() => ({
 }));
 vi.mock('./typo-dictionary-manager.electron', () => ({ default: dictMgr }));
 
-// Heavy transitive deps the module imports at load — stubbed so it just resolves.
+const gateway = vi.hoisted(() => ({ register: vi.fn(), complete: vi.fn() }));
 vi.mock('@tepegoz/model-gateway', () => ({
-  ModelGateway: { register: vi.fn() },
+  ModelGateway: gateway,
   resolveProviderBaseURL: () => '',
   AnthropicProvider: class {},
   DeepSeekProvider: class {},
@@ -64,20 +69,25 @@ vi.mock('@tepegoz/model-gateway', () => ({
   LOCAL_MODEL: { classify: 'l' },
 }));
 vi.mock('@tepegoz/local-inference', () => ({ LocalProvider: class {} }));
-vi.mock('@tepegoz/shared-types', () => ({ isRunnableProvider: () => false }));
-vi.mock('@tepegoz/credential-vault', () => ({
-  default: { listMeta: () => [], getFirstKeyForProvider: () => null },
+const isRunnableProvider = vi.hoisted(() => vi.fn(() => true));
+vi.mock('@tepegoz/shared-types', () => ({ isRunnableProvider }));
+const vault = vi.hoisted(() => ({
+  listMeta: vi.fn((): unknown[] => []),
+  getFirstKeyForProvider: vi.fn((): string | null => null),
 }));
-vi.mock('@tepegoz/libs', () => ({ Logger: { warn: vi.fn(), info: vi.fn() } }));
-vi.mock('../local-inference/llama-engine.electron', () => ({
-  llamaEngine: () => ({ isAvailable: () => false }),
-}));
-vi.mock('../model-catalog/model-manager.electron', () => ({
-  default: { resolveModel: () => null },
-}));
+vi.mock('@tepegoz/credential-vault', () => ({ default: vault }));
+const logger = vi.hoisted(() => ({ warn: vi.fn(), info: vi.fn() }));
+vi.mock('@tepegoz/libs', () => ({ Logger: logger }));
+const llama = vi.hoisted(() =>
+  vi.fn<() => { isAvailable: () => boolean }>(() => ({ isAvailable: () => false })),
+);
+vi.mock('../local-inference/llama-engine.electron', () => ({ llamaEngine: llama }));
+const modelManager = vi.hoisted(() => ({ resolveModel: vi.fn((): unknown => null) }));
+vi.mock('../model-catalog/model-manager.electron', () => ({ default: modelManager }));
 
 const mod = await import('./typo-host.electron');
 const cfg = () => cap.cfg!;
+const base = () => ({ issues: [] as unknown[], language: 'en', sourcesUsed: [] as string[] });
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -85,6 +95,11 @@ beforeEach(() => {
   isExtensionEnabled.mockReturnValue(true);
   dictMgr.list.mockReturnValue([{ id: 'en-US', language: 'en' }]);
   dictMgr.loadInstalled.mockReturnValue(null);
+  llama.mockReturnValue({ isAvailable: () => false });
+  modelManager.resolveModel.mockReturnValue(null);
+  vault.listMeta.mockReturnValue([]);
+  isRunnableProvider.mockReturnValue(true);
+  gateway.complete.mockResolvedValue({ text: '{"issues":[]}' });
 });
 
 it('the default export is whatever createTypoHost returned', () => {
@@ -107,10 +122,75 @@ describe('the adapter closures', () => {
   it('dictionaries returns the installed-dictionary list', () => {
     expect(cfg().dictionaries()).toEqual([{ id: 'en-US', language: 'en' }]);
   });
+});
 
-  it('dictionaryFor returns null (and drops any cache entry) when nothing is installed', () => {
+describe('dictionaryFor', () => {
+  it('returns null and drops any cache entry when nothing is installed', () => {
     expect(cfg().dictionaryFor('fr')).toBeNull();
     expect(dictMgr.loadInstalled).toHaveBeenCalledWith('fr');
+  });
+
+  it('builds a spell instance for an installed dictionary and caches it by id', () => {
+    dictMgr.loadInstalled.mockReturnValue({ id: 'en-US', aff: 'SET UTF-8\n', dic: '1\nword\n' });
+    const first = cfg().dictionaryFor('en');
+    expect(typeof first?.correct).toBe('function');
+
+    expect(cfg().dictionaryFor('en')).toBe(first); // same id → same cached instance
+
+    dictMgr.loadInstalled.mockReturnValue({ id: 'en-GB', aff: 'SET UTF-8\n', dic: '1\ncolour\n' });
+    expect(cfg().dictionaryFor('en')).not.toBe(first); // id changed → rebuilt
+  });
+});
+
+describe('aiReview', () => {
+  it('short-circuits on empty text or aiMode "none"', async () => {
+    const b = base();
+    expect(await cfg().aiReview({ text: '   ', aiMode: 'auto' }, b, {})).toBe(b);
+    expect(await cfg().aiReview({ text: 'hello', aiMode: 'none' }, b, {})).toBe(b);
+    expect(gateway.complete).not.toHaveBeenCalled();
+  });
+
+  it('runs a local-LLM pass and merges the returned issues', async () => {
+    llama.mockReturnValue({ isAvailable: () => true });
+    modelManager.resolveModel.mockReturnValue({ id: 'm' });
+    gateway.complete.mockResolvedValue({
+      text: '{"issues":[{"kind":"spelling","text":"teh","message":"typo","suggestions":["the"]}]}',
+    });
+    const res = await cfg().aiReview({ text: 'teh cat sat', aiMode: 'auto' }, base(), {
+      localLlmMode: 'auto',
+    });
+    expect(gateway.register).toHaveBeenCalled();
+    expect((res.issues as { source: string }[])[0]).toMatchObject({
+      source: 'local-llm',
+      kind: 'spelling',
+    });
+  });
+
+  it('swallows a local review failure with a warning', async () => {
+    llama.mockReturnValue({ isAvailable: () => true });
+    modelManager.resolveModel.mockReturnValue({ id: 'm' });
+    gateway.complete.mockRejectedValue(new Error('model timeout'));
+    const b = base();
+    expect(await cfg().aiReview({ text: 'teh', aiMode: 'auto' }, b, { localLlmMode: 'auto' })).toBe(
+      b,
+    );
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Typo local LLM review failed',
+      expect.objectContaining({ err: expect.stringContaining('model timeout') as string }),
+    );
+  });
+
+  it('runs an external-AI pass under manual mode with a runnable provider key', async () => {
+    vault.listMeta.mockReturnValue([{ provider: 'openai', region: 'us' }]);
+    vault.getFirstKeyForProvider.mockReturnValue('sk-test');
+    gateway.complete.mockResolvedValue({
+      text: '{"issues":[{"kind":"grammar","text":"cat sat","message":"awkward","suggestions":[]}]}',
+    });
+    const res = await cfg().aiReview({ text: 'the cat sat', aiMode: 'manual' }, base(), {
+      externalAiMode: 'manual',
+    });
+    expect(gateway.register).toHaveBeenCalled();
+    expect((res.issues as { source: string }[])[0]).toMatchObject({ source: 'external-ai' });
   });
 });
 
