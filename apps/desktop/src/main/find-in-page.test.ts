@@ -261,3 +261,16 @@ describe('releaseFindSession', () => {
     expect(wc.listenerCount('did-start-navigation')).toBe(0);
   });
 });
+
+describe('view teardown', () => {
+  it("the view's own 'destroyed' event drops the session so a later find re-subscribes", () => {
+    const q = { query: 'a', forward: true, findNext: false, matchCase: false };
+    runFindInPage(asWin(win), asWc(wc), q);
+    expect(wc.listenerCount('found-in-page')).toBe(1);
+
+    wc.emit('destroyed');
+
+    runFindInPage(asWin(win), asWc(wc), q); // session was forgotten → fresh subscription
+    expect(wc.listenerCount('found-in-page')).toBe(2); // the stale listener is still attached, plus a new one
+  });
+});
