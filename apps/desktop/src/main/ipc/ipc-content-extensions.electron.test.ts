@@ -28,8 +28,6 @@ vi.mock('../lib/i18n-main', () => ({
   mainStrings: () => ({ errors: { forbidden: 'forbidden' } }),
 }));
 
-const stub = (methods: string[]) => Object.fromEntries(methods.map((m) => [m, vi.fn(() => ({}))]));
-
 const uaHost = vi.hoisted(() => ({ get: vi.fn(() => 'UA'), set: vi.fn((v: unknown) => v) }));
 vi.mock('../extensions/user-agent-host.electron', () => ({ default: uaHost }));
 
@@ -72,28 +70,37 @@ const dictMgr = vi.hoisted(() => ({
 }));
 vi.mock('../extensions/typo-dictionary-manager.electron', () => ({ default: dictMgr }));
 
+const translateHost = vi.hoisted(() => ({
+  get: vi.fn(() => ({})),
+  update: vi.fn((p: unknown) => p),
+  state: vi.fn(() => ({})),
+  translateText: vi.fn((i: unknown) => ({ i })),
+  setSiteEnabled: vi.fn((o: string, e: boolean) => ({ o, e })),
+  addGlossaryTerm: vi.fn((t: unknown) => ({ t })),
+  removeGlossaryTerm: vi.fn((id: unknown) => ({ id })),
+}));
+const respondTranslateCloudFallback = vi.hoisted(() => vi.fn());
 vi.mock('../extensions/translate-host.electron', () => ({
-  default: stub([
-    'get',
-    'update',
-    'state',
-    'pageState',
-    'translateText',
-    'setSiteEnabled',
-    'addGlossary',
-    'removeGlossary',
-  ]),
-  respondTranslateCloudFallback: vi.fn(),
+  default: translateHost,
+  respondTranslateCloudFallback,
+}));
+const translatePageInjector = vi.hoisted(() => ({
+  translateActive: vi.fn(() => Promise.resolve(null)),
+  restoreActive: vi.fn(() => Promise.resolve(null)),
 }));
 vi.mock('../extensions/translate-page-injector-controller.electron', () => ({
-  default: stub(['toggle', 'retranslate']),
+  default: translatePageInjector,
 }));
-vi.mock('../extensions/video-player-host.electron', () => ({
-  default: stub(['get', 'update', 'state', 'setSiteEnabled']),
+const videoHost = vi.hoisted(() => ({
+  get: vi.fn(() => ({})),
+  update: vi.fn((p: unknown) => p),
+  setSiteEnabled: vi.fn((o: string, e: boolean) => ({ o, e })),
 }));
+vi.mock('../extensions/video-player-host.electron', () => ({ default: videoHost }));
+const videoInjector = vi.hoisted(() => ({ refreshActive: vi.fn(() => Promise.resolve()) }));
 vi.mock('../extensions/video-player-page-injector.electron', () => ({
-  default: stub(['toggle']),
-  getVideoPlayerPageState: vi.fn(() => ({})),
+  default: videoInjector,
+  getVideoPlayerPageState: vi.fn(() => ({ __page: true })),
 }));
 
 const { registerExtensionsIpc } = await import('./ipc-content-extensions');
@@ -101,14 +108,24 @@ const { registerExtensionsIpc } = await import('./ipc-content-extensions');
 const ev = { senderFrame: { url: TRUSTED }, sender: {} };
 const evil = { senderFrame: { url: 'https://evil.example/' }, sender: {} };
 const call = (c: string, p?: unknown, e: unknown = ev) => h.handlers.get(c)?.(e, p);
+const fire = (c: string, p?: unknown, e: unknown = ev) => h.listeners.get(c)?.(e, p);
 
 beforeEach(() => {
   h.handlers.clear();
   h.listeners.clear();
   bw.windows = [];
-  [uaHost, popupHost, adHost, typoHost, dictMgr].forEach((o) =>
-    Object.values(o).forEach((f) => (f as ReturnType<typeof vi.fn>).mockClear()),
-  );
+  [
+    uaHost,
+    popupHost,
+    adHost,
+    typoHost,
+    dictMgr,
+    translateHost,
+    translatePageInjector,
+    videoHost,
+    videoInjector,
+  ].forEach((o) => Object.values(o).forEach((f) => (f as ReturnType<typeof vi.fn>).mockClear()));
+  respondTranslateCloudFallback.mockClear();
   registerExtensionsIpc();
 });
 
@@ -166,5 +183,89 @@ describe('untrusted sender', () => {
     expect(() => call(IpcChannels.typoGet, undefined, evil)).toThrow();
     expect(adHost.get).not.toHaveBeenCalled();
     expect(typoHost.get).not.toHaveBeenCalled();
+  });
+});
+
+describe('read-only delegators forward straight to their host', () => {
+  it('user-agent / popup-blocker / adblock / typo reads', async () => {
+    expect(call(IpcChannels.userAgentGet)).toBe('UA');
+    call(IpcChannels.popupBlockerGet);
+    expect(popupHost.get).toHaveBeenCalled();
+    call(IpcChannels.popupBlockerRecentRequests);
+    expect(popupHost.getRecentRequests).toHaveBeenCalled();
+    call(IpcChannels.adblockGet);
+    call(IpcChannels.adblockState);
+    expect(adHost.state).toHaveBeenCalled();
+    call(IpcChannels.typoGet);
+    call(IpcChannels.typoState);
+    call(IpcChannels.typoDictionariesList);
+    expect(dictMgr.list).toHaveBeenCalled();
+
+    await call(IpcChannels.adblockRefresh);
+    await call(IpcChannels.typoDictionaryShowFolder);
+    expect(dictMgr.showFolder).toHaveBeenCalled();
+  });
+
+  it('translate + video reads', async () => {
+    call(IpcChannels.translateGet);
+    call(IpcChannels.translateState);
+    expect(translateHost.state).toHaveBeenCalled();
+    await call(IpcChannels.translatePageStart);
+    expect(translatePageInjector.translateActive).toHaveBeenCalled();
+    await call(IpcChannels.translatePageRestore);
+    expect(translatePageInjector.restoreActive).toHaveBeenCalled();
+
+    call(IpcChannels.videoPlayerGet);
+    expect(videoHost.get).toHaveBeenCalled();
+    const state = call(IpcChannels.videoPlayerState) as { page: unknown };
+    expect(state.page).toEqual({ __page: true });
+  });
+});
+
+describe('write delegators validate then apply', () => {
+  it('popup-blocker:trust routes a valid origin to the host (onAction)', () => {
+    fire(IpcChannels.popupBlockerTrust, 'https://trusted.test');
+    expect(popupHost.trustOrigin).toHaveBeenCalledWith('https://trusted.test');
+    fire(IpcChannels.popupBlockerTrust, 42); // invalid → swallowed, host untouched
+    expect(popupHost.trustOrigin).toHaveBeenCalledTimes(1);
+  });
+
+  it('typo:site-set / ignored-word-add / dictionary-delete / dictionary-cancel', () => {
+    call(IpcChannels.typoSiteSet, { origin: 'https://x.test', enabled: false });
+    expect(typoHost.setSiteEnabled).toHaveBeenCalledWith('https://x.test', false);
+
+    call(IpcChannels.typoIgnoredWordAdd, { word: 'blorp', language: 'en' });
+    expect(typoHost.addIgnoredWord).toHaveBeenCalledWith('blorp', 'en');
+
+    call(IpcChannels.typoDictionaryDelete, 'en-US');
+    expect(dictMgr.remove).toHaveBeenCalledWith('en-US');
+
+    fire(IpcChannels.typoDictionaryCancel, 'en-US');
+    expect(dictMgr.cancel).toHaveBeenCalledWith('en-US');
+  });
+
+  it('translate:site-set / glossary add+remove / cloud-fallback-respond', () => {
+    call(IpcChannels.translateSiteSet, { origin: 'https://x.test', enabled: true });
+    expect(translateHost.setSiteEnabled).toHaveBeenCalledWith('https://x.test', true);
+
+    call(IpcChannels.translateGlossaryAdd, {
+      source: 'cat',
+      target: 'kedi',
+      caseSensitive: false,
+    });
+    expect(translateHost.addGlossaryTerm).toHaveBeenCalled();
+
+    fire(IpcChannels.translateCloudFallbackRespond, {
+      requestId: 'r1',
+      allow: true,
+      remember: false,
+    });
+    expect(respondTranslateCloudFallback).toHaveBeenCalled();
+  });
+
+  it('video-player:site-set re-skins the active tab after the update', async () => {
+    await call(IpcChannels.videoPlayerSiteSet, { origin: 'https://x.test', enabled: false });
+    expect(videoHost.setSiteEnabled).toHaveBeenCalledWith('https://x.test', false);
+    expect(videoInjector.refreshActive).toHaveBeenCalled();
   });
 });
