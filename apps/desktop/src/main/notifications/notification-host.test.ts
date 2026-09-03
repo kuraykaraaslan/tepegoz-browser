@@ -143,4 +143,18 @@ describe('attach', () => {
     NotificationHost.attach();
     expect(storeSubscribe).toHaveBeenCalledTimes(1);
   });
+
+  it('the wired broadcast pushes the center snapshot to every live app window', () => {
+    const live = liveWindow();
+    const deadSend = vi.fn();
+    const dead = { isDestroyed: () => true, webContents: { send: deadSend } };
+    getAllWindows.mockReturnValue([dead, live.win]);
+
+    NotificationHost.attach();
+    const broadcast = storeSubscribe.mock.calls[0]![0] as () => void;
+    broadcast();
+
+    expect(live.send).toHaveBeenCalledWith(expect.anything(), []); // state() → []
+    expect(deadSend).not.toHaveBeenCalled();
+  });
 });
