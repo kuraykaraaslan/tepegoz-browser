@@ -9,9 +9,8 @@ vi.mock('../tabs', () => ({
     focusedWindow: () => focusedWindow() as unknown,
   },
 }));
-vi.mock('@tepegoz/libs', () => ({
-  Logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
-}));
+const logger = vi.hoisted(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() }));
+vi.mock('@tepegoz/libs', () => ({ Logger: logger }));
 const journalSent = vi.fn();
 vi.mock('./certificate-journal', () => ({
   journalClientCertificateSent: (...a: unknown[]): void => {
@@ -23,6 +22,7 @@ const {
   clearClientCertificateChoices,
   decideClientCertificate,
   listClientCertificateChoices,
+  registerClientCertificateHandler,
   resolveClientCertificate,
 } = await import('./client-certificate-broker');
 
@@ -241,5 +241,100 @@ describe('listClientCertificateChoices', () => {
     // Asked again rather than replaying the remembered yes — otherwise "forget" would be a label on
     // a button that did nothing.
     await expect(again).resolves.toBeNull();
+  });
+});
+
+/**
+ * The paths that must ALSO send nothing: a window that vanished between focus and prompt, a prompt the
+ * user never answers, a URL that will not parse, and a duplicate answer arriving after the request has
+ * already settled.
+ */
+describe('the "send nothing" edges', () => {
+  it('sends nothing when the focused window was destroyed before we could ask', async () => {
+    focusedWindow.mockReturnValue({ isDestroyed: () => true, webContents: { send } });
+    await expect(decideClientCertificate('https://a.example.com/', CERTS)).resolves.toBeNull();
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('sends nothing, and says so, when the prompt times out unanswered', async () => {
+    vi.useFakeTimers();
+    try {
+      const decision = decideClientCertificate('https://intranet.example.com/', CERTS);
+      await vi.advanceTimersByTimeAsync(120_000);
+      await expect(decision).resolves.toBeNull();
+      expect(logger.info).toHaveBeenCalledWith('Client-certificate prompt timed out; sent nothing', {
+        origin: 'https://intranet.example.com',
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('uses the raw string as the origin key when the URL will not parse', async () => {
+    const decision = decideClientCertificate('not a url', CERTS);
+    const [, request] = send.mock.calls.at(-1) as [string, { origin: string }];
+    expect(request.origin).toBe('not a url');
+    answerLastPrompt(null);
+    await expect(decision).resolves.toBeNull();
+  });
+
+  it('ignores a duplicate answer that arrives after the request has settled', async () => {
+    const decision = decideClientCertificate('https://a.example.com/', CERTS);
+    const [, request] = send.mock.calls.at(-1) as [string, { requestId: string }];
+    resolveClientCertificate({ requestId: request.requestId, index: 0 });
+    await expect(decision).resolves.toBe(CERTS[0]);
+    expect(() =>
+      resolveClientCertificate({ requestId: request.requestId, index: 1 }),
+    ).not.toThrow();
+  });
+});
+
+/**
+ * The Electron seam. `preventDefault()` must fire first and unconditionally — without it Chromium has
+ * already sent `certificateList[0]` — and every settled outcome must reach Chromium's callback: the
+ * chosen certificate, or no argument at all for "send nothing", including when the decision rejects.
+ */
+describe('registerClientCertificateHandler', () => {
+  const onApp = vi.fn<(event: string, listener: (...a: unknown[]) => void) => void>();
+  const fakeApp = { on: onApp } as unknown as Electron.App;
+
+  function handlerFor(url: string, certificateList: Certificate[], callback: () => void): void {
+    registerClientCertificateHandler(fakeApp);
+    const listener = onApp.mock.calls.find(([e]) => e === 'select-client-certificate')?.[1];
+    const event = { preventDefault: vi.fn() };
+    listener?.(event, {}, url, certificateList, callback);
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+  }
+
+  it('prevents the silent default, then feeds Chromium the chosen certificate', async () => {
+    const callback = vi.fn();
+    handlerFor('https://intranet.example.com/', CERTS, callback);
+    answerLastPrompt(1);
+    await vi.waitFor(() => {
+      expect(callback).toHaveBeenCalledWith(CERTS[1]);
+    });
+  });
+
+  it('calls the callback with no argument — "send nothing" — when the user declines', async () => {
+    const callback = vi.fn();
+    handlerFor('https://intranet.example.com/', CERTS, callback);
+    answerLastPrompt(null);
+    await vi.waitFor(() => {
+      expect(callback).toHaveBeenCalledWith();
+    });
+  });
+
+  it('sends nothing and warns when the decision itself rejects', async () => {
+    focusedWindow.mockImplementation(() => {
+      throw new Error('boom');
+    });
+    const callback = vi.fn();
+    handlerFor('https://intranet.example.com/', CERTS, callback);
+    await vi.waitFor(() => {
+      expect(callback).toHaveBeenCalledWith();
+    });
+    expect(logger.warn).toHaveBeenCalledWith('Client-certificate decision failed; sent nothing', {
+      err: expect.stringContaining('boom') as string,
+    });
   });
 });
