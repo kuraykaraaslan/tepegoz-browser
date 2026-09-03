@@ -26,14 +26,28 @@ const prefs = vi.hoisted(() => ({
   downloadHistoryRetention: 'manual' as const,
 }));
 const dialog = vi.hoisted(() => ({ showSaveDialog: vi.fn() }));
+const bw = vi.hoisted((): { focused: unknown; all: unknown[] } => ({ focused: null, all: [] }));
+const shellMock = vi.hoisted(() => ({
+  openPath: vi.fn<() => Promise<string>>(() => Promise.resolve('')),
+  showItemInFolder: vi.fn(),
+}));
+const resume = vi.hoisted(() => ({
+  resumeInterrupted: vi.fn(() => ({ action: 'resume' })),
+  resumeRefusal: vi.fn(
+    () => Object.assign(new Error('resume refused'), { statusCode: 409 }) as Error,
+  ),
+}));
+const autoretry = vi.hoisted(() => ({ forget: vi.fn() }));
 
 vi.mock('./download-service-fs.electron', () => fs);
 vi.mock('./download-service-store.electron', () => store);
+vi.mock('./download-service-resume.electron', () => resume);
+vi.mock('./download-service-autoretry.electron', () => autoretry);
 vi.mock('@tepegoz/preferences', () => ({ default: { getAll: () => prefs } }));
 vi.mock('electron', () => ({
-  BrowserWindow: { getFocusedWindow: () => null, getAllWindows: () => [] },
+  BrowserWindow: { getFocusedWindow: () => bw.focused, getAllWindows: () => bw.all },
   dialog,
-  shell: { openPath: vi.fn(() => Promise.resolve('')), showItemInFolder: vi.fn() },
+  shell: shellMock,
 }));
 
 const { runCommand } = await import('./download-service-commands.electron');
@@ -43,16 +57,18 @@ interface Rec {
   url: string;
   filename: string;
   status: string;
-  trustVerdict?: string;
-  quarantinePath?: string;
-  finalPath?: string;
+  trustVerdict?: string | undefined;
+  quarantinePath?: string | undefined;
+  finalPath?: string | undefined;
   provenance: { actor: string };
-  item?: {
-    pause: ReturnType<typeof vi.fn>;
-    resume: ReturnType<typeof vi.fn>;
-    cancel: ReturnType<typeof vi.fn>;
-    canResume: ReturnType<typeof vi.fn>;
-  };
+  item?:
+    | {
+        pause: ReturnType<typeof vi.fn>;
+        resume: ReturnType<typeof vi.fn>;
+        cancel: ReturnType<typeof vi.fn>;
+        canResume: ReturnType<typeof vi.fn>;
+      }
+    | undefined;
 }
 
 function fakeItem() {
@@ -88,6 +104,10 @@ const run = (s: unknown, id: string, action: string, wc?: unknown) =>
 beforeEach(() => {
   vi.clearAllMocks();
   prefs.downloadAskEachTime = false;
+  bw.focused = null;
+  bw.all = [];
+  shellMock.openPath.mockResolvedValue('');
+  resume.resumeInterrupted.mockReturnValue({ action: 'resume' });
 });
 afterEach(() => vi.clearAllMocks());
 
@@ -121,9 +141,9 @@ describe('runCommand', () => {
     });
 
     it('refuses a download that is not in quarantine yet with 409', async () => {
-      await expect(
-        run(state({ status: 'in_progress' }), 'd1', 'release'),
-      ).rejects.toMatchObject({ statusCode: 409 });
+      await expect(run(state({ status: 'in_progress' }), 'd1', 'release')).rejects.toMatchObject({
+        statusCode: 409,
+      });
       expect(fs.moveFile).not.toHaveBeenCalled();
     });
 
@@ -177,5 +197,106 @@ describe('runCommand', () => {
   it('clear removes the record outright', async () => {
     await run(state({ status: 'completed' }), 'd1', 'clear');
     expect(store.removeRecord).toHaveBeenCalledWith(expect.anything(), 'd1');
+  });
+
+  describe('resume without a live DownloadItem', () => {
+    it('delegates to resumeInterrupted and lets a "resume" plan through', async () => {
+      resume.resumeInterrupted.mockReturnValue({ action: 'resume' });
+      await run(state({ status: 'interrupted', item: undefined }), 'd1', 'resume');
+      expect(resume.resumeInterrupted).toHaveBeenCalled();
+    });
+
+    it('throws the refusal when the plan is not "resume"', async () => {
+      resume.resumeInterrupted.mockReturnValue({ action: 'refuse' });
+      await expect(
+        run(state({ status: 'interrupted', item: undefined }), 'd1', 'resume'),
+      ).rejects.toMatchObject({ statusCode: 409 });
+      expect(resume.resumeRefusal).toHaveBeenCalled();
+    });
+
+    it('a live item that reports it cannot resume is recorded, not overwritten', async () => {
+      const item = fakeItem();
+      item.canResume.mockReturnValue(false);
+      await run(state({ status: 'paused', item }), 'd1', 'resume');
+      expect(item.resume).not.toHaveBeenCalled();
+      expect(store.patch).toHaveBeenCalledWith(
+        expect.anything(),
+        'd1',
+        expect.objectContaining({ canResume: false }),
+      );
+    });
+  });
+
+  describe('open', () => {
+    it('opens a released file via the OS shell', async () => {
+      await run(state({ status: 'completed', finalPath: '/dl/f.bin' }), 'd1', 'open');
+      expect(shellMock.openPath).toHaveBeenCalledWith('/dl/f.bin');
+    });
+
+    it('refuses a download that has not been released yet with 409', async () => {
+      await expect(
+        run(state({ status: 'quarantined', finalPath: undefined }), 'd1', 'open'),
+      ).rejects.toMatchObject({ statusCode: 409 });
+    });
+
+    it('surfaces an OS open failure as a 500', async () => {
+      shellMock.openPath.mockResolvedValueOnce('no application registered');
+      await expect(
+        run(state({ status: 'completed', finalPath: '/dl/f.bin' }), 'd1', 'open'),
+      ).rejects.toMatchObject({ statusCode: 500 });
+    });
+  });
+
+  describe('reveal', () => {
+    it('shows the final path in the file browser', async () => {
+      await run(state({ status: 'completed', finalPath: '/dl/f.bin' }), 'd1', 'reveal');
+      expect(shellMock.showItemInFolder).toHaveBeenCalledWith('/dl/f.bin');
+    });
+
+    it('falls back to the quarantine path when there is no final path', async () => {
+      await run(
+        state({ status: 'quarantined', finalPath: undefined, quarantinePath: '/q/f.bin' }),
+        'd1',
+        'reveal',
+      );
+      expect(shellMock.showItemInFolder).toHaveBeenCalledWith('/q/f.bin');
+    });
+
+    it('404s when neither path is available', async () => {
+      await expect(
+        run(
+          state({ status: 'in_progress', finalPath: undefined, quarantinePath: undefined }),
+          'd1',
+          'reveal',
+        ),
+      ).rejects.toMatchObject({ statusCode: 404 });
+    });
+  });
+
+  describe('release — the save-dialog paths', () => {
+    it('computes a fresh unique final path when the record has none', async () => {
+      await run(
+        state({ status: 'quarantined', trustVerdict: 'safe', finalPath: undefined }),
+        'd1',
+        'release',
+      );
+      expect(fs.uniquePath).toHaveBeenCalledWith('/dl', 'f.bin');
+      expect(fs.moveFile).toHaveBeenCalled();
+    });
+
+    it('prompts with the focused window and moves to the chosen path under "ask each time"', async () => {
+      prefs.downloadAskEachTime = true;
+      bw.focused = { __win: true };
+      dialog.showSaveDialog.mockResolvedValueOnce({
+        canceled: false,
+        filePath: '/picked/here.bin',
+      });
+      await run(state({ status: 'quarantined', trustVerdict: 'safe' }), 'd1', 'release');
+      expect(dialog.showSaveDialog).toHaveBeenCalledWith(
+        { __win: true },
+        expect.objectContaining({ defaultPath: expect.any(String) as string }),
+      );
+      expect(fs.moveFile).toHaveBeenCalledWith('/q/f.bin', '/picked/here.bin');
+    });
   });
 });
