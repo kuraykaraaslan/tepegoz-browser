@@ -50,7 +50,8 @@ class AppError extends Error {
     this.statusCode = s;
   }
 }
-vi.mock('@tepegoz/libs', () => ({ AppError, Logger: { warn: vi.fn() } }));
+const logger = vi.hoisted(() => ({ warn: vi.fn() }));
+vi.mock('@tepegoz/libs', () => ({ AppError, Logger: logger }));
 
 const prefs = vi.hoisted(() => ({
   getAll: vi.fn(() => ({
@@ -243,6 +244,12 @@ describe('assertOpenablePath / assertReadableFile', () => {
     expect(await Host.assertOpenablePath('/g1/doc.txt')).toBe('/g1/doc.txt');
     expect(policy.assertMembership).toHaveBeenCalledWith('/g1/doc.txt');
   });
+
+  it('assertReadableFile returns the real path for an allowed regular file', async () => {
+    realpath.mockResolvedValue('/g1/doc.txt');
+    expect(await Host.assertReadableFile('/g1/doc.txt')).toBe('/g1/doc.txt');
+    expect(policy.assertMembership).toHaveBeenCalledWith('/g1/doc.txt');
+  });
 });
 
 describe('the FileSystemHost seam', () => {
@@ -342,6 +349,21 @@ describe('the FileSystemHost seam', () => {
     const hits = await host.search(path.join(path.sep, 'r'), '*.log', 2);
     expect(hits).toHaveLength(2);
   });
+
+  it('search skips a directory it cannot read rather than failing the whole walk', async () => {
+    const host = await freshFsHost();
+    fsp.readdir.mockImplementation((dir: unknown) =>
+      String(dir).endsWith('root')
+        ? Promise.resolve([
+            { name: 'ok.log', isFile: () => true, isDirectory: () => false },
+            { name: 'locked', isFile: () => false, isDirectory: () => true },
+          ])
+        : Promise.reject(new Error('EACCES')),
+    );
+    const root = path.join(path.sep, 'root');
+    const hits = await host.search(root, '**/*.log', 10);
+    expect(hits).toEqual([path.join(root, 'ok.log')]); // the locked subtree contributed nothing
+  });
 });
 
 describe('writeExport / writeExportBundle', () => {
@@ -395,6 +417,22 @@ describe('seedDefaultGrant (via a fresh init)', () => {
         { path: path.join(path.sep, 'home', 'u', 'tepegoz'), mode: 'full', recursive: true },
       ],
     });
+  });
+
+  it('logs, but still writes the grant, when the default-folder mkdir fails', async () => {
+    prefs.getAll.mockReturnValue({
+      fileOperationsEnabled: true,
+      fileAccessGrants: [],
+      fileAccessSeeded: false,
+    });
+    fsp.mkdir.mockRejectedValueOnce(new Error('EACCES'));
+    await freshFsHost();
+    await new Promise((r) => setTimeout(r, 0)); // let the void mkdir().catch(...) run
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Could not create default file-operations folder',
+      expect.objectContaining({ err: expect.stringContaining('EACCES') as string }),
+    );
+    expect(prefs.update).toHaveBeenCalled();
   });
 });
 
