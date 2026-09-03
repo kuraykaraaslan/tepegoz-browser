@@ -199,6 +199,42 @@ describe('the Runtime.bindingCalled listener', () => {
     bindingListener(wc)(...call(JSON.stringify({ url: 'https://video.test/watch' })));
     expect(windows.list[0]!.webContents.send).not.toHaveBeenCalled();
   });
+
+  it('an unparseable page URL resolves to a null origin and is not broadcast', async () => {
+    const wc = fakeWc();
+    tab.active = wc;
+    windows.list = [{ isDestroyed: () => false, webContents: { send: vi.fn() } }];
+    await navTo('https://video.test/watch', wc);
+    wc.getURL.mockReturnValue('::: not a url :::');
+    bindingListener(wc)(...call(JSON.stringify({ url: 'x' })));
+    expect(windows.list[0]!.webContents.send).not.toHaveBeenCalled();
+  });
+});
+
+describe('per-tab listener teardown', () => {
+  it('the destroyed handler removes the message listener and forgets the wc', async () => {
+    const wc = fakeWc();
+    await navTo('https://video.test/watch', wc);
+    const onDestroyed = wc.once.mock.calls.find((c) => c[0] === 'destroyed')?.[1] as () => void;
+    const listener = bindingListener(wc);
+
+    onDestroyed();
+    expect(wc.debugger.removeListener).toHaveBeenCalledWith('message', listener);
+
+    await navTo('https://video.test/2', wc); // forgotten → re-arms
+    expect(wc.debugger.on).toHaveBeenCalledTimes(2);
+  });
+
+  it('the destroyed handler leaves an already-destroyed debugger untouched', async () => {
+    const wc = fakeWc();
+    await navTo('https://video.test/watch', wc);
+    const onDestroyed = wc.once.mock.calls.find((c) => c[0] === 'destroyed')?.[1] as () => void;
+
+    wc.isDestroyed.mockReturnValue(true);
+    onDestroyed();
+
+    expect(wc.debugger.removeListener).not.toHaveBeenCalled();
+  });
 });
 
 describe('refreshActive', () => {
@@ -230,5 +266,14 @@ describe('refreshActive', () => {
   it('is a no-op with no active tab', async () => {
     tab.active = null;
     await expect(injector.refreshActive()).resolves.toBeUndefined();
+  });
+
+  it('disableOn bails on a destroyed active tab', async () => {
+    const wc = fakeWc();
+    wc.isDestroyed.mockReturnValue(true);
+    tab.active = wc;
+    host.isActiveForPage.mockReturnValue(false);
+    await injector.refreshActive();
+    expect(wc.executeJavaScript).not.toHaveBeenCalled();
   });
 });
