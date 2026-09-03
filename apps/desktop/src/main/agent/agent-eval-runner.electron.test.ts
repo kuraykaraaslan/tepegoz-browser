@@ -53,12 +53,15 @@ vi.mock('@tepegoz/shared-types', () => ({ isRunnableProvider }));
 const tm = vi.hoisted(
   (): {
     activeWc: unknown;
-    getState: () => { tabs: { id: string; url: string }[]; activeId: string | null };
+    getState: ReturnType<typeof vi.fn>;
     activeWebContents: () => unknown;
     createTab: ReturnType<typeof vi.fn>;
   } => ({
     activeWc: { __wc: true },
-    getState: () => ({ tabs: [], activeId: null }),
+    getState: vi.fn(() => ({
+      tabs: [] as { id: string; url: string }[],
+      activeId: null as string | null,
+    })),
     activeWebContents: () => tm.activeWc,
     createTab: vi.fn((): string | null => 't1'),
   }),
@@ -110,12 +113,14 @@ function fullEnv(): void {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  fs.writeFileSync.mockReset(); // a test overrides its impl to throw; clearAllMocks would keep that
   fs.readFileSync.mockReturnValue(JSON.stringify({ replies: ['reply one'] }));
   runAgent.mockResolvedValue({ summary: 'the answer', stoppedReason: 'done', steps: [] });
   browserHost.readPage.mockResolvedValue({ url: 'https://fixture.test/page', text: 'body text' });
   isRunnableProvider.mockReturnValue(true);
   tm.activeWc = { __wc: true };
   tm.createTab.mockReturnValue('t1');
+  tm.getState.mockReturnValue({ tabs: [], activeId: null });
 });
 afterEach(() => {
   for (const k of EVAL_KEYS) delete process.env[k];
@@ -200,6 +205,70 @@ describe('a full scripted run', () => {
     expect(tm.createTab).toHaveBeenCalledWith('https://fixture.test/page');
     expect(browserHost.waitForLoad).toHaveBeenCalled();
     expect(browserHost.navigate).not.toHaveBeenCalled();
+  });
+
+  it('passes working activeTabUrl / tabUrl callbacks and an onEvent hook to the agent', async () => {
+    fullEnv();
+    await maybeRunEval();
+    const args = runAgent.mock.calls[0] as unknown as unknown[];
+    const hooks = args[1] as { onEvent: (k: string, m: string, d?: string) => void };
+    const cfg = args[2] as {
+      activeTabUrl: () => string | undefined;
+      tabUrl: (id: string) => string | undefined;
+    };
+
+    // empty tab state -> both resolve to undefined
+    expect(cfg.activeTabUrl()).toBeUndefined();
+    expect(cfg.tabUrl('t1')).toBeUndefined();
+
+    tm.getState.mockReturnValue({
+      tabs: [{ id: 't1', url: 'https://tab.test/x' }],
+      activeId: 't1',
+    });
+    expect(cfg.activeTabUrl()).toBe('https://tab.test/x');
+    expect(cfg.tabUrl('t1')).toBe('https://tab.test/x');
+    expect(cfg.tabUrl('ghost')).toBeUndefined();
+
+    expect(() => {
+      hooks.onEvent('step', 'clicked', 'detail-here');
+    }).not.toThrow();
+    expect(logger.info).toHaveBeenCalledWith('[eval] step: clicked', { detail: 'detail-here' });
+  });
+
+  it('records completionOutcome + visionEscalations in the result when the run reports them', async () => {
+    fullEnv();
+    runAgent.mockResolvedValue({
+      summary: 'a',
+      stoppedReason: 'done',
+      steps: [],
+      completionOutcome: 'confirmed',
+      visionEscalations: 2,
+    });
+    await maybeRunEval();
+    const [, json] = fs.writeFileSync.mock.calls[0]! as [string, string];
+    expect(JSON.parse(json)).toMatchObject({ completionOutcome: 'confirmed', visionEscalations: 2 });
+  });
+
+  it('self-heals a not-ready entry page by retrying the readiness barrier', async () => {
+    fullEnv();
+    browserHost.readPage.mockResolvedValueOnce({ url: 'about:blank', text: '' });
+    await maybeRunEval();
+    expect(runAgent).toHaveBeenCalled();
+    expect(fs.writeFileSync).toHaveBeenCalledWith(
+      '/tmp/eval-out.json',
+      expect.stringContaining('finalUrl'),
+      'utf8',
+    );
+  });
+
+  it('swallows a failure to write the { error } OUT file, still quitting', async () => {
+    fullEnv();
+    runAgent.mockRejectedValue(new Error('agent blew up'));
+    fs.writeFileSync.mockImplementation(() => {
+      throw new Error('disk full');
+    });
+    await expect(maybeRunEval()).resolves.toBeUndefined();
+    expect(appMock.quit).toHaveBeenCalled();
   });
 
   it('threads the run-token ceiling through, treating garbage / non-positive as "off"', async () => {
