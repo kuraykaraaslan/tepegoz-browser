@@ -257,3 +257,43 @@ describe('pageChange evaluation', () => {
     expect(logger.warn).toHaveBeenCalled();
   });
 });
+
+describe('interval callback + start/done notifications', () => {
+  it('the armed interval fires a scheduled tick after TICK_MS', async () => {
+    vi.useFakeTimers();
+    try {
+      store.due.mockReturnValue([]);
+      sched.init();
+      store.due.mockClear();
+      await vi.advanceTimersByTimeAsync(30_000); // one TICK_MS → setInterval's `void tick()`
+      expect(runtime.timer).not.toBeNull();
+      expect(store.due).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('fires the start and done notifications when the task policy asks for them', async () => {
+    runtime.runner = vi.fn(() => Promise.resolve({ ok: true, summary: 'all done' }));
+    store.due.mockReturnValue([
+      task({
+        policy: { notifyOnStart: true, notifyOnDone: true, notifyOnError: false },
+        nextRunAt: 0,
+      }),
+    ]);
+
+    sched.init();
+    await flush();
+
+    expect(notify.push).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'info',
+        title: 'Started Nightly',
+        channels: ['center', 'toast'],
+      }),
+    );
+    expect(notify.push).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'info', title: 'Done Nightly' }),
+    );
+  });
+});
