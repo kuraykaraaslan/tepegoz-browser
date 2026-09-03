@@ -186,4 +186,83 @@ describe('BrowsingWebRequestService', () => {
     await fake.before(beforeDetails(1));
     expect(seen).toHaveBeenCalledTimes(1);
   });
+
+  describe('the per-session response-header stamp', () => {
+    const STAMP = { 'x-dns-prefetch-control': 'off' };
+
+    it('is merged onto whatever the handler pipeline produced', async () => {
+      const fake = fakeWebRequest();
+      BrowsingWebRequestService.attach(fake.webRequest, { stampResponseHeaders: STAMP });
+      BrowsingWebRequestService.onHeadersReceived('a', () => ({
+        responseHeaders: { 'x-a': ['1'] },
+      }));
+
+      const res = await fake.headers();
+      expect(res.responseHeaders).toMatchObject({
+        server: ['fixture'],
+        'x-a': ['1'],
+        'x-dns-prefetch-control': ['off'],
+      });
+    });
+
+    it('overrides an existing value for the same header, and wraps a scalar header value', async () => {
+      const fake = fakeWebRequest();
+      BrowsingWebRequestService.attach(fake.webRequest, {
+        stampResponseHeaders: { 'x-dns-prefetch-control': 'off' },
+      });
+      const details = {
+        ...headersDetails(),
+        responseHeaders: {
+          'x-dns-prefetch-control': ['on'],
+          'x-scalar': 'plain' as unknown as string[],
+        },
+      };
+      const res = await fake.headers(details);
+      expect(res.responseHeaders?.['x-dns-prefetch-control']).toEqual(['off']);
+      expect(res.responseHeaders?.['x-scalar']).toEqual(['plain']);
+    });
+
+    it('is skipped when a handler cancelled the request', async () => {
+      const fake = fakeWebRequest();
+      BrowsingWebRequestService.attach(fake.webRequest, { stampResponseHeaders: STAMP });
+      BrowsingWebRequestService.onHeadersReceived('block', () => ({ cancel: true }));
+
+      const res = await fake.headers();
+      expect(res).toEqual({ cancel: true });
+    });
+
+    it('is still applied when there were no handlers at all', async () => {
+      const fake = fakeWebRequest();
+      BrowsingWebRequestService.attach(fake.webRequest, { stampResponseHeaders: STAMP });
+      const res = await fake.headers();
+      expect(res.responseHeaders?.['x-dns-prefetch-control']).toEqual(['off']);
+    });
+  });
+
+  it('a headers handler that only sets a status line still merges into the response', async () => {
+    const fake = fakeWebRequest();
+    BrowsingWebRequestService.attach(fake.webRequest);
+    BrowsingWebRequestService.onHeadersReceived('sl', () => ({
+      statusLine: 'HTTP/1.1 503 Service Unavailable',
+    }));
+    const res = await fake.headers();
+    expect(res.statusLine).toBe('HTTP/1.1 503 Service Unavailable');
+  });
+
+  it('observer failures — sync throw and async reject — never stop the other observers', () => {
+    const fake = fakeWebRequest();
+    BrowsingWebRequestService.attach(fake.webRequest);
+    const survivor = vi.fn();
+
+    BrowsingWebRequestService.onCompleted('sync-throw', () => {
+      throw new Error('observer exploded');
+    });
+    BrowsingWebRequestService.onCompleted('async-reject', () => Promise.reject(new Error('later')));
+    BrowsingWebRequestService.onCompleted('survivor', survivor);
+
+    expect(() => {
+      fake.completed({ id: 9 } as Electron.OnCompletedListenerDetails);
+    }).not.toThrow();
+    expect(survivor).toHaveBeenCalledOnce();
+  });
 });
