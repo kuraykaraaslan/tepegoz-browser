@@ -133,6 +133,20 @@ describe('history handlers', () => {
     expect(shared.broadcastConversationsState).toHaveBeenCalledTimes(2);
   });
 
+  it('get validates the id and delegates to AgentConversationStore', () => {
+    expect(call(IpcChannels.agentConversationsGet, 'c9')).toEqual({ id: 'c9' });
+    expect(shared.requireAgentEnabled).toHaveBeenCalled();
+    expect(store.get).toHaveBeenCalledWith(db.value, 'c9');
+  });
+
+  it('current resolves via AgentService for a live DB, and is null without one', () => {
+    expect(call(IpcChannels.agentConversationsCurrent, 'g1')).toEqual({ id: 'cur' });
+    expect(svc.currentConversation).toHaveBeenCalledWith(db.value, 'g1');
+
+    db.value = null;
+    expect(call(IpcChannels.agentConversationsCurrent, 'g1')).toBeNull();
+  });
+
   it('open validates {id, groupId} and delegates to AgentService', () => {
     call(IpcChannels.agentConversationsOpen, { id: 'c9', groupId: 'g1' });
     expect(svc.openConversation).toHaveBeenCalledWith(db.value, 'c9', 'g1');
