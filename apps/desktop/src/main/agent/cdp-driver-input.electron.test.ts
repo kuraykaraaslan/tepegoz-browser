@@ -242,3 +242,128 @@ describe('scrollPage', () => {
     expect(calls('Input.dispatchMouseEvent')[0]).toMatchObject({ deltaY: -120 });
   });
 });
+
+/** The human-input realism path: every gesture takes the `adapter !== undefined` branch, which routes
+ *  through the adapter's idle/click/moveTo/insertText/pressKey/scroll instead of raw CDP. */
+describe('the human-input adapter path', () => {
+  interface Adapter {
+    idle: ReturnType<typeof vi.fn>;
+    click: ReturnType<typeof vi.fn>;
+    moveTo: ReturnType<typeof vi.fn>;
+    insertText: ReturnType<typeof vi.fn>;
+    pressKey: ReturnType<typeof vi.fn>;
+    scroll: ReturnType<typeof vi.fn>;
+  }
+  let adapter: Adapter;
+
+  beforeEach(() => {
+    adapter = {
+      idle: vi.fn(() => Promise.resolve()),
+      click: vi.fn(() => Promise.resolve()),
+      moveTo: vi.fn(() => Promise.resolve()),
+      insertText: vi.fn(() => Promise.resolve()),
+      pressKey: vi.fn(() => Promise.resolve()),
+      scroll: vi.fn(() => Promise.resolve()),
+    };
+  });
+
+  it('hoverElement moves the pointer through the adapter, with no raw CDP move', async () => {
+    await hoverElement(cast(wc), 1, cast(adapter), cast(core));
+    expect(adapter.idle).toHaveBeenCalled();
+    expect(adapter.moveTo).toHaveBeenCalledWith(10, 20);
+    expect(calls('Input.dispatchMouseEvent')).toHaveLength(0);
+    expect(core.settle).not.toHaveBeenCalled();
+  });
+
+  it('fillElement clicks to focus, then select-all + insertText once focus lands', async () => {
+    dom.isFocused.mockResolvedValue(true);
+    const res = await fillElement(cast(wc), 1, 'hello', cast(adapter), cast(core));
+    expect(adapter.click).toHaveBeenCalledTimes(1);
+    expect(adapter.click).toHaveBeenCalledWith(10, 20);
+    expect(calls('DOM.focus')).toHaveLength(0); // focus took, so no programmatic fallback
+    expect(calls('Runtime.callFunctionOn')).toHaveLength(1); // selectAllContent
+    expect(adapter.insertText).toHaveBeenCalledWith('hello');
+    expect(res).toEqual({ widget: null });
+    expect(core.settle).toHaveBeenCalled();
+  });
+
+  it('fillElement retries the click three times then falls back to DOM.focus when focus never lands', async () => {
+    vi.useFakeTimers();
+    try {
+      dom.isFocused.mockResolvedValue(false);
+      const p = fillElement(cast(wc), 1, 'hi', cast(adapter), cast(core));
+      await vi.advanceTimersByTimeAsync(2500); // drain 3 × ~500ms waitForFocus polling budgets
+      const res = await p;
+      expect(adapter.click).toHaveBeenCalledTimes(3); // attempt 0 + two retries
+      expect(dom.centerOf).toHaveBeenCalledTimes(3); // initial + one recompute per retry
+      expect(calls('DOM.focus')).toHaveLength(1); // the last-resort programmatic focus
+      expect(adapter.insertText).toHaveBeenCalledWith('hi');
+      expect(res).toEqual({ widget: null });
+      expect(core.settle).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('fillElement drives a readonly widget popup through the adapter (two adapter clicks)', async () => {
+    dom.widgetKindOf.mockResolvedValue('readonly');
+    dom.findWidgetOptionInPage.mockResolvedValue({ x: 33, y: 44, label: 'Tue' });
+    const res = await fillElement(cast(wc), 1, 'Tue', cast(adapter), cast(core));
+    expect(adapter.click).toHaveBeenNthCalledWith(1, 10, 20); // open the widget at its centre
+    expect(adapter.click).toHaveBeenNthCalledWith(2, 33, 44); // click the matched option
+    expect(res).toEqual({ widget: null });
+    expect(core.settle).toHaveBeenCalled();
+  });
+
+  it('fillElement gives up on a readonly widget whose option never renders', async () => {
+    vi.useFakeTimers();
+    try {
+      dom.widgetKindOf.mockResolvedValue('readonly');
+      dom.findWidgetOptionInPage.mockResolvedValue(null);
+      const p = fillElement(cast(wc), 1, 'Nope', cast(adapter), cast(core));
+      await vi.advanceTimersByTimeAsync(1500); // exhaust the ~1000ms waitForWidgetOption budget
+      const res = await p;
+      expect(res).toEqual({ widget: 'readonly' });
+      expect(core.settle).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('sendKeys presses the chord through the adapter', async () => {
+    parseChords.mockReturnValue({ steps: [{ key: 'Enter', modifiers: 0 }], malformed: [] });
+    const res = await sendKeys(cast(wc), 'Enter', cast(adapter), cast(core));
+    expect(adapter.idle).toHaveBeenCalled();
+    expect(adapter.pressKey).toHaveBeenCalledWith(
+      { key: 'Enter', code: 'Enter', keyCode: 13 },
+      0,
+    );
+    expect(calls('Input.dispatchKeyEvent')).toHaveLength(0);
+    expect(res).toEqual({ sent: 1, unsupported: [] });
+  });
+
+  it('scrollPage scrolls through the adapter', async () => {
+    await scrollPage(cast(wc), 'down', undefined, cast(adapter), cast(core));
+    expect(adapter.idle).toHaveBeenCalled();
+    expect(adapter.scroll).toHaveBeenCalledWith('down', undefined);
+    expect(calls('Input.dispatchMouseEvent')).toHaveLength(0);
+    expect(core.settle).toHaveBeenCalled();
+  });
+});
+
+describe('specForStep — printable-key synthesis (via sendKeys, raw CDP)', () => {
+  it('synthesises a Digit code + text for a bare number key', async () => {
+    parseChords.mockReturnValue({ steps: [{ key: '5', modifiers: 0 }], malformed: [] });
+    const res = await sendKeys(cast(wc), '5', undefined, cast(core));
+    const down = calls('Input.dispatchKeyEvent')[0] as Record<string, unknown>;
+    expect(down).toMatchObject({ type: 'keyDown', code: 'Digit5', text: '5', windowsVirtualKeyCode: 53 });
+    expect(res).toEqual({ sent: 1, unsupported: [] });
+  });
+
+  it('reports a non-alphanumeric single character as unsupported', async () => {
+    parseChords.mockReturnValue({ steps: [{ key: '@', modifiers: 0 }], malformed: [] });
+    const res = await sendKeys(cast(wc), '@', undefined, cast(core));
+    expect(res).toEqual({ sent: 0, unsupported: ['@'] });
+    expect(calls('Input.dispatchKeyEvent')).toHaveLength(0);
+  });
+});
