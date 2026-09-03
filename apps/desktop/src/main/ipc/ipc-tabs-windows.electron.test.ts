@@ -84,6 +84,18 @@ vi.mock('../lib/i18n-main', () => ({
   mainStrings: () => ({ errors: { badRequest: 'bad', forbidden: 'forbidden' } }),
 }));
 
+const libsLogger = vi.hoisted(() => ({
+  warn: vi.fn(),
+  info: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+  redact: (s: string) => s,
+}));
+vi.mock('@tepegoz/libs', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return { ...actual, Logger: libsLogger };
+});
+
 /** The tab manager the sender window resolves to, and the three lookup paths that can reach it. */
 const tabs = vi.hoisted(() => ({
   api: {
@@ -103,6 +115,22 @@ const tabs = vi.hoisted(() => ({
     updateGroupSettings: vi.fn(),
     hideTab: vi.fn(),
     showTab: vi.fn(),
+    unhideTab: vi.fn(),
+    createTab: vi.fn(),
+    closeTab: vi.fn(),
+    activate: vi.fn(),
+    moveTab: vi.fn(),
+    setPinned: vi.fn(),
+    createGroup: vi.fn(),
+    moveGroup: vi.fn(),
+    assignToGroup: vi.fn(),
+    removeFromGroup: vi.fn(),
+    ungroup: vi.fn(),
+    goBack: vi.fn(),
+    goForward: vi.fn(),
+    reloadActive: vi.fn(),
+    goHome: vi.fn(),
+    reopenClosedTab: vi.fn(),
   },
   /** `undefined` models "this window has no tab manager" — the teardown case. All three lookups
    *  return `WindowTabs | undefined` (`tabs-manager-base.ts`), and the group-update path checks
@@ -487,5 +515,161 @@ describe('tab-group update — only what was sent', () => {
     expect(() => {
       fire(IpcChannels.tabsGroupUpdate, TRUSTED, { groupId: 'g-1', name: 'Research' });
     }).not.toThrow();
+  });
+});
+
+describe('the window-scoped tab actions delegate to the sender window', () => {
+  it('routes create / background-create / close / activate', () => {
+    fire(IpcChannels.tabsCreate, TRUSTED, 'https://a.test/');
+    expect(tabs.api.createTab).toHaveBeenCalledWith('https://a.test/');
+
+    fire(IpcChannels.tabsCreateBackground, TRUSTED, 'https://b.test/');
+    expect(tabs.api.createTab).toHaveBeenCalledWith('https://b.test/', { background: true });
+
+    fire(IpcChannels.tabsClose, TRUSTED, 't-9');
+    expect(tabs.api.closeTab).toHaveBeenCalledWith('t-9');
+
+    fire(IpcChannels.tabsActivate, TRUSTED, 't-9');
+    expect(tabs.api.activate).toHaveBeenCalledWith('t-9');
+  });
+
+  it('routes move / pin / set-hidden (both directions)', () => {
+    fire(IpcChannels.tabsMove, TRUSTED, { id: 't-1', toIndex: 2, intoGroupId: 'g-1' });
+    expect(tabs.api.moveTab).toHaveBeenCalledWith('t-1', 2, 'g-1');
+
+    fire(IpcChannels.tabsPin, TRUSTED, { id: 't-1', pinned: true });
+    expect(tabs.api.setPinned).toHaveBeenCalledWith('t-1', true);
+
+    fire(IpcChannels.tabsSetHidden, TRUSTED, { id: 't-1', hidden: true });
+    expect(tabs.api.hideTab).toHaveBeenCalledWith('t-1');
+
+    fire(IpcChannels.tabsSetHidden, TRUSTED, { id: 't-1', hidden: false });
+    expect(tabs.api.unhideTab).toHaveBeenCalledWith('t-1');
+  });
+
+  it('routes the group lifecycle actions', () => {
+    fire(IpcChannels.tabsGroupCreate, TRUSTED, { memberIds: ['t-1', 't-2'] });
+    expect(tabs.api.createGroup).toHaveBeenCalledWith(['t-1', 't-2']);
+
+    fire(IpcChannels.tabsGroupMove, TRUSTED, { groupId: 'g-1', toIndex: 0 });
+    expect(tabs.api.moveGroup).toHaveBeenCalledWith('g-1', 0);
+
+    fire(IpcChannels.tabsGroupAssign, TRUSTED, { tabId: 't-1', groupId: 'g-1' });
+    expect(tabs.api.assignToGroup).toHaveBeenCalledWith('t-1', 'g-1');
+
+    fire(IpcChannels.tabsGroupRemove, TRUSTED, 't-1');
+    expect(tabs.api.removeFromGroup).toHaveBeenCalledWith('t-1');
+
+    fire(IpcChannels.tabsUngroup, TRUSTED, 'g-1');
+    expect(tabs.api.ungroup).toHaveBeenCalledWith('g-1');
+  });
+
+  it('routes navigate + the four history/reload signals + reopen-closed', () => {
+    fire(IpcChannels.tabsNavigate, TRUSTED, 'https://go.test/');
+    expect(tabs.api.navigateActive).toHaveBeenCalledWith('https://go.test/');
+
+    fire(IpcChannels.tabsGoBack, TRUSTED);
+    fire(IpcChannels.tabsGoForward, TRUSTED);
+    fire(IpcChannels.tabsReload, TRUSTED);
+    fire(IpcChannels.tabsHome, TRUSTED);
+    expect(tabs.api.goBack).toHaveBeenCalled();
+    expect(tabs.api.goForward).toHaveBeenCalled();
+    expect(tabs.api.reloadActive).toHaveBeenCalled();
+    expect(tabs.api.goHome).toHaveBeenCalled();
+
+    fire(IpcChannels.tabsReopenClosed, TRUSTED, { id: 'closed-1' });
+    expect(tabs.api.reopenClosedTab).toHaveBeenCalledWith('closed-1');
+  });
+
+  it('drops a malformed tab-move payload with a warning instead of delegating', () => {
+    fire(IpcChannels.tabsMove, TRUSTED, { id: 't-1' }); // no toIndex
+    expect(tabs.api.moveTab).not.toHaveBeenCalled();
+    expect(libsLogger.warn).toHaveBeenCalled();
+  });
+
+  it('ignores every window action from an untrusted frame', () => {
+    fire(IpcChannels.tabsCreate, UNTRUSTED, 'https://evil/');
+    fire(IpcChannels.tabsClose, UNTRUSTED, 't-1');
+    fire(IpcChannels.tabsGoBack, UNTRUSTED);
+    expect(tabs.api.createTab).not.toHaveBeenCalled();
+    expect(tabs.api.closeTab).not.toHaveBeenCalled();
+    expect(tabs.api.goBack).not.toHaveBeenCalled();
+  });
+});
+
+describe('native context menus anchor on the sender window', () => {
+  it('opens the tab / hidden-tabs / nav-history / group menus', () => {
+    fire(IpcChannels.tabsContextMenu, TRUSTED, 't-1');
+    expect(menus.tab).toHaveBeenCalledWith(senderWindow, 't-1');
+
+    fire(IpcChannels.tabsHiddenMenu, TRUSTED);
+    expect(menus.hidden).toHaveBeenCalledWith(senderWindow);
+
+    fire(IpcChannels.tabsHistoryMenu, TRUSTED, 'back');
+    expect(menus.navHistory).toHaveBeenCalledWith(senderWindow, 'back');
+
+    fire(IpcChannels.tabsGroupContextMenu, TRUSTED, 'g-1');
+    expect(menus.group).toHaveBeenCalledWith(senderWindow, 'g-1');
+  });
+
+  it('opens the bookmark + extension menus with the parsed payload', () => {
+    fire(IpcChannels.bookmarksContextMenu, TRUSTED, {
+      id: 'bm-1',
+      type: 'bookmark',
+      variant: 'default',
+    });
+    expect(menus.bookmark).toHaveBeenCalledWith(senderWindow, 'bm-1', 'bookmark', 'default');
+
+    fire(IpcChannels.extensionContextMenu, TRUSTED, 'com.tepegoz.macros');
+    expect(menus.extension).toHaveBeenCalledWith(senderWindow, 'com.tepegoz.macros');
+  });
+
+  it('drops a malformed context-menu payload with a warning', () => {
+    fire(IpcChannels.tabsContextMenu, TRUSTED, { not: 'a tab id' });
+    expect(menus.tab).not.toHaveBeenCalled();
+    expect(libsLogger.warn).toHaveBeenCalledWith('Ignored tabs:context-menu: invalid payload');
+  });
+
+  it('ignores context-menu requests from an untrusted frame', () => {
+    fire(IpcChannels.tabsContextMenu, UNTRUSTED, 't-1');
+    fire(IpcChannels.bookmarksContextMenu, UNTRUSTED, { id: 'x', type: 'folder' });
+    expect(menus.tab).not.toHaveBeenCalled();
+    expect(menus.bookmark).not.toHaveBeenCalled();
+  });
+});
+
+describe('extension:open-request relays to the owning chrome window', () => {
+  it('closes the panel and forwards the id for a known extension', () => {
+    extensions.manifests.set('com.tepegoz.macros', {
+      id: 'com.tepegoz.macros',
+      surfaces: ['popup'],
+    });
+    fire(IpcChannels.extensionOpenRequest, TRUSTED, 'com.tepegoz.macros');
+    expect(popups.closed).toBe(1);
+  });
+
+  it('ignores an open-request for an unknown extension', () => {
+    fire(IpcChannels.extensionOpenRequest, TRUSTED, 'com.unknown.ext');
+    expect(popups.closed).toBe(0);
+    expect(libsLogger.warn).toHaveBeenCalledWith(
+      'Ignored extension:open-request for an unknown extension',
+      { id: 'com.unknown.ext' },
+    );
+  });
+});
+
+describe('submenu + quit signals', () => {
+  it('submenu:open attaches a flyout for the parsed kind', () => {
+    fire(IpcChannels.submenuOpen, TRUSTED, { kind: 'history', anchor: ANCHOR });
+    expect(popups.submenus.at(-1)).toMatchObject({
+      query: { surface: 'menu-sub', kind: 'history' },
+    });
+  });
+
+  it('app:quit marks quitting BEFORE it calls app.quit()', () => {
+    fire(IpcChannels.appQuit, TRUSTED);
+    expect(quit.marks).toBe(1);
+    expect(h.quits).toBe(1);
+    expect(Math.min(...h.markQuittingAt)).toBeLessThan(Math.min(...h.quitAt));
   });
 });
