@@ -1,71 +1,143 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
- * The broker's request-recording — what the Site Info bubble reads to decide which permission rows are
- * worth showing (ADR-0044 amendment 2026-09-02). The decision paths themselves (stored grant, global
- * notification switch, the prompt round-trip) are covered here only where they could SKIP the record:
- * a capability answered without a prompt is exactly the one a user may want to revisit.
+ * `WebPermissionBroker` — the per-origin Web permission prompt/decision broker. Pinned: every
+ * `request` records that the origin asked (even when short-circuited); `notifications` is auto-denied
+ * while the global switch is off; a stored `allowed`/`denied` answers without a prompt; an undecided
+ * request with no focused window is denied, otherwise it sends the prompt IPC and resolves on
+ * `respond` (persisting only when `remember`), or auto-denies at the 60s timeout; `requestAll` is
+ * sequential + short-circuiting; and `isAllowed` reflects the stored grant.
  */
 
-interface Bag {
-  sitePermissions: Record<string, Record<string, string>>;
-  notificationsEnabled: boolean;
-}
-const h = vi.hoisted<Bag>(() => ({ sitePermissions: {}, notificationsEnabled: true }));
-
-vi.mock('@tepegoz/preferences', () => ({
-  default: {
-    getAll: () => ({
-      sitePermissions: h.sitePermissions,
-      notificationsEnabled: h.notificationsEnabled,
-    }),
-    update: vi.fn(),
-  },
+const prefs = vi.hoisted(() => ({
+  getAll: vi.fn(() => ({
+    sitePermissions: {},
+    notificationsEnabled: true,
+  })),
+  update: vi.fn(),
 }));
-// No focused window: the prompt path resolves `false` at once instead of arming a 60s timer.
-vi.mock('../tabs', () => ({ default: { focusedWindow: () => null } }));
+vi.mock('@tepegoz/preferences', () => ({ default: prefs }));
+vi.mock('@tepegoz/desktop-ipc', () => ({
+  IpcChannels: new Proxy({}, { get: (_t, k) => k, has: () => true }),
+}));
 
-const { default: WebPermissionBroker, requestedCapabilities } = await import('./permission-broker');
+const focusedWindow = vi.hoisted(() => vi.fn((): unknown => null));
+vi.mock('../tabs', () => ({ default: { focusedWindow } }));
 
-beforeEach(() => {
-  h.sitePermissions = {};
-  h.notificationsEnabled = true;
+type Mod = typeof import('./permission-broker');
+async function load(): Promise<Mod> {
+  vi.resetModules();
+  return import('./permission-broker');
+}
+
+const win = () => ({ isDestroyed: () => false, webContents: { send: vi.fn() } });
+
+let mod: Mod;
+beforeEach(async () => {
+  vi.clearAllMocks();
+  prefs.getAll.mockReturnValue({ sitePermissions: {}, notificationsEnabled: true });
+  focusedWindow.mockReturnValue(null);
+  mod = await load();
 });
 
-describe('requestedCapabilities', () => {
-  it('is empty for an origin that has never asked', () => {
-    expect(requestedCapabilities('https://quiet.example')).toEqual([]);
+describe('request — short-circuits', () => {
+  it('records the asked capability even when the answer is short-circuited', async () => {
+    prefs.getAll.mockReturnValue({
+      sitePermissions: { 'https://a': { camera: 'allowed' } },
+      notificationsEnabled: true,
+    });
+    await mod.default.request('camera', 'https://a');
+    expect(mod.requestedCapabilities('https://a')).toEqual(['camera']);
   });
 
-  it('records a capability answered from a stored grant, without prompting', async () => {
-    h.sitePermissions['https://stored.example'] = { camera: 'allowed' };
-    await expect(WebPermissionBroker.request('camera', 'https://stored.example')).resolves.toBe(
-      true,
+  it('auto-denies notifications while the global switch is off', async () => {
+    prefs.getAll.mockReturnValue({ sitePermissions: {}, notificationsEnabled: false });
+    expect(await mod.default.request('notifications', 'https://a')).toBe(false);
+  });
+
+  it('answers from a stored allowed / denied decision without prompting', async () => {
+    prefs.getAll.mockReturnValue({
+      sitePermissions: { 'https://a': { camera: 'allowed', microphone: 'denied' } },
+      notificationsEnabled: true,
+    });
+    expect(await mod.default.request('camera', 'https://a')).toBe(true);
+    expect(await mod.default.request('microphone', 'https://a')).toBe(false);
+  });
+
+  it('denies an undecided request when there is no focused window', async () => {
+    focusedWindow.mockReturnValue(null);
+    expect(await mod.default.request('camera', 'https://a')).toBe(false);
+  });
+});
+
+describe('request — the prompt round-trip', () => {
+  it('sends the prompt IPC and resolves on respond, persisting only when remember is set', async () => {
+    const w = win();
+    focusedWindow.mockReturnValue(w);
+    const p = mod.default.request('camera', 'https://a');
+    expect(w.webContents.send).toHaveBeenCalledWith(
+      'notificationPermissionRequest',
+      expect.objectContaining({ origin: 'https://a', capability: 'camera' }),
     );
-    expect(requestedCapabilities('https://stored.example')).toEqual(['camera']);
+    const { requestId } = w.webContents.send.mock.calls[0]![1] as { requestId: string };
+
+    mod.default.respond({ requestId, allow: true, remember: true });
+    expect(await p).toBe(true);
+    expect(prefs.update).toHaveBeenCalledWith({
+      sitePermissions: { 'https://a': { camera: 'allowed' } },
+    });
   });
 
-  it('records a request refused by the global notifications switch', async () => {
-    h.notificationsEnabled = false;
-    await expect(WebPermissionBroker.request('notifications', 'https://off.example')).resolves.toBe(
-      false,
-    );
-    expect(requestedCapabilities('https://off.example')).toEqual(['notifications']);
+  it('does not persist when remember is not set, and ignores an unknown requestId', async () => {
+    const w = win();
+    focusedWindow.mockReturnValue(w);
+    const p = mod.default.request('camera', 'https://a');
+    const { requestId } = w.webContents.send.mock.calls[0]![1] as { requestId: string };
+
+    mod.default.respond({ requestId: 'perm-999', allow: true, remember: false }); // unknown → no-op
+    mod.default.respond({ requestId, allow: false, remember: false });
+    expect(await p).toBe(false);
+    expect(prefs.update).not.toHaveBeenCalled();
   });
 
-  it('records every capability of a multi-capability request up to the first refusal', async () => {
-    h.sitePermissions['https://call.example'] = { camera: 'denied' };
-    await expect(
-      WebPermissionBroker.requestAll(['camera', 'microphone'], 'https://call.example'),
-    ).resolves.toBe(false);
-    // The camera was refused, so the microphone was never asked for — and gets no row.
-    expect(requestedCapabilities('https://call.example')).toEqual(['camera']);
+  it('auto-denies at the prompt timeout', async () => {
+    vi.useFakeTimers();
+    const w = win();
+    focusedWindow.mockReturnValue(w);
+    const p = mod.default.request('camera', 'https://a');
+    vi.advanceTimersByTime(60_000);
+    expect(await p).toBe(false);
+    vi.useRealTimers();
+  });
+});
+
+describe('requestAll + isAllowed', () => {
+  it('requestAll is sequential and short-circuits on the first denial', async () => {
+    prefs.getAll.mockReturnValue({
+      sitePermissions: { 'https://a': { camera: 'denied', microphone: 'allowed' } },
+      notificationsEnabled: true,
+    });
+    expect(await mod.default.requestAll(['camera', 'microphone'], 'https://a')).toBe(false);
+    // microphone was never consulted
+    expect(mod.requestedCapabilities('https://a')).toEqual(['camera']);
   });
 
-  it('keeps origins apart', async () => {
-    h.sitePermissions['https://a.example'] = { geolocation: 'allowed' };
-    await WebPermissionBroker.request('geolocation', 'https://a.example');
-    expect(requestedCapabilities('https://a.example')).toEqual(['geolocation']);
-    expect(requestedCapabilities('https://b.example')).toEqual([]);
+  it('requestAll is true only when every capability is granted, false for an empty list', async () => {
+    prefs.getAll.mockReturnValue({
+      sitePermissions: { 'https://a': { camera: 'allowed', microphone: 'allowed' } },
+      notificationsEnabled: true,
+    });
+    expect(await mod.default.requestAll(['camera', 'microphone'], 'https://a')).toBe(true);
+    expect(await mod.default.requestAll([], 'https://a')).toBe(false);
+  });
+
+  it('isAllowed reflects the stored grant and the global switch', () => {
+    prefs.getAll.mockReturnValue({
+      sitePermissions: { 'https://a': { camera: 'allowed', notifications: 'allowed' } },
+      notificationsEnabled: false,
+    });
+    expect(mod.default.isAllowed('camera', 'https://a')).toBe(true);
+    expect(mod.default.isAllowed('notifications', 'https://a')).toBe(false);
+    expect(mod.default.isAllowed('camera', 'https://other')).toBe(false);
   });
 });
