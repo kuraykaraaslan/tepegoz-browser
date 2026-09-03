@@ -23,7 +23,7 @@ const lifecycle = vi.hoisted(() => ({
 }));
 const commands = vi.hoisted(() => ({ runCommand: vi.fn(() => Promise.resolve()) }));
 
-vi.mock('electron', () => ({}));
+vi.mock('electron', () => ({ BrowserWindow: { getAllWindows: () => [] } }));
 vi.mock('@tepegoz/persistence', () => persistence);
 vi.mock('../db/database.electron', () => db);
 vi.mock('../network/browsing-sessions.electron', () => ({ default: sessions }));
@@ -65,6 +65,21 @@ describe('init', () => {
       'downloads',
       expect.any(Function),
       { critical: true },
+    );
+
+    // The registration callback subscribes `will-download` on the session and routes it to the
+    // lifecycle's quarantine handler with the shared context.
+    const attach = sessions.register.mock.calls[0]![1] as (ses: { on: ReturnType<typeof vi.fn> }) => void;
+    const on = vi.fn();
+    attach({ on });
+    const willDownload = on.mock.calls.find((c) => c[0] === 'will-download')?.[1] as
+      | ((e: unknown, item: unknown, wc: unknown) => void)
+      | undefined;
+    willDownload?.({}, { __item: true }, { __wc: true });
+    expect(lifecycle.handleWillDownload).toHaveBeenCalledWith(
+      expect.any(Object),
+      { __item: true },
+      { __wc: true },
     );
   });
 
@@ -138,5 +153,12 @@ describe('delegation', () => {
     });
     expect(id).toBe('gen-id');
     expect(lifecycle.ingestGeneratedFile).toHaveBeenCalledTimes(1);
+  });
+
+  it('state() projects a snapshot and clearTerminal() returns a count', () => {
+    const s = DownloadService.state();
+    expect(s).toBeTypeOf('object');
+    expect(s).not.toBeNull();
+    expect(typeof DownloadService.clearTerminal()).toBe('number');
   });
 });
