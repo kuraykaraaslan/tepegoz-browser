@@ -80,13 +80,24 @@ const BookmarkTreeStore = vi.hoisted(() => ({
   listFlat: vi.fn(() => ['B']),
   toggleAtBar: vi.fn(() => true),
   isBookmarked: vi.fn(() => false),
+  isBookmarkedAnywhere: vi.fn(() => true),
+  getTree: vi.fn(() => [{ id: 'root', children: [] }]),
+  setTags: vi.fn(() => ['work']),
+  listTags: vi.fn(() => [{ tag: 'work', count: 3 }]),
+  createFolder: vi.fn(),
+  rename: vi.fn(),
+  remove: vi.fn(),
+  move: vi.fn(),
 }));
 const isBookmarkable = vi.hoisted(() => vi.fn(() => true));
+const importBookmarksHtmlToStore = vi.hoisted(() =>
+  vi.fn(() => ({ imported: 5, skipped: 1, folders: 2, truncated: false, errors: [] as string[] })),
+);
 vi.mock('@tepegoz/bookmarks', () => ({
   BookmarkTreeStore,
-  importBookmarksHtmlToStore: vi.fn(),
+  importBookmarksHtmlToStore,
   isBookmarkable,
-  serializeBookmarksHtml: () => '<html></html>',
+  serializeBookmarksHtml: (tree: unknown[]) => `<html>${String(tree.length)}</html>`,
 }));
 vi.mock('./ipc-bookmark-profiles', () => ({ registerBookmarkProfileIpc: vi.fn() }));
 vi.mock('../file-operations/file-operations-host', () => ({
@@ -242,5 +253,105 @@ describe('fileAccessPickFolder', () => {
       paths: ['/real/home/docs'],
       cancelled: false,
     });
+  });
+});
+
+describe('bookmark tree + tags + folders', () => {
+  it('bookmarksTree returns the store tree, or [] with no DB', () => {
+    expect(call('bookmarksTree')).toEqual([{ id: 'root', children: [] }]);
+    getDb.mockReturnValue(null);
+    expect(call('bookmarksTree')).toEqual([]);
+  });
+
+  it('bookmarksIsBookmarked consults isBookmarkedAnywhere', () => {
+    expect(call('bookmarksIsBookmarked', 'https://x/')).toBe(true);
+    expect(BookmarkTreeStore.isBookmarkedAnywhere).toHaveBeenCalledWith(
+      { __db: true },
+      'https://x/',
+    );
+    getDb.mockReturnValue(null);
+    expect(call('bookmarksIsBookmarked', 'https://x/')).toBe(false);
+  });
+
+  it('bookmarksImport runs the importer and rebroadcasts only on a real change', () => {
+    const result = call('bookmarksImport', { html: '<a>' });
+    expect(result).toMatchObject({ imported: 5, folders: 2 });
+    expect(importBookmarksHtmlToStore).toHaveBeenCalled();
+
+    importBookmarksHtmlToStore.mockReturnValueOnce({
+      imported: 0,
+      skipped: 3,
+      folders: 0,
+      truncated: false,
+      errors: [],
+    });
+    call('bookmarksImport', { html: '<a>' }); // nothing imported → no crash, no rebroadcast
+
+    getDb.mockReturnValue(null);
+    expect(call('bookmarksImport', { html: '<a>' })).toMatchObject({
+      errors: ['Database is unavailable'],
+    });
+  });
+
+  it('bookmarksExport serializes the tree (empty when no DB)', () => {
+    expect(call('bookmarksExport')).toBe('<html>1</html>');
+    getDb.mockReturnValue(null);
+    expect(call('bookmarksExport')).toBe('<html>0</html>');
+  });
+
+  it('bookmarksSetTags / bookmarksListTags round-trip through the store', () => {
+    expect(call('bookmarksSetTags', { id: 'b1', tags: ['work'] })).toEqual(['work']);
+    expect(BookmarkTreeStore.setTags).toHaveBeenCalledWith({ __db: true }, 'b1', ['work']);
+    expect(call('bookmarksListTags')).toEqual([{ tag: 'work', count: 3 }]);
+
+    getDb.mockReturnValue(null);
+    expect(call('bookmarksSetTags', { id: 'b1', tags: [] })).toEqual([]);
+    expect(call('bookmarksListTags')).toEqual([]);
+  });
+
+  it('createFolder / rename / remove / move delegate when a DB is present, no-op otherwise', () => {
+    call('bookmarksCreateFolder', { parentId: 'p', title: 'New', index: 0 });
+    expect(BookmarkTreeStore.createFolder).toHaveBeenCalledWith(
+      { __db: true },
+      { parentId: 'p', title: 'New', index: 0 },
+    );
+    call('bookmarksCreateFolder', { parentId: 'p', title: 'NoIndex' }); // index undefined branch
+    expect(BookmarkTreeStore.createFolder).toHaveBeenLastCalledWith(
+      { __db: true },
+      { parentId: 'p', title: 'NoIndex' },
+    );
+
+    call('bookmarksRename', { id: 'b1', title: 'X' });
+    expect(BookmarkTreeStore.rename).toHaveBeenCalledWith({ __db: true }, 'b1', 'X');
+    call('bookmarksRemove', 'b1');
+    expect(BookmarkTreeStore.remove).toHaveBeenCalledWith({ __db: true }, 'b1');
+    call('bookmarksMove', { id: 'b1', newParentId: 'p2', index: 2 });
+    expect(BookmarkTreeStore.move).toHaveBeenCalledWith({ __db: true }, 'b1', 'p2', 2);
+
+    getDb.mockReturnValue(null);
+    call('bookmarksRename', { id: 'b1', title: 'Y' });
+    call('bookmarksRemove', 'b1');
+    call('bookmarksMove', { id: 'b1', newParentId: 'p', index: 0 });
+    expect(BookmarkTreeStore.rename).toHaveBeenCalledTimes(1); // still just the one from the DB-present path
+  });
+});
+
+describe('the remaining thin delegators', () => {
+  it('agentCapabilitiesList / screenshotCapture / readerExtract / windowsOpenPrivate', async () => {
+    const agentMatrix = await import('../web-permissions/agent-matrix');
+    expect(call('agentCapabilitiesList')).toEqual([]);
+    void agentMatrix;
+
+    const screenshot = await import('../screenshots/user-screenshot.electron');
+    call('screenshotCapture', 'viewport');
+    expect(vi.mocked(screenshot.captureAndStore)).toHaveBeenCalledWith('viewport');
+
+    const reader = await import('../reader/reader.electron');
+    call('readerExtract');
+    expect(vi.mocked(reader.readActiveTabArticle)).toHaveBeenCalled();
+
+    const opener = await import('../private-window-opener');
+    call('windowsOpenPrivate');
+    expect(vi.mocked(opener.openPrivateWindow)).toHaveBeenCalled();
   });
 });
