@@ -92,6 +92,21 @@ describe('readActiveTabArticle', () => {
     expect(await readActiveTabArticle()).toBeNull();
   });
 
+  it('accepts a well-formed list block and rejects a malformed one', async () => {
+    withPayload(
+      article({ blocks: [{ kind: 'list', ordered: true, items: ['one', 'two', 'three'] }] }),
+    );
+    expect(await readActiveTabArticle()).not.toBeNull();
+
+    // ordered is not a boolean
+    withPayload(article({ blocks: [{ kind: 'list', ordered: 'yes', items: ['x'] } as never] }));
+    expect(await readActiveTabArticle()).toBeNull();
+
+    // an item is not a string
+    withPayload(article({ blocks: [{ kind: 'list', ordered: false, items: ['ok', 42] } as never] }));
+    expect(await readActiveTabArticle()).toBeNull();
+  });
+
   it('rejects an unknown block kind and a malformed heading level', async () => {
     withPayload(article({ blocks: [{ kind: 'marquee', text: 'hi' } as never] }));
     expect(await readActiveTabArticle()).toBeNull();
