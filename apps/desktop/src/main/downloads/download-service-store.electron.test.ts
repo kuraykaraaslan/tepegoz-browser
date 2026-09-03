@@ -8,20 +8,34 @@ import type { DownloadProvenance, DownloadStatus } from '@tepegoz/downloads';
  * newest-first projection, and the live rate join added for the speed/ETA row.
  */
 
+const bw = vi.hoisted(() => ({ windows: [] as unknown[] }));
 vi.mock('electron', () => ({
   app: { getPath: () => '/tmp/dl' },
-  BrowserWindow: { getAllWindows: () => [] },
+  BrowserWindow: { getAllWindows: () => bw.windows },
 }));
 vi.mock('node:fs', () => ({ mkdirSync: vi.fn() }));
-vi.mock('@tepegoz/libs', () => ({ Logger: { warn: vi.fn() } }));
-vi.mock('@tepegoz/preferences', () => ({
-  default: { getAll: () => ({ downloadDirectory: '' }) },
+const logger = vi.hoisted(() => ({ warn: vi.fn() }));
+vi.mock('@tepegoz/libs', () => ({ Logger: logger }));
+const prefs = vi.hoisted(() => ({
+  getAll: vi.fn<() => Record<string, unknown>>(() => ({
+    downloadDirectory: '',
+    downloadHistoryRetention: { mode: 'manual' },
+  })),
 }));
+vi.mock('@tepegoz/preferences', () => ({ default: prefs }));
+const downloadStore = vi.hoisted(() => ({
+  upsert: vi.fn(),
+  remove: vi.fn(),
+  clearTerminal: vi.fn(),
+  list: () => [],
+}));
+const eventJournal = vi.hoisted(() => ({ append: vi.fn() }));
 vi.mock('@tepegoz/persistence', () => ({
-  DownloadStore: { upsert: vi.fn(), remove: vi.fn(), clearTerminal: vi.fn(), list: () => [] },
-  EventJournal: { append: vi.fn() },
+  DownloadStore: downloadStore,
+  EventJournal: eventJournal,
 }));
-vi.mock('../db/database.electron', () => ({ getDb: () => null }));
+const getDb = vi.hoisted(() => vi.fn<() => unknown>(() => null));
+vi.mock('../db/database.electron', () => ({ getDb }));
 
 const store = await import('./download-service-store.electron');
 
@@ -53,6 +67,13 @@ function activeRecord(o: RecOver = {}): ActiveRecord {
 
 let ctx: ReturnType<typeof store.createState>;
 beforeEach(() => {
+  vi.clearAllMocks();
+  bw.windows = [];
+  getDb.mockReturnValue(null);
+  prefs.getAll.mockReturnValue({
+    downloadDirectory: '',
+    downloadHistoryRetention: { mode: 'manual' },
+  });
   ctx = store.createState();
 });
 
@@ -123,5 +144,124 @@ describe('patch / removeRecord / clearTerminal', () => {
 describe('downloadDirectory', () => {
   it('falls back to the OS downloads path when the pref is blank', () => {
     expect(store.downloadDirectory()).toBe('/tmp/dl');
+  });
+
+  it('uses a configured directory verbatim', () => {
+    prefs.getAll.mockReturnValue({ downloadDirectory: '  /home/u/Downloads  ' });
+    expect(store.downloadDirectory()).toBe('/home/u/Downloads');
+  });
+});
+
+describe('persistence side effects (getDb non-null)', () => {
+  it('upsert writes the projection through DownloadStore and swallows a write failure', () => {
+    getDb.mockReturnValue({ __db: true });
+    store.upsert(ctx, activeRecord({ id: 'a' }));
+    expect(downloadStore.upsert).toHaveBeenCalledWith(
+      { __db: true },
+      expect.objectContaining({ id: 'a' }),
+    );
+
+    downloadStore.upsert.mockImplementationOnce(() => {
+      throw new Error('db locked');
+    });
+    expect(() => store.upsert(ctx, activeRecord({ id: 'b' }))).not.toThrow();
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Failed to persist download projection',
+      expect.objectContaining({ id: 'b' }),
+    );
+  });
+
+  it('removeRecord and clearTerminal reach the store when a DB is present', () => {
+    getDb.mockReturnValue({ __db: true });
+    store.upsert(ctx, activeRecord({ id: 'a', status: 'completed' }));
+    store.removeRecord(ctx, 'a');
+    expect(downloadStore.remove).toHaveBeenCalledWith({ __db: true }, 'a');
+
+    store.upsert(ctx, activeRecord({ id: 'x', status: 'completed' }));
+    store.upsert(ctx, activeRecord({ id: 'y', status: 'in_progress' }));
+    expect(store.clearTerminal(ctx)).toBe(1);
+    expect(downloadStore.clearTerminal).toHaveBeenCalledWith({ __db: true });
+  });
+});
+
+describe('broadcast', () => {
+  it('pushes the newest-first snapshot to every live window on any mutation', () => {
+    const send = vi.fn();
+    bw.windows = [
+      { isDestroyed: () => false, webContents: { send } },
+      { isDestroyed: () => true, webContents: { send: vi.fn() } },
+    ];
+    store.upsert(ctx, activeRecord({ id: 'a', updatedAt: 5 }));
+    expect(send).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ items: expect.any(Array) as unknown[] }),
+    );
+  });
+});
+
+describe('applyRetentionPolicy', () => {
+  it('is a no-op under the manual policy', () => {
+    store.upsert(ctx, activeRecord({ id: 'old', status: 'completed', updatedAt: 1 }));
+    expect(store.applyRetentionPolicy(ctx, 10_000_000)).toBe(0);
+    expect(ctx.records.has('old')).toBe(true);
+  });
+
+  it('drops rows older than the age cutoff and reports the count', () => {
+    prefs.getAll.mockReturnValue({
+      downloadDirectory: '',
+      downloadHistoryRetention: { mode: 'age', days: 1 },
+    });
+    const dayMs = 86_400_000;
+    store.upsert(ctx, activeRecord({ id: 'stale', status: 'completed', updatedAt: 0 }));
+    store.upsert(ctx, activeRecord({ id: 'fresh', status: 'completed', updatedAt: 5 * dayMs }));
+    const removed = store.applyRetentionPolicy(ctx, 5 * dayMs);
+    expect(removed).toBe(1);
+    expect(ctx.records.has('stale')).toBe(false);
+    expect(ctx.records.has('fresh')).toBe(true);
+  });
+});
+
+describe('appendAudit', () => {
+  it('journals a rich payload for the download when a DB is present', () => {
+    getDb.mockReturnValue({ __db: true });
+    const rec = activeRecord({
+      id: 'd9',
+      status: 'completed',
+      receivedBytes: 100,
+      totalBytes: 100,
+    });
+    store.appendAudit('DownloadCompleted' as never, rec);
+    expect(eventJournal.append).toHaveBeenCalledWith(
+      { __db: true },
+      expect.objectContaining({
+        type: 'DownloadCompleted',
+        actor: 'user',
+        payload: expect.objectContaining({
+          downloadId: 'd9',
+          filename: 'f.bin',
+          status: 'completed',
+        }) as Record<string, unknown>,
+      }),
+    );
+  });
+
+  it('is a no-op with no DB or no record', () => {
+    getDb.mockReturnValue(null);
+    store.appendAudit('DownloadCompleted' as never, activeRecord());
+    getDb.mockReturnValue({ __db: true });
+    store.appendAudit('DownloadCompleted' as never, undefined);
+    expect(eventJournal.append).not.toHaveBeenCalled();
+  });
+
+  it('swallows a journal-append failure with a warning', () => {
+    getDb.mockReturnValue({ __db: true });
+    eventJournal.append.mockImplementationOnce(() => {
+      throw new Error('journal full');
+    });
+    expect(() => store.appendAudit('DownloadCompleted' as never, activeRecord())).not.toThrow();
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Download audit append failed',
+      expect.objectContaining({ id: 'd1' }),
+    );
   });
 });
