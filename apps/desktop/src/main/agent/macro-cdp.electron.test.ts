@@ -190,3 +190,50 @@ describe('highlight', () => {
     expect(calls('Overlay.hideHighlight')).toHaveLength(1);
   });
 });
+
+describe('auto-wait poll + adapter routing', () => {
+  it('resolveChain keeps polling until the element shows up', async () => {
+    let queries = 0;
+    send = vi.fn((cmd: string) => {
+      if (cmd === 'DOM.querySelector') {
+        queries += 1;
+        return Promise.resolve(queries === 1 ? {} : { nodeId: 42 });
+      }
+      return Promise.resolve(resp[cmd] ?? {});
+    });
+    const id = await MacroCdp.resolveChain(cast(wc()), [{ css: '#el' }] as never, 5_000);
+    expect(id).toBe(99);
+    expect(queries).toBeGreaterThanOrEqual(2); // it retried after the first empty result
+  });
+
+  it('fill through the adapter uses a real click + Ctrl+A + typed text, never DOM.focus', async () => {
+    const adapter = {
+      idle: vi.fn(() => Promise.resolve()),
+      click: vi.fn(() => Promise.resolve()),
+      pressKey: vi.fn(() => Promise.resolve()),
+      insertText: vi.fn(() => Promise.resolve()),
+    };
+    await MacroCdp.fill(cast(wc()), 99, 'typed', cast(adapter));
+    expect(adapter.click).toHaveBeenCalled();
+    expect(adapter.pressKey).toHaveBeenCalledWith({ key: 'a', code: 'KeyA', keyCode: 65 }, 2);
+    expect(adapter.insertText).toHaveBeenCalledWith('typed');
+    expect(calls('DOM.focus')).toHaveLength(0);
+  });
+
+  it('pressKey emits keyDown+text for a printable mapped key', async () => {
+    await MacroCdp.pressKey(cast(wc()), 'a');
+    const ev = calls('Input.dispatchKeyEvent') as { type: string; text?: string }[];
+    expect(ev[0]).toMatchObject({ type: 'keyDown', text: 'a' });
+    expect(ev[1]).toMatchObject({ type: 'keyUp' });
+  });
+
+  it('pressKey routes through the adapter when one is supplied', async () => {
+    const adapter = {
+      idle: vi.fn(() => Promise.resolve()),
+      pressKey: vi.fn(() => Promise.resolve()),
+    };
+    await MacroCdp.pressKey(cast(wc()), 'Enter', cast(adapter));
+    expect(adapter.pressKey).toHaveBeenCalledWith({ key: 'Enter', code: 'Enter', keyCode: 13 });
+    expect(calls('Input.dispatchKeyEvent')).toHaveLength(0);
+  });
+});
