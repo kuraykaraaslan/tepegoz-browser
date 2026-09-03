@@ -26,7 +26,18 @@ const cfg = vi.hoisted(
 );
 
 const fs = vi.hoisted(() => ({
-  createWriteStream: vi.fn(),
+  createWriteStream: vi.fn(() => {
+    const h: Record<string, ((...a: unknown[]) => unknown)[]> = {};
+    return {
+      on(ev: string, fn: (...a: unknown[]) => unknown) {
+        (h[ev] ??= []).push(fn);
+        return this;
+      },
+      fire(ev: string) {
+        for (const fn of h[ev] ?? []) fn();
+      },
+    };
+  }),
   existsSync: vi.fn(() => cfg.exists),
   mkdirSync: vi.fn(),
   readFileSync: vi.fn((p: unknown): string | Buffer => {
@@ -48,12 +59,62 @@ vi.mock('node:crypto', () => ({
   createHash: () => ({ update: () => undefined, digest: () => cfg.digest }),
 }));
 
+type Fn = (...a: unknown[]) => unknown;
+type Resp = { statusCode?: number; headers?: Record<string, string>; emitError?: boolean };
+
+const net = vi.hoisted(
+  (): { queue: Resp[]; defer: boolean; cb: ((res: unknown) => void) | null } => ({
+    queue: [],
+    defer: false,
+    cb: null,
+  }),
+);
+
+function fakeRes(d: Resp): unknown {
+  const h: Record<string, Fn[]> = {};
+  return {
+    statusCode: d.statusCode ?? 200,
+    headers: d.headers ?? {},
+    resume: vi.fn(),
+    on(ev: string, fn: Fn) {
+      (h[ev] ??= []).push(fn);
+      return this;
+    },
+    pipe(out: { fire: (e: string) => void }) {
+      if (d.emitError === true) {
+        for (const fn of h['error'] ?? []) fn(new Error('socket hang up'));
+        return out;
+      }
+      for (const fn of h['data'] ?? []) fn(Buffer.from('chunk'));
+      out.fire('finish');
+      return out;
+    },
+  };
+}
+
+const request = vi.hoisted(
+  () => () =>
+    vi.fn((_url: unknown, _opts: unknown, cb: (res: unknown) => void) => {
+      net.cb = cb;
+      return {
+        on: vi.fn(),
+        end: vi.fn(() => {
+          if (net.defer) return;
+          cb(fakeRes(net.queue.shift() ?? {}));
+        }),
+      };
+    }),
+);
+vi.mock('node:http', () => ({ request: request() }));
+vi.mock('node:https', () => ({ request: request() }));
+
 const shell = vi.hoisted(() => ({ openPath: vi.fn(() => Promise.resolve('')) }));
 vi.mock('electron', () => ({
   app: { getPath: () => '/userData', getAppPath: () => '/app' },
   shell,
 }));
 
+const logger = vi.hoisted(() => ({ warn: vi.fn(), info: vi.fn() }));
 vi.mock('@tepegoz/libs', () => {
   class AppError extends Error {
     statusCode: number;
@@ -64,7 +125,7 @@ vi.mock('@tepegoz/libs', () => {
       this.code = code;
     }
   }
-  return { AppError, Logger: { warn: vi.fn(), info: vi.fn() } };
+  return { AppError, Logger: logger };
 });
 
 type Mgr = typeof import('./typo-dictionary-manager.electron').default;
@@ -102,6 +163,9 @@ beforeEach(() => {
   cfg.fileSize = 10;
   cfg.digest = D;
   cfg.exists = true;
+  net.queue = [];
+  net.defer = false;
+  net.cb = null;
 });
 
 describe('list', () => {
@@ -136,6 +200,81 @@ describe('download', () => {
     await expect(mgr.download('nope')).rejects.toMatchObject({
       statusCode: 404,
       code: 'dictionaryNotFound',
+    });
+  });
+
+  it('fetches both files, verifies the checksum, and records install state', async () => {
+    const mgr = await load();
+    await mgr.download('en_US');
+
+    expect(fs.renameSync).toHaveBeenCalledTimes(2); // aff + dic .part → final
+    const written = fs.writeFileSync.mock.calls.map((c) => String(c[1])).join('\n');
+    expect(written).toContain('"en_US"');
+    expect(mgr.list()[0]).toMatchObject({ downloading: false });
+  });
+
+  it('is a no-op when a download for that id is already active', async () => {
+    const mgr = await load();
+    net.defer = true;
+    const first = mgr.download('en_US');
+    await mgr.download('en_US'); // second call returns immediately (already active)
+    net.defer = false;
+    net.cb?.(fakeRes({})); // release the first file; the second fetch runs normally
+    await first;
+    // only the first download's two files were fetched
+    expect(fs.renameSync).toHaveBeenCalledTimes(2);
+  });
+
+  it('follows an HTTP redirect to the real file', async () => {
+    const mgr = await load();
+    net.queue = [{ statusCode: 302, headers: { location: 'https://cdn.example/real.aff' } }];
+    await mgr.download('en_US');
+    expect(fs.renameSync).toHaveBeenCalled();
+  });
+
+  it('gives up after too many redirects', async () => {
+    const mgr = await load();
+    net.queue = Array.from({ length: 6 }, () => ({
+      statusCode: 302 as const,
+      headers: { location: 'https://cdn.example/loop.aff' },
+    }));
+    await expect(mgr.download('en_US')).rejects.toMatchObject({ statusCode: 502 });
+    expect(mgr.list()[0]).toMatchObject({ status: 'error', error: 'Download failed' });
+  });
+
+  it('surfaces a non-2xx response as a 502 and records the error', async () => {
+    const mgr = await load();
+    net.queue = [{ statusCode: 500 }];
+    await expect(mgr.download('en_US')).rejects.toMatchObject({ statusCode: 502 });
+    expect(mgr.list()[0]).toMatchObject({ status: 'error' });
+  });
+
+  it('wraps a socket error in a generic download-failed AppError', async () => {
+    const mgr = await load();
+    net.queue = [{ emitError: true }];
+    await expect(mgr.download('en_US')).rejects.toMatchObject({
+      code: 'dictionaryDownloadFailed',
+    });
+  });
+
+  it('rejects with a checksum-mismatch code when the downloaded bytes do not match', async () => {
+    const mgr = await load();
+    cfg.digest = 'b'.repeat(64); // sha256File() now disagrees with the catalog sha
+    await expect(mgr.download('en_US')).rejects.toMatchObject({
+      code: 'dictionaryChecksumMismatch',
+    });
+  });
+
+  it('settles quietly (no rethrow) when the in-flight download is canceled', async () => {
+    const mgr = await load();
+    net.defer = true;
+    const p = mgr.download('en_US');
+    mgr.cancel('en_US'); // aborts the controller
+    net.cb?.(fakeRes({ emitError: true })); // the socket then errors out
+    await expect(p).resolves.toBeUndefined();
+
+    expect(logger.info).toHaveBeenCalledWith('Typo dictionary download canceled', {
+      id: 'en_US',
     });
   });
 });
