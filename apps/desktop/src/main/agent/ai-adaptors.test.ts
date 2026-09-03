@@ -16,7 +16,7 @@ const registryList = vi.hoisted(() => vi.fn(() => [] as unknown[]));
 vi.mock('@tepegoz/capability-plane', () => ({ CapabilityRegistry: { list: registryList } }));
 
 const mcpStatus = vi.hoisted(() =>
-  vi.fn(() => [] as { id: string; label: string; state: string }[]),
+  vi.fn(() => [] as { id: string; label: string; state: string; error?: string }[]),
 );
 vi.mock('../mcp/supervisor.electron', () => ({ default: { getStatus: mcpStatus } }));
 
@@ -129,5 +129,31 @@ describe('buildAdaptorConnections', () => {
   it('reports a local (system) adaptor as connected', () => {
     registryList.mockReturnValue([tool({ id: 'browser_click', category: 'browser' })]);
     expect(buildAdaptorConnections('en').find((c) => c.id === 'browser')?.state).toBe('connected');
+  });
+
+  it('surfaces a configured MCP server that has no registered tools yet', () => {
+    mcpStatus.mockReturnValue([{ id: 'srv2', label: 'Standalone MCP', state: 'ready' }]);
+    registryList.mockReturnValue([]); // srv2 comes only from McpService.getStatus()
+    const conn = buildAdaptorConnections('en').find((c) => c.id === 'srv2');
+    expect(conn).toMatchObject({
+      id: 'srv2',
+      label: 'Standalone MCP',
+      kind: 'mcp',
+      provider: 'MCP',
+      state: 'connected',
+      authKind: 'none',
+      auditRequired: true,
+    });
+    expect(conn?.permissions[0]).toMatchObject({ capability: 'web', scopes: [], state: 'connected' });
+  });
+
+  it('carries an errored standalone MCP server’s message as the permission reason', () => {
+    mcpStatus.mockReturnValue([
+      { id: 'srv3', label: 'Broken MCP', state: 'error', error: 'handshake failed' },
+    ]);
+    registryList.mockReturnValue([]);
+    const conn = buildAdaptorConnections('en').find((c) => c.id === 'srv3');
+    expect(conn?.state).toBe('error');
+    expect(conn?.permissions[0]).toMatchObject({ reason: 'handshake failed' });
   });
 });
