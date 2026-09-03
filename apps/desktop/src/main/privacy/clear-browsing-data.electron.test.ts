@@ -101,6 +101,26 @@ describe('the database half', () => {
     );
   });
 
+  it('reports history and agentHistory independently, still clearing downloads', async () => {
+    stores.HistoryStore.deleteSince.mockImplementation(() => {
+      throw new Error('history table locked');
+    });
+    stores.AgentConversationStore.clearSince.mockImplementation(() => {
+      throw new Error('agent history locked');
+    });
+    const r = await clearBrowsingData(DB, req(['history', 'downloads', 'agentHistory']));
+    expect(r.failed).toEqual(['history', 'agentHistory']);
+    expect(r.downloadEntries).toBe(3);
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Clear browsing data: a category failed',
+      expect.objectContaining({ category: 'history' }),
+    );
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Clear browsing data: a category failed',
+      expect.objectContaining({ category: 'agentHistory' }),
+    );
+  });
+
   it('with no database, every wanted DB category is reported failed and no store is touched', async () => {
     const r = await clearBrowsingData(
       null,
