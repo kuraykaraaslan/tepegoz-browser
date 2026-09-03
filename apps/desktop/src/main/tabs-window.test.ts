@@ -49,16 +49,17 @@ vi.mock('./page-commands', () => ({
 }));
 vi.mock('./clipboard/clipboard-service.electron', () => ({ default: {} }));
 vi.mock('./downloads/download-service.electron', () => ({ default: {} }));
-vi.mock('./network/browsing-sessions.electron', () => ({
-  default: { defaultForNewTab: () => ({}), private: () => ({}) },
+const sessions = vi.hoisted(() => ({
+  defaultForNewTab: vi.fn(() => ({ __direct: true })),
+  private: vi.fn(() => ({ __private: true })),
 }));
+vi.mock('./network/browsing-sessions.electron', () => ({ default: sessions }));
 vi.mock('./network/certificate-recorder.electron', () => ({ getRecordedCert: () => undefined }));
 vi.mock('./tabs-content-bounds', () => ({
-  resolveViewBounds: () => ({ x: 0, y: 0, width: 1, height: 1 }),
+  resolveViewBounds: () => ({ x: 0, y: 5, width: 100, height: 80 }),
 }));
-vi.mock('./extensions/action-interceptors.electron', () => ({
-  default: { shouldBlock: () => false },
-}));
+const interceptor = vi.hoisted(() => ({ shouldBlock: vi.fn(() => false) }));
+vi.mock('./extensions/action-interceptors.electron', () => ({ default: interceptor }));
 vi.mock('./tabs-view-wiring', () => ({ wireView: vi.fn(), unwireView: vi.fn() }));
 vi.mock('./tabs-internal-page-view', () => ({
   createInternalPageView: vi.fn(),
@@ -143,13 +144,27 @@ class Harness extends WindowTabs {
   count(): number {
     return this.store.records().length;
   }
+  record(id: string): { kind: string } | undefined {
+    return this.store.get(id);
+  }
+  viewSetBounds(id: string): ReturnType<typeof vi.fn> {
+    return (this.views.get(id) as unknown as { setBounds: ReturnType<typeof vi.fn> }).setBounds;
+  }
+  park(id: string): void {
+    this.parkHiddenView(id);
+  }
 }
 
 let tabs: Harness;
+let win: ReturnType<typeof fakeWindow>;
 beforeEach(() => {
   vi.clearAllMocks();
   closedStack.items = [];
-  tabs = new Harness(fakeWindow() as never, false);
+  interceptor.shouldBlock.mockReturnValue(false);
+  sessions.defaultForNewTab.mockReturnValue({ __direct: true });
+  sessions.private.mockReturnValue({ __private: true });
+  win = fakeWindow();
+  tabs = new Harness(win as never, false);
 });
 
 describe('snapshot', () => {
@@ -226,5 +241,92 @@ describe('restoreWindow', () => {
     });
     expect(created).toHaveLength(2);
     expect(tabs.count()).toBe(2);
+  });
+});
+
+describe('createTab (base)', () => {
+  it('creates a web tab: adds the record, wires + sizes a view, and activates it', () => {
+    const id = tabs.createTab('https://web.test/');
+    expect(id).not.toBeNull();
+    expect(tabs.count()).toBe(1);
+    expect(win.contentView.children).toHaveLength(1); // activate() attached the view
+  });
+
+  it('returns null when the tab:create interceptor blocks it', () => {
+    interceptor.shouldBlock.mockReturnValue(true);
+    expect(tabs.createTab('https://blocked.test/')).toBeNull();
+    expect(tabs.count()).toBe(0);
+  });
+
+  it('a background create does not steal the foreground', () => {
+    const first = tabs.createTab('https://a.test/');
+    tabs.setActive(first!);
+    const bg = tabs.createTab('https://b.test/', { background: true });
+    expect(bg).not.toBeNull();
+    expect(tabs.count()).toBe(2);
+  });
+
+  it('a bare createTab() lands on a view-less internal new-tab', () => {
+    const id = tabs.createTab();
+    expect(id).not.toBeNull();
+    expect(tabs.count()).toBe(1);
+    // internal tab → no WebContentsView entry
+    expect(tabs.record(id!)?.kind).toBe('internal');
+  });
+
+  it('a private window mints tabs on the private session', () => {
+    const priv = new Harness(fakeWindow() as never, true);
+    priv.createTab('https://p.test/');
+    expect(sessions.private).toHaveBeenCalled();
+    expect(sessions.defaultForNewTab).not.toHaveBeenCalled();
+  });
+});
+
+describe('activate / getState (base)', () => {
+  it('detaches the previously-active view and attaches + sizes the new one', () => {
+    const a = tabs.createTab('https://a.test/')!;
+    tabs.createTab('https://b.test/'); // b is active now
+    // switching back to a should re-attach a and detach b.
+    win.contentView.removeChildView.mockClear();
+    tabs.activate(a);
+    expect(win.contentView.removeChildView).toHaveBeenCalled();
+  });
+
+  it('activate is a no-op for an unknown id', () => {
+    expect(() => {
+      tabs.activate('nope');
+    }).not.toThrow();
+  });
+
+  it('getState reports the nav flags off the active view', () => {
+    const id = tabs.createTab('https://a.test/')!;
+    tabs.activate(id);
+    const s = tabs.getState();
+    expect(s).toMatchObject({ canGoBack: false, canGoForward: false, activeZoomFactor: 1 });
+  });
+});
+
+describe('parkHiddenView / dispose (base)', () => {
+  it('parks a hidden tab off the left edge, at the content size', () => {
+    const id = tabs.createTab('https://a.test/')!;
+    const setBounds = tabs.viewSetBounds(id);
+    setBounds.mockClear();
+    tabs.park(id);
+    expect(setBounds).toHaveBeenCalledWith({ x: -108, y: 5, width: 100, height: 80 });
+  });
+
+  it('parkHiddenView is a no-op for a view-less internal tab', () => {
+    const id = tabs.createTab()!; // internal
+    expect(() => {
+      tabs.park(id);
+    }).not.toThrow();
+  });
+
+  it('dispose tears down every view and clears the store', () => {
+    tabs.createTab('https://a.test/');
+    tabs.createTab('https://b.test/');
+    expect(tabs.count()).toBe(2);
+    tabs.dispose();
+    expect(tabs.count()).toBe(0);
   });
 });
