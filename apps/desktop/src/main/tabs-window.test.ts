@@ -133,6 +133,12 @@ class Harness extends WindowTabs {
   setActive(id: string): void {
     this.store.setActive(id);
   }
+  activeId(): string | null {
+    return this.store.activeId;
+  }
+  group(id: string): { name: string; collapsed: boolean } | undefined {
+    return this.store.groupsInOrder().find((g) => g.id === id);
+  }
   makeGroup(name: string, memberIds: string[]): string {
     return this.store.createGroup({ name, color: 'blue', collapsed: false, memberIds });
   }
@@ -241,6 +247,88 @@ describe('restoreWindow', () => {
     });
     expect(created).toHaveLength(2);
     expect(tabs.count()).toBe(2);
+  });
+
+  it('re-creates groups with their stable id + metadata + membership and restores pins', () => {
+    const created = tabs.restoreWindow({
+      tabs: [
+        { url: 'https://one.test/', pinned: false, groupId: 'g1' },
+        { url: 'https://two.test/', pinned: false, groupId: 'g1' },
+        { url: 'https://three.test/', pinned: true, groupId: null },
+      ],
+      groups: [{ id: 'g1', name: 'Work', color: 'blue', collapsed: true, settings: {} }],
+      activeIndex: 0,
+    });
+    expect(tabs.group('g1')).toMatchObject({ name: 'Work', collapsed: true });
+    expect(tabs.record(created[0]!)).toMatchObject({ groupId: 'g1' });
+    expect(tabs.record(created[1]!)).toMatchObject({ groupId: 'g1' });
+    expect(tabs.record(created[2]!)).toMatchObject({ pinned: true, groupId: null });
+  });
+
+  it('skips a persisted group none of whose tabs came back', () => {
+    tabs.restoreWindow({
+      tabs: [{ url: 'https://a.test/', pinned: false, groupId: 'other' }],
+      groups: [{ id: 'ghost', name: 'Ghost', color: 'red', collapsed: false, settings: {} }],
+      activeIndex: -1,
+    });
+    expect(tabs.group('ghost')).toBeUndefined();
+  });
+
+  it('activates the persisted active tab by index', () => {
+    const created = tabs.restoreWindow({
+      tabs: [
+        { url: 'https://a.test/', pinned: false, groupId: null },
+        { url: 'https://b.test/', pinned: false, groupId: null },
+      ],
+      groups: [],
+      activeIndex: 1,
+    });
+    expect(tabs.activeId()).toBe(created[1]);
+  });
+
+  it('never surfaces a hidden tab — the persisted active index points at one, so it falls back to the last visible', () => {
+    const created = tabs.restoreWindow({
+      tabs: [
+        { url: 'https://a.test/', pinned: false, groupId: null },
+        { url: 'https://b.test/', pinned: false, groupId: null, hidden: true },
+      ],
+      groups: [],
+      activeIndex: 1,
+    });
+    expect(tabs.record(created[1]!)).toMatchObject({ hidden: true });
+    expect(tabs.activeId()).toBe(created[0]);
+  });
+
+  it('with no persisted active index, still moves off a hidden foreground tab', () => {
+    const created = tabs.restoreWindow({
+      tabs: [
+        { url: 'https://a.test/', pinned: false, groupId: null, hidden: true },
+        { url: 'https://b.test/', pinned: false, groupId: null },
+      ],
+      groups: [],
+      activeIndex: -1,
+    });
+    expect(tabs.activeId()).toBe(created[1]);
+  });
+
+  it('parks restored hidden tabs so they keep rendering off-screen', () => {
+    const created = tabs.restoreWindow({
+      tabs: [
+        { url: 'https://a.test/', pinned: false, groupId: null },
+        { url: 'https://b.test/', pinned: false, groupId: null, hidden: true },
+      ],
+      groups: [],
+      activeIndex: 0,
+    });
+    const hiddenId = created[1]!;
+    expect(tabs.record(hiddenId)).toMatchObject({ hidden: true });
+    // its view was parked (attached, off the left edge) rather than detached.
+    expect(tabs.viewSetBounds(hiddenId)).toHaveBeenCalledWith({
+      x: -108,
+      y: 5,
+      width: 100,
+      height: 80,
+    });
   });
 });
 
