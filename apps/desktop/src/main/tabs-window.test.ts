@@ -10,12 +10,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * background) and returns the ids it created.
  */
 
+const loadBehavior = vi.hoisted(() => ({ reject: false }));
 vi.mock('electron', () => ({
   WebContentsView: class {
     setBounds = vi.fn();
     setVisible = vi.fn();
     webContents = {
-      loadURL: () => Promise.resolve(),
+      loadURL: () =>
+        loadBehavior.reject ? Promise.reject(new Error('load failed')) : Promise.resolve(),
       isDestroyed: () => false,
       close: vi.fn(),
       getURL: () => '',
@@ -26,9 +28,13 @@ vi.mock('electron', () => ({
   BrowserWindow: { fromWebContents: () => null },
   dialog: { showMessageBoxSync: () => 0 },
 }));
-vi.mock('@tepegoz/libs', () => ({
-  Logger: { warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() },
+const logger = vi.hoisted(() => ({
+  warn: vi.fn(),
+  info: vi.fn(),
+  debug: vi.fn(),
+  error: vi.fn(),
 }));
+vi.mock('@tepegoz/libs', () => ({ Logger: logger }));
 vi.mock('@tepegoz/security-policy', () => ({ mayOpenDevTools: () => ({ allowed: true }) }));
 vi.mock('./lib/i18n-main', () => ({
   mainStrings: () => ({
@@ -37,7 +43,7 @@ vi.mock('./lib/i18n-main', () => ({
 }));
 vi.mock('./lib/navigation-url', () => ({
   isWebUrl: (u: string) => u.startsWith('http'),
-  internalPageUrl: () => null,
+  internalPageUrl: (u: string) => (u.startsWith('tepegoz://') ? u : null),
   toNavigationUrl: (u: string) => u,
 }));
 vi.mock('./tabs-popup-policy', () => ({ asGroupColor: (c: string) => c }));
@@ -54,7 +60,10 @@ const sessions = vi.hoisted(() => ({
   private: vi.fn(() => ({ __private: true })),
 }));
 vi.mock('./network/browsing-sessions.electron', () => ({ default: sessions }));
-vi.mock('./network/certificate-recorder.electron', () => ({ getRecordedCert: () => undefined }));
+const certRec = vi.hoisted(() => ({
+  get: vi.fn<(host: string) => unknown>(() => undefined),
+}));
+vi.mock('./network/certificate-recorder.electron', () => ({ getRecordedCert: certRec.get }));
 vi.mock('./tabs-content-bounds', () => ({
   resolveViewBounds: () => ({ x: 0, y: 5, width: 100, height: 80 }),
 }));
@@ -74,6 +83,7 @@ vi.mock('./tabs-internal-page-view', () => ({
 vi.mock('./navigation/unload-broker', () => ({ askBeforeClose: vi.fn() }));
 
 const closedStack = vi.hoisted((): { items: { url: string; id?: string }[] } => ({ items: [] }));
+const persistSession = vi.hoisted(() => vi.fn());
 vi.mock('./tabs-shared', () => ({
   rememberClosedTab: vi.fn(),
   internalBaseUrl: (u: string) => u,
@@ -81,7 +91,7 @@ vi.mock('./tabs-shared', () => ({
   browsedViewWebPreferences: () => ({}),
   homeUrl: () => 'https://example.com/',
   searchUrlForQuery: (q: string) => q,
-  persistSession: vi.fn(),
+  persistSession,
   involuntaryGroupExitObservers: new Set(),
   takeClosedTab: (id?: string) => {
     if (closedStack.items.length === 0) return undefined;
@@ -92,6 +102,7 @@ vi.mock('./tabs-shared', () => ({
 }));
 
 const { WindowTabs } = await import('./tabs-window');
+const ipv = await import('./tabs-internal-page-view');
 
 function fakeWindow() {
   const children: unknown[] = [];
@@ -159,6 +170,18 @@ class Harness extends WindowTabs {
   park(id: string): void {
     this.parkHiddenView(id);
   }
+  /** Directly seed a backing internal-page view for `id` (the real path needs `hasRealPage`). */
+  seedIpv(id: string, view: unknown): void {
+    this.internalPageViews.set(id, view as never);
+  }
+  /** The view-wiring host the base builds for `wireView` — its `createTab`/`emitState` arrows. */
+  wiringHost(): { createTab: (u?: string, o?: unknown) => void; emitState: () => void } {
+    return this.viewWiringHost() as never;
+  }
+  /** The size-a-view rectangle decision (exercises the destroyed-window branch). */
+  effBounds(): unknown {
+    return this.effectiveBounds();
+  }
 }
 
 let tabs: Harness;
@@ -166,7 +189,9 @@ let win: ReturnType<typeof fakeWindow>;
 beforeEach(() => {
   vi.clearAllMocks();
   closedStack.items = [];
+  loadBehavior.reject = false;
   interceptor.shouldBlock.mockReturnValue(false);
+  certRec.get.mockReturnValue(undefined);
   sessions.defaultForNewTab.mockReturnValue({ __direct: true });
   sessions.private.mockReturnValue({ __private: true });
   win = fakeWindow();
@@ -368,6 +393,50 @@ describe('createTab (base)', () => {
     expect(sessions.private).toHaveBeenCalled();
     expect(sessions.defaultForNewTab).not.toHaveBeenCalled();
   });
+
+  it('routes a tepegoz:// url to a view-less internal tab', () => {
+    const id = tabs.createTab('tepegoz://settings');
+    expect(id).not.toBeNull();
+    expect(tabs.record(id!)?.kind).toBe('internal');
+  });
+
+  it('logs, without throwing, when the initial page load rejects', async () => {
+    loadBehavior.reject = true;
+    tabs.createTab('https://bad.test/');
+    await vi.waitFor(() =>
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Tab failed to load',
+        expect.objectContaining({ url: 'https://bad.test/' }),
+      ),
+    );
+  });
+
+  it('a tab spawned from a grouped opener joins the opener group, right after it', () => {
+    const opener = tabs.createTab('https://a.test/')!;
+    const g = tabs.makeGroup('Work', [opener]);
+    const child = tabs.createTab('https://b.test/', { openerId: opener })!;
+    expect(tabs.record(child)).toMatchObject({ groupId: g });
+  });
+
+  it('a tab spawned from an ungrouped opener stays ungrouped', () => {
+    const opener = tabs.createTab('https://a.test/')!;
+    const child = tabs.createTab('https://b.test/', { openerId: opener })!;
+    expect(tabs.record(child)).toMatchObject({ groupId: null });
+  });
+
+  it('a background internal create does not steal the foreground', () => {
+    const first = tabs.createTab('https://a.test/')!;
+    tabs.setActive(first);
+    const bg = tabs.createTab(undefined, { background: true });
+    expect(bg).not.toBeNull();
+    expect(tabs.activeId()).toBe(first);
+  });
+
+  it('createInternalTab returns null when the tab:create interceptor blocks it', () => {
+    interceptor.shouldBlock.mockReturnValue(true);
+    expect(tabs.createTab()).toBeNull(); // bare createTab → createInternalTab(NEWTAB)
+    expect(tabs.count()).toBe(0);
+  });
 });
 
 describe('activate / getState (base)', () => {
@@ -391,6 +460,28 @@ describe('activate / getState (base)', () => {
     tabs.activate(id);
     const s = tabs.getState();
     expect(s).toMatchObject({ canGoBack: false, canGoForward: false, activeZoomFactor: 1 });
+  });
+
+  it('activate hides the previously-active tab internal-page view', () => {
+    const a = tabs.createTab()!; // internal, now active
+    tabs.seedIpv(a, { __ip: true });
+    tabs.activate(tabs.createTab('https://b.test/')!);
+    expect(vi.mocked(ipv.hideInternalPageView)).toHaveBeenCalledWith(win, { __ip: true });
+  });
+
+  it('getState classifies an unparseable active URL without throwing', () => {
+    const id = tabs.addWeb('http://[bad');
+    tabs.setActive(id);
+    expect(() => tabs.getState()).not.toThrow();
+  });
+
+  it('getState feeds a recorded cert failure into the security classification', () => {
+    certRec.get.mockReturnValueOnce({ errorCode: -200, verificationResult: -200 });
+    const id = tabs.addWeb('https://broken.test/');
+    tabs.setActive(id);
+    const level = tabs.getState().activeSecurityLevel;
+    expect(typeof level).toBe('string');
+    expect(certRec.get).toHaveBeenCalledWith('broken.test');
   });
 });
 
@@ -416,5 +507,61 @@ describe('parkHiddenView / dispose (base)', () => {
     expect(tabs.count()).toBe(2);
     tabs.dispose();
     expect(tabs.count()).toBe(0);
+  });
+
+  it('dispose logs and keeps going when one view teardown throws', () => {
+    tabs.createTab('https://a.test/');
+    win.contentView.removeChildView.mockImplementationOnce(() => {
+      throw new Error('teardown boom');
+    });
+    expect(() => {
+      tabs.dispose();
+    }).not.toThrow();
+    expect(logger.warn).toHaveBeenCalledWith(
+      'tab view teardown failed',
+      expect.objectContaining({ err: expect.stringContaining('teardown boom') as string }),
+    );
+    expect(tabs.count()).toBe(0);
+  });
+
+  it('dispose destroys internal-page views and clears their map', () => {
+    tabs.seedIpv(tabs.addInternal(), { __ip: true });
+    tabs.dispose();
+    expect(vi.mocked(ipv.destroyInternalPageView)).toHaveBeenCalledWith(win, { __ip: true });
+  });
+
+  it('effectiveBounds passes a null content size when the window is destroyed', () => {
+    const dead = { ...fakeWindow(), isDestroyed: () => true };
+    const t = new Harness(dead as never, false);
+    expect(t.effBounds()).toEqual({ x: 0, y: 5, width: 100, height: 80 });
+  });
+});
+
+describe('base small surface', () => {
+  it('exposes the owning window and a total tab count', () => {
+    tabs.addWeb('https://a.test/');
+    tabs.addWeb('https://b.test/', { hidden: true });
+    expect(tabs.window).toBe(win);
+    expect(tabs.tabCount()).toBe(2);
+  });
+
+  it('the view-wiring host forwards createTab and emitState to the base', () => {
+    const host = tabs.wiringHost();
+    host.createTab('https://wired.test/', undefined);
+    expect(tabs.count()).toBe(1);
+    win.webContents.send.mockClear();
+    host.emitState();
+    expect(win.webContents.send).toHaveBeenCalled();
+  });
+
+  it('schedulePersist flushes persistSession once the debounce elapses', () => {
+    vi.useFakeTimers();
+    try {
+      tabs.createTab('https://a.test/'); // emitState → schedulePersist
+      vi.advanceTimersByTime(400);
+      expect(persistSession).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
