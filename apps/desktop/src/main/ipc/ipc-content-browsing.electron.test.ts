@@ -140,6 +140,7 @@ beforeEach(() => {
   getDb.mockReturnValue({ __db: true });
   isBookmarkable.mockReturnValue(true);
   bw.getAllWindows.mockReturnValue([]);
+  bw.fromWebContents.mockReturnValue(null);
   BlobStore.get.mockReturnValue(undefined);
   dialog.showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] });
   mod.registerBrowsingIpc();
@@ -212,6 +213,36 @@ describe('new-tab background image', () => {
     expect(BlobStore.put).toHaveBeenCalled();
   });
 
+  it('picker: a WEBP is recognised by its RIFF/WEBP magic bytes', async () => {
+    dialog.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/pics/bg.webp'] });
+    readFile.mockResolvedValue(
+      Buffer.from([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50, 1, 2]),
+    );
+    const res = (await call('newtabPickBackgroundImage')) as {
+      dataUrl: string;
+      cancelled: boolean;
+    };
+    expect(res.dataUrl).toMatch(/^data:image\/webp;base64,/);
+    expect(res.cancelled).toBe(false);
+  });
+
+  it('anchors both pickers to the sender window when there is one', async () => {
+    const win = { __win: true };
+    bw.fromWebContents.mockReturnValue(win);
+
+    dialog.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/home/docs'] });
+    await call('fileAccessPickFolder');
+    expect(dialog.showOpenDialog).toHaveBeenCalledWith(win, { properties: ['openDirectory'] });
+
+    dialog.showOpenDialog.mockClear();
+    dialog.showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] });
+    await call('newtabPickBackgroundImage');
+    expect(dialog.showOpenDialog).toHaveBeenCalledWith(
+      win,
+      expect.objectContaining({ properties: ['openFile'] }),
+    );
+  });
+
   it('picker: 413 on an oversized image, 415 on an unrecognised type', async () => {
     dialog.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/pics/big.png'] });
     readFile.mockResolvedValue(Buffer.alloc(9 * 1024 * 1024, 0x89));
@@ -243,6 +274,20 @@ describe('responder + list channels', () => {
   it('client-certificate forget clears every remembered choice', () => {
     call('clientCertificateForget');
     expect(clientCert.clearClientCertificateChoices).toHaveBeenCalled();
+  });
+
+  it('notification mark-read + mark-all-read delegate to the store', () => {
+    H.actions.get('notificationsMarkRead')!('n2');
+    H.signals.get('notificationsMarkAllRead')!();
+    expect(notifStore.markRead).toHaveBeenCalledWith('n2');
+    expect(notifStore.markAllRead).toHaveBeenCalled();
+  });
+
+  it('client-certificate respond forwards to the broker; list reads the remembered choices', () => {
+    H.actions.get('clientCertificateRespond')!({ proceed: true });
+    expect(clientCert.resolveClientCertificate).toHaveBeenCalledWith({ proceed: true });
+    expect(call('clientCertificateList')).toEqual([]);
+    expect(clientCert.listClientCertificateChoices).toHaveBeenCalled();
   });
 });
 
