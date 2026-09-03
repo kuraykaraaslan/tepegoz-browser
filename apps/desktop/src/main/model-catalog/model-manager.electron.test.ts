@@ -194,15 +194,18 @@ describe('download', () => {
 
   it('is silent (no 502) when the transfer rejects after a cancel', async () => {
     let rejectTransfer!: (e: unknown) => void;
-    resolveModelFile.mockReturnValue(
-      new Promise((_resolve, reject) => {
-        rejectTransfer = reject;
-      }),
-    );
+    const transfer = new Promise<string>((_resolve, reject) => {
+      rejectTransfer = reject;
+    });
+    // Own the rejection so it is never "unhandled" no matter when `download` awaits it — `download`'s
+    // own `await` still sees the rejection for the test's assertions (each consumer gets the settled
+    // state independently).
+    transfer.catch(() => undefined);
+    resolveModelFile.mockReturnValue(transfer);
+
     const mgr = await load();
     const p = mgr.download('m1');
     mgr.cancel('m1'); // aborts this download's controller (synchronously)
-    await new Promise((r) => setTimeout(r, 0)); // let download reach `await resolveModelFile()`
     rejectTransfer(new Error('The operation was aborted'));
     await expect(p).resolves.toBeUndefined();
     expect(mgr.list()[0]).toMatchObject({ downloading: false }); // active entry cleared
