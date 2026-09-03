@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * `TypoDictionaryManager` — the main-process nspell-dictionary catalog / installer. Pinned: `list`
@@ -313,6 +313,74 @@ describe('showFolder', () => {
       recursive: true,
     });
     expect(shell.openPath).toHaveBeenCalledWith(expect.stringContaining('dictionaries'));
+  });
+});
+
+describe('toInfo + catalog/state resilience', () => {
+  const origReadFile = fs.readFileSync.getMockImplementation();
+  afterEach(() => {
+    if (origReadFile !== undefined) fs.readFileSync.mockImplementation(origReadFile);
+  });
+
+  it('is empty and logs when the catalog file itself cannot be read', async () => {
+    fs.readFileSync.mockImplementationOnce(() => {
+      throw new Error('EACCES catalog');
+    });
+    const mgr = await load();
+    expect(mgr.list()).toEqual([]);
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Failed to read typo dictionary catalog',
+      expect.objectContaining({ err: expect.stringContaining('EACCES catalog') as string }),
+    );
+  });
+
+  it('treats an unreadable install-state file as a clean first run', async () => {
+    fs.readFileSync.mockImplementation((p: unknown): string | Buffer => {
+      const s = String(p);
+      if (s.includes('install-state')) throw new Error('ENOENT');
+      if (s.includes('catalog')) return JSON.stringify(cfg.catalog);
+      if (s.includes('index.aff')) return 'AFF-CONTENT';
+      if (s.includes('index.dic')) return 'DIC-CONTENT';
+      return Buffer.from('x');
+    });
+    cfg.install = { version: 1, installed: { en_US: installedRec() } }; // would read as "installed"
+    const mgr = await load();
+    expect(mgr.list()[0]).toMatchObject({ installed: false, status: 'available' });
+  });
+
+  it('reports "available" when the recorded install sha no longer matches the catalog', async () => {
+    cfg.install = {
+      version: 1,
+      installed: {
+        en_US: {
+          ...installedRec(),
+          files: {
+            aff: { sha256: 'f'.repeat(64), sizeBytes: 10 },
+            dic: { sha256: D, sizeBytes: 10 },
+          },
+        },
+      },
+    };
+    const mgr = await load();
+    expect(mgr.list()[0]).toMatchObject({ installed: false, status: 'available' });
+  });
+
+  it('reports a dictionary with an in-flight download as "downloading"', async () => {
+    const mgr = await load();
+    net.defer = true;
+    const p = mgr.download('en_US');
+
+    const info = mgr.list()[0];
+    expect(info).toMatchObject({
+      downloading: true,
+      status: 'downloading',
+      installed: false,
+      progress: 0,
+    });
+
+    mgr.cancel('en_US');
+    net.cb?.(fakeRes({ emitError: true }));
+    await expect(p).resolves.toBeUndefined();
   });
 });
 
