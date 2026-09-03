@@ -47,13 +47,22 @@ vi.mock('@tepegoz/model-gateway', () => ({
   XaiProvider: class {},
   GroqProvider: class {},
 }));
-vi.mock('@tepegoz/shared-types', () => ({ isRunnableProvider: () => true }));
+const isRunnableProvider = vi.hoisted(() => vi.fn(() => true));
+vi.mock('@tepegoz/shared-types', () => ({ isRunnableProvider }));
 
-const tm = vi.hoisted(() => ({
-  getState: () => ({ tabs: [], activeId: null }),
-  activeWebContents: () => ({ __wc: true }),
-  createTab: () => 't1',
-}));
+const tm = vi.hoisted(
+  (): {
+    activeWc: unknown;
+    getState: () => { tabs: { id: string; url: string }[]; activeId: string | null };
+    activeWebContents: () => unknown;
+    createTab: ReturnType<typeof vi.fn>;
+  } => ({
+    activeWc: { __wc: true },
+    getState: () => ({ tabs: [], activeId: null }),
+    activeWebContents: () => tm.activeWc,
+    createTab: vi.fn((): string | null => 't1'),
+  }),
+);
 vi.mock('../tabs', () => ({ default: tm }));
 
 const browserHost = vi.hoisted(() => ({
@@ -88,6 +97,8 @@ const EVAL_KEYS = [
   'TEPEGOZ_EVAL_MODE',
   'TEPEGOZ_EVAL_SCRIPT',
   'TEPEGOZ_EVAL_RUN_CEILING',
+  'TEPEGOZ_EVAL_PROVIDER',
+  'TEPEGOZ_EVAL_API_KEY',
 ];
 function fullEnv(): void {
   process.env['TEPEGOZ_EVAL'] = '1';
@@ -102,6 +113,9 @@ beforeEach(() => {
   fs.readFileSync.mockReturnValue(JSON.stringify({ replies: ['reply one'] }));
   runAgent.mockResolvedValue({ summary: 'the answer', stoppedReason: 'done', steps: [] });
   browserHost.readPage.mockResolvedValue({ url: 'https://fixture.test/page', text: 'body text' });
+  isRunnableProvider.mockReturnValue(true);
+  tm.activeWc = { __wc: true };
+  tm.createTab.mockReturnValue('t1');
 });
 afterEach(() => {
   for (const k of EVAL_KEYS) delete process.env[k];
@@ -175,6 +189,103 @@ describe('a full scripted run', () => {
     expect(fs.writeFileSync).toHaveBeenCalledWith(
       '/tmp/eval-out.json',
       expect.stringContaining('error'),
+      'utf8',
+    );
+  });
+
+  it('opens the entry tab through the UI path when the window comes up tab-less', async () => {
+    fullEnv();
+    tm.activeWc = null; // brand-new profile: no active webContents yet
+    await maybeRunEval();
+    expect(tm.createTab).toHaveBeenCalledWith('https://fixture.test/page');
+    expect(browserHost.waitForLoad).toHaveBeenCalled();
+    expect(browserHost.navigate).not.toHaveBeenCalled();
+  });
+
+  it('threads the run-token ceiling through, treating garbage / non-positive as "off"', async () => {
+    const ceiling = () =>
+      ((runAgent.mock.calls[0] as unknown as unknown[])[2] as { runTokenCeiling: number })
+        .runTokenCeiling;
+    fullEnv();
+    process.env['TEPEGOZ_EVAL_RUN_CEILING'] = '12000';
+    await maybeRunEval();
+    expect(ceiling()).toBe(12000);
+
+    runAgent.mockClear();
+    process.env['TEPEGOZ_EVAL_RUN_CEILING'] = 'not-a-number';
+    await maybeRunEval();
+    expect(ceiling()).toBe(0);
+
+    runAgent.mockClear();
+    process.env['TEPEGOZ_EVAL_RUN_CEILING'] = '-5';
+    await maybeRunEval();
+    expect(ceiling()).toBe(0);
+  });
+});
+
+describe('live tier provider construction', () => {
+  const live = (provider?: string): void => {
+    fullEnv();
+    delete process.env['TEPEGOZ_EVAL_SCRIPT'];
+    process.env['TEPEGOZ_EVAL_MODE'] = 'live';
+    process.env['TEPEGOZ_EVAL_API_KEY'] = 'sk-live';
+    if (provider !== undefined) process.env['TEPEGOZ_EVAL_PROVIDER'] = provider;
+  };
+  const providerOf = () =>
+    (
+      (runAgent.mock.calls[0] as unknown as unknown[])[2] as {
+        provider: { id: string; instance: unknown };
+      }
+    ).provider;
+
+  it.each([
+    ['openai', 'OpenAIProvider'],
+    ['gemini', 'GeminiProvider'],
+    ['kimi', 'KimiProvider'],
+    ['nova', 'NovaProvider'],
+    ['deepseek', 'DeepSeekProvider'],
+    ['xai', 'XaiProvider'],
+    ['groq', 'GroqProvider'],
+  ])('builds a %s provider from the eval env key', async (id, ctorName) => {
+    live(id);
+    const gw = await import('@tepegoz/model-gateway');
+    await maybeRunEval();
+    const p = providerOf();
+    expect(p.id).toBe(id);
+    expect(p.instance).toBeInstanceOf(
+      (gw as unknown as Record<string, new () => unknown>)[ctorName]!,
+    );
+  });
+
+  it('defaults to Anthropic when no provider is named', async () => {
+    live();
+    const gw = await import('@tepegoz/model-gateway');
+    await maybeRunEval();
+    const p = providerOf();
+    expect(p.id).toBe('anthropic');
+    expect(p.instance).toBeInstanceOf(gw.AnthropicProvider);
+  });
+
+  it('fails into the { error } OUT file when the API key is missing', async () => {
+    live('openai');
+    delete process.env['TEPEGOZ_EVAL_API_KEY'];
+    await maybeRunEval();
+    expect(runAgent).not.toHaveBeenCalled();
+    expect(fs.writeFileSync).toHaveBeenCalledWith(
+      '/tmp/eval-out.json',
+      expect.stringContaining('TEPEGOZ_EVAL_API_KEY'),
+      'utf8',
+    );
+  });
+
+  it('fails into the { error } OUT file when the named provider is not runnable', async () => {
+    live('openai');
+    isRunnableProvider.mockReturnValue(false);
+    await maybeRunEval();
+    expect(runAgent).not.toHaveBeenCalled();
+    expect(fs.writeFileSync).toHaveBeenCalledWith(
+      '/tmp/eval-out.json',
+      expect.stringContaining('not runnable'),
       'utf8',
     );
   });
