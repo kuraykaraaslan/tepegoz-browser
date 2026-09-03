@@ -32,7 +32,8 @@ vi.mock('@tepegoz/uploads', () => ({
 const journal = vi.hoisted(() => ({ append: vi.fn() }));
 vi.mock('@tepegoz/persistence', () => ({ EventJournal: journal }));
 vi.mock('@tepegoz/desktop-ipc', () => ({ IpcChannels: { uploadsState: 'uploads:state' } }));
-vi.mock('electron', () => ({ BrowserWindow: { getAllWindows: () => [] } }));
+const bw = vi.hoisted(() => ({ getAllWindows: vi.fn((): unknown[] => []) }));
+vi.mock('electron', () => ({ BrowserWindow: bw }));
 
 const db = vi.hoisted((): { value: unknown } => ({ value: { __db: true } }));
 vi.mock('../db/database.electron', () => ({ getDb: () => db.value }));
@@ -73,6 +74,7 @@ beforeEach(() => {
   db.value = { __db: true };
   cdp.setFileInputFiles.mockResolvedValue(undefined);
   fsHost.assertReadableFile.mockImplementation((p: string) => Promise.resolve(`/real/${p}`));
+  bw.getAllWindows.mockReturnValue([]);
 });
 
 describe('init', () => {
@@ -172,6 +174,24 @@ describe('command', () => {
     expect(Svc.list()).toEqual([]);
   });
 
+  it('cancel resolves the tab by id and logs when clearing the input fails', async () => {
+    const Svc = await load();
+    const target = { isDestroyed: () => false, getURL: () => 'https://form.test/' };
+    tm.webContentsForTab.mockReturnValue(target);
+    const { id } = await Svc.create(input({ tabId: 'tab-1' }), target as never);
+    cdp.setFileInputFiles.mockClear();
+    cdp.setFileInputFiles.mockRejectedValueOnce(new Error('input gone'));
+
+    await Svc.command(id, 'cancel');
+
+    expect(tm.webContentsForTab).toHaveBeenCalledWith('tab-1');
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Failed to clear file input during upload cancel',
+      expect.objectContaining({ id, err: expect.stringContaining('input gone') as string }),
+    );
+    expect(Svc.list()[0]).toMatchObject({ status: 'canceled' }); // canceled despite the clear failing
+  });
+
   it('404s an unknown id and 400s an unsupported action', async () => {
     const Svc = await load();
     await expect(Svc.command('ghost', 'cancel')).rejects.toMatchObject({
@@ -269,6 +289,23 @@ describe('the web-request lifecycle observers', () => {
       onErr({ id: 999, error: 'x' });
     }).not.toThrow();
     expect(Svc.list()[0]).toMatchObject({ status: 'bound' });
+  });
+});
+
+describe('broadcast', () => {
+  it('pushes the uploads state to every live window', async () => {
+    const Svc = await load();
+    const send = vi.fn();
+    bw.getAllWindows.mockReturnValue([
+      { isDestroyed: () => false, webContents: { send } },
+      { isDestroyed: () => true, webContents: { send: vi.fn() } },
+    ]);
+
+    await Svc.create(input(), wc() as never); // create → broadcast()
+
+    expect(send).toHaveBeenCalledWith('uploads:state', {
+      items: expect.any(Array) as unknown[],
+    });
   });
 });
 
