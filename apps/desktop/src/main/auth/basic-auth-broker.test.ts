@@ -138,6 +138,24 @@ describe('non-answer paths all mean "do not authenticate"', () => {
     expect(sent).toHaveLength(0);
     expect(callback).toHaveBeenCalledWith();
   });
+
+  it('warns and authenticates with nothing when pushing the prompt to the renderer throws', async () => {
+    focusedWindow.mockReturnValue({
+      isDestroyed: () => false,
+      webContents: {
+        send: () => {
+          throw new Error('renderer gone');
+        },
+      },
+    });
+    const { callback } = fireLogin();
+    await flush();
+    expect(callback).toHaveBeenCalledWith();
+    expect(loggerWarn).toHaveBeenCalledWith(
+      'Auth prompt failed',
+      expect.objectContaining({ err: expect.stringContaining('renderer gone') as string }),
+    );
+  });
 });
 
 describe('settle-once', () => {
