@@ -21,8 +21,15 @@ class PolicyDeniedError extends Error {}
 vi.mock('@tepegoz/libs', () => ({ AppError }));
 vi.mock('@tepegoz/macro-engine', () => ({ PolicyDeniedError }));
 
+const adapterArgs = vi.hoisted(
+  (): { cursorCb?: ((x: number, y: number) => void) | undefined } => ({ cursorCb: undefined }),
+);
 vi.mock('@tepegoz/human-input', () => ({
-  HumanInputAdapter: class {},
+  HumanInputAdapter: class {
+    constructor(_send: unknown, cursorCb: (x: number, y: number) => void) {
+      adapterArgs.cursorCb = cursorCb;
+    }
+  },
 }));
 
 const PolicyKernel = vi.hoisted(() => ({
@@ -87,6 +94,66 @@ describe('requireWc', () => {
   it('throws a 409 when there is no active tab', async () => {
     tab.wc = null;
     await expect(make().click(CHAIN)).rejects.toMatchObject({ statusCode: 409 });
+  });
+});
+
+describe('the cursor-move callback given to HumanInputAdapter', () => {
+  it('paints the page cursor on the active view and forwards to deps.onCursorMove', () => {
+    const onCursorMove = vi.fn();
+    make({ onCursorMove });
+    adapterArgs.cursorCb?.(50, 60);
+    expect(cursor.showPageCursor).toHaveBeenCalledWith(wcStub, 50, 60);
+    expect(onCursorMove).toHaveBeenCalledWith(50, 60);
+  });
+
+  it('skips the page cursor when there is no active view, but still forwards the move', () => {
+    const onCursorMove = vi.fn();
+    make({ onCursorMove });
+    tab.wc = null;
+    adapterArgs.cursorCb?.(1, 2);
+    expect(cursor.showPageCursor).not.toHaveBeenCalled();
+    expect(onCursorMove).toHaveBeenCalledWith(1, 2);
+  });
+});
+
+describe('waitForLoad', () => {
+  it('resolves immediately when the main frame is not loading', async () => {
+    wcStub.isLoadingMainFrame.mockReturnValue(false);
+    await expect(make().waitForLoad(1000)).resolves.toBeUndefined();
+    expect(wcStub.once).not.toHaveBeenCalledWith('did-stop-loading', expect.any(Function));
+  });
+
+  it('waits for did-stop-loading (then unbinds) when the main frame is still loading', async () => {
+    wcStub.isLoadingMainFrame.mockReturnValue(true);
+    const p = make().waitForLoad(5000);
+    const done = wcStub.once.mock.calls.find((c) => c[0] === 'did-stop-loading')?.[1] as
+      | (() => void)
+      | undefined;
+    expect(done).toBeDefined();
+    done!();
+    await expect(p).resolves.toBeUndefined();
+    expect(wcStub.removeListener).toHaveBeenCalledWith('did-stop-loading', done);
+  });
+
+  it('does not touch a destroyed webContents when the load settles', async () => {
+    wcStub.isLoadingMainFrame.mockReturnValue(true);
+    const p = make().waitForLoad(5000);
+    const done = wcStub.once.mock.calls.find((c) => c[0] === 'did-stop-loading')?.[1] as
+      | (() => void)
+      | undefined;
+    wcStub.isDestroyed.mockReturnValue(true);
+    done!();
+    await expect(p).resolves.toBeUndefined();
+    expect(wcStub.removeListener).not.toHaveBeenCalled();
+  });
+});
+
+describe('highlight', () => {
+  it('resolves the chain (self-heal path) without acting on it', async () => {
+    const host = make();
+    expect(typeof host.highlight).toBe('function');
+    await expect(host.highlight!(CHAIN)).resolves.toBeUndefined();
+    expect(MacroCdp.resolveChain).toHaveBeenCalled();
   });
 });
 
