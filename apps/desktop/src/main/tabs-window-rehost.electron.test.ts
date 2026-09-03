@@ -11,23 +11,31 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  */
 
 const closed: unknown[] = [];
+const loadBehavior = vi.hoisted(() => ({ reject: false }));
 vi.mock('electron', () => ({
   WebContentsView: class {
     setBounds = vi.fn();
     setVisible = vi.fn();
     webContents = {
-      loadURL: () => Promise.resolve(),
+      loadURL: () =>
+        loadBehavior.reject ? Promise.reject(new Error('tunnel down')) : Promise.resolve(),
       isDestroyed: () => false,
       close: () => closed.push(this),
       session: { __new: true },
+      getZoomFactor: () => 1,
+      navigationHistory: { canGoBack: () => false, canGoForward: () => false },
     };
   },
   BrowserWindow: { fromWebContents: () => null },
   dialog: { showMessageBoxSync: () => 0 },
 }));
-vi.mock('@tepegoz/libs', () => ({
-  Logger: { warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() },
+const logger = vi.hoisted(() => ({
+  warn: vi.fn(),
+  info: vi.fn(),
+  debug: vi.fn(),
+  error: vi.fn(),
 }));
+vi.mock('@tepegoz/libs', () => ({ Logger: logger }));
 vi.mock('@tepegoz/security-policy', () => ({ mayOpenDevTools: () => ({ allowed: true }) }));
 vi.mock('./lib/i18n-main', () => ({
   mainStrings: () => ({
@@ -128,13 +136,25 @@ class Harness extends WindowTabsRehost {
   rec(id: string) {
     return this.store.get(id);
   }
+  hideRec(id: string): void {
+    this.store.setHidden(id, true);
+  }
+  makeActive(id: string): void {
+    this.store.setActive(id);
+  }
+  activeId(): string | null {
+    return this.store.activeId;
+  }
 }
 
 let tabs: Harness;
 beforeEach(() => {
   closed.length = 0;
+  loadBehavior.reject = false;
   wiring.wireView.mockClear();
   wiring.unwireView.mockClear();
+  logger.warn.mockClear();
+  logger.info.mockClear();
   tabs = new Harness(fakeWindow() as never, false);
 });
 
@@ -161,6 +181,32 @@ describe('rehostTab', () => {
     expect(wiring.unwireView).toHaveBeenCalledTimes(1);
     expect(wiring.wireView).toHaveBeenCalledTimes(1);
     expect(tabs.rec(id)).toMatchObject({ isLoading: true, faviconUrl: null });
+  });
+
+  it('re-parks a hidden tab after the move (it stays hidden and attached)', () => {
+    const id = tabs.addWeb();
+    tabs.hideRec(id);
+    expect(tabs.rehostTab(id, TARGET_SESSION)).toBe(true);
+    expect(tabs.rec(id)?.hidden).toBe(true);
+  });
+
+  it('re-activates the active tab after the move', () => {
+    const id = tabs.addWeb();
+    tabs.makeActive(id);
+    expect(tabs.rehostTab(id, TARGET_SESSION)).toBe(true);
+    expect(tabs.activeId()).toBe(id);
+  });
+
+  it('logs when the re-hosted page fails to load on the new session', async () => {
+    loadBehavior.reject = true;
+    const id = tabs.addWeb();
+    tabs.rehostTab(id, TARGET_SESSION);
+    await vi.waitFor(() =>
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Re-hosted tab failed to load',
+        expect.objectContaining({ id, err: expect.stringContaining('tunnel down') as string }),
+      ),
+    );
   });
 });
 
