@@ -29,6 +29,12 @@ vi.mock('electron', () => ({
 const trusted = { value: true };
 vi.mock('../lib/trusted-origin', () => ({ isTrustedAppUrl: () => trusted.value }));
 
+const logger = vi.hoisted(() => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }));
+vi.mock('@tepegoz/libs', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return { ...actual, Logger: logger };
+});
+
 vi.mock('../lib/i18n-main', () => ({
   mainStrings: () => ({
     errors: {
@@ -65,9 +71,15 @@ const windowTabs = {
   byId: new Map<string, ReturnType<typeof fakeTab>>(),
 };
 
+const nav = { cb: null as null | ((url: string, wc: unknown, owner: unknown) => void) };
 vi.mock('../tabs', () => ({
   default: {
-    onNavigation: () => () => {},
+    onNavigation: (fn: (url: string, wc: unknown, owner: unknown) => void) => {
+      nav.cb = fn;
+      return () => {
+        nav.cb = null;
+      };
+    },
     forSenderWindow: () => ({
       activeWebContents: () => windowTabs.active,
       webContentsForTab: (id: string) => windowTabs.byId.get(id) ?? null,
@@ -128,6 +140,8 @@ beforeEach(async () => {
   handlers.clear();
   decrypted.length = 0;
   trusted.value = true;
+  nav.cb = null;
+  logger.warn.mockClear();
   windowTabs.active = null;
   windowTabs.byId.clear();
   ({ PasswordProviderRegistry } = await import('@tepegoz/password-core'));
@@ -253,5 +267,61 @@ describe('autofill boundary', () => {
 
     await expect(fill({ credentialId: 'bank-1', tabId: 'missing' })).rejects.toThrow();
     expect(decrypted).toEqual([]);
+  });
+});
+
+describe('on navigation, it offers the matching logins (metadata only)', () => {
+  function fakeWin(destroyed = false) {
+    return { isDestroyed: () => destroyed, webContents: { send: vi.fn() } };
+  }
+  // The `onNavigation` callback fires `onPageLoaded` fire-and-forget, so flush the microtask queue.
+  const settle = () => new Promise((r) => setTimeout(r, 5));
+
+  it('pushes a metadata-only projection to the navigating tab’s window', async () => {
+    const win = fakeWin();
+    nav.cb!('https://bank.example/login', {}, win);
+    await settle();
+
+    expect(win.webContents.send).toHaveBeenCalledTimes(1);
+    const [channel, payload] = win.webContents.send.mock.calls[0]! as [
+      string,
+      { url: string; matches: Record<string, unknown>[] },
+    ];
+    expect(channel).toMatch(/autofill/i);
+    expect(payload.url).toBe('https://bank.example/login');
+    expect(payload.matches).toHaveLength(1);
+    expect(payload.matches[0]).toMatchObject({
+      id: 'bank-1',
+      username: expect.any(String) as string,
+    });
+    // The encrypted secret must never be in the projection.
+    expect(JSON.stringify(payload.matches[0])).not.toContain('encryptedPassword');
+  });
+
+  it('sends nothing when the page has no saved logins', async () => {
+    const win = fakeWin();
+    nav.cb!('https://no-logins.example/', {}, win);
+    await settle();
+    expect(win.webContents.send).not.toHaveBeenCalled();
+  });
+
+  it('does nothing for an already-destroyed window', async () => {
+    const win = fakeWin(true);
+    nav.cb!('https://bank.example/login', {}, win);
+    await settle();
+    expect(win.webContents.send).not.toHaveBeenCalled();
+  });
+
+  it('logs and swallows a lookup failure', async () => {
+    PasswordProviderRegistry.reset();
+    PasswordProviderRegistry.register({
+      ...provider([]),
+      findByUrl: () => Promise.reject(new Error('vault offline')),
+    });
+    const win = fakeWin();
+    nav.cb!('https://bank.example/login', {}, win);
+    await settle();
+    expect(win.webContents.send).not.toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenCalledWith('Autofill lookup failed', expect.any(Object));
   });
 });
