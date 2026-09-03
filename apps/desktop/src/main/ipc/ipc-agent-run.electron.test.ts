@@ -60,10 +60,13 @@ const PlanGrantStore = vi.hoisted(() => ({
   mint: vi.fn(() => ({ domains: [], tiers: [] })),
   grantFromApproval: vi.fn(() => ({ domains: [], tiers: [] })),
 }));
+const resolveAutonomy = vi.hoisted(() =>
+  vi.fn<() => { decision: string; reason: string }>(() => ({ decision: 'ask', reason: 'r' })),
+);
 vi.mock('@tepegoz/security-policy', () => ({
   PlanGrantStore,
   REMEMBERED_GRANT_DAYS: 30,
-  resolveAutonomy: vi.fn(() => ({ decision: 'ask' })),
+  resolveAutonomy,
 }));
 vi.mock('@tepegoz/capability-plane', () => ({
   CapabilityRegistry: { get: vi.fn(() => undefined) },
@@ -103,23 +106,28 @@ vi.mock('../agent/browser-host.electron', () => bh);
 vi.mock('../tabs', () => ({
   default: { getState: vi.fn(() => ({ tabs: [] as unknown[], activeId: null })) },
 }));
-vi.mock('../agent/plan-grant-scope', () => ({
-  planGrantScope: vi.fn(() => ({ urls: [], tiers: [] })),
+const planGrantScopeMock = vi.hoisted(() =>
+  vi.fn<() => { urls: string[]; tiers: string[] }>(() => ({ urls: [], tiers: [] })),
+);
+vi.mock('../agent/plan-grant-scope', () => ({ planGrantScope: planGrantScopeMock }));
+const remGrant = vi.hoisted(() => ({
+  mayOfferRemember: vi.fn<() => boolean>(() => false),
+  rememberGrant: vi.fn<() => unknown>(() => null),
+  rememberedCoverage: vi.fn<() => { covered: boolean }>(() => ({ covered: false })),
+  resolveSkillScope: vi.fn<() => unknown>(() => null),
 }));
-vi.mock('../agent/remembered-grant-scope', () => ({
-  mayOfferRemember: vi.fn(() => false),
-  rememberGrant: vi.fn(() => null),
-  rememberedCoverage: vi.fn(() => ({ covered: false })),
-  resolveSkillScope: vi.fn(() => null),
-}));
+vi.mock('../agent/remembered-grant-scope', () => remGrant);
 const runLock = vi.hoisted(() => ({
   createRunControl: vi.fn(() => ({ signal: { aborted: false } })),
   unregisterRunControl: vi.fn(),
 }));
 vi.mock('../agent/agent-run-lock.electron', () => runLock);
-vi.mock('../file-operations/file-operations-host', () => ({
-  default: { consentDecision: vi.fn(() => Promise.resolve({ type: 'auto', approved: true })) },
+const fileOps = vi.hoisted(() => ({
+  consentDecision: vi.fn<(req: unknown) => Promise<{ type: string; approved?: boolean }>>(() =>
+    Promise.resolve({ type: 'auto', approved: true }),
+  ),
 }));
+vi.mock('../file-operations/file-operations-host', () => ({ default: fileOps }));
 
 const getDb = vi.hoisted(() => vi.fn((): unknown => null));
 vi.mock('../db/database.electron', () => ({ getDb }));
@@ -176,6 +184,8 @@ type Hooks = {
   onEvent: (k: string, m: string, d?: string) => void;
   onModelDelta: (t: string) => void;
   onCheckpoint: (c: unknown) => void;
+  requestApproval: (req: unknown) => Promise<boolean>;
+  requestPlanApproval: (plan: unknown) => Promise<{ approved: boolean }>;
 };
 const hooksArg = (): Hooks => AgentService.run.mock.calls[0]![1] as Hooks;
 
@@ -210,6 +220,16 @@ beforeEach(() => {
     success: true as const,
     data: v,
   }));
+  fileOps.consentDecision.mockResolvedValue({ type: 'auto', approved: true });
+  remGrant.resolveSkillScope.mockReturnValue(null);
+  remGrant.rememberedCoverage.mockReturnValue({ covered: false });
+  remGrant.mayOfferRemember.mockReturnValue(false);
+  remGrant.rememberGrant.mockReturnValue(null);
+  resolveAutonomy.mockReturnValue({ decision: 'ask', reason: 'r' });
+  PlanGrantStore.covers.mockReturnValue({ covered: false });
+  PlanGrantStore.mint.mockReturnValue({ domains: [], tiers: [] });
+  planGrantScopeMock.mockReturnValue({ urls: [], tiers: [] });
+  bh.browserHost.listTabs.mockReturnValue([]);
   send = vi.fn();
   event = { sender: { isDestroyed: () => false, send } };
   registerAgentRunIpc();
@@ -307,5 +327,192 @@ describe('the injected hooks', () => {
     AgentDeltaSchema.safeParse.mockReturnValue({ success: false });
     hooksArg().onModelDelta('dropped');
     expect(deltas()).toHaveLength(2);
+  });
+});
+
+describe('the injected requestApproval hook', () => {
+  const confirmReq = (over: Record<string, unknown> = {}): Record<string, unknown> => ({
+    toolName: 'fs.write',
+    args: {},
+    policy: { reason: 'writes a file', biometric: false },
+    risk: { tier: 'low' },
+    targetUrl: 'https://example.com/x',
+    ...over,
+  });
+
+  it('short-circuits to the FileOperationsHost decision when it is an "auto" one', async () => {
+    await run();
+    expect(await hooksArg().requestApproval(confirmReq())).toBe(true);
+
+    fileOps.consentDecision.mockResolvedValue({ type: 'auto', approved: false });
+    expect(await hooksArg().requestApproval(confirmReq())).toBe(false);
+    expect(send).not.toHaveBeenCalledWith(IpcChannels.agentApprovalRequest, expect.anything());
+  });
+
+  it('approves without a prompt when the approved plan grant already covers the step', async () => {
+    fileOps.consentDecision.mockResolvedValue({ type: 'ask' });
+    PlanGrantStore.covers.mockReturnValue({ covered: true });
+    await run();
+    expect(await hooksArg().requestApproval(confirmReq())).toBe(true);
+    expect(PlanGrantStore.covers).toHaveBeenCalledWith(
+      expect.objectContaining({ targetUrl: 'https://example.com/x', tier: 'low' }),
+    );
+    expect(send).not.toHaveBeenCalledWith(IpcChannels.agentApprovalRequest, expect.anything());
+  });
+
+  it('approves on a remembered grant and narrates it into the transcript', async () => {
+    fileOps.consentDecision.mockResolvedValue({ type: 'ask' });
+    remGrant.resolveSkillScope.mockReturnValue({ name: 'my-skill' });
+    remGrant.rememberedCoverage.mockReturnValue({ covered: true });
+    await run();
+    expect(await hooksArg().requestApproval(confirmReq())).toBe(true);
+    expect(send).toHaveBeenCalledWith(
+      IpcChannels.agentEvent,
+      expect.objectContaining({ kind: 'grant', detail: 'remembered_grant' }),
+    );
+  });
+
+  it('approves without a prompt when the autonomy level auto-approves', async () => {
+    fileOps.consentDecision.mockResolvedValue({ type: 'ask' });
+    resolveAutonomy.mockReturnValue({ decision: 'auto_approve', reason: 'autonomy: allow' });
+    await run();
+    expect(await hooksArg().requestApproval(confirmReq())).toBe(true);
+    expect(send).not.toHaveBeenCalledWith(IpcChannels.agentApprovalRequest, expect.anything());
+  });
+
+  it('otherwise sends the HITL request and resolves with the renderer answer', async () => {
+    fileOps.consentDecision.mockResolvedValue({ type: 'ask' });
+    await run();
+    const pending = hooksArg().requestApproval(confirmReq());
+    // requestApproval awaits the FileOperationsHost decision first, so let that microtask settle.
+    await vi.waitFor(() => expect(shared.pendingApprovals.has('appr-uuid-x')).toBe(true));
+    expect(send).toHaveBeenCalledWith(
+      IpcChannels.agentApprovalRequest,
+      expect.objectContaining({ approvalId: 'appr-uuid-x', toolName: 'fs.write' }),
+    );
+    const entry = shared.pendingApprovals.get('appr-uuid-x') as { resolve: (o: unknown) => void };
+    entry.resolve({ approved: true });
+    expect(await pending).toBe(true);
+  });
+
+  it('fail-safe denies the HITL request when nobody answers within the timeout', async () => {
+    fileOps.consentDecision.mockResolvedValue({ type: 'ask' });
+    await run();
+    vi.useFakeTimers();
+    try {
+      const pending = hooksArg().requestApproval(confirmReq());
+      await vi.advanceTimersByTimeAsync(120_000);
+      expect(await pending).toBe(false);
+      expect(shared.pendingApprovals.has('appr-uuid-x')).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('skips both grant checks and prompts with no grant offer for an unclassified call', async () => {
+    fileOps.consentDecision.mockResolvedValue({ type: 'ask' });
+    await run();
+    const pending = hooksArg().requestApproval(
+      confirmReq({ risk: undefined, targetUrl: undefined }),
+    );
+    await vi.waitFor(() => expect(shared.pendingApprovals.has('appr-uuid-x')).toBe(true));
+    expect(PlanGrantStore.covers).not.toHaveBeenCalled();
+    expect(remGrant.rememberedCoverage).not.toHaveBeenCalled();
+    const call = send.mock.calls.find((c) => c[0] === IpcChannels.agentApprovalRequest) as [
+      string,
+      Record<string, unknown>,
+    ];
+    expect(call[1]).not.toHaveProperty('riskTier');
+    expect(call[1]).not.toHaveProperty('scopeHost');
+    const entry = shared.pendingApprovals.get('appr-uuid-x') as { resolve: (o: unknown) => void };
+    entry.resolve({ approved: false });
+    expect(await pending).toBe(false);
+  });
+
+  it('widens the run scope and stores a remembered grant when the user ticks both boxes', async () => {
+    fileOps.consentDecision.mockResolvedValue({ type: 'ask' });
+    remGrant.resolveSkillScope.mockReturnValue({ name: 'sk' });
+    remGrant.mayOfferRemember.mockReturnValue(true);
+    remGrant.rememberGrant.mockReturnValue(Date.now() + 1000);
+    await run();
+    const pending = hooksArg().requestApproval(confirmReq());
+    await vi.waitFor(() => expect(shared.pendingApprovals.has('appr-uuid-x')).toBe(true));
+    const entry = shared.pendingApprovals.get('appr-uuid-x') as { resolve: (o: unknown) => void };
+    entry.resolve({ approved: true, grantScope: true, remember: true });
+    expect(await pending).toBe(true);
+    expect(PlanGrantStore.grantFromApproval).toHaveBeenCalledWith(
+      expect.stringMatching(/^run-\d+$/) as string,
+      'https://example.com/x',
+      'low',
+    );
+    expect(remGrant.rememberGrant).toHaveBeenCalled();
+    expect(send).toHaveBeenCalledWith(
+      IpcChannels.agentEvent,
+      expect.objectContaining({ kind: 'grant', detail: 'remembered_grant' }),
+    );
+  });
+});
+
+describe('the injected requestPlanApproval hook', () => {
+  const plan = { goal: 'buy milk', steps: [{ id: 's1', tool: 'nav', rationale: 'go' }] };
+
+  it('mints a scoped grant and self-approves when autonomy is above "ask"', async () => {
+    PreferenceStore.getAll.mockReturnValue({ agentTokenQuota: 0, agentAutonomy: 'allow' });
+    await run();
+    expect(await hooksArg().requestPlanApproval(plan)).toEqual({ approved: true });
+    expect(PlanGrantStore.mint).toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalledWith(IpcChannels.agentPlanPreview, expect.anything());
+  });
+
+  it('sends a plan preview and mints the grant only once the renderer approves it', async () => {
+    await run();
+    const pending = hooksArg().requestPlanApproval(plan);
+    expect(send).toHaveBeenCalledWith(
+      IpcChannels.agentPlanPreview,
+      expect.objectContaining({ planId: 'plan-uuid-x', goal: 'buy milk' }),
+    );
+    expect(PlanGrantStore.mint).not.toHaveBeenCalled();
+    const entry = shared.pendingPlans.get('plan-uuid-x') as { resolve: (d: unknown) => void };
+    entry.resolve({ approved: true });
+    expect(await pending).toEqual({ approved: true });
+    expect(PlanGrantStore.mint).toHaveBeenCalled();
+  });
+
+  it('does not mint a grant when the renderer rejects the plan', async () => {
+    await run();
+    const pending = hooksArg().requestPlanApproval(plan);
+    const entry = shared.pendingPlans.get('plan-uuid-x') as { resolve: (d: unknown) => void };
+    entry.resolve({ approved: false });
+    expect(await pending).toEqual({ approved: false });
+    expect(PlanGrantStore.mint).not.toHaveBeenCalled();
+  });
+
+  it('fail-safe rejects the plan when nobody answers within the timeout', async () => {
+    await run();
+    vi.useFakeTimers();
+    try {
+      const pending = hooksArg().requestPlanApproval(plan);
+      await vi.advanceTimersByTimeAsync(120_000);
+      expect(await pending).toEqual({ approved: false });
+      expect(shared.pendingPlans.has('plan-uuid-x')).toBe(false);
+      expect(PlanGrantStore.mint).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('mints the grant scoped to the active tab URL when autonomy self-approves', async () => {
+    PreferenceStore.getAll.mockReturnValue({ agentTokenQuota: 0, agentAutonomy: 'allow' });
+    bh.browserHost.listTabs.mockReturnValue([
+      { active: false, url: 'https://other.example' },
+      { active: true, url: 'https://shop.example/cart' },
+    ]);
+    await run();
+    await hooksArg().requestPlanApproval(plan);
+    expect(planGrantScopeMock).toHaveBeenCalledWith(
+      plan,
+      'https://shop.example/cart',
+      expect.any(Function),
+    );
   });
 });
