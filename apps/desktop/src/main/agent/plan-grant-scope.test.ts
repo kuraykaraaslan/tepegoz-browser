@@ -82,6 +82,21 @@ describe('planGrantScope', () => {
     expect(scope.tiers).toEqual(['ui-write']);
   });
 
+  it('collects URLs from array-valued step arguments', () => {
+    const scope = planGrantScope(
+      plan([
+        {
+          tool: 'browser_update_page',
+          args: { links: ['https://a.example/1', 'nope', 'https://b.example/2'] },
+        },
+      ]),
+      null,
+      lookup,
+    );
+    expect(scope.urls).toContain('https://a.example/1');
+    expect(scope.urls).toContain('https://b.example/2');
+  });
+
   it('ignores non-http schemes in arguments', () => {
     const scope = planGrantScope(
       plan([
