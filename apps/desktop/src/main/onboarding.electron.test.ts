@@ -8,12 +8,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  */
 
 const prefs = vi.hoisted(() => ({ getAll: vi.fn(() => ({ onboardingCompleted: false })) }));
+const logger = vi.hoisted(() => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn() }));
 vi.mock('@tepegoz/preferences', () => ({ default: prefs }));
+vi.mock('@tepegoz/libs', () => ({ Logger: logger }));
 vi.mock('./chrome-url', () => ({ chromeFilePath: () => '/app/chrome.html' }));
 
 const mod = await import('./onboarding.electron');
 
 const win = () => ({
+  isDestroyed: vi.fn(() => false),
   loadURL: vi.fn(() => Promise.resolve()),
   loadFile: vi.fn(() => Promise.resolve()),
 });
@@ -30,24 +33,62 @@ afterEach(() => {
 });
 
 describe('loadChrome', () => {
-  it('DEV: loads the dev server URL, appending a query string when given', () => {
+  it('DEV: normalises the bare origin to a "/" path before the query', () => {
     process.env['ELECTRON_RENDERER_URL'] = 'http://localhost:5173';
     const a = win();
-    mod.loadChrome(asWin(a));
-    expect(a.loadURL).toHaveBeenCalledWith('http://localhost:5173');
+    void mod.loadChrome(asWin(a));
+    // electron-vite hands us `http://localhost:5173` with no trailing slash; the load must still target
+    // `http://localhost:5173/`, never an authority followed straight by `?`.
+    expect(a.loadURL).toHaveBeenCalledWith('http://localhost:5173/');
 
     const b = win();
-    mod.loadChrome(asWin(b), { surface: 'onboarding' });
-    expect(b.loadURL).toHaveBeenCalledWith('http://localhost:5173?surface=onboarding');
+    void mod.loadChrome(asWin(b), { surface: 'onboarding' });
+    expect(b.loadURL).toHaveBeenCalledWith('http://localhost:5173/?surface=onboarding');
   });
 
-  it('PROD: loads the bundled file, passing { query } only when given', () => {
+  it('DEV: does not double the slash when the dev URL already ends in one', () => {
+    process.env['ELECTRON_RENDERER_URL'] = 'http://localhost:5173/';
     const a = win();
-    mod.loadChrome(asWin(a));
+    void mod.loadChrome(asWin(a), { surface: 'onboarding' });
+    expect(a.loadURL).toHaveBeenCalledWith('http://localhost:5173/?surface=onboarding');
+  });
+
+  it('DEV: retries a failed dev-server load, then resolves', async () => {
+    process.env['ELECTRON_RENDERER_URL'] = 'http://localhost:5173';
+    const w = win();
+    w.loadURL.mockRejectedValueOnce(new Error('ERR_FAILED')).mockResolvedValueOnce(undefined);
+    await mod.loadChrome(asWin(w));
+    expect(w.loadURL).toHaveBeenCalledTimes(2);
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Chrome dev-server load failed, retrying',
+      expect.objectContaining({ attempt: 1 }),
+    );
+  });
+
+  it('DEV: rejects after exhausting the retry budget', async () => {
+    process.env['ELECTRON_RENDERER_URL'] = 'http://localhost:5173';
+    const w = win();
+    w.loadURL.mockRejectedValue(new Error('ERR_FAILED'));
+    await expect(mod.loadChrome(asWin(w))).rejects.toThrow('ERR_FAILED');
+    expect(w.loadURL).toHaveBeenCalledTimes(3);
+  });
+
+  it('DEV: stops retrying once the window is destroyed', async () => {
+    process.env['ELECTRON_RENDERER_URL'] = 'http://localhost:5173';
+    const w = win();
+    w.loadURL.mockRejectedValue(new Error('ERR_FAILED'));
+    w.isDestroyed.mockReturnValueOnce(false).mockReturnValue(true);
+    await mod.loadChrome(asWin(w));
+    expect(w.loadURL).toHaveBeenCalledTimes(1);
+  });
+
+  it('PROD: loads the bundled file, passing { query } only when given', async () => {
+    const a = win();
+    await mod.loadChrome(asWin(a));
     expect(a.loadFile).toHaveBeenCalledWith('/app/chrome.html', undefined);
 
     const b = win();
-    mod.loadChrome(asWin(b), { k: 'v' });
+    await mod.loadChrome(asWin(b), { k: 'v' });
     expect(b.loadFile).toHaveBeenCalledWith('/app/chrome.html', { query: { k: 'v' } });
   });
 });

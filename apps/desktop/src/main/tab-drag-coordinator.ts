@@ -1,6 +1,6 @@
 import { BrowserWindow } from 'electron';
-import { chromeFilePath } from './chrome-url';
 import { Logger } from '@tepegoz/libs';
+import { loadChrome } from './onboarding.electron';
 import {
   IpcChannels,
   type TabDragBegin,
@@ -73,12 +73,7 @@ function loadPreviewSurface(win: BrowserWindow, payload: TabDragBegin): void {
     ...(favicon.length > 0 ? { favicon } : {}),
     ...(payload.groupColor !== null ? { groupColor: payload.groupColor } : {}),
   };
-  const devUrl = process.env['ELECTRON_RENDERER_URL'];
-  const loaded =
-    devUrl !== undefined && devUrl.length > 0
-      ? win.loadURL(`${devUrl}?${new URLSearchParams(query).toString()}`)
-      : win.loadFile(chromeFilePath(), { query });
-  void loaded.catch((err: unknown) => {
+  void loadChrome(win, query).catch((err: unknown) => {
     Logger.warn('Drag preview failed to load', { err: String(err) });
   });
 }

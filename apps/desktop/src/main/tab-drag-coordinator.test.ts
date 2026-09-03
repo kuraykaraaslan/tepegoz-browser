@@ -31,9 +31,10 @@ const preview = vi.hoisted(() => ({
   loadURL: vi.fn(() => Promise.resolve()),
   loadFile: vi.fn(() => Promise.resolve()),
 }));
-vi.mock('./window', () => ({ createDragPreviewWindow: () => preview }));
-vi.mock('./chrome-url', () => ({ chromeFilePath: () => '/app/chrome.html' }));
+const loadChrome = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 const logger = vi.hoisted(() => ({ warn: vi.fn() }));
+vi.mock('./window', () => ({ createDragPreviewWindow: () => preview }));
+vi.mock('./onboarding.electron', () => ({ loadChrome }));
 vi.mock('@tepegoz/libs', () => ({ Logger: logger }));
 vi.mock('./lib/surface-theme', () => ({
   resolveSurfaceTheme: () => ({ theme: 'dark', themeColor: '' }),
@@ -110,40 +111,31 @@ describe('registerTabDragIpc', () => {
 });
 
 describe('tabsDragBegin', () => {
-  it('sizes a fresh preview to the clamped tab size and loads its surface (prod → file)', () => {
+  it('sizes a fresh preview to the clamped tab size and loads its surface via loadChrome', () => {
     begin({ width: 10, height: 5 }); // below the 48 / 24 floors
     expect(preview.setSize).toHaveBeenCalledWith(48, 24);
-    expect(preview.loadFile).toHaveBeenCalledWith(
-      '/app/chrome.html',
-      expect.objectContaining({
-        query: expect.objectContaining({ surface: 'drag-preview' }) as object,
-      }),
+    expect(loadChrome).toHaveBeenCalledWith(
+      preview,
+      expect.objectContaining({ surface: 'drag-preview' }),
     );
   });
 
-  it('DEV: loads the preview surface from the dev server', () => {
-    process.env['ELECTRON_RENDERER_URL'] = 'http://localhost:5173';
+  it('logs a warning when the preview surface fails to load', async () => {
+    loadChrome.mockRejectedValueOnce(new Error('boom'));
     begin();
-    expect(preview.loadURL).toHaveBeenCalledWith(expect.stringContaining('http://localhost:5173?'));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Drag preview failed to load',
+      expect.objectContaining({ err: expect.stringContaining('boom') as string }),
+    );
   });
 
   it('carries a within-limit favicon URL into the preview query', () => {
     begin({ faviconUrl: 'https://x.test/f.ico' });
-    expect(preview.loadFile).toHaveBeenCalledWith(
-      '/app/chrome.html',
-      expect.objectContaining({
-        query: expect.objectContaining({ favicon: 'https://x.test/f.ico' }) as object,
-      }),
-    );
-  });
-
-  it('logs, without throwing, when the preview surface fails to load', async () => {
-    preview.loadFile.mockReturnValueOnce(Promise.reject(new Error('renderer gone')));
-    begin();
-    await new Promise((r) => setTimeout(r, 0)); // let the void loaded.catch(...) run
-    expect(logger.warn).toHaveBeenCalledWith(
-      'Drag preview failed to load',
-      expect.objectContaining({ err: expect.stringContaining('renderer gone') as string }),
+    expect(loadChrome).toHaveBeenCalledWith(
+      preview,
+      expect.objectContaining({ favicon: 'https://x.test/f.ico' }),
     );
   });
 });

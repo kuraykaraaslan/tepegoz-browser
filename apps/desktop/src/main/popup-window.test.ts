@@ -14,12 +14,13 @@ const screen = vi.hoisted(() => ({
 }));
 const BrowserWindow = vi.hoisted(() => ({ getFocusedWindow: vi.fn((): unknown => null) }));
 const createPopupWindow = vi.hoisted(() => vi.fn());
+const loadChrome = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 const logger = vi.hoisted(() => ({ warn: vi.fn() }));
 vi.mock('electron', () => ({ BrowserWindow, screen }));
-vi.mock('./chrome-url', () => ({ chromeFilePath: () => '/chrome.html' }));
 vi.mock('@tepegoz/libs', () => ({ Logger: logger }));
 vi.mock('@tepegoz/desktop-ipc', () => ({ IpcChannels: { popupClosed: 'popup:closed' } }));
 vi.mock('./window', () => ({ createPopupWindow }));
+vi.mock('./onboarding.electron', () => ({ loadChrome }));
 vi.mock('./lib/surface-theme', () => ({
   resolveSurfaceTheme: () => ({ color: '#fff', theme: 'light', themeColor: '#ffffff' }),
 }));
@@ -269,17 +270,16 @@ describe('PopupWindowManager', () => {
     );
   });
 
-  it('loadSurface uses the dev renderer URL when ELECTRON_RENDERER_URL is set', () => {
-    process.env['ELECTRON_RENDERER_URL'] = 'http://localhost:5173';
+  it('loadSurface delegates to the one loadChrome resolver with the surface query', () => {
     PopupWindowManager.open(openOpts('main-menu'));
-    expect(win0().loadURL).toHaveBeenCalledWith(expect.stringContaining('http://localhost:5173?'));
-    expect(win0().loadFile).not.toHaveBeenCalled();
+    expect(loadChrome).toHaveBeenCalledWith(
+      win0(),
+      expect.objectContaining({ surface: 'menu' }),
+    );
   });
 
-  it('loadSurface logs a warning when the bundle fails to load', async () => {
-    createPopupWindow.mockImplementation(() =>
-      mkWin({ loadFile: vi.fn(() => Promise.reject(new Error('boom'))) }),
-    );
+  it('loadSurface logs a warning when loadChrome rejects', async () => {
+    loadChrome.mockRejectedValueOnce(new Error('boom'));
     PopupWindowManager.open(openOpts('main-menu'));
     await vi.runAllTimersAsync().catch(() => undefined);
     expect(logger.warn).toHaveBeenCalledWith(

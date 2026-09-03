@@ -1,8 +1,8 @@
 import { BrowserWindow, screen, type Rectangle } from 'electron';
-import { chromeFilePath } from './chrome-url';
 import { Logger } from '@tepegoz/libs';
 import { IpcChannels } from '@tepegoz/desktop-ipc';
 import { createPopupWindow } from './window';
+import { loadChrome } from './onboarding.electron';
 import { resolveSurfaceTheme } from './lib/surface-theme';
 
 /**
@@ -313,15 +313,10 @@ function nowMs(): number {
   return Date.now();
 }
 
-/** Load the renderer bundle with the surface query (dev URL vs bundled file). */
+/** Load the renderer bundle with the surface query (dev URL vs bundled file), via the one `loadChrome`
+ *  resolver so the popup can't disagree with the main window on where its own UI lives. */
 function loadSurface(win: BrowserWindow, query: Record<string, string>, key: string): void {
-  const search = new URLSearchParams(query).toString();
-  const devUrl = process.env['ELECTRON_RENDERER_URL'];
-  const loaded =
-    devUrl !== undefined && devUrl.length > 0
-      ? win.loadURL(`${devUrl}?${search}`)
-      : win.loadFile(chromeFilePath(), { query });
-  void loaded.catch((err: unknown) => {
+  void loadChrome(win, query).catch((err: unknown) => {
     Logger.warn('Popup failed to load', { key, err: String(err) });
   });
 }
