@@ -130,6 +130,26 @@ describe('site-data:plan', () => {
     };
     expect(plan.warnings).toContain('holds_saved_credentials');
   });
+
+  it('treats a vault-list failure as "no saved password" rather than guessing', async () => {
+    vaultList.mockRejectedValue(new Error('vault locked'));
+    const plan = (await call(IpcChannels.siteDataPlan, 'https://example.com/')) as {
+      warnings: string[];
+    };
+    expect(plan.warnings).not.toContain('holds_saved_credentials');
+  });
+
+  it('treats a failed cookie probe as "no active session" and keeps planning', async () => {
+    const web = fakeSession('persist:tepegoz-web');
+    web.cookies.get.mockRejectedValue(new Error('cookie store locked'));
+    sessions.list = [web];
+    const plan = (await call(IpcChannels.siteDataPlan, 'https://example.com/')) as {
+      warnings: string[];
+      site: string;
+    };
+    expect(plan.site).toBe('example.com');
+    expect(plan.warnings).not.toContain('signs_you_out');
+  });
 });
 
 describe('site-data:clear', () => {
@@ -170,6 +190,14 @@ describe('site-data:clear', () => {
     const out = await call(IpcChannels.siteDataClear, 'https://example.com/');
     expect(out).not.toBeNull();
     expect(journalAppend).not.toHaveBeenCalled();
+  });
+
+  it('swallows a journal-append failure and still returns the plan', async () => {
+    journalAppend.mockImplementationOnce(() => {
+      throw new Error('journal write failed');
+    });
+    const out = await call(IpcChannels.siteDataClear, 'https://example.com/');
+    expect(out).not.toBeNull();
   });
 
   it('returns null for an unresolvable URL', async () => {
