@@ -280,6 +280,47 @@ describe('the action delegators', () => {
     expect(impl.fillElement).toHaveBeenCalled();
     expect(impl.scrollPage).toHaveBeenCalled();
   });
+
+  it('setFileInputFiles / hoverElement / sendKeys forward to their impl', async () => {
+    const wc = mkWc();
+    expect(await CdpDriver.setFileInputFiles(cast(wc), 1, ['a.png'])).toEqual({
+      accept: '*',
+      multiple: false,
+    });
+    await CdpDriver.hoverElement(cast(wc), 1);
+    expect(await CdpDriver.sendKeys(cast(wc), 'Ctrl+A')).toEqual({ sent: 2, unsupported: [] });
+    expect(impl.setFileInputFiles).toHaveBeenCalled();
+    expect(impl.hoverElement).toHaveBeenCalled();
+    expect(impl.sendKeys).toHaveBeenCalled();
+  });
+});
+
+describe('the attachment teardown callbacks', () => {
+  const handler = (fn: ReturnType<typeof vi.fn>, ev: string): (() => void) | undefined =>
+    fn.mock.calls.find((c) => c[0] === ev)?.[1] as (() => void) | undefined;
+
+  it("the debugger 'detach' handler drops the tab so the next snapshot re-attaches", async () => {
+    const wc = mkWc();
+    await CdpDriver.snapshotElements(cast(wc));
+    expect(dbg(wc).attach).toHaveBeenCalledTimes(1);
+
+    handler(dbg(wc).once, 'detach')!();
+
+    await CdpDriver.snapshotElements(cast(wc));
+    expect(dbg(wc).attach).toHaveBeenCalledTimes(2);
+  });
+
+  it("the webContents 'destroyed' handler also clears the tab's ref map", async () => {
+    const wc = mkWc();
+    await CdpDriver.snapshotElements(cast(wc));
+    expect(await CdpDriver.readElementValue(cast(wc), 1)).toBe('the-value');
+
+    handler(wc.once as ReturnType<typeof vi.fn>, 'destroyed')!();
+
+    await expect(CdpDriver.readElementValue(cast(wc), 1)).rejects.toMatchObject({
+      statusCode: 409,
+    });
+  });
 });
 
 describe('pass-through observers', () => {
