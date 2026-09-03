@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * `registerAgentRunIpc` — the `agent:run` handler that streams live events + round-trips HITL
@@ -20,9 +20,10 @@ class AppError extends Error {
     this.code = code;
   }
 }
+const Logger = vi.hoisted(() => ({ warn: vi.fn(), info: vi.fn() }));
 vi.mock('@tepegoz/libs', () => ({
   AppError,
-  Logger: { redact: (s: string) => s, warn: vi.fn(), info: vi.fn() },
+  Logger: { redact: (s: string) => s, warn: Logger.warn, info: Logger.info },
 }));
 
 const IpcChannels = {
@@ -166,7 +167,7 @@ vi.mock('./ipc-helpers', () => ({
 const shared = vi.hoisted(() => ({
   agentRunByGroup: new Map<string, boolean>(),
   broadcastConversationsState: vi.fn(),
-  isHistoryKind: () => false,
+  isHistoryKind: vi.fn<(k: string) => boolean>(() => false),
   JOURNAL_TYPE_BY_KIND: {},
   maybeWarnQuota: vi.fn(),
   pendingApprovals: new Map<string, unknown>(),
@@ -395,6 +396,21 @@ describe('the injected requestApproval hook', () => {
     expect(await pending).toBe(true);
   });
 
+  it('withholds the one-tap grant offer when the target URL will not parse', async () => {
+    fileOps.consentDecision.mockResolvedValue({ type: 'ask' });
+    await run();
+    const pending = hooksArg().requestApproval(confirmReq({ targetUrl: 'not a url' }));
+    await vi.waitFor(() => expect(shared.pendingApprovals.has('appr-uuid-x')).toBe(true));
+    const call = send.mock.calls.find((c) => c[0] === IpcChannels.agentApprovalRequest) as [
+      string,
+      Record<string, unknown>,
+    ];
+    expect(call[1]).not.toHaveProperty('scopeHost');
+    const entry = shared.pendingApprovals.get('appr-uuid-x') as { resolve: (o: unknown) => void };
+    entry.resolve({ approved: false });
+    await pending;
+  });
+
   it('fail-safe denies the HITL request when nobody answers within the timeout', async () => {
     fileOps.consentDecision.mockResolvedValue({ type: 'ask' });
     await run();
@@ -513,6 +529,131 @@ describe('the injected requestPlanApproval hook', () => {
       plan,
       'https://shop.example/cart',
       expect.any(Function),
+    );
+  });
+});
+
+describe('journal + history + token-ledger projections', () => {
+  const journalTypes = shared.JOURNAL_TYPE_BY_KIND as Record<string, string>;
+  afterEach(() => {
+    shared.isHistoryKind.mockReturnValue(false);
+    for (const k of Object.keys(journalTypes)) delete journalTypes[k];
+  });
+
+  it('onEvent writes to conversation history and the Event Journal when both are live', async () => {
+    getDb.mockReturnValue({ __db: true });
+    AgentService.beginHistoryTurn.mockReturnValue({ turnId: 'turn-1' });
+    shared.isHistoryKind.mockReturnValue(true);
+    journalTypes.tool_call = 'ToolCalled';
+    await run();
+
+    hooksArg().onEvent('tool_call', 'clicked #buy', 'on the cart page');
+
+    expect(AgentService.appendHistoryEvent).toHaveBeenCalledWith(
+      { __db: true },
+      'turn-1',
+      expect.objectContaining({
+        kind: 'tool_call',
+        message: 'clicked #buy',
+        detail: 'on the cart page',
+      }),
+    );
+    expect(shared.broadcastConversationsState).toHaveBeenCalled();
+    expect(EventJournal.append).toHaveBeenCalledWith(
+      { __db: true },
+      expect.objectContaining({ type: 'ToolCalled', actor: 'agent', redacted: true }),
+    );
+  });
+
+  it('onEvent swallows and logs a failing journal append', async () => {
+    getDb.mockReturnValue({ __db: true });
+    journalTypes.error = 'AgentError';
+    EventJournal.append.mockImplementationOnce(() => {
+      throw new Error('journal disk full');
+    });
+    await run();
+
+    expect(() => hooksArg().onEvent('error', 'boom')).not.toThrow();
+    expect(Logger.warn).toHaveBeenCalledWith(
+      'Journal append failed',
+      expect.objectContaining({ err: expect.stringContaining('journal disk full') as string }),
+    );
+  });
+
+  it('onCheckpoint is a no-op when there is no database', async () => {
+    getDb.mockReturnValue(null);
+    await run();
+
+    hooksArg().onCheckpoint({ step: 1 });
+
+    expect(EventJournal.append).not.toHaveBeenCalled();
+  });
+
+  it('onCheckpoint appends a redacted CheckpointWritten record', async () => {
+    getDb.mockReturnValue({ __db: true });
+    await run();
+    EventJournal.append.mockClear();
+
+    hooksArg().onCheckpoint({ step: 3, note: 'halfway' });
+
+    expect(EventJournal.append).toHaveBeenCalledWith(
+      { __db: true },
+      expect.objectContaining({ type: 'CheckpointWritten', actor: 'agent', redacted: true }),
+    );
+  });
+
+  it('onCheckpoint falls back to the raw checkpoint when it cannot be stringified', async () => {
+    getDb.mockReturnValue({ __db: true });
+    await run();
+    EventJournal.append.mockClear();
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+
+    expect(() => hooksArg().onCheckpoint(circular)).not.toThrow();
+    expect(EventJournal.append).toHaveBeenCalledWith(
+      { __db: true },
+      expect.objectContaining({ type: 'CheckpointWritten', payload: circular }),
+    );
+  });
+
+  it('onCheckpoint swallows and logs a failing journal append', async () => {
+    getDb.mockReturnValue({ __db: true });
+    await run();
+    EventJournal.append.mockImplementationOnce(() => {
+      throw new Error('checkpoint write failed');
+    });
+
+    expect(() => hooksArg().onCheckpoint({ step: 9 })).not.toThrow();
+    expect(Logger.warn).toHaveBeenCalledWith(
+      'Journal checkpoint append failed',
+      expect.objectContaining({ err: expect.stringContaining('checkpoint write failed') as string }),
+    );
+  });
+
+  it('refunds the run in teardown when it stopped for a refundable reason', async () => {
+    getDb.mockReturnValue({ __db: true });
+    AgentService.run.mockResolvedValue({
+      ok: false,
+      stoppedReason: 'network_lost',
+      completionOutcome: 'verified',
+    });
+
+    await run();
+
+    expect(TokenStore.recordRun).toHaveBeenCalled();
+    expect(TokenStore.refundRun).toHaveBeenCalled();
+  });
+
+  it('logs, without failing the run, when the token-ledger persist throws', async () => {
+    getDb.mockReturnValue({ __db: true });
+    TokenStore.recordRun.mockImplementationOnce(() => {
+      throw new Error('ledger unavailable');
+    });
+
+    await expect(run()).resolves.toMatchObject({ ok: true });
+    expect(Logger.warn).toHaveBeenCalledWith(
+      'Token ledger persist failed',
+      expect.objectContaining({ err: expect.stringContaining('ledger unavailable') as string }),
     );
   });
 });
