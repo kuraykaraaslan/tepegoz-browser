@@ -21,4 +21,14 @@ describe('safeBrowsingApiKey', () => {
     process.env[KEY] = '   ';
     expect(safeBrowsingApiKey()).toBe('');
   });
+
+  it('falls back to the build-time constant when it is set and there is no env override', () => {
+    const g = globalThis as Record<string, unknown>;
+    g.__TEPEGOZ_SAFE_BROWSING_KEY__ = 'build-key-xyz';
+    try {
+      expect(safeBrowsingApiKey()).toBe('build-key-xyz');
+    } finally {
+      delete g.__TEPEGOZ_SAFE_BROWSING_KEY__;
+    }
+  });
 });
