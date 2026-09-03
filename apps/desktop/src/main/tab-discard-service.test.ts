@@ -11,7 +11,9 @@ vi.mock('./tabs', () => ({
   default: { all: (...args: unknown[]) => all(...args) as unknown },
 }));
 
-const { sweep } = await import('./tab-discard-service');
+const mod = await import('./tab-discard-service');
+const { sweep } = mod;
+const service = mod.default;
 
 /** A fake `WindowTabs` exposing just what `sweep` reads: the live state and the two discard primitives. */
 function makeWindowTabs(tabs: Partial<TabInfo>[], opts?: { undiscardable?: Set<string> }) {
@@ -132,5 +134,47 @@ describe('sweep', () => {
     all.mockReturnValue([wt3]);
     sweep(30 * 60_000 + 2000);
     expect(wt3.discardTab).not.toHaveBeenCalled();
+  });
+});
+
+describe('init / stop', () => {
+  beforeEach(() => {
+    getAll.mockReset();
+    all.mockReset();
+    getAll.mockReturnValue({ tabDiscardEnabled: true, tabDiscardIdleMinutes: 30 });
+    all.mockReturnValue([]);
+    service.stop(); // no timer / bookkeeping leaks in from another test
+  });
+
+  it('starts exactly one interval, is idempotent, and stop tears it down', () => {
+    const setSpy = vi.spyOn(globalThis, 'setInterval');
+    const clearSpy = vi.spyOn(globalThis, 'clearInterval');
+    try {
+      service.init();
+      service.init(); // second call must not arm a second timer
+      expect(setSpy).toHaveBeenCalledTimes(1);
+      expect(setSpy).toHaveBeenCalledWith(sweep, 60_000);
+
+      service.stop();
+      expect(clearSpy).toHaveBeenCalledTimes(1);
+
+      service.init(); // after a stop, init arms a fresh timer
+      expect(setSpy).toHaveBeenCalledTimes(2);
+    } finally {
+      service.stop();
+      setSpy.mockRestore();
+      clearSpy.mockRestore();
+    }
+  });
+
+  it('stop clears the background-since bookkeeping so a later sweep restarts each clock', () => {
+    const wt = makeWindowTabs([{ id: 'a' }]);
+    all.mockReturnValue([wt]);
+    const idleMs = 30 * 60_000;
+
+    sweep(0); // seeds backgroundSince for 'a'
+    service.stop(); // must wipe that map
+    sweep(idleMs); // a fresh first sighting again -> nothing past a new threshold yet
+    expect(wt.discardTab).not.toHaveBeenCalled();
   });
 });
