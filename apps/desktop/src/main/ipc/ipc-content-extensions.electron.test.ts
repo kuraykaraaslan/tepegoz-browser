@@ -255,6 +255,9 @@ describe('write delegators validate then apply', () => {
     });
     expect(translateHost.addGlossaryTerm).toHaveBeenCalled();
 
+    call(IpcChannels.translateGlossaryRemove, 'gloss-1');
+    expect(translateHost.removeGlossaryTerm).toHaveBeenCalledWith('gloss-1');
+
     fire(IpcChannels.translateCloudFallbackRespond, {
       requestId: 'r1',
       allow: true,
@@ -266,6 +269,24 @@ describe('write delegators validate then apply', () => {
   it('video-player:site-set re-skins the active tab after the update', async () => {
     await call(IpcChannels.videoPlayerSiteSet, { origin: 'https://x.test', enabled: false });
     expect(videoHost.setSiteEnabled).toHaveBeenCalledWith('https://x.test', false);
+    expect(videoInjector.refreshActive).toHaveBeenCalled();
+  });
+
+  it('the settings-patch write delegators hand the schema-checked patch to their host', async () => {
+    call(IpcChannels.popupBlockerSet, { enabled: true });
+    expect(popupHost.update).toHaveBeenCalledWith({ enabled: true });
+
+    call(IpcChannels.typoSet, { autoDetectLanguage: false });
+    expect(typoHost.update).toHaveBeenCalledWith({ autoDetectLanguage: false });
+
+    call(IpcChannels.translateSet, { enabled: false });
+    expect(translateHost.update).toHaveBeenCalledWith({ enabled: false });
+
+    await call(IpcChannels.translateText, { text: 'hola mundo' });
+    expect(translateHost.translateText).toHaveBeenCalledWith({ text: 'hola mundo' });
+
+    await call(IpcChannels.videoPlayerSet, { theme: 'dark' });
+    expect(videoHost.update).toHaveBeenCalledWith({ theme: 'dark' });
     expect(videoInjector.refreshActive).toHaveBeenCalled();
   });
 });
