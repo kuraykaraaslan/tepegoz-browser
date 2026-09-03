@@ -27,9 +27,13 @@ vi.mock('electron', () => ({
   BrowserWindow: { fromWebContents: () => null },
   dialog: { showMessageBoxSync: () => 0 },
 }));
-vi.mock('@tepegoz/libs', () => ({
-  Logger: { warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() },
+const logger = vi.hoisted(() => ({
+  warn: vi.fn(),
+  info: vi.fn(),
+  debug: vi.fn(),
+  error: vi.fn(),
 }));
+vi.mock('@tepegoz/libs', () => ({ Logger: logger }));
 
 const devVerdict = vi.hoisted((): { v: { allowed: boolean; reason?: string } } => ({
   v: { allowed: true },
@@ -40,11 +44,12 @@ vi.mock('./lib/i18n-main', () => ({
     browser: { unloadTitle: 't', unloadDetail: 'd', unloadLeave: 'l', unloadStay: 's' },
   }),
 }));
-vi.mock('./lib/navigation-url', () => ({
+const navUrl = vi.hoisted(() => ({
   isWebUrl: (u: string) => u.startsWith('http'),
-  internalPageUrl: () => null,
+  internalPageUrl: vi.fn<(u: string) => string | null>(() => null),
   toNavigationUrl: (u: string) => u,
 }));
+vi.mock('./lib/navigation-url', () => navUrl);
 vi.mock('./tabs-popup-policy', () => ({ asGroupColor: (c: string) => c }));
 
 const zoom = vi.hoisted(() => ({ applyZoomCommand: vi.fn() }));
@@ -159,6 +164,15 @@ class Harness extends WindowTabs {
   putView(id: string, wc: Wc): void {
     this.views.set(id, { webContents: wc, setBounds: vi.fn(), setVisible: vi.fn() } as never);
   }
+  putInternalView(id: string, wc: Wc): void {
+    this.internalPageViews.set(id, { webContents: wc, setBounds: vi.fn() } as never);
+  }
+  fakeWin(): {
+    contentView: { removeChildView: ReturnType<typeof vi.fn>; children: unknown[] };
+    webContents: { send: ReturnType<typeof vi.fn> };
+  } {
+    return this.win as never;
+  }
   count(): number {
     return this.store.records().length;
   }
@@ -169,6 +183,7 @@ let wc: Wc;
 beforeEach(() => {
   vi.clearAllMocks();
   devVerdict.v = { allowed: true };
+  navUrl.internalPageUrl.mockReturnValue(null);
   tabs = new Harness(fakeWindow() as never, false);
   wc = mkWc();
 });
@@ -223,6 +238,40 @@ describe('navigation', () => {
     tabs.putView(id, wc);
     tabs.goHome();
     expect(wc.loadURL).toHaveBeenCalledWith('https://example.com/');
+  });
+});
+
+describe('navigateActive — internal + failure paths', () => {
+  it('routes a tepegoz:// URL to openInternalPage instead of loading it', () => {
+    navUrl.internalPageUrl.mockImplementation((u: string) =>
+      u.startsWith('tepegoz://') ? u : null,
+    );
+    const spy = vi.spyOn(tabs, 'openInternalPage').mockImplementation(() => undefined);
+    tabs.navigateActive('tepegoz://settings');
+    expect(spy).toHaveBeenCalledWith('tepegoz://settings');
+  });
+
+  it('logs a warning when the active view rejects the navigation', async () => {
+    const id = tabs.addWeb();
+    tabs.setActive(id);
+    tabs.putView(id, mkWc({ loadURL: vi.fn(() => Promise.reject(new Error('neterr'))) }));
+    tabs.navigateActive('https://dest.test/');
+    await new Promise((r) => setTimeout(r, 0));
+    expect(logger.warn).toHaveBeenCalledWith('Navigation failed', {
+      url: 'https://dest.test/',
+      err: expect.stringContaining('neterr') as string,
+    });
+  });
+
+  it('navigateTab logs a warning when the target view rejects the navigation', async () => {
+    const id = tabs.addWeb();
+    tabs.putView(id, mkWc({ loadURL: vi.fn(() => Promise.reject(new Error('taberr'))) }));
+    expect(tabs.navigateTab(id, 'https://t.test/')).toBe(true);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(logger.warn).toHaveBeenCalledWith('Navigation failed', {
+      url: 'https://t.test/',
+      err: expect.stringContaining('taberr') as string,
+    });
   });
 });
 
@@ -287,6 +336,71 @@ describe('DevTools gate', () => {
 
     tabs.inspectActiveAt(12.4, 8.6);
     expect(wc.once).toHaveBeenCalledWith('devtools-opened', expect.any(Function));
+  });
+
+  it('inspectActiveAt refuses and logs on a sensitive site', () => {
+    const id = tabs.addWeb();
+    tabs.setActive(id);
+    tabs.putView(id, wc);
+    devVerdict.v = { allowed: false, reason: 'sensitive_site' };
+    expect(tabs.inspectActiveAt(1, 2)).toEqual({ allowed: false, reason: 'sensitive_site' });
+    expect(logger.info).toHaveBeenCalledWith('Refused to inspect element', {
+      reason: 'sensitive_site',
+    });
+    expect(wc.inspectElement).not.toHaveBeenCalled();
+  });
+
+  it('inspectActiveAt inspects immediately (rounded coords) when DevTools is already open', () => {
+    const id = tabs.addWeb();
+    tabs.setActive(id);
+    const openWc = mkWc({ isDevToolsOpened: () => true });
+    tabs.putView(id, openWc);
+    tabs.inspectActiveAt(12.6, 7.2);
+    expect(openWc.inspectElement).toHaveBeenCalledWith(13, 7);
+    expect(openWc.once).not.toHaveBeenCalled();
+  });
+});
+
+describe('refreshState + setContentVisible', () => {
+  it('refreshState re-pushes TabsState with no store mutation', () => {
+    const send = tabs.fakeWin().webContents.send;
+    send.mockClear();
+    tabs.refreshState();
+    expect(send).toHaveBeenCalled();
+  });
+
+  it('setContentVisible attaches + repositions the active web view, then detaches it', () => {
+    const id = tabs.addWeb();
+    tabs.setActive(id);
+    tabs.putView(id, wc);
+
+    tabs.setContentVisible(true);
+    expect(tabs.fakeWin().contentView.children).toHaveLength(1);
+
+    tabs.setContentVisible(false);
+    expect(tabs.fakeWin().contentView.removeChildView).toHaveBeenCalledTimes(1);
+  });
+
+  it('setContentVisible also shows / hides the active internal-page view', async () => {
+    const internal = await import('./tabs-internal-page-view');
+    const id = tabs.addWeb();
+    tabs.setActive(id);
+    tabs.putInternalView(id, wc);
+
+    tabs.setContentVisible(true);
+    expect(vi.mocked(internal.showInternalPageView)).toHaveBeenCalled();
+
+    tabs.setContentVisible(false);
+    expect(vi.mocked(internal.hideInternalPageView)).toHaveBeenCalled();
+  });
+
+  it('setContentVisible is a no-op when the active tab has no view of either kind', () => {
+    const id = tabs.addWeb();
+    tabs.setActive(id);
+    expect(() => {
+      tabs.setContentVisible(true);
+    }).not.toThrow();
+    expect(tabs.fakeWin().contentView.removeChildView).not.toHaveBeenCalled();
   });
 });
 
