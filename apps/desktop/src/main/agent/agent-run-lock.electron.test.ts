@@ -1,5 +1,20 @@
-import { describe, it, expect } from 'vitest';
-import { RunControlHandle } from './agent-run-lock.electron';
+import { afterEach, describe, it, expect, vi } from 'vitest';
+import {
+  RunControlHandle,
+  hasActiveAgentRun,
+  registerAgentRunController,
+  unregisterAgentRunController,
+  agentRunController,
+  abortAllAgentRunControllers,
+  createRunControl,
+  agentRunControl,
+  unregisterRunControl,
+  pauseAgentRun,
+  resumeAgentRun,
+  steerAgentRun,
+  setAllRunsOffline,
+  setAllRunsOnline,
+} from './agent-run-lock.electron';
 
 const noop = (): void => {};
 
@@ -140,5 +155,93 @@ describe('RunControlHandle', () => {
     h.abort();
     await p; // resolves despite still being handoff-held
     expect(h.aborted).toBe(true);
+  });
+
+  it('exposes the run-scoped AbortSignal, tied to abort()', () => {
+    const h = new RunControlHandle(noop);
+    expect(h.signal.aborted).toBe(false);
+    h.abort();
+    expect(h.signal.aborted).toBe(true);
+  });
+});
+
+describe('the module-level run registries', () => {
+  afterEach(() => {
+    abortAllAgentRunControllers(); // clears both maps between tests
+  });
+
+  it('hasActiveAgentRun reflects EITHER registry', () => {
+    expect(hasActiveAgentRun()).toBe(false);
+    const ctl = new AbortController();
+    registerAgentRunController('legacy-1', ctl);
+    expect(hasActiveAgentRun()).toBe(true);
+    unregisterAgentRunController('legacy-1');
+    expect(hasActiveAgentRun()).toBe(false);
+
+    createRunControl('run-1', noop);
+    expect(hasActiveAgentRun()).toBe(true);
+    unregisterRunControl('run-1');
+    expect(hasActiveAgentRun()).toBe(false);
+  });
+
+  it('legacy controller path: register / lookup / unregister', () => {
+    const ctl = new AbortController();
+    registerAgentRunController('r', ctl);
+    expect(agentRunController('r')).toBe(ctl);
+    unregisterAgentRunController('r');
+    expect(agentRunController('r')).toBeUndefined();
+  });
+
+  it('interactive control path: create / lookup / unregister', () => {
+    const handle = createRunControl('r', noop);
+    expect(agentRunControl('r')).toBe(handle);
+    unregisterRunControl('r');
+    expect(agentRunControl('r')).toBeUndefined();
+  });
+
+  it('abortAllAgentRunControllers aborts every controller AND control, then clears both', () => {
+    const ctl = new AbortController();
+    registerAgentRunController('legacy', ctl);
+    const handle = createRunControl('interactive', noop);
+
+    abortAllAgentRunControllers();
+
+    expect(ctl.signal.aborted).toBe(true);
+    expect(handle.aborted).toBe(true);
+    expect(hasActiveAgentRun()).toBe(false);
+  });
+
+  it('pause / resume / steer route to the named control and no-op an unknown id', async () => {
+    const handle = createRunControl('r', noop);
+    pauseAgentRun('r');
+    expect(handle.isHeld()).toBe(true);
+    steerAgentRun('r', 'do the thing');
+    resumeAgentRun('r');
+    await handle.waitWhileHeld();
+    expect(handle.isHeld()).toBe(false);
+    expect(handle.drainSteer()).toEqual(['do the thing']);
+
+    expect(() => {
+      pauseAgentRun('ghost');
+      resumeAgentRun('ghost');
+      steerAgentRun('ghost', 'x');
+    }).not.toThrow();
+  });
+
+  it('setAllRunsOffline / setAllRunsOnline fan out to every interactive control', () => {
+    const a = createRunControl('a', noop);
+    const b = createRunControl('b', noop);
+    const offA = vi.spyOn(a, 'setOffline');
+    const onB = vi.spyOn(b, 'setOnline');
+
+    setAllRunsOffline();
+    expect(a.isHeld()).toBe(true);
+    expect(b.isHeld()).toBe(true);
+    expect(offA).toHaveBeenCalled();
+
+    setAllRunsOnline();
+    expect(a.isHeld()).toBe(false);
+    expect(b.isHeld()).toBe(false);
+    expect(onB).toHaveBeenCalled();
   });
 });
