@@ -32,7 +32,7 @@ vi.mock('./lib/navigation-url', () => ({
 vi.mock('./network/browsing-sessions.electron', () => ({
   default: { defaultForNewTab: () => ({}), private: () => ({}) },
 }));
-vi.mock('./network/certificate-recorder.electron', () => ({ getRecordedCert: () => null }));
+vi.mock('./network/certificate-recorder.electron', () => ({ getRecordedCert: () => undefined }));
 vi.mock('@tepegoz/shared-types', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tepegoz/shared-types')>();
   return { ...actual, classifyPageSecurity: () => ({ level: 'neutral' }) };
@@ -111,6 +111,15 @@ class Harness extends WindowTabsGroups {
   }
   pinnedOf(id: string): boolean | undefined {
     return this.store.get(id)?.pinned;
+  }
+  order(): string[] {
+    return this.store.records().map((r) => r.title);
+  }
+  groupOf(gid: string): { name?: string; color?: string; collapsed?: boolean } | undefined {
+    return this.store.getGroup(gid);
+  }
+  has(id: string): boolean {
+    return this.store.has(id);
   }
 }
 
@@ -199,5 +208,97 @@ describe('group membership guards', () => {
     tabs.addTab('c');
     const gid = tabs.createGroup([a, b]);
     expect(tabs.groupMemberIds(gid).sort()).toEqual([a, b].sort());
+  });
+});
+
+describe('ordering passthroughs', () => {
+  it('moveTab reorders a known tab and no-ops an unknown one', () => {
+    const a = tabs.addTab('a');
+    tabs.addTab('b');
+    tabs.addTab('c');
+    tabs.moveTab(a, 2);
+    expect(tabs.order()).toEqual(['b', 'c', 'a']);
+
+    expect(() => {
+      tabs.moveTab('ghost', 0);
+    }).not.toThrow();
+    expect(tabs.order()).toEqual(['b', 'c', 'a']);
+  });
+
+  it('moveGroup runs a whole group to a new index without losing it', () => {
+    const a = tabs.addTab('a');
+    const b = tabs.addTab('b');
+    tabs.addTab('c');
+    const gid = tabs.createGroup([b]);
+    void a;
+    tabs.moveGroup(gid, 0);
+    expect(tabs.hasGroup(gid)).toBe(true);
+  });
+
+  it('createGroup with no members seeds from the active tab, or an empty group when none', () => {
+    const a = tabs.addTab('a');
+    tabs.setActive(a);
+    const seeded = tabs.createGroup();
+    expect(tabs.groupMemberIds(seeded)).toEqual([a]);
+
+    const fresh = new Harness(fakeWindow() as never, false) as Harness & {
+      createGroup: (m?: string[]) => string;
+      groupMemberIds: (g: string) => string[];
+    };
+    const empty = fresh.createGroup();
+    expect(fresh.groupMemberIds(empty)).toEqual([]);
+  });
+});
+
+describe('group setting passthroughs', () => {
+  it('assignToGroup / removeFromGroup move a tab in and out of a group', () => {
+    const a = tabs.addTab('a');
+    const b = tabs.addTab('b');
+    const gid = tabs.createGroup([a]);
+    tabs.assignToGroup(b, gid);
+    expect(tabs.groupIdOf(b)).toBe(gid);
+    tabs.removeFromGroup(b);
+    expect(tabs.groupIdOf(b)).toBeNull();
+  });
+
+  it('rename / recolor / setCollapsed / updateSettings patch the group in the store', () => {
+    const a = tabs.addTab('a');
+    const gid = tabs.createGroup([a]);
+    tabs.renameGroup(gid, 'Research');
+    tabs.recolorGroup(gid, 'red');
+    tabs.setGroupCollapsed(gid, true);
+    tabs.updateGroupSettings(gid, { agentEnabled: true });
+    expect(tabs.groupOf(gid)).toMatchObject({ name: 'Research', color: 'red', collapsed: true });
+  });
+});
+
+describe('newTabInGroup / closeGroup / groupMenuInfo', () => {
+  it('newTabInGroup opens a tab already assigned to an existing group', () => {
+    const a = tabs.addTab('a');
+    const gid = tabs.createGroup([a]);
+    const before = tabs.recordCount();
+    tabs.newTabInGroup(gid);
+    expect(tabs.recordCount()).toBe(before + 1);
+    const newId = tabs.groupMemberIds(gid).find((id) => id !== a);
+    expect(newId).toBeDefined();
+  });
+
+  it('closeGroup closes every member tab', () => {
+    const a = tabs.addTab('a');
+    const b = tabs.addTab('b');
+    tabs.addTab('c'); // ungrouped survivor
+    const gid = tabs.createGroup([a, b]);
+    tabs.closeGroup(gid);
+    expect(tabs.has(a)).toBe(false);
+    expect(tabs.has(b)).toBe(false);
+    expect(tabs.order()).toEqual(['c']);
+  });
+
+  it('groupMenuInfo returns the group color, or undefined for an unknown group', () => {
+    const a = tabs.addTab('a');
+    const gid = tabs.createGroup([a]);
+    tabs.recolorGroup(gid, 'green');
+    expect(tabs.groupMenuInfo(gid)).toEqual({ color: 'green' });
+    expect(tabs.groupMenuInfo('nope')).toBeUndefined();
   });
 });
