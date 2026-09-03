@@ -132,4 +132,47 @@ describe('caching', () => {
     clearFaviconCacheForTests(direct);
     clearFaviconCacheForTests(tunnel);
   });
+
+  it('evicts the oldest entry once 256 icons are cached for a session', async () => {
+    const ses = session('cap');
+    for (let i = 0; i < 256; i += 1) {
+      await faviconDataUrl(ses, `https://site.test/i${String(i)}.png`);
+    }
+    expect(h.calls).toHaveLength(256);
+
+    await faviconDataUrl(ses, 'https://site.test/overflow.png'); // 257th → evicts i0
+    await faviconDataUrl(ses, 'https://site.test/i0.png'); // i0 no longer cached → re-fetch
+    expect(h.calls).toHaveLength(258);
+
+    clearFaviconCacheForTests(ses);
+  });
+});
+
+describe('transport failure modes', () => {
+  it('answers null when net.request cannot be created at all', async () => {
+    h.request.mockImplementationOnce(() => {
+      throw new Error('net unavailable');
+    });
+    expect(await faviconDataUrl(session('a'), 'https://site.test/f.png')).toBeNull();
+  });
+
+  it('aborts and answers null when the request never responds', async () => {
+    vi.useFakeTimers();
+    try {
+      const abort = vi.fn();
+      h.request.mockImplementationOnce((opts: { url: string; session: unknown }) => {
+        h.calls.push({ url: opts.url, session: opts.session });
+        const req = new EventEmitter() as EventEmitter & { end: () => void; abort: () => void };
+        req.abort = abort;
+        req.end = () => undefined; // never emits response or error
+        return req;
+      });
+      const p = faviconDataUrl(session('a'), 'https://site.test/slow.png');
+      await vi.advanceTimersByTimeAsync(10_000); // past TIMEOUT_MS (8s)
+      await expect(p).resolves.toBeNull();
+      expect(abort).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
