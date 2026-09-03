@@ -56,6 +56,21 @@ const DownloadService = vi.hoisted(() => ({
   ingestGeneratedFile: vi.fn(() => Promise.resolve('dl-1')),
 }));
 const runExtraction = vi.hoisted(() => vi.fn((): unknown => ({ ok: 1 })));
+const resetForAgentAction = vi.hoisted(() => vi.fn());
+const brokerCap = vi.hoisted(
+  (): {
+    opts?: {
+      pageUrl: (id?: string) => string;
+      fill: (t: number, x: string, id?: string) => Promise<unknown>;
+    };
+  } => ({}),
+);
+const brokerFill = vi.hoisted(() =>
+  vi.fn((_ref: number, _field: string, _tabId: string | undefined, opts: unknown) => {
+    brokerCap.opts = opts as NonNullable<typeof brokerCap.opts>;
+    return Promise.resolve({ filled: true });
+  }),
+);
 vi.mock('../tabs', () => ({ default: TabManager }));
 vi.mock('../downloads/download-service.electron', () => ({ default: DownloadService }));
 vi.mock('../downloads/download-service-fs.electron', () => ({ originOf: () => '' }));
@@ -67,14 +82,14 @@ vi.mock('./page-cursor.electron', () => ({
   showPageCursor: vi.fn(),
   hidePageCursor: vi.fn(),
   isUserControlActive: () => false,
-  resetForAgentAction: vi.fn(),
+  resetForAgentAction,
 }));
 vi.mock('../extensions/translate-page-injector-controller.electron', () => ({
   default: { ensureUntranslatedForAgent: () => Promise.resolve() },
 }));
 vi.mock('./article-text-script.js', () => ({ buildArticleTextExpression: () => '' }));
 vi.mock('./extraction-sandbox.electron.js', () => ({ runExtraction }));
-vi.mock('./credential-broker.electron.js', () => ({ fillCredential: vi.fn() }));
+vi.mock('./credential-broker.electron.js', () => ({ fillCredential: brokerFill }));
 vi.mock('./wait-condition-script.js', () => ({
   buildWaitConditionExpression: () => '',
   clampWaitMs: (n: number) => n,
@@ -502,5 +517,52 @@ describe('pdf / extraction / screenshot', () => {
     await expect(browserHost.captureScreenshot({ tabId: 't1' })).rejects.toMatchObject({
       statusCode: 502,
     });
+  });
+});
+
+describe('scrollToText + fillCredential', () => {
+  const wc = (over: Record<string, unknown> = {}) => ({
+    isDestroyed: () => false,
+    getURL: () => 'https://p.test/x',
+    getTitle: () => 'P',
+    executeJavaScript: vi.fn(() => Promise.resolve({ found: true, count: 2 })),
+    ...over,
+  });
+
+  it('scrollToText returns the match result and narrates an input_action', async () => {
+    const mod = await load();
+    TabManager.webContentsForTab.mockReturnValue(wc());
+    const send = vi.fn();
+    mod.setCurrentAgentRun('r1', 'g1', send);
+    const res = await mod.withAgentRunScope('r1', () =>
+      mod.browserHost.scrollToText('Terms of Service', 2, 't1'),
+    );
+    expect(res).toEqual({ found: true, count: 2 });
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({ kind: 'input_action' }));
+  });
+
+  it('scrollToText degrades a malformed eval result to not-found', async () => {
+    const { browserHost } = await load();
+    TabManager.webContentsForTab.mockReturnValue(
+      wc({ executeJavaScript: () => Promise.resolve(null) }),
+    );
+    expect(await browserHost.scrollToText('x', undefined, 't1')).toEqual({
+      found: false,
+      count: 0,
+    });
+  });
+
+  it('fillCredential hands the broker a page-url + fill closure that goes through the CDP driver', async () => {
+    const { browserHost } = await load();
+    const w = wc();
+    TabManager.webContentsForTab.mockReturnValue(w);
+    expect(await browserHost.fillCredential!(3, 'password', 't1')).toEqual({ filled: true });
+    expect(brokerFill).toHaveBeenCalledWith(3, 'password', 't1', expect.anything());
+
+    // exercise the closures the broker was handed
+    expect(brokerCap.opts!.pageUrl('t1')).toBe('https://p.test/x');
+    await brokerCap.opts!.fill(5, 'sekret', 't1');
+    expect(resetForAgentAction).toHaveBeenCalled();
+    expect(CdpDriver.fillElement).toHaveBeenCalledWith(w, 5, 'sekret', expect.anything());
   });
 });
