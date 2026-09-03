@@ -171,7 +171,7 @@ describe('macros — run wiring', () => {
     expect(send).toHaveBeenCalledWith('macrosRunProgress', { step: 1 });
   });
 
-  it('macrosRunDraft delegates to runDraft with the macro + variables', () => {
+  it('macrosRunDraft delegates to runDraft and wires the same cursor + progress callbacks', () => {
     expect(call('macrosRunDraft', { macro: { id: 'd' }, variables: { k: 'v' } })).toEqual({
       runId: 'run-2',
     });
@@ -181,6 +181,15 @@ describe('macros — run wiring', () => {
       expect.any(Function),
       expect.anything(),
     );
+
+    const [, , progress, opts] = MacroService.runDraft.mock.calls[0]!;
+    const o = opts as { onCursorMove: (x: number, y: number) => void; onCursorHide: () => void };
+    o.onCursorMove(10, 20);
+    expect(send).toHaveBeenCalledWith('cursorPosition', { x: 110, y: 60, visible: true });
+    o.onCursorHide();
+    expect(send).toHaveBeenCalledWith('cursorPosition', { x: 0, y: 0, visible: false });
+    progress({ step: 1 });
+    expect(send).toHaveBeenCalledWith('macrosRunProgress', { step: 1 });
   });
 
   it('macrosCancel cancels the run when enabled', () => {
