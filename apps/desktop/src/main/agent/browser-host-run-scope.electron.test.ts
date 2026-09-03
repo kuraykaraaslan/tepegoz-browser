@@ -29,8 +29,12 @@ const TabManager = vi.hoisted(() => ({
   getContentBounds: vi.fn(() => ({ x: 0, y: 0 })),
   activate: vi.fn(),
   closeTab: vi.fn(),
+  navigateActive: vi.fn(),
+  navigateTab: vi.fn(() => true),
+  viewlessActiveTabId: vi.fn((): string | null => null),
 }));
 const CdpDriver = vi.hoisted(() => ({
+  waitForPageSettled: vi.fn(() => Promise.resolve()),
   snapshotElements: vi.fn(() => Promise.resolve({ elements: [] })),
   readElementValue: vi.fn((): Promise<string | null> => Promise.resolve('the-value')),
   clickElement: vi.fn(() => Promise.resolve({ occludedBy: null })),
@@ -293,5 +297,140 @@ describe('the browserHost object', () => {
     const { browserHost } = await load();
     TabManager.webContentsForTab.mockReturnValue(null);
     await expect(browserHost.clickElement(1, 'gone')).rejects.toMatchObject({ statusCode: 409 });
+  });
+});
+
+describe('navigation + reads', () => {
+  const wc = (over: Record<string, unknown> = {}) => ({
+    isDestroyed: () => false,
+    getURL: () => 'https://p.test/x',
+    getTitle: () => 'P',
+    reload: vi.fn(),
+    executeJavaScript: vi.fn(() => Promise.resolve({ text: 'hello', sig: 'sig1' })),
+    navigationHistory: {
+      canGoBack: () => true,
+      goBack: vi.fn(),
+      canGoForward: () => false,
+      goForward: vi.fn(),
+    },
+    ...over,
+  });
+
+  it('navigate(url, tabId) navigates the named tab and returns its url/title', async () => {
+    const { browserHost } = await load();
+    const w = wc();
+    TabManager.navigateTab.mockReturnValue(true);
+    TabManager.webContentsForTab.mockReturnValue(w);
+    expect(await browserHost.navigate('https://dst/', 't1')).toEqual({
+      url: 'https://p.test/x',
+      title: 'P',
+    });
+    expect(TabManager.navigateTab).toHaveBeenCalledWith('t1', 'https://dst/');
+    expect(CdpDriver.waitForPageSettled).toHaveBeenCalled();
+  });
+
+  it('navigate(url, tabId) 409s when there is no web tab', async () => {
+    const { browserHost } = await load();
+    TabManager.navigateTab.mockReturnValue(false);
+    await expect(browserHost.navigate('https://dst/', 'ghost')).rejects.toMatchObject({
+      statusCode: 409,
+    });
+  });
+
+  it('navigate() with no tabId drives the active view in place', async () => {
+    const { browserHost } = await load();
+    const w = wc();
+    TabManager.activeWebContents.mockReturnValue(w);
+    await browserHost.navigate('https://dst/');
+    expect(TabManager.navigateActive).toHaveBeenCalledWith('https://dst/');
+  });
+
+  it('navigate 409s when the tab is destroyed during the load wait', async () => {
+    const { browserHost } = await load();
+    TabManager.navigateTab.mockReturnValue(true);
+    TabManager.webContentsForTab.mockReturnValue(wc({ isDestroyed: () => true }));
+    await expect(browserHost.navigate('https://dst/', 't1')).rejects.toMatchObject({
+      statusCode: 409,
+    });
+  });
+
+  it('readPage shapes the eval result, degrading a malformed one to empty strings', async () => {
+    const { browserHost } = await load();
+    TabManager.webContentsForTab.mockReturnValue(wc());
+    expect(await browserHost.readPage('t1')).toEqual({
+      url: 'https://p.test/x',
+      title: 'P',
+      text: 'hello',
+      sig: 'sig1',
+    });
+
+    TabManager.webContentsForTab.mockReturnValue(
+      wc({ executeJavaScript: () => Promise.resolve(null) }),
+    );
+    expect(await browserHost.readPage('t1')).toMatchObject({ text: '', sig: '' });
+  });
+
+  it('readArticleText labels a malformed result as source "body"', async () => {
+    const { browserHost } = await load();
+    TabManager.webContentsForTab.mockReturnValue(
+      wc({ executeJavaScript: () => Promise.resolve({ text: 'Body', source: 'article' }) }),
+    );
+    expect(await browserHost.readArticleText!('t1')).toMatchObject({
+      text: 'Body',
+      source: 'article',
+    });
+
+    TabManager.webContentsForTab.mockReturnValue(
+      wc({ executeJavaScript: () => Promise.resolve(1) }),
+    );
+    expect(await browserHost.readArticleText!('t1')).toMatchObject({ text: '', source: 'body' });
+  });
+
+  it('historyGo reloads, and reports moved from the navigation-history guards', async () => {
+    const { browserHost } = await load();
+    const w = wc();
+    TabManager.webContentsForTab.mockReturnValue(w);
+    expect(await browserHost.historyGo('reload', 't1')).toMatchObject({ moved: true });
+    expect(w.reload).toHaveBeenCalled();
+
+    const back = wc({
+      navigationHistory: {
+        canGoBack: () => false,
+        goBack: vi.fn(),
+        canGoForward: () => false,
+        goForward: vi.fn(),
+      },
+    });
+    TabManager.webContentsForTab.mockReturnValue(back);
+    expect(await browserHost.historyGo('back', 't1')).toMatchObject({ moved: false });
+  });
+
+  it('waitForCondition: network_idle settles, an empty value is unsatisfied, text polls the page', async () => {
+    const { browserHost } = await load();
+    TabManager.webContentsForTab.mockReturnValue(wc());
+    expect(
+      await browserHost.waitForCondition({ kind: 'network_idle', timeoutMs: 5000 }, 't1'),
+    ).toMatchObject({ satisfied: true });
+
+    expect(
+      await browserHost.waitForCondition({ kind: 'text', value: '', timeoutMs: 5000 }, 't1'),
+    ).toEqual({ satisfied: false, waitedMs: 0 });
+
+    TabManager.webContentsForTab.mockReturnValue(
+      wc({ executeJavaScript: () => Promise.resolve({ satisfied: true, waitedMs: 120 }) }),
+    );
+    expect(
+      await browserHost.waitForCondition({ kind: 'text', value: 'Done', timeoutMs: 5000 }, 't1'),
+    ).toEqual({ satisfied: true, waitedMs: 120 });
+  });
+
+  it('waitForLoad settles the page and returns its url/title', async () => {
+    const { browserHost } = await load();
+    TabManager.webContentsForTab.mockReturnValue(wc());
+    expect(await browserHost.waitForLoad('t1', 3000)).toEqual({
+      url: 'https://p.test/x',
+      title: 'P',
+    });
+    expect(CdpDriver.waitForPageSettled).toHaveBeenCalledWith(expect.anything(), 3000);
   });
 });
