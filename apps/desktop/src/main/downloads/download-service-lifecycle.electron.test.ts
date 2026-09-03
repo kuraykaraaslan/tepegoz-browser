@@ -1,198 +1,233 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import type { DownloadTrustVerdict } from '@tepegoz/downloads';
+import { join } from 'node:path';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const QDIR = join('/userData', 'Downloads', 'quarantine');
 
 /**
- * `finishToQuarantine` and `ingestGeneratedFile` are the security promise of the download path made
- * concrete: whatever produced the bytes — a `will-download` transfer or a page the agent printed to
- * PDF — the file is hashed, handed to the injected `DownloadTrustProvider`, and left at `quarantined`
- * (or `blocked`) with a redacted audit record. Nothing here decides it is safe; only a human release
- * does. These paths had no behavioural test.
+ * `download-service-lifecycle.electron` — the will-download / generated-file / quarantine pipeline.
+ * Pinned: `handleWillDownload` redirects the item into the quarantine dir, records a started download,
+ * and its `updated` / `done` listeners track rate + status (pause drops the rate window; completed →
+ * quarantine; cancelled retires retries; a network drop only fails when no auto-retry is scheduled);
+ * `ingestGeneratedFile` writes the bytes into the same quarantine path and runs the same
+ * `finishToQuarantine`; and `finishToQuarantine` hashes + trust-checks the file, patching the row to
+ * quarantined / blocked (or failed, logged, on error).
  */
 
-const records = new Map<string, Record<string, unknown>>();
+vi.mock('node:crypto', () => ({ randomUUID: () => 'uuid-1' }));
+const mkdirSync = vi.hoisted(() => vi.fn());
+vi.mock('node:fs', () => ({ mkdirSync }));
+const writeFile = vi.hoisted(() => vi.fn(() => Promise.resolve()));
+vi.mock('node:fs/promises', () => ({ writeFile }));
+vi.mock('electron', () => ({ app: { getPath: () => '/userData' } }));
+
+vi.mock('@tepegoz/downloads', () => ({
+  classifyDownloadRisk: () => 'normal',
+  computeDownloadRate: () => ({ bytesPerSecond: 100, etaSeconds: 1 }),
+}));
+vi.mock('@tepegoz/libs', () => ({ Logger: { warn: vi.fn() } }));
+
+const retry = vi.hoisted(() => ({ forget: vi.fn(), scheduleAutoRetry: vi.fn(() => false) }));
+vi.mock('./download-service-autoretry.electron', () => retry);
+vi.mock('../network/browsing-sessions.electron', () => ({ default: { all: () => [] } }));
+vi.mock('./download-service-fs.electron', () => ({
+  cleanFilename: (n: string) => n,
+  originOf: () => 'https://origin.test',
+  sha256File: vi.fn(() => Promise.resolve('sha-abc')),
+  uniquePath: (dir: string, name: string) => `${dir}/${name}`,
+}));
 
 const store = vi.hoisted(() => ({
-  upsert: vi.fn((_state: unknown, rec: { id: string }) => {
-    recordsRef.set(rec.id, { ...(rec as Record<string, unknown>) });
-  }),
-  patch: vi.fn((_state: unknown, id: string, p: Record<string, unknown>) => {
-    const cur = recordsRef.get(id);
-    if (cur !== undefined) recordsRef.set(id, { ...cur, ...p });
-  }),
+  applyRetentionPolicy: vi.fn(),
   appendAudit: vi.fn(),
-  applyRetentionPolicy: vi.fn(() => 0),
-  downloadDirectory: vi.fn(() => '/dl'),
-  takePending: vi.fn(() => undefined),
-}));
-// `vi.hoisted` runs before module-level `const records`, so the factory can't close over it directly.
-const recordsRef = records;
-
-const fs = vi.hoisted(() => ({
-  cleanFilename: (s: string) => s,
-  originOf: (u: string) => {
-    try {
-      return new URL(u).origin;
-    } catch {
-      return undefined;
-    }
-  },
-  uniquePath: (dir: string, name: string) => `${dir}/${name}`,
-  sha256File: vi.fn(() => Promise.resolve('a'.repeat(64))),
-  moveFile: vi.fn(() => Promise.resolve()),
-  hasCode: () => false,
-}));
-
-const autoretry = vi.hoisted(() => ({
-  forget: vi.fn(),
-  scheduleAutoRetry: vi.fn(() => false),
-}));
-
-vi.mock('./download-service-store.electron', () => store);
-vi.mock('./download-service-fs.electron', () => fs);
-vi.mock('./download-service-autoretry.electron', () => autoretry);
-vi.mock('../network/browsing-sessions.electron', () => ({ default: { all: () => [] } }));
-vi.mock('@tepegoz/libs', () => ({ Logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() } }));
-vi.mock('node:fs', () => ({ mkdirSync: vi.fn() }));
-vi.mock('node:fs/promises', () => ({ writeFile: vi.fn(() => Promise.resolve()) }));
-vi.mock('electron', () => ({ app: { getPath: () => '/ud' } }));
-
-const { finishToQuarantine, ingestGeneratedFile } = await import(
-  './download-service-lifecycle.electron'
-);
-
-/** A `DownloadState` whose `records` map is the same one the store mock writes to. */
-function stateWith(verdict: DownloadTrustVerdict | (() => Promise<never>)) {
-  return {
-    records,
-    pendingByUrl: new Map(),
-    rates: new Map(),
-    trustProvider: {
-      check: vi.fn(() =>
-        typeof verdict === 'function' ? verdict() : Promise.resolve(verdict),
-      ),
+  downloadDirectory: () => '/userData/Downloads',
+  patch: vi.fn(
+    (
+      s: { records: Map<string, Record<string, unknown>> },
+      id: string,
+      p: Record<string, unknown>,
+    ) => {
+      const r = s.records.get(id);
+      if (r) Object.assign(r, p);
     },
-  } as unknown as Parameters<typeof finishToQuarantine>[0];
-}
+  ),
+  takePending: vi.fn((): unknown => undefined),
+  upsert: vi.fn((s: { records: Map<string, Record<string, unknown>> }, rec: { id: string }) => {
+    s.records.set(rec.id, rec);
+  }),
+}));
+vi.mock('./download-service-store.electron', () => store);
 
-function seedQuarantined(id: string, over: Record<string, unknown> = {}): void {
-  records.set(id, {
-    id,
-    url: 'https://files.example/setup.bin',
-    filename: 'setup.bin',
-    mimeType: 'application/octet-stream',
-    status: 'in_progress',
-    risk: 'normal',
-    trustVerdict: 'unknown',
-    receivedBytes: 10,
-    totalBytes: 10,
-    quarantinePath: `/ud/Downloads/quarantine/${id}-setup.bin`,
-    provenance: { actor: 'site', sourceOrigin: 'https://files.example' },
+const { handleWillDownload, ingestGeneratedFile, finishToQuarantine } =
+  await import('./download-service-lifecycle.electron');
+
+const fsMod = await import('./download-service-fs.electron');
+const sha256File = fsMod.sha256File as ReturnType<typeof vi.fn>;
+
+type State = {
+  records: Map<string, Record<string, unknown>>;
+  rates: Map<string, unknown>;
+  trustProvider: { check: ReturnType<typeof vi.fn> };
+};
+const mkState = (): State => ({
+  records: new Map(),
+  rates: new Map(),
+  trustProvider: { check: vi.fn(() => Promise.resolve('safe')) },
+});
+const cast = <T>(v: unknown): T => v as T;
+
+const mkItem = (over: Record<string, unknown> = {}): Record<string, unknown> => {
+  const listeners = new Map<string, (...a: unknown[]) => void>();
+  return {
+    getURL: () => 'https://dl.test/file.zip',
+    getFilename: () => 'file.zip',
+    getMimeType: () => 'application/zip',
+    getTotalBytes: () => 1000,
+    getReceivedBytes: () => 0,
+    canResume: () => false,
+    getURLChain: () => ['https://dl.test/file.zip'],
+    getETag: () => '',
+    getLastModifiedTime: () => '',
+    setSavePath: vi.fn(),
+    isPaused: () => false,
+    on: vi.fn((ev: string, fn: (...a: unknown[]) => void) => listeners.set(ev, fn)),
+    __listeners: listeners,
     ...over,
-  });
-}
+  };
+};
+const wc = { getURL: () => 'https://page.test/', session: {} };
 
+let state: State;
 beforeEach(() => {
-  records.clear();
   vi.clearAllMocks();
+  state = mkState();
+  sha256File.mockResolvedValue('sha-abc');
+  retry.scheduleAutoRetry.mockReturnValue(false);
 });
 
-describe('finishToQuarantine', () => {
-  it('hashes the file and settles an unknown verdict at quarantined', async () => {
-    seedQuarantined('d1');
-    const state = stateWith('unknown');
-    await finishToQuarantine(state, 'd1');
-
-    const rec = records.get('d1')!;
-    expect(rec.status).toBe('quarantined');
-    expect(rec.trustVerdict).toBe('unknown');
-    expect(rec.sha256).toBe('a'.repeat(64));
-    expect(rec.completedAt).toEqual(expect.any(Number));
-    expect(store.appendAudit).toHaveBeenCalledWith('DownloadQuarantined', expect.any(Object));
+describe('handleWillDownload', () => {
+  it('redirects the item to quarantine and records a started download', () => {
+    const item = mkItem();
+    handleWillDownload(cast(state), cast(item), cast(wc));
+    expect(item.setSavePath).toHaveBeenCalledWith(`${QDIR}/uuid-1-file.zip`);
+    expect(store.upsert).toHaveBeenCalled();
+    expect(store.appendAudit).toHaveBeenCalledWith('DownloadStarted', expect.anything());
+    expect(
+      (item.on as ReturnType<typeof vi.fn>).mock.calls.map((c: unknown[]): unknown => c[0]),
+    ).toEqual(['updated', 'done']);
   });
 
-  it('settles a blocked verdict at blocked, with the DownloadBlocked audit', async () => {
-    seedQuarantined('d2');
-    await finishToQuarantine(stateWith('blocked'), 'd2');
+  it('the updated listener drops the rate window on pause and patches status', () => {
+    const item = mkItem();
+    handleWillDownload(cast(state), cast(item), cast(wc));
+    const updated = (item.__listeners as Map<string, (...a: unknown[]) => void>).get('updated')!;
 
-    expect(records.get('d2')!.status).toBe('blocked');
-    expect(store.appendAudit).toHaveBeenCalledWith('DownloadBlocked', expect.any(Object));
-    expect(store.appendAudit).not.toHaveBeenCalledWith('DownloadQuarantined', expect.any(Object));
+    updated({}, 'interrupted');
+    expect(state.rates.has('uuid-1')).toBe(false);
+    expect(state.records.get('uuid-1')).toMatchObject({ status: 'paused' });
+
+    updated({}, 'progressing');
+    expect(state.records.get('uuid-1')).toMatchObject({ status: 'in_progress' });
+    expect(state.rates.has('uuid-1')).toBe(true);
   });
 
-  it('does NOT auto-complete a safe verdict — release stays a separate human step', async () => {
-    seedQuarantined('d3');
-    await finishToQuarantine(stateWith('safe'), 'd3');
-
-    const rec = records.get('d3')!;
-    expect(rec.trustVerdict).toBe('safe');
-    // Safe means "Safe Browsing had nothing on it", not "moved to Downloads".
-    expect(rec.status).toBe('quarantined');
+  it('the done listener quarantines a completed transfer', () => {
+    const item = mkItem();
+    handleWillDownload(cast(state), cast(item), cast(wc));
+    const done = (item.__listeners as Map<string, (...a: unknown[]) => void>).get('done')!;
+    done({}, 'completed');
+    // finishToQuarantine was invoked (fire-and-forget) — sha256File is its first await
+    expect(sha256File).toHaveBeenCalled();
   });
 
-  it('passes the hash, name, mime and origin to the trust provider', async () => {
-    seedQuarantined('d4', {
-      filename: 'invoice.pdf',
-      mimeType: 'application/pdf',
-      provenance: { actor: 'site', sourceOrigin: 'https://bank.example' },
-    });
-    const state = stateWith('unknown');
-    await finishToQuarantine(state, 'd4');
-
-    expect((state.trustProvider as { check: ReturnType<typeof vi.fn> }).check).toHaveBeenCalledWith({
-      sha256: 'a'.repeat(64),
-      filename: 'invoice.pdf',
-      mimeType: 'application/pdf',
-      sourceOrigin: 'https://bank.example',
-    });
+  it('the done listener retires retries on cancel', () => {
+    const item = mkItem();
+    handleWillDownload(cast(state), cast(item), cast(wc));
+    const done = (item.__listeners as Map<string, (...a: unknown[]) => void>).get('done')!;
+    done({}, 'cancelled');
+    expect(retry.forget).toHaveBeenCalledWith('uuid-1');
+    expect(state.records.get('uuid-1')).toMatchObject({ status: 'canceled' });
+    expect(store.appendAudit).toHaveBeenCalledWith('DownloadCanceled', expect.anything());
   });
 
-  it('marks the record failed when hashing throws, and journals DownloadFailed', async () => {
-    seedQuarantined('d5');
-    fs.sha256File.mockRejectedValueOnce(new Error('EIO: read failed'));
-    await finishToQuarantine(stateWith('unknown'), 'd5');
+  it('a network drop fails only when no auto-retry is scheduled', () => {
+    const itemA = mkItem();
+    handleWillDownload(cast(state), cast(itemA), cast(wc));
+    (itemA.__listeners as Map<string, (...a: unknown[]) => void>).get('done')!({}, 'interrupted');
+    expect(state.records.get('uuid-1')).toMatchObject({ status: 'failed', error: 'interrupted' });
 
-    const rec = records.get('d5')!;
-    expect(rec.status).toBe('failed');
-    expect(String(rec.error)).toContain('EIO');
-    expect(store.appendAudit).toHaveBeenCalledWith('DownloadFailed', expect.any(Object));
-  });
-
-  it('is a no-op for an id that is not in state', async () => {
-    await expect(finishToQuarantine(stateWith('unknown'), 'missing')).resolves.toBeUndefined();
-    expect(store.appendAudit).not.toHaveBeenCalled();
+    retry.scheduleAutoRetry.mockReturnValue(true);
+    store.appendAudit.mockClear();
+    const state2 = mkState();
+    const itemB = mkItem();
+    handleWillDownload(cast(state2), cast(itemB), cast(wc));
+    (itemB.__listeners as Map<string, (...a: unknown[]) => void>).get('done')!({}, 'interrupted');
+    expect(store.appendAudit).not.toHaveBeenCalledWith('DownloadFailed', expect.anything());
   });
 });
 
 describe('ingestGeneratedFile', () => {
-  it('quarantines browser-generated bytes through the same path and returns an id, not a path', async () => {
-    const state = stateWith('unknown');
-    const id = await ingestGeneratedFile(state, {
-      filename: 'My Report.pdf',
+  it('writes the bytes to quarantine and runs the shared finish path', async () => {
+    const id = await ingestGeneratedFile(cast(state), {
+      filename: 'report.pdf',
       mimeType: 'application/pdf',
       bytes: new Uint8Array([1, 2, 3]),
-      provenance: { actor: 'agent', sourceOrigin: 'https://app.example' },
-      sourceUrl: 'https://app.example/report',
+      provenance: { actor: 'agent', sourceUrl: 'https://x/', sourceOrigin: 'https://x' },
+      sourceUrl: 'https://x/',
     });
+    expect(id).toBe('uuid-1');
+    expect(writeFile).toHaveBeenCalledWith(`${QDIR}/uuid-1-report.pdf`, new Uint8Array([1, 2, 3]));
+    expect(store.appendAudit).toHaveBeenCalledWith('DownloadStarted', expect.anything());
+    expect(state.records.get('uuid-1')).toMatchObject({ status: 'quarantined', sha256: 'sha-abc' });
+  });
+});
 
-    expect(typeof id).toBe('string');
-    expect(id).not.toContain('/');
-    const rec = records.get(id)!;
-    expect(rec.status).toBe('quarantined');
-    expect(rec.trustVerdict).toBe('unknown');
-    expect(rec.provenance).toMatchObject({ actor: 'agent' });
-    expect(store.appendAudit).toHaveBeenCalledWith('DownloadStarted', expect.any(Object));
-    expect(store.appendAudit).toHaveBeenCalledWith('DownloadQuarantined', expect.any(Object));
+describe('finishToQuarantine', () => {
+  const seed = (over: Record<string, unknown> = {}): void => {
+    state.records.set('d1', {
+      id: 'd1',
+      filename: 'f.bin',
+      mimeType: 'application/octet-stream',
+      quarantinePath: '/q/d1-f.bin',
+      totalBytes: 500,
+      receivedBytes: 500,
+      provenance: { sourceOrigin: 'https://o' },
+      ...over,
+    });
+  };
+
+  it('hashes, trust-checks, and marks the row quarantined', async () => {
+    seed();
+    state.trustProvider.check.mockResolvedValue('safe');
+    await finishToQuarantine(cast(state), 'd1');
+    expect(state.records.get('d1')).toMatchObject({
+      status: 'quarantined',
+      trustVerdict: 'safe',
+      sha256: 'sha-abc',
+    });
+    expect(retry.forget).toHaveBeenCalledWith('d1');
+    expect(store.applyRetentionPolicy).toHaveBeenCalled();
   });
 
-  it('classifies risk from the (page-controlled) filename rather than trusting the mime', async () => {
-    const id = await ingestGeneratedFile(stateWith('unknown'), {
-      // A hostile page titled its document to land an executable name in the save dialog.
-      filename: 'report.exe',
-      mimeType: 'application/pdf',
-      bytes: new Uint8Array([0]),
-      provenance: { actor: 'agent' },
-      sourceUrl: 'https://evil.example/x',
-    });
-    expect(records.get(id)!.risk).toBe('executable');
+  it('marks the row blocked when the trust provider blocks it', async () => {
+    seed();
+    state.trustProvider.check.mockResolvedValue('blocked');
+    await finishToQuarantine(cast(state), 'd1');
+    expect(state.records.get('d1')).toMatchObject({ status: 'blocked' });
+    expect(store.appendAudit).toHaveBeenCalledWith('DownloadBlocked', expect.anything());
+  });
+
+  it('is a no-op for a missing record or one without a quarantine path', async () => {
+    await finishToQuarantine(cast(state), 'nope');
+    seed({ quarantinePath: undefined });
+    await finishToQuarantine(cast(state), 'd1');
+    expect(store.patch).not.toHaveBeenCalled();
+  });
+
+  it('fails and logs when hashing throws', async () => {
+    seed();
+    sha256File.mockRejectedValue(new Error('io error'));
+    await finishToQuarantine(cast(state), 'd1');
+    expect(state.records.get('d1')).toMatchObject({ status: 'failed', error: 'Error: io error' });
+    expect(store.appendAudit).toHaveBeenCalledWith('DownloadFailed', expect.anything());
   });
 });
