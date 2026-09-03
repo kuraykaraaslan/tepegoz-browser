@@ -16,6 +16,9 @@ const h = vi.hoisted(() => ({
   statusMap: vi.fn(() => new Map<string, 'up' | 'down'>()),
   direct: vi.fn(() => ({ partition: 'persist:tepegoz-web' })),
   ensure: vi.fn((partition: string) => ({ partition })),
+  onGroupExit: vi.fn(),
+  setNewTabProvider: vi.fn(),
+  setPrivateProvider: vi.fn(),
 }));
 
 vi.mock('electron', () => ({ session: { fromPartition: (p: string) => ({ partition: p }) } }));
@@ -33,6 +36,7 @@ vi.mock('../tabs', () => ({
     bindingStates: () => h.tabs,
     allGroups: () => h.groups,
     rehostTab: h.rehostTab,
+    onInvoluntaryGroupExit: h.onGroupExit,
     updateGroupSettings: (groupId: string, patch: Record<string, string>) => {
       h.updateGroupSettings(groupId, patch);
       const group = h.groups.find((g) => g.id === groupId);
@@ -41,7 +45,12 @@ vi.mock('../tabs', () => ({
   },
 }));
 vi.mock('./browsing-sessions.electron', () => ({
-  default: { direct: h.direct, ensure: h.ensure },
+  default: {
+    direct: h.direct,
+    ensure: h.ensure,
+    setNewTabSessionProvider: h.setNewTabProvider,
+    setPrivatePartitionProvider: h.setPrivateProvider,
+  },
 }));
 vi.mock('./connection-pool.electron', () => ({
   default: { ensureUp: h.ensureUp, statusMap: h.statusMap },
@@ -63,7 +72,17 @@ beforeEach(() => {
     { tabId: 'c', groupId: null },
   ];
   h.groups = [{ id: 'g1', settings: {} }];
-  for (const fn of [h.update, h.rehostTab, h.updateGroupSettings, h.ensureUp, h.direct, h.ensure]) {
+  for (const fn of [
+    h.update,
+    h.rehostTab,
+    h.updateGroupSettings,
+    h.ensureUp,
+    h.direct,
+    h.ensure,
+    h.onGroupExit,
+    h.setNewTabProvider,
+    h.setPrivateProvider,
+  ]) {
     fn.mockClear();
   }
   h.rehostTab.mockReturnValue(true);
@@ -238,5 +257,89 @@ describe('preserving a route when pinning strips a tab out of its group', () => 
       resolved: { connectionId: 'tor' },
       source: 'general',
     });
+  });
+});
+
+describe('the raw scope accessors', () => {
+  it('tabBinding / groupBinding return "inherit" when nothing is set, else the stored binding', async () => {
+    expect(BindingService.tabBinding('a')).toEqual({ kind: 'inherit' });
+    expect(BindingService.groupBinding('g1')).toEqual({ kind: 'inherit' });
+
+    await BindingService.bindTab('a', { kind: 'connection', connectionId: 'tor' });
+    await BindingService.bindGroup('g1', { kind: 'connection', connectionId: 'mullvad' });
+    expect(BindingService.tabBinding('a')).toEqual({ kind: 'connection', connectionId: 'tor' });
+    expect(BindingService.groupBinding('g1')).toEqual({
+      kind: 'connection',
+      connectionId: 'mullvad',
+    });
+  });
+
+  it('resolveForGroup reports a group inheriting a tunneled General as tunneled', async () => {
+    h.prefs.networkGeneralBinding = { kind: 'connection', connectionId: 'tor' };
+    expect(BindingService.resolveForGroup('g1').resolved).toEqual({ connectionId: 'tor' });
+
+    await BindingService.bindGroup('g1', { kind: 'direct' });
+    expect(BindingService.resolveForGroup('g1').resolved).toEqual({ connectionId: null });
+  });
+});
+
+describe('tab-override housekeeping', () => {
+  it('forgetTab drops a single tab override', async () => {
+    await BindingService.bindTab('a', { kind: 'connection', connectionId: 'tor' });
+    BindingService.forgetTab('a');
+    expect(BindingService.tabBinding('a')).toEqual({ kind: 'inherit' });
+  });
+
+  it('prune drops overrides for tabs no longer in the live set', async () => {
+    await BindingService.bindTab('a', { kind: 'connection', connectionId: 'tor' });
+    await BindingService.bindTab('c', { kind: 'connection', connectionId: 'tor' });
+    h.tabs = [{ tabId: 'a', groupId: 'g1' }]; // c is gone
+    BindingService.prune();
+    expect(BindingService.tabBinding('a')).toEqual({ kind: 'connection', connectionId: 'tor' });
+    expect(BindingService.tabBinding('c')).toEqual({ kind: 'inherit' });
+  });
+});
+
+describe('startup wiring', () => {
+  it('installGroupExitGuard subscribes and routes the callback to preserveRouteOnGroupExit', async () => {
+    await BindingService.bindGroup('g1', { kind: 'connection', connectionId: 'tor' });
+    BindingService.installGroupExitGuard();
+    expect(h.onGroupExit).toHaveBeenCalledTimes(1);
+
+    const cb = h.onGroupExit.mock.calls[0]![0] as (tabId: string, groupId: string) => void;
+    h.rehostTab.mockClear();
+    cb('a', 'g1'); // must not throw and must freeze a's route onto the group's tunnel
+    h.tabs = h.tabs.map((t) => (t.tabId === 'a' ? { ...t, groupId: null } : t));
+    expect(BindingService.resolveFor('a').resolved).toEqual({ connectionId: 'tor' });
+  });
+
+  it('installNewTabRoute registers a session provider that follows the General binding', () => {
+    BindingService.installNewTabRoute();
+    expect(h.setNewTabProvider).toHaveBeenCalledTimes(1);
+    expect(h.setPrivateProvider).toHaveBeenCalledTimes(1);
+
+    const provide = h.setNewTabProvider.mock.calls[0]![0] as () => unknown;
+
+    // General = Direct → the base session, no tunnel spun up.
+    h.prefs.networkGeneralBinding = { kind: 'direct', connectionId: '' };
+    provide();
+    expect(h.direct).toHaveBeenCalled();
+    expect(h.ensureUp).not.toHaveBeenCalled();
+
+    // General = a connection → bring it up + hand back its partition session.
+    h.direct.mockClear();
+    h.prefs.networkGeneralBinding = { kind: 'connection', connectionId: 'tor' };
+    provide();
+    expect(h.ensureUp).toHaveBeenCalledWith('tor');
+    expect(h.ensure).toHaveBeenCalled();
+  });
+
+  it('the private-side provider also follows a tunneled General', () => {
+    BindingService.installNewTabRoute();
+    const providePrivate = h.setPrivateProvider.mock.calls[0]![0] as () => unknown;
+
+    h.prefs.networkGeneralBinding = { kind: 'connection', connectionId: 'tor' };
+    providePrivate();
+    expect(h.ensureUp).toHaveBeenCalledWith('tor');
   });
 });
