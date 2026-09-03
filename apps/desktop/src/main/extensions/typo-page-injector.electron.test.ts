@@ -175,4 +175,44 @@ describe('the Runtime.bindingCalled listener', () => {
     bindingListener(wc)(...bindingCall(JSON.stringify({ requestId: 'r1', text: 'hello' })));
     expect(typoHost.check).not.toHaveBeenCalled();
   });
+
+  it('treats an unparseable tab URL as no origin (originOf catch)', async () => {
+    const wc = await armed();
+    wc.getURL.mockReturnValue('http://[bad'); // new URL throws
+    bindingListener(wc)(...bindingCall(JSON.stringify({ requestId: 'r1', text: 'hello' })));
+    expect(typoHost.check).not.toHaveBeenCalled();
+  });
+
+  it('logs a warning when typoHost.check rejects', async () => {
+    const wc = await armed();
+    typoHost.check.mockRejectedValue(new Error('check boom'));
+    bindingListener(wc)(
+      ...bindingCall(JSON.stringify({ requestId: 'r1', text: 'teh', language: 'en' })),
+    );
+    await vi.waitFor(() =>
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Typo page check failed',
+        expect.objectContaining({ err: expect.stringContaining('check boom') as string }),
+      ),
+    );
+  });
+
+  describe("the wc 'destroyed' handler", () => {
+    const destroyedHandler = (wc: FakeWc): (() => void) =>
+      wc.once.mock.calls.find((c) => c[0] === 'destroyed')![1] as () => void;
+
+    it('removes the message listener and forgets the wc', async () => {
+      const wc = await armed();
+      const listener = bindingListener(wc);
+      destroyedHandler(wc)();
+      expect(wc.debugger.removeListener).toHaveBeenCalledWith('message', listener);
+    });
+
+    it('skips debugger access on an already-destroyed wc', async () => {
+      const wc = await armed();
+      wc.isDestroyed.mockReturnValue(true);
+      destroyedHandler(wc)();
+      expect(wc.debugger.removeListener).not.toHaveBeenCalled();
+    });
+  });
 });
