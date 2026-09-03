@@ -23,6 +23,7 @@ const shellMock = vi.hoisted(() => ({
 const dialogMock = vi.hoisted((): { result: { canceled: boolean; filePaths: string[] } } => ({
   result: { canceled: false, filePaths: ['C:/picked'] },
 }));
+const bw = vi.hoisted(() => ({ fromWebContents: vi.fn((): unknown => ({ id: 'win' })) }));
 vi.mock('electron', () => ({
   ipcMain: {
     handle: (c: string, fn: (e: unknown, p: unknown) => unknown) => {
@@ -30,7 +31,7 @@ vi.mock('electron', () => ({
     },
     removeHandler: () => undefined,
   },
-  BrowserWindow: { fromWebContents: () => ({ id: 'win' }) },
+  BrowserWindow: bw,
   dialog: { showOpenDialog: () => Promise.resolve(dialogMock.result) },
   shell: { openPath: (p: string) => shellMock.openPath(p) },
 }));
@@ -76,6 +77,7 @@ beforeEach(() => {
   svc.clearTerminal.mockClear();
   shellMock.openPath.mockClear();
   shellMock.openPath.mockResolvedValue('');
+  bw.fromWebContents.mockReturnValue({ id: 'win' });
   dialogMock.result = { canceled: false, filePaths: ['C:/picked'] };
   prefs.downloadDirectory = 'C:/Downloads';
   registerDownloadsIpc();
@@ -112,6 +114,13 @@ describe('registerDownloadsIpc', () => {
     await expect(h.handlers.get(IpcChannels.downloadsPickDirectory)?.(ev, undefined)).resolves.toEqual(
       { path: 'C:/picked', cancelled: false },
     );
+  });
+
+  it('opens a window-less picker when the sender has no owning BrowserWindow', async () => {
+    bw.fromWebContents.mockReturnValue(null);
+    await expect(
+      h.handlers.get(IpcChannels.downloadsPickDirectory)?.(ev, undefined),
+    ).resolves.toEqual({ path: 'C:/picked', cancelled: false });
   });
 
   it('reports false when the download folder cannot be opened', async () => {
