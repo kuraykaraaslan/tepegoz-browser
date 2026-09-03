@@ -106,6 +106,12 @@ describe('registry', () => {
     expect((wt as unknown as { isPrivate: boolean }).isPrivate).toBe(true);
     expect(TabManagerBase.hasPrivateWindow()).toBe(true);
   });
+
+  it('hasPrivateWindow is false when only public windows (or none) are registered', () => {
+    expect(TabManagerBase.hasPrivateWindow()).toBe(false); // registry empty after beforeEach
+    TabManagerBase.register(win('pub') as unknown as never);
+    expect(TabManagerBase.hasPrivateWindow()).toBe(false);
+  });
 });
 
 describe('forSenderWindow', () => {
@@ -277,5 +283,15 @@ describe('persistNow', () => {
       'Failed to append session snapshot journal event',
       expect.any(Object),
     );
+  });
+
+  it('the module-level persister routes tabs-shared.persistSession into persistNow', async () => {
+    const shared = await import('./tabs-shared');
+    getDb.mockReturnValue({ __db: true });
+    register('pub', { tabs: [{ url: 'https://via-persister' }], groups: [], activeIndex: 0 });
+
+    shared.persistSession();
+
+    expect(persistence.SessionStore.save).toHaveBeenCalledTimes(1);
   });
 });
