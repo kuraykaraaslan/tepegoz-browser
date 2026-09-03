@@ -16,6 +16,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 class FakeContents extends EventEmitter {
   destroyed = false;
   closeCalls: unknown[] = [];
+  navigationHistory = { canGoBack: () => false, canGoForward: () => false };
+  getZoomFactor(): number {
+    return 1;
+  }
   constructor(private readonly view: FakeView) {
     super();
   }
@@ -28,6 +32,10 @@ class FakeContents extends EventEmitter {
   close(opts?: unknown): void {
     this.closeCalls.push(opts);
   }
+  reloadCalls = 0;
+  reload(): void {
+    this.reloadCalls++;
+  }
   /** What Chromium does a tick later when the page had no `beforeunload` to run — including the part
    *  the old code did not survive: the view's `webContents` property is gone before we are told. */
   electronDestroys(): void {
@@ -39,8 +47,12 @@ class FakeContents extends EventEmitter {
 
 class FakeView {
   webContents: FakeContents | undefined;
+  boundsCalls: unknown[] = [];
   constructor() {
     this.webContents = new FakeContents(this);
+  }
+  setBounds(b: unknown): void {
+    this.boundsCalls.push(b);
   }
 }
 
@@ -123,8 +135,38 @@ class Harness extends WindowTabsClosing {
     this.views.set(id, view as unknown as Electron.WebContentsView);
     return id;
   }
+  seedInternalTab(url: string): string {
+    return this.store.add({
+      kind: 'internal',
+      title: 'Internal',
+      url,
+      isLoading: false,
+      faviconUrl: null,
+    });
+  }
+  /** The real `createTab` builds a live `WebContentsView`; override it with a store-only stub so
+   *  `createTabRight` / `duplicateTab` are exercisable without Electron. */
+  override createTab(
+    url?: string,
+    opts?: { background?: boolean; openerId?: string | undefined },
+  ): string | null {
+    void opts;
+    return this.store.add({
+      kind: 'web',
+      title: 'New',
+      url: url ?? 'about:blank',
+      isLoading: false,
+      faviconUrl: null,
+    });
+  }
   tabIds(): string[] {
     return this.store.ids();
+  }
+  activeId(): string | null {
+    return this.store.activeId;
+  }
+  isHidden(id: string): boolean {
+    return this.store.get(id)?.hidden === true;
   }
   hasView(id: string): boolean {
     return this.views.has(id);
@@ -186,5 +228,236 @@ describe('closeTab', () => {
 
     expect(tabs.tabIds()).toContain(id);
     expect(tabs.hasView(id)).toBe(true);
+  });
+});
+
+describe('afterRemove', () => {
+  it('closes the window when the last tab goes', () => {
+    const { tabs, win } = harness();
+    const only = tabs.seedInternalTab('tepegoz://newtab');
+    tabs.activate(only);
+
+    tabs.closeTab(only);
+
+    expect(tabs.tabIds()).toEqual([]);
+    expect(win.close).toHaveBeenCalled();
+  });
+
+  it('reselects the last visible tab, skipping hidden ones, when the active tab is closed', () => {
+    const { tabs } = harness();
+    const a = tabs.seedInternalTab('tepegoz://a');
+    const b = tabs.seedInternalTab('tepegoz://b');
+    const c = tabs.seedInternalTab('tepegoz://c');
+    tabs.activate(c);
+    tabs.hideTab(b);
+    tabs.activate(c);
+
+    tabs.closeTab(c);
+
+    expect(tabs.activeId()).toBe(a); // b is hidden → skipped
+  });
+
+  it('just re-emits when a non-active tab is closed', () => {
+    const { tabs } = harness();
+    const a = tabs.seedInternalTab('tepegoz://a');
+    const b = tabs.seedInternalTab('tepegoz://b');
+    tabs.activate(a);
+    sent.length = 0;
+
+    tabs.closeTab(b);
+
+    expect(tabs.tabIds()).toEqual([a]);
+    expect(tabs.activeId()).toBe(a);
+    expect(sent.length).toBeGreaterThan(0);
+  });
+});
+
+describe('hide / unhide', () => {
+  it('hides an active tab and brings the last visible one forward', () => {
+    const { tabs } = harness();
+    const a = tabs.seedInternalTab('tepegoz://a');
+    const b = tabs.seedInternalTab('tepegoz://b');
+    tabs.activate(b);
+
+    tabs.hideTab(b);
+
+    expect(tabs.isHidden(b)).toBe(true);
+    expect(tabs.activeId()).toBe(a);
+  });
+
+  it('will not hide the last visible tab', () => {
+    const { tabs } = harness();
+    const only = tabs.seedInternalTab('tepegoz://a');
+    tabs.activate(only);
+
+    tabs.hideTab(only);
+
+    expect(tabs.isHidden(only)).toBe(false);
+  });
+
+  it('no-ops on an unknown or already-hidden id', () => {
+    const { tabs } = harness();
+    const a = tabs.seedInternalTab('tepegoz://a');
+    const b = tabs.seedInternalTab('tepegoz://b');
+    tabs.activate(a);
+    tabs.hideTab(b);
+
+    expect(() => {
+      tabs.hideTab(b); // already hidden
+      tabs.hideTab('nope'); // unknown
+      tabs.unhideTab('nope'); // unknown
+    }).not.toThrow();
+
+    tabs.unhideTab(b);
+    expect(tabs.isHidden(b)).toBe(false);
+    tabs.unhideTab(b); // not hidden → early return
+    expect(tabs.isHidden(b)).toBe(false);
+  });
+});
+
+describe('small queries and reload', () => {
+  it('activeTabId / viewlessActiveTabId reflect whether the active tab owns a view', () => {
+    const { tabs } = harness();
+    const web = tabs.seedWebTab(new FakeView());
+    const internal = tabs.seedInternalTab('tepegoz://x');
+
+    tabs.activate(internal);
+    expect(tabs.activeTabId()).toBe(internal);
+    expect(tabs.viewlessActiveTabId()).toBe(internal);
+
+    tabs.activate(web);
+    expect(tabs.viewlessActiveTabId()).toBeNull();
+  });
+
+  it('reloadTab reloads the tab view and is a no-op for an unknown id', () => {
+    const { tabs } = harness();
+    const view = new FakeView();
+    const id = tabs.seedWebTab(view);
+
+    tabs.reloadTab(id);
+    expect(view.webContents!.reloadCalls).toBe(1);
+
+    expect(() => {
+      tabs.reloadTab('nope');
+    }).not.toThrow();
+  });
+});
+
+describe('openInternalPage', () => {
+  it('opens a fresh internal tab, then focuses it instead of opening a second', () => {
+    const { tabs } = harness();
+
+    tabs.openInternalPage('tepegoz://settings');
+    const first = tabs.activeId();
+    expect(first).not.toBeNull();
+    expect(tabs.tabIds()).toHaveLength(1);
+
+    tabs.openInternalPage('tepegoz://settings');
+    expect(tabs.tabIds()).toHaveLength(1); // focused the existing one
+    expect(tabs.activeId()).toBe(first);
+  });
+});
+
+describe('bulk close', () => {
+  it('closeOtherTabs keeps only the reference tab, active', () => {
+    const { tabs } = harness();
+    const a = tabs.seedInternalTab('tepegoz://a');
+    const b = tabs.seedInternalTab('tepegoz://b');
+    const c = tabs.seedInternalTab('tepegoz://c');
+    void a;
+    void c;
+
+    tabs.closeOtherTabs(b);
+
+    expect(tabs.tabIds()).toEqual([b]);
+    expect(tabs.activeId()).toBe(b);
+  });
+
+  it('closeOtherTabs is a no-op for an unknown id', () => {
+    const { tabs } = harness();
+    const a = tabs.seedInternalTab('tepegoz://a');
+
+    tabs.closeOtherTabs('nope');
+
+    expect(tabs.tabIds()).toEqual([a]);
+  });
+
+  it('closeTabsToRight closes everything after the reference tab', () => {
+    const { tabs } = harness();
+    const a = tabs.seedInternalTab('tepegoz://a');
+    const b = tabs.seedInternalTab('tepegoz://b');
+    const c = tabs.seedInternalTab('tepegoz://c');
+    const d = tabs.seedInternalTab('tepegoz://d');
+    void c;
+    tabs.activate(d); // active tab is among those being closed → falls back to the ref tab
+
+    tabs.closeTabsToRight(b);
+
+    expect(tabs.tabIds()).toEqual([a, b]);
+    expect(tabs.activeId()).toBe(b);
+  });
+
+  it('closeTabsToRight is a no-op when the reference tab is unknown', () => {
+    const { tabs } = harness();
+    const a = tabs.seedInternalTab('tepegoz://a');
+    const b = tabs.seedInternalTab('tepegoz://b');
+
+    tabs.closeTabsToRight('nope');
+
+    expect(tabs.tabIds()).toEqual([a, b]);
+  });
+});
+
+describe('createTabRight / duplicateTab', () => {
+  it('createTabRight inserts a new tab right after the reference and focuses it', () => {
+    const { tabs } = harness();
+    const a = tabs.seedInternalTab('tepegoz://a');
+    const b = tabs.seedInternalTab('tepegoz://b');
+
+    tabs.createTabRight(a);
+
+    const ids = tabs.tabIds();
+    expect(ids).toHaveLength(3);
+    expect(ids[0]).toBe(a);
+    expect(ids[2]).toBe(b); // the newcomer sits between a and b
+  });
+
+  it('createTabRight is a no-op for an unknown reference', () => {
+    const { tabs } = harness();
+    const a = tabs.seedInternalTab('tepegoz://a');
+
+    tabs.createTabRight('nope');
+
+    expect(tabs.tabIds()).toEqual([a]);
+  });
+
+  it('duplicateTab on an internal tab just focuses the same internal page', () => {
+    const { tabs } = harness();
+    const a = tabs.seedInternalTab('tepegoz://settings');
+    tabs.activate(a);
+
+    tabs.duplicateTab(a);
+
+    // internal → openInternalPage focuses the existing tab, no new one
+    expect(tabs.tabIds()).toEqual([a]);
+  });
+
+  it('duplicateTab on a web tab clones its URL into a new tab after it', () => {
+    const { tabs } = harness();
+    const view = new FakeView();
+    const id = tabs.seedWebTab(view);
+
+    tabs.duplicateTab(id);
+
+    expect(tabs.tabIds()).toHaveLength(2);
+  });
+
+  it('duplicateTab is a no-op for an unknown id', () => {
+    const { tabs } = harness();
+    const a = tabs.seedInternalTab('tepegoz://a');
+
+    tabs.duplicateTab('nope');
+
+    expect(tabs.tabIds()).toEqual([a]);
   });
 });
