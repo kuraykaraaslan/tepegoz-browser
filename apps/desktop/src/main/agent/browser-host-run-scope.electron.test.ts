@@ -52,8 +52,12 @@ const AgentTabGroup = vi.hoisted(() => ({
   ownsTab: vi.fn(() => true),
   releaseTab: vi.fn(),
 }));
+const DownloadService = vi.hoisted(() => ({
+  ingestGeneratedFile: vi.fn(() => Promise.resolve('dl-1')),
+}));
+const runExtraction = vi.hoisted(() => vi.fn((): unknown => ({ ok: 1 })));
 vi.mock('../tabs', () => ({ default: TabManager }));
-vi.mock('../downloads/download-service.electron', () => ({ default: {} }));
+vi.mock('../downloads/download-service.electron', () => ({ default: DownloadService }));
 vi.mock('../downloads/download-service-fs.electron', () => ({ originOf: () => '' }));
 vi.mock('../print/pdf-filename', () => ({ pdfFileName: () => 'page.pdf' }));
 vi.mock('../window-parked', () => ({ isParkedToTray: () => false }));
@@ -69,7 +73,7 @@ vi.mock('../extensions/translate-page-injector-controller.electron', () => ({
   default: { ensureUntranslatedForAgent: () => Promise.resolve() },
 }));
 vi.mock('./article-text-script.js', () => ({ buildArticleTextExpression: () => '' }));
-vi.mock('./extraction-sandbox.electron.js', () => ({ runExtraction: vi.fn() }));
+vi.mock('./extraction-sandbox.electron.js', () => ({ runExtraction }));
 vi.mock('./credential-broker.electron.js', () => ({ fillCredential: vi.fn() }));
 vi.mock('./wait-condition-script.js', () => ({
   buildWaitConditionExpression: () => '',
@@ -432,5 +436,71 @@ describe('navigation + reads', () => {
       title: 'P',
     });
     expect(CdpDriver.waitForPageSettled).toHaveBeenCalledWith(expect.anything(), 3000);
+  });
+});
+
+describe('pdf / extraction / screenshot', () => {
+  const img = (empty = false) => ({
+    isEmpty: () => empty,
+    getSize: () => ({ width: 800, height: 600 }),
+    resize: vi.fn(function (this: unknown) {
+      return this;
+    }),
+    toDataURL: () => 'data:image/png;base64,AAAA',
+  });
+  const wc = (over: Record<string, unknown> = {}) => ({
+    isDestroyed: () => false,
+    getURL: () => 'https://p.test/x',
+    getTitle: () => 'Page Title',
+    executeJavaScript: vi.fn(() => Promise.resolve('<html></html>')),
+    printToPDF: vi.fn(() => Promise.resolve(new Uint8Array([1, 2, 3, 4]))),
+    capturePage: vi.fn(() => Promise.resolve(img())),
+    ...over,
+  });
+
+  it('runExtractionScript hands the outerHTML + script to the sandbox', async () => {
+    const { browserHost } = await load();
+    TabManager.webContentsForTab.mockReturnValue(wc());
+    expect(await browserHost.runExtractionScript!('return 1', 't1')).toEqual({ ok: 1 });
+    expect(runExtraction).toHaveBeenCalledWith({ html: '<html></html>', script: 'return 1' });
+  });
+
+  it('savePageAsPdf ingests the bytes as an agent-provenance quarantine record', async () => {
+    const { browserHost } = await load();
+    TabManager.webContentsForTab.mockReturnValue(wc());
+    const res = await browserHost.savePageAsPdf!('t1');
+    expect(DownloadService.ingestGeneratedFile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        filename: 'page.pdf',
+        mimeType: 'application/pdf',
+        provenance: expect.objectContaining({ actor: 'agent' }) as object,
+      }),
+    );
+    expect(res).toEqual({ downloadId: 'dl-1', filename: 'page.pdf', bytes: 4 });
+  });
+
+  it('captureScreenshot returns a data URL, and 502s an empty capture', async () => {
+    const { browserHost } = await load();
+    TabManager.webContentsForTab.mockReturnValue(
+      wc({ executeJavaScript: () => Promise.resolve({ width: 800, height: 600 }) }),
+    );
+    const shot = await browserHost.captureScreenshot({ tabId: 't1' });
+    expect(shot).toMatchObject({
+      mimeType: 'image/png',
+      dataUrl: 'data:image/png;base64,AAAA',
+      mode: 'viewport',
+      pageWidth: 800,
+      pageHeight: 600,
+    });
+
+    TabManager.webContentsForTab.mockReturnValue(
+      wc({
+        executeJavaScript: () => Promise.resolve({ width: 800, height: 600 }),
+        capturePage: () => Promise.resolve(img(true)),
+      }),
+    );
+    await expect(browserHost.captureScreenshot({ tabId: 't1' })).rejects.toMatchObject({
+      statusCode: 502,
+    });
   });
 });
