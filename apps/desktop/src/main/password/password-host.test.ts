@@ -131,3 +131,33 @@ describe('missing provider', () => {
     expect(await statusOf('logins:remove', 'cred-1')).toBe(503);
   });
 });
+
+describe('list / import / export', () => {
+  it('logins:list returns the aggregated registry list', async () => {
+    expect(await invoke('logins:list', undefined)).toEqual([]);
+  });
+
+  it('logins:import delegates to a provider that supports it', async () => {
+    PasswordProviderRegistry.reset();
+    PasswordProviderRegistry.register({
+      ...provider(),
+      capabilities: { canImport: true, canExport: false, canWrite: true, canSync: false },
+      import: () => Promise.resolve({ imported: 2, skipped: 1, errors: [] }),
+    });
+    const r = await invoke('logins:import', {
+      data: 'url,username,password\nhttps://x,u,p',
+      format: 'generic-csv',
+    });
+    expect(r).toMatchObject({ imported: 2, skipped: 1 });
+  });
+
+  it('logins:export delegates to a provider that supports it', async () => {
+    PasswordProviderRegistry.reset();
+    PasswordProviderRegistry.register({
+      ...provider(),
+      capabilities: { canImport: false, canExport: true, canWrite: true, canSync: false },
+      export: () => Promise.resolve('exported,csv\n'),
+    });
+    expect(await invoke('logins:export', 'generic-csv')).toBe('exported,csv\n');
+  });
+});
