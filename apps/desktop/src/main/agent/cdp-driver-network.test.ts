@@ -13,23 +13,31 @@ import { attachNetworkRecorder, networkSince } from './cdp-driver-network.electr
  */
 
 /** Minimal stand-in for the Electron `webContents` surface the recorder touches. */
-function fakeWebContents(): { wc: WebContents; emit: (method: string, params: unknown) => void } {
+function fakeWebContents(opts: { getURL?: () => string } = {}): {
+  wc: WebContents;
+  emit: (method: string, params: unknown) => void;
+  emitOnce: (event: string) => void;
+} {
   const handlers: Array<(event: unknown, method: string, params?: unknown) => void> = [];
+  const onceHandlers = new Map<string, () => void>();
   const wc = {
     debugger: {
       on: (_event: string, handler: (e: unknown, method: string, params?: unknown) => void) => {
         handlers.push(handler);
       },
     },
-    once: () => undefined,
+    once: (event: string, handler: () => void) => {
+      onceHandlers.set(event, handler);
+    },
     isDestroyed: () => false,
-    getURL: () => 'http://127.0.0.1:5000/silent-api-failure/index.html',
+    getURL: opts.getURL ?? (() => 'http://127.0.0.1:5000/silent-api-failure/index.html'),
   } as unknown as WebContents;
   return {
     wc,
     emit: (method, params) => {
       for (const h of handlers) h({}, method, params);
     },
+    emitOnce: (event) => onceHandlers.get(event)?.(),
   };
 }
 
@@ -253,5 +261,72 @@ describe('AI-8B CDP network recorder', () => {
     emit('Network.requestWillBeSent', requestWillBeSent());
     emit('Network.responseReceived', responseReceived());
     expect(networkSince(wc, 0)).toHaveLength(1);
+  });
+
+  it("the 'destroyed' handler drops the tab's recorder state", () => {
+    const { wc, emit, emitOnce } = fakeWebContents();
+    attachNetworkRecorder(wc);
+    emit('Network.requestWillBeSent', requestWillBeSent());
+    emit('Network.responseReceived', responseReceived());
+    expect(networkSince(wc, 0)).toHaveLength(1);
+
+    emitOnce('destroyed');
+    expect(networkSince(wc, 0)).toEqual([]); // state removed
+  });
+
+  it('tolerates a getURL that throws (a destroyed tab) while still recording the failure', () => {
+    const { wc, emit } = fakeWebContents({
+      getURL: () => {
+        throw new Error('Object has been destroyed');
+      },
+    });
+    attachNetworkRecorder(wc);
+    emit('Network.requestWillBeSent', requestWillBeSent());
+    emit('Network.responseReceived', responseReceived());
+    expect(networkSince(wc, 0)).toHaveLength(1);
+  });
+
+  it('tolerates an unparseable current page URL (pageOrigin falls back to null)', () => {
+    const { wc, emit } = fakeWebContents({ getURL: () => 'not a url' });
+    attachNetworkRecorder(wc);
+    emit('Network.requestWillBeSent', requestWillBeSent());
+    emit('Network.responseReceived', responseReceived());
+    expect(networkSince(wc, 0)).toHaveLength(1);
+  });
+
+  it('sanitises an unparseable request URL without throwing (safeUrl catch)', () => {
+    const { wc, emit } = fakeWebContents();
+    attachNetworkRecorder(wc);
+    emit(
+      'Network.requestWillBeSent',
+      requestWillBeSent({ request: { url: 'gar bage', method: 'POST' } }),
+    );
+    emit(
+      'Network.responseReceived',
+      responseReceived({ response: { url: 'gar bage', status: 500 } }),
+    );
+    expect(networkSince(wc, 0)[0]?.url).toBe('gar bage');
+  });
+
+  it('evicts the oldest observation once 100 action-bearing failures are held', () => {
+    const { wc, emit } = fakeWebContents();
+    attachNetworkRecorder(wc);
+    for (let i = 0; i < 101; i++) {
+      const id = `req${String(i)}`;
+      emit('Network.requestWillBeSent', requestWillBeSent({ requestId: id }));
+      emit('Network.responseReceived', responseReceived({ requestId: id }));
+    }
+    expect(networkSince(wc, 0)).toHaveLength(100); // capped, oldest dropped
+  });
+
+  it('evicts the oldest pending request once 300 are in flight', () => {
+    const { wc, emit } = fakeWebContents();
+    attachNetworkRecorder(wc);
+    for (let i = 0; i < 301; i++) {
+      emit('Network.requestWillBeSent', requestWillBeSent({ requestId: `p${String(i)}` }));
+    }
+    // The first request's response can no longer be joined (its pending entry was evicted).
+    emit('Network.responseReceived', responseReceived({ requestId: 'p0' }));
+    expect(() => networkSince(wc, 0)).not.toThrow();
   });
 });
