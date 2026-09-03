@@ -46,6 +46,26 @@ const h = vi.hoisted(() => {
       scrollPage: vi.fn<(wc: WebContents, d: string, n?: number, a?: Adapter) => Promise<void>>(
         () => Promise.resolve(),
       ),
+      sendKeys: vi.fn<(wc: WebContents, keys: string, a?: Adapter) => Promise<unknown>>(() =>
+        Promise.resolve({ ok: true }),
+      ),
+      pressKey: vi.fn<(wc: WebContents, key: string, a?: Adapter) => Promise<unknown>>(() =>
+        Promise.resolve({ ok: true }),
+      ),
+      hoverElement: vi.fn<(wc: WebContents, ref: number, a?: Adapter) => Promise<void>>(() =>
+        Promise.resolve(),
+      ),
+      snapshotElements: vi.fn<(wc: WebContents, opts: unknown) => Promise<unknown>>(() =>
+        Promise.resolve({ elements: [] }),
+      ),
+      readElementValue: vi.fn<(wc: WebContents, ref: number) => Promise<unknown>>(() =>
+        Promise.resolve('v'),
+      ),
+      networkSince: vi.fn<(wc: WebContents, since: number) => unknown[]>(() => []),
+      interceptionsSince: vi.fn<(wc: WebContents, since: number) => unknown[]>(() => []),
+      selectOption: vi.fn<(wc: WebContents, ref: number, value: string) => Promise<unknown>>(() =>
+        Promise.resolve({ ok: true }),
+      ),
     },
     tabs: {
       viewlessActiveTabId: vi.fn<() => string | null>(() => null),
@@ -60,6 +80,8 @@ const h = vi.hoisted(() => {
         tabs: [],
         activeId: null,
       })),
+      focusedWindow: vi.fn<() => unknown>(() => null),
+      getContentBounds: vi.fn<() => { x: number; y: number }>(() => ({ x: 0, y: 0 })),
     },
     openTab: vi.fn<(group: string, url?: string) => string>(() => 'web-2'),
   };
@@ -75,6 +97,14 @@ vi.mock('./cdp-driver.electron', () => ({
     clickElement: h.cdp.clickElement,
     fillElement: h.cdp.fillElement,
     scrollPage: h.cdp.scrollPage,
+    sendKeys: h.cdp.sendKeys,
+    pressKey: h.cdp.pressKey,
+    hoverElement: h.cdp.hoverElement,
+    snapshotElements: h.cdp.snapshotElements,
+    readElementValue: h.cdp.readElementValue,
+    networkSince: h.cdp.networkSince,
+    interceptionsSince: h.cdp.interceptionsSince,
+    selectOption: h.cdp.selectOption,
   },
 }));
 vi.mock('./page-cursor.electron', () => ({
@@ -300,5 +330,391 @@ describe('per-tab HumanInputAdapter — every action gets real gestures', () => 
 
     expect(h.sends.get(target.id)).toContain('Input.dispatchMouseEvent');
     expect(h.sends.get(activeElsewhere.id)).toEqual([]);
+  });
+});
+
+// --- history / wait / perception / screenshot / cursor — the tool surface the run-scope suite skips ---
+
+let rwid = 5000;
+/** A WebContents rich enough for historyGo / captureScreenshot / waitForCondition (h.wc is text-only). */
+function richWc(over: Record<string, unknown> = {}): WebContents {
+  return {
+    id: rwid++,
+    isDestroyed: () => false,
+    getURL: () => 'https://rich.test/',
+    getTitle: () => 'Rich',
+    executeJavaScript: () => Promise.resolve({}),
+    reload: vi.fn(),
+    navigationHistory: {
+      canGoBack: () => true,
+      canGoForward: () => true,
+      goBack: vi.fn(),
+      goForward: vi.fn(),
+    },
+    debugger: { sendCommand: () => Promise.resolve({}) },
+    ...over,
+  } as unknown as WebContents;
+}
+
+function fakeImage(w: number, ht: number): Electron.NativeImage {
+  return {
+    isEmpty: () => false,
+    getSize: () => ({ width: w, height: ht }),
+    resize: ({ width, height }: { width: number; height: number }) => fakeImage(width, height),
+    toDataURL: () => 'data:image/png;base64,AAAA',
+  } as unknown as Electron.NativeImage;
+}
+
+describe('historyGo', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('steps forward and reports moved when the page can go forward', async () => {
+    const goForward = vi.fn();
+    const wc = richWc({
+      navigationHistory: {
+        canGoBack: () => false,
+        canGoForward: () => true,
+        goBack: vi.fn(),
+        goForward,
+      },
+    });
+    h.tabs.webContentsForTab.mockReturnValue(wc);
+
+    const res = await browserHost.historyGo('forward', 'tab-1');
+
+    expect(goForward).toHaveBeenCalled();
+    expect(res).toEqual({ url: 'https://rich.test/', title: 'Rich', moved: true });
+  });
+
+  it('reports moved:false and does not step when there is no forward entry', async () => {
+    const goForward = vi.fn();
+    const wc = richWc({
+      navigationHistory: {
+        canGoBack: () => false,
+        canGoForward: () => false,
+        goBack: vi.fn(),
+        goForward,
+      },
+    });
+    h.tabs.webContentsForTab.mockReturnValue(wc);
+
+    const res = await browserHost.historyGo('forward', 'tab-1');
+
+    expect(goForward).not.toHaveBeenCalled();
+    expect(res.moved).toBe(false);
+  });
+
+  it('does not step back when there is no back entry', async () => {
+    const goBack = vi.fn();
+    const wc = richWc({
+      navigationHistory: {
+        canGoBack: () => false,
+        canGoForward: () => false,
+        goBack,
+        goForward: vi.fn(),
+      },
+    });
+    h.tabs.webContentsForTab.mockReturnValue(wc);
+
+    const res = await browserHost.historyGo('back', 'tab-1');
+
+    expect(goBack).not.toHaveBeenCalled();
+    expect(res.moved).toBe(false);
+  });
+
+  it('reload always counts as moved', async () => {
+    const reload = vi.fn();
+    h.tabs.webContentsForTab.mockReturnValue(richWc({ reload }));
+
+    const res = await browserHost.historyGo('reload', 'tab-1');
+
+    expect(reload).toHaveBeenCalled();
+    expect(res.moved).toBe(true);
+  });
+});
+
+describe('keyboard + perception passthroughs', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('sendKeys drives CdpDriver.sendKeys with the tab adapter', async () => {
+    const wc = richWc();
+    h.tabs.webContentsForTab.mockReturnValue(wc);
+
+    const res = await browserHost.sendKeys('hello world', 'tab-1');
+
+    expect(h.cdp.sendKeys).toHaveBeenCalledWith(wc, 'hello world', expect.anything());
+    expect(res).toEqual({ ok: true });
+  });
+
+  it('snapshotElements forwards the given opts through the untranslated read', async () => {
+    const wc = richWc();
+    h.tabs.webContentsForTab.mockReturnValue(wc);
+
+    await browserHost.snapshotElements('tab-1', { viewportOnly: true } as never);
+
+    expect(h.cdp.snapshotElements).toHaveBeenCalledWith(wc, { viewportOnly: true });
+  });
+
+  it('snapshotElements passes {} when no opts are given', async () => {
+    const wc = richWc();
+    h.tabs.webContentsForTab.mockReturnValue(wc);
+
+    await browserHost.snapshotElements('tab-1');
+
+    expect(h.cdp.snapshotElements).toHaveBeenCalledWith(wc, {});
+  });
+});
+
+describe('waitForCondition', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('network_idle reuses the driver settle and reports satisfied', async () => {
+    h.tabs.webContentsForTab.mockReturnValue(richWc());
+
+    const res = await browserHost.waitForCondition(
+      { kind: 'network_idle', timeoutMs: 1000 },
+      'tab-1',
+    );
+
+    expect(res.satisfied).toBe(true);
+  });
+
+  it('an empty target value is unsatisfiable without polling the page', async () => {
+    const evaluate = vi.fn();
+    h.tabs.webContentsForTab.mockReturnValue(richWc({ executeJavaScript: evaluate }));
+
+    const res = await browserHost.waitForCondition(
+      { kind: 'text', value: '', timeoutMs: 1000 },
+      'tab-1',
+    );
+
+    expect(res).toEqual({ satisfied: false, waitedMs: 0 });
+    expect(evaluate).not.toHaveBeenCalled();
+  });
+
+  it('a text wait shapes the in-page poll result', async () => {
+    h.tabs.webContentsForTab.mockReturnValue(
+      richWc({ executeJavaScript: () => Promise.resolve({ satisfied: true, waitedMs: 42 }) }),
+    );
+
+    const res = await browserHost.waitForCondition(
+      { kind: 'text', value: 'Done', timeoutMs: 1000 },
+      'tab-1',
+    );
+
+    expect(res).toEqual({ satisfied: true, waitedMs: 42 });
+  });
+
+  it('a malformed poll result degrades to not-satisfied with a measured wait', async () => {
+    h.tabs.webContentsForTab.mockReturnValue(
+      richWc({ executeJavaScript: () => Promise.resolve(null) }),
+    );
+
+    const res = await browserHost.waitForCondition(
+      { kind: 'selector', value: '#x', timeoutMs: 1000 },
+      'tab-1',
+    );
+
+    expect(res.satisfied).toBe(false);
+    expect(typeof res.waitedMs).toBe('number');
+  });
+});
+
+describe('readArticleText', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns the extractor text + source when well-formed', async () => {
+    h.tabs.webContentsForTab.mockReturnValue(
+      richWc({ executeJavaScript: () => Promise.resolve({ text: 'Body copy', source: 'article' }) }),
+    );
+
+    const res = await browserHost.readArticleText!('tab-1');
+
+    expect(res).toMatchObject({ text: 'Body copy', source: 'article', url: 'https://rich.test/' });
+  });
+
+  it('degrades a malformed extractor result to empty body text', async () => {
+    h.tabs.webContentsForTab.mockReturnValue(
+      richWc({ executeJavaScript: () => Promise.resolve(null) }),
+    );
+
+    const res = await browserHost.readArticleText!('tab-1');
+
+    expect(res).toMatchObject({ text: '', source: 'body' });
+  });
+});
+
+describe('captureScreenshot', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('viewport capture resizes down to the max edge and shapes the result', async () => {
+    h.tabs.webContentsForTab.mockReturnValue(
+      richWc({
+        executeJavaScript: () => Promise.resolve({ width: 2000, height: 1000 }),
+        capturePage: () => Promise.resolve(fakeImage(2000, 1000)),
+      }),
+    );
+
+    const res = await browserHost.captureScreenshot({ tabId: 'tab-1', maxEdge: 1400 });
+
+    expect(res.mode).toBe('viewport');
+    expect(res.width).toBe(1400); // 2000 * (1400 / 2000)
+    expect(res.height).toBe(700);
+    expect(res.mimeType).toBe('image/png');
+    expect(res.truncated).toBeUndefined();
+  });
+
+  it('a huge full-page capture is truncated to the pixel budget and flagged', async () => {
+    let captured: unknown;
+    h.tabs.webContentsForTab.mockReturnValue(
+      richWc({
+        executeJavaScript: () => Promise.resolve({ width: 6000, height: 6000 }),
+        capturePage: (rect: unknown) => {
+          captured = rect;
+          return Promise.resolve(fakeImage(6000, 5000));
+        },
+      }),
+    );
+
+    const res = await browserHost.captureScreenshot({
+      tabId: 'tab-1',
+      mode: 'fullPage',
+      maxEdge: 10000,
+    });
+
+    expect(res.truncated).toBe(true);
+    expect(captured).toMatchObject({ x: 0, y: 0, width: 6000, height: 5000 });
+  });
+
+  it('an empty capture is a 502', async () => {
+    h.tabs.webContentsForTab.mockReturnValue(
+      richWc({
+        executeJavaScript: () => Promise.resolve({ width: 100, height: 100 }),
+        capturePage: () =>
+          Promise.resolve({ isEmpty: () => true } as unknown as Electron.NativeImage),
+      }),
+    );
+
+    await expect(browserHost.captureScreenshot({ tabId: 'tab-1' })).rejects.toMatchObject({
+      statusCode: 502,
+    });
+  });
+
+  it('falls back to 1x1 page dimensions for a malformed probe result', async () => {
+    h.tabs.webContentsForTab.mockReturnValue(
+      richWc({
+        executeJavaScript: () => Promise.resolve('not an object'),
+        capturePage: () => Promise.resolve(fakeImage(50, 50)),
+      }),
+    );
+
+    const res = await browserHost.captureScreenshot({ tabId: 'tab-1' });
+
+    expect(res.pageWidth).toBe(1);
+    expect(res.pageHeight).toBe(1);
+  });
+
+  it('coerces non-finite probe numbers to 1', async () => {
+    h.tabs.webContentsForTab.mockReturnValue(
+      richWc({
+        executeJavaScript: () => Promise.resolve({ width: Number.POSITIVE_INFINITY, height: 'x' }),
+        capturePage: () => Promise.resolve(fakeImage(10, 10)),
+      }),
+    );
+
+    const res = await browserHost.captureScreenshot({ tabId: 'tab-1' });
+
+    expect(res.pageWidth).toBe(1);
+    expect(res.pageHeight).toBe(1);
+  });
+});
+
+describe('cursor overlay wiring', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    h.adapterArgs.length = 0;
+  });
+
+  it("a tab adapter's cursor-move pushes the overlay to the focused window when that tab is visible", async () => {
+    const wc = richWc();
+    h.tabs.webContentsForTab.mockReturnValue(wc);
+    h.tabs.activeWebContents.mockReturnValue(wc); // isVisibleTab → true
+    const send = vi.fn();
+    h.tabs.focusedWindow.mockReturnValue({ isDestroyed: () => false, webContents: { send } });
+    h.tabs.getContentBounds.mockReturnValue({ x: 100, y: 40 });
+
+    await browserHost.clickElement(1, 'tab-vis'); // builds the adapter for wc
+    const cursorMove = h.adapterArgs.at(-1)?.[1] as (x: number, y: number) => void;
+    cursorMove(10, 20);
+
+    expect(send).toHaveBeenCalledWith(expect.anything(), { x: 110, y: 60, visible: true });
+  });
+
+  it('the overlay push is a no-op when there is no focused window', async () => {
+    const wc = richWc();
+    h.tabs.webContentsForTab.mockReturnValue(wc);
+    h.tabs.activeWebContents.mockReturnValue(wc);
+    h.tabs.focusedWindow.mockReturnValue(null);
+
+    await browserHost.clickElement(1, 'tab-vis');
+    const cursorMove = h.adapterArgs.at(-1)?.[1] as (x: number, y: number) => void;
+
+    expect(() => {
+      cursorMove(5, 5);
+    }).not.toThrow();
+  });
+
+  it("the adapter's on-screen predicate walks the visible-tab / window-state checks", async () => {
+    const wc = richWc();
+    h.tabs.webContentsForTab.mockReturnValue(wc);
+    h.tabs.activeWebContents.mockReturnValue(wc); // isVisibleTab → true
+    h.tabs.focusedWindow.mockReturnValue({
+      isDestroyed: () => false,
+      isMinimized: () => false,
+      isVisible: () => true,
+      webContents: { send: vi.fn() },
+    });
+    h.tabs.getState.mockReturnValue({ tabs: [{ id: 't1' }], activeId: 't1' });
+
+    await browserHost.clickElement(1, 't1');
+    const onScreen = h.adapterArgs.at(-1)?.[4] as () => boolean;
+
+    expect(onScreen()).toBe(true);
+  });
+
+  it("the on-screen predicate is false for a minimized window", async () => {
+    const wc = richWc();
+    h.tabs.webContentsForTab.mockReturnValue(wc);
+    h.tabs.activeWebContents.mockReturnValue(wc);
+    h.tabs.focusedWindow.mockReturnValue({
+      isDestroyed: () => false,
+      isMinimized: () => true,
+      isVisible: () => true,
+      webContents: { send: vi.fn() },
+    });
+    h.tabs.getState.mockReturnValue({ tabs: [{ id: 't1' }], activeId: 't1' });
+
+    await browserHost.clickElement(1, 't1');
+    const onScreen = h.adapterArgs.at(-1)?.[4] as () => boolean;
+
+    expect(onScreen()).toBe(false);
+  });
+});
+
+describe('networkSince / interceptionsSince tolerance', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('a destroyed target tab yields nothing observed, never an error', async () => {
+    h.tabs.webContentsForTab.mockReturnValue(richWc({ isDestroyed: () => true }));
+
+    await expect(browserHost.networkSince(0, 'gone')).resolves.toEqual([]);
+    await expect(browserHost.interceptionsSince!(0, 'gone')).resolves.toEqual([]);
+  });
+
+  it('an undefined tabId reads the active tab', async () => {
+    h.tabs.activeWebContents.mockReturnValue(richWc());
+    h.cdp.networkSince.mockReturnValue([{ url: 'x' }]);
+
+    await expect(browserHost.networkSince(0)).resolves.toEqual([{ url: 'x' }]);
   });
 });
