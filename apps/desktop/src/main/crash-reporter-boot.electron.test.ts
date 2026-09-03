@@ -8,7 +8,8 @@ const electron = vi.hoisted(() => ({
   crashReporter: { start: vi.fn() },
 }));
 vi.mock('electron', () => electron);
-vi.mock('@tepegoz/libs', () => ({ Logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
+const logger = vi.hoisted(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() }));
+vi.mock('@tepegoz/libs', () => ({ Logger: logger }));
 
 const { crashReportingEnabledFromPrefs, applyCrashReporterPreference } = await import(
   './crash-reporter-boot'
@@ -76,5 +77,20 @@ describe('applyCrashReporterPreference', () => {
     // Nothing leaves the machine.
     expect(opts.uploadToServer).toBe(false);
     expect(opts.submitURL).toBe('');
+  });
+
+  it('logs but still starts the reporter when the crash-dump dir cannot be set', () => {
+    writePrefs({ crashReportingEnabled: true });
+    electron.app.setPath.mockImplementationOnce(() => {
+      throw new Error('EACCES');
+    });
+
+    applyCrashReporterPreference(electron.app as never);
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Could not set the crash-dump directory',
+      expect.objectContaining({ err: expect.stringContaining('EACCES') as string }),
+    );
+    expect(electron.crashReporter.start).toHaveBeenCalledTimes(1);
   });
 });
