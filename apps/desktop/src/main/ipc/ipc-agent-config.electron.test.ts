@@ -60,8 +60,12 @@ vi.mock('@tepegoz/desktop-ipc/schemas', () => ({
   AgentOpenFileSchema: {},
 }));
 
+const modelGateway = vi.hoisted(() => ({
+  isProviderRegistered: vi.fn(() => false),
+  setModelOverride: vi.fn(),
+}));
 vi.mock('@tepegoz/model-gateway', () => ({
-  ModelGateway: { isProviderRegistered: vi.fn(() => false), setModelOverride: vi.fn() },
+  ModelGateway: modelGateway,
   PROVIDER_MODEL_CATALOG: {
     anthropic: [{ id: 'claude-x', label: 'Claude X' }],
     openai: [{ id: 'gpt-x', label: 'GPT X' }],
@@ -107,13 +111,21 @@ const fsHost = vi.hoisted(() => ({
 vi.mock('../file-operations/file-operations-host', () => ({ default: fsHost }));
 
 const prefs = vi.hoisted(() => ({
-  getAll: vi.fn(() => ({
-    agentProviderOverride: null,
-    localProvider: { selectedModelId: '', mode: 'tiered' },
-    agentAutonomy: 'notify',
-    agentEffort: 'medium',
-    agentStrictGuard: false,
-  })),
+  getAll: vi.fn(
+    (): {
+      agentProviderOverride: string | null;
+      localProvider: { selectedModelId: string; mode: string };
+      agentAutonomy: string;
+      agentEffort: string;
+      agentStrictGuard: boolean;
+    } => ({
+      agentProviderOverride: null,
+      localProvider: { selectedModelId: '', mode: 'tiered' },
+      agentAutonomy: 'notify',
+      agentEffort: 'medium',
+      agentStrictGuard: false,
+    }),
+  ),
   update: vi.fn(),
 }));
 vi.mock('@tepegoz/preferences', () => ({
@@ -151,6 +163,7 @@ beforeEach(() => {
   vault.topProvider.mockReturnValue('anthropic');
   vault.modelForProvider.mockReturnValue('claude-x');
   hasActiveAgentRun.mockReturnValue(false);
+  modelGateway.isProviderRegistered.mockReturnValue(false);
   shared.agentEnabled.mockReturnValue(true);
   prefs.getAll.mockReturnValue({
     agentProviderOverride: null,
@@ -188,6 +201,19 @@ describe('agentGetConfig', () => {
     expect(cfg.choices.map((c) => c.id)).toEqual(['k1', 'k2', '__local']);
     expect(cfg.choices.at(-1)).toMatchObject({ provider: 'local', available: false });
   });
+
+  it('selects the on-device id when the effective provider is local', () => {
+    prefs.getAll.mockReturnValue({
+      agentProviderOverride: 'local',
+      localProvider: { selectedModelId: 'phi-3', mode: 'tiered' },
+      agentAutonomy: 'notify',
+      agentEffort: 'medium',
+      agentStrictGuard: false,
+    });
+    const cfg = call('agent:getConfig') as { provider: string; selectedId: string };
+    expect(cfg.provider).toBe('local');
+    expect(cfg.selectedId).toBe('__local');
+  });
 });
 
 describe('agentSelectChoice', () => {
@@ -221,6 +247,16 @@ describe('agentSetModel', () => {
   it("pins a catalog id on the provider's top key", () => {
     call('agent:setModel', { provider: 'anthropic', model: 'claude-x' });
     expect(vault.setKeyModel).toHaveBeenCalledWith('k1', 'claude-x');
+  });
+
+  it('pushes the pin to the live gateway when a run is active on that provider', () => {
+    hasActiveAgentRun.mockReturnValue(true);
+    modelGateway.isProviderRegistered.mockReturnValue(true);
+    call('agent:setModel', { provider: 'anthropic', model: 'claude-x' });
+    expect(modelGateway.setModelOverride).toHaveBeenCalledWith({
+      provider: 'anthropic',
+      model: 'claude-x',
+    });
   });
 });
 
@@ -273,6 +309,13 @@ describe('the export handlers', () => {
         'Refused to open agent file',
         expect.objectContaining({ err: expect.stringContaining('outside grant') as string }),
       ),
+    );
+  });
+
+  it('agentOpenFile opens the asserted real path on the happy path', async () => {
+    helpers.actions.get('agent:openFile')!('/home/u/tepegoz/real.txt');
+    await vi.waitFor(() =>
+      expect(shell.openPath).toHaveBeenCalledWith('/home/u/tepegoz/real.txt'),
     );
   });
 });
