@@ -49,7 +49,7 @@ vi.mock('../print/print-to-pdf.electron', () => ({ savePageAsPdf }));
 const captureAndNotify = vi.hoisted(() => vi.fn());
 vi.mock('../screenshots/screenshot-notify.electron', () => ({ captureAndNotify }));
 
-const { openPageContextMenu, getPageMenuContext, runPageMenuAction } =
+const { openPageContextMenu, getPageMenuContext, runPageMenuAction, runPageMenuContributionAction } =
   await import('./page-context-menu');
 
 const params = (over: Record<string, unknown> = {}) => ({
@@ -189,6 +189,45 @@ describe('wired actions', () => {
     expect(clipboardWriteText).toHaveBeenCalledWith(
       expect.objectContaining({ text: 'https://cdn.example/v.mp4', origin: undefined }),
     );
+  });
+
+  it('inspect and copy-image carry the captured click point', async () => {
+    await open();
+    runPageMenuAction('inspect');
+    runPageMenuAction('copy-image');
+    expect(tm.inspectActiveAt).toHaveBeenCalledTimes(1);
+    expect(tm.copyImageAtActive).toHaveBeenCalledTimes(1);
+    // both get the same (x, y) — the point main kept out of the wire context
+    expect(tm.inspectActiveAt.mock.calls[0]).toEqual(tm.copyImageAtActive.mock.calls[0]);
+  });
+
+  it('open-link-new-tab opens the link as a background tab with the page as opener', async () => {
+    await open(params({ linkURL: 'https://dest.example/x' }));
+    runPageMenuAction('open-link-new-tab');
+    expect(tm.createTab).toHaveBeenCalledWith(
+      'https://dest.example/x',
+      expect.objectContaining({ background: true, openerId: 'tab-1' }),
+    );
+  });
+
+  it('opener falls back to undefined when there is no active tab id', async () => {
+    tm.activeTabId.mockReturnValue(null as never);
+    await open(params({ linkURL: 'https://dest.example/y' }));
+    runPageMenuAction('open-link-new-tab');
+    expect(tm.createTab).toHaveBeenCalledWith(
+      'https://dest.example/y',
+      expect.objectContaining({ openerId: undefined }),
+    );
+  });
+});
+
+describe('contribution actions', () => {
+  it('runPageMenuContributionAction forwards to the contribution service', () => {
+    runPageMenuContributionAction({ contributionId: 'ext.copyThing', menuId: 'm1' } as never);
+    expect(contrib.runAction).toHaveBeenCalledWith({
+      contributionId: 'ext.copyThing',
+      menuId: 'm1',
+    });
   });
 });
 
