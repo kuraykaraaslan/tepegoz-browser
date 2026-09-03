@@ -126,6 +126,19 @@ describe('render-DOM perception', () => {
     expect(send).toHaveBeenCalledWith('Accessibility.getFullAXTree');
     expect(res.elements).toEqual([]);
   });
+
+  it('logs a viewport diagnostic (no a11y fallback) when render-DOM yields zero elements', async () => {
+    tx.parseDomTree.mockReturnValue({ interactables: [], paths: [], hashes: [] });
+    tx.markNewElements.mockReturnValue([]);
+    const res = await run();
+    expect(res.elements).toEqual([]);
+    // the empty branch probes the page viewport rather than falling through to a11y
+    expect(send).toHaveBeenCalledWith(
+      'Runtime.evaluate',
+      expect.objectContaining({ expression: expect.stringContaining('window.innerWidth') as string }),
+    );
+    expect(send).not.toHaveBeenCalledWith('Accessibility.getFullAXTree');
+  });
 });
 
 describe('identity-stable refs (flag-gated)', () => {
