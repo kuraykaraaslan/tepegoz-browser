@@ -12,7 +12,14 @@ vi.mock('electron', () => ({
   WebContentsView: class {
     setBounds = vi.fn();
     setVisible = vi.fn();
-    webContents = { loadURL: () => Promise.resolve(), isDestroyed: () => false, close: vi.fn() };
+    webContents = {
+      loadURL: () => Promise.resolve(),
+      isDestroyed: () => false,
+      close: vi.fn(),
+      getURL: () => '',
+      getZoomFactor: () => 1,
+      navigationHistory: { canGoBack: () => false, canGoForward: () => false },
+    };
   },
   BrowserWindow: { fromWebContents: () => null },
   dialog: { showMessageBoxSync: () => 0 },
@@ -123,12 +130,35 @@ class Harness extends WindowTabsDiscard {
   isLoadingOf(id: string): boolean | undefined {
     return this.store.get(id)?.isLoading;
   }
+  /** Seed a fake live view for `id` and attach it to the window's content view. */
+  seedView(id: string): { close: ReturnType<typeof vi.fn>; setBounds: ReturnType<typeof vi.fn> } {
+    const close = vi.fn();
+    const setBounds = vi.fn();
+    const view = {
+      setBounds,
+      webContents: { session: { __sess: id }, isDestroyed: () => false, close },
+    };
+    this.views.set(id, view as never);
+    this.win.contentView.addChildView(view as never);
+    return { close, setBounds };
+  }
+  hasView(id: string): boolean {
+    return this.views.has(id);
+  }
+  discardedSessionKeys(): string[] {
+    return [
+      ...(this as unknown as { discardedSessions: Map<string, unknown> }).discardedSessions.keys(),
+    ];
+  }
 }
 
 let tabs: Harness;
+let win: ReturnType<typeof fakeWindow>;
 beforeEach(() => {
   wiring.unwireView.mockClear();
-  tabs = new Harness(fakeWindow() as never, false);
+  wiring.wireView.mockClear();
+  win = fakeWindow();
+  tabs = new Harness(win as never, false);
 });
 
 describe('canDiscard', () => {
@@ -189,5 +219,57 @@ describe('discardTab', () => {
     tabs.discardTab(bg);
     expect(tabs.isDiscarded(bg)).toBe(true);
     expect(tabs.isLoadingOf(bg)).toBe(false);
+  });
+
+  it('tears down a live view: detach, unwire, close, drop from the view map, remember the session', () => {
+    const bg = tabs.add();
+    tabs.add();
+    const { close } = tabs.seedView(bg);
+
+    tabs.discardTab(bg);
+
+    expect(win.contentView.removeChildView).toHaveBeenCalled();
+    expect(wiring.unwireView).toHaveBeenCalled();
+    expect(close).toHaveBeenCalled();
+    expect(tabs.hasView(bg)).toBe(false);
+    expect(tabs.discardedSessionKeys()).toContain(bg);
+    expect(tabs.isDiscarded(bg)).toBe(true);
+  });
+});
+
+describe('activate → reviveTab', () => {
+  it('rebuilds the view + reloads the URL, restoring the recorded session, when a discarded tab is activated', () => {
+    const bg = tabs.add();
+    tabs.add();
+    tabs.seedView(bg);
+    tabs.discardTab(bg); // records bg's session, marks it discarded, drops the view
+    expect(tabs.hasView(bg)).toBe(false);
+
+    tabs.activate(bg);
+
+    expect(tabs.isDiscarded(bg)).toBe(false);
+    expect(tabs.isLoadingOf(bg)).toBe(true);
+    expect(tabs.hasView(bg)).toBe(true);
+    expect(wiring.wireView).toHaveBeenCalled();
+    expect(tabs.discardedSessionKeys()).not.toContain(bg); // consumed on revive
+  });
+
+  it('falls back to a fresh session when the tab was marked discarded without one recorded', () => {
+    const bg = tabs.add();
+    tabs.add();
+    tabs.patch(bg, { discarded: true }); // discarded flag only, no discardedSessions entry
+
+    expect(() => {
+      tabs.activate(bg);
+    }).not.toThrow();
+    expect(tabs.isDiscarded(bg)).toBe(false);
+    expect(tabs.hasView(bg)).toBe(true);
+  });
+
+  it('activating a non-discarded tab does not run the revive path', () => {
+    const a = tabs.add();
+    tabs.add();
+    tabs.activate(a);
+    expect(wiring.wireView).not.toHaveBeenCalled();
   });
 });
