@@ -5,6 +5,7 @@ const h = vi.hoisted(() => {
   return {
     order,
     resolveProxyResult: { value: 'SOCKS5 127.0.0.1:1080' },
+    setProxyRejects: { value: false },
     attacherRan: { value: false },
     fromPartition: vi.fn((partition: string) => ({
       partition,
@@ -14,7 +15,9 @@ const h = vi.hoisted(() => {
       // deliberate order: the blackhole at creation, then the real tunnel once verified.
       setProxy: vi.fn((config: { proxyRules: string }): Promise<void> => {
         order.push(config.proxyRules === 'socks5://127.0.0.1:1' ? 'blackhole' : 'setProxy');
-        return Promise.resolve();
+        return h.setProxyRejects.value
+          ? Promise.reject(new Error('setProxy failed'))
+          : Promise.resolve();
       }),
       resolveProxy: vi.fn((): Promise<string> => Promise.resolve(h.resolveProxyResult.value)),
     })),
@@ -24,14 +27,20 @@ const h = vi.hoisted(() => {
 vi.mock('electron', () => ({ session: { fromPartition: h.fromPartition } }));
 
 const { default: BrowsingSessions } = await import('./browsing-sessions.electron');
-const { ensureTunnelSession, resetTunnelSessionsForTests, invalidateTunnelVerification } =
-  await import('./tunnel-session.electron');
+const {
+  ensureTunnelSession,
+  resetTunnelSessionsForTests,
+  invalidateTunnelVerification,
+  applyTunnelHardening,
+  blackholeTunnelSession,
+} = await import('./tunnel-session.electron');
 
 beforeEach(() => {
   BrowsingSessions.resetForTests();
   resetTunnelSessionsForTests();
   h.order.length = 0;
   h.resolveProxyResult.value = 'SOCKS5 127.0.0.1:1080';
+  h.setProxyRejects.value = false;
   h.fromPartition.mockClear();
 });
 
@@ -94,5 +103,47 @@ describe('binding a tunnel session', () => {
     const b = await ensureTunnelSession('vpn-b', 1081);
     expect(a.partition).not.toBe(b.partition);
     expect(a.session).not.toBe(b.session);
+  });
+});
+
+describe('applyTunnelHardening', () => {
+  it('pins the WebRTC IP-handling policy so a tunneled tab cannot leak a real ICE candidate', () => {
+    const wc = { setWebRTCIPHandlingPolicy: vi.fn() };
+    applyTunnelHardening(wc as never);
+    expect(wc.setWebRTCIPHandlingPolicy).toHaveBeenCalledWith('disable_non_proxied_udp');
+  });
+
+  it('rethrows so the caller can treat a failed WebRTC lock as a failed bind', () => {
+    const wc = {
+      setWebRTCIPHandlingPolicy: vi.fn(() => {
+        throw new Error('policy rejected');
+      }),
+    };
+    expect(() => applyTunnelHardening(wc as never)).toThrow('policy rejected');
+  });
+});
+
+describe('blackholeTunnelSession', () => {
+  it('does nothing for an invalid connection id', async () => {
+    await blackholeTunnelSession('vpn/bad');
+    expect(h.order).not.toContain('blackhole');
+  });
+
+  it('points the partition back at the blackhole and forgets its verification', async () => {
+    await ensureTunnelSession('vpn-a', 1080);
+    h.order.length = 0;
+
+    await blackholeTunnelSession('vpn-a');
+    expect(h.order).toContain('blackhole');
+
+    // Verification was dropped: the next bind must re-run the real setProxy + resolveProxy check.
+    await ensureTunnelSession('vpn-a', 1080);
+    expect(h.order.filter((o) => o === 'setProxy')).toHaveLength(1);
+  });
+
+  it('never throws even if the blackhole setProxy fails — the health poll must survive', async () => {
+    await ensureTunnelSession('vpn-a', 1080);
+    h.setProxyRejects.value = true;
+    await expect(blackholeTunnelSession('vpn-a')).resolves.toBeUndefined();
   });
 });
