@@ -21,7 +21,8 @@ class AppError extends Error {
     this.code = code;
   }
 }
-vi.mock('@tepegoz/libs', () => ({ AppError, Logger: { warn: vi.fn() } }));
+const logger = vi.hoisted(() => ({ warn: vi.fn() }));
+vi.mock('@tepegoz/libs', () => ({ AppError, Logger: logger }));
 
 vi.mock('@tepegoz/uploads', () => ({
   classifyUploadRisk: () => 'low',
@@ -182,5 +183,104 @@ describe('command', () => {
       statusCode: 400,
       code: 'unsupportedCommand',
     });
+  });
+});
+
+describe('the web-request lifecycle observers', () => {
+  async function wired() {
+    const Svc = await load();
+    Svc.init();
+    const onBefore = webRequest.onBeforeRequest.mock.calls[0]![1] as (d: unknown) => void;
+    const onDone = webRequest.onCompleted.mock.calls[0]![1] as (d: { id: number }) => void;
+    const onErr = webRequest.onErrorOccurred.mock.calls[0]![1] as (d: {
+      id: number;
+      error: string;
+    }) => void;
+    return { Svc, onBefore, onDone, onErr };
+  }
+  const auditTypes = () => journal.append.mock.calls.map((c) => (c[1] as { type: string }).type);
+
+  it('moves an upload staged → submitting → completed as its request flows through', async () => {
+    const { Svc, onBefore, onDone } = await wired();
+    await Svc.create(input(), wc() as never);
+
+    onBefore({
+      method: 'POST',
+      id: 100,
+      url: 'https://form.test/submit?x=1',
+      uploadData: [{ file: '/real/doc.pdf' }],
+    });
+    expect(Svc.list()[0]).toMatchObject({
+      status: 'submitting',
+      targetUrl: 'https://form.test/submit?x=1',
+      targetOrigin: 'https://form.test',
+    });
+
+    onDone({ id: 100 });
+    expect(Svc.list()[0]).toMatchObject({ status: 'completed' });
+    expect(auditTypes()).toEqual([
+      'UploadStaged',
+      'UploadBound',
+      'UploadSubmitting',
+      'UploadCompleted',
+    ]);
+  });
+
+  it('marks the upload failed when its request errors out', async () => {
+    const { Svc, onBefore, onErr } = await wired();
+    await Svc.create(input(), wc() as never);
+
+    onBefore({
+      method: 'POST',
+      id: 101,
+      url: 'https://form.test/',
+      uploadData: [{ file: '/real/doc.pdf' }],
+    });
+    onErr({ id: 101, error: 'net::ERR_ABORTED' });
+    expect(Svc.list()[0]).toMatchObject({ status: 'failed', error: 'net::ERR_ABORTED' });
+    expect(auditTypes()).toContain('UploadFailed');
+  });
+
+  it('ignores non-upload methods, unknown files, and an unparseable target URL', async () => {
+    const { Svc, onBefore } = await wired();
+    await Svc.create(input(), wc() as never);
+
+    onBefore({ method: 'GET', id: 1, url: 'https://x/', uploadData: [{ file: '/real/doc.pdf' }] });
+    onBefore({ method: 'POST', id: 2, url: 'https://x/', uploadData: [{ file: '/not/staged' }] });
+    onBefore({ method: 'POST', id: 3, url: 'https://x/' }); // no uploadData at all
+    expect(Svc.list()[0]).toMatchObject({ status: 'bound' }); // untouched
+
+    onBefore({
+      method: 'POST',
+      id: 4,
+      url: 'not a url',
+      uploadData: [{ file: '/real/doc.pdf' }],
+    });
+    // The unparseable URL leaves `targetOrigin` unset rather than crashing.
+    expect(Svc.list()[0]).toMatchObject({ status: 'submitting' });
+    expect(Svc.list()[0]).not.toHaveProperty('targetOrigin');
+  });
+
+  it('a completed/failed callback for an unknown request id is a no-op', async () => {
+    const { Svc, onDone, onErr } = await wired();
+    await Svc.create(input(), wc() as never);
+    expect(() => {
+      onDone({ id: 999 });
+      onErr({ id: 999, error: 'x' });
+    }).not.toThrow();
+    expect(Svc.list()[0]).toMatchObject({ status: 'bound' });
+  });
+});
+
+describe('audit resilience', () => {
+  it('a throwing journal append is logged, not fatal to create', async () => {
+    const Svc = await load();
+    journal.append.mockImplementationOnce(() => {
+      throw new Error('journal offline');
+    });
+    await expect(Svc.create(input(), wc() as never)).resolves.toMatchObject({
+      id: expect.any(String) as string,
+    });
+    expect(logger.warn).toHaveBeenCalledWith('Upload audit append failed', expect.any(Object));
   });
 });
