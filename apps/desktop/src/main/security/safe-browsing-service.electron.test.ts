@@ -23,9 +23,16 @@ const provider = vi.hoisted(() => ({
   checkNavigation: vi.fn(() => Promise.resolve({ decision: 'unknown' })),
   checkDownloadOrigin: vi.fn(() => Promise.resolve('unknown')),
 }));
+interface ProviderCfg {
+  enabled: () => boolean;
+  database: () => unknown;
+  fetchFullHashes: () => unknown;
+}
+const providerConfig = vi.hoisted((): { c?: ProviderCfg } => ({}));
 vi.mock('@tepegoz/security-policy', () => ({
   SafeBrowsingProvider: class {
-    constructor() {
+    constructor(c: ProviderCfg) {
+      providerConfig.c = c;
       return provider;
     }
   },
@@ -43,9 +50,15 @@ const store = vi.hoisted(() => ({
   updatedAt: vi.fn(() => 0),
   count: vi.fn(() => 5),
 }));
+interface StoreIo {
+  read: () => Promise<string | null>;
+  write: (c: string) => Promise<void>;
+}
+const storeIo = vi.hoisted((): { io?: StoreIo } => ({}));
 vi.mock('./safe-browsing-prefix-store', () => ({
   PrefixStore: class {
-    constructor() {
+    constructor(io: StoreIo) {
+      storeIo.io = io;
       return store;
     }
   },
@@ -63,12 +76,20 @@ vi.mock('./safe-browsing-v5-client', () => ({
 }));
 
 const sched = vi.hoisted(() => ({ start: vi.fn(), stop: vi.fn() }));
-const schedConfig = vi.hoisted((): { c?: { refresh: () => Promise<void> } } => ({}));
+interface SchedCfg {
+  refresh: () => Promise<void>;
+  lastRefreshAt: () => number;
+  now: () => number;
+  setTimer: (fn: () => void, ms: number) => unknown;
+  clearTimer: (h: unknown) => void;
+  enabled: () => boolean;
+}
+const schedConfig = vi.hoisted((): { c?: SchedCfg } => ({}));
 vi.mock('./safe-browsing-refresh-scheduler', () => ({
   SafeBrowsingRefreshScheduler: class {
     start = sched.start;
     stop = sched.stop;
-    constructor(c: { refresh: () => Promise<void> }) {
+    constructor(c: SchedCfg) {
       schedConfig.c = c;
     }
   },
@@ -178,5 +199,90 @@ describe('the scheduler refresh closure', () => {
     await load();
     await schedConfig.c!.refresh();
     expect(store.replaceAll).not.toHaveBeenCalled();
+  });
+
+  it('asks for a full delta (null token) when a partial arrives but the store holds no set yet', async () => {
+    store.database.mockReturnValue(null);
+    const delta = vi.fn(() =>
+      Promise.resolve({ partial: true, additions: ['a'], versionToken: 'v2' }),
+    );
+    fx.delta = delta;
+    await load();
+    await schedConfig.c!.refresh();
+    // token is null (no DB) → the `partial && token !== null` guard is false → wholesale replace.
+    expect(store.applyDelta).not.toHaveBeenCalled();
+    expect(store.replaceAll).toHaveBeenCalledWith(['a'], expect.any(Number), 'v2');
+  });
+});
+
+describe('the collaborator config closures', () => {
+  it('the provider is wired to the live Settings switch, store DB and full-hash fetcher', async () => {
+    await load();
+    const c = providerConfig.c!;
+    prefs.getAll.mockReturnValue({ safeBrowsingEnabled: false });
+    expect(c.enabled()).toBe(false);
+    prefs.getAll.mockReturnValue({ safeBrowsingEnabled: true });
+    expect(c.enabled()).toBe(true);
+
+    store.database.mockReturnValue({ __db: 'live' });
+    expect(c.database()).toEqual({ __db: 'live' });
+    expect(c.fetchFullHashes()).toBe(fx.full);
+  });
+
+  it('the prefix-store IO reads the on-disk file and returns null when it is absent', async () => {
+    const fsp = await import('node:fs/promises');
+    await load();
+    const io = storeIo.io!;
+
+    vi.mocked(fsp.readFile).mockResolvedValueOnce('{"prefixes":[]}');
+    await expect(io.read()).resolves.toBe('{"prefixes":[]}');
+
+    vi.mocked(fsp.readFile).mockRejectedValueOnce(new Error('ENOENT'));
+    await expect(io.read()).resolves.toBeNull();
+  });
+
+  it('the prefix-store IO writes atomically — temp file then rename, under a mkdir -p', async () => {
+    const fsp = await import('node:fs/promises');
+    await load();
+    await storeIo.io!.write('payload');
+    expect(vi.mocked(fsp.mkdir)).toHaveBeenCalledWith(expect.stringContaining('safe-browsing'), {
+      recursive: true,
+    });
+    const tmp = vi.mocked(fsp.writeFile).mock.calls[0]![0] as string;
+    expect(tmp).toMatch(/prefixes\.json\.\d+\.tmp$/);
+    expect(vi.mocked(fsp.rename)).toHaveBeenCalledWith(
+      tmp,
+      expect.stringContaining('prefixes.json'),
+    );
+  });
+
+  it('the scheduler is wired to wall-clock time, the store timestamp, the Settings switch and an unref-ed timer', async () => {
+    await load();
+    const c = schedConfig.c!;
+    store.updatedAt.mockReturnValue(1234);
+    expect(c.lastRefreshAt()).toBe(1234);
+    expect(typeof c.now()).toBe('number');
+
+    const fn = vi.fn();
+    const handle = c.setTimer(fn, 5);
+    expect(handle).toBeDefined();
+    expect(() => {
+      c.clearTimer(handle);
+    }).not.toThrow();
+
+    prefs.getAll.mockReturnValue({ safeBrowsingEnabled: false });
+    expect(c.enabled()).toBe(false);
+  });
+});
+
+describe('init logging', () => {
+  it('reports a zero prefix count when the store has no database yet', async () => {
+    store.database.mockReturnValue(null);
+    const svc = await load();
+    await svc.init();
+    expect(logger.info).toHaveBeenCalledWith(
+      'Safe Browsing initialized',
+      expect.objectContaining({ prefixDatabase: 0, fullHashResolution: true }) as object,
+    );
   });
 });
