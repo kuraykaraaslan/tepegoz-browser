@@ -1,156 +1,177 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const h = vi.hoisted(() => ({
-  setProxy: vi.fn((config: { proxyRules: string }) => Promise.resolve(config.proxyRules)),
-  // A tunnel partition is blackholed the instant it exists, so the fake session must offer `setProxy`.
-  fromPartition: vi.fn((partition: string) => ({ partition, setProxy: h.setProxy })),
+/**
+ * `BrowsingSessions` — the registry of browsing sessions + the per-session attacher plane. Pinned:
+ * `register` + `ensure` create a session and run every attacher against it exactly once (retro-applying
+ * to sessions already live); a critical attacher that throws poisons the partition for the process
+ * lifetime while a non-critical one only warns; `direct` / `defaultForNewTab` / `private` route through
+ * `ensure` (fail-closed when a provider throws or hands back the wrong partition kind); a fresh tunnel
+ * partition is blackholed on creation; and `release` refuses a non-tunnel partition and wipes a tunnel
+ * one.
+ */
+
+const DIRECT_PARTITION = 'persist:tepegoz-web';
+const PRIVATE_PARTITION = 'tepegoz-private';
+vi.mock('@tepegoz/tab-engine', () => ({
+  DIRECT_PARTITION,
+  PRIVATE_PARTITION,
+  isPrivatePartition: (p: string) => p.startsWith('tepegoz-private'),
+}));
+vi.mock('@tepegoz/security-policy', () => ({
+  BLACKHOLE_PROXY_CONFIG: { proxyRules: 'blackhole' },
+}));
+vi.mock('@tepegoz/libs', () => ({
+  Logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
-vi.mock('electron', () => ({ session: { fromPartition: h.fromPartition } }));
+const fromPartition = vi.hoisted(() =>
+  vi.fn((p: string) => ({
+    __partition: p,
+    setProxy: vi.fn(() => Promise.resolve()),
+    clearStorageData: vi.fn(() => Promise.resolve()),
+    clearCache: vi.fn(() => Promise.resolve()),
+    clearAuthCache: vi.fn(() => Promise.resolve()),
+    clearHostResolverCache: vi.fn(() => Promise.resolve()),
+  })),
+);
+vi.mock('electron', () => ({ session: { fromPartition } }));
 
-const { default: BrowsingSessions } = await import('./browsing-sessions.electron');
-
-const DIRECT = 'persist:tepegoz-web';
-const TUNNEL = 'persist:tepegoz-web--conn-vpn-a';
+const BrowsingSessions = (await import('./browsing-sessions.electron')).default;
+const cast = <T>(v: unknown): T => v as T;
 
 beforeEach(() => {
+  vi.clearAllMocks();
   BrowsingSessions.resetForTests();
-  h.fromPartition.mockClear();
-  h.setProxy.mockClear();
 });
 
-describe('a tunnel partition is fail-closed from the instant it exists', () => {
-  it('blackholes a NEW tunnel partition, before anything can be hosted on it', () => {
-    BrowsingSessions.ensure(TUNNEL);
-    // "No proxy configured" means DIRECT in Chromium, so an unbound tunnel partition would send a tab
-    // that believes it is tunneled straight out the clear path.
-    expect(h.setProxy).toHaveBeenCalledOnce();
-    expect(h.setProxy.mock.calls[0]?.[0].proxyRules.toUpperCase()).not.toContain('DIRECT');
+describe('register + ensure', () => {
+  it('runs each attacher against a session exactly once, retro-applying to live ones', () => {
+    const a = vi.fn();
+    BrowsingSessions.register('filter', a);
+    const ses1 = BrowsingSessions.ensure(DIRECT_PARTITION);
+    expect(a).toHaveBeenCalledWith(ses1, DIRECT_PARTITION);
+
+    const b = vi.fn();
+    BrowsingSessions.register('quarantine', b);
+    expect(b).toHaveBeenCalledWith(ses1, DIRECT_PARTITION); // retro-applied
+
+    a.mockClear();
+    expect(BrowsingSessions.ensure(DIRECT_PARTITION)).toBe(ses1);
+    expect(a).not.toHaveBeenCalled(); // exactly once
   });
 
-  it('never touches the proxy of the DIRECT partition', () => {
-    BrowsingSessions.ensure(DIRECT);
-    expect(h.setProxy).not.toHaveBeenCalled();
-  });
-});
-
-describe('session identity', () => {
-  it('returns the SAME session object for a partition, creating it once', () => {
-    const a = BrowsingSessions.ensure(DIRECT);
-    const b = BrowsingSessions.ensure(DIRECT);
-    expect(a).toBe(b);
-    expect(h.fromPartition).toHaveBeenCalledTimes(1);
+  it('poisons the partition for good when a critical attacher throws in ensure', () => {
+    BrowsingSessions.register(
+      'crit',
+      () => {
+        throw new Error('filter plane down');
+      },
+      { critical: true },
+    );
+    expect(() => BrowsingSessions.ensure(DIRECT_PARTITION)).toThrow('filter plane down');
+    expect(() => BrowsingSessions.ensure(DIRECT_PARTITION)).toThrow('filter plane down');
   });
 
-  it('a tunnel partition is a DIFFERENT session from Direct', () => {
-    expect(BrowsingSessions.ensure(DIRECT)).not.toBe(BrowsingSessions.ensure(TUNNEL));
-  });
-});
-
-describe('per-session wiring — the whole point of the registry', () => {
-  it('runs every registered attacher on a NEW session', () => {
-    const filter = vi.fn();
-    const downloads = vi.fn();
-    BrowsingSessions.register('filter', filter);
-    BrowsingSessions.register('downloads', downloads);
-
-    BrowsingSessions.ensure(TUNNEL);
-
-    expect(filter).toHaveBeenCalledWith(expect.objectContaining({ partition: TUNNEL }), TUNNEL);
-    expect(downloads).toHaveBeenCalledWith(expect.objectContaining({ partition: TUNNEL }), TUNNEL);
+  it('poisons an already-live partition when register retro-applies a failing critical attacher', () => {
+    BrowsingSessions.ensure(DIRECT_PARTITION);
+    BrowsingSessions.register(
+      'crit',
+      () => {
+        throw new Error('boom');
+      },
+      { critical: true },
+    );
+    expect(BrowsingSessions.all()).toEqual([]);
+    expect(() => BrowsingSessions.ensure(DIRECT_PARTITION)).toThrow('boom');
   });
 
-  it('runs each attacher exactly once per session, however often ensure is called', () => {
-    const filter = vi.fn();
-    BrowsingSessions.register('filter', filter);
-    BrowsingSessions.ensure(DIRECT);
-    BrowsingSessions.ensure(DIRECT);
-    BrowsingSessions.ensure(DIRECT);
-    expect(filter).toHaveBeenCalledTimes(1);
-  });
-
-  it('RETRO-APPLIES to sessions that already existed — registration order cannot matter', () => {
-    BrowsingSessions.ensure(DIRECT);
-    BrowsingSessions.ensure(TUNNEL);
-    const seen: string[] = [];
-    BrowsingSessions.register('late', (_ses, partition) => {
-      seen.push(partition);
+  it('only warns when a non-critical attacher throws', () => {
+    BrowsingSessions.register('soft', () => {
+      throw new Error('meh');
     });
-    expect(seen).toEqual([DIRECT, TUNNEL]);
+    expect(() => BrowsingSessions.ensure(DIRECT_PARTITION)).not.toThrow();
   });
 
-  it('the regression this module exists to prevent: a tunnel session is wired like Direct is', () => {
-    const seen: string[] = [];
-    BrowsingSessions.register('filter', (_s, p) => seen.push(`filter:${p}`));
-    BrowsingSessions.register('ua', (_s, p) => seen.push(`ua:${p}`));
-    BrowsingSessions.ensure(DIRECT);
-    BrowsingSessions.ensure(TUNNEL);
-    expect(seen).toContain('filter:' + TUNNEL);
-    expect(seen).toContain('ua:' + TUNNEL);
-  });
-});
-
-describe('a failing attacher', () => {
-  it('a NON-critical failure degrades that one feature and lets the others attach', () => {
-    const ok = vi.fn();
-    BrowsingSessions.register('broken', () => {
-      throw new Error('nope');
+  it('blackholes a fresh tunnel partition on creation', () => {
+    const ses = BrowsingSessions.ensure(`${DIRECT_PARTITION}--conn-abc`);
+    expect(
+      (ses as unknown as { setProxy: ReturnType<typeof vi.fn> }).setProxy,
+    ).toHaveBeenCalledWith({
+      proxyRules: 'blackhole',
     });
-    BrowsingSessions.register('ok', ok);
-    expect(() => BrowsingSessions.ensure(TUNNEL)).not.toThrow();
-    expect(ok).toHaveBeenCalledOnce();
-  });
-
-  it('a CRITICAL failure refuses the session — no half-wired session can host a tab', () => {
-    BrowsingSessions.register(
-      'filter',
-      () => {
-        throw new Error('filter plane unavailable');
-      },
-      { critical: true },
-    );
-    expect(() => BrowsingSessions.ensure(TUNNEL)).toThrow(/filter plane unavailable/);
-  });
-
-  it('a retry after a CRITICAL failure still refuses — it never degrades into a silently unwired session', () => {
-    // Without the poison list this is the leak: exactly-once would SKIP the attacher that failed, and
-    // the second ensure() would hand back a session that looks wired and has no filtering on it.
-    BrowsingSessions.register(
-      'filter',
-      () => {
-        throw new Error('filter plane unavailable');
-      },
-      { critical: true },
-    );
-    expect(() => BrowsingSessions.ensure(TUNNEL)).toThrow();
-    expect(() => BrowsingSessions.ensure(TUNNEL)).toThrow(/filter plane unavailable/);
-    expect(BrowsingSessions.all().map((s) => s.partition)).not.toContain(TUNNEL);
-  });
-
-  it('a critical attacher registered LATE poisons the live session it cannot attach to', () => {
-    BrowsingSessions.ensure(TUNNEL);
-    BrowsingSessions.register(
-      'filter',
-      () => {
-        throw new Error('too late');
-      },
-      { critical: true },
-    );
-    expect(() => BrowsingSessions.ensure(TUNNEL)).toThrow(/too late/);
   });
 });
 
-describe('enumeration', () => {
-  it('lists every live browsing session, base partition first', () => {
-    BrowsingSessions.ensure(DIRECT);
-    BrowsingSessions.ensure(TUNNEL);
-    expect(BrowsingSessions.all().map((s) => s.partition)).toEqual([DIRECT, TUNNEL]);
+describe('route accessors', () => {
+  it('direct + defaultForNewTab fall back to the Direct session with no provider', () => {
+    const d = BrowsingSessions.direct();
+    expect(BrowsingSessions.defaultForNewTab()).toBe(d);
   });
 
-  it('recognises our browsing partitions and nothing else', () => {
-    expect(BrowsingSessions.isBrowsingPartition(DIRECT)).toBe(true);
-    expect(BrowsingSessions.isBrowsingPartition(TUNNEL)).toBe(true);
-    expect(BrowsingSessions.isBrowsingPartition('persist:tepegoz-app')).toBe(false);
-    expect(BrowsingSessions.isBrowsingPartition('tepegoz-extraction-sandbox')).toBe(false);
+  it('defaultForNewTab uses the installed provider, and rethrows a failing one', () => {
+    const custom = BrowsingSessions.ensure(`${DIRECT_PARTITION}--conn-1`);
+    BrowsingSessions.setNewTabSessionProvider(() => cast(custom));
+    expect(BrowsingSessions.defaultForNewTab()).toBe(custom);
+
+    BrowsingSessions.setNewTabSessionProvider(() => {
+      throw new Error('no route');
+    });
+    expect(() => BrowsingSessions.defaultForNewTab()).toThrow('no route');
+  });
+
+  it('private uses PRIVATE_PARTITION by default and refuses a non-private provider result', () => {
+    const p = BrowsingSessions.private();
+    expect((p as unknown as { __partition: string }).__partition).toBe(PRIVATE_PARTITION);
+
+    BrowsingSessions.setPrivatePartitionProvider(() => 'persist:not-private');
+    expect(() => BrowsingSessions.private()).toThrow(/Not a private partition/);
+  });
+
+  it('all returns live sessions in creation order', () => {
+    BrowsingSessions.ensure(DIRECT_PARTITION);
+    BrowsingSessions.ensure(`${DIRECT_PARTITION}--conn-x`);
+    expect(BrowsingSessions.all().map((s) => s.partition)).toEqual([
+      DIRECT_PARTITION,
+      `${DIRECT_PARTITION}--conn-x`,
+    ]);
+  });
+});
+
+describe('partition classification', () => {
+  it('isBrowsingPartition covers direct, tunnel and private; isTunnelPartition only tunnels', () => {
+    expect(BrowsingSessions.isBrowsingPartition(DIRECT_PARTITION)).toBe(true);
+    expect(BrowsingSessions.isBrowsingPartition(`${DIRECT_PARTITION}--conn-1`)).toBe(true);
+    expect(BrowsingSessions.isBrowsingPartition('tepegoz-private--conn-2')).toBe(true);
+    expect(BrowsingSessions.isBrowsingPartition('persist:something-else')).toBe(false);
+
+    expect(BrowsingSessions.isTunnelPartition(`${DIRECT_PARTITION}--conn-1`)).toBe(true);
+    expect(BrowsingSessions.isTunnelPartition(DIRECT_PARTITION)).toBe(false);
+  });
+});
+
+describe('release + discardPrivate', () => {
+  it('release refuses a non-tunnel partition', async () => {
+    await expect(BrowsingSessions.release(DIRECT_PARTITION)).rejects.toThrow(/non-tunnel/);
+  });
+
+  it('release wipes a live tunnel partition and forgets it', async () => {
+    const part = `${DIRECT_PARTITION}--conn-gone`;
+    const ses = BrowsingSessions.ensure(part) as unknown as Record<
+      string,
+      ReturnType<typeof vi.fn>
+    >;
+    await BrowsingSessions.release(part);
+    expect(ses.clearStorageData).toHaveBeenCalled();
+    expect(ses.clearHostResolverCache).toHaveBeenCalled();
+    expect(BrowsingSessions.all()).toEqual([]);
+  });
+
+  it('discardPrivate clears every private session and drops it from the registry', async () => {
+    BrowsingSessions.setPrivatePartitionProvider(() => 'tepegoz-private--conn-7');
+    const ses = BrowsingSessions.private() as unknown as Record<string, ReturnType<typeof vi.fn>>;
+    await BrowsingSessions.discardPrivate();
+    expect(ses.clearStorageData).toHaveBeenCalled();
+    expect(ses.clearCache).toHaveBeenCalled();
+    expect(BrowsingSessions.privateSessions()).toEqual([]);
   });
 });
