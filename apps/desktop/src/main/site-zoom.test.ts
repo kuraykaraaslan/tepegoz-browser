@@ -124,6 +124,11 @@ describe('handleZoomShortcut', () => {
     expect(handleZoomShortcut(ctrl('=', { alt: true }), asWc(wc))).toBe(false);
   });
 
+  it('leaves a Ctrl+<non-zoom-key> chord for someone else to handle', () => {
+    const wc = makeWebContents('https://example.com/', 1);
+    expect(handleZoomShortcut(ctrl('a'), asWc(wc))).toBe(false);
+  });
+
   it('is a no-op with no active tab', () => {
     expect(handleZoomShortcut(ctrl('='), null)).toBe(false);
   });
