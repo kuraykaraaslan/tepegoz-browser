@@ -186,6 +186,34 @@ describe('run / runAwait', () => {
     expect(await deps.readCsv('missing')).toEqual([]);
   });
 
+  it('forwards cursor callbacks into the macro host when cursorOpts is given', async () => {
+    const onCursorMove = vi.fn();
+    const onCursorHide = vi.fn();
+    MacroService.run(input('m1'), vi.fn(), { onCursorMove, onCursorHide });
+    await vi.waitFor(() => expect(hostFactory).toHaveBeenCalled());
+    const deps = hostFactory.mock.calls[0]![0] as {
+      onCursorMove?: unknown;
+      onCursorHide?: unknown;
+    };
+    expect(deps.onCursorMove).toBe(onCursorMove);
+    expect(deps.onCursorHide).toBe(onCursorHide);
+  });
+
+  it('runDraft runs an unsaved macro directly, with no MacroStore lookup', () => {
+    store.get.mockReturnValue(null); // a saved run would 404 — a draft must not care
+    const runId = MacroService.runDraft(MACRO, undefined, vi.fn());
+    expect(typeof runId).toBe('string');
+    expect(store.get).not.toHaveBeenCalled();
+  });
+
+  it('evicts the oldest finished outcome once the recent-outcome cache fills', async () => {
+    const first = (await MacroService.runAwait(input('m1'))).runId;
+    for (let i = 0; i < 50; i += 1) await MacroService.runAwait(input('m1'));
+    expect(MacroService.getRunOutcome(first)).toBeNull(); // pushed past MAX_RECENT
+    const last = (await MacroService.runAwait(input('m1'))).runId;
+    expect(MacroService.getRunOutcome(last)).not.toBeNull();
+  });
+
   it('cancel flips the abort flag for a live run and is a no-op otherwise', () => {
     let seenSignal: { aborted: boolean } | undefined;
     runMacro.mockImplementation((_m: unknown, _h: unknown, opts: unknown) => {
