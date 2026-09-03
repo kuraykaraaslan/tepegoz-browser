@@ -105,7 +105,7 @@ vi.mock('./tabs-view-wiring', () => ({
 vi.mock('./tabs-internal-page-view', () => ({
   createInternalPageView: vi.fn(),
   destroyInternalPageView: vi.fn(),
-  hasRealPage: () => false,
+  hasRealPage: vi.fn(() => false),
   hideInternalPageView: vi.fn(),
   navigateInternalPageView: vi.fn(),
   showInternalPageView: vi.fn(),
@@ -121,6 +121,8 @@ vi.mock('./tabs-shared', () => ({
 }));
 
 const { WindowTabsClosing } = await import('./tabs-window-closing');
+const ipv = await import('./tabs-internal-page-view');
+const ipView = (): Electron.WebContentsView => ({}) as unknown as Electron.WebContentsView;
 
 /** Reaches the protected store/views the real code owns, so a test can stage a wired web tab. */
 class Harness extends WindowTabsClosing {
@@ -158,6 +160,10 @@ class Harness extends WindowTabsClosing {
       isLoading: false,
       faviconUrl: null,
     });
+  }
+  /** The view-wiring host the base hands to `wireView` — its `closeTab` is the override under test. */
+  wiringHost(): { closeTab: (id: string) => void } {
+    return this.viewWiringHost();
   }
   tabIds(): string[] {
     return this.store.ids();
@@ -229,6 +235,54 @@ describe('closeTab', () => {
     expect(tabs.tabIds()).toContain(id);
     expect(tabs.hasView(id)).toBe(true);
   });
+
+  it('tears a still-live view down on the retry pass — unwires, closes the contents, removes the child', () => {
+    const { tabs, win } = harness();
+    const keep = tabs.seedWebTab(new FakeView());
+    const view = new FakeView();
+    const doomed = tabs.seedWebTab(view);
+    const wc = view.webContents!;
+    win.contentView.addChildView(view);
+
+    tabs.closeTab(doomed); // pass 1: askBeforeClose owns the close, the tab stays put
+    expect(tabs.tabIds()).toContain(doomed);
+
+    // `destroyed` fires while the contents are still readable (not the usual nulled case): the retry
+    // pass meets a LIVE wc that askBeforeClose now waves through, so tearDownView runs its live branch.
+    wc.emit('destroyed');
+
+    expect(tabs.tabIds()).toEqual([keep]);
+    expect(tabs.hasView(doomed)).toBe(false);
+    expect(wc.closeCalls).toEqual([{ waitForBeforeUnload: true }, undefined]); // pass-1 ask + pass-2 close()
+    expect(win.contentView.children).not.toContain(view);
+  });
+
+  it('destroys the internal-page view of a closed internal tab that owns one', () => {
+    vi.mocked(ipv.hasRealPage).mockReturnValueOnce(true);
+    const view = ipView();
+    vi.mocked(ipv.createInternalPageView).mockReturnValueOnce(view);
+    const { tabs, win } = harness();
+    const keep = tabs.seedInternalTab('tepegoz://keep');
+    tabs.openInternalPage('tepegoz://has-a-real-page');
+    const owned = tabs.activeId()!;
+
+    tabs.closeTab(owned);
+
+    expect(vi.mocked(ipv.destroyInternalPageView)).toHaveBeenCalledWith(win, view);
+    expect(tabs.tabIds()).toEqual([keep]);
+  });
+
+  it('the view-wiring host routes closeTab back to the real closeTab (Ctrl+W with page focus)', () => {
+    const { tabs } = harness();
+    const keep = tabs.seedInternalTab('tepegoz://keep');
+    const view = new FakeView();
+    const doomed = tabs.seedWebTab(view);
+
+    tabs.wiringHost().closeTab(doomed); // pass 1
+    view.webContents!.electronDestroys(); // pass 2 completes it
+
+    expect(tabs.tabIds()).toEqual([keep]);
+  });
 });
 
 describe('afterRemove', () => {
@@ -255,6 +309,20 @@ describe('afterRemove', () => {
     tabs.closeTab(c);
 
     expect(tabs.activeId()).toBe(a); // b is hidden → skipped
+  });
+
+  it('unhides the last hidden tab when closing the active one leaves nothing visible', () => {
+    const { tabs } = harness();
+    const a = tabs.seedInternalTab('tepegoz://a');
+    const b = tabs.seedInternalTab('tepegoz://b');
+    tabs.activate(a);
+    tabs.hideTab(b); // a visible + active, b hidden
+
+    tabs.closeTab(a); // lastVisibleId() now finds only hidden tabs → returns undefined
+
+    expect(tabs.tabIds()).toEqual([b]);
+    expect(tabs.isHidden(b)).toBe(false); // force-unhidden so the strip is never empty
+    expect(tabs.activeId()).toBe(b);
   });
 
   it('just re-emits when a non-active tab is closed', () => {
@@ -355,6 +423,22 @@ describe('openInternalPage', () => {
     tabs.openInternalPage('tepegoz://settings');
     expect(tabs.tabIds()).toHaveLength(1); // focused the existing one
     expect(tabs.activeId()).toBe(first);
+  });
+
+  it('builds a backing internal-page view when the target url has a real page', () => {
+    vi.mocked(ipv.hasRealPage).mockReturnValueOnce(true);
+    const view = ipView();
+    vi.mocked(ipv.createInternalPageView).mockReturnValueOnce(view);
+    const { tabs, win } = harness();
+
+    tabs.openInternalPage('tepegoz://history');
+
+    expect(vi.mocked(ipv.createInternalPageView)).toHaveBeenCalledWith(
+      win,
+      'tepegoz://history',
+      expect.any(Function),
+    );
+    expect(tabs.activeId()).not.toBeNull();
   });
 });
 
