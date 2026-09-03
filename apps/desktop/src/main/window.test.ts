@@ -275,6 +275,20 @@ describe('createWindow', () => {
     expect(win.webContents.once).toHaveBeenCalledWith('did-finish-load', expect.any(Function));
   });
 
+  it('uses the macOS hidden title bar with an inset traffic-light position', () => {
+    const orig = process.platform;
+    Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true });
+    try {
+      const win = mod.createWindow() as unknown as FakeWin;
+      expect(win.opts).toMatchObject({
+        titleBarStyle: 'hidden',
+        trafficLightPosition: { x: 12, y: 10 },
+      });
+    } finally {
+      Object.defineProperty(process, 'platform', { value: orig, configurable: true });
+    }
+  });
+
   it('restores a saved on-screen placement and re-maximizes when that is how it was left', () => {
     vi.useFakeTimers();
     prefs.getAll.mockReturnValue({
@@ -460,6 +474,11 @@ describe('createPopupWindow / createDragPreviewWindow', () => {
     expect(win.setMenu).toHaveBeenCalledWith(null);
     const openHandler = win.webContents.setWindowOpenHandler.mock.calls[0]![0];
     expect(openHandler({ url: 'https://x/' })).toEqual({ action: 'deny' });
+
+    const prevent = vi.fn();
+    isTrustedAppUrl.mockReturnValue(false);
+    win.fireWc('will-navigate', { preventDefault: prevent }, 'https://evil.example/');
+    expect(prevent).toHaveBeenCalled();
   });
 
   it('createDragPreviewWindow is a transparent, click-through, always-on-top chip', () => {
@@ -474,5 +493,10 @@ describe('createPopupWindow / createDragPreviewWindow', () => {
     });
     expect(win.setAlwaysOnTop).toHaveBeenCalledWith(true, 'screen-saver');
     expect(win.setIgnoreMouseEvents).toHaveBeenCalledWith(true);
+
+    const prevent = vi.fn();
+    isTrustedAppUrl.mockReturnValue(false);
+    win.fireWc('will-navigate', { preventDefault: prevent }, 'https://evil.example/');
+    expect(prevent).toHaveBeenCalled();
   });
 });
