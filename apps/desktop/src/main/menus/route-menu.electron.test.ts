@@ -8,7 +8,8 @@ import type { MenuItemConstructorOptions } from 'electron';
  */
 
 vi.mock('electron', () => ({}));
-vi.mock('@tepegoz/libs', () => ({ Logger: { error: vi.fn() } }));
+const logger = vi.hoisted(() => ({ error: vi.fn() }));
+vi.mock('@tepegoz/libs', () => ({ Logger: logger }));
 vi.mock('../lib/i18n-main', () => ({
   mainStrings: () => ({
     browser: {
@@ -47,14 +48,8 @@ vi.mock('../network/binding-service.electron', () => ({
   default: {
     tabBinding: () => binding.tab,
     groupBinding: () => binding.group,
-    bindTab: (id: string, t: unknown) => {
-      binding.bindTab(id, t);
-      return Promise.resolve();
-    },
-    bindGroup: (id: string, t: unknown) => {
-      binding.bindGroup(id, t);
-      return Promise.resolve();
-    },
+    bindTab: (id: string, t: unknown) => binding.bindTab(id, t) as Promise<void>,
+    bindGroup: (id: string, t: unknown) => binding.bindGroup(id, t) as Promise<void>,
   },
 }));
 
@@ -82,6 +77,7 @@ beforeEach(() => {
   binding.group = { kind: 'direct' };
   binding.bindTab.mockClear();
   binding.bindGroup.mockClear();
+  logger.error.mockClear();
   openInternalPage.mockClear();
 });
 
@@ -116,10 +112,32 @@ describe('routeSubmenu', () => {
     expect(items.find((i) => i.label === 'Sweden — connected')?.checked).toBe(false);
   });
 
+  it('spells out a down connection as "not connected"', () => {
+    pool.connections = [{ id: 'c1', label: 'Sweden', status: 'down' }];
+    expect(labels(routeSubmenu('tab', 't1'))).toContain('Sweden — not connected');
+  });
+
   it('clicking a connection binds that scope to it', () => {
     pool.connections = [{ id: 'c1', label: 'Sweden', status: 'up' }];
     click(routeSubmenu('group', 'g9'), 'Sweden — connected');
     expect(binding.bindGroup).toHaveBeenCalledWith('g9', { kind: 'connection', connectionId: 'c1' });
+  });
+
+  it('logs a route change that fails to apply, without throwing', async () => {
+    pool.connections = [{ id: 'c1', label: 'Sweden', status: 'up' }];
+    binding.bindGroup.mockRejectedValueOnce(new Error('tunnel down'));
+
+    click(routeSubmenu('group', 'g9'), 'Sweden — connected');
+    await new Promise((r) => setTimeout(r, 0)); // let the void apply().catch(...) settle
+
+    expect(logger.error).toHaveBeenCalledWith(
+      'Route change failed',
+      expect.objectContaining({
+        scope: 'group',
+        scopeId: 'g9',
+        err: expect.stringContaining('tunnel down') as string,
+      }),
+    );
   });
 
   it('clicking Direct / Inherit binds those', () => {
