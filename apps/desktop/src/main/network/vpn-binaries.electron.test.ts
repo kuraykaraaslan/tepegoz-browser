@@ -20,7 +20,18 @@ vi.mock('@tepegoz/preferences', () => ({
   default: { getAll: () => ({ networkBinaries: h.paths }) },
 }));
 
-const { findBinaryInFolder, searchPaths } = await import('./vpn-binaries.electron');
+const { findBinaryInFolder, searchPaths, binDir, locateBinary, hasBinary, MissingBinaryError } =
+  await import('./vpn-binaries.electron');
+
+const realPlatform = process.platform;
+function withPlatform(platform: NodeJS.Platform, run: () => void): void {
+  Object.defineProperty(process, 'platform', { value: platform, configurable: true });
+  try {
+    run();
+  } finally {
+    Object.defineProperty(process, 'platform', { value: realPlatform, configurable: true });
+  }
+}
 
 const dirs: string[] = [];
 function tempDir(): string {
@@ -123,5 +134,67 @@ describe('searching a folder the user picked', () => {
     }
     touchExecutable(join(deep, binName('tor')));
     expect(findBinaryInFolder('tor', dir)).toBeNull();
+  });
+});
+
+describe('binDir', () => {
+  it('is userData/bin — the one place the UI tells the user to drop the file', () => {
+    h.userData = join(sep, 'ud');
+    expect(binDir()).toBe(join(sep, 'ud', 'bin'));
+  });
+});
+
+describe('locateBinary / hasBinary', () => {
+  it('returns the first executable it finds — the user override wins', () => {
+    const dir = tempDir();
+    const exe = join(dir, binName('wireproxy'));
+    touchExecutable(exe);
+    h.paths = { wireproxy: exe, tor: '' };
+    expect(locateBinary('wireproxy')).toBe(exe);
+    expect(hasBinary('wireproxy')).toBe(true);
+  });
+
+  it('skips a configured path that is not executable and keeps looking', () => {
+    const dir = tempDir();
+    const notExe = join(dir, 'not-real', binName('tor'));
+    h.paths = { wireproxy: '', tor: notExe };
+    // Nothing on disk for this path, and no real `tor` on a dev box → the search exhausts.
+    expect(() => locateBinary('tor')).toThrow(MissingBinaryError);
+    expect(hasBinary('tor')).toBe(false);
+  });
+
+  it('the thrown error names the binary that is missing', () => {
+    h.paths = { wireproxy: join(tmpdir(), 'nope-wireproxy-4a1'), tor: '' };
+    try {
+      locateBinary('wireproxy');
+      expect.unreachable('should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(MissingBinaryError);
+      expect((err as InstanceType<typeof MissingBinaryError>).binary).toBe('wireproxy');
+      expect((err as Error).message).toContain('wireproxy');
+    }
+  });
+});
+
+describe('per-platform well-known locations', () => {
+  it('on Linux, searches the XDG-ish bin dirs and appends the plain binary name (no .exe)', () => {
+    withPlatform('linux', () => {
+      h.home = join(sep, 'home', 'k');
+      const paths = searchPaths('tor');
+      // `node:path.join` still follows the HOST OS separator regardless of `process.platform`, so
+      // build the expected entries the same way the source does.
+      expect(paths).toContain(join('/usr/bin', 'tor'));
+      expect(paths).toContain(join(h.home, '.local', 'bin', 'tor'));
+      expect(paths.every((p) => !p.endsWith('.exe'))).toBe(true);
+    });
+  });
+
+  it('on macOS, also offers the Tor Browser bundle path for tor', () => {
+    withPlatform('darwin', () => {
+      h.home = join(sep, 'Users', 'k');
+      expect(searchPaths('tor')).toContain('/Applications/Tor Browser.app/Contents/MacOS/Tor/tor');
+      // wireproxy gets no such extra entry.
+      expect(searchPaths('wireproxy').some((p) => p.includes('Tor Browser.app'))).toBe(false);
+    });
   });
 });
