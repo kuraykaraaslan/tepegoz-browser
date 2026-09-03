@@ -19,8 +19,13 @@ vi.mock('./certificate-journal', () => ({
   },
 }));
 
-const { clearCertificateExceptions, decideCertificateError, resolveCertificateError } =
-  await import('./certificate-broker');
+const {
+  clearCertificateExceptions,
+  decideCertificateError,
+  resolveCertificateError,
+  registerCertificateHandler,
+  hasCertificateException,
+} = await import('./certificate-broker');
 
 /** A live chrome window that records what main pushes to the renderer. */
 function windowThatPrompts() {
@@ -176,5 +181,80 @@ describe('the journal record', () => {
       expiry: '2030-01-01T00:00:00.000Z',
     });
     expect(journalProceed).not.toHaveBeenCalled();
+  });
+});
+
+describe('edge cases', () => {
+  it('falls back to a truncated raw string when the URL will not parse', async () => {
+    focusedWindow.mockReturnValue(windowThatPrompts());
+    const decision = decideCertificateError({ ...BAD_CERT, url: 'not a real url' });
+    const [, request] = send.mock.calls.at(-1) as [string, { origin: string }];
+    expect(request.origin).toBe('not a real url');
+    answerLastPrompt(false);
+    await decision;
+  });
+
+  it('refuses the connection when the warning is left unanswered until the timeout', async () => {
+    vi.useFakeTimers();
+    try {
+      focusedWindow.mockReturnValue(windowThatPrompts());
+      const decision = decideCertificateError(BAD_CERT);
+      await vi.advanceTimersByTimeAsync(120_000);
+      await expect(decision).resolves.toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('hasCertificateException reflects a click-through for the rest of the run', async () => {
+    focusedWindow.mockReturnValue(windowThatPrompts());
+    expect(hasCertificateException('https://self-signed.example.com')).toBe(false);
+    const decision = decideCertificateError(BAD_CERT);
+    answerLastPrompt(true);
+    await decision;
+    expect(hasCertificateException('https://self-signed.example.com')).toBe(true);
+  });
+});
+
+describe('registerCertificateHandler', () => {
+  const cert = { issuerName: 'Acme CA', validExpiry: 1893456000 };
+
+  function handlerFor(): (...a: unknown[]) => void {
+    const on = vi.fn();
+    registerCertificateHandler({ on } as unknown as Electron.App);
+    expect(on).toHaveBeenCalledWith('certificate-error', expect.any(Function));
+    return on.mock.calls[0]![1] as (...a: unknown[]) => void;
+  }
+
+  it('prevents the default, decides, and feeds Chromium the verdict', async () => {
+    focusedWindow.mockReturnValue(null); // no window → refuse
+    const preventDefault = vi.fn();
+    const callback = vi.fn();
+    handlerFor()(
+      { preventDefault },
+      {},
+      'https://self-signed.example.com/',
+      'net::ERR_CERT_AUTHORITY_INVALID',
+      cert,
+      callback,
+    );
+    await vi.waitFor(() => expect(callback).toHaveBeenCalledWith(false));
+    expect(preventDefault).toHaveBeenCalled();
+  });
+
+  it('refuses and logs when the decision itself throws', async () => {
+    focusedWindow.mockImplementation(() => {
+      throw new Error('tab manager exploded');
+    });
+    const callback = vi.fn();
+    handlerFor()(
+      { preventDefault: vi.fn() },
+      {},
+      'https://self-signed.example.com/',
+      'net::ERR_CERT_AUTHORITY_INVALID',
+      cert,
+      callback,
+    );
+    await vi.waitFor(() => expect(callback).toHaveBeenCalledWith(false));
   });
 });
