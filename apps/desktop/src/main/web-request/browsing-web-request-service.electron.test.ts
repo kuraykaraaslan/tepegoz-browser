@@ -133,6 +133,53 @@ describe('BrowsingWebRequestService', () => {
     await expect(fake.before()).resolves.toEqual({ redirectURL: 'https://safe.test/' });
   });
 
+  it('fails open on a headers-received handler error and still merges a later handler', async () => {
+    const fake = fakeWebRequest();
+    BrowsingWebRequestService.attach(fake.webRequest);
+
+    BrowsingWebRequestService.onHeadersReceived('bad', () => {
+      throw new Error('headers boom');
+    });
+    BrowsingWebRequestService.onHeadersReceived('good', () => ({
+      responseHeaders: { 'x-good': ['1'] },
+    }));
+
+    const res = await fake.headers();
+    expect(res.responseHeaders).toMatchObject({ server: ['fixture'], 'x-good': ['1'] });
+  });
+
+  it('the unsubscribe closures stop each kind of handler from running again', async () => {
+    const fake = fakeWebRequest();
+    BrowsingWebRequestService.attach(fake.webRequest);
+
+    const before = vi.fn();
+    const headers = vi.fn(() => ({ responseHeaders: { 'x-h': ['1'] } }));
+    const completed = vi.fn();
+    const errored = vi.fn();
+
+    const offBefore = BrowsingWebRequestService.onBeforeRequest('b', (d) => {
+      before(d.id);
+    });
+    const offHeaders = BrowsingWebRequestService.onHeadersReceived('h', headers);
+    const offCompleted = BrowsingWebRequestService.onCompleted('c', completed);
+    const offErrored = BrowsingWebRequestService.onErrorOccurred('e', errored);
+
+    offBefore();
+    offHeaders();
+    offCompleted();
+    offErrored();
+
+    await fake.before(beforeDetails(1));
+    await fake.headers();
+    fake.completed({ id: 2 } as Electron.OnCompletedListenerDetails);
+    fake.errorOccurred({ id: 3, error: 'x' } as Electron.OnErrorOccurredListenerDetails);
+
+    expect(before).not.toHaveBeenCalled();
+    expect(headers).not.toHaveBeenCalled();
+    expect(completed).not.toHaveBeenCalled();
+    expect(errored).not.toHaveBeenCalled();
+  });
+
   it('keeps completed and error observers independent', () => {
     const fake = fakeWebRequest();
     BrowsingWebRequestService.attach(fake.webRequest);
