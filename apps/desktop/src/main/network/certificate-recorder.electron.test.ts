@@ -58,6 +58,16 @@ describe('the verify proc never decides', () => {
     );
     expect(cb).toHaveBeenCalledExactlyOnceWith(-3);
   });
+
+  it('swallows a recorder error and still defers to Chromium with callback(-3)', () => {
+    const cb = vi.fn();
+    certificateVerifyProc(
+      // a non-string hostname makes `request.hostname.toLowerCase()` throw
+      { hostname: undefined as never, certificate: makeCert(), verificationResult: 'net::OK', errorCode: 0 },
+      cb,
+    );
+    expect(cb).toHaveBeenCalledExactlyOnceWith(-3);
+  });
 });
 
 describe('registerCertificateRecorder', () => {
