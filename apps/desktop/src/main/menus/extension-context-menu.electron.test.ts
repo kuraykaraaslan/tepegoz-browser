@@ -125,6 +125,15 @@ describe('showExtensionContextMenu', () => {
     expect(labels(built[0] ?? [])).toContain('Unpin');
   });
 
+  it('relays "unpin" to the chrome window when the Unpin item is clicked', () => {
+    state.pinned = ['ext.a'];
+    showExtensionContextMenu(win, 'ext.a');
+    click(built[0] ?? [], 'Unpin');
+    expect(state.sent).toEqual([
+      { ch: IpcChannels.extensionContextMenuAction, p: { id: 'ext.a', action: 'unpin' } },
+    ]);
+  });
+
   it('relays the chosen action to the chrome window (no popup close when it IS the chrome)', () => {
     showExtensionContextMenu(win, 'ext.a');
     click(built[0] ?? [], 'Remove');
