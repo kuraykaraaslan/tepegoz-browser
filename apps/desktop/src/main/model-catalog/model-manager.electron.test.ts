@@ -59,7 +59,12 @@ const prefs = vi.hoisted(() => ({
 }));
 vi.mock('@tepegoz/preferences', () => ({ default: prefs }));
 
-const resolveModelFile = vi.hoisted(() => vi.fn(() => Promise.resolve('/userData/models/m1.gguf')));
+type ResolveOpts = { onProgress: (p: { totalSize: number; downloadedSize: number }) => void };
+const resolveModelFile = vi.hoisted(() =>
+  vi.fn<(uri: string, opts: ResolveOpts) => Promise<string>>(() =>
+    Promise.resolve('/userData/models/m1.gguf'),
+  ),
+);
 vi.mock('node-llama-cpp', () => ({ resolveModelFile }));
 
 type Mgr = typeof import('./model-manager.electron').default;
@@ -105,6 +110,25 @@ describe('list', () => {
     expect(mgr.list()).toEqual([]);
   });
 
+  it('is empty (with a warning) when the catalog file cannot be read', async () => {
+    const mgr = await load();
+    fs.readFileSync.mockImplementationOnce(() => {
+      throw new Error('EACCES');
+    });
+    expect(mgr.list()).toEqual([]);
+  });
+
+  it('leaves installedBytes undefined when statSync races a delete', async () => {
+    cfg.exists = true;
+    const mgr = await load();
+    fs.statSync.mockImplementationOnce(() => {
+      throw new Error('ENOENT');
+    });
+    const info = mgr.list()[0]!;
+    expect(info.installed).toBe(true);
+    expect(info.installedBytes).toBeUndefined();
+  });
+
   it('fills in installed + on-disk size + selected for an installed, chosen model', async () => {
     cfg.exists = true;
     cfg.size = 4_200_000;
@@ -146,6 +170,42 @@ describe('download', () => {
       statusCode: 502,
       code: 'modelDownloadFailed',
     });
+  });
+
+  it('pushes progress through setProgressListener as the transfer advances', async () => {
+    resolveModelFile.mockImplementation((...args: unknown[]) => {
+      const opts = args[1] as ResolveOpts;
+      opts.onProgress({ totalSize: 1000, downloadedSize: 250 });
+      opts.onProgress({ totalSize: 1000, downloadedSize: 1000 });
+      return Promise.resolve('/userData/models/m1.gguf');
+    });
+    const mgr = await load();
+    const seen: unknown[][] = [];
+    mgr.setProgressListener((models) => {
+      seen.push(models);
+    });
+    await mgr.download('m1');
+
+    expect(seen.length).toBeGreaterThan(1); // start + each onProgress + final clear
+    const rows = seen as { id: string; downloading: boolean; progress: number }[][];
+    expect(rows.find((s) => s[0]!.downloading && s[0]!.progress > 0)).toBeDefined();
+    expect(rows.at(-1)![0]).toMatchObject({ id: 'm1', downloading: false }); // final push
+  });
+
+  it('is silent (no 502) when the transfer rejects after a cancel', async () => {
+    let rejectTransfer!: (e: unknown) => void;
+    resolveModelFile.mockReturnValue(
+      new Promise((_resolve, reject) => {
+        rejectTransfer = reject;
+      }),
+    );
+    const mgr = await load();
+    const p = mgr.download('m1');
+    mgr.cancel('m1'); // aborts this download's controller (synchronously)
+    await new Promise((r) => setTimeout(r, 0)); // let download reach `await resolveModelFile()`
+    rejectTransfer(new Error('The operation was aborted'));
+    await expect(p).resolves.toBeUndefined();
+    expect(mgr.list()[0]).toMatchObject({ downloading: false }); // active entry cleared
   });
 });
 
