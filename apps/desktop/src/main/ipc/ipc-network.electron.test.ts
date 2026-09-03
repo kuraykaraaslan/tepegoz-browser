@@ -8,6 +8,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * characters; `networkPickWireguard` refuses when the keychain is unavailable; `networkSetActive` /
  * `networkSetBinaryPath` / `networkPickBinaryFolder` (404 when nothing is found) update state; and
  * `networkRemoveConnection` releases bindings before removing the connection.
+ *
+ * Also pinned here: `groupRouteFor` (via the `groups` map `networkGetState` returns) — a Direct group is
+ * omitted, a group bound to a connection the pool forgot shows as a dead `vpn: 'down'` route, a non-Tor
+ * connection is a single VPN leg, and a Tor connection splits into `{ vpn, tor }` with the upstream VPN's
+ * health and a `label → upstreamLabel` when it is chained; `networkBindGroup` delegates to
+ * `BindingService.bindGroup`; `networkAddConnection` adds a Tor connection (with or without an upstream);
+ * and both file/folder pickers parent their dialog to the sender window when there is one.
  */
 
 const IpcChannels = {
@@ -82,7 +89,9 @@ vi.mock('../tabs', () => ({ default: tabs }));
 const binding = vi.hoisted(() => ({
   prune: vi.fn(),
   resolveFor: vi.fn(() => ({ resolved: { connectionId: null }, source: 'default' })),
-  resolveForGroup: vi.fn(() => ({ resolved: { connectionId: null } })),
+  resolveForGroup: vi.fn<(groupId: string) => { resolved: { connectionId: string | null } }>(() => ({
+    resolved: { connectionId: null },
+  })),
   mayEgress: vi.fn(() => true),
   general: vi.fn(() => ({ mode: 'direct' })),
   bindTab: vi.fn(() => Promise.resolve()),
@@ -94,7 +103,7 @@ vi.mock('../network/binding-service.electron', () => ({ default: binding }));
 
 const pool = vi.hoisted(() => ({
   has: vi.fn<(id: string) => boolean>(() => false),
-  get: vi.fn((): unknown => undefined),
+  get: vi.fn<(id: string) => unknown>(() => undefined),
   list: vi.fn(() => [] as unknown[]),
   add: vi.fn(),
   ensureUp: vi.fn(() => Promise.resolve()),
@@ -133,6 +142,7 @@ beforeEach(() => {
   bw.getAllWindows.mockReturnValue([]);
   secrets.isAvailable.mockReturnValue(true);
   pool.has.mockReturnValue(false);
+  pool.get.mockReturnValue(undefined);
   pool.list.mockReturnValue([]);
   tabs.forWindow.mockReturnValue({ getState: () => ({ tabs: [], groups: [] }) });
   prefs.getAll.mockReturnValue({ networkBinaries: { wireproxy: '', tor: '' } });
@@ -293,6 +303,178 @@ describe('the remaining setters', () => {
     expect(pool.remove).toHaveBeenCalledWith('c-gone');
     expect(binding.releaseConnection.mock.invocationCallOrder[0]).toBeLessThan(
       pool.remove.mock.invocationCallOrder[0]!,
+    );
+  });
+});
+
+describe('groupRouteFor (via the networkGetState groups map)', () => {
+  const withGroup = (): void => {
+    bw.fromWebContents.mockReturnValue({ __win: true });
+    tabs.forWindow.mockReturnValue({ getState: () => ({ tabs: [], groups: [{ id: 'g1' }] }) });
+  };
+  type Groups = { groups: Record<string, unknown> };
+
+  it('omits a group that resolves to no connection (Direct)', async () => {
+    withGroup();
+    binding.resolveForGroup.mockReturnValue({ resolved: { connectionId: null } });
+    const state = (await call(IpcChannels.networkGetState)) as Groups;
+    expect(state.groups).toEqual({});
+  });
+
+  it('shows a dead route for a group bound to a connection the pool has forgotten', async () => {
+    withGroup();
+    binding.resolveForGroup.mockReturnValue({ resolved: { connectionId: 'ghost' } });
+    pool.get.mockReturnValue(undefined);
+    const state = (await call(IpcChannels.networkGetState)) as Groups;
+    expect(state.groups.g1).toEqual({
+      connectionId: 'ghost',
+      vpn: 'down',
+      tor: null,
+      label: 'ghost',
+    });
+  });
+
+  it('reports a non-Tor connection as a single VPN leg', async () => {
+    withGroup();
+    binding.resolveForGroup.mockReturnValue({ resolved: { connectionId: 'wg1' } });
+    pool.get.mockReturnValue({ id: 'wg1', kind: 'wireguard', status: 'up', label: 'Work VPN' });
+    const state = (await call(IpcChannels.networkGetState)) as Groups;
+    expect(state.groups.g1).toEqual({
+      connectionId: 'wg1',
+      vpn: 'up',
+      tor: null,
+      label: 'Work VPN',
+    });
+  });
+
+  it('reports a Tor connection with no upstream as a Tor-only leg', async () => {
+    withGroup();
+    binding.resolveForGroup.mockReturnValue({ resolved: { connectionId: 'tor1' } });
+    pool.get.mockImplementation((id: string) =>
+      id === 'tor1'
+        ? { id: 'tor1', kind: 'tor', status: 'up', label: 'Onion', upstreamConnectionId: null }
+        : undefined,
+    );
+    const state = (await call(IpcChannels.networkGetState)) as Groups;
+    expect(state.groups.g1).toEqual({
+      connectionId: 'tor1',
+      vpn: null,
+      tor: 'up',
+      label: 'Onion',
+    });
+  });
+
+  it('chains a Tor connection through its upstream VPN, showing both healths side by side', async () => {
+    withGroup();
+    binding.resolveForGroup.mockReturnValue({ resolved: { connectionId: 'tor1' } });
+    pool.get.mockImplementation((id: string) => {
+      if (id === 'tor1')
+        return {
+          id: 'tor1',
+          kind: 'tor',
+          status: 'up',
+          label: 'Onion',
+          upstreamConnectionId: 'wg1',
+        };
+      if (id === 'wg1')
+        return { id: 'wg1', kind: 'wireguard', status: 'degraded', label: 'Work VPN' };
+      return undefined;
+    });
+    const state = (await call(IpcChannels.networkGetState)) as Groups;
+    expect(state.groups.g1).toEqual({
+      connectionId: 'tor1',
+      vpn: 'degraded',
+      tor: 'up',
+      label: 'Onion → Work VPN',
+    });
+  });
+
+  it('falls back to the Tor label alone when the named upstream is itself gone from the pool', async () => {
+    withGroup();
+    binding.resolveForGroup.mockReturnValue({ resolved: { connectionId: 'tor1' } });
+    pool.get.mockImplementation((id: string) =>
+      id === 'tor1'
+        ? { id: 'tor1', kind: 'tor', status: 'up', label: 'Onion', upstreamConnectionId: 'wg-gone' }
+        : undefined,
+    );
+    const state = (await call(IpcChannels.networkGetState)) as Groups;
+    expect(state.groups.g1).toEqual({
+      connectionId: 'tor1',
+      vpn: null,
+      tor: 'up',
+      label: 'Onion',
+    });
+  });
+});
+
+describe('networkBindGroup', () => {
+  it('delegates to BindingService.bindGroup then rebroadcasts', async () => {
+    schemas.BindGroupNetworkSchema.parse.mockReturnValue({
+      groupId: 'g7',
+      binding: { mode: 'tor' },
+    });
+    await call(IpcChannels.networkBindGroup, {});
+    expect(binding.bindGroup).toHaveBeenCalledWith('g7', { mode: 'tor' });
+    expect(bw.getAllWindows).toHaveBeenCalled();
+  });
+});
+
+describe('networkAddConnection — Tor', () => {
+  it('adds a Tor connection chained onto a known upstream', async () => {
+    schemas.AddNetworkConnectionSchema.parse.mockReturnValue({
+      kind: 'tor',
+      label: 'Onion',
+      note: 'n',
+      upstreamConnectionId: 'wg1',
+    });
+    pool.has.mockImplementation((id: string) => id === 'wg1');
+    await call(IpcChannels.networkAddConnection, {});
+    expect(pool.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'onion',
+        kind: 'tor',
+        upstreamConnectionId: 'wg1',
+        version: 1,
+      }),
+    );
+  });
+
+  it('adds a standalone Tor connection when there is no upstream at all', async () => {
+    schemas.AddNetworkConnectionSchema.parse.mockReturnValue({
+      kind: 'tor',
+      label: 'Solo Onion',
+      note: '',
+      upstreamConnectionId: null,
+    });
+    await call(IpcChannels.networkAddConnection, {});
+    expect(pool.add).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'solo-onion', kind: 'tor', upstreamConnectionId: null }),
+    );
+  });
+});
+
+describe('pickers parented to the sender window', () => {
+  it('networkPickWireguard parents the open dialog to the sender window', async () => {
+    bw.fromWebContents.mockReturnValue({ __win: true });
+    dialog.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/home/me/vpn.conf'] });
+    const res = (await call(IpcChannels.networkPickWireguard)) as { fileName: string };
+    expect(res).toMatchObject({ fileName: 'vpn.conf' });
+    expect(dialog.showOpenDialog).toHaveBeenCalledWith(
+      { __win: true },
+      expect.objectContaining({ properties: ['openFile'] }),
+    );
+  });
+
+  it('networkPickBinaryFolder parents the open dialog to the sender window', async () => {
+    bw.fromWebContents.mockReturnValue({ __win: true });
+    schemas.VpnBinarySchema.parse.mockReturnValue('tor');
+    dialog.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/apps'] });
+    bins.findBinaryInFolder.mockReturnValue('/apps/tor/tor');
+    const res = await call(IpcChannels.networkPickBinaryFolder, {});
+    expect(res).toBe('/apps/tor/tor');
+    expect(dialog.showOpenDialog).toHaveBeenCalledWith(
+      { __win: true },
+      expect.objectContaining({ properties: ['openDirectory'] }),
     );
   });
 });
