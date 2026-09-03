@@ -102,6 +102,17 @@ describe('showBookmarkContextMenu', () => {
     ]);
   });
 
+  it('the folder-item variant for a FOLDER offers open-all / move-to-bar / delete', () => {
+    showBookmarkContextMenu(win, 'f2', 'folder', 'folder-item');
+    expect(labels()).toEqual(['Open all', '<separator>', 'Move to bar', 'Delete']);
+    clickAll();
+    expect((sent as { p: { action: string } }[]).map((m) => m.p.action)).toEqual([
+      'open-all',
+      'move-to-bar',
+      'delete',
+    ]);
+  });
+
   it('every item dispatches bookmarks:menu-action carrying its id + type', () => {
     showBookmarkContextMenu(win, 'b7', 'bookmark');
     clickAll();
