@@ -1,5 +1,16 @@
-import { describe, expect, it } from 'vitest';
-import { isRectOnDisplays, placeRectOnDisplays } from './window-placement';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const scr = vi.hoisted(() => ({
+  getAllDisplays: vi.fn((): { workArea: { x: number; y: number; width: number; height: number } }[] => [
+    { workArea: { x: 0, y: 0, width: 1920, height: 1050 } },
+  ]),
+  getPrimaryDisplay: vi.fn(() => ({ workArea: { x: 0, y: 0, width: 1920, height: 1050 } })),
+}));
+vi.mock('electron', () => ({ screen: scr }));
+
+const { isRectOnDisplays, placeRectOnDisplays, isBoundsOnScreen, ensureOnScreen } = await import(
+  './window-placement'
+);
 
 /** The single 1920×1080 laptop screen, 30px of taskbar taken off the work area. */
 const primary = { workArea: { x: 0, y: 0, width: 1920, height: 1050 } };
@@ -62,5 +73,33 @@ describe('placeRectOnDisplays', () => {
   it('leaves the rectangle alone when no display info is available', () => {
     const rect = { x: -1622, y: 133, width: 988, height: 854 };
     expect(placeRectOnDisplays(rect, [], undefined)).toBe(rect);
+  });
+});
+
+describe('the Electron wrappers', () => {
+  beforeEach(() => {
+    scr.getAllDisplays.mockReturnValue([{ workArea: { x: 0, y: 0, width: 1920, height: 1050 } }]);
+    scr.getPrimaryDisplay.mockReturnValue({ workArea: { x: 0, y: 0, width: 1920, height: 1050 } });
+  });
+
+  it('isBoundsOnScreen runs the saved rect against the live display list', () => {
+    expect(isBoundsOnScreen({ x: 100, y: 100, width: 988, height: 854 })).toBe(true);
+    scr.getAllDisplays.mockReturnValue([]); // every monitor unplugged
+    expect(isBoundsOnScreen({ x: 100, y: 100, width: 988, height: 854 })).toBe(false);
+  });
+
+  it('ensureOnScreen recenters an unreachable rect on the live primary display', () => {
+    expect(ensureOnScreen({ x: -5000, y: 0, width: 988, height: 854 })).toEqual({
+      x: 466,
+      y: 98,
+      width: 988,
+      height: 854,
+    });
+    expect(scr.getPrimaryDisplay).toHaveBeenCalled();
+  });
+
+  it('ensureOnScreen returns a still-reachable rect untouched', () => {
+    const rect = { x: 100, y: 100, width: 988, height: 854 };
+    expect(ensureOnScreen(rect)).toBe(rect);
   });
 });
