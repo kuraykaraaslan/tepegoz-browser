@@ -8,6 +8,8 @@ import {
   listTaskRuns,
   nextIntervalRunAt,
   normalizeTaskTrigger,
+  patchTask,
+  removeTask,
   taskCanUseTool,
   upsertTask,
   upsertTaskRun,
@@ -91,6 +93,56 @@ describe('@tepegoz/tasks', () => {
     expect(getTask(state, 'a')?.name).toBe('Task a');
     expect(listTaskRuns(state, 'a')).toHaveLength(1);
     expect(listTaskArtifacts(state, 'a')).toHaveLength(1);
+    expect(listTaskRuns(state)).toHaveLength(1); // no filter → all runs
+    expect(listTaskArtifacts(state)).toHaveLength(1); // no filter → all artifacts
+  });
+
+  it('a manual trigger normalizes to itself', () => {
+    expect(normalizeTaskTrigger({ type: 'manual' })).toEqual({ type: 'manual' });
+  });
+
+  it('upsertTask replaces an existing task in place (same id)', () => {
+    let state = upsertTask(emptyTasksState(), task('a'));
+    state = upsertTask(state, { ...task('a'), name: 'Renamed' });
+    expect(state.tasks).toHaveLength(1);
+    expect(getTask(state, 'a')?.name).toBe('Renamed');
+  });
+
+  it('upsertTaskRun replaces an existing run in place (same id)', () => {
+    const run = {
+      id: 'run-1',
+      taskId: 'a',
+      correlationId: 'c',
+      triggerType: 'manual' as const,
+      status: 'queued' as const,
+      queuedAt: 1,
+    };
+    let state = upsertTaskRun(emptyTasksState(), run);
+    state = upsertTaskRun(state, { ...run, status: 'running' });
+    expect(state.runs).toHaveLength(1);
+    expect(state.runs[0]?.status).toBe('running');
+  });
+
+  it('patchTask merges the patch, keeps id/createdAt, bumps updatedAt; no-ops an unknown id', () => {
+    const state = upsertTask(emptyTasksState(), task('a'));
+    const patched = patchTask(state, {
+      id: 'a',
+      patch: { status: 'disabled', updatedAt: 9_999 },
+    });
+    expect(getTask(patched, 'a')).toMatchObject({
+      id: 'a',
+      createdAt: 1000,
+      status: 'disabled',
+      updatedAt: 9_999,
+    });
+    expect(patchTask(state, { id: 'ghost', patch: { status: 'disabled' } })).toBe(state);
+  });
+
+  it('removeTask drops the task by id', () => {
+    let state = upsertTask(emptyTasksState(), task('a'));
+    state = upsertTask(state, task('b'));
+    state = removeTask(state, 'a');
+    expect(state.tasks.map((t) => t.id)).toEqual(['b']);
   });
 
   it('validates task save input and preapproved policy checks', () => {
