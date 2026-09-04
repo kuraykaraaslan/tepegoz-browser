@@ -4,6 +4,7 @@ const showSaveDialog = vi.fn();
 const writeFile = vi.fn();
 const push = vi.fn();
 const activeWebContents = vi.fn();
+const focusedWindow = vi.fn();
 
 vi.mock('electron', () => ({
   app: { getPath: () => '/downloads' },
@@ -27,7 +28,7 @@ vi.mock('../lib/i18n-main', () => ({
 vi.mock('../tabs', () => ({
   default: {
     focused: () => ({ activeWebContents: () => activeWebContents() as unknown }),
-    focusedWindow: () => ({ isDestroyed: () => false }),
+    focusedWindow: () => focusedWindow() as unknown,
   },
 }));
 
@@ -53,6 +54,7 @@ function fakePage(
 beforeEach(() => {
   vi.clearAllMocks();
   activeWebContents.mockReturnValue(fakePage('Report'));
+  focusedWindow.mockReturnValue({ isDestroyed: () => false });
   showSaveDialog.mockResolvedValue({ canceled: false, filePath: '/downloads/Report.pdf' });
   writeFile.mockResolvedValue(undefined);
 });
@@ -114,6 +116,16 @@ describe('savePageAsPdf', () => {
     await savePageAsPdf();
     expect(writeFile).not.toHaveBeenCalled();
     expect(push).toHaveBeenCalledWith(expect.objectContaining({ kind: 'error' }));
+  });
+
+  it('uses a parent-less save dialog when no window is focused', async () => {
+    focusedWindow.mockReturnValue(null);
+    await savePageAsPdf();
+    expect(showSaveDialog).toHaveBeenCalledWith({
+      defaultPath: expect.stringContaining('Report.pdf') as string,
+    });
+    expect(showSaveDialog.mock.calls[0]).toHaveLength(1); // no BrowserWindow parent argument
+    expect(writeFile).toHaveBeenCalledWith('/downloads/Report.pdf', Buffer.from('%PDF'));
   });
 
   it('does nothing at all with no page — no dialog, no throw', async () => {
