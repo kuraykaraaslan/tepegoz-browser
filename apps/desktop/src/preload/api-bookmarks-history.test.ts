@@ -252,3 +252,32 @@ describe('reopenClosedTab-style payload reshapes carry through the callback', ()
     expect(toggle).toHaveBeenCalledWith();
   });
 });
+
+describe('the notification / HITL-prompt listeners forward only their payload', () => {
+  it.each([
+    ['onNotificationsState', (cb: (p: unknown) => void) => api.onNotificationsState(cb), { unread: 2 }],
+    ['onNotificationToast', (cb: (p: unknown) => void) => api.onNotificationToast(cb), { id: 't1', title: 'Hi' }],
+    [
+      'onNotificationPermissionRequest',
+      (cb: (p: unknown) => void) => api.onNotificationPermissionRequest(cb),
+      { requestId: 'p1', origin: 'https://x.test' },
+    ],
+    ['onBasicAuthRequest', (cb: (p: unknown) => void) => api.onBasicAuthRequest(cb), { requestId: 'a1', host: 'x.test' }],
+    [
+      'onCertificateErrorRequest',
+      (cb: (p: unknown) => void) => api.onCertificateErrorRequest(cb),
+      { requestId: 'c1', url: 'https://x.test' },
+    ],
+    [
+      'onClientCertificateRequest',
+      (cb: (p: unknown) => void) => api.onClientCertificateRequest(cb),
+      { requestId: 'cc1', certificates: [] },
+    ],
+  ])('%s', (_n, subscribe, sample) => {
+    const cb = vi.fn();
+    subscribe(cb);
+    (ipc.on.mock.calls[0]![1] as (e: unknown, p: unknown) => void)({ senderId: 1 }, sample);
+    expect(cb).toHaveBeenCalledWith(sample);
+    expect(cb).toHaveBeenCalledTimes(1);
+  });
+});
