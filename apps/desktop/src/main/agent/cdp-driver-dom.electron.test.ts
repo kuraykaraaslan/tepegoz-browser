@@ -151,6 +151,18 @@ describe('isFocused', () => {
     S.ResolveSchema.safeParse.mockReturnValue(bad);
     expect(await dom.isFocused(cast(wc()), cast({ backendNodeId: 3 }))).toBe(false);
   });
+
+  it('resolves a backend id to an objectId, then checks focus on it', async () => {
+    S.ResolveSchema.safeParse.mockReturnValueOnce(ok({ object: { objectId: 'resolved-fi' } }));
+    S.CallResultSchema.safeParse.mockReturnValueOnce(ok({ result: { value: true } }));
+
+    expect(await dom.isFocused(cast(wc()), cast({ backendNodeId: 3 }))).toBe(true);
+    expect(send).toHaveBeenCalledWith('DOM.resolveNode', { backendNodeId: 3 });
+    expect(send).toHaveBeenCalledWith(
+      'Runtime.callFunctionOn',
+      expect.objectContaining({ objectId: 'resolved-fi' }),
+    );
+  });
 });
 
 describe('locator / path resolution', () => {
