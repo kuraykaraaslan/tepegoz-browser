@@ -3,6 +3,7 @@ import { DEFAULT_PREFERENCES } from '@tepegoz/preferences/model';
 import {
   buildBooleanPreferencePatch,
   buildJsonPreferencePatch,
+  buildStringPreferencePatch,
   listDeveloperPreferenceRows,
 } from './developer-settings-model';
 
@@ -26,6 +27,12 @@ describe('developer settings model', () => {
   it('builds boolean preference patches', () => {
     expect(buildBooleanPreferencePatch('onboardingCompleted', true)).toEqual({
       onboardingCompleted: true,
+    });
+  });
+
+  it('builds string preference patches', () => {
+    expect(buildStringPreferencePatch('searchEngineId', 'duckduckgo')).toEqual({
+      searchEngineId: 'duckduckgo',
     });
   });
 

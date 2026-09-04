@@ -11,7 +11,7 @@ import { useAppContentModel } from './App-content-model';
  */
 
 const update = vi.fn<(p: Partial<Preferences>) => Promise<void>>(() => Promise.resolve());
-const bridge = { navigateTab: vi.fn(), closeTab: vi.fn(), getNewTabBackgroundImage: vi.fn(() => Promise.resolve(null)), pickNewTabBackgroundImage: vi.fn() };
+const bridge = { navigateTab: vi.fn(), closeTab: vi.fn(), getNewTabBackgroundImage: vi.fn<(ref: string) => Promise<string | null>>(() => Promise.resolve(null)), pickNewTabBackgroundImage: vi.fn() };
 
 function prefs(shortcuts: Array<{ id: string; title: string; url: string }> = []): Preferences {
   return { newTabShortcuts: shortcuts } as unknown as Preferences;
@@ -76,6 +76,35 @@ describe('new-tab background', () => {
     const { result } = render(prefs());
     act(() => result.current.onChangeNewTabBackground({ opacity: 0.5 }));
     expect(update.mock.calls[0]?.[0]?.newTabBackground).toMatchObject({ opacity: 0.5 });
+  });
+
+  it('resolves an image-ref background through the blob store and caches the data URL', async () => {
+    bridge.getNewTabBackgroundImage.mockResolvedValueOnce('data:image/webp;base64,ZZ');
+    const p = {
+      newTabShortcuts: [],
+      newTabBackground: { kind: 'image', imageRef: 'cas://xy', color: '#000', svgId: '', imageFit: 'cover' },
+    } as unknown as Preferences;
+    const { result } = render(p);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(bridge.getNewTabBackgroundImage).toHaveBeenCalledWith('cas://xy');
+    expect(result.current.resolvedNewTabBackground.imageDataUrl).toBe('data:image/webp;base64,ZZ');
+  });
+
+  it('leaves the cache untouched when the blob store returns null for the ref', async () => {
+    bridge.getNewTabBackgroundImage.mockResolvedValueOnce(null);
+    const p = {
+      newTabShortcuts: [],
+      newTabBackground: { kind: 'image', imageRef: 'cas://missing', color: '#000', svgId: '', imageFit: 'cover' },
+    } as unknown as Preferences;
+    const { result } = render(p);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.resolvedNewTabBackground.imageDataUrl).toBeUndefined();
   });
 
   it('pick returns null on cancel and caches the ref otherwise', async () => {
