@@ -95,4 +95,70 @@ describe('SearchStartupSection', () => {
     fireEvent.click(screen.getByRole('button', { name: s.searchEngineRemove }));
     expect(lastPatch(setPref)).toEqual({ customSearchEngines: [] });
   });
+
+  it('commits a normalised homepage URL on blur', () => {
+    const { setPref } = renderSection({ homepageUrl: '' });
+    const input = document.getElementById('homepage-url')!;
+    fireEvent.change(input, { target: { value: 'example.org' } });
+    fireEvent.blur(input);
+    expect(setPref).toHaveBeenCalledWith({ homepageUrl: 'https://example.org' });
+  });
+
+  it('edits one custom engine and leaves the others untouched', () => {
+    const a = { id: 'custom-1', name: 'A', searchUrlTemplate: 'https://a.example/?q={q}' };
+    const b = { id: 'custom-2', name: 'B', searchUrlTemplate: 'https://b.example/?q={q}' };
+    const { setPref } = renderSection({ customSearchEngines: [a, b], searchEngineId: 'google' });
+
+    fireEvent.click(screen.getAllByRole('button', { name: s.searchEngineEdit })[0]!);
+    fireEvent.change(document.getElementById('edit-engine-name-custom-1')!, {
+      target: { value: 'A2' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: s.searchEngineSave }));
+
+    expect(lastPatch(setPref).customSearchEngines).toEqual([
+      { id: 'custom-1', name: 'A2', searchUrlTemplate: 'https://a.example/?q={q}' },
+      b,
+    ]);
+  });
+
+  it('edits a custom engine in place and writes the new name + template', () => {
+    const custom = { id: 'custom-1', name: 'Mine', searchUrlTemplate: 'https://m.example/?q={q}' };
+    const { setPref } = renderSection({ customSearchEngines: [custom], searchEngineId: 'google' });
+
+    fireEvent.click(screen.getByRole('button', { name: s.searchEngineEdit }));
+    fireEvent.change(document.getElementById('edit-engine-name-custom-1')!, {
+      target: { value: 'Renamed' },
+    });
+    fireEvent.change(document.getElementById('edit-engine-url-custom-1')!, {
+      target: { value: 'https://renamed.example/?q={q}' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: s.searchEngineSave }));
+
+    expect(lastPatch(setPref).customSearchEngines).toEqual([
+      { id: 'custom-1', name: 'Renamed', searchUrlTemplate: 'https://renamed.example/?q={q}' },
+    ]);
+  });
+
+  it('blocks saving an edit whose template is not a safe search URL', () => {
+    const custom = { id: 'custom-1', name: 'Mine', searchUrlTemplate: 'https://m.example/?q={q}' };
+    renderSection({ customSearchEngines: [custom] });
+
+    fireEvent.click(screen.getByRole('button', { name: s.searchEngineEdit }));
+    fireEvent.change(document.getElementById('edit-engine-url-custom-1')!, {
+      target: { value: 'javascript:alert(1)?q={q}' },
+    });
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: s.searchEngineSave }).disabled).toBe(true);
+    expect(screen.getByText(s.searchEngineCustomInvalid)).toBeTruthy();
+  });
+
+  it('abandons an in-progress edit when Cancel is pressed', () => {
+    const custom = { id: 'custom-1', name: 'Mine', searchUrlTemplate: 'https://m.example/?q={q}' };
+    renderSection({ customSearchEngines: [custom] });
+
+    fireEvent.click(screen.getByRole('button', { name: s.searchEngineEdit }));
+    fireEvent.click(screen.getByRole('button', { name: s.cancel }));
+    // back to the display row: the Edit button is here again, the Save button is gone
+    expect(screen.getByRole('button', { name: s.searchEngineEdit })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: s.searchEngineSave })).toBeNull();
+  });
 });
