@@ -66,6 +66,20 @@ describe('DefaultBrowserSection', () => {
     await waitFor(() => expect(screen.getByText(/could not register/i)).toBeTruthy());
   });
 
+  it('treats a rejected status check as "not default"', async () => {
+    getDefaultBrowserStatus.mockRejectedValue(new Error('shell query failed'));
+    renderSection();
+    await waitFor(() => expect(screen.getByRole('button', { name: /make.*default/i })).toBeTruthy());
+  });
+
+  it('shows the failure line when the make-default call rejects outright', async () => {
+    setAsDefaultBrowser.mockRejectedValue(new Error('picker crashed'));
+    renderSection();
+    await waitFor(() => expect(screen.getByRole('button', { name: /make.*default/i })).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: /make.*default/i }));
+    await waitFor(() => expect(screen.getByText(/could not register/i)).toBeTruthy());
+  });
+
   it('re-reads the status when the window regains focus', async () => {
     renderSection();
     await waitFor(() => expect(getDefaultBrowserStatus).toHaveBeenCalledTimes(1));

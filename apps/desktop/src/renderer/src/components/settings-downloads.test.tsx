@@ -73,6 +73,27 @@ describe('DownloadSettingsSection', () => {
     );
   });
 
+  it('shows the open-failed message when the open call rejects outright', async () => {
+    openDownloadFolder.mockRejectedValue(new Error('spawn failed'));
+    renderSection({ downloadDirectory: '/somewhere' });
+    fireEvent.click(screen.getByRole('button', { name: s.downloadLocationOpen }));
+    await vi.waitFor(() => expect(screen.getByText(s.downloadLocationOpenFailed)).toBeTruthy());
+  });
+
+  it('commits a hand-typed directory on blur', () => {
+    const { setPref } = renderSection({ downloadDirectory: '' });
+    const field = screen.getByLabelText(s.downloadLocationLabel);
+    fireEvent.change(field, { target: { value: '/home/me/Docs' } });
+    fireEvent.blur(field);
+    expect(setPref).toHaveBeenCalledWith({ downloadDirectory: '/home/me/Docs' });
+  });
+
+  it('writes the show-downloads-when-done toggle', () => {
+    const { setPref } = renderSection({ showDownloadsWhenDone: false });
+    fireEvent.click(screen.getByRole('switch', { name: new RegExp(s.showDownloadsWhenDone, 'i') }));
+    expect(setPref).toHaveBeenCalledWith({ showDownloadsWhenDone: true });
+  });
+
   it('writes the ask-each-time toggle', () => {
     const { setPref } = renderSection({ downloadAskEachTime: false });
     fireEvent.click(screen.getByRole('switch', { name: /ask where to save each file/i }));

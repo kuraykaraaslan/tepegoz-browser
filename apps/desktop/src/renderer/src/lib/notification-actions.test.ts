@@ -16,6 +16,7 @@ const bridge = {
   trustPopupOrigin: vi.fn(),
   markNotificationRead: vi.fn(),
   dismissNotification: vi.fn(),
+  undoSessionRestore: vi.fn(),
 };
 
 beforeEach(() => {
@@ -72,6 +73,11 @@ describe('runNotificationAction', () => {
     expect(bridge.markNotificationRead).toHaveBeenCalledWith('n1');
     expect(runNotificationAction(item(), act({ type: 'dismiss' }))).toBe(false);
     expect(bridge.dismissNotification).toHaveBeenCalledWith('n1');
+  });
+
+  it('undo_session_restore relays the click and returns true (one-shot, dismiss the toast)', () => {
+    expect(runNotificationAction(item(), act({ type: 'undo_session_restore' }))).toBe(true);
+    expect(bridge.undoSessionRestore).toHaveBeenCalledTimes(1);
   });
 
   it('an unknown action type is a safe no-op → false', () => {
