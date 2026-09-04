@@ -117,6 +117,15 @@ describe('safeArgsPreview', () => {
   });
 });
 
+describe('isHistoryKind', () => {
+  it('accepts persisted history kinds and rejects ephemeral run-control kinds', () => {
+    expect(mod.isHistoryKind('step_ok')).toBe(true);
+    expect(mod.isHistoryKind('handoff')).toBe(true);
+    expect(mod.isHistoryKind('paused')).toBe(false);
+    expect(mod.isHistoryKind('steered')).toBe(false);
+  });
+});
+
 describe('REFUNDABLE_STOP_REASONS', () => {
   it('includes the not-the-user-fault stops', () => {
     for (const r of [
