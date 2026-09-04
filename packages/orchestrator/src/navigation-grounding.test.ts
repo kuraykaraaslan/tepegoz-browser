@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import type { StepOutcome } from './executor';
 import {
+  buildNavigationGroundingHook,
   buildNavigationGuidance,
   rankActionCandidates,
   rankNavigationCandidates,
@@ -324,5 +326,63 @@ describe('action-control ranking prefers the real control', () => {
     });
     expect(guidance).toContain('[74] Invite Berkay Akar to connect');
     expect(guidance?.indexOf('[74]')).toBeLessThan(guidance?.indexOf('[71]') ?? Infinity);
+  });
+});
+
+describe('buildNavigationGroundingHook', () => {
+  const outcome = (over: Partial<StepOutcome> = {}): StepOutcome => ({
+    stepId: 's1',
+    tool: 'browser_get_elements',
+    ok: true,
+    durationMs: 1,
+    result: {
+      url: 'https://example.com/',
+      elements: [
+        { ref: 1, role: 'link', name: 'Blog', href: 'https://example.com/blog.html', tag: 'a' },
+        { ref: 2, role: 'link', name: 'Pricing', href: 'https://example.com/pricing.html', tag: 'a' },
+      ],
+    },
+    ...over,
+  });
+  const goal = 'Open the blog and read the latest post';
+
+  it('is silent for a non-get-elements or failed step, or a shape mismatch', async () => {
+    const hook = buildNavigationGroundingHook();
+    expect(await hook(outcome({ tool: 'browser_get_page' }), goal)).toBeNull();
+    expect(await hook(outcome({ ok: false }), goal)).toBeNull();
+    expect(await hook(outcome({ result: { nope: true } }), goal)).toBeNull();
+    expect(await hook(outcome({ result: { url: '', elements: [] } }), goal)).toBeNull();
+  });
+
+  it('turns a valid element snapshot into the grounded navigation steer', async () => {
+    const hint = await buildNavigationGroundingHook()(outcome(), goal);
+    expect(hint).toContain('example.com/blog.html');
+  });
+
+  it('enriches with same-origin sitemap URLs when a discoverer is supplied', async () => {
+    const discover = () => Promise.resolve(['https://example.com/blog/latest-post.html']);
+    const hint = await buildNavigationGroundingHook(discover)(
+      outcome({ result: { url: 'https://example.com/', elements: [] } }),
+      goal,
+    );
+    expect(hint).toContain('latest-post');
+  });
+
+  it('swallows a throwing sitemap discoverer and still grounds on the visible links', async () => {
+    const discover = () => Promise.reject(new Error('sitemap fetch failed'));
+    const hint = await buildNavigationGroundingHook(discover)(outcome(), goal);
+    expect(hint).toContain('example.com/blog.html');
+  });
+});
+
+describe('the URL-helper catch fallbacks (a malformed currentUrl must not throw)', () => {
+  it('rankNavigationCandidates tolerates an unparseable currentUrl', () => {
+    expect(() =>
+      rankNavigationCandidates({
+        goal: 'open the blog',
+        currentUrl: 'http://[',
+        elements: [link('Blog', 'https://example.com/blog')],
+      }),
+    ).not.toThrow();
   });
 });
