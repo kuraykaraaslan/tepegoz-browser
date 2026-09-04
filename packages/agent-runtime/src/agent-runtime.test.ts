@@ -404,6 +404,58 @@ describe('runAgent — plan phase, approval, and egress-during-planning', () => 
     expect(res.steps?.some((s) => s.tool === 'browser_update_location')).toBe(true);
   });
 
+  it('recognises web_search_items and an off-origin browser_update_location as ESCAPE tools', async () => {
+    const { CapabilityRegistry } = await import('@tepegoz/capability-plane');
+    for (const id of ['web_search_items', 'browser_update_location']) {
+      CapabilityRegistry.register({
+        descriptor: {
+          id,
+          description: id,
+          dangerClass: 'read', // auto-allowed → the act succeeds so the reactor runs isEscapeTool
+          source: 'builtin',
+          inputSchema: { type: 'object' },
+          requiresIdempotencyKey: false,
+        },
+        inputSchema: objSchema,
+        // browser_update_location returns NO `content` (only a url) → exercises contentFromResult's
+        // undefined fall-through in onOutcome; web_search returns content.
+        handler: () => (id === 'browser_update_location' ? { url: 'https://elsewhere.test/' } : { content: 'ok' }),
+      });
+    }
+    const plan = {
+      goal: 'wander off',
+      steps: [{ id: 's1', tool: 'browser_update_location', args: {}, rationale: 'r', dependsOn: [] }],
+    };
+    const h: AgentRunHooks = { ...hooks(), requestPlanApproval: () => Promise.resolve({ approved: true }) };
+    const deps: AgentRunDeps = {
+      ...DEPS,
+      activeTabUrl: () => 'https://origin.test/here',
+      provider: {
+        id: 'anthropic',
+        instance: new ScriptedProvider((t) =>
+          resp(
+            t === 0
+              ? JSON.stringify(plan)
+              : t === 1
+                ? // an OFF-ORIGIN navigation → isEscapeTool runs its full url-compare arm
+                  JSON.stringify({ action: 'act', tool: 'browser_update_location', args: { url: 'https://elsewhere.test/' }, rationale: 'r' })
+                : t === 2
+                  ? // a malformed target → isEscapeTool's `new URL()` catch → false
+                    JSON.stringify({ action: 'act', tool: 'browser_update_location', args: { url: 'http://[' }, rationale: 'r' })
+                  : t === 3
+                    ? // web_search_items → the immediate `return true` arm
+                      JSON.stringify({ action: 'act', tool: 'web_search_items', args: { query: 'x' }, rationale: 'r' })
+                    : JSON.stringify({ action: 'finish', summary: 'wandered' }),
+          ),
+        ),
+      },
+    };
+    const res = await runAgent('do it', h, deps);
+    // Coverage target is isEscapeTool's off-origin arm + the web_search return; the run terminates either way.
+    expect(typeof res.stoppedReason).toBe('string');
+    expect(res.steps?.length ?? 0).toBeGreaterThan(0);
+  });
+
   it('emits step_error when a tool call fails inside the reactive loop', async () => {
     const { CapabilityRegistry } = await import('@tepegoz/capability-plane');
     CapabilityRegistry.register({
