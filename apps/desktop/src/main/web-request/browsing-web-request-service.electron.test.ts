@@ -1,5 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import BrowsingWebRequestService from './browsing-web-request-service.electron';
+
+const logger = vi.hoisted(() => ({
+  warn: vi.fn(),
+  info: vi.fn(),
+  debug: vi.fn(),
+  error: vi.fn(),
+}));
+vi.mock('@tepegoz/libs', () => ({ Logger: logger }));
+
+const BrowsingWebRequestService = (await import('./browsing-web-request-service.electron')).default;
 
 function beforeDetails(id = 1): Electron.OnBeforeRequestListenerDetails {
   return {
@@ -82,6 +91,7 @@ function fakeWebRequest() {
 describe('BrowsingWebRequestService', () => {
   beforeEach(() => {
     BrowsingWebRequestService.resetForTests();
+    logger.warn.mockReset();
   });
 
   it('runs before-request handlers in order and stops at the first cancel/redirect', async () => {
@@ -146,6 +156,45 @@ describe('BrowsingWebRequestService', () => {
 
     const res = await fake.headers();
     expect(res.responseHeaders).toMatchObject({ server: ['fixture'], 'x-good': ['1'] });
+  });
+
+  it('fails open when the WHOLE before-request pipeline throws (even the log sink), returning {}', async () => {
+    const fake = fakeWebRequest();
+    BrowsingWebRequestService.attach(fake.webRequest);
+    BrowsingWebRequestService.onBeforeRequest('bad', () => {
+      throw new Error('boom');
+    });
+    // The per-handler catch calls Logger.warn — make THAT throw once, so the rejection escapes
+    // runBeforeRequest itself and lands in the listener's outer `.then(_, onRejected)` arm.
+    logger.warn.mockImplementationOnce(() => {
+      throw new Error('log sink down');
+    });
+
+    await expect(fake.before()).resolves.toEqual({});
+    expect(logger.warn).toHaveBeenCalledWith(
+      'webRequest onBeforeRequest pipeline failed open',
+      expect.objectContaining({ err: expect.stringContaining('log sink down') as string }),
+    );
+  });
+
+  it('fails open when the WHOLE headers-received pipeline throws, still applying the session stamp', async () => {
+    const fake = fakeWebRequest();
+    BrowsingWebRequestService.attach(fake.webRequest, {
+      stampResponseHeaders: { 'x-dns-prefetch-control': 'off' },
+    });
+    BrowsingWebRequestService.onHeadersReceived('bad', () => {
+      throw new Error('headers boom');
+    });
+    logger.warn.mockImplementationOnce(() => {
+      throw new Error('log sink down');
+    });
+
+    const res = await fake.headers();
+    expect(res.responseHeaders).toMatchObject({ 'x-dns-prefetch-control': ['off'] });
+    expect(logger.warn).toHaveBeenCalledWith(
+      'webRequest onHeadersReceived pipeline failed open',
+      expect.objectContaining({ err: expect.stringContaining('log sink down') as string }),
+    );
   });
 
   it('the unsubscribe closures stop each kind of handler from running again', async () => {
