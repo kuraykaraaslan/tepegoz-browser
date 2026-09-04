@@ -83,6 +83,49 @@ const INVOKES: Row[] = [
     IpcChannels.agentConversationsList,
     {},
   ],
+  [
+    'runAgent',
+    () => api.runAgent({ prompt: 'go', groupId: 'g1' }),
+    IpcChannels.agentRun,
+    { prompt: 'go', groupId: 'g1' },
+  ],
+  [
+    'getCurrentAgentConversation',
+    () => api.getCurrentAgentConversation('g1'),
+    IpcChannels.agentConversationsCurrent,
+    'g1',
+  ],
+  [
+    'openAgentConversation',
+    () => api.openAgentConversation({ id: 'c1', groupId: 'g1' }),
+    IpcChannels.agentConversationsOpen,
+    { id: 'c1', groupId: 'g1' },
+  ],
+  [
+    'saveAgentSkill',
+    () => api.saveAgentSkill({ name: 'S', prompt: 'p' }),
+    IpcChannels.agentSkillsSave,
+    { name: 'S', prompt: 'p' },
+  ],
+  ['deleteAgentSkill', () => api.deleteAgentSkill('s1'), IpcChannels.agentSkillsDelete, 's1'],
+  [
+    'exportChatLog',
+    () => api.exportChatLog({ content: 'log' }),
+    IpcChannels.agentExportConversation,
+    { content: 'log' },
+  ],
+  [
+    'exportAgentBundle',
+    () => api.exportAgentBundle({ conversationId: 'c1' } as never),
+    IpcChannels.agentExportBundle,
+    { conversationId: 'c1' },
+  ],
+  ['capturePageScreenshot', () => api.capturePageScreenshot(), IpcChannels.tabsCapture],
+  [
+    'listExtensionManifests',
+    () => api.listExtensionManifests(),
+    IpcChannels.extensionsListManifests,
+  ],
 ];
 
 const SENDS: Row[] = [
@@ -114,6 +157,36 @@ const SENDS: Row[] = [
     IpcChannels.agentPlanResponse,
     { planId: 'p1', approved: false, skipStepIds: ['s2'] },
   ],
+  [
+    'cancelLocalModelDownload',
+    () => api.cancelLocalModelDownload('m1'),
+    IpcChannels.modelsCancel,
+    'm1',
+  ],
+  [
+    'requestOpenExtension',
+    () => api.requestOpenExtension('ext-1'),
+    IpcChannels.extensionOpenRequest,
+    'ext-1',
+  ],
+  [
+    'showExtensionContextMenu',
+    () => api.showExtensionContextMenu('ext-1'),
+    IpcChannels.extensionContextMenu,
+    'ext-1',
+  ],
+];
+
+type SubRow = [name: string, run: (cb: (p: unknown) => void) => () => void, channel: string];
+const SUBSCRIPTIONS: SubRow[] = [
+  ['onAgentConversationsState', (cb) => api.onAgentConversationsState(cb), IpcChannels.agentConversationsState],
+  ['onAgentEvent', (cb) => api.onAgentEvent(cb), IpcChannels.agentEvent],
+  ['onAgentApprovalRequest', (cb) => api.onAgentApprovalRequest(cb), IpcChannels.agentApprovalRequest],
+  ['onAgentPlanPreview', (cb) => api.onAgentPlanPreview(cb), IpcChannels.agentPlanPreview],
+  ['onTokenUsage', (cb) => api.onTokenUsage(cb), IpcChannels.tokenUsage],
+  ['onLocalModelsState', (cb) => api.onLocalModelsState(cb), IpcChannels.modelsState],
+  ['onOpenExtension', (cb) => api.onOpenExtension(cb), IpcChannels.extensionOpen],
+  ['onExtensionContextMenuAction', (cb) => api.onExtensionContextMenuAction(cb), IpcChannels.extensionContextMenuAction],
 ];
 
 describe('invoke methods', () => {
@@ -153,5 +226,19 @@ describe('a representative subscription', () => {
     expect(cb).toHaveBeenCalledWith({ text: 'chunk' });
     off();
     expect(ipc.removeListener).toHaveBeenCalledWith(IpcChannels.agentDelta, listener);
+  });
+});
+
+describe('every remaining subscription: subscribe, forward only the payload, unsubscribe', () => {
+  it.each(SUBSCRIPTIONS)('%s', (_n, run, channel) => {
+    const cb = vi.fn();
+    const off = run(cb);
+    expect(ipc.on).toHaveBeenCalledWith(channel, expect.any(Function));
+    const listener = ipc.on.mock.calls[0]![1] as (e: unknown, p: unknown) => void;
+    listener({ senderId: 1 }, { sample: true });
+    expect(cb).toHaveBeenCalledWith({ sample: true });
+    expect(cb).toHaveBeenCalledTimes(1);
+    off();
+    expect(ipc.removeListener).toHaveBeenCalledWith(channel, listener);
   });
 });
