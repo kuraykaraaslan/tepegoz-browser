@@ -106,6 +106,21 @@ describe('NetworkRoutesCard', () => {
     expect(within(row).getByText(s.network.direct)).toBeTruthy();
   });
 
+  it('falls back to no live tab list when the bridge getTabsState call rejects', async () => {
+    getTabsState.mockRejectedValueOnce(new Error('bridge down'));
+    renderCard(state());
+    await waitFor(() => expect(getTabsState).toHaveBeenCalled());
+    // still renders the default route from NetworkState; the routed-tab section stays empty
+    expect(screen.getByText(s.network.defaultRoute)).toBeTruthy();
+    expect(screen.getByText(s.network.routesNoOverrides)).toBeTruthy();
+  });
+
+  it('shows "Direct" as the default route when the general binding is plain direct', () => {
+    renderCard(state({ general: { kind: 'direct' } as NetworkState['general'] }));
+    const row = screen.getByText(s.network.defaultRoute).closest('div') ?? document.body;
+    expect(within(row).getAllByText(s.network.direct).length).toBeGreaterThan(0);
+  });
+
   it('renders a routed group section when a group carries an override', async () => {
     getTabsState.mockResolvedValue(
       tabsState({ groups: [{ id: 'g1', name: 'Work' }] as TabsState['groups'] }),
