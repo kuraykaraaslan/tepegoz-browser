@@ -105,6 +105,15 @@ describe('SiteTrustSection', () => {
     expect(screen.getByRole('button', { name: t.update })).toBeTruthy();
   });
 
+  it('stores a new domain at the level picked in the add form', async () => {
+    setTrustProfile.mockResolvedValue([profile({ domain: 'foo.com', level: 'restricted' })]);
+    renderSection();
+    fireEvent.change(screen.getByLabelText(t.levelLabel), { target: { value: 'restricted' } });
+    fireEvent.change(domainInput(), { target: { value: 'foo.com' } });
+    fireEvent.click(screen.getByRole('button', { name: t.add }));
+    await waitFor(() => expect(setTrustProfile).toHaveBeenCalledWith('foo.com', 'restricted'));
+  });
+
   it('changes an existing profile\'s level in place', async () => {
     listTrustProfiles.mockResolvedValue([profile({ domain: 'example.com', level: 'trusted' })]);
     renderSection();

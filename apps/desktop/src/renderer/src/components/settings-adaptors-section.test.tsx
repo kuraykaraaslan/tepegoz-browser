@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { I18nProvider } from '@tepegoz/i18n/react';
+import { settingsDict } from '@tepegoz/settings-ui';
 import type { AdaptorConnection } from '@tepegoz/desktop-ipc';
 import type { AdaptorPermission } from '@tepegoz/shared-types';
 import { AdaptorsSection } from './settings-adaptors-section';
@@ -84,6 +85,13 @@ describe('AdaptorsSection', () => {
     ]);
     const row = (renderSection(), await screen.findByRole('listitem'));
     expect(within(row).queryByRole('button')).toBeNull();
+  });
+
+  it('shows the audit-required badge for an adaptor that needs one', async () => {
+    listAdaptors.mockResolvedValue([adaptor({ auditRequired: true })]);
+    renderSection();
+    const row = await screen.findByRole('listitem');
+    expect(within(row).getByText(settingsDict.en.adaptorAuditRequired)).toBeTruthy();
   });
 
   it('falls back to the empty state if listing rejects', async () => {

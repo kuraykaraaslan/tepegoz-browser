@@ -97,6 +97,13 @@ describe('LocalActionsSection', () => {
     expect(screen.getByText(s.noActionsYet)).toBeTruthy();
   });
 
+  it('falls back to the empty state when listing adaptors rejects', async () => {
+    listAiAdaptors.mockRejectedValueOnce(new Error('registry down'));
+    renderLocal();
+    await waitFor(() => expect(listAiAdaptors).toHaveBeenCalled());
+    expect(screen.getByText(s.noActionsYet)).toBeTruthy();
+  });
+
   it('offers a per-action toggle for a local-capable action and "Native · no AI" for a mechanical one', async () => {
     listAiAdaptors.mockResolvedValue([adaptor()]);
     renderLocal({ useLocalModelForSimpleTasks: true });
@@ -126,6 +133,13 @@ describe('TokenBudgetSection', () => {
   it('draws no progress bar when the quota is 0 (unlimited)', async () => {
     getTokenUsage.mockResolvedValue({ lifetimeTokens: 500 });
     renderBudget({ agentTokenQuota: 0 });
+    await waitFor(() => expect(getTokenUsage).toHaveBeenCalled());
+    expect(screen.queryByRole('progressbar')).toBeNull();
+  });
+
+  it('shows no usage figure or bar when getTokenUsage rejects', async () => {
+    getTokenUsage.mockRejectedValueOnce(new Error('ledger offline'));
+    renderBudget({ agentTokenQuota: 1000 });
     await waitFor(() => expect(getTokenUsage).toHaveBeenCalled());
     expect(screen.queryByRole('progressbar')).toBeNull();
   });
