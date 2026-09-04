@@ -222,6 +222,13 @@ describe('cache + initial load', () => {
     expect(ElectronBlocker.fromPrebuiltAdsAndTracking).toHaveBeenCalledTimes(1);
   });
 
+  it('treats a valid metadata file with a non-numeric lastUpdatedAt as "never updated"', async () => {
+    await cachedInit(null); // JSON parses fine, but lastUpdatedAt is null -> the ternary's else arm
+    expect(host.setLastUpdatedAt).toHaveBeenCalledWith(null);
+    expect(ElectronBlocker.deserialize).toHaveBeenCalled();
+    expect(ElectronBlocker.fromPrebuiltAdsAndTracking).toHaveBeenCalledTimes(1);
+  });
+
   it('treats a corrupt metadata file as "never updated" and rebuilds', async () => {
     fsp.readFile.mockImplementation((p: unknown) =>
       String(p).includes('metadata')
