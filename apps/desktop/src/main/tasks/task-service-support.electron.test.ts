@@ -150,6 +150,19 @@ describe('readPageChangeText', () => {
     ).rejects.toMatchObject({ statusCode: 409 });
     expect(tm.closeTab).toHaveBeenCalledWith('wtab');
   });
+
+  it('gives up the page-load wait on the timeout when did-stop-loading never fires', async () => {
+    vi.useFakeTimers();
+    try {
+      wc.once.mockImplementation(() => wc); // never invokes the callback → waitForLoad must time out
+      const p = support.readPageChangeText({ url: 'https://watch.test/' } as never);
+      await vi.advanceTimersByTimeAsync(60_000); // past PAGE_CHECK_TIMEOUT_MS
+      await expect(p).resolves.toEqual({ url: 'https://watch.test/final', text: 'page text' });
+      expect(wc.removeListener).toHaveBeenCalledWith('did-stop-loading', expect.any(Function));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('appendAudit', () => {
