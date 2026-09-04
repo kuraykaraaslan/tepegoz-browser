@@ -8,12 +8,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * never has to re-check.
  */
 
+const loadURLBehavior = vi.hoisted(() => ({ reject: false }));
 vi.mock('electron', () => ({
   WebContentsView: class {
     setBounds = vi.fn();
     setVisible = vi.fn();
     webContents = {
-      loadURL: () => Promise.resolve(),
+      loadURL: () =>
+        loadURLBehavior.reject ? Promise.reject(new Error('tunnel down')) : Promise.resolve(),
       isDestroyed: () => false,
       close: vi.fn(),
       getURL: () => '',
@@ -24,9 +26,13 @@ vi.mock('electron', () => ({
   BrowserWindow: { fromWebContents: () => null },
   dialog: { showMessageBoxSync: () => 0 },
 }));
-vi.mock('@tepegoz/libs', () => ({
-  Logger: { warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() },
+const logger = vi.hoisted(() => ({
+  warn: vi.fn(),
+  info: vi.fn(),
+  debug: vi.fn(),
+  error: vi.fn(),
 }));
+vi.mock('@tepegoz/libs', () => ({ Logger: logger }));
 vi.mock('@tepegoz/security-policy', () => ({ mayOpenDevTools: () => ({ allowed: true }) }));
 vi.mock('./lib/i18n-main', () => ({
   mainStrings: () => ({
@@ -264,6 +270,29 @@ describe('activate → reviveTab', () => {
     }).not.toThrow();
     expect(tabs.isDiscarded(bg)).toBe(false);
     expect(tabs.hasView(bg)).toBe(true);
+  });
+
+  it('logs — without throwing — when the revived tab fails to reload', async () => {
+    logger.warn.mockClear();
+    const bg = tabs.add();
+    tabs.add();
+    tabs.patch(bg, { discarded: true });
+
+    loadURLBehavior.reject = true;
+    try {
+      tabs.activate(bg);
+      await new Promise((r) => setTimeout(r, 0)); // let the void loadURL(...).catch(...) settle
+    } finally {
+      loadURLBehavior.reject = false;
+    }
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Discarded tab failed to reload',
+      expect.objectContaining({
+        url: 'https://x.test/',
+        err: expect.stringContaining('tunnel down') as string,
+      }),
+    );
   });
 
   it('activating a non-discarded tab does not run the revive path', () => {
