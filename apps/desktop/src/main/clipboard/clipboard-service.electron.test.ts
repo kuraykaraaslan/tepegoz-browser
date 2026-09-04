@@ -97,6 +97,12 @@ describe('editing commands', () => {
     expect(spy).not.toHaveBeenCalled();
     expect(lastPayload().origin).toBeUndefined();
   });
+
+  it('omits the origin when the live tab URL will not parse', () => {
+    ClipboardService.copy(fakeWc('http://['));
+    expect(lastPayload()).toMatchObject({ operation: 'copy' });
+    expect(lastPayload().origin).toBeUndefined();
+  });
 });
 
 describe('writeText / readText', () => {
