@@ -994,3 +994,82 @@ describe('typed widgets refuse a raw fill (S3 PR7)', () => {
     expect(result['filled']).toBe(true);
   });
 });
+
+describe('browser_analyze_page — registered only with a sandbox', () => {
+  beforeEach(() => CapabilityRegistry.reset());
+
+  it('is absent when the host cannot run an extraction script', () => {
+    registerBrowserTools({ host: fakeHost() });
+    expect(CapabilityRegistry.get('browser_analyze_page')).toBeUndefined();
+  });
+
+  it('returns the capped result + script hash on the happy path, and RETURNS a refusal (not throw) for an empty script', async () => {
+    const runExtractionScript = vi.fn(() => Promise.resolve(['row-1', 'row-2', 'row-3']));
+    registerBrowserTools({ host: fakeHost({ runExtractionScript }) });
+    const cap = CapabilityRegistry.get('browser_analyze_page')!;
+
+    const ok = (await cap.handler({ script: 'document.title', tabId: 't1' })) as Record<string, unknown>;
+    expect(runExtractionScript).toHaveBeenCalledWith('document.title', 't1');
+    expect(ok).toMatchObject({ items: 3, truncated: false });
+    expect(typeof ok['scriptHash']).toBe('string');
+    expect(String(ok['content'])).toContain('row-1');
+
+    const refused = (await cap.handler({ script: '   ' })) as Record<string, unknown>;
+    expect(refused['content']).toBe('');
+    expect(String(refused['refused'])).toMatch(/empty/i);
+    expect(runExtractionScript).toHaveBeenCalledTimes(1); // the refusal never reached the sandbox
+  });
+});
+
+describe('credential_update_field — registered only when a broker exists', () => {
+  beforeEach(() => CapabilityRegistry.reset());
+
+  it('is absent without host.fillCredential', () => {
+    registerBrowserTools({ host: fakeHost() });
+    expect(CapabilityRegistry.get('credential_update_field')).toBeUndefined();
+  });
+
+  it('delegates to the broker, and fails closed if the seam was removed after registration', async () => {
+    const fillCredential = vi.fn(() =>
+      Promise.resolve({ filled: true, field: 'password' as const, origin: 'https://x' }),
+    );
+    const host = fakeHost({ fillCredential });
+    registerBrowserTools({ host });
+    const cap = CapabilityRegistry.get('credential_update_field')!;
+
+    const done = (await cap.handler({ ref: 5, field: 'password', tabId: 't1' })) as Record<
+      string,
+      unknown
+    >;
+    expect(fillCredential).toHaveBeenCalledWith(5, 'password', 't1');
+    expect(done).toMatchObject({ filled: true, origin: 'https://x' });
+
+    // The handler re-checks the seam rather than trusting its closure.
+    delete (host as { fillCredential?: unknown }).fillCredential;
+    const gone = (await cap.handler({ ref: 5, field: 'username' })) as Record<string, unknown>;
+    expect(gone).toMatchObject({ filled: false, field: 'username', origin: '' });
+    expect(String(gone['reason'])).toMatch(/unavailable/i);
+  });
+});
+
+describe('browser_validate_page containsText branch', () => {
+  beforeEach(() => CapabilityRegistry.reset());
+
+  it('echoes containsText and reports the substring hit', async () => {
+    registerBrowserTools({ host: fakeHost() }); // fake readPage text is "hello"
+    const res = (await CapabilityRegistry.get('browser_validate_page')!.handler({
+      containsText: 'hello',
+      tabId: 't1',
+    })) as Record<string, unknown>;
+    expect(res).toMatchObject({ ok: true, containsText: 'hello' });
+  });
+
+  it('omits containsText and is always ok when no text was asked for', async () => {
+    registerBrowserTools({ host: fakeHost() });
+    const res = (await CapabilityRegistry.get('browser_validate_page')!.handler({
+      tabId: 't1',
+    })) as Record<string, unknown>;
+    expect(res).toMatchObject({ ok: true });
+    expect(res).not.toHaveProperty('containsText');
+  });
+});
