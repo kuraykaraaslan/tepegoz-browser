@@ -71,6 +71,15 @@ describe('validation gates the service', () => {
     expect(svc.save).toHaveBeenCalledWith(expect.objectContaining({ name: 'Weekly check' }));
   });
 
+  it('tasks:delete validates the id then deletes it, and rejects an empty one', () => {
+    call(IpcChannels.tasksDelete, 't9');
+    expect(svc.delete).toHaveBeenCalledWith('t9');
+
+    svc.delete.mockClear();
+    expect(() => call(IpcChannels.tasksDelete, '')).toThrow();
+    expect(svc.delete).not.toHaveBeenCalled();
+  });
+
   it('tasks:set-enabled rejects a non-boolean enabled', () => {
     expect(() => call(IpcChannels.tasksSetEnabled, { id: 't1', enabled: 'yes' })).toThrow();
     expect(svc.command).not.toHaveBeenCalled();
