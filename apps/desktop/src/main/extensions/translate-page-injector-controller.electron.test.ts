@@ -10,7 +10,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * `restored` `TranslatePageState`.
  */
 
-vi.mock('@tepegoz/libs', () => ({ Logger: { warn: vi.fn() } }));
+const logger = vi.hoisted(() => ({ warn: vi.fn() }));
+vi.mock('@tepegoz/libs', () => ({ Logger: logger }));
 const prefs = vi.hoisted(() => ({ getAll: vi.fn(() => ({ translate: { mode: 'auto' } })) }));
 vi.mock('@tepegoz/preferences', () => ({ default: prefs }));
 
@@ -105,6 +106,22 @@ describe('start + auto-translate', () => {
     nav('https://site.test/', wc);
     await new Promise((r) => setTimeout(r, 0));
     expect(inject).toHaveBeenCalledWith(wc);
+  });
+
+  it('auto-translate logs — without throwing — when startTranslation fails', async () => {
+    engine.shouldAutoTranslatePage.mockReturnValue(true);
+    inject.mockRejectedValueOnce(new Error('renderer gone'));
+    TPI.start();
+    const nav = TabManager.onNavigation.mock.calls[0]![0];
+    nav('https://site.test/', mkWc());
+    await new Promise((r) => setTimeout(r, 0));
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Automatic page translation failed',
+      expect.objectContaining({
+        url: 'https://site.test/',
+        err: expect.stringContaining('renderer gone') as string,
+      }),
+    );
   });
 });
 
