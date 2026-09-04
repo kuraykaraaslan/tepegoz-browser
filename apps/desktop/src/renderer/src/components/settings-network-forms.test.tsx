@@ -36,8 +36,14 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-function renderRow(opts: { secretsAvailable?: boolean; connections?: NetworkConnectionView[] } = {}) {
-  const onAdd = vi.fn(() => Promise.resolve());
+function renderRow(
+  opts: {
+    secretsAvailable?: boolean;
+    connections?: NetworkConnectionView[];
+    onAddImpl?: () => Promise<void>;
+  } = {},
+) {
+  const onAdd = vi.fn(opts.onAddImpl ?? (() => Promise.resolve()));
   render(
     <AddConnectionRow
       s={s}
@@ -126,5 +132,25 @@ describe('AddConnectionRow', () => {
     renderRow();
     fireEvent.click(screen.getByRole('button', { name: s.network.chooseFile }));
     await waitFor(() => expect(screen.getByText('no DNS line in [Interface]')).toBeTruthy());
+  });
+
+  it('shows the error when onAdd itself rejects', async () => {
+    const { onAdd } = renderRow({ onAddImpl: () => Promise.reject(new Error('daemon refused the profile')) });
+    fireEvent.change(kindSelect(), { target: { value: 'byo-socks' } });
+    fireEvent.change(nameInput(), { target: { value: 'Local' } });
+    fireEvent.change(screen.getByLabelText(s.network.portLabel), { target: { value: '1080' } });
+    fireEvent.click(addBtn());
+    expect(onAdd).toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByText('daemon refused the profile')).toBeTruthy());
+  });
+
+  it('keeps the typed note and submits it with the connection', () => {
+    const { onAdd } = renderRow();
+    fireEvent.change(kindSelect(), { target: { value: 'byo-socks' } });
+    fireEvent.change(nameInput(), { target: { value: 'Local' } });
+    fireEvent.change(screen.getByLabelText(s.network.noteLabel), { target: { value: 'lab box' } });
+    fireEvent.change(screen.getByLabelText(s.network.portLabel), { target: { value: '1080' } });
+    fireEvent.click(addBtn());
+    expect(onAdd).toHaveBeenCalledWith({ kind: 'byo-socks', label: 'Local', note: 'lab box', socksPort: 1080 });
   });
 });

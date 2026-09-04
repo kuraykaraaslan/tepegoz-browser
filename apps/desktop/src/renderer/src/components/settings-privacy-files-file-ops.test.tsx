@@ -90,6 +90,20 @@ describe('FileOperationsSection', () => {
     expect(lastGrants(setPref)[0]).toMatchObject({ path: '/home/docs', recursive: false });
   });
 
+  it('writes back a per-grant access-mode change', () => {
+    const { setPref } = renderSection({ fileAccessGrants: [grant('/home/docs')] });
+    fireEvent.change(screen.getByLabelText(`/home/docs — ${f.modeLabel}`), {
+      target: { value: 'read-write' },
+    });
+    expect(lastGrants(setPref)[0]).toMatchObject({ path: '/home/docs', mode: 'read-write' });
+  });
+
+  it('writes the master file-operations toggle', () => {
+    const { setPref } = renderSection({ fileOperationsEnabled: false, fileAccessGrants: [] });
+    fireEvent.click(screen.getByTestId('toggle-file-ops-enabled'));
+    expect(setPref).toHaveBeenCalledWith({ fileOperationsEnabled: true });
+  });
+
   it('removes a grant through the confirm dialog', () => {
     const { setPref } = renderSection({ fileAccessGrants: [grant('/home/docs')] });
     fireEvent.click(screen.getByRole('button', { name: f.remove }));

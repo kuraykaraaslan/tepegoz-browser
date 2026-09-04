@@ -112,4 +112,26 @@ describe('KeyModelMenu', () => {
     });
     expect(screen.queryByRole('menu')).toBeNull();
   });
+
+  it('closes on a mousedown outside the trigger and the portalled menu', () => {
+    renderMenu();
+    fireEvent.click(screen.getByRole('button', { name: s.keyModel.label }));
+    expect(screen.queryByRole('menu')).not.toBeNull();
+    act(() => {
+      document.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    });
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('stays open for a mousedown inside the menu, and re-places on scroll', () => {
+    renderMenu();
+    fireEvent.click(screen.getByRole('button', { name: s.keyModel.label }));
+    const menu = screen.getByRole('menu');
+    act(() => {
+      menu.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      window.dispatchEvent(new Event('scroll'));
+      window.dispatchEvent(new Event('resize'));
+    });
+    expect(screen.queryByRole('menu')).not.toBeNull();
+  });
 });
