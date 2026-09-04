@@ -119,4 +119,117 @@ describe('McpSupervisor', () => {
     expect(sup.status()).toHaveLength(0);
     expect(CapabilityRegistry.list().filter((d) => d.source === 'mcp')).toHaveLength(0);
   });
+
+  it('reconcile adds a newly-desired server without touching the existing one', async () => {
+    const sup = makeSupervisor();
+    sup.start([config('a')]);
+    await vi.advanceTimersByTimeAsync(0);
+
+    await sup.reconcile([config('a'), config('b')]);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(sup.status().map((s) => s.id).sort()).toEqual(['a', 'b']);
+    expect(sup.status().every((s) => s.state === 'ready')).toBe(true);
+  });
+
+  it('reconcile replaces a server whose config changed (remove + re-add)', async () => {
+    const sup = makeSupervisor();
+    sup.start([config('a')]);
+    await vi.advanceTimersByTimeAsync(0);
+    const before = clients.length;
+
+    await sup.reconcile([{ ...config('a'), command: 'a-different-binary' }]);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(sup.status()[0]?.state).toBe('ready');
+    expect(clients.length).toBeGreaterThan(before); // a fresh client for the replacement
+  });
+
+  it('feeds every state transition to deps.onStatus', async () => {
+    const seen: string[] = [];
+    const sup = new McpSupervisor({
+      clientFactory: () => {
+        const c = new FakeClient(`tool_${String(clients.length)}`);
+        clients.push(c);
+        return c;
+      },
+      transportFactory: () => stubTransport,
+      onStatus: (s) => seen.push(s.state),
+    });
+    clients = [];
+    sup.start([config('a')]);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(seen).toContain('connecting');
+    expect(seen).toContain('ready');
+  });
+
+  it('marks a server errored and schedules a reconnect when connect() itself rejects', async () => {
+    class DeadClient extends FakeClient {
+      override connect(): Promise<void> {
+        return Promise.reject(new Error('spawn ENOENT'));
+      }
+    }
+    const sup = new McpSupervisor({
+      clientFactory: () => {
+        const c = new DeadClient('t');
+        clients.push(c);
+        return c;
+      },
+      transportFactory: () => stubTransport,
+    });
+    clients = [];
+    sup.start([config('a')]);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(sup.status()[0]?.state).toBe('error');
+    expect(sup.status()[0]?.error).toContain('ENOENT');
+  });
+
+  it('disconnects a connection that finished handshaking AFTER its server was removed (race)', async () => {
+    let releaseConnect: () => void = () => undefined;
+    let disconnected = false;
+    class SlowClient extends FakeClient {
+      override connect(): Promise<void> {
+        return new Promise((r) => {
+          releaseConnect = r;
+        });
+      }
+      override close(): Promise<void> {
+        disconnected = true;
+        return Promise.resolve();
+      }
+    }
+    const sup = new McpSupervisor({
+      clientFactory: () => {
+        const c = new SlowClient('t');
+        clients.push(c);
+        return c;
+      },
+      transportFactory: () => stubTransport,
+    });
+    clients = [];
+    sup.start([config('a')]);
+    await vi.advanceTimersByTimeAsync(0); // connectEntry is now awaiting connect()
+
+    await sup.reconcile([]); // server removed → entry.removing = true, entry deleted
+    releaseConnect(); // the handshake completes late
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(sup.status()).toHaveLength(0);
+    expect(disconnected).toBe(true); // the orphaned connection was torn down, not left running
+  });
+
+  it('clears a pending reconnect timer when the server is removed before backoff elapses', async () => {
+    const sup = makeSupervisor();
+    sup.start([config('a')]);
+    await vi.advanceTimersByTimeAsync(0);
+    clients[0]?.onclose?.(); // drop → schedules a reconnect timer
+    await vi.advanceTimersByTimeAsync(0);
+    expect(sup.status()[0]?.state).toBe('error');
+
+    await sup.reconcile([]); // remove before the 60s backoff — must clearTimeout the pending reconnect
+    expect(sup.status()).toHaveLength(0);
+    const clientsAfter = clients.length;
+    await vi.advanceTimersByTimeAsync(120_000); // the cancelled timer must NOT fire
+    expect(clients.length).toBe(clientsAfter);
+  });
 });
