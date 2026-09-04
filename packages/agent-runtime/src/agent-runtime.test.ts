@@ -145,3 +145,84 @@ describe('runAgent guards (before any model/tool call)', () => {
     expect(TokenLedger.totals().totalTokens).toBe(0);
   });
 });
+
+describe('runAgent — plan phase, approval, and egress-during-planning', () => {
+  const validPlan = {
+    goal: 'read the page',
+    steps: [{ id: 's1', tool: 'browser_get_elements', args: {}, rationale: 'r', dependsOn: [] }],
+  };
+
+  beforeEach(async () => {
+    const { CapabilityRegistry } = await import('@tepegoz/capability-plane');
+    CapabilityRegistry.reset();
+    CapabilityRegistry.register({
+      descriptor: {
+        id: 'browser_get_elements',
+        description: 'read the page',
+        dangerClass: 'read',
+        source: 'builtin',
+        inputSchema: { type: 'object' },
+        requiresIdempotencyKey: false,
+      },
+      inputSchema: {
+        safeParse: (data: unknown) =>
+          typeof data === 'object' && data !== null
+            ? { success: true as const, data }
+            : { success: false as const, error: { issues: ['expected an object'] } },
+      },
+      handler: () => ({ content: 'els' }),
+    });
+  });
+
+  /** A provider whose complete() is scripted by `reply` (a fn of the call index). */
+  class ScriptedProvider implements ModelProvider {
+    readonly id = 'anthropic' as const;
+    private turn = 0;
+    constructor(private readonly reply: (turn: number) => CanonResponse | Error) {}
+    complete(): Promise<CanonResponse> {
+      const r = this.reply(this.turn++);
+      return r instanceof Error ? Promise.reject(r) : Promise.resolve(r);
+    }
+  }
+  const resp = (text: string): CanonResponse => ({
+    text,
+    stopReason: 'end',
+    usage: { inputTokens: 10, outputTokens: text.length },
+    toolCalls: [],
+  });
+  const inject = (p: ModelProvider): AgentRunDeps => ({
+    ...DEPS,
+    provider: { id: 'anthropic', instance: p },
+  });
+
+  it('reaches plan approval and stops "plan_rejected" when the user rejects the plan (also seeds the token ledger)', async () => {
+    const h = hooks(); // default requestPlanApproval → { approved: false }
+    const provider = new ScriptedProvider(() => resp(JSON.stringify(validPlan)));
+    const res = await runAgent('do it', h, {
+      ...inject(provider),
+      tokenBudget: { quota: 100_000, lifetimeUsed: 250 },
+      runTokenCeiling: 50_000,
+    });
+    expect(res.stoppedReason).toBe('plan_rejected');
+    expect(res.ok).toBe(false);
+    expect(h.onEvent).toHaveBeenCalledWith('plan', expect.stringContaining('1 step'), expect.any(String));
+  });
+
+  it('stops "aborted" when the signal is already tripped after the plan is ready', async () => {
+    const h: AgentRunHooks = { ...hooks(), signal: { aborted: true } };
+    const provider = new ScriptedProvider(() => resp(JSON.stringify(validPlan)));
+    const res = await runAgent('do it', h, inject(provider));
+    expect(res.stoppedReason).toBe('aborted');
+  });
+
+  it('stops "egress_blocked" when the Egress Firewall blocks the planning request', async () => {
+    const { AppError } = await import('@tepegoz/libs');
+    const h = hooks();
+    const provider = new ScriptedProvider(
+      () => new AppError('blocked: the outbound model request looked like a secret', 403),
+    );
+    const res = await runAgent('do it', h, inject(provider));
+    expect(res.stoppedReason).toBe('egress_blocked');
+    expect(h.onEvent).toHaveBeenCalledWith('error', expect.any(String));
+  });
+});
