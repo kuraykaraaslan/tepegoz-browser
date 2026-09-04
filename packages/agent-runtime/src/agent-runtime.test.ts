@@ -225,4 +225,107 @@ describe('runAgent — plan phase, approval, and egress-during-planning', () => 
     expect(res.stoppedReason).toBe('egress_blocked');
     expect(h.onEvent).toHaveBeenCalledWith('error', expect.any(String));
   });
+
+  it('stops "plan_empty" when the user approves but skips every step', async () => {
+    const h: AgentRunHooks = {
+      ...hooks(),
+      requestPlanApproval: () => Promise.resolve({ approved: true, skipStepIds: ['s1'] }),
+    };
+    const provider = new ScriptedProvider(() => resp(JSON.stringify(validPlan)));
+    const res = await runAgent('do it', h, inject(provider));
+    expect(res.stoppedReason).toBe('plan_empty');
+    expect(res.ok).toBe(false);
+  });
+
+  it('runs the full plan → approve → reactive loop → completed path and assembles the summary', async () => {
+    const h: AgentRunHooks = {
+      ...hooks(),
+      requestPlanApproval: () => Promise.resolve({ approved: true }),
+    };
+    const script = [
+      JSON.stringify(validPlan),
+      JSON.stringify({ action: 'act', tool: 'browser_get_elements', args: { url: 'https://x.test/a' }, rationale: 'r' }),
+      JSON.stringify({ action: 'act', tool: 'browser_get_elements', args: {}, rationale: 'r' }),
+      JSON.stringify({ action: 'finish', summary: 'read both' }),
+      JSON.stringify({ done: true, final_answer: 'the page said hello' }),
+    ];
+    const provider = new ScriptedProvider((t) => resp(script[t] ?? JSON.stringify({ action: 'finish', summary: 'fallback' })));
+
+    const res = await runAgent('do it', h, inject(provider));
+
+    expect(res.stoppedReason).toBe('completed');
+    expect(res.ok).toBe(true);
+    expect(res.summary).toBe('the page said hello');
+    expect(res.tokenUsage?.totalTokens).toBeGreaterThan(0);
+    expect(res.steps?.map((s) => s.tool)).toEqual(['browser_get_elements', 'browser_get_elements']);
+    // navTargetOf pulls the { url } arg through onto the first step, and leaves it off the second.
+    expect(res.steps?.[0]?.targetUrl).toBe('https://x.test/a');
+    expect(res.steps?.[1]?.targetUrl).toBeUndefined();
+    expect(h.onEvent).toHaveBeenCalledWith('done', expect.any(String), expect.stringContaining('tokens'));
+  });
+
+  it('takes the "fail" terminal phase and reports an error when the reactive loop errors out', async () => {
+    const h: AgentRunHooks = { ...hooks(), requestPlanApproval: () => Promise.resolve({ approved: true }) };
+    let turn = 0;
+    const provider = new ScriptedProvider(() =>
+      turn++ === 0 ? resp(JSON.stringify(validPlan)) : new Error('upstream socket reset'),
+    );
+    const res = await runAgent('do it', h, inject(provider));
+    expect(res.ok).toBe(false);
+    expect(res.stoppedReason).not.toBe('completed');
+    expect(h.onEvent).toHaveBeenCalledWith('error', expect.any(String), expect.stringContaining('tokens'));
+  });
+
+  it('surfaces an Egress WARNING to the Console when the prompt carries PII (email), then still sends', async () => {
+    const h = hooks(); // default plan approval → { approved: false }
+    const provider = new ScriptedProvider(() => resp(JSON.stringify(validPlan)));
+    const res = await runAgent('mail the report to alice@example.com when done', h, inject(provider));
+    expect(res.stoppedReason).toBe('plan_rejected'); // the warn is advisory — the request went out
+    expect(h.onEvent).toHaveBeenCalledWith(
+      'decision',
+      expect.stringContaining('Egress warning'),
+      expect.stringContaining('pii_email'),
+    );
+  });
+
+  it('routes a block-severity egress finding (secret-shaped token) to HITL and sends when approved', async () => {
+    const approve = vi.fn(() => Promise.resolve(true));
+    const h: AgentRunHooks = { ...hooks(), requestApproval: approve };
+    const provider = new ScriptedProvider(() => resp(JSON.stringify(validPlan)));
+    const res = await runAgent(
+      'use the key sk-ant-abcdefghijklmnopqrstuvwx to authenticate',
+      h,
+      inject(provider),
+    );
+    expect(approve).toHaveBeenCalledWith(expect.objectContaining({ toolName: 'model_send' }));
+    expect(res.stoppedReason).toBe('plan_rejected'); // approved → sent → plan came back → user rejected
+  });
+
+  it('takes the "cancel" terminal phase when the run-control gate aborts mid-loop', async () => {
+    const state = { aborted: false };
+    const control = {
+      get aborted() {
+        return state.aborted;
+      },
+      isHeld: () => false,
+      waitWhileHeld: () => {
+        state.aborted = true; // trip on the first per-step gate check
+        return Promise.resolve();
+      },
+      drainSteer: (): readonly string[] => [],
+      modelSignal: () => new AbortController().signal,
+      enterOfflineHold: () => undefined,
+      enterHandoffHold: () => undefined,
+    };
+    const h: AgentRunHooks = {
+      ...hooks(),
+      requestPlanApproval: () => Promise.resolve({ approved: true }),
+      control,
+    };
+    const provider = new ScriptedProvider((t) =>
+      resp(t === 0 ? JSON.stringify(validPlan) : JSON.stringify({ action: 'finish', summary: 'x' })),
+    );
+    const res = await runAgent('do it', h, inject(provider));
+    expect(res.stoppedReason).toBe('aborted');
+  });
 });
