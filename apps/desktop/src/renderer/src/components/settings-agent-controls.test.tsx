@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { I18nProvider } from '@tepegoz/i18n/react';
 import { DEFAULT_PREFERENCES } from '@tepegoz/preferences';
 import { SELECTABLE_AGENT_AUTONOMY_LEVELS } from '@tepegoz/shared-types';
+import { AGENT_EFFORT_LEVELS } from '@tepegoz/desktop-ipc';
 import type { Preferences } from '@tepegoz/desktop-ipc';
 import { AgentControlsSection } from './settings-agent-controls';
 
@@ -26,6 +27,8 @@ function renderSection(over: Partial<Preferences> = {}) {
 
 const autonomyRadios = () =>
   screen.getAllByRole<HTMLInputElement>('radio').filter((r) => r.getAttribute('name') === 'agent-autonomy');
+const effortRadios = () =>
+  screen.getAllByRole<HTMLInputElement>('radio').filter((r) => r.getAttribute('name') === 'agent-effort');
 
 afterEach(cleanup);
 
@@ -46,6 +49,14 @@ describe('AgentControlsSection', () => {
     renderSection({ agentAutonomy: 'dangerous' as Preferences['agentAutonomy'] });
     const [ask] = autonomyRadios();
     expect(ask!.checked).toBe(true);
+  });
+
+  it('offers every effort level and writes the chosen one', () => {
+    const { setPref } = renderSection({ agentEffort: AGENT_EFFORT_LEVELS[0] });
+    const radios = effortRadios();
+    expect(radios).toHaveLength(AGENT_EFFORT_LEVELS.length);
+    fireEvent.click(radios[radios.length - 1]!);
+    expect(setPref).toHaveBeenCalledWith({ agentEffort: AGENT_EFFORT_LEVELS[AGENT_EFFORT_LEVELS.length - 1] });
   });
 
   it('writes the strict-guard toggle', () => {
