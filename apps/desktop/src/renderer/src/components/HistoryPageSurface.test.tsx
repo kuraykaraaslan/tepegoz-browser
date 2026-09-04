@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { DEFAULT_PREFERENCES } from '@tepegoz/preferences';
 import { stubJsdomLayout } from '../test-support/jsdom-layout';
 import { HistoryPageSurface } from './HistoryPageSurface';
@@ -45,5 +45,16 @@ describe('HistoryPageSurface', () => {
     await waitFor(() => expect(bridge.getHistory).toHaveBeenCalled());
     expect(bridge.getHistory).toHaveBeenCalledWith({ offset: 0 });
     expect(bridge.searchHistory).not.toHaveBeenCalled();
+  });
+
+  it('routes a non-empty query to searchHistory, not getHistory', async () => {
+    render(<HistoryPageSurface />);
+    await waitFor(() => expect(bridge.getHistory).toHaveBeenCalled());
+
+    fireEvent.change(screen.getByLabelText('Search history'), { target: { value: 'weather' } });
+
+    await waitFor(() =>
+      expect(bridge.searchHistory).toHaveBeenCalledWith({ query: 'weather', offset: 0 }),
+    );
   });
 });
