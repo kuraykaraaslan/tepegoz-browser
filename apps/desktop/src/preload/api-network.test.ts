@@ -42,6 +42,17 @@ describe('scope bindings wrap their ids into a named payload', () => {
 });
 
 describe('connection + binary management', () => {
+  it('addNetworkConnection passes the input through bare', () => {
+    const input = { kind: 'tor' } as never;
+    void networkApi.addNetworkConnection(input);
+    expect(invoke).toHaveBeenCalledWith(IpcChannels.networkAddConnection, input);
+  });
+
+  it('pickWireguardProfile invokes its channel with no payload', () => {
+    void networkApi.pickWireguardProfile();
+    expect(invoke).toHaveBeenCalledWith(IpcChannels.networkPickWireguard);
+  });
+
   it('removeNetworkConnection sends the bare id', () => {
     void networkApi.removeNetworkConnection('c1');
     expect(invoke).toHaveBeenCalledWith(IpcChannels.networkRemoveConnection, 'c1');
