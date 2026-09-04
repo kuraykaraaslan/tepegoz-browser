@@ -236,6 +236,15 @@ describe('wireView', () => {
       expect(run({ url: 'file:///etc/passwd' })).toEqual({ action: 'deny' });
       expect(h.createTab).not.toHaveBeenCalled();
     });
+
+    it('for a disposition that is neither fore- nor background, backgrounds unless the opener is active', () => {
+      const { h, run } = openHandler(); // host.store.activeId is 'other-tab', opener id is 't1'
+      run({ url: 'https://z.test/', disposition: 'new-window' });
+      expect(h.createTab).toHaveBeenLastCalledWith(
+        'https://z.test/',
+        expect.objectContaining({ background: true }), // 't1' !== 'other-tab'
+      );
+    });
   });
 
   describe('navigation guards', () => {
@@ -472,6 +481,16 @@ describe('wirePopupWindow', () => {
         'will-redirect',
       ]),
     );
+  });
+
+  it('records a gesture on an activating input-event', () => {
+    const wc = fakeWc();
+    wirePopupWindow(wc as never);
+    const onInput = handlerFor(wc, 'input-event')!;
+    onInput({}, { type: 'mouseMove' });
+    expect(shared.lastGestureAt.has(wc)).toBe(false);
+    onInput({}, { type: 'mouseDown' });
+    expect(shared.lastGestureAt.has(wc)).toBe(true);
   });
 
   it('its open handler denies a blocked popup but keeps a web / native one as a native window', () => {
