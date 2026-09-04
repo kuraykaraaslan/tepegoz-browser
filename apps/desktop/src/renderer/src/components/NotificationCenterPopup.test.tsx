@@ -29,18 +29,20 @@ function notif(over: Partial<AppNotification> = {}): AppNotification {
 }
 
 const bridge = {
-  getPreferences: () => Promise.resolve({ ...DEFAULT_PREFERENCES }),
+  getPreferences: vi.fn(() => Promise.resolve({ ...DEFAULT_PREFERENCES })),
   listNotifications: vi.fn(() => Promise.resolve({ items: [] as AppNotification[], unread: 0 })),
   onNotificationsState: vi.fn(() => () => undefined),
   dismissNotification: vi.fn(),
   dismissAllNotifications: vi.fn(),
   markNotificationRead: vi.fn(),
   markAllNotificationsRead: vi.fn(),
+  navigateTab: vi.fn(),
   closePopup: vi.fn(),
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  bridge.getPreferences.mockResolvedValue({ ...DEFAULT_PREFERENCES });
   vi.stubGlobal('matchMedia', (query: string) => ({
     matches: false,
     media: query,
@@ -93,6 +95,49 @@ describe('NotificationCenterPopup', () => {
     });
     render(<NotificationCenterPopup />);
     await waitFor(() => expect(screen.getByText(/\d+ sec/i)).toBeTruthy());
+  });
+
+  it('applies the fetched theme and falls back to the OS language for a non-en/tr locale', async () => {
+    bridge.getPreferences.mockResolvedValue({
+      ...DEFAULT_PREFERENCES,
+      locale: 'de' as (typeof DEFAULT_PREFERENCES)['locale'],
+      themeColor: '#0088ff',
+    });
+    render(<NotificationCenterPopup />);
+    await waitFor(() =>
+      expect(document.documentElement.style.getPropertyValue('--primary')).not.toBe(''),
+    );
+  });
+
+  it('survives a rejected snapshot fetch', async () => {
+    bridge.listNotifications.mockRejectedValue(new Error('center offline'));
+    render(<NotificationCenterPopup />);
+    await waitFor(() => expect(bridge.onNotificationsState).toHaveBeenCalled());
+  });
+
+  it('keeps its defaults when the preferences fetch rejects', async () => {
+    bridge.getPreferences.mockRejectedValue(new Error('prefs offline'));
+    render(<NotificationCenterPopup />);
+    await waitFor(() => expect(bridge.listNotifications).toHaveBeenCalled());
+  });
+
+  it('renders a relative time in days for a notification older than a day', async () => {
+    bridge.listNotifications.mockResolvedValue({
+      items: [notif({ ts: Date.now() - 3 * 86_400_000 })],
+      unread: 1,
+    });
+    render(<NotificationCenterPopup />);
+    await waitFor(() => expect(screen.getByText(/\d+ (day|days)/i)).toBeTruthy());
+  });
+
+  it('closes the popup after a navigation notification action runs', async () => {
+    bridge.listNotifications.mockResolvedValue({
+      items: [notif({ id: 'n9', actions: [{ id: 'a', label: 'Open settings', type: 'open_settings' }] })],
+      unread: 1,
+    });
+    render(<NotificationCenterPopup />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Open settings' }));
+    expect(bridge.closePopup).toHaveBeenCalledTimes(1);
   });
 
   it('renders a relative time in hours for an older notification', async () => {

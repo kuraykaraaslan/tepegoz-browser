@@ -31,6 +31,7 @@ stubJsdomLayout();
 const NOW = Date.UTC(2026, 7, 22, 12, 0, 0);
 
 interface Bridge {
+  prefsOk: boolean;
   downloads: { ok: boolean; items: DownloadRecord[] };
   uploads: { ok: boolean; items: UploadRecord[] };
   pushDownloads: ((state: { items: DownloadRecord[] }) => void) | null;
@@ -85,7 +86,10 @@ function stubBridge(): void {
         bridge.closed += 1;
       },
       navigateTab: (url: string) => bridge.navigated.push(url),
-      getPreferences: () => Promise.resolve({ theme: 'dark', themeColor: '', locale: 'en' }),
+      getPreferences: () =>
+        bridge.prefsOk
+          ? Promise.resolve({ theme: 'dark', themeColor: '', locale: 'en' })
+          : Promise.reject(new Error('bridge unavailable')),
       listDownloads: () =>
         bridge.downloads.ok
           ? Promise.resolve(bridge.downloads.items)
@@ -122,6 +126,7 @@ function rowTitles(): string[] {
 beforeEach(() => {
   vi.useFakeTimers({ now: NOW, toFake: ['Date'] });
   bridge = {
+    prefsOk: true,
     downloads: { ok: true, items: [] },
     uploads: { ok: true, items: [] },
     pushDownloads: null,
@@ -327,6 +332,43 @@ describe('when the bridge is not there', () => {
     await waitFor(() => {
       expect(screen.getByText('No downloads or uploads yet')).toBeTruthy();
     });
+  });
+
+  it('still renders its list when the preferences fetch rejects', async () => {
+    bridge.prefsOk = false;
+    bridge.downloads.items = [download({ filename: 'anyway.pdf' })];
+
+    render(<TransferActivityPopup />);
+
+    await waitFor(() => {
+      expect(rowTitles()).toEqual(['anyway.pdf']);
+    });
+  });
+});
+
+describe('size and time formatting across every unit', () => {
+  it('reports a multi-gigabyte transfer in GB', async () => {
+    bridge.downloads.items = [
+      download({ status: 'in_progress', receivedBytes: 1024, totalBytes: 3 * 1024 * 1024 * 1024 }),
+    ];
+
+    render(<TransferActivityPopup />);
+
+    await waitFor(() => expect(screen.getByText(/3\.0 GB/)).toBeTruthy());
+  });
+
+  it('prints an hours-old transfer in hours and a days-old one in days', async () => {
+    bridge.downloads.items = [
+      download({ id: 'd-hr', filename: 'hours.pdf', updatedAt: NOW - 3 * 3_600_000 }),
+      download({ id: 'd-day', filename: 'days.pdf', updatedAt: NOW - 4 * 86_400_000 }),
+    ];
+
+    render(<TransferActivityPopup />);
+
+    await waitFor(() => expect(rowTitles()).toEqual(['hours.pdf', 'days.pdf']));
+    // both relative-time branches (hour, day) are exercised by rendering these two rows
+    expect(screen.getByText(/3 hr/)).toBeTruthy();
+    expect(screen.getByText(/4 days? ago/)).toBeTruthy();
   });
 });
 
