@@ -1,0 +1,38 @@
+{
+  "lang": "en",
+  "voiceId": "onwK4e9ZLuTAKqWW03F9",
+  "modelId": "eleven_multilingual_v2",
+  "_note": "Every line must be checkable against the frames it plays over. `at` is seconds into agent-run.webm; the events it refers to are in agent-run.trace.json, offset by that file's `recordingStartsAtMs`. Re-time with `node scripts/narrate.mjs scripts/narration/agent-run.en.json --check --video <file>` after any re-record — a line that has drifted off its event is a claim about something the viewer cannot see. This set is written for the 58-second capture; the earlier 152-second one needed ten lines and is retained only as the long-form replay on /how-it-works.",
+  "lines": [
+    {
+      "at": 1.2,
+      "text": "One take of a real run, on live websites. Nothing here is staged.",
+      "_anchor": "opening frames, browser on duckduckgo.com"
+    },
+    {
+      "at": 6.5,
+      "text": "The task goes into the Agent Console, in plain language.",
+      "_anchor": "task typed into the console composer, before Send"
+    },
+    {
+      "at": 19.3,
+      "text": "The plan comes first: every tool it means to call, and the reason for it. Uncheck a step and it never runs.",
+      "_anchor": "v18.4s plan ready — Review the plan, 7 steps with rationales"
+    },
+    {
+      "at": 28.0,
+      "text": "It searches, finds the thread, and stops before opening it.",
+      "_anchor": "v26.4s web_search_items, then the gate at v37.1s"
+    },
+    {
+      "at": 38.3,
+      "text": "That address came from text the agent read, not from the person who asked. The kernel calls that a tainted side effect, and will not act on it quietly.",
+      "_anchor": "v37.1s awaiting_approval on browser_update_location, riskTier ui-write, reason tainted_side_effect"
+    },
+    {
+      "at": 48.9,
+      "text": "Approved, it opens the page, checks what actually loaded, and answers. Your key, your machine, your rules.",
+      "_anchor": "v50.4s browser_validate_page, v56.3s done with the thread title"
+    }
+  ]
+}
