@@ -19,7 +19,7 @@
   "dependencies": {
     "@tepegoz/i18n": "workspace:*",
     "@tepegoz/persistence": "workspace:*",
-    "zod": "3.25.76"
+    "zod": "4.5.4"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

@@ -27,14 +27,14 @@
     "@tepegoz/i18n": "workspace:*",
     "@tepegoz/shared-types": "workspace:*",
     "@tepegoz/ui": "workspace:*",
-    "zod": "3.25.76"
+    "zod": "4.5.4"
   },
   "peerDependencies": {
     "react": "^18 || ^19"
   },
   "devDependencies": {
     "@tepegoz/i18n": "workspace:*",
-    "@types/react": "^18.3.18",
+    "@types/react": "^19.2.18",
     "typescript": "^5.7.2",
     "vitest": "^3.2.6"
   }
