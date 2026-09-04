@@ -178,4 +178,103 @@ describe('useAppEffects', () => {
     key({ key: ',', ctrlKey: true });
     expect(bridge.navigateTab).toHaveBeenCalled();
   });
+
+  it('follows OS colour-scheme changes only in plain system mode, and unsubscribes on unmount', async () => {
+    let onMqChange: (() => void) | undefined;
+    const mql = {
+      matches: false,
+      addEventListener: vi.fn((_: string, cb: () => void) => {
+        onMqChange = cb;
+      }),
+      removeEventListener: vi.fn(),
+    };
+    vi.stubGlobal('matchMedia', vi.fn(() => mql));
+
+    const p = params({
+      prefs: { theme: 'system', themeColor: '', glassChrome: false } as AppEffectsParams['prefs'],
+    });
+    const { unmount } = renderHook(() => useAppEffects(p));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    applyTheme.mockClear();
+
+    onMqChange?.(); // the OS flipped light↔dark
+    expect(applyTheme).toHaveBeenCalledWith('system', '');
+
+    unmount();
+    expect(mql.removeEventListener).toHaveBeenCalled();
+    vi.unstubAllGlobals();
+    vi.stubGlobal('ResizeObserver', RO); // restore for the other suites' shared stub
+  });
+
+  it('does NOT follow OS changes when a custom theme colour overrides system', async () => {
+    const mql = { matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() };
+    vi.stubGlobal('matchMedia', vi.fn(() => mql));
+    const p = params({
+      prefs: { theme: 'system', themeColor: '#0af', glassChrome: false } as AppEffectsParams['prefs'],
+    });
+    renderHook(() => useAppEffects(p));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(mql.addEventListener).not.toHaveBeenCalled(); // the effect returned early
+    vi.unstubAllGlobals();
+    vi.stubGlobal('ResizeObserver', RO);
+  });
+
+  it('reports the content area rect (rounded) to main and re-reports on window resize', () => {
+    const el = {
+      getBoundingClientRect: () => ({ left: 10.4, top: 48.6, width: 800.5, height: 600.2 }),
+    } as unknown as HTMLDivElement;
+    const p = params({ contentRef: { current: el } });
+    renderHook(() => useAppEffects(p));
+
+    expect(bridge.setContentBounds).toHaveBeenCalledWith({ x: 10, y: 49, width: 801, height: 600 });
+
+    bridge.setContentBounds.mockClear();
+    window.dispatchEvent(new Event('resize'));
+    expect(bridge.setContentBounds).toHaveBeenCalledTimes(1);
+  });
+
+  it('snapshots the active tab while the omnibox dropdown is open, then restores when it closes', async () => {
+    bridge.captureActiveTab.mockResolvedValueOnce('data:image/png;base64,AAAA' as unknown as null);
+    const p = params({ omniboxDropdownOpen: true });
+    renderHook(() => useAppEffects(p));
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(p.setOmniboxSnapshot).toHaveBeenCalledWith('data:image/png;base64,AAAA');
+    expect(p.setOmniboxViewHidden).toHaveBeenCalledWith(true);
+
+    // Closed → the effect resets both.
+    const p2 = params({ omniboxDropdownOpen: false });
+    renderHook(() => useAppEffects(p2));
+    expect(p2.setOmniboxViewHidden).toHaveBeenCalledWith(false);
+    expect(p2.setOmniboxSnapshot).toHaveBeenCalledWith(null);
+  });
+
+  it('relays an autofill-available push into state', async () => {
+    const p = params();
+    renderHook(() => useAppEffects(p));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    const push = subs.autofill as unknown as (x: { credentials: unknown[] }) => void;
+    push({ credentials: [] });
+    expect(p.setAutofill).toHaveBeenCalledWith({ credentials: [] });
+  });
+
+  it('still hides the live view when the omnibox snapshot capture fails', async () => {
+    bridge.captureActiveTab.mockRejectedValueOnce(new Error('no view'));
+    const p = params({ omniboxDropdownOpen: true });
+    renderHook(() => useAppEffects(p));
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(p.setOmniboxViewHidden).toHaveBeenCalledWith(true);
+    expect(p.setOmniboxSnapshot).not.toHaveBeenCalled();
+  });
 });
