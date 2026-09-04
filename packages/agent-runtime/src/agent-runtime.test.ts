@@ -152,7 +152,15 @@ describe('runAgent — plan phase, approval, and egress-during-planning', () => 
     steps: [{ id: 's1', tool: 'browser_get_elements', args: {}, rationale: 'r', dependsOn: [] }],
   };
 
+  let readResult: unknown = { content: 'els' };
+  const objSchema = {
+    safeParse: (data: unknown) =>
+      typeof data === 'object' && data !== null
+        ? { success: true as const, data }
+        : { success: false as const, error: { issues: ['expected an object'] } },
+  };
   beforeEach(async () => {
+    readResult = { content: 'els' };
     const { CapabilityRegistry } = await import('@tepegoz/capability-plane');
     CapabilityRegistry.reset();
     CapabilityRegistry.register({
@@ -164,13 +172,8 @@ describe('runAgent — plan phase, approval, and egress-during-planning', () => 
         inputSchema: { type: 'object' },
         requiresIdempotencyKey: false,
       },
-      inputSchema: {
-        safeParse: (data: unknown) =>
-          typeof data === 'object' && data !== null
-            ? { success: true as const, data }
-            : { success: false as const, error: { issues: ['expected an object'] } },
-      },
-      handler: () => ({ content: 'els' }),
+      inputSchema: objSchema,
+      handler: () => readResult,
     });
   });
 
@@ -299,6 +302,143 @@ describe('runAgent — plan phase, approval, and egress-during-planning', () => 
     );
     expect(approve).toHaveBeenCalledWith(expect.objectContaining({ toolName: 'model_send' }));
     expect(res.stoppedReason).toBe('plan_rejected'); // approved → sent → plan came back → user rejected
+  });
+
+  it('hands off (terminal) when a perceived page is a CAPTCHA wall', async () => {
+    readResult = { content: 'Please verify you are human to continue', url: 'https://x.test/gate' };
+    const h: AgentRunHooks = { ...hooks(), requestPlanApproval: () => Promise.resolve({ approved: true }) };
+    const provider = new ScriptedProvider((t) =>
+      resp(
+        t === 0
+          ? JSON.stringify(validPlan)
+          : JSON.stringify({ action: 'act', tool: 'browser_get_elements', args: {}, rationale: 'r' }),
+      ),
+    );
+    const res = await runAgent('do it', h, inject(provider));
+    expect(res.stoppedReason).toBe('handoff');
+    expect(h.onEvent).toHaveBeenCalledWith('handoff', 'captcha');
+  });
+
+  it('pauses (not terminal) on a LOGIN wall when a run-control gate is present', async () => {
+    readResult = { content: 'Please sign in to continue to your account', url: 'https://x.test/login' };
+    const state = { aborted: false, gateCalls: 0 };
+    const control = {
+      get aborted() {
+        return state.aborted;
+      },
+      isHeld: () => false,
+      waitWhileHeld: () => {
+        // Let the first step run (so the login guard fires); abort at the NEXT gate so the test ends.
+        if (++state.gateCalls >= 2) state.aborted = true;
+        return Promise.resolve();
+      },
+      drainSteer: (): readonly string[] => [],
+      modelSignal: () => new AbortController().signal,
+      enterOfflineHold: () => undefined,
+      enterHandoffHold: vi.fn(),
+    };
+    const h: AgentRunHooks = {
+      ...hooks(),
+      requestPlanApproval: () => Promise.resolve({ approved: true }),
+      control,
+    };
+    const provider = new ScriptedProvider((t) =>
+      resp(
+        t === 0
+          ? JSON.stringify(validPlan)
+          : JSON.stringify({ action: 'act', tool: 'browser_get_elements', args: {}, rationale: 'r' }),
+      ),
+    );
+    const res = await runAgent('do it', h, inject(provider));
+    expect(control.enterHandoffHold).toHaveBeenCalled();
+    expect(h.onEvent).toHaveBeenCalledWith('handoff', 'login');
+    expect(h.onEvent).toHaveBeenCalledWith('paused', 'paused');
+    expect(res.stoppedReason).toBe('aborted'); // the fake control released by aborting
+  });
+
+  it('builds the invoke-context (idempotency key + egress-blocked flag) and flags an off-origin escape', async () => {
+    const { CapabilityRegistry, ToolGateway } = await import('@tepegoz/capability-plane');
+    CapabilityRegistry.register({
+      descriptor: {
+        id: 'browser_update_location',
+        description: 'navigate',
+        dangerClass: 'state_changing',
+        source: 'builtin',
+        inputSchema: { type: 'object' },
+        requiresIdempotencyKey: true,
+      },
+      inputSchema: objSchema,
+      handler: () => ({ url: 'https://evil.test/' }),
+    });
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    const planNav = {
+      goal: 'go elsewhere',
+      steps: [{ id: 's1', tool: 'browser_update_location', args: {}, rationale: 'r', dependsOn: [] }],
+    };
+    const h: AgentRunHooks = { ...hooks(), requestPlanApproval: () => Promise.resolve({ approved: true }) };
+    const deps: AgentRunDeps = {
+      ...DEPS,
+      activeTabUrl: () => 'https://origin.test/here',
+      tabUrl: () => 'https://origin.test/here',
+      tabEgressBlocked: () => true,
+      provider: {
+        id: 'anthropic',
+        instance: new ScriptedProvider((t) =>
+          resp(
+            t === 0
+              ? JSON.stringify(planNav)
+              : t === 1
+                ? JSON.stringify({
+                    action: 'act',
+                    tool: 'browser_update_location',
+                    args: { url: 'https://evil.test/', tabId: 't1' },
+                    rationale: 'r',
+                  })
+                : JSON.stringify({ action: 'finish', summary: 'left the site' }),
+          ),
+        ),
+      },
+    };
+    const res = await runAgent('do it', h, deps);
+    // The step ran (ctxFor built the idempotency key + egress flag, isEscapeTool judged the target).
+    expect(res.steps?.some((s) => s.tool === 'browser_update_location')).toBe(true);
+  });
+
+  it('emits step_error when a tool call fails inside the reactive loop', async () => {
+    const { CapabilityRegistry } = await import('@tepegoz/capability-plane');
+    CapabilityRegistry.register({
+      descriptor: {
+        id: 'browser_update_page',
+        description: 'act',
+        dangerClass: 'state_changing',
+        source: 'builtin',
+        inputSchema: { type: 'object' },
+        requiresIdempotencyKey: false,
+      },
+      inputSchema: objSchema,
+      handler: () => {
+        throw new Error('the click missed');
+      },
+    });
+    const { ToolGateway } = await import('@tepegoz/capability-plane');
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    const planWithAct = {
+      goal: 'act on the page',
+      steps: [{ id: 's1', tool: 'browser_update_page', args: {}, rationale: 'r', dependsOn: [] }],
+    };
+    const h: AgentRunHooks = { ...hooks(), requestPlanApproval: () => Promise.resolve({ approved: true }) };
+    const provider = new ScriptedProvider((t) =>
+      resp(
+        t === 0
+          ? JSON.stringify(planWithAct)
+          : t === 1
+            ? JSON.stringify({ action: 'act', tool: 'browser_update_page', args: {}, rationale: 'r' })
+            : JSON.stringify({ action: 'finish', summary: 'gave up' }),
+      ),
+    );
+    const res = await runAgent('do it', h, inject(provider));
+    expect(h.onEvent).toHaveBeenCalledWith('step_error', expect.stringContaining('browser_update_page'), expect.any(String));
+    expect(res.stoppedReason).not.toBe('completed');
   });
 
   it('takes the "cancel" terminal phase when the run-control gate aborts mid-loop', async () => {
