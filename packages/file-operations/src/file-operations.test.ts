@@ -142,4 +142,106 @@ describe('registerFileOperations', () => {
     expect(grant.mode).toBe('read');
     expect(policy.isWithinAnyGrant(path.join(newDir, 'f.txt'))).toBe(true);
   });
+
+  it('file_list_items returns the directory entries', async () => {
+    const res = (await invoke('file_list_items', { path: ROOT })) as {
+      path: string;
+      entries: unknown[];
+    };
+    expect(res.path).toBe(ROOT);
+    expect(res.entries).toEqual([{ name: 'a.txt', kind: 'file' }]);
+  });
+
+  it('file_get_metadata reports exists:false for a missing path, and the stat otherwise', async () => {
+    const missing = (await invoke('file_get_metadata', {
+      path: path.join(ROOT, 'nope.txt'),
+    })) as { exists: boolean };
+    expect(missing.exists).toBe(false);
+
+    const file = path.join(ROOT, 'meta.txt');
+    await invoke('file_create_file', { path: file, content: 'abc' });
+    const meta = (await invoke('file_get_metadata', { path: file })) as {
+      exists: boolean;
+      kind: string;
+    };
+    expect(meta).toMatchObject({ exists: true, kind: 'file' });
+  });
+
+  it('file_search_items returns only matches that are still within a grant', async () => {
+    const res = (await invoke('file_search_items', { path: ROOT, pattern: '*.txt' })) as {
+      matches: string[];
+    };
+    expect(res.matches).toEqual([path.join(ROOT, 'a.txt')]);
+  });
+
+  it('file_update_file appends, and 404s a write to a file that does not exist', async () => {
+    const file = path.join(ROOT, 'log.txt');
+    await invoke('file_create_file', { path: file, content: 'a' });
+    await invoke('file_update_file', { path: file, content: 'b', mode: 'append' });
+    expect(((await invoke('file_get_content', { path: file })) as { content: string }).content).toBe(
+      'ab',
+    );
+    // Default mode overwrites.
+    await invoke('file_update_file', { path: file, content: 'fresh' });
+    expect(((await invoke('file_get_content', { path: file })) as { content: string }).content).toBe(
+      'fresh',
+    );
+
+    await expect(
+      invoke('file_update_file', { path: path.join(ROOT, 'ghost.txt'), content: 'x' }),
+    ).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it('file_create_directory makes a directory inside a grant', async () => {
+    const dir = path.join(ROOT, 'sub');
+    const res = (await invoke('file_create_directory', { path: dir })) as { path: string };
+    expect(res.path).toBe(dir);
+    const listed = (await invoke('file_get_metadata', { path: dir })) as { exists: boolean };
+    expect(listed.exists).toBe(true);
+  });
+
+  it('file_create_copy and file_update_location move bytes between two granted paths', async () => {
+    const from = path.join(ROOT, 'src.txt');
+    await invoke('file_create_file', { path: from, content: 'payload' });
+
+    const copied = (await invoke('file_create_copy', {
+      from,
+      to: path.join(ROOT, 'copy.txt'),
+    })) as { from: string; to: string };
+    expect(copied.to).toBe(path.join(ROOT, 'copy.txt'));
+    expect(((await invoke('file_get_content', { path: copied.to })) as { content: string }).content).toBe(
+      'payload',
+    );
+
+    const moved = (await invoke('file_update_location', {
+      from,
+      to: path.join(ROOT, 'moved.txt'),
+    })) as { to: string };
+    expect(((await invoke('file_get_content', { path: moved.to })) as { content: string }).content).toBe(
+      'payload',
+    );
+    const gone = (await invoke('file_get_metadata', { path: from })) as { exists: boolean };
+    expect(gone.exists).toBe(false);
+  });
+
+  it('file_delete_entry removes an entry', async () => {
+    const file = path.join(ROOT, 'trash.txt');
+    await invoke('file_create_file', { path: file, content: 'x' });
+    await invoke('file_delete_entry', { path: file });
+    const gone = (await invoke('file_get_metadata', { path: file })) as { exists: boolean };
+    expect(gone.exists).toBe(false);
+  });
+
+  it('fileaccess_update_grant patches an existing grant, fileaccess_delete_grant removes it', async () => {
+    const dir = path.resolve('grantable');
+    await invoke('fileaccess_create_grant', { path: dir, mode: 'read' });
+
+    await invoke('fileaccess_update_grant', { path: dir, mode: 'full', recursive: true });
+    const grants = CapabilityRegistry.get('fileaccess_list_grants');
+    const list = (await grants!.handler({})) as FileAccessGrant[];
+    expect(list.find((g) => g.path === dir)).toMatchObject({ mode: 'full', recursive: true });
+
+    await invoke('fileaccess_delete_grant', { path: dir });
+    expect(policy.isWithinAnyGrant(path.join(dir, 'x'))).toBe(false);
+  });
 });
