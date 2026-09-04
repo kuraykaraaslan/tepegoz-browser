@@ -82,6 +82,125 @@ const SENDS: Row[] = [
     IpcChannels.submenuOpen,
     { kind: 'main', anchor: { x: 1, y: 2, width: 3, height: 4 }, height: 200 },
   ],
+  ['tabGoForward', () => api.tabGoForward(), IpcChannels.tabsGoForward],
+  ['tabHome', () => api.tabHome(), IpcChannels.tabsHome],
+  ['showHiddenTabsMenu', () => api.showHiddenTabsMenu(), IpcChannels.tabsHiddenMenu],
+  ['closePopup', () => api.closePopup(), IpcChannels.popupClose],
+  ['closeSubmenu', () => api.closeSubmenu(), IpcChannels.submenuClose],
+  [
+    'createTabInBackground',
+    () => api.createTabInBackground('https://bg.test/'),
+    IpcChannels.tabsCreateBackground,
+    'https://bg.test/',
+  ],
+  ['showTabContextMenu', () => api.showTabContextMenu('t1'), IpcChannels.tabsContextMenu, 't1'],
+  [
+    'showNavHistoryMenu',
+    () => api.showNavHistoryMenu('back'),
+    IpcChannels.tabsHistoryMenu,
+    'back',
+  ],
+  [
+    'removeTabFromGroup',
+    () => api.removeTabFromGroup('t1'),
+    IpcChannels.tabsGroupRemove,
+    't1',
+  ],
+  [
+    'showTabGroupContextMenu',
+    () => api.showTabGroupContextMenu('g1'),
+    IpcChannels.tabsGroupContextMenu,
+    'g1',
+  ],
+  [
+    'createTabGroup',
+    () => api.createTabGroup(['t1', 't2']),
+    IpcChannels.tabsGroupCreate,
+    { memberIds: ['t1', 't2'] },
+  ],
+  [
+    'moveTabGroup',
+    () => api.moveTabGroup('g1', 2),
+    IpcChannels.tabsGroupMove,
+    { groupId: 'g1', toIndex: 2 },
+  ],
+  [
+    'setContentBounds',
+    () => api.setContentBounds({ x: 0, y: 0, width: 10, height: 20 }),
+    IpcChannels.tabsSetBounds,
+    { x: 0, y: 0, width: 10, height: 20 },
+  ],
+  [
+    'setContentVisible',
+    () => api.setContentVisible(true),
+    IpcChannels.tabsSetContentVisible,
+    true,
+  ],
+  [
+    'findInPage',
+    () => api.findInPage({ text: 'q', forward: true } as never),
+    IpcChannels.findStart,
+    { text: 'q', forward: true },
+  ],
+  [
+    'beginTabDrag',
+    () => api.beginTabDrag({ tabId: 't1' } as never),
+    IpcChannels.tabsDragBegin,
+    { tabId: 't1' },
+  ],
+  [
+    'moveTabDrag',
+    () => api.moveTabDrag({ x: 5, y: 6 } as never),
+    IpcChannels.tabsDragMove,
+    { x: 5, y: 6 },
+  ],
+  [
+    'endTabDrag',
+    () => api.endTabDrag({ x: 7, y: 8 } as never),
+    IpcChannels.tabsDragEnd,
+    { x: 7, y: 8 },
+  ],
+  [
+    'reportTabStrip',
+    () => api.reportTabStrip({ tabs: [] } as never),
+    IpcChannels.tabsReportStrip,
+    { tabs: [] },
+  ],
+  [
+    'pageMenuContributionAction',
+    () => api.pageMenuContributionAction({ extensionId: 'e1', actionId: 'a1' } as never),
+    IpcChannels.pageMenuContributionAction,
+    { extensionId: 'e1', actionId: 'a1' },
+  ],
+  [
+    'openPopup (with opts)',
+    () =>
+      api.openPopup('surf', { x: 1, y: 2, width: 3, height: 4 }, {
+        id: 'p1',
+        height: 150,
+        align: 'end',
+      }),
+    IpcChannels.popupOpen,
+    {
+      surface: 'surf',
+      id: 'p1',
+      anchor: { x: 1, y: 2, width: 3, height: 4 },
+      height: 150,
+      align: 'end',
+    },
+  ],
+  [
+    'openPopup (no opts → undefined fields)',
+    () => api.openPopup('surf', { x: 1, y: 2, width: 3, height: 4 }),
+    IpcChannels.popupOpen,
+    {
+      surface: 'surf',
+      id: undefined,
+      anchor: { x: 1, y: 2, width: 3, height: 4 },
+      height: undefined,
+      align: undefined,
+    },
+  ],
 ];
 
 const INVOKES: Row[] = [
@@ -142,14 +261,41 @@ describe('onActiveGroupChange', () => {
   });
 });
 
-describe('a representative subscription', () => {
-  it('onOmniboxFocus forwards a bare signal and unsubscribes cleanly', () => {
+describe('bare-signal subscriptions forward nothing and unsubscribe cleanly', () => {
+  it.each([
+    ['onOmniboxFocus', (cb: () => void) => api.onOmniboxFocus(cb), IpcChannels.omniboxFocus],
+    ['onFindOpen', (cb: () => void) => api.onFindOpen(cb), IpcChannels.findOpen],
+  ])('%s', (_n, run, channel) => {
     const cb = vi.fn();
-    const off = api.onOmniboxFocus(cb);
+    const off = run(cb);
+    expect(ipc.on).toHaveBeenCalledWith(channel, expect.any(Function));
     const listener = ipc.on.mock.calls[0]![1] as () => void;
     listener();
     expect(cb).toHaveBeenCalledWith();
     off();
-    expect(ipc.removeListener).toHaveBeenCalledWith(IpcChannels.omniboxFocus, listener);
+    expect(ipc.removeListener).toHaveBeenCalledWith(channel, listener);
+  });
+});
+
+type SubRow = [name: string, run: (cb: (p: unknown) => void) => () => void, channel: string, sample: unknown];
+const SUBSCRIPTIONS: SubRow[] = [
+  ['onWindowMaximizedChange', (cb) => api.onWindowMaximizedChange(cb), IpcChannels.windowMaximizedChanged, true],
+  ['onTabGroupStartRename', (cb) => api.onTabGroupStartRename(cb), IpcChannels.tabsGroupStartRename, 'g1'],
+  ['onTabsState', (cb) => api.onTabsState(cb), IpcChannels.tabsState, { activeId: 't1', tabs: [] }],
+  ['onFindResult', (cb) => api.onFindResult(cb), IpcChannels.findResult, { matches: 3, activeMatchOrdinal: 1 }],
+  ['onPopupClosed', (cb) => api.onPopupClosed(cb), IpcChannels.popupClosed, 'surface-a'],
+];
+
+describe('payload subscriptions: subscribe, forward only the payload, unsubscribe the exact listener', () => {
+  it.each(SUBSCRIPTIONS)('%s', (_n, run, channel, sample) => {
+    const cb = vi.fn();
+    const off = run(cb);
+    expect(ipc.on).toHaveBeenCalledWith(channel, expect.any(Function));
+    const listener = ipc.on.mock.calls[0]![1] as (e: unknown, p: unknown) => void;
+    listener({ senderId: 1 }, sample);
+    expect(cb).toHaveBeenCalledWith(sample);
+    expect(cb).toHaveBeenCalledTimes(1);
+    off();
+    expect(ipc.removeListener).toHaveBeenCalledWith(channel, listener);
   });
 });
