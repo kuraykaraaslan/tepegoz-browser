@@ -105,6 +105,31 @@ describe('TransferActivityButton', () => {
     expect(screen.getByRole('button').textContent).toContain('1');
   });
 
+  it('counts an in-flight upload as active alongside downloads', async () => {
+    bridge.listUploads.mockResolvedValue([
+      { id: 'u1', status: 'staged' },
+      { id: 'u2', status: 'submitting' },
+      { id: 'u3', status: 'done' },
+    ] as unknown as never[]);
+    renderButton();
+    await flush();
+    // two active uploads, no downloads → exact count
+    expect(screen.getByRole('button').textContent).toContain('2');
+  });
+
+  it('swallows a rejected getPreferences when a transfer finishes (no panel, no throw)', async () => {
+    bridge.getPreferences.mockRejectedValue(new Error('bridge unavailable'));
+    renderButton();
+    await flush();
+
+    act(() => downloadsListener({ items: [dl('d1', 'in_progress')] }));
+    act(() => downloadsListener({ items: [dl('d1', 'completed')] }));
+    await flush();
+
+    expect(bridge.getPreferences).toHaveBeenCalled();
+    expect(bridge.openPopup).not.toHaveBeenCalled();
+  });
+
   it('toggles the native popup open and closed on click', async () => {
     bridge.listDownloads.mockResolvedValue([dl('d1', 'in_progress')]);
     renderButton();
