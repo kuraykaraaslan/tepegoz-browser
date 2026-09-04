@@ -50,7 +50,7 @@ const bridge = {
   setNetworkConnectionActive: vi.fn(() => Promise.resolve()),
   removeNetworkConnection: vi.fn(() => Promise.resolve()),
   setGeneralNetworkBinding: vi.fn(() => Promise.resolve()),
-  pickBinaryFolder: vi.fn(() => Promise.resolve(null)),
+  pickBinaryFolder: vi.fn<(binary: string) => Promise<string | null>>(() => Promise.resolve(null)),
   setNetworkBinaryPath: vi.fn(() => Promise.resolve()),
   addNetworkConnection: vi.fn(() => Promise.resolve()),
   pickWireguardProfile: vi.fn(),
@@ -136,6 +136,90 @@ describe('NetworkPrivacySection', () => {
       kind: 'connection',
       connectionId: 'c1',
     });
+  });
+
+  it('resets the default route to Direct through the bridge', async () => {
+    bridge.getNetworkState.mockResolvedValue(
+      netState({ connections: [conn()], general: { kind: 'connection', connectionId: 'c1' } }),
+    );
+    render1();
+    await rowFor('Mullvad');
+    const select = screen
+      .getAllByRole('combobox')
+      .find((el) => el.id === 'network-general') as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: 'direct' } });
+    expect(bridge.setGeneralNetworkBinding).toHaveBeenCalledWith({ kind: 'direct' });
+  });
+
+  it('marks an auto-detected (non-override) helper binary as such', async () => {
+    bridge.getNetworkState.mockResolvedValue(
+      netState({
+        binaries: {
+          wireproxy: { found: true, path: '/usr/bin/wireproxy', isOverride: false, dropInDir: '/opt/bin' },
+          tor: { found: false, path: '', isOverride: false, dropInDir: '/opt/bin' },
+        },
+      }),
+    );
+    render1();
+    await waitFor(() =>
+      expect(screen.getByText(s.network.binaryAutoDetected)).toBeTruthy(),
+    );
+  });
+
+  it('adds a new connection through the embedded form and refetches', async () => {
+    render1();
+    await waitFor(() => expect(bridge.getNetworkState).toHaveBeenCalledTimes(1));
+
+    fireEvent.change(screen.getByLabelText(s.network.kindLabel), { target: { value: 'byo-socks' } });
+    fireEvent.change(screen.getByLabelText(s.network.nameLabel), { target: { value: 'Local SOCKS' } });
+    fireEvent.change(screen.getByLabelText(s.network.portLabel), { target: { value: '1080' } });
+    fireEvent.click(screen.getByRole('button', { name: s.network.add }));
+
+    await waitFor(() =>
+      expect(bridge.addNetworkConnection).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'byo-socks', label: 'Local SOCKS', socksPort: 1080 }),
+      ),
+    );
+    await waitFor(() => expect(bridge.getNetworkState).toHaveBeenCalledTimes(2));
+  });
+
+  it('labels a SOCKS connection and shows a connecting badge mid-handshake', async () => {
+    bridge.getNetworkState.mockResolvedValue(
+      netState({
+        connections: [conn({ label: 'Local', kind: 'byo-socks', status: 'connecting' })],
+      }),
+    );
+    render1();
+    const row = await rowFor('Local');
+    expect(within(row).getByText(s.network.protocolByo)).toBeTruthy();
+    expect(within(row).getByText(s.network.statusConnecting)).toBeTruthy();
+  });
+
+  it('shows the "chained via" note for a connection routed through another', async () => {
+    bridge.getNetworkState.mockResolvedValue(
+      netState({
+        connections: [
+          conn({ id: 'c1', label: 'Mullvad' }),
+          conn({ id: 'c2', label: 'Tor exit', kind: 'tor', upstreamConnectionId: 'c1' }),
+        ],
+      }),
+    );
+    render1();
+    const row = await rowFor('Tor exit');
+    expect(within(row).getByText(s.network.chainedVia.replace('{name}', 'Mullvad'))).toBeTruthy();
+  });
+
+  it('browsing for a helper folder refetches on a pick and surfaces a rejection', async () => {
+    render1();
+    const wpRow = await rowFor('wireproxy');
+
+    bridge.pickBinaryFolder.mockResolvedValueOnce('/opt/bin');
+    fireEvent.click(within(wpRow).getByRole('button', { name: s.network.binaryBrowse }));
+    await waitFor(() => expect(bridge.getNetworkState).toHaveBeenCalledTimes(2));
+
+    bridge.pickBinaryFolder.mockRejectedValueOnce(new Error('searched /wrong/parent'));
+    fireEvent.click(within(wpRow).getByRole('button', { name: s.network.binaryBrowse }));
+    await waitFor(() => expect(screen.getByText('searched /wrong/parent')).toBeTruthy());
   });
 
   it('a missing helper binary offers Browse; an overridden one offers Clear', async () => {
