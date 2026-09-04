@@ -11,6 +11,8 @@ const h = vi.hoisted(() => ({
   invalidateTunnelVerification: vi.fn(),
   blackholeTunnelSession: vi.fn(),
   release: vi.fn(),
+  wgCtor: vi.fn(),
+  torCtor: vi.fn<(id: string, resolver: (() => Promise<number>) | null) => void>(),
 }));
 
 vi.mock('electron', () => ({ session: { fromPartition: (partition: string) => ({ partition }) } }));
@@ -29,6 +31,28 @@ vi.mock('./connection-provider.electron', () => ({
     connect = h.connect;
     disconnect = h.disconnect;
     probe = h.probe;
+  },
+}));
+vi.mock('./wireguard-provider.electron', () => ({
+  WireGuardProvider: class {
+    readonly kind = 'wireguard' as const;
+    connect = h.connect;
+    disconnect = h.disconnect;
+    probe = h.probe;
+    constructor(id: string) {
+      h.wgCtor(id);
+    }
+  },
+}));
+vi.mock('./tor-provider.electron', () => ({
+  TorProvider: class {
+    readonly kind = 'tor' as const;
+    connect = h.connect;
+    disconnect = h.disconnect;
+    probe = h.probe;
+    constructor(id: string, resolver: (() => Promise<number>) | null) {
+      h.torCtor(id, resolver);
+    }
   },
 }));
 vi.mock('./tunnel-session.electron', () => ({
@@ -62,6 +86,8 @@ beforeEach(() => {
     h.invalidateTunnelVerification,
     h.blackholeTunnelSession,
     h.release,
+    h.wgCtor,
+    h.torCtor,
   ]) {
     fn.mockReset();
   }
@@ -218,5 +244,114 @@ describe('adding and removing', () => {
     h.release.mockRejectedValue(new Error('locked'));
     await expect(ConnectionPool.remove('tor')).resolves.toBeUndefined();
     expect(ConnectionPool.has('tor')).toBe(false);
+  });
+});
+
+const wgConn = (id: string): NetworkConnection =>
+  ({ id, label: id.toUpperCase(), kind: 'wireguard', note: '', updatedAt: 1, version: 1 }) as NetworkConnection;
+const torConn = (id: string, upstreamConnectionId: string | null): NetworkConnection => ({
+  id,
+  label: id.toUpperCase(),
+  kind: 'tor',
+  upstreamConnectionId,
+  note: '',
+  updatedAt: 1,
+  version: 1,
+});
+
+describe('providerFor — the one place that knows protocols exist', () => {
+  it('builds a WireGuardProvider from the connection id', () => {
+    ConnectionPool.init();
+    ConnectionPool.add(wgConn('wg1'));
+    expect(h.wgCtor).toHaveBeenCalledWith('wg1');
+    expect(ConnectionPool.has('wg1')).toBe(true);
+  });
+
+  it('builds a TorProvider with a null upstream resolver when the connection does not chain', () => {
+    ConnectionPool.init();
+    ConnectionPool.add(torConn('t1', null));
+    expect(h.torCtor).toHaveBeenCalledWith('t1', null);
+  });
+
+  it('builds a TorProvider with a LAZY upstream-port resolver when it chains', async () => {
+    h.prefs.networkConnections = [conn('up', 1080)];
+    ConnectionPool.init();
+    ConnectionPool.add(torConn('t2', 'up'));
+
+    const resolver = h.torCtor.mock.calls[0]![1];
+    expect(typeof resolver).toBe('function');
+
+    // Resolved at connect time against the upstream's CURRENT port.
+    h.connect.mockResolvedValueOnce({ socksPort: 1080 });
+    await expect(resolver!()).resolves.toBe(1080);
+  });
+
+  it('the chain resolver throws when the upstream exposed no port', async () => {
+    h.prefs.networkConnections = [conn('up', 1080)];
+    ConnectionPool.init();
+    ConnectionPool.add(torConn('t3', 'up'));
+    const resolver = h.torCtor.mock.calls[0]![1]!;
+
+    h.connect.mockResolvedValueOnce({ socksPort: null });
+    await expect(resolver()).rejects.toThrow(/exposed no port/);
+  });
+
+  it('refuses a chain that loops back on itself', async () => {
+    ConnectionPool.init();
+    ConnectionPool.add(torConn('loop', 'loop'));
+    const resolver = h.torCtor.mock.calls[0]![1]!;
+
+    // Drive it from inside its own `ensureUp` so the cycle guard sees `connecting` already holds the id.
+    h.connect.mockImplementationOnce(() => resolver().then(() => ({ socksPort: 9050 })));
+    await expect(ConnectionPool.ensureUp('loop')).rejects.toThrow(/loops back to loop/);
+    expect(ConnectionPool.statusMap().get('loop')).toBe('down');
+  });
+
+  it('reports — does not silently drop — a persisted connection whose kind has no provider', () => {
+    h.prefs.networkConnections = [{ ...conn('weird'), kind: 'quantum-link' } as unknown as NetworkConnection];
+    ConnectionPool.init();
+    // The exhaustive `never` default threw; init caught it, so the pool loads with nothing.
+    expect(ConnectionPool.list()).toEqual([]);
+  });
+});
+
+describe('small surface still worth pinning', () => {
+  it('get() returns a view for a known id and undefined for an unknown one', () => {
+    h.prefs.networkConnections = [conn('tor')];
+    ConnectionPool.init();
+    expect(ConnectionPool.get('tor')).toMatchObject({ id: 'tor', status: 'down' });
+    expect(ConnectionPool.get('ghost')).toBeUndefined();
+  });
+
+  it('a throwing status listener is logged, not allowed to break the notify loop', async () => {
+    h.prefs.networkConnections = [conn('tor')];
+    ConnectionPool.init();
+    const good = vi.fn();
+    ConnectionPool.onStatusChange(() => {
+      throw new Error('listener boom');
+    });
+    ConnectionPool.onStatusChange(good);
+
+    await ConnectionPool.ensureUp('tor'); // drives setStatus → the notify loop
+
+    expect(good).toHaveBeenCalledWith('tor', 'up');
+  });
+
+  it('the health-poll interval callback runs a sweep', async () => {
+    vi.useFakeTimers();
+    try {
+      h.prefs.networkConnections = [conn('tor')];
+      ConnectionPool.init();
+      await ConnectionPool.ensureUp('tor');
+      h.probe.mockClear();
+      // `ensureUp` already armed the poller at the default interval — restart it on a short one.
+      ConnectionPool.stopHealthPolling();
+      ConnectionPool.startHealthPolling(1000);
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(h.probe).toHaveBeenCalled();
+    } finally {
+      ConnectionPool.stopHealthPolling();
+      vi.useRealTimers();
+    }
   });
 });
