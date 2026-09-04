@@ -18,9 +18,9 @@
     "@tepegoz/capability-plane": "workspace:*",
     "@tepegoz/libs": "workspace:*",
     "@tepegoz/shared-types": "workspace:*",
-    "@modelcontextprotocol/sdk": "1.26.0",
+    "@modelcontextprotocol/sdk": "1.30.0",
     "ajv": "8.20.0",
-    "zod": "3.25.76"
+    "zod": "4.5.4"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
