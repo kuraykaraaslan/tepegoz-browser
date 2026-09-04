@@ -22,6 +22,7 @@ const folder = (id: string, children: BookmarkTreeNode[]): BookmarkTreeNode =>
 
 let tree: BookmarkTreeNode[];
 let menuCb: ((a: { id: string; action: string; type?: string }) => void) | null;
+let changedCb: (() => void) | null;
 const bridge = {
   getBookmarkTree: vi.fn<() => Promise<BookmarkTreeNode[]>>(() => Promise.resolve(tree)),
   listBookmarks: vi.fn<() => Promise<{ url: string; title: string }[]>>(() => Promise.resolve([])),
@@ -38,7 +39,12 @@ const bridge = {
       menuCb = null;
     };
   },
-  onBookmarksChanged: () => () => undefined,
+  onBookmarksChanged: (cb: () => void) => {
+    changedCb = cb;
+    return () => {
+      changedCb = null;
+    };
+  },
 };
 
 const tabsRef = {
@@ -50,6 +56,7 @@ const render = (url = 'https://a.test/') => renderHook(() => useBookmarksBar(tab
 beforeEach(() => {
   vi.clearAllMocks();
   menuCb = null;
+  changedCb = null;
   tree = [bar([bm('b1', 'https://one/'), folder('f1', [bm('b2', 'https://two/')])])];
   Object.defineProperty(window, 'tepegoz', { configurable: true, value: bridge });
 });
@@ -105,6 +112,50 @@ describe('useBookmarksBar', () => {
     expect(bridge.getBookmarkTree).toHaveBeenCalled(); // refetched
   });
 
+  it('maps the flat listBookmarks rows into bookmarksRef entries', async () => {
+    bridge.listBookmarks.mockResolvedValueOnce([
+      { url: 'https://one/', title: 'One', favicon: 'data:,x' } as never,
+    ]);
+    const { result } = render('https://one/');
+    await waitFor(() => expect(result.current.barNodes).toHaveLength(2));
+    // The star reads bookmarksRef for the active tab's title/favicon on toggle.
+    await act(async () => {
+      await result.current.onToggleBookmark();
+    });
+    expect(bridge.toggleBookmark).toHaveBeenCalled();
+  });
+
+  it('sets activeBookmarked=false when the isBookmarked lookup rejects', async () => {
+    bridge.isBookmarked.mockRejectedValueOnce(new Error('offline'));
+    const { result } = render('https://one/');
+    await waitFor(() => expect(result.current.barNodes).toHaveLength(2));
+    expect(result.current.activeBookmarked).toBe(false);
+  });
+
+  it('a failing star toggle is logged, not thrown', async () => {
+    bridge.toggleBookmark.mockRejectedValueOnce(new Error('write denied'));
+    const err = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { result } = render();
+    await waitFor(() => expect(result.current.barNodes).toHaveLength(2));
+    await act(async () => {
+      await result.current.onToggleBookmark();
+    });
+    expect(err).toHaveBeenCalledWith('Bookmark toggle failed', expect.any(Error));
+    err.mockRestore();
+  });
+
+  it('a bookmarks:changed broadcast triggers a refetch', async () => {
+    const { result } = render();
+    await waitFor(() => expect(result.current.barNodes).toHaveLength(2));
+    await waitFor(() => expect(changedCb).not.toBeNull());
+    bridge.getBookmarkTree.mockClear();
+    await act(async () => {
+      changedCb?.();
+      await Promise.resolve();
+    });
+    expect(bridge.getBookmarkTree).toHaveBeenCalled();
+  });
+
   it('onBookmarkMove calls the bridge then refetches', async () => {
     const { result } = render();
     await waitFor(() => expect(result.current.barNodes).toHaveLength(2));
@@ -138,13 +189,23 @@ describe('the native context-menu dispatch', () => {
     expect(bridge.navigateTab).toHaveBeenCalledWith(INTERNAL_BOOKMARKS_URL);
   });
 
-  it('delete → removeBookmark by id', async () => {
+  it('delete → removeBookmark by id, and swallows a failure', async () => {
     await ready();
     await act(async () => {
       menuCb?.({ id: 'b1', action: 'delete' });
       await Promise.resolve();
     });
     expect(bridge.removeBookmark).toHaveBeenCalledWith('b1');
+
+    bridge.removeBookmark.mockRejectedValueOnce(new Error('locked'));
+    const err = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    await act(async () => {
+      menuCb?.({ id: 'b1', action: 'delete' });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(err).toHaveBeenCalledWith('Bookmark delete failed', expect.any(Error));
+    err.mockRestore();
   });
 
   it('rename opens the rename popup for that id', async () => {
@@ -155,5 +216,87 @@ describe('the native context-menu dispatch', () => {
       expect.objectContaining({ width: 320 }),
       { id: 'b1' },
     );
+  });
+
+  it('open-new-tab → createTabInBackground with the node url', async () => {
+    await ready();
+    act(() => menuCb?.({ id: 'b1', action: 'open-new-tab' }));
+    expect(bridge.createTabInBackground).toHaveBeenCalledWith('https://one/');
+  });
+
+  it('open-all on a small folder opens each url in a background tab (no confirmation)', async () => {
+    const h = await ready();
+    act(() => menuCb?.({ id: 'f1', action: 'open-all' }));
+    expect(bridge.createTabInBackground).toHaveBeenCalledWith('https://two/');
+    expect(h.result.current.openAllUrls).toBeNull();
+  });
+
+  it('open-all above the 15-url threshold routes to the confirmation list instead of opening', async () => {
+    tree = [
+      bar([
+        folder(
+          'big',
+          Array.from({ length: 20 }, (_, i) => bm(`x${i}`, `https://x${i}/`)),
+        ),
+      ]),
+    ];
+    const h = render();
+    await waitFor(() => expect(menuCb).not.toBeNull());
+    await waitFor(() => expect(h.result.current.barNodes.length).toBeGreaterThan(0));
+    bridge.createTabInBackground.mockClear();
+
+    act(() => menuCb?.({ id: 'big', action: 'open-all' }));
+
+    expect(bridge.createTabInBackground).not.toHaveBeenCalled();
+    expect(h.result.current.openAllUrls).toHaveLength(20);
+  });
+
+  it('move-to-bar → moveBookmark to the bar root end, and swallows a failure', async () => {
+    await ready();
+    await act(async () => {
+      menuCb?.({ id: 'b2', action: 'move-to-bar' });
+      await Promise.resolve();
+    });
+    expect(bridge.moveBookmark).toHaveBeenCalledWith('b2', BOOKMARK_ROOT_BAR, 100000);
+
+    bridge.moveBookmark.mockRejectedValueOnce(new Error('locked'));
+    const err = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    await act(async () => {
+      menuCb?.({ id: 'b2', action: 'move-to-bar' });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(err).toHaveBeenCalled();
+    err.mockRestore();
+  });
+
+  it('add-folder: on a folder makes a subfolder inside it; on a bookmark a bar sibling', async () => {
+    await ready();
+    act(() => menuCb?.({ id: 'f1', action: 'add-folder', type: 'folder' }));
+    expect(bridge.openPopup).toHaveBeenLastCalledWith(
+      'bookmark-add-folder',
+      expect.objectContaining({ width: 320 }),
+      { id: 'f1' },
+    );
+    act(() => menuCb?.({ id: 'b1', action: 'add-folder', type: 'bookmark' }));
+    expect(bridge.openPopup).toHaveBeenLastCalledWith(
+      'bookmark-add-folder',
+      expect.anything(),
+      { id: BOOKMARK_ROOT_BAR },
+    );
+  });
+
+  it('a failing onBookmarkMove is logged, not thrown', async () => {
+    const { result } = render();
+    await waitFor(() => expect(result.current.barNodes).toHaveLength(2));
+    bridge.moveBookmark.mockRejectedValueOnce(new Error('reparent denied'));
+    const err = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    await act(async () => {
+      result.current.onBookmarkMove('b1', 'f1', 0);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(err).toHaveBeenCalledWith('Bookmark move failed', expect.any(Error));
+    err.mockRestore();
   });
 });
