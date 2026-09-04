@@ -69,6 +69,13 @@ describe('NotificationBellButton', () => {
     });
   });
 
+  it('stays at zero unread when the initial listNotifications call rejects', async () => {
+    bridge.listNotifications.mockRejectedValueOnce(new Error('bridge unavailable'));
+    renderBell();
+    await waitFor(() => expect(bridge.onNotificationsState).toHaveBeenCalled());
+    expect(screen.getByRole('button').querySelector('span[aria-hidden="true"]')).toBeNull();
+  });
+
   it('reflects a pushed state update', async () => {
     renderBell();
     await waitFor(() => expect(bridge.onNotificationsState).toHaveBeenCalled());

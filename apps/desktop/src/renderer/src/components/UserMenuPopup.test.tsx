@@ -15,13 +15,14 @@ import { UserMenuPopup } from './UserMenuPopup';
 stubJsdomLayout();
 
 const bridge = {
-  getPreferences: () => Promise.resolve({ ...DEFAULT_PREFERENCES }),
+  getPreferences: vi.fn(() => Promise.resolve({ ...DEFAULT_PREFERENCES })),
   resizePopup: vi.fn(),
   closePopup: vi.fn(),
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  bridge.getPreferences.mockResolvedValue({ ...DEFAULT_PREFERENCES });
   vi.stubGlobal('matchMedia', (query: string) => ({
     matches: false,
     media: query,
@@ -46,6 +47,13 @@ describe('UserMenuPopup', () => {
     render(<UserMenuPopup />);
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(bridge.closePopup).toHaveBeenCalledTimes(1);
+  });
+
+  it('still renders when getPreferences rejects (bridge unavailable → defaults)', async () => {
+    bridge.getPreferences.mockRejectedValueOnce(new Error('bridge unavailable'));
+    render(<UserMenuPopup />);
+    await waitFor(() => expect(bridge.resizePopup).toHaveBeenCalled());
+    expect(screen.getAllByText(userMenuDict.en.name).length).toBeGreaterThan(0);
   });
 
   it('renders the profile card with the placeholder identity', () => {
