@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { I18nProvider } from '@tepegoz/i18n/react';
 import { settingsDict } from '@tepegoz/settings-ui';
 import { DEFAULT_PREFERENCES } from '@tepegoz/preferences';
-import type { McpServerPref, Preferences } from '@tepegoz/desktop-ipc';
+import type { McpServerPref, McpServerStatusInfo, Preferences } from '@tepegoz/desktop-ipc';
 import { McpServersSection } from './settings-mcp-servers';
 
 /**
@@ -15,7 +15,7 @@ import { McpServersSection } from './settings-mcp-servers';
  */
 
 const s = settingsDict.en;
-const getMcpStatus = vi.fn(() => Promise.resolve([]));
+const getMcpStatus = vi.fn<() => Promise<McpServerStatusInfo[]>>(() => Promise.resolve([]));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -134,5 +134,76 @@ describe('McpServersSection', () => {
     const all = screen.getAllByRole('button', { name: s.remove });
     fireEvent.click(all[all.length - 1]!); // the dialog's destructive confirm
     expect(lastPatch(setPref).mcpServers).toEqual([]);
+  });
+
+  it('abandons the edit form when Cancel is pressed', () => {
+    const existing: McpServerPref = {
+      id: 'mcp-1', label: 'Old', transport: 'stdio', enabled: true, command: 'old', args: [],
+    };
+    renderSection({ mcpServers: [existing] });
+    fireEvent.click(screen.getByRole('button', { name: s.searchEngineEdit }));
+    fireEvent.change(field(s.mcp.labelField), { target: { value: 'Half typed' } });
+    fireEvent.click(screen.getByRole('button', { name: s.cancel }));
+    // back to the add form: the label field is blank again and Save is gone
+    expect((field(s.mcp.labelField) as HTMLInputElement).value).toBe('');
+    expect(screen.queryByRole('button', { name: s.searchEngineSave })).toBeNull();
+  });
+
+  it('clears the edit form if the server being edited is removed underneath it', () => {
+    const existing: McpServerPref = {
+      id: 'mcp-1', label: 'Old', transport: 'stdio', enabled: true, command: 'old', args: [],
+    };
+    const { setPref } = renderSection({ mcpServers: [existing] });
+    fireEvent.click(screen.getByRole('button', { name: s.searchEngineEdit }));
+    fireEvent.click(screen.getByRole('button', { name: s.remove }));
+    const all = screen.getAllByRole('button', { name: s.remove });
+    fireEvent.click(all[all.length - 1]!);
+    expect(lastPatch(setPref).mcpServers).toEqual([]);
+    expect((field(s.mcp.labelField) as HTMLInputElement).value).toBe('');
+  });
+
+  it('renders an http_sse server by its URL and flags the env-var reminder', async () => {
+    const existing: McpServerPref = {
+      id: 'mcp-http',
+      label: 'Remote',
+      transport: 'http_sse',
+      enabled: true,
+      url: 'https://mcp.example/sse',
+      env: { TOKEN: 'x' },
+    };
+    renderSection({ mcpServers: [existing] });
+    expect(await screen.findByText('https://mcp.example/sse')).toBeTruthy();
+    expect(screen.getByText(s.mcp.envNote)).toBeTruthy();
+  });
+
+  it('shows the live connection badge and tool count from the status poll', async () => {
+    getMcpStatus.mockResolvedValue([
+      { id: 'mcp-1', label: 'S', transport: 'stdio', state: 'ready', toolCount: 4 },
+    ]);
+    const existing: McpServerPref = {
+      id: 'mcp-1',
+      label: 'S',
+      transport: 'stdio',
+      enabled: true,
+      command: 'c',
+      args: [],
+    };
+    renderSection({ mcpServers: [existing] });
+    await waitFor(() =>
+      expect(screen.getByText(`4 ${s.mcpToolsLabel}`)).toBeTruthy(),
+    );
+    expect(screen.getByText(s.mcpStateLabels.ready)).toBeTruthy();
+  });
+
+  it('stops polling the status endpoint once unmounted', () => {
+    vi.useFakeTimers();
+    renderSection({ mcpServers: [] });
+    const callsBefore = getMcpStatus.mock.calls.length;
+    cleanup(); // unmount → the effect cleanup clears the interval
+    act(() => {
+      vi.advanceTimersByTime(9000);
+    });
+    expect(getMcpStatus.mock.calls.length).toBe(callsBefore);
+    vi.useRealTimers();
   });
 });

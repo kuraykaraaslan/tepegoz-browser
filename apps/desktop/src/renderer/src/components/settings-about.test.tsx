@@ -23,11 +23,13 @@ interface Bridge {
   info: AppInfo | 'reject';
   /** `false` ⇒ the clipboard write rejects. */
   canCopy: boolean;
-  noticesOpened: boolean;
+  noticesOpened: boolean | 'reject';
+  /** `'ok'` ⇒ resolves true, `'false'` ⇒ resolves false, `'reject'` ⇒ rejects. */
+  dataFolder: 'ok' | 'false' | 'reject';
   tabs: string[];
 }
 const bridge = vi.hoisted(
-  (): Bridge => ({ info: 'reject', canCopy: true, noticesOpened: true, tabs: [] }),
+  (): Bridge => ({ info: 'reject', canCopy: true, noticesOpened: true, dataFolder: 'ok', tabs: [] }),
 );
 
 function appInfo(over: Partial<AppInfo> = {}): AppInfo {
@@ -48,6 +50,7 @@ beforeEach(() => {
   bridge.info = appInfo();
   bridge.canCopy = true;
   bridge.noticesOpened = true;
+  bridge.dataFolder = 'ok';
   bridge.tabs = [];
   Object.defineProperty(window, 'tepegoz', {
     configurable: true,
@@ -60,7 +63,14 @@ beforeEach(() => {
         bridge.canCopy
           ? Promise.resolve('diagnostics')
           : Promise.reject(new Error('no clipboard')),
-      openThirdPartyNotices: () => Promise.resolve(bridge.noticesOpened),
+      openThirdPartyNotices: () =>
+        bridge.noticesOpened === 'reject'
+          ? Promise.reject(new Error('notices path blew up'))
+          : Promise.resolve(bridge.noticesOpened),
+      openDataFolder: () =>
+        bridge.dataFolder === 'reject'
+          ? Promise.reject(new Error('no shell'))
+          : Promise.resolve(bridge.dataFolder === 'ok'),
       createTab: (url: string) => bridge.tabs.push(url),
     },
   });
@@ -170,6 +180,17 @@ describe('legal', () => {
     expect(screen.getByText(/ships no notices file/)).not.toBeNull();
   });
 
+  it('falls back to the online notices when the local open call rejects outright', async () => {
+    bridge.noticesOpened = 'reject';
+    renderAbout();
+    fireEvent.click(screen.getByRole('button', { name: /Open notices/ }));
+
+    await waitFor(() => {
+      expect(bridge.tabs).toEqual([THIRD_PARTY_NOTICES_FALLBACK_URL]);
+    });
+    expect(screen.getByText(/ships no notices file/)).not.toBeNull();
+  });
+
   it('opens nothing extra when the local notices file was there', async () => {
     renderAbout();
     fireEvent.click(screen.getByRole('button', { name: /Open notices/ }));
@@ -178,6 +199,37 @@ describe('legal', () => {
       expect(screen.queryByText(/ships no notices file/)).toBeNull();
     });
     expect(bridge.tabs).toEqual([]);
+  });
+});
+
+describe('opening the data folder', () => {
+  it('stays silent when the OS opened the folder', async () => {
+    renderAbout();
+    await waitFor(() => expect(screen.getByRole('button', { name: /data folder/i })).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: /data folder/i }));
+    await waitFor(() =>
+      expect(screen.queryByText(/data folder could not be opened/i)).toBeNull(),
+    );
+  });
+
+  it('shows the failure line when the folder did not open', async () => {
+    bridge.dataFolder = 'false';
+    renderAbout();
+    await waitFor(() => expect(screen.getByRole('button', { name: /data folder/i })).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: /data folder/i }));
+    await waitFor(() =>
+      expect(screen.getByText(/data folder could not be opened/i)).toBeTruthy(),
+    );
+  });
+
+  it('shows the failure line when the open call rejects', async () => {
+    bridge.dataFolder = 'reject';
+    renderAbout();
+    await waitFor(() => expect(screen.getByRole('button', { name: /data folder/i })).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: /data folder/i }));
+    await waitFor(() =>
+      expect(screen.getByText(/data folder could not be opened/i)).toBeTruthy(),
+    );
   });
 });
 
