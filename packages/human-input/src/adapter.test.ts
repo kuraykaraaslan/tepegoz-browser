@@ -140,3 +140,73 @@ describe('HumanInputAdapter — off-screen pacing', () => {
     expect(done).toBe(true);
   });
 });
+
+describe('HumanInputAdapter.moveTo — sub-threshold snap', () => {
+  it('snaps without dispatching any event when the target is within 4px', async () => {
+    const { adapter, calls } = makeAdapter();
+    await adapter.moveTo(2, 2); // dist ~2.8 from (0,0)
+    expect(calls).toEqual([]);
+  });
+});
+
+describe('HumanInputAdapter.scroll', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('runs the ease-out → overshoot → spring-back phases with wheel + smooth-scroll events', async () => {
+    const seen: string[] = [];
+    const send = (method: string, params: Record<string, unknown>): Promise<unknown> => {
+      seen.push(`${method}:${typeof params.type === 'string' ? params.type : ''}`);
+      return Promise.resolve(undefined);
+    };
+    const actions: [string, string][] = [];
+    const adapter = new HumanInputAdapter(send, undefined, (k, d) => actions.push([k, d]));
+
+    const done = adapter.scroll('down', 500);
+    await vi.runAllTimersAsync();
+    await done;
+
+    expect(actions).toContainEqual(['scroll', 'down']);
+    expect(seen).toContain('Input.dispatchMouseEvent:mouseWheel');
+    // Two Runtime.evaluate window.scrollBy calls: the main smooth push and the spring-back.
+    expect(seen.filter((s) => s.startsWith('Runtime.evaluate')).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('yields mid-scroll when shouldYield flips true', async () => {
+    let yield_ = false;
+    const send = (): Promise<unknown> => Promise.resolve(undefined);
+    const adapter = new HumanInputAdapter(send, undefined, undefined, () => yield_);
+    const done = adapter.scroll('up');
+    yield_ = true;
+    await vi.runAllTimersAsync();
+    await expect(done).resolves.toBeUndefined();
+  });
+});
+
+describe('HumanInputAdapter.pressKey', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('dispatches rawKeyDown→keyUp for a non-text key', async () => {
+    const { adapter, calls } = makeAdapter();
+    const done = adapter.pressKey({ key: 'Enter', code: 'Enter', keyCode: 13 });
+    await vi.runAllTimersAsync();
+    await done;
+
+    const keyEvents = calls.filter((c) => c.method === 'Input.dispatchKeyEvent');
+    expect(keyEvents.map((c) => c.params.type)).toEqual(['rawKeyDown', 'keyUp']);
+    expect(keyEvents[0]?.params.text).toBeUndefined();
+  });
+
+  it('uses keyDown with a text field for a printable key, and forwards modifiers', async () => {
+    const { adapter, calls } = makeAdapter();
+    const done = adapter.pressKey({ key: 'a', code: 'KeyA', keyCode: 65, text: 'a' }, 2);
+    await vi.runAllTimersAsync();
+    await done;
+
+    const down = calls.find((c) => c.method === 'Input.dispatchKeyEvent');
+    expect(down?.params.type).toBe('keyDown');
+    expect(down?.params.text).toBe('a');
+    expect(down?.params.modifiers).toBe(2);
+  });
+});
