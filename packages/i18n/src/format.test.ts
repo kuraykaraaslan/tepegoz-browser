@@ -1,9 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
-  formatNumber,
   formatCurrency,
+  formatDate,
+  formatDateByFormat,
   formatList,
+  formatNumber,
   formatRelativeTime,
+  formatTime,
   pluralCategory,
   selectPlural,
 } from './format';
@@ -29,6 +32,29 @@ describe('locale-aware formatting', () => {
     const now = new Date('2026-07-02T12:00:00Z').getTime();
     expect(formatRelativeTime(now - 60_000, 'en', now)).toBe('1 minute ago');
     expect(formatRelativeTime(now + 24 * 3600_000, 'en', now)).toBe('tomorrow');
+  });
+
+  it('formats a date / time in the locale (default styles)', () => {
+    const d = new Date('2026-07-02T09:05:00Z');
+    // dateStyle:'medium' — locale controls order/month name; assert the year is present, not an exact
+    // string (Intl output varies by ICU version).
+    expect(formatDate(d, 'en')).toContain('2026');
+    expect(formatDate(d.getTime(), 'tr')).toContain('2026');
+    expect(formatTime(d, 'en')).toMatch(/\d/);
+    expect(formatDate(d, 'en', { year: 'numeric' })).toBe('2026');
+  });
+
+  it('formatDateByFormat renders every fixed-order pattern and the Intl presets', () => {
+    const d = new Date(2026, 6, 2); // 2 Jul 2026, local time
+    expect(formatDateByFormat(d, 'en', 'iso')).toBe('2026-07-02');
+    expect(formatDateByFormat(d.getTime(), 'en', 'dmy-slash')).toBe('02/07/2026');
+    expect(formatDateByFormat(d, 'en', 'mdy-slash')).toBe('07/02/2026');
+    expect(formatDateByFormat(d, 'en', 'dmy-dot')).toBe('02.07.2026');
+    expect(formatDateByFormat(d, 'en', 'd-mmm-y')).toBe('2 Jul 2026');
+    // The four Intl dateStyle presets take the DATE_STYLE_IDS branch.
+    expect(formatDateByFormat(d, 'en', 'full')).toContain('2026');
+    // An unknown id falls back to the medium preset.
+    expect(formatDateByFormat(d, 'en', 'no-such-format')).toContain('2026');
   });
 
   it('selects the correct CLDR plural category', () => {
