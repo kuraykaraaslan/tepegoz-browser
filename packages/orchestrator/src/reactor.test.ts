@@ -546,3 +546,65 @@ describe('Reactor.run no-progress replan (C1 PR2)', () => {
     expect(replanCalls).toBe(0);
   });
 });
+
+describe('Reactor.run — navigation grounding + validator resilience', () => {
+  const req = (goal = 'do it') => ({
+    goal,
+    tools: tools(),
+    provider: 'anthropic' as const,
+    model: 'mock',
+  });
+
+  it('folds a navigation-grounding hint into the conversation after a browser_get_elements read', async () => {
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    script([act('browser_get_elements'), finish]);
+    const seen: Array<[string, string]> = [];
+    const res = await Reactor.run(req('open the blog'), {
+      groundNavigation: (outcome, goal) => {
+        seen.push([outcome.tool, goal]);
+        return Promise.resolve('Grounded route → https://x/blog (a link visible on this page)');
+      },
+    });
+    expect(res.stoppedReason).toBe('completed');
+    expect(seen).toEqual([['browser_get_elements', 'open the blog']]);
+  });
+
+  it('a grounding hook that returns null pushes nothing and the run continues', async () => {
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    script([act('browser_get_elements'), finish]);
+    const res = await Reactor.run(req(), { groundNavigation: () => Promise.resolve(null) });
+    expect(res.stoppedReason).toBe('completed');
+  });
+
+  it('aborts right after grounding when the signal was tripped during the hook', async () => {
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    script([act('browser_get_elements'), finish, finish]);
+    const signal = { aborted: false };
+    const res = await Reactor.run(req(), {
+      signal,
+      groundNavigation: () => {
+        signal.aborted = true;
+        return Promise.resolve('hint');
+      },
+    });
+    expect(res.stoppedReason).toBe('aborted');
+  });
+
+  it('a validateCompletion that THROWS fails open to "not done" — a validator hiccup never kills the run', async () => {
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    script([finish, act('browser_get_elements'), finish, finish]);
+    let n = 0;
+    const res = await Reactor.run(req(), {
+      maxSteps: 4,
+      validateCompletion: () => {
+        n += 1;
+        return n === 1
+          ? Promise.reject(new Error('validator boom'))
+          : Promise.resolve({ done: true, finalAnswer: 'recovered' });
+      },
+    });
+    expect(res.stoppedReason).toBe('completed');
+    expect(res.summary).toBe('recovered');
+    expect(n).toBeGreaterThanOrEqual(2);
+  });
+});
