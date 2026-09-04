@@ -61,6 +61,17 @@ describe('search', () => {
     const out = await webToolsHost.search({ query: 'q', maxResults: 2 });
     expect(out.map((r) => r.url)).toEqual(['https://a.test/1', 'https://a.test/2']);
   });
+
+  it('drops an anchor whose uddg target will not parse as a URL', async () => {
+    http.get.mockResolvedValue(
+      ddg(
+        '<a class="result__a" href="/l/?uddg=:::not a url:::">Broken</a>' +
+          '<a class="result__a" href="https://ok.test/">OK</a>',
+      ),
+    );
+    const out = await webToolsHost.search({ query: 'q', maxResults: 5 });
+    expect(out.map((r) => r.url)).toEqual(['https://ok.test/']);
+  });
 });
 
 describe('fetch', () => {
