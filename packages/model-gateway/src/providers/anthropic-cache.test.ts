@@ -121,6 +121,50 @@ describe('toAnthropicParams — prompt-cache breakpoints', () => {
     );
     expect(params.messages).toHaveLength(1);
   });
+
+  it('rides the marker on the LAST block of an already-block-array turn (tool_result)', () => {
+    const params = toAnthropicParams(
+      req({
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: BIG },
+              { type: 'tool_result', toolUseId: 'toolu_1', content: 'ok' },
+            ],
+          },
+          { role: 'user', content: 'now' },
+        ],
+        cache: { lastStableMessageIndex: 0 },
+      }),
+    );
+    const content = params.messages[0]?.content as Array<{ type: string; cache_control?: unknown }>;
+    expect(content).toHaveLength(2);
+    expect(content[1]?.type).toBe('tool_result');
+    expect(content[1]?.cache_control).toEqual({ type: 'ephemeral', ttl: '5m' });
+    expect(content[0]?.cache_control).toBeUndefined(); // only the last block carries it
+  });
+
+  it('rides the marker on a trailing image block too', () => {
+    const params = toAnthropicParams(
+      req({
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: BIG },
+              { type: 'image', mediaType: 'image/png', data: 'QUJD' },
+            ],
+          },
+          { role: 'user', content: 'now' },
+        ],
+        cache: { lastStableMessageIndex: 0 },
+      }),
+    );
+    const content = params.messages[0]?.content as Array<{ type: string; cache_control?: unknown }>;
+    expect(content[1]?.type).toBe('image');
+    expect(content[1]?.cache_control).toEqual({ type: 'ephemeral', ttl: '5m' });
+  });
 });
 
 describe('fromAnthropicResult — cache counters', () => {

@@ -69,6 +69,20 @@ describe('toAnthropicParams', () => {
     expect(params.output_config).toEqual({ effort: 'xhigh' });
     expect(JSON.stringify(params)).not.toContain('budget_tokens');
   });
+
+  it('maps a forced tool_choice to { type: "tool", name } and "auto" otherwise (needs tools present)', () => {
+    const withTools = { tools: [{ name: 't', description: 'd', inputSchema: { type: 'object' } }] };
+    expect(
+      toAnthropicParams(req({ ...withTools, toolChoice: { type: 'tool', name: 't' } })).tool_choice,
+    ).toEqual({ type: 'tool', name: 't' });
+    expect(
+      toAnthropicParams(req({ ...withTools, toolChoice: { type: 'auto' } })).tool_choice,
+    ).toEqual({ type: 'auto' });
+    // No tools → tool_choice is never emitted even when requested.
+    expect(
+      toAnthropicParams(req({ toolChoice: { type: 'tool', name: 't' } })).tool_choice,
+    ).toBeUndefined();
+  });
 });
 
 describe('fromAnthropicResult', () => {
