@@ -209,6 +209,12 @@ describe('group membership guards', () => {
     const gid = tabs.createGroup([a, b]);
     expect(tabs.groupMemberIds(gid).sort()).toEqual([a, b].sort());
   });
+
+  it('hasTab reports whether an id lives in this window store', () => {
+    const a = tabs.addTab('a');
+    expect(tabs.hasTab(a)).toBe(true);
+    expect(tabs.hasTab('not-here')).toBe(false);
+  });
 });
 
 describe('ordering passthroughs', () => {
