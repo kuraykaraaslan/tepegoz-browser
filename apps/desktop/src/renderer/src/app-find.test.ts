@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, renderHook } from '@testing-library/react';
 import type { FindInPageQuery, FindInPageResult } from '@tepegoz/desktop-ipc';
 import { useFindInPage } from './app-find';
@@ -15,11 +15,13 @@ import { useFindInPage } from './app-find';
 let calls: FindInPageQuery[];
 let onResult: ((result: FindInPageResult) => void) | null;
 let openBar: (() => void) | null;
+const stopFindInPage = vi.fn();
 
 function stubBridge(): void {
   calls = [];
   onResult = null;
   openBar = null;
+  stopFindInPage.mockReset();
   Object.defineProperty(window, 'tepegoz', {
     configurable: true,
     value: {
@@ -38,7 +40,7 @@ function stubBridge(): void {
       findInPage: (query: FindInPageQuery) => {
         calls.push(query);
       },
-      stopFindInPage: () => undefined,
+      stopFindInPage,
     },
   });
 }
@@ -127,5 +129,68 @@ describe('useFindInPage — tab-switch resync', () => {
       onResult?.({ query: 'needle', activeMatchOrdinal: 1, matches: 9 });
     });
     expect(result.current.totalMatches).toBe(9);
+  });
+});
+
+describe('useFindInPage — the controller actions', () => {
+  const mount = () => renderHook(() => useFindInPage('tab-a'));
+
+  it('setQuery("") stops the session and zeroes the counters instead of opening an empty search', () => {
+    const { result } = mount();
+    act(() => result.current.setQuery('word'));
+    calls = [];
+    act(() => {
+      onResult?.({ query: 'word', activeMatchOrdinal: 2, matches: 5 });
+    });
+    act(() => result.current.setQuery(''));
+    expect(stopFindInPage).toHaveBeenCalled();
+    expect(result.current.totalMatches).toBe(0);
+    expect(result.current.activeMatch).toBe(0);
+    expect(calls).toEqual([]); // no findInPage for an empty query
+  });
+
+  it('setQuery(text) OPENS a session (findNext: true, forward)', () => {
+    const { result } = mount();
+    act(() => result.current.setQuery('needle'));
+    expect(calls.at(-1)).toMatchObject({ query: 'needle', forward: true, findNext: true });
+  });
+
+  it('next()/previous() are follow-up requests within the open session (findNext: false)', () => {
+    const { result } = mount();
+    act(() => result.current.setQuery('needle'));
+    calls = [];
+    act(() => result.current.next());
+    act(() => result.current.previous());
+    expect(calls).toEqual([
+      { query: 'needle', forward: true, findNext: false, matchCase: false },
+      { query: 'needle', forward: false, findNext: false, matchCase: false },
+    ]);
+  });
+
+  it('next() with no query is a no-op', () => {
+    const { result } = mount();
+    act(() => result.current.next());
+    expect(calls).toEqual([]);
+  });
+
+  it('toggleMatchCase flips the flag and restarts the search with it', () => {
+    const { result } = mount();
+    act(() => result.current.setQuery('Needle'));
+    calls = [];
+    act(() => result.current.toggleMatchCase());
+    expect(result.current.matchCase).toBe(true);
+    expect(calls.at(-1)).toMatchObject({ query: 'Needle', findNext: true, matchCase: true });
+  });
+
+  it('close() ends the session and resets the counters', () => {
+    const { result } = mount();
+    act(() => result.current.setQuery('needle'));
+    act(() => {
+      onResult?.({ query: 'needle', activeMatchOrdinal: 1, matches: 4 });
+    });
+    act(() => result.current.close());
+    expect(stopFindInPage).toHaveBeenCalled();
+    expect(result.current.open).toBe(false);
+    expect(result.current.totalMatches).toBe(0);
   });
 });
