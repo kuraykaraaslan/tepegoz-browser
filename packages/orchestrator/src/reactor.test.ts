@@ -671,3 +671,70 @@ describe('Reactor.run — urlFromOutcome tolerates a malformed result URL', () =
     expect(res.stoppedReason).toBe('completed');
   });
 });
+
+describe('Reactor.run — streaming transport + failure-return paths', () => {
+  const req = (goal = 'do it') => ({
+    goal,
+    tools: tools(),
+    provider: 'anthropic' as const,
+    model: 'mock',
+  });
+
+  it('routes the decision call through generateStream when onModelDelta is wired', async () => {
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    script([act('browser_get_elements'), finish]);
+    const deltas: string[] = [];
+    const res = await Reactor.run(req(), { onModelDelta: (d) => deltas.push(d) });
+    expect(res.stoppedReason).toBe('completed');
+    expect(deltas.join('')).toContain('finish');
+  });
+
+  it('stops with the classified stop reason when the model call itself throws', async () => {
+    class ThrowingProvider implements ModelProvider {
+      readonly id: AIProvider = 'anthropic';
+      complete(): Promise<CanonResponse> {
+        return Promise.reject(new Error('upstream socket reset'));
+      }
+    }
+    ModelGateway.reset();
+    ModelGateway.register(new ThrowingProvider());
+    const res = await Reactor.run(req());
+    expect(res.stoppedReason).toBe('tool_error'); // classifyRuntimeError → 'unknown' → 'tool_error'
+    expect(res.failure?.kind).toBe('unknown');
+    expect(res.outcomes).toHaveLength(0);
+  });
+
+  it('fails closed once a retryable tool failure exceeds maxRecoveryAttempts', async () => {
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    CapabilityRegistry.reset();
+    CapabilityRegistry.register({
+      descriptor: {
+        id: 'browser_get_elements',
+        description: 'flaky read',
+        dangerClass: 'read',
+        source: 'builtin',
+        inputSchema: { type: 'object' },
+        requiresIdempotencyKey: false,
+      },
+      inputSchema: {
+        safeParse: (data: unknown) =>
+          typeof data === 'object' && data !== null
+            ? { success: true as const, data }
+            : { success: false as const, error: { issues: ['expected an object'] } },
+      },
+      handler: () => {
+        throw new Error('transient read failure');
+      },
+    });
+    script([
+      act('browser_get_elements'),
+      act('browser_get_elements'),
+      act('browser_get_elements'),
+      finish,
+    ]);
+    const res = await Reactor.run(req(), { maxRecoveryAttempts: 1 });
+    expect(res.failure?.retryable).toBe(true);
+    expect(res.stoppedReason).not.toBe('completed');
+    expect(res.outcomes.length).toBeGreaterThanOrEqual(2);
+  });
+});
