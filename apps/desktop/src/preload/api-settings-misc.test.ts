@@ -72,6 +72,78 @@ const INVOKES: Row[] = [
     IpcChannels.translateGlossaryRemove,
     't1',
   ],
+  ['setUserAgent', () => api.setUserAgent('UA/1'), IpcChannels.userAgentSet, 'UA/1'],
+  ['getPopupBlockerSettings', () => api.getPopupBlockerSettings(), IpcChannels.popupBlockerGet],
+  [
+    'setPopupBlockerSettings (bare patch)',
+    () => api.setPopupBlockerSettings({ enabled: true }),
+    IpcChannels.popupBlockerSet,
+    { enabled: true },
+  ],
+  ['getRecentRequests', () => api.getRecentRequests(), IpcChannels.popupBlockerRecentRequests],
+  ['getAdblockSettings', () => api.getAdblockSettings(), IpcChannels.adblockGet],
+  [
+    'setAdblockSettings (bare patch)',
+    () => api.setAdblockSettings({ enabled: false }),
+    IpcChannels.adblockSet,
+    { enabled: false },
+  ],
+  ['getAdblockState', () => api.getAdblockState(), IpcChannels.adblockState],
+  ['getTypoSettings', () => api.getTypoSettings(), IpcChannels.typoGet],
+  [
+    'setTypoSettings (bare patch)',
+    () => api.setTypoSettings({ enabled: true }),
+    IpcChannels.typoSet,
+    { enabled: true },
+  ],
+  ['getTypoState', () => api.getTypoState(), IpcChannels.typoState],
+  ['listTypoDictionaries', () => api.listTypoDictionaries(), IpcChannels.typoDictionariesList],
+  [
+    'deleteTypoDictionary',
+    () => api.deleteTypoDictionary('en-US'),
+    IpcChannels.typoDictionaryDelete,
+    'en-US',
+  ],
+  [
+    'showTypoDictionariesFolder',
+    () => api.showTypoDictionariesFolder(),
+    IpcChannels.typoDictionaryShowFolder,
+  ],
+  ['getTranslateSettings', () => api.getTranslateSettings(), IpcChannels.translateGet],
+  [
+    'setTranslateSettings (bare patch)',
+    () => api.setTranslateSettings({ enabled: true }),
+    IpcChannels.translateSet,
+    { enabled: true },
+  ],
+  ['getTranslateState', () => api.getTranslateState(), IpcChannels.translateState],
+  [
+    'translateText (bare input)',
+    () => api.translateText({ text: 'hi', target: 'tr' } as never),
+    IpcChannels.translateText,
+    { text: 'hi', target: 'tr' },
+  ],
+  ['startPageTranslation', () => api.startPageTranslation(), IpcChannels.translatePageStart],
+  ['restorePageOriginal', () => api.restorePageOriginal(), IpcChannels.translatePageRestore],
+  [
+    'addTranslateGlossaryTerm (bare term)',
+    () => api.addTranslateGlossaryTerm({ source: 'a', target: 'b' } as never),
+    IpcChannels.translateGlossaryAdd,
+    { source: 'a', target: 'b' },
+  ],
+  ['getVideoPlayerSettings', () => api.getVideoPlayerSettings(), IpcChannels.videoPlayerGet],
+  [
+    'setVideoPlayerSettings (bare patch)',
+    () => api.setVideoPlayerSettings({ enabled: true }),
+    IpcChannels.videoPlayerSet,
+    { enabled: true },
+  ],
+  ['getVideoPlayerState', () => api.getVideoPlayerState(), IpcChannels.videoPlayerState],
+  [
+    'pickNewTabBackgroundImage',
+    () => api.pickNewTabBackgroundImage(),
+    IpcChannels.newtabPickBackgroundImage,
+  ],
 ];
 
 const KEYED: Row[] = [
@@ -152,27 +224,40 @@ describe.each([...INVOKES, ...KEYED, ...SITE_SETTERS])(
 );
 
 describe('ipcRenderer.send methods', () => {
-  it('endTabProcess / trustPopupOrigin / cancelTypoDictionaryDownload are bare sends', () => {
+  it('endTabProcess / trustPopupOrigin / cancelTypoDictionaryDownload / respondTranslateCloudFallback are bare sends', () => {
     api.endTabProcess('t1');
     api.trustPopupOrigin('https://ex.test');
     api.cancelTypoDictionaryDownload('en-US');
+    api.respondTranslateCloudFallback({ requestId: 'r1', approved: true } as never);
     expect(ipc.send.mock.calls).toEqual([
       [IpcChannels.processMetricsEnd, { tabId: 't1' }],
       [IpcChannels.popupBlockerTrust, 'https://ex.test'],
       [IpcChannels.typoDictionaryCancel, 'en-US'],
+      [IpcChannels.translateCloudFallbackRespond, { requestId: 'r1', approved: true }],
     ]);
     expect(invoke).not.toHaveBeenCalled();
   });
 });
 
-describe('a representative subscription', () => {
-  it('onPublicSettingsChanged forwards the settings and unsubscribes the exact listener', () => {
+type SubRow = [name: string, run: (cb: (p: unknown) => void) => () => void, channel: string, sample: unknown];
+const SUBSCRIPTIONS: SubRow[] = [
+  ['onPublicSettingsChanged', (cb) => api.onPublicSettingsChanged(cb), IpcChannels.publicSettingsChanged, { theme: 'dark' }],
+  ['onTypoDictionariesState', (cb) => api.onTypoDictionariesState(cb), IpcChannels.typoDictionariesState, [{ id: 'en-US' }]],
+  ['onTranslatePageState', (cb) => api.onTranslatePageState(cb), IpcChannels.translatePageState, { status: 'translated' }],
+  ['onTranslateCloudFallbackRequest', (cb) => api.onTranslateCloudFallbackRequest(cb), IpcChannels.translateCloudFallbackRequest, { requestId: 'r1' }],
+  ['onVideoPlayerPageState', (cb) => api.onVideoPlayerPageState(cb), IpcChannels.videoPlayerPageState, { playing: true }],
+];
+
+describe('subscriptions: subscribe, forward only the payload, unsubscribe the exact listener', () => {
+  it.each(SUBSCRIPTIONS)('%s', (_n, run, channel, sample) => {
     const cb = vi.fn();
-    const off = api.onPublicSettingsChanged(cb);
-    const listener = ipc.on.mock.calls[0]![1] as (e: unknown, s: unknown) => void;
-    listener({}, { theme: 'dark' });
-    expect(cb).toHaveBeenCalledWith({ theme: 'dark' });
+    const off = run(cb);
+    expect(ipc.on).toHaveBeenCalledWith(channel, expect.any(Function));
+    const listener = ipc.on.mock.calls[0]![1] as (e: unknown, p: unknown) => void;
+    listener({ senderId: 1 }, sample);
+    expect(cb).toHaveBeenCalledWith(sample);
+    expect(cb).toHaveBeenCalledTimes(1);
     off();
-    expect(ipc.removeListener).toHaveBeenCalledWith(IpcChannels.publicSettingsChanged, listener);
+    expect(ipc.removeListener).toHaveBeenCalledWith(channel, listener);
   });
 });
