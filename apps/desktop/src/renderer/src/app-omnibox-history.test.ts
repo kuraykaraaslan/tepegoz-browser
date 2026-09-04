@@ -152,6 +152,18 @@ describe('the @-command handlers', () => {
     );
   });
 
+  it('an agent run whose ensureActiveGroup rejects closes the surface without a runAgent call', async () => {
+    bridge.ensureActiveGroup.mockRejectedValueOnce(new Error('no group'));
+    const { result } = render();
+    await act(async () => {
+      result.current.onAgentTaskFromOmnibox('summarize this');
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(onCloseSurface).toHaveBeenCalled();
+    expect(bridge.runAgent).not.toHaveBeenCalled();
+  });
+
   it('@skill runs the skill’s stored prompt, and an unknown id is a no-op', async () => {
     bridge.listAgentSkills.mockResolvedValueOnce([
       { id: 'sk1', name: 'Weekly report', prompt: 'DO THE WEEKLY REPORT', tombstone: false },

@@ -255,6 +255,22 @@ describe('useAppEffects', () => {
     expect(p2.setOmniboxSnapshot).toHaveBeenCalledWith(null);
   });
 
+  it('drops a snapshot that resolves after the dropdown already closed', async () => {
+    let resolveCapture: (v: string) => void = () => undefined;
+    bridge.captureActiveTab.mockImplementationOnce(
+      () => new Promise<string>((res) => { resolveCapture = res; }) as unknown as Promise<null>,
+    );
+    const p = params({ omniboxDropdownOpen: true });
+    const { unmount } = renderHook(() => useAppEffects(p));
+    unmount(); // cleanup flips the `cancelled` guard before the capture settles
+    await act(async () => {
+      resolveCapture('data:image/png;base64,LATE');
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(p.setOmniboxSnapshot).not.toHaveBeenCalledWith('data:image/png;base64,LATE');
+  });
+
   it('relays an autofill-available push into state', async () => {
     const p = params();
     renderHook(() => useAppEffects(p));
