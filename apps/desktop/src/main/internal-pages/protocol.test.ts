@@ -275,4 +275,23 @@ describe('tepegoz:// handler — favicon read failure', () => {
     const body = await res.text();
     expect(body).not.toContain('rel="icon"');
   });
+
+  it('404s (never throws) when the index document itself cannot be read', async () => {
+    readFile.mockImplementation((path: string) =>
+      path.endsWith('index.html')
+        ? Promise.reject(new Error('EIO'))
+        : Promise.resolve(Buffer.from('')),
+    );
+    vi.resetModules();
+    const fresh = await import('./protocol');
+    let handler: Handler | null = null;
+    sessionProtocolHandle.mockImplementationOnce((_s: string, h: Handler) => {
+      handler = h;
+    });
+    fresh.registerInternalPagesProtocol();
+
+    const res = await handler!({ url: 'tepegoz://settings' });
+
+    expect(res.status).toBe(404);
+  });
 });
