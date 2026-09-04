@@ -163,6 +163,14 @@ describe('the accent colour presets', () => {
     expect(setPref).toHaveBeenCalledTimes(1);
     expect(Object.keys(setPref.mock.calls[0]?.[0] as object)).toEqual(['themeColor']);
   });
+
+  it('commits a hand-picked custom colour on blur', () => {
+    const { setPref } = renderAppearance({ themeColor: '' });
+    const colorInput = document.querySelector('input[type="color"]') as HTMLInputElement;
+    fireEvent.change(colorInput, { target: { value: '#123456' } });
+    fireEvent.blur(colorInput);
+    expect(setPref).toHaveBeenCalledWith(expect.objectContaining({ themeColor: '#123456' }));
+  });
 });
 
 describe('the glass toggle is OS-gated', () => {
@@ -182,6 +190,15 @@ describe('the glass toggle is OS-gated', () => {
     await waitFor(() => {
       expect(screen.getByRole('switch')).toBeTruthy();
     });
+  });
+
+  it('writes the glass preference when the visible toggle is flipped', async () => {
+    appInfo.result = { ok: true, glassAvailable: true };
+    const { setPref } = renderAppearance({ glassChrome: false });
+
+    const toggle = await screen.findByRole('switch');
+    fireEvent.click(toggle);
+    expect(setPref).toHaveBeenCalledWith({ glassChrome: true });
   });
 
   it('stays hidden when the capability query FAILS, rather than defaulting to on', async () => {
@@ -304,5 +321,37 @@ describe('changing language and region', () => {
     fireEvent.click(options[0] as HTMLElement);
 
     expect(setPref).toHaveBeenCalledWith({ region: '' });
+  });
+
+  it('writes the chosen date format', () => {
+    const { setPref } = renderLanguage({ dateFormat: 'medium' }, 'en');
+    fireEvent.change(screen.getByLabelText(/Date format|Tarih biçimi/i), {
+      target: { value: 'long' },
+    });
+    expect(setPref).toHaveBeenCalledWith({ dateFormat: 'long' });
+  });
+
+  it('renders empty date and number previews for a region that yields an invalid tag', () => {
+    // `region` is used raw when it maps to no ISO base, so this produces `en-@@bad@@`, which both
+    // `formatDateByFormat` and `Intl.NumberFormat` reject — each preview must swallow that to ''.
+    expect(() =>
+      renderLanguage({ region: '@@bad@@', dateFormat: 'long' }, 'en'),
+    ).not.toThrow();
+    expect(screen.getByLabelText(/Date format|Tarih biçimi/i)).toBeTruthy();
+  });
+
+  it('degrades to unlabelled region codes when Intl.DisplayNames is unavailable', () => {
+    const RealDisplayNames = Intl.DisplayNames;
+    // Force the `regionOptions` useMemo down its `catch { dn = null }` path.
+    (Intl as unknown as { DisplayNames: unknown }).DisplayNames = function DisplayNames() {
+      throw new Error('no ICU region data');
+    };
+    try {
+      renderLanguage({ region: 'TUR' }, 'en');
+      // the picker still opens and still lists rows, just without localized names
+      expect(openPicker(/Region/i).length).toBeGreaterThan(1);
+    } finally {
+      (Intl as unknown as { DisplayNames: typeof RealDisplayNames }).DisplayNames = RealDisplayNames;
+    }
   });
 });
