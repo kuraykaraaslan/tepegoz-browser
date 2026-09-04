@@ -54,4 +54,13 @@ describe('SystemSection', () => {
     fireEvent.click(screen.getByRole('switch', { name: /hardware acceleration/i }));
     expect(setPref).toHaveBeenCalledWith({ hardwareAccelerationEnabled: false });
   });
+
+  it('relaunches the app from the restart banner', () => {
+    const relaunchApp = vi.fn();
+    Object.defineProperty(window, 'tepegoz', { configurable: true, value: { relaunchApp } });
+    renderSection();
+    fireEvent.click(crashToggle()); // raises the restart banner
+    fireEvent.click(screen.getByRole('button', { name: /restart now/i }));
+    expect(relaunchApp).toHaveBeenCalledTimes(1);
+  });
 });

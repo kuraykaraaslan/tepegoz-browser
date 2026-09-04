@@ -58,6 +58,14 @@ describe('ConfirmAction', () => {
     expect(screen.queryByText('Delete the stored key?')).toBeNull();
   });
 
+  it('closes without firing when the modal is dismissed with Escape', () => {
+    const { onConfirm } = renderConfirm();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete key' }));
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onConfirm).not.toHaveBeenCalled();
+    expect(screen.queryByText('Delete the stored key?')).toBeNull();
+  });
+
   it('opens nothing while disabled', () => {
     renderConfirm({ disabled: true });
     fireEvent.click(screen.getByRole('button', { name: 'Delete key' }));

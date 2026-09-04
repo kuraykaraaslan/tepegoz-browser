@@ -41,6 +41,12 @@ describe('TraySection', () => {
     expect(setPref).toHaveBeenCalledWith({ pauseTasksOnSleep: true });
   });
 
+  it('writes the tab-discard toggle, flipping its current value', () => {
+    const { setPref } = renderSection({ tabDiscardEnabled: false });
+    fireEvent.click(screen.getByRole('switch', { name: /discard/i }));
+    expect(setPref).toHaveBeenCalledWith({ tabDiscardEnabled: true });
+  });
+
   it('hides the idle-minutes field until tab discarding is enabled', () => {
     renderSection({ tabDiscardEnabled: false });
     expect(screen.queryByLabelText(/discard after/i)).toBeNull();
