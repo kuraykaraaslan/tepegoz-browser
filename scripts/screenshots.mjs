@@ -10,24 +10,32 @@
  * Captures with the main process's own `capturePage()`. Every tab is an
  * isolated `WebContentsView` (ADR-0012), composited outside the host window's
  * webContents, so a shot of a loaded WEB page comes back with the chrome drawn
- * and the page area blank. Internal `tepegoz://` pages render in the renderer
- * window and capture correctly, which is what this script sticks to.
+ * and the page area blank. Internal `tepegoz://` pages have historically come
+ * back in the capture, which is what this script sticks to — but note they are
+ * hosted in a `WebContentsView` too (`createInternalPageView` in
+ * apps/desktop/src/main/tabs-internal-page-view.ts), so that is an empirical
+ * result, not a guarantee the tab model gives us. If a run ever returns a blank
+ * internal page as well, that is why: re-verify, do not assume either way.
  *
- * An OS-level screen grab was tried to get the missing shot and REMOVED. It
- * captures whatever is physically in front on the desktop, and Windows refuses
+ * ── STANDING RULE: NEVER an OS-level screen grab ──────────────────────────
+ * One was tried here to get the missing page shot and REMOVED. It captures
+ * whatever is physically in front on the desktop, and Windows refuses
  * foreground activation often enough that "front" is not the window you asked
- * for: it produced one capture of the operator's own browser with their tabs
+ * for: it produced one capture of the OPERATOR'S OWN browser with their tabs
  * and profile avatar, and another of a video playing on their screen. Do not
- * reintroduce it. If a shot of a real page is needed, capture the tab's own
- * webContents and composite deliberately, or take it by hand.
+ * reintroduce it, in this script or in `scripts/record-agent.mjs`. If a shot of
+ * a real page is needed, capture the tab's own webContents and composite
+ * deliberately, take it by hand, or use the `desktopCapturer` path in
+ * `record-agent.mjs`, which resolves ONE window by Electron's own media-source
+ * id and so cannot wander onto the desktop.
+ * ─────────────────────────────────────────────────────────────────────────
  *
  * Real UI states only. Nothing here stages an agent run: the copy's standing
  * rule is that a mockup must not stand in for the real thing.
  */
 import { resolve, join } from 'node:path';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readdirSync, existsSync, rmSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { rmSync } from 'node:fs';
 import { _electron as electron } from '@playwright/test';
 
 const OUT = process.argv[2] ?? '.shots';
@@ -87,9 +95,22 @@ const pageUrl = `http://127.0.0.1:${server.address().port}/`;
 // network settings page). A repo-relative path put the operator's username and
 // a `.shot-profile` test artifact into a public marketing screenshot.
 const profileDir = join('C:', 'Users', 'Public', 'tepegoz-demo');
-rmSync(profileDir, { recursive: true, force: true });
+
+// Everything volatile goes; `models/` STAYS. This is the same profile
+// `scripts/fetch-demo-model.mjs` downloads ~1.1 GB of GGUF weights into, and
+// `scripts/record-agent.mjs` refuses to start without them. A blanket
+// `rmSync(profileDir)` therefore charged a screenshot run a 1.1 GB re-download,
+// silently and on someone else's connection — the reset is per-entry so that
+// cost cannot be paid by accident. Weights are inert data: keeping them cannot
+// leak the previous run's tabs into a shot, which is what the reset is for.
+const KEEP = new Set(['models']);
 mkdirSync(profileDir, { recursive: true });
+for (const entry of readdirSync(profileDir)) {
+  if (KEEP.has(entry)) continue;
+  rmSync(join(profileDir, entry), { recursive: true, force: true });
+}
 writeFileSync(join(profileDir, 'preferences.json'), '{}');
+if (existsSync(join(profileDir, 'models'))) console.log('kept downloaded models/');
 
 const app = await electron.launch({
   args: [`--user-data-dir=${profileDir}`, appDir],

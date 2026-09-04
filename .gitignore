@@ -20,6 +20,16 @@ build/
 # that only ran the tests.
 .spike-bg-*/
 
+# Capture output from the marketing-asset scripts (see scripts/README.md). Both take the output
+# directory as `argv[2]` and fall back to these defaults, so a plain `node scripts/screenshots.mjs`
+# leaves PNGs — and `record-agent.mjs` a multi-megabyte WebM — sitting untracked in the tree, one
+# `git add .` away from landing binaries in history. The bytes that get PUBLISHED live in the website
+# repo's `public/`, never here; what these write is scratch, and re-runnable.
+# (The demo Electron profile is deliberately NOT in the repo — it is `C:\Users\Public\tepegoz-demo`,
+# so the profile path the app prints on screen carries no username and no repo artifact name.)
+.shots/
+.recording/
+
 # Test / coverage
 coverage/
 test-results/

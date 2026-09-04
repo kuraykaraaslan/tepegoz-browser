@@ -8,10 +8,18 @@
  *
  * So the capture runs through Electron's own `desktopCapturer`, which hands
  * back a stream of ONE window identified by an id Electron itself enumerated.
- * That is the safe version of the OS screen grab that was tried and removed
- * earlier: a screen grab captures whatever is physically in front, and on
- * Windows foreground activation is not guaranteed, so it twice captured the
- * operator's own desktop instead of the app. `desktopCapturer` never does that.
+ *
+ * ── STANDING RULE: NEVER an OS-level screen grab ──────────────────────────
+ * A whole-screen grab captures whatever is physically in front, and on Windows
+ * foreground activation is not guaranteed, so "in front" is not the window you
+ * asked for. It was tried here, it twice captured the OPERATOR'S OWN DESKTOP —
+ * once their personal browser with their tabs and profile avatar, once a video
+ * playing on their screen — and it was removed. Do not reintroduce it, in this
+ * script or in `scripts/screenshots.mjs`. The `desktopCapturer` path below is
+ * the safe form and the only permitted one: it resolves the target by the
+ * window's own `getMediaSourceId()`, so there is no branch that can wander onto
+ * the desktop. `useSystemPicker: false` keeps a human out of that decision too.
+ * ─────────────────────────────────────────────────────────────────────────
  *
  * The model is the catalog's recommended on-device Qwen2.5 1.5B, pre-downloaded
  * into the demo profile by `scripts/fetch-demo-model.mjs`. No API key, no spend, and no page
@@ -23,11 +31,40 @@
  *
  * STATUS: the capture works — the WebM contains the composited window with the
  * driven page visible, which no other method here achieves. What does NOT work
- * yet is handing the agent a task from this harness: in the palette's `Do` mode
- * the typed goal is treated as a command-filter query ("No matching command")
- * and Enter dispatches nothing, so the run never starts. Until that is sorted,
- * this script records the app, not the agent, and its output must not be
- * published as a recording of the agent working.
+ * is THIS HARNESS'S dispatch path, and only that one. The script drives the
+ * command palette (Ctrl+K → `Do`), and the palette's Do mode has no commands to
+ * dispatch: `apps/desktop/src/renderer/src/command-palette-host.tsx` ends its
+ * source builder with
+ *
+ *     // Do / Make / Tasks are the agent's modes; they fill in as those surfaces
+ *     // expose commands. Shown as empty rather than hidden, because a mode that
+ *     // appears only sometimes is harder to learn than one that is visibly empty.
+ *     return { chat, do: [], make: [], tasks: [] };
+ *
+ * — still true as of this writing. So the typed goal is matched against an empty
+ * command list ("No matching command") and Enter starts nothing.
+ *
+ * Be precise about the scope of that: the PALETTE is the broken path, not agent
+ * dispatch. The agent does start, from two paths that work today:
+ *
+ *   - the Agent Console sidebar — `extensions/ext-agent/src/panel-actions.ts`
+ *     `onRun()` calls `api.runAgent({ prompt, groupId, … })`. This is how the
+ *     existing `agent-demo.gif` on the marketing site was driven.
+ *   - the omnibox — `apps/desktop/src/renderer/src/app-omnibox-history.ts`
+ *     `startAgentRun()` ensures a group, opens its console, then calls
+ *     `window.tepegoz.runAgent(…)`.
+ *
+ * Both land on the same preload bridge, `runAgent` in
+ * `apps/desktop/src/preload/api-agent-models.ts`, over `IpcChannels.agentRun`.
+ * Anyone re-pointing this harness should drive the sidebar (or call `runAgent`
+ * through the bridge) rather than teach the palette a new trick here — adding a
+ * dispatch path is a product change and belongs in the product, not in a
+ * capture script.
+ *
+ * The publication ban stands REGARDLESS, and is not lifted by the above: as
+ * written, this script records the app, not the agent, so its output must not be
+ * published as a recording of the agent working. Re-point it at a real dispatch
+ * path first, then re-read this line.
  */
 import { resolve, join } from 'node:path';
 import { mkdirSync, writeFileSync, rmSync, existsSync } from 'node:fs';
@@ -148,15 +185,18 @@ async function startRecording() {
     ses.setPermissionRequestHandler((_wc, permission, callback) => {
       callback(permission === 'media' || permission === 'display-capture');
     });
-    ses.setPermissionCheckHandler((_wc, permission) =>
-      permission === 'media' || permission === 'display-capture');
+    ses.setPermissionCheckHandler(
+      (_wc, permission) => permission === 'media' || permission === 'display-capture',
+    );
   });
 
   await win.evaluate(async () => {
     const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
     const chunks = [];
     const rec = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
-    rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+    rec.ondataavailable = (e) => {
+      if (e.data.size) chunks.push(e.data);
+    };
     rec.start(250);
     window.__rec = { rec, chunks, stream };
   });
@@ -202,7 +242,11 @@ console.log('recording…');
 await startRecording();
 await win.waitForTimeout(1200);
 
-// Give the agent the task, through the palette, exactly as a user would.
+// Give the agent the task through the palette, as a user would — except that
+// today this dispatches NOTHING (`do: []` in command-palette-host.tsx; see the
+// STATUS block in the header). The keystrokes are left in place because they are
+// the shape the recording should have once the palette gains Do commands; the
+// working paths meanwhile are the Agent Console sidebar and `runAgent`.
 await win.keyboard.press('Control+K');
 await win.waitForTimeout(1000);
 const doTab = win.getByText(/^Do$/).first();
@@ -211,7 +255,10 @@ await win.waitForTimeout(400);
 
 const input = win.getByPlaceholder(/command|ask|Tepegöz/i).first();
 await input.click();
-await input.type('Fill the contact form: name Ada Lovelace, email ada@example.com, message "Testing the agent." Then submit it.', { delay: 28 });
+await input.type(
+  'Fill the contact form: name Ada Lovelace, email ada@example.com, message "Testing the agent." Then submit it.',
+  { delay: 28 },
+);
 await win.waitForTimeout(600);
 await win.keyboard.press('Enter');
 
