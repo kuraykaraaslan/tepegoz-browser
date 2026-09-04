@@ -111,4 +111,22 @@ describe('clearOnExitNow', () => {
     clearOnExitNow(db);
     expect(cleared.calls).toEqual([]);
   });
+
+  it('swallows a MetaStore write failure while retiring the marker — the DB may be closing', async () => {
+    MetaStore.set(db, PENDING_KEY, JSON.stringify(['history']));
+    prefs.value = { clearOnExit: ['history'] };
+    const setSpy = vi.spyOn(MetaStore, 'set').mockImplementation(() => {
+      throw new Error('database is closing');
+    });
+    try {
+      clearOnExitNow(db); // sync; the throw is inside the resolved .then callback
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(setSpy).toHaveBeenCalledWith(db, PENDING_KEY, '');
+    } finally {
+      setSpy.mockRestore();
+    }
+    expect(cleared.calls).toEqual([{ range: 'all-time', categories: ['history'] }]);
+  });
 });
