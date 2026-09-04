@@ -302,3 +302,51 @@ describe('search', () => {
     expect(options()).toHaveLength(OPTIONS.length);
   });
 });
+
+describe('the open dropdown dismisses itself on an outside interaction', () => {
+  it('closes on a mousedown outside both the trigger and the portalled panel', () => {
+    const { trigger } = setup();
+    fireEvent.click(trigger);
+    expect(screen.queryByRole('listbox')).toBeTruthy();
+
+    fireEvent.mouseDown(document.body);
+    expect(screen.queryByRole('listbox')).toBeNull();
+  });
+
+  it('stays open for a mousedown that lands inside the panel', () => {
+    const { trigger } = setup();
+    fireEvent.click(trigger);
+    const list = screen.getByRole('listbox');
+
+    fireEvent.mouseDown(list);
+    expect(screen.queryByRole('listbox')).toBeTruthy();
+  });
+
+  it('survives a scroll or resize while open (it just re-places the panel)', () => {
+    const { trigger } = setup();
+    fireEvent.click(trigger);
+
+    fireEvent.scroll(window);
+    window.dispatchEvent(new Event('resize'));
+    expect(screen.queryByRole('listbox')).toBeTruthy();
+  });
+});
+
+describe('the flag glyph', () => {
+  it('prefers a bundled flagSrc image over the ISO country SVG', () => {
+    render(
+      <FlagSelect
+        label="Language"
+        value="xx"
+        onChange={vi.fn()}
+        options={[{ value: 'xx', label: 'Custom', flagSrc: 'data:image/png;base64,ABC' }]}
+        searchPlaceholder="Search languages"
+        noResultsLabel="No results"
+        placeholder="Pick one"
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Language/ }));
+    const img = within(screen.getByRole('listbox')).getByRole('presentation');
+    expect(img.getAttribute('src')).toBe('data:image/png;base64,ABC');
+  });
+});
