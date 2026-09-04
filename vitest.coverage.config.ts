@@ -68,7 +68,12 @@ export default defineConfig({
       // numbers below are the gate.
       thresholds: {
         // The mature scope. Floor(measured 2026-08-22): S80.14 / B85.85 / F86.53 / L80.14.
-        'packages/**': { statements: 80, branches: 85, functions: 86, lines: 80 },
+        // Ratcheted 2026-09-05 to floor(measured) S87.85 / B88.97 / F90.66 / L87.85, held ~2pts below
+        // each to absorb v8 run-to-run drift: `@tepegoz/desktop-ipc` went from ZERO test files to a
+        // full schema suite (all 10 `schemas-*.ts`), `@tepegoz/mcp-client` (connection + supervisor)
+        // and `packages/orchestrator/src/reactor.ts` reached 100%, plus tasks/i18n-format/macro-engine
+        // predicate+expr/file-operations tools/human-input adapter/browser-tools/agent-runtime.
+        'packages/**': { statements: 86, branches: 87, functions: 89, lines: 86 },
         // `apps/desktop` joined the gate on 2026-08-22 at its own floor, which is the only honest way to
         // add it — the alternative was to keep claiming it was covered while it was not measured at all.
         // It entered at S12.97 / B68.62 / F39.43 / L12.97 over 24,326 statements, a scope as large as
@@ -151,7 +156,14 @@ export default defineConfig({
         // clear-browsing-data IPC (vault never in scope, every browsing partition, partial-failure
         // resilient, journalled), agent conversation-history + active-tab helper IPC (agentPickFiles
         // 5-file/5-MB cap, text vs base64), and the trusted-origin desktop adapter binding.
-        'apps/desktop/**': { statements: 49, branches: 86, functions: 62, lines: 49 },
+        //
+        // Ratcheted 2026-09-05 to floor(measured) S86.47 / B92.21 / F92.33 / L86.47, held ~2pts below
+        // each. The `test/desktop-main-coverage` loop (rounds ~66→274) drove `apps/desktop/src/main`
+        // and `apps/desktop/src/preload` to ~100% one file per iteration — every reachable statement
+        // is now covered; what remains is documented-unreachable defensive code, `**/index.ts` barrels
+        // (config-excluded), and `apps/desktop/src/renderer` (its own parallel push). This locks in
+        // the 37-point gain so a regression trips CI. A trip means: add the test, do not lower this.
+        'apps/desktop/**': { statements: 84, branches: 90, functions: 90, lines: 84 },
       },
       include: [
         'apps/desktop/src/**',
