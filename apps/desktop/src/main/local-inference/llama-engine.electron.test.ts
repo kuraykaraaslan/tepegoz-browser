@@ -72,8 +72,9 @@ describe('isAvailable', () => {
   it('is true once getLlama resolves', async () => {
     const mod = await load();
     const eng = mod.llamaEngine();
-    await flush();
-    expect(eng.isAvailable()).toBe(true);
+    // The constructor's `void ensureLlama()` settles on its own microtask chain — poll rather than
+    // guess a fixed number of macrotask ticks (a fixed `flush()` loses this race under a full run).
+    await vi.waitFor(() => expect(eng.isAvailable()).toBe(true));
   });
 
   it('is false and logs when the native binary cannot load', async () => {
