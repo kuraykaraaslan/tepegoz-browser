@@ -116,6 +116,18 @@ describe('handleWillDownload', () => {
     ).toEqual(['updated', 'done']);
   });
 
+  it('captures the ETag and Last-Modified for a cross-restart resume when the item has them', () => {
+    const item = mkItem({
+      getETag: () => 'W/"abc123"',
+      getLastModifiedTime: () => 'Wed, 03 Sep 2026 10:00:00 GMT',
+    });
+    handleWillDownload(cast(state), cast(item), cast(wc));
+    expect(state.records.get('uuid-1')).toMatchObject({
+      etag: 'W/"abc123"',
+      lastModified: 'Wed, 03 Sep 2026 10:00:00 GMT',
+    });
+  });
+
   it('the updated listener drops the rate window on pause and patches status', () => {
     const item = mkItem();
     handleWillDownload(cast(state), cast(item), cast(wc));
