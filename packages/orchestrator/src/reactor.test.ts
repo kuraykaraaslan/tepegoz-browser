@@ -608,3 +608,66 @@ describe('Reactor.run — navigation grounding + validator resilience', () => {
     expect(n).toBeGreaterThanOrEqual(2);
   });
 });
+
+describe('Reactor.run — run-control gate (mid-run steering + abort)', () => {
+  const req = (goal = 'do it') => ({
+    goal,
+    tools: tools(),
+    provider: 'anthropic' as const,
+    model: 'mock',
+  });
+
+  type Ctl = import('./run-control').RunControl;
+  const control = (over: Partial<Ctl> = {}): Ctl => ({
+    aborted: false,
+    isHeld: () => false,
+    waitWhileHeld: () => Promise.resolve(),
+    drainSteer: () => [],
+    modelSignal: () => new AbortController().signal,
+    enterOfflineHold: () => undefined,
+    enterHandoffHold: () => undefined,
+    ...over,
+  });
+
+  it('folds a drained steer message into the conversation before the next decision', async () => {
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    script([act('browser_get_elements'), finish]);
+    let drained = false;
+    const res = await Reactor.run(req(), {
+      control: control({
+        drainSteer: () => {
+          if (drained) return [];
+          drained = true;
+          return ['also check the archive'];
+        },
+      }),
+    });
+    expect(res.stoppedReason).toBe('completed');
+    expect(drained).toBe(true);
+  });
+
+  it('stops with stoppedReason "aborted" when control.aborted is set at the gate', async () => {
+    script([finish]);
+    const res = await Reactor.run(req(), { control: control({ aborted: true }) });
+    expect(res.stoppedReason).toBe('aborted');
+  });
+});
+
+describe('Reactor.run — urlFromOutcome tolerates a malformed result URL', () => {
+  it('does not throw when a tool result carries an unparseable url', async () => {
+    ToolGateway.setConfirmHandler(() => Promise.resolve(true));
+    CapabilityRegistry.reset();
+    CapabilityRegistry.register(fakeTool('browser_get_elements', 'read', { url: 'http://[' }));
+    script([act('browser_get_elements'), finish]);
+    const res = await Reactor.run(
+      {
+        goal: 'go',
+        tools: tools(),
+        provider: 'anthropic' as const,
+        model: 'mock',
+      },
+      { recallMemory: () => Promise.resolve(null) },
+    );
+    expect(res.stoppedReason).toBe('completed');
+  });
+});
