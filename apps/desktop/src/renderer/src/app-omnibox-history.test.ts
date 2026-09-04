@@ -87,6 +87,35 @@ describe('onOmniboxSuggest', () => {
     expect(bridge.listDownloads).toHaveBeenCalledTimes(1);
   });
 
+  it('@download maps rows to {id,name,source} — source is the URL host, or the raw string when it will not parse', async () => {
+    bridge.listDownloads.mockResolvedValueOnce([
+      { id: 'd1', filename: 'invoice-web.pdf', url: 'https://files.example.com/a/b.pdf' },
+      { id: 'd2', filename: 'invoice-local.txt', url: 'not a url' },
+    ]);
+    const { result } = render();
+    const texts = JSON.stringify(await result.current.onOmniboxSuggest('@download invoice'));
+    expect(texts).toContain('files.example.com'); // d1: URL host
+    expect(texts).toContain('not a url'); // d2: unparseable → hostOf returns the raw string
+  });
+
+  it('@download degrades to an empty download list when listDownloads rejects', async () => {
+    bridge.listDownloads.mockRejectedValueOnce(new Error('store gone'));
+    const { result } = render();
+    await expect(result.current.onOmniboxSuggest('@download x')).resolves.toBeInstanceOf(Array);
+  });
+
+  it('an empty query does not hit history at all', async () => {
+    const { result } = render();
+    await result.current.onOmniboxSuggest('');
+    expect(bridge.searchHistory).not.toHaveBeenCalled();
+  });
+
+  it('@skill degrades to an empty skill list when listAgentSkills rejects', async () => {
+    bridge.listAgentSkills.mockRejectedValueOnce(new Error('skills store gone'));
+    const { result } = render();
+    await expect(result.current.onOmniboxSuggest('@skill x')).resolves.toBeInstanceOf(Array);
+  });
+
   it('still returns an array when history is unavailable', async () => {
     bridge.searchHistory.mockRejectedValueOnce(new Error('db gone'));
     const { result } = render();
