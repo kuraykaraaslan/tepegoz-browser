@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { AppError } from '@tepegoz/libs';
 import type { ToolError } from '@tepegoz/shared-types';
 import {
   classifyRuntimeError,
   classifyToolFailure,
   recoveryAdviceFor,
   stopReasonForFailure,
+  type AgentFailureKind,
 } from './recovery';
 
 const err = (code: ToolError['code'], message: string, retryable: boolean): ToolError => ({
@@ -96,5 +98,108 @@ describe('agent recovery classification', () => {
     expect(stopReasonForFailure(failure)).toBe('tool_error');
     expect(recoveryAdviceFor(failure).retryable).toBe(true);
     expect(recoveryAdviceFor(failure).instruction.toLowerCase()).toContain('schema');
+  });
+});
+
+describe('classifyRuntimeError', () => {
+  it('flags an Egress-Firewall 403 with the stable phrase as a non-retryable security stop', () => {
+    const f = classifyRuntimeError(
+      new AppError('The outbound model request was blocked', 403),
+    );
+    expect(f).toMatchObject({ kind: 'egress_blocked', retryable: false });
+  });
+
+  it('maps an AppError 502 to model_malformed (retryable)', () => {
+    expect(classifyRuntimeError(new AppError('bad gateway', 502))).toMatchObject({
+      kind: 'model_malformed',
+      retryable: true,
+    });
+  });
+
+  it('classifies by message when there is no status code', () => {
+    expect(classifyRuntimeError(new Error('model returned invalid JSON')).kind).toBe(
+      'model_malformed',
+    );
+    expect(classifyRuntimeError(new Error('please enter the verification code')).kind).toBe(
+      'auth_handoff',
+    );
+    expect(classifyRuntimeError(new Error('navigation timed out')).kind).toBe('navigation_timeout');
+    expect(classifyRuntimeError('a plain string with nothing to match')).toMatchObject({
+      kind: 'unknown',
+      retryable: false,
+    });
+    expect(classifyRuntimeError({ no: 'message' }).message).toBe('Unknown failure');
+  });
+});
+
+describe('classifyToolFailure — the remaining branches', () => {
+  it('auth handoff from the message alone', () => {
+    expect(
+      classifyToolFailure({ tool: 'browser_update_page', error: err('INTERNAL_ERROR', 'solve the captcha', false) }),
+    ).toMatchObject({ kind: 'auth_handoff', retryable: false });
+  });
+
+  it('page_changed from a context-destroyed message', () => {
+    expect(
+      classifyToolFailure({ tool: 'agent_think', error: err('INTERNAL_ERROR', 'execution context was destroyed', false) }),
+    ).toMatchObject({ kind: 'page_changed', retryable: true });
+  });
+
+  it('transient from a RATE_LIMITED / UPSTREAM_ERROR / retryable-flag error', () => {
+    expect(classifyToolFailure({ tool: 't', error: err('RATE_LIMITED', 'slow down', false) }).kind).toBe(
+      'transient',
+    );
+    expect(classifyToolFailure({ tool: 't', error: err('UPSTREAM_ERROR', 'x', false) }).kind).toBe(
+      'transient',
+    );
+    expect(classifyToolFailure({ tool: 't', error: err('INTERNAL_ERROR', 'x', true) }).kind).toBe(
+      'transient',
+    );
+  });
+
+  it('unknown for an unrecognised, non-retryable error', () => {
+    expect(
+      classifyToolFailure({ tool: 't', error: err('NOT_FOUND', 'weird', false) }),
+    ).toMatchObject({ kind: 'unknown', retryable: false });
+  });
+
+  it('tolerates an error object with no code / no retryable flag', () => {
+    const f = classifyToolFailure({ tool: 't', error: { message: 'bare' } as never });
+    expect(f).toMatchObject({ kind: 'unknown', code: undefined, message: 'bare' });
+  });
+});
+
+const ALL_KINDS: AgentFailureKind[] = [
+  'transient',
+  'policy_denied',
+  'page_changed',
+  'selector_stale',
+  'navigation_timeout',
+  'auth_handoff',
+  'model_malformed',
+  'validation',
+  'egress_blocked',
+  'no_active_page',
+  'unknown',
+];
+
+describe('stopReasonForFailure + recoveryAdviceFor cover every AgentFailureKind', () => {
+  it.each(ALL_KINDS)('%s → a stop reason and an advice string', (kind) => {
+    const failure = { kind, message: 'm' } as Parameters<typeof stopReasonForFailure>[0];
+    expect(typeof stopReasonForFailure(failure)).toBe('string');
+    const advice = recoveryAdviceFor(failure);
+    expect(advice.instruction.length).toBeGreaterThan(10);
+    expect(typeof advice.retryable).toBe('boolean');
+  });
+
+  it('maps the distinctive stop reasons', () => {
+    const sr = (kind: AgentFailureKind) =>
+      stopReasonForFailure({ kind, message: 'm' } as Parameters<typeof stopReasonForFailure>[0]);
+    expect(sr('navigation_timeout')).toBe('navigation_timeout');
+    expect(sr('page_changed')).toBe('page_changed');
+    expect(sr('auth_handoff')).toBe('handoff');
+    expect(sr('transient')).toBe('transient_error');
+    expect(sr('egress_blocked')).toBe('egress_blocked');
+    expect(sr('no_active_page')).toBe('tool_error');
   });
 });
