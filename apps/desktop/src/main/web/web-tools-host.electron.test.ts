@@ -128,3 +128,29 @@ describe('discoverSitemap + the sitemap fetch', () => {
     expect(await sitemap.fetch!('https://x.test/robots.txt', 100)).toBeNull();
   });
 });
+
+describe('the transformResponse/validateStatus thunks passed to the http client', () => {
+  // These run inside the real client (mocked here to a bare spy), so nothing calls them unless we
+  // capture and invoke them directly off the options each call site passes.
+  it('each transformResponse coerces the raw response data to a string', async () => {
+    http.get.mockResolvedValue({ data: '<html></html>', status: 200, headers: {} });
+
+    await webToolsHost.search({ query: 'q', maxResults: 1 });
+    const searchOpts = http.get.mock.calls[0]![1] as { transformResponse: [(d: unknown) => string] };
+    expect(searchOpts.transformResponse[0](123)).toBe('123');
+
+    http.get.mockClear();
+    await webToolsHost.fetch({ url: 'https://p.test/', maxBytes: 10 });
+    const fetchOpts = http.get.mock.calls[0]![1] as { transformResponse: [(d: unknown) => string] };
+    expect(fetchOpts.transformResponse[0](null)).toBe('null');
+
+    http.get.mockClear();
+    await sitemap.fetch!('https://x.test/sitemap.xml', 10);
+    const sitemapOpts = http.get.mock.calls[0]![1] as {
+      transformResponse: [(d: unknown) => string];
+      validateStatus: () => boolean;
+    };
+    expect(sitemapOpts.transformResponse[0](42)).toBe('42');
+    expect(sitemapOpts.validateStatus()).toBe(true);
+  });
+});
