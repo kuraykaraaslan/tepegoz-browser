@@ -102,6 +102,7 @@ vi.mock('./tabs-shared', () => ({
 }));
 
 const { WindowTabs } = await import('./tabs-window');
+const { WindowTabsBase } = await import('./tabs-window-base');
 const ipv = await import('./tabs-internal-page-view');
 
 function fakeWindow() {
@@ -175,7 +176,12 @@ class Harness extends WindowTabs {
     this.internalPageViews.set(id, view as never);
   }
   /** The view-wiring host the base builds for `wireView` — its `createTab`/`emitState` arrows. */
-  wiringHost(): { createTab: (u?: string, o?: unknown) => void; emitState: () => void } {
+  wiringHost(): {
+    createTab: (u?: string, o?: unknown) => void;
+    emitState: () => void;
+    getBounds: () => unknown;
+    closeTab: () => void;
+  } {
     return this.viewWiringHost() as never;
   }
   /** The size-a-view rectangle decision (exercises the destroyed-window branch). */
@@ -552,6 +558,20 @@ describe('base small surface', () => {
     win.webContents.send.mockClear();
     host.emitState();
     expect(win.webContents.send).toHaveBeenCalled();
+
+    // `getBounds` reads the live content-area rect (`closeTab` is overridden by `WindowTabsClosing`
+    // further up the chain — see the direct-base test below for ITS own no-op stub).
+    expect(host.getBounds()).toEqual({ x: 0, y: 0, width: 0, height: 0 });
+  });
+
+  it('WindowTabsBase.viewWiringHost().closeTab is a documented no-op below WindowTabsClosing', () => {
+    class BaseHarness extends WindowTabsBase {
+      rawWiringHost(): { closeTab: () => void } {
+        return this.viewWiringHost() as never;
+      }
+    }
+    const base = new BaseHarness(fakeWindow() as never, false);
+    expect(base.rawWiringHost().closeTab()).toBeUndefined();
   });
 
   it('schedulePersist flushes persistSession once the debounce elapses', () => {
