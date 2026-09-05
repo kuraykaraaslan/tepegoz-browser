@@ -135,6 +135,16 @@ describe('run', () => {
     expect(deps.tabEgressBlocked('t1')).toBe(false);
   });
 
+  it('the injected localInference wires the llama engine and resolveModel', async () => {
+    const svc = await load();
+    await svc.run('x', hooks, 'g1');
+    const deps = runAgent.mock.calls[0]![2] as {
+      localInference: { engine: unknown; resolveModel: () => { id: string } };
+    };
+    expect(deps.localInference.engine).toEqual({ __engine: true });
+    expect(deps.localInference.resolveModel()).toEqual({ id: 'local-1' });
+  });
+
   it('forwards a token budget when given', async () => {
     const svc = await load();
     await svc.run('x', hooks, 'g1', 'x', { quota: 100, lifetimeUsed: 10 });
