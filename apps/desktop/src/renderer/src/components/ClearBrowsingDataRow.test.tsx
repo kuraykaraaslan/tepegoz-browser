@@ -114,4 +114,16 @@ describe('ClearBrowsingDataRow', () => {
     fireEvent.click(screen.getByRole('button', { name: s.clearData.confirm }));
     await waitFor(() => expect(screen.getByText(s.clearData.error)).toBeTruthy());
   });
+
+  it('closes the dialog on Cancel', () => {
+    openDialog();
+    fireEvent.click(screen.getByRole('button', { name: s.cancel }));
+    expect(screen.queryByText(s.clearData.categoriesLabel)).toBeNull();
+  });
+
+  it('closes the dialog on Escape', () => {
+    openDialog();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByText(s.clearData.categoriesLabel)).toBeNull();
+  });
 });
