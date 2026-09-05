@@ -198,6 +198,44 @@ describe('waitForPageSettled', () => {
     expect(S.NetworkCompleteSchema.safeParse).not.toHaveBeenCalled();
   });
 
+  it('ignores an unparseable requestWillBeSent payload and an unrelated debugger message', async () => {
+    vi.useFakeTimers();
+    const wc = fakeWc({ loading: false });
+    S.FrameTreeSchema.safeParse.mockReturnValue(ok({ frameTree: { frame: { id: 'F' } } }));
+    S.IsolatedWorldSchema.safeParse.mockReturnValue(ok({ executionContextId: 1 }));
+    S.NetworkRequestSchema.safeParse.mockReturnValue(bad);
+
+    const done = session.waitForPageSettled(cast(wc), ensure, 1000);
+    await vi.advanceTimersByTimeAsync(1);
+    wc.debugger.emitMessage('Network.requestWillBeSent', { garbage: true });
+    wc.debugger.emitMessage('Page.frameNavigated', {}); // an unrelated method: no-op, not a parse attempt
+    await vi.advanceTimersByTimeAsync(1000);
+    await done;
+
+    expect(S.NetworkRequestSchema.safeParse).toHaveBeenCalledTimes(1);
+    expect(S.NetworkCompleteSchema.safeParse).not.toHaveBeenCalled();
+  });
+
+  it('settles via Network.loadingFailed too, and ignores an unparseable completion payload', async () => {
+    vi.useFakeTimers();
+    const wc = fakeWc({ loading: false });
+    S.FrameTreeSchema.safeParse.mockReturnValue(ok({ frameTree: { frame: { id: 'F' } } }));
+    S.IsolatedWorldSchema.safeParse.mockReturnValue(ok({ executionContextId: 1 }));
+    S.NetworkRequestSchema.safeParse.mockReturnValue(ok({ requestId: 'r1', type: 'Document' }));
+    S.NetworkCompleteSchema.safeParse.mockReturnValueOnce(bad).mockReturnValue(ok({ requestId: 'r1' }));
+
+    const done = session.waitForPageSettled(cast(wc), ensure, 1000);
+    await vi.advanceTimersByTimeAsync(1);
+    wc.debugger.emitMessage('Network.requestWillBeSent', { requestId: 'r1' });
+    // First completion event is malformed: ignored, request stays in-flight.
+    wc.debugger.emitMessage('Network.loadingFailed', { garbage: true });
+    wc.debugger.emitMessage('Network.loadingFailed', { requestId: 'r1' });
+    await vi.advanceTimersByTimeAsync(1000);
+    await done;
+
+    expect(S.NetworkCompleteSchema.safeParse).toHaveBeenCalledTimes(2);
+  });
+
   it('falls back to a fixed delay when the DOM-quiet probe throws', async () => {
     vi.useFakeTimers();
     const wc = fakeWc({ loading: false });
@@ -228,5 +266,21 @@ describe('waitForPageSettled', () => {
     await done;
     // Bailed before the DOM-quiet / viewport Runtime.evaluate passes.
     expect(wc.debugger.sendCommand).not.toHaveBeenCalledWith('Runtime.evaluate', expect.anything());
+  });
+
+  it('stops after DOM-quiet when the WebContents is destroyed right after it, skipping viewport', async () => {
+    vi.useFakeTimers();
+    const wc = fakeWc({ loading: false });
+    let calls = 0;
+    wc.isDestroyed.mockImplementation(() => ++calls > 4);
+    S.FrameTreeSchema.safeParse.mockReturnValue(ok({ frameTree: { frame: { id: 'F' } } }));
+    S.IsolatedWorldSchema.safeParse.mockReturnValue(ok({ executionContextId: 1 }));
+
+    const done = session.waitForPageSettled(cast(wc), ensure, 1000);
+    await vi.advanceTimersByTimeAsync(1000);
+    await done;
+    // DOM-quiet's own Runtime.evaluate ran; the viewport pass's own never got the chance to.
+    expect(wc.debugger.sendCommand).toHaveBeenCalledWith('Runtime.evaluate', expect.anything());
+    expect(wc.debugger.sendCommand).toHaveBeenCalledTimes(3); // getFrameTree + createIsolatedWorld + evaluate
   });
 });
