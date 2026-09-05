@@ -209,15 +209,18 @@ describe('resolve (via click)', () => {
 });
 
 describe('the actions', () => {
-  it('fill / press / scroll delegate to MacroCdp and hide the cursor', async () => {
-    const host = make({ onCursorHide: vi.fn() });
+  it('click / fill / press / scroll delegate to MacroCdp and hide the cursor, notifying onCursorHide', async () => {
+    const onCursorHide = vi.fn();
+    const host = make({ onCursorHide });
+    await host.click(CHAIN);
     await host.fill(CHAIN, 'text');
     await host.press('Enter');
     await host.scroll('down', 300);
     expect(MacroCdp.fill).toHaveBeenCalledWith(wcStub, 7, 'text', expect.anything());
     expect(MacroCdp.pressKey).toHaveBeenCalledWith(wcStub, 'Enter', expect.anything());
     expect(MacroCdp.scroll).toHaveBeenCalledWith(wcStub, 'down', 300, expect.anything());
-    expect(cursor.hidePageCursor).toHaveBeenCalledTimes(3);
+    expect(cursor.hidePageCursor).toHaveBeenCalledTimes(4);
+    expect(onCursorHide).toHaveBeenCalledTimes(4);
   });
 
   it('navigate goes through the scheme-checked browser host', async () => {
@@ -256,6 +259,20 @@ describe('the read-only probes', () => {
   it('readCsv forwards to the injected reader', async () => {
     await make().readCsv('hash-1');
     expect(readCsv).toHaveBeenCalledWith('hash-1');
+  });
+
+  it('sleep resolves after the given delay', async () => {
+    vi.useFakeTimers();
+    try {
+      const done = vi.fn();
+      void make().sleep(50).then(done);
+      await vi.advanceTimersByTimeAsync(49);
+      expect(done).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(done).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
