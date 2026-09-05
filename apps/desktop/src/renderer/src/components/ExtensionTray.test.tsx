@@ -127,6 +127,32 @@ describe('ExtensionTray', () => {
     expect(onExtensionAction).toHaveBeenCalledTimes(1);
   });
 
+  it('clears the pending deferred-click timer on unmount (no stray action after unmount)', () => {
+    vi.useFakeTimers();
+    const clearTimeoutSpy = vi.spyOn(window, 'clearTimeout');
+    const onExtensionAction = vi.fn();
+    const { unmount } = render(
+      <ExtensionTray
+        locale="en"
+        extensions={[def('a', true)]}
+        extensionStates={[{ id: 'a', status: 'enabled' }]}
+        pinnedIds={['a']}
+        activeExtensionId={null}
+        onExtensionAction={onExtensionAction}
+        onReorderPinned={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'a' }));
+    expect(onExtensionAction).not.toHaveBeenCalled();
+
+    const callsBeforeUnmount = clearTimeoutSpy.mock.calls.length;
+    unmount();
+    expect(clearTimeoutSpy.mock.calls.length).toBeGreaterThan(callsBeforeUnmount);
+
+    vi.advanceTimersByTime(300);
+    expect(onExtensionAction).not.toHaveBeenCalled();
+  });
+
   it('fires the deferred single click alone when no second click arrives', () => {
     vi.useFakeTimers();
     const onExtensionAction = vi.fn();
