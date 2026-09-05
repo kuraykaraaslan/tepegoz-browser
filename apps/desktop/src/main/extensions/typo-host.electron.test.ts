@@ -68,7 +68,11 @@ vi.mock('@tepegoz/model-gateway', () => ({
   GROQ_MODEL: { classify: 'q' },
   LOCAL_MODEL: { classify: 'l' },
 }));
-vi.mock('@tepegoz/local-inference', () => ({ LocalProvider: class {} }));
+vi.mock('@tepegoz/local-inference', () => ({
+  LocalProvider: class {
+    constructor(public opts: { resolveModel: () => unknown }) {}
+  },
+}));
 const isRunnableProvider = vi.hoisted(() => vi.fn(() => true));
 vi.mock('@tepegoz/shared-types', () => ({ isRunnableProvider }));
 const vault = vi.hoisted(() => ({
@@ -164,6 +168,14 @@ describe('aiReview', () => {
       source: 'local-llm',
       kind: 'spelling',
     });
+    const registered = gateway.register.mock.calls[0]![0] as { opts: { resolveModel: () => unknown } };
+    expect(registered.opts.resolveModel()).toEqual({ id: 'm' });
+  });
+
+  it('does not register the local provider when auto mode is on but the engine/model is unavailable', async () => {
+    llama.mockReturnValue({ isAvailable: () => false });
+    await cfg().aiReview({ text: 'teh cat sat', aiMode: 'auto' }, base(), { localLlmMode: 'auto' });
+    expect(gateway.register).not.toHaveBeenCalled();
   });
 
   it('swallows a local review failure with a warning', async () => {
@@ -178,6 +190,24 @@ describe('aiReview', () => {
       'Typo local LLM review failed',
       expect.objectContaining({ err: expect.stringContaining('model timeout') as string }),
     );
+  });
+
+  it('skips external AI when no stored key belongs to a runnable provider', async () => {
+    vault.listMeta.mockReturnValue([{ provider: 'openai', region: 'us' }]);
+    isRunnableProvider.mockReturnValue(false);
+    await cfg().aiReview({ text: 'the cat sat', aiMode: 'manual' }, base(), {
+      externalAiMode: 'manual',
+    });
+    expect(gateway.register).not.toHaveBeenCalled();
+  });
+
+  it('skips external AI when the runnable provider has no usable key', async () => {
+    vault.listMeta.mockReturnValue([{ provider: 'openai', region: 'us' }]);
+    vault.getFirstKeyForProvider.mockReturnValue(null);
+    await cfg().aiReview({ text: 'the cat sat', aiMode: 'manual' }, base(), {
+      externalAiMode: 'manual',
+    });
+    expect(gateway.register).not.toHaveBeenCalled();
   });
 
   it('runs an external-AI pass under manual mode with a runnable provider key', async () => {
@@ -222,6 +252,44 @@ describe('aiReview', () => {
       externalAiMode: 'manual',
     });
     expect((res.issues as { start: number; end: number }[])[0]).toMatchObject({ start: 4, end: 7 });
+  });
+
+  it('drops an AI issue whose text cannot be located and returns base when the response fails schema', async () => {
+    vault.listMeta.mockReturnValue([{ provider: 'openai', region: 'us' }]);
+    vault.getFirstKeyForProvider.mockReturnValue('sk');
+    gateway.complete.mockResolvedValue({
+      text: '{"issues":[{"kind":"grammar","text":"not in the source","message":"m","suggestions":[]}]}',
+    });
+    const res = await cfg().aiReview({ text: 'the cat sat', aiMode: 'manual' }, base(), {
+      externalAiMode: 'manual',
+    });
+    expect(res.issues).toEqual([]);
+
+    gateway.complete.mockResolvedValue({ text: '{"issues":"not-an-array"}' });
+    const b = base();
+    expect(
+      await cfg().aiReview({ text: 'the cat sat', aiMode: 'manual' }, b, {
+        externalAiMode: 'manual',
+      }),
+    ).toBe(b);
+  });
+
+  it('dedupes an AI issue matching an already-seen range+kind, and marks a style issue as info severity', async () => {
+    vault.listMeta.mockReturnValue([{ provider: 'openai', region: 'us' }]);
+    vault.getFirstKeyForProvider.mockReturnValue('sk');
+    gateway.complete.mockResolvedValue({
+      text:
+        '{"issues":[' +
+        '{"kind":"style","text":"cat","start":4,"end":7,"message":"m1","suggestions":[]},' +
+        '{"kind":"style","text":"cat","start":4,"end":7,"message":"m2","suggestions":[]}' +
+        ']}',
+    });
+    const res = await cfg().aiReview({ text: 'the cat sat', aiMode: 'manual' }, base(), {
+      externalAiMode: 'manual',
+    });
+    const issues = res.issues as { severity: string }[];
+    expect(issues).toHaveLength(1); // the second, identical-range issue was deduped
+    expect(issues[0]!.severity).toBe('info'); // style → info, not warning
   });
 
   it('swallows an external review failure with a warning', async () => {
