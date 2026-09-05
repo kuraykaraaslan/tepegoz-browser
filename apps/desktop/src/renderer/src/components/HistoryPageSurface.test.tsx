@@ -17,7 +17,9 @@ stubJsdomLayout();
 const bridge = {
   getPreferences: () => Promise.resolve({ ...DEFAULT_PREFERENCES }),
   onPublicSettingsChanged: () => () => undefined,
-  getHistory: vi.fn(() => Promise.resolve([])),
+  getHistory: vi.fn<() => Promise<Array<{ url: string; title: string; ts: number }>>>(() =>
+    Promise.resolve([]),
+  ),
   searchHistory: vi.fn(() => Promise.resolve([])),
   deleteHistory: vi.fn(() => Promise.resolve()),
   clearHistory: vi.fn(() => Promise.resolve()),
@@ -56,5 +58,19 @@ describe('HistoryPageSurface', () => {
     await waitFor(() =>
       expect(bridge.searchHistory).toHaveBeenCalledWith({ query: 'weather', offset: 0 }),
     );
+  });
+
+  it('deletes an entry through the bridge when its remove button is clicked', async () => {
+    bridge.getHistory.mockResolvedValueOnce([{ url: 'https://a.example', title: 'A', ts: 1 }]);
+    render(<HistoryPageSurface />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove' }));
+    await waitFor(() => expect(bridge.deleteHistory).toHaveBeenCalledWith('https://a.example'));
+  });
+
+  it('clears all history through the bridge when "Clear all" is clicked', async () => {
+    render(<HistoryPageSurface />);
+    await waitFor(() => expect(bridge.getHistory).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole('button', { name: 'Clear all' }));
+    await waitFor(() => expect(bridge.clearHistory).toHaveBeenCalledTimes(1));
   });
 });
