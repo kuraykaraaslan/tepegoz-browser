@@ -23,14 +23,21 @@ it('id / input methods hit their channels with the raw arg', () => {
   void tasksApi.deleteTask('task-1');
   void tasksApi.saveTask({ name: 'n' } as never);
   void tasksApi.runTaskNow({ id: 'task-1', action: 'run' } as never);
+  void tasksApi.cancelTaskRun({ id: 'task-1', action: 'cancel' } as never);
   void tasksApi.setTaskEnabled({ id: 'task-1', enabled: false });
   expect(invoke.mock.calls).toEqual([
     [IpcChannels.tasksGet, 'task-1'],
     [IpcChannels.tasksDelete, 'task-1'],
     [IpcChannels.tasksSave, { name: 'n' }],
     [IpcChannels.tasksRunNow, { id: 'task-1', action: 'run' }],
+    [IpcChannels.tasksCancelRun, { id: 'task-1', action: 'cancel' }],
     [IpcChannels.tasksSetEnabled, { id: 'task-1', enabled: false }],
   ]);
+});
+
+it('listTasks hits its channel with no argument', () => {
+  void tasksApi.listTasks();
+  expect(invoke).toHaveBeenCalledWith(IpcChannels.tasksList);
 });
 
 it('the list filters pass an optional taskId through (undefined = all)', () => {
