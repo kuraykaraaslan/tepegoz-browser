@@ -1,7 +1,12 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import type { DownloadRecord, UploadRecord } from '@tepegoz/desktop-ipc';
+import {
+  INTERNAL_DOWNLOADS_URL,
+  INTERNAL_UPLOADS_URL,
+  type DownloadRecord,
+  type UploadRecord,
+} from '@tepegoz/desktop-ipc';
 import { stubJsdomLayout } from '../test-support/jsdom-layout';
 import { TransferActivityPopup } from './TransferActivityPopup';
 
@@ -32,6 +37,7 @@ const NOW = Date.UTC(2026, 7, 22, 12, 0, 0);
 
 interface Bridge {
   prefsOk: boolean;
+  locale: string;
   downloads: { ok: boolean; items: DownloadRecord[] };
   uploads: { ok: boolean; items: UploadRecord[] };
   pushDownloads: ((state: { items: DownloadRecord[] }) => void) | null;
@@ -88,7 +94,7 @@ function stubBridge(): void {
       navigateTab: (url: string) => bridge.navigated.push(url),
       getPreferences: () =>
         bridge.prefsOk
-          ? Promise.resolve({ theme: 'dark', themeColor: '', locale: 'en' })
+          ? Promise.resolve({ theme: 'dark', themeColor: '', locale: bridge.locale })
           : Promise.reject(new Error('bridge unavailable')),
       listDownloads: () =>
         bridge.downloads.ok
@@ -127,6 +133,7 @@ beforeEach(() => {
   vi.useFakeTimers({ now: NOW, toFake: ['Date'] });
   bridge = {
     prefsOk: true,
+    locale: 'en',
     downloads: { ok: true, items: [] },
     uploads: { ok: true, items: [] },
     pushDownloads: null,
@@ -292,6 +299,67 @@ describe('what each row tells you', () => {
     // A query string can carry a token; it has no business in a popup row.
     expect(screen.queryByText(/token=secret/)).toBeNull();
   });
+
+  it('falls back to the raw url when a download has no source origin', async () => {
+    bridge.downloads.items = [
+      download({ url: 'https://files.example/report.pdf', provenance: { actor: 'user' } }),
+    ];
+
+    render(<TransferActivityPopup />);
+
+    await waitFor(() => {
+      expect(screen.getByText('https://files.example/report.pdf')).toBeTruthy();
+    });
+  });
+
+  it('falls back from an upload\'s target origin to its target url, then to a dash', async () => {
+    bridge.uploads.items = [
+      upload({ targetOrigin: undefined, targetUrl: 'https://forms.example/submit', provenance: { actor: 'user' } }),
+    ];
+    render(<TransferActivityPopup />);
+    await waitFor(() => {
+      expect(screen.getByText('https://forms.example/submit')).toBeTruthy();
+    });
+    cleanup();
+
+    bridge.uploads.items = [
+      upload({ targetOrigin: undefined, targetUrl: undefined, provenance: { actor: 'user' } }),
+    ];
+    render(<TransferActivityPopup />);
+    await waitFor(() => {
+      expect(screen.getByText('-')).toBeTruthy();
+    });
+  });
+
+  it('shows the risk glyph regardless of direction, and the plain direction glyph otherwise', async () => {
+    bridge.downloads.items = [download({ id: 'd-risky', risk: 'executable' })];
+    bridge.uploads.items = [upload({ id: 'u-safe', risk: 'normal' })];
+
+    const { container } = render(<TransferActivityPopup />);
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('listitem')).toHaveLength(2);
+    });
+    const icons = [...container.querySelectorAll('svg[data-icon]')].map((el) =>
+      el.getAttribute('data-icon'),
+    );
+    expect(icons).toContain('circle-exclamation');
+    expect(icons).toContain('arrow-up');
+  });
+});
+
+describe('locale resolution', () => {
+  it('resolves the stored tr locale from preferences', async () => {
+    bridge.locale = 'tr';
+    render(<TransferActivityPopup />);
+    expect(await screen.findByText('Aktarımlar')).toBeTruthy();
+  });
+
+  it('falls back through resolveLocale when the stored locale is neither en nor tr', async () => {
+    bridge.locale = 'de';
+    render(<TransferActivityPopup />);
+    expect(await screen.findByText('Transfers')).toBeTruthy();
+  });
 });
 
 describe('live updates', () => {
@@ -396,7 +464,7 @@ describe('the ways out', () => {
     expect(bridge.closed).toBe(0);
   });
 
-  it('navigates to a full page AND closes, so the popup does not linger over it', async () => {
+  it('navigates to the full uploads page AND closes, so the popup does not linger over it', async () => {
     render(<TransferActivityPopup />);
     await waitFor(() => {
       expect(bridge.pushDownloads).not.toBeNull();
@@ -405,7 +473,31 @@ describe('the ways out', () => {
     const footer = screen.getAllByRole('button').at(-1);
     fireEvent.click(footer as HTMLElement);
 
-    expect(bridge.navigated).toHaveLength(1);
+    expect(bridge.navigated).toEqual([INTERNAL_UPLOADS_URL]);
     expect(bridge.closed).toBe(1);
+  });
+
+  it('navigates to the full downloads page too', async () => {
+    render(<TransferActivityPopup />);
+    await waitFor(() => {
+      expect(bridge.pushDownloads).not.toBeNull();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Full download history' }));
+
+    expect(bridge.navigated).toEqual([INTERNAL_DOWNLOADS_URL]);
+    expect(bridge.closed).toBe(1);
+  });
+
+  it('closes via its own close button', async () => {
+    render(<TransferActivityPopup />);
+    await waitFor(() => {
+      expect(bridge.pushDownloads).not.toBeNull();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close transfers' }));
+
+    expect(bridge.closed).toBe(1);
+    expect(bridge.navigated).toHaveLength(0);
   });
 });
