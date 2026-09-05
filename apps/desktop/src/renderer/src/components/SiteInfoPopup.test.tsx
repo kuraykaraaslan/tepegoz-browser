@@ -86,6 +86,13 @@ describe('SiteInfoPopup', () => {
     expect(bridge.closePopup).toHaveBeenCalledTimes(1);
   });
 
+  it('closes the popup when the header close button is clicked', async () => {
+    renderPopup();
+    await screen.findByText(t.connectionSecureTitle);
+    fireEvent.click(screen.getByRole('button', { name: t.close }));
+    expect(bridge.closePopup).toHaveBeenCalled();
+  });
+
   it('shows the load-error line (distinct from "loading") when the bridge has no info', async () => {
     bridge.getPageInfo.mockResolvedValue(null);
     renderPopup();
@@ -106,6 +113,22 @@ describe('SiteInfoPopup', () => {
     fireEvent.click(screen.getByText(t.siteSettings));
     expect(bridge.navigateTab).toHaveBeenCalledWith('tepegoz://settings#privacy');
     expect(bridge.closePopup).toHaveBeenCalled();
+  });
+
+  it('shows the invalid-certificate styling, omits an empty serial, and falls back for a bad date', async () => {
+    bridge.getPageInfo.mockResolvedValue(
+      info({
+        certErrorCode: 'net::ERR_CERT_DATE_INVALID',
+        certificate: cert({ serialNumber: '', validFrom: 'not-a-date' }),
+      }),
+    );
+    renderPopup();
+    fireEvent.click(await screen.findByText(t.connectionSecureTitle));
+    fireEvent.click(await screen.findByText(t.certificateInvalid));
+
+    expect(await screen.findByText(t.certificate)).toBeTruthy();
+    expect(screen.queryByText('AA:BB')).toBeNull();
+    expect(screen.getByText('not-a-date')).toBeTruthy(); // fmtDate falls back to the raw string
   });
 
   it('drills panel → Security → Certificate and walks back', async () => {
@@ -184,6 +207,12 @@ describe('SiteInfoPopup', () => {
     bridge.getPreferences.mockRejectedValueOnce(new Error('prefs gone'));
     renderPopup();
     await screen.findByText(t.connectionSecureTitle);
+  });
+
+  it('resolves the stored tr locale', async () => {
+    bridge.getPreferences.mockResolvedValue({ ...DEFAULT_PREFERENCES, locale: 'tr' });
+    renderPopup();
+    expect(await screen.findByText(siteInfoDict.tr.connectionSecureTitle)).toBeTruthy();
   });
 
   it('falls back to the internal treatment for an unclassified security level', async () => {
