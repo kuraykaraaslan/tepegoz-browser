@@ -186,6 +186,17 @@ describe('a full scripted run', () => {
     expect(appMock.quit).toHaveBeenCalled();
   });
 
+  it('fails into the { error } path when the scripted tier has no TEPEGOZ_EVAL_SCRIPT', async () => {
+    fullEnv();
+    delete process.env['TEPEGOZ_EVAL_SCRIPT'];
+    await maybeRunEval();
+    expect(runAgent).not.toHaveBeenCalled();
+    const calls = fs.writeFileSync.mock.calls as [string, string][];
+    const errWrite = calls.find(([, body]) => body.includes('TEPEGOZ_EVAL_SCRIPT'));
+    expect(errWrite).toBeDefined();
+    expect(appMock.quit).toHaveBeenCalled();
+  });
+
   it('fails into the { error } path when the replies file is not valid JSON schema', async () => {
     fullEnv();
     fs.readFileSync.mockReturnValue(JSON.stringify({ notReplies: true }));
@@ -211,11 +222,24 @@ describe('a full scripted run', () => {
     fullEnv();
     await maybeRunEval();
     const args = runAgent.mock.calls[0] as unknown as unknown[];
-    const hooks = args[1] as { onEvent: (k: string, m: string, d?: string) => void };
+    const hooks = args[1] as {
+      onEvent: (k: string, m: string, d?: string) => void;
+      requestPlanApproval: () => Promise<{ approved: boolean }>;
+      requestApproval: () => Promise<boolean>;
+    };
     const cfg = args[2] as {
       activeTabUrl: () => string | undefined;
       tabUrl: (id: string) => string | undefined;
+      listTabs: () => unknown[];
+      localInference: { resolveModel: () => unknown };
     };
+
+    // Unattended eval auto-approves every HITL gate, reachable only under TEPEGOZ_EVAL.
+    await expect(hooks.requestPlanApproval()).resolves.toEqual({ approved: true });
+    await expect(hooks.requestApproval()).resolves.toBe(true);
+    expect(cfg.listTabs()).toEqual([]);
+    expect(browserHost.listTabs).toHaveBeenCalled();
+    expect(cfg.localInference.resolveModel()).toEqual({});
 
     // empty tab state -> both resolve to undefined
     expect(cfg.activeTabUrl()).toBeUndefined();
@@ -233,6 +257,17 @@ describe('a full scripted run', () => {
       hooks.onEvent('step', 'clicked', 'detail-here');
     }).not.toThrow();
     expect(logger.info).toHaveBeenCalledWith('[eval] step: clicked', { detail: 'detail-here' });
+
+    hooks.onEvent('step', 'clicked');
+    expect(logger.info).toHaveBeenCalledWith('[eval] step: clicked', { detail: '' });
+  });
+
+  it('defaults a missing summary/steps in the written result', async () => {
+    fullEnv();
+    runAgent.mockResolvedValue({ stoppedReason: 'done' });
+    await maybeRunEval();
+    const [, json] = fs.writeFileSync.mock.calls[0]! as [string, string];
+    expect(JSON.parse(json)).toMatchObject({ summary: '', steps: [] });
   });
 
   it('records completionOutcome + visionEscalations in the result when the run reports them', async () => {
@@ -259,6 +294,24 @@ describe('a full scripted run', () => {
       expect.stringContaining('finalUrl'),
       'utf8',
     );
+  });
+
+  it('gives up once the readiness deadline passes and surfaces the last not-ready error', async () => {
+    fullEnv();
+    vi.useFakeTimers();
+    try {
+      browserHost.readPage.mockResolvedValue({ url: 'about:blank', text: '' });
+      const run = maybeRunEval();
+      await vi.advanceTimersByTimeAsync(30_000);
+      await run;
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(runAgent).not.toHaveBeenCalled();
+    const calls = fs.writeFileSync.mock.calls as [string, string][];
+    const errWrite = calls.find(([, body]) => body.includes('entry page not ready'));
+    expect(errWrite).toBeDefined();
+    expect(appMock.quit).toHaveBeenCalled();
   });
 
   it('swallows a failure to write the { error } OUT file, still quitting', async () => {
