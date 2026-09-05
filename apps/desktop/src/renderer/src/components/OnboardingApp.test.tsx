@@ -2,7 +2,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { DEFAULT_PREFERENCES } from '@tepegoz/preferences';
-import type { DetectedBrowserProfile } from '@tepegoz/desktop-ipc';
+import type {
+  BookmarkImportInput,
+  BookmarkImportResult,
+  DetectedBrowserProfile,
+} from '@tepegoz/desktop-ipc';
 import { onboardingDict } from '@tepegoz/onboarding-ui/i18n';
 import { stubJsdomLayout } from '../test-support/jsdom-layout';
 import { OnboardingApp } from './OnboardingApp';
@@ -24,7 +28,9 @@ const bridge = {
   toggleMaximizeWindow: vi.fn(),
   closeWindow: vi.fn(),
   platform: 'win32',
-  importBookmarks: vi.fn(() => Promise.resolve({ imported: 0, skipped: 0, errors: [] })),
+  importBookmarks: vi.fn<(input: BookmarkImportInput) => Promise<BookmarkImportResult>>(() =>
+    Promise.resolve({ imported: 0, skipped: 0, folders: 0, errors: [], truncated: false }),
+  ),
   detectBrowserProfiles: vi.fn<() => Promise<DetectedBrowserProfile[]>>(() => Promise.resolve([])),
   importBookmarkProfile: vi.fn(() => Promise.resolve({ imported: 0, skipped: 0, errors: [] })),
   importLogins: vi.fn(() => Promise.resolve({ imported: 0, skipped: 0, errors: [] })),
@@ -96,6 +102,34 @@ describe('OnboardingApp', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Import from Chrome — Kuray' }));
     await waitFor(() => expect(bridge.importBookmarkProfile).toHaveBeenCalledWith('chrome:abc123'));
+  });
+
+  it('imports bookmarks from a dropped HTML file', async () => {
+    render(<OnboardingApp />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Begin' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    const dropZone = await screen.findByRole('button', { name: /Choose bookmarks file/ });
+    // jsdom's `File` has no `.text()`; a plain object with just that method satisfies the
+    // handler's actual runtime use of the dropped file (it never touches any other File API).
+    const file = { text: () => Promise.resolve('<html></html>') };
+    fireEvent.drop(dropZone, { dataTransfer: { files: [file] } });
+    await waitFor(() => expect(bridge.importBookmarks).toHaveBeenCalled());
+    expect(bridge.importBookmarks.mock.calls[0]![0]).toMatchObject({
+      format: 'html',
+      data: '<html></html>',
+    });
+  });
+
+  it('imports logins from a dropped CSV file', async () => {
+    render(<OnboardingApp />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Begin' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    const dropZone = await screen.findByRole('button', { name: /Choose password CSV/ });
+    const file = { text: () => Promise.resolve('user,pass\n') };
+    fireEvent.drop(dropZone, { dataTransfer: { files: [file] } });
+    await waitFor(() =>
+      expect(bridge.importLogins).toHaveBeenCalledWith('user,pass\n', 'generic-csv'),
+    );
   });
 
   it('calls completeOnboarding when the user finishes the flow', async () => {
