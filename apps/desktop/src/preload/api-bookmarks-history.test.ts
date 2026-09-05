@@ -250,11 +250,22 @@ describe('reopenClosedTab-style payload reshapes carry through the callback', ()
     api.onReaderToggle(toggle);
     (ipc.on.mock.calls[0]![1] as () => void)();
     expect(toggle).toHaveBeenCalledWith();
+
+    ipc.on.mockClear();
+    const changed = vi.fn();
+    api.onBookmarksChanged(changed);
+    (ipc.on.mock.calls[0]![1] as () => void)();
+    expect(changed).toHaveBeenCalledWith();
   });
 });
 
 describe('the notification / HITL-prompt listeners forward only their payload', () => {
   it.each([
+    [
+      'onBookmarkMenuAction',
+      (cb: (p: unknown) => void) => api.onBookmarkMenuAction(cb),
+      { action: 'rename', id: 'b1' },
+    ],
     ['onNotificationsState', (cb: (p: unknown) => void) => api.onNotificationsState(cb), { unread: 2 }],
     ['onNotificationToast', (cb: (p: unknown) => void) => api.onNotificationToast(cb), { id: 't1', title: 'Hi' }],
     [

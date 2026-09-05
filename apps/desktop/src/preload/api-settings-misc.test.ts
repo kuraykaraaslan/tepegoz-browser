@@ -29,6 +29,7 @@ type Row = [name: string, run: () => unknown, channel: string, payload?: unknown
 const INVOKES: Row[] = [
   ['getAppInfo', () => api.getAppInfo(), IpcChannels.appGetInfo],
   ['copyDiagnostics', () => api.copyDiagnostics(), IpcChannels.appCopyDiagnostics],
+  ['openThirdPartyNotices', () => api.openThirdPartyNotices(), IpcChannels.appOpenThirdPartyNotices],
   ['openDataFolder', () => api.openDataFolder(), IpcChannels.appOpenDataFolder],
   ['getDefaultBrowserStatus', () => api.getDefaultBrowserStatus(), IpcChannels.defaultBrowserGet],
   ['setAsDefaultBrowser', () => api.setAsDefaultBrowser(), IpcChannels.defaultBrowserSet],

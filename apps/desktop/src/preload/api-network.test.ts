@@ -77,6 +77,11 @@ describe('connection + binary management', () => {
   });
 });
 
+it('getNetworkState invokes its channel with no payload', () => {
+  void networkApi.getNetworkState();
+  expect(invoke).toHaveBeenCalledWith(IpcChannels.networkGetState);
+});
+
 describe('onNetworkState', () => {
   it('wires a listener, forwards only the state, and removes it on the returned fn', () => {
     const cb = vi.fn();
