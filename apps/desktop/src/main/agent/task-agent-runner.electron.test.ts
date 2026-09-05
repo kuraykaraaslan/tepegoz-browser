@@ -82,6 +82,7 @@ const trigger = { type: 'interval' } as never;
 type Hooks = {
   onEvent: (k: string, m: string, d?: string) => void;
   onCheckpoint: (c: unknown) => void;
+  requestPlanApproval: () => Promise<{ approved: boolean }>;
   requestApproval: (r: unknown) => Promise<boolean>;
 };
 const hooks = () => agentRun.mock.calls[0]![1] as Hooks;
@@ -143,6 +144,12 @@ describe('a real run', () => {
 
     agentRun.mockRejectedValue(new Error('boom'));
     expect(await runTaskAgent(task(), run, trigger)).toEqual({ ok: false, error: 'boom' });
+
+    agentRun.mockRejectedValue('a raw string rejection');
+    expect(await runTaskAgent(task(), run, trigger)).toEqual({
+      ok: false,
+      error: 'a raw string rejection',
+    });
   });
 });
 
@@ -165,6 +172,19 @@ describe('the injected hooks', () => {
     h.onEvent('handoff', 'need a human');
     expect(notify.push).toHaveBeenCalledWith(
       expect.objectContaining({ title: 'Handoff', body: 'need a human' }),
+    );
+  });
+
+  it('requestPlanApproval always auto-approves (unattended task, no plan HITL)', async () => {
+    await runTaskAgent(task(), run, trigger);
+    await expect(hooks().requestPlanApproval()).resolves.toEqual({ approved: true });
+  });
+
+  it('onEvent pushes an approval (not handoff) notification for awaiting_approval', async () => {
+    await runTaskAgent(task(), run, trigger);
+    hooks().onEvent('awaiting_approval', 'needs a human to confirm');
+    expect(notify.push).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Approval', body: 'needs a human to confirm' }),
     );
   });
 
@@ -225,6 +245,27 @@ describe('the injected hooks', () => {
     expect(logger.warn).toHaveBeenCalledWith(
       'Background task journal append failed',
       expect.objectContaining({ err: expect.stringContaining('journal disk full') as string }),
+    );
+  });
+
+  it('shows "(none)" in the prompt and never preapproves an unresolvable origin when no targetUrl exists anywhere', async () => {
+    await runTaskAgent(task({ targetUrl: undefined }), run, trigger);
+    const prompt = agentRun.mock.calls[0]![0];
+    expect(prompt).toContain('targetUrl: (none)');
+
+    const req = { toolName: 'file_write', targetUrl: undefined, policy: { reason: 'r' } };
+    expect(await hooks().requestApproval(req)).toBe(false);
+  });
+
+  it('falls back to the task targetUrl for preapproval when the request carries none of its own', async () => {
+    await runTaskAgent(task(), run, trigger); // default task.targetUrl is an allowed origin
+    const req = { toolName: 'file_write', targetUrl: undefined, policy: { reason: 'r' } };
+    expect(await hooks().requestApproval(req)).toBe(true);
+    expect(journal.append).toHaveBeenCalledWith(
+      { __db: true },
+      expect.objectContaining({
+        payload: expect.objectContaining({ origin: 'https://site.test', decision: 'preapproved' }) as object,
+      }),
     );
   });
 
