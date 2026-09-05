@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { publicRecord } from './download-service-model.electron';
+import { publicRecord, unknownTrustProvider } from './download-service-model.electron';
 import type { ActiveDownload } from './download-service-model.electron';
 
 /**
@@ -35,6 +35,14 @@ function activeRecord(over: Partial<ActiveDownload> = {}): ActiveDownload {
     ...over,
   };
 }
+
+describe('unknownTrustProvider', () => {
+  it('resolves every check as unknown (the no-provider-configured default)', async () => {
+    await expect(
+      unknownTrustProvider.check({ sha256: 'a'.repeat(64), filename: 'x.bin' }),
+    ).resolves.toBe('unknown');
+  });
+});
 
 describe('publicRecord', () => {
   it('keeps the renderer-facing fields', () => {
