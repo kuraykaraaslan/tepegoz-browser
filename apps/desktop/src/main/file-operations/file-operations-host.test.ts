@@ -146,6 +146,12 @@ describe('canonicalize', () => {
     );
     expect(await Host.canonicalize(abs)).toBe(path.join(path.sep, 'real', 'new', 'file.txt'));
   });
+
+  it('returns the normalized input unchanged when nothing on the whole path exists', async () => {
+    realpath.mockRejectedValue(new Error('ENOENT'));
+    const abs = path.join(path.sep, 'nothing', 'here', 'at', 'all.txt');
+    expect(await Host.canonicalize(abs)).toBe(path.normalize(abs));
+  });
 });
 
 describe('effectiveGrants', () => {
@@ -197,6 +203,56 @@ describe('grant mutations re-sync the policy', () => {
   });
 });
 
+describe('the grants store handed to registerFileOperations', () => {
+  it('forwards list/add/remove/update to the FileOperationsHost static methods', async () => {
+    vi.resetModules();
+    prefs.getAll.mockReturnValue({
+      fileOperationsEnabled: true,
+      fileAccessGrants: [{ path: '/g1', mode: 'read', recursive: true }],
+      fileAccessSeeded: true,
+    });
+    const m = await import('./file-operations-host');
+    m.default.init();
+    const grants = registerFileOperations.mock.calls.at(-1)![0] as {
+      grants: {
+        list: () => unknown;
+        add: (g: unknown) => Promise<void>;
+        remove: (p: string) => Promise<void>;
+        update: (p: string, patch: unknown) => Promise<void>;
+      };
+    };
+
+    expect(grants.grants.list()).toEqual([{ path: '/g1', mode: 'read', recursive: true }]);
+
+    await grants.grants.add({ path: '/g2', mode: 'read', recursive: false });
+    expect(prefs.update).toHaveBeenLastCalledWith({
+      fileAccessGrants: [
+        { path: '/g1', mode: 'read', recursive: true },
+        { path: '/g2', mode: 'read', recursive: false },
+      ],
+    });
+
+    await grants.grants.remove('/g1');
+    expect(prefs.update).toHaveBeenLastCalledWith({ fileAccessGrants: [] });
+
+    prefs.getAll.mockReturnValue({
+      fileOperationsEnabled: true,
+      fileAccessGrants: [
+        { path: '/g2', mode: 'read', recursive: false },
+        { path: '/g3', mode: 'read', recursive: false },
+      ],
+      fileAccessSeeded: true,
+    });
+    await grants.grants.update('/g2', { mode: 'full' });
+    expect(prefs.update).toHaveBeenLastCalledWith({
+      fileAccessGrants: [
+        { path: '/g2', mode: 'full', recursive: false },
+        { path: '/g3', mode: 'read', recursive: false }, // untouched: a non-matching entry passes through
+      ],
+    });
+  });
+});
+
 describe('consentDecision', () => {
   const req = (over: Record<string, unknown> = {}) =>
     ({ toolName: 'file_write', args: { path: '/g1/f.txt' }, ...over }) as never;
@@ -206,6 +262,7 @@ describe('consentDecision', () => {
       type: 'fallthrough',
     });
     expect(await Host.consentDecision(req({ args: {} }))).toEqual({ type: 'fallthrough' });
+    expect(await Host.consentDecision(req({ args: undefined }))).toEqual({ type: 'fallthrough' });
   });
 
   it('maps the policy verdict: allow → auto-approve, deny → auto-deny, ask → fall-through', async () => {
@@ -272,6 +329,9 @@ describe('the FileSystemHost seam', () => {
 
     await host.appendFile('/g1/log', Buffer.from('z').toString('base64'), 'base64');
     expect(fsp.appendFile).toHaveBeenLastCalledWith('/g1/log', Buffer.from('z'));
+
+    await host.appendFile('/g1/log.txt', 'more text', 'utf8');
+    expect(fsp.appendFile).toHaveBeenLastCalledWith('/g1/log.txt', 'more text');
   });
 
   it('mkdir is recursive; rename / copyFile / remove delegate straight through', async () => {
@@ -350,6 +410,29 @@ describe('the FileSystemHost seam', () => {
     expect(hits).toHaveLength(2);
   });
 
+  it('search stops at the entry-visit cap, not just the result limit', async () => {
+    const host = await freshFsHost();
+    const entries = Array.from({ length: 20_001 }, (_, i) => ({
+      name: `f${String(i)}.txt`, // never matches the pattern below, so only the visited cap can stop it
+      isFile: () => true,
+      isDirectory: () => false,
+    }));
+    fsp.readdir.mockResolvedValue(entries);
+    const hits = await host.search(path.join(path.sep, 'r'), '*.log', 1_000_000);
+    expect(hits).toEqual([]);
+  });
+
+  it('search matches a single-char "?" glob wildcard', async () => {
+    const host = await freshFsHost();
+    fsp.readdir.mockResolvedValue([
+      { name: 'a1.log', isFile: () => true, isDirectory: () => false },
+      { name: 'a12.log', isFile: () => true, isDirectory: () => false },
+    ]);
+    const root = path.join(path.sep, 'r');
+    const hits = await host.search(root, 'a?.log', 10);
+    expect(hits).toEqual([path.join(root, 'a1.log')]);
+  });
+
   it('search skips a directory it cannot read rather than failing the whole walk', async () => {
     const host = await freshFsHost();
     fsp.readdir.mockImplementation((dir: unknown) =>
@@ -394,12 +477,24 @@ describe('writeExport / writeExportBundle', () => {
     expect(fsp.writeFile).toHaveBeenCalledWith(path.join(bundle, 'img', 'a.png'), Buffer.from('p'));
   });
 
-  it('writeExportBundle rejects a bundle name or a file path that escapes the folder', async () => {
+  it('writeExportBundle rejects a bundle name that escapes the folder', async () => {
     const root = path.join(path.sep, 'home', 'u', 'tepegoz');
     realpath.mockImplementation((p: string) =>
       Promise.resolve(p === root ? root : '/somewhere/else'),
     );
     await expect(Host.writeExportBundle('..', [])).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it('writeExportBundle rejects a per-file relPath that resolves outside the bundle folder', async () => {
+    const root = path.join(path.sep, 'home', 'u', 'tepegoz');
+    // Only `root` itself "exists"; the bundle dir and the file target are both resolved by
+    // canonicalize's ancestor-walk fallback, which re-appends the missing tail onto `root`.
+    realpath.mockImplementation((p: string) =>
+      p === root ? Promise.resolve(root) : Promise.reject(new Error('ENOENT')),
+    );
+    await expect(
+      Host.writeExportBundle('diag', [{ relPath: path.join('..', 'escape.txt'), content: 'x' }]),
+    ).rejects.toMatchObject({ statusCode: 400 });
   });
 });
 
