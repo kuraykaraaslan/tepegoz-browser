@@ -56,6 +56,12 @@ describe('UserMenuPopup', () => {
     expect(screen.getAllByText(userMenuDict.en.name).length).toBeGreaterThan(0);
   });
 
+  it('resolves the stored tr locale', async () => {
+    bridge.getPreferences.mockResolvedValue({ ...DEFAULT_PREFERENCES, locale: 'tr' });
+    render(<UserMenuPopup />);
+    expect((await screen.findAllByText(userMenuDict.tr.name)).length).toBeGreaterThan(0);
+  });
+
   it('renders the profile card with the placeholder identity', () => {
     render(<UserMenuPopup />);
     expect(screen.getAllByText(userMenuDict.en.name).length).toBeGreaterThan(0);

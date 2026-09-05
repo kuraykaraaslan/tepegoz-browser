@@ -2,6 +2,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { DEFAULT_PREFERENCES } from '@tepegoz/preferences';
+import type { DetectedBrowserProfile } from '@tepegoz/desktop-ipc';
+import { onboardingDict } from '@tepegoz/onboarding-ui/i18n';
 import { stubJsdomLayout } from '../test-support/jsdom-layout';
 import { OnboardingApp } from './OnboardingApp';
 
@@ -23,7 +25,7 @@ const bridge = {
   closeWindow: vi.fn(),
   platform: 'win32',
   importBookmarks: vi.fn(() => Promise.resolve({ imported: 0, skipped: 0, errors: [] })),
-  detectBrowserProfiles: vi.fn(() => Promise.resolve([])),
+  detectBrowserProfiles: vi.fn<() => Promise<DetectedBrowserProfile[]>>(() => Promise.resolve([])),
   importBookmarkProfile: vi.fn(() => Promise.resolve({ imported: 0, skipped: 0, errors: [] })),
   importLogins: vi.fn(() => Promise.resolve({ imported: 0, skipped: 0, errors: [] })),
   completeOnboarding: vi.fn(() => Promise.resolve()),
@@ -59,6 +61,12 @@ describe('OnboardingApp', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Begin' })).toBeTruthy());
   });
 
+  it('resolves the stored tr locale', async () => {
+    bridge.getPreferences.mockResolvedValueOnce({ ...DEFAULT_PREFERENCES, locale: 'tr' });
+    render(<OnboardingApp />);
+    expect(await screen.findByRole('button', { name: onboardingDict.tr.begin })).toBeTruthy();
+  });
+
   it('wires the caption controls to the window bridge', async () => {
     render(<OnboardingApp />);
     await screen.findByRole('button', { name: 'Begin' });
@@ -68,6 +76,26 @@ describe('OnboardingApp', () => {
     expect(bridge.minimizeWindow).toHaveBeenCalledTimes(1);
     expect(bridge.toggleMaximizeWindow).toHaveBeenCalledTimes(1);
     expect(bridge.closeWindow).toHaveBeenCalledTimes(1);
+  });
+
+  it('detects browser profiles once the import step opens, and imports the one picked', async () => {
+    const profile: DetectedBrowserProfile = {
+      id: 'chrome:abc123',
+      source: 'chrome',
+      browserLabel: 'Chrome',
+      profileName: 'Kuray',
+      modifiedAt: 2,
+    };
+    bridge.detectBrowserProfiles.mockResolvedValueOnce([profile]);
+    render(<OnboardingApp />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Begin' }));
+    expect(bridge.detectBrowserProfiles).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    await waitFor(() => expect(bridge.detectBrowserProfiles).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Import from Chrome — Kuray' }));
+    await waitFor(() => expect(bridge.importBookmarkProfile).toHaveBeenCalledWith('chrome:abc123'));
   });
 
   it('calls completeOnboarding when the user finishes the flow', async () => {

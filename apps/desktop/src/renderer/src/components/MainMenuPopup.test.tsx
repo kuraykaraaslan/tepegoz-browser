@@ -3,9 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { DEFAULT_PREFERENCES } from '@tepegoz/preferences';
 import {
+  INTERNAL_DOWNLOADS_URL,
   INTERNAL_PROCESS_URL,
   INTERNAL_SETTINGS_URL,
+  INTERNAL_UPLOADS_URL,
 } from '@tepegoz/desktop-ipc';
+import { browserDict } from '../../../i18n';
 import { stubJsdomLayout } from '../test-support/jsdom-layout';
 import { MainMenuPopup } from './MainMenuPopup';
 
@@ -76,6 +79,12 @@ describe('MainMenuPopup', () => {
     await waitFor(() => expect(screen.getByRole('menu')).toBeTruthy());
   });
 
+  it('resolves the stored tr locale', async () => {
+    bridge.getPreferences.mockResolvedValueOnce({ ...DEFAULT_PREFERENCES, locale: 'tr' });
+    render(<MainMenuPopup />);
+    expect(await screen.findByRole('menuitem', { name: new RegExp(browserDict.tr.newTab) })).toBeTruthy();
+  });
+
   it('closes on Escape', async () => {
     render(<MainMenuPopup />);
     await screen.findByRole('menu');
@@ -88,6 +97,34 @@ describe('MainMenuPopup', () => {
     fireEvent.click(await screen.findByRole('menuitem', { name: /New tab/ }));
     expect(bridge.createTab).toHaveBeenCalledTimes(1);
     expect(bridge.closePopup).toHaveBeenCalledTimes(1);
+  });
+
+  it('reopens the last closed tab and reloads the active one from their rows', async () => {
+    render(<MainMenuPopup />);
+    fireEvent.click(await screen.findByRole('menuitem', { name: /Reopen closed tab/ }));
+    expect(bridge.reopenClosedTab).toHaveBeenCalledTimes(1);
+    expect(bridge.closePopup).toHaveBeenCalledTimes(1);
+    cleanup();
+
+    render(<MainMenuPopup />);
+    fireEvent.click(await screen.findByRole('menuitem', { name: /Reload/ }));
+    expect(bridge.tabReload).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens the downloads, uploads, and tasks pages from their rows', async () => {
+    render(<MainMenuPopup />);
+    fireEvent.click(await screen.findByRole('menuitem', { name: /Downloads/ }));
+    expect(bridge.navigateTab).toHaveBeenCalledWith(INTERNAL_DOWNLOADS_URL);
+    cleanup();
+
+    render(<MainMenuPopup />);
+    fireEvent.click(await screen.findByRole('menuitem', { name: /Uploads/ }));
+    expect(bridge.navigateTab).toHaveBeenCalledWith(INTERNAL_UPLOADS_URL);
+    cleanup();
+
+    render(<MainMenuPopup />);
+    fireEvent.click(await screen.findByRole('menuitem', { name: /Tasks/ }));
+    expect(bridge.navigateTab).toHaveBeenCalledWith('tepegoz://com.tepegoz.tasks');
   });
 
   it('navigates to Settings / Task manager / quits from their rows', async () => {
@@ -124,5 +161,12 @@ describe('MainMenuPopup', () => {
 
     fireEvent.mouseEnter(screen.getByRole('menuitem', { name: /New tab/ }));
     expect(bridge.closeSubmenu).toHaveBeenCalled();
+  });
+
+  it('sizes the history flyout window without a closed-tabs bonus when there are none to reopen', async () => {
+    bridge.listRecentlyClosedTabs.mockResolvedValueOnce([]);
+    render(<MainMenuPopup />);
+    fireEvent.mouseEnter(await screen.findByRole('menuitem', { name: /History/ }));
+    expect(bridge.openSubmenu).toHaveBeenCalledWith('history', expect.anything(), expect.anything());
   });
 });

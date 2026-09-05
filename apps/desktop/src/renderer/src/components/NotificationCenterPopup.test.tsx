@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { AppNotification } from '@tepegoz/shared-types/notifications';
 import { DEFAULT_PREFERENCES } from '@tepegoz/preferences';
+import { notificationsUiDict } from '@tepegoz/notifications-ui/i18n';
 import { stubJsdomLayout } from '../test-support/jsdom-layout';
 import { NotificationCenterPopup } from './NotificationCenterPopup';
 
@@ -107,6 +108,26 @@ describe('NotificationCenterPopup', () => {
     await waitFor(() =>
       expect(document.documentElement.style.getPropertyValue('--primary')).not.toBe(''),
     );
+  });
+
+  it('resolves the stored tr locale', async () => {
+    bridge.getPreferences.mockResolvedValue({ ...DEFAULT_PREFERENCES, locale: 'tr' });
+    render(<NotificationCenterPopup />);
+    expect(await screen.findByText(notificationsUiDict.tr.title)).toBeTruthy();
+  });
+
+  it('marks a notification read, marks all read, and clears all through the header/row controls', async () => {
+    bridge.listNotifications.mockResolvedValue({ items: [notif({ id: 'n1', read: false })], unread: 1 });
+    render(<NotificationCenterPopup />);
+
+    fireEvent.click(await screen.findByText('Update'));
+    expect(bridge.markNotificationRead).toHaveBeenCalledWith('n1');
+
+    fireEvent.click(screen.getByRole('button', { name: notificationsUiDict.en.markAllRead }));
+    expect(bridge.markAllNotificationsRead).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: notificationsUiDict.en.clearAll }));
+    expect(bridge.dismissAllNotifications).toHaveBeenCalledTimes(1);
   });
 
   it('survives a rejected snapshot fetch', async () => {
