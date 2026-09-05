@@ -232,6 +232,19 @@ describe('the adapter closures', () => {
     );
   });
 
+  it('falls back to an empty memory file when the persisted store is missing or invalid', async () => {
+    store.readJsonFile.mockReturnValue(undefined);
+    await load();
+    expect(o().memoryLookup('hello')).toBeNull();
+  });
+
+  it('memoryStore is a no-op (no re-write) when the key already maps to the same value', async () => {
+    store.readJsonFile.mockReturnValue({ version: 1, entries: { hello: 'merhaba' } });
+    await load();
+    o().memoryStore('hello', 'merhaba');
+    expect(store.writeJsonFile).not.toHaveBeenCalled();
+  });
+
   it('evicts the oldest entry once the memory passes its 2000-entry cap', async () => {
     const entries: Record<string, string> = {};
     for (let i = 0; i < 2000; i += 1) entries[`k${String(i)}`] = `v${String(i)}`;
@@ -257,6 +270,17 @@ describe('the batch runners', () => {
   });
 
   it('runCloudBatch 503s when no cloud provider key is available', async () => {
+    await load();
+    await expect(o().runCloudBatch({ items: [] })).rejects.toMatchObject({
+      statusCode: 503,
+      code: 'translateNoCloudProvider',
+    });
+  });
+
+  it('runCloudBatch 503s when a runnable provider is found but has no usable key', async () => {
+    isRunnableProvider.mockReturnValue(true);
+    vault.listMeta.mockReturnValue([{ provider: 'openai', region: 'us' }]);
+    vault.getFirstKeyForProvider.mockReturnValue(null);
     await load();
     await expect(o().runCloudBatch({ items: [] })).rejects.toMatchObject({
       statusCode: 503,
