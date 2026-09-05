@@ -96,7 +96,7 @@ const vault = vi.hoisted(() => ({
     p === 'anthropic' ? [{ id: 'k1', provider: 'anthropic' }] : [],
   ),
   modelForProvider: vi.fn(() => 'claude-x'),
-  topProvider: vi.fn(() => 'anthropic'),
+  topProvider: vi.fn<() => string | null>(() => 'anthropic'),
   reorderKeys: vi.fn(),
   setKeyModel: vi.fn(),
   getFirstKeyForProvider: vi.fn(() => 'sk-x'),
@@ -214,6 +214,39 @@ describe('agentGetConfig', () => {
     expect(cfg.provider).toBe('local');
     expect(cfg.selectedId).toBe('__local');
   });
+
+  it('a runnable non-local override WITH a stored key wins, and an empty selectedId falls back when the effective provider has no key metadata', () => {
+    vault.status.mockReturnValue({ anthropic: true, openai: true });
+    prefs.getAll.mockReturnValue({
+      agentProviderOverride: 'openai',
+      localProvider: { selectedModelId: '', mode: 'tiered' },
+      agentAutonomy: 'notify',
+      agentEffort: 'medium',
+      agentStrictGuard: false,
+    });
+    const cfg = call('agent:getConfig') as { provider: string; selectedId: string };
+    expect(cfg.provider).toBe('openai');
+    // listMetaByProvider('openai') is [] in this fixture, so `?? ''` is what supplies selectedId.
+    expect(cfg.selectedId).toBe('');
+  });
+
+  it('falls back to local when mode is "default" and a local model is selected, with no override', () => {
+    prefs.getAll.mockReturnValue({
+      agentProviderOverride: null,
+      localProvider: { selectedModelId: 'phi-3', mode: 'default' },
+      agentAutonomy: 'notify',
+      agentEffort: 'medium',
+      agentStrictGuard: false,
+    });
+    const cfg = call('agent:getConfig') as { provider: string };
+    expect(cfg.provider).toBe('local');
+  });
+
+  it('falls back to anthropic when the vault has no top provider at all', () => {
+    vault.topProvider.mockReturnValue(null);
+    const cfg = call('agent:getConfig') as { provider: string };
+    expect(cfg.provider).toBe('anthropic');
+  });
 });
 
 describe('agentSelectChoice', () => {
@@ -257,6 +290,13 @@ describe('agentSetModel', () => {
       provider: 'anthropic',
       model: 'claude-x',
     });
+  });
+
+  it('pushes null (clear) to the live gateway when the pin is cleared on an active provider', () => {
+    hasActiveAgentRun.mockReturnValue(true);
+    modelGateway.isProviderRegistered.mockReturnValue(true);
+    call('agent:setModel', { provider: 'anthropic', model: '' });
+    expect(modelGateway.setModelOverride).toHaveBeenCalledWith(null);
   });
 });
 
