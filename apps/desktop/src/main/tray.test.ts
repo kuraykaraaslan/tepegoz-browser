@@ -169,6 +169,22 @@ describe('tray click', () => {
   });
 });
 
+describe('Show item', () => {
+  it('reveals existing windows when the context-menu "Show" item is clicked', async () => {
+    tabs.windows = [{ window: 'a' }];
+    const { initTray } = await load();
+    initTray();
+    const template = el.buildFromTemplate.mock.calls[0]![0] as {
+      label?: string;
+      click?: () => void;
+    }[];
+    const show = template.find((i) => i.label === 'Show');
+    show?.click?.();
+    expect(showFromTray).toHaveBeenCalledTimes(1);
+    expect(openWindow).not.toHaveBeenCalled();
+  });
+});
+
 describe('Quit item', () => {
   it('marks the quit intent before calling app.quit', async () => {
     const { initTray } = await load();
