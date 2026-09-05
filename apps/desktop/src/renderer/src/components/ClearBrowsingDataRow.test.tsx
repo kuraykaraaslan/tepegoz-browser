@@ -80,6 +80,17 @@ describe('ClearBrowsingDataRow', () => {
     expect(confirm.disabled).toBe(true);
   });
 
+  it('adds a not-yet-selected category to the send list when checked', async () => {
+    openDialog();
+    fireEvent.click(screen.getByRole('checkbox', { name: /Download history/ }));
+    fireEvent.click(screen.getByRole('button', { name: s.clearData.confirm }));
+    await waitFor(() => expect(clearBrowsingData).toHaveBeenCalledTimes(1));
+    expect(clearBrowsingData).toHaveBeenCalledWith({
+      range: 'last-hour',
+      categories: ['history', 'cookies', 'cache', 'downloads'],
+    });
+  });
+
   it('sends the chosen range and categories to the bridge', async () => {
     openDialog();
     fireEvent.change(screen.getByLabelText(s.clearData.rangeLabel), {
