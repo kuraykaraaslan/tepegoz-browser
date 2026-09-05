@@ -55,12 +55,36 @@ describe('runNotificationAction', () => {
     expect(bridge.createTab).not.toHaveBeenCalled();
   });
 
+  it('open_url_background with no url does nothing and returns false', () => {
+    expect(runNotificationAction(item(), act({ type: 'open_url_background' }))).toBe(false);
+    expect(bridge.createTabInBackground).not.toHaveBeenCalled();
+  });
+
+  it('navigate_current with no url does nothing and returns false', () => {
+    expect(runNotificationAction(item(), act({ type: 'navigate_current' }))).toBe(false);
+    expect(bridge.navigateTab).not.toHaveBeenCalled();
+  });
+
   it('trust_origin trusts the item origin THEN opens the pending popup url', () => {
     expect(
       runNotificationAction(item(), act({ type: 'trust_origin', url: 'https://popup/' })),
     ).toBe(true);
     expect(bridge.trustPopupOrigin).toHaveBeenCalledWith('https://site.example');
     expect(bridge.createTab).toHaveBeenCalledWith('https://popup/');
+  });
+
+  it('trust_origin with no item origin skips trusting anything', () => {
+    expect(
+      runNotificationAction(item({ origin: '' }), act({ type: 'trust_origin', url: 'https://popup/' })),
+    ).toBe(true);
+    expect(bridge.trustPopupOrigin).not.toHaveBeenCalled();
+    expect(bridge.createTab).toHaveBeenCalledWith('https://popup/');
+  });
+
+  it('trust_origin with no pending popup url trusts the origin but opens nothing, returns false', () => {
+    expect(runNotificationAction(item(), act({ type: 'trust_origin' }))).toBe(false);
+    expect(bridge.trustPopupOrigin).toHaveBeenCalledWith('https://site.example');
+    expect(bridge.createTab).not.toHaveBeenCalled();
   });
 
   it('open_settings navigates to the settings page, returns true', () => {
