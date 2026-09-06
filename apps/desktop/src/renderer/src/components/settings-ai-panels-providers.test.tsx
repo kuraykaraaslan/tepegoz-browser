@@ -11,6 +11,11 @@ import { ProvidersSection } from './settings-ai-panels-providers';
  * Providers & API keys. The list is one drag/keyboard-reorderable priority order; the raw key never
  * comes back; the model is pinned per key; and every failure reports what main said rather than a
  * blanket "upstream down". This drives add / remove / rename / reorder and the failure branches.
+ *
+ * Two branches are deliberately left uncovered. `move`'s `moved === undefined` guard: every caller
+ * passes an index that came out of `keys` itself, so the `splice` always yields an element — it
+ * guards a caller that does not exist yet. And the region Select's `?? ''` default: the Select only
+ * renders inside `providerRegionOpts.length > 0`, so element 0 is always there.
  */
 
 const s = settingsDict.en;
@@ -36,9 +41,7 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-function renderSection(
-  over: Partial<Parameters<typeof ProvidersSection>[0]> = {},
-): {
+function renderSection(over: Partial<Parameters<typeof ProvidersSection>[0]> = {}): {
   onAdd: ReturnType<typeof vi.fn>;
   onRemoveById: ReturnType<typeof vi.fn>;
   onRename: ReturnType<typeof vi.fn>;
@@ -56,13 +59,7 @@ function renderSection(
   };
   render(
     <I18nProvider locale="en">
-      <ProvidersSection
-        keys={[]}
-        encryptionAvailable
-        regions={{}}
-        {...fns}
-        {...over}
-      />
+      <ProvidersSection keys={[]} encryptionAvailable regions={{}} {...fns} {...over} />
     </I18nProvider>,
   );
   return fns;
@@ -81,7 +78,12 @@ describe('ProvidersSection', () => {
     fireEvent.change(screen.getByLabelText(s.apiKey), { target: { value: 'sk-secret' } });
     fireEvent.click(screen.getByRole('button', { name: s.addKey }));
     await waitFor(() =>
-      expect(onAdd).toHaveBeenCalledWith('anthropic', s.providerNames.anthropic, 'sk-secret', undefined),
+      expect(onAdd).toHaveBeenCalledWith(
+        'anthropic',
+        s.providerNames.anthropic,
+        'sk-secret',
+        undefined,
+      ),
     );
     await waitFor(() => expect(notify).toHaveBeenCalledWith('success', s.keyAdded));
   });
@@ -202,7 +204,7 @@ describe('ProvidersSection', () => {
     await waitFor(() => expect(notify).toHaveBeenCalledWith('error', 'remove blew up'));
   });
 
-  it('shows a key\'s stored region label and re-selecting the default region sends nothing', async () => {
+  it("shows a key's stored region label and re-selecting the default region sends nothing", async () => {
     const regions = {
       anthropic: [
         { id: 'us', label: 'United States' },
@@ -222,7 +224,12 @@ describe('ProvidersSection', () => {
     fireEvent.change(screen.getByLabelText(s.apiKey), { target: { value: 'sk-us' } });
     fireEvent.click(screen.getByRole('button', { name: s.addKey }));
     await waitFor(() =>
-      expect(onAdd).toHaveBeenCalledWith('anthropic', s.providerNames.anthropic, 'sk-us', undefined),
+      expect(onAdd).toHaveBeenCalledWith(
+        'anthropic',
+        s.providerNames.anthropic,
+        'sk-us',
+        undefined,
+      ),
     );
   });
 
@@ -278,12 +285,76 @@ describe('ProvidersSection', () => {
           Promise.resolve({ models: { anthropic: [{ id: 'sonnet', label: 'Sonnet' }] } }),
       },
     });
-    const { onSetModel, notify } = renderSection({ keys: [key({ id: 'k1', provider: 'anthropic' })] });
+    const { onSetModel, notify } = renderSection({
+      keys: [key({ id: 'k1', provider: 'anthropic' })],
+    });
 
     const trigger = await screen.findByRole('button', { name: s.keyModel.label });
     fireEvent.click(trigger);
     fireEvent.click(screen.getByRole('menuitemradio', { name: /Sonnet/ }));
     await waitFor(() => expect(onSetModel).toHaveBeenCalledWith('k1', 'sonnet'));
     await waitFor(() => expect(notify).toHaveBeenCalledWith('success', s.keyModel.saved));
+  });
+
+  it('ignores a form submit with no key, so Enter in the label field cannot add a blank', () => {
+    const { onAdd, notify } = renderSection();
+    fireEvent.change(document.getElementById('key-label')!, { target: { value: 'Personal' } });
+    // The Add button is disabled here, but a text input still submits its form on Enter — which is
+    // why `add()` re-checks rather than trusting the button.
+    fireEvent.submit(document.getElementById('key-label')!.closest('form')!);
+    expect(onAdd).not.toHaveBeenCalled();
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  it('ignores a rename submitted blank, so Enter on an emptied field cannot erase the label', () => {
+    const { onRename } = renderSection({ keys: [key({ id: 'k1', label: 'Old' })] });
+    fireEvent.click(screen.getByRole('button', { name: s.rename }));
+    const input = document.getElementById('rename-k1')!;
+    fireEvent.change(input, { target: { value: '   ' } });
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: c.common.save }).disabled).toBe(
+      true,
+    );
+
+    fireEvent.submit(input.closest('form')!);
+    expect(onRename).not.toHaveBeenCalled();
+    // and the row stays open for editing rather than closing on a write that never happened
+    expect(document.getElementById('rename-k1')).not.toBeNull();
+  });
+
+  it('leaves the order alone when a drop cannot name two distinct rows', () => {
+    const { onReorder } = renderSection({
+      keys: [key({ id: 'a', label: 'A' }), key({ id: 'b', label: 'B' })],
+    });
+    const rows = screen.getAllByRole('listitem');
+
+    // A drop with no drag in progress: `dragId` is null, so the source index resolves to -1.
+    fireEvent.drop(rows[1]!);
+    expect(onReorder).not.toHaveBeenCalled();
+
+    // A row dropped on itself: from === to. Reordering to the same place is still a vault write.
+    fireEvent.dragStart(rows[0]!);
+    fireEvent.drop(rows[0]!);
+    expect(onReorder).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the raw region id when the catalog has no label for it', () => {
+    // A key outlives the catalog entry it was created under — a region can be retired, or the
+    // provider can drop out of the regions map entirely. Either way the row still says WHERE the
+    // key points, which is the whole reason that line is on screen.
+    renderSection({
+      regions: {
+        anthropic: [{ id: 'us', label: 'United States' }],
+      } as unknown as CredentialsStatus['regions'],
+      keys: [
+        key({ id: 'k1', label: 'Retired region', region: 'ap-southeast-1' }),
+        key({ id: 'k2', label: 'Unmapped provider', provider: 'openai', region: 'eu-west' }),
+      ],
+    });
+    expect(
+      within(screen.getByText('Retired region').closest('li')!).getByText('ap-southeast-1'),
+    ).toBeTruthy();
+    expect(
+      within(screen.getByText('Unmapped provider').closest('li')!).getByText('eu-west'),
+    ).toBeTruthy();
   });
 });
