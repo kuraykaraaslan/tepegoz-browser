@@ -11,7 +11,14 @@ import { useAppContentModel } from './App-content-model';
  */
 
 const update = vi.fn<(p: Partial<Preferences>) => Promise<void>>(() => Promise.resolve());
-const bridge = { navigateTab: vi.fn(), closeTab: vi.fn(), getNewTabBackgroundImage: vi.fn<(ref: string) => Promise<string | null>>(() => Promise.resolve(null)), pickNewTabBackgroundImage: vi.fn() };
+const bridge = {
+  navigateTab: vi.fn(),
+  closeTab: vi.fn(),
+  getNewTabBackgroundImage: vi.fn<(ref: string) => Promise<string | null>>(() =>
+    Promise.resolve(null),
+  ),
+  pickNewTabBackgroundImage: vi.fn(),
+};
 
 function prefs(shortcuts: Array<{ id: string; title: string; url: string }> = []): Preferences {
   return { newTabShortcuts: shortcuts } as unknown as Preferences;
@@ -36,7 +43,11 @@ describe('new-tab shortcuts', () => {
   });
 
   it('refuses an 11th shortcut', () => {
-    const full = Array.from({ length: 10 }, (_, i) => ({ id: `s${i}`, title: `t${i}`, url: `u${i}` }));
+    const full = Array.from({ length: 10 }, (_, i) => ({
+      id: `s${i}`,
+      title: `t${i}`,
+      url: `u${i}`,
+    }));
     const { result } = render(prefs(full));
     act(() => result.current.onAddShortcut('t', 'https://x/'));
     expect(update).not.toHaveBeenCalled();
@@ -50,6 +61,35 @@ describe('new-tab shortcuts', () => {
       title: 'https://new/',
       url: 'https://new/',
     });
+    act(() => result.current.onRemoveShortcut('s1'));
+    expect(update.mock.calls[1]?.[0]?.newTabShortcuts).toEqual([]);
+  });
+
+  it('leaves the other shortcuts untouched when one is edited', () => {
+    const a = { id: 's1', title: 'A', url: 'https://a/' };
+    const b = { id: 's2', title: 'B', url: 'https://b/' };
+    const { result } = render(prefs([a, b]));
+    act(() => result.current.onEditShortcut('s2', 'B2', 'https://b2/'));
+    const next = update.mock.calls[0]?.[0]?.newTabShortcuts;
+    expect(next?.[0]).toBe(a); // untouched entries pass through by identity, not as rebuilt copies
+    expect(next?.[1]).toMatchObject({ id: 's2', title: 'B2', url: 'https://b2/' });
+  });
+});
+
+describe('before preferences have loaded', () => {
+  // `prefs` is null until the first read returns, and the new-tab page renders in that window. Every
+  // transform reads through the same `?? []`, so none of them may throw or write undefined.
+  it('reports an empty list and still adds the first shortcut', () => {
+    const { result } = render(null);
+    expect(result.current.newTabShortcuts).toEqual([]);
+    act(() => result.current.onAddShortcut('First', 'https://a.test/'));
+    expect(update.mock.calls[0]?.[0]?.newTabShortcuts).toHaveLength(1);
+  });
+
+  it('edits and removes against the empty list instead of throwing', () => {
+    const { result } = render(null);
+    act(() => result.current.onEditShortcut('s1', 't', 'https://x/'));
+    expect(update.mock.calls[0]?.[0]?.newTabShortcuts).toEqual([]);
     act(() => result.current.onRemoveShortcut('s1'));
     expect(update.mock.calls[1]?.[0]?.newTabShortcuts).toEqual([]);
   });
@@ -82,7 +122,13 @@ describe('new-tab background', () => {
     bridge.getNewTabBackgroundImage.mockResolvedValueOnce('data:image/webp;base64,ZZ');
     const p = {
       newTabShortcuts: [],
-      newTabBackground: { kind: 'image', imageRef: 'cas://xy', color: '#000', svgId: '', imageFit: 'cover' },
+      newTabBackground: {
+        kind: 'image',
+        imageRef: 'cas://xy',
+        color: '#000',
+        svgId: '',
+        imageFit: 'cover',
+      },
     } as unknown as Preferences;
     const { result } = render(p);
     await act(async () => {
@@ -97,7 +143,13 @@ describe('new-tab background', () => {
     bridge.getNewTabBackgroundImage.mockResolvedValueOnce(null);
     const p = {
       newTabShortcuts: [],
-      newTabBackground: { kind: 'image', imageRef: 'cas://missing', color: '#000', svgId: '', imageFit: 'cover' },
+      newTabBackground: {
+        kind: 'image',
+        imageRef: 'cas://missing',
+        color: '#000',
+        svgId: '',
+        imageFit: 'cover',
+      },
     } as unknown as Preferences;
     const { result } = render(p);
     await act(async () => {
