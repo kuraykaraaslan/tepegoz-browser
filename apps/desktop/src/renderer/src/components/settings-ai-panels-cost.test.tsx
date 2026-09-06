@@ -117,7 +117,9 @@ describe('LocalActionsSection', () => {
     listAiAdaptors.mockResolvedValue([adaptor()]);
     renderLocal({ useLocalModelForSimpleTasks: false });
     await screen.findByText('browser.click');
-    expect(screen.getByRole<HTMLInputElement>('switch', { name: s.runLocallyLabel }).disabled).toBe(true);
+    expect(screen.getByRole<HTMLInputElement>('switch', { name: s.runLocallyLabel }).disabled).toBe(
+      true,
+    );
   });
 
   it('writes a per-action override', async () => {
@@ -126,6 +128,50 @@ describe('LocalActionsSection', () => {
     await screen.findByText('browser.click');
     fireEvent.click(screen.getByRole('switch', { name: s.runLocallyLabel }));
     expect(setPref).toHaveBeenCalledWith({ localActions: { 'browser.click': false } });
+  });
+
+  it('turns the local model back off, writing the flag and the mode together', () => {
+    // The off direction is the one that has to reach `localProvider.mode`: leaving it at 'simple'
+    // with the flag false would keep a local model loaded for a feature that is switched off.
+    const { setPref } = renderLocal({ useLocalModelForSimpleTasks: true });
+    fireEvent.click(screen.getByRole('switch', { name: new RegExp(s.localModel, 'i') }));
+    const patch = setPref.mock.calls[0]![0] as Partial<Preferences>;
+    expect(patch.useLocalModelForSimpleTasks).toBe(false);
+    expect(patch.localProvider?.mode).toBe('off');
+  });
+
+  it('localizes a known system adaptor and keeps the given title otherwise', async () => {
+    // System titles are localized by id here; extension and MCP titles arrive already resolved by
+    // whoever owns them, and a system id with no dictionary entry has to fall back to its own title
+    // rather than render as blank.
+    const withAction = (id: string, title: string, kind: AIAdaptor['kind']): AIAdaptor =>
+      ({
+        ...adaptor({ id, title, kind }),
+        actions: [
+          {
+            id: `${id}.act`,
+            description: '',
+            dangerClass: 'read',
+            source: id,
+            requiresIdempotencyKey: false,
+            aiTask: 'none',
+            localCapable: true,
+            adaptorId: id,
+          },
+        ],
+      }) as AIAdaptor;
+
+    listAiAdaptors.mockResolvedValue([
+      withAction('browser', 'RAW BROWSER', 'system'),
+      withAction('com.example.unknown', 'Unknown System', 'system'),
+      withAction('com.example.ext', 'An Extension', 'extension'),
+    ]);
+    renderLocal({ useLocalModelForSimpleTasks: true });
+
+    expect(await screen.findByText(s.adaptors.browser)).toBeTruthy();
+    expect(screen.queryByText('RAW BROWSER')).toBeNull();
+    expect(screen.getByText('Unknown System')).toBeTruthy();
+    expect(screen.getByText('An Extension')).toBeTruthy();
   });
 });
 
@@ -168,5 +214,38 @@ describe('TokenBudgetSection', () => {
     fireEvent.change(input, { target: { value: '1234.7' } });
     fireEvent.blur(input);
     expect(setPref).toHaveBeenCalledWith({ agentTokenQuota: 1234 });
+  });
+
+  it('colours the bar by the same thresholds the Agent Console warns at', async () => {
+    // The suite claimed to cover the "threshold colour" and only ever checked the percentage. The
+    // colour is the part a glance reads.
+    const barFill = (): Element => screen.getByRole('progressbar').firstElementChild!;
+
+    getTokenUsage.mockResolvedValue({ lifetimeTokens: 500 });
+    renderBudget({ agentTokenQuota: 1000 });
+    await screen.findByRole('progressbar');
+    expect(barFill().className).toContain('bg-primary');
+    cleanup();
+
+    getTokenUsage.mockResolvedValue({ lifetimeTokens: 800 });
+    renderBudget({ agentTokenQuota: 1000 });
+    await screen.findByRole('progressbar');
+    expect(barFill().className).toContain('bg-warning');
+    cleanup();
+
+    getTokenUsage.mockResolvedValue({ lifetimeTokens: 1000 });
+    renderBudget({ agentTokenQuota: 1000 });
+    await screen.findByRole('progressbar');
+    expect(barFill().className).toContain('bg-error');
+  });
+
+  it('commits 0 rather than NaN when the quota field is cleared', () => {
+    // `agentTokenQuota` is a number in preferences; NaN would be written straight through and every
+    // later comparison against it would be false, silently unlimiting the budget.
+    const { setPref } = renderBudget({ agentTokenQuota: 1000 });
+    const input = screen.getByLabelText(s.tokenBudget.label);
+    fireEvent.change(input, { target: { value: '' } });
+    fireEvent.blur(input);
+    expect(setPref).toHaveBeenCalledWith({ agentTokenQuota: 0 });
   });
 });
