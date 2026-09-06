@@ -38,7 +38,9 @@ function sub(name: string): Sub {
 }
 
 const bridge = {
-  getPreferences: vi.fn(() => Promise.resolve({ theme: 'light', themeColor: '', glassChrome: true })),
+  getPreferences: vi.fn(() =>
+    Promise.resolve({ theme: 'light', themeColor: '', glassChrome: true }),
+  ),
   getTabsState: vi.fn(() => Promise.resolve({ tabs: [{ id: 't1' }], activeId: 't1' })),
   getAppInfo: vi.fn(() => Promise.resolve({ glassAvailable: false })),
   captureActiveTab: vi.fn(() => Promise.resolve(null)),
@@ -144,7 +146,11 @@ describe('useAppEffects', () => {
     const p = params();
     renderHook(() => useAppEffects(p));
     (p.setPrefs as ReturnType<typeof vi.fn>).mockClear();
-    bridge.getPreferences.mockResolvedValueOnce({ theme: 'dark', themeColor: '', glassChrome: false });
+    bridge.getPreferences.mockResolvedValueOnce({
+      theme: 'dark',
+      themeColor: '',
+      glassChrome: false,
+    });
     await act(async () => {
       (subs.publicSettings as unknown as () => void)();
       await Promise.resolve();
@@ -179,6 +185,50 @@ describe('useAppEffects', () => {
     expect(bridge.navigateTab).toHaveBeenCalled();
   });
 
+  it('falls back to system theme, no motion override and no glass before preferences load', async () => {
+    // `prefs` is null until the first read returns, and the shell renders in that window. Every one
+    // of these reads through a `?? default`, and getting it wrong shows: a flash of the wrong theme,
+    // or a translucent chrome over an opaque shell.
+    const mql = { matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() };
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn(() => mql),
+    );
+
+    const { unmount } = renderHook((pr: AppEffectsParams) => useAppEffects(pr), {
+      initialProps: params({ prefs: null, glassAvailable: true }),
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(applyTheme).toHaveBeenCalledWith('system', '');
+    expect(applyMotionPreference).toHaveBeenCalledWith(false);
+    expect(document.documentElement.classList.contains('glass')).toBe(false);
+
+    unmount();
+    vi.unstubAllGlobals();
+    vi.stubGlobal('ResizeObserver', RO); // restore the shared stub for the other suites
+  });
+
+  it('ignores an unbound key and leaves the command palette to its own host', () => {
+    // Both take the same early return, and both matter: preventDefault on an unbound key would eat
+    // the page's own keyboard, and eating Ctrl+K here would stop the palette opening at all.
+    const p = params();
+    renderHook(() => useAppEffects(p));
+    const dispatch = (init: KeyboardEventInit): boolean => {
+      const e = new KeyboardEvent('keydown', { ...init, bubbles: true, cancelable: true });
+      window.dispatchEvent(e);
+      return e.defaultPrevented;
+    };
+
+    expect(dispatch({ key: 'q' })).toBe(false);
+    expect(dispatch({ key: 'k', ctrlKey: true })).toBe(false);
+    expect(bridge.createTab).not.toHaveBeenCalled();
+    expect(bridge.reopenClosedTab).not.toHaveBeenCalled();
+    expect(p.extSurfaces.closeSurface).not.toHaveBeenCalled();
+  });
+
   it('follows OS colour-scheme changes only in plain system mode, and unsubscribes on unmount', async () => {
     let onMqChange: (() => void) | undefined;
     const mql = {
@@ -188,7 +238,10 @@ describe('useAppEffects', () => {
       }),
       removeEventListener: vi.fn(),
     };
-    vi.stubGlobal('matchMedia', vi.fn(() => mql));
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn(() => mql),
+    );
 
     const p = params({
       prefs: { theme: 'system', themeColor: '', glassChrome: false } as AppEffectsParams['prefs'],
@@ -210,9 +263,16 @@ describe('useAppEffects', () => {
 
   it('does NOT follow OS changes when a custom theme colour overrides system', async () => {
     const mql = { matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() };
-    vi.stubGlobal('matchMedia', vi.fn(() => mql));
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn(() => mql),
+    );
     const p = params({
-      prefs: { theme: 'system', themeColor: '#0af', glassChrome: false } as AppEffectsParams['prefs'],
+      prefs: {
+        theme: 'system',
+        themeColor: '#0af',
+        glassChrome: false,
+      } as AppEffectsParams['prefs'],
     });
     renderHook(() => useAppEffects(p));
     await act(async () => {
@@ -258,7 +318,10 @@ describe('useAppEffects', () => {
   it('drops a snapshot that resolves after the dropdown already closed', async () => {
     let resolveCapture: (v: string) => void = () => undefined;
     bridge.captureActiveTab.mockImplementationOnce(
-      () => new Promise<string>((res) => { resolveCapture = res; }) as unknown as Promise<null>,
+      () =>
+        new Promise<string>((res) => {
+          resolveCapture = res;
+        }) as unknown as Promise<null>,
     );
     const p = params({ omniboxDropdownOpen: true });
     const { unmount } = renderHook(() => useAppEffects(p));
