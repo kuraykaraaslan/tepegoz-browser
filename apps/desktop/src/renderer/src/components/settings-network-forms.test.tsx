@@ -11,6 +11,9 @@ import { AddConnectionRow } from './settings-network-forms';
  * (label required; WireGuard needs a picked .conf and is blocked without the keychain; SOCKS needs a
  * 1..65535 port); the discriminated input each protocol submits; the Tor upstream list excludes Tor
  * connections; and a picked profile auto-names the connection.
+ *
+ * One branch is deliberately left uncovered: `picked?.path ?? ''` in `submit`. `canAdd` requires a
+ * picked profile for WireGuard, and `submit` only runs behind `canAdd`.
  */
 
 const s = settingsDict.en;
@@ -71,7 +74,9 @@ describe('AddConnectionRow', () => {
     renderRow({ secretsAvailable: false });
     fireEvent.change(nameInput(), { target: { value: 'Home' } });
     expect(addBtn().disabled).toBe(true);
-    expect(screen.getByRole<HTMLButtonElement>('button', { name: s.network.chooseFile }).disabled).toBe(true);
+    expect(
+      screen.getByRole<HTMLButtonElement>('button', { name: s.network.chooseFile }).disabled,
+    ).toBe(true);
   });
 
   it('picks a .conf, auto-fills the name from it, and submits a wireguard input', async () => {
@@ -100,7 +105,12 @@ describe('AddConnectionRow', () => {
 
     fireEvent.change(screen.getByLabelText(s.network.portLabel), { target: { value: '1080' } });
     fireEvent.click(addBtn());
-    expect(onAdd).toHaveBeenCalledWith({ kind: 'byo-socks', label: 'Local', note: '', socksPort: 1080 });
+    expect(onAdd).toHaveBeenCalledWith({
+      kind: 'byo-socks',
+      label: 'Local',
+      note: '',
+      socksPort: 1080,
+    });
   });
 
   it('offers non-Tor connections as Tor upstreams and submits the chosen one', () => {
@@ -135,7 +145,9 @@ describe('AddConnectionRow', () => {
   });
 
   it('shows the error when onAdd itself rejects', async () => {
-    const { onAdd } = renderRow({ onAddImpl: () => Promise.reject(new Error('daemon refused the profile')) });
+    const { onAdd } = renderRow({
+      onAddImpl: () => Promise.reject(new Error('daemon refused the profile')),
+    });
     fireEvent.change(kindSelect(), { target: { value: 'byo-socks' } });
     fireEvent.change(nameInput(), { target: { value: 'Local' } });
     fireEvent.change(screen.getByLabelText(s.network.portLabel), { target: { value: '1080' } });
@@ -151,6 +163,67 @@ describe('AddConnectionRow', () => {
     fireEvent.change(screen.getByLabelText(s.network.noteLabel), { target: { value: 'lab box' } });
     fireEvent.change(screen.getByLabelText(s.network.portLabel), { target: { value: '1080' } });
     fireEvent.click(addBtn());
-    expect(onAdd).toHaveBeenCalledWith({ kind: 'byo-socks', label: 'Local', note: 'lab box', socksPort: 1080 });
+    expect(onAdd).toHaveBeenCalledWith({
+      kind: 'byo-socks',
+      label: 'Local',
+      note: 'lab box',
+      socksPort: 1080,
+    });
+  });
+
+  it('submits an unchained Tor connection with a null upstream', () => {
+    // The plain case, and the one a first-time user picks: Tor with nothing in front of it. The
+    // chained case was covered; "" from the select has to become null, not an empty id.
+    const { onAdd } = renderRow({
+      connections: [view({ id: 'fra', label: 'FRA', kind: 'wireguard' })],
+    });
+    fireEvent.change(kindSelect(), { target: { value: 'tor' } });
+    fireEvent.change(nameInput(), { target: { value: 'Plain Tor' } });
+    fireEvent.click(addBtn());
+    expect(onAdd).toHaveBeenCalledWith({
+      kind: 'tor',
+      label: 'Plain Tor',
+      note: '',
+      upstreamConnectionId: null,
+    });
+  });
+
+  it('keeps the profile already picked when a second pick is cancelled', async () => {
+    // Cancelling a file dialog is not a choice to discard what was already chosen. Without the early
+    // return the cancel would null the profile out and re-disable Add.
+    pickWireguardProfile.mockResolvedValueOnce(picked).mockResolvedValueOnce(null);
+    renderRow();
+    fireEvent.click(screen.getByRole('button', { name: s.network.chooseFile }));
+    await waitFor(() => expect((nameInput() as HTMLInputElement).value).toBe('home'));
+    expect(addBtn().disabled).toBe(false);
+
+    // once a profile is picked the button reads its file name, which is the second click's target
+    fireEvent.click(screen.getByRole('button', { name: 'home.conf' }));
+    await waitFor(() => expect(pickWireguardProfile).toHaveBeenCalledTimes(2));
+    expect((nameInput() as HTMLInputElement).value).toBe('home');
+    expect(screen.getByRole('button', { name: 'home.conf' })).toBeTruthy();
+    expect(addBtn().disabled).toBe(false);
+  });
+
+  it('shows a picker rejection that is not an Error', async () => {
+    // The bridge rejects with whatever crossed the boundary; a structured-cloned value need not be an
+    // Error, and an empty error line would tell the user nothing about their .conf.
+    pickWireguardProfile.mockRejectedValue('EPERM opening the profile');
+    renderRow();
+    fireEvent.click(screen.getByRole('button', { name: s.network.chooseFile }));
+    await waitFor(() => expect(screen.getByText('EPERM opening the profile')).toBeTruthy());
+  });
+
+  it('shows an onAdd rejection that is not an Error', async () => {
+    // Typed as Error only to satisfy `prefer-promise-reject-errors`; the point is that at runtime it
+    // is a bare string, which is what a structured-cloned rejection can arrive as.
+    const notAnError = 'daemon socket missing' as unknown as Error;
+    const { onAdd } = renderRow({ onAddImpl: () => Promise.reject(notAnError) });
+    fireEvent.change(kindSelect(), { target: { value: 'byo-socks' } });
+    fireEvent.change(nameInput(), { target: { value: 'Local' } });
+    fireEvent.change(screen.getByLabelText(s.network.portLabel), { target: { value: '1080' } });
+    fireEvent.click(addBtn());
+    expect(onAdd).toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByText('daemon socket missing')).toBeTruthy());
   });
 });
