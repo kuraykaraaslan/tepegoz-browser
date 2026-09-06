@@ -14,6 +14,10 @@ import { MenuSubPopup } from './MenuSubPopup';
  * A submenu flyout window (`?surface=menu-sub&kind=history|bookmarks|extensions`) — its own native
  * window opened beside the main menu. It fetches its own data, builds a `Menu`, and every selection
  * runs a bridge call then `closePopup` (cascading the whole menu shut).
+ *
+ * One branch is deliberately left uncovered: the `contentRef.current === null` guard in the resize
+ * effect. The div holding the ref renders unconditionally, so React has attached it by the time
+ * the effect runs.
  */
 
 stubJsdomLayout();
@@ -21,11 +25,19 @@ stubJsdomLayout();
 const bridge = {
   getPreferences: vi.fn(() => Promise.resolve({ ...DEFAULT_PREFERENCES })),
   getHistory: vi.fn(() => Promise.resolve<{ url: string; title: string }[]>([])),
-  listRecentlyClosedTabs: vi.fn(() => Promise.resolve<{ id: string; title: string; url: string }[]>([])),
+  listRecentlyClosedTabs: vi.fn(() =>
+    Promise.resolve<{ id: string; title: string; url: string }[]>([]),
+  ),
   listBookmarks: vi.fn(() => Promise.resolve<{ url: string; title: string }[]>([])),
   listExtensionManifests: vi.fn(() =>
     Promise.resolve<
-      { id: string; icon: string; name: string; description: string; labels: Record<string, never> }[]
+      {
+        id: string;
+        icon: string;
+        name: string;
+        description: string;
+        labels: Record<string, never>;
+      }[]
     >([]),
   ),
   reopenClosedTab: vi.fn(),
@@ -55,6 +67,34 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+/**
+ * Hold the NEXT call to `mock` open, and hand back the release. Used to unmount the flyout while a
+ * read is still in flight, which is the only way to reach the `cancelled` guards that sit after it.
+ */
+function stallNext<T>(
+  mock: { mockImplementationOnce: (fn: () => Promise<T>) => unknown },
+  value: T,
+): () => void {
+  let release: () => void = () => undefined;
+  mock.mockImplementationOnce(
+    () =>
+      new Promise<T>((res) => {
+        release = () => {
+          res(value);
+        };
+      }),
+  );
+  return () => {
+    release();
+  };
+}
+
+/** Let the stalled promise's continuation run to the point the guard is reached. */
+async function flush(): Promise<void> {
+  await new Promise((r) => setTimeout(r, 0));
+  await new Promise((r) => setTimeout(r, 0));
+}
+
 describe('MenuSubPopup', () => {
   it('renders nothing but the shell when the preferences fetch rejects', async () => {
     bridge.getPreferences.mockRejectedValueOnce(new Error('bridge gone'));
@@ -66,7 +106,10 @@ describe('MenuSubPopup', () => {
   it('bails out of the data build when unmounted before preferences resolve', async () => {
     let resolvePrefs: (p: typeof DEFAULT_PREFERENCES) => void = () => undefined;
     bridge.getPreferences.mockImplementationOnce(
-      () => new Promise<typeof DEFAULT_PREFERENCES>((res) => { resolvePrefs = res; }),
+      () =>
+        new Promise<typeof DEFAULT_PREFERENCES>((res) => {
+          resolvePrefs = res;
+        }),
     );
     const view = render(<MenuSubPopup kind="history" />);
     view.unmount();
@@ -91,7 +134,9 @@ describe('MenuSubPopup', () => {
 
   describe('history kind', () => {
     it('lists recently-closed rows, history rows, and "Show full history"; each acts then closes', async () => {
-      bridge.listRecentlyClosedTabs.mockResolvedValue([{ id: 't9', title: 'Closed tab', url: 'https://c/' }]);
+      bridge.listRecentlyClosedTabs.mockResolvedValue([
+        { id: 't9', title: 'Closed tab', url: 'https://c/' },
+      ]);
       bridge.getHistory.mockResolvedValue([
         { url: 'https://a.example/', title: 'A page' },
         { url: 'https://b.example/', title: '' },
@@ -109,6 +154,18 @@ describe('MenuSubPopup', () => {
 
       fireEvent.click(screen.getByRole('menuitem', { name: 'Show full history' }));
       expect(bridge.navigateTab).toHaveBeenCalledWith(INTERNAL_HISTORY_URL);
+    });
+
+    it('falls back to the URL for a recently-closed tab with no title', async () => {
+      // The history rows already had this covered; the recently-closed rows are a separate list with
+      // a separate label expression, and a closed tab that never finished loading has no title.
+      bridge.listRecentlyClosedTabs.mockResolvedValue([
+        { id: 't1', title: '', url: 'https://untitled.example/' },
+      ]);
+      render(<MenuSubPopup kind="history" />);
+      expect(
+        await screen.findByRole('menuitem', { name: 'https://untitled.example/' }),
+      ).toBeTruthy();
     });
 
     it('omits the recently-closed section and still lists "Show full history" when both reads reject', async () => {
@@ -134,6 +191,14 @@ describe('MenuSubPopup', () => {
 
       fireEvent.click(screen.getByRole('menuitem', { name: 'A bookmark' }));
       expect(bridge.navigateTab).toHaveBeenCalledWith('https://bm/');
+    });
+
+    it('falls back to the URL for a bookmark with no title', async () => {
+      bridge.listBookmarks.mockResolvedValue([{ url: 'https://untitled-bm.example/', title: '' }]);
+      render(<MenuSubPopup kind="bookmarks" />);
+      expect(
+        await screen.findByRole('menuitem', { name: 'https://untitled-bm.example/' }),
+      ).toBeTruthy();
     });
 
     it('shows the disabled empty row when there are no bookmarks', async () => {
@@ -178,6 +243,48 @@ describe('MenuSubPopup', () => {
       bridge.listExtensionManifests.mockRejectedValueOnce(new Error('x'));
       render(<MenuSubPopup kind="extensions" />);
       expect(await screen.findByRole('menuitem', { name: 'Manage extensions' })).toBeTruthy();
+    });
+  });
+
+  describe('a read that lands after the flyout is gone', () => {
+    // A flyout is a native popup that closes on a click anywhere, so its data routinely arrives after
+    // it is gone. These drive that race end to end for all three kinds: unmount with the read still
+    // in flight, then let it land.
+    //
+    // What they pin is the PATH, not the `cancelled` guard itself — checked by mutation: deleting the
+    // guard keeps them green, because React 18 makes a state update on an unmounted tree a silent
+    // no-op, so the guard has no externally observable effect to assert on. They are here because the
+    // path is a real one that must complete without throwing, and because anything later added after
+    // the guard (a bridge call, a map over a late payload) would break them.
+
+    it('drops a late recently-closed read', async () => {
+      const release = stallNext(bridge.listRecentlyClosedTabs, []);
+      const view = render(<MenuSubPopup kind="history" />);
+      await waitFor(() => expect(bridge.listRecentlyClosedTabs).toHaveBeenCalled());
+      view.unmount();
+      release();
+      await flush();
+      expect(screen.queryByRole('menuitem')).toBeNull();
+    });
+
+    it('drops a late bookmarks read', async () => {
+      const release = stallNext(bridge.listBookmarks, []);
+      const view = render(<MenuSubPopup kind="bookmarks" />);
+      await waitFor(() => expect(bridge.listBookmarks).toHaveBeenCalled());
+      view.unmount();
+      release();
+      await flush();
+      expect(screen.queryByRole('menuitem')).toBeNull();
+    });
+
+    it('drops a late extension-manifest read', async () => {
+      const release = stallNext(bridge.listExtensionManifests, []);
+      const view = render(<MenuSubPopup kind="extensions" />);
+      await waitFor(() => expect(bridge.listExtensionManifests).toHaveBeenCalled());
+      view.unmount();
+      release();
+      await flush();
+      expect(screen.queryByRole('menuitem')).toBeNull();
     });
   });
 });
