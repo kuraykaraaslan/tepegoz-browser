@@ -12,6 +12,10 @@ import { McpServersSection } from './settings-mcp-servers';
  * test: the draft validation that mirrors the schema's superRefine (name required; stdio needs a
  * command; http_sse needs a real URL), args parsed as a whitespace-separated list (empty ⇒ none), the
  * transport-specific server shape, add-vs-update keyed on id, enable toggle, and remove.
+ *
+ * One branch here is deliberately left uncovered: `submit`'s `if (error !== null) return`. The only
+ * caller is the Add/Save button, which is disabled by that same predicate, so no interaction can
+ * reach it — it is the guard that keeps that coupling from being the only thing holding.
  */
 
 const s = settingsDict.en;
@@ -138,7 +142,12 @@ describe('McpServersSection', () => {
 
   it('abandons the edit form when Cancel is pressed', () => {
     const existing: McpServerPref = {
-      id: 'mcp-1', label: 'Old', transport: 'stdio', enabled: true, command: 'old', args: [],
+      id: 'mcp-1',
+      label: 'Old',
+      transport: 'stdio',
+      enabled: true,
+      command: 'old',
+      args: [],
     };
     renderSection({ mcpServers: [existing] });
     fireEvent.click(screen.getByRole('button', { name: s.searchEngineEdit }));
@@ -151,7 +160,12 @@ describe('McpServersSection', () => {
 
   it('clears the edit form if the server being edited is removed underneath it', () => {
     const existing: McpServerPref = {
-      id: 'mcp-1', label: 'Old', transport: 'stdio', enabled: true, command: 'old', args: [],
+      id: 'mcp-1',
+      label: 'Old',
+      transport: 'stdio',
+      enabled: true,
+      command: 'old',
+      args: [],
     };
     const { setPref } = renderSection({ mcpServers: [existing] });
     fireEvent.click(screen.getByRole('button', { name: s.searchEngineEdit }));
@@ -189,9 +203,7 @@ describe('McpServersSection', () => {
       args: [],
     };
     renderSection({ mcpServers: [existing] });
-    await waitFor(() =>
-      expect(screen.getByText(`4 ${s.mcpToolsLabel}`)).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText(`4 ${s.mcpToolsLabel}`)).toBeTruthy());
     expect(screen.getByText(s.mcpStateLabels.ready)).toBeTruthy();
   });
 
@@ -205,5 +217,116 @@ describe('McpServersSection', () => {
     });
     expect(getMcpStatus.mock.calls.length).toBe(callsBefore);
     vi.useRealTimers();
+  });
+
+  it('fills the draft from an http_sse server (no command, no args) and keeps its env on save', () => {
+    const existing: McpServerPref = {
+      id: 'mcp-http',
+      label: 'Remote',
+      transport: 'http_sse',
+      enabled: false,
+      url: 'https://mcp.example/sse',
+      env: { TOKEN: 'x' },
+    };
+    const { setPref } = renderSection({ mcpServers: [existing] });
+    fireEvent.click(screen.getByRole('button', { name: s.searchEngineEdit }));
+
+    // The draft carries every field, so `draftFrom` has to default the two this server does not
+    // have. Flipping the transport is the only way to see them: the stdio inputs render for it.
+    fireEvent.change(field(s.mcp.transport), { target: { value: 'stdio' } });
+    expect((field(s.mcp.command) as HTMLInputElement).value).toBe('');
+    expect((field(s.mcp.args) as HTMLInputElement).value).toBe('');
+    fireEvent.change(field(s.mcp.transport), { target: { value: 'http_sse' } });
+
+    fireEvent.change(field(s.mcp.labelField), { target: { value: 'Remote 2' } });
+    fireEvent.click(screen.getByRole('button', { name: s.searchEngineSave }));
+
+    // env is never editable here, so an edit has to preserve it rather than drop it.
+    const servers = lastPatch(setPref).mcpServers as McpServerPref[];
+    expect(servers[0]).toMatchObject({
+      id: 'mcp-http',
+      label: 'Remote 2',
+      enabled: false,
+      url: 'https://mcp.example/sse',
+      env: { TOKEN: 'x' },
+    });
+  });
+
+  it('rewrites only the edited row when several servers are configured', () => {
+    const a: McpServerPref = {
+      id: 'mcp-a',
+      label: 'A',
+      transport: 'stdio',
+      enabled: true,
+      command: 'a',
+      args: [],
+    };
+    const b: McpServerPref = {
+      id: 'mcp-b',
+      label: 'B',
+      transport: 'stdio',
+      enabled: true,
+      command: 'b',
+      args: [],
+    };
+    const { setPref } = renderSection({ mcpServers: [a, b] });
+
+    fireEvent.click(screen.getAllByRole('button', { name: s.searchEngineEdit })[1]!);
+    fireEvent.change(field(s.mcp.labelField), { target: { value: 'B2' } });
+    fireEvent.click(screen.getByRole('button', { name: s.searchEngineSave }));
+
+    const servers = lastPatch(setPref).mcpServers as McpServerPref[];
+    expect(servers.map((m) => m.label)).toEqual(['A', 'B2']);
+    expect(servers[0]).toBe(a); // untouched rows pass through by identity, not a rebuilt copy
+  });
+
+  it('flips the enabled flag of the targeted server only', () => {
+    const a: McpServerPref = {
+      id: 'mcp-a',
+      label: 'A',
+      transport: 'stdio',
+      enabled: true,
+      command: 'a',
+      args: [],
+    };
+    const b: McpServerPref = {
+      id: 'mcp-b',
+      label: 'B',
+      transport: 'stdio',
+      enabled: true,
+      command: 'b',
+      args: [],
+    };
+    const { setPref } = renderSection({ mcpServers: [a, b] });
+
+    fireEvent.click(screen.getAllByRole('switch', { name: s.mcp.enabled })[1]!);
+
+    const servers = lastPatch(setPref).mcpServers as McpServerPref[];
+    expect(servers.map((m) => m.enabled)).toEqual([true, false]);
+    expect(servers[0]).toBe(a);
+  });
+
+  it('renders a stdio server that carries no args as its bare command', () => {
+    const existing: McpServerPref = {
+      id: 'mcp-1',
+      label: 'S',
+      transport: 'stdio',
+      enabled: true,
+      command: 'npx',
+    };
+    renderSection({ mcpServers: [existing] });
+    expect(screen.getByText('npx')).toBeTruthy();
+  });
+
+  it('never prints "undefined" for a row missing its transport-specific field', () => {
+    // `McpServerPref` does not narrow `command`/`url` by transport — the row renderer defaults both,
+    // and this is what that default is for: a row still reads as text, never as the word "undefined".
+    const servers: McpServerPref[] = [
+      { id: 'mcp-a', label: 'A', transport: 'stdio', enabled: true, args: ['--flag'] },
+      { id: 'mcp-b', label: 'B', transport: 'http_sse', enabled: true },
+    ];
+    renderSection({ mcpServers: servers });
+    expect(screen.queryByText(/undefined/)).toBeNull();
+    expect(screen.getByText('--flag')).toBeTruthy();
   });
 });
