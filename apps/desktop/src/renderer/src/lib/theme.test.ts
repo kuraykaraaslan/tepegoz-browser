@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { contrastRatio } from '@tepegoz/ui';
-import { applyTheme, isHexColor, luminance } from './theme';
+import {
+  applyMotionPreference,
+  applyTheme,
+  describeThemeColor,
+  isHexColor,
+  luminance,
+} from './theme';
 
 /**
  * The theme engine's contract. It had no test at all — and the box it belongs to asks for exactly the
@@ -13,6 +19,12 @@ import { applyTheme, isHexColor, luminance } from './theme';
  * hold a contrast promise — the focus ring measured below 3:1 on seven of the eight shipped presets,
  * and secondary text hit 1.92:1 on a light custom colour. And the custom path never overrode
  * `--primary-on-surface`, so the brand cyan stayed as foreground over an arbitrary background.
+ *
+ * Two branches are deliberately left uncovered: the loop-exhaustion fallbacks in `shadeUntil` and
+ * `accentFor`. Both searches walk to a step-20 candidate of pure white or pure black, and the
+ * direction is `bestTextOn`'s winner — so the extreme in that direction always clears the bar
+ * (max(contrast(white, base), contrast(black, base)) bottoms out at ~4.58:1, above AA_TEXT, and
+ * the label on pure white measures ~17.9:1). They are a belt on a search that terminates.
  */
 
 /** The exact preset list offered in Settings (`settings-appearance-language.tsx`). */
@@ -55,6 +67,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   root().className = '';
   root().removeAttribute('style');
+  root().removeAttribute('data-reduce-motion');
   prefersDark = false;
 });
 
@@ -176,5 +189,69 @@ describe('isHexColor', () => {
     expect(isHexColor('#fff')).toBe(false);
     expect(isHexColor('0d7377')).toBe(false);
     expect(isHexColor('rgb(1,2,3)')).toBe(false);
+  });
+});
+
+describe('describeThemeColor reads out the same derivation applyTheme applies', () => {
+  it('reports exactly the tokens that get set, for a dark and a light surface', () => {
+    // The picker's hint promises "text contrast is chosen automatically". The read-out is only worth
+    // anything if it is the SAME derivation — a second implementation that drifted would show a
+    // number the screen does not actually render.
+    for (const color of ['#1e293b', '#e0e0e0']) {
+      applyTheme('system', color);
+      const report = describeThemeColor(color);
+      expect(report, color).not.toBeNull();
+      expect(report!.surface, color).toBe(cssVar('--surface-base'));
+      expect(report!.raised, color).toBe(cssVar('--surface-raised'));
+      expect(report!.text, color).toBe(cssVar('--text-primary'));
+      expect(report!.secondaryText, color).toBe(cssVar('--text-secondary'));
+      expect(report!.accent, color).toBe(cssVar('--border-focus'));
+    }
+  });
+
+  it('raises a dark surface toward white and a light surface toward black', () => {
+    // `raised` is the one token whose direction flips with the chosen text colour, and the flip is
+    // what makes a raised card read as raised rather than as a smudge.
+    const dark = describeThemeColor('#1e293b')!;
+    expect(luminance(dark.raised)).toBeGreaterThan(luminance(dark.surface));
+    const light = describeThemeColor('#e0e0e0')!;
+    expect(luminance(light.raised)).toBeLessThan(luminance(light.surface));
+  });
+
+  it('reports ratios that clear the bars the derivation solves for', () => {
+    const r = describeThemeColor('#0d7377')!;
+    expect(r.textRatio).toBeGreaterThanOrEqual(4.5);
+    expect(r.accentRatio).toBeGreaterThanOrEqual(3);
+    expect(r.accentLabelRatio).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('returns null for the same input applyTheme ignores', () => {
+    expect(describeThemeColor('not-a-color')).toBeNull();
+    expect(describeThemeColor('')).toBeNull();
+  });
+});
+
+describe('applyMotionPreference only ever ADDS a reason to reduce motion', () => {
+  it('marks the document when forced on', () => {
+    applyMotionPreference(true);
+    expect(root().getAttribute('data-reduce-motion')).toBe('1');
+  });
+
+  it('removes the attribute when turned off, rather than asserting "full motion"', () => {
+    // `tokens.css` honours `prefers-reduced-motion` on its own. Writing a falsy value here would let
+    // the browser override an accessibility setting the user already made at the OS level; removing
+    // the attribute hands the decision back.
+    applyMotionPreference(true);
+    applyMotionPreference(false);
+    expect(root().hasAttribute('data-reduce-motion')).toBe(false);
+  });
+
+  it('is idempotent in both directions', () => {
+    applyMotionPreference(true);
+    applyMotionPreference(true);
+    expect(root().getAttribute('data-reduce-motion')).toBe('1');
+    applyMotionPreference(false);
+    applyMotionPreference(false);
+    expect(root().hasAttribute('data-reduce-motion')).toBe(false);
   });
 });
