@@ -12,6 +12,10 @@ import { BookmarkFolderPopup } from './BookmarkFolderPopup';
  * A bar folder's dropdown as its own native window. Fetches the tree, renders the folder's contents
  * (subfolders expand inline), navigates + closes on a bookmark click, and handles the reduced native
  * context menu's action sent back from main (open / open-new-tab / open-all / move-to-bar / delete).
+ *
+ * One branch is deliberately left uncovered: the `contentRef.current === null` guard in the resize
+ * effect. The div holding the ref renders unconditionally, so React has attached it by the time
+ * the effect runs.
  */
 
 stubJsdomLayout();
@@ -84,17 +88,13 @@ describe('BookmarkFolderPopup', () => {
   it('shows the empty-folder message when the folder has no children', async () => {
     bridge.getBookmarkTree.mockResolvedValue([folder('f-root', 'Bar folder', [])]);
     render(<BookmarkFolderPopup folderId="f-root" />);
-    await waitFor(() =>
-      expect(screen.getByText(bookmarksUiDict.en.emptyFolder)).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText(bookmarksUiDict.en.emptyFolder)).toBeTruthy());
   });
 
   it('shows the empty message too when the tree read rejects', async () => {
     bridge.getBookmarkTree.mockRejectedValueOnce(new Error('store gone'));
     render(<BookmarkFolderPopup folderId="f-root" />);
-    await waitFor(() =>
-      expect(screen.getByText(bookmarksUiDict.en.emptyFolder)).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText(bookmarksUiDict.en.emptyFolder)).toBeTruthy());
   });
 
   it('renders the folder contents, expands a subfolder inline, navigates on a bookmark click', async () => {
@@ -120,12 +120,63 @@ describe('BookmarkFolderPopup', () => {
     expect(bridge.closePopup).toHaveBeenCalledTimes(1);
   });
 
+  it('finds a folder nested inside another folder', async () => {
+    // The popup is opened by id against the WHOLE tree, so `findNode` has to return a hit found in a
+    // child up through its parent rather than losing it at the first level.
+    bridge.getBookmarkTree.mockResolvedValue([
+      folder('f-other', 'Other', []),
+      folder('f-root', 'Bar folder', [folder('f-deep', 'Deep', [bm('Buried', 'https://buried/')])]),
+    ]);
+    render(<BookmarkFolderPopup folderId="f-deep" />);
+    expect(await screen.findByText('Buried')).toBeTruthy();
+  });
+
+  it('renders an em dash for a subfolder with no title', async () => {
+    bridge.getBookmarkTree.mockResolvedValue([
+      folder('f-root', 'Bar folder', [folder('f-sub', '', [bm('Nested', 'https://nested/')])]),
+    ]);
+    render(<BookmarkFolderPopup folderId="f-root" />);
+    expect(await screen.findByText('—')).toBeTruthy();
+  });
+
+  it('renders a bookmark row carrying no url, and clicking it navigates nowhere', async () => {
+    // The click handler guards `n.url !== null`, so the component already treats a url-less bookmark
+    // row as possible; the tooltip has to degrade with it rather than read "undefined".
+    const orphan: BookmarkTreeNode = { ...bm('', 'https://x/'), url: null };
+    bridge.getBookmarkTree.mockResolvedValue([folder('f-root', 'Bar folder', [orphan])]);
+    render(<BookmarkFolderPopup folderId="f-root" />);
+
+    const row = await waitFor(() => screen.getByRole('button'));
+    expect(row.getAttribute('title')).toBe('');
+    fireEvent.click(row);
+    expect(bridge.navigateTab).not.toHaveBeenCalled();
+    expect(bridge.closePopup).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not theme the document when the popup is gone before preferences arrive', async () => {
+    // The flyout is a native window that closes on a click anywhere. Without the guard the late
+    // `applyTheme` writes to a documentElement nobody is looking at any more — and unlike a setState
+    // on an unmounted tree, that one is not a no-op.
+    let resolvePrefs: (p: typeof DEFAULT_PREFERENCES) => void = () => undefined;
+    bridge.getPreferences.mockImplementationOnce(
+      () =>
+        new Promise<typeof DEFAULT_PREFERENCES>((res) => {
+          resolvePrefs = res;
+        }),
+    );
+    document.documentElement.classList.remove('dark');
+
+    const view = render(<BookmarkFolderPopup folderId="f-root" />);
+    view.unmount();
+    resolvePrefs({ ...DEFAULT_PREFERENCES, theme: 'dark', themeColor: '' });
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(document.documentElement.classList.contains('dark')).toBe(false);
+  });
+
   it('opens the reduced context menu for a bookmark row and for a folder branch', async () => {
     bridge.getBookmarkTree.mockResolvedValue([
-      folder('f-root', 'Bar folder', [
-        bm('Alpha', 'https://alpha/'),
-        folder('f-sub', 'Sub', []),
-      ]),
+      folder('f-root', 'Bar folder', [bm('Alpha', 'https://alpha/'), folder('f-sub', 'Sub', [])]),
     ]);
     render(<BookmarkFolderPopup folderId="f-root" />);
     fireEvent.contextMenu(await screen.findByText('Alpha'));
@@ -136,7 +187,9 @@ describe('BookmarkFolderPopup', () => {
 
   it('falls back to the bookmark glyph when a favicon image fails to load', async () => {
     bridge.getBookmarkTree.mockResolvedValue([
-      folder('f-root', 'Bar folder', [bm('Broken', 'https://x/', 'https://broken.example/favicon.ico')]),
+      folder('f-root', 'Bar folder', [
+        bm('Broken', 'https://x/', 'https://broken.example/favicon.ico'),
+      ]),
     ]);
     render(<BookmarkFolderPopup folderId="f-root" />);
     const row = await screen.findByText('Broken');
@@ -148,7 +201,9 @@ describe('BookmarkFolderPopup', () => {
 
   it('still renders the contents when the preferences fetch rejects', async () => {
     bridge.getPreferences.mockRejectedValueOnce(new Error('prefs gone'));
-    bridge.getBookmarkTree.mockResolvedValue([folder('f-root', 'Bar', [bm('Alpha', 'https://a/')])]);
+    bridge.getBookmarkTree.mockResolvedValue([
+      folder('f-root', 'Bar', [bm('Alpha', 'https://a/')]),
+    ]);
     render(<BookmarkFolderPopup folderId="f-root" />);
     expect(await screen.findByText('Alpha')).toBeTruthy();
   });
@@ -157,9 +212,7 @@ describe('BookmarkFolderPopup', () => {
     bridge.getPreferences.mockResolvedValue({ ...DEFAULT_PREFERENCES, locale: 'tr' });
     bridge.getBookmarkTree.mockResolvedValue([folder('f-root', 'Bar', [])]);
     render(<BookmarkFolderPopup folderId="f-root" />);
-    await waitFor(() =>
-      expect(screen.getByText(bookmarksUiDict.tr.emptyFolder)).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText(bookmarksUiDict.tr.emptyFolder)).toBeTruthy());
   });
 
   it('closes on Escape', async () => {
