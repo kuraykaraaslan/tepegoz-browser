@@ -22,6 +22,8 @@ build/
 
 # Test / coverage
 coverage/
+# Ad-hoc --coverage.reportsDirectory targets used when measuring a single file.
+.cov-*/
 test-results/
 playwright-report/
 # Eval output is REGENERABLE, never a source of truth — a committed report goes stale the moment the
