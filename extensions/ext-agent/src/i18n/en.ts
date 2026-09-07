@@ -260,6 +260,9 @@ export const en = {
     copied: 'Copied',
     runConfig: 'Run settings',
     skillUsed: 'Skill used',
+    allowed: 'You allowed {tool}',
+    allowedRemembered: 'remembered',
+    allowedScoped: 'for this run',
   },
   // Composer attachment chips (selected text / file / screenshot).
   attach: {

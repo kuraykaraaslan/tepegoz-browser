@@ -299,12 +299,19 @@ Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. N
       from a stored conversation has no `config` and simply shows no line (per-turn config is not
       persisted; the export's conversation-level meta already carries it). en + tr (`thread.runConfig`
       aria-label). 3 render tests._
-- [ ] **B3 — Drop approval history into the transcript as a permanent card.** LibreChat renders tool approval
+- [x] **B3 — Drop approval history into the transcript as a permanent card.** LibreChat renders tool approval
       inline instead of as a modal. **Do not copy that part** — the modal here is deliberately blocking, and
       the risk-class naming plus the commerce double-confirm are built on it; removing it would be a
       regression. What is missing is the _record_: once approved, the modal closes and the only trace is in
       the journal. Leave a card saying "at this step you allowed X." Shares plumbing with the pending-argument
       edit in [`../tracks/librechat-agent-parity.md`](../../docs/parities/librechat-agent-parity.md) P5.
+      _Landed 2026-09-08: `respond(true, …)` appends a `TurnApproval` (`{ tool, ts, remembered, scoped }`)
+      to the turn that owns the run (`approval.runId`, newest-turn fallback); a DENIAL gets no card — the
+      action did not happen. `TurnApprovals` (`panel-turn-meta.tsx`) renders each as a green-bordered
+      "You allowed {tool}" card between the step feed and the response, with `· remembered` / `· for this
+run` when those boxes were also ticked. The blocking modal is untouched. en + tr
+      (`thread.allowed` / `allowedRemembered` / `allowedScoped`). 2 render tests; a restored turn has no
+      `approvals` and shows nothing._
 - [x] **B2 — Skill pills in the transcript (visibility only).** Which skill produced an answer is not shown.
       A pill makes "this reply was generated with that instruction pack" visible — the same honesty logic as
       the evidence chips. **Only the display half is in scope:** LibreChat's `automatic` / `always-on` skill

@@ -241,6 +241,9 @@ export const tr: AgentStrings = {
     copied: 'Kopyalandı',
     runConfig: 'Çalıştırma ayarları',
     skillUsed: 'Kullanılan beceri',
+    allowed: '{tool} işlemine izin verdiniz',
+    allowedRemembered: 'hatırlandı',
+    allowedScoped: 'bu çalıştırma için',
   },
   // Besteci ek chip'leri (seçili metin / dosya / ekran görüntüsü).
   attach: {

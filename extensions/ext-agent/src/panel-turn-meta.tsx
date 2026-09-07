@@ -1,5 +1,6 @@
+import { CheckIcon } from './panel-icons';
 import type { AgentStrings } from './i18n';
-import type { Turn } from './panel-state';
+import type { Turn, TurnApproval } from './panel-state';
 
 /**
  * The per-turn metadata row under the prompt: a skill pill (S8 B2) and a provider · model · autonomy
@@ -33,5 +34,38 @@ export function TurnMeta({ turn, a }: { turn: Turn; a: AgentStrings }) {
         </span>
       )}
     </div>
+  );
+}
+
+/**
+ * A permanent record of every approval the user GRANTED in a turn (S8 B3). The modal is deliberately
+ * blocking and closes on answer; without this the only trace of "you allowed X here" is the journal.
+ * Denials are not shown — a denied action did not happen.
+ */
+export function TurnApprovals({ approvals, a }: { approvals: TurnApproval[]; a: AgentStrings }) {
+  if (approvals.length === 0) return null;
+  return (
+    <ul className="space-y-1 px-1">
+      {approvals.map((g, i) => {
+        const flags = [
+          g.remembered ? a.thread.allowedRemembered : null,
+          g.scoped ? a.thread.allowedScoped : null,
+        ].filter((f): f is string => f !== null);
+        return (
+          <li
+            key={`${g.tool}-${String(g.ts)}-${String(i)}`}
+            className="flex items-start gap-2 rounded-md border border-green-500/30 bg-green-500/5 px-2 py-1 text-xs text-text-secondary"
+          >
+            <CheckIcon className="mt-0.5 h-3 w-3 shrink-0 text-green-600 dark:text-green-400" />
+            <span className="[overflow-wrap:anywhere]">
+              {a.thread.allowed.replace('{tool}', g.tool)}
+              {flags.length > 0 && (
+                <span className="text-text-disabled"> · {flags.join(' · ')}</span>
+              )}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

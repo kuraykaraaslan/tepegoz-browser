@@ -86,6 +86,16 @@ export interface TurnConfig {
   effort: string;
 }
 
+/** One approval the user granted during a turn (S8 B3). */
+export interface TurnApproval {
+  tool: string;
+  ts: number;
+  /** The user also ticked "remember this for the skill". */
+  remembered: boolean;
+  /** The user also ticked the one-tap run-scope grant. */
+  scoped: boolean;
+}
+
 export interface Turn {
   id: string;
   prompt: string;
@@ -95,6 +105,10 @@ export interface Turn {
   config?: TurnConfig;
   /** The skill that produced this turn (S8 B2), when one was used. Absent on a restored turn. */
   skill?: { id: string; name: string };
+  /** Approvals the user granted during this turn (S8 B3) — a permanent transcript record, since the
+   *  modal closes on answer and otherwise the only trace is the journal. Denials are NOT recorded here
+   *  (a denied action did not happen); order is grant order. Absent on a restored turn. */
+  approvals?: TurnApproval[];
   /**
    * What this run’s evidence supported (S4). Absent when the run never reached a completion verdict —
    * deliberately not defaulted, because "we do not know" and "we could not confirm" are different

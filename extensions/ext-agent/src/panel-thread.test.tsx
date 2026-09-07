@@ -8,9 +8,10 @@ import type { AgentHostApi } from './types';
 import type { Turn } from './panel-state';
 
 /**
- * Transcript adornments: message-level copy (S8 A4) and the per-turn run-config read-back line
- * (S8 B4). Copy was code-blocks-only; the config line answers "which model / autonomy was this?"
- * when scrolling back a long run.
+ * Transcript adornments (S8): message-level copy (A4), the skill pill (B2), the run-config read-back
+ * line (B4), and the permanent approval-history cards (B3). Each is display-only — a record of what a
+ * run used or what the user allowed, so scrolling back a long transcript does not send you to the
+ * journal.
  */
 
 const a = agentDict.en;
@@ -156,5 +157,27 @@ describe('PanelThread — skill pill (B2)', () => {
   it('renders no pill for a plain turn', () => {
     renderThread([turn()]);
     expect(screen.queryByLabelText(a.thread.skillUsed)).toBeNull();
+  });
+});
+
+describe('PanelThread — approval history cards (B3)', () => {
+  it('leaves a permanent card for each granted approval, with the remember / scope flags', () => {
+    renderThread([
+      turn({
+        approvals: [
+          { tool: 'browser_export_pdf', ts: 1, remembered: false, scoped: false },
+          { tool: 'files_delete_item', ts: 2, remembered: true, scoped: true },
+        ],
+      }),
+    ]);
+    expect(screen.getByText(a.thread.allowed.replace('{tool}', 'browser_export_pdf'))).toBeTruthy();
+    const second = screen.getByText(a.thread.allowed.replace('{tool}', 'files_delete_item'));
+    expect(second.textContent).toContain(a.thread.allowedRemembered);
+    expect(second.textContent).toContain(a.thread.allowedScoped);
+  });
+
+  it('renders nothing for a turn with no approvals', () => {
+    renderThread([turn({ approvals: [] })]);
+    expect(screen.queryByText(a.thread.allowed.replace('{tool}', 'browser_export_pdf'))).toBeNull();
   });
 });

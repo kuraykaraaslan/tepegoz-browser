@@ -6,7 +6,7 @@ import type { CompletionOutcome } from '@tepegoz/shared-types';
 import type { AgentHostApi } from './types';
 import { GaugeIcon, KIND_DOT, SparkIcon } from './panel-icons';
 import { MessageCopyButton } from './panel-copy-button';
-import { TurnMeta } from './panel-turn-meta';
+import { TurnApprovals, TurnMeta } from './panel-turn-meta';
 import { PROSE_KINDS, STEP_KINDS, type Turn } from './panel-state';
 
 /**
@@ -182,6 +182,8 @@ export function PanelThread({
                     )}
                   </div>
                 )}
+
+                {turn.approvals !== undefined && <TurnApprovals approvals={turn.approvals} a={a} />}
 
                 {response.map((e, i) => {
                   const isProse = PROSE_KINDS.has(e.kind);

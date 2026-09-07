@@ -292,10 +292,30 @@ export function useAgentActions(deps: AgentActionsDeps) {
 
   function respond(approved: boolean, remember = false, grantScope = false): void {
     const { approval } = activeState;
-    if (approval !== null) {
-      api.respondAgentApproval(approval.approvalId, approved, remember, grantScope);
-      mutateActive((s) => ({ ...s, approval: null }));
-    }
+    if (approval === null) return;
+    api.respondAgentApproval(approval.approvalId, approved, remember, grantScope);
+    mutateActive((s) => {
+      const cleared = { ...s, approval: null };
+      // S8 B3: leave a permanent card in the transcript for a GRANT (a denial did not happen, so it
+      // gets no card). Attach it to the turn that owns this run, falling back to the newest turn.
+      if (!approved || s.turns.length === 0) return cleared;
+      const record = {
+        tool: approval.toolName,
+        ts: Date.now(),
+        remembered: remember,
+        scoped: grantScope,
+      };
+      const targetIdx =
+        s.turns.findIndex((t) => t.runId !== null && t.runId === approval.runId) === -1
+          ? s.turns.length - 1
+          : s.turns.findIndex((t) => t.runId !== null && t.runId === approval.runId);
+      return {
+        ...cleared,
+        turns: s.turns.map((t, i) =>
+          i === targetIdx ? { ...t, approvals: [...(t.approvals ?? []), record] } : t,
+        ),
+      };
+    });
   }
 
   function toggleStep(id: string): void {
