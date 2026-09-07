@@ -41,6 +41,16 @@ export default defineConfig({
   test: {
     include: ['packages/*/src/**/*.test.{ts,tsx}', 'apps/desktop/src/**/*.test.{ts,tsx}'],
     exclude: ['**/node_modules/**'],
+    // Vitest's 5s default is a per-package number, and this is not a per-package run: it is 646 files
+    // in one pass with every worker contending for the same cores. The heaviest renderer suites
+    // (`settings-appearance-language` renders ~250 localized, collated region options and queries all
+    // of them by role) take ~0.9s each on an idle machine and were tipping past 5s here — failing the
+    // gate intermittently, on a DIFFERENT test each run, in both the renderer and the main process.
+    // That is the worst kind of red: it says nothing about the code and trains people to re-run.
+    // Raised for THIS config only; `turbo run test` keeps the default, where a 5s test is a real
+    // signal because nothing else is competing with it.
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
     coverage: {
       provider: 'v8',
       reporter: ['text-summary', 'text'],
