@@ -258,6 +258,12 @@ direct, verified resource — WebBrain does this as a skill-first, browser-fallb
 `download_*` capability tools and their existing HITL/quarantine gate (ADR-0040) — this is a resolver, not
 a new download path.
 
+> **Direct-link MVP shipped** (2026-09-07) as `download_analyze_media` (`resolve` is not an approved
+> `ToolNameSchema` verb; `analyze` is) — see `phases/product/phase-2c-classic-browser-essentials.md`'s
+> "Media resolver tool" box for the evidence. Scoped to a URL whose response IS the media bytes
+> (HEAD-probed, MIME-classified, no save). Extracting media from an INDIRECT source — a YouTube watch
+> page, `resolve_public_media`'s harder half — is still open.
+
 ### P3-d — Read-only Dev diagnostics
 
 A narrow, explicitly **read-only** trio — console messages, network-request summaries (method/status/

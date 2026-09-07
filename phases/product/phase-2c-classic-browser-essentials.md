@@ -158,12 +158,32 @@ permissions reuse the single Policy/PermissionGuard (no parallel permission flow
         origin, and an agent-printed PDF goes through the **same** path (risk classified from the
         page-controlled filename, id returned rather than a path). This is the path the whole download
         trust model rests on and it had no test._
-- [ ] **Media resolver tool.** The `download_*` tools manage downloads that have already started; nothing
+- [x] **Media resolver tool.** The `download_*` tools manage downloads that have already started; nothing
       resolves a _public media URL_ (a YouTube transcript, a public video/image link) into a direct,
       verified resource. Add one resolver tool — and route the actual save through the **existing**
       quarantine → hash → SafeBrowsing → trust-gate path above, so it gains no new write path and no new
       trust exemption. Captured, not scheduled:
       [`../tracks/webbrain-agent-parity.md`](../../docs/parities/webbrain-agent-parity.md) P3-c.
+  - [x] _**Direct-link MVP shipped** (`download_analyze_media` — `resolve`/`resolve_media` isn't an
+        approved tool verb per `ToolNameSchema`, so it's named with the approved `analyze` verb
+        instead). `@tepegoz/downloads`'s `resolveMedia`/`classifyMediaProbe` (Electron-free, pure) take
+        an injected `MediaProbe` host seam and classify the response as `direct` (an image/video/audio
+        content-type — returns `contentType`/`contentLengthBytes`/a suggested filename off the FINAL
+        post-redirect URL) or `not_direct` (an HTML page, an unrecognized type, an unreachable host, or
+        a disallowed scheme like `file:`/`data:`/`javascript:` — rejected before any network call) with
+        a hint telling the agent to fall back to browsing/`web_get_page`. The desktop host
+        (`download-tools-host.electron.ts`) probes with a HEAD request (what virtually every CDN
+        serving direct media supports) and falls back to a 1-byte ranged GET for a server that rejects
+        HEAD (405/501) or errors, reading the true size off `Content-Range` when the server reports it
+        there instead of `Content-Length`. The tool itself is `dangerClass: 'read'` and never calls
+        `createDownload` — it only tells the agent what to hand to the existing, unchanged
+        `download_create_item` HITL/quarantine path, exactly as this box requires. Extracting media
+        from an INDIRECT source (a YouTube watch page, not a direct link) is the harder half of
+        WebBrain's `resolve_public_media`/`download_social_media` pair and stays a documented follow-up
+        in P3-c rather than blocking this box. `docs/adding-a-tool.md` does not exist in this repo (only
+        under `.junk/webbrain/`) — the DoD-shape line calling for an entry in it is not yet actionable
+        for ANY tool, not just this one, so it is left as a separate, repo-wide gap rather than invented
+        here for one tool. No new user-facing UI surface, so no new i18n strings._
 - [~] **Executable/script** downloads (`.exe/.msi/.bat/.ps1/.sh/.dmg/...`) force an extra HITL confirm; zip/rar
   surface a content warning; nothing is "trusted" until the check passes
   - [x] _**zip/rar content warning shipped.** `archiveContentsUnverified(record)` in `@tepegoz/downloads`

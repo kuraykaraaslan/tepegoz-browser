@@ -2,13 +2,20 @@ import { z } from 'zod';
 import { CapabilityRegistry } from '@tepegoz/capability-plane';
 import type { ToolDescriptor } from '@tepegoz/shared-types';
 import type { DownloadCommandInput, DownloadCreateInput, DownloadRecord } from './index';
-import { DownloadCommandInputSchema, DownloadCreateInputSchema } from './schemas';
+import { resolveMedia, type MediaProbe } from './media-resolver';
+import {
+  DownloadCommandInputSchema,
+  DownloadCreateInputSchema,
+  MediaResolveInputSchema,
+} from './schemas';
 
 export interface DownloadToolsHost {
   listDownloads(): DownloadRecord[];
   getDownload(id: string): DownloadRecord | null;
   createDownload(input: DownloadCreateInput): unknown;
   commandDownload(input: DownloadCommandInput): unknown;
+  /** P3-c media resolver's network probe (HEAD / ranged-GET). See {@link MediaProbe}. */
+  probeMedia: MediaProbe;
 }
 
 const NoArgs = z.object({}).strip();
@@ -75,5 +82,20 @@ export function registerDownloadTools(deps: { host: DownloadToolsHost }): void {
     ),
     inputSchema: DownloadCommandInputSchema,
     handler: (args) => host.commandDownload(args),
+  });
+
+  CapabilityRegistry.register({
+    descriptor: descriptor(
+      'download_analyze_media',
+      'read',
+      "Resolve a public media URL (image/video/audio) into direct, verified metadata BEFORE downloading " +
+        "it. Returns { kind: 'direct', url, contentType, contentLengthBytes, suggestedFilename } when the " +
+        "URL IS the media bytes, or { kind: 'not_direct', reason, hint } when it is a page or unusable — " +
+        'follow the hint (browse to it, or use web_get_page) instead of guessing. Read-only: it never ' +
+        'saves anything — pass the resolved url to download_create_item to actually save it through the ' +
+        'normal quarantine/trust gate. args: { url: string }.',
+    ),
+    inputSchema: MediaResolveInputSchema,
+    handler: (args) => resolveMedia(args.url, host.probeMedia),
   });
 }

@@ -62,3 +62,7 @@ export const DownloadCommandInputSchema = z.object({
   id: z.string().min(1).max(128),
   action: DownloadCommandActionSchema,
 }) satisfies z.ZodType<DownloadCommandInput>;
+
+export const MediaResolveInputSchema = z.object({
+  url: z.string().min(1).max(4096),
+});
