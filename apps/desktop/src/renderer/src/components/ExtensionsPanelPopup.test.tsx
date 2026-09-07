@@ -12,17 +12,17 @@ import { ExtensionsPanelPopup } from './ExtensionsPanelPopup';
  * The puzzle button's Extensions panel — its own native window. Lists every ENABLED extension grouped
  * by page-content access, with a pin toggle per row (optimistic, reverted if main rejects the write) and
  * a `⋮` that opens the native menu. A row click relays to main (this window doesn't route surfaces).
+ *
+ * One branch is deliberately left uncovered: the `contentRef.current === null` guard in the resize
+ * effect. The div holding the ref renders unconditionally, so React has attached it by the time
+ * the effect runs.
  */
 
 stubJsdomLayout();
 
 const x = extensionsDict.en;
 
-function wire(
-  id: string,
-  name: string,
-  permissions: string[] = [],
-): ExtensionManifestWire {
+function wire(id: string, name: string, permissions: string[] = []): ExtensionManifestWire {
   return {
     id,
     name,
@@ -98,7 +98,9 @@ describe('ExtensionsPanelPopup', () => {
     ]);
     render(<ExtensionsPanelPopup />);
 
-    const withAccess = (await screen.findByText(x.groupPageAccess)).closest('section') as HTMLElement;
+    const withAccess = (await screen.findByText(x.groupPageAccess)).closest(
+      'section',
+    ) as HTMLElement;
     expect(within(withAccess).getByText('Reader')).toBeTruthy();
     const noAccess = screen.getByText(x.groupNoAccess).closest('section') as HTMLElement;
     expect(within(noAccess).getByText('Vault')).toBeTruthy();
@@ -135,7 +137,10 @@ describe('ExtensionsPanelPopup', () => {
   });
 
   it('unpins an already-pinned extension', async () => {
-    bridge.getPreferences.mockResolvedValue({ ...DEFAULT_PREFERENCES, pinnedExtensions: ['reader'] });
+    bridge.getPreferences.mockResolvedValue({
+      ...DEFAULT_PREFERENCES,
+      pinnedExtensions: ['reader'],
+    });
     bridge.listExtensionManifests.mockResolvedValue([wire('reader', 'Reader', [])]);
     render(<ExtensionsPanelPopup />);
 
@@ -163,5 +168,31 @@ describe('ExtensionsPanelPopup', () => {
     await waitFor(() => expect(bridge.resizePopup).toHaveBeenCalled());
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(bridge.closePopup).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not theme the document when the panel is gone before preferences arrive', () => {
+    // This popup is a native window that closes on a click anywhere, so its preferences read
+    // routinely lands after it is gone. Unlike a setState on an unmounted tree, the `applyTheme` on
+    // the other side of this guard is NOT a no-op — it writes to documentElement, which outlives the
+    // window. Verified by mutation: removing the guard fails this test.
+    let resolvePrefs: (p: typeof DEFAULT_PREFERENCES) => void = () => undefined;
+    bridge.getPreferences.mockImplementationOnce(
+      () =>
+        new Promise<typeof DEFAULT_PREFERENCES>((res) => {
+          resolvePrefs = res;
+        }),
+    );
+    document.documentElement.classList.remove('dark');
+
+    const view = render(<ExtensionsPanelPopup />);
+    view.unmount();
+    resolvePrefs({ ...DEFAULT_PREFERENCES, theme: 'dark', themeColor: '' });
+
+    return new Promise<void>((done) => {
+      setTimeout(() => {
+        expect(document.documentElement.classList.contains('dark')).toBe(false);
+        done();
+      }, 0);
+    });
   });
 });
