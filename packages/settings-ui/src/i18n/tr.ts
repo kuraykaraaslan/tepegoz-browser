@@ -825,6 +825,11 @@ export const tr: SettingsStrings = {
     torUpstream: 'Üst bağlantı',
     torUpstreamNone: 'Doğrudan Tor’a',
     torUpstreamVia: '{name} üzerinden',
+    torNotTorBrowserTitle: 'Tor’a yönlendirilen bir sekme, Tor Browser oturumu değildir',
+    torNotTorBrowserBody:
+      'Doğrudan trafik ve Tor trafiği bu tarayıcıda aynı anda çalışır. İkisi arasında ilişkilendirilen etkinlik, anonim bir oturumu yeniden ilişkilendirebilir — Tor Browser’ın tam da önlemek için var olduğu durum. Güçlü anonimlik için tek bir sekmeyi yönlendirmek yerine Tor Browser kullanın.',
+    torChainedCaveat:
+      'Tor’dan önce bir VPN kullanmak, güveni VPN operatörüne kaydırır; operatör Tor kullandığınızı görebilir. İkisini birleştirmek genellikle önerilmez.',
     binaryMissing:
       '{name} bulunamadı. {dir} klasörüne koyun ya da aşağıya tam yolunu yazın. Tepegöz bu dosyayı içinde getirmez.',
     helpersHint:

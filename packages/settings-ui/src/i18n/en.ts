@@ -833,6 +833,11 @@ export const en = {
     torUpstream: 'Upstream connection',
     torUpstreamNone: 'Straight to Tor',
     torUpstreamVia: 'Through {name}',
+    torNotTorBrowserTitle: 'A Tor-routed tab is not a Tor Browser session',
+    torNotTorBrowserBody:
+      'Direct and Tor traffic run in this browser at the same time. Activity correlated across the two can re-link an anonymous session — the pattern Tor Browser exists to prevent. For strong anonymity, use Tor Browser rather than routing a single tab.',
+    torChainedCaveat:
+      'Sending a VPN before Tor shifts trust onto the VPN operator, which can then see that you use Tor. Combining the two is generally not recommended.',
     binaryMissing:
       '{name} was not found. Put it in {dir}, or give its full path below. Tepegöz does not ship it.',
     helpersHint:

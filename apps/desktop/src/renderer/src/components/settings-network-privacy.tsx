@@ -140,6 +140,12 @@ function ConnectionRow({
       {c.lastError !== null && c.status !== 'up' && (
         <p className="mt-1 text-xs text-error-fg">{c.lastError}</p>
       )}
+      {c.kind === 'tor' && upstream !== undefined && (
+        // Phase 5 disclosure: chaining VPN → Tor is a supported product choice, but Tor's own guidance
+        // is that it is generally not recommended — the hop before Tor learns you are a Tor user and
+        // trust shifts to the VPN operator. State it here, on the connection it applies to.
+        <p className="mt-1 text-xs text-text-disabled">{s.network.torChainedCaveat}</p>
+      )}
     </li>
   );
 }
@@ -239,12 +245,24 @@ export function NetworkPrivacySection({ s }: { s: SettingsStrings }) {
   }, []);
 
   const generalValue = state.general.kind === 'connection' ? state.general.connectionId : 'direct';
+  // Phase 5 disclosure: per-tab routing means a Tor-bound tab and direct tabs run in the same browser
+  // at once — the exact pattern Tor Browser tells users to avoid. Surface it as soon as a Tor
+  // connection exists, because that is when the caveat starts to matter.
+  const hasTor = state.connections.some((c) => c.kind === 'tor');
 
   return (
     <div className="space-y-4">
       <Card title={s.network.title} subtitle={s.network.intro}>
         {!state.secretsAvailable && (
           <AlertBanner variant="warning" message={s.network.keychainBody} className="mb-4" />
+        )}
+        {hasTor && (
+          <AlertBanner
+            variant="info"
+            title={s.network.torNotTorBrowserTitle}
+            message={s.network.torNotTorBrowserBody}
+            className="mb-4"
+          />
         )}
 
         <AddConnectionRow

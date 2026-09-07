@@ -190,15 +190,23 @@ endpoint** (one loopback port per active connection), never an OS-level system p
       connection keeps its **own** guard set — and every connection a user deletes and recreates is a guard
       rotation. That is a real anonymity consequence of a design chosen for isolation; ADR-0011 should state
       the trade rather than leave it implicit.
-- [ ] **⚠️ Two shipped/planned behaviours contradict the Tor research and must be disclosed, not quietly
-      kept.** Both are defensible product choices; neither is defensible if the UI implies otherwise:
-  - [ ] **Chained VPN → Tor is landed above as `[x]`**, while the Tor guidance is that combining them is
+- [x] **⚠️ Two shipped/planned behaviours contradict the Tor research and must be disclosed, not quietly
+      kept.** Both are defensible product choices; neither is defensible if the UI implies otherwise.
+      _Both disclosures landed in the connections overview (`settings-network-privacy.tsx`), en+tr, 2026-09-08._
+  - [x] **Chained VPN → Tor is landed above as `[x]`**, while the Tor guidance is that combining them is
         generally _not_ recommended — the hop before Tor sees that you are a Tor user and the arrangement
         shifts trust onto the VPN operator. Keep the feature, state the trade in the connections overview.
-  - [ ] **Per-tab routing means Tor traffic and direct traffic run in the same browser at the same time** —
+        _`network.torChainedCaveat` renders on any connection that is `kind: 'tor'` **and** has an
+        upstream — on that row, next to the `via {name}` chain label — and nowhere else. Test:
+        "warns on a chained VPN → Tor connection, on the row it applies to" (asserts a straight-to-Tor
+        row does not carry it)._
+  - [x] **Per-tab routing means Tor traffic and direct traffic run in the same browser at the same time** —
         precisely the pattern Tor Browser tells users to avoid, because correlated activity across the two
         can re-link the anonymous session. This is a **thesis-level** consequence of the per-tab model, not
         a bug, and the disclosure copy has to say it plainly: a Tor-routed tab is not a Tor Browser session.
+        _`network.torNotTorBrowserTitle` / `…Body` render as an `info` `AlertBanner` at the top of the
+        Connections card **as soon as any connection is `kind: 'tor'`** — the point at which the caveat
+        starts to matter — and is absent otherwise. Two tests pin both directions._
   - Source: [`../../docs/research/research-tor-browser.md`](../../docs/research/research-tor-browser.md)
     and [`../../docs/research/research-secure-browser-design.md`](../../docs/research/research-secure-browser-design.md).
 

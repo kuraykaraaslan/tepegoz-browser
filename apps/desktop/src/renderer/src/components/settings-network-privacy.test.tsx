@@ -84,6 +84,37 @@ describe('NetworkPrivacySection', () => {
     await waitFor(() => expect(screen.getByText(s.network.noConnections)).toBeTruthy());
   });
 
+  it('discloses "a Tor tab is not a Tor Browser session" once any Tor connection exists', async () => {
+    bridge.getNetworkState.mockResolvedValue(
+      netState({ connections: [conn({ id: 't1', label: 'Tor', kind: 'tor' })] }),
+    );
+    render1();
+    await waitFor(() => expect(screen.getByText(s.network.torNotTorBrowserBody)).toBeTruthy());
+  });
+
+  it('does NOT show the Tor-session disclosure when no connection is Tor', async () => {
+    bridge.getNetworkState.mockResolvedValue(netState({ connections: [conn()] }));
+    render1();
+    await rowFor('Mullvad');
+    expect(screen.queryByText(s.network.torNotTorBrowserBody)).toBeNull();
+  });
+
+  it('warns on a chained VPN → Tor connection, on the row it applies to', async () => {
+    bridge.getNetworkState.mockResolvedValue(
+      netState({
+        connections: [
+          conn({ id: 'vpn', label: 'Mullvad' }),
+          conn({ id: 'tor', label: 'Tor over VPN', kind: 'tor', upstreamConnectionId: 'vpn' }),
+        ],
+      }),
+    );
+    render1();
+    const row = await rowFor('Tor over VPN');
+    expect(within(row).getByText(s.network.torChainedCaveat)).toBeTruthy();
+    // A straight-to-Tor connection would not carry it.
+    expect(within(await rowFor('Mullvad')).queryByText(s.network.torChainedCaveat)).toBeNull();
+  });
+
   it("echoes the exit note as the user's own claim and shows a verbatim error while down", async () => {
     bridge.getNetworkState.mockResolvedValue(
       netState({
