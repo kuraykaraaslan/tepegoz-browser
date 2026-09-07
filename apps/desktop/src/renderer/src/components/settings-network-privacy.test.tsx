@@ -122,19 +122,38 @@ describe('NetworkPrivacySection', () => {
     expect(within(await rowFor('Mullvad')).queryByText(s.network.torChainedCaveat)).toBeNull();
   });
 
-  it("echoes the exit note as the user's own claim and shows a verbatim error while down", async () => {
+  it("echoes the exit note as the user's own claim and maps a provider error to one localized sentence", async () => {
     bridge.getNetworkState.mockResolvedValue(
       netState({
         connections: [
-          conn({ note: 'Mullvad SE', lastError: 'wireproxy not found', status: 'down' }),
+          conn({
+            note: 'Mullvad SE',
+            lastError: 'wireproxy did not come up: bad key material',
+            status: 'down',
+          }),
         ],
       }),
     );
     render1();
     const row = await rowFor('Mullvad');
     expect(within(row).getByText(s.network.notedAs.replace('{note}', 'Mullvad SE'))).toBeTruthy();
-    expect(within(row).getByText('wireproxy not found')).toBeTruthy();
+    // The localized "what happened + what to do" sentence, NOT the raw stderr.
+    expect(within(row).getByText(s.network.connError.handshake)).toBeTruthy();
+    expect(within(row).queryByText(/bad key material/)).toBeNull();
+    // The raw string is still one hover away for a bug report.
+    expect(within(row).getByText(s.network.connError.handshake).getAttribute('title')).toBe(
+      'wireproxy did not come up: bad key material',
+    );
     expect(within(row).getByRole('button', { name: s.network.connect })).toBeTruthy();
+  });
+
+  it('falls back to the generic sentence for an unrecognised provider error', async () => {
+    bridge.getNetworkState.mockResolvedValue(
+      netState({ connections: [conn({ lastError: 'totally novel failure', status: 'down' })] }),
+    );
+    render1();
+    const row = await rowFor('Mullvad');
+    expect(within(row).getByText(s.network.connError.unknown)).toBeTruthy();
   });
 
   it('connects a down connection through the bridge', async () => {

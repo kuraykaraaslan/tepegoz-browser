@@ -841,6 +841,26 @@ export const en = {
     tunnelLimitsBody:
       'A tunnel changes the network address a site sees. It does not change your browser profile — cookies, logins and history stay with the tab — nor the browser’s own fingerprint: the TLS handshake, HTTP header order and request timing are the same through every tunnel here, so anti-bot and reputation systems still recognise the browser. Tepegöz does not normalise those in this version.',
     tunnelLimitsLink: 'Clear a site’s data',
+    connError: {
+      binaryMissing:
+        'The helper program for this connection is not installed. Add it in the helpers section below, or point Tepegöz at the folder that has it.',
+      badConfig:
+        'This connection’s configuration is missing or unreadable. Remove the connection and import the config again.',
+      chainLoop:
+        'This connection chains back to itself through its upstream. Choose a different upstream connection.',
+      noSuchConnection:
+        'The upstream connection this one depends on no longer exists. Choose a different upstream, or remove this connection.',
+      portUnusable:
+        'The local port for this connection could not be used. Remove the connection and add it again.',
+      noListener:
+        'The helper program started but never opened its local connection. Check its configuration and try connecting again.',
+      processExited:
+        'The helper program stopped before it was ready. Check its configuration, then try connecting again.',
+      handshake:
+        'The tunnel started but could not connect. Check the server address and key in the config and that the server is reachable, then try again.',
+      unknown:
+        'This connection could not be established. Try connecting again; if it keeps failing, remove it and add it back.',
+    },
     binaryMissing:
       '{name} was not found. Put it in {dir}, or give its full path below. Tepegöz does not ship it.',
     helpersHint:

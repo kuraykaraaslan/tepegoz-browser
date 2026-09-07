@@ -833,6 +833,26 @@ export const tr: SettingsStrings = {
     tunnelLimitsBody:
       'Bir tünel, bir sitenin gördüğü ağ adresini değiştirir. Tarayıcı profilinizi değiştirmez — çerezler, oturum açma bilgileri ve geçmiş sekmede kalır — tarayıcının kendi parmak izini de değiştirmez: TLS el sıkışması, HTTP başlık sırası ve istek zamanlaması buradaki her tünelde aynıdır; bu yüzden bot önleme ve itibar sistemleri tarayıcıyı yine tanır. Tepegöz bu sürümde bunları normalleştirmez.',
     tunnelLimitsLink: 'Bir sitenin verilerini temizle',
+    connError: {
+      binaryMissing:
+        'Bu bağlantı için yardımcı program kurulu değil. Aşağıdaki yardımcılar bölümünden ekleyin ya da Tepegöz’e programın bulunduğu klasörü gösterin.',
+      badConfig:
+        'Bu bağlantının yapılandırması eksik veya okunamıyor. Bağlantıyı kaldırın ve yapılandırmayı yeniden içe aktarın.',
+      chainLoop:
+        'Bu bağlantı, üst bağlantısı üzerinden kendine dönüyor. Farklı bir üst bağlantı seçin.',
+      noSuchConnection:
+        'Bu bağlantının bağlı olduğu üst bağlantı artık yok. Farklı bir üst bağlantı seçin ya da bu bağlantıyı kaldırın.',
+      portUnusable:
+        'Bu bağlantı için yerel bağlantı noktası kullanılamadı. Bağlantıyı kaldırıp yeniden ekleyin.',
+      noListener:
+        'Yardımcı program başladı ama yerel bağlantısını hiç açmadı. Yapılandırmasını kontrol edip yeniden bağlanmayı deneyin.',
+      processExited:
+        'Yardımcı program hazır olmadan durdu. Yapılandırmasını kontrol edin, sonra yeniden bağlanmayı deneyin.',
+      handshake:
+        'Tünel başladı ama bağlanamadı. Yapılandırmadaki sunucu adresini ve anahtarı, ayrıca sunucunun erişilebilir olduğunu kontrol edip yeniden deneyin.',
+      unknown:
+        'Bu bağlantı kurulamadı. Yeniden bağlanmayı deneyin; sürekli başarısız oluyorsa bağlantıyı kaldırıp yeniden ekleyin.',
+    },
     binaryMissing:
       '{name} bulunamadı. {dir} klasörüne koyun ya da aşağıya tam yolunu yazın. Tepegöz bu dosyayı içinde getirmez.',
     helpersHint:

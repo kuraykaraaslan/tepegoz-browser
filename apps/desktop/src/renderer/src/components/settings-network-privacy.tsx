@@ -13,6 +13,7 @@ import { AddConnectionRow } from './settings-network-forms';
 import { ConfirmAction } from './settings-confirm';
 import { NetworkRoutesCard } from './settings-network-routes';
 import { CrossLink, Select } from './settings-shared';
+import { classifyNetworkError } from './network-error';
 
 /**
  * Network privacy (Phase 5) — the VPN/Tor connection manager and the profile-wide default route.
@@ -138,7 +139,11 @@ function ConnectionRow({
         />
       </div>
       {c.lastError !== null && c.status !== 'up' && (
-        <p className="mt-1 text-xs text-error-fg">{c.lastError}</p>
+        // One localized sentence with a next step — never the raw provider stderr (Phase 5). The raw
+        // string stays one hover away for a bug report.
+        <p className="mt-1 text-xs text-error-fg" title={c.lastError}>
+          {s.network.connError[classifyNetworkError(c.lastError)]}
+        </p>
       )}
       {c.kind === 'tor' && upstream !== undefined && (
         // Phase 5 disclosure: chaining VPN → Tor is a supported product choice, but Tor's own guidance

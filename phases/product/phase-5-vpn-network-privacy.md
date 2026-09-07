@@ -382,8 +382,14 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 - [ ] **Connection health over time** — keep-alive, reconnect, and per-connection metrics (handshake success
       rate, latency, uptime) surfaced in the connections overview, so a tunnel that dies quietly is visible
       instead of being discovered through a leak
-- [ ] **Errors in the user's language, with a next step** — every failure state maps to one localized sentence
-      and one action; no raw provider stderr in the UI
+- [x] **Errors in the user's language, with a next step** — every failure state maps to one localized sentence
+      and one action; no raw provider stderr in the UI. _Landed 2026-09-08: pure `classifyNetworkError`
+      (`components/network-error.ts`, 16 tests, 100% cov) maps a connect-time `lastError` to one of eight
+      causes — binary missing / bad config / chain loop / no such upstream / port unusable / no listener /
+      process exited / handshake — each with an en+tr sentence that names the fix
+      (`network.connError.*`), and an `unknown` fallback that never guesses. The connections overview
+      renders that sentence in place of `c.lastError`; the raw string is kept only as `title=` for a bug
+      report. Component tests assert the sentence shows and the raw stderr does not._
 - [ ] **Docs that assume nothing** — a short Turkish + English guide covering what the tunnel does and does
       **not** hide (explicitly: it does not stop fingerprinting — cross-link the section above)
 - [ ] **"Slow" needs a cause, not a spinner.** When a tunnelled tab is slow the user cannot tell whether it
