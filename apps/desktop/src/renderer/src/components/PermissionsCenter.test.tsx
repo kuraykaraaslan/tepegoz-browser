@@ -11,6 +11,10 @@ import { AgentPermissionMatrix, PermissionsCenter } from './PermissionsCenter';
  * front, set a capability, forget a site), and `AgentPermissionMatrix` is a READ-ONLY view over the
  * Policy Kernel, grouped by danger class. The filter only appears past 4 sites; the empty/no-results
  * states are worded distinctly on purpose.
+ *
+ * One branch is deliberately left uncovered: the `pendingOrigin === null || first === undefined`
+ * guard in Add. Its button is disabled unless `pendingOrigin` parsed, and the capability list it
+ * indexes is a module constant.
  */
 
 const s = settingsDict.en;
@@ -69,10 +73,7 @@ describe('PermissionsCenter (site permissions)', () => {
 
   it('shows the filter only past four sites and narrows the list with it', () => {
     const perms = Object.fromEntries(
-      ['a', 'b', 'c', 'd', 'e'].map((x) => [
-        `https://${x}.example`,
-        { camera: 'prompt' as const },
-      ]),
+      ['a', 'b', 'c', 'd', 'e'].map((x) => [`https://${x}.example`, { camera: 'prompt' as const }]),
     );
     renderCenter(perms);
     fireEvent.change(screen.getByLabelText(pc.filter), { target: { value: 'c.example' } });
@@ -82,10 +83,7 @@ describe('PermissionsCenter (site permissions)', () => {
 
   it('says "no results" (not "no sites") when the filter matches nothing', () => {
     const perms = Object.fromEntries(
-      ['a', 'b', 'c', 'd', 'e'].map((x) => [
-        `https://${x}.example`,
-        { camera: 'prompt' as const },
-      ]),
+      ['a', 'b', 'c', 'd', 'e'].map((x) => [`https://${x}.example`, { camera: 'prompt' as const }]),
     );
     renderCenter(perms);
     fireEvent.change(screen.getByLabelText(pc.filter), { target: { value: 'zzz' } });
@@ -144,5 +142,23 @@ describe('AgentPermissionMatrix (read-only)', () => {
 
     fireEvent.change(screen.getByLabelText(pc.filter), { target: { value: 'nothing-matches' } });
     expect(screen.getByText(s.noResults)).toBeTruthy();
+  });
+
+  it('heads a group by its raw danger class when the dictionary has no label for it', async () => {
+    // `dangerClass` is a plain string on the wire, not the four-value union — an MCP server or an
+    // extension declares its own. A class this build has never heard of still has to head its group
+    // by name; the alternative is a group of tools under a blank heading.
+    renderMatrix([
+      { id: 'mcp_files_read', dangerClass: 'read', decision: 'allow' },
+      { id: 'mcp_bank_transfer', dangerClass: 'irreversible_spend', decision: 'deny' },
+    ]);
+    await screen.findByText('mcp_bank_transfer');
+
+    const heading = (text: string): HTMLElement =>
+      screen.getByText(
+        (_content, el) => el?.tagName === 'P' && (el.textContent ?? '').startsWith(text),
+      );
+    expect(heading(s.dangerLabels.read)).toBeTruthy();
+    expect(heading('irreversible_spend')).toBeTruthy();
   });
 });
