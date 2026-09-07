@@ -10,12 +10,13 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
-import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFolder, faFileExport, faFolderPlus } from '@fortawesome/free-solid-svg-icons';
 import { useT } from '@tepegoz/i18n/react';
 import { bookmarksUiDict } from './i18n';
 import { Favicon, FolderRow, ItemRow, TREE_PREFIX } from './bookmark-rows';
+import { resolveBookmarkDrop } from './bookmark-drop-resolver';
 
 export type BookmarkNodeType = 'folder' | 'bookmark';
 
@@ -55,9 +56,6 @@ export interface BookmarksManagerProps {
    */
   onExport?: () => Promise<string>;
 }
-
-/** Move-into always drops at the folder's end; the store clamps this to the child count. */
-const END_INDEX = 100000;
 
 function findNode(nodes: readonly BookmarkManagerNode[], id: string): BookmarkManagerNode | null {
   for (const n of nodes) {
@@ -146,32 +144,11 @@ export function BookmarksManager({
   const handleDragStart = (e: DragStartEvent): void => setActiveId(String(e.active.id));
   const handleDragEnd = (e: DragEndEvent): void => {
     setActiveId(null);
-    if (e.over === null || selectedId === null) return;
-    const rawActive = String(e.active.id);
-    const rawOver = String(e.over.id);
-    const activeNodeId = stripTree(rawActive); // a dragged tree folder is prefixed; right-pane rows are not
-    const overIsTree = rawOver.startsWith(TREE_PREFIX);
-    const overNodeId = stripTree(rawOver);
-    if (activeNodeId === overNodeId) return;
-    // 1) Dropped onto a folder in the LEFT tree → move INTO it. Covers moving into a folder, OUT of the
-    //    current folder (drop on a parent/root), or into another folder — for tree folders and list rows.
-    if (overIsTree) {
-      onMove(activeNodeId, overNodeId, END_INDEX);
-      return;
-    }
-    // A tree-folder drag only resolves against tree drops; dropping it in the list is a no-op.
-    if (rawActive.startsWith(TREE_PREFIX)) return;
-    // 2) A right-pane row dropped onto a FOLDER row in the list → move INTO that folder (Chrome behavior).
-    if (children.find((c) => c.id === overNodeId)?.type === 'folder') {
-      onMove(activeNodeId, overNodeId, END_INDEX);
-      return;
-    }
-    // 3) Otherwise reorder within the current folder.
-    const ids = children.map((c) => c.id);
-    const from = ids.indexOf(activeNodeId);
-    const to = ids.indexOf(overNodeId);
-    if (from === -1 || to === -1 || from === to) return;
-    onMove(activeNodeId, selectedId, arrayMove(ids, from, to).indexOf(activeNodeId));
+    if (e.over === null) return;
+    // The decision itself lives in  so it can be tested without driving a
+    // dnd-kit pointer drag — the same split  uses.
+    const move = resolveBookmarkDrop(String(e.active.id), String(e.over.id), selectedId, children);
+    if (move !== null) onMove(move.nodeId, move.parentId, move.index);
   };
 
   const activeNode = activeId === null ? null : findNode(roots, stripTree(activeId));
