@@ -390,8 +390,15 @@ endpoint** (one loopback port per active connection), never an OS-level system p
       (`network.connError.*`), and an `unknown` fallback that never guesses. The connections overview
       renders that sentence in place of `c.lastError`; the raw string is kept only as `title=` for a bug
       report. Component tests assert the sentence shows and the raw stderr does not._
-- [ ] **Docs that assume nothing** — a short Turkish + English guide covering what the tunnel does and does
-      **not** hide (explicitly: it does not stop fingerprinting — cross-link the section above)
+- [~] **Docs that assume nothing** — a short Turkish + English guide covering what the tunnel does and does
+  **not** hide (explicitly: it does not stop fingerprinting — cross-link the section above).
+  _English guide landed 2026-09-08: [`../../docs/network-privacy-guide.md`](../../docs/network-privacy-guide.md)
+  — what changes (one address, one tab), what does not (profile, browser fingerprint, agent-tab
+  rhythm), the exit-operator-is-your-new-ISP framing, the Tor specifics (not a Tor Browser session /
+  chained VPN→Tor / guard stability), and the practical notes (nothing bundled, no clear-path
+  fallback, failures name a fix). Cross-links `threat-model.md` and ADR-0011 §7; `threat-model.md`
+  links back. **Turkish half owed** — the repo has no bilingual-docs mechanism and inventing one is
+  out of this box's scope; box kept `[~]`._
 - [ ] **"Slow" needs a cause, not a spinner.** When a tunnelled tab is slow the user cannot tell whether it
       is relay latency, a bridge, the site blocking the exit, or the tunnel itself half-down — and the Tor
       corpus shows that ambiguity is what turns a slow session into an abandoned product. Attribute it: the

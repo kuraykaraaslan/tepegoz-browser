@@ -127,6 +127,9 @@ and were never claimed to cover this path.
 
 ## Network-privacy tunnels (Phase 5)
 
+> User-facing companion: [`network-privacy-guide.md`](network-privacy-guide.md) — what routing a tab
+> through a tunnel does and does not do, in plain language.
+
 A tunnel-bound tab adds a trust boundary the rest of this document does not cover: `browsed page` ⇄
 `this browser` ⇄ **`local SOCKS endpoint`** ⇄ `tunnel operator (Tor exit, VPN provider, SSH host)` ⇄
 `destination`. The operator is a party the user chose and this browser cannot vouch for.
