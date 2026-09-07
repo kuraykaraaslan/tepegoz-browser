@@ -70,6 +70,42 @@ describe('StepFeed', () => {
     expect(screen.queryByText('browser_get_page: allow')).toBeNull();
   });
 
+  it('marks the last step as running (pulsing) only while the turn is working', () => {
+    const inFlight = [step('step_ok', 'browser_get_page ✓', 1), step('step_start', 'act', 2)];
+    const { container, rerender } = render(
+      <StepFeed steps={inFlight} open working latestMessage={undefined} onToggle={vi.fn()} a={a} />,
+    );
+    // Exactly one pulsing dot — the trailing in-flight step_start.
+    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(1);
+
+    // Once the run stops, the same list has no running marker.
+    rerender(
+      <StepFeed
+        steps={inFlight}
+        open
+        working={false}
+        latestMessage={undefined}
+        onToggle={vi.fn()}
+        a={a}
+      />,
+    );
+    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0);
+  });
+
+  it('does not mark a trailing step_ok as running', () => {
+    const { container } = render(
+      <StepFeed
+        steps={[step('step_start', 'a', 1), step('step_ok', 'a ✓', 2)]}
+        open
+        working
+        latestMessage={undefined}
+        onToggle={vi.fn()}
+        a={a}
+      />,
+    );
+    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0);
+  });
+
   it('toggles on header click', () => {
     const onToggle = vi.fn();
     render(
