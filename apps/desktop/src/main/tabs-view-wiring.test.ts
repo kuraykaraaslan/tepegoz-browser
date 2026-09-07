@@ -73,6 +73,9 @@ const shared = vi.hoisted(() => ({
 }));
 vi.mock('./tabs-shared', () => shared);
 
+const tunnel = vi.hoisted(() => ({ hardenIfTunneled: vi.fn() }));
+vi.mock('./network/tunnel-session.electron', () => tunnel);
+
 const { wireView, unwireView, wirePopupWindow } = await import('./tabs-view-wiring');
 
 function fakeWc(url = 'https://page.test/') {
@@ -523,5 +526,48 @@ describe('wirePopupWindow', () => {
     const nested = fakeWc();
     onCreated({ webContents: nested });
     expect(nested.setWindowOpenHandler).toHaveBeenCalled();
+  });
+});
+
+/**
+ * The WebRTC lock has to be INVOKED, not merely to exist. It previously did exist — implemented,
+ * exported and unit-tested in `tunnel-session.electron.ts` — with no production caller anywhere, so
+ * every tunneled tab could still emit host ICE candidates carrying the machine's real address while its
+ * HTTP traffic went through the tunnel. These are the cases that fail if that caller disappears again;
+ * the ones in `tunnel-session.electron.test.ts` decide WHICH sessions get hardened, these decide that
+ * the two wiring choke points ask at all.
+ */
+describe('WebRTC hardening is actually wired', () => {
+  it('wireView hardens the view it is given', () => {
+    const wc = fakeWc();
+    wireView(host() as never, 'tab-1', { webContents: wc } as never);
+    expect(tunnel.hardenIfTunneled).toHaveBeenCalledWith(wc);
+  });
+
+  it('wireView hardens BEFORE installing the unload prompt or any listener', () => {
+    // Ordering is the safety property: the caller loads a URL right after wiring, so the lock must be
+    // on before anything can run in the page.
+    const wc = fakeWc();
+    wireView(host() as never, 'tab-1', { webContents: wc } as never);
+    const hardenedAt = tunnel.hardenIfTunneled.mock.invocationCallOrder[0] ?? Infinity;
+    const promptAt = installUnloadPrompt.mock.invocationCallOrder[0] ?? Infinity;
+    const firstListenerAt = wc.on.mock.invocationCallOrder[0] ?? Infinity;
+    expect(hardenedAt).toBeLessThan(promptAt);
+    expect(hardenedAt).toBeLessThan(firstListenerAt);
+  });
+
+  it('wirePopupWindow hardens the popup too — it inherits the opener tunneled session', () => {
+    const wc = fakeWc();
+    wirePopupWindow(wc as never);
+    expect(tunnel.hardenIfTunneled).toHaveBeenCalledWith(wc);
+  });
+
+  it('a nested popup spawned from a popup is hardened as well', () => {
+    const outer = fakeWc();
+    wirePopupWindow(outer as never);
+    tunnel.hardenIfTunneled.mockClear();
+    const inner = fakeWc();
+    handlerFor(outer, 'did-create-window')?.({ webContents: inner });
+    expect(tunnel.hardenIfTunneled).toHaveBeenCalledWith(inner);
   });
 });

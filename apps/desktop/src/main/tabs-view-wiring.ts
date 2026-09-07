@@ -15,6 +15,7 @@ import { applyStoredZoom, handleZoomShortcut } from './site-zoom';
 import { getDb } from './db/database.electron';
 import ActionInterceptorService from './extensions/action-interceptors.electron';
 import { handleSafeBrowsingNavigation } from './security/safe-browsing-interstitial.electron';
+import { hardenIfTunneled } from './network/tunnel-session.electron';
 import { faviconDataUrl } from './tabs-favicon.electron';
 import {
   blockNonWeb,
@@ -91,6 +92,13 @@ export function unwireView(view: WebContentsView): void {
 
 export function wireView(host: ViewWiringHost, id: string, view: WebContentsView): void {
   const wc = view.webContents;
+
+  // FIRST, before any listener and before the caller loads a URL: lock WebRTC on a tunneled view so it
+  // cannot emit host ICE candidates carrying the machine's real address. This is the single choke point
+  // for it — all three view-creation paths (fresh tab, revive-from-discard, cross-window rehost) and the
+  // tear-off re-wire come through here, which is the whole reason it is here rather than repeated at
+  // each `new WebContentsView`. Re-applying on a re-wire is idempotent. A Direct view is untouched.
+  hardenIfTunneled(wc);
 
   // The page's own "unsaved changes" prompt. Installed here but NOT listed in `WIRED_EVENTS`: it is
   // idempotent and outlives `unwireView`, because whether a page has unsaved work does not change when
@@ -313,6 +321,11 @@ export function wireView(host: ViewWiringHost, id: string, view: WebContentsView
  *  its OWN popups through the same blocker + hybrid policy. A popup window has no tab context, so its
  *  nested popups (when allowed) stay native windows rather than becoming tabs. */
 export function wirePopupWindow(wc: WebContents): void {
+  // A popup inherits its OPENER's session (`popupWindowOptions`), so a popup from a tunneled page is
+  // itself tunneled and needs the same WebRTC lock. Missing it here would be the more dangerous half of
+  // the leak: the popup looks like a continuation of the same tunneled session, so nothing on screen
+  // tells the user their real address just went out from it.
+  hardenIfTunneled(wc);
   wc.on('input-event', (_e, input) => {
     if (isActivatingInput(input.type)) lastGestureAt.set(wc, Date.now());
   });

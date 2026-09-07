@@ -1,6 +1,11 @@
 import { session, type Session } from 'electron';
 import { Logger } from '@tepegoz/libs';
-import { DIRECT_PARTITION, isPrivatePartition, PRIVATE_PARTITION } from '@tepegoz/tab-engine';
+import {
+  DIRECT_PARTITION,
+  isPrivatePartition,
+  isTunneledPartition,
+  PRIVATE_PARTITION,
+} from '@tepegoz/tab-engine';
 import { BLACKHOLE_PROXY_CONFIG } from '@tepegoz/security-policy';
 
 /**
@@ -260,9 +265,33 @@ const BrowsingSessions = {
   },
 
   /** Is this a tunnel-bound partition, as opposed to the Direct one? Wiring that must differ between the
-   *  two — the DNS-prefetch suppression header, for one — asks here rather than pattern-matching itself. */
+   *  two — the DNS-prefetch suppression header, for one — asks here rather than pattern-matching itself.
+   *
+   *  NARROW ON PURPOSE: browsed tunnel partitions only. It gates `releaseTunnelPartition`, which DELETES
+   *  a partition's storage, so widening it to private partitions would put the throwaway private session
+   *  in reach of a destructive call written for a different lifecycle. Per-`WebContents` hardening asks
+   *  {@link isTunnelSession} instead, which covers both spellings because it only ever tightens. */
   isTunnelPartition(partition: string): boolean {
     return partition.startsWith(TUNNEL_PREFIX);
+  },
+
+  /** The partition a live session was created under, or `null` if it is not one of ours (app chrome,
+   *  Electron's default). A reverse lookup because Electron exposes no partition name on a `Session`. */
+  partitionOf(ses: Session): string | null {
+    for (const [partition, candidate] of live) if (candidate === ses) return partition;
+    return null;
+  },
+
+  /**
+   * Is this session's traffic supposed to be inside a Phase 5 tunnel — browsed OR private?
+   *
+   * A session this registry never created answers `false`, which is correct rather than merely safe: it
+   * is app chrome or an internal page, and applying the tunnel's WebRTC lock there would break
+   * `getUserMedia` on surfaces that are not on a tunnel at all.
+   */
+  isTunnelSession(ses: Session): boolean {
+    const partition = BrowsingSessions.partitionOf(ses);
+    return partition !== null && isTunneledPartition(partition);
   },
 
   /**

@@ -244,9 +244,37 @@ endpoint** (one loopback port per active connection), never an OS-level system p
 > this phase hides the **IP**, and a user who routes a tab through Tor and is then re-identified by canvas
 > hash — or whose real address leaks out of WebRTC — got the ceremony of privacy without the substance.
 
-- [ ] **WebRTC local-IP leak is a kill-switch concern, not a privacy preference.** Block host-candidate
+- [x] **WebRTC local-IP leak is a kill-switch concern, not a privacy preference.** Block host-candidate
       exposure (mDNS obfuscation) for any tunnel-bound partition. A leak here reveals the real address of a tab
       the user was told is tunneled, so it fails this phase's promise regardless of what Phase 2 ships
+  - [x] _**Closed 2026-09-07, and it was open in the worst way: the fix was already written.**
+        `applyTunnelHardening` (`disable_non_proxied_udp`) had shipped in `tunnel-session.electron.ts`
+        with two passing unit tests and **no production caller anywhere** — a grep for it found the
+        definition and the test file, nothing else. So every tunneled tab could hand out the machine's
+        real local and public addresses in ICE candidates while its HTTP traffic went through the
+        tunnel, with the route badge showing green. A test proving a function behaves correctly says
+        nothing about whether anything invokes it, and that gap is invisible to coverage: the function
+        was 100% covered._
+  - [x] _Wired at the two choke points rather than at each `new WebContentsView`, because this module's
+        own rule is that the leaks come from a SECOND path that skipped a check. `wireView` covers all
+        three view-creation paths (fresh tab, revive-from-discard, cross-window rehost) plus the tear-off
+        re-wire; `wirePopupWindow` covers page-opened popups, including nested ones. The popup case is
+        the more dangerous half — a popup inherits its opener's session, so it looks like a continuation
+        of the same tunneled session while leaking._
+  - [x] _Found and fixed a **second** bug while wiring it: `BrowsingSessions.isTunnelPartition` matches
+        only `persist:tepegoz-web--conn-`, so a **private** tunneled tab (`tepegoz-private--conn-{id}`)
+        read as untunneled. That is the highest-stakes combination in the phase. New pure
+        `isTunneledPartition` in `@tepegoz/tab-engine` covers both spellings; `isTunnelPartition` is
+        deliberately left narrow because it gates `release`, which DELETES a partition's storage._
+  - [x] _Direct views are deliberately left alone: `disable_non_proxied_udp` is correct only when there
+        IS a proxy to carry the UDP, and applying it with no tunnel would break ordinary WebRTC (video
+        calls in a normal tab) to defend a leak that is not possible there. A failed lock on a tunneled
+        view PROPAGATES — "the tab does not load" is an acceptable failure state here, "it loads on the
+        clear path" is not._
+  - [x] _22 tests: which sessions harden (browsed tunnel / private tunnel / Direct / unbound private /
+        not-ours / propagating failure), the pure predicate against both key builders, and — the ones
+        that would have caught the original defect — that the wiring **calls** it, hardening before any
+        listener or the unload prompt. Mutation-checked: deleting the `wireView` call turns 2 red._
 - [ ] **One claim, one surface.** Fingerprint posture binds at the same three scopes as a route
       (General / group / tab) and is shown in the same place as the route badge — "this tab is anonymous" must
       not be assembled by the user out of two independent settings that can disagree

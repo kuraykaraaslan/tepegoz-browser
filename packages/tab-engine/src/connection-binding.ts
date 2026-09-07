@@ -106,6 +106,27 @@ export function partitionKeyFor(resolved: ResolvedConnection): string {
   return `${DIRECT_PARTITION}--conn-${resolved.connectionId}`;
 }
 
+/** The infix both {@link partitionKeyFor} and `privatePartitionKey` use to name a bound partition. */
+const CONNECTION_INFIX = '--conn-';
+
+/**
+ * Does this partition carry a Phase 5 connection binding — i.e. is its traffic supposed to be inside a
+ * tunnel?
+ *
+ * Deliberately covers BOTH spellings, because there are two: `partitionKeyFor` produces
+ * `persist:tepegoz-web--conn-{id}` and `privatePartitionKey` produces `tepegoz-private--conn-{id}`.
+ * Anything keyed off one prefix alone silently treats a **private tunneled** tab as untunneled, which
+ * is the worst case to miss — a user in private mode over Tor has made the strongest statement about
+ * what they expect, and it is the combination most likely to be tested by someone who actually cares.
+ *
+ * Pairs with, and does not replace, `BrowsingSessions.isTunnelPartition`: that one answers the narrower
+ * "is this a browsed tunnel partition I may release/wipe", which must stay narrow because it gates
+ * destructive storage deletion.
+ */
+export function isTunneledPartition(partition: string): boolean {
+  return partition.includes(CONNECTION_INFIX);
+}
+
 /**
  * The binding a tab must be given IN ITS OWN RIGHT when it is about to lose its group involuntarily.
  *

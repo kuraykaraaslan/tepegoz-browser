@@ -16,6 +16,7 @@ vi.mock('@tepegoz/tab-engine', () => ({
   DIRECT_PARTITION,
   PRIVATE_PARTITION,
   isPrivatePartition: (p: string) => p.startsWith('tepegoz-private'),
+  isTunneledPartition: (p: string) => p.includes('--conn-'),
 }));
 vi.mock('@tepegoz/security-policy', () => ({
   BLACKHOLE_PROXY_CONFIG: { proxyRules: 'blackhole' },
@@ -157,6 +158,47 @@ describe('partition classification', () => {
 
     expect(BrowsingSessions.isTunnelPartition(`${DIRECT_PARTITION}--conn-1`)).toBe(true);
     expect(BrowsingSessions.isTunnelPartition(DIRECT_PARTITION)).toBe(false);
+  });
+
+  it('isTunnelPartition stays NARROW — a private tunnel partition is not releasable storage', () => {
+    // It gates `release`, which deletes a partition's storage. Widening it would put the throwaway
+    // private session in reach of a destructive call written for a different lifecycle.
+    expect(BrowsingSessions.isTunnelPartition(`${PRIVATE_PARTITION}--conn-1`)).toBe(false);
+  });
+});
+
+describe('partitionOf / isTunnelSession', () => {
+  it('maps a live session back to the partition it was created under', () => {
+    const part = `${DIRECT_PARTITION}--conn-a`;
+    const ses = BrowsingSessions.ensure(part);
+    expect(BrowsingSessions.partitionOf(ses)).toBe(part);
+  });
+
+  it('answers null for a session this registry never created', () => {
+    expect(BrowsingSessions.partitionOf({ notOurs: true } as never)).toBeNull();
+  });
+
+  it('is true for a browsed tunnel session', () => {
+    const ses = BrowsingSessions.ensure(`${DIRECT_PARTITION}--conn-a`);
+    expect(BrowsingSessions.isTunnelSession(ses)).toBe(true);
+  });
+
+  it('is true for a PRIVATE tunnel session — the case a prefix-only check would miss', () => {
+    // Private + tunnel is the strongest statement a user can make about what they expect, and the
+    // combination most likely to be checked by someone who actually cares.
+    const ses = BrowsingSessions.ensure(`${PRIVATE_PARTITION}--conn-a`);
+    expect(BrowsingSessions.isTunnelSession(ses)).toBe(true);
+  });
+
+  it('is false for the Direct session — there is no tunnel to carry its UDP', () => {
+    expect(BrowsingSessions.isTunnelSession(BrowsingSessions.ensure(DIRECT_PARTITION))).toBe(false);
+  });
+
+  it('is false for an unbound private session, and for a session we never made', () => {
+    expect(BrowsingSessions.isTunnelSession(BrowsingSessions.ensure(PRIVATE_PARTITION))).toBe(
+      false,
+    );
+    expect(BrowsingSessions.isTunnelSession({ notOurs: true } as never)).toBe(false);
   });
 });
 

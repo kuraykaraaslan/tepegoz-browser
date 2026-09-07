@@ -109,6 +109,29 @@ export function applyTunnelHardening(wc: WebContents): void {
   }
 }
 
+/**
+ * Apply {@link applyTunnelHardening} to a `WebContents` **iff** it is hosted on a tunnel session.
+ *
+ * This is the form the wiring layer calls, and it exists because the leak this closes is a
+ * default-open one. `applyTunnelHardening` shipped, tested, and was never called from anywhere in
+ * production — so every tunneled tab has been able to hand out the machine's real local and public
+ * addresses in ICE candidates while its HTTP traffic went through the tunnel. A test proving a function
+ * behaves correctly says nothing about whether anything invokes it.
+ *
+ * A Direct tab is left alone deliberately, rather than hardened "just in case": `disable_non_proxied_udp`
+ * is the correct policy only when there IS a proxy to carry the UDP. Applying it with no tunnel would
+ * break ordinary WebRTC — video calls in a normal tab — to defend against a leak that is not possible
+ * there, because on Direct the real address is not a secret being kept.
+ *
+ * Throws if the policy could not be set on a tunneled view. That propagates on purpose: a tab whose
+ * WebRTC lock did not stick is a tab that leaks, and this phase's rule is that the failure states are
+ * "the tab does not load" or "the user is told" — never "it loads on the clear path".
+ */
+export function hardenIfTunneled(wc: WebContents): void {
+  if (!BrowsingSessions.isTunnelSession(wc.session)) return;
+  applyTunnelHardening(wc);
+}
+
 /** Forget the verification cache (tests, and a connection torn down and rebuilt on a new port). */
 export function invalidateTunnelVerification(connectionId: string): void {
   if (!isValidConnectionId(connectionId)) return;

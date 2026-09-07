@@ -26,12 +26,14 @@ const h = vi.hoisted(() => {
 
 vi.mock('electron', () => ({ session: { fromPartition: h.fromPartition } }));
 
+const { DIRECT_PARTITION } = await import('@tepegoz/tab-engine');
 const { default: BrowsingSessions } = await import('./browsing-sessions.electron');
 const {
   ensureTunnelSession,
   resetTunnelSessionsForTests,
   invalidateTunnelVerification,
   applyTunnelHardening,
+  hardenIfTunneled,
   blackholeTunnelSession,
 } = await import('./tunnel-session.electron');
 
@@ -120,6 +122,56 @@ describe('applyTunnelHardening', () => {
       }),
     };
     expect(() => applyTunnelHardening(wc as never)).toThrow('policy rejected');
+  });
+});
+
+/**
+ * `hardenIfTunneled` is the form the wiring layer calls, and the reason it exists is a defect rather
+ * than a refactor: `applyTunnelHardening` shipped fully tested and had NO production caller, so every
+ * tunneled tab could still hand out the machine's real address in an ICE candidate. Proving a function
+ * works says nothing about whether anything invokes it, so these cases are about WHICH sessions get it.
+ */
+describe('hardenIfTunneled', () => {
+  const contents = (ses: unknown) => ({ session: ses, setWebRTCIPHandlingPolicy: vi.fn() });
+
+  it('locks WebRTC on a browsed tunnel session', () => {
+    const wc = contents(BrowsingSessions.ensure(`${DIRECT_PARTITION}--conn-a`));
+    hardenIfTunneled(wc as never);
+    expect(wc.setWebRTCIPHandlingPolicy).toHaveBeenCalledWith('disable_non_proxied_udp');
+  });
+
+  it('locks WebRTC on a PRIVATE tunnel session too', () => {
+    const wc = contents(BrowsingSessions.ensure('tepegoz-private--conn-a'));
+    hardenIfTunneled(wc as never);
+    expect(wc.setWebRTCIPHandlingPolicy).toHaveBeenCalledWith('disable_non_proxied_udp');
+  });
+
+  it('leaves a Direct view ALONE — with no tunnel, the policy would break ordinary WebRTC', () => {
+    const wc = contents(BrowsingSessions.ensure(DIRECT_PARTITION));
+    hardenIfTunneled(wc as never);
+    expect(wc.setWebRTCIPHandlingPolicy).not.toHaveBeenCalled();
+  });
+
+  it('leaves an UNBOUND private session alone — private is not the same claim as tunneled', () => {
+    const wc = contents(BrowsingSessions.ensure('tepegoz-private'));
+    hardenIfTunneled(wc as never);
+    expect(wc.setWebRTCIPHandlingPolicy).not.toHaveBeenCalled();
+  });
+
+  it('leaves a session this registry never created alone (app chrome, internal pages)', () => {
+    const wc = contents({ notOurs: true });
+    hardenIfTunneled(wc as never);
+    expect(wc.setWebRTCIPHandlingPolicy).not.toHaveBeenCalled();
+  });
+
+  it('propagates a failed lock on a tunneled view — a tab that leaks must not just load', () => {
+    const wc = {
+      session: BrowsingSessions.ensure(`${DIRECT_PARTITION}--conn-a`),
+      setWebRTCIPHandlingPolicy: vi.fn(() => {
+        throw new Error('policy rejected');
+      }),
+    };
+    expect(() => hardenIfTunneled(wc as never)).toThrow('policy rejected');
   });
 });
 

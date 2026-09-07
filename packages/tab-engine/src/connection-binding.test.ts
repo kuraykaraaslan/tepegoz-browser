@@ -3,12 +3,14 @@ import {
   affectedByGeneralChange,
   affectedByGroupChange,
   bindingOnInvoluntaryGroupExit,
+  isTunneledPartition,
   isValidConnectionId,
   partitionKeyFor,
   resolveBinding,
   type ScopedBinding,
   type TabBindingState,
 } from './connection-binding';
+import { privatePartitionKey } from './private-partition';
 
 const conn = (id: string): ScopedBinding => ({ kind: 'connection', connectionId: id });
 const inherit: ScopedBinding = { kind: 'inherit' };
@@ -110,6 +112,39 @@ describe('partition keys', () => {
     for (const ok of ['vpn-a', 'tor-1', 'wg0', 'mullvad-se-sto-001']) {
       expect(isValidConnectionId(ok)).toBe(true);
     }
+  });
+});
+
+/**
+ * `isTunneledPartition` answers "is this partition's traffic supposed to be inside a tunnel", and it
+ * exists because there are TWO spellings of a bound partition, not one. Per-`WebContents` hardening
+ * (the WebRTC lock) keys off this, so a predicate that missed a spelling would leave exactly those tabs
+ * able to leak the machine's real address while the UI still said "tunneled".
+ */
+describe('isTunneledPartition', () => {
+  it('is true for a browsed tunnel partition', () => {
+    expect(isTunneledPartition(partitionKeyFor({ connectionId: 'vpn-a' }))).toBe(true);
+  });
+
+  it('is true for a PRIVATE tunnel partition — the spelling a prefix-only check misses', () => {
+    expect(isTunneledPartition(privatePartitionKey({ connectionId: 'vpn-a' }))).toBe(true);
+  });
+
+  it('is false for the two UNBOUND partitions — neither is carried by a tunnel', () => {
+    expect(isTunneledPartition(partitionKeyFor({ connectionId: null }))).toBe(false);
+    expect(isTunneledPartition(privatePartitionKey({ connectionId: null }))).toBe(false);
+  });
+
+  it('agrees with the key builders for every id they accept, rather than restating the format', () => {
+    for (const id of ['vpn-a', 'tor-1', 'wg0', 'mullvad-se-sto-001']) {
+      expect(isTunneledPartition(partitionKeyFor({ connectionId: id }))).toBe(true);
+      expect(isTunneledPartition(privatePartitionKey({ connectionId: id }))).toBe(true);
+    }
+  });
+
+  it('is false for a partition that is not ours at all', () => {
+    expect(isTunneledPartition('persist:tepegoz-app')).toBe(false);
+    expect(isTunneledPartition('')).toBe(false);
   });
 });
 
