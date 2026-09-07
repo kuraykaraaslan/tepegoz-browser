@@ -31,15 +31,21 @@ import { defineConfig } from 'vitest/config';
  * `index.ts` barrels. That is a different thing from a package exclusion — it removes code this run
  * cannot execute, not code it would rather not measure. The reasoning is recorded at that list.
  *
- * NOT IN SCOPE, said plainly: `apps/desktop`. It ships 47 test files that run under `turbo run test`
- * and are not measured here. This is a real gap, not a definition — measured on 2026-08-22, adding it
- * takes the gate to **S46.63 / B83.17 / F72.08 / L46.63** over 48,618 statements, because the renderer
- * (`App.tsx` and every component) sits near 0% and `src/main` at ~10%. It is recorded in
- * `phases/README.md` as owed work rather than papered over: the README used to claim this gate covered
- * "all of `apps/desktop`", and it never has.
+ * `apps/desktop` IS in scope, and has been since 2026-08-22. This paragraph used to open "NOT IN
+ * SCOPE, said plainly" and describe a 47-file gap measuring S46.63 with the renderer near 0% — true
+ * when written, contradicted by the thresholds twenty lines below ever since, which is the worst place
+ * for a doc to go stale: the honest disclosure outlived the dishonesty it was disclosing. It entered
+ * at S12.97 and now measures **S99.95 / B94.92 / F99.88 / L99.95**, the better-covered of the two
+ * scopes.
  *
  * THRESHOLDS are the measured floor of the scope, not an aspiration. Ratchet them UP as coverage
  * lands; never widen the exclusion list to protect a number.
+ *
+ * HOW to re-measure, because it is not obvious and getting it wrong is what let these floors drift up
+ * to sixteen points under reality: the `text-summary` "Coverage summary" is the BLEND of both scopes
+ * and is not either gate. To read a per-glob actual, set that glob's thresholds to 100, run
+ * `pnpm coverage`, and read the percentages back out of Vitest's own `ERROR: Coverage for … does not
+ * meet` lines. Then set floor(measured) less ~2pts for v8 run-to-run drift.
  */
 export default defineConfig({
   test: {
@@ -87,7 +93,18 @@ export default defineConfig({
         // full schema suite (all 10 `schemas-*.ts`), `@tepegoz/mcp-client` (connection + supervisor)
         // and `packages/orchestrator/src/reactor.ts` reached 100%, plus tasks/i18n-format/macro-engine
         // predicate+expr/file-operations tools/human-input adapter/browser-tools/agent-runtime.
-        'packages/**': { statements: 86, branches: 87, functions: 89, lines: 86 },
+        //
+        // Ratcheted 2026-09-07 to S95 / B89 / F93 / L95. Measured on a clean tree by probing with the
+        // thresholds set to 100 and reading the actuals back out of Vitest's own threshold errors —
+        // the `text-summary` line is a BLEND of both scopes and cannot tell you either one, which is
+        // why this had drifted unnoticed. Actual: **S97.58 / B91.93 / F95.29 / L97.58**, held ~2pts
+        // below each per the drift convention above.
+        //
+        // Worth naming what this fixes, since it is the gate's own failure mode: the previous floor
+        // (86/87/89/86) sat up to ELEVEN points under reality. A ratchet that stops ratcheting is not
+        // a ratchet — a change deleting a tenth of this scope's covered statements would have passed
+        // green. The floor is only a regression alarm while it sits just under the measurement.
+        'packages/**': { statements: 95, branches: 89, functions: 93, lines: 95 },
         // `apps/desktop` joined the gate on 2026-08-22 at its own floor, which is the only honest way to
         // add it — the alternative was to keep claiming it was covered while it was not measured at all.
         // It entered at S12.97 / B68.62 / F39.43 / L12.97 over 24,326 statements, a scope as large as
@@ -177,7 +194,14 @@ export default defineConfig({
         // is now covered; what remains is documented-unreachable defensive code, `**/index.ts` barrels
         // (config-excluded), and `apps/desktop/src/renderer` (its own parallel push). This locks in
         // the 37-point gain so a regression trips CI. A trip means: add the test, do not lower this.
-        'apps/desktop/**': { statements: 84, branches: 90, functions: 90, lines: 84 },
+        //
+        // Ratcheted 2026-09-07 to S97 / B92 / F97 / L97, same probe, same ~2pt drift allowance.
+        // Actual: **S99.95 / B94.92 / F99.88 / L99.95** — this scope entered the gate at S12.97 on
+        // 2026-08-22 and is now the better-covered of the two, which is worth stating because the old
+        // floor (84/90/90/84) was up to SIXTEEN points under it and still described the app as the
+        // weak half. It is not. `packages/**` is now the scope with the real remaining gap, and its
+        // branch number (91.93) is the lowest figure anywhere in this gate.
+        'apps/desktop/**': { statements: 97, branches: 92, functions: 97, lines: 97 },
       },
       include: [
         'apps/desktop/src/**',
