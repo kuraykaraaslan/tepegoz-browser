@@ -260,11 +260,16 @@ Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. N
 > `@tepegoz/orchestrator`); none of it grows `apps/desktop`. Every new user-visible string ships EN + full TR
 > in the same PR (ADR-0016).
 
-- [ ] **A4 — Message-level actions: copy / quote / edit.** Only code blocks are copyable today; there is no
-      full-message copy, no quoting a prior answer into a new turn, no editing your own message and resending.
-      Pure renderer, touches no trust boundary — **the cheapest item here.** The quote chip is a natural fit:
-      the composer already has a selected-text attachment path (`panel-attachments.ts`) and a quote is a
-      variant of it.
+- [~] **A4 — Message-level actions: copy / quote / edit.** Only code blocks are copyable today; there is no
+  full-message copy, no quoting a prior answer into a new turn, no editing your own message and resending.
+  Pure renderer, touches no trust boundary — **the cheapest item here.** The quote chip is a natural fit:
+  the composer already has a selected-text attachment path (`panel-attachments.ts`) and a quote is a
+  variant of it. _**Copy landed 2026-09-08:** `MessageCopyButton` (`panel-copy-button.tsx`) — a
+  hover-revealed icon button on the user prompt bubble and each prose response, `navigator.clipboard`
+  (the same path the markdown code-block copy uses, no bridge), a 1.5 s "Copied" tick cleared on
+  unmount, en + tr (`thread.copyMessage` / `thread.copied`). 5 tests in `panel-thread.test.tsx`
+  (prompt + response copy, missing-clipboard tolerance, empty-thread, layout). **Quote and
+  edit-and-resend still owed** — those touch the composer/attachment path, not just the renderer._
 - [ ] **A2 — A context-fullness gauge, distinct from the token counter.** The counter and the 80% quota
       warning measure **cost**; how full the _context window_ is is invisible. That is the real breaking point
       of a long run. The data already exists on the `cache-window` / `TokenLedger` side. Showing it answers

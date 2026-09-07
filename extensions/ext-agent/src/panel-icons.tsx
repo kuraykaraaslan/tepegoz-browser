@@ -43,6 +43,12 @@ export const TrashIcon = ({ className }: { className?: string }) => (
     <path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m2 0v12a1 1 0 01-1 1H7a1 1 0 01-1-1V7m4 4v6m4-6v6" />
   </Svg>
 );
+export const CopyIcon = ({ className }: { className?: string }) => (
+  <Svg className={className}>
+    <rect x="9" y="9" width="11" height="11" rx="2" />
+    <path d="M5 15V5a2 2 0 012-2h8" />
+  </Svg>
+);
 export const BackgroundIcon = ({ className }: { className?: string }) => (
   <Svg className={className}>
     <path d="M4 4h10v10H4zM8 20h12V8" />

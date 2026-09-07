@@ -5,6 +5,7 @@ import type { AgentStrings } from './i18n';
 import type { CompletionOutcome } from '@tepegoz/shared-types';
 import type { AgentHostApi } from './types';
 import { GaugeIcon, KIND_DOT, SparkIcon } from './panel-icons';
+import { MessageCopyButton } from './panel-copy-button';
 import { PROSE_KINDS, STEP_KINDS, type Turn } from './panel-state';
 
 /**
@@ -82,7 +83,12 @@ export function PanelThread({
               !turn.events.some((e) => e.kind === 'done' || e.kind === 'error');
             return (
               <div key={turn.id} className="space-y-1.5">
-                <div className="flex justify-end">
+                <div className="group flex items-start justify-end gap-1">
+                  <MessageCopyButton
+                    text={turn.prompt}
+                    label={a.thread.copyMessage}
+                    copiedLabel={a.thread.copied}
+                  />
                   <div
                     className="max-w-[85%] rounded-2xl rounded-br-sm bg-amber-500/15 px-3 py-2 text-text-primary [overflow-wrap:anywhere]"
                     aria-label={a.thread.you}
@@ -179,7 +185,7 @@ export function PanelThread({
                   return (
                     <div
                       key={`${String(e.ts)}-${String(i)}`}
-                      className="flex items-start gap-2 rounded px-1"
+                      className="group flex items-start gap-2 rounded px-1"
                     >
                       <span
                         className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', KIND_DOT[e.kind])}
@@ -209,6 +215,13 @@ export function PanelThread({
                           </span>
                         )}
                       </div>
+                      {isProse && e.message.length > 0 && (
+                        <MessageCopyButton
+                          text={e.message}
+                          label={a.thread.copyMessage}
+                          copiedLabel={a.thread.copied}
+                        />
+                      )}
                     </div>
                   );
                 })}

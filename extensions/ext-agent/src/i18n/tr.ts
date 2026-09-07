@@ -237,6 +237,8 @@ export const tr: AgentStrings = {
   thread: {
     you: 'Sen',
     working: 'Çalışıyor…',
+    copyMessage: 'Mesajı kopyala',
+    copied: 'Kopyalandı',
   },
   // Besteci ek chip'leri (seçili metin / dosya / ekran görüntüsü).
   attach: {

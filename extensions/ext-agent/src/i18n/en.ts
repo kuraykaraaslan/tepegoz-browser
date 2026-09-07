@@ -256,6 +256,8 @@ export const en = {
   thread: {
     you: 'You',
     working: 'Working…',
+    copyMessage: 'Copy message',
+    copied: 'Copied',
   },
   // Composer attachment chips (selected text / file / screenshot).
   attach: {
