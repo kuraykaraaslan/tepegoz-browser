@@ -385,10 +385,16 @@ run` when those boxes were also ticked. The blocking modal is untouched. en + tr
   cases (10 total). **Still owed for `[x]`:** the "adjustable" half — a real setting that overrides
   `maxSteps` per run is spend-shaped (a higher cap is a bigger bill) and belongs with the run-config
   surface, so it stays a deliberate owner decision, not an autonomous change._
-- [ ] **Per-tool-call timing on the replay timeline.** The audit journal already timestamps every call; the
+- [x] **Per-tool-call timing on the replay timeline.** The audit journal already timestamps every call; the
       timeline shows steps and evidence badges but no latency. One column, no new data path — and it is what
       turns "the agent felt slow" into a specific slow call.
       [`../tracks/ui-tars-desktop-agent-parity.md`](../../docs/parities/ui-tars-desktop-agent-parity.md) P2-b.
+      _Landed 2026-09-08: `StepFeed` now shows each completed step's wall time — `step_ok` / `step_error`
+      ts minus the `step_start` that opened it, paired with a single "last open start" cursor (the reactor
+      runs one step at a time, never nested), so there is genuinely no new data path. `stepDurations()` +
+      `formatStepDuration()` in `panel-step-feed.tsx` (`340ms` rounded to 10ms under a second, `1.2s` to
+      ten, `12s` past), muted right-aligned column, hidden below 10ms so an instant cache hit doesn't
+      render `0ms`. 3 new tests (13 total)._
 
 ## Fixtures
 

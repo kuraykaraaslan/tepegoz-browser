@@ -171,6 +171,64 @@ describe('StepFeed', () => {
     expect(screen.getByText(`· step 2 of ${DEFAULT_AGENT_MAX_STEPS}`)).toBeTruthy();
   });
 
+  it('annotates a completed step with its wall time', () => {
+    render(
+      <StepFeed
+        steps={[
+          step('step_start', 'browser_get_page: allow', 1000),
+          step('step_ok', 'browser_get_page ✓', 1400),
+        ]}
+        open
+        working={false}
+        latestMessage={undefined}
+        onToggle={vi.fn()}
+        a={a}
+      />,
+    );
+    expect(screen.getByText('400ms')).toBeTruthy();
+  });
+
+  it('formats multi-second calls in seconds and rounds sub-second to 10ms', () => {
+    const { rerender } = render(
+      <StepFeed
+        steps={[step('step_start', 'a', 0), step('step_ok', 'a ✓', 1234)]}
+        open
+        working={false}
+        latestMessage={undefined}
+        onToggle={vi.fn()}
+        a={a}
+      />,
+    );
+    expect(screen.getByText('1.2s')).toBeTruthy();
+    rerender(
+      <StepFeed
+        steps={[step('step_start', 'a', 0), step('step_error', 'a ✗', 344)]}
+        open
+        working={false}
+        latestMessage={undefined}
+        onToggle={vi.fn()}
+        a={a}
+      />,
+    );
+    // step_error is timed too.
+    expect(screen.getByText('340ms')).toBeTruthy();
+  });
+
+  it('shows no timing on a step_start with nothing after it', () => {
+    render(
+      <StepFeed
+        steps={[step('step_ok', 'a ✓', 5), step('step_start', 'b', 10)]}
+        open
+        working
+        latestMessage={undefined}
+        onToggle={vi.fn()}
+        a={a}
+      />,
+    );
+    // Neither row can be paired into a duration → no ms/s annotation anywhere.
+    expect(screen.queryByText(/^\d+(\.\d+)?(ms|s)$/)).toBeNull();
+  });
+
   it('toggles on header click', () => {
     const onToggle = vi.fn();
     render(
