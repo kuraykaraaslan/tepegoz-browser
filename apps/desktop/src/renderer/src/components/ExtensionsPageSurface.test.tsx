@@ -68,4 +68,41 @@ describe('ExtensionsPageSurface', () => {
       extensions: [{ id: 'com.tepegoz.agent', status: 'disabled' }],
     });
   });
+
+  it('persists an enable the same way, replacing the disabled entry', async () => {
+    prefs = {
+      ...DEFAULT_PREFERENCES,
+      extensions: [{ id: 'com.tepegoz.agent', status: 'disabled' }],
+    };
+    render(<ExtensionsPageSurface />);
+    const toggle = await screen.findByRole<HTMLInputElement>('switch', { name: /Agent/ });
+    expect(toggle.checked).toBe(false);
+
+    fireEvent.click(toggle);
+
+    await waitFor(() => expect(updatePreferences).toHaveBeenCalledTimes(1));
+    expect(updatePreferences).toHaveBeenCalledWith({
+      extensions: [{ id: 'com.tepegoz.agent', status: 'enabled' }],
+    });
+  });
+
+  it('still writes a toggle when the preferences read failed', async () => {
+    // The read rejects into `() => undefined`, so the page renders with no state at all — the rows
+    // come from the catalog, not from preferences. A toggle then has to build the array from nothing
+    // rather than throw on a null `prefs`.
+    Object.defineProperty(window, 'tepegoz', {
+      configurable: true,
+      value: { ...bridge, getPreferences: () => Promise.reject(new Error('prefs unreadable')) },
+    });
+    render(<ExtensionsPageSurface />);
+    const toggle = await screen.findByRole<HTMLInputElement>('switch', { name: /Agent/ });
+    expect(toggle.checked).toBe(true); // no stored state ⇒ a built-in reads as on
+
+    fireEvent.click(toggle);
+
+    await waitFor(() => expect(updatePreferences).toHaveBeenCalledTimes(1));
+    expect(updatePreferences).toHaveBeenCalledWith({
+      extensions: [{ id: 'com.tepegoz.agent', status: 'disabled' }],
+    });
+  });
 });
