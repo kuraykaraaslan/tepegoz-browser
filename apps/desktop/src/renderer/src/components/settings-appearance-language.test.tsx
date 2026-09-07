@@ -164,6 +164,23 @@ describe('the accent colour presets', () => {
     expect(Object.keys(setPref.mock.calls[0]?.[0] as object)).toEqual(['themeColor']);
   });
 
+  it('rings the custom-colour control only for a colour that is not a preset', () => {
+    // With a hand-picked colour no preset swatch is pressed and no theme card is pressed either, so
+    // if this control does not read as the active one, nothing on the screen says where the colour
+    // currently in force came from.
+    const customLabel = (): HTMLElement =>
+      (document.querySelector('input[type="color"]') as HTMLInputElement).closest(
+        'label',
+      ) as HTMLElement;
+
+    renderAppearance({ theme: 'dark', themeColor: '#123456' });
+    expect(customLabel().className).toContain('ring-2');
+
+    cleanup();
+    renderAppearance({ theme: 'dark', themeColor: '#0d7377' }); // turquoise — a preset
+    expect(customLabel().className).not.toContain('ring-2');
+  });
+
   it('commits a hand-picked custom colour on blur', () => {
     const { setPref } = renderAppearance({ themeColor: '' });
     const colorInput = document.querySelector('input[type="color"]') as HTMLInputElement;
@@ -334,9 +351,7 @@ describe('changing language and region', () => {
   it('renders empty date and number previews for a region that yields an invalid tag', () => {
     // `region` is used raw when it maps to no ISO base, so this produces `en-@@bad@@`, which both
     // `formatDateByFormat` and `Intl.NumberFormat` reject — each preview must swallow that to ''.
-    expect(() =>
-      renderLanguage({ region: '@@bad@@', dateFormat: 'long' }, 'en'),
-    ).not.toThrow();
+    expect(() => renderLanguage({ region: '@@bad@@', dateFormat: 'long' }, 'en')).not.toThrow();
     expect(screen.getByLabelText(/Date format|Tarih biçimi/i)).toBeTruthy();
   });
 
@@ -351,7 +366,8 @@ describe('changing language and region', () => {
       // the picker still opens and still lists rows, just without localized names
       expect(openPicker(/Region/i).length).toBeGreaterThan(1);
     } finally {
-      (Intl as unknown as { DisplayNames: typeof RealDisplayNames }).DisplayNames = RealDisplayNames;
+      (Intl as unknown as { DisplayNames: typeof RealDisplayNames }).DisplayNames =
+        RealDisplayNames;
     }
   });
 });
