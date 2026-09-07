@@ -5,7 +5,8 @@ a browser agent competitive with **Claude for Chrome** (reliability + safety) **
 Comet** (assistant UX) — and keeps every claim **falsifiable and honestly measured**, never marketing.
 
 > **This folder is the single authoritative AI roadmap.** It **supersedes and replaces** the v2 track
-> in [`../ai/`](../ai/) (M1–M2 / C1–C7 / F1–F3). Those phase documents are retired by [S0](phase-s0-truth-and-repair.md);
+> formerly in `phases/ai/` (M1–M2 / C1–C7 / F1–F3). That folder no longer exists — [S0](phase-s0-truth-and-repair.md)
+> retired those phase documents and **removed the originals**, which is why this is a path and not a link;
 > their still-valid machinery is **absorbed here, not destroyed** — the statistical constitution
 > ([`constitution.md`](constitution.md)), the results ledger ([`eval-results.md`](eval-results.md)), the
 > prose-debt ledger ([`PROSE-LEDGER.md`](PROSE-LEDGER.md)), the eval harness + frozen fixtures, and the

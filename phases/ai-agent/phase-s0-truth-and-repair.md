@@ -6,7 +6,8 @@ v3) · **Track:** [AI Agent Super](README.md)
 
 **Goal:** Make this folder the **single authoritative** AI competence roadmap and repair the three-way
 drift between docs, code, and numbers before any capability work opens. Absorb the still-valid machinery
-of the retired v2 [`../ai/`](../ai/) track, restore the deleted v1 archive, kill the stale index that
+of the retired v2 `phases/ai/` track (that folder is gone — this task removed the originals, so the
+path is deliberately not a link), restore the deleted v1 archive, kill the stale index that
 hides three breached anti-debt rules, and delete the knowingly-wrong regenerable report artefact. Then
 produce the first **honest full-registry baseline** (all 52 scenarios, N=3, Anthropic product tier) whose
 **failure taxonomy may re-order this very program** — the same pre-registered humility M1 carried.
