@@ -3,12 +3,18 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { I18nProvider } from '@tepegoz/i18n/react';
 import { formatShortcut, SHORTCUTS } from '@tepegoz/shortcuts';
+import { settingsDict } from '@tepegoz/settings-ui';
 import { ShortcutsSection } from './settings-shortcuts';
 
 /**
  * The keyboard-shortcut help list, rendered straight from the `SHORTCUTS` registry (a hand-kept table
  * would go stale and teach a dead key). The filter matches the key notation as well as the
  * description, and it uses the platform's own notation from `window.tepegoz.platform`.
+ *
+ * The component's `?? shortcut.id` fallback stays uncovered on purpose: it cannot fire while every
+ * registered id has a description, and the last test here is what keeps that true. Covering it would
+ * mean mocking the registry to inject a shortcut that does not exist — proving the fallback works on
+ * a fake instead of proving the real list is complete.
  */
 
 beforeEach(() => {
@@ -53,5 +59,19 @@ describe('ShortcutsSection', () => {
       target: { value: 'zzz-not-a-shortcut-zzz' },
     });
     expect(screen.queryAllByRole('listitem')).toHaveLength(0);
+  });
+
+  it('every registered shortcut has a description in both locales', () => {
+    // The registry and the dictionary are different files, so a shortcut can ship with no string and
+    // render as a bare `newPrivateWindow` in the help list. en/tr parity is already guarded in
+    // `settings-ui`; what nothing guarded is REGISTRY drift — the dictionary can be perfectly
+    // symmetric and still be missing an id that was added to the registry yesterday.
+    for (const locale of ['en', 'tr'] as const) {
+      const descriptions = settingsDict[locale].shortcuts.descriptions as Record<string, string>;
+      const missing = SHORTCUTS.filter((sc) => descriptions[sc.id] === undefined).map(
+        (sc) => sc.id,
+      );
+      expect(missing, locale).toEqual([]);
+    }
   });
 });
