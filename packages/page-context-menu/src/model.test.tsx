@@ -7,6 +7,13 @@ import {
   type PageContextMenuContext,
 } from './model';
 
+/**
+ * One branch is deliberately left uncovered: `compactMenu`'s trailing-separator pop. Every core menu
+ * ends with `inspect`, and every placement merged after the loop appends its rows AFTER the separator
+ * that introduces them — so the merged array cannot end on a separator. It is tidying for a shape the
+ * builders do not currently produce.
+ */
+
 type MenuRowItem = Extract<MenuItem, { kind?: 'item' }>;
 
 function actions(): PageContextMenuActions {
@@ -217,5 +224,237 @@ describe('buildPageContextMenuModel contributions', () => {
     const item = findItem(items, 'contribution:test:disabled:item');
     expect(item.disabled).toBe(true);
     expect(item.onSelect).toBeUndefined();
+  });
+});
+
+describe('the menu each right-click target gets', () => {
+  const pageCtx = (patch: Partial<PageContextMenuContext> = {}): PageContextMenuContext =>
+    editableCtx({ isEditable: false, ...patch });
+
+  it('offers the image commands on an image', () => {
+    const items = buildPageContextMenuModel(
+      en,
+      pageCtx({ mediaType: 'image' }),
+      actions(),
+      'win32',
+    );
+    expect(itemIds(items)).toEqual([
+      'open-image-new-tab',
+      'save-image',
+      'copy-image',
+      'copy-image-address',
+      'sep',
+      'inspect',
+    ]);
+    expect(findItem(items, 'save-image').disabled).toBe(false);
+  });
+
+  it('offers the media commands on a video and on audio, with no copy-image among them', () => {
+    // Copying the pixels is an image affordance; a video frame is not what "copy" would mean here.
+    for (const mediaType of ['video', 'audio'] as const) {
+      const items = buildPageContextMenuModel(en, pageCtx({ mediaType }), actions(), 'win32');
+      expect(itemIds(items), mediaType).toEqual([
+        'open-media-new-tab',
+        'save-media',
+        'copy-media-address',
+        'sep',
+        'inspect',
+      ]);
+    }
+  });
+
+  it('appends the image rows to a LINK menu when the link is an image', () => {
+    const items = buildPageContextMenuModel(
+      en,
+      pageCtx({ linkUrl: 'https://x/pic', mediaType: 'image' }),
+      actions(),
+      'win32',
+    );
+    expect(itemIds(items)).toEqual([
+      'open-link-new-tab',
+      'copy-link',
+      'sep',
+      'open-image-new-tab',
+      'save-image',
+      'copy-image',
+      'sep',
+      'inspect',
+    ]);
+  });
+
+  it('adds Copy to a link menu when text is also selected', () => {
+    const items = buildPageContextMenuModel(
+      en,
+      pageCtx({ linkUrl: 'https://x/', selectionText: 'some words' }),
+      actions(),
+      'win32',
+    );
+    expect(itemIds(items)).toEqual([
+      'open-link-new-tab',
+      'copy-link',
+      'sep',
+      'copy',
+      'sep',
+      'inspect',
+    ]);
+  });
+
+  it('greys out each edit command the page says is unavailable, rather than hiding it', () => {
+    // A command that vanishes reads as "this menu is broken"; a greyed one reads as "not now", which
+    // is what an empty clipboard or an unselectable field actually means.
+    const items = buildPageContextMenuModel(
+      en,
+      editableCtx({ canCut: false, canCopy: false, canPaste: false, canSelectAll: false }),
+      actions(),
+      'win32',
+    );
+    for (const id of ['cut', 'copy', 'paste', 'select-all']) {
+      expect(findItem(items, id).disabled, id).toBe(true);
+      expect(findItem(items, id).onSelect, id).toBeUndefined();
+    }
+    // and the row is still there, in place
+    expect(itemIds(items)).toEqual(['cut', 'copy', 'paste', 'select-all', 'sep', 'inspect']);
+  });
+
+  it('greys out Back and Forward when there is no history either way', () => {
+    const items = buildPageContextMenuModel(en, pageCtx(), actions(), 'win32');
+    expect(findItem(items, 'back').disabled).toBe(true);
+    expect(findItem(items, 'forward').disabled).toBe(true);
+
+    const withHistory = buildPageContextMenuModel(
+      en,
+      pageCtx({ canGoBack: true, canGoForward: true }),
+      actions(),
+      'win32',
+    );
+    expect(findItem(withHistory, 'back').disabled).toBe(false);
+    expect(findItem(withHistory, 'forward').disabled).toBe(false);
+  });
+});
+
+describe('menu tidying', () => {
+  it('never renders a doubled or trailing separator', () => {
+    // Sections come and go with the context, so an absent section would otherwise leave the
+    // separator that introduced it — two rules in a row, or a rule hanging off the bottom.
+    const items = buildPageContextMenuModel(
+      en,
+      editableCtx({
+        contributions: [
+          { id: 'a', contributorId: 'test', placement: 'top', priority: 0, items: [] },
+          {
+            id: 'b',
+            contributorId: 'test',
+            placement: 'bottom',
+            priority: 0,
+            items: [{ id: 'one', label: 'One', actionId: 'act.one' }],
+          },
+        ],
+      }),
+      actions(),
+      'win32',
+    );
+    const ids = itemIds(items);
+    expect(ids[ids.length - 1]).not.toBe('sep');
+    for (let i = 1; i < ids.length; i++) {
+      expect(ids[i] === 'sep' && ids[i - 1] === 'sep', `doubled separator at ${String(i)}`).toBe(
+        false,
+      );
+    }
+  });
+
+  it('separates two contribution sections in the same placement from each other', () => {
+    const items = buildPageContextMenuModel(
+      en,
+      editableCtx({
+        contributions: [
+          {
+            id: 'second',
+            contributorId: 'test',
+            placement: 'top',
+            priority: 2,
+            items: [{ id: 'b', label: 'B', actionId: 'act.b' }],
+          },
+          {
+            id: 'first',
+            contributorId: 'test',
+            placement: 'top',
+            priority: 1,
+            title: 'Section one',
+            items: [{ id: 'a', label: 'A', actionId: 'act.a' }],
+          },
+        ],
+      }),
+      actions(),
+      'win32',
+    );
+    const ids = itemIds(items);
+    // priority orders the sections, the title labels the one that has one, and a separator divides
+    expect(ids.slice(0, 4)).toEqual([
+      'label:Section one',
+      'contribution:test:first:a',
+      'sep',
+      'contribution:test:second:b',
+    ]);
+  });
+});
+
+describe('the selection menu', () => {
+  const selCtx = (selectionText: string): PageContextMenuContext =>
+    editableCtx({ isEditable: false, selectionText });
+
+  it('offers copy, a search row naming the selection, and the not-yet-wired placeholders', () => {
+    const items = buildPageContextMenuModel(en, selCtx('kuray'), actions(), 'win32');
+    expect(itemIds(items)).toEqual([
+      'copy',
+      'copy-link-highlight',
+      'search-selection',
+      'sep',
+      'print',
+      'reading-mode',
+      'translate-selection',
+      'sep',
+      'extensions',
+      'sep',
+      'inspect',
+    ]);
+    expect(findItem(items, 'search-selection').label).toBe('Search the web for “kuray”');
+    // placeholders are greyed, so keyboard navigation skips them instead of landing on a dead row
+    expect(findItem(items, 'reading-mode').disabled).toBe(true);
+    expect(findItem(items, 'copy').disabled).toBe(false);
+  });
+
+  it('ellipsizes a long selection in the search row instead of stretching the menu', () => {
+    const long = 'x'.repeat(200);
+    const items = buildPageContextMenuModel(en, selCtx(long), actions(), 'win32');
+    const label = findItem(items, 'search-selection').label;
+    expect(label).toBe(`Search the web for “${'x'.repeat(40)}…”`);
+    // a selection exactly at the cap keeps its last character and gains no ellipsis
+    const exact = buildPageContextMenuModel(en, selCtx('y'.repeat(40)), actions(), 'win32');
+    expect(findItem(exact, 'search-selection').label).toBe(
+      `Search the web for “${'y'.repeat(40)}”`,
+    );
+  });
+
+  it('drops a trailing separator left by a bottom contribution that renders nothing', () => {
+    // `compactMenu` pops the tail. Without it a bottom section with no visible items leaves the
+    // rule that was meant to introduce it hanging off the end of the menu.
+    const items = buildPageContextMenuModel(
+      en,
+      editableCtx({
+        isEditable: false,
+        contributions: [
+          {
+            id: 'empty-bottom',
+            contributorId: 'test',
+            placement: 'bottom',
+            priority: 0,
+            items: [],
+          },
+        ],
+      }),
+      actions(),
+      'win32',
+    );
+    expect(itemIds(items).at(-1)).not.toBe('sep');
   });
 });
