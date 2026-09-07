@@ -14,6 +14,10 @@ import { SearchStartupSection } from './settings-privacy-files-search';
  * never be handed one; a duplicate engine name is refused (the picker stores an unseen id, two "Wiki"
  * rows are indistinguishable); and removing the selected custom engine falls the default back to the
  * built-in rather than silently leaving a dangling id.
+ *
+ * Two branches are deliberately left uncovered: the `!canAdd` and `editingId === null ||
+ * !canSaveEdit` guards. Neither `addEngine` nor `commitEdit` is reachable except through a button
+ * disabled by that same predicate — there is no form here, so no Enter key routes around it.
  */
 
 const s = settingsDict.en;
@@ -104,6 +108,22 @@ describe('SearchStartupSection', () => {
     expect(setPref).toHaveBeenCalledWith({ homepageUrl: 'https://example.org' });
   });
 
+  it('flags a homepage that is not a navigable URL, and writes nothing on blur', () => {
+    // The field commits on pause, so an unflagged bad value looks accepted while nothing was saved.
+    // The error is the only thing telling the user their homepage did not take.
+    const { setPref } = renderSection({ homepageUrl: '' });
+    const input = document.getElementById('homepage-url')!;
+    fireEvent.change(input, { target: { value: 'not a url at all' } });
+
+    expect(screen.getByText(s.startup.urlInvalid)).toBeTruthy();
+    fireEvent.blur(input);
+    expect(setPref).not.toHaveBeenCalled();
+
+    // and it clears once the value becomes navigable again
+    fireEvent.change(input, { target: { value: 'example.org' } });
+    expect(screen.queryByText(s.startup.urlInvalid)).toBeNull();
+  });
+
   it('edits one custom engine and leaves the others untouched', () => {
     const a = { id: 'custom-1', name: 'A', searchUrlTemplate: 'https://a.example/?q={q}' };
     const b = { id: 'custom-2', name: 'B', searchUrlTemplate: 'https://b.example/?q={q}' };
@@ -147,7 +167,9 @@ describe('SearchStartupSection', () => {
     fireEvent.change(document.getElementById('edit-engine-url-custom-1')!, {
       target: { value: 'javascript:alert(1)?q={q}' },
     });
-    expect(screen.getByRole<HTMLButtonElement>('button', { name: s.searchEngineSave }).disabled).toBe(true);
+    expect(
+      screen.getByRole<HTMLButtonElement>('button', { name: s.searchEngineSave }).disabled,
+    ).toBe(true);
     expect(screen.getByText(s.searchEngineCustomInvalid)).toBeTruthy();
   });
 
