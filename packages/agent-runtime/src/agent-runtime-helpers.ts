@@ -32,8 +32,35 @@ export async function planOrEgressStop(
   }
 }
 
+/**
+ * A plain-language sentence for each way a run can stop WITHOUT the agent having written its own
+ * summary — so the Console says what happened instead of showing a raw enum code ("Finished:
+ * max_steps"). Only the reasons that reach the generic branch below are listed; `completed` carries the
+ * agent's summary, and `aborted` / `handoff` / `plan_rejected` / `egress_blocked` are messaged at their
+ * own call sites.
+ *
+ * English only, like the rest of this module — the terminal-message path has no localizer injected yet;
+ * translating it is tracked as a separate item (S8 "localized to the same bar").
+ */
+const STOP_REASON_MESSAGES: Record<string, string> = {
+  max_steps:
+    'The run reached its step limit before finishing. It may have needed more steps, or it got stuck — check the last few steps above.',
+  loop_detected:
+    'The run stopped because it was repeating the same action without making progress.',
+  tool_error: 'The run stopped after a tool call failed and could not be recovered.',
+  policy_denied: 'The run stopped because an action it needed was not permitted.',
+  selector_stale:
+    'The run lost track of an element on the page (it changed underneath the agent) and could not continue.',
+  navigation_timeout: 'The run stopped waiting for a page that never finished loading.',
+  page_changed:
+    'The page changed unexpectedly mid-action, so the run stopped rather than act on the wrong page.',
+  model_malformed: 'The run stopped after the model returned a response it could not act on.',
+  transient_error:
+    'The run stopped after a temporary error it could not get past — trying again may work.',
+};
+
 /** The terminal Console line for a finished run: the agent's own summary if any, else a distinct
- *  reason for a security stop (Egress Firewall), else a generic finished line. */
+ *  reason for a security stop (Egress Firewall), else a plain-language reason, else a generic line. */
 export function terminalMessageFor(
   stoppedReason: string,
   summary: string | undefined,
@@ -41,7 +68,7 @@ export function terminalMessageFor(
 ): string {
   if (summary !== undefined && summary.length > 0) return summary;
   if (failure?.kind === 'egress_blocked' && failure.message.length > 0) return failure.message;
-  const base = `Finished: ${stoppedReason}`;
+  const base = STOP_REASON_MESSAGES[stoppedReason] ?? `Finished: ${stoppedReason}`;
   // In development, surface the underlying failure detail (tool + error code + message) instead of the
   // opaque stop reason, so the Console shows *why* a run stopped. Never in production — the raw message
   // can carry page/tool internals and is noise for end users.

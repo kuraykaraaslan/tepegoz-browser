@@ -35,7 +35,17 @@ describe('terminalMessageFor', () => {
     ).toBe('Outbound request looked like a secret.');
   });
 
-  it('in dev, appends the failure detail (tool + code + message) to the stop reason', () => {
+  it('maps a known stop reason to a plain-language sentence, not the raw enum code', () => {
+    expect(terminalMessageFor('max_steps', undefined, undefined)).toMatch(/reached its step limit/);
+    expect(terminalMessageFor('loop_detected', undefined, undefined)).toMatch(/repeating the same/);
+    expect(terminalMessageFor('navigation_timeout', undefined, undefined)).toMatch(
+      /never finished loading/,
+    );
+    // None of them leak the code itself.
+    expect(terminalMessageFor('max_steps', undefined, undefined)).not.toContain('max_steps');
+  });
+
+  it('in dev, appends the failure detail after the plain-language reason', () => {
     expect(
       terminalMessageFor(
         'tool_error',
@@ -47,18 +57,23 @@ describe('terminalMessageFor', () => {
           message: 'slow down',
         }),
       ),
-    ).toBe('Finished: tool_error — tool=browser_update_page code=RATE_LIMITED slow down');
-  });
-
-  it('in dev with a failure that carries no detail, falls back to the plain "Finished:" line', () => {
-    expect(terminalMessageFor('max_steps', undefined, failure({ message: '' }))).toBe(
-      'Finished: max_steps',
+    ).toBe(
+      'The run stopped after a tool call failed and could not be recovered. — tool=browser_update_page code=RATE_LIMITED slow down',
     );
   });
 
-  it('returns the plain line when there is no summary and no failure at all', () => {
+  it('in dev with a failure that carries no detail, still shows the plain-language reason', () => {
+    expect(terminalMessageFor('max_steps', undefined, failure({ message: '' }))).toMatch(
+      /reached its step limit/,
+    );
+  });
+
+  it('falls back to the generic "Finished:" line for an unknown reason and no failure', () => {
     expect(terminalMessageFor('completed', undefined, undefined)).toBe('Finished: completed');
     expect(terminalMessageFor('completed', '', undefined)).toBe('Finished: completed');
+    expect(terminalMessageFor('some_new_reason', undefined, undefined)).toBe(
+      'Finished: some_new_reason',
+    );
   });
 });
 

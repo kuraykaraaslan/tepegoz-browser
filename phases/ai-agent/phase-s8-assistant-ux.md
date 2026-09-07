@@ -153,9 +153,18 @@ Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. N
 > off-screen instead of stealing focus. The tasks below are the residue — what those reports ask for and this
 > project does **not** have.
 
-- [ ] **Failure gets a reason, not a shrug.** When a run stops, the console states which step failed, what was
-      observed, and the single next action (retry step / resume from step / hand to me). Atlas's most-repeated
-      complaint is a generic error string; ours must never be one.
+- [~] **Failure gets a reason, not a shrug.** When a run stops, the console states which step failed, what was
+  observed, and the single next action (retry step / resume from step / hand to me). Atlas's most-repeated
+  complaint is a generic error string; ours must never be one. _Landed 2026-09-08: the terminal Console
+  line no longer shows a raw enum code. `terminalMessageFor` now maps every stop reason that reaches the
+  generic branch — `max_steps` / `loop_detected` / `tool_error` / `policy_denied` / `selector_stale` /
+  `navigation_timeout` / `page_changed` / `model_malformed` / `transient_error` — to a plain sentence
+  that says what happened ("The run reached its step limit before finishing …"); the agent's own summary
+  still wins when there is one, and dev still appends the tool/code detail. Helper tests cover the
+  mapping, the dev-detail append, and the fallback for an unknown reason. **Still owed for `[x]`:** the
+  "single next action" affordance (retry step / resume from step / hand to me — resume is gated on Phase
+  1b checkpoints), and the tr localization (this module has no localizer injected — an English-only
+  change, tracked with S8 "localized to the same bar")._
 - [ ] **Resume from a step**, not only re-run from zero — the durable half is Phase 1b's checkpoint work; this
       is the surface that exposes it.
 - [ ] **Cost forecast before the run, refund after a tool-side failure.** Show an estimated token/cost range
