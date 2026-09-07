@@ -46,7 +46,9 @@ describe('FileOperationsSection', () => {
   it('shows the empty state and disables "add folder" when file operations are off', () => {
     renderSection({ fileOperationsEnabled: false, fileAccessGrants: [] });
     expect(screen.getByText(f.noFolders)).toBeTruthy();
-    expect(screen.getByRole<HTMLButtonElement>('button', { name: f.addFolder }).disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: f.addFolder }).disabled).toBe(
+      true,
+    );
   });
 
   it('appends a picked folder as a read / recursive grant', async () => {
@@ -96,6 +98,23 @@ describe('FileOperationsSection', () => {
       target: { value: 'read-write' },
     });
     expect(lastGrants(setPref)[0]).toMatchObject({ path: '/home/docs', mode: 'read-write' });
+  });
+
+  it('widens one folder to read-write without touching the others', () => {
+    // Every edit case above has a single grant in the list, so each one matched and the untouched
+    // arm never ran. This is the whitelist that sandboxes the assistant's file tools: an edit that
+    // rewrote a sibling grant would silently widen access to a folder the user did not touch.
+    const docs = grant('/home/docs');
+    const photos = grant('/home/photos');
+    const { setPref } = renderSection({ fileAccessGrants: [docs, photos] });
+
+    fireEvent.change(screen.getByLabelText(`/home/photos — ${f.modeLabel}`), {
+      target: { value: 'read-write' },
+    });
+
+    const next = lastGrants(setPref);
+    expect(next[1]).toMatchObject({ path: '/home/photos', mode: 'read-write' });
+    expect(next[0]).toBe(docs); // untouched grants pass through by identity, not as rebuilt copies
   });
 
   it('writes the master file-operations toggle', () => {
