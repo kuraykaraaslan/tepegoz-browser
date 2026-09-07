@@ -14,7 +14,10 @@ import { useExtensionSurfaces, type ExtensionSurfacesResult } from './app-extens
  * harness (it returns render FUNCTIONS, not JSX, so a host component is needed to call them).
  */
 
-function manifest(id: string, actions: Partial<ExtensionManifestWire['actions']> = {}): ExtensionManifestWire {
+function manifest(
+  id: string,
+  actions: Partial<ExtensionManifestWire['actions']> = {},
+): ExtensionManifestWire {
   return {
     id,
     name: id,
@@ -55,7 +58,13 @@ interface HarnessProps {
   capture: (r: ExtensionSurfacesResult) => void;
 }
 
-function Harness({ registry, activeGroupId, activeGroupAgentPanelOpen, overlayAlsoOpen, capture }: HarnessProps) {
+function Harness({
+  registry,
+  activeGroupId,
+  activeGroupAgentPanelOpen,
+  overlayAlsoOpen,
+  capture,
+}: HarnessProps) {
   const result = useExtensionSurfaces(
     registry,
     activeGroupId,
@@ -111,7 +120,10 @@ function renderHarness(over: Partial<HarnessProps> = {}) {
     ...over,
   };
   const utils = render(<Harness {...props} />);
-  return { ...utils, rerenderWith: (o: Partial<HarnessProps>) => utils.rerender(<Harness {...props} {...o} />) };
+  return {
+    ...utils,
+    rerenderWith: (o: Partial<HarnessProps>) => utils.rerender(<Harness {...props} {...o} />),
+  };
 }
 
 describe('useExtensionSurfaces', () => {
@@ -139,7 +151,10 @@ describe('useExtensionSurfaces', () => {
 
   it('a "modal" action opens, re-triggering the same one closes, and a different id/kind replaces it', () => {
     renderHarness({
-      registry: [def('a', { click: 'modal' }, { modal: surface('A') }), def('b', { click: 'panel' }, { panel: surface('B') })],
+      registry: [
+        def('a', { click: 'modal' }, { modal: surface('A') }),
+        def('b', { click: 'panel' }, { panel: surface('B') }),
+      ],
     });
     act(() => current.runExtensionAction('a', 'click'));
     expect(current.activeSurface).toEqual({ id: 'a', kind: 'modal' });
@@ -178,12 +193,16 @@ describe('useExtensionSurfaces', () => {
     expect(current.popupOpenId).toBeNull();
 
     act(() => current.runExtensionAction('a', 'click'));
-    expect(bridge.openPopup).toHaveBeenLastCalledWith('ext', expect.objectContaining({ width: 0, height: 0 }), {
-      id: 'a',
-    });
+    expect(bridge.openPopup).toHaveBeenLastCalledWith(
+      'ext',
+      expect.objectContaining({ width: 0, height: 0 }),
+      {
+        id: 'a',
+      },
+    );
   });
 
-  it('clears the popup-pressed state only when the closed native surface is this extension\'s', () => {
+  it("clears the popup-pressed state only when the closed native surface is this extension's", () => {
     let onClosed: ((surface: string) => void) | undefined;
     bridge.onPopupClosed.mockImplementation((cb) => {
       onClosed = cb;
@@ -212,12 +231,19 @@ describe('useExtensionSurfaces', () => {
   });
 
   it('docking the Agent Console with an active group remembers open/closed directly on it', () => {
-    renderHarness({ registry: [def(AGENT_EXTENSION_ID, { click: 'sidebar' })], activeGroupId: 'g1' });
+    renderHarness({
+      registry: [def(AGENT_EXTENSION_ID, { click: 'sidebar' })],
+      activeGroupId: 'g1',
+    });
     act(() => current.runExtensionAction(AGENT_EXTENSION_ID, 'click'));
-    expect(bridge.updateTabGroup).toHaveBeenCalledWith('g1', { settings: { [AGENT_PANEL_OPEN_KEY]: true } });
+    expect(bridge.updateTabGroup).toHaveBeenCalledWith('g1', {
+      settings: { [AGENT_PANEL_OPEN_KEY]: true },
+    });
 
     act(() => current.closeSidebar());
-    expect(bridge.updateTabGroup).toHaveBeenCalledWith('g1', { settings: { [AGENT_PANEL_OPEN_KEY]: false } });
+    expect(bridge.updateTabGroup).toHaveBeenCalledWith('g1', {
+      settings: { [AGENT_PANEL_OPEN_KEY]: false },
+    });
     expect(current.sidebarExtId).toBeNull();
   });
 
@@ -229,18 +255,26 @@ describe('useExtensionSurfaces', () => {
   });
 
   it('opening the Agent Console with no active group creates one, then remembers it open', async () => {
-    renderHarness({ registry: [def(AGENT_EXTENSION_ID, { click: 'sidebar' })], activeGroupId: null });
+    renderHarness({
+      registry: [def(AGENT_EXTENSION_ID, { click: 'sidebar' })],
+      activeGroupId: null,
+    });
     await act(async () => {
       current.runExtensionAction(AGENT_EXTENSION_ID, 'click');
       await Promise.resolve();
     });
     expect(bridge.ensureActiveGroup).toHaveBeenCalled();
-    expect(bridge.updateTabGroup).toHaveBeenCalledWith('g1', { settings: { [AGENT_PANEL_OPEN_KEY]: true } });
+    expect(bridge.updateTabGroup).toHaveBeenCalledWith('g1', {
+      settings: { [AGENT_PANEL_OPEN_KEY]: true },
+    });
   });
 
   it('survives a failed ensureActiveGroup when opening the Agent Console with no active tab', async () => {
     bridge.ensureActiveGroup.mockRejectedValueOnce(new Error('no active tab'));
-    renderHarness({ registry: [def(AGENT_EXTENSION_ID, { click: 'sidebar' })], activeGroupId: null });
+    renderHarness({
+      registry: [def(AGENT_EXTENSION_ID, { click: 'sidebar' })],
+      activeGroupId: null,
+    });
     await act(async () => {
       current.runExtensionAction(AGENT_EXTENSION_ID, 'click');
       await Promise.resolve();
@@ -249,8 +283,35 @@ describe('useExtensionSurfaces', () => {
   });
 
   it('closing the Agent Console with no active group does nothing (nothing to forget it on)', () => {
-    renderHarness({ registry: [def(AGENT_EXTENSION_ID, { click: 'sidebar' })], activeGroupId: null });
+    renderHarness({
+      registry: [def(AGENT_EXTENSION_ID, { click: 'sidebar' })],
+      activeGroupId: null,
+    });
     act(() => current.closeSidebar());
+    expect(bridge.ensureActiveGroup).not.toHaveBeenCalled();
+    expect(bridge.updateTabGroup).not.toHaveBeenCalled();
+  });
+
+  it('closing an OPEN Agent Console with no active group mints no group just to record it', async () => {
+    // The case above closes a console that was never opened, so `closeSidebar` returns before the
+    // remember path runs at all — it proves less than its name suggests. This one opens it first,
+    // which is the only way to reach the "closing has nothing to record" branch. What it pins: a
+    // close must not call `ensureActiveGroup`. Creating a tab group as a side effect of CLOSING a
+    // panel would be the app inventing state out of the user putting something away.
+    renderHarness({
+      registry: [def(AGENT_EXTENSION_ID, { click: 'sidebar' })],
+      activeGroupId: null,
+    });
+    await act(async () => {
+      current.runExtensionAction(AGENT_EXTENSION_ID, 'click');
+      await Promise.resolve();
+    });
+    bridge.ensureActiveGroup.mockClear();
+    bridge.updateTabGroup.mockClear();
+
+    act(() => current.closeSidebar());
+
+    expect(current.sidebarExtId).toBeNull();
     expect(bridge.ensureActiveGroup).not.toHaveBeenCalled();
     expect(bridge.updateTabGroup).not.toHaveBeenCalled();
   });
@@ -338,7 +399,9 @@ describe('useExtensionSurfaces', () => {
     renderHarness({ registry: [def('a', { click: 'sidebar' }, { sidebar: surface('Dock') })] });
     act(() => current.runExtensionAction('a', 'click'));
     act(() => {
-      screen.getByRole('separator').dispatchEvent(new MouseEvent('pointerdown', { clientX: 500, bubbles: true }));
+      screen
+        .getByRole('separator')
+        .dispatchEvent(new MouseEvent('pointerdown', { clientX: 500, bubbles: true }));
       window.dispatchEvent(new MouseEvent('pointerup'));
     });
     await act(async () => {
@@ -354,7 +417,9 @@ describe('useExtensionSurfaces', () => {
     renderHarness({ registry: [def('a', { click: 'sidebar' }, { sidebar: surface('Dock') })] });
     act(() => current.runExtensionAction('a', 'click'));
     await act(async () => {
-      screen.getByRole('separator').dispatchEvent(new MouseEvent('pointerdown', { clientX: 500, bubbles: true }));
+      screen
+        .getByRole('separator')
+        .dispatchEvent(new MouseEvent('pointerdown', { clientX: 500, bubbles: true }));
       await Promise.resolve();
     });
     expect(current.resizingSidebar).toBe(true);
@@ -366,7 +431,9 @@ describe('useExtensionSurfaces', () => {
     renderHarness({ registry: [def('a', { click: 'sidebar' }, { sidebar: surface('Dock') })] });
     act(() => current.runExtensionAction('a', 'click'));
     act(() => {
-      screen.getByRole('separator').dispatchEvent(new MouseEvent('pointerdown', { clientX: 500, bubbles: true }));
+      screen
+        .getByRole('separator')
+        .dispatchEvent(new MouseEvent('pointerdown', { clientX: 500, bubbles: true }));
       window.dispatchEvent(new MouseEvent('pointerup'));
     });
     await act(async () => {
