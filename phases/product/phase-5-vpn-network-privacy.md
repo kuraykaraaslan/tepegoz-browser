@@ -349,15 +349,24 @@ endpoint** (one loopback port per active connection), never an OS-level system p
       the posture deliberately alongside the TLS-fingerprint row above; they are one question, not two.
       Source: [`../../docs/research/research-isp-tracking.md`](../../docs/research/research-isp-tracking.md) and
       [`../../docs/research/research-vpn-security.md`](../../docs/research/research-vpn-security.md).
-- [ ] **An agent-driven tab has a rhythm.** Automated request timing is a signal on its own, and it is
+- [x] **An agent-driven tab has a rhythm.** Automated request timing is a signal on its own, and it is
       the one this project generates by existing. Cross-reference the countermeasures already in
       [`packages/human-input`](../../packages/human-input) (randomized inter-action idle, real gestures)
       and state whether they extend to request pacing or only to input events —
       [`../../docs/research/research-automation-detection.md`](../../docs/research/research-automation-detection.md) is the
-      analysis of how that detection works
-- [ ] **Agent-driven tabs, stated honestly.** Automation timing is itself a signal. Decide and document whether
+      analysis of how that detection works. _Established 2026-09-08: `HumanInputAdapter` operates purely on
+      CDP `Input.*` events (mouse curves, Gaussian click hold-time, per-character flight-time,
+      inter-action idle) and is **skipped entirely** when the tab is unperceived (S7 PR3). It does not
+      touch HTTP request pacing, connection setup, or the reactor's perceive→act cadence — input events
+      only. Recorded in `docs/threat-model.md` (Phase 5 table row + residual-risk bullet)._
+- [x] **Agent-driven tabs, stated honestly.** Automation timing is itself a signal. Decide and document whether
       a driven tab may claim the same posture as a human-driven one, or whether the badge must say it is more
-      identifiable — this project does not get to leave that ambiguous
+      identifiable — this project does not get to leave that ambiguous. _Decided 2026-09-08: an agent-driven
+      tab **is** more identifiable as automation than a human-driven one, and a tunnel does not change that
+      (input humanization is not request-pacing humanization). The route badge is scoped to the **network
+      path** a tab takes and makes **no** automation-detection-resistance claim — so the badge does not need
+      a separate "more identifiable" marker, but the threat model states the limit plainly rather than
+      letting "routed through Tor" imply more. Request-pacing decorrelation is owed, not built._
 
 ### Network-privacy onboarding & health (rival evidence: Freenet)
 
