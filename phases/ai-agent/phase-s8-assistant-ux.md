@@ -47,7 +47,7 @@ Six UI-scoped PRs, each ≤250 lines, sequenced behind their substrate phases. N
 
 ### PR2 — Live step feed + evidence chips
 
-- [ ] Step-feed component in `ext-agent` with per-step status (running/done/failed/skipped) driven by `step_*` events; split out of [panel-thread.tsx](../../extensions/ext-agent/src/panel-thread.tsx) if it approaches the 250-line cap.
+- [~] Step-feed component in `ext-agent` with per-step status (running/done/failed/skipped) driven by `step_*` events; split out of [panel-thread.tsx](../../extensions/ext-agent/src/panel-thread.tsx) if it approaches the 250-line cap. _Split done 2026-09-08: `StepFeed` (`panel-step-feed.tsx`) — the collapsible per-turn progress feed, driven by the `step_start` / `step_ok` / `step_error` events already on the turn, coloured by `KIND_DOT`, header count + latest-step-inline while working. `panel-thread.tsx` back to 239 lines. 5 tests (`panel-step-feed.test.tsx`). **Still owed for `[x]`:** distinct `running` (the in-flight `step_start` with no matching `step_ok`/`step_error` yet) and `skipped` (a plan step the user skipped) states — today those two are not visually separated from `done` / `failed`._
 - [x] Render S4 evidence chips against each step's citations ([S4](phase-s4-verified-outcomes.md)); chip → citation resolution only, no new data.
 - [x] EN + TR strings for status + chip labels.
 

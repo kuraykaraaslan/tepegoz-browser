@@ -4,8 +4,9 @@ import { Markdown } from '@tepegoz/markdown';
 import type { AgentStrings } from './i18n';
 import type { CompletionOutcome } from '@tepegoz/shared-types';
 import type { AgentHostApi } from './types';
-import { GaugeIcon, KIND_DOT, SparkIcon } from './panel-icons';
+import { KIND_DOT, SparkIcon } from './panel-icons';
 import { MessageCopyButton } from './panel-copy-button';
+import { StepFeed } from './panel-step-feed';
 import { TurnApprovals, TurnMeta } from './panel-turn-meta';
 import { PROSE_KINDS, STEP_KINDS, type Turn } from './panel-state';
 
@@ -137,57 +138,14 @@ export function PanelThread({
                   </div>
                 )}
 
-                {steps.length > 0 && (
-                  <div className="rounded-md border border-border bg-surface-raised">
-                    <button
-                      type="button"
-                      onClick={() => onToggleSteps(turn.id)}
-                      className="flex w-full items-center justify-between gap-2 px-2 py-1.5 text-xs text-text-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-                    >
-                      <span className="flex min-w-0 items-center gap-1.5">
-                        <GaugeIcon className="h-3.5 w-3.5 shrink-0 text-text-secondary" />
-                        <span className="shrink-0">
-                          {a.progress} ({steps.length})
-                        </span>
-                        {working && !stepsOpen && latestStep !== undefined && (
-                          <span className="truncate text-text-disabled">
-                            · {latestStep.message}
-                          </span>
-                        )}
-                      </span>
-                      <span className="shrink-0">
-                        {stepsOpen ? a.reasoning.hide : a.reasoning.show}
-                      </span>
-                    </button>
-                    {stepsOpen && (
-                      <ul className="space-y-1 border-t border-border px-2 py-2">
-                        {steps.map((e, i) => (
-                          <li
-                            key={`s-${String(e.ts)}-${String(i)}`}
-                            className="flex items-start gap-2 px-1"
-                          >
-                            <span
-                              className={cn(
-                                'mt-1.5 h-2 w-2 shrink-0 rounded-full',
-                                KIND_DOT[e.kind],
-                              )}
-                            />
-                            <div className="min-w-0 flex-1">
-                              <span className="text-text-primary [overflow-wrap:anywhere]">
-                                {e.message}
-                              </span>
-                              {e.detail !== undefined && e.detail.length > 0 && (
-                                <span className="ml-1 text-text-secondary [overflow-wrap:anywhere]">
-                                  — {e.detail}
-                                </span>
-                              )}
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                )}
+                <StepFeed
+                  steps={steps}
+                  open={stepsOpen}
+                  working={working}
+                  latestMessage={latestStep?.message}
+                  onToggle={() => onToggleSteps(turn.id)}
+                  a={a}
+                />
 
                 {turn.approvals !== undefined && <TurnApprovals approvals={turn.approvals} a={a} />}
 
