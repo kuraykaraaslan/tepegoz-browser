@@ -130,6 +130,40 @@ describe('useFindInPage — tab-switch resync', () => {
     });
     expect(result.current.totalMatches).toBe(9);
   });
+
+  it('ignores a result answering a query the user has already typed past', () => {
+    // The test above is named for stale results but only ever delivers results for the CURRENT query,
+    // so the guard it describes never runs. This delivers one for a superseded query, which is the
+    // common case rather than an edge one: every keystroke starts a new search, and Chromium answers
+    // the previous one whenever it gets round to it. `restart` does not zero the counters for a
+    // non-empty query, so an unguarded late answer shows the old query's count under the new one.
+    const { result } = renderHook(() => useFindInPage('tab-a'));
+    act(() => {
+      openBar?.();
+    });
+    act(() => {
+      result.current.setQuery('needle');
+    });
+    act(() => {
+      onResult?.({ query: 'needle', activeMatchOrdinal: 1, matches: 3 });
+    });
+    expect(result.current.totalMatches).toBe(3);
+
+    act(() => {
+      result.current.setQuery('haystack');
+    });
+    act(() => {
+      onResult?.({ query: 'needle', activeMatchOrdinal: 7, matches: 99 });
+    });
+    expect(result.current.totalMatches).toBe(3);
+    expect(result.current.activeMatch).toBe(1);
+
+    // and the answer that does match still lands
+    act(() => {
+      onResult?.({ query: 'haystack', activeMatchOrdinal: 1, matches: 2 });
+    });
+    expect(result.current.totalMatches).toBe(2);
+  });
 });
 
 describe('useFindInPage — the controller actions', () => {
